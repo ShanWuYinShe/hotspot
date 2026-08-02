@@ -3,6 +3,9 @@
    Each resolves through var(--pr-*) which changes per theme via cascade.
 
    Naming: --{domain}-{property} e.g. --text-primary, --surface-page
+   Synced with .workwork/Hotspot_Make/src/styles/theme.css:
+   interaction token contract + shell/overlay primitives + card-menu +
+   page contract + shape/space/motion 系统。
 ────────────────────────────────────────────────────────────────────── */
 
 :root {
@@ -16,7 +19,7 @@
   --surface-page: var(--pr-page-bg);
   --surface-overlay-soft: var(--pr-overlay-soft);
   --surface-overlay-strong: var(--pr-overlay-strong);
-  --surface-scrim: var(--pr-scrim);
+  --surface-image-scrim: var(--pr-scrim);
 
   /* Accent / Interactive */
   --accent-default: var(--pr-accent-primary);
@@ -53,4 +56,140 @@
   --marker-user: var(--pr-map-user);
   --marker-group: var(--pr-map-group);
   --marker-content: var(--pr-map-post);
+}
+
+/* ── Interaction token contract ────────────────────────────────────────
+   Shared primitives only need these aliases for surface hierarchy and
+   pointer feedback; they derive from each theme's palette. */
+:root {
+  --surface-canvas: var(--surface-page);
+  --surface-panel: var(--surface-primary);
+  --surface-raised: var(--surface-primary);
+  --surface-hover: color-mix(in srgb, var(--accent-default) 7%, var(--surface-primary));
+  --surface-selected: var(--accent-soft);
+  --content-primary: var(--text-primary);
+  --content-secondary: var(--text-secondary);
+  /* Navigation states derive exclusively from the active theme/mode palette. */
+  --navigation-content: var(--content-secondary);
+  --navigation-content-active: var(--accent-default);
+  --navigation-active-indicator: var(--accent-default);
+  --surface-navigation-hover: var(--surface-hover);
+  --elevation-navigation-active: 0 2px 10px var(--glow-accent);
+  --elevation-navigation-hover: 0 0 0 1px var(--border-strong);
+  --elevation-side-sheet: -8px 0 40px rgba(0, 0, 0, 0.22);
+  --elevation-badge: 0 1px 4px rgba(0, 0, 0, 0.25);
+  --border-subtle: var(--border-default);
+  --interactive-hover-fill: var(--interactive-hover);
+  --interactive-hover-overlay: var(--interactive-hover);
+  --interactive-active-fill: var(--interactive-active);
+}
+
+/* ── Shell and overlay primitives ─────────────────────────────────────
+   Page layouts should reference these semantic values instead of
+   rebuilding per-theme rgba strings in component files. */
+:root {
+  --surface-nav-glass: color-mix(in srgb, var(--surface-panel) 90%, transparent);
+  --border-nav-glass: color-mix(in srgb, var(--accent-default) 14%, transparent);
+  --surface-scrim: rgba(14, 10, 35, 0.36);
+  --surface-overlay: rgba(14, 10, 35, 0.38);
+  --border-inverse: rgba(255, 255, 255, 0.25);  --content-inverse: #FFFFFF;
+  --content-inverse-muted: rgba(255, 255, 255, 0.70);
+  --content-inverse-secondary: rgba(255, 255, 255, 0.80);
+  --content-on-accent: var(--text-on-accent);
+  --surface-control-thumb: var(--content-inverse);
+  --elevation-menu: 0 16px 40px rgba(0, 0, 0, 0.16);
+  --elevation-control-thumb: 0 1px 3px rgba(0, 0, 0, 0.18);
+  --surface-toggle-off: rgba(120, 120, 128, 0.22);
+  --surface-toggle-off-strong: rgba(120, 120, 128, 0.25);
+  --surface-toggle-thumb: var(--surface-panel);
+  --elevation-toggle-on: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+  --elevation-toggle-off: inset 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(120, 120, 128, 0.15);
+  --elevation-toggle-thumb: 0 1px 4px rgba(0, 0, 0, 0.26), 0 0.5px 1px rgba(0, 0, 0, 0.14);
+  --surface-media-scrim-soft: linear-gradient(to top, rgba(0, 0, 0, 0.22), transparent 58%);
+  --surface-media-scrim-card: linear-gradient(to top, rgba(0, 0, 0, 0.28), transparent 60%);
+  --surface-media-scrim-rail: linear-gradient(to top, rgba(0, 0, 0, 0.24), transparent 58%);
+  --surface-profile-cover-scrim: linear-gradient(to bottom, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.55));
+  --surface-profile-edit-scrim: linear-gradient(to bottom, transparent 40%, rgba(0, 0, 0, 0.5));
+  --surface-gallery-scrim: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.48));
+  --surface-gallery-label: rgba(0, 0, 0, 0.46);
+  --surface-map-control: rgba(255, 255, 255, 0.20);
+  --surface-map-control-active: rgba(255, 255, 255, 0.25);
+  --elevation-profile-avatar: 0 6px 20px rgba(0, 0, 0, 0.22);
+  --elevation-modal: 0 24px 80px rgba(0, 0, 0, 0.24), 0 0 0 1px var(--border-subtle);
+  --elevation-fab: 0 6px 18px var(--glow-accent), 0 2px 4px rgba(0, 0, 0, 0.10);
+  --elevation-nav: 0 -2px 16px rgba(0, 0, 0, 0.04), 0 8px 24px var(--glow-accent);
+  --elevation-sheet: 0 -8px 40px rgba(0, 0, 0, 0.18), 0 -2px 0 var(--border-subtle);
+  --radius-sheet: 1.75rem;
+}
+
+/* Per-theme scrim/overlay（对齐 Figma Make theme.css 993-1020）：
+   遮罩与蒙层随主题取色，避免深紫系在 Forest 下偏色。 */
+.vibrant.dark {
+  --surface-scrim: rgba(0, 0, 0, 0.42);
+  --surface-overlay: rgba(0, 0, 0, 0.42);
+}
+.forest {
+  --surface-scrim: rgba(20, 28, 20, 0.34);
+  --surface-overlay: rgba(20, 28, 20, 0.38);
+}
+.forest.dark {
+  --surface-scrim: rgba(0, 0, 0, 0.42);
+  --surface-overlay: rgba(0, 0, 0, 0.42);
+}
+
+/* Nearby feed: information trays sit on the image, not on the page canvas. */
+:root {
+  --surface-card-menu: color-mix(in srgb, var(--surface-primary) 88%, var(--accent-default));
+  --border-card-menu: color-mix(in srgb, var(--accent-default) 22%, var(--border-default));
+}
+.dark {
+  --surface-card-menu: color-mix(in srgb, var(--surface-primary) 82%, var(--accent-default));
+  --border-card-menu: color-mix(in srgb, var(--accent-default) 28%, var(--border-default));
+}
+
+/* ── Responsive page-content contract ────────────────────────────────
+   Standard page columns consume these values through ContentColumn /
+   PageHeader 等共享布局原语。 */
+:root {
+  --page-gutter: 1.25rem;
+  --page-content-max: 100%;
+}
+@media (min-width: 600px) {
+  :root { --page-gutter: 1.5rem; }
+}
+@media (min-width: 1280px) {
+  :root { --page-gutter: 1.75rem; }
+}
+
+/* ── Rounded-rectangle shape system ─────────────────────────────────
+   Panels, controls, and compact chips share a deliberate rounded-rectangle
+   family. Components should use rounded-panel / rounded-control /
+   rounded-chip instead of inventing arbitrary corner values. */
+:root {
+  --shape-compact: 0.5rem;
+  --shape-tight: 0.625rem;
+  --shape-small: 0.75rem;
+  --shape-control: 1rem;
+  --shape-relaxed: 1.125rem;
+  --shape-panel: 1.25rem;
+  --shape-feature: 1.5rem;
+  --shape-chip: var(--shape-compact);
+}
+
+/* ── System rhythm and interaction tokens ───────────────────────────
+   Use these values for new shared components instead of page-local timing,
+   spacing, or easing literals. */
+:root {
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --motion-fast: 160ms;
+  --motion-standard: 220ms;
+  --motion-slow: 320ms;
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+  --focus-ring-width: 3px;
 }

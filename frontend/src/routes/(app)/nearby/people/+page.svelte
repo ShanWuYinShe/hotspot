@@ -4,10 +4,11 @@
 	import { platformStore } from '@/stores/platform.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
-	import PageHeader from '@/components/shared/PageHeader.svelte';
-	import SearchInput from '@/components/shared/SearchInput.svelte';
-	import TagPill from '@/components/shared/TagPill.svelte';
-	import EmptyState from '@/components/shared/EmptyState.svelte';
+	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
+	import TagPill from '@/components/forms/TagPill.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import UserCard, { type NearbyUser } from './UserCard.svelte';
 	import { getNearbyUsers } from '@/api';
 	import { ROUTES } from '@/lib/routes';
@@ -86,9 +87,6 @@
 
 	const isDesktop = $derived(platformStore.platform === 'desktop');
 	const isTablet = $derived(platformStore.platform === 'tablet');
-	const contentStyle = $derived(
-		isDesktop ? 'width:100%;' : isTablet ? 'max-width:964px;width:100%;' : 'max-width:680px;width:100%;'
-	);
 	const gridColumns = $derived(platformStore.platform === 'mobile' ? 2 : isDesktop ? 3 : 2);
 
 	const toggleFollow = (id: string) => {
@@ -98,26 +96,26 @@
 	};
 </script>
 
-<PageHeader
-	title="附近的人"
-	subtitle="徐州 · 5km 内 · 每 3 分钟刷新"
-	sticky
-	onBack={() => history.back()}
+<StandardPageLayout
+	contentClassName="py-6"
+	contentMaxWidth={isTablet ? '964px' : isDesktop ? undefined : '680px'}
 >
-	{#snippet children()}
-		<div class="hidden sm:flex flex-1 max-w-sm ml-3">
-			<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或此刻状态" compact />
-		</div>
+	{#snippet header()}
+		<PageHeader title="附近的人" subtitle="徐州 · 5km 内 · 每 3 分钟刷新" sticky onBack={() => history.back()}>
+			{#snippet trailing()}
+				<div class="hidden sm:flex flex-1 max-w-sm ml-3">
+					<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或此刻状态" compact />
+				</div>
+			{/snippet}
+		</PageHeader>
 	{/snippet}
-</PageHeader>
 
-{#if !isDesktop}
-	<div class="sm:hidden px-5 mt-0 -mt-2 pb-2">
-		<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或状态" compact />
-	</div>
-{/if}
+	{#if !isDesktop}
+		<div class="sm:hidden -mt-2 pb-2">
+			<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或状态" compact />
+		</div>
+	{/if}
 
-<div class={isDesktop ? 'px-7 py-6' : 'px-5 py-5 mx-auto'} style={contentStyle}>
 	<div class={isTablet ? 'grid gap-6' : ''}>
 		<div class="min-w-0">
 			<!-- 排序 + 标签过滤 -->
@@ -193,4 +191,4 @@
 			{/if}
 		</div>
 	</div>
-</div>
+</StandardPageLayout>

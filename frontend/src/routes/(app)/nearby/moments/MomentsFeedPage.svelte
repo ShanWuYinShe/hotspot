@@ -4,10 +4,10 @@
 	import { platformStore } from '@/stores/platform.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
-	import EmptyState from '@/components/shared/EmptyState.svelte';
-	import PageHeader from '@/components/shared/PageHeader.svelte';
-	import SearchInput from '@/components/shared/SearchInput.svelte';
-	import TagPill from '@/components/shared/TagPill.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
+	import TagPill from '@/components/forms/TagPill.svelte';
 	import PostCard from '@/components/moments/PostCard.svelte';
 	import { createFeedInteractions, type FeedItem } from '@/components/moments/feed-interactions.svelte';
 	import { getFeedNearby } from '@/api';
@@ -159,12 +159,12 @@
 	<!-- ═══ Desktop Discover — 2-col BSP field ═══ -->
 	<div class="content-mode-wide flex flex-col h-full">
 		<PageHeader title="附近瞬间" subtitle="徐州 · 附近正在发生的事" sticky onBack={() => history.back()}>
-			{#snippet actions()}
-				<span class="text-[var(--neu-text-muted)] text-xs">{filtered.length} 条内容</span>
-			{/snippet}
-			{#snippet children()}
-				<div class="hidden sm:flex flex-1 max-w-sm ml-3">
-					<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" compact />
+			{#snippet trailing()}
+				<div class="flex items-center gap-2">
+					<div class="hidden sm:flex flex-1 max-w-sm">
+						<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" compact />
+					</div>
+					<span class="text-[var(--neu-text-muted)] text-xs">{filtered.length} 条内容</span>
 				</div>
 			{/snippet}
 		</PageHeader>
@@ -215,16 +215,16 @@
 	<div class="sticky top-0 z-10 bg-[var(--neu-bg)]" style="backdrop-filter:blur(16px);border-bottom:1px solid var(--neu-border);">
 		<div class="flex gap-6 mx-auto" style="width:100%;">
 			<div class="mx-auto w-full lg:mx-0 min-w-0" style="width:100%;">
-				<PageHeader title="附近瞬间" subtitle="徐州 · 附近正在发生的事" onBack={() => history.back()}>
-					{#snippet actions()}
-						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--neu-accent-primary)]" style="box-shadow:0 3px 10px var(--neu-glow);">
-							<Sparkles style="width:11px;height:11px;color:white;" strokeWidth={2} />
-							<span class="text-white text-[11px]">精选</span>
-						</div>
-					{/snippet}
-					{#snippet children()}
-						<div class="hidden sm:flex flex-1 max-w-sm ml-3">
-							<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" compact />
+				<PageHeader title="附近瞬间" subtitle="徐州 · 附近正在发生的事" onBack={() => history.back()} sticky={false}>
+					{#snippet trailing()}
+						<div class="flex items-center gap-2">
+							<div class="hidden sm:flex flex-1 max-w-sm">
+								<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" compact />
+							</div>
+							<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--neu-accent-primary)]" style="box-shadow:0 3px 10px var(--neu-glow);">
+								<Sparkles style="width:11px;height:11px;color:white;" strokeWidth={2} />
+								<span class="text-white text-[11px]">精选</span>
+							</div>
 						</div>
 					{/snippet}
 				</PageHeader>
@@ -288,7 +288,7 @@
 {:else}
 	<!-- ═══ Mobile Discover — single-column feed, max-width 560px centred ═══ -->
 	<PageHeader title="附近瞬间" subtitle="徐州 · 附近正在发生的事" sticky onBack={() => history.back()}>
-		{#snippet actions()}
+		{#snippet trailing()}
 			<span class="text-[var(--neu-text-muted)] text-xs">{filtered.length} 条内容</span>
 		{/snippet}
 	</PageHeader>

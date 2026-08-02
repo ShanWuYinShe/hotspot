@@ -4,7 +4,7 @@
 	import { platformStore } from '@/stores/platform.svelte';
 	import { openComposer } from '@/stores/composer.svelte';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
-	import EmptyState from '@/components/shared/EmptyState.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import ProfileTabs, { type Tab } from '@/components/profile/ProfileTabs.svelte';
 	import { useGalleryPosts, useReactedPosts, useFavoritePosts, type GalleryPost } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';

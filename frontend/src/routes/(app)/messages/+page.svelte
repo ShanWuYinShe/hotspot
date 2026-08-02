@@ -2,15 +2,15 @@
 	import { goto } from '$app/navigation';
 	import { Plus, MessageSquareDashed } from '@lucide/svelte';
 	import { platformStore } from '@/stores/platform.svelte';
-	import PageHeader from '@/components/shared/PageHeader.svelte';
-	import SearchInput from '@/components/shared/SearchInput.svelte';
-	import EmptyState from '@/components/shared/EmptyState.svelte';
-	import OnlineDot from '@/components/shared/OnlineDot.svelte';
+	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import ChatView from '@/components/messages/ChatView.svelte';
 	import GroupChatView from '@/components/messages/GroupChatView.svelte';
 	import ChatListItem, { type ChatItem } from '@/components/messages/ChatListItem.svelte';
-	import NewConversationSheet from '@/components/messages/NewConversationSheet.svelte';
-	import CreateGroupSheet from '@/components/groups/CreateGroupSheet.svelte';
+	import NewConversationSheet from '@/components/overlays/NewConversationSheet.svelte';
+	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import { getPrivateChats, listMyGroups } from '@/api';
 	import { ROUTES } from '@/lib/routes';
@@ -127,7 +127,7 @@
 			<!-- List header -->
 			<div class="flex-shrink-0" style="border-bottom:1px solid var(--neu-border);">
 				<PageHeader title="消息" className="!py-2">
-					{#snippet actions()}
+					{#snippet trailing()}
 						<button
 							type="button"
 							class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none neu-surface-flat"
@@ -248,7 +248,7 @@
 {:else}
 	<!-- ═══ Mobile Messages ═══ -->
 	<PageHeader title="消息" sticky subtitle={totalUnread > 0 ? `${totalUnread} 条未读` : '全部已读'}>
-		{#snippet actions()}
+		{#snippet trailing()}
 			<button
 				type="button"
 				class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none neu-surface-flat"

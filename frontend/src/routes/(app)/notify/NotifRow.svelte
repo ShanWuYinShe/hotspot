@@ -19,8 +19,8 @@
 
 <button
 	type="button"
-	class="neu-hover-row app-list-row app-list-row--rich cursor-pointer rounded-[18px] mb-1.5 px-3 w-full text-left neu-row-hover"
-	style="background:{notif.read ? 'transparent' : cfgTone(7)};border:{notif.read ? '1px solid transparent' : `1px solid ${cfgTone(18)}`};"
+	class="neu-hover-row app-list-row app-list-row--rich cursor-pointer px-3 w-full text-left neu-row-hover"
+	style="background:transparent;"
 	onclick={() => onRead(notif.id)}
 >
 	<!-- Avatar + icon badge -->

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Camera, User, FileText, Check } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
-	import ActionIconButton from '@/components/shared/ActionIconButton.svelte';
-	import PageHeader from '@/components/shared/PageHeader.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import { getAccount, updateAccount } from '@/api';
 
 	// 编辑资料：昵称/简介/兴趣标签（5 个上限）+ 注销按钮。
@@ -66,7 +66,7 @@
 </script>
 
 <PageHeader title="编辑资料" onBack={() => history.back()} sticky>
-	{#snippet actions()}
+	{#snippet trailing()}
 		<button
 			type="button"
 			class="neu-hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all text-[13px] {saved ? 'bg-[var(--semantic-online)]' : 'bg-[var(--neu-accent-primary)]'} text-white"

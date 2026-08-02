@@ -2,9 +2,9 @@
 	import type { Component, Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { Bell, Lock, ChevronRight, LogOut, Globe, Info, Volume2, MapPin, User } from '@lucide/svelte';
-	import PageHeader from '@/components/shared/PageHeader.svelte';
+	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
-	import NeuToggle from '@/components/shared/NeuToggle.svelte';
+	import NeuToggle from '@/components/forms/NeuToggle.svelte';
 	import { logout } from '@/stores/auth.svelte';
 	import { getAccount, getSettings } from '@/api';
 	import { ROUTES } from '@/lib/routes';

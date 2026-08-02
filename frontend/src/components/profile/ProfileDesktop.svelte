@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Share2, MapPin, ChevronRight, Camera, Pencil, Grid3X3, Users, Heart, MessageCircle } from '@lucide/svelte';
-	import ActionIconButton from '@/components/shared/ActionIconButton.svelte';
-	import PageHeader from '@/components/shared/PageHeader.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import SectionMoments from '@/components/profile/SectionMoments.svelte';
 	import SectionGroups from '@/components/profile/SectionGroups.svelte';
 	import RelationshipsWorkspace from '@/components/profile/RelationshipsWorkspace.svelte';

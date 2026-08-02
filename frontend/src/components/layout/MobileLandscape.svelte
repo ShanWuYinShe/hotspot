@@ -6,7 +6,7 @@
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import CreateSheet from '@/components/layout/CreateSheet.svelte';
-	import RailIcon from '@/components/layout/RailIcon.svelte';
+	import RailIcon from '@/components/layout/desktop/RailIcon.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 
 	// 移动横屏：紧凑左栏（无状态栏），全高内容 + 右侧滑入发布面板。

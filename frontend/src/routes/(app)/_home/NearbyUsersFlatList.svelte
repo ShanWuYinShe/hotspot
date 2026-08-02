@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import OnlineDot from '@/components/shared/OnlineDot.svelte';
-	import type { NearbyUser } from '@/components/home/PeopleRadarStrip.svelte';
+	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
+	import type { NearbyUser } from '@/routes/(app)/_home/PeopleRadarStrip.svelte';
 
 	// 紧凑附近用户行列表（迁移自旧版 NearbyFeedPage 内 NearbyUsersFlatList/NearbyUserRow）。
 

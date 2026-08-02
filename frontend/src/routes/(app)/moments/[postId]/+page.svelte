@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { MapPin, Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Send, Link2, Check } from '@lucide/svelte';
-	import ActionIconButton from '@/components/shared/ActionIconButton.svelte';
-	import PageHeader from '@/components/shared/PageHeader.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
 	import { auth } from '@/stores/auth.svelte';
-	import DesktopDetailSplit from '@/components/layout/DesktopDetailSplit.svelte';
-	import RailSection from '@/components/layout/RailSection.svelte';
-	import RailUserRow from '@/components/layout/RailUserRow.svelte';
-	import RailLocationMini from '@/components/layout/RailLocationMini.svelte';
+	import DesktopDetailSplit from '@/components/layout/desktop/DesktopDetailSplit.svelte';
+	import RailSection from '@/components/layout/desktop/RailSection.svelte';
+	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
+	import RailLocationMini from '@/components/layout/desktop/RailLocationMini.svelte';
 	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 
@@ -199,7 +199,7 @@
 	<div class="flex flex-col bg-[var(--neu-bg)]" style="height:100%;">
 		<!-- Header -->
 		<PageHeader title={post.user || '详情'} onBack={() => history.back()} className="flex-shrink-0 border-b border-[var(--neu-border)]">
-			{#snippet actions()}
+			{#snippet trailing()}
 				<DropdownMenu.Root bind:open={moreOpen}>
 					<div bind:this={moreMenuEl} class="relative">
 						<ActionIconButton icon={MoreHorizontal} label="更多操作" onClick={() => (moreOpen = !moreOpen)} />

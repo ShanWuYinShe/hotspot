@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowLeft, Phone, Video, Send, Smile, CheckCheck, MoreHorizontal } from '@lucide/svelte';
+	import { ArrowLeft, Phone, Video, Send, Smile, CheckCheck, MoreHorizontal, MessageCircle } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { getPrivateMessages, sendPrivateMessage, markPrivateRead } from '@/api';
@@ -423,6 +423,19 @@
 
 	<!-- Messages -->
 	<div bind:this={scrollEl} onscroll={handleScroll} class="flex-1 overflow-y-auto no-scrollbar" style="overscroll-behavior:contain;">
+		{#if !loading && messages.length === 0}
+			<!-- 空会话：还没有消息时的引导空态 -->
+			<div class="flex h-full flex-col items-center justify-center gap-2 px-6" style="min-height:240px;">
+				<div
+					class="flex items-center justify-center rounded-full"
+					style="width:56px;height:56px;border:1px solid var(--neu-border);box-shadow:6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light);"
+				>
+					<MessageCircle style="width:22px;height:22px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+				</div>
+				<p class="text-[var(--neu-text)]" style="font-size:14px;font-weight:500;">还没有消息</p>
+				<p class="text-center text-[var(--neu-text-muted)]" style="font-size:12px;max-width:220px;">打个招呼，开始这段对话吧</p>
+			</div>
+		{:else}
 		<div class="animate-fade-in flex flex-col gap-2 px-4 pt-4 pb-3">
 			<!-- Date pill -->
 			<div class="flex justify-center mb-2">
@@ -443,7 +456,7 @@
 							{msg.text}
 						</p>
 						<p
-							class="{msg.sent ? 'text-[rgba(255,255,255,0.65)]' : 'text-[var(--neu-text-muted)]'}"
+							class="{msg.sent ? 'text-[var(--content-inverse-muted)]' : 'text-[var(--neu-text-muted)]'}"
 							style="font-size:10px;margin-top:4px;display:flex;align-items:center;gap:3px;justify-content:{msg.sent ? 'flex-end' : 'flex-start'};"
 						>
 							{msg.time}
@@ -455,6 +468,7 @@
 				</div>
 			{/each}
 		</div>
+		{/if}
 	</div>
 
 	<!-- Input bar -->

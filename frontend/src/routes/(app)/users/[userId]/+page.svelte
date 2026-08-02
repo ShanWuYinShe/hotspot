@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { MapPin, MessageCircle, UserPlus, UserCheck, Share2, Heart, Grid3X3, Bookmark, MoreHorizontal, Flag, PencilLine, UserX, X, Check, ArrowLeft } from '@lucide/svelte';
-	import ActionIconButton from '@/components/shared/ActionIconButton.svelte';
-	import DesktopDetailSplit from '@/components/layout/DesktopDetailSplit.svelte';
-	import RailSection from '@/components/layout/RailSection.svelte';
-	import RailUserRow from '@/components/layout/RailUserRow.svelte';
-	import RailLocationMini from '@/components/layout/RailLocationMini.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import DesktopDetailSplit from '@/components/layout/desktop/DesktopDetailSplit.svelte';
+	import RailSection from '@/components/layout/desktop/RailSection.svelte';
+	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
+	import RailLocationMini from '@/components/layout/desktop/RailLocationMini.svelte';
 	import { getProfile, follow, block, createReport } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import * as Dialog from '@/components/ui/dialog';

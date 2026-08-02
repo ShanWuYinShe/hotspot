@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { ArrowLeft, Bell, CalendarDays, Check, MapPin, MessageCircle, Users } from '@lucide/svelte';
-	import ActionIconButton from '@/components/shared/ActionIconButton.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import { Tabs } from 'bits-ui';
 	import { ROUTES } from '@/lib/routes';
 	import { getGroupDetail, getGroupMembers, getGroupAnnouncements } from '@/api';

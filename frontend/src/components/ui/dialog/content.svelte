@@ -22,22 +22,22 @@
 
 	const SIDE_CLASSES: Record<DialogSide, string> = {
 		center:
-			'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[24px] shadow-[0_24px_80px_rgba(0,0,0,0.24),0_0_0_1px_var(--neu-border)] data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
+			'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[24px] shadow-[var(--elevation-modal)] data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
 		bottom:
-			'bottom-0 left-0 right-0 rounded-t-[28px] shadow-[0_-8px_40px_rgba(0,0,0,0.18),0_-2px_0_var(--neu-border)] data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
+			'bottom-0 left-0 right-0 rounded-t-[var(--radius-sheet)] shadow-[var(--elevation-sheet)] data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
 		right:
-			'top-0 bottom-0 right-0 w-[min(420px,92vw)] border-l border-[var(--neu-border)] shadow-[-8px_0_40px_rgba(0,0,0,0.18)] data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right',
+			'top-0 bottom-0 right-0 w-[min(420px,92vw)] border-l border-[var(--neu-border)] shadow-[var(--elevation-side-sheet)] data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right',
 		left:
-			'top-0 bottom-0 left-0 w-[min(420px,92vw)] border-r border-[var(--neu-border)] shadow-[8px_0_40px_rgba(0,0,0,0.18)] data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left',
+			'top-0 bottom-0 left-0 w-[min(420px,92vw)] border-r border-[var(--neu-border)] shadow-[var(--elevation-side-sheet)] data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left',
 		top:
-			'top-0 left-0 right-0 rounded-b-[28px] shadow-[0_8px_40px_rgba(0,0,0,0.18),0_2px_0_var(--neu-border)] data-[state=open]:slide-in-from-top data-[state=closed]:slide-out-to-top'
+			'top-0 left-0 right-0 rounded-b-[var(--radius-sheet)] shadow-[var(--elevation-sheet)] data-[state=open]:slide-in-from-top data-[state=closed]:slide-out-to-top'
 	};
 </script>
 
 <Dialog.Portal>
 	<Dialog.Overlay
 		class={cn(
-			'fixed inset-0 z-[var(--z-overlay)] bg-[rgba(0,0,0,0.35)] backdrop-blur-[3px] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
+			'fixed inset-0 z-[var(--z-overlay)] bg-[var(--surface-overlay)] backdrop-blur-[3px] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
 			overlayClassName
 		)}
 	/>

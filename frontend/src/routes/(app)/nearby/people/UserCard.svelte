@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { MapPin, UserCheck, UserPlus } from '@lucide/svelte';
-	import OnlineDot from '@/components/shared/OnlineDot.svelte';
+	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 
 	// 附近用户卡片：图片铺满整卡，标签/距离/关注等菜单以覆盖层显示在图片上。
 	// 桌面/平板 BSP 布局中高度由布局单元决定；移动网格中由 aspect-[3/4] 撑起。
@@ -37,7 +37,7 @@
 </script>
 
 <div
-	class="neu-hover-card relative h-full w-full overflow-hidden rounded-[20px] aspect-[3/4] cursor-pointer neu-surface-flat neu-card-hover neu-focus-ring"
+	class="image-hover-frame neu-hover-card relative h-full w-full overflow-hidden rounded-[20px] aspect-[3/4] cursor-pointer neu-surface-flat neu-card-hover neu-focus-ring"
 	style="background:var(--neu-bg);"
 	role="button"
 	tabindex="0"
@@ -54,11 +54,11 @@
 		<img
 			src={user.avatar}
 			alt={user.name}
-			class="absolute inset-0 h-full w-full object-cover"
+			class="image-hover-frame__image absolute inset-0 h-full w-full object-cover"
 			loading="lazy"
 			onerror={() => (avatarFailed = true)}
 		/>
-	{:else}
+	{:else}}
 		<!-- 无头像 / 加载失败：accent 主题渐变占位铺满整卡 -->
 		<div
 			class="absolute inset-0 flex items-center justify-center"
@@ -67,6 +67,9 @@
 			<span class="text-[var(--neu-accent-primary)] text-3xl font-semibold">{Array.from(user.name)[0] ?? '?'}</span>
 		</div>
 	{/if}
+
+	<!-- 图片渐变：与信息托盘自然过渡（对齐 NearbyImageCard media-scrim） -->
+	<div class="pointer-events-none absolute inset-0" style="background:var(--surface-media-scrim-card);"></div>
 
 	<!-- 左上：兴趣标签 -->
 	{#if user.tag}
@@ -84,26 +87,26 @@
 		<span class="text-white text-[10px]">{user.distance}</span>
 	</div>
 
-	<!-- 底部：名字 / 此刻状态 / 共同好友 / 关注按钮（半透明深色玻璃背景，有图无图都保证可读） -->
-	<div class="absolute inset-x-0 bottom-0 bg-[var(--card-scrim)] px-3 pt-2 pb-2.5" style="backdrop-filter:blur(12px);">
+	<!-- 底部：名字 / 此刻状态 / 共同好友 / 关注按钮（混色信息托盘（surface-card-menu），对齐 Figma Make） -->
+	<div class="absolute inset-x-0 bottom-0 border-t px-3 pt-2 pb-2.5" style="background:var(--surface-card-menu);border-color:var(--border-card-menu);">
 		<div class="min-w-0">
-			<p class="flex items-center gap-1.5 truncate text-white text-sm font-semibold">
+			<p class="flex items-center gap-1.5 truncate text-[var(--neu-text)] text-sm font-semibold">
 				<span class="truncate">{user.name}</span>
 				{#if user.status === '在线'}
-					<OnlineDot size="sm" className="relative static" color="var(--online-on-scrim)" />
+					<OnlineDot size="sm" className="relative static" color="var(--status-online)" />
 				{/if}
 			</p>
-			<p class="truncate text-white/78 text-[10px] mt-0.5">{user.note}</p>
+			<p class="truncate text-[var(--neu-text-muted)] text-[10px] mt-0.5">{user.note}</p>
 		</div>
 		<div class="mt-2 flex items-center justify-between gap-2">
-			<span class="truncate text-white/70 text-[10px]">{user.mutual ? `${user.mutual} 位共同好友` : '等待认识'}</span>
+			<span class="truncate text-[var(--neu-text-muted)] text-[10px]">{user.mutual ? `${user.mutual} 位共同好友` : '等待认识'}</span>
 			<button
 				type="button"
 				class="neu-hover-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 w-[30px] h-[30px]"
 				aria-label={followed ? `取消关注 ${user.name}` : `关注 ${user.name}`}
 				style={followed
-					? 'background:var(--neu-accent-soft);border:1px solid rgba(255,255,255,0.45);color:white;'
-					: 'background:var(--neu-accent-primary);color:white;box-shadow:0 2px 8px var(--neu-glow);'}
+					? 'background:var(--neu-accent-soft);border:1px solid var(--neu-border-pressed);color:var(--neu-text-muted);'
+					: 'background:var(--neu-accent-primary);color:var(--neu-on-accent);box-shadow:0 2px 8px var(--neu-glow);'}
 				onclick={(e) => {
 					e.stopPropagation();
 					onFollow();

@@ -409,7 +409,7 @@
 								{msg.text}
 							</p>
 							<p
-								class="{msg.sent ? 'text-[rgba(255,255,255,0.65)]' : 'text-[var(--neu-text-muted)]'}"
+								class="{msg.sent ? 'text-[var(--content-inverse-muted)]' : 'text-[var(--neu-text-muted)]'}"
 								style="font-size:10px;margin-top:4px;display:flex;align-items:center;gap:3px;justify-content:{msg.sent ? 'flex-end' : 'flex-start'};"
 							>
 								{msg.time}

@@ -70,9 +70,8 @@
     position: relative;
     isolation: isolate;
     min-height: 0;
-    background:
-      radial-gradient(70rem 28rem at 14% -12%, color-mix(in srgb, var(--neu-accent-primary) 5%, transparent), transparent 68%),
-      linear-gradient(180deg, color-mix(in srgb, var(--neu-bg) 96%, var(--page-bg)) 0%, var(--neu-bg) 46%, color-mix(in srgb, var(--neu-bg) 98%, var(--page-bg)) 100%);
+    /* 统一画布：与 page 同底，分隔靠边框与留白（对齐 Figma Make 桌面画布契约） */
+    background: var(--page-bg);
   }
 
   .desktop-main-scroll {

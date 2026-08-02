@@ -74,30 +74,27 @@
 
   .neu-card-hover {
     cursor: pointer;
-    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: box-shadow 0.26s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .neu-card-hover:hover {
-    transform: translateY(-3px);
     box-shadow: 0 0 0 1px var(--neu-accent-soft-border), var(--hover-shadow-card) !important;
   }
-  .neu-card-hover:active { transform: translateY(-1px) scale(0.985); }
+  .neu-card-hover:active { transform: scale(0.985); }
   .neu-card-hover:focus-visible { outline: 2px solid var(--neu-accent-primary); outline-offset: 2px; }
 
   .neu-row-hover {
     position: relative;
     cursor: pointer;
     transition:
-      transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
       background-color 0.18s ease,
       box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .neu-row-hover:hover {
-    transform: translateY(-2px);
-    background-color: color-mix(in srgb, var(--neu-accent-soft) 72%, var(--neu-bg)) !important;
+    background-color: var(--surface-hover) !important;
     box-shadow: 0 0 0 1px var(--neu-accent-soft-border), var(--hover-shadow-row) !important;
   }
   .neu-row-hover:active {
-    transform: translateY(0) scale(0.985);
+    transform: scale(0.985);
   }
   .neu-row-hover[data-active="true"],
   .neu-row-hover[aria-pressed="true"] {
@@ -147,11 +144,11 @@
     transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.20s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.16s ease;
   }
   .neu-circle-hover:hover {
-    transform: scale(1.07);
+    transform: scale(1.10);
     border-color: var(--neu-accent-soft-border) !important;
     box-shadow: var(--hover-shadow-btn) !important;
   }
-  .neu-circle-hover:active { transform: scale(0.92); }
+  .neu-circle-hover:active { transform: scale(0.94); }
 
   .neu-pill-hover {
     transition: box-shadow 0.18s cubic-bezier(0.22, 1, 0.36, 1);
@@ -457,13 +454,13 @@
   .neu-hover-btn:active,
   .neu-hover-action:active { filter: brightness(0.96); }
 
-  /* 列表行（row）：仅上浮，不缩放；大卡片（card）：仅上浮 + 阴影抬升 */
-  .neu-hover-row:hover { transform: translateY(-2px); }
-  .neu-hover-row:active { transform: translateY(0); }
-  .neu-hover-card:hover { transform: translateY(-4px); }
+  /* 列表行（row）：仅背景/阴影反馈，不位移不缩放；
+     大卡片（card）：仅阴影抬升，布局框体永不移动（对齐 Figma Make 契约） */
+  .neu-hover-row:hover { background-color: var(--surface-hover); }
+  .neu-hover-row:active { }
   .neu-hover-card:hover { box-shadow: 0 10px 28px var(--neu-shadow-dark); }
 
-  /* 圆形图标按钮（ActionIconButton 等）：恢复缩放反馈 */
+  /* 圆形图标按钮（ActionIconButton 等）：圆形允许缩放（Figma Make btn 契约 1.10/0.94） */
   .neu-scale-btn:hover { transform: scale(1.10); }
   .neu-scale-btn:active { transform: scale(0.94); }
 
@@ -496,3 +493,117 @@
   .dark.forest .neu-hover-bg:hover {
     background-color: color-mix(in srgb, var(--neu-accent-primary) 16%, transparent);
   }
+
+/*── Interaction contract（对齐 Figma Make theme.css 885-1102）──────────
+   可见填充是基线 hover 提示；渐变叠加层对内联/Tailwind 实色背景同样
+   生效，主按钮与图标按钮获得一致反馈而不抹掉其语义底色。
+   注意：带显式背景类（bg-*）或内联背景的按钮已自带语义底色，
+   背景填充仅作用于透明/ghost 按钮，避免覆盖实色 accent 导致白字褪色。 */
+@layer utilities {
+  :where(button:not(:disabled)) {
+    border-radius: var(--radius);
+    transition: background-color 160ms ease, background-image 160ms ease, border-color 160ms ease, color 160ms ease;
+  }
+  :where(button:not(:disabled):not([class*="bg-"])):active {
+    background-color: var(--interactive-active-fill);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    :where(button:not(:disabled)):hover {
+      background-image: linear-gradient(var(--interactive-hover-overlay), var(--interactive-hover-overlay)) !important;
+    }
+    :where(button:not(:disabled):not([class*="bg-"])):hover {
+      background-color: var(--interactive-hover-fill);
+    }
+    :where(button[aria-current="page"], button[aria-pressed="true"], button[data-active="true"]):hover {
+      background-color: transparent;
+      background-image: none !important;
+    }
+  }
+  /* 紧凑导航控件需要真胶囊形，而非通用控件圆角 */
+  .neu-nav-tab {
+    border-radius: 1.5rem;
+    overflow: hidden;
+  }
+}
+
+/*── Shared image-first interaction ─────────────────────────────────────
+   图片优先的交互元素：框体永不改变占位。accent 边框画在继承的圆角
+   裁剪内部，只有内部图片做微妙缩放（对齐 Figma Make image-hover-frame）。 */
+@layer utilities {
+  .image-hover-frame {
+    isolation: isolate;
+  }
+  .image-hover-frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    pointer-events: none;
+    border: 2px solid transparent;
+    border-radius: inherit;
+    transition: border-color 160ms ease;
+  }
+  .image-hover-frame__image {
+    transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .image-hover-frame:hover::after {
+      border-color: var(--neu-accent-primary);
+    }
+    .image-hover-frame:hover .image-hover-frame__image {
+      transform: scale(1.045);
+    }
+  }
+
+  /* 头像入口是视觉目标而非矩形按钮：hover 反馈只属于圆形头像本身，
+     说明文字保持稳定（对齐 Figma Make avatar-entry）。 */
+  .avatar-entry {
+    background: transparent !important;
+    background-image: none !important;
+  }
+  .avatar-entry__avatar {
+    transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1), border-color 160ms ease, box-shadow 160ms ease;
+    transform-origin: center;
+  }
+  .avatar-entry__avatar img {
+    transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .avatar-entry:hover {
+      background: transparent !important;
+      background-image: none !important;
+    }
+    .avatar-entry:hover .avatar-entry__avatar {
+      transform: none;
+      border-color: var(--neu-accent-primary) !important;
+      box-shadow: none;
+    }
+    .avatar-entry:hover .avatar-entry__avatar img {
+      transform: scale(1.055);
+    }
+  }
+}
+
+/*── Routed page canvas + 三端页面契约 ──────────────────────────────────
+   桌面、平板、手机共享同一结构化布局；标准页面用共享 gutter 而非各自
+   发明外层内边距。平板是可工作画布：标记者在手机上保持移动度量，在
+   平板画布上以统一 24px 外 gutter 展开。 */
+@layer utilities {
+  [data-page-viewport] {
+    background: var(--page-bg);
+    color: var(--neu-text);
+  }
+  [data-platform="tablet"] .tablet-content-fill {
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  [data-desktop-main] .desktop-main-scroll > * {
+    background-color: var(--page-bg) !important;
+  }
+  [data-desktop-main] .sticky {
+    background-color: var(--page-bg) !important;
+  }
+}

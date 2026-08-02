@@ -31,7 +31,7 @@
 </script>
 
 <div
-	class="neu-hover-card relative h-full w-full overflow-hidden aspect-[4/3] cursor-pointer {hero
+	class="image-hover-frame neu-hover-card relative h-full w-full overflow-hidden aspect-[4/3] cursor-pointer {hero
 		? 'rounded-[22px] neu-surface-hero'
 		: 'rounded-[18px] neu-surface-flat'} neu-card-hover"
 	style="background:var(--neu-bg);"
@@ -48,8 +48,8 @@
 	}}
 >
 	{#if item.image}
-		<img src={item.image} alt={item.tag} class="absolute inset-0 h-full w-full object-cover" />
-	{:else}
+		<img src={item.image} alt={item.tag} class="image-hover-frame__image absolute inset-0 h-full w-full object-cover" />
+	{:else}}
 		<!-- 无图：accent 主题渐变占位（底部覆盖层已含正文/作者/操作，此处仅做装饰） -->
 		<div
 			class="absolute inset-0 flex items-center justify-center"
@@ -64,6 +64,9 @@
 		</div>
 	{/if}
 
+	<!-- 图片渐变：与信息托盘自然过渡（对齐 NearbyImageCard media-scrim） -->
+	<div class="pointer-events-none absolute inset-0" style="background:var(--surface-media-scrim-card);"></div>
+
 	{#if edition}
 		<div class="absolute right-3 top-3 z-[1] flex h-7 min-w-7 items-center justify-center rounded-full border border-white/35 bg-black/20 px-1.5 font-mono text-[9px] tracking-[0.12em] text-white backdrop-blur-sm">
 			{edition}
@@ -75,18 +78,18 @@
 		<span class="text-white text-[10px]">{item.tag}</span>
 	</div>
 
-	<!-- 底部：正文 / 作者与位置 / 操作栏（半透明深色玻璃背景，有图无图都保证可读） -->
-	<div class="absolute inset-x-0 bottom-0 bg-[var(--card-scrim)] px-3 pt-2 pb-2.5" style="backdrop-filter:blur(12px);">
-		<p class="{dense ? 'line-clamp-1 text-xs' : 'line-clamp-2 text-[13px]'} leading-[1.55]" style="color:rgba(255,255,255,0.92);">
+	<!-- 底部：正文 / 作者与位置 / 操作栏（混色信息托盘（surface-card-menu），对齐 Figma Make） -->
+	<div class="absolute inset-x-0 bottom-0 border-t px-3 pt-2 pb-2.5" style="background:var(--surface-card-menu);border-color:var(--border-card-menu);">
+		<p class="{dense ? 'line-clamp-1 text-xs' : 'line-clamp-2 text-[13px]'} leading-[1.55]" style="color:var(--neu-text);">
 			{item.content}
 		</p>
 
 		<div class="mt-1.5 flex items-center gap-2">
-			<Avatar src={item.avatar} name={item.user} size={22} style="border:1.5px solid rgba(255,255,255,0.65);" />
-			<span class="text-[11px] text-white" style="font-weight:500;">{item.user}</span>
+			<Avatar src={item.avatar} name={item.user} size={22} style="border:1.5px solid var(--border-card-menu);" />
+			<span class="text-[11px] text-[var(--neu-text)]" style="font-weight:500;">{item.user}</span>
 			<div class="flex items-center gap-0.5 ml-auto">
-				<MapPin style="width:9px;height:9px;color:rgba(255,255,255,0.8);" strokeWidth={1.5} />
-				<span class="text-[10px]" style="color:rgba(255,255,255,0.8);">{item.location}</span>
+				<MapPin style="width:9px;height:9px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+				<span class="text-[10px]" style="color:var(--neu-text-muted);">{item.location}</span>
 			</div>
 		</div>
 
@@ -95,7 +98,7 @@
 			<div class="flex gap-3.5">
 				<button
 					type="button"
-					class="neu-hover-action flex items-center gap-1.5 outline-none {liked ? 'text-[var(--accent-on-scrim)]' : 'text-white/90'}"
+					class="neu-hover-action flex items-center gap-1.5 outline-none {liked ? 'text-[var(--neu-accent-primary)]' : 'text-[var(--neu-text-muted)]'}"
 					onclick={(e) => {
 						e.stopPropagation();
 						onLike();
@@ -104,7 +107,7 @@
 					<Heart style="width:15px;height:15px;" strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
 					<span class="text-[11px]">{item.likes + (liked ? 1 : 0)}</span>
 				</button>
-				<button type="button" class="neu-hover-action flex items-center gap-1.5 outline-none text-white/90" onclick={(e) => e.stopPropagation()}>
+				<button type="button" class="neu-hover-action flex items-center gap-1.5 outline-none text-[var(--neu-text-muted)]" onclick={(e) => e.stopPropagation()}>
 					<MessageCircle style="width:15px;height:15px;" strokeWidth={1.5} />
 					<span class="text-[11px]">{item.comments}</span>
 				</button>
@@ -112,7 +115,7 @@
 			<div class="flex gap-3">
 				<button
 					type="button"
-					class="neu-hover-action outline-none {saved ? 'text-[var(--accent-on-scrim)]' : 'text-white/90'}"
+					class="neu-hover-action outline-none {saved ? 'text-[var(--neu-accent-primary)]' : 'text-[var(--neu-text-muted)]'}"
 					onclick={(e) => {
 						e.stopPropagation();
 						onSave();
@@ -120,7 +123,7 @@
 				>
 					<Bookmark style="width:15px;height:15px;" strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />
 				</button>
-				<button type="button" class="neu-hover-action outline-none text-white/90" onclick={(e) => e.stopPropagation()}>
+				<button type="button" class="neu-hover-action outline-none text-[var(--neu-text-muted)]" onclick={(e) => e.stopPropagation()}>
 					<Share2 style="width:15px;height:15px;" strokeWidth={1.5} />
 				</button>
 			</div>

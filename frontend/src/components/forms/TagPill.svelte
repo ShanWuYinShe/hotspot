@@ -27,11 +27,11 @@
 		type="button"
 		aria-pressed={active}
 		class={cn(
-			'rounded-full outline-none transition-colors px-3 py-1 cursor-pointer hover:border-[var(--neu-border-pressed)] hover:text-[var(--neu-text)] focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]',
+			'rounded-full outline-none transition-colors px-3 py-1 cursor-pointer neu-surface-ghost focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]',
 			sizeClasses[size],
 			active
-				? 'bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] border border-[var(--neu-accent-soft-border)]'
-				: 'bg-transparent text-[var(--neu-text-muted)] border border-[var(--neu-border)]',
+				? 'bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] border border-[var(--neu-accent-soft-border)] font-semibold'
+				: 'text-[var(--neu-text-muted)]',
 			className
 		)}
 		onclick={onClick}
@@ -44,8 +44,8 @@
 			'rounded-full outline-none transition-colors px-3 py-1',
 			sizeClasses[size],
 			active
-				? 'bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] border border-[var(--neu-accent-soft-border)]'
-				: 'bg-transparent text-[var(--neu-text-muted)] border border-[var(--neu-border)]',
+				? 'bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] border border-[var(--neu-accent-soft-border)] font-semibold'
+				: 'text-[var(--neu-text-muted)]',
 			className
 		)}
 	>

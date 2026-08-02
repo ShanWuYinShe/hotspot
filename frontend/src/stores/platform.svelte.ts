@@ -1,12 +1,14 @@
-// Platform store — 响应式平台检测（mobile/tablet/desktop + 横竖屏）。
+// Platform store — 响应式平台检测（mobile/tablet/desktop + 横竖屏 + 宽平板）。
 // 迁移自旧版 PlatformContext（runes 模块单例）。
+// isWideTablet：≥960px 的平板为宽平板（可提升分栏 workspace / 浮动 Dock），
+// 对齐 Figma Make PlatformContext 契约。
 
 export type Platform = 'mobile' | 'tablet' | 'desktop';
 export type Orientation = 'portrait' | 'landscape';
 
-export function detect(): { platform: Platform; orientation: Orientation } {
+export function detect(): { platform: Platform; orientation: Orientation; isWideTablet: boolean } {
   if (typeof window === 'undefined') {
-    return { platform: 'mobile', orientation: 'portrait' };
+    return { platform: 'mobile', orientation: 'portrait', isWideTablet: false };
   }
   const w = window.innerWidth;
   const h = window.innerHeight;
@@ -18,15 +20,18 @@ export function detect(): { platform: Platform; orientation: Orientation } {
   else if (minDim >= 600) platform = 'tablet';
   else platform = 'mobile';
 
-  return { platform, orientation };
+  const isWideTablet = platform === 'tablet' && w >= 960;
+  return { platform, orientation, isWideTablet };
 }
 
 let platform = $state<Platform>('mobile');
 let orientation = $state<Orientation>('portrait');
+let isWideTablet = $state(false);
 
-function apply(value: { platform: Platform; orientation: Orientation }) {
+function apply(value: { platform: Platform; orientation: Orientation; isWideTablet: boolean }) {
   platform = value.platform;
   orientation = value.orientation;
+  isWideTablet = value.isWideTablet;
 }
 
 /** 由根布局调用一次：初始检测 + resize/orientationchange 监听（rAF 节流）。返回清理函数。 */
@@ -49,4 +54,5 @@ export function initPlatform(): () => void {
 export const platformStore = {
   get platform() { return platform; },
   get orientation() { return orientation; },
+  get isWideTablet() { return isWideTablet; },
 };

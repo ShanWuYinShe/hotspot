@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Search, MapPin, X, Users, ChevronRight, Clock, Star, SlidersHorizontal, Crosshair, Check } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
-	import PageHeader from '@/components/shared/PageHeader.svelte';
+	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import * as Popover from '@/components/ui/popover';
 	import { XUZHOU_CENTER, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from './location-data';
@@ -213,7 +213,7 @@
 	<!-- ══ TOP BAR ══ -->
 	<div style="position:absolute;top:0;left:0;right:0;z-index:50;">
 		<PageHeader title="地图探索" onBack={() => history.back()}>
-			{#snippet actions()}
+			{#snippet trailing()}
 				<Popover.Root bind:open={showFilter}>
 					<div bind:this={filterAnchorEl}>
 						<button

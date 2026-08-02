@@ -2,9 +2,9 @@
 	import { goto } from '$app/navigation';
 	import { Search as SearchIcon, TrendingUp, Users, FileText, Clock } from '@lucide/svelte';
 	import { platformStore } from '@/stores/platform.svelte';
-	import PageHeader from '@/components/shared/PageHeader.svelte';
-	import SearchInput from '@/components/shared/SearchInput.svelte';
-	import EmptyState from '@/components/shared/EmptyState.svelte';
+	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import { searchUsers, searchMoments } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 

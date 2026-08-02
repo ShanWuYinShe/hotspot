@@ -1,5 +1,5 @@
 <script lang="ts">
-	import OnlineDot from '@/components/shared/OnlineDot.svelte';
+	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 
 	// 会话列表项（迁移自旧版 MessagesPage 内 ChatListItem）。
 

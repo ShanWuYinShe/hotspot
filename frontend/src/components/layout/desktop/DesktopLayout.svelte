@@ -11,10 +11,10 @@
 	import { composer, openComposer, closeComposer } from '@/stores/composer.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import AppearanceMenu from '@/components/layout/AppearanceMenu.svelte';
-	import ActionIconButton from '@/components/shared/ActionIconButton.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import CreateSheet from '@/components/layout/CreateSheet.svelte';
-	import SidebarNavItem from '@/components/layout/SidebarNavItem.svelte';
-	import LocationCard from '@/components/layout/LocationCard.svelte';
+	import SidebarNavItem from '@/components/layout/desktop/SidebarNavItem.svelte';
+	import LocationCard from '@/components/layout/desktop/LocationCard.svelte';
 	import { ROUTES, getDesktopNavId, type DesktopNavId } from '@/lib/routes';
 	import imgHotSpot from '@/assets/9254a1e0e11b516a6c1aecb80d92b66f2caa243e.png';
 
@@ -138,20 +138,19 @@
 			<span class="tracking-tight" style="font-size:17px;color:var(--neu-text);">HotSpot</span>
 		</button>
 
-		<ActionIconButton
-			icon={isSidebarCollapsed ? PanelLeftOpen : PanelLeftClose}
-			label={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
-			onClick={() => (isSidebarCollapsed = !isSidebarCollapsed)}
-			variant="ghost"
-			size={36}
-		/>
-
 		<!-- Spacer -->
 		<div class="flex-1"></div>
 
 		<!-- Right Actions -->
 		<div class="flex items-center gap-0.5">
-			<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} />
+			<ActionIconButton
+				icon={Search}
+				label="搜索"
+				onClick={() => void goto(ROUTES.search)}
+				variant="ghost"
+				size={36}
+			/>
+
 			<ActionIconButton
 				icon={Plus}
 				label="发布"
@@ -203,11 +202,27 @@
 
 	<!-- BODY — sidebar + main content -->
 	<div class="desktop-workspace relative z-0 flex flex-1 overflow-hidden" style="gap:0px;">
-		<!-- Sidebar (192px, fixed width) -->
+		<!-- Sidebar (224px expanded / 72px collapsed, fixed width) -->
 		<aside
-			class="flex flex-col flex-shrink-0 overflow-hidden box-border"
-			style="width:{isSidebarCollapsed ? 56 : 'calc(192px + var(--workspace-gutter) * 2)'};padding:{isSidebarCollapsed ? 'calc(var(--workspace-gutter) / 2) 8px' : 'var(--workspace-gutter)'};background:color-mix(in srgb, var(--neu-bg) 80%, transparent);border-right:1px solid var(--neu-border);"
+			class="relative flex flex-col flex-shrink-0 overflow-visible box-border transition-[width] duration-200"
+			style="width:{isSidebarCollapsed ? 72 : 224}px;padding:0.75rem;"
 		>
+			<!-- Edge-mounted collapse control: leaves the navigation rhythm untouched -->
+			<button
+				type="button"
+				class="neu-hover-btn absolute -right-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border outline-none transition-colors hover:bg-[var(--neu-accent-soft)] focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
+				style="color:var(--neu-text-muted);background:var(--page-bg);border-color:var(--neu-border);box-shadow:0 2px 8px var(--neu-shadow-dark);"
+				aria-label={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
+				aria-pressed={isSidebarCollapsed}
+				title={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
+				onclick={() => (isSidebarCollapsed = !isSidebarCollapsed)}
+			>
+				{#if isSidebarCollapsed}
+					<PanelLeftOpen size={16} strokeWidth={1.7} />
+				{:else}
+					<PanelLeftClose size={16} strokeWidth={1.7} />
+				{/if}
+			</button>
 			<!-- Scrollable nav region — takes all available space -->
 			<div class="flex-1 flex flex-col overflow-y-auto no-scrollbar min-h-0">
 				<!-- Section 1: Discovery nav -->
@@ -243,7 +258,7 @@
 		</aside>
 
 		<!-- Main Content Card -->
-		<main class="desktop-main-panel flex-1 min-w-0 overflow-hidden transition-colors duration-500">
+		<main class="desktop-main-panel flex-1 min-w-0 overflow-hidden border-l transition-colors duration-500" style="border-color:var(--neu-border);">
 			<!-- Inner scroll container — sticky headers inside will stick to this -->
 			<div class={cn('desktop-main-scroll h-full no-scrollbar', isFullCanvas ? 'overflow-hidden' : 'overflow-y-auto')}>
 				<div class={cn('desktop-page-canvas', isFullCanvas && 'h-full')}>
@@ -255,11 +270,7 @@
 
 	<!-- CREATE MODAL — centered dialog on desktop -->
 	<Dialog.Root open={showCreate} onOpenChange={(next) => (next ? openComposer() : closeComposer())}>
-		<Dialog.Content
-			side="center"
-			class="overflow-hidden"
-			style="width:480px;height:78vh;max-height:700px;box-shadow:0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--neu-border), 8px 8px 24px var(--neu-shadow-dark), -8px -8px 24px var(--neu-shadow-light);"
-		>
+		<Dialog.Content side="center" class="overflow-hidden" style="width:480px;height:78vh;max-height:700px;">
 			<CreateSheet onClose={closeComposer} />
 		</Dialog.Content>
 	</Dialog.Root>

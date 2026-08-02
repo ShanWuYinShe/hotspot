@@ -10,8 +10,8 @@
 	import CreateSheet from '@/components/layout/CreateSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import StatusBar from '@/components/layout/StatusBar.svelte';
-	import DesktopLayout from '@/components/layout/DesktopLayout.svelte';
-	import TabletLayout from '@/components/layout/TabletLayout.svelte';
+	import DesktopLayout from '@/components/layout/desktop/DesktopLayout.svelte';
+	import TabletLayout from '@/components/layout/tablet/TabletLayout.svelte';
 	import NavTab from '@/components/layout/NavTab.svelte';
 	import MobileLandscape from '@/components/layout/MobileLandscape.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
@@ -73,7 +73,7 @@
 				<nav
 					aria-label="Main navigation"
 					class="flex-shrink-0 w-full"
-					style="background:color-mix(in srgb, var(--neu-bg) 92%, transparent);backdrop-filter:blur(24px) saturate(1.8);-webkit-backdrop-filter:blur(24px) saturate(1.8);border-top:1px solid var(--neu-border);box-shadow:0 -1px 0 var(--neu-border), 0 -8px 28px var(--neu-shadow-dark);transition:background 0.4s ease, border-color 0.4s ease;"
+					style="background:var(--surface-nav-glass);backdrop-filter:blur(24px) saturate(1.8);-webkit-backdrop-filter:blur(24px) saturate(1.8);border-top:1px solid var(--border-nav-glass);box-shadow:var(--elevation-nav);transition:background 0.4s ease, border-color 0.4s ease;"
 				>
 					<div
 						class="flex items-center justify-between px-2"

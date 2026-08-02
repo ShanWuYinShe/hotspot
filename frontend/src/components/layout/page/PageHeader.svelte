@@ -1,0 +1,66 @@
+<script lang="ts">
+	import type { Snippet } from 'svelte';
+	import { ArrowLeft } from '@lucide/svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import ContentColumn from './ContentColumn.svelte';
+	import { platformStore } from '@/stores/platform.svelte';
+	import { cn } from '@/lib/utils';
+
+	// 布局组件（layout/page）。
+	// PageHeader — 与正文共用同一 ContentColumn gutter 的页面页头。
+	// 对齐 Figma Make layout/page/PageHeader 契约：
+	//   - 内容包在 ContentColumn 内，左/右边缘与页面正文严格对齐
+	//   - 背景 var(--page-bg)（桌面统一画布契约，sticky 时与滚动内容同底）
+	//   - 返回按钮默认仅非桌面显示；showBackOnDesktop 可显式开启
+	//
+	// ┌──────────────── 路由页面 ──────────────────────────┐
+	// │ ┌──────── ContentColumn ────────┐                  │
+	// │ │ ←  标题              trailing  │  (sticky 可选)   │
+	// │ └───────────────────────────────┘                  │
+	// └────────────────────────────────────────────────────┘
+	// 设备范围：桌面、平板和手机通用。
+
+	let {
+		title,
+		subtitle,
+		onBack,
+		backLabel = '返回',
+		trailing,
+		sticky = true,
+		showBackOnDesktop = false,
+		maxWidth,
+		className = ''
+	}: {
+		title: string;
+		subtitle?: string;
+		onBack?: () => void;
+		backLabel?: string;
+		trailing?: Snippet;
+		sticky?: boolean;
+		showBackOnDesktop?: boolean;
+		maxWidth?: number | string;
+		className?: string;
+	} = $props();
+
+	const showBack = $derived(Boolean(onBack) && (platformStore.platform !== 'desktop' || showBackOnDesktop));
+</script>
+
+<header
+	class={cn('shrink-0', sticky && 'sticky top-0 z-20', className)}
+	style="background-color:var(--page-bg);border-bottom:1px solid var(--neu-border);"
+>
+	<ContentColumn {maxWidth} class="flex items-center gap-3 py-4">
+		{#if showBack}
+			<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={36} />
+		{/if}
+		<div class={cn('min-w-0', trailing ? '' : 'flex-1')}>
+			<h1 class="text-[var(--neu-text)] text-[18px] font-medium leading-none">{title}</h1>
+			{#if subtitle}
+				<p class="mt-1 text-[var(--neu-text-muted)] text-[11px]">{subtitle}</p>
+			{/if}
+		</div>
+		{#if trailing}
+			{@render trailing()}
+		{/if}
+	</ContentColumn>
+</header>

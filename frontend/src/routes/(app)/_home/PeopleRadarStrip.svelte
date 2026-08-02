@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ChevronRight } from '@lucide/svelte';
-	import SectionHead from '@/components/home/SectionHead.svelte';
-	import OnlineDot from '@/components/shared/OnlineDot.svelte';
+	import SectionHead from '@/routes/(app)/_home/SectionHead.svelte';
+	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 
 	// 附近的人雷达条——扁平头像横排（迁移自旧版 NearbyFeedPage）。
 

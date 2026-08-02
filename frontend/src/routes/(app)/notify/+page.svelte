@@ -2,12 +2,12 @@
 	import { goto } from '$app/navigation';
 	import { Bell, CheckCheck } from '@lucide/svelte';
 	import { platformStore } from '@/stores/platform.svelte';
-	import DesktopDetailSplit from '@/components/layout/DesktopDetailSplit.svelte';
-	import RailSection from '@/components/layout/RailSection.svelte';
-	import RailUserRow from '@/components/layout/RailUserRow.svelte';
-	import PageHeader from '@/components/shared/PageHeader.svelte';
-	import TagPill from '@/components/shared/TagPill.svelte';
-	import EmptyState from '@/components/shared/EmptyState.svelte';
+	import DesktopDetailSplit from '@/components/layout/desktop/DesktopDetailSplit.svelte';
+	import RailSection from '@/components/layout/desktop/RailSection.svelte';
+	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
+	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import TagPill from '@/components/forms/TagPill.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import NotifRow from './NotifRow.svelte';
 	import { TYPE_CONFIG, type Notif } from './notif-data';
 	import { listNotifications, getUnreadCount, markRead } from '@/api';
@@ -143,7 +143,7 @@
 
 		<div class="h-full overflow-y-auto no-scrollbar">
 			<PageHeader title="通知" sticky onBack={() => history.back()} subtitle={unread > 0 ? `${unread} 条未读` : undefined}>
-				{#snippet actions()}
+				{#snippet trailing()}
 					{#if unread > 0}
 						<button
 							type="button"
@@ -158,28 +158,49 @@
 				{/snippet}
 			</PageHeader>
 
-			<!-- Filter tabs -->
+			<!-- Filter tabs（对齐 Figma Make 通知页：选中实心 accent + glow） -->
 			<div class="flex overflow-x-auto no-scrollbar pb-3 gap-2 px-5" style={shellStyle}>
 				{#each FILTER_TABS as t}
-					<TagPill active={filter === t.id} onClick={() => (filter = t.id)} size="sm">{t.label}</TagPill>
+					<button
+						type="button"
+						aria-pressed={filter === t.id}
+						data-active={filter === t.id ? 'true' : undefined}
+						onclick={() => (filter = t.id)}
+						class="flex-shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
+						style={filter === t.id
+							? 'background:var(--neu-accent-primary);color:white;font-size:12px;box-shadow:0 3px 10px var(--neu-glow);border:none;'
+							: 'background:var(--neu-bg);color:var(--neu-text-muted);font-size:12px;border:1px solid var(--neu-border);box-shadow:3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light);'}
+					>
+						{t.label}
+					</button>
 				{/each}
 			</div>
 
-			<!-- List -->
-			<div class="flex flex-col px-5 pt-3 pb-6 gap-0" style={shellStyle}>
+			<!-- List：每个分组一个连接列表表面（BorderedList 契约；heading 在列表外） -->
+			<div class="flex flex-col px-5 pt-3 pb-6" style={shellStyle}>
 				{#if unreadGroup.length > 0}
 					<p class="uppercase mb-2 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">新消息</p>
-					{#each unreadGroup as n (n.id)}
-						<NotifRow notif={n} onRead={markSingleRead} onRemove={remove} />
-					{/each}
+					<div class="app-list">
+						<div class="app-list-inner">
+							{#each unreadGroup as n (n.id)}
+								<NotifRow notif={n} onRead={markSingleRead} onRemove={remove} />
+							{/each}
+						</div>
+					</div>
 					{#if readGroup.length > 0}
 						<p class="uppercase mt-4 mb-2 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">较早</p>
 					{/if}
 				{/if}
 
-				{#each readGroup as n (n.id)}
-					<NotifRow notif={n} onRead={markSingleRead} onRemove={remove} />
-				{/each}
+				{#if readGroup.length > 0}
+					<div class="app-list">
+						<div class="app-list-inner">
+							{#each readGroup as n (n.id)}
+								<NotifRow notif={n} onRead={markSingleRead} onRemove={remove} />
+							{/each}
+						</div>
+					</div>
+				{/if}
 
 				{#if filtered.length === 0}
 					<EmptyState title="暂无通知">

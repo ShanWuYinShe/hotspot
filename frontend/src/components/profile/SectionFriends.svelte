@@ -2,8 +2,8 @@
 	import { goto } from '$app/navigation';
 	import { MessageCircle } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
-	import TagPill from '@/components/shared/TagPill.svelte';
-	import SearchInput from '@/components/shared/SearchInput.svelte';
+	import TagPill from '@/components/forms/TagPill.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 

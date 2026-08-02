@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { MapPin, Users, Lock, Globe } from '@lucide/svelte';
-	import SectionHead from '@/components/home/SectionHead.svelte';
+	import SectionHead from '@/routes/(app)/_home/SectionHead.svelte';
 
 	// 附近群组横向轮播（迁移自旧版 NearbyFeedPage 内 GroupCarousel）。
 

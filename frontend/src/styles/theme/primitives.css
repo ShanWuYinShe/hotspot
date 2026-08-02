@@ -2,97 +2,102 @@
    Raw color values per theme-mode. These are the only values that change
    between themes. All semantic tokens derive from these via var().
 
+   Values synced with .workwork/Hotspot_Make/src/styles/theme.css 最终生效层
+   （统一画布 pass / 对比度审计 / theme contract repair 之后的级联结果）：
+   - Vibrant / 星际 = 深空蓝体系（#3578D4 → dark #69A8FF）
+   - Forest / 清野 = 纸白扁平体系（#F6F7F3 → dark #161A16）
+
    Naming: --pr-{domain} e.g. --pr-bg, --pr-text, --pr-accent
 ────────────────────────────────────────────────────────────────────── */
 
 /* Default / Vibrant light */
 :root,
 .vibrant {
-  --pr-bg: #FAFAFE;
-  --pr-page-bg: #EEF2FF;
-  --pr-text: #1E1B4B;
-  --pr-text-muted: #514D86;
-  --pr-accent: #4F46E5;
-  --pr-accent-primary: #4F46E5;
-  --pr-glow: rgba(79, 70, 229, 0.30);
+  --pr-bg: #F7FAFF;
+  --pr-page-bg: #F7FAFF;
+  --pr-text: #16233A;
+  --pr-text-muted: #52647F;
+  --pr-accent: #3578D4;
+  --pr-accent-primary: #3578D4;
+  --pr-glow: rgba(53, 120, 212, 0.22);
   --pr-shadow-light: rgba(255, 255, 255, 1);
   --pr-shadow-dark: rgba(99, 91, 200, 0.12);
-  --pr-border: rgba(99, 102, 241, 0.15);
-  --pr-border-pressed: rgba(99, 102, 241, 0.26);
-  --pr-accent-soft: rgba(79, 70, 229, 0.10);
-  --pr-accent-soft-border: rgba(79, 70, 229, 0.32);
-  --pr-hover: rgba(79, 70, 229, 0.12);
-  --pr-active-hover: rgba(79, 70, 229, 0.16);
+  --pr-border: rgba(53, 120, 212, 0.18);
+  --pr-border-pressed: rgba(53, 120, 212, 0.32);
+  --pr-accent-soft: rgba(53, 120, 212, 0.10);
+  --pr-accent-soft-border: rgba(53, 120, 212, 0.28);
+  --pr-hover: rgba(53, 120, 212, 0.10);
+  --pr-active-hover: rgba(53, 120, 212, 0.16);
   --pr-on-accent: #FFFFFF;
-  --pr-online: #0F766E;
-  --pr-hot: #BE123C;
-  --pr-warning: #A16207;
-  --pr-map-user: #4F46E5;
-  --pr-map-group: #047857;
-  --pr-map-post: #C2410C;
-  --pr-overlay-soft: rgba(30, 27, 75, 0.08);
-  --pr-overlay-strong: rgba(14, 10, 35, 0.50);
-  --pr-scrim: linear-gradient(to bottom, rgba(20, 16, 56, 0.04) 0%, rgba(20, 16, 56, 0.52) 100%);
-  --pr-shadow-card: 0 14px 36px rgba(99, 102, 241, 0.14), 0 4px 14px rgba(99, 102, 241, 0.08), 0 0 0 1px rgba(99, 102, 241, 0.07);
-  --pr-shadow-row: 0 8px 20px rgba(99, 102, 241, 0.11), 0 2px 8px rgba(99, 102, 241, 0.07);
-  --pr-shadow-btn: 0 6px 18px rgba(99, 102, 241, 0.20), 0 2px 6px rgba(99, 102, 241, 0.12);
-  --pr-shadow-pill: 0 4px 12px rgba(99, 102, 241, 0.16), 0 1px 4px rgba(99, 102, 241, 0.10);
+  --pr-online: #14B8A6;
+  --pr-hot: #F43F5E;
+  --pr-warning: #F59E0B;
+  --pr-map-user: #3578D4;
+  --pr-map-group: #10B981;
+  --pr-map-post: #F97316;
+  --pr-overlay-soft: rgba(22, 35, 58, 0.08);
+  --pr-overlay-strong: rgba(12, 25, 48, 0.52);
+  --pr-scrim: linear-gradient(to bottom, rgba(16, 35, 66, 0.03) 0%, rgba(16, 35, 66, 0.54) 100%);
+  --pr-shadow-card: 0 12px 28px rgba(53, 120, 212, 0.12), 0 3px 10px rgba(53, 120, 212, 0.07);
+  --pr-shadow-row: 0 6px 16px rgba(53, 120, 212, 0.10);
+  --pr-shadow-btn: 0 5px 14px rgba(53, 120, 212, 0.18);
+  --pr-shadow-pill: 0 3px 9px rgba(53, 120, 212, 0.14);
 }
 
 /* Vibrant dark */
 .vibrant.dark {
-  --pr-bg: #130F26;
-  --pr-page-bg: #07040F;
-  --pr-text: #EAE6FF;
-  --pr-text-muted: #AAA6D8;
-  --pr-accent: #818cf8;
-  --pr-accent-primary: #818cf8;
-  --pr-glow: rgba(129, 140, 248, 0.30);
+  --pr-bg: #0B1424;
+  --pr-page-bg: #0B1424;
+  --pr-text: #E8F1FF;
+  --pr-text-muted: #A5B6CE;
+  --pr-accent: #69A8FF;
+  --pr-accent-primary: #69A8FF;
+  --pr-glow: rgba(105, 168, 255, 0.25);
   --pr-shadow-light: rgba(129, 140, 248, 0.07);
   --pr-shadow-dark: rgba(0, 0, 0, 0.72);
-  --pr-border: rgba(129, 140, 248, 0.14);
-  --pr-border-pressed: rgba(129, 140, 248, 0.26);
-  --pr-accent-soft: rgba(129, 140, 248, 0.14);
-  --pr-accent-soft-border: rgba(129, 140, 248, 0.34);
-  --pr-hover: rgba(129, 140, 248, 0.18);
-  --pr-active-hover: rgba(129, 140, 248, 0.24);
-  --pr-on-accent: #120F2A;
-  --pr-online: #2DD4BF;
+  --pr-border: rgba(136, 183, 255, 0.18);
+  --pr-border-pressed: rgba(136, 183, 255, 0.32);
+  --pr-accent-soft: rgba(105, 168, 255, 0.14);
+  --pr-accent-soft-border: rgba(105, 168, 255, 0.30);
+  --pr-hover: rgba(105, 168, 255, 0.15);
+  --pr-active-hover: rgba(105, 168, 255, 0.22);
+  --pr-on-accent: #071426;
+  --pr-online: #37C99A;
   --pr-hot: #FB7185;
   --pr-warning: #FBBF24;
-  --pr-map-user: #818CF8;
+  --pr-map-user: #69A8FF;
   --pr-map-group: #34D399;
   --pr-map-post: #FB923C;
-  --pr-overlay-soft: rgba(234, 230, 255, 0.08);
-  --pr-overlay-strong: rgba(0, 0, 0, 0.60);
-  --pr-scrim: linear-gradient(to bottom, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.62) 100%);
-  --pr-shadow-card: 0 14px 36px rgba(129, 140, 248, 0.20), 0 4px 14px rgba(129, 140, 248, 0.12);
-  --pr-shadow-row: 0 8px 20px rgba(129, 140, 248, 0.15), 0 2px 8px rgba(129, 140, 248, 0.09);
-  --pr-shadow-btn: 0 6px 18px rgba(129, 140, 248, 0.26), 0 2px 6px rgba(129, 140, 248, 0.14);
-  --pr-shadow-pill: 0 4px 12px rgba(129, 140, 248, 0.20), 0 1px 4px rgba(129, 140, 248, 0.12);
+  --pr-overlay-soft: rgba(232, 241, 255, 0.08);
+  --pr-overlay-strong: rgba(0, 8, 20, 0.62);
+  --pr-scrim: linear-gradient(to bottom, rgba(0, 10, 27, 0.02) 0%, rgba(0, 10, 27, 0.66) 100%);
+  --pr-shadow-card: 0 12px 28px rgba(36, 105, 194, 0.20), 0 3px 10px rgba(0, 0, 0, 0.26);
+  --pr-shadow-row: 0 6px 16px rgba(36, 105, 194, 0.18);
+  --pr-shadow-btn: 0 5px 14px rgba(105, 168, 255, 0.24);
+  --pr-shadow-pill: 0 3px 9px rgba(105, 168, 255, 0.20);
 }
 
 /* Forest light */
 .forest {
-  --pr-bg: #F9F9F5;
-  --pr-page-bg: #EDECEA;
-  --pr-text: #1B1F1B;
-  --pr-text-muted: #58685E;
+  --pr-bg: #F6F7F3;
+  --pr-page-bg: #F6F7F3;
+  --pr-text: #152219;
+  --pr-text-muted: #3F5547;
   --pr-accent: #3D7A55;
   --pr-accent-primary: #3D7A55;
   --pr-glow: rgba(61, 122, 85, 0.18);
   --pr-shadow-light: rgba(255, 255, 255, 0.0);
   --pr-shadow-dark: rgba(0, 0, 0, 0.0);
-  --pr-border: rgba(61, 122, 85, 0.13);
-  --pr-border-pressed: rgba(61, 122, 85, 0.24);
-  --pr-accent-soft: rgba(61, 122, 85, 0.10);
-  --pr-accent-soft-border: rgba(61, 122, 85, 0.32);
-  --pr-hover: rgba(61, 122, 85, 0.11);
-  --pr-active-hover: rgba(61, 122, 85, 0.16);
+  --pr-border: rgba(42, 73, 52, 0.24);
+  --pr-border-pressed: rgba(42, 73, 52, 0.38);
+  --pr-accent-soft: rgba(61, 122, 85, 0.11);
+  --pr-accent-soft-border: rgba(61, 122, 85, 0.30);
+  --pr-hover: rgba(61, 122, 85, 0.12);
+  --pr-active-hover: rgba(61, 122, 85, 0.17);
   --pr-on-accent: #FFFFFF;
   --pr-online: #3D7A55;
-  --pr-hot: #78602E;
-  --pr-warning: #806426;
+  --pr-hot: #8E6F35;
+  --pr-warning: #9A7A35;
   --pr-map-user: #3D7A55;
   --pr-map-group: #638B46;
   --pr-map-post: #A57C38;
@@ -108,21 +113,21 @@
 /* Forest dark */
 .forest.dark {
   --pr-bg: #161A16;
-  --pr-page-bg: #0E110E;
-  --pr-text: #DCE8DE;
-  --pr-text-muted: #9AAFA0;
+  --pr-page-bg: #161A16;
+  --pr-text: #E8F1E9;
+  --pr-text-muted: #A8BDAE;
   --pr-accent: #52B878;
   --pr-accent-primary: #52B878;
   --pr-glow: rgba(82, 184, 120, 0.20);
   --pr-shadow-light: rgba(255, 255, 255, 0.0);
   --pr-shadow-dark: rgba(0, 0, 0, 0.0);
-  --pr-border: rgba(82, 184, 120, 0.12);
-  --pr-border-pressed: rgba(82, 184, 120, 0.22);
+  --pr-border: rgba(169, 199, 178, 0.18);
+  --pr-border-pressed: rgba(169, 199, 178, 0.30);
   --pr-accent-soft: rgba(82, 184, 120, 0.12);
   --pr-accent-soft-border: rgba(82, 184, 120, 0.34);
-  --pr-hover: rgba(82, 184, 120, 0.14);
-  --pr-active-hover: rgba(82, 184, 120, 0.20);
-  --pr-on-accent: #0B1A10;
+  --pr-hover: rgba(82, 184, 120, 0.18);
+  --pr-active-hover: rgba(82, 184, 120, 0.24);
+  --pr-on-accent: #0C1911;
   --pr-online: #52B878;
   --pr-hot: #C4A75A;
   --pr-warning: #C4A75A;
@@ -131,7 +136,7 @@
   --pr-map-post: #C4A75A;
   --pr-overlay-soft: rgba(220, 232, 222, 0.07);
   --pr-overlay-strong: rgba(0, 0, 0, 0.54);
-  --pr-scrim: linear-gradient(to bottom, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.56) 100%);
+  --pr-scrim: linear-gradient(to bottom, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.56) 100%);
   --pr-shadow-card: 0 0 0 1.5px rgba(82, 184, 120, 0.26);
   --pr-shadow-row: 0 0 0 1px rgba(82, 184, 120, 0.20);
   --pr-shadow-btn: 0 0 0 1.5px rgba(82, 184, 120, 0.32);

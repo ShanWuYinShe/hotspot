@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { UserPlus, Check, TrendingUp, Heart } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
-	import EmptyState from '@/components/shared/EmptyState.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 

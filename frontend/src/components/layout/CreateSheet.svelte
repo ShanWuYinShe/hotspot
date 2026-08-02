@@ -1,16 +1,20 @@
 <script lang="ts">
 	import { Hash, ImagePlus, Lock, MapPin, Smile, Users, X } from '@lucide/svelte';
 	import type { Component } from 'svelte';
-	import ActionIconButton from '@/components/shared/ActionIconButton.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { loadDefaultLocation, type GeoPoint } from '@/lib/default-location';
 	import { createMoment } from '@/api';
 
 	// 三端共用的发布器（手机 Sheet / 平板 Sheet / 桌面对话框）。
-	// 迁移自旧版 CreateSheet。
+	// 迁移自旧版 CreateSheet。对齐 Figma Make：header 提供「创建群组」surface 切换。
+
+	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
 
 	let { onClose }: { onClose: () => void } = $props();
+
+	let surface = $state<'moment' | 'group'>('moment');
 
 	const MOOD_TAGS = ['松弛', '漫游', '咖啡', '展览', '自然', '夜色'];
 	const LOCATIONS = ['徐州 · 云龙湖附近', '徐州 · 回龙窝', '徐州 · 彭城广场'];
@@ -88,6 +92,7 @@
 	};
 </script>
 
+{#if surface === 'moment'}
 <form
 	class="flex h-full w-full flex-col overflow-hidden bg-[var(--neu-bg)] text-[var(--neu-text)]"
 	onsubmit={(event) => {
@@ -106,7 +111,16 @@
 					记录此刻
 				</h1>
 			</div>
-			<ActionIconButton icon={X} label="关闭发布器" onClick={onClose} size={36} />
+			<div class="flex items-center gap-2">
+				<button
+					type="button"
+					onclick={() => (surface = 'group')}
+					class="rounded-full border border-[var(--neu-accent-soft-border)] bg-[var(--neu-accent-soft)] px-3 py-1.5 text-[11px] font-medium text-[var(--neu-accent-primary)] outline-none transition-colors hover:bg-[var(--neu-accent-primary)] hover:text-white focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
+				>
+					创建群组
+				</button>
+				<ActionIconButton icon={X} label="关闭发布器" onClick={onClose} size={36} />
+			</div>
 		</div>
 	</header>
 
@@ -268,4 +282,8 @@
 		</button>
 	</footer>
 </form>
+{:else}
+	<!-- 创建群组 surface（对齐 Figma Make CreateSheet 的 surface 切换） -->
+	<CreateGroupSheet onClose={onClose} />
+{/if}
 

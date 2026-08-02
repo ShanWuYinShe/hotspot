@@ -3,10 +3,10 @@
 	import { Plus, Users, ChevronRight, Clock, Shield } from '@lucide/svelte';
 	import { platformStore } from '@/stores/platform.svelte';
 	import * as Dialog from '@/components/ui/dialog';
-	import CreateGroupSheet from '@/components/groups/CreateGroupSheet.svelte';
+	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
-	import SearchInput from '@/components/shared/SearchInput.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import { useMyGroups } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 

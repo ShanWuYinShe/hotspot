@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, Crosshair, Check } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
-	import PageHeader from '@/components/shared/PageHeader.svelte';
+	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { XUZHOU_CENTER, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from './location-data';
 	import {
@@ -95,7 +95,7 @@
 		<!-- Header -->
 		<div class="flex-shrink-0">
 			<PageHeader title="地图探索" onBack={() => history.back()} subtitle="江苏·徐州" sticky>
-				{#snippet actions()}
+				{#snippet trailing()}
 					<button
 						type="button"
 						class="neu-hover-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 neu-circle-hover bg-[var(--neu-bg)]"

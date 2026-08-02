@@ -5,12 +5,12 @@
 	import { platformStore } from '@/stores/platform.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import { getTrending, getNearbyUsers, getNearbyGroups } from '@/api';
-	import SectionHead from '@/components/home/SectionHead.svelte';
-	import HeroStats from '@/components/home/HeroStats.svelte';
-	import PeopleRadarStrip, { type NearbyUser } from '@/components/home/PeopleRadarStrip.svelte';
-	import ActivityList, { type Activity } from '@/components/home/ActivityList.svelte';
-	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
-	import NearbyUsersFlatList from '@/components/home/NearbyUsersFlatList.svelte';
+	import SectionHead from '@/routes/(app)/_home/SectionHead.svelte';
+	import HeroStats from '@/routes/(app)/_home/HeroStats.svelte';
+	import PeopleRadarStrip, { type NearbyUser } from '@/routes/(app)/_home/PeopleRadarStrip.svelte';
+	import ActivityList, { type Activity } from '@/routes/(app)/_home/ActivityList.svelte';
+	import GroupCarousel, { type NearbyGroup } from '@/routes/(app)/_home/GroupCarousel.svelte';
+	import NearbyUsersFlatList from '@/routes/(app)/_home/NearbyUsersFlatList.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 首页「附近」：Hero 统计 + 附近用户雷达条 + 话题活动 + 群组轮播 + 推荐列表。

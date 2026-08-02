@@ -4,12 +4,12 @@
 	import { platformStore } from '@/stores/platform.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import * as Dialog from '@/components/ui/dialog';
-	import CreateGroupSheet from '@/components/groups/CreateGroupSheet.svelte';
+	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
-	import PageHeader from '@/components/shared/PageHeader.svelte';
-	import SearchInput from '@/components/shared/SearchInput.svelte';
-	import TagPill from '@/components/shared/TagPill.svelte';
-	import EmptyState from '@/components/shared/EmptyState.svelte';
+	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
+	import TagPill from '@/components/forms/TagPill.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import FeaturedGroupCard from './FeaturedGroupCard.svelte';
 	import GroupCard from './GroupCard.svelte';
 	import { mapGroup, type Group } from './group-data';
@@ -87,20 +87,20 @@
 </script>
 
 <PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} sticky onBack={() => history.back()}>
-	{#snippet actions()}
-		<button
-			type="button"
-			class="neu-hover-btn flex items-center gap-1 px-3 py-1.5 rounded-full neu-focus-ring bg-[var(--neu-accent-primary)] text-white text-xs font-semibold"
-			style="box-shadow:0 3px 10px var(--neu-glow);"
-			onclick={() => (showCreate = true)}
-		>
-			<Plus size={14} />
-			创建
-		</button>
-	{/snippet}
-	{#snippet children()}
-		<div class="hidden sm:flex flex-1 max-w-sm ml-3">
-			<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" compact />
+	{#snippet trailing()}
+		<div class="flex items-center gap-2">
+			<div class="hidden sm:flex flex-1 max-w-sm">
+				<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" compact />
+			</div>
+			<button
+				type="button"
+				class="neu-hover-btn flex items-center gap-1 px-3 py-1.5 rounded-full neu-focus-ring bg-[var(--neu-accent-primary)] text-white text-xs font-semibold"
+				style="box-shadow:0 3px 10px var(--neu-glow);"
+				onclick={() => (showCreate = true)}
+			>
+				<Plus size={14} />
+				创建
+			</button>
 		</div>
 	{/snippet}
 </PageHeader>

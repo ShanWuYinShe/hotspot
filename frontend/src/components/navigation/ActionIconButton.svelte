@@ -34,16 +34,16 @@
 
 	const highlighted = $derived(!disabled && (active || (variant === 'ghost' && hovered)));
 	const iconColor = $derived(
-		tone === 'inverse' ? 'white' : tone === 'accent' || highlighted ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'
+		tone === 'inverse' ? 'var(--content-inverse)' : tone === 'accent' || highlighted ? 'var(--neu-accent-primary)' : 'var(--content-secondary)'
 	);
 
 	const style = $derived.by(() => {
 		if (variant === 'overlay') {
-			return `width:${size}px;height:${size}px;background:rgba(0,0,0,.35);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.25);`;
+			return `width:${size}px;height:${size}px;background:var(--surface-overlay);backdrop-filter:blur(10px);border:1px solid var(--border-inverse);`;
 		} else if (variant === 'ghost') {
 			return `width:${size}px;height:${size}px;background:${highlighted ? (active ? (hovered ? 'var(--neu-active-hover)' : 'var(--neu-accent-soft)') : 'transparent') : 'transparent'};border:${active ? `1px solid ${hovered ? 'var(--neu-accent-primary)' : 'var(--neu-accent-soft-border)'}` : '1px solid transparent'};`;
 		}
-		return `width:${size}px;height:${size}px;background:${active ? (hovered ? 'var(--neu-active-hover)' : 'var(--neu-accent-soft)') : 'var(--neu-bg)'};border:${active ? `1px solid ${hovered ? 'var(--neu-accent-primary)' : 'var(--neu-accent-soft-border)'}` : '1px solid var(--neu-border)'};box-shadow:${active || themeStore.theme === 'forest' ? 'none' : '4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light)'};`;
+		return `width:${size}px;height:${size}px;background:${active ? (hovered ? 'var(--neu-active-hover)' : 'var(--neu-accent-soft)') : 'var(--surface-raised)'};border:${active ? `1px solid ${hovered ? 'var(--neu-accent-primary)' : 'var(--neu-accent-soft-border)'}` : '1px solid var(--border-subtle)'};box-shadow:${active || themeStore.theme === 'forest' ? 'none' : '4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light)'};`;
 	});
 </script>
 

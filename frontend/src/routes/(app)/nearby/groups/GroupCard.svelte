@@ -9,7 +9,7 @@
 </script>
 
 <div
-	class="neu-hover-card relative h-full w-full overflow-hidden rounded-[18px] aspect-[3/4] cursor-pointer neu-surface-flat neu-card-hover neu-focus-ring"
+	class="image-hover-frame neu-hover-card relative h-full w-full overflow-hidden rounded-[18px] aspect-[3/4] cursor-pointer neu-surface-flat neu-card-hover neu-focus-ring"
 	style="background:var(--neu-bg);"
 	role="button"
 	tabindex="0"
@@ -23,8 +23,8 @@
 	}}
 >
 	{#if group.banner}
-		<img src={group.banner} alt={group.name} class="absolute inset-0 h-full w-full object-cover" />
-	{:else}
+		<img src={group.banner} alt={group.name} class="image-hover-frame__image absolute inset-0 h-full w-full object-cover" />
+	{:else}}
 		<!-- 无封面：accent 主题渐变占位 -->
 		<div
 			class="absolute inset-0 flex items-center justify-center"
@@ -33,6 +33,9 @@
 			<span class="text-[var(--neu-accent-primary)] text-3xl font-semibold">{Array.from(group.name)[0] ?? '群'}</span>
 		</div>
 	{/if}
+
+	<!-- 图片渐变：与信息托盘自然过渡（对齐 NearbyImageCard media-scrim） -->
+	<div class="pointer-events-none absolute inset-0" style="background:var(--surface-media-scrim-card);"></div>
 
 	<!-- 左上：分类 -->
 	<span class="absolute top-2 left-2 px-1.5 py-0.5 rounded-full text-white bg-[var(--neu-accent-primary)] text-[9px]">{group.category}</span>
@@ -46,10 +49,10 @@
 		{/if}
 	</span>
 
-	<!-- 底部：群名 / 活动 / 成员与加入（半透明深色玻璃背景，有图无图都保证可读） -->
-	<div class="absolute inset-x-0 bottom-0 bg-[var(--card-scrim)] px-3 pt-2 pb-2.5" style="backdrop-filter:blur(12px);">
-		<p class="line-clamp-1 text-white text-[13px] font-semibold">{group.name}</p>
-		<p class="flex items-center gap-1 truncate text-white/80 text-[10px] mt-0.5">
+	<!-- 底部：群名 / 活动 / 成员与加入（混色信息托盘（surface-card-menu），对齐 Figma Make） -->
+	<div class="absolute inset-x-0 bottom-0 border-t px-3 pt-2 pb-2.5" style="background:var(--surface-card-menu);border-color:var(--border-card-menu);">
+		<p class="line-clamp-1 text-[var(--neu-text)] text-[13px] font-semibold">{group.name}</p>
+		<p class="flex items-center gap-1 truncate text-[var(--neu-text-muted)] text-[10px] mt-0.5">
 			<CalendarDays size={10} />
 			{group.activity}
 		</p>
@@ -57,10 +60,10 @@
 			<div class="flex items-center gap-1.5 min-w-0">
 				<div class="flex -space-x-2 flex-shrink-0">
 					{#each group.avatars as avatar, index}
-						<img src={avatar} alt="群成员" class="w-5 h-5 rounded-full object-cover" style="border:1px solid rgba(255,255,255,0.45);z-index:{3 - index};" />
+						<img src={avatar} alt="群成员" class="w-5 h-5 rounded-full object-cover" style="border:1px solid var(--border-card-menu);z-index:{3 - index};" />
 					{/each}
 				</div>
-				<span class="flex items-center gap-1 truncate text-white/80 text-[10px]">
+				<span class="flex items-center gap-1 truncate text-[var(--neu-text-muted)] text-[10px]">
 					<Users size={10} />
 					{group.members} 人
 					<MapPin size={10} class="ml-1" />

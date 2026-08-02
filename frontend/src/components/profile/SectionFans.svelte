@@ -2,8 +2,8 @@
 	import { goto } from '$app/navigation';
 	import { UserPlus, Check } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
-	import EmptyState from '@/components/shared/EmptyState.svelte';
-	import DataDisplay, { type MetricItem } from '@/components/shared/DataDisplay.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import DataDisplay, { type MetricItem } from '@/components/data-display/DataDisplay.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 

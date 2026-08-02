@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Check, Moon, Palette, Sun, Database } from '@lucide/svelte';
-	import ActionIconButton from '@/components/shared/ActionIconButton.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import { themeStore, toggleDark, setTheme } from '@/stores/theme.svelte';
 	import * as Popover from '@/components/ui/popover';
 
@@ -83,11 +83,11 @@
 			onClick={() => (open = !open)}
 			variant="ghost"
 			active={open}
-			size={36}
+			size={34}
 		/>
 	</div>
 
-	<Popover.Content customAnchor={rootEl} class="w-[244px] rounded-[18px] p-2.5" role="dialog" aria-label="外观设置">
+	<Popover.Content customAnchor={rootEl} class="w-[230px] rounded-relaxed p-2.5" role="dialog" aria-label="外观设置">
 			<div class="px-2 pb-2">
 				<p class="neu-eyebrow">外观</p>
 				<p class="mt-1 text-[11px] text-[var(--neu-text-muted)]">
@@ -103,26 +103,23 @@
 					<p id="theme-choice-label" class="neu-eyebrow">主题</p>
 					<span class="text-[10px] text-[var(--neu-text-muted)]">选择一种基调</span>
 				</div>
-				<div class="grid grid-cols-2 gap-1" role="group" aria-label="选择主题">
+				<div class="grid grid-cols-2 gap-1.5" role="group" aria-label="选择主题">
 					{#each THEMES as item}
 						{@const selected = themeStore.theme === item.id}
 						<button
 							type="button"
 							onclick={() => setTheme(item.id)}
 							aria-pressed={selected}
-							class="flex min-w-0 items-center gap-2 rounded-[12px] px-2 py-2 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] {selected
+							class="rounded-small p-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] {selected
 								? 'bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] hover:bg-[var(--neu-active-hover)]'
 								: 'neu-surface-ghost text-[var(--neu-text-muted)]'}"
 						>
-							<span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full" style="background:{item.swatch};">
-								{#if selected}
-									<Check size={13} color="white" strokeWidth={2.5} />
-								{/if}
-							</span>
-							<span class="min-w-0">
-								<span class="block truncate text-[12px] font-medium">{item.label}</span>
-								<span class="block truncate text-[10px] text-[var(--neu-text-muted)]">{item.note}</span>
-							</span>
+							<span
+								class="mb-2 block h-5 w-5 rounded-full"
+								style="background:{item.swatch};box-shadow:0 0 0 3px {selected ? 'var(--neu-accent-soft)' : 'transparent'};"
+							></span>
+							<span class="block text-[12px] font-medium" style="color:var(--neu-text);">{item.label}</span>
+							<span class="mt-0.5 block text-[10px] text-[var(--neu-text-muted)]">{item.note}</span>
 						</button>
 					{/each}
 				</div>
@@ -132,7 +129,7 @@
 				type="button"
 				onclick={toggleDark}
 				aria-pressed={themeStore.isDark}
-				class="neu-hover-btn mt-2 flex w-full items-center justify-between rounded-[12px] ring-1 ring-[var(--neu-border)] px-3 py-2.5 text-left outline-none transition-colors hover:bg-[var(--neu-accent-soft)] focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
+				class="neu-hover-btn neu-surface-ghost mt-2 flex w-full items-center justify-between rounded-small px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
 				style="color:var(--neu-text);"
 			>
 				<span class="flex items-center gap-2">
@@ -150,8 +147,8 @@
 				</span>
 				<span class="relative h-5 w-[34px] overflow-hidden rounded-full" style="background:{themeStore.isDark ? 'var(--neu-accent-primary)' : 'var(--neu-border-pressed)'};">
 					<span
-						class="absolute top-[3px] h-[14px] w-[14px] rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.18)]"
-						style="left:{themeStore.isDark ? 17 : 3}px;transition:left 0.2s cubic-bezier(0.34,1.56,0.64,1);"
+						class="absolute top-[3px] h-[14px] w-[14px] rounded-full"
+						style="background:var(--surface-control-thumb);box-shadow:var(--elevation-control-thumb);left:{themeStore.isDark ? 17 : 3}px;transition:left 0.2s cubic-bezier(0.34,1.56,0.64,1);"
 					></span>
 				</span>
 			</button>
