@@ -1,5 +1,5 @@
 /** Canonical application URLs mirror backend domains and resource names. */
-export type ProfileSection = "moments" | "groups" | "relationships";
+export type ProfileSection = "moments" | "groups" | "friends" | "following" | "fans";
 
 export const ROUTES = {
   home: "/",

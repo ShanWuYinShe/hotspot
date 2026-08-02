@@ -1,152 +1,129 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Share2, MapPin, Camera, Pencil } from '@lucide/svelte';
-	import { platformStore } from '@/stores/platform.svelte';
+	import { Camera, ChevronRight, Heart, ImageIcon, MapPin, Pencil, Settings, UserCheck, UserPlus, Users } from '@lucide/svelte';
 	import AppearanceMenu from '@/components/layout/AppearanceMenu.svelte';
-									import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-	import ProfileTabs, { type Tab } from '@/components/profile/ProfileTabs.svelte';
-	import GalleryGrid from '@/components/profile/GalleryGrid.svelte';
-	import { useAccountData, useGalleryPosts, useReactedPosts, useFavoritePosts, type GalleryPost } from '@/lib/profile-data.svelte';
-	import { ROUTES } from '@/lib/routes';
+	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
+	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import { useAccountData } from '@/lib/profile-data.svelte';
+	import { ROUTES, type ProfileSection } from '@/lib/routes';
 
-	// 移动/平板个人主页：Hero 身份卡 + Tab 画廊 + 平板右侧陪伴栏。
-	// 迁移自旧版 ProfileFeature 内 ProfileMobile。
+	// 移动/平板个人主页（对齐 Figma Make ProfileCompact 契约）：
+	// 资料页眉 + 身份卡（68px 头像 + 编辑按钮 + stats 横条）+ 个人数据 5 行链接（无 Tab/画廊）。
 
 	const { avatar, nickname, stats } = useAccountData();
-	const myPosts = useGalleryPosts('my');
-	const reacted = useReactedPosts();
-	const savedP = useFavoritePosts();
 
-	let activeTab = $state<Tab>('posts');
-	const postsMap = $derived({ posts: myPosts.posts, liked: reacted.posts, saved: savedP.posts } as Record<Tab, GalleryPost[]>);
+	const DATA_ITEMS: { section: ProfileSection; label: string; detail: string; icon: typeof ImageIcon }[] = [
+		{ section: 'moments', label: '我的瞬间', detail: '查看已发布的记录', icon: ImageIcon },
+		{ section: 'groups', label: '我的群组', detail: `${stats.groups_count} 个正在参与`, icon: Users },
+		{ section: 'friends', label: '好友', detail: `${stats.friends_count} 位好友`, icon: Heart },
+		{ section: 'following', label: '关注', detail: `${stats.following_count} 人`, icon: UserPlus },
+		{ section: 'fans', label: '粉丝', detail: `${stats.followers_count} 人`, icon: UserCheck }
+	];
 
-	const isTablet = $derived(platformStore.platform === 'tablet');
-	const tabletShellStyle = $derived(isTablet ? 'max-width:884px;width:100%;' : '');
-	const mainColStyle = $derived(isTablet ? 'max-width:560px;' : '');
-	const containerStyle = $derived(
-		isTablet ? 'max-width:560px;margin-left:auto;margin-right:auto;width:100%;' : ''
-	);
+	const statsList = [
+		{ label: '帖子', value: stats.moments_count, section: 'moments' as const },
+		{ label: '关注者', value: stats.followers_count, section: 'fans' as const },
+		{ label: '足迹', value: 27, section: null as const }
+	];
 </script>
 
-<div class="sticky top-0 z-20 py-3 bg-[var(--neu-bg)]" style="border-bottom:1px solid var(--neu-border);">
-	<div class="{isTablet ? 'mx-auto px-0 flex gap-6' : 'px-5'}" style={tabletShellStyle}>
-		<div class="{isTablet ? 'mx-auto w-full lg:mx-0 min-w-0 px-5' : 'w-full px-0'}" style={mainColStyle}>
-			<div class="flex items-center justify-between">
-				<div>
-					<p class="text-[var(--neu-text)] text-lg">鹿鸣</p>
-					<p class="text-[var(--neu-text-muted)] text-[11px] mt-px">@elara.v</p>
-				</div>
-				<div class="flex gap-2">
-					<ActionIconButton icon={Share2} label="分享个人主页" size={36} />
+<StandardPageLayout contentClassName="pt-5 pb-8">
+	{#snippet header()}
+		<!-- 资料页眉（对齐 Figma Make：eyebrow + 设置入口） -->
+		<div class="border-b border-[var(--neu-border)]" style="background:var(--neu-bg);">
+			<ContentColumn class="flex items-center justify-between py-3">
+				<p class="text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--neu-accent-primary)]">个人资料</p>
+				<div class="flex items-center gap-1.5">
 					<AppearanceMenu />
+					<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} size={34} />
 				</div>
-			</div>
+			</ContentColumn>
 		</div>
-		{#if isTablet}
-			<div class="hidden lg:block flex-shrink-0" style="width:var(--context-rail-width);"></div>
-		{/if}
-	</div>
-</div>
+	{/snippet}
 
-<div class="animate-fade-in {isTablet ? 'mx-auto px-0 flex gap-6 pb-6 pt-5' : 'flex flex-col w-full pb-6'}" style={tabletShellStyle}>
-	<!-- Main column -->
-	<div class="{isTablet ? 'mx-auto w-full lg:mx-0 min-w-0 flex flex-col' : 'flex flex-col w-full'}" style={mainColStyle}>
-		<!-- Hero identity card -->
-		<div class={isTablet ? 'px-5' : 'px-5 pt-5'}>
-			<div class="neu-ambient-glow">
-				<div class="neu-surface-hero rounded-[24px] flex flex-col items-center" style="padding:24px 20px 18px;">
-					<!-- Avatar -->
-					<div class="relative mb-3">
-						<div
-							class="rounded-full overflow-hidden"
-							style="width:92px;height:92px;border:3px solid var(--neu-bg);box-shadow:0 6px 18px var(--neu-glow);"
-						>
+	<!-- 身份卡（compact） -->
+	<section class="rounded-panel border border-[var(--neu-border)] neu-surface-flat" aria-label="个人资料">
+		<div class="p-5">
+			<div class="flex items-start justify-between gap-5">
+				<div class="flex min-w-0 items-center gap-4">
+					<div class="relative shrink-0">
+						<div class="overflow-hidden rounded-full border-2 border-[var(--neu-bg)] bg-[var(--neu-bg)] p-1">
 							{#if avatar}
-								<img src={avatar} alt={nickname || '用户'} class="w-full h-full object-cover" />
+								<img src={avatar} alt={nickname || '用户'} class="rounded-full object-cover" style="width:68px;height:68px;" />
 							{:else}
-								<span class="text-[var(--neu-text-muted)] text-[32px]">{(nickname || '?')[0]}</span>
+								<span class="flex items-center justify-center text-[var(--neu-text-muted)]" style="width:68px;height:68px;font-size:28px;">{(nickname || '?')[0]}</span>
 							{/if}
 						</div>
 						<button
 							type="button"
-							class="neu-hover-btn absolute bottom-0 right-0 flex items-center justify-center rounded-full outline-none bg-[var(--neu-accent-primary)]"
-							style="width:26px;height:26px;border:2.5px solid var(--neu-bg);"
-						>
-							<Camera style="width:12px;height:12px;color:white;" strokeWidth={2} />
-						</button>
-					</div>
-
-					<!-- Identity -->
-					<h2 class="text-[var(--neu-text)] text-[22px]">鹿鸣</h2>
-					<span class="text-[var(--neu-text-muted)] text-xs mt-0.5">@elara.v</span>
-					<p class="text-[var(--neu-text-muted)] text-xs text-center pt-2.5 px-5 pb-1 leading-relaxed">
-						触感思考者 · 在流动中寻觅静止
-					</p>
-					<div class="flex items-center gap-1 mb-4">
-						<MapPin style="width:11px;height:11px;color:var(--neu-accent-primary);" strokeWidth={1.5} />
-						<span class="text-[var(--neu-text-muted)] text-[11px]">江苏·徐州</span>
-					</div>
-
-					<!-- Dual action -->
-					<div class="flex w-full gap-2 mb-5">
-						<button
-							type="button"
-							class="neu-hover-btn flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[14px] outline-none bg-[var(--neu-accent-primary)] text-white text-[13px] font-medium"
-							style="box-shadow:0 3px 10px var(--neu-glow);"
+							aria-label="更换头像"
 							onclick={() => void goto(ROUTES.meEdit)}
+							class="neu-hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-[var(--neu-accent-primary)] text-white"
+							style="width:26px;height:26px;border:2px solid var(--neu-bg);"
 						>
-							<Pencil style="width:13px;height:13px;" strokeWidth={2} />
-							编辑资料
-						</button>
-						<button
-							type="button"
-							class="neu-hover-btn flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[14px] outline-none text-[var(--neu-text)] text-[13px]"
-							style="background:transparent;border:1px solid var(--neu-border-pressed);transition:background 0.18s ease;"
-						>
-							<Share2 style="width:13px;height:13px;" strokeWidth={1.75} />
-							分享主页
+							<Camera style="width:13px;height:13px;" strokeWidth={2} />
 						</button>
 					</div>
-
-					<!-- Stats — flat, integrated INTO the hero card -->
-					<div class="grid grid-cols-3 w-full rounded-[14px] bg-[var(--neu-border)] overflow-hidden" style="gap:1px;box-shadow:0 0 0 1px var(--neu-border);">
-						<button
-							type="button"
-							class="neu-hover-bg flex flex-col items-center justify-center py-2.5 outline-none"
-							style="background:var(--neu-bg);"
-						>
-							<span class="text-[var(--neu-text)] text-xl font-semibold leading-none">48</span>
-							<span class="text-[var(--neu-text-muted)] text-[10px] mt-1.5">帖子</span>
-						</button>
-						<button
-							type="button"
-							class="neu-hover-bg flex flex-col items-center justify-center py-2.5 outline-none"
-							style="background:var(--neu-bg);"
-							onclick={() => void goto(`${ROUTES.meSection('relationships')}?tab=followers`)}
-						>
-							<span class="text-[var(--neu-text)] text-xl font-semibold leading-none">312</span>
-							<span class="text-[var(--neu-text-muted)] text-[10px] mt-1.5">关注者</span>
-						</button>
-						<button
-							type="button"
-							class="neu-hover-bg flex flex-col items-center justify-center py-2.5 outline-none"
-							style="background:var(--neu-bg);"
-						>
-							<span class="text-[var(--neu-text)] text-xl font-semibold leading-none">27</span>
-							<span class="text-[var(--neu-text-muted)] text-[10px] mt-1.5">足迹</span>
-						</button>
+					<div class="min-w-0">
+						<h1 class="text-[20px] font-medium tracking-[-0.01em] text-[var(--neu-text)]">{nickname || '鹿鸣'}</h1>
+						<p class="mt-0.5 text-xs text-[var(--neu-text-muted)]">@elara.v</p>
+						<p class="mt-2 flex items-center gap-1.5 text-xs text-[var(--neu-text-muted)]">
+							<MapPin style="width:14px;height:14px;color:var(--neu-accent-primary);" strokeWidth={1.8} />
+							江苏 · 徐州
+						</p>
 					</div>
 				</div>
+				<button
+					type="button"
+					onclick={() => void goto(ROUTES.meEdit)}
+					class="neu-hover-btn inline-flex shrink-0 items-center gap-1.5 border border-[var(--neu-border)] bg-[var(--neu-bg)] px-3 py-2 text-xs font-medium text-[var(--neu-text)] outline-none transition-colors hover:bg-[var(--neu-accent-soft)]"
+				>
+					<Pencil style="width:14px;height:14px;" strokeWidth={1.8} />
+					编辑资料
+				</button>
+			</div>
+			<p class="mt-5 max-w-[430px] text-sm leading-6 text-[var(--neu-text-muted)]">
+				触感思考者。在流动里收集安静，也在熟悉的街道寻找新的光。
+			</p>
+		</div>
+		<div class="grid grid-cols-3 border-t border-[var(--neu-border)]">
+			{#each statsList as stat, i}
+				<button
+					type="button"
+					class="neu-hover-bg border-l border-[var(--neu-border)] px-4 py-3 text-left outline-none first:border-l-0"
+					style="background:var(--neu-bg);"
+					onclick={() => (stat.section ? void goto(ROUTES.meSection(stat.section)) : undefined)}
+				>
+					<p class="text-base font-medium tabular-nums text-[var(--neu-text)]">{stat.value}</p>
+					<p class="mt-0.5 text-[11px] text-[var(--neu-text-muted)]">{stat.label}</p>
+				</button>
+			{/each}
+		</div>
+	</section>
+
+	<!-- 个人数据 5 行链接 -->
+	<section class="mt-5 rounded-panel border border-[var(--neu-border)] neu-surface-flat" aria-label="个人数据">
+		<div class="flex items-center justify-between border-b border-[var(--neu-border)] px-5 py-3.5">
+			<div>
+				<p class="text-sm font-medium text-[var(--neu-text)]">个人数据</p>
+				<p class="mt-0.5 text-[11px] text-[var(--neu-text-muted)]">管理你在 HotSpot 的内容与关系</p>
 			</div>
 		</div>
-
-		<!-- Tabs + content -->
-		<div class="mt-6">
-			<ProfileTabs activeTab={activeTab} setActiveTab={(t) => (activeTab = t)} />
-			<div class="px-4 mt-3">
-				<GalleryGrid posts={postsMap[activeTab]} {activeTab} />
-			</div>
-		</div>
-	</div>
-
-</div>
+		{#each DATA_ITEMS as item (item.section)}
+			<button
+				type="button"
+				class="neu-hover-bg flex w-full items-center gap-3 border-b border-[var(--neu-border)] px-5 py-3.5 text-left outline-none last:border-b-0"
+				style="background:var(--neu-bg);"
+				onclick={() => void goto(ROUTES.meSection(item.section))}
+			>
+				<item.icon style="width:17px;height:17px;color:var(--neu-accent-primary);flex-shrink:0;" strokeWidth={1.7} />
+				<span class="min-w-0 flex-1">
+					<span class="block text-sm text-[var(--neu-text)]">{item.label}</span>
+					<span class="mt-0.5 block truncate text-[11px] text-[var(--neu-text-muted)]">{item.detail}</span>
+				</span>
+				<ChevronRight style="width:16px;height:16px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.7} />
+			</button>
+		{/each}
+	</section>
+</StandardPageLayout>

@@ -26,15 +26,15 @@ describe('requireNumericId', () => {
 });
 
 describe('requireProfileSection', () => {
-	it('接受三个合法分区', () => {
-		for (const section of ['moments', 'groups', 'relationships']) {
+	it('接受五个合法分区', () => {
+		for (const section of ['moments', 'groups', 'friends', 'following', 'fans']) {
 			expect(requireProfileSection(section)).toBe(section);
 		}
 	});
 
-	it('拒绝未知分区（followers/following 走 ?tab= query，不经路径）', () => {
+	it('拒绝未知分区', () => {
 		expectHttp404(() => requireProfileSection('whatever'));
-		expectHttp404(() => requireProfileSection('followers'));
+		expectHttp404(() => requireProfileSection('relationships'));
 		expectHttp404(() => requireProfileSection(''));
 	});
 });
