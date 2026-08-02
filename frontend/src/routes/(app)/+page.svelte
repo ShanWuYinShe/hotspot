@@ -164,7 +164,7 @@
 				<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} />
 				<div>
 					<SectionHead title="附近活动" />
-					<ActivityList items={activities} onClick={() => void goto(ROUTES.nearbyMoments)} />
+					<ActivityList items={activities} onClick={(id) => void goto(ROUTES.event(id))} />
 				</div>
 				<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
 			</div>
@@ -232,7 +232,7 @@
 			<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} />
 			<div>
 				<SectionHead title="附近活动" />
-				<ActivityList items={activities} onClick={() => void goto(ROUTES.nearbyMoments)} />
+				<ActivityList items={activities} onClick={(id) => void goto(ROUTES.event(id))} />
 			</div>
 			<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
 			<div>
