@@ -212,7 +212,7 @@
 
 	<!-- ══ TOP BAR ══ -->
 	<div style="position:absolute;top:0;left:0;right:0;z-index:50;">
-		<PageHeader title="地图探索" onBack={() => history.back()}>
+		<PageHeader title="位置选择" onBack={() => history.back()}>
 			{#snippet trailing()}
 				<Popover.Root bind:open={showFilter}>
 					<div bind:this={filterAnchorEl}>

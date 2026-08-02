@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, Crosshair, Check } from '@lucide/svelte';
+	import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, Crosshair, Check, SlidersHorizontal, Heart } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -7,7 +7,8 @@
 	import {
 		PIN_COLORS, PIN_LABELS, pinTone, buildMapData, getMarkerUrl, fetchMapCanvas,
 		type MapHeatBucket,
-		markerUserUrl, markerGroupUrl, markerMomentUrl
+		markerUserUrl, markerGroupUrl, markerMomentUrl,
+		markerUserClusterUrl, markerGroupClusterUrl, markerMomentClusterUrl
 	} from './location-shared';
 	import MapPinMarker from './MapPinMarker.svelte';
 	import MapHeatDot from './MapHeatDot.svelte';
@@ -21,6 +22,7 @@
 	let activeFilters = $state<Set<PinType>>(new Set(['user', 'group', 'post']));
 	let activeTab = $state<'nearby' | 'hot' | 'recent'>('nearby');
 	let hoveredListId = $state<string | null>(null);
+	let showFilter = $state(true);
 	const zoom = 0.045;
 	let mapCenter = $state(XUZHOU_CENTER);
 
@@ -94,7 +96,7 @@
 	<div class="flex flex-col flex-shrink-0" style="width:340px;border-right:1px solid var(--neu-border);">
 		<!-- Header -->
 		<div class="flex-shrink-0">
-			<PageHeader title="地图探索" onBack={() => history.back()} subtitle="江苏·徐州" sticky>
+			<PageHeader title="位置选择" onBack={() => history.back()} subtitle="江苏·徐州" sticky>
 				{#snippet trailing()}
 					<button
 						type="button"
@@ -110,29 +112,6 @@
 					</button>
 				{/snippet}
 			</PageHeader>
-
-			<!-- Type stat chips -->
-			<div class="flex gap-2 px-5 pb-3">
-				{#each [
-					{ type: 'user', count: userCount, color: PIN_COLORS.user, label: '用户', icon: markerUserUrl },
-					{ type: 'group', count: groupCount, color: PIN_COLORS.group, label: '群组', icon: markerGroupUrl },
-					{ type: 'post', count: postCount, color: PIN_COLORS.post, label: '动态', icon: markerMomentUrl }
-				] as chip}
-					{@const active = activeFilters.has(chip.type as PinType)}
-					<button
-						type="button"
-						class="neu-hover-btn flex-1 flex items-center gap-1.5 rounded-[13px] px-2 py-2 outline-none"
-						style="background:{active ? pinTone(chip.type as PinType, 14) : 'var(--neu-bg)'};border:1px solid {active ? pinTone(chip.type as PinType, 40) : 'var(--neu-border)'};box-shadow:{active ? `0 2px 8px ${pinTone(chip.type as PinType, 25)}` : '4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)'};"
-						onclick={() => toggleFilter(chip.type as PinType)}
-					>
-						<img src={chip.icon} alt={chip.label} style="width:14px;height:19px;flex-shrink:0;" />
-						<div class="flex-1 min-w-0">
-							<p style="font-size:15px;color:{active ? chip.color : 'var(--neu-text)'};line-height:1;">{chip.count}</p>
-							<p class="text-[var(--neu-text-muted)]" style="font-size:10px;margin-top:1px;">{chip.label}</p>
-						</div>
-					</button>
-				{/each}
-			</div>
 		</div>
 
 		<!-- Search -->
@@ -247,6 +226,15 @@
 									{/if}
 									{#if pin.distance}
 										<span class="text-[var(--neu-text-muted)] text-[11px]">{pin.distance}</span>
+									{/if}
+									{#if pin.members}
+										<span class="text-[var(--neu-text-muted)] text-[11px]">{pin.members}人</span>
+									{/if}
+									{#if pin.likes}
+										<span class="flex items-center gap-0.5 text-[var(--neu-text-muted)]">
+											<Heart style="width:9px;height:9px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+											<span class="text-[11px]">{pin.likes}</span>
+										</span>
 									{/if}
 								</div>
 							</div>
@@ -368,9 +356,11 @@
 		tabindex="0"
 		aria-label="地图（点击空白处取消选中）"
 		onclick={(e) => {
-			// 详情浮层内的点击不视为地图空白点击
+			// 详情浮层与筛选下拉内的点击不视为地图空白点击
 			if ((e.target as HTMLElement).closest('[data-map-popup]')) return;
+			if ((e.target as HTMLElement).closest('[data-map-filter]')) return;
 			selectedPin = null;
+			showFilter = false;
 		}}
 		onkeydown={(e) => {
 			if (e.target !== e.currentTarget) return;
@@ -415,6 +405,54 @@
 			</div>
 		{/if}
 
+		<!-- 左上筛选浮动按钮 + 下拉（对齐 Figma Make LocationDesktop 筛选面板） -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div data-map-filter class="absolute z-20" style="top:14px;left:14px;" onclick={(e) => e.stopPropagation()}>
+			<button
+				type="button"
+				class="neu-hover-btn flex items-center gap-2 rounded-full outline-none"
+				style="padding:9px 16px;font-size:13px;background:{showFilter ? 'var(--neu-accent-primary)' : 'var(--neu-bg)'};color:{showFilter ? 'white' : 'var(--neu-text)'};border:1px solid {showFilter ? 'transparent' : 'var(--neu-border)'};box-shadow:{showFilter ? '0 4px 16px var(--neu-glow)' : '0 4px 16px var(--neu-shadow-dark)'};"
+				onclick={() => (showFilter = !showFilter)}
+			>
+				<SlidersHorizontal style="width:13px;height:13px;" strokeWidth={showFilter ? 2.5 : 1.75} />
+				筛选
+				{#if activeFilters.size < 3}
+					<span style="margin-left:2px;font-size:10px;padding:1px 6px;border-radius:999px;background:{showFilter ? 'var(--surface-map-control-active)' : 'var(--neu-accent-soft)'};color:{showFilter ? 'white' : 'var(--neu-accent-primary)'};font-weight:500;">{activeFilters.size}</span>
+				{/if}
+			</button>
+			{#if showFilter}
+				<div class="mt-2 overflow-hidden rounded-control" style="background:var(--neu-bg);box-shadow:0 8px 28px var(--neu-shadow-dark);border:1px solid var(--neu-border);width:200px;">
+					{#each [{ type: 'user', label: '用户', icon: markerUserUrl, clusterIcon: markerUserClusterUrl, color: PIN_COLORS.user, count: userCount }, { type: 'group', label: '群组', icon: markerGroupUrl, clusterIcon: markerGroupClusterUrl, color: PIN_COLORS.group, count: groupCount }, { type: 'post', label: '动态', icon: markerMomentUrl, clusterIcon: markerMomentClusterUrl, color: PIN_COLORS.post, count: postCount }] as item, i}
+						{#if i > 0}
+							<div style="height:1px;background:var(--neu-border);"></div>
+						{/if}
+						{@const active = activeFilters.has(item.type as PinType)}
+						<button
+							type="button"
+							class="neu-hover-btn flex w-full items-center gap-2 px-3 py-2.5 text-left outline-none"
+							style="opacity:{active ? 1 : 0.45};"
+							onclick={() => toggleFilter(item.type as PinType)}
+						>
+							<img src={item.icon} alt="" style="width:15px;height:21px;" />
+							<img src={item.clusterIcon} alt="" style="width:15px;height:21px;opacity:0.65;" />
+							<span class="flex-1 text-[var(--neu-text)]" style="font-size:12px;">{item.label}</span>
+							<span style="font-size:12px;color:{item.color};font-weight:600;">{item.count}</span>
+							<span class="flex items-center justify-center flex-shrink-0" style="width:14px;height:14px;border-radius:4px;background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--neu-border-pressed)'};transition:all 0.18s;">
+								{#if active}
+									<Check style="width:10px;height:10px;color:white;" strokeWidth={3} />
+								{/if}
+							</span>
+						</button>
+					{/each}
+					<div style="height:1px;background:var(--neu-border);"></div>
+					<div class="flex items-center gap-2 px-3 py-2">
+						<span style="width:13px;height:13px;border-radius:50%;background:{PIN_COLORS.user};border:2px solid var(--neu-bg);box-shadow:0 0 5px {pinTone('user', 50)};"></span>
+						<span class="text-[var(--neu-text-muted)]" style="font-size:12px;">我的位置</span>
+					</div>
+				</div>
+			{/if}
+		</div>
+
 
 		<!-- Selected pin popup -->
 		{#if selectedPin}
@@ -456,6 +494,15 @@
 							{/if}
 							{#if selectedPin.distance}
 								<span class="text-[var(--neu-text-muted)] text-xs">{selectedPin.distance}</span>
+							{/if}
+							{#if selectedPin.members}
+								<span class="text-[var(--neu-text-muted)] text-xs">{selectedPin.members}名成员</span>
+							{/if}
+							{#if selectedPin.likes}
+								<span class="flex items-center gap-1">
+									<Heart style="width:10px;height:10px;color:var(--semantic-hot);" strokeWidth={1.5} />
+									<span class="text-[var(--neu-text-muted)] text-xs">{selectedPin.likes}</span>
+								</span>
 							{/if}
 						</div>
 					</div>
