@@ -41,7 +41,7 @@
 	// 对齐 Figma Make：可点击时 tap → opacity 0.84（0.1s），无 scale
 	const rowOpacity = $derived(onClick && isPressed ? 0.84 : 1);
 
-	const isCard = tone === 'card';
+	const isCard = $derived(tone === 'card');
 	const baseCardShadow = '5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)';
 	const rowStyle = $derived.by(() => {
 		const parts: string[] = [];
@@ -59,6 +59,7 @@
 	});
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
 	role={onClick ? 'button' : undefined}
 	aria-label={ariaLabel}

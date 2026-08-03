@@ -50,6 +50,7 @@
 	const cardTransform = $derived(pressed ? 'scale(var(--card-tap-scale, 0.94))' : 'scale(1)');
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <article
 	class={cn(
 		'image-hover-frame neu-card-hover relative h-full w-full cursor-pointer overflow-hidden',

@@ -50,7 +50,6 @@
 	<!-- Compact tablet: edge-attached bar; wide tablet: centred floating Dock -->
 	{#if !isSubPage}
 		<nav
-			role="navigation"
 			aria-label="主导航"
 			class="flex-shrink-0 w-full flex justify-center"
 			style={isWide

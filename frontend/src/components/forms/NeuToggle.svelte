@@ -17,8 +17,8 @@
 		compact?: boolean;
 	} = $props();
 
-	const width = compact ? 48 : 50;
-	const thumbOffset = compact ? 22 : 23;
+	const width = $derived(compact ? 48 : 50);
+	const thumbOffset = $derived(compact ? 22 : 23);
 </script>
 
 <Switch.Root

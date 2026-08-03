@@ -47,7 +47,7 @@
 	};
 
 	// 对齐 Figma Make Sheet：遮罩统一用 black/50（比 surface-overlay 更深，与设计一致）。
-	const canShowClose = showCloseButton && side !== 'center';
+	const canShowClose = $derived(showCloseButton && side !== 'center');
 </script>
 
 <Dialog.Portal>

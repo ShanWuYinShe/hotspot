@@ -341,11 +341,12 @@
 								</div>
 							</div>
 						{/if}
-						</div>
-					{/each}
-				</div>
-		</ContentColumn>
-	</div>
+					</div>
+				{/each}
+			</div>
+			</div>
+	</ContentColumn>
+</div>
 {/snippet}
 
 {#snippet rail()}

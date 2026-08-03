@@ -144,6 +144,7 @@
 	>
 		<div class="flex items-center gap-3">
 			<SearchIcon class="size-5 shrink-0 text-[var(--neu-accent-primary)]" strokeWidth={1.8} />
+			<!-- svelte-ignore a11y_autofocus -->
 			<input
 				bind:this={inputEl}
 				autofocus
