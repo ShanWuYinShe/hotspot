@@ -13,6 +13,7 @@
 	} from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
+	import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
 	import { searchUsers, searchMoments } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 
@@ -190,18 +191,19 @@
 					</button>
 				</div>
 				{#if recent.length > 0}
+					<EmbeddedList>
 					{#each recent as item (item)}
 						<button
 							type="button"
 							onclick={() => choose(item)}
-							class="neu-hover-bg flex w-full items-center gap-3 border-b px-5 py-4 text-left last:border-b-0"
-							style="border-color:var(--neu-border);"
+							class="neu-hover-bg flex w-full items-center gap-3 px-5 py-4 text-left"
 						>
 							<Clock class="size-4 text-[var(--neu-text-muted)]" strokeWidth={1.7} />
 							<span class="flex-1 text-sm text-[var(--neu-text)]">{item}</span>
 							<ArrowUpRight class="size-4 text-[var(--neu-text-muted)]" strokeWidth={1.7} />
 						</button>
 					{/each}
+					</EmbeddedList>
 				{:else}
 					<p class="px-5 py-8 text-sm text-[var(--neu-text-muted)]">还没有搜索记录。</p>
 				{/if}
@@ -298,11 +300,12 @@
 								<Users class="size-4 text-[var(--neu-accent-primary)]" strokeWidth={1.7} />
 								<h2 class="text-sm font-medium text-[var(--neu-text)]">用户</h2>
 							</div>
+       <EmbeddedList>
 							{#each results.users as person (person.user_id)}
 								<button
 									type="button"
 									onclick={() => void goto(ROUTES.user(person.user_id))}
-									class="neu-hover-bg flex w-full items-center gap-3 border-b px-4 py-3.5 text-left last:border-b-0"
+									class="neu-hover-bg flex w-full items-center gap-3 px-4 py-3.5 text-left"
 									style="border-color:var(--neu-border);"
 								>
 									<img
@@ -319,6 +322,7 @@
 									<ArrowUpRight class="size-4 text-[var(--neu-text-muted)]" />
 								</button>
 							{/each}
+       </EmbeddedList>
 						</section>
 					{/if}
 
@@ -332,11 +336,12 @@
 								<FileText class="size-4 text-[var(--neu-accent-primary)]" strokeWidth={1.7} />
 								<h2 class="text-sm font-medium text-[var(--neu-text)]">动态</h2>
 							</div>
+       <EmbeddedList>
 							{#each results.moments as post (post.moment_id)}
 								<button
 									type="button"
 									onclick={() => void goto(ROUTES.moment(post.moment_id))}
-									class="neu-hover-bg flex w-full items-center gap-3 border-b px-4 py-3.5 text-left last:border-b-0"
+									class="neu-hover-bg flex w-full items-center gap-3 px-4 py-3.5 text-left"
 									style="border-color:var(--neu-border);"
 								>
 									{#if post.media?.[0]?.url}
@@ -358,6 +363,7 @@
 									<ArrowUpRight class="size-4 text-[var(--neu-text-muted)]" />
 								</button>
 							{/each}
+       </EmbeddedList>
 						</section>
 					{/if}
 
@@ -371,11 +377,12 @@
 								<Hash class="size-4 text-[var(--neu-accent-primary)]" strokeWidth={1.7} />
 								<h2 class="text-sm font-medium text-[var(--neu-text)]">话题</h2>
 							</div>
+       <EmbeddedList>
 							{#each results.topics as topic (topic)}
 								<button
 									type="button"
 									onclick={() => choose(topic)}
-									class="neu-hover-bg flex w-full items-center gap-3 border-b px-4 py-3.5 text-left last:border-b-0"
+									class="neu-hover-bg flex w-full items-center gap-3 px-4 py-3.5 text-left"
 									style="border-color:var(--neu-border);"
 								>
 									<Hash class="size-4 text-[var(--neu-accent-primary)]" />
@@ -383,6 +390,7 @@
 									<ArrowUpRight class="size-4 text-[var(--neu-text-muted)]" />
 								</button>
 							{/each}
+       </EmbeddedList>
 						</section>
 					{/if}
 				</div>

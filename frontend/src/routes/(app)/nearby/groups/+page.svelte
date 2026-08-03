@@ -89,7 +89,7 @@
 		<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} sticky onBack={() => history.back()} contentClassName="!py-3">
 			{#snippet trailing()}
 				<div class="hidden sm:flex flex-1 max-w-sm">
-					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" compact />
+					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" class="px-3 py-2" />
 				</div>
 			{/snippet}
 			{#snippet below()}
@@ -105,7 +105,7 @@
 
 	{#if !isDesktop}
 		<div class="sm:hidden -mt-2 pb-2">
-			<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" compact />
+			<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" class="px-3 py-2" />
 		</div>
 	{/if}
 

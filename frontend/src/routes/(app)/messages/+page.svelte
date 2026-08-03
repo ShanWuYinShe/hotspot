@@ -144,7 +144,7 @@
 					{/snippet}
 				</PageHeader>
 				<div class="px-4 pb-3">
-					<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="搜索…" compact />
+					<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="搜索…" class="px-3 py-2" />
 				</div>
 			</div>
 
@@ -195,9 +195,9 @@
 					{#if selectedId !== null && selectedChat}
 						<div class="h-full">
 							{#if selectedChat.kind === 'group'}
-							<GroupChatView groupId={String(selectedChat.id)} showBackButton={false} compact />
+							<GroupChatView groupId={String(selectedChat.id)} showBackButton={false} class="px-3 py-2" />
 						{:else}
-							<ChatView peerUserId={selectedChat.peerUserId} contact={{ name: selectedChat.name, avatar: selectedChat.avatar, online: selectedChat.online }} showBackButton={false} compact />
+							<ChatView peerUserId={selectedChat.peerUserId} contact={{ name: selectedChat.name, avatar: selectedChat.avatar, online: selectedChat.online }} showBackButton={false} class="px-3 py-2" />
 						{/if}
 						</div>
 					{:else}
@@ -264,7 +264,7 @@
 			</button>
 		{/snippet}
 	</PageHeader>
-	<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="搜索会话…" class="mx-5 mb-3" />
+	<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="搜索会话…" class="mx-5 mb-3 px-3 py-2" />
 
 	<div class="animate-fade-in flex flex-col px-5 pt-4 pb-4" style="max-width:640px;margin-left:auto;margin-right:auto;width:100%;">
 		{#if onlineChats.length > 0}

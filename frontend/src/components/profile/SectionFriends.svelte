@@ -47,7 +47,7 @@
 
 	<!-- Search -->
 	<div class="{embedded ? 'px-6 lg:px-8' : 'px-5'} pt-4 pb-2 flex-shrink-0">
-		<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索好友…" compact />
+		<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索好友…" class="px-3 py-2" />
 	</div>
 
 	<!-- Filter pills -->

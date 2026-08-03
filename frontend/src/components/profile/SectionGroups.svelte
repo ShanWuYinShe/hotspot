@@ -18,7 +18,7 @@
 <div class="no-scrollbar flex flex-1 flex-col overflow-y-auto">
 	<!-- 搜索 + 统计行（对齐 Figma SectionGroups header） -->
 	<div class="shrink-0 px-5 pt-4 pb-3">
-		<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索我的群组…" />
+		<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索我的群组…" class="px-3.5 py-2.5" />
 		<div class="mt-3 flex items-center justify-between">
 			<p class="text-[12px] text-[var(--neu-text-muted)]">共 {groups.length} 个群组</p>
 			<div class="flex items-center gap-1.5 text-[12px] text-[var(--semantic-online)]">

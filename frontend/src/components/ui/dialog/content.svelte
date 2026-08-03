@@ -39,9 +39,9 @@
 		bottom:
 			'bottom-0 left-0 right-0 rounded-t-[var(--radius-sheet)] shadow-[var(--elevation-sheet)] data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
 		right:
-			'top-0 bottom-0 right-0 w-[min(420px,92vw)] border-l border-[var(--neu-border)] shadow-[var(--elevation-side-sheet)] data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right',
+			'top-0 bottom-0 right-0 w-3/4 border-l border-[var(--neu-border)] shadow-[var(--elevation-side-sheet)] data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right sm:max-w-sm',
 		left:
-			'top-0 bottom-0 left-0 w-[min(420px,92vw)] border-r border-[var(--neu-border)] shadow-[var(--elevation-side-sheet)] data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left',
+			'top-0 bottom-0 left-0 w-3/4 border-r border-[var(--neu-border)] shadow-[var(--elevation-side-sheet)] data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left sm:max-w-sm',
 		top:
 			'top-0 left-0 right-0 rounded-b-[var(--radius-sheet)] shadow-[var(--elevation-sheet)] data-[state=open]:slide-in-from-top data-[state=closed]:slide-out-to-top'
 	};
@@ -61,11 +61,11 @@
 		{@render children?.()}
 		{#if canShowClose}
 			<Dialog.Close
-				class="absolute top-4 right-4 z-10 flex items-center justify-center rounded-full outline-none transition-opacity hover:opacity-100 focus-visible:outline-2 focus-visible:outline-[var(--neu-accent-primary)] focus-visible:outline-offset-2"
-				style="width:32px;height:32px;background:var(--neu-accent-soft);color:var(--neu-text-muted);opacity:0.7;"
+				class="absolute top-4 right-4 z-10 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-2 focus-visible:outline-[var(--neu-accent-primary)] focus-visible:outline-offset-2"
 				aria-label="关闭"
 			>
-				<X size={16} strokeWidth={2} />
+				<X class="size-4" strokeWidth={2} />
+				<span class="sr-only">Close</span>
 			</Dialog.Close>
 		{/if}
 	</Dialog.Content>

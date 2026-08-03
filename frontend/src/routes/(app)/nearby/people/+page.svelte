@@ -104,7 +104,7 @@
 		<PageHeader title="附近的人" subtitle="徐州 · 5km 内 · 每 3 分钟刷新" sticky onBack={() => history.back()} contentClassName="!py-3">
 			{#snippet trailing()}
 				<div class="hidden sm:flex flex-1 max-w-sm ml-3">
-					<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或此刻状态" compact />
+					<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或此刻状态" class="px-3 py-2" />
 				</div>
 			{/snippet}
 		</PageHeader>
@@ -112,7 +112,7 @@
 
 	{#if !isDesktop}
 		<div class="sm:hidden -mt-2 pb-2">
-			<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或状态" compact />
+			<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或状态" class="px-3 py-2" />
 		</div>
 	{/if}
 

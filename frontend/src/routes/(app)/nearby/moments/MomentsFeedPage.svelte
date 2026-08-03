@@ -172,7 +172,7 @@
 			{#snippet trailing()}
 				<div class="flex items-center gap-2">
 					<div class="hidden sm:flex flex-1 max-w-sm">
-						<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" compact />
+						<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" class="px-3 py-2" />
 					</div>
 					<span class="text-[var(--neu-text-muted)] text-xs">{filtered.length} 条内容</span>
 				</div>
@@ -229,7 +229,7 @@
 					{#snippet trailing()}
 						<div class="flex items-center gap-2">
 							<div class="hidden sm:flex flex-1 max-w-sm">
-								<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" compact />
+								<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" class="px-3 py-2" />
 							</div>
 							<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--neu-accent-primary)]" style="box-shadow:0 3px 10px var(--neu-glow);">
 								<Sparkles style="width:11px;height:11px;color:white;" strokeWidth={2} />
@@ -291,7 +291,7 @@
 	</PageHeader>
 
 	<div class="px-5 -mt-2 pb-2">
-		<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" compact />
+		<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" class="px-3 py-2" />
 	</div>
 
 	<ContentColumn maxWidth="560px" class="animate-fade-in pt-3 pb-6">
