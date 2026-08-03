@@ -84,27 +84,27 @@
 			getGroupDetail(gid)
 				.then((res) => {
 					if (cancelled || res.code !== 0 || !res.data) return;
-					const d = res.data as any;
-					groupName = d.name ?? d.group?.name ?? '';
-					groupAvatar = d.avatar_url ?? d.group?.avatar_url ?? '';
+					const d = res.data;
+					groupName = d.group.name;
+					groupAvatar = d.group.avatar_url ?? '';
 				})
 				.catch(() => {});
 			const res = await getGroupMessages({ group_id: gid, pagination: { limit: 50 } }).catch(() => ({
 				code: -1,
-				data: { items: [] }
+				data: { items: [], next_cursor: undefined }
 			}));
 			if (cancelled) return;
-			const items = (res.code === 0 && res.data ? (res.data as any).items : []) as any[];
+			const items = res.code === 0 && res.data ? res.data.items : [];
 			const meId = auth.user?.user_id ?? '__me__';
-			messages = items.map((m: any) => ({
-				id: String(m.message_id ?? ''),
-				text: m.recalled_at ? '[消息已撤回]' : (m.content ?? m.text ?? ''),
+			messages = items.map((m) => ({
+				id: String(m.message_id),
+				text: m.recalled_at ? '[消息已撤回]' : (m.content ?? ''),
 				recalled: Boolean(m.recalled_at),
-				sent: m.sender?.user_id ? m.sender.user_id === meId : Boolean(m.sent),
-				time: formatTime(m.sent_at ?? m.created_at)
+				sent: m.sender.user_id === meId,
+				time: formatTime(m.sent_at)
 			}));
 			loading = false;
-			nextCursor = (res.data as any)?.next_cursor ?? null;
+			nextCursor = res.data?.next_cursor ?? null;
 			loadingMore = false;
 			// spec: group_messages/mark_read (scope='group') 标记该群全部已读;幂等语义,失败静默。
 			void markGroupRead({ scope: 'group', group_id: gid }).catch(() => {});
@@ -156,17 +156,17 @@
 		if (groupId !== gid) return;
 		loadingMore = false;
 		if (!res || res.code !== 0 || !res.data) return;
-		const items = (res.data as any).items ?? [];
+		const items = res.data.items ?? [];
 		const meId = auth.user?.user_id ?? '__me__';
-		const mapped: GroupMessage[] = items.map((m: any) => ({
-			id: String(m.message_id ?? ''),
-			text: m.recalled_at ? '[消息已撤回]' : (m.content ?? m.text ?? ''),
+		const mapped: GroupMessage[] = items.map((m) => ({
+			id: String(m.message_id),
+			text: m.recalled_at ? '[消息已撤回]' : (m.content ?? ''),
 			recalled: Boolean(m.recalled_at),
-			sent: m.sender?.user_id ? m.sender.user_id === meId : Boolean(m.sent),
-			time: formatTime(m.sent_at ?? m.created_at)
+			sent: m.sender.user_id === meId,
+			time: formatTime(m.sent_at)
 		}));
 		messages = [...mapped, ...messages];
-		nextCursor = (res.data as any)?.next_cursor ?? null;
+		nextCursor = res.data?.next_cursor ?? null;
 		// 新内容插在顶部:把可视位置下移新内容高度
 		requestAnimationFrame(() => {
 			const el2 = scrollEl;

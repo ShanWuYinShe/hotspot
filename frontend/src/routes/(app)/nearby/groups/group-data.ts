@@ -1,4 +1,5 @@
 // 附近群组卡片数据类型与映射（迁移自旧版 NearbyGroupsPage）。
+import type { GroupItem } from '@/api/types';
 
 export interface Group {
 	id: string;
@@ -16,21 +17,21 @@ export interface Group {
 }
 
 /** Map a spec GroupItem (feed/nearby_groups) result to the card shape. */
-export function mapGroup(item: any): Group {
-	const g = item?.group ?? {};
+export function mapGroup(item: GroupItem): Group {
+	const g = item.group;
 	return {
-		id: String(g.group_id ?? ''),
-		name: g.name ?? '',
+		id: g.group_id,
+		name: g.name,
 		banner: g.avatar_url ?? '',
-		category: (item?.tags?.[0] ?? '') || '同城',
-		members: g.members_count ?? 0,
-		online: item?.online_members_count ?? 0,
-		distance: item?.location?.distance ?? '',
+		category: (item.tags?.[0] ?? '') || '同城',
+		members: g.members_count,
+		online: item.online_members_count ?? 0,
+		distance: item.location?.distance != null ? `${item.location.distance}m` : '',
 		// join_method 在 GroupItem 顶层；invite_only/password 视为私密
-		privacy: item?.join_method === 'invite_only' || item?.join_method === 'password' ? 'private' : 'public',
-		joined: item?.my_state?.is_joined ?? false,
-		desc: item?.description ?? '',
-		activity: item?.next_activity ?? '',
+		privacy: item.join_method === 'invite_only' || item.join_method === 'password' ? 'private' : 'public',
+		joined: item.my_state?.is_joined ?? false,
+		desc: item.description ?? '',
+		activity: item.next_activity ?? '',
 		avatars: []
 	};
 }

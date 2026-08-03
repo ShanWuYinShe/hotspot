@@ -90,18 +90,18 @@
 			// Fetch history by target_user_id; derive direction from sender.
 			const res = await getPrivateMessages({ target_user_id: peerUserId, pagination: { limit: 50 } }).catch(() => ({
 				code: -1,
-				data: { items: [] }
+				data: { items: [], next_cursor: undefined }
 			}));
 			if (cancelled) return;
-			const items = (res.code === 0 && res.data ? (res.data as any).items : []) as any[];
-			const mapped: ChatMessage[] = items.map((m: any) => ({
-				id: String(m.message_id ?? ''),
-				text: m.content ?? m.text ?? '',
-				sent: m.sender?.user_id ? m.sender.user_id === (auth.user?.user_id ?? '__me__') : Boolean(m.sent),
-				time: formatTime(m.sent_at ?? m.created_at)
+			const items = res.code === 0 && res.data ? res.data.items : [];
+			const mapped: ChatMessage[] = items.map((m) => ({
+				id: String(m.message_id),
+				text: m.content ?? '',
+				sent: m.sender.user_id === (auth.user?.user_id ?? '__me__'),
+				time: formatTime(m.sent_at)
 			}));
 			messages = mapped;
-			nextCursor = (res.data as any)?.next_cursor ?? null;
+			nextCursor = res.data?.next_cursor ?? null;
 			loadingMore = false;
 			loading = false;
 
@@ -112,12 +112,12 @@
 			// If no peer display info was passed, try to read it from the latest
 			// incoming message's sender (or any message sender that isn't me).
 			if (!contactProp) {
-				const peer = items.map((m: any) => m.sender).find((s: any) => s && s.user_id !== (auth.user?.user_id ?? '__me__'));
+				const peer = items.map((m) => m.sender).find((s) => s && s.user_id !== (auth.user?.user_id ?? '__me__'));
 				if (peer) {
 					contact = {
-						name: peer.nickname ?? peer.name ?? '',
-						avatar: peer.avatar_url ?? peer.avatar ?? '',
-						online: peer.presence_status === 'online'
+						name: peer.nickname,
+						avatar: peer.avatar_url ?? '',
+						online: false
 					};
 				}
 			}
@@ -177,15 +177,15 @@
 		if (peerUserId !== peer) return;
 		loadingMore = false;
 		if (!res || res.code !== 0 || !res.data) return;
-		const items = (res.data as any).items ?? [];
-		const mapped: ChatMessage[] = items.map((m: any) => ({
-			id: String(m.message_id ?? ''),
-			text: m.content ?? m.text ?? '',
-			sent: m.sender?.user_id ? m.sender.user_id === (auth.user?.user_id ?? '__me__') : Boolean(m.sent),
-			time: formatTime(m.sent_at ?? m.created_at)
+		const items = res.data.items ?? [];
+		const mapped: ChatMessage[] = items.map((m) => ({
+			id: String(m.message_id),
+			text: m.content ?? '',
+			sent: m.sender.user_id === (auth.user?.user_id ?? '__me__'),
+			time: formatTime(m.sent_at)
 		}));
 		messages = [...mapped, ...messages];
-		nextCursor = (res.data as any)?.next_cursor ?? null;
+		nextCursor = res.data?.next_cursor ?? null;
 		// 新内容插在顶部:把可视位置下移新内容高度
 		requestAnimationFrame(() => {
 			const el2 = scrollEl;
