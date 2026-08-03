@@ -180,6 +180,8 @@
    Use these values for new shared components instead of page-local timing,
    spacing, or easing literals. */
 :root {
+  /* 卡片按压缩放（vibrant 默认 0.94，forest 覆盖 0.97，对齐 Figma useHoverConfig tap） */
+  --card-tap-scale: 0.94;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;

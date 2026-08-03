@@ -13,6 +13,8 @@
 .forest {
   /* Canvas — warm paper-white */
   --background: var(--neu-bg);
+  /* forest 主题卡片按压缩放 0.97（对齐 Figma useHoverConfig forest tap） */
+  --card-tap-scale: 0.97;
   --foreground: var(--neu-text);
   --card: var(--neu-bg);
   --card-foreground: var(--neu-text);

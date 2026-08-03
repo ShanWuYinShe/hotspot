@@ -42,11 +42,12 @@
 	} = $props();
 
 	// 对齐 Figma Make NearbyImageCard：hover 时图片缩放 1.055 / 0.32s [0.22,1,0.36,1]
-	// （组件内联覆盖共享 CSS 的 1.045/240ms）；整卡按压 scale 0.94。
+	// （组件内联覆盖共享 CSS 的 1.045/240ms）；整卡按压 scale 由 --card-tap-scale 驱动
+	// （vibrant 0.94 / forest 0.97，对齐 Figma useHoverConfig tap）。
 	let pressed = $state(false);
 	let hovered = $state(false);
 	const imageTransform = $derived(hovered ? 'scale(1.055)' : 'scale(1)');
-	const cardTransform = $derived(pressed ? 'scale(0.94)' : 'scale(1)');
+	const cardTransform = $derived(pressed ? 'scale(var(--card-tap-scale, 0.94))' : 'scale(1)');
 </script>
 
 <article

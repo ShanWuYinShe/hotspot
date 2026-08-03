@@ -44,7 +44,7 @@
 		</div>
 
 		<!-- Stats row -->
-		<div class="grid grid-cols-3 mt-4 bg-[var(--neu-border)]" style="gap:1px;border-radius:14px;overflow:hidden;">
+		<div class="grid grid-cols-3 mt-4 bg-[var(--neu-border)]" style="gap:1px;border-radius:var(--shape-control);overflow:hidden;">
 			<div class="flex flex-col items-center justify-center py-2.5 bg-[var(--neu-bg)]">
 				<span class="text-[19px] font-semibold" style="color:var(--neu-accent-primary);line-height:1;">{stats.nearby}</span>
 				<span class="text-[10px]" style="color:var(--neu-text-muted);margin-top:4px;">人附近</span>

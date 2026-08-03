@@ -71,7 +71,7 @@
 		isCard ? 'rounded-relaxed border' : 'bg-[var(--neu-bg)]',
 		className
 	)}
-	style={`${rowStyle}opacity:${rowOpacity};transition-duration:0.1s;`}
+	style={`${rowStyle}opacity:${rowOpacity};transition-duration:${isPressed ? '0.10s' : '0.20s'};`}
 	onmouseenter={() => (hovered = true)}
 	onmouseleave={() => {
 		hovered = false;

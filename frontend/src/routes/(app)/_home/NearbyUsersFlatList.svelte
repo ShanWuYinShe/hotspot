@@ -1,9 +1,10 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
-	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
+	import BorderedList from '@/components/data-display/BorderedList.svelte';
+	import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
 	import type { NearbyUser } from '@/routes/(app)/_home/PeopleRadarStrip.svelte';
 
-	// 紧凑附近用户行列表（迁移自旧版 NearbyFeedPage 内 NearbyUsersFlatList/NearbyUserRow）。
+	// 紧凑附近用户行列表（对齐 Figma Make HomePage NearbyUsersFlatList）。
+	// BorderedList 容器 + InteractiveListRow 行（focus ring + 键盘 + aria + tap opacity）。
 
 	let {
 		users,
@@ -17,42 +18,43 @@
 </script>
 
 {#if users.length > 0}
-	<div class="flex flex-col bg-[var(--neu-border)]" style="gap:1px;border-radius:16px;box-shadow:0 0 0 1px var(--neu-border);overflow:hidden;">
-		<div style="overflow:hidden;border-radius:16px;">
-			{#each users as u (u.id)}
-				{@const followed = followingIds.has(u.id)}
-				<div class="neu-hover-bg flex items-center gap-3 px-4 py-3 cursor-pointer" style="background:var(--neu-bg);">
-					<div class="relative flex-shrink-0">
-						<div class="rounded-full overflow-hidden" style="width:38px;height:38px;">
-							<img src={u.avatar} alt={u.name} class="w-full h-full object-cover" />
-						</div>
-						{#if u.status === '在线'}
-							<OnlineDot size="md" />
-						{/if}
+	<BorderedList>
+		{#each users as u (u.id)}
+			{@const followed = followingIds.has(u.id)}
+			<InteractiveListRow class="flex items-center gap-3 px-4 py-3 cursor-pointer">
+				<div class="relative flex-shrink-0">
+					<div class="avatar-entry__avatar rounded-full overflow-hidden" style="width:38px;height:38px;">
+						<img src={u.avatar} alt={u.name} class="image-hover-frame__image w-full h-full object-cover" />
 					</div>
-					<div class="flex-1 min-w-0">
-						<p class="text-[13px]" style="color:var(--neu-text);">{u.name}</p>
-						<div class="flex items-center gap-1.5 mt-0.5">
-							<span class="text-[10px]" style="color:var(--neu-accent-primary);">#{u.tag}</span>
-							<span class="text-[10px]" style="color:var(--neu-text-muted);opacity:0.5;">·</span>
-							<span class="text-[10px]" style="color:var(--neu-text-muted);">{u.distance}</span>
-						</div>
-					</div>
-					<button
-						type="button"
-						class="neu-hover-btn px-3 py-1 rounded-full outline-none transition-all text-[11px]"
-						style={followed
-							? 'background:transparent;color:var(--neu-text-muted);border:1px solid var(--neu-border-pressed);'
-							: 'background:var(--neu-accent-primary);color:white;border:1px solid transparent;'}
-						onclick={(e) => {
-							e.stopPropagation();
-							onToggle(u.id);
-						}}
-					>
-						{followed ? '已关注' : '关注'}
-					</button>
+					{#if u.status === '在线'}
+						<span
+							class="absolute bottom-0 right-0 rounded-full"
+							style="width:9px;height:9px;background:var(--semantic-online);border:2px solid var(--neu-bg);"
+						></span>
+					{/if}
 				</div>
-			{/each}
-		</div>
-	</div>
+				<div class="flex-1 min-w-0">
+					<p style="font-size:13px;color:var(--neu-text);">{u.name}</p>
+					<div class="flex items-center gap-1.5 mt-0.5">
+						<span style="font-size:10px;color:var(--neu-accent-primary);">#{u.tag}</span>
+						<span style="font-size:10px;color:var(--neu-text-muted);opacity:0.5;">·</span>
+						<span style="font-size:10px;color:var(--neu-text-muted);">{u.distance}</span>
+					</div>
+				</div>
+				<button
+					type="button"
+					class="neu-hover-btn neu-tap-93 px-3 py-1 rounded-full outline-none transition-all"
+					style={followed
+						? 'background:transparent;color:var(--neu-text-muted);border:1px solid var(--neu-border-pressed);font-size:11px;'
+						: 'background:var(--neu-accent-primary);color:white;border:1px solid transparent;font-size:11px;'}
+					onclick={(e) => {
+						e.stopPropagation();
+						onToggle(u.id);
+					}}
+				>
+					{followed ? '已关注' : '关注'}
+				</button>
+			</InteractiveListRow>
+		{/each}
+	</BorderedList>
 {/if}

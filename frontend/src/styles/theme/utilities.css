@@ -447,10 +447,10 @@
     will-change: transform;
   }
 
-  /* 通用按钮：hover 轻微提亮、按下 0.94 缩放（对齐 Figma tap 0.94/0.10s） */
+  /* 通用按钮：按下 0.94 缩放（对齐 Figma tap 0.94/0.10s）；hover 由全局 button 规则的
+     --interactive-hover-fill 背景填充承载（Figma 无 brightness 滤镜） */
   .neu-hover-btn { transition-duration: 0.17s, 0.18s, 0.18s, 0.18s, 0.18s; }
-  .neu-hover-btn:hover { filter: brightness(1.05); }
-  .neu-hover-btn:active { transform: scale(0.94); filter: brightness(0.96); transition-duration: 0.10s, 0.18s, 0.18s, 0.18s, 0.18s; }
+  .neu-hover-btn:active { transform: scale(0.94); transition-duration: 0.10s, 0.18s, 0.18s, 0.18s, 0.18s; }
 
   /* 行内小图标动作：hover 缩放 1.20（Figma action）、按下 0.94 */
   .neu-hover-action:hover { transform: scale(1.20); transition-duration: 0.14s, 0.18s, 0.18s, 0.18s, 0.18s; }
@@ -468,6 +468,7 @@
 
   /* 页面级按钮的精确 tap 强度（对齐 Figma 各页 whileTap 硬编码值） */
   .neu-tap-99:active { transform: scale(0.99); }
+  .neu-tap-98:active { transform: scale(0.98); }
   .neu-tap-97:active { transform: scale(0.97); }
   .neu-tap-93:active { transform: scale(0.93); }
   .neu-tap-92:active { transform: scale(0.92); }

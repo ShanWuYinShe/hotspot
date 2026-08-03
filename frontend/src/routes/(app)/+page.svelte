@@ -145,10 +145,13 @@
 {#if platformStore.platform !== 'mobile'}
 	<!-- ═══ Desktop Home — 2-column with clear hierarchy ═══ -->
 	<div class="content-mode-wide flex flex-col h-full">
-		<ContentColumn class="flex items-center justify-between py-4">
+		<div
+			class="flex-shrink-0 flex items-center justify-between px-5 sm:px-7 py-4"
+			style="background-color:var(--neu-bg);border-bottom:1px solid var(--neu-border);"
+		>
 			<div>
-				<h1 class="text-2xl" style="color:var(--neu-text);">首页</h1>
-				<p class="text-xs" style="color:var(--neu-text-muted);margin-top:2px;">发现周边有趣的人和事</p>
+				<h1 style="font-size:24px;color:var(--neu-text);">首页</h1>
+				<p style="font-size:12px;color:var(--neu-text-muted);margin-top:2px;">发现周边有趣的人和事</p>
 			</div>
 			<div class="flex items-center gap-2">
 				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full neu-surface-flat">
@@ -156,7 +159,7 @@
 					<span class="text-xs" style="color:var(--neu-text-muted);">{onlineCount} 在线</span>
 				</div>
 			</div>
-		</ContentColumn>
+		</div>
 
 		<div class="flex flex-1 min-h-0 gap-0 overflow-hidden">
 			<!-- Left: hero + activity + groups (340px) -->
@@ -207,24 +210,20 @@
 					<p class="text-xs" style="color:var(--neu-text-muted);margin-top:2px;">发现周边有趣的人和事</p>
 				</div>
 				<div class="flex items-center gap-2">
-					<!-- 城市 pill（对齐 Figma HomeMobile 城市徽标） -->
+					<!-- 城市徽标（对齐 Figma HomeMobile：非交互 div + 绿点 + 文字，无 MapPin 图标） -->
+					<div class="flex items-center gap-1.5 py-1.5 px-3 rounded-full neu-surface-flat">
+						<span class="rounded-full" style="width:6px;height:6px;background:var(--semantic-online);"></span>
+						<span style="font-size:11px;color:var(--neu-text-muted);">徐州</span>
+					</div>
+					<!-- 搜索按钮（对齐 Figma HomeMobile size-8 圆形搜索，图标 16px） -->
 					<button
 						type="button"
-						class="neu-hover-btn flex items-center gap-1.5 py-1.5 px-3 rounded-full cursor-pointer neu-surface-flat"
-						onclick={() => void goto(ROUTES.map)}
-					>
-						<MapPin style="width:12px;height:12px;color:var(--neu-accent-primary);" strokeWidth={1.75} />
-						<span class="text-[11px]" style="color:var(--neu-text-muted);">徐州</span>
-					</button>
-					<!-- 搜索按钮（对齐 Figma HomeMobile size-8 圆形搜索） -->
-					<button
-						type="button"
-						class="neu-hover-btn flex items-center justify-center rounded-full cursor-pointer outline-none neu-surface-flat"
-						style="width:32px;height:32px;"
+						class="neu-hover-btn flex size-8 items-center justify-center rounded-full border cursor-pointer transition-colors hover:bg-[var(--neu-accent-soft)]"
+						style="border-color:var(--neu-border);background:var(--neu-bg);"
 						onclick={() => void goto(ROUTES.search)}
 						aria-label="搜索"
 					>
-						<Search style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.75} />
+						<Search class="size-4" color="var(--neu-text-muted)" strokeWidth={1.8} />
 					</button>
 				</div>
 			</div>

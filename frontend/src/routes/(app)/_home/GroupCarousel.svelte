@@ -28,7 +28,7 @@
 	<div class="flex gap-3 overflow-x-auto no-scrollbar pb-1">
 		{#each groups as g (g.id)}
 			<div
-				class="image-hover-frame neu-card-hover relative aspect-square w-[140px] flex-shrink-0 cursor-pointer overflow-hidden rounded-control"
+				class="image-hover-frame neu-card-hover neu-tap-98 relative aspect-square w-[140px] flex-shrink-0 cursor-pointer overflow-hidden rounded-control"
 			>
 				<img src={g.banner} alt={g.name} class="image-hover-frame__image absolute inset-0 h-full w-full object-cover" />
 				<div class="absolute inset-0" style="background:var(--surface-media-scrim-soft);"></div>
