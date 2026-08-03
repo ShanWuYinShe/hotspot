@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ArrowLeft, Phone, Video, Send, Smile, CheckCheck, MoreHorizontal, MessageCircle } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import { cn } from '@/lib/utils';
 	import { auth } from '@/stores/auth.svelte';
 	import { getPrivateMessages, sendPrivateMessage, markPrivateRead } from '@/api';
 	import {
@@ -36,7 +37,8 @@
 		contact: contactProp,
 		showBackButton = false,
 		onBack,
-		compact = false
+		compact = false,
+		class: className = ''
 	}: {
 		/** The peer's user_id (spec: target_user_id). */
 		peerUserId: string;
@@ -45,6 +47,7 @@
 		showBackButton?: boolean;
 		onBack?: () => void;
 		compact?: boolean; // for desktop split-pane (smaller header)
+		class?: string;
 	} = $props();
 
 	function formatTime(iso?: string) {
@@ -354,7 +357,7 @@
 	});
 </script>
 
-<div class="flex min-h-0 flex-col h-full bg-[var(--neu-bg)]">
+<div class={cn('flex min-h-0 flex-col h-full bg-[var(--neu-bg)]', className)}>
 	<!-- Header -->
 	<div class="flex-shrink-0 flex items-center gap-3 px-4 bg-[var(--neu-bg)]" style="height:{compact ? 52 : 60}px;border-bottom:1px solid var(--neu-border);">
 		{#if showBackButton}

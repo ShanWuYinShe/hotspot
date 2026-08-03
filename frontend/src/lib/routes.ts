@@ -1,5 +1,18 @@
-/** Canonical application URLs mirror backend domains and resource names. */
-export type ProfileSection = "moments" | "groups" | "friends" | "following" | "fans";
+/**
+ * Canonical application URLs mirror backend domains and resource names.
+ *
+ * 注意：Figma Make 原项目的个人主页分区为 moments / groups / friends / following / fans
+ * 共 5 个；当前 frontend 在导航层把「关注 + 粉丝」合并为单个 relationships 分区
+ * （内部用 ?tab=followers|following 切换）。因此 ProfileSection 在 5 个原值之外
+ * 额外保留 relationships 作为路由段合法值，避免类型与路由守卫割裂。
+ */
+export type ProfileSection =
+	| "moments"
+	| "groups"
+	| "friends"
+	| "following"
+	| "fans"
+	| "relationships";
 
 export const ROUTES = {
   home: "/",

@@ -46,13 +46,13 @@
 				{#snippet icon()}
 					<Grid3X3 size={20} />
 				{/snippet}
-				{#if activeTab === 'posts'}
-					{#snippet action()}
+				{#snippet action()}
+					{#if activeTab === 'posts'}
 						<button type="button" onclick={openComposer} class="rounded-full bg-[var(--neu-accent-primary)] px-4 py-2 text-xs font-medium text-[var(--text-on-accent)] neu-focus-ring">
 							发布第一条
 						</button>
-					{/snippet}
-				{/if}
+					{/if}
+				{/snippet}
 			</EmptyState>
 		{:else}
 			<!-- 编辑式档案头部（对齐 Figma SectionMoments header） -->

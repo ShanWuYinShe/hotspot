@@ -249,7 +249,7 @@
 	</div>
 {:else}
 	<!-- ═══ Mobile Messages ═══ -->
-	<PageHeader title="消息" sticky subtitle={totalUnread > 0 ? `${totalUnread} 条未读` : '全部已读'}>
+	<PageHeader title="消息" sticky titleSize={22} subtitleSize={12} subtitle={totalUnread > 0 ? `${totalUnread} 条未读` : '全部已读'}>
 		{#snippet trailing()}
 			<button
 				type="button"

@@ -11,7 +11,7 @@
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import NotifRow from './NotifRow.svelte';
-	import { TYPE_CONFIG, type Notif } from './notif-data';
+	import { TYPE_CONFIG, normalizeNotifType, type Notif } from './notif-data';
 	import { listNotifications, getUnreadCount, markRead } from '@/api';
 	import { WS_NOTIFY_EVENT } from '@/lib/ws/client';
 	import { ROUTES } from '@/lib/routes';
@@ -19,23 +19,14 @@
 	// 通知列表：类型过滤、单条/全部已读、桌面右侧概览 Rail。
 	// 迁移自旧版 NotificationsPage。
 
-	const FILTER_TABS = [
-		{ id: 'all', label: '全部' },
-		// 点赞由 reaction_added 表达(契约已删 moment_liked),tab 语义对齐 reaction。
-		{ id: 'reaction', label: '点赞' },
-		{ id: 'follow', label: '关注' },
-		{ id: 'comment', label: '评论' },
-		{ id: 'nearby', label: '附近' }
-	];
-
-	// tab id → 命中的 NotifyType 集合(契约 NotifyCategory 映射,api_spec_types.md)。
-	// 注:group/report 类通知未设独立 tab,全部归入"全部"。
-	const FILTER_TYPE_MAP: Record<string, string[]> = {
-		reaction: ['reaction_added'],
-		follow: ['new_follower', 'mutual_follow'],
-		comment: ['moment_commented', 'comment_reply', 'mentioned'],
-		nearby: ['nearby_new_moment']
-	};
+const FILTER_TABS = [
+	{ id: 'all', label: '全部' },
+	// 点赞由 reaction_added 表达(契约已删 moment_liked),tab 语义对齐 reaction。
+	{ id: 'reaction', label: '点赞' },
+	{ id: 'follow', label: '关注' },
+	{ id: 'comment', label: '评论' },
+	{ id: 'nearby', label: '附近' }
+];
 
 	let notifs = $state<Notif[]>([]);
 	let filter = $state('all');
@@ -92,7 +83,8 @@
 						else text = n.payload?.title ?? n.message ?? '';
 						return {
 							id: n.notification_id ?? String(i + 1),
-							type: n.type ?? 'reaction',
+							// 归一化为语义键，使图标/计数/分区过滤都能命中 TYPE_CONFIG。
+							type: normalizeNotifType(n.type ?? 'reaction_added'),
 							read: n.is_read ?? false,
 							time: n.created_at ?? '',
 							user: { name: actor.nickname ?? '', avatar: actor.avatar_url ?? '' },
@@ -130,9 +122,9 @@
 		notifs = notifs.filter((n) => n.id !== id);
 	};
 
-	const filtered = $derived(
-		notifs.filter((n) => filter === 'all' || (FILTER_TYPE_MAP[filter] ?? []).includes(n.type))
-	);
+	// 归一化后 n.type 已是语义键（reaction/follow/comment/nearby/event），
+	// 直接与 tab id 比较；FILTER_TYPE_MAP 仅保留供历史/调试参考。
+	const filtered = $derived(notifs.filter((n) => filter === 'all' || n.type === filter));
 	const unreadGroup = $derived(filtered.filter((n) => !n.read));
 	const readGroup = $derived(filtered.filter((n) => n.read));
 	const typeStats = $derived(
@@ -143,7 +135,7 @@
 {#snippet main()}
 
 		<div class="h-full overflow-y-auto no-scrollbar">
-			<PageHeader title="通知" sticky onBack={() => history.back()} subtitle={unread > 0 ? `${unread} 条未读` : undefined}>
+			<PageHeader title="通知" sticky titleSize={20} onBack={() => history.back()} subtitle={unread > 0 ? `${unread} 条未读` : undefined}>
 				{#snippet trailing()}
 					{#if unread > 0}
 						<button
@@ -192,17 +184,14 @@
 							<NotifRow notif={n} onRead={markSingleRead} onRemove={remove} />
 						{/each}
 					</BorderedList>
-					{#if readGroup.length > 0}
-						<!-- 较早分组标题（非 emphasis：计数 pill + flex 分隔线） -->
-						<div class="mb-2 mt-4 flex h-5 items-center gap-2">
-							<p class="uppercase" style="font-size:10px;font-weight:500;letter-spacing:0.14em;color:var(--neu-text-muted);">较早</p>
-							<span class="rounded-full px-1.5 py-0.5" style="font-size:10px;line-height:1;color:var(--neu-accent-primary);background:var(--neu-accent-soft);">{readGroup.length}</span>
-							<span aria-hidden="true" class="h-px flex-1" style="background:var(--neu-border);"></span>
-						</div>
-					{/if}
 				{/if}
 
 				{#if readGroup.length > 0}
+					<!-- 较早分组标题（非 emphasis：仅 label + flex 分隔线，对齐 Figma Make） -->
+					<div class="mb-2 flex h-5 items-center gap-2" style="margin-top:{unreadGroup.length > 0 ? '16px' : '0'};">
+						<p class="uppercase" style="font-size:10px;font-weight:500;letter-spacing:0.14em;color:var(--neu-text-muted);">较早</p>
+						<span aria-hidden="true" class="h-px flex-1" style="background:var(--neu-border);"></span>
+					</div>
 					<BorderedList>
 						{#each readGroup as n (n.id)}
 							<NotifRow notif={n} onRead={markSingleRead} onRemove={remove} />

@@ -168,7 +168,7 @@
 {#if platform === 'desktop'}
 	<!-- ═══ Desktop Discover — 2-col BSP field ═══ -->
 	<div class="content-mode-wide flex flex-col h-full">
-		<PageHeader title="附近动态" sticky onBack={() => history.back()}>
+		<PageHeader title="附近动态" sticky titleSize={20} onBack={() => history.back()}>
 			{#snippet trailing()}
 				<div class="flex items-center gap-2">
 					<div class="hidden sm:flex flex-1 max-w-sm">
@@ -206,7 +206,6 @@
 								<PostCard
 									item={item}
 									dense
-									edition={String(index + 1).padStart(2, '0')}
 									liked={item.liked}
 									saved={item.saved}
 									onLike={() => void interactions.toggleLike(item.id)}
@@ -222,7 +221,7 @@
 	</div>
 {:else if platform === 'tablet'}
 	<!-- ═══ Tablet Discover — header + content ═══ -->
-	<PageHeader title="附近动态" sticky onBack={() => history.back()}>
+	<PageHeader title="附近动态" sticky titleSize={24} onBack={() => history.back()}>
 		{#snippet trailing()}
 			<div class="flex items-center gap-2">
 				<div class="hidden sm:flex flex-1 max-w-sm">
@@ -262,7 +261,6 @@
 						<PostCard
 							item={item}
 							dense
-							edition={String(index + 1).padStart(2, '0')}
 							liked={item.liked}
 							saved={item.saved}
 							onLike={() => void interactions.toggleLike(item.id)}
@@ -276,7 +274,7 @@
 	</ContentColumn>
 {:else}
 	<!-- ═══ Mobile Discover — single-column feed, max-width 560px centred ═══ -->
-	<PageHeader title="附近动态" sticky onBack={() => history.back()}>
+	<PageHeader title="附近动态" sticky titleSize={22} onBack={() => history.back()}>
 		{#snippet trailing()}
 			<span class="text-[var(--neu-text-muted)] text-xs">{filtered.length} 条内容</span>
 		{/snippet}
@@ -311,7 +309,6 @@
 					<PostCard
 						item={item}
 						dense
-						edition={String(index + 1).padStart(2, '0')}
 						liked={item.liked}
 						saved={item.saved}
 						onLike={() => void interactions.toggleLike(item.id)}

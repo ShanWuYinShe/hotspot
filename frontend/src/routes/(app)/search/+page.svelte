@@ -316,7 +316,7 @@
 									<span class="min-w-0 flex-1">
 										<span class="block text-sm text-[var(--neu-text)]">{person.nickname}</span>
 										<span class="mt-0.5 block text-xs text-[var(--neu-text-muted)]">
-											@{person.user_id}{#if person.tags?.length} · {person.tags[0]}{/if}
+											{#if person.tags?.length}{person.tags[0]}{/if}
 										</span>
 									</span>
 									<ArrowUpRight class="size-4 text-[var(--neu-text-muted)]" />

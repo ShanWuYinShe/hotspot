@@ -38,14 +38,14 @@
 </script>
 
 <NearbyImageCard
-	imageSrc={user.avatar}
+	imageSrc={avatarFailed ? '' : user.avatar}
 	imageAlt={user.name}
 	onClick={onNavigate}
 	onImageError={() => (avatarFailed = true)}
 	class="rounded-panel aspect-[3/4] neu-surface-flat"
 >
 	<!-- 无头像 / 加载失败：accent 主题渐变占位覆盖在图片层之上 -->
-	{#if avatarFailed}
+	{#if avatarFailed || !user.avatar}
 		<div
 			class="absolute inset-0 z-[1] flex items-center justify-center"
 			style="background:linear-gradient(135deg, color-mix(in srgb, var(--neu-accent-primary) 24%, var(--neu-bg)) 0%, color-mix(in srgb, var(--neu-accent-primary) 8%, var(--neu-bg)) 100%);"

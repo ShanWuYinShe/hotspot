@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { Search, MapPin, X, Users, ChevronRight, Clock, Star, SlidersHorizontal, Crosshair, Check } from '@lucide/svelte';
+	import { Search, MapPin, X, Users, ChevronRight, Clock, Star, SlidersHorizontal, Crosshair, Check, ArrowLeft } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
-	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import * as Popover from '@/components/ui/popover';
 	import { XUZHOU_CENTER, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from './location-data';
@@ -173,10 +172,10 @@
 	>
 		<iframe src={embedUrl} title="地图" style="width:100%;height:100%;border:0;pointer-events:none;"></iframe>
 
-		<!-- Current location pulsing dot -->
+		<!-- Current location pulsing dot（对齐 Figma Make：halo scale 1→1.8 / opacity 0.55→0 循环） -->
 		<div style="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:5;pointer-events:none;">
 			<div style="width:18px;height:18px;border-radius:50%;background:{PIN_COLORS.user};border:3px solid var(--neu-bg);box-shadow:0 2px 10px {pinTone('user', 55)};position:relative;">
-				<span class="absolute rounded-full" style="inset:-7px;background:{pinTone('user', 20)};border:1px solid {pinTone('user', 30)};"></span>
+				<span class="map-pulse-halo absolute rounded-full" style="inset:-7px;background:{pinTone('user', 20)};border:1px solid {pinTone('user', 30)};"></span>
 			</div>
 		</div>
 
@@ -211,22 +210,32 @@
 		</div>
 	</div>
 
-	<!-- ══ TOP BAR ══ -->
-	<div style="position:absolute;top:0;left:0;right:0;z-index:50;">
-		<PageHeader title="位置选择" onBack={() => history.back()}>
-			{#snippet trailing()}
-				<Popover.Root bind:open={showFilter}>
-					<div bind:this={filterAnchorEl}>
-						<button
-							type="button"
-							class="neu-hover-btn flex items-center gap-2 rounded-full outline-none {showFilter ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-[var(--neu-bg)] text-[var(--neu-text)]'}"
-							style="padding:9px 16px;font-size:14px;border:{showFilter ? '1px solid transparent' : '1px solid var(--neu-border)'};box-shadow:{showFilter ? '0 4px 16px var(--neu-glow)' : '0 2px 12px var(--neu-shadow-dark), 0 1px 3px var(--neu-shadow-dark)'};"
-							onclick={() => (showFilter = !showFilter)}
-						>
-							<SlidersHorizontal style="width:14px;height:14px;" strokeWidth={showFilter ? 2.5 : 1.75} />
-							筛选
-						</button>
-					</div>
+	<!-- ══ TOP BAR (fixed, floating over map — 对齐 Figma Make：无标题，仅返回 + 筛选) ══ -->
+	<div style="position:absolute;top:0;left:0;right:0;z-index:50;padding:12px 14px 0;">
+		<div style="display:flex;align-items:center;justify-content:space-between;">
+			<!-- Back -->
+			<button
+				type="button"
+				class="neu-hover-btn flex items-center justify-center rounded-full outline-none neu-circle-hover"
+				style="width:42px;height:42px;{floatBtnStyle}"
+				onclick={() => history.back()}
+			>
+				<ArrowLeft style="width:17px;height:17px;color:var(--neu-text);" strokeWidth={2} />
+			</button>
+
+			<!-- Filter toggle -->
+			<Popover.Root bind:open={showFilter}>
+				<div bind:this={filterAnchorEl}>
+					<button
+						type="button"
+						class="neu-hover-btn flex items-center gap-2 rounded-full outline-none {showFilter ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-[var(--neu-bg)] text-[var(--neu-text)]'}"
+						style="padding:9px 16px;font-size:14px;border:{showFilter ? '1px solid transparent' : '1px solid var(--neu-border)'};box-shadow:{showFilter ? '0 4px 16px var(--neu-glow)' : '0 2px 12px var(--neu-shadow-dark), 0 1px 3px var(--neu-shadow-dark)'};"
+						onclick={() => (showFilter = !showFilter)}
+					>
+						<SlidersHorizontal style="width:14px;height:14px;" strokeWidth={showFilter ? 2.5 : 1.75} />
+						筛选
+					</button>
+				</div>
 
 					<!-- Filter legend panel -->
 					<Popover.Content
@@ -258,8 +267,7 @@
 						{/each}
 					</Popover.Content>
 				</Popover.Root>
-			{/snippet}
-		</PageHeader>
+		</div>
 	</div>
 
 	<!-- ══ RIGHT CONTROLS — bottom tracks sheet ══ -->

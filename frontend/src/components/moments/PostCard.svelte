@@ -16,8 +16,7 @@
 		onSave,
 		dense = false,
 		onClick,
-		hero = false,
-		edition
+		hero = false
 	}: {
 		item: FeedItem;
 		liked: boolean;
@@ -27,7 +26,6 @@
 		dense?: boolean;
 		onClick?: () => void;
 		hero?: boolean;
-		edition?: string;
 	} = $props();
 </script>
 
@@ -52,12 +50,6 @@
 		</div>
 	{/if}
 
-	{#if edition}
-		<div class="absolute right-3 top-3 z-[2] flex h-7 min-w-7 items-center justify-center rounded-full border border-white/35 bg-black/20 px-1.5 font-mono text-[9px] tracking-[0.12em] text-white backdrop-blur-sm">
-			{edition}
-		</div>
-	{/if}
-
 	<!-- Tag chip -->
 	<div class="absolute top-2.5 left-2.5 z-[2] px-2 py-0.5 rounded-full bg-[var(--neu-accent-primary)]" style="box-shadow:0 2px 8px var(--neu-glow);">
 		<span class="text-white text-[10px]">{item.tag}</span>
@@ -65,19 +57,21 @@
 
 	<!-- 底部信息托盘（surface-card-menu，由 NearbyImageCard footer 槽渲染） -->
 	{#snippet footer()}
-		<div class="px-3 pt-2.5 pb-2.5">
-			<p class="{dense ? 'line-clamp-1 text-xs' : 'line-clamp-2 text-[13px]'} leading-[1.55]" style="color:var(--neu-text);">
+		<div class="px-3 pb-2.5 pt-2.5">
+			<!-- 作者行：头像 + 昵称 + 位置（对齐 Figma Make PostCard footer 顺序） -->
+			<div class="flex min-w-0 items-center gap-2">
+				<Avatar src={item.avatar} name={item.user} size={22} style="border:1.5px solid var(--border-card-menu);" />
+				<span class="truncate text-[11px] text-[var(--neu-text)]" style="font-weight:500;">{item.user}</span>
+				<span class="ml-auto flex min-w-0 items-center gap-0.5 truncate text-[10px]" style="color:var(--neu-text-muted);">
+					<MapPin style="width:9px;height:9px;flex-shrink:0;color:var(--neu-text-muted);" strokeWidth={1.5} />
+					{item.location}
+				</span>
+			</div>
+
+			<!-- 正文：单行省略，muted（对齐 Figma Make：fontSize 11 / muted） -->
+			<p class="mt-1 line-clamp-1 leading-[1.55] text-[11px]" style="color:var(--neu-text-muted);">
 				{item.content}
 			</p>
-
-			<div class="mt-1.5 flex items-center gap-2">
-				<Avatar src={item.avatar} name={item.user} size={22} style="border:1.5px solid var(--border-card-menu);" />
-				<span class="text-[11px] text-[var(--neu-text)]" style="font-weight:500;">{item.user}</span>
-				<div class="flex items-center gap-0.5 ml-auto">
-					<MapPin style="width:9px;height:9px;color:var(--neu-text-muted);" strokeWidth={1.5} />
-					<span class="text-[10px]" style="color:var(--neu-text-muted);">{item.location}</span>
-				</div>
-			</div>
 
 			<!-- Actions -->
 			<div class="mt-1.5 flex items-center justify-between">
@@ -93,10 +87,10 @@
 						<Heart style="width:15px;height:15px;" strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
 						<span class="text-[11px]">{item.likes + (liked ? 1 : 0)}</span>
 					</button>
-					<button type="button" class="neu-hover-action flex items-center gap-1.5 outline-none text-[var(--neu-text-muted)]" onclick={(e) => e.stopPropagation()}>
+					<span class="flex items-center gap-1.5 text-[11px] text-[var(--neu-text-muted)]">
 						<MessageCircle style="width:15px;height:15px;" strokeWidth={1.5} />
-						<span class="text-[11px]">{item.comments}</span>
-					</button>
+						{item.comments}
+					</span>
 				</div>
 				<div class="flex gap-3">
 					<button

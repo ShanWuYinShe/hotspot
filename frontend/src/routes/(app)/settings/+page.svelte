@@ -7,7 +7,7 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import NeuToggle from '@/components/forms/NeuToggle.svelte';
 	import { logout } from '@/stores/auth.svelte';
-	import { themeStore, setTheme, toggleDark } from '@/stores/theme.svelte';
+	import { themeStore, setTheme, toggleDark, type AppTheme } from '@/stores/theme.svelte';
 	import { getAccount, getSettings } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 
@@ -94,7 +94,7 @@
 		<div class="px-4 py-3.5">
 			<div class="flex items-center gap-3">
 				<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
-					<Palette style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+					<Palette style="width:15px;height:15px;color:var(--neu-accent-primary);" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-[14px] text-[var(--neu-text)]">应用主题</p>
@@ -102,7 +102,7 @@
 				</div>
 			</div>
 			<div class="mt-3 grid grid-cols-2 gap-2">
-				{#each [{ id: 'forest', label: '清野' }, { id: 'vibrant', label: '星际' }] as t}
+				{#each ([{ id: 'forest', label: '清野' }, { id: 'vibrant', label: '星际' }] as { id: AppTheme; label: string }[]) as t}
 					<button
 						type="button"
 						aria-pressed={themeStore.theme === t.id}
@@ -122,13 +122,13 @@
 		</div>
 		<div class="mx-4 bg-[var(--neu-border)]" style="height:1px;"></div>
 		<div class="flex items-center gap-3 px-4 py-3.5">
-			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
-				{#if themeStore.isDark}
-					<Moon style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
-				{:else}
-					<Sun style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
-				{/if}
-			</div>
+				<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
+					{#if themeStore.isDark}
+						<Moon style="width:15px;height:15px;color:var(--neu-accent-primary);" strokeWidth={1.5} />
+					{:else}
+						<Sun style="width:15px;height:15px;color:var(--neu-accent-primary);" strokeWidth={1.5} />
+					{/if}
+				</div>
 			<div class="flex-1 min-w-0">
 				<p class="text-[14px] text-[var(--neu-text)]">深色模式</p>
 				<p class="text-[11px] text-[var(--neu-text-muted)]">{themeStore.isDark ? '当前使用深色外观' : '当前使用浅色外观'}</p>
@@ -192,7 +192,7 @@
 	<!-- General -->
 	<p class="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em] uppercase">通用</p>
 	<div class="rounded-panel overflow-hidden neu-surface-flat">
-		<button type="button" class="neu-hover-bg flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease;">
+		<button type="button" class="neu-hover-bg neu-row-nudge flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
 			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
 				<Globe style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
 			</div>
@@ -203,7 +203,7 @@
 			<ChevronRight style="width:15px;height:15px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
 		</button>
 		<div class="mx-4 bg-[var(--neu-border)]" style="height:1px;"></div>
-		<button type="button" class="neu-hover-bg flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease;">
+		<button type="button" class="neu-hover-bg neu-row-nudge flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
 			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
 				<User style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
 			</div>
@@ -214,7 +214,7 @@
 			<ChevronRight style="width:15px;height:15px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
 		</button>
 		<div class="mx-4 bg-[var(--neu-border)]" style="height:1px;"></div>
-		<button type="button" class="neu-hover-bg flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease;">
+		<button type="button" class="neu-hover-bg neu-row-nudge flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
 			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
 				<Info style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
 			</div>

@@ -22,17 +22,19 @@
 
 	let {
 		children,
-		class: className = ''
+		class: className = '',
+		style: styleProp = ''
 	}: {
 		children: Snippet;
 		class?: string;
+		style?: string;
 	} = $props();
 </script>
 
 <!-- BorderedList：唯一外框 + 行分隔（gap-px + 容器底色形成 1px 线） -->
 <div
 	class={cn('flex flex-col gap-px overflow-hidden rounded-control border', className)}
-	style="background:var(--neu-border);border-color:var(--neu-border);"
+	style={`background:var(--neu-border);border-color:var(--neu-border);${styleProp}`}
 >
 	{@render children()}
 </div>

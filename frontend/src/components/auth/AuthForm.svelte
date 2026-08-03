@@ -166,7 +166,7 @@
 		{#if mode === 'login'}
 			<!-- 登录方式双 tab（对齐 Figma Make LoginPage） -->
 			<div class="grid grid-cols-2 border border-[var(--neu-border)] bg-[var(--neu-bg)] p-1" style="border-radius:12px;">
-				{#each [['code', '验证码登录'], ['password', '密码登录']] as [id, label]}
+				{#each ([['code', '验证码登录'], ['password', '密码登录']] as ['code' | 'password', string][]) as [id, label]}
 					<button
 						type="button"
 						aria-pressed={method === id}

@@ -74,13 +74,15 @@
 		}
 	}}
 >
-	<img
-		src={imageSrc}
-		alt={imageAlt}
-		class="image-hover-frame__image absolute inset-0 h-full w-full object-cover will-change-transform"
-		style="transform:{imageTransform};transition:transform 0.32s cubic-bezier(0.22,1,0.36,1);"
-		onerror={onImageError}
-	/>
+	{#if imageSrc}
+		<img
+			src={imageSrc}
+			alt={imageAlt}
+			class="image-hover-frame__image absolute inset-0 h-full w-full object-cover will-change-transform"
+			style="transform:{imageTransform};transition:transform 0.32s cubic-bezier(0.22,1,0.36,1);"
+			onerror={onImageError}
+		/>
+	{/if}
 	<div class="absolute inset-0" style="background:var(--surface-media-scrim-card);"></div>
 	{#if children}
 		{@render children()}

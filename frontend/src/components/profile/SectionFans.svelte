@@ -99,17 +99,48 @@
 						{/snippet}
 					</EmptyState>
 				</div>
-			{:else}
-				{#each filtered as f (f.id)}
-					{@const isMutual = followedBack.has(f.id)}
-					<InteractiveListRow tone="card" class="flex items-center gap-3 p-3.5 cursor-pointer"
-						onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
-						ariaLabel={`查看 ${f.name} 的主页`}
-					>
-						<FanRowBody {f} {isMutual} />
-					</InteractiveListRow>
-				{/each}
-			{/if}
+				{:else}
+					{#each filtered as f (f.id)}
+						{@const isMutual = followedBack.has(f.id)}
+						<InteractiveListRow tone="card" class="flex items-center gap-3 p-3.5 cursor-pointer"
+							onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
+							ariaLabel={`查看 ${f.name} 的主页`}
+						>
+							<Avatar ring src={f.avatar} name={f.name} size={48} />
+							<div class="flex-1 min-w-0">
+								<div class="flex items-center gap-2">
+									<span class="text-[var(--neu-text)] text-[13px]">{f.name}</span>
+									{#if isMutual}
+										<span class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[var(--semantic-online)] text-[10px]" style="background:color-mix(in srgb, var(--semantic-online) 12%, transparent);">
+											<Check style="width:9px;height:9px;" strokeWidth={2.5} />
+											互关
+										</span>
+									{/if}
+								</div>
+								<p class="text-[var(--neu-text-muted)] text-[11px] mt-0.5">
+									{f.handle} · {fanLabel(f.joinedDays)}关注了你
+								</p>
+							</div>
+							<button
+								type="button"
+								class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] {isMutual ? 'bg-transparent text-[var(--neu-text-muted)]' : 'bg-[var(--neu-accent-primary)] text-white'}"
+								style={isMutual ? 'border:1px solid var(--neu-border-pressed);' : 'border:1px solid transparent;'}
+								onclick={(e) => {
+									e.stopPropagation();
+									toggleFollow(f.id);
+								}}
+							>
+								{#if isMutual}
+									<Check style="width:10px;height:10px;" strokeWidth={2.5} />
+									互关
+								{:else}
+									<UserPlus style="width:10px;height:10px;" strokeWidth={2} />
+									回关
+								{/if}
+							</button>
+						</InteractiveListRow>
+					{/each}
+				{/if}
 		</div>
 	{:else}
 		<div class="px-5 pb-6">
@@ -121,52 +152,48 @@
 				</EmptyState>
 			{:else}
 			<BorderedList>
-				{#each filtered as f (f.id)}
-					{@const isMutual = followedBack.has(f.id)}
-					<InteractiveListRow class="flex items-center gap-3 p-3 cursor-pointer"
-						onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
-						ariaLabel={`查看 ${f.name} 的主页`}
-					>
-						<FanRowBody {f} {isMutual} compact />
-					</InteractiveListRow>
-				{/each}
-			</BorderedList>
-			{/if}
-		</div>
-	{/if}
-</div>
-
-{#snippet FanRowBody(f: (typeof filtered)[number], isMutual: boolean, compact = false)}
-	<Avatar ring src={f.avatar} name={f.name} size={compact ? 42 : 48} />
-	<div class="flex-1 min-w-0">
-		<div class="flex items-center gap-2">
-			<span class="text-[var(--neu-text)] text-[13px]">{f.name}</span>
-			{#if isMutual}
-				<span class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[var(--semantic-online)] text-[10px]" style="background:color-mix(in srgb, var(--semantic-online) 12%, transparent);">
-					<Check style="width:9px;height:9px;" strokeWidth={2.5} />
-					互关
-				</span>
-			{/if}
-		</div>
-		<p class="text-[var(--neu-text-muted)] text-[11px] mt-0.5">
-			{f.handle} · {fanLabel(f.joinedDays)}关注了你
-		</p>
-	</div>
-	<button
-		type="button"
-		class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] {isMutual ? 'bg-transparent text-[var(--neu-text-muted)]' : 'bg-[var(--neu-accent-primary)] text-white'}"
-		style={isMutual ? 'border:1px solid var(--neu-border-pressed);' : 'border:1px solid transparent;'}
-		onclick={(e) => {
-			e.stopPropagation();
-			toggleFollow(f.id);
-		}}
-	>
-		{#if isMutual}
-			<Check style="width:10px;height:10px;" strokeWidth={2.5} />
-			互关
-		{:else}
-			<UserPlus style="width:10px;height:10px;" strokeWidth={2} />
-			回关
+					{#each filtered as f (f.id)}
+						{@const isMutual = followedBack.has(f.id)}
+						<InteractiveListRow class="flex items-center gap-3 p-3 cursor-pointer"
+							onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
+							ariaLabel={`查看 ${f.name} 的主页`}
+						>
+							<Avatar ring src={f.avatar} name={f.name} size={42} />
+							<div class="flex-1 min-w-0">
+								<div class="flex items-center gap-2">
+									<span class="text-[var(--neu-text)] text-[13px]">{f.name}</span>
+									{#if isMutual}
+										<span class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[var(--semantic-online)] text-[10px]" style="background:color-mix(in srgb, var(--semantic-online) 12%, transparent);">
+											<Check style="width:9px;height:9px;" strokeWidth={2.5} />
+											互关
+										</span>
+									{/if}
+								</div>
+								<p class="text-[var(--neu-text-muted)] text-[11px] mt-0.5">
+									{f.handle} · {fanLabel(f.joinedDays)}关注了你
+								</p>
+							</div>
+							<button
+								type="button"
+								class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] {isMutual ? 'bg-transparent text-[var(--neu-text-muted)]' : 'bg-[var(--neu-accent-primary)] text-white'}"
+								style={isMutual ? 'border:1px solid var(--neu-border-pressed);' : 'border:1px solid transparent;'}
+								onclick={(e) => {
+									e.stopPropagation();
+									toggleFollow(f.id);
+								}}
+							>
+								{#if isMutual}
+									<Check style="width:10px;height:10px;" strokeWidth={2.5} />
+									互关
+								{:else}
+									<UserPlus style="width:10px;height:10px;" strokeWidth={2} />
+									回关
+								{/if}
+							</button>
+						</InteractiveListRow>
+					{/each}
+				</BorderedList>
+				{/if}
+			</div>
 		{/if}
-	</button>
-{/snippet}
+	</div>

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Camera, ChevronRight, Heart, ImageIcon, MapPin, Pencil, Settings, UserCheck, UserPlus, Users } from '@lucide/svelte';
-	import AppearanceMenu from '@/components/layout/AppearanceMenu.svelte';
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
@@ -21,25 +20,22 @@
 		{ section: 'fans', label: '粉丝', detail: `${stats.followers_count} 人`, icon: UserCheck }
 	];
 
-	const statsList = [
-		{ label: '帖子', value: stats.moments_count, section: 'moments' as const },
-		{ label: '关注者', value: stats.followers_count, section: 'fans' as const },
-		{ label: '足迹', value: 27, section: null as const }
+	const statsList: { label: string; value: number; section: ProfileSection | null }[] = [
+		{ label: '帖子', value: stats.moments_count, section: 'moments' },
+		{ label: '关注者', value: stats.followers_count, section: 'fans' },
+		{ label: '足迹', value: 27, section: null }
 	];
 </script>
 
 <StandardPageLayout contentClassName="pt-5 pb-8">
 	{#snippet header()}
 		<!-- 资料页眉（对齐 Figma Make：eyebrow + 设置入口） -->
-		<div class="border-b border-[var(--neu-border)]" style="background:var(--neu-bg);">
-			<ContentColumn class="flex items-center justify-between py-3">
-				<p class="text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--neu-accent-primary)]">个人资料</p>
-				<div class="flex items-center gap-1.5">
-					<AppearanceMenu />
+			<div class="border-b border-[var(--neu-border)]" style="background:var(--neu-bg);">
+				<ContentColumn class="flex items-center justify-between py-3">
+					<p class="text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--neu-accent-primary)]">个人资料</p>
 					<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} size={34} />
-				</div>
-			</ContentColumn>
-		</div>
+				</ContentColumn>
+			</div>
 	{/snippet}
 
 	<!-- 身份卡（compact） -->
@@ -89,15 +85,10 @@
 		</div>
 		<div class="grid grid-cols-3 border-t border-[var(--neu-border)]">
 			{#each statsList as stat, i}
-				<button
-					type="button"
-					class="neu-hover-bg border-l border-[var(--neu-border)] px-4 py-3 text-left outline-none first:border-l-0"
-					style="background:var(--neu-bg);"
-					onclick={() => (stat.section ? void goto(ROUTES.meSection(stat.section)) : undefined)}
-				>
+				<div class="border-l border-[var(--neu-border)] px-4 py-3 first:border-l-0">
 					<p class="text-base font-medium tabular-nums text-[var(--neu-text)]">{stat.value}</p>
 					<p class="mt-0.5 text-[11px] text-[var(--neu-text-muted)]">{stat.label}</p>
-				</button>
+				</div>
 			{/each}
 		</div>
 	</section>
@@ -107,7 +98,7 @@
 		<div class="flex items-center justify-between border-b border-[var(--neu-border)] px-5 py-3.5">
 			<div>
 				<p class="text-sm font-medium text-[var(--neu-text)]">个人数据</p>
-				<p class="mt-0.5 text-[11px] text-[var(--neu-text-muted)]">管理你在 HotSpot 的内容与关系</p>
+				<p class="mt-0.5 text-[11px] text-[var(--neu-text-muted)]">在这里查看你的内容与关系</p>
 			</div>
 		</div>
 		{#each DATA_ITEMS as item (item.section)}
@@ -117,7 +108,9 @@
 				style="background:var(--neu-bg);"
 				onclick={() => void goto(ROUTES.meSection(item.section))}
 			>
-				<item.icon style="width:17px;height:17px;color:var(--neu-accent-primary);flex-shrink:0;" strokeWidth={1.7} />
+				<span class="flex shrink-0 items-center justify-center rounded-[10px]" style="width:32px;height:32px;background:var(--neu-accent-soft);border:1px solid var(--neu-accent-soft-border);color:var(--neu-accent-primary);">
+					<item.icon style="width:16px;height:16px;" strokeWidth={1.8} />
+				</span>
 				<span class="min-w-0 flex-1">
 					<span class="block text-sm text-[var(--neu-text)]">{item.label}</span>
 					<span class="mt-0.5 block truncate text-[11px] text-[var(--neu-text-muted)]">{item.detail}</span>

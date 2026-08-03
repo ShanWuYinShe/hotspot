@@ -42,7 +42,7 @@
 	     地图/消息为全画布页：禁用滚动，canvas 固定视口高度。 -->
 	<RoutedContentViewport
 		contentClassName="tablet-page-canvas {pathname === ROUTES.map ? 'h-full' : ''}"
-		style={[ROUTES.map, ROUTES.messages].includes(pathname) ? 'overflow:hidden;' : undefined}
+		style={(pathname === ROUTES.map || pathname === ROUTES.messages) ? 'overflow:hidden;' : undefined}
 	>
 		{@render children()}
 	</RoutedContentViewport>

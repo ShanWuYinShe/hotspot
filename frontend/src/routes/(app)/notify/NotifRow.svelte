@@ -19,8 +19,8 @@
 
 <button
 	type="button"
-	class="neu-hover-row neu-row-hover flex cursor-pointer items-center gap-3 px-3 w-full text-left"
-	style="background:var(--neu-bg);min-height:4.75rem;"
+	class="neu-hover-row neu-row-hover flex cursor-pointer items-center gap-3.5 px-3 py-3.5 w-full text-left"
+	style="background:var(--neu-bg);"
 	onclick={() => onRead(notif.id)}
 >
 	<!-- Avatar + icon badge -->

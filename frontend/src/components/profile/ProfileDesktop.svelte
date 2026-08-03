@@ -9,7 +9,7 @@
 	import SectionFollowing from '@/components/profile/SectionFollowing.svelte';
 	import SectionFans from '@/components/profile/SectionFans.svelte';
 	import { useAccountData } from '@/lib/profile-data.svelte';
-	import { ROUTES } from '@/lib/routes';
+	import { ROUTES, type ProfileSection } from '@/lib/routes';
 
 	// 桌面个人主页（对齐 Figma Make ProfilePage 契约）：
 	// 总览 = 资料页眉 + 双栏（公开个人资料卡 + 资料状态 aside）+ 资料详情 dl；
@@ -28,11 +28,13 @@
 	};
 	const meta = $derived(section && SECTION_META[section] ? SECTION_META[section] : null);
 
-	const statsList = $derived([
-		{ label: '帖子', value: stats.moments_count, section: 'moments' as const },
-		{ label: '关注者', value: stats.followers_count, section: 'fans' as const },
-		{ label: '足迹', value: 27, section: null as const }
-	]);
+	const statsList = $derived(
+		([
+			{ label: '帖子', value: stats.moments_count, section: 'moments' },
+			{ label: '关注者', value: stats.followers_count, section: 'fans' },
+			{ label: '足迹', value: 27, section: null }
+		] as { label: string; value: number; section: ProfileSection | null }[])
+	);
 
 	const detailRows = $derived([
 		{ icon: AtSign, label: '用户名', value: '@elara.v' },

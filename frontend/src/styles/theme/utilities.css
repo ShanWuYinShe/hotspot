@@ -509,6 +509,19 @@
     background-color: color-mix(in srgb, var(--neu-accent-primary) 16%, transparent);
   }
 
+  /* 行级悬停位移（对齐 Figma Make SettingsPage NavRow whileHover x:3）：
+     整行在 hover 时右移 3px，与背景填充叠加形成"可点击行"的动效反馈。 */
+  .neu-row-nudge:hover { transform: translateX(3px); }
+
+  /* 地图当前位置脉冲光晕（对齐 Figma Make LocationMobile motion.div：
+     scale 1→1.8 / opacity 0.55→0 无限循环，2.4s 节奏）。 */
+  @keyframes map-pulse {
+    0% { transform: scale(1); opacity: 0.55; }
+    70% { opacity: 0; }
+    100% { transform: scale(1.8); opacity: 0; }
+  }
+  .map-pulse-halo { animation: map-pulse 2.4s ease-out infinite; }
+
 /*── Interaction contract（对齐 Figma Make theme.css 885-1102）──────────
    可见填充是基线 hover 提示；渐变叠加层对内联/Tailwind 实色背景同样
    生效，主按钮与图标按钮获得一致反馈而不抹掉其语义底色。

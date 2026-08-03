@@ -82,7 +82,6 @@
 			label="外观设置"
 			onClick={() => (open = !open)}
 			variant="ghost"
-			active={open}
 			size={34}
 		/>
 	</div>

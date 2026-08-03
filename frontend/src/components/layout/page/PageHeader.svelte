@@ -30,6 +30,10 @@
 		sticky = true,
 		showBackOnDesktop = false,
 		maxWidth,
+		/** 标题字号（对齐 Figma Make 各页手写 header：消息 22 / 发现 22-24 / 详情 16 等）。 */
+		titleSize = 18,
+		/** 副标题字号（对齐 Figma Make：多数页 12，PageHeader 默认 11）。 */
+		subtitleSize = 11,
 		class: className = '',
 		contentClassName = ''
 	}: {
@@ -42,6 +46,8 @@
 		sticky?: boolean;
 		showBackOnDesktop?: boolean;
 		maxWidth?: number | string;
+		titleSize?: number;
+		subtitleSize?: number;
 		class?: string;
 		/** 内部 ContentColumn 的 className（默认 py-4；传 py-3 等可对齐 Figma 手写 header） */
 		contentClassName?: string;
@@ -60,9 +66,9 @@
 				<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={36} />
 			{/if}
 			<div class={cn('min-w-0', trailing ? '' : 'flex-1')}>
-				<h1 class="text-[var(--neu-text)] text-[18px] font-medium leading-none">{title}</h1>
+				<h1 class="text-[var(--neu-text)] font-medium leading-none" style="font-size:{titleSize}px;">{title}</h1>
 				{#if subtitle}
-					<p class="mt-1 text-[var(--neu-text-muted)] text-[11px]">{subtitle}</p>
+					<p class="mt-1 text-[var(--neu-text-muted)]" style="font-size:{subtitleSize}px;">{subtitle}</p>
 				{/if}
 			</div>
 			{#if trailing}
