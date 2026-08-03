@@ -6,6 +6,7 @@
 	import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
 	import { Tabs } from 'bits-ui';
 	import { ROUTES } from '@/lib/routes';
+	import { formatDistance } from '@/lib/utils';
 	import { getGroupDetail, getGroupMembers, getGroupAnnouncements } from '@/api';
 	import { wsClient } from '@/lib/ws/client';
 	import { presence, watchPresence } from '@/stores/presence.svelte';
@@ -74,7 +75,7 @@
 					category: (detailData.tags?.[0] ?? group.category) || '同城',
 					members: g.members_count,
 					online: detailData.online_members_count ?? group.online,
-					distance: detailData.location?.distance != null ? `${detailData.location.distance}m` : group.distance,
+					distance: formatDistance(detailData.location?.distance) || group.distance,
 					description: detailData.description ?? group.description,
 					banner: g.avatar_url ?? group.banner
 				};

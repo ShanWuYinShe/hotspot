@@ -11,6 +11,7 @@
 	import NearbyUsersFlatList from '@/routes/(app)/_home/NearbyUsersFlatList.svelte';
 	import { type NearbyUser } from '@/routes/(app)/_home/PeopleRadarStrip.svelte';
 	import { ROUTES } from '@/lib/routes';
+	import { formatDistance } from '@/lib/utils';
 
 	// 发现聚合页（平板/移动端顶级导航）：聚合「附近的人 / 附近群组 / 附近动态」
 	// 与搜索入口——平板/移动端没有桌面侧栏的空间放多个 nearby 菜单，统一收口到
@@ -68,7 +69,7 @@
 				nearbyUsers = nearbyUsersData.items.map((u) => ({
 					id: u.user?.user_id ?? '',
 					name: u.user?.nickname ?? '',
-					distance: u.location?.distance != null ? `${u.location.distance}m` : '',
+					distance: formatDistance(u.location?.distance),
 					avatar: u.user?.avatar_url ?? '',
 					status: u.presence_status === 'online' ? '在线' : '离线',
 					tag: u.tags?.[0] ?? ''
@@ -81,7 +82,7 @@
 					name: g.group?.name ?? '',
 					members: g.group?.members_count ?? 0,
 					banner: g.group?.avatar_url ?? '',
-					distance: g.location?.distance != null ? `${g.location.distance}m` : '',
+					distance: formatDistance(g.location?.distance),
 					privacy: g.join_method === 'invite_only' || g.join_method === 'password' ? 'private' : 'public'
 				}));
 			}

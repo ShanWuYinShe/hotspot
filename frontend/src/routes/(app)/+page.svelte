@@ -12,6 +12,7 @@
 	import GroupCarousel, { type NearbyGroup } from '@/routes/(app)/_home/GroupCarousel.svelte';
 	import NearbyUsersFlatList from '@/routes/(app)/_home/NearbyUsersFlatList.svelte';
 	import { ROUTES } from '@/lib/routes';
+	import { formatDistance } from '@/lib/utils';
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 
@@ -78,7 +79,7 @@
 					const users: NearbyUser[] = nearbyUsersData.items.map((u) => ({
 						id: u.user?.user_id ?? '',
 						name: u.user?.nickname ?? '',
-						distance: u.location?.distance != null ? `${u.location.distance}m` : '',
+						distance: formatDistance(u.location?.distance),
 						avatar: u.user?.avatar_url ?? '',
 						status: u.presence_status === 'online' ? '在线' : '离线',
 						tag: u.tags?.[0] ?? ''
@@ -92,7 +93,7 @@
 						name: g.group?.name ?? '',
 						members: g.group?.members_count ?? 0,
 						banner: g.group?.avatar_url ?? '',
-						distance: g.location?.distance != null ? `${g.location.distance}m` : '',
+						distance: formatDistance(g.location?.distance),
 						privacy: g.join_method === 'invite_only' || g.join_method === 'password' ? 'private' : 'public'
 					}));
 					nearbyGroups = groups;

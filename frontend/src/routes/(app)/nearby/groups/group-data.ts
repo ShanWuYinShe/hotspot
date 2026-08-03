@@ -1,5 +1,6 @@
 // 附近群组卡片数据类型与映射（迁移自旧版 NearbyGroupsPage）。
 import type { GroupItem } from '@/api/types';
+import { formatDistance } from '@/lib/utils';
 
 export interface Group {
 	id: string;
@@ -26,7 +27,7 @@ export function mapGroup(item: GroupItem): Group {
 		category: (item.tags?.[0] ?? '') || '同城',
 		members: g.members_count,
 		online: item.online_members_count ?? 0,
-		distance: item.location?.distance != null ? `${item.location.distance}m` : '',
+		distance: formatDistance(item.location?.distance),
 		// join_method 在 GroupItem 顶层；invite_only/password 视为私密
 		privacy: item.join_method === 'invite_only' || item.join_method === 'password' ? 'private' : 'public',
 		joined: item.my_state?.is_joined ?? false,

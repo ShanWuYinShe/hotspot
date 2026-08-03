@@ -12,6 +12,7 @@
 	import UserCard, { type NearbyUser } from './UserCard.svelte';
 	import { getNearbyUsers } from '@/api';
 	import { ROUTES } from '@/lib/routes';
+	import { formatDistance } from '@/lib/utils';
 
 	// 附近的人：排序/标签过滤 + BSP 卡片墙（桌面）/ 网格（移动/平板）。
 	// 迁移自旧版 NearbyPeoplePage。
@@ -52,7 +53,7 @@
 						// spec: feed/nearby_users → UserItem（user 嵌套 + presence_status + location）
 						id: u.user?.user_id ?? '',
 						name: u.user?.nickname ?? '',
-						distance: u.location?.distance != null ? `${u.location.distance}m` : '',
+						distance: formatDistance(u.location?.distance),
 						avatar: u.user?.avatar_url ?? '',
 						status: u.presence_status === 'online' ? '在线' : '离线',
 						tag: u.tags?.[0] ?? '',
