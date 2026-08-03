@@ -140,20 +140,23 @@ const FILTER_TABS = [
 				subtitleSize={12}
 				contentClassName="pt-4 pb-0"
 				onBack={() => history.back()}
-				subtitle={unread > 0 ? `${unread} 条未读` : undefined}
 			>
 				{#snippet trailing()}
-					{#if unread > 0}
-						<button
-							type="button"
-							class="neu-hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none bg-[var(--neu-bg)] text-[var(--neu-accent-primary)] text-[12px]"
-							style="border:1px solid var(--neu-border);box-shadow:3px 3px 8px var(--neu-shadow-dark), -3px -3px 8px var(--neu-shadow-light);"
-							onclick={markAllRead}
-						>
-							<CheckCheck style="width:13px;height:13px;" strokeWidth={2} />
-							全部已读
-						</button>
-					{/if}
+					<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「全部已读」同排 -->
+					<div class="flex items-center gap-2">
+						{#if unread > 0}
+							<span class="text-[var(--neu-text-muted)] text-xs">{unread} 条未读</span>
+							<button
+								type="button"
+								class="neu-hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none bg-[var(--neu-bg)] text-[var(--neu-accent-primary)] text-[12px]"
+								style="border:1px solid var(--neu-border);box-shadow:3px 3px 8px var(--neu-shadow-dark), -3px -3px 8px var(--neu-shadow-light);"
+								onclick={markAllRead}
+							>
+								<CheckCheck style="width:13px;height:13px;" strokeWidth={2} />
+								全部已读
+							</button>
+						{/if}
+					</div>
 				{/snippet}
 				{#snippet below()}
 					<!-- Filter tabs（对齐 Figma Make：与标题同处 sticky header 内，滚动时吸顶） -->

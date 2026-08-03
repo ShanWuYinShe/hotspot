@@ -248,19 +248,27 @@
 	</div>
 {:else}
 	<!-- ═══ Mobile Messages ═══ -->
-	<PageHeader title="消息" sticky titleSize={22} subtitleSize={12} contentClassName="pt-4 pb-0" subtitle={totalUnread > 0 ? `${totalUnread} 条未读` : '全部已读'}>
+	<PageHeader title="消息" sticky titleSize={22} subtitleSize={12} contentClassName="pt-4 pb-0">
 		{#snippet trailing()}
-			<button
-				type="button"
-				class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none neu-surface-flat"
-				style="width:36px;height:36px;"
-				onclick={() => {
-					newChatTab = 'chat';
-					showNewChat = true;
-				}}
-			>
-				<Plus style="width:16px;height:16px;color:var(--neu-text-muted);" strokeWidth={1.5} />
-			</button>
+			<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「新会话」同排 -->
+			<div class="flex items-center gap-2">
+				{#if totalUnread > 0}
+					<span class="text-[var(--neu-text-muted)] text-xs">{totalUnread} 条未读</span>
+				{:else}
+					<span class="text-[var(--semantic-online)] text-xs">全部已读</span>
+				{/if}
+				<button
+					type="button"
+					class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none neu-surface-flat"
+					style="width:36px;height:36px;"
+					onclick={() => {
+						newChatTab = 'chat';
+						showNewChat = true;
+					}}
+				>
+					<Plus style="width:16px;height:16px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+				</button>
+			</div>
 		{/snippet}
 		{#snippet below()}
 			<!-- 搜索框：sticky header 内第二行（对齐 Figma MessagesMobile） -->

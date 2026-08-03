@@ -96,47 +96,40 @@
 	};
 </script>
 
-<StandardPageLayout contentClassName="py-5 sm:py-6">
-	{#snippet header()}
-		<PageHeader title="附近的人" subtitle="徐州 · 5km 内 · 每 3 分钟刷新" sticky glass contentClassName="pt-4 pb-0" onBack={() => history.back()}>
-			{#snippet trailing()}
-				<div class="hidden sm:flex flex-1 max-w-sm ml-3">
-					<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或此刻状态" class="px-3 py-2" />
-				</div>
-			{/snippet}
-			{#snippet below()}
-				<!-- 移动端搜索框：与标题同处 sticky header 内（对齐 Figma NearbyPeoplePage） -->
-				<div class="sm:hidden mt-3">
-					<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或状态" class="px-3 py-2" />
-				</div>
-			{/snippet}
-		</PageHeader>
-	{/snippet}
+	<StandardPageLayout contentClassName="py-5 sm:py-6">
+		{#snippet header()}
+			<PageHeader title="附近的人" subtitle="徐州 · 5km 内 · 每 3 分钟刷新" sticky glass contentClassName="pt-4 pb-0" onBack={() => history.back()}>
+				{#snippet below()}
+					<!-- 搜索框（全设备全宽，对齐附近群组样板） + 排序/标签过滤：同处 sticky header 内 -->
+					<div class="mt-3">
+						<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或此刻状态" class="px-3.5 py-2" />
+					</div>
+					<div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 mt-3">
+						<div class="flex items-center gap-1 p-1 rounded-full neu-input-surface w-fit">
+							{#each SORT_OPTIONS as option}
+								<button
+									type="button"
+									onclick={() => (sort = option)}
+									aria-pressed={sort === option}
+									class="px-3.5 py-1 rounded-full outline-none transition-colors text-xs focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] {sort === option ? 'bg-[var(--neu-accent-primary)] text-white font-semibold' : 'text-[var(--neu-text-muted)]'}"
+								>
+									{option}
+								</button>
+							{/each}
+						</div>
+						<div class="flex gap-1.5 overflow-x-auto no-scrollbar">
+							{#each FILTER_TAGS as tag}
+								<TagPill active={tagFilter === tag} onClick={() => (tagFilter = tag)} size="md">{tag}</TagPill>
+							{/each}
+						</div>
+					</div>
+				{/snippet}
+			</PageHeader>
+		{/snippet}
 
-	<div class={isTablet ? 'grid gap-6' : ''}>
-		<div class="min-w-0">
-			<!-- 排序 + 标签过滤 -->
-			<div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 mb-5">
-				<div class="flex items-center gap-1 p-1 rounded-full neu-input-surface w-fit">
-					{#each SORT_OPTIONS as option}
-						<button
-							type="button"
-							onclick={() => (sort = option)}
-							aria-pressed={sort === option}
-							class="px-3.5 py-1 rounded-full outline-none transition-colors text-xs focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] {sort === option ? 'bg-[var(--neu-accent-primary)] text-white font-semibold' : 'text-[var(--neu-text-muted)]'}"
-						>
-							{option}
-						</button>
-					{/each}
-				</div>
-				<div class="flex gap-1.5 overflow-x-auto no-scrollbar">
-					{#each FILTER_TAGS as tag}
-						<TagPill active={tagFilter === tag} onClick={() => (tagFilter = tag)} size="md">{tag}</TagPill>
-					{/each}
-				</div>
-			</div>
-
-			{#if list.length}
+		<div class={isTablet ? 'grid gap-6' : ''}>
+			<div class="min-w-0">
+				{#if list.length}
 				{#if isDesktop || isTablet}
 					<BspCardCanvas
 						items={list.slice(0, visibleCount)}

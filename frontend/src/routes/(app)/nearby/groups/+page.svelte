@@ -81,12 +81,16 @@
 </script>
 
 
-<StandardPageLayout contentClassName="py-5 sm:py-6">
-	{#snippet header()}
-		<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} sticky glass contentClassName="pt-4 pb-0" onBack={() => history.back()}>
-			{#snippet subtitleIcon()}
-				<MapPin style="width:10px;height:10px;color:var(--neu-accent-primary);" strokeWidth={1.8} />
-			{/snippet}
+	<StandardPageLayout contentClassName="py-5 sm:py-6">
+		{#snippet header()}
+			<PageHeader title="附近群组" subtitle="徐州 · 5km 内" sticky glass contentClassName="pt-4 pb-0" onBack={() => history.back()}>
+				{#snippet subtitleIcon()}
+					<MapPin style="width:10px;height:10px;color:var(--neu-accent-primary);" strokeWidth={1.8} />
+				{/snippet}
+				{#snippet trailing()}
+					<!-- 计数统一在标题右侧（对齐首页/附近动态样板） -->
+					<span class="text-[var(--neu-text-muted)] text-xs">{filtered.length} 个活跃群组</span>
+				{/snippet}
 			{#snippet below()}
 				<!-- 搜索框（全设备全宽，对齐 Figma） + 分类标签：同处 sticky header 内 -->
 				<div class="mt-3">
