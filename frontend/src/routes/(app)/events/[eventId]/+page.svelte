@@ -9,6 +9,7 @@
 	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
 	import RailLocationMini from '@/components/layout/desktop/RailLocationMini.svelte';
 	import * as Dialog from '@/components/ui/dialog';
+	import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 活动详情（对齐 Figma Make EventDetailPage）。
@@ -298,8 +299,9 @@
 				</div>
 				<span class="rounded-full px-2 py-1 text-[10px]" style="color:{ev.color};background:{evTone(12)};">发起人</span>
 			</div>
-			{#each ev.participants as participant, index (participant.id)}
-				<div class="flex items-center gap-3 py-3" style="border-bottom:{index < ev.participants.length - 1 ? '1px solid var(--neu-border)' : 'none'};">
+			<EmbeddedList>
+			{#each ev.participants as participant (participant.id)}
+				<div class="flex items-center gap-3 py-3">
 					<img src={participant.avatar} alt={participant.name} class="h-10 w-10 rounded-full object-cover" />
 					<div class="flex-1">
 						<p class="text-[13px] text-[var(--neu-text)]">{participant.name}</p>
@@ -308,6 +310,7 @@
 					<Check size={15} color={ev.color} />
 				</div>
 			{/each}
+			</EmbeddedList>
 		</div>
 		<div class="px-5 pb-5 pt-3" style="border-top:1px solid var(--neu-border);">
 			<button type="button" onclick={() => (showParticipants = false)} class="w-full rounded-full py-3 text-[13px] font-semibold outline-none" style="background:{evTone(14)};color:{ev.color};">知道了</button>

@@ -277,16 +277,16 @@
 					{/each}
 				</EmbeddedList>
 			{:else}
-				<div class="divide-y divide-[var(--neu-border)]">
-					{#each announcements as item (item.title)}
-						<article class="py-4">
-							<p class="text-[14px] font-medium text-[var(--neu-text)]">{item.title}</p>
-							<p class="mt-1 text-[12px] leading-5 text-[var(--neu-text-muted)]">{item.body}</p>
-							<p class="mt-2 text-[11px] text-[var(--neu-text-muted)]">{item.time}</p>
-						</article>
-					{/each}
-				</div>
-			{/if}
+					<EmbeddedList>
+						{#each announcements as item (item.title)}
+							<article class="py-4">
+								<p class="text-[14px] font-medium text-[var(--neu-text)]">{item.title}</p>
+								<p class="mt-1 text-[12px] leading-5 text-[var(--neu-text-muted)]">{item.body}</p>
+								<p class="mt-2 text-[11px] text-[var(--neu-text-muted)]">{item.time}</p>
+							</article>
+						{/each}
+					</EmbeddedList>
+				{/if}
 		</main>
 
 		<aside class="flex h-fit flex-col gap-3 rounded-[20px] ring-1 ring-[var(--neu-border)] bg-[var(--neu-bg)] p-4">
