@@ -96,7 +96,7 @@
 					附近推荐
 				</p>
 				{#each filteredSuggested as u (u.id)}
-					<div class="neu-hover-row flex items-center gap-3.5 px-3 py-3 rounded-relaxed neu-row-hover" style="border:1px solid var(--neu-border);">
+					<div class="flex items-center gap-3.5 px-3 py-3 rounded-relaxed neu-row-hover" style="border:1px solid var(--neu-border);">
 						<img src={u.avatar} alt={u.name} class="rounded-full object-cover flex-shrink-0" style="width:44px;height:44px;border:1.5px solid var(--neu-border);" />
 						<div class="flex-1 min-w-0">
 							<p class="text-[var(--neu-text)]" style="font-size:14px;">{u.name}</p>
@@ -130,7 +130,7 @@
 				<!-- Create group chat row -->
 				<button
 					type="button"
-					class="neu-hover-card flex items-center gap-3.5 px-3 py-3 rounded-relaxed w-full outline-none text-left mb-3 neu-row-hover bg-[var(--neu-bg)]"
+					class="neu-hover-card flex items-center gap-3.5 px-3 py-3 rounded-relaxed w-full outline-none text-left mb-3 bg-[var(--neu-bg)]"
 					style="box-shadow:5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);border:1px solid var(--neu-border);"
 					onclick={() => {
 						onClose();
@@ -152,7 +152,7 @@
 				{#each filteredContacts as c (c.id)}
 					<button
 						type="button"
-						class="neu-hover-row flex items-center gap-3.5 px-3 py-3 rounded-relaxed cursor-pointer w-full text-left neu-row-hover"
+						class="flex items-center gap-3.5 px-3 py-3 rounded-relaxed cursor-pointer w-full text-left neu-row-hover"
 						style="border:1px solid var(--neu-border);"
 						onclick={() => {
 							onNewChat?.(c.id);

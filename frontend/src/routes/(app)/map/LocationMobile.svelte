@@ -363,7 +363,7 @@
 					<EmbeddedList class="animate-fade-in">
 					{#each searchResults as r}<button
 								type="button"
-								class="neu-hover-bg app-list-row app-list-row--standard neu-row-hover px-5 outline-none"
+								class="app-list-row app-list-row--standard neu-row-hover px-5 outline-none"
 								style="background:var(--neu-bg)"
 								aria-pressed={selectedLoc?.displayName === r.displayName}
 								onclick={() => handleSelectLoc(r)}
@@ -447,7 +447,7 @@
 								{#each recentItems as loc}
 									<button
 										type="button"
-										class="neu-hover-bg app-list-row app-list-row--standard neu-row-hover px-4 outline-none"
+										class="app-list-row app-list-row--standard neu-row-hover px-4 outline-none"
 										style="background:var(--neu-bg);"
 										aria-pressed={selectedLoc?.displayName === loc.displayName}
 										onclick={() => handleSelectLoc(loc)}
@@ -476,7 +476,7 @@
 								{#each HOT_LOCATIONS as loc}
 									<button
 										type="button"
-										class="neu-hover-bg app-list-row app-list-row--standard neu-row-hover px-4 outline-none"
+										class="app-list-row app-list-row--standard neu-row-hover px-4 outline-none"
 										style="background:var(--neu-bg);"
 										aria-pressed={selectedLoc?.displayName === loc.displayName}
 										onclick={() => handleSelectLoc(loc)}

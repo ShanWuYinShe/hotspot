@@ -139,7 +139,7 @@
 						{#each searchResults as r}
 							<button
 								type="button"
-								class="neu-hover-bg neu-row-hover flex w-full items-center gap-3 px-4 py-3 text-left outline-none"
+								class="neu-row-hover flex w-full items-center gap-3 px-4 py-3 text-left outline-none"
 								style="background:var(--neu-bg);"
 								aria-pressed={selectedLoc?.displayName === r.displayName}
 								onclick={() => handleSelectLoc(r)}
@@ -194,7 +194,7 @@
 						{#each nearbyPins as pin (pin.id)}
 						<button
 							type="button"
-							class="neu-row-hover app-list-row app-list-row--standard neu-row-hover outline-none"
+							class="neu-row-hover app-list-row app-list-row--standard outline-none"
 							style="background:{selectedPin?.id === pin.id ? pinTone(pin.type, 10) : 'var(--neu-bg)'};"
 							aria-pressed={selectedPin?.id === pin.id}
 							onclick={() => {
@@ -259,7 +259,7 @@
 						{#each HOT_LOCATIONS as loc, i}
 						<button
 							type="button"
-							class="neu-hover-card neu-row-hover app-list-row app-list-row--rich neu-row-hover rounded-[16px] outline-none"
+							class="neu-row-hover app-list-row app-list-row--rich rounded-[16px] outline-none"
 							style="background:{selectedLoc?.displayName === loc.displayName ? 'var(--neu-accent-soft)' : 'var(--neu-bg)'};box-shadow:{selectedLoc?.displayName === loc.displayName ? '0 0 0 1px var(--neu-accent-soft-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)' : '0 0 0 1px var(--neu-border), 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)'};"
 							aria-pressed={selectedLoc?.displayName === loc.displayName}
 							onclick={() => handleSelectLoc(loc)}
@@ -293,7 +293,7 @@
 						{#each RECENT_LOCATIONS as loc, i}
 						<button
 							type="button"
-							class="neu-hover-card neu-row-hover app-list-row app-list-row--rich neu-row-hover rounded-[16px] outline-none"
+							class="neu-row-hover app-list-row app-list-row--rich rounded-[16px] outline-none"
 							style="background:{selectedLoc?.displayName === loc.displayName ? 'var(--neu-accent-soft)' : 'var(--neu-bg)'};box-shadow:{selectedLoc?.displayName === loc.displayName || hoveredListId === `recent-${i}` ? '0 0 0 1px var(--neu-accent-soft-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)' : '0 0 0 1px var(--neu-border), 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)'};"
 							aria-pressed={selectedLoc?.displayName === loc.displayName}
 							onclick={() => handleSelectLoc(loc)}
