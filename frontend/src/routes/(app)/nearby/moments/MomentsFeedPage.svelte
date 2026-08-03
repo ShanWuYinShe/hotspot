@@ -117,35 +117,36 @@
 	const platform = $derived(platformStore.platform);
 </script>
 
-<!-- ═══ 分类 Tab（下划线样式，对齐 Figma Make DiscoverHeader）+ 热门 tag 列表 ═══ -->
-{#snippet tabRow(className: string)}
-	<div class="flex flex-col {className}">
-		<!-- 下划线 Tab 栏（对齐 Figma DiscoverPage：border-b + active 下划线 indicator） -->
-		<div class="no-scrollbar flex overflow-x-auto" style="border-bottom:1px solid var(--neu-border);">
-			{#each TABS as tab}
-				{@const isActive = activeTab === tab}
-				<button
-					type="button"
-					onclick={() => (activeTab = tab)}
-					aria-pressed={isActive}
-					class="relative shrink-0 rounded-t-[12px] pb-3 pt-1 outline-none"
-					style="padding-left:18px;padding-right:18px;color:{isActive ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'};font-weight:{isActive ? 500 : 400};font-size:13px;transition:color 0.2s;"
-				>
-					{tab}
-					{#if isActive}
-						<span
-							class="absolute"
-							style="bottom:-1px;left:14%;right:14%;height:2px;border-radius:1px;background:var(--neu-accent-primary);"
-						></span>
-					{/if}
-				</button>
-			{/each}
-		</div>
-		<div class="flex gap-1.5 overflow-x-auto no-scrollbar pt-3">
-			{#each tags as tag}
-				<TagPill active={activeTag === tag} onClick={() => (activeTag = activeTag === tag ? null : tag)} size="md">{tag}</TagPill>
-			{/each}
-		</div>
+<!-- ═══ 分类 Tab 栏（下划线样式，对齐 Figma Make DiscoverHeader；随 header 吸顶）═══ -->
+{#snippet tabBar()}
+	<div class="no-scrollbar flex overflow-x-auto" style="border-bottom:1px solid var(--neu-border);">
+		{#each TABS as tab}
+			{@const isActive = activeTab === tab}
+			<button
+				type="button"
+				onclick={() => (activeTab = tab)}
+				aria-pressed={isActive}
+				class="relative shrink-0 rounded-t-[12px] pb-3 pt-1 outline-none"
+				style="padding-left:18px;padding-right:18px;color:{isActive ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'};font-weight:{isActive ? 500 : 400};font-size:13px;transition:color 0.2s;"
+			>
+				{tab}
+				{#if isActive}
+					<span
+						class="absolute"
+						style="bottom:-1px;left:14%;right:14%;height:2px;border-radius:1px;background:var(--neu-accent-primary);"
+					></span>
+				{/if}
+			</button>
+		{/each}
+	</div>
+{/snippet}
+
+<!-- ═══ 热门 tag 列表（scrollable / flex-wrap 由调用处 className 决定，对齐 Figma TagChips）═══ -->
+{#snippet tagChips(className: string)}
+	<div class="flex gap-1.5 no-scrollbar {className}">
+		{#each tags as tag}
+			<TagPill active={activeTag === tag} onClick={() => (activeTag = activeTag === tag ? null : tag)} size="md">{tag}</TagPill>
+		{/each}
 	</div>
 {/snippet}
 
@@ -166,25 +167,32 @@
 {/snippet}
 
 {#if platform === 'desktop'}
-	<!-- ═══ Desktop Discover — 2-col BSP field ═══ -->
+	<!-- ═══ Desktop Discover — header（搜索 + Tab 入 header）+ 3 列内容 ═══ -->
 	<div class="content-mode-wide flex flex-col h-full">
-		<PageHeader title="附近动态" sticky titleSize={20} onBack={() => history.back()}>
+		<PageHeader
+			title="附近动态"
+			sticky={false}
+			titleSize={20}
+			contentClassName="pt-5 pb-0"
+			onBack={() => history.back()}
+		>
 			{#snippet trailing()}
-				<div class="flex items-center gap-2">
-					<div class="hidden sm:flex flex-1 max-w-sm">
-						<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" class="px-3 py-2" />
-					</div>
-					<span class="text-[var(--neu-text-muted)] text-xs">{filtered.length} 条内容</span>
+				<span class="text-[var(--neu-text-muted)] text-xs">{filtered.length} 条内容</span>
+			{/snippet}
+			{#snippet below()}
+				<div class="mt-2 mb-2.5">
+					<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" class="px-4 py-2.5 rounded-relaxed" />
 				</div>
+				{@render tabBar()}
 			{/snippet}
 		</PageHeader>
 
 		<div class="flex flex-1 min-h-0 overflow-hidden">
 			<!-- Main feed -->
 			<div class="flex-1 overflow-y-auto no-scrollbar">
-				<div style="padding:20px 24px 28px;">
+				<ContentColumn class="py-5">
 					<div class="mb-5">
-						{@render tabRow('xl:flex-row xl:items-center justify-between gap-3')}
+						{@render tagChips('flex-wrap')}
 					</div>
 
 					{#if loading || !filtered.length}
@@ -215,30 +223,31 @@
 							{/snippet}
 						</BspCardCanvas>
 					{/if}
-				</div>
+				</ContentColumn>
 			</div>
 		</div>
 	</div>
 {:else if platform === 'tablet'}
-	<!-- ═══ Tablet Discover — header + content ═══ -->
-	<PageHeader title="附近动态" sticky titleSize={24} onBack={() => history.back()}>
+	<!-- ═══ Tablet Discover — header（标题 + 精选 pill + 搜索 + Tab）+ content ═══ -->
+	<PageHeader title="附近动态" sticky titleSize={24} contentClassName="pt-4 pb-0" onBack={() => history.back()}>
 		{#snippet trailing()}
-			<div class="flex items-center gap-2">
-				<div class="hidden sm:flex flex-1 max-w-sm">
-					<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" class="px-3 py-2" />
-				</div>
-				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--neu-accent-primary)]" style="box-shadow:0 3px 10px var(--neu-glow);">
-					<Sparkles style="width:11px;height:11px;color:white;" strokeWidth={2} />
-					<span class="text-white text-[11px]">精选</span>
-				</div>
+			<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--neu-accent-primary)]" style="box-shadow:0 3px 10px var(--neu-glow);">
+				<Sparkles style="width:11px;height:11px;color:white;" strokeWidth={2} />
+				<span class="text-white text-[11px]">精选</span>
 			</div>
+		{/snippet}
+		{#snippet below()}
+			<div class="mt-2 mb-2.5">
+				<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" class="px-4 py-2.5 rounded-relaxed" />
+			</div>
+			{@render tabBar()}
 		{/snippet}
 	</PageHeader>
 
 	<ContentColumn class="animate-fade-in pt-4 pb-7">
 		<div class="min-w-0">
 			<div class="mb-5">
-				{@render tabRow('xl:flex-row xl:items-center justify-between gap-3')}
+				{@render tagChips('overflow-x-auto')}
 			</div>
 
 			{#if loading || !filtered.length}
@@ -273,20 +282,22 @@
 		</div>
 	</ContentColumn>
 {:else}
-	<!-- ═══ Mobile Discover — single-column feed, max-width 560px centred ═══ -->
-	<PageHeader title="附近动态" sticky titleSize={22} onBack={() => history.back()}>
+	<!-- ═══ Mobile Discover — sticky header（标题 + 搜索 + Tab）+ 560px 居中内容 ═══ -->
+	<PageHeader title="附近动态" sticky titleSize={22} contentClassName="pt-3 pb-0" onBack={() => history.back()}>
 		{#snippet trailing()}
 			<span class="text-[var(--neu-text-muted)] text-xs">{filtered.length} 条内容</span>
 		{/snippet}
+		{#snippet below()}
+			<div class="mt-2 mb-2.5">
+				<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" class="px-4 py-2.5 rounded-relaxed" />
+			</div>
+			{@render tabBar()}
+		{/snippet}
 	</PageHeader>
 
-	<div class="px-5 -mt-2 pb-2">
-		<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" class="px-3 py-2" />
-	</div>
-
-	<ContentColumn maxWidth="560px" class="animate-fade-in pt-3 pb-6">
+	<ContentColumn maxWidth="560px" class="animate-fade-in !px-4 pt-3 pb-6">
 		<div class="mb-4">
-			{@render tabRow('gap-3')}
+			{@render tagChips('overflow-x-auto')}
 		</div>
 
 		{#if loading || !filtered.length}
