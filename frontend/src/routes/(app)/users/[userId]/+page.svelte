@@ -44,7 +44,7 @@
 		tags: []
 	});
 	let loading = $state(true);
-	let mutualFriends = $state<{ id: number; name: string; sub: string; avatar: string }[]>([]);
+	let mutualFriends = $state<{ id: string; name: string; sub: string; avatar: string }[]>([]);
 	let similarUsers = $state<{ id: number; name: string; sub: string; avatar: string }[]>([]);
 	let followed = $state(false);
 	let activeTab = $state<'moments' | 'liked' | 'saved'>('moments');
@@ -64,35 +64,34 @@
 				loading = true;
 				const res = await getProfile(uid).catch(() => ({ code: -1, data: null }));
 				if (cancelled) return;
-				const data = (res.code === 0 ? res.data : null) as any;
+				const data = res.code === 0 ? res.data : null;
 				if (data) {
-					const u = data.user ?? data;
-					const s = data.stats ?? {};
-					const r = data.relation ?? {};
+					const u = data.user;
+					const s = u.stats;
+					const r = u.relation;
 					user = {
-						name: u.nickname ?? data.nickname ?? '',
-						handle: u.user_id ? `@${(u.nickname ?? '').replace(/\s/g, '_')}` : '',
-						bio: u.bio ?? data.bio ?? '',
-						location: u.location?.location_name ?? data.location?.location_name ?? '',
-						avatar: u.avatar_url ?? data.avatar ?? '',
-						banner: u.cover_url ?? data.banner ?? '',
-						followers: s.followers_count ?? 0,
-						following: s.following_count ?? 0,
-						moments: s.moments_count ?? 0,
-						gallery: data.recent_moments?.items?.map((m: any) => m.images?.[0]?.url ?? '') ?? [],
-						tags: u.tags ?? data.tags ?? []
+						name: u.user.nickname,
+						handle: u.user.user_id ? `@${u.user.nickname.replace(/\s/g, '_')}` : '',
+						bio: u.bio ?? '',
+						location: u.location?.location_name ?? '',
+						avatar: u.user.avatar_url ?? '',
+						banner: '',
+						followers: s?.followers_count ?? 0,
+						following: s?.following_count ?? 0,
+						moments: s?.moments_count ?? 0,
+						gallery: data.recent_moments?.items?.map((m) => m.images?.[0]?.url ?? '') ?? [],
+						tags: u.tags ?? []
 					};
-					if (r.is_following !== undefined) followed = r.is_following;
-					if (r.is_blocked !== undefined) blocked = r.is_blocked;
-					if (data.remark) remark = data.remark;
+					if (r?.is_following !== undefined) followed = r.is_following;
+					if (r?.is_blocked !== undefined) blocked = r.is_blocked;
 
-					const mutual = u.social_context?.mutual_friends_preview ?? data.mutual_friends;
+					const mutual = u.social_context?.mutual_friends_preview;
 					if (mutual) {
-						mutualFriends = mutual.map((f: any) => ({
-							id: f.user_id ?? f.id ?? 0,
-							name: f.nickname ?? f.name ?? '',
+						mutualFriends = mutual.map((f) => ({
+							id: f.user_id,
+							name: f.nickname,
 							sub: '',
-							avatar: f.avatar_url ?? f.avatar ?? ''
+							avatar: f.avatar_url ?? ''
 						}));
 					}
 				}

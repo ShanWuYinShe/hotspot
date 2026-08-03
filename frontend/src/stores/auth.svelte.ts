@@ -89,7 +89,7 @@ async function refreshUser(): Promise<void> {
 export function initAuth(): () => void {
   void (async () => {
     const res = await checkAuthStatus().catch(() => null);
-    const data = res && res.code === 0 ? (res.data as any) : null;
+    const data = res && res.code === 0 ? res.data : null;
     if (data?.is_valid) {
       await refreshUser();
     } else {

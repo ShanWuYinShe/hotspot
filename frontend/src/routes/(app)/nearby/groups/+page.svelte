@@ -47,7 +47,7 @@
 				referencePoint ? { reference_point: referencePoint, pagination: { limit: 24 } } : { pagination: { limit: 24 } }
 			).catch(() => ({ code: -1, data: { items: [] } }));
 			if (cancelled) return;
-			const items = (res.code === 0 && res.data ? (res.data as any).items : []) as any[];
+			const items = res.code === 0 && res.data ? res.data.items : [];
 			groups = items.map(mapGroup);
 			loading = false;
 		}

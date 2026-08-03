@@ -27,7 +27,7 @@ export async function loadDefaultLocation(): Promise<DefaultLocation | null> {
 		try {
 			const res = await getClientConfig();
 			if (res.code === 0) {
-				const loc = (res.data as any)?.defaults?.default_location;
+				const loc = res.data?.defaults?.default_location;
 				if (loc?.point?.latitude != null && loc?.point?.longitude != null) {
 					cached = {
 						point: { latitude: loc.point.latitude, longitude: loc.point.longitude },
