@@ -21,11 +21,11 @@
 	<BorderedList>
 		{#each users as u (u.id)}
 			{@const followed = followingIds.has(u.id)}
-			<InteractiveListRow class="flex items-center gap-3 px-4 py-3 cursor-pointer">
-				<div class="relative flex-shrink-0">
-					<div class="avatar-entry__avatar rounded-full overflow-hidden" style="width:38px;height:38px;">
-						<img src={u.avatar} alt={u.name} class="image-hover-frame__image w-full h-full object-cover" />
-					</div>
+				<InteractiveListRow class="flex items-center gap-3 px-4 py-3 cursor-pointer">
+					<div class="relative flex-shrink-0">
+						<div class="rounded-full overflow-hidden" style="width:38px;height:38px;">
+							<img src={u.avatar} alt={u.name} class="w-full h-full object-cover" />
+						</div>
 					{#if u.status === '在线'}
 						<span
 							class="absolute bottom-0 right-0 rounded-full"

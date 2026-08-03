@@ -159,11 +159,11 @@
 						{#each onlineChats as c (c.id)}
 							<button
 								type="button"
-								class="neu-hover-btn flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer"
+								class="avatar-entry flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer"
 								onclick={() => (selectedId = c.id)}
 							>
 								<div class="relative">
-									<div class="rounded-full overflow-hidden" style="width:36px;height:36px;border:{selectedId === c.id ? '2px solid var(--neu-accent-primary)' : '1.5px solid var(--neu-border)'};">
+									<div class="avatar-entry__avatar rounded-full overflow-hidden" style="width:36px;height:36px;border:{selectedId === c.id ? '2px solid var(--neu-accent-primary)' : '1.5px solid var(--neu-border)'};">
 										<img src={c.avatar} alt={c.name} class="w-full h-full object-cover" />
 									</div>
 									<OnlineDot size="sm" />
@@ -278,11 +278,11 @@
 					{#each onlineChats as chat (chat.id)}
 						<button
 							type="button"
-							class="neu-hover-btn flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer"
+							class="avatar-entry flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer"
 							onclick={() => void goto(ROUTES.message(chat.peerUserId || chat.id))}
 						>
 							<div class="relative">
-								<div class="rounded-full overflow-hidden bg-[var(--neu-bg)]" style="width:52px;height:52px;padding:2px;border:2px solid var(--neu-accent-primary);">
+								<div class="avatar-entry__avatar rounded-full overflow-hidden bg-[var(--neu-bg)]" style="width:52px;height:52px;padding:2px;border:2px solid var(--neu-accent-primary);">
 									<img src={chat.avatar} alt={chat.name} class="w-full h-full object-cover rounded-full" />
 								</div>
 								<OnlineDot size="lg" />

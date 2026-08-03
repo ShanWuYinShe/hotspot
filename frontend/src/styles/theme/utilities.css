@@ -76,11 +76,13 @@
     cursor: pointer;
     transition: box-shadow 0.26s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .neu-card-hover:hover {
-    box-shadow: 0 0 0 1px var(--neu-accent-soft-border), var(--hover-shadow-card) !important;
-  }
   .neu-card-hover:active { transform: scale(0.985); }
   .neu-card-hover:focus-visible { outline: 2px solid var(--neu-accent-primary); outline-offset: 2px; }
+  @media (hover: hover) and (pointer: fine) {
+    .neu-card-hover:hover {
+      box-shadow: 0 0 0 1px var(--neu-accent-soft-border), var(--hover-shadow-card) !important;
+    }
+  }
 
   .neu-row-hover {
     position: relative;
@@ -88,10 +90,6 @@
     transition:
       background-color 0.18s ease,
       box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .neu-row-hover:hover {
-    background-color: var(--surface-hover) !important;
-    box-shadow: 0 0 0 1px var(--neu-accent-soft-border), var(--hover-shadow-row) !important;
   }
   .neu-row-hover:active {
     transform: scale(0.985);
@@ -101,15 +99,21 @@
     background-color: var(--neu-accent-soft) !important;
     box-shadow: inset 2px 0 0 var(--neu-accent-primary), 0 0 0 1px var(--neu-accent-soft-border), var(--hover-shadow-row) !important;
   }
-  .neu-row-hover[data-active="true"]:hover,
-  .neu-row-hover[aria-pressed="true"]:hover {
-    background-color: var(--neu-active-hover) !important;
-    box-shadow: inset 2px 0 0 var(--neu-accent-primary), 0 0 0 1px var(--neu-accent-soft-border), var(--hover-shadow-row) !important;
-    transform: none;
-  }
   .neu-row-hover:focus-visible {
     outline: 2px solid var(--neu-accent-primary);
     outline-offset: 2px;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .neu-row-hover:hover {
+      background-color: var(--surface-hover) !important;
+      box-shadow: 0 0 0 1px var(--neu-accent-soft-border), var(--hover-shadow-row) !important;
+    }
+    .neu-row-hover[data-active="true"]:hover,
+    .neu-row-hover[aria-pressed="true"]:hover {
+      background-color: var(--neu-active-hover) !important;
+      box-shadow: inset 2px 0 0 var(--neu-accent-primary), 0 0 0 1px var(--neu-accent-soft-border), var(--hover-shadow-row) !important;
+      transform: none;
+    }
   }
 
   /*── App-list system ─────────────────────────────────────────────── */
@@ -143,18 +147,22 @@
   .neu-circle-hover {
     transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.20s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.16s ease;
   }
-  .neu-circle-hover:hover {
-    transform: scale(1.10);
-    border-color: var(--neu-accent-soft-border) !important;
-    box-shadow: var(--hover-shadow-btn) !important;
-  }
   .neu-circle-hover:active { transform: scale(0.94); }
+  @media (hover: hover) and (pointer: fine) {
+    .neu-circle-hover:hover {
+      transform: scale(1.10);
+      border-color: var(--neu-accent-soft-border) !important;
+      box-shadow: var(--hover-shadow-btn) !important;
+    }
+  }
 
   .neu-pill-hover {
     transition: box-shadow 0.18s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .neu-pill-hover:hover {
-    box-shadow: var(--hover-shadow-pill) !important;
+  @media (hover: hover) and (pointer: fine) {
+    .neu-pill-hover:hover {
+      box-shadow: var(--hover-shadow-pill) !important;
+    }
   }
 
   .no-scrollbar {
@@ -227,8 +235,10 @@
     box-shadow: 0 0 0 1px var(--neu-border);
     transition: box-shadow 0.18s ease, background-color 0.18s ease;
   }
-  .neu-surface-flat:hover {
-    box-shadow: 0 0 0 1px var(--neu-border-pressed);
+  @media (hover: hover) and (pointer: fine) {
+    .neu-surface-flat:hover {
+      box-shadow: 0 0 0 1px var(--neu-border-pressed);
+    }
   }
 
   .neu-surface-ghost {
@@ -236,18 +246,20 @@
     border: 1px solid transparent;
     transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
   }
-  .neu-surface-ghost:hover {
-    background-color: var(--neu-hover);
-    border-color: var(--neu-accent-soft-border);
-  }
   .neu-surface-ghost[aria-pressed="true"] {
     background-color: var(--neu-accent-soft);
     border-color: var(--neu-accent-soft-border);
     color: var(--neu-accent-primary);
   }
-  .neu-surface-ghost[aria-pressed="true"]:hover {
-    background-color: var(--neu-active-hover);
-    border-color: var(--neu-accent-primary);
+  @media (hover: hover) and (pointer: fine) {
+    .neu-surface-ghost:hover {
+      background-color: var(--neu-hover);
+      border-color: var(--neu-accent-soft-border);
+    }
+    .neu-surface-ghost[aria-pressed="true"]:hover {
+      background-color: var(--neu-active-hover);
+      border-color: var(--neu-accent-primary);
+    }
   }
 
   .neu-ambient-glow {
@@ -352,9 +364,11 @@
   .vibrant .neu-surface-flat {
     background: color-mix(in srgb, var(--neu-bg) 92%, var(--neu-accent-primary) 3%);
   }
-  .vibrant .neu-surface-ghost:hover {
-    background: color-mix(in srgb, var(--neu-accent-primary) 10%, transparent);
-    border-color: color-mix(in srgb, var(--neu-accent-primary) 18%, transparent);
+  @media (hover: hover) and (pointer: fine) {
+    .vibrant .neu-surface-ghost:hover {
+      background: color-mix(in srgb, var(--neu-accent-primary) 10%, transparent);
+      border-color: color-mix(in srgb, var(--neu-accent-primary) 18%, transparent);
+    }
   }
 
   /* 清野: strict paper-flat */
@@ -377,20 +391,22 @@
   .forest .neu-pressed {
     box-shadow: inset 0 0 0 1px var(--neu-border-pressed) !important;
   }
-  .forest .neu-card-hover:hover,
-  .forest .neu-row-hover:hover,
-  .forest .neu-circle-hover:hover,
-  .forest .neu-pill-hover:hover {
-    box-shadow: 0 0 0 1px var(--neu-border-pressed) !important;
-  }
-  .forest .neu-surface-ghost:hover {
-    background: var(--neu-hover);
-    border-color: var(--neu-accent-soft-border);
-  }
-  .forest .neu-row-hover[data-active="true"]:hover,
-  .forest .neu-row-hover[aria-pressed="true"]:hover {
-    background: var(--neu-active-hover) !important;
-    box-shadow: inset 2px 0 0 var(--neu-accent-primary), 0 0 0 1px var(--neu-accent-soft-border) !important;
+  @media (hover: hover) and (pointer: fine) {
+    .forest .neu-card-hover:hover,
+    .forest .neu-row-hover:hover,
+    .forest .neu-circle-hover:hover,
+    .forest .neu-pill-hover:hover {
+      box-shadow: 0 0 0 1px var(--neu-border-pressed) !important;
+    }
+    .forest .neu-surface-ghost:hover {
+      background: var(--neu-hover);
+      border-color: var(--neu-accent-soft-border);
+    }
+    .forest .neu-row-hover[data-active="true"]:hover,
+    .forest .neu-row-hover[aria-pressed="true"]:hover {
+      background: var(--neu-active-hover) !important;
+      box-shadow: inset 2px 0 0 var(--neu-accent-primary), 0 0 0 1px var(--neu-accent-soft-border) !important;
+    }
   }
 
   @media (min-width: 1024px) {
@@ -452,19 +468,29 @@
   .neu-hover-btn { transition-duration: 0.17s, 0.18s, 0.18s, 0.18s, 0.18s; }
   .neu-hover-btn:active { transform: scale(0.94); transition-duration: 0.10s, 0.18s, 0.18s, 0.18s, 0.18s; }
 
-  /* 行内小图标动作：hover 缩放 1.20（Figma action）、按下 0.94 */
-  .neu-hover-action:hover { transform: scale(1.20); transition-duration: 0.14s, 0.18s, 0.18s, 0.18s, 0.18s; }
+  /* 行内小图标动作：hover 缩放 1.20（Figma action）、按下 0.94。
+     hover 缩放仅 fine pointer 启用（对齐 useHoverConfig withoutHover 契约），
+     tap（:active）在所有设备生效。 */
   .neu-hover-action:active { transform: scale(0.94); transition-duration: 0.10s, 0.18s, 0.18s, 0.18s, 0.18s; }
+  @media (hover: hover) and (pointer: fine) {
+    .neu-hover-action:hover { transform: scale(1.20); transition-duration: 0.14s, 0.18s, 0.18s, 0.18s, 0.18s; }
+  }
 
   /* 列表行（row）：仅背景填充，不位移不缩放；
-     大卡片（card）：仅阴影抬升，布局框体永不移动（对齐 Figma Make 契约） */
-  .neu-hover-row:hover { background-color: var(--surface-hover); }
+     大卡片（card）：仅阴影抬升，布局框体永不移动（对齐 Figma Make 契约）。
+     hover 填充/阴影仅 fine pointer 生效（触屏无 hover）。 */
   .neu-hover-row:active { }
-  .neu-hover-card:hover { box-shadow: 0 10px 28px var(--neu-shadow-dark); }
+  @media (hover: hover) and (pointer: fine) {
+    .neu-hover-row:hover { background-color: var(--surface-hover); }
+    .neu-hover-card:hover { box-shadow: 0 10px 28px var(--neu-shadow-dark); }
+  }
 
-  /* 圆形图标按钮（ActionIconButton 等）：圆形允许缩放（Figma Make btn 契约 1.10/0.94） */
-  .neu-scale-btn:hover { transform: scale(1.10); transition-duration: 0.17s; }
+  /* 圆形图标按钮（ActionIconButton 等）：圆形允许缩放（Figma Make btn 契约 1.10/0.94）。
+     hover 缩放仅 fine pointer；tap 全设备。 */
   .neu-scale-btn:active { transform: scale(0.94); transition-duration: 0.10s; }
+  @media (hover: hover) and (pointer: fine) {
+    .neu-scale-btn:hover { transform: scale(1.10); transition-duration: 0.17s; }
+  }
 
   /* 页面级按钮的精确 tap 强度（对齐 Figma 各页 whileTap 硬编码值） */
   .neu-tap-99:active { transform: scale(0.99); }
@@ -480,21 +506,27 @@
   .neu-tap-84:active { transform: scale(0.84); }
 
   /* 顶栏图标按钮（Figma DesktopLayout HeaderBtn action 契约：hover 1.18 + 背景填充 + tap 0.84，
-     覆盖 ActionIconButton 默认的 btn 契约 1.10/0.94） */
-  .neu-header-action:hover { transform: scale(1.18); transition-duration: 0.14s, 0.18s, 0.18s, 0.18s, 0.18s; background-color: var(--interactive-hover-fill); }
+     覆盖 ActionIconButton 默认的 btn 契约 1.10/0.94）。hover 仅 fine pointer；tap 全设备。 */
   .neu-header-action:active { transform: scale(0.84); transition-duration: 0.10s, 0.18s, 0.18s, 0.18s, 0.18s; }
+  @media (hover: hover) and (pointer: fine) {
+    .neu-header-action:hover { transform: scale(1.18); transition-duration: 0.14s, 0.18s, 0.18s, 0.18s, 0.18s; background-color: var(--interactive-hover-fill); }
+  }
 
-  /* vibrant：无阴影抬升（玻璃感），仅位移光晕 */
-  .vibrant .neu-hover-card:hover { box-shadow: 0 8px 24px var(--neu-accent-soft); }
+  /* vibrant：无阴影抬升（玻璃感），仅位移光晕（仅 fine pointer） */
+  @media (hover: hover) and (pointer: fine) {
+    .vibrant .neu-hover-card:hover { box-shadow: 0 8px 24px var(--neu-accent-soft); }
+  }
 
   /* forest：扁平——无位移无阴影，仅背景色承载；缩放保留但略保守（Figma forest 1.08/0.97） */
-  .forest .neu-hover-row:hover { transform: none; box-shadow: none; }
-  .forest .neu-hover-card:hover { transform: none; box-shadow: none; }
   .forest .neu-hover-btn:active,
   .forest .neu-hover-action:active,
   .forest .neu-scale-btn:active { transform: scale(0.97); }
-  .forest .neu-scale-btn:hover { transform: scale(1.08); }
-  .forest .neu-hover-action:hover { transform: scale(1.18); }
+  @media (hover: hover) and (pointer: fine) {
+    .forest .neu-hover-row:hover { transform: none; box-shadow: none; }
+    .forest .neu-hover-card:hover { transform: none; box-shadow: none; }
+    .forest .neu-scale-btn:hover { transform: scale(1.08); }
+    .forest .neu-hover-action:hover { transform: scale(1.18); }
+  }
 
   /* 悬停背景（bgHover）：主题 + 暗色感知的 accent 混色 */
   .neu-hover-bg { transition: background-color 0.18s ease; }
@@ -518,8 +550,11 @@
   }
 
   /* 行级悬停位移（对齐 Figma Make SettingsPage NavRow whileHover x:3）：
-     整行在 hover 时右移 3px，与背景填充叠加形成"可点击行"的动效反馈。 */
-  .neu-row-nudge:hover { transform: translateX(3px); }
+     整行在 hover 时右移 3px，与背景填充叠加形成"可点击行"的动效反馈。
+     仅 fine pointer 生效（触屏无 hover）。 */
+  @media (hover: hover) and (pointer: fine) {
+    .neu-row-nudge:hover { transform: translateX(3px); }
+  }
 
   /* 地图当前位置脉冲光晕（对齐 Figma Make LocationMobile motion.div：
      scale 1→1.8 / opacity 0.55→0 无限循环，2.4s 节奏）。 */
