@@ -50,7 +50,7 @@ worktree 合并完成后，先清理其 compose 资源，再删除 worktree：
 docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v
 
 # 2. 删除 worktree 与分支（git 侧流程见全局 Git 准则）
-git worktree remove .claude/worktrees/<分支名>
+git worktree remove .worktrees/<分支名>
 git branch -d <分支名>
 ```
 
