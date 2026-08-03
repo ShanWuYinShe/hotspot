@@ -66,15 +66,15 @@
 			const detailRes = await getGroupDetail(gid).catch(() => ({ code: -1, data: null }));
 			// 竞态防护：页面已切到别的群组则丢弃本次结果（等价原 effect 的 cancelled 守卫）
 			if (params.groupId !== gid) return;
-			const detailData = (detailRes.code === 0 ? detailRes.data : null) as any;
+			const detailData = detailRes.code === 0 ? detailRes.data : null;
 			if (detailData) {
-				const g = detailData.group ?? detailData;
+				const g = detailData.group;
 				group = {
-					name: g.name ?? group.name,
-					category: (detailData.tags?.[0] ?? g.category ?? group.category) || '同城',
-					members: g.members_count ?? group.members,
-					online: g.online_count ?? group.online,
-					distance: detailData.location?.distance ?? group.distance,
+					name: g.name,
+					category: (detailData.tags?.[0] ?? group.category) || '同城',
+					members: g.members_count,
+					online: detailData.online_members_count ?? group.online,
+					distance: detailData.location?.distance != null ? `${detailData.location.distance}m` : group.distance,
 					description: detailData.description ?? group.description,
 					banner: g.avatar_url ?? group.banner
 				};
@@ -90,15 +90,15 @@
 			const membersRes = await getGroupMembers(gid).catch(() => ({ code: -1, data: { items: [] } }));
 			// 竞态防护：页面已切到别的群组则丢弃本次结果
 			if (params.groupId !== gid) return;
-			const membersData = (membersRes.code === 0 ? membersRes.data : null) as any;
+			const membersData = membersRes.code === 0 ? membersRes.data : null;
 			if (membersData) {
-				const items: Member[] = (membersData.items || []).map((m: any, i: number) => ({
-					id: m.user?.user_id ?? i + 1,
+				const items: Member[] = (membersData.items || []).map((m, i) => ({
+					id: i + 1,
 					userId: m.user?.user_id ?? '',
-					name: m.user?.nickname ?? m.name ?? '',
+					name: m.user?.nickname ?? '',
 					role: m.role ?? '成员',
-					online: m.user?.presence_status === 'online' || m.online || false,
-					avatar: m.user?.avatar_url ?? m.avatar ?? ''
+					online: m.presence_status === 'online',
+					avatar: m.user?.avatar_url ?? ''
 				}));
 				members = items;
 				// 成员在线状态实时化：订阅全部成员（先释放旧订阅再建新订阅）
@@ -115,12 +115,12 @@
 			const announcementsRes = await getGroupAnnouncements(gid).catch(() => ({ code: -1, data: { items: [] } }));
 			// 竞态防护：页面已切到别的群组则丢弃本次结果
 			if (params.groupId !== gid) return;
-			const announcementsData = (announcementsRes.code === 0 ? announcementsRes.data : null) as any;
+			const announcementsData = announcementsRes.code === 0 ? announcementsRes.data : null;
 			if (announcementsData) {
-				const items: Announcement[] = (announcementsData.items || []).map((a: any) => ({
-					title: a.title ?? a.name ?? '',
-					body: a.body ?? a.content ?? a.text ?? '',
-					time: a.time ?? a.created_at ?? ''
+				const items: Announcement[] = (announcementsData.items || []).map((a) => ({
+					title: a.title ?? '',
+					body: a.content ?? '',
+					time: a.created_at ?? ''
 				}));
 				announcements = items;
 			}

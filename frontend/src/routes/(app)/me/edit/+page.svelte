@@ -24,13 +24,13 @@
 			try {
 				const res = await getAccount().catch(() => ({ code: -1, data: null }));
 				if (cancelled) return;
-				const data = (res.code === 0 ? res.data : null) as any;
+				const data = res.code === 0 ? res.data : null;
 				if (data) {
 					// spec: AccountData.nickname, .bio, .tags, .avatar_url, .user_id
-					nickname = data.nickname ?? '';
+					nickname = data.nickname;
 					bio = data.bio ?? '';
 					avatar = data.avatar_url ?? '';
-					userId = data.user_id ?? '';
+					userId = data.user_id;
 					if (data.tags) tags = new Set(data.tags);
 				}
 			} finally {

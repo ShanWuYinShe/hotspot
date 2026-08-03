@@ -42,29 +42,29 @@
 					listMyGroups().catch(() => ({ code: -1, data: { items: [] } }))
 				]);
 				if (cancelled) return;
-				const privData = (privRes.code === 0 && privRes.data ? (privRes.data as any).items : []) as any[];
-				const groupData = (groupRes.code === 0 && groupRes.data ? (groupRes.data as any).items : []) as any[];
-				const privateChats: ChatItem[] = privData.map((c: any, i: number) => ({
-					id: c.id ?? i + 1,
+				const privData = privRes.code === 0 && privRes.data ? privRes.data.items : [];
+				const groupData = groupRes.code === 0 && groupRes.data ? groupRes.data.items : [];
+				const privateChats: ChatItem[] = privData.map((c, i) => ({
+					id: i + 1,
 					// spec: PrivateChatItem.other_user — the peer; private messages are
 					// addressed by target_user_id (the peer's user_id), not a chat id.
-					peerUserId: c.other_user?.user_id ?? c.peer_user_id ?? c.target_user_id ?? '',
-					name: c.other_user?.nickname ?? c.name ?? c.nickname ?? c.peer_name ?? '',
-					avatar: c.other_user?.avatar_url ?? c.avatar ?? c.peer_avatar ?? '',
-					lastMessage: c.last_message?.content ?? c.last_message ?? c.last_msg ?? '',
-					time: c.last_message?.sent_at ?? c.last_activity_at ?? c.time ?? c.updated_at ?? '',
-					unread: c.unread_count ?? c.unread ?? 0,
-					online: c.other_user?.presence_status === 'online' || c.online || false,
-					group: c.group ?? c.is_group ?? false,
+					peerUserId: c.other_user?.user_id ?? '',
+					name: c.other_user?.nickname ?? '',
+					avatar: c.other_user?.avatar_url ?? '',
+					lastMessage: c.last_message?.content ?? '',
+					time: c.last_message?.sent_at ?? c.last_activity_at ?? '',
+					unread: c.unread_count ?? 0,
+					online: c.presence_status === 'online',
+					group: false,
 					kind: 'private'
 				}));
 				// spec: GroupItem { group: GroupInfo, my_state?: MyGroupState, last_activity_at?, last_message? }
-				const groupChats: ChatItem[] = groupData.map((c: any, i: number) => {
-					const g = c.group ?? {};
+				const groupChats: ChatItem[] = groupData.map((c, i) => {
+					const g = c.group;
 					return {
 						id: g.group_id ?? `group-${i}`,
 						peerUserId: '',
-						name: g.name ?? '',
+						name: g.name,
 						avatar: g.avatar_url ?? '',
 						// spec: last_message 仅 groups/list_my 返回,非文本消息预览为空。
 						lastMessage: c.last_message?.content ?? '',

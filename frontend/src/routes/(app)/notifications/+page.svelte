@@ -55,11 +55,11 @@ const FILTER_TABS = [
 				]);
 				if (cancelled) return;
 
-				const notifData = (notifRes.code === 0 ? notifRes.data : null) as any;
+				const notifData = notifRes.code === 0 ? notifRes.data : null;
 
 				if (notifData) {
-					const items: NotificationItem[] = (notifData.items || []).map((n: any, i: number) => {
-						const actor = n.payload?.actor ?? n.actor ?? {};
+					const items: NotificationItem[] = (notifData.items || []).map((n, i) => {
+						const actor = n.payload?.actor ?? { user_id: '', nickname: '' };
 						const groupName = n.payload?.group_name ?? '群组';
 						let text = '';
 						if (n.type === 'moment_commented') text = n.payload?.comment_preview ?? `${actor.nickname ?? ''} 评论了你的动态`;
@@ -78,7 +78,7 @@ const FILTER_TABS = [
 						else if (n.type === 'report_dismissed') text = `你的举报未通过审核${n.payload?.note ? `:${n.payload.note}` : ''}`;
 						else if (n.type === 'nearby_new_moment') text = `${actor.nickname ?? ''} 在附近发布了新瞬间`;
 						else if (n.type === 'system_announcement') text = '系统公告';
-						else text = n.payload?.title ?? n.message ?? '';
+						else text = n.payload?.message ?? '';
 						return {
 							id: n.notification_id ?? String(i + 1),
 							// 归一化为语义键，使图标/计数/分区过滤都能命中 TYPE_CONFIG。
@@ -87,7 +87,7 @@ const FILTER_TABS = [
 							time: n.created_at ?? '',
 							user: { name: actor.nickname ?? '', avatar: actor.avatar_url ?? '' },
 							text,
-							momentImage: n.payload?.moment_summary?.cover_url ?? n.payload?.cover_url ?? undefined
+							momentImage: n.payload?.moment_summary?.cover_url ?? undefined
 						};
 					});
 					notifications = items;

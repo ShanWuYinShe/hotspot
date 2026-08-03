@@ -100,25 +100,25 @@
 				]);
 				if (cancelled) return;
 
-				const detailData = (detailRes.code === 0 ? detailRes.data : null) as any;
-				const commentsData = (commentsRes.code === 0 ? commentsRes.data : null) as any;
+				const detailData = detailRes.code === 0 ? detailRes.data : null;
+				const commentsData = commentsRes.code === 0 ? commentsRes.data : null;
 
 				if (detailData) {
 					moment = {
-						id: detailData.id ?? detailData.moment_id ?? numericMomentId,
-						user: detailData.user?.nickname ?? detailData.author_name ?? detailData.nickname ?? '',
-						handle: detailData.handle ?? detailData.username ?? '',
-						avatar: detailData.avatar ?? detailData.user?.avatar_url ?? detailData.author_avatar ?? '',
-						location: detailData.location?.location_name ?? detailData.place ?? '',
-						image: detailData.image ?? detailData.images?.[0]?.url ?? detailData.images?.[0] ?? '',
-						content: detailData.content ?? detailData.text ?? detailData.body ?? '',
-						time: detailData.time ?? detailData.created_at ?? '',
+						id: numericMomentId,
+						user: detailData.user?.nickname ?? '',
+						handle: '',
+						avatar: detailData.user?.avatar_url ?? '',
+						location: detailData.location?.location_name ?? '',
+						image: detailData.images?.[0]?.url ?? '',
+						content: detailData.description ?? '',
+						time: detailData.created_at ?? '',
 						likes: detailData.likes_count ?? 0,
-						tag: detailData.tag ?? detailData.tags?.[0] ?? '',
+						tag: detailData.tags?.[0] ?? '',
 						comments: []
 					};
 					// Derive liked from reactions[].reacted_by_me (spec); saved from my_state.
-					const mine = (detailData.reactions || []).find((r: any) => r.reacted_by_me);
+					const mine = (detailData.reactions || []).find((r) => r.reacted_by_me);
 					if (mine) {
 						liked = true;
 						likeEmoji = mine.emoji ?? '👍';
@@ -129,13 +129,13 @@
 				}
 
 				if (commentsData) {
-					const items: MomentComment[] = (commentsData.items || []).map((c: any, i: number) => ({
-						id: c.id ?? i + 1,
-						user: c.user?.nickname ?? c.author_name ?? c.nickname ?? '',
-						avatar: c.avatar ?? c.user?.avatar_url ?? c.author_avatar ?? '',
-						text: c.text ?? c.content ?? c.body ?? '',
-						time: c.time ?? c.created_at ?? '',
-						likes: (c.reactions || []).reduce((s: number, r: any) => s + (r.count ?? 0), 0)
+					const items: MomentComment[] = (commentsData.items || []).map((c, i) => ({
+						id: i + 1,
+						user: c.user?.nickname ?? '',
+						avatar: c.user?.avatar_url ?? '',
+						text: c.content ?? '',
+						time: c.created_at ?? '',
+						likes: (c.reactions || []).reduce((s, r) => s + (r.count ?? 0), 0)
 					}));
 					apiComments = items;
 				}

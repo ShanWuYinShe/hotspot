@@ -46,13 +46,13 @@
 				loading = true;
 				const res = await getNearbyUsers(referencePoint ? { reference_point: referencePoint } : {}).catch(() => ({ code: -1, data: { items: [] } }));
 				if (cancelled) return;
-				const data = (res.code === 0 ? res.data : null) as any;
+				const data = res.code === 0 ? res.data : null;
 				if (data) {
-					const items: NearbyUser[] = (data.items || []).map((u: any) => ({
+					const items: NearbyUser[] = (data.items || []).map((u) => ({
 						// spec: feed/nearby_users → UserItem（user 嵌套 + presence_status + location）
 						id: u.user?.user_id ?? '',
 						name: u.user?.nickname ?? '',
-						distance: u.location?.distance ?? '',
+						distance: u.location?.distance != null ? `${u.location.distance}m` : '',
 						avatar: u.user?.avatar_url ?? '',
 						status: u.presence_status === 'online' ? '在线' : '离线',
 						tag: u.tags?.[0] ?? '',

@@ -47,18 +47,18 @@
 				const feedRes = await getFeedNearby(referencePoint ? { reference_point: referencePoint } : {}).catch(() => ({ code: -1, data: { items: [] } }));
 				if (cancelled) return;
 
-				const feedData = (feedRes.code === 0 ? feedRes.data : null) as any;
+				const feedData = feedRes.code === 0 ? feedRes.data : null;
 
 				if (feedData) {
-					const items: FeedItem[] = (feedData.items || []).map((m: any, i: number) => {
-						const mine = (m.reactions || []).find((r: any) => r.reacted_by_me);
+					const items: FeedItem[] = (feedData.items || []).map((m, i) => {
+						const mine = (m.reactions || []).find((r) => r.reacted_by_me);
 						return {
-							id: m.moment_id ?? m.id ?? i + 1,
+							id: m.moment_id ?? i + 1,
 							user: m.user?.nickname ?? '',
 							avatar: m.user?.avatar_url ?? '',
 							location: m.location?.location_name ?? '',
 							tag: m.tags?.[0] ?? '',
-							content: m.description ?? m.content ?? '',
+							content: m.description ?? '',
 							image: m.images?.[0]?.url ?? '',
 							likes: m.likes_count ?? 0,
 							comments: m.comments_count ?? 0,

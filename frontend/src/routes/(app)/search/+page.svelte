@@ -76,21 +76,18 @@
 				searchUsers({ keyword: term }).catch(() => ({ code: -1, data: { items: [] } })),
 				searchMoments({ keyword: term }).catch(() => ({ code: -1, data: { items: [] } }))
 			]);
-			const rawUsers = (usersRes.code === 0 ? (usersRes.data as any)?.items : []) ?? [];
-			const rawMoments = (momentsRes.code === 0 ? (momentsRes.data as any)?.items : []) ?? [];
-			const users = rawUsers.map((u: any) => {
-				const inner = u.user ?? u;
-				return { user_id: inner.user_id ?? '', nickname: inner.nickname ?? '', avatar_url: inner.avatar_url, tags: inner.tags };
+			const rawUsers = usersRes.code === 0 ? usersRes.data?.items : undefined;
+			const rawMoments = momentsRes.code === 0 ? momentsRes.data?.items : undefined;
+			const users = (rawUsers ?? []).map((u) => {
+				const inner = u.user;
+				return { user_id: inner.user_id, nickname: inner.nickname, avatar_url: inner.avatar_url, tags: u.tags };
 			});
-			const moments = rawMoments.map((m: any) => ({
-				...m,
-				user: m.user ?? m.user_info
-			}));
+			const moments = (rawMoments ?? []).map((m) => ({ ...m }));
 			// 话题从结果动态聚合
 			const topicSet = new Set<string>();
 			for (const m of moments) {
-				if (m.tag) topicSet.add(m.tag);
-				if (m.user?.tags) m.user.tags.forEach((t: string) => topicSet.add(t));
+				m.tags?.forEach((t) => topicSet.add(t));
+				// UserItem.tags 仅在 user detail 提供；search 返回的 UserItem 可能含 tags
 			}
 			results = { users, moments, topics: Array.from(topicSet) };
 		} catch {
