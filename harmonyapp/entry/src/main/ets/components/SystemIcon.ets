@@ -55,7 +55,7 @@ export enum AppIcon {
   // 位置图标
   LOCATION = 'sys.symbol.position',
   MAP = 'sys.symbol.map',
-  NEARBY = 'sys.symbol.discover',
+  NEARBY = 'sys.symbol.discover', // 系统符号 id 保留 discover，语义为「附近」
 
   // 用户图标
   PERSON = 'sys.symbol.person',

@@ -29,14 +29,14 @@ export interface AppNavItem {
   openNotificationCenter: boolean;
 }
 
-/** 桌面侧边栏发现组（顶层目的地） */
-export const DESKTOP_DISCOVER_NAV: AppNavItem[] = [
+/** 桌面侧边栏主导航组（首页/附近动态/附近的人/附近的群组） */
+export const DESKTOP_PRIMARY_NAV: AppNavItem[] = [
   {
-    label: '首页', icon: AppIcon.HOME, tabRoute: 'nearby', pageName: '',
+    label: '首页', icon: AppIcon.HOME, tabRoute: 'home', pageName: '',
     isTab: true, requiresAuth: false, badge: 'none', openNotificationCenter: false
   },
   {
-    label: '发现', icon: AppIcon.COMPASS, tabRoute: 'discover', pageName: '',
+    label: '附近动态', icon: AppIcon.COMPASS, tabRoute: 'moments', pageName: '',
     isTab: true, requiresAuth: false, badge: 'none', openNotificationCenter: false
   },
   {
@@ -85,7 +85,7 @@ export interface AppBottomTab {
 
 export const BOTTOM_TABS: AppBottomTab[] = [
   { label: '首页', icon: AppIcon.HOME, index: 0, requiresAuth: false, badge: 'none' },
-  { label: '发现', icon: AppIcon.COMPASS, index: 1, requiresAuth: false, badge: 'none' },
+  { label: '附近动态', icon: AppIcon.COMPASS, index: 1, requiresAuth: false, badge: 'none' },
   { label: '消息', icon: AppIcon.MESSAGE, index: 3, requiresAuth: true, badge: 'inbox' },
   { label: '我的', icon: AppIcon.PERSON, index: 4, requiresAuth: true, badge: 'none' }
 ];

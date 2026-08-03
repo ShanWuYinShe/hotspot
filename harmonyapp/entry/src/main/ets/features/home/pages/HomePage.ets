@@ -46,7 +46,7 @@ interface StatItem {
 
 @Preview
 @Component
-export struct NearbyPage {
+export struct HomePage {
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_CURRENT_LOCATION) @Watch('onCurrentLocationChange') currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_BROWSE_ANCHOR) @Watch('onBrowseAnchorChange') browseAnchor: LocationInfo | null = null;
@@ -540,7 +540,6 @@ export struct NearbyPage {
     .onClick(() => AppRouter.push(PageNames.LOCATION_PICKER))
   }
 
-  @Builder
   // ==================== 区块标题 (eyebrow) ====================
 
   @Builder
@@ -619,7 +618,7 @@ export struct NearbyPage {
               .alignItems(HorizontalAlign.Center)
             }, (_: string) => _)
           } else {
-            ForEach(this.users.slice(0, 8), (user: UserItem) => {
+            ForEach(this.users.slice(0, 4), (user: UserItem) => {
               Column({ space: 6 }) {
                 Stack({ alignContent: Alignment.Center }) {
                   SystemAvatar({
@@ -702,8 +701,7 @@ export struct NearbyPage {
     if (this.groupsLoading || this.groups.length > 0) {
       Column() {
         this.buildSectionHeader('附近群组', '查看全部', () => {
-          const param: SearchRouteParam = { initialTab: 2 } as SearchRouteParam;
-          AppRouter.push(PageNames.SEARCH, param);
+          AppRouter.push(PageNames.NEARBY_GROUPS);
         })
 
         Scroll() {

@@ -14,10 +14,10 @@
 
 import { type BreakpointType } from '../../core/responsive/Breakpoint';
 import { DesignConstants } from '../../constants/DesignConstants';
-import { DESKTOP_DISCOVER_NAV, DESKTOP_PERSONAL_NAV, type AppNavItem } from '../../constants/AppNavigation';
+import { DESKTOP_PRIMARY_NAV, DESKTOP_PERSONAL_NAV, type AppNavItem } from '../../constants/AppNavigation';
 import { PageNames } from '../../constants/AppConstants';
-import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
-import { DiscoverPage } from '../../features/discover/pages/DiscoverPage';
+import { HomePage } from '../../features/home/pages/HomePage';
+import { MomentsFeedPage } from '../../features/moment/pages/MomentsFeedPage';
 import { MessagePage } from '../../features/message/pages/MessagePage';
 import { ProfilePage } from '../../features/profile/pages/ProfilePage';
 import { LoginPromptView } from '../LoginPromptView';
@@ -187,7 +187,7 @@ export struct DesktopLayout {
       }
       .alignItems(VerticalAlign.Center)
       .onClick(() => {
-        this.currentRoute = 'nearby';
+        this.currentRoute = 'home';
       })
 
       Blank().layoutWeight(1)
@@ -331,7 +331,7 @@ export struct DesktopLayout {
     Column() {
       // 发现组
       Column({ space: 2 }) {
-        ForEach(DESKTOP_DISCOVER_NAV, (item: AppNavItem) => {
+        ForEach(DESKTOP_PRIMARY_NAV, (item: AppNavItem) => {
           this.NavItemBuilder(item)
         }, (item: AppNavItem) => item.label)
       }
@@ -472,10 +472,10 @@ export struct DesktopLayout {
   @Builder
   MainContent() {
     Column() {
-      if (this.currentRoute === 'nearby') {
-        NearbyPage()
-      } else if (this.currentRoute === 'discover') {
-        DiscoverPage()
+      if (this.currentRoute === 'home') {
+        HomePage()
+      } else if (this.currentRoute === 'moments') {
+        MomentsFeedPage()
       } else if (this.currentRoute === 'messages') {
         if (this.isLoggedIn) {
           Column() {

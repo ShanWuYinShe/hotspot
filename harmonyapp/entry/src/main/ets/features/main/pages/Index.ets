@@ -74,7 +74,7 @@ struct Index {
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'lg';
 
   @State currentTabIndex: number = 0;
-  @State currentRoute: string = 'nearby';
+  @State currentRoute: string = 'home';
   @State previousTabIndex: number = 0;
   @State isInitialized: boolean = false;
   @State lastError: string = '';

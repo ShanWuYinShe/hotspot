@@ -266,9 +266,9 @@ export interface PageShellSystem {
   SHELL_NARROW_MAX: number;
   /** 表单内容栏（设置/个人资料/编辑/搜索/登录）— 对齐 .page-shell--form min(560px, ...) */
   SHELL_FORM_MAX: number;
-  /** feed 窄栏（discover/moments 移动·窄平板）— 对齐 .feed-density-shell--narrow 640px */
+  /** feed 窄栏（moments 移动·窄平板）— 对齐 .feed-density-shell--narrow 640px */
   FEED_NARROW_MAX: number;
-  /** feed 中栏（discover/moments 宽平板）— 对齐 .feed-density-shell--medium 960px */
+  /** feed 中栏（moments 宽平板）— 对齐 .feed-density-shell--medium 960px */
   FEED_MEDIUM_MAX: number;
 }
 

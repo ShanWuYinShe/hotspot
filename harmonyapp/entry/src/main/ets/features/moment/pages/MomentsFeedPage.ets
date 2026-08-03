@@ -38,7 +38,7 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF11;
-const TAG: string = 'DiscoverPage';
+const TAG: string = 'MomentsFeedPage';
 
 class SearchParams {
   keyword: string = '';
@@ -47,7 +47,7 @@ class SearchParams {
 
 @Preview
 @Component
-export struct DiscoverPage {
+export struct MomentsFeedPage {
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
@@ -247,11 +247,11 @@ export struct DiscoverPage {
   build() {
   ResponsiveContainer() {
     Column() {
-      // 粘性头部：标题(走 SystemPageHeader) + 搜索栏 + 标签栏（对齐前端 discover/+page.svelte headerContent）
+      // 粘性头部：标题(走 SystemPageHeader) + 搜索栏 + 标签栏（对齐前端 nearby/moments 页 headerContent）
       Column() {
         // 标题行 —— 统一走 SystemPageHeader（标题 + 内容数 trailing，透明背景自带安全区）
         SystemPageHeader({
-          title: '发现',
+          title: '附近动态',
           titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
           titleWeight: FontWeight.Medium,
           backgroundVariant: 'transparent'

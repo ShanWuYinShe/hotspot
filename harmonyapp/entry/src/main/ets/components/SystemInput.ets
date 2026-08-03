@@ -20,7 +20,7 @@ export struct SystemInput {
   @Prop fontSize: number = DesignConstants.FONT.SIZE.SM_PLUS; // 13
   /** 错误态：边框变 error 色 */
   @Prop hasError: boolean = false;
-  /** 右侧清除按钮（value 非空时显示，对齐前端 discover 搜索栏的 X） */
+  /** 右侧清除按钮（value 非空时显示，对齐前端 moments 搜索栏的 X） */
   @Prop showClearButton: boolean = false;
   /** 清除按钮图标尺寸 */
   @Prop clearIconSize: number = 13;

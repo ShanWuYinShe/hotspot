@@ -86,7 +86,7 @@ export function isWideForm(bp: BreakpointType): boolean {
 
 /** 采用 master-detail 信息架构（双栏 / split-pane）。
  *  对齐前端 platformStore.useMasterDetail（= isWide ≥960）。
- *  用于 discover / message / nearby / profile 等存在「双栏 vs 单列」布局差异的页面。 */
+ *  用于 moments / message / nearby / profile 等存在「双栏 vs 单列」布局差异的页面。 */
 export function useMasterDetail(bp: BreakpointType): boolean {
   return isWideForm(bp);
 }

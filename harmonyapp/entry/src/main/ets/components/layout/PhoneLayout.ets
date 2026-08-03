@@ -17,8 +17,8 @@
  * 图标：使用系统 SymbolSpan（按 harmonyapp/AGENTS.md "系统图标" 约束）
  */
 
-import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
-import { DiscoverPage } from '../../features/discover/pages/DiscoverPage';
+import { HomePage } from '../../features/home/pages/HomePage';
+import { MomentsFeedPage } from '../../features/moment/pages/MomentsFeedPage';
 import { MessagePage } from '../../features/message/pages/MessagePage';
 import { ProfilePage } from '../../features/profile/pages/ProfilePage';
 import { LoginPromptView } from '../LoginPromptView';
@@ -100,8 +100,8 @@ export struct PhoneLayout {
 
         // 主体：Tabs + 5 TabContent（Nearby / Discover / Create / Message / Profile）
         Tabs({ barPosition: BarPosition.End, controller: this.tabsController, index: this.currentTabIndex }) {
-          TabContent() { NearbyPage() }.tabBar(this.TabBarBuilder(0))
-          TabContent() { DiscoverPage() }.tabBar(this.TabBarBuilder(1))
+          TabContent() { HomePage() }.tabBar(this.TabBarBuilder(0))
+          TabContent() { MomentsFeedPage() }.tabBar(this.TabBarBuilder(1))
           TabContent() { Column() {} }.tabBar(this.CreateTabBuilder())
           TabContent() {
             if (this.isLoggedIn) {

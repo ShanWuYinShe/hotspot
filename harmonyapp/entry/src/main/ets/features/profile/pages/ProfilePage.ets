@@ -1628,7 +1628,7 @@ export struct ProfilePage {
 
       Row({ space: DesignConstants.SPACING.MD }) {
         this.ProfileQuickAction(AppIcon.HEART, '关系', () => this.openRelationshipHub())
-        this.ProfileQuickAction(AppIcon.STAR, '收藏', () => this.openMyShares())
+        this.ProfileQuickAction(AppIcon.SHARE, '分享', () => this.openMyShares())
         this.ProfileQuickAction(AppIcon.SETTINGS, '设置', () => this.openSettingsCenter())
       }
       .width('100%')

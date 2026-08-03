@@ -13,8 +13,8 @@ import { BreakpointType } from '../core/responsive/Breakpoint';
  * - wide：数据表格 / 管理后台 / 仪表盘（1320）
  * - narrow：详情 / 阅读 / 长文（720）
  * - form：设置 / 个人资料 / 编辑 / 搜索 / 登录（560）
- * - feed-narrow：discover / moments 移动·窄平板（640）
- * - feed-medium：discover / moments 宽平板（960）
+ * - feed-narrow：moments 移动·窄平板（640）
+ * - feed-medium：moments 宽平板（960）
  *
  * 用法：
  *   PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint }) {

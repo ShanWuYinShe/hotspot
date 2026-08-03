@@ -120,7 +120,7 @@ export struct AnchorEntry {
     .borderRadius(DesignConstants.SHAPE.INPUT) // 18
     .border({ width: 1, color: this.getPalette().borderColor })
     .alignItems(VerticalAlign.Center)
-    .scale(this.isPressed ? { x: 0.98, y: 0.98 } : { x: 1, y: 1 })
+    .scale(this.isPressed ? { x: 0.98, y: 0.98 } : { x: 1, y: 1 }) // 对齐前端输入行按压强度
     .animation({ curve: curves.springMotion(0.3, 0.85) })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
@@ -156,7 +156,7 @@ export struct AnchorEntry {
     .border({ width: 1, color: this.getPalette().borderColor })
     .borderRadius(DesignConstants.RADIUS.FULL)
     .alignItems(VerticalAlign.Center)
-    .scale(this.isPressed ? { x: 0.94, y: 0.94 } : { x: 1, y: 1 })
+    .scale(this.isPressed ? { x: 0.94, y: 0.94 } : { x: 1, y: 1 }) // 对齐前端 pill 按钮按压强度
     .animation({ curve: curves.springMotion(0.3, 0.85) })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {

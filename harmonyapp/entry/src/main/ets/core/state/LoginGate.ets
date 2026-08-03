@@ -7,8 +7,8 @@
  *   2) 随即跳转登录页，并带上 restoreAction/restoreTargetId，
  *   3) 登录成功后由 LoginPage.finishAuthNavigation 自动补做原动作。
  *
- * 本类取代此前散落在 GroupPage/GroupDetailPage/SettingsPage/DiscoverPage/
- * SearchPage/ChatPage/MomentPage/NearbyPage/InteractionActions 中的重复门禁逻辑，
+ * 本类取代此前散落在 GroupPage/GroupDetailPage/SettingsPage/MomentsFeedPage/
+ * SearchPage/ChatPage/MomentPage/HomePage/InteractionActions 中的重复门禁逻辑，
  * 保证「同一动作 → 同一提示文案 + 同一跳转行为 + 同一登录后补做」。
  */
 
