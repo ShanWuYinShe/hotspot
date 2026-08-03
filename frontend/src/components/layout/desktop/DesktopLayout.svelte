@@ -226,8 +226,8 @@
 			</button>
 			<!-- Scrollable nav region — takes all available space -->
 			<div class="flex-1 flex flex-col overflow-y-auto no-scrollbar min-h-0">
-				<!-- Section 1: Discovery nav -->
-				<div class="flex flex-col gap-0.5 {isSidebarCollapsed ? 'items-center' : ''}">
+			<!-- Section 1: 发现导航 -->
+			<div class="flex flex-col gap-0.5 {isSidebarCollapsed ? 'items-center' : ''}">
 					{#each TOP_NAV as item (item.id)}
 						<SidebarNavItem {item} isActive={activeNavId === item.id} onClick={() => handleNavClick(item)} collapsed={isSidebarCollapsed} />
 					{/each}
