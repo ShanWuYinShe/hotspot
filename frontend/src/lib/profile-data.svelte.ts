@@ -12,6 +12,14 @@ import {
 	listFollowing,
 	listFollowers
 } from '@/api';
+import type {
+	AccountData,
+	FollowerItem,
+	FollowingItem,
+	FriendItem,
+	GroupItem,
+	MomentItem
+} from '@/api/types';
 
 export interface GalleryMoment {
 	id: string;
@@ -26,6 +34,16 @@ export interface ProfileStats {
 	followers_count: number;
 	following_count: number;
 	groups_count: number;
+}
+
+/** Map a spec MomentItem to the flat GalleryMoment shape the gallery tiles consume. */
+function mapGalleryMoment(m: MomentItem): GalleryMoment {
+	return {
+		id: m.moment_id,
+		img: m.images?.[0]?.url ?? '',
+		likes: m.likes_count ?? 0,
+		comments: m.comments_count ?? 0
+	};
 }
 
 export function useAccountData() {
@@ -44,7 +62,7 @@ export function useAccountData() {
 		getAccount()
 			.then((res) => {
 				if (res.code === 0 && res.data) {
-					const d = res.data as any;
+					const d: AccountData = res.data;
 					avatar = d.avatar_url ?? '';
 					nickname = d.nickname ?? '';
 					stats = d.stats ?? stats;
@@ -78,13 +96,7 @@ export function useGalleryMoments(type: 'my' | 'user' = 'my', userId?: string) {
 		fetcher({ pagination: { limit: 20 } })
 			.then((res) => {
 				if (res.code === 0 && res.data) {
-					posts =
-						(res.data as any).items?.map((m: any) => ({
-							id: m.moment_id,
-							img: m.images?.[0]?.url ?? '',
-							likes: m.likes_count ?? 0,
-							comments: m.comments_count ?? 0
-						})) ?? [];
+					posts = res.data.items?.map(mapGalleryMoment) ?? [];
 				}
 			})
 			.finally(() => (loading = false));
@@ -108,13 +120,7 @@ export function useReactedMoments(userId?: string) {
 		listUserReactedMoments(userId ?? '', { pagination: { limit: 20 } })
 			.then((res) => {
 				if (res.code === 0 && res.data) {
-					posts =
-						(res.data as any).items?.map((m: any) => ({
-							id: m.moment_id,
-							img: m.images?.[0]?.url ?? m.images?.[0] ?? '',
-							likes: m.likes_count ?? 0,
-							comments: m.comments_count ?? 0
-						})) ?? [];
+					posts = res.data.items?.map(mapGalleryMoment) ?? [];
 				}
 			})
 			.finally(() => (loading = false));
@@ -138,13 +144,7 @@ export function useFavoriteMoments() {
 		getFavoriteMoments({ pagination: { limit: 20 } })
 			.then((res) => {
 				if (res.code === 0 && res.data) {
-					posts =
-						(res.data as any).items?.map((m: any) => ({
-							id: m.moment_id,
-							img: m.images?.[0]?.url ?? m.images?.[0] ?? '',
-							likes: m.likes_count ?? 0,
-							comments: m.comments_count ?? 0
-						})) ?? [];
+					posts = res.data.items?.map(mapGalleryMoment) ?? [];
 				}
 			})
 			.finally(() => (loading = false));
@@ -162,26 +162,39 @@ export function useFavoriteMoments() {
 
 const ROLE_LABEL: Record<string, string> = { owner: '群主', admin: '管理员', member: '成员' };
 
+export interface MappedGroup {
+	id: string;
+	name: string;
+	avatar: string;
+	banner: string;
+	members: number;
+	online: number;
+	desc: string;
+	role: string;
+	lastActive: string;
+	tags: string[];
+}
+
 /**
  * Map a spec GroupItem (`{ group: GroupInfo, description, my_state, ... }`) to the
  * flat shape SectionGroups/MyGroupCard consumes.
  */
-function mapGroup(item: any) {
-	const g = item?.group ?? {};
-	const role = item?.my_state?.role;
+function mapGroup(item: GroupItem): MappedGroup {
+	const g = item.group;
+	const role = item.my_state?.role;
 	return {
-		id: g.group_id ?? '',
-		name: g.name ?? '',
+		id: g.group_id,
+		name: g.name,
 		avatar: g.avatar_url ?? '',
 		// spec GroupItem has no banner; reuse the avatar so the banner area isn't a
 		// broken-image icon. A dedicated banner field can be added when the spec does.
 		banner: g.avatar_url ?? '',
-		members: g.members_count ?? 0,
-		online: item?.online_members_count ?? 0,
-		desc: item?.description ?? '',
+		members: g.members_count,
+		online: item.online_members_count ?? 0,
+		desc: item.description ?? '',
 		role: role ? (ROLE_LABEL[role] ?? role) : '成员',
-		lastActive: item?.last_activity_at ?? '',
-		tags: item?.tags ?? []
+		lastActive: item.last_activity_at ?? '',
+		tags: item.tags ?? []
 	};
 }
 
@@ -192,57 +205,88 @@ function daysSince(iso?: string): number {
 	return Math.max(1, Math.floor(diff / 86400000));
 }
 
+export interface MappedFriend {
+	id: string;
+	name: string;
+	avatar: string;
+	online: boolean;
+	handle: string;
+	mutual: boolean;
+	tag: string;
+}
+
+export interface MappedFollowing {
+	id: string;
+	name: string;
+	avatar: string;
+	desc: string;
+	posts: number;
+	latestImg: string;
+	isMutual: boolean;
+}
+
+export interface MappedFollower {
+	id: string;
+	name: string;
+	avatar: string;
+	handle: string;
+	joinedDays: number;
+	followBack: boolean;
+	isMutual: boolean;
+}
+
 /**
  * Map the three spec relationship items to the flat shapes the Section components
  * expect. The spec nests UserInfo under `user:` and uses presence_status / is_mutual.
  */
-function mapFriend(item: any) {
-	const u = item?.user ?? {};
+function mapFriend(item: FriendItem): MappedFriend {
+	const u = item.user;
 	return {
-		id: u.user_id ?? '',
-		name: u.nickname ?? '',
+		id: u.user_id,
+		name: u.nickname,
 		avatar: u.avatar_url ?? '',
-		online: item?.presence_status === 'online',
-		handle: item?.remark ? `@${item.remark}` : `@${u.user_id ?? ''}`,
+		online: item.presence_status === 'online',
+		handle: item.remark ? `@${item.remark}` : `@${u.user_id}`,
 		mutual: true, // friends list is bidirectional by definition
 		tag: '好友'
 	};
 }
 
-function mapFollowing(item: any) {
-	const u = item?.user ?? {};
+function mapFollowing(item: FollowingItem): MappedFollowing {
+	const u = item.user;
 	return {
-		id: u.user_id ?? '',
-		name: u.nickname ?? '',
+		id: u.user_id,
+		name: u.nickname,
 		avatar: u.avatar_url ?? '',
-		desc: item?.remark ?? item?.bio ?? '',
-		posts: item?.moments_count ?? 0,
-		latestImg: item?.latest_moment_image ?? '',
-		isMutual: Boolean(item?.is_mutual)
+		desc: item.remark ?? '',
+		posts: 0,
+		latestImg: '',
+		isMutual: Boolean(item.is_mutual)
 	};
 }
 
-function mapFollower(item: any) {
-	const u = item?.user ?? {};
+function mapFollower(item: FollowerItem): MappedFollower {
+	const u = item.user;
 	return {
-		id: u.user_id ?? '',
-		name: u.nickname ?? '',
+		id: u.user_id,
+		name: u.nickname,
 		avatar: u.avatar_url ?? '',
-		handle: item?.remark ? `@${item.remark}` : `@${u.user_id ?? ''}`,
-		joinedDays: daysSince(item?.followed_at),
-		followBack: Boolean(item?.is_mutual),
-		isMutual: Boolean(item?.is_mutual)
+		// spec FollowerItem 无 remark；用 user_id 作 handle 占位
+		handle: `@${u.user_id}`,
+		joinedDays: daysSince(item.followed_at),
+		followBack: Boolean(item.is_mutual),
+		isMutual: Boolean(item.is_mutual)
 	};
 }
 
 export function useMyGroups() {
-	let groups = $state<any[]>([]);
+	let groups = $state<MappedGroup[]>([]);
 	let loading = $state(true);
 
 	$effect(() => {
 		listMyGroups({ pagination: { limit: 20 } })
 			.then((res) => {
-				if (res.code === 0) groups = ((res.data as any).items ?? []).map(mapGroup);
+				if (res.code === 0) groups = (res.data.items ?? []).map(mapGroup);
 			})
 			.finally(() => (loading = false));
 	});
@@ -259,9 +303,9 @@ export function useMyGroups() {
 
 /** Relationship lists — friends / following / followers. */
 export function useRelationships() {
-	let friends = $state<any[]>([]);
-	let following = $state<any[]>([]);
-	let followers = $state<any[]>([]);
+	let friends = $state<MappedFriend[]>([]);
+	let following = $state<MappedFollowing[]>([]);
+	let followers = $state<MappedFollower[]>([]);
 	let loading = $state(true);
 
 	$effect(() => {
@@ -271,9 +315,9 @@ export function useRelationships() {
 			listFollowers({ pagination: { limit: 50 } }).catch(() => ({ code: -1, data: { items: [] } }))
 		])
 			.then(([f, fo, fr]) => {
-				friends = f.code === 0 ? ((f.data as any).items ?? []).map(mapFriend) : [];
-				following = fo.code === 0 ? ((fo.data as any).items ?? []).map(mapFollowing) : [];
-				followers = fr.code === 0 ? ((fr.data as any).items ?? []).map(mapFollower) : [];
+				friends = f.code === 0 ? (f.data.items ?? []).map(mapFriend) : [];
+				following = fo.code === 0 ? (fo.data.items ?? []).map(mapFollowing) : [];
+				followers = fr.code === 0 ? (fr.data.items ?? []).map(mapFollower) : [];
 			})
 			.finally(() => (loading = false));
 	});

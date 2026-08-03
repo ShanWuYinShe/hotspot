@@ -70,11 +70,11 @@ let pendingAction = $state<PendingAction | null>(null);
 async function refreshUser(): Promise<void> {
   const res = await getAccount().catch(() => null);
   if (res && res.code === 0 && res.data) {
-    const d = res.data as any;
+    const d = res.data;
     user = {
-      user_id: d.user_id ?? d.id ?? '',
-      nickname: d.nickname ?? d.name ?? '',
-      avatar_url: d.avatar_url ?? d.avatar ?? '',
+      user_id: d.user_id,
+      nickname: d.nickname,
+      avatar_url: d.avatar_url ?? '',
       user_type: d.user_type,
     };
     status = 'authenticated';

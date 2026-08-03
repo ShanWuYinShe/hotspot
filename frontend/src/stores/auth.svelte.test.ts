@@ -1,5 +1,6 @@
 // Auth store 测试：requireAuth 拦截与 pending-action 重放、事件降级。
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { AccountData, AuthStatus } from '@/api/types';
 
 vi.mock('@/api', () => ({
   checkAuthStatus: vi.fn(),
@@ -12,17 +13,16 @@ vi.mock('@/api', () => ({
 
 import * as api from '@/api';
 
+const accountMock = { user_id: 'u1', nickname: '测试', avatar_url: '' } as AccountData;
+
 beforeEach(async () => {
   vi.resetModules();
   vi.clearAllMocks();
   sessionStorage.clear();
   localStorage.clear();
   // 默认未认证
-  vi.mocked(api.checkAuthStatus).mockResolvedValue({ code: 0, data: { is_valid: false } });
-  vi.mocked(api.getAccount).mockResolvedValue({
-    code: 0,
-    data: { user_id: 'u1', nickname: '测试', avatar_url: '' },
-  });
+  vi.mocked(api.checkAuthStatus).mockResolvedValue({ code: 0, data: { is_valid: false } as AuthStatus });
+  vi.mocked(api.getAccount).mockResolvedValue({ code: 0, data: accountMock });
 });
 
 it('匿名时 requireAuth 存储 pending-action 并打开登录弹层', async () => {

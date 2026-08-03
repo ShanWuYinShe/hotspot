@@ -13,11 +13,11 @@
 	let { embedded = false }: { embedded?: boolean } = $props();
 
 	let sortBy = $state<'recent' | 'active'>('recent');
-	let unfollowedIds = $state<Set<number>>(new Set());
+	let unfollowedIds = $state<Set<string>>(new Set());
 
 	const { following } = useRelationships();
 
-	const toggleUnfollow = (id: number) => {
+	const toggleUnfollow = (id: string) => {
 		const next = new Set(unfollowedIds);
 		next.has(id) ? next.delete(id) : next.add(id);
 		unfollowedIds = next;

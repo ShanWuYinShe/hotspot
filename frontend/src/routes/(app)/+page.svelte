@@ -53,12 +53,12 @@
 				]);
 				if (cancelled) return;
 
-				const trendingData = (trendingRes.code === 0 ? trendingRes.data : null) as any;
-				const nearbyUsersData = (nearbyUsersRes.code === 0 ? nearbyUsersRes.data : null) as any;
-				const nearbyGroupsData = (nearbyGroupsRes.code === 0 ? nearbyGroupsRes.data : null) as any;
+				const trendingData = trendingRes.code === 0 ? trendingRes.data : null;
+				const nearbyUsersData = nearbyUsersRes.code === 0 ? nearbyUsersRes.data : null;
+				const nearbyGroupsData = nearbyGroupsRes.code === 0 ? nearbyGroupsRes.data : null;
 
 				if (trendingData) {
-					const acts: Activity[] = (trendingData.hot_moments || []).map((a: any, i: number) => ({
+					const acts: Activity[] = (trendingData.hot_moments || []).map((a, i) => ({
 						id: i + 1,
 						icon: [Coffee, Music, Users, Star][i % 4],
 						title: a.description ?? '',
@@ -75,10 +75,10 @@
 				}
 
 				if (nearbyUsersData) {
-					const users: NearbyUser[] = nearbyUsersData.items.map((u: any) => ({
+					const users: NearbyUser[] = nearbyUsersData.items.map((u) => ({
 						id: u.user?.user_id ?? '',
 						name: u.user?.nickname ?? '',
-						distance: u.location?.distance ?? '',
+						distance: u.location?.distance != null ? `${u.location.distance}m` : '',
 						avatar: u.user?.avatar_url ?? '',
 						status: u.presence_status === 'online' ? '在线' : '离线',
 						tag: u.tags?.[0] ?? ''
@@ -87,18 +87,18 @@
 				}
 
 				if (nearbyGroupsData) {
-					const groups: NearbyGroup[] = nearbyGroupsData.items.map((g: any) => ({
+					const groups: NearbyGroup[] = nearbyGroupsData.items.map((g) => ({
 						id: g.group?.group_id ?? '',
 						name: g.group?.name ?? '',
 						members: g.group?.members_count ?? 0,
 						banner: g.group?.avatar_url ?? '',
-						distance: g.location?.distance ?? '',
+						distance: g.location?.distance != null ? `${g.location.distance}m` : '',
 						privacy: g.join_method === 'invite_only' || g.join_method === 'password' ? 'private' : 'public'
 					}));
 					nearbyGroups = groups;
 				}
-			} catch (e: any) {
-				if (!cancelled) error = e.message ?? '加载失败';
+			} catch (e) {
+				if (!cancelled) error = e instanceof Error ? e.message : '加载失败';
 			} finally {
 				if (!cancelled) loading = false;
 			}

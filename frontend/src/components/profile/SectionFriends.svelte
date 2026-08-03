@@ -7,7 +7,7 @@
 	import BorderedList from '@/components/data-display/BorderedList.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
-	import { useRelationships } from '@/lib/profile-data.svelte';
+	import { useRelationships, type MappedFriend } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 好友分区（迁移自旧版 ProfileSections 内 SectionFriends）。
@@ -72,7 +72,7 @@
 					onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
 					ariaLabel={`查看 ${f.name} 的主页`}
 				>
-					<FriendRowBody {f} />
+					{@render FriendRowBody(f)}
 				</InteractiveListRow>
 			{/each}
 		</div>
@@ -91,7 +91,7 @@
 							onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
 							ariaLabel={`查看 ${f.name} 的主页`}
 						>
-							<FriendRowBody {f} />
+							{@render FriendRowBody(f)}
 						</InteractiveListRow>
 					{/each}
 				</BorderedList>
@@ -100,7 +100,7 @@
 	{/if}
 </div>
 
-{#snippet FriendRowBody(f: (typeof friends)[number])}
+{#snippet FriendRowBody(f: MappedFriend)}
 	<Avatar ring src={f.avatar} name={f.name} size={42}>
 		{#snippet badge()}
 			<span class="absolute bottom-0 right-0 rounded-full {f.online ? 'bg-[var(--semantic-online)]' : 'bg-[var(--neu-text-muted)]'}" style="width:10px;height:10px;border:2px solid var(--neu-bg);opacity:{f.online ? 1 : 0.5};"></span>
