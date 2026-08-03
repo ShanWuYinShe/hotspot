@@ -284,7 +284,7 @@
 	<!-- ═══ Mobile Discover — 统一 PageHeader + 560px 居中内容 ═══ -->
 	{@render discoverHeader()}
 
-	<ContentColumn maxWidth="560px" class="animate-fade-in px-4! pt-4 pb-6">
+	<ContentColumn maxWidth="560px" class="animate-fade-in pt-4 pb-6">
 		<div class="mb-4">
 			{@render tagChips('overflow-x-auto')}
 		</div>

@@ -141,6 +141,7 @@ const FILTER_TABS = [
 				titleSize={20}
 				subtitleSize={12}
 				contentClassName="pt-4 pb-0"
+				maxWidth={isDesktop ? 'var(--content-reading-max)' : '640px'}
 				onBack={() => history.back()}
 				subtitle={unread > 0 ? `${unread} 条未读` : undefined}
 			>

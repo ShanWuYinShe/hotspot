@@ -3,6 +3,7 @@
 	import { Plus, MessageSquareDashed } from '@lucide/svelte';
 	import { platformStore } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
@@ -269,7 +270,7 @@
 		{/snippet}
 	</PageHeader>
 
-	<div class="animate-fade-in flex flex-col px-5 pt-4 pb-4" style="max-width:640px;margin-left:auto;margin-right:auto;width:100%;">
+	<ContentColumn maxWidth="640px" class="animate-fade-in flex flex-col pt-4 pb-4">
 		{#if onlineChats.length > 0}
 			<div class="mb-4">
 				<p class="uppercase mb-2.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">在线</p>
@@ -312,7 +313,7 @@
 				{/each}
 			</EmbeddedList>
 		{/if}
-	</div>
+	</ContentColumn>
 
 	<Dialog.Root open={showNewChat} onOpenChange={(next) => (next ? undefined : (showNewChat = false))}>
 		<Dialog.Content side="bottom" class="overflow-hidden" style="height:85%;box-shadow:0 -8px 40px rgba(0,0,0,0.18);">

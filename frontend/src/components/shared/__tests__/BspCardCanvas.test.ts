@@ -128,7 +128,7 @@ describe('BspCardCanvas 容器自适应', () => {
 		expect(Math.max(...rightEdges)).toBe(containerWidth - gap / 2);
 
 		// 布局保持满铺：真实卡片数不变，高度重新计算
-		const visibleCards = [...bsp.querySelectorAll(':scope > div')].filter((d) => d.style.width && (d as HTMLElement).style.height !== '');
+		const visibleCards = [...bsp.querySelectorAll(':scope > div')].filter((d) => (d as HTMLElement).style.width && (d as HTMLElement).style.height !== '');
 		expect(visibleCards.length).toBeGreaterThanOrEqual(12);
 		expect(secondCanvasH).toBeGreaterThan(0);
 		void firstCanvasH;

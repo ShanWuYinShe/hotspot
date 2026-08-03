@@ -132,7 +132,7 @@
 			</div>
 
 			<!-- 内容 -->
-			<div class="tablet-content-fill px-5 pb-6 pt-4" style="max-width:640px;margin-left:auto;margin-right:auto;width:100%;">
+			<div class="tablet-content-fill px-[var(--page-gutter)] pb-6 pt-4" style="max-width:640px;margin-left:auto;margin-right:auto;width:100%;">
 				<h1 class="text-[var(--neu-text)] text-[24px] mb-2">{ev.title}</h1>
 
 				<!-- meta 行 -->
@@ -217,7 +217,7 @@
 		</div>
 
 		<!-- sticky 底部 CTA -->
-		<div class="tablet-content-fill flex-shrink-0 px-5 pb-6 pt-3" style="background-color:var(--neu-bg);border-top:1px solid var(--neu-border);max-width:640px;margin-left:auto;margin-right:auto;width:100%;">
+		<div class="tablet-content-fill flex-shrink-0 px-[var(--page-gutter)] pb-6 pt-3" style="background-color:var(--neu-bg);border-top:1px solid var(--neu-border);max-width:640px;margin-left:auto;margin-right:auto;width:100%;">
 			<button
 				type="button"
 				onclick={() => (joined = !joined)}

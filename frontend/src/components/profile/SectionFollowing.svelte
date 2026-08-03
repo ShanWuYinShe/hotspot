@@ -29,7 +29,7 @@
 <div class="flex-1 overflow-y-auto no-scrollbar flex flex-col">
 	{#if !embedded}
 		<!-- Header -->
-		<div class="flex items-center justify-between px-5 py-4 flex-shrink-0" style="border-bottom:1px solid var(--neu-border);">
+		<div class="flex items-center justify-between px-[var(--page-gutter)] py-4 flex-shrink-0" style="border-bottom:1px solid var(--neu-border);">
 			<div>
 				<div class="flex items-center gap-2.5">
 					<span class="text-[var(--neu-text)] text-[15px]">关注</span>
@@ -46,7 +46,7 @@
 	{/if}
 
 	<!-- Sort tabs — ghost chips -->
-	<div class="flex gap-1.5 {embedded ? 'px-6 lg:px-8' : 'px-5'} py-3 flex-shrink-0">
+	<div class="flex gap-1.5 px-[var(--page-gutter)] py-3 flex-shrink-0">
 		{#each [{ id: 'recent', label: '最近关注' }, { id: 'active', label: '最活跃' }] as pill}
 			{@const active = sortBy === pill.id}
 			<button
@@ -65,7 +65,7 @@
 
 	<!-- Following list -->
 	{#if embedded}
-		<div class="grid w-full grid-cols-1 gap-4 px-6 pb-8 md:grid-cols-2 lg:px-8 xl:grid-cols-3">
+		<div class="grid w-full grid-cols-1 gap-4 px-[var(--page-gutter)] pb-8 md:grid-cols-2 xl:grid-cols-3">
 			{#if sorted.length === 0}
 				<div class="col-span-full">
 					<EmptyState title="还没有关注" description="去发现附近的人，找到有趣的创作者。">
@@ -110,7 +110,7 @@
 				{/if}
 		</div>
 	{:else}
-		<div class="px-5 pb-6">
+		<div class="px-[var(--page-gutter)] pb-6">
 			{#if sorted.length === 0}
 				<EmptyState title="还没有关注" description="去发现附近的人，找到有趣的创作者。">
 					{#snippet icon()}
