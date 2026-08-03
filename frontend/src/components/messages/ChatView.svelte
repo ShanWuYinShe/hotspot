@@ -504,7 +504,7 @@
 			style="width:36px;height:36px;box-shadow:{inputVal.trim() ? '0 4px 14px var(--neu-glow)' : '4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)'};border:1px solid var(--neu-border);"
 			onclick={() => void handleSend()}
 		>
-			<Send style="width:14px;height:14px;color:{inputVal.trim() ? 'white' : 'var(--neu-text-muted)'};transform:translateX(1px);" strokeWidth={2} />
+			<Send style="width:14px;height:14px;color:{inputVal.trim() ? 'var(--text-on-accent)' : 'var(--neu-text-muted)'};transform:translateX(1px);" strokeWidth={2} />
 		</button>
 	</div>
 </div>

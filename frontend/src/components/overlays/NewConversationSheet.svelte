@@ -138,7 +138,7 @@
 					}}
 				>
 					<div class="flex items-center justify-center rounded-full flex-shrink-0 bg-[var(--neu-accent-primary)]" style="width:44px;height:44px;box-shadow:0 3px 8px var(--neu-glow);">
-						<Users style="width:20px;height:20px;color:white;" strokeWidth={1.75} />
+						<Users style="width:20px;height:20px;color:var(--text-on-accent);" strokeWidth={1.75} />
 					</div>
 					<div>
 						<p class="text-[var(--neu-text)]" style="font-size:14px;font-weight:500;">创建群聊</p>

@@ -96,9 +96,9 @@
 						onclick={toggleComposer}
 					>
 						{#if composer.composerOpen}
-							<X style="width:19px;height:19px;color:white;" strokeWidth={2.2} />
+							<X style="width:19px;height:19px;color:var(--text-on-accent);" strokeWidth={2.2} />
 						{:else}
-							<Plus style="width:19px;height:19px;color:white;" strokeWidth={2.2} />
+							<Plus style="width:19px;height:19px;color:var(--text-on-accent);" strokeWidth={2.2} />
 						{/if}
 					</button>
 				</div>

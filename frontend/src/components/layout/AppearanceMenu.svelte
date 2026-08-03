@@ -9,6 +9,9 @@
 
 	let { class: className = '' }: { class?: string } = $props();
 
+	// 主题预览色板：这里用字面值而非 var(--pr-*)，因为色板需要在主题激活前静态展示
+	// 各主题的代表色（CSS 变量解析的是"当前"主题，无法表达"另一"主题）。值与
+	// themes/vibrant.css、themes/forest.css 的 --pr-accent-primary 保持同步。
 	const THEMES = [
 		{ id: 'vibrant', label: '星际', note: '冷色玻璃', swatch: '#6366F1' },
 		{ id: 'forest', label: '清野', note: '自然纸面', swatch: '#3D7A55' }

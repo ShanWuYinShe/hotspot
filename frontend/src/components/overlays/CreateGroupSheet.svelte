@@ -89,7 +89,7 @@
 				class="flex items-center justify-center rounded-full bg-[var(--neu-accent-primary)]"
 				style="width:72px;height:72px;box-shadow:0 8px 24px var(--neu-glow);"
 			>
-				<Check style="width:32px;height:32px;color:white;" strokeWidth={2.5} />
+				<Check style="width:32px;height:32px;color:var(--text-on-accent);" strokeWidth={2.5} />
 			</div>
 			<div>
 				<p class="text-[20px] font-semibold text-[var(--neu-text)]">群组已创建！</p>

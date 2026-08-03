@@ -79,7 +79,7 @@
 			onclick={() => void handleSave()}
 		>
 			{#if saved}
-				<Check style="width:14px;height:14px;color:white;" strokeWidth={2.5} />
+				<Check style="width:14px;height:14px;color:var(--text-on-accent);" strokeWidth={2.5} />
 			{:else}
 				保存
 			{/if}
@@ -113,7 +113,7 @@
 				class="neu-hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-[var(--neu-accent-primary)]"
 				style="width:26px;height:26px;border:2px solid var(--neu-bg);box-shadow:0 2px 8px var(--neu-glow);"
 			>
-				<Camera style="width:12px;height:12px;color:white;" strokeWidth={2} />
+				<Camera style="width:12px;height:12px;color:var(--text-on-accent);" strokeWidth={2} />
 			</button>
 		</div>
 		<div>

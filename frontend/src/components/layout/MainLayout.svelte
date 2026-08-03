@@ -4,7 +4,6 @@
 	import { goto } from '$app/navigation';
 	import { MapPin, Compass, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
 	import { cn } from '@/lib/utils';
-	import { themeStore } from '@/stores/theme.svelte';
 	import { platformStore } from '@/stores/platform.svelte';
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
 	import CreateSheet from '@/components/layout/CreateSheet.svelte';
@@ -34,19 +33,10 @@
 	const isSubPage = $derived(isSubPagePath(pathname));
 	const showCreate = $derived(composer.composerOpen);
 
-	const fabGlow = $derived.by(() => {
-		if (composer.composerOpen) return 'none';
-		const isDark = themeStore.isDark;
-		if (themeStore.theme === 'forest') {
-			return isDark
-				? '0 6px 22px rgba(82,184,120,0.38), 0 2px 6px rgba(0,0,0,0.20)'
-				: '0 6px 18px rgba(61,122,85,0.32), 0 2px 4px rgba(0,0,0,0.10)';
-		}
-		return isDark
-			? '0 6px 22px rgba(129,140,248,0.42), 0 2px 6px rgba(0,0,0,0.20)'
-			: '0 6px 18px rgba(99,102,241,0.38), 0 2px 4px rgba(0,0,0,0.10)';
-	});
-
+	// FAB 光晕：复用 --neu-glow（每主题/暗色已定义），叠加一层中性落影增强立体感。
+	const fabGlow = $derived(
+		composer.composerOpen ? 'none' : '0 6px 18px var(--neu-glow), 0 2px 6px rgba(0,0,0,0.14)'
+	);
 </script>
 
 {#if platformStore.platform === 'desktop'}
@@ -99,9 +89,9 @@
 								aria-label={composer.composerOpen ? '关闭' : '发布'}
 							>
 								{#if composer.composerOpen}
-									<X style="width:20px;height:20px;color:white;" strokeWidth={2.2} />
+									<X style="width:20px;height:20px;color:var(--text-on-accent);" strokeWidth={2.2} />
 								{:else}
-									<Plus style="width:20px;height:20px;color:white;" strokeWidth={2.2} />
+									<Plus style="width:20px;height:20px;color:var(--text-on-accent);" strokeWidth={2.2} />
 								{/if}
 							</button>
 						</div>

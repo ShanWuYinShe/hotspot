@@ -134,7 +134,7 @@
 		{#snippet trailing()}
 			{#if platform === 'tablet'}
 				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--neu-accent-primary)]" style="box-shadow:0 3px 10px var(--neu-glow);">
-					<Sparkles style="width:11px;height:11px;color:white;" strokeWidth={2} />
+					<Sparkles style="width:11px;height:11px;color:var(--text-on-accent);" strokeWidth={2} />
 					<span class="text-white text-[11px]">精选</span>
 				</div>
 			{:else}

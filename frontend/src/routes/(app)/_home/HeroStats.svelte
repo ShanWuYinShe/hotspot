@@ -31,7 +31,7 @@
 					class="flex items-center justify-center rounded-full bg-[var(--neu-accent-primary)]"
 					style="width:38px;height:38px;box-shadow:0 4px 14px var(--neu-glow);"
 				>
-					<Radar style="width:17px;height:17px;color:white;" strokeWidth={2} />
+					<Radar style="width:17px;height:17px;color:var(--text-on-accent);" strokeWidth={2} />
 				</div>
 				<div>
 					<p class="text-[13px]" style="color:var(--neu-text);font-weight:500;">实时附近</p>

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Navigation2, ChevronRight } from '@lucide/svelte';
-	import { themeStore } from '@/stores/theme.svelte';
 
 	// 侧栏底部「位置选择」锚点卡片（迁移自旧版 DesktopLayout 内 LocationCard）。
 	// 折叠态镜像侧栏导航项的 hover 语义：默认透明、hover 淡灰填充。
@@ -14,7 +13,7 @@
 	} = $props();
 
 	let hovered = $state(false);
-	const collapsedHover = $derived(themeStore.isDark ? 'rgba(255,255,255,0.045)' : 'rgba(0,0,0,0.035)');
+	const collapsedHover = $derived('var(--interactive-hover-fill)');
 </script>
 
 <button
@@ -31,7 +30,7 @@
 		class="flex items-center justify-center rounded-full flex-shrink-0"
 		style="width:{collapsed ? 30 : 34}px;height:{collapsed ? 30 : 34}px;background:var(--neu-accent-primary);box-shadow:none;"
 	>
-		<Navigation2 style="width:18px;height:18px;color:white;" strokeWidth={2} />
+		<Navigation2 style="width:18px;height:18px;color:var(--text-on-accent);" strokeWidth={2} />
 	</div>
 
 	<div class={collapsed ? 'sr-only' : 'flex-1 min-w-0 text-left'}>

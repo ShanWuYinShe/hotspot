@@ -249,7 +249,7 @@
 					</div>
 				{/if}
 				<div class="absolute top-3 left-3 px-2.5 py-0.5 rounded-full bg-[var(--neu-accent-primary)]" style="box-shadow:0 2px 8px var(--neu-glow);">
-					<span class="text-white text-[10px]">#{moment.tag}</span>
+					<span class="text-[var(--text-on-accent)] text-[10px]">#{moment.tag}</span>
 				</div>
 			</div>
 
@@ -367,7 +367,7 @@
 				style="width:36px;height:36px;background:{input.trim() ? 'var(--neu-accent-primary)' : 'var(--neu-bg)'};box-shadow:{input.trim() ? '0 4px 14px var(--neu-glow)' : '4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)'};border:1px solid var(--neu-border);transition:all 0.2s;"
 				onclick={() => void handleComment()}
 			>
-				<Send style="width:14px;height:14px;color:{input.trim() ? 'white' : 'var(--neu-text-muted)'};transform:translateX(1px);" strokeWidth={2} />
+				<Send style="width:14px;height:14px;color:{input.trim() ? 'var(--text-on-accent)' : 'var(--neu-text-muted)'};transform:translateX(1px);" strokeWidth={2} />
 			</button>
 		</div>
 	</div>
