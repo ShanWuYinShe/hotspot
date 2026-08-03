@@ -17,6 +17,8 @@ export type ProfileSection =
 export const ROUTES = {
   home: "/",
   login: "/login",
+  /** 发现聚合页（平板/移动端顶级导航；聚合附近的人/群组/动态与搜索入口）。 */
+  discover: "/discover",
   messages: "/messages",
   me: "/me",
   meEdit: "/me/edit",

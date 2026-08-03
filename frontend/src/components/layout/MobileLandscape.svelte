@@ -16,7 +16,8 @@
 
 	const NAV_ITEMS: { path: string; icon: Component; label: string }[] = [
 		{ path: ROUTES.home, icon: MapPin, label: '附近' },
-		{ path: ROUTES.nearbyMoments, icon: Compass, label: '附近动态' },
+		// 平板/移动端无桌面侧栏空间放多个 nearby 菜单：聚合为「发现」页
+		{ path: ROUTES.discover, icon: Compass, label: '发现' },
 		{ path: ROUTES.messages, icon: MessageCircle, label: '消息' },
 		{ path: ROUTES.me, icon: CircleUser, label: '我的' }
 	];
