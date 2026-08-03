@@ -126,9 +126,9 @@
 	<div class="content-mode-wide flex h-full">
 		<!-- Left: chat list -->
 		<div class="flex flex-col flex-shrink-0 overflow-hidden" style="width:300px;border-right:1px solid var(--neu-border);">
-			<!-- List header -->
+			<!-- List header（对齐 Figma：px-4 pt-4 pb-3，标题 18 + Plus 30 + 搜索框） -->
 			<div class="flex-shrink-0" style="border-bottom:1px solid var(--neu-border);">
-				<PageHeader title="消息" class="!py-2">
+				<PageHeader title="消息" titleSize={18} contentClassName="px-4 pt-4 pb-0">
 					{#snippet trailing()}
 						<button
 							type="button"
@@ -142,10 +142,12 @@
 							<Plus style="width:14px;height:14px;color:var(--neu-text-muted);" strokeWidth={1.5} />
 						</button>
 					{/snippet}
+					{#snippet below()}
+						<div class="mt-3 pb-3">
+							<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="搜索…" class="px-3 py-2" fontSize={12} />
+						</div>
+					{/snippet}
 				</PageHeader>
-				<div class="px-4 pb-3">
-					<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="搜索…" class="px-3 py-2" />
-				</div>
 			</div>
 
 			<!-- 在线 strip -->
@@ -188,29 +190,25 @@
 			</EmbeddedList>
 		</div>
 
-		<!-- Right: chat view or empty state -->
-		<div class="flex min-w-0 flex-1 bg-[color-mix(in_srgb,var(--page-bg)_55%,transparent)] p-4">
-			<div class="min-h-0 flex-1 overflow-hidden rounded-feature neu-ring-border bg-[var(--neu-bg)] shadow-[0_10px_28px_color-mix(in_srgb,var(--neu-shadow-dark)_32%,transparent)]">
-				<div class="h-full" style="overflow:hidden;border-radius:22px;">
-					{#if selectedId !== null && selectedChat}
-						<div class="h-full">
-							{#if selectedChat.kind === 'group'}
-							<GroupChatView groupId={String(selectedChat.id)} showBackButton={false} class="px-3 py-2" />
-						{:else}
-							<ChatView peerUserId={selectedChat.peerUserId} contact={{ name: selectedChat.name, avatar: selectedChat.avatar, online: selectedChat.online }} showBackButton={false} class="px-3 py-2" />
-						{/if}
-						</div>
+		<!-- Right: chat view or empty state（对齐 Figma：无卡片包裹，直接平铺） -->
+		<div class="flex-1 overflow-hidden">
+			{#if selectedId !== null && selectedChat}
+				<div class="h-full">
+					{#if selectedChat.kind === 'group'}
+						<GroupChatView groupId={String(selectedChat.id)} showBackButton={false} />
 					{:else}
-						<div class="h-full">
-							<EmptyState title="选择一个会话" description="从左侧选择联系人开始聊天" class="h-full justify-center !py-0">
-								{#snippet icon()}
-									<MessageSquareDashed style="width:28px;height:28px;color:var(--neu-text-muted);opacity:0.5;" strokeWidth={1.25} />
-								{/snippet}
-							</EmptyState>
-						</div>
+						<ChatView peerUserId={selectedChat.peerUserId} contact={{ name: selectedChat.name, avatar: selectedChat.avatar, online: selectedChat.online }} showBackButton={false} />
 					{/if}
 				</div>
-			</div>
+			{:else}
+				<div class="h-full">
+					<EmptyState title="选择一个会话" description="从左侧选择联系人开始聊天" class="h-full justify-center !py-0" iconSize={72}>
+						{#snippet icon()}
+							<MessageSquareDashed style="width:28px;height:28px;color:var(--neu-text-muted);opacity:0.5;" strokeWidth={1.25} />
+						{/snippet}
+					</EmptyState>
+				</div>
+			{/if}
 		</div>
 
 		<Dialog.Root open={showNewChat} onOpenChange={(next) => (next ? undefined : (showNewChat = false))}>
@@ -249,7 +247,7 @@
 	</div>
 {:else}
 	<!-- ═══ Mobile Messages ═══ -->
-	<PageHeader title="消息" sticky titleSize={22} subtitleSize={12} subtitle={totalUnread > 0 ? `${totalUnread} 条未读` : '全部已读'}>
+	<PageHeader title="消息" sticky titleSize={22} subtitleSize={12} contentClassName="pt-3 pb-0" subtitle={totalUnread > 0 ? `${totalUnread} 条未读` : '全部已读'}>
 		{#snippet trailing()}
 			<button
 				type="button"
@@ -263,8 +261,13 @@
 				<Plus style="width:16px;height:16px;color:var(--neu-text-muted);" strokeWidth={1.5} />
 			</button>
 		{/snippet}
+		{#snippet below()}
+			<!-- 搜索框：sticky header 内第二行（对齐 Figma MessagesMobile） -->
+			<div class="mt-3 pb-3">
+				<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="搜索会话…" class="rounded-relaxed px-4 py-2.5" />
+			</div>
+		{/snippet}
 	</PageHeader>
-	<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="搜索会话…" class="mx-5 mb-3 px-3 py-2" />
 
 	<div class="animate-fade-in flex flex-col px-5 pt-4 pb-4" style="max-width:640px;margin-left:auto;margin-right:auto;width:100%;">
 		{#if onlineChats.length > 0}
@@ -292,24 +295,23 @@
 
 		<p class="uppercase mb-2.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">最近</p>
 
-		<div class="rounded-relaxed overflow-hidden neu-surface-flat">
-			{#if filtered.length === 0}
-				<EmptyState title="没有找到会话">
-					{#snippet icon()}
-						<MessageSquareDashed style="width:28px;height:28px;color:var(--neu-text-muted);opacity:0.5;" strokeWidth={1.25} />
-					{/snippet}
-				</EmptyState>
-			{:else}
-				<EmbeddedList class="px-2 py-1">
-					{#each filtered as chat (chat.id)}
-						<ChatListItem
-							chat={chat}
-							onClick={() => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}
-						/>
-					{/each}
-				</EmbeddedList>
-			{/if}
-		</div>
+		<!-- 列表：无外层容器，EmbeddedList 直接裸排（对齐 Figma） -->
+		{#if filtered.length === 0}
+			<EmptyState bare class="!py-12" title="没有找到会话">
+				{#snippet icon()}
+					<MessageSquareDashed style="width:36px;height:36px;color:var(--neu-text-muted);opacity:0.5;" strokeWidth={1.25} />
+				{/snippet}
+			</EmptyState>
+		{:else}
+			<EmbeddedList class="px-2 py-1">
+				{#each filtered as chat (chat.id)}
+					<ChatListItem
+						chat={chat}
+						onClick={() => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}
+					/>
+				{/each}
+			</EmbeddedList>
+		{/if}
 	</div>
 
 	<Dialog.Root open={showNewChat} onOpenChange={(next) => (next ? undefined : (showNewChat = false))}>

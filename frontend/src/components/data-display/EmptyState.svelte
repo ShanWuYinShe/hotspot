@@ -8,6 +8,7 @@
 		description,
 		action,
 		bare = false,
+		iconSize = 64,
 		class: className = ''
 	}: {
 		icon?: Snippet;
@@ -16,6 +17,8 @@
 		action?: Snippet;
 		/** bare：对齐 Figma 列表内空态（无圆形容器，图标直接渲染 + muted 文案）。 */
 		bare?: boolean;
+		/** 图标圆形容器尺寸（对齐 Figma 桌面消息空态 72px / 默认 64px）。 */
+		iconSize?: number;
 		class?: string;
 	} = $props();
 </script>
@@ -31,8 +34,8 @@
 	<div class={cn('flex flex-col items-center justify-center py-20 gap-3', className)}>
 		{#if icon}
 			<div
-				class="flex items-center justify-center rounded-full w-16 h-16 border border-[var(--neu-border)]"
-				style="box-shadow:6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light);"
+				class="flex items-center justify-center rounded-full border border-[var(--neu-border)]"
+				style="width:{iconSize}px;height:{iconSize}px;box-shadow:6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light);"
 			>
 				{@render icon()}
 			</div>
