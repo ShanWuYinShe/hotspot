@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Component } from 'svelte';
-	import { themeStore } from '@/stores/theme.svelte';
+	import { theme } from '@/stores/theme.svelte';
 
 	// ActionIconButton — 圆形图标按钮（对齐 Figma Make ActionIconButton 契约）。
 	// variant: surface（凸起）/ overlay（图片覆盖层 blur）/ ghost（透明）。
@@ -39,7 +39,7 @@
 		} else if (variant === 'ghost') {
 			return `width:${size}px;height:${size}px;background:transparent;border:1px solid transparent;`;
 		}
-		return `width:${size}px;height:${size}px;background:var(--surface-raised);border:1px solid var(--border-subtle);box-shadow:${themeStore.theme === 'forest' ? 'none' : '4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light)'};`;
+		return `width:${size}px;height:${size}px;background:var(--surface-raised);border:1px solid var(--border-subtle);box-shadow:${theme.theme === 'forest' ? 'none' : '4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light)'};`;
 	});
 </script>
 

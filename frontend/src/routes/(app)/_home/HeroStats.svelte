@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Radar, ChevronRight } from '@lucide/svelte';
-	import { platformStore } from '@/stores/platform.svelte';
+	import { platform } from '@/stores/platform.svelte';
 
 	// Hero 统计横幅——单一焦点 + 环境光晕（迁移自旧版 NearbyFeedPage）。
 
@@ -13,7 +13,7 @@
 	} = $props();
 
 	const rangeLabel = $derived(
-		platformStore.platform === 'mobile' ? '徐州 · 5km 内 · 持续更新' : '5km 内 · 持续更新'
+		platform.platform === 'mobile' ? '徐州 · 5km 内 · 持续更新' : '5km 内 · 持续更新'
 	);
 </script>
 

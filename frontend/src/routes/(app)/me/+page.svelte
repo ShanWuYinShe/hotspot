@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { platformStore } from '@/stores/platform.svelte';
+	import { platform } from '@/stores/platform.svelte';
 	import ProfileDesktop from '@/components/profile/ProfileDesktop.svelte';
 	import ProfileMobile from '@/components/profile/ProfileMobile.svelte';
 
@@ -7,7 +7,7 @@
 	// 因此这里 section 恒为 null。资源分区（/me/:section）在任意设备上独立可寻址——复用全宽分区视图。
 </script>
 
-{#if platformStore.platform === 'desktop'}
+{#if platform.platform === 'desktop'}
 	<ProfileDesktop section={null} />
 {:else}
 	<ProfileMobile />

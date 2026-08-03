@@ -24,12 +24,14 @@ export function detect(): { platform: Platform; orientation: Orientation; isWide
   return { platform, orientation, isWideTablet };
 }
 
-let platform = $state<Platform>('mobile');
+// 内部状态变量与导出对象重名会自引用（getter 内 `platform` 解析到导出对象本身），
+// 故内部用 devicePlatform，导出对象命名为 platform（与 auth/composer/presence/ws 一致）。
+let devicePlatform = $state<Platform>('mobile');
 let orientation = $state<Orientation>('portrait');
 let isWideTablet = $state(false);
 
 function apply(value: { platform: Platform; orientation: Orientation; isWideTablet: boolean }) {
-  platform = value.platform;
+  devicePlatform = value.platform;
   orientation = value.orientation;
   isWideTablet = value.isWideTablet;
 }
@@ -51,8 +53,8 @@ export function initPlatform(): () => void {
   };
 }
 
-export const platformStore = {
-  get platform() { return platform; },
+export const platform = {
+  get platform() { return devicePlatform; },
   get orientation() { return orientation; },
   get isWideTablet() { return isWideTablet; },
 };

@@ -7,7 +7,7 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import NeuToggle from '@/components/forms/NeuToggle.svelte';
 	import { logout } from '@/stores/auth.svelte';
-	import { themeStore, setTheme, toggleDark, type AppTheme } from '@/stores/theme.svelte';
+	import { theme, setTheme, toggleDark, type AppTheme } from '@/stores/theme.svelte';
 	import { getAccount, getSettings } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 
@@ -105,10 +105,10 @@
 				{#each ([{ id: 'forest', label: '清野' }, { id: 'vibrant', label: '星际' }] as { id: AppTheme; label: string }[]) as t}
 					<button
 						type="button"
-						aria-pressed={themeStore.theme === t.id}
+						aria-pressed={theme.theme === t.id}
 						onclick={() => setTheme(t.id)}
 						class="flex items-center gap-2 border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
-						style="border-color:{themeStore.theme === t.id ? 'var(--neu-accent-primary)' : 'var(--neu-border)'};background:{themeStore.theme === t.id ? 'var(--neu-accent-soft)' : 'transparent'};color:var(--neu-text);"
+						style="border-color:{theme.theme === t.id ? 'var(--neu-accent-primary)' : 'var(--neu-border)'};background:{theme.theme === t.id ? 'var(--neu-accent-soft)' : 'transparent'};color:var(--neu-text);"
 					>
 						{#if t.id === 'forest'}
 							<Trees style="width:15px;height:15px;color:var(--neu-accent-primary);" strokeWidth={1.7} />
@@ -123,7 +123,7 @@
 		<div class="mx-4 bg-[var(--neu-border)]" style="height:1px;"></div>
 		<div class="flex items-center gap-3 px-4 py-3.5">
 				<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
-					{#if themeStore.isDark}
+					{#if theme.isDark}
 						<Moon style="width:15px;height:15px;color:var(--neu-accent-primary);" strokeWidth={1.5} />
 					{:else}
 						<Sun style="width:15px;height:15px;color:var(--neu-accent-primary);" strokeWidth={1.5} />
@@ -131,9 +131,9 @@
 				</div>
 			<div class="flex-1 min-w-0">
 				<p class="text-[14px] text-[var(--neu-text)]">深色模式</p>
-				<p class="text-[11px] text-[var(--neu-text-muted)]">{themeStore.isDark ? '当前使用深色外观' : '当前使用浅色外观'}</p>
+				<p class="text-[11px] text-[var(--neu-text-muted)]">{theme.isDark ? '当前使用深色外观' : '当前使用浅色外观'}</p>
 			</div>
-			<NeuToggle on={themeStore.isDark} onToggle={toggleDark} label="深色模式" />
+			<NeuToggle on={theme.isDark} onToggle={toggleDark} label="深色模式" />
 		</div>
 	</div>
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Bell, CheckCheck } from '@lucide/svelte';
-	import { platformStore } from '@/stores/platform.svelte';
+	import { platform } from '@/stores/platform.svelte';
 	import DesktopDetailSplit from '@/components/layout/desktop/DesktopDetailSplit.svelte';
 	import RailSection from '@/components/layout/desktop/RailSection.svelte';
 	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';

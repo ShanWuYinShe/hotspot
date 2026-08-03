@@ -2,7 +2,7 @@
 	import { ArrowLeft, MapPin, Clock, Users, Share2, Calendar, ChevronRight, Check, Star, X } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { platformStore } from '@/stores/platform.svelte';
+	import { platform } from '@/stores/platform.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import DesktopDetailSplit from '@/components/layout/desktop/DesktopDetailSplit.svelte';
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
@@ -98,7 +98,7 @@
 
 	const eventIdParam = $derived(page.params.eventId);
 	const ev = $derived(EVENTS[Number(eventIdParam)] ?? DEFAULT_EVENT);
-	const isDesktop = $derived(platformStore.platform === 'desktop');
+	const isDesktop = $derived(platform.platform === 'desktop');
 
 	let joined = $state(false);
 	let showParticipants = $state(false);

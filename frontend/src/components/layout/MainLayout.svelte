@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { MapPin, Compass, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
 	import { cn } from '@/lib/utils';
-	import { platformStore } from '@/stores/platform.svelte';
+	import { platform } from '@/stores/platform.svelte';
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
 	import CreateSheet from '@/components/layout/CreateSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
@@ -29,7 +29,7 @@
 	];
 
 	const pathname = $derived(page.url.pathname);
-	const isMobileLandscape = $derived(platformStore.orientation === 'landscape');
+	const isMobileLandscape = $derived(platform.orientation === 'landscape');
 	const isSubPage = $derived(isSubPagePath(pathname));
 	const showCreate = $derived(composer.composerOpen);
 
@@ -39,9 +39,9 @@
 	);
 </script>
 
-{#if platformStore.platform === 'desktop'}
+{#if platform.platform === 'desktop'}
 	<DesktopLayout>{@render children()}</DesktopLayout>
-{:else if platformStore.platform === 'tablet'}
+{:else if platform.platform === 'tablet'}
 	<TabletLayout>{@render children()}</TabletLayout>
 {:else if isMobileLandscape}
 	<MobileLandscape>{@render children()}</MobileLandscape>

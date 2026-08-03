@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { MapPin, Users } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
-	import { platformStore } from '@/stores/platform.svelte';
+	import { platform } from '@/stores/platform.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
@@ -57,8 +57,8 @@
 		};
 	});
 
-	const isDesktop = $derived(platformStore.platform === 'desktop');
-	const isTablet = $derived(platformStore.platform === 'tablet');
+	const isDesktop = $derived(platform.platform === 'desktop');
+	const isTablet = $derived(platform.platform === 'tablet');
 	const filtered = $derived(
 		groups.filter((group) => {
 			const q = searchQuery.trim().toLowerCase();

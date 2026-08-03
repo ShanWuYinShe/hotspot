@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Component } from 'svelte';
-	import { themeStore } from '@/stores/theme.svelte';
+	import { theme } from '@/stores/theme.svelte';
 
 	// 移动横屏左栏导航图标（迁移自旧版 MainLayout 内 RailIcon）。
 	// hover/active 反馈：主题感知的背景/阴影/缩放（CSS 类 + 主题类选择器）。
@@ -23,14 +23,14 @@
 	// 主题感知 hover 背景（RailIcon 专用：forest/vibrant 透明、neu 纸面）
 	const hoverBg = $derived.by(() => {
 		if (!showHover) return 'transparent';
-		const t = themeStore.theme;
+		const t = theme.theme;
 		return t === 'forest' || t === 'vibrant' ? 'transparent' : 'var(--neu-bg)';
 	});
 
 	const hoverShadow = $derived.by(() => {
 		if (!showHover) return 'none';
-		const t = themeStore.theme;
-		const isDark = themeStore.isDark;
+		const t = theme.theme;
+		const isDark = theme.isDark;
 		if (t === 'forest') {
 			return isDark ? '0 0 0 1px rgba(82,184,120,0.28)' : '0 0 0 1px rgba(61,122,85,0.22)';
 		}
@@ -42,7 +42,7 @@
 		return '5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)';
 	});
 
-	const hoverScale = $derived(showHover ? (themeStore.theme === 'forest' ? 1.08 : 1.14) : 1);
+	const hoverScale = $derived(showHover ? (theme.theme === 'forest' ? 1.08 : 1.14) : 1);
 	const iconColor = $derived(
 		isActive || showHover ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'
 	);

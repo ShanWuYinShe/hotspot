@@ -7,7 +7,9 @@ const IS_DARK_KEY = 'isDark';
 const THEME_KEY = 'appTheme';
 
 let isDark = $state(false);
-let theme = $state<AppTheme>('vibrant');
+// 内部状态变量与导出对象重名会自引用（getter 内 `theme` 解析到导出对象本身），
+// 故内部用 appTheme，导出对象命名为 theme（与 auth/composer/presence/ws 一致）。
+let appTheme = $state<AppTheme>('vibrant');
 
 /* Apply / remove classes on <html> based on current state */
 function applyClasses(dark: boolean, t: AppTheme) {
@@ -38,23 +40,23 @@ function readInitial(): { isDark: boolean; theme: AppTheme } {
 export function initTheme(): void {
   const initial = readInitial();
   isDark = initial.isDark;
-  theme = initial.theme;
-  applyClasses(isDark, theme);
+  appTheme = initial.theme;
+  applyClasses(isDark, appTheme);
 }
 
 export function toggleDark(): void {
   isDark = !isDark;
   try { localStorage.setItem(IS_DARK_KEY, String(isDark)); } catch {}
-  applyClasses(isDark, theme);
+  applyClasses(isDark, appTheme);
 }
 
 export function setTheme(t: AppTheme): void {
-  theme = t;
+  appTheme = t;
   try { localStorage.setItem(THEME_KEY, t); } catch {}
-  applyClasses(isDark, theme);
+  applyClasses(isDark, appTheme);
 }
 
-export const themeStore = {
+export const theme = {
   get isDark() { return isDark; },
-  get theme() { return theme; },
+  get theme() { return appTheme; },
 };

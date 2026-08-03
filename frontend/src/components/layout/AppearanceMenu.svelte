@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Check, Moon, Palette, Sun, Database } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-	import { themeStore, toggleDark, setTheme } from '@/stores/theme.svelte';
+	import { theme, toggleDark, setTheme } from '@/stores/theme.svelte';
 	import * as Popover from '@/components/ui/popover';
 
 	// 唯一的外观/模式控制。选择面板保持打开，仅显式完成、外部点击或 Escape 关闭。
@@ -20,8 +20,8 @@
 	let open = $state(false);
 	let rootEl = $state<HTMLElement | null>(null);
 
-	const currentTheme = $derived(THEMES.find((item) => item.id === themeStore.theme)?.label ?? '星际');
-	const modeLabel = $derived(themeStore.isDark ? '深色' : '浅色');
+	const currentTheme = $derived(THEMES.find((item) => item.id === theme.theme)?.label ?? '星际');
+	const modeLabel = $derived(theme.isDark ? '深色' : '浅色');
 
 	// ── Dev API source toggle（仅 dev）───────────────────────────
 	let mockEnabled = $state(true);
@@ -107,7 +107,7 @@
 				</div>
 				<div class="grid grid-cols-2 gap-1.5" role="group" aria-label="选择主题">
 					{#each THEMES as item}
-						{@const selected = themeStore.theme === item.id}
+						{@const selected = theme.theme === item.id}
 						<button
 							type="button"
 							onclick={() => setTheme(item.id)}
@@ -130,27 +130,27 @@
 			<button
 				type="button"
 				onclick={toggleDark}
-				aria-pressed={themeStore.isDark}
+				aria-pressed={theme.isDark}
 				class="neu-hover-btn neu-surface-ghost mt-2 flex w-full items-center justify-between rounded-small px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
 				style="color:var(--neu-text);"
 			>
 				<span class="flex items-center gap-2">
 					<span class="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-[var(--neu-accent-soft)]">
-						{#if themeStore.isDark}
+						{#if theme.isDark}
 							<Sun size={13} color="var(--neu-accent-primary)" />
 						{:else}
 							<Moon size={13} color="var(--neu-accent-primary)" />
 						{/if}
 					</span>
 					<span>
-						<span class="block text-[12px] font-medium">{themeStore.isDark ? '深色模式' : '浅色模式'}</span>
+						<span class="block text-[12px] font-medium">{theme.isDark ? '深色模式' : '浅色模式'}</span>
 						<span class="block text-[10px] text-[var(--neu-text-muted)]">点击切换</span>
 					</span>
 				</span>
-				<span class="relative h-5 w-[34px] overflow-hidden rounded-full" style="background:{themeStore.isDark ? 'var(--neu-accent-primary)' : 'var(--neu-border-pressed)'};">
+				<span class="relative h-5 w-[34px] overflow-hidden rounded-full" style="background:{theme.isDark ? 'var(--neu-accent-primary)' : 'var(--neu-border-pressed)'};">
 					<span
 						class="absolute top-[3px] h-[14px] w-[14px] rounded-full"
-						style="background:var(--surface-control-thumb);box-shadow:var(--elevation-control-thumb);left:{themeStore.isDark ? 17 : 3}px;transition:left 0.2s cubic-bezier(0.34,1.56,0.64,1);"
+						style="background:var(--surface-control-thumb);box-shadow:var(--elevation-control-thumb);left:{theme.isDark ? 17 : 3}px;transition:left 0.2s cubic-bezier(0.34,1.56,0.64,1);"
 					></span>
 				</span>
 			</button>

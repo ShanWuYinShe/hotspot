@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Sparkles } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
-	import { platformStore } from '@/stores/platform.svelte';
+	import { platform } from '@/stores/platform.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
@@ -115,11 +115,11 @@
 		);
 	});
 
-	const platform = $derived(platformStore.platform);
-	const gridColumns = $derived(platform === 'mobile' ? 2 : platform === 'tablet' ? 2 : 3);
-	const minCardWidth = $derived(platform === 'mobile' ? 150 : 160);
-	const minCardHeight = $derived(platform === 'mobile' ? 220 : 260);
-	const minCanvasHeight = $derived(platform === 'mobile' ? 440 : 520);
+	const device = $derived(platform.platform);
+	const gridColumns = $derived(device === 'mobile' ? 2 : device === 'tablet' ? 2 : 3);
+	const minCardWidth = $derived(device === 'mobile' ? 150 : 160);
+	const minCardHeight = $derived(device === 'mobile' ? 220 : 260);
+	const minCanvasHeight = $derived(device === 'mobile' ? 440 : 520);
 </script>
 
 <!-- ═══ 三端统一页面 header（样板：标题行 + trailing 计数/精选 + below 搜索 + 分类 Tab）═══ -->
@@ -127,12 +127,12 @@
 	<PageHeader
 		title="附近动态"
 		sticky
-		titleSize={platform === 'desktop' ? 20 : platform === 'tablet' ? 24 : 22}
+		titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}
 		contentClassName="pt-4 pb-0"
 		onBack={() => history.back()}
 	>
 		{#snippet trailing()}
-			{#if platform === 'tablet'}
+			{#if device === 'tablet'}
 				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--neu-accent-primary)]" style="box-shadow:0 3px 10px var(--neu-glow);">
 					<Sparkles style="width:11px;height:11px;color:var(--text-on-accent);" strokeWidth={2} />
 					<span class="text-white text-[11px]">精选</span>
@@ -206,7 +206,7 @@
 	{/snippet}
 
 	<div class="mb-5">
-		{@render tagChips(platform === 'desktop' ? 'flex-wrap' : 'overflow-x-auto')}
+		{@render tagChips(device === 'desktop' ? 'flex-wrap' : 'overflow-x-auto')}
 	</div>
 
 	{#if loading || !filtered.length}

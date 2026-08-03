@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Plus, MessageSquareDashed } from '@lucide/svelte';
-	import { platformStore } from '@/stores/platform.svelte';
+	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
@@ -118,7 +118,7 @@
 	const onlineChats = $derived(liveChats.filter((c) => c.online));
 	const totalUnread = $derived(chats.reduce((s, c) => s + c.unread, 0));
 	// 平板与桌面共用分栏（对齐 Figma Make：platform !== 'mobile' 即桌面分栏）
-	const isDesktop = $derived(platformStore.platform !== 'mobile');
+	const isDesktop = $derived(platform.platform !== 'mobile');
 	const selectedChat = $derived(liveChats.find((c) => c.id === selectedId));
 </script>
 

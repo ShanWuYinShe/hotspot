@@ -2,7 +2,7 @@
 	import type { Component } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { Coffee, Music, Users, Star, ChevronRight, MapPin, Search } from '@lucide/svelte';
-	import { platformStore } from '@/stores/platform.svelte';
+	import { platform } from '@/stores/platform.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import { getTrending, getNearbyUsers, getNearbyGroups } from '@/api';
 	import SectionHead from '@/routes/(app)/_home/SectionHead.svelte';
@@ -139,7 +139,7 @@
 	</div>
 {/snippet}
 
-{#if platformStore.platform !== 'mobile'}
+{#if platform.platform !== 'mobile'}
 	<!-- ═══ Desktop/Tablet Home — 统一 PageHeader + 2-column ═══ -->
 	<div class="content-mode-wide flex flex-col h-full">
 		<PageHeader title="首页" titleSize={24} subtitle="发现周边有趣的人和事" sticky>
@@ -149,7 +149,7 @@
 						<span class="rounded-full" style="width:6px;height:6px;background:var(--semantic-online);"></span>
 						<span class="text-xs" style="color:var(--neu-text-muted);">{onlineCount} 在线</span>
 					</div>
-					{#if platformStore.platform === 'tablet'}
+					{#if platform.platform === 'tablet'}
 						<button
 							type="button"
 							aria-label="搜索"

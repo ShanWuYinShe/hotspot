@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { MapPin, Compass, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
-	import { platformStore } from '@/stores/platform.svelte';
+	import { platform } from '@/stores/platform.svelte';
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import CreateSheet from '@/components/layout/CreateSheet.svelte';
@@ -28,7 +28,7 @@
 	const pathname = $derived(page.url.pathname);
 	const isSubPage = $derived(isSubPagePath(pathname));
 	const showCreate = $derived(composer.composerOpen);
-	const isWide = $derived(platformStore.isWideTablet);
+	const isWide = $derived(platform.isWideTablet);
 </script>
 
 <div

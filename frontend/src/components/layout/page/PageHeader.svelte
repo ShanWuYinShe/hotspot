@@ -3,7 +3,7 @@
 	import { ArrowLeft } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import ContentColumn from './ContentColumn.svelte';
-	import { platformStore } from '@/stores/platform.svelte';
+	import { platform } from '@/stores/platform.svelte';
 	import { cn } from '@/lib/utils';
 
 	// 布局组件（layout/page）。
@@ -59,7 +59,7 @@
 		contentClassName?: string;
 	} = $props();
 
-	const showBack = $derived(Boolean(onBack) && (platformStore.platform !== 'desktop' || showBackOnDesktop));
+	const showBack = $derived(Boolean(onBack) && (platform.platform !== 'desktop' || showBackOnDesktop));
 </script>
 
 <header
