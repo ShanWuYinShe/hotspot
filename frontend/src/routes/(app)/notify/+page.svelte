@@ -140,7 +140,7 @@ const FILTER_TABS = [
 				sticky
 				titleSize={20}
 				subtitleSize={12}
-				contentClassName="pt-3 pb-0"
+				contentClassName="pt-4 pb-0"
 				onBack={() => history.back()}
 				subtitle={unread > 0 ? `${unread} 条未读` : undefined}
 			>

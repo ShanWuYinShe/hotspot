@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { platformStore } from '@/stores/platform.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
-			import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
+	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
@@ -86,7 +86,7 @@
 	contentMaxWidth={isTablet ? '964px' : isDesktop ? '1152px' : '680px'}
 >
 	{#snippet header()}
-		<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} sticky glass onBack={() => history.back()}>
+		<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} sticky glass contentClassName="pt-4 pb-0" onBack={() => history.back()}>
 			{#snippet subtitleIcon()}
 				<MapPin style="width:10px;height:10px;color:var(--neu-accent-primary);" strokeWidth={1.8} />
 			{/snippet}

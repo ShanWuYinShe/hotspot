@@ -631,7 +631,6 @@
   [data-desktop-main] .desktop-main-scroll > * {
     background-color: var(--page-bg) !important;
   }
-  [data-desktop-main] .sticky {
-    background-color: var(--page-bg) !important;
-  }
+  /* 注：不再强制 [data-desktop-main] .sticky 为 page-bg——PageHeader 已内联
+     背景（glass ? color-mix 毛玻璃 : page-bg），保证三端玻璃效果一致。 */
 }

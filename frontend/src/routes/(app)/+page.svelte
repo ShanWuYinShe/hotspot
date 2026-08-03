@@ -11,21 +11,14 @@
 	import ActivityList, { type Activity } from '@/routes/(app)/_home/ActivityList.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/routes/(app)/_home/GroupCarousel.svelte';
 	import NearbyUsersFlatList from '@/routes/(app)/_home/NearbyUsersFlatList.svelte';
-	import {
-		TabletRail,
-		NearbyPulseCard,
-		StreakCard,
-		DailyPickCard,
-		SuggestedFollowsCard,
-		VibeCard
-	} from '@/components/layout/tablet';
 	import { ROUTES } from '@/lib/routes';
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
+	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 
 	// 首页「附近」：Hero 统计 + 话题活动 + 群组轮播 + 推荐列表。
-	// 三端共用同一套业务组件，仅外层 wrapper 按平台区分布局。
-	// 桌面：左侧 340px 摘要栏 + 右侧完整用户列表（2 栏 grid）。
-	// 移动/平板：单栏堆叠 + 宽平板右栏陪伴卡。
+	// 三端统一 PageHeader（title + 额外信息 + trailing 工具区）+ 内容区：
+	// 桌面/平板：左侧 340px 摘要栏 + 右侧完整用户列表（2 栏 grid）。
+	// 移动：单栏堆叠。
 
 	// ── 数据获取（原 useEffect + Promise.all + cancelled 竞态）────────
 	let nearbyUsers = $state<NearbyUser[]>([]);
@@ -129,8 +122,6 @@
 		online: String(onlineCount)
 	});
 
-	const isTablet = $derived(platformStore.platform === 'tablet');
-	const isWideTablet = $derived(isTablet && platformStore.isWideTablet);
 </script>
 
 {#snippet homeContent()}
@@ -148,34 +139,29 @@
 {/snippet}
 
 {#if platformStore.platform !== 'mobile'}
-	<!-- ═══ Desktop/Tablet Home — header + 2-column ═══ -->
+	<!-- ═══ Desktop/Tablet Home — 统一 PageHeader + 2-column ═══ -->
 	<div class="content-mode-wide flex flex-col h-full">
-		<div
-			class="flex-shrink-0 flex items-center justify-between px-5 sm:px-7 py-4"
-			style="background-color:var(--neu-bg);border-bottom:1px solid var(--neu-border);"
-		>
-			<div>
-				<h1 style="font-size:24px;color:var(--neu-text);">首页</h1>
-				<p style="font-size:12px;color:var(--neu-text-muted);margin-top:2px;">发现周边有趣的人和事</p>
-			</div>
-			<div class="flex items-center gap-2">
-				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full neu-surface-flat">
-					<span class="rounded-full" style="width:6px;height:6px;background:var(--semantic-online);"></span>
-					<span class="text-xs" style="color:var(--neu-text-muted);">{onlineCount} 在线</span>
+		<PageHeader title="首页" titleSize={24} subtitle="发现周边有趣的人和事" sticky>
+			{#snippet trailing()}
+				<div class="flex items-center gap-2">
+					<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full neu-surface-flat">
+						<span class="rounded-full" style="width:6px;height:6px;background:var(--semantic-online);"></span>
+						<span class="text-xs" style="color:var(--neu-text-muted);">{onlineCount} 在线</span>
+					</div>
+					{#if platformStore.platform === 'tablet'}
+						<button
+							type="button"
+							aria-label="搜索"
+							onclick={() => void goto(ROUTES.search)}
+							class="neu-hover-btn flex size-8 items-center justify-center rounded-full outline-none bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"
+							style="border:1px solid var(--neu-border);"
+						>
+							<Search style="width:16px;height:16px;" strokeWidth={1.8} />
+						</button>
+					{/if}
 				</div>
-				{#if platformStore.platform === 'tablet'}
-					<button
-						type="button"
-						aria-label="搜索"
-						onclick={() => void goto(ROUTES.search)}
-						class="neu-hover-btn flex size-8 items-center justify-center rounded-full outline-none bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"
-						style="border:1px solid var(--neu-border);"
-					>
-						<Search style="width:16px;height:16px;" strokeWidth={1.8} />
-					</button>
-				{/if}
-			</div>
-		</div>
+			{/snippet}
+		</PageHeader>
 
 		<div class="flex flex-1 min-h-0 gap-0 overflow-hidden">
 			<!-- Left: hero + activity + groups (340px) -->
@@ -214,59 +200,28 @@
 		</div>
 	</div>
 {:else}
-	<!-- ═══ Mobile/Tablet Home — single column ═══ -->
-	<div class="sticky top-0 z-10 py-3 bg-[var(--neu-bg)]" style="border-bottom:1px solid var(--neu-border);">
-		<ContentColumn maxWidth={isTablet ? '924px' : undefined} class={isTablet ? 'flex gap-6' : 'flex'}>
-			<div
-				class="{isTablet ? 'px-5 flex items-center justify-between min-w-0' : 'w-full flex items-center justify-between'}"
-				style={isTablet ? 'max-width:600px;margin-left:auto;margin-right:auto;width:100%;' : ''}
-			>
-				<div>
-					<h1 class="text-[22px]" style="color:var(--neu-text);">附近</h1>
-					<p class="text-xs" style="color:var(--neu-text-muted);margin-top:2px;">发现周边有趣的人和事</p>
+	<!-- ═══ Mobile Home — 统一 PageHeader + single column ═══ -->
+	<PageHeader title="附近" titleSize={22} subtitle="发现周边有趣的人和事" sticky>
+		{#snippet trailing()}
+			<div class="flex items-center gap-2">
+				<div class="flex items-center gap-1.5 py-1.5 px-3 rounded-full neu-surface-flat">
+					<span class="rounded-full" style="width:6px;height:6px;background:var(--semantic-online);"></span>
+					<span style="font-size:11px;color:var(--neu-text-muted);">徐州</span>
 				</div>
-				<div class="flex items-center gap-2">
-					<div class="flex items-center gap-1.5 py-1.5 px-3 rounded-full neu-surface-flat">
-						<span class="rounded-full" style="width:6px;height:6px;background:var(--semantic-online);"></span>
-						<span style="font-size:11px;color:var(--neu-text-muted);">徐州</span>
-					</div>
-					<button
-						type="button"
-						class="neu-hover-btn flex size-8 items-center justify-center rounded-full border cursor-pointer transition-colors hover:bg-[var(--neu-accent-soft)]"
-						style="border-color:var(--neu-border);background:var(--neu-bg);"
-						onclick={() => void goto(ROUTES.search)}
-						aria-label="搜索"
-					>
-						<Search class="size-4" color="var(--neu-text-muted)" strokeWidth={1.8} />
-					</button>
-				</div>
+				<button
+					type="button"
+					class="neu-hover-btn flex size-8 items-center justify-center rounded-full border cursor-pointer transition-colors hover:bg-[var(--neu-accent-soft)]"
+					style="border-color:var(--neu-border);background:var(--neu-bg);"
+					onclick={() => void goto(ROUTES.search)}
+					aria-label="搜索"
+				>
+					<Search class="size-4" color="var(--neu-text-muted)" strokeWidth={1.8} />
+				</button>
 			</div>
-			{#if isWideTablet}
-				<div class="hidden lg:block flex-shrink-0" style="width:var(--context-rail-width);"></div>
-			{/if}
-		</ContentColumn>
+		{/snippet}
+	</PageHeader>
 
-		<ContentColumn
-			maxWidth={isTablet ? '924px' : undefined}
-			class="animate-fade-in {isTablet ? 'flex gap-6 pt-5 pb-8' : 'flex flex-col pt-5 pb-8 gap-7'}"
-		>
-			<div
-				class="{isTablet ? 'flex flex-col gap-7 px-5 min-w-0' : 'flex flex-col gap-7 w-full'}"
-				style={isTablet ? 'max-width:600px;margin-left:auto;margin-right:auto;width:100%;' : ''}
-			>
-				{@render homeContent()}
-			</div>
-			{#if isWideTablet}
-				<div class="hidden lg:block flex-shrink-0" style="width:var(--context-rail-width);">
-					<TabletRail>
-						<NearbyPulseCard />
-						<StreakCard />
-						<DailyPickCard />
-						<SuggestedFollowsCard />
-						<VibeCard />
-					</TabletRail>
-				</div>
-			{/if}
-		</ContentColumn>
-	</div>
+	<ContentColumn class="animate-fade-in flex flex-col gap-7 pt-5 pb-8">
+		{@render homeContent()}
+	</ContentColumn>
 {/if}

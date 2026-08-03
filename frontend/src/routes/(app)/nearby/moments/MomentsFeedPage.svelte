@@ -117,6 +117,34 @@
 	const platform = $derived(platformStore.platform);
 </script>
 
+<!-- ═══ 三端统一页面 header（对齐 Figma DiscoverDesktop 结构：标题行 + 计数/精选 + 搜索 + Tab）═══ -->
+{#snippet discoverHeader()}
+	<PageHeader
+		title="附近动态"
+		sticky
+		titleSize={platform === 'desktop' ? 20 : platform === 'tablet' ? 24 : 22}
+		contentClassName="pt-4 pb-0"
+		onBack={() => history.back()}
+	>
+		{#snippet trailing()}
+			{#if platform === 'tablet'}
+				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--neu-accent-primary)]" style="box-shadow:0 3px 10px var(--neu-glow);">
+					<Sparkles style="width:11px;height:11px;color:white;" strokeWidth={2} />
+					<span class="text-white text-[11px]">精选</span>
+				</div>
+			{:else}
+				<span class="text-[var(--neu-text-muted)] text-xs">{filtered.length} 条内容</span>
+			{/if}
+		{/snippet}
+		{#snippet below()}
+			<div class="mt-3 mb-2.5">
+				<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" class="px-4 py-2.5 rounded-relaxed" />
+			</div>
+			{@render tabBar()}
+		{/snippet}
+	</PageHeader>
+{/snippet}
+
 <!-- ═══ 分类 Tab 栏（下划线样式，对齐 Figma Make DiscoverHeader；随 header 吸顶）═══ -->
 {#snippet tabBar()}
 	<div class="no-scrollbar flex overflow-x-auto" style="border-bottom:1px solid var(--neu-border);">
@@ -167,30 +195,14 @@
 {/snippet}
 
 {#if platform === 'desktop'}
-	<!-- ═══ Desktop Discover — header（搜索 + Tab 入 header）+ 3 列内容 ═══ -->
+	<!-- ═══ Desktop Discover — 统一 PageHeader + 3 列内容 ═══ -->
 	<div class="content-mode-wide flex flex-col h-full">
-		<PageHeader
-			title="附近动态"
-			sticky={false}
-			titleSize={20}
-			contentClassName="pt-5 pb-0"
-			onBack={() => history.back()}
-		>
-			{#snippet trailing()}
-				<span class="text-[var(--neu-text-muted)] text-xs">{filtered.length} 条内容</span>
-			{/snippet}
-			{#snippet below()}
-				<div class="mt-2 mb-2.5">
-					<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" class="px-4 py-2.5 rounded-relaxed" />
-				</div>
-				{@render tabBar()}
-			{/snippet}
-		</PageHeader>
+		{@render discoverHeader()}
 
 		<div class="flex flex-1 min-h-0 overflow-hidden">
 			<!-- Main feed -->
 			<div class="flex-1 overflow-y-auto no-scrollbar">
-				<ContentColumn class="py-5">
+				<ContentColumn class="pt-4 pb-6">
 					<div class="mb-5">
 						{@render tagChips('flex-wrap')}
 					</div>
@@ -228,23 +240,10 @@
 		</div>
 	</div>
 {:else if platform === 'tablet'}
-	<!-- ═══ Tablet Discover — header（标题 + 精选 pill + 搜索 + Tab）+ content ═══ -->
-	<PageHeader title="附近动态" sticky titleSize={24} contentClassName="pt-4 pb-0" onBack={() => history.back()}>
-		{#snippet trailing()}
-			<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--neu-accent-primary)]" style="box-shadow:0 3px 10px var(--neu-glow);">
-				<Sparkles style="width:11px;height:11px;color:white;" strokeWidth={2} />
-				<span class="text-white text-[11px]">精选</span>
-			</div>
-		{/snippet}
-		{#snippet below()}
-			<div class="mt-2 mb-2.5">
-				<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" class="px-4 py-2.5 rounded-relaxed" />
-			</div>
-			{@render tabBar()}
-		{/snippet}
-	</PageHeader>
+	<!-- ═══ Tablet Discover — 统一 PageHeader + content ═══ -->
+	{@render discoverHeader()}
 
-	<ContentColumn class="animate-fade-in pt-4 pb-7">
+	<ContentColumn class="animate-fade-in pt-4 pb-6">
 		<div class="min-w-0">
 			<div class="mb-5">
 				{@render tagChips('overflow-x-auto')}
@@ -282,20 +281,10 @@
 		</div>
 	</ContentColumn>
 {:else}
-	<!-- ═══ Mobile Discover — sticky header（标题 + 搜索 + Tab）+ 560px 居中内容 ═══ -->
-	<PageHeader title="附近动态" sticky titleSize={22} contentClassName="pt-3 pb-0" onBack={() => history.back()}>
-		{#snippet trailing()}
-			<span class="text-[var(--neu-text-muted)] text-xs">{filtered.length} 条内容</span>
-		{/snippet}
-		{#snippet below()}
-			<div class="mt-2 mb-2.5">
-				<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" class="px-4 py-2.5 rounded-relaxed" />
-			</div>
-			{@render tabBar()}
-		{/snippet}
-	</PageHeader>
+	<!-- ═══ Mobile Discover — 统一 PageHeader + 560px 居中内容 ═══ -->
+	{@render discoverHeader()}
 
-	<ContentColumn maxWidth="560px" class="animate-fade-in px-4! pt-3 pb-6">
+	<ContentColumn maxWidth="560px" class="animate-fade-in px-4! pt-4 pb-6">
 		<div class="mb-4">
 			{@render tagChips('overflow-x-auto')}
 		</div>
