@@ -124,6 +124,8 @@
 
 {#if isDesktop}
 	<!-- ═══ Desktop Messages — split pane (list left + chat right) ═══ -->
+	<!-- h-full：RoutedContentViewport 内容链现提供显式高度（见该组件注释），
+	     分栏固定视口高、左栏列表内部滚动；平板/桌面画布均撑满。 -->
 	<div class="content-mode-wide flex h-full">
 		<!-- Left: chat list -->
 		<div class="flex flex-col flex-shrink-0 overflow-hidden" style="width:300px;border-right:1px solid var(--neu-border);">
@@ -175,18 +177,22 @@
 				</div>
 			{/if}
 
-			<!-- Chat list（EmbeddedList 契约：分栏内连接列表，行无独立边框） -->
+			<!-- Chat list（EmbeddedList 契约：分栏内连接列表，行无独立边框。
+			     每行外层 px-3 py-1 包裹——对齐 Figma MessagesPage：行间有呼吸间距，
+			     选中态 glow 不与相邻行重叠，分隔线嵌在间距中不显突兀） -->
 			<EmbeddedList class="flex-1 overflow-y-auto no-scrollbar px-2 py-2">
 				{#if totalUnread > 0}
 					<p class="uppercase px-2 mb-1 text-[var(--neu-text-muted)] text-[9px] tracking-[0.12em]">未读</p>
 				{/if}
 				{#each filtered as chat (chat.id)}
-					<ChatListItem
-						chat={chat}
-						isSelected={selectedId === chat.id}
-						onClick={() => (selectedId = chat.id)}
-						compact
-					/>
+					<div class="px-3 py-1">
+						<ChatListItem
+							chat={chat}
+							isSelected={selectedId === chat.id}
+							onClick={() => (selectedId = chat.id)}
+							compact
+						/>
+					</div>
 				{/each}
 			</EmbeddedList>
 		</div>
@@ -278,7 +284,7 @@
 		{/snippet}
 	</PageHeader>
 
-	<ContentColumn class="animate-fade-in flex flex-col pt-4 pb-4">
+	<ContentColumn class="animate-fade-in flex flex-col min-h-full pt-4 pb-4">
 		{#if onlineChats.length > 0}
 			<div class="mb-4">
 				<p class="uppercase mb-2.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">在线</p>
@@ -304,7 +310,7 @@
 
 		<p class="uppercase mb-2.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">最近</p>
 
-		<!-- 列表：无外层容器，EmbeddedList 直接裸排（对齐 Figma） -->
+		<!-- 列表：无外层容器，EmbeddedList 直接裸排（对齐 Figma）；每行 px-3 py-1 包裹 -->
 		{#if filtered.length === 0}
 			<EmptyState bare class="py-12!" title="没有找到会话">
 				{#snippet icon()}
@@ -314,10 +320,12 @@
 		{:else}
 			<EmbeddedList class="px-2 py-1">
 				{#each filtered as chat (chat.id)}
-					<ChatListItem
-						chat={chat}
-						onClick={() => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}
-					/>
+					<div class="px-3 py-1">
+						<ChatListItem
+							chat={chat}
+							onClick={() => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}
+						/>
+					</div>
 				{/each}
 			</EmbeddedList>
 		{/if}

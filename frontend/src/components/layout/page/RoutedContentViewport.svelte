@@ -47,7 +47,11 @@
 	)}
 	{style}
 >
-	<div class={cn('min-h-full w-full', contentClassName)}>
+	<!-- 内容 div 需显式 h-full：PageViewport 的 h-full/min-h-full 相对 height:auto
+	     父级时百分比高度失效（min-height 不算显式高度），导致内容不满时页面
+	     无法撑满视口（消息页等短内容页底部出现空白）。h-full 相对 main
+	     （flex item，高度由 shell 确定）始终有效；min-h-full 兜底超长内容。 -->
+	<div class={cn('h-full min-h-full w-full', contentClassName)}>
 		<PageViewport>
 			{@render children()}
 		</PageViewport>
