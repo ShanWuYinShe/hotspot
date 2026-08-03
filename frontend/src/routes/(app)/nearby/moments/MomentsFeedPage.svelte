@@ -221,30 +221,23 @@
 		</div>
 	</div>
 {:else if platform === 'tablet'}
-	<!-- ═══ Tablet Discover — 2-column grid, max-width 800px centred ═══ -->
-	<div class="sticky top-0 z-10 bg-[var(--neu-bg)]" style="backdrop-filter:blur(16px);border-bottom:1px solid var(--neu-border);">
-		<ContentColumn maxWidth="1124px">
-			<div class="mx-auto w-full lg:mx-0 min-w-0" style="width:100%;">
-				<PageHeader title="附近动态" onBack={() => history.back()} sticky={false}>
-					{#snippet trailing()}
-						<div class="flex items-center gap-2">
-							<div class="hidden sm:flex flex-1 max-w-sm">
-								<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" class="px-3 py-2" />
-							</div>
-							<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--neu-accent-primary)]" style="box-shadow:0 3px 10px var(--neu-glow);">
-								<Sparkles style="width:11px;height:11px;color:white;" strokeWidth={2} />
-								<span class="text-white text-[11px]">精选</span>
-							</div>
-						</div>
-					{/snippet}
-				</PageHeader>
+	<!-- ═══ Tablet Discover — header + content ═══ -->
+	<PageHeader title="附近动态" sticky onBack={() => history.back()}>
+		{#snippet trailing()}
+			<div class="flex items-center gap-2">
+				<div class="hidden sm:flex flex-1 max-w-sm">
+					<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" class="px-3 py-2" />
+				</div>
+				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--neu-accent-primary)]" style="box-shadow:0 3px 10px var(--neu-glow);">
+					<Sparkles style="width:11px;height:11px;color:white;" strokeWidth={2} />
+					<span class="text-white text-[11px]">精选</span>
+				</div>
 			</div>
-			<div class="hidden lg:block flex-shrink-0" style="width:var(--context-rail-width);"></div>
-		</ContentColumn>
-	</div>
+		{/snippet}
+	</PageHeader>
 
-	<ContentColumn maxWidth="1124px" class="animate-fade-in flex gap-6 pt-4 pb-7">
-		<div class="mx-auto w-full lg:mx-0 min-w-0" style="width:100%;">
+	<ContentColumn class="animate-fade-in pt-4 pb-7">
+		<div class="min-w-0">
 			<div class="mb-5">
 				{@render tabRow('xl:flex-row xl:items-center justify-between gap-3')}
 			</div>
@@ -280,7 +273,6 @@
 				</BspCardCanvas>
 			{/if}
 		</div>
-		<div class="hidden lg:block flex-shrink-0" style="width:var(--context-rail-width);"></div>
 	</ContentColumn>
 {:else}
 	<!-- ═══ Mobile Discover — single-column feed, max-width 560px centred ═══ -->
