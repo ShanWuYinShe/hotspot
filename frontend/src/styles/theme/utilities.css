@@ -528,25 +528,12 @@
     .forest .neu-hover-action:hover { transform: scale(1.18); }
   }
 
-  /* 悬停背景（bgHover）：主题 + 暗色感知的 accent 混色 */
+  /* 悬停背景（bgHover）：直接复用 --interactive-hover-fill token（= --pr-hover，
+     每主题/暗色已精确定义：vibrant 10%/15%、forest 12%/18%），与全局 button hover
+     填充一致，避免硬编码 color-mix 与 token 漂移。仅 fine pointer 生效。 */
   .neu-hover-bg { transition: background-color 0.18s ease; }
-  .neu-hover-bg:hover {
-    background-color: color-mix(in srgb, var(--neu-accent-primary) 7%, transparent);
-  }
-  .vibrant .neu-hover-bg:hover {
-    background-color: color-mix(in srgb, var(--neu-accent-primary) 8%, transparent);
-  }
-  .forest .neu-hover-bg:hover {
-    background-color: color-mix(in srgb, var(--neu-accent-primary) 12%, transparent);
-  }
-  .dark .neu-hover-bg:hover {
-    background-color: color-mix(in srgb, var(--neu-accent-primary) 11%, transparent);
-  }
-  .dark.vibrant .neu-hover-bg:hover {
-    background-color: color-mix(in srgb, var(--neu-accent-primary) 12%, transparent);
-  }
-  .dark.forest .neu-hover-bg:hover {
-    background-color: color-mix(in srgb, var(--neu-accent-primary) 16%, transparent);
+  @media (hover: hover) and (pointer: fine) {
+    .neu-hover-bg:hover { background-color: var(--interactive-hover-fill); }
   }
 
   /* 行级悬停位移（对齐 Figma Make SettingsPage NavRow whileHover x:3）：
