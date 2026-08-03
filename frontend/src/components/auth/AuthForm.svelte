@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { ArrowRight, Leaf, LockKeyhole, Mail, MessageCircle } from '@lucide/svelte';
+	import { ArrowRight, LockKeyhole, Mail, MessageCircle } from '@lucide/svelte';
 	import { login, register, guest } from '@/stores/auth.svelte';
 	import { requestPasswordReset, resetPassword } from '@/api';
 
@@ -151,15 +151,17 @@
 	{#if mode === 'register' || mode === 'guest'}
 		<label class="flex flex-col" style="gap:6px;">
 			<span style="font-size:11px;letter-spacing:0.08em;color:var(--neu-text-muted);">昵称</span>
-			<input
-				type="text"
-				bind:value={nickname}
-				placeholder={mode === 'guest' ? '给自己起个名字' : '1–30 个字符'}
-				disabled={submitting}
-				autocomplete="off"
-				class="min-w-0 flex-1 bg-transparent text-sm outline-none"
-				style="color:var(--neu-text);"
-			/>
+			<span class="flex items-center gap-2 border border-[var(--neu-border)] px-3 py-3" style="background:var(--neu-bg);">
+				<input
+					type="text"
+					bind:value={nickname}
+					placeholder={mode === 'guest' ? '给自己起个名字' : '1–30 个字符'}
+					disabled={submitting}
+					autocomplete="off"
+					class="min-w-0 flex-1 bg-transparent text-sm outline-none"
+					style="color:var(--neu-text);"
+				/>
+			</span>
 		</label>
 	{/if}
 
@@ -199,15 +201,17 @@
 			<!-- 验证码登录：验证码输入 + 获取验证码 -->
 			<label class="flex flex-col" style="gap:6px;">
 				<span style="font-size:11px;letter-spacing:0.08em;color:var(--neu-text-muted);">验证码</span>
-				<input
-					type="text"
-					bind:value={code}
-					placeholder="输入收到的验证码"
-					disabled={submitting}
-					autocomplete="off"
-					class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--neu-text-muted)]"
-					style="color:var(--neu-text);"
-				/>
+				<span class="flex items-center gap-2 border border-[var(--neu-border)] px-3 py-3" style="background:var(--neu-bg);">
+					<input
+						type="text"
+						bind:value={code}
+						placeholder="输入收到的验证码"
+						disabled={submitting}
+						autocomplete="off"
+						class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--neu-text-muted)]"
+						style="color:var(--neu-text);"
+					/>
+				</span>
 			</label>
 			<button
 				type="button"
@@ -239,40 +243,46 @@
 	{#if mode === 'forgot' || mode === 'reset'}
 		<label class="flex flex-col" style="gap:6px;">
 			<span style="font-size:11px;letter-spacing:0.08em;color:var(--neu-text-muted);">账号</span>
-			<input
-				type="text"
-				bind:value={resetLoginId}
-				placeholder="注册时的手机号 / 邮箱"
-				disabled={submitting}
-				autocomplete="off"
-				class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--neu-text-muted)]"
-				style="color:var(--neu-text);"
-			/>
-		</label>
-		{#if mode === 'reset'}
-			<label class="flex flex-col" style="gap:6px;">
-				<span style="font-size:11px;letter-spacing:0.08em;color:var(--neu-text-muted);">验证码</span>
+			<span class="flex items-center gap-2 border border-[var(--neu-border)] px-3 py-3" style="background:var(--neu-bg);">
 				<input
 					type="text"
-					bind:value={code}
-					placeholder="输入收到的验证码"
+					bind:value={resetLoginId}
+					placeholder="注册时的手机号 / 邮箱"
 					disabled={submitting}
 					autocomplete="off"
 					class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--neu-text-muted)]"
 					style="color:var(--neu-text);"
 				/>
+			</span>
+		</label>
+		{#if mode === 'reset'}
+			<label class="flex flex-col" style="gap:6px;">
+				<span style="font-size:11px;letter-spacing:0.08em;color:var(--neu-text-muted);">验证码</span>
+				<span class="flex items-center gap-2 border border-[var(--neu-border)] px-3 py-3" style="background:var(--neu-bg);">
+					<input
+						type="text"
+						bind:value={code}
+						placeholder="输入收到的验证码"
+						disabled={submitting}
+						autocomplete="off"
+						class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--neu-text-muted)]"
+						style="color:var(--neu-text);"
+					/>
+				</span>
 			</label>
 			<label class="flex flex-col" style="gap:6px;">
 				<span style="font-size:11px;letter-spacing:0.08em;color:var(--neu-text-muted);">新密码</span>
-				<input
-					type="password"
-					bind:value={newPassword}
-					placeholder="8–128 位，含字母和数字"
-					disabled={submitting}
-					autocomplete="new-password"
-					class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--neu-text-muted)]"
-					style="color:var(--neu-text);"
-				/>
+				<span class="flex items-center gap-2 border border-[var(--neu-border)] px-3 py-3" style="background:var(--neu-bg);">
+					<input
+						type="password"
+						bind:value={newPassword}
+						placeholder="8–128 位，含字母和数字"
+						disabled={submitting}
+						autocomplete="new-password"
+						class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--neu-text-muted)]"
+						style="color:var(--neu-text);"
+					/>
+				</span>
 			</label>
 		{/if}
 	{/if}
