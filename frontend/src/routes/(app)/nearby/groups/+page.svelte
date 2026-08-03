@@ -86,7 +86,7 @@
 	contentMaxWidth={isTablet ? '964px' : isDesktop ? '1152px' : '680px'}
 >
 	{#snippet header()}
-		<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} sticky onBack={() => history.back()} contentClassName="!py-3">
+		<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} sticky onBack={() => history.back()}>
 			{#snippet trailing()}
 				<div class="hidden sm:flex flex-1 max-w-sm">
 					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" class="px-3 py-2" />

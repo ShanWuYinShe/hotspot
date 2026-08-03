@@ -101,7 +101,7 @@
 	contentMaxWidth={isTablet ? '964px' : isDesktop ? '1152px' : '680px'}
 >
 	{#snippet header()}
-		<PageHeader title="附近的人" subtitle="徐州 · 5km 内 · 每 3 分钟刷新" sticky onBack={() => history.back()} contentClassName="!py-3">
+		<PageHeader title="附近的人" subtitle="徐州 · 5km 内 · 每 3 分钟刷新" sticky onBack={() => history.back()}>
 			{#snippet trailing()}
 				<div class="hidden sm:flex flex-1 max-w-sm ml-3">
 					<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或此刻状态" class="px-3 py-2" />
