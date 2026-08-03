@@ -21,7 +21,7 @@
 	];
 
 	const statsList: { label: string; value: number; section: ProfileSection | null }[] = [
-		{ label: '帖子', value: stats.moments_count, section: 'moments' },
+		{ label: '瞬间', value: stats.moments_count, section: 'moments' },
 		{ label: '关注者', value: stats.followers_count, section: 'fans' },
 		{ label: '足迹', value: 27, section: null }
 	];

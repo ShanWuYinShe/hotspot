@@ -8,7 +8,7 @@
 		type BspRect
 	} from '@/lib/bsp-layout';
 
-	// 响应式 BSP 渲染器（三个桌面发现目录共用）。
+	// 响应式 BSP 渲染器（三个桌面附近目录共用）。
 	// 迁移自旧版 BspCardCanvas：卡片多为 1×1，穿插少量 1×2 / 2×1，
 	// 偶尔 2×2 hero。包含 ResizeObserver 重排、IntersectionObserver 虚拟化
 	// 与滚动加载哨兵。

@@ -16,7 +16,7 @@
 	} = $props();
 </script>
 
-<button type="button" class="neu-hover-bg flex items-center gap-2.5 w-full text-left rounded-[10px] {onClick ? 'cursor-pointer' : ''}" onclick={onClick}>
+<button type="button" class="neu-hover-bg neu-tap-985 flex items-center gap-2.5 w-full text-left rounded-[10px] {onClick ? 'cursor-pointer' : ''}" onclick={onClick}>
 	<div class="rounded-[10px] overflow-hidden flex-shrink-0" style="width:46px;height:46px;">
 		<img src={image} alt={title} class="w-full h-full object-cover" />
 	</div>

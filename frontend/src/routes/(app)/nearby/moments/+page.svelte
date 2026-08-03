@@ -9,7 +9,7 @@
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
-	import PostCard from '@/components/moments/PostCard.svelte';
+	import MomentCard from '@/components/moments/MomentCard.svelte';
 	import { createFeedInteractions, type FeedItem } from '@/components/moments/feed-interactions.svelte';
 	import { getFeedNearby } from '@/api';
 	import { ROUTES } from '@/lib/routes';
@@ -226,7 +226,7 @@
 			onLoadMore={() => (visibleCount = Math.min(visibleCount + 8, filtered.length))}
 		>
 			{#snippet renderItem(item: FeedItem, index: number)}
-				<PostCard
+				<MomentCard
 					item={item}
 					dense
 					liked={item.liked}

@@ -27,7 +27,7 @@
 
 <button
 	type="button"
-	class="neu-tap-97 relative flex h-10 outline-none {collapsed ? 'w-10 self-center items-center justify-center rounded-tight' : 'w-full items-center gap-3 rounded-tight px-3 text-left'}"
+	class="neu-tap-985 relative flex h-10 outline-none {collapsed ? 'w-10 self-center items-center justify-center rounded-tight' : 'w-full items-center gap-3 rounded-tight px-3 text-left'}"
 	style="background:{isActive ? 'var(--neu-accent-primary)' : hoverBg};color:{isActive ? 'var(--content-on-accent)' : showHover ? 'var(--neu-text)' : 'var(--neu-text-muted)'};box-shadow:{isActive ? 'var(--elevation-navigation-active)' : 'none'};transition:background 0.16s ease, color 0.16s ease, box-shadow 0.2s ease;"
 	aria-current={isActive ? 'page' : undefined}
 	data-active={isActive ? 'true' : undefined}
@@ -43,12 +43,12 @@
 		style="position:absolute;left:4px;top:50%;width:3px;height:{showHover ? 16 : 0}px;margin-top:{showHover ? -8 : 0}px;border-radius:2px;background:var(--neu-accent-primary);opacity:{showHover ? 0.9 : 0};transition:height 0.18s ease, opacity 0.18s ease, margin-top 0.18s ease;pointer-events:none;"
 	></span>
 	<Icon
-		style="width:17px;height:17px;flex-shrink:0;color:{isActive ? 'var(--content-on-accent)' : showHover ? 'var(--neu-text)' : 'var(--neu-text-muted)'};transition:color 0.16s ease;"
+		style="width:17px;height:17px;flex-shrink:0;color:{isActive ? 'var(--content-on-accent)' : showHover ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'};transition:color 0.16s ease;"
 		strokeWidth={isActive ? 2 : 1.6}
 	/>
 	<span
 		class={collapsed ? 'sr-only' : ''}
-		style={collapsed ? '' : 'font-size:14px;font-weight:500;letter-spacing:0.01em;'}
+		style={collapsed ? '' : `font-size:14px;font-weight:${isActive ? 500 : 400};letter-spacing:0.01em;`}
 	>
 		{item.label}
 	</span>

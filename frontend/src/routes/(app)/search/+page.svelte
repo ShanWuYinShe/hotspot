@@ -337,15 +337,15 @@
 								<h2 class="text-sm font-medium text-[var(--neu-text)]">动态</h2>
 							</div>
        <EmbeddedList>
-							{#each results.moments as post (post.moment_id)}
+							{#each results.moments as moment (moment.moment_id)}
 								<button
 									type="button"
-									onclick={() => void goto(ROUTES.moment(post.moment_id))}
+									onclick={() => void goto(ROUTES.moment(moment.moment_id))}
 									class="neu-hover-bg flex w-full items-center gap-3 px-4 py-3.5 text-left"
 									style="border-color:var(--neu-border);"
 								>
-									{#if post.media?.[0]?.url}
-										<img src={post.media[0].url} alt="" class="size-10 rounded-tight object-cover" />
+									{#if moment.media?.[0]?.url}
+										<img src={moment.media[0].url} alt="" class="size-10 rounded-tight object-cover" />
 									{:else}
 										<div
 											class="flex size-10 items-center justify-center rounded-tight"
@@ -355,9 +355,9 @@
 										</div>
 									{/if}
 									<span class="min-w-0 flex-1">
-										<span class="block truncate text-sm text-[var(--neu-text)]">{post.description ?? '无标题'}</span>
+										<span class="block truncate text-sm text-[var(--neu-text)]">{moment.description ?? '无标题'}</span>
 										<span class="mt-0.5 block text-xs text-[var(--neu-text-muted)]">
-											{post.user?.nickname ?? '匿名'}{#if post.likes_count} · {post.likes_count} 赞{/if}
+											{moment.user?.nickname ?? '匿名'}{#if moment.likes_count} · {moment.likes_count} 赞{/if}
 										</span>
 									</span>
 									<ArrowUpRight class="size-4 text-[var(--neu-text-muted)]" />

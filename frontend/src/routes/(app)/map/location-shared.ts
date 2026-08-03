@@ -27,9 +27,9 @@ export const SNAP_HEIGHTS: Record<SnapState, number> = { min: SNAP_MIN, mid: SNA
 export const PIN_COLORS: Record<PinType, string> = {
 	user: 'var(--map-user)',
 	group: 'var(--map-group)',
-	post: 'var(--map-post)'
+	moment: 'var(--map-moment)'
 };
-export const PIN_LABELS: Record<PinType, string> = { user: '用户', group: '群组', post: '动态' };
+export const PIN_LABELS: Record<PinType, string> = { user: '用户', group: '群组', moment: '瞬间' };
 export const pinTone = (type: PinType, amount: number) =>
 	`color-mix(in srgb, ${PIN_COLORS[type]} ${amount}%, transparent)`;
 export const floatBtnStyle =
@@ -112,11 +112,11 @@ export function buildViewportBounds(center: { lat: number; lng: number }, zoom: 
 }
 
 function emptyResult(): MapCanvasResult {
-	return { mode: 'empty', pins: [], heatBuckets: [], counts: { user: 0, group: 0, post: 0 } };
+	return { mode: 'empty', pins: [], heatBuckets: [], counts: { user: 0, group: 0, moment: 0 } };
 }
 
 function hotspotToPin(item: MapHotspotItem): Pin {
-	const type: PinType = item.object_type === 'moment' ? 'post' : item.object_type;
+	const type: PinType = item.object_type as PinType;
 	return {
 		id: item.object_id,
 		type,
@@ -140,11 +140,11 @@ function normalizeCanvas(res: { code: number; data?: unknown }): MapCanvasResult
 	const data = res.data as MapCanvasResponse;
 	if (data.heatmap?.items?.length) {
 		const items = data.heatmap.items;
-		const counts: Record<PinType, number> = { user: 0, group: 0, post: 0 };
+		const counts: Record<PinType, number> = { user: 0, group: 0, moment: 0 };
 		for (const b of items) {
 			counts.user += b.breakdown?.user ?? 0;
 			counts.group += b.breakdown?.group ?? 0;
-			counts.post += b.breakdown?.moment ?? 0;
+			counts.moment += b.breakdown?.moment ?? 0;
 		}
 		return { mode: 'heatmap', pins: [], heatBuckets: items, counts };
 	}
@@ -152,7 +152,7 @@ function normalizeCanvas(res: { code: number; data?: unknown }): MapCanvasResult
 		const items = data.hotspots.items;
 		// next_cursor：密集视口时分页取下一页。当前固定 zoom 下单页足够，
 		// 图钉与统计同页口径一致；后续接入视口交互时再做游标翻页。
-		const counts: Record<PinType, number> = { user: 0, group: 0, post: 0 };
+		const counts: Record<PinType, number> = { user: 0, group: 0, moment: 0 };
 		const pins = items.map(hotspotToPin);
 		for (const p of pins) counts[p.type] += 1;
 		return { mode: 'hotspots', pins, heatBuckets: [], counts };
@@ -176,7 +176,7 @@ export async function fetchMapCanvas(
 	const buildParams = (t?: PinType) => ({
 		viewport,
 		pagination: { limit: 100 },
-		...(t ? { filter: { data_type: t === 'post' ? 'moment' : t } } : {})
+		...(t ? { filter: { data_type: t } } : {})
 	});
 
 	if (activeTypes.length === 3) {
@@ -194,14 +194,14 @@ export async function fetchMapCanvas(
 			mode: 'empty',
 			pins: [],
 			heatBuckets: [],
-			counts: { user: 0, group: 0, post: 0 }
+			counts: { user: 0, group: 0, moment: 0 }
 		};
 		for (const part of parts) {
 			merged.pins.push(...part.pins);
 			merged.heatBuckets.push(...part.heatBuckets);
 			merged.counts.user += part.counts.user;
 			merged.counts.group += part.counts.group;
-			merged.counts.post += part.counts.post;
+			merged.counts.moment += part.counts.moment;
 			// 混合模式合并（理论场景：同视口下不同类型被服务端判为不同模式）：
 			// 热力与图钉叠加渲染，mode 以热力优先
 			if (part.mode === 'heatmap') merged.mode = 'heatmap';

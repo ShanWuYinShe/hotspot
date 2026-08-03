@@ -20,7 +20,7 @@
 	let searchQuery = $state('');
 	let selectedPin = $state<Pin | null>(null);
 	let selectedLoc = $state<LocationResult | null>(null);
-	let activeFilters = $state<Set<PinType>>(new Set(['user', 'group', 'post']));
+	let activeFilters = $state<Set<PinType>>(new Set(['user', 'group', 'moment']));
 	let activeTab = $state<'nearby' | 'hot' | 'recent'>('nearby');
 	let hoveredListId = $state<string | null>(null);
 	let showFilter = $state(true);
@@ -30,7 +30,7 @@
 	// map/canvas 数据
 	let mapPins = $state<Pin[]>([]);
 	let heatBuckets = $state<MapHeatBucket[]>([]);
-	let mapCounts = $state<Record<PinType, number>>({ user: 0, group: 0, post: 0 });
+	let mapCounts = $state<Record<PinType, number>>({ user: 0, group: 0, moment: 0 });
 	let mapLoading = $state(true);
 
 	// 视口中心或筛选变化时重新拉取
@@ -51,7 +51,7 @@
 		};
 	});
 
-	// 图钉详情跳转：user/group/post 分别路由到对应详情页
+	// 图钉详情跳转：user/group/moment 分别路由到对应详情页
 	function openPinDetail(pin: Pin) {
 		if (pin.type === 'user') void goto(ROUTES.user(pin.id));
 		else if (pin.type === 'group') void goto(ROUTES.group(pin.id));
@@ -73,7 +73,7 @@
 
 	const userCount = $derived(mapCounts.user);
 	const groupCount = $derived(mapCounts.group);
-	const postCount = $derived(mapCounts.post);
+	const momentCount = $derived(mapCounts.moment);
 
 	function handleSelectLoc(loc: LocationResult) {
 		selectedLoc = loc;
@@ -209,7 +209,7 @@
 										<span class="absolute bottom-0 right-0 rounded-full bg-[var(--semantic-online)]" style="width:10px;height:10px;border:2px solid var(--neu-bg);"></span>
 									{/if}
 								</div>
-							{:else if pin.type === 'post' && pin.image}
+							{:else if pin.type === 'moment' && pin.image}
 								<img src={pin.image} alt={pin.title || pin.name || ''} class="rounded-[11px] object-cover flex-shrink-0" style="width:42px;height:42px;" />
 							{:else}
 								<div class="flex items-center justify-center rounded-[12px] flex-shrink-0" style="width:42px;height:42px;background:{pinTone(pin.type, 12)};">
@@ -423,7 +423,7 @@
 			</button>
 			{#if showFilter}
 				<div class="mt-2 overflow-hidden rounded-control" style="background:var(--neu-bg);box-shadow:0 8px 28px var(--neu-shadow-dark);border:1px solid var(--neu-border);width:200px;">
-					{#each [{ type: 'user', label: '用户', icon: markerUserUrl, clusterIcon: markerUserClusterUrl, color: PIN_COLORS.user, count: userCount }, { type: 'group', label: '群组', icon: markerGroupUrl, clusterIcon: markerGroupClusterUrl, color: PIN_COLORS.group, count: groupCount }, { type: 'post', label: '动态', icon: markerMomentUrl, clusterIcon: markerMomentClusterUrl, color: PIN_COLORS.post, count: postCount }] as item, i}
+					{#each [{ type: 'user', label: '用户', icon: markerUserUrl, clusterIcon: markerUserClusterUrl, color: PIN_COLORS.user, count: userCount }, { type: 'group', label: '群组', icon: markerGroupUrl, clusterIcon: markerGroupClusterUrl, color: PIN_COLORS.group, count: groupCount }, { type: 'moment', label: '瞬间', icon: markerMomentUrl, clusterIcon: markerMomentClusterUrl, color: PIN_COLORS.moment, count: momentCount }] as item, i}
 						{#if i > 0}
 							<div style="height:1px;background:var(--neu-border);"></div>
 						{/if}
@@ -470,7 +470,7 @@
 								<span class="absolute bottom-0 right-0 rounded-full bg-[var(--semantic-online)]" style="width:12px;height:12px;border:2.5px solid var(--neu-bg);"></span>
 							{/if}
 						</div>
-					{:else if selectedPin.type === 'post' && selectedPin.image}
+					{:else if selectedPin.type === 'moment' && selectedPin.image}
 						<img src={selectedPin.image} alt={selectedPin.name || selectedPin.title || ''} class="rounded-[14px] object-cover flex-shrink-0" style="width:52px;height:52px;" />
 					{:else}
 						<div class="flex items-center justify-center rounded-[15px] flex-shrink-0" style="width:52px;height:52px;background:{pinTone(selectedPin.type, 14)};">

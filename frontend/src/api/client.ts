@@ -120,7 +120,7 @@ export async function searchMoments(params: object)       { return request<Pagin
 export async function getMomentDetail(momentId: string)   { return request<object>(Endpoints.Moments.GetDetail, { moment_id: momentId }); }
 export async function createMoment(params: object)        { return request<object>(Endpoints.Moments.Create, params); }
 export async function listMyMoments(params?: object)      { return request<PaginatedData<object>>(Endpoints.Moments.ListMy, params ?? {}); }
-export async function getFavoritePosts(params?: object)   { return request<PaginatedData<object>>(Endpoints.Moments.ListFavorites, params ?? {}); }
+export async function getFavoriteMoments(params?: object)   { return request<PaginatedData<object>>(Endpoints.Moments.ListFavorites, params ?? {}); }
 
 // Groups
 export async function searchGroups(params: object)        { return request<PaginatedData<object>>(Endpoints.Groups.Search, params); }

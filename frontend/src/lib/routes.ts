@@ -25,8 +25,8 @@ export const ROUTES = {
   nearbyPeople: "/nearby/people",
   nearbyGroups: "/nearby/groups",
   nearbyMoments: "/nearby/moments",
-  search: "/search",
-  notify: "/notify",
+	search: "/search",
+	notifications: "/notifications",
   user: (userId: string | number) => `/users/${userId}`,
   moment: (momentId: string | number) => `/moments/${momentId}`,
   group: (groupId: string | number) => `/groups/${groupId}`,
@@ -47,7 +47,7 @@ const DETAIL_PREFIXES = ["/users/", "/moments/", "/groups/", "/events/"] as cons
 export const SUB_PAGE_PATHS = [
   ROUTES.settings,
   ROUTES.map,
-  ROUTES.notify,
+  ROUTES.notifications,
   ROUTES.search,
   ROUTES.nearbyPeople,
   ROUTES.nearbyGroups,
@@ -73,8 +73,8 @@ export function isPrimaryRouteActive(pathname: string, target: string) {
 }
 
 export type DesktopNavId =
-  | "home" | "nearby-people" | "nearby-groups" | "nearby-activity"
-  | "messages" | "notifications" | "moments" | "my-groups"
+  | "home" | "nearby-people" | "nearby-groups" | "nearby-moments"
+  | "messages" | "moments" | "my-groups"
   | "relationships";
 
 /**
@@ -89,7 +89,7 @@ export function getDesktopNavId(pathname: string, search = ""): DesktopNavId | n
   if (pathname === ROUTES.messages || pathname.startsWith(`${ROUTES.messages}/`)) return "messages";
   if (pathname === ROUTES.nearbyGroups) return "nearby-groups";
   if (pathname === ROUTES.nearbyPeople) return "nearby-people";
-  if (pathname === ROUTES.nearbyMoments) return "nearby-activity";
+  if (pathname === ROUTES.nearbyMoments) return "nearby-moments";
 
   if (pathname.startsWith(`${ROUTES.me}/`)) {
     const section = pathname.slice(`${ROUTES.me}/`.length);

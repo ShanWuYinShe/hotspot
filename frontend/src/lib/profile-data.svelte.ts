@@ -6,14 +6,14 @@ import {
 	listUserMoments,
 	listUserReactedMoments,
 	listMyMoments,
-	getFavoritePosts,
+	getFavoriteMoments,
 	listMyGroups,
 	listFriends,
 	listFollowing,
 	listFollowers
 } from '@/api';
 
-export interface GalleryPost {
+export interface GalleryMoment {
 	id: string;
 	img: string;
 	likes: number;
@@ -69,8 +69,8 @@ export function useAccountData() {
 	};
 }
 
-export function useGalleryPosts(type: 'my' | 'user' = 'my', userId?: string) {
-	let posts = $state<GalleryPost[]>([]);
+export function useGalleryMoments(type: 'my' | 'user' = 'my', userId?: string) {
+	let posts = $state<GalleryMoment[]>([]);
 	let loading = $state(true);
 
 	$effect(() => {
@@ -100,8 +100,8 @@ export function useGalleryPosts(type: 'my' | 'user' = 'my', userId?: string) {
 	};
 }
 
-export function useReactedPosts(userId?: string) {
-	let posts = $state<GalleryPost[]>([]);
+export function useReactedMoments(userId?: string) {
+	let posts = $state<GalleryMoment[]>([]);
 	let loading = $state(true);
 
 	$effect(() => {
@@ -130,12 +130,12 @@ export function useReactedPosts(userId?: string) {
 	};
 }
 
-export function useFavoritePosts() {
-	let posts = $state<GalleryPost[]>([]);
+export function useFavoriteMoments() {
+	let posts = $state<GalleryMoment[]>([]);
 	let loading = $state(true);
 
 	$effect(() => {
-		getFavoritePosts({ pagination: { limit: 20 } })
+		getFavoriteMoments({ pagination: { limit: 20 } })
 			.then((res) => {
 				if (res.code === 0 && res.data) {
 					posts =

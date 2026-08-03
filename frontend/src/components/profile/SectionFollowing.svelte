@@ -51,7 +51,7 @@
 			{@const active = sortBy === pill.id}
 			<button
 				type="button"
-				class="neu-hover-btn flex items-center gap-1.5 px-3 py-1 rounded-full outline-none neu-surface-ghost text-xs {active ? 'bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] font-medium' : 'text-[var(--neu-text-muted)]'}"
+				class="neu-hover-btn flex items-center gap-1.5 px-3 py-1 rounded-full outline-none neu-surface-ghost text-xs neu-tap-93 {active ? 'bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] font-medium' : 'text-[var(--neu-text-muted)]'}"
 				style={active ? 'border-color:var(--neu-accent-soft-border);' : ''}
 				onclick={() => (sortBy = pill.id as 'recent' | 'active')}
 			>
@@ -90,7 +90,7 @@
 							<img src={f.latestImg} alt="" class="rounded-[8px] object-cover flex-shrink-0" style="width:44px;height:44px;opacity:0.85;" />
 							<button
 								type="button"
-								class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] {unfollowedIds.has(f.id) ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-transparent text-[var(--neu-text-muted)]'}"
+								class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] neu-tap-93 {unfollowedIds.has(f.id) ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-transparent text-[var(--neu-text-muted)]'}"
 								style={unfollowedIds.has(f.id) ? 'border:1px solid transparent;' : 'border:1px solid var(--neu-border-pressed);'}
 								onclick={(e) => {
 									e.stopPropagation();
@@ -134,7 +134,7 @@
 							<img src={f.latestImg} alt="" class="rounded-[8px] object-cover flex-shrink-0" style="width:36px;height:36px;opacity:0.85;" />
 							<button
 								type="button"
-								class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] {unfollowedIds.has(f.id) ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-transparent text-[var(--neu-text-muted)]'}"
+								class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] neu-tap-93 {unfollowedIds.has(f.id) ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-transparent text-[var(--neu-text-muted)]'}"
 								style={unfollowedIds.has(f.id) ? 'border:1px solid transparent;' : 'border:1px solid var(--neu-border-pressed);'}
 								onclick={(e) => {
 									e.stopPropagation();

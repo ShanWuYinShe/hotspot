@@ -33,7 +33,7 @@
 		{#each filtered as g (g.id)}
 			<button
 				type="button"
-				class="neu-card-hover group flex min-h-[148px] w-full overflow-hidden rounded-relaxed border text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
+				class="neu-card-hover neu-tap-94 group flex min-h-[148px] w-full overflow-hidden rounded-relaxed border text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
 				style="background:var(--neu-bg);border-color:var(--neu-border);box-shadow:5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);"
 				aria-label={`进入群组：${g.name}`}
 				onclick={() => void goto(`${ROUTES.group(g.id)}?from=me`)}

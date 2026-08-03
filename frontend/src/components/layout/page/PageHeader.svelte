@@ -31,7 +31,7 @@
 		sticky = true,
 		showBackOnDesktop = false,
 		maxWidth,
-		/** 标题字号（对齐 Figma Make 各页手写 header：消息 22 / 发现 22-24 / 详情 16 等）。 */
+		/** 标题字号（对齐 Figma Make 各页手写 header：消息 22 / 附近动态 22-24 / 详情 16 等）。 */
 		titleSize = 18,
 		/** 副标题字号（对齐 Figma Make：多数页 12，PageHeader 默认 11）。 */
 		subtitleSize = 11,

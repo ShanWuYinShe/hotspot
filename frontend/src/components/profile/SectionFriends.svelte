@@ -55,7 +55,7 @@
 		{#each [{ id: 'all', label: '全部' }, { id: 'online', label: '在线' }, { id: 'offline', label: '离线' }] as pill}
 			<button
 				type="button"
-				class="neu-hover-btn px-3 py-1.5 rounded-full outline-none text-xs {activeFilter === pill.id ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-[var(--neu-bg)] text-[var(--neu-text-muted)]'}"
+				class="neu-hover-btn px-3 py-1.5 rounded-full outline-none text-xs neu-tap-93 {activeFilter === pill.id ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-[var(--neu-bg)] text-[var(--neu-text-muted)]'}"
 				style={activeFilter === pill.id ? 'box-shadow:0 3px 8px var(--neu-glow);' : 'border:1px solid var(--neu-border);'}
 				onclick={() => (activeFilter = pill.id as 'all' | 'online' | 'offline')}
 			>
@@ -118,7 +118,7 @@
 	<div class="flex flex-col gap-1.5 flex-shrink-0">
 		<button
 			type="button"
-			class="neu-hover-btn flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none bg-[var(--neu-accent-primary)] text-white text-[11px]"
+			class="neu-hover-btn flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none neu-tap-93 bg-[var(--neu-accent-primary)] text-white text-[11px]"
 			style="box-shadow:0 3px 8px var(--neu-glow);"
 			onclick={(e) => {
 				e.stopPropagation();
@@ -130,7 +130,7 @@
 		</button>
 		<button
 			type="button"
-			class="neu-hover-btn flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none bg-[var(--neu-bg)] text-[var(--neu-text-muted)] text-[11px]"
+			class="neu-hover-btn flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none neu-tap-93 bg-[var(--neu-bg)] text-[var(--neu-text-muted)] text-[11px]"
 			style="border:1px solid var(--neu-border);box-shadow:3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light);"
 			onclick={(e) => {
 				e.stopPropagation();

@@ -40,7 +40,7 @@
   --color-semantic-warning: var(--semantic-warning);
   --color-map-user: var(--map-user);
   --color-map-group: var(--map-group);
-  --color-map-post: var(--map-post);
+  --color-map-moment: var(--map-moment);
 
   /* Semantic palette (Phase 2+) — enables bg-surface-primary, text-text-primary etc. */
   --color-surface-primary: var(--surface-primary);

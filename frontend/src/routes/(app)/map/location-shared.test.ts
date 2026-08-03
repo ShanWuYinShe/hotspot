@@ -20,7 +20,7 @@ afterEach(() => {
 });
 
 describe('fetchMapCanvas', () => {
-	it('hotspots 响应映射为图钉（moment→post、距离格式化）', async () => {
+	it('hotspots 响应映射为图钉（moment→moment、距离格式化）', async () => {
 		vi.mocked(getMapCanvas).mockResolvedValueOnce(
 			canvasOnce({
 				hotspots: {
@@ -46,17 +46,17 @@ describe('fetchMapCanvas', () => {
 			})
 		);
 
-		const result = await fetchMapCanvas(CENTER, ZOOM, ['user', 'group', 'post']);
+		const result = await fetchMapCanvas(CENTER, ZOOM, ['user', 'group', 'moment']);
 		expect(result.mode).toBe('hotspots');
 		expect(result.pins).toHaveLength(2);
-		const post = result.pins[0];
-		expect(post.type).toBe('post');
-		expect(post.id).toBe('42');
-		expect(post.lat).toBe(34.26);
-		expect(post.distance).toBe('850m');
-		expect(post.image).toBe('https://example.com/a.jpg');
-		expect(post.tag).toBe('云龙湖');
-		expect(result.counts).toEqual({ user: 1, group: 0, post: 1 });
+		const moment = result.pins[0];
+		expect(moment.type).toBe('moment');
+		expect(moment.id).toBe('42');
+		expect(moment.lat).toBe(34.26);
+		expect(moment.distance).toBe('850m');
+		expect(moment.image).toBe('https://example.com/a.jpg');
+		expect(moment.tag).toBe('云龙湖');
+		expect(result.counts).toEqual({ user: 1, group: 0, moment: 1 });
 	});
 
 	it('heatmap 响应按 breakdown 聚合统计', async () => {
@@ -83,21 +83,21 @@ describe('fetchMapCanvas', () => {
 			})
 		);
 
-		const result = await fetchMapCanvas(CENTER, ZOOM, ['user', 'group', 'post']);
+		const result = await fetchMapCanvas(CENTER, ZOOM, ['user', 'group', 'moment']);
 		expect(result.mode).toBe('heatmap');
 		expect(result.heatBuckets).toHaveLength(2);
 		expect(result.pins).toHaveLength(0);
-		expect(result.counts).toEqual({ user: 3, group: 3, post: 1 });
+		expect(result.counts).toEqual({ user: 3, group: 3, moment: 1 });
 	});
 
 	it('空响应返回 empty 结果', async () => {
 		vi.mocked(getMapCanvas).mockResolvedValueOnce(canvasOnce({}));
 
-		const result = await fetchMapCanvas(CENTER, ZOOM, ['user', 'group', 'post']);
+		const result = await fetchMapCanvas(CENTER, ZOOM, ['user', 'group', 'moment']);
 		expect(result.mode).toBe('empty');
 		expect(result.pins).toHaveLength(0);
 		expect(result.heatBuckets).toHaveLength(0);
-		expect(result.counts).toEqual({ user: 0, group: 0, post: 0 });
+		expect(result.counts).toEqual({ user: 0, group: 0, moment: 0 });
 	});
 
 	it('部分类型选择时按类型分别请求并合并', async () => {
@@ -124,7 +124,7 @@ describe('fetchMapCanvas', () => {
 		const result = await fetchMapCanvas(CENTER, ZOOM, ['user', 'group']);
 		expect(result.mode).toBe('hotspots');
 		expect(result.pins).toHaveLength(2);
-		expect(result.counts).toEqual({ user: 1, group: 1, post: 0 });
+		expect(result.counts).toEqual({ user: 1, group: 1, moment: 0 });
 		expect(getMapCanvas).toHaveBeenCalledTimes(2);
 		// data_type 为单值：user/group 各自请求
 		expect(vi.mocked(getMapCanvas).mock.calls[0][0]).toMatchObject({ filter: { data_type: 'user' } });
@@ -134,7 +134,7 @@ describe('fetchMapCanvas', () => {
 	it('全选时单次请求且不传 filter', async () => {
 		vi.mocked(getMapCanvas).mockResolvedValueOnce(canvasOnce({}));
 
-		await fetchMapCanvas(CENTER, ZOOM, ['user', 'group', 'post']);
+		await fetchMapCanvas(CENTER, ZOOM, ['user', 'group', 'moment']);
 		expect(getMapCanvas).toHaveBeenCalledTimes(1);
 		const params = vi.mocked(getMapCanvas).mock.calls[0][0] as any;
 		expect(params.viewport.bounds).toEqual({
@@ -156,7 +156,7 @@ describe('fetchMapCanvas', () => {
 		vi.mocked(getMapCanvas).mockResolvedValueOnce({ code: 10600, data: {}, message: '服务暂时不可用' });
 		const errRes = await fetchMapCanvas(CENTER, ZOOM, ['user']);
 		expect(errRes.mode).toBe('empty');
-		expect(errRes.counts).toEqual({ user: 0, group: 0, post: 0 });
+		expect(errRes.counts).toEqual({ user: 0, group: 0, moment: 0 });
 
 		vi.mocked(getMapCanvas).mockRejectedValueOnce(new Error('network down'));
 		const rejectRes = await fetchMapCanvas(CENTER, ZOOM, ['user']);

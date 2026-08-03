@@ -1,14 +1,16 @@
 <script lang="ts">
-	import { TYPE_CONFIG, type Notif } from './notif-data';
+	import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
+	import { TYPE_CONFIG, type NotificationItem } from './notification-data';
 
-	// 通知行（迁移自旧版 NotificationsPage 内 NotifRow）。
+	// 通知行（对齐 Figma Make NotificationsPage 行契约：InteractiveListRow
+	// hover 背景填充 + tap opacity 0.84，无 scale 位移）。
 
 	let {
 		notif,
 		onRead,
 		onRemove
 	}: {
-		notif: Notif;
+		notif: NotificationItem;
 		onRead: (id: string) => void;
 		onRemove: (id: string) => void;
 	} = $props();
@@ -17,11 +19,10 @@
 	const cfgTone = (amount: number) => `color-mix(in srgb, ${cfg.color} ${amount}%, transparent)`;
 </script>
 
-<button
-	type="button"
-	class="neu-hover-row neu-row-hover flex cursor-pointer items-center gap-3.5 px-3 py-3.5 w-full text-left"
-	style="background:var(--neu-bg);"
-	onclick={() => onRead(notif.id)}
+<InteractiveListRow
+	onClick={() => onRead(notif.id)}
+	ariaLabel={`通知：${notif.text}`}
+	class="flex items-center gap-3.5 px-3 py-3.5"
 >
 	<!-- Avatar + icon badge -->
 	<div class="relative flex-shrink-0">
@@ -50,15 +51,15 @@
 		<p class="text-[var(--neu-text-muted)] text-[11px] mt-0.5">{notif.time}</p>
 	</div>
 
-	<!-- Post thumb or unread dot -->
+	<!-- Moment thumb or unread dot -->
 	<div class="flex items-center gap-2 flex-shrink-0">
-		{#if notif.postImage}
+		{#if notif.momentImage}
 			<div class="rounded-[10px] overflow-hidden" style="width:38px;height:38px;">
-				<img src={notif.postImage} alt="" class="w-full h-full object-cover" />
+				<img src={notif.momentImage} alt="" class="w-full h-full object-cover" />
 			</div>
 		{/if}
 		{#if !notif.read}
 			<div class="rounded-full" style="width:8px;height:8px;background:{cfg.color};"></div>
 		{/if}
 	</div>
-</button>
+</InteractiveListRow>

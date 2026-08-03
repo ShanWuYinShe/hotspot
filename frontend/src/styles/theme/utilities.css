@@ -468,13 +468,21 @@
 
   /* 页面级按钮的精确 tap 强度（对齐 Figma 各页 whileTap 硬编码值） */
   .neu-tap-99:active { transform: scale(0.99); }
+  .neu-tap-985:active { transform: scale(0.985); }
   .neu-tap-98:active { transform: scale(0.98); }
   .neu-tap-97:active { transform: scale(0.97); }
+  .neu-tap-95:active { transform: scale(0.95); }
+  .neu-tap-94:active { transform: scale(0.94); }
   .neu-tap-93:active { transform: scale(0.93); }
   .neu-tap-92:active { transform: scale(0.92); }
   .neu-tap-90:active { transform: scale(0.90); }
   .neu-tap-88:active { transform: scale(0.88); }
   .neu-tap-84:active { transform: scale(0.84); }
+
+  /* 顶栏图标按钮（Figma DesktopLayout HeaderBtn action 契约：hover 1.18 + 背景填充 + tap 0.84，
+     覆盖 ActionIconButton 默认的 btn 契约 1.10/0.94） */
+  .neu-header-action:hover { transform: scale(1.18); transition-duration: 0.14s, 0.18s, 0.18s, 0.18s, 0.18s; background-color: var(--interactive-hover-fill); }
+  .neu-header-action:active { transform: scale(0.84); transition-duration: 0.10s, 0.18s, 0.18s, 0.18s, 0.18s; }
 
   /* vibrant：无阴影抬升（玻璃感），仅位移光晕 */
   .vibrant .neu-hover-card:hover { box-shadow: 0 8px 24px var(--neu-accent-soft); }

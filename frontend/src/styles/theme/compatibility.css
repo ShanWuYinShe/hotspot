@@ -40,5 +40,5 @@
   --semantic-warning: var(--status-warning);
   --map-user: var(--marker-user);
   --map-group: var(--marker-group);
-  --map-post: var(--marker-content);
+  --map-moment: var(--marker-content);
 }

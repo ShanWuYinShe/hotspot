@@ -11,7 +11,7 @@
 	import { ROUTES } from '@/lib/routes';
 	import * as Dialog from '@/components/ui/dialog';
 
-	// 用户详情：关注/私信/屏蔽/举报/备注 + 帖子画廊 + 桌面 Rail。
+	// 用户详情：关注/私信/屏蔽/举报/备注 + 瞬间画廊 + 桌面 Rail。
 	// 迁移自旧版 UserProfilePage。
 
 	let { params }: { params: { userId: string } } = $props();
@@ -25,7 +25,7 @@
 		banner: string;
 		followers: number;
 		following: number;
-		posts: number;
+		moments: number;
 		gallery: string[];
 		tags: string[];
 	}
@@ -39,7 +39,7 @@
 		banner: '',
 		followers: 0,
 		following: 0,
-		posts: 0,
+		moments: 0,
 		gallery: [],
 		tags: []
 	});
@@ -47,7 +47,7 @@
 	let mutualFriends = $state<{ id: number; name: string; sub: string; avatar: string }[]>([]);
 	let similarUsers = $state<{ id: number; name: string; sub: string; avatar: string }[]>([]);
 	let followed = $state(false);
-	let activeTab = $state<'posts' | 'liked' | 'saved'>('posts');
+	let activeTab = $state<'moments' | 'liked' | 'saved'>('moments');
 	let moreOpen = $state(false);
 	let blocked = $state(false);
 	let remark = $state('');
@@ -78,7 +78,7 @@
 						banner: u.cover_url ?? data.banner ?? '',
 						followers: s.followers_count ?? 0,
 						following: s.following_count ?? 0,
-						posts: s.moments_count ?? 0,
+						moments: s.moments_count ?? 0,
 						gallery: data.recent_moments?.items?.map((m: any) => m.images?.[0]?.url ?? '') ?? [],
 						tags: u.tags ?? data.tags ?? []
 					};
@@ -243,7 +243,7 @@
 					<div class="flex gap-2 pb-1">
 						<button
 							type="button"
-							class="neu-hover-btn flex items-center gap-1.5 px-3.5 py-2 rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-45 bg-[var(--neu-bg)] text-[var(--neu-text-muted)] text-xs"
+							class="neu-hover-btn neu-tap-93 flex items-center gap-1.5 px-3.5 py-2 rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-45 bg-[var(--neu-bg)] text-[var(--neu-text-muted)] text-xs"
 							style="border:1px solid var(--neu-border);box-shadow:4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
 							disabled={blocked}
 							onclick={() => !blocked && void goto(ROUTES.message(1))}
@@ -253,7 +253,7 @@
 						</button>
 						<button
 							type="button"
-							class="neu-hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all disabled:cursor-not-allowed disabled:opacity-45 text-xs {followed ? 'bg-[var(--neu-bg)] text-[var(--neu-accent-primary)]' : 'bg-[var(--neu-accent-primary)] text-white'}"
+							class="neu-hover-btn neu-tap-93 flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all disabled:cursor-not-allowed disabled:opacity-45 text-xs {followed ? 'bg-[var(--neu-bg)] text-[var(--neu-accent-primary)]' : 'bg-[var(--neu-accent-primary)] text-white'}"
 							style={followed
 								? 'border:1.5px solid var(--neu-accent-primary);box-shadow:4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);'
 								: 'box-shadow:0 4px 14px var(--neu-glow);border:1px solid transparent;'}
@@ -298,7 +298,7 @@
 				<!-- Stats -->
 				<div class="flex gap-0 mt-5 overflow-hidden rounded-[20px] bg-[var(--neu-bg)]" style="box-shadow:0 0 0 1px var(--neu-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light);">
 					<div style="overflow:hidden;border-radius:20px;">
-						{#each [{ label: '帖子', v: fmtNum(user.posts) }, { label: '粉丝', v: fmtNum(user.followers) }, { label: '关注', v: fmtNum(user.following) }] as s, i}
+						{#each [{ label: '瞬间', v: fmtNum(user.moments) }, { label: '粉丝', v: fmtNum(user.followers) }, { label: '关注', v: fmtNum(user.following) }] as s, i}
 							<div class="flex-1 flex flex-col items-center py-4 relative">
 								{#if i > 0}
 									<div class="absolute left-0 top-1/2 -translate-y-1/2 bg-[var(--neu-border)]" style="width:1px;height:28px;"></div>
@@ -312,13 +312,13 @@
 
 				<!-- Tabs -->
 			<div class="flex" style="border-bottom:1px solid var(--neu-border);padding-left:16px;padding-right:16px;flex-shrink:0;">
-				{#each [{ id: 'posts', icon: Grid3X3, label: '帖子' }, { id: 'liked', icon: Heart, label: '喜欢' }, { id: 'saved', icon: Bookmark, label: '收藏' }] as t}
+				{#each [{ id: 'moments', icon: Grid3X3, label: '瞬间' }, { id: 'liked', icon: Heart, label: '喜欢' }, { id: 'saved', icon: Bookmark, label: '收藏' }] as t}
 					{@const active = activeTab === t.id}
 					<button
 						type="button"
 						class="neu-hover-btn relative flex items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none text-[13px] {active ? 'text-[var(--neu-accent-primary)]' : 'text-[var(--neu-text-muted)]'}"
 						style="flex:1;font-weight:{active ? 500 : 400};"
-						onclick={() => (activeTab = t.id as 'posts' | 'liked' | 'saved')}
+						onclick={() => (activeTab = t.id as 'moments' | 'liked' | 'saved')}
 					>
 						<t.icon style="width:13px;height:13px;" strokeWidth={active ? 2 : 1.5} />
 						{t.label}
@@ -332,7 +332,7 @@
 			<!-- Gallery -->
 			<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:3px;padding:3px;">
 				{#each user.gallery as src, i}
-					<div class="image-hover-frame relative cursor-pointer" style="aspect-ratio:1;overflow:hidden;">
+					<div class="image-hover-frame neu-tap-97 relative cursor-pointer" style="aspect-ratio:1;overflow:hidden;">
 						<img src={src} alt={`photo ${i}`} class="image-hover-frame__image w-full h-full object-cover" />
 						{#if activeTab === 'liked'}
 							<div class="absolute inset-0 flex items-end justify-end p-1.5 bg-[var(--overlay-soft)]">

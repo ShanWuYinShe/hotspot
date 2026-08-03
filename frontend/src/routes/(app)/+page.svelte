@@ -125,16 +125,17 @@
 </script>
 
 {#snippet homeContent()}
-	<!-- 三端共用的业务组件（只写一次） -->
+	<!-- 三端共用的业务组件（只写一次）。首页为大纲页：列表限长 + 「更多」链接导航到专区 -->
 	<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} />
 	<div>
-		<SectionHead title="附近活动" />
-		<ActivityList items={activities} onClick={(id) => void goto(ROUTES.event(id))} />
+		<SectionHead title="附近活动" action="更多" onAction={() => void goto(ROUTES.nearbyMoments)} />
+		<ActivityList items={activities.slice(0, 3)} onClick={(id) => void goto(ROUTES.event(id))} />
 	</div>
 	<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
 	<div>
 		<SectionHead title="人物推荐" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
-		<NearbyUsersFlatList users={nearbyUsers} followingIds={followingIds} onToggle={toggleFollow} />
+		<!-- 对齐 Figma HomePage：人物推荐仅展示前 4 位，其余引导到附近的人专区 -->
+		<NearbyUsersFlatList users={nearbyUsers.slice(0, 4)} followingIds={followingIds} onToggle={toggleFollow} />
 	</div>
 {/snippet}
 
@@ -185,7 +186,7 @@
 					</div>
 					<button
 						type="button"
-						class="neu-hover-btn flex items-center gap-0.5 outline-none neu-surface-ghost rounded-full px-2 py-0.5 text-[var(--neu-accent-primary)]"
+						class="neu-hover-btn neu-tap-93 flex items-center gap-0.5 outline-none neu-surface-ghost rounded-full px-2 py-0.5 text-[var(--neu-accent-primary)]"
 						onclick={() => void goto(ROUTES.nearbyPeople)}
 					>
 						<span class="text-xs">查看全部</span>

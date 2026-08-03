@@ -192,7 +192,7 @@
 	<!-- General -->
 	<p class="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em] uppercase">通用</p>
 	<div class="rounded-panel overflow-hidden neu-surface-flat">
-		<button type="button" class="neu-hover-bg neu-row-nudge flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
+		<button type="button" class="neu-hover-bg neu-row-nudge neu-tap-94 flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
 			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
 				<Globe style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
 			</div>
@@ -203,7 +203,7 @@
 			<ChevronRight style="width:15px;height:15px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
 		</button>
 		<div class="mx-4 bg-[var(--neu-border)]" style="height:1px;"></div>
-		<button type="button" class="neu-hover-bg neu-row-nudge flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
+		<button type="button" class="neu-hover-bg neu-row-nudge neu-tap-94 flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
 			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
 				<User style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
 			</div>
@@ -214,7 +214,7 @@
 			<ChevronRight style="width:15px;height:15px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
 		</button>
 		<div class="mx-4 bg-[var(--neu-border)]" style="height:1px;"></div>
-		<button type="button" class="neu-hover-bg neu-row-nudge flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
+		<button type="button" class="neu-hover-bg neu-row-nudge neu-tap-94 flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
 			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
 				<Info style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
 			</div>

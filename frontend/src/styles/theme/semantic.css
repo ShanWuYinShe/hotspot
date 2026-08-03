@@ -54,7 +54,7 @@
   /* Map markers */
   --marker-user: var(--pr-map-user);
   --marker-group: var(--pr-map-group);
-  --marker-content: var(--pr-map-post);
+  --marker-content: var(--pr-map-moment);
 }
 
 /* ── Interaction token contract ────────────────────────────────────────

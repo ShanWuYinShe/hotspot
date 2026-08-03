@@ -35,7 +35,7 @@
   --pr-warning: #F59E0B;
   --pr-map-user: #3578D4;
   --pr-map-group: #10B981;
-  --pr-map-post: #F97316;
+  --pr-map-moment: #F97316;
   --pr-overlay-soft: rgba(22, 35, 58, 0.08);
   --pr-overlay-strong: rgba(12, 25, 48, 0.52);
   --pr-scrim: linear-gradient(to bottom, rgba(16, 35, 66, 0.03) 0%, rgba(16, 35, 66, 0.54) 100%);
@@ -139,7 +139,7 @@
   --pr-warning: #FBBF24;
   --pr-map-user: #69A8FF;
   --pr-map-group: #34D399;
-  --pr-map-post: #FB923C;
+  --pr-map-moment: #FB923C;
   --pr-overlay-soft: rgba(232, 241, 255, 0.08);
   --pr-overlay-strong: rgba(0, 8, 20, 0.62);
   --pr-scrim: linear-gradient(to bottom, rgba(0, 10, 27, 0.02) 0%, rgba(0, 10, 27, 0.66) 100%);

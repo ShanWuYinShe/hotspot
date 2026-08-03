@@ -1,6 +1,6 @@
 /* Location types & static data — extracted from the legacy page file to keep the page lean. */
 
-export type PinType = "user" | "group" | "post";
+export type PinType = "user" | "group" | "moment";
 
 export interface Pin {
   id: string | number; type: PinType; lat: number; lng: number;

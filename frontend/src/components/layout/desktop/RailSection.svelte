@@ -21,12 +21,12 @@
 	<div class="flex items-end justify-between mb-3">
 		<span class="neu-eyebrow">{title}</span>
 		{#if action && onAction}
-			<button
-				type="button"
-				class="neu-hover-action flex items-center gap-0.5 outline-none"
-				style="color:var(--neu-accent-primary);"
-				onclick={onAction}
-			>
+		<button
+			type="button"
+			class="neu-hover-btn flex items-center gap-0.5 outline-none"
+			style="color:var(--neu-accent-primary);"
+			onclick={onAction}
+		>
 				<span style="font-size:11px;">{action}</span>
 				<ChevronRight style="width:12px;height:12px;" strokeWidth={1.5} />
 			</button>

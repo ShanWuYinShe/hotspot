@@ -66,11 +66,11 @@
 		topicActive = !topicActive;
 	};
 
-	const canPost = $derived(text.trim().length > 0 && !submitting);
+	const canPublish = $derived(text.trim().length > 0 && !submitting);
 	const activeAudience = $derived(AUDIENCES.find((item) => item.id === audience) ?? AUDIENCES[0]);
 
 	const handleSubmit = async () => {
-		if (!canPost) return;
+		if (!canPublish) return;
 		submitting = true;
 		try {
 			const res = await createMoment({
@@ -275,7 +275,7 @@
 		</div>
 		<button
 			type="submit"
-			disabled={!canPost}
+			disabled={!canPublish}
 			class="neu-hover-btn shrink-0 rounded-full px-5 py-2.5 text-[13px] font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] disabled:cursor-not-allowed disabled:border disabled:border-[var(--neu-border)] disabled:bg-transparent disabled:text-[var(--neu-text-muted)] enabled:bg-[var(--neu-accent-primary)] enabled:text-white enabled:shadow-[0_6px_18px_var(--neu-glow)]"
 		>
 			发布动态

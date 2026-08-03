@@ -3,7 +3,7 @@
 	import { Heart, MessageCircle, CalendarDays, ArrowUpRight, Grid3X3 } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import { openComposer } from '@/stores/composer.svelte';
-	import { useGalleryPosts, useReactedPosts, useFavoritePosts, type GalleryPost } from '@/lib/profile-data.svelte';
+	import { useGalleryMoments, useReactedMoments, useFavoriteMoments, type GalleryMoment } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 我的瞬间分区（对齐 Figma Make ProfileSections SectionMoments）。
@@ -14,11 +14,11 @@
 
 	let activeTab = $state<Tab>('posts');
 
-	const myPosts = useGalleryPosts('my');
-	const reacted = useReactedPosts();
-	const savedP = useFavoritePosts();
+	const myPosts = useGalleryMoments('my');
+	const reacted = useReactedMoments();
+	const savedP = useFavoriteMoments();
 
-	const postsMap = $derived({ posts: myPosts.posts, liked: reacted.posts, saved: savedP.posts } as Record<Tab, GalleryPost[]>);
+	const postsMap = $derived({ posts: myPosts.posts, liked: reacted.posts, saved: savedP.posts } as Record<Tab, GalleryMoment[]>);
 	const archive = $derived(postsMap[activeTab]);
 	const featured = $derived(archive[0]);
 	const remaining = $derived(archive.slice(1));
@@ -110,7 +110,7 @@
 						aria-label="查看精选瞬间"
 					>
 						<div class="lg:grid lg:grid-cols-[minmax(0,1.38fr)_minmax(280px,0.62fr)]">
-							<div class="image-hover-frame relative aspect-[16/10] overflow-hidden lg:aspect-auto lg:min-h-[390px]" style="background:var(--page-bg);">
+							<div class="image-hover-frame neu-tap-97 relative aspect-[16/10] overflow-hidden lg:aspect-auto lg:min-h-[390px]" style="background:var(--page-bg);">
 								<img src={featured.img} alt="本期精选瞬间" class="image-hover-frame__image h-full w-full object-cover" />
 							</div>
 							<div class="flex flex-col justify-between border-t p-6 lg:border-l lg:border-t-0" style="border-color:var(--neu-border);">
@@ -147,22 +147,22 @@
 					</div>
 
 					<div class="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-						{#each remaining as post, index (post.id)}
+						{#each remaining as moment, index (moment.id)}
 							<button
 								type="button"
-								onclick={() => void goto(`${ROUTES.moment(post.id)}?from=me`)}
+								onclick={() => void goto(`${ROUTES.moment(moment.id)}?from=me`)}
 								class="group overflow-hidden rounded-control border text-left transition-colors hover:border-[var(--neu-accent-soft-border)] {index === 0 ? 'col-span-2' : ''}"
 								style="border-color:var(--neu-border);background:var(--neu-bg);"
 								aria-label="查看瞬间详情"
 							>
-								<div class="image-hover-frame overflow-hidden {index === 0 ? 'aspect-[16/8]' : 'aspect-square'}" style="background:var(--page-bg);">
-									<img src={post.img} alt={captions[index % captions.length]} class="image-hover-frame__image h-full w-full object-cover" />
+								<div class="image-hover-frame neu-tap-97 overflow-hidden {index === 0 ? 'aspect-[16/8]' : 'aspect-square'}" style="background:var(--page-bg);">
+									<img src={moment.img} alt={captions[index % captions.length]} class="image-hover-frame__image h-full w-full object-cover" />
 								</div>
 								<div class="flex items-center justify-between gap-2 px-3 py-2.5">
 									<p class="truncate text-xs text-[var(--neu-text)]">{captions[index % captions.length]}</p>
 									<div class="flex shrink-0 items-center gap-2 text-[10px] text-[var(--neu-text-muted)]">
-										<span class="flex items-center gap-0.5"><Heart class="size-3" strokeWidth={1.7} />{post.likes}</span>
-										<span class="flex items-center gap-0.5"><MessageCircle class="size-3" strokeWidth={1.7} />{post.comments}</span>
+										<span class="flex items-center gap-0.5"><Heart class="size-3" strokeWidth={1.7} />{moment.likes}</span>
+										<span class="flex items-center gap-0.5"><MessageCircle class="size-3" strokeWidth={1.7} />{moment.comments}</span>
 									</div>
 								</div>
 							</button>

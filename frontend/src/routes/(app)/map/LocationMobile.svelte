@@ -76,7 +76,7 @@
 	/* ── Content state ── */
 	let showFilter = $state(false);
 	let filterAnchorEl = $state<HTMLElement | null>(null);
-	let activeFilters = $state<Set<PinType>>(new Set(['user', 'group', 'post']));
+	let activeFilters = $state<Set<PinType>>(new Set(['user', 'group', 'moment']));
 	let searchQuery = $state('');
 	let selectedPin = $state<Pin | null>(null);
 	let selectedLoc = $state<LocationResult | null>(null);
@@ -88,7 +88,7 @@
 	// map/canvas 数据
 	let mapPins = $state<Pin[]>([]);
 	let heatBuckets = $state<MapHeatBucket[]>([]);
-	let mapCounts = $state<Record<PinType, number>>({ user: 0, group: 0, post: 0 });
+	let mapCounts = $state<Record<PinType, number>>({ user: 0, group: 0, moment: 0 });
 	let mapLoading = $state(true);
 
 	// 视口中心或筛选变化时重新拉取
@@ -141,7 +141,7 @@
 		activeFilters = next;
 	}
 
-	// 图钉详情跳转：user/group/post 分别路由到对应详情页
+	// 图钉详情跳转：user/group/moment 分别路由到对应详情页
 	function openPinDetail(pin: Pin) {
 		if (pin.type === 'user') void goto(ROUTES.user(pin.id));
 		else if (pin.type === 'group') void goto(ROUTES.group(pin.id));
@@ -248,7 +248,7 @@
 						{#each [
 							['user', '用户', markerUserUrl, PIN_COLORS.user],
 							['group', '群组', markerGroupUrl, PIN_COLORS.group],
-							['post', '动态', markerMomentUrl, PIN_COLORS.post]
+							['moment', '瞬间', markerMomentUrl, PIN_COLORS.moment]
 						] as [type, label, icon, color], i}
 							{@const active = activeFilters.has(type as PinType)}
 							{#if i > 0}
@@ -395,7 +395,7 @@
 											<span class="absolute bottom-0 right-0 rounded-full bg-[var(--semantic-online)]" style="width:10px;height:10px;border:2px solid var(--neu-bg);"></span>
 										{/if}
 									</div>
-								{:else if selectedPin.type === 'post' && selectedPin.image}
+								{:else if selectedPin.type === 'moment' && selectedPin.image}
 									<img src={selectedPin.image} alt={selectedPin.name || selectedPin.title || ''} class="rounded-[10px] object-cover flex-shrink-0" style="width:42px;height:42px;" />
 								{:else}
 									<img src={getMarkerUrl(selectedPin.type, selectedPin.count ?? 1)} alt="" style="width:22px;height:29px;flex-shrink:0;" />

@@ -7,7 +7,7 @@ export {
   follow, block, getProfile, getUserDetail, batchGet,
   listFriends, listFollowing, listFollowers,
   getFeedFollowing, getFeedNearby, getTrending, getNearbyUsers, getNearbyGroups,
-  searchMoments, getMomentDetail, createMoment, listMyMoments, getFavoritePosts,
+  searchMoments, getMomentDetail, createMoment, listMyMoments, getFavoriteMoments,
   searchGroups, getGroupDetail, createGroup, listMyGroups,
   searchUsers, searchSuggest,
   getUnreadCount, listNotifications, markRead,
@@ -25,5 +25,5 @@ export {
   listComments,
   getMapCanvas,
 } from '@/api/client';
-// P2: useApi 以 createApiState 形式重建于 src/lib/useApi.svelte.ts
+
 export type { ApiResponse, PaginatedData } from '@/api/client';

@@ -21,7 +21,7 @@
 <div class="neu-hover-bg flex items-center gap-2.5 rounded-[10px] {onClick ? 'cursor-pointer' : ''}">
 	<button
 		type="button"
-		class="flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-[10px] outline-none"
+		class="neu-tap-985 flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-[10px] outline-none"
 		onclick={onClick}
 	>
 		<div class="rounded-full overflow-hidden flex-shrink-0" style="width:34px;height:34px;border:1px solid var(--neu-border);">

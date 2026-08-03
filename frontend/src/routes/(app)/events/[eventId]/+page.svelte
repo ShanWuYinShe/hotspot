@@ -182,7 +182,7 @@
 				<div class="mb-5">
 					<div class="mb-3 flex items-center justify-between">
 						<p class="text-[14px] text-[var(--neu-text)]">参与者 · {ev.participants.length}/{ev.maxParticipants}</p>
-						<button type="button" class="neu-hover-btn flex items-center gap-0.5 outline-none" style="color:var(--neu-accent-primary);" onclick={() => (showParticipants = true)}>
+						<button type="button" class="neu-hover-btn neu-tap-93 flex items-center gap-0.5 outline-none" style="color:var(--neu-accent-primary);" onclick={() => (showParticipants = true)}>
 							<span class="text-[12px]">查看全部</span>
 							<ChevronRight style="width:13px;height:13px;" strokeWidth={1.5} />
 						</button>

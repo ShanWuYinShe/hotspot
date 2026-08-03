@@ -79,7 +79,7 @@
 			{@const active = fanFilter === pill.id}
 			<button
 				type="button"
-				class="neu-hover-btn px-3 py-1 rounded-full outline-none neu-surface-ghost text-xs {active ? 'bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] font-medium' : 'text-[var(--neu-text-muted)]'}"
+				class="neu-hover-btn px-3 py-1 rounded-full outline-none neu-surface-ghost text-xs neu-tap-93 {active ? 'bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] font-medium' : 'text-[var(--neu-text-muted)]'}"
 				style={active ? 'border-color:var(--neu-accent-soft-border);' : ''}
 				onclick={() => (fanFilter = pill.id as 'all' | 'mutual' | 'pending')}
 			>
@@ -123,7 +123,7 @@
 							</div>
 							<button
 								type="button"
-								class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] {isMutual ? 'bg-transparent text-[var(--neu-text-muted)]' : 'bg-[var(--neu-accent-primary)] text-white'}"
+								class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] neu-tap-93 {isMutual ? 'bg-transparent text-[var(--neu-text-muted)]' : 'bg-[var(--neu-accent-primary)] text-white'}"
 								style={isMutual ? 'border:1px solid var(--neu-border-pressed);' : 'border:1px solid transparent;'}
 								onclick={(e) => {
 									e.stopPropagation();
@@ -175,7 +175,7 @@
 							</div>
 							<button
 								type="button"
-								class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] {isMutual ? 'bg-transparent text-[var(--neu-text-muted)]' : 'bg-[var(--neu-accent-primary)] text-white'}"
+								class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] neu-tap-93 {isMutual ? 'bg-transparent text-[var(--neu-text-muted)]' : 'bg-[var(--neu-accent-primary)] text-white'}"
 								style={isMutual ? 'border:1px solid var(--neu-border-pressed);' : 'border:1px solid transparent;'}
 								onclick={(e) => {
 									e.stopPropagation();

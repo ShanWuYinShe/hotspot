@@ -10,8 +10,8 @@
 	import BorderedList from '@/components/data-display/BorderedList.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-	import NotifRow from './NotifRow.svelte';
-	import { TYPE_CONFIG, normalizeNotifType, type Notif } from './notif-data';
+	import NotificationRow from './NotificationRow.svelte';
+	import { TYPE_CONFIG, normalizeNotifType, type NotificationItem } from './notification-data';
 	import { listNotifications, getUnreadCount, markRead } from '@/api';
 	import { WS_NOTIFY_EVENT } from '@/lib/ws/client';
 	import { ROUTES } from '@/lib/routes';
@@ -28,7 +28,7 @@ const FILTER_TABS = [
 	{ id: 'nearby', label: '附近' }
 ];
 
-	let notifs = $state<Notif[]>([]);
+	let notifications = $state<NotificationItem[]>([]);
 	let filter = $state('all');
 	let loading = $state(true);
 	// WS 推送（ws:notify）到来时 +1，触发下方加载 effect 重新拉取通知与未读。
@@ -58,7 +58,7 @@ const FILTER_TABS = [
 				const notifData = (notifRes.code === 0 ? notifRes.data : null) as any;
 
 				if (notifData) {
-					const items: Notif[] = (notifData.items || []).map((n: any, i: number) => {
+					const items: NotificationItem[] = (notifData.items || []).map((n: any, i: number) => {
 						const actor = n.payload?.actor ?? n.actor ?? {};
 						const groupName = n.payload?.group_name ?? '群组';
 						let text = '';
@@ -87,13 +87,13 @@ const FILTER_TABS = [
 							time: n.created_at ?? '',
 							user: { name: actor.nickname ?? '', avatar: actor.avatar_url ?? '' },
 							text,
-							postImage: n.payload?.moment_summary?.cover_url ?? n.payload?.cover_url ?? undefined
+							momentImage: n.payload?.moment_summary?.cover_url ?? n.payload?.cover_url ?? undefined
 						};
 					});
-					notifs = items;
+					notifications = items;
 				}
 			} catch {
-				if (!cancelled) notifs = [];
+				if (!cancelled) notifications = [];
 			} finally {
 				if (!cancelled) loading = false;
 			}
@@ -104,29 +104,29 @@ const FILTER_TABS = [
 		};
 	});
 
-	const unread = $derived(notifs.filter((n) => !n.read).length);
+	const unread = $derived(notifications.filter((n) => !n.read).length);
 
 	const markAllRead = () => {
 		// spec: scope='all' clears all unread. Update local state optimistically.
-		notifs = notifs.map((n) => ({ ...n, read: true }));
+		notifications = notifications.map((n) => ({ ...n, read: true }));
 		void markRead({ scope: 'all' }).catch(() => {});
 	};
 	const markSingleRead = (id: string) => {
-		notifs = notifs.map((n) => (n.id === id ? { ...n, read: true } : n));
+		notifications = notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
 		// spec: scope='selected' with notification_ids (one of notification_ids|type).
 		void markRead({ scope: 'selected', notification_ids: [id] }).catch(() => {});
 	};
 	const remove = (id: string) => {
-		notifs = notifs.filter((n) => n.id !== id);
+		notifications = notifications.filter((n) => n.id !== id);
 	};
 
 	// 归一化后 n.type 已是语义键（reaction/follow/comment/nearby/event），
 	// 直接与 tab id 比较；FILTER_TYPE_MAP 仅保留供历史/调试参考。
-	const filtered = $derived(notifs.filter((n) => filter === 'all' || n.type === filter));
+	const filtered = $derived(notifications.filter((n) => filter === 'all' || n.type === filter));
 	const unreadGroup = $derived(filtered.filter((n) => !n.read));
 	const readGroup = $derived(filtered.filter((n) => n.read));
 	const typeStats = $derived(
-		(Object.keys(TYPE_CONFIG) as string[]).map((t) => ({ type: t, count: notifs.filter((n) => n.type === t).length }))
+		(Object.keys(TYPE_CONFIG) as string[]).map((t) => ({ type: t, count: notifications.filter((n) => n.type === t).length }))
 	);
 </script>
 
@@ -164,7 +164,7 @@ const FILTER_TABS = [
 								aria-pressed={filter === t.id}
 								data-active={filter === t.id ? 'true' : undefined}
 								onclick={() => (filter = t.id)}
-								class="flex-shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
+								class="neu-tap-92 flex-shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
 								style={filter === t.id
 									? 'background:var(--neu-accent-primary);color:white;font-size:12px;box-shadow:0 3px 10px var(--neu-glow);border:none;'
 									: 'background:var(--neu-bg);color:var(--neu-text-muted);font-size:12px;border:1px solid var(--neu-border);box-shadow:3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light);'}
@@ -188,7 +188,7 @@ const FILTER_TABS = [
 					</div>
 					<BorderedList>
 						{#each unreadGroup as n (n.id)}
-							<NotifRow notif={n} onRead={markSingleRead} onRemove={remove} />
+							<NotificationRow notif={n} onRead={markSingleRead} onRemove={remove} />
 						{/each}
 					</BorderedList>
 				{/if}
@@ -201,7 +201,7 @@ const FILTER_TABS = [
 					</div>
 					<BorderedList>
 						{#each readGroup as n (n.id)}
-							<NotifRow notif={n} onRead={markSingleRead} onRemove={remove} />
+							<NotificationRow notif={n} onRead={markSingleRead} onRemove={remove} />
 						{/each}
 					</BorderedList>
 				{/if}
@@ -224,7 +224,7 @@ const FILTER_TABS = [
 			<RailSection title="今日概览">
 				<div class="flex items-baseline gap-1.5 mb-3">
 					<span class="text-[var(--neu-text)] text-[30px] font-semibold leading-none">{unread}</span>
-					<span class="text-[var(--neu-text-muted)] text-[11px]">条未读 · 共 {notifs.length} 条</span>
+					<span class="text-[var(--neu-text-muted)] text-[11px]">条未读 · 共 {notifications.length} 条</span>
 				</div>
 				<div class="flex flex-col gap-2">
 					{#each typeStats as { type, count }}
@@ -247,7 +247,7 @@ const FILTER_TABS = [
 
 			<RailSection title="新关注你的人" action="全部" onAction={() => void goto(`${ROUTES.meSection('relationships')}?tab=followers`)}>
 				<div class="flex flex-col gap-3">
-					{#each notifs.filter((n) => n.type === 'follow').slice(0, 3) as n (n.id)}
+					{#each notifications.filter((n) => n.type === 'follow').slice(0, 3) as n (n.id)}
 						<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.time}>
 							{#snippet trailing()}
 								<button type="button" class="neu-hover-btn px-2.5 py-1 rounded-full outline-none flex-shrink-0 bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] text-[11px]" style="border:1px solid var(--neu-accent-soft-border);">
@@ -261,7 +261,7 @@ const FILTER_TABS = [
 
 			<RailSection title="此刻附近" action="查看" onAction={() => void goto(ROUTES.nearbyPeople)}>
 				<div class="flex flex-col gap-3">
-					{#each notifs.filter((n) => n.type === 'nearby').slice(0, 3) as n (n.id)}
+					{#each notifications.filter((n) => n.type === 'nearby').slice(0, 3) as n (n.id)}
 						<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.text} />
 					{/each}
 				</div>

@@ -35,7 +35,7 @@
 		{ id: 'home', icon: Home, label: '首页', path: ROUTES.home },
 		{ id: 'nearby-people', icon: Users, label: '附近的人', path: ROUTES.nearbyPeople },
 		{ id: 'nearby-groups', icon: UserRound, label: '附近群组', path: ROUTES.nearbyGroups },
-		{ id: 'nearby-activity', icon: Rss, label: '附近瞬间', path: ROUTES.nearbyMoments }
+		{ id: 'nearby-moments', icon: Rss, label: '附近瞬间', path: ROUTES.nearbyMoments }
 	];
 
 	const PERSONAL_NAV: NavItem[] = [
@@ -47,8 +47,8 @@
 
 	const LAST_DESKTOP_NAV_KEY = 'hotspot:last-desktop-nav';
 	const DESKTOP_NAV_IDS: DesktopNavId[] = [
-		'home', 'nearby-people', 'nearby-groups', 'nearby-activity',
-		'messages', 'notifications', 'moments', 'my-groups', 'relationships'
+		'home', 'nearby-people', 'nearby-groups', 'nearby-moments',
+		'messages', 'moments', 'my-groups', 'relationships'
 	];
 
 	function readLastDesktopNav(): DesktopNavId | null {
@@ -150,6 +150,7 @@
 				onClick={() => void goto(ROUTES.search)}
 				variant="ghost"
 				size={36}
+				class="neu-header-action"
 			/>
 
 			<ActionIconButton
@@ -164,13 +165,14 @@
 				}}
 				variant="ghost"
 				size={36}
+				class="neu-header-action"
 			/>
 
-			<ActionIconButton icon={Bell} label="通知" onClick={() => guardNav('查看通知', ROUTES.notify)} variant="ghost" size={36} />
+			<ActionIconButton icon={Bell} label="通知" onClick={() => guardNav('查看通知', ROUTES.notifications)} variant="ghost" size={36} class="neu-header-action" />
 
 			<AppearanceMenu />
 
-			<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} variant="ghost" size={36} />
+			<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} variant="ghost" size={36} class="neu-header-action" />
 
 			{#if auth.user}
 				<button
