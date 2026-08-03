@@ -202,7 +202,7 @@
 				</div>
 			{:else}
 				<div class="h-full">
-					<EmptyState title="选择一个会话" description="从左侧选择联系人开始聊天" class="h-full justify-center !py-0" iconSize={72}>
+					<EmptyState title="选择一个会话" description="从左侧选择联系人开始聊天" class="h-full justify-center py-0!" iconSize={72}>
 						{#snippet icon()}
 							<MessageSquareDashed style="width:28px;height:28px;color:var(--neu-text-muted);opacity:0.5;" strokeWidth={1.25} />
 						{/snippet}
@@ -297,7 +297,7 @@
 
 		<!-- 列表：无外层容器，EmbeddedList 直接裸排（对齐 Figma） -->
 		{#if filtered.length === 0}
-			<EmptyState bare class="!py-12" title="没有找到会话">
+			<EmptyState bare class="py-12!" title="没有找到会话">
 				{#snippet icon()}
 					<MessageSquareDashed style="width:36px;height:36px;color:var(--neu-text-muted);opacity:0.5;" strokeWidth={1.25} />
 				{/snippet}

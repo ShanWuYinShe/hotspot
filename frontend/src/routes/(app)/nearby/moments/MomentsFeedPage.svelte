@@ -295,7 +295,7 @@
 		{/snippet}
 	</PageHeader>
 
-	<ContentColumn maxWidth="560px" class="animate-fade-in !px-4 pt-3 pb-6">
+	<ContentColumn maxWidth="560px" class="animate-fade-in px-4! pt-3 pb-6">
 		<div class="mb-4">
 			{@render tagChips('overflow-x-auto')}
 		</div>
