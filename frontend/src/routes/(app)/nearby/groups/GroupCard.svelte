@@ -40,11 +40,8 @@
 	{#snippet footer()}
 		<div class="p-3">
 			<p class="line-clamp-1 text-[var(--neu-text)] text-[13px] font-semibold">{group.name}</p>
-			<p class="flex items-center gap-1 truncate text-[var(--neu-text-muted)] text-[10px] mt-1">
-				<CalendarDays size={10} />
-				{group.activity}
-			</p>
-			<div class="mt-2 flex items-center justify-between gap-2">
+			<!-- stats 行：头像堆叠 + 成员 / 距离（对齐 Figma GroupCard 行序） -->
+			<div class="mt-1 flex items-center justify-between gap-2 text-[var(--neu-text-muted)] text-[10px]">
 				<div class="flex items-center gap-1.5 min-w-0">
 					{#if group.avatars.length > 0}
 						<div class="flex -space-x-2 flex-shrink-0">
@@ -53,13 +50,22 @@
 							{/each}
 						</div>
 					{/if}
-					<span class="flex items-center gap-1 truncate text-[var(--neu-text-muted)] text-[10px]">
+					<span class="flex items-center gap-1 truncate">
 						<Users size={10} />
 						{group.members} 人
-						<MapPin size={10} class="ml-1" />
-						{group.distance}
 					</span>
 				</div>
+				<span class="flex items-center gap-1 flex-shrink-0 text-[var(--neu-accent-primary)]">
+					<MapPin size={10} />
+					{group.distance}
+				</span>
+			</div>
+			<!-- activity 独立行（对齐 Figma：semantic-online 色 + CalendarDays 图标） -->
+			<div class="mt-2 flex items-center justify-between gap-2">
+				<span class="min-w-0 truncate text-[var(--semantic-online)] text-[10px]">
+					<CalendarDays class="inline mr-1" style="width:10px;height:10px;" />
+					{group.activity}
+				</span>
 				<JoinButton {group} {onToggle} />
 			</div>
 		</div>

@@ -23,6 +23,7 @@
 	let {
 		title,
 		subtitle,
+		subtitleIcon,
 		onBack,
 		backLabel = '返回',
 		trailing,
@@ -34,11 +35,15 @@
 		titleSize = 18,
 		/** 副标题字号（对齐 Figma Make：多数页 12，PageHeader 默认 11）。 */
 		subtitleSize = 11,
+		/** glass：半透明毛玻璃背景（对齐 Figma nearby 页 sticky header）。 */
+		glass = false,
 		class: className = '',
 		contentClassName = ''
 	}: {
 		title: string;
 		subtitle?: string;
+		/** 副标题行内小图标（对齐 Figma nearby/groups 的 MapPin 副标题）。 */
+		subtitleIcon?: Snippet;
 		onBack?: () => void;
 		backLabel?: string;
 		trailing?: Snippet;
@@ -48,6 +53,7 @@
 		maxWidth?: number | string;
 		titleSize?: number;
 		subtitleSize?: number;
+		glass?: boolean;
 		class?: string;
 		/** 内部 ContentColumn 的 className（默认 py-4；传 py-3 等可对齐 Figma 手写 header） */
 		contentClassName?: string;
@@ -58,7 +64,9 @@
 
 <header
 	class={cn('shrink-0', sticky && 'sticky top-0 z-20', className)}
-	style="background-color:var(--page-bg);border-bottom:1px solid var(--neu-border);"
+	style={glass
+		? 'background-color:color-mix(in srgb, var(--neu-bg) 92%, transparent);backdrop-filter:blur(16px);border-bottom:1px solid var(--neu-border);'
+		: 'background-color:var(--page-bg);border-bottom:1px solid var(--neu-border);'}
 >
 	<ContentColumn {maxWidth} class={cn('py-4', contentClassName)}>
 		<div class="flex items-center gap-3">
@@ -68,7 +76,12 @@
 			<div class={cn('min-w-0', trailing ? '' : 'flex-1')}>
 				<h1 class="text-[var(--neu-text)] font-medium leading-none" style="font-size:{titleSize}px;">{title}</h1>
 				{#if subtitle}
-					<p class="mt-1 text-[var(--neu-text-muted)]" style="font-size:{subtitleSize}px;">{subtitle}</p>
+					<p class="mt-1 flex items-center gap-1 text-[var(--neu-text-muted)]" style="font-size:{subtitleSize}px;">
+						{#if subtitleIcon}
+							{@render subtitleIcon()}
+						{/if}
+						{subtitle}
+					</p>
 				{/if}
 			</div>
 			{#if trailing}

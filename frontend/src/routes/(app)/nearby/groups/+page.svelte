@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Users } from '@lucide/svelte';
+	import { MapPin, Users } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { platformStore } from '@/stores/platform.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
@@ -86,15 +86,16 @@
 	contentMaxWidth={isTablet ? '964px' : isDesktop ? '1152px' : '680px'}
 >
 	{#snippet header()}
-		<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} sticky onBack={() => history.back()}>
-			{#snippet trailing()}
-				<div class="hidden sm:flex flex-1 max-w-sm">
-					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" class="px-3 py-2" />
-				</div>
+		<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} sticky glass onBack={() => history.back()}>
+			{#snippet subtitleIcon()}
+				<MapPin style="width:10px;height:10px;color:var(--neu-accent-primary);" strokeWidth={1.8} />
 			{/snippet}
 			{#snippet below()}
-				<!-- 分类标签（sticky header 内常驻，对齐 Figma Make NearbyGroupsPage） -->
-				<div class="flex gap-1.5 overflow-x-auto no-scrollbar pt-3">
+				<!-- 搜索框（全设备全宽，对齐 Figma） + 分类标签：同处 sticky header 内 -->
+				<div class="mt-3">
+					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" class="px-3.5 py-2" />
+				</div>
+				<div class="flex gap-1.5 overflow-x-auto no-scrollbar mt-3">
 					{#each CATEGORIES as category}
 						<TagPill active={activeCategory === category} onClick={() => (activeCategory = category)}>{category}</TagPill>
 					{/each}
@@ -102,12 +103,6 @@
 			{/snippet}
 		</PageHeader>
 	{/snippet}
-
-	{#if !isDesktop}
-		<div class="sm:hidden -mt-2 pb-2">
-			<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" class="px-3 py-2" />
-		</div>
-	{/if}
 
 	<div class="min-w-0">
 		{#if loading}
@@ -156,9 +151,9 @@
 				</div>
 			{/if}
 		{:else}
-			<EmptyState title="没有找到相关群组">
+			<EmptyState bare title="没有找到相关群组">
 				{#snippet icon()}
-					<Users size={32} color="var(--neu-text-muted)" />
+					<Users size={40} color="var(--neu-text-muted)" opacity={0.4} />
 				{/snippet}
 			</EmptyState>
 		{/if}

@@ -101,20 +101,20 @@
 	contentMaxWidth={isTablet ? '964px' : isDesktop ? '1152px' : '680px'}
 >
 	{#snippet header()}
-		<PageHeader title="附近的人" subtitle="徐州 · 5km 内 · 每 3 分钟刷新" sticky onBack={() => history.back()}>
+		<PageHeader title="附近的人" subtitle="徐州 · 5km 内 · 每 3 分钟刷新" sticky glass onBack={() => history.back()}>
 			{#snippet trailing()}
 				<div class="hidden sm:flex flex-1 max-w-sm ml-3">
 					<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或此刻状态" class="px-3 py-2" />
 				</div>
 			{/snippet}
+			{#snippet below()}
+				<!-- 移动端搜索框：与标题同处 sticky header 内（对齐 Figma NearbyPeoplePage） -->
+				<div class="sm:hidden mt-3">
+					<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或状态" class="px-3 py-2" />
+				</div>
+			{/snippet}
 		</PageHeader>
 	{/snippet}
-
-	{#if !isDesktop}
-		<div class="sm:hidden -mt-2 pb-2">
-			<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或状态" class="px-3 py-2" />
-		</div>
-	{/if}
 
 	<div class={isTablet ? 'grid gap-6' : ''}>
 		<div class="min-w-0">
@@ -126,7 +126,7 @@
 							type="button"
 							onclick={() => (sort = option)}
 							aria-pressed={sort === option}
-							class="px-3.5 py-1 rounded-full outline-none transition-colors text-xs focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] {sort === option ? 'bg-[var(--neu-accent-primary)] text-white font-semibold' : 'neu-surface-ghost text-[var(--neu-text-muted)]'}"
+							class="px-3.5 py-1 rounded-full outline-none transition-colors text-xs focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] {sort === option ? 'bg-[var(--neu-accent-primary)] text-white font-semibold' : 'text-[var(--neu-text-muted)]'}"
 						>
 							{option}
 						</button>
@@ -175,9 +175,9 @@
 					</div>
 				{/if}
 			{:else}
-				<EmptyState title="没有找到匹配的附近用户">
+				<EmptyState bare title="没有找到匹配的附近用户">
 					{#snippet icon()}
-						<Users size={24} color="var(--neu-text-muted)" opacity={0.4} />
+						<Users size={40} color="var(--neu-text-muted)" opacity={0.4} />
 					{/snippet}
 				</EmptyState>
 			{/if}

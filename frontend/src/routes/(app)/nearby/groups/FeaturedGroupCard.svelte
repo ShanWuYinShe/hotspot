@@ -34,22 +34,26 @@
 	{#snippet footer()}
 		<div class="p-4">
 			<p class="text-[var(--neu-text)] text-lg font-semibold">{group.name}</p>
-			<p class="truncate text-[var(--neu-text-muted)] text-[11px] mt-[3px]">{group.desc}</p>
-			<div class="mt-2.5 flex items-center justify-between gap-2">
-				<div class="flex items-center gap-3 text-[var(--neu-text-muted)] text-[11px] min-w-0">
-					<span class="flex items-center gap-1 flex-shrink-0">
-						<Users size={12} />
-						{group.members}
-					</span>
-					<span class="flex items-center gap-1 flex-shrink-0 text-[var(--status-online)]">
-						<span class="rounded-full" style="width:6px;height:6px;background:var(--status-online);"></span>
-						{group.online} 在线
-					</span>
-					<span class="flex-shrink-0">{group.distance}</span>
-					<span class="flex items-center gap-1 truncate text-[var(--neu-accent-primary)]">
-						<CalendarDays size={12} />
+			<p class="truncate text-[var(--neu-text-muted)] text-[11px] mt-1">{group.desc}</p>
+			<div class="mt-3 flex items-center gap-3">
+				<div class="min-w-0 flex-1">
+					<!-- stats 行：成员 / 在线 / 距离（对齐 Figma FeaturedGroupCard） -->
+					<div class="flex items-center gap-3 text-[var(--neu-text-muted)] text-[11px]">
+						<span class="flex items-center gap-1 flex-shrink-0">
+							<Users size={12} />
+							{group.members}
+						</span>
+						<span class="flex items-center gap-1 flex-shrink-0 text-[var(--status-online)]">
+							<span class="rounded-full" style="width:6px;height:6px;background:var(--status-online);"></span>
+							{group.online} 在线
+						</span>
+						<span class="flex-shrink-0">{group.distance}</span>
+					</div>
+					<!-- activity 独立 accent 行（对齐 Figma：与 stats 行分离） -->
+					<p class="mt-2 truncate text-[11px] text-[var(--neu-accent-primary)]">
+						<CalendarDays class="inline mr-1" style="width:12px;height:12px;" />
 						{group.activity}
-					</span>
+					</p>
 				</div>
 				<JoinButton {group} {onToggle} />
 			</div>
