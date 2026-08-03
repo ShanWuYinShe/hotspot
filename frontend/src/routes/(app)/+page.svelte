@@ -22,8 +22,10 @@
 	import { ROUTES } from '@/lib/routes';
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 
-	// 首页「附近」：Hero 统计 + 附近用户雷达条 + 话题活动 + 群组轮播 + 推荐列表。
-	// 迁移自旧版 NearbyFeedPage（mobile/desktop 双版本）。
+	// 首页「附近」：Hero 统计 + 话题活动 + 群组轮播 + 推荐列表。
+	// 三端共用同一套业务组件，仅外层 wrapper 按平台区分布局。
+	// 桌面：左侧 340px 摘要栏 + 右侧完整用户列表（2 栏 grid）。
+	// 移动/平板：单栏堆叠 + 宽平板右栏陪伴卡。
 
 	// ── 数据获取（原 useEffect + Promise.all + cancelled 竞态）────────
 	let nearbyUsers = $state<NearbyUser[]>([]);
@@ -44,9 +46,6 @@
 	});
 
 	$effect(() => {
-		// spec: feed/nearby_users + feed/nearby_groups — reference_point is
-		// optional — server resolves it via fallback chain (explicit → last known
-		// location → ClientConfig.default_location). 有 point 就传、没有就不传照常请求。
 		let cancelled = false;
 		async function fetchData() {
 			try {
@@ -56,7 +55,6 @@
 				if (referencePoint) searchParams.reference_point = referencePoint;
 				const [trendingRes, nearbyUsersRes, nearbyGroupsRes] = await Promise.all([
 					getTrending().catch(() => ({ code: -1, data: null })),
-					// feed/nearby_users is auth-optional, so anonymous users still see nearby users.
 					getNearbyUsers(searchParams).catch(() => ({ code: -1, data: { items: [] } })),
 					getNearbyGroups(searchParams).catch(() => ({ code: -1, data: { items: [] } }))
 				]);
@@ -67,7 +65,6 @@
 				const nearbyGroupsData = (nearbyGroupsRes.code === 0 ? nearbyGroupsRes.data : null) as any;
 
 				if (trendingData) {
-					// spec: TrendingBundle.hot_moments: MomentItem[]
 					const acts: Activity[] = (trendingData.hot_moments || []).map((a: any, i: number) => ({
 						id: i + 1,
 						icon: [Coffee, Music, Users, Star][i % 4],
@@ -85,7 +82,6 @@
 				}
 
 				if (nearbyUsersData) {
-					// spec: feed/nearby_users → UserItem
 					const users: NearbyUser[] = nearbyUsersData.items.map((u: any) => ({
 						id: u.user?.user_id ?? '',
 						name: u.user?.nickname ?? '',
@@ -98,14 +94,12 @@
 				}
 
 				if (nearbyGroupsData) {
-					// spec: feed/nearby_groups → GroupItem
 					const groups: NearbyGroup[] = nearbyGroupsData.items.map((g: any) => ({
 						id: g.group?.group_id ?? '',
 						name: g.group?.name ?? '',
 						members: g.group?.members_count ?? 0,
 						banner: g.group?.avatar_url ?? '',
 						distance: g.location?.distance ?? '',
-						// join_method 在 GroupItem 顶层；invite_only/password 视为私密
 						privacy: g.join_method === 'invite_only' || g.join_method === 'password' ? 'private' : 'public'
 					}));
 					nearbyGroups = groups;
@@ -122,7 +116,6 @@
 		};
 	});
 
-	// ── 共享状态：关注开关 ──────────────────────────────────────────
 	let followingIds = $state<Set<string>>(new Set());
 	const toggleFollow = (id: string) => {
 		const n = new Set(followingIds);
@@ -130,20 +123,32 @@
 		followingIds = n;
 	};
 	const onlineCount = $derived(nearbyUsers.filter((u) => u.status === '在线').length);
-	// hero 统计由已请求的 feed 数据推导（spec 无专用统计端点）
 	const heroStats = $derived({
 		nearby: String(nearbyUsers.length),
 		active: String(activities.length),
 		online: String(onlineCount)
 	});
 
-	// ── 私有组件（旧版拆文件，此处直接内联函数式 Snippet）───────
 	const isTablet = $derived(platformStore.platform === 'tablet');
 	const isWideTablet = $derived(isTablet && platformStore.isWideTablet);
 </script>
 
+{#snippet homeContent()}
+	<!-- 三端共用的业务组件（只写一次） -->
+	<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} />
+	<div>
+		<SectionHead title="附近活动" />
+		<ActivityList items={activities} onClick={(id) => void goto(ROUTES.event(id))} />
+	</div>
+	<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
+	<div>
+		<SectionHead title="人物推荐" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
+		<NearbyUsersFlatList users={nearbyUsers} followingIds={followingIds} onToggle={toggleFollow} />
+	</div>
+{/snippet}
+
 {#if platformStore.platform !== 'mobile'}
-	<!-- ═══ Desktop Home — 2-column with clear hierarchy ═══ -->
+	<!-- ═══ Desktop/Tablet Home — header + 2-column ═══ -->
 	<div class="content-mode-wide flex flex-col h-full">
 		<div
 			class="flex-shrink-0 flex items-center justify-between px-5 sm:px-7 py-4"
@@ -172,7 +177,7 @@
 				<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
 			</div>
 
-			<!-- Right: full nearby-users list（对齐 Figma：仅 NearbyUsersFlatList，无 PeopleRadarStrip） -->
+			<!-- Right: full nearby-users list -->
 			<div class="flex-1 overflow-y-auto no-scrollbar p-5 sm:p-6">
 				<div class="flex items-end justify-between mb-5">
 					<div>
@@ -198,7 +203,7 @@
 		</div>
 	</div>
 {:else}
-	<!-- ═══ Mobile/Tablet Home ═══ -->
+	<!-- ═══ Mobile/Tablet Home — single column ═══ -->
 	<div class="sticky top-0 z-10 py-3 bg-[var(--neu-bg)]" style="border-bottom:1px solid var(--neu-border);">
 		<ContentColumn maxWidth={isTablet ? '924px' : undefined} class={isTablet ? 'flex gap-6' : 'flex'}>
 			<div
@@ -210,12 +215,10 @@
 					<p class="text-xs" style="color:var(--neu-text-muted);margin-top:2px;">发现周边有趣的人和事</p>
 				</div>
 				<div class="flex items-center gap-2">
-					<!-- 城市徽标（对齐 Figma HomeMobile：非交互 div + 绿点 + 文字，无 MapPin 图标） -->
 					<div class="flex items-center gap-1.5 py-1.5 px-3 rounded-full neu-surface-flat">
 						<span class="rounded-full" style="width:6px;height:6px;background:var(--semantic-online);"></span>
 						<span style="font-size:11px;color:var(--neu-text-muted);">徐州</span>
 					</div>
-					<!-- 搜索按钮（对齐 Figma HomeMobile size-8 圆形搜索，图标 16px） -->
 					<button
 						type="button"
 						class="neu-hover-btn flex size-8 items-center justify-center rounded-full border cursor-pointer transition-colors hover:bg-[var(--neu-accent-soft)]"
@@ -228,32 +231,21 @@
 				</div>
 			</div>
 			{#if isWideTablet}
-				<!-- 宽平板右栏占位（与正文区 TabletRail 对齐 gutter） -->
 				<div class="hidden lg:block flex-shrink-0" style="width:var(--context-rail-width);"></div>
 			{/if}
 		</ContentColumn>
 
-	<ContentColumn
-		maxWidth={isTablet ? '924px' : undefined}
-		class="animate-fade-in {isTablet ? 'flex gap-6 pt-5 pb-8' : 'flex flex-col pt-5 pb-8 gap-7'}"
-	>
-		<div
-			class="{isTablet ? 'flex flex-col gap-7 px-5 min-w-0' : 'flex flex-col gap-7 w-full'}"
-			style={isTablet ? 'max-width:600px;margin-left:auto;margin-right:auto;width:100%;' : ''}
+		<ContentColumn
+			maxWidth={isTablet ? '924px' : undefined}
+			class="animate-fade-in {isTablet ? 'flex gap-6 pt-5 pb-8' : 'flex flex-col pt-5 pb-8 gap-7'}"
 		>
-			<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} />
-			<div>
-				<SectionHead title="附近活动" />
-				<ActivityList items={activities} onClick={(id) => void goto(ROUTES.event(id))} />
-			</div>
-			<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
-			<div>
-					<SectionHead title="人物推荐" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
-					<NearbyUsersFlatList users={nearbyUsers.slice(0, 4)} followingIds={followingIds} onToggle={toggleFollow} />
-				</div>
+			<div
+				class="{isTablet ? 'flex flex-col gap-7 px-5 min-w-0' : 'flex flex-col gap-7 w-full'}"
+				style={isTablet ? 'max-width:600px;margin-left:auto;margin-right:auto;width:100%;' : ''}
+			>
+				{@render homeContent()}
 			</div>
 			{#if isWideTablet}
-				<!-- 宽平板右栏陪伴卡（对齐 Figma Make HomeMobile showTabletRail） -->
 				<div class="hidden lg:block flex-shrink-0" style="width:var(--context-rail-width);">
 					<TabletRail>
 						<NearbyPulseCard />
