@@ -3,7 +3,6 @@
 	import { MapPin, Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Send, Link2, Check } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
-	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
 	import { auth } from '@/stores/auth.svelte';
@@ -213,7 +212,7 @@
 {#snippet main()}
 	<div class="flex flex-col bg-[var(--neu-bg)]" style="height:100%;">
 		<!-- Header -->
-		<PageHeader title="动态详情" titleSize={16} contentClassName="py-3" maxWidth="680px" onBack={() => history.back()} class="flex-shrink-0 border-b border-[var(--neu-border)]">
+		<PageHeader title="动态详情" titleSize={16} contentClassName="px-4 py-3" onBack={() => history.back()} class="flex-shrink-0 border-b border-[var(--neu-border)]">
 			{#snippet trailing()}
 				<DropdownMenu.Root bind:open={moreOpen}>
 					<div bind:this={moreMenuEl} class="relative">
@@ -253,7 +252,7 @@
 				</div>
 			</div>
 
-			<ContentColumn maxWidth="680px" class="pt-4 pb-3">
+			<div class="px-5 pt-4 pb-3">
 				<!-- Author -->
 				<div class="flex items-center gap-3 mb-3">
 					<button
@@ -345,7 +344,7 @@
 					{/each}
 				</div>
 				<div style="height:80px;"></div>
-			</ContentColumn>
+			</div>
 		</div>
 
 		<!-- Input bar -->

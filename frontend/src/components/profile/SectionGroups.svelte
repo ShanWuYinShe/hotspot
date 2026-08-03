@@ -17,7 +17,7 @@
 
 <div class="no-scrollbar flex flex-1 flex-col overflow-y-auto">
 	<!-- 搜索 + 统计行（对齐 Figma SectionGroups header） -->
-	<div class="shrink-0 px-[var(--page-gutter)] pt-4 pb-3">
+	<div class="shrink-0 px-5 pt-4 pb-3">
 		<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索我的群组…" class="px-3.5 py-2.5" />
 		<div class="mt-3 flex items-center justify-between">
 			<p class="text-[12px] text-[var(--neu-text-muted)]">共 {groups.length} 个群组</p>
@@ -29,7 +29,7 @@
 	</div>
 
 	<!-- 横向媒体卡网格（对齐 Figma：1/2 列，min-h 148px，左 banner + 右详情） -->
-	<div class="grid grid-cols-1 gap-3 px-[var(--page-gutter)] pb-6 sm:grid-cols-2">
+	<div class="grid grid-cols-1 gap-3 px-5 pb-6 sm:grid-cols-2">
 		{#each filtered as g (g.id)}
 			<button
 				type="button"
@@ -88,7 +88,7 @@
 	</div>
 
 	{#if filtered.length === 0}
-		<div class="flex flex-1 flex-col items-center justify-center gap-2 px-[var(--page-gutter)] py-16">
+		<div class="flex flex-1 flex-col items-center justify-center gap-2 px-5 py-16">
 			<Search class="text-[var(--neu-text-muted)]" style="width:22px;height:22px;" strokeWidth={1.4} />
 			<p class="text-[13px] text-[var(--neu-text-muted)]">没有找到匹配的群组</p>
 		</div>

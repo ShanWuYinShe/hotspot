@@ -68,7 +68,7 @@
 	};
 </script>
 
-<StandardPageLayout contentClassName="pt-4 pb-10" contentMaxWidth="var(--content-reading-max)">
+<StandardPageLayout contentClassName="py-5 pb-10">
 	{#snippet header()}
 		<PageHeader title="编辑资料" onBack={() => history.back()} sticky={false}>
 	{#snippet trailing()}

@@ -34,8 +34,6 @@ const FILTER_TABS = [
 	// WS 推送（ws:notify）到来时 +1，触发下方加载 effect 重新拉取通知与未读。
 	let reloadKey = $state(0);
 
-	const isDesktop = $derived(platformStore.platform === 'desktop');
-
 	// WS 实时通知：收到推送后重新拉取列表（复用下方同一加载逻辑）。
 	$effect(() => {
 		const onNotify = () => {
@@ -141,7 +139,6 @@ const FILTER_TABS = [
 				titleSize={20}
 				subtitleSize={12}
 				contentClassName="pt-4 pb-0"
-				maxWidth={isDesktop ? 'var(--content-reading-max)' : '640px'}
 				onBack={() => history.back()}
 				subtitle={unread > 0 ? `${unread} 条未读` : undefined}
 			>
@@ -179,7 +176,7 @@ const FILTER_TABS = [
 				{/snippet}
 			</PageHeader>
 
-			<ContentColumn maxWidth={isDesktop ? 'var(--content-reading-max)' : '640px'} class="pt-3 pb-6">
+			<ContentColumn class="pt-3 pb-6">
 				<!-- List：每个分组一个连接列表表面（BorderedList 契约；heading 在列表外） -->
 				<div class="flex flex-col">
 				{#if unreadGroup.length > 0}

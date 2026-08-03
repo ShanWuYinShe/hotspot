@@ -13,7 +13,6 @@
 	import { createFeedInteractions, type FeedItem } from '@/components/moments/feed-interactions.svelte';
 	import { getFeedNearby } from '@/api';
 	import { ROUTES } from '@/lib/routes';
-	import { nearbyContentMaxWidth } from '@/lib/nearby-layout';
 
 	// 发现流（首页与 /nearby/moments 共用）：移动单列 / 平板双列 / 桌面
 	// BSP 卡片墙。头部与附近的人对齐：标题+返回 / 搜索，下一行分类 Tab + tag 列表。
@@ -125,7 +124,6 @@
 		sticky
 		titleSize={platform === 'desktop' ? 20 : platform === 'tablet' ? 24 : 22}
 		contentClassName="pt-4 pb-0"
-		maxWidth={nearbyContentMaxWidth(platform)}
 		onBack={() => history.back()}
 	>
 		{#snippet trailing()}
@@ -204,7 +202,7 @@
 		<div class="flex flex-1 min-h-0 overflow-hidden">
 			<!-- Main feed -->
 			<div class="flex-1 overflow-y-auto no-scrollbar">
-				<ContentColumn maxWidth={nearbyContentMaxWidth(platform)} class="pt-4 pb-6">
+				<ContentColumn class="pt-4 pb-6">
 					<div class="mb-5">
 						{@render tagChips('flex-wrap')}
 					</div>
@@ -245,7 +243,7 @@
 	<!-- ═══ Tablet Discover — 统一 PageHeader + content ═══ -->
 	{@render discoverHeader()}
 
-	<ContentColumn maxWidth={nearbyContentMaxWidth(platform)} class="animate-fade-in pt-4 pb-6">
+	<ContentColumn class="animate-fade-in pt-4 pb-6">
 		<div class="min-w-0">
 			<div class="mb-5">
 				{@render tagChips('overflow-x-auto')}
@@ -283,10 +281,10 @@
 		</div>
 	</ContentColumn>
 {:else}
-	<!-- ═══ Mobile Discover — 统一 PageHeader + 内容列（与附近的人/群组同宽契约）═══ -->
+	<!-- ═══ Mobile Discover — 统一 PageHeader + 560px 居中内容 ═══ -->
 	{@render discoverHeader()}
 
-	<ContentColumn maxWidth={nearbyContentMaxWidth(platform)} class="animate-fade-in pt-4 pb-6">
+	<ContentColumn maxWidth="560px" class="animate-fade-in pt-4 pb-6">
 		<div class="mb-4">
 			{@render tagChips('overflow-x-auto')}
 		</div>

@@ -30,7 +30,7 @@
 <div class="flex-1 overflow-y-auto no-scrollbar flex flex-col">
 	{#if !embedded}
 		<!-- Header -->
-		<div class="flex items-center justify-between px-[var(--page-gutter)] py-4 flex-shrink-0" style="border-bottom:1px solid var(--neu-border);">
+		<div class="flex items-center justify-between px-5 py-4 flex-shrink-0" style="border-bottom:1px solid var(--neu-border);">
 			<div>
 				<div class="flex items-center gap-2.5">
 					<span class="text-[var(--neu-text)] text-[15px]">好友</span>
@@ -46,12 +46,12 @@
 	{/if}
 
 	<!-- Search -->
-	<div class="px-[var(--page-gutter)] pt-4 pb-2 flex-shrink-0">
+	<div class="{embedded ? 'px-6 lg:px-8' : 'px-5'} pt-4 pb-2 flex-shrink-0">
 		<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索好友…" class="px-3 py-2" />
 	</div>
 
 	<!-- Filter pills -->
-	<div class="flex gap-2 px-[var(--page-gutter)] pb-4 flex-shrink-0">
+	<div class="flex gap-2 {embedded ? 'px-6 lg:px-8' : 'px-5'} pb-4 flex-shrink-0">
 		{#each [{ id: 'all', label: '全部' }, { id: 'online', label: '在线' }, { id: 'offline', label: '离线' }] as pill}
 			<button
 				type="button"
@@ -66,7 +66,7 @@
 
 	<!-- Friend list（连接列表契约：BorderedList + InteractiveListRow，行不设独立边框） -->
 	{#if embedded}
-		<div class="grid w-full grid-cols-1 gap-4 px-[var(--page-gutter)] pb-8 md:grid-cols-2 xl:grid-cols-3">
+		<div class="grid w-full grid-cols-1 gap-4 px-6 pb-8 md:grid-cols-2 lg:px-8 xl:grid-cols-3">
 			{#each filtered as f (f.id)}
 				<InteractiveListRow tone="card" class="flex items-center gap-3 p-3.5 cursor-pointer"
 					onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
@@ -77,7 +77,7 @@
 			{/each}
 		</div>
 	{:else}
-		<div class="flex flex-col gap-3 px-[var(--page-gutter)] pb-6">
+		<div class="flex flex-col gap-3 px-5 pb-6">
 			{#if filtered.length === 0}
 				<EmptyState title="还没有好友" description="去附近的人里认识新朋友。">
 					{#snippet icon()}

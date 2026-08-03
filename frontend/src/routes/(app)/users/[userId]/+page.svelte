@@ -3,7 +3,6 @@
 	import { MapPin, MessageCircle, UserPlus, UserCheck, Share2, Heart, Grid3X3, Bookmark, MoreHorizontal, Flag, PencilLine, UserX, X, Check, ArrowLeft } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import DesktopDetailSplit from '@/components/layout/desktop/DesktopDetailSplit.svelte';
-	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import RailSection from '@/components/layout/desktop/RailSection.svelte';
 	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
 	import RailLocationMini from '@/components/layout/desktop/RailLocationMini.svelte';
@@ -229,8 +228,7 @@
 		</div>
 
 		<!-- Avatar + info — constrained width, centered -->
-		<ContentColumn maxWidth="560px">
-			<div class="-mt-10 pb-4 flex flex-col">
+		<div class="px-5 -mt-10 pb-4 flex flex-col">
 				<div class="flex items-end justify-between mb-3">
 					<div class="relative">
 						<div class="rounded-[22px] overflow-hidden" style="width:76px;height:76px;border:3px solid var(--neu-bg);box-shadow:0 6px 20px rgba(0,0,0,0.22);">
@@ -305,13 +303,12 @@
 								{/if}
 								<span class="text-[var(--neu-text)] text-[22px]">{s.v}</span>
 								<span class="uppercase mt-1 text-[var(--neu-text-muted)] text-[9px]" style="letter-spacing:0.1em;">{s.label}</span>
-							</div>
-						{/each}
+								</div>
+							{/each}
+						</div>
 					</div>
-				</div>
-			</div>
 
-			<!-- Tabs -->
+				<!-- Tabs -->
 			<div class="flex" style="border-bottom:1px solid var(--neu-border);padding-left:16px;padding-right:16px;flex-shrink:0;">
 				{#each [{ id: 'posts', icon: Grid3X3, label: '帖子' }, { id: 'liked', icon: Heart, label: '喜欢' }, { id: 'saved', icon: Bookmark, label: '收藏' }] as t}
 					{@const active = activeTab === t.id}
@@ -342,10 +339,10 @@
 								</div>
 							</div>
 						{/if}
-					</div>
-				{/each}
-			</div>
-	</ContentColumn>
+						</div>
+					{/each}
+				</div>
+		</div>
 	</div>
 {/snippet}
 
