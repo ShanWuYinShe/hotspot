@@ -12,7 +12,6 @@
 	import UserCard, { type NearbyUser } from './UserCard.svelte';
 	import { getNearbyUsers } from '@/api';
 	import { ROUTES } from '@/lib/routes';
-	import { nearbyContentMaxWidth } from '@/lib/nearby-layout';
 
 	// 附近的人：排序/标签过滤 + BSP 卡片墙（桌面）/ 网格（移动/平板）。
 	// 迁移自旧版 NearbyPeoplePage。
@@ -97,12 +96,9 @@
 	};
 </script>
 
-<StandardPageLayout
-	contentClassName="py-5 sm:py-6"
-	contentMaxWidth={nearbyContentMaxWidth(platformStore.platform)}
->
+<StandardPageLayout contentClassName="py-5 sm:py-6">
 	{#snippet header()}
-		<PageHeader title="附近的人" subtitle="徐州 · 5km 内 · 每 3 分钟刷新" sticky glass contentClassName="pt-4 pb-0" maxWidth={nearbyContentMaxWidth(platformStore.platform)} onBack={() => history.back()}>
+		<PageHeader title="附近的人" subtitle="徐州 · 5km 内 · 每 3 分钟刷新" sticky glass contentClassName="pt-4 pb-0" onBack={() => history.back()}>
 			{#snippet trailing()}
 				<div class="hidden sm:flex flex-1 max-w-sm ml-3">
 					<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或此刻状态" class="px-3 py-2" />

@@ -5,6 +5,7 @@
 	import { platformStore } from '@/stores/platform.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import DesktopDetailSplit from '@/components/layout/desktop/DesktopDetailSplit.svelte';
+	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import RailSection from '@/components/layout/desktop/RailSection.svelte';
 	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
 	import RailLocationMini from '@/components/layout/desktop/RailLocationMini.svelte';
@@ -132,7 +133,7 @@
 			</div>
 
 			<!-- 内容 -->
-			<div class="tablet-content-fill px-5 pb-6 pt-4" style="max-width:640px;margin-left:auto;margin-right:auto;width:100%;">
+			<ContentColumn class="pt-4 pb-6">
 				<h1 class="text-[var(--neu-text)] text-[24px] mb-2">{ev.title}</h1>
 
 				<!-- meta 行 -->
@@ -213,11 +214,12 @@
 					<MapPin style="width:14px;height:14px;color:{ev.color};" strokeWidth={1.5} />
 					<span class="text-[13px] text-[var(--neu-text-muted)]">距你 {ev.distance} · 步行约 {walkMinutes} 分钟</span>
 				</div>
-			</div>
+		</ContentColumn>
 		</div>
 
-		<!-- sticky 底部 CTA -->
-		<div class="tablet-content-fill flex-shrink-0 px-5 pb-6 pt-3" style="background-color:var(--neu-bg);border-top:1px solid var(--neu-border);max-width:640px;margin-left:auto;margin-right:auto;width:100%;">
+		<!-- sticky 底部 CTA（按钮保持 640px 阅读宽度，页面布局全宽） -->
+		<div class="flex-shrink-0 px-[var(--page-gutter)] pb-6 pt-3" style="background-color:var(--neu-bg);border-top:1px solid var(--neu-border);">
+			<div class="mx-auto w-full" style="max-width:640px;">
 			<button
 				type="button"
 				onclick={() => (joined = !joined)}
@@ -234,6 +236,7 @@
 					立即报名参加
 				{/if}
 			</button>
+			</div>
 		</div>
 	</div>
 {/snippet}

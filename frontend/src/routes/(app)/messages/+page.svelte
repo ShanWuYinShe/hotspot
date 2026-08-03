@@ -270,7 +270,7 @@
 		{/snippet}
 	</PageHeader>
 
-	<ContentColumn maxWidth="640px" class="animate-fade-in flex flex-col pt-4 pb-4">
+	<ContentColumn class="animate-fade-in flex flex-col pt-4 pb-4">
 		{#if onlineChats.length > 0}
 			<div class="mb-4">
 				<p class="uppercase mb-2.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">在线</p>

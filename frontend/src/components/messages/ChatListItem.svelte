@@ -1,7 +1,13 @@
 <script lang="ts">
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 
-	// 会话列表项（迁移自旧版 MessagesPage 内 ChatListItem）。
+	// 会话列表项（对齐 Figma Make ConversationListItem 契约）：
+	//   - hover/focus-visible：--interactive-hover-fill 背景填充（无 !important，
+	//     选中项的内联 accent 背景在 hover 时保持不变 —— 这是与 neu-row-hover
+	//     关键区别：后者 !important 规则会破坏选中态）
+	//   - selected：accent 背景 + glow 阴影 + 反色文字（content-inverse 系列）
+	//     + border-inverse 头像框
+	//   - tap：按压 opacity 0.8 反馈；transition 150ms
 
 	export interface ChatItem {
 		id: number | string;
@@ -31,16 +37,15 @@
 
 <button
 	type="button"
-	data-active={isSelected}
 	aria-current={isSelected ? 'page' : undefined}
-	class="neu-hover-row app-list-row app-list-row--rich w-full cursor-pointer text-left outline-none neu-row-hover"
-	style="padding:{compact ? '10px 16px' : '12px 16px'};background:{isSelected ? 'var(--neu-accent-primary)' : 'var(--neu-bg)'};box-shadow:{isSelected ? '0 2px 10px var(--neu-glow)' : 'none'};"
+	class="group flex w-full cursor-pointer items-center gap-3.5 rounded-control px-4 text-left outline-none transition-colors duration-150 hover:bg-[var(--interactive-hover-fill)] focus-visible:bg-[var(--interactive-hover-fill)] active:opacity-80"
+	style="padding:{compact ? '10px 16px' : '12px 16px'};background:{isSelected ? 'var(--neu-accent-primary)' : 'transparent'};box-shadow:{isSelected ? '0 3px 12px var(--neu-glow)' : 'none'};"
 	onclick={onClick}
 >
 	<span class="relative flex-shrink-0">
 		<span
 			class="block overflow-hidden rounded-full"
-			style="width:{compact ? 40 : 44}px;height:{compact ? 40 : 44}px;border:{isSelected ? '2px solid white' : '1.5px solid var(--neu-border)'};"
+			style="width:{compact ? 40 : 44}px;height:{compact ? 40 : 44}px;border:{isSelected ? '1.5px solid var(--border-inverse)' : '1.5px solid var(--neu-border)'};"
 		>
 			<img src={chat.avatar} alt="" class="h-full w-full object-cover" />
 		</span>
@@ -51,14 +56,17 @@
 
 	<span class="min-w-0 flex-1">
 		<span class="mb-0.5 flex items-baseline justify-between">
-			<span class="{isSelected ? 'text-white' : 'text-[var(--neu-text)]'} text-sm" style="font-weight:{chat.unread > 0 || isSelected ? 600 : 400};">
+			<span
+				class="{isSelected ? 'text-[var(--content-inverse)]' : 'text-[var(--neu-text)]'} text-sm"
+				style="font-weight:{chat.unread > 0 || isSelected ? 600 : 400};"
+			>
 				{chat.name}
 			</span>
-			<span class="{isSelected ? 'text-white/80' : 'text-[var(--neu-text-muted)]'} text-[11px] shrink-0">
+			<span class="{isSelected ? 'text-[var(--content-inverse-muted)]' : 'text-[var(--neu-text-muted)]'} shrink-0 text-[11px]">
 				{chat.time}
 			</span>
 		</span>
-		<span class="block truncate pr-4 {isSelected ? 'text-white/75' : 'text-[var(--neu-text-muted)]'} text-xs">
+		<span class="block truncate pr-4 {isSelected ? 'text-[var(--content-inverse-secondary)]' : 'text-[var(--neu-text-muted)]'} text-xs">
 			{chat.lastMessage}
 		</span>
 	</span>

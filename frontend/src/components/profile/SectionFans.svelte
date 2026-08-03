@@ -42,7 +42,7 @@
 <div class="flex-1 overflow-y-auto no-scrollbar flex flex-col">
 	{#if !embedded}
 		<!-- Header -->
-		<div class="flex items-center justify-between px-5 py-4 flex-shrink-0" style="border-bottom:1px solid var(--neu-border);">
+		<div class="flex items-center justify-between px-[var(--page-gutter)] py-4 flex-shrink-0" style="border-bottom:1px solid var(--neu-border);">
 			<div>
 				<div class="flex items-center gap-2.5">
 					<span class="text-[var(--neu-text)] text-[15px]">粉丝</span>
@@ -63,7 +63,7 @@
 	{/if}
 
 	<!-- Stats row — flat joined cells -->
-	<div class="{embedded ? 'px-6 lg:px-8' : 'px-5'} py-3 flex-shrink-0">
+	<div class="px-[var(--page-gutter)] py-3 flex-shrink-0">
 		<DataDisplay
 			items={[
 				{ label: '总粉丝', value: followers.length },
@@ -74,7 +74,7 @@
 	</div>
 
 	<!-- Filter pills — ghost -->
-	<div class="flex gap-1.5 {embedded ? 'px-6 lg:px-8' : 'px-5'} pb-3 flex-shrink-0">
+	<div class="flex gap-1.5 px-[var(--page-gutter)] pb-3 flex-shrink-0">
 		{#each [{ id: 'all', label: '全部' }, { id: 'mutual', label: '互相关注' }, { id: 'pending', label: '待回关' }] as pill}
 			{@const active = fanFilter === pill.id}
 			<button
@@ -90,7 +90,7 @@
 
 		<!-- Fan list -->
 	{#if embedded}
-		<div class="grid w-full grid-cols-1 gap-4 px-6 pb-8 md:grid-cols-2 lg:px-8 xl:grid-cols-3">
+		<div class="grid w-full grid-cols-1 gap-4 px-[var(--page-gutter)] pb-8 md:grid-cols-2 xl:grid-cols-3">
 			{#if filtered.length === 0}
 				<div class="col-span-full">
 					<EmptyState title="还没有粉丝" description="分享你的瞬间，让更多人发现你。">
@@ -143,7 +143,7 @@
 				{/if}
 		</div>
 	{:else}
-		<div class="px-5 pb-6">
+		<div class="px-[var(--page-gutter)] pb-6">
 			{#if filtered.length === 0}
 				<EmptyState title="还没有粉丝" description="分享你的瞬间，让更多人发现你。">
 					{#snippet icon()}

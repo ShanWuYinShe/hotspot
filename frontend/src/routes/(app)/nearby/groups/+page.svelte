@@ -14,7 +14,6 @@
 	import { mapGroup, type Group } from './group-data';
 	import { getNearbyGroups } from '@/api';
 	import { ROUTES } from '@/lib/routes';
-	import { nearbyContentMaxWidth } from '@/lib/nearby-layout';
 
 	// 附近群组：分类过滤 + 精选卡 + 网格 / 桌面 BSP 卡片墙（对齐 Figma Make NearbyGroupsPage）。
 	// 迁移自旧版 NearbyGroupsPage。
@@ -82,12 +81,9 @@
 </script>
 
 
-<StandardPageLayout
-	contentClassName="py-5 sm:py-6"
-	contentMaxWidth={nearbyContentMaxWidth(platformStore.platform)}
->
+<StandardPageLayout contentClassName="py-5 sm:py-6">
 	{#snippet header()}
-		<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} sticky glass contentClassName="pt-4 pb-0" maxWidth={nearbyContentMaxWidth(platformStore.platform)} onBack={() => history.back()}>
+		<PageHeader title="附近群组" subtitle={`徐州 · 5km 内 · ${filtered.length} 个活跃群组`} sticky glass contentClassName="pt-4 pb-0" onBack={() => history.back()}>
 			{#snippet subtitleIcon()}
 				<MapPin style="width:10px;height:10px;color:var(--neu-accent-primary);" strokeWidth={1.8} />
 			{/snippet}

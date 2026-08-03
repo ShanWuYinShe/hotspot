@@ -165,7 +165,7 @@
 
 		<div class="flex flex-1 min-h-0 gap-0 overflow-hidden">
 			<!-- Left: hero + activity + groups (340px) -->
-			<div class="flex flex-col overflow-y-auto no-scrollbar gap-6 shrink-0 p-5 sm:p-6" style="width:340px;border-right:1px solid var(--neu-border);">
+			<div class="flex flex-col overflow-y-auto no-scrollbar gap-6 shrink-0 px-[var(--page-gutter)] py-6" style="width:340px;border-right:1px solid var(--neu-border);">
 				<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} />
 				<div>
 					<SectionHead title="附近活动" />
@@ -175,7 +175,7 @@
 			</div>
 
 			<!-- Right: full nearby-users list -->
-			<div class="flex-1 overflow-y-auto no-scrollbar p-5 sm:p-6">
+			<div class="flex-1 overflow-y-auto no-scrollbar px-[var(--page-gutter)] py-6">
 				<div class="flex items-end justify-between mb-5">
 					<div>
 						<span class="neu-eyebrow">附近的人</span>

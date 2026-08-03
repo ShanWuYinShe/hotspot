@@ -39,7 +39,7 @@
 </script>
 
 <div class="no-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
-	<div class="mx-auto w-full max-w-[1180px] px-5 pb-10 pt-7 sm:px-7 lg:px-10">
+	<div class="mx-auto w-full px-[var(--page-gutter)] pb-10 pt-7">
 		{#if archive.length === 0}
 			<!-- 空态 -->
 			<EmptyState title="这里还没有瞬间" description="从一次路过、一次相遇开始记录。">
