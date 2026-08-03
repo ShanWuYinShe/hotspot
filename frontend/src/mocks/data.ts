@@ -91,7 +91,7 @@ export const mockNearbyUsers = mockUsers.slice(0, 5).map((u, i) => ({
   user: u,
   presence_status: PRESENCES[i],
   last_online_at: isoDaysAgo(i + 1),
-  location: { point: { latitude: 34.25, longitude: 117.19 }, location_name: "云龙湖", distance: `${0.4 + i * 0.4}km` },
+  location: { point: { latitude: 34.25, longitude: 117.19 }, location_name: "云龙湖", distance: `${(0.4 + i * 0.4).toFixed(1)}km` },
   tags: [NEARBY_TAGS[i]],
 }));
 

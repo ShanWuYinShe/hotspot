@@ -8,8 +8,10 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * 距离展示格式化。spec RelativeLocation.distance 为 number（米），后端统一返回米；
  * mock 数据偶用字符串（如 "0.4km"），此处兼容两种形态避免 "0.4kmm" 类拼接错误。
+ * 数字统一四舍五入到 1 位小数，消除浮点伪影（如 0.4 * 3 → 1.2000000000000002）；
+ * spec 整数米数取整后原样输出。
  */
 export function formatDistance(d?: number | string | null): string {
   if (d == null) return '';
-  return typeof d === 'number' ? `${d}m` : d;
+  return typeof d === 'number' ? `${Math.round(d * 10) / 10}m` : d;
 }
