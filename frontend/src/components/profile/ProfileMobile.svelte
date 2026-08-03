@@ -33,7 +33,7 @@
 			<div class="border-b border-[var(--neu-border)]" style="background:var(--neu-bg);">
 				<ContentColumn class="flex items-center justify-between py-3">
 					<p class="text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--neu-accent-primary)]">个人资料</p>
-					<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} size={34} />
+					<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} variant="ghost" size={32} />
 				</ContentColumn>
 			</div>
 	{/snippet}
@@ -56,7 +56,7 @@
 							aria-label="更换头像"
 							onclick={() => void goto(ROUTES.meEdit)}
 							class="neu-hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-[var(--neu-accent-primary)] text-white"
-							style="width:26px;height:26px;border:2px solid var(--neu-bg);"
+							style="width:24px;height:24px;border:2px solid var(--neu-bg);"
 						>
 							<Camera style="width:13px;height:13px;" strokeWidth={2} />
 						</button>
@@ -108,7 +108,7 @@
 				style="background:var(--neu-bg);"
 				onclick={() => void goto(ROUTES.meSection(item.section))}
 			>
-				<span class="flex shrink-0 items-center justify-center rounded-[10px]" style="width:32px;height:32px;background:var(--neu-accent-soft);border:1px solid var(--neu-accent-soft-border);color:var(--neu-accent-primary);">
+				<span class="flex shrink-0 items-center justify-center" style="width:32px;height:32px;background:color-mix(in srgb, var(--neu-accent-primary) 6%, var(--neu-bg));color:var(--neu-accent-primary);">
 					<item.icon style="width:16px;height:16px;" strokeWidth={1.8} />
 				</span>
 				<span class="min-w-0 flex-1">

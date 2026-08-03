@@ -333,8 +333,8 @@
 			<!-- Gallery -->
 			<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:3px;padding:3px;">
 				{#each user.gallery as src, i}
-					<div class="neu-hover-btn relative cursor-pointer" style="aspect-ratio:1;overflow:hidden;">
-						<img src={src} alt={`photo ${i}`} class="w-full h-full object-cover" />
+					<div class="image-hover-frame relative cursor-pointer" style="aspect-ratio:1;overflow:hidden;">
+						<img src={src} alt={`photo ${i}`} class="image-hover-frame__image w-full h-full object-cover" />
 						{#if activeTab === 'liked'}
 							<div class="absolute inset-0 flex items-end justify-end p-1.5 bg-[var(--overlay-soft)]">
 								<div class="flex items-center justify-center rounded-full bg-[var(--neu-accent-primary)]" style="width:20px;height:20px;">

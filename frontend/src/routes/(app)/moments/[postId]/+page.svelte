@@ -213,7 +213,7 @@
 {#snippet main()}
 	<div class="flex flex-col bg-[var(--neu-bg)]" style="height:100%;">
 		<!-- Header -->
-		<PageHeader title="动态详情" titleSize={16} onBack={() => history.back()} class="flex-shrink-0 border-b border-[var(--neu-border)]">
+		<PageHeader title="动态详情" titleSize={16} contentClassName="px-4 py-3" onBack={() => history.back()} class="flex-shrink-0 border-b border-[var(--neu-border)]">
 			{#snippet trailing()}
 				<DropdownMenu.Root bind:open={moreOpen}>
 					<div bind:this={moreMenuEl} class="relative">

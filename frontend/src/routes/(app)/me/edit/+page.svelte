@@ -70,7 +70,7 @@
 
 <StandardPageLayout contentClassName="pt-4 pb-10" contentMaxWidth="var(--content-reading-max)">
 	{#snippet header()}
-		<PageHeader title="编辑资料" onBack={() => history.back()} sticky>
+		<PageHeader title="编辑资料" onBack={() => history.back()} sticky={false}>
 	{#snippet trailing()}
 		<button
 			type="button"

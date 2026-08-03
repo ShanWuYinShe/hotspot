@@ -135,7 +135,15 @@ const FILTER_TABS = [
 {#snippet main()}
 
 		<div class="h-full overflow-y-auto no-scrollbar">
-			<PageHeader title="通知" sticky titleSize={20} onBack={() => history.back()} subtitle={unread > 0 ? `${unread} 条未读` : undefined}>
+			<PageHeader
+				title="通知"
+				sticky
+				titleSize={20}
+				subtitleSize={12}
+				contentClassName="pt-3 pb-0"
+				onBack={() => history.back()}
+				subtitle={unread > 0 ? `${unread} 条未读` : undefined}
+			>
 				{#snippet trailing()}
 					{#if unread > 0}
 						<button
@@ -149,27 +157,28 @@ const FILTER_TABS = [
 						</button>
 					{/if}
 				{/snippet}
+				{#snippet below()}
+					<!-- Filter tabs（对齐 Figma Make：与标题同处 sticky header 内，滚动时吸顶） -->
+					<div class="mt-3 flex overflow-x-auto no-scrollbar gap-2 pb-3">
+						{#each FILTER_TABS as t}
+							<button
+								type="button"
+								aria-pressed={filter === t.id}
+								data-active={filter === t.id ? 'true' : undefined}
+								onclick={() => (filter = t.id)}
+								class="flex-shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
+								style={filter === t.id
+									? 'background:var(--neu-accent-primary);color:white;font-size:12px;box-shadow:0 3px 10px var(--neu-glow);border:none;'
+									: 'background:var(--neu-bg);color:var(--neu-text-muted);font-size:12px;border:1px solid var(--neu-border);box-shadow:3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light);'}
+							>
+								{t.label}
+							</button>
+						{/each}
+					</div>
+				{/snippet}
 			</PageHeader>
 
 			<ContentColumn maxWidth={isDesktop ? 'var(--content-reading-max)' : '640px'} class="pt-3 pb-6">
-				<!-- Filter tabs（对齐 Figma Make 通知页：选中实心 accent + glow） -->
-				<div class="flex overflow-x-auto no-scrollbar pb-3 gap-2">
-				{#each FILTER_TABS as t}
-					<button
-						type="button"
-						aria-pressed={filter === t.id}
-						data-active={filter === t.id ? 'true' : undefined}
-						onclick={() => (filter = t.id)}
-						class="flex-shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
-						style={filter === t.id
-							? 'background:var(--neu-accent-primary);color:white;font-size:12px;box-shadow:0 3px 10px var(--neu-glow);border:none;'
-							: 'background:var(--neu-bg);color:var(--neu-text-muted);font-size:12px;border:1px solid var(--neu-border);box-shadow:3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light);'}
-					>
-						{t.label}
-					</button>
-				{/each}
-			</div>
-
 				<!-- List：每个分组一个连接列表表面（BorderedList 契约；heading 在列表外） -->
 				<div class="flex flex-col">
 				{#if unreadGroup.length > 0}

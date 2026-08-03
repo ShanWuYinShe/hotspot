@@ -136,8 +136,8 @@
 					<ShieldCheck style="width:16px;height:16px;color:var(--neu-accent-primary);" strokeWidth={1.8} />
 				</div>
 				<p class="mt-2 text-xs leading-5 text-[var(--neu-text-muted)]">你的基础资料已完善，可随时在编辑页更新。</p>
-				<div class="mt-5 h-1.5 overflow-hidden rounded-full bg-[var(--neu-border)]">
-					<div class="h-full w-full rounded-full bg-[var(--neu-accent-primary)]"></div>
+				<div class="mt-5 h-1.5 overflow-hidden bg-[var(--neu-border)]">
+					<div class="h-full w-full bg-[var(--neu-accent-primary)]"></div>
 				</div>
 				<p class="mt-2 text-[11px] text-[var(--neu-text-muted)]">4 项基础资料已填写</p>
 				<button

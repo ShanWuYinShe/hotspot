@@ -163,6 +163,17 @@
 					<span class="rounded-full" style="width:6px;height:6px;background:var(--semantic-online);"></span>
 					<span class="text-xs" style="color:var(--neu-text-muted);">{onlineCount} 在线</span>
 				</div>
+				{#if platformStore.platform === 'tablet'}
+					<button
+						type="button"
+						aria-label="搜索"
+						onclick={() => void goto(ROUTES.search)}
+						class="neu-hover-btn flex size-8 items-center justify-center rounded-full outline-none bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"
+						style="border:1px solid var(--neu-border);"
+					>
+						<Search style="width:16px;height:16px;" strokeWidth={1.8} />
+					</button>
+				{/if}
 			</div>
 		</div>
 
