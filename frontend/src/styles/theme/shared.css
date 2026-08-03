@@ -1,0 +1,65 @@
+/* ── 共享 Token（与主题无关）───────────────────────────────────────────
+   z-index 层级、blur 层级、shape 圆角系统、space 间距系统、
+   motion 动效系统、ease 缓动系统。
+   这些值在所有主题和模式下完全相同，集中管理避免散落。
+────────────────────────────────────────────────────────────────────── */
+
+/* ── Z-Index Scale ──────────────────────────────────────────────────────
+   Single source of truth for stacking order. */
+:root {
+  --z-base: 1;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-nav: 30;
+  --z-overlay: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+}
+
+/* ── Backdrop Blur Scale ─────────────────────────────────────────────── */
+:root {
+  --blur-overlay: 4px;
+  --blur-surface: 16px;
+}
+
+/* ── Rounded-rectangle shape system ─────────────────────────────────
+   Panels, controls, and compact chips share a deliberate rounded-rectangle
+   family. */
+:root {
+  --shape-compact: 0.5rem;
+  --shape-tight: 0.625rem;
+  --shape-small: 0.75rem;
+  --shape-control: 1rem;
+  --shape-relaxed: 1.125rem;
+  --shape-panel: 1.25rem;
+  --shape-feature: 1.5rem;
+  --shape-chip: var(--shape-compact);
+}
+
+/* ── System rhythm and interaction tokens ─────────────────────────── */
+:root {
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --motion-fast: 160ms;
+  --motion-standard: 220ms;
+  --motion-slow: 320ms;
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+  --focus-ring-width: 3px;
+}
+
+/* ── Responsive page-content contract ──────────────────────────────── */
+:root {
+  --page-gutter: 1.25rem;
+  --page-content-max: 100%;
+}
+@media (min-width: 600px) {
+  :root { --page-gutter: 1.5rem; }
+}
+@media (min-width: 1280px) {
+  :root { --page-gutter: 1.75rem; }
+}

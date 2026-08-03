@@ -1,37 +1,33 @@
 /* ── Theme entry point ─────────────────────────────────────────────────
    Import all theme partials in dependency order:
 
-   Layer 0 — Base variables
+   Layer 0 — Shared (theme-agnostic)
      1. shadcn.css          — shadcn/ui standard variables (:root + .dark)
-     2. defaults.css        — custom token defaults (vibrant fallback)
+     2. shared.css          — z-index/blur/shape/space/motion/ease（与主题无关）
 
-   Layer 1 — Primitives
-     3. primitives.css      — --pr-* raw values per theme-mode
+   Layer 1 — Semantic alias
+     3. semantic.css        — --text-primary, --surface-page etc. → --pr-*
 
-   Layer 2 — Semantics
-     4. semantic.css        — --text-primary, --surface-page etc. → --pr-*
+   Layer 2 — Themes (each theme is a single self-contained file)
+     4. themes/vibrant.css  — :root,.vibrant / .vibrant.dark（全部 vibrant 值）
+     5. themes/forest.css   — .forest / .forest.dark（全部 forest 值）
 
-   Layer 2.5 — Compatibility (loaded BEFORE theme overrides so themes win)
-     5. compatibility.css   — --neu-* aliases → semantic names
-
-   Layer 3 — Theme overrides (override compatibility with direct values)
-     6. themes/vibrant.css  — .vibrant / .vibrant.dark
-     7. themes/forest.css   — .forest / .forest.dark
+   Layer 2.5 — Compatibility (loaded BEFORE utilities so neu-* aliases work)
+     6. compatibility.css   — --neu-* aliases → semantic names
 
    Layout & Presentation
-     8. layout.css          — context rail + workspace dimensions
-     9. base.css            — @layer base (typography + button feedback)
-    10. theme-registry.css  — @theme inline (Tailwind class registration)
-    11. utilities.css       — @layer utilities (component classes)
+     7. layout.css          — context rail + workspace dimensions
+     8. base.css            — @layer base (typography + button feedback)
+     9. theme-registry.css  — @theme inline (Tailwind class registration)
+    10. utilities.css       — @layer utilities (component classes)
 ────────────────────────────────────────────────────────────────────── */
 
 @import './shadcn.css';
-@import './defaults.css';
-@import './primitives.css';
+@import './shared.css';
 @import './semantic.css';
-@import './compatibility.css';
 @import './themes/vibrant.css';
 @import './themes/forest.css';
+@import './compatibility.css';
 @import './layout.css';
 @import './base.css';
 @import './theme-registry.css';

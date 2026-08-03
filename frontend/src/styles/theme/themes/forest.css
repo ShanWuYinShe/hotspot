@@ -5,16 +5,50 @@
    Dark:  deep forest green-black #161A16 — quiet and grounded
    Shadows: ZERO — fully flat. Borders: green-tinted hairlines.
 
-   本文件只保留 shadcn 桥接值与 Svelte 特有扩展；
-   --neu-* 等原始值统一由 primitives.css → semantic.css →
-   compatibility.css 提供（与 .workwork/Hotspot_Make theme.css
-   最终生效层一致）。
+   本文件是 Forest 主题的**唯一定义来源**（light + dark）。
+   色值与 .workwork/Hotspot_Make/src/styles/theme.css 最终生效层一致。
 ────────────────────────────────────────────────────────────────────── */
+
+/* ═══ Forest Light ═══ */
 .forest {
-  /* Canvas — warm paper-white */
+  /* ── 原始色板 --pr-* ── */
+  --pr-bg: #F6F7F3;
+  --pr-page-bg: #F6F7F3;
+  --pr-text: #152219;
+  --pr-text-muted: #3F5547;
+  --pr-accent: #3D7A55;
+  --pr-accent-primary: #3D7A55;
+  --pr-glow: rgba(61, 122, 85, 0.18);
+  --pr-shadow-light: rgba(255, 255, 255, 0.0);
+  --pr-shadow-dark: rgba(0, 0, 0, 0.0);
+  --pr-border: rgba(42, 73, 52, 0.24);
+  --pr-border-pressed: rgba(42, 73, 52, 0.38);
+  --pr-accent-soft: rgba(61, 122, 85, 0.11);
+  --pr-accent-soft-border: rgba(61, 122, 85, 0.30);
+  --pr-hover: rgba(61, 122, 85, 0.12);
+  --pr-active-hover: rgba(61, 122, 85, 0.17);
+  --pr-on-accent: #FFFFFF;
+  --pr-online: #3D7A55;
+  --pr-hot: #8E6F35;
+  --pr-warning: #9A7A35;
+  --pr-map-user: #3D7A55;
+  --pr-map-group: #638B46;
+  --pr-map-post: #A57C38;
+  --pr-overlay-soft: rgba(27, 31, 27, 0.08);
+  --pr-overlay-strong: rgba(20, 28, 20, 0.42);
+  --pr-scrim: linear-gradient(to bottom, rgba(20, 28, 20, 0.02) 0%, rgba(20, 28, 20, 0.44) 100%);
+  --pr-shadow-card: 0 0 0 1.5px rgba(61, 122, 85, 0.22);
+  --pr-shadow-row: 0 0 0 1px rgba(61, 122, 85, 0.18);
+  --pr-shadow-btn: 0 0 0 1.5px rgba(61, 122, 85, 0.28);
+  --pr-shadow-pill: 0 0 0 1px rgba(61, 122, 85, 0.20);
+
+  /* ── color-mix 预设 ── */
+  --pr-accent-bg: color-mix(in srgb, var(--pr-accent-primary) 10%, var(--pr-bg));
+  --pr-online-bg: color-mix(in srgb, var(--pr-online) 14%, transparent);
+  --pr-danger-bg: color-mix(in srgb, var(--pr-hot) 10%, transparent);
+
+  /* ── shadcn 桥接 ── */
   --background: var(--neu-bg);
-  /* forest 主题卡片按压缩放 0.97（对齐 Figma useHoverConfig forest tap） */
-  --card-tap-scale: 0.97;
   --foreground: var(--neu-text);
   --card: var(--neu-bg);
   --card-foreground: var(--neu-text);
@@ -31,14 +65,93 @@
   --input-background: #F1F3EE;
   --switch-background: var(--neu-border-pressed);
 
-  /* 卡片图片上的信息区玻璃背景 */
+  /* ── Shell / overlay primitives ── */
+  --surface-nav-glass: color-mix(in srgb, var(--surface-panel) 90%, transparent);
+  --border-nav-glass: color-mix(in srgb, var(--neu-accent-primary) 15%, transparent);
+  --surface-scrim: rgba(20, 28, 20, 0.34);
+  --surface-overlay: rgba(20, 28, 20, 0.38);
+  --border-inverse: rgba(255, 255, 255, 0.25);
+  --content-inverse: #FFFFFF;
+  --content-inverse-muted: rgba(255, 255, 255, 0.70);
+  --content-inverse-secondary: rgba(255, 255, 255, 0.80);
+  --content-on-accent: var(--primary-foreground);
+  --surface-control-thumb: var(--content-inverse);
+  --elevation-menu: 0 16px 40px rgba(0, 0, 0, 0.16);
+  --elevation-control-thumb: 0 1px 3px rgba(0, 0, 0, 0.18);
+  --surface-toggle-off: rgba(120, 120, 128, 0.22);
+  --surface-toggle-off-strong: rgba(120, 120, 128, 0.25);
+  --surface-toggle-thumb: var(--surface-panel);
+  --elevation-toggle-on: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+  --elevation-toggle-off: inset 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(120, 120, 128, 0.15);
+  --elevation-toggle-thumb: 0 1px 4px rgba(0, 0, 0, 0.26), 0 0.5px 1px rgba(0, 0, 0, 0.14);
+  --surface-media-scrim-soft: linear-gradient(to top, rgba(0, 0, 0, 0.22), transparent 58%);
+  --surface-media-scrim-card: linear-gradient(to top, rgba(0, 0, 0, 0.28), transparent 60%);
+  --surface-media-scrim-rail: linear-gradient(to top, rgba(0, 0, 0, 0.24), transparent 58%);
+  --surface-profile-cover-scrim: linear-gradient(to bottom, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.55));
+  --surface-profile-edit-scrim: linear-gradient(to bottom, transparent 40%, rgba(0, 0, 0, 0.5));
+  --surface-gallery-scrim: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.48));
+  --surface-gallery-label: rgba(0, 0, 0, 0.46);
+  --surface-map-control: rgba(255, 255, 255, 0.20);
+  --surface-map-control-active: rgba(255, 255, 255, 0.25);
+  --elevation-profile-avatar: 0 6px 20px rgba(0, 0, 0, 0.22);
+  --elevation-modal: 0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--border-subtle);
+  --elevation-fab: 0 6px 18px var(--glow-accent), 0 2px 4px rgba(0,0,0,0.10);
+  --elevation-nav: 0 -2px 16px rgba(61,122,85,0.08), 0 8px 24px rgba(61,122,85,0.10);
+  --elevation-sheet: 0 -8px 40px rgba(0,0,0,0.18), 0 -2px 0 var(--border-subtle);
+  --radius-sheet: 1.75rem;
+
+  /* ── Nearby feed card-menu ── */
+  --surface-card-menu: color-mix(in srgb, var(--neu-bg) 88%, var(--neu-accent-primary));
+  --border-card-menu: color-mix(in srgb, var(--neu-accent-primary) 22%, var(--neu-border));
+
+  /* ── 卡片图片上的信息区玻璃背景 ── */
   --card-scrim: rgba(20, 28, 20, 0.55);
   --accent-on-scrim: #6EE7B7;
   --online-on-scrim: #6EE7B7;
+
+  /* ── 卡片按压缩放（forest tap 0.97）── */
+  --card-tap-scale: 0.97;
 }
 
+/* ═══ Forest Dark ═══ */
 .forest.dark {
-  /* Canvas — deep forest, unified with page */
+  /* ── 原始色板 --pr-* ── */
+  --pr-bg: #161A16;
+  --pr-page-bg: #161A16;
+  --pr-text: #E8F1E9;
+  --pr-text-muted: #A8BDAE;
+  --pr-accent: #52B878;
+  --pr-accent-primary: #52B878;
+  --pr-glow: rgba(82, 184, 120, 0.20);
+  --pr-shadow-light: rgba(255, 255, 255, 0.0);
+  --pr-shadow-dark: rgba(0, 0, 0, 0.0);
+  --pr-border: rgba(169, 199, 178, 0.18);
+  --pr-border-pressed: rgba(169, 199, 178, 0.30);
+  --pr-accent-soft: rgba(82, 184, 120, 0.12);
+  --pr-accent-soft-border: rgba(82, 184, 120, 0.34);
+  --pr-hover: rgba(82, 184, 120, 0.18);
+  --pr-active-hover: rgba(82, 184, 120, 0.24);
+  --pr-on-accent: #0C1911;
+  --pr-online: #52B878;
+  --pr-hot: #C4A75A;
+  --pr-warning: #C4A75A;
+  --pr-map-user: #52B878;
+  --pr-map-group: #88B85A;
+  --pr-map-post: #C4A75A;
+  --pr-overlay-soft: rgba(220, 232, 222, 0.07);
+  --pr-overlay-strong: rgba(0, 0, 0, 0.54);
+  --pr-scrim: linear-gradient(to bottom, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.56) 100%);
+  --pr-shadow-card: 0 0 0 1.5px rgba(82, 184, 120, 0.26);
+  --pr-shadow-row: 0 0 0 1px rgba(82, 184, 120, 0.20);
+  --pr-shadow-btn: 0 0 0 1.5px rgba(82, 184, 120, 0.32);
+  --pr-shadow-pill: 0 0 0 1px rgba(82, 184, 120, 0.24);
+
+  /* ── color-mix 预设 ── */
+  --pr-accent-bg: color-mix(in srgb, var(--pr-accent-primary) 12%, var(--pr-bg));
+  --pr-online-bg: color-mix(in srgb, var(--pr-online) 14%, transparent);
+  --pr-danger-bg: color-mix(in srgb, var(--pr-hot) 12%, transparent);
+
+  /* ── shadcn 桥接 ── */
   --background: var(--neu-bg);
   --foreground: var(--neu-text);
   --card: var(--neu-bg);
@@ -55,6 +168,22 @@
   --ring: var(--neu-accent-primary);
   --input-background: #1A201A;
   --switch-background: var(--neu-border-pressed);
+
+  /* ── Shell / overlay primitives (dark 覆盖) ── */
+  --surface-nav-glass: color-mix(in srgb, var(--surface-panel) 92%, transparent);
+  --border-nav-glass: color-mix(in srgb, var(--neu-accent-primary) 16%, transparent);
+  --surface-scrim: rgba(0, 0, 0, 0.42);
+  --surface-overlay: rgba(0, 0, 0, 0.42);
+  --elevation-fab: 0 6px 22px var(--glow-accent), 0 2px 6px rgba(0,0,0,0.20);
+  --elevation-nav: 0 -4px 24px rgba(0,0,0,0.40), 0 8px 32px rgba(0,0,0,0.28);
+  --elevation-sheet: 0 -8px 48px rgba(0,0,0,0.22), 0 -2px 0 var(--border-subtle);
+  --elevation-modal: 0 28px 88px rgba(0,0,0,0.42), 0 0 0 1px var(--border-subtle);
+
+  /* ── card-menu dark ── */
+  --surface-card-menu: color-mix(in srgb, var(--neu-bg) 82%, var(--neu-accent-primary));
+  --border-card-menu: color-mix(in srgb, var(--neu-accent-primary) 28%, var(--neu-border));
+
+  /* ── 玻璃背景 dark ── */
   --card-scrim: rgba(0, 0, 0, 0.60);
   --accent-on-scrim: #6EE7B7;
   --online-on-scrim: #6EE7B7;

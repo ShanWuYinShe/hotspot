@@ -94,9 +94,9 @@
 
 <div class="flex h-full bg-[var(--neu-bg)]">
 	<!-- ══ LEFT SIDEBAR ══ -->
-	<div class="flex flex-col flex-shrink-0" style="width:340px;border-right:1px solid var(--neu-border);">
+	<div class="flex flex-col shrink-0" style="width:340px;border-right:1px solid var(--neu-border);">
 		<!-- Header -->
-		<div class="flex-shrink-0">
+		<div class="shrink-0">
 			<PageHeader title="位置选择" onBack={() => history.back()} subtitle="江苏·徐州" sticky>
 				{#snippet trailing()}
 					<button
@@ -116,7 +116,7 @@
 		</div>
 
 		<!-- Search -->
-		<div class="flex-shrink-0 px-4 pt-3 pb-2 relative">
+		<div class="shrink-0 px-4 pt-3 pb-2 relative">
 			<div class="flex items-center gap-2.5 px-3.5 rounded-[14px] neu-input-surface" style="height:42px;">
 				<Search style="width:14px;height:14px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
 				<input

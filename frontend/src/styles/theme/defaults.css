@@ -1,9 +1,0 @@
-/* 默认主题变量（星际/深空蓝）：首帧与无脚本环境保持与可选主题一致。 */
-:root {
-  --neu-bg: #F7FAFF; --page-bg: #F7FAFF; --neu-shadow-light: rgba(255,255,255,1); --neu-shadow-dark: rgba(99,91,200,.12);
-  --neu-text: #16233A; --neu-text-muted: #52647F; --neu-accent: #3578D4; --neu-accent-primary: #3578D4; --neu-glow: rgba(53,120,212,.22);
-  --neu-border: rgba(53,120,212,.18); --neu-border-pressed: rgba(53,120,212,.32); --neu-accent-soft: rgba(53,120,212,.10); --neu-accent-soft-border: rgba(53,120,212,.28); --neu-on-accent: #FFFFFF; --neu-hover: rgba(53,120,212,.10); --neu-active-hover: rgba(53,120,212,.16);
-  --background: var(--neu-bg); --foreground: var(--neu-text); --border: var(--neu-border); --ring: var(--neu-accent-primary); --input-background: #F2F7FF; --switch-background: var(--neu-border-pressed);
-  --semantic-online: #14B8A6; --semantic-hot: #F43F5E; --semantic-warning: #F59E0B; --map-user: #3578D4; --map-group: #10B981; --map-post: #F97316; --overlay-soft: rgba(22,35,58,.08); --overlay-strong: rgba(12,25,48,.52); --surface-image-scrim: linear-gradient(to bottom, rgba(16,35,66,.03), rgba(16,35,66,.54)); --card-scrim: rgba(12, 25, 48, 0.55); --accent-on-scrim: #93C5FD; --online-on-scrim: #2DD4BF;
-  --hover-shadow-card: 0 12px 28px rgba(53,120,212,.12), 0 3px 10px rgba(53,120,212,.07); --hover-shadow-row: 0 6px 16px rgba(53,120,212,.10); --hover-shadow-btn: 0 5px 14px rgba(53,120,212,.18); --hover-shadow-pill: 0 3px 9px rgba(53,120,212,.14);
-}
