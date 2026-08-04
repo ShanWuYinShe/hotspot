@@ -23,7 +23,7 @@ export function initMock(w: any, envDefault: boolean) {
   enabled = readPersisted(envDefault);
   if (enabled) {
     // Only warn about genuinely missing API handlers. SPA navigation requests
-    // (e.g. GET /me/groups, GET /me/fans — the page routes, not API
+    // (e.g. GET /me/groups, GET /me/relationships — the page routes, not API
     // calls) and Vite HMR / font / static asset requests would otherwise each
     // log a noisy "[MSW] intercepted a request without a matching request
     // handler" warning on every navigation, drowning out real gaps.

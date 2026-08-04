@@ -42,7 +42,7 @@
 		{ id: 'messages', icon: MessageCircle, label: '消息', path: ROUTES.messages },
 		{ id: 'moments', icon: ImageIcon, label: '我的瞬间', path: ROUTES.meSection('moments') },
 		{ id: 'my-groups', icon: Users, label: '我的群组', path: ROUTES.meSection('groups') },
-		{ id: 'relationships', icon: Heart, label: '关系', path: ROUTES.meSection('friends') }
+		{ id: 'relationships', icon: Heart, label: '关系', path: ROUTES.meSection('relationships') }
 	];
 
 	const LAST_DESKTOP_NAV_KEY = 'hotspot:last-desktop-nav';

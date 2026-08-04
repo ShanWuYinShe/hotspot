@@ -1,16 +1,19 @@
 /**
  * Canonical application URLs mirror backend domains and resource names.
  *
- * 个人主页分区共 5 个：moments / groups / friends / following / fans（对齐 Figma Make）。
- * 桌面导航的「关系」项聚合后三者，落地到 friends 分区；路由守卫见 route-guards.ts，
- * 与这里的 ProfileSection 保持一致。
+ * 个人主页分区共 6 个：moments / groups / friends / following / fans 五个独立分区，
+ * 外加 relationships 聚合分区（好友 + 关注 + 粉丝三 tab，内部用 ?tab= 切换）。
+ * relationships 由 me/[section] 独立渲染为样板页（StandardPageLayout，不走
+ * ProfileDesktop 分区模式）；桌面导航「关系」和通知页「新关注你的人」入口落在
+ * relationships；移动端个人数据 5 行链接走独立分区。路由守卫见 route-guards.ts。
  */
 export type ProfileSection =
 	| "moments"
 	| "groups"
 	| "friends"
 	| "following"
-	| "fans";
+	| "fans"
+	| "relationships";
 
 export const ROUTES = {
   home: "/",
