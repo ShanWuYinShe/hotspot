@@ -77,21 +77,24 @@ src/routes/
   (app)/
     +layout.svelte         # MainLayout 外壳（桌面/平板/移动/横屏四端分派）
     +page.svelte           # 首页（附近动态）
+    discover/              # 发现聚合页（平板/移动端顶级导航）
     nearby/people/         # 附近的人
     nearby/groups/         # 附近的组
-    nearby/moments/        # 附近时刻
-    moments/[postId]/      # 时刻详情
+    nearby/moments/        # 附近时刻（页面样板结构权威基准）
+    moments/[momentId]/    # 时刻详情
     messages/              # 消息列表
     messages/[chatId]/     # 聊天详情（chatId 实为对端 user_id）
     messages/group/[groupId]/  # 群聊详情
     me/                    # 个人主页
-    me/[section]/          # 个人主页分段
+    me/[section]/          # 个人主页分段（5 独立分区 + relationships 聚合页）
     me/edit/               # 编辑资料
     users/[userId]/        # 用户详情
     groups/[groupId]/      # 群组详情
+    events/[eventId]/      # 活动详情
     settings/              # 设置
     map/                   # 地图
-    notify/                # 通知
+    notifications/         # 通知
+    notify/                # 旧路径 307 重定向到 /notifications
     search/                # 搜索
 ```
 
@@ -99,14 +102,49 @@ src/routes/
 
 路由常量见 `@/lib/routes`。
 
-页面实现与路由同目录 colocate：每个路由目录下，除 `+page.svelte` 外，同目录存放页面私有组件（如 `map/LocationDesktop.svelte` + `location-data.ts`）。跨路由复用的页面组件（如 `components/moments/MomentsFeedPage` 同时被首页和 `nearby/moments` 使用）放在 `components/` 对应域目录；共享组件统一在 `components/`。
+页面实现与路由同目录 colocate：每个路由目录下，除 `+page.svelte` 外，同目录存放页面私有组件（如 `map/LocationDesktop.svelte` + `location-data.ts`）。跨路由复用的页面组件（如 `components/profile/SectionFriends.svelte` 同时被 `me/[section]` 分区页与 `me/relationships` 聚合页复用）放在 `components/` 对应域目录；共享组件统一在 `components/`。
+
+## 页面样板结构（所有页面必须遵守）
+
+**权威样板页：`src/routes/(app)/nearby/moments/+page.svelte`。** 任何新增路由页面
+（含三端差异）都以它为基准，结构固定为：
+
+```
+StandardPageLayout                     # 全站唯一外层布局（components/layout/page/）
+├── header snippet
+│   └── PageHeader                     # 三端统一页头
+│       ├── title / titleSize          # 桌面 20 / 平板 24 / 移动 22（样板页参考值）
+│       ├── trailing snippet           # 计数、精选等右上信息
+│       └── below snippet              # 搜索框 + 分类 Tab 栏（随 header 吸顶）
+└── children                           # 正文，直接放 ContentColumn 内
+```
+
+约束：
+
+1. **布局**：页面必须用 `StandardPageLayout`，header 以 snippet 传入、正文放 children；
+   不得自行组合 PageHeader/ContentColumn/页面级滚动/页面级横向 padding（契约见
+   StandardPageLayout.svelte 注释）。gutter 一律由 `ContentColumn` 的
+   `px-[var(--page-gutter)]` 管理。
+2. **页头**：一律用 `PageHeader`（`sticky` 默认开），`onBack` 在非桌面自动显示返回
+   按钮；`below` 只放搜索框与 Tab 栏等 header 附属区。
+3. **分类 Tab 栏**：下划线样式（容器 `border-bottom` + 激活项底部 2px 指示条 +
+   `aria-pressed`），放 `below` snippet 内随 header 吸顶；tab 状态可存 URL query
+   （如 `?tab=`）以支持深链，切换用 `goto` 更新 URL。
+4. **正文与滚动**：正文直接放 children；页面滚动由 `RoutedContentViewport`（main）
+   唯一承担，页面不得自建滚动容器（消息分栏、地图等全画布页面除外）。内嵌自带
+   gutter 的组件时用负 margin（`-mx-[var(--page-gutter)]`）抵消 ContentColumn
+   gutter，避免双重内边距（参照 `SectionRelationships.svelte`）。
+5. **三端差异**：共用组件只写一次，设备差异用 `platform.platform` 派生（列数、字号、
+   布局分支），不得复制三份页面。
+6. **数据获取与状态**：`$effect` + `cancelled` 竞态清理模式（参照样板页）；加载中用
+   spinner、空列表用 `EmptyState`（参照样板页 feedState snippet）。
 
 ## 目录结构
 
 ```
 src/
   routes/         # SvelteKit 路由（+page.svelte / +layout.svelte + 页面私有组件）
-  components/     # 共享组件（layout/ shared/ auth/ groups/ home/ moments/ profile/ messages/）
+  components/     # 共享组件（按域分子目录：auth/ data-display/ forms/ layout/ messages/ moments/ navigation/ overlays/ profile/ shared/ ui/）
   stores/         # runes 模块单例（auth/theme/platform/composer，.svelte.ts）
   lib/            # 工具函数 + 路由常量 + 数据工厂（.svelte.ts 响应式）
   api/            # API 客户端层（client.ts 零框架依赖）
@@ -124,15 +162,14 @@ src/
 theme/
   index.css              # 入口，按依赖顺序导入所有分片
   shadcn.css             # Layer 0: shadcn/ui 基础变量
-  defaults.css           # Layer 0: 自定义 token 默认值（星际回退）
-  primitives.css         # Layer 1: --pr-* 原始色值（每主题定义）
-  semantic.css           # Layer 2: 语义 token（--text-primary 等 → --pr-*）
+  shared.css             # Layer 0: z-index/blur/shape/space/motion/ease（与主题无关）
+  semantic.css           # Layer 1: 语义 token（--text-primary 等 → --pr-*）
+  themes/vibrant.css     # Layer 2: 星际主题（全部 --pr-* 值）
+  themes/forest.css      # Layer 2: 清野主题（全部 --pr-* 值）
   compatibility.css      # Layer 2.5: 旧名别名（--neu-* → 语义名）
-  theme-registry.css     # @theme inline Tailwind 注册
-  themes/vibrant.css     # 星际主题覆盖
-  themes/forest.css      # 清野主题覆盖
   layout.css             # 布局变量（context-rail、workspace）
   base.css               # @layer base（排版 + 按钮基线）
+  theme-registry.css     # @theme inline Tailwind 注册
   utilities.css          # @layer utilities（组件工具类 + neu-hover-* 交互类）
 ```
 
