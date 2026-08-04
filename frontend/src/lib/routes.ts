@@ -1,18 +1,16 @@
 /**
  * Canonical application URLs mirror backend domains and resource names.
  *
- * 注意：Figma Make 原项目的个人主页分区为 moments / groups / friends / following / fans
- * 共 5 个；当前 frontend 在导航层把「关注 + 粉丝」合并为单个 relationships 分区
- * （内部用 ?tab=followers|following 切换）。因此 ProfileSection 在 5 个原值之外
- * 额外保留 relationships 作为路由段合法值，避免类型与路由守卫割裂。
+ * 个人主页分区共 5 个：moments / groups / friends / following / fans（对齐 Figma Make）。
+ * 桌面导航的「关系」项聚合后三者，落地到 friends 分区；路由守卫见 route-guards.ts，
+ * 与这里的 ProfileSection 保持一致。
  */
 export type ProfileSection =
 	| "moments"
 	| "groups"
 	| "friends"
 	| "following"
-	| "fans"
-	| "relationships";
+	| "fans";
 
 export const ROUTES = {
   home: "/",
@@ -97,7 +95,7 @@ export function getDesktopNavId(pathname: string, search = ""): DesktopNavId | n
     const section = pathname.slice(`${ROUTES.me}/`.length);
     if (section === "moments") return "moments";
     if (section === "groups") return "my-groups";
-    // "relationships" is the only other section; treat it (and any /me/ tail) as relationships.
+    // friends/following/fans 及任何 /me/ 尾段都归属「关系」导航项。
     return "relationships";
   }
 

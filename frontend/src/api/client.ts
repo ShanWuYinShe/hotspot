@@ -7,7 +7,6 @@ import type {
 	ApiVersionMeta,
 	AuthStatus,
 	AuthTokenPair,
-	BatchGetUsersData,
 	BootstrapData,
 	ClientConfig,
 	CommentItem,
@@ -22,17 +21,11 @@ import type {
 	MomentItem,
 	NotifyItem,
 	PaginatedData,
-	PresignedUpload,
 	PrivateChatItem,
 	PrivateMessageItem,
-	ReactionItem,
 	ReportCreated,
-	SearchSuggestResponse,
-	ShareCreated,
-	ShareDetail,
 	TrendingBundle,
 	UnreadCountResult,
-	UploadedMedia,
 	UserItem,
 	UserProfileBundle,
 	UserSettings,
@@ -130,19 +123,14 @@ export async function resetPassword(params: object)      { return request<AuthTo
 export async function getAccount()                        { return request<AccountData>(Endpoints.Users.GetAccount); }
 export async function updateAccount(params: object)       { return request<void>(Endpoints.Users.UpdateAccount, params); }
 export async function getSettings()                       { return request<UserSettings>(Endpoints.Users.GetSettings); }
-export async function updateSettings(params: object)      { return request<void>(Endpoints.Users.UpdateSettings, params); }
-export async function updateLocation(params: object)      { return request<void>(Endpoints.Users.UpdateLocation, params); }
 export async function follow(params: object)              { return request<void>(Endpoints.Users.Follow, params); }
 export async function block(params: object)               { return request<void>(Endpoints.Users.Block, params); }
 export async function getProfile(userId: string)          { return request<UserProfileBundle>(Endpoints.Users.GetProfile, { user_id: userId }); }
-export async function getUserDetail(userId: string)       { return request<UserItem>(Endpoints.Users.GetDetail, { user_id: userId }); }
-export async function batchGet(userIds: string[])         { return request<BatchGetUsersData>(Endpoints.Users.BatchGet, { user_ids: userIds }); }
 export async function listFriends(params?: object)        { return request<PaginatedData<FriendItem>>(Endpoints.Users.ListFriends, params ?? {}); }
 export async function listFollowing(params?: object)      { return request<PaginatedData<FollowingItem>>(Endpoints.Users.ListFollowing, params ?? {}); }
 export async function listFollowers(params?: object)      { return request<PaginatedData<FollowerItem>>(Endpoints.Users.ListFollowers, params ?? {}); }
 
 // Feed
-export async function getFeedFollowing(params?: object)   { return request<PaginatedData<MomentItem>>(Endpoints.Feed.Following, params ?? {}); }
 export async function getFeedNearby(params?: object)      { return request<PaginatedData<MomentItem>>(Endpoints.Feed.Nearby, params ?? {}); }
 export async function getNearbyUsers(params?: object)     { return request<PaginatedData<UserItem>>(Endpoints.Feed.NearbyUsers, params ?? {}); }
 export async function getNearbyGroups(params?: object)    { return request<PaginatedData<GroupItem>>(Endpoints.Feed.NearbyGroups, params ?? {}); }
@@ -156,14 +144,12 @@ export async function listMyMoments(params?: object)      { return request<Pagin
 export async function getFavoriteMoments(params?: object)   { return request<PaginatedData<MomentItem>>(Endpoints.Moments.ListFavorites, params ?? {}); }
 
 // Groups
-export async function searchGroups(params: object)        { return request<PaginatedData<GroupItem>>(Endpoints.Groups.Search, params); }
 export async function getGroupDetail(groupId: string)     { return request<GroupItem>(Endpoints.Groups.GetDetail, { group_id: groupId }); }
 export async function createGroup(params: object)         { return request<GroupItem>(Endpoints.Groups.Create, params); }
 export async function listMyGroups(params?: object)       { return request<PaginatedData<GroupItem>>(Endpoints.Groups.ListMy, params ?? {}); }
 
 // Search
 export async function searchUsers(params: object)         { return request<PaginatedData<UserItem>>(Endpoints.Users.Search, params); }
-export async function searchSuggest(params: object)       { return request<SearchSuggestResponse>(Endpoints.Search.Suggest, params); }
 
 // Notifications
 export async function getUnreadCount()                    { return request<UnreadCountResult>(Endpoints.Notify.GetUnreadCount); }
@@ -178,10 +164,6 @@ export async function bootstrap(params?: object)          { return request<Boots
 // Reports
 export async function createReport(params: object)        { return request<ReportCreated>(Endpoints.Reports.Create, params); }
 
-// Share
-export async function getShare(params: object)            { return request<ShareDetail>(Endpoints.Share.Get, params); }
-export async function createShare(params: object)         { return request<ShareCreated>(Endpoints.Share.Create, params); }
-
 // Chat
 export async function getPrivateChats(params?: object)    { return request<PaginatedData<PrivateChatItem>>(Endpoints.PrivateChats.List, params ?? {}); }
 export async function getPrivateMessages(params: object)  { return request<PaginatedData<PrivateMessageItem>>(Endpoints.PrivateMessages.GetHistory, params); }
@@ -191,13 +173,8 @@ export async function sendGroupMessage(params: object)    { return request<Messa
 export async function markPrivateRead(params: object)     { return request<void>(Endpoints.PrivateMessages.MarkRead, params); }
 export async function markGroupRead(params: object)       { return request<void>(Endpoints.GroupMessages.MarkRead, params); }
 
-// Media
-export async function presignUpload(params: object)       { return request<PresignedUpload>(Endpoints.Media.PresignUpload, params); }
-export async function completeUpload(params: object)      { return request<UploadedMedia>(Endpoints.Media.CompleteUpload, params); }
-
 // Reactions
 export async function setReaction(params: object)         { return request<void>(Endpoints.Reactions.Set, params); }
-export async function listReactions(params: object)       { return request<PaginatedData<ReactionItem>>(Endpoints.Reactions.List, params); }
 
 // Comments
 export async function createComment(params: object)       { return request<CommentItem>(Endpoints.Comments.Create, params); }

@@ -9,7 +9,7 @@
 	import ActivityList, { type Activity } from '@/routes/(app)/_home/ActivityList.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/routes/(app)/_home/GroupCarousel.svelte';
 	import NearbyUsersFlatList from '@/routes/(app)/_home/NearbyUsersFlatList.svelte';
-	import { type NearbyUser } from '@/routes/(app)/_home/PeopleRadarStrip.svelte';
+	import { type NearbyUser } from '@/routes/(app)/_home/nearby-users';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance } from '@/lib/utils';
 

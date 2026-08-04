@@ -1,7 +1,7 @@
 <script lang="ts">
 	import BorderedList from '@/components/data-display/BorderedList.svelte';
 	import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
-	import type { NearbyUser } from '@/routes/(app)/_home/PeopleRadarStrip.svelte';
+	import type { NearbyUser } from '@/routes/(app)/_home/nearby-users';
 
 	// 紧凑附近用户行列表（对齐 Figma Make HomePage NearbyUsersFlatList）。
 	// BorderedList 容器 + InteractiveListRow 行（focus ring + 键盘 + aria + tap opacity）。

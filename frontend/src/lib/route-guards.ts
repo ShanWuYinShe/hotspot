@@ -13,7 +13,7 @@ export function requireNumericId(value: string): string {
 }
 
 /** 个人主页分区白名单（与 lib/routes.ts 的 ProfileSection 保持一致）。 */
-const PROFILE_SECTIONS = new Set(['moments', 'groups', 'friends', 'following', 'fans', 'relationships']);
+const PROFILE_SECTIONS = new Set(['moments', 'groups', 'friends', 'following', 'fans']);
 
 export function requireProfileSection(value: string): string {
 	if (!PROFILE_SECTIONS.has(value)) {

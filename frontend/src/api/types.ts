@@ -285,13 +285,6 @@ export interface GroupMessageItem {
 	reactions?: Reaction[];
 }
 
-export interface ReactionItem {
-	// spec: types.md → ReactionItem
-	user: UserInfo;
-	emoji: string;
-	reacted_at: string;
-}
-
 export interface NotifyPayload {
 	// spec: api_spec_notify.md → NotifyPayload（按 type 判别的联合体）。
 	// 此处建模为宽松 record——消费方按 type 分支读取字段。
@@ -459,46 +452,10 @@ export interface FollowerItem {
 	last_online_at?: string;
 }
 
-export interface BatchGetUsersData {
-	// spec: user.md → batch_get
-	users: Record<string, UserItem>;
-}
-
 // --- Feed（spec: api_spec_feed.md）---
 export interface TrendingBundle {
 	// spec: feed.md → trending
 	hot_moments: MomentItem[];
-}
-
-// --- Search（spec: api_spec_search.md）---
-export interface TagSuggestItem {
-	name: string;
-	usage_count: number;
-}
-export interface UserSuggestItem {
-	user: UserInfo;
-	bio?: string;
-	location?: RelativeLocation;
-}
-export interface GroupSuggestItem {
-	group: GroupInfo;
-	description?: string;
-	location?: RelativeLocation;
-}
-export interface MomentSuggestItem {
-	moment_id: string;
-	description_preview: string;
-	author: UserInfo;
-	location?: RelativeLocation;
-}
-export type SearchSuggestItem =
-	| { type: 'tag'; payload: TagSuggestItem }
-	| { type: 'user'; payload: UserSuggestItem }
-	| { type: 'group'; payload: GroupSuggestItem }
-	| { type: 'moment'; payload: MomentSuggestItem };
-export interface SearchSuggestResponse {
-	// spec: search.md → suggest
-	items: SearchSuggestItem[];
 }
 
 // --- Notifications（spec: api_spec_notify.md）---
@@ -576,49 +533,6 @@ export interface MessageSent {
 
 // --- Groups（spec: api_spec_group.md）---
 export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'revoked';
-
-// --- Media（spec: api_spec_media.md）---
-export interface PresignedUpload {
-	// spec: media.md → presign_upload
-	upload_id: string;
-	upload_url: string;
-	headers: Record<string, string>;
-	expires_at: string;
-}
-export interface UploadedMedia {
-	// spec: media.md → complete_upload
-	file_id: string;
-}
-
-// --- Share（spec: api_spec_share.md）---
-export type ShareType = 'user' | 'group' | 'moment' | 'location';
-export interface ShareCreated {
-	// spec: share.md → share/create
-	share_id: string;
-	share_code: string;
-	expires_at?: string;
-}
-export interface ShareDetail {
-	// spec: share.md → share/get
-	share: {
-		share_id: string;
-		share_code: string;
-		share_type: ShareType;
-		creator: UserInfo;
-		created_at: string;
-		expires_at?: string;
-	};
-	payload:
-		| { shared_user_id: string }
-		| { shared_group_id: string }
-		| { shared_moment_id: string }
-		| { shared_location: Location };
-	preview?: {
-		title: string;
-		subtitle?: string;
-		cover_url?: string;
-	};
-}
 
 // --- Reports（spec: api_spec_report.md）---
 export interface ReportCreated {

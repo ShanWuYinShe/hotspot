@@ -27,7 +27,7 @@ describe('requireNumericId', () => {
 
 describe('requireProfileSection', () => {
 	it('接受合法分区', () => {
-		for (const section of ['moments', 'groups', 'friends', 'following', 'fans', 'relationships']) {
+		for (const section of ['moments', 'groups', 'friends', 'following', 'fans']) {
 			expect(requireProfileSection(section)).toBe(section);
 		}
 	});

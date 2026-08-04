@@ -7,7 +7,7 @@
 	import { getTrending, getNearbyUsers, getNearbyGroups } from '@/api';
 	import SectionHead from '@/routes/(app)/_home/SectionHead.svelte';
 	import HeroStats from '@/routes/(app)/_home/HeroStats.svelte';
-	import { type NearbyUser } from '@/routes/(app)/_home/PeopleRadarStrip.svelte';
+	import { type NearbyUser } from '@/routes/(app)/_home/nearby-users';
 	import ActivityList, { type Activity } from '@/routes/(app)/_home/ActivityList.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/routes/(app)/_home/GroupCarousel.svelte';
 	import NearbyUsersFlatList from '@/routes/(app)/_home/NearbyUsersFlatList.svelte';

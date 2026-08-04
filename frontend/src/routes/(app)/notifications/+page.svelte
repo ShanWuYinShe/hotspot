@@ -248,7 +248,7 @@ const FILTER_TABS = [
 				</div>
 			</RailSection>
 
-			<RailSection title="新关注你的人" action="全部" onAction={() => void goto(`${ROUTES.meSection('relationships')}?tab=followers`)}>
+			<RailSection title="新关注你的人" action="全部" onAction={() => void goto(ROUTES.meSection('fans'))}>
 				<div class="flex flex-col gap-3">
 					{#each notifications.filter((n) => n.type === 'follow').slice(0, 3) as n (n.id)}
 						<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.time}>
