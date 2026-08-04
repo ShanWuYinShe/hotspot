@@ -2,6 +2,7 @@
 	import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, Crosshair, Check, Heart } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import BorderedList from '@/components/data-display/BorderedList.svelte';
+	import { loadDefaultLocation } from '@/lib/default-location';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from './location-data';
 	import { PIN_COLORS, PIN_LABELS, pinTone, getMarkerUrl } from './location-shared';
 
@@ -36,19 +37,30 @@
 		onReset: () => void;
 		onConfirm: () => void;
 	} = $props();
+
+	let locationName = $state('');
+	$effect(() => {
+		let cancelled = false;
+		void loadDefaultLocation().then((loc) => {
+			if (!cancelled) locationName = loc?.location_name ?? '';
+		});
+		return () => {
+			cancelled = true;
+		};
+	});
 </script>
 
 <!-- Header -->
 <div class="shrink-0">
-	<PageHeader title="位置选择" onBack={() => history.back()} subtitle="江苏·徐州" sticky>
+	<PageHeader title="位置选择" onBack={() => history.back()} subtitle={locationName || '位置选择'} sticky>
 		{#snippet trailing()}
 			<button
 				type="button"
-				class="neu-hover-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 neu-circle-hover bg-[var(--neu-bg)]"
-				style="width:36px;height:36px;border:1px solid var(--neu-border);box-shadow:4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light);"
+				class="hover-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 circle-hover bg-[var(--surface-primary)]"
+				style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:4px 4px 9px var(--elevation-shadow-dark), -4px -4px 9px var(--elevation-shadow-light);"
 				onclick={onReset}
 			>
-				<Crosshair style="width:15px;height:15px;color:var(--neu-accent-primary);" strokeWidth={1.75} />
+				<Crosshair style="width:15px;height:15px;color:var(--accent-default);" strokeWidth={1.75} />
 			</button>
 		{/snippet}
 	</PageHeader>
@@ -56,8 +68,8 @@
 
 <!-- Search -->
 <div class="shrink-0 px-4 pt-3 pb-2 relative">
-	<div class="flex items-center gap-2.5 px-3.5 rounded-[14px] neu-input-surface" style="height:42px;">
-		<Search style="width:14px;height:14px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
+	<div class="flex items-center gap-2.5 px-3.5 rounded-[14px] input-surface" style="height:42px;">
+		<Search style="width:14px;height:14px;color:var(--text-secondary);flex-shrink:0;" strokeWidth={1.5} />
 		<input
 			bind:value={searchQuery}
 			oninput={(e) => {
@@ -65,27 +77,27 @@
 				selectedLoc = null;
 			}}
 			placeholder="搜索地点或地标…"
-			class="flex-1 bg-transparent outline-none text-[var(--neu-text)] text-[13px]"
+			class="flex-1 bg-transparent outline-none text-[var(--text-primary)] text-[13px]"
 		/>
 		{#if searchQuery}
-			<button type="button" class="neu-hover-btn outline-none" onclick={() => (searchQuery = '')}>
-				<X style="width:13px;height:13px;color:var(--neu-text-muted);" strokeWidth={2} />
+			<button type="button" class="hover-btn outline-none" onclick={() => (searchQuery = '')}>
+				<X style="width:13px;height:13px;color:var(--text-secondary);" strokeWidth={2} />
 			</button>
 		{/if}
 	</div>
 	{#if searchResults.length > 0}
-		<BorderedList class="absolute top-full left-4 right-4 z-30 mt-1" style="box-shadow:0 0 0 1px var(--neu-border), 0 10px 36px var(--neu-shadow-dark);">
+		<BorderedList class="absolute top-full left-4 right-4 z-30 mt-1" style="box-shadow:0 0 0 1px var(--border-default), 0 10px 36px var(--elevation-shadow-dark);">
 			{#each searchResults as r}
 				<button
 					type="button"
-					class="bg-[var(--neu-bg)] flex w-full items-center gap-3 px-4 py-3 text-left outline-none transition-[background-color,transform] duration-150 hover:bg-[var(--interactive-hover-fill)] focus-visible:bg-[var(--interactive-hover-fill)] active:scale-[0.98] active:duration-100"
+					class="bg-[var(--surface-primary)] flex w-full items-center gap-3 px-4 py-3 text-left outline-none transition-[background-color,transform] duration-150 hover:bg-[var(--interactive-hover-fill)] focus-visible:bg-[var(--interactive-hover-fill)] active:scale-[0.98] active:duration-100"
 					aria-pressed={selectedLoc?.displayName === r.displayName}
 					onclick={() => onSelectLoc(r)}
 				>
-					<MapPin style="width:13px;height:13px;color:var(--neu-accent-primary);flex-shrink:0;" strokeWidth={1.5} />
-					<span class="text-[var(--neu-text)]" style="font-size:13px;flex:1;">{r.displayName}</span>
+					<MapPin style="width:13px;height:13px;color:var(--accent-default);flex-shrink:0;" strokeWidth={1.5} />
+					<span class="text-[var(--text-primary)]" style="font-size:13px;flex:1;">{r.displayName}</span>
 					{#if selectedLoc?.displayName === r.displayName}
-						<Check style="width:13px;height:13px;color:var(--neu-accent-primary);" strokeWidth={2.5} />
+						<Check style="width:13px;height:13px;color:var(--accent-default);" strokeWidth={2.5} />
 					{/if}
 				</button>
 			{/each}
@@ -102,8 +114,8 @@
 	] as tab}
 		<button
 			type="button"
-			class="neu-hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none {activeTab === tab.id ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-[var(--neu-bg)] text-[var(--neu-text-muted)]'}"
-			style={activeTab === tab.id ? 'font-size:12px;box-shadow:0 3px 10px var(--neu-glow);' : 'font-size:12px;border:1px solid var(--neu-border);'}
+			class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none {activeTab === tab.id ? 'bg-[var(--accent-default)] text-white' : 'bg-[var(--surface-primary)] text-[var(--text-secondary)]'}"
+			style={activeTab === tab.id ? 'font-size:12px;box-shadow:0 3px 10px var(--glow-accent);' : 'font-size:12px;border:1px solid var(--border-default);'}
 			onclick={() => (activeTab = tab.id as 'nearby' | 'hot' | 'recent')}
 		>
 			<tab.icon style="width:11px;height:11px;" strokeWidth={activeTab === tab.id ? 2.5 : 1.5} />
@@ -117,15 +129,15 @@
 	{#if activeTab === 'nearby'}
 		<div class="animate-fade-in flex flex-col gap-2">
 			<!-- Current location card -->
-			<div class="flex items-center gap-3 p-3.5 rounded-[16px] bg-[var(--neu-accent-primary)] text-white">
+			<div class="flex items-center gap-3 p-3.5 rounded-[16px] bg-[var(--accent-default)] text-white">
 				<div class="flex items-center justify-center rounded-full flex-shrink-0" style="width:42px;height:42px;background:rgba(255,255,255,0.2);">
 					<Navigation style="width:17px;height:17px;" strokeWidth={2} />
 				</div>
 				<div class="flex-1">
 					<p style="font-size:13px;">当前位置</p>
-					<p style="font-size:11px;opacity:0.8;margin-top:1px;">江苏·徐州 · 精度 ±12m</p>
+					<p style="font-size:11px;opacity:0.8;margin-top:1px;">{locationName || '自动定位'}</p>
 				</div>
-				<div class="bg-[var(--semantic-online)]" style="width:8px;height:8px;border-radius:50%;box-shadow:0 0 6px var(--semantic-online);flex-shrink:0;"></div>
+				<div class="bg-[var(--status-online)]" style="width:8px;height:8px;border-radius:50%;box-shadow:0 0 6px var(--status-online);flex-shrink:0;"></div>
 			</div>
 
 			{#if nearbyPins.length}
@@ -142,7 +154,7 @@
 							<div class="relative flex-shrink-0">
 								<img src={pin.avatar} alt={pin.name || pin.title || ''} class="rounded-full object-cover" style="width:42px;height:42px;" />
 								{#if pin.online}
-									<span class="absolute bottom-0 right-0 rounded-full bg-[var(--semantic-online)]" style="width:10px;height:10px;border:2px solid var(--neu-bg);"></span>
+									<span class="absolute bottom-0 right-0 rounded-full bg-[var(--status-online)]" style="width:10px;height:10px;border:2px solid var(--surface-primary);"></span>
 								{/if}
 							</div>
 						{:else if pin.type === 'moment' && pin.image}
@@ -153,23 +165,23 @@
 							</div>
 						{/if}
 						<div class="flex-1 min-w-0">
-							<p class="text-[var(--neu-text)] text-[13px]">{pin.name || pin.title}</p>
+							<p class="text-[var(--text-primary)] text-[13px]">{pin.name || pin.title}</p>
 							<div class="flex items-center gap-2 mt-0.5 flex-wrap">
 								<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:{pinTone(pin.type, 15)};color:{PIN_COLORS[pin.type]};">
 									{PIN_LABELS[pin.type]}
 								</span>
 								{#if pin.tag}
-									<span class="text-[var(--neu-text-muted)] text-[11px]">#{pin.tag}</span>
+									<span class="text-[var(--text-secondary)] text-[11px]">#{pin.tag}</span>
 								{/if}
 								{#if pin.distance}
-									<span class="text-[var(--neu-text-muted)] text-[11px]">{pin.distance}</span>
+									<span class="text-[var(--text-secondary)] text-[11px]">{pin.distance}</span>
 								{/if}
 								{#if pin.members}
-									<span class="text-[var(--neu-text-muted)] text-[11px]">{pin.members}人</span>
+									<span class="text-[var(--text-secondary)] text-[11px]">{pin.members}人</span>
 								{/if}
 								{#if pin.likes}
-									<span class="flex items-center gap-0.5 text-[var(--neu-text-muted)]">
-										<Heart style="width:9px;height:9px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+									<span class="flex items-center gap-0.5 text-[var(--text-secondary)]">
+										<Heart style="width:9px;height:9px;color:var(--text-secondary);" strokeWidth={1.5} />
 										<span class="text-[11px]">{pin.likes}</span>
 									</span>
 								{/if}
@@ -178,14 +190,14 @@
 						{#if isSelected}
 							<span class="rounded-full px-2 py-1" style="font-size:10px;color:white;background:{PIN_COLORS[pin.type]};flex-shrink:0;">已定位</span>
 						{:else}
-							<ChevronRight style="width:14px;height:14px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
+							<ChevronRight style="width:14px;height:14px;color:var(--text-secondary);flex-shrink:0;" strokeWidth={1.5} />
 						{/if}
 					</button>
 				{/each}
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
-					<MapPin style="width:22px;height:22px;color:var(--neu-text-muted);opacity:0.3;" strokeWidth={1} />
-					<p class="text-[var(--neu-text-muted)] text-xs">附近暂无内容，放大或移动地图后刷新</p>
+					<MapPin style="width:22px;height:22px;color:var(--text-secondary);opacity:0.3;" strokeWidth={1} />
+					<p class="text-[var(--text-secondary)] text-xs">附近暂无内容，放大或移动地图后刷新</p>
 				</div>
 			{/if}
 		</div>
@@ -196,31 +208,31 @@
 					{@const isSelected = selectedLoc?.displayName === loc.displayName}
 					<button
 						type="button"
-						class="bg-[var(--neu-bg)] flex w-full items-center gap-3 rounded-[16px] p-3.5 text-left outline-none transition-[background-color,box-shadow,transform] duration-150 {isSelected ? '' : 'hover:bg-[var(--interactive-hover-fill)] focus-visible:bg-[var(--interactive-hover-fill)]'} active:scale-[0.97] active:duration-100"
-						style="box-shadow:{isSelected ? '0 0 0 1px var(--neu-accent-soft-border), 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)' : '4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)'};border:1px solid {isSelected ? 'var(--neu-accent-soft-border)' : 'var(--neu-border)'};"
+						class="bg-[var(--surface-primary)] flex w-full items-center gap-3 rounded-[16px] p-3.5 text-left outline-none transition-[background-color,box-shadow,transform] duration-150 {isSelected ? '' : 'hover:bg-[var(--interactive-hover-fill)] focus-visible:bg-[var(--interactive-hover-fill)]'} active:scale-[0.97] active:duration-100"
+						style="box-shadow:{isSelected ? '0 0 0 1px var(--accent-border), 4px 4px 10px var(--elevation-shadow-dark), -4px -4px 10px var(--elevation-shadow-light)' : '4px 4px 10px var(--elevation-shadow-dark), -4px -4px 10px var(--elevation-shadow-light)'};border:1px solid {isSelected ? 'var(--accent-border)' : 'var(--border-default)'};"
 						aria-pressed={isSelected}
 						onclick={() => onSelectLoc(loc)}
 					>
-						<div class="flex items-center justify-center rounded-[14px] flex-shrink-0 bg-[var(--neu-accent-primary)]" style="width:46px;height:46px;font-size:22px;opacity:0.88;">
+						<div class="flex items-center justify-center rounded-[14px] flex-shrink-0 bg-[var(--accent-default)]" style="width:46px;height:46px;font-size:22px;opacity:0.88;">
 							{loc.emoji}
 						</div>
 						<div class="flex-1 min-w-0">
-							<p class="text-[var(--neu-text)] text-sm">{loc.displayName}</p>
-							<p class="text-[var(--neu-text-muted)]" style="font-size:12px;margin-top:2px;">{loc.desc}</p>
+							<p class="text-[var(--text-primary)] text-sm">{loc.displayName}</p>
+							<p class="text-[var(--text-secondary)]" style="font-size:12px;margin-top:2px;">{loc.desc}</p>
 						</div>
 						<div class="flex flex-col items-end flex-shrink-0 gap-0.5">
 							<div class="flex items-center gap-1">
-								<Users style="width:11px;height:11px;color:var(--neu-accent-primary);" strokeWidth={1.5} />
-								<span class="text-[var(--neu-accent-primary)] text-xs">{loc.users}</span>
+								<Users style="width:11px;height:11px;color:var(--accent-default);" strokeWidth={1.5} />
+								<span class="text-[var(--accent-default)] text-xs">{loc.users}</span>
 							</div>
-							<span class="text-[var(--neu-text-muted)] text-[10px]">在线</span>
+							<span class="text-[var(--text-secondary)] text-[10px]">在线</span>
 						</div>
 					</button>
 				{/each}
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
-					<Star style="width:22px;height:22px;color:var(--neu-text-muted);opacity:0.3;" strokeWidth={1} />
-					<p class="text-[var(--neu-text-muted)] text-xs">暂无热门地点</p>
+					<Star style="width:22px;height:22px;color:var(--text-secondary);opacity:0.3;" strokeWidth={1} />
+					<p class="text-[var(--text-secondary)] text-xs">暂无热门地点</p>
 				</div>
 			{/if}
 		</div>
@@ -231,27 +243,27 @@
 					{@const isSelected = selectedLoc?.displayName === loc.displayName}
 					<button
 						type="button"
-						class="bg-[var(--neu-bg)] flex w-full items-center gap-3 rounded-[16px] p-3.5 text-left outline-none transition-[background-color,box-shadow,transform] duration-150 {isSelected ? '' : 'hover:bg-[var(--interactive-hover-fill)] focus-visible:bg-[var(--interactive-hover-fill)]'} active:scale-[0.97] active:duration-100"
-						style="box-shadow:4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);border:1px solid var(--neu-border);"
+						class="bg-[var(--surface-primary)] flex w-full items-center gap-3 rounded-[16px] p-3.5 text-left outline-none transition-[background-color,box-shadow,transform] duration-150 {isSelected ? '' : 'hover:bg-[var(--interactive-hover-fill)] focus-visible:bg-[var(--interactive-hover-fill)]'} active:scale-[0.97] active:duration-100"
+						style="box-shadow:4px 4px 10px var(--elevation-shadow-dark), -4px -4px 10px var(--elevation-shadow-light);border:1px solid var(--border-default);"
 						aria-pressed={isSelected}
 						onclick={() => onSelectLoc(loc)}
 					>
-						<div class="flex items-center justify-center rounded-full flex-shrink-0 bg-[var(--neu-bg)]" style="width:44px;height:44px;box-shadow:3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light);border:1px solid var(--neu-border);font-size:20px;">
+						<div class="flex items-center justify-center rounded-full flex-shrink-0 bg-[var(--surface-primary)]" style="width:44px;height:44px;box-shadow:3px 3px 7px var(--elevation-shadow-dark), -3px -3px 7px var(--elevation-shadow-light);border:1px solid var(--border-default);font-size:20px;">
 							{loc.emoji}
 						</div>
 						<div class="flex-1 min-w-0">
-							<p class="text-[var(--neu-text)] text-sm">{loc.displayName}</p>
-							<p class="text-[var(--neu-text-muted)]" style="font-size:12px;margin-top:2px;">{loc.desc}</p>
+							<p class="text-[var(--text-primary)] text-sm">{loc.displayName}</p>
+							<p class="text-[var(--text-secondary)]" style="font-size:12px;margin-top:2px;">{loc.desc}</p>
 						</div>
 						{#if isSelected}
-							<Check style="width:14px;height:14px;color:var(--neu-accent-primary);flex-shrink:0;" strokeWidth={2.5} />
+							<Check style="width:14px;height:14px;color:var(--accent-default);flex-shrink:0;" strokeWidth={2.5} />
 						{/if}
 					</button>
 				{/each}
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
-					<Clock style="width:22px;height:22px;color:var(--neu-text-muted);opacity:0.3;" strokeWidth={1} />
-					<p class="text-[var(--neu-text-muted)] text-xs">暂无最近记录</p>
+					<Clock style="width:22px;height:22px;color:var(--text-secondary);opacity:0.3;" strokeWidth={1} />
+					<p class="text-[var(--text-secondary)] text-xs">暂无最近记录</p>
 				</div>
 			{/if}
 		</div>
@@ -259,27 +271,27 @@
 </div>
 
 <!-- Confirm -->
-<div style="flex-shrink:0;padding:10px 12px 16px;border-top:1px solid var(--neu-border);">
+<div style="flex-shrink:0;padding:10px 12px 16px;border-top:1px solid var(--border-default);">
 	{#if selectedLoc}
-		<div class="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-[13px] bg-[var(--neu-bg)]" style="box-shadow:0 0 0 1px var(--neu-border), inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);">
-			<Check style="width:13px;height:13px;color:var(--neu-accent-primary);flex-shrink:0;" strokeWidth={2.5} />
-			<p class="flex-1 truncate text-[var(--neu-accent-primary)] text-xs">{selectedLoc.displayName}</p>
+		<div class="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-[13px] bg-[var(--surface-primary)]" style="box-shadow:0 0 0 1px var(--border-default), inset 2px 2px 5px var(--elevation-shadow-dark), inset -2px -2px 5px var(--elevation-shadow-light);">
+			<Check style="width:13px;height:13px;color:var(--accent-default);flex-shrink:0;" strokeWidth={2.5} />
+			<p class="flex-1 truncate text-[var(--accent-default)] text-xs">{selectedLoc.displayName}</p>
 			<button
 				type="button"
-				class="neu-hover-btn outline-none"
+				class="hover-btn outline-none"
 				onclick={() => {
 					selectedLoc = null;
 					searchQuery = '';
 				}}
 			>
-				<X style="width:12px;height:12px;color:var(--neu-text-muted);" strokeWidth={2} />
+				<X style="width:12px;height:12px;color:var(--text-secondary);" strokeWidth={2} />
 			</button>
 		</div>
 	{/if}
 	<button
 		type="button"
-		class="neu-hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-[var(--neu-accent-primary)] text-white"
-		style="height:48px;font-size:14px;box-shadow:0 6px 20px var(--neu-glow);"
+		class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-[var(--accent-default)] text-white"
+		style="height:48px;font-size:14px;box-shadow:0 6px 20px var(--glow-accent);"
 		onclick={onConfirm}
 	>
 		<MapPin style="width:14px;height:14px;" strokeWidth={2} />

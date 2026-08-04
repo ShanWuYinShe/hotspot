@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { ChevronRight } from '@lucide/svelte';
 
-	// 详情栏通用小节包装（迁移自旧版 DetailRail 内 RailSection）。
+	// 详情栏通用小节包装。
 
 	let {
 		title,
@@ -17,14 +17,14 @@
 	} = $props();
 </script>
 
-<div class="neu-surface-flat rounded-[18px] p-4">
+<div class="surface-flat rounded-[18px] p-4">
 	<div class="flex items-end justify-between mb-3">
-		<span class="neu-eyebrow">{title}</span>
+		<span class="eyebrow">{title}</span>
 		{#if action && onAction}
 		<button
 			type="button"
-			class="neu-hover-btn flex items-center gap-0.5 outline-none"
-			style="color:var(--neu-accent-primary);"
+			class="hover-btn flex items-center gap-0.5 outline-none"
+			style="color:var(--accent-default);"
 			onclick={onAction}
 		>
 				<span style="font-size:11px;">{action}</span>

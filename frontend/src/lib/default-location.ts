@@ -1,4 +1,4 @@
-// 客户端配置默认位置（迁移自旧版 useDefaultLocation 的纯 TS 部分）。
+// 客户端配置默认位置。
 //
 // reference_point 是每个 feed/search 端点的可选参数:不传时服务端按回退链解析
 // (请求显式传参 → 最近一次 users/update_location → ClientConfig.defaults.default_location.point)。

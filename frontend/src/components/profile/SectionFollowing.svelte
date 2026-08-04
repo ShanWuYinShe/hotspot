@@ -8,7 +8,7 @@
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
-	// 关注分区（迁移自旧版 ProfileSections 内 SectionFollowing/FollowingRow）。
+	// 关注分区。
 
 	let { embedded = false }: { embedded?: boolean } = $props();
 
@@ -29,17 +29,17 @@
 <div class="flex-1 overflow-y-auto no-scrollbar flex flex-col">
 	{#if !embedded}
 		<!-- Header -->
-		<div class="flex items-center justify-between px-[var(--page-gutter)] py-4 flex-shrink-0" style="border-bottom:1px solid var(--neu-border);">
+		<div class="flex items-center justify-between px-[var(--page-gutter)] py-4 flex-shrink-0" style="border-bottom:1px solid var(--border-default);">
 			<div>
 				<div class="flex items-center gap-2.5">
-					<span class="text-[var(--neu-text)] text-[15px]">关注</span>
-					<span class="px-2 py-0.5 rounded-full bg-[var(--neu-accent-primary)] text-white text-[11px]">
+					<span class="text-[var(--text-primary)] text-[15px]">关注</span>
+					<span class="px-2 py-0.5 rounded-full bg-[var(--accent-default)] text-white text-[11px]">
 						{following.length} 人
 					</span>
 				</div>
-				<p class="mt-1 text-[var(--neu-text-muted)] text-[11px]">你主动订阅的动态与创作者</p>
+				<p class="mt-1 text-[var(--text-secondary)] text-[11px]">你主动订阅的动态与创作者</p>
 			</div>
-			<span class="rounded-full px-3 py-1 bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] text-[11px]" style="border:1px solid var(--neu-accent-soft-border);">
+			<span class="rounded-full px-3 py-1 bg-[var(--accent-soft)] text-[var(--accent-default)] text-[11px]" style="border:1px solid var(--accent-border);">
 				点击卡片查看主页
 			</span>
 		</div>
@@ -51,8 +51,8 @@
 			{@const active = sortBy === pill.id}
 			<button
 				type="button"
-				class="neu-hover-btn flex items-center gap-1.5 px-3 py-1 rounded-full outline-none neu-surface-ghost text-xs neu-tap-93 {active ? 'bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] font-medium' : 'text-[var(--neu-text-muted)]'}"
-				style={active ? 'border-color:var(--neu-accent-soft-border);' : ''}
+				class="hover-btn flex items-center gap-1.5 px-3 py-1 rounded-full outline-none surface-ghost text-xs tap-93 {active ? 'bg-[var(--accent-soft)] text-[var(--accent-default)] font-medium' : 'text-[var(--text-secondary)]'}"
+				style={active ? 'border-color:var(--accent-border);' : ''}
 				onclick={() => (sortBy = pill.id as 'recent' | 'active')}
 			>
 				{#if pill.id === 'active'}
@@ -83,15 +83,15 @@
 						>
 							<Avatar ring src={f.avatar} name={f.name} size={48} />
 							<div class="flex-1 min-w-0">
-								<p class="text-[var(--neu-text)] text-[13px]">{f.name}</p>
-								<p class="truncate text-[var(--neu-text-muted)] text-[11px] mt-px">{f.desc}</p>
-								<p class="text-[var(--neu-accent-primary)] text-[10px] mt-px">{f.posts} 帖子</p>
+								<p class="text-[var(--text-primary)] text-[13px]">{f.name}</p>
+								<p class="truncate text-[var(--text-secondary)] text-[11px] mt-px">{f.desc}</p>
+								<p class="text-[var(--accent-default)] text-[10px] mt-px">{f.posts} 帖子</p>
 							</div>
 							<img src={f.latestImg} alt="" class="rounded-[8px] object-cover flex-shrink-0" style="width:44px;height:44px;opacity:0.85;" />
 							<button
 								type="button"
-								class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] neu-tap-93 {unfollowedIds.has(f.id) ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-transparent text-[var(--neu-text-muted)]'}"
-								style={unfollowedIds.has(f.id) ? 'border:1px solid transparent;' : 'border:1px solid var(--neu-border-pressed);'}
+								class="hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] tap-93 {unfollowedIds.has(f.id) ? 'bg-[var(--accent-default)] text-white' : 'bg-transparent text-[var(--text-secondary)]'}"
+								style={unfollowedIds.has(f.id) ? 'border:1px solid transparent;' : 'border:1px solid var(--border-strong);'}
 								onclick={(e) => {
 									e.stopPropagation();
 									toggleUnfollow(f.id);
@@ -127,15 +127,15 @@
 						>
 							<Avatar ring src={f.avatar} name={f.name} size={42} />
 							<div class="flex-1 min-w-0">
-								<p class="text-[var(--neu-text)] text-[13px]">{f.name}</p>
-								<p class="truncate text-[var(--neu-text-muted)] text-[11px] mt-px">{f.desc}</p>
-								<p class="text-[var(--neu-accent-primary)] text-[10px] mt-px">{f.posts} 帖子</p>
+								<p class="text-[var(--text-primary)] text-[13px]">{f.name}</p>
+								<p class="truncate text-[var(--text-secondary)] text-[11px] mt-px">{f.desc}</p>
+								<p class="text-[var(--accent-default)] text-[10px] mt-px">{f.posts} 帖子</p>
 							</div>
 							<img src={f.latestImg} alt="" class="rounded-[8px] object-cover flex-shrink-0" style="width:36px;height:36px;opacity:0.85;" />
 							<button
 								type="button"
-								class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] neu-tap-93 {unfollowedIds.has(f.id) ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-transparent text-[var(--neu-text-muted)]'}"
-								style={unfollowedIds.has(f.id) ? 'border:1px solid transparent;' : 'border:1px solid var(--neu-border-pressed);'}
+								class="hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] tap-93 {unfollowedIds.has(f.id) ? 'bg-[var(--accent-default)] text-white' : 'bg-transparent text-[var(--text-secondary)]'}"
+								style={unfollowedIds.has(f.id) ? 'border:1px solid transparent;' : 'border:1px solid var(--border-strong);'}
 								onclick={(e) => {
 									e.stopPropagation();
 									toggleUnfollow(f.id);

@@ -1,21 +1,22 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { MoreHorizontal, Link2 } from '@lucide/svelte';
+	import { MoreHorizontal, Link2, Send } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
 	import { auth } from '@/stores/auth.svelte';
-	import DesktopDetailSplit from '@/components/layout/desktop/DesktopDetailSplit.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
 	import RailSection from '@/components/layout/desktop/RailSection.svelte';
 	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
 	import RailLocationMini from '@/components/layout/desktop/RailLocationMini.svelte';
 	import RailMomentThumb from '@/components/layout/desktop/RailMomentThumb.svelte';
 	import MomentPostBody from './MomentPostBody.svelte';
-	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment } from '@/api';
+	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment, getFeedNearby, searchMoments } from '@/api';
 	import { ROUTES } from '@/lib/routes';
+	import { formatDistance } from '@/lib/utils';
 
 	// 动态详情：点赞/收藏/评论/复制链接/更多菜单 + 桌面右 Rail。
-	// 迁移自旧版 MomentDetailPage。
 
 	let { params }: { params: { momentId: string } } = $props();
 
@@ -23,26 +24,45 @@
 	type MomentComment = import('./MomentPostBody.svelte').MomentComment;
 	type MomentData = import('./MomentPostBody.svelte').MomentData;
 
-	// 桌面 rail 占位数据（对齐 Figma PostDetailPage NEARBY_NOW/RELATED_MOMENTS；
-	// 后端无专用端点，先用占位引导，后续接入 feed/nearby 与相关推荐）。
-	const NEARBY_NOW = [
-		{ id: 1, name: '鹿鸣', sub: '246m · 摄影', avatar: 'https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=80' },
-		{ id: 2, name: '阿禾', sub: '388m · 旅行', avatar: 'https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=80' },
-		{ id: 3, name: '野原', sub: '520m · 音乐', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80' }
-	];
-	const RELATED_MOMENTS = [
-		{ id: 40, title: '植物园晨光', meta: '南枝 · 124 赞', image: 'https://images.unsplash.com/photo-1768776179834-93e6cafc6d97?w=120' },
-		{ id: 41, title: '城市夜光', meta: '本地向导 · 89 赞', image: 'https://images.unsplash.com/photo-1748737349771-e2b6605e5961?w=120' },
-		{ id: 42, title: '老街手冲馆', meta: '野原 · 56 赞', image: 'https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=120' }
-	];
+	// 桌面 rail 数据：此刻附近来自 feed/nearby，更多动态来自 moments/search（均走 MSW mock）。
+	let nearbyNow = $state<{ id: string; name: string; sub: string; avatar: string }[]>([]);
+	let relatedMoments = $state<{ id: string; title: string; meta: string; image: string }[]>([]);
+
+	$effect(() => {
+		let cancelled = false;
+		void Promise.all([
+			getFeedNearby({ pagination: { limit: 3 } }).catch(() => ({ code: -1, data: null })),
+			searchMoments({ keyword: '', pagination: { limit: 3 } }).catch(() => ({ code: -1, data: null }))
+		]).then(([nearbyRes, relatedRes]) => {
+			if (cancelled) return;
+			const nearbyItems = nearbyRes.code === 0 ? nearbyRes.data?.items ?? [] : [];
+			const relatedItems = relatedRes.code === 0 ? relatedRes.data?.items ?? [] : [];
+			nearbyNow = nearbyItems.map((m) => ({
+				id: m.user?.user_id ?? m.moment_id,
+				name: m.user?.nickname ?? '',
+				sub: [formatDistance(m.location?.distance), m.tags?.[0]].filter(Boolean).join(' · '),
+				avatar: m.user?.avatar_url ?? ''
+			}));
+			relatedMoments = relatedItems.map((m) => ({
+				id: m.moment_id,
+				title: m.description ?? '',
+				meta: `${m.user?.nickname ?? ''} · ${m.likes_count ?? 0} 赞`,
+				image: m.images?.[0]?.url ?? ''
+			}));
+		});
+		return () => {
+			cancelled = true;
+		};
+	});
 
 	// params 为路由参数（SPA 内可能变化），此处用 $derived 保持响应。
-	const numericMomentId = $derived(Number(params.momentId));
-	const momentId = $derived(String(numericMomentId));
+	// spec: moment_id 为 string，客户端不解析 ID 内容，直接透传使用。
+	const momentId = $derived(params.momentId);
 
 	function emptyMoment(): MomentData {
 		return {
-			id: 0,
+			id: '',
+			authorId: '',
 			user: '',
 			handle: '',
 			avatar: '',
@@ -86,7 +106,8 @@
 
 				if (detailData) {
 					moment = {
-						id: numericMomentId,
+						id: momentId,
+						authorId: detailData.user?.user_id ?? '',
 						user: detailData.user?.nickname ?? '',
 						handle: '',
 						avatar: detailData.user?.avatar_url ?? '',
@@ -176,7 +197,7 @@
 	};
 
 	const copyMomentLink = async () => {
-		const momentUrl = `${window.location.origin}${ROUTES.moment(numericMomentId)}`;
+		const momentUrl = `${window.location.origin}${ROUTES.moment(momentId)}`;
 		try {
 			if (!navigator.clipboard?.writeText) throw new Error('Clipboard API unavailable');
 			await navigator.clipboard.writeText(momentUrl);
@@ -191,10 +212,9 @@
 	let moreMenuEl = $state<HTMLElement | null>(null);
 </script>
 
-{#snippet main()}
-	<div class="flex flex-col bg-[var(--neu-bg)]" style="height:100%;">
-		<!-- Header -->
-		<PageHeader title="动态详情" titleSize={16} onBack={() => history.back()} class="flex-shrink-0 border-b border-[var(--neu-border)]">
+<SplitPageLayout contentClassName="p-0">
+	{#snippet header()}
+		<PageHeader title="动态详情" titleSize={16} onBack={() => history.back()} class="flex-shrink-0 border-b border-[var(--border-default)]">
 			{#snippet trailing()}
 				<DropdownMenu.Root bind:open={moreOpen}>
 					<div bind:this={moreMenuEl} class="relative">
@@ -202,10 +222,10 @@
 					</div>
 					<DropdownMenu.Content customAnchor={moreMenuEl}>
 						<DropdownMenu.Item onSelect={() => void copyMomentLink()}>
-							<Link2 style="width:14px;height:14px;color:var(--neu-accent-primary);" strokeWidth={1.75} />
+							<Link2 style="width:14px;height:14px;color:var(--accent-default);" strokeWidth={1.75} />
 							复制链接
 						</DropdownMenu.Item>
-						<DropdownMenu.Item class="text-[var(--neu-text-muted)]">
+						<DropdownMenu.Item class="text-[var(--text-secondary)]">
 							取消
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
@@ -216,37 +236,59 @@
 		<p aria-live="polite" class="sr-only">
 			{shareStatus === 'copied' ? '动态链接已复制' : shareStatus === 'failed' ? '无法复制动态链接' : ''}
 		</p>
+	{/snippet}
 
-		<!-- Scrollable content -->
-		<div class="flex-1 overflow-y-auto no-scrollbar">
-			<MomentPostBody
-				{moment}
-				comments={apiComments}
-				{commentCount}
-				{liked}
-				{saved}
-				{shareStatus}
-				bind:input
-				onToggleLike={() => void toggleLike()}
-				onToggleSave={() => void toggleSave()}
-				onShare={() => void copyMomentLink()}
-				onComment={() => void handleComment()}
-			/>
-		</div>
+	<!-- 内容体自带 ContentColumn gutter：负 margin 抵消 SplitPageLayout 的 gutter -->
+	<div class="-mx-[var(--page-gutter)]">
+		<MomentPostBody
+			{moment}
+			comments={apiComments}
+			{commentCount}
+			{liked}
+			{saved}
+			{shareStatus}
+			onToggleLike={() => void toggleLike()}
+			onToggleSave={() => void toggleSave()}
+			onShare={() => void copyMomentLink()}
+		/>
 	</div>
-{/snippet}
 
-{#snippet rail()}
+	{#snippet footer()}
+		<!-- 评论输入栏固定在主区底部，不随正文滚动 -->
+		<div class="flex-shrink-0 flex items-center gap-2.5 px-4 py-3 bg-[var(--surface-primary)]" style="border-top:1px solid var(--border-default);">
+			<Avatar src={auth.user?.avatar_url} name={auth.user?.nickname} size={30} style="border:1px solid var(--border-default);" />
+			<div class="flex-1 flex items-center px-4 rounded-relaxed input-surface" style="height:38px;">
+				<input
+					bind:value={input}
+					onkeydown={(e) => {
+						if (e.key === 'Enter') void handleComment();
+					}}
+					placeholder="写下你的评论…"
+					class="flex-1 bg-transparent outline-none text-[var(--text-primary)] text-[13px]"
+				/>
+			</div>
+			<button
+				type="button"
+				class="hover-btn tap-88 flex items-center justify-center rounded-full outline-none flex-shrink-0"
+				style="width:36px;height:36px;background:{input.trim() ? 'var(--accent-default)' : 'var(--surface-primary)'};box-shadow:{input.trim() ? '0 4px 14px var(--glow-accent)' : '4px 4px 8px var(--elevation-shadow-dark), -4px -4px 8px var(--elevation-shadow-light)'};border:1px solid var(--border-default);transition:all 0.2s;"
+				onclick={() => void handleComment()}
+			>
+				<Send style="width:14px;height:14px;color:{input.trim() ? 'var(--text-on-accent)' : 'var(--text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
+			</button>
+		</div>
+	{/snippet}
+
+	{#snippet rail()}
 	<RailSection title="作者">
-		<RailUserRow avatar={moment.avatar} name={moment.user} sub={`${moment.handle} · ${moment.location}`} onClick={() => void goto(ROUTES.user(moment.id))}>
+		<RailUserRow avatar={moment.avatar} name={moment.user} sub={`${moment.handle} · ${moment.location}`} onClick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}>
 			{#snippet trailing()}
 				<button
 					type="button"
-					class="neu-hover-btn px-2.5 py-1 rounded-full outline-none flex-shrink-0 bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)]"
-					style="font-size:11px;border:1px solid var(--neu-accent-soft-border);"
+					class="hover-btn px-2.5 py-1 rounded-full outline-none flex-shrink-0 bg-[var(--accent-soft)] text-[var(--accent-default)]"
+					style="font-size:11px;border:1px solid var(--accent-border);"
 					onclick={(e) => {
 						e.stopPropagation();
-						void goto(ROUTES.message(moment.id));
+						if (moment.authorId) void goto(ROUTES.message(moment.authorId));
 					}}
 				>
 					私信
@@ -256,26 +298,25 @@
 	</RailSection>
 
 	<RailSection title="相关位置">
-		<RailLocationMini name={moment.location} desc="共 12 条动态 · 6 人在此" />
+		<RailLocationMini name={moment.location} />
 	</RailSection>
 
-	<!-- 此刻附近（对齐 Figma PostDetailPage rail；后端无专用端点，先用占位引导） -->
+	<!-- 此刻附近（feed/nearby） -->
 	<RailSection title="此刻附近" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)}>
 		<div class="flex flex-col gap-3">
-			{#each NEARBY_NOW as u (u.id)}
-				<RailUserRow avatar={u.avatar} name={u.name} sub={u.sub} onClick={() => void goto(ROUTES.user(String(u.id)))} />
+			{#each nearbyNow as u (u.id)}
+				<RailUserRow avatar={u.avatar} name={u.name} sub={u.sub} onClick={() => { if (u.id) void goto(ROUTES.user(u.id)); }} />
 			{/each}
 		</div>
 	</RailSection>
 
-	<!-- 更多动态（对齐 Figma PostDetailPage rail） -->
+	<!-- 更多动态（moments/search） -->
 	<RailSection title="更多动态" action="发现" onAction={() => void goto(ROUTES.nearbyMoments)}>
 		<div class="flex flex-col gap-3">
-			{#each RELATED_MOMENTS as p (p.id)}
-				<RailMomentThumb image={p.image} title={p.title} meta={p.meta} onClick={() => void goto(ROUTES.moment(String(p.id)))} />
+			{#each relatedMoments as p (p.id)}
+				<RailMomentThumb image={p.image} title={p.title} meta={p.meta} onClick={() => void goto(ROUTES.moment(p.id))} />
 			{/each}
 		</div>
 	</RailSection>
-{/snippet}
-
-<DesktopDetailSplit {main} {rail} />
+	{/snippet}
+</SplitPageLayout>

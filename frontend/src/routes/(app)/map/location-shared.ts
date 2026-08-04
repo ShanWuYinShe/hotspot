@@ -1,4 +1,4 @@
-// 地图共享逻辑（迁移自旧版 location.shared 的纯 TS 部分）。
+// 地图共享逻辑。
 
 import { getMapCanvas } from '@/api';
 import type { Pin, PinType } from './location-data';
@@ -25,15 +25,15 @@ export type SnapState = 'min' | 'mid' | 'max';
 export const SNAP_HEIGHTS: Record<SnapState, number> = { min: SNAP_MIN, mid: SNAP_MID, max: SNAP_MAX };
 
 export const PIN_COLORS: Record<PinType, string> = {
-	user: 'var(--map-user)',
-	group: 'var(--map-group)',
-	moment: 'var(--map-moment)'
+	user: 'var(--marker-user)',
+	group: 'var(--marker-group)',
+	moment: 'var(--marker-content)'
 };
 export const PIN_LABELS: Record<PinType, string> = { user: '用户', group: '群组', moment: '瞬间' };
 export const pinTone = (type: PinType, amount: number) =>
 	`color-mix(in srgb, ${PIN_COLORS[type]} ${amount}%, transparent)`;
 export const floatBtnStyle =
-	'background:var(--neu-bg);border:1px solid var(--neu-border);box-shadow:0 2px 12px var(--neu-shadow-dark), 0 1px 3px var(--neu-shadow-dark);';
+	'background:var(--surface-primary);border:1px solid var(--border-default);box-shadow:0 2px 12px var(--elevation-shadow-dark), 0 1px 3px var(--elevation-shadow-dark);';
 
 export interface MapBounds {
 	minLat: number;

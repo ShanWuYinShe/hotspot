@@ -11,9 +11,10 @@ API 契约见 `spec/api_spec_*.md`（`spec/` 目录只读权威）。
 ## 技术栈
 
 - 框架：SvelteKit 2 + Svelte 5（runes）+ `adapter-static` SPA 模式
-  （`ssr=false` + `fallback: 'index.html'`，nginx `try_files` 回退；全部页面客户端渲染）
-- 样式：Tailwind CSS v4 + CSS Token 三层架构（`neu-hover-*` CSS 类承载交互反馈）
-- UI 组件：bits-ui 生态组件（`components/ui/` 封装层：dialog/sheet 定位变体、dropdown-menu、popover）+ 页面级自研视觉组件
+  （`ssr=false` + `fallback: 'index.html'`，nginx `try_files` 回退；全部页面客户端渲染。
+  本项目不需要 SSR，禁止引入服务端渲染相关代码、依赖或 `hooks.server.ts`/`+server.ts`）
+- 样式：Tailwind CSS v4 + CSS Token 三层架构（`hover-*` CSS 类承载交互反馈）
+- UI 组件：bits-ui 生态组件（`components/ui/` 封装层：dialog、dropdown-menu、popover）+ 页面级自研视觉组件
 - 包管理：bun（`bun install` / `bun run`）
 - 测试：vitest + @testing-library/svelte（宿主机 `bun run test`）
 - Mock：MSW（仅 dev 模式）
@@ -94,20 +95,38 @@ src/routes/
     settings/              # 设置
     map/                   # 地图
     notifications/         # 通知
-    notify/                # 旧路径 307 重定向到 /notifications
     search/                # 搜索
 ```
 
-> 注：管理后台（spec `api_spec_admin_core.md` / `api_spec_admin_moderation.md`）仅有后端契约，**前端路由尚未实现**——功能边界中的「管理后台」为待建项，勿误判为遗漏。
+> 分栏页（`notifications/`、`moments/[momentId]/`、`users/[userId]/`、`events/[eventId]/`）
+> 使用 `SplitPageLayout`；其余 `(app)` 页面（含首页、群组详情、个人主页）使用 `StandardPageLayout`。
+
+> 注：管理后台（spec `api_spec_admin_core.md` / `api_spec_admin_moderation.md`）已有后端契约，前端 `src/api/endpoints.ts` 也登记了 `Admin` 端点（如 `admin/rbac/get_me`），但**页面尚未实现，后续再补**——功能边界中的「管理后台」为待建项，勿误判为遗漏。
 
 路由常量见 `@/lib/routes`。
 
 页面实现与路由同目录 colocate：每个路由目录下，除 `+page.svelte` 外，同目录存放页面私有组件（如 `map/LocationDesktop.svelte` + `location-data.ts`）。跨路由复用的页面组件（如 `components/profile/SectionFriends.svelte` 同时被 `me/[section]` 分区页与 `me/relationships` 聚合页复用）放在 `components/` 对应域目录；共享组件统一在 `components/`。
 
-## 页面样板结构（所有页面必须遵守）
+## 页面布局（普通页 StandardPageLayout / 分栏页 SplitPageLayout）
 
-**权威样板页：`src/routes/(app)/nearby/moments/+page.svelte`。** 任何新增路由页面
-（含三端差异）都以它为基准，结构固定为：
+所有路由页面必须使用统一布局组件，禁止自行拼装 PageHeader/ContentColumn/页面级
+滚动/页面级横向 padding：
+
+- **普通页面**：`StandardPageLayout`（`components/layout/page/StandardPageLayout.svelte`），
+  正文单列，滚动由 `RoutedContentViewport` 承担；正文内可含多列 grid（如群组详情
+  main + aside、个人主页双栏），不属于分栏需求。
+- **分栏页面**（桌面主区 + 右 rail）：`SplitPageLayout`
+  （`components/layout/page/SplitPageLayout.svelte`），主区与 rail 滚动由组件统一管理，
+  footer 固定于主区底部。当前分栏页：通知、动态详情、用户详情、活动详情。
+- **临时豁免**：聊天页面（桌面端与移动端）因分栏/全屏会话布局特殊，可暂不套用；
+  但页头、列表与正文的 gutter/padding 仍必须与样板一致（沿用 `PageHeader` +
+  `ContentColumn` 的 `px-[var(--page-gutter)]`，不得另起页面级横向 padding）。
+  地图（全画布）与登录页（无 MainLayout 外壳）不适用。
+- 强制统一布局是为了保证切换页面时右侧内容区不发生水平偏移；存量页面需逐步对齐，
+  不得新增其他例外。
+
+**权威样板页：`src/routes/(app)/nearby/moments/+page.svelte`。** 普通页面以它为基准，
+结构固定为：
 
 ```
 StandardPageLayout                     # 全站唯一外层布局（components/layout/page/）
@@ -121,18 +140,19 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 
 约束：
 
-1. **布局**：页面必须用 `StandardPageLayout`，header 以 snippet 传入、正文放 children；
-   不得自行组合 PageHeader/ContentColumn/页面级滚动/页面级横向 padding（契约见
-   StandardPageLayout.svelte 注释）。gutter 一律由 `ContentColumn` 的
-   `px-[var(--page-gutter)]` 管理。
+1. **布局**：普通页面必须用 `StandardPageLayout`，分栏页面必须用 `SplitPageLayout`；
+   header 以 snippet 传入、正文放 children；不得自行组合
+   PageHeader/ContentColumn/页面级滚动/页面级横向 padding（契约见对应组件注释，
+   聊天页豁免见上）。gutter 一律由 `ContentColumn` 的 `px-[var(--page-gutter)]` 管理。
 2. **页头**：一律用 `PageHeader`（`sticky` 默认开），`onBack` 在非桌面自动显示返回
    按钮；`below` 只放搜索框与 Tab 栏等 header 附属区。
 3. **分类 Tab 栏**：下划线样式（容器 `border-bottom` + 激活项底部 2px 指示条 +
    `aria-pressed`），放 `below` snippet 内随 header 吸顶；tab 状态可存 URL query
    （如 `?tab=`）以支持深链，切换用 `goto` 更新 URL。
-4. **正文与滚动**：正文直接放 children；页面滚动由 `RoutedContentViewport`（main）
-   唯一承担，页面不得自建滚动容器（消息分栏、地图等全画布页面除外）。内嵌自带
-   gutter 的组件时用负 margin（`-mx-[var(--page-gutter)]`）抵消 ContentColumn
+4. **正文与滚动**：正文直接放 children；`StandardPageLayout` 页面滚动由
+   `RoutedContentViewport`（main）唯一承担，`SplitPageLayout` 分栏页的主区/rail 滚动由
+   组件统一管理；页面不得自建滚动容器（消息分栏、地图等全画布页面除外）。内嵌
+   自带 gutter 的组件时用负 margin（`-mx-[var(--page-gutter)]`）抵消 ContentColumn
    gutter，避免双重内边距（参照 `SectionRelationships.svelte`）。
 5. **三端差异**：共用组件只写一次，设备差异用 `platform.platform` 派生（列数、字号、
    布局分支），不得复制三份页面。
@@ -145,7 +165,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 src/
   routes/         # SvelteKit 路由（+page.svelte / +layout.svelte + 页面私有组件）
   components/     # 共享组件（按域分子目录：auth/ data-display/ forms/ layout/ messages/ moments/ navigation/ overlays/ profile/ shared/ ui/）
-  stores/         # runes 模块单例（auth/theme/platform/composer，.svelte.ts）
+  stores/         # runes 模块单例（auth/theme/platform/presence/ws/composer，.svelte.ts）
   lib/            # 工具函数 + 路由常量 + 数据工厂（.svelte.ts 响应式）
   api/            # API 客户端层（client.ts 零框架依赖）
   styles/         # CSS（主题、Tailwind）
@@ -166,14 +186,13 @@ theme/
   semantic.css           # Layer 1: 语义 token（--text-primary 等 → --pr-*）
   themes/vibrant.css     # Layer 2: 星际主题（全部 --pr-* 值）
   themes/forest.css      # Layer 2: 清野主题（全部 --pr-* 值）
-  compatibility.css      # Layer 2.5: 旧名别名（--neu-* → 语义名）
   layout.css             # 布局变量（context-rail、workspace）
   base.css               # @layer base（排版 + 按钮基线）
   theme-registry.css     # @theme inline Tailwind 注册
-  utilities.css          # @layer utilities（组件工具类 + neu-hover-* 交互类）
+  utilities.css          # @layer utilities（组件工具类 + hover-* 交互类）
 ```
 
-- Token 三层链：`--neu-*` → 兼容别名 → `--text-primary` 等语义名 → `--pr-*` 原始值
+- Token 两层链：`--text-primary` 等语义名 → `--pr-*` 原始值（无旧名兼容层）
 - 新组件优先使用语义名（`var(--text-primary)`、`var(--surface-page)` 等）+ Tailwind className
 - 主题切换通过 `<html>` 上的 `.vibrant` / `.forest` + `.dark` 类实现
-- 悬停/按压反馈统一用 `neu-hover-btn/action/row/card/bg` CSS 类（主题差异由类选择器承载），避免 JS 状态动画
+- 悬停/按压反馈统一用 `hover-btn/action/row/card/bg` CSS 类（主题差异由类选择器承载），避免 JS 状态动画

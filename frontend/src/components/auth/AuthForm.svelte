@@ -150,8 +150,8 @@
 >
 	{#if mode === 'register' || mode === 'guest'}
 		<label class="flex flex-col" style="gap:6px;">
-			<span style="font-size:11px;letter-spacing:0.08em;color:var(--neu-text-muted);">昵称</span>
-			<span class="flex items-center gap-2 border border-[var(--neu-border)] px-3 py-3" style="background:var(--neu-bg);">
+			<span style="font-size:11px;letter-spacing:0.08em;color:var(--text-secondary);">昵称</span>
+			<span class="flex items-center gap-2 border border-[var(--border-default)] px-3 py-3" style="background:var(--surface-primary);">
 				<input
 					type="text"
 					bind:value={nickname}
@@ -159,7 +159,7 @@
 					disabled={submitting}
 					autocomplete="off"
 					class="min-w-0 flex-1 bg-transparent text-sm outline-none"
-					style="color:var(--neu-text);"
+					style="color:var(--text-primary);"
 				/>
 			</span>
 		</label>
@@ -168,14 +168,14 @@
 	{#if mode === 'login' || mode === 'register'}
 		{#if mode === 'login'}
 			<!-- 登录方式双 tab（对齐 Figma Make LoginPage：容器 bg-secondary 无圆角，active 仅 bg-card） -->
-			<div class="grid grid-cols-2 border border-[var(--neu-border)] p-1" style="background:color-mix(in srgb, var(--neu-accent-primary) 6%, var(--neu-bg));">
+			<div class="grid grid-cols-2 border border-[var(--border-default)] p-1" style="background:color-mix(in srgb, var(--accent-default) 6%, var(--surface-primary));">
 				{#each ([['code', '验证码登录'], ['password', '密码登录']] as ['code' | 'password', string][]) as [id, label]}
 					<button
 						type="button"
 						aria-pressed={method === id}
 						onclick={() => (method = id)}
 						class="px-3 py-2 text-xs outline-none transition-colors"
-						style="background:{method === id ? 'var(--neu-bg)' : 'transparent'};color:{method === id ? 'var(--neu-text)' : 'var(--neu-text-muted)'};"
+						style="background:{method === id ? 'var(--surface-primary)' : 'transparent'};color:{method === id ? 'var(--text-primary)' : 'var(--text-secondary)'};"
 					>
 						{label}
 					</button>
@@ -183,57 +183,57 @@
 			</div>
 		{/if}
 		<label class="flex flex-col" style="gap:6px;">
-			<span style="font-size:11px;font-weight:500;color:var(--neu-text-muted);">手机号、邮箱或账号</span>
-			<span class="flex items-center gap-2 border border-[var(--neu-border)] px-3 py-3" style="background:var(--neu-bg);">
-				<Mail style="width:16px;height:16px;color:var(--neu-accent-primary);flex-shrink:0;" strokeWidth={1.8} />
+			<span style="font-size:11px;font-weight:500;color:var(--text-secondary);">手机号、邮箱或账号</span>
+			<span class="flex items-center gap-2 border border-[var(--border-default)] px-3 py-3" style="background:var(--surface-primary);">
+				<Mail style="width:16px;height:16px;color:var(--accent-default);flex-shrink:0;" strokeWidth={1.8} />
 				<input
 					type="text"
 					bind:value={loginId}
 					placeholder="请输入账号"
 					disabled={submitting}
 					autocomplete="off"
-					class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--neu-text-muted)]"
-					style="color:var(--neu-text);"
+					class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--text-secondary)]"
+					style="color:var(--text-primary);"
 				/>
 			</span>
 		</label>
 		{#if mode === 'login' && method === 'code'}
 			<!-- 验证码登录：验证码输入 + 获取验证码 -->
 			<label class="flex flex-col" style="gap:6px;">
-				<span style="font-size:11px;letter-spacing:0.08em;color:var(--neu-text-muted);">验证码</span>
-				<span class="flex items-center gap-2 border border-[var(--neu-border)] px-3 py-3" style="background:var(--neu-bg);">
+				<span style="font-size:11px;letter-spacing:0.08em;color:var(--text-secondary);">验证码</span>
+				<span class="flex items-center gap-2 border border-[var(--border-default)] px-3 py-3" style="background:var(--surface-primary);">
 					<input
 						type="text"
 						bind:value={code}
 						placeholder="输入收到的验证码"
 						disabled={submitting}
 						autocomplete="off"
-						class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--neu-text-muted)]"
-						style="color:var(--neu-text);"
+						class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--text-secondary)]"
+						style="color:var(--text-primary);"
 					/>
 				</span>
 			</label>
 			<button
 				type="button"
-				class="neu-hover-btn w-full border border-[var(--neu-border)] px-3 py-3 text-sm text-[var(--neu-text)] outline-none transition-colors"
-				style="background:color-mix(in srgb, var(--neu-accent-primary) 6%, var(--neu-bg));"
+				class="hover-btn w-full border border-[var(--border-default)] px-3 py-3 text-sm text-[var(--text-primary)] outline-none transition-colors"
+				style="background:color-mix(in srgb, var(--accent-default) 6%, var(--surface-primary));"
 				onclick={() => (error = '验证码发送功能即将开放，请使用密码登录')}
 			>
 				获取验证码
 			</button>
 		{:else if mode === 'login' || mode === 'register'}
 			<label class="flex flex-col" style="gap:6px;">
-				<span style="font-size:11px;font-weight:500;color:var(--neu-text-muted);">密码</span>
-				<span class="flex items-center gap-2 border border-[var(--neu-border)] px-3 py-3" style="background:var(--neu-bg);">
-					<LockKeyhole style="width:16px;height:16px;color:var(--neu-accent-primary);flex-shrink:0;" strokeWidth={1.8} />
+				<span style="font-size:11px;font-weight:500;color:var(--text-secondary);">密码</span>
+				<span class="flex items-center gap-2 border border-[var(--border-default)] px-3 py-3" style="background:var(--surface-primary);">
+					<LockKeyhole style="width:16px;height:16px;color:var(--accent-default);flex-shrink:0;" strokeWidth={1.8} />
 					<input
 						type="password"
 						bind:value={password}
 						placeholder="请输入密码"
 						disabled={submitting}
 						autocomplete="current-password"
-						class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--neu-text-muted)]"
-						style="color:var(--neu-text);"
+						class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--text-secondary)]"
+						style="color:var(--text-primary);"
 					/>
 				</span>
 			</label>
@@ -242,45 +242,45 @@
 
 	{#if mode === 'forgot' || mode === 'reset'}
 		<label class="flex flex-col" style="gap:6px;">
-			<span style="font-size:11px;letter-spacing:0.08em;color:var(--neu-text-muted);">账号</span>
-			<span class="flex items-center gap-2 border border-[var(--neu-border)] px-3 py-3" style="background:var(--neu-bg);">
+			<span style="font-size:11px;letter-spacing:0.08em;color:var(--text-secondary);">账号</span>
+			<span class="flex items-center gap-2 border border-[var(--border-default)] px-3 py-3" style="background:var(--surface-primary);">
 				<input
 					type="text"
 					bind:value={resetLoginId}
 					placeholder="注册时的手机号 / 邮箱"
 					disabled={submitting}
 					autocomplete="off"
-					class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--neu-text-muted)]"
-					style="color:var(--neu-text);"
+					class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--text-secondary)]"
+					style="color:var(--text-primary);"
 				/>
 			</span>
 		</label>
 		{#if mode === 'reset'}
 			<label class="flex flex-col" style="gap:6px;">
-				<span style="font-size:11px;letter-spacing:0.08em;color:var(--neu-text-muted);">验证码</span>
-				<span class="flex items-center gap-2 border border-[var(--neu-border)] px-3 py-3" style="background:var(--neu-bg);">
+				<span style="font-size:11px;letter-spacing:0.08em;color:var(--text-secondary);">验证码</span>
+				<span class="flex items-center gap-2 border border-[var(--border-default)] px-3 py-3" style="background:var(--surface-primary);">
 					<input
 						type="text"
 						bind:value={code}
 						placeholder="输入收到的验证码"
 						disabled={submitting}
 						autocomplete="off"
-						class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--neu-text-muted)]"
-						style="color:var(--neu-text);"
+						class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--text-secondary)]"
+						style="color:var(--text-primary);"
 					/>
 				</span>
 			</label>
 			<label class="flex flex-col" style="gap:6px;">
-				<span style="font-size:11px;letter-spacing:0.08em;color:var(--neu-text-muted);">新密码</span>
-				<span class="flex items-center gap-2 border border-[var(--neu-border)] px-3 py-3" style="background:var(--neu-bg);">
+				<span style="font-size:11px;letter-spacing:0.08em;color:var(--text-secondary);">新密码</span>
+				<span class="flex items-center gap-2 border border-[var(--border-default)] px-3 py-3" style="background:var(--surface-primary);">
 					<input
 						type="password"
 						bind:value={newPassword}
 						placeholder="8–128 位，含字母和数字"
 						disabled={submitting}
 						autocomplete="new-password"
-						class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--neu-text-muted)]"
-						style="color:var(--neu-text);"
+						class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--text-secondary)]"
+						style="color:var(--text-primary);"
 					/>
 				</span>
 			</label>
@@ -288,13 +288,13 @@
 	{/if}
 
 	{#if error}
-		<p style="font-size:12px;color:var(--semantic-hot);" role="alert">{error}</p>
+		<p style="font-size:12px;color:var(--status-danger);" role="alert">{error}</p>
 	{/if}
 
 	<button
 		type="submit"
-		class="neu-hover-btn flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-opacity"
-		style="background:var(--neu-accent-primary);color:white;opacity:{submitting ? 0.6 : 1};"
+		class="hover-btn flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-opacity"
+		style="background:var(--accent-default);color:white;opacity:{submitting ? 0.6 : 1};"
 		disabled={submitting}
 	>
 		{submitting ? '处理中…' : submitLabel(mode)}
@@ -305,45 +305,45 @@
 
 	{#if mode === 'login' && !compact}
 		<!-- 其他方式（对齐 Figma Make LoginPage） -->
-		<div class="flex items-center gap-3 text-[11px] text-[var(--neu-text-muted)]">
-			<span class="h-px flex-1" style="background:var(--neu-border);"></span>
+		<div class="flex items-center gap-3 text-[11px] text-[var(--text-secondary)]">
+			<span class="h-px flex-1" style="background:var(--border-default);"></span>
 			其他方式
-			<span class="h-px flex-1" style="background:var(--neu-border);"></span>
+			<span class="h-px flex-1" style="background:var(--border-default);"></span>
 		</div>
 		<button
 			type="button"
-			class="neu-hover-btn mt-4 flex w-full items-center justify-center gap-2 border border-[var(--neu-border)] px-3 py-2.5 text-xs text-[var(--neu-text)] outline-none transition-colors"
-			style="background:var(--neu-bg);"
+			class="hover-btn mt-4 flex w-full items-center justify-center gap-2 border border-[var(--border-default)] px-3 py-2.5 text-xs text-[var(--text-primary)] outline-none transition-colors"
+			style="background:var(--surface-primary);"
 			onclick={() => (error = '微信登录暂未开放，请使用密码登录')}
 		>
-			<MessageCircle style="width:16px;height:16px;color:var(--neu-accent-primary);" strokeWidth={1.8} />
+			<MessageCircle style="width:16px;height:16px;color:var(--accent-default);" strokeWidth={1.8} />
 			使用微信继续
 		</button>
-		<p class="mt-5 text-center text-[11px] leading-5 text-[var(--neu-text-muted)]">登录即表示你同意服务条款与隐私政策。</p>
+		<p class="mt-5 text-center text-[11px] leading-5 text-[var(--text-secondary)]">登录即表示你同意服务条款与隐私政策。</p>
 	{/if}
 
 	<!-- Mode switcher -->
 	<div class="flex flex-wrap items-center justify-center" style="gap:14px;margin-top:4px;">
 		{#if mode !== 'login' && mode !== 'forgot' && mode !== 'reset'}
-			<button type="button" onclick={() => switchMode('login')} class="text-[12px] transition-opacity hover:opacity-70" style="color:var(--neu-accent-primary);">
+			<button type="button" onclick={() => switchMode('login')} class="text-[12px] transition-opacity hover:opacity-70" style="color:var(--accent-default);">
 				已有账号？登录
 			</button>
 		{/if}
 		{#if mode === 'login'}
-			<button type="button" onclick={() => switchMode('register')} class="text-[12px] transition-opacity hover:opacity-70" style="color:var(--neu-accent-primary);">
+			<button type="button" onclick={() => switchMode('register')} class="text-[12px] transition-opacity hover:opacity-70" style="color:var(--accent-default);">
 				注册新账号
 			</button>
-			<button type="button" onclick={() => switchMode('forgot')} class="text-[12px] transition-opacity hover:opacity-70" style="color:var(--neu-accent-primary);">
+			<button type="button" onclick={() => switchMode('forgot')} class="text-[12px] transition-opacity hover:opacity-70" style="color:var(--accent-default);">
 				忘记密码
 			</button>
 		{/if}
 		{#if mode === 'register' || mode === 'forgot' || mode === 'reset'}
-			<button type="button" onclick={() => switchMode('login')} class="text-[12px] transition-opacity hover:opacity-70" style="color:var(--neu-accent-primary);">
+			<button type="button" onclick={() => switchMode('login')} class="text-[12px] transition-opacity hover:opacity-70" style="color:var(--accent-default);">
 				返回登录
 			</button>
 		{/if}
 		{#if mode !== 'guest' && mode !== 'forgot' && mode !== 'reset'}
-			<button type="button" onclick={() => switchMode('guest')} class="text-[12px] transition-opacity hover:opacity-70" style="color:var(--neu-accent-primary);">
+			<button type="button" onclick={() => switchMode('guest')} class="text-[12px] transition-opacity hover:opacity-70" style="color:var(--accent-default);">
 				随便逛逛（访客）
 			</button>
 		{/if}

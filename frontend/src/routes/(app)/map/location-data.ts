@@ -1,4 +1,4 @@
-/* Location types & static data — extracted from the legacy page file to keep the page lean. */
+/* Location types & static data — 地图页私有类型与静态数据。 */
 
 export type PinType = "user" | "group" | "moment";
 
@@ -13,8 +13,6 @@ export interface LocationResult {
   displayName: string; lat: number; lng: number;
   emoji?: string; desc?: string; users?: number;
 }
-
-export const XUZHOU_CENTER = { lat: 34.2604, lng: 117.1855 };
 
 // 地图图钉与统计来自 POST /api/v1/map/canvas（见 location-shared.ts 的 fetchMapCanvas）。
 // 以下为暂无数据源的静态空态：热门/最近列表（服务端无对应端点）、地点搜索（search/suggest

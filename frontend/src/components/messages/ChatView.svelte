@@ -64,7 +64,7 @@
 			if (!res || res.code !== 0 || !res.data) return null;
 			const items = res.data.items;
 			const mapped: ChatMessage[] = items.map((m) => ({
-				id: String(m.message_id),
+				id: m.message_id,
 				text: m.content ?? '',
 				sent: m.sender.user_id === meId,
 				time: formatTime(m.sent_at)
@@ -105,7 +105,7 @@
 			if (!payload || payload.target_user_id !== peerUserId) return null;
 			// 自己发送的消息跳过（乐观追加 + HTTP 回执已处理）
 			if (payload.sender?.user_id === meId) return null;
-			const id = String(payload.message_id ?? '');
+			const id = payload.message_id ?? '';
 			if (!id) return null;
 			// 会话有新消息即视为已读（与加载行为一致）
 			void markPrivateRead({ scope: 'session', target_user_id: peerUserId }).catch(() => {});
@@ -114,7 +114,7 @@
 		wsMessageUpdate: (e) => {
 			const detail = (e as CustomEvent<{ type: 'edited' | 'recalled' | 'read'; payload: PrivateMessageNewPayload }>).detail;
 			if (!detail?.payload || detail.payload.target_user_id !== peerUserId) return null;
-			const id = String(detail.payload.message_id ?? '');
+			const id = detail.payload.message_id ?? '';
 			if (detail.type === 'edited') return { type: 'edited', id, content: detail.payload.content };
 			if (detail.type === 'recalled') return { type: 'recalled', id };
 			// 'read'：本地列表无已读状态字段，忽略
@@ -179,17 +179,17 @@
 	});
 </script>
 
-<div class="flex min-h-0 flex-col h-full bg-[var(--neu-bg)]">
+<div class="flex min-h-0 flex-col h-full bg-[var(--surface-primary)]">
 	<!-- Header -->
-	<div class="flex-shrink-0 flex items-center gap-3 px-4 bg-[var(--neu-bg)]" style="height:{compact ? 52 : 60}px;border-bottom:1px solid var(--neu-border);">
+	<div class="flex-shrink-0 flex items-center gap-3 px-4 bg-[var(--surface-primary)]" style="height:{compact ? 52 : 60}px;border-bottom:1px solid var(--border-default);">
 		{#if showBackButton}
 			<button
 				type="button"
-				class="neu-hover-btn neu-scale-btn neu-tap-88 flex items-center justify-center rounded-full outline-none flex-shrink-0 bg-[var(--neu-bg)]"
-				style="width:36px;height:36px;box-shadow:4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light);border:1px solid var(--neu-border);"
+				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none flex-shrink-0 bg-[var(--surface-primary)]"
+				style="width:36px;height:36px;box-shadow:4px 4px 9px var(--elevation-shadow-dark), -4px -4px 9px var(--elevation-shadow-light);border:1px solid var(--border-default);"
 				onclick={onBack}
 			>
-				<ArrowLeft style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+				<ArrowLeft style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</button>
 		{/if}
 
@@ -198,21 +198,21 @@
 			src={contact?.avatar}
 			name={peerName}
 			size={compact ? 34 : 38}
-			style="border:1.5px solid var(--neu-border);box-shadow:3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light);"
+			style="border:1.5px solid var(--border-default);box-shadow:3px 3px 7px var(--elevation-shadow-dark), -3px -3px 7px var(--elevation-shadow-light);"
 		>
 			{#snippet badge()}
 				{#if onlineNow}
-					<span class="absolute bottom-0 right-0 rounded-full bg-[var(--semantic-online)]" style="width:9px;height:9px;border:2px solid var(--neu-bg);"></span>
+					<span class="absolute bottom-0 right-0 rounded-full bg-[var(--status-online)]" style="width:9px;height:9px;border:2px solid var(--surface-primary);"></span>
 				{/if}
 			{/snippet}
 		</Avatar>
 
 		<!-- Name + status -->
 		<div class="flex-1 min-w-0">
-			<p class="truncate text-[var(--neu-text)]" style="font-size:{compact ? 13 : 14}px;">
+			<p class="truncate text-[var(--text-primary)]" style="font-size:{compact ? 13 : 14}px;">
 				{peerName || '会话'}
 			</p>
-			<p class="{peerTyping ? 'text-[var(--neu-accent-primary)]' : onlineNow ? 'text-[var(--semantic-online)]' : 'text-[var(--neu-text-muted)]'}" style="font-size:11px;">
+			<p class="{peerTyping ? 'text-[var(--accent-default)]' : onlineNow ? 'text-[var(--status-online)]' : 'text-[var(--text-secondary)]'}" style="font-size:11px;">
 				{#if peerTyping}
 					正在输入…
 				{:else if onlineNow}
@@ -230,18 +230,18 @@
 			{#each [Phone, Video] as Icon, i}
 				<button
 					type="button"
-					class="neu-hover-btn neu-scale-btn neu-tap-88 flex items-center justify-center rounded-full outline-none bg-[var(--neu-bg)]"
-					style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light);border:1px solid var(--neu-border);"
+					class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none bg-[var(--surface-primary)]"
+					style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:4px 4px 9px var(--elevation-shadow-dark), -4px -4px 9px var(--elevation-shadow-light);border:1px solid var(--border-default);"
 				>
-					<Icon style="width:14px;height:14px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+					<Icon style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={1.5} />
 				</button>
 			{/each}
 			<button
 				type="button"
-				class="neu-hover-btn neu-scale-btn neu-tap-88 flex items-center justify-center rounded-full outline-none bg-[var(--neu-bg)]"
-				style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light);border:1px solid var(--neu-border);"
+				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none bg-[var(--surface-primary)]"
+				style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:4px 4px 9px var(--elevation-shadow-dark), -4px -4px 9px var(--elevation-shadow-light);border:1px solid var(--border-default);"
 			>
-				<MoreHorizontal style="width:14px;height:14px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+				<MoreHorizontal style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</button>
 		</div>
 	</div>
@@ -253,18 +253,18 @@
 			<div class="flex h-full flex-col items-center justify-center gap-2 px-6" style="min-height:240px;">
 				<div
 					class="flex items-center justify-center rounded-full"
-					style="width:56px;height:56px;border:1px solid var(--neu-border);box-shadow:6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light);"
+					style="width:56px;height:56px;border:1px solid var(--border-default);box-shadow:6px 6px 14px var(--elevation-shadow-dark), -6px -6px 14px var(--elevation-shadow-light);"
 				>
-					<MessageCircle style="width:22px;height:22px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+					<MessageCircle style="width:22px;height:22px;color:var(--text-secondary);" strokeWidth={1.5} />
 				</div>
-				<p class="text-[var(--neu-text)]" style="font-size:14px;font-weight:500;">还没有消息</p>
-				<p class="text-center text-[var(--neu-text-muted)]" style="font-size:12px;max-width:220px;">打个招呼，开始这段对话吧</p>
+				<p class="text-[var(--text-primary)]" style="font-size:14px;font-weight:500;">还没有消息</p>
+				<p class="text-center text-[var(--text-secondary)]" style="font-size:12px;max-width:220px;">打个招呼，开始这段对话吧</p>
 			</div>
 		{:else}
 		<div class="animate-fade-in flex flex-col gap-2 px-4 pt-4 pb-3">
 			<!-- Date pill -->
 			<div class="flex justify-center mb-2">
-				<span class="px-3 py-1 rounded-full bg-[var(--neu-bg)] text-[var(--neu-text-muted)]" style="font-size:10px;border:1px solid var(--neu-border);letter-spacing:0.05em;opacity:0.8;">
+				<span class="px-3 py-1 rounded-full bg-[var(--surface-primary)] text-[var(--text-secondary)]" style="font-size:10px;border:1px solid var(--border-default);letter-spacing:0.05em;opacity:0.8;">
 					今天
 				</span>
 			</div>
@@ -272,16 +272,16 @@
 			{#each chat.messages as msg (msg.id)}
 				<div class="animate-fade-in flex {msg.sent ? 'justify-end' : 'justify-start'}">
 					<div
-						class="{msg.sent ? 'bg-[var(--neu-accent-primary)]' : 'bg-[var(--neu-bg)]'}"
+						class="{msg.sent ? 'bg-[var(--accent-default)]' : 'bg-[var(--surface-primary)]'}"
 						style="max-width:76%;padding:10px 14px;border-radius:{msg.sent ? '18px 4px 18px 18px' : '4px 18px 18px 18px'};{msg.sent
-							? 'box-shadow:0 4px 14px var(--neu-glow);'
-							: 'box-shadow:4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);border:1px solid var(--neu-border);'}"
+							? 'box-shadow:0 4px 14px var(--glow-accent);'
+							: 'box-shadow:4px 4px 10px var(--elevation-shadow-dark), -4px -4px 10px var(--elevation-shadow-light);border:1px solid var(--border-default);'}"
 					>
-						<p class="{msg.sent ? 'text-white' : 'text-[var(--neu-text)]'}" style="font-size:13px;line-height:1.55;">
+						<p class="{msg.sent ? 'text-white' : 'text-[var(--text-primary)]'}" style="font-size:13px;line-height:1.55;">
 							{msg.text}
 						</p>
 						<p
-							class="{msg.sent ? 'text-[var(--content-inverse-muted)]' : 'text-[var(--neu-text-muted)]'}"
+							class="{msg.sent ? 'text-[var(--content-inverse-muted)]' : 'text-[var(--text-secondary)]'}"
 							style="font-size:10px;margin-top:4px;display:flex;align-items:center;gap:3px;justify-content:{msg.sent ? 'flex-end' : 'flex-start'};"
 						>
 							{msg.time}
@@ -298,18 +298,18 @@
 
 	<!-- Input bar -->
 	{#if chat.sendError}
-		<p class="px-4 pb-1.5 text-[var(--semantic-warning)]" style="font-size:11px;">{chat.sendError}</p>
+		<p class="px-4 pb-1.5 text-[var(--status-warning)]" style="font-size:11px;">{chat.sendError}</p>
 	{/if}
-	<div class="flex-shrink-0 flex items-center gap-2.5 px-4 py-3 bg-[var(--neu-bg)]" style="border-top:1px solid var(--neu-border);">
+	<div class="flex-shrink-0 flex items-center gap-2.5 px-4 py-3 bg-[var(--surface-primary)]" style="border-top:1px solid var(--border-default);">
 		<button
 			type="button"
-			class="neu-hover-btn neu-scale-btn neu-tap-88 flex items-center justify-center rounded-full outline-none flex-shrink-0 bg-[var(--neu-bg)]"
-			style="width:36px;height:36px;box-shadow:4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light);border:1px solid var(--neu-border);"
+			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none flex-shrink-0 bg-[var(--surface-primary)]"
+			style="width:36px;height:36px;box-shadow:4px 4px 8px var(--elevation-shadow-dark), -4px -4px 8px var(--elevation-shadow-light);border:1px solid var(--border-default);"
 		>
-			<Smile style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+			<Smile style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 		</button>
 
-		<div class="flex-1 flex items-center px-4 rounded-[18px] neu-input-surface" style="height:38px;">
+		<div class="flex-1 flex items-center px-4 rounded-[18px] input-surface" style="height:38px;">
 			<input
 				type="text"
 				bind:value={chat.inputVal}
@@ -318,18 +318,18 @@
 					if (e.key === 'Enter') void chat.handleSend();
 				}}
 				placeholder="发消息…"
-				class="flex-1 bg-transparent outline-none text-[var(--neu-text)]"
+				class="flex-1 bg-transparent outline-none text-[var(--text-primary)]"
 				style="font-size:13px;"
 			/>
 		</div>
 
 		<button
 			type="button"
-			class="neu-hover-btn neu-scale-btn neu-tap-88 flex items-center justify-center rounded-full outline-none flex-shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-[var(--neu-accent-primary)]' : 'bg-[var(--neu-bg)]'}"
-			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? '0 4px 14px var(--neu-glow)' : '4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)'};border:1px solid var(--neu-border);"
+			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none flex-shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-[var(--accent-default)]' : 'bg-[var(--surface-primary)]'}"
+			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? '0 4px 14px var(--glow-accent)' : '4px 4px 8px var(--elevation-shadow-dark), -4px -4px 8px var(--elevation-shadow-light)'};border:1px solid var(--border-default);"
 			onclick={() => void chat.handleSend()}
 		>
-			<Send style="width:14px;height:14px;color:{chat.inputVal.trim() ? 'var(--text-on-accent)' : 'var(--neu-text-muted)'};transform:translateX(1px);" strokeWidth={2} />
+			<Send style="width:14px;height:14px;color:{chat.inputVal.trim() ? 'var(--text-on-accent)' : 'var(--text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
 		</button>
 	</div>
 </div>

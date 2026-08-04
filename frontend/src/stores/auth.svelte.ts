@@ -1,5 +1,5 @@
 // Auth store — the single source of truth for "who is the current user".
-// 迁移自旧版 AuthContext（runes 模块单例，ssr=false 无双重渲染问题）。
+// AuthContext（runes 模块单例；纯客户端 SPA，无服务端实例化问题）。
 //
 // Web 端通过 HttpOnly Cookie 认证（access_token / refresh_token），
 // 本 store 不直接接触 token，只跟踪会话有效性（auth/check_status）与当前账号

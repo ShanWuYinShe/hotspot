@@ -1,4 +1,4 @@
-// BSP 卡片布局算法不变量测试（旧版无测试，迁移补课）。
+// BSP 卡片布局算法不变量测试。
 import { describe, it, expect } from 'vitest';
 import { generateBspCardLayout, deriveBspGridGeometry, planBspLayout, appendPlacements, type BspRect } from './bsp-layout';
 

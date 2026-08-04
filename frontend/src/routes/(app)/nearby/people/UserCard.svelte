@@ -42,20 +42,20 @@
 	imageAlt={user.name}
 	onClick={onNavigate}
 	onImageError={() => (avatarFailed = true)}
-	class="rounded-panel aspect-[3/4] neu-surface-flat"
+	class="rounded-panel aspect-[3/4] surface-flat"
 >
 	<!-- 无头像 / 加载失败：accent 主题渐变占位覆盖在图片层之上 -->
 	{#if avatarFailed || !user.avatar}
 		<div
 			class="absolute inset-0 z-[1] flex items-center justify-center"
-			style="background:linear-gradient(135deg, color-mix(in srgb, var(--neu-accent-primary) 24%, var(--neu-bg)) 0%, color-mix(in srgb, var(--neu-accent-primary) 8%, var(--neu-bg)) 100%);"
+			style="background:linear-gradient(135deg, color-mix(in srgb, var(--accent-default) 24%, var(--surface-primary)) 0%, color-mix(in srgb, var(--accent-default) 8%, var(--surface-primary)) 100%);"
 		>
-			<span class="text-[var(--neu-accent-primary)] text-3xl font-semibold">{Array.from(user.name)[0] ?? '?'}</span>
+			<span class="text-[var(--accent-default)] text-3xl font-semibold">{Array.from(user.name)[0] ?? '?'}</span>
 		</div>
 	{/if}
 
 	<!-- 右上：距离（单份，消除历史重复徽章 bug） -->
-	<div class="absolute top-2.5 right-2.5 z-[2] flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--overlay-strong)]" style="backdrop-filter:blur(8px);">
+	<div class="absolute top-2.5 right-2.5 z-[2] flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--surface-overlay-strong)]" style="backdrop-filter:blur(8px);">
 		<MapPin class="w-[9px] h-[9px] text-white" strokeWidth={1.5} />
 		<span class="text-white text-[10px]">{user.distance}</span>
 	</div>
@@ -64,10 +64,10 @@
 		<div class="px-3 pt-2.5 pb-2.5">
 			<div class="flex items-center justify-between gap-2">
 				<div class="min-w-0">
-					<p class="flex items-center gap-1.5 truncate text-[var(--neu-text)] text-[14px]" style="font-weight:600;">
+					<p class="flex items-center gap-1.5 truncate text-[var(--text-primary)] text-[14px]" style="font-weight:600;">
 						<span class="truncate">{user.name}</span>
 					</p>
-					<p class="truncate text-[var(--neu-text-muted)] text-[10px] mt-0.5">{user.note}</p>
+					<p class="truncate text-[var(--text-secondary)] text-[10px] mt-0.5">{user.note}</p>
 				</div>
 				{#if user.status === '在线'}
 					<span
@@ -79,16 +79,16 @@
 			</div>
 			<div class="mt-2 flex items-center justify-between gap-2">
 				{#if user.tag}
-					<span class="rounded-full px-1.5 py-0.5 text-[10px]" style="background:var(--neu-accent-soft);color:var(--neu-accent-primary);border:1px solid var(--neu-accent-soft-border);">#{user.tag}</span>
+					<span class="rounded-full px-1.5 py-0.5 text-[10px]" style="background:var(--accent-soft);color:var(--accent-default);border:1px solid var(--accent-border);">#{user.tag}</span>
 				{:else}
 					<span></span>
 				{/if}
 				<button
 					type="button"
-					class="neu-hover-btn neu-tap-90 flex items-center justify-center rounded-full outline-none flex-shrink-0"
+					class="hover-btn tap-90 flex items-center justify-center rounded-full outline-none flex-shrink-0"
 					style="width:28px;height:28px;{followed
-						? 'background:var(--neu-accent-soft);border:1px solid var(--neu-accent-soft-border);color:var(--neu-accent-primary);'
-						: 'background:var(--neu-accent-primary);color:var(--text-on-accent);box-shadow:0 2px 8px var(--neu-glow);'}"
+						? 'background:var(--accent-soft);border:1px solid var(--accent-border);color:var(--accent-default);'
+						: 'background:var(--accent-default);color:var(--text-on-accent);box-shadow:0 2px 8px var(--glow-accent);'}"
 					aria-label={followed ? `取消关注 ${user.name}` : `关注 ${user.name}`}
 					onclick={(e) => {
 						e.stopPropagation();

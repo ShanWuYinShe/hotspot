@@ -1,10 +1,10 @@
-// Feed 交互状态工厂（迁移自旧版 MomentsFeedPage 内 useFeedInteractions）。
+// Feed 交互状态工厂。
 // 持有每条 FeedItem 的 liked/saved 交互状态，乐观更新 + API 失败回滚。
 
 import { setReaction, favoriteMoment } from '@/api';
 
 export interface FeedItem {
-	id: number | string;
+	id: string;
 	user: string;
 	avatar: string;
 	location: string;
@@ -29,7 +29,7 @@ export function createFeedInteractions(getInitial: () => FeedItem[]): FeedIntera
 	let items = $state<FeedItem[]>(getInitial());
 
 	// 外部数据更新时同步（原 useEffect setItems(initial)）——通过 getter 保持对数据源的响应。
-	// 注意：同步是整体覆盖，会重置 toggleLike/toggleSave 的乐观状态（与旧版语义一致）。
+	// 注意：同步是整体覆盖，会重置 toggleLike/toggleSave 的乐观状态。
 	$effect(() => {
 		items = getInitial();
 	});
@@ -39,7 +39,7 @@ export function createFeedInteractions(getInitial: () => FeedItem[]): FeedIntera
 		const target = items.find((it) => it.id === id);
 		if (target) {
 			try {
-				await setReaction({ target_type: 'moment', target_id: String(id), emoji: target.likeEmoji, active: !target.liked });
+				await setReaction({ target_type: 'moment', target_id: id, emoji: target.likeEmoji, active: !target.liked });
 			} catch {
 				items = items.map((it) => (it.id === id ? { ...it, liked: target.liked } : it));
 			}
@@ -51,7 +51,7 @@ export function createFeedInteractions(getInitial: () => FeedItem[]): FeedIntera
 		const target = items.find((it) => it.id === id);
 		if (target) {
 			try {
-				await favoriteMoment({ moment_id: String(id), active: !target.saved });
+				await favoriteMoment({ moment_id: id, active: !target.saved });
 			} catch {
 				items = items.map((it) => (it.id === id ? { ...it, saved: target.saved } : it));
 			}

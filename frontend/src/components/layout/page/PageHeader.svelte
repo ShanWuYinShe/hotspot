@@ -10,7 +10,7 @@
 	// PageHeader — 与正文共用同一 ContentColumn gutter 的页面页头。
 	// 对齐 Figma Make layout/page/PageHeader 契约：
 	//   - 内容包在 ContentColumn 内，左/右边缘与页面正文严格对齐
-	//   - 背景 var(--page-bg)（桌面统一画布契约，sticky 时与滚动内容同底）
+	//   - 背景 var(--surface-page)（桌面统一画布契约，sticky 时与滚动内容同底）
 	//   - 返回按钮默认仅非桌面显示；showBackOnDesktop 可显式开启
 	//
 	// ┌──────────────── 路由页面 ──────────────────────────┐
@@ -65,8 +65,8 @@
 <header
 	class={cn('shrink-0', sticky && 'sticky top-0 z-20', className)}
 	style={glass
-		? 'background-color:color-mix(in srgb, var(--neu-bg) 92%, transparent);backdrop-filter:blur(16px);border-bottom:1px solid var(--neu-border);'
-		: 'background-color:var(--page-bg);border-bottom:1px solid var(--neu-border);'}
+		? 'background-color:color-mix(in srgb, var(--surface-primary) 92%, transparent);backdrop-filter:blur(16px);border-bottom:1px solid var(--border-default);'
+		: 'background-color:var(--surface-page);border-bottom:1px solid var(--border-default);'}
 >
 	<ContentColumn {maxWidth} class={cn('py-4', contentClassName)}>
 		<div class="flex items-center gap-3">
@@ -74,9 +74,9 @@
 				<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={36} />
 			{/if}
 			<div class={cn('min-w-0', trailing ? '' : 'flex-1')}>
-				<h1 class="text-[var(--neu-text)] font-medium leading-none" style="font-size:{titleSize}px;">{title}</h1>
+				<h1 class="text-[var(--text-primary)] font-medium leading-none" style="font-size:{titleSize}px;">{title}</h1>
 				{#if subtitle}
-					<p class="mt-1 flex items-center gap-1 text-[var(--neu-text-muted)]" style="font-size:{subtitleSize}px;">
+					<p class="mt-1 flex items-center gap-1 text-[var(--text-secondary)]" style="font-size:{subtitleSize}px;">
 						{#if subtitleIcon}
 							{@render subtitleIcon()}
 						{/if}

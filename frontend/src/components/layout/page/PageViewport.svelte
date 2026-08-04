@@ -3,7 +3,7 @@
 
 	// 布局组件（layout/page）。
 	// PageViewport — 路由页面画布承载。提供 [data-page-viewport] 标记，激活
-	// utilities.css 中 [data-page-viewport] 的 page-bg 背景与 neu-text 前景色契约。
+	// utilities.css 中 [data-page-viewport] 的 surface-page 背景与 text-primary 前景色契约。
 	// 对齐 Figma Make layout/page/PageViewport：
 	//   - 仅承载页面画布，绝不设置裁剪 overflow（滚动由三端 shell 独占）
 	//   - h-full min-h-full w-full，让子页面撑满 RoutedContentViewport 的内容区

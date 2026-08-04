@@ -35,7 +35,7 @@
 <div
 	data-platform="tablet"
 	class="flex flex-col h-[100dvh] w-full overflow-hidden transition-colors duration-500 font-sans"
-	style="background-color:var(--neu-bg);color:var(--neu-text);"
+	style="background-color:var(--surface-primary);color:var(--text-primary);"
 >
 	<StatusBar />
 
@@ -64,7 +64,7 @@
 				{#each NAV_ITEMS.slice(0, 2) as item}
 					<button
 						type="button"
-						class="neu-hover-btn neu-nav-tab relative flex flex-col items-center justify-center outline-none select-none rounded-[var(--shape-panel)]"
+						class="hover-btn nav-tab relative flex flex-col items-center justify-center outline-none select-none rounded-[var(--shape-panel)]"
 						style="flex:1;min-width:0;padding-top:9px;padding-bottom:9px;gap:5px;"
 						aria-label={item.label}
 						aria-current={isPrimaryRouteActive(pathname, item.path) ? 'page' : undefined}
@@ -91,8 +91,8 @@
 				<div class="flex items-center justify-center flex-shrink-0" style="width:64px;">
 					<button
 						type="button"
-						class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none select-none"
-						style="width:48px;height:48px;background:{composer.composerOpen ? 'var(--neu-text-muted)' : 'var(--neu-accent-primary)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--elevation-fab)'};transition:background 0.22s, box-shadow 0.22s, transform 0.18s cubic-bezier(0.22,1,0.36,1), filter 0.18s ease;"
+						class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none select-none"
+						style="width:48px;height:48px;background:{composer.composerOpen ? 'var(--text-secondary)' : 'var(--accent-default)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--elevation-fab)'};transition:background 0.22s, box-shadow 0.22s, transform 0.18s cubic-bezier(0.22,1,0.36,1), filter 0.18s ease;"
 						aria-label={composer.composerOpen ? '关闭' : '发布'}
 						onclick={toggleComposer}
 					>
@@ -107,7 +107,7 @@
 				{#each NAV_ITEMS.slice(2, 4) as item}
 					<button
 						type="button"
-						class="neu-hover-btn neu-nav-tab relative flex flex-col items-center justify-center outline-none select-none rounded-[var(--shape-panel)]"
+						class="hover-btn nav-tab relative flex flex-col items-center justify-center outline-none select-none rounded-[var(--shape-panel)]"
 						style="flex:1;min-width:0;padding-top:9px;padding-bottom:9px;gap:5px;"
 						aria-label={item.label}
 						aria-current={isPrimaryRouteActive(pathname, item.path) ? 'page' : undefined}

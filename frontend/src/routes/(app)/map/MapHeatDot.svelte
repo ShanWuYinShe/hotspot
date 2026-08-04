@@ -16,5 +16,5 @@
 
 <div
 	class="absolute rounded-full pointer-events-none"
-	style="transform:translate(-50%,-50%);background:var(--neu-accent-primary);box-shadow:0 0 12px var(--neu-accent-primary);{style}"
+	style="transform:translate(-50%,-50%);background:var(--accent-default);box-shadow:0 0 12px var(--accent-default);{style}"
 ></div>

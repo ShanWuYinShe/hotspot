@@ -16,6 +16,6 @@
 	} = $props();
 </script>
 
-<div class={cn('flex flex-col divide-y divide-[var(--neu-border)]', className)}>
+<div class={cn('flex flex-col divide-y divide-[var(--border-default)]', className)}>
 	{@render children()}
 </div>

@@ -9,9 +9,8 @@
 	} from '@/lib/bsp-layout';
 
 	// 响应式 BSP 渲染器（三个桌面附近目录共用）。
-	// 迁移自旧版 BspCardCanvas：卡片多为 1×1，穿插少量 1×2 / 2×1，
-	// 偶尔 2×2 hero。包含 ResizeObserver 重排、IntersectionObserver 虚拟化
-	// 与滚动加载哨兵。
+	// 卡片多为 1×1，穿插少量 1×2 / 2×1，偶尔 2×2 hero。包含 ResizeObserver
+	// 重排、IntersectionObserver 虚拟化与滚动加载哨兵。
 
 	let {
 		items,
@@ -48,7 +47,7 @@
 		hasMore?: boolean;
 	} = $props();
 
-	// 方向性最小值折叠到对称回退（与旧版一致）
+	// 方向性最小值折叠到对称回退
 	const resolvedMinWidth = $derived(minCardWidth ?? minCardSize);
 	const resolvedMinHeight = $derived(minCardHeight ?? minCardSize);
 
@@ -349,7 +348,7 @@
 					<div
 						aria-hidden="true"
 						class="h-full w-full"
-						style="border-radius:20px;background:var(--neu-bg);box-shadow:0 0 0 1px var(--neu-border);opacity:.55;"
+						style="border-radius:20px;background:var(--surface-primary);box-shadow:0 0 0 1px var(--border-default);opacity:.55;"
 					></div>
 				{/if}
 			{/if}

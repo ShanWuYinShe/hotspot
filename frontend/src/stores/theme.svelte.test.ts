@@ -1,4 +1,4 @@
-// Theme store 测试：localStorage 初值、'neu'→'forest' 迁移、html 类应用。
+// Theme store 测试：localStorage 初值与 html 类应用。
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 beforeEach(async () => {
@@ -27,13 +27,6 @@ it('读取持久化初值并应用 html 类', async () => {
   expect(cls.contains('dark')).toBe(true);
   expect(cls.contains('forest')).toBe(true);
   expect(cls.contains('vibrant')).toBe(false);
-});
-
-it('废弃的 "neu" 偏好迁移到 forest', async () => {
-  localStorage.setItem('appTheme', 'neu');
-  const { initTheme, theme } = await import('./theme.svelte');
-  initTheme();
-  expect(theme.theme).toBe('forest');
 });
 
 it('toggleDark / setTheme 持久化并应用类', async () => {

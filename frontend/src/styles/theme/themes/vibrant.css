@@ -7,7 +7,6 @@
 
    本文件是 Vibrant 主题的**唯一定义来源**（light + dark）。
    :root 默认即为 vibrant（首帧/无脚本 fallback）。
-   色值与 .workwork/Hotspot_Make/src/styles/theme.css 最终生效层一致。
 ────────────────────────────────────────────────────────────────────── */
 
 /* ═══ Vibrant Light（:root 默认）═══ */
@@ -50,26 +49,26 @@
   --pr-danger-bg: color-mix(in srgb, var(--pr-hot) 10%, transparent);
 
   /* ── shadcn 桥接 ── */
-  --background: var(--neu-bg);
-  --foreground: var(--neu-text);
-  --card: var(--neu-bg);
-  --card-foreground: var(--neu-text);
-  --popover: var(--neu-bg);
-  --popover-foreground: var(--neu-text);
+  --background: var(--surface-primary);
+  --foreground: var(--text-primary);
+  --card: var(--surface-primary);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-primary);
+  --popover-foreground: var(--text-primary);
   --secondary: #EEF5FF;
-  --secondary-foreground: var(--neu-text);
+  --secondary-foreground: var(--text-primary);
   --muted: #EEF5FF;
-  --muted-foreground: var(--neu-text-muted);
-  --accent: var(--neu-accent-soft);
-  --accent-foreground: var(--neu-text);
-  --border: var(--neu-border);
-  --ring: var(--neu-accent-primary);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--accent-soft);
+  --accent-foreground: var(--text-primary);
+  --border: var(--border-default);
+  --ring: var(--accent-default);
   --input-background: #F2F7FF;
-  --switch-background: var(--neu-border-pressed);
+  --switch-background: var(--border-strong);
 
   /* ── Shell / overlay primitives ── */
   --surface-nav-glass: color-mix(in srgb, var(--surface-panel) 90%, transparent);
-  --border-nav-glass: color-mix(in srgb, var(--neu-accent-primary) 14%, transparent);
+  --border-nav-glass: color-mix(in srgb, var(--accent-default) 14%, transparent);
   --surface-scrim: rgba(14, 10, 35, 0.36);
   --surface-overlay: rgba(14, 10, 35, 0.38);
   --border-inverse: rgba(255, 255, 255, 0.25);
@@ -103,8 +102,8 @@
   --radius-sheet: 1.75rem;
 
   /* ── Nearby feed card-menu ── */
-  --surface-card-menu: color-mix(in srgb, var(--neu-bg) 88%, var(--neu-accent-primary));
-  --border-card-menu: color-mix(in srgb, var(--neu-accent-primary) 22%, var(--neu-border));
+  --surface-card-menu: color-mix(in srgb, var(--surface-primary) 88%, var(--accent-default));
+  --border-card-menu: color-mix(in srgb, var(--accent-default) 22%, var(--border-default));
 
   /* ── 卡片图片上的信息区玻璃背景 ── */
   --card-scrim: rgba(12, 25, 48, 0.55);
@@ -154,26 +153,26 @@
   --pr-danger-bg: color-mix(in srgb, var(--pr-hot) 12%, transparent);
 
   /* ── shadcn 桥接 ── */
-  --background: var(--neu-bg);
-  --foreground: var(--neu-text);
-  --card: var(--neu-bg);
-  --card-foreground: var(--neu-text);
-  --popover: var(--neu-bg);
-  --popover-foreground: var(--neu-text);
+  --background: var(--surface-primary);
+  --foreground: var(--text-primary);
+  --card: var(--surface-primary);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-primary);
+  --popover-foreground: var(--text-primary);
   --secondary: #111E32;
-  --secondary-foreground: var(--neu-text);
+  --secondary-foreground: var(--text-primary);
   --muted: #111E32;
-  --muted-foreground: var(--neu-text-muted);
-  --accent: var(--neu-accent-soft);
-  --accent-foreground: var(--neu-text);
-  --border: var(--neu-border);
-  --ring: var(--neu-accent-primary);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--accent-soft);
+  --accent-foreground: var(--text-primary);
+  --border: var(--border-default);
+  --ring: var(--accent-default);
   --input-background: #101D31;
-  --switch-background: var(--neu-border-pressed);
+  --switch-background: var(--border-strong);
 
   /* ── Shell / overlay primitives (dark 覆盖) ── */
   --surface-nav-glass: color-mix(in srgb, var(--surface-panel) 90%, transparent);
-  --border-nav-glass: color-mix(in srgb, var(--neu-accent-primary) 18%, transparent);
+  --border-nav-glass: color-mix(in srgb, var(--accent-default) 18%, transparent);
   --surface-scrim: rgba(0, 0, 0, 0.42);
   --surface-overlay: rgba(0, 0, 0, 0.42);
   --elevation-fab: 0 6px 22px var(--glow-accent), 0 2px 6px rgba(0,0,0,0.20);
@@ -182,8 +181,8 @@
   --elevation-modal: 0 28px 88px rgba(0,0,0,0.42), 0 0 0 1px var(--border-subtle);
 
   /* ── card-menu dark ── */
-  --surface-card-menu: color-mix(in srgb, var(--neu-bg) 82%, var(--neu-accent-primary));
-  --border-card-menu: color-mix(in srgb, var(--neu-accent-primary) 28%, var(--neu-border));
+  --surface-card-menu: color-mix(in srgb, var(--surface-primary) 82%, var(--accent-default));
+  --border-card-menu: color-mix(in srgb, var(--accent-default) 28%, var(--border-default));
 
   /* ── 玻璃背景 dark ── */
   --card-scrim: rgba(0, 0, 0, 0.62);

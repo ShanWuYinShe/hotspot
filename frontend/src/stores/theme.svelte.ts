@@ -1,5 +1,5 @@
 // Theme store — dark mode + 语义主题（vibrant 星际 / forest 清野）。
-// 迁移自旧版 ThemeContext（runes 模块单例）。
+// ThemeContext（runes 模块单例）。
 
 export type AppTheme = 'forest' | 'vibrant';
 
@@ -18,8 +18,7 @@ function applyClasses(dark: boolean, t: AppTheme) {
   // Dark
   dark ? root.classList.add('dark') : root.classList.remove('dark');
 
-  // Both surviving themes are explicit classes; this prevents a stale warm-sand class from lingering.
-  root.classList.remove('forest', 'vibrant', 'neu');
+  root.classList.remove('forest', 'vibrant');
   root.classList.add(t);
 }
 
@@ -30,8 +29,6 @@ function readInitial(): { isDark: boolean; theme: AppTheme } {
     dark = localStorage.getItem(IS_DARK_KEY) === 'true';
     const saved = localStorage.getItem(THEME_KEY);
     if (saved === 'forest' || saved === 'vibrant') t = saved;
-    // Migrate retired 暖砂 preference to 清野 so old local storage cannot revive it.
-    else if (saved === 'neu') t = 'forest';
   } catch {}
   return { isDark: dark, theme: t };
 }

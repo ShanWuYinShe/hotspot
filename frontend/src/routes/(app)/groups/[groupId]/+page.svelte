@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, Bell, CalendarDays, Check, MapPin, MessageCircle, Users } from '@lucide/svelte';
+	import { ArrowLeft, Bell, Check, MapPin, MessageCircle, Users } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
+	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
 	import { Tabs } from 'bits-ui';
 	import { ROUTES } from '@/lib/routes';
@@ -12,7 +12,6 @@
 	import { presence, watchPresence } from '@/stores/presence.svelte';
 
 	// 群组详情：封面 + 简介/成员/公告三 Tab + 加入按钮 + 桌面侧栏。
-	// 迁移自旧版 GroupDetailPage。
 	// WS 实时：订阅 group 频道，成员/详情/公告变更事件触发对应刷新；解散弹提示并跳转。
 
 	let { params }: { params: { groupId: string } } = $props();
@@ -200,8 +199,9 @@
 	const onlineMemberCount = $derived(onlineMemberIds.size);
 </script>
 
-<div class="content-mode-wide min-h-full bg-[var(--neu-bg)]">
-	<div class="relative h-[clamp(220px,28vw,340px)] overflow-hidden">
+<StandardPageLayout contentClassName="pb-6">
+	<!-- 全幅封面（负 margin 抵消 ContentColumn gutter） -->
+	<div class="relative h-[clamp(220px,28vw,340px)] overflow-hidden -mx-[var(--page-gutter)]">
 		<img src={group.banner} alt={`${group.name} 的群组封面`} class="h-full w-full object-cover" />
 		<div class="absolute inset-0 bg-[linear-gradient(to_top,rgba(0,0,0,.7),transparent_65%)]"></div>
 		<div class="absolute left-5 top-4">
@@ -213,16 +213,15 @@
 		</div>
 	</div>
 
-	<ContentColumn class="py-6">
-		<div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
+	<div class="grid gap-8 pt-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
 			<main class="min-w-0">
-			<div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-[var(--neu-text-muted)]">
+			<div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-[var(--text-secondary)]">
 				<span class="flex items-center gap-1.5">
 					<Users size={14} />
 					{group.members} 位成员
 				</span>
-				<span class="flex items-center gap-1.5 text-[var(--semantic-online)]">
-					<span class="h-2 w-2 rounded-full bg-[var(--semantic-online)]"></span>
+				<span class="flex items-center gap-1.5 text-[var(--status-online)]">
+					<span class="h-2 w-2 rounded-full bg-[var(--status-online)]"></span>
 					{onlineMemberCount} 人在线
 				</span>
 				<span class="flex items-center gap-1.5">
@@ -233,15 +232,15 @@
 
 			<!-- Tabs -->
 			<Tabs.Root value={tab} onValueChange={(v) => (tab = v as GroupTab)}>
-				<Tabs.List class="mt-6 flex gap-1 border-b border-[var(--neu-border)]">
+				<Tabs.List class="mt-6 flex gap-1 border-b border-[var(--border-default)]">
 					{#each ['overview', 'members', 'announcements'] as item (item)}
 						<Tabs.Trigger
 							value={item}
-							class="neu-hover-btn relative px-3 py-2.5 text-[13px] neu-focus-ring {tab === item ? 'text-[var(--neu-accent-primary)]' : 'text-[var(--neu-text-muted)]'}"
+							class="hover-btn relative px-3 py-2.5 text-[13px] focus-ring {tab === item ? 'text-[var(--accent-default)]' : 'text-[var(--text-secondary)]'}"
 						>
 							{item === 'overview' ? '简介' : item === 'members' ? '成员' : '公告'}
 							{#if tab === item}
-								<span class="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-[var(--neu-accent-primary)]"></span>
+								<span class="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-[var(--accent-default)]"></span>
 							{/if}
 						</Tabs.Trigger>
 					{/each}
@@ -250,30 +249,23 @@
 
 			{#if tab === 'overview'}
 				<div class="py-6">
-					<p class="max-w-3xl text-[15px] leading-7 text-[var(--neu-text-muted)]">{group.description}</p>
-					<div class="mt-7 rounded-[18px] ring-1 ring-[var(--neu-border)] p-4">
-						<p class="flex items-center gap-2 text-[14px] font-medium text-[var(--neu-text)]">
-							<CalendarDays size={15} class="text-[var(--neu-accent-primary)]" />
-							群组节奏
-						</p>
-						<p class="mt-2 text-[12px] leading-5 text-[var(--neu-text-muted)]">每周三、周末晚间有主题讨论。加入后可接收新公告与群聊提醒。</p>
-					</div>
+					<p class="max-w-3xl text-[15px] leading-7 text-[var(--text-secondary)]">{group.description}</p>
 				</div>
 			{:else if tab === 'members'}
 				<EmbeddedList>
 					{#each members as member (member.id)}
-						<button type="button" class="neu-hover-row app-list-row app-list-row--standard neu-row-hover outline-none" onclick={() => void goto(ROUTES.user(member.id))}>
+						<button type="button" class="hover-row app-list-row app-list-row--standard row-hover outline-none" onclick={() => { if (member.userId) void goto(ROUTES.user(member.userId)); }}>
 							<div class="relative">
 								<img src={member.avatar} alt="" class="h-10 w-10 rounded-full object-cover" />
 								{#if onlineMemberIds.has(member.userId)}
-									<span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[var(--neu-bg)] bg-[var(--semantic-online)]"></span>
+									<span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[var(--surface-primary)] bg-[var(--status-online)]"></span>
 								{/if}
 							</div>
 							<span class="min-w-0 flex-1">
-								<span class="block text-[14px] text-[var(--neu-text)]">{member.name}</span>
-								<span class="text-[11px] text-[var(--neu-text-muted)]">{member.role}</span>
+								<span class="block text-[14px] text-[var(--text-primary)]">{member.name}</span>
+								<span class="text-[11px] text-[var(--text-secondary)]">{member.role}</span>
 							</span>
-							<span class="text-[11px] text-[var(--neu-text-muted)]">查看资料</span>
+							<span class="text-[11px] text-[var(--text-secondary)]">查看资料</span>
 						</button>
 					{/each}
 				</EmbeddedList>
@@ -281,19 +273,19 @@
 					<EmbeddedList>
 						{#each announcements as item (item.title)}
 							<article class="py-4">
-								<p class="text-[14px] font-medium text-[var(--neu-text)]">{item.title}</p>
-								<p class="mt-1 text-[12px] leading-5 text-[var(--neu-text-muted)]">{item.body}</p>
-								<p class="mt-2 text-[11px] text-[var(--neu-text-muted)]">{item.time}</p>
+								<p class="text-[14px] font-medium text-[var(--text-primary)]">{item.title}</p>
+								<p class="mt-1 text-[12px] leading-5 text-[var(--text-secondary)]">{item.body}</p>
+								<p class="mt-2 text-[11px] text-[var(--text-secondary)]">{item.time}</p>
 							</article>
 						{/each}
 					</EmbeddedList>
 				{/if}
 		</main>
 
-		<aside class="flex h-fit flex-col gap-3 rounded-[20px] ring-1 ring-[var(--neu-border)] bg-[var(--neu-bg)] p-4">
+		<aside class="flex h-fit flex-col gap-3 rounded-[20px] ring-1 ring-[var(--border-default)] bg-[var(--surface-primary)] p-4">
 			<button
 				type="button"
-				class="neu-hover-btn w-full rounded-full px-4 py-3 text-[13px] font-medium neu-focus-ring {joined ? 'border border-[var(--neu-accent-primary)] text-[var(--neu-accent-primary)]' : 'bg-[var(--neu-accent-primary)] text-white'}"
+				class="hover-btn w-full rounded-full px-4 py-3 text-[13px] font-medium focus-ring {joined ? 'border border-[var(--accent-default)] text-[var(--accent-default)]' : 'bg-[var(--accent-default)] text-white'}"
 				onclick={() => (joined = !joined)}
 			>
 				{#if joined}
@@ -306,17 +298,16 @@
 				{/if}
 			</button>
 			{#if joined}
-				<button type="button" onclick={() => void goto(ROUTES.groupMessage(params.groupId))} class="neu-hover-btn flex w-full items-center justify-center gap-2 rounded-full border border-[var(--neu-border)] px-4 py-3 text-[13px] text-[var(--neu-text)] neu-focus-ring">
+				<button type="button" onclick={() => void goto(ROUTES.groupMessage(params.groupId))} class="hover-btn flex w-full items-center justify-center gap-2 rounded-full border border-[var(--border-default)] px-4 py-3 text-[13px] text-[var(--text-primary)] focus-ring">
 					<MessageCircle size={15} />
 					打开群聊
 				</button>
 			{:else}
-				<p class="px-2 text-center text-[11px] leading-5 text-[var(--neu-text-muted)]">
+				<p class="px-2 text-center text-[11px] leading-5 text-[var(--text-secondary)]">
 					<Bell size={13} class="mr-1 inline" />
 					加入后可管理群组通知并进入群聊
 				</p>
 			{/if}
 			</aside>
-		</div>
-	</ContentColumn>
-</div>
+	</div>
+</StandardPageLayout>

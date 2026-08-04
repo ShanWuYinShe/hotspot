@@ -10,7 +10,7 @@
 	// 移动/平板个人主页（对齐 Figma Make ProfileCompact 契约）：
 	// 资料页眉 + 身份卡（68px 头像 + 编辑按钮 + stats 横条）+ 个人数据 5 行链接（无 Tab/画廊）。
 
-	const { avatar, nickname, stats } = useAccountData();
+	const { avatar, nickname, stats, bio, handle, locationName } = useAccountData();
 
 	const DATA_ITEMS: { section: ProfileSection; label: string; detail: string; icon: typeof ImageIcon }[] = [
 		{ section: 'moments', label: '我的瞬间', detail: '查看已发布的记录', icon: ImageIcon },
@@ -23,99 +23,99 @@
 	const statsList: { label: string; value: number; section: ProfileSection | null }[] = [
 		{ label: '瞬间', value: stats.moments_count, section: 'moments' },
 		{ label: '关注者', value: stats.followers_count, section: 'fans' },
-		{ label: '足迹', value: 27, section: null }
+		{ label: '群组', value: stats.groups_count, section: 'groups' }
 	];
 </script>
 
 <StandardPageLayout contentClassName="pt-5 pb-8">
 	{#snippet header()}
 		<!-- 资料页眉（对齐 Figma Make：eyebrow + 设置入口） -->
-			<div class="border-b border-[var(--neu-border)]" style="background:var(--neu-bg);">
+			<div class="border-b border-[var(--border-default)]" style="background:var(--surface-primary);">
 				<ContentColumn class="flex items-center justify-between py-3">
-					<p class="text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--neu-accent-primary)]">个人资料</p>
+					<p class="text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--accent-default)]">个人资料</p>
 					<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} variant="ghost" size={32} />
 				</ContentColumn>
 			</div>
 	{/snippet}
 
 	<!-- 身份卡（compact） -->
-	<section class="rounded-panel border border-[var(--neu-border)] neu-surface-flat" aria-label="个人资料">
+	<section class="rounded-panel border border-[var(--border-default)] surface-flat" aria-label="个人资料">
 		<div class="p-5">
 			<div class="flex items-start justify-between gap-5">
 				<div class="flex min-w-0 items-center gap-4">
 					<div class="relative shrink-0">
-						<div class="overflow-hidden rounded-full border-2 border-[var(--neu-bg)] bg-[var(--neu-bg)] p-1">
+						<div class="overflow-hidden rounded-full border-2 border-[var(--surface-primary)] bg-[var(--surface-primary)] p-1">
 							{#if avatar}
 								<img src={avatar} alt={nickname || '用户'} class="rounded-full object-cover" style="width:68px;height:68px;" />
 							{:else}
-								<span class="flex items-center justify-center text-[var(--neu-text-muted)]" style="width:68px;height:68px;font-size:28px;">{(nickname || '?')[0]}</span>
+								<span class="flex items-center justify-center text-[var(--text-secondary)]" style="width:68px;height:68px;font-size:28px;">{(nickname || '?')[0]}</span>
 							{/if}
 						</div>
 						<button
 							type="button"
 							aria-label="更换头像"
 							onclick={() => void goto(ROUTES.meEdit)}
-							class="neu-hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-[var(--neu-accent-primary)] text-white"
-							style="width:24px;height:24px;border:2px solid var(--neu-bg);"
+							class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-[var(--accent-default)] text-white"
+							style="width:24px;height:24px;border:2px solid var(--surface-primary);"
 						>
 							<Camera style="width:13px;height:13px;" strokeWidth={2} />
 						</button>
 					</div>
 					<div class="min-w-0">
-						<h1 class="text-[20px] font-medium tracking-[-0.01em] text-[var(--neu-text)]">{nickname || '鹿鸣'}</h1>
-						<p class="mt-0.5 text-xs text-[var(--neu-text-muted)]">@elara.v</p>
-						<p class="mt-2 flex items-center gap-1.5 text-xs text-[var(--neu-text-muted)]">
-							<MapPin style="width:14px;height:14px;color:var(--neu-accent-primary);" strokeWidth={1.8} />
-							江苏 · 徐州
+						<h1 class="text-[20px] font-medium tracking-[-0.01em] text-[var(--text-primary)]">{nickname || '未设置昵称'}</h1>
+						<p class="mt-0.5 text-xs text-[var(--text-secondary)]">{handle}</p>
+						<p class="mt-2 flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
+							<MapPin style="width:14px;height:14px;color:var(--accent-default);" strokeWidth={1.8} />
+							{locationName || '未设置位置'}
 						</p>
 					</div>
 				</div>
 				<button
 					type="button"
 					onclick={() => void goto(ROUTES.meEdit)}
-					class="neu-hover-btn inline-flex shrink-0 items-center gap-1.5 border border-[var(--neu-border)] bg-[var(--neu-bg)] px-3 py-2 text-xs font-medium text-[var(--neu-text)] outline-none transition-colors hover:bg-[var(--neu-accent-soft)]"
+					class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-[var(--border-default)] bg-[var(--surface-primary)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] outline-none transition-colors hover:bg-[var(--accent-soft)]"
 				>
 					<Pencil style="width:14px;height:14px;" strokeWidth={1.8} />
 					编辑资料
 				</button>
 			</div>
-			<p class="mt-5 max-w-[430px] text-sm leading-6 text-[var(--neu-text-muted)]">
-				触感思考者。在流动里收集安静，也在熟悉的街道寻找新的光。
+			<p class="mt-5 max-w-[430px] text-sm leading-6 text-[var(--text-secondary)]">
+				{bio || '这个人还没有填写简介。'}
 			</p>
 		</div>
-		<div class="grid grid-cols-3 border-t border-[var(--neu-border)]">
+		<div class="grid grid-cols-3 border-t border-[var(--border-default)]">
 			{#each statsList as stat, i}
-				<div class="border-l border-[var(--neu-border)] px-4 py-3 first:border-l-0">
-					<p class="text-base font-medium tabular-nums text-[var(--neu-text)]">{stat.value}</p>
-					<p class="mt-0.5 text-[11px] text-[var(--neu-text-muted)]">{stat.label}</p>
+				<div class="border-l border-[var(--border-default)] px-4 py-3 first:border-l-0">
+					<p class="text-base font-medium tabular-nums text-[var(--text-primary)]">{stat.value}</p>
+					<p class="mt-0.5 text-[11px] text-[var(--text-secondary)]">{stat.label}</p>
 				</div>
 			{/each}
 		</div>
 	</section>
 
 	<!-- 个人数据 5 行链接 -->
-	<section class="mt-5 rounded-panel border border-[var(--neu-border)] neu-surface-flat" aria-label="个人数据">
-		<div class="flex items-center justify-between border-b border-[var(--neu-border)] px-5 py-3.5">
+	<section class="mt-5 rounded-panel border border-[var(--border-default)] surface-flat" aria-label="个人数据">
+		<div class="flex items-center justify-between border-b border-[var(--border-default)] px-5 py-3.5">
 			<div>
-				<p class="text-sm font-medium text-[var(--neu-text)]">个人数据</p>
-				<p class="mt-0.5 text-[11px] text-[var(--neu-text-muted)]">在这里查看你的内容与关系</p>
+				<p class="text-sm font-medium text-[var(--text-primary)]">个人数据</p>
+				<p class="mt-0.5 text-[11px] text-[var(--text-secondary)]">在这里查看你的内容与关系</p>
 			</div>
 		</div>
 		{#each DATA_ITEMS as item (item.section)}
 			<button
 				type="button"
-				class="neu-hover-bg flex w-full items-center gap-3 border-b border-[var(--neu-border)] px-5 py-3.5 text-left outline-none last:border-b-0"
-				style="background:var(--neu-bg);"
+				class="hover-bg flex w-full items-center gap-3 border-b border-[var(--border-default)] px-5 py-3.5 text-left outline-none last:border-b-0"
+				style="background:var(--surface-primary);"
 				onclick={() => void goto(ROUTES.meSection(item.section))}
 			>
-				<span class="flex shrink-0 items-center justify-center" style="width:32px;height:32px;background:color-mix(in srgb, var(--neu-accent-primary) 6%, var(--neu-bg));color:var(--neu-accent-primary);">
+				<span class="flex shrink-0 items-center justify-center" style="width:32px;height:32px;background:color-mix(in srgb, var(--accent-default) 6%, var(--surface-primary));color:var(--accent-default);">
 					<item.icon style="width:16px;height:16px;" strokeWidth={1.8} />
 				</span>
 				<span class="min-w-0 flex-1">
-					<span class="block text-sm text-[var(--neu-text)]">{item.label}</span>
-					<span class="mt-0.5 block truncate text-[11px] text-[var(--neu-text-muted)]">{item.detail}</span>
+					<span class="block text-sm text-[var(--text-primary)]">{item.label}</span>
+					<span class="mt-0.5 block truncate text-[11px] text-[var(--text-secondary)]">{item.detail}</span>
 				</span>
-				<ChevronRight style="width:16px;height:16px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.7} />
+				<ChevronRight style="width:16px;height:16px;color:var(--text-secondary);flex-shrink:0;" strokeWidth={1.7} />
 			</button>
 		{/each}
 	</section>

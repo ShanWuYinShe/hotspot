@@ -36,7 +36,7 @@
 			</div>
 		{/if}
 		{#if notif.user.avatar}
-			<div class="absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full" style="width:18px;height:18px;background:{cfg.color};border:2px solid var(--neu-bg);">
+			<div class="absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full" style="width:18px;height:18px;background:{cfg.color};border:2px solid var(--surface-primary);">
 				<cfg.icon style="width:9px;height:9px;color:var(--text-on-accent);" strokeWidth={2.5} />
 			</div>
 		{/if}
@@ -44,11 +44,11 @@
 
 	<!-- Text -->
 	<div class="flex-1 min-w-0">
-		<p class="truncate text-[var(--neu-text)] text-[13px]">
+		<p class="truncate text-[var(--text-primary)] text-[13px]">
 			<span style="font-weight:{notif.read ? 400 : 500};">{notif.user.name}</span>
 			{' '}{notif.text}
 		</p>
-		<p class="text-[var(--neu-text-muted)] text-[11px] mt-0.5">{notif.time}</p>
+		<p class="text-[var(--text-secondary)] text-[11px] mt-0.5">{notif.time}</p>
 	</div>
 
 	<!-- Moment thumb or unread dot -->

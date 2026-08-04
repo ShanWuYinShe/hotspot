@@ -1,12 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Bell, CheckCheck } from '@lucide/svelte';
-	import { platform } from '@/stores/platform.svelte';
-	import DesktopDetailSplit from '@/components/layout/desktop/DesktopDetailSplit.svelte';
 	import RailSection from '@/components/layout/desktop/RailSection.svelte';
 	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
-	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
+	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import BorderedList from '@/components/data-display/BorderedList.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
@@ -17,7 +15,6 @@
 	import { ROUTES } from '@/lib/routes';
 
 	// 通知列表：类型过滤、单条/全部已读、桌面右侧概览 Rail。
-	// 迁移自旧版 NotificationsPage。
 
 const FILTER_TABS = [
 	{ id: 'all', label: '全部' },
@@ -130,64 +127,63 @@ const FILTER_TABS = [
 	);
 </script>
 
-{#snippet main()}
+<SplitPageLayout contentClassName="pt-3 pb-6">
+	{#snippet header()}
+		<PageHeader
+			title="通知"
+			sticky
+			titleSize={20}
+			subtitleSize={12}
+			contentClassName="pt-4 pb-0"
+			onBack={() => history.back()}
+		>
+			{#snippet trailing()}
+				<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「全部已读」同排 -->
+				<div class="flex items-center gap-2">
+					{#if unread > 0}
+						<span class="text-[var(--text-secondary)] text-xs">{unread} 条未读</span>
+						<button
+							type="button"
+							class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none bg-[var(--surface-primary)] text-[var(--accent-default)] text-[12px]"
+							style="border:1px solid var(--border-default);box-shadow:3px 3px 8px var(--elevation-shadow-dark), -3px -3px 8px var(--elevation-shadow-light);"
+							onclick={markAllRead}
+						>
+							<CheckCheck style="width:13px;height:13px;" strokeWidth={2} />
+							全部已读
+						</button>
+					{/if}
+				</div>
+			{/snippet}
+			{#snippet below()}
+				<!-- Filter tabs（对齐 Figma Make：与标题同处 sticky header 内，滚动时吸顶） -->
+				<div class="mt-3 flex overflow-x-auto no-scrollbar gap-2 pb-3">
+					{#each FILTER_TABS as t}
+						<button
+							type="button"
+							aria-pressed={filter === t.id}
+							data-active={filter === t.id ? 'true' : undefined}
+							onclick={() => (filter = t.id)}
+							class="tap-92 flex-shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-[var(--accent-default)]"
+							style={filter === t.id
+								? 'background:var(--accent-default);color:white;font-size:12px;box-shadow:0 3px 10px var(--glow-accent);border:none;'
+								: 'background:var(--surface-primary);color:var(--text-secondary);font-size:12px;border:1px solid var(--border-default);box-shadow:3px 3px 6px var(--elevation-shadow-dark), -3px -3px 6px var(--elevation-shadow-light);'}
+						>
+							{t.label}
+						</button>
+					{/each}
+				</div>
+			{/snippet}
+		</PageHeader>
+	{/snippet}
 
-		<div class="h-full overflow-y-auto no-scrollbar">
-			<PageHeader
-				title="通知"
-				sticky
-				titleSize={20}
-				subtitleSize={12}
-				contentClassName="pt-4 pb-0"
-				onBack={() => history.back()}
-			>
-				{#snippet trailing()}
-					<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「全部已读」同排 -->
-					<div class="flex items-center gap-2">
-						{#if unread > 0}
-							<span class="text-[var(--neu-text-muted)] text-xs">{unread} 条未读</span>
-							<button
-								type="button"
-								class="neu-hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none bg-[var(--neu-bg)] text-[var(--neu-accent-primary)] text-[12px]"
-								style="border:1px solid var(--neu-border);box-shadow:3px 3px 8px var(--neu-shadow-dark), -3px -3px 8px var(--neu-shadow-light);"
-								onclick={markAllRead}
-							>
-								<CheckCheck style="width:13px;height:13px;" strokeWidth={2} />
-								全部已读
-							</button>
-						{/if}
-					</div>
-				{/snippet}
-				{#snippet below()}
-					<!-- Filter tabs（对齐 Figma Make：与标题同处 sticky header 内，滚动时吸顶） -->
-					<div class="mt-3 flex overflow-x-auto no-scrollbar gap-2 pb-3">
-						{#each FILTER_TABS as t}
-							<button
-								type="button"
-								aria-pressed={filter === t.id}
-								data-active={filter === t.id ? 'true' : undefined}
-								onclick={() => (filter = t.id)}
-								class="neu-tap-92 flex-shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
-								style={filter === t.id
-									? 'background:var(--neu-accent-primary);color:white;font-size:12px;box-shadow:0 3px 10px var(--neu-glow);border:none;'
-									: 'background:var(--neu-bg);color:var(--neu-text-muted);font-size:12px;border:1px solid var(--neu-border);box-shadow:3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light);'}
-							>
-								{t.label}
-							</button>
-						{/each}
-					</div>
-				{/snippet}
-			</PageHeader>
-
-			<ContentColumn class="pt-3 pb-6">
-				<!-- List：每个分组一个连接列表表面（BorderedList 契约；heading 在列表外） -->
-				<div class="flex flex-col">
+	<!-- List：每个分组一个连接列表表面（BorderedList 契约；heading 在列表外） -->
+	<div class="flex flex-col">
 				{#if unreadGroup.length > 0}
 					<!-- 新消息分组标题（emphasis：accent 点 + 计数 pill，对齐 Figma Make） -->
 					<div class="mb-2 flex h-5 items-center gap-2">
-						<span aria-hidden="true" class="h-1.5 w-1.5 rounded-full" style="background:var(--neu-accent-primary);"></span>
-						<p class="uppercase" style="font-size:10px;font-weight:600;letter-spacing:0.14em;color:var(--neu-text);">新消息</p>
-						<span class="rounded-full px-1.5 py-0.5" style="font-size:10px;line-height:1;color:var(--neu-accent-primary);background:var(--neu-accent-soft);">{unreadGroup.length}</span>
+						<span aria-hidden="true" class="h-1.5 w-1.5 rounded-full" style="background:var(--accent-default);"></span>
+						<p class="uppercase" style="font-size:10px;font-weight:600;letter-spacing:0.14em;color:var(--text-primary);">新消息</p>
+						<span class="rounded-full px-1.5 py-0.5" style="font-size:10px;line-height:1;color:var(--accent-default);background:var(--accent-soft);">{unreadGroup.length}</span>
 					</div>
 					<BorderedList>
 						{#each unreadGroup as n (n.id)}
@@ -199,8 +195,8 @@ const FILTER_TABS = [
 				{#if readGroup.length > 0}
 					<!-- 较早分组标题（非 emphasis：仅 label + flex 分隔线，对齐 Figma Make） -->
 					<div class="mb-2 flex h-5 items-center gap-2" style="margin-top:{unreadGroup.length > 0 ? '16px' : '0'};">
-						<p class="uppercase" style="font-size:10px;font-weight:500;letter-spacing:0.14em;color:var(--neu-text-muted);">较早</p>
-						<span aria-hidden="true" class="h-px flex-1" style="background:var(--neu-border);"></span>
+						<p class="uppercase" style="font-size:10px;font-weight:500;letter-spacing:0.14em;color:var(--text-secondary);">较早</p>
+						<span aria-hidden="true" class="h-px flex-1" style="background:var(--border-default);"></span>
 					</div>
 					<BorderedList>
 						{#each readGroup as n (n.id)}
@@ -212,37 +208,34 @@ const FILTER_TABS = [
 				{#if filtered.length === 0}
 					<EmptyState title="暂无通知">
 						{#snippet icon()}
-							<Bell style="width:24px;height:24px;color:var(--neu-text-muted);opacity:0.5;" strokeWidth={1.25} />
+							<Bell style="width:24px;height:24px;color:var(--text-secondary);opacity:0.5;" strokeWidth={1.25} />
 						{/snippet}
 					</EmptyState>
 				{/if}
-				</div>
-			</ContentColumn>
-		</div>
-{/snippet}
+	</div>
 
-{#snippet rail()}
+	{#snippet rail()}
 
 		<div>
 			<RailSection title="今日概览">
 				<div class="flex items-baseline gap-1.5 mb-3">
-					<span class="text-[var(--neu-text)] text-[30px] font-semibold leading-none">{unread}</span>
-					<span class="text-[var(--neu-text-muted)] text-[11px]">条未读 · 共 {notifications.length} 条</span>
+					<span class="text-[var(--text-primary)] text-[30px] font-semibold leading-none">{unread}</span>
+					<span class="text-[var(--text-secondary)] text-[11px]">条未读 · 共 {notifications.length} 条</span>
 				</div>
 				<div class="flex flex-col gap-2">
 					{#each typeStats as { type, count }}
 						{@const cfg = TYPE_CONFIG[type] ?? TYPE_CONFIG.reaction}
 						<button
 							type="button"
-							class="neu-hover-btn flex items-center gap-2.5 rounded-[10px] px-2 py-1.5 outline-none text-left"
+							class="hover-btn flex items-center gap-2.5 rounded-[10px] px-2 py-1.5 outline-none text-left"
 							style="background:{filter === type ? `color-mix(in srgb, ${cfg.color} 10%, transparent)` : 'transparent'};border:1px solid {filter === type ? `color-mix(in srgb, ${cfg.color} 22%, transparent)` : 'transparent'};transition:background 0.15s;"
 							onclick={() => (filter = type)}
 						>
 							<div class="flex items-center justify-center rounded-full flex-shrink-0" style="width:24px;height:24px;background:{`color-mix(in srgb, ${cfg.color} 16%, transparent)`};">
 								<cfg.icon style="width:11px;height:11px;color:{cfg.color};" strokeWidth={1.75} />
 							</div>
-							<span class="text-[var(--neu-text)] text-[12px] flex-1">{cfg.label}</span>
-							<span class="text-[var(--neu-text-muted)] text-[11px]">{count}</span>
+							<span class="text-[var(--text-primary)] text-[12px] flex-1">{cfg.label}</span>
+							<span class="text-[var(--text-secondary)] text-[11px]">{count}</span>
 						</button>
 					{/each}
 				</div>
@@ -253,7 +246,7 @@ const FILTER_TABS = [
 					{#each notifications.filter((n) => n.type === 'follow').slice(0, 3) as n (n.id)}
 						<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.time}>
 							{#snippet trailing()}
-								<button type="button" class="neu-hover-btn px-2.5 py-1 rounded-full outline-none flex-shrink-0 bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] text-[11px]" style="border:1px solid var(--neu-accent-soft-border);">
+								<button type="button" class="hover-btn px-2.5 py-1 rounded-full outline-none flex-shrink-0 bg-[var(--accent-soft)] text-[var(--accent-default)] text-[11px]" style="border:1px solid var(--accent-border);">
 									回关
 								</button>
 							{/snippet}
@@ -270,6 +263,5 @@ const FILTER_TABS = [
 				</div>
 			</RailSection>
 		</div>
-{/snippet}
-
-<DesktopDetailSplit {main} {rail} />
+	{/snippet}
+</SplitPageLayout>

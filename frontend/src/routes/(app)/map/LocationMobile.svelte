@@ -3,14 +3,15 @@
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import * as Popover from '@/components/ui/popover';
-	import { XUZHOU_CENTER, RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from './location-data';
+	import { loadDefaultLocation } from '@/lib/default-location';
+	import { RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from './location-data';
 	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, pinTone, floatBtnStyle, buildMapData, fetchMapCanvas, type MapHeatBucket, markerUserUrl, markerGroupUrl, markerMomentUrl, type SnapState } from './location-shared';
 	import MapPinMarker from './MapPinMarker.svelte';
 	import MapHeatDot from './MapHeatDot.svelte';
 	import LocationSheetList from './LocationSheetList.svelte';
 
 	// 移动端地图探索：全屏 OSM + 可拖拽吸附底部 Sheet（148/318/540 三档）。
-	// 迁移自旧版 LocationMobile（motion spring 吸附改 CSS transition）。
+	// motion spring 吸附改 CSS transition。
 
 	/* ── Sheet drag ── */
 	let sheetH = $state(SNAP_MID);
@@ -81,9 +82,24 @@
 	let selectedPin = $state<Pin | null>(null);
 	let selectedLoc = $state<LocationResult | null>(null);
 	const zoom = 0.045;
-	let mapCenter = $state(XUZHOU_CENTER);
+	let mapCenter = $state<{ lat: number; lng: number } | null>(null);
+	let defaultCenter = $state<{ lat: number; lng: number } | null>(null);
 	let recentItems = $state(RECENT_LOCATIONS);
 	let activeTab = $state<'recent' | 'hot'>('recent');
+
+	// 初始/复位中心来自 ClientConfig default_location（MSW mock），不写死坐标。
+	$effect(() => {
+		let cancelled = false;
+		void loadDefaultLocation().then((loc) => {
+			if (cancelled) return;
+			const point = loc?.point ? { lat: loc.point.latitude, lng: loc.point.longitude } : null;
+			defaultCenter = point;
+			if (!mapCenter) mapCenter = point;
+		});
+		return () => {
+			cancelled = true;
+		};
+	});
 
 	// map/canvas 数据
 	let mapPins = $state<Pin[]>([]);
@@ -95,6 +111,7 @@
 	$effect(() => {
 		const center = mapCenter;
 		const types = [...activeFilters];
+		if (!center) return;
 		let cancelled = false;
 		mapLoading = true;
 		void fetchMapCanvas(center, zoom, types).then((r) => {
@@ -109,7 +126,7 @@
 		};
 	});
 
-	const { url: embedUrl, bounds } = $derived(buildMapData(mapCenter, zoom));
+	const mapData = $derived(mapCenter ? buildMapData(mapCenter, zoom) : null);
 	const filteredPins = $derived(mapPins);
 	const searchResults = $derived(searchQuery.trim() ? SEARCH_DB.filter((s) => s.displayName.includes(searchQuery)).slice(0, 5) : []);
 
@@ -128,7 +145,7 @@
 	}
 
 	function handleConfirm() {
-		const loc = selectedLoc ?? { displayName: '当前位置', lat: XUZHOU_CENTER.lat, lng: XUZHOU_CENTER.lng };
+		const loc = selectedLoc ?? { displayName: '当前位置', lat: mapCenter?.lat ?? 0, lng: mapCenter?.lng ?? 0 };
 		try {
 			localStorage.setItem('hotspot_last_location', JSON.stringify([loc.lat, loc.lng]));
 		} catch {}
@@ -149,12 +166,12 @@
 	}
 
 	const sheetStyle = $derived(
-		`position:absolute;bottom:0;left:0;right:0;height:${sheetH}px;z-index:20;border-radius:22px 22px 0 0;border:1px solid var(--neu-border);border-bottom:none;box-shadow:0 -6px 28px var(--neu-shadow-dark);display:flex;flex-direction:column;overflow:hidden;${dragging ? '' : 'transition:height 0.3s cubic-bezier(0.34,1.56,0.64,1);'}`
+		`position:absolute;bottom:0;left:0;right:0;height:${sheetH}px;z-index:20;border-radius:22px 22px 0 0;border:1px solid var(--border-default);border-bottom:none;box-shadow:0 -6px 28px var(--elevation-shadow-dark);display:flex;flex-direction:column;overflow:hidden;${dragging ? '' : 'transition:height 0.3s cubic-bezier(0.34,1.56,0.64,1);'}`
 	);
 	const rightCtrlBottom = $derived(sheetH + 10);
 </script>
 
-<div class="bg-[var(--neu-bg)]" style="position:relative;width:100%;height:100%;overflow:hidden;">
+<div class="bg-[var(--surface-primary)]" style="position:relative;width:100%;height:100%;overflow:hidden;">
 	<!-- ══ MAP (full screen, tappable) ══ -->
 	<div
 		style="position:absolute;inset:0;z-index:0;"
@@ -170,25 +187,26 @@
 			}
 		}}
 	>
-		<iframe src={embedUrl} title="地图" style="width:100%;height:100%;border:0;pointer-events:none;"></iframe>
+		{#if mapData}
+		<iframe src={mapData.url} title="地图" style="width:100%;height:100%;border:0;pointer-events:none;"></iframe>
 
 		<!-- Current location pulsing dot（对齐 Figma Make：halo scale 1→1.8 / opacity 0.55→0 循环） -->
 		<div style="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:5;pointer-events:none;">
-			<div style="width:18px;height:18px;border-radius:50%;background:{PIN_COLORS.user};border:3px solid var(--neu-bg);box-shadow:0 2px 10px {pinTone('user', 55)};position:relative;">
+			<div style="width:18px;height:18px;border-radius:50%;background:{PIN_COLORS.user};border:3px solid var(--surface-primary);box-shadow:0 2px 10px {pinTone('user', 55)};position:relative;">
 				<span class="map-pulse-halo absolute rounded-full" style="inset:-7px;background:{pinTone('user', 20)};border:1px solid {pinTone('user', 30)};"></span>
 			</div>
 		</div>
 
 		<!-- Heatmap buckets（大视口 / 高密度时服务端返回热力统计） -->
 		{#each heatBuckets as bucket (bucket.cell_token)}
-			<MapHeatDot {bucket} {bounds} />
+			<MapHeatDot {bucket} bounds={mapData.bounds} />
 		{/each}
 
 		<!-- Marker pins -->
 		{#each filteredPins as pin (pin.id)}
 			<MapPinMarker
 				pin={pin}
-				{bounds}
+				bounds={mapData.bounds}
 				isSelected={selectedPin?.id === pin.id}
 				onSelect={(e) => {
 					e.stopPropagation();
@@ -197,15 +215,16 @@
 				}}
 			/>
 		{/each}
+		{/if}
 
 		{#if mapLoading}
-			<div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 rounded-full bg-[var(--neu-bg)] px-3 py-1 text-[11px] text-[var(--neu-text-muted)]" style="box-shadow:0 2px 12px var(--neu-shadow-dark);border:1px solid var(--neu-border);">
+			<div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 rounded-full bg-[var(--surface-primary)] px-3 py-1 text-[11px] text-[var(--text-secondary)]" style="box-shadow:0 2px 12px var(--elevation-shadow-dark);border:1px solid var(--border-default);">
 				加载地图数据…
 			</div>
 		{/if}
 
 		<!-- Attribution -->
-		<div class="text-[var(--neu-text-muted)]" style="position:absolute;bottom:4px;left:6px;font-size:9px;opacity:0.4;pointer-events:none;z-index:1;">
+		<div class="text-[var(--text-secondary)]" style="position:absolute;bottom:4px;left:6px;font-size:9px;opacity:0.4;pointer-events:none;z-index:1;">
 			© OpenStreetMap contributors
 		</div>
 	</div>
@@ -216,11 +235,11 @@
 			<!-- Back -->
 			<button
 				type="button"
-				class="neu-hover-btn flex items-center justify-center rounded-full outline-none neu-circle-hover"
+				class="hover-btn flex items-center justify-center rounded-full outline-none circle-hover"
 				style="width:42px;height:42px;{floatBtnStyle}"
 				onclick={() => history.back()}
 			>
-				<ArrowLeft style="width:17px;height:17px;color:var(--neu-text);" strokeWidth={2} />
+				<ArrowLeft style="width:17px;height:17px;color:var(--text-primary);" strokeWidth={2} />
 			</button>
 
 			<!-- Filter toggle -->
@@ -228,8 +247,8 @@
 				<div bind:this={filterAnchorEl}>
 					<button
 						type="button"
-						class="neu-hover-btn flex items-center gap-2 rounded-full outline-none {showFilter ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-[var(--neu-bg)] text-[var(--neu-text)]'}"
-						style="padding:9px 16px;font-size:14px;border:{showFilter ? '1px solid transparent' : '1px solid var(--neu-border)'};box-shadow:{showFilter ? '0 4px 16px var(--neu-glow)' : '0 2px 12px var(--neu-shadow-dark), 0 1px 3px var(--neu-shadow-dark)'};"
+						class="hover-btn flex items-center gap-2 rounded-full outline-none {showFilter ? 'bg-[var(--accent-default)] text-white' : 'bg-[var(--surface-primary)] text-[var(--text-primary)]'}"
+						style="padding:9px 16px;font-size:14px;border:{showFilter ? '1px solid transparent' : '1px solid var(--border-default)'};box-shadow:{showFilter ? '0 4px 16px var(--glow-accent)' : '0 2px 12px var(--elevation-shadow-dark), 0 1px 3px var(--elevation-shadow-dark)'};"
 						onclick={() => (showFilter = !showFilter)}
 					>
 						<SlidersHorizontal style="width:14px;height:14px;" strokeWidth={showFilter ? 2.5 : 1.75} />
@@ -252,17 +271,17 @@
 						] as [type, label, icon, color], i}
 							{@const active = activeFilters.has(type as PinType)}
 							{#if i > 0}
-								<div class="bg-[var(--neu-border)]" style="height:1px;"></div>
+								<div class="bg-[var(--border-default)]" style="height:1px;"></div>
 							{/if}
 							<button
 								type="button"
-								class="neu-hover-btn w-full flex items-center gap-2 px-3 py-3 outline-none"
+								class="hover-btn w-full flex items-center gap-2 px-3 py-3 outline-none"
 								style="opacity:{active ? 1 : 0.38};"
 								onclick={() => toggleFilter(type as PinType)}
 							>
 								<img src={icon} alt={label} style="width:18px;height:24px;flex-shrink:0;" />
-								<span class="text-[var(--neu-text)]" style="flex:1;font-size:13px;text-align:left;">{label}</span>
-								<div style="width:13px;height:13px;border-radius:50%;flex-shrink:0;background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--neu-border)'};box-shadow:{active ? `0 0 6px ${color}55` : 'none'};transition:all 0.18s;"></div>
+								<span class="text-[var(--text-primary)]" style="flex:1;font-size:13px;text-align:left;">{label}</span>
+								<div style="width:13px;height:13px;border-radius:50%;flex-shrink:0;background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--border-default)'};box-shadow:{active ? `0 0 6px ${color}55` : 'none'};transition:all 0.18s;"></div>
 							</button>
 						{/each}
 					</Popover.Content>
@@ -275,37 +294,37 @@
 		<!-- GPS re-center -->
 		<button
 			type="button"
-			class="neu-hover-btn flex items-center justify-center rounded-full outline-none neu-circle-hover"
+			class="hover-btn flex items-center justify-center rounded-full outline-none circle-hover"
 			style="width:42px;height:42px;{floatBtnStyle}"
 			onclick={() => {
-				mapCenter = XUZHOU_CENTER;
+				mapCenter = defaultCenter;
 				selectedLoc = null;
 				searchQuery = '';
 			}}
 		>
-			<Crosshair style="width:18px;height:18px;color:var(--neu-accent-primary);" strokeWidth={1.75} />
+			<Crosshair style="width:18px;height:18px;color:var(--accent-default);" strokeWidth={1.75} />
 		</button>
 
 		<!-- My location dot（对齐 Figma Make：用户位置圆点 + 白描边 + 主题色 glow） -->
 		<button
 			type="button"
 			aria-label="我的位置"
-			class="neu-hover-btn flex items-center justify-center rounded-full outline-none neu-circle-hover"
+			class="hover-btn flex items-center justify-center rounded-full outline-none circle-hover"
 			style="width:42px;height:42px;{floatBtnStyle}"
 			onclick={() => {
-				mapCenter = XUZHOU_CENTER;
+				mapCenter = defaultCenter;
 				selectedLoc = null;
 				searchQuery = '';
 			}}
 		>
 			<div
-				style="width:14px;height:14px;border-radius:50%;background:var(--marker-user);border:2.5px solid var(--neu-bg);box-shadow:0 0 8px color-mix(in srgb, var(--marker-user) 65%, transparent);"
+				style="width:14px;height:14px;border-radius:50%;background:var(--marker-user);border:2.5px solid var(--surface-primary);box-shadow:0 0 8px color-mix(in srgb, var(--marker-user) 65%, transparent);"
 			></div>
 		</button>
 	</div>
 
 	<!-- ══ BOTTOM SHEET (draggable) ══ -->
-	<div class="bg-[var(--neu-bg)]" style={sheetStyle}>
+	<div class="bg-[var(--surface-primary)]" style={sheetStyle}>
 		<!-- Drag handle -->
 		<div
 			role="slider"
@@ -319,13 +338,13 @@
 			onpointerdown={onHandlePointerDown}
 			onkeydown={onHandleKeydown}
 		>
-			<div class="bg-[var(--neu-border)]" style="width:38px;height:4px;border-radius:2px;"></div>
+			<div class="bg-[var(--border-default)]" style="width:38px;height:4px;border-radius:2px;"></div>
 		</div>
 
 		<!-- Search bar -->
 		<div style="flex-shrink:0;padding:0 14px 8px;">
-			<div class="flex items-center gap-2.5 px-3.5 rounded-[15px] neu-input-surface" style="height:44px;">
-				<Search style="width:15px;height:15px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
+			<div class="flex items-center gap-2.5 px-3.5 rounded-[15px] input-surface" style="height:44px;">
+				<Search style="width:15px;height:15px;color:var(--text-secondary);flex-shrink:0;" strokeWidth={1.5} />
 				<input
 					bind:value={searchQuery}
 					oninput={(e) => {
@@ -337,21 +356,21 @@
 						if (snap === 'min') snapTo('mid');
 					}}
 					placeholder="搜索地点、地标或坐标"
-					class="flex-1 bg-transparent outline-none text-[var(--neu-text)] text-sm"
+					class="flex-1 bg-transparent outline-none text-[var(--text-primary)] text-sm"
 				/>
 				{#if searchQuery}
 					<button
 						type="button"
-						class="neu-hover-btn outline-none"
+						class="hover-btn outline-none"
 						onclick={() => {
 							searchQuery = '';
 							selectedLoc = null;
 						}}
 					>
-						<X style="width:14px;height:14px;color:var(--neu-text-muted);" strokeWidth={2} />
+						<X style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={2} />
 					</button>
 				{:else if selectedLoc}
-					<Check style="width:14px;height:14px;color:var(--neu-accent-primary);flex-shrink:0;" strokeWidth={2.5} />
+					<Check style="width:14px;height:14px;color:var(--accent-default);flex-shrink:0;" strokeWidth={2.5} />
 				{/if}
 			</div>
 		</div>
@@ -377,8 +396,8 @@
 		<div style="flex-shrink:0;padding:8px 14px 18px;">
 			<button
 				type="button"
-				class="neu-hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-[var(--neu-accent-primary)] text-white"
-				style="height:50px;font-size:15px;box-shadow:0 6px 20px var(--neu-glow);"
+				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-[var(--accent-default)] text-white"
+				style="height:50px;font-size:15px;box-shadow:0 6px 20px var(--glow-accent);"
 				onclick={handleConfirm}
 			>
 				<MapPin style="width:15px;height:15px;" strokeWidth={2} />

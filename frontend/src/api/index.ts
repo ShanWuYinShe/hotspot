@@ -22,6 +22,8 @@ export {
   listUserMoments, listUserReactedMoments,
   listComments,
   getMapCanvas,
+  getEventDetail, getSimilarEvents,
+  searchSuggest,
 } from '@/api/client';
 
 export type { ApiResponse, PaginatedData } from '@/api/client';

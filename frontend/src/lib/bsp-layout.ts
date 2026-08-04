@@ -40,8 +40,8 @@ export type BspLayoutOptions = {
   /** Clear space between cards. The grid unit is sized so the visible card still meets the minimums. */
   gap?: number;
   /**
-   * Symmetric minimum edge length. Kept for backwards compatibility; when the
-   * directional `minWidth` / `minHeight` are omitted they both fall back to it.
+   * Symmetric minimum edge length. When the directional `minWidth` / `minHeight`
+   * are omitted they both fall back to it.
    */
   minSize?: number;
   /**
@@ -785,7 +785,7 @@ function countReal(rects: BspRect[]): number {
  * Rows start from the tightest fit for the card count (and `minCanvasHeight`),
  * preferring enough surplus for a 2×2 hero on larger collections; the search
  * widens until the surplus is decomposable. Returns null when no row count
- * admits an exact tiling (the host falls back to the legacy probe loop).
+ * admits an exact tiling (the host falls back to the probe loop).
  */
 export function planBspLayout(
   options: Omit<BspLayoutOptions, "canvasHeight"> & { minCanvasHeight?: number },

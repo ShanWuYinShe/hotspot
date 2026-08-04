@@ -10,7 +10,7 @@
 	//   - 包含 PageViewport（路由画布）+ Outlet 内容
 	//   - 路由页面不得再渲染本组件或 PageViewport
 	//   - desktopPane=true 时输出 data-desktop-main 属性，激活 utilities.css 中
-	//     [data-desktop-main] .desktop-main-scroll > * 与 .sticky 的 page-bg 强制规则
+	//     [data-desktop-main] .desktop-main-scroll > * 与 .sticky 的 surface-page 强制规则
 	//
 	// ┌──────────────── 应用壳 ────────────────┐
 	// │ 导航 / 侧栏 / 底部栏                         │

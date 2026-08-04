@@ -9,7 +9,7 @@
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
-	// 粉丝分区（迁移自旧版 ProfileSections 内 SectionFans/FanRow）。
+	// 粉丝分区。
 
 	let { embedded = false }: { embedded?: boolean } = $props();
 
@@ -42,19 +42,19 @@
 <div class="flex-1 overflow-y-auto no-scrollbar flex flex-col">
 	{#if !embedded}
 		<!-- Header -->
-		<div class="flex items-center justify-between px-[var(--page-gutter)] py-4 flex-shrink-0" style="border-bottom:1px solid var(--neu-border);">
+		<div class="flex items-center justify-between px-[var(--page-gutter)] py-4 flex-shrink-0" style="border-bottom:1px solid var(--border-default);">
 			<div>
 				<div class="flex items-center gap-2.5">
-					<span class="text-[var(--neu-text)] text-[15px]">粉丝</span>
-					<span class="px-2 py-0.5 rounded-full bg-[var(--neu-accent-primary)] text-white text-[11px]">
+					<span class="text-[var(--text-primary)] text-[15px]">粉丝</span>
+					<span class="px-2 py-0.5 rounded-full bg-[var(--accent-default)] text-white text-[11px]">
 						{followers.length} 人
 					</span>
 				</div>
-				<p class="mt-1 text-[var(--neu-text-muted)] text-[11px]">关注你的人，优先处理待回关关系</p>
+				<p class="mt-1 text-[var(--text-secondary)] text-[11px]">关注你的人，优先处理待回关关系</p>
 			</div>
 			<div class="flex items-center gap-2">
 				{#if pendingCount > 0}
-					<span class="px-2 py-0.5 rounded-full text-[var(--semantic-warning)] text-[11px]" style="background:color-mix(in srgb, var(--semantic-warning) 13%, transparent);border:1px solid color-mix(in srgb, var(--semantic-warning) 24%, transparent);">
+					<span class="px-2 py-0.5 rounded-full text-[var(--status-warning)] text-[11px]" style="background:color-mix(in srgb, var(--status-warning) 13%, transparent);border:1px solid color-mix(in srgb, var(--status-warning) 24%, transparent);">
 						{pendingCount} 待回关
 					</span>
 				{/if}
@@ -79,8 +79,8 @@
 			{@const active = fanFilter === pill.id}
 			<button
 				type="button"
-				class="neu-hover-btn px-3 py-1 rounded-full outline-none neu-surface-ghost text-xs neu-tap-93 {active ? 'bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] font-medium' : 'text-[var(--neu-text-muted)]'}"
-				style={active ? 'border-color:var(--neu-accent-soft-border);' : ''}
+				class="hover-btn px-3 py-1 rounded-full outline-none surface-ghost text-xs tap-93 {active ? 'bg-[var(--accent-soft)] text-[var(--accent-default)] font-medium' : 'text-[var(--text-secondary)]'}"
+				style={active ? 'border-color:var(--accent-border);' : ''}
 				onclick={() => (fanFilter = pill.id as 'all' | 'mutual' | 'pending')}
 			>
 				{pill.label}
@@ -109,22 +109,22 @@
 							<Avatar ring src={f.avatar} name={f.name} size={48} />
 							<div class="flex-1 min-w-0">
 								<div class="flex items-center gap-2">
-									<span class="text-[var(--neu-text)] text-[13px]">{f.name}</span>
+									<span class="text-[var(--text-primary)] text-[13px]">{f.name}</span>
 									{#if isMutual}
-										<span class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[var(--semantic-online)] text-[10px]" style="background:color-mix(in srgb, var(--semantic-online) 12%, transparent);">
+										<span class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[var(--status-online)] text-[10px]" style="background:color-mix(in srgb, var(--status-online) 12%, transparent);">
 											<Check style="width:9px;height:9px;" strokeWidth={2.5} />
 											互关
 										</span>
 									{/if}
 								</div>
-								<p class="text-[var(--neu-text-muted)] text-[11px] mt-0.5">
+								<p class="text-[var(--text-secondary)] text-[11px] mt-0.5">
 									{f.handle} · {fanLabel(f.joinedDays)}关注了你
 								</p>
 							</div>
 							<button
 								type="button"
-								class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] neu-tap-93 {isMutual ? 'bg-transparent text-[var(--neu-text-muted)]' : 'bg-[var(--neu-accent-primary)] text-white'}"
-								style={isMutual ? 'border:1px solid var(--neu-border-pressed);' : 'border:1px solid transparent;'}
+								class="hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] tap-93 {isMutual ? 'bg-transparent text-[var(--text-secondary)]' : 'bg-[var(--accent-default)] text-white'}"
+								style={isMutual ? 'border:1px solid var(--border-strong);' : 'border:1px solid transparent;'}
 								onclick={(e) => {
 									e.stopPropagation();
 									toggleFollow(f.id);
@@ -161,22 +161,22 @@
 							<Avatar ring src={f.avatar} name={f.name} size={42} />
 							<div class="flex-1 min-w-0">
 								<div class="flex items-center gap-2">
-									<span class="text-[var(--neu-text)] text-[13px]">{f.name}</span>
+									<span class="text-[var(--text-primary)] text-[13px]">{f.name}</span>
 									{#if isMutual}
-										<span class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[var(--semantic-online)] text-[10px]" style="background:color-mix(in srgb, var(--semantic-online) 12%, transparent);">
+										<span class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[var(--status-online)] text-[10px]" style="background:color-mix(in srgb, var(--status-online) 12%, transparent);">
 											<Check style="width:9px;height:9px;" strokeWidth={2.5} />
 											互关
 										</span>
 									{/if}
 								</div>
-								<p class="text-[var(--neu-text-muted)] text-[11px] mt-0.5">
+								<p class="text-[var(--text-secondary)] text-[11px] mt-0.5">
 									{f.handle} · {fanLabel(f.joinedDays)}关注了你
 								</p>
 							</div>
 							<button
 								type="button"
-								class="neu-hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] neu-tap-93 {isMutual ? 'bg-transparent text-[var(--neu-text-muted)]' : 'bg-[var(--neu-accent-primary)] text-white'}"
-								style={isMutual ? 'border:1px solid var(--neu-border-pressed);' : 'border:1px solid transparent;'}
+								class="hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] tap-93 {isMutual ? 'bg-transparent text-[var(--text-secondary)]' : 'bg-[var(--accent-default)] text-white'}"
+								style={isMutual ? 'border:1px solid var(--border-strong);' : 'border:1px solid transparent;'}
 								onclick={(e) => {
 									e.stopPropagation();
 									toggleFollow(f.id);

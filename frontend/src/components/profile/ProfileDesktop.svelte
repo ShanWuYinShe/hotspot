@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Camera, MapPin, Pencil, ShieldCheck, AtSign, FileText, UserCheck, ChevronRight } from '@lucide/svelte';
+	import { Camera, MapPin, Pencil, ShieldCheck, AtSign, FileText, ChevronRight } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
-	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
+	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SectionMoments from '@/components/profile/SectionMoments.svelte';
 	import SectionGroups from '@/components/profile/SectionGroups.svelte';
 	import SectionFriends from '@/components/profile/SectionFriends.svelte';
@@ -18,7 +18,7 @@
 
 	let { section }: { section: string | null } = $props();
 
-	const { avatar, nickname, stats } = useAccountData();
+	const { avatar, nickname, stats, bio, handle, locationName } = useAccountData();
 
 	const SECTION_META: Record<string, { title: string }> = {
 		moments: { title: '我的瞬间' },
@@ -33,23 +33,29 @@
 		([
 			{ label: '瞬间', value: stats.moments_count, section: 'moments' },
 			{ label: '关注者', value: stats.followers_count, section: 'fans' },
-			{ label: '足迹', value: 27, section: null }
+			{ label: '群组', value: stats.groups_count, section: 'groups' }
 		] as { label: string; value: number; section: ProfileSection | null }[])
 	);
 
 	const detailRows = $derived([
-		{ icon: AtSign, label: '用户名', value: '@elara.v' },
-		{ icon: MapPin, label: '所在地', value: '江苏 · 徐州' },
-		{ icon: FileText, label: '个人简介', value: '触感思考者 · 在流动中寻觅静止' },
-		{ icon: UserCheck, label: '资料可见范围', value: '公开' }
+		{ icon: AtSign, label: '用户名', value: handle || '未设置' },
+		{ icon: MapPin, label: '所在地', value: locationName || '未设置' },
+		{ icon: FileText, label: '个人简介', value: bio || '未填写' }
 	]);
+
+	const filledCount = $derived(
+		[nickname, avatar, bio, locationName, stats.groups_count > 0].filter(Boolean).length
+	);
 </script>
 
 {#if meta}
-	<!-- 分区模式 -->
-	<div class="flex flex-col h-full">
-		<PageHeader title={meta.title} sticky onBack={() => void goto(ROUTES.me)} />
-		<div class="flex-1 min-h-0 overflow-hidden flex">
+	<!-- 分区模式：StandardPageLayout + sticky PageHeader；
+	     Section 组件自带 px-[var(--page-gutter)]，负 margin 抵消 ContentColumn gutter -->
+	<StandardPageLayout contentClassName="p-0">
+		{#snippet header()}
+			<PageHeader title={meta.title} sticky onBack={() => void goto(ROUTES.me)} />
+		{/snippet}
+		<div class="-mx-[var(--page-gutter)]">
 			{#if section === 'moments'}
 				<SectionMoments />
 			{:else if section === 'groups'}
@@ -62,21 +68,21 @@
 				<SectionFans />
 			{/if}
 		</div>
-	</div>
+	</StandardPageLayout>
 {:else}
 	<!-- 总览模式（对齐 Figma Make ProfileDesktop：单列资料页） -->
-	<ContentColumn class="py-7 lg:py-8">
+	<StandardPageLayout contentClassName="py-7 lg:py-8">
 		<!-- 资料页眉 -->
-		<header class="flex items-start justify-between gap-6 border-b border-[var(--neu-border)] pb-5">
+		<header class="flex items-start justify-between gap-6 border-b border-[var(--border-default)] pb-5">
 			<div>
-				<p class="text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--neu-accent-primary)]">个人资料</p>
-				<h1 class="mt-2 text-[24px] font-medium tracking-[-0.015em] text-[var(--neu-text)]">管理你的公开信息</h1>
-				<p class="mt-1.5 text-sm text-[var(--neu-text-muted)]">这些资料会展示给访问你主页的人。</p>
+				<p class="text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--accent-default)]">个人资料</p>
+				<h1 class="mt-2 text-[24px] font-medium tracking-[-0.015em] text-[var(--text-primary)]">管理你的公开信息</h1>
+				<p class="mt-1.5 text-sm text-[var(--text-secondary)]">这些资料会展示给访问你主页的人。</p>
 			</div>
 			<button
 				type="button"
 				onclick={() => void goto(ROUTES.meEdit)}
-				class="neu-hover-btn inline-flex shrink-0 items-center gap-1.5 border border-[var(--neu-border)] bg-[var(--neu-bg)] px-3.5 py-2.5 text-sm font-medium text-[var(--neu-text)] outline-none transition-colors hover:bg-[var(--neu-accent-soft)]"
+				class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-[var(--border-default)] bg-[var(--surface-primary)] px-3.5 py-2.5 text-sm font-medium text-[var(--text-primary)] outline-none transition-colors hover:bg-[var(--accent-soft)]"
 			>
 				<Pencil style="width:16px;height:16px;" strokeWidth={1.8} />
 				编辑资料
@@ -85,66 +91,66 @@
 
 		<!-- 双栏：公开资料卡 + 资料状态 -->
 		<div class="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
-			<section class="rounded-panel border border-[var(--neu-border)] neu-surface-flat" aria-label="公开个人资料">
+			<section class="rounded-panel border border-[var(--border-default)] surface-flat" aria-label="公开个人资料">
 				<div class="flex items-start gap-5 p-6">
 					<div class="relative shrink-0">
-						<div class="overflow-hidden rounded-full border-2 border-[var(--neu-bg)] bg-[var(--neu-bg)] p-1">
+						<div class="overflow-hidden rounded-full border-2 border-[var(--surface-primary)] bg-[var(--surface-primary)] p-1">
 							{#if avatar}
 								<img src={avatar} alt={nickname || '用户'} class="rounded-full object-cover" style="width:82px;height:82px;" />
 							{:else}
-								<span class="flex items-center justify-center text-[var(--neu-text-muted)]" style="width:82px;height:82px;font-size:32px;">{(nickname || '?')[0]}</span>
+								<span class="flex items-center justify-center text-[var(--text-secondary)]" style="width:82px;height:82px;font-size:32px;">{(nickname || '?')[0]}</span>
 							{/if}
 						</div>
 						<button
 							type="button"
 							aria-label="更换头像"
 							onclick={() => void goto(ROUTES.meEdit)}
-							class="neu-hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-[var(--neu-accent-primary)] text-white"
-							style="width:28px;height:28px;border:2px solid var(--neu-bg);"
+							class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-[var(--accent-default)] text-white"
+							style="width:28px;height:28px;border:2px solid var(--surface-primary);"
 						>
 							<Camera style="width:14px;height:14px;" strokeWidth={2} />
 						</button>
 					</div>
 					<div class="min-w-0 pt-1">
-						<h2 class="text-[22px] font-medium tracking-[-0.01em] text-[var(--neu-text)]">{nickname || '鹿鸣'}</h2>
-						<p class="mt-1 text-sm text-[var(--neu-text-muted)]">@elara.v</p>
-						<p class="mt-4 max-w-[460px] text-sm leading-6 text-[var(--neu-text-muted)]">触感思考者。在流动里收集安静，也在熟悉的街道寻找新的光。</p>
-						<p class="mt-3 flex items-center gap-1.5 text-xs text-[var(--neu-text-muted)]">
-							<MapPin style="width:14px;height:14px;color:var(--neu-accent-primary);" strokeWidth={1.8} />
-							江苏 · 徐州
+						<h2 class="text-[22px] font-medium tracking-[-0.01em] text-[var(--text-primary)]">{nickname || '未设置昵称'}</h2>
+						<p class="mt-1 text-sm text-[var(--text-secondary)]">{handle}</p>
+						<p class="mt-4 max-w-[460px] text-sm leading-6 text-[var(--text-secondary)]">{bio || '这个人还没有填写简介。'}</p>
+						<p class="mt-3 flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
+							<MapPin style="width:14px;height:14px;color:var(--accent-default);" strokeWidth={1.8} />
+							{locationName || '未设置位置'}
 						</p>
 					</div>
 				</div>
-				<div class="grid grid-cols-3 border-t border-[var(--neu-border)]">
+				<div class="grid grid-cols-3 border-t border-[var(--border-default)]">
 					{#each statsList as stat, i}
 						<button
 							type="button"
-							class="neu-hover-bg border-l border-[var(--neu-border)] px-5 py-4 text-left outline-none first:border-l-0"
-							style="background:var(--neu-bg);"
+							class="hover-bg border-l border-[var(--border-default)] px-5 py-4 text-left outline-none first:border-l-0"
+							style="background:var(--surface-primary);"
 							onclick={() => (stat.section ? void goto(ROUTES.meSection(stat.section)) : undefined)}
 						>
-							<p class="text-lg font-medium tabular-nums text-[var(--neu-text)]">{stat.value}</p>
-							<p class="mt-0.5 text-xs text-[var(--neu-text-muted)]">{stat.label}</p>
+							<p class="text-lg font-medium tabular-nums text-[var(--text-primary)]">{stat.value}</p>
+							<p class="mt-0.5 text-xs text-[var(--text-secondary)]">{stat.label}</p>
 						</button>
 					{/each}
 				</div>
 			</section>
 
 			<!-- 资料状态 -->
-			<aside class="rounded-panel border border-[var(--neu-border)] neu-surface-flat p-5" aria-label="资料状态">
+			<aside class="rounded-panel border border-[var(--border-default)] surface-flat p-5" aria-label="资料状态">
 				<div class="flex items-center justify-between">
-					<h2 class="text-sm font-medium text-[var(--neu-text)]">资料状态</h2>
-					<ShieldCheck style="width:16px;height:16px;color:var(--neu-accent-primary);" strokeWidth={1.8} />
+					<h2 class="text-sm font-medium text-[var(--text-primary)]">资料状态</h2>
+					<ShieldCheck style="width:16px;height:16px;color:var(--accent-default);" strokeWidth={1.8} />
 				</div>
-				<p class="mt-2 text-xs leading-5 text-[var(--neu-text-muted)]">你的基础资料已完善，可随时在编辑页更新。</p>
-				<div class="mt-5 h-1.5 overflow-hidden bg-[var(--neu-border)]">
-					<div class="h-full w-full bg-[var(--neu-accent-primary)]"></div>
+				<p class="mt-2 text-xs leading-5 text-[var(--text-secondary)]">你的基础资料已完善，可随时在编辑页更新。</p>
+				<div class="mt-5 h-1.5 overflow-hidden bg-[var(--border-default)]">
+					<div class="h-full bg-[var(--accent-default)]" style="width:{filledCount * 20}%;"></div>
 				</div>
-				<p class="mt-2 text-[11px] text-[var(--neu-text-muted)]">4 项基础资料已填写</p>
+				<p class="mt-2 text-[11px] text-[var(--text-secondary)]">{filledCount} 项基础资料已填写</p>
 				<button
 					type="button"
 					onclick={() => void goto(ROUTES.settings)}
-					class="neu-hover-btn mt-5 flex w-full items-center justify-center gap-2 border border-[var(--neu-border)] bg-[var(--neu-bg)] py-2.5 text-xs font-medium text-[var(--neu-text)] outline-none transition-colors hover:bg-[var(--neu-accent-soft)]"
+					class="hover-btn mt-5 flex w-full items-center justify-center gap-2 border border-[var(--border-default)] bg-[var(--surface-primary)] py-2.5 text-xs font-medium text-[var(--text-primary)] outline-none transition-colors hover:bg-[var(--accent-soft)]"
 				>
 					账号与隐私设置
 					<ChevronRight style="width:14px;height:14px;" strokeWidth={1.8} />
@@ -153,24 +159,24 @@
 		</div>
 
 		<!-- 资料详情 -->
-		<section class="mt-5 rounded-panel border border-[var(--neu-border)] neu-surface-flat" aria-label="资料详情">
-			<div class="border-b border-[var(--neu-border)] px-6 py-4">
-				<h2 class="text-sm font-medium text-[var(--neu-text)]">资料详情</h2>
-				<p class="mt-1 text-xs text-[var(--neu-text-muted)]">以下内容将显示在你的个人主页。</p>
+		<section class="mt-5 rounded-panel border border-[var(--border-default)] surface-flat" aria-label="资料详情">
+			<div class="border-b border-[var(--border-default)] px-6 py-4">
+				<h2 class="text-sm font-medium text-[var(--text-primary)]">资料详情</h2>
+				<p class="mt-1 text-xs text-[var(--text-secondary)]">以下内容将显示在你的个人主页。</p>
 			</div>
 			<dl class="grid md:grid-cols-2">
 				{#each detailRows as row, index}
 					<div
-						class="flex items-start gap-3 px-6 py-4 {index > 1 ? 'border-t border-[var(--neu-border)]' : ''} {index % 2 === 1 ? 'md:border-l md:border-[var(--neu-border)]' : ''}"
+						class="flex items-start gap-3 px-6 py-4 {index > 1 ? 'border-t border-[var(--border-default)]' : ''} {index % 2 === 1 ? 'md:border-l md:border-[var(--border-default)]' : ''}"
 					>
-						<row.icon style="width:16px;height:16px;margin-top:2px;color:var(--neu-accent-primary);flex-shrink:0;" strokeWidth={1.7} />
+						<row.icon style="width:16px;height:16px;margin-top:2px;color:var(--accent-default);flex-shrink:0;" strokeWidth={1.7} />
 						<div class="min-w-0">
-							<dt class="text-[11px] text-[var(--neu-text-muted)]">{row.label}</dt>
-							<dd class="mt-1 text-sm text-[var(--neu-text)]">{row.value}</dd>
+							<dt class="text-[11px] text-[var(--text-secondary)]">{row.label}</dt>
+							<dd class="mt-1 text-sm text-[var(--text-primary)]">{row.value}</dd>
 						</div>
 					</div>
 				{/each}
 			</dl>
 		</section>
-	</ContentColumn>
+	</StandardPageLayout>
 {/if}

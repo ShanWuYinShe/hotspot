@@ -19,7 +19,7 @@
 	import { presence, watchPresence } from '@/stores/presence.svelte';
 
 	// 消息列表：在线条 + 会话列表（私聊 + 群聊混合）+ 新会话 Sheet + 建群 Sheet；
-	// 桌面左右分栏（内嵌 ChatView / GroupChatView）。迁移自旧版 MessagesPage。
+	// 桌面左右分栏（内嵌 ChatView / GroupChatView）。
 
 	/** 时间戳兜底：无效日期按 0 处理（用于私聊/群聊混合排序）。 */
 	function tsOf(t: string): number {
@@ -45,7 +45,7 @@
 				const privData = privRes.code === 0 && privRes.data ? privRes.data.items : [];
 				const groupData = groupRes.code === 0 && groupRes.data ? groupRes.data.items : [];
 				const privateChats: ChatItem[] = privData.map((c, i) => ({
-					id: i + 1,
+					id: `chat-${i}`,
 					// spec: PrivateChatItem.other_user — the peer; private messages are
 					// addressed by target_user_id (the peer's user_id), not a chat id.
 					peerUserId: c.other_user?.user_id ?? '',
@@ -128,21 +128,21 @@
 	     分栏固定视口高、左栏列表内部滚动；平板/桌面画布均撑满。 -->
 	<div class="content-mode-wide flex h-full">
 		<!-- Left: chat list -->
-		<div class="flex flex-col flex-shrink-0 overflow-hidden" style="width:300px;border-right:1px solid var(--neu-border);">
+		<div class="flex flex-col flex-shrink-0 overflow-hidden" style="width:300px;border-right:1px solid var(--border-default);">
 			<!-- List header（对齐 Figma：px-4 pt-4 pb-3，标题 18 + Plus 30 + 搜索框） -->
-			<div class="flex-shrink-0" style="border-bottom:1px solid var(--neu-border);">
+			<div class="flex-shrink-0" style="border-bottom:1px solid var(--border-default);">
 				<PageHeader title="消息" titleSize={18} contentClassName="px-4 pt-4 pb-0">
 					{#snippet trailing()}
 						<button
 							type="button"
-							class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none neu-surface-flat"
+							class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none surface-flat"
 							style="width:30px;height:30px;"
 							onclick={() => {
 								newChatTab = 'chat';
 								showNewChat = true;
 							}}
 						>
-							<Plus style="width:14px;height:14px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+							<Plus style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={1.5} />
 						</button>
 					{/snippet}
 					{#snippet below()}
@@ -155,22 +155,22 @@
 
 			<!-- 在线 strip -->
 			{#if onlineChats.length > 0}
-				<div class="flex-shrink-0 px-4 py-2.5" style="border-bottom:1px solid var(--neu-border);">
-					<p class="uppercase mb-2 text-[var(--neu-text-muted)] text-[9px] tracking-[0.12em]">在线</p>
+				<div class="flex-shrink-0 px-4 py-2.5" style="border-bottom:1px solid var(--border-default);">
+					<p class="uppercase mb-2 text-[var(--text-secondary)] text-[9px] tracking-[0.12em]">在线</p>
 					<div class="flex gap-3 overflow-x-auto no-scrollbar">
 						{#each onlineChats as c (c.id)}
 							<button
 								type="button"
-								class="avatar-entry neu-tap-93 flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer"
+								class="avatar-entry tap-93 flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer"
 								onclick={() => (selectedId = c.id)}
 							>
 								<div class="relative">
-									<div class="avatar-entry__avatar rounded-full overflow-hidden" style="width:36px;height:36px;border:{selectedId === c.id ? '2px solid var(--neu-accent-primary)' : '1.5px solid var(--neu-border)'};">
+									<div class="avatar-entry__avatar rounded-full overflow-hidden" style="width:36px;height:36px;border:{selectedId === c.id ? '2px solid var(--accent-default)' : '1.5px solid var(--border-default)'};">
 										<img src={c.avatar} alt={c.name} class="w-full h-full object-cover" />
 									</div>
 									<OnlineDot size="sm" />
 								</div>
-								<span class="text-[var(--neu-text-muted)] text-[10px]">{c.name}</span>
+								<span class="text-[var(--text-secondary)] text-[10px]">{c.name}</span>
 							</button>
 						{/each}
 					</div>
@@ -182,7 +182,7 @@
 			     选中态 glow 不与相邻行重叠，分隔线嵌在间距中不显突兀） -->
 			<EmbeddedList class="flex-1 overflow-y-auto no-scrollbar px-2 py-2">
 				{#if totalUnread > 0}
-					<p class="uppercase px-2 mb-1 text-[var(--neu-text-muted)] text-[9px] tracking-[0.12em]">未读</p>
+					<p class="uppercase px-2 mb-1 text-[var(--text-secondary)] text-[9px] tracking-[0.12em]">未读</p>
 				{/if}
 				{#each filtered as chat (chat.id)}
 					<div class="px-3 py-1">
@@ -202,7 +202,7 @@
 			{#if selectedId !== null && selectedChat}
 				<div class="h-full">
 					{#if selectedChat.kind === 'group'}
-						<GroupChatView groupId={String(selectedChat.id)} showBackButton={false} />
+						<GroupChatView groupId={selectedChat.id} showBackButton={false} />
 					{:else}
 						<ChatView peerUserId={selectedChat.peerUserId} contact={{ name: selectedChat.name, avatar: selectedChat.avatar, online: selectedChat.online }} showBackButton={false} />
 					{/if}
@@ -211,7 +211,7 @@
 				<div class="h-full">
 					<EmptyState title="选择一个会话" description="从左侧选择联系人开始聊天" class="h-full justify-center py-0!" iconSize={72}>
 						{#snippet icon()}
-							<MessageSquareDashed style="width:28px;height:28px;color:var(--neu-text-muted);opacity:0.5;" strokeWidth={1.25} />
+							<MessageSquareDashed style="width:28px;height:28px;color:var(--text-secondary);opacity:0.5;" strokeWidth={1.25} />
 						{/snippet}
 					</EmptyState>
 				</div>
@@ -259,20 +259,20 @@
 			<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「新会话」同排 -->
 			<div class="flex items-center gap-2">
 				{#if totalUnread > 0}
-					<span class="text-[var(--neu-text-muted)] text-xs">{totalUnread} 条未读</span>
+					<span class="text-[var(--text-secondary)] text-xs">{totalUnread} 条未读</span>
 				{:else}
-					<span class="text-[var(--semantic-online)] text-xs">全部已读</span>
+					<span class="text-[var(--status-online)] text-xs">全部已读</span>
 				{/if}
 				<button
 					type="button"
-					class="neu-hover-btn neu-scale-btn flex items-center justify-center rounded-full outline-none neu-surface-flat"
+					class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none surface-flat"
 					style="width:36px;height:36px;"
 					onclick={() => {
 						newChatTab = 'chat';
 						showNewChat = true;
 					}}
 				>
-					<Plus style="width:16px;height:16px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+					<Plus style="width:16px;height:16px;color:var(--text-secondary);" strokeWidth={1.5} />
 				</button>
 			</div>
 		{/snippet}
@@ -287,34 +287,34 @@
 	<ContentColumn class="animate-fade-in flex flex-col min-h-full pt-4 pb-4">
 		{#if onlineChats.length > 0}
 			<div class="mb-4">
-				<p class="uppercase mb-2.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">在线</p>
+				<p class="uppercase mb-2.5 text-[var(--text-secondary)] text-[10px] tracking-[0.14em]">在线</p>
 				<div class="flex gap-4 overflow-x-auto no-scrollbar pb-1">
 					{#each onlineChats as chat (chat.id)}
 						<button
 							type="button"
-							class="avatar-entry neu-tap-93 flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer"
+							class="avatar-entry tap-93 flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer"
 							onclick={() => void goto(ROUTES.message(chat.peerUserId || chat.id))}
 						>
 							<div class="relative">
-								<div class="avatar-entry__avatar rounded-full overflow-hidden bg-[var(--neu-bg)]" style="width:52px;height:52px;padding:2px;border:2px solid var(--neu-accent-primary);">
+								<div class="avatar-entry__avatar rounded-full overflow-hidden bg-[var(--surface-primary)]" style="width:52px;height:52px;padding:2px;border:2px solid var(--accent-default);">
 									<img src={chat.avatar} alt={chat.name} class="w-full h-full object-cover rounded-full" />
 								</div>
 								<OnlineDot size="lg" />
 							</div>
-							<span class="text-[var(--neu-text-muted)] text-[11px]">{chat.name}</span>
+							<span class="text-[var(--text-secondary)] text-[11px]">{chat.name}</span>
 						</button>
 					{/each}
 				</div>
 			</div>
 		{/if}
 
-		<p class="uppercase mb-2.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em]">最近</p>
+		<p class="uppercase mb-2.5 text-[var(--text-secondary)] text-[10px] tracking-[0.14em]">最近</p>
 
 		<!-- 列表：无外层容器，EmbeddedList 直接裸排（对齐 Figma）；每行 px-3 py-1 包裹 -->
 		{#if filtered.length === 0}
 			<EmptyState bare class="py-12!" title="没有找到会话">
 				{#snippet icon()}
-					<MessageSquareDashed style="width:36px;height:36px;color:var(--neu-text-muted);opacity:0.5;" strokeWidth={1.25} />
+					<MessageSquareDashed style="width:36px;height:36px;color:var(--text-secondary);opacity:0.5;" strokeWidth={1.25} />
 				{/snippet}
 			</EmptyState>
 		{:else}

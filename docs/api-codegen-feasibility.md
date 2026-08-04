@@ -6,7 +6,7 @@ Three codebases hand-maintain the same API contract against `spec/`:
 
 | Layer | File(s) | Format |
 |-------|---------|--------|
-| Frontend | `frontend/src/lib/api/endpoints.ts` + `types/api.ts` | TypeScript constants + interfaces |
+| Frontend | `frontend/src/api/endpoints.ts` + `types.ts` | TypeScript constants + interfaces |
 | Backend | `backend-go/internal/modules/*/types.go` | Go structs |
 | HarmonyOS | `harmonyapp/.../ApiEndpoints.ets` + `.../types/` | ArkTS constants + interfaces |
 
@@ -43,7 +43,7 @@ Add a CI step that compares the current frontend types against a reference snaps
 
 ## Recommendation
 
-**Phase 1 (now)**: Option 3 — CI diff check. Write a script that parses `spec/api_spec_types.md` + module-specific `api_spec_*.md` and compares against `frontend/src/lib/types/api.ts`. Run in CI alongside `bun check`.
+**Phase 1 (now)**: Option 3 — CI diff check. Write a script that parses `spec/api_spec_types.md` + module-specific `api_spec_*.md` and compares against `frontend/src/api/types.ts`. Run in CI alongside `bun check`.
 
 **Phase 2 (when spec matures)**: Option 2 — custom parser that emits TS/ArkTS types. Reuse the parser from Phase 1, extend it to emit files.
 
@@ -54,7 +54,7 @@ Add a CI step that compares the current frontend types against a reference snaps
 The comparison script would:
 1. Parse `spec/api_spec_types.md` for base types (GeoPoint, Location, PaginationParams, etc.).
 2. Parse each `api_spec_*.md` for module-specific request/response types.
-3. Parse the generated `frontend/src/lib/types/api.ts` via TypeScript compiler API or simple regex.
+3. Parse the generated `frontend/src/api/types.ts` via TypeScript compiler API or simple regex.
 4. Report: extra fields in frontend (→ strict-decode 10000), missing fields (→ silent data loss), type mismatches (`number` vs `string`).
 
 Rough estimate: 200-400 lines of TypeScript. Run as `bun run scripts/check-contract-drift.ts`.

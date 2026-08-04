@@ -1,5 +1,4 @@
 // API endpoint registry — MUST match spec/api_spec_*.md.
-// v2: All /me/ path segments removed per migration doc.
 
 const PREFIX = '/api/v1';
 
@@ -201,5 +200,11 @@ export const Endpoints = {
     Rbac: {
       GetMe: `${PREFIX}/admin/rbac/get_me`,
     },
+  },
+
+  // Events（spec 尚未定义，仅 MSW mock 提供；后端契约就绪后按 spec 收编）
+  Events: {
+    GetDetail: `${PREFIX}/events/get_detail`,
+    ListSimilar: `${PREFIX}/events/list_similar`,
   },
 } as const;

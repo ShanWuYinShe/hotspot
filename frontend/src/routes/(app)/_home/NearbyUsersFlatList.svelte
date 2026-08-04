@@ -29,24 +29,24 @@
 					{#if u.status === '在线'}
 						<span
 							class="absolute bottom-0 right-0 rounded-full"
-							style="width:9px;height:9px;background:var(--semantic-online);border:2px solid var(--neu-bg);"
+							style="width:9px;height:9px;background:var(--status-online);border:2px solid var(--surface-primary);"
 						></span>
 					{/if}
 				</div>
 				<div class="flex-1 min-w-0">
-					<p style="font-size:13px;color:var(--neu-text);">{u.name}</p>
+					<p style="font-size:13px;color:var(--text-primary);">{u.name}</p>
 					<div class="flex items-center gap-1.5 mt-0.5">
-						<span style="font-size:10px;color:var(--neu-accent-primary);">#{u.tag}</span>
-						<span style="font-size:10px;color:var(--neu-text-muted);opacity:0.5;">·</span>
-						<span style="font-size:10px;color:var(--neu-text-muted);">{u.distance}</span>
+						<span style="font-size:10px;color:var(--accent-default);">#{u.tag}</span>
+						<span style="font-size:10px;color:var(--text-secondary);opacity:0.5;">·</span>
+						<span style="font-size:10px;color:var(--text-secondary);">{u.distance}</span>
 					</div>
 				</div>
 				<button
 					type="button"
-					class="neu-hover-btn neu-tap-93 px-3 py-1 rounded-full outline-none transition-all"
+					class="hover-btn tap-93 px-3 py-1 rounded-full outline-none transition-all"
 					style={followed
-						? 'background:transparent;color:var(--neu-text-muted);border:1px solid var(--neu-border-pressed);font-size:11px;'
-						: 'background:var(--neu-accent-primary);color:white;border:1px solid transparent;font-size:11px;'}
+						? 'background:transparent;color:var(--text-secondary);border:1px solid var(--border-strong);font-size:11px;'
+						: 'background:var(--accent-default);color:white;border:1px solid transparent;font-size:11px;'}
 					onclick={(e) => {
 						e.stopPropagation();
 						onToggle(u.id);

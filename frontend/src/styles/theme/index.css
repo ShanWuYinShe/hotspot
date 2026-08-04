@@ -12,14 +12,11 @@
      4. themes/vibrant.css  — :root,.vibrant / .vibrant.dark（全部 vibrant 值）
      5. themes/forest.css   — .forest / .forest.dark（全部 forest 值）
 
-   Layer 2.5 — Compatibility (loaded BEFORE utilities so neu-* aliases work)
-     6. compatibility.css   — --neu-* aliases → semantic names
-
    Layout & Presentation
-     7. layout.css          — context rail + workspace dimensions
-     8. base.css            — @layer base (typography + button feedback)
-     9. theme-registry.css  — @theme inline (Tailwind class registration)
-    10. utilities.css       — @layer utilities (component classes)
+     6. layout.css          — context rail + workspace dimensions
+     7. base.css            — @layer base (typography + button feedback)
+     8. theme-registry.css  — @theme inline (Tailwind class registration)
+     9. utilities.css       — @layer utilities (component classes)
 ────────────────────────────────────────────────────────────────────── */
 
 @import './shadcn.css';
@@ -27,7 +24,6 @@
 @import './semantic.css';
 @import './themes/vibrant.css';
 @import './themes/forest.css';
-@import './compatibility.css';
 @import './layout.css';
 @import './base.css';
 @import './theme-registry.css';

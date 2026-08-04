@@ -36,10 +36,10 @@
 					<item.icon style="width:16px;height:16px;color:{item.color};" strokeWidth={1.75} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p style="font-size:13px;color:var(--neu-text);">{item.title}</p>
-					<p style="font-size:11px;color:var(--neu-text-muted);margin-top:1px;">{item.sub}</p>
+					<p style="font-size:13px;color:var(--text-primary);">{item.title}</p>
+					<p style="font-size:11px;color:var(--text-secondary);margin-top:1px;">{item.sub}</p>
 				</div>
-				<ChevronRight style="width:13px;height:13px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+				<ChevronRight style="width:13px;height:13px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</InteractiveListRow>
 		{/each}
 	</BorderedList>

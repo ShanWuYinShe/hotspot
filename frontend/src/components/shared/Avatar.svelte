@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
-	// Avatar — 用户/群组头像统一展示组件（迁移自旧版 Avatar）。
+	// Avatar — 用户/群组头像统一展示组件。
 	// 包装元素持有 border-radius + outline + overflow:hidden，徽标作为子元素
 	// 与描边同一元素，避免「分离边框的 broken-border」问题。
 
@@ -40,14 +40,14 @@
 
 <div
 	class="relative flex-shrink-0 {className}"
-	style="width:{size}px;height:{size}px;border-radius:{borderRadius};overflow:hidden;background:var(--neu-bg);{ring ? `border:1px solid color-mix(in srgb, var(--neu-accent) 10%, var(--neu-bg));` : ''}{style}"
+	style="width:{size}px;height:{size}px;border-radius:{borderRadius};overflow:hidden;background:var(--surface-primary);{ring ? `border:1px solid color-mix(in srgb, var(--accent-fill) 10%, var(--surface-primary));` : ''}{style}"
 >
 	{#if showImage}
 		<img src={src} alt={name ?? ''} class="h-full w-full object-cover" onerror={() => (hasError = true)} />
 	{:else}
 		<span
 			class="flex h-full w-full items-center justify-center"
-			style="font-size:{Math.round(size * 0.42)}px;color:var(--neu-text-muted);background:color-mix(in srgb, var(--neu-accent) 8%, var(--neu-bg));"
+			style="font-size:{Math.round(size * 0.42)}px;color:var(--text-secondary);background:color-mix(in srgb, var(--accent-fill) 8%, var(--surface-primary));"
 		>
 			{initial}
 		</span>

@@ -5,14 +5,13 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
-	import NeuToggle from '@/components/forms/NeuToggle.svelte';
+	import Toggle from '@/components/forms/Toggle.svelte';
 	import { logout } from '@/stores/auth.svelte';
 	import { theme, setTheme, toggleDark, type AppTheme } from '@/stores/theme.svelte';
 	import { getAccount, getSettings } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 
 	// 设置页：通知/声音/隐私开关（iOS 式）、语言、账号信息、退出登录。
-	// 迁移自旧版 SettingsPage。
 
 	let notif = $state(true);
 	let sounds = $state(true);
@@ -77,28 +76,28 @@
 	{/snippet}
 
 	<!-- User card — hero with ambient glow -->
-	<div class="neu-ambient-glow mb-3">
-		<button type="button" class="neu-hover-btn flex items-center gap-4 px-4 py-3.5 rounded-panel w-full outline-none text-left neu-surface-hero">
-			<Avatar src={accountAvatar} name={accountName} size={48} style="border:2px solid var(--neu-bg);box-shadow:0 4px 12px var(--neu-glow);" />
+	<div class="ambient-glow mb-3">
+		<button type="button" class="hover-btn flex items-center gap-4 px-4 py-3.5 rounded-panel w-full outline-none text-left surface-hero">
+			<Avatar src={accountAvatar} name={accountName} size={48} style="border:2px solid var(--surface-primary);box-shadow:0 4px 12px var(--glow-accent);" />
 			<div class="flex-1 min-w-0">
-				<p class="text-[15px] tracking-tight text-[var(--neu-text)]">{accountName || '用户'}</p>
-				<p class="text-[11px] mt-0.5 text-[var(--neu-text-muted)]">{accountHandle}{accountEmail ? ` · ${accountEmail}` : ''}</p>
+				<p class="text-[15px] tracking-tight text-[var(--text-primary)]">{accountName || '用户'}</p>
+				<p class="text-[11px] mt-0.5 text-[var(--text-secondary)]">{accountHandle}{accountEmail ? ` · ${accountEmail}` : ''}</p>
 			</div>
-			<ChevronRight style="width:15px;height:15px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
+			<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);flex-shrink:0;" strokeWidth={1.5} />
 		</button>
 	</div>
 
 	<!-- Appearance（对齐 Figma Make SettingsPage：应用主题二选一 + 深色模式） -->
-	<p class="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em] uppercase">外观</p>
-	<div class="rounded-panel overflow-hidden neu-surface-flat">
+	<p class="px-1 mt-3 mb-1.5 text-[var(--text-secondary)] text-[10px] tracking-[0.14em] uppercase">外观</p>
+	<div class="rounded-panel overflow-hidden surface-flat">
 		<div class="px-4 py-3.5">
 			<div class="flex items-center gap-3">
-				<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
-					<Palette style="width:15px;height:15px;color:var(--neu-accent-primary);" strokeWidth={1.5} />
+				<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
+					<Palette style="width:15px;height:15px;color:var(--accent-default);" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-[14px] text-[var(--neu-text)]">应用主题</p>
-					<p class="text-[11px] text-[var(--neu-text-muted)]">选择一套全局视觉风格</p>
+					<p class="text-[14px] text-[var(--text-primary)]">应用主题</p>
+					<p class="text-[11px] text-[var(--text-secondary)]">选择一套全局视觉风格</p>
 				</div>
 			</div>
 			<div class="mt-3 grid grid-cols-2 gap-2">
@@ -107,122 +106,122 @@
 						type="button"
 						aria-pressed={theme.theme === t.id}
 						onclick={() => setTheme(t.id)}
-						class="flex items-center gap-2 border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
-						style="border-color:{theme.theme === t.id ? 'var(--neu-accent-primary)' : 'var(--neu-border)'};background:{theme.theme === t.id ? 'var(--neu-accent-soft)' : 'transparent'};color:var(--neu-text);"
+						class="flex items-center gap-2 border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent-default)]"
+						style="border-color:{theme.theme === t.id ? 'var(--accent-default)' : 'var(--border-default)'};background:{theme.theme === t.id ? 'var(--accent-soft)' : 'transparent'};color:var(--text-primary);"
 					>
 						{#if t.id === 'forest'}
-							<Trees style="width:15px;height:15px;color:var(--neu-accent-primary);" strokeWidth={1.7} />
+							<Trees style="width:15px;height:15px;color:var(--accent-default);" strokeWidth={1.7} />
 						{:else}
-							<Palette style="width:15px;height:15px;color:var(--neu-accent-primary);" strokeWidth={1.7} />
+							<Palette style="width:15px;height:15px;color:var(--accent-default);" strokeWidth={1.7} />
 						{/if}
 						<span class="text-xs">{t.label}</span>
 					</button>
 				{/each}
 			</div>
 		</div>
-		<div class="mx-4 bg-[var(--neu-border)]" style="height:1px;"></div>
+		<div class="mx-4 bg-[var(--border-default)]" style="height:1px;"></div>
 		<div class="flex items-center gap-3 px-4 py-3.5">
-				<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
+				<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
 					{#if theme.isDark}
-						<Moon style="width:15px;height:15px;color:var(--neu-accent-primary);" strokeWidth={1.5} />
+						<Moon style="width:15px;height:15px;color:var(--accent-default);" strokeWidth={1.5} />
 					{:else}
-						<Sun style="width:15px;height:15px;color:var(--neu-accent-primary);" strokeWidth={1.5} />
+						<Sun style="width:15px;height:15px;color:var(--accent-default);" strokeWidth={1.5} />
 					{/if}
 				</div>
 			<div class="flex-1 min-w-0">
-				<p class="text-[14px] text-[var(--neu-text)]">深色模式</p>
-				<p class="text-[11px] text-[var(--neu-text-muted)]">{theme.isDark ? '当前使用深色外观' : '当前使用浅色外观'}</p>
+				<p class="text-[14px] text-[var(--text-primary)]">深色模式</p>
+				<p class="text-[11px] text-[var(--text-secondary)]">{theme.isDark ? '当前使用深色外观' : '当前使用浅色外观'}</p>
 			</div>
-			<NeuToggle on={theme.isDark} onToggle={toggleDark} label="深色模式" />
+			<Toggle on={theme.isDark} onToggle={toggleDark} label="深色模式" />
 		</div>
 	</div>
 
 	<!-- Notifications -->
-	<p class="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em] uppercase">通知</p>
-	<div class="rounded-panel overflow-hidden neu-surface-flat">
+	<p class="px-1 mt-3 mb-1.5 text-[var(--text-secondary)] text-[10px] tracking-[0.14em] uppercase">通知</p>
+	<div class="rounded-panel overflow-hidden surface-flat">
 		<div class="flex items-center gap-3 px-4 py-3.5">
-			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
-				<Bell style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+			<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
+				<Bell style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</div>
 			<div class="flex-1 min-w-0">
-				<p class="text-[14px] text-[var(--neu-text)]">推送通知</p>
-				<p class="text-[11px] text-[var(--neu-text-muted)]">消息、提及与新动态提醒</p>
+				<p class="text-[14px] text-[var(--text-primary)]">推送通知</p>
+				<p class="text-[11px] text-[var(--text-secondary)]">消息、提及与新动态提醒</p>
 			</div>
-			<NeuToggle on={notif} onToggle={() => (notif = !notif)} />
+			<Toggle on={notif} onToggle={() => (notif = !notif)} />
 		</div>
-		<div class="mx-4 bg-[var(--neu-border)]" style="height:1px;"></div>
+		<div class="mx-4 bg-[var(--border-default)]" style="height:1px;"></div>
 		<div class="flex items-center gap-3 px-4 py-3.5">
-			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
-				<Volume2 style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+			<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
+				<Volume2 style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</div>
 			<div class="flex-1 min-w-0">
-				<p class="text-[14px] text-[var(--neu-text)]">应用声音</p>
-				<p class="text-[11px] text-[var(--neu-text-muted)]">操作反馈音效</p>
+				<p class="text-[14px] text-[var(--text-primary)]">应用声音</p>
+				<p class="text-[11px] text-[var(--text-secondary)]">操作反馈音效</p>
 			</div>
-			<NeuToggle on={sounds} onToggle={() => (sounds = !sounds)} />
+			<Toggle on={sounds} onToggle={() => (sounds = !sounds)} />
 		</div>
 	</div>
 
 	<!-- Privacy -->
-	<p class="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em] uppercase">隐私与安全</p>
-	<div class="rounded-panel overflow-hidden neu-surface-flat">
+	<p class="px-1 mt-3 mb-1.5 text-[var(--text-secondary)] text-[10px] tracking-[0.14em] uppercase">隐私与安全</p>
+	<div class="rounded-panel overflow-hidden surface-flat">
 		<div class="flex items-center gap-3 px-4 py-3.5">
-			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
-				<Lock style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+			<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
+				<Lock style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</div>
 			<div class="flex-1 min-w-0">
-				<p class="text-[14px] text-[var(--neu-text)]">私密账号</p>
-				<p class="text-[11px] text-[var(--neu-text-muted)]">仅关注者可查看你的内容</p>
+				<p class="text-[14px] text-[var(--text-primary)]">私密账号</p>
+				<p class="text-[11px] text-[var(--text-secondary)]">仅关注者可查看你的内容</p>
 			</div>
-			<NeuToggle on={privateProfile} onToggle={() => (privateProfile = !privateProfile)} />
+			<Toggle on={privateProfile} onToggle={() => (privateProfile = !privateProfile)} />
 		</div>
-		<div class="mx-4 bg-[var(--neu-border)]" style="height:1px;"></div>
+		<div class="mx-4 bg-[var(--border-default)]" style="height:1px;"></div>
 		<div class="flex items-center gap-3 px-4 py-3.5">
-			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
-				<MapPin style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+			<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
+				<MapPin style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</div>
 			<div class="flex-1 min-w-0">
-				<p class="text-[14px] text-[var(--neu-text)]">位置共享</p>
-				<p class="text-[11px] text-[var(--neu-text-muted)]">允许附近用户发现你</p>
+				<p class="text-[14px] text-[var(--text-primary)]">位置共享</p>
+				<p class="text-[11px] text-[var(--text-secondary)]">允许附近用户发现你</p>
 			</div>
-			<NeuToggle on={locationSharing} onToggle={() => (locationSharing = !locationSharing)} />
+			<Toggle on={locationSharing} onToggle={() => (locationSharing = !locationSharing)} />
 		</div>
 	</div>
 
 	<!-- General -->
-	<p class="px-1 mt-3 mb-1.5 text-[var(--neu-text-muted)] text-[10px] tracking-[0.14em] uppercase">通用</p>
-	<div class="rounded-panel overflow-hidden neu-surface-flat">
-		<button type="button" class="neu-hover-bg neu-row-nudge neu-tap-94 flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
-			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
-				<Globe style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+	<p class="px-1 mt-3 mb-1.5 text-[var(--text-secondary)] text-[10px] tracking-[0.14em] uppercase">通用</p>
+	<div class="rounded-panel overflow-hidden surface-flat">
+		<button type="button" class="hover-bg row-nudge tap-94 flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
+			<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
+				<Globe style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</div>
 			<div class="flex-1 min-w-0">
-				<p class="text-[14px] text-[var(--neu-text)]">语言</p>
+				<p class="text-[14px] text-[var(--text-primary)]">语言</p>
 			</div>
-			<span class="text-[12px] flex-shrink-0 text-[var(--neu-text-muted)]">中文</span>
-			<ChevronRight style="width:15px;height:15px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
+			<span class="text-[12px] flex-shrink-0 text-[var(--text-secondary)]">中文</span>
+			<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);flex-shrink:0;" strokeWidth={1.5} />
 		</button>
-		<div class="mx-4 bg-[var(--neu-border)]" style="height:1px;"></div>
-		<button type="button" class="neu-hover-bg neu-row-nudge neu-tap-94 flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
-			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
-				<User style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+		<div class="mx-4 bg-[var(--border-default)]" style="height:1px;"></div>
+		<button type="button" class="hover-bg row-nudge tap-94 flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
+			<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
+				<User style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</div>
 			<div class="flex-1 min-w-0">
-				<p class="text-[14px] text-[var(--neu-text)]">账号信息</p>
+				<p class="text-[14px] text-[var(--text-primary)]">账号信息</p>
 			</div>
-			<span class="text-[12px] flex-shrink-0 text-[var(--neu-text-muted)]"></span>
-			<ChevronRight style="width:15px;height:15px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
+			<span class="text-[12px] flex-shrink-0 text-[var(--text-secondary)]"></span>
+			<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);flex-shrink:0;" strokeWidth={1.5} />
 		</button>
-		<div class="mx-4 bg-[var(--neu-border)]" style="height:1px;"></div>
-		<button type="button" class="neu-hover-bg neu-row-nudge neu-tap-94 flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
-			<div class="flex items-center justify-center rounded-full flex-shrink-0 neu-icon-badge" style="width:36px;height:36px;">
-				<Info style="width:15px;height:15px;color:var(--neu-text-muted);" strokeWidth={1.5} />
+		<div class="mx-4 bg-[var(--border-default)]" style="height:1px;"></div>
+		<button type="button" class="hover-bg row-nudge tap-94 flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
+			<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
+				<Info style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</div>
 			<div class="flex-1 min-w-0">
-				<p class="text-[14px] text-[var(--neu-text)]">关于</p>
+				<p class="text-[14px] text-[var(--text-primary)]">关于</p>
 			</div>
-			<span class="text-[12px] flex-shrink-0 text-[var(--neu-text-muted)]">v 1.0.0</span>
-			<ChevronRight style="width:15px;height:15px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
+			<span class="text-[12px] flex-shrink-0 text-[var(--text-secondary)]">v 1.0.0</span>
+			<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);flex-shrink:0;" strokeWidth={1.5} />
 		</button>
 	</div>
 
@@ -230,7 +229,7 @@
 	<div class="mt-5">
 		<button
 			type="button"
-			class="neu-hover-btn flex items-center justify-center gap-2 px-4 py-3 rounded-control w-full outline-none neu-surface-flat text-[var(--neu-accent-primary)]"
+			class="hover-btn flex items-center justify-center gap-2 px-4 py-3 rounded-control w-full outline-none surface-flat text-[var(--accent-default)]"
 			onclick={() => void handleLogout()}
 		>
 			<LogOut style="width:14px;height:14px;" strokeWidth={1.75} />

@@ -2,8 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { MapPin, MessageCircle, UserPlus, UserCheck, Share2, Heart, Grid3X3, Bookmark, MoreHorizontal, Flag, PencilLine, UserX, X, Check, ArrowLeft } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-	import DesktopDetailSplit from '@/components/layout/desktop/DesktopDetailSplit.svelte';
-	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
+	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import RailSection from '@/components/layout/desktop/RailSection.svelte';
 	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
 	import RailLocationMini from '@/components/layout/desktop/RailLocationMini.svelte';
@@ -12,7 +11,6 @@
 	import * as Dialog from '@/components/ui/dialog';
 
 	// 用户详情：关注/私信/屏蔽/举报/备注 + 瞬间画廊 + 桌面 Rail。
-	// 迁移自旧版 UserProfilePage。
 
 	let { params }: { params: { userId: string } } = $props();
 
@@ -143,9 +141,7 @@
 	};
 </script>
 
-{#snippet main()}
-	<div class="flex flex-col bg-[var(--neu-bg)]" style="height:100%;overflow-y:auto;">
-	<Dialog.Root open={moreOpen} onOpenChange={(next) => (next ? undefined : (moreOpen = false))}>
+<Dialog.Root open={moreOpen} onOpenChange={(next) => (next ? undefined : (moreOpen = false))}>
 		<Dialog.Content
 			side="bottom"
 			class="inset-x-4 bottom-4 mx-auto max-w-md rounded-[24px] p-5"
@@ -154,23 +150,23 @@
 		>
 			<div class="flex items-center justify-between">
 				<div>
-					<p class="neu-eyebrow">关系与安全</p>
-					<p class="mt-1 text-[16px] text-[var(--neu-text)]">{user.name}</p>
+					<p class="eyebrow">关系与安全</p>
+					<p class="mt-1 text-[16px] text-[var(--text-primary)]">{user.name}</p>
 				</div>
 				<ActionIconButton icon={X} label="关闭" onClick={() => (moreOpen = false)} size={32} />
 			</div>
-				<label class="mt-5 block text-[12px] text-[var(--neu-text-muted)]">
+				<label class="mt-5 block text-[12px] text-[var(--text-secondary)]">
 					备注名称
 					<input
 						bind:value={remarkDraft}
 						oninput={(e) => (remarkDraft = e.currentTarget.value.slice(0, 24))}
 						placeholder="只对你可见"
-						class="mt-2 w-full rounded-[14px] ring-1 ring-[var(--neu-border)] bg-transparent px-3 py-2.5 text-[13px] text-[var(--neu-text)] neu-focus-ring"
+						class="mt-2 w-full rounded-[14px] ring-1 ring-[var(--border-default)] bg-transparent px-3 py-2.5 text-[13px] text-[var(--text-primary)] focus-ring"
 					/>
 				</label>
 				<button
 					type="button"
-					class="neu-hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] ring-1 ring-[var(--neu-border)] py-2.5 text-[13px] text-[var(--neu-text)] neu-focus-ring"
+					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] ring-1 ring-[var(--border-default)] py-2.5 text-[13px] text-[var(--text-primary)] focus-ring"
 					onclick={() => {
 						remark = remarkDraft.trim();
 						moreOpen = false;
@@ -181,7 +177,7 @@
 				</button>
 				<button
 					type="button"
-					class="neu-hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-[var(--semantic-hot)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--semantic-hot)]"
+					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-[var(--status-danger)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--status-danger)]"
 					onclick={toggleBlock}
 				>
 					<UserX size={14} />
@@ -189,7 +185,7 @@
 				</button>
 				<button
 					type="button"
-					class="neu-hover-btn mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-[var(--neu-text-muted)] neu-focus-ring"
+					class="hover-btn mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-[var(--text-secondary)] focus-ring"
 					onclick={submitReport}
 				>
 					{#if reportSent}
@@ -203,8 +199,9 @@
 		</Dialog.Content>
 	</Dialog.Root>
 
-		<!-- Banner -->
-		<div class="relative overflow-hidden" style="height:clamp(150px, 25vw, 210px);flex-shrink:0;">
+<SplitPageLayout contentClassName="pb-6">
+	<!-- Banner（全幅封面：负 margin 抵消 SplitPageLayout 的 gutter） -->
+	<div class="relative overflow-hidden -mx-[var(--page-gutter)]" style="height:clamp(150px, 25vw, 210px);flex-shrink:0;">
 			<img src={user.banner} alt="banner" class="absolute inset-0 w-full h-full object-cover" />
 			<div class="absolute inset-0" style="background:var(--surface-profile-cover-scrim);"></div>
 
@@ -227,23 +224,22 @@
 			</div>
 		</div>
 
-		<!-- Avatar + info -->
-		<ContentColumn>
-			<div class="-mt-10 pb-4 flex flex-col">
+	<!-- Avatar + info（gutter 由 SplitPageLayout 提供） -->
+	<div class="-mt-10 pb-4 flex flex-col">
 				<div class="flex items-end justify-between mb-3">
 					<div class="relative">
-						<div class="rounded-[22px] overflow-hidden" style="width:76px;height:76px;border:3px solid var(--neu-bg);box-shadow:0 6px 20px rgba(0,0,0,0.22);">
+						<div class="rounded-[22px] overflow-hidden" style="width:76px;height:76px;border:3px solid var(--surface-primary);box-shadow:0 6px 20px rgba(0,0,0,0.22);">
 							<img src={user.avatar} alt={user.name} class="w-full h-full object-cover" />
 						</div>
-						<span class="absolute bottom-1 right-1 rounded-full bg-[var(--semantic-online)]" style="width:12px;height:12px;border:2px solid var(--neu-bg);"></span>
+						<span class="absolute bottom-1 right-1 rounded-full bg-[var(--status-online)]" style="width:12px;height:12px;border:2px solid var(--surface-primary);"></span>
 					</div>
 
 					<!-- Action buttons -->
 					<div class="flex gap-2 pb-1">
 						<button
 							type="button"
-							class="neu-hover-btn neu-tap-93 flex items-center gap-1.5 px-3.5 py-2 rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-45 bg-[var(--neu-bg)] text-[var(--neu-text-muted)] text-xs"
-							style="border:1px solid var(--neu-border);box-shadow:4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);"
+							class="hover-btn tap-93 flex items-center gap-1.5 px-3.5 py-2 rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-45 bg-[var(--surface-primary)] text-[var(--text-secondary)] text-xs"
+							style="border:1px solid var(--border-default);box-shadow:4px 4px 10px var(--elevation-shadow-dark), -4px -4px 10px var(--elevation-shadow-light);"
 							disabled={blocked}
 							onclick={() => !blocked && void goto(ROUTES.message(1))}
 						>
@@ -252,10 +248,10 @@
 						</button>
 						<button
 							type="button"
-							class="neu-hover-btn neu-tap-93 flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all disabled:cursor-not-allowed disabled:opacity-45 text-xs {followed ? 'bg-[var(--neu-bg)] text-[var(--neu-accent-primary)]' : 'bg-[var(--neu-accent-primary)] text-white'}"
+							class="hover-btn tap-93 flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all disabled:cursor-not-allowed disabled:opacity-45 text-xs {followed ? 'bg-[var(--surface-primary)] text-[var(--accent-default)]' : 'bg-[var(--accent-default)] text-white'}"
 							style={followed
-								? 'border:1.5px solid var(--neu-accent-primary);box-shadow:4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);'
-								: 'box-shadow:0 4px 14px var(--neu-glow);border:1px solid transparent;'}
+								? 'border:1.5px solid var(--accent-default);box-shadow:4px 4px 10px var(--elevation-shadow-dark), -4px -4px 10px var(--elevation-shadow-light);'
+								: 'box-shadow:0 4px 14px var(--glow-accent);border:1px solid transparent;'}
 							disabled={blocked}
 							onclick={toggleFollow}
 						>
@@ -270,59 +266,59 @@
 					</div>
 				</div>
 
-				<h1 class="text-[var(--neu-text)] text-xl">{user.name}</h1>
-				<p class="text-[var(--neu-text-muted)] text-[13px]" style="margin-top:1px;">{user.handle}{remark ? ` · ${remark}` : ''}</p>
+				<h1 class="text-[var(--text-primary)] text-xl">{user.name}</h1>
+				<p class="text-[var(--text-secondary)] text-[13px]" style="margin-top:1px;">{user.handle}{remark ? ` · ${remark}` : ''}</p>
 				{#if blocked}
-					<div class="mt-3 flex items-center gap-2 rounded-[12px] ring-1 ring-[var(--semantic-hot)]/30 bg-[color-mix(in_srgb,var(--semantic-hot)_8%,transparent)] px-3 py-2 text-[12px] text-[var(--semantic-hot)]">
+					<div class="mt-3 flex items-center gap-2 rounded-[12px] ring-1 ring-[var(--status-danger)]/30 bg-[color-mix(in_srgb,var(--status-danger)_8%,transparent)] px-3 py-2 text-[12px] text-[var(--status-danger)]">
 						<UserX size={14} />
 						你已屏蔽此用户；关注和私信已停用。
 					</div>
 				{/if}
-				<p class="text-[var(--neu-text-muted)] text-[13px]" style="line-height:1.65;margin-top:8px;">{user.bio}</p>
+				<p class="text-[var(--text-secondary)] text-[13px]" style="line-height:1.65;margin-top:8px;">{user.bio}</p>
 
 				<div class="flex items-center gap-1.5 mt-2">
-					<MapPin style="width:11px;height:11px;color:var(--neu-accent-primary);" strokeWidth={1.5} />
-					<span class="text-[var(--neu-text-muted)] text-[11px]">{user.location}</span>
+					<MapPin style="width:11px;height:11px;color:var(--accent-default);" strokeWidth={1.5} />
+					<span class="text-[var(--text-secondary)] text-[11px]">{user.location}</span>
 				</div>
 
 				<!-- Tags -->
 				<div class="flex gap-2 mt-3 flex-wrap">
 					{#each user.tags as t (t)}
-						<span class="px-2.5 py-0.5 rounded-full bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] text-[11px]" style="border:1px solid var(--neu-accent-soft-border);">
+						<span class="px-2.5 py-0.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent-default)] text-[11px]" style="border:1px solid var(--accent-border);">
 							#{t}
 						</span>
 					{/each}
 				</div>
 
 				<!-- Stats -->
-				<div class="flex gap-0 mt-5 overflow-hidden rounded-[20px] bg-[var(--neu-bg)]" style="box-shadow:0 0 0 1px var(--neu-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light);">
+				<div class="flex gap-0 mt-5 overflow-hidden rounded-[20px] bg-[var(--surface-primary)]" style="box-shadow:0 0 0 1px var(--border-default), 6px 6px 14px var(--elevation-shadow-dark), -6px -6px 14px var(--elevation-shadow-light);">
 					<div style="overflow:hidden;border-radius:20px;">
 						{#each [{ label: '瞬间', v: fmtNum(user.moments) }, { label: '粉丝', v: fmtNum(user.followers) }, { label: '关注', v: fmtNum(user.following) }] as s, i}
 							<div class="flex-1 flex flex-col items-center py-4 relative">
 								{#if i > 0}
-									<div class="absolute left-0 top-1/2 -translate-y-1/2 bg-[var(--neu-border)]" style="width:1px;height:28px;"></div>
+									<div class="absolute left-0 top-1/2 -translate-y-1/2 bg-[var(--border-default)]" style="width:1px;height:28px;"></div>
 								{/if}
-								<span class="text-[var(--neu-text)] text-[22px]">{s.v}</span>
-								<span class="uppercase mt-1 text-[var(--neu-text-muted)] text-[9px]" style="letter-spacing:0.1em;">{s.label}</span>
+								<span class="text-[var(--text-primary)] text-[22px]">{s.v}</span>
+								<span class="uppercase mt-1 text-[var(--text-secondary)] text-[9px]" style="letter-spacing:0.1em;">{s.label}</span>
 								</div>
 							{/each}
 						</div>
 					</div>
 
 				<!-- Tabs -->
-			<div class="flex" style="border-bottom:1px solid var(--neu-border);padding-left:16px;padding-right:16px;flex-shrink:0;">
+			<div class="flex" style="border-bottom:1px solid var(--border-default);padding-left:16px;padding-right:16px;flex-shrink:0;">
 				{#each [{ id: 'moments', icon: Grid3X3, label: '瞬间' }, { id: 'liked', icon: Heart, label: '喜欢' }, { id: 'saved', icon: Bookmark, label: '收藏' }] as t}
 					{@const active = activeTab === t.id}
 					<button
 						type="button"
-						class="neu-hover-btn relative flex items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none text-[13px] {active ? 'text-[var(--neu-accent-primary)]' : 'text-[var(--neu-text-muted)]'}"
+						class="hover-btn relative flex items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none text-[13px] {active ? 'text-[var(--accent-default)]' : 'text-[var(--text-secondary)]'}"
 						style="flex:1;font-weight:{active ? 500 : 400};"
 						onclick={() => (activeTab = t.id as 'moments' | 'liked' | 'saved')}
 					>
 						<t.icon style="width:13px;height:13px;" strokeWidth={active ? 2 : 1.5} />
 						{t.label}
 						{#if active}
-							<span class="bg-[var(--neu-accent-primary)]" style="position:absolute;bottom:-1px;left:18%;right:18%;height:2px;border-radius:1px;"></span>
+							<span class="bg-[var(--accent-default)]" style="position:absolute;bottom:-1px;left:18%;right:18%;height:2px;border-radius:1px;"></span>
 						{/if}
 					</button>
 				{/each}
@@ -331,11 +327,11 @@
 			<!-- Gallery -->
 			<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:3px;padding:3px;">
 				{#each user.gallery as src, i}
-					<div class="image-hover-frame neu-tap-97 relative cursor-pointer" style="aspect-ratio:1;overflow:hidden;">
+					<div class="image-hover-frame tap-97 relative cursor-pointer" style="aspect-ratio:1;overflow:hidden;">
 						<img src={src} alt={`photo ${i}`} class="image-hover-frame__image w-full h-full object-cover" />
 						{#if activeTab === 'liked'}
-							<div class="absolute inset-0 flex items-end justify-end p-1.5 bg-[var(--overlay-soft)]">
-								<div class="flex items-center justify-center rounded-full bg-[var(--neu-accent-primary)]" style="width:20px;height:20px;">
+							<div class="absolute inset-0 flex items-end justify-end p-1.5 bg-[var(--surface-overlay-soft)]">
+								<div class="flex items-center justify-center rounded-full bg-[var(--accent-default)]" style="width:20px;height:20px;">
 									<Heart style="width:10px;height:10px;color:var(--text-on-accent);" strokeWidth={2} fill="white" />
 								</div>
 							</div>
@@ -343,20 +339,17 @@
 					</div>
 				{/each}
 			</div>
-			</div>
-	</ContentColumn>
-</div>
-{/snippet}
+		</div>
 
-{#snippet rail()}
+	{#snippet rail()}
 	<RailSection title="所在位置">
-		<RailLocationMini name={user.location} desc="附近 38 位活跃用户" />
+		<RailLocationMini name={user.location} />
 	</RailSection>
 
 	<RailSection title="兴趣标签">
 		<div class="flex gap-2 flex-wrap">
 			{#each user.tags as t (t)}
-				<span class="px-2.5 py-0.5 rounded-full bg-[var(--neu-accent-soft)] text-[var(--neu-accent-primary)] text-[11px]" style="border:1px solid var(--neu-accent-soft-border);">
+				<span class="px-2.5 py-0.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent-default)] text-[11px]" style="border:1px solid var(--accent-border);">
 					#{t}
 				</span>
 			{/each}
@@ -381,6 +374,5 @@
 			{/each}
 		</div>
 	</RailSection>
-{/snippet}
-
-<DesktopDetailSplit {main} {rail} />
+	{/snippet}
+</SplitPageLayout>

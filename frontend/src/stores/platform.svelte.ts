@@ -1,5 +1,5 @@
 // Platform store — 响应式平台检测（mobile/tablet/desktop + 横竖屏 + 宽平板）。
-// 迁移自旧版 PlatformContext（runes 模块单例）。
+// PlatformContext（runes 模块单例）。
 // isWideTablet：≥960px 的平板为宽平板（可提升分栏 workspace / 浮动 Dock），
 // 对齐 Figma Make PlatformContext 契约。
 

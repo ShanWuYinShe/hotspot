@@ -10,10 +10,10 @@
 
 <button
 	type="button"
-	class="neu-hover-btn rounded-full outline-none text-[11px] px-[13px] py-1.5 flex-shrink-0"
+	class="hover-btn rounded-full outline-none text-[11px] px-[13px] py-1.5 flex-shrink-0"
 	style={group.joined
-		? 'border:1px solid var(--neu-border-pressed);color:var(--neu-text-muted);'
-		: 'background:var(--neu-accent-primary);color:var(--text-on-accent);font-weight:600;box-shadow:0 2px 8px var(--neu-glow);'}
+		? 'border:1px solid var(--border-strong);color:var(--text-secondary);'
+		: 'background:var(--accent-default);color:var(--text-on-accent);font-weight:600;box-shadow:0 2px 8px var(--glow-accent);'}
 	onclick={(e) => {
 		e.stopPropagation();
 		onToggle();

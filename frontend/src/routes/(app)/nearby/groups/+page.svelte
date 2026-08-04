@@ -16,7 +16,6 @@
 	import { ROUTES } from '@/lib/routes';
 
 	// 附近群组：分类过滤 + 精选卡 + 网格 / 桌面 BSP 卡片墙（对齐 Figma Make NearbyGroupsPage）。
-	// 迁移自旧版 NearbyGroupsPage。
 
 	const CATEGORIES = ['全部', '摄影', '音乐', '户外', '阅读', '美食', '健身', '游戏'];
 
@@ -26,11 +25,15 @@
 	let visibleCount = $state(12);
 	let loading = $state(true);
 	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
+	let locationName = $state('');
 
 	$effect(() => {
 		let cancelled = false;
 		void loadDefaultLocation().then((loc) => {
-			if (!cancelled) referencePoint = loc?.point ?? null;
+			if (!cancelled) {
+				referencePoint = loc?.point ?? null;
+				locationName = loc?.location_name ?? '';
+			}
 		});
 		return () => {
 			cancelled = true;
@@ -83,13 +86,13 @@
 
 	<StandardPageLayout contentClassName="py-5 sm:py-6">
 		{#snippet header()}
-			<PageHeader title="附近群组" subtitle="徐州 · 5km 内" sticky glass contentClassName="pt-4 pb-0" onBack={() => history.back()}>
+			<PageHeader title="附近群组" subtitle={locationName ? `${locationName} · 5km 内` : '5km 内'} sticky glass contentClassName="pt-4 pb-0" onBack={() => history.back()}>
 				{#snippet subtitleIcon()}
-					<MapPin style="width:10px;height:10px;color:var(--neu-accent-primary);" strokeWidth={1.8} />
+					<MapPin style="width:10px;height:10px;color:var(--accent-default);" strokeWidth={1.8} />
 				{/snippet}
 				{#snippet trailing()}
 					<!-- 计数统一在标题右侧（对齐首页/附近动态样板） -->
-					<span class="text-[var(--neu-text-muted)] text-xs">{filtered.length} 个活跃群组</span>
+					<span class="text-[var(--text-secondary)] text-xs">{filtered.length} 个活跃群组</span>
 				{/snippet}
 			{#snippet below()}
 				<!-- 搜索框（全设备全宽，对齐 Figma） + 分类标签：同处 sticky header 内 -->
@@ -108,13 +111,13 @@
 	<div class="min-w-0">
 		{#if loading}
 			<div class="flex flex-col items-center gap-3 py-20">
-				<div class="rounded-full border-2 border-[var(--neu-border)] border-t-[var(--neu-accent-primary)] animate-spin" style="width:28px;height:28px;"></div>
-				<p class="text-[var(--neu-text-muted)] text-[13px]">加载附近群组…</p>
+				<div class="rounded-full border-2 border-[var(--border-default)] border-t-[var(--accent-default)] animate-spin" style="width:28px;height:28px;"></div>
+				<p class="text-[var(--text-secondary)] text-[13px]">加载附近群组…</p>
 			</div>
 		{:else if filtered.length}
 			<div class="flex items-center justify-between mb-3">
-				<span class="neu-eyebrow">此刻附近群组</span>
-				<span class="text-[var(--semantic-online)] text-[11px]">{totalOnline} 人正在群聊</span>
+				<span class="eyebrow">此刻附近群组</span>
+				<span class="text-[var(--status-online)] text-[11px]">{totalOnline} 人正在群聊</span>
 			</div>
 			{#if isDesktop || isTablet}
 				<!-- index 0 用 FeaturedGroupCard（对齐 Figma），其余用 GroupCard；保留 BSP 布局（决策） -->
@@ -154,7 +157,7 @@
 		{:else}
 			<EmptyState bare title="没有找到相关群组">
 				{#snippet icon()}
-					<Users size={40} color="var(--neu-text-muted)" opacity={0.4} />
+					<Users size={40} color="var(--text-secondary)" opacity={0.4} />
 				{/snippet}
 			</EmptyState>
 		{/if}

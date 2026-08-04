@@ -10,7 +10,7 @@
 
 <DropdownMenu.Item
 	class={cn(
-		'flex w-full cursor-pointer items-center gap-2 rounded-[10px] px-2.5 py-2 text-left text-xs text-[var(--neu-text)] outline-none transition-colors hover:bg-[var(--neu-accent-soft)] focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] data-[highlighted]:bg-[var(--neu-accent-soft)]',
+		'flex w-full cursor-pointer items-center gap-2 rounded-[10px] px-2.5 py-2 text-left text-xs text-[var(--text-primary)] outline-none transition-colors hover:bg-[var(--accent-soft)] focus-visible:ring-2 focus-visible:ring-[var(--accent-default)] data-[highlighted]:bg-[var(--accent-soft)]',
 		className
 	)}
 	{...rest}

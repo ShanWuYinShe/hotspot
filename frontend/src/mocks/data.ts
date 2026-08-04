@@ -169,14 +169,6 @@ export const mockMoments = Array.from({ length: 24 }, (_, i) => {
   };
 });
 
-// ── Reaction items (spec ReactionItem: { user, emoji, reacted_at }) ──
-// Used by reactions/list (the reactions detail view for a moment/comment).
-export const mockReactionItems = mockUsers.slice(0, 5).map((u, i) => ({
-  user: { user_id: u.user_id, nickname: u.nickname, avatar_url: u.avatar_url },
-  emoji: ["👍", "❤️", "🔥"][i % 3],
-  reacted_at: new Date(Date.now() - i * 600000).toISOString(),
-}));
-
 // ── Groups (spec GroupItem: nested { group: GroupInfo }) ───────
 export const mockGroups = [
   { group: { group_id: "group_1", name: "回龙窝胶片会", avatar_url: avatarA.replace("w=200", "w=400"), members_count: 143 }, description: "胶片摄影爱好者交流", join_method: "direct", requires_approval: false, online_members_count: 12, location: { point: { latitude: 34.25, longitude: 117.19 }, location_name: "回龙窝", distance: "0.4km" }, tags: ["摄影"], my_state: { role: "member", is_joined: true, unread_count: 0, is_muted: false, is_pinned: false } },
@@ -209,3 +201,49 @@ export const mockChats = [
 export const mockTrending = {
   hot_moments: mockMoments.slice(0, 6),
 };
+
+// ── Events（spec 尚未定义，仅 MSW mock；后端契约就绪后按 spec 收编）────
+export const mockEvents: Record<string, object> = {
+  "1": {
+    id: "1",
+    title: "湖边晨咖小聚",
+    tag: "社交",
+    color: "var(--status-warning)",
+    bg: "color-mix(in srgb, var(--status-warning) 12%, transparent)",
+    cover: "https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=1080",
+    description:
+      "每周六早上九点，我们聚集在老街手冲馆，分享一周的所见所闻。无论是设计师、程序员还是艺术家，都欢迎加入！带上你的好奇心就够了。",
+    location: "老街手冲馆·徐州市鼓楼区",
+    date: "2026年4月18日 周六",
+    time: "09:00 - 11:00",
+    host: { name: mockUsers[4].nickname, avatar: mockUsers[4].avatar_url },
+    participants: mockUsers.slice(0, 4).map((u) => ({ id: u.user_id, name: u.nickname, avatar: u.avatar_url })),
+    maxParticipants: 20,
+    distance: "0.3km",
+    highlights: ["免费咖啡 ☕", "结识新朋友", "分享创意", "每周固定"],
+  },
+  "2": {
+    id: "2",
+    title: "户部山周末弹唱",
+    tag: "音乐",
+    color: "var(--accent-default)",
+    bg: "var(--accent-soft)",
+    cover: "https://images.unsplash.com/photo-1768776179834-93e6cafc6d97?w=1080",
+    description:
+      "在城市的中心，用音乐连接每一颗心。本次户部山周末弹唱将邀请本地独立乐队和歌手进行现场表演，免费入场，欢迎所有人来感受音乐的力量。",
+    location: "彭城广场·徐州市云龙区",
+    date: "2026年4月19日 周日",
+    time: "14:00 - 20:00",
+    host: { name: mockUsers[5].nickname, avatar: mockUsers[5].avatar_url },
+    participants: mockUsers.slice(1, 4).map((u) => ({ id: u.user_id, name: u.nickname, avatar: u.avatar_url })),
+    maxParticipants: 200,
+    distance: "0.7km",
+    highlights: ["免费入场 🎸", "现场表演", "多个乐队", "本地艺术家"],
+  },
+};
+
+export const mockSimilarEvents = [
+  { id: "2", name: "户部山周末弹唱", sub: "周日 14:00 · 0.7km", avatar: "https://images.unsplash.com/photo-1768776179834-93e6cafc6d97?w=120" },
+  { id: "3", name: "回龙窝夜读会", sub: "周四 19:30 · 1.1km", avatar: "https://images.unsplash.com/photo-1774125384717-5c5a05ce8e9c?w=120" },
+  { id: "4", name: "老街胶片散步", sub: "周六 09:00 · 1.5km", avatar: "https://images.unsplash.com/photo-1759734282634-b4958ea9a6e0?w=120" },
+];

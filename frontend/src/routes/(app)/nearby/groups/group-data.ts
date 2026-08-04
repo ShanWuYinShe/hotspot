@@ -1,4 +1,4 @@
-// 附近群组卡片数据类型与映射（迁移自旧版 NearbyGroupsPage）。
+// 附近群组卡片数据类型与映射。
 import type { GroupItem } from '@/api/types';
 import { formatDistance } from '@/lib/utils';
 

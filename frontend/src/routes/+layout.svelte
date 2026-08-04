@@ -8,7 +8,6 @@
 	import { initTheme } from '@/stores/theme.svelte';
 	import { initPlatform } from '@/stores/platform.svelte';
 	import AuthGate from '@/components/auth/AuthGate.svelte';
-	import { initMock } from '@/mocks/toggle';
 
 	let { children }: { children: Snippet } = $props();
 
@@ -23,13 +22,6 @@
 	initWs();
 	// 在线状态实时化：UserOnline/UserOffline → onlineUsers（供消息列表/私聊/群成员消费）。
 	initPresence();
-
-	// MSW mock（仅 dev；PUBLIC_API_MOCK !== 'false' 时启用，localStorage 可覆盖）
-	if (import.meta.env.DEV && import.meta.env.PUBLIC_API_MOCK !== 'false') {
-		void import('@/mocks/browser').then(({ worker }) => {
-			initMock(worker, true);
-		});
-	}
 </script>
 
 {@render children()}

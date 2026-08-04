@@ -16,7 +16,7 @@
 	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 
-	// 迁移自旧版 MainLayout：桌面 → DesktopLayout，平板 → TabletLayout，
+	// 桌面 → DesktopLayout，平板 → TabletLayout，
 	// 移动竖屏 → 底部 4 Tab + 中央 FAB + 发布 Sheet；移动横屏 → 左侧 Rail。
 
 	let { children }: { children: Snippet } = $props();
@@ -34,9 +34,9 @@
 	const isSubPage = $derived(isSubPagePath(pathname));
 	const showCreate = $derived(composer.composerOpen);
 
-	// FAB 光晕：复用 --neu-glow（每主题/暗色已定义），叠加一层中性落影增强立体感。
+	// FAB 光晕：复用 --glow-accent（每主题/暗色已定义），叠加一层中性落影增强立体感。
 	const fabGlow = $derived(
-		composer.composerOpen ? 'none' : '0 6px 18px var(--neu-glow), 0 2px 6px rgba(0,0,0,0.14)'
+		composer.composerOpen ? 'none' : '0 6px 18px var(--glow-accent), 0 2px 6px rgba(0,0,0,0.14)'
 	);
 </script>
 
@@ -49,11 +49,11 @@
 {:else}
 	<div
 		class="min-h-[100dvh] w-full flex justify-center items-start font-sans transition-colors duration-500"
-		style="background-color:var(--page-bg);"
+		style="background-color:var(--surface-page);"
 	>
 		<div
 			class={cn('flex flex-col h-[100dvh] w-full', 'transition-colors duration-500 overflow-hidden relative')}
-			style="background-color:var(--neu-bg);color:var(--neu-text);"
+			style="background-color:var(--surface-primary);color:var(--text-primary);"
 		>
 			<StatusBar />
 
@@ -84,8 +84,8 @@
 						<div class="flex flex-col items-center" style="width:68px;">
 							<button
 								type="button"
-								class="neu-hover-btn neu-scale-btn flex items-center justify-center outline-none select-none rounded-full"
-								style="width:50px;height:50px;background:{composer.composerOpen ? 'var(--neu-text-muted)' : 'var(--neu-accent-primary)'};box-shadow:{fabGlow};transition:background 0.22s ease, box-shadow 0.22s ease, transform 0.18s cubic-bezier(0.22,1,0.36,1), filter 0.18s ease;"
+								class="hover-btn scale-btn flex items-center justify-center outline-none select-none rounded-full"
+								style="width:50px;height:50px;background:{composer.composerOpen ? 'var(--text-secondary)' : 'var(--accent-default)'};box-shadow:{fabGlow};transition:background 0.22s ease, box-shadow 0.22s ease, transform 0.18s cubic-bezier(0.22,1,0.36,1), filter 0.18s ease;"
 								onclick={toggleComposer}
 								aria-label={composer.composerOpen ? '关闭' : '发布'}
 							>

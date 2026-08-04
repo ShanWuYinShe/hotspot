@@ -31,7 +31,7 @@ import type {
 	UserSettings,
 } from '@/api/types';
 
-// 分页信封由 types.ts 提供（结构等价）；此处重导出以兼容已有 import。
+// 分页信封由 types.ts 提供；此处集中重导出供页面直接使用。
 export type { PaginatedData };
 
 export interface ApiResponse<T> {
@@ -205,5 +205,12 @@ export async function listComments(momentId: string, pagination?: object) {
 
 // Map
 export async function getMapCanvas(params: object)        { return request<object>(Endpoints.Map.Canvas, params); }
+
+// Events（spec 尚未定义，仅 MSW mock；后端契约就绪后按 spec 调整入参与返回）
+export async function getEventDetail(eventId: string)     { return request<object>(Endpoints.Events.GetDetail, { event_id: eventId }); }
+export async function getSimilarEvents(params?: object)   { return request<object>(Endpoints.Events.ListSimilar, params ?? {}); }
+
+// Search
+export async function searchSuggest(params?: object)      { return request<object>(Endpoints.Search.Suggest, params ?? {}); }
 
 export { Endpoints };

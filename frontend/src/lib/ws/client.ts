@@ -490,7 +490,7 @@ export class WsClient {
   }
 }
 
-/** 模块单例（SSR 下所有操作 no-op，与 src/api/client.ts 一致）。 */
+/** 模块单例（非浏览器环境 no-op，与 src/api/client.ts 一致）。 */
 export const wsClient = new WsClient();
 
 export type { ClientWsEvent, ServerWsEvent };

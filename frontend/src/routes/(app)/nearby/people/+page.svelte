@@ -15,7 +15,6 @@
 	import { formatDistance } from '@/lib/utils';
 
 	// 附近的人：排序/标签过滤 + BSP 卡片墙（桌面）/ 网格（移动/平板）。
-	// 迁移自旧版 NearbyPeoplePage。
 
 	const SORT_OPTIONS = ['距离', '在线', '共同好友'];
 	const FILTER_TAGS = ['全部', '摄影', '旅行', '音乐', '美食', '运动', '阅读', '艺术'];
@@ -28,11 +27,15 @@
 	let allUsers = $state<NearbyUser[]>([]);
 	let loading = $state(true);
 	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
+	let locationName = $state('');
 
 	$effect(() => {
 		let cancelled = false;
 		void loadDefaultLocation().then((loc) => {
-			if (!cancelled) referencePoint = loc?.point ?? null;
+			if (!cancelled) {
+				referencePoint = loc?.point ?? null;
+				locationName = loc?.location_name ?? '';
+			}
 		});
 		return () => {
 			cancelled = true;
@@ -99,20 +102,20 @@
 
 	<StandardPageLayout contentClassName="py-5 sm:py-6">
 		{#snippet header()}
-			<PageHeader title="附近的人" subtitle="徐州 · 5km 内 · 每 3 分钟刷新" sticky glass contentClassName="pt-4 pb-0" onBack={() => history.back()}>
+			<PageHeader title="附近的人" subtitle={locationName ? `${locationName} · 5km 内 · 每 3 分钟刷新` : '5km 内 · 每 3 分钟刷新'} sticky glass contentClassName="pt-4 pb-0" onBack={() => history.back()}>
 				{#snippet below()}
 					<!-- 搜索框（全设备全宽，对齐附近群组样板） + 排序/标签过滤：同处 sticky header 内 -->
 					<div class="mt-3">
 						<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或此刻状态" class="px-3.5 py-2" />
 					</div>
 					<div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 mt-3">
-						<div class="flex items-center gap-1 p-1 rounded-full neu-input-surface w-fit">
+						<div class="flex items-center gap-1 p-1 rounded-full input-surface w-fit">
 							{#each SORT_OPTIONS as option}
 								<button
 									type="button"
 									onclick={() => (sort = option)}
 									aria-pressed={sort === option}
-									class="px-3.5 py-1 rounded-full outline-none transition-colors text-xs focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)] {sort === option ? 'bg-[var(--neu-accent-primary)] text-white font-semibold' : 'text-[var(--neu-text-muted)]'}"
+									class="px-3.5 py-1 rounded-full outline-none transition-colors text-xs focus-visible:ring-2 focus-visible:ring-[var(--accent-default)] {sort === option ? 'bg-[var(--accent-default)] text-white font-semibold' : 'text-[var(--text-secondary)]'}"
 								>
 									{option}
 								</button>
@@ -168,7 +171,7 @@
 			{:else}
 				<EmptyState bare title="没有找到匹配的附近用户">
 					{#snippet icon()}
-						<Users size={40} color="var(--neu-text-muted)" opacity={0.4} />
+						<Users size={40} color="var(--text-secondary)" opacity={0.4} />
 					{/snippet}
 				</EmptyState>
 			{/if}

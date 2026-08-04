@@ -1,4 +1,4 @@
-// 通知数据类型与类型配置（迁移自旧版 NotificationsPage）。
+// 通知数据类型与类型配置。
 
 import type { Component } from 'svelte';
 import { Heart, UserPlus, MessageCircle, Bell, MapPin } from '@lucide/svelte';
@@ -15,11 +15,11 @@ export interface NotificationItem {
 
 export const TYPE_CONFIG: Record<string, { icon: Component; color: string; label: string }> = {
 	// 点赞语义 = reaction_added(契约已删 moment_liked)。
-	reaction: { icon: Heart, color: 'var(--semantic-hot)', label: '点赞' },
-	follow: { icon: UserPlus, color: 'var(--neu-accent-primary)', label: '关注' },
-	comment: { icon: MessageCircle, color: 'var(--map-user)', label: '评论' },
-	nearby: { icon: MapPin, color: 'var(--semantic-online)', label: '附近' },
-	event: { icon: Bell, color: 'var(--semantic-warning)', label: '活动' }
+	reaction: { icon: Heart, color: 'var(--status-danger)', label: '点赞' },
+	follow: { icon: UserPlus, color: 'var(--accent-default)', label: '关注' },
+	comment: { icon: MessageCircle, color: 'var(--marker-user)', label: '评论' },
+	nearby: { icon: MapPin, color: 'var(--status-online)', label: '附近' },
+	event: { icon: Bell, color: 'var(--status-warning)', label: '活动' }
 };
 
 /**

@@ -13,23 +13,23 @@
 	imageSrc={group.banner ?? group.name}
 	imageAlt={group.name}
 	onClick={onOpen}
-	class="rounded-[18px] aspect-[3/4] neu-surface-flat"
+	class="rounded-[18px] aspect-[3/4] surface-flat"
 >
 	<!-- 无封面时占位：覆盖在图片层之上 -->
 	{#if !group.banner}
 		<div
 			class="absolute inset-0 z-[1] flex items-center justify-center"
-			style="background:linear-gradient(135deg, color-mix(in srgb, var(--neu-accent-primary) 20%, var(--neu-bg)) 0%, color-mix(in srgb, var(--neu-accent-primary) 6%, var(--neu-bg)) 100%);"
+			style="background:linear-gradient(135deg, color-mix(in srgb, var(--accent-default) 20%, var(--surface-primary)) 0%, color-mix(in srgb, var(--accent-default) 6%, var(--surface-primary)) 100%);"
 		>
-			<span class="text-[var(--neu-accent-primary)] text-3xl font-semibold">{Array.from(group.name)[0] ?? '群'}</span>
+			<span class="text-[var(--accent-default)] text-3xl font-semibold">{Array.from(group.name)[0] ?? '群'}</span>
 		</div>
 	{/if}
 
 	<!-- 左上：分类 -->
-	<span class="absolute top-2 left-2 z-[2] px-1.5 py-0.5 rounded-full text-white bg-[var(--neu-accent-primary)] text-[9px]">{group.category}</span>
+	<span class="absolute top-2 left-2 z-[2] px-1.5 py-0.5 rounded-full text-white bg-[var(--accent-default)] text-[9px]">{group.category}</span>
 
 	<!-- 右上：隐私 -->
-	<span class="absolute top-2 right-2 z-[2] flex items-center justify-center rounded-full" style="width:20px;height:20px;background:var(--overlay-strong);">
+	<span class="absolute top-2 right-2 z-[2] flex items-center justify-center rounded-full" style="width:20px;height:20px;background:var(--surface-overlay-strong);">
 		{#if group.privacy === 'private'}
 			<Lock size={10} color="white" />
 		{:else}
@@ -39,9 +39,9 @@
 
 	{#snippet footer()}
 		<div class="p-3">
-			<p class="line-clamp-1 text-[var(--neu-text)] text-[13px] font-semibold">{group.name}</p>
+			<p class="line-clamp-1 text-[var(--text-primary)] text-[13px] font-semibold">{group.name}</p>
 			<!-- stats 行：头像堆叠 + 成员 / 距离（对齐 Figma GroupCard 行序） -->
-			<div class="mt-1 flex items-center justify-between gap-2 text-[var(--neu-text-muted)] text-[10px]">
+			<div class="mt-1 flex items-center justify-between gap-2 text-[var(--text-secondary)] text-[10px]">
 				<div class="flex items-center gap-1.5 min-w-0">
 					{#if group.avatars.length > 0}
 						<div class="flex -space-x-2 flex-shrink-0">
@@ -55,14 +55,14 @@
 						{group.members} 人
 					</span>
 				</div>
-				<span class="flex items-center gap-1 flex-shrink-0 text-[var(--neu-accent-primary)]">
+				<span class="flex items-center gap-1 flex-shrink-0 text-[var(--accent-default)]">
 					<MapPin size={10} />
 					{group.distance}
 				</span>
 			</div>
 			<!-- activity 独立行（对齐 Figma：semantic-online 色 + CalendarDays 图标） -->
 			<div class="mt-2 flex items-center justify-between gap-2">
-				<span class="min-w-0 truncate text-[var(--semantic-online)] text-[10px]">
+				<span class="min-w-0 truncate text-[var(--status-online)] text-[10px]">
 					<CalendarDays class="inline mr-1" style="width:10px;height:10px;" />
 					{group.activity}
 				</span>

@@ -14,8 +14,8 @@
     min-width: var(--context-rail-width);
     flex-shrink: 0;
     align-self: stretch;
-    border-left: 1px solid var(--neu-border);
-    background: var(--neu-bg);
+    border-left: 1px solid var(--border-default);
+    background: var(--surface-primary);
   }
   .context-rail__content {
     display: flex;
@@ -71,7 +71,7 @@
     isolation: isolate;
     min-height: 0;
     /* 统一画布：与 page 同底，分隔靠边框与留白（对齐 Figma Make 桌面画布契约） */
-    background: var(--page-bg);
+    background: var(--surface-page);
   }
 
   .desktop-main-scroll {

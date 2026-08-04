@@ -3,7 +3,7 @@
 	import { Search as SearchIcon, X } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
-	import { searchUsers, searchMoments } from '@/api';
+	import { searchUsers, searchMoments, searchSuggest } from '@/api';
 	import SearchDiscovery from './SearchDiscovery.svelte';
 	import SearchResults, { type TabType, type SearchResultsData } from './SearchResults.svelte';
 
@@ -23,6 +23,8 @@
 	let query = $state('');
 	let tab = $state<TabType>('all');
 	let recent = $state<string[]>(readRecent());
+	let discoveryHot = $state<string[]>([]);
+	let discoveryTopics = $state<string[]>([]);
 	let results = $state<SearchResultsData>({
 		users: [],
 		moments: [],
@@ -32,6 +34,22 @@
 
 	$effect(() => {
 		localStorage.setItem('search_recent', JSON.stringify(recent));
+	});
+
+	// 发现态的热门搜索/推荐话题来自 search/suggest（MSW mock，后端契约一致）。
+	$effect(() => {
+		let cancelled = false;
+		void searchSuggest().then((res) => {
+			if (cancelled) return;
+			const suggest = res as { code: number; data?: { items?: Array<{ payload?: { name?: string } }> } | null };
+			const items = suggest.code === 0 ? suggest.data?.items ?? [] : [];
+			const names = items.map((i) => i.payload?.name ?? '').filter(Boolean);
+			discoveryHot = names;
+			discoveryTopics = names;
+		});
+		return () => {
+			cancelled = true;
+		};
 	});
 
 	const keyword = $derived(query.trim().toLowerCase());
@@ -106,12 +124,12 @@
 
 	<!-- 搜索输入卡片（对齐 Figma：rounded-panel border bg-card） -->
 	<section
-		class="rounded-panel border bg-[var(--neu-bg)] p-3"
-		style="border-color:var(--neu-border);"
+		class="rounded-panel border bg-[var(--surface-primary)] p-3"
+		style="border-color:var(--border-default);"
 		aria-label="搜索输入"
 	>
 		<div class="flex items-center gap-3">
-			<SearchIcon class="size-5 shrink-0 text-[var(--neu-accent-primary)]" strokeWidth={1.8} />
+			<SearchIcon class="size-5 shrink-0 text-[var(--accent-default)]" strokeWidth={1.8} />
 			<!-- svelte-ignore a11y_autofocus -->
 			<input
 				bind:this={inputEl}
@@ -122,14 +140,14 @@
 					if (e.key === 'Enter' && query.trim()) remember(query.trim());
 				}}
 				placeholder="搜索用户、动态、地点或话题"
-				class="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-[var(--neu-text)] outline-none placeholder:text-[var(--neu-text-muted)]"
+				class="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-secondary)]"
 			/>
 			{#if query}
 				<button
 					type="button"
 					onclick={() => (query = '')}
 					aria-label="清除搜索"
-					class="neu-hover-btn flex size-8 items-center justify-center text-[var(--neu-text-muted)] hover:text-[var(--neu-text)]"
+					class="hover-btn flex size-8 items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
 				>
 					<X class="size-4" />
 				</button>
@@ -139,7 +157,7 @@
 
 	{#if !keyword}
 		<!-- 无查询发现态（对齐 Figma：双栏 grid + 推荐话题跨列） -->
-		<SearchDiscovery recent={recent} onChoose={choose} onClear={() => (recent = [])} />
+		<SearchDiscovery recent={recent} hot={discoveryHot} topics={discoveryTopics} onChoose={choose} onClear={() => (recent = [])} />
 	{:else}
 		<!-- 有查询结果态（对齐 Figma） -->
 		<SearchResults

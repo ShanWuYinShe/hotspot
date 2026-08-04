@@ -17,8 +17,12 @@ function writePersisted(v: boolean) {
   try { localStorage.setItem(STORAGE_KEY, String(v)); } catch {}
 }
 
-/** Called once at startup from the app entry. Reads localStorage, falls back to env. */
-export function initMock(w: any, envDefault: boolean) {
+/**
+ * 应用启动时调用一次（hooks.client init，早于任何 API 请求）。
+ * 读取 localStorage（可覆盖默认），启用时等待 service worker 真正就绪。
+ * 返回是否启用了 mock。
+ */
+export async function initMock(w: any, envDefault: boolean): Promise<boolean> {
   worker = w;
   enabled = readPersisted(envDefault);
   if (enabled) {
@@ -27,7 +31,7 @@ export function initMock(w: any, envDefault: boolean) {
     // calls) and Vite HMR / font / static asset requests would otherwise each
     // log a noisy "[MSW] intercepted a request without a matching request
     // handler" warning on every navigation, drowning out real gaps.
-    worker.start({
+    await worker.start({
       onUnhandledRequest(req: { url: string }) {
         if (req.url.includes("/api/v1/")) return "warn";
         return "bypass";
@@ -35,6 +39,7 @@ export function initMock(w: any, envDefault: boolean) {
     });
   }
   notify();
+  return enabled;
 }
 
 export function isMockEnabled(): boolean {

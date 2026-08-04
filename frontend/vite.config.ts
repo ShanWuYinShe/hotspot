@@ -10,12 +10,6 @@ export default defineConfig({
 		// 需显式允许，否则 Vite 7 的 host 校验会拒绝请求。
 		allowedHosts: ['nginx.hotspot.orb.local']
 	},
-	optimizeDeps: {
-		// @lucide/svelte 与 bits-ui 均发布 .svelte 源文件，esbuild 预打包无法处理
-		// （否则 dev 首次加载报 "No loader is configured for .svelte" / nginx 504），
-		// 排除后由 vite-plugin-svelte 直接转译（dev 必需，build 无预打包）
-		exclude: ['@lucide/svelte', 'bits-ui']
-	},
 	test: {
 		environment: 'jsdom',
 		setupFiles: ['./vitest-setup.ts'],

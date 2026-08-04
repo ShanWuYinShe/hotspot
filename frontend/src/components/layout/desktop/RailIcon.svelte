@@ -2,7 +2,7 @@
 	import type { Component } from 'svelte';
 	import { theme } from '@/stores/theme.svelte';
 
-	// 移动横屏左栏导航图标（迁移自旧版 MainLayout 内 RailIcon）。
+	// 移动横屏左栏导航图标。
 	// hover/active 反馈：主题感知的背景/阴影/缩放（CSS 类 + 主题类选择器）。
 
 	let {
@@ -20,11 +20,11 @@
 	let hovered = $state(false);
 	const showHover = $derived(hovered && !isActive);
 
-	// 主题感知 hover 背景（RailIcon 专用：forest/vibrant 透明、neu 纸面）
+	// 主题感知 hover 背景（RailIcon 专用：forest/vibrant 主题差异由类选择器承载）
 	const hoverBg = $derived.by(() => {
 		if (!showHover) return 'transparent';
 		const t = theme.theme;
-		return t === 'forest' || t === 'vibrant' ? 'transparent' : 'var(--neu-bg)';
+		return t === 'forest' || t === 'vibrant' ? 'transparent' : 'var(--surface-primary)';
 	});
 
 	const hoverShadow = $derived.by(() => {
@@ -39,12 +39,12 @@
 				? '0 6px 16px rgba(129,140,248,0.22), 0 2px 6px rgba(129,140,248,0.12)'
 				: '0 6px 16px rgba(99,102,241,0.18), 0 2px 6px rgba(99,102,241,0.10)';
 		}
-		return '5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light)';
+		return '5px 5px 12px var(--elevation-shadow-dark), -5px -5px 12px var(--elevation-shadow-light)';
 	});
 
 	const hoverScale = $derived(showHover ? (theme.theme === 'forest' ? 1.08 : 1.14) : 1);
 	const iconColor = $derived(
-		isActive || showHover ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'
+		isActive || showHover ? 'var(--accent-default)' : 'var(--text-secondary)'
 	);
 </script>
 
@@ -60,7 +60,7 @@
 >
 	{#if isActive}
 		<div
-			style="position:absolute;inset:4px;border-radius:12px;background:var(--neu-accent-primary);opacity:0.14;"
+			style="position:absolute;inset:4px;border-radius:12px;background:var(--accent-default);opacity:0.14;"
 		></div>
 	{/if}
 	<Icon
@@ -71,6 +71,6 @@
 		{label}
 	</span>
 	{#if isActive}
-		<div style="position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:2px;background:var(--neu-accent-primary);"></div>
+		<div style="position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:2px;background:var(--accent-default);"></div>
 	{/if}
 </button>

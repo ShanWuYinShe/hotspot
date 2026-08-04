@@ -52,7 +52,7 @@
 		onBack={() => void goto(ROUTES.me)}
 	>
 		{#snippet trailing()}
-			<span class="text-[var(--neu-text-muted)] text-xs">{activeCount} 人</span>
+			<span class="text-[var(--text-secondary)] text-xs">{activeCount} 人</span>
 		{/snippet}
 		{#snippet below()}
 			{@render relTabBar()}
@@ -61,7 +61,7 @@
 {/snippet}
 
 {#snippet relTabBar()}
-	<div class="no-scrollbar flex overflow-x-auto" style="border-bottom:1px solid var(--neu-border);">
+	<div class="no-scrollbar flex overflow-x-auto" style="border-bottom:1px solid var(--border-default);">
 		{#each TABS as t}
 			{@const isActive = activeTab === t.id}
 			<button
@@ -69,14 +69,14 @@
 				onclick={() => switchTab(t.id)}
 				aria-pressed={isActive}
 				class="relative shrink-0 rounded-t-[12px] pb-3 pt-1 outline-none"
-				style="padding-left:18px;padding-right:18px;color:{isActive ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'};font-weight:{isActive ? 500 : 400};font-size:13px;transition:color 0.2s;"
+				style="padding-left:18px;padding-right:18px;color:{isActive ? 'var(--accent-default)' : 'var(--text-secondary)'};font-weight:{isActive ? 500 : 400};font-size:13px;transition:color 0.2s;"
 			>
 				{t.label}
 				<span class="text-[10px]" style="opacity:0.75;">{t.id === 'friends' ? friends.length : t.id === 'following' ? following.length : followers.length}</span>
 				{#if isActive}
 					<span
 						class="absolute"
-						style="bottom:-1px;left:14%;right:14%;height:2px;border-radius:1px;background:var(--neu-accent-primary);"
+						style="bottom:-1px;left:14%;right:14%;height:2px;border-radius:1px;background:var(--accent-default);"
 					></span>
 				{/if}
 			</button>

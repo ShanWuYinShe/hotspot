@@ -3,7 +3,6 @@
 	import { goto } from '$app/navigation';
 	import { Coffee, Music, Users, Star, ChevronRight, MapPin, Search } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
-	import { loadDefaultLocation } from '@/lib/default-location';
 	import { getTrending, getNearbyUsers, getNearbyGroups } from '@/api';
 	import SectionHead from '@/routes/(app)/_home/SectionHead.svelte';
 	import HeroStats from '@/routes/(app)/_home/HeroStats.svelte';
@@ -13,8 +12,9 @@
 	import NearbyUsersFlatList from '@/routes/(app)/_home/NearbyUsersFlatList.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance } from '@/lib/utils';
-	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
+	import { loadDefaultLocation, type DefaultLocation } from '@/lib/default-location';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 
 	// 首页「附近」：Hero 统计 + 话题活动 + 群组轮播 + 推荐列表。
 	// 三端统一 PageHeader（title + 额外信息 + trailing 工具区）+ 内容区：
@@ -27,12 +27,12 @@
 	let nearbyGroups = $state<NearbyGroup[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
-	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
+	let defaultLocation = $state<DefaultLocation | null>(null);
 
 	$effect(() => {
 		let cancelled = false;
 		void loadDefaultLocation().then((loc) => {
-			if (!cancelled) referencePoint = loc?.point ?? null;
+			if (!cancelled) defaultLocation = loc ?? null;
 		});
 		return () => {
 			cancelled = true;
@@ -46,7 +46,7 @@
 				loading = true;
 				error = null;
 				const searchParams: Record<string, unknown> = { radius: 5000, pagination: { limit: 12 } };
-				if (referencePoint) searchParams.reference_point = referencePoint;
+				if (defaultLocation) searchParams.reference_point = defaultLocation.point;
 				const [trendingRes, nearbyUsersRes, nearbyGroupsRes] = await Promise.all([
 					getTrending().catch(() => ({ code: -1, data: null })),
 					getNearbyUsers(searchParams).catch(() => ({ code: -1, data: { items: [] } })),
@@ -64,12 +64,12 @@
 						icon: [Coffee, Music, Users, Star][i % 4],
 						title: a.description ?? '',
 						sub: a.location?.location_name ?? '',
-						color: ['var(--semantic-warning)', 'var(--neu-accent-primary)', 'var(--map-group)', 'var(--semantic-hot)'][i % 4],
+						color: ['var(--status-warning)', 'var(--accent-default)', 'var(--marker-group)', 'var(--status-danger)'][i % 4],
 						bg: [
-							'color-mix(in srgb, var(--semantic-warning) 10%, transparent)',
-							'var(--neu-accent-soft)',
-							'color-mix(in srgb, var(--map-group) 10%, transparent)',
-							'color-mix(in srgb, var(--semantic-hot) 10%, transparent)'
+							'color-mix(in srgb, var(--status-warning) 10%, transparent)',
+							'var(--accent-soft)',
+							'color-mix(in srgb, var(--marker-group) 10%, transparent)',
+							'color-mix(in srgb, var(--status-danger) 10%, transparent)'
 						][i % 4]
 					}));
 					activities = acts;
@@ -127,7 +127,7 @@
 
 {#snippet homeContent()}
 	<!-- 三端共用的业务组件（只写一次）。首页为大纲页：列表限长 + 「更多」链接导航到专区 -->
-	<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} />
+	<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={defaultLocation?.location_name ?? ''} />
 	<div>
 		<SectionHead title="附近活动" action="更多" onAction={() => void goto(ROUTES.nearbyMoments)} />
 		<ActivityList items={activities.slice(0, 3)} onClick={(id) => void goto(ROUTES.event(id))} />
@@ -140,35 +140,63 @@
 	</div>
 {/snippet}
 
-{#if platform.platform !== 'mobile'}
-	<!-- ═══ Desktop/Tablet Home — 统一 PageHeader + 2-column ═══ -->
-	<div class="content-mode-wide flex flex-col h-full">
-		<PageHeader title="首页" titleSize={24} subtitle="发现周边有趣的人和事" sticky>
-			{#snippet trailing()}
-				<div class="flex items-center gap-2">
-					<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full neu-surface-flat">
-						<span class="rounded-full" style="width:6px;height:6px;background:var(--semantic-online);"></span>
-						<span class="text-xs" style="color:var(--neu-text-muted);">{onlineCount} 在线</span>
+<StandardPageLayout
+	contentClassName={platform.platform === 'mobile' ? 'animate-fade-in flex flex-col gap-7 pt-5 pb-8' : 'py-6'}
+>
+	{#snippet header()}
+		{#if platform.platform !== 'mobile'}
+			<!-- ═══ Desktop/Tablet Home — 统一 PageHeader + 2-column ═══ -->
+			<PageHeader title="首页" titleSize={24} subtitle="发现周边有趣的人和事" sticky>
+				{#snippet trailing()}
+					<div class="flex items-center gap-2">
+						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full surface-flat">
+							<span class="rounded-full" style="width:6px;height:6px;background:var(--status-online);"></span>
+							<span class="text-xs" style="color:var(--text-secondary);">{onlineCount} 在线</span>
+						</div>
+						{#if platform.platform === 'tablet'}
+							<button
+								type="button"
+								aria-label="搜索"
+								onclick={() => void goto(ROUTES.search)}
+								class="hover-btn flex size-8 items-center justify-center rounded-full outline-none bg-[var(--surface-primary)] text-[var(--text-secondary)]"
+								style="border:1px solid var(--border-default);"
+							>
+								<Search style="width:16px;height:16px;" strokeWidth={1.8} />
+							</button>
+						{/if}
 					</div>
-					{#if platform.platform === 'tablet'}
+				{/snippet}
+			</PageHeader>
+		{:else}
+			<!-- ═══ Mobile Home — 统一 PageHeader + single column ═══ -->
+			<PageHeader title="附近" titleSize={22} subtitle="发现周边有趣的人和事" sticky>
+				{#snippet trailing()}
+					<div class="flex items-center gap-2">
+						<div class="flex items-center gap-1.5 py-1.5 px-3 rounded-full surface-flat">
+							<span class="rounded-full" style="width:6px;height:6px;background:var(--status-online);"></span>
+							<span style="font-size:11px;color:var(--text-secondary);">{defaultLocation?.location_name || '附近'}</span>
+						</div>
 						<button
 							type="button"
-							aria-label="搜索"
+							class="hover-btn flex size-8 items-center justify-center rounded-full border cursor-pointer transition-colors hover:bg-[var(--accent-soft)]"
+							style="border-color:var(--border-default);background:var(--surface-primary);"
 							onclick={() => void goto(ROUTES.search)}
-							class="neu-hover-btn flex size-8 items-center justify-center rounded-full outline-none bg-[var(--neu-bg)] text-[var(--neu-text-muted)]"
-							style="border:1px solid var(--neu-border);"
+							aria-label="搜索"
 						>
-							<Search style="width:16px;height:16px;" strokeWidth={1.8} />
+							<Search class="size-4" color="var(--text-secondary)" strokeWidth={1.8} />
 						</button>
-					{/if}
-				</div>
-			{/snippet}
-		</PageHeader>
+					</div>
+				{/snippet}
+			</PageHeader>
+		{/if}
+	{/snippet}
 
-		<div class="flex flex-1 min-h-0 gap-0 overflow-hidden">
+	{#if platform.platform !== 'mobile'}
+		<!-- Desktop/Tablet：左摘要栏 + 右用户列表（正文多列 grid，随页面统一滚动） -->
+		<div class="grid grid-cols-[340px_minmax(0,1fr)] gap-6">
 			<!-- Left: hero + activity + groups (340px) -->
-			<div class="flex flex-col overflow-y-auto no-scrollbar gap-6 shrink-0 px-[var(--page-gutter)] py-6" style="width:340px;border-right:1px solid var(--neu-border);">
-				<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} />
+			<div class="flex flex-col gap-6 border-r border-[var(--border-default)] pr-6">
+				<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={defaultLocation?.location_name ?? ''} />
 				<div>
 					<SectionHead title="附近活动" />
 					<ActivityList items={activities} onClick={(id) => void goto(ROUTES.event(id))} />
@@ -177,17 +205,17 @@
 			</div>
 
 			<!-- Right: full nearby-users list -->
-			<div class="flex-1 overflow-y-auto no-scrollbar px-[var(--page-gutter)] py-6">
+			<div>
 				<div class="flex items-end justify-between mb-5">
 					<div>
-						<span class="neu-eyebrow">附近的人</span>
-						<p class="text-xs" style="color:var(--neu-text-muted);margin-top:4px;">
+						<span class="eyebrow">附近的人</span>
+						<p class="text-xs" style="color:var(--text-secondary);margin-top:4px;">
 							5km 范围内 · 实时更新
 						</p>
 					</div>
 					<button
 						type="button"
-						class="neu-hover-btn neu-tap-93 flex items-center gap-0.5 outline-none neu-surface-ghost rounded-full px-2 py-0.5 text-[var(--neu-accent-primary)]"
+						class="hover-btn tap-93 flex items-center gap-0.5 outline-none surface-ghost rounded-full px-2 py-0.5 text-[var(--accent-default)]"
 						onclick={() => void goto(ROUTES.nearbyPeople)}
 					>
 						<span class="text-xs">查看全部</span>
@@ -200,30 +228,7 @@
 				</div>
 			</div>
 		</div>
-	</div>
-{:else}
-	<!-- ═══ Mobile Home — 统一 PageHeader + single column ═══ -->
-	<PageHeader title="附近" titleSize={22} subtitle="发现周边有趣的人和事" sticky>
-		{#snippet trailing()}
-			<div class="flex items-center gap-2">
-				<div class="flex items-center gap-1.5 py-1.5 px-3 rounded-full neu-surface-flat">
-					<span class="rounded-full" style="width:6px;height:6px;background:var(--semantic-online);"></span>
-					<span style="font-size:11px;color:var(--neu-text-muted);">徐州</span>
-				</div>
-				<button
-					type="button"
-					class="neu-hover-btn flex size-8 items-center justify-center rounded-full border cursor-pointer transition-colors hover:bg-[var(--neu-accent-soft)]"
-					style="border-color:var(--neu-border);background:var(--neu-bg);"
-					onclick={() => void goto(ROUTES.search)}
-					aria-label="搜索"
-				>
-					<Search class="size-4" color="var(--neu-text-muted)" strokeWidth={1.8} />
-				</button>
-			</div>
-		{/snippet}
-	</PageHeader>
-
-	<ContentColumn class="animate-fade-in flex flex-col gap-7 pt-5 pb-8">
+	{:else}
 		{@render homeContent()}
-	</ContentColumn>
-{/if}
+	{/if}
+</StandardPageLayout>

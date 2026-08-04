@@ -1,8 +1,8 @@
 /* ── Tailwind v4 @theme inline registrations ────────────────────────────
    Maps CSS custom properties to Tailwind color classes so that
-   bg-background, text-foreground, bg-neu-bg, text-neu-text-muted, etc.
-   all resolve through the cascade. Keep both blocks in one file so the
-   full palette is visible at a glance.
+   bg-background, text-foreground, bg-surface-primary, text-text-primary
+   etc. all resolve through the cascade. Keep both blocks in one file so
+   the full palette is visible at a glance.
 ────────────────────────────────────────────────────────────────────── */
 
 @theme inline {
@@ -21,28 +21,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  /* Custom application palette */
-  --color-neu-bg: var(--neu-bg);
-  --color-neu-shadow-light: var(--neu-shadow-light);
-  --color-neu-shadow-dark: var(--neu-shadow-dark);
-  --color-neu-text: var(--neu-text);
-  --color-neu-text-muted: var(--neu-text-muted);
-  --color-neu-accent: var(--neu-accent);
-  --color-neu-accent-primary: var(--neu-accent-primary);
-  --color-neu-glow: var(--neu-glow);
-  --color-neu-border: var(--neu-border);
-  --color-neu-border-pressed: var(--neu-border-pressed);
-  --color-neu-accent-soft: var(--neu-accent-soft);
-  --color-neu-accent-soft-border: var(--neu-accent-soft-border);
-  --color-page-bg: var(--page-bg);
-  --color-semantic-online: var(--semantic-online);
-  --color-semantic-hot: var(--semantic-hot);
-  --color-semantic-warning: var(--semantic-warning);
-  --color-map-user: var(--map-user);
-  --color-map-group: var(--map-group);
-  --color-map-moment: var(--map-moment);
-
-  /* Semantic palette (Phase 2+) — enables bg-surface-primary, text-text-primary etc. */
+  /* Semantic palette — enables bg-surface-primary, text-text-primary etc. */
   --color-surface-primary: var(--surface-primary);
   --color-surface-page: var(--surface-page);
   --color-text-primary: var(--text-primary);

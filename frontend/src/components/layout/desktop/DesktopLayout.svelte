@@ -20,7 +20,6 @@
 	import imgHotSpot from '@/assets/9254a1e0e11b516a6c1aecb80d92b66f2caa243e.png';
 
 	// 桌面全屏布局（≥1024px）：52px 顶栏 + 可折叠侧栏 + 主内容卡片 + 发布模态。
-	// 迁移自旧版 DesktopLayout。
 
 	let { children }: { children: Snippet } = $props();
 
@@ -119,24 +118,24 @@
 
 <div
 	class="flex flex-col h-screen w-screen overflow-hidden transition-colors duration-500 font-sans"
-	style="background-color:var(--page-bg);color:var(--neu-text);"
+	style="background-color:var(--surface-page);color:var(--text-primary);"
 >
 	<!-- HEADER — 52px, full width -->
 	<header
 		class="relative z-30 flex-shrink-0 flex items-center px-5 gap-2"
-		style="height:52px;background-color:var(--page-bg);border-bottom:1px solid var(--neu-border);"
+		style="height:52px;background-color:var(--surface-page);border-bottom:1px solid var(--border-default);"
 	>
 		<!-- Logo -->
 		<button
 			type="button"
-			class="neu-hover-btn flex items-center gap-2 mr-3 select-none rounded-full neu-focus-ring focus-visible:ring-offset-[var(--page-bg)]"
+			class="hover-btn flex items-center gap-2 mr-3 select-none rounded-full focus-ring focus-visible:ring-offset-[var(--surface-page)]"
 			onclick={() => {
 				activeNavId = 'home';
 				void goto(ROUTES.home);
 			}}
 		>
 			<img src={imgHotSpot} alt="HotSpot Logo" class="rounded-full object-cover flex-shrink-0" style="width:28px;height:28px;" />
-			<span class="tracking-tight" style="font-size:17px;color:var(--neu-text);">HotSpot</span>
+			<span class="tracking-tight" style="font-size:17px;color:var(--text-primary);">HotSpot</span>
 		</button>
 
 		<!-- Spacer -->
@@ -150,7 +149,7 @@
 				onClick={() => void goto(ROUTES.search)}
 				variant="ghost"
 				size={36}
-				class="neu-header-action"
+				class="header-action"
 			/>
 
 			<ActionIconButton
@@ -165,19 +164,19 @@
 				}}
 				variant="ghost"
 				size={36}
-				class="neu-header-action"
+				class="header-action"
 			/>
 
-			<ActionIconButton icon={Bell} label="通知" onClick={() => guardNav('查看通知', ROUTES.notifications)} variant="ghost" size={36} class="neu-header-action" />
+			<ActionIconButton icon={Bell} label="通知" onClick={() => guardNav('查看通知', ROUTES.notifications)} variant="ghost" size={36} class="header-action" />
 
 			<AppearanceMenu />
 
-			<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} variant="ghost" size={36} class="neu-header-action" />
+			<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} variant="ghost" size={36} class="header-action" />
 
 			{#if auth.user}
 				<button
 					type="button"
-					class="neu-hover-btn neu-scale-btn relative ml-1.5 flex-shrink-0 rounded-full neu-focus-ring focus-visible:ring-offset-[var(--page-bg)]"
+					class="hover-btn scale-btn relative ml-1.5 flex-shrink-0 rounded-full focus-ring focus-visible:ring-offset-[var(--surface-page)]"
 					style="width:32px;height:32px;"
 					aria-label="打开个人主页"
 					onclick={() => guardNav('打开个人主页', ROUTES.me)}
@@ -186,14 +185,14 @@
 						src={auth.user.avatar_url || ''}
 						alt={auth.user.nickname || '用户'}
 						class="w-full h-full rounded-full object-cover"
-						style="border:1.5px solid var(--neu-border);"
+						style="border:1.5px solid var(--border-default);"
 					/>
 				</button>
 			{:else}
 				<button
 					type="button"
-					class="neu-hover-btn ml-1.5 flex-shrink-0 rounded-full px-3 neu-focus-ring"
-					style="height:32px;background:var(--neu-accent-primary);color:white;font-size:12px;"
+					class="hover-btn ml-1.5 flex-shrink-0 rounded-full px-3 focus-ring"
+					style="height:32px;background:var(--accent-default);color:white;font-size:12px;"
 					aria-label="登录"
 					onclick={() => void goto(ROUTES.login)}
 				>
@@ -213,8 +212,8 @@
 			<!-- Edge-mounted collapse control: leaves the navigation rhythm untouched -->
 			<button
 				type="button"
-				class="neu-hover-btn absolute -right-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border outline-none transition-colors hover:bg-[var(--neu-accent-soft)] focus-visible:ring-2 focus-visible:ring-[var(--neu-accent-primary)]"
-				style="color:var(--neu-text-muted);background:var(--page-bg);border-color:var(--neu-border);box-shadow:0 2px 8px var(--neu-shadow-dark);"
+				class="hover-btn absolute -right-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border outline-none transition-colors hover:bg-[var(--accent-soft)] focus-visible:ring-2 focus-visible:ring-[var(--accent-default)]"
+				style="color:var(--text-secondary);background:var(--surface-page);border-color:var(--border-default);box-shadow:0 2px 8px var(--elevation-shadow-dark);"
 				aria-label={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
 				aria-pressed={isSidebarCollapsed}
 				title={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
@@ -236,12 +235,12 @@
 				</div>
 
 				<!-- Divider -->
-				<div class="my-3 self-center" style="height:1px;width:{isSidebarCollapsed ? 24 : '100%'};background:var(--neu-border);"></div>
+				<div class="my-3 self-center" style="height:1px;width:{isSidebarCollapsed ? 24 : '100%'};background:var(--border-default);"></div>
 
 				<!-- Section 2 label -->
 				<p
 					class={isSidebarCollapsed ? 'sr-only' : 'px-3 mb-2'}
-					style="font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--neu-text-muted);opacity:0.65;"
+					style="font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-secondary);opacity:0.65;"
 				>
 					个人中心
 				</p>
@@ -260,9 +259,9 @@
 			</div>
 		</aside>
 
-		<!-- Main Content Card — RoutedContentViewport 是唯一滚动 owner（desktopPane 激活 sticky-header page-bg 强制规则）。
+		<!-- Main Content Card — RoutedContentViewport 是唯一滚动 owner（desktopPane 激活 sticky-header surface-page 强制规则）。
 		     全画布页（消息分栏 / 地图探索）禁用滚动，画布固定视口高度。 -->
-		<div class="desktop-main-panel flex-1 min-w-0 overflow-hidden border-l transition-colors duration-500" style="border-color:var(--neu-border);">
+		<div class="desktop-main-panel flex-1 min-w-0 overflow-hidden border-l transition-colors duration-500" style="border-color:var(--border-default);">
 			<RoutedContentViewport
 				desktopPane
 				class="desktop-main-scroll"

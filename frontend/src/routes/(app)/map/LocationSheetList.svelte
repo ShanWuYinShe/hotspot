@@ -40,20 +40,20 @@
 				aria-pressed={selectedLoc?.displayName === r.displayName}
 				onclick={() => onSelectLoc(r)}
 			>
-				<div class="flex items-center justify-center rounded-full flex-shrink-0 bg-[var(--neu-accent-primary)]" style="width:34px;height:34px;opacity:0.12">
-					<MapPin style="width:14px;height:14px;color:var(--neu-accent-primary)" strokeWidth={1.75} />
+				<div class="flex items-center justify-center rounded-full flex-shrink-0 bg-[var(--accent-default)]" style="width:34px;height:34px;opacity:0.12">
+					<MapPin style="width:14px;height:14px;color:var(--accent-default)" strokeWidth={1.75} />
 				</div>
-				<span class="text-[var(--neu-text)]" style="font-size:14px;flex:1">{r.displayName}</span>
+				<span class="text-[var(--text-primary)]" style="font-size:14px;flex:1">{r.displayName}</span>
 				{#if selectedLoc?.displayName === r.displayName}
-					<Check style="width:14px;height:14px;color:var(--neu-accent-primary);flex-shrink:0" strokeWidth={2.5} />
+					<Check style="width:14px;height:14px;color:var(--accent-default);flex-shrink:0" strokeWidth={2.5} />
 				{/if}
 			</button>
 		{/each}
 	</EmbeddedList>
 {:else if searchQuery && searchResults.length === 0}
 	<div class="flex flex-col items-center py-6">
-		<MapPin style="width:26px;height:26px;color:var(--neu-text-muted);opacity:0.28;" strokeWidth={1} />
-		<p class="text-[var(--neu-text-muted)]" style="font-size:13px;margin-top:8px;">未找到匹配地点</p>
+		<MapPin style="width:26px;height:26px;color:var(--text-secondary);opacity:0.28;" strokeWidth={1} />
+		<p class="text-[var(--text-secondary)]" style="font-size:13px;margin-top:8px;">未找到匹配地点</p>
 	</div>
 {:else}
 	<div class="animate-fade-in">
@@ -64,7 +64,7 @@
 					<div class="relative flex-shrink-0">
 						<img src={selectedPin.avatar} alt={selectedPin.name || selectedPin.title || ''} class="rounded-full object-cover" style="width:42px;height:42px;" />
 						{#if selectedPin.online}
-							<span class="absolute bottom-0 right-0 rounded-full bg-[var(--semantic-online)]" style="width:10px;height:10px;border:2px solid var(--neu-bg);"></span>
+							<span class="absolute bottom-0 right-0 rounded-full bg-[var(--status-online)]" style="width:10px;height:10px;border:2px solid var(--surface-primary);"></span>
 						{/if}
 					</div>
 				{:else if selectedPin.type === 'moment' && selectedPin.image}
@@ -73,18 +73,18 @@
 					<img src={getMarkerUrl(selectedPin.type, selectedPin.count ?? 1)} alt="" style="width:22px;height:29px;flex-shrink:0;" />
 				{/if}
 				<div class="flex-1 min-w-0">
-					<p class="text-[var(--neu-text)] text-[13px]">{selectedPin.name || selectedPin.title}</p>
-					<p class="text-[var(--neu-text-muted)]" style="font-size:11px;margin-top:1px;">
+					<p class="text-[var(--text-primary)] text-[13px]">{selectedPin.name || selectedPin.title}</p>
+					<p class="text-[var(--text-secondary)]" style="font-size:11px;margin-top:1px;">
 						{PIN_LABELS[selectedPin.type]}
 						{selectedPin.distance ? ` · ${selectedPin.distance}` : ''}
 						{selectedPin.tag ? ` · #${selectedPin.tag}` : ''}
 					</p>
 				</div>
-				<button type="button" class="neu-hover-btn px-2.5 py-1.5 rounded-full outline-none flex-shrink-0" style="background:{PIN_COLORS[selectedPin.type]};color:white;font-size:11px;" onclick={() => onOpenPinDetail(selectedPin)}>
+				<button type="button" class="hover-btn px-2.5 py-1.5 rounded-full outline-none flex-shrink-0" style="background:{PIN_COLORS[selectedPin.type]};color:white;font-size:11px;" onclick={() => onOpenPinDetail(selectedPin)}>
 					查看
 				</button>
-				<button type="button" class="neu-hover-btn outline-none flex-shrink-0 ml-0.5" onclick={onClearPin}>
-					<X style="width:13px;height:13px;color:var(--neu-text-muted);" strokeWidth={2} />
+				<button type="button" class="hover-btn outline-none flex-shrink-0 ml-0.5" onclick={onClearPin}>
+					<X style="width:13px;height:13px;color:var(--text-secondary);" strokeWidth={2} />
 				</button>
 			</div>
 		{/if}
@@ -97,8 +97,8 @@
 			] as tab}
 				<button
 					type="button"
-					class="neu-hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none {activeTab === tab.id ? 'bg-[var(--neu-accent-primary)] text-white' : 'bg-[var(--neu-bg)] text-[var(--neu-text-muted)]'}"
-					style={activeTab === tab.id ? 'font-size:12px;box-shadow:0 3px 10px var(--neu-glow);' : 'font-size:12px;border:1px solid var(--neu-border);'}
+					class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none {activeTab === tab.id ? 'bg-[var(--accent-default)] text-white' : 'bg-[var(--surface-primary)] text-[var(--text-secondary)]'}"
+					style={activeTab === tab.id ? 'font-size:12px;box-shadow:0 3px 10px var(--glow-accent);' : 'font-size:12px;border:1px solid var(--border-default);'}
 					onclick={() => (activeTab = tab.id as 'recent' | 'hot')}
 				>
 					<tab.icon style="width:11px;height:11px;" strokeWidth={activeTab === tab.id ? 2.5 : 1.5} />
@@ -106,7 +106,7 @@
 				</button>
 			{/each}
 			{#if activeTab === 'recent' && recentItems.length > 0}
-				<button type="button" class="neu-hover-btn ml-auto outline-none text-[var(--neu-text-muted)] text-xs" onclick={() => (recentItems = [])}>
+				<button type="button" class="hover-btn ml-auto outline-none text-[var(--text-secondary)] text-xs" onclick={() => (recentItems = [])}>
 					清空
 				</button>
 			{/if}
@@ -123,23 +123,23 @@
 							aria-pressed={selectedLoc?.displayName === loc.displayName}
 							onclick={() => onSelectLoc(loc)}
 						>
-							<div class="flex items-center justify-center rounded-full flex-shrink-0 bg-[var(--neu-bg)]" style="width:36px;height:36px;border:1px solid var(--neu-border);box-shadow:3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light);font-size:18px;">
+							<div class="flex items-center justify-center rounded-full flex-shrink-0 bg-[var(--surface-primary)]" style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:3px 3px 6px var(--elevation-shadow-dark), -3px -3px 6px var(--elevation-shadow-light);font-size:18px;">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
-								<p class="truncate text-[var(--neu-text)] text-sm">{loc.displayName}</p>
-								<p class="text-[var(--neu-text-muted)]" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
+								<p class="truncate text-[var(--text-primary)] text-sm">{loc.displayName}</p>
+								<p class="text-[var(--text-secondary)]" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
 							</div>
 							{#if selectedLoc?.displayName === loc.displayName}
-								<Check style="width:14px;height:14px;color:var(--neu-accent-primary);flex-shrink:0;" strokeWidth={2.5} />
+								<Check style="width:14px;height:14px;color:var(--accent-default);flex-shrink:0;" strokeWidth={2.5} />
 							{:else}
-								<ChevronRight style="width:13px;height:13px;color:var(--neu-border);flex-shrink:0;" strokeWidth={1.5} />
+								<ChevronRight style="width:13px;height:13px;color:var(--border-default);flex-shrink:0;" strokeWidth={1.5} />
 							{/if}
 						</button>
 					{/each}
 				</EmbeddedList>
 			{:else}
-				<p class="text-[var(--neu-text-muted)]" style="font-size:13px;padding:12px 20px;">暂无最近记录</p>
+				<p class="text-[var(--text-secondary)]" style="font-size:13px;padding:12px 20px;">暂无最近记录</p>
 			{/if}
 		{:else}
 			{#if HOT_LOCATIONS.length}
@@ -151,24 +151,24 @@
 							aria-pressed={selectedLoc?.displayName === loc.displayName}
 							onclick={() => onSelectLoc(loc)}
 						>
-							<div class="flex items-center justify-center rounded-[13px] flex-shrink-0 bg-[var(--neu-accent-primary)]" style="width:36px;height:36px;font-size:18px;opacity:0.88;">
+							<div class="flex items-center justify-center rounded-[13px] flex-shrink-0 bg-[var(--accent-default)]" style="width:36px;height:36px;font-size:18px;opacity:0.88;">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
-								<p class="truncate text-[var(--neu-text)] text-sm">{loc.displayName}</p>
-								<p class="text-[var(--neu-text-muted)]" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
+								<p class="truncate text-[var(--text-primary)] text-sm">{loc.displayName}</p>
+								<p class="text-[var(--text-secondary)]" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
 							</div>
 							<div class="flex items-center gap-1 flex-shrink-0">
-								<Users style="width:11px;height:11px;color:var(--neu-accent-primary);" strokeWidth={1.5} />
-								<span class="text-[var(--neu-accent-primary)] text-xs">{loc.users}</span>
+								<Users style="width:11px;height:11px;color:var(--accent-default);" strokeWidth={1.5} />
+								<span class="text-[var(--accent-default)] text-xs">{loc.users}</span>
 							</div>
 						</button>
 					{/each}
 				</EmbeddedList>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-8">
-					<Star style="width:20px;height:20px;color:var(--neu-text-muted);opacity:0.3;" strokeWidth={1} />
-					<p class="text-[var(--neu-text-muted)] text-xs">暂无热门地点</p>
+					<Star style="width:20px;height:20px;color:var(--text-secondary);opacity:0.3;" strokeWidth={1} />
+					<p class="text-[var(--text-secondary)] text-xs">暂无热门地点</p>
 				</div>
 			{/if}
 		{/if}

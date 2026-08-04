@@ -53,7 +53,7 @@
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <article
 	class={cn(
-		'image-hover-frame neu-card-hover relative h-full w-full cursor-pointer overflow-hidden',
+		'image-hover-frame card-hover relative h-full w-full cursor-pointer overflow-hidden',
 		className
 	)}
 	style="transform:{cardTransform};transition:transform 0.10s cubic-bezier(0.22,1,0.36,1);"

@@ -1,4 +1,4 @@
-// 个人中心数据工厂（迁移自旧版 me/profile.data.ts 的 hooks）。
+// 个人中心数据工厂。
 // 组件内调用创建独立响应式状态；数据映射函数（mapGroup/mapFriend 等）原样保留。
 
 import {
@@ -24,6 +24,7 @@ import type {
 export interface GalleryMoment {
 	id: string;
 	img: string;
+	title: string;
 	likes: number;
 	comments: number;
 }
@@ -41,6 +42,7 @@ function mapGalleryMoment(m: MomentItem): GalleryMoment {
 	return {
 		id: m.moment_id,
 		img: m.images?.[0]?.url ?? '',
+		title: m.description ?? '',
 		likes: m.likes_count ?? 0,
 		comments: m.comments_count ?? 0
 	};
@@ -49,6 +51,9 @@ function mapGalleryMoment(m: MomentItem): GalleryMoment {
 export function useAccountData() {
 	let avatar = $state('');
 	let nickname = $state('');
+	let bio = $state('');
+	let locationName = $state('');
+	let handle = $state('');
 	let stats = $state<ProfileStats>({
 		moments_count: 0,
 		friends_count: 0,
@@ -65,6 +70,9 @@ export function useAccountData() {
 					const d: AccountData = res.data;
 					avatar = d.avatar_url ?? '';
 					nickname = d.nickname ?? '';
+					bio = d.bio ?? '';
+					locationName = d.location?.location_name ?? '';
+					handle = d.nickname ? `@${d.nickname.replace(/\s/g, '_')}` : '';
 					stats = d.stats ?? stats;
 				}
 			})
@@ -77,6 +85,15 @@ export function useAccountData() {
 		},
 		get nickname() {
 			return nickname;
+		},
+		get bio() {
+			return bio;
+		},
+		get locationName() {
+			return locationName;
+		},
+		get handle() {
+			return handle;
 		},
 		get stats() {
 			return stats;

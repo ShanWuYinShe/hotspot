@@ -53,7 +53,7 @@
 					const items: FeedItem[] = (feedData.items || []).map((m, i) => {
 						const mine = (m.reactions || []).find((r) => r.reacted_by_me);
 						return {
-							id: m.moment_id ?? i + 1,
+							id: m.moment_id ?? String(i + 1),
 							user: m.user?.nickname ?? '',
 							avatar: m.user?.avatar_url ?? '',
 							location: m.location?.location_name ?? '',
@@ -97,7 +97,7 @@
 		};
 	});
 
-	// 三端共用的过滤逻辑（旧版每个布局内重复，此处收敛）
+	// 三端共用的过滤逻辑（收敛到单处实现）
 	let searchVal = $state('');
 	let activeTab = $state('热门');
 	let activeTag = $state<string | null>(null);
@@ -133,12 +133,12 @@
 	>
 		{#snippet trailing()}
 			{#if device === 'tablet'}
-				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--neu-accent-primary)]" style="box-shadow:0 3px 10px var(--neu-glow);">
+				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--accent-default)]" style="box-shadow:0 3px 10px var(--glow-accent);">
 					<Sparkles style="width:11px;height:11px;color:var(--text-on-accent);" strokeWidth={2} />
 					<span class="text-white text-[11px]">精选</span>
 				</div>
 			{:else}
-				<span class="text-[var(--neu-text-muted)] text-xs">{filtered.length} 条内容</span>
+				<span class="text-[var(--text-secondary)] text-xs">{filtered.length} 条内容</span>
 			{/if}
 		{/snippet}
 		{#snippet below()}
@@ -152,7 +152,7 @@
 
 <!-- ═══ 分类 Tab 栏（下划线样式，对齐 Figma Make；随 header 吸顶）═══ -->
 {#snippet tabBar()}
-	<div class="no-scrollbar flex overflow-x-auto" style="border-bottom:1px solid var(--neu-border);">
+	<div class="no-scrollbar flex overflow-x-auto" style="border-bottom:1px solid var(--border-default);">
 		{#each TABS as tab}
 			{@const isActive = activeTab === tab}
 			<button
@@ -160,13 +160,13 @@
 				onclick={() => (activeTab = tab)}
 				aria-pressed={isActive}
 				class="relative shrink-0 rounded-t-[12px] pb-3 pt-1 outline-none"
-				style="padding-left:18px;padding-right:18px;color:{isActive ? 'var(--neu-accent-primary)' : 'var(--neu-text-muted)'};font-weight:{isActive ? 500 : 400};font-size:13px;transition:color 0.2s;"
+				style="padding-left:18px;padding-right:18px;color:{isActive ? 'var(--accent-default)' : 'var(--text-secondary)'};font-weight:{isActive ? 500 : 400};font-size:13px;transition:color 0.2s;"
 			>
 				{tab}
 				{#if isActive}
 					<span
 						class="absolute"
-						style="bottom:-1px;left:14%;right:14%;height:2px;border-radius:1px;background:var(--neu-accent-primary);"
+						style="bottom:-1px;left:14%;right:14%;height:2px;border-radius:1px;background:var(--accent-default);"
 					></span>
 				{/if}
 			</button>
@@ -187,13 +187,13 @@
 {#snippet feedState()}
 	{#if loading}
 		<div class="flex flex-col items-center gap-3 py-20">
-			<div class="rounded-full border-2 border-[var(--neu-border)] border-t-[var(--neu-accent-primary)] animate-spin" style="width:28px;height:28px;"></div>
-			<p class="text-[var(--neu-text-muted)] text-[13px]">加载附近动态…</p>
+			<div class="rounded-full border-2 border-[var(--border-default)] border-t-[var(--accent-default)] animate-spin" style="width:28px;height:28px;"></div>
+			<p class="text-[var(--text-secondary)] text-[13px]">加载附近动态…</p>
 		</div>
 	{:else}
 		<EmptyState title="附近暂时没有瞬间">
 			{#snippet icon()}
-				<Sparkles size={24} color="var(--neu-text-muted)" opacity={0.4} />
+				<Sparkles size={24} color="var(--text-secondary)" opacity={0.4} />
 			{/snippet}
 		</EmptyState>
 	{/if}

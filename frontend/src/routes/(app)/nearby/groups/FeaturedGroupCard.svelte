@@ -13,32 +13,32 @@
 	imageSrc={group.banner ?? group.name}
 	imageAlt={group.name}
 	onClick={onOpen}
-	class="rounded-feature min-h-[340px] neu-surface-hero"
+	class="rounded-feature min-h-[340px] surface-hero"
 >
 	<!-- 无封面时占位：覆盖在图片层之上 -->
 	{#if !group.banner}
 		<div
 			class="absolute inset-0 z-[1] flex items-center justify-center"
-			style="background:linear-gradient(135deg, color-mix(in srgb, var(--neu-accent-primary) 20%, var(--neu-bg)) 0%, color-mix(in srgb, var(--neu-accent-primary) 6%, var(--neu-bg)) 100%);"
+			style="background:linear-gradient(135deg, color-mix(in srgb, var(--accent-default) 20%, var(--surface-primary)) 0%, color-mix(in srgb, var(--accent-default) 6%, var(--surface-primary)) 100%);"
 		>
-			<span class="text-[var(--neu-accent-primary)] text-4xl font-semibold">{Array.from(group.name)[0] ?? '群'}</span>
+			<span class="text-[var(--accent-default)] text-4xl font-semibold">{Array.from(group.name)[0] ?? '群'}</span>
 		</div>
 	{/if}
 
 	<!-- 左上：精选徽章 -->
-	<div class="absolute top-3 left-3 z-[2] flex items-center gap-1.5 px-2 py-1 rounded-full" style="background:var(--overlay-strong);backdrop-filter:blur(8px);">
+	<div class="absolute top-3 left-3 z-[2] flex items-center gap-1.5 px-2 py-1 rounded-full" style="background:var(--surface-overlay-strong);backdrop-filter:blur(8px);">
 		<Sparkles size={11} color="white" />
 		<span class="text-white text-[10px]">本周精选</span>
 	</div>
 
 	{#snippet footer()}
 		<div class="p-4">
-			<p class="text-[var(--neu-text)] text-lg font-semibold">{group.name}</p>
-			<p class="truncate text-[var(--neu-text-muted)] text-[11px] mt-1">{group.desc}</p>
+			<p class="text-[var(--text-primary)] text-lg font-semibold">{group.name}</p>
+			<p class="truncate text-[var(--text-secondary)] text-[11px] mt-1">{group.desc}</p>
 			<div class="mt-3 flex items-center gap-3">
 				<div class="min-w-0 flex-1">
 					<!-- stats 行：成员 / 在线 / 距离（对齐 Figma FeaturedGroupCard） -->
-					<div class="flex items-center gap-3 text-[var(--neu-text-muted)] text-[11px]">
+					<div class="flex items-center gap-3 text-[var(--text-secondary)] text-[11px]">
 						<span class="flex items-center gap-1 flex-shrink-0">
 							<Users size={12} />
 							{group.members}
@@ -50,7 +50,7 @@
 						<span class="flex-shrink-0">{group.distance}</span>
 					</div>
 					<!-- activity 独立 accent 行（对齐 Figma：与 stats 行分离） -->
-					<p class="mt-2 truncate text-[11px] text-[var(--neu-accent-primary)]">
+					<p class="mt-2 truncate text-[11px] text-[var(--accent-default)]">
 						<CalendarDays class="inline mr-1" style="width:12px;height:12px;" />
 						{group.activity}
 					</p>
