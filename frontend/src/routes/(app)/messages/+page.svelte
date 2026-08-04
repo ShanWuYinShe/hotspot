@@ -161,7 +161,7 @@
 						{#each onlineChats as c (c.id)}
 							<button
 								type="button"
-								class="avatar-entry flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer"
+								class="avatar-entry neu-tap-93 flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer"
 								onclick={() => (selectedId = c.id)}
 							>
 								<div class="relative">
@@ -292,7 +292,7 @@
 					{#each onlineChats as chat (chat.id)}
 						<button
 							type="button"
-							class="avatar-entry flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer"
+							class="avatar-entry neu-tap-93 flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer"
 							onclick={() => void goto(ROUTES.message(chat.peerUserId || chat.id))}
 						>
 							<div class="relative">

@@ -22,7 +22,6 @@
 	let selectedLoc = $state<LocationResult | null>(null);
 	let activeFilters = $state<Set<PinType>>(new Set(['user', 'group', 'moment']));
 	let activeTab = $state<'nearby' | 'hot' | 'recent'>('nearby');
-	let hoveredListId = $state<string | null>(null);
 	let showFilter = $state(true);
 	const zoom = 0.045;
 	let mapCenter = $state(XUZHOU_CENTER);
@@ -107,7 +106,6 @@
 			bind:activeTab
 			bind:selectedPin
 			bind:selectedLoc
-			bind:hoveredListId
 			{mapCounts}
 			onSelectPin={handleSelectPin}
 			onSelectLoc={handleSelectLoc}

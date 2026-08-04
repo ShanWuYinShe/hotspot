@@ -17,7 +17,6 @@
 		activeTab = $bindable<'nearby' | 'hot' | 'recent'>('nearby'),
 		selectedPin = $bindable<Pin | null>(null),
 		selectedLoc = $bindable<LocationResult | null>(null),
-		hoveredListId = $bindable<string | null>(null),
 		mapCounts = $bindable<Record<PinType, number>>({ user: 0, group: 0, moment: 0 }),
 		onSelectPin,
 		onSelectLoc,
@@ -30,7 +29,6 @@
 		activeTab?: 'nearby' | 'hot' | 'recent';
 		selectedPin?: Pin | null;
 		selectedLoc?: LocationResult | null;
-		hoveredListId?: string | null;
 		mapCounts?: Record<PinType, number>;
 		/** 选中附近图钉：由父组件同步设置 selectedPin 并移动地图中心。 */
 		onSelectPin: (pin: Pin) => void;
@@ -80,8 +78,7 @@
 			{#each searchResults as r}
 				<button
 					type="button"
-					class="neu-row-hover flex w-full items-center gap-3 px-4 py-3 text-left outline-none"
-					style="background:var(--neu-bg);"
+					class="bg-[var(--neu-bg)] flex w-full items-center gap-3 px-4 py-3 text-left outline-none transition-[background-color,transform] duration-150 hover:bg-[var(--interactive-hover-fill)] focus-visible:bg-[var(--interactive-hover-fill)] active:scale-[0.98] active:duration-100"
 					aria-pressed={selectedLoc?.displayName === r.displayName}
 					onclick={() => onSelectLoc(r)}
 				>
@@ -133,11 +130,12 @@
 
 			{#if nearbyPins.length}
 				{#each nearbyPins as pin (pin.id)}
+					{@const isSelected = selectedPin?.id === pin.id}
 					<button
 						type="button"
-						class="neu-row-hover app-list-row app-list-row--standard outline-none"
-						style="background:{selectedPin?.id === pin.id ? pinTone(pin.type, 10) : 'var(--neu-bg)'};"
-						aria-pressed={selectedPin?.id === pin.id}
+						class="app-list-row app-list-row--standard outline-none transition-[background-color,transform] duration-150 {isSelected ? '' : 'hover:bg-[var(--interactive-hover-fill)] focus-visible:bg-[var(--interactive-hover-fill)]'} active:scale-[0.97] active:duration-100"
+						style={isSelected ? `background:${pinTone(pin.type, 10)};` : ''}
+						aria-pressed={isSelected}
 						onclick={() => onSelectPin(pin)}
 					>
 						{#if pin.type === 'user' && pin.avatar}
@@ -177,7 +175,7 @@
 								{/if}
 							</div>
 						</div>
-						{#if selectedPin?.id === pin.id}
+						{#if isSelected}
 							<span class="rounded-full px-2 py-1" style="font-size:10px;color:white;background:{PIN_COLORS[pin.type]};flex-shrink:0;">已定位</span>
 						{:else}
 							<ChevronRight style="width:14px;height:14px;color:var(--neu-text-muted);flex-shrink:0;" strokeWidth={1.5} />
@@ -194,12 +192,13 @@
 	{:else if activeTab === 'hot'}
 		<div class="animate-fade-in flex flex-col gap-2">
 			{#if HOT_LOCATIONS.length}
-				{#each HOT_LOCATIONS as loc, i}
+				{#each HOT_LOCATIONS as loc}
+					{@const isSelected = selectedLoc?.displayName === loc.displayName}
 					<button
 						type="button"
-						class="neu-row-hover app-list-row app-list-row--rich rounded-[16px] outline-none"
-						style="background:{selectedLoc?.displayName === loc.displayName ? 'var(--neu-accent-soft)' : 'var(--neu-bg)'};box-shadow:{selectedLoc?.displayName === loc.displayName ? '0 0 0 1px var(--neu-accent-soft-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)' : '0 0 0 1px var(--neu-border), 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)'};"
-						aria-pressed={selectedLoc?.displayName === loc.displayName}
+						class="bg-[var(--neu-bg)] flex w-full items-center gap-3 rounded-[16px] p-3.5 text-left outline-none transition-[background-color,box-shadow,transform] duration-150 {isSelected ? '' : 'hover:bg-[var(--interactive-hover-fill)] focus-visible:bg-[var(--interactive-hover-fill)]'} active:scale-[0.97] active:duration-100"
+						style="box-shadow:{isSelected ? '0 0 0 1px var(--neu-accent-soft-border), 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)' : '4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)'};border:1px solid {isSelected ? 'var(--neu-accent-soft-border)' : 'var(--neu-border)'};"
+						aria-pressed={isSelected}
 						onclick={() => onSelectLoc(loc)}
 					>
 						<div class="flex items-center justify-center rounded-[14px] flex-shrink-0 bg-[var(--neu-accent-primary)]" style="width:46px;height:46px;font-size:22px;opacity:0.88;">
@@ -228,12 +227,13 @@
 	{:else}
 		<div class="animate-fade-in flex flex-col gap-2">
 			{#if RECENT_LOCATIONS.length}
-				{#each RECENT_LOCATIONS as loc, i}
+				{#each RECENT_LOCATIONS as loc}
+					{@const isSelected = selectedLoc?.displayName === loc.displayName}
 					<button
 						type="button"
-						class="neu-row-hover app-list-row app-list-row--rich rounded-[16px] outline-none"
-						style="background:{selectedLoc?.displayName === loc.displayName ? 'var(--neu-accent-soft)' : 'var(--neu-bg)'};box-shadow:{selectedLoc?.displayName === loc.displayName || hoveredListId === `recent-${i}` ? '0 0 0 1px var(--neu-accent-soft-border), 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light)' : '0 0 0 1px var(--neu-border), 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light)'};"
-						aria-pressed={selectedLoc?.displayName === loc.displayName}
+						class="bg-[var(--neu-bg)] flex w-full items-center gap-3 rounded-[16px] p-3.5 text-left outline-none transition-[background-color,box-shadow,transform] duration-150 {isSelected ? '' : 'hover:bg-[var(--interactive-hover-fill)] focus-visible:bg-[var(--interactive-hover-fill)]'} active:scale-[0.97] active:duration-100"
+						style="box-shadow:4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);border:1px solid var(--neu-border);"
+						aria-pressed={isSelected}
 						onclick={() => onSelectLoc(loc)}
 					>
 						<div class="flex items-center justify-center rounded-full flex-shrink-0 bg-[var(--neu-bg)]" style="width:44px;height:44px;box-shadow:3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light);border:1px solid var(--neu-border);font-size:20px;">
@@ -243,7 +243,7 @@
 							<p class="text-[var(--neu-text)] text-sm">{loc.displayName}</p>
 							<p class="text-[var(--neu-text-muted)]" style="font-size:12px;margin-top:2px;">{loc.desc}</p>
 						</div>
-						{#if selectedLoc?.displayName === loc.displayName}
+						{#if isSelected}
 							<Check style="width:14px;height:14px;color:var(--neu-accent-primary);flex-shrink:0;" strokeWidth={2.5} />
 						{/if}
 					</button>

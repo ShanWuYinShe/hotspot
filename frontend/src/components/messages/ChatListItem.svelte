@@ -2,11 +2,11 @@
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 
 	// 会话列表项（对齐 Figma Make ConversationListItem 契约）：
-	//   - hover/focus-visible：--interactive-hover-fill 背景填充（无 !important，
-	//     选中项的内联 accent 背景在 hover 时保持不变 —— 这是与 neu-row-hover
-	//     关键区别：后者 !important 规则会破坏选中态）
+	//   - hover/focus-visible：--interactive-hover-fill 背景填充；选中态通过
+	//     类切换渲染 accent 背景，故 hover 填充不会覆盖选中态（inline style
+	//     会压过 Tailwind hover 类导致 hover 不生效，因此不用 inline 背景）
 	//   - selected：accent 背景 + glow 阴影 + 反色文字（content-inverse 系列）
-	//     + border-inverse 头像框
+	//     + border-inverse 头像框；仅 unread > 0 时名字加粗（对齐 Figma）
 	//   - tap：按压 opacity 0.8 反馈；transition 150ms
 
 	export interface ChatItem {
@@ -38,8 +38,8 @@
 <button
 	type="button"
 	aria-current={isSelected ? 'page' : undefined}
-	class="group flex w-full cursor-pointer items-center gap-3.5 rounded-control px-4 text-left outline-none transition-colors duration-150 hover:bg-[var(--interactive-hover-fill)] focus-visible:bg-[var(--interactive-hover-fill)] active:opacity-80"
-	style="padding:{compact ? '10px 16px' : '12px 16px'};background:{isSelected ? 'var(--neu-accent-primary)' : 'transparent'};box-shadow:{isSelected ? '0 3px 12px var(--neu-glow)' : 'none'};"
+	class="group flex w-full cursor-pointer items-center gap-3.5 rounded-control px-4 text-left outline-none transition-colors duration-150 {isSelected ? 'bg-[var(--neu-accent-primary)]' : 'hover:bg-[var(--interactive-hover-fill)] focus-visible:bg-[var(--interactive-hover-fill)]'} active:opacity-80"
+	style="padding:{compact ? '10px 16px' : '12px 16px'};box-shadow:{isSelected ? '0 3px 12px var(--neu-glow)' : 'none'};"
 	onclick={onClick}
 >
 	<span class="relative flex-shrink-0">
@@ -58,7 +58,7 @@
 		<span class="mb-0.5 flex items-baseline justify-between">
 			<span
 				class="{isSelected ? 'text-[var(--content-inverse)]' : 'text-[var(--neu-text)]'} text-sm"
-				style="font-weight:{chat.unread > 0 || isSelected ? 600 : 400};"
+				style="font-weight:{chat.unread > 0 ? 600 : 400};"
 			>
 				{chat.name}
 			</span>
