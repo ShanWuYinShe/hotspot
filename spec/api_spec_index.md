@@ -78,14 +78,11 @@
 
 ## 预留（Reserved / 未实现）
 
-以下能力**当前不实现**，但契约为其预留扩展点，待未来版本落地。客户端不应依赖这些端点/字段的存在：
+以下能力**当前不实现**，待未来版本落地时再定义端点/字段。客户端不应依赖其存在：
 
-- **消息送达回执（delivered）**：当前只到"已读"（`is_read`/`read_count`）。WS 消息相关 payload 预留 `delivered_to?: string[]` 字段位（默认不返回），未来实现送达回执时启用。
-- **第三方登录（OAuth）**：当前仅支持账号密码 + 游客。`api_spec_auth.md` 预留 `auth/oauth/{provider}/callback` 端点签名（标记 `@planned`），provider 枚举 `'wechat' | 'qq' | 'apple'`，待集成第三方 IdP 时实现。
-- **多端实时同步（self-sync）**：单设备单会话模型下，跨设备状态同步通过冷启动 `system/bootstrap` + HTTP 补拉实现。未来如需实时多端同步，将作为独立 WS 协议版本重新设计（不在此版本预留具体事件形状）。
+- **多端实时同步（self-sync）**：单设备单会话模型下，跨设备状态同步通过冷启动 `system/bootstrap` + HTTP 补拉实现。未来如需实时多端同步，将作为独立 WS 协议版本重新设计。
 - **邮箱/手机号变更**：`users/email/request_change`、`users/email/confirm_change`、`users/phone/request_change`、`users/phone/confirm_change`——依赖邮件/短信验证码发送服务，待服务接入后实现。
 - **Feed 负反馈**：`feed/dismiss`——标记内容为"不感兴趣"，用于改善推荐质量。推荐算法优化为后续迭代重点，当前阶段优先完成核心 Feed 流。
-- **综合搜索聚合**：`search/all` 已移除（原设计为一次请求返回三类结果首屏）。客户端可分别调用 `users/search`、`groups/search`、`moments/search` 实现同等效果，各自独立分页更灵活。
 
 ## 快速索引（按路径前缀）
 

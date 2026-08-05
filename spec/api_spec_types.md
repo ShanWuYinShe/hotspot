@@ -18,7 +18,6 @@
 ```typescript
 // 消息类型枚举
 type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'share' | 'system';
-// 注：SendMessageType 仅 chat 单模块使用，已下放至 api_spec_chat.md，此处不重复
 
 // 用户类型枚举（仅表达账号生命周期，不含权限角色）
 // - 'temp': 临时用户（访客，未注册）
@@ -60,11 +59,11 @@ interface Reaction {
 // === 状态枚举 ===
 // 用户在线状态（当前仅支持 online/offline，后续可扩展更多状态）
 type UserPresenceStatus = 'online' | 'offline';
-type ReportStatus = 'pending' | 'reviewing' | 'escalated' | 'resolved' | 'dismissed';
+type ReportStatus = 'pending' | 'resolved' | 'dismissed';
 
 // === 业务操作类型 ===
 type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
-type ReportAction = 'resolve' | 'dismiss' | 'escalate';
+type ReportAction = 'resolve' | 'dismiss';
 
 // 举报原因枚举（用户从中选取；跨 report + admin_moderation 两模块——AdminReportItem extends ReportItem 继承此字段）
 type ReportReason =
@@ -88,20 +87,13 @@ type AnnounceLevel = 'info' | 'warning' | 'error';
 type FollowSource = 'moment' | 'search' | 'recommendation' | 'profile' | 'group';
 
 // === 推荐理由类型（用于解释推荐来源）===
-// 注：原 RecommendationContext 为单字段 { type } 包装，过度设计，已折叠。
-// MomentItem.recommendation 现直接使用 RecommendationType。
 type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
-
-// === 以下类型从各模块收归至此，作为跨模块共享的权威定义 ===
 
 // 私聊权限（跨 user + chat + admin 三模块，故保留在通用类型）
 // 注：'friends' 表示"仅好友"，好友 = 双方互相关注的用户
 type ChatPerm = 'everyone' | 'friends' | 'nobody';
 
-// 通知类型（跨 notification + websocket + admin 三模块，故保留在通用类型）
-// 注：原单模块类型 Gender/ApplicationStatus/ShareType/BlockReason/SendMessageType/MessageSent
-// 经核查仅单模块使用，已下放回各自模块文件（符合「单模块归属」规则）。
-// 通知类型与分类本身确实跨 notification + websocket + admin_moderation 三个模块（未读计数、推送事件、管理端），故保留于此。
+// 通知类型（跨 notification + websocket + admin_moderation 三模块：未读计数、推送事件、管理端，故保留在通用类型）
 type NotifyType =
   | 'new_follower'                // 被关注
   | 'mutual_follow'               // 形成互相关注
@@ -306,10 +298,9 @@ interface Relationship {
   
   // 互相关注可由客户端计算：is_following && is_followed_by
   
-  // 设计说明：不暴露 is_blocked_by（对方是否拉黑了我）
-  // 被拉黑的用户不应感知到自己被拉黑（业界隐私最佳实践）
-  // 被拉黑后的体验由服务端隐式处理：搜索不到对方、看不到动态、无法发消息等
-  // 客户端看到的效果与"对方设置了严格隐私"一致
+  // 设计说明：不暴露 is_blocked_by（对方是否拉黑了我）——资料/关系字段不透露拉黑状态
+  // 被拉黑后的被动体验由服务端隐式处理：搜索不到对方、看不到动态等
+  // 但主动交互明确告知：私聊发送失败返回 BlockReason='blocked'（见 api_spec_chat.md），不掩饰拉黑状态
 }
 ```
 
@@ -456,7 +447,7 @@ interface MomentItem {
   };
 
   // Feed 场景返回（推荐理由，让用户了解为什么看到这条内容）
-  recommendation?: RecommendationType;  // 原 RecommendationContext 已折叠为单 type
+  recommendation?: RecommendationType;  // 推荐理由（Friend 流/附近/热门等来源解释）
 }
 ```
 
@@ -473,7 +464,7 @@ interface MomentSummary {
 
 ### 反应 (Reaction)
 
-**ReactionItem**: 反应者列表项（用于 `reactions/list` 查询某个资源的反应详情，替代原 `moments/list_likes`/`comments/list_likes`）
+**ReactionItem**: 反应者列表项（用于 `reactions/list` 查询某个资源的反应详情）
 ```typescript
 interface ReactionItem {
   user: UserInfo;
@@ -482,8 +473,7 @@ interface ReactionItem {
 }
 ```
 
-> 设计说明：原 `LikeItem`（仅 liked_at）随点赞/取消点赞二元接口被统一 `set_reaction` 取代而废弃。
-> 反应列表统一返回带 emoji 的 `ReactionItem`，客户端可按 emoji 分组渲染，也可聚合为 `MomentItem.reactions` 的 count。
+> 设计说明：反应列表统一返回带 emoji 的 `ReactionItem`，客户端可按 emoji 分组渲染，也可聚合为 `MomentItem.reactions` 的 count。
 
 ### 消息 (Message)
 
@@ -501,14 +491,12 @@ interface MessageReplyTo {
 
 > 设计说明：`sender` 采用嵌套 `UserInfo` 而非扁平 `user_id`/`nickname`，与 spec 中所有"对用户的引用"（`sender`/`actor`/`creator`/`applicant` 等）保持一致；`type` 字段是渲染回复引用的必需信息（区分文本/图片/分享等），扁平结构无法表达非文本消息的引用。
 
-> 注：`MessageSent`（消息发送成功响应）经核查仅 chat 模块使用，已下放至 `api_spec_chat.md`，此处不再定义。
-
 私聊/群聊消息项类型定义在模块文档中：`api_spec_chat.md`。
 
 ### 标签 (Tag)
 
 ```typescript
-// 标签趋势（原定义于 api_spec_search.md，跨模块复用故收归至此）
+// 标签趋势（搜索、Feed 等模块共用）
 type TagTrend = 'rising' | 'stable' | 'falling';
 
 // 标签项（搜索、Feed 等模块共用）
@@ -522,7 +510,7 @@ interface TagItem {
 ### 举报 (Report)
 
 ```typescript
-// 举报项（原定义于 api_spec_report.md，因 admin_moderation 模块 AdminReportItem extends ReportItem，跨 2 模块复用故收归至此）
+// 举报项（report + admin_moderation 两模块共用：AdminReportItem extends ReportItem）
 interface ReportItem {
   report_id: string;
   target_type: ReportTargetType;
@@ -559,8 +547,7 @@ interface ReportSnapshot {
 ### 用户设置 (UserSettings)
 
 ```typescript
-// 用户设置（原定义于 api_spec_user.md，因 WebSocket 模块 SelfSettingsUpdatedPayload 引用，跨 2 模块复用故收归至此）
-// ChatPerm 定义于本文件
+// 用户设置（user + websocket 两模块共用；ChatPerm 定义于本文件）
 
 interface UserSettings {
   privacy_level: PrivacyLevel;
@@ -568,7 +555,7 @@ interface UserSettings {
   presence_visible: boolean;         // 在线状态和最后在线时间的可见性（统一控制），false 时 `presence_status`/`last_online_at` 均不返回
   social_lists_visible: boolean;     // 好友/关注/粉丝列表是否公开（统一控制）
   groups_visible: boolean;           // 群组列表是否公开（false 时 users/list_groups 直接过滤）
-  reacted_moments_visible: boolean;  // 反应过的瞬间列表是否公开（原 liked_moments_visible，随 reaction 统一更名）
+  reacted_moments_visible: boolean;  // 反应过的瞬间列表是否公开
   stats_visible: boolean;            // 统计信息是否公开
   allow_follow: boolean;
   allow_private_chat: ChatPerm;
@@ -582,7 +569,7 @@ interface UserSettings {
 
 ### 应用配置 (AppConfig 相关)
 
-> 以下配置类型由 `system`（客户端可见投影 `ClientConfig`）与 `admin_core`（完整服务端配置 `AppConfig`）共用，故收归至此。
+> 以下配置类型由 `system`（客户端可见投影 `ClientConfig`）与 `admin_core`（完整服务端配置 `AppConfig`）共用。
 
 ```typescript
 // 功能开关（客户端可见，由管理员配置）
@@ -613,6 +600,6 @@ interface ContactInfo {
   support_email: string;
   privacy_policy_url: string;
   terms_of_service_url: string;
-  official_website_url: string;  // 原 official_website，加 _url 后缀与同接口其他 URL 字段统一
+  official_website_url: string;
 }
 ```

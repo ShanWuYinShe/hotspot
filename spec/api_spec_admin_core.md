@@ -493,7 +493,7 @@ interface AppConfig {
 
 更新应用配置（按 section 部分更新，Patch 语义）。
 
-**设计说明**：原 `update_upload`/`update_defaults`/`update_rate_limits`/`update_response_defaults`/`update_features`/`update_limits`/`update_contact` 七个端点已合并为单一 `update`。各 section 权限均为 `admin.app_config.write`（无差异化），合并消除了冗余的契约表面积；一次请求可更新单个或多个 section，未传的 section 保持不变。
+**设计说明**：`update` 按 section 部分更新（Patch 语义），一次请求可更新单个或多个 section，未传的 section 保持不变。各 section 权限统一为 `admin.app_config.write`。
 
 - **认证**: 必须 + `admin.app_config.write`
 

@@ -75,11 +75,11 @@
 // 可发送的消息类型（system 由服务端生成，客户端不可发送）
 type SendMessageType = Exclude<MessageType, 'system'>;
 
-// 不可发消息原因（被拉黑场景统一返回 'privacy'，不暴露拉黑状态以保护隐私）
+// 不可发消息原因（应用层使用，非列类型；随 send 失败响应 data 返回）
 type BlockReason =
-  | 'privacy'                  // 对方隐私设置不允许（含被拉黑场景）
-  | 'stranger_quota_exceeded'  // 陌生人消息限额已用完
-  | 'account_suspended';       // 账号被限制（如被管理员临时限制发言；当前版本仅枚举预留，尚无状态来源，服务端不会返回此值）
+  | 'blocked'                  // 已被对方拉黑（明确提示，不掩饰拉黑状态）
+  | 'privacy'                  // 对方隐私设置不允许（allow_private_chat 限制）
+  | 'stranger_quota_exceeded'; // 陌生人消息限额已用完
 
 // 消息发送成功响应（私聊/群聊通用）
 interface MessageSent {
@@ -301,9 +301,9 @@ interface DeletePrivateChatRequest {
 - 陌生人消息限制：每日向非互相关注用户（陌生人）发送私聊消息的上限由 `AppConfig.limits.stranger_message_daily_quota` 控制（客户端通过 `ClientConfig.limits` 读取），超限返回 `10200`
 
 **错误响应 data（本端点显式声明，见 `api_spec_base.md` envelope 约定）**：当发送被拒绝（返回 `10200`）时，`data` 携带结构化原因 `{ reason: BlockReason }`（`BlockReason` 定义于本模块「类型定义」）：
-- `'privacy'`：对方隐私设置不允许（含被拉黑场景，统一返回此值，不暴露拉黑状态）
+- `'blocked'`：已被对方拉黑
+- `'privacy'`：对方隐私设置不允许（`allow_private_chat` 限制）
 - `'stranger_quota_exceeded'`：陌生人消息限额已用完
-- `'account_suspended'`：账号被限制
 其余错误（`10300`）不返回 `data`。
 
 - **认证**: 必须

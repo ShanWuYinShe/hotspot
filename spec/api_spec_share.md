@@ -36,7 +36,7 @@
 ### 本模块类型
 
 ```typescript
-// 分享目标类型（原定义于 api_spec_types.md，因仅 share 模块使用已下放至此）
+// 分享目标类型
 type ShareType = 'user' | 'group' | 'moment' | 'location';
 ```
 

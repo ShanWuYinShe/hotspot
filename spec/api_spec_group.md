@@ -100,14 +100,14 @@ type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'revoked';
 interface SearchGroupsRequest {
   keyword?: string;    // 关键字搜索（匹配名称、描述等）
   tag?: string;        // 标签筛选
-  radius?: number;     // 位置范围（米），100-50000，配合 reference_point 使用；未提供时默认 5_000 米，并受 AppConfig.limits.search_radius_max 上限约束
+  radius?: number;     // 搜索半径（米），约束见 api_spec_base.md 字段校验约束
   sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';  // 默认: relevance
   reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
   pagination?: PaginationParams;
 }
 // 至少提供 keyword、tag、radius 中的一个；不满足时请求失败。
 // reference_point 不算搜索条件，仅用于距离计算和排序，不能单独作为搜索条件。
-// 当仅缺省 radius 且提供了 keyword/tag 时，服务端按默认 5_000 米计算，并受 AppConfig.limits.search_radius_max 上限约束。
+// 提供 keyword/tag 但缺省 radius 时，服务端按默认半径计算。
 ```
 
 **Response**: `ApiResponse<PaginatedData<GroupItem>>`
@@ -158,8 +158,7 @@ interface CreateGroupRequest {
 
 **Response**: `ApiResponse<GroupItem>`
 ```typescript
-// 群组创建响应：直接返回完整 GroupItem（与 moments/create 返回 MomentItem 保持一致）
-// 不再使用独立的 GroupCreated 类型，客户端无需额外请求即可获得完整群组数据
+// 群组创建响应：直接返回完整 GroupItem（与 moments/create 返回 MomentItem 保持一致），客户端无需额外请求
 ```
 
 **错误码**: `10300`
@@ -399,7 +398,7 @@ interface SetMemberRoleRequest {
 
 ### POST /api/v1/groups/members/set_mute
 
-设置成员禁言状态（两态统一端点，替代原 mute/unmute 成对动词）。
+设置成员禁言状态（两态统一端点）。
 
 - **认证**: 必须
 

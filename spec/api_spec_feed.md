@@ -61,13 +61,11 @@ interface GetFeedFollowingRequest {
 **Request**: `GetFeedNearbyRequest`
 ```typescript
 interface GetFeedNearbyRequest {
-  radius?: number;  // 位置范围（米），100-50000，可由 AppConfig.limits.search_radius_max 覆盖
+  radius?: number;  // 搜索半径（米），约束见 api_spec_base.md 字段校验约束
   reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
   pagination?: PaginationParams;
 }
 ```
-
-**半径默认值**：未提供 `radius` 时默认使用 `5_000` 米（5 km），服务端按 `AppConfig.limits.search_radius_max` 上限裁剪。
 
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
@@ -86,13 +84,11 @@ interface GetFeedNearbyRequest {
 **Request**: `GetFeedNearbyUsersRequest`
 ```typescript
 interface GetFeedNearbyUsersRequest {
-  radius?: number;  // 位置范围（米），100-50000，可由 AppConfig.limits.search_radius_max 覆盖
+  radius?: number;  // 搜索半径（米），约束见 api_spec_base.md 字段校验约束
   reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
   pagination?: PaginationParams;
 }
 ```
-
-**半径默认值**：未提供 `radius` 时默认使用 `5_000` 米（5 km），并受 `AppConfig.limits.search_radius_max` 上限约束。
 
 **Response**: `ApiResponse<PaginatedData<UserItem>>`
 
@@ -111,13 +107,11 @@ interface GetFeedNearbyUsersRequest {
 **Request**: `GetFeedNearbyGroupsRequest`
 ```typescript
 interface GetFeedNearbyGroupsRequest {
-  radius?: number;  // 位置范围（米），100-50000，可由 AppConfig.limits.search_radius_max 覆盖
+  radius?: number;  // 搜索半径（米），约束见 api_spec_base.md 字段校验约束
   reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
   pagination?: PaginationParams;
 }
 ```
-
-**半径默认值**：未提供 `radius` 时默认使用 `5_000` 米（5 km），并受 `AppConfig.limits.search_radius_max` 上限约束。
 
 **Response**: `ApiResponse<PaginatedData<GroupItem>>`
 

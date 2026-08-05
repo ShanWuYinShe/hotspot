@@ -140,8 +140,8 @@ interface ClientConfig {
 // 由管理员在后台配置（见 api_spec_admin_core.md 中 ContentDefaults）
 interface ClientDefaults {
   default_location: Location;        // 默认位置（必须满足 Location 约束），Location 定义于 api_spec_types.md
-  default_user_avatar_url: string;   // 默认用户头像 URL（原 default_user_avatar，加 _url 后缀统一）
-  default_group_avatar_url: string;  // 默认群组头像 URL（原 default_group_avatar）
+  default_user_avatar_url: string;   // 默认用户头像 URL
+  default_group_avatar_url: string;  // 默认群组头像 URL
 }
 ```
 
@@ -155,10 +155,7 @@ interface ClientDefaults {
 
 **缓存契约（防惊群）**：响应携带 `bootstrap_version`（服务端在 config/version 变更时递增）。客户端可缓存响应并在后续冷启动时通过 `If-None-Match: <bootstrap_version>` 请求头询问；服务端无变化时返回精简响应（`code=0` + `data.bootstrap_version` 不变 + 其余字段省略，由客户端使用缓存）。`bootstrap_version` 的失效由服务端在 admin 修改 `AppConfig` 或发布新版本/公告时主动递增。
 
-> **惊群防护（生产必需）**：`bootstrap_version` 变更时，所有客户端下次冷启动会同时 miss 缓存并全量重拉 bootstrap。若不加防护，单次 admin 配置变更会瞬间产生百万级全量请求击穿该端点。**强制要求**：
-> - **客户端**：检测到 `bootstrap_version` 变更后，**不得立即**发起全量请求；须加随机 jitter 延迟（建议 0-300 秒均匀分布）后再刷新，将集中请求打散到数分钟窗口
-> - **服务端**：`bootstrap_version`、`meta`、`client_config` 三个字段为**公共数据**，可按 `bootstrap_version` 做 CDN/反向代理缓存 key 并启用 stale-while-revalidate
-> - **注意**：`profile` 和 `unread_summary` 为用户私有数据，**不可被 CDN 缓存**。已登录用户的 bootstrap 响应天然不可缓存——jitter 是唯一防线；CDN 缓存仅对匿名用户流量生效
+> **防惊群**：`bootstrap_version` 变更会让所有客户端同时 miss 缓存并全量重拉，客户端应加随机 jitter 延迟后刷新，避免集中请求。`meta`/`client_config` 为公共数据可做 CDN 缓存；`profile`/`unread_summary` 为用户私有数据，不可缓存。
 
 **Request**: `BootstrapRequest`
 ```typescript

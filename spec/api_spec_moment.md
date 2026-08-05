@@ -14,7 +14,7 @@
   - 基础规范：`api_spec_base.md`
   - 通用类型：`api_spec_types.md`
   - 错误码：`api_spec_errors.md`
-  - 搜索建议：`api_spec_search.md`（per-module suggest 已移除，使用全局 `search/suggest`）
+  - 搜索建议：`api_spec_search.md`
 
 ## 端点总览
 
@@ -70,14 +70,14 @@
 interface SearchMomentsRequest {
   keyword?: string;    // 关键字搜索（匹配描述等）
   tag?: string;        // 标签筛选
-  radius?: number;     // 位置范围（米），100-50000，配合 reference_point 使用；未提供时默认 5_000 米，并受 AppConfig.limits.search_radius_max 上限约束
+  radius?: number;     // 搜索半径（米），约束见 api_spec_base.md 字段校验约束
   sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';  // 默认: relevance
   reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
   pagination?: PaginationParams;
 }
 // 至少提供 keyword、tag、radius 中的一个；不满足时请求失败
 // reference_point 不算搜索条件，仅用于距离计算和排序，不能单独作为搜索条件
-// 当仅缺省 radius 且提供了 keyword/tag 时，服务端按默认 5_000 米计算，并受 AppConfig.limits.search_radius_max 上限约束
+// 提供 keyword/tag 但缺省 radius 时，服务端按默认半径计算
 ```
 
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
@@ -223,7 +223,7 @@ interface MyFavoritesRequest {
 
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
-> 瞬间反应列表已收归至 `POST /api/v1/reactions/list`（见 `api_spec_reaction.md`），传入 `{ target_type: 'moment', target_id: ... }` 即可查询。
+> 瞬间反应列表由 `POST /api/v1/reactions/list` 查询（见 `api_spec_reaction.md`），传入 `{ target_type: 'moment', target_id: ... }` 即可。
 
 ---
 
@@ -266,7 +266,7 @@ interface CommentItem {
   mentions?: string[];      // @ 提及的用户 ID 列表
   created_at: string;
   replies_count: number;    // 子评论数量
-  reactions?: Reaction[];   // 表情反应聚合（含 reacted_by_me，替代原 likes_count + is_liked）
+  reactions?: Reaction[];   // 表情反应聚合（含 reacted_by_me）
   is_deleted: boolean;      // 软删除标记；true 时 content 为空，客户端展示"该评论已删除"占位
 
   // 顶层评论列表场景（comments/list）返回前 N 条回复预览，消除展开回复的 N+1；
@@ -342,7 +342,7 @@ interface CommentRepliesRequest {
 
 > 评论的表情反应统一由 `POST /api/v1/reactions/set { target_type: 'comment', target_id: comment_id, ... }` 处理，本模块不再单独定义 like/unlike 端点。
 
-> 评论反应列表已收归至 `POST /api/v1/reactions/list`（见 `api_spec_reaction.md`），传入 `{ target_type: 'comment', target_id: ... }` 即可查询。
+> 评论反应列表由 `POST /api/v1/reactions/list` 查询（见 `api_spec_reaction.md`），传入 `{ target_type: 'comment', target_id: ... }` 即可。
 
 ### POST /api/v1/comments/get_detail
 

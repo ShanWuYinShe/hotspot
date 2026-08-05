@@ -105,10 +105,6 @@ interface SearchSuggestResponse {
 
 ---
 
-## 标签相关类型
-
-`TagItem`、`TagTrend` 已收归至 `api_spec_types.md`，本模块和其他模块统一引用。
-
 ## 综合搜索
 
-不再提供 `search/all` 统一聚合端点。客户端需要综合搜索结果（用户 + 群组 + 瞬间首屏聚合）时，分别调用 `users/search`、`groups/search`、`moments/search` 即可——这三个接口覆盖了 `search/all` 的全部能力，且各自独立分页更为灵活。
+标签相关类型（`TagItem`/`TagTrend`）定义于 `api_spec_types.md`。综合搜索结果（用户 + 群组 + 瞬间）由客户端分别调用 `users/search`、`groups/search`、`moments/search` 拼装，各自独立分页，不提供聚合端点。

@@ -285,13 +285,11 @@ interface AdminReportItem extends ReportItem {
 - `resolve`：确认举报有效，执行处理（如封禁用户、删除内容），状态变更为 `resolved`。处理成功后向举报人推送 `ReportResolved` WebSocket 事件并落库通知（`NotifyType='report_resolved'`）
 - `dismiss`：驳回举报，不执行任何处理，状态变更为 `dismissed`。驳回后向举报人推送 `ReportDismissed` WebSocket 事件并落库通知（`NotifyType='report_dismissed'`）
 
-> `escalate` 动作保留于 `ReportAction` 枚举定义（`api_spec_types.md`）中供未来多管理员协作扩展，当前不实现。`reviewing` 状态同理保留。
-
 **Request**: `AdminReportHandleRequest`
 ```typescript
 interface AdminReportHandleRequest {
   report_id: string;
-  action: 'resolve' | 'dismiss';   // 当前仅支持 resolve / dismiss；escalate 保留供未来扩展
+  action: 'resolve' | 'dismiss';
   note?: string;                // 处理备注（0-500 字符）
   ban_duration_days?: number;   // action=resolve 时可选：封禁天数（0=永久），不提供则仅标记处理不执行封禁。
                                 // target_type='user': 直接封禁该用户
@@ -329,9 +327,8 @@ interface AdminTagSearchRequest {
 **Response**: `ApiResponse<PaginatedData<AdminTagItem>>`
 ```typescript
 // 扩展 TagItem（定义于 api_spec_types.md）添加管理员视角字段
-// 补 tag_id：原仅用 name 作主键违反「所有 ID 用 xxx_id」约定，tags 改名后历史关联不断
 interface AdminTagItem extends TagItem {
-  tag_id: string;        // 标签唯一标识（替代原仅用 name 作主键）
+  tag_id: string;        // 标签唯一标识（内部存储标识，仅用于展示/审计关联，不参与删除寻址）
   created_at: string;
 }
 ```
@@ -347,7 +344,7 @@ interface AdminTagItem extends TagItem {
 **删除语义（软屏蔽，保护历史数据完整性）**：
 - 默认**软屏蔽**：标签不再可被新建/搜索命中，但**已引用该标签的历史瞬间/群组/用户数据保留不变**（不回写改写历史记录），避免大范围不可逆的数据修改
 - 物理删除（从所有历史引用中移除）为**高危操作**，需在 Request 中显式传 `hard_delete: true` 确认；物理删除不可逆，会改写所有引用该标签的资源
-- 屏蔽后同名标签不可再次创建；如需恢复，管理员可通过独立流程取消屏蔽（本文档未定义取消屏蔽端点，待后续补充）
+- 屏蔽后同名标签不可再次创建（当前不提供取消屏蔽端点；误屏蔽需服务端维护处理）
 - **寻址说明**：标签的业务唯一键为 `name`（与普通 API `TagItem` 一致，`TagItem` 定义于 `api_spec_types.md`）；`AdminTagItem.tag_id`（定义于本文件「类型定义」小节）为内部存储标识，仅用于展示/审计关联，不参与删除寻址
 
 - **认证**: 必须 + `admin.tags.write`

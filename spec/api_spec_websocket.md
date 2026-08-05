@@ -281,14 +281,14 @@ type ServerEventType =
   // 聊天消息 - 私聊
   | "PrivateMessageNew" | "PrivateMessageEdited" | "PrivateMessageRecalled"
   | "PrivateMessageRead"
-  | "PrivateTyping"               // 原 PrivateUserTyping，与客户端事件 PrivateTyping 对齐
+  | "PrivateTyping"               // 私聊输入状态（服务端推送版）
   // 聊天消息 - 群聊
   | "GroupMessageNew" | "GroupMessageEdited" | "GroupMessageRecalled"
   | "GroupMessageReadCountUpdated"  // 群消息已读数变更（节流聚合推送，替代逐人已读广播）
-  | "GroupTyping"                 // 原 GroupUserTyping，对齐命名
+  | "GroupTyping"                 // 群聊输入状态（服务端推送版）
   // 群组管理
   | "GroupMemberJoined" | "GroupMemberLeft" | "GroupMemberRemoved"
-  | "GroupMemberRoleChanged"      // 成员角色变更（升/降级 admin），补原缺失的实时角色刷新事件
+  | "GroupMemberRoleChanged"      // 成员角色变更（升/降级 admin）
   | "GroupMemberMuted" | "GroupMemberUnmuted"
   | "GroupInviteReceived" | "GroupInviteRevoked" | "GroupInviteExpired" | "GroupInviteRejected" | "GroupInviteResponse"
   | "GroupApplicationReceived" | "GroupApplicationCancelled" | "GroupApplicationExpired" | "GroupApplicationRejected" | "GroupApplicationResponse"
@@ -568,7 +568,7 @@ interface PrivateMessageRecalledPayload {
 type PrivateMessageRecalledEvent = { type: "PrivateMessageRecalled"; payload: PrivateMessageRecalledPayload; };
 
 interface PrivateMessageReadPayload {
-  // 接收方天然知道是私聊对端读了消息，无需冗余 target_user_id/reader_id（原三 ID 设计冗余，已合并）
+  // 接收方天然知道是私聊对端读了消息，无需冗余 target_user_id/reader_id
   up_to_message_id: string;  // 标记已读至此消息（含）
   read_at: string;           // UTC ISO 8601，读取时间
 }
@@ -803,7 +803,7 @@ interface GroupMemberRemovedPayload {
 }
 type GroupMemberRemovedEvent = { type: "GroupMemberRemoved"; payload: GroupMemberRemovedPayload; };
 
-// 成员角色变更（升/降级 admin）——补原缺失的实时角色刷新事件
+// 成员角色变更（升/降级 admin）
 // GroupRole 定义于 api_spec_types.md（'owner' | 'admin' | 'member'）
 interface GroupMemberRoleChangedPayload {
   group_id: string;
@@ -836,7 +836,7 @@ interface GroupUpdatedPayload {
     has_password?: boolean;          // @member-only：订阅者恒为群成员，可推送
     location?: Location;
   };
-  updated_by: UserInfo;        // 操作者（统一用嵌套 UserInfo，与 types.md「对用户引用」约定一致，原裸 user_id 已修正）
+  updated_by: UserInfo;        // 操作者（嵌套 UserInfo，与 types.md「对用户引用」约定一致）
   updated_at: string;
 }
 type GroupUpdatedEvent = { type: "GroupUpdated"; payload: GroupUpdatedPayload; };
@@ -936,10 +936,6 @@ interface AccountBannedPayload {
 type AccountBannedEvent = { type: "AccountBanned"; payload: AccountBannedPayload; };
 ```
 
-**多端同步事件（⏳ 延期实现）**：
-
-> payload 定义见文末「[延期实现事件（Roadmap）](#延期实现事件roadmap)」小节。这些事件当前不实现，客户端通过冷启动 HTTP API 补拉实现多端同步。
-
 **错误码定义**：
 
 错误码定义以 `api_spec_errors.md` 为准（精简后每个类型仅一个错误码，具体场景通过 `message` 描述）。
@@ -976,14 +972,14 @@ type AuthEvent = { type: "Auth"; payload: AuthPayload; };
 // PingPayload 定义见上文「心跳机制」
 type PingEvent = { type: "Ping"; payload: PingPayload; };
 
-// 客户端发送版 payload（与服务端推送版 PrivateTypingPayload 结构不同，故拆分命名，避免同名冲突）
+// 客户端发送版（服务端推送版结构不同，拆分命名）
 interface PrivateTypingSendPayload {
   target_user_id: string;
   is_typing: boolean;
 }
 type PrivateTypingSendEvent = { type: "PrivateTyping"; payload: PrivateTypingSendPayload; };
 
-// 客户端发送版 payload（与服务端推送版 GroupTypingPayload 结构不同，故拆分命名，避免同名冲突）
+// 客户端发送版（服务端推送版结构不同，拆分命名）
 interface GroupTypingSendPayload {
   group_id: string;
   is_typing: boolean;

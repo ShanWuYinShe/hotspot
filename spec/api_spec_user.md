@@ -84,14 +84,14 @@ type Gender = 'male' | 'female' | 'other';
 interface SearchUsersRequest {
   keyword?: string;    // 关键字搜索（匹配昵称、bio 等）
   tag?: string;        // 标签筛选
-  radius?: number;     // 位置范围（米），100-50000，配合 reference_point 使用；未提供时默认 5_000 米，并受 AppConfig.limits.search_radius_max 上限约束
+  radius?: number;     // 搜索半径（米），约束见 api_spec_base.md 字段校验约束
   sort_by?: 'relevance' | 'distance' | 'newest';  // 默认: relevance（有意不提供 popular：用户无明确的公开热度指标，与 moments/groups 不同）
   reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
   pagination?: PaginationParams;
 }
 // 至少提供 keyword、tag、radius 中的一个；不满足时请求失败
 // reference_point 不算搜索条件，仅用于距离计算和排序，不能单独作为搜索条件
-// 当仅缺省 radius 且提供了 keyword/tag 时，服务端按默认 5_000 米计算，并受 AppConfig.limits.search_radius_max 上限约束
+// 提供 keyword/tag 但缺省 radius 时，服务端按默认半径计算
 ```
 
 **Response**: `ApiResponse<PaginatedData<UserItem>>`
