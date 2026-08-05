@@ -34,7 +34,7 @@
 - 所有 ID 字段必须使用显式 `xxx_id` 命名（禁止裸 `id`）
 - 所有 `xxx_id` 字段在 API 层统一为 `string` 类型（前端视为不透明字符串，不关心内部是数字还是 UUID）
 - 所有 `*_url` 字段（如 `avatar_url`、`thumbnail_url`、`upload_url` 等）的值必须为**完整的绝对 URL**（含协议和域名，如 `https://cdn.example.com/path/to/image.jpg`），客户端无需拼接 base URL
-- 幂等性：会产生重复内容或副作用的写操作必须使用 `Idempotency-Key`；其余写操作无需该键（详见「幂等性（契约级）」）。
+- 幂等性：仅**重发会产生重复结果且无自然去重兜底**的写操作必须使用 `Idempotency-Key`；其余写操作（含状态设值、删除/解散/更新及有自然去重键的创建）无需该键（判定见「幂等性（契约级）」）。
 
 禁止：
 - 禁止在客户端生成或拼装 `cursor`
