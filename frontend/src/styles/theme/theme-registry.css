@@ -26,6 +26,7 @@
   --color-surface-page: var(--surface-page);
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
+  --color-text-on-accent: var(--text-on-accent);
   --color-accent-default: var(--accent-default);
   --color-accent-soft: var(--accent-soft);
   --color-accent-border: var(--accent-border);
@@ -87,6 +88,8 @@
   --color-navigation-active-indicator: var(--navigation-active-indicator);
   --color-surface-scrim: var(--surface-scrim);
   --color-surface-overlay: var(--surface-overlay);
+  --color-surface-overlay-strong: var(--surface-overlay-strong);
+  --color-surface-overlay-soft: var(--surface-overlay-soft);
   --color-border-inverse: var(--border-inverse);
 
   /* Interaction feedback fill tokens（按压/悬停实底填充） */

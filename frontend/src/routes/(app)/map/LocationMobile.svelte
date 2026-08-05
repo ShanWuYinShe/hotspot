@@ -171,7 +171,7 @@
 	const rightCtrlBottom = $derived(sheetH + 10);
 </script>
 
-<div class="bg-[var(--surface-primary)]" style="position:relative;width:100%;height:100%;overflow:hidden;">
+<div class="bg-surface-primary" style="position:relative;width:100%;height:100%;overflow:hidden;">
 	<!-- ══ MAP (full screen, tappable) ══ -->
 	<div
 		style="position:absolute;inset:0;z-index:0;"
@@ -218,13 +218,13 @@
 		{/if}
 
 		{#if mapLoading}
-			<div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 rounded-full bg-[var(--surface-primary)] px-3 py-1 text-[11px] text-[var(--text-secondary)]" style="box-shadow:0 2px 12px var(--elevation-shadow-dark);border:1px solid var(--border-default);">
+			<div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-[11px] text-text-secondary" style="box-shadow:0 2px 12px var(--elevation-shadow-dark);border:1px solid var(--border-default);">
 				加载地图数据…
 			</div>
 		{/if}
 
 		<!-- Attribution -->
-		<div class="text-[var(--text-secondary)]" style="position:absolute;bottom:4px;left:6px;font-size:9px;opacity:0.4;pointer-events:none;z-index:1;">
+		<div class="text-text-secondary" style="position:absolute;bottom:4px;left:6px;font-size:9px;opacity:0.4;pointer-events:none;z-index:1;">
 			© OpenStreetMap contributors
 		</div>
 	</div>
@@ -247,7 +247,7 @@
 				<div bind:this={filterAnchorEl}>
 					<button
 						type="button"
-						class="hover-btn flex items-center gap-2 rounded-full outline-none {showFilter ? 'bg-[var(--accent-default)] text-white' : 'bg-[var(--surface-primary)] text-[var(--text-primary)]'}"
+						class="hover-btn flex items-center gap-2 rounded-full outline-none {showFilter ? 'bg-accent-default text-white' : 'bg-surface-primary text-text-primary'}"
 						style="padding:9px 16px;font-size:14px;border:{showFilter ? '1px solid transparent' : '1px solid var(--border-default)'};box-shadow:{showFilter ? '0 4px 16px var(--glow-accent)' : '0 2px 12px var(--elevation-shadow-dark), 0 1px 3px var(--elevation-shadow-dark)'};"
 						onclick={() => (showFilter = !showFilter)}
 					>
@@ -271,7 +271,7 @@
 						] as [type, label, icon, color], i}
 							{@const active = activeFilters.has(type as PinType)}
 							{#if i > 0}
-								<div class="bg-[var(--border-default)]" style="height:1px;"></div>
+								<div class="bg-border-default" style="height:1px;"></div>
 							{/if}
 							<button
 								type="button"
@@ -280,7 +280,7 @@
 								onclick={() => toggleFilter(type as PinType)}
 							>
 								<img src={icon} alt={label} style="width:18px;height:24px;flex-shrink:0;" />
-								<span class="text-[var(--text-primary)]" style="flex:1;font-size:13px;text-align:left;">{label}</span>
+								<span class="text-text-primary" style="flex:1;font-size:13px;text-align:left;">{label}</span>
 								<div style="width:13px;height:13px;border-radius:50%;flex-shrink:0;background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--border-default)'};box-shadow:{active ? `0 0 6px ${color}55` : 'none'};transition:all 0.18s;"></div>
 							</button>
 						{/each}
@@ -324,7 +324,7 @@
 	</div>
 
 	<!-- ══ BOTTOM SHEET (draggable) ══ -->
-	<div class="bg-[var(--surface-primary)]" style={sheetStyle}>
+	<div class="bg-surface-primary" style={sheetStyle}>
 		<!-- Drag handle -->
 		<div
 			role="slider"
@@ -338,7 +338,7 @@
 			onpointerdown={onHandlePointerDown}
 			onkeydown={onHandleKeydown}
 		>
-			<div class="bg-[var(--border-default)]" style="width:38px;height:4px;border-radius:2px;"></div>
+			<div class="bg-border-default" style="width:38px;height:4px;border-radius:2px;"></div>
 		</div>
 
 		<!-- Search bar -->
@@ -356,7 +356,7 @@
 						if (snap === 'min') snapTo('mid');
 					}}
 					placeholder="搜索地点、地标或坐标"
-					class="flex-1 bg-transparent outline-none text-[var(--text-primary)] text-sm"
+					class="flex-1 bg-transparent outline-none text-text-primary text-sm"
 				/>
 				{#if searchQuery}
 					<button
@@ -396,7 +396,7 @@
 		<div style="flex-shrink:0;padding:8px 14px 18px;">
 			<button
 				type="button"
-				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-[var(--accent-default)] text-white"
+				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-white"
 				style="height:50px;font-size:15px;box-shadow:0 6px 20px var(--glow-accent);"
 				onclick={handleConfirm}
 			>

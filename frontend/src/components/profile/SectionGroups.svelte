@@ -20,8 +20,8 @@
 	<div class="shrink-0 px-[var(--page-gutter)] pt-4 pb-3">
 		<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索我的群组…" class="px-3.5 py-2.5" />
 		<div class="mt-3 flex items-center justify-between">
-			<p class="text-[12px] text-[var(--text-secondary)]">共 {groups.length} 个群组</p>
-			<div class="flex items-center gap-1.5 text-[12px] text-[var(--status-online)]">
+			<p class="text-[12px] text-text-secondary">共 {groups.length} 个群组</p>
+			<div class="flex items-center gap-1.5 text-[12px] text-status-online">
 				<span class="rounded-full" style="width:6px;height:6px;background:var(--status-online);"></span>
 				{totalOnline} 人在线
 			</div>
@@ -33,7 +33,7 @@
 		{#each filtered as g (g.id)}
 			<button
 				type="button"
-				class="card-hover tap-94 group flex min-h-[148px] w-full overflow-hidden rounded-relaxed border text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-default)]"
+				class="card-hover tap-94 group flex min-h-[148px] w-full overflow-hidden rounded-relaxed border text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
 				style="background:var(--surface-primary);border-color:var(--border-default);box-shadow:5px 5px 12px var(--elevation-shadow-dark), -5px -5px 12px var(--elevation-shadow-light);"
 				aria-label={`进入群组：${g.name}`}
 				onclick={() => void goto(`${ROUTES.group(g.id)}?from=me`)}
@@ -66,13 +66,13 @@
 							class="h-8 w-8 shrink-0 rounded-tight object-cover"
 							style="border:1px solid var(--border-default);"
 						/>
-						<p class="min-w-0 flex-1 truncate text-[14px] font-medium text-[var(--text-primary)]">{g.name}</p>
-						<ChevronRight class="shrink-0 text-[var(--text-secondary)]" style="width:15px;height:15px;" strokeWidth={1.7} />
+						<p class="min-w-0 flex-1 truncate text-[14px] font-medium text-text-primary">{g.name}</p>
+						<ChevronRight class="shrink-0 text-text-secondary" style="width:15px;height:15px;" strokeWidth={1.7} />
 					</div>
 
-					<p class="mt-2 truncate text-[11px] text-[var(--text-secondary)]">{g.desc}</p>
+					<p class="mt-2 truncate text-[11px] text-text-secondary">{g.desc}</p>
 
-					<div class="mt-auto flex items-center justify-between pt-3 text-[11px] text-[var(--text-secondary)]">
+					<div class="mt-auto flex items-center justify-between pt-3 text-[11px] text-text-secondary">
 						<span class="flex items-center gap-1">
 							<Users style="width:12px;height:12px;" strokeWidth={1.5} />
 							{g.members} 位成员
@@ -89,8 +89,8 @@
 
 	{#if filtered.length === 0}
 		<div class="flex flex-1 flex-col items-center justify-center gap-2 px-[var(--page-gutter)] py-16">
-			<Search class="text-[var(--text-secondary)]" style="width:22px;height:22px;" strokeWidth={1.4} />
-			<p class="text-[13px] text-[var(--text-secondary)]">没有找到匹配的群组</p>
+			<Search class="text-text-secondary" style="width:22px;height:22px;" strokeWidth={1.4} />
+			<p class="text-[13px] text-text-secondary">没有找到匹配的群组</p>
 		</div>
 	{/if}
 </div>

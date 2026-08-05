@@ -50,12 +50,12 @@
 			class="absolute inset-0 z-[1] flex items-center justify-center"
 			style="background:linear-gradient(135deg, color-mix(in srgb, var(--accent-default) 24%, var(--surface-primary)) 0%, color-mix(in srgb, var(--accent-default) 8%, var(--surface-primary)) 100%);"
 		>
-			<span class="text-[var(--accent-default)] text-3xl font-semibold">{Array.from(user.name)[0] ?? '?'}</span>
+			<span class="text-accent-default text-3xl font-semibold">{Array.from(user.name)[0] ?? '?'}</span>
 		</div>
 	{/if}
 
 	<!-- 右上：距离（单份，消除历史重复徽章 bug） -->
-	<div class="absolute top-2.5 right-2.5 z-[2] flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--surface-overlay-strong)]" style="backdrop-filter:blur(8px);">
+	<div class="absolute top-2.5 right-2.5 z-[2] flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface-overlay-strong" style="backdrop-filter:blur(8px);">
 		<MapPin class="w-[9px] h-[9px] text-white" strokeWidth={1.5} />
 		<span class="text-white text-[10px]">{user.distance}</span>
 	</div>
@@ -64,10 +64,10 @@
 		<div class="px-3 pt-2.5 pb-2.5">
 			<div class="flex items-center justify-between gap-2">
 				<div class="min-w-0">
-					<p class="flex items-center gap-1.5 truncate text-[var(--text-primary)] text-[14px]" style="font-weight:600;">
+					<p class="flex items-center gap-1.5 truncate text-text-primary text-[14px]" style="font-weight:600;">
 						<span class="truncate">{user.name}</span>
 					</p>
-					<p class="truncate text-[var(--text-secondary)] text-[10px] mt-0.5">{user.note}</p>
+					<p class="truncate text-text-secondary text-[10px] mt-0.5">{user.note}</p>
 				</div>
 				{#if user.status === '在线'}
 					<span

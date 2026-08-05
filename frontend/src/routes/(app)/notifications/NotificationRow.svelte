@@ -44,11 +44,11 @@
 
 	<!-- Text -->
 	<div class="flex-1 min-w-0">
-		<p class="truncate text-[var(--text-primary)] text-[13px]">
+		<p class="truncate text-text-primary text-[13px]">
 			<span style="font-weight:{notif.read ? 400 : 500};">{notif.user.name}</span>
 			{' '}{notif.text}
 		</p>
-		<p class="text-[var(--text-secondary)] text-[11px] mt-0.5">{notif.time}</p>
+		<p class="text-text-secondary text-[11px] mt-0.5">{notif.time}</p>
 	</div>
 
 	<!-- Moment thumb or unread dot -->

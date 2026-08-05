@@ -67,9 +67,9 @@
 	data-active={pressed ? 'true' : undefined}
 	tabindex={onClick ? 0 : undefined}
 	class={cn(
-		'relative transition-[background-color,box-shadow,opacity] duration-200 ease-out focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-default)]',
+		'relative transition-[background-color,box-shadow,opacity] duration-200 ease-out focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default',
 		onClick && 'cursor-pointer',
-		isCard ? 'rounded-relaxed border' : 'bg-[var(--surface-primary)]',
+		isCard ? 'rounded-relaxed border' : 'bg-surface-primary',
 		className
 	)}
 	style={`${rowStyle}opacity:${rowOpacity};transition-duration:${isPressed ? '0.10s' : '0.20s'};`}

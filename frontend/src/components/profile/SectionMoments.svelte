@@ -45,7 +45,7 @@
 				{/snippet}
 				{#snippet action()}
 					{#if activeTab === 'posts'}
-						<button type="button" onclick={openComposer} class="rounded-full bg-[var(--accent-default)] px-4 py-2 text-xs font-medium text-[var(--text-on-accent)] focus-ring">
+						<button type="button" onclick={openComposer} class="rounded-full bg-accent-default px-4 py-2 text-xs font-medium text-text-on-accent focus-ring">
 							发布第一条
 						</button>
 					{/if}
@@ -56,18 +56,18 @@
 			<header class="border-b pb-6" style="border-color:var(--border-default);">
 				<div class="flex flex-wrap items-end justify-between gap-5">
 					<div>
-						<p class="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--accent-default)]">Personal archive / 2024</p>
-						<h2 class="mt-2 text-[30px] font-medium leading-none tracking-[-0.02em] text-[var(--text-primary)]">个人影像档案</h2>
-						<p class="mt-3 max-w-[460px] text-sm leading-6 text-[var(--text-secondary)]">{activeMeta[activeTab].description}</p>
+						<p class="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-accent-default">Personal archive / 2024</p>
+						<h2 class="mt-2 text-[30px] font-medium leading-none tracking-[-0.02em] text-text-primary">个人影像档案</h2>
+						<p class="mt-3 max-w-[460px] text-sm leading-6 text-text-secondary">{activeMeta[activeTab].description}</p>
 					</div>
 					<div class="flex items-center gap-5 border-l pl-5" style="border-color:var(--border-default);">
 						<div>
-							<p class="font-mono text-xl font-semibold leading-none text-[var(--text-primary)]">{archive.length}</p>
-							<p class="mt-1 text-[11px] text-[var(--text-secondary)]">{activeMeta[activeTab].label}</p>
+							<p class="font-mono text-xl font-semibold leading-none text-text-primary">{archive.length}</p>
+							<p class="mt-1 text-[11px] text-text-secondary">{activeMeta[activeTab].label}</p>
 						</div>
 						<div>
-							<p class="font-mono text-xl font-semibold leading-none text-[var(--text-primary)]">27</p>
-							<p class="mt-1 text-[11px] text-[var(--text-secondary)]">到过的地方</p>
+							<p class="font-mono text-xl font-semibold leading-none text-text-primary">27</p>
+							<p class="mt-1 text-[11px] text-text-secondary">到过的地方</p>
 						</div>
 					</div>
 				</div>
@@ -82,15 +82,15 @@
 								role="tab"
 								aria-selected={isActive}
 								onclick={() => (activeTab = item.id)}
-								class="rounded-full px-3.5 py-2 text-xs transition-colors {isActive ? 'bg-[var(--surface-primary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}"
+								class="rounded-full px-3.5 py-2 text-xs transition-colors {isActive ? 'bg-surface-primary text-text-primary' : 'text-text-secondary hover:text-text-primary'}"
 								style={isActive ? 'box-shadow:0 2px 8px var(--elevation-shadow-dark);' : ''}
 							>
 								{item.label}<span class="ml-1.5 font-mono text-[10px] opacity-70">{item.count}</span>
 							</button>
 						{/each}
 					</div>
-					<div class="flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">
-						<CalendarDays class="size-3.5 text-[var(--accent-default)]" strokeWidth={1.7} />
+					<div class="flex items-center gap-1.5 text-[11px] text-text-secondary">
+						<CalendarDays class="size-3.5 text-accent-default" strokeWidth={1.7} />
 						<span>{activeMeta[activeTab].note}</span>
 					</div>
 				</div>
@@ -102,7 +102,7 @@
 					<button
 						type="button"
 						onclick={() => void goto(`${ROUTES.moment(featured.id)}?from=me`)}
-						class="group block w-full overflow-hidden rounded-feature border text-left transition-colors hover:border-[var(--accent-border)]"
+						class="group block w-full overflow-hidden rounded-feature border text-left transition-colors hover:border-accent-border"
 						style="border-color:var(--border-default);background:var(--surface-primary);"
 						aria-label="查看精选瞬间"
 					>
@@ -113,18 +113,18 @@
 							<div class="flex flex-col justify-between border-t p-6 lg:border-l lg:border-t-0" style="border-color:var(--border-default);">
 								<div>
 									<div class="flex items-center justify-between">
-										<span class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-default)]">Featured record</span>
-										<span class="text-[11px] text-[var(--text-secondary)]">06.18</span>
+										<span class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-accent-default">Featured record</span>
+										<span class="text-[11px] text-text-secondary">06.18</span>
 									</div>
-									<h3 class="mt-5 text-[24px] font-medium leading-snug text-[var(--text-primary)]">在云龙湖边，<br />把傍晚收进相册。</h3>
-									<p class="mt-4 text-sm leading-6 text-[var(--text-secondary)]">风停下来以后，水面留下了比语言更完整的回答。今天没有目的地，只是沿着湖岸慢慢走。</p>
+									<h3 class="mt-5 text-[24px] font-medium leading-snug text-text-primary">在云龙湖边，<br />把傍晚收进相册。</h3>
+									<p class="mt-4 text-sm leading-6 text-text-secondary">风停下来以后，水面留下了比语言更完整的回答。今天没有目的地，只是沿着湖岸慢慢走。</p>
 								</div>
 								<div class="mt-8 flex items-center justify-between border-t pt-4" style="border-color:var(--border-default);">
-									<div class="flex items-center gap-4 text-[11px] text-[var(--text-secondary)]">
-										<span class="flex items-center gap-1"><Heart class="size-3 text-[var(--accent-default)]" strokeWidth={1.8} />{featured.likes}</span>
-										<span class="flex items-center gap-1"><MessageCircle class="size-3 text-[var(--accent-default)]" strokeWidth={1.8} />{featured.comments}</span>
+									<div class="flex items-center gap-4 text-[11px] text-text-secondary">
+										<span class="flex items-center gap-1"><Heart class="size-3 text-accent-default" strokeWidth={1.8} />{featured.likes}</span>
+										<span class="flex items-center gap-1"><MessageCircle class="size-3 text-accent-default" strokeWidth={1.8} />{featured.comments}</span>
 									</div>
-									<span class="flex size-8 items-center justify-center rounded-full text-[var(--accent-default)]" style="background:var(--accent-soft);" aria-hidden="true">
+									<span class="flex size-8 items-center justify-center rounded-full text-accent-default" style="background:var(--accent-soft);" aria-hidden="true">
 										<ArrowUpRight class="size-4" strokeWidth={1.8} />
 									</span>
 								</div>
@@ -137,10 +137,10 @@
 				{#if remaining.length > 0}
 					<div class="mt-10 flex items-end justify-between border-b pb-3" style="border-color:var(--border-default);">
 						<div>
-							<p class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-default)]">Recent entries</p>
-							<h3 class="mt-1 text-base font-medium text-[var(--text-primary)]">六月的城市笔记</h3>
+							<p class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-accent-default">Recent entries</p>
+							<h3 class="mt-1 text-base font-medium text-text-primary">六月的城市笔记</h3>
 						</div>
-						<p class="text-[11px] text-[var(--text-secondary)]">{remaining.length} 个片段</p>
+						<p class="text-[11px] text-text-secondary">{remaining.length} 个片段</p>
 					</div>
 
 					<div class="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -148,7 +148,7 @@
 							<button
 								type="button"
 								onclick={() => void goto(`${ROUTES.moment(moment.id)}?from=me`)}
-								class="group overflow-hidden rounded-control border text-left transition-colors hover:border-[var(--accent-border)] {index === 0 ? 'col-span-2' : ''}"
+								class="group overflow-hidden rounded-control border text-left transition-colors hover:border-accent-border {index === 0 ? 'col-span-2' : ''}"
 								style="border-color:var(--border-default);background:var(--surface-primary);"
 								aria-label="查看瞬间详情"
 							>
@@ -156,8 +156,8 @@
 									<img src={moment.img} alt={moment.title || '瞬间图片'} class="image-hover-frame__image h-full w-full object-cover" />
 								</div>
 								<div class="flex items-center justify-between gap-2 px-3 py-2.5">
-									<p class="truncate text-xs text-[var(--text-primary)]">{moment.title || '瞬间'}</p>
-									<div class="flex shrink-0 items-center gap-2 text-[10px] text-[var(--text-secondary)]">
+									<p class="truncate text-xs text-text-primary">{moment.title || '瞬间'}</p>
+									<div class="flex shrink-0 items-center gap-2 text-[10px] text-text-secondary">
 										<span class="flex items-center gap-0.5"><Heart class="size-3" strokeWidth={1.7} />{moment.likes}</span>
 										<span class="flex items-center gap-0.5"><MessageCircle class="size-3" strokeWidth={1.7} />{moment.comments}</span>
 									</div>

@@ -133,12 +133,12 @@
 	>
 		{#snippet trailing()}
 			{#if device === 'tablet'}
-				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--accent-default)]" style="box-shadow:0 3px 10px var(--glow-accent);">
+				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-default" style="box-shadow:0 3px 10px var(--glow-accent);">
 					<Sparkles style="width:11px;height:11px;color:var(--text-on-accent);" strokeWidth={2} />
 					<span class="text-white text-[11px]">精选</span>
 				</div>
 			{:else}
-				<span class="text-[var(--text-secondary)] text-xs">{filtered.length} 条内容</span>
+				<span class="text-text-secondary text-xs">{filtered.length} 条内容</span>
 			{/if}
 		{/snippet}
 		{#snippet below()}
@@ -187,8 +187,8 @@
 {#snippet feedState()}
 	{#if loading}
 		<div class="flex flex-col items-center gap-3 py-20">
-			<div class="rounded-full border-2 border-[var(--border-default)] border-t-[var(--accent-default)] animate-spin" style="width:28px;height:28px;"></div>
-			<p class="text-[var(--text-secondary)] text-[13px]">加载附近动态…</p>
+			<div class="rounded-full border-2 border-border-default border-t-accent-default animate-spin" style="width:28px;height:28px;"></div>
+			<p class="text-text-secondary text-[13px]">加载附近动态…</p>
 		</div>
 	{:else}
 		<EmptyState title="附近暂时没有瞬间">

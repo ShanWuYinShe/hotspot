@@ -32,14 +32,14 @@
 		<div class="flex items-center justify-between px-[var(--page-gutter)] py-4 flex-shrink-0" style="border-bottom:1px solid var(--border-default);">
 			<div>
 				<div class="flex items-center gap-2.5">
-					<span class="text-[var(--text-primary)] text-[15px]">关注</span>
-					<span class="px-2 py-0.5 rounded-full bg-[var(--accent-default)] text-white text-[11px]">
+					<span class="text-text-primary text-[15px]">关注</span>
+					<span class="px-2 py-0.5 rounded-full bg-accent-default text-white text-[11px]">
 						{following.length} 人
 					</span>
 				</div>
-				<p class="mt-1 text-[var(--text-secondary)] text-[11px]">你主动订阅的动态与创作者</p>
+				<p class="mt-1 text-text-secondary text-[11px]">你主动订阅的动态与创作者</p>
 			</div>
-			<span class="rounded-full px-3 py-1 bg-[var(--accent-soft)] text-[var(--accent-default)] text-[11px]" style="border:1px solid var(--accent-border);">
+			<span class="rounded-full px-3 py-1 bg-accent-soft text-accent-default text-[11px]" style="border:1px solid var(--accent-border);">
 				点击卡片查看主页
 			</span>
 		</div>
@@ -51,7 +51,7 @@
 			{@const active = sortBy === pill.id}
 			<button
 				type="button"
-				class="hover-btn flex items-center gap-1.5 px-3 py-1 rounded-full outline-none surface-ghost text-xs tap-93 {active ? 'bg-[var(--accent-soft)] text-[var(--accent-default)] font-medium' : 'text-[var(--text-secondary)]'}"
+				class="hover-btn flex items-center gap-1.5 px-3 py-1 rounded-full outline-none surface-ghost text-xs tap-93 {active ? 'bg-accent-soft text-accent-default font-medium' : 'text-text-secondary'}"
 				style={active ? 'border-color:var(--accent-border);' : ''}
 				onclick={() => (sortBy = pill.id as 'recent' | 'active')}
 			>
@@ -83,14 +83,14 @@
 						>
 							<Avatar ring src={f.avatar} name={f.name} size={48} />
 							<div class="flex-1 min-w-0">
-								<p class="text-[var(--text-primary)] text-[13px]">{f.name}</p>
-								<p class="truncate text-[var(--text-secondary)] text-[11px] mt-px">{f.desc}</p>
-								<p class="text-[var(--accent-default)] text-[10px] mt-px">{f.posts} 帖子</p>
+								<p class="text-text-primary text-[13px]">{f.name}</p>
+								<p class="truncate text-text-secondary text-[11px] mt-px">{f.desc}</p>
+								<p class="text-accent-default text-[10px] mt-px">{f.posts} 帖子</p>
 							</div>
 							<img src={f.latestImg} alt="" class="rounded-[8px] object-cover flex-shrink-0" style="width:44px;height:44px;opacity:0.85;" />
 							<button
 								type="button"
-								class="hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] tap-93 {unfollowedIds.has(f.id) ? 'bg-[var(--accent-default)] text-white' : 'bg-transparent text-[var(--text-secondary)]'}"
+								class="hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] tap-93 {unfollowedIds.has(f.id) ? 'bg-accent-default text-white' : 'bg-transparent text-text-secondary'}"
 								style={unfollowedIds.has(f.id) ? 'border:1px solid transparent;' : 'border:1px solid var(--border-strong);'}
 								onclick={(e) => {
 									e.stopPropagation();
@@ -127,14 +127,14 @@
 						>
 							<Avatar ring src={f.avatar} name={f.name} size={42} />
 							<div class="flex-1 min-w-0">
-								<p class="text-[var(--text-primary)] text-[13px]">{f.name}</p>
-								<p class="truncate text-[var(--text-secondary)] text-[11px] mt-px">{f.desc}</p>
-								<p class="text-[var(--accent-default)] text-[10px] mt-px">{f.posts} 帖子</p>
+								<p class="text-text-primary text-[13px]">{f.name}</p>
+								<p class="truncate text-text-secondary text-[11px] mt-px">{f.desc}</p>
+								<p class="text-accent-default text-[10px] mt-px">{f.posts} 帖子</p>
 							</div>
 							<img src={f.latestImg} alt="" class="rounded-[8px] object-cover flex-shrink-0" style="width:36px;height:36px;opacity:0.85;" />
 							<button
 								type="button"
-								class="hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] tap-93 {unfollowedIds.has(f.id) ? 'bg-[var(--accent-default)] text-white' : 'bg-transparent text-[var(--text-secondary)]'}"
+								class="hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] tap-93 {unfollowedIds.has(f.id) ? 'bg-accent-default text-white' : 'bg-transparent text-text-secondary'}"
 								style={unfollowedIds.has(f.id) ? 'border:1px solid transparent;' : 'border:1px solid var(--border-strong);'}
 								onclick={(e) => {
 									e.stopPropagation();

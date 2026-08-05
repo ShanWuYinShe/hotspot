@@ -151,22 +151,22 @@
 			<div class="flex items-center justify-between">
 				<div>
 					<p class="eyebrow">关系与安全</p>
-					<p class="mt-1 text-[16px] text-[var(--text-primary)]">{user.name}</p>
+					<p class="mt-1 text-[16px] text-text-primary">{user.name}</p>
 				</div>
 				<ActionIconButton icon={X} label="关闭" onClick={() => (moreOpen = false)} size={32} />
 			</div>
-				<label class="mt-5 block text-[12px] text-[var(--text-secondary)]">
+				<label class="mt-5 block text-[12px] text-text-secondary">
 					备注名称
 					<input
 						bind:value={remarkDraft}
 						oninput={(e) => (remarkDraft = e.currentTarget.value.slice(0, 24))}
 						placeholder="只对你可见"
-						class="mt-2 w-full rounded-[14px] ring-1 ring-[var(--border-default)] bg-transparent px-3 py-2.5 text-[13px] text-[var(--text-primary)] focus-ring"
+						class="mt-2 w-full rounded-[14px] ring-1 ring-border-default bg-transparent px-3 py-2.5 text-[13px] text-text-primary focus-ring"
 					/>
 				</label>
 				<button
 					type="button"
-					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] ring-1 ring-[var(--border-default)] py-2.5 text-[13px] text-[var(--text-primary)] focus-ring"
+					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] ring-1 ring-border-default py-2.5 text-[13px] text-text-primary focus-ring"
 					onclick={() => {
 						remark = remarkDraft.trim();
 						moreOpen = false;
@@ -177,7 +177,7 @@
 				</button>
 				<button
 					type="button"
-					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-[var(--status-danger)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--status-danger)]"
+					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-status-danger outline-none focus-visible:ring-2 focus-visible:ring-status-danger"
 					onclick={toggleBlock}
 				>
 					<UserX size={14} />
@@ -185,7 +185,7 @@
 				</button>
 				<button
 					type="button"
-					class="hover-btn mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-[var(--text-secondary)] focus-ring"
+					class="hover-btn mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-text-secondary focus-ring"
 					onclick={submitReport}
 				>
 					{#if reportSent}
@@ -231,14 +231,14 @@
 						<div class="rounded-[22px] overflow-hidden" style="width:76px;height:76px;border:3px solid var(--surface-primary);box-shadow:0 6px 20px rgba(0,0,0,0.22);">
 							<img src={user.avatar} alt={user.name} class="w-full h-full object-cover" />
 						</div>
-						<span class="absolute bottom-1 right-1 rounded-full bg-[var(--status-online)]" style="width:12px;height:12px;border:2px solid var(--surface-primary);"></span>
+						<span class="absolute bottom-1 right-1 rounded-full bg-status-online" style="width:12px;height:12px;border:2px solid var(--surface-primary);"></span>
 					</div>
 
 					<!-- Action buttons -->
 					<div class="flex gap-2 pb-1">
 						<button
 							type="button"
-							class="hover-btn tap-93 flex items-center gap-1.5 px-3.5 py-2 rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-45 bg-[var(--surface-primary)] text-[var(--text-secondary)] text-xs"
+							class="hover-btn tap-93 flex items-center gap-1.5 px-3.5 py-2 rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-45 bg-surface-primary text-text-secondary text-xs"
 							style="border:1px solid var(--border-default);box-shadow:4px 4px 10px var(--elevation-shadow-dark), -4px -4px 10px var(--elevation-shadow-light);"
 							disabled={blocked}
 							onclick={() => !blocked && void goto(ROUTES.message(1))}
@@ -248,7 +248,7 @@
 						</button>
 						<button
 							type="button"
-							class="hover-btn tap-93 flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all disabled:cursor-not-allowed disabled:opacity-45 text-xs {followed ? 'bg-[var(--surface-primary)] text-[var(--accent-default)]' : 'bg-[var(--accent-default)] text-white'}"
+							class="hover-btn tap-93 flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all disabled:cursor-not-allowed disabled:opacity-45 text-xs {followed ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-white'}"
 							style={followed
 								? 'border:1.5px solid var(--accent-default);box-shadow:4px 4px 10px var(--elevation-shadow-dark), -4px -4px 10px var(--elevation-shadow-light);'
 								: 'box-shadow:0 4px 14px var(--glow-accent);border:1px solid transparent;'}
@@ -266,40 +266,40 @@
 					</div>
 				</div>
 
-				<h1 class="text-[var(--text-primary)] text-xl">{user.name}</h1>
-				<p class="text-[var(--text-secondary)] text-[13px]" style="margin-top:1px;">{user.handle}{remark ? ` · ${remark}` : ''}</p>
+				<h1 class="text-text-primary text-xl">{user.name}</h1>
+				<p class="text-text-secondary text-[13px]" style="margin-top:1px;">{user.handle}{remark ? ` · ${remark}` : ''}</p>
 				{#if blocked}
-					<div class="mt-3 flex items-center gap-2 rounded-[12px] ring-1 ring-[var(--status-danger)]/30 bg-[color-mix(in_srgb,var(--status-danger)_8%,transparent)] px-3 py-2 text-[12px] text-[var(--status-danger)]">
+					<div class="mt-3 flex items-center gap-2 rounded-[12px] ring-1 ring-status-danger/30 bg-[color-mix(in_srgb,var(--status-danger)_8%,transparent)] px-3 py-2 text-[12px] text-status-danger">
 						<UserX size={14} />
 						你已屏蔽此用户；关注和私信已停用。
 					</div>
 				{/if}
-				<p class="text-[var(--text-secondary)] text-[13px]" style="line-height:1.65;margin-top:8px;">{user.bio}</p>
+				<p class="text-text-secondary text-[13px]" style="line-height:1.65;margin-top:8px;">{user.bio}</p>
 
 				<div class="flex items-center gap-1.5 mt-2">
 					<MapPin style="width:11px;height:11px;color:var(--accent-default);" strokeWidth={1.5} />
-					<span class="text-[var(--text-secondary)] text-[11px]">{user.location}</span>
+					<span class="text-text-secondary text-[11px]">{user.location}</span>
 				</div>
 
 				<!-- Tags -->
 				<div class="flex gap-2 mt-3 flex-wrap">
 					{#each user.tags as t (t)}
-						<span class="px-2.5 py-0.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent-default)] text-[11px]" style="border:1px solid var(--accent-border);">
+						<span class="px-2.5 py-0.5 rounded-full bg-accent-soft text-accent-default text-[11px]" style="border:1px solid var(--accent-border);">
 							#{t}
 						</span>
 					{/each}
 				</div>
 
 				<!-- Stats -->
-				<div class="flex gap-0 mt-5 overflow-hidden rounded-[20px] bg-[var(--surface-primary)]" style="box-shadow:0 0 0 1px var(--border-default), 6px 6px 14px var(--elevation-shadow-dark), -6px -6px 14px var(--elevation-shadow-light);">
+				<div class="flex gap-0 mt-5 overflow-hidden rounded-[20px] bg-surface-primary" style="box-shadow:0 0 0 1px var(--border-default), 6px 6px 14px var(--elevation-shadow-dark), -6px -6px 14px var(--elevation-shadow-light);">
 					<div style="overflow:hidden;border-radius:20px;">
 						{#each [{ label: '瞬间', v: fmtNum(user.moments) }, { label: '粉丝', v: fmtNum(user.followers) }, { label: '关注', v: fmtNum(user.following) }] as s, i}
 							<div class="flex-1 flex flex-col items-center py-4 relative">
 								{#if i > 0}
-									<div class="absolute left-0 top-1/2 -translate-y-1/2 bg-[var(--border-default)]" style="width:1px;height:28px;"></div>
+									<div class="absolute left-0 top-1/2 -translate-y-1/2 bg-border-default" style="width:1px;height:28px;"></div>
 								{/if}
-								<span class="text-[var(--text-primary)] text-[22px]">{s.v}</span>
-								<span class="uppercase mt-1 text-[var(--text-secondary)] text-[9px]" style="letter-spacing:0.1em;">{s.label}</span>
+								<span class="text-text-primary text-[22px]">{s.v}</span>
+								<span class="uppercase mt-1 text-text-secondary text-[9px]" style="letter-spacing:0.1em;">{s.label}</span>
 								</div>
 							{/each}
 						</div>
@@ -311,14 +311,14 @@
 					{@const active = activeTab === t.id}
 					<button
 						type="button"
-						class="hover-btn relative flex items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none text-[13px] {active ? 'text-[var(--accent-default)]' : 'text-[var(--text-secondary)]'}"
+						class="hover-btn relative flex items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none text-[13px] {active ? 'text-accent-default' : 'text-text-secondary'}"
 						style="flex:1;font-weight:{active ? 500 : 400};"
 						onclick={() => (activeTab = t.id as 'moments' | 'liked' | 'saved')}
 					>
 						<t.icon style="width:13px;height:13px;" strokeWidth={active ? 2 : 1.5} />
 						{t.label}
 						{#if active}
-							<span class="bg-[var(--accent-default)]" style="position:absolute;bottom:-1px;left:18%;right:18%;height:2px;border-radius:1px;"></span>
+							<span class="bg-accent-default" style="position:absolute;bottom:-1px;left:18%;right:18%;height:2px;border-radius:1px;"></span>
 						{/if}
 					</button>
 				{/each}
@@ -330,8 +330,8 @@
 					<div class="image-hover-frame tap-97 relative cursor-pointer" style="aspect-ratio:1;overflow:hidden;">
 						<img src={src} alt={`photo ${i}`} class="image-hover-frame__image w-full h-full object-cover" />
 						{#if activeTab === 'liked'}
-							<div class="absolute inset-0 flex items-end justify-end p-1.5 bg-[var(--surface-overlay-soft)]">
-								<div class="flex items-center justify-center rounded-full bg-[var(--accent-default)]" style="width:20px;height:20px;">
+							<div class="absolute inset-0 flex items-end justify-end p-1.5 bg-surface-overlay-soft">
+								<div class="flex items-center justify-center rounded-full bg-accent-default" style="width:20px;height:20px;">
 									<Heart style="width:10px;height:10px;color:var(--text-on-accent);" strokeWidth={2} fill="white" />
 								</div>
 							</div>
@@ -349,7 +349,7 @@
 	<RailSection title="兴趣标签">
 		<div class="flex gap-2 flex-wrap">
 			{#each user.tags as t (t)}
-				<span class="px-2.5 py-0.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent-default)] text-[11px]" style="border:1px solid var(--accent-border);">
+				<span class="px-2.5 py-0.5 rounded-full bg-accent-soft text-accent-default text-[11px]" style="border:1px solid var(--accent-border);">
 					#{t}
 				</span>
 			{/each}

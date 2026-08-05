@@ -215,13 +215,13 @@
 
 	<div class="grid gap-8 pt-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
 			<main class="min-w-0">
-			<div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-[var(--text-secondary)]">
+			<div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-text-secondary">
 				<span class="flex items-center gap-1.5">
 					<Users size={14} />
 					{group.members} 位成员
 				</span>
-				<span class="flex items-center gap-1.5 text-[var(--status-online)]">
-					<span class="h-2 w-2 rounded-full bg-[var(--status-online)]"></span>
+				<span class="flex items-center gap-1.5 text-status-online">
+					<span class="h-2 w-2 rounded-full bg-status-online"></span>
 					{onlineMemberCount} 人在线
 				</span>
 				<span class="flex items-center gap-1.5">
@@ -232,15 +232,15 @@
 
 			<!-- Tabs -->
 			<Tabs.Root value={tab} onValueChange={(v) => (tab = v as GroupTab)}>
-				<Tabs.List class="mt-6 flex gap-1 border-b border-[var(--border-default)]">
+				<Tabs.List class="mt-6 flex gap-1 border-b border-border-default">
 					{#each ['overview', 'members', 'announcements'] as item (item)}
 						<Tabs.Trigger
 							value={item}
-							class="hover-btn relative px-3 py-2.5 text-[13px] focus-ring {tab === item ? 'text-[var(--accent-default)]' : 'text-[var(--text-secondary)]'}"
+							class="hover-btn relative px-3 py-2.5 text-[13px] focus-ring {tab === item ? 'text-accent-default' : 'text-text-secondary'}"
 						>
 							{item === 'overview' ? '简介' : item === 'members' ? '成员' : '公告'}
 							{#if tab === item}
-								<span class="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-[var(--accent-default)]"></span>
+								<span class="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-accent-default"></span>
 							{/if}
 						</Tabs.Trigger>
 					{/each}
@@ -249,7 +249,7 @@
 
 			{#if tab === 'overview'}
 				<div class="py-6">
-					<p class="max-w-3xl text-[15px] leading-7 text-[var(--text-secondary)]">{group.description}</p>
+					<p class="max-w-3xl text-[15px] leading-7 text-text-secondary">{group.description}</p>
 				</div>
 			{:else if tab === 'members'}
 				<EmbeddedList>
@@ -258,14 +258,14 @@
 							<div class="relative">
 								<img src={member.avatar} alt="" class="h-10 w-10 rounded-full object-cover" />
 								{#if onlineMemberIds.has(member.userId)}
-									<span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[var(--surface-primary)] bg-[var(--status-online)]"></span>
+									<span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-surface-primary bg-status-online"></span>
 								{/if}
 							</div>
 							<span class="min-w-0 flex-1">
-								<span class="block text-[14px] text-[var(--text-primary)]">{member.name}</span>
-								<span class="text-[11px] text-[var(--text-secondary)]">{member.role}</span>
+								<span class="block text-[14px] text-text-primary">{member.name}</span>
+								<span class="text-[11px] text-text-secondary">{member.role}</span>
 							</span>
-							<span class="text-[11px] text-[var(--text-secondary)]">查看资料</span>
+							<span class="text-[11px] text-text-secondary">查看资料</span>
 						</button>
 					{/each}
 				</EmbeddedList>
@@ -273,19 +273,19 @@
 					<EmbeddedList>
 						{#each announcements as item (item.title)}
 							<article class="py-4">
-								<p class="text-[14px] font-medium text-[var(--text-primary)]">{item.title}</p>
-								<p class="mt-1 text-[12px] leading-5 text-[var(--text-secondary)]">{item.body}</p>
-								<p class="mt-2 text-[11px] text-[var(--text-secondary)]">{item.time}</p>
+								<p class="text-[14px] font-medium text-text-primary">{item.title}</p>
+								<p class="mt-1 text-[12px] leading-5 text-text-secondary">{item.body}</p>
+								<p class="mt-2 text-[11px] text-text-secondary">{item.time}</p>
 							</article>
 						{/each}
 					</EmbeddedList>
 				{/if}
 		</main>
 
-		<aside class="flex h-fit flex-col gap-3 rounded-[20px] ring-1 ring-[var(--border-default)] bg-[var(--surface-primary)] p-4">
+		<aside class="flex h-fit flex-col gap-3 rounded-[20px] ring-1 ring-border-default bg-surface-primary p-4">
 			<button
 				type="button"
-				class="hover-btn w-full rounded-full px-4 py-3 text-[13px] font-medium focus-ring {joined ? 'border border-[var(--accent-default)] text-[var(--accent-default)]' : 'bg-[var(--accent-default)] text-white'}"
+				class="hover-btn w-full rounded-full px-4 py-3 text-[13px] font-medium focus-ring {joined ? 'border border-accent-default text-accent-default' : 'bg-accent-default text-white'}"
 				onclick={() => (joined = !joined)}
 			>
 				{#if joined}
@@ -298,12 +298,12 @@
 				{/if}
 			</button>
 			{#if joined}
-				<button type="button" onclick={() => void goto(ROUTES.groupMessage(params.groupId))} class="hover-btn flex w-full items-center justify-center gap-2 rounded-full border border-[var(--border-default)] px-4 py-3 text-[13px] text-[var(--text-primary)] focus-ring">
+				<button type="button" onclick={() => void goto(ROUTES.groupMessage(params.groupId))} class="hover-btn flex w-full items-center justify-center gap-2 rounded-full border border-border-default px-4 py-3 text-[13px] text-text-primary focus-ring">
 					<MessageCircle size={15} />
 					打开群聊
 				</button>
 			{:else}
-				<p class="px-2 text-center text-[11px] leading-5 text-[var(--text-secondary)]">
+				<p class="px-2 text-center text-[11px] leading-5 text-text-secondary">
 					<Bell size={13} class="mr-1 inline" />
 					加入后可管理群组通知并进入群聊
 				</p>

@@ -124,12 +124,12 @@
 
 	<!-- 搜索输入卡片（对齐 Figma：rounded-panel border bg-card） -->
 	<section
-		class="rounded-panel border bg-[var(--surface-primary)] p-3"
+		class="rounded-panel border bg-surface-primary p-3"
 		style="border-color:var(--border-default);"
 		aria-label="搜索输入"
 	>
 		<div class="flex items-center gap-3">
-			<SearchIcon class="size-5 shrink-0 text-[var(--accent-default)]" strokeWidth={1.8} />
+			<SearchIcon class="size-5 shrink-0 text-accent-default" strokeWidth={1.8} />
 			<!-- svelte-ignore a11y_autofocus -->
 			<input
 				bind:this={inputEl}
@@ -140,14 +140,14 @@
 					if (e.key === 'Enter' && query.trim()) remember(query.trim());
 				}}
 				placeholder="搜索用户、动态、地点或话题"
-				class="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-secondary)]"
+				class="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-text-primary outline-none placeholder:text-text-secondary"
 			/>
 			{#if query}
 				<button
 					type="button"
 					onclick={() => (query = '')}
 					aria-label="清除搜索"
-					class="hover-btn flex size-8 items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+					class="hover-btn flex size-8 items-center justify-center text-text-secondary hover:text-text-primary"
 				>
 					<X class="size-4" />
 				</button>

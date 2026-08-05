@@ -74,9 +74,9 @@
 				<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={36} />
 			{/if}
 			<div class={cn('min-w-0', trailing ? '' : 'flex-1')}>
-				<h1 class="text-[var(--text-primary)] font-medium leading-none" style="font-size:{titleSize}px;">{title}</h1>
+				<h1 class="text-text-primary font-medium leading-none" style="font-size:{titleSize}px;">{title}</h1>
 				{#if subtitle}
-					<p class="mt-1 flex items-center gap-1 text-[var(--text-secondary)]" style="font-size:{subtitleSize}px;">
+					<p class="mt-1 flex items-center gap-1 text-text-secondary" style="font-size:{subtitleSize}px;">
 						{#if subtitleIcon}
 							{@render subtitleIcon()}
 						{/if}

@@ -141,10 +141,10 @@ const FILTER_TABS = [
 				<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「全部已读」同排 -->
 				<div class="flex items-center gap-2">
 					{#if unread > 0}
-						<span class="text-[var(--text-secondary)] text-xs">{unread} 条未读</span>
+						<span class="text-text-secondary text-xs">{unread} 条未读</span>
 						<button
 							type="button"
-							class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none bg-[var(--surface-primary)] text-[var(--accent-default)] text-[12px]"
+							class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none bg-surface-primary text-accent-default text-[12px]"
 							style="border:1px solid var(--border-default);box-shadow:3px 3px 8px var(--elevation-shadow-dark), -3px -3px 8px var(--elevation-shadow-light);"
 							onclick={markAllRead}
 						>
@@ -163,7 +163,7 @@ const FILTER_TABS = [
 							aria-pressed={filter === t.id}
 							data-active={filter === t.id ? 'true' : undefined}
 							onclick={() => (filter = t.id)}
-							class="tap-92 flex-shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-[var(--accent-default)]"
+							class="tap-92 flex-shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default"
 							style={filter === t.id
 								? 'background:var(--accent-default);color:white;font-size:12px;box-shadow:0 3px 10px var(--glow-accent);border:none;'
 								: 'background:var(--surface-primary);color:var(--text-secondary);font-size:12px;border:1px solid var(--border-default);box-shadow:3px 3px 6px var(--elevation-shadow-dark), -3px -3px 6px var(--elevation-shadow-light);'}
@@ -219,8 +219,8 @@ const FILTER_TABS = [
 		<div>
 			<RailSection title="今日概览">
 				<div class="flex items-baseline gap-1.5 mb-3">
-					<span class="text-[var(--text-primary)] text-[30px] font-semibold leading-none">{unread}</span>
-					<span class="text-[var(--text-secondary)] text-[11px]">条未读 · 共 {notifications.length} 条</span>
+					<span class="text-text-primary text-[30px] font-semibold leading-none">{unread}</span>
+					<span class="text-text-secondary text-[11px]">条未读 · 共 {notifications.length} 条</span>
 				</div>
 				<div class="flex flex-col gap-2">
 					{#each typeStats as { type, count }}
@@ -234,8 +234,8 @@ const FILTER_TABS = [
 							<div class="flex items-center justify-center rounded-full flex-shrink-0" style="width:24px;height:24px;background:{`color-mix(in srgb, ${cfg.color} 16%, transparent)`};">
 								<cfg.icon style="width:11px;height:11px;color:{cfg.color};" strokeWidth={1.75} />
 							</div>
-							<span class="text-[var(--text-primary)] text-[12px] flex-1">{cfg.label}</span>
-							<span class="text-[var(--text-secondary)] text-[11px]">{count}</span>
+							<span class="text-text-primary text-[12px] flex-1">{cfg.label}</span>
+							<span class="text-text-secondary text-[11px]">{count}</span>
 						</button>
 					{/each}
 				</div>
@@ -246,7 +246,7 @@ const FILTER_TABS = [
 					{#each notifications.filter((n) => n.type === 'follow').slice(0, 3) as n (n.id)}
 						<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.time}>
 							{#snippet trailing()}
-								<button type="button" class="hover-btn px-2.5 py-1 rounded-full outline-none flex-shrink-0 bg-[var(--accent-soft)] text-[var(--accent-default)] text-[11px]" style="border:1px solid var(--accent-border);">
+								<button type="button" class="hover-btn px-2.5 py-1 rounded-full outline-none flex-shrink-0 bg-accent-soft text-accent-default text-[11px]" style="border:1px solid var(--accent-border);">
 									回关
 								</button>
 							{/snippet}

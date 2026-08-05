@@ -8,4 +8,4 @@
 	let { class: className, ...rest }: Props = $props();
 </script>
 
-<DropdownMenu.Separator class={cn('my-1 h-px bg-[var(--border-default)]', className)} {...rest} />
+<DropdownMenu.Separator class={cn('my-1 h-px bg-border-default', className)} {...rest} />

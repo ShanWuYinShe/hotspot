@@ -113,7 +113,7 @@
 	}
 </script>
 
-<div class="flex h-full bg-[var(--surface-primary)]">
+<div class="flex h-full bg-surface-primary">
 	<!-- ══ LEFT SIDEBAR ══ -->
 	<div class="flex flex-col shrink-0" style="width:340px;border-right:1px solid var(--border-default);">
 		<LocationDesktopPanel
@@ -188,7 +188,7 @@
 
 		{#if mapLoading}
 			<!-- 加载中的轻量指示 -->
-			<div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 rounded-full bg-[var(--surface-primary)] px-3 py-1 text-[11px] text-[var(--text-secondary)]" style="box-shadow:0 2px 12px var(--elevation-shadow-dark);border:1px solid var(--border-default);">
+			<div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-[11px] text-text-secondary" style="box-shadow:0 2px 12px var(--elevation-shadow-dark);border:1px solid var(--border-default);">
 				加载地图数据…
 			</div>
 		{/if}
@@ -224,7 +224,7 @@
 						>
 							<img src={item.icon} alt="" style="width:15px;height:21px;" />
 							<img src={item.clusterIcon} alt="" style="width:15px;height:21px;opacity:0.65;" />
-							<span class="flex-1 text-[var(--text-primary)]" style="font-size:12px;">{item.label}</span>
+							<span class="flex-1 text-text-primary" style="font-size:12px;">{item.label}</span>
 							<span style="font-size:12px;color:{item.color};font-weight:600;">{item.count}</span>
 							<span class="flex items-center justify-center flex-shrink-0" style="width:14px;height:14px;border-radius:4px;background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--border-strong)'};transition:all 0.18s;">
 								{#if active}
@@ -236,7 +236,7 @@
 					<div style="height:1px;background:var(--border-default);"></div>
 					<div class="flex items-center gap-2 px-3 py-2">
 						<span style="width:13px;height:13px;border-radius:50%;background:{PIN_COLORS.user};border:2px solid var(--surface-primary);box-shadow:0 0 5px {pinTone('user', 50)};"></span>
-						<span class="text-[var(--text-secondary)]" style="font-size:12px;">我的位置</span>
+						<span class="text-text-secondary" style="font-size:12px;">我的位置</span>
 					</div>
 				</div>
 			{/if}
@@ -247,7 +247,7 @@
 		{#if selectedPin}
 			<div
 				data-map-popup
-				class="bg-[var(--surface-primary)]"
+				class="bg-surface-primary"
 				style="position:absolute;bottom:20px;left:20px;right:20px;z-index:25;border-radius:20px;padding:16px;box-shadow:0 0 0 1px var(--border-default), 0 16px 48px var(--elevation-shadow-dark);"
 			>
 				<div class="flex items-center gap-3">
@@ -255,7 +255,7 @@
 						<div class="relative flex-shrink-0">
 							<img src={selectedPin.avatar} alt={selectedPin.name || selectedPin.title || ''} class="rounded-full object-cover" style="width:52px;height:52px;" />
 							{#if selectedPin.online}
-								<span class="absolute bottom-0 right-0 rounded-full bg-[var(--status-online)]" style="width:12px;height:12px;border:2.5px solid var(--surface-primary);"></span>
+								<span class="absolute bottom-0 right-0 rounded-full bg-status-online" style="width:12px;height:12px;border:2.5px solid var(--surface-primary);"></span>
 							{/if}
 						</div>
 					{:else if selectedPin.type === 'moment' && selectedPin.image}
@@ -267,7 +267,7 @@
 					{/if}
 					<div class="flex-1 min-w-0">
 						<div class="flex items-center gap-2">
-							<p class="text-[var(--text-primary)] text-[15px]">{selectedPin.name || selectedPin.title}</p>
+							<p class="text-text-primary text-[15px]">{selectedPin.name || selectedPin.title}</p>
 							{#if (selectedPin.count ?? 1) > 1}
 								<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:{PIN_COLORS[selectedPin.type]};color:white;">
 									{selectedPin.count}个
@@ -279,18 +279,18 @@
 								{PIN_LABELS[selectedPin.type]}
 							</span>
 							{#if selectedPin.tag}
-								<span class="text-[var(--text-secondary)] text-xs">#{selectedPin.tag}</span>
+								<span class="text-text-secondary text-xs">#{selectedPin.tag}</span>
 							{/if}
 							{#if selectedPin.distance}
-								<span class="text-[var(--text-secondary)] text-xs">{selectedPin.distance}</span>
+								<span class="text-text-secondary text-xs">{selectedPin.distance}</span>
 							{/if}
 							{#if selectedPin.members}
-								<span class="text-[var(--text-secondary)] text-xs">{selectedPin.members}名成员</span>
+								<span class="text-text-secondary text-xs">{selectedPin.members}名成员</span>
 							{/if}
 							{#if selectedPin.likes}
 								<span class="flex items-center gap-1">
 									<Heart style="width:10px;height:10px;color:var(--status-danger);" strokeWidth={1.5} />
-									<span class="text-[var(--text-secondary)] text-xs">{selectedPin.likes}</span>
+									<span class="text-text-secondary text-xs">{selectedPin.likes}</span>
 								</span>
 							{/if}
 						</div>
@@ -298,7 +298,7 @@
 					<div class="flex gap-2 flex-shrink-0">
 						<button
 							type="button"
-							class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none bg-[var(--accent-default)] text-white"
+							class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none bg-accent-default text-white"
 							style="font-size:13px;box-shadow:0 4px 14px var(--glow-accent);"
 							onclick={() => selectedPin && openPinDetail(selectedPin)}
 						>
@@ -307,7 +307,7 @@
 						</button>
 						<button
 							type="button"
-							class="hover-btn outline-none flex items-center justify-center rounded-full bg-[var(--surface-primary)]"
+							class="hover-btn outline-none flex items-center justify-center rounded-full bg-surface-primary"
 							style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:3px 3px 7px var(--elevation-shadow-dark), -3px -3px 7px var(--elevation-shadow-light);"
 							onclick={() => (selectedPin = null)}
 						>
@@ -319,7 +319,7 @@
 		{/if}
 
 		<!-- Attribution -->
-		<div class="text-[var(--text-secondary)]" style="position:absolute;bottom:4px;left:8px;font-size:9px;opacity:0.38;pointer-events:none;z-index:1;">
+		<div class="text-text-secondary" style="position:absolute;bottom:4px;left:8px;font-size:9px;opacity:0.38;pointer-events:none;z-index:1;">
 			© OpenStreetMap contributors
 		</div>
 	</div>

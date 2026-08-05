@@ -64,7 +64,7 @@
 				{#each NAV_ITEMS.slice(0, 2) as item}
 					<button
 						type="button"
-						class="hover-btn nav-tab relative flex flex-col items-center justify-center outline-none select-none rounded-[var(--shape-panel)]"
+						class="hover-btn nav-tab relative flex flex-col items-center justify-center outline-none select-none rounded-panel"
 						style="flex:1;min-width:0;padding-top:9px;padding-bottom:9px;gap:5px;"
 						aria-label={item.label}
 						aria-current={isPrimaryRouteActive(pathname, item.path) ? 'page' : undefined}
@@ -107,7 +107,7 @@
 				{#each NAV_ITEMS.slice(2, 4) as item}
 					<button
 						type="button"
-						class="hover-btn nav-tab relative flex flex-col items-center justify-center outline-none select-none rounded-[var(--shape-panel)]"
+						class="hover-btn nav-tab relative flex flex-col items-center justify-center outline-none select-none rounded-panel"
 						style="flex:1;min-width:0;padding-top:9px;padding-bottom:9px;gap:5px;"
 						aria-label={item.label}
 						aria-current={isPrimaryRouteActive(pathname, item.path) ? 'page' : undefined}

@@ -214,7 +214,7 @@
 
 <SplitPageLayout contentClassName="p-0">
 	{#snippet header()}
-		<PageHeader title="动态详情" titleSize={16} onBack={() => history.back()} class="flex-shrink-0 border-b border-[var(--border-default)]">
+		<PageHeader title="动态详情" titleSize={16} onBack={() => history.back()} class="flex-shrink-0 border-b border-border-default">
 			{#snippet trailing()}
 				<DropdownMenu.Root bind:open={moreOpen}>
 					<div bind:this={moreMenuEl} class="relative">
@@ -225,7 +225,7 @@
 							<Link2 style="width:14px;height:14px;color:var(--accent-default);" strokeWidth={1.75} />
 							复制链接
 						</DropdownMenu.Item>
-						<DropdownMenu.Item class="text-[var(--text-secondary)]">
+						<DropdownMenu.Item class="text-text-secondary">
 							取消
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
@@ -255,7 +255,7 @@
 
 	{#snippet footer()}
 		<!-- 评论输入栏固定在主区底部，不随正文滚动 -->
-		<div class="flex-shrink-0 flex items-center gap-2.5 px-4 py-3 bg-[var(--surface-primary)]" style="border-top:1px solid var(--border-default);">
+		<div class="flex-shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary" style="border-top:1px solid var(--border-default);">
 			<Avatar src={auth.user?.avatar_url} name={auth.user?.nickname} size={30} style="border:1px solid var(--border-default);" />
 			<div class="flex-1 flex items-center px-4 rounded-relaxed input-surface" style="height:38px;">
 				<input
@@ -264,7 +264,7 @@
 						if (e.key === 'Enter') void handleComment();
 					}}
 					placeholder="写下你的评论…"
-					class="flex-1 bg-transparent outline-none text-[var(--text-primary)] text-[13px]"
+					class="flex-1 bg-transparent outline-none text-text-primary text-[13px]"
 				/>
 			</div>
 			<button
@@ -284,7 +284,7 @@
 			{#snippet trailing()}
 				<button
 					type="button"
-					class="hover-btn px-2.5 py-1 rounded-full outline-none flex-shrink-0 bg-[var(--accent-soft)] text-[var(--accent-default)]"
+					class="hover-btn px-2.5 py-1 rounded-full outline-none flex-shrink-0 bg-accent-soft text-accent-default"
 					style="font-size:11px;border:1px solid var(--accent-border);"
 					onclick={(e) => {
 						e.stopPropagation();

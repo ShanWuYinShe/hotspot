@@ -52,7 +52,7 @@
 		onBack={() => void goto(ROUTES.me)}
 	>
 		{#snippet trailing()}
-			<span class="text-[var(--text-secondary)] text-xs">{activeCount} 人</span>
+			<span class="text-text-secondary text-xs">{activeCount} 人</span>
 		{/snippet}
 		{#snippet below()}
 			{@render relTabBar()}

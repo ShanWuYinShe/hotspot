@@ -128,7 +128,7 @@
 		<!-- Logo -->
 		<button
 			type="button"
-			class="hover-btn flex items-center gap-2 mr-3 select-none rounded-full focus-ring focus-visible:ring-offset-[var(--surface-page)]"
+			class="hover-btn flex items-center gap-2 mr-3 select-none rounded-full focus-ring focus-visible:ring-offset-surface-page"
 			onclick={() => {
 				activeNavId = 'home';
 				void goto(ROUTES.home);
@@ -176,7 +176,7 @@
 			{#if auth.user}
 				<button
 					type="button"
-					class="hover-btn scale-btn relative ml-1.5 flex-shrink-0 rounded-full focus-ring focus-visible:ring-offset-[var(--surface-page)]"
+					class="hover-btn scale-btn relative ml-1.5 flex-shrink-0 rounded-full focus-ring focus-visible:ring-offset-surface-page"
 					style="width:32px;height:32px;"
 					aria-label="打开个人主页"
 					onclick={() => guardNav('打开个人主页', ROUTES.me)}
@@ -212,7 +212,7 @@
 			<!-- Edge-mounted collapse control: leaves the navigation rhythm untouched -->
 			<button
 				type="button"
-				class="hover-btn absolute -right-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border outline-none transition-colors hover:bg-[var(--accent-soft)] focus-visible:ring-2 focus-visible:ring-[var(--accent-default)]"
+				class="hover-btn absolute -right-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border outline-none transition-colors hover:bg-accent-soft focus-visible:ring-2 focus-visible:ring-accent-default"
 				style="color:var(--text-secondary);background:var(--surface-page);border-color:var(--border-default);box-shadow:0 2px 8px var(--elevation-shadow-dark);"
 				aria-label={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
 				aria-pressed={isSidebarCollapsed}

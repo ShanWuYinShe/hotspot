@@ -158,7 +158,7 @@
 								type="button"
 								aria-label="搜索"
 								onclick={() => void goto(ROUTES.search)}
-								class="hover-btn flex size-8 items-center justify-center rounded-full outline-none bg-[var(--surface-primary)] text-[var(--text-secondary)]"
+								class="hover-btn flex size-8 items-center justify-center rounded-full outline-none bg-surface-primary text-text-secondary"
 								style="border:1px solid var(--border-default);"
 							>
 								<Search style="width:16px;height:16px;" strokeWidth={1.8} />
@@ -178,7 +178,7 @@
 						</div>
 						<button
 							type="button"
-							class="hover-btn flex size-8 items-center justify-center rounded-full border cursor-pointer transition-colors hover:bg-[var(--accent-soft)]"
+							class="hover-btn flex size-8 items-center justify-center rounded-full border cursor-pointer transition-colors hover:bg-accent-soft"
 							style="border-color:var(--border-default);background:var(--surface-primary);"
 							onclick={() => void goto(ROUTES.search)}
 							aria-label="搜索"
@@ -195,7 +195,7 @@
 		<!-- Desktop/Tablet：左摘要栏 + 右用户列表（正文多列 grid，随页面统一滚动） -->
 		<div class="grid grid-cols-[340px_minmax(0,1fr)] gap-6">
 			<!-- Left: hero + activity + groups (340px) -->
-			<div class="flex flex-col gap-6 border-r border-[var(--border-default)] pr-6">
+			<div class="flex flex-col gap-6 border-r border-border-default pr-6">
 				<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={defaultLocation?.location_name ?? ''} />
 				<div>
 					<SectionHead title="附近活动" />
@@ -215,7 +215,7 @@
 					</div>
 					<button
 						type="button"
-						class="hover-btn tap-93 flex items-center gap-0.5 outline-none surface-ghost rounded-full px-2 py-0.5 text-[var(--accent-default)]"
+						class="hover-btn tap-93 flex items-center gap-0.5 outline-none surface-ghost rounded-full px-2 py-0.5 text-accent-default"
 						onclick={() => void goto(ROUTES.nearbyPeople)}
 					>
 						<span class="text-xs">查看全部</span>

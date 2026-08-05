@@ -27,11 +27,11 @@
 		type="button"
 		aria-pressed={active}
 		class={cn(
-			'rounded-full outline-none transition-colors px-3 py-1 cursor-pointer surface-ghost focus-visible:ring-2 focus-visible:ring-[var(--accent-default)]',
+			'rounded-full outline-none transition-colors px-3 py-1 cursor-pointer surface-ghost focus-visible:ring-2 focus-visible:ring-accent-default',
 			sizeClasses[size],
 			active
-				? 'bg-[var(--accent-soft)] text-[var(--accent-default)] border border-[var(--accent-border)] font-semibold'
-				: 'text-[var(--text-secondary)]',
+				? 'bg-accent-soft text-accent-default border border-accent-border font-semibold'
+				: 'text-text-secondary',
 			className
 		)}
 		onclick={onClick}
@@ -44,8 +44,8 @@
 			'rounded-full outline-none transition-colors px-3 py-1',
 			sizeClasses[size],
 			active
-				? 'bg-[var(--accent-soft)] text-[var(--accent-default)] border border-[var(--accent-border)] font-semibold'
-				: 'text-[var(--text-secondary)]',
+				? 'bg-accent-soft text-accent-default border border-accent-border font-semibold'
+				: 'text-text-secondary',
 			className
 		)}
 	>

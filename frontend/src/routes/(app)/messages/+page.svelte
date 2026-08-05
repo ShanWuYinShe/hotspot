@@ -156,7 +156,7 @@
 			<!-- 在线 strip -->
 			{#if onlineChats.length > 0}
 				<div class="flex-shrink-0 px-4 py-2.5" style="border-bottom:1px solid var(--border-default);">
-					<p class="uppercase mb-2 text-[var(--text-secondary)] text-[9px] tracking-[0.12em]">在线</p>
+					<p class="uppercase mb-2 text-text-secondary text-[9px] tracking-[0.12em]">在线</p>
 					<div class="flex gap-3 overflow-x-auto no-scrollbar">
 						{#each onlineChats as c (c.id)}
 							<button
@@ -170,7 +170,7 @@
 									</div>
 									<OnlineDot size="sm" />
 								</div>
-								<span class="text-[var(--text-secondary)] text-[10px]">{c.name}</span>
+								<span class="text-text-secondary text-[10px]">{c.name}</span>
 							</button>
 						{/each}
 					</div>
@@ -182,7 +182,7 @@
 			     选中态 glow 不与相邻行重叠，分隔线嵌在间距中不显突兀） -->
 			<EmbeddedList class="flex-1 overflow-y-auto no-scrollbar px-2 py-2">
 				{#if totalUnread > 0}
-					<p class="uppercase px-2 mb-1 text-[var(--text-secondary)] text-[9px] tracking-[0.12em]">未读</p>
+					<p class="uppercase px-2 mb-1 text-text-secondary text-[9px] tracking-[0.12em]">未读</p>
 				{/if}
 				{#each filtered as chat (chat.id)}
 					<div class="px-3 py-1">
@@ -259,9 +259,9 @@
 			<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「新会话」同排 -->
 			<div class="flex items-center gap-2">
 				{#if totalUnread > 0}
-					<span class="text-[var(--text-secondary)] text-xs">{totalUnread} 条未读</span>
+					<span class="text-text-secondary text-xs">{totalUnread} 条未读</span>
 				{:else}
-					<span class="text-[var(--status-online)] text-xs">全部已读</span>
+					<span class="text-status-online text-xs">全部已读</span>
 				{/if}
 				<button
 					type="button"
@@ -287,7 +287,7 @@
 	<ContentColumn class="animate-fade-in flex flex-col min-h-full pt-4 pb-4">
 		{#if onlineChats.length > 0}
 			<div class="mb-4">
-				<p class="uppercase mb-2.5 text-[var(--text-secondary)] text-[10px] tracking-[0.14em]">在线</p>
+				<p class="uppercase mb-2.5 text-text-secondary text-[10px] tracking-[0.14em]">在线</p>
 				<div class="flex gap-4 overflow-x-auto no-scrollbar pb-1">
 					{#each onlineChats as chat (chat.id)}
 						<button
@@ -296,19 +296,19 @@
 							onclick={() => void goto(ROUTES.message(chat.peerUserId || chat.id))}
 						>
 							<div class="relative">
-								<div class="avatar-entry__avatar rounded-full overflow-hidden bg-[var(--surface-primary)]" style="width:52px;height:52px;padding:2px;border:2px solid var(--accent-default);">
+								<div class="avatar-entry__avatar rounded-full overflow-hidden bg-surface-primary" style="width:52px;height:52px;padding:2px;border:2px solid var(--accent-default);">
 									<img src={chat.avatar} alt={chat.name} class="w-full h-full object-cover rounded-full" />
 								</div>
 								<OnlineDot size="lg" />
 							</div>
-							<span class="text-[var(--text-secondary)] text-[11px]">{chat.name}</span>
+							<span class="text-text-secondary text-[11px]">{chat.name}</span>
 						</button>
 					{/each}
 				</div>
 			</div>
 		{/if}
 
-		<p class="uppercase mb-2.5 text-[var(--text-secondary)] text-[10px] tracking-[0.14em]">最近</p>
+		<p class="uppercase mb-2.5 text-text-secondary text-[10px] tracking-[0.14em]">最近</p>
 
 		<!-- 列表：无外层容器，EmbeddedList 直接裸排（对齐 Figma）；每行 px-3 py-1 包裹 -->
 		{#if filtered.length === 0}

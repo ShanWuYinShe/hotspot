@@ -106,7 +106,7 @@
 		<PageHeader title="发现" subtitle="聚合附近的人、群组与动态" sticky>
 			{#snippet trailing()}
 				<!-- 计数统一在标题右侧（全站样板） -->
-				<span class="text-[var(--text-secondary)] text-xs">{nearbyUsers.length} 人 · {nearbyGroups.length} 群</span>
+				<span class="text-text-secondary text-xs">{nearbyUsers.length} 人 · {nearbyGroups.length} 群</span>
 			{/snippet}
 		</PageHeader>
 	{/snippet}
@@ -114,12 +114,12 @@
 	<!-- 搜索入口（对齐 Figma 搜索卡片：rounded-panel border bg-card） -->
 	<button
 		type="button"
-		class="hover-btn flex w-full items-center gap-3 rounded-panel border bg-[var(--surface-primary)] p-3 text-left outline-none"
+		class="hover-btn flex w-full items-center gap-3 rounded-panel border bg-surface-primary p-3 text-left outline-none"
 		style="border-color:var(--border-default);"
 		onclick={() => void goto(ROUTES.search)}
 	>
-		<SearchIcon class="size-5 shrink-0 text-[var(--accent-default)]" strokeWidth={1.8} />
-		<span class="min-w-0 flex-1 py-2 text-[15px] text-[var(--text-secondary)]">搜索用户、群组、动态、地点…</span>
+		<SearchIcon class="size-5 shrink-0 text-accent-default" strokeWidth={1.8} />
+		<span class="min-w-0 flex-1 py-2 text-[15px] text-text-secondary">搜索用户、群组、动态、地点…</span>
 	</button>
 
 	<!-- 附近的人 -->

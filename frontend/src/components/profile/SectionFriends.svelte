@@ -33,15 +33,15 @@
 		<div class="flex items-center justify-between px-[var(--page-gutter)] py-4 flex-shrink-0" style="border-bottom:1px solid var(--border-default);">
 			<div>
 				<div class="flex items-center gap-2.5">
-					<span class="text-[var(--text-primary)] text-[15px]">好友</span>
+					<span class="text-text-primary text-[15px]">好友</span>
 					<div class="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px]" style="background:color-mix(in srgb, var(--status-online) 13%, transparent);border:1px solid color-mix(in srgb, var(--status-online) 24%, transparent);">
-						<div class="bg-[var(--status-online)]" style="width:6px;height:6px;border-radius:50%;"></div>
-						<span class="text-[var(--status-online)]">{onlineCount} 在线</span>
+						<div class="bg-status-online" style="width:6px;height:6px;border-radius:50%;"></div>
+						<span class="text-status-online">{onlineCount} 在线</span>
 					</div>
 				</div>
-				<p class="mt-1 text-[var(--text-secondary)] text-[11px]">双向关系，可直接开启对话</p>
+				<p class="mt-1 text-text-secondary text-[11px]">双向关系，可直接开启对话</p>
 			</div>
-			<span class="text-[var(--text-secondary)] text-xs">{friends.length} 位好友</span>
+			<span class="text-text-secondary text-xs">{friends.length} 位好友</span>
 		</div>
 	{/if}
 
@@ -55,7 +55,7 @@
 		{#each [{ id: 'all', label: '全部' }, { id: 'online', label: '在线' }, { id: 'offline', label: '离线' }] as pill}
 			<button
 				type="button"
-				class="hover-btn px-3 py-1.5 rounded-full outline-none text-xs tap-93 {activeFilter === pill.id ? 'bg-[var(--accent-default)] text-white' : 'bg-[var(--surface-primary)] text-[var(--text-secondary)]'}"
+				class="hover-btn px-3 py-1.5 rounded-full outline-none text-xs tap-93 {activeFilter === pill.id ? 'bg-accent-default text-white' : 'bg-surface-primary text-text-secondary'}"
 				style={activeFilter === pill.id ? 'box-shadow:0 3px 8px var(--glow-accent);' : 'border:1px solid var(--border-default);'}
 				onclick={() => (activeFilter = pill.id as 'all' | 'online' | 'offline')}
 			>
@@ -103,22 +103,22 @@
 {#snippet FriendRowBody(f: MappedFriend)}
 	<Avatar ring src={f.avatar} name={f.name} size={42}>
 		{#snippet badge()}
-			<span class="absolute bottom-0 right-0 rounded-full {f.online ? 'bg-[var(--status-online)]' : 'bg-[var(--text-secondary)]'}" style="width:10px;height:10px;border:2px solid var(--surface-primary);opacity:{f.online ? 1 : 0.5};"></span>
+			<span class="absolute bottom-0 right-0 rounded-full {f.online ? 'bg-status-online' : 'bg-text-secondary'}" style="width:10px;height:10px;border:2px solid var(--surface-primary);opacity:{f.online ? 1 : 0.5};"></span>
 		{/snippet}
 	</Avatar>
 	<div class="flex-1 min-w-0">
 		<div class="flex items-center gap-2">
-			<span class="text-[var(--text-primary)] text-sm">{f.name}</span>
+			<span class="text-text-primary text-sm">{f.name}</span>
 			<TagPill size="sm">{f.tag}</TagPill>
 		</div>
-		<p class="text-[var(--text-secondary)] text-xs mt-0.5">
+		<p class="text-text-secondary text-xs mt-0.5">
 			{f.handle} · {f.mutual} 共同好友
 		</p>
 	</div>
 	<div class="flex flex-col gap-1.5 flex-shrink-0">
 		<button
 			type="button"
-			class="hover-btn flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none tap-93 bg-[var(--accent-default)] text-white text-[11px]"
+			class="hover-btn flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none tap-93 bg-accent-default text-white text-[11px]"
 			style="box-shadow:0 3px 8px var(--glow-accent);"
 			onclick={(e) => {
 				e.stopPropagation();
@@ -130,7 +130,7 @@
 		</button>
 		<button
 			type="button"
-			class="hover-btn flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none tap-93 bg-[var(--surface-primary)] text-[var(--text-secondary)] text-[11px]"
+			class="hover-btn flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none tap-93 bg-surface-primary text-text-secondary text-[11px]"
 			style="border:1px solid var(--border-default);box-shadow:3px 3px 6px var(--elevation-shadow-dark), -3px -3px 6px var(--elevation-shadow-light);"
 			onclick={(e) => {
 				e.stopPropagation();

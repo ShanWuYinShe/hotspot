@@ -92,7 +92,7 @@
 				{/snippet}
 				{#snippet trailing()}
 					<!-- 计数统一在标题右侧（对齐首页/附近动态样板） -->
-					<span class="text-[var(--text-secondary)] text-xs">{filtered.length} 个活跃群组</span>
+					<span class="text-text-secondary text-xs">{filtered.length} 个活跃群组</span>
 				{/snippet}
 			{#snippet below()}
 				<!-- 搜索框（全设备全宽，对齐 Figma） + 分类标签：同处 sticky header 内 -->
@@ -111,13 +111,13 @@
 	<div class="min-w-0">
 		{#if loading}
 			<div class="flex flex-col items-center gap-3 py-20">
-				<div class="rounded-full border-2 border-[var(--border-default)] border-t-[var(--accent-default)] animate-spin" style="width:28px;height:28px;"></div>
-				<p class="text-[var(--text-secondary)] text-[13px]">加载附近群组…</p>
+				<div class="rounded-full border-2 border-border-default border-t-accent-default animate-spin" style="width:28px;height:28px;"></div>
+				<p class="text-text-secondary text-[13px]">加载附近群组…</p>
 			</div>
 		{:else if filtered.length}
 			<div class="flex items-center justify-between mb-3">
 				<span class="eyebrow">此刻附近群组</span>
-				<span class="text-[var(--status-online)] text-[11px]">{totalOnline} 人正在群聊</span>
+				<span class="text-status-online text-[11px]">{totalOnline} 人正在群聊</span>
 			</div>
 			{#if isDesktop || isTablet}
 				<!-- index 0 用 FeaturedGroupCard（对齐 Figma），其余用 GroupCard；保留 BSP 布局（决策） -->

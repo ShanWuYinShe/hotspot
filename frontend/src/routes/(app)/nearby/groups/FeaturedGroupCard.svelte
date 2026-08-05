@@ -21,7 +21,7 @@
 			class="absolute inset-0 z-[1] flex items-center justify-center"
 			style="background:linear-gradient(135deg, color-mix(in srgb, var(--accent-default) 20%, var(--surface-primary)) 0%, color-mix(in srgb, var(--accent-default) 6%, var(--surface-primary)) 100%);"
 		>
-			<span class="text-[var(--accent-default)] text-4xl font-semibold">{Array.from(group.name)[0] ?? '群'}</span>
+			<span class="text-accent-default text-4xl font-semibold">{Array.from(group.name)[0] ?? '群'}</span>
 		</div>
 	{/if}
 
@@ -33,24 +33,24 @@
 
 	{#snippet footer()}
 		<div class="p-4">
-			<p class="text-[var(--text-primary)] text-lg font-semibold">{group.name}</p>
-			<p class="truncate text-[var(--text-secondary)] text-[11px] mt-1">{group.desc}</p>
+			<p class="text-text-primary text-lg font-semibold">{group.name}</p>
+			<p class="truncate text-text-secondary text-[11px] mt-1">{group.desc}</p>
 			<div class="mt-3 flex items-center gap-3">
 				<div class="min-w-0 flex-1">
 					<!-- stats 行：成员 / 在线 / 距离（对齐 Figma FeaturedGroupCard） -->
-					<div class="flex items-center gap-3 text-[var(--text-secondary)] text-[11px]">
+					<div class="flex items-center gap-3 text-text-secondary text-[11px]">
 						<span class="flex items-center gap-1 flex-shrink-0">
 							<Users size={12} />
 							{group.members}
 						</span>
-						<span class="flex items-center gap-1 flex-shrink-0 text-[var(--status-online)]">
+						<span class="flex items-center gap-1 flex-shrink-0 text-status-online">
 							<span class="rounded-full" style="width:6px;height:6px;background:var(--status-online);"></span>
 							{group.online} 在线
 						</span>
 						<span class="flex-shrink-0">{group.distance}</span>
 					</div>
 					<!-- activity 独立 accent 行（对齐 Figma：与 stats 行分离） -->
-					<p class="mt-2 truncate text-[11px] text-[var(--accent-default)]">
+					<p class="mt-2 truncate text-[11px] text-accent-default">
 						<CalendarDays class="inline mr-1" style="width:12px;height:12px;" />
 						{group.activity}
 					</p>

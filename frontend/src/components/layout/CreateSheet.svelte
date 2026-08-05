@@ -97,20 +97,20 @@
 
 {#if surface === 'moment'}
 <form
-	class="flex h-full w-full flex-col overflow-hidden bg-[var(--surface-primary)] text-[var(--text-primary)]"
+	class="flex h-full w-full flex-col overflow-hidden bg-surface-primary text-text-primary"
 	onsubmit={(event) => {
 		event.preventDefault();
 		void handleSubmit();
 	}}
 >
-	<header class="flex-none border-b border-[var(--border-default)] px-5 pb-3 pt-4">
+	<header class="flex-none border-b border-border-default px-5 pb-3 pt-4">
 		<div class="mb-3 flex justify-center" aria-hidden="true">
-			<span class="h-1 w-9 rounded-full bg-[var(--border-strong)]"></span>
+			<span class="h-1 w-9 rounded-full bg-border-strong"></span>
 		</div>
 		<div class="flex items-center justify-between gap-4">
 			<div class="min-w-0">
 				<p class="eyebrow">附近动态</p>
-				<h1 id="create-composer-title" class="mt-1 text-[20px] font-medium leading-none tracking-[-0.01em] text-[var(--text-primary)]">
+				<h1 id="create-composer-title" class="mt-1 text-[20px] font-medium leading-none tracking-[-0.01em] text-text-primary">
 					记录此刻
 				</h1>
 			</div>
@@ -118,7 +118,7 @@
 				<button
 					type="button"
 					onclick={() => (surface = 'group')}
-					class="rounded-full border border-[var(--accent-border)] bg-[var(--accent-soft)] px-3 py-1.5 text-[11px] font-medium text-[var(--accent-default)] outline-none transition-colors hover:bg-[var(--accent-default)] hover:text-white focus-visible:ring-2 focus-visible:ring-[var(--accent-default)]"
+					class="rounded-full border border-accent-border bg-accent-soft px-3 py-1.5 text-[11px] font-medium text-accent-default outline-none transition-colors hover:bg-accent-default hover:text-white focus-visible:ring-2 focus-visible:ring-accent-default"
 				>
 					创建群组
 				</button>
@@ -131,16 +131,16 @@
 		<div class="mx-auto flex w-full max-w-[560px] flex-col gap-4">
 			<div class="flex items-center justify-between gap-3">
 				<div class="flex min-w-0 items-center gap-2.5">
-					<Avatar src={auth.user?.avatar_url} name={auth.user?.nickname} size={36} class="border border-[var(--border-default)]" />
+					<Avatar src={auth.user?.avatar_url} name={auth.user?.nickname} size={36} class="border border-border-default" />
 					<div class="min-w-0">
-						<p class="text-[13px] font-medium text-[var(--text-primary)]">{auth.user?.nickname || '用户'}</p>
-						<span class="mt-0.5 flex items-center gap-1 text-[11px] text-[var(--text-secondary)]">
-							<MapPin size={12} class="text-[var(--accent-default)]" strokeWidth={1.75} />
+						<p class="text-[13px] font-medium text-text-primary">{auth.user?.nickname || '用户'}</p>
+						<span class="mt-0.5 flex items-center gap-1 text-[11px] text-text-secondary">
+							<MapPin size={12} class="text-accent-default" strokeWidth={1.75} />
 							<span class="truncate">{locationName || '当前位置'}</span>
 						</span>
 					</div>
 				</div>
-				<span class="rounded-full border border-[var(--accent-border)] bg-[var(--accent-soft)] px-2.5 py-1 text-[10px] font-medium text-[var(--accent-default)]">
+				<span class="rounded-full border border-accent-border bg-accent-soft px-2.5 py-1 text-[10px] font-medium text-accent-default">
 					正在发布
 				</span>
 			</div>
@@ -150,19 +150,19 @@
 					bind:value={text}
 					oninput={(e) => (text = e.currentTarget.value.slice(0, 280))}
 					placeholder="写下此刻发生的事，或分享一个想被附近的人看见的瞬间…"
-					class="min-h-[122px] w-full resize-none bg-transparent text-[15px] leading-7 text-[var(--text-primary)] outline-none placeholder:text-[var(--text-secondary)]"
+					class="min-h-[122px] w-full resize-none bg-transparent text-[15px] leading-7 text-text-primary outline-none placeholder:text-text-secondary"
 					aria-label="动态内容"
 				></textarea>
-				<div class="mt-3 flex items-center justify-between border-t border-[var(--border-default)] pt-3">
+				<div class="mt-3 flex items-center justify-between border-t border-border-default pt-3">
 					<div class="flex items-center gap-1">
 						<button
 							type="button"
 							onclick={() => (hasImage = !hasImage)}
 							aria-label={hasImage ? '已添加照片' : '添加照片'}
 							aria-pressed={hasImage}
-							class="flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent-default)] {hasImage
-								? 'bg-[var(--accent-soft)] text-[var(--accent-default)] hover:bg-[var(--interactive-active)]'
-								: 'text-[var(--text-secondary)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-default)]'}"
+							class="flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {hasImage
+								? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
+								: 'text-text-secondary hover:bg-accent-soft hover:text-accent-default'}"
 						>
 							<ImagePlus size={16} strokeWidth={hasImage ? 2 : 1.6} />
 						</button>
@@ -170,7 +170,7 @@
 							type="button"
 							onclick={() => appendText('✨')}
 							aria-label="添加心情"
-							class="flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent-default)] text-[var(--text-secondary)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-default)]"
+							class="flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default text-text-secondary hover:bg-accent-soft hover:text-accent-default"
 						>
 							<Smile size={16} strokeWidth={1.6} />
 						</button>
@@ -179,23 +179,23 @@
 							onclick={toggleTopic}
 							aria-label="添加话题"
 							aria-pressed={topicActive}
-							class="flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent-default)] {topicActive
-								? 'bg-[var(--accent-soft)] text-[var(--accent-default)] hover:bg-[var(--interactive-active)]'
-								: 'text-[var(--text-secondary)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-default)]'}"
+							class="flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {topicActive
+								? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
+								: 'text-text-secondary hover:bg-accent-soft hover:text-accent-default'}"
 						>
 							<Hash size={16} strokeWidth={topicActive ? 2 : 1.6} />
 						</button>
 					</div>
-					<span class="text-[11px] tabular-nums {text.length >= 260 ? 'text-[var(--destructive)]' : 'text-[var(--text-secondary)]'}">
+					<span class="text-[11px] tabular-nums {text.length >= 260 ? 'text-destructive' : 'text-text-secondary'}">
 						{text.length}/280
 					</span>
 				</div>
 			</div>
 
 			{#if hasImage}
-				<div class="relative overflow-hidden rounded-[18px] ring-border bg-[var(--surface-page)]">
+				<div class="relative overflow-hidden rounded-[18px] ring-border bg-surface-page">
 					<div class="overflow-hidden rounded-[18px]">
-						<div class="flex h-36 w-full items-center justify-center gap-2 bg-[var(--surface-page)] text-[var(--text-secondary)]">
+						<div class="flex h-36 w-full items-center justify-center gap-2 bg-surface-page text-text-secondary">
 							<ImagePlus size={16} strokeWidth={1.6} />
 							<span class="text-[11px]">照片已添加</span>
 						</div>
@@ -216,7 +216,7 @@
 				<div class="mb-2 flex items-center justify-between">
 					<p id="mood-label" class="eyebrow">此刻氛围</p>
 					{#if selectedMoods.size > 0}
-						<span class="text-[10px] text-[var(--text-secondary)]">已选 {selectedMoods.size} 项</span>
+						<span class="text-[10px] text-text-secondary">已选 {selectedMoods.size} 项</span>
 					{/if}
 				</div>
 				<div class="flex flex-wrap gap-2">
@@ -226,9 +226,9 @@
 							type="button"
 							onclick={() => toggleMood(tag)}
 							aria-pressed={active}
-							class="rounded-full border px-3 py-1.5 text-[12px] outline-none transition-all focus-visible:ring-2 focus-visible:ring-[var(--accent-default)] {active
-								? 'border-[var(--accent-border)] bg-[var(--accent-soft)] font-medium text-[var(--accent-default)] hover:border-[var(--accent-default)] hover:bg-[var(--interactive-active)]'
-								: 'border-[var(--border-default)] bg-transparent text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]'}"
+							class="rounded-full border px-3 py-1.5 text-[12px] outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default {active
+								? 'border-accent-border bg-accent-soft font-medium text-accent-default hover:border-accent-default hover:bg-interactive-active'
+								: 'border-border-default bg-transparent text-text-secondary hover:border-border-strong hover:text-text-primary'}"
 						>
 							{tag}
 						</button>
@@ -238,11 +238,11 @@
 
 			<section
 				aria-labelledby="audience-label"
-				class="rounded-[18px] ring-1 ring-[var(--border-default)] bg-[color-mix(in_srgb,var(--surface-primary)_94%,var(--surface-page)_6%)] p-2"
+				class="rounded-[18px] ring-1 ring-border-default bg-[color-mix(in_srgb,var(--surface-primary)_94%,var(--surface-page)_6%)] p-2"
 			>
 				<div class="flex items-center justify-between px-2 pb-2 pt-1">
 					<p id="audience-label" class="eyebrow">谁可以看到</p>
-					<span class="text-[10px] text-[var(--text-secondary)]">{activeAudience.hint}</span>
+					<span class="text-[10px] text-text-secondary">{activeAudience.hint}</span>
 				</div>
 				<div class="grid grid-cols-3 gap-1">
 					{#each AUDIENCES as { id, label, icon: AudienceIcon }}
@@ -251,9 +251,9 @@
 							type="button"
 							onclick={() => (audience = id)}
 							aria-pressed={active}
-							class="flex min-w-0 flex-col items-center gap-1 rounded-[12px] px-1 py-2 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent-default)] {active
-								? 'bg-[var(--accent-soft)] text-[var(--accent-default)] hover:bg-[var(--interactive-active)]'
-								: 'text-[var(--text-secondary)] hover:bg-[var(--accent-soft)]/50'}"
+							class="flex min-w-0 flex-col items-center gap-1 rounded-[12px] px-1 py-2 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {active
+								? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
+								: 'text-text-secondary hover:bg-accent-soft/50'}"
 						>
 							<AudienceIcon size={14} strokeWidth={active ? 2 : 1.5} />
 							<span class="truncate text-[10px] font-medium">{label}</span>
@@ -264,16 +264,16 @@
 		</div>
 	</div>
 
-	<footer class="flex flex-none items-center gap-3 border-t border-[var(--border-default)] bg-[var(--surface-primary)] px-5 py-3">
+	<footer class="flex flex-none items-center gap-3 border-t border-border-default bg-surface-primary px-5 py-3">
 		<div class="min-w-0 flex-1">
-			<p class="truncate text-[11px] text-[var(--text-secondary)]">
+			<p class="truncate text-[11px] text-text-secondary">
 				{selectedMoods.size ? `将以 ${Array.from(selectedMoods).join(' · ')} 的氛围出现` : '选择氛围，让附近的人更容易找到你'}
 			</p>
 		</div>
 		<button
 			type="submit"
 			disabled={!canPublish}
-			class="hover-btn shrink-0 rounded-full px-5 py-2.5 text-[13px] font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-[var(--accent-default)] disabled:cursor-not-allowed disabled:border disabled:border-[var(--border-default)] disabled:bg-transparent disabled:text-[var(--text-secondary)] enabled:bg-[var(--accent-default)] enabled:text-white enabled:shadow-[0_6px_18px_var(--glow-accent)]"
+			class="hover-btn shrink-0 rounded-full px-5 py-2.5 text-[13px] font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:border disabled:border-border-default disabled:bg-transparent disabled:text-text-secondary enabled:bg-accent-default enabled:text-white enabled:shadow-[0_6px_18px_var(--glow-accent)]"
 		>
 			发布动态
 		</button>

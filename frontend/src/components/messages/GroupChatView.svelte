@@ -162,13 +162,13 @@
 	});
 </script>
 
-<div class="flex min-h-0 flex-col h-full bg-[var(--surface-primary)]">
+<div class="flex min-h-0 flex-col h-full bg-surface-primary">
 	<!-- Header -->
-	<div class="flex-shrink-0 flex items-center gap-3 px-4 bg-[var(--surface-primary)]" style="height:{compact ? 52 : 60}px;border-bottom:1px solid var(--border-default);">
+	<div class="flex-shrink-0 flex items-center gap-3 px-4 bg-surface-primary" style="height:{compact ? 52 : 60}px;border-bottom:1px solid var(--border-default);">
 		{#if showBackButton}
 			<button
 				type="button"
-				class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 bg-[var(--surface-primary)]"
+				class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 bg-surface-primary"
 				style="width:36px;height:36px;box-shadow:4px 4px 9px var(--elevation-shadow-dark), -4px -4px 9px var(--elevation-shadow-light);border:1px solid var(--border-default);"
 				onclick={onBack}
 			>
@@ -187,10 +187,10 @@
 
 		<!-- Name + status -->
 		<div class="flex-1 min-w-0">
-			<p class="truncate text-[var(--text-primary)]" style="font-size:{compact ? 13 : 14}px;">
+			<p class="truncate text-text-primary" style="font-size:{compact ? 13 : 14}px;">
 				{groupName || '群聊'}
 			</p>
-			<p class="{groupTyping ? 'text-[var(--accent-default)]' : 'text-[var(--text-secondary)]'}" style="font-size:11px;">
+			<p class="{groupTyping ? 'text-accent-default' : 'text-text-secondary'}" style="font-size:11px;">
 				{#if groupTyping}
 					{typingName || '有人'}正在输入…
 				{:else}
@@ -204,17 +204,17 @@
 	<div bind:this={chat.scrollEl} onscroll={chat.handleScroll} class="flex-1 overflow-y-auto no-scrollbar" style="overscroll-behavior:contain;">
 		{#if chat.loading}
 			<div class="flex h-full items-center justify-center">
-				<p class="text-[var(--text-secondary)]" style="font-size:12px;">加载中…</p>
+				<p class="text-text-secondary" style="font-size:12px;">加载中…</p>
 			</div>
 		{:else if chat.messages.length === 0}
 			<div class="flex h-full items-center justify-center">
-				<p class="text-[var(--text-secondary)]" style="font-size:12px;">还没有消息，来打个招呼吧</p>
+				<p class="text-text-secondary" style="font-size:12px;">还没有消息，来打个招呼吧</p>
 			</div>
 		{:else}
 			<div class="animate-fade-in flex flex-col gap-2 px-4 pt-4 pb-3">
 				<!-- Date pill -->
 				<div class="flex justify-center mb-2">
-					<span class="px-3 py-1 rounded-full bg-[var(--surface-primary)] text-[var(--text-secondary)]" style="font-size:10px;border:1px solid var(--border-default);letter-spacing:0.05em;opacity:0.8;">
+					<span class="px-3 py-1 rounded-full bg-surface-primary text-text-secondary" style="font-size:10px;border:1px solid var(--border-default);letter-spacing:0.05em;opacity:0.8;">
 						今天
 					</span>
 				</div>
@@ -222,16 +222,16 @@
 				{#each chat.messages as msg (msg.id)}
 					<div class="animate-fade-in flex {msg.sent ? 'justify-end' : 'justify-start'}">
 						<div
-							class="{msg.sent ? 'bg-[var(--accent-default)]' : 'bg-[var(--surface-primary)]'}"
+							class="{msg.sent ? 'bg-accent-default' : 'bg-surface-primary'}"
 							style="max-width:76%;padding:10px 14px;border-radius:{msg.sent ? '18px 4px 18px 18px' : '4px 18px 18px 18px'};{msg.sent
 								? 'box-shadow:0 4px 14px var(--glow-accent);'
 								: 'box-shadow:4px 4px 10px var(--elevation-shadow-dark), -4px -4px 10px var(--elevation-shadow-light);border:1px solid var(--border-default);'}"
 						>
-							<p class="{msg.sent ? 'text-white' : 'text-[var(--text-primary)]'}" style="font-size:13px;line-height:1.55;">
+							<p class="{msg.sent ? 'text-white' : 'text-text-primary'}" style="font-size:13px;line-height:1.55;">
 								{msg.text}
 							</p>
 							<p
-								class="{msg.sent ? 'text-[var(--content-inverse-muted)]' : 'text-[var(--text-secondary)]'}"
+								class="{msg.sent ? 'text-content-inverse-muted' : 'text-text-secondary'}"
 								style="font-size:10px;margin-top:4px;display:flex;align-items:center;gap:3px;justify-content:{msg.sent ? 'flex-end' : 'flex-start'};"
 							>
 								{msg.time}
@@ -248,9 +248,9 @@
 
 	<!-- Input bar -->
 	{#if chat.sendError}
-		<p class="px-4 pb-1.5 text-[var(--status-warning)]" style="font-size:11px;">{chat.sendError}</p>
+		<p class="px-4 pb-1.5 text-status-warning" style="font-size:11px;">{chat.sendError}</p>
 	{/if}
-	<div class="flex-shrink-0 flex items-center gap-2.5 px-4 py-3 bg-[var(--surface-primary)]" style="border-top:1px solid var(--border-default);">
+	<div class="flex-shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary" style="border-top:1px solid var(--border-default);">
 		<div class="flex-1 flex items-center px-4 rounded-[18px] input-surface" style="height:38px;">
 			<input
 				type="text"
@@ -260,14 +260,14 @@
 					if (e.key === 'Enter') void chat.handleSend();
 				}}
 				placeholder="发消息…"
-				class="flex-1 bg-transparent outline-none text-[var(--text-primary)]"
+				class="flex-1 bg-transparent outline-none text-text-primary"
 				style="font-size:13px;"
 			/>
 		</div>
 
 		<button
 			type="button"
-			class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-[var(--accent-default)]' : 'bg-[var(--surface-primary)]'}"
+			class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'}"
 			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? '0 4px 14px var(--glow-accent)' : '4px 4px 8px var(--elevation-shadow-dark), -4px -4px 8px var(--elevation-shadow-light)'};border:1px solid var(--border-default);"
 			onclick={() => void chat.handleSend()}
 		>

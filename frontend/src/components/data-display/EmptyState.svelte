@@ -34,15 +34,15 @@
 	<div class={cn('flex flex-col items-center justify-center py-20 gap-3', className)}>
 		{#if icon}
 			<div
-				class="flex items-center justify-center rounded-full border border-[var(--border-default)]"
+				class="flex items-center justify-center rounded-full border border-border-default"
 				style="width:{iconSize}px;height:{iconSize}px;box-shadow:6px 6px 14px var(--elevation-shadow-dark), -6px -6px 14px var(--elevation-shadow-light);"
 			>
 				{@render icon()}
 			</div>
 		{/if}
-		<p class="text-[var(--text-primary)] text-[15px] font-medium">{title}</p>
+		<p class="text-text-primary text-[15px] font-medium">{title}</p>
 		{#if description}
-			<p class="text-[var(--text-secondary)] text-center max-w-xs text-[13px] leading-relaxed">{description}</p>
+			<p class="text-text-secondary text-center max-w-xs text-[13px] leading-relaxed">{description}</p>
 		{/if}
 		{#if action}
 			{@render action()}

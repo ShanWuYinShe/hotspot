@@ -38,7 +38,7 @@
 <button
 	type="button"
 	aria-current={isSelected ? 'page' : undefined}
-	class="group flex w-full cursor-pointer items-center gap-3.5 rounded-control px-4 text-left outline-none transition-colors duration-150 {isSelected ? 'bg-[var(--accent-default)]' : 'hover:bg-[var(--interactive-hover-fill)] focus-visible:bg-[var(--interactive-hover-fill)]'} active:opacity-80"
+	class="group flex w-full cursor-pointer items-center gap-3.5 rounded-control px-4 text-left outline-none transition-colors duration-150 {isSelected ? 'bg-accent-default' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:opacity-80"
 	style="padding:{compact ? '10px 16px' : '12px 16px'};box-shadow:{isSelected ? '0 3px 12px var(--glow-accent)' : 'none'};"
 	onclick={onClick}
 >
@@ -57,23 +57,23 @@
 	<span class="min-w-0 flex-1">
 		<span class="mb-0.5 flex items-baseline justify-between">
 			<span
-				class="{isSelected ? 'text-[var(--content-inverse)]' : 'text-[var(--text-primary)]'} text-sm"
+				class="{isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm"
 				style="font-weight:{chat.unread > 0 ? 600 : 400};"
 			>
 				{chat.name}
 			</span>
-			<span class="{isSelected ? 'text-[var(--content-inverse-muted)]' : 'text-[var(--text-secondary)]'} shrink-0 text-[11px]">
+			<span class="{isSelected ? 'text-content-inverse-muted' : 'text-text-secondary'} shrink-0 text-[11px]">
 				{chat.time}
 			</span>
 		</span>
-		<span class="block truncate pr-4 {isSelected ? 'text-[var(--content-inverse-secondary)]' : 'text-[var(--text-secondary)]'} text-xs">
+		<span class="block truncate pr-4 {isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs">
 			{chat.lastMessage}
 		</span>
 	</span>
 
 	{#if chat.unread > 0 && !isSelected}
 		<span
-			class="flex flex-shrink-0 items-center justify-center rounded-full bg-[var(--accent-default)] text-white text-[11px] font-semibold"
+			class="flex flex-shrink-0 items-center justify-center rounded-full bg-accent-default text-white text-[11px] font-semibold"
 			style="width:20px;height:20px;box-shadow:0 2px 8px var(--glow-accent);"
 		>
 			{chat.unread}

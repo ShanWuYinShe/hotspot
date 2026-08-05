@@ -32,7 +32,7 @@
 		<div class="flex items-center justify-between">
 			<div class="flex items-center gap-2.5">
 				<div
-					class="flex items-center justify-center rounded-full bg-[var(--accent-default)]"
+					class="flex items-center justify-center rounded-full bg-accent-default"
 					style="width:38px;height:38px;box-shadow:0 4px 14px var(--glow-accent);"
 				>
 					<Radar style="width:17px;height:17px;color:var(--text-on-accent);" strokeWidth={2} />
@@ -48,16 +48,16 @@
 		</div>
 
 		<!-- Stats row -->
-		<div class="grid grid-cols-3 mt-4 bg-[var(--border-default)]" style="gap:1px;border-radius:var(--shape-control);overflow:hidden;">
-			<div class="flex flex-col items-center justify-center py-2.5 bg-[var(--surface-primary)]">
+		<div class="grid grid-cols-3 mt-4 bg-border-default" style="gap:1px;border-radius:var(--shape-control);overflow:hidden;">
+			<div class="flex flex-col items-center justify-center py-2.5 bg-surface-primary">
 				<span class="text-[19px] font-semibold" style="color:var(--accent-default);line-height:1;">{stats.nearby}</span>
 				<span class="text-[10px]" style="color:var(--text-secondary);margin-top:4px;">人附近</span>
 			</div>
-			<div class="flex flex-col items-center justify-center py-2.5 bg-[var(--surface-primary)]">
+			<div class="flex flex-col items-center justify-center py-2.5 bg-surface-primary">
 				<span class="text-[19px] font-semibold" style="color:var(--status-warning);line-height:1;">{stats.active}</span>
 				<span class="text-[10px]" style="color:var(--text-secondary);margin-top:4px;">活动中</span>
 			</div>
-			<div class="flex flex-col items-center justify-center py-2.5 bg-[var(--surface-primary)]">
+			<div class="flex flex-col items-center justify-center py-2.5 bg-surface-primary">
 				<span class="text-[19px] font-semibold" style="color:var(--status-online);line-height:1;">{stats.online}</span>
 				<span class="text-[10px]" style="color:var(--text-secondary);margin-top:4px;">在线</span>
 			</div>

@@ -73,16 +73,16 @@
 	<!-- 总览模式（对齐 Figma Make ProfileDesktop：单列资料页） -->
 	<StandardPageLayout contentClassName="py-7 lg:py-8">
 		<!-- 资料页眉 -->
-		<header class="flex items-start justify-between gap-6 border-b border-[var(--border-default)] pb-5">
+		<header class="flex items-start justify-between gap-6 border-b border-border-default pb-5">
 			<div>
-				<p class="text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--accent-default)]">个人资料</p>
-				<h1 class="mt-2 text-[24px] font-medium tracking-[-0.015em] text-[var(--text-primary)]">管理你的公开信息</h1>
-				<p class="mt-1.5 text-sm text-[var(--text-secondary)]">这些资料会展示给访问你主页的人。</p>
+				<p class="text-[11px] font-medium uppercase tracking-[0.14em] text-accent-default">个人资料</p>
+				<h1 class="mt-2 text-[24px] font-medium tracking-[-0.015em] text-text-primary">管理你的公开信息</h1>
+				<p class="mt-1.5 text-sm text-text-secondary">这些资料会展示给访问你主页的人。</p>
 			</div>
 			<button
 				type="button"
 				onclick={() => void goto(ROUTES.meEdit)}
-				class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-[var(--border-default)] bg-[var(--surface-primary)] px-3.5 py-2.5 text-sm font-medium text-[var(--text-primary)] outline-none transition-colors hover:bg-[var(--accent-soft)]"
+				class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default bg-surface-primary px-3.5 py-2.5 text-sm font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
 			>
 				<Pencil style="width:16px;height:16px;" strokeWidth={1.8} />
 				编辑资料
@@ -91,66 +91,66 @@
 
 		<!-- 双栏：公开资料卡 + 资料状态 -->
 		<div class="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
-			<section class="rounded-panel border border-[var(--border-default)] surface-flat" aria-label="公开个人资料">
+			<section class="rounded-panel border border-border-default surface-flat" aria-label="公开个人资料">
 				<div class="flex items-start gap-5 p-6">
 					<div class="relative shrink-0">
-						<div class="overflow-hidden rounded-full border-2 border-[var(--surface-primary)] bg-[var(--surface-primary)] p-1">
+						<div class="overflow-hidden rounded-full border-2 border-surface-primary bg-surface-primary p-1">
 							{#if avatar}
 								<img src={avatar} alt={nickname || '用户'} class="rounded-full object-cover" style="width:82px;height:82px;" />
 							{:else}
-								<span class="flex items-center justify-center text-[var(--text-secondary)]" style="width:82px;height:82px;font-size:32px;">{(nickname || '?')[0]}</span>
+								<span class="flex items-center justify-center text-text-secondary" style="width:82px;height:82px;font-size:32px;">{(nickname || '?')[0]}</span>
 							{/if}
 						</div>
 						<button
 							type="button"
 							aria-label="更换头像"
 							onclick={() => void goto(ROUTES.meEdit)}
-							class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-[var(--accent-default)] text-white"
+							class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-accent-default text-white"
 							style="width:28px;height:28px;border:2px solid var(--surface-primary);"
 						>
 							<Camera style="width:14px;height:14px;" strokeWidth={2} />
 						</button>
 					</div>
 					<div class="min-w-0 pt-1">
-						<h2 class="text-[22px] font-medium tracking-[-0.01em] text-[var(--text-primary)]">{nickname || '未设置昵称'}</h2>
-						<p class="mt-1 text-sm text-[var(--text-secondary)]">{handle}</p>
-						<p class="mt-4 max-w-[460px] text-sm leading-6 text-[var(--text-secondary)]">{bio || '这个人还没有填写简介。'}</p>
-						<p class="mt-3 flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
+						<h2 class="text-[22px] font-medium tracking-[-0.01em] text-text-primary">{nickname || '未设置昵称'}</h2>
+						<p class="mt-1 text-sm text-text-secondary">{handle}</p>
+						<p class="mt-4 max-w-[460px] text-sm leading-6 text-text-secondary">{bio || '这个人还没有填写简介。'}</p>
+						<p class="mt-3 flex items-center gap-1.5 text-xs text-text-secondary">
 							<MapPin style="width:14px;height:14px;color:var(--accent-default);" strokeWidth={1.8} />
 							{locationName || '未设置位置'}
 						</p>
 					</div>
 				</div>
-				<div class="grid grid-cols-3 border-t border-[var(--border-default)]">
+				<div class="grid grid-cols-3 border-t border-border-default">
 					{#each statsList as stat, i}
 						<button
 							type="button"
-							class="hover-bg border-l border-[var(--border-default)] px-5 py-4 text-left outline-none first:border-l-0"
+							class="hover-bg border-l border-border-default px-5 py-4 text-left outline-none first:border-l-0"
 							style="background:var(--surface-primary);"
 							onclick={() => (stat.section ? void goto(ROUTES.meSection(stat.section)) : undefined)}
 						>
-							<p class="text-lg font-medium tabular-nums text-[var(--text-primary)]">{stat.value}</p>
-							<p class="mt-0.5 text-xs text-[var(--text-secondary)]">{stat.label}</p>
+							<p class="text-lg font-medium tabular-nums text-text-primary">{stat.value}</p>
+							<p class="mt-0.5 text-xs text-text-secondary">{stat.label}</p>
 						</button>
 					{/each}
 				</div>
 			</section>
 
 			<!-- 资料状态 -->
-			<aside class="rounded-panel border border-[var(--border-default)] surface-flat p-5" aria-label="资料状态">
+			<aside class="rounded-panel border border-border-default surface-flat p-5" aria-label="资料状态">
 				<div class="flex items-center justify-between">
-					<h2 class="text-sm font-medium text-[var(--text-primary)]">资料状态</h2>
+					<h2 class="text-sm font-medium text-text-primary">资料状态</h2>
 					<ShieldCheck style="width:16px;height:16px;color:var(--accent-default);" strokeWidth={1.8} />
 				</div>
-				<p class="mt-2 text-xs leading-5 text-[var(--text-secondary)]">你的基础资料已完善，可随时在编辑页更新。</p>
-				<div class="mt-5 h-1.5 overflow-hidden bg-[var(--border-default)]">
-					<div class="h-full bg-[var(--accent-default)]" style="width:{filledCount * 20}%;"></div>
+				<p class="mt-2 text-xs leading-5 text-text-secondary">你的基础资料已完善，可随时在编辑页更新。</p>
+				<div class="mt-5 h-1.5 overflow-hidden bg-border-default">
+					<div class="h-full bg-accent-default" style="width:{filledCount * 20}%;"></div>
 				</div>
-				<p class="mt-2 text-[11px] text-[var(--text-secondary)]">{filledCount} 项基础资料已填写</p>
+				<p class="mt-2 text-[11px] text-text-secondary">{filledCount} 项基础资料已填写</p>
 				<button
 					type="button"
 					onclick={() => void goto(ROUTES.settings)}
-					class="hover-btn mt-5 flex w-full items-center justify-center gap-2 border border-[var(--border-default)] bg-[var(--surface-primary)] py-2.5 text-xs font-medium text-[var(--text-primary)] outline-none transition-colors hover:bg-[var(--accent-soft)]"
+					class="hover-btn mt-5 flex w-full items-center justify-center gap-2 border border-border-default bg-surface-primary py-2.5 text-xs font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
 				>
 					账号与隐私设置
 					<ChevronRight style="width:14px;height:14px;" strokeWidth={1.8} />
@@ -159,20 +159,20 @@
 		</div>
 
 		<!-- 资料详情 -->
-		<section class="mt-5 rounded-panel border border-[var(--border-default)] surface-flat" aria-label="资料详情">
-			<div class="border-b border-[var(--border-default)] px-6 py-4">
-				<h2 class="text-sm font-medium text-[var(--text-primary)]">资料详情</h2>
-				<p class="mt-1 text-xs text-[var(--text-secondary)]">以下内容将显示在你的个人主页。</p>
+		<section class="mt-5 rounded-panel border border-border-default surface-flat" aria-label="资料详情">
+			<div class="border-b border-border-default px-6 py-4">
+				<h2 class="text-sm font-medium text-text-primary">资料详情</h2>
+				<p class="mt-1 text-xs text-text-secondary">以下内容将显示在你的个人主页。</p>
 			</div>
 			<dl class="grid md:grid-cols-2">
 				{#each detailRows as row, index}
 					<div
-						class="flex items-start gap-3 px-6 py-4 {index > 1 ? 'border-t border-[var(--border-default)]' : ''} {index % 2 === 1 ? 'md:border-l md:border-[var(--border-default)]' : ''}"
+						class="flex items-start gap-3 px-6 py-4 {index > 1 ? 'border-t border-border-default' : ''} {index % 2 === 1 ? 'md:border-l md:border-border-default' : ''}"
 					>
 						<row.icon style="width:16px;height:16px;margin-top:2px;color:var(--accent-default);flex-shrink:0;" strokeWidth={1.7} />
 						<div class="min-w-0">
-							<dt class="text-[11px] text-[var(--text-secondary)]">{row.label}</dt>
-							<dd class="mt-1 text-sm text-[var(--text-primary)]">{row.value}</dd>
+							<dt class="text-[11px] text-text-secondary">{row.label}</dt>
+							<dd class="mt-1 text-sm text-text-primary">{row.value}</dd>
 						</div>
 					</div>
 				{/each}

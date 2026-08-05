@@ -21,7 +21,7 @@
 
 <button
 	type="button"
-	class="hover-btn nav-tab relative flex flex-col items-center justify-center outline-none select-none rounded-[var(--shape-panel)]"
+	class="hover-btn nav-tab relative flex flex-col items-center justify-center outline-none select-none rounded-panel"
 	style="flex:1;min-width:0;padding-top:10px;padding-bottom:8px;gap:4px;"
 	aria-label={label}
 	aria-current={isActive ? 'page' : undefined}

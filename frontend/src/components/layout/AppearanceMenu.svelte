@@ -92,18 +92,18 @@
 	<Popover.Content customAnchor={rootEl} class="w-[230px] rounded-relaxed p-2.5" role="dialog" aria-label="外观设置">
 			<div class="px-2 pb-2">
 				<p class="eyebrow">外观</p>
-				<p class="mt-1 text-[11px] text-[var(--text-secondary)]">
+				<p class="mt-1 text-[11px] text-text-secondary">
 					当前：{currentTheme} · {modeLabel}
 				</p>
 			</div>
 
 			<section
 				aria-labelledby="theme-choice-label"
-				class="rounded-[18px] ring-1 ring-[var(--border-default)] bg-[color-mix(in_srgb,var(--surface-primary)_94%,var(--surface-page)_6%)] p-2"
+				class="rounded-[18px] ring-1 ring-border-default bg-[color-mix(in_srgb,var(--surface-primary)_94%,var(--surface-page)_6%)] p-2"
 			>
 				<div class="flex items-center justify-between px-2 pb-2 pt-1">
 					<p id="theme-choice-label" class="eyebrow">主题</p>
-					<span class="text-[10px] text-[var(--text-secondary)]">选择一种基调</span>
+					<span class="text-[10px] text-text-secondary">选择一种基调</span>
 				</div>
 				<div class="grid grid-cols-2 gap-1.5" role="group" aria-label="选择主题">
 					{#each THEMES as item}
@@ -112,16 +112,16 @@
 							type="button"
 							onclick={() => setTheme(item.id)}
 							aria-pressed={selected}
-							class="rounded-small p-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent-default)] {selected
-								? 'bg-[var(--accent-soft)] text-[var(--accent-default)] hover:bg-[var(--interactive-active)]'
-								: 'surface-ghost text-[var(--text-secondary)]'}"
+							class="rounded-small p-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {selected
+								? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
+								: 'surface-ghost text-text-secondary'}"
 						>
 							<span
 								class="mb-2 block h-5 w-5 rounded-full"
 								style="background:{item.swatch};box-shadow:0 0 0 3px {selected ? 'var(--accent-soft)' : 'transparent'};"
 							></span>
 							<span class="block text-[12px] font-medium" style="color:var(--text-primary);">{item.label}</span>
-							<span class="mt-0.5 block text-[10px] text-[var(--text-secondary)]">{item.note}</span>
+							<span class="mt-0.5 block text-[10px] text-text-secondary">{item.note}</span>
 						</button>
 					{/each}
 				</div>
@@ -131,11 +131,11 @@
 				type="button"
 				onclick={toggleDark}
 				aria-pressed={theme.isDark}
-				class="hover-btn surface-ghost mt-2 flex w-full items-center justify-between rounded-small px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-default)]"
+				class="hover-btn surface-ghost mt-2 flex w-full items-center justify-between rounded-small px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
 				style="color:var(--text-primary);"
 			>
 				<span class="flex items-center gap-2">
-					<span class="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-[var(--accent-soft)]">
+					<span class="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-accent-soft">
 						{#if theme.isDark}
 							<Sun size={13} color="var(--accent-default)" />
 						{:else}
@@ -144,7 +144,7 @@
 					</span>
 					<span>
 						<span class="block text-[12px] font-medium">{theme.isDark ? '深色模式' : '浅色模式'}</span>
-						<span class="block text-[10px] text-[var(--text-secondary)]">点击切换</span>
+						<span class="block text-[10px] text-text-secondary">点击切换</span>
 					</span>
 				</span>
 				<span class="relative h-5 w-[34px] overflow-hidden rounded-full" style="background:{theme.isDark ? 'var(--accent-default)' : 'var(--border-strong)'};">
@@ -159,16 +159,16 @@
 				<button
 					type="button"
 					onclick={handleMockToggle}
-					class="hover-btn mt-2 flex w-full items-center justify-between rounded-[12px] ring-1 ring-[var(--border-default)] px-3 py-2.5 text-left outline-none transition-colors hover:bg-[var(--accent-soft)] focus-visible:ring-2 focus-visible:ring-[var(--accent-default)]"
+					class="hover-btn mt-2 flex w-full items-center justify-between rounded-[12px] ring-1 ring-border-default px-3 py-2.5 text-left outline-none transition-colors hover:bg-accent-soft focus-visible:ring-2 focus-visible:ring-accent-default"
 					style="color:var(--text-primary);"
 				>
 					<span class="flex items-center gap-2">
-						<span class="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-[var(--accent-soft)]">
+						<span class="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-accent-soft">
 							<Database size={13} color="var(--accent-default)" />
 						</span>
 						<span>
 							<span class="block text-[12px] font-medium">API 数据来源</span>
-							<span class="block text-[10px] text-[var(--text-secondary)]">{mockEnabled ? '模拟数据' : '真实后端'}</span>
+							<span class="block text-[10px] text-text-secondary">{mockEnabled ? '模拟数据' : '真实后端'}</span>
 						</span>
 					</span>
 					<span class="relative h-5 w-[34px] overflow-hidden rounded-full" style="background:{mockEnabled ? 'var(--accent-default)' : 'var(--border-strong)'};">
@@ -179,9 +179,9 @@
 					</span>
 				</button>
 
-				<div class="mt-2 rounded-[12px] ring-1 ring-[var(--border-default)] px-3 py-2.5" style="color:var(--text-primary);">
+				<div class="mt-2 rounded-[12px] ring-1 ring-border-default px-3 py-2.5" style="color:var(--text-primary);">
 					<span class="block text-[12px] font-medium">模拟登录态</span>
-					<span class="mb-2 block text-[10px] text-[var(--text-secondary)]">影响 login/register/guest/reset 的返回</span>
+					<span class="mb-2 block text-[10px] text-text-secondary">影响 login/register/guest/reset 的返回</span>
 					<div class="flex flex-col" style="gap:4px;">
 						{#each AUTH_SCENARIOS as s}
 							<button
@@ -200,7 +200,7 @@
 					<button
 						type="button"
 						onclick={() => void resetLoggedOut()}
-						class="mt-2 w-full rounded-[8px] ring-1 ring-[var(--border-default)] px-2 py-1.5 text-[11px] outline-none transition-colors hover:bg-[var(--accent-soft)]"
+						class="mt-2 w-full rounded-[8px] ring-1 ring-border-default px-2 py-1.5 text-[11px] outline-none transition-colors hover:bg-accent-soft"
 						style="color:var(--text-secondary);"
 					>
 						重置为未登录（匿名浏览）

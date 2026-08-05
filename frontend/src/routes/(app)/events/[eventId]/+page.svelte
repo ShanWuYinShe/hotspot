@@ -109,7 +109,7 @@
 
 	<!-- 内容（gutter 由 SplitPageLayout 提供） -->
 	<div class="pt-4">
-				<h1 class="text-[var(--text-primary)] text-[24px] mb-2">{safeEv.title}</h1>
+				<h1 class="text-text-primary text-[24px] mb-2">{safeEv.title}</h1>
 
 				<!-- meta 行 -->
 				<div class="mb-5 flex flex-col gap-2">
@@ -118,7 +118,7 @@
 							<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width:30px;height:30px;background:color-mix(in srgb, {safeEv.color} 14%, transparent);">
 								<meta.icon style="width:13px;height:13px;color:{safeEv.color};" strokeWidth={1.75} />
 							</div>
-							<span class="text-[13px] text-[var(--text-secondary)]">{meta.text}</span>
+							<span class="text-[13px] text-text-secondary">{meta.text}</span>
 						</div>
 					{/each}
 				</div>
@@ -129,17 +129,17 @@
 						<img src={safeEv.host.avatar} alt={safeEv.host.name} class="h-full w-full object-cover" />
 					</div>
 					<div class="flex-1">
-						<p class="text-[13px] text-[var(--text-primary)]">{safeEv.host.name}</p>
+						<p class="text-[13px] text-text-primary">{safeEv.host.name}</p>
 						<div class="flex items-center gap-1">
 							<Star style="width:10px;height:10px;color:var(--status-warning);" fill="var(--status-warning)" strokeWidth={1.5} />
-							<span class="text-[11px] text-[var(--text-secondary)]">活动发起人</span>
+							<span class="text-[11px] text-text-secondary">活动发起人</span>
 						</div>
 					</div>
 					<button type="button" class="hover-btn tap-93 rounded-full px-3 py-1.5 text-white text-[12px] outline-none" style="background:{safeEv.color};box-shadow:0 3px 10px {evTone(40)};">关注</button>
 				</div>
 
 				<!-- 描述 -->
-				<p class="mb-5 text-[14px] leading-[1.75] text-[var(--text-secondary)]">{safeEv.description}</p>
+				<p class="mb-5 text-[14px] leading-[1.75] text-text-secondary">{safeEv.description}</p>
 
 				<!-- 亮点 -->
 				<div class="mb-5 grid gap-2.5" style="grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));">
@@ -148,7 +148,7 @@
 							<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width:24px;height:24px;background:color-mix(in srgb, {safeEv.color} 14%, transparent);">
 								<Check style="width:11px;height:11px;color:{safeEv.color};" strokeWidth={2.5} />
 							</div>
-							<span class="text-[12px] text-[var(--text-primary)]">{h}</span>
+							<span class="text-[12px] text-text-primary">{h}</span>
 						</div>
 					{/each}
 				</div>
@@ -156,7 +156,7 @@
 				<!-- 参与者 -->
 				<div class="mb-5">
 					<div class="mb-3 flex items-center justify-between">
-						<p class="text-[14px] text-[var(--text-primary)]">参与者 · {safeEv.participants.length}/{safeEv.maxParticipants}</p>
+						<p class="text-[14px] text-text-primary">参与者 · {safeEv.participants.length}/{safeEv.maxParticipants}</p>
 						<button type="button" class="hover-btn tap-93 flex items-center gap-0.5 outline-none" style="color:var(--accent-default);" onclick={() => (showParticipants = true)}>
 							<span class="text-[12px]">查看全部</span>
 							<ChevronRight style="width:13px;height:13px;" strokeWidth={1.5} />
@@ -180,14 +180,14 @@
 								<span class="text-[11px] font-semibold" style="color:{safeEv.color};">+{safeEv.maxParticipants - safeEv.participants.length}</span>
 							</div>
 						{/if}
-						<span class="ml-2 text-[12px] text-[var(--text-secondary)]">已报名</span>
+						<span class="ml-2 text-[12px] text-text-secondary">已报名</span>
 					</div>
 				</div>
 
 				<!-- 距离信息 -->
 				<div class="flex items-center gap-2 rounded-control px-4 py-3" style="background:{evTone(10)};border:1px solid {evTone(25)};">
 					<MapPin style="width:14px;height:14px;color:{safeEv.color};" strokeWidth={1.5} />
-					<span class="text-[13px] text-[var(--text-secondary)]">距你 {safeEv.distance} · 步行约 {walkMinutes} 分钟</span>
+					<span class="text-[13px] text-text-secondary">距你 {safeEv.distance} · 步行约 {walkMinutes} 分钟</span>
 				</div>
 	</div>
 
@@ -263,8 +263,8 @@
 	<Dialog.Content side="bottom" class="overflow-hidden" style="max-width:520px;margin-left:auto;margin-right:auto;left:16px;right:16px;">
 		<header class="flex items-center gap-3 px-5 py-4" style="border-bottom:1px solid var(--border-default);">
 			<div class="flex-1">
-				<p class="text-[16px] font-semibold text-[var(--text-primary)]">报名名单</p>
-				<p class="mt-0.5 text-[11px] text-[var(--text-secondary)]">{safeEv.participants.length} 人已报名 · 还可加入 {safeEv.maxParticipants - safeEv.participants.length} 人</p>
+				<p class="text-[16px] font-semibold text-text-primary">报名名单</p>
+				<p class="mt-0.5 text-[11px] text-text-secondary">{safeEv.participants.length} 人已报名 · 还可加入 {safeEv.maxParticipants - safeEv.participants.length} 人</p>
 			</div>
 			<Dialog.Close class="surface-ghost flex items-center justify-center rounded-full outline-none" style="width:32px;height:32px;" aria-label="关闭报名名单">
 				<X size={16} color="var(--text-secondary)" />
@@ -274,8 +274,8 @@
 			<div class="flex items-center gap-3 py-3" style="border-bottom:1px solid var(--border-default);">
 				<img src={safeEv.host.avatar} alt={safeEv.host.name} class="h-10 w-10 rounded-full object-cover" style="border:2px solid {safeEv.color};" />
 				<div class="flex-1">
-					<p class="text-[13px] font-semibold text-[var(--text-primary)]">{safeEv.host.name}</p>
-					<p class="mt-0.5 text-[11px] text-[var(--text-secondary)]">活动发起人</p>
+					<p class="text-[13px] font-semibold text-text-primary">{safeEv.host.name}</p>
+					<p class="mt-0.5 text-[11px] text-text-secondary">活动发起人</p>
 				</div>
 				<span class="rounded-full px-2 py-1 text-[10px]" style="color:{safeEv.color};background:{evTone(12)};">发起人</span>
 			</div>
@@ -284,8 +284,8 @@
 				<div class="flex items-center gap-3 py-3">
 					<img src={participant.avatar} alt={participant.name} class="h-10 w-10 rounded-full object-cover" />
 					<div class="flex-1">
-						<p class="text-[13px] text-[var(--text-primary)]">{participant.name}</p>
-						<p class="mt-0.5 text-[11px] text-[var(--text-secondary)]">已报名 · 等待一起见面</p>
+						<p class="text-[13px] text-text-primary">{participant.name}</p>
+						<p class="mt-0.5 text-[11px] text-text-secondary">已报名 · 等待一起见面</p>
 					</div>
 					<Check size={15} color={safeEv.color} />
 				</div>
