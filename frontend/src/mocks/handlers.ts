@@ -145,12 +145,20 @@ export const handlers = [
   http.post(`${API}/users/get_account`, () => requireMockAuth() ?? json(apiOk(mockAccount))),
   http.post(`${API}/users/update_account`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/users/get_settings`, () => requireMockAuth() ?? json(apiOk(mockSettings))),
-  http.post(`${API}/users/get_profile`, () => json(apiOk({
-    user: mockUsers[1],
-    stats: { moments_count: 24, friends_count: 18, followers_count: 89, following_count: 42, groups_count: 5 },
-    relation: { is_following: true, is_followed_by: false, is_blocked: false },
-    recent_moments: { items: mockMoments.slice(0, 6) },
-  }))),
+  http.post(`${API}/users/get_profile`, async ({ request }) => {
+    // 按 user_id 路由（缺失/未知 id 回退第一位用户），stats/relation 用同一组
+    // 派生数据，recent_moments 返回对应用户的瞬间（避免访问任意用户都看到同一个人）。
+    const body = (await request.json().catch(() => ({}))) as { user_id?: string };
+    const idx = Math.max(0, mockUsers.findIndex((u) => u.user_id === body?.user_id));
+    const u = mockUsers[idx];
+    const userMoments = mockMoments.filter((m) => m.user.user_id === u.user_id);
+    return json(apiOk({
+      user: u,
+      stats: { moments_count: userMoments.length || 24, friends_count: 18, followers_count: 89, following_count: 42, groups_count: 5 },
+      relation: { is_following: idx !== 0, is_followed_by: false, is_blocked: false },
+      recent_moments: { items: userMoments.length ? userMoments : mockMoments.slice(idx * 2, idx * 2 + 4) },
+    }));
+  }),
   http.post(`${API}/users/search`, () => json(paginated(mockUsers))),
   // list_* default to the current user → auth-required when no user_id given.
   http.post(`${API}/users/list_friends`, () => requireMockAuth() ?? json(paginated(mockFriends))),
@@ -162,9 +170,15 @@ export const handlers = [
   http.post(`${API}/users/block`, () => requireMockAuth() ?? json(apiOk(null))),
 
   // ── Moments ────────────────────────────────────
-  // search/get_detail are auth-optional (anonymous sees public moments).
+  // search/get_detail 是 auth-optional（匿名可见公开 moments）。
   http.post(`${API}/moments/search`, () => json(paginated(mockMoments.slice(0, 12)))),
-  http.post(`${API}/moments/get_detail`, () => json(apiOk(mockMoments[0]))),
+  // get_detail 按 moment_id 路由（缺失/未知 id 回退第一条，避免 404 打断浏览）
+  http.post(`${API}/moments/get_detail`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { moment_id?: string };
+    const id = body?.moment_id;
+    const found = mockMoments.find((m) => m.moment_id === id);
+    return json(apiOk(found ?? mockMoments[0]));
+  }),
   http.post(`${API}/moments/list_my`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 9)))),
   http.post(`${API}/moments/list_favorites`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 6)))),
   http.post(`${API}/moments/favorite`, () => requireMockAuth() ?? json(apiOk(null))),
@@ -173,14 +187,25 @@ export const handlers = [
   // ── Comments ───────────────────────────────────
   // list 是 auth-optional；create 需要登录。返回 spec CommentItem
   // （user: UserInfo 嵌套；reactions 为聚合结构）。
-  http.post(`${API}/comments/list`, () => json(paginated([
-    { comment_id: "c1", user: mockUsers[1], content: "拍得真好看！", created_at: "2026-07-26T14:00:00Z", replies_count: 2, is_deleted: false, mentions: [], reactions: [{ emoji: "👍", count: 3, reacted_by_me: false }] },
-    { comment_id: "c2", user: mockUsers[2], content: "什么相机拍的？", created_at: "2026-07-26T13:00:00Z", replies_count: 0, is_deleted: false, mentions: [], reactions: [] },
-  ]))),
-  http.post(`${API}/comments/create`, () => requireMockAuth() ?? json(apiOk({
-    comment_id: `c${Date.now()}`, user: mockUsers[0], content: "", created_at: new Date().toISOString(),
-    replies_count: 0, is_deleted: false, mentions: [], reactions: [],
-  }))),
+  // list 按 moment_id 派生评论（评论人/文案随瞬间变化，避免所有瞬间显示同一批评论）。
+  http.post(`${API}/comments/list`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { moment_id?: string };
+    const seed = mockMoments.findIndex((m) => m.moment_id === body?.moment_id);
+    const idx = seed < 0 ? 0 : seed;
+    return json(paginated([
+      { comment_id: `c${idx}-1`, user: mockUsers[(idx + 1) % mockUsers.length], content: "拍得真好看！", created_at: "2026-07-26T14:00:00Z", replies_count: 2, is_deleted: false, mentions: [], reactions: [{ emoji: "👍", count: 3, reacted_by_me: false }] },
+      { comment_id: `c${idx}-2`, user: mockUsers[(idx + 2) % mockUsers.length], content: mockMoments[idx].tags[0] ? `这个${mockMoments[idx].tags[0]}主题好棒` : "什么相机拍的？", created_at: "2026-07-26T13:00:00Z", replies_count: 0, is_deleted: false, mentions: [], reactions: [] },
+    ]));
+  }),
+  http.post(`${API}/comments/create`, async ({ request }) => {
+    // 回显请求内容，让乐观追加的评论在确认后保持文本（而非变空白）。
+    const body = (await request.json().catch(() => ({}))) as { content?: string };
+    return requireMockAuth() ?? json(apiOk({
+      comment_id: `c${Date.now()}`, user: mockUsers[0], content: body?.content ?? "",
+      created_at: new Date().toISOString(),
+      replies_count: 0, is_deleted: false, mentions: [], reactions: [],
+    }));
+  }),
 
   // ── Reactions ──────────────────────────────────
   // set 需要登录。返回 spec ReactionItem。
@@ -188,7 +213,12 @@ export const handlers = [
 
   // ── Groups ─────────────────────────────────────
   // get_detail/members/announcements 是 auth-optional；list_my 需要登录。
-  http.post(`${API}/groups/get_detail`, () => json(apiOk({ ...mockGroups[0], my_state: { role: "member" as const, is_joined: true, unread_count: 0, is_muted: false, is_pinned: false } }))),
+  // get_detail 按 group_id 路由（缺失/未知 id 回退第一条）。
+  http.post(`${API}/groups/get_detail`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { group_id?: string };
+    const found = mockGroups.find((g) => g.group.group_id === body?.group_id);
+    return json(apiOk({ ...(found ?? mockGroups[0]), my_state: { role: "member" as const, is_joined: true, unread_count: 0, is_muted: false, is_pinned: false } }));
+  }),
   http.post(`${API}/groups/list_my`, () => requireMockAuth() ?? json(paginated(mockGroups.slice(0, 2)))),
   http.post(`${API}/groups/members/list`, () => json(paginated(mockUsers.slice(0, 4).map(u => ({ user: u, role: "member", joined_at: "2026-01-01T00:00:00Z" }))))),
   http.post(`${API}/groups/announcements/list`, () => json(apiOk({ items: [
@@ -200,19 +230,47 @@ export const handlers = [
   // ── Chat ───────────────────────────────────────
   // All chat endpoints are auth-required (spec: private_chats/*, *_messages/*).
   http.post(`${API}/private_chats/list`, () => requireMockAuth() ?? json(paginated(mockChats))),
-  http.post(`${API}/private_messages/get_history`, () => requireMockAuth() ?? json(paginated([]))),
+  // get_history 按 target_user_id 路由：命中 mockChats 时返回 last_message 种子
+  // + 一条历史消息（刷新后会话内容仍在）；新会话（未命中）返回空列表，走引导空态。
+  http.post(`${API}/private_messages/get_history`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { target_user_id?: string };
+    const chat = mockChats.find((c) => c.other_user.user_id === body?.target_user_id);
+    if (!chat) return requireMockAuth() ?? json(paginated([]));
+    return requireMockAuth() ?? json(paginated([
+      chat.last_message,
+      { message_id: `${chat.last_message.message_id}-seed`, type: "text", content: "嗨，最近怎么样？", sender: chat.other_user, sent_at: "2026-07-25T10:00:00Z" },
+    ]));
+  }),
   // send: echo back a spec PrivateMessageItem so ChatView's optimistic append
-  // is confirmed (message persists instead of rolling back).
-  http.post(`${API}/private_messages/send`, () => requireMockAuth() ?? json(apiOk({
-    message_id: `m${Date.now()}`, type: "text", content: "", sender: mockUsers[0],
-    sent_at: new Date().toISOString(), is_read: false,
-  }))),
+  // is confirmed (message persists instead of rolling back). 回显请求 content，
+  // 让消息文本在回执后保持一致。
+  http.post(`${API}/private_messages/send`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { content?: string };
+    return requireMockAuth() ?? json(apiOk({
+      message_id: `m${Date.now()}`, type: "text", content: body?.content ?? "", sender: mockUsers[0],
+      sent_at: new Date().toISOString(), is_read: false,
+    }));
+  }),
   http.post(`${API}/private_messages/mark_read`, () => requireMockAuth() ?? json(apiOk(null))),
-  http.post(`${API}/group_messages/get_history`, () => requireMockAuth() ?? json(paginated([]))),
-  http.post(`${API}/group_messages/send`, () => requireMockAuth() ?? json(apiOk({
-    message_id: `gm${Date.now()}`, type: "text", content: "", sender: mockUsers[0],
-    sent_at: new Date().toISOString(), is_read: false,
-  }))),
+  http.post(`${API}/group_messages/get_history`, async ({ request }) => {
+    // 按 group_id 路由：命中 mockGroups 时返回种子消息（刷新后群聊内容仍在）；
+    // 未命中返回空列表。种子消息 sender 取群成员（mockUsers 前几位）。
+    const body = (await request.json().catch(() => ({}))) as { group_id?: string };
+    const group = mockGroups.find((g) => g.group.group_id === body?.group_id);
+    if (!group) return requireMockAuth() ?? json(paginated([]));
+    const sender = mockUsers[mockGroups.indexOf(group) % mockUsers.length];
+    return requireMockAuth() ?? json(paginated([
+      { message_id: `gm-${group.group.group_id}-1`, type: "text", content: `欢迎来到「${group.group.name}」！`, sender, sent_at: "2026-07-26T09:00:00Z" },
+      { message_id: `gm-${group.group.group_id}-2`, type: "text", content: "本周活动安排见公告，记得准时参加～", sender: mockUsers[(mockGroups.indexOf(group) + 1) % mockUsers.length], sent_at: "2026-07-26T09:30:00Z" },
+    ]));
+  }),
+  http.post(`${API}/group_messages/send`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { content?: string };
+    return requireMockAuth() ?? json(apiOk({
+      message_id: `gm${Date.now()}`, type: "text", content: body?.content ?? "", sender: mockUsers[0],
+      sent_at: new Date().toISOString(), is_read: false,
+    }));
+  }),
   http.post(`${API}/group_messages/mark_read`, () => requireMockAuth() ?? json(apiOk(null))),
 
   // ── Feed ───────────────────────────────────────
