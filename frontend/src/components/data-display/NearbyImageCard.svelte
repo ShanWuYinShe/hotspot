@@ -41,12 +41,12 @@
 		class?: string;
 	} = $props();
 
-	// 对齐 Figma Make NearbyImageCard：hover 时图片缩放 1.055 / 0.32s [0.22,1,0.36,1]
-	// （组件内联覆盖共享 CSS 的 1.045/240ms）；整卡按压 scale 由 --card-tap-scale 驱动
-	// （vibrant 0.94 / forest 0.97，对齐 Figma useHoverConfig tap）。
+	// hover 反馈（图片缩放 + accent 边框）完全由 CSS 驱动
+	// （.image-hover-frame:hover 规则，单一事实源——JS 状态与 :hover 不同步
+	// 会导致鼠标在卡片上滑动时反馈闪烁/丢失）。
+	// 整卡按压 scale 由 --card-tap-scale 驱动（vibrant 0.94 / forest 0.97，
+	// 对齐 Figma useHoverConfig tap）。
 	let pressed = $state(false);
-	let hovered = $state(false);
-	const imageTransform = $derived(hovered ? 'scale(1.055)' : 'scale(1)');
 	const cardTransform = $derived(pressed ? 'scale(var(--card-tap-scale, 0.94))' : 'scale(1)');
 </script>
 
@@ -61,12 +61,7 @@
 	tabindex={onClick ? 0 : undefined}
 	onpointerdown={() => (pressed = true)}
 	onpointerup={() => (pressed = false)}
-	onpointerleave={() => {
-		pressed = false;
-		hovered = false;
-	}}
-	onmouseenter={() => (hovered = true)}
-	onmouseleave={() => (hovered = false)}
+	onpointerleave={() => (pressed = false)}
 	onclick={onClick}
 	onkeydown={(e) => {
 		if (onClick && (e.key === 'Enter' || e.key === ' ')) {
@@ -80,7 +75,6 @@
 			src={imageSrc}
 			alt={imageAlt}
 			class="image-hover-frame__image absolute inset-0 h-full w-full object-cover will-change-transform"
-			style="transform:{imageTransform};transition:transform 0.32s cubic-bezier(0.22,1,0.36,1);"
 			onerror={onImageError}
 		/>
 	{/if}

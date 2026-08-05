@@ -98,17 +98,19 @@
 			</header>
 
 			<div class="pt-7">
-				<!-- 特色精选卡（对齐 Figma Featured record：16/10 图 + 标题段落 + ArrowUpRight） -->
+				<!-- 特色精选卡（对齐 Figma Featured record：16/10 图 + 标题段落 + ArrowUpRight）。
+				     hover 反馈（image-hover-frame 边框 + 图片缩放）绑定整卡按钮而非图片容器：
+				     鼠标在卡片任意位置（含文本区）反馈持续。 -->
 				{#if featured}
 					<button
 						type="button"
 						onclick={() => void goto(`${ROUTES.moment(featured.id)}?from=me`)}
-						class="group block w-full overflow-hidden rounded-feature border text-left transition-colors hover:border-accent-border"
+						class="group image-hover-frame relative block w-full overflow-hidden rounded-feature border text-left transition-colors"
 						style="border-color:var(--border-default);background:var(--surface-primary);"
 						aria-label="查看精选瞬间"
 					>
 						<div class="lg:grid lg:grid-cols-[minmax(0,1.38fr)_minmax(280px,0.62fr)]">
-							<div class="image-hover-frame tap-97 relative aspect-[16/10] overflow-hidden lg:aspect-auto lg:min-h-97.5" style="background:var(--surface-page);">
+							<div class="tap-97 relative aspect-[16/10] overflow-hidden lg:aspect-auto lg:min-h-97.5" style="background:var(--surface-page);">
 								<img src={featured.img} alt="本期精选瞬间" class="image-hover-frame__image h-full w-full object-cover" />
 							</div>
 							<div class="flex flex-col justify-between border-t p-6 lg:border-l lg:border-t-0" style="border-color:var(--border-default);">
@@ -145,15 +147,15 @@
 					</div>
 
 					<div class="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-						{#each remaining as moment, index (moment.id)}
-							<button
-								type="button"
-								onclick={() => void goto(`${ROUTES.moment(moment.id)}?from=me`)}
-								class="group overflow-hidden rounded-control border text-left transition-colors hover:border-accent-border {index === 0 ? 'col-span-2' : ''}"
-								style="border-color:var(--border-default);background:var(--surface-primary);"
-								aria-label="查看瞬间详情"
-							>
-								<div class="image-hover-frame tap-97 relative overflow-hidden {index === 0 ? 'aspect-[16/8]' : 'aspect-square'}" style="background:var(--surface-page);">
+				{#each remaining as moment, index (moment.id)}
+					<button
+						type="button"
+						onclick={() => void goto(`${ROUTES.moment(moment.id)}?from=me`)}
+						class="group image-hover-frame relative overflow-hidden rounded-control border text-left transition-colors {index === 0 ? 'col-span-2' : ''}"
+						style="border-color:var(--border-default);background:var(--surface-primary);"
+						aria-label="查看瞬间详情"
+					>
+						<div class="tap-97 relative overflow-hidden {index === 0 ? 'aspect-[16/8]' : 'aspect-square'}" style="background:var(--surface-page);">
 									<img src={moment.img} alt={moment.title || '瞬间图片'} class="image-hover-frame__image h-full w-full object-cover" />
 								</div>
 								<div class="flex items-center justify-between gap-2 px-3 py-2.5">
