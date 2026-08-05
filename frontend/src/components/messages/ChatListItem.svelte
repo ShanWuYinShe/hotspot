@@ -38,7 +38,7 @@
 <button
 	type="button"
 	aria-current={isSelected ? 'page' : undefined}
-	class="group flex w-full cursor-pointer items-center gap-3.5 rounded-control px-4 text-left outline-none transition-colors duration-150 {isSelected ? 'bg-accent-default' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:opacity-80"
+	class="group flex w-full cursor-pointer items-center gap-3.5 rounded-control px-4 text-left outline-none transition-[background-color,opacity] duration-150 {isSelected ? 'bg-accent-default' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:opacity-80"
 	style="padding:{compact ? '10px 16px' : '12px 16px'};box-shadow:{isSelected ? '0 3px 12px var(--glow-accent)' : 'none'};"
 	onclick={onClick}
 >

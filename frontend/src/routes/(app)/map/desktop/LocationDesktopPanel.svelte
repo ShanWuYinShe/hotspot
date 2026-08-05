@@ -90,7 +90,7 @@
 			{#each searchResults as r}
 				<button
 					type="button"
-					class="bg-surface-primary flex w-full items-center gap-3 px-4 py-3 text-left outline-none transition-[background-color,transform] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:scale-98 active:duration-100"
+					class="bg-surface-primary flex w-full items-center gap-3 px-4 py-3 text-left outline-none transition-[background-color,opacity] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:opacity-80"
 					aria-pressed={selectedLoc?.displayName === r.displayName}
 					onclick={() => onSelectLoc(r)}
 				>
@@ -145,7 +145,7 @@
 					{@const isSelected = selectedPin?.id === pin.id}
 					<button
 						type="button"
-						class="app-list-row app-list-row--standard outline-none transition-[background-color,transform] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:scale-97 active:duration-100"
+						class="app-list-row app-list-row--standard outline-none transition-[background-color,opacity] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:opacity-80"
 						style={isSelected ? `background:${pinTone(pin.type, 10)};` : ''}
 						aria-pressed={isSelected}
 						onclick={() => onSelectPin(pin)}
@@ -208,7 +208,7 @@
 					{@const isSelected = selectedLoc?.displayName === loc.displayName}
 					<button
 						type="button"
-						class="bg-surface-primary flex w-full items-center gap-3 rounded-control p-3.5 text-left outline-none transition-[background-color,box-shadow,transform] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:scale-97 active:duration-100"
+						class="bg-surface-primary flex w-full items-center gap-3 rounded-control p-3.5 text-left outline-none transition-[background-color,box-shadow,opacity] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:opacity-80"
 						style="box-shadow:{isSelected ? '0 0 0 1px var(--accent-border), var(--shadow-neu-md)' : 'var(--shadow-neu-md)'};border:1px solid {isSelected ? 'var(--accent-border)' : 'var(--border-default)'};"
 						aria-pressed={isSelected}
 						onclick={() => onSelectLoc(loc)}
@@ -243,7 +243,7 @@
 					{@const isSelected = selectedLoc?.displayName === loc.displayName}
 					<button
 						type="button"
-						class="bg-surface-primary flex w-full items-center gap-3 rounded-control p-3.5 text-left outline-none transition-[background-color,box-shadow,transform] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:scale-97 active:duration-100"
+						class="bg-surface-primary flex w-full items-center gap-3 rounded-control p-3.5 text-left outline-none transition-[background-color,box-shadow,opacity] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:opacity-80"
 						style="box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
 						aria-pressed={isSelected}
 						onclick={() => onSelectLoc(loc)}

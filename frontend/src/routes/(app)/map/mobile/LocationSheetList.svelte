@@ -36,7 +36,7 @@
 		{#each searchResults as r}
 			<button
 				type="button"
-				class="app-list-row app-list-row--standard px-5 outline-none transition-[background-color,transform] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:scale-98 active:duration-100"
+				class="app-list-row app-list-row--standard px-5 outline-none transition-[background-color,opacity] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:opacity-80"
 				aria-pressed={selectedLoc?.displayName === r.displayName}
 				onclick={() => onSelectLoc(r)}
 			>
@@ -119,7 +119,7 @@
 					{#each recentItems as loc}
 						<button
 							type="button"
-							class="app-list-row app-list-row--standard px-4 outline-none transition-[background-color,transform] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:scale-98 active:duration-100"
+							class="app-list-row app-list-row--standard px-4 outline-none transition-[background-color,opacity] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:opacity-80"
 							aria-pressed={selectedLoc?.displayName === loc.displayName}
 							onclick={() => onSelectLoc(loc)}
 						>
@@ -147,7 +147,7 @@
 					{#each HOT_LOCATIONS as loc}
 						<button
 							type="button"
-							class="app-list-row app-list-row--standard px-4 outline-none transition-[background-color,transform] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:scale-98 active:duration-100"
+							class="app-list-row app-list-row--standard px-4 outline-none transition-[background-color,opacity] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:opacity-80"
 							aria-pressed={selectedLoc?.displayName === loc.displayName}
 							onclick={() => onSelectLoc(loc)}
 						>
