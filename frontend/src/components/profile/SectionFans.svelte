@@ -5,7 +5,7 @@
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import BorderedList from '@/components/data-display/BorderedList.svelte';
 	import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
-	import DataDisplay, { type MetricItem } from '@/components/data-display/DataDisplay.svelte';
+	import MetricRow, { type MetricItem } from '@/components/data-display/MetricRow.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
@@ -64,7 +64,7 @@
 
 	<!-- Stats row — flat joined cells -->
 	<div class="px-[var(--page-gutter)] py-3 flex-shrink-0">
-		<DataDisplay
+		<MetricRow
 			items={[
 				{ label: '总粉丝', value: followers.length },
 				{ label: '互相关注', value: mutualCount, tone: 'positive' },

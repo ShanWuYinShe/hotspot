@@ -4,7 +4,7 @@
 	import NearbyImageCard from '@/components/data-display/NearbyImageCard.svelte';
 	import type { FeedItem } from './feed-interactions.svelte';
 
-	// PostCard — 动态卡片：基于 NearbyImageCard 统一图片优先原语。
+	// MomentCard — 动态卡片：基于 NearbyImageCard 统一图片优先原语。
 	// 标签/作者/正文/操作栏全部以覆盖层显示在图片上（无图时用主题化占位背景）。
 	// dense 用于 BSP 瓦片（高度由布局单元决定）；hero 用于大卡（aspect 4/3 撑高）。
 
@@ -57,7 +57,7 @@
 	<!-- 底部信息托盘（surface-card-menu，由 NearbyImageCard footer 槽渲染） -->
 	{#snippet footer()}
 		<div class="px-3 pb-2.5 pt-2.5">
-			<!-- 作者行：头像 + 昵称 + 位置（对齐 Figma Make PostCard footer 顺序） -->
+			<!-- 作者行：头像 + 昵称 + 位置 -->
 			<div class="flex min-w-0 items-center gap-2">
 				<Avatar src={item.avatar} name={item.user} size={22} style="border:1.5px solid var(--border-card-menu);" />
 				<span class="truncate text-[11px] text-text-primary" style="font-weight:500;">{item.user}</span>
@@ -67,7 +67,7 @@
 				</span>
 			</div>
 
-			<!-- 正文：单行省略，muted（对齐 Figma Make：fontSize 11 / muted） -->
+			<!-- 正文：单行省略，muted -->
 			<p class="mt-1 line-clamp-1 leading-[1.55] text-[11px]" style="color:var(--text-secondary);">
 				{item.content}
 			</p>
