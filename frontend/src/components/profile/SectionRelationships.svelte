@@ -6,8 +6,9 @@
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SectionFriends from '@/components/profile/SectionFriends.svelte';
 	import SectionFollowing from '@/components/profile/SectionFollowing.svelte';
-	import SectionFans from '@/components/profile/SectionFans.svelte';
-	import { useRelationships } from '@/lib/profile-data.svelte';
+import SectionFans from '@/components/profile/SectionFans.svelte';
+import TabBar from '@/components/navigation/TabBar.svelte';
+import { useRelationships } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 关系聚合页（/me/relationships，桌面导航「关系」与通知页深链的落地页）：
@@ -61,27 +62,15 @@
 {/snippet}
 
 {#snippet relTabBar()}
-	<div class="no-scrollbar flex overflow-x-auto" style="border-bottom:1px solid var(--border-default);">
-		{#each TABS as t}
-			{@const isActive = activeTab === t.id}
-			<button
-				type="button"
-				onclick={() => switchTab(t.id)}
-				aria-pressed={isActive}
-				class="relative shrink-0 rounded-t-[12px] pb-3 pt-1 outline-none"
-				style="padding-left:18px;padding-right:18px;color:{isActive ? 'var(--accent-default)' : 'var(--text-secondary)'};font-weight:{isActive ? 500 : 400};font-size:13px;transition:color 0.2s;"
-			>
-				{t.label}
-				<span class="text-[10px]" style="opacity:0.75;">{t.id === 'friends' ? friends.length : t.id === 'following' ? following.length : followers.length}</span>
-				{#if isActive}
-					<span
-						class="absolute"
-						style="bottom:-1px;left:14%;right:14%;height:2px;border-radius:1px;background:var(--accent-default);"
-					></span>
-				{/if}
-			</button>
-		{/each}
-	</div>
+	<TabBar
+		items={TABS.map((t) => ({
+			id: t.id,
+			label: t.label,
+			count: t.id === 'friends' ? friends.length : t.id === 'following' ? following.length : followers.length
+		}))}
+		value={activeTab}
+		onchange={(id) => switchTab(id as RelTab)}
+	/>
 {/snippet}
 
 <!-- ═══ 样板 layout：StandardPageLayout（sticky header + ContentColumn 全宽 gutter）═══

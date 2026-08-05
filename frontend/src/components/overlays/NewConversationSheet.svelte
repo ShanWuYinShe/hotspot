@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { X, UserPlus, MessageCircle, Users, Check } from '@lucide/svelte';
+	import { UserPlus, MessageCircle, Users, Check } from '@lucide/svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
+	import SheetShell from '@/components/overlays/SheetShell.svelte';
 
 	// 新会话底部 Sheet：添加好友 / 开始私聊 / 创建群聊入口。
 
@@ -36,29 +37,9 @@
 	const filteredContacts = $derived(CONTACTS.filter((c) => !searchQ || c.name.toLowerCase().includes(searchQ.toLowerCase())));
 </script>
 
-<div class="flex flex-col h-full bg-surface-primary">
-	<!-- Handle -->
-	<div class="flex justify-center pt-3 pb-1 flex-shrink-0">
-		<div class="rounded-full bg-border-default" style="width:36px;height:4px;"></div>
-	</div>
-
-	<!-- Header -->
-	<div class="flex items-center justify-between px-5 py-3 flex-shrink-0" style="border-bottom:1px solid var(--border-default);">
-		<h2 class="text-text-primary" style="font-size:17px;">
-			{tab === 'add' ? '添加好友' : '新建会话'}
-		</h2>
-		<button
-			type="button"
-			class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none bg-surface-primary"
-			style="width:32px;height:32px;box-shadow:var(--shadow-neu-xs);border:1px solid var(--border-default);"
-			onclick={onClose}
-		>
-			<X style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={2} />
-		</button>
-	</div>
-
+<SheetShell title={tab === 'add' ? '添加好友' : '新建会话'} {onClose}>
 	<!-- Tab switcher -->
-	<div class="flex px-5 pt-3 pb-2 gap-2 flex-shrink-0">
+	<div class="flex px-5 pt-3 pb-2 gap-2 shrink-0">
 		{#each [{ id: 'add', icon: UserPlus, label: '添加好友' }, { id: 'chat', icon: MessageCircle, label: '开始私聊' }] as t}
 			<button
 				type="button"
@@ -78,7 +59,7 @@
 	</div>
 
 	<!-- Search bar — 复用 SearchInput 统一原语 -->
-	<div class="px-5 pb-3 flex-shrink-0">
+	<div class="px-5 pb-3 shrink-0">
 		<SearchInput
 			value={searchQ}
 			onChange={(v) => (searchQ = v)}
@@ -96,14 +77,14 @@
 				</p>
 				{#each filteredSuggested as u (u.id)}
 					<div class="flex items-center gap-3.5 px-3 py-3 rounded-relaxed row-hover" style="border:1px solid var(--border-default);">
-						<img src={u.avatar} alt={u.name} class="rounded-full object-cover flex-shrink-0" style="width:44px;height:44px;border:1.5px solid var(--border-default);" />
+						<img src={u.avatar} alt={u.name} class="rounded-full object-cover shrink-0" style="width:44px;height:44px;border:1.5px solid var(--border-default);" />
 						<div class="flex-1 min-w-0">
 							<p class="text-text-primary" style="font-size:14px;">{u.name}</p>
 							<p class="text-text-secondary" style="font-size:11px;">{u.subtitle}</p>
 						</div>
 						<button
 							type="button"
-							class="hover-btn tap-92 flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none flex-shrink-0 {addedIds.has(u.id) ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-white'}"
+							class="hover-btn tap-92 flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none shrink-0 {addedIds.has(u.id) ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-white'}"
 							style={addedIds.has(u.id)
 								? 'box-shadow:var(--shadow-neu-inset-xs);border:1px solid var(--border-strong);font-size:11px;'
 								: 'font-size:11px;box-shadow:0 3px 8px var(--glow-accent);'}
@@ -136,7 +117,7 @@
 						onCreateGroup?.();
 					}}
 				>
-					<div class="flex items-center justify-center rounded-full flex-shrink-0 bg-accent-default" style="width:44px;height:44px;box-shadow:0 3px 8px var(--glow-accent);">
+					<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default" style="width:44px;height:44px;box-shadow:0 3px 8px var(--glow-accent);">
 						<Users style="width:20px;height:20px;color:var(--text-on-accent);" strokeWidth={1.75} />
 					</div>
 					<div>
@@ -158,7 +139,7 @@
 							onClose();
 						}}
 					>
-						<div class="relative flex-shrink-0">
+						<div class="relative shrink-0">
 							<img src={c.avatar} alt={c.name} class="rounded-full object-cover" style="width:44px;height:44px;border:1.5px solid var(--border-default);" />
 							{#if c.online}
 								<span class="absolute bottom-0 right-0 rounded-full bg-status-online" style="width:10px;height:10px;border:2px solid var(--surface-primary);"></span>
@@ -170,10 +151,10 @@
 								{c.online ? '在线' : '离线'}
 							</p>
 						</div>
-						<MessageCircle style="width:16px;height:16px;color:var(--text-secondary);flex-shrink:0;" strokeWidth={1.5} />
+						<MessageCircle style="width:16px;height:16px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
 					</button>
 				{/each}
 			</div>
 		{/if}
 	</div>
-</div>
+</SheetShell>

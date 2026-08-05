@@ -1,6 +1,8 @@
 <script lang="ts">
-	import { ArrowLeft, Phone, Video, Send, Smile, CheckCheck, MoreHorizontal, MessageCircle } from '@lucide/svelte';
+	import { ArrowLeft, Phone, Video, Send, Smile, MoreHorizontal, MessageCircle } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import MessageBubble from '@/components/messages/MessageBubble.svelte';
+	import ChatDatePill from '@/components/messages/ChatDatePill.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { getPrivateMessages, sendPrivateMessage, markPrivateRead } from '@/api';
 	import {
@@ -181,11 +183,11 @@
 
 <div class="flex min-h-0 flex-col h-full bg-surface-primary">
 	<!-- Header -->
-	<div class="flex-shrink-0 flex items-center gap-3 px-4 bg-surface-primary" style="height:{compact ? 52 : 60}px;border-bottom:1px solid var(--border-default);">
+	<div class="shrink-0 flex items-center gap-3 px-4 bg-surface-primary" style="height:{compact ? 52 : 60}px;border-bottom:1px solid var(--border-default);">
 		{#if showBackButton}
 			<button
 				type="button"
-				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none flex-shrink-0 bg-surface-primary"
+				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0 bg-surface-primary"
 				style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
 				onclick={onBack}
 			>
@@ -262,35 +264,10 @@
 			</div>
 		{:else}
 		<div class="animate-fade-in flex flex-col gap-2 px-4 pt-4 pb-3">
-			<!-- Date pill -->
-			<div class="flex justify-center mb-2">
-				<span class="px-3 py-1 rounded-full bg-surface-primary text-text-secondary" style="font-size:10px;border:1px solid var(--border-default);letter-spacing:0.05em;opacity:0.8;">
-					今天
-				</span>
-			</div>
+			<ChatDatePill />
 
 			{#each chat.messages as msg (msg.id)}
-				<div class="animate-fade-in flex {msg.sent ? 'justify-end' : 'justify-start'}">
-					<div
-						class="{msg.sent ? 'bg-accent-default' : 'bg-surface-primary'}"
-						style="max-width:76%;padding:10px 14px;border-radius:{msg.sent ? '18px 4px 18px 18px' : '4px 18px 18px 18px'};{msg.sent
-							? 'box-shadow:0 4px 14px var(--glow-accent);'
-							: 'box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);'}"
-					>
-						<p class="{msg.sent ? 'text-white' : 'text-text-primary'}" style="font-size:13px;line-height:1.55;">
-							{msg.text}
-						</p>
-						<p
-							class="{msg.sent ? 'text-content-inverse-muted' : 'text-text-secondary'}"
-							style="font-size:10px;margin-top:4px;display:flex;align-items:center;gap:3px;justify-content:{msg.sent ? 'flex-end' : 'flex-start'};"
-						>
-							{msg.time}
-							{#if msg.sent && msg.id === chat.lastSentId}
-								<CheckCheck style="width:12px;height:12px;opacity:0.8;" strokeWidth={2} />
-							{/if}
-						</p>
-					</div>
-				</div>
+				<MessageBubble text={msg.text} sent={msg.sent} time={msg.time} showCheck={msg.id === chat.lastSentId} />
 			{/each}
 		</div>
 		{/if}
@@ -300,16 +277,16 @@
 	{#if chat.sendError}
 		<p class="px-4 pb-1.5 text-status-warning" style="font-size:11px;">{chat.sendError}</p>
 	{/if}
-	<div class="flex-shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary" style="border-top:1px solid var(--border-default);">
+	<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary" style="border-top:1px solid var(--border-default);">
 		<button
 			type="button"
-			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none flex-shrink-0 bg-surface-primary"
+			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0 bg-surface-primary"
 			style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
 		>
 			<Smile style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 		</button>
 
-		<div class="flex-1 flex items-center px-4 rounded-[18px] input-surface" style="height:38px;">
+		<div class="flex-1 flex items-center px-4 rounded-relaxed input-surface" style="height:38px;">
 			<input
 				type="text"
 				bind:value={chat.inputVal}
@@ -325,7 +302,7 @@
 
 		<button
 			type="button"
-			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none flex-shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'}"
+			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'}"
 			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? '0 4px 14px var(--glow-accent)' : 'var(--shadow-neu-md)'};border:1px solid var(--border-default);"
 			onclick={() => void chat.handleSend()}
 		>

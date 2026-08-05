@@ -9,6 +9,7 @@
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
 	import MomentCard from '@/components/moments/MomentCard.svelte';
 	import { createFeedInteractions, type FeedItem } from '@/components/moments/feed-interactions.svelte';
 	import { getFeedNearby } from '@/api';
@@ -135,7 +136,7 @@
 			{#if device === 'tablet'}
 				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-default" style="box-shadow:0 3px 10px var(--glow-accent);">
 					<Sparkles style="width:11px;height:11px;color:var(--text-on-accent);" strokeWidth={2} />
-					<span class="text-white text-[11px]">精选</span>
+					<span class="text-white text-xs">精选</span>
 				</div>
 			{:else}
 				<span class="text-text-secondary text-xs">{filtered.length} 条内容</span>
@@ -150,28 +151,9 @@
 	</PageHeader>
 {/snippet}
 
-<!-- ═══ 分类 Tab 栏（下划线样式，对齐 Figma Make；随 header 吸顶）═══ -->
+<!-- ═══ 分类 Tab 栏（下划线样式，随 header 吸顶）═══ -->
 {#snippet tabBar()}
-	<div class="no-scrollbar flex overflow-x-auto" style="border-bottom:1px solid var(--border-default);">
-		{#each TABS as tab}
-			{@const isActive = activeTab === tab}
-			<button
-				type="button"
-				onclick={() => (activeTab = tab)}
-				aria-pressed={isActive}
-				class="relative shrink-0 rounded-t-[12px] pb-3 pt-1 outline-none"
-				style="padding-left:18px;padding-right:18px;color:{isActive ? 'var(--accent-default)' : 'var(--text-secondary)'};font-weight:{isActive ? 500 : 400};font-size:13px;transition:color 0.2s;"
-			>
-				{tab}
-				{#if isActive}
-					<span
-						class="absolute"
-						style="bottom:-1px;left:14%;right:14%;height:2px;border-radius:1px;background:var(--accent-default);"
-					></span>
-				{/if}
-			</button>
-		{/each}
-	</div>
+	<TabBar items={TABS.map((t) => ({ id: t, label: t }))} value={activeTab} onchange={(id) => (activeTab = id)} />
 {/snippet}
 
 <!-- ═══ 热门 tag 列表（scrollable / flex-wrap 由调用处 className 决定，对齐 Figma TagChips）═══ -->
@@ -188,7 +170,7 @@
 	{#if loading}
 		<div class="flex flex-col items-center gap-3 py-20">
 			<div class="rounded-full border-2 border-border-default border-t-accent-default animate-spin" style="width:28px;height:28px;"></div>
-			<p class="text-text-secondary text-[13px]">加载附近动态…</p>
+			<p class="text-text-secondary text-base">加载附近动态…</p>
 		</div>
 	{:else}
 		<EmptyState title="附近暂时没有瞬间">

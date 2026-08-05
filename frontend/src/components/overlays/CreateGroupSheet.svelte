@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { X, Camera, Globe, Lock, Check, ChevronRight, MapPin } from '@lucide/svelte';
+	import { Camera, Globe, Lock, Check, ChevronRight, MapPin } from '@lucide/svelte';
 	import { createGroup } from '@/api';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import Toggle from '@/components/forms/Toggle.svelte';
+	import SheetShell from '@/components/overlays/SheetShell.svelte';
 
 	// CreateGroupSheet — 创建群组的底部 Sheet / 模态。
 	// 使用处：NearbyGroups(FAB)、Profile > 我的群组（页头按钮）、
@@ -71,28 +72,7 @@
 	};
 </script>
 
-<div class="flex flex-col h-full bg-surface-primary">
-	<!-- Handle -->
-	<div class="flex justify-center pt-3 pb-1 flex-shrink-0">
-		<div class="rounded-full bg-border-default" style="width:36px;height:4px;"></div>
-	</div>
-
-	<!-- Header -->
-	<div
-		class="flex items-center justify-between px-5 py-3 flex-shrink-0"
-		style="border-bottom:1px solid var(--border-default);"
-	>
-		<h2 class="text-[17px] text-text-primary">创建群组</h2>
-		<button
-			type="button"
-			onclick={onClose}
-			class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none bg-surface-primary"
-			style="width:32px;height:32px;box-shadow:var(--shadow-neu-xs);border:1px solid var(--border-default);"
-		>
-			<X style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={2} />
-		</button>
-	</div>
-
+<SheetShell title="创建群组" {onClose}>
 	{#if step === 'done'}
 		<div class="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
 			<div
@@ -103,7 +83,7 @@
 			</div>
 			<div>
 				<p class="text-[20px] font-semibold text-text-primary">群组已创建！</p>
-				<p class="text-[13px] mt-1.5 text-text-secondary">「{name}」已成功创建，现在可以邀请好友加入了</p>
+				<p class="text-base mt-1.5 text-text-secondary">「{name}」已成功创建，现在可以邀请好友加入了</p>
 			</div>
 			<button
 				type="button"
@@ -124,13 +104,13 @@
 					style="width:100%;height:110px;box-shadow:var(--shadow-neu-inset-sm);border:2px dashed var(--border-default);"
 				>
 					<Camera style="width:26px;height:26px;color:var(--text-secondary);" strokeWidth={1.25} />
-					<span class="text-[12px] text-text-secondary">添加封面图片</span>
+					<span class="text-sm text-text-secondary">添加封面图片</span>
 				</button>
 			</div>
 
 			<!-- Group name -->
 			<div>
-				<label class="text-[11px] tracking-[0.1em] uppercase text-text-secondary" for="group-name">群组名称 *</label>
+				<label class="text-xs tracking-widest uppercase text-text-secondary" for="group-name">群组名称 *</label>
 				<div class="flex items-center gap-2.5 mt-1.5 px-4 rounded-control input-surface" style="height:46px;">
 					<input
 						id="group-name"
@@ -139,36 +119,36 @@
 						bind:value={name}
 						maxlength={30}
 					/>
-					<span class="text-[11px] shrink-0 text-text-secondary">{name.length}/30</span>
+					<span class="text-xs shrink-0 text-text-secondary">{name.length}/30</span>
 				</div>
 			</div>
 
 			<!-- Description -->
 			<div>
-				<label class="text-[11px] tracking-[0.1em] uppercase text-text-secondary" for="group-desc">简介</label>
+				<label class="text-xs tracking-widest uppercase text-text-secondary" for="group-desc">简介</label>
 				<div class="mt-1.5 px-4 py-3 rounded-control input-surface">
 					<textarea
 						id="group-desc"
-						class="w-full bg-transparent outline-none resize-none text-text-primary text-[13px] min-h-[72px]"
+						class="w-full bg-transparent outline-none resize-none text-text-primary text-base min-h-18"
 						placeholder="描述一下这个群组的主题…"
 						bind:value={desc}
 						maxlength={150}
 					></textarea>
 					<div class="flex justify-end">
-						<span class="text-[10px] text-text-secondary">{desc.length}/150</span>
+						<span class="text-xxs text-text-secondary">{desc.length}/150</span>
 					</div>
 				</div>
 			</div>
 
 			<!-- Category chips -->
 			<fieldset class="flex flex-col border-0 p-0 m-0 min-w-0">
-				<legend class="text-[11px] tracking-[0.1em] uppercase text-text-secondary">分类</legend>
+				<legend class="text-xs tracking-widest uppercase text-text-secondary">分类</legend>
 				<div class="flex flex-wrap gap-2 mt-2">
 					{#each CATEGORIES as cat}
 						<button
 							type="button"
 							onclick={() => (category = cat)}
-							class="hover-btn px-3.5 py-1.5 rounded-full outline-none text-[12px] {category === cat ? 'bg-accent-default text-white font-medium' : 'bg-surface-primary text-text-secondary'}"
+							class="hover-btn px-3.5 py-1.5 rounded-full outline-none text-sm {category === cat ? 'bg-accent-default text-white font-medium' : 'bg-surface-primary text-text-secondary'}"
 							style={category === cat
 								? 'box-shadow:0 3px 8px var(--glow-accent);'
 								: 'box-shadow:var(--shadow-neu-xs);border:1px solid var(--border-default);'}
@@ -192,7 +172,7 @@
 					{/if}
 					<div>
 						<p class="text-[14px] text-text-primary">{isPrivate ? '私密群组' : '公开群组'}</p>
-						<p class="text-[11px] text-text-secondary">
+						<p class="text-xs text-text-secondary">
 							{isPrivate ? '仅受邀请的人可加入' : '所有人都可以找到并加入'}
 						</p>
 					</div>
@@ -214,7 +194,7 @@
 					<Check style="width:18px;height:18px;color:{requiresApproval ? 'var(--accent-default)' : 'var(--text-secondary)'};" strokeWidth={1.5} />
 					<div>
 						<p class="text-[14px] text-text-primary">新人需审核</p>
-						<p class="text-[11px] text-text-secondary">
+						<p class="text-xs text-text-secondary">
 							{requiresApproval ? '申请需群主/管理员审核通过后加入' : '申请后直接加入'}
 						</p>
 					</div>
@@ -232,16 +212,16 @@
 				class="flex items-center gap-2.5 px-4 py-3 rounded-relaxed bg-surface-primary"
 				style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--border-default);"
 			>
-				<MapPin style="width:16px;height:16px;color:var(--accent-default);flex-shrink:0;" strokeWidth={1.5} />
+				<MapPin style="width:16px;height:16px;color:var(--accent-default);shrink:0;" strokeWidth={1.5} />
 				<div class="flex-1 min-w-0">
-					<p class="text-[13px] text-text-primary">{locationName || '自动定位中…'}</p>
-					<p class="text-[11px] text-text-secondary">自动定位 — 可修改</p>
+					<p class="text-base text-text-primary">{locationName || '自动定位中…'}</p>
+					<p class="text-xs text-text-secondary">自动定位 — 可修改</p>
 				</div>
 				<ChevronRight style="width:13px;height:13px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</div>
 
 			{#if createError}
-				<p class="text-[12px] text-status-warning">{createError}</p>
+				<p class="text-sm text-status-warning">{createError}</p>
 			{/if}
 
 			<!-- Create button -->
@@ -252,8 +232,8 @@
 				class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-panel outline-none text-[15px] font-medium {canCreate && !creating ? 'bg-accent-default text-white' : 'bg-surface-primary text-text-secondary'}"
 				style="box-shadow:{canCreate && !creating ? '0 6px 22px var(--glow-accent)' : 'var(--shadow-neu-inset-sm)'};border:{canCreate && !creating ? 'none' : '1px solid var(--border-default)'};transition:all 0.22s ease;cursor:{canCreate && !creating ? 'pointer' : 'not-allowed'};"
 			>
-				{creating ? '创建中…' : '创建群组'}
-			</button>
-		</div>
-	{/if}
-</div>
+		{creating ? '创建中…' : '创建群组'}
+	</button>
+	</div>
+{/if}
+</SheetShell>
