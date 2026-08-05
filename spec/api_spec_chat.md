@@ -364,7 +364,7 @@ interface UpdatePrivateMessageRequest {
 }
 ```
 
-**Response**: `ApiResponse`
+**Response**: `ApiResponse<PrivateMessageItem>`（内容类更新返回更新后完整对象；见 `api_spec_base.md`「设计规范」）
 
 **错误码**: `10200` `10300` `10400`
 
@@ -476,7 +476,7 @@ interface UpdateGroupMessageRequest {
 }
 ```
 
-**Response**: `ApiResponse`
+**Response**: `ApiResponse<GroupMessageItem>`（内容类更新返回更新后完整对象；见 `api_spec_base.md`「设计规范」）
 
 **错误码**: `10200` `10300` `10400`
 

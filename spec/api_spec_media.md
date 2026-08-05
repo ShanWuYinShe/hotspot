@@ -172,6 +172,8 @@ interface UploadedMedia {
 - `10300`：`upload_id` 不存在（如恶意请求发送了不存在的 upload_id）
 - `10400`：业务冲突——文件直传尚未完成（对象存储上传未到位），客户端应完成直传后重试
 
+**幂等语义（自然去重键）**：`upload_id` 与 `file_id` 的映射在首次 complete 成功后持久化。同一 `upload_id` **重复调用**返回相同的 `file_id` 与元数据（等价成功），不报错——覆盖"complete 成功但响应丢失后重试"场景（客户端重试即可拿到 `file_id`，无需重新 presign+上传）。判定见 `api_spec_base.md`「自然去重键」。
+
 ### POST /api/v1/media/batch_complete_upload
 
 批量完成上传。适用于瞬间发布（多图）、聊天批量发文件等场景——与 `batch_presign_upload` 配对，消除发图场景下逐个调用 `complete_upload` 的 N 次请求。
@@ -202,3 +204,5 @@ interface BatchCompleteUpload {
 **错误码说明**：沿用 `complete_upload` 的错误语义（原子失败）：
 - `10300`：任一 `upload_id` 不存在
 - `10400`：任一文件直传尚未完成
+
+**幂等语义**：与 `complete_upload` 一致——重复传入已完成的 `upload_ids` 返回相同的 `file_id` 映射（等价成功）。

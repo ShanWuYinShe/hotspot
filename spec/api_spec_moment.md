@@ -155,6 +155,12 @@ interface EditMomentRequest {
 
 删除生活瞬间。
 
+**删除语义（软删除，与评论一致）**：
+- 瞬间**不物理删除**，标记 `is_deleted=true`，`description` 清空（客户端展示"内容已删除"占位）
+- **其下评论/反应数据保留**（不级联删除，保留对话上下文与审计）；瞬间不可见后，评论列表（`comments/list`）随之不可达（挂载瞬间按不存在处理）
+- **可见性**：作者本人的 `list_my`、收藏者的 `list_favorites` 返回软删占位项（`is_deleted=true`、description 为空）；其余场景（`get_detail`/Feed/搜索/评论挂载）按不存在处理（`10300`/过滤）
+- 删除后推送 `MomentDeleted` WebSocket 事件（见 `api_spec_websocket.md`），客户端据此更新本地列表/收藏展示
+
 - **认证**: 必须
 
 **Request**: `DeleteMomentRequest`

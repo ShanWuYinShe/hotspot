@@ -426,7 +426,7 @@ interface MomentItem {
   moment_id: string;
   description: string;
   images?: MediaAsset[];
-  tags?: string[];                 // 标签；与 user/group 对齐改为可选
+  tags?: string[];
   mentions?: string[];
   created_at: string;
   likes_count: number;
@@ -434,6 +434,7 @@ interface MomentItem {
   shares_count: number;
   reactions?: Reaction[];          // 表情反应聚合（无反应时省略）；reaction.reacted_by_me 为 @auth-only 语义
   user: UserInfo;
+  is_deleted: boolean;             // 软删除标记；true 时 description 为空，客户端展示"内容已删除"占位（见 moment.md 删除语义）
 
   // 位置信息（可见性规则见 RelativeLocation 类型定义）
   location: RelativeLocation;
@@ -443,7 +444,7 @@ interface MomentItem {
 
   // === @auth-only 以下字段仅登录态返回 ===
   my_state?: {
-    is_favorited: boolean;         // 收藏状态（点赞/反应态改由 reactions[].reacted_by_me 表达）
+    is_favorited: boolean;         // 收藏状态
   };
 
   // Feed 场景返回（推荐理由，让用户了解为什么看到这条内容）

@@ -345,6 +345,7 @@ interface AdminTagItem extends TagItem {
 - 默认**软屏蔽**：标签不再可被新建/搜索命中，但**已引用该标签的历史瞬间/群组/用户数据保留不变**（不回写改写历史记录），避免大范围不可逆的数据修改
 - 物理删除（从所有历史引用中移除）为**高危操作**，需在 Request 中显式传 `hard_delete: true` 确认；物理删除不可逆，会改写所有引用该标签的资源
 - 屏蔽后同名标签不可再次创建（当前不提供取消屏蔽端点；误屏蔽需服务端维护处理）
+- **新内容约束**：被屏蔽标签出现在新建内容（瞬间/群组/用户资料的 `tags`）中时，该请求失败（`10400`，message 指明被屏蔽的标签名）——防止绕过屏蔽重新引入
 - **寻址说明**：标签的业务唯一键为 `name`（与普通 API `TagItem` 一致，`TagItem` 定义于 `api_spec_types.md`）；`AdminTagItem.tag_id`（定义于本文件「类型定义」小节）为内部存储标识，仅用于展示/审计关联，不参与删除寻址
 
 - **认证**: 必须 + `admin.tags.write`
@@ -414,12 +415,7 @@ interface CreateAnnouncementRequest {
 }
 ```
 
-**Response**: `ApiResponse<AnnouncementCreated>`
-```typescript
-interface AnnouncementCreated {
-  announcement_id: string;
-}
-```
+**Response**: `ApiResponse<AdminAnnouncementItem>`（返回完整公告对象，客户端直接渲染；`AdminAnnouncementItem` 定义见本文件「类型定义」小节）
 
 **错误码**: `10200`
 
@@ -442,7 +438,7 @@ interface UpdateAnnouncementRequest {
 }
 ```
 
-**Response**: `ApiResponse`
+**Response**: `ApiResponse<AdminAnnouncementItem>`（内容类更新返回更新后完整对象，见 `api_spec_base.md`「设计规范」）
 
 **错误码**: `10200` `10300`
 

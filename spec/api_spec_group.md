@@ -190,7 +190,7 @@ interface UpdateGroupRequest {
 }
 ```
 
-**Response**: `ApiResponse`
+**Response**: `ApiResponse<GroupItem>`（内容类更新返回更新后完整对象，客户端直接刷新 UI；见 `api_spec_base.md`「设计规范」）
 
 **错误码**: `10200` `10300`
 
@@ -463,9 +463,9 @@ interface UnbanMemberRequest {
 
 ### POST /api/v1/groups/members/list_banned
 
-获取封禁列表。
+获取封禁列表。封禁名单属群管理信息，仅群主/群管理员/系统管理员可见（普通成员返回 `10200`，与 Discord 等产品一致）。
 
-- **认证**: 必须
+- **认证**: 必须（仅群主、群管理员或系统管理员）
 - **排序**: 按 `banned_at` 时间倒序（最近封禁在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `BannedMembersRequest`
@@ -660,7 +660,7 @@ interface UpdateGroupAnnouncementRequest {
 }
 ```
 
-**Response**: `ApiResponse`
+**Response**: `ApiResponse<GroupAnnouncementItem>`（内容类更新返回更新后完整对象；见 `api_spec_base.md`「设计规范」）
 
 **错误码**: `10200` `10300`
 

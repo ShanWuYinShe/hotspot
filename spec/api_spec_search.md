@@ -25,6 +25,9 @@
 - `RelativeLocation`
 - `UserInfo`
 - `GroupInfo`
+- `UserItem`
+- `GroupItem`
+- `TagItem`
 
 ## 端点详情
 
@@ -61,27 +64,13 @@ interface SearchSuggestRequest {
 **Response**: `ApiResponse<SearchSuggestResponse>`
 
 ```typescript
-// 标签建议项
-interface TagSuggestItem {
-  name: string;
-  usage_count: number;
-}
+// 建议项统一复用通用类型（TagItem/UserItem/GroupItem 定义于 api_spec_types.md），不重复定义同义结构
+// - tag：TagItem（name + usage_count + trend?）
+// - user：UserItem（@auth-only 字段按登录态返回，与全规范一致）
+// - group：GroupItem
+// - moment：MomentSuggestItem（基于 MomentSummary 的轻量扩展，仅用于建议场景）
 
-// 用户建议项（统一使用 UserInfo 嵌套，与 spec 全局类型约定一致）
-interface UserSuggestItem {
-  user: UserInfo;
-  bio?: string;
-  location?: RelativeLocation;
-}
-
-// 群组建议项（统一使用 GroupInfo 嵌套）
-interface GroupSuggestItem {
-  group: GroupInfo;
-  description?: string;
-  location?: RelativeLocation;
-}
-
-// 瞬间建议项
+// 瞬间建议项（MomentSummary 定义于 api_spec_types.md；author 为发布者，location 为相对浏览锚点的位置）
 interface MomentSuggestItem {
   moment_id: string;
   description_preview: string;
@@ -93,9 +82,9 @@ interface MomentSuggestItem {
 type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
 
 type SearchSuggestItem =
-  | { type: 'tag'; payload: TagSuggestItem }
-  | { type: 'user'; payload: UserSuggestItem }
-  | { type: 'group'; payload: GroupSuggestItem }
+  | { type: 'tag'; payload: TagItem }
+  | { type: 'user'; payload: UserItem }
+  | { type: 'group'; payload: GroupItem }
   | { type: 'moment'; payload: MomentSuggestItem };
 
 interface SearchSuggestResponse {

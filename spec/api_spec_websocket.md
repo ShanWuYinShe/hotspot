@@ -35,6 +35,8 @@
 | | `MessageMentioned` | 推送给被 @ 的用户（瞬间或评论中被提及） |
 | | `ReactionAdded` | 推送给被反应资源的作者，告知谁添加了表情反应 |
 | | `ReactionRemoved` | 推送给被反应资源的作者，告知谁移除了表情反应 |
+| **瞬间生命周期** | `MomentUpdated` | 推送给瞬间作者的其他在线设备（瞬间被编辑） |
+| | `MomentDeleted` | 推送给瞬间作者的其他在线设备 + 收藏者（瞬间被软删除） |
 | **群组邀请** | `GroupInviteReceived` | 推送给被邀请加入群组的用户 |
 | | `GroupInviteRevoked` | 推送给受邀人：邀请被发起方撤销 |
 | | `GroupInviteExpired` | 推送给受邀人：邀请过期自动失效 |
@@ -278,6 +280,8 @@ type ServerEventType =
   // 互动（含表情反应）
   | "ReactionAdded" | "ReactionRemoved"   // 表情反应增减（覆盖 message/moment/comment 三类目标）
   | "MomentCommented" | "CommentReply" | "MessageMentioned"
+  // 瞬间生命周期（编辑/软删除）
+  | "MomentUpdated" | "MomentDeleted"
   // 聊天消息 - 私聊
   | "PrivateMessageNew" | "PrivateMessageEdited" | "PrivateMessageRecalled"
   | "PrivateMessageRead"
@@ -532,6 +536,21 @@ interface MessageMentionedPayload {
   mentioned_at: string;
 }
 type MessageMentionedEvent = { type: "MessageMentioned"; payload: MessageMentionedPayload; };
+
+// 瞬间被编辑（仅推送给作者的其他在线设备，用于多端同步；他人视角通过 HTTP 拉取最新内容）
+interface MomentUpdatedPayload {
+  moment_id: string;
+  updated_at: string;
+}
+type MomentUpdatedEvent = { type: "MomentUpdated"; payload: MomentUpdatedPayload; };
+
+// 瞬间被软删除（推送给作者的其他在线设备 + 已收藏该瞬间的用户；客户端据此更新本地列表/收藏为"已删除"占位）
+// 纯实时事件，不落库通知
+interface MomentDeletedPayload {
+  moment_id: string;
+  deleted_at: string;
+}
+type MomentDeletedEvent = { type: "MomentDeleted"; payload: MomentDeletedPayload; };
 ```
 
 **私聊消息事件**:

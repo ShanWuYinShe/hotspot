@@ -361,8 +361,8 @@ interface AccountData {
   bio?: string;
   tags?: string[];
   gender?: Gender;              // Gender 定义于本模块「类型定义」小节
-  email?: string;               // 邮箱（当前由注册时 login_id 推断，后续通过邮箱变更流程修改；变更接口暂未实现，见 api_spec_index.md 预留）
-  phone?: string;               // 手机号（同上）
+  email?: string;               // 邮箱：注册时 login_id 按格式判定——含 '@' 视为邮箱（存 email），否则省略；后续通过邮箱变更流程修改（变更接口暂未实现，见 api_spec_index.md 预留）
+  phone?: string;               // 手机号：注册时 login_id 为纯数字视为手机号（存 phone），否则省略；用户名注册时两字段均省略
   location: Location;           // 存储的原始位置，不含 distance/bearing_degrees（与 RelativeLocation 不同）
   presence_status: UserPresenceStatus;
   last_online_at: string;       // UTC ISO 8601，最后在线时间
@@ -433,7 +433,9 @@ interface UpgradeAccountRequest {
 
 升级成功后返回完整账户数据，客户端无需额外调 `get_account` 即可获取新的 `user_type`。
 
-**错误码**: `10400`
+**Token/Session 语义**：升级**不吊销当前 session、不重发 token**——服务端将当前 session 的 `user_type` 更新为 `normal`，现有 access_token/refresh_token 继续有效，客户端无需重新登录。访客期资料（昵称/头像/bio 等）随账户保留。
+
+**错误码**: `10400`（`login_id` 已被占用）
 
 ---
 
@@ -471,6 +473,8 @@ interface UpdateSettingsRequest {
 ### POST /api/v1/users/delete_account
 
 删除账户。
+
+**数据保留策略（契约级）**：账户删除**不级联删除已发布内容**——该用户已发布的瞬间、评论、群聊消息等公开内容保留（维护其他用户视角的社交上下文与对话完整性），但发布者身份**匿名化**：昵称/头像等个人信息替换为"已注销用户"占位，`user_id` 保留用于数据关联但不再可被搜索/访问。个人数据（登录凭证、私聊记录、设置、收藏、关注关系等）随账户删除。删除不可逆。
 
 - **认证**: 必须
 
