@@ -1,12 +1,12 @@
 <script lang="ts">
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
-	import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
+	import ListItem from '@/components/list/ListItem.svelte';
 
 	// 会话列表项（对齐 Figma Make ConversationListItem 契约）：
-	//   - 基于 InteractiveListRow 统一行组件（hover 填充 / tap 反馈 / 键盘 / aria）
+	//   - 基于公共 ListItem 行组件（hover 填充 / tap 反馈 / 键盘 / aria）
 	//   - 已读/未读不靠字号或字重区分（所有 item 大小一致），未读仅由
 	//     计数 chip 呈现；点击后未读清零（由页面 markRead 处理）
-	//   - selected：InteractiveListRow pressed 驱动 accent 全背景 + 反色文字
+	//   - selected：ListItem pressed 驱动 accent 全背景 + 反色文字
 	//     （content-inverse 系列）+ border-inverse 头像框；inline 背景避免
 	//     全局 button hover overlay 盖出白蒙蒙效果
 	//   - unread 徽章：选中时保留占位并改为反色，避免行内 flex-1 文本区
@@ -38,7 +38,7 @@
 	} = $props();
 </script>
 
-<InteractiveListRow
+<ListItem
 	pressed={isSelected}
 	onClick={onClick}
 	ariaLabel={`打开与 ${chat.name} 的会话`}
@@ -79,4 +79,4 @@
 			{chat.unread}
 		</span>
 	{/if}
-</InteractiveListRow>
+</ListItem>

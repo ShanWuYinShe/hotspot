@@ -6,8 +6,8 @@
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 import Avatar from '@/components/shared/Avatar.svelte';
 import Toggle from '@/components/forms/Toggle.svelte';
-import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
-import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
+import List from '@/components/list/List.svelte';
+import ListItem from '@/components/list/ListItem.svelte';
 	import { logout } from '@/stores/auth.svelte';
 	import { theme, setTheme, toggleDark, type AppTheme } from '@/stores/theme.svelte';
 	import { getAccount, getSettings } from '@/api';
@@ -92,7 +92,7 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 	<!-- Appearance（对齐 Figma Make SettingsPage：应用主题二选一 + 深色模式） -->
 	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-[0.14em] uppercase">外观</p>
 	<div class="rounded-panel overflow-hidden surface-flat">
-		<EmbeddedList>
+		<List>
 			<div class="px-4 py-3.5">
 				<div class="flex items-center gap-3">
 					<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
@@ -136,13 +136,13 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 				</div>
 				<Toggle on={theme.isDark} onToggle={toggleDark} label="深色模式" />
 			</div>
-		</EmbeddedList>
+		</List>
 	</div>
 
 	<!-- Notifications -->
 	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-[0.14em] uppercase">通知</p>
 	<div class="rounded-panel overflow-hidden surface-flat">
-		<EmbeddedList>
+		<List>
 			<div class="flex items-center gap-3 px-4 py-3.5">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
 					<Bell style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
@@ -163,13 +163,13 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 				</div>
 				<Toggle on={sounds} onToggle={() => (sounds = !sounds)} />
 			</div>
-		</EmbeddedList>
+		</List>
 	</div>
 
 	<!-- Privacy -->
 	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-[0.14em] uppercase">隐私与安全</p>
 	<div class="rounded-panel overflow-hidden surface-flat">
-		<EmbeddedList>
+		<List>
 			<div class="flex items-center gap-3 px-4 py-3.5">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
 					<Lock style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
@@ -190,14 +190,14 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 				</div>
 				<Toggle on={locationSharing} onToggle={() => (locationSharing = !locationSharing)} />
 			</div>
-		</EmbeddedList>
+		</List>
 	</div>
 
 	<!-- General -->
 	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-[0.14em] uppercase">通用</p>
 	<div class="rounded-panel overflow-hidden surface-flat">
-		<EmbeddedList>
-			<InteractiveListRow class="flex items-center gap-3 px-4 py-3.5" ariaLabel="语言设置">
+		<List>
+			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="语言设置">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
 					<Globe style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 				</div>
@@ -206,8 +206,8 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary">中文</span>
 				<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
-			</InteractiveListRow>
-			<InteractiveListRow class="flex items-center gap-3 px-4 py-3.5" ariaLabel="账号信息">
+			</ListItem>
+			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="账号信息">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
 					<User style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 				</div>
@@ -216,8 +216,8 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary"></span>
 				<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
-			</InteractiveListRow>
-			<InteractiveListRow class="flex items-center gap-3 px-4 py-3.5" ariaLabel="关于">
+			</ListItem>
+			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="关于">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
 					<Info style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 				</div>
@@ -226,8 +226,8 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary">v 1.0.0</span>
 				<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
-			</InteractiveListRow>
-		</EmbeddedList>
+			</ListItem>
+		</List>
 	</div>
 
 	<!-- Log Out — flat, less visually heavy -->

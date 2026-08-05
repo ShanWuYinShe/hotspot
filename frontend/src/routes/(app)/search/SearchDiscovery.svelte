@@ -1,7 +1,7 @@
 <script lang="ts">
 import { TrendingUp, Clock, Hash, ArrowUpRight } from '@lucide/svelte';
-import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
-import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
+import List from '@/components/list/List.svelte';
+import ListItem from '@/components/list/ListItem.svelte';
 
 	// 搜索页「无查询发现态」：最近搜索 + 热门搜索 + 推荐话题。
 	// 页面私有组件（colocate），由 search/+page.svelte 渲染。
@@ -42,9 +42,9 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 			</button>
 		</div>
 		{#if recent.length > 0}
-			<EmbeddedList>
+			<List>
 				{#each recent as item (item)}
-					<InteractiveListRow
+					<ListItem
 						onClick={() => onChoose(item)}
 						ariaLabel={`重新搜索 ${item}`}
 						class="flex items-center gap-3 px-5 py-4"
@@ -52,9 +52,9 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 						<Clock class="size-4 text-text-secondary" strokeWidth={1.7} />
 						<span class="flex-1 text-sm text-text-primary">{item}</span>
 						<ArrowUpRight class="size-4 text-text-secondary" strokeWidth={1.7} />
-					</InteractiveListRow>
+					</ListItem>
 				{/each}
-			</EmbeddedList>
+			</List>
 		{:else}
 			<p class="px-5 py-8 text-sm text-text-secondary">还没有搜索记录。</p>
 		{/if}
@@ -71,18 +71,18 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 			<h2 class="text-sm font-medium text-text-primary">正在关注</h2>
 		</div>
 		<div class="mt-4">
-			<EmbeddedList>
+			<List>
 				{#each hot as item, index (item)}
-					<InteractiveListRow
+					<ListItem
 						onClick={() => onChoose(item)}
 						ariaLabel={`搜索 ${item}`}
 						class="flex items-center gap-3 py-2"
 					>
 						<span class="w-4 text-xs text-accent-default">{index + 1}</span>
 						<span class="flex-1 text-sm text-text-primary">{item}</span>
-					</InteractiveListRow>
+					</ListItem>
 				{/each}
-			</EmbeddedList>
+			</List>
 		</div>
 	</section>
 

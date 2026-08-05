@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Search as SearchIcon, Users, FileText, Hash, ArrowUpRight } from '@lucide/svelte';
-import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
-import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
+import List from '@/components/list/List.svelte';
+import ListItem from '@/components/list/ListItem.svelte';
 import Avatar from '@/components/shared/Avatar.svelte';
 	import { ROUTES } from '@/lib/routes';
 
@@ -94,9 +94,9 @@ import Avatar from '@/components/shared/Avatar.svelte';
 						<Users class="size-4 text-accent-default" strokeWidth={1.7} />
 						<h2 class="text-sm font-medium text-text-primary">用户</h2>
 					</div>
-					<EmbeddedList>
+					<List>
 						{#each results.users as person (person.user_id)}
-							<InteractiveListRow
+							<ListItem
 								onClick={() => void goto(ROUTES.user(person.user_id))}
 								ariaLabel={`查看 ${person.nickname} 的资料`}
 								class="flex items-center gap-3 px-4 py-3.5"
@@ -109,9 +109,9 @@ import Avatar from '@/components/shared/Avatar.svelte';
 									</span>
 								</span>
 								<ArrowUpRight class="size-4 text-text-secondary" />
-							</InteractiveListRow>
+							</ListItem>
 						{/each}
-					</EmbeddedList>
+					</List>
 				</section>
 			{/if}
 
@@ -125,9 +125,9 @@ import Avatar from '@/components/shared/Avatar.svelte';
 						<FileText class="size-4 text-accent-default" strokeWidth={1.7} />
 						<h2 class="text-sm font-medium text-text-primary">动态</h2>
 					</div>
-					<EmbeddedList>
+					<List>
 						{#each results.moments as moment (moment.moment_id)}
-							<InteractiveListRow
+							<ListItem
 								onClick={() => void goto(ROUTES.moment(moment.moment_id))}
 								ariaLabel={moment.description ?? '无标题'}
 								class="flex items-center gap-3 px-4 py-3.5"
@@ -149,9 +149,9 @@ import Avatar from '@/components/shared/Avatar.svelte';
 									</span>
 								</span>
 								<ArrowUpRight class="size-4 text-text-secondary" />
-							</InteractiveListRow>
+							</ListItem>
 						{/each}
-					</EmbeddedList>
+					</List>
 				</section>
 			{/if}
 
@@ -165,9 +165,9 @@ import Avatar from '@/components/shared/Avatar.svelte';
 						<Hash class="size-4 text-accent-default" strokeWidth={1.7} />
 						<h2 class="text-sm font-medium text-text-primary">话题</h2>
 					</div>
-					<EmbeddedList>
+					<List>
 						{#each results.topics as topic (topic)}
-							<InteractiveListRow
+							<ListItem
 								onClick={() => onChoose(topic)}
 								ariaLabel={`搜索话题 ${topic}`}
 								class="flex items-center gap-3 px-4 py-3.5"
@@ -175,9 +175,9 @@ import Avatar from '@/components/shared/Avatar.svelte';
 								<Hash class="size-4 text-accent-default" />
 								<span class="flex-1 text-sm text-text-primary">#{topic}</span>
 								<ArrowUpRight class="size-4 text-text-secondary" />
-							</InteractiveListRow>
+							</ListItem>
 						{/each}
-					</EmbeddedList>
+					</List>
 				</section>
 			{/if}
 		</div>

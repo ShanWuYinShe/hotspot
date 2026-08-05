@@ -2,20 +2,22 @@
 	import type { Snippet } from 'svelte';
 	import { cn } from '@/lib/utils';
 
-	// 导航组件（navigation）。
-	// InteractiveListRow — 通用交互列表行（对齐 Figma Make InteractiveListRow 契约）：
-	//   - tone=joined：连接列表行（--surface-primary 表面，配合 BorderedList/EmbeddedList）
+	// 列表骨架组件（list）——列表只有两个公共组件：List（容器）+ ListItem（行）。
+	// ListItem 是唯一交互行组件（对齐 Figma Make InteractiveListRow 契约）：
+	//   - tone=joined：连接列表行（--surface-primary 表面，配合 List 使用）
 	//   - tone=card  ：独立卡片行（rounded-relaxed + 边框 + 凸起阴影）
 	//   - hover：--interactive-hover-fill 背景填充；tap：轻微透明度按压反馈
-	//   - pressed：选中态（accent 全背景 + 反色文字，对齐 ConversationListItem 强选中契约）；
-	//     children 需按 $derived(isSelected) 切换反色类（text-content-inverse 系列）
+	//   - pressed：选中态（accent 全背景 + 反色文字）；children 需按选中态
+	//     切换反色类（text-content-inverse 系列）
 	//   - 可点击时提供 role=button / 键盘 Enter+Space / tabindex / aria-pressed
 	//
-	// ┌──────────────── 列表容器 ────────────────┐
-	// │ ┌──── InteractiveListRow ─────┐          │
-	// │ │ 图标 / 主文本 / 操作          │          │
-	// │ └──────────────────────────────┘          │
-	// └────────────────────────────────────────────┘
+	// 使用方式：列表的交互已全部在此定义，调用方只需向 children 填充内容。
+	//
+	// ┌──────────────── 列表容器 List ────────┐
+	// │ ┌──── ListItem ────────────┐          │
+	// │ │ 图标 / 主文本 / 操作      │          │
+	// │ └──────────────────────────┘          │
+	// └────────────────────────────────────────┘
 	// 设备范围：桌面、平板和手机通用。
 
 	let {
@@ -39,28 +41,29 @@
 
 	let hovered = $state(false);
 	let focused = $state(false);
-	let isPressed = $state(false);
-	const activeSurface = $derived(hovered || focused);
+	let pointerDown = $state(false);
+	// hover 或 focus 时行处于「激活表面」：叠加 hover-fill 背景
+	const surfaceActive = $derived(hovered || focused);
 	// 对齐 Figma Make：可点击时 tap → opacity 0.84（0.1s），无 scale
-	const rowOpacity = $derived(onClick && isPressed ? 0.84 : 1);
+	const itemOpacity = $derived(onClick && pointerDown ? 0.84 : 1);
 
 	const isCard = $derived(tone === 'card');
-	const baseCardShadow = 'var(--shadow-neu-lg)';
-	const rowStyle = $derived.by(() => {
+	const cardShadow = 'var(--shadow-neu-lg)';
+	const itemStyle = $derived.by(() => {
 		const parts: string[] = [];
 		if (style) parts.push(style);
 		if (isCard) {
 			parts.push('background:var(--surface-primary);');
 			parts.push('border:1px solid var(--border-default);');
 			parts.push(
-				`box-shadow:${activeSurface ? `${baseCardShadow}, inset 0 0 0 1px var(--accent-border)` : baseCardShadow};`
+				`box-shadow:${surfaceActive ? `${cardShadow}, inset 0 0 0 1px var(--accent-border)` : cardShadow};`
 			);
 		}
 		// 选中态：accent 全背景（inline style 优先，hover 不再叠加填充）
 		if (pressed) {
 			parts.push('background:var(--accent-default);');
-		} else if (activeSurface) {
-			// hover/focus 填充放在最后，确保覆盖行内背景（Figma Make hover-fill 契约）
+		} else if (surfaceActive) {
+			// hover/focus 填充放在最后，确保覆盖行内背景（hover-fill 契约）
 			parts.push('background:var(--interactive-hover-fill);');
 		}
 		return parts.join('');
@@ -80,19 +83,19 @@
 		isCard ? 'rounded-relaxed border' : 'bg-surface-primary',
 		className
 	)}
-	style={`${rowStyle}opacity:${rowOpacity};transition-duration:${isPressed ? '0.10s' : '0.20s'};`}
+	style={`${itemStyle}opacity:${itemOpacity};transition-duration:${pointerDown ? '0.10s' : '0.20s'};`}
 	onmouseenter={() => (hovered = true)}
 	onmouseleave={() => {
 		hovered = false;
-		isPressed = false;
+		pointerDown = false;
 	}}
 	onfocus={() => (focused = true)}
 	onblur={() => {
 		focused = false;
-		isPressed = false;
+		pointerDown = false;
 	}}
-	onpointerdown={() => onClick && (isPressed = true)}
-	onpointerup={() => (isPressed = false)}
+	onpointerdown={() => onClick && (pointerDown = true)}
+	onpointerup={() => (pointerDown = false)}
 	onclick={onClick}
 	onkeydown={
 		onClick

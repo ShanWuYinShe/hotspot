@@ -2,7 +2,7 @@
 import { UserPlus, MessageCircle, Users, Check } from '@lucide/svelte';
 import SearchInput from '@/components/forms/SearchInput.svelte';
 import SheetShell from '@/components/overlays/SheetShell.svelte';
-import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
+import ListItem from '@/components/list/ListItem.svelte';
 
 	// 新会话底部 Sheet：添加好友 / 开始私聊 / 创建群聊入口。
 
@@ -84,7 +84,7 @@ function toggleAdd(id: number) {
 					附近推荐
 				</p>
 				{#each filteredSuggested as u (u.id)}
-					<InteractiveListRow
+					<ListItem
 						tone="card"
 						onClick={() => toggleAdd(u.id)}
 						ariaLabel={addedIds.has(u.id) ? `取消添加 ${u.name}` : `添加 ${u.name}`}
@@ -114,13 +114,13 @@ function toggleAdd(id: number) {
 								添加
 							{/if}
 						</button>
-					</InteractiveListRow>
+					</ListItem>
 				{/each}
 			</div>
 		{:else}
 			<div class="animate-fade-in flex flex-col gap-2">
 				<!-- Create group chat row -->
-				<InteractiveListRow
+				<ListItem
 					tone="card"
 					onClick={() => {
 						onClose();
@@ -136,13 +136,13 @@ function toggleAdd(id: number) {
 						<p class="text-text-primary" style="font-size:14px;font-weight:500;">创建群聊</p>
 						<p class="text-text-secondary" style="font-size:11px;">邀请好友一起聊</p>
 					</div>
-				</InteractiveListRow>
+				</ListItem>
 
 				<p class="uppercase mb-2 text-text-secondary" style="font-size:10px;letter-spacing:0.14em;">
 					联系人
 				</p>
 				{#each filteredContacts as c (c.id)}
-					<InteractiveListRow
+					<ListItem
 						tone="card"
 						onClick={() => {
 							onNewChat?.(c.id);
@@ -164,7 +164,7 @@ function toggleAdd(id: number) {
 							</p>
 						</div>
 						<MessageCircle style="width:16px;height:16px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
-					</InteractiveListRow>
+					</ListItem>
 				{/each}
 			</div>
 		{/if}

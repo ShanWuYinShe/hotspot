@@ -3,8 +3,8 @@
 	import { ArrowLeft, Bell, Check, MapPin, MessageCircle, Users } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
-	import BorderedList from '@/components/data-display/BorderedList.svelte';
-import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
+	import List from '@/components/list/List.svelte';
+import ListItem from '@/components/list/ListItem.svelte';
 	import { Tabs } from 'bits-ui';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance } from '@/lib/utils';
@@ -253,10 +253,10 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 					<p class="max-w-3xl text-[15px] leading-7 text-text-secondary">{group.description}</p>
 				</div>
 				{:else if tab === 'members'}
-					<!-- 空旷内容区 → BorderedList（有边框列表契约）；列表行不设独立边框 -->
-					<BorderedList class="mt-6">
+					<!-- 空旷内容区 → List bordered（有边框列表契约）；列表行不设独立边框 -->
+					<List bordered class="mt-6">
 						{#each members as member (member.id)}
-							<InteractiveListRow
+							<ListItem
 								onClick={() => {
 									if (member.userId) void goto(ROUTES.user(member.userId));
 								}}
@@ -274,12 +274,12 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 									<span class="text-xs text-text-secondary">{member.role}</span>
 								</span>
 								<span class="text-xs text-text-secondary">查看资料</span>
-							</InteractiveListRow>
+							</ListItem>
 						{/each}
-					</BorderedList>
+					</List>
 			{:else}
-				<!-- 空旷内容区 → BorderedList（有边框列表契约） -->
-				<BorderedList class="mt-6">
+				<!-- 空旷内容区 → List bordered（有边框列表契约） -->
+				<List bordered class="mt-6">
 					{#each announcements as item (item.title)}
 						<article class="px-4 py-4">
 							<p class="text-[14px] font-medium text-text-primary">{item.title}</p>
@@ -287,7 +287,7 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 							<p class="mt-2 text-xs text-text-secondary">{item.time}</p>
 						</article>
 					{/each}
-				</BorderedList>
+				</List>
 			{/if}
 		</main>
 

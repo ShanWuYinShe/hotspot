@@ -11,7 +11,7 @@
 	import GroupChatView from '@/components/messages/GroupChatView.svelte';
 	import ChatListItem, { type ChatItem } from '@/components/messages/ChatListItem.svelte';
 	import NewConversationSheet from '@/components/overlays/NewConversationSheet.svelte';
-	import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
+	import List from '@/components/list/List.svelte';
 	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import { getPrivateChats, listMyGroups, markPrivateRead, markGroupRead } from '@/api';
@@ -194,10 +194,10 @@
 				</div>
 			{/if}
 
-			<!-- Chat list（EmbeddedList 契约：分栏内连接列表，行无独立边框。
+			<!-- Chat list（List 契约：分栏内连接列表，行无独立边框。
 			     每行外层 px-3 py-1 包裹——对齐 Figma MessagesPage：行间有呼吸间距，
 			     选中态 glow 不与相邻行重叠，分隔线嵌在间距中不显突兀） -->
-			<EmbeddedList class="flex-1 overflow-y-auto no-scrollbar px-2 py-2">
+			<List class="flex-1 overflow-y-auto no-scrollbar px-2 py-2">
 				{#if totalUnread > 0}
 					<p class="uppercase px-2 mb-1 text-text-secondary text-[9px] tracking-[0.12em]">未读</p>
 				{/if}
@@ -211,7 +211,7 @@
 						/>
 					</div>
 				{/each}
-			</EmbeddedList>
+			</List>
 		</div>
 
 		<!-- Right: chat view or empty state（对齐 Figma：无卡片包裹，直接平铺） -->
@@ -327,7 +327,7 @@
 
 		<p class="uppercase mb-2.5 text-text-secondary text-xxs tracking-[0.14em]">最近</p>
 
-		<!-- 列表：无外层容器，EmbeddedList 直接裸排（对齐 Figma）；每行 px-3 py-1 包裹 -->
+		<!-- 列表：无外层容器，List 直接裸排（对齐 Figma）；每行 px-3 py-1 包裹 -->
 		{#if filtered.length === 0}
 			<EmptyState bare class="py-12!" title="没有找到会话">
 				{#snippet icon()}
@@ -335,7 +335,7 @@
 				{/snippet}
 			</EmptyState>
 		{:else}
-			<EmbeddedList class="px-2 py-1">
+			<List class="px-2 py-1">
 				{#each filtered as chat (chat.id)}
 					<div class="px-3 py-1">
 						<ChatListItem
@@ -344,7 +344,7 @@
 						/>
 					</div>
 				{/each}
-			</EmbeddedList>
+			</List>
 		{/if}
 	</ContentColumn>
 

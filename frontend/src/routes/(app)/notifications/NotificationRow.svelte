@@ -1,8 +1,8 @@
 <script lang="ts">
-	import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
+	import ListItem from '@/components/list/ListItem.svelte';
 	import { TYPE_CONFIG, type NotificationItem } from './notification-data';
 
-	// 通知行（对齐 Figma Make NotificationsPage 行契约：InteractiveListRow
+	// 通知行（对齐 Figma Make NotificationsPage 行契约：ListItem
 	// hover 背景填充 + tap opacity 0.84，无 scale 位移）。
 
 	let {
@@ -19,7 +19,7 @@
 	const cfgTone = (amount: number) => `color-mix(in srgb, ${cfg.color} ${amount}%, transparent)`;
 </script>
 
-<InteractiveListRow
+<ListItem
 	onClick={() => onRead(notif.id)}
 	ariaLabel={`通知：${notif.text}`}
 	class="flex items-center gap-3.5 px-3 py-3.5"
@@ -62,4 +62,4 @@
 			<div class="rounded-full" style="width:8px;height:8px;background:{cfg.color};"></div>
 		{/if}
 	</div>
-</InteractiveListRow>
+</ListItem>

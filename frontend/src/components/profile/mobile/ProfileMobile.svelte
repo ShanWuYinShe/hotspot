@@ -4,8 +4,8 @@
 import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-import BorderedList from '@/components/data-display/BorderedList.svelte';
-import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
+import List from '@/components/list/List.svelte';
+import ListItem from '@/components/list/ListItem.svelte';
 	import { useAccountData } from '@/lib/profile-data.svelte';
 	import { ROUTES, type ProfileSection } from '@/lib/routes';
 
@@ -96,7 +96,7 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 	</section>
 
 	<!-- 个人数据 5 行链接 -->
-	<BorderedList class="mt-5" ariaLabel="个人数据">
+	<List bordered class="mt-5" ariaLabel="个人数据">
 		<div class="flex items-center justify-between bg-surface-primary px-5 py-3.5">
 			<div>
 				<p class="text-sm font-medium text-text-primary">个人数据</p>
@@ -104,7 +104,7 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 			</div>
 		</div>
 		{#each DATA_ITEMS as item (item.section)}
-			<InteractiveListRow
+			<ListItem
 				onClick={() => void goto(ROUTES.meSection(item.section))}
 				ariaLabel={item.label}
 				class="flex items-center gap-3 px-5 py-3.5"
@@ -117,7 +117,7 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 					<span class="mt-0.5 block truncate text-xs text-text-secondary">{item.detail}</span>
 				</span>
 				<ChevronRight style="width:16px;height:16px;color:var(--text-secondary);shrink:0;" strokeWidth={1.7} />
-			</InteractiveListRow>
+			</ListItem>
 		{/each}
-	</BorderedList>
+	</List>
 </StandardPageLayout>

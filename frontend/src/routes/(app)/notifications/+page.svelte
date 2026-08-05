@@ -5,7 +5,7 @@
 	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
-	import BorderedList from '@/components/data-display/BorderedList.svelte';
+	import List from '@/components/list/List.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import NotificationRow from './NotificationRow.svelte';
@@ -175,7 +175,7 @@ const FILTER_TABS = [
 		</PageHeader>
 	{/snippet}
 
-	<!-- List：每个分组一个连接列表表面（BorderedList 契约；heading 在列表外） -->
+	<!-- List：每个分组一个连接列表表面（List bordered 契约；heading 在列表外） -->
 	<div class="flex flex-col">
 				{#if unreadGroup.length > 0}
 					<!-- 新消息分组标题（emphasis：accent 点 + 计数 pill，对齐 Figma Make） -->
@@ -184,11 +184,11 @@ const FILTER_TABS = [
 						<p class="uppercase" style="font-size:10px;font-weight:600;letter-spacing:0.14em;color:var(--text-primary);">新消息</p>
 						<span class="rounded-full px-1.5 py-0.5" style="font-size:10px;line-height:1;color:var(--accent-default);background:var(--accent-soft);">{unreadGroup.length}</span>
 					</div>
-					<BorderedList>
+					<List bordered>
 						{#each unreadGroup as n (n.id)}
 							<NotificationRow notif={n} onRead={markSingleRead} onRemove={remove} />
 						{/each}
-					</BorderedList>
+					</List>
 				{/if}
 
 				{#if readGroup.length > 0}
@@ -197,11 +197,11 @@ const FILTER_TABS = [
 						<p class="uppercase" style="font-size:10px;font-weight:500;letter-spacing:0.14em;color:var(--text-secondary);">较早</p>
 						<span aria-hidden="true" class="h-px flex-1" style="background:var(--border-default);"></span>
 					</div>
-					<BorderedList>
+					<List bordered>
 						{#each readGroup as n (n.id)}
 							<NotificationRow notif={n} onRead={markSingleRead} onRemove={remove} />
 						{/each}
-					</BorderedList>
+					</List>
 				{/if}
 
 				{#if filtered.length === 0}

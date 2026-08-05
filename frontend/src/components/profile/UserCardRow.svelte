@@ -1,12 +1,12 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
-	import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
+	import ListItem from '@/components/list/ListItem.svelte';
 
 	// UserCardRow — 用户卡片行（好友/关注/粉丝列表共用）。
-	// 统一：InteractiveListRow 外壳 + Avatar（ring + 可选角标）+ 名字 + 可选徽章。
+	// 统一：ListItem 外壳 + Avatar（ring + 可选角标）+ 名字 + 可选徽章。
 	// 副信息（handle/desc/时间）、缩略图、动作按钮由调用方 snippet 注入。
-	// tone: 'row'（BorderedList 内，avatar 42）/ 'card'（embedded 网格，avatar 48）。
+	// tone: 'row'（List bordered 内，avatar 42）/ 'card'（embedded 网格，avatar 48）。
 
 	let {
 		name,
@@ -29,15 +29,16 @@
 		subtitle?: Snippet;
 		thumbnail?: Snippet;
 		actions?: Snippet;
-		onClick: () => void;
-		ariaLabel: string;
+		/** 整行点击（不传则行不可点击，仅行内动作交互，如附近用户行的关注按钮）。 */
+		onClick?: () => void;
+		ariaLabel?: string;
 		style?: string;
 	} = $props();
 </script>
 
-<InteractiveListRow
+<ListItem
 	tone={tone === 'card' ? 'card' : undefined}
-	class="flex cursor-pointer items-center gap-3 {tone === 'card' ? 'p-3.5' : 'p-3'}"
+	class="flex items-center gap-3 {tone === 'card' ? 'p-3.5' : 'p-3'}"
 	{onClick}
 	{ariaLabel}
 	{style}
@@ -66,4 +67,4 @@
 	{#if actions}
 		{@render actions()}
 	{/if}
-</InteractiveListRow>
+</ListItem>

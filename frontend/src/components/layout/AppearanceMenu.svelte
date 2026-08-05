@@ -1,8 +1,8 @@
 <script lang="ts">
 import { Check, Moon, Palette, Sun, Database } from '@lucide/svelte';
 import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
-import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
+import List from '@/components/list/List.svelte';
+import ListItem from '@/components/list/ListItem.svelte';
 	import { theme, toggleDark, setTheme } from '@/stores/theme.svelte';
 	import * as Popover from '@/components/ui/popover';
 
@@ -184,9 +184,9 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 				<div class="mt-2 rounded-small ring-1 ring-border-default px-3 py-2.5" style="color:var(--text-primary);">
 					<span class="block text-sm font-medium">模拟登录态</span>
 					<span class="mb-2 block text-xxs text-text-secondary">影响 login/register/guest/reset 的返回</span>
-					<EmbeddedList>
+					<List>
 						{#each AUTH_SCENARIOS as s}
-							<InteractiveListRow
+							<ListItem
 								pressed={scenario === s.id}
 								onClick={() => void applyScenario(s.id)}
 								ariaLabel={`切换登录态：${s.label}`}
@@ -196,9 +196,9 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 								{#if scenario === s.id}
 									<Check size={12} style="color:var(--content-inverse);" />
 								{/if}
-							</InteractiveListRow>
+							</ListItem>
 						{/each}
-					</EmbeddedList>
+					</List>
 					<button
 						type="button"
 						onclick={() => void resetLoggedOut()}

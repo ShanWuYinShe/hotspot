@@ -1,15 +1,16 @@
 <script lang="ts">
-	import type { Component } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Coffee, Music, Users, Star, ChevronRight, MapPin, Search } from '@lucide/svelte';
+	import { ChevronRight, Search } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import { getTrending, getNearbyUsers, getNearbyGroups } from '@/api';
 	import SectionHead from '@/routes/(app)/_home/SectionHead.svelte';
 	import HeroStats from '@/routes/(app)/_home/HeroStats.svelte';
 	import { type NearbyUser } from '@/routes/(app)/_home/nearby-users';
-	import ActivityList, { type Activity } from '@/routes/(app)/_home/ActivityList.svelte';
+	import { toActivities, type Activity } from '@/routes/(app)/_home/activity-data';
 	import GroupCarousel, { type NearbyGroup } from '@/routes/(app)/_home/GroupCarousel.svelte';
-	import NearbyUsersList from '@/routes/(app)/_home/NearbyUsersList.svelte';
+	import List from '@/components/list/List.svelte';
+	import ListItem from '@/components/list/ListItem.svelte';
+	import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance } from '@/lib/utils';
 	import { loadDefaultLocation, type DefaultLocation } from '@/lib/default-location';
@@ -58,22 +59,7 @@
 				const nearbyUsersData = nearbyUsersRes.code === 0 ? nearbyUsersRes.data : null;
 				const nearbyGroupsData = nearbyGroupsRes.code === 0 ? nearbyGroupsRes.data : null;
 
-				if (trendingData) {
-					const acts: Activity[] = (trendingData.hot_moments || []).map((a, i) => ({
-						id: i + 1,
-						icon: [Coffee, Music, Users, Star][i % 4],
-						title: a.description ?? '',
-						sub: a.location?.location_name ?? '',
-						color: ['var(--status-warning)', 'var(--accent-default)', 'var(--marker-group)', 'var(--status-danger)'][i % 4],
-						bg: [
-							'color-mix(in srgb, var(--status-warning) 10%, transparent)',
-							'var(--accent-soft)',
-							'color-mix(in srgb, var(--marker-group) 10%, transparent)',
-							'color-mix(in srgb, var(--status-danger) 10%, transparent)'
-						][i % 4]
-					}));
-					activities = acts;
-				}
+				activities = toActivities(trendingData);
 
 				if (nearbyUsersData) {
 					const users: NearbyUser[] = nearbyUsersData.items.map((u) => ({
@@ -125,18 +111,79 @@
 
 </script>
 
+{#snippet activityRows(items: Activity[], onClick: (id: number) => void)}
+	<List bordered>
+		{#each items as item (item.id)}
+			<ListItem
+				onClick={() => onClick(item.id)}
+				ariaLabel={item.title}
+				class="flex items-center gap-3 px-4 py-3"
+			>
+				<div
+					class="rounded-tight flex items-center justify-center shrink-0"
+					style="width:34px;height:34px;background:{item.bg};"
+				>
+					<item.icon style="width:16px;height:16px;color:{item.color};" strokeWidth={1.75} />
+				</div>
+				<div class="flex-1 min-w-0">
+					<p style="font-size:13px;color:var(--text-primary);">{item.title}</p>
+					<p style="font-size:11px;color:var(--text-secondary);margin-top:1px;">{item.sub}</p>
+				</div>
+				<ChevronRight style="width:13px;height:13px;color:var(--text-secondary);" strokeWidth={1.5} />
+			</ListItem>
+		{/each}
+	</List>
+{/snippet}
+
+{#snippet userRows(users: NearbyUser[], following: Set<string>, onToggle: (id: string) => void)}
+	<List bordered>
+		{#each users as u (u.id)}
+			{@const followed = following.has(u.id)}
+			<UserCardRow name={u.name} avatar={u.avatar}>
+				{#snippet avatarBadge()}
+					{#if u.status === '在线'}
+						<span
+							class="absolute bottom-0 right-0 rounded-full border-2"
+							style="width:10px;height:10px;background:var(--status-online);border-color:var(--surface-primary);"
+						></span>
+					{/if}
+				{/snippet}
+				{#snippet subtitle()}
+					<p class="mt-1 flex items-center gap-1.5">
+						<span style="font-size:10px;color:var(--accent-default);">#{u.tag}</span>
+						<span style="font-size:10px;color:var(--text-secondary);opacity:0.5;">·</span>
+						<span style="font-size:10px;color:var(--text-secondary);">{u.distance}</span>
+					</p>
+				{/snippet}
+				{#snippet actions()}
+					<button
+						type="button"
+						class="hover-btn tap-93 px-3 py-1 rounded-full outline-none transition-all"
+						style={followed
+							? 'background:transparent;color:var(--text-secondary);border:1px solid var(--border-strong);font-size:11px;'
+							: 'background:var(--accent-default);color:white;border:1px solid transparent;font-size:11px;'}
+						onclick={() => onToggle(u.id)}
+					>
+						{followed ? '已关注' : '关注'}
+					</button>
+				{/snippet}
+			</UserCardRow>
+		{/each}
+	</List>
+{/snippet}
+
 {#snippet homeContent()}
 	<!-- 三端共用的业务组件（只写一次）。首页为大纲页：列表限长 + 「更多」链接导航到专区 -->
 	<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={defaultLocation?.location_name ?? ''} />
 	<div>
 		<SectionHead title="附近活动" action="更多" onAction={() => void goto(ROUTES.nearbyMoments)} />
-		<ActivityList items={activities.slice(0, 3)} onClick={(id) => void goto(ROUTES.event(id))} />
+		{@render activityRows(activities.slice(0, 3), (id) => void goto(ROUTES.event(id)))}
 	</div>
 	<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
 	<div>
 		<SectionHead title="人物推荐" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
 		<!-- 对齐 Figma HomePage：人物推荐仅展示前 4 位，其余引导到附近的人专区 -->
-		<NearbyUsersList users={nearbyUsers.slice(0, 4)} followingIds={followingIds} onToggle={toggleFollow} />
+		{@render userRows(nearbyUsers.slice(0, 4), followingIds, toggleFollow)}
 	</div>
 {/snippet}
 
@@ -199,7 +246,7 @@
 				<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={defaultLocation?.location_name ?? ''} />
 				<div>
 					<SectionHead title="附近活动" />
-					<ActivityList items={activities} onClick={(id) => void goto(ROUTES.event(id))} />
+					{@render activityRows(activities, (id) => void goto(ROUTES.event(id)))}
 				</div>
 				<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
 			</div>
@@ -224,7 +271,7 @@
 				</div>
 
 				<div class="mt-6">
-					<NearbyUsersList users={nearbyUsers} followingIds={followingIds} onToggle={toggleFollow} />
+					{@render userRows(nearbyUsers, followingIds, toggleFollow)}
 				</div>
 			</div>
 		</div>

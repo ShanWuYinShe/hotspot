@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { MapPin, X, Users, ChevronRight, Clock, Star, Check } from '@lucide/svelte';
-	import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
-import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
+	import List from '@/components/list/List.svelte';
+import ListItem from '@/components/list/ListItem.svelte';
 	import { HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { PIN_COLORS, PIN_LABELS, pinTone, getMarkerUrl } from '../shared/location-shared';
 
@@ -33,10 +33,10 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 </script>
 
 {#if searchQuery && searchResults.length > 0}
-	<EmbeddedList class="animate-fade-in">
+	<List class="animate-fade-in">
 		{#each searchResults as r}
 			{@const isSelected = selectedLoc?.displayName === r.displayName}
-			<InteractiveListRow
+			<ListItem
 				pressed={isSelected}
 				onClick={() => onSelectLoc(r)}
 				ariaLabel={`选择地点 ${r.displayName}`}
@@ -49,9 +49,9 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 				{#if isSelected}
 					<Check style="width:14px;height:14px;color:var(--content-inverse);shrink:0" strokeWidth={2.5} />
 				{/if}
-			</InteractiveListRow>
+			</ListItem>
 		{/each}
-	</EmbeddedList>
+	</List>
 {:else if searchQuery && searchResults.length === 0}
 	<div class="flex flex-col items-center py-6">
 		<MapPin style="width:26px;height:26px;color:var(--text-secondary);opacity:0.28;" strokeWidth={1} />
@@ -117,10 +117,10 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 		<!-- List items -->
 		{#if activeTab === 'recent'}
 			{#if recentItems.length > 0}
-				<EmbeddedList>
+				<List>
 					{#each recentItems as loc}
 						{@const isSelected = selectedLoc?.displayName === loc.displayName}
-						<InteractiveListRow
+						<ListItem
 							pressed={isSelected}
 							onClick={() => onSelectLoc(loc)}
 							ariaLabel={`选择最近地点 ${loc.displayName}`}
@@ -138,18 +138,18 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 							{:else}
 								<ChevronRight style="width:13px;height:13px;color:var(--border-default);shrink:0;" strokeWidth={1.5} />
 							{/if}
-						</InteractiveListRow>
+						</ListItem>
 					{/each}
-				</EmbeddedList>
+				</List>
 			{:else}
 				<p class="text-text-secondary" style="font-size:13px;padding:12px 20px;">暂无最近记录</p>
 			{/if}
 		{:else}
 			{#if HOT_LOCATIONS.length}
-				<EmbeddedList>
+				<List>
 					{#each HOT_LOCATIONS as loc}
 						{@const isSelected = selectedLoc?.displayName === loc.displayName}
-						<InteractiveListRow
+						<ListItem
 							pressed={isSelected}
 							onClick={() => onSelectLoc(loc)}
 							ariaLabel={`选择热门地点 ${loc.displayName}`}
@@ -166,9 +166,9 @@ import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelt
 								<Users style="width:11px;height:11px;color:{isSelected ? 'var(--content-inverse)' : 'var(--accent-default)'};" strokeWidth={1.5} />
 								<span class="{isSelected ? 'text-content-inverse-secondary' : 'text-accent-default'} text-xs">{loc.users}</span>
 							</div>
-						</InteractiveListRow>
+						</ListItem>
 					{/each}
-				</EmbeddedList>
+				</List>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-8">
 					<Star style="width:20px;height:20px;color:var(--text-secondary);opacity:0.3;" strokeWidth={1} />
