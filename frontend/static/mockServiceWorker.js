@@ -96,6 +96,14 @@ addEventListener('fetch', function (event) {
     return
   }
 
+  // 项目定制：只处理 API 请求（本项目 API 统一挂在 /api/ 下）。
+  // 其余请求（Vite HMR / 静态资源 / SvelteKit data 等）直接走网络、完全不进入
+  // MSW 处理链——避免无 handler 请求走 passthrough（SW 内 fetch 在反代环境下
+  // 可能失败，导致页面请求报 "Failed to fetch"）。
+  if (!new URL(event.request.url).pathname.startsWith('/api/')) {
+    return
+  }
+
   // Opening the DevTools triggers the "only-if-cached" request
   // that cannot be handled by the worker. Bypass such requests.
   if (
