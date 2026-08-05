@@ -37,6 +37,7 @@
 | | `ReactionRemoved` | 推送给被反应资源的作者，告知谁移除了表情反应 |
 | **瞬间生命周期** | `MomentUpdated` | 推送给瞬间作者的其他在线设备（瞬间被编辑） |
 | | `MomentDeleted` | 推送给瞬间作者的其他在线设备 + 收藏者（瞬间被软删除） |
+| **群聊提及** | `GroupMessageMentioned` | 推送给群消息中被 @ 的用户（对每个被 @ 用户分别推送） |
 | **群组邀请** | `GroupInviteReceived` | 推送给被邀请加入群组的用户 |
 | | `GroupInviteRevoked` | 推送给受邀人：邀请被发起方撤销 |
 | | `GroupInviteExpired` | 推送给受邀人：邀请过期自动失效 |
@@ -289,6 +290,7 @@ type ServerEventType =
   // 聊天消息 - 群聊
   | "GroupMessageNew" | "GroupMessageEdited" | "GroupMessageRecalled"
   | "GroupMessageReadCountUpdated"  // 群消息已读数变更（节流聚合推送，替代逐人已读广播）
+  | "GroupMessageMentioned"       // 群聊消息中被 @（对被 @ 的每个用户分别推送，落库通知）
   | "GroupTyping"                 // 群聊输入状态（服务端推送版）
   // 群组管理
   | "GroupMemberJoined" | "GroupMemberLeft" | "GroupMemberRemoved"
@@ -647,6 +649,18 @@ interface GroupMessageReadCountUpdatedPayload {
 type GroupMessageReadCountUpdatedEvent = { type: "GroupMessageReadCountUpdated"; payload: GroupMessageReadCountUpdatedPayload; };
 // 推送目标：订阅了该 group 的成员（消息发送者尤其关心自己消息的已读数）
 // 注：客户端不应将此事件用于精确计数，仅用于 UI 的"已有 N 人已读"展示刷新
+
+// 群聊消息中被 @（对 mentions 中的每个被 @ 用户分别推送 + 落库通知）
+// 与私聊/瞬间 @ 的 MessageMentioned 对应，群聊 @ 走独立事件（target 是群消息）
+interface GroupMessageMentionedPayload {
+  notify_id: string;
+  group_id: string;
+  message_id: string;
+  actor: UserInfo;          // 发送者（@ 的发起人）
+  content_preview?: string; // 消息内容截断预览
+  mentioned_at: string;
+}
+type GroupMessageMentionedEvent = { type: "GroupMessageMentioned"; payload: GroupMessageMentionedPayload; };
 
 interface GroupTypingPayload {
   group_id: string;

@@ -487,6 +487,8 @@ interface DeleteAccountRequest {
 
 **Response**: `ApiResponse`
 
+**login_id 处理**：注销后 `login_id`（手机号/邮箱/用户名）**释放**，可被新用户重新注册（与多数产品一致，避免凭证永久占用）。
+
 **错误码**: `10400`
 
 ---
@@ -520,6 +522,8 @@ interface FollowRequest {
 ### POST /api/v1/users/block
 
 设置拉黑状态（两态统一端点）。
+
+**级联语义**：拉黑时**自动解除双方关注关系**（`is_following`/好友关系清零，与微博/Instagram 等主流产品一致）——被拉黑方无法再通过关注关系触达；解除拉黑**不自动恢复**关注关系（需重新关注）。
 
 - **认证**: 必须
 

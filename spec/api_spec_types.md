@@ -99,7 +99,8 @@ type NotifyType =
   | 'mutual_follow'               // 形成互相关注
   | 'moment_commented'            // 瞬间被评论
   | 'comment_reply'               // 评论被回复
-  | 'mentioned'                   // 被 @ 提及
+  | 'mentioned'                   // 被 @ 提及（瞬间/评论）
+  | 'group_mentioned'             // 群聊消息中被 @
   | 'reaction_added'              // 内容被添加表情反应（自反应不落库）
   | 'group_invite_received'       // 收到入群邀请
   | 'group_application_received'  // 收到入群申请（群管理员视角）
@@ -113,7 +114,7 @@ type NotifyType =
 // 通知分类（用于未读计数分组展示，见 api_spec_notify.md get_unread_count 返回的 by_type）
 // 映射为契约级，新增 NotifyType 时必须同步归类：
 // - social:        new_follower, mutual_follow
-// - interaction:   moment_commented, comment_reply, mentioned, reaction_added
+// - interaction:   moment_commented, comment_reply, mentioned, group_mentioned, reaction_added
 // - group:         group_invite_received, group_application_received, group_application_accepted, group_application_rejected
 // - report:        report_resolved, report_dismissed
 // - nearby:        nearby_new_moment

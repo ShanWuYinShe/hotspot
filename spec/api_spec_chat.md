@@ -146,7 +146,9 @@ interface GroupMessageItem {
 **消息类型与字段要求**：
 - `text` 需要 `content`
 - `image`/`video`/`audio`/`file` 需要 `file_id`
-- `share` 需要 `share_code`
+- `share` 需要 `share_code`，服务端必须校验 `share_code` 存在且有效（未撤销/未过期），无效返回 `10400`（防发送失效链接）
+
+**群聊 @ 通知**：`group_messages/send` 携带 `mentions` 时，服务端对每个被 @ 的用户分别推送 `GroupMessageMentioned` 事件并落库通知（`NotifyType='group_mentioned'`，见 `api_spec_notify.md`）；被 @ 用户需为该群成员，非成员 ID 忽略。
 
 **发送语义**：API 调用仅提交发送意图和获取 `message_id`，消息最终态通过 WebSocket 推送获取。
 

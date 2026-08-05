@@ -52,6 +52,7 @@
 | `moment_commented` | `MomentCommented` | 瞬间被评论 |
 | `comment_reply` | `CommentReply` | 评论被回复 |
 | `mentioned` | `MessageMentioned` | 瞬间/评论中被 @ |
+| `group_mentioned` | `GroupMessageMentioned` | 群聊消息中被 @（对被 @ 的每个用户分别落库推送） |
 | `reaction_added` | `ReactionAdded` | 内容被添加表情反应（自反应不落库，此时事件不携带 `notify_id`） |
 | `group_invite_received` | `GroupInviteReceived` | 收到入群邀请 |
 | `group_application_received` | `GroupApplicationReceived` | 群主/管理员收到入群申请 |
@@ -78,6 +79,7 @@ type NotifyPayload =
   | { type: 'moment_commented'; actor: UserInfo; moment_id: string; moment_summary: MomentSummary; comment_id: string; comment_preview: string }
   | { type: 'comment_reply'; actor: UserInfo; comment_id: string; replied_comment_preview: string; reply_id: string; reply_content_preview: string; moment_id: string; moment_summary: MomentSummary }
   | { type: 'mentioned'; actor: UserInfo; target_type: 'moment' | 'comment'; moment_id: string; moment_summary: MomentSummary; comment_id?: string; comment_preview?: string }
+  | { type: 'group_mentioned'; actor: UserInfo; group_id: string; group_name: string; message_id: string; content_preview?: string }  // 群聊消息中被 @（被 @ 者收到；群申请等群事件为双向契约，群 @ 也明确告知发送者身份）
   | { type: 'reaction_added'; actor: UserInfo; target_type: 'message' | 'moment' | 'comment'; target_id: string; emoji: string }  // 表情反应被添加（资源作者收到；actor 为反应者；自我反应不产生通知）
   | { type: 'group_invite_received'; actor: UserInfo; group_id: string; group_name: string; group_avatar_url?: string; invite_id: string; message?: string }
   | { type: 'group_application_received'; applicant: UserInfo; group_id: string; group_name: string; application_id: string }  // 推送给群主/管理员
