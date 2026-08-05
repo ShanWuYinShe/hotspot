@@ -74,20 +74,17 @@ import { useRelationships } from '@/lib/profile-data.svelte';
 {/snippet}
 
 <!-- ═══ 样板 layout：StandardPageLayout（sticky header + ContentColumn 全宽 gutter）═══
-     embedded Section 自带 px-[var(--page-gutter)]，负 margin 抵消 ContentColumn 的
-     gutter，避免双重内边距（视觉 gutter 与 header/正文保持一致）。 -->
+     Section 组件为纯内容（不自建 gutter），gutter 由 ContentColumn 统一提供。 -->
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
 		{@render relHeader()}
 	{/snippet}
 
-	<div class="-mx-[var(--page-gutter)]">
-		{#if activeTab === 'friends'}
-			<SectionFriends embedded />
-		{:else if activeTab === 'following'}
-			<SectionFollowing embedded />
-		{:else}
-			<SectionFans embedded />
-		{/if}
-	</div>
+	{#if activeTab === 'friends'}
+		<SectionFriends embedded />
+	{:else if activeTab === 'following'}
+		<SectionFollowing embedded />
+	{:else}
+		<SectionFans embedded />
+	{/if}
 </StandardPageLayout>

@@ -126,7 +126,7 @@ const FILTER_TABS = [
 	);
 </script>
 
-<SplitPageLayout contentClassName="pt-3 pb-6">
+<SplitPageLayout contentClassName="pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader
 			title="通知"

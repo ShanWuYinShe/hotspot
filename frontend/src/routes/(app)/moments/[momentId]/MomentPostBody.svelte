@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { MapPin, Heart, MessageCircle, Share2, Bookmark, Check } from '@lucide/svelte';
-	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import { ROUTES } from '@/lib/routes';
 
@@ -57,8 +56,8 @@
 	} = $props();
 </script>
 
-<!-- Post image -->
-<div class="relative overflow-hidden" style="height:clamp(220px, 38vw, 380px);">
+<!-- Post image（全幅封面：负 margin 抵消外层 SplitPageLayout 的 gutter，与 events/users 一致） -->
+<div class="relative overflow-hidden -mx-[var(--page-gutter)]" style="height:clamp(220px, 38vw, 380px);">
 	{#if moment.image}
 		<img src={moment.image} alt="moment" class="w-full h-full object-cover" />
 	{:else}
@@ -72,7 +71,7 @@
 	</div>
 </div>
 
-<ContentColumn class="pt-4 pb-3">
+<div class="pt-4 pb-3">
 	<!-- Author -->
 	<div class="flex items-center gap-3 mb-3">
 		<button
@@ -163,4 +162,4 @@
 			</div>
 		{/each}
 	</div>
-</ContentColumn>
+</div>

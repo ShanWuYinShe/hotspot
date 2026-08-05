@@ -212,7 +212,7 @@
 	let moreMenuEl = $state<HTMLElement | null>(null);
 </script>
 
-<SplitPageLayout contentClassName="p-0">
+<SplitPageLayout contentClassName="pb-6">
 	{#snippet header()}
 		<PageHeader title="动态详情" titleSize={16} onBack={() => history.back()} class="shrink-0 border-b border-border-default">
 			{#snippet trailing()}
@@ -238,20 +238,18 @@
 		</p>
 	{/snippet}
 
-	<!-- 内容体自带 ContentColumn gutter：负 margin 抵消 SplitPageLayout 的 gutter -->
-	<div class="-mx-[var(--page-gutter)]">
-		<MomentPostBody
-			{moment}
-			comments={apiComments}
-			{commentCount}
-			{liked}
-			{saved}
-			{shareStatus}
-			onToggleLike={() => void toggleLike()}
-			onToggleSave={() => void toggleSave()}
-			onShare={() => void copyMomentLink()}
-		/>
-	</div>
+	<!-- 内容（gutter 由 SplitPageLayout 提供；全幅封面在 MomentPostBody 内负 margin 抵消） -->
+	<MomentPostBody
+		{moment}
+		comments={apiComments}
+		{commentCount}
+		{liked}
+		{saved}
+		{shareStatus}
+		onToggleLike={() => void toggleLike()}
+		onToggleSave={() => void toggleSave()}
+		onShare={() => void copyMomentLink()}
+	/>
 
 	{#snippet footer()}
 		<!-- 评论输入栏固定在主区底部，不随正文滚动 -->

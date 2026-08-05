@@ -7,6 +7,7 @@
 
 	// 我的群组分区（对齐 Figma Make ProfileSections SectionGroups）。
 	// 横向媒体卡布局：固定宽左侧 banner + 右侧详情列（avatar+name+chevron+desc+members+lastActive），min-h 148px。
+	// 纯内容组件：滚动与 gutter 由外层 StandardPageLayout/ContentColumn 承担，不自建容器。
 
 	let searchQ = $state('');
 
@@ -15,21 +16,20 @@
 	const totalOnline = $derived(groups.reduce((sum, g) => sum + (g.online ?? 0), 0));
 </script>
 
-<div class="no-scrollbar flex flex-1 flex-col overflow-y-auto">
-	<!-- 搜索 + 统计行（对齐 Figma SectionGroups header） -->
-	<div class="shrink-0 px-[var(--page-gutter)] pt-4 pb-3">
-		<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索我的群组…" class="px-3.5 py-2.5" />
-		<div class="mt-3 flex items-center justify-between">
-			<p class="text-sm text-text-secondary">共 {groups.length} 个群组</p>
-			<div class="flex items-center gap-1.5 text-sm text-status-online">
-				<span class="rounded-full" style="width:6px;height:6px;background:var(--status-online);"></span>
-				{totalOnline} 人在线
-			</div>
+<!-- 搜索 + 统计行（对齐 Figma SectionGroups header） -->
+<div class="pb-3 pt-4">
+	<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索我的群组…" class="px-3.5 py-2.5" />
+	<div class="mt-3 flex items-center justify-between">
+		<p class="text-sm text-text-secondary">共 {groups.length} 个群组</p>
+		<div class="flex items-center gap-1.5 text-sm text-status-online">
+			<span class="rounded-full" style="width:6px;height:6px;background:var(--status-online);"></span>
+			{totalOnline} 人在线
 		</div>
 	</div>
+</div>
 
-	<!-- 横向媒体卡网格（对齐 Figma：1/2 列，min-h 148px，左 banner + 右详情） -->
-	<div class="grid grid-cols-1 gap-3 px-[var(--page-gutter)] pb-6 sm:grid-cols-2">
+<!-- 横向媒体卡网格（对齐 Figma：1/2 列，min-h 148px，左 banner + 右详情） -->
+<div class="grid grid-cols-1 gap-3 pb-6 sm:grid-cols-2">
 		{#each filtered as g (g.id)}
 			<button
 				type="button"
@@ -88,7 +88,7 @@
 	</div>
 
 	{#if filtered.length === 0}
-		<div class="flex flex-1 flex-col items-center justify-center gap-2 px-[var(--page-gutter)] py-16">
+		<div class="flex flex-col items-center justify-center gap-2 py-16">
 			<Search class="text-text-secondary" style="width:22px;height:22px;" strokeWidth={1.4} />
 			<p class="text-base text-text-secondary">没有找到匹配的群组</p>
 		</div>

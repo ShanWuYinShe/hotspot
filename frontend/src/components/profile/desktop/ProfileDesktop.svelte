@@ -50,24 +50,22 @@
 
 {#if meta}
 	<!-- 分区模式：StandardPageLayout + sticky PageHeader；
-	     Section 组件自带 px-[var(--page-gutter)]，负 margin 抵消 ContentColumn gutter -->
-	<StandardPageLayout contentClassName="p-0">
+	     Section 组件为纯内容（不自建滚动/gutter），gutter 由 ContentColumn 统一提供 -->
+	<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 		{#snippet header()}
 			<PageHeader title={meta.title} sticky onBack={() => void goto(ROUTES.me)} />
 		{/snippet}
-		<div class="-mx-[var(--page-gutter)]">
-			{#if section === 'moments'}
-				<SectionMoments />
-			{:else if section === 'groups'}
-				<SectionGroups />
-			{:else if section === 'friends'}
-				<SectionFriends />
-			{:else if section === 'following'}
-				<SectionFollowing />
-			{:else if section === 'fans'}
-				<SectionFans />
-			{/if}
-		</div>
+		{#if section === 'moments'}
+			<SectionMoments />
+		{:else if section === 'groups'}
+			<SectionGroups />
+		{:else if section === 'friends'}
+			<SectionFriends />
+		{:else if section === 'following'}
+			<SectionFollowing />
+		{:else if section === 'fans'}
+			<SectionFans />
+		{/if}
 	</StandardPageLayout>
 {:else}
 	<!-- 总览模式（对齐 Figma Make ProfileDesktop：单列资料页） -->

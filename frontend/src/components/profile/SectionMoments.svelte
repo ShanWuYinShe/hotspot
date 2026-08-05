@@ -35,8 +35,9 @@
 	]);
 </script>
 
-<div class="no-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
-	<div class="mx-auto w-full px-[var(--page-gutter)] pb-10 pt-7">
+<!-- 我的瞬间分区（对齐 Figma Make ProfileSections SectionMoments）。
+     纯内容组件：滚动与 gutter 由外层 StandardPageLayout/ContentColumn 承担，不自建容器。 -->
+<div class="pb-10 pt-7">
 		{#if archive.length === 0}
 			<!-- 空态 -->
 			<EmptyState title="这里还没有瞬间" description="从一次路过、一次相遇开始记录。">
@@ -168,5 +169,4 @@
 				{/if}
 			</div>
 		{/if}
-	</div>
 </div>

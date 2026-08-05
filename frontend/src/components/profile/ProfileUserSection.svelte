@@ -10,6 +10,7 @@
 	// 统一：可选 header（标题+计数+副标题+右上角）、搜索框、统计行、筛选 pill 栏、
 	// 双模列表容器（embedded 卡片网格 / 非 embedded 连接列表行）、空态。
 	// 行渲染由 children snippet 注入（item 透传），数据源与动作差异留在各 Section。
+	// 纯内容组件：滚动与 gutter 由外层 StandardPageLayout/ContentColumn 承担，不自建容器。
 
 	let {
 		title,
@@ -50,10 +51,10 @@
 	} = $props();
 </script>
 
-<div class="flex flex-1 flex-col no-scrollbar overflow-y-auto">
+<div>
 	{#if !embedded}
 		<!-- Header -->
-		<header class="flex shrink-0 items-center justify-between px-[var(--page-gutter)] py-4" style="border-bottom:1px solid var(--border-default);">
+		<header class="flex items-center justify-between py-4" style="border-bottom:1px solid var(--border-default);">
 			<div>
 				<div class="flex items-center gap-2.5">
 					<span class="text-text-primary text-[15px]">{title}</span>
@@ -77,21 +78,21 @@
 
 	{#if search}
 		<!-- Search -->
-		<div class="shrink-0 px-[var(--page-gutter)] pt-4 pb-2">
+		<div class="pt-4 pb-2">
 			<SearchInput value={search.value} onChange={search.onChange} placeholder={search.placeholder} class="px-3 py-2" />
 		</div>
 	{/if}
 
 	{#if stats}
 		<!-- Stats row — flat joined cells -->
-		<div class="shrink-0 px-[var(--page-gutter)] py-3">
+		<div class="py-3">
 			<MetricRow items={stats} />
 		</div>
 	{/if}
 
 	{#if filters}
 		<!-- Filter pills — ghost chips -->
-		<div class="flex shrink-0 gap-1.5 px-[var(--page-gutter)] pt-3 pb-3">
+		<div class="flex gap-1.5 pt-3 pb-3">
 			{#each filters as pill}
 				{@const active = filterValue === pill.id}
 				<button
@@ -111,7 +112,7 @@
 
 	{#if embedded}
 		<!-- Card grid（relationships 聚合页 embedded 模式） -->
-		<div class="grid w-full grid-cols-1 gap-4 px-[var(--page-gutter)] pb-8 md:grid-cols-2 xl:grid-cols-3">
+		<div class="grid w-full grid-cols-1 gap-4 pb-8 md:grid-cols-2 xl:grid-cols-3">
 			{#if items.length === 0}
 				<div class="col-span-full">
 					<EmptyState title={emptyTitle} description={emptyDescription}>
@@ -128,7 +129,7 @@
 		</div>
 	{:else}
 		<!-- Bordered list（独立分区页） -->
-		<div class="px-[var(--page-gutter)] pb-6">
+		<div class="pb-6">
 			{#if items.length === 0}
 				<EmptyState title={emptyTitle} description={emptyDescription}>
 					{#snippet icon()}
