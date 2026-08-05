@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ProfileDesktop from '@/components/profile/ProfileDesktop.svelte';
+	import ProfileDesktop from '@/components/profile/desktop/ProfileDesktop.svelte';
 	import SectionRelationships from '@/components/profile/SectionRelationships.svelte';
 
 	// 个人主页分段：五个独立分区（moments / groups / friends / following / fans）

@@ -12,7 +12,7 @@
 	import DesktopLayout from '@/components/layout/desktop/DesktopLayout.svelte';
 	import TabletLayout from '@/components/layout/tablet/TabletLayout.svelte';
 	import NavTab from '@/components/layout/NavTab.svelte';
-	import MobileLandscape from '@/components/layout/MobileLandscape.svelte';
+	import MobileLandscape from '@/components/layout/mobile/MobileLandscape.svelte';
 	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 

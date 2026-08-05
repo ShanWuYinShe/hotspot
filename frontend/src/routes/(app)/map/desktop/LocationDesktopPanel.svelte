@@ -3,8 +3,8 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import BorderedList from '@/components/data-display/BorderedList.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
-	import { RECENT_LOCATIONS, HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from './location-data';
-	import { PIN_COLORS, PIN_LABELS, pinTone, getMarkerUrl } from './location-shared';
+	import { RECENT_LOCATIONS, HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
+	import { PIN_COLORS, PIN_LABELS, pinTone, getMarkerUrl } from '../shared/location-shared';
 
 	// 桌面地图「左侧面板」：标题/搜索/Tab 列表/确认。
 	// 页面私有组件（colocate），由 map/LocationDesktop.svelte 渲染。

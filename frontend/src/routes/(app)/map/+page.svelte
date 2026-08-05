@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { platform } from '@/stores/platform.svelte';
-	import LocationDesktop from './LocationDesktop.svelte';
-	import LocationMobile from './LocationMobile.svelte';
+	import LocationDesktop from './desktop/LocationDesktop.svelte';
+	import LocationMobile from './mobile/LocationMobile.svelte';
 
 	// 地图探索入口：平台分派（桌面/移动）。
 </script>

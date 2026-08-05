@@ -3,15 +3,15 @@
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import { loadDefaultLocation } from '@/lib/default-location';
-	import { SEARCH_DB, type PinType, type Pin, type LocationResult } from './location-data';
+	import { SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import {
 		PIN_COLORS, PIN_LABELS, pinTone, buildMapData, getMarkerUrl, fetchMapCanvas,
 		type MapHeatBucket,
 		markerUserUrl, markerGroupUrl, markerMomentUrl,
 		markerUserClusterUrl, markerGroupClusterUrl, markerMomentClusterUrl
-	} from './location-shared';
-	import MapPinMarker from './MapPinMarker.svelte';
-	import MapHeatDot from './MapHeatDot.svelte';
+	} from '../shared/location-shared';
+	import MapPinMarker from '../shared/MapPinMarker.svelte';
+	import MapHeatDot from '../shared/MapHeatDot.svelte';
 	import LocationDesktopPanel from './LocationDesktopPanel.svelte';
 
 	// 桌面地图探索：左侧栏（统计/搜索/Tab 列表/确认，由 LocationDesktopPanel 承载）

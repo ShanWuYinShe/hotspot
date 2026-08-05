@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { MapPin, X, Users, ChevronRight, Clock, Star, Check } from '@lucide/svelte';
 	import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
-	import { HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from './location-data';
-	import { PIN_COLORS, PIN_LABELS, pinTone, getMarkerUrl } from './location-shared';
+	import { HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
+	import { PIN_COLORS, PIN_LABELS, pinTone, getMarkerUrl } from '../shared/location-shared';
 
 	// 移动端地图「底部 Sheet 列表内容」：搜索建议 / 选中图钉 mini-card / Tab / 最近·热门列表。
 	// 页面私有组件（colocate），由 map/LocationMobile.svelte 渲染（仅 snap !== 'min' 时显示）。

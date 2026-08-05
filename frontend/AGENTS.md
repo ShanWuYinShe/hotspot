@@ -93,7 +93,7 @@ src/routes/
     groups/[groupId]/      # 群组详情
     events/[eventId]/      # 活动详情
     settings/              # 设置
-    map/                   # 地图
+    map/                   # 地图（+page.svelte 设备分派；desktop/ mobile/ shared/ 子目录）
     notifications/         # 通知
     search/                # 搜索
 ```
@@ -105,7 +105,7 @@ src/routes/
 
 路由常量见 `@/lib/routes`。
 
-页面实现与路由同目录 colocate：每个路由目录下，除 `+page.svelte` 外，同目录存放页面私有组件（如 `map/LocationDesktop.svelte` + `location-data.ts`）。跨路由复用的页面组件（如 `components/profile/SectionFriends.svelte` 同时被 `me/[section]` 分区页与 `me/relationships` 聚合页复用）放在 `components/` 对应域目录；共享组件统一在 `components/`。
+页面私有组件与路由同目录，**按设备分目录**：每个路由目录下，`+page.svelte` 做设备分派（`platform.platform`），设备专属组件放 `desktop/` / `mobile/` 子目录，跨设备共享的组件与逻辑放 `shared/` 子目录（如 `map/desktop/LocationDesktop.svelte` + `map/mobile/LocationMobile.svelte` + `map/shared/location-data.ts`）。跨路由复用的页面组件（如 `components/profile/SectionFriends.svelte` 同时被 `me/[section]` 分区页与 `me/relationships` 聚合页复用）放在 `components/` 对应域目录；共享组件统一在 `components/`，设备专属共享组件按 `components/<域>/{desktop,tablet,mobile}/` 分目录（如 `layout/mobile/MobileLandscape.svelte`、`profile/desktop/ProfileDesktop.svelte`）。
 
 ## 页面布局（普通页 StandardPageLayout / 分栏页 SplitPageLayout）
 
@@ -163,8 +163,9 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 
 ```
 src/
-  routes/         # SvelteKit 路由（+page.svelte / +layout.svelte + 页面私有组件）
-  components/     # 共享组件（按域分子目录：auth/ data-display/ forms/ layout/ messages/ moments/ navigation/ overlays/ profile/ shared/ ui/）
+  routes/         # SvelteKit 路由（+page.svelte / +layout.svelte + 页面私有组件按设备分子目录）
+  components/     # 共享组件（按域分子目录：auth/ data-display/ forms/ layout/ messages/ moments/ navigation/ overlays/ profile/ shared/ ui/；
+                  #   设备专属共享组件再按 {desktop,tablet,mobile}/ 分目录，如 layout/mobile/、profile/desktop/）
   stores/         # runes 模块单例（auth/theme/platform/presence/ws/composer，.svelte.ts）
   lib/            # 工具函数 + 路由常量 + 数据工厂（.svelte.ts 响应式）
   api/            # API 客户端层（client.ts 零框架依赖）

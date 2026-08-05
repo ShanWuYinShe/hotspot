@@ -4,10 +4,10 @@
 	import { ROUTES } from '@/lib/routes';
 	import * as Popover from '@/components/ui/popover';
 	import { loadDefaultLocation } from '@/lib/default-location';
-	import { RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from './location-data';
-	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, pinTone, floatBtnStyle, buildMapData, fetchMapCanvas, type MapHeatBucket, markerUserUrl, markerGroupUrl, markerMomentUrl, type SnapState } from './location-shared';
-	import MapPinMarker from './MapPinMarker.svelte';
-	import MapHeatDot from './MapHeatDot.svelte';
+	import { RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
+	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, pinTone, floatBtnStyle, buildMapData, fetchMapCanvas, type MapHeatBucket, markerUserUrl, markerGroupUrl, markerMomentUrl, type SnapState } from '../shared/location-shared';
+	import MapPinMarker from '../shared/MapPinMarker.svelte';
+	import MapHeatDot from '../shared/MapHeatDot.svelte';
 	import LocationSheetList from './LocationSheetList.svelte';
 
 	// 移动端地图探索：全屏 OSM + 可拖拽吸附底部 Sheet（148/318/540 三档）。
