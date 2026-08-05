@@ -1,23 +1,21 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { MessageCircle, Users } from '@lucide/svelte';
-	import Avatar from '@/components/shared/Avatar.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
-	import SearchInput from '@/components/forms/SearchInput.svelte';
-	import BorderedList from '@/components/data-display/BorderedList.svelte';
-	import EmptyState from '@/components/data-display/EmptyState.svelte';
-	import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
+	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
+	import type { SectionFilter } from '@/components/profile/section-filter';
+	import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import { useRelationships, type MappedFriend } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
-	// 好友分区。
+	// 好友分区：ProfileUserSection 骨架 + UserCardRow 行。
 
 	let { embedded = false }: { embedded?: boolean } = $props();
 
 	let searchQ = $state('');
 	let activeFilter = $state<'all' | 'online' | 'offline'>('all');
 
-	const { friends, loading } = useRelationships();
+	const { friends } = useRelationships();
 
 	const filtered = $derived(
 		friends
@@ -25,119 +23,75 @@
 			.filter((f) => searchQ === '' || f.name.toLowerCase().includes(searchQ.toLowerCase()) || f.handle.includes(searchQ))
 	);
 	const onlineCount = $derived(friends.filter((f) => f.online).length);
+
+	const FILTERS: SectionFilter[] = [
+		{ id: 'all', label: '全部' },
+		{ id: 'online', label: '在线' },
+		{ id: 'offline', label: '离线' }
+	];
 </script>
 
-<div class="flex-1 overflow-y-auto no-scrollbar flex flex-col">
-	{#if !embedded}
-		<!-- Header -->
-		<div class="flex items-center justify-between px-[var(--page-gutter)] py-4 shrink-0" style="border-bottom:1px solid var(--border-default);">
-			<div>
-				<div class="flex items-center gap-2.5">
-					<span class="text-text-primary text-[15px]">好友</span>
-					<div class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style="background:var(--color-online-bg);border:1px solid color-mix(in srgb, var(--status-online) 24%, transparent);">
-						<div class="bg-status-online" style="width:6px;height:6px;border-radius:50%;"></div>
-						<span class="text-status-online">{onlineCount} 在线</span>
-					</div>
+<ProfileUserSection
+	title="好友"
+	subtitle="双向关系，可直接开启对话"
+	count={friends.length}
+	countSuffix=" 位好友"
+	{embedded}
+	search={{ value: searchQ, onChange: (v) => (searchQ = v), placeholder: '搜索好友…' }}
+	filters={FILTERS}
+	filterValue={activeFilter}
+	onFilter={(id) => (activeFilter = id as 'all' | 'online' | 'offline')}
+	emptyTitle="还没有好友"
+	emptyDescription="去附近的人里认识新朋友。"
+	emptyIcon={Users}
+	items={filtered}
+>
+	{#snippet children(f: MappedFriend)}
+		<UserCardRow
+			name={f.name}
+			avatar={f.avatar}
+			tone={embedded ? 'card' : 'row'}
+			onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
+			ariaLabel={`查看 ${f.name} 的主页`}
+		>
+			{#snippet avatarBadge()}
+				<span class="absolute bottom-0 right-0 rounded-full {f.online ? 'bg-status-online' : 'bg-text-secondary'}" style="width:10px;height:10px;border:2px solid var(--surface-primary);opacity:{f.online ? 1 : 0.5};"></span>
+			{/snippet}
+			{#snippet nameBadge()}
+				<TagPill size="sm">{f.tag}</TagPill>
+			{/snippet}
+			{#snippet subtitle()}
+				<p class="mt-0.5 text-text-secondary text-xs">
+					{f.handle} · {f.mutual} 共同好友
+				</p>
+			{/snippet}
+			{#snippet actions()}
+				<div class="flex flex-col gap-1.5 shrink-0">
+					<button
+						type="button"
+						class="hover-btn tap-93 flex items-center justify-center gap-1 rounded-full bg-accent-default px-2.5 py-1.5 text-xs text-white outline-none"
+						style="box-shadow:0 3px 8px var(--glow-accent);"
+						onclick={(e) => {
+							e.stopPropagation();
+							void goto(ROUTES.message(f.id));
+						}}
+					>
+						<MessageCircle style="width:11px;height:11px;" strokeWidth={2} />
+						发消息
+					</button>
+					<button
+						type="button"
+						class="hover-btn tap-93 flex items-center justify-center gap-1 rounded-full bg-surface-primary px-2.5 py-1.5 text-xs text-text-secondary outline-none"
+						style="border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);"
+						onclick={(e) => {
+							e.stopPropagation();
+							void goto(`${ROUTES.user(f.id)}?from=relationships`);
+						}}
+					>
+						查看主页
+					</button>
 				</div>
-				<p class="mt-1 text-text-secondary text-xs">双向关系，可直接开启对话</p>
-			</div>
-			<span class="text-text-secondary text-xs">{friends.length} 位好友</span>
-		</div>
-	{/if}
-
-	<!-- Search -->
-	<div class="px-[var(--page-gutter)] pt-4 pb-2 shrink-0">
-		<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索好友…" class="px-3 py-2" />
-	</div>
-
-	<!-- Filter pills -->
-	<div class="flex gap-2 px-[var(--page-gutter)] pb-4 shrink-0">
-		{#each [{ id: 'all', label: '全部' }, { id: 'online', label: '在线' }, { id: 'offline', label: '离线' }] as pill}
-			<button
-				type="button"
-				class="hover-btn px-3 py-1.5 rounded-full outline-none text-xs tap-93 {activeFilter === pill.id ? 'bg-accent-default text-white' : 'bg-surface-primary text-text-secondary'}"
-				style={activeFilter === pill.id ? 'box-shadow:0 3px 8px var(--glow-accent);' : 'border:1px solid var(--border-default);'}
-				onclick={() => (activeFilter = pill.id as 'all' | 'online' | 'offline')}
-			>
-				{pill.label}
-			</button>
-		{/each}
-	</div>
-
-	<!-- Friend list（连接列表契约：BorderedList + InteractiveListRow，行不设独立边框） -->
-	{#if embedded}
-		<div class="grid w-full grid-cols-1 gap-4 px-[var(--page-gutter)] pb-8 md:grid-cols-2 xl:grid-cols-3">
-			{#each filtered as f (f.id)}
-				<InteractiveListRow tone="card" class="flex items-center gap-3 p-3.5 cursor-pointer"
-					onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
-					ariaLabel={`查看 ${f.name} 的主页`}
-				>
-					{@render FriendRowBody(f)}
-				</InteractiveListRow>
-			{/each}
-		</div>
-	{:else}
-		<div class="flex flex-col gap-3 px-[var(--page-gutter)] pb-6">
-			{#if filtered.length === 0}
-				<EmptyState title="还没有好友" description="去附近的人里认识新朋友。">
-					{#snippet icon()}
-						<Users size={18} />
-					{/snippet}
-				</EmptyState>
-			{:else}
-				<BorderedList>
-					{#each filtered as f (f.id)}
-						<InteractiveListRow class="flex items-center gap-3 p-3 cursor-pointer"
-							onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
-							ariaLabel={`查看 ${f.name} 的主页`}
-						>
-							{@render FriendRowBody(f)}
-						</InteractiveListRow>
-					{/each}
-				</BorderedList>
-			{/if}
-		</div>
-	{/if}
-</div>
-
-{#snippet FriendRowBody(f: MappedFriend)}
-	<Avatar ring src={f.avatar} name={f.name} size={42}>
-		{#snippet badge()}
-			<span class="absolute bottom-0 right-0 rounded-full {f.online ? 'bg-status-online' : 'bg-text-secondary'}" style="width:10px;height:10px;border:2px solid var(--surface-primary);opacity:{f.online ? 1 : 0.5};"></span>
-		{/snippet}
-	</Avatar>
-	<div class="flex-1 min-w-0">
-		<div class="flex items-center gap-2">
-			<span class="text-text-primary text-sm">{f.name}</span>
-			<TagPill size="sm">{f.tag}</TagPill>
-		</div>
-		<p class="text-text-secondary text-xs mt-0.5">
-			{f.handle} · {f.mutual} 共同好友
-		</p>
-	</div>
-	<div class="flex flex-col gap-1.5 shrink-0">
-		<button
-			type="button"
-			class="hover-btn flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none tap-93 bg-accent-default text-white text-xs"
-			style="box-shadow:0 3px 8px var(--glow-accent);"
-			onclick={(e) => {
-				e.stopPropagation();
-				void goto(ROUTES.message(f.id));
-			}}
-		>
-			<MessageCircle style="width:11px;height:11px;" strokeWidth={2} />
-			发消息
-		</button>
-		<button
-			type="button"
-			class="hover-btn flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none tap-93 bg-surface-primary text-text-secondary text-xs"
-			style="border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);"
-			onclick={(e) => {
-				e.stopPropagation();
-				void goto(`${ROUTES.user(f.id)}?from=relationships`);
-			}}
-		>
-			查看主页
-		</button>
-	</div>
-{/snippet}
+			{/snippet}
+		</UserCardRow>
+	{/snippet}
+</ProfileUserSection>
