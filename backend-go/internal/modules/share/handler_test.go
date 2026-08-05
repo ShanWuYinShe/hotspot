@@ -117,7 +117,9 @@ func TestShareHandlerReturnsBusinessErrors(t *testing.T) {
 	revokeReq := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/revoke", strings.NewReader(`{"share_id":"share_1"}`)))
 	revokeRR := httptest.NewRecorder()
 	handler.Revoke(revokeRR, revokeReq)
-	assertCode(t, revokeRR, 10200)
+	// 隐私一致性（spec api_spec_share.md）：share 存在但无权限时统一 10300，
+	// 不通过 10200 泄露 share 的存在性。
+	assertCode(t, revokeRR, 10300)
 }
 
 func TestShareHandlerReturns10600OnServiceError(t *testing.T) {

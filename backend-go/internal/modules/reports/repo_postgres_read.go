@@ -2,6 +2,7 @@ package reports
 
 import (
 	"context"
+	"encoding/json"
 
 	"hotspot/backend-go/internal/platform/persistence"
 )
@@ -22,8 +23,16 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req MyRepo
 	items := []ReportItem{}
 	for rows.Next() {
 		var item ReportItem
-		if err := rows.Scan(&item.ReportID, &item.TargetType, &item.TargetID, &item.Reason, &item.Description, &item.Status, &item.CreatedAt); err != nil {
+		var snapshotJSON *string
+		if err := rows.Scan(&item.ReportID, &item.TargetType, &item.TargetID, &item.Reason, &item.Description, &item.Status, &item.CreatedAt, &snapshotJSON); err != nil {
 			return PaginatedReports{}, err
+		}
+		if snapshotJSON != nil && *snapshotJSON != "" {
+			var snapshot ReportSnapshot
+			if err := json.Unmarshal([]byte(*snapshotJSON), &snapshot); err != nil {
+				return PaginatedReports{}, err
+			}
+			item.MessageSnapshot = &snapshot
 		}
 		items = append(items, item)
 	}

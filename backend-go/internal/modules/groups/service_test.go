@@ -794,7 +794,7 @@ func TestServiceApproveApplicationHappyPath(t *testing.T) {
 		apps:      []GroupApplicationItem{{ApplicationID: "app1", GroupID: "g1", Status: pending, Applicant: UserInfo{UserID: "u3"}}},
 	}
 	svc := NewServiceWithRepo(repo)
-	err := svc.ApproveApplication(grpCtx("u1"), ApproveGroupApplicationRequest{ApplicationID: "app1"})
+	err := svc.ApproveApplication(grpCtx("u1"), ApproveGroupApplicationRequest{GroupID: "g1", ApplicationID: "app1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -806,7 +806,7 @@ func TestServiceApproveApplicationRejectsNotFound(t *testing.T) {
 		apps:     []GroupApplicationItem{}, // 无匹配申请
 	}
 	svc := NewServiceWithRepo(repo)
-	err := svc.ApproveApplication(grpCtx("u1"), ApproveGroupApplicationRequest{ApplicationID: "missing"})
+	err := svc.ApproveApplication(grpCtx("u1"), ApproveGroupApplicationRequest{GroupID: "g1", ApplicationID: "missing"})
 	if !errors.Is(err, ErrGroupNotFound) {
 		t.Fatalf("expected ErrGroupNotFound, got %v", err)
 	}
@@ -821,7 +821,7 @@ func TestServiceApproveApplicationPropagatesRepoError(t *testing.T) {
 		approveErr: errors.New("db error"),
 	}
 	svc := NewServiceWithRepo(repo)
-	err := svc.ApproveApplication(grpCtx("u1"), ApproveGroupApplicationRequest{ApplicationID: "app1"})
+	err := svc.ApproveApplication(grpCtx("u1"), ApproveGroupApplicationRequest{GroupID: "g1", ApplicationID: "app1"})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -838,7 +838,7 @@ func TestServiceRejectApplicationRejectsNotFound(t *testing.T) {
 		apps:     []GroupApplicationItem{},
 	}
 	svc := NewServiceWithRepo(repo)
-	err := svc.RejectApplication(grpCtx("u1"), RejectGroupApplicationRequest{ApplicationID: "missing"})
+	err := svc.RejectApplication(grpCtx("u1"), RejectGroupApplicationRequest{GroupID: "g1", ApplicationID: "missing"})
 	if !errors.Is(err, ErrGroupNotFound) {
 		t.Fatalf("expected ErrGroupNotFound, got %v", err)
 	}
@@ -853,7 +853,7 @@ func TestServiceRejectApplicationHappyPath(t *testing.T) {
 	}
 	svc := NewServiceWithRepo(repo)
 	reason := "not suitable"
-	err := svc.RejectApplication(grpCtx("u1"), RejectGroupApplicationRequest{ApplicationID: "app1", Reason: &reason})
+	err := svc.RejectApplication(grpCtx("u1"), RejectGroupApplicationRequest{GroupID: "g1", ApplicationID: "app1", Reason: &reason})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -868,7 +868,7 @@ func TestServiceRejectApplicationPropagatesRepoError(t *testing.T) {
 		rejectErr: errors.New("db error"),
 	}
 	svc := NewServiceWithRepo(repo)
-	err := svc.RejectApplication(grpCtx("u1"), RejectGroupApplicationRequest{ApplicationID: "app1"})
+	err := svc.RejectApplication(grpCtx("u1"), RejectGroupApplicationRequest{GroupID: "g1", ApplicationID: "app1"})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -1114,11 +1114,11 @@ func TestServiceListMyApplicationsPropagatesError(t *testing.T) {
 func TestServiceCancelApplicationDelegatesToRepo(t *testing.T) {
 	repo := &stubGroupsRepo{
 		apps: []GroupApplicationItem{
-			{ApplicationID: "app1", Applicant: UserInfo{UserID: "u1"}},
+			{ApplicationID: "app1", GroupID: "g1", Applicant: UserInfo{UserID: "u1"}},
 		},
 	}
 	svc := NewServiceWithRepo(repo)
-	err := svc.CancelApplication(grpCtx("u1"), CancelApplicationRequest{ApplicationID: "app1"})
+	err := svc.CancelApplication(grpCtx("u1"), CancelApplicationRequest{GroupID: "g1", ApplicationID: "app1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1128,11 +1128,11 @@ func TestServiceCancelApplicationPropagatesError(t *testing.T) {
 	repo := &stubGroupsRepo{
 		cancelErr: errors.New("db error"),
 		apps: []GroupApplicationItem{
-			{ApplicationID: "app1", Applicant: UserInfo{UserID: "u1"}},
+			{ApplicationID: "app1", GroupID: "g1", Applicant: UserInfo{UserID: "u1"}},
 		},
 	}
 	svc := NewServiceWithRepo(repo)
-	err := svc.CancelApplication(grpCtx("u1"), CancelApplicationRequest{ApplicationID: "app1"})
+	err := svc.CancelApplication(grpCtx("u1"), CancelApplicationRequest{GroupID: "g1", ApplicationID: "app1"})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

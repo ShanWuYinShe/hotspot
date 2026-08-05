@@ -64,14 +64,14 @@ func TestInMemoryAppendMany_EmptyListIsNoop(t *testing.T) {
 
 // TestInMemoryAppendMany_DeliversAllWithSharedId verifies every recipient
 // gets a notification even though the in-memory AppendMany passes the same
-// NotifyItem (and thus the same NotificationID) to each Append. The postgres
+// NotifyItem (and thus the same NotifyID) to each Append. The postgres
 // batch path now derives a distinct per-row id from a shared prefix (the
 // table PK is notification_id alone, so a shared id would collide); this test
 // confirms the in-memory fan-out still delivers to all users.
 func TestInMemoryAppendMany_DeliversAllWithSharedId(t *testing.T) {
 	repo := NewInMemoryRepository()
 	users := []string{"u1", "u2"}
-	item := NotifyItem{NotificationID: "shared_notif", Type: "mention"}
+	item := NotifyItem{NotifyID: "shared_notif", Type: "mention"}
 	if err := repo.AppendMany(context.Background(), users, item); err != nil {
 		t.Fatalf("AppendMany failed: %v", err)
 	}

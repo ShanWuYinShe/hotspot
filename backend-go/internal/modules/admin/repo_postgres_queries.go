@@ -295,7 +295,8 @@ SELECT r.report_id,
        COALESCE(handler.user_id, ''),
        COALESCE(handler.nickname, ''),
        COALESCE(handler.avatar_url, ''),
-       COALESCE(r.handle_note, '')
+       COALESCE(r.handle_note, ''),
+       r.message_snapshot::text
 FROM reports r
 JOIN users reporter ON reporter.user_id = r.creator_user_id
 LEFT JOIN users handler ON handler.user_id = r.handled_by_user_id
@@ -318,6 +319,7 @@ SELECT r.report_id,
        COALESCE(handler.nickname, ''),
        COALESCE(handler.avatar_url, ''),
        COALESCE(r.handle_note, ''),
+       r.message_snapshot::text,
        COALESCE(target_user.user_id, ''),
        COALESCE(target_user.nickname, ''),
        COALESCE(target_user.avatar_url, '')

@@ -94,10 +94,22 @@ func (s *Service) Revoke(ctx context.Context, req RevokeShareRequest) error {
 	if !ok || principal.UserID == "" {
 		return ErrInvalidShareRequest
 	}
-	cmd, err := newRevokeShareCommand(principal.UserID, req)
-	if err != nil {
-		return err
+	shareID := strings.TrimSpace(req.ShareID)
+	shareCode := strings.TrimSpace(req.ShareCode)
+	if (shareID == "") == (shareCode == "") {
+		// 二选一：必须且只能传 share_id 或 share_code 其中之一
+		//（spec api_spec_share.md：创建者可能只保留了复制出的链接码）
+		return ErrInvalidShareRequest
 	}
+	if shareID == "" {
+		detail, err := s.repo.Get(ctx, getShareQuery{ShareCode: shareCode})
+		if err != nil {
+			observability.L().Error("share.revoke resolve by code failed", "error", err, "share_code", shareCode)
+			return err
+		}
+		shareID = detail.Share.ShareID
+	}
+	cmd := revokeShareCommand{CreatorUserID: principal.UserID, ShareID: shareID}
 	if err := s.repo.Revoke(ctx, cmd); err != nil {
 		observability.L().Error("share.revoke failed", "error", err, "share_id", cmd.ShareID)
 		return err
@@ -149,13 +161,6 @@ func newListSharesQuery(creatorUserID string, req ShareListRequest) (listSharesQ
 		return listSharesQuery{}, err
 	}
 	return listSharesQuery{CreatorUserID: creatorUserID, ShareType: shareType, Limit: limit, Cursor: cursor}, nil
-}
-
-func newRevokeShareCommand(creatorUserID string, req RevokeShareRequest) (revokeShareCommand, error) {
-	if creatorUserID == "" || strings.TrimSpace(req.ShareID) == "" {
-		return revokeShareCommand{}, ErrInvalidShareRequest
-	}
-	return revokeShareCommand{CreatorUserID: creatorUserID, ShareID: strings.TrimSpace(req.ShareID)}, nil
 }
 
 func normalizeSharePayload(shareType string, payload map[string]any) map[string]any {

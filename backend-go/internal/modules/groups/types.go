@@ -160,8 +160,12 @@ type UpdateGroupRequest struct {
 	Location         *Location        `json:"location,omitempty"`
 }
 
+// DismissGroupRequest dismisses a group (owner only). Reason is audit-only:
+// it is never surfaced to members (they receive the owner_dismissed category,
+// spec api_spec_group.md).
 type DismissGroupRequest struct {
-	GroupID string `json:"group_id"`
+	GroupID string  `json:"group_id"`
+	Reason  *string `json:"reason,omitempty"`
 }
 
 type GroupMembersRequest struct {
@@ -291,11 +295,16 @@ type GroupApplicationItem struct {
 	HandledBy     *UserInfo         `json:"handled_by,omitempty"`
 }
 
+// ApproveGroupApplicationRequest approves a group application. GroupID is the
+// group-level auth anchor and must match the application's group, otherwise
+// the request fails (spec api_spec_group.md).
 type ApproveGroupApplicationRequest struct {
+	GroupID       string `json:"group_id"`
 	ApplicationID string `json:"application_id"`
 }
 
 type RejectGroupApplicationRequest struct {
+	GroupID       string  `json:"group_id"`
 	ApplicationID string  `json:"application_id"`
 	Reason        *string `json:"reason,omitempty"`
 }
@@ -371,8 +380,13 @@ type MyApplicationsRequest struct {
 	Pagination *PaginationParams  `json:"pagination,omitempty"`
 }
 
+// CancelApplicationRequest cancels a pending group application. GroupID must
+// match the application's group; Reason (0-200 chars) is delivered to the
+// group admins, aligned with the admin-side reject reason.
 type CancelApplicationRequest struct {
-	ApplicationID string `json:"application_id"`
+	GroupID       string  `json:"group_id"`
+	ApplicationID string  `json:"application_id"`
+	Reason        *string `json:"reason,omitempty"`
 }
 
 type MyInvitesRequest struct {

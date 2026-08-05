@@ -70,10 +70,10 @@ func (b *notificationBackendStub) Exec(_ context.Context, query string, args ...
 	switch query {
 	case queryInsertNotification:
 		item := NotifyItem{
-			NotificationID: args[0].(string),
-			Type:           args[2].(string),
-			IsRead:         args[3].(bool),
-			CreatedAt:      args[4].(string),
+			NotifyID:  args[0].(string),
+			Type:      args[2].(string),
+			IsRead:    args[3].(bool),
+			CreatedAt: args[4].(string),
 		}
 		if payloadRaw := args[5].(string); payloadRaw != "" {
 			_ = json.Unmarshal([]byte(payloadRaw), &item.Payload)
@@ -83,7 +83,7 @@ func (b *notificationBackendStub) Exec(_ context.Context, query string, args ...
 		ids := args[1].([]string)
 		for i := range b.items[userID] {
 			for _, id := range ids {
-				if b.items[userID][i].NotificationID == id {
+				if b.items[userID][i].NotifyID == id {
 					b.items[userID][i].IsRead = true
 				}
 			}
@@ -111,16 +111,20 @@ func (b *notificationBackendStub) Query(_ context.Context, query string, args ..
 		if args[1] != nil {
 			typeFilter = args[1].(string)
 		}
-		cursorCreatedAt := ""
+		var isReadFilter *bool
 		if args[2] != nil {
-			cursorCreatedAt = args[2].(string)
+			isReadFilter = args[2].(*bool)
 		}
-		cursorNotificationID := args[3].(string)
-		limit := args[4].(int)
+		cursorCreatedAt := ""
+		if args[3] != nil {
+			cursorCreatedAt = args[3].(string)
+		}
+		cursorNotifyID := args[4].(string)
+		limit := args[5].(int)
 		items := append([]NotifyItem(nil), b.items[userID]...)
 		sort.Slice(items, func(i, j int) bool {
 			if items[i].CreatedAt == items[j].CreatedAt {
-				return items[i].NotificationID > items[j].NotificationID
+				return items[i].NotifyID > items[j].NotifyID
 			}
 			return items[i].CreatedAt > items[j].CreatedAt
 		})
@@ -129,13 +133,16 @@ func (b *notificationBackendStub) Query(_ context.Context, query string, args ..
 			if typeFilter != "" && item.Type != typeFilter {
 				continue
 			}
+			if isReadFilter != nil && item.IsRead != *isReadFilter {
+				continue
+			}
 			if cursorCreatedAt != "" {
-				if !(item.CreatedAt < cursorCreatedAt || (item.CreatedAt == cursorCreatedAt && item.NotificationID < cursorNotificationID)) {
+				if !(item.CreatedAt < cursorCreatedAt || (item.CreatedAt == cursorCreatedAt && item.NotifyID < cursorNotifyID)) {
 					continue
 				}
 			}
 			payloadJSON, _ := json.Marshal(item.Payload)
-			rows = append(rows, []any{item.NotificationID, item.Type, item.IsRead, item.CreatedAt, string(payloadJSON)})
+			rows = append(rows, []any{item.NotifyID, item.Type, item.IsRead, item.CreatedAt, string(payloadJSON)})
 			if len(rows) >= limit {
 				break
 			}
@@ -195,16 +202,16 @@ func TestPersistenceRepositoryWithPostgresDSNDoesNotFallbackSilently(t *testing.
 func TestPostgresRepositoryListSupportsFilterPaginationAndUnreadCount(t *testing.T) {
 	backend := newNotificationBackendStub()
 	backend.items["user_alice"] = []NotifyItem{
-		{NotificationID: "notif_3", Type: "system_announcement", IsRead: false, CreatedAt: "2026-03-20T00:00:00Z", Payload: map[string]any{"type": "system_announcement", "announcement_id": "ann_1"}},
-		{NotificationID: "notif_2", Type: "new_follower", IsRead: false, CreatedAt: "2026-03-20T00:00:00Z", Payload: map[string]any{"type": "new_follower"}},
-		{NotificationID: "notif_1", Type: "group_invite_received", IsRead: true, CreatedAt: "2026-03-19T00:00:00Z", Payload: map[string]any{"type": "group_invite_received"}},
+		{NotifyID: "notif_3", Type: "system_announcement", IsRead: false, CreatedAt: "2026-03-20T00:00:00Z", Payload: map[string]any{"type": "system_announcement", "announcement_id": "ann_1"}},
+		{NotifyID: "notif_2", Type: "new_follower", IsRead: false, CreatedAt: "2026-03-20T00:00:00Z", Payload: map[string]any{"type": "new_follower"}},
+		{NotifyID: "notif_1", Type: "group_invite_received", IsRead: true, CreatedAt: "2026-03-19T00:00:00Z", Payload: map[string]any{"type": "group_invite_received"}},
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
 
 	page1, err := repo.List(context.Background(), "user_alice", NotificationListRequest{Pagination: &PaginationParams{Limit: 2}})
-	if err != nil || len(page1.Items) != 2 || page1.Items[0].NotificationID != "notif_3" || page1.Items[1].NotificationID != "notif_2" || page1.NextCursor == "" {
+	if err != nil || len(page1.Items) != 2 || page1.Items[0].NotifyID != "notif_3" || page1.Items[1].NotifyID != "notif_2" || page1.NextCursor == "" {
 		t.Fatalf("unexpected page1: %#v err=%v", page1, err)
 	}
 	if page1.Items[0].Payload["announcement_id"] != "ann_1" {
@@ -212,12 +219,12 @@ func TestPostgresRepositoryListSupportsFilterPaginationAndUnreadCount(t *testing
 	}
 
 	page2, err := repo.List(context.Background(), "user_alice", NotificationListRequest{Pagination: &PaginationParams{Limit: 2, Cursor: page1.NextCursor}})
-	if err != nil || len(page2.Items) != 1 || page2.Items[0].NotificationID != "notif_1" || page2.NextCursor != "" {
+	if err != nil || len(page2.Items) != 1 || page2.Items[0].NotifyID != "notif_1" || page2.NextCursor != "" {
 		t.Fatalf("unexpected page2: %#v err=%v", page2, err)
 	}
 
 	filtered, err := repo.List(context.Background(), "user_alice", NotificationListRequest{Type: "new_follower", Pagination: &PaginationParams{Limit: 20}})
-	if err != nil || len(filtered.Items) != 1 || filtered.Items[0].NotificationID != "notif_2" {
+	if err != nil || len(filtered.Items) != 1 || filtered.Items[0].NotifyID != "notif_2" {
 		t.Fatalf("unexpected filtered list: %#v err=%v", filtered, err)
 	}
 

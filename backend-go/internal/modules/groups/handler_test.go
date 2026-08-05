@@ -401,7 +401,7 @@ func TestApproveApplicationSendsAcceptedNotification(t *testing.T) {
 	}
 	memberSink := &groupRealtimeSink{}
 	hub.RegisterUser("user_bob", "sess_member", memberSink)
-	if err := service.ApproveApplication(ownerCtx, ApproveGroupApplicationRequest{ApplicationID: result.Application.ApplicationID}); err != nil {
+	if err := service.ApproveApplication(ownerCtx, ApproveGroupApplicationRequest{GroupID: created.Group.GroupID, ApplicationID: result.Application.ApplicationID}); err != nil {
 		t.Fatalf("approve application: %v", err)
 	}
 	memberNotifications, err := notificationRepo.List(context.Background(), "user_bob", notify.NotificationListRequest{})
@@ -442,7 +442,7 @@ func TestApproveApplicationHandlerMapsSpecificErrors(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			handler := NewHandler(NewServiceWithRepo(tc.repo))
-			req := httptest.NewRequest(http.MethodPost, "/applications/approve", strings.NewReader(`{"application_id":"app_1"}`))
+			req := httptest.NewRequest(http.MethodPost, "/applications/approve", strings.NewReader(`{"group_id":"g1","application_id":"app_1"}`))
 			req.Header.Set("Idempotency-Key", fmt.Sprintf("approve-app-%024d", tc.expected))
 			req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 			rr := httptest.NewRecorder()
@@ -478,7 +478,7 @@ func TestRejectApplicationHandlerMapsSpecificErrors(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			handler := NewHandler(NewServiceWithRepo(tc.repo))
-			req := httptest.NewRequest(http.MethodPost, "/applications/reject", strings.NewReader(`{"application_id":"app_1"}`))
+			req := httptest.NewRequest(http.MethodPost, "/applications/reject", strings.NewReader(`{"group_id":"g1","application_id":"app_1"}`))
 			req.Header.Set("Idempotency-Key", fmt.Sprintf("reject-app--%024d", tc.expected))
 			req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 			rr := httptest.NewRecorder()
@@ -1460,10 +1460,10 @@ func TestHandlerListMyApplicationsRejectsInvalidJSON(t *testing.T) {
 func TestHandlerCancelApplicationReturnsSuccess(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{
 		listApplicationsItems: []GroupApplicationItem{
-			{ApplicationID: "app_1", Applicant: UserInfo{UserID: "user_alice"}},
+			{ApplicationID: "app_1", GroupID: "g1", Applicant: UserInfo{UserID: "user_alice"}},
 		},
 	}))
-	req := httptest.NewRequest(http.MethodPost, "/list_applications/cancel", strings.NewReader(`{"application_id":"app_1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/list_applications/cancel", strings.NewReader(`{"group_id":"g1","application_id":"app_1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.CancelApplication(rr, req)

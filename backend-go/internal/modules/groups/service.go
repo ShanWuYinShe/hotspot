@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"hotspot/backend-go/internal/modules/notify"
@@ -25,8 +26,24 @@ type Service struct {
 	repo          Repository
 	notifications groupNotificationWriter
 	users         actor.Provider
-	locations     LocationProvider // optional; nil => skip user-location fallback
-	appConfig     appconfig.Source // optional; nil => default TTLs for invite/application expiry
+	locations     LocationProvider        // optional; nil => skip user-location fallback
+	appConfig     appconfig.Source        // optional; nil => default TTLs for invite/application expiry
+	audit         GroupDismissAuditWriter // optional; nil => dismiss audit is skipped
+}
+
+// GroupDismissAuditWriter records a group-dismiss audit entry (spec
+// api_spec_group.md: the dismiss reason is audit-only and must never be
+// surfaced to members). Implemented by the admin module and wired in
+// bootstrap to avoid a groups → admin import cycle.
+type GroupDismissAuditWriter interface {
+	AppendGroupDismissAudit(ctx context.Context, operatorID string, groupID string, groupName string, reason string) error
+}
+
+// SetGroupDismissAuditWriter wires the optional audit writer (admin module).
+func (s *Service) SetGroupDismissAuditWriter(w GroupDismissAuditWriter) {
+	if s != nil {
+		s.audit = w
+	}
 }
 
 // LocationProvider 提供已登录用户最近一次 update_location 的位置(回退链第 2 级,
@@ -269,9 +286,21 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 		observability.L().Warn("groups.dismiss permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return ErrAccessRestricted
 	}
+	reason := ""
+	if req.Reason != nil {
+		reason = strings.TrimSpace(*req.Reason)
+		if len(reason) > 500 {
+			return ErrInvalidReason
+		}
+	}
 	if err := s.repo.Dismiss(ctx, req.GroupID); err != nil {
 		observability.L().Error("groups.dismiss failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return fmt.Errorf("groups.Service.Dismiss: repo: %w", err)
+	}
+	if s.audit != nil {
+		if err := s.audit.AppendGroupDismissAudit(ctx, principal.UserID, group.Group.GroupID, group.Group.Name, reason); err != nil {
+			observability.L().Error("groups.dismiss audit failed", "error", err, "group_id", req.GroupID)
+		}
 	}
 	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: map[string]any{"group_id": req.GroupID, "dismissed_at": time.Now().UTC().Format(time.RFC3339), "reason": "owner_dismissed"}}
 	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
@@ -516,16 +545,28 @@ func (s *Service) CancelApplication(ctx context.Context, req CancelApplicationRe
 	if !ok || application.Applicant.UserID != principal.UserID {
 		return ErrApplicationNotFound
 	}
+	if req.GroupID != application.GroupID {
+		// Group-level auth anchor mismatch: report not-found so callers cannot
+		// probe applications across groups (spec api_spec_group.md).
+		return ErrApplicationNotFound
+	}
+	reason := ""
+	if req.Reason != nil {
+		reason = strings.TrimSpace(*req.Reason)
+		if len(reason) > 200 {
+			return ErrInvalidReason
+		}
+	}
 	if err := s.repo.CancelApplication(ctx, req.ApplicationID); err != nil {
 		return err
 	}
-	s.notifyGroupApplicationCancelled(ctx, application)
+	s.notifyGroupApplicationCancelled(ctx, application, reason)
 	return nil
 }
 
 // notifyGroupApplicationCancelled persists group_application_cancelled
 // notifications and pushes GroupApplicationCancelled events to the group admins.
-func (s *Service) notifyGroupApplicationCancelled(ctx context.Context, application GroupApplicationItem) {
+func (s *Service) notifyGroupApplicationCancelled(ctx context.Context, application GroupApplicationItem, reason string) {
 	group, groupFound, err := s.repo.Get(ctx, application.GroupID)
 	if err != nil || !groupFound {
 		return
@@ -540,24 +581,32 @@ func (s *Service) notifyGroupApplicationCancelled(ctx context.Context, applicati
 		if member.Role != GroupRoleOwner && member.Role != GroupRoleAdmin {
 			continue
 		}
+		var reasonPtr *string
+		if reason != "" {
+			reasonPtr = &reason
+		}
 		notificationID := ""
 		if s.notifications != nil {
-			id, err := s.notifications.AppendGroupApplicationCancelled(ctx, member.User.UserID, group.Group.GroupID, group.Group.Name, application.ApplicationID, applicant, nil)
+			id, err := s.notifications.AppendGroupApplicationCancelled(ctx, member.User.UserID, group.Group.GroupID, group.Group.Name, application.ApplicationID, applicant, reasonPtr)
 			if err != nil {
 				observability.L().Error("groups.notify_group_application_cancelled append failed", "error", err, "application_id", application.ApplicationID)
 			} else {
 				notificationID = id
 			}
 		}
+		payload := map[string]any{
+			"notify_id":      notificationID,
+			"application_id": application.ApplicationID,
+			"group_id":       group.Group.GroupID,
+			"applicant":      applicant,
+			"cancelled_at":   now,
+		}
+		if reason != "" {
+			payload["reason"] = reason
+		}
 		realtime.DefaultHub().BroadcastToUser(member.User.UserID, realtime.Event{
-			Type: realtime.EventTypeGroupApplicationCancelled,
-			Payload: map[string]any{
-				"notification_id": notificationID,
-				"application_id":  application.ApplicationID,
-				"group_id":        group.Group.GroupID,
-				"applicant":       applicant,
-				"cancelled_at":    now,
-			},
+			Type:    realtime.EventTypeGroupApplicationCancelled,
+			Payload: payload,
 		})
 	}
 }
@@ -588,11 +637,11 @@ func (s *Service) notifyGroupApplicationExpired(ctx context.Context, group Group
 		realtime.DefaultHub().BroadcastToUser(member.User.UserID, realtime.Event{
 			Type: realtime.EventTypeGroupApplicationExpired,
 			Payload: map[string]any{
-				"notification_id": notificationID,
-				"application_id":  application.ApplicationID,
-				"group_id":        group.Group.GroupID,
-				"applicant":       applicant,
-				"expired_at":      now,
+				"notify_id":      notificationID,
+				"application_id": application.ApplicationID,
+				"group_id":       group.Group.GroupID,
+				"applicant":      applicant,
+				"expired_at":     now,
 			},
 		})
 	}
@@ -612,8 +661,8 @@ func (s *Service) notifyGroupApplicationRejected(ctx context.Context, group Grou
 		}
 	}
 	payload := map[string]any{
-		"notification_id": notificationID,
-		"application_id":  application.ApplicationID,
+		"notify_id":      notificationID,
+		"application_id": application.ApplicationID,
 		"group": map[string]any{
 			"group_id":      group.Group.GroupID,
 			"name":          group.Group.Name,
@@ -679,8 +728,8 @@ func (s *Service) notifyGroupInviteReceived(ctx context.Context, group GroupItem
 		}
 	}
 	payload := map[string]any{
-		"notification_id": notificationID,
-		"invite_id":       invitation.InviteID,
+		"notify_id": notificationID,
+		"invite_id": invitation.InviteID,
 		"group": map[string]any{
 			"group_id":      group.Group.GroupID,
 			"name":          group.Group.Name,
@@ -707,7 +756,7 @@ func (s *Service) notifyGroupInviteAccepted(ctx context.Context, invite GroupInv
 			notificationID = id
 		}
 	}
-	realtime.DefaultHub().BroadcastToUser(invite.Inviter.UserID, realtime.Event{Type: realtime.EventTypeGroupInviteResponse, Payload: map[string]any{"notification_id": notificationID, "invite_id": invite.InviteID, "group_id": invite.Group.GroupID, "user": user, "responded_at": time.Now().UTC().Format(time.RFC3339)}})
+	realtime.DefaultHub().BroadcastToUser(invite.Inviter.UserID, realtime.Event{Type: realtime.EventTypeGroupInviteResponse, Payload: map[string]any{"notify_id": notificationID, "invite_id": invite.InviteID, "group_id": invite.Group.GroupID, "user": user, "responded_at": time.Now().UTC().Format(time.RFC3339)}})
 }
 
 func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group GroupItem, applicantUserID string, application *struct {
@@ -734,7 +783,7 @@ func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group Grou
 				notificationID = id
 			}
 		}
-		payload := map[string]any{"notification_id": notificationID, "application_id": application.ApplicationID, "group_id": group.Group.GroupID, "applicant": applicant, "created_at": time.Now().UTC().Format(time.RFC3339)}
+		payload := map[string]any{"notify_id": notificationID, "application_id": application.ApplicationID, "group_id": group.Group.GroupID, "applicant": applicant, "created_at": time.Now().UTC().Format(time.RFC3339)}
 		if message != nil && *message != "" {
 			payload["message"] = *message
 		}
@@ -752,5 +801,5 @@ func (s *Service) notifyGroupApplicationAccepted(ctx context.Context, group Grou
 			notificationID = id
 		}
 	}
-	realtime.DefaultHub().BroadcastToUser(application.Applicant.UserID, realtime.Event{Type: realtime.EventTypeGroupApplicationResponse, Payload: map[string]any{"notification_id": notificationID, "application_id": application.ApplicationID, "group": map[string]any{"group_id": group.Group.GroupID, "name": group.Group.Name, "avatar_url": group.Group.AvatarURL, "members_count": group.Group.MembersCount}, "responded_at": time.Now().UTC().Format(time.RFC3339)}})
+	realtime.DefaultHub().BroadcastToUser(application.Applicant.UserID, realtime.Event{Type: realtime.EventTypeGroupApplicationResponse, Payload: map[string]any{"notify_id": notificationID, "application_id": application.ApplicationID, "group": map[string]any{"group_id": group.Group.GroupID, "name": group.Group.Name, "avatar_url": group.Group.AvatarURL, "members_count": group.Group.MembersCount}, "responded_at": time.Now().UTC().Format(time.RFC3339)}})
 }

@@ -2,6 +2,7 @@ package reports
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -24,7 +25,15 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	}
 	now := time.Now().UTC()
 	reportID := fmt.Sprintf("report_%d", now.UnixNano())
-	if err := queryable.Exec(ctx, queryInsertReport, reportID, userID, string(req.TargetType), req.TargetID, string(req.Reason), req.Description, string(ReportStatusPending), now.Format(time.RFC3339)); err != nil {
+	var snapshotJSON any
+	if req.MessageSnapshot != nil {
+		raw, err := json.Marshal(req.MessageSnapshot)
+		if err != nil {
+			return ReportCreated{}, err
+		}
+		snapshotJSON = string(raw)
+	}
+	if err := queryable.Exec(ctx, queryInsertReport, reportID, userID, string(req.TargetType), req.TargetID, string(req.Reason), req.Description, string(ReportStatusPending), now.Format(time.RFC3339), snapshotJSON); err != nil {
 		return ReportCreated{}, err
 	}
 	return ReportCreated{ReportID: reportID}, nil

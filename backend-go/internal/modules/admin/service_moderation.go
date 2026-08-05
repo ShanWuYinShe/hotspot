@@ -537,10 +537,10 @@ func (s *Service) notifyReportHandled(ctx context.Context, reporterUserID, repor
 		}
 	}
 	payload := map[string]any{
-		"notification_id": notificationID,
-		"report_id":       reportID,
-		"target_type":     targetType,
-		"target_id":       targetID,
+		"notify_id":   notificationID,
+		"report_id":   reportID,
+		"target_type": targetType,
+		"target_id":   targetID,
 	}
 	if note != "" {
 		payload["note"] = note

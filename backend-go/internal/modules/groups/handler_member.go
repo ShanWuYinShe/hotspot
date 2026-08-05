@@ -35,13 +35,17 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 	var req ApproveGroupApplicationRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.ApplicationID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.ApplicationID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
 	if err := h.service.ApproveApplication(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
+			return
+		}
+		if errors.Is(err, ErrApplicationNotFound) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "申请不存在"))
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -60,13 +64,21 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 	var req RejectGroupApplicationRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.ApplicationID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.ApplicationID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
 	if err := h.service.RejectApplication(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
+			return
+		}
+		if errors.Is(err, ErrApplicationNotFound) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "申请不存在"))
+			return
+		}
+		if errors.Is(err, ErrInvalidReason) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {

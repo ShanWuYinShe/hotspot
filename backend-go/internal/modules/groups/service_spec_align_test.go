@@ -210,7 +210,7 @@ func TestServiceRevokeInviteNotifiesInvitee(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected map payload, got %#v", event.Payload)
 	}
-	for _, key := range []string{"notification_id", "invite_id", "group_id", "revoked_by", "revoked_at"} {
+	for _, key := range []string{"notify_id", "invite_id", "group_id", "revoked_by", "revoked_at"} {
 		if payload[key] == nil {
 			t.Fatalf("expected payload key %q, got %#v", key, payload)
 		}
@@ -287,12 +287,12 @@ func TestServiceRejectInviteNotifiesInviter(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected map payload, got %#v", event.Payload)
 	}
-	for _, key := range []string{"notification_id", "invite_id", "group_id", "rejected_by", "rejected_at"} {
+	for _, key := range []string{"notify_id", "invite_id", "group_id", "rejected_by", "rejected_at"} {
 		if payload[key] == nil {
 			t.Fatalf("expected payload key %q, got %#v", key, payload)
 		}
 	}
-	if payload["notification_id"] != "notif_written" || payload["invite_id"] != "inv1" || payload["group_id"] != "g1" {
+	if payload["notify_id"] != "notif_written" || payload["invite_id"] != "inv1" || payload["group_id"] != "g1" {
 		t.Fatalf("unexpected event payload: %#v", payload)
 	}
 	rejectedBy, ok := payload["rejected_by"].(map[string]any)
@@ -394,8 +394,8 @@ func TestServiceRejectInviteLazyExpiryRevokesAndPushesExpired(t *testing.T) {
 	if payload["invite_id"] != "inv1" || payload["group_id"] != "g1" {
 		t.Fatalf("unexpected event payload: %#v", payload)
 	}
-	if payload["notification_id"] != "notif_written" {
-		t.Fatalf("expected notification_id embedded, got %#v", payload["notification_id"])
+	if payload["notify_id"] != "notif_written" {
+		t.Fatalf("expected notification_id embedded, got %#v", payload["notify_id"])
 	}
 	if payload["expired_at"] == nil || payload["expired_at"] == "" {
 		t.Fatalf("expected expired_at, got %#v", payload)
@@ -445,7 +445,7 @@ func TestServiceCancelApplicationNotifiesAdmins(t *testing.T) {
 	adminSink := registerSink(hub, "u3")
 	memberSink := registerSink(hub, "u4")
 
-	err := svc.CancelApplication(grpCtx("u2"), CancelApplicationRequest{ApplicationID: "app1"})
+	err := svc.CancelApplication(grpCtx("u2"), CancelApplicationRequest{GroupID: "g1", ApplicationID: "app1"})
 	if err != nil {
 		t.Fatalf("cancel application: %v", err)
 	}
@@ -480,7 +480,7 @@ func TestServiceCancelApplicationNotifiesAdmins(t *testing.T) {
 	if !ok || payload["application_id"] != "app1" || payload["group_id"] != "g1" {
 		t.Fatalf("unexpected owner payload: %#v", ownerSink.events[0].Payload)
 	}
-	if payload["notification_id"] != "notif_written" || payload["cancelled_at"] == nil {
+	if payload["notify_id"] != "notif_written" || payload["cancelled_at"] == nil {
 		t.Fatalf("unexpected owner payload fields: %#v", payload)
 	}
 	applicant, ok := payload["applicant"].(map[string]any)
@@ -496,7 +496,7 @@ func TestServiceCancelApplicationRejectsForeignApplication(t *testing.T) {
 	svc := NewServiceWithDeps(repo, &notifyWriterStub{}, nil)
 	withTestHub(t)
 
-	err := svc.CancelApplication(grpCtx("u2"), CancelApplicationRequest{ApplicationID: "app1"})
+	err := svc.CancelApplication(grpCtx("u2"), CancelApplicationRequest{GroupID: "g1", ApplicationID: "app1"})
 	if !errors.Is(err, ErrApplicationNotFound) {
 		t.Fatalf("expected ErrApplicationNotFound, got %v", err)
 	}
@@ -525,7 +525,7 @@ func TestServiceRejectApplicationNotifiesApplicant(t *testing.T) {
 	hub := withTestHub(t)
 	applicantSink := registerSink(hub, "u3")
 
-	err := svc.RejectApplication(grpCtx("u1"), RejectGroupApplicationRequest{ApplicationID: "app1", Reason: &reason})
+	err := svc.RejectApplication(grpCtx("u1"), RejectGroupApplicationRequest{GroupID: "g1", ApplicationID: "app1", Reason: &reason})
 	if err != nil {
 		t.Fatalf("reject application: %v", err)
 	}
@@ -564,8 +564,8 @@ func TestServiceRejectApplicationNotifiesApplicant(t *testing.T) {
 	if !ok || group["group_id"] != "g1" || group["name"] != "test" {
 		t.Fatalf("unexpected group in payload: %#v", payload["group"])
 	}
-	if payload["notification_id"] != "notif_written" {
-		t.Fatalf("expected notification_id embedded, got %#v", payload["notification_id"])
+	if payload["notify_id"] != "notif_written" {
+		t.Fatalf("expected notification_id embedded, got %#v", payload["notify_id"])
 	}
 }
 
@@ -592,7 +592,7 @@ func TestServiceRejectApplicationLazyExpiryCancelsAndPushesExpired(t *testing.T)
 	hub := withTestHub(t)
 	adminSink := registerSink(hub, "u1")
 
-	err := svc.RejectApplication(grpCtx("u1"), RejectGroupApplicationRequest{ApplicationID: "app1"})
+	err := svc.RejectApplication(grpCtx("u1"), RejectGroupApplicationRequest{GroupID: "g1", ApplicationID: "app1"})
 	if !errors.Is(err, ErrAlreadyProcessed) {
 		t.Fatalf("expected ErrAlreadyProcessed, got %v", err)
 	}
@@ -613,7 +613,7 @@ func TestServiceRejectApplicationLazyExpiryCancelsAndPushesExpired(t *testing.T)
 	if !ok || payload["application_id"] != "app1" || payload["group_id"] != "g1" {
 		t.Fatalf("unexpected expired payload: %#v", adminSink.events[0].Payload)
 	}
-	if payload["notification_id"] != "notif_written" || payload["expired_at"] == nil {
+	if payload["notify_id"] != "notif_written" || payload["expired_at"] == nil {
 		t.Fatalf("unexpected expired payload fields: %#v", payload)
 	}
 }
@@ -639,7 +639,7 @@ func TestServiceApproveApplicationLazyExpiryCancelsAndPushesExpired(t *testing.T
 	hub := withTestHub(t)
 	adminSink := registerSink(hub, "u1")
 
-	err := svc.ApproveApplication(grpCtx("u1"), ApproveGroupApplicationRequest{ApplicationID: "app1"})
+	err := svc.ApproveApplication(grpCtx("u1"), ApproveGroupApplicationRequest{GroupID: "g1", ApplicationID: "app1"})
 	if !errors.Is(err, ErrAlreadyProcessed) {
 		t.Fatalf("expected ErrAlreadyProcessed, got %v", err)
 	}

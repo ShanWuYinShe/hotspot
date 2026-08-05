@@ -332,13 +332,13 @@ func (s *Service) notifyMomentAuthor(ctx context.Context, momentContext MomentNo
 		}
 	}
 	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeMomentCommented, Payload: map[string]any{
-		"notification_id": notificationID,
-		"moment_id":       item.MomentID,
-		"moment_summary":  cloneSummary(momentSummary),
-		"comment_id":      item.CommentID,
-		"actor":           actor,
-		"content":         item.Content,
-		"commented_at":    item.CreatedAt,
+		"notify_id":      notificationID,
+		"moment_id":      item.MomentID,
+		"moment_summary": cloneSummary(momentSummary),
+		"comment_id":     item.CommentID,
+		"actor":          actor,
+		"content":        item.Content,
+		"commented_at":   item.CreatedAt,
 	}})
 }
 
@@ -361,7 +361,7 @@ func (s *Service) notifyReplyTarget(ctx context.Context, momentContext MomentNot
 		}
 	}
 	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeCommentReply, Payload: map[string]any{
-		"notification_id":         notificationID,
+		"notify_id":               notificationID,
 		"moment_id":               item.MomentID,
 		"moment_summary":          cloneSummary(momentSummary),
 		"comment_id":              replyTarget.CommentID,
@@ -387,7 +387,7 @@ func (s *Service) notifyMentionedUsers(ctx context.Context, momentContext Moment
 			}
 		}
 		realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeMessageMentioned, Payload: map[string]any{
-			"notification_id": notificationID,
+			"notify_id":       notificationID,
 			"target_type":     "comment",
 			"moment_id":       item.MomentID,
 			"comment_id":      item.CommentID,

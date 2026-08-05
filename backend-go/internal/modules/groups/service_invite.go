@@ -154,11 +154,11 @@ func (s *Service) notifyGroupInviteRevoked(ctx context.Context, group GroupItem,
 		}
 	}
 	payload := map[string]any{
-		"notification_id": notificationID,
-		"invite_id":       inviteID,
-		"group_id":        group.Group.GroupID,
-		"revoked_by":      revokedBy,
-		"revoked_at":      now,
+		"notify_id":  notificationID,
+		"invite_id":  inviteID,
+		"group_id":   group.Group.GroupID,
+		"revoked_by": revokedBy,
+		"revoked_at": now,
 	}
 	if reason != nil && *reason != "" {
 		payload["reason"] = *reason
@@ -181,11 +181,11 @@ func (s *Service) notifyGroupInviteRejected(ctx context.Context, invite GroupInv
 		}
 	}
 	payload := map[string]any{
-		"notification_id": notificationID,
-		"invite_id":       invite.InviteID,
-		"group_id":        invite.Group.GroupID,
-		"rejected_by":     rejectedBy,
-		"rejected_at":     now,
+		"notify_id":   notificationID,
+		"invite_id":   invite.InviteID,
+		"group_id":    invite.Group.GroupID,
+		"rejected_by": rejectedBy,
+		"rejected_at": now,
 	}
 	if reason != nil && *reason != "" {
 		payload["reason"] = *reason
@@ -209,10 +209,10 @@ func (s *Service) notifyGroupInviteExpired(ctx context.Context, inviteeUserID st
 	realtime.DefaultHub().BroadcastToUser(inviteeUserID, realtime.Event{
 		Type: realtime.EventTypeGroupInviteExpired,
 		Payload: map[string]any{
-			"notification_id": notificationID,
-			"invite_id":       invite.InviteID,
-			"group_id":        invite.Group.GroupID,
-			"expired_at":      now,
+			"notify_id":  notificationID,
+			"invite_id":  invite.InviteID,
+			"group_id":   invite.Group.GroupID,
+			"expired_at": now,
 		},
 	})
 }

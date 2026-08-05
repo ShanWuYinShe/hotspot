@@ -43,20 +43,24 @@ func (r *InMemoryRepository) List(_ context.Context, userID string, req Notifica
 	}
 	items := make([]NotifyItem, 0)
 	for _, item := range r.items[userID] {
-		if query.Type == "" || item.Type == query.Type {
-			items = append(items, item)
+		if query.Type != "" && item.Type != query.Type {
+			continue
 		}
+		if query.IsRead != nil && item.IsRead != *query.IsRead {
+			continue
+		}
+		items = append(items, item)
 	}
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].CreatedAt == items[j].CreatedAt {
-			return items[i].NotificationID > items[j].NotificationID
+			return items[i].NotifyID > items[j].NotifyID
 		}
 		return items[i].CreatedAt > items[j].CreatedAt
 	})
 	if query.Cursor != nil {
 		filtered := items[:0]
 		for _, item := range items {
-			if item.CreatedAt < query.Cursor.CreatedAt || (item.CreatedAt == query.Cursor.CreatedAt && item.NotificationID < query.Cursor.NotificationID) {
+			if item.CreatedAt < query.Cursor.CreatedAt || (item.CreatedAt == query.Cursor.CreatedAt && item.NotifyID < query.Cursor.NotifyID) {
 				filtered = append(filtered, item)
 			}
 		}
@@ -65,7 +69,7 @@ func (r *InMemoryRepository) List(_ context.Context, userID string, req Notifica
 	page := PaginatedNotify{}
 	if len(items) > query.Limit {
 		last := items[query.Limit-1]
-		page.NextCursor = encodeNotificationCursor(notificationCursor{CreatedAt: last.CreatedAt, NotificationID: last.NotificationID})
+		page.NextCursor = encodeNotificationCursor(notificationCursor{CreatedAt: last.CreatedAt, NotifyID: last.NotifyID})
 		items = items[:query.Limit]
 	}
 	page.Items = items
@@ -100,7 +104,7 @@ func (r *InMemoryRepository) MarkAsRead(_ context.Context, userID string, ids []
 	defer r.mu.Unlock()
 	for i := range r.items[userID] {
 		for _, id := range ids {
-			if r.items[userID][i].NotificationID == id {
+			if r.items[userID][i].NotifyID == id {
 				r.items[userID][i].IsRead = true
 			}
 		}
@@ -113,17 +117,6 @@ func (r *InMemoryRepository) MarkAllRead(_ context.Context, userID string) error
 	defer r.mu.Unlock()
 	for i := range r.items[userID] {
 		r.items[userID][i].IsRead = true
-	}
-	return nil
-}
-
-func (r *InMemoryRepository) MarkAllReadByType(_ context.Context, userID string, notificationType string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	for i := range r.items[userID] {
-		if r.items[userID][i].Type == notificationType {
-			r.items[userID][i].IsRead = true
-		}
 	}
 	return nil
 }

@@ -285,7 +285,7 @@ func TestUnreactBroadcastsToTargetOwner(t *testing.T) {
 		t.Fatalf("expected map payload, got %T", ownerSink.events[0].Payload)
 	}
 	// 契约:反应移除不产生通知,payload 不含 notification_id。
-	if _, has := payload["notification_id"]; has {
+	if _, has := payload["notify_id"]; has {
 		t.Fatalf("ReactionRemoved payload must not carry notification_id, got %+v", payload)
 	}
 	if payload["target_type"] != "moment" || payload["target_id"] != "m1" || payload["emoji"] != "👍" {

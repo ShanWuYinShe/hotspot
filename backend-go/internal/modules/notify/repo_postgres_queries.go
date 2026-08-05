@@ -6,9 +6,10 @@ SELECT notification_id, type, is_read, created_at, payload::text
 FROM notifications
 WHERE user_id = $1
   AND ($2 = '' OR type = $2)
-  AND ($3 IS NULL OR created_at < $3 OR (created_at = $3 AND notification_id < $4))
+  AND ($3 IS NULL OR is_read = $3)
+  AND ($4 IS NULL OR created_at < $4 OR (created_at = $4 AND notification_id < $5))
 ORDER BY created_at DESC, notification_id DESC
-LIMIT $5`
+LIMIT $6`
 
 	queryInsertNotification = `
 INSERT INTO notifications (notification_id, user_id, type, is_read, created_at, payload)
@@ -43,9 +44,4 @@ WHERE user_id = $1 AND notification_id = ANY($2)`
 UPDATE notifications
 SET is_read = TRUE
 WHERE user_id = $1 AND is_read = FALSE`
-
-	queryMarkAllNotificationsByTypeRead = `
-UPDATE notifications
-SET is_read = TRUE
-WHERE user_id = $1 AND is_read = FALSE AND type = $2`
 )

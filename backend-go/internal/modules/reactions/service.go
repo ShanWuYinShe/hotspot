@@ -255,7 +255,7 @@ func (s *Service) notifyOwner(ctx context.Context, req SetReactionRequest, actor
 		"reacted_at":  reactedAt,
 	}
 	if notificationID != "" {
-		eventPayload["notification_id"] = notificationID
+		eventPayload["notify_id"] = notificationID
 	}
 	// Merge target-specific summary fields if present (e.g. moment_summary).
 	for k, v := range owner.Summary {

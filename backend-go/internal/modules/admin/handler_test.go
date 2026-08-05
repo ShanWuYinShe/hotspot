@@ -821,7 +821,7 @@ func TestSearchAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 	if adminPayload["announcement_id"] != createResp.Data.AnnouncementID || adminPayload["title"] != "维护通知" || adminPayload["content"] != "今晚维护" || adminPayload["severity"] != AnnounceLevelWarning || adminPayload["action_url"] != "https://example.com/maint" {
 		t.Fatalf("unexpected admin payload: %#v", adminPayload)
 	}
-	if adminPayload["notification_id"] == "" || adminPayload["notification_id"] != alicePayload["notification_id"] {
+	if adminPayload["notify_id"] == "" || adminPayload["notify_id"] != alicePayload["notify_id"] {
 		t.Fatalf("expected shared non-empty notification_id in broadcast payloads: %#v %#v", adminPayload, alicePayload)
 	}
 	adminNotifications, err := notificationRepo.List(context.Background(), "admin", notify.NotificationListRequest{})
@@ -832,8 +832,8 @@ func TestSearchAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 	if err != nil || len(aliceNotifications.Items) != 1 || aliceNotifications.Items[0].Type != "system_announcement" {
 		t.Fatalf("unexpected alice notifications: %#v err=%v", aliceNotifications, err)
 	}
-	if adminNotifications.Items[0].NotificationID != adminPayload["notification_id"] || aliceNotifications.Items[0].NotificationID != adminPayload["notification_id"] {
-		t.Fatalf("expected stored notification_id to match broadcast payload: broadcast=%v stored admin=%q alice=%q", adminPayload["notification_id"], adminNotifications.Items[0].NotificationID, aliceNotifications.Items[0].NotificationID)
+	if adminNotifications.Items[0].NotifyID != adminPayload["notify_id"] || aliceNotifications.Items[0].NotifyID != adminPayload["notify_id"] {
+		t.Fatalf("expected stored notification_id to match broadcast payload: broadcast=%v stored admin=%q alice=%q", adminPayload["notify_id"], adminNotifications.Items[0].NotifyID, aliceNotifications.Items[0].NotifyID)
 	}
 
 	searchReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/search", strings.NewReader(`{"severity":"warning","pagination":{"limit":10}}`)), "admin", true)

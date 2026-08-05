@@ -28,7 +28,7 @@ func NewInMemoryRepository() *InMemoryRepository {
 
 func (r *InMemoryRepository) Create(_ context.Context, userID string, req CreateReportRequest) (ReportCreated, error) {
 	now := time.Now().UTC()
-	report := ReportItem{ReportID: fmt.Sprintf("report_%d", now.UnixNano()), TargetType: req.TargetType, TargetID: req.TargetID, Reason: req.Reason, Description: req.Description, Status: ReportStatusPending, CreatedAt: now.Format(time.RFC3339)}
+	report := ReportItem{ReportID: fmt.Sprintf("report_%d", now.UnixNano()), TargetType: req.TargetType, TargetID: req.TargetID, Reason: req.Reason, Description: req.Description, Status: ReportStatusPending, CreatedAt: now.Format(time.RFC3339), MessageSnapshot: req.MessageSnapshot}
 	r.mu.Lock()
 	r.reports[userID] = append(r.reports[userID], report)
 	r.mu.Unlock()

@@ -232,6 +232,9 @@ type AdminReportItem struct {
 	Reporter    usersmodule.UserInfo  `json:"reporter"`
 	HandledBy   *usersmodule.UserInfo `json:"handled_by,omitempty"`
 	HandleNote  string                `json:"handle_note,omitempty"`
+	// MessageSnapshot 仅 target_type='message' 时返回：管理员基于快照审核，
+	// 不直接查询私聊/群聊消息库（spec api_spec_types.md ReportItem）。
+	MessageSnapshot *reportsmodule.ReportSnapshot `json:"message_snapshot,omitempty"`
 }
 
 type PaginatedAdminReports struct {
@@ -270,6 +273,7 @@ const (
 	AuditActionAdminRevoke        AuditAction = "admin.revoke"
 	AuditActionTagDelete          AuditAction = "tag.delete"
 	AuditActionConfigUpdate       AuditAction = "config.update"
+	AuditActionGroupDismiss       AuditAction = "group.dismiss"
 )
 
 const (
@@ -278,6 +282,7 @@ const (
 	AuditTargetTypeAdmin        AuditTargetType = "admin"
 	AuditTargetTypeTag          AuditTargetType = "tag"
 	AuditTargetTypeConfig       AuditTargetType = "config"
+	AuditTargetTypeGroup        AuditTargetType = "group"
 )
 
 type AuditLogItem struct {
@@ -650,15 +655,16 @@ type reportHandleRecord struct {
 
 func reportItemFromModule(item reportsmodule.ReportItem, reporter usersmodule.UserInfo, handledBy *usersmodule.UserInfo, handleNote string) AdminReportItem {
 	return AdminReportItem{
-		ReportID:    item.ReportID,
-		TargetType:  ReportTargetType(item.TargetType),
-		TargetID:    item.TargetID,
-		Reason:      string(item.Reason),
-		Description: item.Description,
-		Status:      ReportStatus(item.Status),
-		CreatedAt:   item.CreatedAt,
-		Reporter:    reporter,
-		HandledBy:   handledBy,
-		HandleNote:  handleNote,
+		ReportID:        item.ReportID,
+		TargetType:      ReportTargetType(item.TargetType),
+		TargetID:        item.TargetID,
+		Reason:          string(item.Reason),
+		Description:     item.Description,
+		Status:          ReportStatus(item.Status),
+		CreatedAt:       item.CreatedAt,
+		Reporter:        reporter,
+		HandledBy:       handledBy,
+		HandleNote:      handleNote,
+		MessageSnapshot: item.MessageSnapshot,
 	}
 }

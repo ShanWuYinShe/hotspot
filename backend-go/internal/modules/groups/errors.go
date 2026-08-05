@@ -19,5 +19,6 @@ var (
 	ErrTargetNotMember      = errors.New("目标用户不是群成员")
 	ErrApplicationNotFound  = errors.New("申请不存在")
 	ErrAnnouncementNotFound = errors.New("公告不存在")
+	ErrInvalidReason        = errors.New("原因不合法")
 	ErrInvalidCursor        = errors.New("groups: invalid cursor")
 )

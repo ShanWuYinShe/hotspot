@@ -436,16 +436,16 @@ func TestFollowMutualFollowAddsNotificationsAndRealtime(t *testing.T) {
 	// Each realtime payload must carry the notification_id of the persisted
 	// record (spec api_spec_websocket.md dedup contract).
 	aliceMutualPayload, ok := aliceSink.events[0].Payload.(map[string]any)
-	if !ok || aliceMutualPayload["notification_id"] != aliceNotifications.Items[0].NotificationID {
-		t.Fatalf("unexpected alice mutual payload: %#v stored=%q", aliceSink.events[0].Payload, aliceNotifications.Items[0].NotificationID)
+	if !ok || aliceMutualPayload["notify_id"] != aliceNotifications.Items[0].NotifyID {
+		t.Fatalf("unexpected alice mutual payload: %#v stored=%q", aliceSink.events[0].Payload, aliceNotifications.Items[0].NotifyID)
 	}
 	bobFollowerPayload, ok := bobSink.events[0].Payload.(map[string]any)
-	if !ok || bobFollowerPayload["notification_id"] != bobNotifications.Items[1].NotificationID {
-		t.Fatalf("unexpected bob follower payload: %#v stored=%q", bobSink.events[0].Payload, bobNotifications.Items[1].NotificationID)
+	if !ok || bobFollowerPayload["notify_id"] != bobNotifications.Items[1].NotifyID {
+		t.Fatalf("unexpected bob follower payload: %#v stored=%q", bobSink.events[0].Payload, bobNotifications.Items[1].NotifyID)
 	}
 	bobMutualPayload, ok := bobSink.events[1].Payload.(map[string]any)
-	if !ok || bobMutualPayload["notification_id"] != bobNotifications.Items[0].NotificationID {
-		t.Fatalf("unexpected bob mutual payload: %#v stored=%q", bobSink.events[1].Payload, bobNotifications.Items[0].NotificationID)
+	if !ok || bobMutualPayload["notify_id"] != bobNotifications.Items[0].NotifyID {
+		t.Fatalf("unexpected bob mutual payload: %#v stored=%q", bobSink.events[1].Payload, bobNotifications.Items[0].NotifyID)
 	}
 }
 
@@ -495,8 +495,8 @@ func TestFollowCarriesSourceIntoNotificationAndRealtime(t *testing.T) {
 	if eventPayload["source"] != string(FollowSourceMoment) || eventPayload["source_moment_id"] != "moment_123" {
 		t.Fatalf("unexpected realtime payload: %#v", eventPayload)
 	}
-	if eventPayload["notification_id"] != notificationsPage.Items[0].NotificationID {
-		t.Fatalf("expected event notification_id to match stored item, got event=%v stored=%q", eventPayload["notification_id"], notificationsPage.Items[0].NotificationID)
+	if eventPayload["notify_id"] != notificationsPage.Items[0].NotifyID {
+		t.Fatalf("expected event notification_id to match stored item, got event=%v stored=%q", eventPayload["notify_id"], notificationsPage.Items[0].NotifyID)
 	}
 }
 

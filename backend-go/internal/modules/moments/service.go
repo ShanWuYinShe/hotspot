@@ -488,12 +488,12 @@ func (s *Service) notifyMomentMentions(ctx context.Context, actorUserID string, 
 			notificationID = id
 		}
 		realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeMessageMentioned, Payload: map[string]any{
-			"notification_id": notificationID,
-			"target_type":     "moment",
-			"moment_id":       item.MomentID,
-			"moment_summary":  cloneMomentSummary(momentSummary, item.MomentID),
-			"actor":           actor,
-			"mentioned_at":    item.CreatedAt,
+			"notify_id":      notificationID,
+			"target_type":    "moment",
+			"moment_id":      item.MomentID,
+			"moment_summary": cloneMomentSummary(momentSummary, item.MomentID),
+			"actor":          actor,
+			"mentioned_at":   item.CreatedAt,
 		}})
 	}
 }

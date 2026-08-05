@@ -94,8 +94,12 @@ type PaginatedShares struct {
 	NextCursor string          `json:"next_cursor,omitempty"`
 }
 
+// RevokeShareRequest revokes a share (spec api_spec_share.md): exactly one of
+// ShareID or ShareCode must be provided — the creator may only have kept the
+// copied link code, so revoke must be addressable by code as well.
 type RevokeShareRequest struct {
-	ShareID string `json:"share_id"`
+	ShareID   string `json:"share_id,omitempty"`
+	ShareCode string `json:"share_code,omitempty"`
 }
 
 type createShareCommand struct {

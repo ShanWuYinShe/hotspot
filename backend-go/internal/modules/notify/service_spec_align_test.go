@@ -1,7 +1,6 @@
 package notify
 
-// 本文件覆盖 spec 对齐新增/修改的 Append*/MarkAllReadByType/
-// PublishNearbyNewMoment/SetNearbyNotifyProvider 逻辑以及通知类型白名单。
+// 本文件覆盖 spec 对齐新增/修改的 Append*/PublishNearbyNewMoment/SetNearbyNotifyProvider 逻辑以及通知类型白名单。
 // 断言依据 spec/api_spec_notify.md 的 NotifyPayload 联合类型结构。
 
 import (
@@ -10,23 +9,8 @@ import (
 	"testing"
 
 	systemmodule "hotspot/backend-go/internal/modules/system"
-	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/realtime"
 )
-
-// markReadByTypeCaptureRepo 在 notificationListCaptureRepo 基础上捕获
-// MarkAllReadByType 的 userID/type 参数。
-type markReadByTypeCaptureRepo struct {
-	*notificationListCaptureRepo
-	markUser string
-	markType string
-}
-
-func (r *markReadByTypeCaptureRepo) MarkAllReadByType(_ context.Context, userID string, notificationType string) error {
-	r.markUser = userID
-	r.markType = notificationType
-	return nil
-}
 
 // nearbyNotifyProviderStub 模拟用户“附近新瞬间”通知开关。
 type nearbyNotifyProviderStub struct {
@@ -70,8 +54,8 @@ func TestAppendGroupInviteAcceptedBuildsNotification(t *testing.T) {
 		t.Fatal("expected generated notification_id, got empty")
 	}
 	item := requireSingleAppend(t, repo, "user_alice")
-	if item.NotificationID != notificationID {
-		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	if item.NotifyID != notificationID {
+		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
 	}
 	if item.Type != "group_invite_accepted" || item.Payload["type"] != "group_invite_accepted" {
 		t.Fatalf("unexpected type: %#v", item)
@@ -104,8 +88,8 @@ func TestAppendGroupInviteRevokedBuildsNotificationWithRevokerAndReason(t *testi
 		t.Fatal("expected generated notification_id, got empty")
 	}
 	item := requireSingleAppend(t, repo, "user_bob")
-	if item.NotificationID != notificationID {
-		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	if item.NotifyID != notificationID {
+		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
 	}
 	if item.Type != "group_invite_revoked" || item.Payload["type"] != "group_invite_revoked" {
 		t.Fatalf("unexpected type: %#v", item)
@@ -152,8 +136,8 @@ func TestAppendGroupInviteRejectedBuildsNotification(t *testing.T) {
 		t.Fatal("expected generated notification_id, got empty")
 	}
 	item := requireSingleAppend(t, repo, "user_alice")
-	if item.NotificationID != notificationID {
-		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	if item.NotifyID != notificationID {
+		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
 	}
 	if item.Type != "group_invite_rejected" || item.Payload["type"] != "group_invite_rejected" {
 		t.Fatalf("unexpected type: %#v", item)
@@ -196,8 +180,8 @@ func TestAppendGroupApplicationCancelledBuildsNotification(t *testing.T) {
 		t.Fatal("expected generated notification_id, got empty")
 	}
 	item := requireSingleAppend(t, repo, "user_admin")
-	if item.NotificationID != notificationID {
-		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	if item.NotifyID != notificationID {
+		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
 	}
 	if item.Type != "group_application_cancelled" || item.Payload["type"] != "group_application_cancelled" {
 		t.Fatalf("unexpected type: %#v", item)
@@ -240,8 +224,8 @@ func TestAppendGroupApplicationRejectedBuildsNotification(t *testing.T) {
 		t.Fatal("expected generated notification_id, got empty")
 	}
 	item := requireSingleAppend(t, repo, "user_bob")
-	if item.NotificationID != notificationID {
-		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	if item.NotifyID != notificationID {
+		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
 	}
 	if item.Type != "group_application_rejected" || item.Payload["type"] != "group_application_rejected" {
 		t.Fatalf("unexpected type: %#v", item)
@@ -268,8 +252,8 @@ func TestAppendGroupApplicationReceivedBuildsNotification(t *testing.T) {
 		t.Fatal("expected non-empty notification_id")
 	}
 	item := requireSingleAppend(t, repo, "user_admin")
-	if item.NotificationID != id {
-		t.Fatalf("expected item.NotificationID=%q, got %q", id, item.NotificationID)
+	if item.NotifyID != id {
+		t.Fatalf("expected item.NotifyID=%q, got %q", id, item.NotifyID)
 	}
 	if item.Type != "group_application_received" || item.Payload["type"] != "group_application_received" {
 		t.Fatalf("unexpected type: %#v", item)
@@ -296,8 +280,8 @@ func TestAppendReportResolvedBuildsNotification(t *testing.T) {
 		t.Fatal("expected generated notification_id, got empty")
 	}
 	item := requireSingleAppend(t, repo, "user_reporter")
-	if item.NotificationID != notificationID {
-		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	if item.NotifyID != notificationID {
+		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
 	}
 	if item.Type != "report_resolved" || item.Payload["type"] != "report_resolved" {
 		t.Fatalf("unexpected type: %#v", item)
@@ -336,8 +320,8 @@ func TestAppendReportDismissedBuildsNotification(t *testing.T) {
 		t.Fatal("expected generated notification_id, got empty")
 	}
 	item := requireSingleAppend(t, repo, "user_reporter")
-	if item.NotificationID != notificationID {
-		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	if item.NotifyID != notificationID {
+		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
 	}
 	if item.Type != "report_dismissed" || item.Payload["type"] != "report_dismissed" {
 		t.Fatalf("unexpected type: %#v", item)
@@ -378,8 +362,8 @@ func TestAppendCommentReplyBuildsNotification(t *testing.T) {
 		t.Fatal("expected generated notification_id, got empty")
 	}
 	item := requireSingleAppend(t, repo, "user_alice")
-	if item.NotificationID != notificationID {
-		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	if item.NotifyID != notificationID {
+		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
 	}
 	if item.Type != "comment_reply" || item.Payload["type"] != "comment_reply" {
 		t.Fatalf("unexpected type: %#v", item)
@@ -407,11 +391,11 @@ func TestAppendCommentReplyBuildsNotification(t *testing.T) {
 // --- AppendNewFollower / AppendMutualFollow / AppendMomentCommented / ---
 // --- AppendMentioned / AppendSystemAnnouncement (notification_id) ---
 
-// TestAppendNewFollowerBuildsNotificationID verifies the generated
-// notification_id is returned and persisted as NotifyItem.NotificationID
+// TestAppendNewFollowerBuildsNotifyID verifies the generated
+// notification_id is returned and persisted as NotifyItem.NotifyID
 // (embedded as the first field of the pushed NewFollower payload, spec
 // api_spec_websocket.md).
-func TestAppendNewFollowerBuildsNotificationID(t *testing.T) {
+func TestAppendNewFollowerBuildsNotifyID(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
 	notificationID, err := service.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "moment", "moment_123")
@@ -422,15 +406,15 @@ func TestAppendNewFollowerBuildsNotificationID(t *testing.T) {
 		t.Fatal("expected generated notification_id, got empty")
 	}
 	item := requireSingleAppend(t, repo, "user_alice")
-	if item.NotificationID != notificationID {
-		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	if item.NotifyID != notificationID {
+		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
 	}
 	if item.Type != "new_follower" || item.Payload["type"] != "new_follower" {
 		t.Fatalf("unexpected type: %#v", item)
 	}
 }
 
-func TestAppendMutualFollowBuildsNotificationID(t *testing.T) {
+func TestAppendMutualFollowBuildsNotifyID(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
 	notificationID, err := service.AppendMutualFollow(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"})
@@ -441,15 +425,15 @@ func TestAppendMutualFollowBuildsNotificationID(t *testing.T) {
 		t.Fatal("expected generated notification_id, got empty")
 	}
 	item := requireSingleAppend(t, repo, "user_alice")
-	if item.NotificationID != notificationID {
-		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	if item.NotifyID != notificationID {
+		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
 	}
 	if item.Type != "mutual_follow" || item.Payload["type"] != "mutual_follow" {
 		t.Fatalf("unexpected type: %#v", item)
 	}
 }
 
-func TestAppendMomentCommentedBuildsNotificationID(t *testing.T) {
+func TestAppendMomentCommentedBuildsNotifyID(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
 	notificationID, err := service.AppendMomentCommented(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "moment_1", map[string]any{"moment_id": "moment_1", "description_preview": "summary"}, "comment_1", "preview")
@@ -460,15 +444,15 @@ func TestAppendMomentCommentedBuildsNotificationID(t *testing.T) {
 		t.Fatal("expected generated notification_id, got empty")
 	}
 	item := requireSingleAppend(t, repo, "user_alice")
-	if item.NotificationID != notificationID {
-		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	if item.NotifyID != notificationID {
+		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
 	}
 	if item.Type != "moment_commented" || item.Payload["type"] != "moment_commented" {
 		t.Fatalf("unexpected type: %#v", item)
 	}
 }
 
-func TestAppendMentionedBuildsNotificationID(t *testing.T) {
+func TestAppendMentionedBuildsNotifyID(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
 	notificationID, err := service.AppendMentioned(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "comment", "moment_1", map[string]any{"moment_id": "moment_1", "description_preview": "summary"}, "comment_1", "preview")
@@ -479,15 +463,15 @@ func TestAppendMentionedBuildsNotificationID(t *testing.T) {
 		t.Fatal("expected generated notification_id, got empty")
 	}
 	item := requireSingleAppend(t, repo, "user_alice")
-	if item.NotificationID != notificationID {
-		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	if item.NotifyID != notificationID {
+		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
 	}
 	if item.Type != "mentioned" || item.Payload["type"] != "mentioned" {
 		t.Fatalf("unexpected type: %#v", item)
 	}
 }
 
-func TestAppendSystemAnnouncementBuildsNotificationID(t *testing.T) {
+func TestAppendSystemAnnouncementBuildsNotifyID(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
 	payload := systemmodule.SystemAnnouncementItem{AnnouncementID: "ann_1", Title: "维护通知", Content: "今晚维护", Severity: systemmodule.AnnounceLevelInfo, CreatedAt: "2026-03-26T00:00:00Z"}
@@ -502,44 +486,12 @@ func TestAppendSystemAnnouncementBuildsNotificationID(t *testing.T) {
 		t.Fatalf("unexpected append-many capture: %#v", repo)
 	}
 	item := repo.appended[0]
-	if item.NotificationID != notificationID {
-		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	if item.NotifyID != notificationID {
+		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
 	}
 	if item.Type != "system_announcement" || item.Payload["type"] != "system_announcement" || item.Payload["announcement_id"] != "ann_1" {
 		t.Fatalf("unexpected system notification item: %#v", item)
 	}
-}
-
-// --- MarkAllReadByType ---
-
-func TestMarkAllReadByTypeDelegatesTypeToRepo(t *testing.T) {
-	repo := &markReadByTypeCaptureRepo{notificationListCaptureRepo: &notificationListCaptureRepo{}}
-	service := NewServiceWithRepo(repo)
-	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	if err := service.MarkAllReadByType(ctx, "group_invite_received"); err != nil {
-		t.Fatalf("mark all read by type: %v", err)
-	}
-	if repo.markUser != "user_alice" {
-		t.Fatalf("expected user user_alice, got %q", repo.markUser)
-	}
-	if repo.markType != "group_invite_received" {
-		t.Fatalf("expected type group_invite_received, got %q", repo.markType)
-	}
-}
-
-func TestMarkAllReadByTypePropagatesRepoError(t *testing.T) {
-	service := NewServiceWithRepo(&errorMarkReadRepo{})
-	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	err := service.MarkAllReadByType(ctx, "new_follower")
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-}
-
-type errorMarkReadRepo struct{ notificationListCaptureRepo }
-
-func (errorMarkReadRepo) MarkAllReadByType(context.Context, string, string) error {
-	return errors.New("boom")
 }
 
 // --- PublishNearbyNewMoment + SetNearbyNotifyProvider ---

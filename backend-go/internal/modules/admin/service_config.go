@@ -355,3 +355,22 @@ func (s *Service) appendConfigAudit(ctx context.Context, actor AdminActor, confi
 		},
 	}))
 }
+
+// AppendGroupDismissAudit records a group-dismiss audit entry (spec
+// api_spec_group.md: the dismiss reason is audit-only and never surfaced to
+// members). Implemented here so the groups module can write dismiss audits
+// through the injected groups.GroupDismissAuditWriter without a groups→admin
+// import cycle.
+func (s *Service) AppendGroupDismissAudit(ctx context.Context, operatorID string, groupID string, groupName string, reason string) error {
+	details := AuditDetails{"type": string(AuditActionGroupDismiss), "group_id": groupID}
+	if reason != "" {
+		details["reason"] = reason
+	}
+	return s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, AdminActor{UserID: operatorID}, AuditLogEntry{
+		Action:     AuditActionGroupDismiss,
+		TargetType: AuditTargetTypeGroup,
+		TargetID:   groupID,
+		TargetName: groupName,
+		Details:    details,
+	}))
+}

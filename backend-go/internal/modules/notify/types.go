@@ -26,12 +26,15 @@ const (
 	NotifyCategoryNearby      NotifyCategory = "nearby"
 )
 
+// NotifyItem is the notify/list item. The primary key is exposed as notify_id
+// (spec api_spec_notify.md): it is shared with the realtime WS event payload of
+// the same business event, so clients can deduplicate across the two paths.
 type NotifyItem struct {
-	NotificationID string         `json:"notification_id"`
-	Type           string         `json:"type"`
-	IsRead         bool           `json:"is_read"`
-	CreatedAt      string         `json:"created_at"`
-	Payload        map[string]any `json:"payload"`
+	NotifyID  string         `json:"notify_id"`
+	Type      string         `json:"type"`
+	IsRead    bool           `json:"is_read"`
+	CreatedAt string         `json:"created_at"`
+	Payload   map[string]any `json:"payload"`
 }
 
 type PaginatedNotify struct {
@@ -74,28 +77,27 @@ type PaginationParams = types.PaginationParams
 
 type NotificationListRequest struct {
 	Type       string            `json:"type,omitempty"`
+	IsRead     *bool             `json:"is_read,omitempty"`
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
-// MarkReadRequest is the unified mark_read request (api_spec_notify.md).
-// scope defaults to "selected" when empty. When scope="all", notification_ids
-// and type are ignored and all unread notifications are cleared. When
-// scope="selected", exactly one of notification_ids or type must be provided.
+// MarkReadRequest marks notifications as read (spec api_spec_notify.md):
+// notify_ids selects the notifications to mark (1-50); absent or empty means
+// "mark everything read". Unknown or foreign ids are silently ignored.
 type MarkReadRequest struct {
-	Scope           string   `json:"scope,omitempty"`
-	NotificationIDs []string `json:"notification_ids,omitempty"`
-	Type            string   `json:"type,omitempty"`
+	NotifyIDs []string `json:"notify_ids,omitempty"`
 }
 
 type notificationListQuery struct {
 	Type   string
+	IsRead *bool
 	Limit  int
 	Cursor *notificationCursor
 }
 
 type notificationCursor struct {
-	CreatedAt      string `json:"created_at"`
-	NotificationID string `json:"notification_id"`
+	CreatedAt string `json:"created_at"`
+	NotifyID  string `json:"notify_id"`
 }
 
 func normalizeNotificationType(value string) string {
@@ -128,7 +130,7 @@ func normalizeNotificationListQuery(req NotificationListRequest) (notificationLi
 	if err != nil {
 		return notificationListQuery{}, err
 	}
-	return notificationListQuery{Type: normalizedType, Limit: limit, Cursor: cursor}, nil
+	return notificationListQuery{Type: normalizedType, IsRead: req.IsRead, Limit: limit, Cursor: cursor}, nil
 }
 
 func encodeNotificationCursor(cursor notificationCursor) string {
@@ -148,7 +150,7 @@ func decodeNotificationCursor(value string) (*notificationCursor, error) {
 	if err := json.Unmarshal(decoded, &cursor); err != nil {
 		return nil, ErrInvalidNotificationRequest
 	}
-	if cursor.CreatedAt == "" || cursor.NotificationID == "" {
+	if cursor.CreatedAt == "" || cursor.NotifyID == "" {
 		return nil, ErrInvalidNotificationRequest
 	}
 	return &cursor, nil

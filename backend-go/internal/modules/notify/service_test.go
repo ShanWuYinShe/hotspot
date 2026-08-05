@@ -146,8 +146,8 @@ func TestAppendGroupInviteReceivedBuildsNotification(t *testing.T) {
 		t.Fatal("expected non-empty notification_id")
 	}
 	item := repo.appended[0]
-	if item.NotificationID != id {
-		t.Fatalf("expected item.NotificationID=%q, got %q", id, item.NotificationID)
+	if item.NotifyID != id {
+		t.Fatalf("expected item.NotifyID=%q, got %q", id, item.NotifyID)
 	}
 	if item.Type != "group_invite_received" || item.Payload["invite_id"] != "invite_1" || item.Payload["group_id"] != "group_1" || item.Payload["message"] != "join us" {
 		t.Fatalf("unexpected notification item: %#v", item)
@@ -165,8 +165,8 @@ func TestAppendGroupApplicationAcceptedBuildsNotification(t *testing.T) {
 		t.Fatalf("expected generated notification_id, got empty")
 	}
 	item := repo.appended[0]
-	if item.NotificationID != notificationID {
-		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	if item.NotifyID != notificationID {
+		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
 	}
 	if item.Type != "group_application_accepted" || item.Payload["application_id"] != "app_1" {
 		t.Fatalf("unexpected notification item: %#v", item)
@@ -193,10 +193,10 @@ func TestPushSystemAnnouncementFansOut(t *testing.T) {
 	if !ok {
 		t.Fatalf("unexpected alice payload type: %#v", aliceSink.events[0].Payload)
 	}
-	if alicePayload["notification_id"] != "notif_1" || alicePayload["announcement_id"] != "ann_1" || alicePayload["title"] != "维护通知" || alicePayload["content"] != "今晚维护" || alicePayload["action_url"] != "https://example.com/maint" || alicePayload["severity"] != systemmodule.AnnounceLevelInfo {
+	if alicePayload["notify_id"] != "notif_1" || alicePayload["announcement_id"] != "ann_1" || alicePayload["title"] != "维护通知" || alicePayload["content"] != "今晚维护" || alicePayload["action_url"] != "https://example.com/maint" || alicePayload["severity"] != systemmodule.AnnounceLevelInfo {
 		t.Fatalf("unexpected alice payload: %#v", alicePayload)
 	}
-	if bobPayload, ok := bobSink.events[0].Payload.(map[string]any); !ok || bobPayload["notification_id"] != "notif_1" {
+	if bobPayload, ok := bobSink.events[0].Payload.(map[string]any); !ok || bobPayload["notify_id"] != "notif_1" {
 		t.Fatalf("unexpected bob payload: %#v", bobSink.events[0].Payload)
 	}
 }
@@ -216,8 +216,8 @@ func TestAppendSystemAnnouncementBuildsNotificationsForUsers(t *testing.T) {
 		t.Fatalf("unexpected append-many capture: %#v", repo)
 	}
 	item := repo.appended[0]
-	if item.NotificationID != notificationID {
-		t.Fatalf("expected item.NotificationID=%q, got %q", notificationID, item.NotificationID)
+	if item.NotifyID != notificationID {
+		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
 	}
 	if item.Type != "system_announcement" || item.Payload["announcement_id"] != "ann_1" || item.Payload["type"] != "system_announcement" {
 		t.Fatalf("unexpected system notification item: %#v", item)
@@ -225,16 +225,16 @@ func TestAppendSystemAnnouncementBuildsNotificationsForUsers(t *testing.T) {
 }
 
 func TestServiceListNormalizesPaginationAndCursor(t *testing.T) {
-	repo := &notificationListCaptureRepo{list: PaginatedNotify{Items: []NotifyItem{{NotificationID: "notif_1"}}}}
+	repo := &notificationListCaptureRepo{list: PaginatedNotify{Items: []NotifyItem{{NotifyID: "notif_1"}}}}
 	service := NewServiceWithRepo(repo)
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	cursor := encodeNotificationCursor(notificationCursor{CreatedAt: "2026-03-26T00:00:00Z", NotificationID: "notif_9"})
+	cursor := encodeNotificationCursor(notificationCursor{CreatedAt: "2026-03-26T00:00:00Z", NotifyID: "notif_9"})
 
 	list, err := service.List(ctx, NotificationListRequest{Type: "new_follower", Pagination: &PaginationParams{Limit: 999, Cursor: cursor}})
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
-	if len(list.Items) != 1 || list.Items[0].NotificationID != "notif_1" {
+	if len(list.Items) != 1 || list.Items[0].NotifyID != "notif_1" {
 		t.Fatalf("unexpected list: %#v", list)
 	}
 	if repo.userID != "user_alice" {

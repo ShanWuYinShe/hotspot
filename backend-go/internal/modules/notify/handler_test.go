@@ -15,12 +15,11 @@ import (
 )
 
 type notificationErrorRepo struct {
-	listErr          error
-	unreadErr        error
-	markReadErr      error
-	markAllErr       error
-	markAllByTypeErr error
-	appendErr        error
+	listErr     error
+	unreadErr   error
+	markReadErr error
+	markAllErr  error
+	appendErr   error
 }
 
 func (r *notificationErrorRepo) Append(context.Context, string, NotifyItem) error {
@@ -40,9 +39,6 @@ func (r *notificationErrorRepo) MarkAsRead(context.Context, string, []string) er
 }
 func (r *notificationErrorRepo) MarkAllRead(context.Context, string) error {
 	return r.markAllErr
-}
-func (r *notificationErrorRepo) MarkAllReadByType(context.Context, string, string) error {
-	return r.markAllByTypeErr
 }
 
 func withPrincipal(req *http.Request) *http.Request {
@@ -81,19 +77,19 @@ func TestUnreadCountAndMarkRead(t *testing.T) {
 		t.Fatalf("unexpected list response: %#v", listResp)
 	}
 
-	markReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"selected","notification_ids":["notif_1"]}`)))
+	markReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"notify_ids":["notif_1"]}`)))
 	markRR := httptest.NewRecorder()
 	handler.MarkRead(markRR, markReq)
 	assertNotificationCode(t, markRR, 0)
 
-	markAllReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"all"}`)))
+	markAllReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{}`)))
 	markAllRR := httptest.NewRecorder()
 	handler.MarkRead(markAllRR, markAllReq)
 	assertNotificationCode(t, markAllRR, 0)
 }
 
 func TestNotificationHandlerReturns10600OnServiceError(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&notificationErrorRepo{listErr: errors.New("boom"), unreadErr: errors.New("boom"), markReadErr: errors.New("boom"), markAllErr: errors.New("boom"), markAllByTypeErr: errors.New("boom")}))
+	handler := NewHandler(NewServiceWithRepo(&notificationErrorRepo{listErr: errors.New("boom"), unreadErr: errors.New("boom"), markReadErr: errors.New("boom"), markAllErr: errors.New("boom")}))
 
 	listReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{}`)))
 	listRR := httptest.NewRecorder()
@@ -105,12 +101,12 @@ func TestNotificationHandlerReturns10600OnServiceError(t *testing.T) {
 	handler.UnreadCount(unreadRR, unreadReq)
 	assertNotificationCode(t, unreadRR, 10600)
 
-	markReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"selected","notification_ids":["notif_1"]}`)))
+	markReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"notify_ids":["notif_1"]}`)))
 	markRR := httptest.NewRecorder()
 	handler.MarkRead(markRR, markReq)
 	assertNotificationCode(t, markRR, 10600)
 
-	markAllReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"all"}`)))
+	markAllReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{}`)))
 	markAllRR := httptest.NewRecorder()
 	handler.MarkRead(markAllRR, markAllReq)
 	assertNotificationCode(t, markAllRR, 10600)

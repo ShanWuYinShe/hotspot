@@ -52,7 +52,7 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 			notificationID = id
 		}
 	}
-	newFollowerPayload := map[string]any{"notification_id": notificationID, "actor": actor, "followed_at": followedAt}
+	newFollowerPayload := map[string]any{"notify_id": notificationID, "actor": actor, "followed_at": followedAt}
 	if sourceValue != "" {
 		newFollowerPayload["source"] = sourceValue
 	}
@@ -83,8 +83,8 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 				notificationIDForTarget = id
 			}
 		}
-		mutualPayloadForPrincipal := map[string]any{"notification_id": notificationIDForPrincipal, "actor": actor, "mutual_at": mutualAt}
-		mutualPayloadForTarget := map[string]any{"notification_id": notificationIDForTarget, "actor": actor, "mutual_at": mutualAt}
+		mutualPayloadForPrincipal := map[string]any{"notify_id": notificationIDForPrincipal, "actor": actor, "mutual_at": mutualAt}
+		mutualPayloadForTarget := map[string]any{"notify_id": notificationIDForTarget, "actor": actor, "mutual_at": mutualAt}
 		realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMutualFollow, Payload: mutualPayloadForPrincipal})
 		realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeMutualFollow, Payload: mutualPayloadForTarget})
 	}

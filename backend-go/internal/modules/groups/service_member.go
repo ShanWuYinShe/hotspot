@@ -2,6 +2,7 @@ package groups
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -29,6 +30,11 @@ func (s *Service) ApproveApplication(ctx context.Context, req ApproveGroupApplic
 	if err != nil {
 		return err
 	}
+	if req.GroupID != application.GroupID {
+		// Group-level auth anchor mismatch: report not-found so callers cannot
+		// probe applications across groups (spec api_spec_group.md).
+		return ErrApplicationNotFound
+	}
 	if err := s.repo.ApproveApplication(ctx, principal.UserID, req.ApplicationID); err != nil {
 		return err
 	}
@@ -43,10 +49,26 @@ func (s *Service) RejectApplication(ctx context.Context, req RejectGroupApplicat
 	if err != nil {
 		return err
 	}
-	if err := s.repo.RejectApplication(ctx, req.ApplicationID, req.Reason); err != nil {
+	if req.GroupID != application.GroupID {
+		// Group-level auth anchor mismatch: report not-found so callers cannot
+		// probe applications across groups (spec api_spec_group.md).
+		return ErrApplicationNotFound
+	}
+	reason := ""
+	if req.Reason != nil {
+		reason = strings.TrimSpace(*req.Reason)
+		if len(reason) > 200 {
+			return ErrInvalidReason
+		}
+	}
+	var reasonPtr *string
+	if reason != "" {
+		reasonPtr = &reason
+	}
+	if err := s.repo.RejectApplication(ctx, req.ApplicationID, reasonPtr); err != nil {
 		return err
 	}
-	s.notifyGroupApplicationRejected(ctx, group, application, principal.UserID, req.Reason)
+	s.notifyGroupApplicationRejected(ctx, group, application, principal.UserID, reasonPtr)
 	return nil
 }
 

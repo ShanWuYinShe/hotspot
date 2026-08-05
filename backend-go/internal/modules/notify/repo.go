@@ -13,13 +13,12 @@ type Repository interface {
 	UnreadCount(context.Context, string) (UnreadCountResult, error)
 	MarkAsRead(context.Context, string, []string) error
 	MarkAllRead(context.Context, string) error
-	MarkAllReadByType(context.Context, string, string) error
 }
 
 func normalizeNotifyItem(item NotifyItem) NotifyItem {
 	now := time.Now().UTC()
-	if item.NotificationID == "" {
-		item.NotificationID = newNotificationID()
+	if item.NotifyID == "" {
+		item.NotifyID = newNotificationID()
 	}
 	if item.CreatedAt == "" {
 		item.CreatedAt = now.Format(time.RFC3339)
@@ -32,8 +31,8 @@ func normalizeNotifyItem(item NotifyItem) NotifyItem {
 }
 
 // newNotificationID generates the notification primary key. Callers that need
-// the id for realtime event payloads (e.g. ReactionAdded.notification_id)
-// generate it up front and pass it into the NotifyItem.
+// the id for realtime event payloads (e.g. ReactionAdded.notify_id) generate
+// it up front and pass it into the NotifyItem.
 func newNotificationID() string {
 	return fmt.Sprintf("notif_%d", time.Now().UTC().UnixNano())
 }

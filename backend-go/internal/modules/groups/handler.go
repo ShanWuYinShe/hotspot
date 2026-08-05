@@ -135,6 +135,10 @@ func (h *Handler) Dismiss(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
+		if errors.Is(err, ErrInvalidReason) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+			return
+		}
 		if errors.Is(err, ErrAccessRestricted) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
@@ -405,7 +409,7 @@ func (h *Handler) ListMyApplications(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
 	var req CancelApplicationRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.ApplicationID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.ApplicationID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -416,6 +420,10 @@ func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, ErrApplicationNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "申请不存在"))
+			return
+		}
+		if errors.Is(err, ErrInvalidReason) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))

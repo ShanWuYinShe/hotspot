@@ -269,7 +269,7 @@ func TestCreateMomentSendsMentionNotificationsAndRealtime(t *testing.T) {
 	if payload["target_type"] != "moment" || payload["moment_id"] != created.MomentID {
 		t.Fatalf("unexpected realtime payload: %#v", payload)
 	}
-	notificationID, _ := payload["notification_id"].(string)
+	notificationID, _ := payload["notify_id"].(string)
 	if notificationID == "" {
 		t.Fatalf("expected non-empty notification_id in event payload: %#v", payload)
 	}
@@ -280,8 +280,8 @@ func TestCreateMomentSendsMentionNotificationsAndRealtime(t *testing.T) {
 	if len(notificationsPage.Items) != 1 || notificationsPage.Items[0].Type != "mentioned" {
 		t.Fatalf("unexpected notifications page: %#v", notificationsPage)
 	}
-	if notificationsPage.Items[0].NotificationID != notificationID {
-		t.Fatalf("expected event notification_id to match stored item, got event=%q stored=%q", notificationID, notificationsPage.Items[0].NotificationID)
+	if notificationsPage.Items[0].NotifyID != notificationID {
+		t.Fatalf("expected event notification_id to match stored item, got event=%q stored=%q", notificationID, notificationsPage.Items[0].NotifyID)
 	}
 }
 

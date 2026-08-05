@@ -70,7 +70,7 @@ func TestSetReactMessageTargetNotifiesAndBroadcasts(t *testing.T) {
 		t.Fatalf("unexpected payload: %+v", payload)
 	}
 	// 非自反应:payload 必须携带 notification_id(客户端深链用)。
-	if payload["notification_id"] != "notif_1" {
+	if payload["notify_id"] != "notif_1" {
 		t.Fatalf("expected notification_id=notif_1, got %+v", payload)
 	}
 	actorInfo, ok := payload["actor"].(map[string]any)

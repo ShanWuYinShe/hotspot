@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"context"
+
 	"github.com/go-chi/chi/v5"
 
 	"hotspot/backend-go/internal/modules/notify"
@@ -48,4 +50,14 @@ func (m *Module) Mount(r chi.Router) {
 			MountRoutes(group, m.handler)
 		})
 	})
+}
+
+// AppendGroupDismissAudit implements groups.GroupDismissAuditWriter so the
+// groups module can write owner-dismiss audit entries without a groups→admin
+// import cycle (spec api_spec_group.md).
+func (m *Module) AppendGroupDismissAudit(ctx context.Context, operatorID string, groupID string, groupName string, reason string) error {
+	if m == nil || m.handler == nil || m.handler.service == nil {
+		return nil
+	}
+	return m.handler.service.AppendGroupDismissAudit(ctx, operatorID, groupID, groupName, reason)
 }

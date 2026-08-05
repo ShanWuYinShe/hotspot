@@ -35,7 +35,3 @@ func (r *PersistenceRepository) MarkAsRead(ctx context.Context, userID string, i
 func (r *PersistenceRepository) MarkAllRead(ctx context.Context, userID string) error {
 	return r.impl.MarkAllRead(ctx, userID)
 }
-
-func (r *PersistenceRepository) MarkAllReadByType(ctx context.Context, userID string, notificationType string) error {
-	return r.impl.MarkAllReadByType(ctx, userID, notificationType)
-}

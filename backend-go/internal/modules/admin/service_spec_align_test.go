@@ -118,7 +118,7 @@ func TestHandleReportResolvePushesAndNotifiesReporter(t *testing.T) {
 	if !ok {
 		t.Fatalf("unexpected payload type: %T", ev.Payload)
 	}
-	if payload["notification_id"] != "notif_resolved_1" || payload["report_id"] != "report_1" || payload["target_type"] != "user" || payload["target_id"] != "user_target" || payload["note"] != "confirmed violation" {
+	if payload["notify_id"] != "notif_resolved_1" || payload["report_id"] != "report_1" || payload["target_type"] != "user" || payload["target_id"] != "user_target" || payload["note"] != "confirmed violation" {
 		t.Fatalf("unexpected payload: %+v", payload)
 	}
 	if _, ok := payload["resolved_at"]; !ok {
@@ -161,7 +161,7 @@ func TestHandleReportDismissPushesAndNotifiesReporter(t *testing.T) {
 		t.Fatalf("expected ReportDismissed event, got %s", ev.Type)
 	}
 	payload := ev.Payload.(map[string]any)
-	if payload["notification_id"] != "notif_dismissed_1" || payload["report_id"] != "report_2" {
+	if payload["notify_id"] != "notif_dismissed_1" || payload["report_id"] != "report_2" {
 		t.Fatalf("unexpected payload: %+v", payload)
 	}
 	if _, ok := payload["note"]; ok {

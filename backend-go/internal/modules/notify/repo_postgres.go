@@ -43,7 +43,7 @@ func (r *PostgresRepository) Append(ctx context.Context, userID string, item Not
 	if err != nil {
 		return err
 	}
-	return queryable.Exec(ctx, queryInsertNotification, item.NotificationID, userID, item.Type, item.IsRead, item.CreatedAt, string(payloadJSON))
+	return queryable.Exec(ctx, queryInsertNotification, item.NotifyID, userID, item.Type, item.IsRead, item.CreatedAt, string(payloadJSON))
 }
 
 func (r *PostgresRepository) AppendMany(ctx context.Context, userIDs []string, item NotifyItem) error {
@@ -78,7 +78,7 @@ func (r *PostgresRepository) AppendMany(ctx context.Context, userIDs []string, i
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
-		return txQueryable.Exec(txCtx, queryInsertNotificationsBatch, targets, item.NotificationID, item.Type, item.IsRead, item.CreatedAt, string(payloadJSON))
+		return txQueryable.Exec(txCtx, queryInsertNotificationsBatch, targets, item.NotifyID, item.Type, item.IsRead, item.CreatedAt, string(payloadJSON))
 	})
 }
 
@@ -102,15 +102,4 @@ func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) err
 		return persistence.ErrNotImplemented
 	}
 	return queryable.Exec(ctx, queryMarkAllNotificationsRead, userID)
-}
-
-func (r *PostgresRepository) MarkAllReadByType(ctx context.Context, userID string, notificationType string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
-	return queryable.Exec(ctx, queryMarkAllNotificationsByTypeRead, userID, notificationType)
 }

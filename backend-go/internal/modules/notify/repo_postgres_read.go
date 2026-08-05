@@ -24,9 +24,9 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req Notifi
 	cursorNotificationID := ""
 	if query.Cursor != nil {
 		cursorCreatedAt = query.Cursor.CreatedAt
-		cursorNotificationID = query.Cursor.NotificationID
+		cursorNotificationID = query.Cursor.NotifyID
 	}
-	rows, err := queryable.Query(ctx, queryListNotifications, userID, query.Type, cursorCreatedAt, cursorNotificationID, query.Limit+1)
+	rows, err := queryable.Query(ctx, queryListNotifications, userID, query.Type, query.IsRead, cursorCreatedAt, cursorNotificationID, query.Limit+1)
 	if err != nil {
 		return PaginatedNotify{}, err
 	}
@@ -35,7 +35,7 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req Notifi
 	for rows.Next() {
 		var item NotifyItem
 		var payloadJSON string
-		if err := rows.Scan(&item.NotificationID, &item.Type, &item.IsRead, &item.CreatedAt, &payloadJSON); err != nil {
+		if err := rows.Scan(&item.NotifyID, &item.Type, &item.IsRead, &item.CreatedAt, &payloadJSON); err != nil {
 			return PaginatedNotify{}, err
 		}
 		if payloadJSON != "" {
@@ -51,7 +51,7 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req Notifi
 	page := PaginatedNotify{}
 	if len(items) > query.Limit {
 		last := items[query.Limit-1]
-		page.NextCursor = encodeNotificationCursor(notificationCursor{CreatedAt: last.CreatedAt, NotificationID: last.NotificationID})
+		page.NextCursor = encodeNotificationCursor(notificationCursor{CreatedAt: last.CreatedAt, NotifyID: last.NotifyID})
 		items = items[:query.Limit]
 	}
 	page.Items = items

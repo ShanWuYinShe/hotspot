@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	groupsmodule "hotspot/backend-go/internal/modules/groups"
+	reportsmodule "hotspot/backend-go/internal/modules/reports"
 	usersmodule "hotspot/backend-go/internal/modules/users"
 	"time"
 
@@ -298,6 +299,7 @@ type adminReportRow struct {
 	HandledByNickname  string
 	HandledByAvatar    string
 	HandleNote         string
+	MessageSnapshot    *string
 	TargetUserID       string
 	TargetUserNickname string
 	TargetUserAvatar   string
@@ -407,6 +409,7 @@ func scanAdminReportRow(row persistence.Row, withTargetUser bool) (reportHandleR
 			&record.HandledByNickname,
 			&record.HandledByAvatar,
 			&record.HandleNote,
+			&record.MessageSnapshot,
 			&record.TargetUserID,
 			&record.TargetUserNickname,
 			&record.TargetUserAvatar,
@@ -430,6 +433,7 @@ func scanAdminReportRow(row persistence.Row, withTargetUser bool) (reportHandleR
 			&record.HandledByNickname,
 			&record.HandledByAvatar,
 			&record.HandleNote,
+			&record.MessageSnapshot,
 		); err != nil {
 			return reportHandleRecord{}, err
 		}
@@ -444,6 +448,13 @@ func scanAdminReportRow(row persistence.Row, withTargetUser bool) (reportHandleR
 		CreatedAt:   record.CreatedAt.UTC().Format(time.RFC3339),
 		Reporter:    usersmodule.UserInfo{UserID: record.ReporterUserID, Nickname: record.ReporterNickname, AvatarURL: record.ReporterAvatarURL},
 		HandleNote:  record.HandleNote,
+	}
+	if record.MessageSnapshot != nil && *record.MessageSnapshot != "" {
+		var snapshot reportsmodule.ReportSnapshot
+		if err := json.Unmarshal([]byte(*record.MessageSnapshot), &snapshot); err != nil {
+			return reportHandleRecord{}, err
+		}
+		item.MessageSnapshot = &snapshot
 	}
 	if record.HandledAt != nil {
 		item.HandledAt = record.HandledAt.UTC().Format(time.RFC3339)

@@ -110,8 +110,10 @@ func (h *Handler) Revoke(w http.ResponseWriter, r *http.Request) {
 			logBusinessError(r, "Revoke", 10000, "参数错误")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		case errors.Is(err, ErrSharePermission):
-			logBusinessError(r, "Revoke", 10200, "无权限访问")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "无权限访问"))
+			// 隐私一致性（spec api_spec_share.md）：share 存在但无权限时统一
+			// 返回 10300，不通过 10200 泄露 share 的存在性。
+			logBusinessError(r, "Revoke", 10300, "资源不存在")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "资源不存在"))
 		case errors.Is(err, ErrShareNotFound):
 			logBusinessError(r, "Revoke", 10300, "资源不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "资源不存在"))
