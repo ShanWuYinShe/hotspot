@@ -3,7 +3,7 @@
 	import { ArrowLeft, Bell, Check, MapPin, MessageCircle, Users } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
-	import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
+	import BorderedList from '@/components/data-display/BorderedList.svelte';
 	import { Tabs } from 'bits-ui';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance } from '@/lib/utils';
@@ -252,7 +252,8 @@
 					<p class="max-w-3xl text-[15px] leading-7 text-text-secondary">{group.description}</p>
 				</div>
 			{:else if tab === 'members'}
-				<EmbeddedList>
+				<!-- 空旷内容区 → BorderedList（有边框列表契约）；列表行不设独立边框 -->
+				<BorderedList class="mt-6">
 					{#each members as member (member.id)}
 						<button type="button" class="hover-row app-list-row app-list-row--standard row-hover outline-none" onclick={() => { if (member.userId) void goto(ROUTES.user(member.userId)); }}>
 							<div class="relative">
@@ -268,18 +269,19 @@
 							<span class="text-xs text-text-secondary">查看资料</span>
 						</button>
 					{/each}
-				</EmbeddedList>
+				</BorderedList>
 			{:else}
-					<EmbeddedList>
-						{#each announcements as item (item.title)}
-							<article class="py-4">
-								<p class="text-[14px] font-medium text-text-primary">{item.title}</p>
-								<p class="mt-1 text-sm leading-5 text-text-secondary">{item.body}</p>
-								<p class="mt-2 text-xs text-text-secondary">{item.time}</p>
-							</article>
-						{/each}
-					</EmbeddedList>
-				{/if}
+				<!-- 空旷内容区 → BorderedList（有边框列表契约） -->
+				<BorderedList class="mt-6">
+					{#each announcements as item (item.title)}
+						<article class="px-4 py-4">
+							<p class="text-[14px] font-medium text-text-primary">{item.title}</p>
+							<p class="mt-1 text-sm leading-5 text-text-secondary">{item.body}</p>
+							<p class="mt-2 text-xs text-text-secondary">{item.time}</p>
+						</article>
+					{/each}
+				</BorderedList>
+			{/if}
 		</main>
 
 		<aside class="flex h-fit flex-col gap-3 rounded-panel ring-1 ring-border-default bg-surface-primary p-4">

@@ -7,6 +7,8 @@
 	//     会压过 Tailwind hover 类导致 hover 不生效，因此不用 inline 背景）
 	//   - selected：accent 背景 + glow 阴影 + 反色文字（content-inverse 系列）
 	//     + border-inverse 头像框；仅 unread > 0 时名字加粗（对齐 Figma）
+	//   - unread 徽章：选中时保留占位并改为反色（不随选中消失），避免行内
+	//     flex-1 文本区宽度跳变导致点击位移
 	//   - tap：按压 opacity 0.8 反馈；transition 150ms
 
 	export interface ChatItem {
@@ -71,10 +73,10 @@
 		</span>
 	</span>
 
-	{#if chat.unread > 0 && !isSelected}
+	{#if chat.unread > 0}
 		<span
-			class="flex shrink-0 items-center justify-center rounded-full bg-accent-default text-white text-xs font-semibold"
-			style="width:20px;height:20px;box-shadow:0 2px 8px var(--glow-accent);"
+			class="flex shrink-0 items-center justify-center rounded-full text-xs font-semibold {isSelected ? 'bg-content-inverse text-accent-default' : 'bg-accent-default text-white'}"
+			style="width:20px;height:20px;{isSelected ? '' : 'box-shadow:0 2px 8px var(--glow-accent);'}"
 		>
 			{chat.unread}
 		</span>

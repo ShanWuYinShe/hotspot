@@ -2,6 +2,7 @@
 	import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, Crosshair, Check, Heart } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import BorderedList from '@/components/data-display/BorderedList.svelte';
+	import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { PIN_COLORS, PIN_LABELS, pinTone, getMarkerUrl } from '../shared/location-shared';
@@ -141,15 +142,16 @@
 			</div>
 
 			{#if nearbyPins.length}
-				{#each nearbyPins as pin (pin.id)}
-					{@const isSelected = selectedPin?.id === pin.id}
-					<button
-						type="button"
-						class="app-list-row app-list-row--standard outline-none transition-[background-color,opacity] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:opacity-80"
-						style={isSelected ? `background:${pinTone(pin.type, 10)};` : ''}
-						aria-pressed={isSelected}
-						onclick={() => onSelectPin(pin)}
-					>
+				<EmbeddedList>
+					{#each nearbyPins as pin (pin.id)}
+						{@const isSelected = selectedPin?.id === pin.id}
+						<button
+							type="button"
+							class="app-list-row app-list-row--standard outline-none transition-[background-color,opacity] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:opacity-80"
+							style={isSelected ? `background:${pinTone(pin.type, 10)};` : ''}
+							aria-pressed={isSelected}
+							onclick={() => onSelectPin(pin)}
+						>
 						{#if pin.type === 'user' && pin.avatar}
 							<div class="relative shrink-0">
 								<img src={pin.avatar} alt={pin.name || pin.title || ''} class="rounded-full object-cover" style="width:42px;height:42px;" />
@@ -194,6 +196,7 @@
 						{/if}
 					</button>
 				{/each}
+				</EmbeddedList>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
 					<MapPin style="width:22px;height:22px;color:var(--text-secondary);opacity:0.3;" strokeWidth={1} />
@@ -202,33 +205,37 @@
 			{/if}
 		</div>
 	{:else if activeTab === 'hot'}
-		<div class="animate-fade-in flex flex-col gap-2">
+		<div class="animate-fade-in">
 			{#if HOT_LOCATIONS.length}
-				{#each HOT_LOCATIONS as loc}
-					{@const isSelected = selectedLoc?.displayName === loc.displayName}
-					<button
-						type="button"
-						class="bg-surface-primary flex w-full items-center gap-3 rounded-control p-3.5 text-left outline-none transition-[background-color,box-shadow,opacity] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:opacity-80"
-						style="box-shadow:{isSelected ? '0 0 0 1px var(--accent-border), var(--shadow-neu-md)' : 'var(--shadow-neu-md)'};border:1px solid {isSelected ? 'var(--accent-border)' : 'var(--border-default)'};"
-						aria-pressed={isSelected}
-						onclick={() => onSelectLoc(loc)}
-					>
-						<div class="flex items-center justify-center rounded-xl shrink-0 bg-accent-default" style="width:46px;height:46px;font-size:22px;opacity:0.88;">
-							{loc.emoji}
-						</div>
-						<div class="flex-1 min-w-0">
-							<p class="text-text-primary text-sm">{loc.displayName}</p>
-							<p class="text-text-secondary" style="font-size:12px;margin-top:2px;">{loc.desc}</p>
-						</div>
-						<div class="flex flex-col items-end shrink-0 gap-0.5">
-							<div class="flex items-center gap-1">
+				<EmbeddedList>
+					{#each HOT_LOCATIONS as loc}
+						{@const isSelected = selectedLoc?.displayName === loc.displayName}
+						<button
+							type="button"
+							class="app-list-row app-list-row--standard outline-none transition-[background-color,opacity] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:opacity-80"
+							style={isSelected ? 'background:var(--accent-soft);' : ''}
+							aria-pressed={isSelected}
+							onclick={() => onSelectLoc(loc)}
+						>
+							<div class="flex items-center justify-center rounded-small shrink-0 bg-accent-default" style="width:36px;height:36px;font-size:18px;opacity:0.88;">
+								{loc.emoji}
+							</div>
+							<div class="flex-1 min-w-0">
+								<p class="truncate text-text-primary text-sm">{loc.displayName}</p>
+								<p class="truncate text-text-secondary" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
+							</div>
+							<div class="flex shrink-0 items-center gap-1">
 								<Users style="width:11px;height:11px;color:var(--accent-default);" strokeWidth={1.5} />
 								<span class="text-accent-default text-xs">{loc.users}</span>
 							</div>
-							<span class="text-text-secondary text-xxs">在线</span>
-						</div>
-					</button>
-				{/each}
+							{#if isSelected}
+								<Check style="width:14px;height:14px;color:var(--accent-default);shrink:0;" strokeWidth={2.5} />
+							{:else}
+								<ChevronRight style="width:13px;height:13px;color:var(--border-default);shrink:0;" strokeWidth={1.5} />
+							{/if}
+						</button>
+					{/each}
+				</EmbeddedList>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
 					<Star style="width:22px;height:22px;color:var(--text-secondary);opacity:0.3;" strokeWidth={1} />
@@ -237,29 +244,33 @@
 			{/if}
 		</div>
 	{:else}
-		<div class="animate-fade-in flex flex-col gap-2">
+		<div class="animate-fade-in">
 			{#if RECENT_LOCATIONS.length}
-				{#each RECENT_LOCATIONS as loc}
-					{@const isSelected = selectedLoc?.displayName === loc.displayName}
-					<button
-						type="button"
-						class="bg-surface-primary flex w-full items-center gap-3 rounded-control p-3.5 text-left outline-none transition-[background-color,box-shadow,opacity] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:opacity-80"
-						style="box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
-						aria-pressed={isSelected}
-						onclick={() => onSelectLoc(loc)}
-					>
-						<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary" style="width:44px;height:44px;box-shadow:var(--shadow-neu-xs);border:1px solid var(--border-default);font-size:20px;">
-							{loc.emoji}
-						</div>
-						<div class="flex-1 min-w-0">
-							<p class="text-text-primary text-sm">{loc.displayName}</p>
-							<p class="text-text-secondary" style="font-size:12px;margin-top:2px;">{loc.desc}</p>
-						</div>
-						{#if isSelected}
-							<Check style="width:14px;height:14px;color:var(--accent-default);shrink:0;" strokeWidth={2.5} />
-						{/if}
-					</button>
-				{/each}
+				<EmbeddedList>
+					{#each RECENT_LOCATIONS as loc}
+						{@const isSelected = selectedLoc?.displayName === loc.displayName}
+						<button
+							type="button"
+							class="app-list-row app-list-row--standard outline-none transition-[background-color,opacity] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:opacity-80"
+							style={isSelected ? 'background:var(--accent-soft);' : ''}
+							aria-pressed={isSelected}
+							onclick={() => onSelectLoc(loc)}
+						>
+							<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary" style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);font-size:18px;">
+								{loc.emoji}
+							</div>
+							<div class="flex-1 min-w-0">
+								<p class="truncate text-text-primary text-sm">{loc.displayName}</p>
+								<p class="truncate text-text-secondary" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
+							</div>
+							{#if isSelected}
+								<Check style="width:14px;height:14px;color:var(--accent-default);shrink:0;" strokeWidth={2.5} />
+							{:else}
+								<ChevronRight style="width:13px;height:13px;color:var(--border-default);shrink:0;" strokeWidth={1.5} />
+							{/if}
+						</button>
+					{/each}
+				</EmbeddedList>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
 					<Clock style="width:22px;height:22px;color:var(--text-secondary);opacity:0.3;" strokeWidth={1} />
