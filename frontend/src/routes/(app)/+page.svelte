@@ -21,7 +21,7 @@
 	// 桌面/平板：左侧 340px 摘要栏 + 右侧完整用户列表（2 栏 grid）。
 	// 移动：单栏堆叠。
 
-	// ── 数据获取（原 useEffect + Promise.all + cancelled 竞态）────────
+	// ── 数据获取（Promise.all + cancelled 竞态）────────
 	let nearbyUsers = $state<NearbyUser[]>([]);
 	let activities = $state<Activity[]>([]);
 	let nearbyGroups = $state<NearbyGroup[]>([]);

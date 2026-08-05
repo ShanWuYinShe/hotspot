@@ -734,7 +734,7 @@ export function generateBspCardLayout({
  * none. When a decomposition exists, `n` cards tile an `rows × cols` grid
  * with zero holes.
  *
- * Heuristics mirror the old soft quotas: at most one 2×2 hero (and none for
+ * Heuristics mirror the soft quotas: at most one 2×2 hero (and none for
  * small collections), few rectangular "穿插" tiles (≤ 6), and balanced
  * portrait/landscape. `rows === 1` forbids portrait tiles and heroes (they
  * need two rows). The list is sorted by preference: more heroes first, then
@@ -1020,7 +1020,7 @@ function tryAppend({
   if (placements.length < appendTarget) {
     greedyFill(geometry, rows, occupancy, placementGrid, computedQuotas, owed, placedFromFrozen, placements, appendTarget, mulberry32(seed ^ 0x5a5a), false);
   }
-  // 碎片兜底：剩余格无法容纳配额中的大形状（如旧布局含补位格、空间被切碎）时，
+  // 碎片兜底：剩余格无法容纳配额中的大形状（如布局含补位格、空间被切碎）时，
   // 用 1×1 完成剩余配额，保证新卡真卡数达到 newCardCount（宿主无需回退全量重排）。
   const oneByOne = TILE_SHAPES[0];
   while (placements.length < appendTarget) {

@@ -653,6 +653,4 @@
   [data-desktop-main] .desktop-main-scroll > * {
     background-color: var(--surface-page) !important;
   }
-  /* 注：不再强制 [data-desktop-main] .sticky 为 surface-page——PageHeader 已内联
-     背景（glass ? color-mix 毛玻璃 : surface-page），保证三端玻璃效果一致。 */
 }

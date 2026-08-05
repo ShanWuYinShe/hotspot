@@ -71,7 +71,7 @@
 	}
 
 	/** 求解：优先 plan 精确满铺（基础宽列数 + 恰好行数 + 配额，无补位骨架）；
-	 *  append 路径冻结旧卡仅扩展新区；plan 失败回退探测循环。 */
+	 *  append 路径冻结已放置卡片仅扩展新区；plan 失败回退探测循环。 */
 	function recompute(w: number, n: number) {
 		if (!w || !n) {
 			prevSolve = null;
@@ -130,7 +130,7 @@
 					}
 				}
 			}
-			// plan 失败（罕见）→ 旧估算路径：按行数估算扩展高度，软配额
+			// plan 失败（罕见）→ 回退估算路径：按行数估算扩展高度，软配额
 			const estimatedRows = Math.max(2, Math.ceil((n * 1.6) / appendGeo.cols));
 			const expandedHeight = Math.max(prevSolve.height, Math.round(estimatedRows * appendGeo.unitH));
 

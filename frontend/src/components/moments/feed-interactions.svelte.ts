@@ -28,7 +28,7 @@ export interface FeedInteractions {
 export function createFeedInteractions(getInitial: () => FeedItem[]): FeedInteractions {
 	let items = $state<FeedItem[]>(getInitial());
 
-	// 外部数据更新时同步（原 useEffect setItems(initial)）——通过 getter 保持对数据源的响应。
+	// 外部数据更新时同步——通过 getter 保持对数据源的响应。
 	// 注意：同步是整体覆盖，会重置 toggleLike/toggleSave 的乐观状态。
 	$effect(() => {
 		items = getInitial();

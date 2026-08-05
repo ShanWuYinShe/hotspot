@@ -56,7 +56,7 @@
 	let announcements = $state<Announcement[]>([]);
 	let loading = $state(true);
 	let unwatchMembers: (() => void) | null = null;
-	/** 竞态防护：仅最后一次发起的加载允许落地（等价原 effect 的 cancelled 标志）。 */
+	/** 竞态防护：仅最后一次发起的加载允许落地。 */
 	let loadToken = 0;
 
 	// --- 加载函数（初始加载与 WS 事件刷新复用） ---
@@ -64,7 +64,7 @@
 	async function loadDetail(gid: string) {
 		try {
 			const detailRes = await getGroupDetail(gid).catch(() => ({ code: -1, data: null }));
-			// 竞态防护：页面已切到别的群组则丢弃本次结果（等价原 effect 的 cancelled 守卫）
+			// 竞态防护：页面已切到别的群组则丢弃本次结果
 			if (params.groupId !== gid) return;
 			const detailData = detailRes.code === 0 ? detailRes.data : null;
 			if (detailData) {

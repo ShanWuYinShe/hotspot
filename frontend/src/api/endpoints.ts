@@ -152,14 +152,6 @@ export const Endpoints = {
     Suggest: `${PREFIX}/search/suggest`,
   },
 
-  // Media
-  Media: {
-    PresignUpload: `${PREFIX}/media/presign_upload`,
-    BatchPresignUpload: `${PREFIX}/media/batch_presign_upload`,
-    CompleteUpload: `${PREFIX}/media/complete_upload`,
-    BatchCompleteUpload: `${PREFIX}/media/batch_complete_upload`,
-  },
-
   // System
   System: {
     GetMeta: `${PREFIX}/system/get_meta`,
@@ -185,14 +177,6 @@ export const Endpoints = {
   Reports: {
     Create: `${PREFIX}/reports/create`,
     ListMy: `${PREFIX}/reports/list_my`,
-  },
-
-  // Share
-  Share: {
-    Create: `${PREFIX}/share/create`,
-    Get: `${PREFIX}/share/get`,
-    Revoke: `${PREFIX}/share/revoke`,
-    ListMy: `${PREFIX}/share/list_my`,
   },
 
   // Admin

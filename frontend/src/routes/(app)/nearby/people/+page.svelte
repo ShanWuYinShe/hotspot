@@ -77,7 +77,7 @@
 		};
 	});
 
-	// 过滤 + 排序（原 useMemo）
+	// 过滤 + 排序
 	const list = $derived.by(() => {
 		const next = allUsers.filter(
 			(user) =>

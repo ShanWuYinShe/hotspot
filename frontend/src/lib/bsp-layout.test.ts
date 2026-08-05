@@ -186,9 +186,9 @@ describe('appendPlacements', () => {
     expect(extended.filter((r) => r.placeholder).length).toBe(0);
   });
 
-  it('旧布局含补位格时，追加仍达到 newCount 张真实卡片（补位格不消耗新卡配额）', () => {
+  it('布局含补位格时，追加仍达到 newCount 张真实卡片（补位格不消耗新卡配额）', () => {
     const geo = deriveBspGridGeometry({ canvasWidth: BASE.canvasWidth, canvasHeight: BASE.canvasHeight, targetCount: 12 });
-    // 构造含补位格的旧布局：超大画布高度 → 行数远超需要 → fillToFull 补位
+    // 构造含补位格的布局：超大画布高度 → 行数远超需要 → fillToFull 补位
     const existing = generateBspCardLayout({ ...BASE, cols: geo.cols, canvasHeight: 3200 });
     expect(existing.some((r) => r.placeholder)).toBe(true);
 

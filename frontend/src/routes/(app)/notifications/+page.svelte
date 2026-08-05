@@ -117,8 +117,7 @@ const FILTER_TABS = [
 		notifications = notifications.filter((n) => n.id !== id);
 	};
 
-	// 归一化后 n.type 已是语义键（reaction/follow/comment/nearby/event），
-	// 直接与 tab id 比较；FILTER_TYPE_MAP 仅保留供历史/调试参考。
+	// 归一化后 n.type 已是语义键（reaction/follow/comment/nearby/event），直接与 tab id 比较。
 	const filtered = $derived(notifications.filter((n) => filter === 'all' || n.type === filter));
 	const unreadGroup = $derived(filtered.filter((n) => !n.read));
 	const readGroup = $derived(filtered.filter((n) => n.read));

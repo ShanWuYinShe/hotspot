@@ -76,8 +76,7 @@
 	const rest = $derived(filtered.slice(1));
 	const totalOnline = $derived(filtered.reduce((sum, group) => sum + group.online, 0));
 
-	// TODO: connect to groups/join & groups/leave once client wrappers exist;
-	// for now toggle locally so the button reflects intent immediately.
+	// TODO: 接入 groups/join 与 groups/leave（client 包装就绪后）；当前仅本地切换反映按钮意图。
 	const toggleJoin = (id: string) => {
 		groups = groups.map((group) => (group.id === id ? { ...group, joined: !group.joined } : group));
 	};
