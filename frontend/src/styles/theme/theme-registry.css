@@ -88,4 +88,20 @@
   --color-surface-scrim: var(--surface-scrim);
   --color-surface-overlay: var(--surface-overlay);
   --color-border-inverse: var(--border-inverse);
+
+  /* Interaction feedback fill tokens（按压/悬停实底填充） */
+  --color-interactive-hover-fill: var(--interactive-hover-fill);
+  --color-interactive-active: var(--interactive-active);
+  --color-content-inverse-secondary: var(--content-inverse-secondary);
+
+  /* Neumorphic elevation shadows — 归一化手抄 box-shadow 分布
+     原值归到最近刻度（blur 6~8px 差异视觉无感知），生成 shadow-neu-* 工具类 */
+  --shadow-neu-xs: 3px 3px 7px var(--elevation-shadow-dark), -3px -3px 7px var(--elevation-shadow-light);
+  --shadow-neu-md: 4px 4px 9px var(--elevation-shadow-dark), -4px -4px 9px var(--elevation-shadow-light);
+  --shadow-neu-lg: 5px 5px 12px var(--elevation-shadow-dark), -5px -5px 12px var(--elevation-shadow-light);
+  --shadow-neu-xl: 6px 6px 14px var(--elevation-shadow-dark), -6px -6px 14px var(--elevation-shadow-light);
+  --shadow-neu-inset-xs: inset 2px 2px 5px var(--elevation-shadow-dark), inset -2px -2px 5px var(--elevation-shadow-light);
+  --shadow-neu-inset-sm: inset 4px 4px 10px var(--elevation-shadow-dark), inset -4px -4px 10px var(--elevation-shadow-light);
+  --shadow-neu-inset-md: inset 5px 5px 10px var(--elevation-shadow-dark), inset -5px -5px 10px var(--elevation-shadow-light);
+  --shadow-neu-inset-lg: inset 8px 8px 16px var(--elevation-shadow-dark), inset -8px -8px 16px var(--elevation-shadow-light);
 }
