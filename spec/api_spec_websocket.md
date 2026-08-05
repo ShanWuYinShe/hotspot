@@ -169,7 +169,7 @@ WebSocket close code 受 RFC 6455 约束（范围 1000-4999），应用层错误
 HTTP API 返回的数据可能与 WebSocket 推送的事件重复（resume 续传或补拉都可能产生）。去重方式按资源主键执行（参见 `api_spec_base.md`）：
 
 - **持久化事件**：去重规则分两类：
-  - **携带 `notify_id` 的事件**（关注/瞬间互动/群邀请申请/系统公告/reaction）：客户端按 `notify_id` 去重——它与 HTTP `notify/list` 返回的 `NotifyItem.notify_id` 为同一主键（见 api_spec_notify.md）。
+  - **携带 `notify_id` 的事件**（关注/瞬间互动/群邀请申请/群聊 @/系统公告/reaction）：客户端按 `notify_id` 去重——它与 HTTP `notify/list` 返回的 `NotifyItem.notify_id` 为同一主键（见 api_spec_notify.md）。
   - **其它持久化事件**（消息等）：按业务主键或稳定组合键去重（如 `message_id`、`comment_id`）。resume 续传的事件携带单调递增的 `server_seq`，客户端也可按 seq 去重。
 - **状态快照事件**：直接覆盖（保留最新状态），无需去重。
 
@@ -652,6 +652,8 @@ type GroupMessageReadCountUpdatedEvent = { type: "GroupMessageReadCountUpdated";
 
 // 群聊消息中被 @（对 mentions 中的每个被 @ 用户分别推送 + 落库通知）
 // 与私聊/瞬间 @ 的 MessageMentioned 对应，群聊 @ 走独立事件（target 是群消息）
+// 自动推送（无需订阅该群频道）——基于 @ 关系推送，与私聊消息同机制；被 @ 者即使
+// 未订阅该群也能收到此事件（@ 是主动提及，不属于群频道被动内容）
 interface GroupMessageMentionedPayload {
   notify_id: string;
   group_id: string;
