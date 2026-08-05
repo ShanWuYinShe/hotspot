@@ -228,6 +228,11 @@
     }
   }
 
+  /* 无图卡片占位：accent 渐隐到 surface（MomentCard/GroupCard/UserCard 封面统一） */
+  .surface-accent-gradient {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent-default) 20%, var(--surface-primary)) 0%, color-mix(in srgb, var(--accent-default) 6%, var(--surface-primary)) 100%);
+  }
+
   .surface-ghost {
     background-color: transparent;
     border: 1px solid transparent;

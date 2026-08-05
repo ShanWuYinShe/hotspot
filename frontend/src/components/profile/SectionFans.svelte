@@ -111,7 +111,7 @@
 								<div class="flex items-center gap-2">
 									<span class="text-text-primary text-[13px]">{f.name}</span>
 									{#if isMutual}
-										<span class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-status-online text-[10px]" style="background:color-mix(in srgb, var(--status-online) 12%, transparent);">
+										<span class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-status-online text-[10px]" style="background:var(--color-online-bg);">
 											<Check style="width:9px;height:9px;" strokeWidth={2.5} />
 											互关
 										</span>
@@ -163,7 +163,7 @@
 								<div class="flex items-center gap-2">
 									<span class="text-text-primary text-[13px]">{f.name}</span>
 									{#if isMutual}
-										<span class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-status-online text-[10px]" style="background:color-mix(in srgb, var(--status-online) 12%, transparent);">
+										<span class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-status-online text-[10px]" style="background:var(--color-online-bg);">
 											<Check style="width:9px;height:9px;" strokeWidth={2.5} />
 											互关
 										</span>

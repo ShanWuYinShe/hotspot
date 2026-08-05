@@ -50,7 +50,7 @@
 		<button
 			type="button"
 			class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none bg-surface-primary"
-			style="width:32px;height:32px;box-shadow:3px 3px 7px var(--elevation-shadow-dark), -3px -3px 7px var(--elevation-shadow-light);border:1px solid var(--border-default);"
+			style="width:32px;height:32px;box-shadow:var(--shadow-neu-xs);border:1px solid var(--border-default);"
 			onclick={onClose}
 		>
 			<X style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={2} />
@@ -65,7 +65,7 @@
 				class="hover-btn flex items-center gap-2 px-4 py-2 rounded-full outline-none {tab === t.id ? 'bg-accent-default text-white' : 'bg-surface-primary text-text-secondary'}"
 				style={tab === t.id
 					? 'font-size:13px;font-weight:500;box-shadow:0 4px 12px var(--glow-accent);'
-					: 'font-size:13px;box-shadow:3px 3px 7px var(--elevation-shadow-dark), -3px -3px 7px var(--elevation-shadow-light);border:1px solid var(--border-default);'}
+					: 'font-size:13px;box-shadow:var(--shadow-neu-xs);border:1px solid var(--border-default);'}
 				onclick={() => {
 					tab = t.id as Tab;
 					searchQ = '';
@@ -105,7 +105,7 @@
 							type="button"
 							class="hover-btn tap-92 flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none flex-shrink-0 {addedIds.has(u.id) ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-white'}"
 							style={addedIds.has(u.id)
-								? 'box-shadow:inset 2px 2px 5px var(--elevation-shadow-dark), inset -2px -2px 5px var(--elevation-shadow-light);border:1px solid var(--border-strong);font-size:11px;'
+								? 'box-shadow:var(--shadow-neu-inset-xs);border:1px solid var(--border-strong);font-size:11px;'
 								: 'font-size:11px;box-shadow:0 3px 8px var(--glow-accent);'}
 							onclick={() => {
 								const n = new Set(addedIds);
@@ -130,7 +130,7 @@
 				<button
 					type="button"
 					class="hover-card flex items-center gap-3.5 px-3 py-3 rounded-relaxed w-full outline-none text-left mb-3 bg-surface-primary"
-					style="box-shadow:5px 5px 12px var(--elevation-shadow-dark), -5px -5px 12px var(--elevation-shadow-light);border:1px solid var(--border-default);"
+					style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--border-default);"
 					onclick={() => {
 						onClose();
 						onCreateGroup?.();

@@ -34,7 +34,7 @@
 			<div>
 				<div class="flex items-center gap-2.5">
 					<span class="text-text-primary text-[15px]">好友</span>
-					<div class="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px]" style="background:color-mix(in srgb, var(--status-online) 13%, transparent);border:1px solid color-mix(in srgb, var(--status-online) 24%, transparent);">
+					<div class="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px]" style="background:var(--color-online-bg);border:1px solid color-mix(in srgb, var(--status-online) 24%, transparent);">
 						<div class="bg-status-online" style="width:6px;height:6px;border-radius:50%;"></div>
 						<span class="text-status-online">{onlineCount} 在线</span>
 					</div>
@@ -131,7 +131,7 @@
 		<button
 			type="button"
 			class="hover-btn flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full outline-none tap-93 bg-surface-primary text-text-secondary text-[11px]"
-			style="border:1px solid var(--border-default);box-shadow:3px 3px 6px var(--elevation-shadow-dark), -3px -3px 6px var(--elevation-shadow-light);"
+			style="border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);"
 			onclick={(e) => {
 				e.stopPropagation();
 				void goto(`${ROUTES.user(f.id)}?from=relationships`);

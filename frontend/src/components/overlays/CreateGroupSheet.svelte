@@ -87,7 +87,7 @@
 			type="button"
 			onclick={onClose}
 			class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none bg-surface-primary"
-			style="width:32px;height:32px;box-shadow:3px 3px 7px var(--elevation-shadow-dark), -3px -3px 7px var(--elevation-shadow-light);border:1px solid var(--border-default);"
+			style="width:32px;height:32px;box-shadow:var(--shadow-neu-xs);border:1px solid var(--border-default);"
 		>
 			<X style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={2} />
 		</button>
@@ -121,7 +121,7 @@
 				<button
 					type="button"
 					class="hover-btn flex flex-col items-center justify-center gap-2 rounded-feature outline-none bg-surface-primary"
-					style="width:100%;height:110px;box-shadow:inset 4px 4px 10px var(--elevation-shadow-dark), inset -4px -4px 10px var(--elevation-shadow-light);border:2px dashed var(--border-default);"
+					style="width:100%;height:110px;box-shadow:var(--shadow-neu-inset-sm);border:2px dashed var(--border-default);"
 				>
 					<Camera style="width:26px;height:26px;color:var(--text-secondary);" strokeWidth={1.25} />
 					<span class="text-[12px] text-text-secondary">添加封面图片</span>
@@ -171,7 +171,7 @@
 							class="hover-btn px-3.5 py-1.5 rounded-full outline-none text-[12px] {category === cat ? 'bg-accent-default text-white font-medium' : 'bg-surface-primary text-text-secondary'}"
 							style={category === cat
 								? 'box-shadow:0 3px 8px var(--glow-accent);'
-								: 'box-shadow:3px 3px 7px var(--elevation-shadow-dark), -3px -3px 7px var(--elevation-shadow-light);border:1px solid var(--border-default);'}
+								: 'box-shadow:var(--shadow-neu-xs);border:1px solid var(--border-default);'}
 						>
 							{cat}
 						</button>
@@ -182,7 +182,7 @@
 			<!-- Privacy toggle -->
 			<div
 				class="flex items-center justify-between px-4 py-3.5 rounded-relaxed bg-surface-primary"
-				style="box-shadow:5px 5px 12px var(--elevation-shadow-dark), -5px -5px 12px var(--elevation-shadow-light);border:1px solid var(--border-default);"
+				style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--border-default);"
 			>
 				<div class="flex items-center gap-3">
 					{#if isPrivate}
@@ -208,7 +208,7 @@
 			<!-- Approval toggle（requires_approval：审核通过后才算真正加入） -->
 			<div
 				class="flex items-center justify-between px-4 py-3.5 rounded-relaxed bg-surface-primary"
-				style="box-shadow:5px 5px 12px var(--elevation-shadow-dark), -5px -5px 12px var(--elevation-shadow-light);border:1px solid var(--border-default);"
+				style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--border-default);"
 			>
 				<div class="flex items-center gap-3">
 					<Check style="width:18px;height:18px;color:{requiresApproval ? 'var(--accent-default)' : 'var(--text-secondary)'};" strokeWidth={1.5} />
@@ -230,7 +230,7 @@
 			<!-- Location -->
 			<div
 				class="flex items-center gap-2.5 px-4 py-3 rounded-relaxed bg-surface-primary"
-				style="box-shadow:5px 5px 12px var(--elevation-shadow-dark), -5px -5px 12px var(--elevation-shadow-light);border:1px solid var(--border-default);"
+				style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--border-default);"
 			>
 				<MapPin style="width:16px;height:16px;color:var(--accent-default);flex-shrink:0;" strokeWidth={1.5} />
 				<div class="flex-1 min-w-0">
@@ -250,7 +250,7 @@
 				onclick={() => void handleCreate()}
 				disabled={!canCreate || creating}
 				class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-panel outline-none text-[15px] font-medium {canCreate && !creating ? 'bg-accent-default text-white' : 'bg-surface-primary text-text-secondary'}"
-				style="box-shadow:{canCreate && !creating ? '0 6px 22px var(--glow-accent)' : 'inset 4px 4px 10px var(--elevation-shadow-dark), inset -4px -4px 10px var(--elevation-shadow-light)'};border:{canCreate && !creating ? 'none' : '1px solid var(--border-default)'};transition:all 0.22s ease;cursor:{canCreate && !creating ? 'pointer' : 'not-allowed'};"
+				style="box-shadow:{canCreate && !creating ? '0 6px 22px var(--glow-accent)' : 'var(--shadow-neu-inset-sm)'};border:{canCreate && !creating ? 'none' : '1px solid var(--border-default)'};transition:all 0.22s ease;cursor:{canCreate && !creating ? 'pointer' : 'not-allowed'};"
 			>
 				{creating ? '创建中…' : '创建群组'}
 			</button>

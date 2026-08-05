@@ -169,7 +169,7 @@
 			<button
 				type="button"
 				class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 bg-surface-primary"
-				style="width:36px;height:36px;box-shadow:4px 4px 9px var(--elevation-shadow-dark), -4px -4px 9px var(--elevation-shadow-light);border:1px solid var(--border-default);"
+				style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
 				onclick={onBack}
 			>
 				<ArrowLeft style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
@@ -182,7 +182,7 @@
 			name={groupName}
 			size={compact ? 34 : 38}
 			shape="rounded"
-			style="border:1.5px solid var(--border-default);box-shadow:3px 3px 7px var(--elevation-shadow-dark), -3px -3px 7px var(--elevation-shadow-light);"
+			style="border:1.5px solid var(--border-default);box-shadow:var(--shadow-neu-xs);"
 		/>
 
 		<!-- Name + status -->
@@ -225,7 +225,7 @@
 							class="{msg.sent ? 'bg-accent-default' : 'bg-surface-primary'}"
 							style="max-width:76%;padding:10px 14px;border-radius:{msg.sent ? '18px 4px 18px 18px' : '4px 18px 18px 18px'};{msg.sent
 								? 'box-shadow:0 4px 14px var(--glow-accent);'
-								: 'box-shadow:4px 4px 10px var(--elevation-shadow-dark), -4px -4px 10px var(--elevation-shadow-light);border:1px solid var(--border-default);'}"
+								: 'box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);'}"
 						>
 							<p class="{msg.sent ? 'text-white' : 'text-text-primary'}" style="font-size:13px;line-height:1.55;">
 								{msg.text}
@@ -268,7 +268,7 @@
 		<button
 			type="button"
 			class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'}"
-			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? '0 4px 14px var(--glow-accent)' : '4px 4px 8px var(--elevation-shadow-dark), -4px -4px 8px var(--elevation-shadow-light)'};border:1px solid var(--border-default);"
+			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? '0 4px 14px var(--glow-accent)' : 'var(--shadow-neu-md)'};border:1px solid var(--border-default);"
 			onclick={() => void chat.handleSend()}
 		>
 			<Send style="width:14px;height:14px;color:{chat.inputVal.trim() ? 'var(--text-on-accent)' : 'var(--text-secondary)'};transform:translateX(1px);" strokeWidth={2} />

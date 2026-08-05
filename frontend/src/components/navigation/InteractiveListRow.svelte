@@ -42,7 +42,7 @@
 	const rowOpacity = $derived(onClick && isPressed ? 0.84 : 1);
 
 	const isCard = $derived(tone === 'card');
-	const baseCardShadow = '5px 5px 12px var(--elevation-shadow-dark), -5px -5px 12px var(--elevation-shadow-light)';
+	const baseCardShadow = 'var(--shadow-neu-lg)';
 	const rowStyle = $derived.by(() => {
 		const parts: string[] = [];
 		if (style) parts.push(style);

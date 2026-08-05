@@ -308,7 +308,7 @@
 						<button
 							type="button"
 							class="hover-btn outline-none flex items-center justify-center rounded-full bg-surface-primary"
-							style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:3px 3px 7px var(--elevation-shadow-dark), -3px -3px 7px var(--elevation-shadow-light);"
+							style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);"
 							onclick={() => (selectedPin = null)}
 						>
 							<X style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={2} />

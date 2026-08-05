@@ -39,7 +39,7 @@
 				? '0 6px 16px rgba(129,140,248,0.22), 0 2px 6px rgba(129,140,248,0.12)'
 				: '0 6px 16px rgba(99,102,241,0.18), 0 2px 6px rgba(99,102,241,0.10)';
 		}
-		return '5px 5px 12px var(--elevation-shadow-dark), -5px -5px 12px var(--elevation-shadow-light)';
+		return 'var(--shadow-neu-lg)';
 	});
 
 	const hoverScale = $derived(showHover ? (theme.theme === 'forest' ? 1.08 : 1.14) : 1);

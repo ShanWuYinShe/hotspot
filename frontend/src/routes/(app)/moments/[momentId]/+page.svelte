@@ -270,7 +270,7 @@
 			<button
 				type="button"
 				class="hover-btn tap-88 flex items-center justify-center rounded-full outline-none flex-shrink-0"
-				style="width:36px;height:36px;background:{input.trim() ? 'var(--accent-default)' : 'var(--surface-primary)'};box-shadow:{input.trim() ? '0 4px 14px var(--glow-accent)' : '4px 4px 8px var(--elevation-shadow-dark), -4px -4px 8px var(--elevation-shadow-light)'};border:1px solid var(--border-default);transition:all 0.2s;"
+				style="width:36px;height:36px;background:{input.trim() ? 'var(--accent-default)' : 'var(--surface-primary)'};box-shadow:{input.trim() ? '0 4px 14px var(--glow-accent)' : 'var(--shadow-neu-md)'};border:1px solid var(--border-default);transition:all 0.2s;"
 				onclick={() => void handleComment()}
 			>
 				<Send style="width:14px;height:14px;color:{input.trim() ? 'var(--text-on-accent)' : 'var(--text-secondary)'};transform:translateX(1px);" strokeWidth={2} />

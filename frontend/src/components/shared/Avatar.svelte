@@ -47,7 +47,7 @@
 	{:else}
 		<span
 			class="flex h-full w-full items-center justify-center"
-			style="font-size:{Math.round(size * 0.42)}px;color:var(--text-secondary);background:color-mix(in srgb, var(--accent-fill) 8%, var(--surface-primary));"
+			style="font-size:{Math.round(size * 0.42)}px;color:var(--text-secondary);background:var(--color-accent-bg);"
 		>
 			{initial}
 		</span>

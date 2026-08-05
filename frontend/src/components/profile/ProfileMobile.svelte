@@ -108,7 +108,7 @@
 				style="background:var(--surface-primary);"
 				onclick={() => void goto(ROUTES.meSection(item.section))}
 			>
-				<span class="flex shrink-0 items-center justify-center" style="width:32px;height:32px;background:color-mix(in srgb, var(--accent-default) 6%, var(--surface-primary));color:var(--accent-default);">
+				<span class="flex shrink-0 items-center justify-center" style="width:32px;height:32px;background:var(--color-accent-bg);color:var(--accent-default);">
 					<item.icon style="width:16px;height:16px;" strokeWidth={1.8} />
 				</span>
 				<span class="min-w-0 flex-1">

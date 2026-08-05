@@ -34,7 +34,7 @@
 			<button
 				type="button"
 				class="card-hover tap-94 group flex min-h-[148px] w-full overflow-hidden rounded-relaxed border text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
-				style="background:var(--surface-primary);border-color:var(--border-default);box-shadow:5px 5px 12px var(--elevation-shadow-dark), -5px -5px 12px var(--elevation-shadow-light);"
+				style="background:var(--surface-primary);border-color:var(--border-default);box-shadow:var(--shadow-neu-lg);"
 				aria-label={`进入群组：${g.name}`}
 				onclick={() => void goto(`${ROUTES.group(g.id)}?from=me`)}
 			>

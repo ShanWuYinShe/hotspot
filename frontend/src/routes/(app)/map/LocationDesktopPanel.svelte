@@ -57,7 +57,7 @@
 			<button
 				type="button"
 				class="hover-btn flex items-center justify-center rounded-full outline-none flex-shrink-0 circle-hover bg-surface-primary"
-				style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:4px 4px 9px var(--elevation-shadow-dark), -4px -4px 9px var(--elevation-shadow-light);"
+				style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-md);"
 				onclick={onReset}
 			>
 				<Crosshair style="width:15px;height:15px;color:var(--accent-default);" strokeWidth={1.75} />
@@ -209,7 +209,7 @@
 					<button
 						type="button"
 						class="bg-surface-primary flex w-full items-center gap-3 rounded-[16px] p-3.5 text-left outline-none transition-[background-color,box-shadow,transform] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:scale-[0.97] active:duration-100"
-						style="box-shadow:{isSelected ? '0 0 0 1px var(--accent-border), 4px 4px 10px var(--elevation-shadow-dark), -4px -4px 10px var(--elevation-shadow-light)' : '4px 4px 10px var(--elevation-shadow-dark), -4px -4px 10px var(--elevation-shadow-light)'};border:1px solid {isSelected ? 'var(--accent-border)' : 'var(--border-default)'};"
+						style="box-shadow:{isSelected ? '0 0 0 1px var(--accent-border), var(--shadow-neu-md)' : 'var(--shadow-neu-md)'};border:1px solid {isSelected ? 'var(--accent-border)' : 'var(--border-default)'};"
 						aria-pressed={isSelected}
 						onclick={() => onSelectLoc(loc)}
 					>
@@ -244,11 +244,11 @@
 					<button
 						type="button"
 						class="bg-surface-primary flex w-full items-center gap-3 rounded-[16px] p-3.5 text-left outline-none transition-[background-color,box-shadow,transform] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:scale-[0.97] active:duration-100"
-						style="box-shadow:4px 4px 10px var(--elevation-shadow-dark), -4px -4px 10px var(--elevation-shadow-light);border:1px solid var(--border-default);"
+						style="box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
 						aria-pressed={isSelected}
 						onclick={() => onSelectLoc(loc)}
 					>
-						<div class="flex items-center justify-center rounded-full flex-shrink-0 bg-surface-primary" style="width:44px;height:44px;box-shadow:3px 3px 7px var(--elevation-shadow-dark), -3px -3px 7px var(--elevation-shadow-light);border:1px solid var(--border-default);font-size:20px;">
+						<div class="flex items-center justify-center rounded-full flex-shrink-0 bg-surface-primary" style="width:44px;height:44px;box-shadow:var(--shadow-neu-xs);border:1px solid var(--border-default);font-size:20px;">
 							{loc.emoji}
 						</div>
 						<div class="flex-1 min-w-0">
@@ -273,7 +273,7 @@
 <!-- Confirm -->
 <div style="flex-shrink:0;padding:10px 12px 16px;border-top:1px solid var(--border-default);">
 	{#if selectedLoc}
-		<div class="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-[13px] bg-surface-primary" style="box-shadow:0 0 0 1px var(--border-default), inset 2px 2px 5px var(--elevation-shadow-dark), inset -2px -2px 5px var(--elevation-shadow-light);">
+		<div class="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-[13px] bg-surface-primary" style="box-shadow:0 0 0 1px var(--border-default), var(--shadow-neu-inset-xs);">
 			<Check style="width:13px;height:13px;color:var(--accent-default);flex-shrink:0;" strokeWidth={2.5} />
 			<p class="flex-1 truncate text-accent-default text-xs">{selectedLoc.displayName}</p>
 			<button

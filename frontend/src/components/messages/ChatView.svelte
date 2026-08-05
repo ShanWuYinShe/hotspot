@@ -186,7 +186,7 @@
 			<button
 				type="button"
 				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none flex-shrink-0 bg-surface-primary"
-				style="width:36px;height:36px;box-shadow:4px 4px 9px var(--elevation-shadow-dark), -4px -4px 9px var(--elevation-shadow-light);border:1px solid var(--border-default);"
+				style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
 				onclick={onBack}
 			>
 				<ArrowLeft style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
@@ -198,7 +198,7 @@
 			src={contact?.avatar}
 			name={peerName}
 			size={compact ? 34 : 38}
-			style="border:1.5px solid var(--border-default);box-shadow:3px 3px 7px var(--elevation-shadow-dark), -3px -3px 7px var(--elevation-shadow-light);"
+			style="border:1.5px solid var(--border-default);box-shadow:var(--shadow-neu-xs);"
 		>
 			{#snippet badge()}
 				{#if onlineNow}
@@ -231,7 +231,7 @@
 				<button
 					type="button"
 					class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none bg-surface-primary"
-					style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:4px 4px 9px var(--elevation-shadow-dark), -4px -4px 9px var(--elevation-shadow-light);border:1px solid var(--border-default);"
+					style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
 				>
 					<Icon style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={1.5} />
 				</button>
@@ -239,7 +239,7 @@
 			<button
 				type="button"
 				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none bg-surface-primary"
-				style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:4px 4px 9px var(--elevation-shadow-dark), -4px -4px 9px var(--elevation-shadow-light);border:1px solid var(--border-default);"
+				style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
 			>
 				<MoreHorizontal style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</button>
@@ -253,7 +253,7 @@
 			<div class="flex h-full flex-col items-center justify-center gap-2 px-6" style="min-height:240px;">
 				<div
 					class="flex items-center justify-center rounded-full"
-					style="width:56px;height:56px;border:1px solid var(--border-default);box-shadow:6px 6px 14px var(--elevation-shadow-dark), -6px -6px 14px var(--elevation-shadow-light);"
+					style="width:56px;height:56px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xl);"
 				>
 					<MessageCircle style="width:22px;height:22px;color:var(--text-secondary);" strokeWidth={1.5} />
 				</div>
@@ -275,7 +275,7 @@
 						class="{msg.sent ? 'bg-accent-default' : 'bg-surface-primary'}"
 						style="max-width:76%;padding:10px 14px;border-radius:{msg.sent ? '18px 4px 18px 18px' : '4px 18px 18px 18px'};{msg.sent
 							? 'box-shadow:0 4px 14px var(--glow-accent);'
-							: 'box-shadow:4px 4px 10px var(--elevation-shadow-dark), -4px -4px 10px var(--elevation-shadow-light);border:1px solid var(--border-default);'}"
+							: 'box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);'}"
 					>
 						<p class="{msg.sent ? 'text-white' : 'text-text-primary'}" style="font-size:13px;line-height:1.55;">
 							{msg.text}
@@ -304,7 +304,7 @@
 		<button
 			type="button"
 			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none flex-shrink-0 bg-surface-primary"
-			style="width:36px;height:36px;box-shadow:4px 4px 8px var(--elevation-shadow-dark), -4px -4px 8px var(--elevation-shadow-light);border:1px solid var(--border-default);"
+			style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
 		>
 			<Smile style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 		</button>
@@ -326,7 +326,7 @@
 		<button
 			type="button"
 			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none flex-shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'}"
-			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? '0 4px 14px var(--glow-accent)' : '4px 4px 8px var(--elevation-shadow-dark), -4px -4px 8px var(--elevation-shadow-light)'};border:1px solid var(--border-default);"
+			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? '0 4px 14px var(--glow-accent)' : 'var(--shadow-neu-md)'};border:1px solid var(--border-default);"
 			onclick={() => void chat.handleSend()}
 		>
 			<Send style="width:14px;height:14px;color:{chat.inputVal.trim() ? 'var(--text-on-accent)' : 'var(--text-secondary)'};transform:translateX(1px);" strokeWidth={2} />

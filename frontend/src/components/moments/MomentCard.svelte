@@ -38,12 +38,11 @@
 	<!-- 无图时占位：覆盖在图片层之上（NearbyImageCard 已渲染 item.image，此处仅在无图时遮挡） -->
 	{#if !item.image}
 		<div
-			class="absolute inset-0 z-[1] flex items-center justify-center"
-			style="background:linear-gradient(135deg, color-mix(in srgb, var(--accent-default) 18%, var(--surface-primary)) 0%, color-mix(in srgb, var(--accent-default) 5%, var(--surface-primary)) 100%);"
+			class="surface-accent-gradient absolute inset-0 z-[1] flex items-center justify-center"
 		>
 			<div
 				class="flex items-center justify-center rounded-[14px]"
-				style="width:46px;height:46px;background:color-mix(in srgb, var(--accent-default) 14%, var(--surface-primary));border:1px solid color-mix(in srgb, var(--accent-default) 25%, transparent);box-shadow:0 6px 18px color-mix(in srgb, var(--accent-default) 18%, transparent);"
+				style="width:46px;height:46px;background:var(--color-accent-bg);border:1px solid color-mix(in srgb, var(--accent-default) 25%, transparent);box-shadow:0 6px 18px color-mix(in srgb, var(--accent-default) 18%, transparent);"
 			>
 				<MapPin size={20} class="text-accent-default" strokeWidth={1.5} />
 			</div>

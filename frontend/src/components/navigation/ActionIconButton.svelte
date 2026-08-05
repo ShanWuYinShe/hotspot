@@ -39,7 +39,7 @@
 		} else if (variant === 'ghost') {
 			return `width:${size}px;height:${size}px;background:transparent;border:1px solid transparent;`;
 		}
-		return `width:${size}px;height:${size}px;background:var(--surface-raised);border:1px solid var(--border-subtle);box-shadow:${theme.theme === 'forest' ? 'none' : '4px 4px 9px var(--elevation-shadow-dark), -4px -4px 9px var(--elevation-shadow-light)'};`;
+		return `width:${size}px;height:${size}px;background:var(--surface-raised);border:1px solid var(--border-subtle);box-shadow:${theme.theme === 'forest' ? 'none' : 'var(--shadow-neu-md)'};`;
 	});
 </script>
 

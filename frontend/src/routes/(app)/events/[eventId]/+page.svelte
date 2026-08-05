@@ -124,7 +124,7 @@
 				</div>
 
 				<!-- 发起人 -->
-				<div class="mb-4 flex items-center gap-3 rounded-panel px-4 py-3.5" style="background:var(--surface-primary);box-shadow:5px 5px 12px var(--elevation-shadow-dark), -5px -5px 12px var(--elevation-shadow-light);border:1px solid var(--border-default);">
+				<div class="mb-4 flex items-center gap-3 rounded-panel px-4 py-3.5" style="background:var(--surface-primary);box-shadow:var(--shadow-neu-lg);border:1px solid var(--border-default);">
 					<div class="flex-shrink-0 overflow-hidden rounded-full" style="width:40px;height:40px;border:2px solid {safeEv.color};">
 						<img src={safeEv.host.avatar} alt={safeEv.host.name} class="h-full w-full object-cover" />
 					</div>
@@ -144,7 +144,7 @@
 				<!-- 亮点 -->
 				<div class="mb-5 grid gap-2.5" style="grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));">
 					{#each safeEv.highlights as h}
-						<div class="flex items-center gap-2.5 rounded-control px-3.5 py-3" style="background:var(--surface-primary);box-shadow:4px 4px 10px var(--elevation-shadow-dark), -4px -4px 10px var(--elevation-shadow-light);border:1px solid var(--border-default);">
+						<div class="flex items-center gap-2.5 rounded-control px-3.5 py-3" style="background:var(--surface-primary);box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);">
 							<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width:24px;height:24px;background:color-mix(in srgb, {safeEv.color} 14%, transparent);">
 								<Check style="width:11px;height:11px;color:{safeEv.color};" strokeWidth={2.5} />
 							</div>

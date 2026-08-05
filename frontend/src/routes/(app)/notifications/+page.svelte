@@ -145,7 +145,7 @@ const FILTER_TABS = [
 						<button
 							type="button"
 							class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none bg-surface-primary text-accent-default text-[12px]"
-							style="border:1px solid var(--border-default);box-shadow:3px 3px 8px var(--elevation-shadow-dark), -3px -3px 8px var(--elevation-shadow-light);"
+							style="border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);"
 							onclick={markAllRead}
 						>
 							<CheckCheck style="width:13px;height:13px;" strokeWidth={2} />
@@ -166,7 +166,7 @@ const FILTER_TABS = [
 							class="tap-92 flex-shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default"
 							style={filter === t.id
 								? 'background:var(--accent-default);color:white;font-size:12px;box-shadow:0 3px 10px var(--glow-accent);border:none;'
-								: 'background:var(--surface-primary);color:var(--text-secondary);font-size:12px;border:1px solid var(--border-default);box-shadow:3px 3px 6px var(--elevation-shadow-dark), -3px -3px 6px var(--elevation-shadow-light);'}
+								: 'background:var(--surface-primary);color:var(--text-secondary);font-size:12px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);'}
 						>
 							{t.label}
 						</button>

@@ -179,7 +179,7 @@
 					class="hover-btn px-3.5 py-1.5 rounded-full outline-none transition-all text-[12px] {active ? 'bg-accent-default text-white' : 'bg-surface-primary text-text-secondary'}"
 					style={active
 						? 'box-shadow:0 3px 10px var(--glow-accent);border:none;'
-						: 'border:1px solid var(--border-default);opacity:0.4;box-shadow:3px 3px 6px var(--elevation-shadow-dark), -3px -3px 6px var(--elevation-shadow-light);'}
+						: 'border:1px solid var(--border-default);opacity:0.4;box-shadow:var(--shadow-neu-xs);'}
 					onclick={() => !disabled && toggleTag(t)}
 				>
 					#{t}
@@ -194,7 +194,7 @@
 		<button
 			type="button"
 			class="hover-btn w-full text-left px-4 py-3.5 rounded-[18px] outline-none bg-surface-primary text-status-danger text-[14px]"
-			style="box-shadow:5px 5px 12px var(--elevation-shadow-dark), -5px -5px 12px var(--elevation-shadow-light);border:1px solid var(--border-default);"
+			style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--border-default);"
 		>
 			注销账号
 		</button>

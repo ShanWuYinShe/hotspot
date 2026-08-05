@@ -239,7 +239,7 @@
 						<button
 							type="button"
 							class="hover-btn tap-93 flex items-center gap-1.5 px-3.5 py-2 rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-45 bg-surface-primary text-text-secondary text-xs"
-							style="border:1px solid var(--border-default);box-shadow:4px 4px 10px var(--elevation-shadow-dark), -4px -4px 10px var(--elevation-shadow-light);"
+							style="border:1px solid var(--border-default);box-shadow:var(--shadow-neu-md);"
 							disabled={blocked}
 							onclick={() => !blocked && void goto(ROUTES.message(1))}
 						>
@@ -250,7 +250,7 @@
 							type="button"
 							class="hover-btn tap-93 flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all disabled:cursor-not-allowed disabled:opacity-45 text-xs {followed ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-white'}"
 							style={followed
-								? 'border:1.5px solid var(--accent-default);box-shadow:4px 4px 10px var(--elevation-shadow-dark), -4px -4px 10px var(--elevation-shadow-light);'
+								? 'border:1.5px solid var(--accent-default);box-shadow:var(--shadow-neu-md);'
 								: 'box-shadow:0 4px 14px var(--glow-accent);border:1px solid transparent;'}
 							disabled={blocked}
 							onclick={toggleFollow}
@@ -291,7 +291,7 @@
 				</div>
 
 				<!-- Stats -->
-				<div class="flex gap-0 mt-5 overflow-hidden rounded-[20px] bg-surface-primary" style="box-shadow:0 0 0 1px var(--border-default), 6px 6px 14px var(--elevation-shadow-dark), -6px -6px 14px var(--elevation-shadow-light);">
+				<div class="flex gap-0 mt-5 overflow-hidden rounded-[20px] bg-surface-primary" style="box-shadow:0 0 0 1px var(--border-default), var(--shadow-neu-xl);">
 					<div style="overflow:hidden;border-radius:20px;">
 						{#each [{ label: '瞬间', v: fmtNum(user.moments) }, { label: '粉丝', v: fmtNum(user.followers) }, { label: '关注', v: fmtNum(user.following) }] as s, i}
 							<div class="flex-1 flex flex-col items-center py-4 relative">

@@ -123,7 +123,7 @@
 							aria-pressed={selectedLoc?.displayName === loc.displayName}
 							onclick={() => onSelectLoc(loc)}
 						>
-							<div class="flex items-center justify-center rounded-full flex-shrink-0 bg-surface-primary" style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:3px 3px 6px var(--elevation-shadow-dark), -3px -3px 6px var(--elevation-shadow-light);font-size:18px;">
+							<div class="flex items-center justify-center rounded-full flex-shrink-0 bg-surface-primary" style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);font-size:18px;">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">

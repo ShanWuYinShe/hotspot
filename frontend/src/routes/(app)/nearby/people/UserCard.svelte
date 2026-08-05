@@ -47,8 +47,7 @@
 	<!-- 无头像 / 加载失败：accent 主题渐变占位覆盖在图片层之上 -->
 	{#if avatarFailed || !user.avatar}
 		<div
-			class="absolute inset-0 z-[1] flex items-center justify-center"
-			style="background:linear-gradient(135deg, color-mix(in srgb, var(--accent-default) 24%, var(--surface-primary)) 0%, color-mix(in srgb, var(--accent-default) 8%, var(--surface-primary)) 100%);"
+			class="surface-accent-gradient absolute inset-0 z-[1] flex items-center justify-center"
 		>
 			<span class="text-accent-default text-3xl font-semibold">{Array.from(user.name)[0] ?? '?'}</span>
 		</div>

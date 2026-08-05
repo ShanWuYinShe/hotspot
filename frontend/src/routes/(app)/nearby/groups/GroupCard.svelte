@@ -18,8 +18,7 @@
 	<!-- 无封面时占位：覆盖在图片层之上 -->
 	{#if !group.banner}
 		<div
-			class="absolute inset-0 z-[1] flex items-center justify-center"
-			style="background:linear-gradient(135deg, color-mix(in srgb, var(--accent-default) 20%, var(--surface-primary)) 0%, color-mix(in srgb, var(--accent-default) 6%, var(--surface-primary)) 100%);"
+			class="surface-accent-gradient absolute inset-0 z-[1] flex items-center justify-center"
 		>
 			<span class="text-accent-default text-3xl font-semibold">{Array.from(group.name)[0] ?? '群'}</span>
 		</div>

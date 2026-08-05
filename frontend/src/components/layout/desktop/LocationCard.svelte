@@ -31,7 +31,7 @@
 <button
 	type="button"
 	class="hover-btn card-hover flex items-center outline-none text-left {collapsed ? 'h-10 w-10 self-center justify-center rounded-xl' : 'w-full gap-3 rounded-[16px]'}"
-	style="padding:{collapsed ? 0 : '10px 12px'};background:{hovered ? collapsedHover : collapsed ? 'transparent' : 'var(--surface-primary)'};border:1px solid var(--border-default);box-shadow:{collapsed ? 'none' : '5px 5px 12px var(--elevation-shadow-dark), -5px -5px 12px var(--elevation-shadow-light)'};transform:{hovered ? 'translateY(-2px)' : 'translateY(0)'};transition:background 0.16s ease, transform 0.22s cubic-bezier(0.22,1,0.36,1), box-shadow 0.22s cubic-bezier(0.22,1,0.36,1);"
+	style="padding:{collapsed ? 0 : '10px 12px'};background:{hovered ? collapsedHover : collapsed ? 'transparent' : 'var(--surface-primary)'};border:1px solid var(--border-default);box-shadow:{collapsed ? 'none' : 'var(--shadow-neu-lg)'};transform:{hovered ? 'translateY(-2px)' : 'translateY(0)'};transition:background 0.16s ease, transform 0.22s cubic-bezier(0.22,1,0.36,1), box-shadow 0.22s cubic-bezier(0.22,1,0.36,1);"
 	title={collapsed ? '位置选择' : undefined}
 	aria-label="位置选择"
 	onclick={onClick}
