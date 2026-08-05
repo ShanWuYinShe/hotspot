@@ -13,7 +13,7 @@
 	imageSrc={group.banner ?? group.name}
 	imageAlt={group.name}
 	onClick={onOpen}
-	class="rounded-[18px] aspect-[3/4] surface-flat"
+	class="rounded-relaxed aspect-[3/4] surface-flat"
 >
 	<!-- 无封面时占位：覆盖在图片层之上 -->
 	{#if !group.banner}
@@ -38,12 +38,12 @@
 
 	{#snippet footer()}
 		<div class="p-3">
-			<p class="line-clamp-1 text-text-primary text-[13px] font-semibold">{group.name}</p>
+			<p class="line-clamp-1 text-text-primary text-base font-semibold">{group.name}</p>
 			<!-- stats 行：头像堆叠 + 成员 / 距离（对齐 Figma GroupCard 行序） -->
-			<div class="mt-1 flex items-center justify-between gap-2 text-text-secondary text-[10px]">
+			<div class="mt-1 flex items-center justify-between gap-2 text-text-secondary text-xxs">
 				<div class="flex items-center gap-1.5 min-w-0">
 					{#if group.avatars.length > 0}
-						<div class="flex -space-x-2 flex-shrink-0">
+						<div class="flex -space-x-2 shrink-0">
 							{#each group.avatars as avatar, index (index)}
 								<img src={avatar} alt="群成员" class="w-5 h-5 rounded-full object-cover" style="border:1px solid var(--border-card-menu);z-index:{3 - index};" />
 							{/each}
@@ -54,14 +54,14 @@
 						{group.members} 人
 					</span>
 				</div>
-				<span class="flex items-center gap-1 flex-shrink-0 text-accent-default">
+				<span class="flex items-center gap-1 shrink-0 text-accent-default">
 					<MapPin size={10} />
 					{group.distance}
 				</span>
 			</div>
 			<!-- activity 独立行（对齐 Figma：semantic-online 色 + CalendarDays 图标） -->
 			<div class="mt-2 flex items-center justify-between gap-2">
-				<span class="min-w-0 truncate text-status-online text-[10px]">
+				<span class="min-w-0 truncate text-status-online text-xxs">
 					<CalendarDays class="inline mr-1" style="width:10px;height:10px;" />
 					{group.activity}
 				</span>

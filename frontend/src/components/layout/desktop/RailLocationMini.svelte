@@ -11,12 +11,12 @@
 
 <button
 	type="button"
-	class="hover-bg flex items-center gap-2.5 w-full outline-none text-left rounded-[12px] p-2 -m-2"
+	class="hover-bg flex items-center gap-2.5 w-full outline-none text-left rounded-small p-2 -m-2"
 	onclick={() => void goto(ROUTES.map)}
 	onmouseenter={() => (hovered = true)}
 	onmouseleave={() => (hovered = false)}
 >
-	<div class="flex items-center justify-center rounded-full flex-shrink-0" style="width:32px;height:32px;background:var(--accent-soft);">
+	<div class="flex items-center justify-center rounded-full shrink-0" style="width:32px;height:32px;background:var(--accent-soft);">
 		<MapPin style="width:13px;height:13px;color:var(--accent-default);" strokeWidth={1.75} />
 	</div>
 	<div class="flex-1 min-w-0">
@@ -25,5 +25,5 @@
 			<p style="font-size:10px;color:var(--text-secondary);margin-top:1px;" class="truncate">{desc}</p>
 		{/if}
 	</div>
-	<ChevronRight style="width:12px;height:12px;color:var(--text-secondary);flex-shrink:0;" strokeWidth={1.5} />
+	<ChevronRight style="width:12px;height:12px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
 </button>

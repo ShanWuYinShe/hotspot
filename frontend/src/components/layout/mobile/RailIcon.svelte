@@ -50,7 +50,7 @@
 
 <button
 	type="button"
-	class="relative flex flex-col items-center justify-center outline-none rounded-[16px]"
+	class="relative flex flex-col items-center justify-center outline-none rounded-control"
 	style="width:52px;height:52px;gap:3px;background:{hoverBg};box-shadow:{hoverShadow};transform:scale({hoverScale});transition:background 0.16s ease, box-shadow 0.2s cubic-bezier(0.22,1,0.36,1), transform 0.2s cubic-bezier(0.34,1.56,0.64,1);"
 	aria-label={label}
 	aria-current={isActive ? 'page' : undefined}

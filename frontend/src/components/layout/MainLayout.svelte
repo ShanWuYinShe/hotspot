@@ -48,11 +48,11 @@
 	<MobileLandscape>{@render children()}</MobileLandscape>
 {:else}
 	<div
-		class="min-h-[100dvh] w-full flex justify-center items-start font-sans transition-colors duration-500"
+		class="min-h-dvh w-full flex justify-center items-start font-sans transition-colors duration-500"
 		style="background-color:var(--surface-page);"
 	>
 		<div
-			class={cn('flex flex-col h-[100dvh] w-full', 'transition-colors duration-500 overflow-hidden relative')}
+			class={cn('flex flex-col h-dvh w-full', 'transition-colors duration-500 overflow-hidden relative')}
 			style="background-color:var(--surface-primary);color:var(--text-primary);"
 		>
 			<StatusBar />
@@ -64,7 +64,7 @@
 			{#if !isSubPage}
 				<nav
 					aria-label="Main navigation"
-					class="flex-shrink-0 w-full"
+					class="shrink-0 w-full"
 					style="background:var(--surface-nav-glass);backdrop-filter:blur(24px) saturate(1.8);-webkit-backdrop-filter:blur(24px) saturate(1.8);border-top:1px solid var(--border-nav-glass);box-shadow:var(--elevation-nav);transition:background 0.4s ease, border-color 0.4s ease;"
 				>
 					<div

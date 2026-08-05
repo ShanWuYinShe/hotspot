@@ -33,7 +33,7 @@
 	imageSrc={item.image ?? item.avatar}
 	imageAlt={item.tag}
 	{onClick}
-	class="aspect-[4/3] {hero ? 'rounded-[22px] surface-hero' : 'rounded-[18px] surface-flat'}"
+	class="aspect-[4/3] {hero ? 'rounded-[22px] surface-hero' : 'rounded-relaxed surface-flat'}"
 >
 	<!-- 无图时占位：覆盖在图片层之上（NearbyImageCard 已渲染 item.image，此处仅在无图时遮挡） -->
 	{#if !item.image}
@@ -41,7 +41,7 @@
 			class="surface-accent-gradient absolute inset-0 z-[1] flex items-center justify-center"
 		>
 			<div
-				class="flex items-center justify-center rounded-[14px]"
+				class="flex items-center justify-center rounded-xl"
 				style="width:46px;height:46px;background:var(--color-accent-bg);border:1px solid color-mix(in srgb, var(--accent-default) 25%, transparent);box-shadow:0 6px 18px color-mix(in srgb, var(--accent-default) 18%, transparent);"
 			>
 				<MapPin size={20} class="text-accent-default" strokeWidth={1.5} />
@@ -51,7 +51,7 @@
 
 	<!-- Tag chip -->
 	<div class="absolute top-2.5 left-2.5 z-[2] px-2 py-0.5 rounded-full bg-accent-default" style="box-shadow:0 2px 8px var(--glow-accent);">
-		<span class="text-white text-[10px]">{item.tag}</span>
+		<span class="text-white text-xxs">{item.tag}</span>
 	</div>
 
 	<!-- 底部信息托盘（surface-card-menu，由 NearbyImageCard footer 槽渲染） -->
@@ -60,15 +60,15 @@
 			<!-- 作者行：头像 + 昵称 + 位置 -->
 			<div class="flex min-w-0 items-center gap-2">
 				<Avatar src={item.avatar} name={item.user} size={22} style="border:1.5px solid var(--border-card-menu);" />
-				<span class="truncate text-[11px] text-text-primary" style="font-weight:500;">{item.user}</span>
-				<span class="ml-auto flex min-w-0 items-center gap-0.5 truncate text-[10px]" style="color:var(--text-secondary);">
-					<MapPin style="width:9px;height:9px;flex-shrink:0;color:var(--text-secondary);" strokeWidth={1.5} />
+				<span class="truncate text-xs text-text-primary" style="font-weight:500;">{item.user}</span>
+				<span class="ml-auto flex min-w-0 items-center gap-0.5 truncate text-xxs" style="color:var(--text-secondary);">
+					<MapPin style="width:9px;height:9px;shrink:0;color:var(--text-secondary);" strokeWidth={1.5} />
 					{item.location}
 				</span>
 			</div>
 
 			<!-- 正文：单行省略，muted -->
-			<p class="mt-1 line-clamp-1 leading-[1.55] text-[11px]" style="color:var(--text-secondary);">
+			<p class="mt-1 line-clamp-1 leading-[1.55] text-xs" style="color:var(--text-secondary);">
 				{item.content}
 			</p>
 
@@ -84,9 +84,9 @@
 						}}
 					>
 						<Heart style="width:15px;height:15px;" strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
-						<span class="text-[11px]">{item.likes + (liked ? 1 : 0)}</span>
+						<span class="text-xs">{item.likes + (liked ? 1 : 0)}</span>
 					</button>
-					<span class="flex items-center gap-1.5 text-[11px] text-text-secondary">
+					<span class="flex items-center gap-1.5 text-xs text-text-secondary">
 						<MessageCircle style="width:15px;height:15px;" strokeWidth={1.5} />
 						{item.comments}
 					</span>

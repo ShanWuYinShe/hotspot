@@ -36,16 +36,16 @@
 		{#each searchResults as r}
 			<button
 				type="button"
-				class="app-list-row app-list-row--standard px-5 outline-none transition-[background-color,transform] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:scale-[0.98] active:duration-100"
+				class="app-list-row app-list-row--standard px-5 outline-none transition-[background-color,transform] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:scale-98 active:duration-100"
 				aria-pressed={selectedLoc?.displayName === r.displayName}
 				onclick={() => onSelectLoc(r)}
 			>
-				<div class="flex items-center justify-center rounded-full flex-shrink-0 bg-accent-default" style="width:34px;height:34px;opacity:0.12">
+				<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default" style="width:34px;height:34px;opacity:0.12">
 					<MapPin style="width:14px;height:14px;color:var(--accent-default)" strokeWidth={1.75} />
 				</div>
 				<span class="text-text-primary" style="font-size:14px;flex:1">{r.displayName}</span>
 				{#if selectedLoc?.displayName === r.displayName}
-					<Check style="width:14px;height:14px;color:var(--accent-default);flex-shrink:0" strokeWidth={2.5} />
+					<Check style="width:14px;height:14px;color:var(--accent-default);shrink:0" strokeWidth={2.5} />
 				{/if}
 			</button>
 		{/each}
@@ -61,29 +61,29 @@
 		{#if selectedPin}
 			<div class="flex items-center gap-3 mx-4 mb-2 p-3 rounded-[15px]" style="background:{pinTone(selectedPin.type, 10)};border:1px solid {pinTone(selectedPin.type, 30)};">
 				{#if selectedPin.type === 'user' && selectedPin.avatar}
-					<div class="relative flex-shrink-0">
+					<div class="relative shrink-0">
 						<img src={selectedPin.avatar} alt={selectedPin.name || selectedPin.title || ''} class="rounded-full object-cover" style="width:42px;height:42px;" />
 						{#if selectedPin.online}
 							<span class="absolute bottom-0 right-0 rounded-full bg-status-online" style="width:10px;height:10px;border:2px solid var(--surface-primary);"></span>
 						{/if}
 					</div>
 				{:else if selectedPin.type === 'moment' && selectedPin.image}
-					<img src={selectedPin.image} alt={selectedPin.name || selectedPin.title || ''} class="rounded-[10px] object-cover flex-shrink-0" style="width:42px;height:42px;" />
+					<img src={selectedPin.image} alt={selectedPin.name || selectedPin.title || ''} class="rounded-tight object-cover shrink-0" style="width:42px;height:42px;" />
 				{:else}
-					<img src={getMarkerUrl(selectedPin.type, selectedPin.count ?? 1)} alt="" style="width:22px;height:29px;flex-shrink:0;" />
+					<img src={getMarkerUrl(selectedPin.type, selectedPin.count ?? 1)} alt="" style="width:22px;height:29px;shrink:0;" />
 				{/if}
 				<div class="flex-1 min-w-0">
-					<p class="text-text-primary text-[13px]">{selectedPin.name || selectedPin.title}</p>
+					<p class="text-text-primary text-base">{selectedPin.name || selectedPin.title}</p>
 					<p class="text-text-secondary" style="font-size:11px;margin-top:1px;">
 						{PIN_LABELS[selectedPin.type]}
 						{selectedPin.distance ? ` · ${selectedPin.distance}` : ''}
 						{selectedPin.tag ? ` · #${selectedPin.tag}` : ''}
 					</p>
 				</div>
-				<button type="button" class="hover-btn px-2.5 py-1.5 rounded-full outline-none flex-shrink-0" style="background:{PIN_COLORS[selectedPin.type]};color:white;font-size:11px;" onclick={() => onOpenPinDetail(selectedPin)}>
+				<button type="button" class="hover-btn px-2.5 py-1.5 rounded-full outline-none shrink-0" style="background:{PIN_COLORS[selectedPin.type]};color:white;font-size:11px;" onclick={() => onOpenPinDetail(selectedPin)}>
 					查看
 				</button>
-				<button type="button" class="hover-btn outline-none flex-shrink-0 ml-0.5" onclick={onClearPin}>
+				<button type="button" class="hover-btn outline-none shrink-0 ml-0.5" onclick={onClearPin}>
 					<X style="width:13px;height:13px;color:var(--text-secondary);" strokeWidth={2} />
 				</button>
 			</div>
@@ -119,11 +119,11 @@
 					{#each recentItems as loc}
 						<button
 							type="button"
-							class="app-list-row app-list-row--standard px-4 outline-none transition-[background-color,transform] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:scale-[0.98] active:duration-100"
+							class="app-list-row app-list-row--standard px-4 outline-none transition-[background-color,transform] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:scale-98 active:duration-100"
 							aria-pressed={selectedLoc?.displayName === loc.displayName}
 							onclick={() => onSelectLoc(loc)}
 						>
-							<div class="flex items-center justify-center rounded-full flex-shrink-0 bg-surface-primary" style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);font-size:18px;">
+							<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary" style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);font-size:18px;">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
@@ -131,9 +131,9 @@
 								<p class="text-text-secondary" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
 							</div>
 							{#if selectedLoc?.displayName === loc.displayName}
-								<Check style="width:14px;height:14px;color:var(--accent-default);flex-shrink:0;" strokeWidth={2.5} />
+								<Check style="width:14px;height:14px;color:var(--accent-default);shrink:0;" strokeWidth={2.5} />
 							{:else}
-								<ChevronRight style="width:13px;height:13px;color:var(--border-default);flex-shrink:0;" strokeWidth={1.5} />
+								<ChevronRight style="width:13px;height:13px;color:var(--border-default);shrink:0;" strokeWidth={1.5} />
 							{/if}
 						</button>
 					{/each}
@@ -147,18 +147,18 @@
 					{#each HOT_LOCATIONS as loc}
 						<button
 							type="button"
-							class="app-list-row app-list-row--standard px-4 outline-none transition-[background-color,transform] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:scale-[0.98] active:duration-100"
+							class="app-list-row app-list-row--standard px-4 outline-none transition-[background-color,transform] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:scale-98 active:duration-100"
 							aria-pressed={selectedLoc?.displayName === loc.displayName}
 							onclick={() => onSelectLoc(loc)}
 						>
-							<div class="flex items-center justify-center rounded-[13px] flex-shrink-0 bg-accent-default" style="width:36px;height:36px;font-size:18px;opacity:0.88;">
+							<div class="flex items-center justify-center rounded-[13px] shrink-0 bg-accent-default" style="width:36px;height:36px;font-size:18px;opacity:0.88;">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
 								<p class="truncate text-text-primary text-sm">{loc.displayName}</p>
 								<p class="text-text-secondary" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
 							</div>
-							<div class="flex items-center gap-1 flex-shrink-0">
+							<div class="flex items-center gap-1 shrink-0">
 								<Users style="width:11px;height:11px;color:var(--accent-default);" strokeWidth={1.5} />
 								<span class="text-accent-default text-xs">{loc.users}</span>
 							</div>

@@ -23,7 +23,7 @@
 
 <!-- Dense, horizontally comparable metrics: counts, ratios, and relationship states. -->
 <dl
-	class="grid overflow-hidden rounded-[14px] ring-border {className}"
+	class="grid overflow-hidden rounded-xl ring-border {className}"
 	style="grid-template-columns:repeat({items.length}, minmax(0, 1fr));gap:1px;background:var(--border-default);"
 >
 	{#each items as item (item.label)}
@@ -35,7 +35,7 @@
 					{item.value}
 				{/if}
 			</dd>
-			<dt class="mt-1 truncate text-[11px] text-text-secondary">{item.label}</dt>
+			<dt class="mt-1 truncate text-xs text-text-secondary">{item.label}</dt>
 		</div>
 	{/each}
 </dl>

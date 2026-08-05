@@ -75,7 +75,7 @@
 		<!-- 资料页眉 -->
 		<header class="flex items-start justify-between gap-6 border-b border-border-default pb-5">
 			<div>
-				<p class="text-[11px] font-medium uppercase tracking-[0.14em] text-accent-default">个人资料</p>
+				<p class="text-xs font-medium uppercase tracking-[0.14em] text-accent-default">个人资料</p>
 				<h1 class="mt-2 text-[24px] font-medium tracking-[-0.015em] text-text-primary">管理你的公开信息</h1>
 				<p class="mt-1.5 text-sm text-text-secondary">这些资料会展示给访问你主页的人。</p>
 			</div>
@@ -114,7 +114,7 @@
 					<div class="min-w-0 pt-1">
 						<h2 class="text-[22px] font-medium tracking-[-0.01em] text-text-primary">{nickname || '未设置昵称'}</h2>
 						<p class="mt-1 text-sm text-text-secondary">{handle}</p>
-						<p class="mt-4 max-w-[460px] text-sm leading-6 text-text-secondary">{bio || '这个人还没有填写简介。'}</p>
+						<p class="mt-4 max-w-115 text-sm leading-6 text-text-secondary">{bio || '这个人还没有填写简介。'}</p>
 						<p class="mt-3 flex items-center gap-1.5 text-xs text-text-secondary">
 							<MapPin style="width:14px;height:14px;color:var(--accent-default);" strokeWidth={1.8} />
 							{locationName || '未设置位置'}
@@ -146,7 +146,7 @@
 				<div class="mt-5 h-1.5 overflow-hidden bg-border-default">
 					<div class="h-full bg-accent-default" style="width:{filledCount * 20}%;"></div>
 				</div>
-				<p class="mt-2 text-[11px] text-text-secondary">{filledCount} 项基础资料已填写</p>
+				<p class="mt-2 text-xs text-text-secondary">{filledCount} 项基础资料已填写</p>
 				<button
 					type="button"
 					onclick={() => void goto(ROUTES.settings)}
@@ -169,9 +169,9 @@
 					<div
 						class="flex items-start gap-3 px-6 py-4 {index > 1 ? 'border-t border-border-default' : ''} {index % 2 === 1 ? 'md:border-l md:border-border-default' : ''}"
 					>
-						<row.icon style="width:16px;height:16px;margin-top:2px;color:var(--accent-default);flex-shrink:0;" strokeWidth={1.7} />
+						<row.icon style="width:16px;height:16px;margin-top:2px;color:var(--accent-default);shrink:0;" strokeWidth={1.7} />
 						<div class="min-w-0">
-							<dt class="text-[11px] text-text-secondary">{row.label}</dt>
+							<dt class="text-xs text-text-secondary">{row.label}</dt>
 							<dd class="mt-1 text-sm text-text-primary">{row.value}</dd>
 						</div>
 					</div>

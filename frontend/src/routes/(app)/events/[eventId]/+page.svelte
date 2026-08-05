@@ -89,7 +89,7 @@
 {#if ev}
 <SplitPageLayout contentClassName="pb-6">
 	<!-- 全幅封面（负 margin 抵消 SplitPageLayout 的 gutter） -->
-	<div class="relative flex-shrink-0 overflow-hidden -mx-[var(--page-gutter)]" style="height:clamp(200px, 32vw, 280px);">
+	<div class="relative shrink-0 overflow-hidden -mx-[var(--page-gutter)]" style="height:clamp(200px, 32vw, 280px);">
 				<img src={safeEv.cover} alt={safeEv.title} class="absolute inset-0 h-full w-full object-cover" />
 				<div class="absolute inset-0" style="background:linear-gradient(to bottom, transparent 30%, {safeEv.bg} 100%);"></div>
 
@@ -103,7 +103,7 @@
 
 				<!-- 标签 -->
 				<div class="absolute bottom-4 left-4">
-					<span class="rounded-full px-3 py-1 text-white text-[12px]" style="background:{safeEv.color};box-shadow:0 3px 10px {evTone(50)};">{safeEv.tag}</span>
+					<span class="rounded-full px-3 py-1 text-white text-sm" style="background:{safeEv.color};box-shadow:0 3px 10px {evTone(50)};">{safeEv.tag}</span>
 				</div>
 			</div>
 
@@ -115,27 +115,27 @@
 				<div class="mb-5 flex flex-col gap-2">
 					{#each [{ icon: Calendar, text: safeEv.date }, { icon: Clock, text: safeEv.time }, { icon: MapPin, text: safeEv.location }] as meta}
 						<div class="flex items-center gap-2.5">
-							<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width:30px;height:30px;background:color-mix(in srgb, {safeEv.color} 14%, transparent);">
+							<div class="flex shrink-0 items-center justify-center rounded-full" style="width:30px;height:30px;background:color-mix(in srgb, {safeEv.color} 14%, transparent);">
 								<meta.icon style="width:13px;height:13px;color:{safeEv.color};" strokeWidth={1.75} />
 							</div>
-							<span class="text-[13px] text-text-secondary">{meta.text}</span>
+							<span class="text-base text-text-secondary">{meta.text}</span>
 						</div>
 					{/each}
 				</div>
 
 				<!-- 发起人 -->
 				<div class="mb-4 flex items-center gap-3 rounded-panel px-4 py-3.5" style="background:var(--surface-primary);box-shadow:var(--shadow-neu-lg);border:1px solid var(--border-default);">
-					<div class="flex-shrink-0 overflow-hidden rounded-full" style="width:40px;height:40px;border:2px solid {safeEv.color};">
+					<div class="shrink-0 overflow-hidden rounded-full" style="width:40px;height:40px;border:2px solid {safeEv.color};">
 						<img src={safeEv.host.avatar} alt={safeEv.host.name} class="h-full w-full object-cover" />
 					</div>
 					<div class="flex-1">
-						<p class="text-[13px] text-text-primary">{safeEv.host.name}</p>
+						<p class="text-base text-text-primary">{safeEv.host.name}</p>
 						<div class="flex items-center gap-1">
 							<Star style="width:10px;height:10px;color:var(--status-warning);" fill="var(--status-warning)" strokeWidth={1.5} />
-							<span class="text-[11px] text-text-secondary">活动发起人</span>
+							<span class="text-xs text-text-secondary">活动发起人</span>
 						</div>
 					</div>
-					<button type="button" class="hover-btn tap-93 rounded-full px-3 py-1.5 text-white text-[12px] outline-none" style="background:{safeEv.color};box-shadow:0 3px 10px {evTone(40)};">关注</button>
+					<button type="button" class="hover-btn tap-93 rounded-full px-3 py-1.5 text-white text-sm outline-none" style="background:{safeEv.color};box-shadow:0 3px 10px {evTone(40)};">关注</button>
 				</div>
 
 				<!-- 描述 -->
@@ -145,10 +145,10 @@
 				<div class="mb-5 grid gap-2.5" style="grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));">
 					{#each safeEv.highlights as h}
 						<div class="flex items-center gap-2.5 rounded-control px-3.5 py-3" style="background:var(--surface-primary);box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);">
-							<div class="flex flex-shrink-0 items-center justify-center rounded-full" style="width:24px;height:24px;background:color-mix(in srgb, {safeEv.color} 14%, transparent);">
+							<div class="flex shrink-0 items-center justify-center rounded-full" style="width:24px;height:24px;background:color-mix(in srgb, {safeEv.color} 14%, transparent);">
 								<Check style="width:11px;height:11px;color:{safeEv.color};" strokeWidth={2.5} />
 							</div>
-							<span class="text-[12px] text-text-primary">{h}</span>
+							<span class="text-sm text-text-primary">{h}</span>
 						</div>
 					{/each}
 				</div>
@@ -158,7 +158,7 @@
 					<div class="mb-3 flex items-center justify-between">
 						<p class="text-[14px] text-text-primary">参与者 · {safeEv.participants.length}/{safeEv.maxParticipants}</p>
 						<button type="button" class="hover-btn tap-93 flex items-center gap-0.5 outline-none" style="color:var(--accent-default);" onclick={() => (showParticipants = true)}>
-							<span class="text-[12px]">查看全部</span>
+							<span class="text-sm">查看全部</span>
 							<ChevronRight style="width:13px;height:13px;" strokeWidth={1.5} />
 						</button>
 					</div>
@@ -177,23 +177,23 @@
 						{/each}
 						{#if safeEv.maxParticipants - safeEv.participants.length > 0}
 							<div class="flex items-center justify-center rounded-full" style="width:36px;height:36px;border:2px solid var(--surface-primary);margin-left:-10px;background:{evTone(18)};">
-								<span class="text-[11px] font-semibold" style="color:{safeEv.color};">+{safeEv.maxParticipants - safeEv.participants.length}</span>
+								<span class="text-xs font-semibold" style="color:{safeEv.color};">+{safeEv.maxParticipants - safeEv.participants.length}</span>
 							</div>
 						{/if}
-						<span class="ml-2 text-[12px] text-text-secondary">已报名</span>
+						<span class="ml-2 text-sm text-text-secondary">已报名</span>
 					</div>
 				</div>
 
 				<!-- 距离信息 -->
 				<div class="flex items-center gap-2 rounded-control px-4 py-3" style="background:{evTone(10)};border:1px solid {evTone(25)};">
 					<MapPin style="width:14px;height:14px;color:{safeEv.color};" strokeWidth={1.5} />
-					<span class="text-[13px] text-text-secondary">距你 {safeEv.distance} · 步行约 {walkMinutes} 分钟</span>
+					<span class="text-base text-text-secondary">距你 {safeEv.distance} · 步行约 {walkMinutes} 分钟</span>
 				</div>
 	</div>
 
 	{#snippet footer()}
 		<!-- sticky 底部 CTA（按钮保持 640px 阅读宽度，页面布局全宽） -->
-		<div class="flex-shrink-0 px-[var(--page-gutter)] pb-6 pt-3" style="background-color:var(--surface-primary);border-top:1px solid var(--border-default);">
+		<div class="shrink-0 px-[var(--page-gutter)] pb-6 pt-3" style="background-color:var(--surface-primary);border-top:1px solid var(--border-default);">
 			<div class="mx-auto w-full" style="max-width:640px;">
 			<button
 				type="button"
@@ -220,7 +220,7 @@
 	<RailSection title="活动发起人">
 		<RailUserRow avatar={safeEv.host.avatar} name={safeEv.host.name} sub="活动发起人">
 			{#snippet trailing()}
-				<button type="button" class="hover-btn flex-shrink-0 rounded-full px-2.5 py-1 text-white text-[11px] outline-none" style="background:{safeEv.color};">关注</button>
+				<button type="button" class="hover-btn shrink-0 rounded-full px-2.5 py-1 text-white text-xs outline-none" style="background:{safeEv.color};">关注</button>
 			{/snippet}
 		</RailUserRow>
 	</RailSection>
@@ -264,7 +264,7 @@
 		<header class="flex items-center gap-3 px-5 py-4" style="border-bottom:1px solid var(--border-default);">
 			<div class="flex-1">
 				<p class="text-[16px] font-semibold text-text-primary">报名名单</p>
-				<p class="mt-0.5 text-[11px] text-text-secondary">{safeEv.participants.length} 人已报名 · 还可加入 {safeEv.maxParticipants - safeEv.participants.length} 人</p>
+				<p class="mt-0.5 text-xs text-text-secondary">{safeEv.participants.length} 人已报名 · 还可加入 {safeEv.maxParticipants - safeEv.participants.length} 人</p>
 			</div>
 			<Dialog.Close class="surface-ghost flex items-center justify-center rounded-full outline-none" style="width:32px;height:32px;" aria-label="关闭报名名单">
 				<X size={16} color="var(--text-secondary)" />
@@ -274,18 +274,18 @@
 			<div class="flex items-center gap-3 py-3" style="border-bottom:1px solid var(--border-default);">
 				<img src={safeEv.host.avatar} alt={safeEv.host.name} class="h-10 w-10 rounded-full object-cover" style="border:2px solid {safeEv.color};" />
 				<div class="flex-1">
-					<p class="text-[13px] font-semibold text-text-primary">{safeEv.host.name}</p>
-					<p class="mt-0.5 text-[11px] text-text-secondary">活动发起人</p>
+					<p class="text-base font-semibold text-text-primary">{safeEv.host.name}</p>
+					<p class="mt-0.5 text-xs text-text-secondary">活动发起人</p>
 				</div>
-				<span class="rounded-full px-2 py-1 text-[10px]" style="color:{safeEv.color};background:{evTone(12)};">发起人</span>
+				<span class="rounded-full px-2 py-1 text-xxs" style="color:{safeEv.color};background:{evTone(12)};">发起人</span>
 			</div>
 			<EmbeddedList>
 			{#each safeEv.participants as participant (participant.id)}
 				<div class="flex items-center gap-3 py-3">
 					<img src={participant.avatar} alt={participant.name} class="h-10 w-10 rounded-full object-cover" />
 					<div class="flex-1">
-						<p class="text-[13px] text-text-primary">{participant.name}</p>
-						<p class="mt-0.5 text-[11px] text-text-secondary">已报名 · 等待一起见面</p>
+						<p class="text-base text-text-primary">{participant.name}</p>
+						<p class="mt-0.5 text-xs text-text-secondary">已报名 · 等待一起见面</p>
 					</div>
 					<Check size={15} color={safeEv.color} />
 				</div>
@@ -293,7 +293,7 @@
 			</EmbeddedList>
 		</div>
 		<div class="px-5 pb-5 pt-3" style="border-top:1px solid var(--border-default);">
-			<button type="button" onclick={() => (showParticipants = false)} class="w-full rounded-full py-3 text-[13px] font-semibold outline-none" style="background:{evTone(14)};color:{safeEv.color};">知道了</button>
+			<button type="button" onclick={() => (showParticipants = false)} class="w-full rounded-full py-3 text-base font-semibold outline-none" style="background:{evTone(14)};color:{safeEv.color};">知道了</button>
 		</div>
 	</Dialog.Content>
 </Dialog.Root>

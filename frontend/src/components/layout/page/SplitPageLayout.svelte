@@ -45,7 +45,7 @@
 			<!-- 主区：header + 滚动正文 + 固定 footer -->
 			<div class="flex min-w-0 flex-1 flex-col">
 				{#if header}
-					<div class="flex-shrink-0">{@render header()}</div>
+					<div class="shrink-0">{@render header()}</div>
 				{/if}
 				<div class="no-scrollbar min-h-0 flex-1 overflow-y-auto">
 					<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>
@@ -53,14 +53,14 @@
 					</ContentColumn>
 				</div>
 				{#if footer}
-					<div class="flex-shrink-0">{@render footer()}</div>
+					<div class="shrink-0">{@render footer()}</div>
 				{/if}
 			</div>
 			<ContextRail attached>{@render rail()}</ContextRail>
 		</div>
 	{:else}
 		{#if header}
-			<div class="flex-shrink-0">{@render header()}</div>
+			<div class="shrink-0">{@render header()}</div>
 		{/if}
 		<div class="no-scrollbar min-h-0 flex-1 overflow-y-auto">
 			<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>
@@ -68,7 +68,7 @@
 			</ContentColumn>
 		</div>
 		{#if footer}
-			<div class="flex-shrink-0">{@render footer()}</div>
+			<div class="shrink-0">{@render footer()}</div>
 		{/if}
 	{/if}
 </section>

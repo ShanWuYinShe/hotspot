@@ -30,7 +30,7 @@
 
 <button
 	type="button"
-	class="hover-btn card-hover flex items-center outline-none text-left {collapsed ? 'h-10 w-10 self-center justify-center rounded-xl' : 'w-full gap-3 rounded-[16px]'}"
+	class="hover-btn card-hover flex items-center outline-none text-left {collapsed ? 'h-10 w-10 self-center justify-center rounded-xl' : 'w-full gap-3 rounded-control'}"
 	style="padding:{collapsed ? 0 : '10px 12px'};background:{hovered ? collapsedHover : collapsed ? 'transparent' : 'var(--surface-primary)'};border:1px solid var(--border-default);box-shadow:{collapsed ? 'none' : 'var(--shadow-neu-lg)'};transform:{hovered ? 'translateY(-2px)' : 'translateY(0)'};transition:background 0.16s ease, transform 0.22s cubic-bezier(0.22,1,0.36,1), box-shadow 0.22s cubic-bezier(0.22,1,0.36,1);"
 	title={collapsed ? '位置选择' : undefined}
 	aria-label="位置选择"
@@ -39,7 +39,7 @@
 	onmouseleave={() => (hovered = false)}
 >
 	<div
-		class="flex items-center justify-center rounded-full flex-shrink-0"
+		class="flex items-center justify-center rounded-full shrink-0"
 		style="width:{collapsed ? 30 : 34}px;height:{collapsed ? 30 : 34}px;background:var(--accent-default);box-shadow:none;"
 	>
 		<Navigation2 style="width:18px;height:18px;color:var(--text-on-accent);" strokeWidth={2} />
@@ -54,6 +54,6 @@
 	</div>
 
 	{#if !collapsed}
-		<ChevronRight style="width:13px;height:13px;color:var(--text-secondary);flex-shrink:0;" strokeWidth={1.5} />
+		<ChevronRight style="width:13px;height:13px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
 	{/if}
 </button>

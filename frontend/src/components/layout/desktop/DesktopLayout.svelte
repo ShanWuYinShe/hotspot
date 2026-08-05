@@ -122,7 +122,7 @@
 >
 	<!-- HEADER — 52px, full width -->
 	<header
-		class="relative z-30 flex-shrink-0 flex items-center px-5 gap-2"
+		class="relative z-30 shrink-0 flex items-center px-5 gap-2"
 		style="height:52px;background-color:var(--surface-page);border-bottom:1px solid var(--border-default);"
 	>
 		<!-- Logo -->
@@ -134,7 +134,7 @@
 				void goto(ROUTES.home);
 			}}
 		>
-			<img src={imgHotSpot} alt="HotSpot Logo" class="rounded-full object-cover flex-shrink-0" style="width:28px;height:28px;" />
+			<img src={imgHotSpot} alt="HotSpot Logo" class="rounded-full object-cover shrink-0" style="width:28px;height:28px;" />
 			<span class="tracking-tight" style="font-size:17px;color:var(--text-primary);">HotSpot</span>
 		</button>
 
@@ -176,7 +176,7 @@
 			{#if auth.user}
 				<button
 					type="button"
-					class="hover-btn scale-btn relative ml-1.5 flex-shrink-0 rounded-full focus-ring focus-visible:ring-offset-surface-page"
+					class="hover-btn scale-btn relative ml-1.5 shrink-0 rounded-full focus-ring focus-visible:ring-offset-surface-page"
 					style="width:32px;height:32px;"
 					aria-label="打开个人主页"
 					onclick={() => guardNav('打开个人主页', ROUTES.me)}
@@ -191,7 +191,7 @@
 			{:else}
 				<button
 					type="button"
-					class="hover-btn ml-1.5 flex-shrink-0 rounded-full px-3 focus-ring"
+					class="hover-btn ml-1.5 shrink-0 rounded-full px-3 focus-ring"
 					style="height:32px;background:var(--accent-default);color:white;font-size:12px;"
 					aria-label="登录"
 					onclick={() => void goto(ROUTES.login)}
@@ -206,7 +206,7 @@
 	<div class="desktop-workspace relative z-0 flex flex-1 overflow-hidden" style="gap:0px;">
 		<!-- Sidebar (224px expanded / 72px collapsed, fixed width) -->
 		<aside
-			class="relative flex flex-col flex-shrink-0 overflow-visible box-border transition-[width] duration-200"
+			class="relative flex flex-col shrink-0 overflow-visible box-border transition-[width] duration-200"
 			style="width:{isSidebarCollapsed ? 72 : 224}px;padding:0.75rem;"
 		>
 			<!-- Edge-mounted collapse control: leaves the navigation rhythm untouched -->
@@ -254,7 +254,7 @@
 			</div>
 
 			<!-- Location Anchor — ALWAYS pinned to bottom -->
-			<div class="flex flex-shrink-0 pt-3 {isSidebarCollapsed ? 'justify-center' : ''}">
+			<div class="flex shrink-0 pt-3 {isSidebarCollapsed ? 'justify-center' : ''}">
 				<LocationCard collapsed={isSidebarCollapsed} onClick={() => void goto(ROUTES.map)} />
 			</div>
 		</aside>

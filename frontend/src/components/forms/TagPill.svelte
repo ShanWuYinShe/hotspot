@@ -17,7 +17,7 @@
 	} = $props();
 
 	const sizeClasses = {
-		sm: 'text-[10px]',
+		sm: 'text-xxs',
 		md: 'text-xs'
 	} as const;
 </script>

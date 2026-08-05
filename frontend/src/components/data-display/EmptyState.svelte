@@ -42,7 +42,7 @@
 		{/if}
 		<p class="text-text-primary text-[15px] font-medium">{title}</p>
 		{#if description}
-			<p class="text-text-secondary text-center max-w-xs text-[13px] leading-relaxed">{description}</p>
+			<p class="text-text-secondary text-center max-w-xs text-base leading-relaxed">{description}</p>
 		{/if}
 		{#if action}
 			{@render action()}

@@ -28,12 +28,12 @@
 </script>
 
 <div
-	class="flex h-[100dvh] w-full overflow-hidden font-sans transition-colors duration-500"
+	class="flex h-dvh w-full overflow-hidden font-sans transition-colors duration-500"
 	style="background-color:var(--surface-page);color:var(--text-primary);"
 >
 	{#if !isSubPage}
 		<aside
-			class="flex-shrink-0 flex flex-col items-center"
+			class="shrink-0 flex flex-col items-center"
 			style="width:64px;padding-top:max(env(safe-area-inset-top, 8px), 8px);padding-bottom:max(env(safe-area-inset-bottom, 8px), 8px);padding-left:max(env(safe-area-inset-left, 0px), 0px);gap:8px;border-right:1px solid var(--border-default);background-color:var(--surface-primary);"
 		>
 			{#each NAV_ITEMS.slice(0, 2) as item}
@@ -77,7 +77,7 @@
 	<Dialog.Root open={showCreate} onOpenChange={(next) => (next ? openComposer() : closeComposer())}>
 		<Dialog.Content
 			side="right"
-			class="overflow-hidden rounded-l-[28px] border-l-0"
+			class="overflow-hidden rounded-l-sheet border-l-0"
 			style="width:min(560px,90%);box-shadow:-8px 0 40px rgba(0,0,0,0.22);"
 		>
 			<CreateSheet onClose={closeComposer} />

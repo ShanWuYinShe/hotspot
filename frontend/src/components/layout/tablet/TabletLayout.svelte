@@ -34,7 +34,7 @@
 
 <div
 	data-platform="tablet"
-	class="flex flex-col h-[100dvh] w-full overflow-hidden transition-colors duration-500 font-sans"
+	class="flex flex-col h-dvh w-full overflow-hidden transition-colors duration-500 font-sans"
 	style="background-color:var(--surface-primary);color:var(--text-primary);"
 >
 	<StatusBar />
@@ -52,7 +52,7 @@
 	{#if !isSubPage}
 		<nav
 			aria-label="主导航"
-			class="flex-shrink-0 w-full flex justify-center"
+			class="shrink-0 w-full flex justify-center"
 			style={isWide
 				? 'padding:10px 24px max(16px, env(safe-area-inset-bottom, 16px));background-color:transparent;'
 				: 'padding:0;background-color:var(--surface-nav-glass);border-top:1px solid var(--border-nav-glass);box-shadow:var(--elevation-nav);'}
@@ -88,7 +88,7 @@
 				{/each}
 
 				<!-- Centre FAB -->
-				<div class="flex items-center justify-center flex-shrink-0" style="width:64px;">
+				<div class="flex items-center justify-center shrink-0" style="width:64px;">
 					<button
 						type="button"
 						class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none select-none"

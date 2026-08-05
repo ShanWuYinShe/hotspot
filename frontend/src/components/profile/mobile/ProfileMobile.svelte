@@ -32,7 +32,7 @@
 		<!-- 资料页眉（对齐 Figma Make：eyebrow + 设置入口） -->
 			<div class="border-b border-border-default" style="background:var(--surface-primary);">
 				<ContentColumn class="flex items-center justify-between py-3">
-					<p class="text-[11px] font-medium uppercase tracking-[0.14em] text-accent-default">个人资料</p>
+					<p class="text-xs font-medium uppercase tracking-[0.14em] text-accent-default">个人资料</p>
 					<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} variant="ghost" size={32} />
 				</ContentColumn>
 			</div>
@@ -79,7 +79,7 @@
 					编辑资料
 				</button>
 			</div>
-			<p class="mt-5 max-w-[430px] text-sm leading-6 text-text-secondary">
+			<p class="mt-5 max-w-107.5 text-sm leading-6 text-text-secondary">
 				{bio || '这个人还没有填写简介。'}
 			</p>
 		</div>
@@ -87,7 +87,7 @@
 			{#each statsList as stat, i}
 				<div class="border-l border-border-default px-4 py-3 first:border-l-0">
 					<p class="text-base font-medium tabular-nums text-text-primary">{stat.value}</p>
-					<p class="mt-0.5 text-[11px] text-text-secondary">{stat.label}</p>
+					<p class="mt-0.5 text-xs text-text-secondary">{stat.label}</p>
 				</div>
 			{/each}
 		</div>
@@ -98,7 +98,7 @@
 		<div class="flex items-center justify-between border-b border-border-default px-5 py-3.5">
 			<div>
 				<p class="text-sm font-medium text-text-primary">个人数据</p>
-				<p class="mt-0.5 text-[11px] text-text-secondary">在这里查看你的内容与关系</p>
+				<p class="mt-0.5 text-xs text-text-secondary">在这里查看你的内容与关系</p>
 			</div>
 		</div>
 		{#each DATA_ITEMS as item (item.section)}
@@ -113,9 +113,9 @@
 				</span>
 				<span class="min-w-0 flex-1">
 					<span class="block text-sm text-text-primary">{item.label}</span>
-					<span class="mt-0.5 block truncate text-[11px] text-text-secondary">{item.detail}</span>
+					<span class="mt-0.5 block truncate text-xs text-text-secondary">{item.detail}</span>
 				</span>
-				<ChevronRight style="width:16px;height:16px;color:var(--text-secondary);flex-shrink:0;" strokeWidth={1.7} />
+				<ChevronRight style="width:16px;height:16px;color:var(--text-secondary);shrink:0;" strokeWidth={1.7} />
 			</button>
 		{/each}
 	</section>

@@ -56,18 +56,18 @@
 			<header class="border-b pb-6" style="border-color:var(--border-default);">
 				<div class="flex flex-wrap items-end justify-between gap-5">
 					<div>
-						<p class="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-accent-default">Personal archive / 2024</p>
+						<p class="font-mono text-xxs font-semibold uppercase tracking-[0.16em] text-accent-default">Personal archive / 2024</p>
 						<h2 class="mt-2 text-[30px] font-medium leading-none tracking-[-0.02em] text-text-primary">个人影像档案</h2>
-						<p class="mt-3 max-w-[460px] text-sm leading-6 text-text-secondary">{activeMeta[activeTab].description}</p>
+						<p class="mt-3 max-w-115 text-sm leading-6 text-text-secondary">{activeMeta[activeTab].description}</p>
 					</div>
 					<div class="flex items-center gap-5 border-l pl-5" style="border-color:var(--border-default);">
 						<div>
 							<p class="font-mono text-xl font-semibold leading-none text-text-primary">{archive.length}</p>
-							<p class="mt-1 text-[11px] text-text-secondary">{activeMeta[activeTab].label}</p>
+							<p class="mt-1 text-xs text-text-secondary">{activeMeta[activeTab].label}</p>
 						</div>
 						<div>
 							<p class="font-mono text-xl font-semibold leading-none text-text-primary">27</p>
-							<p class="mt-1 text-[11px] text-text-secondary">到过的地方</p>
+							<p class="mt-1 text-xs text-text-secondary">到过的地方</p>
 						</div>
 					</div>
 				</div>
@@ -85,11 +85,11 @@
 								class="rounded-full px-3.5 py-2 text-xs transition-colors {isActive ? 'bg-surface-primary text-text-primary' : 'text-text-secondary hover:text-text-primary'}"
 								style={isActive ? 'box-shadow:0 2px 8px var(--elevation-shadow-dark);' : ''}
 							>
-								{item.label}<span class="ml-1.5 font-mono text-[10px] opacity-70">{item.count}</span>
+								{item.label}<span class="ml-1.5 font-mono text-xxs opacity-70">{item.count}</span>
 							</button>
 						{/each}
 					</div>
-					<div class="flex items-center gap-1.5 text-[11px] text-text-secondary">
+					<div class="flex items-center gap-1.5 text-xs text-text-secondary">
 						<CalendarDays class="size-3.5 text-accent-default" strokeWidth={1.7} />
 						<span>{activeMeta[activeTab].note}</span>
 					</div>
@@ -107,20 +107,20 @@
 						aria-label="查看精选瞬间"
 					>
 						<div class="lg:grid lg:grid-cols-[minmax(0,1.38fr)_minmax(280px,0.62fr)]">
-							<div class="image-hover-frame tap-97 relative aspect-[16/10] overflow-hidden lg:aspect-auto lg:min-h-[390px]" style="background:var(--surface-page);">
+							<div class="image-hover-frame tap-97 relative aspect-[16/10] overflow-hidden lg:aspect-auto lg:min-h-97.5" style="background:var(--surface-page);">
 								<img src={featured.img} alt="本期精选瞬间" class="image-hover-frame__image h-full w-full object-cover" />
 							</div>
 							<div class="flex flex-col justify-between border-t p-6 lg:border-l lg:border-t-0" style="border-color:var(--border-default);">
 								<div>
 									<div class="flex items-center justify-between">
-										<span class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-accent-default">Featured record</span>
-										<span class="text-[11px] text-text-secondary">06.18</span>
+										<span class="font-mono text-xxs font-semibold uppercase tracking-[0.14em] text-accent-default">Featured record</span>
+										<span class="text-xs text-text-secondary">06.18</span>
 									</div>
 									<h3 class="mt-5 text-[24px] font-medium leading-snug text-text-primary">在云龙湖边，<br />把傍晚收进相册。</h3>
 									<p class="mt-4 text-sm leading-6 text-text-secondary">风停下来以后，水面留下了比语言更完整的回答。今天没有目的地，只是沿着湖岸慢慢走。</p>
 								</div>
 								<div class="mt-8 flex items-center justify-between border-t pt-4" style="border-color:var(--border-default);">
-									<div class="flex items-center gap-4 text-[11px] text-text-secondary">
+									<div class="flex items-center gap-4 text-xs text-text-secondary">
 										<span class="flex items-center gap-1"><Heart class="size-3 text-accent-default" strokeWidth={1.8} />{featured.likes}</span>
 										<span class="flex items-center gap-1"><MessageCircle class="size-3 text-accent-default" strokeWidth={1.8} />{featured.comments}</span>
 									</div>
@@ -137,10 +137,10 @@
 				{#if remaining.length > 0}
 					<div class="mt-10 flex items-end justify-between border-b pb-3" style="border-color:var(--border-default);">
 						<div>
-							<p class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-accent-default">Recent entries</p>
+							<p class="font-mono text-xxs font-semibold uppercase tracking-[0.14em] text-accent-default">Recent entries</p>
 							<h3 class="mt-1 text-base font-medium text-text-primary">六月的城市笔记</h3>
 						</div>
-						<p class="text-[11px] text-text-secondary">{remaining.length} 个片段</p>
+						<p class="text-xs text-text-secondary">{remaining.length} 个片段</p>
 					</div>
 
 					<div class="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -157,7 +157,7 @@
 								</div>
 								<div class="flex items-center justify-between gap-2 px-3 py-2.5">
 									<p class="truncate text-xs text-text-primary">{moment.title || '瞬间'}</p>
-									<div class="flex shrink-0 items-center gap-2 text-[10px] text-text-secondary">
+									<div class="flex shrink-0 items-center gap-2 text-xxs text-text-secondary">
 										<span class="flex items-center gap-0.5"><Heart class="size-3" strokeWidth={1.7} />{moment.likes}</span>
 										<span class="flex items-center gap-0.5"><MessageCircle class="size-3" strokeWidth={1.7} />{moment.comments}</span>
 									</div>

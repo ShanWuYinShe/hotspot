@@ -43,7 +43,7 @@
 		style="position:absolute;left:4px;top:50%;width:3px;height:{showHover ? 16 : 0}px;margin-top:{showHover ? -8 : 0}px;border-radius:2px;background:var(--accent-default);opacity:{showHover ? 0.9 : 0};transition:height 0.18s ease, opacity 0.18s ease, margin-top 0.18s ease;pointer-events:none;"
 	></span>
 	<Icon
-		style="width:17px;height:17px;flex-shrink:0;color:{isActive ? 'var(--content-on-accent)' : showHover ? 'var(--accent-default)' : 'var(--text-secondary)'};transition:color 0.16s ease;"
+		style="width:17px;height:17px;shrink:0;color:{isActive ? 'var(--content-on-accent)' : showHover ? 'var(--accent-default)' : 'var(--text-secondary)'};transition:color 0.16s ease;"
 		strokeWidth={isActive ? 2 : 1.6}
 	/>
 	<span

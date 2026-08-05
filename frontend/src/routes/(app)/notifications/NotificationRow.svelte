@@ -25,7 +25,7 @@
 	class="flex items-center gap-3.5 px-3 py-3.5"
 >
 	<!-- Avatar + icon badge -->
-	<div class="relative flex-shrink-0">
+	<div class="relative shrink-0">
 		{#if notif.user.avatar}
 			<div class="rounded-full overflow-hidden" style="width:44px;height:44px;">
 				<img src={notif.user.avatar} alt={notif.user.name} class="w-full h-full object-cover" />
@@ -44,17 +44,17 @@
 
 	<!-- Text -->
 	<div class="flex-1 min-w-0">
-		<p class="truncate text-text-primary text-[13px]">
+		<p class="truncate text-text-primary text-base">
 			<span style="font-weight:{notif.read ? 400 : 500};">{notif.user.name}</span>
 			{' '}{notif.text}
 		</p>
-		<p class="text-text-secondary text-[11px] mt-0.5">{notif.time}</p>
+		<p class="text-text-secondary text-xs mt-0.5">{notif.time}</p>
 	</div>
 
 	<!-- Moment thumb or unread dot -->
-	<div class="flex items-center gap-2 flex-shrink-0">
+	<div class="flex items-center gap-2 shrink-0">
 		{#if notif.momentImage}
-			<div class="rounded-[10px] overflow-hidden" style="width:38px;height:38px;">
+			<div class="rounded-tight overflow-hidden" style="width:38px;height:38px;">
 				<img src={notif.momentImage} alt="" class="w-full h-full object-cover" />
 			</div>
 		{/if}

@@ -55,8 +55,8 @@
 
 	<!-- 右上：距离（单份，消除历史重复徽章 bug） -->
 	<div class="absolute top-2.5 right-2.5 z-[2] flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface-overlay-strong" style="backdrop-filter:blur(8px);">
-		<MapPin class="w-[9px] h-[9px] text-white" strokeWidth={1.5} />
-		<span class="text-white text-[10px]">{user.distance}</span>
+		<MapPin class="w-2.25 h-2.25 text-white" strokeWidth={1.5} />
+		<span class="text-white text-xxs">{user.distance}</span>
 	</div>
 
 	{#snippet footer()}
@@ -66,7 +66,7 @@
 					<p class="flex items-center gap-1.5 truncate text-text-primary text-[14px]" style="font-weight:600;">
 						<span class="truncate">{user.name}</span>
 					</p>
-					<p class="truncate text-text-secondary text-[10px] mt-0.5">{user.note}</p>
+					<p class="truncate text-text-secondary text-xxs mt-0.5">{user.note}</p>
 				</div>
 				{#if user.status === '在线'}
 					<span
@@ -78,13 +78,13 @@
 			</div>
 			<div class="mt-2 flex items-center justify-between gap-2">
 				{#if user.tag}
-					<span class="rounded-full px-1.5 py-0.5 text-[10px]" style="background:var(--accent-soft);color:var(--accent-default);border:1px solid var(--accent-border);">#{user.tag}</span>
+					<span class="rounded-full px-1.5 py-0.5 text-xxs" style="background:var(--accent-soft);color:var(--accent-default);border:1px solid var(--accent-border);">#{user.tag}</span>
 				{:else}
 					<span></span>
 				{/if}
 				<button
 					type="button"
-					class="hover-btn tap-90 flex items-center justify-center rounded-full outline-none flex-shrink-0"
+					class="hover-btn tap-90 flex items-center justify-center rounded-full outline-none shrink-0"
 					style="width:28px;height:28px;{followed
 						? 'background:var(--accent-soft);border:1px solid var(--accent-border);color:var(--accent-default);'
 						: 'background:var(--accent-default);color:var(--text-on-accent);box-shadow:0 2px 8px var(--glow-accent);'}"

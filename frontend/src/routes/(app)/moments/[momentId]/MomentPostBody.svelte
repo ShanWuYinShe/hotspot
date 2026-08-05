@@ -62,13 +62,13 @@
 	{#if moment.image}
 		<img src={moment.image} alt="moment" class="w-full h-full object-cover" />
 	{:else}
-		<div class="flex h-full w-full flex-col items-center justify-center gap-2 bg-[color-mix(in_srgb,var(--accent-default)_12%,var(--surface-primary))]">
+		<div class="flex h-full w-full flex-col items-center justify-center gap-2 bg-accent-bg">
 			<MapPin size={28} class="text-accent-default" strokeWidth={1.5} />
 			<span class="text-text-secondary text-xs">来自 {moment.location || '附近'} 的动态</span>
 		</div>
 	{/if}
 	<div class="absolute top-3 left-3 px-2.5 py-0.5 rounded-full bg-accent-default" style="box-shadow:0 2px 8px var(--glow-accent);">
-		<span class="text-text-on-accent text-[10px]">#{moment.tag}</span>
+		<span class="text-text-on-accent text-xxs">#{moment.tag}</span>
 	</div>
 </div>
 
@@ -77,7 +77,7 @@
 	<div class="flex items-center gap-3 mb-3">
 		<button
 			type="button"
-			class="hover-btn rounded-full overflow-hidden flex-shrink-0 cursor-pointer focus-ring focus-visible:ring-offset-surface-primary"
+			class="hover-btn rounded-full overflow-hidden shrink-0 cursor-pointer focus-ring focus-visible:ring-offset-surface-primary"
 			style="width:44px;height:44px;padding:0;background:transparent;border:2px solid var(--accent-default);"
 			aria-label={`查看${moment.user}的个人主页`}
 			onclick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}
@@ -88,12 +88,12 @@
 			<p class="text-text-primary text-[15px]">{moment.user}</p>
 			<div class="flex items-center gap-1.5">
 				<span class="text-text-secondary text-xs">{moment.handle}</span>
-				<span class="text-text-secondary text-[10px]" style="opacity:0.5;">·</span>
+				<span class="text-text-secondary text-xxs" style="opacity:0.5;">·</span>
 				<MapPin style="width:10px;height:10px;color:var(--accent-default);" strokeWidth={1.5} />
-				<span class="text-text-secondary text-[11px]">{moment.location}</span>
+				<span class="text-text-secondary text-xs">{moment.location}</span>
 			</div>
 		</div>
-		<span class="text-text-secondary text-[11px]">{moment.time}</span>
+		<span class="text-text-secondary text-xs">{moment.time}</span>
 	</div>
 
 	<!-- Content -->
@@ -108,11 +108,11 @@
 				onclick={onToggleLike}
 			>
 				<Heart style="width:19px;height:19px;" strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
-				<span class="text-[13px]">{moment.likes + (liked ? 1 : 0)}</span>
+				<span class="text-base">{moment.likes + (liked ? 1 : 0)}</span>
 			</button>
 			<div class="flex items-center gap-1.5 text-text-secondary">
 				<MessageCircle style="width:19px;height:19px;" strokeWidth={1.5} />
-				<span class="text-[13px]">{commentCount}</span>
+				<span class="text-base">{commentCount}</span>
 			</div>
 		</div>
 		<div class="flex gap-3">
@@ -139,7 +139,7 @@
 	</div>
 
 	<!-- Comments -->
-	<p class="uppercase mt-4 mb-3 text-text-secondary text-[10px]" style="letter-spacing:0.14em;">
+	<p class="uppercase mt-4 mb-3 text-text-secondary text-xxs" style="letter-spacing:0.14em;">
 		评论 · {commentCount}
 	</p>
 	<div class="flex flex-col gap-4">
@@ -148,16 +148,16 @@
 				<Avatar src={c.avatar} name={c.user} size={34} />
 				<div class="flex-1">
 					<div class="flex items-baseline gap-2">
-						<span class="text-text-primary text-[13px]">{c.user}</span>
-						<span class="text-text-secondary text-[11px]">{c.time}</span>
+						<span class="text-text-primary text-base">{c.user}</span>
+						<span class="text-text-secondary text-xs">{c.time}</span>
 					</div>
-					<p class="text-text-secondary text-[13px]" style="line-height:1.6;margin-top:2px;">{c.text}</p>
+					<p class="text-text-secondary text-base" style="line-height:1.6;margin-top:2px;">{c.text}</p>
 					<div class="flex items-center gap-1 mt-1.5">
 						<button type="button" class="tap-84 flex items-center gap-1 outline-none text-text-secondary">
 							<Heart style="width:12px;height:12px;" strokeWidth={1.5} />
-							<span class="text-[11px]">{c.likes}</span>
+							<span class="text-xs">{c.likes}</span>
 						</button>
-						<span class="text-text-secondary text-[11px]" style="margin-left:8px;cursor:pointer;">回复</span>
+						<span class="text-text-secondary text-xs" style="margin-left:8px;cursor:pointer;">回复</span>
 					</div>
 				</div>
 			</div>

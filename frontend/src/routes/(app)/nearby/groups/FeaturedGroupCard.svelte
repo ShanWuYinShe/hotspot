@@ -13,7 +13,7 @@
 	imageSrc={group.banner ?? group.name}
 	imageAlt={group.name}
 	onClick={onOpen}
-	class="rounded-feature min-h-[340px] surface-hero"
+	class="rounded-feature min-h-85 surface-hero"
 >
 	<!-- 无封面时占位：覆盖在图片层之上 -->
 	{#if !group.banner}
@@ -27,29 +27,29 @@
 	<!-- 左上：精选徽章 -->
 	<div class="absolute top-3 left-3 z-[2] flex items-center gap-1.5 px-2 py-1 rounded-full" style="background:var(--surface-overlay-strong);backdrop-filter:blur(8px);">
 		<Sparkles size={11} color="white" />
-		<span class="text-white text-[10px]">本周精选</span>
+		<span class="text-white text-xxs">本周精选</span>
 	</div>
 
 	{#snippet footer()}
 		<div class="p-4">
 			<p class="text-text-primary text-lg font-semibold">{group.name}</p>
-			<p class="truncate text-text-secondary text-[11px] mt-1">{group.desc}</p>
+			<p class="truncate text-text-secondary text-xs mt-1">{group.desc}</p>
 			<div class="mt-3 flex items-center gap-3">
 				<div class="min-w-0 flex-1">
 					<!-- stats 行：成员 / 在线 / 距离（对齐 Figma FeaturedGroupCard） -->
-					<div class="flex items-center gap-3 text-text-secondary text-[11px]">
-						<span class="flex items-center gap-1 flex-shrink-0">
+					<div class="flex items-center gap-3 text-text-secondary text-xs">
+						<span class="flex items-center gap-1 shrink-0">
 							<Users size={12} />
 							{group.members}
 						</span>
-						<span class="flex items-center gap-1 flex-shrink-0 text-status-online">
+						<span class="flex items-center gap-1 shrink-0 text-status-online">
 							<span class="rounded-full" style="width:6px;height:6px;background:var(--status-online);"></span>
 							{group.online} 在线
 						</span>
-						<span class="flex-shrink-0">{group.distance}</span>
+						<span class="shrink-0">{group.distance}</span>
 					</div>
 					<!-- activity 独立 accent 行（对齐 Figma：与 stats 行分离） -->
-					<p class="mt-2 truncate text-[11px] text-accent-default">
+					<p class="mt-2 truncate text-xs text-accent-default">
 						<CalendarDays class="inline mr-1" style="width:12px;height:12px;" />
 						{group.activity}
 					</p>

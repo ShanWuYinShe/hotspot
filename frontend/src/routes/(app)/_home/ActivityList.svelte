@@ -30,7 +30,7 @@
 		{#each items as item (item.id)}
 			<InteractiveListRow onClick={() => onClick(item.id)} class="flex items-center gap-3 px-4 py-3 cursor-pointer">
 				<div
-					class="rounded-tight flex items-center justify-center flex-shrink-0"
+					class="rounded-tight flex items-center justify-center shrink-0"
 					style="width:34px;height:34px;background:{item.bg};"
 				>
 					<item.icon style="width:16px;height:16px;color:{item.color};" strokeWidth={1.75} />

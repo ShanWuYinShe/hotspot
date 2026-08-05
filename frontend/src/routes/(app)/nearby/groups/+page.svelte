@@ -111,12 +111,12 @@
 		{#if loading}
 			<div class="flex flex-col items-center gap-3 py-20">
 				<div class="rounded-full border-2 border-border-default border-t-accent-default animate-spin" style="width:28px;height:28px;"></div>
-				<p class="text-text-secondary text-[13px]">加载附近群组…</p>
+				<p class="text-text-secondary text-base">加载附近群组…</p>
 			</div>
 		{:else if filtered.length}
 			<div class="flex items-center justify-between mb-3">
 				<span class="eyebrow">此刻附近群组</span>
-				<span class="text-status-online text-[11px]">{totalOnline} 人正在群聊</span>
+				<span class="text-status-online text-xs">{totalOnline} 人正在群聊</span>
 			</div>
 			{#if isDesktop || isTablet}
 				<!-- index 0 用 FeaturedGroupCard（对齐 Figma），其余用 GroupCard；保留 BSP 布局（决策） -->

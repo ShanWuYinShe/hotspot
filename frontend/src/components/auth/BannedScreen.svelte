@@ -23,7 +23,7 @@
 		</p>
 		<button
 			type="button"
-			class="hover-btn mt-2 rounded-[14px] px-8 py-2.5 text-[15px] font-medium"
+			class="hover-btn mt-2 rounded-xl px-8 py-2.5 text-[15px] font-medium"
 			style="background:var(--accent-default);color:white;"
 			onclick={onAcknowledge}
 		>

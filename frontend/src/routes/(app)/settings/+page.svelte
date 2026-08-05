@@ -81,23 +81,23 @@
 			<Avatar src={accountAvatar} name={accountName} size={48} style="border:2px solid var(--surface-primary);box-shadow:0 4px 12px var(--glow-accent);" />
 			<div class="flex-1 min-w-0">
 				<p class="text-[15px] tracking-tight text-text-primary">{accountName || '用户'}</p>
-				<p class="text-[11px] mt-0.5 text-text-secondary">{accountHandle}{accountEmail ? ` · ${accountEmail}` : ''}</p>
+				<p class="text-xs mt-0.5 text-text-secondary">{accountHandle}{accountEmail ? ` · ${accountEmail}` : ''}</p>
 			</div>
-			<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);flex-shrink:0;" strokeWidth={1.5} />
+			<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
 		</button>
 	</div>
 
 	<!-- Appearance（对齐 Figma Make SettingsPage：应用主题二选一 + 深色模式） -->
-	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-[10px] tracking-[0.14em] uppercase">外观</p>
+	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-[0.14em] uppercase">外观</p>
 	<div class="rounded-panel overflow-hidden surface-flat">
 		<div class="px-4 py-3.5">
 			<div class="flex items-center gap-3">
-				<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
+				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
 					<Palette style="width:15px;height:15px;color:var(--accent-default);" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-[14px] text-text-primary">应用主题</p>
-					<p class="text-[11px] text-text-secondary">选择一套全局视觉风格</p>
+					<p class="text-xs text-text-secondary">选择一套全局视觉风格</p>
 				</div>
 			</div>
 			<div class="mt-3 grid grid-cols-2 gap-2">
@@ -121,7 +121,7 @@
 		</div>
 		<div class="mx-4 bg-border-default" style="height:1px;"></div>
 		<div class="flex items-center gap-3 px-4 py-3.5">
-				<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
+				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
 					{#if theme.isDark}
 						<Moon style="width:15px;height:15px;color:var(--accent-default);" strokeWidth={1.5} />
 					{:else}
@@ -130,98 +130,98 @@
 				</div>
 			<div class="flex-1 min-w-0">
 				<p class="text-[14px] text-text-primary">深色模式</p>
-				<p class="text-[11px] text-text-secondary">{theme.isDark ? '当前使用深色外观' : '当前使用浅色外观'}</p>
+				<p class="text-xs text-text-secondary">{theme.isDark ? '当前使用深色外观' : '当前使用浅色外观'}</p>
 			</div>
 			<Toggle on={theme.isDark} onToggle={toggleDark} label="深色模式" />
 		</div>
 	</div>
 
 	<!-- Notifications -->
-	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-[10px] tracking-[0.14em] uppercase">通知</p>
+	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-[0.14em] uppercase">通知</p>
 	<div class="rounded-panel overflow-hidden surface-flat">
 		<div class="flex items-center gap-3 px-4 py-3.5">
-			<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
+			<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
 				<Bell style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</div>
 			<div class="flex-1 min-w-0">
 				<p class="text-[14px] text-text-primary">推送通知</p>
-				<p class="text-[11px] text-text-secondary">消息、提及与新动态提醒</p>
+				<p class="text-xs text-text-secondary">消息、提及与新动态提醒</p>
 			</div>
 			<Toggle on={notif} onToggle={() => (notif = !notif)} />
 		</div>
 		<div class="mx-4 bg-border-default" style="height:1px;"></div>
 		<div class="flex items-center gap-3 px-4 py-3.5">
-			<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
+			<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
 				<Volume2 style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</div>
 			<div class="flex-1 min-w-0">
 				<p class="text-[14px] text-text-primary">应用声音</p>
-				<p class="text-[11px] text-text-secondary">操作反馈音效</p>
+				<p class="text-xs text-text-secondary">操作反馈音效</p>
 			</div>
 			<Toggle on={sounds} onToggle={() => (sounds = !sounds)} />
 		</div>
 	</div>
 
 	<!-- Privacy -->
-	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-[10px] tracking-[0.14em] uppercase">隐私与安全</p>
+	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-[0.14em] uppercase">隐私与安全</p>
 	<div class="rounded-panel overflow-hidden surface-flat">
 		<div class="flex items-center gap-3 px-4 py-3.5">
-			<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
+			<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
 				<Lock style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</div>
 			<div class="flex-1 min-w-0">
 				<p class="text-[14px] text-text-primary">私密账号</p>
-				<p class="text-[11px] text-text-secondary">仅关注者可查看你的内容</p>
+				<p class="text-xs text-text-secondary">仅关注者可查看你的内容</p>
 			</div>
 			<Toggle on={privateProfile} onToggle={() => (privateProfile = !privateProfile)} />
 		</div>
 		<div class="mx-4 bg-border-default" style="height:1px;"></div>
 		<div class="flex items-center gap-3 px-4 py-3.5">
-			<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
+			<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
 				<MapPin style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</div>
 			<div class="flex-1 min-w-0">
 				<p class="text-[14px] text-text-primary">位置共享</p>
-				<p class="text-[11px] text-text-secondary">允许附近用户发现你</p>
+				<p class="text-xs text-text-secondary">允许附近用户发现你</p>
 			</div>
 			<Toggle on={locationSharing} onToggle={() => (locationSharing = !locationSharing)} />
 		</div>
 	</div>
 
 	<!-- General -->
-	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-[10px] tracking-[0.14em] uppercase">通用</p>
+	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-[0.14em] uppercase">通用</p>
 	<div class="rounded-panel overflow-hidden surface-flat">
 		<button type="button" class="hover-bg row-nudge tap-94 flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
-			<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
+			<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
 				<Globe style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</div>
 			<div class="flex-1 min-w-0">
 				<p class="text-[14px] text-text-primary">语言</p>
 			</div>
-			<span class="text-[12px] flex-shrink-0 text-text-secondary">中文</span>
-			<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);flex-shrink:0;" strokeWidth={1.5} />
+			<span class="text-sm shrink-0 text-text-secondary">中文</span>
+			<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
 		</button>
 		<div class="mx-4 bg-border-default" style="height:1px;"></div>
 		<button type="button" class="hover-bg row-nudge tap-94 flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
-			<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
+			<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
 				<User style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</div>
 			<div class="flex-1 min-w-0">
 				<p class="text-[14px] text-text-primary">账号信息</p>
 			</div>
-			<span class="text-[12px] flex-shrink-0 text-text-secondary"></span>
-			<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);flex-shrink:0;" strokeWidth={1.5} />
+			<span class="text-sm shrink-0 text-text-secondary"></span>
+			<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
 		</button>
 		<div class="mx-4 bg-border-default" style="height:1px;"></div>
 		<button type="button" class="hover-bg row-nudge tap-94 flex items-center gap-3 px-4 py-3.5 w-full outline-none text-left" style="transition:background 0.16s ease, transform 0.16s ease;">
-			<div class="flex items-center justify-center rounded-full flex-shrink-0 icon-badge" style="width:36px;height:36px;">
+			<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
 				<Info style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</div>
 			<div class="flex-1 min-w-0">
 				<p class="text-[14px] text-text-primary">关于</p>
 			</div>
-			<span class="text-[12px] flex-shrink-0 text-text-secondary">v 1.0.0</span>
-			<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);flex-shrink:0;" strokeWidth={1.5} />
+			<span class="text-sm shrink-0 text-text-secondary">v 1.0.0</span>
+			<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
 		</button>
 	</div>
 

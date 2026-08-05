@@ -14,7 +14,7 @@
 			class="hover-btn flex items-center gap-0.5 outline-none surface-ghost rounded-full px-2 py-0.5 text-accent-default"
 			onclick={onAction}
 		>
-			<span class="text-[11px]">{action}</span>
+			<span class="text-xs">{action}</span>
 			<ChevronRight style="width:12px;height:12px;" strokeWidth={1.5} />
 		</button>
 	{/if}

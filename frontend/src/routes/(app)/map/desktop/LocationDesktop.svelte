@@ -188,7 +188,7 @@
 
 		{#if mapLoading}
 			<!-- 加载中的轻量指示 -->
-			<div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-[11px] text-text-secondary" style="box-shadow:0 2px 12px var(--elevation-shadow-dark);border:1px solid var(--border-default);">
+			<div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary" style="box-shadow:0 2px 12px var(--elevation-shadow-dark);border:1px solid var(--border-default);">
 				加载地图数据…
 			</div>
 		{/if}
@@ -226,7 +226,7 @@
 							<img src={item.clusterIcon} alt="" style="width:15px;height:21px;opacity:0.65;" />
 							<span class="flex-1 text-text-primary" style="font-size:12px;">{item.label}</span>
 							<span style="font-size:12px;color:{item.color};font-weight:600;">{item.count}</span>
-							<span class="flex items-center justify-center flex-shrink-0" style="width:14px;height:14px;border-radius:4px;background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--border-strong)'};transition:all 0.18s;">
+							<span class="flex items-center justify-center shrink-0" style="width:14px;height:14px;border-radius:4px;background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--border-strong)'};transition:all 0.18s;">
 								{#if active}
 									<Check style="width:10px;height:10px;color:white;" strokeWidth={3} />
 								{/if}
@@ -252,16 +252,16 @@
 			>
 				<div class="flex items-center gap-3">
 					{#if selectedPin.type === 'user' && selectedPin.avatar}
-						<div class="relative flex-shrink-0">
+						<div class="relative shrink-0">
 							<img src={selectedPin.avatar} alt={selectedPin.name || selectedPin.title || ''} class="rounded-full object-cover" style="width:52px;height:52px;" />
 							{#if selectedPin.online}
 								<span class="absolute bottom-0 right-0 rounded-full bg-status-online" style="width:12px;height:12px;border:2.5px solid var(--surface-primary);"></span>
 							{/if}
 						</div>
 					{:else if selectedPin.type === 'moment' && selectedPin.image}
-						<img src={selectedPin.image} alt={selectedPin.name || selectedPin.title || ''} class="rounded-[14px] object-cover flex-shrink-0" style="width:52px;height:52px;" />
+						<img src={selectedPin.image} alt={selectedPin.name || selectedPin.title || ''} class="rounded-xl object-cover shrink-0" style="width:52px;height:52px;" />
 					{:else}
-						<div class="flex items-center justify-center rounded-[15px] flex-shrink-0" style="width:52px;height:52px;background:{pinTone(selectedPin.type, 14)};">
+						<div class="flex items-center justify-center rounded-[15px] shrink-0" style="width:52px;height:52px;background:{pinTone(selectedPin.type, 14)};">
 							<img src={getMarkerUrl(selectedPin.type, selectedPin.count ?? 1)} alt="" style="width:26px;height:35px;" />
 						</div>
 					{/if}
@@ -295,7 +295,7 @@
 							{/if}
 						</div>
 					</div>
-					<div class="flex gap-2 flex-shrink-0">
+					<div class="flex gap-2 shrink-0">
 						<button
 							type="button"
 							class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none bg-accent-default text-white"

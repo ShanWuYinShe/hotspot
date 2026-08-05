@@ -144,7 +144,7 @@
 <Dialog.Root open={moreOpen} onOpenChange={(next) => (next ? undefined : (moreOpen = false))}>
 		<Dialog.Content
 			side="bottom"
-			class="inset-x-4 bottom-4 mx-auto max-w-md rounded-[24px] p-5"
+			class="inset-x-4 bottom-4 mx-auto max-w-md rounded-feature p-5"
 			aria-label={`${user.name} 的更多操作`}
 			style="box-shadow:0 24px 80px rgba(0,0,0,.28);"
 		>
@@ -155,18 +155,18 @@
 				</div>
 				<ActionIconButton icon={X} label="关闭" onClick={() => (moreOpen = false)} size={32} />
 			</div>
-				<label class="mt-5 block text-[12px] text-text-secondary">
+				<label class="mt-5 block text-sm text-text-secondary">
 					备注名称
 					<input
 						bind:value={remarkDraft}
 						oninput={(e) => (remarkDraft = e.currentTarget.value.slice(0, 24))}
 						placeholder="只对你可见"
-						class="mt-2 w-full rounded-[14px] ring-1 ring-border-default bg-transparent px-3 py-2.5 text-[13px] text-text-primary focus-ring"
+						class="mt-2 w-full rounded-xl ring-1 ring-border-default bg-transparent px-3 py-2.5 text-base text-text-primary focus-ring"
 					/>
 				</label>
 				<button
 					type="button"
-					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] ring-1 ring-border-default py-2.5 text-[13px] text-text-primary focus-ring"
+					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-xl ring-1 ring-border-default py-2.5 text-base text-text-primary focus-ring"
 					onclick={() => {
 						remark = remarkDraft.trim();
 						moreOpen = false;
@@ -177,7 +177,7 @@
 				</button>
 				<button
 					type="button"
-					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-status-danger outline-none focus-visible:ring-2 focus-visible:ring-status-danger"
+					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-base text-status-danger outline-none focus-visible:ring-2 focus-visible:ring-status-danger"
 					onclick={toggleBlock}
 				>
 					<UserX size={14} />
@@ -185,7 +185,7 @@
 				</button>
 				<button
 					type="button"
-					class="hover-btn mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] py-2.5 text-[13px] text-text-secondary focus-ring"
+					class="hover-btn mt-1 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-base text-text-secondary focus-ring"
 					onclick={submitReport}
 				>
 					{#if reportSent}
@@ -201,7 +201,7 @@
 
 <SplitPageLayout contentClassName="pb-6">
 	<!-- Banner（全幅封面：负 margin 抵消 SplitPageLayout 的 gutter） -->
-	<div class="relative overflow-hidden -mx-[var(--page-gutter)]" style="height:clamp(150px, 25vw, 210px);flex-shrink:0;">
+	<div class="relative overflow-hidden -mx-[var(--page-gutter)]" style="height:clamp(150px, 25vw, 210px);shrink:0;">
 			<img src={user.banner} alt="banner" class="absolute inset-0 w-full h-full object-cover" />
 			<div class="absolute inset-0" style="background:var(--surface-profile-cover-scrim);"></div>
 
@@ -267,31 +267,31 @@
 				</div>
 
 				<h1 class="text-text-primary text-xl">{user.name}</h1>
-				<p class="text-text-secondary text-[13px]" style="margin-top:1px;">{user.handle}{remark ? ` · ${remark}` : ''}</p>
+				<p class="text-text-secondary text-base" style="margin-top:1px;">{user.handle}{remark ? ` · ${remark}` : ''}</p>
 				{#if blocked}
-					<div class="mt-3 flex items-center gap-2 rounded-[12px] ring-1 ring-status-danger/30 bg-[color-mix(in_srgb,var(--status-danger)_8%,transparent)] px-3 py-2 text-[12px] text-status-danger">
+					<div class="mt-3 flex items-center gap-2 rounded-small ring-1 ring-status-danger/30 bg-danger-bg px-3 py-2 text-sm text-status-danger">
 						<UserX size={14} />
 						你已屏蔽此用户；关注和私信已停用。
 					</div>
 				{/if}
-				<p class="text-text-secondary text-[13px]" style="line-height:1.65;margin-top:8px;">{user.bio}</p>
+				<p class="text-text-secondary text-base" style="line-height:1.65;margin-top:8px;">{user.bio}</p>
 
 				<div class="flex items-center gap-1.5 mt-2">
 					<MapPin style="width:11px;height:11px;color:var(--accent-default);" strokeWidth={1.5} />
-					<span class="text-text-secondary text-[11px]">{user.location}</span>
+					<span class="text-text-secondary text-xs">{user.location}</span>
 				</div>
 
 				<!-- Tags -->
 				<div class="flex gap-2 mt-3 flex-wrap">
 					{#each user.tags as t (t)}
-						<span class="px-2.5 py-0.5 rounded-full bg-accent-soft text-accent-default text-[11px]" style="border:1px solid var(--accent-border);">
+						<span class="px-2.5 py-0.5 rounded-full bg-accent-soft text-accent-default text-xs" style="border:1px solid var(--accent-border);">
 							#{t}
 						</span>
 					{/each}
 				</div>
 
 				<!-- Stats -->
-				<div class="flex gap-0 mt-5 overflow-hidden rounded-[20px] bg-surface-primary" style="box-shadow:0 0 0 1px var(--border-default), var(--shadow-neu-xl);">
+				<div class="flex gap-0 mt-5 overflow-hidden rounded-panel bg-surface-primary" style="box-shadow:0 0 0 1px var(--border-default), var(--shadow-neu-xl);">
 					<div style="overflow:hidden;border-radius:20px;">
 						{#each [{ label: '瞬间', v: fmtNum(user.moments) }, { label: '粉丝', v: fmtNum(user.followers) }, { label: '关注', v: fmtNum(user.following) }] as s, i}
 							<div class="flex-1 flex flex-col items-center py-4 relative">
@@ -306,12 +306,12 @@
 					</div>
 
 				<!-- Tabs -->
-			<div class="flex" style="border-bottom:1px solid var(--border-default);padding-left:16px;padding-right:16px;flex-shrink:0;">
+			<div class="flex" style="border-bottom:1px solid var(--border-default);padding-left:16px;padding-right:16px;shrink:0;">
 				{#each [{ id: 'moments', icon: Grid3X3, label: '瞬间' }, { id: 'liked', icon: Heart, label: '喜欢' }, { id: 'saved', icon: Bookmark, label: '收藏' }] as t}
 					{@const active = activeTab === t.id}
 					<button
 						type="button"
-						class="hover-btn relative flex items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none text-[13px] {active ? 'text-accent-default' : 'text-text-secondary'}"
+						class="hover-btn relative flex items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none text-base {active ? 'text-accent-default' : 'text-text-secondary'}"
 						style="flex:1;font-weight:{active ? 500 : 400};"
 						onclick={() => (activeTab = t.id as 'moments' | 'liked' | 'saved')}
 					>
@@ -349,7 +349,7 @@
 	<RailSection title="兴趣标签">
 		<div class="flex gap-2 flex-wrap">
 			{#each user.tags as t (t)}
-				<span class="px-2.5 py-0.5 rounded-full bg-accent-soft text-accent-default text-[11px]" style="border:1px solid var(--accent-border);">
+				<span class="px-2.5 py-0.5 rounded-full bg-accent-soft text-accent-default text-xs" style="border:1px solid var(--accent-border);">
 					#{t}
 				</span>
 			{/each}

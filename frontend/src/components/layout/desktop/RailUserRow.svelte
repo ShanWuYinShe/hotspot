@@ -18,13 +18,13 @@
 	} = $props();
 </script>
 
-<div class="hover-bg flex items-center gap-2.5 rounded-[10px] {onClick ? 'cursor-pointer' : ''}">
+<div class="hover-bg flex items-center gap-2.5 rounded-tight {onClick ? 'cursor-pointer' : ''}">
 	<button
 		type="button"
-		class="tap-985 flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-[10px] outline-none"
+		class="tap-985 flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-tight outline-none"
 		onclick={onClick}
 	>
-		<div class="rounded-full overflow-hidden flex-shrink-0" style="width:34px;height:34px;border:1px solid var(--border-default);">
+		<div class="rounded-full overflow-hidden shrink-0" style="width:34px;height:34px;border:1px solid var(--border-default);">
 			<img src={avatar} alt={name} class="w-full h-full object-cover" />
 		</div>
 		<div class="flex-1 min-w-0">

@@ -21,7 +21,7 @@
 </script>
 
 <div
-	class="flex-shrink-0 flex items-center justify-between px-5 select-none"
+	class="shrink-0 flex items-center justify-between px-5 select-none"
 	style="height:44px;background-color:var(--surface-primary);"
 >
 	<!-- Time -->
@@ -32,8 +32,8 @@
 	</span>
 
 	<!-- System indicators -->
-	<div class="flex items-center gap-[5px]">
-		<div class="flex items-end gap-[2px]">
+	<div class="flex items-center gap-1.25">
+		<div class="flex items-end gap-0.5">
 			{#each signalHeights as hgt, i}
 				<div
 					style="width:3px;height:{hgt}px;border-radius:1px;background-color:var(--text-primary);opacity:{i < 3 ? 1 : 0.28};"

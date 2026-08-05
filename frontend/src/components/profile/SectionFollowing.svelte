@@ -29,24 +29,24 @@
 <div class="flex-1 overflow-y-auto no-scrollbar flex flex-col">
 	{#if !embedded}
 		<!-- Header -->
-		<div class="flex items-center justify-between px-[var(--page-gutter)] py-4 flex-shrink-0" style="border-bottom:1px solid var(--border-default);">
+		<div class="flex items-center justify-between px-[var(--page-gutter)] py-4 shrink-0" style="border-bottom:1px solid var(--border-default);">
 			<div>
 				<div class="flex items-center gap-2.5">
 					<span class="text-text-primary text-[15px]">关注</span>
-					<span class="px-2 py-0.5 rounded-full bg-accent-default text-white text-[11px]">
+					<span class="px-2 py-0.5 rounded-full bg-accent-default text-white text-xs">
 						{following.length} 人
 					</span>
 				</div>
-				<p class="mt-1 text-text-secondary text-[11px]">你主动订阅的动态与创作者</p>
+				<p class="mt-1 text-text-secondary text-xs">你主动订阅的动态与创作者</p>
 			</div>
-			<span class="rounded-full px-3 py-1 bg-accent-soft text-accent-default text-[11px]" style="border:1px solid var(--accent-border);">
+			<span class="rounded-full px-3 py-1 bg-accent-soft text-accent-default text-xs" style="border:1px solid var(--accent-border);">
 				点击卡片查看主页
 			</span>
 		</div>
 	{/if}
 
 	<!-- Sort tabs — ghost chips -->
-	<div class="flex gap-1.5 px-[var(--page-gutter)] py-3 flex-shrink-0">
+	<div class="flex gap-1.5 px-[var(--page-gutter)] py-3 shrink-0">
 		{#each [{ id: 'recent', label: '最近关注' }, { id: 'active', label: '最活跃' }] as pill}
 			{@const active = sortBy === pill.id}
 			<button
@@ -83,14 +83,14 @@
 						>
 							<Avatar ring src={f.avatar} name={f.name} size={48} />
 							<div class="flex-1 min-w-0">
-								<p class="text-text-primary text-[13px]">{f.name}</p>
-								<p class="truncate text-text-secondary text-[11px] mt-px">{f.desc}</p>
-								<p class="text-accent-default text-[10px] mt-px">{f.posts} 帖子</p>
+								<p class="text-text-primary text-base">{f.name}</p>
+								<p class="truncate text-text-secondary text-xs mt-px">{f.desc}</p>
+								<p class="text-accent-default text-xxs mt-px">{f.posts} 帖子</p>
 							</div>
-							<img src={f.latestImg} alt="" class="rounded-[8px] object-cover flex-shrink-0" style="width:44px;height:44px;opacity:0.85;" />
+							<img src={f.latestImg} alt="" class="rounded-compact object-cover shrink-0" style="width:44px;height:44px;opacity:0.85;" />
 							<button
 								type="button"
-								class="hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] tap-93 {unfollowedIds.has(f.id) ? 'bg-accent-default text-white' : 'bg-transparent text-text-secondary'}"
+								class="hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none shrink-0 text-xs tap-93 {unfollowedIds.has(f.id) ? 'bg-accent-default text-white' : 'bg-transparent text-text-secondary'}"
 								style={unfollowedIds.has(f.id) ? 'border:1px solid transparent;' : 'border:1px solid var(--border-strong);'}
 								onclick={(e) => {
 									e.stopPropagation();
@@ -127,14 +127,14 @@
 						>
 							<Avatar ring src={f.avatar} name={f.name} size={42} />
 							<div class="flex-1 min-w-0">
-								<p class="text-text-primary text-[13px]">{f.name}</p>
-								<p class="truncate text-text-secondary text-[11px] mt-px">{f.desc}</p>
-								<p class="text-accent-default text-[10px] mt-px">{f.posts} 帖子</p>
+								<p class="text-text-primary text-base">{f.name}</p>
+								<p class="truncate text-text-secondary text-xs mt-px">{f.desc}</p>
+								<p class="text-accent-default text-xxs mt-px">{f.posts} 帖子</p>
 							</div>
-							<img src={f.latestImg} alt="" class="rounded-[8px] object-cover flex-shrink-0" style="width:36px;height:36px;opacity:0.85;" />
+							<img src={f.latestImg} alt="" class="rounded-compact object-cover shrink-0" style="width:36px;height:36px;opacity:0.85;" />
 							<button
 								type="button"
-								class="hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] tap-93 {unfollowedIds.has(f.id) ? 'bg-accent-default text-white' : 'bg-transparent text-text-secondary'}"
+								class="hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none shrink-0 text-xs tap-93 {unfollowedIds.has(f.id) ? 'bg-accent-default text-white' : 'bg-transparent text-text-secondary'}"
 								style={unfollowedIds.has(f.id) ? 'border:1px solid transparent;' : 'border:1px solid var(--border-strong);'}
 								onclick={(e) => {
 									e.stopPropagation();

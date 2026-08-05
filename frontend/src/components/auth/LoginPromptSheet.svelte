@@ -23,7 +23,7 @@
 <Dialog.Root {open} onOpenChange={(next) => (next ? undefined : onClose())}>
 	<Dialog.Content
 		side="bottom"
-		class="left-1/2 w-full max-w-[460px] -translate-x-1/2 px-5 pb-8 pt-3"
+		class="left-1/2 w-full max-w-115 -translate-x-1/2 px-5 pb-8 pt-3"
 	>
 		<div class="mb-3 flex justify-center" aria-hidden="true">
 			<span class="h-1 w-9 rounded-full" style="background:var(--border-strong);"></span>
@@ -34,7 +34,7 @@
 					登录后继续
 				</Dialog.Title>
 				{#if actionLabel}
-					<p class="mt-0.5 text-[12px]" style="color:var(--text-secondary);">
+					<p class="mt-0.5 text-sm" style="color:var(--text-secondary);">
 						请先登录后再「{actionLabel}」
 					</p>
 				{/if}

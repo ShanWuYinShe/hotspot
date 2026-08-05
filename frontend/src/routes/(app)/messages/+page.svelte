@@ -128,9 +128,9 @@
 	     分栏固定视口高、左栏列表内部滚动；平板/桌面画布均撑满。 -->
 	<div class="content-mode-wide flex h-full">
 		<!-- Left: chat list -->
-		<div class="flex flex-col flex-shrink-0 overflow-hidden" style="width:300px;border-right:1px solid var(--border-default);">
+		<div class="flex flex-col shrink-0 overflow-hidden" style="width:300px;border-right:1px solid var(--border-default);">
 			<!-- List header（对齐 Figma：px-4 pt-4 pb-3，标题 18 + Plus 30 + 搜索框） -->
-			<div class="flex-shrink-0" style="border-bottom:1px solid var(--border-default);">
+			<div class="shrink-0" style="border-bottom:1px solid var(--border-default);">
 				<PageHeader title="消息" titleSize={18} contentClassName="px-4 pt-4 pb-0">
 					{#snippet trailing()}
 						<button
@@ -155,13 +155,13 @@
 
 			<!-- 在线 strip -->
 			{#if onlineChats.length > 0}
-				<div class="flex-shrink-0 px-4 py-2.5" style="border-bottom:1px solid var(--border-default);">
+				<div class="shrink-0 px-4 py-2.5" style="border-bottom:1px solid var(--border-default);">
 					<p class="uppercase mb-2 text-text-secondary text-[9px] tracking-[0.12em]">在线</p>
 					<div class="flex gap-3 overflow-x-auto no-scrollbar">
 						{#each onlineChats as c (c.id)}
 							<button
 								type="button"
-								class="avatar-entry tap-93 flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer"
+								class="avatar-entry tap-93 flex flex-col items-center gap-1 shrink-0 cursor-pointer"
 								onclick={() => (selectedId = c.id)}
 							>
 								<div class="relative">
@@ -170,7 +170,7 @@
 									</div>
 									<OnlineDot size="sm" />
 								</div>
-								<span class="text-text-secondary text-[10px]">{c.name}</span>
+								<span class="text-text-secondary text-xxs">{c.name}</span>
 							</button>
 						{/each}
 					</div>
@@ -287,12 +287,12 @@
 	<ContentColumn class="animate-fade-in flex flex-col min-h-full pt-4 pb-4">
 		{#if onlineChats.length > 0}
 			<div class="mb-4">
-				<p class="uppercase mb-2.5 text-text-secondary text-[10px] tracking-[0.14em]">在线</p>
+				<p class="uppercase mb-2.5 text-text-secondary text-xxs tracking-[0.14em]">在线</p>
 				<div class="flex gap-4 overflow-x-auto no-scrollbar pb-1">
 					{#each onlineChats as chat (chat.id)}
 						<button
 							type="button"
-							class="avatar-entry tap-93 flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer"
+							class="avatar-entry tap-93 flex flex-col items-center gap-1.5 shrink-0 cursor-pointer"
 							onclick={() => void goto(ROUTES.message(chat.peerUserId || chat.id))}
 						>
 							<div class="relative">
@@ -301,14 +301,14 @@
 								</div>
 								<OnlineDot size="lg" />
 							</div>
-							<span class="text-text-secondary text-[11px]">{chat.name}</span>
+							<span class="text-text-secondary text-xs">{chat.name}</span>
 						</button>
 					{/each}
 				</div>
 			</div>
 		{/if}
 
-		<p class="uppercase mb-2.5 text-text-secondary text-[10px] tracking-[0.14em]">最近</p>
+		<p class="uppercase mb-2.5 text-text-secondary text-xxs tracking-[0.14em]">最近</p>
 
 		<!-- 列表：无外层容器，EmbeddedList 直接裸排（对齐 Figma）；每行 px-3 py-1 包裹 -->
 		{#if filtered.length === 0}

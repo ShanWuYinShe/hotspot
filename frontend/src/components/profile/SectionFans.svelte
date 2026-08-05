@@ -42,19 +42,19 @@
 <div class="flex-1 overflow-y-auto no-scrollbar flex flex-col">
 	{#if !embedded}
 		<!-- Header -->
-		<div class="flex items-center justify-between px-[var(--page-gutter)] py-4 flex-shrink-0" style="border-bottom:1px solid var(--border-default);">
+		<div class="flex items-center justify-between px-[var(--page-gutter)] py-4 shrink-0" style="border-bottom:1px solid var(--border-default);">
 			<div>
 				<div class="flex items-center gap-2.5">
 					<span class="text-text-primary text-[15px]">粉丝</span>
-					<span class="px-2 py-0.5 rounded-full bg-accent-default text-white text-[11px]">
+					<span class="px-2 py-0.5 rounded-full bg-accent-default text-white text-xs">
 						{followers.length} 人
 					</span>
 				</div>
-				<p class="mt-1 text-text-secondary text-[11px]">关注你的人，优先处理待回关关系</p>
+				<p class="mt-1 text-text-secondary text-xs">关注你的人，优先处理待回关关系</p>
 			</div>
 			<div class="flex items-center gap-2">
 				{#if pendingCount > 0}
-					<span class="px-2 py-0.5 rounded-full text-status-warning text-[11px]" style="background:color-mix(in srgb, var(--status-warning) 13%, transparent);border:1px solid color-mix(in srgb, var(--status-warning) 24%, transparent);">
+					<span class="px-2 py-0.5 rounded-full text-status-warning text-xs" style="background:color-mix(in srgb, var(--status-warning) 13%, transparent);border:1px solid color-mix(in srgb, var(--status-warning) 24%, transparent);">
 						{pendingCount} 待回关
 					</span>
 				{/if}
@@ -63,7 +63,7 @@
 	{/if}
 
 	<!-- Stats row — flat joined cells -->
-	<div class="px-[var(--page-gutter)] py-3 flex-shrink-0">
+	<div class="px-[var(--page-gutter)] py-3 shrink-0">
 		<MetricRow
 			items={[
 				{ label: '总粉丝', value: followers.length },
@@ -74,7 +74,7 @@
 	</div>
 
 	<!-- Filter pills — ghost -->
-	<div class="flex gap-1.5 px-[var(--page-gutter)] pb-3 flex-shrink-0">
+	<div class="flex gap-1.5 px-[var(--page-gutter)] pb-3 shrink-0">
 		{#each [{ id: 'all', label: '全部' }, { id: 'mutual', label: '互相关注' }, { id: 'pending', label: '待回关' }] as pill}
 			{@const active = fanFilter === pill.id}
 			<button
@@ -109,21 +109,21 @@
 							<Avatar ring src={f.avatar} name={f.name} size={48} />
 							<div class="flex-1 min-w-0">
 								<div class="flex items-center gap-2">
-									<span class="text-text-primary text-[13px]">{f.name}</span>
+									<span class="text-text-primary text-base">{f.name}</span>
 									{#if isMutual}
-										<span class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-status-online text-[10px]" style="background:var(--color-online-bg);">
+										<span class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-status-online text-xxs" style="background:var(--color-online-bg);">
 											<Check style="width:9px;height:9px;" strokeWidth={2.5} />
 											互关
 										</span>
 									{/if}
 								</div>
-								<p class="text-text-secondary text-[11px] mt-0.5">
+								<p class="text-text-secondary text-xs mt-0.5">
 									{f.handle} · {fanLabel(f.joinedDays)}关注了你
 								</p>
 							</div>
 							<button
 								type="button"
-								class="hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] tap-93 {isMutual ? 'bg-transparent text-text-secondary' : 'bg-accent-default text-white'}"
+								class="hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none shrink-0 text-xs tap-93 {isMutual ? 'bg-transparent text-text-secondary' : 'bg-accent-default text-white'}"
 								style={isMutual ? 'border:1px solid var(--border-strong);' : 'border:1px solid transparent;'}
 								onclick={(e) => {
 									e.stopPropagation();
@@ -161,21 +161,21 @@
 							<Avatar ring src={f.avatar} name={f.name} size={42} />
 							<div class="flex-1 min-w-0">
 								<div class="flex items-center gap-2">
-									<span class="text-text-primary text-[13px]">{f.name}</span>
+									<span class="text-text-primary text-base">{f.name}</span>
 									{#if isMutual}
-										<span class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-status-online text-[10px]" style="background:var(--color-online-bg);">
+										<span class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-status-online text-xxs" style="background:var(--color-online-bg);">
 											<Check style="width:9px;height:9px;" strokeWidth={2.5} />
 											互关
 										</span>
 									{/if}
 								</div>
-								<p class="text-text-secondary text-[11px] mt-0.5">
+								<p class="text-text-secondary text-xs mt-0.5">
 									{f.handle} · {fanLabel(f.joinedDays)}关注了你
 								</p>
 							</div>
 							<button
 								type="button"
-								class="hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none flex-shrink-0 text-[11px] tap-93 {isMutual ? 'bg-transparent text-text-secondary' : 'bg-accent-default text-white'}"
+								class="hover-btn flex items-center gap-1 px-3 py-1 rounded-full outline-none shrink-0 text-xs tap-93 {isMutual ? 'bg-transparent text-text-secondary' : 'bg-accent-default text-white'}"
 								style={isMutual ? 'border:1px solid var(--border-strong);' : 'border:1px solid transparent;'}
 								onclick={(e) => {
 									e.stopPropagation();

@@ -218,7 +218,7 @@
 		{/if}
 
 		{#if mapLoading}
-			<div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-[11px] text-text-secondary" style="box-shadow:0 2px 12px var(--elevation-shadow-dark);border:1px solid var(--border-default);">
+			<div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary" style="box-shadow:0 2px 12px var(--elevation-shadow-dark);border:1px solid var(--border-default);">
 				加载地图数据…
 			</div>
 		{/if}
@@ -262,7 +262,7 @@
 						side="bottom"
 						align="end"
 						sideOffset={8}
-						class="w-[136px] overflow-hidden rounded-[16px] p-0"
+						class="w-34 overflow-hidden rounded-control p-0"
 					>
 						{#each [
 							['user', '用户', markerUserUrl, PIN_COLORS.user],
@@ -279,9 +279,9 @@
 								style="opacity:{active ? 1 : 0.38};"
 								onclick={() => toggleFilter(type as PinType)}
 							>
-								<img src={icon} alt={label} style="width:18px;height:24px;flex-shrink:0;" />
+								<img src={icon} alt={label} style="width:18px;height:24px;shrink:0;" />
 								<span class="text-text-primary" style="flex:1;font-size:13px;text-align:left;">{label}</span>
-								<div style="width:13px;height:13px;border-radius:50%;flex-shrink:0;background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--border-default)'};box-shadow:{active ? `0 0 6px ${color}55` : 'none'};transition:all 0.18s;"></div>
+								<div style="width:13px;height:13px;border-radius:50%;shrink:0;background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--border-default)'};box-shadow:{active ? `0 0 6px ${color}55` : 'none'};transition:all 0.18s;"></div>
 							</button>
 						{/each}
 					</Popover.Content>
@@ -334,7 +334,7 @@
 			aria-valuemax={SNAP_MAX}
 			aria-valuenow={Math.min(SNAP_MAX, Math.max(SNAP_MIN, sheetH))}
 			tabindex="0"
-			style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:10px;padding-bottom:6px;cursor:grab;touch-action:none;user-select:none;"
+			style="shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:10px;padding-bottom:6px;cursor:grab;touch-action:none;user-select:none;"
 			onpointerdown={onHandlePointerDown}
 			onkeydown={onHandleKeydown}
 		>
@@ -342,9 +342,9 @@
 		</div>
 
 		<!-- Search bar -->
-		<div style="flex-shrink:0;padding:0 14px 8px;">
+		<div style="shrink:0;padding:0 14px 8px;">
 			<div class="flex items-center gap-2.5 px-3.5 rounded-[15px] input-surface" style="height:44px;">
-				<Search style="width:15px;height:15px;color:var(--text-secondary);flex-shrink:0;" strokeWidth={1.5} />
+				<Search style="width:15px;height:15px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
 				<input
 					bind:value={searchQuery}
 					oninput={(e) => {
@@ -370,7 +370,7 @@
 						<X style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={2} />
 					</button>
 				{:else if selectedLoc}
-					<Check style="width:14px;height:14px;color:var(--accent-default);flex-shrink:0;" strokeWidth={2.5} />
+					<Check style="width:14px;height:14px;color:var(--accent-default);shrink:0;" strokeWidth={2.5} />
 				{/if}
 			</div>
 		</div>
@@ -393,7 +393,7 @@
 		{/if}
 
 		<!-- Confirm button — always at bottom of sheet -->
-		<div style="flex-shrink:0;padding:8px 14px 18px;">
+		<div style="shrink:0;padding:8px 14px 18px;">
 			<button
 				type="button"
 				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-white"

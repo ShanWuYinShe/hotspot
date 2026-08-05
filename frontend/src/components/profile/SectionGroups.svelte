@@ -20,8 +20,8 @@
 	<div class="shrink-0 px-[var(--page-gutter)] pt-4 pb-3">
 		<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索我的群组…" class="px-3.5 py-2.5" />
 		<div class="mt-3 flex items-center justify-between">
-			<p class="text-[12px] text-text-secondary">共 {groups.length} 个群组</p>
-			<div class="flex items-center gap-1.5 text-[12px] text-status-online">
+			<p class="text-sm text-text-secondary">共 {groups.length} 个群组</p>
+			<div class="flex items-center gap-1.5 text-sm text-status-online">
 				<span class="rounded-full" style="width:6px;height:6px;background:var(--status-online);"></span>
 				{totalOnline} 人在线
 			</div>
@@ -33,7 +33,7 @@
 		{#each filtered as g (g.id)}
 			<button
 				type="button"
-				class="card-hover tap-94 group flex min-h-[148px] w-full overflow-hidden rounded-relaxed border text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
+				class="card-hover tap-94 group flex min-h-37 w-full overflow-hidden rounded-relaxed border text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
 				style="background:var(--surface-primary);border-color:var(--border-default);box-shadow:var(--shadow-neu-lg);"
 				aria-label={`进入群组：${g.name}`}
 				onclick={() => void goto(`${ROUTES.group(g.id)}?from=me`)}
@@ -51,7 +51,7 @@
 						{/if}
 						{g.role}
 					</div>
-					<div class="absolute bottom-2 left-2 flex items-center gap-1 text-white text-[10px]">
+					<div class="absolute bottom-2 left-2 flex items-center gap-1 text-white text-xxs">
 						<span class="rounded-full" style="width:6px;height:6px;background:var(--status-online);"></span>
 						{g.online}
 					</div>
@@ -70,9 +70,9 @@
 						<ChevronRight class="shrink-0 text-text-secondary" style="width:15px;height:15px;" strokeWidth={1.7} />
 					</div>
 
-					<p class="mt-2 truncate text-[11px] text-text-secondary">{g.desc}</p>
+					<p class="mt-2 truncate text-xs text-text-secondary">{g.desc}</p>
 
-					<div class="mt-auto flex items-center justify-between pt-3 text-[11px] text-text-secondary">
+					<div class="mt-auto flex items-center justify-between pt-3 text-xs text-text-secondary">
 						<span class="flex items-center gap-1">
 							<Users style="width:12px;height:12px;" strokeWidth={1.5} />
 							{g.members} 位成员
@@ -90,7 +90,7 @@
 	{#if filtered.length === 0}
 		<div class="flex flex-1 flex-col items-center justify-center gap-2 px-[var(--page-gutter)] py-16">
 			<Search class="text-text-secondary" style="width:22px;height:22px;" strokeWidth={1.4} />
-			<p class="text-[13px] text-text-secondary">没有找到匹配的群组</p>
+			<p class="text-base text-text-secondary">没有找到匹配的群组</p>
 		</div>
 	{/if}
 </div>

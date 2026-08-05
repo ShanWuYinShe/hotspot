@@ -233,6 +233,11 @@
     background: linear-gradient(135deg, color-mix(in srgb, var(--accent-default) 20%, var(--surface-primary)) 0%, color-mix(in srgb, var(--accent-default) 6%, var(--surface-primary)) 100%);
   }
 
+  /* 浮层内嵌面板：surface-primary 微混 surface-page 提亮（CreateSheet/AppearanceMenu 等） */
+  .surface-tinted {
+    background-color: color-mix(in srgb, var(--surface-primary) 94%, var(--surface-page) 6%);
+  }
+
   .surface-ghost {
     background-color: transparent;
     border: 1px solid transparent;

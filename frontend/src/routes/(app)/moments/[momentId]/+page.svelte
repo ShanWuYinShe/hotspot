@@ -214,7 +214,7 @@
 
 <SplitPageLayout contentClassName="p-0">
 	{#snippet header()}
-		<PageHeader title="动态详情" titleSize={16} onBack={() => history.back()} class="flex-shrink-0 border-b border-border-default">
+		<PageHeader title="动态详情" titleSize={16} onBack={() => history.back()} class="shrink-0 border-b border-border-default">
 			{#snippet trailing()}
 				<DropdownMenu.Root bind:open={moreOpen}>
 					<div bind:this={moreMenuEl} class="relative">
@@ -255,7 +255,7 @@
 
 	{#snippet footer()}
 		<!-- 评论输入栏固定在主区底部，不随正文滚动 -->
-		<div class="flex-shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary" style="border-top:1px solid var(--border-default);">
+		<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary" style="border-top:1px solid var(--border-default);">
 			<Avatar src={auth.user?.avatar_url} name={auth.user?.nickname} size={30} style="border:1px solid var(--border-default);" />
 			<div class="flex-1 flex items-center px-4 rounded-relaxed input-surface" style="height:38px;">
 				<input
@@ -264,12 +264,12 @@
 						if (e.key === 'Enter') void handleComment();
 					}}
 					placeholder="写下你的评论…"
-					class="flex-1 bg-transparent outline-none text-text-primary text-[13px]"
+					class="flex-1 bg-transparent outline-none text-text-primary text-base"
 				/>
 			</div>
 			<button
 				type="button"
-				class="hover-btn tap-88 flex items-center justify-center rounded-full outline-none flex-shrink-0"
+				class="hover-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0"
 				style="width:36px;height:36px;background:{input.trim() ? 'var(--accent-default)' : 'var(--surface-primary)'};box-shadow:{input.trim() ? '0 4px 14px var(--glow-accent)' : 'var(--shadow-neu-md)'};border:1px solid var(--border-default);transition:all 0.2s;"
 				onclick={() => void handleComment()}
 			>
@@ -284,7 +284,7 @@
 			{#snippet trailing()}
 				<button
 					type="button"
-					class="hover-btn px-2.5 py-1 rounded-full outline-none flex-shrink-0 bg-accent-soft text-accent-default"
+					class="hover-btn px-2.5 py-1 rounded-full outline-none shrink-0 bg-accent-soft text-accent-default"
 					style="font-size:11px;border:1px solid var(--accent-border);"
 					onclick={(e) => {
 						e.stopPropagation();

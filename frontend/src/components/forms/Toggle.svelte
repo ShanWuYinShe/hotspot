@@ -22,7 +22,7 @@
 </script>
 
 <Switch.Root
-	class="hover-btn relative outline-none flex-shrink-0"
+	class="hover-btn relative outline-none shrink-0"
 	checked={on}
 	onCheckedChange={(next) => {
 		if (next !== on) onToggle();

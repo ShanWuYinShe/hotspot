@@ -42,7 +42,7 @@
 	style="padding:{compact ? '10px 16px' : '12px 16px'};box-shadow:{isSelected ? '0 3px 12px var(--glow-accent)' : 'none'};"
 	onclick={onClick}
 >
-	<span class="relative flex-shrink-0">
+	<span class="relative shrink-0">
 		<span
 			class="block overflow-hidden rounded-full"
 			style="width:{compact ? 40 : 44}px;height:{compact ? 40 : 44}px;border:{isSelected ? '1.5px solid var(--border-inverse)' : '1.5px solid var(--border-default)'};"
@@ -62,7 +62,7 @@
 			>
 				{chat.name}
 			</span>
-			<span class="{isSelected ? 'text-content-inverse-muted' : 'text-text-secondary'} shrink-0 text-[11px]">
+			<span class="{isSelected ? 'text-content-inverse-muted' : 'text-text-secondary'} shrink-0 text-xs">
 				{chat.time}
 			</span>
 		</span>
@@ -73,7 +73,7 @@
 
 	{#if chat.unread > 0 && !isSelected}
 		<span
-			class="flex flex-shrink-0 items-center justify-center rounded-full bg-accent-default text-white text-[11px] font-semibold"
+			class="flex shrink-0 items-center justify-center rounded-full bg-accent-default text-white text-xs font-semibold"
 			style="width:20px;height:20px;box-shadow:0 2px 8px var(--glow-accent);"
 		>
 			{chat.unread}

@@ -185,7 +185,7 @@
 		<label class="flex flex-col" style="gap:6px;">
 			<span style="font-size:11px;font-weight:500;color:var(--text-secondary);">手机号、邮箱或账号</span>
 			<span class="flex items-center gap-2 border border-border-default px-3 py-3" style="background:var(--surface-primary);">
-				<Mail style="width:16px;height:16px;color:var(--accent-default);flex-shrink:0;" strokeWidth={1.8} />
+				<Mail style="width:16px;height:16px;color:var(--accent-default);shrink:0;" strokeWidth={1.8} />
 				<input
 					type="text"
 					bind:value={loginId}
@@ -225,7 +225,7 @@
 			<label class="flex flex-col" style="gap:6px;">
 				<span style="font-size:11px;font-weight:500;color:var(--text-secondary);">密码</span>
 				<span class="flex items-center gap-2 border border-border-default px-3 py-3" style="background:var(--surface-primary);">
-					<LockKeyhole style="width:16px;height:16px;color:var(--accent-default);flex-shrink:0;" strokeWidth={1.8} />
+					<LockKeyhole style="width:16px;height:16px;color:var(--accent-default);shrink:0;" strokeWidth={1.8} />
 					<input
 						type="password"
 						bind:value={password}
@@ -305,7 +305,7 @@
 
 	{#if mode === 'login' && !compact}
 		<!-- 其他方式（对齐 Figma Make LoginPage） -->
-		<div class="flex items-center gap-3 text-[11px] text-text-secondary">
+		<div class="flex items-center gap-3 text-xs text-text-secondary">
 			<span class="h-px flex-1" style="background:var(--border-default);"></span>
 			其他方式
 			<span class="h-px flex-1" style="background:var(--border-default);"></span>
@@ -319,31 +319,31 @@
 			<MessageCircle style="width:16px;height:16px;color:var(--accent-default);" strokeWidth={1.8} />
 			使用微信继续
 		</button>
-		<p class="mt-5 text-center text-[11px] leading-5 text-text-secondary">登录即表示你同意服务条款与隐私政策。</p>
+		<p class="mt-5 text-center text-xs leading-5 text-text-secondary">登录即表示你同意服务条款与隐私政策。</p>
 	{/if}
 
 	<!-- Mode switcher -->
 	<div class="flex flex-wrap items-center justify-center" style="gap:14px;margin-top:4px;">
 		{#if mode !== 'login' && mode !== 'forgot' && mode !== 'reset'}
-			<button type="button" onclick={() => switchMode('login')} class="text-[12px] transition-opacity hover:opacity-70" style="color:var(--accent-default);">
+			<button type="button" onclick={() => switchMode('login')} class="text-sm transition-opacity hover:opacity-70" style="color:var(--accent-default);">
 				已有账号？登录
 			</button>
 		{/if}
 		{#if mode === 'login'}
-			<button type="button" onclick={() => switchMode('register')} class="text-[12px] transition-opacity hover:opacity-70" style="color:var(--accent-default);">
+			<button type="button" onclick={() => switchMode('register')} class="text-sm transition-opacity hover:opacity-70" style="color:var(--accent-default);">
 				注册新账号
 			</button>
-			<button type="button" onclick={() => switchMode('forgot')} class="text-[12px] transition-opacity hover:opacity-70" style="color:var(--accent-default);">
+			<button type="button" onclick={() => switchMode('forgot')} class="text-sm transition-opacity hover:opacity-70" style="color:var(--accent-default);">
 				忘记密码
 			</button>
 		{/if}
 		{#if mode === 'register' || mode === 'forgot' || mode === 'reset'}
-			<button type="button" onclick={() => switchMode('login')} class="text-[12px] transition-opacity hover:opacity-70" style="color:var(--accent-default);">
+			<button type="button" onclick={() => switchMode('login')} class="text-sm transition-opacity hover:opacity-70" style="color:var(--accent-default);">
 				返回登录
 			</button>
 		{/if}
 		{#if mode !== 'guest' && mode !== 'forgot' && mode !== 'reset'}
-			<button type="button" onclick={() => switchMode('guest')} class="text-[12px] transition-opacity hover:opacity-70" style="color:var(--accent-default);">
+			<button type="button" onclick={() => switchMode('guest')} class="text-sm transition-opacity hover:opacity-70" style="color:var(--accent-default);">
 				随便逛逛（访客）
 			</button>
 		{/if}

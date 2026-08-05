@@ -39,7 +39,7 @@
 </script>
 
 <div
-	class="relative flex-shrink-0 {className}"
+	class="relative shrink-0 {className}"
 	style="width:{size}px;height:{size}px;border-radius:{borderRadius};overflow:hidden;background:var(--surface-primary);{ring ? `border:1px solid color-mix(in srgb, var(--accent-fill) 10%, var(--surface-primary));` : ''}{style}"
 >
 	{#if showImage}
