@@ -9,7 +9,7 @@
 	import { type NearbyUser } from '@/routes/(app)/_home/nearby-users';
 	import ActivityList, { type Activity } from '@/routes/(app)/_home/ActivityList.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/routes/(app)/_home/GroupCarousel.svelte';
-	import NearbyUsersFlatList from '@/routes/(app)/_home/NearbyUsersFlatList.svelte';
+	import NearbyUsersList from '@/routes/(app)/_home/NearbyUsersList.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance } from '@/lib/utils';
 	import { loadDefaultLocation, type DefaultLocation } from '@/lib/default-location';
@@ -136,7 +136,7 @@
 	<div>
 		<SectionHead title="人物推荐" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
 		<!-- 对齐 Figma HomePage：人物推荐仅展示前 4 位，其余引导到附近的人专区 -->
-		<NearbyUsersFlatList users={nearbyUsers.slice(0, 4)} followingIds={followingIds} onToggle={toggleFollow} />
+		<NearbyUsersList users={nearbyUsers.slice(0, 4)} followingIds={followingIds} onToggle={toggleFollow} />
 	</div>
 {/snippet}
 
@@ -224,7 +224,7 @@
 				</div>
 
 				<div class="mt-6">
-					<NearbyUsersFlatList users={nearbyUsers} followingIds={followingIds} onToggle={toggleFollow} />
+					<NearbyUsersList users={nearbyUsers} followingIds={followingIds} onToggle={toggleFollow} />
 				</div>
 			</div>
 		</div>

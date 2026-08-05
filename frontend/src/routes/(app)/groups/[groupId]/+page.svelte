@@ -4,6 +4,7 @@
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import BorderedList from '@/components/data-display/BorderedList.svelte';
+import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
 	import { Tabs } from 'bits-ui';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance } from '@/lib/utils';
@@ -251,25 +252,31 @@
 				<div class="py-6">
 					<p class="max-w-3xl text-[15px] leading-7 text-text-secondary">{group.description}</p>
 				</div>
-			{:else if tab === 'members'}
-				<!-- 空旷内容区 → BorderedList（有边框列表契约）；列表行不设独立边框 -->
-				<BorderedList class="mt-6">
-					{#each members as member (member.id)}
-						<button type="button" class="hover-row app-list-row app-list-row--standard row-hover outline-none" onclick={() => { if (member.userId) void goto(ROUTES.user(member.userId)); }}>
-							<div class="relative">
-								<img src={member.avatar} alt="" class="h-10 w-10 rounded-full object-cover" />
-								{#if onlineMemberIds.has(member.userId)}
-									<span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-surface-primary bg-status-online"></span>
-								{/if}
-							</div>
-							<span class="min-w-0 flex-1">
-								<span class="block text-[14px] text-text-primary">{member.name}</span>
-								<span class="text-xs text-text-secondary">{member.role}</span>
-							</span>
-							<span class="text-xs text-text-secondary">查看资料</span>
-						</button>
-					{/each}
-				</BorderedList>
+				{:else if tab === 'members'}
+					<!-- 空旷内容区 → BorderedList（有边框列表契约）；列表行不设独立边框 -->
+					<BorderedList class="mt-6">
+						{#each members as member (member.id)}
+							<InteractiveListRow
+								onClick={() => {
+									if (member.userId) void goto(ROUTES.user(member.userId));
+								}}
+								ariaLabel={`查看 ${member.name} 的资料`}
+								class="app-list-row app-list-row--standard"
+							>
+								<div class="relative">
+									<img src={member.avatar} alt="" class="h-10 w-10 rounded-full object-cover" />
+									{#if onlineMemberIds.has(member.userId)}
+										<span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-surface-primary bg-status-online"></span>
+									{/if}
+								</div>
+								<span class="min-w-0 flex-1">
+									<span class="block text-[14px] text-text-primary">{member.name}</span>
+									<span class="text-xs text-text-secondary">{member.role}</span>
+								</span>
+								<span class="text-xs text-text-secondary">查看资料</span>
+							</InteractiveListRow>
+						{/each}
+					</BorderedList>
 			{:else}
 				<!-- 空旷内容区 → BorderedList（有边框列表契约） -->
 				<BorderedList class="mt-6">

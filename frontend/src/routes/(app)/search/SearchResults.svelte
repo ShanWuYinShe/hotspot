@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Search as SearchIcon, Users, FileText, Hash, ArrowUpRight } from '@lucide/svelte';
-	import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
-	import Avatar from '@/components/shared/Avatar.svelte';
+import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
+import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
+import Avatar from '@/components/shared/Avatar.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 搜索页「有查询结果态」：Tab 栏 + 用户/动态/话题结果组。
@@ -95,11 +96,10 @@
 					</div>
 					<EmbeddedList>
 						{#each results.users as person (person.user_id)}
-							<button
-								type="button"
-								onclick={() => void goto(ROUTES.user(person.user_id))}
-								class="hover-bg flex w-full items-center gap-3 px-4 py-3.5 text-left"
-								style="border-color:var(--border-default);"
+							<InteractiveListRow
+								onClick={() => void goto(ROUTES.user(person.user_id))}
+								ariaLabel={`查看 ${person.nickname} 的资料`}
+								class="flex items-center gap-3 px-4 py-3.5"
 							>
 								<Avatar src={person.avatar_url ?? ''} name={person.nickname} size={36} />
 								<span class="min-w-0 flex-1">
@@ -109,7 +109,7 @@
 									</span>
 								</span>
 								<ArrowUpRight class="size-4 text-text-secondary" />
-							</button>
+							</InteractiveListRow>
 						{/each}
 					</EmbeddedList>
 				</section>
@@ -127,11 +127,10 @@
 					</div>
 					<EmbeddedList>
 						{#each results.moments as moment (moment.moment_id)}
-							<button
-								type="button"
-								onclick={() => void goto(ROUTES.moment(moment.moment_id))}
-								class="hover-bg flex w-full items-center gap-3 px-4 py-3.5 text-left"
-								style="border-color:var(--border-default);"
+							<InteractiveListRow
+								onClick={() => void goto(ROUTES.moment(moment.moment_id))}
+								ariaLabel={moment.description ?? '无标题'}
+								class="flex items-center gap-3 px-4 py-3.5"
 							>
 								{#if moment.media?.[0]?.url}
 									<img src={moment.media[0].url} alt="" class="size-10 rounded-tight object-cover" />
@@ -150,7 +149,7 @@
 									</span>
 								</span>
 								<ArrowUpRight class="size-4 text-text-secondary" />
-							</button>
+							</InteractiveListRow>
 						{/each}
 					</EmbeddedList>
 				</section>
@@ -168,16 +167,15 @@
 					</div>
 					<EmbeddedList>
 						{#each results.topics as topic (topic)}
-							<button
-								type="button"
-								onclick={() => onChoose(topic)}
-								class="hover-bg flex w-full items-center gap-3 px-4 py-3.5 text-left"
-								style="border-color:var(--border-default);"
+							<InteractiveListRow
+								onClick={() => onChoose(topic)}
+								ariaLabel={`搜索话题 ${topic}`}
+								class="flex items-center gap-3 px-4 py-3.5"
 							>
 								<Hash class="size-4 text-accent-default" />
 								<span class="flex-1 text-sm text-text-primary">#{topic}</span>
 								<ArrowUpRight class="size-4 text-text-secondary" />
-							</button>
+							</InteractiveListRow>
 						{/each}
 					</EmbeddedList>
 				</section>

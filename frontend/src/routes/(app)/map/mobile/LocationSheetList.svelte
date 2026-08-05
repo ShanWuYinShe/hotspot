@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { MapPin, X, Users, ChevronRight, Clock, Star, Check } from '@lucide/svelte';
 	import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
+import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
 	import { HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { PIN_COLORS, PIN_LABELS, pinTone, getMarkerUrl } from '../shared/location-shared';
 
@@ -34,20 +35,21 @@
 {#if searchQuery && searchResults.length > 0}
 	<EmbeddedList class="animate-fade-in">
 		{#each searchResults as r}
-			<button
-				type="button"
-				class="app-list-row app-list-row--standard px-5 outline-none transition-[background-color,opacity] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:opacity-80"
-				aria-pressed={selectedLoc?.displayName === r.displayName}
-				onclick={() => onSelectLoc(r)}
+			{@const isSelected = selectedLoc?.displayName === r.displayName}
+			<InteractiveListRow
+				pressed={isSelected}
+				onClick={() => onSelectLoc(r)}
+				ariaLabel={`选择地点 ${r.displayName}`}
+				class="app-list-row app-list-row--standard px-5"
 			>
 				<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default" style="width:34px;height:34px;opacity:0.12">
 					<MapPin style="width:14px;height:14px;color:var(--accent-default)" strokeWidth={1.75} />
 				</div>
-				<span class="text-text-primary" style="font-size:14px;flex:1">{r.displayName}</span>
-				{#if selectedLoc?.displayName === r.displayName}
-					<Check style="width:14px;height:14px;color:var(--accent-default);shrink:0" strokeWidth={2.5} />
+				<span class="{isSelected ? 'text-content-inverse' : 'text-text-primary'}" style="font-size:14px;flex:1">{r.displayName}</span>
+				{#if isSelected}
+					<Check style="width:14px;height:14px;color:var(--content-inverse);shrink:0" strokeWidth={2.5} />
 				{/if}
-			</button>
+			</InteractiveListRow>
 		{/each}
 	</EmbeddedList>
 {:else if searchQuery && searchResults.length === 0}
@@ -117,25 +119,26 @@
 			{#if recentItems.length > 0}
 				<EmbeddedList>
 					{#each recentItems as loc}
-						<button
-							type="button"
-							class="app-list-row app-list-row--standard px-4 outline-none transition-[background-color,opacity] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:opacity-80"
-							aria-pressed={selectedLoc?.displayName === loc.displayName}
-							onclick={() => onSelectLoc(loc)}
+						{@const isSelected = selectedLoc?.displayName === loc.displayName}
+						<InteractiveListRow
+							pressed={isSelected}
+							onClick={() => onSelectLoc(loc)}
+							ariaLabel={`选择最近地点 ${loc.displayName}`}
+							class="app-list-row app-list-row--standard px-4"
 						>
 							<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary" style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);font-size:18px;">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
-								<p class="truncate text-text-primary text-sm">{loc.displayName}</p>
-								<p class="text-text-secondary" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
+								<p class="truncate {isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm">{loc.displayName}</p>
+								<p class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'}" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
 							</div>
-							{#if selectedLoc?.displayName === loc.displayName}
-								<Check style="width:14px;height:14px;color:var(--accent-default);shrink:0;" strokeWidth={2.5} />
+							{#if isSelected}
+								<Check style="width:14px;height:14px;color:var(--content-inverse);shrink:0;" strokeWidth={2.5} />
 							{:else}
 								<ChevronRight style="width:13px;height:13px;color:var(--border-default);shrink:0;" strokeWidth={1.5} />
 							{/if}
-						</button>
+						</InteractiveListRow>
 					{/each}
 				</EmbeddedList>
 			{:else}
@@ -145,24 +148,25 @@
 			{#if HOT_LOCATIONS.length}
 				<EmbeddedList>
 					{#each HOT_LOCATIONS as loc}
-						<button
-							type="button"
-							class="app-list-row app-list-row--standard px-4 outline-none transition-[background-color,opacity] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:opacity-80"
-							aria-pressed={selectedLoc?.displayName === loc.displayName}
-							onclick={() => onSelectLoc(loc)}
+						{@const isSelected = selectedLoc?.displayName === loc.displayName}
+						<InteractiveListRow
+							pressed={isSelected}
+							onClick={() => onSelectLoc(loc)}
+							ariaLabel={`选择热门地点 ${loc.displayName}`}
+							class="app-list-row app-list-row--standard px-4"
 						>
 							<div class="flex items-center justify-center rounded-[13px] shrink-0 bg-accent-default" style="width:36px;height:36px;font-size:18px;opacity:0.88;">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
-								<p class="truncate text-text-primary text-sm">{loc.displayName}</p>
-								<p class="text-text-secondary" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
+								<p class="truncate {isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm">{loc.displayName}</p>
+								<p class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'}" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
 							</div>
 							<div class="flex items-center gap-1 shrink-0">
-								<Users style="width:11px;height:11px;color:var(--accent-default);" strokeWidth={1.5} />
-								<span class="text-accent-default text-xs">{loc.users}</span>
+								<Users style="width:11px;height:11px;color:{isSelected ? 'var(--content-inverse)' : 'var(--accent-default)'};" strokeWidth={1.5} />
+								<span class="{isSelected ? 'text-content-inverse-secondary' : 'text-accent-default'} text-xs">{loc.users}</span>
 							</div>
-						</button>
+						</InteractiveListRow>
 					{/each}
 				</EmbeddedList>
 			{:else}

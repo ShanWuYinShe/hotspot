@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { UserPlus, MessageCircle, Users, Check } from '@lucide/svelte';
-	import SearchInput from '@/components/forms/SearchInput.svelte';
-	import SheetShell from '@/components/overlays/SheetShell.svelte';
+import { UserPlus, MessageCircle, Users, Check } from '@lucide/svelte';
+import SearchInput from '@/components/forms/SearchInput.svelte';
+import SheetShell from '@/components/overlays/SheetShell.svelte';
+import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
 
 	// 新会话底部 Sheet：添加好友 / 开始私聊 / 创建群聊入口。
 
@@ -28,8 +29,15 @@
 	function initialTab(): Tab {
 		return defaultTab;
 	}
-	let searchQ = $state('');
-	let addedIds = $state<Set<number>>(new Set());
+let searchQ = $state('');
+let addedIds = $state<Set<number>>(new Set());
+
+// 行整体与「添加」按钮共用同一切换逻辑（按钮 stopPropagation 避免双击切换）
+function toggleAdd(id: number) {
+	const n = new Set(addedIds);
+	n.has(id) ? n.delete(id) : n.add(id);
+	addedIds = n;
+}
 
 	const filteredSuggested = $derived(
 		SUGGESTED.filter((u) => !searchQ || u.name.toLowerCase().includes(searchQ.toLowerCase()) || u.subtitle.includes(searchQ))
@@ -76,7 +84,12 @@
 					附近推荐
 				</p>
 				{#each filteredSuggested as u (u.id)}
-					<div class="flex items-center gap-3.5 px-3 py-3 rounded-relaxed row-hover" style="border:1px solid var(--border-default);">
+					<InteractiveListRow
+						tone="card"
+						onClick={() => toggleAdd(u.id)}
+						ariaLabel={addedIds.has(u.id) ? `取消添加 ${u.name}` : `添加 ${u.name}`}
+						class="flex items-center gap-3.5 p-3"
+					>
 						<img src={u.avatar} alt={u.name} class="rounded-full object-cover shrink-0" style="width:44px;height:44px;border:1.5px solid var(--border-default);" />
 						<div class="flex-1 min-w-0">
 							<p class="text-text-primary" style="font-size:14px;">{u.name}</p>
@@ -88,10 +101,9 @@
 							style={addedIds.has(u.id)
 								? 'box-shadow:var(--shadow-neu-inset-xs);border:1px solid var(--border-strong);font-size:11px;'
 								: 'font-size:11px;box-shadow:0 3px 8px var(--glow-accent);'}
-							onclick={() => {
-								const n = new Set(addedIds);
-								n.has(u.id) ? n.delete(u.id) : n.add(u.id);
-								addedIds = n;
+							onclick={(e) => {
+								e.stopPropagation();
+								toggleAdd(u.id);
 							}}
 						>
 							{#if addedIds.has(u.id)}
@@ -102,20 +114,20 @@
 								添加
 							{/if}
 						</button>
-					</div>
+					</InteractiveListRow>
 				{/each}
 			</div>
 		{:else}
 			<div class="animate-fade-in flex flex-col gap-2">
 				<!-- Create group chat row -->
-				<button
-					type="button"
-					class="hover-card flex items-center gap-3.5 px-3 py-3 rounded-relaxed w-full outline-none text-left mb-3 bg-surface-primary"
-					style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--border-default);"
-					onclick={() => {
+				<InteractiveListRow
+					tone="card"
+					onClick={() => {
 						onClose();
 						onCreateGroup?.();
 					}}
+					ariaLabel="创建群聊"
+					class="mb-3 flex items-center gap-3.5 p-3"
 				>
 					<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default" style="width:44px;height:44px;box-shadow:0 3px 8px var(--glow-accent);">
 						<Users style="width:20px;height:20px;color:var(--text-on-accent);" strokeWidth={1.75} />
@@ -124,20 +136,20 @@
 						<p class="text-text-primary" style="font-size:14px;font-weight:500;">创建群聊</p>
 						<p class="text-text-secondary" style="font-size:11px;">邀请好友一起聊</p>
 					</div>
-				</button>
+				</InteractiveListRow>
 
 				<p class="uppercase mb-2 text-text-secondary" style="font-size:10px;letter-spacing:0.14em;">
 					联系人
 				</p>
 				{#each filteredContacts as c (c.id)}
-					<button
-						type="button"
-						class="flex items-center gap-3.5 px-3 py-3 rounded-relaxed cursor-pointer w-full text-left row-hover"
-						style="border:1px solid var(--border-default);"
-						onclick={() => {
+					<InteractiveListRow
+						tone="card"
+						onClick={() => {
 							onNewChat?.(c.id);
 							onClose();
 						}}
+						ariaLabel={`与 ${c.name} 开始私聊`}
+						class="flex items-center gap-3.5 p-3"
 					>
 						<div class="relative shrink-0">
 							<img src={c.avatar} alt={c.name} class="rounded-full object-cover" style="width:44px;height:44px;border:1.5px solid var(--border-default);" />
@@ -152,7 +164,7 @@
 							</p>
 						</div>
 						<MessageCircle style="width:16px;height:16px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
-					</button>
+					</InteractiveListRow>
 				{/each}
 			</div>
 		{/if}

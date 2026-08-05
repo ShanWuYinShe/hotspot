@@ -8,7 +8,7 @@
 	import SectionHead from '@/routes/(app)/_home/SectionHead.svelte';
 	import ActivityList, { type Activity } from '@/routes/(app)/_home/ActivityList.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/routes/(app)/_home/GroupCarousel.svelte';
-	import NearbyUsersFlatList from '@/routes/(app)/_home/NearbyUsersFlatList.svelte';
+	import NearbyUsersList from '@/routes/(app)/_home/NearbyUsersList.svelte';
 	import { type NearbyUser } from '@/routes/(app)/_home/nearby-users';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance } from '@/lib/utils';
@@ -125,7 +125,7 @@
 	<!-- 附近的人 -->
 	<div class="mt-6">
 		<SectionHead title="附近的人" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
-		<NearbyUsersFlatList users={nearbyUsers.slice(0, 4)} followingIds={followingIds} onToggle={toggleFollow} />
+		<NearbyUsersList users={nearbyUsers.slice(0, 4)} followingIds={followingIds} onToggle={toggleFollow} />
 	</div>
 
 	<!-- 附近群组 -->

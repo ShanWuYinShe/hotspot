@@ -7,6 +7,8 @@
 	//   - tone=joined：连接列表行（--surface-primary 表面，配合 BorderedList/EmbeddedList）
 	//   - tone=card  ：独立卡片行（rounded-relaxed + 边框 + 凸起阴影）
 	//   - hover：--interactive-hover-fill 背景填充；tap：轻微透明度按压反馈
+	//   - pressed：选中态（accent 全背景 + 反色文字，对齐 ConversationListItem 强选中契约）；
+	//     children 需按 $derived(isSelected) 切换反色类（text-content-inverse 系列）
 	//   - 可点击时提供 role=button / 键盘 Enter+Space / tabindex / aria-pressed
 	//
 	// ┌──────────────── 列表容器 ────────────────┐
@@ -30,6 +32,7 @@
 		tone?: 'joined' | 'card';
 		onClick?: () => void;
 		ariaLabel?: string;
+		/** 选中态（accent 全背景 + 反色）。行自身渲染 aria-pressed/data-active。 */
 		pressed?: boolean;
 		style?: string;
 	} = $props();
@@ -53,8 +56,13 @@
 				`box-shadow:${activeSurface ? `${baseCardShadow}, inset 0 0 0 1px var(--accent-border)` : baseCardShadow};`
 			);
 		}
-		// hover/focus 填充放在最后，确保覆盖行内背景（Figma Make hover-fill 契约）
-		if (activeSurface) parts.push('background:var(--interactive-hover-fill);');
+		// 选中态：accent 全背景（inline style 优先，hover 不再叠加填充）
+		if (pressed) {
+			parts.push('background:var(--accent-default);');
+		} else if (activeSurface) {
+			// hover/focus 填充放在最后，确保覆盖行内背景（Figma Make hover-fill 契约）
+			parts.push('background:var(--interactive-hover-fill);');
+		}
 		return parts.join('');
 	});
 </script>

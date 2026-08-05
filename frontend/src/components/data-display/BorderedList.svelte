@@ -23,11 +23,13 @@
 	let {
 		children,
 		class: className = '',
-		style: styleProp = ''
+		style: styleProp = '',
+		ariaLabel
 	}: {
 		children: Snippet;
 		class?: string;
 		style?: string;
+		ariaLabel?: string;
 	} = $props();
 </script>
 
@@ -35,6 +37,7 @@
 <div
 	class={cn('flex flex-col gap-px overflow-hidden rounded-control border', className)}
 	style={`background:var(--border-default);border-color:var(--border-default);${styleProp}`}
+	aria-label={ariaLabel}
 >
 	{@render children()}
 </div>

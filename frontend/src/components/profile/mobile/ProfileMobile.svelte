@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Camera, ChevronRight, Heart, ImageIcon, MapPin, Pencil, Settings, UserCheck, UserPlus, Users } from '@lucide/svelte';
-	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
-	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
-	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
+import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
+import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+import BorderedList from '@/components/data-display/BorderedList.svelte';
+import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
 	import { useAccountData } from '@/lib/profile-data.svelte';
 	import { ROUTES, type ProfileSection } from '@/lib/routes';
 
@@ -94,19 +96,18 @@
 	</section>
 
 	<!-- 个人数据 5 行链接 -->
-	<section class="mt-5 rounded-panel border border-border-default surface-flat" aria-label="个人数据">
-		<div class="flex items-center justify-between border-b border-border-default px-5 py-3.5">
+	<BorderedList class="mt-5" ariaLabel="个人数据">
+		<div class="flex items-center justify-between bg-surface-primary px-5 py-3.5">
 			<div>
 				<p class="text-sm font-medium text-text-primary">个人数据</p>
 				<p class="mt-0.5 text-xs text-text-secondary">在这里查看你的内容与关系</p>
 			</div>
 		</div>
 		{#each DATA_ITEMS as item (item.section)}
-			<button
-				type="button"
-				class="hover-bg flex w-full items-center gap-3 border-b border-border-default px-5 py-3.5 text-left outline-none last:border-b-0"
-				style="background:var(--surface-primary);"
-				onclick={() => void goto(ROUTES.meSection(item.section))}
+			<InteractiveListRow
+				onClick={() => void goto(ROUTES.meSection(item.section))}
+				ariaLabel={item.label}
+				class="flex items-center gap-3 px-5 py-3.5"
 			>
 				<span class="flex shrink-0 items-center justify-center" style="width:32px;height:32px;background:var(--color-accent-bg);color:var(--accent-default);">
 					<item.icon style="width:16px;height:16px;" strokeWidth={1.8} />
@@ -116,7 +117,7 @@
 					<span class="mt-0.5 block truncate text-xs text-text-secondary">{item.detail}</span>
 				</span>
 				<ChevronRight style="width:16px;height:16px;color:var(--text-secondary);shrink:0;" strokeWidth={1.7} />
-			</button>
+			</InteractiveListRow>
 		{/each}
-	</section>
+	</BorderedList>
 </StandardPageLayout>

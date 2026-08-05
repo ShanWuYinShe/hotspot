@@ -1,17 +1,16 @@
 <script lang="ts">
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
+	import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
 
 	// 会话列表项（对齐 Figma Make ConversationListItem 契约）：
+	//   - 基于 InteractiveListRow 统一行组件（hover 填充 / tap 反馈 / 键盘 / aria）
 	//   - 已读/未读不靠字号或字重区分（所有 item 大小一致），未读仅由
 	//     计数 chip 呈现；点击后未读清零（由页面 markRead 处理）
-	//   - hover/focus-visible：--interactive-hover-fill 背景填充
-	//   - selected：accent 背景 + glow 阴影 + 反色文字（content-inverse 系列）
-	//     + border-inverse 头像框。选中态用 inline background（非 bg-* 类），
-	//     避免全局 button hover overlay 盖出白蒙蒙效果；aria-current 触发
-	//     utilities 豁免规则（hover 时保持 accent 不变）
+	//   - selected：InteractiveListRow pressed 驱动 accent 全背景 + 反色文字
+	//     （content-inverse 系列）+ border-inverse 头像框；inline 背景避免
+	//     全局 button hover overlay 盖出白蒙蒙效果
 	//   - unread 徽章：选中时保留占位并改为反色，避免行内 flex-1 文本区
 	//     宽度跳变导致点击位移
-	//   - tap：按压 opacity 0.8 反馈；transition 150ms
 
 	export interface ChatItem {
 		id: string;
@@ -39,12 +38,12 @@
 	} = $props();
 </script>
 
-<button
-	type="button"
-	aria-current={isSelected ? 'page' : undefined}
-	class="group flex w-full cursor-pointer items-center gap-3.5 rounded-control px-4 text-left outline-none transition-[background-color,opacity] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:opacity-80"
-	style="padding:{compact ? '10px 16px' : '12px 16px'};background:{isSelected ? 'var(--accent-default)' : 'transparent'};box-shadow:{isSelected ? '0 3px 12px var(--glow-accent)' : 'none'};"
-	onclick={onClick}
+<InteractiveListRow
+	pressed={isSelected}
+	onClick={onClick}
+	ariaLabel={`打开与 ${chat.name} 的会话`}
+	class="flex items-center gap-3.5 rounded-control"
+	style="padding:{compact ? '10px 16px' : '12px 16px'};box-shadow:{isSelected ? '0 3px 12px var(--glow-accent)' : 'none'};"
 >
 	<span class="relative shrink-0">
 		<span
@@ -80,4 +79,4 @@
 			{chat.unread}
 		</span>
 	{/if}
-</button>
+</InteractiveListRow>

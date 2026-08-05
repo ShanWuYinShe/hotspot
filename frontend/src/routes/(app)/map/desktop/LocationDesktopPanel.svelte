@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, Crosshair, Check, Heart } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
-	import BorderedList from '@/components/data-display/BorderedList.svelte';
-	import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
+import BorderedList from '@/components/data-display/BorderedList.svelte';
+import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
+import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { PIN_COLORS, PIN_LABELS, pinTone, getMarkerUrl } from '../shared/location-shared';
@@ -88,20 +89,21 @@
 	</div>
 	{#if searchResults.length > 0}
 		<BorderedList class="absolute top-full left-4 right-4 z-30 mt-1" style="box-shadow:0 0 0 1px var(--border-default), 0 10px 36px var(--elevation-shadow-dark);">
-			{#each searchResults as r}
-				<button
-					type="button"
-					class="app-list-row app-list-row--standard outline-none transition-[background-color,opacity] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:opacity-80"
-					aria-pressed={selectedLoc?.displayName === r.displayName}
-					onclick={() => onSelectLoc(r)}
-				>
-					<MapPin style="width:13px;height:13px;color:var(--accent-default);shrink:0;" strokeWidth={1.5} />
-					<span class="text-text-primary flex-1" style="font-size:13px;">{r.displayName}</span>
-					{#if selectedLoc?.displayName === r.displayName}
-						<Check style="width:13px;height:13px;color:var(--accent-default);" strokeWidth={2.5} />
-					{/if}
-				</button>
-			{/each}
+		{#each searchResults as r}
+			{@const isSelected = selectedLoc?.displayName === r.displayName}
+			<InteractiveListRow
+				pressed={isSelected}
+				onClick={() => onSelectLoc(r)}
+				ariaLabel={`选择地点 ${r.displayName}`}
+				class="app-list-row app-list-row--standard"
+			>
+				<MapPin style="width:13px;height:13px;color:var(--accent-default);shrink:0;" strokeWidth={1.5} />
+				<span class="{isSelected ? 'text-content-inverse' : 'text-text-primary'} flex-1" style="font-size:13px;">{r.displayName}</span>
+				{#if isSelected}
+					<Check style="width:13px;height:13px;color:var(--content-inverse);" strokeWidth={2.5} />
+				{/if}
+			</InteractiveListRow>
+		{/each}
 		</BorderedList>
 	{/if}
 </div>
@@ -145,12 +147,11 @@
 				<EmbeddedList>
 					{#each nearbyPins as pin (pin.id)}
 						{@const isSelected = selectedPin?.id === pin.id}
-						<button
-							type="button"
-							class="app-list-row app-list-row--standard outline-none transition-[background-color,opacity] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:opacity-80"
-							style={isSelected ? `background:${pinTone(pin.type, 10)};` : ''}
-							aria-pressed={isSelected}
-							onclick={() => onSelectPin(pin)}
+						<InteractiveListRow
+							pressed={isSelected}
+							onClick={() => onSelectPin(pin)}
+							ariaLabel={`选择 ${pin.name || pin.title || ''}`}
+							class="app-list-row app-list-row--standard"
 						>
 						{#if pin.type === 'user' && pin.avatar}
 							<div class="relative shrink-0">
@@ -167,23 +168,23 @@
 							</div>
 						{/if}
 						<div class="flex-1 min-w-0">
-							<p class="text-text-primary text-base">{pin.name || pin.title}</p>
+							<p class="{isSelected ? 'text-content-inverse' : 'text-text-primary'} text-base">{pin.name || pin.title}</p>
 							<div class="flex items-center gap-2 mt-0.5 flex-wrap">
 								<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:{pinTone(pin.type, 15)};color:{PIN_COLORS[pin.type]};">
 									{PIN_LABELS[pin.type]}
 								</span>
 								{#if pin.tag}
-									<span class="text-text-secondary text-xs">#{pin.tag}</span>
+									<span class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs">#{pin.tag}</span>
 								{/if}
 								{#if pin.distance}
-									<span class="text-text-secondary text-xs">{pin.distance}</span>
+									<span class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs">{pin.distance}</span>
 								{/if}
 								{#if pin.members}
-									<span class="text-text-secondary text-xs">{pin.members}人</span>
+									<span class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs">{pin.members}人</span>
 								{/if}
 								{#if pin.likes}
-									<span class="flex items-center gap-0.5 text-text-secondary">
-										<Heart style="width:9px;height:9px;color:var(--text-secondary);" strokeWidth={1.5} />
+									<span class="flex items-center gap-0.5 {isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'}">
+										<Heart style="width:9px;height:9px;" strokeWidth={1.5} />
 										<span class="text-xs">{pin.likes}</span>
 									</span>
 								{/if}
@@ -194,7 +195,7 @@
 						{:else}
 							<ChevronRight style="width:14px;height:14px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
 						{/if}
-					</button>
+					</InteractiveListRow>
 				{/each}
 				</EmbeddedList>
 			{:else}
@@ -210,30 +211,29 @@
 				<EmbeddedList>
 					{#each HOT_LOCATIONS as loc}
 						{@const isSelected = selectedLoc?.displayName === loc.displayName}
-						<button
-							type="button"
-							class="app-list-row app-list-row--standard outline-none transition-[background-color,opacity] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:opacity-80"
-							style={isSelected ? 'background:var(--accent-soft);' : ''}
-							aria-pressed={isSelected}
-							onclick={() => onSelectLoc(loc)}
+						<InteractiveListRow
+							pressed={isSelected}
+							onClick={() => onSelectLoc(loc)}
+							ariaLabel={`选择热门地点 ${loc.displayName}`}
+							class="app-list-row app-list-row--standard"
 						>
 							<div class="flex items-center justify-center rounded-small shrink-0 bg-accent-default" style="width:36px;height:36px;font-size:18px;opacity:0.88;">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
-								<p class="truncate text-text-primary text-sm">{loc.displayName}</p>
-								<p class="truncate text-text-secondary" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
+								<p class="truncate {isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm">{loc.displayName}</p>
+								<p class="truncate {isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'}" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
 							</div>
 							<div class="flex shrink-0 items-center gap-1">
-								<Users style="width:11px;height:11px;color:var(--accent-default);" strokeWidth={1.5} />
-								<span class="text-accent-default text-xs">{loc.users}</span>
+								<Users style="width:11px;height:11px;color:{isSelected ? 'var(--content-inverse)' : 'var(--accent-default)'};" strokeWidth={1.5} />
+								<span class="{isSelected ? 'text-content-inverse-secondary' : 'text-accent-default'} text-xs">{loc.users}</span>
 							</div>
 							{#if isSelected}
-								<Check style="width:14px;height:14px;color:var(--accent-default);shrink:0;" strokeWidth={2.5} />
+								<Check style="width:14px;height:14px;color:var(--content-inverse);shrink:0;" strokeWidth={2.5} />
 							{:else}
 								<ChevronRight style="width:13px;height:13px;color:var(--border-default);shrink:0;" strokeWidth={1.5} />
 							{/if}
-						</button>
+						</InteractiveListRow>
 					{/each}
 				</EmbeddedList>
 			{:else}
@@ -249,26 +249,25 @@
 				<EmbeddedList>
 					{#each RECENT_LOCATIONS as loc}
 						{@const isSelected = selectedLoc?.displayName === loc.displayName}
-						<button
-							type="button"
-							class="app-list-row app-list-row--standard outline-none transition-[background-color,opacity] duration-150 {isSelected ? '' : 'hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill'} active:opacity-80"
-							style={isSelected ? 'background:var(--accent-soft);' : ''}
-							aria-pressed={isSelected}
-							onclick={() => onSelectLoc(loc)}
+						<InteractiveListRow
+							pressed={isSelected}
+							onClick={() => onSelectLoc(loc)}
+							ariaLabel={`选择最近地点 ${loc.displayName}`}
+							class="app-list-row app-list-row--standard"
 						>
 							<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary" style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);font-size:18px;">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
-								<p class="truncate text-text-primary text-sm">{loc.displayName}</p>
-								<p class="truncate text-text-secondary" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
+								<p class="truncate {isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm">{loc.displayName}</p>
+								<p class="truncate {isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'}" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
 							</div>
 							{#if isSelected}
-								<Check style="width:14px;height:14px;color:var(--accent-default);shrink:0;" strokeWidth={2.5} />
+								<Check style="width:14px;height:14px;color:var(--content-inverse);shrink:0;" strokeWidth={2.5} />
 							{:else}
 								<ChevronRight style="width:13px;height:13px;color:var(--border-default);shrink:0;" strokeWidth={1.5} />
 							{/if}
-						</button>
+						</InteractiveListRow>
 					{/each}
 				</EmbeddedList>
 			{:else}

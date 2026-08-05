@@ -1,6 +1,8 @@
 <script lang="ts">
-	import { Check, Moon, Palette, Sun, Database } from '@lucide/svelte';
-	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+import { Check, Moon, Palette, Sun, Database } from '@lucide/svelte';
+import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
+import InteractiveListRow from '@/components/navigation/InteractiveListRow.svelte';
 	import { theme, toggleDark, setTheme } from '@/stores/theme.svelte';
 	import * as Popover from '@/components/ui/popover';
 
@@ -182,21 +184,21 @@
 				<div class="mt-2 rounded-small ring-1 ring-border-default px-3 py-2.5" style="color:var(--text-primary);">
 					<span class="block text-sm font-medium">模拟登录态</span>
 					<span class="mb-2 block text-xxs text-text-secondary">影响 login/register/guest/reset 的返回</span>
-					<div class="flex flex-col" style="gap:4px;">
+					<EmbeddedList>
 						{#each AUTH_SCENARIOS as s}
-							<button
-								type="button"
-								onclick={() => void applyScenario(s.id)}
-								class="flex items-center justify-between rounded-compact px-2 py-1.5 text-left text-xs outline-none transition-colors"
-								style="background:{scenario === s.id ? 'var(--accent-soft)' : 'transparent'};color:{scenario === s.id ? 'var(--accent-default)' : 'var(--text-primary)'};"
+							<InteractiveListRow
+								pressed={scenario === s.id}
+								onClick={() => void applyScenario(s.id)}
+								ariaLabel={`切换登录态：${s.label}`}
+								class="flex items-center justify-between px-2 py-1.5"
 							>
-								<span>{s.label}</span>
+								<span class="{scenario === s.id ? 'text-content-inverse' : 'text-text-primary'} text-xs">{s.label}</span>
 								{#if scenario === s.id}
-									<Check size={12} />
+									<Check size={12} style="color:var(--content-inverse);" />
 								{/if}
-							</button>
+							</InteractiveListRow>
 						{/each}
-					</div>
+					</EmbeddedList>
 					<button
 						type="button"
 						onclick={() => void resetLoggedOut()}
