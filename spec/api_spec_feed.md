@@ -13,14 +13,14 @@
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 | 幂等 |
-|-----|------|------|------|
-| `POST /api/v1/feed/following` | 关注动态（我关注的人发布的瞬间） | 必须 | 无 |
-| `POST /api/v1/feed/nearby` | 附近瞬间（基于位置的发现流） | 必须 | 无 |
-| `POST /api/v1/feed/nearby_users` | 附近的人推荐 | 可选 | 无 |
-| `POST /api/v1/feed/nearby_groups` | 附近的群组推荐 | 可选 | 无 |
-| `POST /api/v1/feed/trending` | 热门内容（发现页默认） | 可选 | 无 |
+| 端点 | 说明 | 认证 |
+|-----|------|------|
 
+| `POST /api/v1/feed/following` | 关注动态（我关注的人发布的瞬间） | 必须 |
+| `POST /api/v1/feed/nearby` | 附近瞬间（基于位置的发现流） | 必须 |
+| `POST /api/v1/feed/nearby_users` | 附近的人推荐 | 可选 |
+| `POST /api/v1/feed/nearby_groups` | 附近的群组推荐 | 可选 |
+| `POST /api/v1/feed/trending` | 热门内容（发现页默认） | 可选 |
 ## 类型定义
 
 以下类型定义于 `api_spec_types.md`：
@@ -37,7 +37,6 @@
 关注的人发布的瞬间，按时间倒序排列。
 
 - **认证**: 必须
-- **幂等**: 无
 - **排序**: 按 `created_at DESC` 排序，`moment_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `GetFeedFollowingRequest`
@@ -50,8 +49,6 @@ interface GetFeedFollowingRequest {
 
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/feed/nearby
@@ -59,7 +56,6 @@ interface GetFeedFollowingRequest {
 附近范围内的瞬间，按距离和热度综合排序。当前用户的主要发现流入口。
 
 - **认证**: 必须
-- **幂等**: 无
 - **排序**: 以地理位置相关信号为主，`moment_id DESC` 作为稳定 tie-breaker；一致性级别为弱一致
 
 **Request**: `GetFeedNearbyRequest`
@@ -75,8 +71,6 @@ interface GetFeedNearbyRequest {
 
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/feed/nearby_users
@@ -84,7 +78,6 @@ interface GetFeedNearbyRequest {
 获取附近的用户推荐。认证可选——未登录也可浏览附近用户，支持匿名发现（拉新关键路径）。
 
 - **认证**: 可选
-- **幂等**: 无
 - **排序**: 
   - 主序：以地理位置相关信号为主（距离/活跃度的组合）
   - 次序：允许综合"社交信号"（共同好友数、共同标签）提升前排质量
@@ -103,8 +96,6 @@ interface GetFeedNearbyUsersRequest {
 
 **Response**: `ApiResponse<PaginatedData<UserItem>>`
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/feed/nearby_groups
@@ -112,7 +103,6 @@ interface GetFeedNearbyUsersRequest {
 获取附近可加入的群组推荐。认证可选——未登录也可浏览附近群组。
 
 - **认证**: 可选
-- **幂等**: 无
 - **排序**: 
   - 主序：以地理位置相关信号为主（距离/热度/活跃度的组合）
   - 次序：允许在距离接近时体现"社交信号"（共同好友/同标签）
@@ -131,8 +121,6 @@ interface GetFeedNearbyGroupsRequest {
 
 **Response**: `ApiResponse<PaginatedData<GroupItem>>`
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/feed/trending
@@ -144,7 +132,6 @@ interface GetFeedNearbyGroupsRequest {
 - `search/suggest`：**有输入前缀**的"搜索框联想"——用户在搜索框输入时，按前缀匹配的用户/群组/瞬间/标签建议。
 
 - **认证**: 可选
-- **幂等**: 无
 
 **Request**: `GetFeedTrendingRequest`
 ```typescript
@@ -158,5 +145,3 @@ interface TrendingBundle {
   hot_moments: MomentItem[];   // 热门瞬间列表；@auth-only 字段（如 reactions[].reacted_by_me）按登录态返回
 }
 ```
-
-**错误码**: `10000`

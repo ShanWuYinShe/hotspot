@@ -13,21 +13,21 @@
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 | 幂等 |
-|------|------|------|------|
-| `POST /api/v1/auth/register` | 用户注册 | 否 | 是 |
-| `POST /api/v1/auth/login` | 用户登录 | 否 | 否 |
-| `POST /api/v1/auth/logout` | 用户登出 | 必须 | 否 |
-| `POST /api/v1/auth/guest` | 创建访客用户 | 否 | 是 |
-| `POST /api/v1/auth/refresh_token` | 刷新 Token | 可选 | 否 |
-| `POST /api/v1/auth/check_status` | 检查认证状态 | 可选 | 否 |
-| `POST /api/v1/auth/request_password_reset` | 请求密码重置 | 否 | 否 |
-| `POST /api/v1/auth/reset_password` | 重置密码 | 否 | 是 |
-| `POST /api/v1/auth/change_password` | 修改密码 | 必须 | 是 |
-| `POST /api/v1/auth/list_sessions` | 获取会话列表 | 必须 | 否 |
-| `POST /api/v1/auth/revoke_session` | 撤销会话 | 必须 | 否 |
-| `POST /api/v1/auth/revoke_all_sessions` | 撤销所有其他会话 | 必须 | 否 |
+| 端点 | 说明 | 认证 |
+|------|------|------|
 
+| `POST /api/v1/auth/register` | 用户注册 | 否 |
+| `POST /api/v1/auth/login` | 用户登录 | 否 |
+| `POST /api/v1/auth/logout` | 用户登出 | 必须 |
+| `POST /api/v1/auth/guest` | 创建访客用户 | 否 |
+| `POST /api/v1/auth/refresh_token` | 刷新 Token | 可选 |
+| `POST /api/v1/auth/check_status` | 检查认证状态 | 可选 |
+| `POST /api/v1/auth/request_password_reset` | 请求密码重置 | 否 |
+| `POST /api/v1/auth/reset_password` | 重置密码 | 否 |
+| `POST /api/v1/auth/change_password` | 修改密码 | 必须 |
+| `POST /api/v1/auth/list_sessions` | 获取会话列表 | 必须 |
+| `POST /api/v1/auth/revoke_session` | 撤销会话 | 必须 |
+| `POST /api/v1/auth/revoke_all_sessions` | 撤销所有其他会话 | 必须 |
 ## 类型定义
 
 以下类型定义于 `api_spec_types.md`：
@@ -119,7 +119,7 @@ Token 通过响应体投递：
 **Request**: `RegisterRequest`
 ```typescript
 interface RegisterRequest {
-  login_id: string;
+  login_id: string;             // 手机号/邮箱/用户名（注册后作为登录凭证）
   nickname: string;
   password: string;
   client_type: ClientType;
@@ -129,14 +129,13 @@ interface RegisterRequest {
 
 **Response**: `ApiResponse<AuthTokenPairWeb | AuthTokenPairApp>`
 
-**错误码**: `10000` `10400`
+**错误码**: `10400`
 
 ### POST /api/v1/auth/login
 
 用户登录（密码方式）。
 
 - **认证**: 无
-- **幂等**: 否
 
 **Request**: `LoginRequest`
 ```typescript
@@ -154,7 +153,7 @@ interface LoginRequest {
 
 **安全说明**：用户不存在和密码错误统一返回 `10100`（认证失败），不区分具体原因，防止账号枚举攻击。
 
-**错误码**: `10000` `10100`
+**错误码**: `10100`
 
 ---
 
@@ -163,7 +162,6 @@ interface LoginRequest {
 用户登出。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **失效规则**：登出会将当前 access_token 与 refresh_token 写入黑名单，直至过期。
 
@@ -187,8 +185,6 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 - 客户端也可以在调用 logout 之前先主动断开 WebSocket
 - 无论哪种顺序，服务端都会确保 WebSocket 连接被清理
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/auth/guest
@@ -209,8 +205,6 @@ interface GuestRequest {
 
 **Response**: `ApiResponse<AuthTokenPairWeb | AuthTokenPairApp>`
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/auth/refresh_token
@@ -218,7 +212,6 @@ interface GuestRequest {
 刷新 Token。
 
 - **认证**: 可选
-- **幂等**: 否
 
 **刷新规则**：
 - 刷新成功后：access_token 和 refresh_token 都会更新
@@ -234,8 +227,10 @@ interface GuestRequest {
 **驱逐优先于宽限（契约级）**：宽限期仅容忍"并发刷新竞态"。若旧 session 是被「单设备单会话驱逐」显式写入黑名单的（如同设备重新登录），则黑名单立即生效，**30 秒宽限不覆盖显式驱逐**——旧 session 的任何请求（含宽限期内 refresh）立即失败为 `10100`。
 
 **client_type 约束**：
-- `client_type='web'`：请求体不得包含 `refresh_token` 字段（若包含则返回 `10000`）
-- `client_type='app'`：请求体必须包含非空 `refresh_token`（缺少或为空则返回 `10000`）
+- `client_type='web'`：请求体不得包含 `refresh_token` 字段（若包含则请求失败）
+- `client_type='app'`：请求体必须包含非空 `refresh_token`（缺少或为空则请求失败）
+
+**错误码**: `10100`
 
 **Request**: `RefreshTokenRequest`
 ```typescript
@@ -248,8 +243,6 @@ interface RefreshTokenRequest {
 
 **Response**: `ApiResponse<AuthTokenPairWeb | AuthTokenPairApp>`
 
-**错误码**: `10000` `10100`
-
 ---
 
 ### POST /api/v1/auth/check_status
@@ -257,7 +250,6 @@ interface RefreshTokenRequest {
 检查认证状态。
 
 - **认证**: 可选
-- **幂等**: 否
 
 **说明**：Token 可选；未登录或携带无效/过期 Token 时返回 `is_valid: false`（不会触发 `10100`），仅当 Token 验证通过时返回 `is_valid: true` 并附 `expires_at`。
 
@@ -271,8 +263,6 @@ interface AuthStatus {
 }
 ```
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/auth/request_password_reset
@@ -280,7 +270,6 @@ interface AuthStatus {
 请求密码重置（发送验证码）。
 
 - **认证**: 无
-- **幂等**: 否
 
 **安全说明**：
 - 无论 `login_id` 是否存在，均返回成功响应，不暴露账号是否注册
@@ -295,8 +284,6 @@ interface RequestPasswordResetRequest {
 ```
 
 **Response**: `ApiResponse`
-
-**错误码**: `10000` `10500`
 
 ---
 
@@ -315,7 +302,7 @@ interface RequestPasswordResetRequest {
 **Request**: `ResetPasswordRequest`
 ```typescript
 interface ResetPasswordRequest {
-  login_id: string;
+  login_id: string;          // 注册时使用的手机号/邮箱
   verification_code: string;
   new_password: string;
   client_type: ClientType;
@@ -326,7 +313,7 @@ interface ResetPasswordRequest {
 
 **错误码说明**：`10300` 仅用于"重置请求不存在或已过期"，禁止返回"用户不存在"等暴露账号存在性的 message（与 `request_password_reset` 的安全策略一致）。
 
-**错误码**: `10000` `10100` `10300`
+**错误码**: `10100` `10300`
 
 ---
 
@@ -352,8 +339,6 @@ interface ChangePasswordRequest {
 - 所有被吊销会话的 token 写入黑名单
 - 被吊销设备的 WebSocket 连接收到 `SessionRevoked`（`reason='password_changed'`）事件后被服务端主动断开（见 `api_spec_websocket.md`）
 
-**错误码**: `10000` `10100`
-
 ---
 
 ### POST /api/v1/auth/list_sessions
@@ -361,7 +346,6 @@ interface ChangePasswordRequest {
 获取活跃会话列表。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **黑名单语义**：登出/撤销会话会将对应 token 写入黑名单，直至 token 过期。
 
@@ -390,8 +374,6 @@ interface SessionItem {
 - 按 `last_active_at` 倒序排列，当前会话在前
 - 跨设备场景：用户可在手机、平板、Web 各自登录（不同 `device_id`），互不驱逐；同设备重复登录则驱逐旧 session
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/auth/revoke_session
@@ -399,7 +381,6 @@ interface SessionItem {
 撤销会话（设备下线）。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **安全说明**：
 - 撤销操作会将对应会话的 token 写入黑名单，直至过期
@@ -415,7 +396,7 @@ interface RevokeSessionRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10300` `10400`
+**错误码**: `10300` `10400`
 
 ---
 
@@ -424,7 +405,6 @@ interface RevokeSessionRequest {
 撤销当前会话之外的所有其他活跃会话。适用于账号被盗、密码泄露等紧急安全场景。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **安全说明**：
 - 当前会话（发起请求的会话）不会被撤销
@@ -439,5 +419,3 @@ interface RevokeAllResult {
   revoked_count: number;  // 被撤销的会话数量
 }
 ```
-
-**错误码**: `10000`

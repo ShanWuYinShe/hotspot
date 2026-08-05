@@ -103,30 +103,26 @@ type ChatPerm = 'everyone' | 'friends' | 'nobody';
 // 经核查仅单模块使用，已下放回各自模块文件（符合「单模块归属」规则）。
 // 通知类型与分类本身确实跨 notification + websocket + admin_moderation 三个模块（未读计数、推送事件、管理端），故保留于此。
 type NotifyType =
-  | 'new_follower'
-  | 'mutual_follow'
-  | 'moment_commented'
-  | 'comment_reply'
-  | 'mentioned'
-  | 'reaction_added'              // 新增：表情反应通知（@auth-only，仅 message/moment/comment 三类目标的 reaction）
-  | 'group_invite_received'
-  | 'group_invite_revoked'        // 邀请被发起方撤销或过期自动失效（@auth-only，通知受邀人）
-  | 'group_invite_accepted'
-  | 'group_invite_rejected'       // 邀请被受邀人拒绝（@auth-only，通知邀请发起方，含 reason）
-  | 'group_application_received'
-  | 'group_application_cancelled' // 申请被发起方取消或过期自动失效（@auth-only，通知群管理员）
-  | 'group_application_accepted'
-  | 'group_application_rejected'  // 新增：申请被拒绝（@auth-only，通知申请人，对应 #18 返回处理结果）
-  | 'report_resolved'             // 新增：举报被处理（@auth-only，通知举报人处理结果）
-  | 'report_dismissed'            // 新增：举报被驳回（@auth-only，通知举报人处理结果）
-  | 'system_announcement'
-  | 'nearby_new_moment';          // 新增：附近有人发布了新瞬间（基于位置的发现通知，用户可配置开关，服务端节流推送）
+  | 'new_follower'                // 被关注
+  | 'mutual_follow'               // 形成互相关注
+  | 'moment_commented'            // 瞬间被评论
+  | 'comment_reply'               // 评论被回复
+  | 'mentioned'                   // 被 @ 提及
+  | 'reaction_added'              // 内容被添加表情反应（自反应不落库）
+  | 'group_invite_received'       // 收到入群邀请
+  | 'group_application_received'  // 收到入群申请（群管理员视角）
+  | 'group_application_accepted'  // 入群申请被通过
+  | 'group_application_rejected'  // 入群申请被拒绝
+  | 'report_resolved'             // 举报被处理
+  | 'report_dismissed'            // 举报被驳回
+  | 'system_announcement'         // 系统公告
+  | 'nearby_new_moment';          // 附近有人发布新瞬间（用户可配置开关，服务端节流推送）
 
 // 通知分类（用于未读计数分组展示，见 api_spec_notify.md get_unread_count 返回的 by_type）
 // 映射为契约级，新增 NotifyType 时必须同步归类：
 // - social:        new_follower, mutual_follow
 // - interaction:   moment_commented, comment_reply, mentioned, reaction_added
-// - group:         group_invite_received, group_invite_revoked, group_invite_accepted, group_invite_rejected, group_application_received, group_application_cancelled, group_application_accepted, group_application_rejected
+// - group:         group_invite_received, group_application_received, group_application_accepted, group_application_rejected
 // - report:        report_resolved, report_dismissed
 // - nearby:        nearby_new_moment
 // - system:        system_announcement
@@ -268,7 +264,6 @@ interface UserStats {
   groups_count: number;
 }
 ```
-
 
 **UserItem**: 用户统一数据类型（用于列表、搜索、详情、Feed 等所有场景）
 ```typescript

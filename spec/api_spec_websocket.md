@@ -23,6 +23,7 @@
 | | `Pong` | 推送给当前连接的心跳响应 |
 | | `Error` | 推送给当前连接的错误通知（severity 指导是否需要重连） |
 | | `SubscribeAck` | 推送给当前连接的订阅操作响应 |
+| | `SessionRevoked` | 当前连接的会话被驱逐/撤销，客户端须立即清本地态并断开 |
 | **私聊消息** | `PrivateMessageNew` | 推送给消息接收者 + 发送者的其他在线设备 |
 | | `PrivateMessageEdited` | 推送给私聊对端 + 发送者的其他在线设备 |
 | | `PrivateMessageRecalled` | 推送给私聊对端 + 发送者的其他在线设备 |
@@ -39,13 +40,15 @@
 | | `GroupInviteExpired` | 推送给受邀人：邀请过期自动失效 |
 | | `GroupInviteRejected` | 推送给邀请发起方：受邀人拒绝了邀请 |
 | | `GroupInviteResponse` | 推送给邀请发起方：邀请被接受 |
-| | `GroupInviteResponse` | 推送给邀请发起者，告知邀请被接受 |
-| | `GroupApplicationReceived` | 推送给群主/管理员，告知有新的入群申请 |
+| **群组申请** | `GroupApplicationReceived` | 推送给群主/管理员，告知有新的入群申请 |
+| | `GroupApplicationCancelled` | 推送给群管理员：申请被申请人取消 |
+| | `GroupApplicationExpired` | 推送给群管理员：申请过期自动失效 |
+| | `GroupApplicationRejected` | 推送给申请人：申请被拒绝 |
 | | `GroupApplicationResponse` | 推送给申请加入群的用户，告知申请被接受 |
 | **用户** | `UserProfileUpdated` | 推送给正在与其私聊的对端以及其当前所在群聊的订阅者 |
 | **举报** | `ReportResolved` | 推送给举报人，告知举报已被处理 |
 | | `ReportDismissed` | 推送给举报人，告知举报已被驳回 |
-| | `NearbyNewMoment` | 推送给配置开启"附近新瞬间通知"的用户，告知附近有人发布了新瞬间 |
+| **附近发现** | `NearbyNewMoment` | 推送给配置开启"附近新瞬间通知"的用户，告知附近有人发布了新瞬间 |
 | **系统** | `SystemAnnouncement` | 推送给所有在线连接的系统公告 |
 | | `AccountBanned` | 推送给被封禁账号的当前连接，客户端收到后应立即登出 |
 
@@ -64,10 +67,12 @@
 | **消息** | `GroupMessageNew` | 新消息 |
 | | `GroupMessageEdited` | 消息被编辑 |
 | | `GroupMessageRecalled` | 消息被撤回 |
+| | `GroupMessageReadCountUpdated` | 群消息已读数变更（节流聚合推送） |
 | | `GroupTyping` | 成员正在输入 |
 | **成员变动** | `GroupMemberJoined` | 新成员加入 |
 | | `GroupMemberLeft` | 成员主动离开 |
 | | `GroupMemberRemoved` | 成员被移除（踢出/封禁） |
+| | `GroupMemberRoleChanged` | 成员角色变更（升/降级 admin） |
 | | `GroupMemberMuted` | 成员被禁言 |
 | | `GroupMemberUnmuted` | 成员被解除禁言 |
 | **群管理** | `GroupAnnouncementCreated` | 新群公告发布 |
@@ -161,7 +166,7 @@ WebSocket close code 受 RFC 6455 约束（范围 1000-4999），应用层错误
 HTTP API 返回的数据可能与 WebSocket 推送的事件重复（resume 续传或补拉都可能产生）。去重方式按资源主键执行（参见 `api_spec_base.md`）：
 
 - **持久化事件**：去重规则分两类：
-  - **通知类事件**（关注/瞬间互动/群邀请申请/系统公告/reaction）：payload 携带 `notification_id`，客户端按 `notification_id` 去重——它与 HTTP `notify/list` 返回的 `NotifyItem.notification_id` 为同一主键（见 api_spec_notify.md）。
+  - **携带 `notify_id` 的事件**（关注/瞬间互动/群邀请申请/系统公告/reaction）：客户端按 `notify_id` 去重——它与 HTTP `notify/list` 返回的 `NotifyItem.notify_id` 为同一主键（见 api_spec_notify.md）。
   - **其它持久化事件**（消息等）：按业务主键或稳定组合键去重（如 `message_id`、`comment_id`）。resume 续传的事件携带单调递增的 `server_seq`，客户端也可按 seq 去重。
 - **状态快照事件**：直接覆盖（保留最新状态），无需去重。
 
@@ -251,7 +256,9 @@ type ClientWebSocketEvent = WebSocketEvent<ClientEventType, unknown>;
 
 **消息可靠性与去重**：
 - 基于 TCP：协议层保证消息不丢失、不乱序、不重复，应用层无需维护 seq。
-- **持久化事件**：去重按事件性质——通知类事件按 `notification_id`（与 HTTP 通知 API 同主键），消息类事件按业务主键（`message_id` 等）。
+- **携带 `notify_id` 的事件**：按 `notify_id` 去重（与 HTTP 通知 API 同主键，见 `api_spec_notify.md`「通知与 WebSocket 事件的关系」）；此类事件同时落库了一条通知记录，客户端需处理通知已读同步（用户已阅读对应内容时调用 `notify/mark_read` 标记已读）
+- **不携带 `notify_id` 的事件**：纯实时事件（消息、群成员变动、群公告等），与通知中心无关，直接更新对应界面即可
+- **其他持久化事件**（消息等）：按业务主键去重（如 `message_id`、`comment_id`）。resume 续传的事件携带单调递增的 `server_seq`，客户端也可按 seq 去重
 - **状态快照事件**：表示最新状态（如在线状态、输入状态、成员变更），按 `user_id + 事件类型` 或 `group_id + user_id + 事件类型` 覆盖即可。
 
 > 重连后的数据补拉与去重策略详见「连接与鉴权」中的「重连恢复策略」。
@@ -314,7 +321,7 @@ interface ConnectionEstablishedPayload {
   user_id: string;
   server_time: string;             // 服务端当前时间（UTC ISO 8601），客户端用于判断断开时长
   resume_token: string;            // 本次连接的恢复令牌；重连时透传给 Auth 以尝试增量恢复（TTL ≈ 2×ping_interval）
-  server_seq: number;              // 当前连接的单调递增序号基线；后续每个推送事件携带 server_seq 供续传/去重
+  server_seq: string;              // 当前连接的单调递增序号基线；后续每个推送事件携带 server_seq 供续传/去重（客户端仅透传与去重，不做数值运算）
 
   // 服务端配置（动态配置，客户端不得硬编码）
   config: {
@@ -439,14 +446,13 @@ type UserOfflineEvent = { type: "UserOffline"; payload: UserOfflinePayload; };
 // - actor: 执行操作的人（如关注者、评论者、反应者），与 NotifyPayload.actor 语义一致
 // - user: 事件主体（如加入群的人、被操作的人），不一定是操作发起者
 //
-// 持久化通知类事件统一携带 notification_id：
-// - 下列"关注/瞬间互动/群邀请申请/系统公告"事件均会落库为通知记录（见 api_spec_notify.md）
-// - payload 首字段 notification_id 与 HTTP notify/list 返回的 NotifyItem.notification_id 为同一主键
-// - 客户端据此在 WS 实时路径与 HTTP 补拉路径间精确去重（按 notification_id），无需依赖业务组合键
-// - 与瞬时状态事件（UserOnline/Typing 等，无 notification_id）形成明确区分
+// notify_id 字段约定：
+// - 携带 notify_id 的事件 = 该业务事件同时落库了一条通知记录（见 api_spec_notify.md「通知与 WebSocket 事件的关系」）
+// - notify_id 与 HTTP notify/list 返回的 NotifyItem.notify_id 为同一主键，客户端据此在实时路径与补拉路径间去重
+// - 不携带 notify_id 的事件为纯实时事件（消息、群成员变动、群公告等），与通知中心无关
 
 interface NewFollowerPayload {
-  notification_id: string;
+  notify_id: string;
   actor: UserInfo;
   followed_at: string;
   
@@ -457,7 +463,7 @@ interface NewFollowerPayload {
 type NewFollowerEvent = { type: "NewFollower"; payload: NewFollowerPayload; };
 
 interface MutualFollowPayload {
-  notification_id: string;
+  notify_id: string;
   actor: UserInfo;
   mutual_at: string;
 }
@@ -470,18 +476,19 @@ type MutualFollowEvent = { type: "MutualFollow"; payload: MutualFollowPayload; }
 
 // 表情反应（统一 message/moment/comment 三类目标）
 // ReactTarget / Reaction 定义于 api_spec_types.md
+// 事件统一推送（服务端不做自反应判断）；自反应（actor 为资源作者）不落库通知，此时事件不携带 notify_id，客户端自行过滤展示
 interface ReactionAddedPayload {
-  notification_id: string;          // 仅当 actor ≠ 资源作者时携带（自我反应不通知）；自反应时省略
+  notify_id?: string;        // 有通知落盘时携带（与 notify/list 同主键）；自反应时无此字段
   target_type: ReactTarget;  // 'message' | 'moment' | 'comment'
-  target_id: string;                // message_id / moment_id / comment_id
+  target_id: string;         // message_id / moment_id / comment_id
   emoji: string;
   actor: UserInfo;
   reacted_at: string;
 }
 type ReactionAddedEvent = { type: "ReactionAdded"; payload: ReactionAddedPayload; };
 
+// 反应移除为纯实时事件，不落库通知
 interface ReactionRemovedPayload {
-  // 反应移除不产生通知（非持久化通知），无 notification_id
   target_type: ReactTarget;
   target_id: string;
   emoji: string;
@@ -491,7 +498,7 @@ interface ReactionRemovedPayload {
 type ReactionRemovedEvent = { type: "ReactionRemoved"; payload: ReactionRemovedPayload; };
 
 interface MomentCommentedPayload {
-  notification_id: string;
+  notify_id: string;
   moment_id: string;
   moment_summary: MomentSummary;
   comment_id: string;
@@ -502,7 +509,7 @@ interface MomentCommentedPayload {
 type MomentCommentedEvent = { type: "MomentCommented"; payload: MomentCommentedPayload; };
 
 interface CommentReplyPayload {
-  notification_id: string;
+  notify_id: string;
   moment_id: string;
   moment_summary: MomentSummary;
   comment_id: string;
@@ -515,7 +522,7 @@ interface CommentReplyPayload {
 type CommentReplyEvent = { type: "CommentReply"; payload: CommentReplyPayload; };
 
 interface MessageMentionedPayload {
-  notification_id: string;
+  notify_id: string;
   target_type: 'moment' | 'comment';
   moment_id: string;
   comment_id?: string;
@@ -643,7 +650,7 @@ interface GroupMemberJoinedPayload {
 type GroupMemberJoinedEvent = { type: "GroupMemberJoined"; payload: GroupMemberJoinedPayload; };
 
 interface GroupInviteReceivedPayload {
-  notification_id: string;
+  notify_id: string;
   invite_id: string;
   group: GroupInfo;  // 引用 api_spec_types.md
   inviter: UserInfo;
@@ -652,9 +659,8 @@ interface GroupInviteReceivedPayload {
 }
 type GroupInviteReceivedEvent = { type: "GroupInviteReceived"; payload: GroupInviteReceivedPayload; };
 
+// 邀请被接受 → 推送给邀请发起方。纯实时事件，不落库通知（邀请状态可在 groups/members/invites/list 查询）
 interface GroupInviteResponsePayload {
-  // 仅邀请被接受时推送（拒绝推送 GroupInviteRejected）。原 status:'accepted' 单值字段已移除——事件名即语义，无需冗余枚举
-  notification_id: string;
   invite_id: string;
   group_id: string;
   user: UserInfo;       // 接受邀请的用户
@@ -662,20 +668,18 @@ interface GroupInviteResponsePayload {
 }
 type GroupInviteResponseEvent = { type: "GroupInviteResponse"; payload: GroupInviteResponsePayload; };
 
-// 邀请被受邀人拒绝 → 推送给邀请发起方（对应 NotifyType='group_invite_rejected'，含 reason）
+// 邀请被受邀人拒绝 → 推送给邀请发起方。纯实时事件，不落库通知
 interface GroupInviteRejectedPayload {
-  notification_id: string;
   invite_id: string;
   group_id: string;
-  rejected_by: UserInfo;   // 拒绝邀请的受邀人（邀请发起方可见其身份，与申请拒绝同理——群邀请是双向契约）
+  rejected_by: UserInfo;   // 拒绝邀请的受邀人（邀请发起方可见其身份——群邀请是双向契约）
   rejected_at: string;
   reason?: string;
 }
 type GroupInviteRejectedEvent = { type: "GroupInviteRejected"; payload: GroupInviteRejectedPayload; };
 
-// 邀请被发起方（管理员）主动撤销 → 推送给受邀人
+// 邀请被发起方（管理员）主动撤销 → 推送给受邀人。纯实时事件，不落库通知
 interface GroupInviteRevokedPayload {
-  notification_id: string;
   invite_id: string;
   group_id: string;
   revoked_by: UserInfo;   // 撤销邀请的管理员
@@ -684,10 +688,8 @@ interface GroupInviteRevokedPayload {
 }
 type GroupInviteRevokedEvent = { type: "GroupInviteRevoked"; payload: GroupInviteRevokedPayload; };
 
-// 邀请过期（超 expires_at 自动失效）→ 推送给受邀人
-// 落库通知复用 NotifyType='group_invite_revoked'（revoked_by 省略），见 api_spec_notify.md
+// 邀请过期（超 expires_at 自动失效）→ 推送给受邀人。纯实时事件，不落库通知
 interface GroupInviteExpiredPayload {
-  notification_id: string;
   invite_id: string;
   group_id: string;
   expired_at: string;
@@ -695,7 +697,7 @@ interface GroupInviteExpiredPayload {
 type GroupInviteExpiredEvent = { type: "GroupInviteExpired"; payload: GroupInviteExpiredPayload; };
 
 interface GroupApplicationReceivedPayload {
-  notification_id: string;
+  notify_id: string;
   application_id: string;
   group_id: string;
   applicant: UserInfo;
@@ -705,17 +707,15 @@ interface GroupApplicationReceivedPayload {
 type GroupApplicationReceivedEvent = { type: "GroupApplicationReceived"; payload: GroupApplicationReceivedPayload; };
 
 interface GroupApplicationResponsePayload {
-  // 仅申请被接受时推送。原 status:'accepted' 单值字段已移除
-  notification_id: string;
+  notify_id: string;
   application_id: string;
   group: GroupInfo;
   responded_at: string;
 }
 type GroupApplicationResponseEvent = { type: "GroupApplicationResponse"; payload: GroupApplicationResponsePayload; };
 
-// 申请被发起方（申请人）主动取消 → 推送给群管理员
+// 申请被发起方（申请人）主动取消 → 推送给群管理员。纯实时事件，不落库通知
 interface GroupApplicationCancelledPayload {
-  notification_id: string;
   application_id: string;
   group_id: string;
   applicant: UserInfo;
@@ -724,10 +724,8 @@ interface GroupApplicationCancelledPayload {
 }
 type GroupApplicationCancelledEvent = { type: "GroupApplicationCancelled"; payload: GroupApplicationCancelledPayload; };
 
-// 申请过期（超 expires_at 自动失效）→ 推送给群管理员
-// 落库通知复用 NotifyType='group_application_cancelled'，见 api_spec_notify.md
+// 申请过期（超 expires_at 自动失效）→ 推送给群管理员。纯实时事件，不落库通知
 interface GroupApplicationExpiredPayload {
-  notification_id: string;
   application_id: string;
   group_id: string;
   applicant: UserInfo;
@@ -735,12 +733,12 @@ interface GroupApplicationExpiredPayload {
 }
 type GroupApplicationExpiredEvent = { type: "GroupApplicationExpired"; payload: GroupApplicationExpiredPayload; };
 
-// 申请被群管理员拒绝 → 推送给申请人（对应 NotifyType='group_application_rejected'，含 reason）
+// 申请被群管理员拒绝 → 推送给申请人（含 reason）
 interface GroupApplicationRejectedPayload {
-  notification_id: string;
+  notify_id: string;
   application_id: string;
   group: GroupInfo;
-  rejected_by: UserInfo;   // 处理管理员（申请人可见管理员身份，与举报场景不同——群申请是双向契约）
+  rejected_by: UserInfo;   // 处理管理员（申请人可见管理员身份——群申请是双向契约）
   rejected_at: string;
   reason?: string;
 }
@@ -749,7 +747,7 @@ type GroupApplicationRejectedEvent = { type: "GroupApplicationRejected"; payload
 // 举报处理结果（推送给举报人）
 // ReportTargetType 定义于 api_spec_types.md
 interface ReportResolvedPayload {
-  notification_id: string;
+  notify_id: string;
   report_id: string;
   target_type: ReportTargetType;
   target_id: string;
@@ -759,7 +757,7 @@ interface ReportResolvedPayload {
 type ReportResolvedEvent = { type: "ReportResolved"; payload: ReportResolvedPayload; };
 
 interface ReportDismissedPayload {
-  notification_id: string;
+  notify_id: string;
   report_id: string;
   target_type: ReportTargetType;
   target_id: string;
@@ -770,7 +768,7 @@ type ReportDismissedEvent = { type: "ReportDismissed"; payload: ReportDismissedP
 
 // 附近新瞬间（推送给配置开启此通知的用户；服务端节流，同区域短时间内仅推送一次）
 interface NearbyNewMomentPayload {
-  notification_id: string;
+  notify_id: string;
   moment_id: string;
   moment_summary: MomentSummary;
   actor: UserInfo;
@@ -779,9 +777,8 @@ interface NearbyNewMomentPayload {
 }
 type NearbyNewMomentEvent = { type: "NearbyNewMoment"; payload: NearbyNewMomentPayload; };
 
-// 群公告发布：本质是持久化通知，补 notification_id 以支持与 notify/list 去重
+// 群公告发布：纯实时事件，不落库通知（群公告为群组内容，群内公告列表可见）
 interface GroupAnnouncementCreatedPayload {
-  notification_id: string;      // 与 notify/list 的 NotifyItem.notification_id 同主键
   announcement: GroupAnnouncementItem;
 }
 type GroupAnnouncementCreatedEvent = { type: "GroupAnnouncementCreated"; payload: GroupAnnouncementCreatedPayload; };
@@ -893,7 +890,7 @@ type UserProfileUpdatedEvent = { type: "UserProfileUpdated"; payload: UserProfil
 ```typescript
 // SystemAnnouncementItem 定义于 api_spec_types.md
 interface SystemAnnouncementPayload {
-  notification_id: string;
+  notify_id: string;
   announcement_id: string;
   title: string;
   content: string;
@@ -929,8 +926,8 @@ interface ErrorPayload {
 type ErrorEvent = { type: "Error"; payload: ErrorPayload; };
 
 // 账号被封禁（自动推送给被封禁用户，客户端收到后应立即登出）
+// 纯实时事件，不落库通知（被封禁用户被强制登出，通知中心无意义）
 interface AccountBannedPayload {
-  notification_id: string;     // 持久化通知主键（补：原缺失，账号封禁属持久化事件，应支持去重）
   reason: string;              // 封禁原因
   duration_days: number;       // 封禁时长（天），0=永久
   banned_at: string;

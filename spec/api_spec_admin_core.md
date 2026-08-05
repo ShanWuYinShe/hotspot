@@ -54,23 +54,23 @@
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 | 幂等 |
-|------|------|------|------|
-| `POST /api/v1/admin/rbac/get_me` | 我的管理员权限 | 必须 | 否 |
-| `POST /api/v1/admin/rbac/list_permissions` | 权限字典 | 必须 + `admin.rbac.manage` | 否 |
-| `POST /api/v1/admin/rbac/roles/list` | 角色列表 | 必须 + `admin.rbac.manage` | 否 |
-| `POST /api/v1/admin/rbac/roles/create` | 创建角色 | 必须 + `admin.rbac.manage` | 否 |
-| `POST /api/v1/admin/rbac/roles/update` | 更新角色 | 必须 + `admin.rbac.manage` | 否 |
-| `POST /api/v1/admin/rbac/roles/delete` | 删除角色 | 必须 + `admin.rbac.manage` | 否 |
-| `POST /api/v1/admin/rbac/roles/set_permissions` | 设置角色权限 | 必须 + `admin.rbac.manage` | 否 |
-| `POST /api/v1/admin/rbac/admins/list` | 管理员列表 | 必须 + `admin.rbac.manage` | 否 |
-| `POST /api/v1/admin/rbac/admins/grant` | 授权/更新管理员 | 必须 + `admin.rbac.manage` | 否 |
-| `POST /api/v1/admin/rbac/admins/revoke` | 撤销管理员 | 必须 + `admin.rbac.manage` | 否 |
-| `POST /api/v1/admin/audit/list` | 审计日志列表 | 必须 + `admin.audit.read` | 否 |
-| `POST /api/v1/admin/audit/get_detail` | 审计日志详情 | 必须 + `admin.audit.read` | 否 |
-| `POST /api/v1/admin/app_config/get` | 获取完整应用配置 | 必须 + `admin.app_config.read` | 否 |
-| `POST /api/v1/admin/app_config/update` | 更新应用配置（按 section 部分更新） | 必须 + `admin.app_config.write` | 否 |
+| 端点 | 说明 | 认证 |
+|------|------|------|
 
+| `POST /api/v1/admin/rbac/get_me` | 我的管理员权限 | 必须 |
+| `POST /api/v1/admin/rbac/list_permissions` | 权限字典 | 必须 + `admin.rbac.manage` |
+| `POST /api/v1/admin/rbac/roles/list` | 角色列表 | 必须 + `admin.rbac.manage` |
+| `POST /api/v1/admin/rbac/roles/create` | 创建角色 | 必须 + `admin.rbac.manage` |
+| `POST /api/v1/admin/rbac/roles/update` | 更新角色 | 必须 + `admin.rbac.manage` |
+| `POST /api/v1/admin/rbac/roles/delete` | 删除角色 | 必须 + `admin.rbac.manage` |
+| `POST /api/v1/admin/rbac/roles/set_permissions` | 设置角色权限 | 必须 + `admin.rbac.manage` |
+| `POST /api/v1/admin/rbac/admins/list` | 管理员列表 | 必须 + `admin.rbac.manage` |
+| `POST /api/v1/admin/rbac/admins/grant` | 授权/更新管理员 | 必须 + `admin.rbac.manage` |
+| `POST /api/v1/admin/rbac/admins/revoke` | 撤销管理员 | 必须 + `admin.rbac.manage` |
+| `POST /api/v1/admin/audit/list` | 审计日志列表 | 必须 + `admin.audit.read` |
+| `POST /api/v1/admin/audit/get_detail` | 审计日志详情 | 必须 + `admin.audit.read` |
+| `POST /api/v1/admin/app_config/get` | 获取完整应用配置 | 必须 + `admin.app_config.read` |
+| `POST /api/v1/admin/app_config/update` | 更新应用配置（按 section 部分更新） | 必须 + `admin.app_config.write` |
 ## 类型定义
 
 以下类型定义于 `api_spec_types.md`：
@@ -98,7 +98,6 @@
 获取我的管理员权限信息。
 
 - **认证**: 必须（仅要求"是管理员"，不要求 `admin.rbac.manage`）
-- **幂等**: 否
 
 **Request**: `{}`
 
@@ -125,7 +124,6 @@ interface AdminPermissions {
 获取权限字典。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 否
 
 **Request**: `{}`
 
@@ -147,7 +145,6 @@ interface AdminPermissionItem {
 获取角色列表。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 否
 
 **Request**: `AdminRbacRolesListRequest`
 ```typescript
@@ -169,7 +166,7 @@ interface AdminRoleItem {
 - RBAC 角色为系统配置数据，数量有限，无需分页
 - 与 `list_permissions` 返回格式保持一致
 
-**错误码**: `10000` `10200`
+**错误码**: `10200`
 
 ---
 
@@ -178,7 +175,6 @@ interface AdminRoleItem {
 创建角色。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 否
 
 **Request**: `AdminRbacRoleCreateRequest`
 ```typescript
@@ -190,7 +186,7 @@ interface AdminRbacRoleCreateRequest {
 
 **Response**: `ApiResponse<AdminRoleItem>`
 
-**错误码**: `10000` `10200` `10400`
+**错误码**: `10200` `10400`
 
 ---
 
@@ -199,7 +195,6 @@ interface AdminRbacRoleCreateRequest {
 更新角色。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 否
 
 **Request**: `AdminRbacRoleUpdateRequest`
 ```typescript
@@ -213,7 +208,7 @@ interface AdminRbacRoleUpdateRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ---
 
@@ -222,7 +217,6 @@ interface AdminRbacRoleUpdateRequest {
 删除角色。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 否
 
 **Request**: `AdminRbacRoleDeleteRequest`
 ```typescript
@@ -242,7 +236,6 @@ interface AdminRbacRoleDeleteRequest {
 设置角色权限。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 否
 
 **Request**: `AdminRbacRoleSetPermissionsRequest`
 ```typescript
@@ -258,7 +251,7 @@ interface AdminRbacRoleSetPermissionsRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -267,7 +260,6 @@ interface AdminRbacRoleSetPermissionsRequest {
 获取管理员列表。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 否
 - **排序**: 按 `granted_at DESC` 排序（最近授权在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `AdminRbacAdminsListRequest`
@@ -287,7 +279,7 @@ interface AdminOperatorItem {
 }
 ```
 
-**错误码**: `10000` `10200`
+**错误码**: `10200`
 
 ---
 
@@ -296,7 +288,6 @@ interface AdminOperatorItem {
 授予/更新管理员。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 否
 
 **额外约束**：仅超级管理员可将 `grant_all_permissions=true`
 
@@ -312,11 +303,11 @@ interface AdminRbacGrantAdminRequest {
 **参数互斥说明**：
 - 当 `grant_all_permissions === true` 时，`role_ids` 必须为空数组或省略，服务端将忽略传入的角色列表。
 - 当 `grant_all_permissions !== true` 时，`role_ids` 为必填，至少包含一个角色。
-- 若同时传入 `grant_all_permissions=true` 且 `role_ids` 非空，视为参数冲突，返回 `10000`（message: "grant_all_permissions 与 role_ids 互斥"）。
+- 若同时传入 `grant_all_permissions=true` 且 `role_ids` 非空，视为参数冲突（message: "grant_all_permissions 与 role_ids 互斥"）。
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -325,7 +316,6 @@ interface AdminRbacGrantAdminRequest {
 撤销管理员。
 
 - **认证**: 必须 + `admin.rbac.manage`
-- **幂等**: 否
 
 **额外约束**：撤销超级管理员仅超级管理员可执行
 
@@ -357,7 +347,6 @@ interface AdminRbacRevokeAdminRequest {
 查询审计日志列表。
 
 - **认证**: 必须 + `admin.audit.read`
-- **幂等**: 否
 - **排序**: 按 `created_at DESC` 排序（最新在前），`log_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `AuditLogListRequest`
@@ -439,7 +428,7 @@ interface AuditLogItem {
 }
 ```
 
-**错误码**: `10000` `10200`
+**错误码**: `10200`
 
 ---
 
@@ -448,7 +437,6 @@ interface AuditLogItem {
 获取审计日志详情。
 
 - **认证**: 必须 + `admin.audit.read`
-- **幂等**: 否
 
 **Request**: `AuditLogOpenTheDoorRequest`
 ```typescript
@@ -459,7 +447,7 @@ interface AuditLogOpenTheDoorRequest {
 
 **Response**: `ApiResponse<AuditLogItem>`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -472,7 +460,6 @@ interface AuditLogOpenTheDoorRequest {
 获取完整应用配置（AppConfig）。
 
 - **认证**: 必须 + `admin.app_config.read`
-- **幂等**: 否
 
 **Request**: `{}`
 
@@ -509,7 +496,6 @@ interface AppConfig {
 **设计说明**：原 `update_upload`/`update_defaults`/`update_rate_limits`/`update_response_defaults`/`update_features`/`update_limits`/`update_contact` 七个端点已合并为单一 `update`。各 section 权限均为 `admin.app_config.write`（无差异化），合并消除了冗余的契约表面积；一次请求可更新单个或多个 section，未传的 section 保持不变。
 
 - **认证**: 必须 + `admin.app_config.write`
-- **幂等**: 否
 
 **Request**: `UpdateAppConfigRequest`
 ```typescript
@@ -532,7 +518,7 @@ interface UpdateAppConfigRequest {
   limits?: Partial<AppLimits>;                 // 应用限制
   contact?: Partial<ContactInfo>;              // 联系/合规信息
 }
-// 至少传一个 section，否则返回 10000；未传的 section 保持不变
+// 至少传一个 section，否则请求失败；未传的 section 保持不变
 ```
 
 **Response**: `ApiResponse`
@@ -541,7 +527,7 @@ interface UpdateAppConfigRequest {
 - `rate_limits` / `response_defaults` 的数值字段必须为正整数
 - `contact` 的 `support_email` 须为有效 Email、`*_url` 须为有效 URL
 
-**错误码**: `10000` `10200`
+**错误码**: `10200`
 
 ---
 

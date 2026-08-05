@@ -14,11 +14,11 @@
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 | 幂等 |
-|-----|------|------|------|
-| `POST /api/v1/reports/create` | 创建举报 | 必须 | 否 |
-| `POST /api/v1/reports/list_my` | 我的举报记录 | 必须 | 否 |
+| 端点 | 说明 | 认证 |
+|-----|------|------|
 
+| `POST /api/v1/reports/create` | 创建举报 | 必须 |
+| `POST /api/v1/reports/list_my` | 我的举报记录 | 必须 |
 ## 举报审核流程说明
 
 **当前状态流转**：
@@ -69,7 +69,6 @@
 创建举报。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **字段说明**：
 - `reason`：举报原因，从 `ReportReason` 枚举中选取
@@ -81,7 +80,7 @@
 - 当 `target_type='moment'`/`'comment'`/`'message'` 且目标资源属于当前用户时，返回 `10400`
 - 重复举报：同一 `target_type + target_id` 已存在 `pending`、`reviewing` 或 `escalated` 记录时，**返回成功**（`code=0`），`data` 中包含已有举报的 `report_id` 及 `is_duplicate: true`，不创建新举报单。这本质是天然幂等——`(reporter_id, target_type, target_id, pending_status)` 构成自然去重键
 - 若该目标历史举报均已进入终态（`resolved` / `dismissed`），允许再次举报（视为新举报单）
-- **消息举报快照**（隐私边界）：当 `target_type='message'` 时，`message_snapshot` 为**必填**——举报人必须提交举报时的消息内容快照。服务端原样存储，管理员审核**基于快照**判断，不直接查询私聊消息库。这既保证管理员有足够信息审核，又避免管理员随意翻阅用户私聊内容的隐私风险。缺少 `message_snapshot` 或快照不完整时返回 `10000`。
+- **消息举报快照**（隐私边界）：当 `target_type='message'` 时，`message_snapshot` 为**必填**——举报人必须提交举报时的消息内容快照。服务端原样存储，管理员审核**基于快照**判断，不直接查询私聊消息库。这既保证管理员有足够信息审核，又避免管理员随意翻阅用户私聊内容的隐私风险。缺少 `message_snapshot` 或快照不完整时请求失败。
 
 **Request**: `CreateReportRequest`
 ```typescript
@@ -102,14 +101,13 @@ interface ReportCreated {
 }
 ```
 
-**错误码**: `10000` `10300` `10400`（自举报等）
+**错误码**: `10300` `10400`（自举报等）
 
 ### POST /api/v1/reports/list_my
 
 我的举报记录。
 
 - **认证**: 必须
-- **幂等**: 否
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `report_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
 
 **Request**: `MyReportsRequest`
@@ -126,5 +124,3 @@ interface MyReportsRequest {
 `ReportItem` 定义于 `api_spec_types.md`。
 
 **可见性说明（契约级）**：举报人在 `reports/list_my` 可见自己举报的完整状态机（`pending`/`reviewing`/`escalated`/终态）及 `ReportItem.resolution`（`@owner-only`，仅举报人自己可见处理结果摘要）。**不可见**处理管理员的身份（隐私保护，避免举报人针对性报复）——`resolution` 不含 `handled_by`，仅含 `action`/`resolved_at`/`note`(脱敏)。
-
-**错误码**: `10000`

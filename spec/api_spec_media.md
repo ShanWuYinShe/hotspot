@@ -13,13 +13,13 @@
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 | 幂等 |
-|-----|------|------|------|
-| `POST /api/v1/media/presign_upload` | 申请上传预签名 | 必须 | 否 |
-| `POST /api/v1/media/batch_presign_upload` | 批量申请上传预签名 | 必须 | 否 |
-| `POST /api/v1/media/complete_upload` | 完成上传 | 必须 | 否 |
-| `POST /api/v1/media/batch_complete_upload` | 批量完成上传 | 必须 | 否 |
+| 端点 | 说明 | 认证 |
+|-----|------|------|
 
+| `POST /api/v1/media/presign_upload` | 申请上传预签名 | 必须 |
+| `POST /api/v1/media/batch_presign_upload` | 批量申请上传预签名 | 必须 |
+| `POST /api/v1/media/complete_upload` | 完成上传 | 必须 |
+| `POST /api/v1/media/batch_complete_upload` | 批量完成上传 | 必须 |
 ## 设计理念
 
 文件上传采用「先上传，后引用」的安全模式。
@@ -54,7 +54,7 @@
 
 ### chat_file 安全约束（黑名单）
 
-`chat_file` 允许传输用户自定义文件，但为防止恶意载荷（XSS、脚本注入、可执行攻击），服务端必须拒绝以下类型，返回 `10000`（参数错误）：
+`chat_file` 允许传输用户自定义文件，但为防止恶意载荷（XSS、脚本注入、可执行攻击），服务端必须拒绝以下类型（参数错误）：
 
 | 禁止类型 | 原因 |
 |---------|------|
@@ -64,7 +64,7 @@
 
 **实现要求**：
 - 校验基于**文件扩展名 + MIME 类型双判定**（任一命中黑名单即拒绝），防止单纯改扩展名绕过
-- MIME 类型与扩展名不一致时返回 `10000`（如 `.png` 扩展名但 `text/html` MIME）
+- MIME 类型与扩展名不一致时拒绝（如 `.png` 扩展名但 `text/html` MIME）
 - 未明确禁止的类型默认允许
 
 ## 端点详情
@@ -74,7 +74,6 @@
 申请上传预签名。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `PresignUploadRequest`
 ```typescript
@@ -85,7 +84,7 @@ interface PresignUploadRequest {
   file_size: number;
   mime_type: string;
   category: MediaCategory;
-  md5?: string;
+  md5?: string;   // 文件内容 MD5（可选，服务端用于校验完整性）
 }
 ```
 
@@ -99,9 +98,7 @@ interface PresignedUpload {
 }
 ```
 
-**错误码**: `10000`
-
-`10000` 触发条件（示例）：
+**参数校验**：
 - `category` 非法或不支持
 - `mime_type` 与 `category` 不匹配
 - `file_size` 超出该 `category` 的限制
@@ -120,7 +117,6 @@ interface PresignedUpload {
 批量申请上传预签名。适用于瞬间发布（多图）、聊天批量发文件等场景。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **说明**：
 - 批量预签名是原子操作：任一文件校验失败则整批失败
@@ -140,9 +136,7 @@ interface BatchPresignedUpload {
 
 **Response**: `ApiResponse<BatchPresignedUpload>`
 
-**错误码**: `10000`
-
-`10000` 触发条件（示例）：
+**参数校验**：
 - `files` 为空、超过 9 项、或单项字段不合法
 - 任一文件的 `category` / `mime_type` / `file_size` / `file_name` / `md5` 校验失败（批量请求原子失败）
 
@@ -151,7 +145,6 @@ interface BatchPresignedUpload {
 完成上传。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `CompleteUploadRequest`
 ```typescript
@@ -159,11 +152,6 @@ interface CompleteUploadRequest {
   upload_id: string;
 }
 ```
-
-**幂等行为**（遵循 `api_spec_base.md` 幂等契约，Key 绑定 `(user_id + endpoint + key)`）：
-- 相同 `Idempotency-Key` 的重试：直接返回首次成功的完整响应（缓存的 `file_id`）
-- **不同 `Idempotency-Key` 但同一 `upload_id` 已完成上传**：返回**成功**（缓存的 `file_id`），不报错——这是幂等成功语义，与 base.md 一致。`upload_id` 完成上传后即不可重复完成，重提只返回已有结果
-- `upload_id` 与 `Idempotency-Key` 不绑定：幂等键防的是"网络重试导致重复副作用"，不作为上传资源的占用锁
 
 **Response**: `ApiResponse<UploadedMedia>`
 ```typescript
@@ -178,7 +166,7 @@ interface UploadedMedia {
 }
 ```
 
-**错误码**: `10000` `10300` `10400`
+**错误码**: `10300` `10400`
 
 **错误码说明**：
 - `10300`：`upload_id` 不存在（如恶意请求发送了不存在的 upload_id）
@@ -189,12 +177,11 @@ interface UploadedMedia {
 批量完成上传。适用于瞬间发布（多图）、聊天批量发文件等场景——与 `batch_presign_upload` 配对，消除发图场景下逐个调用 `complete_upload` 的 N 次请求。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **说明**：
 - 与 `batch_presign_upload` 对称的原子操作：任一 `upload_id` 校验失败则整批失败，不部分完成
 - 响应的 `uploads` 与请求 `upload_ids` **一一对应且顺序一致**
-- 不需要幂等（避免批量场景下单个 key 语义混乱）；客户端对失败的整批可直接重试（服务端对已完成的 `upload_id` 返回既有结果），或拆分为单文件 `complete_upload` 精细处理
+- 客户端对失败的整批可直接重试，或拆分为单文件 `complete_upload` 精细处理
 
 **Request**: `BatchCompleteUploadRequest`
 ```typescript
@@ -210,9 +197,8 @@ interface BatchCompleteUpload {
 }
 ```
 
-**错误码**: `10000` `10300` `10400`
+**错误码**: `10300` `10400`
 
 **错误码说明**：沿用 `complete_upload` 的错误语义（原子失败）：
-- `10000`：`upload_ids` 为空、超过 9 项
 - `10300`：任一 `upload_id` 不存在
 - `10400`：任一文件直传尚未完成

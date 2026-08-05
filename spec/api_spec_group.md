@@ -15,42 +15,43 @@
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 | 幂等 |
-|-----|------|------|------|
-| `POST /api/v1/groups/search` | 搜索群组（支持关键字/标签/位置组合） | 可选 | 否 |
-| `POST /api/v1/groups/get_detail` | 群组详情 | 可选 | 否 |
-| `POST /api/v1/groups/create` | 创建群组 | 必须 | 是 |
-| `POST /api/v1/groups/update` | 更新群组 | 必须 | 否 |
-| `POST /api/v1/groups/dismiss` | 解散群组 | 必须 | 否 |
-| `POST /api/v1/groups/members/list` | 成员列表 | 可选 | 否 |
-| `POST /api/v1/groups/members/search` | 搜索成员 | 可选 | 否 |
-| `POST /api/v1/groups/members/invite` | 邀请成员 | 必须 | 否 |
-| `POST /api/v1/groups/members/invites/list` | 我发出的邀请列表 | 必须 | 否 |
-| `POST /api/v1/groups/members/invites/revoke` | 撤销已发邀请 | 必须 | 否 |
-| `POST /api/v1/groups/members/set_role` | 设置角色 | 必须 | 否 |
-| `POST /api/v1/groups/members/set_mute` | 设置禁言状态（两态统一） | 必须 | 否 |
-| `POST /api/v1/groups/members/ban` | 封禁成员 | 必须 | 否 |
-| `POST /api/v1/groups/members/unban` | 解除封禁 | 必须 | 否 |
-| `POST /api/v1/groups/members/list_banned` | 封禁列表 | 必须 | 否 |
-| `POST /api/v1/groups/members/remove` | 移除成员 | 必须 | 否 |
-| `POST /api/v1/groups/applications/list` | 申请列表 | 必须 | 否 |
-| `POST /api/v1/groups/applications/approve` | 同意申请 | 必须 | 否 |
-| `POST /api/v1/groups/applications/reject` | 拒绝申请 | 必须 | 否 |
-| `POST /api/v1/groups/update_preferences` | 更新我的群组偏好 | 必须 | 否 |
-| `POST /api/v1/groups/join` | 加入群组（根据 join_method 自动处理） | 必须 | 是 |
-| `POST /api/v1/groups/transfer_ownership` | 转让群主 | 必须 | 建议 |
-| `POST /api/v1/groups/announcements/create` | 发布公告 | 必须 | 是 |
-| `POST /api/v1/groups/announcements/list` | 公告列表 | 可选 | 否 |
-| `POST /api/v1/groups/announcements/update` | 更新公告 | 必须 | 否 |
-| `POST /api/v1/groups/announcements/delete` | 删除公告 | 必须 | 否 |
-| `POST /api/v1/groups/list_my` | 我的群组列表 | 必须 | 否 |
-| `POST /api/v1/groups/list_applications` | 我的申请列表 | 必须 | 否 |
-| `POST /api/v1/groups/cancel_application` | 取消申请 | 必须 | 否 |
-| `POST /api/v1/groups/list_invites` | 我的邀请列表 | 必须 | 否 |
-| `POST /api/v1/groups/accept_invite` | 接受邀请 | 必须 | 否 |
-| `POST /api/v1/groups/reject_invite` | 拒绝邀请 | 必须 | 否 |
-| `POST /api/v1/groups/leave` | 退出群组 | 必须 | 否 |
+| 端点 | 说明 | 认证 |
+|-----|------|------|
 
+| `POST /api/v1/groups/search` | 搜索群组（支持关键字/标签/位置组合） | 可选 |
+| `POST /api/v1/groups/get_detail` | 群组详情 | 可选 |
+| `POST /api/v1/groups/create` | 创建群组 | 必须 |
+| `POST /api/v1/groups/update` | 更新群组 | 必须 |
+| `POST /api/v1/groups/dismiss` | 解散群组 | 必须 |
+| `POST /api/v1/groups/members/list` | 成员列表 | 可选 |
+| `POST /api/v1/groups/members/search` | 搜索成员 | 可选 |
+| `POST /api/v1/groups/members/invite` | 邀请成员 | 必须 |
+| `POST /api/v1/groups/members/invites/list` | 我发出的邀请列表 | 必须 |
+| `POST /api/v1/groups/members/invites/revoke` | 撤销已发邀请 | 必须 |
+| `POST /api/v1/groups/members/set_role` | 设置角色 | 必须 |
+| `POST /api/v1/groups/members/set_mute` | 设置禁言状态（两态统一） | 必须 |
+| `POST /api/v1/groups/members/ban` | 封禁成员 | 必须 |
+| `POST /api/v1/groups/members/unban` | 解除封禁 | 必须 |
+| `POST /api/v1/groups/members/list_banned` | 封禁列表 | 必须 |
+| `POST /api/v1/groups/members/remove` | 移除成员 | 必须 |
+| `POST /api/v1/groups/applications/list` | 申请列表 | 必须 |
+| `POST /api/v1/groups/applications/approve` | 同意申请 | 必须 |
+| `POST /api/v1/groups/applications/reject` | 拒绝申请 | 必须 |
+| `POST /api/v1/groups/update_preferences` | 更新我的群组偏好 | 必须 |
+| `POST /api/v1/groups/join` | 加入群组（根据 join_method 自动处理） | 必须 |
+| `POST /api/v1/groups/transfer_ownership` | 转让群主 | 必须 | 建议 |
+
+| `POST /api/v1/groups/announcements/create` | 发布公告 | 必须 |
+| `POST /api/v1/groups/announcements/list` | 公告列表 | 可选 |
+| `POST /api/v1/groups/announcements/update` | 更新公告 | 必须 |
+| `POST /api/v1/groups/announcements/delete` | 删除公告 | 必须 |
+| `POST /api/v1/groups/list_my` | 我的群组列表 | 必须 |
+| `POST /api/v1/groups/list_applications` | 我的申请列表 | 必须 |
+| `POST /api/v1/groups/cancel_application` | 取消申请 | 必须 |
+| `POST /api/v1/groups/list_invites` | 我的邀请列表 | 必须 |
+| `POST /api/v1/groups/accept_invite` | 接受邀请 | 必须 |
+| `POST /api/v1/groups/reject_invite` | 拒绝邀请 | 必须 |
+| `POST /api/v1/groups/leave` | 退出群组 | 必须 |
 ## 类型定义
 
 以下类型定义于 `api_spec_types.md`：
@@ -86,7 +87,6 @@ type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'revoked';
 统一搜索群组。支持关键字、标签、位置范围三种条件的自由组合。
 
 - **认证**: 可选
-- **幂等**: 否
 - **排序**: 
   - 默认 `sort_by='relevance'`：按相关性优先排序
   - `sort_by='distance'`：按距离由近到远排序（未提供 `radius` 时按默认 `5_000` 米计算）
@@ -105,14 +105,12 @@ interface SearchGroupsRequest {
   reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
   pagination?: PaginationParams;
 }
-// 至少提供 keyword、tag、radius 中的一个；不满足时返回 10000（参数错误）。
+// 至少提供 keyword、tag、radius 中的一个；不满足时请求失败。
 // reference_point 不算搜索条件，仅用于距离计算和排序，不能单独作为搜索条件。
 // 当仅缺省 radius 且提供了 keyword/tag 时，服务端按默认 5_000 米计算，并受 AppConfig.limits.search_radius_max 上限约束。
 ```
 
 **Response**: `ApiResponse<PaginatedData<GroupItem>>`
-
-**错误码**: `10000`
 
 ---
 
@@ -121,7 +119,6 @@ interface SearchGroupsRequest {
 获取群组详情。认证可选，字段可见性规则见 `api_spec_base.md`。
 
 - **认证**: 可选
-- **幂等**: 否
 
 **Request**: `GroupOpenTheDoorRequest`
 ```typescript
@@ -132,7 +129,7 @@ interface GroupOpenTheDoorRequest {
 
 **Response**: `ApiResponse<GroupItem>`
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ---
 
@@ -148,7 +145,7 @@ interface GroupOpenTheDoorRequest {
 interface CreateGroupRequest {
   name: string;
   description?: string;
-  avatar_file_id?: string;
+  avatar_file_id?: string;   // 来自 media/complete_upload 返回的 file_id
   tags?: string[];
   password?: string;
   join_method?: GroupJoinMethod;  // 默认: 'direct'
@@ -165,7 +162,7 @@ interface CreateGroupRequest {
 // 不再使用独立的 GroupCreated 类型，客户端无需额外请求即可获得完整群组数据
 ```
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ---
 
@@ -174,7 +171,6 @@ interface CreateGroupRequest {
 更新群组信息。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `UpdateGroupRequest`
 ```typescript
@@ -182,10 +178,10 @@ interface UpdateGroupRequest {
   group_id: string;
   name?: string;
   description?: string;
-  avatar_file_id?: string;
+  avatar_file_id?: string;   // 来自 media/complete_upload 返回的 file_id
   tags?: string[];
   password?: string;
-  clear_password?: boolean;  // true 时移除群密码（与 password 互斥，同时传入视为参数冲突返回 10000）
+  clear_password?: boolean;  // true 时移除群密码（与 password 互斥，同时传入视为参数冲突）
   join_method?: GroupJoinMethod;
   requires_approval?: boolean;
   next_activity?: string;          // 设置/更新下次活动预告；传空字符串清除
@@ -197,7 +193,7 @@ interface UpdateGroupRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -210,7 +206,6 @@ interface UpdateGroupRequest {
 **级联处理（契约级）**：解散时，该群所有 `pending` 状态的申请与邀请由服务端自动置为 `revoked`（群已不存在，无需推送单独事件；客户端下次拉取列表时自然不可见）。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `DismissGroupRequest`
 ```typescript
@@ -222,7 +217,7 @@ interface DismissGroupRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -231,7 +226,6 @@ interface DismissGroupRequest {
 获取成员列表。
 
 - **认证**: 可选（未登录或未加入群组的用户仅能看到公开字段，`@group-admin-only` 字段仍按可见性控制）
-- **幂等**: 否
 - **排序**: 按 `joined_at` 时间正序（最早加入在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `GroupMembersRequest`
@@ -256,7 +250,7 @@ interface GroupMemberItem {
 }
 ```
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ---
 
@@ -265,7 +259,6 @@ interface GroupMemberItem {
 搜索群组成员。用于大群场景中快速定位特定成员。
 
 - **认证**: 可选（未登录或非成员与未加入用户看到相同字段；`@group-admin-only` 字段仅群管理员可见）
-- **幂等**: 否
 - **排序**: 按匹配度优先，同匹配度按 `joined_at` 正序，`user_id ASC` 作为稳定 tie-breaker；一致性级别为弱一致（搜索场景允许短暂延迟）
 
 **Request**: `SearchGroupMembersRequest`
@@ -280,7 +273,7 @@ interface SearchGroupMembersRequest {
 
 **Response**: `ApiResponse<PaginatedData<GroupMemberItem>>`
 
-**错误码**: `10000` `10300` `10400`
+**错误码**: `10300` `10400`
 
 `10400` 典型场景：调用方不具备当前群组成员搜索资格（如未加入群组且群设置不允许检索）。
 
@@ -295,7 +288,6 @@ interface SearchGroupMembersRequest {
 - 被邀请用户**已是群成员**时，视为目标已达，返回成功（no-op，不创建邀请、不报错）。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `InviteMemberRequest`
 ```typescript
@@ -315,7 +307,7 @@ interface Invitation {
 }
 ```
 
-**错误码**: `10000` `10200` `10300` `10400`（`10400` 仅用于真正无法完成的冲突，如邀请已被封禁的用户）
+**错误码**: `10200` `10300` `10400`（`10400` 仅用于真正无法完成的冲突，如邀请已被封禁的用户）
 
 ---
 
@@ -324,7 +316,6 @@ interface Invitation {
 我发出的邀请列表。权限：群主、群管理员或系统管理员。
 
 - **认证**: 必须
-- **幂等**: 否
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `invite_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
 
 **Request**: `GroupSentInvitesRequest`
@@ -354,7 +345,7 @@ interface GroupSentInviteItem {
 
 **过期语义（契约级）**：超过 `expires_at` 的 pending 邀请由服务端自动置为 `revoked`（与发起者主动撤销同状态，便于客户端统一展示为"已失效"），并向受邀人推送 `GroupInviteExpired` 事件（见 `api_spec_websocket.md`）。`members/invites/list` 默认仅返回 `pending`，查历史需显式传 `status`。
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ---
 
@@ -363,7 +354,6 @@ interface GroupSentInviteItem {
 撤销已发出的待处理邀请。权限：群主、群管理员或系统管理员。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `RevokeSentInviteRequest`
 ```typescript
@@ -376,7 +366,7 @@ interface RevokeSentInviteRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ---
 
@@ -391,7 +381,6 @@ interface RevokeSentInviteRequest {
 **降级与 pending 邀请**：邀请是群行为（非个人），inviter 降级为普通成员后，其历史发出的 pending 邀请由其他管理员/owner 继续可见与管理（不自动失效）。**owner 降级**（转交所有权）前若有 pending 邀请，需先 `members/invites/revoke` 或在 `transfer_ownership` 中一并转交管理权，否则返回 `10400`。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `SetMemberRoleRequest`
 ```typescript
@@ -404,7 +393,7 @@ interface SetMemberRoleRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`（`10400` 用于真正无法完成的状态冲突，如降级最后一个管理员等）
+**错误码**: `10200` `10300` `10400`（`10400` 用于真正无法完成的状态冲突，如降级最后一个管理员等）
 
 ---
 
@@ -413,7 +402,6 @@ interface SetMemberRoleRequest {
 设置成员禁言状态（两态统一端点，替代原 mute/unmute 成对动词）。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `SetMuteRequest`
 ```typescript
@@ -427,7 +415,7 @@ interface SetMuteRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ---
 
@@ -438,7 +426,6 @@ interface SetMuteRequest {
 **级联处理（契约级）**：封禁时，被 ban 用户**发出的**该群 pending 申请置 `revoked`；**发给**被 ban 用户的该群 pending 邀请置 `revoked`（避免被封用户仍收到邀请再加入）。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `BanMemberRequest`
 ```typescript
@@ -451,7 +438,7 @@ interface BanMemberRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ---
 
@@ -460,7 +447,6 @@ interface BanMemberRequest {
 解除封禁成员。对未处于封禁状态的成员调用视为 no-op，返回成功（不报错），与 Discord/Slack 等"设状态操作重复达同状态应成功"的业界共识一致。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `UnbanMemberRequest`
 ```typescript
@@ -472,7 +458,7 @@ interface UnbanMemberRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -481,7 +467,6 @@ interface UnbanMemberRequest {
 获取封禁列表。
 
 - **认证**: 必须
-- **幂等**: 否
 - **排序**: 按 `banned_at` 时间倒序（最近封禁在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `BannedMembersRequest`
@@ -504,7 +489,7 @@ interface BannedMemberItem {
 }
 ```
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -513,7 +498,6 @@ interface BannedMemberItem {
 移除成员。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `RemoveMemberRequest`
 ```typescript
@@ -525,7 +509,7 @@ interface RemoveMemberRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ---
 
@@ -534,7 +518,6 @@ interface RemoveMemberRequest {
 获取群组申请列表。
 
 - **认证**: 必须
-- **幂等**: 否
 - **排序**: 按 `created_at` 时间倒序（最新申请在前），`application_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `GroupApplicationsRequest`
@@ -565,7 +548,7 @@ interface GroupApplicationItem {
 }
 ```
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -575,29 +558,29 @@ interface GroupApplicationItem {
 
 **边界情况**：对已处于 `accepted` 状态的申请重复调用，视为 no-op 返回成功。
 
+**推送**：审批通过后向申请人推送 `GroupApplicationResponse` 事件并落库通知（见 `api_spec_notify.md`）。
+
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `ApproveGroupApplicationRequest`
 ```typescript
 interface ApproveGroupApplicationRequest {
-  group_id: string;        // 群级鉴权（与 revoke 对齐）；须与 application 所属群一致，否则 10000
+  group_id: string;        // 群级鉴权（与 revoke 对齐）；须与 application 所属群一致，否则请求失败
   application_id: string;
 }
 ```
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ---
 
 ### POST /api/v1/groups/applications/reject
 
-拒绝群组申请。拒绝后向申请人推送 `GroupApplicationRejected` 通知（含 `reason`，对应 `NotifyType='group_application_rejected'`）。
+拒绝群组申请。拒绝后向申请人推送 `GroupApplicationRejected` 事件并落库通知（含 `reason`，见 `api_spec_notify.md`）。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `RejectGroupApplicationRequest`
 ```typescript
@@ -610,7 +593,7 @@ interface RejectGroupApplicationRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ---
 
@@ -633,7 +616,7 @@ interface CreateGroupAnnouncementRequest {
 
 **Response**: `ApiResponse<GroupAnnouncementItem>`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ---
 
@@ -642,7 +625,6 @@ interface CreateGroupAnnouncementRequest {
 获取群公告列表。
 
 - **认证**: 可选
-- **幂等**: 否
 - **排序**: 按 `is_pinned DESC, created_at DESC` 排序，`announcement_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `GroupAnnouncementsRequest`
@@ -658,7 +640,7 @@ interface GroupAnnouncementsRequest {
 **说明**：
 - 普通用户只需获取最新的 N 条群公告，无需分页翻阅历史
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ---
 
@@ -667,7 +649,6 @@ interface GroupAnnouncementsRequest {
 更新群公告。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `UpdateGroupAnnouncementRequest`
 ```typescript
@@ -682,7 +663,7 @@ interface UpdateGroupAnnouncementRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -691,7 +672,6 @@ interface UpdateGroupAnnouncementRequest {
 删除群公告。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `DeleteGroupAnnouncementRequest`
 ```typescript
@@ -703,7 +683,7 @@ interface DeleteGroupAnnouncementRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -711,9 +691,7 @@ interface DeleteGroupAnnouncementRequest {
 
 更新我的群组偏好（静音/置顶，区别于 `groups/update` 群信息更新）。
 
-
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `UpdateGroupMySettingsRequest`
 ```typescript
@@ -726,7 +704,7 @@ interface UpdateGroupMySettingsRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10300` `10400`
+**错误码**: `10300` `10400`
 
 ---
 
@@ -737,7 +715,6 @@ interface UpdateGroupMySettingsRequest {
 - `direct` + 需审核：创建加入申请，返回 `status: 'pending_approval'`
 - `password`：需提供 `password`，验证通过后按 `requires_approval` 直接加入或创建申请
 - `invite_only`：仅受邀用户可加入（未受邀返回错误 `10400`（该群组仅限邀请加入）；受邀后按 `requires_approval` 直接加入或创建申请）
-
 
 - **认证**: 必须
 - **幂等**: 是（客户端必须携带 `Idempotency-Key`）
@@ -750,6 +727,8 @@ interface JoinGroupRequest {
   message?: string;    // approval 群组可选附言
 }
 ```
+
+**推送**：创建申请（`status='pending_approval'`）时向群管理员推送 `GroupApplicationReceived` 事件并落库通知（见 `api_spec_notify.md`）。
 
 **Response**: `ApiResponse<JoinGroupResult>`
 ```typescript
@@ -765,7 +744,7 @@ interface JoinGroupResult {
 }
 ```
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ---
 
@@ -788,7 +767,7 @@ interface TransferOwnershipRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ---
 
@@ -796,11 +775,9 @@ interface TransferOwnershipRequest {
 
 获取我的群组。
 
-
 **说明**：登录态必定返回 `my_state` 字段，包含 `role`、`is_joined`、`unread_count`、`is_muted`、`is_pinned`、`joined_at` 等群组内状态。本端点无 `reference_point` 参数，返回的 `GroupItem.location` 中 `distance` 和 `bearing_degrees` 为 `undefined`。
 
 - **认证**: 必须
-- **幂等**: 否
 - **排序**: 默认按 `is_pinned DESC, last_activity_at DESC` 排序（置顶优先，最近活跃在前），`group_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `MyGroupsRequest`
@@ -812,8 +789,6 @@ interface MyGroupsRequest {
 
 **Response**: `ApiResponse<PaginatedData<GroupItem>>`
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/groups/list_applications
@@ -821,7 +796,6 @@ interface MyGroupsRequest {
 获取我的群组申请列表。查看当前用户提交的所有群组申请及其审核状态。
 
 - **认证**: 必须
-- **幂等**: 否
 - **排序**: 按 `created_at` 时间倒序（最新申请在前），`application_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `MyApplicationsRequest`
@@ -834,17 +808,13 @@ interface MyApplicationsRequest {
 
 **Response**: `ApiResponse<PaginatedData<GroupApplicationItem>>`
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/groups/cancel_application
 
-取消群组申请。取消后向群管理员推送 `GroupApplicationCancelled` 通知（对应 `NotifyType='group_application_cancelled'`）。
-
+取消群组申请。取消后向群管理员推送 `GroupApplicationCancelled` 事件（纯实时，不落库通知，见 `api_spec_websocket.md`）。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `CancelApplicationRequest`
 ```typescript
@@ -857,7 +827,7 @@ interface CancelApplicationRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ---
 
@@ -865,9 +835,7 @@ interface CancelApplicationRequest {
 
 获取我的群组邀请列表。
 
-
 - **认证**: 必须
-- **幂等**: 否
 - **排序**: 按 `created_at` 时间倒序（最新邀请在前），`invite_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `MyInvitesRequest`
@@ -893,17 +861,13 @@ interface GroupInviteItem {
 }
 ```
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/groups/accept_invite
 
 接受群组邀请。
 
-
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `AcceptInviteRequest`
 ```typescript
@@ -919,7 +883,7 @@ interface InviteAcceptedResult {
 }
 ```
 
-**错误码**: `10000` `10300` `10400`
+**错误码**: `10300` `10400`
 
 ---
 
@@ -927,11 +891,9 @@ interface InviteAcceptedResult {
 
 拒绝群组邀请。
 
-**推送**：拒绝成功后向邀请发起方推送 `GroupInviteRejected` 事件并落库通知（`NotifyType='group_invite_rejected'`，含 `reason`，见 `api_spec_websocket.md` 与 `api_spec_notify.md`）。
-
+**推送**：拒绝成功后向邀请发起方推送 `GroupInviteRejected` 事件（纯实时，不落库通知，含 `reason`，见 `api_spec_websocket.md`）。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `RejectInviteRequest`
 ```typescript
@@ -943,7 +905,7 @@ interface RejectInviteRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10300` `10400`
+**错误码**: `10300` `10400`
 
 ---
 
@@ -956,7 +918,6 @@ interface RejectInviteRequest {
 **级联处理（契约级）**：退群用户作为**申请人**的该群 pending 申请自动置 `revoked`；作为 inviter 发出的 pending 邀请**保留**（邀请是群行为，由其他管理员管理），但如果退群的是该群最后一个管理员/owner，则已由 `transfer_ownership` 限制提前拦截（不会发生"无人管理 pending 邀请"的状态）。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `LeaveGroupRequest`
 ```typescript
@@ -967,4 +928,4 @@ interface LeaveGroupRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10300` `10400`
+**错误码**: `10300` `10400`

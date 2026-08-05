@@ -13,30 +13,30 @@
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 | 幂等 |
-|-----|------|------|------|
-| `POST /api/v1/users/search` | 搜索用户（支持关键字/标签/位置组合） | 可选 | 否 |
-| `POST /api/v1/users/get_detail` | 用户资料详情 | 可选 | 否 |
-| `POST /api/v1/users/get_profile` | 用户主页聚合（资料 + 近期瞬间，首屏骨架） | 可选 | 否 |
-| `POST /api/v1/users/list_friends` | 好友列表（user_id 可选，默认=当前用户） | 条件必须 | 否 |
-| `POST /api/v1/users/list_following` | 关注列表（user_id 可选，默认=当前用户） | 条件必须 | 否 |
-| `POST /api/v1/users/list_followers` | 粉丝列表（user_id 可选，默认=当前用户） | 条件必须 | 否 |
-| `POST /api/v1/users/list_groups` | 用户群组列表 | 可选 | 否 |
-| `POST /api/v1/users/list_moments` | 用户瞬间历史 | 可选 | 否 |
-| `POST /api/v1/users/list_reacted_moments` | 用户反应过的瞬间列表 | 可选 | 否 |
-| `POST /api/v1/users/batch_get` | 批量获取用户信息 | 可选 | 否 |
-| `POST /api/v1/users/get_account` | 我的账户数据 | 必须 | 否 |
-| `POST /api/v1/users/update_account` | 更新我的账户 | 必须 | 否 |
-| `POST /api/v1/users/update_location` | 更新我的位置 | 必须 | 否 |
-| `POST /api/v1/users/upgrade` | 访客升级 | 必须 | 否 |
-| `POST /api/v1/users/get_settings` | 我的设置 | 必须 | 否 |
-| `POST /api/v1/users/update_settings` | 更新我的设置 | 必须 | 否 |
-| `POST /api/v1/users/delete_account` | 删除账户 | 必须 | 否 |
-| `POST /api/v1/users/follow` | 设置关注状态（两态统一） | 必须 | 否 |
-| `POST /api/v1/users/block` | 设置拉黑状态（两态统一） | 必须 | 否 |
-| `POST /api/v1/users/list_blocked` | 我的拉黑列表 | 必须 | 否 |
-| `POST /api/v1/users/set_remark` | 设置备注 | 必须 | 否 |
+| 端点 | 说明 | 认证 |
+|-----|------|------|
 
+| `POST /api/v1/users/search` | 搜索用户（支持关键字/标签/位置组合） | 可选 |
+| `POST /api/v1/users/get_detail` | 用户资料详情 | 可选 |
+| `POST /api/v1/users/get_profile` | 用户主页聚合（资料 + 近期瞬间，首屏骨架） | 可选 |
+| `POST /api/v1/users/list_friends` | 好友列表（user_id 可选，默认=当前用户） | 条件必须 |
+| `POST /api/v1/users/list_following` | 关注列表（user_id 可选，默认=当前用户） | 条件必须 |
+| `POST /api/v1/users/list_followers` | 粉丝列表（user_id 可选，默认=当前用户） | 条件必须 |
+| `POST /api/v1/users/list_groups` | 用户群组列表 | 可选 |
+| `POST /api/v1/users/list_moments` | 用户瞬间历史 | 可选 |
+| `POST /api/v1/users/list_reacted_moments` | 用户反应过的瞬间列表 | 可选 |
+| `POST /api/v1/users/batch_get` | 批量获取用户信息 | 可选 |
+| `POST /api/v1/users/get_account` | 我的账户数据 | 必须 |
+| `POST /api/v1/users/update_account` | 更新我的账户 | 必须 |
+| `POST /api/v1/users/update_location` | 更新我的位置 | 必须 |
+| `POST /api/v1/users/upgrade` | 访客升级 | 必须 |
+| `POST /api/v1/users/get_settings` | 我的设置 | 必须 |
+| `POST /api/v1/users/update_settings` | 更新我的设置 | 必须 |
+| `POST /api/v1/users/delete_account` | 删除账户 | 必须 |
+| `POST /api/v1/users/follow` | 设置关注状态（两态统一） | 必须 |
+| `POST /api/v1/users/block` | 设置拉黑状态（两态统一） | 必须 |
+| `POST /api/v1/users/list_blocked` | 我的拉黑列表 | 必须 |
+| `POST /api/v1/users/set_remark` | 设置备注 | 必须 |
 > 表情反应（reaction）是跨 message/moment/comment 三类资源的统一动作，独立命名空间 `reactions/`（见 `api_spec_reaction.md`）。
 
 ## 类型定义
@@ -72,7 +72,6 @@ type Gender = 'male' | 'female' | 'other';
 统一搜索用户。支持关键字、标签、位置范围三种条件的自由组合。
 
 - **认证**: 可选
-- **幂等**: 否
 - **排序**: 
   - 默认 `sort_by='relevance'`：按相关性优先排序，同分时以最近活跃时间做稳定 tie-breaker
   - `sort_by='distance'`：按距离由近到远排序（未提供 `radius` 时按默认 `5_000` 米计算），距离相近时体现关键词相关性
@@ -90,14 +89,12 @@ interface SearchUsersRequest {
   reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
   pagination?: PaginationParams;
 }
-// 至少提供 keyword、tag、radius 中的一个；不满足时返回 10000（参数错误）
+// 至少提供 keyword、tag、radius 中的一个；不满足时请求失败
 // reference_point 不算搜索条件，仅用于距离计算和排序，不能单独作为搜索条件
 // 当仅缺省 radius 且提供了 keyword/tag 时，服务端按默认 5_000 米计算，并受 AppConfig.limits.search_radius_max 上限约束
 ```
 
 **Response**: `ApiResponse<PaginatedData<UserItem>>`
-
-**错误码**: `10000`
 
 ---
 
@@ -108,7 +105,6 @@ interface SearchUsersRequest {
 **隐私说明**：用户存在但对其资料设置了完全隐藏（或调用方被对方拉黑等隐私限制）时，返回 `10300`（按不存在处理，不暴露存在性，见 `api_spec_base.md` 隐私拒绝策略）；用户不存在时返回 `10300`。
 
 - **认证**: 可选
-- **幂等**: 否
 
 **Request**: `UserOpenTheDoorRequest`
 ```typescript
@@ -119,7 +115,7 @@ interface UserOpenTheDoorRequest {
 
 **Response**: `ApiResponse<UserItem>`
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ---
 
@@ -128,7 +124,6 @@ interface UserOpenTheDoorRequest {
 获取用户主页首屏聚合数据（资料 + 近期瞬间）。一次请求拿到主页骨架，消除"资料 + 瞬间"的多次往返。
 
 - **认证**: 可选（与 `users/get_detail` 对齐，字段可见性规则见 `api_spec_base.md`）
-- **幂等**: 否
 - **排序**: `recent_moments` 内部按 `created_at DESC`（最新在前），与 `users/list_moments` 一致
 
 **设计要点**：
@@ -151,7 +146,7 @@ interface UserProfileBundle {
 }
 ```
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ---
 
@@ -162,7 +157,6 @@ interface UserProfileBundle {
 **统一端点**：`user_id` 可选。不传或传入当前用户 ID 时查询自己的好友列表，返回 `@owner-only` 字段（如 `remark`）。传入其他用户 ID 时查询对方的好友列表，受 `social_lists_visible` 隐私设置控制。
 
 - **认证**: 条件必须（见 `api_spec_base.md` 认证档位说明：未指定 `user_id` 等价于查自己，必须登录；指定他人 ID 时为可选）
-- **幂等**: 否
 - **排序**: 默认按 `followed_back_at` **时间倒序**（最近成为好友在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `ListFriendsRequest`
@@ -187,7 +181,7 @@ interface FriendItem {
 
 **可见性说明**：`remark` 为 `@owner-only`（仅查询自己时返回），`presence_status`/`last_online_at` 受对方 `presence_visible` 隐私设置控制。
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -198,7 +192,6 @@ interface FriendItem {
 **统一端点**：`user_id` 可选。不传或传入当前用户 ID 时查询自己的关注列表。传入其他用户 ID 时查询对方的关注列表，受 `social_lists_visible` 隐私设置控制。
 
 - **认证**: 条件必须（见 `api_spec_base.md` 认证档位说明：未指定 `user_id` 等价于查自己，必须登录；指定他人 ID 时为可选）
-- **幂等**: 否
 - **排序**: 默认按 `followed_at` **时间倒序**（最近关注在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `ListFollowingRequest`
@@ -223,7 +216,7 @@ interface FollowingItem {
 
 **可见性说明**：`remark` 为 `@owner-only`（仅查询自己时返回）；`presence_status`/`last_online_at` 受对方 `presence_visible` 隐私设置控制。
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -234,7 +227,6 @@ interface FollowingItem {
 **统一端点**：`user_id` 可选。不传或传入当前用户 ID 时查询自己的粉丝列表。传入其他用户 ID 时查询对方的粉丝列表，受 `social_lists_visible` 隐私设置控制。
 
 - **认证**: 条件必须（见 `api_spec_base.md` 认证档位说明：未指定 `user_id` 等价于查自己，必须登录；指定他人 ID 时为可选）
-- **幂等**: 否
 - **排序**: 默认按 `followed_at` **时间倒序**（最近关注在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `ListFollowersRequest`
@@ -258,7 +250,7 @@ interface FollowerItem {
 
 **可见性说明**：`presence_status`/`last_online_at` 受对方 `presence_visible` 隐私设置控制。
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -269,7 +261,6 @@ interface FollowerItem {
 **隐私控制**：受 `groups_visible` 设置控制。仅返回 `is_searchable=true` 的公开群组。本端点无 `reference_point` 参数，返回的 `GroupItem.location` 中 `distance` 和 `bearing_degrees` 为 `undefined`。
 
 - **认证**: 可选
-- **幂等**: 否
 - **排序**: 默认按 `joined_at` **时间倒序**（最近加入在前），`group_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `UserGroupsRequest`
@@ -282,7 +273,7 @@ interface UserGroupsRequest {
 
 **Response**: `ApiResponse<PaginatedData<GroupItem>>`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -293,7 +284,6 @@ interface UserGroupsRequest {
 **说明**：生活瞬间支持 `privacy_level` 控制可见性（`public` / `private`）。未登录用户仅能访问 `public` 的瞬间；登录态可额外看到自己的所有瞬间（包括 `private`）。认证可选，字段可见性规则见 `api_spec_base.md`。
 
 - **认证**: 可选
-- **幂等**: 否
 - **排序**: 默认按 `created_at` **时间倒序**（最新瞬间在前），`moment_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `UserMomentsRequest`
@@ -306,7 +296,7 @@ interface UserMomentsRequest {
 
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ---
 
@@ -317,7 +307,6 @@ interface UserMomentsRequest {
 **隐私控制**：受 `reacted_moments_visible` 设置控制。
 
 - **认证**: 可选
-- **幂等**: 否
 - **排序**: 默认按 `last_reacted_at` **时间倒序**（最近反应在前），`moment_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `UserReactedMomentsRequest`
@@ -330,7 +319,7 @@ interface UserReactedMomentsRequest {
 
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -339,7 +328,6 @@ interface UserReactedMomentsRequest {
 批量获取用户信息。用于列表/Feed/通知等场景中高效解析 `UserInfo`，消除逐个调用 `get_detail` 的 N+1 问题。
 
 - **认证**: 可选（已登录返回 `@auth-only` 字段）
-- **幂等**: 否
 
 **Request**: `BatchGetUsersRequest`
 ```typescript
@@ -353,8 +341,6 @@ interface BatchGetUsersRequest {
 // users 为 user_id → UserItem 的映射；不存在的 user_id 不出现在 map 中
 ```
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/users/get_account
@@ -362,7 +348,6 @@ interface BatchGetUsersRequest {
 获取当前用户账户数据（含 `email`/`phone`/`user_type` 等仅自己可见的字段）。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `{}`
 
@@ -386,8 +371,6 @@ interface AccountData {
 }
 ```
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/users/update_account
@@ -395,13 +378,12 @@ interface AccountData {
 更新用户账户资料。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `UpdateAccountRequest`
 ```typescript
 interface UpdateAccountRequest {
   nickname?: string;
-  avatar_file_id?: string;
+  avatar_file_id?: string;   // 来自 media/complete_upload 返回的 file_id
   bio?: string;
   tags?: string[];
   gender?: Gender;
@@ -412,7 +394,7 @@ interface UpdateAccountRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ---
 
@@ -421,7 +403,6 @@ interface UpdateAccountRequest {
 更新用户位置。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `UpdateLocationRequest`
 ```typescript
@@ -432,8 +413,6 @@ interface UpdateLocationRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/users/upgrade
@@ -441,12 +420,11 @@ interface UpdateLocationRequest {
 账户升级（访客升级为正式用户）。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `UpgradeAccountRequest`
 ```typescript
 interface UpgradeAccountRequest {
-  login_id: string;
+  login_id: string;   // 手机号/邮箱/用户名
   password: string;
 }
 ```
@@ -455,7 +433,7 @@ interface UpgradeAccountRequest {
 
 升级成功后返回完整账户数据，客户端无需额外调 `get_account` 即可获取新的 `user_type`。
 
-**错误码**: `10000` `10400`
+**错误码**: `10400`
 
 ---
 
@@ -464,15 +442,12 @@ interface UpgradeAccountRequest {
 获取用户设置。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `{}`
 
 **Response**: `ApiResponse<UserSettings>`
 
 `UserSettings` 定义于 `api_spec_types.md`。
-
-**错误码**: `10000`
 
 ---
 
@@ -481,7 +456,6 @@ interface UpgradeAccountRequest {
 更新用户设置。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `UpdateSettingsRequest`
 ```typescript
@@ -492,8 +466,6 @@ interface UpdateSettingsRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/users/delete_account
@@ -501,7 +473,6 @@ interface UpdateSettingsRequest {
 删除账户。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `DeleteAccountRequest`
 ```typescript
@@ -512,7 +483,7 @@ interface DeleteAccountRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10400`
+**错误码**: `10400`
 
 ---
 
@@ -525,7 +496,6 @@ interface DeleteAccountRequest {
 `active=false` 时：若原本是好友，则好友关系自动解除。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `FollowRequest`
 ```typescript
@@ -539,7 +509,7 @@ interface FollowRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`（不能关注/取关自己）
+**错误码**: `10200` `10300` `10400`（不能关注/取关自己）
 
 ---
 
@@ -548,7 +518,6 @@ interface FollowRequest {
 设置拉黑状态（两态统一端点）。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `BlockRequest`
 ```typescript
@@ -561,7 +530,7 @@ interface BlockRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10300` `10400`（不能拉黑/解除拉黑自己）
+**错误码**: `10300` `10400`（不能拉黑/解除拉黑自己）
 
 ---
 
@@ -570,7 +539,6 @@ interface BlockRequest {
 获取拉黑列表。
 
 - **认证**: 必须
-- **幂等**: 否
 - **排序**: 默认按 `blocked_at` **时间倒序**（最近拉黑在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `MyBlockedRequest`
@@ -589,8 +557,6 @@ interface BlockedUserItem {
 }
 ```
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/users/set_remark
@@ -600,7 +566,6 @@ interface BlockedUserItem {
 **权限要求**：必须已关注该用户。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `SetRemarkRequest`
 ```typescript
@@ -612,4 +577,4 @@ interface SetRemarkRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10300` `10400`（未关注该用户）
+**错误码**: `10300` `10400`（未关注该用户）

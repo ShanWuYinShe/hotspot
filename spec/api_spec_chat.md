@@ -23,33 +23,33 @@
 
 ### 私聊管理（`private_chats`）
 
-| 端点 | 说明 | 认证 | 幂等 |
-|-----|------|------|------|
-| `POST /api/v1/private_chats/list` | 私聊列表 | 必须 | 否 |
-| `POST /api/v1/private_chats/get_detail` | 私聊详情 | 必须 | 否 |
-| `POST /api/v1/private_chats/update_preferences` | 更新会话偏好 | 必须 | 否 |
-| `POST /api/v1/private_chats/delete` | 删除私聊会话 | 必须 | 否 |
+| 端点 | 说明 | 认证 |
+|-----|------|------|
 
+| `POST /api/v1/private_chats/list` | 私聊列表 | 必须 |
+| `POST /api/v1/private_chats/get_detail` | 私聊详情 | 必须 |
+| `POST /api/v1/private_chats/update_preferences` | 更新会话偏好 | 必须 |
+| `POST /api/v1/private_chats/delete` | 删除私聊会话 | 必须 |
 ### 私聊消息（`private_messages`）
 
-| 端点 | 说明 | 认证 | 幂等 |
-|-----|------|------|------|
-| `POST /api/v1/private_messages/send` | 发送私聊消息 | 必须 | 是 |
-| `POST /api/v1/private_messages/get_history` | 私聊消息历史 | 必须 | 否 |
-| `POST /api/v1/private_messages/update` | 编辑私聊消息 | 必须 | 否 |
-| `POST /api/v1/private_messages/recall` | 撤回私聊消息 | 必须 | 否 |
-| `POST /api/v1/private_messages/mark_read` | 标记私聊消息已读（scope 控制范围） | 必须 | 否 |
+| 端点 | 说明 | 认证 |
+|-----|------|------|
 
+| `POST /api/v1/private_messages/send` | 发送私聊消息 | 必须 |
+| `POST /api/v1/private_messages/get_history` | 私聊消息历史 | 必须 |
+| `POST /api/v1/private_messages/update` | 编辑私聊消息 | 必须 |
+| `POST /api/v1/private_messages/recall` | 撤回私聊消息 | 必须 |
+| `POST /api/v1/private_messages/mark_read` | 标记私聊消息已读（scope 控制范围） | 必须 |
 ### 群聊消息（`group_messages`）
 
-| 端点 | 说明 | 认证 | 幂等 |
-|-----|------|------|------|
-| `POST /api/v1/group_messages/send` | 发送群聊消息 | 必须 | 是 |
-| `POST /api/v1/group_messages/get_history` | 群聊消息历史 | 必须 | 否 |
-| `POST /api/v1/group_messages/update` | 编辑群聊消息 | 必须 | 否 |
-| `POST /api/v1/group_messages/recall` | 撤回群聊消息 | 必须 | 否 |
-| `POST /api/v1/group_messages/mark_read` | 标记群聊消息已读（scope 控制范围） | 必须 | 否 |
+| 端点 | 说明 | 认证 |
+|-----|------|------|
 
+| `POST /api/v1/group_messages/send` | 发送群聊消息 | 必须 |
+| `POST /api/v1/group_messages/get_history` | 群聊消息历史 | 必须 |
+| `POST /api/v1/group_messages/update` | 编辑群聊消息 | 必须 |
+| `POST /api/v1/group_messages/recall` | 撤回群聊消息 | 必须 |
+| `POST /api/v1/group_messages/mark_read` | 标记群聊消息已读（scope 控制范围） | 必须 |
 ## 已读状态设计
 
 | 场景 | 字段 | 说明 |
@@ -161,7 +161,6 @@ interface GroupMessageItem {
 获取私聊列表。
 
 - **认证**: 必须
-- **幂等**: 否
 - **排序**: 按 `is_pinned DESC, last_activity_at DESC` 排序（置顶优先，最新会话在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `MyPrivateChatsRequest`
@@ -204,8 +203,6 @@ interface PrivateChatItem {
 
 **说明**：`can_message` 仅反映调用当下的隐私校验结果；若对方后续修改隐私设置或拉黑，`private_messages/send` 仍可能失败，客户端需处理权限错误。
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/private_chats/get_detail
@@ -225,7 +222,6 @@ interface PrivateChatItem {
 响应始终包含最近消息列表（`PaginatedData<PrivateMessageItem>`，会话不存在时为空），条数由 `AppConfig.response_defaults.chat_recent_messages_count` 控制。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `PrivateChatOpenTheDoorRequest`
 ```typescript
@@ -243,14 +239,13 @@ interface PrivateChatOpenResult {
 }
 ```
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ### POST /api/v1/private_chats/update_preferences
 
 更新私聊偏好（静音/置顶）。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `UpdatePrivateChatPreferencesRequest`
 ```typescript
@@ -263,7 +258,7 @@ interface UpdatePrivateChatPreferencesRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ### POST /api/v1/private_chats/delete
 
@@ -276,7 +271,6 @@ interface UpdatePrivateChatPreferencesRequest {
 - 若再次发起私聊，将创建一个新的空白会话
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `DeletePrivateChatRequest`
 ```typescript
@@ -287,7 +281,7 @@ interface DeletePrivateChatRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ---
 
@@ -310,7 +304,7 @@ interface DeletePrivateChatRequest {
 - `'privacy'`：对方隐私设置不允许（含被拉黑场景，统一返回此值，不暴露拉黑状态）
 - `'stranger_quota_exceeded'`：陌生人消息限额已用完
 - `'account_suspended'`：账号被限制
-其余错误（`10000`/`10300`）不返回 `data`。
+其余错误（`10300`）不返回 `data`。
 
 - **认证**: 必须
 - **幂等**: 是（客户端必须携带 `Idempotency-Key`）
@@ -321,7 +315,7 @@ interface SendPrivateMessageRequest {
   target_user_id: string;
   type: SendMessageType;
   content?: string;
-  file_id?: string;
+  file_id?: string;          // 来自 media/complete_upload 返回的 file_id（image/video/audio/file 类型）
   share_code?: string;
   reply_to_message_id?: string;
 }
@@ -329,14 +323,13 @@ interface SendPrivateMessageRequest {
 
 **Response**: `ApiResponse<MessageSent>`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ### POST /api/v1/private_messages/get_history
 
 获取私聊消息历史。
 
 - **认证**: 必须
-- **幂等**: 否
 - **排序**: 按 `sent_at` 时间倒序（最新在前），`message_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `GetPrivateMessagesHistoryRequest`
@@ -349,7 +342,7 @@ interface GetPrivateMessagesHistoryRequest {
 
 **Response**: `ApiResponse<PaginatedData<PrivateMessageItem>>`
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ### POST /api/v1/private_messages/update
 
@@ -362,7 +355,6 @@ interface GetPrivateMessagesHistoryRequest {
 - 已撤回的消息不可编辑，返回 `10400`
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `UpdatePrivateMessageRequest`
 ```typescript
@@ -374,14 +366,13 @@ interface UpdatePrivateMessageRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ### POST /api/v1/private_messages/recall
 
 撤回私聊消息。发送者只能撤回撤回时间窗内的消息，窗口由 `AppConfig.limits.message_recall_window_seconds` 控制（客户端通过 `ClientConfig.limits` 读取），超时返回 `10400`。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `RecallPrivateMessageRequest`
 ```typescript
@@ -392,7 +383,7 @@ interface RecallPrivateMessageRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ### POST /api/v1/private_messages/mark_read
 
@@ -401,7 +392,6 @@ interface RecallPrivateMessageRequest {
 **up_to 语义**：标记截至某条消息（含）及之前的所有消息为已读。`up_to_message_id` 不属于目标会话时返回 `10300`。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `MarkPrivateReadRequest`
 ```typescript
@@ -414,7 +404,7 @@ interface MarkPrivateReadRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000`（参数错误，如 `scope='session'` 但 `target_user_id` 缺失） `10300`（`up_to_message_id` 不属于该会话）
+**错误码**: `10300`（`up_to_message_id` 不属于该会话）
 
 ---
 
@@ -437,7 +427,7 @@ interface SendGroupMessageRequest {
   group_id: string;
   type: SendMessageType;
   content?: string;
-  file_id?: string;
+  file_id?: string;          // 来自 media/complete_upload 返回的 file_id（image/video/audio/file 类型）
   share_code?: string;
   reply_to_message_id?: string;
   mentions?: string[];
@@ -446,14 +436,13 @@ interface SendGroupMessageRequest {
 
 **Response**: `ApiResponse<MessageSent>`
 
-**错误码**: `10000` `10300` `10400`
+**错误码**: `10300` `10400`
 
 ### POST /api/v1/group_messages/get_history
 
 获取群聊消息历史。
 
 - **认证**: 必须
-- **幂等**: 否
 - **排序**: 按 `sent_at` 时间倒序（最新在前），`message_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `GetGroupMessagesHistoryRequest`
@@ -467,7 +456,7 @@ interface GetGroupMessagesHistoryRequest {
 **Response**: `ApiResponse<PaginatedData<GroupMessageItem>>`
 **返回说明**：`items` 统一包含完整群聊历史（含 `type='system'` 的群系统消息）；客户端可按展示需求自行过滤。
 
-**错误码**: `10000` `10300` `10400`
+**错误码**: `10300` `10400`
 
 ### POST /api/v1/group_messages/update
 
@@ -478,7 +467,6 @@ interface GetGroupMessagesHistoryRequest {
 - 已撤回的消息不可编辑，返回 `10400`
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `UpdateGroupMessageRequest`
 ```typescript
@@ -490,14 +478,13 @@ interface UpdateGroupMessageRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ### POST /api/v1/group_messages/recall
 
 撤回群聊消息。发送者可撤回撤回时间窗内的消息（窗口由 `AppConfig.limits.message_recall_window_seconds` 控制），群组管理员/群主可撤回任何消息，超时返回 `10400`。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `RecallGroupMessageRequest`
 ```typescript
@@ -508,7 +495,7 @@ interface RecallGroupMessageRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ### POST /api/v1/group_messages/mark_read
 
@@ -517,7 +504,6 @@ interface RecallGroupMessageRequest {
 **up_to 语义**：标记截至某条消息（含）及之前的所有消息为已读。`up_to_message_id` 不属于目标群组时返回 `10300`。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `MarkGroupReadRequest`
 ```typescript
@@ -530,4 +516,4 @@ interface MarkGroupReadRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10300` `10400`（`scope='group'` 但 `group_id` 缺失返回 `10000`）
+**错误码**: `10300` `10400`

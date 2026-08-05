@@ -26,10 +26,10 @@
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 | 幂等 |
-|------|------|------|------|
-| `POST /api/v1/map/canvas` | 根据视口返回统计或热点明细 | 可选 | 无 |
+| 端点 | 说明 | 认证 |
+|------|------|------|
 
+| `POST /api/v1/map/canvas` | 根据视口返回统计或热点明细 | 可选 |
 ## 端点详情
 
 ### POST /api/v1/map/canvas
@@ -37,7 +37,6 @@
 根据视口范围和 S2 网格预聚合，自动返回热力统计（`heatmap`）或热点明细（`hotspots`）中的一种。
 
 - **认证**: 可选
-- **幂等**: 无
 
 **Request**: `MapCanvasRequest`
 
@@ -71,7 +70,7 @@ interface Bounds {
   west: number;
 }
 // 约束：north >= south；east >= west（允许退化视口）；east/west 取值范围 [-180, 180]。
-// 暂不支持跨国际日期变更线视口（需由客户端拆分请求）。违反时返回 `10000`。
+// 暂不支持跨国际日期变更线视口（需由客户端拆分请求）。
 
 // 地图视口：仅由经纬度边界决定，不需要客户端提供 zoom
 interface MapViewport {
@@ -82,7 +81,7 @@ interface TimeRangeParams {
   start_time?: string;  // UTC ISO 8601
   end_time?: string;    // UTC ISO 8601
 }
-// 约束：若同时提供，必须满足 start_time <= end_time。违反时返回 `10000`。
+// 约束：若同时提供，必须满足 start_time <= end_time。
 ```
 
 ### 统计与明细类型
@@ -161,6 +160,7 @@ interface MapCanvasRequest {
   pagination?: PaginationParams;
   // 注：无 reference_point 字段。distance/bearing_degrees 的计算锚点 = viewport 几何中心
   //     （由 bounds 四角求平均得到）。客户端无需传入锚点；服务端按视口中心计算所有 hotspot 的相对距离/方位。
+}
 
 // 响应为 tagged union：模式由服务端按视口尺度与数据密度决定（大尺度→heatmap，小尺度→hotspots）
 // 客户端按 mode 分支渲染；结构本身编码了互斥规则，无需散文约束
@@ -197,10 +197,3 @@ type MapCanvasResponse =
 
 - 聚合与查询必须基于 S2 网格与视口范围，不得引入行政区 / region 概念作为契约维度
 - `cell_token`、`level` 对客户端是不透明标识，客户端不应依赖其具体含义或编码格式
-
-### 错误码
-
-- `10000`：请求参数不合法，例如：
-  - `viewport.bounds` 超出允许范围或 east/west 不满足约束；
-  - `TimeRangeParams` 中 `start_time > end_time`；
-  - 其他违反本模块参数约束的情况。

@@ -19,13 +19,13 @@
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 | 幂等 |
-|-----|------|------|------|
-| `POST /api/v1/share/create` | 创建分享 | 必须 | 是 |
-| `POST /api/v1/share/get` | 获取分享详情 | 可选 | 否 |
-| `POST /api/v1/share/list_my` | 我的分享列表 | 必须 | 否 |
-| `POST /api/v1/share/revoke` | 撤销分享 | 必须 | 否 |
+| 端点 | 说明 | 认证 |
+|-----|------|------|
 
+| `POST /api/v1/share/create` | 创建分享 | 必须 |
+| `POST /api/v1/share/get` | 获取分享详情 | 可选 |
+| `POST /api/v1/share/list_my` | 我的分享列表 | 必须 |
+| `POST /api/v1/share/revoke` | 撤销分享 | 必须 |
 ## 类型定义
 
 以下类型定义于 `api_spec_types.md`：
@@ -118,9 +118,9 @@ interface ShareCreated {
 - 校验目标资源存在且可访问
 - 对于"资源存在但不可访问"场景，统一返回 `10300`（按资源不存在处理，避免泄漏隐私可见性）
 - `location`：校验经纬度范围；当 `share_type='location'` 时，`location_name` 约束覆盖为 **1-100 字符（必填）**，要求位置名称非空（全局默认 0-100，见 `api_spec_base.md` 字段校验约束）
-- `expires_in_seconds` 若提供，必须为正整数且不超过系统允许上限（默认上限=30天，即 2_592_000 秒；超过上限或 <=0 返回 `10000` 参数错误）
+- `expires_in_seconds` 若提供，必须为正整数且不超过系统允许上限（默认上限=30天，即 2_592_000 秒；超过上限或 <=0 请求失败）
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ---
 
@@ -129,7 +129,6 @@ interface ShareCreated {
 获取分享详情。
 
 - **认证**: 可选（公开访问）
-- **幂等**: 否
 
 **Request**: `GetShareRequest`
 ```typescript
@@ -162,7 +161,7 @@ interface ShareDetail {
 }
 ```
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ---
 
@@ -171,7 +170,6 @@ interface ShareDetail {
 获取当前用户创建的分享列表。
 
 - **认证**: 必须
-- **幂等**: 否
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `share_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
 
 **Request**: `ShareListRequest`
@@ -195,8 +193,6 @@ interface ShareListItem {
 }
 ```
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/share/revoke
@@ -204,7 +200,6 @@ interface ShareListItem {
 撤销分享。撤销后分享码不可再用于 `get`。
 
 - **认证**: 必须（仅分享创建者可撤销）
-- **幂等**: 否
 
 **Request**: `RevokeShareRequest`
 ```typescript
@@ -212,12 +207,12 @@ interface RevokeShareRequest {
   share_id?: string;    // 分享 ID（来自 share/create 或 share/list_my）
   share_code?: string;  // 或分享码（创建者可能仅保留了复制出的链接码）
 }
-// 二选一：必须且只能传 share_id 或 share_code 其中之一；同时传或都不传返回 10000
+// 二选一：必须且只能传 share_id 或 share_code 其中之一；同时传或都不传请求失败
 ```
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 > 隐私一致性：非创建者撤销（share 存在但无权限）统一返回 `10300`，与本模块「资源存在但不可访问按不存在处理」规则一致（见上方隐私规则），不通过 `10200` 泄露 share 的存在性。
 > 设计说明：revoke 同时支持 share_id 与 share_code，消除"创建者只保留了链接码却无法撤销"的寻址不对称。

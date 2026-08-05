@@ -11,24 +11,24 @@
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 | 幂等 |
-|-----|------|------|------|
-| `POST /api/v1/admin/users/search` | 搜索用户 | 必须 + `admin.users.read` | 否 |
-| `POST /api/v1/admin/users/get_detail` | 用户详情 | 必须 + `admin.users.read` | 否 |
-| `POST /api/v1/admin/users/ban` | 封禁用户 | 必须 + `admin.users.write` | 否 |
-| `POST /api/v1/admin/users/unban` | 解封用户 | 必须 + `admin.users.write` | 否 |
-| `POST /api/v1/admin/groups/search` | 搜索群组 | 必须 + `admin.groups.read` | 否 |
-| `POST /api/v1/admin/groups/get_detail` | 群组详情 | 必须 + `admin.groups.read` | 否 |
-| `POST /api/v1/admin/groups/dismiss` | 解散群组 | 必须 + `admin.groups.write` | 否 |
-| `POST /api/v1/admin/reports/list` | 举报列表（按状态/类型过滤） | 必须 + `admin.reports.read` | 否 |
-| `POST /api/v1/admin/reports/handle` | 处理举报 | 必须 + `admin.reports.write` | 否 |
-| `POST /api/v1/admin/tags/search` | 搜索标签 | 必须 + `admin.tags.read` | 否 |
-| `POST /api/v1/admin/tags/delete` | 删除/屏蔽标签 | 必须 + `admin.tags.write` | 否 |
-| `POST /api/v1/admin/announcements/search` | 搜索系统公告 | 必须 + `admin.announcements.read` | 否 |
-| `POST /api/v1/admin/announcements/create` | 发布系统公告 | 必须 + `admin.announcements.write` | 是 |
-| `POST /api/v1/admin/announcements/update` | 更新系统公告 | 必须 + `admin.announcements.write` | 否 |
-| `POST /api/v1/admin/announcements/delete` | 删除系统公告 | 必须 + `admin.announcements.write` | 否 |
+| 端点 | 说明 | 认证 |
+|-----|------|------|
 
+| `POST /api/v1/admin/users/search` | 搜索用户 | 必须 + `admin.users.read` |
+| `POST /api/v1/admin/users/get_detail` | 用户详情 | 必须 + `admin.users.read` |
+| `POST /api/v1/admin/users/ban` | 封禁用户 | 必须 + `admin.users.write` |
+| `POST /api/v1/admin/users/unban` | 解封用户 | 必须 + `admin.users.write` |
+| `POST /api/v1/admin/groups/search` | 搜索群组 | 必须 + `admin.groups.read` |
+| `POST /api/v1/admin/groups/get_detail` | 群组详情 | 必须 + `admin.groups.read` |
+| `POST /api/v1/admin/groups/dismiss` | 解散群组 | 必须 + `admin.groups.write` |
+| `POST /api/v1/admin/reports/list` | 举报列表（按状态/类型过滤） | 必须 + `admin.reports.read` |
+| `POST /api/v1/admin/reports/handle` | 处理举报 | 必须 + `admin.reports.write` |
+| `POST /api/v1/admin/tags/search` | 搜索标签 | 必须 + `admin.tags.read` |
+| `POST /api/v1/admin/tags/delete` | 删除/屏蔽标签 | 必须 + `admin.tags.write` |
+| `POST /api/v1/admin/announcements/search` | 搜索系统公告 | 必须 + `admin.announcements.read` |
+| `POST /api/v1/admin/announcements/create` | 发布系统公告 | 必须 + `admin.announcements.write` |
+| `POST /api/v1/admin/announcements/update` | 更新系统公告 | 必须 + `admin.announcements.write` |
+| `POST /api/v1/admin/announcements/delete` | 删除系统公告 | 必须 + `admin.announcements.write` |
 ## 类型定义
 
 以下类型定义于 `api_spec_types.md`：
@@ -63,7 +63,6 @@ type UserAccountStatus = 'normal' | 'banned';
 搜索用户（管理员）。
 
 - **认证**: 必须 + `admin.users.read`
-- **幂等**: 否
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `user.user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致。
 
 **Request**: `AdminUserSearchRequest`
@@ -96,7 +95,7 @@ interface AdminUserItem extends UserItem {
 }
 ```
 
-**错误码**: `10000` `10200`
+**错误码**: `10200`
 
 ---
 
@@ -105,7 +104,6 @@ interface AdminUserItem extends UserItem {
 获取用户详情（管理员）。
 
 - **认证**: 必须 + `admin.users.read`
-- **幂等**: 否
 
 **Request**: `AdminUserOpenTheDoorRequest`
 ```typescript
@@ -116,7 +114,7 @@ interface AdminUserOpenTheDoorRequest {
 
 **Response**: `ApiResponse<AdminUserItem>`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -125,7 +123,6 @@ interface AdminUserOpenTheDoorRequest {
 封禁用户（管理员）。
 
 - **认证**: 必须 + `admin.users.write`
-- **幂等**: 否
 
 **安全约束**：
 - 禁止封禁自身（返回 `10400`）
@@ -144,7 +141,7 @@ interface AdminBanUserRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ---
 
@@ -153,7 +150,6 @@ interface AdminBanUserRequest {
 解封用户（管理员）。对未处于封禁状态的用户调用视为 no-op，返回成功（与 group `members/unban` 一致，遵循设状态操作重复达同状态应成功的业界共识）。
 
 - **认证**: 必须 + `admin.users.write`
-- **幂等**: 否
 
 **安全约束**：
 - 解封操作会记录审计日志（含 no-op 解封尝试，便于审计追溯）
@@ -168,7 +164,7 @@ interface AdminUnbanUserRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -177,7 +173,6 @@ interface AdminUnbanUserRequest {
 搜索群组（管理员）。
 
 - **认证**: 必须 + `admin.groups.read`
-- **幂等**: 否
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `group.group_id ASC` 作为稳定 tie-breaker；一致性级别为强一致。
 
 **Request**: `AdminGroupSearchRequest`
@@ -198,7 +193,7 @@ interface AdminGroupItem extends GroupItem {
 }
 ```
 
-**错误码**: `10000` `10200`
+**错误码**: `10200`
 
 ---
 
@@ -207,7 +202,6 @@ interface AdminGroupItem extends GroupItem {
 获取群组详情（管理员）。
 
 - **认证**: 必须 + `admin.groups.read`
-- **幂等**: 否
 
 **Request**: `AdminGroupOpenTheDoorRequest`
 ```typescript
@@ -218,7 +212,7 @@ interface AdminGroupOpenTheDoorRequest {
 
 **Response**: `ApiResponse<AdminGroupItem>`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -227,7 +221,6 @@ interface AdminGroupOpenTheDoorRequest {
 解散群组（管理员）。
 
 - **认证**: 必须 + `admin.groups.write`
-- **幂等**: 否
 
 **安全约束**：
 - 解散后群内所有成员收到 `GroupDismissed` WebSocket 事件（`reason='policy_violation'`，不暴露管理员身份）
@@ -245,7 +238,7 @@ interface AdminDismissGroupRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -254,7 +247,6 @@ interface AdminDismissGroupRequest {
 举报列表（管理员）。按状态/目标类型过滤（无关键字搜索语义，故命名为 list 而非 search）。
 
 - **认证**: 必须 + `admin.reports.read`
-- **幂等**: 否
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `report_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
 
 **Request**: `AdminReportListRequest`
@@ -275,7 +267,7 @@ interface AdminReportItem extends ReportItem {
 }
 ```
 
-**错误码**: `10000` `10200`
+**错误码**: `10200`
 
 ---
 
@@ -284,7 +276,6 @@ interface AdminReportItem extends ReportItem {
 处理举报（管理员）。
 
 - **认证**: 必须 + `admin.reports.write`
-- **幂等**: 否
 
 **安全约束**：
 - 仅 `pending` 状态的举报可处理，已终态（`resolved`/`dismissed`）的举报返回 `10400`
@@ -316,7 +307,7 @@ interface AdminReportHandleRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300` `10400`
+**错误码**: `10200` `10300` `10400`
 
 ---
 
@@ -325,7 +316,6 @@ interface AdminReportHandleRequest {
 搜索标签（管理员）。
 
 - **认证**: 必须 + `admin.tags.read`
-- **幂等**: 否
 - **排序**: 默认按照 `usage_count DESC` 排序，数值相同以 `name ASC` 作为稳定 tie-breaker；一致性级别为弱一致。
 
 **Request**: `AdminTagSearchRequest`
@@ -346,7 +336,7 @@ interface AdminTagItem extends TagItem {
 }
 ```
 
-**错误码**: `10000` `10200`
+**错误码**: `10200`
 
 ---
 
@@ -361,7 +351,6 @@ interface AdminTagItem extends TagItem {
 - **寻址说明**：标签的业务唯一键为 `name`（与普通 API `TagItem` 一致，`TagItem` 定义于 `api_spec_types.md`）；`AdminTagItem.tag_id`（定义于本文件「类型定义」小节）为内部存储标识，仅用于展示/审计关联，不参与删除寻址
 
 - **认证**: 必须 + `admin.tags.write`
-- **幂等**: 否
 
 **Request**: `AdminDeleteTagRequest`
 ```typescript
@@ -373,7 +362,7 @@ interface AdminDeleteTagRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -382,7 +371,6 @@ interface AdminDeleteTagRequest {
 搜索系统公告（管理员视角），返回包含管理员字段的公告列表。
 
 - **认证**: 必须 + `admin.announcements.read`
-- **幂等**: 否
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `announcement_id DESC` 作为稳定 tie-breaker；一致性级别为弱一致。
 
 **说明**：
@@ -407,7 +395,7 @@ interface AdminAnnouncementItem extends SystemAnnouncementItem {
 }
 ```
 
-**错误码**: `10000` `10200`
+**错误码**: `10200`
 
 ---
 
@@ -436,7 +424,7 @@ interface AnnouncementCreated {
 }
 ```
 
-**错误码**: `10000` `10200`
+**错误码**: `10200`
 
 ---
 
@@ -445,7 +433,6 @@ interface AnnouncementCreated {
 更新系统公告（管理员）。
 
 - **认证**: 必须 + `admin.announcements.write`
-- **幂等**: 否
 
 **Request**: `UpdateAnnouncementRequest`
 ```typescript
@@ -460,7 +447,7 @@ interface UpdateAnnouncementRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ---
 
@@ -469,7 +456,6 @@ interface UpdateAnnouncementRequest {
 删除公告（管理员）。
 
 - **认证**: 必须 + `admin.announcements.write`
-- **幂等**: 否
 
 **Request**: `DeleteAnnouncementRequest`
 ```typescript
@@ -480,4 +466,4 @@ interface DeleteAnnouncementRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`

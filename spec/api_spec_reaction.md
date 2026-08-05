@@ -14,11 +14,11 @@
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 | 幂等 |
-|-----|------|------|------|
-| `POST /api/v1/reactions/set` | 设置表情反应（两态统一） | 必须 | 否 |
-| `POST /api/v1/reactions/list` | 反应列表（统一三类目标） | 可选 | 否 |
+| 端点 | 说明 | 认证 |
+|-----|------|------|
 
+| `POST /api/v1/reactions/set` | 设置表情反应（两态统一） | 必须 |
+| `POST /api/v1/reactions/list` | 反应列表（统一三类目标） | 可选 |
 ## 类型定义
 
 以下类型定义于 `api_spec_types.md`：
@@ -35,7 +35,6 @@
 设置表情反应（两态统一端点）。覆盖消息、瞬间、评论三类目标。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `SetReactionRequest`
 ```typescript
@@ -53,12 +52,12 @@ interface SetReactionRequest {
 - `active=true` 且用户此前对该目标用过其他 emoji：视为切换（旧 emoji 计数 -1，新 emoji 计数 +1），不分多次调用
 - `active=true` 且 emoji 与当前一致：no-op 成功
 - `active=false`：移除当前用户对该目标的反应（若 emoji 与当前不一致仍视为成功，幂等）
-- 目标资源不存在返回 `10300`；emoji 不在白名单返回 `10000`
+- 目标资源不存在返回 `10300`；emoji 不在白名单请求失败
 - 私聊/群聊消息场景：若被对方拉黑或对方 `allow_private_chat='nobody'`，仍允许 reaction（reaction 是公开互动信号，不受私聊权限约束）
 
-**WS 推送**：成功后触发 `ReactionAdded` / `ReactionRemoved` 事件（见 `api_spec_websocket.md`），并向被反应资源作者推送 `reaction_added` 通知（若作者非当前用户）。
+**WS 推送**：成功后触发 `ReactionAdded` / `ReactionRemoved` 事件（服务端统一推送、不做自反应判断，客户端自行过滤自反应场景，见 `api_spec_websocket.md`）；`ReactionAdded` 落库 `reaction_added` 通知（自反应不落库）。
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ---
 
@@ -67,7 +66,6 @@ interface SetReactionRequest {
 获取表情反应列表（统一 moment / comment / message 三类目标）。按反应时间倒序，支持按 emoji 过滤。
 
 - **认证**: 可选
-- **幂等**: 否
 - **排序**: 默认按 `reacted_at` **时间倒序**（最近反应在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `ListReactionsRequest`
@@ -82,4 +80,4 @@ interface ListReactionsRequest {
 
 **Response**: `ApiResponse<PaginatedData<ReactionItem>>`（`ReactionItem` 定义于 `api_spec_types.md`）
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`

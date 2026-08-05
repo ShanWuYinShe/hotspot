@@ -18,22 +18,22 @@
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 | 幂等 |
-|-----|------|------|------|
-| `POST /api/v1/moments/search` | 搜索瞬间（支持关键字/标签/位置组合） | 可选 | 否 |
-| `POST /api/v1/moments/get_detail` | 瞬间详情 | 可选 | 否 |
-| `POST /api/v1/moments/create` | 创建瞬间 | 必须 | 是 |
-| `POST /api/v1/moments/update` | 编辑瞬间 | 必须 | 否 |
-| `POST /api/v1/moments/delete` | 删除瞬间 | 必须 | 否 |
-| `POST /api/v1/moments/list_my` | 我发布的瞬间 | 必须 | 否 |
-| `POST /api/v1/moments/list_favorites` | 我的收藏 | 必须 | 否 |
-| `POST /api/v1/moments/favorite` | 设置收藏状态（两态统一） | 必须 | 否 |
-| `POST /api/v1/comments/create` | 创建评论/回复 | 必须 | 是 |
-| `POST /api/v1/comments/delete` | 删除评论 | 必须 | 否 |
-| `POST /api/v1/comments/list` | 顶层评论列表 | 可选 | 否 |
-| `POST /api/v1/comments/list_replies` | 子评论列表 | 可选 | 否 |
-| `POST /api/v1/comments/get_detail` | 评论详情 | 可选 | 否 |
+| 端点 | 说明 | 认证 |
+|-----|------|------|
 
+| `POST /api/v1/moments/search` | 搜索瞬间（支持关键字/标签/位置组合） | 可选 |
+| `POST /api/v1/moments/get_detail` | 瞬间详情 | 可选 |
+| `POST /api/v1/moments/create` | 创建瞬间 | 必须 |
+| `POST /api/v1/moments/update` | 编辑瞬间 | 必须 |
+| `POST /api/v1/moments/delete` | 删除瞬间 | 必须 |
+| `POST /api/v1/moments/list_my` | 我发布的瞬间 | 必须 |
+| `POST /api/v1/moments/list_favorites` | 我的收藏 | 必须 |
+| `POST /api/v1/moments/favorite` | 设置收藏状态（两态统一） | 必须 |
+| `POST /api/v1/comments/create` | 创建评论/回复 | 必须 |
+| `POST /api/v1/comments/delete` | 删除评论 | 必须 |
+| `POST /api/v1/comments/list` | 顶层评论列表 | 可选 |
+| `POST /api/v1/comments/list_replies` | 子评论列表 | 可选 |
+| `POST /api/v1/comments/get_detail` | 评论详情 | 可选 |
 > 表情反应（reaction）统一由 `POST /api/v1/reactions/set` 处理，反应列表统一由 `POST /api/v1/reactions/list` 查询（见 `api_spec_reaction.md`）。
 
 ## 类型定义
@@ -58,7 +58,6 @@
 统一搜索生活瞬间。支持关键字、标签、位置范围三种条件的自由组合。
 
 - **认证**: 可选
-- **幂等**: 否
 - **排序**:
   - `sort_by='relevance'`（默认）：按相关性优先；同分时按 `created_at` 倒序，再以 `moment_id ASC` 作为稳定 tie-breaker
   - `sort_by='distance'`：按距离由近到远（未提供 `radius` 时按默认 `5_000` 米计算）
@@ -76,14 +75,12 @@ interface SearchMomentsRequest {
   reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
   pagination?: PaginationParams;
 }
-// 至少提供 keyword、tag、radius 中的一个；不满足时返回 10000（参数错误）
+// 至少提供 keyword、tag、radius 中的一个；不满足时请求失败
 // reference_point 不算搜索条件，仅用于距离计算和排序，不能单独作为搜索条件
 // 当仅缺省 radius 且提供了 keyword/tag 时，服务端按默认 5_000 米计算，并受 AppConfig.limits.search_radius_max 上限约束
 ```
 
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
-
-**错误码**: `10000`
 
 ### POST /api/v1/moments/get_detail
 
@@ -92,7 +89,6 @@ interface SearchMomentsRequest {
 **隐私说明**：`privacy_level='private'` 的瞬间仅拥有者可见；非拥有者（含未登录用户）访问 private 瞬间统一返回 `10300`（按不存在处理，不通过 10200 暴露瞬间存在性，与 base.md 隐私规则一致）。
 
 - **认证**: 可选
-- **幂等**: 否
 
 **Request**: `MomentOpenTheDoorRequest`
 ```typescript
@@ -103,7 +99,7 @@ interface MomentOpenTheDoorRequest {
 
 **Response**: `ApiResponse<MomentItem>`
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ### 瞬间操作
 
@@ -121,21 +117,20 @@ interface CreateMomentRequest {
   location: Location;
   privacy_level?: PrivacyLevel;  // 默认: 'public'
   tags?: string[];
-  image_file_ids?: string[];
+  image_file_ids?: string[];     // 来自 media/batch_complete_upload 返回的 file_id
   mentions?: string[];
 }
 ```
 
 **Response**: `ApiResponse<MomentItem>`
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ### POST /api/v1/moments/update
 
 编辑生活瞬间。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `EditMomentRequest`
 ```typescript
@@ -145,7 +140,7 @@ interface EditMomentRequest {
   location?: Location;
   privacy_level?: PrivacyLevel;
   tags?: string[];
-  image_file_ids?: string[];
+  image_file_ids?: string[];     // 来自 media/batch_complete_upload 返回的 file_id
   mentions?: string[];
 }
 ```
@@ -154,14 +149,13 @@ interface EditMomentRequest {
 
 **Response**: `ApiResponse<MomentItem>`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ### POST /api/v1/moments/delete
 
 删除生活瞬间。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `DeleteMomentRequest`
 ```typescript
@@ -172,7 +166,7 @@ interface DeleteMomentRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ### 当前用户瞬间互动 API
 
@@ -184,7 +178,6 @@ interface DeleteMomentRequest {
 设置瞬间收藏状态（两态统一端点）。
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `FavoriteRequest`
 ```typescript
@@ -196,14 +189,13 @@ interface FavoriteRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ### POST /api/v1/moments/list_my
 
 我发布的瞬间列表。
 
 - **认证**: 必须
-- **幂等**: 否
 - **排序**: 默认按 `created_at` **时间倒序**（最新瞬间在前），`moment_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `MyMomentsRequest`
@@ -215,14 +207,11 @@ interface MyMomentsRequest {
 
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
-**错误码**: `10000`
-
 ### POST /api/v1/moments/list_favorites
 
 我的收藏列表。
 
 - **认证**: 必须
-- **幂等**: 否
 - **排序**: 默认按 `favorited_at` **时间倒序**（最近收藏在前），`moment_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `MyFavoritesRequest`
@@ -233,8 +222,6 @@ interface MyFavoritesRequest {
 ```
 
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
-
-**错误码**: `10000`
 
 > 瞬间反应列表已收归至 `POST /api/v1/reactions/list`（见 `api_spec_reaction.md`），传入 `{ target_type: 'moment', target_id: ... }` 即可查询。
 
@@ -289,7 +276,7 @@ interface CommentItem {
 }
 ```
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ### POST /api/v1/comments/delete
 
@@ -303,7 +290,6 @@ interface CommentItem {
 - 仅评论作者或系统管理员可删除（管理员删除记录审计日志）
 
 - **认证**: 必须
-- **幂等**: 否
 
 **Request**: `DeleteCommentRequest`
 ```typescript
@@ -314,14 +300,13 @@ interface DeleteCommentRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10000` `10200` `10300`
+**错误码**: `10200` `10300`
 
 ### POST /api/v1/comments/list
 
 获取指定瞬间的顶层评论列表。认证可选，字段可见性规则见 `api_spec_base.md`。
 
 - **认证**: 可选
-- **幂等**: 否
 - **排序**: 评论列表默认按 `created_at` **时间倒序**（最新在前），`comment_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `CommentsRequest`
@@ -334,14 +319,13 @@ interface CommentsRequest {
 
 **Response**: `ApiResponse<PaginatedData<CommentItem>>`
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 ### POST /api/v1/comments/list_replies
 
 获取指定评论的子评论列表。认证可选，字段可见性规则见 `api_spec_base.md`。
 
 - **认证**: 可选
-- **幂等**: 否
 - **排序**: 回复列表默认按 `created_at` **时间正序**（最早在前，便于对话阅读），`comment_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `CommentRepliesRequest`
@@ -354,7 +338,7 @@ interface CommentRepliesRequest {
 
 **Response**: `ApiResponse<PaginatedData<CommentItem>>`
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`
 
 > 评论的表情反应统一由 `POST /api/v1/reactions/set { target_type: 'comment', target_id: comment_id, ... }` 处理，本模块不再单独定义 like/unlike 端点。
 
@@ -365,7 +349,6 @@ interface CommentRepliesRequest {
 获取单条评论详情。
 
 - **认证**: 可选
-- **幂等**: 否
 
 **Request**: `CommentOpenTheDoorRequest`
 ```typescript
@@ -376,4 +359,4 @@ interface CommentOpenTheDoorRequest {
 
 **Response**: `ApiResponse<CommentItem>`
 
-**错误码**: `10000` `10300`
+**错误码**: `10300`

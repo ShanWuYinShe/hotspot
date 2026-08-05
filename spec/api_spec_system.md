@@ -13,14 +13,14 @@
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 | 幂等 |
-|-----|------|------|------|
-| `POST /api/v1/system/get_meta` | API 版本元信息 | 无 | 无 |
-| `POST /api/v1/system/health` | 健康检查 | 无 | 无 |
-| `POST /api/v1/system/list_announcements` | 系统公告列表 | 无 | 无 |
-| `POST /api/v1/system/get_client_config` | 客户端公开配置 | 无 | 无 |
-| `POST /api/v1/system/bootstrap` | 冷启动聚合（config + meta + profile + unread） | 可选 | 无 |
+| 端点 | 说明 | 认证 |
+|-----|------|------|
 
+| `POST /api/v1/system/get_meta` | API 版本元信息 | 无 |
+| `POST /api/v1/system/health` | 健康检查 | 无 |
+| `POST /api/v1/system/list_announcements` | 系统公告列表 | 无 |
+| `POST /api/v1/system/get_client_config` | 客户端公开配置 | 无 |
+| `POST /api/v1/system/bootstrap` | 冷启动聚合（config + meta + profile + unread） | 可选 |
 ## 类型定义
 
 以下类型定义于 `api_spec_types.md`：
@@ -37,7 +37,6 @@
 获取当前 API 版本的元信息，包括废弃状态和下线计划。
 
 - **认证**: 无
-- **幂等**: 无
 
 **说明**：各 API 版本路径下都应提供此端点；客户端启动时调用以检查当前版本状态。
 
@@ -68,8 +67,6 @@ type ApiVersionStatus =
   | 'sunset';     // 即将下线或已停止
 ```
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/system/health
@@ -77,7 +74,6 @@ type ApiVersionStatus =
 系统健康检查。
 
 - **认证**: 无
-- **幂等**: 无
 
 **说明**：HTTP 非 200 表示未进入业务层；HTTP 200 时，`code=0` 表示系统可用（`data.status` 为 `healthy` 或 `degraded`），`code=10600` 表示系统不可用（`unhealthy`，`data` 省略，原因见 `message`）。
 
@@ -95,8 +91,6 @@ interface HealthStatus {
 }
 ```
 
-**错误码**: `10600`
-
 ---
 
 ### POST /api/v1/system/list_announcements
@@ -104,7 +98,6 @@ interface HealthStatus {
 获取系统公告列表。
 
 - **认证**: 无
-- **幂等**: 无
 
 **Request**: `{}`
 
@@ -116,8 +109,6 @@ interface HealthStatus {
 - 管理员查看/搜索全部公告（含历史）请使用 `admin/announcements/search`（定义于 `api_spec_admin_moderation.md`）
 - 按 `created_at` 倒序排列
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/system/get_client_config
@@ -125,7 +116,6 @@ interface HealthStatus {
 获取客户端公开配置。
 
 - **认证**: 无
-- **幂等**: 无
 
 **说明**：
 - 返回的 `ClientConfig` 由 `AppConfig`（见 `api_spec_admin_core.md`）投影得来，包含功能开关、输入限制、联系方式
@@ -155,8 +145,6 @@ interface ClientDefaults {
 }
 ```
 
-**错误码**: `10000`
-
 ---
 
 ### POST /api/v1/system/bootstrap
@@ -164,7 +152,6 @@ interface ClientDefaults {
 冷启动聚合端点。一次请求拉齐客户端冷启动所需的全部基础数据，替代分别调用 `get_meta` + `get_client_config` + `users/get_account` + `notify/get_unread_count` 的多次往返。
 
 - **认证**: 可选（未登录时 `profile`/`unread_summary` 省略，仅返回 `meta` + `client_config`）
-- **幂等**: 无
 
 **缓存契约（防惊群）**：响应携带 `bootstrap_version`（服务端在 config/version 变更时递增）。客户端可缓存响应并在后续冷启动时通过 `If-None-Match: <bootstrap_version>` 请求头询问；服务端无变化时返回精简响应（`code=0` + `data.bootstrap_version` 不变 + 其余字段省略，由客户端使用缓存）。`bootstrap_version` 的失效由服务端在 admin 修改 `AppConfig` 或发布新版本/公告时主动递增。
 
@@ -208,5 +195,3 @@ interface UnreadSummary {
 - 这是**聚合端点**，不引入新数据，仅合并现有端点的响应；各字段语义与原端点完全一致
 - 登录态下若 `profile` 所在的 token 已过期，按"认证可选"语义降级为匿名（返回 `meta` + `client_config`，省略 `profile`/`unread_summary`），不返回 `10100`
 - 客户端应优先调用此端点；各原子端点（`get_meta`/`get_client_config` 等）仍保留，供需要单项刷新的场景
-
-**错误码**: `10000`
