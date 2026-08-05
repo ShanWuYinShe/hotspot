@@ -342,6 +342,40 @@ func TestServiceDeleteAccountRequiresAuth(t *testing.T) {
 	}
 }
 
+// TestServiceDeleteAccountAnonymizesContentAuthor：spec api_spec_user.md
+// 「数据保留策略」——账户删除后 users 行保留（内容因不触发级联而保留），
+// 昵称/头像等个人信息替换为"已注销用户"占位，is_deleted 标记使已注销用户
+// 不再可被搜索/访问。
+func TestServiceDeleteAccountAnonymizesContentAuthor(t *testing.T) {
+	repo := NewInMemoryRepository()
+	svc := NewServiceWithRepo(repo)
+	_ = repo.PutProfile(context.Background(), MyProfile{UserID: "u1", Nickname: "Alice", AvatarURL: "https://cdn.example/a.png", UserType: UserTypeNormal, Location: Location{LocationName: "南天门"}})
+
+	err := svc.DeleteAccount(userCtx("u1"), DeleteAccountRequest{Confirmation: "DELETE_MY_ACCOUNT"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	profile, found, err := repo.GetProfile(context.Background(), "u1")
+	if err != nil || !found {
+		t.Fatalf("profile must be kept (row preserved for content JOIN), found=%v err=%v", found, err)
+	}
+	if profile.Nickname != "已注销用户" {
+		t.Fatalf("expected anonymized nickname, got %q", profile.Nickname)
+	}
+	if profile.AvatarURL != "" {
+		t.Fatalf("expected cleared avatar, got %q", profile.AvatarURL)
+	}
+	if !profile.IsDeleted {
+		t.Fatalf("expected is_deleted flag set")
+	}
+
+	// 已注销用户详情按不存在处理（get_detail 10300）
+	if _, ok, err := svc.OpenTheDoor(userCtx("u2"), "u1"); err != nil || ok {
+		t.Fatalf("expected deleted user to be treated as not-found, ok=%v err=%v", ok, err)
+	}
+}
+
 func TestServiceDeleteAccountRejectsWrongConfirmation(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{})
 	err := svc.DeleteAccount(userCtx("u1"), DeleteAccountRequest{Confirmation: "WRONG"})

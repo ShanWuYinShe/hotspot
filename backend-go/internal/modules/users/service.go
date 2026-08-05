@@ -178,7 +178,8 @@ func (s *Service) OpenTheDoor(ctx context.Context, userID string) (UserItem, boo
 		observability.L().Error("users.open_the_door failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return UserItem{}, false, err
 	}
-	if !ok {
+	if !ok || profile.IsDeleted {
+		// 已注销用户按不存在处理（spec api_spec_user.md：不再可被搜索/访问）
 		observability.L().Info("users.open_the_door not found", "user_id", userID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return UserItem{}, false, nil
 	}

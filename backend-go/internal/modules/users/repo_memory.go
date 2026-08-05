@@ -59,10 +59,25 @@ func (r *InMemoryRepository) PutProfile(_ context.Context, profile MyProfile) er
 	r.profiles[profile.UserID] = profile
 	return nil
 }
+
+// DeleteProfile 账户删除匿名化（与 postgres 实现一致）：users 行保留并置占位
+// （已发布内容保留 + 作者显示"已注销用户"），个人数据清理。
 func (r *InMemoryRepository) DeleteProfile(_ context.Context, userID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	delete(r.profiles, userID)
+	if profile, ok := r.profiles[userID]; ok {
+		profile.Nickname = "已注销用户"
+		profile.AvatarURL = ""
+		profile.Bio = ""
+		profile.Tags = nil
+		profile.Gender = ""
+		profile.Email = ""
+		profile.Phone = ""
+		profile.Location = Location{}
+		profile.PresenceStatus = UserPresenceOffline
+		profile.IsDeleted = true
+		r.profiles[userID] = profile
+	}
 	delete(r.settings, userID)
 	delete(r.relations, userID)
 	delete(r.reactedMoments, userID)

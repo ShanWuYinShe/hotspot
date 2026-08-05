@@ -2,7 +2,7 @@ package users
 
 const (
 	queryGetUserProfile = `
-SELECT user_id, nickname, COALESCE(avatar_url, ''), user_type, COALESCE(bio, ''), COALESCE(gender, ''), COALESCE(email, ''), COALESCE(phone, ''), location_name, latitude, longitude, presence_status, last_online, created_at
+SELECT user_id, nickname, COALESCE(avatar_url, ''), user_type, COALESCE(bio, ''), COALESCE(gender, ''), COALESCE(email, ''), COALESCE(phone, ''), location_name, latitude, longitude, presence_status, last_online, created_at, is_deleted
 FROM users
 WHERE user_id = $1`
 
@@ -11,6 +11,7 @@ SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), u.user_type, COALESCE(
 FROM users u
 JOIN user_settings us ON us.user_id = u.user_id
 WHERE us.searchable = TRUE
+  AND u.is_deleted = FALSE
   AND ($1 = '' OR (us.nickname_searchable = TRUE AND u.nickname ILIKE '%' || $1 || '%') OR u.bio ILIKE '%' || $1 || '%')
 ORDER BY u.created_at DESC, u.user_id ASC`
 
@@ -63,7 +64,41 @@ presence_status = EXCLUDED.presence_status,
 last_online = EXCLUDED.last_online,
 s2_cell_id = EXCLUDED.s2_cell_id`
 
-	queryDeleteUserProfile = `DELETE FROM users WHERE user_id = $1`
+	// 账户删除匿名化（spec api_spec_user.md「数据保留策略」）：users 行保留
+	// （user_id 关联不断、内容因不触发级联而保留），昵称/头像等替换为占位，
+	// is_deleted 标记使已注销用户不再可被搜索/访问。
+	queryAnonymizeUserProfile = `
+UPDATE users
+SET nickname = '已注销用户',
+    avatar_url = NULL,
+    bio = NULL,
+    gender = NULL,
+    email = NULL,
+    phone = NULL,
+    location_name = '',
+    presence_status = 'offline',
+    is_deleted = TRUE
+WHERE user_id = $1`
+
+	queryDeleteAuthAccountByUserID = `DELETE FROM auth_accounts WHERE user_id = $1`
+
+	queryRevokeAllUserSessions = `DELETE FROM auth_sessions WHERE user_id = $1`
+
+	queryDeleteUserSettingsByUserID = `DELETE FROM user_settings WHERE user_id = $1`
+
+	queryDeleteUserRelations = `DELETE FROM user_relations WHERE user_id = $1 OR target_user_id = $1`
+
+	queryDeleteUserProfileTagsByUserID = `DELETE FROM user_profile_tags WHERE user_id = $1`
+
+	queryDeleteUserFavorites = `DELETE FROM moment_favorites WHERE user_id = $1`
+
+	queryDeleteUserNotifications = `DELETE FROM notifications WHERE user_id = $1`
+
+	queryDeleteUserPrivateChats = `
+DELETE FROM private_chats
+WHERE user_a_id = $1 OR user_b_id = $1`
+
+	queryDeleteUserUploadSessions = `DELETE FROM media_upload_sessions WHERE user_id = $1`
 
 	queryGetUserSettings = `
 SELECT privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, reacted_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable, COALESCE(nearby_moment_notify, FALSE)

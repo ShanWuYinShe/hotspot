@@ -49,6 +49,8 @@ type MyProfile struct {
 	LastOnline     string             `json:"last_online"`
 	CreatedAt      string             `json:"created_at"`
 	Stats          UserStats          `json:"stats"`
+	// IsDeleted 为内部标记（不序列化）：已注销用户（匿名化占位，见 api_spec_user.md）。
+	IsDeleted bool `json:"-"`
 }
 
 type ChatPerm string

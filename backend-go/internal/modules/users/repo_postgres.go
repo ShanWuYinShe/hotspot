@@ -2,6 +2,7 @@ package users
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	grouptypes "hotspot/backend-go/internal/modules/groups"
@@ -50,15 +51,48 @@ func (r *PostgresRepository) PutProfile(ctx context.Context, profile MyProfile) 
 		return queryable.Exec(txCtx, queryInsertUserProfileTagsBatch, profile.UserID, tags)
 	})
 }
+
+// DeleteProfile 账户删除匿名化（spec api_spec_user.md「数据保留策略」）：
+// users 行保留（user_id 关联不断，已发布内容因不触发级联而保留），
+// 昵称/头像等个人信息替换为"已注销用户"占位并标记 is_deleted；
+// 个人数据（登录凭证/会话/设置/关系/收藏/通知/私聊记录/上传会话）同一事务清理。
 func (r *PostgresRepository) DeleteProfile(ctx context.Context, userID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return persistence.ErrNotImplemented
 	}
+	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		for _, stmt := range []struct {
+			sql string
+			arg any
+		}{
+			{queryAnonymizeUserProfile, userID},
+			{queryDeleteAuthAccountByUserID, userID},
+			{queryRevokeAllUserSessions, userID},
+			{queryDeleteUserSettingsByUserID, userID},
+			{queryDeleteUserRelations, userID},
+			{queryDeleteUserProfileTagsByUserID, userID},
+			{queryDeleteUserFavorites, userID},
+			{queryDeleteUserNotifications, userID},
+			{queryDeleteUserPrivateChats, userID},
+			{queryDeleteUserUploadSessions, userID},
+		} {
+			if err := r.execInTx(txCtx, stmt.sql, stmt.arg); err != nil {
+				return fmt.Errorf("users.DeleteProfile %q: %w", stmt.sql, err)
+			}
+		}
+		return nil
+	})
+}
+
+func (r *PostgresRepository) execInTx(ctx context.Context, sql string, arg any) error {
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, queryDeleteUserProfile, userID)
+	if q, ok := persistence.QueryableFromContext(ctx); ok {
+		return q.Exec(ctx, sql, arg)
+	}
+	return queryable.Exec(ctx, sql, arg)
 }
 func (r *PostgresRepository) PutSettings(ctx context.Context, userID string, settings UserSettings) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {

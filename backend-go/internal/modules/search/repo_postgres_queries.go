@@ -23,6 +23,7 @@ SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), COALESCE(u.bio, ''), u
 FROM users u
 JOIN user_settings us ON us.user_id = u.user_id
 WHERE us.searchable = TRUE
+  AND u.is_deleted = FALSE
   AND us.privacy_level = 'public'
   AND (
     u.nickname ILIKE '%' || $1 || '%'

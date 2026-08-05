@@ -27,6 +27,7 @@ SELECT u.user_id,
 FROM users u
 JOIN user_settings us ON us.user_id = u.user_id
 WHERE us.searchable = TRUE
+  AND u.is_deleted = FALSE
   AND us.location_visible = TRUE
   AND us.privacy_level = 'public'
   AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
