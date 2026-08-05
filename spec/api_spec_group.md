@@ -39,7 +39,7 @@
 | `POST /api/v1/groups/applications/reject` | 拒绝申请 | 必须 |
 | `POST /api/v1/groups/update_preferences` | 更新我的群组偏好 | 必须 |
 | `POST /api/v1/groups/join` | 加入群组（根据 join_method 自动处理） | 必须 |
-| `POST /api/v1/groups/transfer_ownership` | 转让群主 | 必须 | 建议 |
+| `POST /api/v1/groups/transfer_ownership` | 转让群主 | 必须 |
 
 | `POST /api/v1/groups/announcements/create` | 发布公告 | 必须 |
 | `POST /api/v1/groups/announcements/list` | 公告列表 | 可选 |
@@ -717,7 +717,11 @@ interface UpdateGroupMySettingsRequest {
 - `invite_only`：仅受邀用户可加入（未受邀返回错误 `10400`（该群组仅限邀请加入）；受邀后按 `requires_approval` 直接加入或创建申请）
 
 - **认证**: 必须
-- **幂等**: 是（客户端必须携带 `Idempotency-Key`）
+
+**自然去重**（与 `members/invite` 对称，无需 `Idempotency-Key`）：
+- approval 路径：若同一用户对该群已有 `pending` 申请，返回已有 `application_id`（不重复创建、不重复通知管理员）
+- direct/invite 路径：成员关系 `(group_id, user_id)` 唯一，已加入视为 no-op 成功（返回 `status: 'joined'`）
+- 判定见 `api_spec_base.md`「自然去重键」
 
 **Request**: `JoinGroupRequest`
 ```typescript
@@ -755,7 +759,8 @@ interface JoinGroupResult {
 **边界情况**：`new_owner_id` 不是该群成员时，返回 `10400`（"目标用户不是群成员"）。
 
 - **认证**: 必须
-- **幂等**: 建议（建议客户端携带 `Idempotency-Key`）
+
+**自然去重**：首次成功后原群主失去群主权限，重发同一请求返回 `10200`（权限不足），不会重复转让。无需 `Idempotency-Key`（判定见 `api_spec_base.md`「自然去重键」）。
 
 **Request**: `TransferOwnershipRequest`
 ```typescript

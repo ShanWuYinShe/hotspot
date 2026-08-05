@@ -114,7 +114,7 @@ Token 通过响应体投递：
 用户注册。
 
 - **认证**: 无
-- **幂等**: 是（客户端必须携带 `Idempotency-Key`）
+- **幂等**: 是（客户端必须携带 `Idempotency-Key`）；`auth/register` 是全规范唯一保留幂等键的「有唯一约束」接口，理由见 `api_spec_base.md`「唯一约束特例」
 
 **Request**: `RegisterRequest`
 ```typescript
@@ -292,7 +292,8 @@ interface RequestPasswordResetRequest {
 验证验证码并重置密码。重置成功后自动登录并返回 Token。
 
 - **认证**: 无
-- **幂等**: 是（客户端必须携带 `Idempotency-Key`）
+
+**自然去重**：验证码为一次性凭证，首次成功后即失效——重发同一请求返回 `10300`（验证码已用/过期），不会重复改密。无需 `Idempotency-Key`（判定见 `api_spec_base.md`「自然去重键」）。
 
 **安全说明**：
 - 重置密码成功后，服务端自动吊销该账号所有现有会话（与 `change_password` 一致）
@@ -322,7 +323,8 @@ interface ResetPasswordRequest {
 修改密码（需要验证旧密码）。
 
 - **认证**: 必须
-- **幂等**: 是（客户端必须携带 `Idempotency-Key`）
+
+**自然去重**：首次成功后旧密码立即失效，重发同一请求（仍带旧密码）返回 `10100`（认证失败），不会重复改密。无需 `Idempotency-Key`（判定见 `api_spec_base.md`「自然去重键」）。
 
 **Request**: `ChangePasswordRequest`
 ```typescript

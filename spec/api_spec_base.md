@@ -513,26 +513,40 @@ App 端通过 Header 携带认证信息：
 
 幂等性用于防止网络重试导致的重复创建或重复副作用。
 
-只有**重复发送会产生用户可见的重复内容或严重副作用**的写操作才需要幂等：客户端必须携带 `Idempotency-Key`，服务端据此去重并回放首次成功响应。其余接口（状态设值、状态转移、删除/解散、更新等天然幂等）无需幂等键，契约不做标注。
+#### 判定原则
 
-需要实现幂等的接口以本节「需要实现幂等的接口」清单为权威。
+一个接口是否需要 `Idempotency-Key`，取决于**重发是否会真的产生重复结果**，而非「客户端是否会重试」：
+
+- **需要**：重发会产生用户可见的重复内容/数据，且**无其他机制兜底去重**——客户端必须携带 `Idempotency-Key`，服务端据此去重并回放首次成功响应。
+- **不需要**：以下三类天然幂等，契约不标注、客户端不传 key：
+  - **状态设值/状态转移**：`set_mute`、`ban`/`unban`、`set_role`、`favorite`、`reactions/set` 等——重复请求达成同一状态即 no-op 成功。
+  - **删除/解散/更新**：删除已删除、解散已解散、更新相同字段，重发结果一致。
+  - **有自然去重键的创建**：服务端存在唯一约束或一次性凭证，重发要么返回成功+已存在资源（无歧义）、要么因凭证失效/权限丧失而失败——这本身就是幂等保护，无需额外 key。
+
+需要实现幂等的接口以本节「需要实现幂等的接口」清单为唯一权威。二元判定：要么「需要」、要么「不需要」——不存在「建议」中间档。
 
 #### 需要实现幂等的接口
 
 以下接口客户端必须携带 `Idempotency-Key`：
 
-- 认证与账号：`auth/register`、`auth/guest`、`auth/reset_password`、`auth/change_password`
-- 内容创建：`moments/create`、`comments/create`
-- 消息发送：`private_messages/send`、`group_messages/send`
-- 分享创建：`share/create`
-- 群组创建与加入：`groups/create`、`groups/join`、`groups/announcements/create`
-- 管理员公告创建：`admin/announcements/create`
+- 内容创建（无自然去重键，重发=重复内容）：`moments/create`、`comments/create`、`groups/create`、`groups/announcements/create`、`admin/announcements/create`、`share/create`
+- 消息发送（无自然去重键，重发=重复消息骚扰）：`private_messages/send`、`group_messages/send`
+- 账号创建：`auth/guest`（无唯一约束，每次调用创建独立访客账号）、`auth/register`（唯一约束特例，见下方）
 
-> `reports/create` 不在此列表——`(reporter_id, target_type, target_id, pending_status)` 构成自然去重键，重复举报返回成功 + 已有 `report_id`，不需要幂等。
+> **唯一约束特例（`auth/register`）**：`login_id` 有唯一约束，重复注册返回 `10400`（login_id 已存在），表面看似自然去重。但与下面「自然去重键」白名单的接口不同：这里的 `10400` 有**歧义**——是「我刚提交被自己重试占了」还是「该 login_id 早被别人占用」？客户端收到后无法直接判断本次注册是否已成功，必须额外发起一次 `login` 才能恢复。为消除这一歧义、让重试能回放首次的 `AuthTokenPair`，`register` 作为全规范唯一特例保留 `Idempotency-Key`。
 
-#### 建议实现幂等的接口
+#### 用自然去重键替代 Idempotency-Key 的接口（无需 key）
 
-- 不可逆且调用方可能因权限变更无法安全重试：`groups/transfer_ownership`
+以下接口虽为创建/写操作，但服务端存在自然去重机制——重发不会产生重复数据，因此**不需要** `Idempotency-Key`：
+
+| 端点 | 自然去重键 | 重发行为 |
+|------|----------|---------|
+| `reports/create` | `(reporter_id, target_type, target_id, pending_status)` | 返回成功 + 已有 `report_id`（`is_duplicate: true`），不创建新举报单 |
+| `groups/members/invite` | `(group_id, invitee_id, pending)` | 返回已有邀请，不重复创建、不重复通知 |
+| `groups/join`（approval 路径） | `(group_id, applicant_id, pending)` | 返回已有 `application_id`，不重复创建、不重复通知管理员；direct/invite 路径成员关系唯一，天然幂等 |
+| `auth/reset_password` | 一次性验证码 | 首次成功后验证码失效，重发 → `10300`（验证码已用/过期） |
+| `auth/change_password` | 旧密码凭证 | 首次成功后旧密码失效，重发 → `10100`（认证失败） |
+| `groups/transfer_ownership` | 群主身份（调用方权限） | 首次后调用方失群主权限，重发 → `10200`（权限不足） |
 
 #### Idempotency-Key 格式
 
