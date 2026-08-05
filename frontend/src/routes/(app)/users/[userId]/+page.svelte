@@ -6,6 +6,8 @@
 	import RailSection from '@/components/layout/desktop/RailSection.svelte';
 	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
 	import RailLocationMini from '@/components/layout/desktop/RailLocationMini.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
+	import MetricRow from '@/components/data-display/MetricRow.svelte';
 	import { getProfile, follow, block, createReport } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import * as Dialog from '@/components/ui/dialog';
@@ -20,7 +22,6 @@
 		bio: string;
 		location: string;
 		avatar: string;
-		banner: string;
 		followers: number;
 		following: number;
 		moments: number;
@@ -34,7 +35,6 @@
 		bio: '',
 		location: '',
 		avatar: '',
-		banner: '',
 		followers: 0,
 		following: 0,
 		moments: 0,
@@ -43,7 +43,6 @@
 	});
 	let loading = $state(true);
 	let mutualFriends = $state<{ id: string; name: string; sub: string; avatar: string }[]>([]);
-	let similarUsers = $state<{ id: number; name: string; sub: string; avatar: string }[]>([]);
 	let followed = $state(false);
 	let activeTab = $state<'moments' | 'liked' | 'saved'>('moments');
 	let moreOpen = $state(false);
@@ -73,7 +72,6 @@
 						bio: u.bio ?? '',
 						location: u.location?.location_name ?? '',
 						avatar: u.user.avatar_url ?? '',
-						banner: '',
 						followers: s?.followers_count ?? 0,
 						following: s?.following_count ?? 0,
 						moments: s?.moments_count ?? 0,
@@ -199,43 +197,41 @@
 		</Dialog.Content>
 	</Dialog.Root>
 
-<SplitPageLayout contentClassName="pb-6">
-	<!-- Banner（全幅封面：负 margin 抵消 SplitPageLayout 的 gutter） -->
-	<div class="relative overflow-hidden -mx-[var(--page-gutter)]" style="height:clamp(150px, 25vw, 210px);shrink:0;">
-			<img src={user.banner} alt="banner" class="absolute inset-0 w-full h-full object-cover" />
-			<div class="absolute inset-0" style="background:var(--surface-profile-cover-scrim);"></div>
-
-			<!-- Top buttons -->
-			<div class="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-4">
-				<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => history.back()} variant="overlay" tone="inverse" />
-				<div class="flex gap-2">
-					<ActionIconButton icon={Share2} label={shareCopied ? '链接已复制' : '分享资料'} onClick={copyProfileLink} variant="overlay" tone="inverse" />
-					<ActionIconButton
-						icon={MoreHorizontal}
-						label="更多操作"
-						onClick={() => {
-							remarkDraft = remark;
-							moreOpen = true;
-						}}
-						variant="overlay"
-						tone="inverse"
-					/>
-				</div>
-			</div>
+<SplitPageLayout contentClassName="pt-5 pb-6">
+	<!-- 资料头（无封面数据：紧凑头部，返回/分享/更多 浮在首行，对齐动态详情作者行层级） -->
+	<div class="flex items-center justify-between">
+		<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => history.back()} />
+		<div class="flex gap-2">
+			<ActionIconButton icon={Share2} label={shareCopied ? '链接已复制' : '分享资料'} onClick={copyProfileLink} />
+			<ActionIconButton
+				icon={MoreHorizontal}
+				label="更多操作"
+				onClick={() => {
+					remarkDraft = remark;
+					moreOpen = true;
+				}}
+			/>
 		</div>
+	</div>
 
-	<!-- Avatar + info（gutter 由 SplitPageLayout 提供） -->
-	<div class="-mt-10 flex flex-col pb-5">
-				<div class="flex items-end justify-between mb-3">
-					<div class="relative">
-						<div class="rounded-[22px] overflow-hidden" style="width:76px;height:76px;border:3px solid var(--surface-primary);box-shadow:0 6px 20px rgba(0,0,0,0.22);">
-							<img src={user.avatar} alt={user.name} class="w-full h-full object-cover" />
+	<!-- Avatar + 身份（gutter 由 SplitPageLayout 提供） -->
+	<div class="mt-5 flex flex-col pb-5">
+				<div class="flex items-end justify-between gap-4">
+					<div class="flex min-w-0 items-center gap-4">
+						<div class="relative shrink-0">
+							<div class="overflow-hidden rounded-full" style="width:80px;height:80px;border:3px solid var(--surface-primary);box-shadow:var(--shadow-neu-xl);">
+								<img src={user.avatar} alt={user.name} class="w-full h-full object-cover" />
+							</div>
+							<span class="absolute bottom-1 right-1 rounded-full bg-status-online" style="width:14px;height:14px;border:2px solid var(--surface-primary);"></span>
 						</div>
-						<span class="absolute bottom-1 right-1 rounded-full bg-status-online" style="width:12px;height:12px;border:2px solid var(--surface-primary);"></span>
+						<div class="min-w-0 pt-1">
+							<h1 class="truncate text-[26px] font-medium tracking-[-0.01em] text-text-primary">{user.name}</h1>
+							<p class="mt-1 truncate text-text-secondary">{user.handle}{remark ? ` · ${remark}` : ''}</p>
+						</div>
 					</div>
 
 					<!-- Action buttons -->
-					<div class="flex gap-2 pb-1">
+					<div class="flex shrink-0 gap-2 pb-1">
 						<button
 							type="button"
 							class="hover-btn tap-93 flex items-center gap-1.5 px-3.5 py-2 rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-45 bg-surface-primary text-text-secondary text-xs"
@@ -266,80 +262,69 @@
 					</div>
 				</div>
 
-			<h1 class="text-text-primary text-xl">{user.name}</h1>
-			<p class="mt-0.5 text-text-secondary text-base">{user.handle}{remark ? ` · ${remark}` : ''}</p>
-				{#if blocked}
-					<div class="mt-3 flex items-center gap-2 rounded-small ring-1 ring-status-danger/30 bg-danger-bg px-3 py-2 text-sm text-status-danger">
-						<UserX size={14} />
-						你已屏蔽此用户；关注和私信已停用。
-					</div>
+			{#if blocked}
+				<div class="mt-4 flex items-center gap-2 rounded-small ring-1 ring-status-danger/30 bg-danger-bg px-3 py-2 text-sm text-status-danger">
+					<UserX size={14} />
+					你已屏蔽此用户；关注和私信已停用。
+				</div>
+			{/if}
+			<p class="mt-4 max-w-115 text-sm leading-6 text-text-secondary">{user.bio}</p>
+
+			<!-- 位置 + 标签 -->
+			<div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+				{#if user.location}
+					<span class="flex items-center gap-1.5 text-text-secondary text-base">
+						<MapPin style="width:13px;height:13px;color:var(--accent-default);" strokeWidth={1.75} />
+						{user.location}
+					</span>
 				{/if}
-				<p class="mt-2 text-text-secondary text-base" style="line-height:1.65;">{user.bio}</p>
+				{#each user.tags as t (t)}
+					<span class="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs text-accent-default" style="border:1px solid var(--accent-border);">
+						#{t}
+					</span>
+				{/each}
+			</div>
 
-				<div class="flex items-center gap-1.5 mt-2">
-					<MapPin style="width:11px;height:11px;color:var(--accent-default);" strokeWidth={1.5} />
-					<span class="text-text-secondary text-xs">{user.location}</span>
-				</div>
+			<!-- Stats -->
+			<div class="mt-6">
+				<MetricRow
+					items={[
+						{ label: '瞬间', value: fmtNum(user.moments) },
+						{ label: '粉丝', value: fmtNum(user.followers) },
+						{ label: '关注', value: fmtNum(user.following) }
+					]}
+				/>
+			</div>
 
-				<!-- Tags -->
-				<div class="flex gap-2 mt-3 flex-wrap">
-					{#each user.tags as t (t)}
-						<span class="px-2.5 py-0.5 rounded-full bg-accent-soft text-accent-default text-xs" style="border:1px solid var(--accent-border);">
-							#{t}
-						</span>
-					{/each}
-				</div>
+		<!-- Tabs（TabBar 统一下划线样式） -->
+	<div class="mt-8">
+		<TabBar
+			items={[
+				{ id: 'moments', icon: Grid3X3, label: '瞬间' },
+				{ id: 'liked', icon: Heart, label: '喜欢' },
+				{ id: 'saved', icon: Bookmark, label: '收藏' }
+			]}
+			value={activeTab}
+			onchange={(id) => (activeTab = id as 'moments' | 'liked' | 'saved')}
+		/>
+	</div>
 
-				<!-- Stats -->
-				<div class="flex gap-0 mt-5 overflow-hidden rounded-panel bg-surface-primary" style="box-shadow:0 0 0 1px var(--border-default), var(--shadow-neu-xl);">
-					<div style="overflow:hidden;border-radius:20px;">
-						{#each [{ label: '瞬间', v: fmtNum(user.moments) }, { label: '粉丝', v: fmtNum(user.followers) }, { label: '关注', v: fmtNum(user.following) }] as s, i}
-							<div class="flex-1 flex flex-col items-center py-4 relative">
-								{#if i > 0}
-									<div class="absolute left-0 top-1/2 -translate-y-1/2 bg-border-default" style="width:1px;height:28px;"></div>
-								{/if}
-								<span class="text-text-primary text-[22px]">{s.v}</span>
-								<span class="uppercase mt-1 text-text-secondary text-[9px]" style="letter-spacing:0.1em;">{s.label}</span>
-								</div>
-							{/each}
+	<!-- Gallery -->
+	<div class="mt-4 grid grid-cols-3 gap-1.5">
+		{#each user.gallery as src, i}
+			<div class="image-hover-frame tap-97 relative cursor-pointer rounded-small overflow-hidden" style="aspect-ratio:1;">
+				<img src={src} alt={`photo ${i}`} class="image-hover-frame__image w-full h-full object-cover" />
+				{#if activeTab === 'liked'}
+					<div class="absolute inset-0 flex items-end justify-end p-1.5 bg-surface-overlay-soft">
+						<div class="flex items-center justify-center rounded-full bg-accent-default" style="width:20px;height:20px;">
+							<Heart style="width:10px;height:10px;color:var(--text-on-accent);" strokeWidth={2} fill="white" />
 						</div>
 					</div>
-
-				<!-- Tabs -->
-			<div class="flex" style="border-bottom:1px solid var(--border-default);padding-left:16px;padding-right:16px;shrink:0;">
-				{#each [{ id: 'moments', icon: Grid3X3, label: '瞬间' }, { id: 'liked', icon: Heart, label: '喜欢' }, { id: 'saved', icon: Bookmark, label: '收藏' }] as t}
-					{@const active = activeTab === t.id}
-					<button
-						type="button"
-						class="hover-btn relative flex items-center justify-center gap-1.5 pb-3 pt-1.5 outline-none text-base {active ? 'text-accent-default' : 'text-text-secondary'}"
-						style="flex:1;font-weight:{active ? 500 : 400};"
-						onclick={() => (activeTab = t.id as 'moments' | 'liked' | 'saved')}
-					>
-						<t.icon style="width:13px;height:13px;" strokeWidth={active ? 2 : 1.5} />
-						{t.label}
-						{#if active}
-							<span class="bg-accent-default" style="position:absolute;bottom:-1px;left:18%;right:18%;height:2px;border-radius:1px;"></span>
-						{/if}
-					</button>
-				{/each}
+				{/if}
 			</div>
-
-			<!-- Gallery -->
-			<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:3px;padding:3px;">
-				{#each user.gallery as src, i}
-					<div class="image-hover-frame tap-97 relative cursor-pointer" style="aspect-ratio:1;overflow:hidden;">
-						<img src={src} alt={`photo ${i}`} class="image-hover-frame__image w-full h-full object-cover" />
-						{#if activeTab === 'liked'}
-							<div class="absolute inset-0 flex items-end justify-end p-1.5 bg-surface-overlay-soft">
-								<div class="flex items-center justify-center rounded-full bg-accent-default" style="width:20px;height:20px;">
-									<Heart style="width:10px;height:10px;color:var(--text-on-accent);" strokeWidth={2} fill="white" />
-								</div>
-							</div>
-						{/if}
-					</div>
-				{/each}
-			</div>
-		</div>
+		{/each}
+	</div>
+</div>
 
 	{#snippet rail()}
 	<RailSection title="所在位置">
@@ -365,14 +350,5 @@
 			</div>
 		</RailSection>
 	{/if}
-
-
-	<RailSection title="你可能也关注" action="更多" onAction={() => void goto(ROUTES.nearbyPeople)}>
-		<div class="flex flex-col gap-3">
-			{#each similarUsers as u (u.id)}
-				<RailUserRow avatar={u.avatar} name={u.name} sub={u.sub} onClick={() => void goto(ROUTES.user(u.id))} />
-			{/each}
-		</div>
-	</RailSection>
 	{/snippet}
 </SplitPageLayout>

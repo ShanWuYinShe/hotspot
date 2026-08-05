@@ -1,8 +1,10 @@
 <script lang="ts">
-	// TabBar — 下划线分类 Tab 栏（统一 nearby/moments 与关系聚合页等的手写重复实现）。
+	import type { Component } from 'svelte';
+
+	// TabBar — 下划线分类 Tab 栏（统一 nearby/moments、关系聚合页、用户详情等手写重复实现）。
 	// 容器 border-bottom + 激活项底部 2px 指示条 + aria-pressed，随 PageHeader below 吸顶。
 
-	export type TabItem = { id: string; label: string; count?: number };
+	export type TabItem = { id: string; label: string; count?: number; icon?: Component };
 
 	let {
 		items,
@@ -24,11 +26,14 @@
 			type="button"
 			onclick={() => onchange(tab.id)}
 			aria-pressed={isActive}
-			class="relative shrink-0 rounded-t-small px-4.5 pb-3 pt-1 text-base outline-none transition-colors duration-200 {isActive ? 'font-medium text-accent-default' : 'font-normal text-text-secondary'}"
+			class="relative flex shrink-0 items-center gap-1.5 rounded-t-small px-4.5 pb-3 pt-1 text-base outline-none transition-colors duration-200 {isActive ? 'font-medium text-accent-default' : 'font-normal text-text-secondary'}"
 		>
+			{#if tab.icon}
+				<tab.icon style="width:13px;height:13px;" strokeWidth={isActive ? 2 : 1.5} />
+			{/if}
 			{tab.label}
 			{#if tab.count !== undefined}
-				<span class="ml-0.5 text-xxs opacity-75">{tab.count}</span>
+				<span class="text-xxs opacity-75">{tab.count}</span>
 			{/if}
 			{#if isActive}
 				<span class="absolute bottom-[-1px] left-[14%] right-[14%] h-0.5 rounded-[1px] bg-accent-default"></span>
