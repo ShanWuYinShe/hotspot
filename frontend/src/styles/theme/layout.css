@@ -20,7 +20,7 @@
   .context-rail__content {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 1rem;
     min-height: 100%;
     padding: var(--context-rail-inset);
   }
@@ -51,12 +51,12 @@
 @layer utilities {
   /* Shared content canvas — every routed view occupies the same right-hand
      working field. Pages may choose their internal composition, but never a
-     different outer alignment or an arbitrary content ceiling. */
+     different outer alignment or an arbitrary content ceiling.
+     画布宽度跟随可用空间（桌面主区 = 视口 − 侧栏），不做硬性上限：
+     超宽屏下内容继续自适应放大，而非右侧留白。 */
   :root {
     --workspace-gutter: clamp(0.875rem, 1.75vw, 1.5rem);
     --workspace-gap: clamp(0.875rem, 1.5vw, 1.25rem);
-    --content-canvas-max: 96rem;
-    --content-reading-max: 48rem;
     --context-rail-width: clamp(18rem, 20vw, 21rem);
     --context-rail-gap: clamp(1rem, 1.75vw, 1.5rem);
   }
@@ -83,17 +83,13 @@
 
   .desktop-page-canvas,
   .tablet-page-canvas {
-    width: min(100%, var(--content-canvas-max));
+    width: 100%;
     min-height: 100%;
     margin-inline: auto;
   }
 
   .content-mode-wide {
     min-width: 0;
-  }
-
-  .content-mode-reading {
-    max-width: var(--content-reading-max);
   }
 
   .desktop-page-canvas .context-rail-grid {

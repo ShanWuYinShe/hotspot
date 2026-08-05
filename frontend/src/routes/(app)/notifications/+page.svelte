@@ -179,7 +179,7 @@ const FILTER_TABS = [
 	<div class="flex flex-col">
 				{#if unreadGroup.length > 0}
 					<!-- 新消息分组标题（emphasis：accent 点 + 计数 pill，对齐 Figma Make） -->
-					<div class="mb-2 flex h-5 items-center gap-2">
+					<div class="mb-3 flex h-5 items-center gap-2">
 						<span aria-hidden="true" class="h-1.5 w-1.5 rounded-full" style="background:var(--accent-default);"></span>
 						<p class="uppercase" style="font-size:10px;font-weight:600;letter-spacing:0.14em;color:var(--text-primary);">新消息</p>
 						<span class="rounded-full px-1.5 py-0.5" style="font-size:10px;line-height:1;color:var(--accent-default);background:var(--accent-soft);">{unreadGroup.length}</span>
@@ -193,7 +193,7 @@ const FILTER_TABS = [
 
 				{#if readGroup.length > 0}
 					<!-- 较早分组标题（非 emphasis：仅 label + flex 分隔线，对齐 Figma Make） -->
-					<div class="mb-2 flex h-5 items-center gap-2" style="margin-top:{unreadGroup.length > 0 ? '16px' : '0'};">
+					<div class="mb-3 flex h-5 items-center gap-2" style="margin-top:{unreadGroup.length > 0 ? '20px' : '0'};">
 						<p class="uppercase" style="font-size:10px;font-weight:500;letter-spacing:0.14em;color:var(--text-secondary);">较早</p>
 						<span aria-hidden="true" class="h-px flex-1" style="background:var(--border-default);"></span>
 					</div>

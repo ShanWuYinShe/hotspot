@@ -225,7 +225,7 @@
 		</div>
 
 	<!-- Avatar + info（gutter 由 SplitPageLayout 提供） -->
-	<div class="-mt-10 pb-4 flex flex-col">
+	<div class="-mt-10 flex flex-col pb-5">
 				<div class="flex items-end justify-between mb-3">
 					<div class="relative">
 						<div class="rounded-[22px] overflow-hidden" style="width:76px;height:76px;border:3px solid var(--surface-primary);box-shadow:0 6px 20px rgba(0,0,0,0.22);">
@@ -266,15 +266,15 @@
 					</div>
 				</div>
 
-				<h1 class="text-text-primary text-xl">{user.name}</h1>
-				<p class="text-text-secondary text-base" style="margin-top:1px;">{user.handle}{remark ? ` · ${remark}` : ''}</p>
+			<h1 class="text-text-primary text-xl">{user.name}</h1>
+			<p class="mt-0.5 text-text-secondary text-base">{user.handle}{remark ? ` · ${remark}` : ''}</p>
 				{#if blocked}
 					<div class="mt-3 flex items-center gap-2 rounded-small ring-1 ring-status-danger/30 bg-danger-bg px-3 py-2 text-sm text-status-danger">
 						<UserX size={14} />
 						你已屏蔽此用户；关注和私信已停用。
 					</div>
 				{/if}
-				<p class="text-text-secondary text-base" style="line-height:1.65;margin-top:8px;">{user.bio}</p>
+				<p class="mt-2 text-text-secondary text-base" style="line-height:1.65;">{user.bio}</p>
 
 				<div class="flex items-center gap-1.5 mt-2">
 					<MapPin style="width:11px;height:11px;color:var(--accent-default);" strokeWidth={1.5} />

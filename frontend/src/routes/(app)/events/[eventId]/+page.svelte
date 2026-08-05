@@ -108,11 +108,11 @@
 			</div>
 
 	<!-- 内容（gutter 由 SplitPageLayout 提供） -->
-	<div class="pt-4">
-				<h1 class="text-text-primary text-[24px] mb-2">{safeEv.title}</h1>
+	<div class="pt-5">
+				<h1 class="text-text-primary text-[24px] mb-3">{safeEv.title}</h1>
 
 				<!-- meta 行 -->
-				<div class="mb-5 flex flex-col gap-2">
+				<div class="mb-6 flex flex-col gap-2.5">
 					{#each [{ icon: Calendar, text: safeEv.date }, { icon: Clock, text: safeEv.time }, { icon: MapPin, text: safeEv.location }] as meta}
 						<div class="flex items-center gap-2.5">
 							<div class="flex shrink-0 items-center justify-center rounded-full" style="width:30px;height:30px;background:color-mix(in srgb, {safeEv.color} 14%, transparent);">
