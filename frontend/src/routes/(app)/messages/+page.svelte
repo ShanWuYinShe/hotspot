@@ -14,7 +14,7 @@
 	import EmbeddedList from '@/components/data-display/EmbeddedList.svelte';
 	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
-	import { getPrivateChats, listMyGroups } from '@/api';
+	import { getPrivateChats, listMyGroups, markPrivateRead, markGroupRead } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import { presence, watchPresence } from '@/stores/presence.svelte';
 
@@ -107,6 +107,23 @@
 	// 会话 id：私聊为数字索引/chat id，群聊为字符串 group_id。
 	let selectedId = $state<number | string | null>(null);
 
+	// 选中会话：设置选中 id + 立即清零本地未读（徽章消失）+ 调 markRead API。
+	// 未读状态不随 ChatView 内部处理（那里只标记"已读"不影响列表徽章），
+	// 列表层必须自己联动，否则点击未读会话后徽章不消失。
+	const selectChat = (chat: ChatItem) => {
+		if (selectedId !== chat.id) selectedId = chat.id;
+		if (chat.unread > 0) {
+			chats = chats.map((c) => (c.id === chat.id ? { ...c, unread: 0 } : c));
+			// spec: private_messages/mark_read(scope=session) / group_messages/mark_read(scope=group)；
+			// 幂等语义，失败静默（徽章已本地清零，不打扰浏览）。
+			if (chat.kind === 'group' || chat.group) {
+				void markGroupRead({ scope: 'group', group_id: String(chat.id) }).catch(() => {});
+			} else {
+				void markPrivateRead({ scope: 'session', target_user_id: chat.peerUserId || String(chat.id) }).catch(() => {});
+			}
+		}
+	};
+
 	// 渲染用实时在线判定：WS 推送优先，HTTP 快照（chat.online）仅兜底
 	const liveChats = $derived(
 		chats.map((c) => ({ ...c, online: presence.isOnline(c.peerUserId) }))
@@ -162,7 +179,7 @@
 							<button
 								type="button"
 								class="avatar-entry tap-93 flex flex-col items-center gap-1 shrink-0 cursor-pointer"
-								onclick={() => (selectedId = c.id)}
+								onclick={() => selectChat(c)}
 							>
 								<div class="relative">
 									<div class="avatar-entry__avatar rounded-full overflow-hidden" style="width:36px;height:36px;border:{selectedId === c.id ? '2px solid var(--accent-default)' : '1.5px solid var(--border-default)'};">
@@ -189,7 +206,7 @@
 						<ChatListItem
 							chat={chat}
 							isSelected={selectedId === chat.id}
-							onClick={() => (selectedId = chat.id)}
+							onClick={() => selectChat(chat)}
 							compact
 						/>
 					</div>

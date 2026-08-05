@@ -91,12 +91,12 @@
 			{#each searchResults as r}
 				<button
 					type="button"
-					class="bg-surface-primary flex w-full items-center gap-3 px-4 py-3 text-left outline-none transition-[background-color,opacity] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:opacity-80"
+					class="app-list-row app-list-row--standard outline-none transition-[background-color,opacity] duration-150 hover:bg-interactive-hover-fill focus-visible:bg-interactive-hover-fill active:opacity-80"
 					aria-pressed={selectedLoc?.displayName === r.displayName}
 					onclick={() => onSelectLoc(r)}
 				>
 					<MapPin style="width:13px;height:13px;color:var(--accent-default);shrink:0;" strokeWidth={1.5} />
-					<span class="text-text-primary" style="font-size:13px;flex:1;">{r.displayName}</span>
+					<span class="text-text-primary flex-1" style="font-size:13px;">{r.displayName}</span>
 					{#if selectedLoc?.displayName === r.displayName}
 						<Check style="width:13px;height:13px;color:var(--accent-default);" strokeWidth={2.5} />
 					{/if}
