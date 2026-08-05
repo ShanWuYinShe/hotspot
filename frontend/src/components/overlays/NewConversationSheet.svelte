@@ -71,7 +71,7 @@
 	<!-- Content -->
 	<div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-6">
 		{#if tab === 'add'}
-			<div class="animate-fade-in flex flex-col gap-1">
+			<div class="animate-fade-in flex flex-col gap-2">
 				<p class="uppercase mb-2 text-text-secondary" style="font-size:10px;letter-spacing:0.14em;">
 					附近推荐
 				</p>
@@ -106,7 +106,7 @@
 				{/each}
 			</div>
 		{:else}
-			<div class="animate-fade-in flex flex-col gap-1">
+			<div class="animate-fade-in flex flex-col gap-2">
 				<!-- Create group chat row -->
 				<button
 					type="button"

@@ -157,7 +157,7 @@
 						{/snippet}
 					</BspCardCanvas>
 				{:else}
-					<div class="grid gap-3" style="grid-template-columns:repeat({gridColumns}, minmax(0, 1fr));">
+					<div class="grid gap-4" style="grid-template-columns:repeat({gridColumns}, minmax(0, 1fr));">
 						{#each list as user, index (user.id)}
 							<UserCard
 								user={user}

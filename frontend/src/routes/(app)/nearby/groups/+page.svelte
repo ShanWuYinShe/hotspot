@@ -147,7 +147,7 @@
 						<FeaturedGroupCard group={featured} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
 					</div>
 				{/if}
-				<div class="grid grid-cols-2 gap-3">
+				<div class="grid grid-cols-2 gap-4">
 					{#each rest as group (group.id)}
 						<GroupCard group={group} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
 					{/each}
