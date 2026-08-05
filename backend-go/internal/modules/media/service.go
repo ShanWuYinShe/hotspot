@@ -121,13 +121,13 @@ func (s *Service) Complete(ctx context.Context, uploadID string) (UploadedMedia,
 	if !ok || upload.UserID != principal.UserID {
 		return UploadedMedia{}, ErrUploadNotFound
 	}
-	key := idempotency.KeyFromContext(ctx)
 	if upload.Completed {
-		if upload.CompletedIdempotencyKey == "" || upload.CompletedIdempotencyKey != key {
-			return UploadedMedia{}, ErrUploadConflict
-		}
+		// 自然幂等（spec api_spec_media.md）：upload_id → file_id 映射在首次 complete 成功后
+		// 持久化，同一 upload_id 重复调用直接返回相同 file_id（等价成功），不依赖
+		// Idempotency-Key——覆盖"complete 成功但响应丢失后重试"场景。
 		return upload.File, nil
 	}
+	key := idempotency.KeyFromContext(ctx) // 仅记录用途（repo 存储），不参与幂等判定
 	meta, err := s.provider.Head(ctx, upload.StorageKey)
 	if err != nil {
 		if errors.Is(err, ErrUploadNotReady) {

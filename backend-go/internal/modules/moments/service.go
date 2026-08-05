@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"hotspot/backend-go/internal/modules/comments"
 	"hotspot/backend-go/internal/modules/notify"
@@ -91,6 +92,10 @@ func (s *Service) OpenTheDoor(ctx context.Context, momentID string) (MomentItem,
 	}
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	isOwner := principal.UserID != "" && item.User.UserID == principal.UserID
+	if item.IsDeleted && !isOwner {
+		// 软删瞬间对非作者按不存在处理（spec api_spec_moment.md「删除语义」）
+		return MomentItem{}, false, nil
+	}
 	if item.PrivacyLevel == "private" && !isOwner {
 		return MomentItem{}, false, nil
 	}
@@ -222,6 +227,11 @@ func (s *Service) Update(ctx context.Context, req EditMomentRequest) (MomentItem
 	}
 	s.notifyMomentMentions(ctx, principal.UserID, updated)
 	s.hydrateImages(ctx, &updated)
+	// 瞬间被编辑 → 推送给作者的其他在线设备（多端同步，spec api_spec_websocket.md）
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMomentUpdated, Payload: map[string]any{
+		"moment_id":  req.MomentID,
+		"updated_at": time.Now().UTC().Format(time.RFC3339),
+	}})
 	return updated, nil
 }
 
@@ -237,8 +247,22 @@ func (s *Service) Delete(ctx context.Context, momentID string) error {
 	if item.User.UserID != principal.UserID {
 		return ErrPermissionDenied
 	}
+	if item.IsDeleted {
+		// 重复删除（已软删）视为 no-op 成功
+		return nil
+	}
 	if err := s.repo.Delete(ctx, momentID); err != nil {
 		return fmt.Errorf("moments.Service.Delete: repo: %w", err)
+	}
+	// 软删后推送 MomentDeleted（spec api_spec_websocket.md）：作者其他在线设备 + 收藏者
+	// 据此将本地列表/收藏更新为"已删除"占位。
+	now := time.Now().UTC().Format(time.RFC3339)
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMomentDeleted, Payload: map[string]any{
+		"moment_id":  momentID,
+		"deleted_at": now,
+	}})
+	if err := s.broadcastMomentDeletedToFavorites(ctx, momentID, principal.UserID, now); err != nil {
+		observability.L().Warn("moments.delete favorite broadcast failed", "error", err, "moment_id", momentID)
 	}
 	return nil
 }
@@ -472,4 +496,23 @@ func (s *Service) notifyMomentMentions(ctx context.Context, actorUserID string, 
 			"mentioned_at":    item.CreatedAt,
 		}})
 	}
+}
+
+// broadcastMomentDeletedToFavorites 推送 MomentDeleted 给收藏该瞬间的用户
+// （spec api_spec_websocket.md：瞬间被软删除时收藏者据此更新收藏列表为"已删除"占位）。
+func (s *Service) broadcastMomentDeletedToFavorites(ctx context.Context, momentID, exceptUserID, deletedAt string) error {
+	userIDs, err := s.repo.ListFavoriteUserIDs(ctx, momentID)
+	if err != nil {
+		return err
+	}
+	for _, userID := range userIDs {
+		if userID == exceptUserID {
+			continue
+		}
+		realtime.DefaultHub().BroadcastToUser(userID, realtime.Event{Type: realtime.EventTypeMomentDeleted, Payload: map[string]any{
+			"moment_id":  momentID,
+			"deleted_at": deletedAt,
+		}})
+	}
+	return nil
 }

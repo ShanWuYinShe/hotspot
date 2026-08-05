@@ -25,9 +25,8 @@ const (
 	ReportReasonSelfHarm       ReportReason = "self_harm"
 	ReportReasonOther          ReportReason = "other"
 
+	// ReportStatus 收敛为三态（spec api_spec_types.md）：reviewing/escalated 已删除
 	ReportStatusPending   ReportStatus = "pending"
-	ReportStatusReviewing ReportStatus = "reviewing"
-	ReportStatusEscalated ReportStatus = "escalated"
 	ReportStatusResolved  ReportStatus = "resolved"
 	ReportStatusDismissed ReportStatus = "dismissed"
 )

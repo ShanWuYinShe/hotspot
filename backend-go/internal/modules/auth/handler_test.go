@@ -478,9 +478,12 @@ func TestResetPasswordUnknownOrInvalidRequestReturnsNotFound(t *testing.T) {
 	}
 }
 
-func TestChangePasswordRequiresIdempotencyKey(t *testing.T) {
+// TestChangePasswordWithoutIdempotencyKey：spec 移除 change_password 的幂等键
+// （旧密码自然去重，见 api_spec_base.md），无 Idempotency-Key 也可正常调用——
+// 旧密码错误返回 10100 而非参数错误。
+func TestChangePasswordWithoutIdempotencyKey(t *testing.T) {
 	handler := newTestHandler()
-	req := httptest.NewRequest(http.MethodPost, "/change_password", strings.NewReader(`{"old_password":"old","new_password":"new"}`))
+	req := httptest.NewRequest(http.MethodPost, "/change_password", strings.NewReader(`{"old_password":"wrong-old","new_password":"new-pass"}`))
 	ctx := platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
@@ -491,8 +494,8 @@ func TestChangePasswordRequiresIdempotencyKey(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if int(resp["code"].(float64)) != 10000 {
-		t.Fatalf("unexpected response: %#v", resp)
+	if int(resp["code"].(float64)) != 10100 {
+		t.Fatalf("expected 10100 (old password mismatch, natural dedup), got: %#v", resp)
 	}
 }
 

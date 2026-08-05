@@ -400,6 +400,30 @@ func (s *Service) AppendMentioned(ctx context.Context, targetUserID string, acto
 	return id, err
 }
 
+// AppendGroupMentioned records a group-chat mention notification
+// (NotifyType='group_mentioned', spec api_spec_notify.md) and returns the
+// notification_id to embed in the pushed GroupMessageMentioned payload.
+func (s *Service) AppendGroupMentioned(ctx context.Context, targetUserID string, actor map[string]any, groupID, groupName, messageID, contentPreview string) (string, error) {
+	payload := map[string]any{
+		"type":       "group_mentioned",
+		"actor":      actor,
+		"group_id":   groupID,
+		"group_name": groupName,
+		"message_id": messageID,
+	}
+	if contentPreview != "" {
+		payload["content_preview"] = contentPreview
+	}
+	id := newNotificationID()
+	err := s.repo.Append(ctx, targetUserID, NotifyItem{
+		NotificationID: id,
+		Type:           "group_mentioned",
+		IsRead:         false,
+		Payload:        payload,
+	})
+	return id, err
+}
+
 // PushSystemAnnouncement broadcasts a system announcement to all online
 // connections. The payload carries the same notification_id that
 // AppendSystemAnnouncement persisted, so clients can deduplicate the realtime

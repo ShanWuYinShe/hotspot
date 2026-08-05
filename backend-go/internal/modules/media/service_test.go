@@ -97,8 +97,11 @@ func TestServiceCompleteSemantics(t *testing.T) {
 		t.Fatalf("expected stable replay, got file=%#v err=%v", replayed, err)
 	}
 
-	if _, err := service.Complete(mediaContextWithUserAndKey("u1", "key2"), "upload_1"); !errors.Is(err, ErrUploadConflict) {
-		t.Fatalf("expected ErrUploadConflict, got %v", err)
+	// 自然幂等（spec api_spec_media.md）：同一 upload_id 重复 complete 返回相同
+	// file_id（等价成功），不依赖 Idempotency-Key——不同 key 也视为等价成功。
+	replayed2, err := service.Complete(mediaContextWithUserAndKey("u1", "key2"), "upload_1")
+	if err != nil || replayed2.FileID != file.FileID {
+		t.Fatalf("expected natural-idempotent replay regardless of key, got file=%#v err=%v", replayed2, err)
 	}
 }
 

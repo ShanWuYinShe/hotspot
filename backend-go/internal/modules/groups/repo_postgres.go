@@ -279,22 +279,22 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 		return nil, "", err
 	}
 	type scannedItem struct {
-		item           GroupItem
-		locationName   string
-		latitude       float64
-		longitude      float64
-		joinMethod     string
+		item             GroupItem
+		locationName     string
+		latitude         float64
+		longitude        float64
+		joinMethod       string
 		requiresApproval bool
-		nextActivity   *string
-		roleText       string
-		createdAt      *time.Time
-		lastActivityAt *time.Time
-		tags           []string
-		membersCount   int
-		onlineCount    int
-		joinedAt       time.Time
-		isMuted        bool
-		mutedUntil     *time.Time
+		nextActivity     *string
+		roleText         string
+		createdAt        *time.Time
+		lastActivityAt   *time.Time
+		tags             []string
+		membersCount     int
+		onlineCount      int
+		joinedAt         time.Time
+		isMuted          bool
+		mutedUntil       *time.Time
 		// last_message 预览(LEFT JOIN LATERAL,可能为空)
 		lastMessageID    *string
 		lastMessageType  *string
@@ -398,6 +398,8 @@ func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, group
 	if group.RequiresApproval {
 		var existingID string
 		if err := queryable.QueryRow(ctx, queryFindPendingGroupApplication, groupID, userID).Scan(&existingID); err == nil && existingID != "" {
+			// 自然去重（spec api_spec_base.md）：命中已有 pending 申请，返回已有 application_id，
+			// 不重复创建；IsNewApplication=false 使 service 跳过重复通知。
 			return JoinGroupResult{Status: JoinGroupStatusPendingApproval, Application: &struct {
 				ApplicationID string `json:"application_id"`
 			}{ApplicationID: existingID}}, nil
@@ -410,7 +412,7 @@ func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, group
 		if err := queryable.Exec(ctx, queryInsertGroupApplication, applicationID, groupID, userID, nullableStringPtr(message), string(ApplicationStatusPending), now); err != nil {
 			return JoinGroupResult{}, err
 		}
-		return JoinGroupResult{Status: JoinGroupStatusPendingApproval, Application: &struct {
+		return JoinGroupResult{Status: JoinGroupStatusPendingApproval, IsNewApplication: true, Application: &struct {
 			ApplicationID string `json:"application_id"`
 		}{ApplicationID: applicationID}}, nil
 	}

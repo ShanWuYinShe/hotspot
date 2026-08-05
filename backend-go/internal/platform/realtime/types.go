@@ -30,6 +30,12 @@ const (
 	EventTypeMessageMentioned = "MessageMentioned"
 )
 
+// 瞬间生命周期（编辑/软删除，spec api_spec_websocket.md）
+const (
+	EventTypeMomentUpdated = "MomentUpdated"
+	EventTypeMomentDeleted = "MomentDeleted"
+)
+
 // 私聊
 const (
 	EventTypePrivateMessageNew      = "PrivateMessageNew"
@@ -45,6 +51,7 @@ const (
 	EventTypeGroupMessageEdited           = "GroupMessageEdited"
 	EventTypeGroupMessageRecalled         = "GroupMessageRecalled"
 	EventTypeGroupMessageReadCountUpdated = "GroupMessageReadCountUpdated"
+	EventTypeGroupMessageMentioned        = "GroupMessageMentioned"
 	EventTypeGroupTyping                  = "GroupTyping"
 )
 

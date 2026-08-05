@@ -56,6 +56,10 @@ func (r *PersistenceRepository) MessageExists(ctx context.Context, messageID str
 	return r.impl.MessageExists(ctx, messageID)
 }
 
+func (r *PersistenceRepository) GetGroupName(ctx context.Context, groupID string) (string, bool, error) {
+	return r.impl.GetGroupName(ctx, groupID)
+}
+
 func (r *PersistenceRepository) LookupMessageMeta(ctx context.Context, messageID string) (MessageOwnerMeta, bool, error) {
 	return r.impl.LookupMessageMeta(ctx, messageID)
 }

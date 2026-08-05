@@ -443,7 +443,7 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 	if !found {
 		return &httpx.APIError{Code: 10300, Message: "举报不存在"}, nil
 	}
-	if record.Item.Status != ReportStatusPending && record.Item.Status != ReportStatusReviewing && record.Item.Status != ReportStatusEscalated {
+	if record.Item.Status != ReportStatusPending {
 		return &httpx.APIError{Code: 10400, Message: "举报已处理"}, nil
 	}
 	if req.Action == ReportActionResolve {
@@ -634,7 +634,7 @@ func validateAdminUserSearchRequest(req AdminUserSearchRequest) *httpx.APIError 
 
 func isValidReportAction(action ReportAction) bool {
 	switch action {
-	case ReportActionResolve, ReportActionDismiss, ReportActionEscalate:
+	case ReportActionResolve, ReportActionDismiss:
 		return true
 	default:
 		return false

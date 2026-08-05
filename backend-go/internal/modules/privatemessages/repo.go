@@ -12,21 +12,23 @@ var (
 	ErrMessageNotEditable      = errors.New("private_messages: message not editable")
 	ErrMessageNotRecallable    = errors.New("private_messages: message not recallable")
 	ErrInvalidCursor           = errors.New("private_messages: invalid cursor")
+	// ErrInvalidShareCode：share 类型消息的 share_code 无效（不存在/已撤销/已过期）。
+	ErrInvalidShareCode = errors.New("private_messages: invalid share code")
 )
 
 // BlockReason mirrors spec api_spec_chat.md BlockReason: the structured reason
 // returned in the 10200 error data of private_messages/send.
+// 拉黑明确返回 'blocked'（产品决策：拉黑就显示拉黑，见 spec）；
+// 'privacy' 仅用于 allow_private_chat 隐私设置限制。
 type BlockReason string
 
 const (
-	// BlockReasonPrivacy covers the blocked relationship and privacy settings
-	// (allow_private_chat) — the blocked state is never exposed.
+	// BlockReasonBlocked: the recipient has blocked the sender.
+	BlockReasonBlocked BlockReason = "blocked"
+	// BlockReasonPrivacy: privacy settings (allow_private_chat) disallow the message.
 	BlockReasonPrivacy BlockReason = "privacy"
 	// BlockReasonStrangerQuotaExceeded: daily stranger-message quota used up.
 	BlockReasonStrangerQuotaExceeded BlockReason = "stranger_quota_exceeded"
-	// BlockReasonAccountSuspended: reserved (account restriction) — type kept
-	// for contract parity; not enforced yet.
-	BlockReasonAccountSuspended BlockReason = "account_suspended"
 )
 
 // MessageBlockedError is returned by Service.Send when the message is refused

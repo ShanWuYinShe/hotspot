@@ -73,6 +73,10 @@ func (r *stubGroupMessageRepo) MessageExists(_ context.Context, _ string) (bool,
 	return false, "", nil
 }
 
+func (r *stubGroupMessageRepo) GetGroupName(_ context.Context, _ string) (string, bool, error) {
+	return "test group", true, nil
+}
+
 // LookupMessageMeta defaults to a message owned by "u1" in "g1" so the
 // handler-level Update/Recall tests that authorize as u1 succeed without
 // extra wiring.

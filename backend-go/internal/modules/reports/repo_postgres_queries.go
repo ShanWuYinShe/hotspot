@@ -16,7 +16,7 @@ ORDER BY created_at DESC, report_id DESC`
 	queryFindExistingReport = `
 SELECT report_id
 FROM reports
-WHERE target_type = $1 AND target_id = $2 AND status IN ('pending', 'reviewing', 'escalated')
+WHERE target_type = $1 AND target_id = $2 AND status = 'pending'
 LIMIT 1`
 
 	queryReportTargetOwnerUser = `

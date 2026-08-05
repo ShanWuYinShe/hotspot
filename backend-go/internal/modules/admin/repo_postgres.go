@@ -742,14 +742,12 @@ func (r *PostgresRepository) HandleReport(ctx context.Context, reportID string, 
 	if err != nil || !found {
 		return AdminReportItem{}, found, err
 	}
-	status := ReportStatusReviewing
+	status := ReportStatusPending
 	switch action {
 	case ReportActionResolve:
 		status = ReportStatusResolved
 	case ReportActionDismiss:
 		status = ReportStatusDismissed
-	case ReportActionEscalate:
-		status = ReportStatusEscalated
 	}
 	now := time.Now().UTC()
 	var handledByID any

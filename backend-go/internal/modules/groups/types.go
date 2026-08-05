@@ -41,9 +41,9 @@ func paginationCursor(p *PaginationParams) string {
 }
 
 const (
-	GroupJoinMethodDirect      GroupJoinMethod = "direct"
-	GroupJoinMethodPassword    GroupJoinMethod = "password"
-	GroupJoinMethodInviteOnly  GroupJoinMethod = "invite_only"
+	GroupJoinMethodDirect     GroupJoinMethod = "direct"
+	GroupJoinMethodPassword   GroupJoinMethod = "password"
+	GroupJoinMethodInviteOnly GroupJoinMethod = "invite_only"
 
 	GroupRoleOwner  GroupRole = "owner"
 	GroupRoleAdmin  GroupRole = "admin"
@@ -351,6 +351,10 @@ type JoinGroupResult struct {
 	Application *struct {
 		ApplicationID string `json:"application_id"`
 	} `json:"application,omitempty"`
+	// IsNewApplication 为内部标记（不序列化）：approval 路径是否本次新创建的申请。
+	// 命中已有 pending 申请（自然去重，见 api_spec_base.md）时为 false，
+	// service 据此跳过重复通知管理员。
+	IsNewApplication bool `json:"-"`
 }
 
 type TransferOwnershipRequest struct {

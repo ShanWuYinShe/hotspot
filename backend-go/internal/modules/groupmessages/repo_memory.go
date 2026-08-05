@@ -9,16 +9,32 @@ import (
 )
 
 type InMemoryRepository struct {
-	mu        sync.RWMutex
-	items     map[string][]GroupMessageItem
-	readCount map[string]map[string]int // groupID -> messageID -> count
+	mu         sync.RWMutex
+	items      map[string][]GroupMessageItem
+	readCount  map[string]map[string]int // groupID -> messageID -> count
+	groupNames map[string]string         // groupID -> name（测试可注入）
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
-		items:     make(map[string][]GroupMessageItem),
-		readCount: make(map[string]map[string]int),
+		items:      make(map[string][]GroupMessageItem),
+		readCount:  make(map[string]map[string]int),
+		groupNames: make(map[string]string),
 	}
+}
+
+// SetGroupName 供测试注入群名（群名权威在 groups 模块，内存实现仅测试用）。
+func (r *InMemoryRepository) SetGroupName(groupID, name string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.groupNames[groupID] = name
+}
+
+func (r *InMemoryRepository) GetGroupName(_ context.Context, groupID string) (string, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	name, ok := r.groupNames[groupID]
+	return name, ok, nil
 }
 func (r *InMemoryRepository) Send(_ context.Context, req SendGroupMessageRequest) (MessageSent, error) {
 	now := time.Now().UTC()

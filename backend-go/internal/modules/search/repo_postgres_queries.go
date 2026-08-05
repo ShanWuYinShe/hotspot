@@ -12,6 +12,7 @@ SELECT mt.tag_name, COUNT(*) AS usage_count
 FROM moment_tags mt
 JOIN moments m ON m.moment_id = mt.moment_id
 WHERE m.privacy_level = 'public'
+  AND m.is_deleted = FALSE
   AND mt.tag_name ILIKE '%' || $1 || '%'
 GROUP BY mt.tag_name
 ORDER BY usage_count DESC
@@ -45,6 +46,7 @@ SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.locati
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
 WHERE m.privacy_level = 'public'
+  AND m.is_deleted = FALSE
   AND m.description ILIKE '%' || $1 || '%'
 ORDER BY popularity DESC
 LIMIT $2`

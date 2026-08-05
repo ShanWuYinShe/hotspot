@@ -107,7 +107,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "密码参数冲突"))
 		return
 	}
-	if err := h.service.Update(r.Context(), req); err != nil {
+	item, err := h.service.Update(r.Context(), req)
+	if err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
@@ -119,7 +120,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
+	// 内容类更新返回更新后完整对象（spec api_spec_base.md「设计规范」）
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(item))
 }
 
 func (h *Handler) Dismiss(w http.ResponseWriter, r *http.Request) {
@@ -206,37 +208,39 @@ func (h *Handler) ListMyGroups(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
-	if err := idempotency.RequireKey(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
-		return
-	}
 	var req JoinGroupRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "groups/join", func() httpx.ApiResponse[JoinGroupResult] {
-		result, err := h.service.JoinGroup(r.Context(), req)
-		if err != nil {
-			if errors.Is(err, ErrGroupNotFound) {
-				return httpx.ApiResponse[JoinGroupResult]{Code: 10300, Message: "群组不存在"}
-			}
-			if errors.Is(err, ErrInvalidPassword) {
-				return httpx.ApiResponse[JoinGroupResult]{Code: 10400, Message: "密码错误"}
-			}
-			if errors.Is(err, ErrAlreadyApplied) {
-				return httpx.ApiResponse[JoinGroupResult]{Code: 10400, Message: "已申请过"}
-			}
-			if errors.Is(err, ErrGroupFull) {
-				return httpx.ApiResponse[JoinGroupResult]{Code: 10400, Message: "群组已满"}
-			}
-			if errors.Is(err, ErrAccessRestricted) {
-				return httpx.ApiResponse[JoinGroupResult]{Code: 10200, Message: "该群组仅限邀请加入"}
-			}
-			return httpx.ApiResponse[JoinGroupResult]{Code: 10600, Message: "服务暂时不可用"}
+	// 自然去重（spec api_spec_base.md）：approval 路径命中已有 pending 申请返回已有
+	// application_id（不重复创建/通知）；direct/invite 路径成员关系唯一。无需 Idempotency-Key。
+	result, err := h.service.JoinGroup(r.Context(), req)
+	if err != nil {
+		if errors.Is(err, ErrGroupNotFound) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
+			return
 		}
-		return httpx.Success(result)
-	})
+		if errors.Is(err, ErrInvalidPassword) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "密码错误"))
+			return
+		}
+		if errors.Is(err, ErrAlreadyApplied) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "已申请过"))
+			return
+		}
+		if errors.Is(err, ErrGroupFull) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "群组已满"))
+			return
+		}
+		if errors.Is(err, ErrAccessRestricted) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "该群组仅限邀请加入"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))
 }
 
 func (h *Handler) CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
@@ -289,7 +293,8 @@ func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	if err := h.service.UpdateAnnouncement(r.Context(), req); err != nil {
+	item, err := h.service.UpdateAnnouncement(r.Context(), req)
+	if err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
@@ -298,10 +303,15 @@ func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
+		if errors.Is(err, ErrAnnouncementNotFound) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "公告不存在"))
+			return
+		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
+	// 内容类更新返回更新后完整对象（spec api_spec_base.md「设计规范」）
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(item))
 }
 
 func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {

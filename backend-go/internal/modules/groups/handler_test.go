@@ -30,6 +30,7 @@ type groupErrorRepo struct {
 	listMyGroupsItems     []GroupItem
 	joinGroupErr          error
 	createAnnouncementErr error
+	announceItems         []GroupAnnouncementItem
 	listAnnouncementsErr  error
 	updateAnnouncementErr error
 	deleteAnnouncementErr error
@@ -89,7 +90,7 @@ func (r *groupErrorRepo) CreateAnnouncement(context.Context, string, CreateGroup
 	return GroupAnnouncementItem{}, r.createAnnouncementErr
 }
 func (r *groupErrorRepo) ListAnnouncements(context.Context, string) ([]GroupAnnouncementItem, error) {
-	return nil, r.listAnnouncementsErr
+	return r.announceItems, r.listAnnouncementsErr
 }
 func (r *groupErrorRepo) UpdateAnnouncement(context.Context, string, UpdateGroupAnnouncementRequest) error {
 	return r.updateAnnouncementErr
@@ -570,6 +571,11 @@ func TestListMembersHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
 		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
 		getFound:  true,
+		announceItems: []GroupAnnouncementItem{{
+			AnnouncementID: "ann1",
+			GroupID:        "g1",
+			Title:          "Updated",
+		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/members/list", strings.NewReader(`{"group_id":"g1"}`))
@@ -623,6 +629,11 @@ func TestSearchMembersHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
 		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
 		getFound:  true,
+		announceItems: []GroupAnnouncementItem{{
+			AnnouncementID: "ann1",
+			GroupID:        "g1",
+			Title:          "Updated",
+		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/members/search", strings.NewReader(`{"group_id":"g1","keyword":"alice"}`))
@@ -696,6 +707,11 @@ func TestBanMemberHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
 		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
 		getFound:  true,
+		announceItems: []GroupAnnouncementItem{{
+			AnnouncementID: "ann1",
+			GroupID:        "g1",
+			Title:          "Updated",
+		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/members/ban", strings.NewReader(`{"group_id":"g1","user_id":"u2"}`))
@@ -733,6 +749,11 @@ func TestBanMemberHandlerCannotBanSelf(t *testing.T) {
 	repo := &groupErrorRepo{
 		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
 		getFound:  true,
+		announceItems: []GroupAnnouncementItem{{
+			AnnouncementID: "ann1",
+			GroupID:        "g1",
+			Title:          "Updated",
+		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/members/ban", strings.NewReader(`{"group_id":"g1","user_id":"user_alice"}`))
@@ -747,6 +768,11 @@ func TestUnbanMemberHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
 		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
 		getFound:  true,
+		announceItems: []GroupAnnouncementItem{{
+			AnnouncementID: "ann1",
+			GroupID:        "g1",
+			Title:          "Updated",
+		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/members/unban", strings.NewReader(`{"group_id":"g1","user_id":"u2"}`))
@@ -778,6 +804,11 @@ func TestListBannedMembersHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
 		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
 		getFound:  true,
+		announceItems: []GroupAnnouncementItem{{
+			AnnouncementID: "ann1",
+			GroupID:        "g1",
+			Title:          "Updated",
+		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/members/list_banned", strings.NewReader(`{"group_id":"g1"}`))
@@ -813,6 +844,11 @@ func TestListSentInvitesHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
 		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
 		getFound:  true,
+		announceItems: []GroupAnnouncementItem{{
+			AnnouncementID: "ann1",
+			GroupID:        "g1",
+			Title:          "Updated",
+		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/members/invites/list", strings.NewReader(`{"group_id":"g1"}`))
@@ -848,6 +884,11 @@ func TestRevokeInviteHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
 		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
 		getFound:  true,
+		announceItems: []GroupAnnouncementItem{{
+			AnnouncementID: "ann1",
+			GroupID:        "g1",
+			Title:          "Updated",
+		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/members/invites/revoke", strings.NewReader(`{"group_id":"g1","invite_id":"inv1"}`))
@@ -881,6 +922,11 @@ func TestCreateAnnouncementHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
 		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
 		getFound:  true,
+		announceItems: []GroupAnnouncementItem{{
+			AnnouncementID: "ann1",
+			GroupID:        "g1",
+			Title:          "Updated",
+		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/announcements/create", strings.NewReader(`{"group_id":"g1","title":"Notice","content":"Hello"}`))
@@ -982,6 +1028,11 @@ func TestUpdateAnnouncementHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
 		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
 		getFound:  true,
+		announceItems: []GroupAnnouncementItem{{
+			AnnouncementID: "ann1",
+			GroupID:        "g1",
+			Title:          "Updated",
+		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/announcements/update", strings.NewReader(`{"group_id":"g1","announcement_id":"ann1","title":"Updated"}`))
@@ -1036,6 +1087,11 @@ func TestDeleteAnnouncementHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
 		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
 		getFound:  true,
+		announceItems: []GroupAnnouncementItem{{
+			AnnouncementID: "ann1",
+			GroupID:        "g1",
+			Title:          "Updated",
+		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/announcements/delete", strings.NewReader(`{"group_id":"g1","announcement_id":"ann1"}`))
@@ -1179,6 +1235,11 @@ func TestHandlerUpdateReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
 		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
 		getFound:  true,
+		announceItems: []GroupAnnouncementItem{{
+			AnnouncementID: "ann1",
+			GroupID:        "g1",
+			Title:          "Updated",
+		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"group_id":"g1","name":"Updated Name"}`))
@@ -1235,6 +1296,11 @@ func TestHandlerDismissReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
 		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
 		getFound:  true,
+		announceItems: []GroupAnnouncementItem{{
+			AnnouncementID: "ann1",
+			GroupID:        "g1",
+			Title:          "Updated",
+		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/dismiss", strings.NewReader(`{"group_id":"g1"}`))
@@ -1611,6 +1677,11 @@ func TestHandlerRemoveMemberReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
 		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
 		getFound:  true,
+		announceItems: []GroupAnnouncementItem{{
+			AnnouncementID: "ann1",
+			GroupID:        "g1",
+			Title:          "Updated",
+		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/members/remove", strings.NewReader(`{"group_id":"g1","user_id":"user_bob"}`))

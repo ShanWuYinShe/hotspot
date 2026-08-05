@@ -10,13 +10,16 @@ import (
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
-type Module struct{ handler *Handler }
+type Module struct {
+	handler *Handler
+	Service *Service
+}
 
 func NewModule(factory *persistence.Factory) *Module {
 	repo := NewPersistenceRepository(factory)
 	service := NewServiceWithRepo(repo)
 	service.SetMomentsSharer(moments.NewServiceWithRepo(moments.NewPersistenceRepository(factory)))
-	return &Module{handler: NewHandler(service)}
+	return &Module{handler: NewHandler(service), Service: service}
 }
 
 func (m *Module) Mount(r chi.Router) {

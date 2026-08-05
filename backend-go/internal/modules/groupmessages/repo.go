@@ -31,6 +31,9 @@ type Repository interface {
 	GetMediaForMessage(context.Context, string) (map[string]any, bool, error)
 	MemberMuteStatus(context.Context, string, string) (isMuted bool, mutedUntil string, found bool, err error)
 	MessageExists(ctx context.Context, messageID string) (found bool, senderID string, err error)
+	// GetGroupName returns the group name for the given group (used in
+	// GroupMessageMentioned notification payloads).
+	GetGroupName(ctx context.Context, groupID string) (string, bool, error)
 	// LookupMessageMeta returns the group ID and sender user ID for a message.
 	// senderID is "" when the message has a NULL sender (legacy/anonymous).
 	// found is false when no message matches messageID.

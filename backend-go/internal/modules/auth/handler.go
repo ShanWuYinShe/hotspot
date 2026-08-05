@@ -213,10 +213,6 @@ func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
-	if err := idempotency.RequireKey(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
-		return
-	}
 	var req ResetPasswordRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
@@ -226,31 +222,27 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
+	// 自然去重（spec api_spec_auth.md）：验证码为一次性凭证，首次成功后即失效，
+	// 重发返回 10300（验证码已用/过期），不会重复改密。无需 Idempotency-Key。
 	if req.ClientType == ClientTypeWeb {
-		idempotency.ReplayOrStore(w, r, "auth/reset_password", func() httpx.ApiResponse[AuthTokenPairWeb] {
-			result, err := h.service.ResetPassword(r.Context(), req, sessionMetaFromRequest(r, req.ClientType, resolveDeviceID(r, "")))
-			if err != nil {
-				return errorResponse[AuthTokenPairWeb](apiErrorFrom(err))
-			}
-			platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour)
-			return httpx.Success(AuthTokenPairWeb{})
-		})
-		return
-	}
-	idempotency.ReplayOrStore(w, r, "auth/reset_password", func() httpx.ApiResponse[AuthTokenPairApp] {
 		result, err := h.service.ResetPassword(r.Context(), req, sessionMetaFromRequest(r, req.ClientType, resolveDeviceID(r, "")))
 		if err != nil {
-			return errorResponse[AuthTokenPairApp](apiErrorFrom(err))
+			httpx.WriteJSON(w, http.StatusOK, errorResponse[AuthTokenPairWeb](apiErrorFrom(err)))
+			return
 		}
-		return authSuccessApp(result)
-	})
+		platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour)
+		httpx.WriteJSON(w, http.StatusOK, httpx.Success(AuthTokenPairWeb{}))
+		return
+	}
+	result, err := h.service.ResetPassword(r.Context(), req, sessionMetaFromRequest(r, req.ClientType, resolveDeviceID(r, "")))
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, errorResponse[AuthTokenPairApp](apiErrorFrom(err)))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, authSuccessApp(result))
 }
 
 func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
-	if err := idempotency.RequireKey(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
-		return
-	}
 	var req ChangePasswordRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
@@ -260,12 +252,13 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "auth/change_password", func() httpx.ApiResponse[struct{}] {
-		if err := h.service.ChangePassword(r.Context(), req); err != nil {
-			return errorResponse[struct{}](apiErrorFrom(err))
-		}
-		return httpx.SuccessEmpty()
-	})
+	// 自然去重（spec api_spec_auth.md）：首次成功后旧密码立即失效，
+	// 重发同一请求（仍带旧密码）返回 10100，不会重复改密。无需 Idempotency-Key。
+	if err := h.service.ChangePassword(r.Context(), req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, errorResponse[struct{}](apiErrorFrom(err)))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
 func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {

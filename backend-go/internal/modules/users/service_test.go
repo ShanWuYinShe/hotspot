@@ -355,7 +355,7 @@ func TestServiceDeleteAccountRejectsWrongConfirmation(t *testing.T) {
 func TestServiceUpgradeRejectsAlreadyNormal(t *testing.T) {
 	repo := &stubUserRepo{profile: testProfile("u1"), profileFound: true}
 	svc := NewServiceWithRepo(repo)
-	err := svc.Upgrade(userCtx("u1"), UpgradeAccountRequest{LoginID: "test@test.com", Password: "pass"})
+	_, err := svc.Upgrade(userCtx("u1"), UpgradeAccountRequest{LoginID: "test@test.com", Password: "pass"})
 	if !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected conflict for already normal user, got %v", err)
 	}
@@ -366,7 +366,7 @@ func TestServiceUpgradeWithEmailWritesToEmail(t *testing.T) {
 	tempProfile.UserType = UserTypeTemp
 	repo := &stubUserRepo{profile: tempProfile, profileFound: true}
 	svc := NewServiceWithRepo(repo)
-	err := svc.Upgrade(userCtx("u1"), UpgradeAccountRequest{LoginID: "test@test.com", Password: "pass"})
+	_, err := svc.Upgrade(userCtx("u1"), UpgradeAccountRequest{LoginID: "test@test.com", Password: "pass"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -380,7 +380,7 @@ func TestServiceUpgradeWithPhoneWritesToPhone(t *testing.T) {
 	tempProfile.UserType = UserTypeTemp
 	repo := &stubUserRepo{profile: tempProfile, profileFound: true}
 	svc := NewServiceWithRepo(repo)
-	err := svc.Upgrade(userCtx("u1"), UpgradeAccountRequest{LoginID: "13800138000", Password: "pass"})
+	_, err := svc.Upgrade(userCtx("u1"), UpgradeAccountRequest{LoginID: "13800138000", Password: "pass"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

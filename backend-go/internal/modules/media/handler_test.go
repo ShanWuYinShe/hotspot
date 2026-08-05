@@ -147,10 +147,12 @@ func TestMediaHandlerCompleteMapsSpecCodes(t *testing.T) {
 	handler.CompleteUpload(okRR, okReq)
 	assertMediaCode(t, okRR, 0)
 
-	conflictReq := mediaAuthedCompleteRequest("upload_ready", "dddd1234dddd1234dddd1234dddd1234")
-	conflictRR := httptest.NewRecorder()
-	handler.CompleteUpload(conflictRR, conflictReq)
-	assertMediaCode(t, conflictRR, 10400)
+	// 自然幂等（spec api_spec_media.md）：同一 upload_id 重复 complete 返回相同
+	// file_id（等价成功 0），即使换用不同 Idempotency-Key。
+	replayReq := mediaAuthedCompleteRequest("upload_ready", "dddd1234dddd1234dddd1234dddd1234")
+	replayRR := httptest.NewRecorder()
+	handler.CompleteUpload(replayRR, replayReq)
+	assertMediaCode(t, replayRR, 0)
 }
 
 // TestMediaHandlerCompleteSucceedsWithoutIdempotencyKey verifies that

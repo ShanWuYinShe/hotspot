@@ -65,5 +65,6 @@ const (
 	FROM moments m
 	JOIN users u ON u.user_id = m.user_id
 	WHERE m.moment_id = $1
-	  AND m.privacy_level = 'public'`
+	  AND m.privacy_level = 'public'
+	  AND m.is_deleted = FALSE`
 )

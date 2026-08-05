@@ -14,8 +14,8 @@ type Module struct {
 	Service *Service
 }
 
-func NewModule(factory *persistence.Factory, users userReader) *Module {
-	svc := NewServiceWithRepoAndUsers(NewPersistenceRepository(factory), users)
+func NewModule(factory *persistence.Factory, users userReader, mentions groupMentionNotifier, shares shareValidator) *Module {
+	svc := NewServiceWithDeps(NewPersistenceRepository(factory), users, mentions, shares)
 	return &Module{handler: NewHandler(svc), Service: svc}
 }
 func (m *Module) Mount(r chi.Router) {

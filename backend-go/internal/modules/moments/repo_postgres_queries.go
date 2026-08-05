@@ -7,13 +7,13 @@ FROM users
 WHERE user_id = $1`
 
 	queryGetMoment = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted
 FROM moments m
 LEFT JOIN users u ON u.user_id = m.user_id
 WHERE m.moment_id = $1`
 
 	queryListMyMoments = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted
 FROM moments m
 LEFT JOIN users u ON u.user_id = m.user_id
 WHERE m.user_id = $1
@@ -101,7 +101,9 @@ SET description = COALESCE($2, description),
 WHERE moment_id = $1`
 
 	queryDeleteMoment = `
-DELETE FROM moments WHERE moment_id = $1`
+UPDATE moments
+SET is_deleted = TRUE, description = ''
+WHERE moment_id = $1`
 
 	queryCheckMomentFavorite = `
 SELECT 1
@@ -117,8 +119,13 @@ ON CONFLICT (user_id, moment_id) DO NOTHING`
 DELETE FROM moment_favorites
 WHERE user_id = $1 AND moment_id = $2`
 
+	queryListMomentFavoriteUserIDs = `
+SELECT user_id
+FROM moment_favorites
+WHERE moment_id = $1`
+
 	queryListFavoriteMoments = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, mf.favorited_at
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted, mf.favorited_at
 FROM moment_favorites mf
 JOIN moments m ON m.moment_id = mf.moment_id
 LEFT JOIN users u ON u.user_id = m.user_id

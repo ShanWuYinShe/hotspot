@@ -70,6 +70,10 @@ func (r *stubMomentRepo) ListFavorites(_ context.Context, _ string, _ int, _ str
 	return r.favRes, r.favListErr
 }
 
+func (r *stubMomentRepo) ListFavoriteUserIDs(_ context.Context, _ string) ([]string, error) {
+	return nil, nil
+}
+
 func (r *stubMomentRepo) LoadMyState(ctx context.Context, a, b string) *MyMomentState {
 	return r.myState
 }

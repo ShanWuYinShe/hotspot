@@ -1,6 +1,11 @@
 package groupmessages
 
 const (
+	queryGetGroupName = `
+	SELECT name
+	FROM groups
+	WHERE group_id = $1`
+
 	queryInsertGroupMessage = `
 	INSERT INTO group_messages (message_id, group_id, sender_user_id, type, content, sent_at)
 	VALUES ($1,$2,$3,$4,$5,$6)`

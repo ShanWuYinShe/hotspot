@@ -49,10 +49,12 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	systemModule := system.NewModule(factory, sharedAppConfig)
 	systemModule.SetHealthRedisPinger(redisPinger)
 
-	gmModule := groupmessages.NewModule(factory, usersModule.Service)
-	pcModule := privatechats.NewModule(factory, sharedAppConfig)
-
 	notificationService := notify.NewServiceWithRepo(notify.NewPersistenceRepository(factory))
+	shareModule := share.NewModule(factory)
+
+	gmModule := groupmessages.NewModule(factory, usersModule.Service, notificationService, shareModule.Service)
+	pcModule := privatechats.NewModule(factory, sharedAppConfig, shareModule.Service)
+
 	systemModule.Service().SetBootstrapResolver(systemBootstrapResolver{
 		users:  usersModule.Service,
 		notify: notificationService,
@@ -102,7 +104,7 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 		reactionsModule,
 		reports.NewModule(factory),
 		searchModule,
-		share.NewModule(factory),
+		shareModule,
 		systemModule,
 		usersModule,
 	}

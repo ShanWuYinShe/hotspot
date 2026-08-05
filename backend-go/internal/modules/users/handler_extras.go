@@ -105,11 +105,14 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	if err := h.service.Upgrade(r.Context(), req); err != nil {
+	// 升级成功返回完整账户数据（spec api_spec_user.md users/upgrade），
+	// 客户端无需额外调 get_account 即可获取新的 user_type。
+	profile, err := h.service.Upgrade(r.Context(), req)
+	if err != nil {
 		h.writeServiceError(w, r, "Upgrade", err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(profile))
 }
 
 func isValidLoginID(loginID string) bool {

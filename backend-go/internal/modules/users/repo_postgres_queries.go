@@ -128,7 +128,7 @@ WHERE target_user_id = $1 AND user_id = ANY($2)`
 
 	queryCountUserStats = `
 SELECT
-  (SELECT COUNT(*) FROM moments m WHERE m.user_id = $1),
+  (SELECT COUNT(*) FROM moments m WHERE m.user_id = $1 AND m.is_deleted = FALSE),
   (SELECT COUNT(*) FROM user_relations ur JOIN user_relations rev ON rev.user_id = ur.target_user_id AND rev.target_user_id = ur.user_id AND rev.is_following = TRUE WHERE ur.user_id = $1 AND ur.is_following = TRUE),
   (SELECT COUNT(*) FROM user_relations ur WHERE ur.target_user_id = $1 AND ur.is_following = TRUE),
   (SELECT COUNT(*) FROM user_relations ur WHERE ur.user_id = $1 AND ur.is_following = TRUE),
@@ -204,6 +204,7 @@ SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.create
 FROM moments m
 LEFT JOIN users u ON u.user_id = m.user_id
 WHERE m.user_id = $1
+  AND m.is_deleted = FALSE
   AND ($2 OR m.privacy_level <> 'private')
   AND (
     $3::timestamptz IS NULL
@@ -219,6 +220,7 @@ FROM reactions r
 JOIN moments m ON m.moment_id = r.target_id
 LEFT JOIN users u ON u.user_id = m.user_id
 WHERE r.target_type = 'moment' AND r.user_id = $1
+  AND m.is_deleted = FALSE
   AND ($2 = '' OR m.user_id = $2 OR m.privacy_level <> 'private')
   AND (
     $3::timestamptz IS NULL

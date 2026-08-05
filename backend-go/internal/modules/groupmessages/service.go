@@ -3,6 +3,7 @@ package groupmessages
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"hotspot/backend-go/internal/modules/users"
@@ -11,9 +12,22 @@ import (
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
+// groupMentionNotifier 落库群聊 @ 通知（由 notify 模块实现，见 module.go 装配）。
+type groupMentionNotifier interface {
+	AppendGroupMentioned(ctx context.Context, targetUserID string, actor map[string]any, groupID, groupName, messageID, contentPreview string) (string, error)
+}
+
+// shareValidator 校验 share_code 有效性（由 share 模块实现，见 module.go 装配）。
+type shareValidator interface {
+	ValidateShareCode(ctx context.Context, shareCode string) error
+}
+
 var ErrNotGroupMember = errors.New("groupmessages: not a group member")
 
 var ErrUserMuted = errors.New("groupmessages: user is muted")
+
+// ErrInvalidShareCode：share 类型消息的 share_code 无效（不存在/已撤销/已过期）。
+var ErrInvalidShareCode = errors.New("groupmessages: invalid share code")
 
 type MutedError struct {
 	MutedUntil string
@@ -35,14 +49,19 @@ type userReader interface {
 }
 
 type Service struct {
-	repo  Repository
-	users userReader
+	repo     Repository
+	users    userReader
+	mentions groupMentionNotifier // optional; nil => 群聊 @ 不落库通知（测试/降级模式）
+	shares   shareValidator       // optional; nil => 不校验 share_code（测试/降级模式）
 }
 
 func NewService() *Service                        { return NewServiceWithRepo(NewInMemoryRepository()) }
 func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo, users: nil} }
 func NewServiceWithRepoAndUsers(repo Repository, users userReader) *Service {
 	return &Service{repo: repo, users: users}
+}
+func NewServiceWithDeps(repo Repository, users userReader, mentions groupMentionNotifier, shares shareValidator) *Service {
+	return &Service{repo: repo, users: users, mentions: mentions, shares: shares}
 }
 func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (MessageSent, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
@@ -58,6 +77,12 @@ func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (Messag
 		return MessageSent{}, err
 	} else if found && isMuted {
 		return MessageSent{}, &MutedError{MutedUntil: mutedUntil}
+	}
+	// share 类型：校验 share_code 存在且有效（spec api_spec_chat.md，防发送失效链接）
+	if req.ShareCode != "" && s.shares != nil {
+		if err := s.shares.ValidateShareCode(ctx, req.ShareCode); err != nil {
+			return MessageSent{}, ErrInvalidShareCode
+		}
 	}
 	msg, err := s.repo.Send(ctx, req)
 	if err != nil {
@@ -91,7 +116,43 @@ func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (Messag
 		}
 	}
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{Type: realtime.EventTypeGroupMessageNew, Payload: payload})
+	// 群聊 @ 通知（spec api_spec_chat.md「群聊 @ 通知」）：对被 @ 的每个成员分别落库+推送
+	s.notifyMentions(ctx, userID, req, msg)
 	return msg, nil
+}
+
+// notifyMentions 对被 @ 的成员逐人落库 group_mentioned 通知并推送
+// GroupMessageMentioned 事件（自动推送，无需订阅该群频道）。
+func (s *Service) notifyMentions(ctx context.Context, actorUserID string, req SendGroupMessageRequest, msg MessageSent) {
+	if s.mentions == nil || len(req.Mentions) == 0 {
+		return
+	}
+	actor := s.resolveUserInfo(ctx, actorUserID)
+	groupName := s.resolveGroupName(ctx, req.GroupID)
+	contentPreview := strings.TrimSpace(req.Content)
+	if len(contentPreview) > 80 {
+		contentPreview = contentPreview[:80]
+	}
+	for _, mentionedUserID := range req.Mentions {
+		if mentionedUserID == actorUserID {
+			continue
+		}
+		notificationID := ""
+		id, err := s.mentions.AppendGroupMentioned(ctx, mentionedUserID, actor, req.GroupID, groupName, msg.MessageID, contentPreview)
+		if err != nil {
+			observability.L().Error("groupmessages.mentions append failed", "error", err, "group_id", req.GroupID, "mentioned_user_id", mentionedUserID)
+		} else {
+			notificationID = id
+		}
+		realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeGroupMessageMentioned, Payload: map[string]any{
+			"notify_id":       notificationID,
+			"group_id":        req.GroupID,
+			"message_id":      msg.MessageID,
+			"actor":           actor,
+			"content_preview": contentPreview,
+			"mentioned_at":    msg.SentAt,
+		}})
+	}
 }
 func (s *Service) History(ctx context.Context, groupID string, pagination *PaginationParams) (PaginatedGroupMessages, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
@@ -231,4 +292,13 @@ func (s *Service) buildMedia(ctx context.Context, fileID string) map[string]any 
 
 func (s *Service) LookupMessage(ctx context.Context, messageID string) (found bool, senderID string, err error) {
 	return s.repo.MessageExists(ctx, messageID)
+}
+
+// resolveGroupName 解析群名用于 @ 通知负载（查询失败时回退为空串，不阻塞发送）。
+func (s *Service) resolveGroupName(ctx context.Context, groupID string) string {
+	name, ok, err := s.repo.GetGroupName(ctx, groupID)
+	if err != nil || !ok {
+		return ""
+	}
+	return name
 }

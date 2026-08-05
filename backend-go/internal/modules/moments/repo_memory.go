@@ -299,6 +299,18 @@ func (r *InMemoryRepository) ListFavorites(_ context.Context, userID string, lim
 	return PaginatedMoments{Items: items}, nil
 }
 
+func (r *InMemoryRepository) ListFavoriteUserIDs(_ context.Context, momentID string) ([]string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var userIDs []string
+	for userID, favs := range r.favorites {
+		if favs[momentID] {
+			userIDs = append(userIDs, userID)
+		}
+	}
+	return userIDs, nil
+}
+
 // sortMoments sorts a slice of MomentItem in place according to the given mode.
 // refPt is used for distance calculation; keyword and tag are used for relevance scoring.
 func sortMoments(items []MomentItem, sortBy string, refPt geo.Point, keyword, tag string) {

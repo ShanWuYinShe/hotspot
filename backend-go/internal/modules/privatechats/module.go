@@ -1,6 +1,8 @@
 package privatechats
 
 import (
+	"context"
+
 	"github.com/go-chi/chi/v5"
 
 	private_messages "hotspot/backend-go/internal/modules/privatemessages"
@@ -13,14 +15,20 @@ import (
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
+// shareValidator 校验 share_code 有效性（由 share 模块实现，经 bootstrap 注入）。
+type shareValidator interface {
+	ValidateShareCode(ctx context.Context, shareCode string) error
+}
+
 type Module struct {
 	chatHandler    *Handler
 	messageHandler *private_messages.Handler
 	messageRuntime *private_messages.Runtime
 }
 
-func NewModule(factory *persistence.Factory, source appconfig.Source) *Module {
+func NewModule(factory *persistence.Factory, source appconfig.Source, shares shareValidator) *Module {
 	messageRuntime := private_messages.NewRuntime(factory, source)
+	messageRuntime.SetShareValidator(shares)
 	userService := users.NewServiceWithRepo(users.NewPersistenceRepository(factory))
 	chatService := NewServiceWithDeps(NewPostgresRepository(factory), messageRuntime.ReadService(), userService)
 	return &Module{chatHandler: NewHandler(chatService, source), messageHandler: messageRuntime.Handler(), messageRuntime: messageRuntime}

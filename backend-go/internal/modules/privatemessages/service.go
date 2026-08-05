@@ -29,10 +29,16 @@ type userReader interface {
 	GetMySettings(context.Context) (users.UserSettings, error)
 }
 
+// shareValidator 校验 share_code 有效性（由 share 模块实现，见 module.go 装配）。
+type shareValidator interface {
+	ValidateShareCode(ctx context.Context, shareCode string) error
+}
+
 type Service struct {
 	repo      Repository
 	users     userReader
 	appConfig appconfig.Source // optional; nil => stranger quota disabled (0)
+	shares    shareValidator   // optional; nil => 不校验 share_code（测试/降级模式）
 }
 
 func NewService() *Service {
@@ -48,6 +54,10 @@ func NewServiceWithRepo(repo Repository) *Service {
 func NewServiceWithDeps(repo Repository, userService userReader) *Service {
 	return &Service{repo: repo, users: userService}
 }
+
+// SetShareValidator wires the share_code validator (spec api_spec_chat.md：
+// share 类型消息发送时校验有效性)。
+func (s *Service) SetShareValidator(v shareValidator) { s.shares = v }
 
 // SetAppConfig wires the app config source (used for the stranger message
 // daily quota). Optional: nil disables the quota check.
@@ -72,6 +82,13 @@ func NewRuntimeWithRepo(repo Repository) *Runtime {
 	}
 }
 
+// SetShareValidator wires the share_code validator into the runtime service.
+func (r *Runtime) SetShareValidator(v shareValidator) {
+	if svc, ok := r.readService.(*Service); ok {
+		svc.SetShareValidator(v)
+	}
+}
+
 func (r *Runtime) Handler() *Handler {
 	return r.handler
 }
@@ -84,6 +101,12 @@ func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (Mess
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	if err := s.ensureCanSend(ctx, principal.UserID, req.TargetUserID); err != nil {
 		return MessageSent{}, err
+	}
+	// share 类型：校验 share_code 存在且有效（spec api_spec_chat.md，防发送失效链接）
+	if req.ShareCode != "" && s.shares != nil {
+		if err := s.shares.ValidateShareCode(ctx, req.ShareCode); err != nil {
+			return MessageSent{}, ErrInvalidShareCode
+		}
 	}
 	msg, err := s.repo.Send(ctx, principal.UserID, req.TargetUserID, req)
 	if err != nil {
@@ -228,9 +251,9 @@ func (s *Service) ensureCanSend(ctx context.Context, userID, targetUserID string
 	if userID == targetUserID {
 		return nil
 	}
-	// 被拉黑统一返回 'privacy'(不暴露拉黑状态,见 api_spec_chat.md BlockReason)
+	// 拉黑明确返回 'blocked'（产品决策：拉黑就显示拉黑，见 api_spec_chat.md BlockReason）
 	if item.Relation != nil && item.Relation.IsBlocked {
-		return &MessageBlockedError{Reason: BlockReasonPrivacy}
+		return &MessageBlockedError{Reason: BlockReasonBlocked}
 	}
 	settings, settingsErr := s.users.GetMySettings(platformauth.WithPrincipal(ctx, platformauth.Principal{UserID: targetUserID, SessionID: "private-message-probe"}))
 	if settingsErr != nil {

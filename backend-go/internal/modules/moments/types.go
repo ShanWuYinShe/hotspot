@@ -45,6 +45,7 @@ type MomentItem struct {
 	CommentsCount int           `json:"comments_count"`
 	SharesCount   int           `json:"shares_count"`
 	User          UserInfo      `json:"user"`
+	IsDeleted     bool          `json:"is_deleted"`
 	Location      Location      `json:"location"`
 	PrivacyLevel  string        `json:"privacy_level,omitempty"`
 	// Reactions is the per-emoji aggregate (@auth-only reacted_by_me). Omitted

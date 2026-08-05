@@ -270,36 +270,54 @@ func (s *Service) UpdateLocation(ctx context.Context, req UpdateLocationRequest)
 	return nil
 }
 
-func (s *Service) Upgrade(ctx context.Context, req UpgradeAccountRequest) error {
+func (s *Service) Upgrade(ctx context.Context, req UpgradeAccountRequest) (MyProfile, error) {
 	startedAt := time.Now()
 	observability.L().Info("users.upgrade started")
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
-		return err
+		return MyProfile{}, err
 	}
 	profile, ok, err := s.repo.GetProfile(ctx, principal.UserID)
 	if err != nil {
 		observability.L().Error("users.upgrade failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return err
+		return MyProfile{}, err
 	}
 	if !ok {
 		profile = s.defaultProfile(ctx, principal.UserID)
 	}
 	if profile.UserType == UserTypeNormal {
-		return ErrConflict
+		return MyProfile{}, ErrConflict
 	}
 	profile.UserType = UserTypeNormal
-	if strings.Contains(req.LoginID, "@") {
+	// 推断规则（spec api_spec_user.md AccountData.email/phone）：
+	// 含 '@' → email；纯数字 → phone；用户名 → 两字段均省略。
+	switch {
+	case strings.Contains(req.LoginID, "@"):
 		profile.Email = req.LoginID
-	} else {
+	case isNumericLoginID(req.LoginID):
 		profile.Phone = req.LoginID
 	}
 	if err := s.repo.PutProfile(ctx, profile); err != nil {
 		observability.L().Error("users.upgrade failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return err
+		return MyProfile{}, err
 	}
+	// Token/Session 语义（spec api_spec_user.md）：升级不吊销当前 session、不重发
+	// token——user_type 更新后现有 token 继续有效，客户端无需重新登录。
 	observability.L().Info("users.upgrade completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
-	return nil
+	return profile, nil
+}
+
+// isNumericLoginID 判断 login_id 是否为纯数字（手机号）。
+func isNumericLoginID(loginID string) bool {
+	if loginID == "" {
+		return false
+	}
+	for _, r := range loginID {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *Service) DeleteAccount(ctx context.Context, req DeleteAccountRequest) error {

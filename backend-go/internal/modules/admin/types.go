@@ -119,9 +119,8 @@ const (
 	UserAccountStatusNormal UserAccountStatus = "normal"
 	UserAccountStatusBanned UserAccountStatus = "banned"
 
+	// ReportStatus/ReportAction 收敛（spec api_spec_types.md）：reviewing/escalated/escalate 已删除
 	ReportStatusPending   ReportStatus = "pending"
-	ReportStatusReviewing ReportStatus = "reviewing"
-	ReportStatusEscalated ReportStatus = "escalated"
 	ReportStatusResolved  ReportStatus = "resolved"
 	ReportStatusDismissed ReportStatus = "dismissed"
 
@@ -131,9 +130,8 @@ const (
 	ReportTargetTypeMessage ReportTargetType = "message"
 	ReportTargetTypeGroup   ReportTargetType = "group"
 
-	ReportActionResolve  ReportAction = "resolve"
-	ReportActionDismiss  ReportAction = "dismiss"
-	ReportActionEscalate ReportAction = "escalate"
+	ReportActionResolve ReportAction = "resolve"
+	ReportActionDismiss ReportAction = "dismiss"
 )
 
 type AdminUserItem struct {

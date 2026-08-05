@@ -960,8 +960,6 @@ func (r *InMemoryRepository) HandleReport(_ context.Context, reportID string, ac
 		record.Item.Status = ReportStatusResolved
 	case ReportActionDismiss:
 		record.Item.Status = ReportStatusDismissed
-	case ReportActionEscalate:
-		record.Item.Status = ReportStatusEscalated
 	}
 	record.Item.HandledAt = now
 	record.Item.HandleNote = note

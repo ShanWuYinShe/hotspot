@@ -61,6 +61,10 @@ func (r *stubRepo) MessageExists(_ context.Context, _ string) (bool, string, err
 	return false, "", nil
 }
 
+func (r *stubRepo) GetGroupName(_ context.Context, _ string) (string, bool, error) {
+	return "test group", true, nil
+}
+
 func (r *stubRepo) LookupMessageMeta(_ context.Context, _ string) (MessageOwnerMeta, bool, error) {
 	if !r.ownerFound {
 		return MessageOwnerMeta{}, false, nil

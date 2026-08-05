@@ -209,7 +209,7 @@ func buildSearchMomentsQuery(bounds geo.Bounds, keyword *string, tag *string, so
 	}
 	args := make([]any, 0, 6)
 	var builder strings.Builder
-	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level FROM moments m LEFT JOIN users u ON u.user_id = m.user_id WHERE m.privacy_level = 'public' AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi) WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)`)
+	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted FROM moments m LEFT JOIN users u ON u.user_id = m.user_id WHERE m.privacy_level = 'public' AND m.is_deleted = FALSE AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi) WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)`)
 	args = append(args, mins, maxs)
 	if keyword != nil && *keyword != "" {
 		args = append(args, *keyword)
@@ -367,6 +367,33 @@ func (r *PostgresRepository) ListFavorites(ctx context.Context, userID string, l
 		items[i].Tags = tagsByMomentID[items[i].MomentID]
 	}
 	return PaginatedMoments{Items: items}, nil
+}
+
+func (r *PostgresRepository) ListFavoriteUserIDs(ctx context.Context, momentID string) ([]string, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return nil, persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return nil, persistence.ErrNotImplemented
+	}
+	rows, err := queryable.Query(ctx, queryListMomentFavoriteUserIDs, momentID)
+	if err != nil {
+		return nil, fmt.Errorf("moments.ListFavoriteUserIDs query: %w", err)
+	}
+	defer rows.Close()
+	var userIDs []string
+	for rows.Next() {
+		var userID string
+		if err := rows.Scan(&userID); err != nil {
+			return nil, fmt.Errorf("moments.ListFavoriteUserIDs scan: %w", err)
+		}
+		userIDs = append(userIDs, userID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("moments.ListFavoriteUserIDs rows: %w", err)
+	}
+	return userIDs, nil
 }
 
 type momentInteractionCursor struct {

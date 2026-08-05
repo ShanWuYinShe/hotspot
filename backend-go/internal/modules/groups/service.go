@@ -163,35 +163,36 @@ func (s *Service) resolveReferencePoint(ctx context.Context) GeoPoint {
 	return GeoPoint{Latitude: lat, Longitude: lng}
 }
 
-func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) error {
+func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) (GroupItem, error) {
 	startedAt := time.Now()
 	observability.L().Info("groups.update started", "group_id", req.GroupID)
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
 		observability.L().Error("groups.update failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return err
+		return GroupItem{}, err
 	}
 	if !ok {
 		observability.L().Warn("groups.update not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return ErrGroupNotFound
+		return GroupItem{}, ErrGroupNotFound
 	}
 	if group.MyState == nil || group.MyState.Role != GroupRoleOwner {
 		observability.L().Warn("groups.update permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return ErrAccessRestricted
+		return GroupItem{}, ErrAccessRestricted
 	}
 	if err := s.repo.Update(ctx, principal.UserID, req); err != nil {
 		observability.L().Error("groups.update failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return fmt.Errorf("groups.Service.Update: repo: %w", err)
+		return GroupItem{}, fmt.Errorf("groups.Service.Update: repo: %w", err)
 	}
-	// 重新读取以构造 updated_fields（对比变更前后）；受控字段见 buildGroupUpdatedFields。
+	// 重新读取以构造 updated_fields（对比变更前后）并返回更新后完整对象
+	// （内容类更新返回更新后对象，spec api_spec_base.md「设计规范」）。
 	updated, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
 		observability.L().Error("groups.update refresh failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return fmt.Errorf("groups.Service.Update: refresh: %w", err)
+		return GroupItem{}, fmt.Errorf("groups.Service.Update: refresh: %w", err)
 	}
 	if !ok {
-		return ErrGroupNotFound
+		return GroupItem{}, ErrGroupNotFound
 	}
 	payload := map[string]any{
 		"group_id":   req.GroupID,
@@ -206,7 +207,7 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) error {
 		Payload: payload,
 	})
 	observability.L().Info("groups.update completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
-	return nil
+	return updated, nil
 }
 
 // buildGroupUpdatedFields 计算更新前后 GroupItem 的可见变更字段（spec websocket.md GroupUpdatedPayload）。
@@ -359,7 +360,8 @@ func (s *Service) JoinGroup(ctx context.Context, req JoinGroupRequest) (JoinGrou
 		observability.L().Error("groups.join_group failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return JoinGroupResult{}, fmt.Errorf("groups.Service.JoinGroup: repo: %w", err)
 	}
-	if result.Status == JoinGroupStatusPendingApproval {
+	if result.Status == JoinGroupStatusPendingApproval && result.IsNewApplication {
+		// 仅新创建的申请才通知管理员；命中已有 pending 申请（自然去重）不重复通知
 		s.notifyGroupApplicationReceived(ctx, group, principal.UserID, result.Application, req.Message)
 	}
 	observability.L().Info("groups.join_group completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -414,18 +416,31 @@ func (s *Service) ListAnnouncements(ctx context.Context, req GroupAnnouncementsR
 	return items, nil
 }
 
-func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateGroupAnnouncementRequest) error {
+func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
-		return err
+		return GroupAnnouncementItem{}, err
 	}
 	if !ok {
-		return ErrGroupNotFound
+		return GroupAnnouncementItem{}, ErrGroupNotFound
 	}
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
-		return ErrAccessRestricted
+		return GroupAnnouncementItem{}, ErrAccessRestricted
 	}
-	return s.repo.UpdateAnnouncement(ctx, req.GroupID, req)
+	if err := s.repo.UpdateAnnouncement(ctx, req.GroupID, req); err != nil {
+		return GroupAnnouncementItem{}, err
+	}
+	// 内容类更新返回更新后完整对象（spec api_spec_base.md「设计规范」）
+	items, err := s.repo.ListAnnouncements(ctx, req.GroupID)
+	if err != nil {
+		return GroupAnnouncementItem{}, err
+	}
+	for _, item := range items {
+		if item.AnnouncementID == req.AnnouncementID {
+			return item, nil
+		}
+	}
+	return GroupAnnouncementItem{}, ErrAnnouncementNotFound
 }
 
 func (s *Service) DeleteAnnouncement(ctx context.Context, req DeleteGroupAnnouncementRequest) error {

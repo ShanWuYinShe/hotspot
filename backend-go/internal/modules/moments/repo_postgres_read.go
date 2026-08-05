@@ -156,7 +156,7 @@ func scanMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, error) 
 	var userID, nickname, locationName, privacyLevel string
 	var createdAt time.Time
 	var latitude, longitude float64
-	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel); err != nil {
+	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &item.IsDeleted); err != nil {
 		return MomentItem{}, fmt.Errorf("moments.scanMomentRow scan: %w", err)
 	}
 	// nickname 已通过 SQL 的 COALESCE(u.nickname, '') 兜底
@@ -225,7 +225,7 @@ func scanFavoriteMomentRow(scanner interface{ Scan(...any) error }) (MomentItem,
 	var userID, nickname, locationName, privacyLevel string
 	var createdAt, favoritedAt time.Time
 	var latitude, longitude float64
-	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &favoritedAt); err != nil {
+	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &item.IsDeleted, &favoritedAt); err != nil {
 		return MomentItem{}, "", fmt.Errorf("moments.scanFavoriteMomentRow scan: %w", err)
 	}
 	if nickname == "" {

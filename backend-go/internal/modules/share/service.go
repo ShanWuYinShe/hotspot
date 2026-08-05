@@ -60,6 +60,18 @@ func (s *Service) Get(ctx context.Context, req GetShareRequest) (ShareDetail, er
 	return item, nil
 }
 
+// ValidateShareCode 校验 share_code 存在且有效（未撤销/未过期）。
+// 供消息模块发送 share 类型消息时调用（spec api_spec_chat.md「消息发送统一规则」：
+// 无效返回错误，防发送失效链接）。
+func (s *Service) ValidateShareCode(ctx context.Context, shareCode string) error {
+	query, err := newGetShareQuery(GetShareRequest{ShareCode: shareCode})
+	if err != nil {
+		return err
+	}
+	_, err = s.repo.Get(ctx, query)
+	return err
+}
+
 func (s *Service) List(ctx context.Context, req ShareListRequest) (PaginatedShares, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
 	if !ok || principal.UserID == "" {

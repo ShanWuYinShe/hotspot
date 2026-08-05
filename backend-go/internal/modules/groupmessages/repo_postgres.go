@@ -203,6 +203,19 @@ func (r *PostgresRepository) MessageExists(ctx context.Context, messageID string
 	return true, senderUserID, nil
 }
 
+func (r *PostgresRepository) GetGroupName(ctx context.Context, groupID string) (string, bool, error) {
+	queryable, ok := r.getQueryable()
+	if !ok {
+		return "", false, persistence.ErrNotImplemented
+	}
+	var name string
+	err := queryable.QueryRow(ctx, queryGetGroupName, groupID).Scan(&name)
+	if err != nil {
+		return "", false, nil
+	}
+	return name, true, nil
+}
+
 // LookupMessageMeta returns the group + sender metadata used by the service
 // layer to authorize Update/Recall (membership + ownership). A NULL
 // sender_user_id is returned as "" — the service refuses to mutate such

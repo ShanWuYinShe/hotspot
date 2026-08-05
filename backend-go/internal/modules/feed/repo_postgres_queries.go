@@ -75,7 +75,8 @@ SELECT m.moment_id,
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
 JOIN user_relations ur ON ur.target_user_id = m.user_id AND ur.user_id = $1 AND ur.is_following = TRUE
-WHERE m.privacy_level = 'public'`
+WHERE m.privacy_level = 'public'
+  AND m.is_deleted = FALSE`
 
 	queryFeedMomentsNearby = `
 SELECT m.moment_id,
@@ -96,6 +97,7 @@ SELECT m.moment_id,
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
 WHERE m.privacy_level = 'public'
+  AND m.is_deleted = FALSE
   AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
               WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)`
 
@@ -128,5 +130,6 @@ SELECT m.moment_id,
        EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $1)
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
-WHERE m.privacy_level = 'public'`
+WHERE m.privacy_level = 'public'
+  AND m.is_deleted = FALSE`
 )

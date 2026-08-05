@@ -437,16 +437,19 @@ func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string
 	}
 	// requires_approval：创建加入申请，审核通过后才算真正加入
 	if group.RequiresApproval {
+		// 自然去重：命中已有 pending 申请返回已有 application_id（与 postgres 实现一致）
 		for _, record := range r.applications {
 			if record.GroupID == groupID && record.ApplicantID == userID && record.Status == ApplicationStatusPending {
-				return JoinGroupResult{}, ErrAlreadyApplied
+				return JoinGroupResult{Status: JoinGroupStatusPendingApproval, Application: &struct {
+					ApplicationID string `json:"application_id"`
+				}{ApplicationID: record.ApplicationID}}, nil
 			}
 		}
 		now := time.Now().UTC()
 		applicationID := "app_" + now.Format("20060102150405.000000000")
 		record := inMemoryApplicationRecord{ApplicationID: applicationID, GroupID: groupID, ApplicantID: userID, Status: ApplicationStatusPending, Message: message, CreatedAt: now.Format(time.RFC3339)}
 		r.applications[applicationID] = record
-		return JoinGroupResult{Status: JoinGroupStatusPendingApproval, Application: &struct {
+		return JoinGroupResult{Status: JoinGroupStatusPendingApproval, IsNewApplication: true, Application: &struct {
 			ApplicationID string `json:"application_id"`
 		}{ApplicationID: applicationID}}, nil
 	}

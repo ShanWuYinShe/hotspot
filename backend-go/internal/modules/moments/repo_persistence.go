@@ -64,6 +64,10 @@ func (r *PersistenceRepository) ListFavorites(ctx context.Context, userID string
 	return r.impl.ListFavorites(ctx, userID, limit, cursor)
 }
 
+func (r *PersistenceRepository) ListFavoriteUserIDs(ctx context.Context, momentID string) ([]string, error) {
+	return r.impl.ListFavoriteUserIDs(ctx, momentID)
+}
+
 func (r *PersistenceRepository) LoadMyState(ctx context.Context, momentID, userID string) *MyMomentState {
 	return r.impl.LoadMyState(ctx, momentID, userID)
 }

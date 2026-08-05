@@ -273,7 +273,7 @@ func TestServiceOpenTheDoorNotFound(t *testing.T) {
 func TestServiceUpdateRequiresOwner(t *testing.T) {
 	repo := &stubGroupsRepo{getResult: memberGroup(), getFound: true}
 	svc := NewServiceWithRepo(repo)
-	err := svc.Update(grpCtx("u1"), UpdateGroupRequest{GroupID: "g1"})
+	_, err := svc.Update(grpCtx("u1"), UpdateGroupRequest{GroupID: "g1"})
 	if !errors.Is(err, ErrAccessRestricted) {
 		t.Fatalf("expected access restricted, got %v", err)
 	}
@@ -281,7 +281,7 @@ func TestServiceUpdateRequiresOwner(t *testing.T) {
 
 func TestServiceUpdateRejectsNotFound(t *testing.T) {
 	svc := NewServiceWithRepo(&stubGroupsRepo{})
-	err := svc.Update(grpCtx("u1"), UpdateGroupRequest{GroupID: "g1"})
+	_, err := svc.Update(grpCtx("u1"), UpdateGroupRequest{GroupID: "g1"})
 	if !errors.Is(err, ErrGroupNotFound) {
 		t.Fatalf("expected not found, got %v", err)
 	}
@@ -290,7 +290,7 @@ func TestServiceUpdateRejectsNotFound(t *testing.T) {
 func TestServiceUpdateHappyPath(t *testing.T) {
 	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
 	svc := NewServiceWithRepo(repo)
-	err := svc.Update(grpCtx("u1"), UpdateGroupRequest{GroupID: "g1"})
+	_, err := svc.Update(grpCtx("u1"), UpdateGroupRequest{GroupID: "g1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1046,7 +1046,7 @@ func TestServiceTransferOwnershipPropagatesRepoError(t *testing.T) {
 func TestServiceUpdatePropagatesRepoError(t *testing.T) {
 	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, updateErr: errors.New("db error")}
 	svc := NewServiceWithRepo(repo)
-	err := svc.Update(grpCtx("u1"), UpdateGroupRequest{GroupID: "g1"})
+	_, err := svc.Update(grpCtx("u1"), UpdateGroupRequest{GroupID: "g1"})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -1282,7 +1282,7 @@ func TestServiceUpdateBroadcastsGroupUpdatedWithChangedFields(t *testing.T) {
 	sink := &groupRealtimeSink{}
 	hub.SetGroupSubscriptions([]string{created.Group.GroupID}, sink)
 
-	if err := service.Update(ctx, UpdateGroupRequest{GroupID: created.Group.GroupID, Name: "New Name", Description: "new desc"}); err != nil {
+	if _, err := service.Update(ctx, UpdateGroupRequest{GroupID: created.Group.GroupID, Name: "New Name", Description: "new desc"}); err != nil {
 		t.Fatalf("update: %v", err)
 	}
 	if len(sink.events) != 1 || sink.events[0].Type != realtime.EventTypeGroupUpdated {
