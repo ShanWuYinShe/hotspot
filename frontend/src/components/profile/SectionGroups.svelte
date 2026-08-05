@@ -93,4 +93,3 @@
 			<p class="text-base text-text-secondary">没有找到匹配的群组</p>
 		</div>
 	{/if}
-</div>
