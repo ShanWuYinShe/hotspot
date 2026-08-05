@@ -15,3 +15,15 @@ export function formatDistance(d?: number | string | null): string {
   if (d == null) return '';
   return typeof d === 'number' ? `${Math.round(d * 10) / 10}m` : d;
 }
+
+/**
+ * 日期时间展示格式化（动态详情/评论等完整时间场景）。
+ * 输入 ISO 字符串，输出 "2026-08-05 17:20"；非法/空输入返回空串。
+ */
+export function formatDateTime(iso?: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}

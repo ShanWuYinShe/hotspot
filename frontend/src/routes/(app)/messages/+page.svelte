@@ -11,11 +11,12 @@
 	import GroupChatView from '@/components/messages/GroupChatView.svelte';
 	import ChatListItem, { type ChatItem } from '@/components/messages/ChatListItem.svelte';
 	import NewConversationSheet from '@/components/overlays/NewConversationSheet.svelte';
-	import List from '@/components/list/List.svelte';
+	import ListContainer from '@/components/list/ListContainer.svelte';
 	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import { getPrivateChats, listMyGroups, markPrivateRead, markGroupRead } from '@/api';
-	import { ROUTES } from '@/lib/routes';
+	import { formatTime } from '@/lib/chat.svelte';
+import { ROUTES } from '@/lib/routes';
 	import { presence, watchPresence } from '@/stores/presence.svelte';
 
 	// 消息列表：在线条 + 会话列表（私聊 + 群聊混合）+ 新会话 Sheet + 建群 Sheet；
@@ -52,7 +53,7 @@
 					name: c.other_user?.nickname ?? '',
 					avatar: c.other_user?.avatar_url ?? '',
 					lastMessage: c.last_message?.content ?? '',
-					time: c.last_message?.sent_at ?? c.last_activity_at ?? '',
+					time: formatTime(c.last_message?.sent_at ?? c.last_activity_at),
 					unread: c.unread_count ?? 0,
 					online: c.presence_status === 'online',
 					group: false,
@@ -197,7 +198,7 @@
 			<!-- Chat list（List 契约：分栏内连接列表，行无独立边框。
 			     每行外层 px-3 py-1 包裹——对齐 Figma MessagesPage：行间有呼吸间距，
 			     选中态 glow 不与相邻行重叠，分隔线嵌在间距中不显突兀） -->
-			<List class="flex-1 overflow-y-auto no-scrollbar px-2 py-2">
+			<ListContainer class="flex-1 overflow-y-auto no-scrollbar px-2 py-2">
 				{#if totalUnread > 0}
 					<p class="uppercase px-2 mb-1 text-text-secondary text-[9px] tracking-[0.12em]">未读</p>
 				{/if}
@@ -211,7 +212,7 @@
 						/>
 					</div>
 				{/each}
-			</List>
+			</ListContainer>
 		</div>
 
 		<!-- Right: chat view or empty state（对齐 Figma：无卡片包裹，直接平铺） -->
@@ -335,7 +336,7 @@
 				{/snippet}
 			</EmptyState>
 		{:else}
-			<List class="px-2 py-1">
+			<ListContainer class="px-2 py-1">
 				{#each filtered as chat (chat.id)}
 					<div class="px-3 py-1">
 						<ChatListItem
@@ -344,7 +345,7 @@
 						/>
 					</div>
 				{/each}
-			</List>
+			</ListContainer>
 		{/if}
 	</ContentColumn>
 

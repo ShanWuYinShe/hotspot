@@ -1,7 +1,7 @@
 <script lang="ts">
 import { Check, Moon, Palette, Sun, Database } from '@lucide/svelte';
 import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-import List from '@/components/list/List.svelte';
+import ListContainer from '@/components/list/ListContainer.svelte';
 import ListItem from '@/components/list/ListItem.svelte';
 	import { theme, toggleDark, setTheme } from '@/stores/theme.svelte';
 	import * as Popover from '@/components/ui/popover';
@@ -184,7 +184,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 				<div class="mt-2 rounded-small ring-1 ring-border-default px-3 py-2.5" style="color:var(--text-primary);">
 					<span class="block text-sm font-medium">模拟登录态</span>
 					<span class="mb-2 block text-xxs text-text-secondary">影响 login/register/guest/reset 的返回</span>
-					<List>
+					<ListContainer>
 						{#each AUTH_SCENARIOS as s}
 							<ListItem
 								pressed={scenario === s.id}
@@ -198,7 +198,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 								{/if}
 							</ListItem>
 						{/each}
-					</List>
+					</ListContainer>
 					<button
 						type="button"
 						onclick={() => void resetLoggedOut()}

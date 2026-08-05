@@ -8,7 +8,7 @@
 	import { type NearbyUser } from '@/routes/(app)/_home/nearby-users';
 	import { toActivities, type Activity } from '@/routes/(app)/_home/activity-data';
 	import GroupCarousel, { type NearbyGroup } from '@/routes/(app)/_home/GroupCarousel.svelte';
-	import List from '@/components/list/List.svelte';
+	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -112,7 +112,7 @@
 </script>
 
 {#snippet activityRows(items: Activity[], onClick: (id: number) => void)}
-	<List bordered>
+	<ListContainer bordered>
 		{#each items as item (item.id)}
 			<ListItem
 				onClick={() => onClick(item.id)}
@@ -132,11 +132,11 @@
 				<ChevronRight style="width:13px;height:13px;color:var(--text-secondary);" strokeWidth={1.5} />
 			</ListItem>
 		{/each}
-	</List>
+	</ListContainer>
 {/snippet}
 
 {#snippet userRows(users: NearbyUser[], following: Set<string>, onToggle: (id: string) => void)}
-	<List bordered>
+	<ListContainer bordered>
 		{#each users as u (u.id)}
 			{@const followed = following.has(u.id)}
 			<UserCardRow name={u.name} avatar={u.avatar}>
@@ -169,7 +169,7 @@
 				{/snippet}
 			</UserCardRow>
 		{/each}
-	</List>
+	</ListContainer>
 {/snippet}
 
 {#snippet homeContent()}

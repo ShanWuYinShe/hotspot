@@ -8,7 +8,7 @@
 	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
 	import RailLocationMini from '@/components/layout/desktop/RailLocationMini.svelte';
 	import * as Dialog from '@/components/ui/dialog';
-	import List from '@/components/list/List.svelte';
+	import ListContainer from '@/components/list/ListContainer.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { getEventDetail, getSimilarEvents } from '@/api';
@@ -279,7 +279,7 @@
 				</div>
 				<span class="rounded-full px-2 py-1 text-xxs" style="color:{safeEv.color};background:{evTone(12)};">发起人</span>
 			</div>
-			<List>
+			<ListContainer>
 			{#each safeEv.participants as participant (participant.id)}
 				<div class="flex items-center gap-3 py-3">
 					<img src={participant.avatar} alt={participant.name} class="h-10 w-10 rounded-full object-cover" />
@@ -290,7 +290,7 @@
 					<Check size={15} color={safeEv.color} />
 				</div>
 			{/each}
-			</List>
+			</ListContainer>
 		</div>
 		<div class="px-5 pb-5 pt-3" style="border-top:1px solid var(--border-default);">
 			<button type="button" onclick={() => (showParticipants = false)} class="w-full rounded-full py-3 text-base font-semibold outline-none" style="background:{evTone(14)};color:{safeEv.color};">知道了</button>

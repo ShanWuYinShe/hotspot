@@ -3,11 +3,11 @@
 	import { ArrowLeft, Bell, Check, MapPin, MessageCircle, Users } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
-	import List from '@/components/list/List.svelte';
+	import ListContainer from '@/components/list/ListContainer.svelte';
 import ListItem from '@/components/list/ListItem.svelte';
 	import { Tabs } from 'bits-ui';
 	import { ROUTES } from '@/lib/routes';
-	import { formatDistance } from '@/lib/utils';
+	import { formatDistance, formatDateTime } from '@/lib/utils';
 	import { getGroupDetail, getGroupMembers, getGroupAnnouncements } from '@/api';
 	import { wsClient } from '@/lib/ws/client';
 	import { presence, watchPresence } from '@/stores/presence.svelte';
@@ -121,7 +121,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 				const items: Announcement[] = (announcementsData.items || []).map((a) => ({
 					title: a.title ?? '',
 					body: a.content ?? '',
-					time: a.created_at ?? ''
+					time: formatDateTime(a.created_at)
 				}));
 				announcements = items;
 			}
@@ -254,7 +254,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 				</div>
 				{:else if tab === 'members'}
 					<!-- 空旷内容区 → List bordered（有边框列表契约）；列表行不设独立边框 -->
-					<List bordered class="mt-6">
+					<ListContainer bordered class="mt-6">
 						{#each members as member (member.id)}
 							<ListItem
 								onClick={() => {
@@ -276,10 +276,10 @@ import ListItem from '@/components/list/ListItem.svelte';
 								<span class="text-xs text-text-secondary">查看资料</span>
 							</ListItem>
 						{/each}
-					</List>
+					</ListContainer>
 			{:else}
 				<!-- 空旷内容区 → List bordered（有边框列表契约） -->
-				<List bordered class="mt-6">
+				<ListContainer bordered class="mt-6">
 					{#each announcements as item (item.title)}
 						<article class="px-4 py-4">
 							<p class="text-[14px] font-medium text-text-primary">{item.title}</p>
@@ -287,7 +287,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 							<p class="mt-2 text-xs text-text-secondary">{item.time}</p>
 						</article>
 					{/each}
-				</List>
+				</ListContainer>
 			{/if}
 		</main>
 

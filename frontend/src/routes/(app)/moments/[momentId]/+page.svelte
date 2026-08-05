@@ -14,7 +14,7 @@
 	import MomentPostBody from './MomentPostBody.svelte';
 	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment, getFeedNearby, searchMoments } from '@/api';
 	import { ROUTES } from '@/lib/routes';
-	import { formatDistance } from '@/lib/utils';
+	import { formatDistance, formatDateTime } from '@/lib/utils';
 
 	// 动态详情：点赞/收藏/评论/复制链接/更多菜单 + 桌面右 Rail。
 
@@ -114,7 +114,7 @@
 						location: detailData.location?.location_name ?? '',
 						image: detailData.images?.[0]?.url ?? '',
 						content: detailData.description ?? '',
-						time: detailData.created_at ?? '',
+						time: formatDateTime(detailData.created_at),
 						likes: detailData.likes_count ?? 0,
 						tag: detailData.tags?.[0] ?? '',
 						comments: []
@@ -136,7 +136,7 @@
 						user: c.user?.nickname ?? '',
 						avatar: c.user?.avatar_url ?? '',
 						text: c.content ?? '',
-						time: c.created_at ?? '',
+						time: formatDateTime(c.created_at),
 						likes: (c.reactions || []).reduce((s, r) => s + (r.count ?? 0), 0)
 					}));
 					apiComments = items;

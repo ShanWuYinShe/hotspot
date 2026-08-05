@@ -1,7 +1,7 @@
 <script lang="ts" generics="T extends { id: string }">
 	import type { Component, Snippet } from 'svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-	import List from '@/components/list/List.svelte';
+	import ListContainer from '@/components/list/ListContainer.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import MetricRow, { type MetricItem } from '@/components/data-display/MetricRow.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
@@ -137,11 +137,11 @@
 					{/snippet}
 				</EmptyState>
 			{:else}
-				<List bordered>
+				<ListContainer bordered>
 					{#each items as item (item.id)}
 						{@render children(item)}
 					{/each}
-				</List>
+				</ListContainer>
 			{/if}
 		</div>
 	{/if}

@@ -9,7 +9,7 @@
 	import GroupCarousel, { type NearbyGroup } from '@/routes/(app)/_home/GroupCarousel.svelte';
 	import { type NearbyUser } from '@/routes/(app)/_home/nearby-users';
 	import { toActivities, type Activity } from '@/routes/(app)/_home/activity-data';
-	import List from '@/components/list/List.svelte';
+	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -113,7 +113,7 @@
 	<!-- 附近的人 -->
 	<div class="mt-6">
 		<SectionHead title="附近的人" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
-		<List bordered>
+		<ListContainer bordered>
 			{#each nearbyUsers.slice(0, 4) as u (u.id)}
 				{@const followed = followingIds.has(u.id)}
 				<UserCardRow name={u.name} avatar={u.avatar}>
@@ -146,7 +146,7 @@
 					{/snippet}
 				</UserCardRow>
 			{/each}
-		</List>
+		</ListContainer>
 	</div>
 
 	<!-- 附近群组 -->
@@ -158,7 +158,7 @@
 	<!-- 附近动态 -->
 	<div class="mt-6">
 		<SectionHead title="附近动态" action="查看全部" onAction={() => void goto(ROUTES.nearbyMoments)} />
-		<List bordered>
+		<ListContainer bordered>
 			{#each activities.slice(0, 3) as item (item.id)}
 				<ListItem
 					onClick={() => void goto(ROUTES.event(item.id))}
@@ -178,6 +178,6 @@
 					<ChevronRight style="width:13px;height:13px;color:var(--text-secondary);" strokeWidth={1.5} />
 				</ListItem>
 			{/each}
-		</List>
+		</ListContainer>
 	</div>
 </StandardPageLayout>

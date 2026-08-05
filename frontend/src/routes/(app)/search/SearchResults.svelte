@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Search as SearchIcon, Users, FileText, Hash, ArrowUpRight } from '@lucide/svelte';
-import List from '@/components/list/List.svelte';
+import ListContainer from '@/components/list/ListContainer.svelte';
 import ListItem from '@/components/list/ListItem.svelte';
 import Avatar from '@/components/shared/Avatar.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -94,7 +94,7 @@ import Avatar from '@/components/shared/Avatar.svelte';
 						<Users class="size-4 text-accent-default" strokeWidth={1.7} />
 						<h2 class="text-sm font-medium text-text-primary">用户</h2>
 					</div>
-					<List>
+					<ListContainer>
 						{#each results.users as person (person.user_id)}
 							<ListItem
 								onClick={() => void goto(ROUTES.user(person.user_id))}
@@ -111,7 +111,7 @@ import Avatar from '@/components/shared/Avatar.svelte';
 								<ArrowUpRight class="size-4 text-text-secondary" />
 							</ListItem>
 						{/each}
-					</List>
+					</ListContainer>
 				</section>
 			{/if}
 
@@ -125,7 +125,7 @@ import Avatar from '@/components/shared/Avatar.svelte';
 						<FileText class="size-4 text-accent-default" strokeWidth={1.7} />
 						<h2 class="text-sm font-medium text-text-primary">动态</h2>
 					</div>
-					<List>
+					<ListContainer>
 						{#each results.moments as moment (moment.moment_id)}
 							<ListItem
 								onClick={() => void goto(ROUTES.moment(moment.moment_id))}
@@ -151,7 +151,7 @@ import Avatar from '@/components/shared/Avatar.svelte';
 								<ArrowUpRight class="size-4 text-text-secondary" />
 							</ListItem>
 						{/each}
-					</List>
+					</ListContainer>
 				</section>
 			{/if}
 
@@ -165,7 +165,7 @@ import Avatar from '@/components/shared/Avatar.svelte';
 						<Hash class="size-4 text-accent-default" strokeWidth={1.7} />
 						<h2 class="text-sm font-medium text-text-primary">话题</h2>
 					</div>
-					<List>
+					<ListContainer>
 						{#each results.topics as topic (topic)}
 							<ListItem
 								onClick={() => onChoose(topic)}
@@ -177,7 +177,7 @@ import Avatar from '@/components/shared/Avatar.svelte';
 								<ArrowUpRight class="size-4 text-text-secondary" />
 							</ListItem>
 						{/each}
-					</List>
+					</ListContainer>
 				</section>
 			{/if}
 		</div>

@@ -2,9 +2,9 @@
 	import type { Snippet } from 'svelte';
 	import { cn } from '@/lib/utils';
 
-	// 列表骨架组件（list）——列表只有两个公共组件：List（容器）+ ListItem（行）。
+	// 列表骨架组件（list）——列表只有两个公共组件：ListContainer（容器）+ ListItem（行）。
 	// ListItem 是唯一交互行组件（对齐 Figma Make InteractiveListRow 契约）：
-	//   - tone=joined：连接列表行（--surface-primary 表面，配合 List 使用）
+	//   - tone=joined：连接列表行（--surface-primary 表面，配合 ListContainer 使用）
 	//   - tone=card  ：独立卡片行（rounded-relaxed + 边框 + 凸起阴影）
 	//   - hover：--interactive-hover-fill 背景填充；tap：轻微透明度按压反馈
 	//   - pressed：选中态（accent 全背景 + 反色文字）；children 需按选中态

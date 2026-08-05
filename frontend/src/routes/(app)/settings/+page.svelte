@@ -6,7 +6,7 @@
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 import Avatar from '@/components/shared/Avatar.svelte';
 import Toggle from '@/components/forms/Toggle.svelte';
-import List from '@/components/list/List.svelte';
+import ListContainer from '@/components/list/ListContainer.svelte';
 import ListItem from '@/components/list/ListItem.svelte';
 	import { logout } from '@/stores/auth.svelte';
 	import { theme, setTheme, toggleDark, type AppTheme } from '@/stores/theme.svelte';
@@ -92,7 +92,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 	<!-- Appearance（对齐 Figma Make SettingsPage：应用主题二选一 + 深色模式） -->
 	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-[0.14em] uppercase">外观</p>
 	<div class="rounded-panel overflow-hidden surface-flat">
-		<List>
+		<ListContainer>
 			<div class="px-4 py-3.5">
 				<div class="flex items-center gap-3">
 					<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
@@ -136,13 +136,13 @@ import ListItem from '@/components/list/ListItem.svelte';
 				</div>
 				<Toggle on={theme.isDark} onToggle={toggleDark} label="深色模式" />
 			</div>
-		</List>
+		</ListContainer>
 	</div>
 
 	<!-- Notifications -->
 	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-[0.14em] uppercase">通知</p>
 	<div class="rounded-panel overflow-hidden surface-flat">
-		<List>
+		<ListContainer>
 			<div class="flex items-center gap-3 px-4 py-3.5">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
 					<Bell style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
@@ -163,13 +163,13 @@ import ListItem from '@/components/list/ListItem.svelte';
 				</div>
 				<Toggle on={sounds} onToggle={() => (sounds = !sounds)} />
 			</div>
-		</List>
+		</ListContainer>
 	</div>
 
 	<!-- Privacy -->
 	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-[0.14em] uppercase">隐私与安全</p>
 	<div class="rounded-panel overflow-hidden surface-flat">
-		<List>
+		<ListContainer>
 			<div class="flex items-center gap-3 px-4 py-3.5">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
 					<Lock style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
@@ -190,13 +190,13 @@ import ListItem from '@/components/list/ListItem.svelte';
 				</div>
 				<Toggle on={locationSharing} onToggle={() => (locationSharing = !locationSharing)} />
 			</div>
-		</List>
+		</ListContainer>
 	</div>
 
 	<!-- General -->
 	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-[0.14em] uppercase">通用</p>
 	<div class="rounded-panel overflow-hidden surface-flat">
-		<List>
+		<ListContainer>
 			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="语言设置">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
 					<Globe style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
@@ -227,7 +227,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 				<span class="text-sm shrink-0 text-text-secondary">v 1.0.0</span>
 				<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
 			</ListItem>
-		</List>
+		</ListContainer>
 	</div>
 
 	<!-- Log Out — flat, less visually heavy -->

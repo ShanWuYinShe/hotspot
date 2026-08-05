@@ -5,14 +5,15 @@
 	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
-	import List from '@/components/list/List.svelte';
+	import ListContainer from '@/components/list/ListContainer.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import NotificationRow from './NotificationRow.svelte';
 	import { TYPE_CONFIG, normalizeNotifType, type NotificationItem } from './notification-data';
 	import { listNotifications, getUnreadCount, markRead } from '@/api';
 	import { WS_NOTIFY_EVENT } from '@/lib/ws/client';
-	import { ROUTES } from '@/lib/routes';
+	import { formatDateTime } from '@/lib/utils';
+import { ROUTES } from '@/lib/routes';
 
 	// 通知列表：类型过滤、单条/全部已读、桌面右侧概览 Rail。
 
@@ -81,7 +82,7 @@ const FILTER_TABS = [
 							// 归一化为语义键，使图标/计数/分区过滤都能命中 TYPE_CONFIG。
 							type: normalizeNotifType(n.type ?? 'reaction_added'),
 							read: n.is_read ?? false,
-							time: n.created_at ?? '',
+							time: formatDateTime(n.created_at),
 							user: { name: actor.nickname ?? '', avatar: actor.avatar_url ?? '' },
 							text,
 							momentImage: n.payload?.moment_summary?.cover_url ?? undefined
@@ -184,11 +185,11 @@ const FILTER_TABS = [
 						<p class="uppercase" style="font-size:10px;font-weight:600;letter-spacing:0.14em;color:var(--text-primary);">新消息</p>
 						<span class="rounded-full px-1.5 py-0.5" style="font-size:10px;line-height:1;color:var(--accent-default);background:var(--accent-soft);">{unreadGroup.length}</span>
 					</div>
-					<List bordered>
+					<ListContainer bordered>
 						{#each unreadGroup as n (n.id)}
 							<NotificationRow notif={n} onRead={markSingleRead} onRemove={remove} />
 						{/each}
-					</List>
+					</ListContainer>
 				{/if}
 
 				{#if readGroup.length > 0}
@@ -197,11 +198,11 @@ const FILTER_TABS = [
 						<p class="uppercase" style="font-size:10px;font-weight:500;letter-spacing:0.14em;color:var(--text-secondary);">较早</p>
 						<span aria-hidden="true" class="h-px flex-1" style="background:var(--border-default);"></span>
 					</div>
-					<List bordered>
+					<ListContainer bordered>
 						{#each readGroup as n (n.id)}
 							<NotificationRow notif={n} onRead={markSingleRead} onRemove={remove} />
 						{/each}
-					</List>
+					</ListContainer>
 				{/if}
 
 				{#if filtered.length === 0}

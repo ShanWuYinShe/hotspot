@@ -4,7 +4,7 @@
 import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-import List from '@/components/list/List.svelte';
+import ListContainer from '@/components/list/ListContainer.svelte';
 import ListItem from '@/components/list/ListItem.svelte';
 	import { useAccountData } from '@/lib/profile-data.svelte';
 	import { ROUTES, type ProfileSection } from '@/lib/routes';
@@ -96,7 +96,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 	</section>
 
 	<!-- 个人数据 5 行链接 -->
-	<List bordered class="mt-5" ariaLabel="个人数据">
+	<ListContainer bordered class="mt-5" ariaLabel="个人数据">
 		<div class="flex items-center justify-between bg-surface-primary px-5 py-3.5">
 			<div>
 				<p class="text-sm font-medium text-text-primary">个人数据</p>
@@ -119,5 +119,5 @@ import ListItem from '@/components/list/ListItem.svelte';
 				<ChevronRight style="width:16px;height:16px;color:var(--text-secondary);shrink:0;" strokeWidth={1.7} />
 			</ListItem>
 		{/each}
-	</List>
+	</ListContainer>
 </StandardPageLayout>

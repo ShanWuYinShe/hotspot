@@ -1,6 +1,6 @@
 <script lang="ts">
 import { TrendingUp, Clock, Hash, ArrowUpRight } from '@lucide/svelte';
-import List from '@/components/list/List.svelte';
+import ListContainer from '@/components/list/ListContainer.svelte';
 import ListItem from '@/components/list/ListItem.svelte';
 
 	// 搜索页「无查询发现态」：最近搜索 + 热门搜索 + 推荐话题。
@@ -42,7 +42,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 			</button>
 		</div>
 		{#if recent.length > 0}
-			<List>
+			<ListContainer>
 				{#each recent as item (item)}
 					<ListItem
 						onClick={() => onChoose(item)}
@@ -54,7 +54,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 						<ArrowUpRight class="size-4 text-text-secondary" strokeWidth={1.7} />
 					</ListItem>
 				{/each}
-			</List>
+			</ListContainer>
 		{:else}
 			<p class="px-5 py-8 text-sm text-text-secondary">还没有搜索记录。</p>
 		{/if}
@@ -71,7 +71,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 			<h2 class="text-sm font-medium text-text-primary">正在关注</h2>
 		</div>
 		<div class="mt-4">
-			<List>
+			<ListContainer>
 				{#each hot as item, index (item)}
 					<ListItem
 						onClick={() => onChoose(item)}
@@ -82,7 +82,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 						<span class="flex-1 text-sm text-text-primary">{item}</span>
 					</ListItem>
 				{/each}
-			</List>
+			</ListContainer>
 		</div>
 	</section>
 

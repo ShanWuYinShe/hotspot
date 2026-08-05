@@ -153,7 +153,7 @@
 								style="border-color:var(--border-default);background:var(--surface-primary);"
 								aria-label="查看瞬间详情"
 							>
-								<div class="image-hover-frame tap-97 overflow-hidden {index === 0 ? 'aspect-[16/8]' : 'aspect-square'}" style="background:var(--surface-page);">
+								<div class="image-hover-frame tap-97 relative overflow-hidden {index === 0 ? 'aspect-[16/8]' : 'aspect-square'}" style="background:var(--surface-page);">
 									<img src={moment.img} alt={moment.title || '瞬间图片'} class="image-hover-frame__image h-full w-full object-cover" />
 								</div>
 								<div class="flex items-center justify-between gap-2 px-3 py-2.5">

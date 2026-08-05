@@ -13,7 +13,8 @@
 	import MomentCard from '@/components/moments/MomentCard.svelte';
 	import { createFeedInteractions, type FeedItem } from '@/components/moments/feed-interactions.svelte';
 	import { getFeedNearby } from '@/api';
-	import { ROUTES } from '@/lib/routes';
+	import { formatDateTime } from '@/lib/utils';
+import { ROUTES } from '@/lib/routes';
 
 	// 附近动态（/nearby/moments）：BSP 卡片墙（桌面 3 列 / 平板 2 列 / 移动 2 列）。
 	// 全站样板页面：StandardPageLayout（sticky PageHeader + ContentColumn 全宽 gutter）
@@ -63,7 +64,7 @@
 							image: m.images?.[0]?.url ?? '',
 							likes: m.likes_count ?? 0,
 							comments: m.comments_count ?? 0,
-							time: m.created_at ?? '',
+							time: formatDateTime(m.created_at),
 							liked: Boolean(mine),
 							saved: Boolean(m.my_state?.is_favorited),
 							likeEmoji: mine?.emoji ?? '👍'

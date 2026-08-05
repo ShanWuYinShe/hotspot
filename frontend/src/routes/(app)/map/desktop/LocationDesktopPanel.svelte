@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, Crosshair, Check, Heart } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
-import List from '@/components/list/List.svelte';
+import ListContainer from '@/components/list/ListContainer.svelte';
 import ListItem from '@/components/list/ListItem.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
@@ -87,7 +87,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 		{/if}
 	</div>
 	{#if searchResults.length > 0}
-		<List bordered class="absolute top-full left-4 right-4 z-30 mt-1" style="box-shadow:0 0 0 1px var(--border-default), 0 10px 36px var(--elevation-shadow-dark);">
+		<ListContainer bordered class="absolute top-full left-4 right-4 z-30 mt-1" style="box-shadow:0 0 0 1px var(--border-default), 0 10px 36px var(--elevation-shadow-dark);">
 		{#each searchResults as r}
 			{@const isSelected = selectedLoc?.displayName === r.displayName}
 			<ListItem
@@ -103,7 +103,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 				{/if}
 			</ListItem>
 		{/each}
-		</List>
+		</ListContainer>
 	{/if}
 </div>
 
@@ -143,14 +143,14 @@ import ListItem from '@/components/list/ListItem.svelte';
 			</div>
 
 			{#if nearbyPins.length}
-				<List>
+				<ListContainer>
 					{#each nearbyPins as pin (pin.id)}
 						{@const isSelected = selectedPin?.id === pin.id}
 						<ListItem
 							pressed={isSelected}
 							onClick={() => onSelectPin(pin)}
 							ariaLabel={`选择 ${pin.name || pin.title || ''}`}
-							class="app-list-row app-list-row--standard"
+							class="app-list-row app-list-row--standard rounded-control"
 						>
 						{#if pin.type === 'user' && pin.avatar}
 							<div class="relative shrink-0">
@@ -196,7 +196,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 						{/if}
 					</ListItem>
 				{/each}
-				</List>
+				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
 					<MapPin style="width:22px;height:22px;color:var(--text-secondary);opacity:0.3;" strokeWidth={1} />
@@ -207,14 +207,14 @@ import ListItem from '@/components/list/ListItem.svelte';
 	{:else if activeTab === 'hot'}
 		<div class="animate-fade-in">
 			{#if HOT_LOCATIONS.length}
-				<List>
+				<ListContainer>
 					{#each HOT_LOCATIONS as loc}
 						{@const isSelected = selectedLoc?.displayName === loc.displayName}
 						<ListItem
 							pressed={isSelected}
 							onClick={() => onSelectLoc(loc)}
 							ariaLabel={`选择热门地点 ${loc.displayName}`}
-							class="app-list-row app-list-row--standard"
+							class="app-list-row app-list-row--standard rounded-control"
 						>
 							<div class="flex items-center justify-center rounded-small shrink-0 bg-accent-default" style="width:36px;height:36px;font-size:18px;opacity:0.88;">
 								{loc.emoji}
@@ -234,7 +234,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 							{/if}
 						</ListItem>
 					{/each}
-				</List>
+				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
 					<Star style="width:22px;height:22px;color:var(--text-secondary);opacity:0.3;" strokeWidth={1} />
@@ -245,14 +245,14 @@ import ListItem from '@/components/list/ListItem.svelte';
 	{:else}
 		<div class="animate-fade-in">
 			{#if RECENT_LOCATIONS.length}
-				<List>
+				<ListContainer>
 					{#each RECENT_LOCATIONS as loc}
 						{@const isSelected = selectedLoc?.displayName === loc.displayName}
 						<ListItem
 							pressed={isSelected}
 							onClick={() => onSelectLoc(loc)}
 							ariaLabel={`选择最近地点 ${loc.displayName}`}
-							class="app-list-row app-list-row--standard"
+							class="app-list-row app-list-row--standard rounded-control"
 						>
 							<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary" style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);font-size:18px;">
 								{loc.emoji}
@@ -268,7 +268,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 							{/if}
 						</ListItem>
 					{/each}
-				</List>
+				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
 					<Clock style="width:22px;height:22px;color:var(--text-secondary);opacity:0.3;" strokeWidth={1} />

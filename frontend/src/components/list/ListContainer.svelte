@@ -2,8 +2,8 @@
 	import type { Snippet } from 'svelte';
 	import { cn } from '@/lib/utils';
 
-	// 列表骨架组件（list）——列表只有两个公共组件：List（容器）+ ListItem（行）。
-	// List 按所在区域二选一（对齐 Figma Make ListContainers 契约）：
+	// 列表骨架组件（list）——列表只有两个公共组件：ListContainer（容器）+ ListItem（行）。
+	// ListContainer 按所在区域二选一（对齐 Figma Make ListContainers 契约）：
 	//   bordered=false（默认）：嵌入面板/Sheet/rail/分栏的集合（会话列表、地图附近栏等）。
 	//                          无外框，仅提供安静的行内分隔线（divide-y）。
 	//   bordered=true          ：直接位于开放页面区域的集合（朋友/关注/粉丝/通知等）。
@@ -12,7 +12,7 @@
 	//
 	// ┌──────────────── 页面内容区 ────────────┐
 	// │ 分组标题（列表外）                       │
-	// │ ┌──── List（bordered） ───────────────┐ │
+	// │ ┌──── ListContainer（bordered） ──────┐ │
 	// │ │ ListItem 1                          │ │
 	// │ │ ──────────────────────────────────  │ │
 	// │ │ ListItem 2                          │ │

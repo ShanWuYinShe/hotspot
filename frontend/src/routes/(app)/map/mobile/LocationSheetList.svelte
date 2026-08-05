@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { MapPin, X, Users, ChevronRight, Clock, Star, Check } from '@lucide/svelte';
-	import List from '@/components/list/List.svelte';
+	import ListContainer from '@/components/list/ListContainer.svelte';
 import ListItem from '@/components/list/ListItem.svelte';
 	import { HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { PIN_COLORS, PIN_LABELS, pinTone, getMarkerUrl } from '../shared/location-shared';
@@ -33,14 +33,14 @@ import ListItem from '@/components/list/ListItem.svelte';
 </script>
 
 {#if searchQuery && searchResults.length > 0}
-	<List class="animate-fade-in">
+	<ListContainer class="animate-fade-in">
 		{#each searchResults as r}
 			{@const isSelected = selectedLoc?.displayName === r.displayName}
 			<ListItem
 				pressed={isSelected}
 				onClick={() => onSelectLoc(r)}
 				ariaLabel={`选择地点 ${r.displayName}`}
-				class="app-list-row app-list-row--standard px-5"
+				class="app-list-row app-list-row--standard rounded-control px-5"
 			>
 				<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default" style="width:34px;height:34px;opacity:0.12">
 					<MapPin style="width:14px;height:14px;color:var(--accent-default)" strokeWidth={1.75} />
@@ -51,7 +51,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 				{/if}
 			</ListItem>
 		{/each}
-	</List>
+	</ListContainer>
 {:else if searchQuery && searchResults.length === 0}
 	<div class="flex flex-col items-center py-6">
 		<MapPin style="width:26px;height:26px;color:var(--text-secondary);opacity:0.28;" strokeWidth={1} />
@@ -117,14 +117,14 @@ import ListItem from '@/components/list/ListItem.svelte';
 		<!-- List items -->
 		{#if activeTab === 'recent'}
 			{#if recentItems.length > 0}
-				<List>
+				<ListContainer>
 					{#each recentItems as loc}
 						{@const isSelected = selectedLoc?.displayName === loc.displayName}
 						<ListItem
 							pressed={isSelected}
 							onClick={() => onSelectLoc(loc)}
 							ariaLabel={`选择最近地点 ${loc.displayName}`}
-							class="app-list-row app-list-row--standard px-4"
+							class="app-list-row app-list-row--standard rounded-control px-4"
 						>
 							<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary" style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);font-size:18px;">
 								{loc.emoji}
@@ -140,20 +140,20 @@ import ListItem from '@/components/list/ListItem.svelte';
 							{/if}
 						</ListItem>
 					{/each}
-				</List>
+				</ListContainer>
 			{:else}
 				<p class="text-text-secondary" style="font-size:13px;padding:12px 20px;">暂无最近记录</p>
 			{/if}
 		{:else}
 			{#if HOT_LOCATIONS.length}
-				<List>
+				<ListContainer>
 					{#each HOT_LOCATIONS as loc}
 						{@const isSelected = selectedLoc?.displayName === loc.displayName}
 						<ListItem
 							pressed={isSelected}
 							onClick={() => onSelectLoc(loc)}
 							ariaLabel={`选择热门地点 ${loc.displayName}`}
-							class="app-list-row app-list-row--standard px-4"
+							class="app-list-row app-list-row--standard rounded-control px-4"
 						>
 							<div class="flex items-center justify-center rounded-[13px] shrink-0 bg-accent-default" style="width:36px;height:36px;font-size:18px;opacity:0.88;">
 								{loc.emoji}
@@ -168,7 +168,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 							</div>
 						</ListItem>
 					{/each}
-				</List>
+				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-8">
 					<Star style="width:20px;height:20px;color:var(--text-secondary);opacity:0.3;" strokeWidth={1} />
