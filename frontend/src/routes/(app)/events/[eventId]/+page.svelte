@@ -103,7 +103,7 @@
 
 				<!-- 标签 -->
 				<div class="absolute bottom-4 left-4">
-					<span class="rounded-full px-3 py-1 text-white text-sm" style="background:{safeEv.color};box-shadow:0 3px 10px {evTone(50)};">{safeEv.tag}</span>
+					<span class="rounded-full px-3 py-1 text-cst-text-on-status text-sm" style="background:{safeEv.color};box-shadow:0 3px 10px {evTone(50)};">{safeEv.tag}</span>
 				</div>
 			</div>
 
@@ -136,7 +136,7 @@
 						</div>
 					</div>
 					<!-- TODO: 关注后端 users/follow 已实现（POST /api/v1/users/follow），前端接线待完成 -->
-					<button type="button" class="hover-btn tap-93 rounded-full px-3 py-1.5 text-white text-sm outline-none" style="background:{safeEv.color};box-shadow:0 3px 10px {evTone(40)};">关注</button>
+					<button type="button" class="hover-btn tap-93 rounded-full px-3 py-1.5 text-cst-text-on-status text-sm outline-none" style="background:{safeEv.color};box-shadow:0 3px 10px {evTone(40)};">关注</button>
 				</div>
 
 				<!-- 描述 -->
@@ -202,7 +202,7 @@
 				class="hover-btn tap-97 flex w-full items-center justify-center gap-2 rounded-feature py-4 text-base outline-none transition-all duration-300"
 				style={joined
 					? `background:var(--cst-surface-primary);border:2px solid ${safeEv.color};color:${safeEv.color};box-shadow:0 0 0 4px ${evTone(18)};`
-					: `background:${safeEv.color};color:white;box-shadow:0 8px 24px ${evTone(45)};border:none;`}
+					: `background:${safeEv.color};color:var(--cst-text-on-status);box-shadow:0 8px 24px ${evTone(45)};border:none;`}
 			>
 				{#if joined}
 					<Check class="size-4.5"  strokeWidth={2.5} />
@@ -222,7 +222,7 @@
 		<RailUserRow avatar={safeEv.host.avatar} name={safeEv.host.name} sub="活动发起人">
 			{#snippet trailing()}
 				<!-- TODO: 关注后端 users/follow 已实现（POST /api/v1/users/follow），前端接线待完成 -->
-				<button type="button" class="hover-btn shrink-0 rounded-full px-2.5 py-1 text-white text-xs outline-none" style="background:{safeEv.color};">关注</button>
+				<button type="button" class="hover-btn shrink-0 rounded-full px-2.5 py-1 text-cst-text-on-status text-xs outline-none" style="background:{safeEv.color};">关注</button>
 			{/snippet}
 		</RailUserRow>
 	</RailSection>

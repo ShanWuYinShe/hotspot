@@ -22,7 +22,7 @@
 	<!-- 左上：精选徽章 -->
 	<div class="absolute top-3 left-3 z-[2] flex items-center gap-1.5 px-2 py-1 rounded-full" style="background:var(--cst-surface-overlay-strong);backdrop-filter:blur(8px);">
 		<Sparkles size={11} color="white" />
-		<span class="text-white text-xxs">本周精选</span>
+		<span class="text-content-inverse text-xxs">本周精选</span>
 	</div>
 
 	{#snippet footer()}

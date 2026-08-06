@@ -225,13 +225,13 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 	<!-- 全幅封面（负 margin 抵消 ContentColumn gutter） -->
 	<div class="relative h-[clamp(220px,28vw,340px)] overflow-hidden -mx-[var(--cst-page-gutter)]">
 		<img src={group.banner} alt={`${group.name} 的群组封面`} class="h-full w-full object-cover" />
-		<div class="absolute inset-0 bg-[linear-gradient(to_top,rgba(0,0,0,.7),transparent_65%)]"></div>
+		<div class="absolute inset-0 bg-surface-cover-scrim"></div>
 		<div class="absolute left-5 top-4">
 			<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => history.back()} variant="overlay" tone="inverse" />
 		</div>
 		<div class="absolute bottom-5 left-6 right-6">
-			<span class="rounded-full bg-white/18 px-2.5 py-1 text-xs text-white backdrop-blur-sm">{group.category}</span>
-			<h1 class="mt-3 text-[clamp(24px,3vw,34px)] font-medium tracking-[-0.02em] text-white">{group.name}</h1>
+			<span class="rounded-full bg-surface-glass-badge px-2.5 py-1 text-xs text-content-inverse backdrop-blur-sm">{group.category}</span>
+			<h1 class="mt-3 text-[clamp(24px,3vw,34px)] font-medium tracking-[-0.02em] text-content-inverse">{group.name}</h1>
 		</div>
 	</div>
 

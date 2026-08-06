@@ -40,7 +40,7 @@
 
 	<!-- Tag chip -->
 	<div class="absolute top-2.5 left-2.5 z-[2] px-2 py-0.5 rounded-full bg-accent-default shadow-[0_2px_8px_var(--cst-glow-accent)]" >
-		<span class="text-white text-xxs">{item.tag}</span>
+		<span class="text-content-inverse text-xxs">{item.tag}</span>
 	</div>
 
 	<!-- 底部信息托盘（surface-card-menu，由 NearbyImageCard footer 槽渲染） -->

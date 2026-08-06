@@ -34,9 +34,9 @@
 				<div class="absolute inset-0" style="background:var(--cst-surface-media-scrim-soft);"></div>
 				<div class="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full" style="background:var(--cst-surface-overlay-strong);">
 					{#if g.privacy === 'private'}
-						<Lock class="h-2.5 w-2.5 text-white" strokeWidth={2} />
+						<Lock class="h-2.5 w-2.5 text-content-inverse" strokeWidth={2} />
 					{:else}
-						<Globe class="h-2.5 w-2.5 text-white" strokeWidth={2} />
+						<Globe class="h-2.5 w-2.5 text-content-inverse" strokeWidth={2} />
 					{/if}
 				</div>
 				<div class="absolute inset-x-0 bottom-0 border-t px-2.5 pb-2.5 pt-2" style="background:var(--cst-surface-card-menu);border-color:var(--cst-border-card-menu);">

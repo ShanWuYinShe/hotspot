@@ -196,17 +196,48 @@ theme/
   index.css              # 入口，按依赖顺序导入所有分片
   shadcn.css             # Layer 0: shadcn/ui 基础变量
   shared.css             # Layer 0: z-index/shape/motion/ease（与主题无关）
-  semantic.css           # Layer 1: 语义 token（--text-primary 等 → --pr-*）
-  themes/vibrant.css     # Layer 2: 星际主题（全部 --pr-* 值）
-  themes/forest.css      # Layer 2: 清野主题（全部 --pr-* 值）
+  semantic.css           # Layer 1: 语义 token（--cst-text-primary 等 → --cst-pr-*）
+  themes/vibrant.css     # Layer 2: 星际主题（全部 --cst-pr-* 值）
+  themes/forest.css      # Layer 2: 清野主题（全部 --cst-pr-* 值）
   layout.css             # 布局变量（context-rail、workspace）
   base.css               # @layer base（排版 + 按钮基线）
   theme-registry.css     # @theme inline Tailwind 注册
   utilities.css          # @layer utilities（组件工具类 + hover-* 交互类）
 ```
 
-- Token 两层链：`--text-primary` 等语义名 → `--pr-*` 原始值（无旧名兼容层）
-- 新组件优先使用语义名（`var(--text-primary)`、`var(--surface-page)` 等）+ Tailwind className
+### 配色硬约束（强制）
+
+**所有涉及配色的取值——字体颜色、背景、边框、hover 颜色、active 颜色、阴影、
+遮罩、状态色、图钉/标记色等——必须来自 design token，严格禁止在页面/组件中
+单独定义色值**（禁止 `text-white`、`color:#fff`、`bg-black/50`、内联 `rgba(...)`
+等字面量）。所有 token 必须能随主题（vibrant/forest）与明暗模式正确变化。
+
+- **前缀约定**：全部 design token 使用 `cst-` 前缀（`--cst-text-primary`、
+  `--cst-surface-primary`、`--cst-elevation-card`…），一眼可识别 token 来源。
+  定义层（shared/semantic/themes/layout/shadcn）禁止出现无前缀变量。
+- **Tailwind 注册层例外**：`theme-registry.css` 的 `@theme inline` 注册键
+  （`--color-*`、`--text-xxs` 等字号、`--radius-*`、`--shadow-*`、
+  `--ease-standard`）是 Tailwind 工具类生成机制，**必须保持原名**；
+  其值引用 `var(--cst-*)`。
+- **Token 两层链**：`--cst-text-primary` 等语义名 → `--cst-pr-*` 原始值
+  （无旧名兼容层）
+- **配色映射速查**（页面中如何选 token）：
+  - 正文/辅助文字：`--cst-text-primary` / `--cst-text-secondary`
+  - 主题色背景上的文字：`--cst-text-on-accent`（按钮/选中态）
+  - 状态色背景上的文字：`--cst-text-on-status`（online/warning 底）
+  - 图片/遮罩上的反色文字：`--cst-content-inverse`（浅色底深字/深色底白字）
+  - 图钉色背景上的文字：`--cst-content-on-marker`（地图标记）
+  - 遮罩/玻璃：`--cst-surface-scrim`（弹层遮罩）、
+    `--cst-surface-media-scrim-strong`（照片遮罩）、
+    `--cst-surface-cover-scrim`（封面渐变）、`--cst-surface-glass-badge`（玻璃徽章）
+  - hover/active：优先 `hover:bg-accent-soft` 等 token 类；背景填充走
+    `--cst-interactive-hover-fill` / `--cst-interactive-active`
+  - 内容数据驱动的动态色（事件主题色、活动色）仅允许在数据层用 token
+    派生（如 `var(--cst-status-warning)`），页面渲染层不得另写色值
+- 新增组件时若缺语义 token，先在 themes/{vibrant,forest}.css 补 `--cst-*`
+  定义（light + dark），不得在组件里写死色值绕过
+
+- 新组件优先使用语义名（`var(--cst-text-primary)`、`var(--cst-surface-page)` 等）+ Tailwind className
 - 主题切换通过 `<html>` 上的 `.vibrant` / `.forest` + `.dark` 类实现
 - 悬停/按压反馈统一用 `hover-btn/action/bg`、`scale-btn`、`tap-*`、`header-action` CSS
   类（主题差异由 themes/*.css 的 `@layer utilities` 覆盖承载），避免 JS 状态动画

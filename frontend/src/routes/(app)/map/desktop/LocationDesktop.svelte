@@ -222,7 +222,7 @@
 							<span style="font-size:12px;color:{item.color};font-weight:600;">{item.count}</span>
 							<span class="flex items-center justify-center shrink-0" style="width:14px;height:14px;border-radius:4px;background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--cst-border-strong)'};transition:all 0.18s;">
 								{#if active}
-									<Check class="size-2.5"  style="color:white" strokeWidth={3} />
+									<Check class="size-2.5"  style="color:var(--cst-content-on-marker)" strokeWidth={3} />
 								{/if}
 							</span>
 						</button>
@@ -250,7 +250,7 @@
 						<div class="flex items-center gap-2">
 							<p class="text-text-primary text-base">{selectedPin.name || selectedPin.title}</p>
 							{#if (selectedPin.count ?? 1) > 1}
-								<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:{PIN_COLORS[selectedPin.type]};color:white;">
+								<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);">
 									{selectedPin.count}个
 								</span>
 							{/if}

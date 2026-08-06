@@ -72,7 +72,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 						{selectedPin.tag ? ` · #${selectedPin.tag}` : ''}
 					</p>
 				</div>
-				<button type="button" class="hover-btn px-2.5 py-1.5 rounded-full outline-none shrink-0" style="background:{PIN_COLORS[selectedPin.type]};color:white;font-size:11px;" onclick={() => onOpenPinDetail(selectedPin)}>
+				<button type="button" class="hover-btn px-2.5 py-1.5 rounded-full outline-none shrink-0" style="background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);font-size:11px;" onclick={() => onOpenPinDetail(selectedPin)}>
 					查看
 				</button>
 				<button type="button" class="hover-btn outline-none shrink-0 ml-0.5" onclick={onClearPin}>

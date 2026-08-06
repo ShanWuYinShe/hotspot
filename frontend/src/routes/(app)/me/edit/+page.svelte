@@ -73,7 +73,7 @@
 	{#snippet trailing()}
 		<button
 			type="button"
-			class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all text-base {saved ? 'bg-status-online' : 'bg-accent-default'} text-text-on-accent"
+			class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all text-base {saved ? 'bg-status-online text-cst-text-on-status' : 'bg-accent-default text-text-on-accent'}"
 			style="box-shadow:0 4px 14px {saved ? 'color-mix(in srgb, var(--cst-status-online) 35%, transparent)' : 'var(--cst-glow-accent)'};border:none;"
 			onclick={() => void handleSave()}
 		>
@@ -93,7 +93,7 @@
 		<div class="absolute inset-0 bg-surface-primary"></div>
 		<button
 			type="button"
-			class="hover-btn absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none bg-surface-overlay-strong text-white text-sm"
+			class="hover-btn absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none bg-surface-overlay-strong text-content-inverse text-sm"
 			style="padding:6px 12px;backdrop-filter:blur(10px);border:1px solid var(--cst-border-inverse);"
 		>
 			<Camera class="size-3.25"  strokeWidth={1.75} />

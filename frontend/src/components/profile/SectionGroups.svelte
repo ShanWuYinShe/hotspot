@@ -51,7 +51,7 @@
 						{/if}
 						{g.role}
 					</div>
-					<div class="absolute bottom-2 left-2 flex items-center gap-1 text-white text-xxs">
+					<div class="absolute bottom-2 left-2 flex items-center gap-1 text-content-inverse text-xxs">
 						<span class="rounded-full size-1.5"  style="background:var(--cst-status-online)"></span>
 						{g.online}
 					</div>

@@ -191,11 +191,11 @@
 							<ImagePlus size={16} strokeWidth={1.6} />
 							<span class="text-xs">照片已添加</span>
 						</div>
-						<span class="absolute bottom-2.5 left-2.5 rounded-full bg-black/55 px-2 py-1 text-xxs text-white backdrop-blur-sm">1 张照片</span>
+						<span class="absolute bottom-2.5 left-2.5 rounded-full bg-surface-media-scrim-strong px-2 py-1 text-xxs text-content-inverse backdrop-blur-sm">1 张照片</span>
 						<button
 							type="button"
 							onclick={() => (hasImage = false)}
-							class="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white outline-none backdrop-blur-sm hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-white"
+							class="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-surface-media-scrim-strong text-content-inverse outline-none backdrop-blur-sm hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-content-inverse"
 							aria-label="移除照片"
 						>
 							<X size={14} strokeWidth={2} />

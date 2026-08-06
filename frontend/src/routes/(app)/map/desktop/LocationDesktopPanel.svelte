@@ -172,7 +172,7 @@ locationName = loc?.location_name ?? '';
 							</div>
 						</div>
 						{#if isSelected}
-							<span class="rounded-full px-2 py-1" style="font-size:10px;color:white;background:{PIN_COLORS[pin.type]};shrink:0;">已定位</span>
+							<span class="rounded-full px-2 py-1" style="font-size:10px;color:var(--cst-content-on-marker);background:{PIN_COLORS[pin.type]};shrink:0;">已定位</span>
 						{:else}
 							<ChevronRight class="size-3.5 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 						{/if}
