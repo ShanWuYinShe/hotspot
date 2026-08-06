@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	private_messages "hotspot/backend-go/internal/modules/privatemessages"
+	"hotspot/backend-go/internal/modules/privatemessages"
 	"hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 )
@@ -47,18 +47,18 @@ func (r *stubChatRepo) DeleteForUser(_ context.Context, _, _ string, _ *time.Tim
 }
 
 type stubMsgReadService struct {
-	recentResult private_messages.PaginatedMessages
+	recentResult privatemessages.PaginatedMessages
 	recentErr    error
-	lastResult   *private_messages.PrivateMessageItem
+	lastResult   *privatemessages.PrivateMessageItem
 	lastErr      error
 	unreadCount  int
 	unreadErr    error
 }
 
-func (m *stubMsgReadService) Recent(_ context.Context, _ string, _ int, _ *time.Time) (private_messages.PaginatedMessages, error) {
+func (m *stubMsgReadService) Recent(_ context.Context, _ string, _ int, _ *time.Time) (privatemessages.PaginatedMessages, error) {
 	return m.recentResult, m.recentErr
 }
-func (m *stubMsgReadService) Last(_ context.Context, _ string, _ *time.Time) (*private_messages.PrivateMessageItem, error) {
+func (m *stubMsgReadService) Last(_ context.Context, _ string, _ *time.Time) (*privatemessages.PrivateMessageItem, error) {
 	return m.lastResult, m.lastErr
 }
 func (m *stubMsgReadService) UnreadCount(_ context.Context, _ string, _ *time.Time) (int, error) {
@@ -147,8 +147,8 @@ func TestServiceOpenTheDoorRestoresDeletedChatWithNewMessages(t *testing.T) {
 		state:     ChatState{TargetID: "u2", CreatedAt: now, DeletedAt: &deletedAt},
 	}
 	msgs := &stubMsgReadService{
-		recentResult: private_messages.PaginatedMessages{Items: []private_messages.PrivateMessageItem{{MessageID: "pm1"}}},
-		lastResult:   &private_messages.PrivateMessageItem{MessageID: "pm1", SentAt: now.Format(time.RFC3339Nano)},
+		recentResult: privatemessages.PaginatedMessages{Items: []privatemessages.PrivateMessageItem{{MessageID: "pm1"}}},
+		lastResult:   &privatemessages.PrivateMessageItem{MessageID: "pm1", SentAt: now.Format(time.RFC3339Nano)},
 	}
 	usr := &stubChatUserReader{item: defaultUserItem(), found: true, settings: defaultSettings()}
 	svc := NewServiceWithDeps(repo, msgs, usr)
@@ -170,7 +170,7 @@ func TestServiceOpenTheDoorRestoreError(t *testing.T) {
 		restoreErr: errors.New("boom"),
 	}
 	msgs := &stubMsgReadService{
-		recentResult: private_messages.PaginatedMessages{Items: []private_messages.PrivateMessageItem{{MessageID: "pm1"}}},
+		recentResult: privatemessages.PaginatedMessages{Items: []privatemessages.PrivateMessageItem{{MessageID: "pm1"}}},
 	}
 	svc := NewServiceWithDeps(repo, msgs, &stubChatUserReader{})
 	_, err := svc.OpenTheDoor(chatCtx("u1"), "u2", 20)

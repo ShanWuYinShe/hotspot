@@ -5,7 +5,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	private_messages "hotspot/backend-go/internal/modules/privatemessages"
+	"hotspot/backend-go/internal/modules/privatemessages"
 	"hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -22,19 +22,19 @@ type shareValidator interface {
 
 type Module struct {
 	chatHandler    *Handler
-	messageHandler *private_messages.Handler
-	messageRuntime *private_messages.Runtime
+	messageHandler *privatemessages.Handler
+	messageRuntime *privatemessages.Runtime
 }
 
 func NewModule(factory *persistence.Factory, source appconfig.Source, shares shareValidator) *Module {
-	messageRuntime := private_messages.NewRuntime(factory, source)
+	messageRuntime := privatemessages.NewRuntime(factory, source)
 	messageRuntime.SetShareValidator(shares)
 	userService := users.NewServiceWithRepo(users.NewPersistenceRepository(factory))
 	chatService := NewServiceWithDeps(NewPostgresRepository(factory), messageRuntime.ReadService(), userService)
 	return &Module{chatHandler: NewHandler(chatService, source), messageHandler: messageRuntime.Handler(), messageRuntime: messageRuntime}
 }
 
-func (m *Module) MessageService() private_messages.ReadService {
+func (m *Module) MessageService() privatemessages.ReadService {
 	return m.messageRuntime.ReadService()
 }
 func (m *Module) Mount(r chi.Router) {

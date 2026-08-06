@@ -3,7 +3,7 @@ package privatechats
 import (
 	"time"
 
-	private_messages "hotspot/backend-go/internal/modules/privatemessages"
+	"hotspot/backend-go/internal/modules/privatemessages"
 	platformcursor "hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/types"
 )
@@ -29,11 +29,11 @@ func decodeChatCursor(value string) (time.Time, string, error) {
 	}
 	var decoded chatCursor
 	if err := platformcursor.Decode("private_chats.list", value, &decoded); err != nil || decoded.LastActivityAt == "" || decoded.UserID == "" {
-		return time.Time{}, "", private_messages.ErrInvalidCursor
+		return time.Time{}, "", privatemessages.ErrInvalidCursor
 	}
 	parsed, err := time.Parse(time.RFC3339Nano, decoded.LastActivityAt)
 	if err != nil {
-		return time.Time{}, "", private_messages.ErrInvalidCursor
+		return time.Time{}, "", privatemessages.ErrInvalidCursor
 	}
 	return parsed.UTC(), decoded.UserID, nil
 }
@@ -86,6 +86,6 @@ type DeletePrivateChatRequest struct {
 }
 
 type PrivateChatOpenResult struct {
-	Chat           PrivateChatItem                    `json:"chat"`
-	RecentMessages private_messages.PaginatedMessages `json:"recent_messages"`
+	Chat           PrivateChatItem                   `json:"chat"`
+	RecentMessages privatemessages.PaginatedMessages `json:"recent_messages"`
 }

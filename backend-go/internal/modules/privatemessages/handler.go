@@ -1,4 +1,4 @@
-package private_messages
+package privatemessages
 
 import (
 	"errors"

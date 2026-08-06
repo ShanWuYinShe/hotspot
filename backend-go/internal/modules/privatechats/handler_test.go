@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	private_messages "hotspot/backend-go/internal/modules/privatemessages"
+	"hotspot/backend-go/internal/modules/privatemessages"
 	"hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -50,19 +50,19 @@ type privateChatMessageReader struct {
 	recentErr   error
 	lastErr     error
 	unreadErr   error
-	recent      private_messages.PaginatedMessages
-	last        *private_messages.PrivateMessageItem
+	recent      privatemessages.PaginatedMessages
+	last        *privatemessages.PrivateMessageItem
 	unreadCount int
 }
 
-func (r *privateChatMessageReader) Recent(context.Context, string, int, *time.Time) (private_messages.PaginatedMessages, error) {
+func (r *privateChatMessageReader) Recent(context.Context, string, int, *time.Time) (privatemessages.PaginatedMessages, error) {
 	if r.recentErr != nil {
-		return private_messages.PaginatedMessages{}, r.recentErr
+		return privatemessages.PaginatedMessages{}, r.recentErr
 	}
 	return r.recent, nil
 }
 
-func (r *privateChatMessageReader) Last(context.Context, string, *time.Time) (*private_messages.PrivateMessageItem, error) {
+func (r *privateChatMessageReader) Last(context.Context, string, *time.Time) (*privatemessages.PrivateMessageItem, error) {
 	if r.lastErr != nil {
 		return nil, r.lastErr
 	}
@@ -94,18 +94,18 @@ func (r *privateChatUserReader) GetMySettings(context.Context) (users.UserSettin
 	return r.settings, nil
 }
 
-func newHandlers() (*Handler, *private_messages.Handler) {
+func newHandlers() (*Handler, *privatemessages.Handler) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
 	userRepo := users.NewInMemoryRepository()
 	seedPrivateChatUsers(userRepo)
 	return newHandlersWithUserRepo(userRepo)
 }
 
-func newHandlersWithUserRepo(userRepo *users.InMemoryRepository) (*Handler, *private_messages.Handler) {
-	messageRepo := private_messages.NewInMemoryRepository()
+func newHandlersWithUserRepo(userRepo *users.InMemoryRepository) (*Handler, *privatemessages.Handler) {
+	messageRepo := privatemessages.NewInMemoryRepository()
 	userService := users.NewServiceWithRepo(userRepo)
-	messageService := private_messages.NewServiceWithDeps(messageRepo, userService)
-	messageHandler := private_messages.NewHandler(messageService)
+	messageService := privatemessages.NewServiceWithDeps(messageRepo, userService)
+	messageHandler := privatemessages.NewHandler(messageService)
 	chatHandler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), messageService, userService), appconfig.NewStaticSource(config.Load()))
 	return chatHandler, messageHandler
 }
@@ -159,8 +159,8 @@ func TestSendAndHistoryWorkTogether(t *testing.T) {
 	messageHandler.GetHistory(historyRR, historyReq)
 
 	var historyResp struct {
-		Code int                                `json:"code"`
-		Data private_messages.PaginatedMessages `json:"data"`
+		Code int                               `json:"code"`
+		Data privatemessages.PaginatedMessages `json:"data"`
 	}
 	if err := json.NewDecoder(historyRR.Body).Decode(&historyResp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -218,14 +218,14 @@ func TestOpenTheDoorUsesSharedResponseDefaults(t *testing.T) {
 		t.Fatalf("update shared source: %v", err)
 	}
 
-	messageRepo := private_messages.NewInMemoryRepository()
+	messageRepo := privatemessages.NewInMemoryRepository()
 	userRepo := users.NewInMemoryRepository()
 	_ = userRepo.PutProfile(context.Background(), users.MyProfile{UserID: "user_bob", Nickname: "Bob", UserType: users.UserTypeNormal, Location: users.Location{LocationName: "Somewhere"}, PresenceStatus: users.UserPresenceOnline, LastOnline: time.Now().UTC().Format(time.RFC3339), CreatedAt: time.Now().UTC().Format(time.RFC3339)})
 	_ = userRepo.PutSettings(context.Background(), "user_bob", users.UserSettings{AllowPrivateChat: users.ChatPermEveryone, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, ReactedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
 	userService := users.NewServiceWithRepo(userRepo)
-	messageService := private_messages.NewServiceWithDeps(messageRepo, userService)
+	messageService := privatemessages.NewServiceWithDeps(messageRepo, userService)
 	chatHandler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), messageService, userService), source)
-	messageHandler := private_messages.NewHandler(messageService)
+	messageHandler := privatemessages.NewHandler(messageService)
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
 	for _, body := range []string{

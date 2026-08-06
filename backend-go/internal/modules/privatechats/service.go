@@ -5,7 +5,7 @@ import (
 	"sort"
 	"time"
 
-	private_messages "hotspot/backend-go/internal/modules/privatemessages"
+	"hotspot/backend-go/internal/modules/privatemessages"
 	"hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
@@ -19,19 +19,19 @@ type userReader interface {
 
 type Service struct {
 	repo     Repository
-	messages private_messages.ReadService
+	messages privatemessages.ReadService
 	users    userReader
 }
 
 func NewService() *Service {
 	userRepo := users.NewInMemoryRepository()
-	return NewServiceWithDeps(NewInMemoryRepository(), private_messages.NewService(), users.NewServiceWithRepo(userRepo))
+	return NewServiceWithDeps(NewInMemoryRepository(), privatemessages.NewService(), users.NewServiceWithRepo(userRepo))
 }
-func NewServiceWithRepos(repo Repository, messages private_messages.ReadService) *Service {
+func NewServiceWithRepos(repo Repository, messages privatemessages.ReadService) *Service {
 	userRepo := users.NewInMemoryRepository()
 	return NewServiceWithDeps(repo, messages, users.NewServiceWithRepo(userRepo))
 }
-func NewServiceWithDeps(repo Repository, messages private_messages.ReadService, userService userReader) *Service {
+func NewServiceWithDeps(repo Repository, messages privatemessages.ReadService, userService userReader) *Service {
 	return &Service{repo: repo, messages: messages, users: userService}
 }
 func (s *Service) OpenTheDoor(ctx context.Context, targetUserID string, recentLimit int) (PrivateChatOpenResult, error) {

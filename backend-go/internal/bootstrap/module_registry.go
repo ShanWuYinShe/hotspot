@@ -8,7 +8,7 @@ import (
 	"hotspot/backend-go/internal/modules/feed"
 	"hotspot/backend-go/internal/modules/groupmessages"
 	"hotspot/backend-go/internal/modules/groups"
-	mapmodule "hotspot/backend-go/internal/modules/map"
+	"hotspot/backend-go/internal/modules/mapmodule"
 	"hotspot/backend-go/internal/modules/media"
 	"hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/modules/notify"
