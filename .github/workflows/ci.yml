@@ -53,8 +53,22 @@ jobs:
         run: go build -C backend-go -o /dev/null ./cmd/server
       - name: go vet
         run: go vet -C backend-go ./...
-      - name: go test
-        run: go test -C backend-go -count=1 $(go list -C backend-go ./... | grep -v /test/integration) -v 2>&1 | tee
+      - name: go test (with coverage gate)
+        run: |
+          cd backend-go
+          go test -count=1 $(go list ./... | grep -v /test/integration) -coverprofile=/tmp/cover.out 2>&1 | tee /tmp/gotest.log
+          # 业务模块覆盖率门槛：internal/modules 下任一包 <70% 即失败。
+          # go test 单包输出格式：ok  <pkg>  <dur>  coverage: <x>% of statements
+          awk '/^ok .*coverage: [0-9.]+% of statements/ {
+            pkg = $2
+            cov = $0
+            sub(/^.*coverage: /, "", cov)
+            sub(/% of statements.*$/, "", cov)
+            if (pkg ~ /modules\// && cov + 0 < 70.0) {
+              print "COVERAGE BELOW 70%: " pkg " " cov "%"
+              failed = 1
+            }
+          } END { if (failed) exit 1 }' /tmp/gotest.log
 
   frontend:
     name: Frontend (SvelteKit)
