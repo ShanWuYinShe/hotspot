@@ -14,7 +14,7 @@ func (s *Service) GetMe(ctx context.Context) (AdminPermissions, *httpx.APIError,
 	observability.L().Info("admin.get_me started")
 	actor, found, err := s.actorFromContext(ctx)
 	if err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			observability.L().Warn("admin.get_me auth failed", "error", apiErr, "elapsed_ms", time.Since(startedAt).Milliseconds())
 			return AdminPermissions{}, apiErr, nil
 		}
@@ -74,7 +74,7 @@ func (s *Service) CreateRole(ctx context.Context, req AdminRbacRoleCreateRequest
 	}
 	item, err := s.repo.CreateRole(ctx, req)
 	if err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			observability.L().Warn("admin.create_role business error", "error", apiErr, "elapsed_ms", time.Since(startedAt).Milliseconds())
 			return AdminRoleItem{}, apiErr, nil
 		}
@@ -114,7 +114,7 @@ func (s *Service) UpdateRole(ctx context.Context, req AdminRbacRoleUpdateRequest
 		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}, nil
 	}
 	if err := s.repo.UpdateRole(ctx, req); err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			return apiErr, nil
 		}
 		return nil, err
@@ -153,7 +153,7 @@ func (s *Service) DeleteRole(ctx context.Context, roleID string) (*httpx.APIErro
 		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}, nil
 	}
 	if err := s.repo.DeleteRole(ctx, roleID); err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			return apiErr, nil
 		}
 		return nil, err
@@ -194,7 +194,7 @@ func (s *Service) SetRolePermissions(ctx context.Context, req AdminRbacRoleSetPe
 		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}, nil
 	}
 	if err := s.repo.SetRolePermissions(ctx, req.RoleID, permissionKeys); err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			return apiErr, nil
 		}
 		return nil, err
@@ -223,7 +223,7 @@ func (s *Service) ListAdmins(ctx context.Context, req AdminRbacAdminsListRequest
 	}
 	page, err := s.repo.ListAdmins(ctx, pagination)
 	if err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			return PaginatedAdminOperators{}, apiErr, nil
 		}
 		return PaginatedAdminOperators{}, nil, err
@@ -254,7 +254,7 @@ func (s *Service) GrantAdmin(ctx context.Context, req AdminRbacGrantAdminRequest
 		return httpx.InvalidRequest("参数错误"), nil
 	}
 	if err := s.repo.GrantAdmin(ctx, AdminGrantUpsert{UserID: req.UserID, GrantAllPermissions: req.GrantAllPermissions, RoleIDs: roleIDs}); err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			return apiErr, nil
 		}
 		return nil, err
@@ -293,7 +293,7 @@ func (s *Service) RevokeAdmin(ctx context.Context, userID string) (*httpx.APIErr
 		return &httpx.APIError{Code: httpx.CodeForbidden, Message: "系统管理员权限不足: admin.rbac.manage"}, nil
 	}
 	if err := s.repo.RevokeAdmin(ctx, userID); err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			return apiErr, nil
 		}
 		return nil, err

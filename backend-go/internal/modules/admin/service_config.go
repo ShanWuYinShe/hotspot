@@ -19,7 +19,7 @@ func (s *Service) ListAuditLogs(ctx context.Context, req AuditLogListRequest) (P
 	}
 	page, err := s.repo.ListAuditLogs(ctx, filter, actor.HasPermission(permissionAuditReadIP))
 	if err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			return PaginatedAuditLogs{}, apiErr, nil
 		}
 		return PaginatedAuditLogs{}, nil, err

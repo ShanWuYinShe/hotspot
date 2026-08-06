@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -52,7 +53,7 @@ func (s *Service) actorFromContext(ctx context.Context) (AdminActor, bool, error
 func (s *Service) requirePermission(ctx context.Context, permission string) (AdminActor, *httpx.APIError, error) {
 	actor, found, err := s.actorFromContext(ctx)
 	if err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			return AdminActor{}, apiErr, nil
 		}
 		return AdminActor{}, nil, err
@@ -68,6 +69,16 @@ func (s *Service) requirePermission(ctx context.Context, permission string) (Adm
 
 func formatAuditLogID(action, targetID string, ts time.Time) string {
 	return fmt.Sprintf("audit_%s_%s_%d", action, targetID, ts.UnixNano())
+}
+
+// asAPIError 从错误链中提取 *httpx.APIError（errors.As 语义，兼容 %w 包装），
+// 提取不到返回 nil。admin 模块的业务错误统一经此出口识别，禁止直接类型断言。
+func asAPIError(err error) *httpx.APIError {
+	var apiErr *httpx.APIError
+	if errors.As(err, &apiErr) {
+		return apiErr
+	}
+	return nil
 }
 
 func applyPositiveIntPatch(target *int, patch *int) *httpx.APIError {

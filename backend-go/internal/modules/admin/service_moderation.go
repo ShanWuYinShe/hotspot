@@ -250,7 +250,7 @@ func (s *Service) SearchUsers(ctx context.Context, req AdminUserSearchRequest) (
 	}
 	page, err := s.repo.SearchUsers(ctx, req)
 	if err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			return PaginatedAdminUsers{}, apiErr, nil
 		}
 		return PaginatedAdminUsers{}, nil, err
@@ -271,7 +271,7 @@ func (s *Service) OpenAdminUser(ctx context.Context, userID string) (AdminUserIt
 	}
 	item, found, err := s.repo.GetUser(ctx, userID)
 	if err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			return AdminUserItem{}, apiErr, nil
 		}
 		return AdminUserItem{}, nil, err
@@ -318,7 +318,7 @@ func (s *Service) UnbanUser(ctx context.Context, req AdminUnbanUserRequest) (*ht
 		return &httpx.APIError{Code: httpx.CodeForbidden, Message: "系统管理员权限不足: admin.users.write"}, nil
 	}
 	if err := s.repo.SetUserBanState(ctx, req.UserID, UserBanState{Status: UserAccountStatusNormal}); err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			return apiErr, nil
 		}
 		return nil, err
@@ -340,7 +340,7 @@ func (s *Service) SearchGroups(ctx context.Context, req AdminGroupSearchRequest)
 	}
 	page, err := s.repo.SearchGroups(ctx, req)
 	if err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			return PaginatedAdminGroups{}, apiErr, nil
 		}
 		return PaginatedAdminGroups{}, nil, err
@@ -383,7 +383,7 @@ func (s *Service) DismissGroup(ctx context.Context, req AdminDismissGroupRequest
 	}
 	item, found, err := s.repo.DismissGroup(ctx, req.GroupID)
 	if err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			return apiErr, nil
 		}
 		return nil, err
@@ -413,7 +413,7 @@ func (s *Service) SearchReports(ctx context.Context, req AdminReportListRequest)
 	}
 	page, err := s.repo.SearchReports(ctx, req)
 	if err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			return PaginatedAdminReports{}, apiErr, nil
 		}
 		return PaginatedAdminReports{}, nil, err
@@ -430,7 +430,8 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 	if apiErr != nil || err != nil {
 		return apiErr, err
 	}
-	if strings.TrimSpace(req.ReportID) == "" || !isValidReportAction(req.Action) || len(req.Note) > 500 {
+	note := strings.TrimSpace(req.Note)
+	if strings.TrimSpace(req.ReportID) == "" || !isValidReportAction(req.Action) || len(note) > 500 {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
 	if req.BanDurationDays != nil && *req.BanDurationDays < 0 {
@@ -450,34 +451,28 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 		switch record.Item.TargetType {
 		case ReportTargetTypeGroup:
 			if _, _, err := s.repo.DismissGroup(ctx, record.Item.TargetID); err != nil {
-				if apiErr, ok := err.(*httpx.APIError); ok {
+				if apiErr := asAPIError(err); apiErr != nil {
 					return apiErr, nil
 				}
 				return nil, err
 			}
 		case ReportTargetTypeUser:
-			if req.BanDurationDays != nil {
-				if apiErr, err := s.banUser(ctx, actor, record.TargetUser.UserID, req.Note, req.BanDurationDays, false); apiErr != nil || err != nil {
-					return apiErr, err
-				}
+			if apiErr, err := s.banReportedUser(ctx, actor, record.TargetUser.UserID, note, req.BanDurationDays); apiErr != nil || err != nil {
+				return apiErr, err
 			}
 		case ReportTargetTypeMoment:
 			if err := s.repo.DeleteMoment(ctx, record.Item.TargetID); err != nil {
 				return nil, err
 			}
-			if req.BanDurationDays != nil {
-				if apiErr, err := s.banUser(ctx, actor, record.TargetUser.UserID, req.Note, req.BanDurationDays, false); apiErr != nil || err != nil {
-					return apiErr, err
-				}
+			if apiErr, err := s.banReportedUser(ctx, actor, record.TargetUser.UserID, note, req.BanDurationDays); apiErr != nil || err != nil {
+				return apiErr, err
 			}
 		case ReportTargetTypeComment:
 			if err := s.repo.DeleteComment(ctx, record.Item.TargetID); err != nil {
 				return nil, err
 			}
-			if req.BanDurationDays != nil {
-				if apiErr, err := s.banUser(ctx, actor, record.TargetUser.UserID, req.Note, req.BanDurationDays, false); apiErr != nil || err != nil {
-					return apiErr, err
-				}
+			if apiErr, err := s.banReportedUser(ctx, actor, record.TargetUser.UserID, note, req.BanDurationDays); apiErr != nil || err != nil {
+				return apiErr, err
 			}
 		case ReportTargetTypeMessage:
 			if err := s.repo.RecallGroupMessage(ctx, record.Item.TargetID); err != nil {
@@ -485,16 +480,14 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 					return nil, err
 				}
 			}
-			if req.BanDurationDays != nil {
-				if apiErr, err := s.banUser(ctx, actor, record.TargetUser.UserID, req.Note, req.BanDurationDays, false); apiErr != nil || err != nil {
-					return apiErr, err
-				}
+			if apiErr, err := s.banReportedUser(ctx, actor, record.TargetUser.UserID, note, req.BanDurationDays); apiErr != nil || err != nil {
+				return apiErr, err
 			}
 		}
 	}
-	_, ok, err := s.repo.HandleReport(ctx, req.ReportID, req.Action, strings.TrimSpace(req.Note), &UserInfo{UserID: actor.UserID, Nickname: actor.UserID})
+	_, ok, err := s.repo.HandleReport(ctx, req.ReportID, req.Action, note, &UserInfo{UserID: actor.UserID, Nickname: actor.UserID})
 	if err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			return apiErr, nil
 		}
 		return nil, err
@@ -502,15 +495,23 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 	if !ok {
 		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "举报不存在"}, nil
 	}
-	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("report.handle"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetType("report"), TargetID: req.ReportID, TargetName: req.ReportID, Details: map[string]any{"type": "report.handle", "report_id": req.ReportID, "action": string(req.Action), "note": strings.TrimSpace(req.Note)}}); err != nil {
+	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("report.handle"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetType("report"), TargetID: req.ReportID, TargetName: req.ReportID, Details: map[string]any{"type": "report.handle", "report_id": req.ReportID, "action": string(req.Action), "note": note}}); err != nil {
 		return nil, err
 	}
 	// Notify the reporter about the outcome (resolve/dismiss only; escalate
 	// keeps the report pending and does not notify).
 	if req.Action == ReportActionResolve || req.Action == ReportActionDismiss {
-		s.notifyReportHandled(ctx, record.Item.Reporter.UserID, req.ReportID, string(record.Item.TargetType), record.Item.TargetID, strings.TrimSpace(req.Note), req.Action == ReportActionResolve)
+		s.notifyReportHandled(ctx, record.Item.Reporter.UserID, req.ReportID, string(record.Item.TargetType), record.Item.TargetID, note, req.Action == ReportActionResolve)
 	}
 	return nil, nil
+}
+
+// banReportedUser 按举报处理附带的天数封禁目标用户（nil = 不封禁，跳过）。
+func (s *Service) banReportedUser(ctx context.Context, actor AdminActor, targetUserID, note string, banDays *int) (*httpx.APIError, error) {
+	if banDays == nil {
+		return nil, nil
+	}
+	return s.banUser(ctx, actor, targetUserID, note, banDays, false)
 }
 
 // notifyReportHandled persists the report_resolved/report_dismissed
@@ -591,7 +592,7 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 	bannedAt := time.Now().UTC()
 	state := UserBanState{Status: UserAccountStatusBanned, Reason: strings.TrimSpace(reason), DurationDays: duration, BannedAt: bannedAt}
 	if err := s.repo.SetUserBanState(ctx, userID, state); err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		if apiErr := asAPIError(err); apiErr != nil {
 			return apiErr, nil
 		}
 		return nil, err
