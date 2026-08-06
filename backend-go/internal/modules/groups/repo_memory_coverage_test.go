@@ -25,7 +25,6 @@ func TestMemoryAnnouncementAndApplicationLifecycle(t *testing.T) {
 	if err != nil || ann.AnnouncementID == "" {
 		t.Fatalf("create announcement: %#v err=%v", ann, err)
 	}
-	// 内存 repo 的公告方法为 stub：List 仅校验群存在
 	anns, err := repo.ListAnnouncements(ctx, created.Group.GroupID)
 	if err != nil {
 		t.Fatalf("list announcements: %#v err=%v", anns, err)

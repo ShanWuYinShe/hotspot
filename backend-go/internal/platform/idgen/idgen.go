@@ -30,17 +30,6 @@ func New() (string, error) {
 	return hex.EncodeToString(buf), nil
 }
 
-// MustNew is the panic-on-error variant of New, for call sites where a
-// crypto/rand failure is unrecoverable (none in practice). Prefer New in
-// production code paths.
-func MustNew() string {
-	id, err := New()
-	if err != nil {
-		panic(err)
-	}
-	return id
-}
-
 // WithPrefix returns "<prefix><random id>". It is a small convenience over
 // calling New and concatenating manually; use it to keep the prefix
 // convention explicit at each call site.

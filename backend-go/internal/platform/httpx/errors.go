@@ -37,7 +37,3 @@ func (e *APIError) Error() string {
 func InvalidRequest(message string) *APIError {
 	return &APIError{Code: CodeInvalidRequest, Message: message}
 }
-
-func InternalUnavailable(message string) *APIError {
-	return &APIError{Code: CodeInternalUnavailable, Message: message}
-}

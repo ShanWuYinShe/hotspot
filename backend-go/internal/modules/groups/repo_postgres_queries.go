@@ -40,9 +40,9 @@ WHERE gm.group_id = $1 AND ($2 = '' OR gm.role = $2)
 ORDER BY gm.joined_at ASC, gm.user_id ASC`
 
 	// queryListMyGroupsBase is the static prefix of the my-groups query. The
-	// keyset cursor predicate and LIMIT are appended dynamically by
-	// buildListMyGroupsQuery so pagination is done at the DB layer (no OFFSET,
-	// no Go-side full scan). members_count is computed via a single aggregated
+	// keyset cursor predicate, ORDER BY and LIMIT are appended dynamically
+	// inside ListMyGroups so pagination is done at the DB layer (no OFFSET, no
+	// Go-side full scan). members_count is computed via a single aggregated
 	// LEFT JOIN instead of a per-row COUNT(*) (which was an N+1).
 	queryListMyGroupsBase = `
 		SELECT g.group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, g.requires_approval, g.next_activity, is_searchable, max_members, g.owner_id, g.created_at, g.last_activity_at, COALESCE(g.tags, '{}'),
