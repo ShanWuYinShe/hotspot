@@ -13,7 +13,7 @@
 	import { listNotifications, getUnreadCount, markRead } from '@/api';
 	import { WS_NOTIFY_EVENT } from '@/lib/ws/client';
 	import { formatDateTime } from '@/lib/utils';
-import { ROUTES } from '@/lib/routes';
+import { ROUTES, ME_SECTION_PATHS } from '@/lib/routes';
 
 	// 通知列表：类型过滤、单条/全部已读、桌面右侧概览 Rail。
 
@@ -241,7 +241,7 @@ const FILTER_TABS = [
 				</div>
 			</RailSection>
 
-			<RailSection title="新关注你的人" action="全部" onAction={() => void goto(`${ROUTES.meSection('relationships')}?tab=fans`)}>
+			<RailSection title="新关注你的人" action="全部" onAction={() => void goto(`${ME_SECTION_PATHS.relationships}?tab=fans`)}>
 				<div class="flex flex-col gap-3">
 					{#each notifications.filter((n) => n.type === 'follow').slice(0, 3) as n (n.id)}
 						<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.time}>

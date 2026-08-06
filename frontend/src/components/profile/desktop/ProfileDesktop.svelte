@@ -9,7 +9,7 @@
 	import SectionFollowing from '@/components/profile/SectionFollowing.svelte';
 	import SectionFans from '@/components/profile/SectionFans.svelte';
 	import { useAccountData } from '@/lib/profile-data.svelte';
-	import { ROUTES, type ProfileSection } from '@/lib/routes';
+	import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 
 	// 桌面个人主页（对齐 Figma Make ProfilePage 契约）：
 	// 总览 = 资料页眉 + 双栏（公开个人资料卡 + 资料状态 aside）+ 资料详情 dl；
@@ -125,7 +125,7 @@
 							type="button"
 							class="hover-bg border-l border-border-default px-5 py-4 text-left outline-none first:border-l-0"
 							style="background:var(--surface-primary);"
-							onclick={() => (stat.section ? void goto(ROUTES.meSection(stat.section)) : undefined)}
+							onclick={() => (stat.section ? void goto(ME_SECTION_PATHS[stat.section]) : undefined)}
 						>
 							<p class="text-lg font-medium tabular-nums text-text-primary">{stat.value}</p>
 							<p class="mt-0.5 text-xs text-text-secondary">{stat.label}</p>

@@ -9,7 +9,7 @@
 import SectionFans from '@/components/profile/SectionFans.svelte';
 import TabBar from '@/components/navigation/TabBar.svelte';
 import { useRelationships } from '@/lib/profile-data.svelte';
-	import { ROUTES } from '@/lib/routes';
+	import { ROUTES, ME_SECTION_PATHS } from '@/lib/routes';
 
 	// 关系聚合页（/me/relationships，桌面导航「关系」与通知页深链的落地页）：
 	// 好友 / 关注 / 粉丝 三 tab。对齐全站样板（nearby/moments）：StandardPageLayout
@@ -37,7 +37,7 @@ import { useRelationships } from '@/lib/profile-data.svelte';
 
 	const switchTab = (tab: RelTab) => {
 		if (tab === activeTab) return;
-		void goto(`${ROUTES.meSection('relationships')}?tab=${tab}`);
+		void goto(`${ME_SECTION_PATHS.relationships}?tab=${tab}`);
 	};
 
 	const device = $derived(platform.platform);

@@ -7,7 +7,7 @@ import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 import ListContainer from '@/components/list/ListContainer.svelte';
 import ListItem from '@/components/list/ListItem.svelte';
 	import { useAccountData } from '@/lib/profile-data.svelte';
-	import { ROUTES, type ProfileSection } from '@/lib/routes';
+	import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 
 	// 移动/平板个人主页（对齐 Figma Make ProfileCompact 契约）：
 	// 资料页眉 + 身份卡（68px 头像 + 编辑按钮 + stats 横条）+ 个人数据 5 行链接（无 Tab/画廊）。
@@ -105,7 +105,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 		</div>
 		{#each DATA_ITEMS as item (item.section)}
 			<ListItem
-				onClick={() => void goto(ROUTES.meSection(item.section))}
+				onClick={() => void goto(ME_SECTION_PATHS[item.section])}
 				ariaLabel={item.label}
 				class="flex items-center gap-3 px-5 py-3.5"
 			>

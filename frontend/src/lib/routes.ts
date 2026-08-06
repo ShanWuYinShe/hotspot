@@ -3,9 +3,10 @@
  *
  * 个人主页分区共 6 个：moments / groups / friends / following / fans 五个独立分区，
  * 外加 relationships 聚合分区（好友 + 关注 + 粉丝三 tab，内部用 ?tab= 切换）。
- * relationships 由 me/[section] 独立渲染为样板页（StandardPageLayout，不走
- * ProfileDesktop 分区模式）；桌面导航「关系」和通知页「新关注你的人」入口落在
- * relationships；移动端个人数据 5 行链接走独立分区。路由守卫见 route-guards.ts。
+ * 全部为常驻固定路由（/me/moments、/me/relationships …），不走动态段；
+ * relationships 独立渲染为样板页（StandardPageLayout，不走 ProfileDesktop
+ * 分区模式）；桌面导航「关系」和通知页「新关注你的人」入口落在 relationships；
+ * 移动端个人数据 5 行链接走独立分区。路径见 ME_SECTION_PATHS。
  */
 export type ProfileSection =
 	| "moments"
@@ -14,6 +15,16 @@ export type ProfileSection =
 	| "following"
 	| "fans"
 	| "relationships";
+
+/** 个人主页固定分区页路径（常驻路由，非动态段）。 */
+export const ME_SECTION_PATHS: Record<ProfileSection, string> = {
+  moments: "/me/moments",
+  groups: "/me/groups",
+  friends: "/me/friends",
+  following: "/me/following",
+  fans: "/me/fans",
+  relationships: "/me/relationships",
+};
 
 export const ROUTES = {
   home: "/",
@@ -37,7 +48,6 @@ export const ROUTES = {
   message: (chatId: string | number) => `/messages/${chatId}`,
   /** 群聊窗口（与私聊 message() 区分;静态段 group 优先于 [chatId] 参数段）。 */
   groupMessage: (groupId: string | number) => `/messages/group/${groupId}`,
-  meSection: (section: ProfileSection) => `/me/${section}`,
 } as const;
 
 /**

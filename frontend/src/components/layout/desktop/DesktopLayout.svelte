@@ -16,7 +16,7 @@
 	import SidebarNavItem from '@/components/layout/desktop/SidebarNavItem.svelte';
 	import LocationCard from '@/components/layout/desktop/LocationCard.svelte';
 	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
-	import { ROUTES, getDesktopNavId, type DesktopNavId } from '@/lib/routes';
+	import { ROUTES, ME_SECTION_PATHS, getDesktopNavId, type DesktopNavId } from '@/lib/routes';
 	import imgHotSpot from '@/assets/9254a1e0e11b516a6c1aecb80d92b66f2caa243e.png';
 
 	// 桌面全屏布局（≥1024px）：52px 顶栏 + 可折叠侧栏 + 主内容卡片 + 发布模态。
@@ -39,9 +39,9 @@
 
 	const PERSONAL_NAV: NavItem[] = [
 		{ id: 'messages', icon: MessageCircle, label: '消息', path: ROUTES.messages },
-		{ id: 'moments', icon: ImageIcon, label: '我的瞬间', path: ROUTES.meSection('moments') },
-		{ id: 'my-groups', icon: Users, label: '我的群组', path: ROUTES.meSection('groups') },
-		{ id: 'relationships', icon: Heart, label: '关系', path: ROUTES.meSection('relationships') }
+		{ id: 'moments', icon: ImageIcon, label: '我的瞬间', path: ME_SECTION_PATHS.moments },
+		{ id: 'my-groups', icon: Users, label: '我的群组', path: ME_SECTION_PATHS.groups },
+		{ id: 'relationships', icon: Heart, label: '关系', path: ME_SECTION_PATHS.relationships }
 	];
 
 	const LAST_DESKTOP_NAV_KEY = 'hotspot:last-desktop-nav';
