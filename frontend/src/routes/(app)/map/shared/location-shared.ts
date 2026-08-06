@@ -1,6 +1,7 @@
 // 地图共享逻辑。
 
 import { getMapCanvas } from '@/api';
+import { formatDistance } from '@/lib/utils';
 import type { Pin, PinType } from './location-data';
 import markerUserUrl from '@/assets/markers/marker_user.svg';
 import markerGroupUrl from '@/assets/markers/marker_group.svg';
@@ -128,11 +129,6 @@ function hotspotToPin(item: MapHotspotItem): Pin {
 		image: item.cover_url,
 		distance: item.distance_meters != null ? formatDistance(item.distance_meters) : undefined
 	};
-}
-
-function formatDistance(meters: number): string {
-	if (meters >= 1000) return `${(meters / 1000).toFixed(1)}km`;
-	return `${Math.round(meters)}m`;
 }
 
 function normalizeCanvas(res: { code: number; data?: unknown }): MapCanvasResult {

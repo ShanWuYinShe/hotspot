@@ -5,8 +5,8 @@
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
-	import { Tabs } from 'bits-ui';
-	import { ROUTES } from '@/lib/routes';
+import TabBar from '@/components/navigation/TabBar.svelte';
+		import { ROUTES } from '@/lib/routes';
 	import { formatDistance, formatDateTime } from '@/lib/utils';
 	import { getGroupDetail, getGroupMembers, getGroupAnnouncements } from '@/api';
 	import { wsClient } from '@/lib/ws/client';
@@ -231,22 +231,18 @@
 				</span>
 			</div>
 
-			<!-- Tabs -->
-			<Tabs.Root value={tab} onValueChange={(v) => (tab = v as GroupTab)}>
-				<Tabs.List class="mt-6 flex gap-1 border-b border-border-default">
-					{#each ['overview', 'members', 'announcements'] as item (item)}
-						<Tabs.Trigger
-							value={item}
-							class="hover-btn relative px-3 py-2.5 text-base focus-ring {tab === item ? 'text-accent-default' : 'text-text-secondary'}"
-						>
-							{item === 'overview' ? '简介' : item === 'members' ? '成员' : '公告'}
-							{#if tab === item}
-								<span class="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-accent-default"></span>
-							{/if}
-						</Tabs.Trigger>
-					{/each}
-				</Tabs.List>
-			</Tabs.Root>
+			<!-- 分类 Tab（统一 TabBar 下划线样式） -->
+			<div class="mt-4 border-b border-border-default">
+				<TabBar
+					items={[
+						{ id: 'overview', label: '简介' },
+						{ id: 'members', label: '成员' },
+						{ id: 'announcements', label: '公告' }
+					]}
+					value={tab}
+					onChange={(id) => (tab = id as GroupTab)}
+				/>
+			</div>
 
 			{#if tab === 'overview'}
 				<div class="py-6">

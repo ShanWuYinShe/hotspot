@@ -13,7 +13,12 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function formatDistance(d?: number | string | null): string {
   if (d == null) return '';
-  return typeof d === 'number' ? `${Math.round(d * 10) / 10}m` : d;
+  // number 为米：≥1km 转 km（1 位小数），否则原样米；字符串（如 '0.4km'）直接返回
+  if (typeof d === 'number') {
+    if (d >= 1000) return `${(d / 1000).toFixed(1)}km`;
+    return `${Math.round(d)}m`;
+  }
+  return d;
 }
 
 /**

@@ -1,0 +1,53 @@
+<script lang="ts">
+	import type { NearbyUser } from './nearby-users';
+	import ListContainer from '@/components/list/ListContainer.svelte';
+	import UserCardRow from '@/components/profile/UserCardRow.svelte';
+
+	// 首页/发现页共用的「附近用户」行列表：ListContainer + UserCardRow
+	// （在线角标 + #tag · 距离副标题 + 关注按钮），两页一致避免重复实现。
+
+	let {
+		users,
+		followingIds,
+		onToggle
+	}: {
+		users: NearbyUser[];
+		followingIds: Set<string>;
+		onToggle: (id: string) => void;
+	} = $props();
+</script>
+
+<ListContainer bordered>
+	{#each users as u (u.id)}
+		{@const followed = followingIds.has(u.id)}
+		<UserCardRow name={u.name} avatar={u.avatar}>
+			{#snippet avatarBadge()}
+				{#if u.isOnline}
+					<span
+						class="absolute bottom-0 right-0 rounded-full border-2"
+						style="width:10px;height:10px;background:var(--status-online);border-color:var(--surface-primary);"
+					></span>
+				{/if}
+			{/snippet}
+			{#snippet subtitle()}
+				<p class="mt-1 flex items-center gap-1.5">
+					<span style="font-size:10px;color:var(--accent-default);">#{u.tag}</span>
+					<span style="font-size:10px;color:var(--text-secondary);opacity:0.5;">·</span>
+					<span style="font-size:10px;color:var(--text-secondary);">{u.distance}</span>
+				</p>
+			{/snippet}
+			{#snippet actions()}
+				<button
+					type="button"
+					class="hover-btn tap-93 px-3 py-1 rounded-full outline-none transition-all"
+					style={followed
+						? 'background:transparent;color:var(--text-secondary);border:1px solid var(--border-strong);font-size:11px;'
+						: 'background:var(--accent-default);color:white;border:1px solid transparent;font-size:11px;'}
+					onclick={() => onToggle(u.id)}
+				>
+					{followed ? '已关注' : '关注'}
+				</button>
+			{/snippet}
+		</UserCardRow>
+	{/each}
+</ListContainer>

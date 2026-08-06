@@ -21,7 +21,6 @@
 	// + header 内 trailing 计数、below 搜索与分类 Tab —— 其他页面均以此为准。
 	// 对齐 Figma Make 附近动态页结构。
 
-	// TODO(mock): 分类 Tab 尚未接线过滤逻辑（待数据源区分热门/附近/活动/关注后实现）
 	const TABS = ['热门', '附近', '活动', '关注'];
 
 	let apiFeedItems = $state<FeedItem[]>([]);
@@ -111,11 +110,16 @@
 
 	const filtered = $derived.by(() => {
 		const q = searchQuery.trim().toLowerCase();
-		return interactions.items.filter(
+		let items = interactions.items.filter(
 			(i) =>
 				(!activeTag || i.tag === activeTag) &&
 				(!q || i.user.toLowerCase().includes(q) || i.content.toLowerCase().includes(q) || i.location.toLowerCase().includes(q))
 		);
+		// 分类 Tab 过滤：热门=按热度排序；活动=活动标签；关注=关注流（mock 无数据源，恒空）
+		if (activeTab === '热门') items = [...items].sort((a, b) => b.likes - a.likes);
+		else if (activeTab === '活动') items = items.filter((i) => i.tag === '活动');
+		else if (activeTab === '关注') items = [];
+		return items;
 	});
 
 	const device = $derived(platform.platform);

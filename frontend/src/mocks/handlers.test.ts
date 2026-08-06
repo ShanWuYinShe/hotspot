@@ -58,7 +58,8 @@ describe('msw id-routed handlers', () => {
 		const target = mockUsers[3];
 		const res = await run('/api/v1/users/get_profile', { user_id: target.user_id });
 		expect(res.code).toBe(0);
-		expect(res.data.user.user_id).toBe(target.user_id);
+		// spec: UserProfileBundle — user 为 UserItem（嵌套 user: UserInfo）
+		expect(res.data.user.user.user_id).toBe(target.user_id);
 		expect(Array.isArray(res.data.recent_moments.items)).toBe(true);
 	});
 

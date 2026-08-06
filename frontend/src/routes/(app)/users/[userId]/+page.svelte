@@ -25,7 +25,7 @@
 		followers: number;
 		following: number;
 		moments: number;
-		gallery: string[];
+		gallery: { moments: string[]; liked: string[]; saved: string[] };
 		tags: string[];
 	}
 
@@ -38,14 +38,14 @@
 		followers: 0,
 		following: 0,
 		moments: 0,
-		gallery: [],
+		gallery: { moments: [], liked: [], saved: [] },
 		tags: []
 	});
 	let loading = $state(true);
 	let mutualFriends = $state<{ id: string; name: string; sub: string; avatar: string }[]>([]);
 	let followed = $state(false);
-	// TODO(mock): liked/saved 分类暂未接入独立数据源（当前共享同一画廊）
 	let activeTab = $state<'moments' | 'liked' | 'saved'>('moments');
+	const galleryItems = $derived(user.gallery[activeTab]);
 	let moreOpen = $state(false);
 	let blocked = $state(false);
 	let remark = $state('');
@@ -76,7 +76,11 @@
 						followers: s?.followers_count ?? 0,
 						following: s?.following_count ?? 0,
 						moments: s?.moments_count ?? 0,
-						gallery: data.recent_moments?.items?.map((m) => m.images?.[0]?.url ?? '') ?? [],
+						gallery: {
+		moments: data.recent_moments?.items?.map((m) => m.images?.[0]?.url ?? '') ?? [],
+		liked: data.liked_moments?.items?.map((m) => m.images?.[0]?.url ?? '') ?? [],
+		saved: data.favorited_moments?.items?.map((m) => m.images?.[0]?.url ?? '') ?? []
+	},
 						tags: u.tags ?? []
 					};
 					if (r?.is_following !== undefined) followed = r.is_following;
@@ -312,7 +316,7 @@
 
 	<!-- Gallery -->
 	<div class="mt-4 grid grid-cols-3 gap-1.5">
-		{#each user.gallery as src, i}
+		{#each galleryItems as src, i}
 			<div class="image-hover-frame tap-97 relative cursor-pointer rounded-small overflow-hidden" style="aspect-ratio:1;">
 				<img src={src} alt={`photo ${i}`} class="image-hover-frame__image w-full h-full object-cover" />
 				{#if activeTab === 'liked'}

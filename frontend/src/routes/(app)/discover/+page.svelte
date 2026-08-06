@@ -4,16 +4,15 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
-	import { getTrending, getNearbyUsers, getNearbyGroups } from '@/api';
+	import { fetchHomeFeed } from '@/components/home/home-feed';
+	import { type Activity } from '@/components/home/activity-data';
+	import NearbyUserRows from '@/components/home/NearbyUserRows.svelte';
+	import ListContainer from '@/components/list/ListContainer.svelte';
+	import ListItem from '@/components/list/ListItem.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
 	import { type NearbyUser } from '@/components/home/nearby-users';
-	import { toActivities, type Activity } from '@/components/home/activity-data';
-	import ListContainer from '@/components/list/ListContainer.svelte';
-	import ListItem from '@/components/list/ListItem.svelte';
-	import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import { ROUTES } from '@/lib/routes';
-	import { formatDistance } from '@/lib/utils';
 
 	// 发现聚合页（平板/移动端顶级导航）：聚合「附近的人 / 附近群组 / 附近动态」
 	// 与搜索入口——平板/移动端没有桌面侧栏的空间放多个 nearby 菜单，统一收口到
@@ -38,42 +37,11 @@
 	$effect(() => {
 		let cancelled = false;
 		async function fetchData() {
-			const searchParams: Record<string, unknown> = { radius: 5000, pagination: { limit: 12 } };
-			if (referencePoint) searchParams.reference_point = referencePoint;
-			const [trendingRes, nearbyUsersRes, nearbyGroupsRes] = await Promise.all([
-				getTrending().catch(() => ({ code: -1, data: null })),
-				getNearbyUsers(searchParams).catch(() => ({ code: -1, data: { items: [] } })),
-				getNearbyGroups(searchParams).catch(() => ({ code: -1, data: { items: [] } }))
-			]);
+			const feed = await fetchHomeFeed(referencePoint);
 			if (cancelled) return;
-
-			const trendingData = trendingRes.code === 0 ? trendingRes.data : null;
-			const nearbyUsersData = nearbyUsersRes.code === 0 ? nearbyUsersRes.data : null;
-			const nearbyGroupsData = nearbyGroupsRes.code === 0 ? nearbyGroupsRes.data : null;
-
-			activities = toActivities(trendingData);
-
-			if (nearbyUsersData) {
-				nearbyUsers = nearbyUsersData.items.map((u) => ({
-					id: u.user?.user_id ?? '',
-					name: u.user?.nickname ?? '',
-					distance: formatDistance(u.location?.distance),
-					avatar: u.user?.avatar_url ?? '',
-					isOnline: u.presence_status === 'online',
-					tag: u.tags?.[0] ?? ''
-				}));
-			}
-
-			if (nearbyGroupsData) {
-				nearbyGroups = nearbyGroupsData.items.map((g) => ({
-					id: g.group?.group_id ?? '',
-					name: g.group?.name ?? '',
-					members: g.group?.members_count ?? 0,
-					banner: g.group?.avatar_url ?? '',
-					distance: formatDistance(g.location?.distance),
-					privacy: g.join_method === 'invite_only' || g.join_method === 'password' ? 'private' : 'public'
-				}));
-			}
+			activities = feed.activities;
+			nearbyUsers = feed.users;
+			nearbyGroups = feed.groups;
 		}
 		void fetchData();
 		return () => {
@@ -113,40 +81,7 @@
 	<!-- 附近的人 -->
 	<div class="mt-6">
 		<SectionHead title="附近的人" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
-		<ListContainer bordered>
-			{#each nearbyUsers.slice(0, 4) as u (u.id)}
-				{@const followed = followingIds.has(u.id)}
-				<UserCardRow name={u.name} avatar={u.avatar}>
-					{#snippet avatarBadge()}
-						{#if u.isOnline}
-							<span
-								class="absolute bottom-0 right-0 rounded-full border-2"
-								style="width:10px;height:10px;background:var(--status-online);border-color:var(--surface-primary);"
-							></span>
-						{/if}
-					{/snippet}
-					{#snippet subtitle()}
-						<p class="mt-1 flex items-center gap-1.5">
-							<span class="text-[10px]"  style="color:var(--accent-default)">#{u.tag}</span>
-							<span class="text-[10px]"  style="color:var(--text-secondary);opacity:0.5">·</span>
-							<span class="text-[10px]"  style="color:var(--text-secondary)">{u.distance}</span>
-						</p>
-					{/snippet}
-					{#snippet actions()}
-						<button
-							type="button"
-							class="hover-btn tap-93 px-3 py-1 rounded-full outline-none transition-all"
-							style={followed
-								? 'background:transparent;color:var(--text-secondary);border:1px solid var(--border-strong);font-size:11px;'
-								: 'background:var(--accent-default);color:white;border:1px solid transparent;font-size:11px;'}
-							onclick={() => toggleFollow(u.id)}
-						>
-							{followed ? '已关注' : '关注'}
-						</button>
-					{/snippet}
-				</UserCardRow>
-			{/each}
-		</ListContainer>
+<NearbyUserRows users={nearbyUsers.slice(0, 4)} {followingIds} onToggle={toggleFollow} />
 	</div>
 
 	<!-- 附近群组 -->

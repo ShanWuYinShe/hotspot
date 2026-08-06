@@ -2,17 +2,16 @@
 	import { goto } from '$app/navigation';
 	import { ChevronRight, Search } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
-	import { getTrending, getNearbyUsers, getNearbyGroups } from '@/api';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import HeroStats from '@/components/home/HeroStats.svelte';
 	import { type NearbyUser } from '@/components/home/nearby-users';
-	import { toActivities, type Activity } from '@/components/home/activity-data';
-	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
+	import { type Activity } from '@/components/home/activity-data';
+	import { fetchHomeFeed } from '@/components/home/home-feed';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
-	import UserCardRow from '@/components/profile/UserCardRow.svelte';
+	import NearbyUserRows from '@/components/home/NearbyUserRows.svelte';
+	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
 	import { ROUTES } from '@/lib/routes';
-	import { formatDistance } from '@/lib/utils';
 	import { loadDefaultLocation, type DefaultLocation } from '@/lib/default-location';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -46,44 +45,11 @@
 			try {
 				loading = true;
 				error = null;
-				const searchParams: Record<string, unknown> = { radius: 5000, pagination: { limit: 12 } };
-				if (defaultLocation) searchParams.reference_point = defaultLocation.point;
-				const [trendingRes, nearbyUsersRes, nearbyGroupsRes] = await Promise.all([
-					getTrending().catch(() => ({ code: -1, data: null })),
-					getNearbyUsers(searchParams).catch(() => ({ code: -1, data: { items: [] } })),
-					getNearbyGroups(searchParams).catch(() => ({ code: -1, data: { items: [] } }))
-				]);
+				const feed = await fetchHomeFeed(defaultLocation?.point);
 				if (cancelled) return;
-
-				const trendingData = trendingRes.code === 0 ? trendingRes.data : null;
-				const nearbyUsersData = nearbyUsersRes.code === 0 ? nearbyUsersRes.data : null;
-				const nearbyGroupsData = nearbyGroupsRes.code === 0 ? nearbyGroupsRes.data : null;
-
-				activities = toActivities(trendingData);
-
-				if (nearbyUsersData) {
-					const users: NearbyUser[] = nearbyUsersData.items.map((u) => ({
-						id: u.user?.user_id ?? '',
-						name: u.user?.nickname ?? '',
-						distance: formatDistance(u.location?.distance),
-						avatar: u.user?.avatar_url ?? '',
-						isOnline: u.presence_status === 'online',
-						tag: u.tags?.[0] ?? ''
-					}));
-					nearbyUsers = users;
-				}
-
-				if (nearbyGroupsData) {
-					const groups: NearbyGroup[] = nearbyGroupsData.items.map((g) => ({
-						id: g.group?.group_id ?? '',
-						name: g.group?.name ?? '',
-						members: g.group?.members_count ?? 0,
-						banner: g.group?.avatar_url ?? '',
-						distance: formatDistance(g.location?.distance),
-						privacy: g.join_method === 'invite_only' || g.join_method === 'password' ? 'private' : 'public'
-					}));
-					nearbyGroups = groups;
-				}
+				activities = feed.activities;
+				nearbyUsers = feed.users;
+				nearbyGroups = feed.groups;
 			} catch (e) {
 				if (!cancelled) error = e instanceof Error ? e.message : '加载失败';
 			} finally {
@@ -135,43 +101,6 @@
 	</ListContainer>
 {/snippet}
 
-{#snippet userRows(users: NearbyUser[], following: Set<string>, onToggle: (id: string) => void)}
-	<ListContainer bordered>
-		{#each users as u (u.id)}
-			{@const followed = following.has(u.id)}
-			<UserCardRow name={u.name} avatar={u.avatar}>
-				{#snippet avatarBadge()}
-					{#if u.isOnline}
-						<span
-							class="absolute bottom-0 right-0 rounded-full border-2"
-							style="width:10px;height:10px;background:var(--status-online);border-color:var(--surface-primary);"
-						></span>
-					{/if}
-				{/snippet}
-				{#snippet subtitle()}
-					<p class="mt-1 flex items-center gap-1.5">
-						<span class="text-[10px]"  style="color:var(--accent-default)">#{u.tag}</span>
-						<span class="text-[10px]"  style="color:var(--text-secondary);opacity:0.5">·</span>
-						<span class="text-[10px]"  style="color:var(--text-secondary)">{u.distance}</span>
-					</p>
-				{/snippet}
-				{#snippet actions()}
-					<button
-						type="button"
-						class="hover-btn tap-93 px-3 py-1 rounded-full outline-none transition-all"
-						style={followed
-							? 'background:transparent;color:var(--text-secondary);border:1px solid var(--border-strong);font-size:11px;'
-							: 'background:var(--accent-default);color:white;border:1px solid transparent;font-size:11px;'}
-						onclick={() => onToggle(u.id)}
-					>
-						{followed ? '已关注' : '关注'}
-					</button>
-				{/snippet}
-			</UserCardRow>
-		{/each}
-	</ListContainer>
-{/snippet}
-
 {#snippet homeContent()}
 	<!-- 三端共用的业务组件（只写一次）。首页为大纲页：列表限长 + 「更多」链接导航到专区 -->
 	<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={defaultLocation?.location_name ?? ''} />
@@ -183,7 +112,7 @@
 	<div>
 		<SectionHead title="人物推荐" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
 		<!-- 对齐 Figma HomePage：人物推荐仅展示前 4 位，其余引导到附近的人专区 -->
-		{@render userRows(nearbyUsers.slice(0, 4), followingIds, toggleFollow)}
+		<NearbyUserRows users={nearbyUsers.slice(0, 4)} {followingIds} onToggle={toggleFollow} />
 	</div>
 {/snippet}
 
@@ -271,7 +200,7 @@
 				</div>
 
 				<div class="mt-6">
-					{@render userRows(nearbyUsers, followingIds, toggleFollow)}
+					<NearbyUserRows users={nearbyUsers} {followingIds} onToggle={toggleFollow} />
 				</div>
 			</div>
 		</div>

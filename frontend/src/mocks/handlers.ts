@@ -153,10 +153,20 @@ export const handlers = [
     const u = mockUsers[idx];
     const userMoments = mockMoments.filter((m) => m.user.user_id === u.user_id);
     return json(apiOk({
-      user: u,
-      stats: { moments_count: userMoments.length || 24, friends_count: 18, followers_count: 89, following_count: 42, groups_count: 5 },
-      relation: { is_following: idx !== 0, is_followed_by: false, is_blocked: false },
+      // spec: UserProfileBundle — user 为 UserItem（嵌套 user: UserInfo + stats/relation 内嵌）
+      user: {
+        user: { user_id: u.user_id, nickname: u.nickname, avatar_url: u.avatar_url },
+        bio: `这是 ${u.nickname} 的简介`,
+        tags: ['摄影', '户外'],
+        presence_status: 'online',
+        location: { point: { latitude: 34.26, longitude: 117.18 }, location_name: '徐州', distance: '0.3km' },
+        stats: { moments_count: userMoments.length || 24, friends_count: 18, followers_count: 89, following_count: 42, groups_count: 5 },
+        relation: { is_following: idx !== 0, is_followed_by: false, is_blocked: false }
+      },
       recent_moments: { items: userMoments.length ? userMoments : mockMoments.slice(idx * 2, idx * 2 + 4) },
+      // 喜欢/收藏流（mock 演示数据：与最近动态区分，避免三 tab 完全同图）
+      liked_moments: { items: mockMoments.slice((idx + 1) % 6, (idx + 1) % 6 + 3) },
+      favorited_moments: { items: mockMoments.slice((idx + 3) % 6, (idx + 3) % 6 + 3) },
     }));
   }),
   http.post(`${API}/users/search`, () => json(paginated(mockUsers))),

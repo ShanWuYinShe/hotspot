@@ -421,6 +421,9 @@ export interface UserProfileBundle {
 	// spec: user.md → get_profile
 	user: UserItem;
 	recent_moments: PaginatedData<MomentItem>;
+	/** 喜欢/收藏流（mock 演示数据，spec 未定义独立字段，扩展字段） */
+	liked_moments?: PaginatedData<MomentItem>;
+	favorited_moments?: PaginatedData<MomentItem>;
 }
 
 export interface FriendItem {

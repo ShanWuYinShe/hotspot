@@ -5,13 +5,14 @@
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import { SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import {
-		PIN_COLORS, PIN_LABELS, pinTone, buildMapData, getMarkerUrl, fetchMapCanvas,
+		PIN_COLORS, PIN_LABELS, pinTone, buildMapData, fetchMapCanvas,
 		type MapHeatBucket,
 		markerUserUrl, markerGroupUrl, markerMomentUrl,
 		markerUserClusterUrl, markerGroupClusterUrl, markerMomentClusterUrl
 	} from '../shared/location-shared';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
 	import MapHeatDot from '../shared/MapHeatDot.svelte';
+	import PinMedia from '../shared/PinMedia.svelte';
 	import LocationDesktopPanel from './LocationDesktopPanel.svelte';
 
 	// 桌面地图探索：左侧栏（统计/搜索/Tab 列表/确认，由 LocationDesktopPanel 承载）
@@ -251,20 +252,7 @@
 				style="position:absolute;bottom:20px;left:20px;right:20px;z-index:25;border-radius:20px;padding:16px;box-shadow:0 0 0 1px var(--border-default), 0 16px 48px var(--elevation-shadow-dark);"
 			>
 				<div class="flex items-center gap-3">
-					{#if selectedPin.type === 'user' && selectedPin.avatar}
-						<div class="relative shrink-0">
-							<img src={selectedPin.avatar} alt={selectedPin.name || selectedPin.title || ''} class="rounded-full object-cover size-13"  />
-							{#if selectedPin.online}
-								<span class="absolute bottom-0 right-0 rounded-full bg-status-online size-3"  style="border:2.5px solid var(--surface-primary)"></span>
-							{/if}
-						</div>
-					{:else if selectedPin.type === 'moment' && selectedPin.image}
-						<img src={selectedPin.image} alt={selectedPin.name || selectedPin.title || ''} class="rounded-xl object-cover shrink-0 size-13"  />
-					{:else}
-						<div class="flex items-center justify-center rounded-[15px] shrink-0" style="width:52px;height:52px;background:{pinTone(selectedPin.type, 14)};">
-							<img class="w-6.5 h-8.75" src={getMarkerUrl(selectedPin.type, selectedPin.count ?? 1)} alt=""  />
-						</div>
-					{/if}
+					<PinMedia pin={selectedPin} size={52} markerWidth={26} markerHeight={35} />
 					<div class="flex-1 min-w-0">
 						<div class="flex items-center gap-2">
 							<p class="text-text-primary text-[15px]">{selectedPin.name || selectedPin.title}</p>

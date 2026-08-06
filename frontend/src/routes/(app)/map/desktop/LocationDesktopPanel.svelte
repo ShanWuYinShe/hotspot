@@ -5,7 +5,8 @@
 	import ListItem from '@/components/list/ListItem.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
-	import { PIN_COLORS, PIN_LABELS, pinTone, getMarkerUrl } from '../shared/location-shared';
+	import { PIN_COLORS, PIN_LABELS, pinTone } from '../shared/location-shared';
+import PinMedia from '../shared/PinMedia.svelte';
 
 	// 桌面地图「左侧面板」：标题/搜索/Tab 列表/确认。
 	// 页面私有组件（colocate），由 map/LocationDesktop.svelte 渲染。
@@ -152,20 +153,7 @@
 							ariaLabel={`选择 ${pin.name || pin.title || ''}`}
 							class="app-list-row app-list-row--standard rounded-control"
 						>
-						{#if pin.type === 'user' && pin.avatar}
-							<div class="relative shrink-0">
-								<img src={pin.avatar} alt={pin.name || pin.title || ''} class="rounded-full object-cover size-10.5"  />
-								{#if pin.online}
-									<span class="absolute bottom-0 right-0 rounded-full bg-status-online size-2.5 border-2 border-surface-primary"  ></span>
-								{/if}
-							</div>
-						{:else if pin.type === 'moment' && pin.image}
-							<img src={pin.image} alt={pin.title || pin.name || ''} class="rounded-[11px] object-cover shrink-0 size-10.5"  />
-						{:else}
-							<div class="flex items-center justify-center rounded-small shrink-0" style="width:42px;height:42px;background:{pinTone(pin.type, 12)};">
-								<img class="w-5 h-6.75" src={getMarkerUrl(pin.type, 1)} alt={pin.type}  />
-							</div>
-						{/if}
+						<PinMedia {pin} size={42} />
 						<div class="flex-1 min-w-0">
 							<p class="{isSelected ? 'text-content-inverse' : 'text-text-primary'} text-base">{pin.name || pin.title}</p>
 							<div class="flex items-center gap-2 mt-0.5 flex-wrap">

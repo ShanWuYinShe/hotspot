@@ -3,7 +3,8 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import { HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
-	import { PIN_COLORS, PIN_LABELS, pinTone, getMarkerUrl } from '../shared/location-shared';
+	import { PIN_COLORS, PIN_LABELS, pinTone } from '../shared/location-shared';
+import PinMedia from '../shared/PinMedia.svelte';
 
 	// 移动端地图「底部 Sheet 列表内容」：搜索建议 / 选中图钉 mini-card / Tab / 最近·热门列表。
 	// 页面私有组件（colocate），由 map/LocationMobile.svelte 渲染（仅 snap !== 'min' 时显示）。
@@ -62,18 +63,7 @@
 		<!-- Selected pin mini-card -->
 		{#if selectedPin}
 			<div class="flex items-center gap-3 mx-4 mb-2 p-3 rounded-[15px]" style="background:{pinTone(selectedPin.type, 10)};border:1px solid {pinTone(selectedPin.type, 30)};">
-				{#if selectedPin.type === 'user' && selectedPin.avatar}
-					<div class="relative shrink-0">
-						<img src={selectedPin.avatar} alt={selectedPin.name || selectedPin.title || ''} class="rounded-full object-cover size-10.5"  />
-						{#if selectedPin.online}
-							<span class="absolute bottom-0 right-0 rounded-full bg-status-online size-2.5 border-2 border-surface-primary"  ></span>
-						{/if}
-					</div>
-				{:else if selectedPin.type === 'moment' && selectedPin.image}
-					<img src={selectedPin.image} alt={selectedPin.name || selectedPin.title || ''} class="rounded-tight object-cover shrink-0 size-10.5"  />
-				{:else}
-					<img class="w-5.5 h-7.25 shrink-0" src={getMarkerUrl(selectedPin.type, selectedPin.count ?? 1)} alt=""  />
-				{/if}
+				<PinMedia pin={selectedPin} size={42} />
 				<div class="flex-1 min-w-0">
 					<p class="text-text-primary text-base">{selectedPin.name || selectedPin.title}</p>
 					<p class="text-text-secondary text-[11px] mt-px" >
