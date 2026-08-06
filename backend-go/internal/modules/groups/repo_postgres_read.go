@@ -162,6 +162,9 @@ func getGroupBase(ctx context.Context, queryable persistence.QueryableDB, groupI
 	return scanGroupBase(queryable.QueryRow(ctx, queryGetGroup, groupID))
 }
 
+// loadGroupMembership 读取单个群的成员状态。注意 UnreadCount 恒为 0、
+// IsPinned 恒为 false：spec 未定义未读数/置顶的存储与来源，属于已知限制，
+// 勿将这两个字段当作真实数据使用。
 func loadGroupMembership(ctx context.Context, queryable persistence.QueryableDB, groupID, userID string) (*MyGroupState, error) {
 	if userID == "" {
 		return nil, nil
@@ -179,6 +182,8 @@ func loadGroupMembership(ctx context.Context, queryable persistence.QueryableDB,
 	return &MyGroupState{Role: GroupRole(role), IsJoined: true, UnreadCount: 0, IsMuted: isMuted, MutedUntil: formatMutedUntil(mutedUntil), IsPinned: false, JoinedAt: joinedAt.UTC().Format(time.RFC3339)}, nil
 }
 
+// loadGroupMemberships 批量读取成员状态（同 loadGroupMembership，未读数/置顶
+// 为已知限制，恒为 0/false）。
 func loadGroupMemberships(ctx context.Context, queryable persistence.QueryableDB, groupIDs []string, userID string) (map[string]*MyGroupState, error) {
 	result := make(map[string]*MyGroupState, len(groupIDs))
 	if userID == "" || len(groupIDs) == 0 {

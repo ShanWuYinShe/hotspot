@@ -152,7 +152,10 @@ func (r *PostgresRepository) IsMember(ctx context.Context, groupID, userID strin
 	}
 	var v int
 	if err := queryable.QueryRow(ctx, queryCheckGroupMembership, groupID, userID).Scan(&v); err != nil {
-		return false, nil
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
 	}
 	return true, nil
 }

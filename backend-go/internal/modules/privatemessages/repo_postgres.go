@@ -2,9 +2,12 @@ package privatemessages
 
 import (
 	"context"
-	"hotspot/backend-go/internal/platform/idgen"
+	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
+	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
@@ -192,7 +195,10 @@ func (r *PostgresRepository) GetMessageForReply(ctx context.Context, messageID, 
 	var senderUserID, nickname, content, shareCode string
 	err := queryable.QueryRow(ctx, queryGetPrivateMessageForReply, messageID, viewerUserID).Scan(&senderUserID, &nickname, &content, &shareCode)
 	if err != nil {
-		return nil, false, nil
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, false, nil
+		}
+		return nil, false, err
 	}
 	result := map[string]any{
 		"message_id": messageID,
@@ -215,7 +221,10 @@ func (r *PostgresRepository) GetMediaForMessage(ctx context.Context, fileID, own
 	var fileSize int
 	err := queryable.QueryRow(ctx, queryGetMediaFileForMessage, fileID, ownerUserID).Scan(&fileIDFound, &storageKey, &fileName, &fileSize, &mimeType)
 	if err != nil {
-		return nil, false, nil
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, false, nil
+		}
+		return nil, false, err
 	}
 	result := map[string]any{
 		"url":       storageKey,
@@ -241,7 +250,10 @@ func (r *PostgresRepository) MessageExists(ctx context.Context, messageID string
 	var senderUserID string
 	err := queryable.QueryRow(ctx, queryPrivateMessageExists, messageID).Scan(&senderUserID)
 	if err != nil {
-		return false, "", nil
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, "", nil
+		}
+		return false, "", err
 	}
 	return true, senderUserID, nil
 }
