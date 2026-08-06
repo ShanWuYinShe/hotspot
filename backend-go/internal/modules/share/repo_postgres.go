@@ -51,7 +51,7 @@ func (r *PostgresRepository) Create(ctx context.Context, cmd createShareCommand)
 		if err == nil {
 			return ShareCreated{ShareID: shareID, ShareCode: shareCode, ExpiresAt: expiresAt}, nil
 		}
-		if isUniqueViolation(err) {
+		if persistence.IsUniqueViolation(err) {
 			continue
 		}
 		return ShareCreated{}, err
@@ -178,9 +178,4 @@ func newShareCode() (string, error) {
 		code[i] = shareCodeAlphabet[int(buf[i])%len(shareCodeAlphabet)]
 	}
 	return string(code), nil
-}
-
-func isUniqueViolation(err error) bool {
-	var sqlState interface{ SQLState() string }
-	return errors.As(err, &sqlState) && sqlState.SQLState() == "23505"
 }

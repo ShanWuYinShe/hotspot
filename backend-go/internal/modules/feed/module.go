@@ -17,7 +17,7 @@ type Module struct {
 }
 
 func NewModule(factory *persistence.Factory, source appconfig.Source, imageResolver ImageResolver) *Module {
-	repo := NewPersistenceRepository(factory)
+	repo := NewPostgresRepository(factory)
 	svc := NewServiceWithSourceAndImages(repo, source, imageResolver)
 	return &Module{handler: NewHandler(svc), Service: svc}
 }

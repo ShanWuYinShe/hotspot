@@ -16,9 +16,9 @@ type Module struct {
 }
 
 func NewModule(factory *persistence.Factory) *Module {
-	repo := NewPersistenceRepository(factory)
+	repo := NewPostgresRepository(factory)
 	service := NewServiceWithRepo(repo)
-	service.SetMomentsSharer(moments.NewServiceWithRepo(moments.NewPersistenceRepository(factory)))
+	service.SetMomentsSharer(moments.NewServiceWithRepo(moments.NewPostgresRepository(factory)))
 	return &Module{handler: NewHandler(service), Service: service}
 }
 

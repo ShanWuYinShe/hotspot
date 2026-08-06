@@ -29,14 +29,14 @@ type LocationProvider interface {
 }
 
 func NewService(source appconfig.Source) *Service {
-	return NewServiceWithSource(NewPersistenceRepository(nil), source)
+	return NewServiceWithSource(NewPostgresRepository(nil), source)
 }
 
 func NewServiceWithRepo(repo Repository) *Service { return NewServiceWithSource(repo, nil) }
 
 func NewServiceWithSource(repo Repository, source appconfig.Source) *Service {
 	if repo == nil {
-		repo = NewPersistenceRepository(nil)
+		repo = NewPostgresRepository(nil)
 	}
 	if source == nil {
 		source = appconfig.NewStaticSource(config.Config{})

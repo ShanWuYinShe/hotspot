@@ -19,27 +19,6 @@ type JoinGroupStatus string
 // (previously these were flat top-level limit/cursor fields).
 type PaginationParams = types.PaginationParams
 
-// paginationLimit returns the page size, defaulting to fallback when unset or
-// out of range. Free function because methods cannot be defined on a type
-// aliased from another package.
-func paginationLimit(p *PaginationParams, fallback, max int) int {
-	if p == nil || p.Limit <= 0 {
-		return fallback
-	}
-	if p.Limit > max {
-		return max
-	}
-	return p.Limit
-}
-
-// paginationCursor returns the pagination cursor (empty when unset).
-func paginationCursor(p *PaginationParams) string {
-	if p == nil {
-		return ""
-	}
-	return p.Cursor
-}
-
 const (
 	GroupJoinMethodDirect     GroupJoinMethod = "direct"
 	GroupJoinMethodPassword   GroupJoinMethod = "password"

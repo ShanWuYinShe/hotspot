@@ -19,14 +19,6 @@ func NewHandler(service *Service, appConfig appconfig.Source) *Handler {
 	return &Handler{service: service, appConfig: appConfig}
 }
 
-func logServerError(r *http.Request, method string, err error) {
-	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
-}
-
-func logBusinessError(r *http.Request, method string, code httpx.Code, message string) {
-	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
-}
-
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	var req MyPrivateChatsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
@@ -35,7 +27,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.service.List(r.Context(), req)
 	if err != nil {
-		logServerError(r, "List", err)
+		observability.LogServerError(r, "List", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -85,10 +77,10 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleServiceError(w http.ResponseWriter, r *http.Request, method string, err error) {
 	if errors.Is(err, users.ErrUserNotFound) {
-		logBusinessError(r, method, httpx.CodeNotFound, "用户不存在")
+		observability.LogBusinessError(r, method, int(httpx.CodeNotFound), "用户不存在")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "用户不存在"))
 		return
 	}
-	logServerError(r, method, err)
+	observability.LogServerError(r, method, err)
 	httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 }

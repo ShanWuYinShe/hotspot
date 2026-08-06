@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"hotspot/backend-go/internal/platform/types"
 	"sort"
 	"strings"
 	"time"
@@ -218,8 +219,8 @@ func searchCursorForGroupItem(item GroupItem, meta groupSearchMeta, sortBy strin
 // changed between pages), it falls back to skipping the rows that sort after
 // the cursor.
 func paginateSearchGroups(items []GroupItem, metas map[string]groupSearchMeta, sortBy string, pagination *PaginationParams) (PaginatedGroups, error) {
-	limit := paginationLimit(pagination, defaultSearchLimit, maxSearchLimit)
-	cursor, err := decodeSearchCursor(paginationCursor(pagination))
+	limit := types.PaginationLimitWith(pagination, defaultSearchLimit, maxSearchLimit)
+	cursor, err := decodeSearchCursor(types.PaginationCursor(pagination))
 	if err != nil {
 		return PaginatedGroups{}, err
 	}

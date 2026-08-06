@@ -15,14 +15,6 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-func logServerError(r *http.Request, method string, err error) {
-	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
-}
-
-func logBusinessError(r *http.Request, method string, code httpx.Code, message string) {
-	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
-}
-
 func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Prefix         string `json:"prefix"`
@@ -61,7 +53,7 @@ func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 		Radius:         body.Radius,
 	})
 	if err != nil {
-		logServerError(r, "Suggest", err)
+		observability.LogServerError(r, "Suggest", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}

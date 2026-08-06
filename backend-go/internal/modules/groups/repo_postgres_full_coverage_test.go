@@ -624,20 +624,20 @@ func TestPostgresTransferOwnershipAndNilHelpers(t *testing.T) {
 	// queryableForTx
 	ctxWithQ, cancel := context.WithCancel(ctx)
 	_ = cancel
-	_, ok := queryableForTx(ctxWithQ, &persistence.Factory{DB: &groupFullStub{}})
+	_, ok := persistence.QueryableForTx(ctxWithQ, &persistence.Factory{DB: &groupFullStub{}})
 	if !ok {
 		t.Fatal("queryableForTx with db must succeed")
 	}
-	if _, ok := queryableForTx(ctx, nil); ok {
+	if _, ok := persistence.QueryableForTx(ctx, nil); ok {
 		t.Fatal("queryableForTx nil factory must fail")
 	}
-	if _, ok := queryableForTx(ctx, &persistence.Factory{}); ok {
+	if _, ok := persistence.QueryableForTx(ctx, &persistence.Factory{}); ok {
 		t.Fatal("queryableForTx empty factory must fail")
 	}
 	// ctx 带 transaction queryable 优先
 	q := &groupFullStub{}
 	txCtx := persistence.WithTx(ctx, q, nil)
-	if got, ok := queryableForTx(txCtx, nil); !ok || got != q {
+	if got, ok := persistence.QueryableForTx(txCtx, nil); !ok || got != q {
 		t.Fatal("queryableForTx must prefer ctx queryable")
 	}
 }

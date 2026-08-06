@@ -99,10 +99,10 @@ func TestAdminRepoListPermissionsAndNilHelpers(t *testing.T) {
 	if nullableString("  ") != nil || nullableString("x") != "x" {
 		t.Fatal("nullableString")
 	}
-	if !isUniqueViolation(&pgconn.PgError{Code: "23505"}) {
+	if !persistence.IsUniqueViolation(&pgconn.PgError{Code: "23505"}) {
 		t.Fatal("isUniqueViolation must match 23505")
 	}
-	if isUniqueViolation(errors.New("boom")) {
+	if persistence.IsUniqueViolation(errors.New("boom")) {
 		t.Fatal("isUniqueViolation must reject non-pg errors")
 	}
 }
@@ -716,7 +716,7 @@ func TestAdminStoreCursorHelpers(t *testing.T) {
 		}
 	}
 	// normalizeLimit
-	if normalizeLimit(0) != 20 || normalizeLimit(101) != 100 || normalizeLimit(5) != 5 {
+	if types.NormalizeLimit(0) != 20 || types.NormalizeLimit(101) != 100 || types.NormalizeLimit(5) != 5 {
 		t.Fatal("normalizeLimit")
 	}
 	// limitPageItems

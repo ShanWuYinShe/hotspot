@@ -15,7 +15,7 @@ type Module struct {
 }
 
 func NewModule(factory *persistence.Factory) *Module {
-	repo := NewPersistenceRepository(factory)
+	repo := NewPostgresRepository(factory)
 	return &Module{handler: NewHandler(NewServiceWithRepo(repo))}
 }
 

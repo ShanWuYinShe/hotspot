@@ -104,14 +104,6 @@ func (b *reportBackendStub) Query(_ context.Context, query string, args ...any) 
 	return &reportRowsValues{rows: rows}, nil
 }
 
-func TestNewPersistenceRepositoryUsesPostgresWhenDSNConfigured(t *testing.T) {
-	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
-	repo := NewPersistenceRepository(factory)
-	if _, ok := repo.impl.(*PostgresRepository); !ok {
-		t.Fatalf("expected postgres impl, got %T", repo.impl)
-	}
-}
-
 func TestPostgresRepositoryCreateAndList(t *testing.T) {
 	backend := newReportBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})

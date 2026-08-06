@@ -167,20 +167,12 @@ func (b *notificationBackendStub) Query(_ context.Context, query string, args ..
 	}
 }
 
-func TestNewPersistenceRepositoryUsesPostgresWhenDSNConfigured(t *testing.T) {
-	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
-	repo := NewPersistenceRepository(factory)
-	if _, ok := repo.impl.(*PostgresRepository); !ok {
-		t.Fatalf("expected postgres impl, got %T", repo.impl)
-	}
-}
-
 func TestPersistenceRepositoryWithPostgresDSNDoesNotFallbackSilently(t *testing.T) {
 	factory := &persistence.Factory{
 		Config: persistence.Config{PostgresDSN: "postgres://example"},
 		DB:     notificationNonQueryableDB{},
 	}
-	repo := &PersistenceRepository{impl: NewPostgresRepository(factory)}
+	repo := NewPostgresRepository(factory)
 
 	if err := repo.Append(context.Background(), "user_alice", NotifyItem{Type: "new_follower"}); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("expected ErrNotImplemented for append, got %v", err)

@@ -24,7 +24,7 @@ func NewModule(ctx context.Context, cfg config.Config, factory *persistence.Fact
 	// Wire the configured bcrypt cost once at startup. config.Validate() has
 	// already enforced the OWASP minimum by this point.
 	ConfigureHashingCost(cfg.BcryptCost)
-	repo := NewPersistenceRepository(factory)
+	repo := NewPostgresRepository(factory)
 	service := NewServiceWithSource(ctx, authService, repo, cfg, source)
 	return &Module{handler: NewHandler(service)}
 }

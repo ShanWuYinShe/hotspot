@@ -60,17 +60,6 @@ func ErrAnnouncementNotFound() error {
 	return errAnnouncementNotFound
 }
 
-func normalizeLimit(limit int) int {
-	switch {
-	case limit <= 0:
-		return 20
-	case limit > 100:
-		return 100
-	default:
-		return limit
-	}
-}
-
 type AnnouncementCreateInput struct {
 	Actor     AnnouncementActor
 	Title     string

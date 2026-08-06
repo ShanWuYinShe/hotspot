@@ -16,14 +16,6 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-func logServerError(r *http.Request, method string, err error) {
-	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
-}
-
-func logBusinessError(r *http.Request, method string, code httpx.Code, message string) {
-	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
-}
-
 func (h *Handler) GetMyProfile(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
@@ -79,9 +71,9 @@ func (h *Handler) UpdateMySettings(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) writeServiceError(w http.ResponseWriter, r *http.Request, method string, err error) {
 	apiErr := apiErrorFromService(err)
 	if apiErr.Code == httpx.CodeInternalUnavailable {
-		logServerError(r, method, err)
+		observability.LogServerError(r, method, err)
 	} else {
-		logBusinessError(r, method, apiErr.Code, apiErr.Message)
+		observability.LogBusinessError(r, method, int(apiErr.Code), apiErr.Message)
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Error(apiErr.Code, apiErr.Message))
 }

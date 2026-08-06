@@ -18,14 +18,6 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-func logServerError(r *http.Request, method string, err error) {
-	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
-}
-
-func logBusinessError(r *http.Request, method string, code httpx.Code, message string) {
-	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
-}
-
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	if err := idempotency.RequireKey(r); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
@@ -39,7 +31,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	idempotency.ReplayOrStore(w, r, "groups/create", func() httpx.ApiResponse[GroupItem] {
 		item, err := h.service.Create(r.Context(), req)
 		if err != nil {
-			logServerError(r, "Create", err)
+			observability.LogServerError(r, "Create", err)
 			return httpx.ApiResponse[GroupItem]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 		}
 		return httpx.Success(item)
@@ -54,7 +46,7 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 	}
 	item, ok, err := h.service.OpenTheDoor(r.Context(), req.GroupID)
 	if err != nil {
-		logServerError(r, "OpenTheDoor", err)
+		observability.LogServerError(r, "OpenTheDoor", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -90,7 +82,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
 			return
 		}
-		logServerError(r, "Search", err)
+		observability.LogServerError(r, "Search", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}

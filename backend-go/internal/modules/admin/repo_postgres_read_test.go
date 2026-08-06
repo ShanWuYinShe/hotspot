@@ -414,14 +414,6 @@ func stringValue(v any) string {
 	return v.(string)
 }
 
-func TestNewPersistenceRepositoryUsesPostgresWhenDSNConfigured(t *testing.T) {
-	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
-	repo := NewPersistenceRepository(factory)
-	if _, ok := repo.impl.(*PostgresRepository); !ok {
-		t.Fatalf("expected postgres impl, got %T", repo.impl)
-	}
-}
-
 func TestPostgresRepositoryRoleAndAdminFlows(t *testing.T) {
 	backend := newAdminBackendStub()
 	backend.users["user_bob"] = UserInfo{UserID: "user_bob", Nickname: "Bob", AvatarURL: "avatar"}

@@ -112,17 +112,6 @@ func validPermissionSet(values []string) bool {
 	return true
 }
 
-func normalizeLimit(limit int) int {
-	switch {
-	case limit <= 0:
-		return 20
-	case limit > 100:
-		return 100
-	default:
-		return limit
-	}
-}
-
 func limitPageItems[T any](items []T, limit int) ([]T, bool) {
 	if len(items) <= limit {
 		return items, false

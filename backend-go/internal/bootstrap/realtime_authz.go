@@ -10,9 +10,9 @@ import (
 
 type realtimeUserService struct{ svc *users.Service }
 
-type realtimeUserRepo struct{ repo *users.PersistenceRepository }
+type realtimeUserRepo struct{ repo users.Repository }
 
-type realtimeGroupRepo struct{ repo *groups.PersistenceRepository }
+type realtimeGroupRepo struct{ repo groups.Repository }
 
 func (a realtimeUserService) OpenTheDoor(ctx context.Context, userID string) (string, bool, error) {
 	item, ok, err := a.svc.OpenTheDoor(ctx, userID)

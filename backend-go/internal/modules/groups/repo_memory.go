@@ -3,6 +3,7 @@ package groups
 import (
 	"context"
 	"fmt"
+	"hotspot/backend-go/internal/platform/types"
 	"sort"
 	"strings"
 	"sync"
@@ -163,7 +164,7 @@ func (r *InMemoryRepository) Search(ctx context.Context, req SearchGroupsRequest
 		}
 	}
 	sortGroupsForSearch(items, metas, req.SortBy)
-	cursor, err := decodeSearchCursor(paginationCursor(req.Pagination))
+	cursor, err := decodeSearchCursor(types.PaginationCursor(req.Pagination))
 	if err != nil {
 		return PaginatedGroups{}, err
 	}
@@ -176,7 +177,7 @@ func (r *InMemoryRepository) Search(ctx context.Context, req SearchGroupsRequest
 		}
 		items = filtered
 	}
-	limit := paginationLimit(req.Pagination, defaultSearchLimit, maxSearchLimit)
+	limit := types.PaginationLimitWith(req.Pagination, defaultSearchLimit, maxSearchLimit)
 	response := PaginatedGroups{}
 	if len(items) <= limit {
 		response.Items = items

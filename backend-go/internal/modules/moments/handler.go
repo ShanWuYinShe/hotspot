@@ -22,34 +22,26 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-func logServerError(r *http.Request, method string, err error) {
-	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
-}
-
-func logBusinessError(r *http.Request, method string, code httpx.Code, message string) {
-	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
-}
-
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	if err := idempotency.RequireKey(r); err != nil {
-		logBusinessError(r, "Create", err.Code, err.Message)
+		observability.LogBusinessError(r, "Create", int(err.Code), err.Message)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
 	var req CreateMomentRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.Description == "" || (req.Location.Point.Latitude == 0 && req.Location.Point.Longitude == 0 && req.Location.LocationName == "") {
-		logBusinessError(r, "Create", httpx.CodeInvalidRequest, "参数错误")
+		observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	if utf8.RuneCountInString(req.Description) > momentDescriptionMaxRunes {
-		logBusinessError(r, "Create", httpx.CodeInvalidRequest, "内容超过长度限制")
+		observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "内容超过长度限制")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "内容超过长度限制"))
 		return
 	}
 	// Reject out-of-range coordinates before they corrupt the S2 index.
 	if !geo.IsValidPoint(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude}) {
-		logBusinessError(r, "Create", httpx.CodeInvalidRequest, "参数错误: 经纬度超出有效范围")
+		observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "参数错误: 经纬度超出有效范围")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误: 经纬度超出有效范围"))
 		return
 	}
@@ -58,13 +50,13 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			switch {
 			case errors.Is(err, ErrTooManyImages):
-				logBusinessError(r, "Create", httpx.CodeInvalidRequest, "图片数量超过上限")
+				observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "图片数量超过上限")
 				return httpx.ApiResponse[MomentItem]{Code: httpx.CodeInvalidRequest, Message: "图片数量超过上限"}
 			case errors.Is(err, ErrImagesNotOwned):
-				logBusinessError(r, "Create", httpx.CodeInvalidRequest, "图片校验失败")
+				observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "图片校验失败")
 				return httpx.ApiResponse[MomentItem]{Code: httpx.CodeInvalidRequest, Message: "图片校验失败"}
 			}
-			logServerError(r, "Create", err)
+			observability.LogServerError(r, "Create", err)
 			return httpx.ApiResponse[MomentItem]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 		}
 		return httpx.Success(item)
@@ -74,18 +66,18 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 	var req MomentOpenTheDoorRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
-		logBusinessError(r, "OpenTheDoor", httpx.CodeInvalidRequest, "参数错误")
+		observability.LogBusinessError(r, "OpenTheDoor", int(httpx.CodeInvalidRequest), "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	item, ok, err := h.service.OpenTheDoor(r.Context(), req.MomentID)
 	if err != nil {
-		logServerError(r, "OpenTheDoor", err)
+		observability.LogServerError(r, "OpenTheDoor", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
 	if !ok {
-		logBusinessError(r, "OpenTheDoor", httpx.CodeNotFound, "瞬间不存在")
+		observability.LogBusinessError(r, "OpenTheDoor", int(httpx.CodeNotFound), "瞬间不存在")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "瞬间不存在"))
 		return
 	}
@@ -95,13 +87,13 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 	var req MyMomentsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		logBusinessError(r, "ListMine", httpx.CodeInvalidRequest, "参数错误")
+		observability.LogBusinessError(r, "ListMine", int(httpx.CodeInvalidRequest), "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	list, err := h.service.ListMine(r.Context(), req)
 	if err != nil {
-		logServerError(r, "ListMine", err)
+		observability.LogServerError(r, "ListMine", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -111,12 +103,12 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	var req SearchMomentsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		logBusinessError(r, "Search", httpx.CodeInvalidRequest, "参数错误")
+		observability.LogBusinessError(r, "Search", int(httpx.CodeInvalidRequest), "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	if req.Keyword == nil && req.Tag == nil && req.Radius == nil {
-		logBusinessError(r, "Search", httpx.CodeInvalidRequest, "参数错误")
+		observability.LogBusinessError(r, "Search", int(httpx.CodeInvalidRequest), "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
@@ -124,14 +116,14 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		switch req.SortBy {
 		case "relevance", "distance", "newest", "popular":
 		default:
-			logBusinessError(r, "Search", httpx.CodeInvalidRequest, "参数错误")
+			observability.LogBusinessError(r, "Search", int(httpx.CodeInvalidRequest), "参数错误")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
 	}
 	result, err := h.service.Search(r.Context(), req)
 	if err != nil {
-		logServerError(r, "Search", err)
+		observability.LogServerError(r, "Search", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -141,33 +133,33 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var req EditMomentRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
-		logBusinessError(r, "Update", httpx.CodeInvalidRequest, "参数错误")
+		observability.LogBusinessError(r, "Update", int(httpx.CodeInvalidRequest), "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	item, err := h.service.Update(r.Context(), req)
 	if err != nil {
 		if errors.Is(err, ErrMomentNotFound) {
-			logBusinessError(r, "Update", httpx.CodeNotFound, "瞬间不存在")
+			observability.LogBusinessError(r, "Update", int(httpx.CodeNotFound), "瞬间不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "瞬间不存在"))
 			return
 		}
 		if errors.Is(err, ErrPermissionDenied) {
-			logBusinessError(r, "Update", httpx.CodeForbidden, "权限不足")
+			observability.LogBusinessError(r, "Update", int(httpx.CodeForbidden), "权限不足")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
 			return
 		}
 		if errors.Is(err, ErrTooManyImages) {
-			logBusinessError(r, "Update", httpx.CodeInvalidRequest, "图片数量超过上限")
+			observability.LogBusinessError(r, "Update", int(httpx.CodeInvalidRequest), "图片数量超过上限")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "图片数量超过上限"))
 			return
 		}
 		if errors.Is(err, ErrImagesNotOwned) {
-			logBusinessError(r, "Update", httpx.CodeInvalidRequest, "图片校验失败")
+			observability.LogBusinessError(r, "Update", int(httpx.CodeInvalidRequest), "图片校验失败")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "图片校验失败"))
 			return
 		}
-		logServerError(r, "Update", err)
+		observability.LogServerError(r, "Update", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -177,22 +169,22 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	var req DeleteMomentRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
-		logBusinessError(r, "Delete", httpx.CodeInvalidRequest, "参数错误")
+		observability.LogBusinessError(r, "Delete", int(httpx.CodeInvalidRequest), "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	if err := h.service.Delete(r.Context(), req.MomentID); err != nil {
 		if errors.Is(err, ErrMomentNotFound) {
-			logBusinessError(r, "Delete", httpx.CodeNotFound, "瞬间不存在")
+			observability.LogBusinessError(r, "Delete", int(httpx.CodeNotFound), "瞬间不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "瞬间不存在"))
 			return
 		}
 		if errors.Is(err, ErrPermissionDenied) {
-			logBusinessError(r, "Delete", httpx.CodeForbidden, "权限不足")
+			observability.LogBusinessError(r, "Delete", int(httpx.CodeForbidden), "权限不足")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
 			return
 		}
-		logServerError(r, "Delete", err)
+		observability.LogServerError(r, "Delete", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -204,7 +196,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Favorite(w http.ResponseWriter, r *http.Request) {
 	var req FavoriteMomentRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
-		logBusinessError(r, "Favorite", httpx.CodeInvalidRequest, "参数错误")
+		observability.LogBusinessError(r, "Favorite", int(httpx.CodeInvalidRequest), "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
@@ -220,11 +212,11 @@ func (h *Handler) Favorite(w http.ResponseWriter, r *http.Request) {
 			if !req.Active {
 				method = "Unfavorite"
 			}
-			logBusinessError(r, method, httpx.CodeNotFound, "瞬间不存在")
+			observability.LogBusinessError(r, method, int(httpx.CodeNotFound), "瞬间不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "瞬间不存在"))
 			return
 		}
-		logServerError(r, "Favorite", err)
+		observability.LogServerError(r, "Favorite", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -234,13 +226,13 @@ func (h *Handler) Favorite(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListFavorites(w http.ResponseWriter, r *http.Request) {
 	var req MyFavoritesRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		logBusinessError(r, "ListFavorites", httpx.CodeInvalidRequest, "参数错误")
+		observability.LogBusinessError(r, "ListFavorites", int(httpx.CodeInvalidRequest), "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	result, err := h.service.ListFavorites(r.Context(), req)
 	if err != nil {
-		logServerError(r, "ListFavorites", err)
+		observability.LogServerError(r, "ListFavorites", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}

@@ -23,11 +23,11 @@ type Module struct {
 }
 
 func NewModule(factory *persistence.Factory, source appconfig.MutableSource) *Module {
-	repo := NewPersistenceRepository(factory)
+	repo := NewPostgresRepository(factory)
 	provider := NewAppConfigProvider(source)
-	systemRepo := systemmodule.NewPersistenceRepository(factory)
+	systemRepo := systemmodule.NewPostgresRepository(factory)
 	moderationStore := NewPersistenceModerationStore(factory, systemRepo)
-	pushService := notify.NewServiceWithRepo(notify.NewPersistenceRepository(factory))
+	pushService := notify.NewServiceWithRepo(notify.NewPostgresRepository(factory))
 	return NewModuleWithDeps(repo, provider, moderationStore, pushService)
 }
 

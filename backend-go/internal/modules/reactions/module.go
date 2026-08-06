@@ -21,7 +21,7 @@ type Module struct {
 // actor provider. Pass nil for providers/notifications to disable side
 // effects (e.g. in tests).
 func NewModule(factory *persistence.Factory, providers []TargetProvider, notificationWriter reactionNotificationWriter, actorProvider actor.Provider) *Module {
-	repo := NewPersistenceRepository(factory)
+	repo := NewPostgresRepository(factory)
 	svc := NewServiceWithDeps(repo, providers, notificationWriter, actorProvider)
 	return &Module{handler: NewHandler(svc), Service: svc}
 }

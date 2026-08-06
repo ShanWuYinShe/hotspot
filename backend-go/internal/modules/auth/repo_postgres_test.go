@@ -33,7 +33,7 @@ func TestPersistenceRepositoryWithPostgresDSNDoesNotFallbackSilently(t *testing.
 		Config: persistence.Config{PostgresDSN: "postgres://example"},
 		DB:     persistence.NewInMemoryDB(),
 	}
-	repo := NewPersistenceRepository(factory)
+	repo := NewPostgresRepository(factory)
 
 	if _, err := repo.Register(context.Background(), RegisterParams{
 		LoginID:          "alice",

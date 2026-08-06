@@ -3,6 +3,7 @@ package system
 import (
 	"context"
 	"fmt"
+	"hotspot/backend-go/internal/platform/types"
 	"sort"
 	"strings"
 	"sync"
@@ -57,7 +58,7 @@ func (r *InMemoryRepository) SearchAnnouncements(_ context.Context, filter Annou
 		}
 		filtered = append(filtered, item)
 	}
-	limit := normalizeLimit(filter.Limit)
+	limit := types.NormalizeLimit(filter.Limit)
 	page := AnnouncementPage{Items: make([]AnnouncementRecord, 0, limit)}
 	for idx, item := range filtered {
 		if idx >= limit {

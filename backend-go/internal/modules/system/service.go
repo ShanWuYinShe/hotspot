@@ -19,7 +19,7 @@ func NewService(appConfig appconfig.Source) *Service {
 }
 
 func NewServiceWithFactory(factory *persistence.Factory, appConfig appconfig.Source) *Service {
-	return NewServiceWithDeps(NewPersistenceRepository(factory), NewAppConfigProvider(appConfig))
+	return NewServiceWithDeps(NewPostgresRepository(factory), NewAppConfigProvider(appConfig))
 }
 
 func NewServiceWithDeps(repo Repository, provider Provider) *Service {

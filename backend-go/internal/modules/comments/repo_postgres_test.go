@@ -213,14 +213,6 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 	}
 }
 
-func TestNewPersistenceRepositoryUsesPostgresWhenDSNConfigured(t *testing.T) {
-	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
-	repo := NewPersistenceRepository(factory)
-	if _, ok := repo.impl.(*PostgresRepository); !ok {
-		t.Fatalf("expected postgres impl, got %T", repo.impl)
-	}
-}
-
 func TestPostgresRepositoryWritesAndReadsQueryableDB(t *testing.T) {
 	backend := newBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})

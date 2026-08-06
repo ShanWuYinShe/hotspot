@@ -7,3 +7,43 @@ type PaginationParams struct {
 	Limit  int    `json:"limit,omitempty"`
 	Cursor string `json:"cursor,omitempty"`
 }
+
+// NormalizeLimit 归一化分页 limit：≤0 取 20，>100 截断 100。
+// 全后端统一入口，替代各模块重复的 normalizeLimit/paginationLimit。
+func NormalizeLimit(limit int) int {
+	switch {
+	case limit <= 0:
+		return 20
+	case limit > 100:
+		return 100
+	default:
+		return limit
+	}
+}
+
+// PaginationLimit 返回分页 limit 裸值（nil 安全）。
+func PaginationLimit(p *PaginationParams) int {
+	if p == nil {
+		return 0
+	}
+	return p.Limit
+}
+
+// PaginationLimitWith 返回归一化 limit：≤0 取 fallback，>max 截断 max。
+func PaginationLimitWith(p *PaginationParams, fallback, max int) int {
+	if p == nil || p.Limit <= 0 {
+		return fallback
+	}
+	if p.Limit > max {
+		return max
+	}
+	return p.Limit
+}
+
+// PaginationCursor 返回分页 cursor（nil 安全）。
+func PaginationCursor(p *PaginationParams) string {
+	if p == nil {
+		return ""
+	}
+	return p.Cursor
+}

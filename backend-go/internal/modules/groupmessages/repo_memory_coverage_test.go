@@ -3,9 +3,6 @@ package groupmessages
 import (
 	"context"
 	"testing"
-
-	"hotspot/backend-go/internal/platform/config"
-	"hotspot/backend-go/internal/platform/persistence"
 )
 
 func TestMemoryGroupMessageLifecycle(t *testing.T) {
@@ -112,12 +109,5 @@ func TestMemoryMessageExistsStub(t *testing.T) {
 	repo := NewInMemoryRepository()
 	if exists, groupID, err := repo.MessageExists(context.Background(), "m1"); err != nil || exists || groupID != "" {
 		t.Fatalf("message exists stub: %v %q %v", exists, groupID, err)
-	}
-}
-
-func TestGmPersistenceRepoWiresPostgres(t *testing.T) {
-	repo := NewPersistenceRepository(persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"}))
-	if _, ok := repo.impl.(*PostgresRepository); !ok {
-		t.Fatalf("expected postgres impl, got %T", repo.impl)
 	}
 }

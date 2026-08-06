@@ -2,6 +2,7 @@ package feed
 
 import (
 	"context"
+	"hotspot/backend-go/internal/platform/types"
 
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -31,7 +32,7 @@ type ReactionAggregator interface {
 }
 
 func NewService(source appconfig.Source) *Service {
-	return NewServiceWithSourceAndImages(NewPersistenceRepository(nil), source, nil)
+	return NewServiceWithSourceAndImages(NewPostgresRepository(nil), source, nil)
 }
 
 func NewServiceWithRepo(repo Repository) *Service {
@@ -44,7 +45,7 @@ func NewServiceWithSource(repo Repository, source appconfig.Source) *Service {
 
 func NewServiceWithSourceAndImages(repo Repository, source appconfig.Source, images ImageResolver) *Service {
 	if repo == nil {
-		repo = NewPersistenceRepository(nil)
+		repo = NewPostgresRepository(nil)
 	}
 	if source == nil {
 		source = appconfig.NewStaticSource(config.Config{})
@@ -64,7 +65,7 @@ func (s *Service) Following(ctx context.Context, req GetFeedFollowingRequest) (P
 	query := momentsQuery{
 		ViewerUserID: principal.UserID,
 		Limit:        normalizeFeedLimit(req.Pagination),
-		Cursor:       paginationCursor(req.Pagination),
+		Cursor:       types.PaginationCursor(req.Pagination),
 	}
 	if refPt := s.resolveReferencePoint(ctx, req.ReferencePoint); refPt != nil {
 		query.ReferencePoint = *refPt
@@ -93,7 +94,7 @@ func (s *Service) Nearby(ctx context.Context, req GetFeedNearbyRequest) (Paginat
 		ReferencePoint: *refPt,
 		Radius:         s.normalizeRadius(ctx, req.Radius),
 		Limit:          normalizeFeedLimit(req.Pagination),
-		Cursor:         paginationCursor(req.Pagination),
+		Cursor:         types.PaginationCursor(req.Pagination),
 	}
 	items, err := s.repo.ListNearbyMoments(ctx, query)
 	if err != nil {
@@ -208,7 +209,7 @@ func (s *Service) newNearbyGroupsQuery(ctx context.Context, viewerUserID string,
 		ReferencePoint: *refPt,
 		Radius:         s.normalizeRadius(ctx, req.Radius),
 		Limit:          normalizeFeedLimit(req.Pagination),
-		Cursor:         paginationCursor(req.Pagination),
+		Cursor:         types.PaginationCursor(req.Pagination),
 	}, nil
 }
 
@@ -222,7 +223,7 @@ func (s *Service) newNearbyUsersQuery(ctx context.Context, viewerUserID string, 
 		ReferencePoint: *refPt,
 		Radius:         s.normalizeRadius(ctx, req.Radius),
 		Limit:          normalizeFeedLimit(req.Pagination),
-		Cursor:         paginationCursor(req.Pagination),
+		Cursor:         types.PaginationCursor(req.Pagination),
 	}, nil
 }
 
@@ -250,13 +251,6 @@ func normalizeFeedLimit(pagination *PaginationParams) int {
 	default:
 		return pagination.Limit
 	}
-}
-
-func paginationCursor(pagination *PaginationParams) string {
-	if pagination == nil {
-		return ""
-	}
-	return pagination.Cursor
 }
 
 func isValidGeoPoint(point GeoPoint) bool {

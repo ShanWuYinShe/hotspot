@@ -35,7 +35,7 @@ func (r *PostgresRepository) PutProfile(ctx context.Context, profile MyProfile) 
 		tags = []string{}
 	}
 	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
-		queryable, ok := queryableForTx(txCtx, r.factory)
+		queryable, ok := persistence.QueryableForTx(txCtx, r.factory)
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
@@ -247,13 +247,3 @@ func nowRFC3339() string {
 // queryableForTx returns the Queryable bound to ctx by RunInTransaction, or
 // nil when no transaction is in effect. Mirrors the helper used by groups/
 // moments/comments so repo methods transparently join an in-flight tx.
-func queryableForTx(ctx context.Context, factory *persistence.Factory) (persistence.Queryable, bool) {
-	if q, ok := persistence.QueryableFromContext(ctx); ok {
-		return q, true
-	}
-	if factory == nil || factory.DB == nil {
-		return nil, false
-	}
-	q, ok := factory.DB.(persistence.QueryableDB)
-	return q, ok
-}

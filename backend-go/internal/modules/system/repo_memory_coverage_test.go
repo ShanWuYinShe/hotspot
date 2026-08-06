@@ -3,6 +3,7 @@ package system
 import (
 	"context"
 	"errors"
+	"hotspot/backend-go/internal/platform/types"
 	"testing"
 	"time"
 
@@ -111,13 +112,13 @@ func TestAppConfigProviderSystemAnnouncementsCount(t *testing.T) {
 }
 
 func TestNormalizeAnnouncementLimit(t *testing.T) {
-	if got := normalizeLimit(0); got != 20 {
+	if got := types.NormalizeLimit(0); got != 20 {
 		t.Fatalf("expected default 20, got %d", got)
 	}
-	if got := normalizeLimit(500); got != 100 {
+	if got := types.NormalizeLimit(500); got != 100 {
 		t.Fatalf("expected cap 100, got %d", got)
 	}
-	if got := normalizeLimit(42); got != 42 {
+	if got := types.NormalizeLimit(42); got != 42 {
 		t.Fatalf("expected 42, got %d", got)
 	}
 }

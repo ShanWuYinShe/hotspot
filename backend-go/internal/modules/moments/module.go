@@ -22,11 +22,11 @@ type Module struct {
 }
 
 func NewModule(factory *persistence.Factory, actorProvider actor.Provider, appConfig appconfig.Source, imageResolver ImageResolver) *Module {
-	momentRepo := NewPersistenceRepository(factory)
-	notificationService := notify.NewServiceWithRepo(notify.NewPersistenceRepository(factory))
+	momentRepo := NewPostgresRepository(factory)
+	notificationService := notify.NewServiceWithRepo(notify.NewPostgresRepository(factory))
 	txRunner := persistence.NewTxRunner(factory)
 	momentService := NewServiceWithDepsAndImagesAndConfig(momentRepo, notificationService, actorProvider, imageResolver, appConfig, txRunner)
-	commentService := comments.NewServiceWithDeps(comments.NewPersistenceRepository(factory), momentService, notificationService, actorProvider, appConfig, txRunner)
+	commentService := comments.NewServiceWithDeps(comments.NewPostgresRepository(factory), momentService, notificationService, actorProvider, appConfig, txRunner)
 	return &Module{
 		momentsHandler:  NewHandler(momentService),
 		commentsHandler: comments.NewHandler(commentService),

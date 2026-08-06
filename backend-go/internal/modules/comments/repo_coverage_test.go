@@ -87,7 +87,7 @@ func TestCommentsConstructorsWire(t *testing.T) {
 }
 
 func TestCommentsPersistenceRepoDelegates(t *testing.T) {
-	repo := NewPersistenceRepository(persistence.NewFactory(config.Config{}))
+	repo := NewPostgresRepository(persistence.NewFactory(config.Config{}))
 	ctx := context.Background()
 	if err := repo.SoftDelete(ctx, "c1"); err != persistence.ErrNotImplemented {
 		t.Fatalf("soft delete: %v", err)

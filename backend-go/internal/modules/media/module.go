@@ -20,7 +20,7 @@ type Module struct {
 }
 
 func NewModule(cfg config.Config, factory *persistence.Factory) *Module {
-	repo := NewPersistenceRepository(factory)
+	repo := NewPostgresRepository(factory)
 	endpoint, err := url.Parse(strings.TrimSpace(cfg.S3Endpoint))
 	if err != nil || endpoint.Scheme == "" || endpoint.Host == "" || strings.TrimSpace(cfg.S3Bucket) == "" {
 		panic("media object storage not configured")

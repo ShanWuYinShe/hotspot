@@ -16,14 +16,6 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-func logServerError(r *http.Request, method string, err error) {
-	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
-}
-
-func logBusinessError(r *http.Request, method string, code httpx.Code, message string) {
-	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
-}
-
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	var req NotificationListRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
@@ -36,7 +28,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
-		logServerError(r, "List", err)
+		observability.LogServerError(r, "List", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -50,7 +42,7 @@ func (h *Handler) UnreadCount(w http.ResponseWriter, r *http.Request) {
 	}
 	count, err := h.service.UnreadCount(r.Context())
 	if err != nil {
-		logServerError(r, "UnreadCount", err)
+		observability.LogServerError(r, "UnreadCount", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -68,7 +60,7 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(req.NotifyIDs) == 0 {
 		if err := h.service.MarkAllRead(r.Context()); err != nil {
-			logServerError(r, "MarkRead", err)
+			observability.LogServerError(r, "MarkRead", err)
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 			return
 		}
@@ -80,7 +72,7 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.MarkAsRead(r.Context(), req.NotifyIDs); err != nil {
-		logServerError(r, "MarkRead", err)
+		observability.LogServerError(r, "MarkRead", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}

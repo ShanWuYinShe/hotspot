@@ -12,7 +12,7 @@ import (
 type Module struct{ handler *Handler }
 
 func NewModule(factory *persistence.Factory) *Module {
-	repo := NewPersistenceRepository(factory)
+	repo := NewPostgresRepository(factory)
 	return &Module{handler: NewHandler(NewServiceWithRepo(repo))}
 }
 

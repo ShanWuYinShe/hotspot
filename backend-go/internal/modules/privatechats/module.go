@@ -29,7 +29,7 @@ type Module struct {
 func NewModule(factory *persistence.Factory, source appconfig.Source, shares shareValidator) *Module {
 	messageRuntime := privatemessages.NewRuntime(factory, source)
 	messageRuntime.SetShareValidator(shares)
-	userService := users.NewServiceWithRepo(users.NewPersistenceRepository(factory))
+	userService := users.NewServiceWithRepo(users.NewPostgresRepository(factory))
 	chatService := NewServiceWithDeps(NewPostgresRepository(factory), messageRuntime.ReadService(), userService)
 	return &Module{chatHandler: NewHandler(chatService, source), messageHandler: messageRuntime.Handler(), messageRuntime: messageRuntime}
 }

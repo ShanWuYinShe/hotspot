@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hotspot/backend-go/internal/platform/types"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/persistence"
 )
@@ -106,7 +106,7 @@ func (r *PostgresRepository) CreateRole(ctx context.Context, req AdminRbacRoleCr
 		Permissions: []string{},
 	}
 	if err := queryable.Exec(ctx, queryRoleInsert, item.RoleID, item.Name, nullableString(item.Description), now, now); err != nil {
-		if isUniqueViolation(err) {
+		if persistence.IsUniqueViolation(err) {
 			return AdminRoleItem{}, &httpx.APIError{Code: httpx.CodeConflict, Message: "角色已存在"}
 		}
 		return AdminRoleItem{}, err
@@ -144,7 +144,7 @@ func (r *PostgresRepository) UpdateRole(ctx context.Context, req AdminRbacRoleUp
 		description = strings.TrimSpace(*req.Description)
 	}
 	if err := queryable.Exec(ctx, queryRoleUpdate, req.RoleID, name, nullableString(description), time.Now().UTC()); err != nil {
-		if isUniqueViolation(err) {
+		if persistence.IsUniqueViolation(err) {
 			return &httpx.APIError{Code: httpx.CodeConflict, Message: "角色已存在"}
 		}
 		return err
@@ -241,7 +241,7 @@ func (r *PostgresRepository) ListAdmins(ctx context.Context, pagination Paginati
 		}
 		filtered = append(filtered, record)
 	}
-	limit := normalizeLimit(pagination.Limit)
+	limit := types.NormalizeLimit(pagination.Limit)
 	page := adminListPage{Items: make([]AdminOperatorItem, 0, limit)}
 	for idx, record := range filtered {
 		if idx >= limit {
@@ -325,7 +325,7 @@ func (r *PostgresRepository) ListAuditLogs(ctx context.Context, filter AuditLogF
 		return auditLogPage{}, err
 	}
 	defer rows.Close()
-	limit := normalizeLimit(filter.Pagination.Limit)
+	limit := types.NormalizeLimit(filter.Pagination.Limit)
 	page := auditLogPage{Items: make([]AuditLogItem, 0, limit)}
 	seenCursor := filter.Pagination.Cursor == ""
 	for rows.Next() {
@@ -412,11 +412,6 @@ func nullableString(value string) any {
 	return value
 }
 
-func isUniqueViolation(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "23505"
-}
-
 func (r *PostgresRepository) SearchUsers(ctx context.Context, req AdminUserSearchRequest) (adminUserPage, error) {
 	queryable, ok := r.queryable()
 	if !ok {
@@ -438,7 +433,7 @@ func (r *PostgresRepository) SearchUsers(ctx context.Context, req AdminUserSearc
 	if err := rows.Err(); err != nil {
 		return adminUserPage{}, err
 	}
-	cursorRaw := paginationCursor(req.Pagination)
+	cursorRaw := types.PaginationCursor(req.Pagination)
 	cursor, apiErr := decodeAdminUserCursor(cursorRaw)
 	if apiErr != nil {
 		return adminUserPage{}, apiErr
@@ -456,7 +451,7 @@ func (r *PostgresRepository) SearchUsers(ctx context.Context, req AdminUserSearc
 		}
 		filtered = append(filtered, item)
 	}
-	limit := normalizeLimit(paginationLimit(req.Pagination))
+	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
 	page := adminUserPage{Items: make([]AdminUserItem, 0, limit)}
 	for idx, item := range filtered {
 		if idx >= limit {
@@ -583,7 +578,7 @@ func (r *PostgresRepository) SearchGroups(ctx context.Context, req AdminGroupSea
 	if err := rows.Err(); err != nil {
 		return adminGroupPage{}, err
 	}
-	cursorRaw := paginationCursor(req.Pagination)
+	cursorRaw := types.PaginationCursor(req.Pagination)
 	cursor, apiErr := decodeAdminGroupCursor(cursorRaw)
 	if apiErr != nil {
 		return adminGroupPage{}, apiErr
@@ -601,7 +596,7 @@ func (r *PostgresRepository) SearchGroups(ctx context.Context, req AdminGroupSea
 		}
 		filtered = append(filtered, item)
 	}
-	limit := normalizeLimit(paginationLimit(req.Pagination))
+	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
 	page := adminGroupPage{Items: make([]AdminGroupItem, 0, limit)}
 	for idx, item := range filtered {
 		if idx >= limit {
@@ -688,7 +683,7 @@ func (r *PostgresRepository) SearchReports(ctx context.Context, req AdminReportL
 	if err := rows.Err(); err != nil {
 		return adminReportPage{}, err
 	}
-	cursorRaw := paginationCursor(req.Pagination)
+	cursorRaw := types.PaginationCursor(req.Pagination)
 	cursor, apiErr := decodeAdminReportCursor(cursorRaw)
 	if apiErr != nil {
 		return adminReportPage{}, apiErr
@@ -706,7 +701,7 @@ func (r *PostgresRepository) SearchReports(ctx context.Context, req AdminReportL
 		}
 		filtered = append(filtered, item)
 	}
-	limit := normalizeLimit(paginationLimit(req.Pagination))
+	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
 	page := adminReportPage{Items: make([]AdminReportItem, 0, limit)}
 	for idx, item := range filtered {
 		if idx >= limit {

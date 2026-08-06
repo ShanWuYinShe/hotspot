@@ -222,14 +222,6 @@ func sharePayloadJSON(value any) string {
 	}
 }
 
-func TestNewPersistenceRepositoryUsesPostgresWhenDSNConfigured(t *testing.T) {
-	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
-	repo := NewPersistenceRepository(factory)
-	if _, ok := repo.impl.(*PostgresRepository); !ok {
-		t.Fatalf("expected postgres impl, got %T", repo.impl)
-	}
-}
-
 func TestPostgresRepositoryCreateGetListAndRevoke(t *testing.T) {
 	backend := newShareBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})

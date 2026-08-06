@@ -17,28 +17,20 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-func logServerError(r *http.Request, method string, err error) {
-	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
-}
-
-func logBusinessError(r *http.Request, method string, code httpx.Code, message string) {
-	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
-}
-
 func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 	if err := idempotency.RequireKey(r); err != nil {
-		logBusinessError(r, "Send", err.Code, err.Message)
+		observability.LogBusinessError(r, "Send", int(err.Code), err.Message)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
 	var req SendPrivateMessageRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		logBusinessError(r, "Send", err.Code, err.Message)
+		observability.LogBusinessError(r, "Send", int(err.Code), err.Message)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
 	if !isValidSendRequest(req) {
-		logBusinessError(r, "Send", httpx.CodeInvalidRequest, "参数错误")
+		observability.LogBusinessError(r, "Send", int(httpx.CodeInvalidRequest), "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
@@ -48,11 +40,11 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 			var blocked *MessageBlockedError
 			if errors.As(err, &blocked) {
 				// 契约(api_spec_chat.md):发送被拒绝返回 httpx.CodeForbidden,data 携带 { reason: BlockReason }
-				logBusinessError(r, "Send", httpx.CodeForbidden, "发送被拒绝")
+				observability.LogBusinessError(r, "Send", int(httpx.CodeForbidden), "发送被拒绝")
 				var data any = map[string]string{"reason": string(blocked.Reason)}
 				return httpx.ApiResponse[any]{Code: httpx.CodeForbidden, Message: "发送被拒绝", Data: &data}
 			}
-			logServerError(r, "Send", err)
+			observability.LogServerError(r, "Send", err)
 			return httpx.ApiResponse[any]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 		}
 		var data any = msg
@@ -63,18 +55,18 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetHistory(w http.ResponseWriter, r *http.Request) {
 	var req GetHistoryRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		logBusinessError(r, "GetHistory", err.Code, err.Message)
+		observability.LogBusinessError(r, "GetHistory", int(err.Code), err.Message)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
 	if req.TargetUserID == "" || !isValidPagination(req.Pagination) {
-		logBusinessError(r, "GetHistory", httpx.CodeInvalidRequest, "参数错误")
+		observability.LogBusinessError(r, "GetHistory", int(httpx.CodeInvalidRequest), "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	history, err := h.service.History(r.Context(), req)
 	if err != nil {
-		logServerError(r, "GetHistory", err)
+		observability.LogServerError(r, "GetHistory", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -84,23 +76,23 @@ func (h *Handler) GetHistory(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var req UpdatePrivateMessageRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MessageID == "" || req.Content == "" {
-		logBusinessError(r, "Update", httpx.CodeInvalidRequest, "参数错误")
+		observability.LogBusinessError(r, "Update", int(httpx.CodeInvalidRequest), "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	if err := h.service.Update(r.Context(), req); err != nil {
 		switch {
 		case errors.Is(err, ErrMessageNotFound):
-			logBusinessError(r, "Update", httpx.CodeNotFound, "消息不存在")
+			observability.LogBusinessError(r, "Update", int(httpx.CodeNotFound), "消息不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "消息不存在"))
 		case errors.Is(err, ErrMessagePermissionDenied):
-			logBusinessError(r, "Update", httpx.CodeForbidden, "无权限编辑消息")
+			observability.LogBusinessError(r, "Update", int(httpx.CodeForbidden), "无权限编辑消息")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "无权限编辑消息"))
 		case errors.Is(err, ErrMessageNotEditable):
-			logBusinessError(r, "Update", httpx.CodeConflict, "消息不可编辑")
+			observability.LogBusinessError(r, "Update", int(httpx.CodeConflict), "消息不可编辑")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "消息不可编辑"))
 		default:
-			logServerError(r, "Update", err)
+			observability.LogServerError(r, "Update", err)
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		}
 		return
@@ -111,23 +103,23 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 	var req RecallPrivateMessageRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MessageID == "" {
-		logBusinessError(r, "Recall", httpx.CodeInvalidRequest, "参数错误")
+		observability.LogBusinessError(r, "Recall", int(httpx.CodeInvalidRequest), "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	if err := h.service.Recall(r.Context(), req); err != nil {
 		switch {
 		case errors.Is(err, ErrMessageNotFound):
-			logBusinessError(r, "Recall", httpx.CodeNotFound, "消息不存在")
+			observability.LogBusinessError(r, "Recall", int(httpx.CodeNotFound), "消息不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "消息不存在"))
 		case errors.Is(err, ErrMessagePermissionDenied):
-			logBusinessError(r, "Recall", httpx.CodeForbidden, "无权限撤回消息")
+			observability.LogBusinessError(r, "Recall", int(httpx.CodeForbidden), "无权限撤回消息")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "无权限撤回消息"))
 		case errors.Is(err, ErrMessageNotRecallable):
-			logBusinessError(r, "Recall", httpx.CodeConflict, "消息不可撤回")
+			observability.LogBusinessError(r, "Recall", int(httpx.CodeConflict), "消息不可撤回")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "消息不可撤回"))
 		default:
-			logServerError(r, "Recall", err)
+			observability.LogServerError(r, "Recall", err)
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		}
 		return
@@ -143,7 +135,7 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	var req MarkPrivateReadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		logBusinessError(r, "MarkRead", httpx.CodeInvalidRequest, "参数错误")
+		observability.LogBusinessError(r, "MarkRead", int(httpx.CodeInvalidRequest), "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
@@ -154,7 +146,7 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	switch scope {
 	case "all":
 		if err := h.service.MarkAllRead(r.Context()); err != nil {
-			logServerError(r, "MarkRead", err)
+			observability.LogServerError(r, "MarkRead", err)
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 			return
 		}
@@ -162,7 +154,7 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 		return
 	case "session":
 		if req.TargetUserID == "" {
-			logBusinessError(r, "MarkRead", httpx.CodeInvalidRequest, "参数错误")
+			observability.LogBusinessError(r, "MarkRead", int(httpx.CodeInvalidRequest), "参数错误")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
@@ -171,18 +163,18 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 			UpToMessageID: req.UpToMessageID,
 		}); err != nil {
 			if errors.Is(err, ErrMessageNotFound) {
-				logBusinessError(r, "MarkRead", httpx.CodeNotFound, "消息不存在")
+				observability.LogBusinessError(r, "MarkRead", int(httpx.CodeNotFound), "消息不存在")
 				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "消息不存在"))
 				return
 			}
-			logServerError(r, "MarkRead", err)
+			observability.LogServerError(r, "MarkRead", err)
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 		return
 	default:
-		logBusinessError(r, "MarkRead", httpx.CodeInvalidRequest, "参数错误")
+		observability.LogBusinessError(r, "MarkRead", int(httpx.CodeInvalidRequest), "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 	}
 }

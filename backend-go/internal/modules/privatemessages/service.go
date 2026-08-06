@@ -65,7 +65,7 @@ func (s *Service) SetAppConfig(source appconfig.Source) { s.appConfig = source }
 
 func NewRuntime(factory *persistence.Factory, source appconfig.Source) *Runtime {
 	repo := NewPostgresRepository(factory)
-	userService := users.NewServiceWithRepo(users.NewPersistenceRepository(factory))
+	userService := users.NewServiceWithRepo(users.NewPostgresRepository(factory))
 	service := NewServiceWithDeps(repo, userService)
 	service.SetAppConfig(source)
 	return &Runtime{

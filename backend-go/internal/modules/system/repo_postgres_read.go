@@ -2,6 +2,7 @@ package system
 
 import (
 	"context"
+	"hotspot/backend-go/internal/platform/types"
 
 	"hotspot/backend-go/internal/platform/persistence"
 )
@@ -38,7 +39,7 @@ func (r *PostgresRepository) SearchAnnouncements(ctx context.Context, filter Ann
 	if err != nil {
 		return AnnouncementPage{}, err
 	}
-	limit := normalizeLimit(filter.Limit)
+	limit := types.NormalizeLimit(filter.Limit)
 	cursorCreatedAt := any(nil)
 	cursorAnnouncementID := ""
 	if filter.Cursor != nil {

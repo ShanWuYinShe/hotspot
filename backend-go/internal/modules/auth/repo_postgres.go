@@ -11,7 +11,6 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type PostgresRepository struct {
@@ -44,7 +43,7 @@ func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams
 	var conflict bool
 	var execErr error
 	txErr := persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
-		queryable, ok := queryableForTx(txCtx, r.factory)
+		queryable, ok := persistence.QueryableForTx(txCtx, r.factory)
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
@@ -53,7 +52,7 @@ func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams
 			return err
 		}
 		if err := queryable.Exec(txCtx, queryInsertAuthAccount, params.LoginID, userID, hashed, now, now); err != nil {
-			if isUniqueViolation(err) {
+			if persistence.IsUniqueViolation(err) {
 				conflict = true
 			}
 			execErr = err
@@ -66,7 +65,7 @@ func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams
 		return nil
 	})
 	if txErr != nil {
-		if conflict || isUniqueViolation(txErr) {
+		if conflict || persistence.IsUniqueViolation(txErr) {
 			return Account{}, ErrLoginIDConflict
 		}
 		if execErr != nil {
@@ -81,16 +80,6 @@ func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams
 // when one is present, otherwise falls back to the shared pool. This lets the
 // same repo method run against either a tx (when RunInTransaction is active) or
 // the pool, without the caller caring which.
-func queryableForTx(ctx context.Context, factory *persistence.Factory) (persistence.Queryable, bool) {
-	if q, ok := persistence.QueryableFromContext(ctx); ok {
-		return q, true
-	}
-	if factory == nil || factory.DB == nil {
-		return nil, false
-	}
-	qdb, ok := factory.DB.(persistence.Queryable)
-	return qdb, ok
-}
 
 func (r *PostgresRepository) CreateGuest(ctx context.Context, params GuestParams) (Account, error) {
 	queryable, ok := r.queryable()
@@ -285,9 +274,4 @@ func (r *PostgresRepository) queryable() (persistence.QueryableDB, bool) {
 func (r accountRecord) withDerivedFields() accountRecord {
 	r.Account = Account{UserID: r.UserID, LoginID: r.LoginID, Nickname: r.LoginID, UserType: "normal"}
 	return r
-}
-
-func isUniqueViolation(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }

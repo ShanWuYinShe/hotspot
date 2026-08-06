@@ -31,7 +31,7 @@ type Service struct {
 }
 
 func NewService() *Service {
-	return NewServiceWithRepoAndProvider(NewPersistenceRepository(nil), NewObjectStorageProvider(config.Load()))
+	return NewServiceWithRepoAndProvider(NewPostgresRepository(nil), NewObjectStorageProvider(config.Load()))
 }
 func NewServiceWithRepo(repo Repository) *Service {
 	return NewServiceWithRepoAndProvider(repo, NewObjectStorageProvider(config.Load()))

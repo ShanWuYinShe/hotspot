@@ -22,14 +22,6 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-func logServerError(r *http.Request, method string, err error) {
-	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
-}
-
-func logBusinessError(r *http.Request, method string, code httpx.Code, message string) {
-	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
-}
-
 func (h *Handler) CheckStatus(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
@@ -96,9 +88,9 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		apiErr := apiErrorFrom(err)
 		if apiErr.Code == httpx.CodeInternalUnavailable {
-			logServerError(r, "Login", err)
+			observability.LogServerError(r, "Login", err)
 		} else {
-			logBusinessError(r, "Login", apiErr.Code, apiErr.Message)
+			observability.LogBusinessError(r, "Login", int(apiErr.Code), apiErr.Message)
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(apiErr.Code, apiErr.Message))
 		return
@@ -174,7 +166,7 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.service.Refresh(r.Context(), req, deviceID, refreshCookie)
 	if err != nil {
-		logBusinessError(r, "RefreshToken", httpx.CodeUnauthorized, "Refresh Token 无效或过期")
+		observability.LogBusinessError(r, "RefreshToken", int(httpx.CodeUnauthorized), "Refresh Token 无效或过期")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeUnauthorized, "Refresh Token 无效或过期"))
 		return
 	}

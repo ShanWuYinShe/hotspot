@@ -49,7 +49,7 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	systemModule := system.NewModule(factory, sharedAppConfig)
 	systemModule.SetHealthRedisPinger(redisPinger)
 
-	notificationService := notify.NewServiceWithRepo(notify.NewPersistenceRepository(factory))
+	notificationService := notify.NewServiceWithRepo(notify.NewPostgresRepository(factory))
 	shareModule := share.NewModule(factory)
 
 	gmModule := groupmessages.NewModule(factory, usersModule.Service, notificationService, shareModule.Service)

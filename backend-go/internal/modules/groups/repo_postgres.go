@@ -64,7 +64,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	s2CellID := geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})
 	ownerRole := string(GroupRoleOwner)
 	if err := persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
-		queryable, ok := queryableForTx(txCtx, r.factory)
+		queryable, ok := persistence.QueryableForTx(txCtx, r.factory)
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
@@ -572,7 +572,7 @@ func (r *PostgresRepository) ApproveApplication(ctx context.Context, approverID 
 	// Previously these were two separate Execs: if the second failed the
 	// application was already marked accepted with no matching member row.
 	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
-		queryable, ok := queryableForTx(txCtx, r.factory)
+		queryable, ok := persistence.QueryableForTx(txCtx, r.factory)
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
@@ -733,7 +733,7 @@ func (r *PostgresRepository) AcceptInvite(ctx context.Context, userID string, in
 	// Wrap the invite-status update and the member insert in a single tx so a
 	// failure of the second statement rolls back the invite acceptance.
 	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
-		queryable, ok := queryableForTx(txCtx, r.factory)
+		queryable, ok := persistence.QueryableForTx(txCtx, r.factory)
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
@@ -975,16 +975,6 @@ func nilOrString(s string) *string {
 // when one is present, otherwise falls back to the shared pool. Used by methods
 // that opt into RunInTransaction so the same code path serves both the pooled
 // and the transactional case.
-func queryableForTx(ctx context.Context, factory *persistence.Factory) (persistence.Queryable, bool) {
-	if q, ok := persistence.QueryableFromContext(ctx); ok {
-		return q, true
-	}
-	if factory == nil || factory.DB == nil {
-		return nil, false
-	}
-	qdb, ok := factory.DB.(persistence.Queryable)
-	return qdb, ok
-}
 
 func nilOrStringJoinMethod(g *GroupJoinMethod) *string {
 	if g == nil {

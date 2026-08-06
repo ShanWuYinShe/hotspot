@@ -12,10 +12,10 @@ type Service struct{ repo Repository }
 
 const heatmapViewportThresholdMeters = 50000
 
-func NewService() *Service { return NewServiceWithRepo(NewPersistenceRepository(nil)) }
+func NewService() *Service { return NewServiceWithRepo(NewPostgresRepository(nil)) }
 func NewServiceWithRepo(repo Repository) *Service {
 	if repo == nil {
-		repo = NewPersistenceRepository(nil)
+		repo = NewPostgresRepository(nil)
 	}
 	return &Service{repo: repo}
 }

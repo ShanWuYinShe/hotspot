@@ -5,6 +5,7 @@ import (
 	"fmt"
 	groupsmodule "hotspot/backend-go/internal/modules/groups"
 	usersmodule "hotspot/backend-go/internal/modules/users"
+	"hotspot/backend-go/internal/platform/types"
 	"sort"
 	"strings"
 	"sync"
@@ -369,7 +370,7 @@ func (r *InMemoryRepository) ListAdmins(_ context.Context, pagination Pagination
 		}
 		filtered = append(filtered, item)
 	}
-	limit := normalizeLimit(pagination.Limit)
+	limit := types.NormalizeLimit(pagination.Limit)
 	page := adminListPage{Items: make([]AdminOperatorItem, 0, limit)}
 	for idx, grant := range filtered {
 		if idx >= limit {
@@ -437,7 +438,7 @@ func (r *InMemoryRepository) ListAuditLogs(_ context.Context, filter AuditLogFil
 		return auditLogPage{}, apiErr
 	}
 	logs := r.filteredAuditLogsLocked(filter)
-	limit := normalizeLimit(filter.Pagination.Limit)
+	limit := types.NormalizeLimit(filter.Pagination.Limit)
 	page := auditLogPage{Items: make([]AuditLogItem, 0, limit)}
 	seenCursor := filter.Pagination.Cursor == ""
 	for _, entry := range logs {
@@ -587,20 +588,6 @@ func cloneAuditDetails(details AuditDetails) AuditDetails {
 	return cloned
 }
 
-func paginationLimit(pagination *PaginationParams) int {
-	if pagination == nil {
-		return 0
-	}
-	return pagination.Limit
-}
-
-func paginationCursor(pagination *PaginationParams) string {
-	if pagination == nil {
-		return ""
-	}
-	return pagination.Cursor
-}
-
 func timeFromRFC3339(value string) time.Time {
 	parsed, err := time.Parse(time.RFC3339, value)
 	if err != nil {
@@ -697,7 +684,7 @@ func (r *InMemoryRepository) seedAuditLogs() {
 func (r *InMemoryRepository) SearchUsers(_ context.Context, req AdminUserSearchRequest) (adminUserPage, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	cursor, apiErr := decodeAdminUserCursor(paginationCursor(req.Pagination))
+	cursor, apiErr := decodeAdminUserCursor(types.PaginationCursor(req.Pagination))
 	if apiErr != nil {
 		return adminUserPage{}, apiErr
 	}
@@ -729,7 +716,7 @@ func (r *InMemoryRepository) SearchUsers(_ context.Context, req AdminUserSearchR
 	})
 	filtered := make([]AdminUserItem, 0, len(items))
 	for _, item := range items {
-		if paginationCursor(req.Pagination) != "" {
+		if types.PaginationCursor(req.Pagination) != "" {
 			createdAt := timeFromRFC3339(item.CreatedAt)
 			if createdAt.After(cursor.CreatedAt) {
 				continue
@@ -740,7 +727,7 @@ func (r *InMemoryRepository) SearchUsers(_ context.Context, req AdminUserSearchR
 		}
 		filtered = append(filtered, item)
 	}
-	limit := normalizeLimit(paginationLimit(req.Pagination))
+	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
 	paged, hasMore := limitPageItems(filtered, limit)
 	page := adminUserPage{Items: append(make([]AdminUserItem, 0, len(paged)), paged...)}
 	if hasMore {
@@ -820,7 +807,7 @@ func (r *InMemoryRepository) RevokeSession(_ context.Context, sessionID string) 
 func (r *InMemoryRepository) SearchGroups(_ context.Context, req AdminGroupSearchRequest) (adminGroupPage, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	cursor, apiErr := decodeAdminGroupCursor(paginationCursor(req.Pagination))
+	cursor, apiErr := decodeAdminGroupCursor(types.PaginationCursor(req.Pagination))
 	if apiErr != nil {
 		return adminGroupPage{}, apiErr
 	}
@@ -846,7 +833,7 @@ func (r *InMemoryRepository) SearchGroups(_ context.Context, req AdminGroupSearc
 	})
 	filtered := make([]AdminGroupItem, 0, len(items))
 	for _, item := range items {
-		if paginationCursor(req.Pagination) != "" {
+		if types.PaginationCursor(req.Pagination) != "" {
 			createdAt := timeFromRFC3339(item.CreatedAt)
 			if createdAt.After(cursor.CreatedAt) {
 				continue
@@ -857,7 +844,7 @@ func (r *InMemoryRepository) SearchGroups(_ context.Context, req AdminGroupSearc
 		}
 		filtered = append(filtered, item)
 	}
-	limit := normalizeLimit(paginationLimit(req.Pagination))
+	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
 	paged, hasMore := limitPageItems(filtered, limit)
 	page := adminGroupPage{Items: append(make([]AdminGroupItem, 0, len(paged)), paged...)}
 	if hasMore {
@@ -898,7 +885,7 @@ func (r *InMemoryRepository) ListGroupMemberIDs(_ context.Context, groupID strin
 func (r *InMemoryRepository) SearchReports(_ context.Context, req AdminReportListRequest) (adminReportPage, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	cursor, apiErr := decodeAdminReportCursor(paginationCursor(req.Pagination))
+	cursor, apiErr := decodeAdminReportCursor(types.PaginationCursor(req.Pagination))
 	if apiErr != nil {
 		return adminReportPage{}, apiErr
 	}
@@ -921,7 +908,7 @@ func (r *InMemoryRepository) SearchReports(_ context.Context, req AdminReportLis
 	})
 	filtered := make([]AdminReportItem, 0, len(items))
 	for _, item := range items {
-		if paginationCursor(req.Pagination) != "" {
+		if types.PaginationCursor(req.Pagination) != "" {
 			createdAt := timeFromRFC3339(item.CreatedAt)
 			if createdAt.After(cursor.CreatedAt) {
 				continue
@@ -932,7 +919,7 @@ func (r *InMemoryRepository) SearchReports(_ context.Context, req AdminReportLis
 		}
 		filtered = append(filtered, item)
 	}
-	limit := normalizeLimit(paginationLimit(req.Pagination))
+	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
 	paged, hasMore := limitPageItems(filtered, limit)
 	page := adminReportPage{Items: append(make([]AdminReportItem, 0, len(paged)), paged...)}
 	if hasMore {

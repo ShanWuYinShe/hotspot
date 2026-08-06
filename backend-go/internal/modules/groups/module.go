@@ -18,8 +18,8 @@ type Module struct {
 }
 
 func NewModule(factory *persistence.Factory, actorProvider actor.Provider) *Module {
-	repo := NewPersistenceRepository(factory)
-	notificationService := notify.NewServiceWithRepo(notify.NewPersistenceRepository(factory))
+	repo := NewPostgresRepository(factory)
+	notificationService := notify.NewServiceWithRepo(notify.NewPostgresRepository(factory))
 	svc := NewServiceWithDeps(repo, notificationService, actorProvider)
 	return &Module{handler: NewHandler(svc), Service: svc}
 }
