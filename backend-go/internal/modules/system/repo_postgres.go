@@ -6,9 +6,10 @@ import (
 	"hotspot/backend-go/internal/platform/idgen"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
+
+	"github.com/jackc/pgx/v5"
 )
 
 var errAnnouncementNotFound = errors.New("announcement not found")

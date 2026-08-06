@@ -11,6 +11,7 @@ import (
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type Service struct {
@@ -20,8 +21,8 @@ type Service struct {
 }
 
 type userNotificationWriter interface {
-	AppendNewFollower(ctx context.Context, targetUserID string, actor map[string]any, source string, sourceMomentID string) (string, error)
-	AppendMutualFollow(ctx context.Context, targetUserID string, actor map[string]any) (string, error)
+	AppendNewFollower(ctx context.Context, targetUserID string, actor types.UserInfo, source string, sourceMomentID string) (string, error)
+	AppendMutualFollow(ctx context.Context, targetUserID string, actor types.UserInfo) (string, error)
 }
 
 func NewService() *Service {

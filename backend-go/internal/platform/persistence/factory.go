@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"hotspot/backend-go/internal/platform/config"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"hotspot/backend-go/internal/platform/config"
 )
 
 type Factory struct {

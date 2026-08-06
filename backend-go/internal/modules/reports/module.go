@@ -1,12 +1,13 @@
 package reports
 
 import (
-	"github.com/go-chi/chi/v5"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/ratelimit"
 	"hotspot/backend-go/internal/platform/resourceguard"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type Module struct{ handler *Handler }

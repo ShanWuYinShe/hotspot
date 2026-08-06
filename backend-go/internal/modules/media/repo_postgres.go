@@ -5,8 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"hotspot/backend-go/internal/platform/persistence"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type PostgresRepository struct {

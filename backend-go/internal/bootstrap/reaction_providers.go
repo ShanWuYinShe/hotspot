@@ -6,6 +6,7 @@ import (
 	"hotspot/backend-go/internal/modules/comments"
 	"hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/modules/reactions"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 // messageExistence is the minimal surface the message reaction provider needs
@@ -43,8 +44,8 @@ func (p momentReactionProvider) Resolve(ctx context.Context, momentID string) (r
 		return reactions.TargetContext{}, false, nil
 	}
 	summary := mc.Summary
-	if summary == nil {
-		summary = map[string]any{"moment_id": momentID}
+	if summary.MomentID == "" {
+		summary.MomentID = momentID
 	}
 	return reactions.TargetContext{OwnerUserID: mc.UserID, Summary: summary}, true, nil
 }
@@ -68,22 +69,9 @@ func (p commentReactionProvider) Resolve(ctx context.Context, commentID string) 
 	if !found {
 		return reactions.TargetContext{}, false, nil
 	}
-	summary := map[string]any{
-		"moment_id":       item.MomentID,
-		"comment_preview": summarizeCommentPreview(item.Content),
-	}
-	return reactions.TargetContext{OwnerUserID: item.User.UserID, Summary: summary}, true, nil
-}
-
-// summarizeCommentPreview mirrors comments' own preview helper so the
-// reaction notification carries a short text without importing comments'
-// private helpers.
-func summarizeCommentPreview(content string) string {
-	const max = 80
-	if len(content) > max {
-		return content[:max]
-	}
-	return content
+	// reaction_added 通知/事件载荷不含 summary 字段（spec），仅保留
+	// moment_id 便于关联定位。
+	return reactions.TargetContext{OwnerUserID: item.User.UserID, Summary: types.MomentSummary{MomentID: item.MomentID}}, true, nil
 }
 
 // messageReactionProvider resolves message existence for the 'message'

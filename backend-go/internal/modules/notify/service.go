@@ -7,6 +7,7 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type Service struct {
@@ -72,7 +73,7 @@ func (s *Service) MarkAllRead(ctx context.Context) error {
 // AppendNewFollower records a new_follower notification and returns the
 // generated notify_id (embedded as the first field of the pushed
 // NewFollower payload, spec api_spec_websocket.md).
-func (s *Service) AppendNewFollower(ctx context.Context, targetUserID string, actor map[string]any, source string, sourceMomentID string) (string, error) {
+func (s *Service) AppendNewFollower(ctx context.Context, targetUserID string, actor types.UserInfo, source string, sourceMomentID string) (string, error) {
 	payload := map[string]any{"type": "new_follower", "actor": actor}
 	if source != "" {
 		payload["source"] = source
@@ -93,7 +94,7 @@ func (s *Service) AppendNewFollower(ctx context.Context, targetUserID string, ac
 // AppendMutualFollow records a mutual_follow notification and returns the
 // generated notify_id (embedded as the first field of the pushed
 // MutualFollow payload, spec api_spec_websocket.md).
-func (s *Service) AppendMutualFollow(ctx context.Context, targetUserID string, actor map[string]any) (string, error) {
+func (s *Service) AppendMutualFollow(ctx context.Context, targetUserID string, actor types.UserInfo) (string, error) {
 	id := newNotificationID()
 	err := s.repo.Append(ctx, targetUserID, NotifyItem{
 		NotifyID: id,
@@ -126,7 +127,7 @@ func (s *Service) AppendSystemAnnouncement(ctx context.Context, userIDs []string
 // AppendGroupInviteReceived records a group_invite_received notification and
 // returns the generated notify_id (embedded as the first field of the
 // pushed GroupInviteReceived payload, spec api_spec_websocket.md).
-func (s *Service) AppendGroupInviteReceived(ctx context.Context, targetUserID string, actor map[string]any, groupID string, groupName string, inviteID string, message *string) (string, error) {
+func (s *Service) AppendGroupInviteReceived(ctx context.Context, targetUserID string, actor types.UserInfo, groupID string, groupName string, inviteID string, message *string) (string, error) {
 	payload := map[string]any{
 		"type":       "group_invite_received",
 		"actor":      actor,
@@ -146,7 +147,7 @@ func (s *Service) AppendGroupInviteReceived(ctx context.Context, targetUserID st
 // notification and returns the generated notify_id (embedded as the
 // first field of the pushed GroupApplicationReceived payload, spec
 // api_spec_websocket.md).
-func (s *Service) AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant map[string]any, groupID string, groupName string, applicationID string) (string, error) {
+func (s *Service) AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant types.UserInfo, groupID string, groupName string, applicationID string) (string, error) {
 	id := newNotificationID()
 	err := s.repo.Append(ctx, targetUserID, NotifyItem{
 		NotifyID: id,
@@ -174,7 +175,7 @@ func (s *Service) AppendGroupApplicationAccepted(ctx context.Context, targetUser
 
 // AppendGroupApplicationRejected records a group_application_rejected
 // notification. Returns the generated notify_id for the realtime payload.
-func (s *Service) AppendGroupApplicationRejected(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, rejectedBy map[string]any, reason *string) (string, error) {
+func (s *Service) AppendGroupApplicationRejected(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, rejectedBy types.UserInfo, reason *string) (string, error) {
 	payload := map[string]any{
 		"type":           "group_application_rejected",
 		"group_id":       groupID,
@@ -228,7 +229,7 @@ func (s *Service) AppendReportDismissed(ctx context.Context, targetUserID string
 // AppendMomentCommented records a moment_commented notification and returns
 // the generated notify_id (embedded as the first field of the pushed
 // MomentCommented payload, spec api_spec_websocket.md).
-func (s *Service) AppendMomentCommented(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, commentID string, commentPreview string) (string, error) {
+func (s *Service) AppendMomentCommented(ctx context.Context, targetUserID string, actor types.UserInfo, momentID string, momentSummary types.MomentSummary, commentID string, commentPreview string) (string, error) {
 	id := newNotificationID()
 	err := s.repo.Append(ctx, targetUserID, NotifyItem{
 		NotifyID: id,
@@ -251,7 +252,7 @@ func (s *Service) AppendMomentCommented(ctx context.Context, targetUserID string
 // comment_liked types were removed from the contract (spec api_spec_types.md
 // NotifyType). Returns the generated notify_id so callers can embed it
 // in the realtime ReactionAdded payload.
-func (s *Service) AppendReactionAdded(ctx context.Context, targetUserID string, actor map[string]any, targetType string, targetID string, emoji string) (string, error) {
+func (s *Service) AppendReactionAdded(ctx context.Context, targetUserID string, actor types.UserInfo, targetType string, targetID string, emoji string) (string, error) {
 	id := newNotificationID()
 	err := s.repo.Append(ctx, targetUserID, NotifyItem{
 		NotifyID: id,
@@ -271,7 +272,7 @@ func (s *Service) AppendReactionAdded(ctx context.Context, targetUserID string, 
 // AppendCommentReply records a comment_reply notification and returns the
 // generated notify_id (embedded as the first field of the pushed
 // CommentReply payload, spec api_spec_websocket.md).
-func (s *Service) AppendCommentReply(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, parentCommentID string, parentPreview string, replyID string, replyPreview string) (string, error) {
+func (s *Service) AppendCommentReply(ctx context.Context, targetUserID string, actor types.UserInfo, momentID string, momentSummary types.MomentSummary, parentCommentID string, parentPreview string, replyID string, replyPreview string) (string, error) {
 	id := newNotificationID()
 	err := s.repo.Append(ctx, targetUserID, NotifyItem{
 		NotifyID: id,
@@ -294,7 +295,7 @@ func (s *Service) AppendCommentReply(ctx context.Context, targetUserID string, a
 // AppendMentioned records a mentioned notification and returns the generated
 // notify_id (embedded as the first field of the pushed MessageMentioned
 // payload, spec api_spec_websocket.md).
-func (s *Service) AppendMentioned(ctx context.Context, targetUserID string, actor map[string]any, targetType string, momentID string, momentSummary map[string]any, commentID string, commentPreview string) (string, error) {
+func (s *Service) AppendMentioned(ctx context.Context, targetUserID string, actor types.UserInfo, targetType string, momentID string, momentSummary types.MomentSummary, commentID string, commentPreview string) (string, error) {
 	payload := map[string]any{
 		"type":           "mentioned",
 		"actor":          actor,
@@ -321,7 +322,7 @@ func (s *Service) AppendMentioned(ctx context.Context, targetUserID string, acto
 // AppendGroupMentioned records a group-chat mention notification
 // (NotifyType='group_mentioned', spec api_spec_notify.md) and returns the
 // notify_id to embed in the pushed GroupMessageMentioned payload.
-func (s *Service) AppendGroupMentioned(ctx context.Context, targetUserID string, actor map[string]any, groupID, groupName, messageID, contentPreview string) (string, error) {
+func (s *Service) AppendGroupMentioned(ctx context.Context, targetUserID string, actor types.UserInfo, groupID, groupName, messageID, contentPreview string) (string, error) {
 	payload := map[string]any{
 		"type":       "group_mentioned",
 		"actor":      actor,
@@ -361,7 +362,7 @@ func (s *Service) PushSystemAnnouncement(item systemmodule.SystemAnnouncementIte
 	realtime.DefaultHub().BroadcastToAll(realtime.Event{Type: realtime.EventTypeSystemAnnouncement, Payload: payload})
 }
 
-func (s *Service) PublishNearbyNewMoment(ctx context.Context, targetUserID, actorID, momentID string, distance int, actorPayload map[string]any, momentSummaryPayload map[string]any) error {
+func (s *Service) PublishNearbyNewMoment(ctx context.Context, targetUserID, actorID, momentID string, distance int, actorPayload types.UserInfo, momentSummaryPayload types.MomentSummary) error {
 	if s.nearbyNotifyProvider != nil {
 		enabled, err := s.nearbyNotifyProvider.IsNearbyMomentNotifyEnabled(ctx, targetUserID)
 		if err != nil {

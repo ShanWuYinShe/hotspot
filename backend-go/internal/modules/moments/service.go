@@ -16,6 +16,7 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type Service struct {
@@ -44,7 +45,7 @@ type ReactionAggregator interface {
 }
 
 type momentNotificationWriter interface {
-	AppendMentioned(ctx context.Context, targetUserID string, actor map[string]any, targetType string, momentID string, momentSummary map[string]any, commentID string, commentPreview string) (string, error)
+	AppendMentioned(ctx context.Context, targetUserID string, actor types.UserInfo, targetType string, momentID string, momentSummary types.MomentSummary, commentID string, commentPreview string) (string, error)
 }
 
 func NewService() *Service {
@@ -117,9 +118,9 @@ func (s *Service) NotificationContext(ctx context.Context, momentID string) (com
 	}
 	return comments.MomentNotificationContext{
 		UserID: item.User.UserID,
-		Summary: map[string]any{
-			"moment_id":           item.MomentID,
-			"description_preview": summarizeMomentDescription(item.Description),
+		Summary: types.MomentSummary{
+			MomentID:           item.MomentID,
+			DescriptionPreview: summarizeMomentDescription(item.Description),
 		},
 	}, true, nil
 }
@@ -423,39 +424,31 @@ func (s *Service) resolveReferencePoint(ctx context.Context) GeoPoint {
 	return GeoPoint{Latitude: lat, Longitude: lng}
 }
 
-func (s *Service) buildMomentActor(ctx context.Context, userID string) (map[string]any, error) {
+func (s *Service) buildMomentActor(ctx context.Context, userID string) (types.UserInfo, error) {
 	if s.users != nil {
 		info, err := s.users.GetActorInfo(ctx, userID)
 		if err != nil {
-			return nil, err
+			return types.UserInfo{}, err
 		}
 		return actorFromInfo(info), nil
 	}
 	return fallbackActor(userID), nil
 }
 
-func fallbackActor(userID string) map[string]any {
+func fallbackActor(userID string) types.UserInfo {
 	userID = strings.TrimSpace(userID)
-	return map[string]any{"user_id": userID, "nickname": userID}
+	return types.UserInfo{UserID: userID, Nickname: userID}
 }
 
-func actorFromInfo(info actor.Info) map[string]any {
-	actor := map[string]any{"user_id": info.UserID, "nickname": info.Nickname}
-	if info.AvatarURL != "" {
-		actor["avatar_url"] = info.AvatarURL
-	}
-	return actor
+func actorFromInfo(info actor.Info) types.UserInfo {
+	return types.UserInfo{UserID: info.UserID, Nickname: info.Nickname, AvatarURL: info.AvatarURL}
 }
 
-func cloneMomentSummary(summary map[string]any, momentID string) map[string]any {
-	cloned := make(map[string]any, len(summary)+1)
-	for key, value := range summary {
-		cloned[key] = value
+func momentSummaryForItem(item MomentItem) types.MomentSummary {
+	return types.MomentSummary{
+		MomentID:           item.MomentID,
+		DescriptionPreview: summarizeMomentDescription(item.Description),
 	}
-	if len(cloned) == 0 {
-		cloned["moment_id"] = momentID
-	}
-	return cloned
 }
 
 func summarizeMomentDescription(description string) string {
@@ -470,7 +463,7 @@ func (s *Service) notifyMomentMentions(ctx context.Context, actorUserID string, 
 	if s.notifications == nil {
 		return
 	}
-	momentSummary := cloneMomentSummary(map[string]any{"moment_id": item.MomentID, "description_preview": summarizeMomentDescription(item.Description)}, item.MomentID)
+	momentSummary := momentSummaryForItem(item)
 	actor, err := s.buildMomentActor(ctx, actorUserID)
 	if err != nil {
 		observability.L().Error("moments.mentions build actor failed", "error", err, "user_id", actorUserID)
@@ -491,7 +484,7 @@ func (s *Service) notifyMomentMentions(ctx context.Context, actorUserID string, 
 			"notify_id":      notificationID,
 			"target_type":    "moment",
 			"moment_id":      item.MomentID,
-			"moment_summary": cloneMomentSummary(momentSummary, item.MomentID),
+			"moment_summary": momentSummary,
 			"actor":          actor,
 			"mentioned_at":   item.CreatedAt,
 		}})

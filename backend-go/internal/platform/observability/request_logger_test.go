@@ -5,10 +5,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"hotspot/backend-go/internal/platform/requestmeta"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
-	"hotspot/backend-go/internal/platform/requestmeta"
 )
 
 func TestRequestLoggerMiddlewareUsesRequestmetaClientIP(t *testing.T) {

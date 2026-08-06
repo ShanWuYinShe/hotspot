@@ -8,6 +8,7 @@ import (
 	"hotspot/backend-go/internal/modules/notify"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type momentProviderStub struct {
@@ -43,15 +44,15 @@ type failingNotificationWriter struct {
 	calls int
 }
 
-func (w *failingNotificationWriter) AppendMomentCommented(context.Context, string, map[string]any, string, map[string]any, string, string) (string, error) {
+func (w *failingNotificationWriter) AppendMomentCommented(context.Context, string, types.UserInfo, string, types.MomentSummary, string, string) (string, error) {
 	w.calls++
 	return "", errors.New("notification down")
 }
-func (w *failingNotificationWriter) AppendCommentReply(context.Context, string, map[string]any, string, map[string]any, string, string, string, string) (string, error) {
+func (w *failingNotificationWriter) AppendCommentReply(context.Context, string, types.UserInfo, string, types.MomentSummary, string, string, string, string) (string, error) {
 	w.calls++
 	return "", errors.New("notification down")
 }
-func (w *failingNotificationWriter) AppendMentioned(context.Context, string, map[string]any, string, string, map[string]any, string, string) (string, error) {
+func (w *failingNotificationWriter) AppendMentioned(context.Context, string, types.UserInfo, string, string, types.MomentSummary, string, string) (string, error) {
 	w.calls++
 	return "", errors.New("notification down")
 }
@@ -69,7 +70,7 @@ func TestCreateTopLevelCommentSendsRealtimeAndNotificationToMomentAuthor(t *test
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
-			Summary: map[string]any{"moment_id": "moment_1", "description_preview": "moment summary"},
+			Summary: types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "moment summary"},
 		},
 	}
 	notificationRepo := notify.NewInMemoryRepository()
@@ -129,7 +130,7 @@ func TestCreateTopLevelCommentOnOwnMomentSkipsRealtimeAndNotification(t *testing
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
-			Summary: map[string]any{"moment_id": "moment_1", "description_preview": "moment summary"},
+			Summary: types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "moment summary"},
 		},
 	}
 	notificationRepo := notify.NewInMemoryRepository()
@@ -161,7 +162,7 @@ func TestCreateReplySendsRealtimeAndNotificationToParentAuthor(t *testing.T) {
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
-			Summary: map[string]any{"moment_id": "moment_1", "description_preview": "moment summary"},
+			Summary: types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "moment summary"},
 		},
 	}
 	notificationRepo := notify.NewInMemoryRepository()
@@ -228,7 +229,7 @@ func TestCreateReplyToOwnCommentSkipsRealtimeAndNotification(t *testing.T) {
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
-			Summary: map[string]any{"moment_id": "moment_1", "description_preview": "moment summary"},
+			Summary: types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "moment summary"},
 		},
 	}
 	notificationRepo := notify.NewInMemoryRepository()
@@ -267,7 +268,7 @@ func TestCreateCommentMentionSendsRealtimeAndNotification(t *testing.T) {
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
-			Summary: map[string]any{"moment_id": "moment_1", "description_preview": "moment summary"},
+			Summary: types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "moment summary"},
 		},
 	}
 	notificationRepo := notify.NewInMemoryRepository()
@@ -318,7 +319,7 @@ func TestCreateReplyMentionDeduplicatesReplyTarget(t *testing.T) {
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
-			Summary: map[string]any{"moment_id": "moment_1", "description_preview": "moment summary"},
+			Summary: types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "moment summary"},
 		},
 	}
 	notificationRepo := notify.NewInMemoryRepository()
@@ -360,7 +361,7 @@ func TestCreateTopLevelCommentMentionDeduplicatesMomentAuthor(t *testing.T) {
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
-			Summary: map[string]any{"moment_id": "moment_1", "description_preview": "moment summary"},
+			Summary: types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "moment summary"},
 		},
 	}
 	notificationRepo := notify.NewInMemoryRepository()
@@ -395,7 +396,7 @@ func TestCreateCommentIgnoresNotificationFailures(t *testing.T) {
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
-			Summary: map[string]any{"moment_id": "moment_1", "description_preview": "moment summary"},
+			Summary: types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "moment summary"},
 		},
 	}
 	writer := &failingNotificationWriter{}

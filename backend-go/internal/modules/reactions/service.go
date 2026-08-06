@@ -10,6 +10,7 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 // Service orchestrates reaction reads/writes and the side effects (owner
@@ -257,27 +258,19 @@ func (s *Service) notifyOwner(ctx context.Context, req SetReactionRequest, actor
 	if notificationID != "" {
 		eventPayload["notify_id"] = notificationID
 	}
-	// Merge target-specific summary fields if present (e.g. moment_summary).
-	for k, v := range owner.Summary {
-		eventPayload[k] = v
-	}
 	realtime.DefaultHub().BroadcastToUser(ownerID, realtime.Event{
 		Type:    EventTypeReactionAdded,
 		Payload: eventPayload,
 	})
 }
 
-func (s *Service) buildActor(ctx context.Context, userID string) map[string]any {
+func (s *Service) buildActor(ctx context.Context, userID string) types.UserInfo {
 	if s.users != nil {
 		info, err := s.users.GetActorInfo(ctx, userID)
 		if err == nil {
-			a := map[string]any{"user_id": info.UserID, "nickname": info.Nickname}
-			if info.AvatarURL != "" {
-				a["avatar_url"] = info.AvatarURL
-			}
-			return a
+			return types.UserInfo{UserID: info.UserID, Nickname: info.Nickname, AvatarURL: info.AvatarURL}
 		}
 		observability.L().Error("reactions.build actor failed", "error", err, "user_id", userID)
 	}
-	return map[string]any{"user_id": userID, "nickname": userID}
+	return types.UserInfo{UserID: userID, Nickname: userID}
 }

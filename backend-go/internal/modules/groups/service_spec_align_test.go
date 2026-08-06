@@ -17,6 +17,7 @@ import (
 	"hotspot/backend-go/internal/platform/actor"
 	"hotspot/backend-go/internal/platform/appconfig"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 // --- stubs ---
@@ -60,15 +61,15 @@ type groupApplicationRejectedCall struct {
 	groupID       string
 	groupName     string
 	applicationID string
-	rejectedBy    map[string]any
+	rejectedBy    types.UserInfo
 	reason        *string
 }
 
-func (w *notifyWriterStub) AppendGroupInviteReceived(context.Context, string, map[string]any, string, string, string, *string) (string, error) {
+func (w *notifyWriterStub) AppendGroupInviteReceived(context.Context, string, types.UserInfo, string, string, string, *string) (string, error) {
 	return "notif_written", nil
 }
 
-func (w *notifyWriterStub) AppendGroupApplicationReceived(context.Context, string, map[string]any, string, string, string) (string, error) {
+func (w *notifyWriterStub) AppendGroupApplicationReceived(context.Context, string, types.UserInfo, string, string, string) (string, error) {
 	return "notif_written", nil
 }
 
@@ -76,7 +77,7 @@ func (w *notifyWriterStub) AppendGroupApplicationAccepted(context.Context, strin
 	return "notif_written", nil
 }
 
-func (w *notifyWriterStub) AppendGroupApplicationRejected(_ context.Context, targetUserID, groupID, groupName, applicationID string, rejectedBy map[string]any, reason *string) (string, error) {
+func (w *notifyWriterStub) AppendGroupApplicationRejected(_ context.Context, targetUserID, groupID, groupName, applicationID string, rejectedBy types.UserInfo, reason *string) (string, error) {
 	w.applicationRejected = append(w.applicationRejected, groupApplicationRejectedCall{targetUserID, groupID, groupName, applicationID, rejectedBy, reason})
 	return "notif_written", nil
 }
@@ -217,8 +218,8 @@ func TestServiceRejectInviteNotifiesInviter(t *testing.T) {
 	if payload["invite_id"] != "inv1" || payload["group_id"] != "g1" {
 		t.Fatalf("unexpected event payload: %#v", payload)
 	}
-	rejectedBy, ok := payload["rejected_by"].(map[string]any)
-	if !ok || rejectedBy["user_id"] != "u1" {
+	rejectedBy, ok := payload["rejected_by"].(types.UserInfo)
+	if !ok || rejectedBy.UserID != "u1" {
 		t.Fatalf("unexpected rejected_by in event: %#v", payload["rejected_by"])
 	}
 	if payload["reason"] != reason {
@@ -368,8 +369,8 @@ func TestServiceCancelApplicationNotifiesAdmins(t *testing.T) {
 	if payload["cancelled_at"] == nil {
 		t.Fatalf("unexpected owner payload fields: %#v", payload)
 	}
-	applicant, ok := payload["applicant"].(map[string]any)
-	if !ok || applicant["user_id"] != "u2" {
+	applicant, ok := payload["applicant"].(types.UserInfo)
+	if !ok || applicant.UserID != "u2" {
 		t.Fatalf("unexpected applicant in payload: %#v", payload["applicant"])
 	}
 }
@@ -421,7 +422,7 @@ func TestServiceRejectApplicationNotifiesApplicant(t *testing.T) {
 	if call.targetUserID != "u3" || call.groupID != "g1" || call.applicationID != "app1" {
 		t.Fatalf("unexpected rejected call: %#v", call)
 	}
-	if call.rejectedBy == nil || call.rejectedBy["user_id"] != "u1" {
+	if call.rejectedBy.UserID != "u1" {
 		t.Fatalf("expected rejected_by u1, got %#v", call.rejectedBy)
 	}
 	if call.reason == nil || *call.reason != reason {
@@ -441,8 +442,8 @@ func TestServiceRejectApplicationNotifiesApplicant(t *testing.T) {
 	if payload["application_id"] != "app1" || payload["reason"] != reason {
 		t.Fatalf("unexpected event payload: %#v", payload)
 	}
-	rejectedBy, ok := payload["rejected_by"].(map[string]any)
-	if !ok || rejectedBy["user_id"] != "u1" {
+	rejectedBy, ok := payload["rejected_by"].(types.UserInfo)
+	if !ok || rejectedBy.UserID != "u1" {
 		t.Fatalf("unexpected rejected_by: %#v", payload["rejected_by"])
 	}
 	group, ok := payload["group"].(map[string]any)
@@ -575,10 +576,10 @@ func TestResolveUserInfoUsesActorProvider(t *testing.T) {
 	svc := NewServiceWithDeps(&stubGroupsRepo{}, nil, provider)
 
 	got := svc.resolveUserInfo(context.Background(), "u42")
-	if got["user_id"] != "u42" || got["nickname"] != "Nick" {
+	if got.UserID != "u42" || got.Nickname != "Nick" {
 		t.Fatalf("unexpected user info: %#v", got)
 	}
-	if got["avatar_url"] != "https://example.com/avatar.png" {
+	if got.AvatarURL != "https://example.com/avatar.png" {
 		t.Fatalf("expected avatar_url, got %#v", got)
 	}
 }
@@ -586,10 +587,10 @@ func TestResolveUserInfoUsesActorProvider(t *testing.T) {
 func TestResolveUserInfoFallsBackToUserID(t *testing.T) {
 	svc := NewServiceWithRepo(&stubGroupsRepo{}) // users == nil
 	got := svc.resolveUserInfo(context.Background(), "u42")
-	if got["user_id"] != "u42" || got["nickname"] != "u42" {
+	if got.UserID != "u42" || got.Nickname != "u42" {
 		t.Fatalf("expected fallback user_id/nickname, got %#v", got)
 	}
-	if _, hasAvatar := got["avatar_url"]; hasAvatar {
+	if got.AvatarURL != "" {
 		t.Fatalf("expected no avatar_url in fallback, got %#v", got)
 	}
 }
@@ -598,7 +599,7 @@ func TestResolveUserInfoFallsBackOnProviderError(t *testing.T) {
 	provider := actorProviderStub{err: errors.New("actor lookup failed")}
 	svc := NewServiceWithDeps(&stubGroupsRepo{}, nil, provider)
 	got := svc.resolveUserInfo(context.Background(), "u42")
-	if got["user_id"] != "u42" || got["nickname"] != "u42" {
+	if got.UserID != "u42" || got.Nickname != "u42" {
 		t.Fatalf("expected fallback on provider error, got %#v", got)
 	}
 }

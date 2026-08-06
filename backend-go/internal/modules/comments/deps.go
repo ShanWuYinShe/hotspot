@@ -1,10 +1,14 @@
 package comments
 
-import "context"
+import (
+	"context"
+
+	"hotspot/backend-go/internal/platform/types"
+)
 
 type MomentNotificationContext struct {
 	UserID  string
-	Summary map[string]any
+	Summary types.MomentSummary
 }
 
 type MomentProvider interface {

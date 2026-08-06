@@ -54,10 +54,10 @@ type LocationProvider interface {
 }
 
 type groupNotificationWriter interface {
-	AppendGroupInviteReceived(ctx context.Context, targetUserID string, actor map[string]any, groupID string, groupName string, inviteID string, message *string) (string, error)
-	AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant map[string]any, groupID string, groupName string, applicationID string) (string, error)
+	AppendGroupInviteReceived(ctx context.Context, targetUserID string, actor types.UserInfo, groupID string, groupName string, inviteID string, message *string) (string, error)
+	AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant types.UserInfo, groupID string, groupName string, applicationID string) (string, error)
 	AppendGroupApplicationAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string) (string, error)
-	AppendGroupApplicationRejected(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, rejectedBy map[string]any, reason *string) (string, error)
+	AppendGroupApplicationRejected(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, rejectedBy types.UserInfo, reason *string) (string, error)
 }
 
 func NewService() *Service {
@@ -675,18 +675,14 @@ func groupUserInfo(user UserInfo) map[string]any {
 	return payload
 }
 
-func (s *Service) resolveUserInfo(ctx context.Context, userID string) map[string]any {
+func (s *Service) resolveUserInfo(ctx context.Context, userID string) types.UserInfo {
 	if s.users != nil {
 		info, err := s.users.GetActorInfo(ctx, userID)
 		if err == nil {
-			actor := map[string]any{"user_id": info.UserID, "nickname": info.Nickname}
-			if info.AvatarURL != "" {
-				actor["avatar_url"] = info.AvatarURL
-			}
-			return actor
+			return types.UserInfo{UserID: info.UserID, Nickname: info.Nickname, AvatarURL: info.AvatarURL}
 		}
 	}
-	return groupUserInfo(UserInfo{UserID: userID, Nickname: userID})
+	return types.UserInfo{UserID: userID, Nickname: userID}
 }
 
 func (s *Service) notifyGroupInviteReceived(ctx context.Context, group GroupItem, inviterUserID string, req InviteMemberRequest, invitation Invitation) {

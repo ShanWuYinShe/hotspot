@@ -9,11 +9,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gorilla/websocket"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/ratelimit"
+
+	"github.com/gorilla/websocket"
 )
 
 func wsURL(serverURL string) string { return "ws" + strings.TrimPrefix(serverURL, "http") + "/ws/v1" }

@@ -8,10 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"hotspot/backend-go/internal/platform/actor"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
+
+	"github.com/gorilla/websocket"
 )
 
 // stubTypingActorProvider resolves actor info for resolveTypingActor.

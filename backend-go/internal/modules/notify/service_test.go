@@ -8,6 +8,7 @@ import (
 	systemmodule "hotspot/backend-go/internal/modules/system"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type sinkStub struct{ events []realtime.Event }
@@ -56,7 +57,7 @@ func (r *notificationListCaptureRepo) MarkAllReadByType(context.Context, string,
 func TestAppendNewFollowerBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	if _, err := service.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "", ""); err != nil {
+	if _, err := service.AppendNewFollower(context.Background(), "user_alice", types.UserInfo{UserID: "user_bob", Nickname: "Bob"}, "", ""); err != nil {
 		t.Fatalf("append new follower: %v", err)
 	}
 	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
@@ -71,7 +72,7 @@ func TestAppendNewFollowerBuildsNotification(t *testing.T) {
 func TestAppendNewFollowerIncludesSourceFields(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	if _, err := service.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "moment", "moment_123"); err != nil {
+	if _, err := service.AppendNewFollower(context.Background(), "user_alice", types.UserInfo{UserID: "user_bob", Nickname: "Bob"}, "moment", "moment_123"); err != nil {
 		t.Fatalf("append new follower with source: %v", err)
 	}
 	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
@@ -86,7 +87,7 @@ func TestAppendNewFollowerIncludesSourceFields(t *testing.T) {
 func TestAppendMutualFollowBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	if _, err := service.AppendMutualFollow(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}); err != nil {
+	if _, err := service.AppendMutualFollow(context.Background(), "user_alice", types.UserInfo{UserID: "user_bob", Nickname: "Bob"}); err != nil {
 		t.Fatalf("append mutual follow: %v", err)
 	}
 	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
@@ -101,7 +102,7 @@ func TestAppendMutualFollowBuildsNotification(t *testing.T) {
 func TestAppendMomentCommentedBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	if _, err := service.AppendMomentCommented(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "moment_1", map[string]any{"moment_id": "moment_1", "description_preview": "summary"}, "comment_1", "preview"); err != nil {
+	if _, err := service.AppendMomentCommented(context.Background(), "user_alice", types.UserInfo{UserID: "user_bob", Nickname: "Bob"}, "moment_1", types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "summary"}, "comment_1", "preview"); err != nil {
 		t.Fatalf("append moment commented: %v", err)
 	}
 	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
@@ -119,7 +120,7 @@ func TestAppendMomentCommentedBuildsNotification(t *testing.T) {
 func TestAppendMentionedBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	if _, err := service.AppendMentioned(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "comment", "moment_1", map[string]any{"moment_id": "moment_1", "description_preview": "summary"}, "comment_1", "preview"); err != nil {
+	if _, err := service.AppendMentioned(context.Background(), "user_alice", types.UserInfo{UserID: "user_bob", Nickname: "Bob"}, "comment", "moment_1", types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "summary"}, "comment_1", "preview"); err != nil {
 		t.Fatalf("append mentioned: %v", err)
 	}
 	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
@@ -138,7 +139,7 @@ func TestAppendGroupInviteReceivedBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
 	message := "join us"
-	id, err := service.AppendGroupInviteReceived(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "group_1", "Hot Group", "invite_1", &message)
+	id, err := service.AppendGroupInviteReceived(context.Background(), "user_alice", types.UserInfo{UserID: "user_bob", Nickname: "Bob"}, "group_1", "Hot Group", "invite_1", &message)
 	if err != nil {
 		t.Fatalf("append group invite received: %v", err)
 	}

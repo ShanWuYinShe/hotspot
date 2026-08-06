@@ -8,6 +8,7 @@ import (
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 // stubTargetProvider serves a single target kind and reports existence by id.
@@ -23,7 +24,7 @@ func (s stubTargetProvider) Resolve(_ context.Context, targetID string) (TargetC
 	if !s.exists[targetID] {
 		return TargetContext{}, false, nil
 	}
-	return TargetContext{OwnerUserID: s.owners[targetID], Summary: map[string]any{"moment_id": targetID}}, true, nil
+	return TargetContext{OwnerUserID: s.owners[targetID], Summary: types.MomentSummary{MomentID: targetID}}, true, nil
 }
 
 // recordingNotifier captures Append* calls for assertion.
@@ -39,7 +40,7 @@ type reactionAddedCall struct {
 	emoji        string
 }
 
-func (n *recordingNotifier) AppendReactionAdded(_ context.Context, targetUserID string, _ map[string]any, targetType string, targetID string, emoji string) (string, error) {
+func (n *recordingNotifier) AppendReactionAdded(_ context.Context, targetUserID string, _ types.UserInfo, targetType string, targetID string, emoji string) (string, error) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	n.reactionAddedCalls = append(n.reactionAddedCalls, reactionAddedCall{targetUserID, targetType, targetID, emoji})

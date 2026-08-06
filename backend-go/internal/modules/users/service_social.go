@@ -7,6 +7,7 @@ import (
 
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 func (s *Service) Follow(ctx context.Context, targetUserID string, source FollowSource, sourceMomentID string) error {
@@ -427,14 +428,10 @@ func ensureSocialListsVisible(ctx context.Context, repo Repository, userID strin
 	return nil
 }
 
-func (s *Service) buildFollowActor(ctx context.Context, userID string) map[string]any {
+func (s *Service) buildFollowActor(ctx context.Context, userID string) types.UserInfo {
 	profile, ok, err := s.repo.GetProfile(ctx, userID)
 	if err != nil || !ok {
-		return map[string]any{"user_id": userID, "nickname": userID}
+		return types.UserInfo{UserID: userID, Nickname: userID}
 	}
-	actor := map[string]any{"user_id": profile.UserID, "nickname": profile.Nickname}
-	if profile.AvatarURL != "" {
-		actor["avatar_url"] = profile.AvatarURL
-	}
-	return actor
+	return types.UserInfo{UserID: profile.UserID, Nickname: profile.Nickname, AvatarURL: profile.AvatarURL}
 }

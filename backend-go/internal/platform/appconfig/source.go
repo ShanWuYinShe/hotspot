@@ -7,9 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type Source interface {

@@ -10,11 +10,12 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 // groupMentionNotifier 落库群聊 @ 通知（由 notify 模块实现，见 module.go 装配）。
 type groupMentionNotifier interface {
-	AppendGroupMentioned(ctx context.Context, targetUserID string, actor map[string]any, groupID, groupName, messageID, contentPreview string) (string, error)
+	AppendGroupMentioned(ctx context.Context, targetUserID string, actor types.UserInfo, groupID, groupName, messageID, contentPreview string) (string, error)
 }
 
 // shareValidator 校验 share_code 有效性（由 share 模块实现，见 module.go 装配）。
@@ -261,14 +262,12 @@ func (s *Service) ensureMember(ctx context.Context, groupID, userID string) erro
 	return nil
 }
 
-func (s *Service) resolveUserInfo(ctx context.Context, userID string) map[string]any {
-	info := map[string]any{"user_id": userID}
+func (s *Service) resolveUserInfo(ctx context.Context, userID string) types.UserInfo {
+	info := types.UserInfo{UserID: userID, Nickname: userID}
 	if s.users != nil {
 		if item, ok, err := s.users.OpenTheDoor(ctx, userID); err == nil && ok {
-			info["nickname"] = item.User.Nickname
-			if item.User.AvatarURL != "" {
-				info["avatar_url"] = item.User.AvatarURL
-			}
+			info.Nickname = item.User.Nickname
+			info.AvatarURL = item.User.AvatarURL
 		}
 	}
 	return info

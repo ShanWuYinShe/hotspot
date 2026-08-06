@@ -1,6 +1,9 @@
 package reactions
 
-import "context"
+import (
+	"context"
+	"hotspot/backend-go/internal/platform/types"
+)
 
 // TargetContext carries the author and display summary of a reaction target,
 // used to address notifications/realtime when a reaction is added.
@@ -9,9 +12,9 @@ type TargetContext struct {
 	// Empty for message targets whose owner is resolved per-message by the
 	// chat layer; reactions to such targets skip owner notification.
 	OwnerUserID string
-	// Summary is an opaque payload describing the target for notification
-	// rendering (e.g. moment_id + description preview).
-	Summary map[string]any
+	// Summary describes the target moment for notification rendering
+	// (spec MomentSummary); empty when the provider has no summary.
+	Summary types.MomentSummary
 }
 
 // TargetProvider resolves a target's context (existence + owner + summary)
@@ -33,5 +36,5 @@ type reactionNotificationWriter interface {
 	// AppendReactionAdded persists a reaction_added notification and returns
 	// the generated notification_id (embedded in the realtime payload when the
 	// reactor is not the target author; self-reactions skip notification).
-	AppendReactionAdded(ctx context.Context, targetUserID string, actor map[string]any, targetType string, targetID string, emoji string) (string, error)
+	AppendReactionAdded(ctx context.Context, targetUserID string, actor types.UserInfo, targetType string, targetID string, emoji string) (string, error)
 }

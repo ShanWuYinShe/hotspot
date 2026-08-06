@@ -17,6 +17,7 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type failingMomentCounter struct {
@@ -52,7 +53,7 @@ func (c *failingMomentCounter) NotificationContext(ctx context.Context, momentID
 	if err != nil || !ok {
 		return comments.MomentNotificationContext{}, ok, err
 	}
-	return comments.MomentNotificationContext{UserID: item.User.UserID, Summary: map[string]any{"moment_id": item.MomentID, "description_preview": item.Description}}, true, nil
+	return comments.MomentNotificationContext{UserID: item.User.UserID, Summary: types.MomentSummary{MomentID: item.MomentID, DescriptionPreview: item.Description}}, true, nil
 }
 
 type sinkCapture struct{ events []realtime.Event }

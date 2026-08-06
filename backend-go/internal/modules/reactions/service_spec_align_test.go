@@ -10,6 +10,7 @@ import (
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 // stubActorProvider resolves actor info for buildActor tests.
@@ -74,11 +75,11 @@ func TestSetReactMessageTargetNotifiesAndBroadcasts(t *testing.T) {
 	if payload["notify_id"] != "notif_1" {
 		t.Fatalf("expected notification_id=notif_1, got %+v", payload)
 	}
-	actorInfo, ok := payload["actor"].(map[string]any)
+	actorInfo, ok := payload["actor"].(types.UserInfo)
 	if !ok {
-		t.Fatalf("expected actor map, got %T", payload["actor"])
+		t.Fatalf("expected actor struct, got %T", payload["actor"])
 	}
-	if actorInfo["user_id"] != "u_bob" || actorInfo["nickname"] != "Bob" || actorInfo["avatar_url"] != "https://avatar.example/bob.png" {
+	if actorInfo.UserID != "u_bob" || actorInfo.Nickname != "Bob" || actorInfo.AvatarURL != "https://avatar.example/bob.png" {
 		t.Fatalf("unexpected actor: %+v", actorInfo)
 	}
 }
@@ -182,7 +183,7 @@ func TestHandlerSetRejectsEmojiOutsideWhitelist(t *testing.T) {
 func TestBuildActorFallsBackWhenProviderFails(t *testing.T) {
 	svc := NewServiceWithDeps(NewInMemoryRepository(), nil, nil, stubActorProvider{err: errors.New("boom")})
 	a := svc.buildActor(context.Background(), "u_x")
-	if a["user_id"] != "u_x" || a["nickname"] != "u_x" {
+	if a.UserID != "u_x" || a.Nickname != "u_x" {
 		t.Fatalf("expected fallback actor {user_id:u_x,nickname:u_x}, got %+v", a)
 	}
 }

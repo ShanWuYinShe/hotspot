@@ -261,7 +261,7 @@ func TestServiceBuildMomentActorWithProvider(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildMomentActor: %v", err)
 	}
-	if a["user_id"] != "u1" || a["nickname"] != "Alice" || a["avatar_url"] != "https://a.example/alice.png" {
+	if a.UserID != "u1" || a.Nickname != "Alice" || a.AvatarURL != "https://a.example/alice.png" {
 		t.Fatalf("unexpected actor: %+v", a)
 	}
 }
@@ -282,21 +282,21 @@ func TestServiceBuildMomentActorFallback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fallback actor must not error: %v", err)
 	}
-	if a["user_id"] != "u1" || a["nickname"] != "u1" {
+	if a.UserID != "u1" || a.Nickname != "u1" {
 		t.Fatalf("expected fallback actor, got %+v", a)
 	}
 }
 
 func TestActorFromInfo(t *testing.T) {
 	withAvatar := actorFromInfo(actor.Info{UserID: "u1", Nickname: "Alice", AvatarURL: "https://a"})
-	if withAvatar["avatar_url"] != "https://a" {
+	if withAvatar.AvatarURL != "https://a" {
 		t.Fatalf("avatar_url must be present: %+v", withAvatar)
 	}
 	withoutAvatar := actorFromInfo(actor.Info{UserID: "u2", Nickname: "Bob"})
-	if _, has := withoutAvatar["avatar_url"]; has {
+	if withoutAvatar.AvatarURL != "" {
 		t.Fatalf("avatar_url must be omitted when empty: %+v", withoutAvatar)
 	}
-	if withoutAvatar["user_id"] != "u2" || withoutAvatar["nickname"] != "Bob" {
+	if withoutAvatar.UserID != "u2" || withoutAvatar.Nickname != "Bob" {
 		t.Fatalf("unexpected actor: %+v", withoutAvatar)
 	}
 }

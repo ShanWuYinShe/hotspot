@@ -9,12 +9,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"hotspot/backend-go/internal/platform/actor"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/ratelimit"
 	"hotspot/backend-go/internal/platform/worker"
+
+	"github.com/gorilla/websocket"
 )
 
 // userPresenceAuthorizer 查询目标用户详情（在场状态）。OpenTheDoor 为刻意

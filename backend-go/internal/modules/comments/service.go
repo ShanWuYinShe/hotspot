@@ -13,6 +13,7 @@ import (
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 var ErrMomentNotFound = errors.New("comments: moment not found")
@@ -35,9 +36,9 @@ type ReactionAggregator interface {
 }
 
 type commentNotificationWriter interface {
-	AppendMomentCommented(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, commentID string, commentPreview string) (string, error)
-	AppendCommentReply(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, parentCommentID string, parentPreview string, replyID string, replyPreview string) (string, error)
-	AppendMentioned(ctx context.Context, targetUserID string, actor map[string]any, targetType string, momentID string, momentSummary map[string]any, commentID string, commentPreview string) (string, error)
+	AppendMomentCommented(ctx context.Context, targetUserID string, actor types.UserInfo, momentID string, momentSummary types.MomentSummary, commentID string, commentPreview string) (string, error)
+	AppendCommentReply(ctx context.Context, targetUserID string, actor types.UserInfo, momentID string, momentSummary types.MomentSummary, parentCommentID string, parentPreview string, replyID string, replyPreview string) (string, error)
+	AppendMentioned(ctx context.Context, targetUserID string, actor types.UserInfo, targetType string, momentID string, momentSummary types.MomentSummary, commentID string, commentPreview string) (string, error)
 }
 
 func NewService(repo Repository, moments MomentProvider) *Service {
@@ -313,7 +314,7 @@ func (s *Service) resolveReplyTarget(ctx context.Context, parentID string) (Comm
 	return parent, true, nil
 }
 
-func (s *Service) notifyMomentAuthor(ctx context.Context, momentContext MomentNotificationContext, actor map[string]any, item CommentItem, mentionTargets map[string]struct{}) {
+func (s *Service) notifyMomentAuthor(ctx context.Context, momentContext MomentNotificationContext, actor types.UserInfo, item CommentItem, mentionTargets map[string]struct{}) {
 	targetUserID := strings.TrimSpace(momentContext.UserID)
 	if targetUserID == "" || targetUserID == item.User.UserID {
 		return
@@ -333,7 +334,7 @@ func (s *Service) notifyMomentAuthor(ctx context.Context, momentContext MomentNo
 	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeMomentCommented, Payload: map[string]any{
 		"notify_id":      notificationID,
 		"moment_id":      item.MomentID,
-		"moment_summary": cloneSummary(momentSummary),
+		"moment_summary": momentSummary,
 		"comment_id":     item.CommentID,
 		"actor":          actor,
 		"content":        item.Content,
@@ -341,7 +342,7 @@ func (s *Service) notifyMomentAuthor(ctx context.Context, momentContext MomentNo
 	}})
 }
 
-func (s *Service) notifyReplyTarget(ctx context.Context, momentContext MomentNotificationContext, actor map[string]any, replyTarget CommentItem, item CommentItem, mentionTargets map[string]struct{}) {
+func (s *Service) notifyReplyTarget(ctx context.Context, momentContext MomentNotificationContext, actor types.UserInfo, replyTarget CommentItem, item CommentItem, mentionTargets map[string]struct{}) {
 	targetUserID := strings.TrimSpace(replyTarget.User.UserID)
 	if targetUserID == "" || targetUserID == item.User.UserID {
 		return
@@ -362,7 +363,7 @@ func (s *Service) notifyReplyTarget(ctx context.Context, momentContext MomentNot
 	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeCommentReply, Payload: map[string]any{
 		"notify_id":               notificationID,
 		"moment_id":               item.MomentID,
-		"moment_summary":          cloneSummary(momentSummary),
+		"moment_summary":          momentSummary,
 		"comment_id":              replyTarget.CommentID,
 		"replied_comment_preview": parentPreview,
 		"reply_id":                item.CommentID,
@@ -372,7 +373,7 @@ func (s *Service) notifyReplyTarget(ctx context.Context, momentContext MomentNot
 	}})
 }
 
-func (s *Service) notifyMentionedUsers(ctx context.Context, momentContext MomentNotificationContext, actor map[string]any, item CommentItem, mentionTargets map[string]struct{}) {
+func (s *Service) notifyMentionedUsers(ctx context.Context, momentContext MomentNotificationContext, actor types.UserInfo, item CommentItem, mentionTargets map[string]struct{}) {
 	momentSummary := notificationMomentSummary(momentContext, item.MomentID)
 	commentPreview := summarizeCommentText(item.Content, "")
 	for _, targetUserID := range sortedMentionTargets(mentionTargets) {
@@ -390,7 +391,7 @@ func (s *Service) notifyMentionedUsers(ctx context.Context, momentContext Moment
 			"target_type":     "comment",
 			"moment_id":       item.MomentID,
 			"comment_id":      item.CommentID,
-			"moment_summary":  cloneSummary(momentSummary),
+			"moment_summary":  momentSummary,
 			"comment_preview": commentPreview,
 			"actor":           actor,
 			"mentioned_at":    item.CreatedAt,
@@ -398,7 +399,7 @@ func (s *Service) notifyMentionedUsers(ctx context.Context, momentContext Moment
 	}
 }
 
-func buildCommentActor(item CommentItem, fallbackUserID string) map[string]any {
+func buildCommentActor(item CommentItem, fallbackUserID string) types.UserInfo {
 	userID := strings.TrimSpace(item.User.UserID)
 	if userID == "" {
 		userID = strings.TrimSpace(fallbackUserID)
@@ -407,27 +408,15 @@ func buildCommentActor(item CommentItem, fallbackUserID string) map[string]any {
 	if nickname == "" {
 		nickname = userID
 	}
-	actor := map[string]any{"user_id": userID, "nickname": nickname}
-	if avatarURL := strings.TrimSpace(item.User.AvatarURL); avatarURL != "" {
-		actor["avatar_url"] = avatarURL
-	}
-	return actor
+	return types.UserInfo{UserID: userID, Nickname: nickname, AvatarURL: strings.TrimSpace(item.User.AvatarURL)}
 }
 
-func notificationMomentSummary(momentContext MomentNotificationContext, momentID string) map[string]any {
-	summary := cloneSummary(momentContext.Summary)
-	if len(summary) == 0 {
-		summary["moment_id"] = momentID
+func notificationMomentSummary(momentContext MomentNotificationContext, momentID string) types.MomentSummary {
+	summary := momentContext.Summary
+	if summary.MomentID == "" {
+		summary.MomentID = momentID
 	}
 	return summary
-}
-
-func cloneSummary(summary map[string]any) map[string]any {
-	cloned := make(map[string]any, len(summary))
-	for key, value := range summary {
-		cloned[key] = value
-	}
-	return cloned
 }
 
 func uniqueMentionTargets(mentions []string, selfUserID string) map[string]struct{} {

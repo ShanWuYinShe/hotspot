@@ -10,6 +10,7 @@ import (
 
 	systemmodule "hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 // nearbyNotifyProviderStub 模拟用户“附近新瞬间”通知开关。
@@ -47,7 +48,7 @@ func TestAppendGroupApplicationRejectedBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
 	reason := "not suitable"
-	notificationID, err := service.AppendGroupApplicationRejected(context.Background(), "user_bob", "group_1", "Hot Group", "app_1", map[string]any{"user_id": "user_admin", "nickname": "Admin"}, &reason)
+	notificationID, err := service.AppendGroupApplicationRejected(context.Background(), "user_bob", "group_1", "Hot Group", "app_1", types.UserInfo{UserID: "user_admin", Nickname: "Admin"}, &reason)
 	if err != nil {
 		t.Fatalf("append group application rejected: %v", err)
 	}
@@ -61,8 +62,8 @@ func TestAppendGroupApplicationRejectedBuildsNotification(t *testing.T) {
 	if item.Type != "group_application_rejected" || item.Payload["type"] != "group_application_rejected" {
 		t.Fatalf("unexpected type: %#v", item)
 	}
-	rejectedBy, ok := item.Payload["rejected_by"].(map[string]any)
-	if !ok || rejectedBy["user_id"] != "user_admin" {
+	rejectedBy, ok := item.Payload["rejected_by"].(types.UserInfo)
+	if !ok || rejectedBy.UserID != "user_admin" {
 		t.Fatalf("unexpected rejected_by payload: %#v", item.Payload["rejected_by"])
 	}
 	if item.Payload["reason"] != reason {
@@ -75,7 +76,7 @@ func TestAppendGroupApplicationRejectedBuildsNotification(t *testing.T) {
 func TestAppendGroupApplicationReceivedBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	id, err := service.AppendGroupApplicationReceived(context.Background(), "user_admin", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "group_1", "Hot Group", "app_1")
+	id, err := service.AppendGroupApplicationReceived(context.Background(), "user_admin", types.UserInfo{UserID: "user_bob", Nickname: "Bob"}, "group_1", "Hot Group", "app_1")
 	if err != nil {
 		t.Fatalf("append group application received: %v", err)
 	}
@@ -92,8 +93,8 @@ func TestAppendGroupApplicationReceivedBuildsNotification(t *testing.T) {
 	if item.Payload["group_id"] != "group_1" || item.Payload["group_name"] != "Hot Group" || item.Payload["application_id"] != "app_1" {
 		t.Fatalf("unexpected payload: %#v", item.Payload)
 	}
-	applicant, ok := item.Payload["applicant"].(map[string]any)
-	if !ok || applicant["user_id"] != "user_bob" {
+	applicant, ok := item.Payload["applicant"].(types.UserInfo)
+	if !ok || applicant.UserID != "user_bob" {
 		t.Fatalf("unexpected applicant payload: %#v", item.Payload["applicant"])
 	}
 }
@@ -183,8 +184,8 @@ func TestAppendCommentReplyBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
 	notificationID, err := service.AppendCommentReply(context.Background(), "user_alice",
-		map[string]any{"user_id": "user_bob", "nickname": "Bob"},
-		"moment_1", map[string]any{"moment_id": "moment_1", "description_preview": "summary"},
+		types.UserInfo{UserID: "user_bob", Nickname: "Bob"},
+		"moment_1", types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "summary"},
 		"comment_1", "parent preview", "reply_1", "reply preview")
 	if err != nil {
 		t.Fatalf("append comment reply: %v", err)
@@ -211,11 +212,11 @@ func TestAppendCommentReplyBuildsNotification(t *testing.T) {
 			t.Fatalf("expected payload[%q]=%q, got %#v", key, want, item.Payload[key])
 		}
 	}
-	if _, ok := item.Payload["moment_summary"].(map[string]any); !ok {
-		t.Fatalf("expected moment_summary map, got %#v", item.Payload["moment_summary"])
+	if _, ok := item.Payload["moment_summary"].(types.MomentSummary); !ok {
+		t.Fatalf("expected moment_summary struct, got %#v", item.Payload["moment_summary"])
 	}
-	if _, ok := item.Payload["actor"].(map[string]any); !ok {
-		t.Fatalf("expected actor map, got %#v", item.Payload["actor"])
+	if _, ok := item.Payload["actor"].(types.UserInfo); !ok {
+		t.Fatalf("expected actor struct, got %#v", item.Payload["actor"])
 	}
 }
 
@@ -229,7 +230,7 @@ func TestAppendCommentReplyBuildsNotification(t *testing.T) {
 func TestAppendNewFollowerBuildsNotifyID(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	notificationID, err := service.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "moment", "moment_123")
+	notificationID, err := service.AppendNewFollower(context.Background(), "user_alice", types.UserInfo{UserID: "user_bob", Nickname: "Bob"}, "moment", "moment_123")
 	if err != nil {
 		t.Fatalf("append new follower: %v", err)
 	}
@@ -248,7 +249,7 @@ func TestAppendNewFollowerBuildsNotifyID(t *testing.T) {
 func TestAppendMutualFollowBuildsNotifyID(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	notificationID, err := service.AppendMutualFollow(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"})
+	notificationID, err := service.AppendMutualFollow(context.Background(), "user_alice", types.UserInfo{UserID: "user_bob", Nickname: "Bob"})
 	if err != nil {
 		t.Fatalf("append mutual follow: %v", err)
 	}
@@ -267,7 +268,7 @@ func TestAppendMutualFollowBuildsNotifyID(t *testing.T) {
 func TestAppendMomentCommentedBuildsNotifyID(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	notificationID, err := service.AppendMomentCommented(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "moment_1", map[string]any{"moment_id": "moment_1", "description_preview": "summary"}, "comment_1", "preview")
+	notificationID, err := service.AppendMomentCommented(context.Background(), "user_alice", types.UserInfo{UserID: "user_bob", Nickname: "Bob"}, "moment_1", types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "summary"}, "comment_1", "preview")
 	if err != nil {
 		t.Fatalf("append moment commented: %v", err)
 	}
@@ -286,7 +287,7 @@ func TestAppendMomentCommentedBuildsNotifyID(t *testing.T) {
 func TestAppendMentionedBuildsNotifyID(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	notificationID, err := service.AppendMentioned(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "comment", "moment_1", map[string]any{"moment_id": "moment_1", "description_preview": "summary"}, "comment_1", "preview")
+	notificationID, err := service.AppendMentioned(context.Background(), "user_alice", types.UserInfo{UserID: "user_bob", Nickname: "Bob"}, "comment", "moment_1", types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "summary"}, "comment_1", "preview")
 	if err != nil {
 		t.Fatalf("append mentioned: %v", err)
 	}
@@ -334,7 +335,7 @@ func TestPublishNearbyNewMomentNoProviderAppendsAndPushes(t *testing.T) {
 	hub := realtime.DefaultHub()
 	hub.RegisterUser("user_nearby", "sess_1", sink)
 
-	err := service.PublishNearbyNewMoment(context.Background(), "user_nearby", "user_actor", "moment_42", 350, map[string]any{"user_id": "user_actor", "nickname": "Actor"}, map[string]any{"moment_id": "moment_42"})
+	err := service.PublishNearbyNewMoment(context.Background(), "user_nearby", "user_actor", "moment_42", 350, types.UserInfo{UserID: "user_actor", Nickname: "Actor"}, types.MomentSummary{MomentID: "moment_42"})
 	if err != nil {
 		t.Fatalf("publish nearby new moment: %v", err)
 	}
@@ -361,7 +362,7 @@ func TestPublishNearbyNewMomentEnabledProviderAppendsAndPushes(t *testing.T) {
 	sink := withTestHub(t)
 	realtime.DefaultHub().RegisterUser("user_nearby", "sess_1", sink)
 
-	if err := service.PublishNearbyNewMoment(context.Background(), "user_nearby", "user_actor", "moment_42", 120, map[string]any{"user_id": "user_actor"}, map[string]any{"moment_id": "moment_42"}); err != nil {
+	if err := service.PublishNearbyNewMoment(context.Background(), "user_nearby", "user_actor", "moment_42", 120, types.UserInfo{UserID: "user_actor"}, types.MomentSummary{MomentID: "moment_42"}); err != nil {
 		t.Fatalf("publish nearby new moment: %v", err)
 	}
 	if len(repo.appended) != 1 {
@@ -379,7 +380,7 @@ func TestPublishNearbyNewMomentDisabledProviderSkips(t *testing.T) {
 	sink := withTestHub(t)
 	realtime.DefaultHub().RegisterUser("user_nearby", "sess_1", sink)
 
-	if err := service.PublishNearbyNewMoment(context.Background(), "user_nearby", "user_actor", "moment_42", 120, map[string]any{"user_id": "user_actor"}, map[string]any{"moment_id": "moment_42"}); err != nil {
+	if err := service.PublishNearbyNewMoment(context.Background(), "user_nearby", "user_actor", "moment_42", 120, types.UserInfo{UserID: "user_actor"}, types.MomentSummary{MomentID: "moment_42"}); err != nil {
 		t.Fatalf("publish nearby new moment: %v", err)
 	}
 	if len(repo.appended) != 0 {
@@ -395,7 +396,7 @@ func TestPublishNearbyNewMomentProviderErrorPropagates(t *testing.T) {
 	service := NewServiceWithRepo(repo)
 	service.SetNearbyNotifyProvider(nearbyNotifyProviderStub{err: errors.New("settings unavailable")})
 
-	err := service.PublishNearbyNewMoment(context.Background(), "user_nearby", "user_actor", "moment_42", 120, map[string]any{"user_id": "user_actor"}, map[string]any{"moment_id": "moment_42"})
+	err := service.PublishNearbyNewMoment(context.Background(), "user_nearby", "user_actor", "moment_42", 120, types.UserInfo{UserID: "user_actor"}, types.MomentSummary{MomentID: "moment_42"})
 	if err == nil {
 		t.Fatal("expected provider error, got nil")
 	}

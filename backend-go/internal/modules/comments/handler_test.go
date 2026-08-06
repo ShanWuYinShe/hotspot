@@ -11,6 +11,7 @@ import (
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 // --- stub repo ---
@@ -80,13 +81,13 @@ func (p *stubMomentProvider) NotificationContext(_ context.Context, _ string) (M
 
 type stubNotifWriter struct{}
 
-func (s *stubNotifWriter) AppendMomentCommented(_ context.Context, _ string, _ map[string]any, _ string, _ map[string]any, _, _ string) (string, error) {
+func (s *stubNotifWriter) AppendMomentCommented(_ context.Context, _ string, _ types.UserInfo, _ string, _ types.MomentSummary, _, _ string) (string, error) {
 	return "notif_stub", nil
 }
-func (s *stubNotifWriter) AppendCommentReply(_ context.Context, _ string, _ map[string]any, _ string, _ map[string]any, _, _, _, _ string) (string, error) {
+func (s *stubNotifWriter) AppendCommentReply(_ context.Context, _ string, _ types.UserInfo, _ string, _ types.MomentSummary, _, _, _, _ string) (string, error) {
 	return "notif_stub", nil
 }
-func (s *stubNotifWriter) AppendMentioned(_ context.Context, _ string, _ map[string]any, _, _ string, _ map[string]any, _, _ string) (string, error) {
+func (s *stubNotifWriter) AppendMentioned(_ context.Context, _ string, _ types.UserInfo, _, _ string, _ types.MomentSummary, _, _ string) (string, error) {
 	return "notif_stub", nil
 }
 
@@ -129,7 +130,7 @@ func assertCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx.Code
 }
 
 func defaultMoments() *stubMomentProvider {
-	return &stubMomentProvider{exists: true, commentableFound: true, commentable: true, notifCtx: MomentNotificationContext{UserID: "author1", Summary: map[string]any{"moment_id": "m1"}}, notifOk: true}
+	return &stubMomentProvider{exists: true, commentableFound: true, commentable: true, notifCtx: MomentNotificationContext{UserID: "author1", Summary: types.MomentSummary{MomentID: "m1"}}, notifOk: true}
 }
 
 // --- Create tests ---
