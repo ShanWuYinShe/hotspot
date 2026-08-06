@@ -99,10 +99,6 @@ func (a *App) Logger() *observability.Logger {
 	return a.logger
 }
 
-func (a *App) LogField(key string, value any) (string, any) {
-	return key, value
-}
-
 func (a *App) Shutdown() {
 	if a.bridge != nil {
 		a.bridge.Close()

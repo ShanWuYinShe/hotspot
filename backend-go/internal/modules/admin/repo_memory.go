@@ -1048,17 +1048,6 @@ func (r *InMemoryRepository) SendGroupMessage(_ context.Context, id, content, se
 	}
 }
 
-func (r *InMemoryRepository) SendPrivateMessage(_ context.Context, id, content, senderID string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.privateMessages[id] = messageRecord{
-		ID:        id,
-		Content:   content,
-		SenderID:  senderID,
-		CreatedAt: time.Now().UTC(),
-	}
-}
-
 func (r *InMemoryRepository) HasMoment(id string) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -1077,16 +1066,6 @@ func (r *InMemoryRepository) IsGroupMessageRecalled(id string) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	msg, ok := r.groupMessages[id]
-	if !ok {
-		return false
-	}
-	return msg.Recalled
-}
-
-func (r *InMemoryRepository) IsPrivateMessageRecalled(id string) bool {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	msg, ok := r.privateMessages[id]
 	if !ok {
 		return false
 	}

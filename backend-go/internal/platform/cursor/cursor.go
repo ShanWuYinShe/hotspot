@@ -79,20 +79,6 @@ func (c *Codec) Encode(payload any) (string, error) {
 	return base64.RawURLEncoding.EncodeToString(sealed), nil
 }
 
-// EncodeString is a convenience wrapper for the common case of cursors that
-// carry a single opaque string. It does not JSON-wrap the input.
-func (c *Codec) EncodeString(value string) (string, error) {
-	if err := c.ensure(); err != nil {
-		return "", err
-	}
-	nonce := make([]byte, c.nonceSize)
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return "", err
-	}
-	sealed := c.gcm.Seal(nonce, nonce, []byte(value), nil)
-	return base64.RawURLEncoding.EncodeToString(sealed), nil
-}
-
 // Decode reverses Encode, writing the decrypted JSON into out. An empty
 // input returns nil (no cursor) without touching out.
 func (c *Codec) Decode(value string, out any) error {

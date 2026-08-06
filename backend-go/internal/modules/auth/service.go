@@ -165,24 +165,6 @@ func NewServiceWithSource(ctx context.Context, auth *platformauth.Service, repo 
 	return &Service{auth: auth, repo: repo, cfg: cfg, appConfig: source, emailSender: &noopEmailSender{}, loginTracker: newInMemoryLoginTracker(ctx)}
 }
 
-func (s *Service) WithEmailSender(sender emailSender) *Service {
-	s.emailSender = sender
-	return s
-}
-
-// WithLoginTracker replaces the default in-memory login tracker.
-// Use this to inject a Redis-backed tracker for multi-instance deployments.
-// For tests, pass a tracker that uses configurable thresholds and a fake clock.
-func (s *Service) WithLoginTracker(tracker FailedLoginTracker) *Service {
-	if tracker != nil {
-		if lt, ok := s.loginTracker.(*inMemoryLoginTracker); ok {
-			lt.stop() // stop the old tracker's sweeper goroutine
-		}
-		s.loginTracker = tracker
-	}
-	return s
-}
-
 type noopEmailSender struct{}
 
 func (*noopEmailSender) SendPasswordReset(_ context.Context, _ string, _ string) error {
