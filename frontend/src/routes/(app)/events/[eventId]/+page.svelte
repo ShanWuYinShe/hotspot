@@ -26,8 +26,6 @@
 		id: string;
 		title: string;
 		tag: string;
-		color: string;
-		bg: string;
 		cover: string;
 		description: string;
 		location: string;
@@ -54,11 +52,24 @@
 	let loading = $state(true);
 	/** 空数据壳：仅避免 snippet 提升后对 ev 的空值收窄问题，不承载任何假数据。 */
 	const EMPTY_EVENT: EventData = {
-		id: '', title: '', tag: '', color: '', bg: '', cover: '', description: '',
+		id: '', title: '', tag: '', cover: '', description: '',
 		location: '', date: '', time: '', host: { name: '', avatar: '' },
 		participants: [], maxParticipants: 0, distance: '', highlights: []
 	};
 	const safeEv = $derived(ev ?? EMPTY_EVENT);
+
+	// 活动色：数据层只返回语义 tag，视觉色由前端映射到 design token 档位
+	// （主色 main / 淡底 bg / 淡边框 border / 光晕 glow / 反色文字 on）。
+	// 参照 notifications TYPE_CONFIG 模式；缺省 tag 回退 accent 族。
+	const EVENT_TONE: Record<string, { main: string; bg: string; border: string; glow: string; on: string }> = {
+		社交: { main: 'var(--cst-status-warning)', bg: 'var(--cst-status-warning-bg)', border: 'var(--cst-status-warning-border)', glow: 'var(--cst-status-warning-glow)', on: 'var(--cst-text-on-status)' },
+		音乐: { main: 'var(--cst-accent-default)', bg: 'var(--cst-accent-soft-bg)', border: 'var(--cst-accent-border-soft)', glow: 'var(--cst-accent-glow-soft)', on: 'var(--cst-text-on-accent)' },
+		户外: { main: 'var(--cst-marker-group)', bg: 'var(--cst-marker-group-bg)', border: 'var(--cst-marker-group-border)', glow: 'var(--cst-marker-group-glow)', on: 'var(--cst-text-on-status)' },
+		阅读: { main: 'var(--cst-status-online)', bg: 'var(--cst-status-online-bg)', border: 'var(--cst-status-online-border)', glow: 'var(--cst-status-online-glow)', on: 'var(--cst-text-on-status)' },
+		市集: { main: 'var(--cst-status-danger)', bg: 'var(--cst-status-danger-bg)', border: 'var(--cst-status-danger-border)', glow: 'var(--cst-status-danger-glow)', on: 'var(--cst-text-on-status)' }
+	};
+	const DEFAULT_TONE = EVENT_TONE['音乐'];
+	const tone = $derived(EVENT_TONE[safeEv.tag] ?? DEFAULT_TONE);
 
 	$effect(() => {
 		let cancelled = false;
@@ -82,7 +93,6 @@
 	let showParticipants = $state(false);
 
 	const fillRate = $derived(ev ? Math.round((safeEv.participants.length / safeEv.maxParticipants) * 100) : 0);
-	const evTone = (amount: number) => `color-mix(in srgb, ${safeEv.color || 'var(--cst-accent-default)'} ${amount}%, transparent)`;
 	const walkMinutes = $derived(ev && safeEv.distance ? Math.ceil(parseFloat(safeEv.distance) * 12) : 0);
 </script>
 
@@ -91,7 +101,7 @@
 	<!-- 全幅封面（负 margin 抵消 SplitPageLayout 的 gutter） -->
 	<div class="relative shrink-0 overflow-hidden -mx-[var(--cst-page-gutter)]" style="height:clamp(200px, 32vw, 280px);">
 				<img src={safeEv.cover} alt={safeEv.title} class="absolute inset-0 h-full w-full object-cover" />
-				<div class="absolute inset-0" style="background:linear-gradient(to bottom, transparent 30%, {safeEv.bg} 100%);"></div>
+				<div class="absolute inset-0" style="background:linear-gradient(to bottom, transparent 30%, {tone.bg} 100%);"></div>
 
 				<!-- 返回 -->
 				<div class="absolute top-4 left-4 flex gap-2">
@@ -103,7 +113,7 @@
 
 				<!-- 标签 -->
 				<div class="absolute bottom-4 left-4">
-					<span class="rounded-full px-3 py-1 text-cst-text-on-status text-sm" style="background:{safeEv.color};box-shadow:0 3px 10px {evTone(50)};">{safeEv.tag}</span>
+					<span class="rounded-full px-3 py-1 text-sm" style="color:{tone.on};background:{tone.main};box-shadow:0 3px 10px {tone.glow};">{safeEv.tag}</span>
 				</div>
 			</div>
 
@@ -115,8 +125,8 @@
 				<div class="mb-6 flex flex-col gap-2.5">
 					{#each [{ icon: Calendar, text: safeEv.date }, { icon: Clock, text: safeEv.time }, { icon: MapPin, text: safeEv.location }] as meta}
 						<div class="flex items-center gap-2.5">
-							<div class="flex shrink-0 items-center justify-center rounded-full" style="width:30px;height:30px;background:color-mix(in srgb, {safeEv.color} 14%, transparent);">
-								<meta.icon style="width:13px;height:13px;color:{safeEv.color};" strokeWidth={1.75} />
+							<div class="flex shrink-0 items-center justify-center rounded-full" style="width:30px;height:30px;background:{tone.bg};">
+								<meta.icon style="width:13px;height:13px;color:{tone.main};" strokeWidth={1.75} />
 							</div>
 							<span class="text-base text-text-secondary">{meta.text}</span>
 						</div>
@@ -125,7 +135,7 @@
 
 				<!-- 发起人 -->
 				<div class="mb-4 flex items-center gap-3 rounded-panel px-4 py-3.5 shadow-neu-lg border border-border-default"  style="background:var(--cst-surface-primary)">
-					<div class="shrink-0 overflow-hidden rounded-full" style="width:40px;height:40px;border:2px solid {safeEv.color};">
+					<div class="shrink-0 overflow-hidden rounded-full" style="width:40px;height:40px;border:2px solid {tone.main};">
 						<img src={safeEv.host.avatar} alt={safeEv.host.name} class="h-full w-full object-cover" />
 					</div>
 					<div class="flex-1">
@@ -136,7 +146,7 @@
 						</div>
 					</div>
 					<!-- TODO: 关注后端 users/follow 已实现（POST /api/v1/users/follow），前端接线待完成 -->
-					<button type="button" class="hover-btn tap-93 rounded-full px-3 py-1.5 text-cst-text-on-status text-sm outline-none" style="background:{safeEv.color};box-shadow:0 3px 10px {evTone(40)};">关注</button>
+					<button type="button" class="hover-btn tap-93 rounded-full px-3 py-1.5 text-sm outline-none" style="color:{tone.on};background:{tone.main};box-shadow:0 3px 10px {tone.glow};">关注</button>
 				</div>
 
 				<!-- 描述 -->
@@ -146,8 +156,8 @@
 				<div class="mb-5 grid gap-2.5" style="grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));">
 					{#each safeEv.highlights as h}
 						<div class="flex items-center gap-2.5 rounded-control px-3.5 py-3 shadow-neu-md border border-border-default"  style="background:var(--cst-surface-primary)">
-							<div class="flex shrink-0 items-center justify-center rounded-full" style="width:24px;height:24px;background:color-mix(in srgb, {safeEv.color} 14%, transparent);">
-								<Check style="width:11px;height:11px;color:{safeEv.color};" strokeWidth={2.5} />
+							<div class="flex shrink-0 items-center justify-center rounded-full" style="width:24px;height:24px;background:{tone.bg};">
+								<Check style="width:11px;height:11px;color:{tone.main};" strokeWidth={2.5} />
 							</div>
 							<span class="text-sm text-text-primary">{h}</span>
 						</div>
@@ -166,7 +176,7 @@
 
 					<!-- 进度条 -->
 					<div class="mb-3 overflow-hidden rounded-full h-1.5"  style="background:var(--cst-border-default)">
-						<div style="width:{fillRate}%;height:100%;background:{safeEv.color};border-radius:3px;transition:width 0.8s ease-out;"></div>
+						<div style="width:{fillRate}%;height:100%;background:{tone.main};border-radius:3px;transition:width 0.8s ease-out;"></div>
 					</div>
 
 					<!-- 头像栈 -->
@@ -177,8 +187,8 @@
 							</div>
 						{/each}
 						{#if safeEv.maxParticipants - safeEv.participants.length > 0}
-							<div class="flex items-center justify-center rounded-full" style="width:36px;height:36px;border:2px solid var(--cst-surface-primary);margin-left:-10px;background:{evTone(18)};">
-								<span class="text-xs font-semibold" style="color:{safeEv.color};">+{safeEv.maxParticipants - safeEv.participants.length}</span>
+							<div class="flex items-center justify-center rounded-full" style="width:36px;height:36px;border:2px solid var(--cst-surface-primary);margin-left:-10px;background:{tone.bg};">
+								<span class="text-xs font-semibold" style="color:{tone.main};">+{safeEv.maxParticipants - safeEv.participants.length}</span>
 							</div>
 						{/if}
 						<span class="ml-2 text-sm text-text-secondary">已报名</span>
@@ -186,8 +196,8 @@
 				</div>
 
 				<!-- 距离信息 -->
-				<div class="flex items-center gap-2 rounded-control px-4 py-3" style="background:{evTone(10)};border:1px solid {evTone(25)};">
-					<MapPin style="width:14px;height:14px;color:{safeEv.color};" strokeWidth={1.5} />
+				<div class="flex items-center gap-2 rounded-control px-4 py-3" style="background:{tone.bg};border:1px solid {tone.border};">
+					<MapPin style="width:14px;height:14px;color:{tone.main};" strokeWidth={1.5} />
 					<span class="text-base text-text-secondary">距你 {safeEv.distance} · 步行约 {walkMinutes} 分钟</span>
 				</div>
 	</div>
@@ -201,8 +211,8 @@
 				onclick={() => (joined = !joined)}
 				class="hover-btn tap-97 flex w-full items-center justify-center gap-2 rounded-feature py-4 text-base outline-none transition-all duration-300"
 				style={joined
-					? `background:var(--cst-surface-primary);border:2px solid ${safeEv.color};color:${safeEv.color};box-shadow:0 0 0 4px ${evTone(18)};`
-					: `background:${safeEv.color};color:var(--cst-text-on-status);box-shadow:0 8px 24px ${evTone(45)};border:none;`}
+					? `background:var(--cst-surface-primary);border:2px solid ${tone.main};color:${tone.main};box-shadow:0 0 0 4px ${tone.bg};`
+					: `background:${tone.main};color:var(--cst-text-on-status);box-shadow:0 8px 24px ${tone.glow};border:none;`}
 			>
 				{#if joined}
 					<Check class="size-4.5"  strokeWidth={2.5} />
@@ -222,7 +232,7 @@
 		<RailUserRow avatar={safeEv.host.avatar} name={safeEv.host.name} sub="活动发起人">
 			{#snippet trailing()}
 				<!-- TODO: 关注后端 users/follow 已实现（POST /api/v1/users/follow），前端接线待完成 -->
-				<button type="button" class="hover-btn shrink-0 rounded-full px-2.5 py-1 text-cst-text-on-status text-xs outline-none" style="background:{safeEv.color};">关注</button>
+				<button type="button" class="hover-btn shrink-0 rounded-full px-2.5 py-1 text-xs outline-none" style="color:{tone.on};background:{tone.main};">关注</button>
 			{/snippet}
 		</RailUserRow>
 	</RailSection>
@@ -274,12 +284,12 @@
 		</header>
 		<div class="no-scrollbar max-h-[52dvh] overflow-y-auto px-5 py-3">
 			<div class="flex items-center gap-3 py-3 border-b border-border-default" >
-				<img src={safeEv.host.avatar} alt={safeEv.host.name} class="h-10 w-10 rounded-full object-cover" style="border:2px solid {safeEv.color};" />
+				<img src={safeEv.host.avatar} alt={safeEv.host.name} class="h-10 w-10 rounded-full object-cover" style="border:2px solid {tone.main};" />
 				<div class="flex-1">
 					<p class="text-base font-semibold text-text-primary">{safeEv.host.name}</p>
 					<p class="mt-0.5 text-xs text-text-secondary">活动发起人</p>
 				</div>
-				<span class="rounded-full px-2 py-1 text-xxs" style="color:{safeEv.color};background:{evTone(12)};">发起人</span>
+				<span class="rounded-full px-2 py-1 text-xxs" style="color:{tone.main};background:{tone.bg};">发起人</span>
 			</div>
 			<ListContainer>
 			{#each safeEv.participants as participant (participant.id)}
@@ -289,13 +299,13 @@
 						<p class="text-base text-text-primary">{participant.name}</p>
 						<p class="mt-0.5 text-xs text-text-secondary">已报名 · 等待一起见面</p>
 					</div>
-					<Check size={15} color={safeEv.color} />
+					<Check size={15} color={tone.main} />
 				</div>
 			{/each}
 			</ListContainer>
 		</div>
 		<div class="px-5 pb-5 pt-3 border-t border-border-default" >
-			<button type="button" onclick={() => (showParticipants = false)} class="w-full rounded-full py-3 text-base font-semibold outline-none" style="background:{evTone(14)};color:{safeEv.color};">知道了</button>
+			<button type="button" onclick={() => (showParticipants = false)} class="w-full rounded-full py-3 text-base font-semibold outline-none" style="background:{tone.bg};color:{tone.main};">知道了</button>
 		</div>
 	</Dialog.Content>
 </Dialog.Root>

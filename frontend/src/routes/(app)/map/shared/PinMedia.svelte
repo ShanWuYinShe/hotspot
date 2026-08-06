@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { Pin } from './location-data';
-	import { pinTone, getMarkerUrl } from './location-shared';
+	import { PIN_TONES, getMarkerUrl } from './location-shared';
 
 	// 图钉媒体展示（地图三处共用：桌面面板列表行 / 移动 Sheet 卡 / 桌面选中详情）：
-	// 用户 → 头像 + 在线角标；动态 → 图片缩略图；群组/其他 → 类型 marker（pinTone 底色）。
+	// 用户 → 头像 + 在线角标；动态 → 图片缩略图；群组/其他 → 类型 marker（PIN_TONES 淡底）。
 
 	let {
 		pin,
@@ -30,7 +30,7 @@
 {:else}
 	<div
 		class="flex items-center justify-center rounded-small shrink-0"
-		style="width:{size}px;height:{size}px;background:{pinTone(pin.type, 12)};"
+		style="width:{size}px;height:{size}px;background:{PIN_TONES[pin.type].bg};"
 	>
 		<img src={getMarkerUrl(pin.type, pin.count ?? 1)} alt={pin.type} style="width:{markerWidth}px;height:{markerHeight}px;" />
 	</div>

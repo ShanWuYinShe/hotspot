@@ -16,7 +16,6 @@
 	} = $props();
 
 	const cfg = $derived(TYPE_CONFIG[notif.type] ?? TYPE_CONFIG.reaction);
-	const cfgTone = (amount: number) => `color-mix(in srgb, ${cfg.color} ${amount}%, transparent)`;
 </script>
 
 <ListItem
@@ -31,7 +30,7 @@
 				<img src={notif.user.avatar} alt={notif.user.name} class="w-full h-full object-cover" />
 			</div>
 		{:else}
-			<div class="rounded-full flex items-center justify-center" style="width:44px;height:44px;background:{cfgTone(18)};">
+			<div class="rounded-full flex items-center justify-center" style="width:44px;height:44px;background:{cfg.bg};">
 				<cfg.icon style="width:18px;height:18px;color:{cfg.color};" strokeWidth={1.75} />
 			</div>
 		{/if}

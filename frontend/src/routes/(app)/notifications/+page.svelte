@@ -228,10 +228,10 @@ const FILTER_TABS = [
 						<button
 							type="button"
 							class="hover-btn flex items-center gap-2.5 rounded-tight px-2 py-1.5 outline-none text-left"
-							style="background:{filter === type ? `color-mix(in srgb, ${cfg.color} 10%, transparent)` : 'transparent'};border:1px solid {filter === type ? `color-mix(in srgb, ${cfg.color} 22%, transparent)` : 'transparent'};transition:background 0.15s;"
+							style="background:{filter === type ? cfg.bg : 'transparent'};border:1px solid {filter === type ? cfg.border : 'transparent'};transition:background 0.15s;"
 							onclick={() => (filter = type)}
 						>
-							<div class="flex items-center justify-center rounded-full shrink-0" style="width:24px;height:24px;background:{`color-mix(in srgb, ${cfg.color} 16%, transparent)`};">
+							<div class="flex items-center justify-center rounded-full shrink-0" style="width:24px;height:24px;background:{cfg.bg};">
 								<cfg.icon style="width:11px;height:11px;color:{cfg.color};" strokeWidth={1.75} />
 							</div>
 							<span class="text-text-primary text-sm flex-1">{cfg.label}</span>

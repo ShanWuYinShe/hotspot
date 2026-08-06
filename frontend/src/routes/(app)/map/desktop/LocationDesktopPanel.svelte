@@ -5,7 +5,7 @@
 	import ListItem from '@/components/list/ListItem.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
-	import { PIN_COLORS, PIN_LABELS, pinTone } from '../shared/location-shared';
+	import { PIN_COLORS, PIN_LABELS, PIN_TONES } from '../shared/location-shared';
 import PinMedia from '../shared/PinMedia.svelte';
 
 	// 桌面地图「左侧面板」：标题/搜索/Tab 列表/确认。
@@ -151,7 +151,7 @@ locationName = loc?.location_name ?? '';
 						<div class="flex-1 min-w-0">
 							<p class="{isSelected ? 'text-content-inverse' : 'text-text-primary'} text-base">{pin.name || pin.title}</p>
 							<div class="flex items-center gap-2 mt-0.5 flex-wrap">
-								<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:{pinTone(pin.type, 15)};color:{PIN_COLORS[pin.type]};">
+								<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:{PIN_TONES[pin.type].bg};color:{PIN_COLORS[pin.type]};">
 									{PIN_LABELS[pin.type]}
 								</span>
 								{#if pin.tag}

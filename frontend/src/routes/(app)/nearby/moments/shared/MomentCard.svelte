@@ -32,7 +32,7 @@
 	{#snippet placeholder()}
 		<div
 			class="flex items-center justify-center rounded-xl"
-			style="width:46px;height:46px;background:var(--cst-color-accent-bg);border:1px solid color-mix(in srgb, var(--cst-accent-default) 25%, transparent);box-shadow:0 6px 18px color-mix(in srgb, var(--cst-accent-default) 18%, transparent);"
+			style="width:46px;height:46px;background:var(--cst-color-accent-bg);border:1px solid var(--cst-accent-border-soft);box-shadow:0 6px 18px var(--cst-accent-glow-soft);"
 		>
 			<MapPin size={20} class="text-accent-default" strokeWidth={1.5} />
 		</div>

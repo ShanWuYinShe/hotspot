@@ -30,9 +30,13 @@ export const PIN_COLORS: Record<PinType, string> = {
 	group: 'var(--cst-marker-group)',
 	moment: 'var(--cst-marker-content)'
 };
+// 图钉淡底/边框/光晕档位：直接引用主题预定义 token，不自行 color-mix 派生
+export const PIN_TONES: Record<PinType, { bg: string; border: string; glow: string }> = {
+	user: { bg: 'var(--cst-marker-user-bg)', border: 'var(--cst-marker-user-border)', glow: 'var(--cst-marker-user-glow)' },
+	group: { bg: 'var(--cst-marker-group-bg)', border: 'var(--cst-marker-group-border)', glow: 'var(--cst-marker-group-glow)' },
+	moment: { bg: 'var(--cst-marker-moment-bg)', border: 'var(--cst-marker-moment-border)', glow: 'var(--cst-marker-moment-glow)' }
+};
 export const PIN_LABELS: Record<PinType, string> = { user: '用户', group: '群组', moment: '瞬间' };
-export const pinTone = (type: PinType, amount: number) =>
-	`color-mix(in srgb, ${PIN_COLORS[type]} ${amount}%, transparent)`;
 export const floatBtnStyle =
 	'background:var(--cst-surface-primary);border:1px solid var(--cst-border-default);box-shadow:0 2px 12px var(--cst-elevation-shadow-dark), 0 1px 3px var(--cst-elevation-shadow-dark);';
 

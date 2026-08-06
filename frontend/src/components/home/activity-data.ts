@@ -22,10 +22,10 @@ const COLORS = [
 	'var(--cst-status-danger)'
 ] as const;
 const BGS = [
-	'color-mix(in srgb, var(--cst-status-warning) 10%, transparent)',
+	'var(--cst-status-warning-bg)',
 	'var(--cst-accent-soft)',
-	'color-mix(in srgb, var(--cst-marker-group) 10%, transparent)',
-	'color-mix(in srgb, var(--cst-status-danger) 10%, transparent)'
+	'var(--cst-marker-group-bg)',
+	'var(--cst-status-danger-bg)'
 ] as const;
 
 export function toActivities(trending: TrendingBundle | null): Activity[] {

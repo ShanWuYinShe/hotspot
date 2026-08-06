@@ -13,13 +13,15 @@ export interface NotificationItem {
 	momentImage?: string;
 }
 
-export const TYPE_CONFIG: Record<string, { icon: Component; color: string; label: string }> = {
+// 通知类型语义 → design token 色族档位（主色 + 淡底/淡边框，参照主题 -bg/-border 定义）。
+// 数据层只提供 type 语义键，视觉色全部由本映射表指向 token，不在组件里派生。
+export const TYPE_CONFIG: Record<string, { icon: Component; color: string; bg: string; border: string; label: string }> = {
 	// 点赞语义 = reaction_added(契约已删 moment_liked)。
-	reaction: { icon: Heart, color: 'var(--cst-status-danger)', label: '点赞' },
-	follow: { icon: UserPlus, color: 'var(--cst-accent-default)', label: '关注' },
-	comment: { icon: MessageCircle, color: 'var(--cst-marker-user)', label: '评论' },
-	nearby: { icon: MapPin, color: 'var(--cst-status-online)', label: '附近' },
-	event: { icon: Bell, color: 'var(--cst-status-warning)', label: '活动' }
+	reaction: { icon: Heart, color: 'var(--cst-status-danger)', bg: 'var(--cst-status-danger-bg)', border: 'var(--cst-status-danger-border)', label: '点赞' },
+	follow: { icon: UserPlus, color: 'var(--cst-accent-default)', bg: 'var(--cst-accent-soft-bg)', border: 'var(--cst-accent-border-soft)', label: '关注' },
+	comment: { icon: MessageCircle, color: 'var(--cst-marker-user)', bg: 'var(--cst-marker-user-bg)', border: 'var(--cst-marker-user-border)', label: '评论' },
+	nearby: { icon: MapPin, color: 'var(--cst-status-online)', bg: 'var(--cst-status-online-bg)', border: 'var(--cst-status-online-border)', label: '附近' },
+	event: { icon: Bell, color: 'var(--cst-status-warning)', bg: 'var(--cst-status-warning-bg)', border: 'var(--cst-status-warning-border)', label: '活动' }
 };
 
 /**

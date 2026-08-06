@@ -232,8 +232,15 @@ theme/
     `--cst-surface-cover-scrim`（封面渐变）、`--cst-surface-glass-badge`（玻璃徽章）
   - hover/active：优先 `hover:bg-accent-soft` 等 token 类；背景填充走
     `--cst-interactive-hover-fill` / `--cst-interactive-active`
-  - 内容数据驱动的动态色（事件主题色、活动色）仅允许在数据层用 token
-    派生（如 `var(--cst-status-warning)`），页面渲染层不得另写色值
+- **数据层禁止携带颜色**：mock 数据/API 响应只返回语义标识（tag/type/category），
+  不得包含 `color`/`bg` 等展示字段；视觉色由前端按语义键映射到 token
+  （参照 `notifications/shared/notification-data.ts` 的 `TYPE_CONFIG`、
+  events 页 `EVENT_TONE` 模式）
+- **组件/数据层禁止 color-mix 表达式**：需要淡底/淡边框/光晕时引用主题预定义
+  档位 token——每个语义色族在 themes/{vibrant,forest}.css 定义三档：
+  `-bg`（淡底）、`-border`（淡边框）、`-glow`（光晕），如
+  `--cst-status-warning-bg/-border/-glow`、`--cst-marker-user-bg/-border/-glow`。
+  color-mix 只允许出现在 themes/*.css 的 token 值内部（值即最终定义）
 - 新增组件时若缺语义 token，先在 themes/{vibrant,forest}.css 补 `--cst-*`
   定义（light + dark），不得在组件里写死色值绕过
 

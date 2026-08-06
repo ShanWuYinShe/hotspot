@@ -5,7 +5,7 @@
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import {
-		PIN_COLORS, PIN_LABELS, pinTone, buildMapData, fetchMapCanvas,
+		PIN_COLORS, PIN_LABELS, PIN_TONES, buildMapData, fetchMapCanvas,
 		type MapHeatBucket,
 		markerUserUrl, markerGroupUrl, markerMomentUrl,
 		markerUserClusterUrl, markerGroupClusterUrl, markerMomentClusterUrl
@@ -155,8 +155,8 @@
 
 		<!-- Current location dot -->
 		<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:5;">
-			<div style="width:18px;height:18px;border-radius:50%;background:{PIN_COLORS.user};border:3px solid var(--cst-surface-primary);box-shadow:0 2px 10px {pinTone('user', 55)};position:relative;">
-				<span class="absolute rounded-full" style="inset:-8px;background:{pinTone('user', 18)};border:1px solid {pinTone('user', 25)};"></span>
+			<div style="width:18px;height:18px;border-radius:50%;background:{PIN_COLORS.user};border:3px solid var(--cst-surface-primary);box-shadow:0 2px 10px {PIN_TONES.user.glow};position:relative;">
+				<span class="absolute rounded-full" style="inset:-8px;background:{PIN_TONES.user.bg};border:1px solid {PIN_TONES.user.border};"></span>
 			</div>
 		</div>
 
@@ -229,7 +229,7 @@
 					{/each}
 					<div class="h-0.25"  style="background:var(--cst-border-default)"></div>
 					<div class="flex items-center gap-2 px-3 py-2">
-						<span style="width:13px;height:13px;border-radius:50%;background:{PIN_COLORS.user};border:2px solid var(--cst-surface-primary);box-shadow:0 0 5px {pinTone('user', 50)};"></span>
+						<span style="width:13px;height:13px;border-radius:50%;background:{PIN_COLORS.user};border:2px solid var(--cst-surface-primary);box-shadow:0 0 5px {PIN_TONES.user.glow};"></span>
 						<span class="text-text-secondary text-xs" >我的位置</span>
 					</div>
 				</div>
@@ -256,7 +256,7 @@
 							{/if}
 						</div>
 						<div class="flex items-center gap-2 mt-1 flex-wrap">
-							<span style="font-size:11px;padding:1px 7px;border-radius:4px;background:{pinTone(selectedPin.type, 15)};color:{PIN_COLORS[selectedPin.type]};">
+							<span style="font-size:11px;padding:1px 7px;border-radius:4px;background:{PIN_TONES[selectedPin.type].bg};color:{PIN_COLORS[selectedPin.type]};">
 								{PIN_LABELS[selectedPin.type]}
 							</span>
 							{#if selectedPin.tag}

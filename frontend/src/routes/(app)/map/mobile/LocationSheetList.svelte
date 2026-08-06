@@ -3,7 +3,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import { HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
-	import { PIN_COLORS, PIN_LABELS, pinTone } from '../shared/location-shared';
+	import { PIN_COLORS, PIN_LABELS, PIN_TONES } from '../shared/location-shared';
 import PinMedia from '../shared/PinMedia.svelte';
 
 	// 移动端地图「底部 Sheet 列表内容」：搜索建议 / 选中图钉 mini-card / Tab / 最近·热门列表。
@@ -62,7 +62,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 	<div class="animate-fade-in">
 		<!-- Selected pin mini-card -->
 		{#if selectedPin}
-			<div class="flex items-center gap-3 mx-4 mb-2 p-3 rounded-[15px]" style="background:{pinTone(selectedPin.type, 10)};border:1px solid {pinTone(selectedPin.type, 30)};">
+			<div class="flex items-center gap-3 mx-4 mb-2 p-3 rounded-[15px]" style="background:{PIN_TONES[selectedPin.type].bg};border:1px solid {PIN_TONES[selectedPin.type].border};">
 				<PinMedia pin={selectedPin} size={42} />
 				<div class="flex-1 min-w-0">
 					<p class="text-text-primary text-base">{selectedPin.name || selectedPin.title}</p>

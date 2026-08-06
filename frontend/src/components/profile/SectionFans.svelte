@@ -63,7 +63,7 @@
 >
 	{#snippet headerExtra()}
 		{#if pendingCount > 0}
-			<span class="rounded-full px-2 py-0.5 text-xs text-status-warning" style="background:color-mix(in srgb, var(--cst-status-warning) 13%, transparent);border:1px solid color-mix(in srgb, var(--cst-status-warning) 24%, transparent);">
+			<span class="rounded-full px-2 py-0.5 text-xs text-status-warning" style="background:var(--cst-status-warning-bg);border:1px solid var(--cst-status-warning-border);">
 				{pendingCount} 待回关
 			</span>
 		{/if}

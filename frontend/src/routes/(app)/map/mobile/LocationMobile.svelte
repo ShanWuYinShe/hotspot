@@ -5,7 +5,7 @@
 	import * as Popover from '@/components/ui/popover';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
-	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, pinTone, floatBtnStyle, buildMapData, fetchMapCanvas, type MapHeatBucket, markerUserUrl, markerGroupUrl, markerMomentUrl, type SnapState } from '../shared/location-shared';
+	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, floatBtnStyle, buildMapData, fetchMapCanvas, type MapHeatBucket, markerUserUrl, markerGroupUrl, markerMomentUrl, type SnapState } from '../shared/location-shared';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
 	import MapHeatDot from '../shared/MapHeatDot.svelte';
 	import LocationSheetList from './LocationSheetList.svelte';
@@ -182,8 +182,8 @@
 
 		<!-- Current location pulsing dot（对齐 Figma Make：halo scale 1→1.8 / opacity 0.55→0 循环） -->
 		<div style="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:5;pointer-events:none;">
-			<div style="width:18px;height:18px;border-radius:50%;background:{PIN_COLORS.user};border:3px solid var(--cst-surface-primary);box-shadow:0 2px 10px {pinTone('user', 55)};position:relative;">
-				<span class="map-pulse-halo absolute rounded-full" style="inset:-7px;background:{pinTone('user', 20)};border:1px solid {pinTone('user', 30)};"></span>
+			<div style="width:18px;height:18px;border-radius:50%;background:{PIN_COLORS.user};border:3px solid var(--cst-surface-primary);box-shadow:0 2px 10px {PIN_TONES.user.glow};position:relative;">
+				<span class="map-pulse-halo absolute rounded-full" style="inset:-7px;background:{PIN_TONES.user.bg};border:1px solid {PIN_TONES.user.border};"></span>
 			</div>
 		</div>
 
@@ -308,7 +308,7 @@
 			}}
 		>
 			<div
-				style="width:14px;height:14px;border-radius:50%;background:var(--cst-marker-user);border:2.5px solid var(--cst-surface-primary);box-shadow:0 0 8px color-mix(in srgb, var(--cst-marker-user) 65%, transparent);"
+				style="width:14px;height:14px;border-radius:50%;background:var(--cst-marker-user);border:2.5px solid var(--cst-surface-primary);box-shadow:0 0 8px var(--cst-marker-user-glow);"
 			></div>
 		</button>
 	</div>

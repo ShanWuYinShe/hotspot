@@ -74,7 +74,7 @@
 		<button
 			type="button"
 			class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all text-base {saved ? 'bg-status-online text-cst-text-on-status' : 'bg-accent-default text-text-on-accent'}"
-			style="box-shadow:0 4px 14px {saved ? 'color-mix(in srgb, var(--cst-status-online) 35%, transparent)' : 'var(--cst-glow-accent)'};border:none;"
+			style="box-shadow:0 4px 14px {saved ? 'var(--cst-status-online-glow)' : 'var(--cst-glow-accent)'};border:none;"
 			onclick={() => void handleSave()}
 		>
 			{#if saved}

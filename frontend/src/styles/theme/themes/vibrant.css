@@ -40,10 +40,35 @@
   --cst-pr-shadow-card: 0 12px 28px rgba(53, 120, 212, 0.12), 0 3px 10px rgba(53, 120, 212, 0.07);
   --cst-pr-shadow-btn: 0 5px 14px rgba(53, 120, 212, 0.18);
 
-  /* ── color-mix 预设 ── */
+  /* ── color-mix 预设（token 内部派生；组件/数据层不得再写 color-mix）── */
   --cst-pr-accent-bg: color-mix(in srgb, var(--cst-pr-accent-primary) 12%, var(--cst-pr-bg));
   --cst-pr-online-bg: color-mix(in srgb, var(--cst-pr-online) 14%, transparent);
   --cst-pr-danger-bg: color-mix(in srgb, var(--cst-pr-hot) 10%, transparent);
+
+  /* ── 语义色族完整档位（主色 → 淡底 -bg / 淡边框 -border / 光晕 -glow）──
+     数据驱动色（通知/事件/图钉/活动）在前端只做语义键 → 本组 token 的映射，
+     组件与数据层一律引用这些预定义档位，不再自行 color-mix */
+  --cst-accent-soft-bg: color-mix(in srgb, var(--cst-pr-accent-primary) 10%, transparent);
+  --cst-accent-border-soft: color-mix(in srgb, var(--cst-pr-accent-primary) 25%, transparent);
+  --cst-accent-glow-soft: color-mix(in srgb, var(--cst-pr-accent-primary) 18%, transparent);
+  --cst-status-online-bg: color-mix(in srgb, var(--cst-pr-online) 13%, transparent);
+  --cst-status-online-border: color-mix(in srgb, var(--cst-pr-online) 24%, transparent);
+  --cst-status-online-glow: color-mix(in srgb, var(--cst-pr-online) 35%, transparent);
+  --cst-status-danger-bg: color-mix(in srgb, var(--cst-pr-hot) 13%, transparent);
+  --cst-status-danger-border: color-mix(in srgb, var(--cst-pr-hot) 24%, transparent);
+  --cst-status-danger-glow: color-mix(in srgb, var(--cst-pr-hot) 40%, transparent);
+  --cst-status-warning-bg: color-mix(in srgb, var(--cst-pr-warning) 13%, transparent);
+  --cst-status-warning-border: color-mix(in srgb, var(--cst-pr-warning) 24%, transparent);
+  --cst-status-warning-glow: color-mix(in srgb, var(--cst-pr-warning) 40%, transparent);
+  --cst-marker-user-bg: color-mix(in srgb, var(--cst-pr-map-user) 13%, transparent);
+  --cst-marker-user-border: color-mix(in srgb, var(--cst-pr-map-user) 24%, transparent);
+  --cst-marker-user-glow: color-mix(in srgb, var(--cst-pr-map-user) 45%, transparent);
+  --cst-marker-group-bg: color-mix(in srgb, var(--cst-pr-map-group) 13%, transparent);
+  --cst-marker-group-border: color-mix(in srgb, var(--cst-pr-map-group) 24%, transparent);
+  --cst-marker-group-glow: color-mix(in srgb, var(--cst-pr-map-group) 45%, transparent);
+  --cst-marker-moment-bg: color-mix(in srgb, var(--cst-pr-map-moment) 13%, transparent);
+  --cst-marker-moment-border: color-mix(in srgb, var(--cst-pr-map-moment) 24%, transparent);
+  --cst-marker-moment-glow: color-mix(in srgb, var(--cst-pr-map-moment) 45%, transparent);
 
   /* ── shadcn 桥接（仅 base.css @apply 消费的 4 个；其余 token 无引用，见 shadcn.css）── */
   --cst-background: var(--cst-surface-primary);
@@ -163,10 +188,33 @@
   --cst-pr-shadow-card: 0 12px 28px rgba(36, 105, 194, 0.20), 0 3px 10px rgba(0, 0, 0, 0.26);
   --cst-pr-shadow-btn: 0 5px 14px rgba(105, 168, 255, 0.24);
 
-  /* ── color-mix 预设 ── */
+  /* ── color-mix 预设（dark）── */
   --cst-pr-accent-bg: color-mix(in srgb, var(--cst-pr-accent-primary) 14%, var(--cst-pr-bg));
   --cst-pr-online-bg: color-mix(in srgb, var(--cst-pr-online) 14%, transparent);
   --cst-pr-danger-bg: color-mix(in srgb, var(--cst-pr-hot) 12%, transparent);
+
+  /* ── 语义色族完整档位（dark）── */
+  --cst-accent-soft-bg: color-mix(in srgb, var(--cst-pr-accent-primary) 12%, transparent);
+  --cst-accent-border-soft: color-mix(in srgb, var(--cst-pr-accent-primary) 30%, transparent);
+  --cst-accent-glow-soft: color-mix(in srgb, var(--cst-pr-accent-primary) 20%, transparent);
+  --cst-status-online-bg: color-mix(in srgb, var(--cst-pr-online) 14%, transparent);
+  --cst-status-online-border: color-mix(in srgb, var(--cst-pr-online) 28%, transparent);
+  --cst-status-online-glow: color-mix(in srgb, var(--cst-pr-online) 40%, transparent);
+  --cst-status-danger-bg: color-mix(in srgb, var(--cst-pr-hot) 14%, transparent);
+  --cst-status-danger-border: color-mix(in srgb, var(--cst-pr-hot) 28%, transparent);
+  --cst-status-danger-glow: color-mix(in srgb, var(--cst-pr-hot) 45%, transparent);
+  --cst-status-warning-bg: color-mix(in srgb, var(--cst-pr-warning) 14%, transparent);
+  --cst-status-warning-border: color-mix(in srgb, var(--cst-pr-warning) 28%, transparent);
+  --cst-status-warning-glow: color-mix(in srgb, var(--cst-pr-warning) 45%, transparent);
+  --cst-marker-user-bg: color-mix(in srgb, var(--cst-pr-map-user) 14%, transparent);
+  --cst-marker-user-border: color-mix(in srgb, var(--cst-pr-map-user) 30%, transparent);
+  --cst-marker-user-glow: color-mix(in srgb, var(--cst-pr-map-user) 50%, transparent);
+  --cst-marker-group-bg: color-mix(in srgb, var(--cst-pr-map-group) 14%, transparent);
+  --cst-marker-group-border: color-mix(in srgb, var(--cst-pr-map-group) 30%, transparent);
+  --cst-marker-group-glow: color-mix(in srgb, var(--cst-pr-map-group) 50%, transparent);
+  --cst-marker-moment-bg: color-mix(in srgb, var(--cst-pr-map-moment) 14%, transparent);
+  --cst-marker-moment-border: color-mix(in srgb, var(--cst-pr-map-moment) 30%, transparent);
+  --cst-marker-moment-glow: color-mix(in srgb, var(--cst-pr-map-moment) 50%, transparent);
 
   /* ── shadcn 桥接（dark，同上）── */
   --cst-background: var(--cst-surface-primary);
