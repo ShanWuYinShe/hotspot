@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Bell, CheckCheck } from '@lucide/svelte';
-	import RailSection from '@/components/layout/desktop/RailSection.svelte';
-	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
+	import RailSection from '@/components/rail/RailSection.svelte';
+	import RailUserRow from '@/components/rail/RailUserRow.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
@@ -13,7 +13,7 @@
 	import { listNotifications, getUnreadCount, markRead } from '@/api';
 	import { WS_NOTIFY_EVENT } from '@/lib/ws/client';
 	import { formatDateTime } from '@/lib/utils';
-import { ROUTES, ME_SECTION_PATHS } from '@/lib/routes';
+	import { ROUTES, ME_SECTION_PATHS } from '@/lib/routes';
 
 	// 通知列表：类型过滤、单条/全部已读、桌面右侧概览 Rail。
 
@@ -42,7 +42,7 @@ const FILTER_TABS = [
 	});
 
 	$effect(() => {
-		void reloadKey; // 依赖：WS 推送触发重新加载
+		if (reloadKey) { /* 依赖占位：WS 推送触发重新加载 */ }
 		let cancelled = false;
 		async function fetchNotifs() {
 			try {

@@ -5,10 +5,10 @@
 	import { MapPin, Compass, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
 	import { cn } from '@/lib/utils';
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
-	import CreateSheet from '@/components/layout/CreateSheet.svelte';
+	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import StatusBar from '@/components/layout/StatusBar.svelte';
-	import NavTab from '@/components/layout/NavTab.svelte';
+	import NavTab from '@/components/layout/mobile/NavTab.svelte';
 	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 

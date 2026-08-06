@@ -4,12 +4,12 @@
 	import { Bell, Lock, ChevronRight, LogOut, Globe, Info, Volume2, MapPin, User, Palette, Trees, Moon, Sun } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
-import Avatar from '@/components/shared/Avatar.svelte';
-import Toggle from '@/components/forms/Toggle.svelte';
-import ListContainer from '@/components/list/ListContainer.svelte';
-import ListItem from '@/components/list/ListItem.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
+	import Toggle from '@/components/forms/Toggle.svelte';
+	import ListContainer from '@/components/list/ListContainer.svelte';
+	import ListItem from '@/components/list/ListItem.svelte';
 	import { logout } from '@/stores/auth.svelte';
-	import { theme, setTheme, toggleDark, type AppTheme } from '@/stores/theme.svelte';
+	import { theme, setTheme, toggleDark, THEME_OPTIONS } from '@/stores/theme.svelte';
 	import { getAccount, getSettings } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 
@@ -104,7 +104,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 					</div>
 				</div>
 				<div class="mt-3 grid grid-cols-2 gap-2">
-					{#each ([{ id: 'forest', label: '清野' }, { id: 'vibrant', label: '星际' }] as { id: AppTheme; label: string }[]) as t}
+					{#each THEME_OPTIONS as t}
 						<button
 							type="button"
 							aria-pressed={theme.theme === t.id}

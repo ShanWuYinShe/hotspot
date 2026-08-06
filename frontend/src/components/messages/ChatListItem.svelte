@@ -21,7 +21,6 @@
 		time: string;
 		unread: number;
 		online: boolean;
-		group: boolean;
 		kind?: 'private' | 'group';
 	}
 

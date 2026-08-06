@@ -11,7 +11,7 @@
 		name: string;
 		distance: string;
 		avatar: string;
-		status: string;
+		isOnline: boolean;
 		tag: string;
 		mutual: number;
 		note: string;
@@ -68,7 +68,7 @@
 					</p>
 					<p class="truncate text-text-secondary text-xxs mt-0.5">{user.note}</p>
 				</div>
-				{#if user.status === '在线'}
+				{#if user.isOnline}
 					<span
 						class="shrink-0 rounded-full"
 						title="在线"

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { UserPlus, Check, TrendingUp, Heart } from '@lucide/svelte';
+	import { UserPlus, Check, Heart } from '@lucide/svelte';
 	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
@@ -11,7 +11,7 @@
 
 	let { embedded = false }: { embedded?: boolean } = $props();
 
-	let sortBy = $state<'recent' | 'active'>('recent');
+	let followingFilter = $state<'all' | 'mutual'>('all');
 	let unfollowedIds = $state<Set<string>>(new Set());
 
 	const { following } = useRelationships();
@@ -22,11 +22,11 @@
 		unfollowedIds = next;
 	};
 
-	const sorted = $derived([...following].sort((a, b) => (sortBy === 'active' ? b.posts - a.posts : 0)));
+	const filtered = $derived(followingFilter === 'mutual' ? following.filter((f) => f.isMutual) : following);
 
 	const FILTERS: SectionFilter[] = [
-		{ id: 'recent', label: '最近关注' },
-		{ id: 'active', label: '最活跃', icon: TrendingUp }
+		{ id: 'all', label: '全部' },
+		{ id: 'mutual', label: '互关' }
 	];
 </script>
 
@@ -38,12 +38,12 @@
 	headerNote="点击卡片查看主页"
 	{embedded}
 	filters={FILTERS}
-	filterValue={sortBy}
-	onFilter={(id) => (sortBy = id as 'recent' | 'active')}
+	filterValue={followingFilter}
+	onFilter={(id) => (followingFilter = id as 'all' | 'mutual')}
 	emptyTitle="还没有关注"
 	emptyDescription="去发现附近的人，找到有趣的创作者。"
 	emptyIcon={Heart}
-	items={sorted}
+	items={filtered}
 >
 	{#snippet children(f)}
 		<UserCardRow
@@ -56,10 +56,6 @@
 		>
 			{#snippet subtitle()}
 				<p class="truncate mt-px text-text-secondary text-xs">{f.desc}</p>
-				<p class="mt-px text-accent-default text-xxs">{f.posts} 帖子</p>
-			{/snippet}
-			{#snippet thumbnail()}
-				<img src={f.latestImg} alt="" class="shrink-0 rounded-compact object-cover" style="width:{embedded ? 44 : 36}px;height:{embedded ? 44 : 36}px;opacity:0.85;" />
 			{/snippet}
 			{#snippet actions()}
 				<button

@@ -61,9 +61,7 @@
 				<TagPill size="sm">{f.tag}</TagPill>
 			{/snippet}
 			{#snippet subtitle()}
-				<p class="mt-0.5 text-text-secondary text-xs">
-					{f.handle} · {f.mutual} 共同好友
-				</p>
+				<p class="mt-0.5 text-text-secondary text-xs">{f.handle}</p>
 			{/snippet}
 			{#snippet actions()}
 				<div class="flex flex-col gap-1.5 shrink-0">

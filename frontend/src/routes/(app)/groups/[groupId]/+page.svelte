@@ -4,7 +4,7 @@
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
-import ListItem from '@/components/list/ListItem.svelte';
+	import ListItem from '@/components/list/ListItem.svelte';
 	import { Tabs } from 'bits-ui';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance, formatDateTime } from '@/lib/utils';
@@ -295,6 +295,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 			<button
 				type="button"
 				class="hover-btn w-full rounded-full px-4 py-3 text-base font-medium focus-ring {joined ? 'border border-accent-default text-accent-default' : 'bg-accent-default text-white'}"
+				// TODO(mock): 加入/退出未接后端 API，当前仅本地状态翻转
 				onclick={() => (joined = !joined)}
 			>
 				{#if joined}

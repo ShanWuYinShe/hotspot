@@ -14,13 +14,14 @@
 	import { createFeedInteractions, type FeedItem } from '@/components/moments/feed-interactions.svelte';
 	import { getFeedNearby } from '@/api';
 	import { formatDateTime } from '@/lib/utils';
-import { ROUTES } from '@/lib/routes';
+	import { ROUTES } from '@/lib/routes';
 
 	// 附近动态（/nearby/moments）：BSP 卡片墙（桌面 3 列 / 平板 2 列 / 移动 2 列）。
 	// 全站样板页面：StandardPageLayout（sticky PageHeader + ContentColumn 全宽 gutter）
 	// + header 内 trailing 计数、below 搜索与分类 Tab —— 其他页面均以此为准。
 	// 对齐 Figma Make 附近动态页结构。
 
+	// TODO(mock): 分类 Tab 尚未接线过滤逻辑（待数据源区分热门/附近/活动/关注后实现）
 	const TABS = ['热门', '附近', '活动', '关注'];
 
 	let apiFeedItems = $state<FeedItem[]>([]);
@@ -100,7 +101,7 @@ import { ROUTES } from '@/lib/routes';
 	});
 
 	// 三端共用的过滤逻辑（收敛到单处实现）
-	let searchVal = $state('');
+	let searchQuery = $state('');
 	let activeTab = $state('热门');
 	let activeTag = $state<string | null>(null);
 	let visibleCount = $state(12);
@@ -109,7 +110,7 @@ import { ROUTES } from '@/lib/routes';
 	const interactions = createFeedInteractions(() => apiFeedItems);
 
 	const filtered = $derived.by(() => {
-		const q = searchVal.trim().toLowerCase();
+		const q = searchQuery.trim().toLowerCase();
 		return interactions.items.filter(
 			(i) =>
 				(!activeTag || i.tag === activeTag) &&
@@ -145,7 +146,7 @@ import { ROUTES } from '@/lib/routes';
 		{/snippet}
 		{#snippet below()}
 			<div class="mt-3 mb-2.5">
-				<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="地点、人物、关键词…" class="px-4 py-2.5 rounded-relaxed" />
+				<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="地点、人物、关键词…" class="px-4 py-2.5 rounded-relaxed" />
 			</div>
 			{@render tabBar()}
 		{/snippet}
@@ -154,7 +155,7 @@ import { ROUTES } from '@/lib/routes';
 
 <!-- ═══ 分类 Tab 栏（下划线样式，随 header 吸顶）═══ -->
 {#snippet tabBar()}
-	<TabBar items={TABS.map((t) => ({ id: t, label: t }))} value={activeTab} onchange={(id) => (activeTab = id)} />
+	<TabBar items={TABS.map((t) => ({ id: t, label: t }))} value={activeTab} onChange={(id) => (activeTab = id)} />
 {/snippet}
 
 <!-- ═══ 热门 tag 列表（scrollable / flex-wrap 由调用处 className 决定，对齐 Figma TagChips）═══ -->
@@ -211,7 +212,6 @@ import { ROUTES } from '@/lib/routes';
 			{#snippet renderItem(item: FeedItem, index: number)}
 				<MomentCard
 					item={item}
-					dense
 					liked={item.liked}
 					saved={item.saved}
 					onLike={() => void interactions.toggleLike(item.id)}

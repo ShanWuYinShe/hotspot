@@ -8,7 +8,7 @@ const base = (over: Partial<NearbyUser> = {}): NearbyUser => ({
 	name: '鹿鸣',
 	distance: '0.3km',
 	avatar: '',
-	status: '在线',
+	isOnline: true,
 	tag: '摄影',
 	mutual: 2,
 	note: '记录城市光影',

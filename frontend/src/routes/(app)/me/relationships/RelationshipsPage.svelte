@@ -6,9 +6,9 @@
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SectionFriends from '@/components/profile/SectionFriends.svelte';
 	import SectionFollowing from '@/components/profile/SectionFollowing.svelte';
-import SectionFans from '@/components/profile/SectionFans.svelte';
-import TabBar from '@/components/navigation/TabBar.svelte';
-import { useRelationships } from '@/lib/profile-data.svelte';
+	import SectionFans from '@/components/profile/SectionFans.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
+	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { ROUTES, ME_SECTION_PATHS } from '@/lib/routes';
 
 	// 关系聚合页（/me/relationships，桌面导航「关系」与通知页深链的落地页）：
@@ -69,7 +69,7 @@ import { useRelationships } from '@/lib/profile-data.svelte';
 			count: t.id === 'friends' ? friends.length : t.id === 'following' ? following.length : followers.length
 		}))}
 		value={activeTab}
-		onchange={(id) => switchTab(id as RelTab)}
+		onChange={(id) => switchTab(id as RelTab)}
 	/>
 {/snippet}
 

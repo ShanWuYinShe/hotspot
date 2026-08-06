@@ -229,7 +229,7 @@
 
 		<!-- Actions -->
 		<div class="flex gap-1.5">
-			{#each [Phone, Video] as Icon, i}
+			{#each [Phone, Video] as Icon}
 				<button
 					type="button"
 					class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none bg-surface-primary"

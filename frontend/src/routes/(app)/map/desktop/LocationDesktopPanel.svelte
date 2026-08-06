@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, Crosshair, Check, Heart } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
-import ListContainer from '@/components/list/ListContainer.svelte';
-import ListItem from '@/components/list/ListItem.svelte';
+	import ListContainer from '@/components/list/ListContainer.svelte';
+	import ListItem from '@/components/list/ListItem.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { PIN_COLORS, PIN_LABELS, pinTone, getMarkerUrl } from '../shared/location-shared';

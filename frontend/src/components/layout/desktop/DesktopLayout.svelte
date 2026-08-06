@@ -10,9 +10,9 @@
 	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import { composer, openComposer, closeComposer } from '@/stores/composer.svelte';
 	import * as Dialog from '@/components/ui/dialog';
-	import AppearanceMenu from '@/components/layout/AppearanceMenu.svelte';
+	import AppearanceMenu from '@/components/overlays/AppearanceMenu.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-	import CreateSheet from '@/components/layout/CreateSheet.svelte';
+	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
 	import SidebarNavItem from '@/components/layout/desktop/SidebarNavItem.svelte';
 	import LocationCard from '@/components/layout/desktop/LocationCard.svelte';
 	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';

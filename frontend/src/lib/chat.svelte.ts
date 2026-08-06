@@ -106,14 +106,13 @@ export function useChat(opts: UseChatOptions) {
 		};
 	});
 
-	// 滚动到底部（初始/会话切换立即定位；消息追加平滑滚动）
+	// 滚动到底部：初始/会话切换立即定位；消息追加（messages 变化）时平滑滚动
 	$effect(() => {
 		const el = scrollEl;
-		if (el) el.scrollTop = el.scrollHeight;
-	});
-	$effect(() => {
-		const el = scrollEl;
-		if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+		const len = messages.length;
+		if (!el) return;
+		if (len > 0) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+		else el.scrollTop = el.scrollHeight;
 	});
 
 	// WS 实时接收：新消息追加（按 id 去重）；更新处理编辑/撤回。

@@ -104,7 +104,6 @@
 	// map/canvas 数据
 	let mapPins = $state<Pin[]>([]);
 	let heatBuckets = $state<MapHeatBucket[]>([]);
-	let mapCounts = $state<Record<PinType, number>>({ user: 0, group: 0, moment: 0 });
 	let mapLoading = $state(true);
 
 	// 视口中心或筛选变化时重新拉取
@@ -118,7 +117,6 @@
 			if (cancelled) return;
 			mapPins = r.pins;
 			heatBuckets = r.heatBuckets;
-			mapCounts = r.counts;
 			mapLoading = false;
 		});
 		return () => {
@@ -127,7 +125,6 @@
 	});
 
 	const mapData = $derived(mapCenter ? buildMapData(mapCenter, zoom) : null);
-	const filteredPins = $derived(mapPins);
 	const searchResults = $derived(searchQuery.trim() ? SEARCH_DB.filter((s) => s.displayName.includes(searchQuery)).slice(0, 5) : []);
 
 	function handleMapTap() {
@@ -203,7 +200,7 @@
 		{/each}
 
 		<!-- Marker pins -->
-		{#each filteredPins as pin (pin.id)}
+		{#each mapPins as pin (pin.id)}
 			<MapPinMarker
 				pin={pin}
 				bounds={mapData.bounds}

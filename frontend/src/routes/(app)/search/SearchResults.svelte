@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Search as SearchIcon, Users, FileText, Hash, ArrowUpRight } from '@lucide/svelte';
-import ListContainer from '@/components/list/ListContainer.svelte';
-import ListItem from '@/components/list/ListItem.svelte';
-import Avatar from '@/components/shared/Avatar.svelte';
+	import ListContainer from '@/components/list/ListContainer.svelte';
+	import ListItem from '@/components/list/ListItem.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 搜索页「有查询结果态」：Tab 栏 + 用户/动态/话题结果组。
@@ -20,7 +20,7 @@ import Avatar from '@/components/shared/Avatar.svelte';
 	export interface SearchResultMoment {
 		moment_id: string;
 		description?: string;
-		media?: { url?: string }[];
+		images?: { url?: string }[];
 		user?: SearchResultUser;
 		tag?: string;
 		likes_count?: number;
@@ -132,8 +132,8 @@ import Avatar from '@/components/shared/Avatar.svelte';
 								ariaLabel={moment.description ?? '无标题'}
 								class="flex items-center gap-3 px-4 py-3.5"
 							>
-								{#if moment.media?.[0]?.url}
-									<img src={moment.media[0].url} alt="" class="size-10 rounded-tight object-cover" />
+								{#if moment.images?.[0]?.url}
+									<img src={moment.images[0].url} alt="" class="size-10 rounded-tight object-cover" />
 								{:else}
 									<div
 										class="flex size-10 items-center justify-center rounded-tight"

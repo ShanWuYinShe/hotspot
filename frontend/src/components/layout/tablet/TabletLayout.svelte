@@ -6,7 +6,7 @@
 	import { platform } from '@/stores/platform.svelte';
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
 	import * as Dialog from '@/components/ui/dialog';
-	import CreateSheet from '@/components/layout/CreateSheet.svelte';
+	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
 	import StatusBar from '@/components/layout/StatusBar.svelte';
 	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';

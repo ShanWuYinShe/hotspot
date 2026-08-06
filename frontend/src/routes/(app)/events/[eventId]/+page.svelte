@@ -4,9 +4,9 @@
 	import { page } from '$app/state';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
-	import RailSection from '@/components/layout/desktop/RailSection.svelte';
-	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
-	import RailLocationMini from '@/components/layout/desktop/RailLocationMini.svelte';
+	import RailSection from '@/components/rail/RailSection.svelte';
+	import RailUserRow from '@/components/rail/RailUserRow.svelte';
+	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
@@ -83,7 +83,7 @@
 
 	const fillRate = $derived(ev ? Math.round((safeEv.participants.length / safeEv.maxParticipants) * 100) : 0);
 	const evTone = (amount: number) => `color-mix(in srgb, ${safeEv.color || 'var(--accent-default)'} ${amount}%, transparent)`;
-	const walkMinutes = $derived(ev ? Math.ceil(parseFloat(safeEv.distance) * 12) : 0);
+	const walkMinutes = $derived(ev && safeEv.distance ? Math.ceil(parseFloat(safeEv.distance) * 12) : 0);
 </script>
 
 {#if ev}
@@ -135,6 +135,7 @@
 							<span class="text-xs text-text-secondary">活动发起人</span>
 						</div>
 					</div>
+					<!-- TODO(mock): 关注发起人未接 API -->
 					<button type="button" class="hover-btn tap-93 rounded-full px-3 py-1.5 text-white text-sm outline-none" style="background:{safeEv.color};box-shadow:0 3px 10px {evTone(40)};">关注</button>
 				</div>
 
@@ -220,6 +221,7 @@
 	<RailSection title="活动发起人">
 		<RailUserRow avatar={safeEv.host.avatar} name={safeEv.host.name} sub="活动发起人">
 			{#snippet trailing()}
+				<!-- TODO(mock): 关注发起人未接 API -->
 				<button type="button" class="hover-btn shrink-0 rounded-full px-2.5 py-1 text-white text-xs outline-none" style="background:{safeEv.color};">关注</button>
 			{/snippet}
 		</RailUserRow>

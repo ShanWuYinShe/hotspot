@@ -9,12 +9,12 @@
 	let {
 		items,
 		value,
-		onchange,
+		onChange,
 		class: className = ''
 	}: {
 		items: TabItem[];
 		value: string;
-		onchange: (id: string) => void;
+		onChange: (id: string) => void;
 		class?: string;
 	} = $props();
 </script>
@@ -24,7 +24,7 @@
 		{@const isActive = value === tab.id}
 		<button
 			type="button"
-			onclick={() => onchange(tab.id)}
+			onclick={() => onChange(tab.id)}
 			aria-pressed={isActive}
 			class="relative flex shrink-0 items-center gap-1.5 rounded-t-small px-4.5 pb-3 pt-1 text-base outline-none transition-colors duration-200 {isActive ? 'font-medium text-accent-default' : 'font-normal text-text-secondary'}"
 		>

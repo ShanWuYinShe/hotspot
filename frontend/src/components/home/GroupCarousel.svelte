@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { MapPin, Users, Lock, Globe } from '@lucide/svelte';
-	import SectionHead from '@/routes/(app)/_home/SectionHead.svelte';
+	import SectionHead from '@/components/home/SectionHead.svelte';
 
 	// 附近群组横向轮播（对齐 Figma Make HomePage GroupCarousel）。
 	// 140×140 正方形卡片：banner 铺满 + 底部 card-menu 信息 tray 覆盖在图上。

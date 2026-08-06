@@ -22,7 +22,6 @@
 		/** 作者 user_id（spec: UserInfo.user_id），用于作者卡跳转。 */
 		authorId: string;
 		user: string;
-		handle: string;
 		avatar: string;
 		location: string;
 		image: string;
@@ -86,8 +85,6 @@
 		<div class="flex-1">
 			<p class="text-text-primary text-[15px]">{moment.user}</p>
 			<div class="flex items-center gap-1.5">
-				<span class="text-text-secondary text-xs">{moment.handle}</span>
-				<span class="text-text-secondary text-xxs" style="opacity:0.5;">·</span>
 				<MapPin class="size-2.5"  style="color:var(--accent-default)" strokeWidth={1.5} />
 				<span class="text-text-secondary text-xs">{moment.location}</span>
 			</div>

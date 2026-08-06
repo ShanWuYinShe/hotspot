@@ -7,10 +7,10 @@
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
 	import { auth } from '@/stores/auth.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
-	import RailSection from '@/components/layout/desktop/RailSection.svelte';
-	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
-	import RailLocationMini from '@/components/layout/desktop/RailLocationMini.svelte';
-	import RailMomentThumb from '@/components/layout/desktop/RailMomentThumb.svelte';
+	import RailSection from '@/components/rail/RailSection.svelte';
+	import RailUserRow from '@/components/rail/RailUserRow.svelte';
+	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
+	import RailMomentThumb from '@/components/rail/RailMomentThumb.svelte';
 	import MomentPostBody from './MomentPostBody.svelte';
 	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment, getFeedNearby, searchMoments } from '@/api';
 	import { ROUTES } from '@/lib/routes';
@@ -64,7 +64,6 @@
 			id: '',
 			authorId: '',
 			user: '',
-			handle: '',
 			avatar: '',
 			location: '',
 			image: '',
@@ -109,8 +108,7 @@
 						id: momentId,
 						authorId: detailData.user?.user_id ?? '',
 						user: detailData.user?.nickname ?? '',
-						handle: '',
-						avatar: detailData.user?.avatar_url ?? '',
+							avatar: detailData.user?.avatar_url ?? '',
 						location: detailData.location?.location_name ?? '',
 						image: detailData.images?.[0]?.url ?? '',
 						content: detailData.description ?? '',
@@ -278,7 +276,7 @@
 
 	{#snippet rail()}
 	<RailSection title="作者">
-		<RailUserRow avatar={moment.avatar} name={moment.user} sub={`${moment.handle} · ${moment.location}`} onClick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}>
+		<RailUserRow avatar={moment.avatar} name={moment.user} sub={moment.location} onClick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}>
 			{#snippet trailing()}
 				<button
 					type="button"

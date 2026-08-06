@@ -41,11 +41,9 @@
 		return null;
 	}
 
-	// initialMode 仅在挂载时生效（此后模式切换走 switchMode），此处有意只读取一次初始值。
-	function initialModeValue(): AuthMode {
-		return initialMode;
-	}
-	let mode = $state<AuthMode>(initialModeValue());
+	// initialMode 仅在挂载时生效（此后模式切换走 switchMode）：闭包读取一次初始值
+	const getInitialMode = () => initialMode;
+	let mode = $state<AuthMode>(getInitialMode());
 	// 登录方式（对齐 Figma Make LoginPage 双 tab：验证码登录/密码登录）
 	let method = $state<'code' | 'password'>('password');
 	let loginId = $state('');

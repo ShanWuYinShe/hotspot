@@ -5,10 +5,10 @@
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import { getTrending, getNearbyUsers, getNearbyGroups } from '@/api';
-	import SectionHead from '@/routes/(app)/_home/SectionHead.svelte';
-	import GroupCarousel, { type NearbyGroup } from '@/routes/(app)/_home/GroupCarousel.svelte';
-	import { type NearbyUser } from '@/routes/(app)/_home/nearby-users';
-	import { toActivities, type Activity } from '@/routes/(app)/_home/activity-data';
+	import SectionHead from '@/components/home/SectionHead.svelte';
+	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
+	import { type NearbyUser } from '@/components/home/nearby-users';
+	import { toActivities, type Activity } from '@/components/home/activity-data';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
@@ -59,7 +59,7 @@
 					name: u.user?.nickname ?? '',
 					distance: formatDistance(u.location?.distance),
 					avatar: u.user?.avatar_url ?? '',
-					status: u.presence_status === 'online' ? '在线' : '离线',
+					isOnline: u.presence_status === 'online',
 					tag: u.tags?.[0] ?? ''
 				}));
 			}
@@ -118,7 +118,7 @@
 				{@const followed = followingIds.has(u.id)}
 				<UserCardRow name={u.name} avatar={u.avatar}>
 					{#snippet avatarBadge()}
-						{#if u.status === '在线'}
+						{#if u.isOnline}
 							<span
 								class="absolute bottom-0 right-0 rounded-full border-2"
 								style="width:10px;height:10px;background:var(--status-online);border-color:var(--surface-primary);"

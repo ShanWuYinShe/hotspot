@@ -5,7 +5,7 @@
 	import { MapPin, Compass, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
 	import * as Dialog from '@/components/ui/dialog';
-	import CreateSheet from '@/components/layout/CreateSheet.svelte';
+	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
 	import RailIcon from '@/components/layout/mobile/RailIcon.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 

@@ -86,8 +86,9 @@ src/routes/
     messages/              # 消息列表
     messages/[chatId]/     # 聊天详情（chatId 实为对端 user_id）
     messages/group/[groupId]/  # 群聊详情
-    me/                    # 个人主页
-    me/[section]/          # 个人主页分段（5 独立分区 + relationships 聚合页）
+    me/                    # 个人主页总览
+    me/moments/            # 个人主页固定分区（moments/groups/friends/following/fans）
+    me/relationships/      # 关系聚合页（好友/关注/粉丝三 tab，colocate RelationshipsPage）
     me/edit/               # 编辑资料
     users/[userId]/        # 用户详情
     groups/[groupId]/      # 群组详情
@@ -103,7 +104,7 @@ src/routes/
 
 > 注：管理后台（spec `api_spec_admin_core.md` / `api_spec_admin_moderation.md`）已有后端契约，前端 `src/api/endpoints.ts` 也登记了 `Admin` 端点（如 `admin/rbac/get_me`），但**页面尚未实现，后续再补**——功能边界中的「管理后台」为待建项，勿误判为遗漏。
 
-路由常量见 `@/lib/routes`。
+路由常量见 `@/lib/routes`（个人主页分区路径用 `ME_SECTION_PATHS` 静态映射，不走动态段）。
 
 页面私有组件与路由同目录，**按设备分目录**：每个路由目录下，`+page.svelte` 做设备分派（`platform.platform`），设备专属组件放 `desktop/` / `mobile/` 子目录，跨设备共享的组件与逻辑放 `shared/` 子目录（如 `map/desktop/LocationDesktop.svelte` + `map/mobile/LocationMobile.svelte` + `map/shared/location-data.ts`）。跨路由复用的页面组件（如 `components/profile/SectionFriends.svelte` 同时被 `me/[section]` 分区页与 `me/relationships` 聚合页复用）放在 `components/` 对应域目录；共享组件统一在 `components/`，设备专属共享组件按 `components/<域>/{desktop,tablet,mobile}/` 分目录（如 `layout/mobile/MobileLandscape.svelte`、`profile/desktop/ProfileDesktop.svelte`）。
 
@@ -153,7 +154,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
    `RoutedContentViewport`（main）唯一承担，`SplitPageLayout` 分栏页的主区/rail 滚动由
    组件统一管理；页面不得自建滚动容器（消息分栏、地图等全画布页面除外）。内嵌
    自带 gutter 的组件时用负 margin（`-mx-[var(--page-gutter)]`）抵消 ContentColumn
-   gutter，避免双重内边距（参照 `SectionRelationships.svelte`）。
+   gutter，避免双重内边距（参照 `me/relationships/RelationshipsPage.svelte`）。
 5. **三端差异**：共用组件只写一次，设备差异用 `platform.platform` 派生（列数、字号、
    布局分支），不得复制三份页面。
 6. **数据获取与状态**：`$effect` + `cancelled` 竞态清理模式（参照样板页）；加载中用
@@ -164,7 +165,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 ```
 src/
   routes/         # SvelteKit 路由（+page.svelte / +layout.svelte + 页面私有组件按设备分子目录）
-  components/     # 共享组件（按域分子目录：auth/ data-display/ forms/ layout/ messages/ moments/ navigation/ overlays/ profile/ shared/ ui/；
+  components/     # 共享组件（按域分子目录：auth/ data-display/ forms/ home/ layout/ list/ messages/ moments/ navigation/ overlays/ profile/ shared/ ui/；
                   #   设备专属共享组件再按 {desktop,tablet,mobile}/ 分目录，如 layout/mobile/、profile/desktop/）
   stores/         # runes 模块单例（auth/theme/platform/presence/ws/composer，.svelte.ts）
   lib/            # 工具函数 + 路由常量 + 数据工厂（.svelte.ts 响应式）

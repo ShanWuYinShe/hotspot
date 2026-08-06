@@ -1,8 +1,8 @@
 <script lang="ts">
-import { UserPlus, MessageCircle, Users, Check } from '@lucide/svelte';
-import SearchInput from '@/components/forms/SearchInput.svelte';
-import SheetShell from '@/components/overlays/SheetShell.svelte';
-import ListItem from '@/components/list/ListItem.svelte';
+	import { UserPlus, MessageCircle, Users, Check } from '@lucide/svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
+	import SheetShell from '@/components/overlays/SheetShell.svelte';
+	import ListItem from '@/components/list/ListItem.svelte';
 
 	// 新会话底部 Sheet：添加好友 / 开始私聊 / 创建群聊入口。
 

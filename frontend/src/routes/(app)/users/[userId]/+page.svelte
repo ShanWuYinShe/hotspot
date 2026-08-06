@@ -3,9 +3,9 @@
 	import { MapPin, MessageCircle, UserPlus, UserCheck, Share2, Heart, Grid3X3, Bookmark, MoreHorizontal, Flag, PencilLine, UserX, X, Check, ArrowLeft } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
-	import RailSection from '@/components/layout/desktop/RailSection.svelte';
-	import RailUserRow from '@/components/layout/desktop/RailUserRow.svelte';
-	import RailLocationMini from '@/components/layout/desktop/RailLocationMini.svelte';
+	import RailSection from '@/components/rail/RailSection.svelte';
+	import RailUserRow from '@/components/rail/RailUserRow.svelte';
+	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
 	import { getProfile, follow, block, createReport } from '@/api';
@@ -44,6 +44,7 @@
 	let loading = $state(true);
 	let mutualFriends = $state<{ id: string; name: string; sub: string; avatar: string }[]>([]);
 	let followed = $state(false);
+	// TODO(mock): liked/saved 分类暂未接入独立数据源（当前共享同一画廊）
 	let activeTab = $state<'moments' | 'liked' | 'saved'>('moments');
 	let moreOpen = $state(false);
 	let blocked = $state(false);
@@ -237,7 +238,7 @@
 							class="hover-btn tap-93 flex items-center gap-1.5 px-3.5 py-2 rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-45 bg-surface-primary text-text-secondary text-xs"
 							style="border:1px solid var(--border-default);box-shadow:var(--shadow-neu-md);"
 							disabled={blocked}
-							onclick={() => !blocked && void goto(ROUTES.message(1))}
+							onclick={() => !blocked && void goto(ROUTES.message(uid))}
 						>
 							<MessageCircle class="size-3.5"  strokeWidth={1.5} />
 							私信
@@ -305,7 +306,7 @@
 				{ id: 'saved', icon: Bookmark, label: '收藏' }
 			]}
 			value={activeTab}
-			onchange={(id) => (activeTab = id as 'moments' | 'liked' | 'saved')}
+			onChange={(id) => (activeTab = id as 'moments' | 'liked' | 'saved')}
 		/>
 	</div>
 

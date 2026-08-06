@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { MapPin, X, Users, ChevronRight, Clock, Star, Check } from '@lucide/svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
-import ListItem from '@/components/list/ListItem.svelte';
+	import ListItem from '@/components/list/ListItem.svelte';
 	import { HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { PIN_COLORS, PIN_LABELS, pinTone, getMarkerUrl } from '../shared/location-shared';
 

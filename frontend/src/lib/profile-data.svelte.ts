@@ -228,7 +228,6 @@ export interface MappedFriend {
 	avatar: string;
 	online: boolean;
 	handle: string;
-	mutual: boolean;
 	tag: string;
 }
 
@@ -237,8 +236,6 @@ export interface MappedFollowing {
 	name: string;
 	avatar: string;
 	desc: string;
-	posts: number;
-	latestImg: string;
 	isMutual: boolean;
 }
 
@@ -248,7 +245,6 @@ export interface MappedFollower {
 	avatar: string;
 	handle: string;
 	joinedDays: number;
-	followBack: boolean;
 	isMutual: boolean;
 }
 
@@ -264,7 +260,6 @@ function mapFriend(item: FriendItem): MappedFriend {
 		avatar: u.avatar_url ?? '',
 		online: item.presence_status === 'online',
 		handle: item.remark ? `@${item.remark}` : `@${u.user_id}`,
-		mutual: true, // friends list is bidirectional by definition
 		tag: '好友'
 	};
 }
@@ -276,8 +271,6 @@ function mapFollowing(item: FollowingItem): MappedFollowing {
 		name: u.nickname,
 		avatar: u.avatar_url ?? '',
 		desc: item.remark ?? '',
-		posts: 0,
-		latestImg: '',
 		isMutual: Boolean(item.is_mutual)
 	};
 }
@@ -291,7 +284,6 @@ function mapFollower(item: FollowerItem): MappedFollower {
 		// spec FollowerItem 无 remark；用 user_id 作 handle 占位
 		handle: `@${u.user_id}`,
 		joinedDays: daysSince(item.followed_at),
-		followBack: Boolean(item.is_mutual),
 		isMutual: Boolean(item.is_mutual)
 	};
 }

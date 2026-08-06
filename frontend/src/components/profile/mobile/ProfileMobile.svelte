@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Camera, ChevronRight, Heart, ImageIcon, MapPin, Pencil, Settings, UserCheck, UserPlus, Users } from '@lucide/svelte';
-import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
-import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
-import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-import ListContainer from '@/components/list/ListContainer.svelte';
-import ListItem from '@/components/list/ListItem.svelte';
+	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
+	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import ListContainer from '@/components/list/ListContainer.svelte';
+	import ListItem from '@/components/list/ListItem.svelte';
 	import { useAccountData } from '@/lib/profile-data.svelte';
 	import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 
@@ -86,7 +86,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 			</p>
 		</div>
 		<div class="grid grid-cols-3 border-t border-border-default">
-			{#each statsList as stat, i}
+			{#each statsList as stat}
 				<div class="border-l border-border-default px-4 py-3 first:border-l-0">
 					<p class="text-base font-medium tabular-nums text-text-primary">{stat.value}</p>
 					<p class="mt-0.5 text-xs text-text-secondary">{stat.label}</p>

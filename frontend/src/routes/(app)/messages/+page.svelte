@@ -16,7 +16,7 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import { getPrivateChats, listMyGroups, markPrivateRead, markGroupRead } from '@/api';
 	import { formatTime } from '@/lib/chat.svelte';
-import { ROUTES } from '@/lib/routes';
+	import { ROUTES } from '@/lib/routes';
 	import { presence, watchPresence } from '@/stores/presence.svelte';
 
 	// 消息列表：在线条 + 会话列表（私聊 + 群聊混合）+ 新会话 Sheet + 建群 Sheet；
@@ -56,7 +56,6 @@ import { ROUTES } from '@/lib/routes';
 					time: formatTime(c.last_message?.sent_at ?? c.last_activity_at),
 					unread: c.unread_count ?? 0,
 					online: c.presence_status === 'online',
-					group: false,
 					kind: 'private'
 				}));
 				// spec: GroupItem { group: GroupInfo, my_state?: MyGroupState, last_activity_at?, last_message? }
@@ -83,7 +82,7 @@ import { ROUTES } from '@/lib/routes';
 				// 但显式用 peerUserId 更稳）；旧订阅先释放再建立新订阅。
 				unwatchPresence?.();
 				unwatchPresence = watchPresence(
-					items.filter((c) => !c.group).map((c) => c.peerUserId).filter(Boolean)
+					items.filter((c) => c.kind !== "group").map((c) => c.peerUserId).filter(Boolean)
 				);
 			} catch {
 				if (!cancelled) chats = [];
@@ -101,7 +100,7 @@ import { ROUTES } from '@/lib/routes';
 	});
 
 	// 共享状态：搜索/新会话/建群（移动与桌面共用）
-	let searchVal = $state('');
+	let searchQuery = $state('');
 	let showNewChat = $state(false);
 	let newChatTab = $state<'add' | 'chat'>('chat');
 	let showCreateGroup = $state(false);
@@ -117,7 +116,7 @@ import { ROUTES } from '@/lib/routes';
 			chats = chats.map((c) => (c.id === chat.id ? { ...c, unread: 0 } : c));
 			// spec: private_messages/mark_read(scope=session) / group_messages/mark_read(scope=group)；
 			// 幂等语义，失败静默（徽章已本地清零，不打扰浏览）。
-			if (chat.kind === 'group' || chat.group) {
+			if (chat.kind === 'group') {
 				void markGroupRead({ scope: 'group', group_id: String(chat.id) }).catch(() => {});
 			} else {
 				void markPrivateRead({ scope: 'session', target_user_id: chat.peerUserId || String(chat.id) }).catch(() => {});
@@ -131,7 +130,7 @@ import { ROUTES } from '@/lib/routes';
 	);
 
 	const filtered = $derived(
-		liveChats.filter((c) => c.name.toLowerCase().includes(searchVal.toLowerCase()))
+		liveChats.filter((c) => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
 	);
 	const onlineChats = $derived(liveChats.filter((c) => c.online));
 	const totalUnread = $derived(chats.reduce((s, c) => s + c.unread, 0));
@@ -165,7 +164,7 @@ import { ROUTES } from '@/lib/routes';
 					{/snippet}
 					{#snippet below()}
 						<div class="mt-3 pb-3">
-							<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="搜索…" class="px-3 py-2" fontSize={12} />
+							<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索…" class="px-3 py-2" fontSize={12} />
 						</div>
 					{/snippet}
 				</PageHeader>
@@ -297,7 +296,7 @@ import { ROUTES } from '@/lib/routes';
 		{#snippet below()}
 			<!-- 搜索框：sticky header 内第二行（对齐 Figma MessagesMobile） -->
 			<div class="mt-3 pb-3">
-				<SearchInput value={searchVal} onChange={(v) => (searchVal = v)} placeholder="搜索会话…" class="rounded-relaxed px-4 py-2.5" />
+				<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="rounded-relaxed px-4 py-2.5" />
 			</div>
 		{/snippet}
 	</PageHeader>

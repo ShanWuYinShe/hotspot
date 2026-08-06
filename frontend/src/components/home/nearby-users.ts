@@ -4,6 +4,6 @@ export interface NearbyUser {
 	name: string;
 	distance: string;
 	avatar: string;
-	status: string;
+	isOnline: boolean;
 	tag: string;
 }

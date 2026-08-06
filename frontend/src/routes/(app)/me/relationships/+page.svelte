@@ -1,8 +1,8 @@
 <script lang="ts">
-	import SectionRelationships from '@/components/profile/SectionRelationships.svelte';
+	import RelationshipsPage from './RelationshipsPage.svelte';
 
-	// 关系聚合页（好友/关注/粉丝 三 tab）固定路由：独立样板页（StandardPageLayout），
+	// 关系聚合页（好友/关注/粉丝 三 tab）固定路由：colocate 页面组件（RelationshipsPage），
 	// 任意设备直接渲染。
 </script>
 
-<SectionRelationships />
+<RelationshipsPage />

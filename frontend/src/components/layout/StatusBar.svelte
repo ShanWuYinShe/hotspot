@@ -17,7 +17,6 @@
 
 	const signalHeights = [4, 7, 10, 13];
 	const batteryLevel = 0.72;
-	const batteryLow = batteryLevel < 0.2;
 </script>
 
 <div
@@ -47,7 +46,7 @@
 				style="width:23px;height:11px;border-radius:3px;border:1.5px solid var(--text-primary);position:relative;overflow:hidden;box-sizing:border-box;"
 			>
 				<div
-					style="position:absolute;inset:1px;right:auto;width:calc({batteryLevel * 100}% - 2px);border-radius:1.5px;background-color:{batteryLow ? 'var(--destructive)' : 'var(--text-primary)'};"
+					style="position:absolute;inset:1px;right:auto;width:calc({batteryLevel * 100}% - 2px);border-radius:1.5px;background-color:var(--text-primary);"
 				></div>
 			</div>
 			<div

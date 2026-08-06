@@ -19,7 +19,7 @@
 	const SORT_OPTIONS = ['距离', '在线', '共同好友'];
 	const FILTER_TAGS = ['全部', '摄影', '旅行', '音乐', '美食', '运动', '阅读', '艺术'];
 
-	let search = $state('');
+	let searchQuery = $state('');
 	let sort = $state('距离');
 	let tagFilter = $state('全部');
 	let followedIds = $state<Set<string>>(new Set());
@@ -58,7 +58,7 @@
 						name: u.user?.nickname ?? '',
 						distance: formatDistance(u.location?.distance),
 						avatar: u.user?.avatar_url ?? '',
-						status: u.presence_status === 'online' ? '在线' : '离线',
+						isOnline: u.presence_status === 'online',
 						tag: u.tags?.[0] ?? '',
 						mutual: u.social_context?.mutual_friends_count ?? 0,
 						note: u.bio ?? ''
@@ -82,9 +82,9 @@
 		const next = allUsers.filter(
 			(user) =>
 				(tagFilter === '全部' || user.tag === tagFilter) &&
-				(!search || `${user.name}${user.tag}${user.note}`.toLowerCase().includes(search.toLowerCase()))
+				(!searchQuery || `${user.name}${user.tag}${user.note}`.toLowerCase().includes(searchQuery.toLowerCase()))
 		);
-		if (sort === '在线') return [...next].sort((a, b) => Number(b.status === '在线') - Number(a.status === '在线'));
+		if (sort === '在线') return [...next].sort((a, b) => Number(b.isOnline) - Number(a.isOnline));
 		if (sort === '共同好友') return [...next].sort((a, b) => b.mutual - a.mutual);
 		return next;
 	});
@@ -106,7 +106,7 @@
 				{#snippet below()}
 					<!-- 搜索框（全设备全宽，对齐附近群组样板） + 排序/标签过滤：同处 sticky header 内 -->
 					<div class="mt-3">
-						<SearchInput value={search} onChange={(v) => (search = v)} placeholder="搜索昵称、兴趣或此刻状态" class="px-3.5 py-2" />
+						<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索昵称、兴趣或此刻状态" class="px-3.5 py-2" />
 					</div>
 					<div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 mt-3">
 						<div class="flex items-center gap-1 p-1 rounded-full input-surface w-fit">

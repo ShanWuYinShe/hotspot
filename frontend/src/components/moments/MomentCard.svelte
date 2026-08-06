@@ -6,26 +6,20 @@
 
 	// MomentCard — 动态卡片：基于 NearbyImageCard 统一图片优先原语。
 	// 标签/作者/正文/操作栏全部以覆盖层显示在图片上（无图时用主题化占位背景）。
-	// dense 用于 BSP 瓦片（高度由布局单元决定）；hero 用于大卡（aspect 4/3 撑高）。
-
 	let {
 		item,
 		liked,
 		saved,
 		onLike,
 		onSave,
-		dense = false,
-		onClick,
-		hero = false
+		onClick
 	}: {
 		item: FeedItem;
 		liked: boolean;
 		saved: boolean;
 		onLike: () => void;
 		onSave: () => void;
-		dense?: boolean;
 		onClick?: () => void;
-		hero?: boolean;
 	} = $props();
 </script>
 
@@ -33,7 +27,7 @@
 	imageSrc={item.image ?? item.avatar}
 	imageAlt={item.tag}
 	{onClick}
-	class="aspect-[4/3] {hero ? 'rounded-[22px] surface-hero' : 'rounded-relaxed surface-flat'}"
+	class="aspect-[4/3] rounded-relaxed surface-flat"
 >
 	<!-- 无图时占位：覆盖在图片层之上（NearbyImageCard 已渲染 item.image，此处仅在无图时遮挡） -->
 	{#if !item.image}

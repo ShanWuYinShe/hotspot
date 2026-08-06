@@ -1,9 +1,9 @@
 <script lang="ts">
-import { Check, Moon, Palette, Sun, Database } from '@lucide/svelte';
-import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-import ListContainer from '@/components/list/ListContainer.svelte';
-import ListItem from '@/components/list/ListItem.svelte';
-	import { theme, toggleDark, setTheme } from '@/stores/theme.svelte';
+	import { Check, Moon, Palette, Sun, Database } from '@lucide/svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import ListContainer from '@/components/list/ListContainer.svelte';
+	import ListItem from '@/components/list/ListItem.svelte';
+	import { theme, toggleDark, setTheme, THEME_OPTIONS } from '@/stores/theme.svelte';
 	import * as Popover from '@/components/ui/popover';
 
 	// 唯一的外观/模式控制。选择面板保持打开，仅显式完成、外部点击或 Escape 关闭。
@@ -11,18 +11,12 @@ import ListItem from '@/components/list/ListItem.svelte';
 
 	let { class: className = '' }: { class?: string } = $props();
 
-	// 主题预览色板：这里用字面值而非 var(--pr-*)，因为色板需要在主题激活前静态展示
-	// 各主题的代表色（CSS 变量解析的是"当前"主题，无法表达"另一"主题）。值与
-	// themes/vibrant.css、themes/forest.css 的 --pr-accent-primary 保持同步。
-	const THEMES = [
-		{ id: 'vibrant', label: '星际', note: '冷色玻璃', swatch: '#6366F1' },
-		{ id: 'forest', label: '清野', note: '自然纸面', swatch: '#3D7A55' }
-	] as const;
+	// 主题选项来自 theme store 的 THEME_OPTIONS（与设置页共用，避免两份配置漂移）
 
 	let open = $state(false);
 	let rootEl = $state<HTMLElement | null>(null);
 
-	const currentTheme = $derived(THEMES.find((item) => item.id === theme.theme)?.label ?? '星际');
+	const currentTheme = $derived(THEME_OPTIONS.find((item) => item.id === theme.theme)?.label ?? '星际');
 	const modeLabel = $derived(theme.isDark ? '深色' : '浅色');
 
 	// ── Dev API source toggle（仅 dev）───────────────────────────
@@ -108,7 +102,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 					<span class="text-xxs text-text-secondary">选择一种基调</span>
 				</div>
 				<div class="grid grid-cols-2 gap-1.5" role="group" aria-label="选择主题">
-					{#each THEMES as item}
+					{#each THEME_OPTIONS as item}
 						{@const selected = theme.theme === item.id}
 						<button
 							type="button"

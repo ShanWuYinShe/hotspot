@@ -14,7 +14,7 @@
 	// 桌面个人主页（对齐 Figma Make ProfilePage 契约）：
 	// 总览 = 资料页眉 + 双栏（公开个人资料卡 + 资料状态 aside）+ 资料详情 dl；
 	// 分区模式 = PageHeader + Section 组件（moments/groups/friends/following/fans）。
-	// 注意：relationships 聚合分区由 me/[section] 独立渲染（SectionRelationships），不走本组件。
+	// 注意：relationships 聚合分区由 /me/relationships 独立渲染（RelationshipsPage），不走本组件。
 
 	let { section }: { section: string | null } = $props();
 
@@ -120,7 +120,7 @@
 					</div>
 				</div>
 				<div class="grid grid-cols-3 border-t border-border-default">
-					{#each statsList as stat, i}
+					{#each statsList as stat}
 						<button
 							type="button"
 							class="hover-bg border-l border-border-default px-5 py-4 text-left outline-none first:border-l-0"

@@ -71,7 +71,7 @@
 				const inner = u.user;
 				return { user_id: inner.user_id, nickname: inner.nickname, avatar_url: inner.avatar_url, tags: u.tags };
 			});
-			const moments = (rawMoments ?? []).map((m) => ({ ...m }));
+			const moments = rawMoments ?? [];
 			// 话题从结果动态聚合
 			const topicSet = new Set<string>();
 			for (const m of moments) {
