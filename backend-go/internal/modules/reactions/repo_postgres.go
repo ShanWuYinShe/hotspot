@@ -2,12 +2,11 @@ package reactions
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
+	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
@@ -218,24 +217,27 @@ type listCursor struct {
 	ID string `json:"id"`
 }
 
+// reactionsListCursorNamespace / reactionsTargetCursorNamespace 分别是
+// 点赞列表与点赞目标列表游标的加密命名空间。
+const (
+	reactionsListCursorNamespace   = "reactions.list"
+	reactionsTargetCursorNamespace = "reactions.targets"
+)
+
 func encodeListCursor(at, id string) string {
-	blob, err := json.Marshal(listCursor{At: at, ID: id})
+	value, err := cursor.Encode(reactionsListCursorNamespace, listCursor{At: at, ID: id})
 	if err != nil {
 		return ""
 	}
-	return base64.RawURLEncoding.EncodeToString(blob)
+	return value
 }
 
-func decodeListCursor(cursor string) (any, string, error) {
-	if cursor == "" {
+func decodeListCursor(cursorValue string) (any, string, error) {
+	if cursorValue == "" {
 		return nil, "", nil
 	}
-	blob, err := base64.RawURLEncoding.DecodeString(cursor)
-	if err != nil {
-		return nil, "", ErrInvalidCursor
-	}
 	var c listCursor
-	if err := json.Unmarshal(blob, &c); err != nil || c.At == "" || c.ID == "" {
+	if err := cursor.Decode(reactionsListCursorNamespace, cursorValue, &c); err != nil || c.At == "" || c.ID == "" {
 		return nil, "", ErrInvalidCursor
 	}
 	at, err := time.Parse(time.RFC3339, c.At)
@@ -246,23 +248,19 @@ func decodeListCursor(cursor string) (any, string, error) {
 }
 
 func encodeTargetCursor(at time.Time, id string) string {
-	blob, err := json.Marshal(listCursor{At: at.UTC().Format(time.RFC3339), ID: id})
+	value, err := cursor.Encode(reactionsTargetCursorNamespace, listCursor{At: at.UTC().Format(time.RFC3339), ID: id})
 	if err != nil {
 		return ""
 	}
-	return base64.RawURLEncoding.EncodeToString(blob)
+	return value
 }
 
-func decodeTargetCursor(cursor string) (any, string, error) {
-	if cursor == "" {
+func decodeTargetCursor(cursorValue string) (any, string, error) {
+	if cursorValue == "" {
 		return nil, "", nil
 	}
-	blob, err := base64.RawURLEncoding.DecodeString(cursor)
-	if err != nil {
-		return nil, "", ErrInvalidCursor
-	}
 	var c listCursor
-	if err := json.Unmarshal(blob, &c); err != nil || c.At == "" || c.ID == "" {
+	if err := cursor.Decode(reactionsTargetCursorNamespace, cursorValue, &c); err != nil || c.At == "" || c.ID == "" {
 		return nil, "", ErrInvalidCursor
 	}
 	at, err := time.Parse(time.RFC3339, c.At)

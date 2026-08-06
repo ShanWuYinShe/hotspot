@@ -1,11 +1,10 @@
 package notify
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"strings"
 
+	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/types"
 )
 
@@ -116,25 +115,27 @@ func normalizeNotificationListQuery(req NotificationListRequest) (notificationLi
 	return notificationListQuery{Type: normalizedType, IsRead: req.IsRead, Limit: limit, Cursor: cursor}, nil
 }
 
-func encodeNotificationCursor(cursor notificationCursor) string {
-	payload, _ := json.Marshal(cursor)
-	return base64.RawURLEncoding.EncodeToString(payload)
+// notificationCursorNamespace 是通知列表分页游标的加密命名空间。
+const notificationCursorNamespace = "notify.list"
+
+func encodeNotificationCursor(c notificationCursor) string {
+	value, err := cursor.Encode(notificationCursorNamespace, c)
+	if err != nil {
+		return ""
+	}
+	return value
 }
 
 func decodeNotificationCursor(value string) (*notificationCursor, error) {
 	if strings.TrimSpace(value) == "" {
 		return nil, nil
 	}
-	decoded, err := base64.RawURLEncoding.DecodeString(value)
-	if err != nil {
+	var c notificationCursor
+	if err := cursor.Decode(notificationCursorNamespace, value, &c); err != nil {
 		return nil, ErrInvalidNotificationRequest
 	}
-	var cursor notificationCursor
-	if err := json.Unmarshal(decoded, &cursor); err != nil {
+	if c.CreatedAt == "" || c.NotifyID == "" {
 		return nil, ErrInvalidNotificationRequest
 	}
-	if cursor.CreatedAt == "" || cursor.NotifyID == "" {
-		return nil, ErrInvalidNotificationRequest
-	}
-	return &cursor, nil
+	return &c, nil
 }

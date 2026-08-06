@@ -246,8 +246,14 @@ func TestServiceListNormalizesPaginationAndCursor(t *testing.T) {
 	if repo.req.Pagination == nil || repo.req.Pagination.Limit != maxNotificationListLimit {
 		t.Fatalf("unexpected pagination limit: %#v", repo.req.Pagination)
 	}
-	if repo.req.Pagination.Cursor != cursor {
-		t.Fatalf("unexpected cursor: got %q want %q", repo.req.Pagination.Cursor, cursor)
+	if repo.req.Pagination.Cursor == "" {
+		t.Fatal("expected a cursor to be passed to the repo")
+	}
+	// cursor 是 AES-GCM 加密 token（nonce 随机），断言字节相等无意义，
+	// 改为解码后验证语义一致。
+	decodedCursor, err := decodeNotificationCursor(repo.req.Pagination.Cursor)
+	if err != nil || decodedCursor == nil || decodedCursor.CreatedAt != "2026-03-26T00:00:00Z" || decodedCursor.NotifyID != "notif_9" {
+		t.Fatalf("unexpected cursor payload: %#v err=%v", decodedCursor, err)
 	}
 }
 

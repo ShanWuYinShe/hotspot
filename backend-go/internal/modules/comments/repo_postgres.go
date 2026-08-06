@@ -2,12 +2,11 @@ package comments
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
+	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/persistence"
 
@@ -212,6 +211,10 @@ type commentCursor struct {
 	ID string `json:"id"`
 }
 
+// commentCursorNamespace 是评论分页游标的 AES-GCM 加密命名空间（cursor 包
+// 语义：同一 secret 下不同命名空间互不通用，防止跨列表伪造游标）。
+const commentCursorNamespace = "comments.list"
+
 // queryable resolves the Queryable to use for this request: an in-flight
 // transaction bound to ctx when present, otherwise the shared pool. Returns
 // ok=false when persistence is not configured (in-memory mode), in which case
@@ -239,23 +242,19 @@ func normalizeCommentLimit(limit int) int {
 }
 
 func encodeCommentCursor(at, id string) string {
-	blob, err := json.Marshal(commentCursor{At: at, ID: id})
+	value, err := cursor.Encode(commentCursorNamespace, commentCursor{At: at, ID: id})
 	if err != nil {
 		return ""
 	}
-	return base64.RawURLEncoding.EncodeToString(blob)
+	return value
 }
 
-func decodeCommentCursor(cursor string) (any, string, error) {
-	if cursor == "" {
+func decodeCommentCursor(cursorValue string) (any, string, error) {
+	if cursorValue == "" {
 		return nil, "", nil
 	}
-	blob, err := base64.RawURLEncoding.DecodeString(cursor)
-	if err != nil {
-		return nil, "", ErrInvalidCursor
-	}
 	var decoded commentCursor
-	if err := json.Unmarshal(blob, &decoded); err != nil || decoded.At == "" || decoded.ID == "" {
+	if err := cursor.Decode(commentCursorNamespace, cursorValue, &decoded); err != nil || decoded.At == "" || decoded.ID == "" {
 		return nil, "", ErrInvalidCursor
 	}
 	at, err := time.Parse(time.RFC3339, decoded.At)

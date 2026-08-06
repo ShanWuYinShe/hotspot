@@ -1,8 +1,6 @@
 package admin
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"strings"
 	"time"
 
@@ -20,56 +18,47 @@ type announcementCursor struct {
 	AnnouncementID string    `json:"announcement_id"`
 }
 
+// moderationTagCursorNamespace / moderationAnnouncementCursorNamespace 是
+// 标签搜索与公告管理游标的加密命名空间。
+const (
+	moderationTagCursorNamespace          = "admin.tags"
+	moderationAnnouncementCursorNamespace = "admin.announcements"
+)
+
 func decodeTagCursor(raw string) (tagCursor, *httpx.APIError) {
 	if strings.TrimSpace(raw) == "" {
 		return tagCursor{}, nil
 	}
-	blob, err := base64.RawURLEncoding.DecodeString(raw)
-	if err != nil {
+	c, apiErr := decodeCursor[tagCursor](moderationTagCursorNamespace, raw)
+	if apiErr != nil {
+		return c, apiErr
+	}
+	if c.Name == "" || c.CreatedAt.IsZero() {
 		return tagCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
 	}
-	var cursor tagCursor
-	if err := json.Unmarshal(blob, &cursor); err != nil {
-		return tagCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
-	}
-	if cursor.Name == "" || cursor.CreatedAt.IsZero() {
-		return tagCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
-	}
-	return cursor, nil
+	return c, nil
 }
 
-func encodeTagCursor(cursor tagCursor) string {
-	blob, err := json.Marshal(cursor)
-	if err != nil {
-		return ""
-	}
-	return base64.RawURLEncoding.EncodeToString(blob)
+func encodeTagCursor(c tagCursor) string {
+	return encodeCursor(moderationTagCursorNamespace, c)
 }
 
 func decodeAnnouncementCursor(raw string) (announcementCursor, *httpx.APIError) {
 	if strings.TrimSpace(raw) == "" {
 		return announcementCursor{}, nil
 	}
-	blob, err := base64.RawURLEncoding.DecodeString(raw)
-	if err != nil {
+	c, apiErr := decodeCursor[announcementCursor](moderationAnnouncementCursorNamespace, raw)
+	if apiErr != nil {
+		return c, apiErr
+	}
+	if c.AnnouncementID == "" || c.CreatedAt.IsZero() {
 		return announcementCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
 	}
-	var cursor announcementCursor
-	if err := json.Unmarshal(blob, &cursor); err != nil {
-		return announcementCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
-	}
-	if cursor.AnnouncementID == "" || cursor.CreatedAt.IsZero() {
-		return announcementCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
-	}
-	return cursor, nil
+	return c, nil
 }
 
-func encodeAnnouncementCursor(cursor announcementCursor) string {
-	blob, err := json.Marshal(cursor)
-	if err != nil {
-		return ""
-	}
-	return base64.RawURLEncoding.EncodeToString(blob)
+func encodeAnnouncementCursor(c announcementCursor) string {
+	return encodeCursor(moderationAnnouncementCursorNamespace, c)
 }
 
 func normalizeCursorLimit(limit int) int {

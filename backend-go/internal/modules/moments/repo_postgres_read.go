@@ -2,10 +2,9 @@ package moments
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/persistence"
 	"time"
 
@@ -103,24 +102,22 @@ func (r *PostgresRepository) ListMine(ctx context.Context, userID string, limit 
 	return PaginatedMoments{Items: items}, nil
 }
 
+const momentMineCursorNamespace = "moments.mine"
+
 func encodeMomentMineCursor(createdAt, momentID string) string {
-	blob, err := json.Marshal(momentInteractionCursor{At: createdAt, ID: momentID})
+	value, err := cursor.Encode(momentMineCursorNamespace, momentInteractionCursor{At: createdAt, ID: momentID})
 	if err != nil {
 		return ""
 	}
-	return base64.RawURLEncoding.EncodeToString(blob)
+	return value
 }
 
-func decodeMomentMineCursor(cursor string) (any, string, error) {
-	if cursor == "" {
+func decodeMomentMineCursor(cursorValue string) (any, string, error) {
+	if cursorValue == "" {
 		return nil, "", nil
 	}
-	blob, err := base64.RawURLEncoding.DecodeString(cursor)
-	if err != nil {
-		return nil, "", ErrInvalidCursor
-	}
 	var decoded momentInteractionCursor
-	if err := json.Unmarshal(blob, &decoded); err != nil || decoded.At == "" || decoded.ID == "" {
+	if err := cursor.Decode(momentMineCursorNamespace, cursorValue, &decoded); err != nil || decoded.At == "" || decoded.ID == "" {
 		return nil, "", ErrInvalidCursor
 	}
 	parsedAt, err := time.Parse(time.RFC3339, decoded.At)
