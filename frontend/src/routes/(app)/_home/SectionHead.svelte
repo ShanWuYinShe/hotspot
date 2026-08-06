@@ -15,7 +15,7 @@
 			onclick={onAction}
 		>
 			<span class="text-xs">{action}</span>
-			<ChevronRight style="width:12px;height:12px;" strokeWidth={1.5} />
+			<ChevronRight class="size-3"  strokeWidth={1.5} />
 		</button>
 	{/if}
 </div>

@@ -42,20 +42,20 @@ import ListItem from '@/components/list/ListItem.svelte';
 				ariaLabel={`选择地点 ${r.displayName}`}
 				class="app-list-row app-list-row--standard rounded-control px-5"
 			>
-				<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default" style="width:34px;height:34px;opacity:0.12">
-					<MapPin style="width:14px;height:14px;color:var(--accent-default)" strokeWidth={1.75} />
+				<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default size-8.5"  style="opacity:0.12">
+					<MapPin class="size-3.5"  style="color:var(--accent-default)" strokeWidth={1.75} />
 				</div>
-				<span class="{isSelected ? 'text-content-inverse' : 'text-text-primary'}" style="font-size:14px;flex:1">{r.displayName}</span>
+				<span class="{isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm"  style="flex:1">{r.displayName}</span>
 				{#if isSelected}
-					<Check style="width:14px;height:14px;color:var(--content-inverse);shrink:0" strokeWidth={2.5} />
+					<Check class="size-3.5 shrink-0"  style="color:var(--content-inverse)" strokeWidth={2.5} />
 				{/if}
 			</ListItem>
 		{/each}
 	</ListContainer>
 {:else if searchQuery && searchResults.length === 0}
 	<div class="flex flex-col items-center py-6">
-		<MapPin style="width:26px;height:26px;color:var(--text-secondary);opacity:0.28;" strokeWidth={1} />
-		<p class="text-text-secondary" style="font-size:13px;margin-top:8px;">未找到匹配地点</p>
+		<MapPin class="size-6.5"  style="color:var(--text-secondary);opacity:0.28" strokeWidth={1} />
+		<p class="text-text-secondary text-[13px] mt-2" >未找到匹配地点</p>
 	</div>
 {:else}
 	<div class="animate-fade-in">
@@ -64,19 +64,19 @@ import ListItem from '@/components/list/ListItem.svelte';
 			<div class="flex items-center gap-3 mx-4 mb-2 p-3 rounded-[15px]" style="background:{pinTone(selectedPin.type, 10)};border:1px solid {pinTone(selectedPin.type, 30)};">
 				{#if selectedPin.type === 'user' && selectedPin.avatar}
 					<div class="relative shrink-0">
-						<img src={selectedPin.avatar} alt={selectedPin.name || selectedPin.title || ''} class="rounded-full object-cover" style="width:42px;height:42px;" />
+						<img src={selectedPin.avatar} alt={selectedPin.name || selectedPin.title || ''} class="rounded-full object-cover size-10.5"  />
 						{#if selectedPin.online}
-							<span class="absolute bottom-0 right-0 rounded-full bg-status-online" style="width:10px;height:10px;border:2px solid var(--surface-primary);"></span>
+							<span class="absolute bottom-0 right-0 rounded-full bg-status-online size-2.5 border-2 border-surface-primary"  ></span>
 						{/if}
 					</div>
 				{:else if selectedPin.type === 'moment' && selectedPin.image}
-					<img src={selectedPin.image} alt={selectedPin.name || selectedPin.title || ''} class="rounded-tight object-cover shrink-0" style="width:42px;height:42px;" />
+					<img src={selectedPin.image} alt={selectedPin.name || selectedPin.title || ''} class="rounded-tight object-cover shrink-0 size-10.5"  />
 				{:else}
-					<img src={getMarkerUrl(selectedPin.type, selectedPin.count ?? 1)} alt="" style="width:22px;height:29px;shrink:0;" />
+					<img class="w-5.5 h-7.25 shrink-0" src={getMarkerUrl(selectedPin.type, selectedPin.count ?? 1)} alt=""  />
 				{/if}
 				<div class="flex-1 min-w-0">
 					<p class="text-text-primary text-base">{selectedPin.name || selectedPin.title}</p>
-					<p class="text-text-secondary" style="font-size:11px;margin-top:1px;">
+					<p class="text-text-secondary text-[11px] mt-px" >
 						{PIN_LABELS[selectedPin.type]}
 						{selectedPin.distance ? ` · ${selectedPin.distance}` : ''}
 						{selectedPin.tag ? ` · #${selectedPin.tag}` : ''}
@@ -86,7 +86,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 					查看
 				</button>
 				<button type="button" class="hover-btn outline-none shrink-0 ml-0.5" onclick={onClearPin}>
-					<X style="width:13px;height:13px;color:var(--text-secondary);" strokeWidth={2} />
+					<X class="size-3.25"  style="color:var(--text-secondary)" strokeWidth={2} />
 				</button>
 			</div>
 		{/if}
@@ -103,7 +103,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 					style={activeTab === tab.id ? 'font-size:12px;box-shadow:0 3px 10px var(--glow-accent);' : 'font-size:12px;border:1px solid var(--border-default);'}
 					onclick={() => (activeTab = tab.id as 'recent' | 'hot')}
 				>
-					<tab.icon style="width:11px;height:11px;" strokeWidth={activeTab === tab.id ? 2.5 : 1.5} />
+					<tab.icon class="size-2.75"  strokeWidth={activeTab === tab.id ? 2.5 : 1.5} />
 					{tab.label}
 				</button>
 			{/each}
@@ -126,23 +126,23 @@ import ListItem from '@/components/list/ListItem.svelte';
 							ariaLabel={`选择最近地点 ${loc.displayName}`}
 							class="app-list-row app-list-row--standard rounded-control px-4"
 						>
-							<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary" style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);font-size:18px;">
+							<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary size-9 text-lg border border-border-default shadow-neu-xs"  >
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
 								<p class="truncate {isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm">{loc.displayName}</p>
-								<p class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'}" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
+								<p class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-[11px] mt-px" >{loc.desc}</p>
 							</div>
 							{#if isSelected}
-								<Check style="width:14px;height:14px;color:var(--content-inverse);shrink:0;" strokeWidth={2.5} />
+								<Check class="size-3.5 shrink-0"  style="color:var(--content-inverse)" strokeWidth={2.5} />
 							{:else}
-								<ChevronRight style="width:13px;height:13px;color:var(--border-default);shrink:0;" strokeWidth={1.5} />
+								<ChevronRight class="size-3.25 shrink-0"  style="color:var(--border-default)" strokeWidth={1.5} />
 							{/if}
 						</ListItem>
 					{/each}
 				</ListContainer>
 			{:else}
-				<p class="text-text-secondary" style="font-size:13px;padding:12px 20px;">暂无最近记录</p>
+				<p class="text-text-secondary text-[13px]"  style="padding:12px 20px">暂无最近记录</p>
 			{/if}
 		{:else}
 			{#if HOT_LOCATIONS.length}
@@ -155,12 +155,12 @@ import ListItem from '@/components/list/ListItem.svelte';
 							ariaLabel={`选择热门地点 ${loc.displayName}`}
 							class="app-list-row app-list-row--standard rounded-control px-4"
 						>
-							<div class="flex items-center justify-center rounded-[13px] shrink-0 bg-accent-default" style="width:36px;height:36px;font-size:18px;opacity:0.88;">
+							<div class="flex items-center justify-center rounded-[13px] shrink-0 bg-accent-default size-9 text-lg"  style="opacity:0.88">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
 								<p class="truncate {isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm">{loc.displayName}</p>
-								<p class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'}" style="font-size:11px;margin-top:1px;">{loc.desc}</p>
+								<p class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-[11px] mt-px" >{loc.desc}</p>
 							</div>
 							<div class="flex items-center gap-1 shrink-0">
 								<Users style="width:11px;height:11px;color:{isSelected ? 'var(--content-inverse)' : 'var(--accent-default)'};" strokeWidth={1.5} />
@@ -171,7 +171,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-8">
-					<Star style="width:20px;height:20px;color:var(--text-secondary);opacity:0.3;" strokeWidth={1} />
+					<Star class="size-5"  style="color:var(--text-secondary);opacity:0.3" strokeWidth={1} />
 					<p class="text-text-secondary text-xs">暂无热门地点</p>
 				</div>
 			{/if}

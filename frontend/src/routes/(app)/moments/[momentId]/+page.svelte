@@ -222,7 +222,7 @@
 					</div>
 					<DropdownMenu.Content customAnchor={moreMenuEl}>
 						<DropdownMenu.Item onSelect={() => void copyMomentLink()}>
-							<Link2 style="width:14px;height:14px;color:var(--accent-default);" strokeWidth={1.75} />
+							<Link2 class="size-3.5"  style="color:var(--accent-default)" strokeWidth={1.75} />
 							复制链接
 						</DropdownMenu.Item>
 						<DropdownMenu.Item class="text-text-secondary">
@@ -253,9 +253,9 @@
 
 	{#snippet footer()}
 		<!-- 评论输入栏固定在主区底部，不随正文滚动 -->
-		<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary" style="border-top:1px solid var(--border-default);">
-			<Avatar src={auth.user?.avatar_url} name={auth.user?.nickname} size={30} style="border:1px solid var(--border-default);" />
-			<div class="flex-1 flex items-center px-4 rounded-relaxed input-surface" style="height:38px;">
+		<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary border-t border-border-default" >
+			<Avatar class="border border-border-default" src={auth.user?.avatar_url} name={auth.user?.nickname} size={30}  />
+			<div class="flex-1 flex items-center px-4 rounded-relaxed input-surface h-9.5" >
 				<input
 					bind:value={input}
 					onkeydown={(e) => {

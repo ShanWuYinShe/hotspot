@@ -68,7 +68,7 @@
 					{/each}
 
 					<!-- Centre FAB -->
-					<div class="flex flex-col items-center" style="width:68px;">
+					<div class="flex flex-col items-center w-17" >
 						<button
 							type="button"
 							class="hover-btn scale-btn flex items-center justify-center outline-none select-none rounded-full"
@@ -77,9 +77,9 @@
 							aria-label={composer.composerOpen ? '关闭' : '发布'}
 						>
 							{#if composer.composerOpen}
-								<X style="width:20px;height:20px;color:var(--text-on-accent);" strokeWidth={2.2} />
+								<X class="size-5"  style="color:var(--text-on-accent)" strokeWidth={2.2} />
 							{:else}
-								<Plus style="width:20px;height:20px;color:var(--text-on-accent);" strokeWidth={2.2} />
+								<Plus class="size-5"  style="color:var(--text-on-accent)" strokeWidth={2.2} />
 							{/if}
 						</button>
 					</div>

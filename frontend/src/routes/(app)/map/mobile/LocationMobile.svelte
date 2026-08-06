@@ -218,13 +218,13 @@
 		{/if}
 
 		{#if mapLoading}
-			<div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary" style="box-shadow:0 2px 12px var(--elevation-shadow-dark);border:1px solid var(--border-default);">
+			<div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary shadow-[0_2px_12px_var(--elevation-shadow-dark)] border border-border-default" >
 				加载地图数据…
 			</div>
 		{/if}
 
 		<!-- Attribution -->
-		<div class="text-text-secondary" style="position:absolute;bottom:4px;left:6px;font-size:9px;opacity:0.4;pointer-events:none;z-index:1;">
+		<div class="text-text-secondary text-[9px]"  style="position:absolute;bottom:4px;left:6px;opacity:0.4;pointer-events:none;z-index:1">
 			© OpenStreetMap contributors
 		</div>
 	</div>
@@ -239,7 +239,7 @@
 				style="width:42px;height:42px;{floatBtnStyle}"
 				onclick={() => history.back()}
 			>
-				<ArrowLeft style="width:17px;height:17px;color:var(--text-primary);" strokeWidth={2} />
+				<ArrowLeft class="size-4.25"  style="color:var(--text-primary)" strokeWidth={2} />
 			</button>
 
 			<!-- Filter toggle -->
@@ -251,7 +251,7 @@
 						style="padding:9px 16px;font-size:14px;border:{showFilter ? '1px solid transparent' : '1px solid var(--border-default)'};box-shadow:{showFilter ? '0 4px 16px var(--glow-accent)' : '0 2px 12px var(--elevation-shadow-dark), 0 1px 3px var(--elevation-shadow-dark)'};"
 						onclick={() => (showFilter = !showFilter)}
 					>
-						<SlidersHorizontal style="width:14px;height:14px;" strokeWidth={showFilter ? 2.5 : 1.75} />
+						<SlidersHorizontal class="size-3.5"  strokeWidth={showFilter ? 2.5 : 1.75} />
 						筛选
 					</button>
 				</div>
@@ -271,7 +271,7 @@
 						] as [type, label, icon, color], i}
 							{@const active = activeFilters.has(type as PinType)}
 							{#if i > 0}
-								<div class="bg-border-default" style="height:1px;"></div>
+								<div class="bg-border-default h-0.25" ></div>
 							{/if}
 							<button
 								type="button"
@@ -279,8 +279,8 @@
 								style="opacity:{active ? 1 : 0.38};"
 								onclick={() => toggleFilter(type as PinType)}
 							>
-								<img src={icon} alt={label} style="width:18px;height:24px;shrink:0;" />
-								<span class="text-text-primary" style="flex:1;font-size:13px;text-align:left;">{label}</span>
+								<img class="w-4.5 h-6 shrink-0" src={icon} alt={label}  />
+								<span class="text-text-primary text-[13px]"  style="flex:1;text-align:left">{label}</span>
 								<div style="width:13px;height:13px;border-radius:50%;shrink:0;background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--border-default)'};box-shadow:{active ? `0 0 6px ${color}55` : 'none'};transition:all 0.18s;"></div>
 							</button>
 						{/each}
@@ -302,7 +302,7 @@
 				searchQuery = '';
 			}}
 		>
-			<Crosshair style="width:18px;height:18px;color:var(--accent-default);" strokeWidth={1.75} />
+			<Crosshair class="size-4.5"  style="color:var(--accent-default)" strokeWidth={1.75} />
 		</button>
 
 		<!-- My location dot（对齐 Figma Make：用户位置圆点 + 白描边 + 主题色 glow） -->
@@ -338,13 +338,13 @@
 			onpointerdown={onHandlePointerDown}
 			onkeydown={onHandleKeydown}
 		>
-			<div class="bg-border-default" style="width:38px;height:4px;border-radius:2px;"></div>
+			<div class="bg-border-default w-9.5 h-1 rounded-[2px]" ></div>
 		</div>
 
 		<!-- Search bar -->
-		<div style="shrink:0;padding:0 14px 8px;">
-			<div class="flex items-center gap-2.5 px-3.5 rounded-[15px] input-surface" style="height:44px;">
-				<Search style="width:15px;height:15px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
+		<div class="shrink-0"  style="padding:0 14px 8px">
+			<div class="flex items-center gap-2.5 px-3.5 rounded-[15px] input-surface h-11" >
+				<Search class="size-3.75 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				<input
 					bind:value={searchQuery}
 					oninput={(e) => {
@@ -367,10 +367,10 @@
 							selectedLoc = null;
 						}}
 					>
-						<X style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={2} />
+						<X class="size-3.5"  style="color:var(--text-secondary)" strokeWidth={2} />
 					</button>
 				{:else if selectedLoc}
-					<Check style="width:14px;height:14px;color:var(--accent-default);shrink:0;" strokeWidth={2.5} />
+					<Check class="size-3.5 shrink-0"  style="color:var(--accent-default)" strokeWidth={2.5} />
 				{/if}
 			</div>
 		</div>
@@ -393,14 +393,14 @@
 		{/if}
 
 		<!-- Confirm button — always at bottom of sheet -->
-		<div style="shrink:0;padding:8px 14px 18px;">
+		<div class="shrink-0"  style="padding:8px 14px 18px">
 			<button
 				type="button"
 				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-white"
 				style="height:50px;font-size:15px;box-shadow:0 6px 20px var(--glow-accent);"
 				onclick={handleConfirm}
 			>
-				<MapPin style="width:15px;height:15px;" strokeWidth={2} />
+				<MapPin class="size-3.75"  strokeWidth={2} />
 				{selectedLoc ? `确认：${selectedLoc.displayName.slice(0, 11)}` : '设为浏览锚点'}
 			</button>
 		</div>

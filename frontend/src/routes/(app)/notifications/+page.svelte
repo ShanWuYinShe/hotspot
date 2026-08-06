@@ -148,7 +148,7 @@ const FILTER_TABS = [
 							style="border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);"
 							onclick={markAllRead}
 						>
-							<CheckCheck style="width:13px;height:13px;" strokeWidth={2} />
+							<CheckCheck class="size-3.25"  strokeWidth={2} />
 							全部已读
 						</button>
 					{/if}
@@ -182,8 +182,8 @@ const FILTER_TABS = [
 					<!-- 新消息分组标题（emphasis：accent 点 + 计数 pill，对齐 Figma Make） -->
 					<div class="mb-3 flex h-5 items-center gap-2">
 						<span aria-hidden="true" class="h-1.5 w-1.5 rounded-full" style="background:var(--accent-default);"></span>
-						<p class="uppercase" style="font-size:10px;font-weight:600;letter-spacing:0.14em;color:var(--text-primary);">新消息</p>
-						<span class="rounded-full px-1.5 py-0.5" style="font-size:10px;line-height:1;color:var(--accent-default);background:var(--accent-soft);">{unreadGroup.length}</span>
+						<p class="uppercase text-[10px]"  style="font-weight:600;letter-spacing:0.14em;color:var(--text-primary)">新消息</p>
+						<span class="rounded-full px-1.5 py-0.5 text-[10px]"  style="line-height:1;color:var(--accent-default);background:var(--accent-soft)">{unreadGroup.length}</span>
 					</div>
 					<ListContainer bordered>
 						{#each unreadGroup as n (n.id)}
@@ -195,7 +195,7 @@ const FILTER_TABS = [
 				{#if readGroup.length > 0}
 					<!-- 较早分组标题（非 emphasis：仅 label + flex 分隔线，对齐 Figma Make） -->
 					<div class="mb-3 flex h-5 items-center gap-2" style="margin-top:{unreadGroup.length > 0 ? '20px' : '0'};">
-						<p class="uppercase" style="font-size:10px;font-weight:500;letter-spacing:0.14em;color:var(--text-secondary);">较早</p>
+						<p class="uppercase text-[10px]"  style="font-weight:500;letter-spacing:0.14em;color:var(--text-secondary)">较早</p>
 						<span aria-hidden="true" class="h-px flex-1" style="background:var(--border-default);"></span>
 					</div>
 					<ListContainer bordered>
@@ -208,7 +208,7 @@ const FILTER_TABS = [
 				{#if filtered.length === 0}
 					<EmptyState title="暂无通知">
 						{#snippet icon()}
-							<Bell style="width:24px;height:24px;color:var(--text-secondary);opacity:0.5;" strokeWidth={1.25} />
+							<Bell class="size-6"  style="color:var(--text-secondary);opacity:0.5" strokeWidth={1.25} />
 						{/snippet}
 					</EmptyState>
 				{/if}
@@ -246,7 +246,7 @@ const FILTER_TABS = [
 					{#each notifications.filter((n) => n.type === 'follow').slice(0, 3) as n (n.id)}
 						<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.time}>
 							{#snippet trailing()}
-								<button type="button" class="hover-btn px-2.5 py-1 rounded-full outline-none shrink-0 bg-accent-soft text-accent-default text-xs" style="border:1px solid var(--accent-border);">
+								<button type="button" class="hover-btn px-2.5 py-1 rounded-full outline-none shrink-0 bg-accent-soft text-accent-default text-xs border border-accent-border" >
 									回关
 								</button>
 							{/snippet}

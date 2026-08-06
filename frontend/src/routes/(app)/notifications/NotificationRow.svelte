@@ -27,7 +27,7 @@
 	<!-- Avatar + icon badge -->
 	<div class="relative shrink-0">
 		{#if notif.user.avatar}
-			<div class="rounded-full overflow-hidden" style="width:44px;height:44px;">
+			<div class="rounded-full overflow-hidden size-11" >
 				<img src={notif.user.avatar} alt={notif.user.name} class="w-full h-full object-cover" />
 			</div>
 		{:else}
@@ -37,7 +37,7 @@
 		{/if}
 		{#if notif.user.avatar}
 			<div class="absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full" style="width:18px;height:18px;background:{cfg.color};border:2px solid var(--surface-primary);">
-				<cfg.icon style="width:9px;height:9px;color:var(--text-on-accent);" strokeWidth={2.5} />
+				<cfg.icon class="size-2.25"  style="color:var(--text-on-accent)" strokeWidth={2.5} />
 			</div>
 		{/if}
 	</div>
@@ -54,7 +54,7 @@
 	<!-- Moment thumb or unread dot -->
 	<div class="flex items-center gap-2 shrink-0">
 		{#if notif.momentImage}
-			<div class="rounded-tight overflow-hidden" style="width:38px;height:38px;">
+			<div class="rounded-tight overflow-hidden size-9.5" >
 				<img src={notif.momentImage} alt="" class="w-full h-full object-cover" />
 			</div>
 		{/if}

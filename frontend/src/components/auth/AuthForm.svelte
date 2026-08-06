@@ -149,8 +149,8 @@
 	}}
 >
 	{#if mode === 'register' || mode === 'guest'}
-		<label class="flex flex-col" style="gap:6px;">
-			<span style="font-size:11px;letter-spacing:0.08em;color:var(--text-secondary);">昵称</span>
+		<label class="flex flex-col gap-1.5" >
+			<span class="text-[11px]"  style="letter-spacing:0.08em;color:var(--text-secondary)">昵称</span>
 			<span class="flex items-center gap-2 border border-border-default px-3 py-3" style="background:var(--surface-primary);">
 				<input
 					type="text"
@@ -182,10 +182,10 @@
 				{/each}
 			</div>
 		{/if}
-		<label class="flex flex-col" style="gap:6px;">
-			<span style="font-size:11px;font-weight:500;color:var(--text-secondary);">手机号、邮箱或账号</span>
+		<label class="flex flex-col gap-1.5" >
+			<span class="text-[11px]"  style="font-weight:500;color:var(--text-secondary)">手机号、邮箱或账号</span>
 			<span class="flex items-center gap-2 border border-border-default px-3 py-3" style="background:var(--surface-primary);">
-				<Mail style="width:16px;height:16px;color:var(--accent-default);shrink:0;" strokeWidth={1.8} />
+				<Mail class="size-4 shrink-0"  style="color:var(--accent-default)" strokeWidth={1.8} />
 				<input
 					type="text"
 					bind:value={loginId}
@@ -199,8 +199,8 @@
 		</label>
 		{#if mode === 'login' && method === 'code'}
 			<!-- 验证码登录：验证码输入 + 获取验证码 -->
-			<label class="flex flex-col" style="gap:6px;">
-				<span style="font-size:11px;letter-spacing:0.08em;color:var(--text-secondary);">验证码</span>
+			<label class="flex flex-col gap-1.5" >
+				<span class="text-[11px]"  style="letter-spacing:0.08em;color:var(--text-secondary)">验证码</span>
 				<span class="flex items-center gap-2 border border-border-default px-3 py-3" style="background:var(--surface-primary);">
 					<input
 						type="text"
@@ -222,10 +222,10 @@
 				获取验证码
 			</button>
 		{:else if mode === 'login' || mode === 'register'}
-			<label class="flex flex-col" style="gap:6px;">
-				<span style="font-size:11px;font-weight:500;color:var(--text-secondary);">密码</span>
+			<label class="flex flex-col gap-1.5" >
+				<span class="text-[11px]"  style="font-weight:500;color:var(--text-secondary)">密码</span>
 				<span class="flex items-center gap-2 border border-border-default px-3 py-3" style="background:var(--surface-primary);">
-					<LockKeyhole style="width:16px;height:16px;color:var(--accent-default);shrink:0;" strokeWidth={1.8} />
+					<LockKeyhole class="size-4 shrink-0"  style="color:var(--accent-default)" strokeWidth={1.8} />
 					<input
 						type="password"
 						bind:value={password}
@@ -241,8 +241,8 @@
 	{/if}
 
 	{#if mode === 'forgot' || mode === 'reset'}
-		<label class="flex flex-col" style="gap:6px;">
-			<span style="font-size:11px;letter-spacing:0.08em;color:var(--text-secondary);">账号</span>
+		<label class="flex flex-col gap-1.5" >
+			<span class="text-[11px]"  style="letter-spacing:0.08em;color:var(--text-secondary)">账号</span>
 			<span class="flex items-center gap-2 border border-border-default px-3 py-3" style="background:var(--surface-primary);">
 				<input
 					type="text"
@@ -256,8 +256,8 @@
 			</span>
 		</label>
 		{#if mode === 'reset'}
-			<label class="flex flex-col" style="gap:6px;">
-				<span style="font-size:11px;letter-spacing:0.08em;color:var(--text-secondary);">验证码</span>
+			<label class="flex flex-col gap-1.5" >
+				<span class="text-[11px]"  style="letter-spacing:0.08em;color:var(--text-secondary)">验证码</span>
 				<span class="flex items-center gap-2 border border-border-default px-3 py-3" style="background:var(--surface-primary);">
 					<input
 						type="text"
@@ -270,8 +270,8 @@
 					/>
 				</span>
 			</label>
-			<label class="flex flex-col" style="gap:6px;">
-				<span style="font-size:11px;letter-spacing:0.08em;color:var(--text-secondary);">新密码</span>
+			<label class="flex flex-col gap-1.5" >
+				<span class="text-[11px]"  style="letter-spacing:0.08em;color:var(--text-secondary)">新密码</span>
 				<span class="flex items-center gap-2 border border-border-default px-3 py-3" style="background:var(--surface-primary);">
 					<input
 						type="password"
@@ -288,7 +288,7 @@
 	{/if}
 
 	{#if error}
-		<p style="font-size:12px;color:var(--status-danger);" role="alert">{error}</p>
+		<p class="text-xs"  style="color:var(--status-danger)" role="alert">{error}</p>
 	{/if}
 
 	<button
@@ -299,7 +299,7 @@
 	>
 		{submitting ? '处理中…' : submitLabel(mode)}
 		{#if !submitting && mode === 'login'}
-			<ArrowRight style="width:16px;height:16px;" strokeWidth={1.8} />
+			<ArrowRight class="size-4"  strokeWidth={1.8} />
 		{/if}
 	</button>
 
@@ -316,14 +316,14 @@
 			style="background:var(--surface-primary);"
 			onclick={() => (error = '微信登录暂未开放，请使用密码登录')}
 		>
-			<MessageCircle style="width:16px;height:16px;color:var(--accent-default);" strokeWidth={1.8} />
+			<MessageCircle class="size-4"  style="color:var(--accent-default)" strokeWidth={1.8} />
 			使用微信继续
 		</button>
 		<p class="mt-5 text-center text-xs leading-5 text-text-secondary">登录即表示你同意服务条款与隐私政策。</p>
 	{/if}
 
 	<!-- Mode switcher -->
-	<div class="flex flex-wrap items-center justify-center" style="gap:14px;margin-top:4px;">
+	<div class="flex flex-wrap items-center justify-center gap-3.5 mt-1" >
 		{#if mode !== 'login' && mode !== 'forgot' && mode !== 'reset'}
 			<button type="button" onclick={() => switchMode('login')} class="text-sm transition-opacity hover:opacity-70" style="color:var(--accent-default);">
 				已有账号？登录

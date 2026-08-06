@@ -87,7 +87,7 @@
 		{#snippet header()}
 			<PageHeader title="附近群组" subtitle={locationName ? `${locationName} · 5km 内` : '5km 内'} sticky glass contentClassName="pt-4 pb-0" onBack={() => history.back()}>
 				{#snippet subtitleIcon()}
-					<MapPin style="width:10px;height:10px;color:var(--accent-default);" strokeWidth={1.8} />
+					<MapPin class="size-2.5"  style="color:var(--accent-default)" strokeWidth={1.8} />
 				{/snippet}
 				{#snippet trailing()}
 					<!-- 计数统一在标题右侧（对齐首页/附近动态样板） -->
@@ -110,7 +110,7 @@
 	<div class="min-w-0">
 		{#if loading}
 			<div class="flex flex-col items-center gap-3 py-20">
-				<div class="rounded-full border-2 border-border-default border-t-accent-default animate-spin" style="width:28px;height:28px;"></div>
+				<div class="rounded-full border-2 border-border-default border-t-accent-default animate-spin size-7" ></div>
 				<p class="text-text-secondary text-base">加载附近群组…</p>
 			</div>
 		{:else if filtered.length}

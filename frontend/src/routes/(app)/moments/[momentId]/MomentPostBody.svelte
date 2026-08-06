@@ -66,7 +66,7 @@
 			<span class="text-text-secondary text-xs">来自 {moment.location || '附近'} 的动态</span>
 		</div>
 	{/if}
-	<div class="absolute top-3 left-3 px-2.5 py-0.5 rounded-full bg-accent-default" style="box-shadow:0 2px 8px var(--glow-accent);">
+	<div class="absolute top-3 left-3 px-2.5 py-0.5 rounded-full bg-accent-default shadow-[0_2px_8px_var(--glow-accent)]" >
 		<span class="text-text-on-accent text-xxs">#{moment.tag}</span>
 	</div>
 </div>
@@ -88,7 +88,7 @@
 			<div class="flex items-center gap-1.5">
 				<span class="text-text-secondary text-xs">{moment.handle}</span>
 				<span class="text-text-secondary text-xxs" style="opacity:0.5;">·</span>
-				<MapPin style="width:10px;height:10px;color:var(--accent-default);" strokeWidth={1.5} />
+				<MapPin class="size-2.5"  style="color:var(--accent-default)" strokeWidth={1.5} />
 				<span class="text-text-secondary text-xs">{moment.location}</span>
 			</div>
 		</div>
@@ -99,18 +99,18 @@
 	<p class="text-text-primary text-sm" style="line-height:1.75;">{moment.content}</p>
 
 	<!-- Actions -->
-	<div class="flex items-center justify-between mt-4 py-3" style="border-top:1px solid var(--border-default);border-bottom:1px solid var(--border-default);">
+	<div class="flex items-center justify-between mt-4 py-3 border-t border-border-default border-b border-border-default" >
 		<div class="flex gap-4">
 			<button
 				type="button"
 				class="tap-84 flex items-center gap-1.5 outline-none {liked ? 'text-accent-default' : 'text-text-secondary'}"
 				onclick={onToggleLike}
 			>
-				<Heart style="width:19px;height:19px;" strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
+				<Heart class="size-4.75"  strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
 				<span class="text-base">{moment.likes + (liked ? 1 : 0)}</span>
 			</button>
 			<div class="flex items-center gap-1.5 text-text-secondary">
-				<MessageCircle style="width:19px;height:19px;" strokeWidth={1.5} />
+				<MessageCircle class="size-4.75"  strokeWidth={1.5} />
 				<span class="text-base">{commentCount}</span>
 			</div>
 		</div>
@@ -120,7 +120,7 @@
 				class="tap-84 outline-none {saved ? 'text-accent-default' : 'text-text-secondary'}"
 				onclick={onToggleSave}
 			>
-				<Bookmark style="width:19px;height:19px;" strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />
+				<Bookmark class="size-4.75"  strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />
 			</button>
 			<button
 				type="button"
@@ -129,9 +129,9 @@
 				class="tap-84 rounded-full focus-ring {shareStatus === 'copied' ? 'text-accent-default' : 'text-text-secondary'}"
 			>
 				{#if shareStatus === 'copied'}
-					<Check style="width:19px;height:19px;" strokeWidth={1.8} />
+					<Check class="size-4.75"  strokeWidth={1.8} />
 				{:else}
-					<Share2 style="width:19px;height:19px;" strokeWidth={1.5} />
+					<Share2 class="size-4.75"  strokeWidth={1.5} />
 				{/if}
 			</button>
 		</div>
@@ -150,13 +150,13 @@
 						<span class="text-text-primary text-base">{c.user}</span>
 						<span class="text-text-secondary text-xs">{c.time}</span>
 					</div>
-					<p class="text-text-secondary text-base" style="line-height:1.6;margin-top:2px;">{c.text}</p>
+					<p class="text-text-secondary text-base mt-0.5"  style="line-height:1.6">{c.text}</p>
 					<div class="flex items-center gap-1 mt-1.5">
 						<button type="button" class="tap-84 flex items-center gap-1 outline-none text-text-secondary">
-							<Heart style="width:12px;height:12px;" strokeWidth={1.5} />
+							<Heart class="size-3"  strokeWidth={1.5} />
 							<span class="text-xs">{c.likes}</span>
 						</button>
-						<span class="text-text-secondary text-xs" style="margin-left:8px;cursor:pointer;">回复</span>
+						<span class="text-text-secondary text-xs ml-2"  style="cursor:pointer">回复</span>
 					</div>
 				</div>
 			</div>

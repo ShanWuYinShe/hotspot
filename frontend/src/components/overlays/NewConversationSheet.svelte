@@ -60,7 +60,7 @@ function toggleAdd(id: number) {
 					searchQ = '';
 				}}
 			>
-				<t.icon style="width:13px;height:13px;" strokeWidth={1.75} />
+				<t.icon class="size-3.25"  strokeWidth={1.75} />
 				{t.label}
 			</button>
 		{/each}
@@ -80,7 +80,7 @@ function toggleAdd(id: number) {
 	<div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-6">
 		{#if tab === 'add'}
 			<div class="animate-fade-in flex flex-col gap-2">
-				<p class="uppercase mb-2 text-text-secondary" style="font-size:10px;letter-spacing:0.14em;">
+				<p class="uppercase mb-2 text-text-secondary text-[10px]"  style="letter-spacing:0.14em">
 					附近推荐
 				</p>
 				{#each filteredSuggested as u (u.id)}
@@ -90,10 +90,10 @@ function toggleAdd(id: number) {
 						ariaLabel={addedIds.has(u.id) ? `取消添加 ${u.name}` : `添加 ${u.name}`}
 						class="flex items-center gap-3.5 p-3"
 					>
-						<img src={u.avatar} alt={u.name} class="rounded-full object-cover shrink-0" style="width:44px;height:44px;border:1.5px solid var(--border-default);" />
+						<img src={u.avatar} alt={u.name} class="rounded-full object-cover shrink-0 size-11"  style="border:1.5px solid var(--border-default)" />
 						<div class="flex-1 min-w-0">
-							<p class="text-text-primary" style="font-size:14px;">{u.name}</p>
-							<p class="text-text-secondary" style="font-size:11px;">{u.subtitle}</p>
+							<p class="text-text-primary text-sm" >{u.name}</p>
+							<p class="text-text-secondary text-[11px]" >{u.subtitle}</p>
 						</div>
 						<button
 							type="button"
@@ -107,10 +107,10 @@ function toggleAdd(id: number) {
 							}}
 						>
 							{#if addedIds.has(u.id)}
-								<Check style="width:10px;height:10px;" strokeWidth={2.5} />
+								<Check class="size-2.5"  strokeWidth={2.5} />
 								已添加
 							{:else}
-								<UserPlus style="width:10px;height:10px;" strokeWidth={2} />
+								<UserPlus class="size-2.5"  strokeWidth={2} />
 								添加
 							{/if}
 						</button>
@@ -129,16 +129,16 @@ function toggleAdd(id: number) {
 					ariaLabel="创建群聊"
 					class="mb-3 flex items-center gap-3.5 p-3"
 				>
-					<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default" style="width:44px;height:44px;box-shadow:0 3px 8px var(--glow-accent);">
-						<Users style="width:20px;height:20px;color:var(--text-on-accent);" strokeWidth={1.75} />
+					<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default size-11 shadow-[0_3px_8px_var(--glow-accent)]"  >
+						<Users class="size-5"  style="color:var(--text-on-accent)" strokeWidth={1.75} />
 					</div>
 					<div>
-						<p class="text-text-primary" style="font-size:14px;font-weight:500;">创建群聊</p>
-						<p class="text-text-secondary" style="font-size:11px;">邀请好友一起聊</p>
+						<p class="text-text-primary text-sm"  style="font-weight:500">创建群聊</p>
+						<p class="text-text-secondary text-[11px]" >邀请好友一起聊</p>
 					</div>
 				</ListItem>
 
-				<p class="uppercase mb-2 text-text-secondary" style="font-size:10px;letter-spacing:0.14em;">
+				<p class="uppercase mb-2 text-text-secondary text-[10px]"  style="letter-spacing:0.14em">
 					联系人
 				</p>
 				{#each filteredContacts as c (c.id)}
@@ -152,18 +152,18 @@ function toggleAdd(id: number) {
 						class="flex items-center gap-3.5 p-3"
 					>
 						<div class="relative shrink-0">
-							<img src={c.avatar} alt={c.name} class="rounded-full object-cover" style="width:44px;height:44px;border:1.5px solid var(--border-default);" />
+							<img src={c.avatar} alt={c.name} class="rounded-full object-cover size-11"  style="border:1.5px solid var(--border-default)" />
 							{#if c.online}
-								<span class="absolute bottom-0 right-0 rounded-full bg-status-online" style="width:10px;height:10px;border:2px solid var(--surface-primary);"></span>
+								<span class="absolute bottom-0 right-0 rounded-full bg-status-online size-2.5 border-2 border-surface-primary"  ></span>
 							{/if}
 						</div>
 						<div class="flex-1 min-w-0">
-							<p class="text-text-primary" style="font-size:14px;">{c.name}</p>
-							<p class="{c.online ? 'text-status-online' : 'text-text-secondary'}" style="font-size:11px;">
+							<p class="text-text-primary text-sm" >{c.name}</p>
+							<p class="{c.online ? 'text-status-online' : 'text-text-secondary'} text-[11px]" >
 								{c.online ? '在线' : '离线'}
 							</p>
 						</div>
-						<MessageCircle style="width:16px;height:16px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
+						<MessageCircle class="size-4 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 					</ListItem>
 				{/each}
 			</div>

@@ -191,7 +191,7 @@
 				style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
 				onclick={onBack}
 			>
-				<ArrowLeft style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
+				<ArrowLeft class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 			</button>
 		{/if}
 
@@ -204,7 +204,7 @@
 		>
 			{#snippet badge()}
 				{#if onlineNow}
-					<span class="absolute bottom-0 right-0 rounded-full bg-status-online" style="width:9px;height:9px;border:2px solid var(--surface-primary);"></span>
+					<span class="absolute bottom-0 right-0 rounded-full bg-status-online size-2.25 border-2 border-surface-primary"  ></span>
 				{/if}
 			{/snippet}
 		</Avatar>
@@ -214,7 +214,7 @@
 			<p class="truncate text-text-primary" style="font-size:{compact ? 13 : 14}px;">
 				{peerName || '会话'}
 			</p>
-			<p class="{peerTyping ? 'text-accent-default' : onlineNow ? 'text-status-online' : 'text-text-secondary'}" style="font-size:11px;">
+			<p class="{peerTyping ? 'text-accent-default' : onlineNow ? 'text-status-online' : 'text-text-secondary'} text-[11px]" >
 				{#if peerTyping}
 					正在输入…
 				{:else if onlineNow}
@@ -235,7 +235,7 @@
 					class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none bg-surface-primary"
 					style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
 				>
-					<Icon style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={1.5} />
+					<Icon class="size-3.5"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</button>
 			{/each}
 			<button
@@ -243,7 +243,7 @@
 				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none bg-surface-primary"
 				style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
 			>
-				<MoreHorizontal style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={1.5} />
+				<MoreHorizontal class="size-3.5"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 			</button>
 		</div>
 	</div>
@@ -257,10 +257,10 @@
 					class="flex items-center justify-center rounded-full"
 					style="width:56px;height:56px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xl);"
 				>
-					<MessageCircle style="width:22px;height:22px;color:var(--text-secondary);" strokeWidth={1.5} />
+					<MessageCircle class="size-5.5"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</div>
-				<p class="text-text-primary" style="font-size:14px;font-weight:500;">还没有消息</p>
-				<p class="text-center text-text-secondary" style="font-size:12px;max-width:220px;">打个招呼，开始这段对话吧</p>
+				<p class="text-text-primary text-sm"  style="font-weight:500">还没有消息</p>
+				<p class="text-center text-text-secondary text-xs"  style="max-width:220px">打个招呼，开始这段对话吧</p>
 			</div>
 		{:else}
 		<div class="animate-fade-in flex flex-col gap-2 px-4 pt-4 pb-3">
@@ -275,18 +275,18 @@
 
 	<!-- Input bar -->
 	{#if chat.sendError}
-		<p class="px-4 pb-1.5 text-status-warning" style="font-size:11px;">{chat.sendError}</p>
+		<p class="px-4 pb-1.5 text-status-warning text-[11px]" >{chat.sendError}</p>
 	{/if}
-	<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary" style="border-top:1px solid var(--border-default);">
+	<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary border-t border-border-default" >
 		<button
 			type="button"
 			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0 bg-surface-primary"
 			style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
 		>
-			<Smile style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
+			<Smile class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 		</button>
 
-		<div class="flex-1 flex items-center px-4 rounded-relaxed input-surface" style="height:38px;">
+		<div class="flex-1 flex items-center px-4 rounded-relaxed input-surface h-9.5" >
 			<input
 				type="text"
 				bind:value={chat.inputVal}

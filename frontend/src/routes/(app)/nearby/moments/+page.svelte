@@ -135,8 +135,8 @@ import { ROUTES } from '@/lib/routes';
 	>
 		{#snippet trailing()}
 			{#if device === 'tablet'}
-				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-default" style="box-shadow:0 3px 10px var(--glow-accent);">
-					<Sparkles style="width:11px;height:11px;color:var(--text-on-accent);" strokeWidth={2} />
+				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-default shadow-[0_3px_10px_var(--glow-accent)]" >
+					<Sparkles class="size-2.75"  style="color:var(--text-on-accent)" strokeWidth={2} />
 					<span class="text-white text-xs">精选</span>
 				</div>
 			{:else}
@@ -170,7 +170,7 @@ import { ROUTES } from '@/lib/routes';
 {#snippet feedState()}
 	{#if loading}
 		<div class="flex flex-col items-center gap-3 py-20">
-			<div class="rounded-full border-2 border-border-default border-t-accent-default animate-spin" style="width:28px;height:28px;"></div>
+			<div class="rounded-full border-2 border-border-default border-t-accent-default animate-spin size-7" ></div>
 			<p class="text-text-secondary text-base">加载附近动态…</p>
 		</div>
 	{:else}

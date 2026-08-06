@@ -50,7 +50,7 @@
 	{/if}
 
 	<!-- Tag chip -->
-	<div class="absolute top-2.5 left-2.5 z-[2] px-2 py-0.5 rounded-full bg-accent-default" style="box-shadow:0 2px 8px var(--glow-accent);">
+	<div class="absolute top-2.5 left-2.5 z-[2] px-2 py-0.5 rounded-full bg-accent-default shadow-[0_2px_8px_var(--glow-accent)]" >
 		<span class="text-white text-xxs">{item.tag}</span>
 	</div>
 
@@ -62,7 +62,7 @@
 				<Avatar src={item.avatar} name={item.user} size={22} style="border:1.5px solid var(--border-card-menu);" />
 				<span class="truncate text-xs text-text-primary" style="font-weight:500;">{item.user}</span>
 				<span class="ml-auto flex min-w-0 items-center gap-0.5 truncate text-xxs" style="color:var(--text-secondary);">
-					<MapPin style="width:9px;height:9px;shrink:0;color:var(--text-secondary);" strokeWidth={1.5} />
+					<MapPin class="size-2.25 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 					{item.location}
 				</span>
 			</div>
@@ -83,11 +83,11 @@
 							onLike();
 						}}
 					>
-						<Heart style="width:15px;height:15px;" strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
+						<Heart class="size-3.75"  strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
 						<span class="text-xs">{item.likes + (liked ? 1 : 0)}</span>
 					</button>
 					<span class="flex items-center gap-1.5 text-xs text-text-secondary">
-						<MessageCircle style="width:15px;height:15px;" strokeWidth={1.5} />
+						<MessageCircle class="size-3.75"  strokeWidth={1.5} />
 						{item.comments}
 					</span>
 				</div>
@@ -100,7 +100,7 @@
 							onSave();
 						}}
 					>
-						<Bookmark style="width:15px;height:15px;" strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />
+						<Bookmark class="size-3.75"  strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />
 					</button>
 				</div>
 			</div>

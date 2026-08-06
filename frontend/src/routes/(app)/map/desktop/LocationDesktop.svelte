@@ -115,7 +115,7 @@
 
 <div class="flex h-full bg-surface-primary">
 	<!-- ══ LEFT SIDEBAR ══ -->
-	<div class="flex flex-col shrink-0" style="width:340px;border-right:1px solid var(--border-default);">
+	<div class="flex flex-col shrink-0 w-85 border-r border-border-default"  >
 		<LocationDesktopPanel
 			bind:searchQuery
 			{searchResults}
@@ -188,7 +188,7 @@
 
 		{#if mapLoading}
 			<!-- 加载中的轻量指示 -->
-			<div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary" style="box-shadow:0 2px 12px var(--elevation-shadow-dark);border:1px solid var(--border-default);">
+			<div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary shadow-[0_2px_12px_var(--elevation-shadow-dark)] border border-border-default" >
 				加载地图数据…
 			</div>
 		{/if}
@@ -203,17 +203,17 @@
 				style="padding:9px 16px;font-size:13px;background:{showFilter ? 'var(--accent-default)' : 'var(--surface-primary)'};color:{showFilter ? 'white' : 'var(--text-primary)'};border:1px solid {showFilter ? 'transparent' : 'var(--border-default)'};box-shadow:{showFilter ? '0 4px 16px var(--glow-accent)' : '0 4px 16px var(--elevation-shadow-dark)'};"
 				onclick={() => (showFilter = !showFilter)}
 			>
-				<SlidersHorizontal style="width:13px;height:13px;" strokeWidth={showFilter ? 2.5 : 1.75} />
+				<SlidersHorizontal class="size-3.25"  strokeWidth={showFilter ? 2.5 : 1.75} />
 				筛选
 				{#if activeFilters.size < 3}
 					<span style="margin-left:2px;font-size:10px;padding:1px 6px;border-radius:999px;background:{showFilter ? 'var(--surface-map-control-active)' : 'var(--accent-soft)'};color:{showFilter ? 'white' : 'var(--accent-default)'};font-weight:500;">{activeFilters.size}</span>
 				{/if}
 			</button>
 			{#if showFilter}
-				<div class="mt-2 overflow-hidden rounded-control" style="background:var(--surface-primary);box-shadow:0 8px 28px var(--elevation-shadow-dark);border:1px solid var(--border-default);width:200px;">
+				<div class="mt-2 overflow-hidden rounded-control w-50 shadow-[0_8px_28px_var(--elevation-shadow-dark)] border border-border-default"   style="background:var(--surface-primary)">
 					{#each [{ type: 'user', label: '用户', icon: markerUserUrl, clusterIcon: markerUserClusterUrl, color: PIN_COLORS.user, count: userCount }, { type: 'group', label: '群组', icon: markerGroupUrl, clusterIcon: markerGroupClusterUrl, color: PIN_COLORS.group, count: groupCount }, { type: 'moment', label: '瞬间', icon: markerMomentUrl, clusterIcon: markerMomentClusterUrl, color: PIN_COLORS.moment, count: momentCount }] as item, i}
 						{#if i > 0}
-							<div style="height:1px;background:var(--border-default);"></div>
+							<div class="h-0.25"  style="background:var(--border-default)"></div>
 						{/if}
 						{@const active = activeFilters.has(item.type as PinType)}
 						<button
@@ -222,21 +222,21 @@
 							style="opacity:{active ? 1 : 0.45};"
 							onclick={() => toggleFilter(item.type as PinType)}
 						>
-							<img src={item.icon} alt="" style="width:15px;height:21px;" />
-							<img src={item.clusterIcon} alt="" style="width:15px;height:21px;opacity:0.65;" />
-							<span class="flex-1 text-text-primary" style="font-size:12px;">{item.label}</span>
+							<img class="w-3.75 h-5.25" src={item.icon} alt=""  />
+							<img class="w-3.75 h-5.25" src={item.clusterIcon} alt=""  style="opacity:0.65" />
+							<span class="flex-1 text-text-primary text-xs" >{item.label}</span>
 							<span style="font-size:12px;color:{item.color};font-weight:600;">{item.count}</span>
 							<span class="flex items-center justify-center shrink-0" style="width:14px;height:14px;border-radius:4px;background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--border-strong)'};transition:all 0.18s;">
 								{#if active}
-									<Check style="width:10px;height:10px;color:white;" strokeWidth={3} />
+									<Check class="size-2.5"  style="color:white" strokeWidth={3} />
 								{/if}
 							</span>
 						</button>
 					{/each}
-					<div style="height:1px;background:var(--border-default);"></div>
+					<div class="h-0.25"  style="background:var(--border-default)"></div>
 					<div class="flex items-center gap-2 px-3 py-2">
 						<span style="width:13px;height:13px;border-radius:50%;background:{PIN_COLORS.user};border:2px solid var(--surface-primary);box-shadow:0 0 5px {pinTone('user', 50)};"></span>
-						<span class="text-text-secondary" style="font-size:12px;">我的位置</span>
+						<span class="text-text-secondary text-xs" >我的位置</span>
 					</div>
 				</div>
 			{/if}
@@ -253,16 +253,16 @@
 				<div class="flex items-center gap-3">
 					{#if selectedPin.type === 'user' && selectedPin.avatar}
 						<div class="relative shrink-0">
-							<img src={selectedPin.avatar} alt={selectedPin.name || selectedPin.title || ''} class="rounded-full object-cover" style="width:52px;height:52px;" />
+							<img src={selectedPin.avatar} alt={selectedPin.name || selectedPin.title || ''} class="rounded-full object-cover size-13"  />
 							{#if selectedPin.online}
-								<span class="absolute bottom-0 right-0 rounded-full bg-status-online" style="width:12px;height:12px;border:2.5px solid var(--surface-primary);"></span>
+								<span class="absolute bottom-0 right-0 rounded-full bg-status-online size-3"  style="border:2.5px solid var(--surface-primary)"></span>
 							{/if}
 						</div>
 					{:else if selectedPin.type === 'moment' && selectedPin.image}
-						<img src={selectedPin.image} alt={selectedPin.name || selectedPin.title || ''} class="rounded-xl object-cover shrink-0" style="width:52px;height:52px;" />
+						<img src={selectedPin.image} alt={selectedPin.name || selectedPin.title || ''} class="rounded-xl object-cover shrink-0 size-13"  />
 					{:else}
 						<div class="flex items-center justify-center rounded-[15px] shrink-0" style="width:52px;height:52px;background:{pinTone(selectedPin.type, 14)};">
-							<img src={getMarkerUrl(selectedPin.type, selectedPin.count ?? 1)} alt="" style="width:26px;height:35px;" />
+							<img class="w-6.5 h-8.75" src={getMarkerUrl(selectedPin.type, selectedPin.count ?? 1)} alt=""  />
 						</div>
 					{/if}
 					<div class="flex-1 min-w-0">
@@ -289,7 +289,7 @@
 							{/if}
 							{#if selectedPin.likes}
 								<span class="flex items-center gap-1">
-									<Heart style="width:10px;height:10px;color:var(--status-danger);" strokeWidth={1.5} />
+									<Heart class="size-2.5"  style="color:var(--status-danger)" strokeWidth={1.5} />
 									<span class="text-text-secondary text-xs">{selectedPin.likes}</span>
 								</span>
 							{/if}
@@ -303,7 +303,7 @@
 							onclick={() => selectedPin && openPinDetail(selectedPin)}
 						>
 							查看详情
-							<ChevronRight style="width:13px;height:13px;" strokeWidth={2} />
+							<ChevronRight class="size-3.25"  strokeWidth={2} />
 						</button>
 						<button
 							type="button"
@@ -311,7 +311,7 @@
 							style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);"
 							onclick={() => (selectedPin = null)}
 						>
-							<X style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={2} />
+							<X class="size-3.5"  style="color:var(--text-secondary)" strokeWidth={2} />
 						</button>
 					</div>
 				</div>
@@ -319,7 +319,7 @@
 		{/if}
 
 		<!-- Attribution -->
-		<div class="text-text-secondary" style="position:absolute;bottom:4px;left:8px;font-size:9px;opacity:0.38;pointer-events:none;z-index:1;">
+		<div class="text-text-secondary text-[9px]"  style="position:absolute;bottom:4px;left:8px;opacity:0.38;pointer-events:none;z-index:1">
 			© OpenStreetMap contributors
 		</div>
 	</div>

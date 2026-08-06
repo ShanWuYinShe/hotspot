@@ -54,7 +54,7 @@
 <div>
 	{#if !embedded}
 		<!-- Header -->
-		<header class="flex items-center justify-between py-4" style="border-bottom:1px solid var(--border-default);">
+		<header class="flex items-center justify-between py-4 border-b border-border-default" >
 			<div>
 				<div class="flex items-center gap-2.5">
 					<span class="text-text-primary text-[15px]">{title}</span>
@@ -67,7 +67,7 @@
 				{/if}
 			</div>
 			{#if headerNote}
-				<span class="rounded-full bg-accent-soft px-3 py-1 text-xs text-accent-default" style="border:1px solid var(--accent-border);">
+				<span class="rounded-full bg-accent-soft px-3 py-1 text-xs text-accent-default border border-accent-border" >
 					{headerNote}
 				</span>
 			{:else if headerExtra}
@@ -102,7 +102,7 @@
 					onclick={() => onFilter?.(pill.id)}
 				>
 					{#if pill.icon}
-						<pill.icon style="width:11px;height:11px;" strokeWidth={active ? 2 : 1.5} />
+						<pill.icon class="size-2.75"  strokeWidth={active ? 2 : 1.5} />
 					{/if}
 					{pill.label}
 				</button>

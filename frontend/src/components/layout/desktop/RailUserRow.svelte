@@ -24,13 +24,13 @@
 		class="tap-985 flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-tight outline-none"
 		onclick={onClick}
 	>
-		<div class="rounded-full overflow-hidden shrink-0" style="width:34px;height:34px;border:1px solid var(--border-default);">
+		<div class="rounded-full overflow-hidden shrink-0 size-8.5 border border-border-default"  >
 			<img src={avatar} alt={name} class="w-full h-full object-cover" />
 		</div>
 		<div class="flex-1 min-w-0">
-			<p style="font-size:13px;color:var(--text-primary);" class="truncate">{name}</p>
+			<p  style="color:var(--text-primary)" class="truncate text-[13px]">{name}</p>
 			{#if sub}
-				<p style="font-size:11px;color:var(--text-secondary);margin-top:1px;" class="truncate">{sub}</p>
+				<p  style="color:var(--text-secondary)" class="truncate text-[11px] mt-px">{sub}</p>
 			{/if}
 		</div>
 	</button>

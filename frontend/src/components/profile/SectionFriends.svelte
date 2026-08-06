@@ -76,7 +76,7 @@
 							void goto(ROUTES.message(f.id));
 						}}
 					>
-						<MessageCircle style="width:11px;height:11px;" strokeWidth={2} />
+						<MessageCircle class="size-2.75"  strokeWidth={2} />
 						发消息
 					</button>
 					<button

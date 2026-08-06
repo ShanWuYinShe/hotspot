@@ -79,7 +79,7 @@
 				class="flex items-center justify-center rounded-full bg-accent-default"
 				style="width:72px;height:72px;box-shadow:0 8px 24px var(--glow-accent);"
 			>
-				<Check style="width:32px;height:32px;color:var(--text-on-accent);" strokeWidth={2.5} />
+				<Check class="size-8"  style="color:var(--text-on-accent)" strokeWidth={2.5} />
 			</div>
 			<div>
 				<p class="text-[20px] font-semibold text-text-primary">群组已创建！</p>
@@ -103,7 +103,7 @@
 					class="hover-btn flex flex-col items-center justify-center gap-2 rounded-feature outline-none bg-surface-primary"
 					style="width:100%;height:110px;box-shadow:var(--shadow-neu-inset-sm);border:2px dashed var(--border-default);"
 				>
-					<Camera style="width:26px;height:26px;color:var(--text-secondary);" strokeWidth={1.25} />
+					<Camera class="size-6.5"  style="color:var(--text-secondary)" strokeWidth={1.25} />
 					<span class="text-sm text-text-secondary">添加封面图片</span>
 				</button>
 			</div>
@@ -111,7 +111,7 @@
 			<!-- Group name -->
 			<div>
 				<label class="text-xs tracking-widest uppercase text-text-secondary" for="group-name">群组名称 *</label>
-				<div class="flex items-center gap-2.5 mt-1.5 px-4 rounded-control input-surface" style="height:46px;">
+				<div class="flex items-center gap-2.5 mt-1.5 px-4 rounded-control input-surface h-11.5" >
 					<input
 						id="group-name"
 						class="flex-1 bg-transparent outline-none text-text-primary text-[14px]"
@@ -166,9 +166,9 @@
 			>
 				<div class="flex items-center gap-3">
 					{#if isPrivate}
-						<Lock style="width:18px;height:18px;color:var(--accent-default);" strokeWidth={1.5} />
+						<Lock class="size-4.5"  style="color:var(--accent-default)" strokeWidth={1.5} />
 					{:else}
-						<Globe style="width:18px;height:18px;color:var(--accent-default);" strokeWidth={1.5} />
+						<Globe class="size-4.5"  style="color:var(--accent-default)" strokeWidth={1.5} />
 					{/if}
 					<div>
 						<p class="text-[14px] text-text-primary">{isPrivate ? '私密群组' : '公开群组'}</p>
@@ -212,12 +212,12 @@
 				class="flex items-center gap-2.5 px-4 py-3 rounded-relaxed bg-surface-primary"
 				style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--border-default);"
 			>
-				<MapPin style="width:16px;height:16px;color:var(--accent-default);shrink:0;" strokeWidth={1.5} />
+				<MapPin class="size-4 shrink-0"  style="color:var(--accent-default)" strokeWidth={1.5} />
 				<div class="flex-1 min-w-0">
 					<p class="text-base text-text-primary">{locationName || '自动定位中…'}</p>
 					<p class="text-xs text-text-secondary">自动定位 — 可修改</p>
 				</div>
-				<ChevronRight style="width:13px;height:13px;color:var(--text-secondary);" strokeWidth={1.5} />
+				<ChevronRight class="size-3.25"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 			</div>
 
 			{#if createError}

@@ -27,8 +27,8 @@
 			style="color:var(--accent-default);"
 			onclick={onAction}
 		>
-				<span style="font-size:11px;">{action}</span>
-				<ChevronRight style="width:12px;height:12px;" strokeWidth={1.5} />
+				<span class="text-[11px]" >{action}</span>
+				<ChevronRight class="size-3"  strokeWidth={1.5} />
 			</button>
 		{/if}
 	</div>

@@ -28,7 +28,7 @@
 	<span class="absolute top-2 left-2 z-[2] px-1.5 py-0.5 rounded-full text-white bg-accent-default text-[9px]">{group.category}</span>
 
 	<!-- 右上：隐私 -->
-	<span class="absolute top-2 right-2 z-[2] flex items-center justify-center rounded-full" style="width:20px;height:20px;background:var(--surface-overlay-strong);">
+	<span class="absolute top-2 right-2 z-[2] flex items-center justify-center rounded-full size-5"  style="background:var(--surface-overlay-strong)">
 		{#if group.privacy === 'private'}
 			<Lock size={10} color="white" />
 		{:else}
@@ -62,7 +62,7 @@
 			<!-- activity 独立行（对齐 Figma：semantic-online 色 + CalendarDays 图标） -->
 			<div class="mt-2 flex items-center justify-between gap-2">
 				<span class="min-w-0 truncate text-status-online text-xxs">
-					<CalendarDays class="inline mr-1" style="width:10px;height:10px;" />
+					<CalendarDays class="inline mr-1 size-2.5"  />
 					{group.activity}
 				</span>
 				<JoinButton {group} {onToggle} />

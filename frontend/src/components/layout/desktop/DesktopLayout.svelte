@@ -134,8 +134,8 @@
 				void goto(ROUTES.home);
 			}}
 		>
-			<img src={imgHotSpot} alt="HotSpot Logo" class="rounded-full object-cover shrink-0" style="width:28px;height:28px;" />
-			<span class="tracking-tight" style="font-size:17px;color:var(--text-primary);">HotSpot</span>
+			<img src={imgHotSpot} alt="HotSpot Logo" class="rounded-full object-cover shrink-0 size-7"  />
+			<span class="tracking-tight text-[17px]"  style="color:var(--text-primary)">HotSpot</span>
 		</button>
 
 		<!-- Spacer -->
@@ -203,7 +203,7 @@
 	</header>
 
 	<!-- BODY — sidebar + main content -->
-	<div class="desktop-workspace relative z-0 flex flex-1 overflow-hidden" style="gap:0px;">
+	<div class="desktop-workspace relative z-0 flex flex-1 overflow-hidden gap-0" >
 		<!-- Sidebar (224px expanded / 72px collapsed, fixed width) -->
 		<aside
 			class="relative flex flex-col shrink-0 overflow-visible box-border transition-[width] duration-200"
@@ -275,7 +275,7 @@
 
 	<!-- CREATE MODAL — centered dialog on desktop -->
 	<Dialog.Root open={showCreate} onOpenChange={(next) => (next ? openComposer() : closeComposer())}>
-		<Dialog.Content side="center" class="overflow-hidden" style="width:480px;height:78vh;max-height:700px;">
+		<Dialog.Content side="center" class="overflow-hidden w-120"  style="height:78vh;max-height:700px">
 			<CreateSheet onClose={closeComposer} />
 		</Dialog.Content>
 	</Dialog.Root>

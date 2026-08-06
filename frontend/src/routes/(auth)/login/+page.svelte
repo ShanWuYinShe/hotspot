@@ -13,8 +13,8 @@
 
 <div class="flex min-h-dvh items-center justify-center bg-surface-primary px-5 py-10">
 	<section class="w-full max-w-100 border border-border-default p-6 sm:p-8" style="background:var(--surface-primary);">
-		<div class="flex items-center justify-center rounded-full" style="width:44px;height:44px;background:var(--accent-default);color:white;box-shadow:0 4px 14px var(--glow-accent);">
-			<Leaf style="width:20px;height:20px;" strokeWidth={1.8} />
+		<div class="flex items-center justify-center rounded-full size-11 shadow-[0_4px_14px_var(--glow-accent)]"   style="background:var(--accent-default);color:white">
+			<Leaf class="size-5"  strokeWidth={1.8} />
 		</div>
 		<p class="mt-6 text-xs font-medium uppercase tracking-[0.14em] text-accent-default">热点</p>
 		<h1 class="mt-2 text-2xl font-medium tracking-[-0.015em] text-text-primary">回来看看附近的故事。</h1>

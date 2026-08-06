@@ -126,10 +126,10 @@
 					<item.icon style="width:16px;height:16px;color:{item.color};" strokeWidth={1.75} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p style="font-size:13px;color:var(--text-primary);">{item.title}</p>
-					<p style="font-size:11px;color:var(--text-secondary);margin-top:1px;">{item.sub}</p>
+					<p class="text-[13px]"  style="color:var(--text-primary)">{item.title}</p>
+					<p class="text-[11px] mt-px"  style="color:var(--text-secondary)">{item.sub}</p>
 				</div>
-				<ChevronRight style="width:13px;height:13px;color:var(--text-secondary);" strokeWidth={1.5} />
+				<ChevronRight class="size-3.25"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 			</ListItem>
 		{/each}
 	</ListContainer>
@@ -150,9 +150,9 @@
 				{/snippet}
 				{#snippet subtitle()}
 					<p class="mt-1 flex items-center gap-1.5">
-						<span style="font-size:10px;color:var(--accent-default);">#{u.tag}</span>
-						<span style="font-size:10px;color:var(--text-secondary);opacity:0.5;">·</span>
-						<span style="font-size:10px;color:var(--text-secondary);">{u.distance}</span>
+						<span class="text-[10px]"  style="color:var(--accent-default)">#{u.tag}</span>
+						<span class="text-[10px]"  style="color:var(--text-secondary);opacity:0.5">·</span>
+						<span class="text-[10px]"  style="color:var(--text-secondary)">{u.distance}</span>
 					</p>
 				{/snippet}
 				{#snippet actions()}
@@ -197,7 +197,7 @@
 				{#snippet trailing()}
 					<div class="flex items-center gap-2">
 						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full surface-flat">
-							<span class="rounded-full" style="width:6px;height:6px;background:var(--status-online);"></span>
+							<span class="rounded-full size-1.5"  style="background:var(--status-online)"></span>
 							<span class="text-xs" style="color:var(--text-secondary);">{onlineCount} 在线</span>
 						</div>
 						{#if platform.platform === 'tablet'}
@@ -208,7 +208,7 @@
 								class="hover-btn flex size-8 items-center justify-center rounded-full outline-none bg-surface-primary text-text-secondary"
 								style="border:1px solid var(--border-default);"
 							>
-								<Search style="width:16px;height:16px;" strokeWidth={1.8} />
+								<Search class="size-4"  strokeWidth={1.8} />
 							</button>
 						{/if}
 					</div>
@@ -220,8 +220,8 @@
 				{#snippet trailing()}
 					<div class="flex items-center gap-2">
 						<div class="flex items-center gap-1.5 py-1.5 px-3 rounded-full surface-flat">
-							<span class="rounded-full" style="width:6px;height:6px;background:var(--status-online);"></span>
-							<span style="font-size:11px;color:var(--text-secondary);">{defaultLocation?.location_name || '附近'}</span>
+							<span class="rounded-full size-1.5"  style="background:var(--status-online)"></span>
+							<span class="text-[11px]"  style="color:var(--text-secondary)">{defaultLocation?.location_name || '附近'}</span>
 						</div>
 						<button
 							type="button"
@@ -256,7 +256,7 @@
 				<div class="flex items-end justify-between mb-5">
 					<div>
 						<span class="eyebrow">附近的人</span>
-						<p class="text-xs" style="color:var(--text-secondary);margin-top:4px;">
+						<p class="text-xs mt-1"  style="color:var(--text-secondary)">
 							5km 范围内 · 实时更新
 						</p>
 					</div>
@@ -266,7 +266,7 @@
 						onclick={() => void goto(ROUTES.nearbyPeople)}
 					>
 						<span class="text-xs">查看全部</span>
-						<ChevronRight style="width:13px;height:13px;" strokeWidth={1.5} />
+						<ChevronRight class="size-3.25"  strokeWidth={1.5} />
 					</button>
 				</div>
 

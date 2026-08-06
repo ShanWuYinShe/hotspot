@@ -8,7 +8,7 @@
 </script>
 
 <div class="fixed inset-0 z-[var(--z-toast)] flex items-center justify-center p-6" style="background:var(--surface-primary);">
-	<div class="flex flex-col items-center text-center" style="max-width:360px;gap:16px;">
+	<div class="flex flex-col items-center text-center gap-4"  style="max-width:360px">
 		<div
 			class="flex items-center justify-center rounded-full"
 			style="width:64px;height:64px;background:var(--color-danger-bg);"

@@ -42,18 +42,18 @@
 		class="flex items-center justify-center rounded-full shrink-0"
 		style="width:{collapsed ? 30 : 34}px;height:{collapsed ? 30 : 34}px;background:var(--accent-default);box-shadow:none;"
 	>
-		<Navigation2 style="width:18px;height:18px;color:var(--text-on-accent);" strokeWidth={2} />
+		<Navigation2 class="size-4.5"  style="color:var(--text-on-accent)" strokeWidth={2} />
 	</div>
 
 	<div class={collapsed ? 'sr-only' : 'flex-1 min-w-0 text-left'}>
-		<p style="font-size:12px;color:var(--text-primary);font-weight:500;">位置选择</p>
+		<p class="text-xs"  style="color:var(--text-primary);font-weight:500">位置选择</p>
 		<div class="flex items-center gap-1">
-			<span class="inline-block rounded-full" style="width:5px;height:5px;background:var(--status-online);"></span>
-			<p style="font-size:10px;line-height:1.4;color:var(--text-secondary);">{locationName || '自动定位'}</p>
+			<span class="inline-block rounded-full size-1.25"  style="background:var(--status-online)"></span>
+			<p class="text-[10px]"  style="line-height:1.4;color:var(--text-secondary)">{locationName || '自动定位'}</p>
 		</div>
 	</div>
 
 	{#if !collapsed}
-		<ChevronRight style="width:13px;height:13px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
+		<ChevronRight class="size-3.25 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 	{/if}
 </button>

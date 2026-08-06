@@ -78,7 +78,7 @@
 			onclick={() => void handleSave()}
 		>
 			{#if saved}
-				<Check style="width:14px;height:14px;color:var(--text-on-accent);" strokeWidth={2.5} />
+				<Check class="size-3.5"  style="color:var(--text-on-accent)" strokeWidth={2.5} />
 			{:else}
 				保存
 			{/if}
@@ -96,7 +96,7 @@
 			class="hover-btn absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none bg-surface-overlay-strong text-white text-sm"
 			style="padding:6px 12px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.25);"
 		>
-			<Camera style="width:13px;height:13px;" strokeWidth={1.75} />
+			<Camera class="size-3.25"  strokeWidth={1.75} />
 			更换横幅
 		</button>
 	</div>
@@ -104,7 +104,7 @@
 	<!-- Avatar edit -->
 	<div class="flex items-center gap-4 -mt-8 ml-2">
 		<div class="relative shrink-0">
-			<div class="rounded-[22px] overflow-hidden" style="width:72px;height:72px;border:3px solid var(--surface-primary);box-shadow:0 6px 20px rgba(0,0,0,0.22);">
+			<div class="rounded-[22px] overflow-hidden size-18"  style="border:3px solid var(--surface-primary);box-shadow:0 6px 20px rgba(0,0,0,0.22)">
 				<img src={avatar} alt="avatar" class="w-full h-full object-cover" />
 			</div>
 			<button
@@ -112,7 +112,7 @@
 				class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-accent-default"
 				style="width:26px;height:26px;border:2px solid var(--surface-primary);box-shadow:0 2px 8px var(--glow-accent);"
 			>
-				<Camera style="width:12px;height:12px;color:var(--text-on-accent);" strokeWidth={2} />
+				<Camera class="size-3"  style="color:var(--text-on-accent)" strokeWidth={2} />
 			</button>
 		</div>
 		<div>
@@ -126,7 +126,7 @@
 	<!-- Form fields — spec: nickname, bio, tags are the only user-editable profile fields. -->
 	<div class="flex flex-col gap-1.5">
 		<div class="flex items-center gap-1.5">
-			<User style="width:13px;height:13px;color:var(--accent-default);" strokeWidth={1.75} />
+			<User class="size-3.25"  style="color:var(--accent-default)" strokeWidth={1.75} />
 			<label class="text-text-secondary text-xs uppercase tracking-widest" for="edit-nickname">昵称</label>
 		</div>
 		<div class="px-4 py-3 rounded-relaxed input-surface">
@@ -142,7 +142,7 @@
 
 	<div class="flex flex-col gap-1.5">
 		<div class="flex items-center gap-1.5">
-			<FileText style="width:13px;height:13px;color:var(--accent-default);" strokeWidth={1.75} />
+			<FileText class="size-3.25"  style="color:var(--accent-default)" strokeWidth={1.75} />
 			<label class="text-text-secondary text-xs uppercase tracking-widest" for="edit-bio">个人简介</label>
 		</div>
 		<div class="px-4 py-3 rounded-relaxed input-surface">

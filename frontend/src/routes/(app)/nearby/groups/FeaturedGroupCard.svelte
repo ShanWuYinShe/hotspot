@@ -43,14 +43,14 @@
 							{group.members}
 						</span>
 						<span class="flex items-center gap-1 shrink-0 text-status-online">
-							<span class="rounded-full" style="width:6px;height:6px;background:var(--status-online);"></span>
+							<span class="rounded-full size-1.5"  style="background:var(--status-online)"></span>
 							{group.online} 在线
 						</span>
 						<span class="shrink-0">{group.distance}</span>
 					</div>
 					<!-- activity 独立 accent 行（对齐 Figma：与 stats 行分离） -->
 					<p class="mt-2 truncate text-xs text-accent-default">
-						<CalendarDays class="inline mr-1" style="width:12px;height:12px;" />
+						<CalendarDays class="inline mr-1 size-3"  />
 						{group.activity}
 					</p>
 				</div>

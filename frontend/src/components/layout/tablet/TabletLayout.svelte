@@ -88,7 +88,7 @@
 				{/each}
 
 				<!-- Centre FAB -->
-				<div class="flex items-center justify-center shrink-0" style="width:64px;">
+				<div class="flex items-center justify-center shrink-0 w-16" >
 					<button
 						type="button"
 						class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none select-none"
@@ -97,9 +97,9 @@
 						onclick={toggleComposer}
 					>
 						{#if composer.composerOpen}
-							<X style="width:19px;height:19px;color:var(--text-on-accent);" strokeWidth={2.2} />
+							<X class="size-4.75"  style="color:var(--text-on-accent)" strokeWidth={2.2} />
 						{:else}
-							<Plus style="width:19px;height:19px;color:var(--text-on-accent);" strokeWidth={2.2} />
+							<Plus class="size-4.75"  style="color:var(--text-on-accent)" strokeWidth={2.2} />
 						{/if}
 					</button>
 				</div>

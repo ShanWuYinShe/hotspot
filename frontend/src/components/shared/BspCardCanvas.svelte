@@ -355,6 +355,6 @@
 		</div>
 	{/each}
 	{#if hasMore}
-		<div bind:this={sentinelEl} aria-hidden="true" style="position:absolute;bottom:0;left:0;right:0;height:1px;"></div>
+		<div class="h-0.25" bind:this={sentinelEl} aria-hidden="true"  style="position:absolute;bottom:0;left:0;right:0"></div>
 	{/if}
 </section>

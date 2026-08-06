@@ -19,11 +19,11 @@
 <div class="flex h-full flex-col bg-surface-primary">
 	<!-- Handle -->
 	<div class="flex shrink-0 justify-center pt-3 pb-1">
-		<div class="rounded-full bg-border-default" style="width:36px;height:4px;"></div>
+		<div class="rounded-full bg-border-default w-9 h-1" ></div>
 	</div>
 
 	<!-- Header -->
-	<div class="flex shrink-0 items-center justify-between px-5 py-3" style="border-bottom:1px solid var(--border-default);">
+	<div class="flex shrink-0 items-center justify-between px-5 py-3 border-b border-border-default" >
 		<h2 class="text-[17px] text-text-primary">{title}</h2>
 		<button
 			type="button"
@@ -31,7 +31,7 @@
 			class="hover-btn scale-btn flex items-center justify-center rounded-full bg-surface-primary outline-none shadow-neu-xs"
 			style="width:32px;height:32px;border:1px solid var(--border-default);"
 		>
-			<X style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={2} />
+			<X class="size-3.5"  style="color:var(--text-secondary)" strokeWidth={2} />
 		</button>
 	</div>
 

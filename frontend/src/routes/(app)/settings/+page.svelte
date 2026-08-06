@@ -80,12 +80,12 @@ import ListItem from '@/components/list/ListItem.svelte';
 	<!-- User card — hero with ambient glow -->
 	<div class="ambient-glow mb-3">
 		<button type="button" class="hover-btn flex items-center gap-4 px-4 py-3.5 rounded-panel w-full outline-none text-left surface-hero">
-			<Avatar src={accountAvatar} name={accountName} size={48} style="border:2px solid var(--surface-primary);box-shadow:0 4px 12px var(--glow-accent);" />
+			<Avatar class="border-2 border-surface-primary shadow-[0_4px_12px_var(--glow-accent)]" src={accountAvatar} name={accountName} size={48}  />
 			<div class="flex-1 min-w-0">
 				<p class="text-[15px] tracking-tight text-text-primary">{accountName || '用户'}</p>
 				<p class="text-xs mt-0.5 text-text-secondary">{accountHandle}{accountEmail ? ` · ${accountEmail}` : ''}</p>
 			</div>
-			<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
+			<ChevronRight class="size-3.75 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 		</button>
 	</div>
 
@@ -95,8 +95,8 @@ import ListItem from '@/components/list/ListItem.svelte';
 		<ListContainer>
 			<div class="px-4 py-3.5">
 				<div class="flex items-center gap-3">
-					<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
-						<Palette style="width:15px;height:15px;color:var(--accent-default);" strokeWidth={1.5} />
+					<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
+						<Palette class="size-3.75"  style="color:var(--accent-default)" strokeWidth={1.5} />
 					</div>
 					<div class="flex-1 min-w-0">
 						<p class="text-[14px] text-text-primary">应用主题</p>
@@ -113,9 +113,9 @@ import ListItem from '@/components/list/ListItem.svelte';
 							style="border-color:{theme.theme === t.id ? 'var(--accent-default)' : 'var(--border-default)'};background:{theme.theme === t.id ? 'var(--accent-soft)' : 'transparent'};color:var(--text-primary);"
 						>
 							{#if t.id === 'forest'}
-								<Trees style="width:15px;height:15px;color:var(--accent-default);" strokeWidth={1.7} />
+								<Trees class="size-3.75"  style="color:var(--accent-default)" strokeWidth={1.7} />
 							{:else}
-								<Palette style="width:15px;height:15px;color:var(--accent-default);" strokeWidth={1.7} />
+								<Palette class="size-3.75"  style="color:var(--accent-default)" strokeWidth={1.7} />
 							{/if}
 							<span class="text-xs">{t.label}</span>
 						</button>
@@ -123,11 +123,11 @@ import ListItem from '@/components/list/ListItem.svelte';
 				</div>
 			</div>
 			<div class="flex items-center gap-3 px-4 py-3.5">
-				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
+				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
 					{#if theme.isDark}
-						<Moon style="width:15px;height:15px;color:var(--accent-default);" strokeWidth={1.5} />
+						<Moon class="size-3.75"  style="color:var(--accent-default)" strokeWidth={1.5} />
 					{:else}
-						<Sun style="width:15px;height:15px;color:var(--accent-default);" strokeWidth={1.5} />
+						<Sun class="size-3.75"  style="color:var(--accent-default)" strokeWidth={1.5} />
 					{/if}
 				</div>
 				<div class="flex-1 min-w-0">
@@ -144,8 +144,8 @@ import ListItem from '@/components/list/ListItem.svelte';
 	<div class="rounded-panel overflow-hidden surface-flat">
 		<ListContainer>
 			<div class="flex items-center gap-3 px-4 py-3.5">
-				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
-					<Bell style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
+				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
+					<Bell class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-[14px] text-text-primary">推送通知</p>
@@ -154,8 +154,8 @@ import ListItem from '@/components/list/ListItem.svelte';
 				<Toggle on={notif} onToggle={() => (notif = !notif)} />
 			</div>
 			<div class="flex items-center gap-3 px-4 py-3.5">
-				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
-					<Volume2 style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
+				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
+					<Volume2 class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-[14px] text-text-primary">应用声音</p>
@@ -171,8 +171,8 @@ import ListItem from '@/components/list/ListItem.svelte';
 	<div class="rounded-panel overflow-hidden surface-flat">
 		<ListContainer>
 			<div class="flex items-center gap-3 px-4 py-3.5">
-				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
-					<Lock style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
+				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
+					<Lock class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-[14px] text-text-primary">私密账号</p>
@@ -181,8 +181,8 @@ import ListItem from '@/components/list/ListItem.svelte';
 				<Toggle on={privateProfile} onToggle={() => (privateProfile = !privateProfile)} />
 			</div>
 			<div class="flex items-center gap-3 px-4 py-3.5">
-				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
-					<MapPin style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
+				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
+					<MapPin class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-[14px] text-text-primary">位置共享</p>
@@ -198,34 +198,34 @@ import ListItem from '@/components/list/ListItem.svelte';
 	<div class="rounded-panel overflow-hidden surface-flat">
 		<ListContainer>
 			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="语言设置">
-				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
-					<Globe style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
+				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
+					<Globe class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-[14px] text-text-primary">语言</p>
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary">中文</span>
-				<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
+				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 			</ListItem>
 			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="账号信息">
-				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
-					<User style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
+				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
+					<User class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-[14px] text-text-primary">账号信息</p>
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary"></span>
-				<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
+				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 			</ListItem>
 			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="关于">
-				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge" style="width:36px;height:36px;">
-					<Info style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
+				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
+					<Info class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-[14px] text-text-primary">关于</p>
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary">v 1.0.0</span>
-				<ChevronRight style="width:15px;height:15px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
+				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 			</ListItem>
 		</ListContainer>
 	</div>
@@ -237,7 +237,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 			class="hover-btn flex items-center justify-center gap-2 px-4 py-3 rounded-control w-full outline-none surface-flat text-accent-default"
 			onclick={() => void handleLogout()}
 		>
-			<LogOut style="width:14px;height:14px;" strokeWidth={1.75} />
+			<LogOut class="size-3.5"  strokeWidth={1.75} />
 			<span class="text-[14px]">退出登录</span>
 		</button>
 	</div>

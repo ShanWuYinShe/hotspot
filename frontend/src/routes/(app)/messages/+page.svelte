@@ -146,9 +146,9 @@ import { ROUTES } from '@/lib/routes';
 	     分栏固定视口高、左栏列表内部滚动；平板/桌面画布均撑满。 -->
 	<div class="content-mode-wide flex h-full">
 		<!-- Left: chat list -->
-		<div class="flex flex-col shrink-0 overflow-hidden" style="width:300px;border-right:1px solid var(--border-default);">
+		<div class="flex flex-col shrink-0 overflow-hidden w-75 border-r border-border-default"  >
 			<!-- List header（对齐 Figma：px-4 pt-4 pb-3，标题 18 + Plus 30 + 搜索框） -->
-			<div class="shrink-0" style="border-bottom:1px solid var(--border-default);">
+			<div class="shrink-0 border-b border-border-default" >
 				<PageHeader title="消息" titleSize={18} contentClassName="px-4 pt-4 pb-0">
 					{#snippet trailing()}
 						<button
@@ -160,7 +160,7 @@ import { ROUTES } from '@/lib/routes';
 								showNewChat = true;
 							}}
 						>
-							<Plus style="width:14px;height:14px;color:var(--text-secondary);" strokeWidth={1.5} />
+							<Plus class="size-3.5"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 						</button>
 					{/snippet}
 					{#snippet below()}
@@ -173,7 +173,7 @@ import { ROUTES } from '@/lib/routes';
 
 			<!-- 在线 strip -->
 			{#if onlineChats.length > 0}
-				<div class="shrink-0 px-4 py-2.5" style="border-bottom:1px solid var(--border-default);">
+				<div class="shrink-0 px-4 py-2.5 border-b border-border-default" >
 					<p class="uppercase mb-2 text-text-secondary text-[9px] tracking-[0.12em]">在线</p>
 					<div class="flex gap-3 overflow-x-auto no-scrollbar">
 						{#each onlineChats as c (c.id)}
@@ -229,7 +229,7 @@ import { ROUTES } from '@/lib/routes';
 				<div class="h-full">
 					<EmptyState title="选择一个会话" description="从左侧选择联系人开始聊天" class="h-full justify-center py-0!" iconSize={72}>
 						{#snippet icon()}
-							<MessageSquareDashed style="width:28px;height:28px;color:var(--text-secondary);opacity:0.5;" strokeWidth={1.25} />
+							<MessageSquareDashed class="size-7"  style="color:var(--text-secondary);opacity:0.5" strokeWidth={1.25} />
 						{/snippet}
 					</EmptyState>
 				</div>
@@ -259,7 +259,7 @@ import { ROUTES } from '@/lib/routes';
 		</Dialog.Root>
 
 		<Dialog.Root open={showCreateGroup} onOpenChange={(next) => (next ? undefined : (showCreateGroup = false))}>
-			<Dialog.Content side="center" class="overflow-hidden" aria-label="创建群组" style="width:480px;height:78vh;max-height:700px;">
+			<Dialog.Content side="center" class="overflow-hidden w-120" aria-label="创建群组"  style="height:78vh;max-height:700px">
 				<CreateGroupSheet
 					onClose={() => (showCreateGroup = false)}
 					onCreated={(groupId) => {
@@ -290,7 +290,7 @@ import { ROUTES } from '@/lib/routes';
 						showNewChat = true;
 					}}
 				>
-					<Plus style="width:16px;height:16px;color:var(--text-secondary);" strokeWidth={1.5} />
+					<Plus class="size-4"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</button>
 			</div>
 		{/snippet}
@@ -314,7 +314,7 @@ import { ROUTES } from '@/lib/routes';
 							onclick={() => void goto(ROUTES.message(chat.peerUserId || chat.id))}
 						>
 							<div class="relative">
-								<div class="avatar-entry__avatar rounded-full overflow-hidden bg-surface-primary" style="width:52px;height:52px;padding:2px;border:2px solid var(--accent-default);">
+								<div class="avatar-entry__avatar rounded-full overflow-hidden bg-surface-primary size-13"  style="padding:2px;border:2px solid var(--accent-default)">
 									<img src={chat.avatar} alt={chat.name} class="w-full h-full object-cover rounded-full" />
 								</div>
 								<OnlineDot size="lg" />
@@ -332,7 +332,7 @@ import { ROUTES } from '@/lib/routes';
 		{#if filtered.length === 0}
 			<EmptyState bare class="py-12!" title="没有找到会话">
 				{#snippet icon()}
-					<MessageSquareDashed style="width:36px;height:36px;color:var(--text-secondary);opacity:0.5;" strokeWidth={1.25} />
+					<MessageSquareDashed class="size-9"  style="color:var(--text-secondary);opacity:0.5" strokeWidth={1.25} />
 				{/snippet}
 			</EmptyState>
 		{:else}

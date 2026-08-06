@@ -127,9 +127,9 @@
 					{/snippet}
 					{#snippet subtitle()}
 						<p class="mt-1 flex items-center gap-1.5">
-							<span style="font-size:10px;color:var(--accent-default);">#{u.tag}</span>
-							<span style="font-size:10px;color:var(--text-secondary);opacity:0.5;">·</span>
-							<span style="font-size:10px;color:var(--text-secondary);">{u.distance}</span>
+							<span class="text-[10px]"  style="color:var(--accent-default)">#{u.tag}</span>
+							<span class="text-[10px]"  style="color:var(--text-secondary);opacity:0.5">·</span>
+							<span class="text-[10px]"  style="color:var(--text-secondary)">{u.distance}</span>
 						</p>
 					{/snippet}
 					{#snippet actions()}
@@ -172,10 +172,10 @@
 						<item.icon style="width:16px;height:16px;color:{item.color};" strokeWidth={1.75} />
 					</div>
 					<div class="flex-1 min-w-0">
-						<p style="font-size:13px;color:var(--text-primary);">{item.title}</p>
-						<p style="font-size:11px;color:var(--text-secondary);margin-top:1px;">{item.sub}</p>
+						<p class="text-[13px]"  style="color:var(--text-primary)">{item.title}</p>
+						<p class="text-[11px] mt-px"  style="color:var(--text-secondary)">{item.sub}</p>
 					</div>
-					<ChevronRight style="width:13px;height:13px;color:var(--text-secondary);" strokeWidth={1.5} />
+					<ChevronRight class="size-3.25"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</ListItem>
 			{/each}
 		</ListContainer>

@@ -72,10 +72,10 @@
 					}}
 				>
 					{#if unfollowedIds.has(f.id)}
-						<UserPlus style="width:10px;height:10px;" strokeWidth={2} />
+						<UserPlus class="size-2.5"  strokeWidth={2} />
 						关注
 					{:else}
-						<Check style="width:10px;height:10px;" strokeWidth={2.5} />
+						<Check class="size-2.5"  strokeWidth={2.5} />
 						已关注
 					{/if}
 				</button>

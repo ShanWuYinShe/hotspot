@@ -37,7 +37,7 @@
 			{pin.count}
 		</div>
 	{/if}
-	<img src={getMarkerUrl(pin.type, pin.count ?? 1)} alt={pin.type} style="width:36px;height:48px;display:block;" />
+	<img class="w-9 h-12" src={getMarkerUrl(pin.type, pin.count ?? 1)} alt={pin.type}  style="display:block" />
 	{#if isSelected}
 		<span
 			class="absolute rounded-full pointer-events-none"

@@ -80,7 +80,7 @@
 			{#snippet nameBadge()}
 				{#if isMutual}
 					<span class="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xxs text-status-online" style="background:var(--color-online-bg);">
-						<Check style="width:9px;height:9px;" strokeWidth={2.5} />
+						<Check class="size-2.25"  strokeWidth={2.5} />
 						互关
 					</span>
 				{/if}
@@ -101,10 +101,10 @@
 					}}
 				>
 					{#if isMutual}
-						<Check style="width:10px;height:10px;" strokeWidth={2.5} />
+						<Check class="size-2.5"  strokeWidth={2.5} />
 						互关
 					{:else}
-						<UserPlus style="width:10px;height:10px;" strokeWidth={2} />
+						<UserPlus class="size-2.5"  strokeWidth={2} />
 						回关
 					{/if}
 				</button>

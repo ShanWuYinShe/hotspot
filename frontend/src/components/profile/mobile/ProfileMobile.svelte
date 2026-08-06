@@ -48,9 +48,9 @@ import ListItem from '@/components/list/ListItem.svelte';
 					<div class="relative shrink-0">
 						<div class="overflow-hidden rounded-full border-2 border-surface-primary bg-surface-primary p-1">
 							{#if avatar}
-								<img src={avatar} alt={nickname || '用户'} class="rounded-full object-cover" style="width:68px;height:68px;" />
+								<img src={avatar} alt={nickname || '用户'} class="rounded-full object-cover size-17"  />
 							{:else}
-								<span class="flex items-center justify-center text-text-secondary" style="width:68px;height:68px;font-size:28px;">{(nickname || '?')[0]}</span>
+								<span class="flex items-center justify-center text-text-secondary size-17 text-[28px]" >{(nickname || '?')[0]}</span>
 							{/if}
 						</div>
 						<button
@@ -60,14 +60,14 @@ import ListItem from '@/components/list/ListItem.svelte';
 							class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-accent-default text-white"
 							style="width:24px;height:24px;border:2px solid var(--surface-primary);"
 						>
-							<Camera style="width:13px;height:13px;" strokeWidth={2} />
+							<Camera class="size-3.25"  strokeWidth={2} />
 						</button>
 					</div>
 					<div class="min-w-0">
 						<h1 class="text-[20px] font-medium tracking-[-0.01em] text-text-primary">{nickname || '未设置昵称'}</h1>
 						<p class="mt-0.5 text-xs text-text-secondary">{handle}</p>
 						<p class="mt-2 flex items-center gap-1.5 text-xs text-text-secondary">
-							<MapPin style="width:14px;height:14px;color:var(--accent-default);" strokeWidth={1.8} />
+							<MapPin class="size-3.5"  style="color:var(--accent-default)" strokeWidth={1.8} />
 							{locationName || '未设置位置'}
 						</p>
 					</div>
@@ -77,7 +77,7 @@ import ListItem from '@/components/list/ListItem.svelte';
 					onclick={() => void goto(ROUTES.meEdit)}
 					class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default bg-surface-primary px-3 py-2 text-xs font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
 				>
-					<Pencil style="width:14px;height:14px;" strokeWidth={1.8} />
+					<Pencil class="size-3.5"  strokeWidth={1.8} />
 					编辑资料
 				</button>
 			</div>
@@ -109,14 +109,14 @@ import ListItem from '@/components/list/ListItem.svelte';
 				ariaLabel={item.label}
 				class="flex items-center gap-3 px-5 py-3.5"
 			>
-				<span class="flex shrink-0 items-center justify-center" style="width:32px;height:32px;background:var(--color-accent-bg);color:var(--accent-default);">
-					<item.icon style="width:16px;height:16px;" strokeWidth={1.8} />
+				<span class="flex shrink-0 items-center justify-center size-8"  style="background:var(--color-accent-bg);color:var(--accent-default)">
+					<item.icon class="size-4"  strokeWidth={1.8} />
 				</span>
 				<span class="min-w-0 flex-1">
 					<span class="block text-sm text-text-primary">{item.label}</span>
 					<span class="mt-0.5 block truncate text-xs text-text-secondary">{item.detail}</span>
 				</span>
-				<ChevronRight style="width:16px;height:16px;color:var(--text-secondary);shrink:0;" strokeWidth={1.7} />
+				<ChevronRight class="size-4 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.7} />
 			</ListItem>
 		{/each}
 	</ListContainer>

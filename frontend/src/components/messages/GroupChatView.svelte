@@ -174,7 +174,7 @@
 				style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
 				onclick={onBack}
 			>
-				<ArrowLeft style="width:15px;height:15px;color:var(--text-secondary);" strokeWidth={1.5} />
+				<ArrowLeft class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 			</button>
 		{/if}
 
@@ -192,7 +192,7 @@
 			<p class="truncate text-text-primary" style="font-size:{compact ? 13 : 14}px;">
 				{groupName || '群聊'}
 			</p>
-			<p class="{groupTyping ? 'text-accent-default' : 'text-text-secondary'}" style="font-size:11px;">
+			<p class="{groupTyping ? 'text-accent-default' : 'text-text-secondary'} text-[11px]" >
 				{#if groupTyping}
 					{typingName || '有人'}正在输入…
 				{:else}
@@ -206,11 +206,11 @@
 	<div bind:this={chat.scrollEl} onscroll={chat.handleScroll} class="flex-1 overflow-y-auto no-scrollbar" style="overscroll-behavior:contain;">
 		{#if chat.loading}
 			<div class="flex h-full items-center justify-center">
-				<p class="text-text-secondary" style="font-size:12px;">加载中…</p>
+				<p class="text-text-secondary text-xs" >加载中…</p>
 			</div>
 		{:else if chat.messages.length === 0}
 			<div class="flex h-full items-center justify-center">
-				<p class="text-text-secondary" style="font-size:12px;">还没有消息，来打个招呼吧</p>
+				<p class="text-text-secondary text-xs" >还没有消息，来打个招呼吧</p>
 			</div>
 		{:else}
 			<div class="animate-fade-in flex flex-col gap-2 px-4 pt-4 pb-3">
@@ -225,10 +225,10 @@
 
 	<!-- Input bar -->
 	{#if chat.sendError}
-		<p class="px-4 pb-1.5 text-status-warning" style="font-size:11px;">{chat.sendError}</p>
+		<p class="px-4 pb-1.5 text-status-warning text-[11px]" >{chat.sendError}</p>
 	{/if}
-	<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary" style="border-top:1px solid var(--border-default);">
-		<div class="flex-1 flex items-center px-4 rounded-relaxed input-surface" style="height:38px;">
+	<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary border-t border-border-default" >
+		<div class="flex-1 flex items-center px-4 rounded-relaxed input-surface h-9.5" >
 			<input
 				type="text"
 				bind:value={chat.inputVal}

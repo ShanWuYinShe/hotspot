@@ -16,14 +16,14 @@
 	onmouseenter={() => (hovered = true)}
 	onmouseleave={() => (hovered = false)}
 >
-	<div class="flex items-center justify-center rounded-full shrink-0" style="width:32px;height:32px;background:var(--accent-soft);">
-		<MapPin style="width:13px;height:13px;color:var(--accent-default);" strokeWidth={1.75} />
+	<div class="flex items-center justify-center rounded-full shrink-0 size-8"  style="background:var(--accent-soft)">
+		<MapPin class="size-3.25"  style="color:var(--accent-default)" strokeWidth={1.75} />
 	</div>
 	<div class="flex-1 min-w-0">
-		<p style="font-size:12px;color:var(--text-primary);" class="truncate">{name}</p>
+		<p  style="color:var(--text-primary)" class="truncate text-xs">{name}</p>
 		{#if desc}
-			<p style="font-size:10px;color:var(--text-secondary);margin-top:1px;" class="truncate">{desc}</p>
+			<p  style="color:var(--text-secondary)" class="truncate text-[10px] mt-px">{desc}</p>
 		{/if}
 	</div>
-	<ChevronRight style="width:12px;height:12px;color:var(--text-secondary);shrink:0;" strokeWidth={1.5} />
+	<ChevronRight class="size-3 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 </button>

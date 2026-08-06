@@ -71,6 +71,6 @@
 		{label}
 	</span>
 	{#if isActive}
-		<div style="position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:2px;background:var(--accent-default);"></div>
+		<div class="w-0.75 rounded-[2px]"  style="position:absolute;left:0;top:10px;bottom:10px;background:var(--accent-default)"></div>
 	{/if}
 </button>

@@ -219,10 +219,10 @@
 				<div class="flex items-end justify-between gap-4">
 					<div class="flex min-w-0 items-center gap-4">
 						<div class="relative shrink-0">
-							<div class="overflow-hidden rounded-full" style="width:80px;height:80px;border:3px solid var(--surface-primary);box-shadow:var(--shadow-neu-xl);">
+							<div class="overflow-hidden rounded-full size-20 shadow-neu-xl"   style="border:3px solid var(--surface-primary)">
 								<img src={user.avatar} alt={user.name} class="w-full h-full object-cover" />
 							</div>
-							<span class="absolute bottom-1 right-1 rounded-full bg-status-online" style="width:14px;height:14px;border:2px solid var(--surface-primary);"></span>
+							<span class="absolute bottom-1 right-1 rounded-full bg-status-online size-3.5 border-2 border-surface-primary"  ></span>
 						</div>
 						<div class="min-w-0 pt-1">
 							<h1 class="truncate text-[26px] font-medium tracking-[-0.01em] text-text-primary">{user.name}</h1>
@@ -239,7 +239,7 @@
 							disabled={blocked}
 							onclick={() => !blocked && void goto(ROUTES.message(1))}
 						>
-							<MessageCircle style="width:14px;height:14px;" strokeWidth={1.5} />
+							<MessageCircle class="size-3.5"  strokeWidth={1.5} />
 							私信
 						</button>
 						<button
@@ -252,10 +252,10 @@
 							onclick={toggleFollow}
 						>
 							{#if followed}
-								<UserCheck style="width:14px;height:14px;" strokeWidth={1.5} />
+								<UserCheck class="size-3.5"  strokeWidth={1.5} />
 								已关注
 							{:else}
-								<UserPlus style="width:14px;height:14px;" strokeWidth={1.5} />
+								<UserPlus class="size-3.5"  strokeWidth={1.5} />
 								关注
 							{/if}
 						</button>
@@ -274,12 +274,12 @@
 			<div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
 				{#if user.location}
 					<span class="flex items-center gap-1.5 text-text-secondary text-base">
-						<MapPin style="width:13px;height:13px;color:var(--accent-default);" strokeWidth={1.75} />
+						<MapPin class="size-3.25"  style="color:var(--accent-default)" strokeWidth={1.75} />
 						{user.location}
 					</span>
 				{/if}
 				{#each user.tags as t (t)}
-					<span class="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs text-accent-default" style="border:1px solid var(--accent-border);">
+					<span class="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs text-accent-default border border-accent-border" >
 						#{t}
 					</span>
 				{/each}
@@ -316,8 +316,8 @@
 				<img src={src} alt={`photo ${i}`} class="image-hover-frame__image w-full h-full object-cover" />
 				{#if activeTab === 'liked'}
 					<div class="absolute inset-0 flex items-end justify-end p-1.5 bg-surface-overlay-soft">
-						<div class="flex items-center justify-center rounded-full bg-accent-default" style="width:20px;height:20px;">
-							<Heart style="width:10px;height:10px;color:var(--text-on-accent);" strokeWidth={2} fill="white" />
+						<div class="flex items-center justify-center rounded-full bg-accent-default size-5" >
+							<Heart class="size-2.5"  style="color:var(--text-on-accent)" strokeWidth={2} fill="white" />
 						</div>
 					</div>
 				{/if}
@@ -334,7 +334,7 @@
 	<RailSection title="兴趣标签">
 		<div class="flex gap-2 flex-wrap">
 			{#each user.tags as t (t)}
-				<span class="px-2.5 py-0.5 rounded-full bg-accent-soft text-accent-default text-xs" style="border:1px solid var(--accent-border);">
+				<span class="px-2.5 py-0.5 rounded-full bg-accent-soft text-accent-default text-xs border border-accent-border" >
 					#{t}
 				</span>
 			{/each}

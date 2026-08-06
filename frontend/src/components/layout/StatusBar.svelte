@@ -40,7 +40,7 @@
 				></div>
 			{/each}
 		</div>
-		<Wifi style="width:14px;height:14px;color:var(--text-primary);" strokeWidth={2.5} />
+		<Wifi class="size-3.5"  style="color:var(--text-primary)" strokeWidth={2.5} />
 		<!-- Battery -->
 		<div style="display:flex;align-items:center;">
 			<div
