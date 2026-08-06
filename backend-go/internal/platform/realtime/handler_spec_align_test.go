@@ -222,7 +222,7 @@ func TestRealtimePrivateTypingPushesPayloadToTarget(t *testing.T) {
 	bobSink := &eventSink{}
 	DefaultHub().RegisterUser("user_bob", "sess_bob", bobSink)
 
-	if err := conn.WriteJSON(Event{Type: "PrivateTyping", Payload: PrivateTypingSendPayload{TargetUserID: "user_bob", IsTyping: true}}); err != nil {
+	if err := conn.WriteJSON(Event{Type: "SendPrivateTyping", Payload: PrivateTypingSendPayload{TargetUserID: "user_bob", IsTyping: true}}); err != nil {
 		t.Fatalf("write typing: %v", err)
 	}
 

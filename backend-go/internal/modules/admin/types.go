@@ -173,15 +173,12 @@ type AdminUserOpenTheDoorRequest struct {
 	UserID string `json:"user_id"`
 }
 
-type AdminBanUserRequest struct {
+// AdminSetUserBanRequest 是两态统一端点 admin/users/set_ban 的请求类型（契约级）。
+type AdminSetUserBanRequest struct {
 	UserID       string `json:"user_id"`
+	Active       bool   `json:"active"`
 	Reason       string `json:"reason,omitempty"`
 	DurationDays *int   `json:"duration_days,omitempty"`
-}
-
-type AdminUnbanUserRequest struct {
-	UserID string `json:"user_id"`
-	Reason string `json:"reason,omitempty"`
 }
 
 type AdminGroupItem struct {

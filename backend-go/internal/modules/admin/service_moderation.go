@@ -282,18 +282,13 @@ func (s *Service) OpenAdminUser(ctx context.Context, userID string) (AdminUserIt
 	return item, nil, nil
 }
 
-func (s *Service) BanUser(ctx context.Context, req AdminBanUserRequest) (*httpx.APIError, error) {
+func (s *Service) SetUserBan(ctx context.Context, req AdminSetUserBanRequest) (*httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionUsersWrite)
 	if apiErr != nil || err != nil {
 		return apiErr, err
 	}
-	return s.banUser(ctx, actor, req.UserID, req.Reason, req.DurationDays, true)
-}
-
-func (s *Service) UnbanUser(ctx context.Context, req AdminUnbanUserRequest) (*httpx.APIError, error) {
-	actor, apiErr, err := s.requirePermission(ctx, permissionUsersWrite)
-	if apiErr != nil || err != nil {
-		return apiErr, err
+	if req.Active {
+		return s.banUser(ctx, actor, req.UserID, req.Reason, req.DurationDays, true)
 	}
 	if strings.TrimSpace(req.UserID) == "" || len(req.Reason) > 500 {
 		return httpx.InvalidRequest("参数错误"), nil
@@ -309,8 +304,9 @@ func (s *Service) UnbanUser(ctx context.Context, req AdminUnbanUserRequest) (*ht
 	if err != nil {
 		return nil, err
 	}
+	// 解封未封禁用户视为 no-op 成功（契约：设状态操作重复达同状态返回成功，见 api_spec_errors.md）
 	if !ok || state.Status != UserAccountStatusBanned {
-		return &httpx.APIError{Code: httpx.CodeConflict, Message: "用户未被封禁"}, nil
+		return nil, nil
 	}
 	if _, isAdmin, err := s.repo.GetActor(ctx, req.UserID); err != nil {
 		return nil, err

@@ -153,7 +153,7 @@ func (r *stubGroupsRepo) ApproveApplication(_ context.Context, _ string, _ strin
 func (r *stubGroupsRepo) RejectApplication(_ context.Context, _ string, _ *string) error {
 	return r.rejectErr
 }
-func (r *stubGroupsRepo) UpdateMySettings(_ context.Context, _ string, _ UpdateGroupMySettingsRequest) error {
+func (r *stubGroupsRepo) UpdatePreferences(_ context.Context, _ string, _ UpdateGroupPreferencesRequest) error {
 	return r.settingsErr
 }
 func (r *stubGroupsRepo) LeaveGroup(_ context.Context, _ string, _ string) error { return r.leaveErr }
@@ -462,7 +462,7 @@ func TestServiceMuteMemberRejectsInvalidDuration(t *testing.T) {
 func TestServiceBanMemberCannotBanSelf(t *testing.T) {
 	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
 	svc := NewServiceWithRepo(repo)
-	err := svc.BanMember(grpCtx("u1"), BanMemberRequest{GroupID: "g1", UserID: "u1"})
+	err := svc.SetMemberBan(grpCtx("u1"), SetMemberBanRequest{GroupID: "g1", UserID: "u1", Active: true})
 	if !errors.Is(err, ErrAccessRestricted) {
 		t.Fatalf("expected access restricted, got %v", err)
 	}
@@ -471,7 +471,7 @@ func TestServiceBanMemberCannotBanSelf(t *testing.T) {
 func TestServiceBanMemberRequiresAdmin(t *testing.T) {
 	repo := &stubGroupsRepo{getResult: memberGroup(), getFound: true}
 	svc := NewServiceWithRepo(repo)
-	err := svc.BanMember(grpCtx("u1"), BanMemberRequest{GroupID: "g1", UserID: "u2"})
+	err := svc.SetMemberBan(grpCtx("u1"), SetMemberBanRequest{GroupID: "g1", UserID: "u2", Active: true})
 	if !errors.Is(err, ErrAccessRestricted) {
 		t.Fatalf("expected access restricted, got %v", err)
 	}
@@ -648,19 +648,19 @@ func TestServiceRejectInviteRejectsExpired(t *testing.T) {
 
 // --- Update my settings ---
 
-func TestServiceUpdateMySettingsRejectsNotMember(t *testing.T) {
+func TestServiceUpdatePreferencesRejectsNotMember(t *testing.T) {
 	repo := &stubGroupsRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}}, getFound: true}
 	svc := NewServiceWithRepo(repo)
-	err := svc.UpdateMySettings(grpCtx("u1"), UpdateGroupMySettingsRequest{GroupID: "g1"})
+	err := svc.UpdatePreferences(grpCtx("u1"), UpdateGroupPreferencesRequest{GroupID: "g1"})
 	if !errors.Is(err, ErrNotMember) {
 		t.Fatalf("expected not member, got %v", err)
 	}
 }
 
-func TestServiceUpdateMySettingsHappyPath(t *testing.T) {
+func TestServiceUpdatePreferencesHappyPath(t *testing.T) {
 	repo := &stubGroupsRepo{getResult: memberGroup(), getFound: true}
 	svc := NewServiceWithRepo(repo)
-	err := svc.UpdateMySettings(grpCtx("u1"), UpdateGroupMySettingsRequest{GroupID: "g1"})
+	err := svc.UpdatePreferences(grpCtx("u1"), UpdateGroupPreferencesRequest{GroupID: "g1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -928,7 +928,7 @@ func TestServiceMuteMemberPropagatesRepoError(t *testing.T) {
 func TestServiceBanMemberHappyPath(t *testing.T) {
 	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
 	svc := NewServiceWithRepo(repo)
-	err := svc.BanMember(grpCtx("u1"), BanMemberRequest{GroupID: "g1", UserID: "u2"})
+	err := svc.SetMemberBan(grpCtx("u1"), SetMemberBanRequest{GroupID: "g1", UserID: "u2", Active: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -937,7 +937,7 @@ func TestServiceBanMemberHappyPath(t *testing.T) {
 func TestServiceBanMemberPropagatesRepoError(t *testing.T) {
 	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, banErr: errors.New("db error")}
 	svc := NewServiceWithRepo(repo)
-	err := svc.BanMember(grpCtx("u1"), BanMemberRequest{GroupID: "g1", UserID: "u2"})
+	err := svc.SetMemberBan(grpCtx("u1"), SetMemberBanRequest{GroupID: "g1", UserID: "u2", Active: true})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -951,7 +951,7 @@ func TestServiceBanMemberPropagatesRepoError(t *testing.T) {
 func TestServiceUnbanMemberRequiresAdmin(t *testing.T) {
 	repo := &stubGroupsRepo{getResult: memberGroup(), getFound: true}
 	svc := NewServiceWithRepo(repo)
-	err := svc.UnbanMember(grpCtx("u1"), UnbanMemberRequest{GroupID: "g1", UserID: "u2"})
+	err := svc.SetMemberBan(grpCtx("u1"), SetMemberBanRequest{GroupID: "g1", UserID: "u2", Active: false})
 	if !errors.Is(err, ErrAccessRestricted) {
 		t.Fatalf("expected ErrAccessRestricted, got %v", err)
 	}
@@ -960,7 +960,7 @@ func TestServiceUnbanMemberRequiresAdmin(t *testing.T) {
 func TestServiceUnbanMemberHappyPath(t *testing.T) {
 	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
 	svc := NewServiceWithRepo(repo)
-	err := svc.UnbanMember(grpCtx("u1"), UnbanMemberRequest{GroupID: "g1", UserID: "u2"})
+	err := svc.SetMemberBan(grpCtx("u1"), SetMemberBanRequest{GroupID: "g1", UserID: "u2", Active: false})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -969,7 +969,7 @@ func TestServiceUnbanMemberHappyPath(t *testing.T) {
 func TestServiceUnbanMemberPropagatesRepoError(t *testing.T) {
 	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, unbanErr: errors.New("db error")}
 	svc := NewServiceWithRepo(repo)
-	err := svc.UnbanMember(grpCtx("u1"), UnbanMemberRequest{GroupID: "g1", UserID: "u2"})
+	err := svc.SetMemberBan(grpCtx("u1"), SetMemberBanRequest{GroupID: "g1", UserID: "u2", Active: false})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

@@ -370,7 +370,7 @@ func TestServiceDeleteAccountAnonymizesContentAuthor(t *testing.T) {
 		t.Fatalf("expected is_deleted flag set")
 	}
 
-	// 已注销用户详情按不存在处理（get_detail httpx.CodeNotFound）
+	// 已注销用户详情按不存在处理（open_the_door httpx.CodeNotFound）
 	if _, ok, err := svc.OpenTheDoor(userCtx("u2"), "u1"); err != nil || ok {
 		t.Fatalf("expected deleted user to be treated as not-found, ok=%v err=%v", ok, err)
 	}

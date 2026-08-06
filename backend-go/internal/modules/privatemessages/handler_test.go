@@ -259,7 +259,9 @@ func TestMarkAsReadBroadcastsPrivateMessageReadToTarget(t *testing.T) {
 	}
 }
 
-func TestMarkAllReadBroadcastsSelfReadSync(t *testing.T) {
+// 契约(api_spec_index.md 预留):不提供 self-sync 事件——mark_all_read 只更新本端状态,
+// 不向自己推送已读同步事件。
+func TestMarkAllReadDoesNotBroadcastSelfSync(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
 
@@ -279,11 +281,8 @@ func TestMarkAllReadBroadcastsSelfReadSync(t *testing.T) {
 		t.Fatalf("mark all read: %v", err)
 	}
 
-	if len(sink.events) != 1 {
-		t.Fatalf("expected 1 SelfReadSync event, got %d", len(sink.events))
-	}
-	if sink.events[0].Type != realtime.EventTypeSelfReadSync {
-		t.Fatalf("expected SelfReadSync event, got %s", sink.events[0].Type)
+	if len(sink.events) != 0 {
+		t.Fatalf("expected no self-sync event, got %d events: %#v", len(sink.events), sink.events)
 	}
 }
 

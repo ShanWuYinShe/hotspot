@@ -295,26 +295,26 @@ func TestFollowBlockRemarkAndOpenTheDoor(t *testing.T) {
 	_ = service.repo.PutSettings(ctx, "user_bob", defaultSettings())
 	_ = service.repo.PutSettings(ctx, "user_charlie", defaultSettings())
 
-	followReq := httptest.NewRequest(http.MethodPost, "/follow", strings.NewReader(`{"user_id":"user_bob","active":true}`))
+	followReq := httptest.NewRequest(http.MethodPost, "/set_follow", strings.NewReader(`{"user_id":"user_bob","active":true}`))
 	followReq = followReq.WithContext(ctx)
 	followRR := httptest.NewRecorder()
 	handler.Follow(followRR, followReq)
 
-	followCharlieReq := httptest.NewRequest(http.MethodPost, "/follow", strings.NewReader(`{"user_id":"user_charlie","active":true}`))
+	followCharlieReq := httptest.NewRequest(http.MethodPost, "/set_follow", strings.NewReader(`{"user_id":"user_charlie","active":true}`))
 	followCharlieReq = followCharlieReq.WithContext(ctx)
 	followCharlieRR := httptest.NewRecorder()
 	handler.Follow(followCharlieRR, followCharlieReq)
 
 	charlieCtx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_charlie", SessionID: "sess_2"})
-	charlieFollowAliceReq := httptest.NewRequest(http.MethodPost, "/follow", strings.NewReader(`{"user_id":"user_alice","active":true}`)).WithContext(charlieCtx)
+	charlieFollowAliceReq := httptest.NewRequest(http.MethodPost, "/set_follow", strings.NewReader(`{"user_id":"user_alice","active":true}`)).WithContext(charlieCtx)
 	charlieFollowAliceRR := httptest.NewRecorder()
 	handler.Follow(charlieFollowAliceRR, charlieFollowAliceReq)
-	charlieFollowBobReq := httptest.NewRequest(http.MethodPost, "/follow", strings.NewReader(`{"user_id":"user_bob","active":true}`)).WithContext(charlieCtx)
+	charlieFollowBobReq := httptest.NewRequest(http.MethodPost, "/set_follow", strings.NewReader(`{"user_id":"user_bob","active":true}`)).WithContext(charlieCtx)
 	charlieFollowBobRR := httptest.NewRecorder()
 	handler.Follow(charlieFollowBobRR, charlieFollowBobReq)
 
 	bobCtx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_3"})
-	bobFollowCharlieReq := httptest.NewRequest(http.MethodPost, "/follow", strings.NewReader(`{"user_id":"user_charlie","active":true}`)).WithContext(bobCtx)
+	bobFollowCharlieReq := httptest.NewRequest(http.MethodPost, "/set_follow", strings.NewReader(`{"user_id":"user_charlie","active":true}`)).WithContext(bobCtx)
 	bobFollowCharlieRR := httptest.NewRecorder()
 	handler.Follow(bobFollowCharlieRR, bobFollowCharlieReq)
 
@@ -323,7 +323,7 @@ func TestFollowBlockRemarkAndOpenTheDoor(t *testing.T) {
 	remarkRR := httptest.NewRecorder()
 	handler.SetRemark(remarkRR, remarkReq)
 
-	blockReq := httptest.NewRequest(http.MethodPost, "/block", strings.NewReader(`{"user_id":"user_bob","active":true}`))
+	blockReq := httptest.NewRequest(http.MethodPost, "/set_block", strings.NewReader(`{"user_id":"user_bob","active":true}`))
 	blockReq = blockReq.WithContext(ctx)
 	blockRR := httptest.NewRecorder()
 	handler.Block(blockRR, blockReq)
@@ -716,7 +716,7 @@ func TestUsersHandlerReturns10600OnServiceError(t *testing.T) {
 	handler.OpenTheDoor(openRR, openReq)
 	assertUserCode(t, openRR, httpx.CodeInternalUnavailable)
 
-	followReq := httptest.NewRequest(http.MethodPost, "/follow", strings.NewReader(`{"user_id":"user_bob","active":true}`)).WithContext(ctx)
+	followReq := httptest.NewRequest(http.MethodPost, "/set_follow", strings.NewReader(`{"user_id":"user_bob","active":true}`)).WithContext(ctx)
 	followRR := httptest.NewRecorder()
 	handler.Follow(followRR, followReq)
 	assertUserCode(t, followRR, httpx.CodeInternalUnavailable)
@@ -739,7 +739,7 @@ func TestUsersHandlerReturns10600OnServiceError(t *testing.T) {
 func TestUnblockInvalidJSON(t *testing.T) {
 	handler := NewHandler(NewService())
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	req := httptest.NewRequest(http.MethodPost, "/block", strings.NewReader(`{invalid`)).WithContext(ctx)
+	req := httptest.NewRequest(http.MethodPost, "/set_block", strings.NewReader(`{invalid`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Block(rr, req)
 	assertUserCode(t, rr, httpx.CodeInvalidRequest)
@@ -748,7 +748,7 @@ func TestUnblockInvalidJSON(t *testing.T) {
 func TestUnblockMissingUserID(t *testing.T) {
 	handler := NewHandler(NewService())
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	req := httptest.NewRequest(http.MethodPost, "/block", strings.NewReader(`{}`)).WithContext(ctx)
+	req := httptest.NewRequest(http.MethodPost, "/set_block", strings.NewReader(`{}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Block(rr, req)
 	assertUserCode(t, rr, httpx.CodeInvalidRequest)
@@ -756,7 +756,7 @@ func TestUnblockMissingUserID(t *testing.T) {
 
 func TestUnblockUnauthorized(t *testing.T) {
 	handler := NewHandler(NewService())
-	req := httptest.NewRequest(http.MethodPost, "/block", strings.NewReader(`{"user_id":"user_bob","active":false}`))
+	req := httptest.NewRequest(http.MethodPost, "/set_block", strings.NewReader(`{"user_id":"user_bob","active":false}`))
 	rr := httptest.NewRecorder()
 	handler.Block(rr, req)
 	assertUserCode(t, rr, httpx.CodeUnauthorized)
@@ -766,7 +766,7 @@ func TestUnblockUserNotFound(t *testing.T) {
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	req := httptest.NewRequest(http.MethodPost, "/block", strings.NewReader(`{"user_id":"user_nonexistent","active":false}`)).WithContext(ctx)
+	req := httptest.NewRequest(http.MethodPost, "/set_block", strings.NewReader(`{"user_id":"user_nonexistent","active":false}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Block(rr, req)
 	assertUserCode(t, rr, httpx.CodeNotFound)
@@ -775,7 +775,7 @@ func TestUnblockUserNotFound(t *testing.T) {
 func TestUnblockSelfReturnsConflict(t *testing.T) {
 	handler := NewHandler(NewService())
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	req := httptest.NewRequest(http.MethodPost, "/block", strings.NewReader(`{"user_id":"user_alice","active":false}`)).WithContext(ctx)
+	req := httptest.NewRequest(http.MethodPost, "/set_block", strings.NewReader(`{"user_id":"user_alice","active":false}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Block(rr, req)
 	assertUserCode(t, rr, httpx.CodeConflict)
@@ -794,7 +794,7 @@ func TestUnblockHappyPath(t *testing.T) {
 	if err := repo.Block(ctx, "user_alice", "user_bob", ""); err != nil {
 		t.Fatalf("block bob: %v", err)
 	}
-	req := httptest.NewRequest(http.MethodPost, "/block", strings.NewReader(`{"user_id":"user_bob","active":false}`)).WithContext(ctx)
+	req := httptest.NewRequest(http.MethodPost, "/set_block", strings.NewReader(`{"user_id":"user_bob","active":false}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Block(rr, req)
 	assertUserCode(t, rr, 0)
@@ -806,7 +806,7 @@ func TestUnblockServerError(t *testing.T) {
 		exists:     true,
 	}))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	req := httptest.NewRequest(http.MethodPost, "/block", strings.NewReader(`{"user_id":"user_bob","active":false}`)).WithContext(ctx)
+	req := httptest.NewRequest(http.MethodPost, "/set_block", strings.NewReader(`{"user_id":"user_bob","active":false}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Block(rr, req)
 	assertUserCode(t, rr, httpx.CodeInternalUnavailable)

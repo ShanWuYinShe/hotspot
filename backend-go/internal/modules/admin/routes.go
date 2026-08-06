@@ -21,7 +21,7 @@ func MountRoutes(r chi.Router, handler *Handler) {
 	})
 	r.Route("/audit", func(audit chi.Router) {
 		audit.Post("/list", handler.ListAuditLogs)
-		audit.Post("/get_detail", handler.OpenAuditLog)
+		audit.Post("/open_the_door", handler.OpenAuditLog)
 	})
 	r.Route("/app_config", func(appConfig chi.Router) {
 		appConfig.Post("/get", handler.GetAppConfig)
@@ -29,13 +29,12 @@ func MountRoutes(r chi.Router, handler *Handler) {
 	})
 	r.Route("/users", func(users chi.Router) {
 		users.Post("/search", handler.SearchUsers)
-		users.Post("/get_detail", handler.OpenAdminUser)
-		users.Post("/ban", handler.BanUser)
-		users.Post("/unban", handler.UnbanUser)
+		users.Post("/open_the_door", handler.OpenAdminUser)
+		users.Post("/set_ban", handler.SetUserBan)
 	})
 	r.Route("/groups", func(groups chi.Router) {
 		groups.Post("/search", handler.SearchGroups)
-		groups.Post("/get_detail", handler.OpenAdminGroup)
+		groups.Post("/open_the_door", handler.OpenAdminGroup)
 		groups.Post("/dismiss", handler.DismissGroup)
 	})
 	r.Route("/reports", func(reports chi.Router) {

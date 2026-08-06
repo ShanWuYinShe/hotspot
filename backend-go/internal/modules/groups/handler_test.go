@@ -108,7 +108,7 @@ func (r *groupErrorRepo) ApproveApplication(context.Context, string, string) err
 func (r *groupErrorRepo) RejectApplication(context.Context, string, *string) error {
 	return r.rejectApplicationErr
 }
-func (r *groupErrorRepo) UpdateMySettings(context.Context, string, UpdateGroupMySettingsRequest) error {
+func (r *groupErrorRepo) UpdatePreferences(context.Context, string, UpdateGroupPreferencesRequest) error {
 	return nil
 }
 func (r *groupErrorRepo) LeaveGroup(context.Context, string, string) error {
@@ -512,7 +512,7 @@ func TestRejectInviteHandlerMapsSpecificErrors(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			handler := NewHandler(NewServiceWithRepo(tc.repo))
-			req := httptest.NewRequest(http.MethodPost, "/reject_invite", strings.NewReader(`{"invite_id":"invite_1"}`))
+			req := httptest.NewRequest(http.MethodPost, "/invites/received/reject", strings.NewReader(`{"invite_id":"invite_1"}`))
 			req.Header.Set("Idempotency-Key", fmt.Sprintf("reject-inv-%024d", tc.expected))
 			req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 			rr := httptest.NewRecorder()
@@ -717,11 +717,11 @@ func TestBanMemberHandlerReturnsSuccess(t *testing.T) {
 		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
-	req := httptest.NewRequest(http.MethodPost, "/members/ban", strings.NewReader(`{"group_id":"g1","user_id":"u2"}`))
+	req := httptest.NewRequest(http.MethodPost, "/members/set_ban", strings.NewReader(`{"group_id":"g1","user_id":"u2","active":true}`))
 	req.Header.Set("Idempotency-Key", "banmember123456789012345678901234")
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
-	handler.BanMember(rr, req)
+	handler.SetMemberBan(rr, req)
 
 	var resp struct {
 		Code httpx.Code `json:"code"`
@@ -740,11 +740,11 @@ func TestBanMemberHandlerMapsAccessRestricted(t *testing.T) {
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
-	req := httptest.NewRequest(http.MethodPost, "/members/ban", strings.NewReader(`{"group_id":"g1","user_id":"u2"}`))
+	req := httptest.NewRequest(http.MethodPost, "/members/set_ban", strings.NewReader(`{"group_id":"g1","user_id":"u2","active":true}`))
 	req.Header.Set("Idempotency-Key", "banmember-restricted-123456789012345")
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
-	handler.BanMember(rr, req)
+	handler.SetMemberBan(rr, req)
 	assertGroupCode(t, rr, httpx.CodeForbidden)
 }
 
@@ -759,11 +759,11 @@ func TestBanMemberHandlerCannotBanSelf(t *testing.T) {
 		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
-	req := httptest.NewRequest(http.MethodPost, "/members/ban", strings.NewReader(`{"group_id":"g1","user_id":"user_alice"}`))
+	req := httptest.NewRequest(http.MethodPost, "/members/set_ban", strings.NewReader(`{"group_id":"g1","user_id":"user_alice","active":true}`))
 	req.Header.Set("Idempotency-Key", "ban-self-1234567890123456789012345678")
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
-	handler.BanMember(rr, req)
+	handler.SetMemberBan(rr, req)
 	assertGroupCode(t, rr, httpx.CodeForbidden)
 }
 
@@ -778,10 +778,10 @@ func TestUnbanMemberHandlerReturnsSuccess(t *testing.T) {
 		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
-	req := httptest.NewRequest(http.MethodPost, "/members/unban", strings.NewReader(`{"group_id":"g1","user_id":"u2"}`))
+	req := httptest.NewRequest(http.MethodPost, "/members/set_ban", strings.NewReader(`{"group_id":"g1","user_id":"u2","active":false}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
-	handler.UnbanMember(rr, req)
+	handler.SetMemberBan(rr, req)
 
 	var resp struct {
 		Code httpx.Code `json:"code"`
@@ -796,10 +796,10 @@ func TestUnbanMemberHandlerReturnsSuccess(t *testing.T) {
 
 func TestUnbanMemberHandlerMapsGroupNotFound(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
-	req := httptest.NewRequest(http.MethodPost, "/members/unban", strings.NewReader(`{"group_id":"missing","user_id":"u2"}`))
+	req := httptest.NewRequest(http.MethodPost, "/members/set_ban", strings.NewReader(`{"group_id":"missing","user_id":"u2","active":false}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
-	handler.UnbanMember(rr, req)
+	handler.SetMemberBan(rr, req)
 	assertGroupCode(t, rr, httpx.CodeNotFound)
 }
 
@@ -854,7 +854,7 @@ func TestListSentInvitesHandlerReturnsSuccess(t *testing.T) {
 		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
-	req := httptest.NewRequest(http.MethodPost, "/members/invites/list", strings.NewReader(`{"group_id":"g1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/invites/sent/list", strings.NewReader(`{"group_id":"g1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListSentInvites(rr, req)
@@ -876,7 +876,7 @@ func TestListSentInvitesHandlerMapsAccessRestricted(t *testing.T) {
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
-	req := httptest.NewRequest(http.MethodPost, "/members/invites/list", strings.NewReader(`{"group_id":"g1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/invites/sent/list", strings.NewReader(`{"group_id":"g1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListSentInvites(rr, req)
@@ -894,7 +894,7 @@ func TestRevokeInviteHandlerReturnsSuccess(t *testing.T) {
 		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
-	req := httptest.NewRequest(http.MethodPost, "/members/invites/revoke", strings.NewReader(`{"group_id":"g1","invite_id":"inv1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/invites/sent/revoke", strings.NewReader(`{"group_id":"g1","invite_id":"inv1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.RevokeInvite(rr, req)
@@ -912,7 +912,7 @@ func TestRevokeInviteHandlerReturnsSuccess(t *testing.T) {
 
 func TestRevokeInviteHandlerMapsGroupNotFound(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
-	req := httptest.NewRequest(http.MethodPost, "/members/invites/revoke", strings.NewReader(`{"group_id":"missing","invite_id":"inv1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/invites/sent/revoke", strings.NewReader(`{"group_id":"missing","invite_id":"inv1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.RevokeInvite(rr, req)
@@ -1352,7 +1352,7 @@ func TestHandlerDismissReturns10300WhenNotFound(t *testing.T) {
 	assertGroupCode(t, rr, httpx.CodeNotFound)
 }
 
-func TestHandlerUpdateMySettingsReturnsSuccess(t *testing.T) {
+func TestHandlerUpdatePreferencesReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
 		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
 		getFound:  true,
@@ -1361,7 +1361,7 @@ func TestHandlerUpdateMySettingsReturnsSuccess(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/update_preferences", strings.NewReader(`{"group_id":"g1","is_muted":true}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
-	handler.UpdateMySettings(rr, req)
+	handler.UpdatePreferences(rr, req)
 
 	var resp struct {
 		Code httpx.Code `json:"code"`
@@ -1374,20 +1374,20 @@ func TestHandlerUpdateMySettingsReturnsSuccess(t *testing.T) {
 	}
 }
 
-func TestHandlerUpdateMySettingsRejectsInvalidJSON(t *testing.T) {
+func TestHandlerUpdatePreferencesRejectsInvalidJSON(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
 	req := httptest.NewRequest(http.MethodPost, "/update_preferences", strings.NewReader(`{bad`))
 	rr := httptest.NewRecorder()
-	handler.UpdateMySettings(rr, req)
+	handler.UpdatePreferences(rr, req)
 	assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 }
 
-func TestHandlerUpdateMySettingsReturns10300WhenNotFound(t *testing.T) {
+func TestHandlerUpdatePreferencesReturns10300WhenNotFound(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
 	req := httptest.NewRequest(http.MethodPost, "/update_preferences", strings.NewReader(`{"group_id":"missing"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
-	handler.UpdateMySettings(rr, req)
+	handler.UpdatePreferences(rr, req)
 	assertGroupCode(t, rr, httpx.CodeNotFound)
 }
 
@@ -1590,7 +1590,7 @@ func TestHandlerListMyInvitesReturnsSuccess(t *testing.T) {
 			{InviteID: "inv1", Group: GroupInfo{GroupID: "g1"}, Status: ApplicationStatusPending},
 		},
 	}))
-	req := httptest.NewRequest(http.MethodPost, "/list_invites", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/invites/received/list", strings.NewReader(`{}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyInvites(rr, req)
@@ -1614,7 +1614,7 @@ func TestHandlerListMyInvitesReturnsSuccess(t *testing.T) {
 
 func TestHandlerListMyInvitesRejectsInvalidJSON(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
-	req := httptest.NewRequest(http.MethodPost, "/list_invites", strings.NewReader(`{broken`))
+	req := httptest.NewRequest(http.MethodPost, "/invites/received/list", strings.NewReader(`{broken`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyInvites(rr, req)
@@ -1623,7 +1623,7 @@ func TestHandlerListMyInvitesRejectsInvalidJSON(t *testing.T) {
 
 func TestHandlerListMyInvitesReturns10600OnError(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{listMyInvitesErr: errors.New("boom")}))
-	req := httptest.NewRequest(http.MethodPost, "/list_invites", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/invites/received/list", strings.NewReader(`{}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyInvites(rr, req)
@@ -1638,7 +1638,7 @@ func TestHandlerAcceptInviteReturnsSuccess(t *testing.T) {
 			{InviteID: "inv1", Group: GroupInfo{GroupID: "g1"}, Status: ApplicationStatusPending},
 		},
 	}))
-	req := httptest.NewRequest(http.MethodPost, "/accept_invite", strings.NewReader(`{"invite_id":"inv1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/invites/received/accept", strings.NewReader(`{"invite_id":"inv1"}`))
 	req.Header.Set("Idempotency-Key", "accept-invite-12345678901234567890")
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
@@ -1657,7 +1657,7 @@ func TestHandlerAcceptInviteReturnsSuccess(t *testing.T) {
 
 func TestHandlerAcceptInviteRejectsMissingInviteID(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
-	req := httptest.NewRequest(http.MethodPost, "/accept_invite", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/invites/received/accept", strings.NewReader(`{}`))
 	req.Header.Set("Idempotency-Key", "accept-invite-missing-12345678901234")
 	rr := httptest.NewRecorder()
 	handler.AcceptInvite(rr, req)
@@ -1666,7 +1666,7 @@ func TestHandlerAcceptInviteRejectsMissingInviteID(t *testing.T) {
 
 func TestHandlerAcceptInviteReturns10300WhenNotFound(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{acceptInviteErr: ErrGroupNotFound}))
-	req := httptest.NewRequest(http.MethodPost, "/accept_invite", strings.NewReader(`{"invite_id":"missing"}`))
+	req := httptest.NewRequest(http.MethodPost, "/invites/received/accept", strings.NewReader(`{"invite_id":"missing"}`))
 	req.Header.Set("Idempotency-Key", "accept-invite-nf-12345678901234567890")
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()

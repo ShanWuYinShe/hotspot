@@ -229,6 +229,16 @@ type UnmuteMemberRequest struct {
 	UserID  string `json:"user_id"`
 }
 
+// SetMemberBanRequest 是两态统一端点 groups/members/set_ban 的请求类型（契约级）。
+type SetMemberBanRequest struct {
+	GroupID string  `json:"group_id"`
+	UserID  string  `json:"user_id"`
+	Active  bool    `json:"active"`
+	Reason  *string `json:"reason,omitempty"`
+}
+
+// BanMemberRequest / UnbanMemberRequest 为 repo 层内部请求结构（service.SetMemberBan
+// 按 Active 拆分后传入 repo），不对外暴露。
 type BanMemberRequest struct {
 	GroupID string  `json:"group_id"`
 	UserID  string  `json:"user_id"`
@@ -322,7 +332,7 @@ type DeleteGroupAnnouncementRequest struct {
 	AnnouncementID string `json:"announcement_id"`
 }
 
-type UpdateGroupMySettingsRequest struct {
+type UpdateGroupPreferencesRequest struct {
 	GroupID  string `json:"group_id"`
 	IsMuted  *bool  `json:"is_muted,omitempty"`
 	IsPinned *bool  `json:"is_pinned,omitempty"`

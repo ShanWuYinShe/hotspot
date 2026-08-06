@@ -325,7 +325,7 @@ func classifyRoute(path string) (routeClass, bool) {
 	case strings.HasPrefix(path, "/api/v1/comments/"):
 		return routeClass{readOnly: !strings.HasSuffix(path, "/create")}, true
 	case strings.HasPrefix(path, "/api/v1/groups/"):
-		return routeClass{readOnly: strings.HasSuffix(path, "/search") || strings.HasSuffix(path, "/get_detail")}, true
+		return routeClass{readOnly: strings.HasSuffix(path, "/search") || strings.HasSuffix(path, "/open_the_door")}, true
 	case strings.HasPrefix(path, "/api/v1/users/"):
 		return routeClass{readOnly: isUsersReadPath(path)}, true
 	case strings.HasPrefix(path, "/api/v1/private_chats/"):
@@ -360,7 +360,7 @@ func isAdminReadPath(path string) bool {
 
 func isUsersReadPath(path string) bool {
 	switch path {
-	case "/api/v1/users/search", "/api/v1/users/get_detail", "/api/v1/users/get_account", "/api/v1/users/get_settings", "/api/v1/users/list_blocked":
+	case "/api/v1/users/search", "/api/v1/users/open_the_door", "/api/v1/users/get_account", "/api/v1/users/get_settings", "/api/v1/users/list_blocked":
 		return true
 	default:
 		return false

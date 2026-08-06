@@ -45,7 +45,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
 			group.Post("/list", m.chatHandler.List)
-			group.Post("/get_detail", m.chatHandler.OpenTheDoor)
+			group.Post("/open_the_door", m.chatHandler.OpenTheDoor)
 			group.Post("/update_preferences", m.chatHandler.UpdateSettings)
 			group.Post("/delete", m.chatHandler.Delete)
 		})

@@ -470,7 +470,7 @@ func TestRealtimeRejectsPrivateTypingWhenPrivateChatDenied(t *testing.T) {
 	_ = conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}})
 	var established Event
 	_ = conn.ReadJSON(&established)
-	_ = conn.WriteJSON(Event{Type: "PrivateTyping", Payload: PrivateTypingSendPayload{TargetUserID: "user_bob", IsTyping: true}})
+	_ = conn.WriteJSON(Event{Type: "SendPrivateTyping", Payload: PrivateTypingSendPayload{TargetUserID: "user_bob", IsTyping: true}})
 	var denied struct {
 		Type    string       `json:"type"`
 		Payload ErrorPayload `json:"payload"`
@@ -511,7 +511,7 @@ func TestRealtimeRejectsGroupTypingForNonMember(t *testing.T) {
 	_ = conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}})
 	var established Event
 	_ = conn.ReadJSON(&established)
-	_ = conn.WriteJSON(Event{Type: "GroupTyping", Payload: GroupTypingSendPayload{GroupID: "group_1", IsTyping: true}})
+	_ = conn.WriteJSON(Event{Type: "SendGroupTyping", Payload: GroupTypingSendPayload{GroupID: "group_1", IsTyping: true}})
 	var denied struct {
 		Type    string       `json:"type"`
 		Payload ErrorPayload `json:"payload"`
@@ -576,7 +576,7 @@ func TestRealtimeAllowsGroupSubscriptionAndTypingBeyondFirstHundredMembers(t *te
 	if snapshot.Type != "SubscriptionsSnapshot" {
 		t.Fatalf("unexpected snapshot: %#v", snapshot)
 	}
-	_ = conn.WriteJSON(Event{Type: "GroupTyping", Payload: GroupTypingSendPayload{GroupID: "group_big", IsTyping: true}})
+	_ = conn.WriteJSON(Event{Type: "SendGroupTyping", Payload: GroupTypingSendPayload{GroupID: "group_big", IsTyping: true}})
 	var typing Event
 	if err := conn.ReadJSON(&typing); err != nil {
 		t.Fatalf("read typing event: %v", err)

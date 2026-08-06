@@ -473,13 +473,13 @@ func TestUsers_ListReactedMoments(t *testing.T) {
 func TestUsersMe_GetProfile(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/me/profile/get", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/users/get_account", map[string]any{}, &resp)
 	})
 }
 
 func TestUsersMe_UpdateProfile(t *testing.T) {
 	withAuth(t, func(token string) {
-		apiRespOK(t, "/api/v1/users/me/profile/update", map[string]any{
+		apiRespOK(t, "/api/v1/users/update_account", map[string]any{
 			"bio": "test bio",
 		}, nil)
 	})
@@ -487,9 +487,14 @@ func TestUsersMe_UpdateProfile(t *testing.T) {
 
 func TestUsersMe_LocationUpdate(t *testing.T) {
 	withAuth(t, func(token string) {
-		apiRespOK(t, "/api/v1/users/me/location/update", map[string]any{
-			"latitude":  37.7749,
-			"longitude": -122.4194,
+		apiRespOK(t, "/api/v1/users/update_location", map[string]any{
+			"location": map[string]any{
+				"point": map[string]any{
+					"latitude":  37.7749,
+					"longitude": -122.4194,
+				},
+				"location_name": "San Francisco",
+			},
 		}, nil)
 	})
 }
@@ -497,14 +502,16 @@ func TestUsersMe_LocationUpdate(t *testing.T) {
 func TestUsersMe_GetSettings(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/me/settings/get", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/users/get_settings", map[string]any{}, &resp)
 	})
 }
 
 func TestUsersMe_UpdateSettings(t *testing.T) {
 	withAuth(t, func(token string) {
-		apiRespOK(t, "/api/v1/users/me/settings/update", map[string]any{
-			"allow_stranger_dm": true,
+		apiRespOK(t, "/api/v1/users/update_settings", map[string]any{
+			"settings": map[string]any{
+				"allow_private_chat": "everyone",
+			},
 		}, nil)
 	})
 }
@@ -512,8 +519,9 @@ func TestUsersMe_UpdateSettings(t *testing.T) {
 func TestUsersMe_Follow(t *testing.T) {
 	withTwoUsers(t, func(tok1, tok2 string) {
 		tok1uid, _ := whoAmI(tok1)
-		apiRespOK(t, "/api/v1/users/me/follow", map[string]any{
-			"target_user_id": tok1uid,
+		apiRespOK(t, "/api/v1/users/set_follow", map[string]any{
+			"user_id": tok1uid,
+			"active":  true,
 		}, nil)
 	})
 }
@@ -525,30 +533,30 @@ func TestUsersMe_Unfollow(t *testing.T) {
 	tok1uid := createTestUser(t, "unfollow_target")
 	oldToken := accessToken
 	accessToken = tok1uid
-	apiRespOK(t, "/api/v1/users/me/follow", map[string]any{"target_user_id": tok2uid}, nil)
-	apiRespOK(t, "/api/v1/users/me/unfollow", map[string]any{"target_user_id": tok2uid}, nil)
+	apiRespOK(t, "/api/v1/users/set_follow", map[string]any{"user_id": tok2uid, "active": true}, nil)
+	apiRespOK(t, "/api/v1/users/set_follow", map[string]any{"user_id": tok2uid, "active": false}, nil)
 	accessToken = oldToken
 }
 
 func TestUsersMe_Block_Unblock(t *testing.T) {
 	withTwoUsers(t, func(tok1, tok2 string) {
 		tok2uid, _ := whoAmI(tok2)
-		apiRespOK(t, "/api/v1/users/me/block", map[string]any{"target_user_id": tok2uid}, nil)
-		apiRespOK(t, "/api/v1/users/me/unblock", map[string]any{"target_user_id": tok2uid}, nil)
+		apiRespOK(t, "/api/v1/users/set_block", map[string]any{"user_id": tok2uid, "active": true}, nil)
+		apiRespOK(t, "/api/v1/users/set_block", map[string]any{"user_id": tok2uid, "active": false}, nil)
 	})
 }
 
 func TestUsersMe_ListBlocked(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/me/list_blocked", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/users/list_blocked", map[string]any{}, &resp)
 	})
 }
 
 func TestUsersMe_SetRemark(t *testing.T) {
 	withTwoUsers(t, func(tok1, tok2 string) {
 		tok2uid, _ := whoAmI(tok2)
-		apiRespOK(t, "/api/v1/users/me/set_remark", map[string]any{
+		apiRespOK(t, "/api/v1/users/set_remark", map[string]any{
 			"target_user_id": tok2uid,
 			"remark":         "test remark",
 		}, nil)
@@ -560,7 +568,7 @@ func whoAmI(token string) (string, string) {
 	accessToken = token
 	defer func() { accessToken = old }()
 	var resp ApiResponse[map[string]any]
-	post("/api/v1/users/me/profile/get", map[string]any{}, &resp)
+	post("/api/v1/users/get_account", map[string]any{}, &resp)
 	if resp.Data == nil {
 		return "", ""
 	}
@@ -600,7 +608,7 @@ func TestMoments_Search(t *testing.T) {
 
 func TestMoments_ListLikes(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/moments/list_likes", map[string]any{}, &resp)
+	apiRespOK(t, "/api/v1/reactions/list", map[string]any{"target_type": "moment", "target_id": "fake_moment"}, &resp)
 }
 
 // =============================================================================
@@ -618,13 +626,14 @@ func TestMoments_CreateList(t *testing.T) {
 					"latitude":  37.7749,
 					"longitude": -122.4194,
 				},
+				"location_name": "Test City",
 			},
 		}, &createResp)
 		if createResp.Code != 0 {
 			t.Fatalf("create moment failed: code=%d message=%s", createResp.Code, createResp.Message)
 		}
 		var listResp ApiResponse[map[string]any]
-		apiOK(t, "/api/v1/moments/me/list", map[string]any{}, &listResp)
+		apiOK(t, "/api/v1/moments/list_my", map[string]any{}, &listResp)
 	})
 }
 
@@ -638,6 +647,7 @@ func TestMoments_Update(t *testing.T) {
 					"latitude":  37.7749,
 					"longitude": -122.4194,
 				},
+				"location_name": "Test City",
 			},
 		}, &createResp)
 		if createResp.Code == 0 && createResp.Data != nil {
@@ -654,13 +664,22 @@ func TestMoments_LikeUnlike(t *testing.T) {
 		oldTok := accessToken
 		accessToken = tok1uid
 		var createResp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/moments/create", map[string]any{"description": "likeable moment"}, &createResp)
+		apiRespOK(t, "/api/v1/moments/create", map[string]any{
+			"description": "likeable moment",
+			"location": map[string]any{
+				"point": map[string]any{
+					"latitude":  37.7749,
+					"longitude": -122.4194,
+				},
+				"location_name": "Test City",
+			},
+		}, &createResp)
 		accessToken = oldTok
 
 		if createResp.Code == 0 && createResp.Data != nil {
 			if mid, ok := (*createResp.Data)["moment_id"].(string); ok {
-				apiRespOK(t, "/api/v1/moments/me/like", map[string]any{"moment_id": mid}, nil)
-				apiRespOK(t, "/api/v1/moments/me/unlike", map[string]any{"moment_id": mid}, nil)
+				apiRespOK(t, "/api/v1/reactions/set", map[string]any{"target_type": "moment", "target_id": mid, "emoji": "👍", "active": true}, nil)
+				apiRespOK(t, "/api/v1/reactions/set", map[string]any{"target_type": "moment", "target_id": mid, "emoji": "👍", "active": false}, nil)
 			}
 		}
 	})
@@ -672,12 +691,21 @@ func TestMoments_FavoriteUnfavorite(t *testing.T) {
 		oldTok := accessToken
 		accessToken = uid
 		var createResp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/moments/create", map[string]any{"description": "fav moment"}, &createResp)
+		apiRespOK(t, "/api/v1/moments/create", map[string]any{
+			"description": "fav moment",
+			"location": map[string]any{
+				"point": map[string]any{
+					"latitude":  37.7749,
+					"longitude": -122.4194,
+				},
+				"location_name": "Test City",
+			},
+		}, &createResp)
 		accessToken = oldTok
 		if createResp.Code == 0 && createResp.Data != nil {
 			if mid, ok := (*createResp.Data)["moment_id"].(string); ok {
-				apiRespOK(t, "/api/v1/moments/me/favorite", map[string]any{"moment_id": mid}, nil)
-				apiRespOK(t, "/api/v1/moments/me/unfavorite", map[string]any{"moment_id": mid}, nil)
+				apiRespOK(t, "/api/v1/moments/set_favorite", map[string]any{"moment_id": mid, "active": true}, nil)
+				apiRespOK(t, "/api/v1/moments/set_favorite", map[string]any{"moment_id": mid, "active": false}, nil)
 			}
 		}
 	})
@@ -699,16 +727,15 @@ func TestComments_ListReplies(t *testing.T) {
 
 func TestComments_ListLikes(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/comments/list_likes", map[string]any{"comment_id": "c_fake"}, &resp)
+	apiRespOK(t, "/api/v1/reactions/list", map[string]any{"target_type": "comment", "target_id": "c_fake"}, &resp)
 }
 
 func TestComments_CreateDelete(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
 		apiRespOK(t, "/api/v1/comments/create", map[string]any{
-			"target_id":   "moment_fake",
-			"target_type": "moment",
-			"content":     "test comment",
+			"moment_id": "moment_fake",
+			"content":   "test comment",
 		}, &resp)
 		if resp.Code == 0 && resp.Data != nil {
 			if cid, ok := (*resp.Data)["comment_id"].(string); ok {
@@ -720,8 +747,8 @@ func TestComments_CreateDelete(t *testing.T) {
 
 func TestComments_LikeUnlike(t *testing.T) {
 	withAuth(t, func(token string) {
-		apiRespOK(t, "/api/v1/comments/me/like", map[string]any{"comment_id": "c_fake"}, nil)
-		apiRespOK(t, "/api/v1/comments/me/unlike", map[string]any{"comment_id": "c_fake"}, nil)
+		apiRespOK(t, "/api/v1/reactions/set", map[string]any{"target_type": "comment", "target_id": "c_fake", "emoji": "👍", "active": true}, nil)
+		apiRespOK(t, "/api/v1/reactions/set", map[string]any{"target_type": "comment", "target_id": "c_fake", "emoji": "👍", "active": false}, nil)
 	})
 }
 
@@ -765,6 +792,13 @@ func TestGroups_CreateUpdateDismiss(t *testing.T) {
 		apiRespOK(t, "/api/v1/groups/create", map[string]any{
 			"name":        "Test Group",
 			"description": "integration test group",
+			"location": map[string]any{
+				"point": map[string]any{
+					"latitude":  37.7749,
+					"longitude": -122.4194,
+				},
+				"location_name": "Test City",
+			},
 		}, &createResp)
 		if createResp.Code == 0 && createResp.Data != nil {
 			if gid, ok := (*createResp.Data)["group_id"].(string); ok {
@@ -785,7 +819,7 @@ func TestGroups_CreateUpdateDismiss(t *testing.T) {
 func TestGroups_MyGroups(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/groups/me/list", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/groups/list_my", map[string]any{}, &resp)
 	})
 }
 
@@ -866,8 +900,10 @@ func TestShare_CreateGet(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
 		apiRespOK(t, "/api/v1/share/create", map[string]any{
-			"target_type": "moment",
-			"target_id":   "fake_moment",
+			"share_type": "moment",
+			"payload": map[string]any{
+				"shared_moment_id": "fake_moment",
+			},
 		}, &resp)
 		if resp.Code == 0 && resp.Data != nil {
 			if code := getString(resp.Data, "share_code"); code != "" {
@@ -880,7 +916,7 @@ func TestShare_CreateGet(t *testing.T) {
 func TestShare_MeList(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/share/me/list", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/share/list_my", map[string]any{}, &resp)
 	})
 }
 
@@ -907,7 +943,7 @@ func TestPrivateChats_OpenTheDoor(t *testing.T) {
 func TestPrivateChats_List(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/private_chats/me/list", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/private_chats/list", map[string]any{}, &resp)
 	})
 }
 
@@ -918,7 +954,7 @@ func TestPrivateChats_UpdateSettings(t *testing.T) {
 		apiRespOK(t, "/api/v1/private_chats/open_the_door", map[string]any{"target_user_id": tok2uid}, nil)
 		// Then update settings
 		mute := true
-		apiRespOK(t, "/api/v1/private_chats/me/update_settings", map[string]any{
+		apiRespOK(t, "/api/v1/private_chats/update_preferences", map[string]any{
 			"target_user_id": tok2uid,
 			"is_muted":       mute,
 		}, nil)
@@ -929,7 +965,7 @@ func TestPrivateChats_Delete(t *testing.T) {
 	withTwoUsers(t, func(tok1, tok2 string) {
 		tok2uid, _ := whoAmI(tok2)
 		apiRespOK(t, "/api/v1/private_chats/open_the_door", map[string]any{"target_user_id": tok2uid}, nil)
-		apiRespOK(t, "/api/v1/private_chats/me/delete", map[string]any{"target_user_id": tok2uid}, nil)
+		apiRespOK(t, "/api/v1/private_chats/delete", map[string]any{"target_user_id": tok2uid}, nil)
 	})
 }
 
@@ -988,10 +1024,11 @@ func TestPrivateMessages_MarkAsReadAll(t *testing.T) {
 	withTwoUsers(t, func(tok1, tok2 string) {
 		tok2uid, _ := whoAmI(tok2)
 		apiRespOK(t, "/api/v1/private_chats/open_the_door", map[string]any{"target_user_id": tok2uid}, nil)
-		apiRespOK(t, "/api/v1/private_messages/me/mark_as_read", map[string]any{
-			"target_user_id": tok2uid,
+		apiRespOK(t, "/api/v1/private_messages/mark_read", map[string]any{
+			"scope":            "session",
+			"target_user_id":   tok2uid,
 		}, nil)
-		apiRespOK(t, "/api/v1/private_messages/me/mark_all_read", map[string]any{}, nil)
+		apiRespOK(t, "/api/v1/private_messages/mark_read", map[string]any{"scope": "all"}, nil)
 	})
 }
 
@@ -1024,11 +1061,9 @@ func TestGroupMessages_UpdateRecall(t *testing.T) {
 		oldTok := accessToken
 		accessToken = uid
 		apiRespOK(t, "/api/v1/group_messages/recall", map[string]any{
-			"group_id":   "fake_group",
 			"message_id": "fake_message",
 		}, nil)
 		apiRespOK(t, "/api/v1/group_messages/update", map[string]any{
-			"group_id":   "fake_group",
 			"message_id": "fake_message",
 			"content":    "updated",
 		}, nil)
@@ -1038,10 +1073,11 @@ func TestGroupMessages_UpdateRecall(t *testing.T) {
 
 func TestGroupMessages_MarkAsRead(t *testing.T) {
 	withAuth(t, func(token string) {
-		apiRespOK(t, "/api/v1/group_messages/me/mark_as_read", map[string]any{
+		apiRespOK(t, "/api/v1/group_messages/mark_read", map[string]any{
+			"scope":    "group",
 			"group_id": "fake_group",
 		}, nil)
-		apiRespOK(t, "/api/v1/group_messages/me/mark_all_read", map[string]any{}, nil)
+		apiRespOK(t, "/api/v1/group_messages/mark_read", map[string]any{"scope": "all"}, nil)
 	})
 }
 
@@ -1066,17 +1102,14 @@ func TestNotifications_UnreadCount(t *testing.T) {
 func TestNotifications_MarkReadSelected(t *testing.T) {
 	withAuth(t, func(token string) {
 		apiRespOK(t, "/api/v1/notify/mark_read", map[string]any{
-			"scope":            "selected",
-			"notification_ids": []string{"fake_notif_id"},
+			"notify_ids": []string{"fake_notif_id"},
 		}, nil)
 	})
 }
 
 func TestNotifications_MarkReadAll(t *testing.T) {
 	withAuth(t, func(token string) {
-		apiRespOK(t, "/api/v1/notify/mark_read", map[string]any{
-			"scope": "all",
-		}, nil)
+		apiRespOK(t, "/api/v1/notify/mark_read", map[string]any{}, nil)
 	})
 }
 
@@ -1099,7 +1132,7 @@ func TestReports_Create(t *testing.T) {
 func TestReports_MeList(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/reports/me/list", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/reports/list_my", map[string]any{}, &resp)
 	})
 }
 

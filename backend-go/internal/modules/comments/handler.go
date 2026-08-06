@@ -67,7 +67,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))
 }
 
-// GetDetail handles POST /api/v1/comments/get_detail. Returns a single comment
+// GetDetail handles POST /api/v1/comments/open_the_door. Returns a single comment
 // by id (spec api_spec_moment.md). found=false maps to httpx.CodeNotFound.
 func (h *Handler) GetDetail(w http.ResponseWriter, r *http.Request) {
 	var req GetCommentRequest

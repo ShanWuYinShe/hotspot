@@ -99,13 +99,9 @@ const (
 	EventTypeAccountBanned      = "AccountBanned"
 )
 
-// 多端同步（Deferred）
-const (
-	EventTypeSelfReadSync         = "SelfReadSync"
-	EventTypeSelfChatSettingsSync = "SelfChatSettingsSync"
-	EventTypeSelfSettingsUpdated  = "SelfSettingsUpdated"
-	EventTypeSelfRelationSync     = "SelfRelationSync"
-)
+// 多端同步（self-sync）事件不做：已读状态/设置/关系等具体状态不做跨设备实时同步
+// （见 api_spec_index.md「预留」）。未来如需通用的多端状态实时同步，将作为独立
+// WS 协议版本重新设计，届时再定义事件形状。
 
 type Event struct {
 	Type    string `json:"type"`

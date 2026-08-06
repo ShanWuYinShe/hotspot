@@ -153,7 +153,7 @@ func (s *Service) UnmuteMember(ctx context.Context, req UnmuteMemberRequest) err
 	return nil
 }
 
-func (s *Service) BanMember(ctx context.Context, req BanMemberRequest) error {
+func (s *Service) SetMemberBan(ctx context.Context, req SetMemberBanRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if !ok {
@@ -165,41 +165,36 @@ func (s *Service) BanMember(ctx context.Context, req BanMemberRequest) error {
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
 		return ErrAccessRestricted
 	}
-	if req.UserID == principal.UserID {
+	if req.Active && req.UserID == principal.UserID {
 		return ErrAccessRestricted
 	}
-	if err := s.repo.BanMember(ctx, principal.UserID, req); err != nil {
-		return err
-	}
-	event := realtime.Event{
-		Type: realtime.EventTypeGroupMemberRemoved,
-		Payload: map[string]any{
-			"group_id":     req.GroupID,
-			"user":         s.resolveUserInfo(ctx, req.UserID),
-			"removed_by":   s.resolveUserInfo(ctx, principal.UserID),
-			"reason":       "banned",
-			"removed_at":   time.Now().UTC().Format(time.RFC3339),
-			"member_count": group.Group.MembersCount,
-		},
-	}
-	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
-	realtime.DefaultHub().BroadcastToUser(req.UserID, event)
-	return nil
-}
-
-func (s *Service) UnbanMember(ctx context.Context, req UnbanMemberRequest) error {
-	principal, _ := platformauth.PrincipalFromContext(ctx)
-	group, ok, err := s.repo.Get(ctx, req.GroupID)
-	if !ok {
-		if err != nil {
+	if req.Active {
+		if err := s.repo.BanMember(ctx, principal.UserID, BanMemberRequest{
+			GroupID: req.GroupID,
+			UserID:  req.UserID,
+			Reason:  req.Reason,
+		}); err != nil {
 			return err
 		}
-		return ErrGroupNotFound
+		event := realtime.Event{
+			Type: realtime.EventTypeGroupMemberRemoved,
+			Payload: map[string]any{
+				"group_id":     req.GroupID,
+				"user":         s.resolveUserInfo(ctx, req.UserID),
+				"removed_by":   s.resolveUserInfo(ctx, principal.UserID),
+				"reason":       "banned",
+				"removed_at":   time.Now().UTC().Format(time.RFC3339),
+				"member_count": group.Group.MembersCount,
+			},
+		}
+		realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
+		realtime.DefaultHub().BroadcastToUser(req.UserID, event)
+		return nil
 	}
-	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
-		return ErrAccessRestricted
-	}
-	return s.repo.UnbanMember(ctx, principal.UserID, req)
+	return s.repo.UnbanMember(ctx, principal.UserID, UnbanMemberRequest{
+		GroupID: req.GroupID,
+		UserID:  req.UserID,
+	})
 }
 
 func (s *Service) ListBannedMembers(ctx context.Context, req BannedMembersRequest) ([]BannedMemberItem, string, error) {

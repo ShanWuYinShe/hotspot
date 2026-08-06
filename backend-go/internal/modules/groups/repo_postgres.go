@@ -337,7 +337,7 @@ func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, group
 	return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
 }
 
-func (r *PostgresRepository) UpdateMySettings(ctx context.Context, userID string, req UpdateGroupMySettingsRequest) error {
+func (r *PostgresRepository) UpdatePreferences(ctx context.Context, userID string, req UpdateGroupPreferencesRequest) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return persistence.ErrNotImplemented
 	}

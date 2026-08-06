@@ -791,7 +791,7 @@ func TestMomentHandlerDeleteReturnsSuccess(t *testing.T) {
 
 func TestMomentHandlerFavoriteRejectsMissingMomentID(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
-	req := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/set_favorite", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.Favorite(rr, req)
 	assertMomentCode(t, rr, httpx.CodeInvalidRequest)
@@ -807,7 +807,7 @@ func TestMomentHandlerFavoriteReturnsSuccess(t *testing.T) {
 		t.Fatalf("create moment: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{"moment_id":"`+created.MomentID+`","active":true}`))
+	req := httptest.NewRequest(http.MethodPost, "/set_favorite", strings.NewReader(`{"moment_id":"`+created.MomentID+`","active":true}`))
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Favorite(rr, req)
@@ -825,7 +825,7 @@ func TestMomentHandlerFavoriteReturnsSuccess(t *testing.T) {
 
 func TestMomentHandlerUnfavoriteRejectsMissingMomentID(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
-	req := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{"active":false}`))
+	req := httptest.NewRequest(http.MethodPost, "/set_favorite", strings.NewReader(`{"active":false}`))
 	rr := httptest.NewRecorder()
 	handler.Favorite(rr, req)
 	assertMomentCode(t, rr, httpx.CodeInvalidRequest)
@@ -842,13 +842,13 @@ func TestMomentHandlerUnfavoriteReturnsSuccess(t *testing.T) {
 	}
 
 	// 先收藏
-	favReq := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{"moment_id":"`+created.MomentID+`","active":true}`))
+	favReq := httptest.NewRequest(http.MethodPost, "/set_favorite", strings.NewReader(`{"moment_id":"`+created.MomentID+`","active":true}`))
 	favReq = favReq.WithContext(ctx)
 	favRR := httptest.NewRecorder()
 	handler.Favorite(favRR, favReq)
 
 	// 再取消收藏
-	req := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{"moment_id":"`+created.MomentID+`","active":false}`))
+	req := httptest.NewRequest(http.MethodPost, "/set_favorite", strings.NewReader(`{"moment_id":"`+created.MomentID+`","active":false}`))
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Favorite(rr, req)
@@ -877,7 +877,7 @@ func TestMomentHandlerListFavoritesReturnsSuccess(t *testing.T) {
 	}
 
 	// Alice 收藏自己的 moment
-	favReq := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{"moment_id":"`+created.MomentID+`","active":true}`))
+	favReq := httptest.NewRequest(http.MethodPost, "/set_favorite", strings.NewReader(`{"moment_id":"`+created.MomentID+`","active":true}`))
 	favReq = favReq.WithContext(ctxAlice)
 	favRR := httptest.NewRecorder()
 	handler.Favorite(favRR, favReq)

@@ -459,7 +459,7 @@ func TestPostgresIT_ApplicationApproveReject(t *testing.T) {
 	})
 }
 
-func TestPostgresIT_UpdateMySettings(t *testing.T) {
+func TestPostgresIT_UpdatePreferences(t *testing.T) {
 	testdb.SkipIfShort(t)
 	factory := testdb.Open(t)
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
@@ -469,20 +469,20 @@ func TestPostgresIT_UpdateMySettings(t *testing.T) {
 
 		muted := true
 		pinned := true
-		if err := repo.UpdateMySettings(ctx, ownerID, UpdateGroupMySettingsRequest{
+		if err := repo.UpdatePreferences(ctx, ownerID, UpdateGroupPreferencesRequest{
 			GroupID:  groupID,
 			IsMuted:  &muted,
 			IsPinned: &pinned,
 		}); err != nil {
-			t.Fatalf("UpdateMySettings: %v", err)
+			t.Fatalf("UpdatePreferences: %v", err)
 		}
 
 		muted = false
-		if err := repo.UpdateMySettings(ctx, ownerID, UpdateGroupMySettingsRequest{
+		if err := repo.UpdatePreferences(ctx, ownerID, UpdateGroupPreferencesRequest{
 			GroupID: groupID,
 			IsMuted: &muted,
 		}); err != nil {
-			t.Fatalf("UpdateMySettings (toggle): %v", err)
+			t.Fatalf("UpdatePreferences (toggle): %v", err)
 		}
 	})
 }

@@ -264,31 +264,13 @@ func (h *Handler) OpenAdminUser(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
 }
 
-func (h *Handler) BanUser(w http.ResponseWriter, r *http.Request) {
-	var req AdminBanUserRequest
+func (h *Handler) SetUserBan(w http.ResponseWriter, r *http.Request) {
+	var req AdminSetUserBanRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	apiErr, err := h.service.BanUser(withRequest(r.Context(), r), req)
-	if err != nil {
-		h.writeUnavailable(w, r)
-		return
-	}
-	if apiErr != nil {
-		h.writeAPIError(w, r, apiErr)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
-}
-
-func (h *Handler) UnbanUser(w http.ResponseWriter, r *http.Request) {
-	var req AdminUnbanUserRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
-		return
-	}
-	apiErr, err := h.service.UnbanUser(withRequest(r.Context(), r), req)
+	apiErr, err := h.service.SetUserBan(withRequest(r.Context(), r), req)
 	if err != nil {
 		h.writeUnavailable(w, r)
 		return

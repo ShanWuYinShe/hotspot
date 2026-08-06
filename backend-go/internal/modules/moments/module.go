@@ -47,7 +47,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(ratelimit.Middleware)
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
-			group.Post("/get_detail", m.momentsHandler.OpenTheDoor)
+			group.Post("/open_the_door", m.momentsHandler.OpenTheDoor)
 			group.Post("/search", m.momentsHandler.Search)
 		})
 		momentsRouter.Group(func(group chi.Router) {
@@ -59,7 +59,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Post("/update", m.momentsHandler.Update)
 			group.Post("/delete", m.momentsHandler.Delete)
 			group.Post("/list_my", m.momentsHandler.ListMine)
-			group.Post("/favorite", m.momentsHandler.Favorite)
+			group.Post("/set_favorite", m.momentsHandler.Favorite)
 			group.Post("/list_favorites", m.momentsHandler.ListFavorites)
 		})
 	})
@@ -72,7 +72,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(idempotency.Middleware)
 			group.Post("/list", m.commentsHandler.List)
 			group.Post("/list_replies", m.commentsHandler.ListReplies)
-			group.Post("/get_detail", m.commentsHandler.GetDetail)
+			group.Post("/open_the_door", m.commentsHandler.GetDetail)
 		})
 		commentsRouter.Group(func(group chi.Router) {
 			group.Use(platformauth.RequiredAuth)

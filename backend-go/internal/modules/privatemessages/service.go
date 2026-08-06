@@ -213,15 +213,9 @@ func (s *Service) MarkAsRead(ctx context.Context, req MarkPrivateMessagesReadReq
 		"reader_id":        principal.UserID,
 		"read_at":          time.Now().UTC().Format(time.RFC3339Nano),
 	}}
+	// 契约(api_spec_websocket.md):PrivateMessageRead 仅推给私聊对端（让对方得知已读）。
+	// 不推给已读方自己的其他设备——跨设备已读同步不在本协议范围（self-sync 已移除）。
 	realtime.DefaultHub().BroadcastToUser(meta.TargetUserID, event)
-	if principal.UserID != meta.TargetUserID {
-		realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
-	}
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeSelfReadSync, Payload: map[string]any{
-		"chat_type":        "private",
-		"target_id":        req.TargetUserID,
-		"up_to_message_id": meta.MessageID,
-	}})
 	return nil
 }
 
@@ -231,9 +225,7 @@ func (s *Service) MarkAllRead(ctx context.Context) error {
 		observability.L().Error("privatemessages.mark_all_read failed", "error", err)
 		return err
 	}
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeSelfReadSync, Payload: map[string]any{
-		"chat_type": "private",
-	}})
+	// 不推送 self-sync 事件（已读状态不做跨设备实时同步，见 api_spec_index.md 预留）
 	return nil
 }
 

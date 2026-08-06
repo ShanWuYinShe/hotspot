@@ -352,7 +352,7 @@ func TestServiceOpenAdminUserRejectsNotFound(t *testing.T) {
 func TestServiceBanUserRejectsSelf(t *testing.T) {
 	svc, repo, _, _ := newTestService()
 	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
-	apiErr, err := svc.BanUser(adminCtx("admin1"), AdminBanUserRequest{UserID: "admin1", Reason: "test"})
+	apiErr, err := svc.SetUserBan(adminCtx("admin1"), AdminSetUserBanRequest{UserID: "admin1", Reason: "test", Active: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -361,17 +361,30 @@ func TestServiceBanUserRejectsSelf(t *testing.T) {
 	}
 }
 
-// --- UnbanUser ---
+// --- SetUserBan（unban 路径）---
 
-func TestServiceUnbanUserRejectsNotBanned(t *testing.T) {
+func TestServiceUnbanUserRejectsUnknownUser(t *testing.T) {
 	svc, repo, _, _ := newTestService()
 	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
-	apiErr, err := svc.UnbanUser(adminCtx("admin1"), AdminUnbanUserRequest{UserID: "u2", Reason: "oops"})
+	apiErr, err := svc.SetUserBan(adminCtx("admin1"), AdminSetUserBanRequest{UserID: "u2", Reason: "oops", Active: false})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if apiErr == nil || apiErr.Code != httpx.CodeNotFound {
-		t.Fatalf("expected httpx.CodeNotFound (user not found or not banned), got %v", apiErr)
+		t.Fatalf("expected httpx.CodeNotFound (user not found), got %v", apiErr)
+	}
+}
+
+// 契约：解封未封禁用户视为 no-op 成功（设状态操作重复达同状态返回成功，见 api_spec_errors.md）
+func TestServiceUnbanUserNoopWhenNotBanned(t *testing.T) {
+	svc, repo, _, _ := newTestService()
+	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
+	apiErr, err := svc.SetUserBan(adminCtx("admin1"), AdminSetUserBanRequest{UserID: "user_alice", Reason: "oops", Active: false})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if apiErr != nil {
+		t.Fatalf("expected no-op success, got %v", apiErr)
 	}
 }
 
@@ -503,7 +516,7 @@ func TestServiceSearchUsersRejectsNoAuth(t *testing.T) {
 func TestServiceBanUserHappyPath(t *testing.T) {
 	svc, repo, _, _ := newTestService()
 	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
-	apiErr, err := svc.BanUser(adminCtx("admin1"), AdminBanUserRequest{UserID: "user_bob", Reason: "violation"})
+	apiErr, err := svc.SetUserBan(adminCtx("admin1"), AdminSetUserBanRequest{UserID: "user_bob", Reason: "violation", Active: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -524,7 +537,7 @@ func TestServiceBanUserHappyPath(t *testing.T) {
 func TestServiceBanUserRejectsEmptyUserID(t *testing.T) {
 	svc, repo, _, _ := newTestService()
 	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
-	apiErr, err := svc.BanUser(adminCtx("admin1"), AdminBanUserRequest{UserID: "", Reason: "test"})
+	apiErr, err := svc.SetUserBan(adminCtx("admin1"), AdminSetUserBanRequest{UserID: "", Reason: "test", Active: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -539,13 +552,13 @@ func TestServiceUnbanUserHappyPath(t *testing.T) {
 	svc, repo, _, _ := newTestService()
 	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
 	// 先封禁用户
-	if apiErr, err := svc.BanUser(adminCtx("admin1"), AdminBanUserRequest{UserID: "user_bob", Reason: "violation"}); err != nil {
+	if apiErr, err := svc.SetUserBan(adminCtx("admin1"), AdminSetUserBanRequest{UserID: "user_bob", Reason: "violation", Active: true}); err != nil {
 		t.Fatalf("ban setup error: %v", err)
 	} else if apiErr != nil {
 		t.Fatalf("ban setup api error: %v", apiErr)
 	}
 	// 解封
-	apiErr, err := svc.UnbanUser(adminCtx("admin1"), AdminUnbanUserRequest{UserID: "user_bob", Reason: "appeal approved"})
+	apiErr, err := svc.SetUserBan(adminCtx("admin1"), AdminSetUserBanRequest{UserID: "user_bob", Reason: "appeal approved", Active: false})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

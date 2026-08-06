@@ -110,10 +110,7 @@ func (s *Service) Unfollow(ctx context.Context, targetUserID string) error {
 		observability.L().Error("users.unfollow failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeSelfRelationSync, Payload: map[string]any{
-		"action":         "unfollow",
-		"target_user_id": targetUserID,
-	}})
+	// 不推送 self-sync 事件（关系状态不做跨设备实时同步，见 api_spec_index.md 预留）
 	observability.L().Info("users.unfollow completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
@@ -145,10 +142,7 @@ func (s *Service) Block(ctx context.Context, targetUserID, reason string) error 
 		observability.L().Error("users.block failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeSelfRelationSync, Payload: map[string]any{
-		"action":         "block",
-		"target_user_id": targetUserID,
-	}})
+	// 不推送 self-sync 事件（关系状态不做跨设备实时同步，见 api_spec_index.md 预留）
 	observability.L().Info("users.block completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
@@ -170,10 +164,7 @@ func (s *Service) Unblock(ctx context.Context, targetUserID string) error {
 		observability.L().Error("users.unblock failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeSelfRelationSync, Payload: map[string]any{
-		"action":         "unblock",
-		"target_user_id": targetUserID,
-	}})
+	// 不推送 self-sync 事件（关系状态不做跨设备实时同步，见 api_spec_index.md 预留）
 	observability.L().Info("users.unblock completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }

@@ -80,7 +80,7 @@ func TestMomentHandlerErrorPaths(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&momentErrRepo{repo: NewInMemoryRepository()}))
 
 	// OpenTheDoor：参数错误
-	req := httptest.NewRequest(http.MethodPost, "/get_detail", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/open_the_door", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.OpenTheDoor(rr, req)
 	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInvalidRequest {
@@ -88,7 +88,7 @@ func TestMomentHandlerErrorPaths(t *testing.T) {
 	}
 
 	// OpenTheDoor：不存在 → httpx.CodeNotFound
-	req = httptest.NewRequest(http.MethodPost, "/get_detail", strings.NewReader(`{"moment_id":"missing"}`))
+	req = httptest.NewRequest(http.MethodPost, "/open_the_door", strings.NewReader(`{"moment_id":"missing"}`))
 	rr = httptest.NewRecorder()
 	handler.OpenTheDoor(rr, req)
 	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeNotFound {
@@ -97,7 +97,7 @@ func TestMomentHandlerErrorPaths(t *testing.T) {
 
 	// OpenTheDoor：服务错误 → httpx.CodeInternalUnavailable
 	handler2 := NewHandler(NewServiceWithRepo(&momentErrRepo{repo: NewInMemoryRepository(), err: errors.New("boom")}))
-	req = httptest.NewRequest(http.MethodPost, "/get_detail", strings.NewReader(`{"moment_id":"m1"}`))
+	req = httptest.NewRequest(http.MethodPost, "/open_the_door", strings.NewReader(`{"moment_id":"m1"}`))
 	rr = httptest.NewRecorder()
 	handler2.OpenTheDoor(rr, req)
 	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInternalUnavailable {
@@ -197,7 +197,7 @@ func TestMomentFavoriteErrorPaths(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(repo))
 
 	// 空 moment_id → httpx.CodeInvalidRequest
-	req := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/set_favorite", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.Favorite(rr, req)
 	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInvalidRequest {
@@ -205,7 +205,7 @@ func TestMomentFavoriteErrorPaths(t *testing.T) {
 	}
 
 	// 不存在的 moment → httpx.CodeNotFound
-	req = httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{"moment_id":"missing","active":true}`))
+	req = httptest.NewRequest(http.MethodPost, "/set_favorite", strings.NewReader(`{"moment_id":"missing","active":true}`))
 	req = req.WithContext(principalMoments("u1"))
 	rr = httptest.NewRecorder()
 	handler.Favorite(rr, req)

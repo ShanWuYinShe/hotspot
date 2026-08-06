@@ -126,7 +126,7 @@ func TestPostgresUpdateDismissAndExecWrappers(t *testing.T) {
 	}
 
 	// 纯 Exec 转发：SetMemberRole / MuteMember / UnmuteMember / BanMember /
-	// UnbanMember / RemoveMember / RejectApplication / UpdateMySettings /
+	// UnbanMember / RemoveMember / RejectApplication / UpdatePreferences /
 	// LeaveGroup / CancelApplication / RejectInvite / RevokeInvite /
 	// DeleteAnnouncement
 	execCases := []struct {
@@ -153,7 +153,7 @@ func TestPostgresUpdateDismissAndExecWrappers(t *testing.T) {
 		}},
 		{"reject app", func(r *PostgresRepository) error { return r.RejectApplication(ctx, "a1", nil) }},
 		{"my settings", func(r *PostgresRepository) error {
-			return r.UpdateMySettings(ctx, "u1", UpdateGroupMySettingsRequest{GroupID: "g"})
+			return r.UpdatePreferences(ctx, "u1", UpdateGroupPreferencesRequest{GroupID: "g"})
 		}},
 		{"leave", func(r *PostgresRepository) error { return r.LeaveGroup(ctx, "u1", "g") }},
 		{"cancel app", func(r *PostgresRepository) error { return r.CancelApplication(ctx, "a1") }},

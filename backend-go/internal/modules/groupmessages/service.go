@@ -228,11 +228,7 @@ func (s *Service) MarkAsRead(ctx context.Context, req MarkGroupMessagesReadReque
 		observability.L().Error("groupmessages.mark_as_read failed", "error", err, "group_id", req.GroupID, "up_to_message_id", req.UpToMessageID, "user_id", principal.UserID)
 		return err
 	}
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeSelfReadSync, Payload: map[string]any{
-		"chat_type":        "group",
-		"target_id":        req.GroupID,
-		"up_to_message_id": req.UpToMessageID,
-	}})
+	// 不推送 self-sync 事件（已读状态不做跨设备实时同步，见 api_spec_index.md 预留）
 	return nil
 }
 
@@ -242,9 +238,7 @@ func (s *Service) MarkAllRead(ctx context.Context) error {
 		observability.L().Error("groupmessages.mark_all_read failed", "error", err, "user_id", principal.UserID)
 		return err
 	}
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeSelfReadSync, Payload: map[string]any{
-		"chat_type": "group",
-	}})
+	// 不推送 self-sync 事件（已读状态不做跨设备实时同步，见 api_spec_index.md 预留）
 	return nil
 }
 

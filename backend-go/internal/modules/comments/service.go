@@ -178,7 +178,7 @@ func (s *Service) Get(ctx context.Context, commentID string) (CommentItem, bool,
 }
 
 // GetForDetail returns a single comment with reactions[] filled (backs
-// comments/get_detail). Use Get for internal lookups that don't need reactions.
+// comments/open_the_door). Use Get for internal lookups that don't need reactions.
 func (s *Service) GetForDetail(ctx context.Context, commentID string) (CommentItem, bool, error) {
 	item, found, err := s.repo.Get(ctx, commentID)
 	if err != nil || !found {

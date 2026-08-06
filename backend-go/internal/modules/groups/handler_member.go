@@ -147,34 +147,13 @@ func (h *Handler) SetMute(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
 }
 
-func (h *Handler) BanMember(w http.ResponseWriter, r *http.Request) {
-	var req BanMemberRequest
+func (h *Handler) SetMemberBan(w http.ResponseWriter, r *http.Request) {
+	var req SetMemberBanRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
-	if err := h.service.BanMember(r.Context(), req); err != nil {
-		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
-			return
-		}
-		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
-			return
-		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
-}
-
-func (h *Handler) UnbanMember(w http.ResponseWriter, r *http.Request) {
-	var req UnbanMemberRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
-		return
-	}
-	if err := h.service.UnbanMember(r.Context(), req); err != nil {
+	if err := h.service.SetMemberBan(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return

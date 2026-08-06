@@ -8,7 +8,6 @@ import (
 	momenttypes "hotspot/backend-go/internal/modules/moments"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
-	"hotspot/backend-go/internal/platform/realtime"
 )
 
 func (s *Service) GetMySettings(ctx context.Context) (UserSettings, error) {
@@ -54,9 +53,7 @@ func (s *Service) UpdateMySettings(ctx context.Context, req UpdateSettingsReques
 		observability.L().Error("users.update_my_settings failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeSelfSettingsUpdated, Payload: map[string]any{
-		"settings": settings,
-	}})
+	// 不推送 self-sync 事件（设置状态不做跨设备实时同步，见 api_spec_index.md 预留）
 	observability.L().Info("users.update_my_settings completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }

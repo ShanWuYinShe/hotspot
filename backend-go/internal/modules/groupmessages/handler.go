@@ -29,12 +29,12 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 	}
 	principal, _ := platformauth.PrincipalFromContext(r.Context())
 	req.SenderUserID = principal.UserID
-	idempotency.ReplayOrStore(w, r, "group_messages/send", func() httpx.ApiResponse[MessageSent] {
+	idempotency.ReplayOrStore(w, r, "group_messages/send", func() httpx.ApiResponse[any] {
 		msg, err := h.service.Send(r.Context(), req)
 		if err != nil {
 			if errors.Is(err, ErrNotGroupMember) {
 				observability.LogBusinessError(r, "Send", int(httpx.CodeConflict), "不是群组成员")
-				return httpx.ApiResponse[MessageSent]{Code: httpx.CodeConflict, Message: "不是群组成员"}
+				return httpx.ApiResponse[any]{Code: httpx.CodeConflict, Message: "不是群组成员"}
 			}
 			if errors.Is(err, ErrUserMuted) {
 				mutedUntil := ""
@@ -42,17 +42,18 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 				if errors.As(err, &mutedErr) {
 					mutedUntil = mutedErr.MutedUntil
 				}
-				message := "您已被禁言"
-				if mutedUntil != "" {
-					message = "您已被禁言，截至时间：" + mutedUntil
-				}
-				observability.LogBusinessError(r, "Send", int(httpx.CodeConflict), message)
-				return httpx.ApiResponse[MessageSent]{Code: httpx.CodeConflict, Message: message}
+				// 契约(api_spec_chat.md):禁言拒绝返回 10400,data 携带 { mute: { muted_until } }
+				// 结构化携带截止时间,避免客户端从 message 文本解析时间戳。
+				observability.LogBusinessError(r, "Send", int(httpx.CodeConflict), "您已被禁言")
+				data := map[string]any{"mute": map[string]any{"muted_until": mutedUntil}}
+				var dataPtr any = data
+				return httpx.ApiResponse[any]{Code: httpx.CodeConflict, Message: "您已被禁言", Data: &dataPtr}
 			}
 			observability.LogServerError(r, "Send", err)
-			return httpx.ApiResponse[MessageSent]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
+			return httpx.ApiResponse[any]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 		}
-		return httpx.Success(msg)
+		var data any = msg
+		return httpx.ApiResponse[any]{Code: 0, Data: &data}
 	})
 }
 func (h *Handler) History(w http.ResponseWriter, r *http.Request) {

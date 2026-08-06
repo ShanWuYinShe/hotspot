@@ -61,7 +61,7 @@ type DeleteCommentRequest struct {
 	CommentID string `json:"comment_id"`
 }
 
-// GetCommentRequest backs POST /api/v1/comments/get_detail
+// GetCommentRequest backs POST /api/v1/comments/open_the_door
 // (spec api_spec_moment.md CommentOpenTheDoorRequest).
 type GetCommentRequest struct {
 	CommentID string `json:"comment_id"`

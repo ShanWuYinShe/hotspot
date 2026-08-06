@@ -329,13 +329,13 @@ func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
 }
 
-func (h *Handler) UpdateMySettings(w http.ResponseWriter, r *http.Request) {
-	var req UpdateGroupMySettingsRequest
+func (h *Handler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
+	var req UpdateGroupPreferencesRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
-	if err := h.service.UpdateMySettings(r.Context(), req); err != nil {
+	if err := h.service.UpdatePreferences(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return

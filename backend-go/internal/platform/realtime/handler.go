@@ -272,7 +272,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = sink.Send(Event{Type: EventTypeSubscribeAck, Payload: ack})
 			snapshot.ClientRequestID = payload.ClientRequestID
 			_ = sink.Send(Event{Type: EventTypeSubscriptionsSnapshot, Payload: snapshot})
-		case "PrivateTyping":
+		case "SendPrivateTyping":
 			var payload PrivateTypingSendPayload
 			if err := decodePayload(msg.Payload, &payload); err != nil {
 				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
@@ -292,7 +292,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			actorInfo := h.resolveTypingActor(principalCtx, principal.UserID)
 			DefaultHub().BroadcastToUser(payload.TargetUserID, Event{Type: EventTypePrivateTyping, Payload: PrivateTypingPayload{TargetUserID: payload.TargetUserID, Actor: actorInfo, IsTyping: payload.IsTyping}})
 			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypePrivateTyping, Payload: PrivateTypingPayload{TargetUserID: payload.TargetUserID, Actor: actorInfo, IsTyping: payload.IsTyping}})
-		case "GroupTyping":
+		case "SendGroupTyping":
 			var payload GroupTypingSendPayload
 			if err := decodePayload(msg.Payload, &payload); err != nil {
 				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})

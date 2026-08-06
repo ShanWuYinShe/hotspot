@@ -100,10 +100,10 @@ func TestAdminReadWriteUseDifferentLimits(t *testing.T) {
 	if testdb.DecodeAPICode(t, readRR2) != httpx.CodeRateLimited {
 		t.Fatal("expected admin read limit")
 	}
-	writeReq1 := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/ban", nil)
+	writeReq1 := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/set_ban", nil)
 	writeReq1 = writeReq1.WithContext(platformauth.WithPrincipal(writeReq1.Context(), platformauth.Principal{UserID: "admin_2"}))
 	handler.ServeHTTP(httptest.NewRecorder(), writeReq1)
-	writeReq2 := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/ban", nil)
+	writeReq2 := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/set_ban", nil)
 	writeReq2 = writeReq2.WithContext(platformauth.WithPrincipal(writeReq2.Context(), platformauth.Principal{UserID: "admin_2"}))
 	writeRR2 := httptest.NewRecorder()
 	handler.ServeHTTP(writeRR2, writeReq2)

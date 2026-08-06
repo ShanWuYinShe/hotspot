@@ -387,7 +387,7 @@ func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string
 	return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
 }
 
-func (r *InMemoryRepository) UpdateMySettings(_ context.Context, userID string, req UpdateGroupMySettingsRequest) error {
+func (r *InMemoryRepository) UpdatePreferences(_ context.Context, userID string, req UpdateGroupPreferencesRequest) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, ok := r.groups[req.GroupID]; !ok {

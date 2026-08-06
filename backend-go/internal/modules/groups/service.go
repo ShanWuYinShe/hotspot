@@ -226,7 +226,7 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) (GroupItem
 
 // buildGroupUpdatedFields 计算更新前后 GroupItem 的可见变更字段（spec websocket.md GroupUpdatedPayload）。
 // @group-admin-only 字段（is_searchable/max_members）有意不推送：群广播通道无法按订阅者角色过滤，
-// 少推送是安全的（管理员经 HTTP get_detail 获取）。has_password 为 @member-only，而群订阅者恒为成员，可推。
+// 少推送是安全的（管理员经 HTTP open_the_door 获取）。has_password 为 @member-only，而群订阅者恒为成员，可推。
 func buildGroupUpdatedFields(before, after GroupItem, req UpdateGroupRequest) map[string]any {
 	fields := make(map[string]any)
 	if after.Group.Name != before.Group.Name {
@@ -483,7 +483,7 @@ func (s *Service) DeleteAnnouncement(ctx context.Context, req DeleteGroupAnnounc
 	return s.repo.DeleteAnnouncement(ctx, req.GroupID, req.AnnouncementID)
 }
 
-func (s *Service) UpdateMySettings(ctx context.Context, req UpdateGroupMySettingsRequest) error {
+func (s *Service) UpdatePreferences(ctx context.Context, req UpdateGroupPreferencesRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
@@ -495,7 +495,7 @@ func (s *Service) UpdateMySettings(ctx context.Context, req UpdateGroupMySetting
 	if group.MyState == nil || !group.MyState.IsJoined {
 		return ErrNotMember
 	}
-	return s.repo.UpdateMySettings(ctx, principal.UserID, req)
+	return s.repo.UpdatePreferences(ctx, principal.UserID, req)
 }
 
 func (s *Service) LeaveGroup(ctx context.Context, req LeaveGroupRequest) error {

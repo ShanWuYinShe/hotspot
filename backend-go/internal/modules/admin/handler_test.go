@@ -112,9 +112,9 @@ func TestAdminModerationRoutesAreMounted(t *testing.T) {
 		body string
 	}{
 		{name: "users search", path: "/api/v1/admin/users/search", body: `{"nickname":"bob","pagination":{"limit":10}}`},
-		{name: "users open", path: "/api/v1/admin/users/get_detail", body: `{"user_id":"user_bob"}`},
+		{name: "users open", path: "/api/v1/admin/users/open_the_door", body: `{"user_id":"user_bob"}`},
 		{name: "groups search", path: "/api/v1/admin/groups/search", body: `{"name":"hot","pagination":{"limit":10}}`},
-		{name: "groups open", path: "/api/v1/admin/groups/get_detail", body: `{"group_id":"group_hotspot"}`},
+		{name: "groups open", path: "/api/v1/admin/groups/open_the_door", body: `{"group_id":"group_hotspot"}`},
 		{name: "reports search", path: "/api/v1/admin/reports/list", body: `{"status":"pending","pagination":{"limit":10}}`},
 		{name: "tags search", path: "/api/v1/admin/tags/search", body: `{"keyword":"hot","pagination":{"limit":10}}`},
 		{name: "announcements search", path: "/api/v1/admin/announcements/search", body: `{"pagination":{"limit":10}}`},
@@ -173,14 +173,14 @@ func TestAdminModerationRoutesRequireAdminPermission(t *testing.T) {
 func TestBanUserAuditUsesCloudflareCountry(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	req := adminContext(httptest.NewRequest(http.MethodPost, "/users/ban", strings.NewReader(`{"user_id":"user_bob","reason":"spam"}`)), "admin", true)
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/users/set_ban", strings.NewReader(`{"user_id":"user_bob","reason":"spam","active":true}`)), "admin", true)
 	req.Header.Set("Idempotency-Key", "banusercountry1234def05678ghij9012")
 	req.RemoteAddr = "173.245.48.5:443"
 	req.Header.Set("CF-Connecting-IP", "8.8.8.8")
 	req.Header.Set("CF-IPCountry", "JP")
 	rr := httptest.NewRecorder()
 
-	handler.BanUser(rr, req)
+	handler.SetUserBan(rr, req)
 
 	resp := decodeResponse[struct{}](t, rr)
 	if resp.Code != 0 {
@@ -381,10 +381,10 @@ func TestGetAppConfigRequiresPermission(t *testing.T) {
 
 func TestBanUserSucceedsWithoutIdempotencyKey(t *testing.T) {
 	handler := newTestHandler()
-	req := adminContext(httptest.NewRequest(http.MethodPost, "/users/ban", strings.NewReader(`{"user_id":"user_bob"}`)), "admin", true)
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/users/set_ban", strings.NewReader(`{"user_id":"user_bob","active":true}`)), "admin", true)
 	rr := httptest.NewRecorder()
 
-	handler.BanUser(rr, req)
+	handler.SetUserBan(rr, req)
 
 	resp := decodeResponse[struct{}](t, rr)
 	if resp.Code != 0 {
@@ -399,10 +399,10 @@ func TestBanUserAndUnbanUser(t *testing.T) {
 	bobSink := &sinkCapture{}
 	hub.RegisterUser("user_bob", "sess_user_bob_1", bobSink)
 
-	banReq := adminContext(httptest.NewRequest(http.MethodPost, "/users/ban", strings.NewReader(`{"user_id":"user_bob","reason":"spam","duration_days":7}`)), "admin", true)
+	banReq := adminContext(httptest.NewRequest(http.MethodPost, "/users/set_ban", strings.NewReader(`{"user_id":"user_bob","reason":"spam","duration_days":7,"active":true}`)), "admin", true)
 	banReq.Header.Set("Idempotency-Key", "banuser9abc1234def05678ghij9012klmn")
 	banRR := httptest.NewRecorder()
-	handler.BanUser(banRR, banReq)
+	handler.SetUserBan(banRR, banReq)
 	banResp := decodeResponse[struct{}](t, banRR)
 	if banResp.Code != 0 {
 		t.Fatalf("unexpected ban response: %#v", banResp)
@@ -428,9 +428,9 @@ func TestBanUserAndUnbanUser(t *testing.T) {
 		t.Fatalf("unexpected ban event delivery: %#v closed=%v", bobSink.events, bobSink.closed)
 	}
 
-	unbanReq := adminContext(httptest.NewRequest(http.MethodPost, "/users/unban", strings.NewReader(`{"user_id":"user_bob","reason":"appeal approved"}`)), "admin", true)
+	unbanReq := adminContext(httptest.NewRequest(http.MethodPost, "/users/set_ban", strings.NewReader(`{"user_id":"user_bob","reason":"appeal approved","active":false}`)), "admin", true)
 	unbanRR := httptest.NewRecorder()
-	handler.UnbanUser(unbanRR, unbanReq)
+	handler.SetUserBan(unbanRR, unbanReq)
 	unbanResp := decodeResponse[struct{}](t, unbanRR)
 	if unbanResp.Code != 0 {
 		t.Fatalf("unexpected unban response: %#v", unbanResp)
@@ -1300,7 +1300,7 @@ func TestOpenAuditLogReturnsLog(t *testing.T) {
 	}
 	logID := listResp.Data.Items[0].LogID
 
-	openReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/get_detail", strings.NewReader(`{"log_id":"`+logID+`"}`)), "admin", true)
+	openReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/open_the_door", strings.NewReader(`{"log_id":"`+logID+`"}`)), "admin", true)
 	openRR := httptest.NewRecorder()
 	handler.OpenAuditLog(openRR, openReq)
 	openResp := decodeResponse[AuditLogItem](t, openRR)
@@ -1311,7 +1311,7 @@ func TestOpenAuditLogReturnsLog(t *testing.T) {
 
 func TestOpenAuditLogReturnsNotFoundForMissingLog(t *testing.T) {
 	handler := newTestHandler()
-	openReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/get_detail", strings.NewReader(`{"log_id":"missing_log_id"}`)), "admin", true)
+	openReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/open_the_door", strings.NewReader(`{"log_id":"missing_log_id"}`)), "admin", true)
 	openRR := httptest.NewRecorder()
 	handler.OpenAuditLog(openRR, openReq)
 	openResp := decodeResponse[AuditLogItem](t, openRR)
