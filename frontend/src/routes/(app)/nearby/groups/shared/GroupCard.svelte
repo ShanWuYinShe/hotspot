@@ -25,9 +25,9 @@
 	<!-- 右上：隐私 -->
 	<span class="absolute top-2 right-2 z-[2] flex items-center justify-center rounded-full size-5"  style="background:var(--cst-surface-overlay-strong)">
 		{#if group.privacy === 'private'}
-			<Lock size={10} color="white" />
+			<Lock size={10} color="var(--cst-content-inverse)" />
 		{:else}
-			<Globe size={10} color="white" />
+			<Globe size={10} color="var(--cst-content-inverse)" />
 		{/if}
 	</span>
 

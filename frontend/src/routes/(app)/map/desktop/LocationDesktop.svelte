@@ -5,10 +5,8 @@
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import {
-		PIN_COLORS, PIN_LABELS, PIN_TONES, buildMapData, fetchMapCanvas,
-		type MapHeatBucket,
-		markerUserUrl, markerGroupUrl, markerMomentUrl,
-		markerUserClusterUrl, markerGroupClusterUrl, markerMomentClusterUrl
+		PIN_COLORS, PIN_LABELS, PIN_TONES, markerSvg, buildMapData, fetchMapCanvas,
+		type MapHeatBucket
 	} from '../shared/location-shared';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
 	import MapHeatDot from '../shared/MapHeatDot.svelte';
@@ -194,18 +192,18 @@
 			<button
 				type="button"
 				class="hover-btn flex items-center gap-2 rounded-full outline-none"
-				style="padding:9px 16px;font-size:13px;background:{showFilter ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};color:{showFilter ? 'white' : 'var(--cst-text-primary)'};border:1px solid {showFilter ? 'transparent' : 'var(--cst-border-default)'};box-shadow:{showFilter ? '0 4px 16px var(--cst-glow-accent)' : '0 4px 16px var(--cst-elevation-shadow-dark)'};"
+				style="padding:9px 16px;font-size:13px;background:{showFilter ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-text-primary)'};border:1px solid {showFilter ? 'transparent' : 'var(--cst-border-default)'};box-shadow:{showFilter ? '0 4px 16px var(--cst-glow-accent)' : '0 4px 16px var(--cst-elevation-shadow-dark)'};"
 				onclick={() => (showFilter = !showFilter)}
 			>
 				<SlidersHorizontal class="size-3.25"  strokeWidth={showFilter ? 2.5 : 1.75} />
 				筛选
 				{#if activeFilters.size < 3}
-					<span style="margin-left:2px;font-size:10px;padding:1px 6px;border-radius:999px;background:{showFilter ? 'var(--cst-surface-map-control-active)' : 'var(--cst-accent-soft)'};color:{showFilter ? 'white' : 'var(--cst-accent-default)'};font-weight:500;">{activeFilters.size}</span>
+					<span style="margin-left:2px;font-size:10px;padding:1px 6px;border-radius:999px;background:{showFilter ? 'var(--cst-surface-map-control-active)' : 'var(--cst-accent-soft)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};font-weight:500;">{activeFilters.size}</span>
 				{/if}
 			</button>
 			{#if showFilter}
 				<div class="mt-2 overflow-hidden rounded-control w-50 shadow-[0_8px_28px_var(--cst-elevation-shadow-dark)] border border-border-default"   style="background:var(--cst-surface-primary)">
-					{#each [{ type: 'user', label: '用户', icon: markerUserUrl, clusterIcon: markerUserClusterUrl, color: PIN_COLORS.user, count: userCount }, { type: 'group', label: '群组', icon: markerGroupUrl, clusterIcon: markerGroupClusterUrl, color: PIN_COLORS.group, count: groupCount }, { type: 'moment', label: '瞬间', icon: markerMomentUrl, clusterIcon: markerMomentClusterUrl, color: PIN_COLORS.moment, count: momentCount }] as item, i}
+					{#each [{ type: 'user', label: '用户', color: PIN_COLORS.user, count: userCount }, { type: 'group', label: '群组', color: PIN_COLORS.group, count: groupCount }, { type: 'moment', label: '瞬间', color: PIN_COLORS.moment, count: momentCount }] as item, i}
 						{#if i > 0}
 							<div class="h-0.25"  style="background:var(--cst-border-default)"></div>
 						{/if}
@@ -216,8 +214,10 @@
 							style="opacity:{active ? 1 : 0.45};"
 							onclick={() => toggleFilter(item.type as PinType)}
 						>
-							<img class="w-3.75 h-5.25" src={item.icon} alt=""  />
-							<img class="w-3.75 h-5.25" src={item.clusterIcon} alt=""  style="opacity:0.65" />
+								
+								{@html markerSvg(item.type as PinType, 1, { w: 15, h: 21 })}
+								
+								{@html markerSvg(item.type as PinType, 3, { w: 15, h: 21 })}
 							<span class="flex-1 text-text-primary text-xs" >{item.label}</span>
 							<span style="font-size:12px;color:{item.color};font-weight:600;">{item.count}</span>
 							<span class="flex items-center justify-center shrink-0" style="width:14px;height:14px;border-radius:4px;background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--cst-border-strong)'};transition:all 0.18s;">

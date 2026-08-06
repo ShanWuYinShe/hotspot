@@ -3,21 +3,12 @@
 import { getMapCanvas } from '@/api';
 import { formatDistance } from '@/lib/utils';
 import type { Pin, PinType } from './location-data';
-import markerUserUrl from '@/assets/markers/marker_user.svg';
-import markerGroupUrl from '@/assets/markers/marker_group.svg';
-import markerMomentUrl from '@/assets/markers/marker_moment.svg';
-import markerUserClusterUrl from '@/assets/markers/marker_user_cluster.svg';
-import markerGroupClusterUrl from '@/assets/markers/marker_group_cluster.svg';
-import markerMomentClusterUrl from '@/assets/markers/marker_moment_cluster.svg';
-
-export {
-	markerUserUrl,
-	markerGroupUrl,
-	markerMomentUrl,
-	markerUserClusterUrl,
-	markerGroupClusterUrl,
-	markerMomentClusterUrl
-};
+import markerUserRaw from '@/assets/markers/marker_user.svg?raw';
+import markerGroupRaw from '@/assets/markers/marker_group.svg?raw';
+import markerMomentRaw from '@/assets/markers/marker_moment.svg?raw';
+import markerUserClusterRaw from '@/assets/markers/marker_user_cluster.svg?raw';
+import markerGroupClusterRaw from '@/assets/markers/marker_group_cluster.svg?raw';
+import markerMomentClusterRaw from '@/assets/markers/marker_moment_cluster.svg?raw';
 
 export const SNAP_MIN = 148;
 export const SNAP_MID = 318;
@@ -47,10 +38,15 @@ export interface MapBounds {
 	maxLng: number;
 }
 
-export function getMarkerUrl(type: PinType, count: number) {
-	if (type === 'user') return count >= 3 ? markerUserClusterUrl : markerUserUrl;
-	if (type === 'group') return count >= 3 ? markerGroupClusterUrl : markerGroupUrl;
-	return count >= 3 ? markerMomentClusterUrl : markerMomentUrl;
+/** 内联渲染图钉 SVG（currentColor 主题化：容器 color 走 --cst-marker-* token，
+    深底/白点保留资源固定对比色）。返回完整 <svg> 字符串供 {@html} 使用。 */
+export function markerSvg(type: PinType, count: number, size?: { w: number; h: number }) {
+	const raw = type === 'user' ? (count >= 3 ? markerUserClusterRaw : markerUserRaw)
+		: type === 'group' ? (count >= 3 ? markerGroupClusterRaw : markerGroupRaw)
+		: (count >= 3 ? markerMomentClusterRaw : markerMomentRaw);
+	const dim = size ? `width="${size.w}" height="${size.h}"` : '';
+	const svg = raw.replace('<svg ', `<svg ${dim} `);
+	return `<span style="display:inline-block;color:${PIN_COLORS[type]};">${svg}</span>`;
 }
 
 export function buildMapData(center: { lat: number; lng: number }, zoom: number) {

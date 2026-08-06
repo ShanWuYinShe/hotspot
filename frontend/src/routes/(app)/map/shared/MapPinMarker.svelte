@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Pin } from './location-data';
-	import { getMarkerUrl, PIN_COLORS, type MapBounds } from './location-shared';
+	import { markerSvg, PIN_COLORS, type MapBounds } from './location-shared';
 
 	// 地图图钉。
 
@@ -37,7 +37,8 @@
 			{pin.count}
 		</div>
 	{/if}
-	<img class="w-9 h-12" src={getMarkerUrl(pin.type, pin.count ?? 1)} alt={pin.type}  style="display:block" />
+	
+	{@html markerSvg(pin.type, pin.count ?? 1, { w: 36, h: 48 })}
 	{#if isSelected}
 		<span
 			class="absolute rounded-full pointer-events-none"

@@ -243,6 +243,12 @@ theme/
   color-mix 只允许出现在 themes/*.css 的 token 值内部（值即最终定义）
 - 新增组件时若缺语义 token，先在 themes/{vibrant,forest}.css 补 `--cst-*`
   定义（light + dark），不得在组件里写死色值绕过
+- **图钉 SVG 资源（assets/markers/*.svg）**：主题色 fill/stroke 一律用
+  `currentColor`，由 `location-shared.ts` 的 `markerSvg()` 以
+  `style="color:var(--cst-marker-*)"` 染色，随主题/明暗变化；资源内仅保留
+  图标固有固定对比色（深色底 `#102A43`、白色高光 `#FFFFFF`）不随主题，
+  属合理例外。新增 marker 类 SVG 必须遵循：主题色走 currentColor，
+  禁止内嵌主题色 hex
 
 - 新组件优先使用语义名（`var(--cst-text-primary)`、`var(--cst-surface-page)` 等）+ Tailwind className
 - 主题切换通过 `<html>` 上的 `.vibrant` / `.forest` + `.dark` 类实现

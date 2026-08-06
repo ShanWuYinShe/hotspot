@@ -5,7 +5,7 @@
 	import * as Popover from '@/components/ui/popover';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
-	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, floatBtnStyle, buildMapData, fetchMapCanvas, type MapHeatBucket, markerUserUrl, markerGroupUrl, markerMomentUrl, type SnapState } from '../shared/location-shared';
+	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, markerSvg, floatBtnStyle, buildMapData, fetchMapCanvas, type MapHeatBucket, type SnapState } from '../shared/location-shared';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
 	import MapHeatDot from '../shared/MapHeatDot.svelte';
 	import LocationSheetList from './LocationSheetList.svelte';
@@ -255,11 +255,12 @@
 						class="w-34 overflow-hidden rounded-control p-0"
 					>
 						{#each [
-							['user', '用户', markerUserUrl, PIN_COLORS.user],
-							['group', '群组', markerGroupUrl, PIN_COLORS.group],
-							['moment', '瞬间', markerMomentUrl, PIN_COLORS.moment]
-						] as [type, label, icon, color], i}
+							['user', '用户', PIN_COLORS.user],
+							['group', '群组', PIN_COLORS.group],
+							['moment', '瞬间', PIN_COLORS.moment]
+						] as [type, label, color], i}
 							{@const active = activeFilters.has(type as PinType)}
+							{@const glow = PIN_TONES[type as PinType].glow}
 							{#if i > 0}
 								<div class="bg-border-default h-0.25" ></div>
 							{/if}
@@ -269,9 +270,10 @@
 								style="opacity:{active ? 1 : 0.38};"
 								onclick={() => toggleFilter(type as PinType)}
 							>
-								<img class="w-4.5 h-6 shrink-0" src={icon} alt={label}  />
+								
+								{@html markerSvg(type as PinType, 1, { w: 18, h: 24 })}
 								<span class="text-text-primary text-base"  style="flex:1;text-align:left">{label}</span>
-								<div style="width:13px;height:13px;border-radius:50%;shrink:0;background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--cst-border-default)'};box-shadow:{active ? `0 0 6px ${color}55` : 'none'};transition:all 0.18s;"></div>
+								<div style="width:13px;height:13px;border-radius:50%;shrink:0;background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--cst-border-default)'};box-shadow:{active ? `0 0 6px ${glow}` : 'none'};transition:all 0.18s;"></div>
 							</button>
 						{/each}
 					</Popover.Content>

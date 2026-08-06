@@ -322,7 +322,7 @@
 				{#if activeTab === 'liked'}
 					<div class="absolute inset-0 flex items-end justify-end p-1.5 bg-surface-overlay-soft">
 						<div class="flex items-center justify-center rounded-full bg-accent-default size-5" >
-							<Heart class="size-2.5"  style="color:var(--cst-text-on-accent)" strokeWidth={2} fill="white" />
+							<Heart class="size-2.5"  style="color:var(--cst-text-on-accent)" strokeWidth={2} fill="var(--cst-text-on-accent)" />
 						</div>
 					</div>
 				{/if}
