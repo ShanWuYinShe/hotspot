@@ -4,7 +4,7 @@
  * 个人主页分区共 6 个：moments / groups / friends / following / fans 五个独立分区，
  * 外加 relationships 聚合分区（好友 + 关注 + 粉丝三 tab，内部用 ?tab= 切换）。
  * 全部为常驻固定路由（/me/moments、/me/relationships …），不走动态段；
- * relationships 独立渲染为样板页（StandardPageLayout，不走 ProfileDesktop
+ * relationships 独立渲染为样板页（StandardPageLayout，不走 ProfilePage
  * 分区模式）；桌面导航「关系」和通知页「新关注你的人」入口落在 relationships；
  * 移动端个人数据 5 行链接走独立分区。路径见 ME_SECTION_PATHS。
  */

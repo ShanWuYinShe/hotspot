@@ -11,10 +11,12 @@
 	import { useAccountData } from '@/lib/profile-data.svelte';
 	import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 
-	// 桌面个人主页（对齐 Figma Make ProfilePage 契约）：
+	// 个人主页（对齐 Figma Make ProfilePage 契约）——全设备使用：
 	// 总览 = 资料页眉 + 双栏（公开个人资料卡 + 资料状态 aside）+ 资料详情 dl；
 	// 分区模式 = PageHeader + Section 组件（moments/groups/friends/following/fans）。
-	// 注意：relationships 聚合分区由 /me/relationships 独立渲染（RelationshipsPage），不走本组件。
+	// 设备分派：mobile 总览走 ProfileMobile；tablet/desktop 总览与全部 me 分区页
+	// （任意设备）走本组件。relationships 聚合分区由 /me/relationships 独立渲染
+	// （RelationshipsPage），不走本组件。
 
 	let { section }: { section: string | null } = $props();
 
@@ -68,7 +70,7 @@
 		{/if}
 	</StandardPageLayout>
 {:else}
-	<!-- 总览模式（对齐 Figma Make ProfileDesktop：单列资料页） -->
+	<!-- 总览模式（对齐 Figma Make ProfilePage：单列资料页） -->
 	<StandardPageLayout contentClassName="py-7 lg:py-8">
 		<!-- 资料页眉 -->
 		<header class="flex items-start justify-between gap-6 border-b border-border-default pb-5">

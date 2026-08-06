@@ -9,8 +9,9 @@
 	import { useAccountData } from '@/lib/profile-data.svelte';
 	import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 
-	// 移动/平板个人主页（对齐 Figma Make ProfileCompact 契约）：
+	// 移动个人主页（对齐 Figma Make ProfileCompact 契约）：
 	// 资料页眉 + 身份卡（68px 头像 + 编辑按钮 + stats 横条）+ 个人数据 5 行链接（无 Tab/画廊）。
+	// 设备分派：仅 mobile 使用；tablet 归 desktop 分支走 ProfileDesktop（见 me/+page.svelte）。
 
 	const { avatar, nickname, stats, bio, handle, locationName } = useAccountData();
 

@@ -17,7 +17,7 @@
 	import LocationCard from '@/components/layout/desktop/LocationCard.svelte';
 	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
 	import { ROUTES, ME_SECTION_PATHS, getDesktopNavId, type DesktopNavId } from '@/lib/routes';
-	import imgHotSpot from '@/assets/9254a1e0e11b516a6c1aecb80d92b66f2caa243e.png';
+	import imgHotSpot from '@/assets/hotspot-logo.png';
 
 	// 桌面全屏布局（≥1024px）：52px 顶栏 + 可折叠侧栏 + 主内容卡片 + 发布模态。
 
