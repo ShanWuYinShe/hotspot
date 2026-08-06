@@ -2,7 +2,6 @@ package moments
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +11,7 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
+	"hotspot/backend-go/internal/platform/testdb"
 )
 
 // momentErrRepo 以错误 repo 驱动 handler 的 httpx.CodeInternalUnavailable 分支。
@@ -76,17 +76,6 @@ func (r *momentErrRepo) FetchMomentImageRows(ctx context.Context, momentIDs []st
 	return r.repo.FetchMomentImageRows(ctx, momentIDs)
 }
 
-func decodeMomentCode(t *testing.T, rr *httptest.ResponseRecorder) httpx.Code {
-	t.Helper()
-	var resp struct {
-		Code httpx.Code `json:"code"`
-	}
-	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	return resp.Code
-}
-
 func TestMomentHandlerErrorPaths(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&momentErrRepo{repo: NewInMemoryRepository()}))
 
@@ -94,7 +83,7 @@ func TestMomentHandlerErrorPaths(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/get_detail", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.OpenTheDoor(rr, req)
-	if code := decodeMomentCode(t, rr); code != httpx.CodeInvalidRequest {
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInvalidRequest {
 		t.Fatalf("empty moment id: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 
@@ -102,7 +91,7 @@ func TestMomentHandlerErrorPaths(t *testing.T) {
 	req = httptest.NewRequest(http.MethodPost, "/get_detail", strings.NewReader(`{"moment_id":"missing"}`))
 	rr = httptest.NewRecorder()
 	handler.OpenTheDoor(rr, req)
-	if code := decodeMomentCode(t, rr); code != httpx.CodeNotFound {
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeNotFound {
 		t.Fatalf("missing moment: expected httpx.CodeNotFound, got %d", code)
 	}
 
@@ -111,7 +100,7 @@ func TestMomentHandlerErrorPaths(t *testing.T) {
 	req = httptest.NewRequest(http.MethodPost, "/get_detail", strings.NewReader(`{"moment_id":"m1"}`))
 	rr = httptest.NewRecorder()
 	handler2.OpenTheDoor(rr, req)
-	if code := decodeMomentCode(t, rr); code != httpx.CodeInternalUnavailable {
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInternalUnavailable {
 		t.Fatalf("service error: expected httpx.CodeInternalUnavailable, got %d", code)
 	}
 
@@ -120,7 +109,7 @@ func TestMomentHandlerErrorPaths(t *testing.T) {
 	req = httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{}`))
 	rr = httptest.NewRecorder()
 	handler3.ListMine(rr, req)
-	if code := decodeMomentCode(t, rr); code != httpx.CodeInternalUnavailable {
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInternalUnavailable {
 		t.Fatalf("list error: expected httpx.CodeInternalUnavailable, got %d", code)
 	}
 }
@@ -133,7 +122,7 @@ func TestCreateMomentRejectsBadCoordinates(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "coords1234coords1234coords1234coords")
 	rr := httptest.NewRecorder()
 	handler.Create(rr, req)
-	if code := decodeMomentCode(t, rr); code != httpx.CodeInvalidRequest {
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInvalidRequest {
 		t.Fatalf("bad coordinates: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 }
@@ -147,7 +136,7 @@ func TestCreateMomentRejectsOverlongDescription(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "overlong1234overlong1234over1234")
 	rr := httptest.NewRecorder()
 	handler.Create(rr, req)
-	if code := decodeMomentCode(t, rr); code != httpx.CodeInvalidRequest {
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInvalidRequest {
 		t.Fatalf("overlong description: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 }
@@ -167,7 +156,7 @@ func TestMomentUpdateAndDeleteErrorPaths(t *testing.T) {
 	req = req.WithContext(principalMoments("u1"))
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
-	if code := decodeMomentCode(t, rr); code != httpx.CodeNotFound {
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeNotFound {
 		t.Fatalf("update missing: expected httpx.CodeNotFound, got %d", code)
 	}
 
@@ -176,7 +165,7 @@ func TestMomentUpdateAndDeleteErrorPaths(t *testing.T) {
 	req = req.WithContext(principalMoments("u2"))
 	rr = httptest.NewRecorder()
 	handler.Update(rr, req)
-	if code := decodeMomentCode(t, rr); code != httpx.CodeForbidden {
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeForbidden {
 		t.Fatalf("update foreign: expected httpx.CodeForbidden, got %d", code)
 	}
 
@@ -185,7 +174,7 @@ func TestMomentUpdateAndDeleteErrorPaths(t *testing.T) {
 	req = req.WithContext(principalMoments("u1"))
 	rr = httptest.NewRecorder()
 	handler.Update(rr, req)
-	if code := decodeMomentCode(t, rr); code != httpx.CodeInvalidRequest {
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInvalidRequest {
 		t.Fatalf("update empty: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 
@@ -194,7 +183,7 @@ func TestMomentUpdateAndDeleteErrorPaths(t *testing.T) {
 	req = req.WithContext(principalMoments("u1"))
 	rr = httptest.NewRecorder()
 	handler.Delete(rr, req)
-	if code := decodeMomentCode(t, rr); code != httpx.CodeNotFound {
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeNotFound {
 		t.Fatalf("delete missing: expected httpx.CodeNotFound, got %d", code)
 	}
 }
@@ -211,7 +200,7 @@ func TestMomentFavoriteErrorPaths(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.Favorite(rr, req)
-	if code := decodeMomentCode(t, rr); code != httpx.CodeInvalidRequest {
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInvalidRequest {
 		t.Fatalf("empty favorite: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 
@@ -220,7 +209,7 @@ func TestMomentFavoriteErrorPaths(t *testing.T) {
 	req = req.WithContext(principalMoments("u1"))
 	rr = httptest.NewRecorder()
 	handler.Favorite(rr, req)
-	if code := decodeMomentCode(t, rr); code != httpx.CodeNotFound {
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeNotFound {
 		t.Fatalf("favorite missing: expected httpx.CodeNotFound, got %d", code)
 	}
 
@@ -229,7 +218,7 @@ func TestMomentFavoriteErrorPaths(t *testing.T) {
 	req = req.WithContext(principalMoments("u1"))
 	rr = httptest.NewRecorder()
 	handler.ListFavorites(rr, req)
-	if code := decodeMomentCode(t, rr); code != httpx.CodeInvalidRequest {
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInvalidRequest {
 		t.Fatalf("list favorites malformed: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 }
@@ -247,7 +236,7 @@ func TestMomentDeletePermissionDenied(t *testing.T) {
 	req = req.WithContext(principalMoments("u2"))
 	rr := httptest.NewRecorder()
 	handler.Delete(rr, req)
-	if code := decodeMomentCode(t, rr); code != httpx.CodeForbidden {
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeForbidden {
 		t.Fatalf("foreign delete: expected httpx.CodeForbidden, got %d", code)
 	}
 }

@@ -2,15 +2,14 @@ package media
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/testdb"
 )
 
 // mediaErrRepo 包装内存 repo，Complete 返回可控错误。
@@ -55,7 +54,7 @@ func TestMediaHandlerCompleteBatchErrorPaths(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/batch_complete_upload", strings.NewReader(`{"upload_ids":[]}`))
 	rr := httptest.NewRecorder()
 	handler.CompleteUploadBatch(rr, req)
-	if code := decodeMediaCode(t, rr); code != httpx.CodeInvalidRequest {
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInvalidRequest {
 		t.Fatalf("empty batch: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 
@@ -63,7 +62,7 @@ func TestMediaHandlerCompleteBatchErrorPaths(t *testing.T) {
 	req = httptest.NewRequest(http.MethodPost, "/batch_complete_upload", strings.NewReader(`{"upload_ids":["1","2","3","4","5","6","7","8","9","10"]}`))
 	rr = httptest.NewRecorder()
 	handler.CompleteUploadBatch(rr, req)
-	if code := decodeMediaCode(t, rr); code != httpx.CodeInvalidRequest {
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInvalidRequest {
 		t.Fatalf("oversize batch: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 
@@ -72,20 +71,7 @@ func TestMediaHandlerCompleteBatchErrorPaths(t *testing.T) {
 	req = httptest.NewRequest(http.MethodPost, "/batch_complete_upload", strings.NewReader(`{"upload_ids":["1"]}`))
 	rr = httptest.NewRecorder()
 	handler2.CompleteUploadBatch(rr, req)
-	if code := decodeMediaCode(t, rr); code != httpx.CodeInvalidRequest && code != httpx.CodeInternalUnavailable {
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInvalidRequest && code != httpx.CodeInternalUnavailable {
 		t.Fatalf("unexpected code for batch error: %d", code)
 	}
 }
-
-func decodeMediaCode(t *testing.T, rr *httptest.ResponseRecorder) httpx.Code {
-	t.Helper()
-	var resp struct {
-		Code httpx.Code `json:"code"`
-	}
-	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
-		t.Fatal(err)
-	}
-	return resp.Code
-}
-
-var _ = config.Load
