@@ -17,9 +17,13 @@ API 契约见 `spec/api_spec_*.md`（`spec/` 目录只读权威）。
 - UI 组件：bits-ui 生态组件（`components/ui/` 封装层：dialog、dropdown-menu、popover）+ 页面级自研视觉组件
 - 包管理：bun（`bun install` / `bun run`）
 - 测试：vitest + @testing-library/svelte（宿主机 `bun run test`）
-- Mock：MSW（仅 dev 模式；`hooks.client.ts` 中 `await init()` 注册，scope 为 `/`，
-  但 service worker 的 fetch 事件对非 `/api/` 请求直接放行——只拦截 API 流量，
-  页面/静态资源不受 mock 影响）
+- Mock：MSW（仅 dev 且 `PUBLIC_API_MOCK !== 'false'` 时启用；`hooks.client.ts` 的
+  `init()` 中注册——service worker 首次注册后需刷新一次才接管，带 sessionStorage
+  防死循环标记。`mocks/browser.ts` 的 `setupWorker(...handlers)` 未配显式 scope
+  （默认同源）；`mocks/toggle.ts` 的 `onUnhandledRequest` 对非 `/api/v1/` 请求
+  直接 `bypass`——只拦截 API 流量，页面/静态资源不受 mock 影响，`/api/v1/`
+  未匹配的请求才 `warn`。mock 开关经 localStorage `hotspot:mock-enabled`
+  持久化（`toggleMock()` 切换后 reload））
 
 ## 开发模式：必须通过 Docker Compose + Nginx 网关
 
@@ -51,7 +55,10 @@ Nginx 网关（`docker/nginx.dev.conf`）统一反代：
 - 测试：`bun run test`（vitest，不依赖 Docker）
 - 构建验证：`bun run build`
 
-`bun run build` 会重建 `.svelte-kit/`，可能打断正在运行的 dev server。需要跑 build 前先停掉 frontend 容器（`docker compose stop frontend`），跑完再 `docker compose start frontend`。
+`bun run build` 是 `vite build`（不含 `svelte-kit sync`；重建 `.svelte-kit/` 的是
+`dev`/`check` 脚本里的 `svelte-kit sync`），但会读取并写入 `.svelte-kit/` 产物，
+与正在运行的 dev server 共用该目录，可能相互干扰。需要跑 build 前先停掉 frontend
+容器（`docker compose stop frontend`），跑完再 `docker compose start frontend`。
 
 ## 构建
 
@@ -150,7 +157,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 1. **布局**：普通页面必须用 `StandardPageLayout`，分栏页面必须用 `SplitPageLayout`；
    header 以 snippet 传入、正文放 children；不得自行组合
    PageHeader/ContentColumn/页面级滚动/页面级横向 padding（契约见对应组件注释，
-   聊天页豁免见上）。gutter 一律由 `ContentColumn` 的 `px-[var(--page-gutter)]` 管理。
+   聊天页豁免见上）。gutter 一律由 `ContentColumn` 的 `px-[var(--cst-page-gutter)]` 管理。
 2. **页头**：一律用 `PageHeader`（`sticky` 默认开），`onBack` 在非桌面自动显示返回
    按钮；`below` 只放搜索框与 Tab 栏等 header 附属区。
 3. **分类 Tab 栏**：下划线样式（容器 `border-bottom` + 激活项底部 2px 指示条 +
@@ -159,7 +166,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 4. **正文与滚动**：正文直接放 children；`StandardPageLayout` 页面滚动由
    `RoutedContentViewport`（main）唯一承担，`SplitPageLayout` 分栏页的主区/rail 滚动由
    组件统一管理；页面不得自建滚动容器（消息分栏、地图等全画布页面除外）。内嵌
-   自带 gutter 的组件时用负 margin（`-mx-[var(--page-gutter)]`）抵消 ContentColumn
+   自带 gutter 的组件时用负 margin（`-mx-[var(--cst-page-gutter)]`）抵消 ContentColumn
    gutter，避免双重内边距（参照 `me/relationships/RelationshipsPage.svelte`）。
 5. **三端差异**：共用组件只写一次，设备差异用 `platform.platform` 派生（列数、字号、
    布局分支），不得复制三份页面。
@@ -184,17 +191,19 @@ src/
                   #   messages/ navigation/ overlays/ profile/ rail/ shared/ ui/；
                   #   设备专属共享组件再按 {desktop,tablet,mobile}/ 分目录，如 layout/mobile/、
                   #   layout/desktop/；layout/ 域含 page/ 通用页面原语子目录——
-                  #   StandardPageLayout/SplitPageLayout/PageHeader/ContentColumn）
+                  #   StandardPageLayout/SplitPageLayout/PageHeader/ContentColumn/
+                  #   PageViewport/RoutedContentViewport）
                   #   单路由私有组件不下沉到 components/（如 moments/ 域已清空——MomentCard
                   #   等随路由走 shared/）
   stores/         # runes 模块单例（auth/theme/platform/presence/ws/composer，.svelte.ts）
-  lib/            # 工具函数 + 路由常量 + 数据工厂（.svelte.ts 响应式）
+  lib/            # 工具函数 + 路由常量 + 数据工厂（.svelte.ts 响应式；ws/ 为 WebSocket
+                  #   客户端封装 client.ts + types.ts）
   api/            # API 客户端层（client.ts 零框架依赖）
   styles/         # CSS（主题、Tailwind）
   assets/         # 静态资源（含地图图钉 SVG）
-  mocks/          # MSW mock（仅 dev）
-  static/         # SvelteKit 静态目录（mockServiceWorker.js 等）
+  mocks/          # MSW mock（仅 dev；toggle.ts 提供 localStorage 持久化开关）
 ```
+> `static/` 位于**项目根**（SvelteKit 约定，不在 `src/` 下）：`static/mockServiceWorker.js`（MSW service worker）。
 
 ## 主题 & CSS Token 架构
 

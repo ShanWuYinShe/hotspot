@@ -44,7 +44,7 @@
 	let pointerDown = $state(false);
 	// 多边框防线（dev 提示）：joined 行调用方不得再叠卡片类（边框/圆角/阴影），
 	// 卡片化请用 tone="card"（独立卡片容器）或 ListContainer bordered（容器级唯一外框）；
-	// 静态防线见 scripts/check-list-contract.ts（已挂入 bun run check）
+	// 静态防线见 eslint-rules/no-list-item-card-classes.mjs（ESLint 规则，已挂入 bun run lint / check / pre-commit）
 	const checkRowCardStyles = () => {
 		if (!import.meta.env.DEV) return;
 		if (
