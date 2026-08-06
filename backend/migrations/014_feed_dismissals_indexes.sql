@@ -1,2 +1,0 @@
--- 014_feed_dismissals_indexes.sql
--- 说明：feed_dismissals 的索引已合并到 011_feed_dismissals.sql，本迁移保留占位，不再包含额外 DDL。

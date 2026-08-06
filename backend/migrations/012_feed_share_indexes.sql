@@ -1,6 +1,0 @@
--- 012_feed_share_indexes.sql
--- 说明：原本用于补充 shares 与 feed_dismissals 的索引。
--- 目前这些索引已收口到各自表的迁移文件中：
---   - shares 相关索引：见 006_platform_services.sql
---   - feed_dismissals 相关索引与 helper：见 011_feed_dismissals.sql
--- 本迁移保留占位，不再包含额外 DDL。

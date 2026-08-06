@@ -17,7 +17,9 @@ API 契约见 `spec/api_spec_*.md`（`spec/` 目录只读权威）。
 - UI 组件：bits-ui 生态组件（`components/ui/` 封装层：dialog、dropdown-menu、popover）+ 页面级自研视觉组件
 - 包管理：bun（`bun install` / `bun run`）
 - 测试：vitest + @testing-library/svelte（宿主机 `bun run test`）
-- Mock：MSW（仅 dev 模式）
+- Mock：MSW（仅 dev 模式；`hooks.client.ts` 中 `await init()` 注册，scope 为 `/`，
+  但 service worker 的 fetch 事件对非 `/api/` 请求直接放行——只拦截 API 流量，
+  页面/静态资源不受 mock 影响）
 
 ## 开发模式：必须通过 Docker Compose + Nginx 网关
 
@@ -72,7 +74,7 @@ bun run --cwd frontend build   # adapter-static 产物输出到 build/
 ```
 src/routes/
   +layout.ts               # export const ssr = false（SPA 模式开关）
-  +layout.svelte           # 全局壳（styles + stores + AuthGate + MSW 挂载）
+  +layout.svelte           # 全局壳（styles + stores + AuthGate；MSW 注册在 hooks.client.ts）
   +error.svelte            # 404
   (auth)/login/+page.svelte    # 登录页（无 MainLayout 外壳）
   (app)/
@@ -84,10 +86,14 @@ src/routes/
     nearby/moments/        # 附近时刻（页面样板结构权威基准）
     moments/[momentId]/    # 时刻详情
     messages/              # 消息列表
-    messages/[chatId]/     # 聊天详情（chatId 实为对端 user_id）
+    messages/[peerId]/     # 私聊详情（peerId 即对端 user_id）
     messages/group/[groupId]/  # 群聊详情
-    me/                    # 个人主页总览
-    me/moments/            # 个人主页固定分区（moments/groups/friends/following/fans）
+    me/                    # 个人主页总览（mobile→ProfileMobile，tablet/desktop→ProfilePage）
+    me/moments/            # 个人主页固定分区（moments / groups / friends / following / fans 五个
+    me/groups/             # 独立目录均为固定路由，任意设备走 ProfilePage 分区模式，不走动态段）
+    me/friends/
+    me/following/
+    me/fans/
     me/relationships/      # 关系聚合页（好友/关注/粉丝三 tab，colocate RelationshipsPage）
     me/edit/               # 编辑资料
     users/[userId]/        # 用户详情
@@ -106,7 +112,7 @@ src/routes/
 
 路由常量见 `@/lib/routes`（个人主页分区路径用 `ME_SECTION_PATHS` 静态映射，不走动态段）。
 
-页面私有组件与路由同目录，**按设备分目录**：每个路由目录下，`+page.svelte` 做设备分派（`platform.platform`），设备专属组件放 `desktop/` / `mobile/` 子目录，跨设备共享的组件与逻辑放 `shared/` 子目录（如 `map/desktop/LocationDesktop.svelte` + `map/mobile/LocationMobile.svelte` + `map/shared/location-data.ts`）。跨路由复用的页面组件（如 `components/profile/SectionFriends.svelte` 同时被 `me/[section]` 分区页与 `me/relationships` 聚合页复用）放在 `components/` 对应域目录；共享组件统一在 `components/`，设备专属共享组件按 `components/<域>/{desktop,tablet,mobile}/` 分目录（如 `layout/mobile/MobileLandscape.svelte`、`profile/desktop/ProfileDesktop.svelte`）。
+页面私有组件与路由同目录，**按设备分目录**：每个路由目录下，`+page.svelte` 做设备分派（`platform.platform`），设备专属组件放 `desktop/` / `mobile/` 子目录，跨设备共享的组件与逻辑放 `shared/` 子目录（如 `map/desktop/LocationDesktop.svelte` + `map/mobile/LocationMobile.svelte` + `map/shared/location-data.ts`）。**多组件路由的私有组件一律拆 `shared/`**（如 `nearby/groups/shared/`、`notifications/shared/`、`search/shared/`）；单组件路由（如 `nearby/people/UserCard.svelte`）保持平铺。跨路由复用的页面组件（如 `components/profile/SectionFriends.svelte` 同时被 `me/moments` 分区页与 `me/relationships` 聚合页复用）放在 `components/` 对应域目录；共享组件统一在 `components/`，设备专属共享组件按 `components/<域>/{desktop,tablet,mobile}/` 分目录（如 `layout/mobile/MobileLandscape.svelte`、`layout/desktop/DesktopLayout.svelte`）。**设备分派统一规则：`platform.platform !== 'mobile'` 即桌面分支（tablet 归 desktop）**，三端差异由组件内派生，不得逐页发明三分支。
 
 ## 页面布局（普通页 StandardPageLayout / 分栏页 SplitPageLayout）
 
@@ -121,7 +127,7 @@ src/routes/
   footer 固定于主区底部。当前分栏页：通知、动态详情、用户详情、活动详情。
 - **临时豁免**：聊天页面（桌面端与移动端）因分栏/全屏会话布局特殊，可暂不套用；
   但页头、列表与正文的 gutter/padding 仍必须与样板一致（沿用 `PageHeader` +
-  `ContentColumn` 的 `px-[var(--page-gutter)]`，不得另起页面级横向 padding）。
+  `ContentColumn` 的 `px-4` 布局，不得另起页面级横向 padding）。
   地图（全画布）与登录页（无 MainLayout 外壳）不适用。
 - 强制统一布局是为了保证切换页面时右侧内容区不发生水平偏移；存量页面需逐步对齐，
   不得新增其他例外。
@@ -165,8 +171,13 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 ```
 src/
   routes/         # SvelteKit 路由（+page.svelte / +layout.svelte + 页面私有组件按设备分子目录）
-  components/     # 共享组件（按域分子目录：auth/ data-display/ forms/ home/ layout/ list/ messages/ moments/ navigation/ overlays/ profile/ shared/ ui/；
-                  #   设备专属共享组件再按 {desktop,tablet,mobile}/ 分目录，如 layout/mobile/、profile/desktop/）
+  components/     # 共享组件（按域分子目录：auth/ data-display/ forms/ home/ layout/ list/
+                  #   messages/ navigation/ overlays/ profile/ rail/ shared/ ui/；
+                  #   设备专属共享组件再按 {desktop,tablet,mobile}/ 分目录，如 layout/mobile/、
+                  #   layout/desktop/；layout/ 域含 page/ 通用页面原语子目录——
+                  #   StandardPageLayout/SplitPageLayout/PageHeader/ContentColumn）
+                  #   单路由私有组件不下沉到 components/（如 moments/ 域已清空——MomentCard
+                  #   等随路由走 shared/）
   stores/         # runes 模块单例（auth/theme/platform/presence/ws/composer，.svelte.ts）
   lib/            # 工具函数 + 路由常量 + 数据工厂（.svelte.ts 响应式）
   api/            # API 客户端层（client.ts 零框架依赖）
@@ -184,7 +195,7 @@ src/
 theme/
   index.css              # 入口，按依赖顺序导入所有分片
   shadcn.css             # Layer 0: shadcn/ui 基础变量
-  shared.css             # Layer 0: z-index/blur/shape/space/motion/ease（与主题无关）
+  shared.css             # Layer 0: z-index/shape/motion/ease（与主题无关）
   semantic.css           # Layer 1: 语义 token（--text-primary 等 → --pr-*）
   themes/vibrant.css     # Layer 2: 星际主题（全部 --pr-* 值）
   themes/forest.css      # Layer 2: 清野主题（全部 --pr-* 值）
@@ -197,4 +208,7 @@ theme/
 - Token 两层链：`--text-primary` 等语义名 → `--pr-*` 原始值（无旧名兼容层）
 - 新组件优先使用语义名（`var(--text-primary)`、`var(--surface-page)` 等）+ Tailwind className
 - 主题切换通过 `<html>` 上的 `.vibrant` / `.forest` + `.dark` 类实现
-- 悬停/按压反馈统一用 `hover-btn/action/row/card/bg` CSS 类（主题差异由类选择器承载），避免 JS 状态动画
+- 悬停/按压反馈统一用 `hover-btn/action/bg`、`scale-btn`、`tap-*`、`header-action` CSS
+  类（主题差异由 themes/*.css 的 `@layer utilities` 覆盖承载），避免 JS 状态动画
+- 主题专属组件覆盖（`.vibrant .foo` / `.forest .foo`）统一放对应 themes/*.css 的
+  `@layer utilities` 块，utilities.css 只保留与主题无关的通用类

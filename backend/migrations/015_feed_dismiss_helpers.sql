@@ -1,2 +1,0 @@
--- 015_feed_dismiss_helpers.sql
--- 说明：feed 相关 helper 函数已合并到 011_feed_dismissals.sql，本迁移保留占位，不再包含额外 DDL。
