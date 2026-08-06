@@ -88,7 +88,7 @@
 			<button
 				type="button"
 				onclick={onClose}
-				class="hover-btn px-8 py-3 rounded-full outline-none bg-accent-default text-white text-base font-medium"
+				class="hover-btn px-8 py-3 rounded-full outline-none bg-accent-default text-text-on-accent text-base font-medium"
 				style="box-shadow:0 6px 20px var(--glow-accent);"
 			>
 				完成
@@ -148,7 +148,7 @@
 						<button
 							type="button"
 							onclick={() => (category = cat)}
-							class="hover-btn px-3.5 py-1.5 rounded-full outline-none text-sm {category === cat ? 'bg-accent-default text-white font-medium' : 'bg-surface-primary text-text-secondary'}"
+							class="hover-btn px-3.5 py-1.5 rounded-full outline-none text-sm {category === cat ? 'bg-accent-default text-text-on-accent font-medium' : 'bg-surface-primary text-text-secondary'}"
 							style={category === cat
 								? 'box-shadow:0 3px 8px var(--glow-accent);'
 								: 'box-shadow:var(--shadow-neu-xs);border:1px solid var(--border-default);'}
@@ -229,7 +229,7 @@
 				type="button"
 				onclick={() => void handleCreate()}
 				disabled={!canCreate || creating}
-				class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-panel outline-none text-base font-medium {canCreate && !creating ? 'bg-accent-default text-white' : 'bg-surface-primary text-text-secondary'}"
+				class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-panel outline-none text-base font-medium {canCreate && !creating ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
 				style="box-shadow:{canCreate && !creating ? '0 6px 22px var(--glow-accent)' : 'var(--shadow-neu-inset-sm)'};border:{canCreate && !creating ? 'none' : '1px solid var(--border-default)'};transition:all 0.22s ease;cursor:{canCreate && !creating ? 'pointer' : 'not-allowed'};"
 			>
 		{creating ? '创建中…' : '创建群组'}

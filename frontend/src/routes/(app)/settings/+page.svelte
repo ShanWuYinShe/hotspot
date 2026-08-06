@@ -10,20 +10,63 @@
 	import ListItem from '@/components/list/ListItem.svelte';
 	import { logout } from '@/stores/auth.svelte';
 	import { theme, setTheme, toggleDark, THEME_OPTIONS } from '@/stores/theme.svelte';
-	import { getAccount, getSettings } from '@/api';
+	import { getAccount, getSettings, updateSettings } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 
 	// 设置页：通知/声音/隐私开关（iOS 式）、语言、账号信息、退出登录。
+	// 服务端字段对齐 spec UserSettings：位置共享 → location_visible、私密账号 →
+	// privacy_level；推送通知/应用声音 spec 无服务端字段，是本地客户端偏好，
+	// 用 localStorage 持久化（不冒充服务端设置）。
 
-	let notif = $state(true);
-	let sounds = $state(true);
+	// 本地偏好（推送通知/应用声音）——localStorage 持久化
+	const NOTIF_KEY = 'hotspot:notif';
+	const SOUNDS_KEY = 'hotspot:sounds';
+	const readLocal = (key: string, fallback: boolean) => {
+		try {
+			const v = localStorage.getItem(key);
+			return v === null ? fallback : v === '1';
+		} catch {
+			return fallback;
+		}
+	};
+	const writeLocal = (key: string, value: boolean) => {
+		try {
+			localStorage.setItem(key, value ? '1' : '0');
+		} catch {}
+	};
+
+	let notif = $state(readLocal(NOTIF_KEY, true));
+	let sounds = $state(readLocal(SOUNDS_KEY, true));
 	let privateProfile = $state(false);
 	let locationSharing = $state(true);
 	let accountName = $state('');
-	let accountHandle = $state('');
 	let accountEmail = $state('');
 	let accountAvatar = $state('');
 	let loading = $state(true);
+
+	// 服务端设置开关：乐观更新 + 失败回滚（spec: users/update_settings）
+	const toggleLocationSharing = () => {
+		const next = !locationSharing;
+		locationSharing = next;
+		void updateSettings({ settings: { location_visible: next } }).then((res) => {
+			if (res.code !== 0) locationSharing = !next;
+		});
+	};
+	const togglePrivateProfile = () => {
+		const next = !privateProfile;
+		privateProfile = next;
+		void updateSettings({ settings: { privacy_level: next ? 'private' : 'public' } }).then((res) => {
+			if (res.code !== 0) privateProfile = !next;
+		});
+	};
+	const toggleNotif = () => {
+		notif = !notif;
+		writeLocal(NOTIF_KEY, notif);
+	};
+	const toggleSounds = () => {
+		sounds = !sounds;
+		writeLocal(SOUNDS_KEY, sounds);
+	};
 
 	$effect(() => {
 		let cancelled = false;
@@ -36,21 +79,18 @@
 				]);
 				if (cancelled) return;
 
-				const accountData = (accountRes.code === 0 ? accountRes.data : null) as any;
-				const settingsData = (settingsRes.code === 0 ? settingsRes.data : null) as any;
+				const accountData = accountRes.code === 0 ? accountRes.data : null;
+				const settingsData = settingsRes.code === 0 ? settingsRes.data : null;
 
 				if (accountData) {
-					accountName = accountData.name ?? accountData.nickname ?? '';
-					accountHandle = accountData.handle ?? accountData.username ?? '';
+					accountName = accountData.nickname ?? '';
 					accountEmail = accountData.email ?? '';
-					accountAvatar = accountData.avatar_url ?? accountData.avatar ?? '';
+					accountAvatar = accountData.avatar_url ?? '';
 				}
 
 				if (settingsData) {
-					if (settingsData.notifications !== undefined) notif = settingsData.notifications;
-					if (settingsData.sounds !== undefined) sounds = settingsData.sounds;
-					if (settingsData.private_profile !== undefined) privateProfile = settingsData.private_profile;
-					if (settingsData.location_sharing !== undefined) locationSharing = settingsData.location_sharing;
+					if (settingsData.location_visible !== undefined) locationSharing = settingsData.location_visible;
+					if (settingsData.privacy_level !== undefined) privateProfile = settingsData.privacy_level === 'private';
 				}
 			} catch {
 				// empty data is normal
@@ -83,7 +123,7 @@
 			<Avatar class="border-2 border-surface-primary shadow-[0_4px_12px_var(--glow-accent)]" src={accountAvatar} name={accountName} size={48}  />
 			<div class="flex-1 min-w-0">
 				<p class="text-base tracking-tight text-text-primary">{accountName || '用户'}</p>
-				<p class="text-xs mt-0.5 text-text-secondary">{accountHandle}{accountEmail ? ` · ${accountEmail}` : ''}</p>
+				<p class="text-xs mt-0.5 text-text-secondary">{accountEmail || '未绑定邮箱'}</p>
 			</div>
 			<ChevronRight class="size-3.75 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 		</button>
@@ -151,7 +191,7 @@
 					<p class="text-base text-text-primary">推送通知</p>
 					<p class="text-xs text-text-secondary">消息、提及与新动态提醒</p>
 				</div>
-				<Toggle on={notif} onToggle={() => (notif = !notif)} />
+				<Toggle on={notif} onToggle={toggleNotif} />
 			</div>
 			<div class="flex items-center gap-3 px-4 py-3.5">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
@@ -161,7 +201,7 @@
 					<p class="text-base text-text-primary">应用声音</p>
 					<p class="text-xs text-text-secondary">操作反馈音效</p>
 				</div>
-				<Toggle on={sounds} onToggle={() => (sounds = !sounds)} />
+				<Toggle on={sounds} onToggle={toggleSounds} />
 			</div>
 		</ListContainer>
 	</div>
@@ -178,7 +218,7 @@
 					<p class="text-base text-text-primary">私密账号</p>
 					<p class="text-xs text-text-secondary">仅关注者可查看你的内容</p>
 				</div>
-				<Toggle on={privateProfile} onToggle={() => (privateProfile = !privateProfile)} />
+				<Toggle on={privateProfile} onToggle={togglePrivateProfile} />
 			</div>
 			<div class="flex items-center gap-3 px-4 py-3.5">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
@@ -188,7 +228,7 @@
 					<p class="text-base text-text-primary">位置共享</p>
 					<p class="text-xs text-text-secondary">允许附近用户发现你</p>
 				</div>
-				<Toggle on={locationSharing} onToggle={() => (locationSharing = !locationSharing)} />
+				<Toggle on={locationSharing} onToggle={toggleLocationSharing} />
 			</div>
 		</ListContainer>
 	</div>

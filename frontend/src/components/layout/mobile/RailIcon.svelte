@@ -20,13 +20,8 @@
 	let hovered = $state(false);
 	const showHover = $derived(hovered && !isActive);
 
-	// 主题感知 hover 背景（RailIcon 专用：forest/vibrant 主题差异由类选择器承载）
-	const hoverBg = $derived.by(() => {
-		if (!showHover) return 'transparent';
-		const t = theme.theme;
-		return t === 'forest' || t === 'vibrant' ? 'transparent' : 'var(--surface-primary)';
-	});
-
+	// hover 背景恒为透明（vibrant/forest 两主题均无 rail hover 背景填充，
+	// 反馈由 --elevation-rail-hover 阴影承载）
 	const hoverShadow = $derived(showHover ? 'var(--elevation-rail-hover)' : 'none');
 
 	const hoverScale = $derived(showHover ? (theme.theme === 'forest' ? 1.08 : 1.14) : 1);
@@ -38,7 +33,7 @@
 <button
 	type="button"
 	class="relative flex flex-col items-center justify-center outline-none rounded-control"
-	style="width:52px;height:52px;gap:3px;background:{hoverBg};box-shadow:{hoverShadow};transform:scale({hoverScale});transition:background 0.16s ease, box-shadow 0.2s cubic-bezier(0.22,1,0.36,1), transform 0.2s cubic-bezier(0.34,1.56,0.64,1);"
+	style="width:52px;height:52px;gap:3px;box-shadow:{hoverShadow};transform:scale({hoverScale});transition:background 0.16s ease, box-shadow 0.2s cubic-bezier(0.22,1,0.36,1), transform 0.2s cubic-bezier(0.34,1.56,0.64,1);"
 	aria-label={label}
 	aria-current={isActive ? 'page' : undefined}
 	onclick={onClick}

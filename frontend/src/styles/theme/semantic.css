@@ -36,9 +36,7 @@
   --elevation-shadow-light: var(--pr-shadow-light);
   --elevation-shadow-dark: var(--pr-shadow-dark);
   --elevation-card: var(--pr-shadow-card);
-  --elevation-row: var(--pr-shadow-row);
   --elevation-button: var(--pr-shadow-btn);
-  --elevation-pill: var(--pr-shadow-pill);
 
   /* Color-mix presets */
   --color-accent-bg: var(--pr-accent-bg);

@@ -118,7 +118,7 @@
 				<button
 					type="button"
 					onclick={() => (surface = 'group')}
-					class="rounded-full border border-accent-border bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent-default outline-none transition-colors hover:bg-accent-default hover:text-white focus-visible:ring-2 focus-visible:ring-accent-default"
+					class="rounded-full border border-accent-border bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent-default outline-none transition-colors hover:bg-accent-default hover:text-text-on-accent focus-visible:ring-2 focus-visible:ring-accent-default"
 				>
 					创建群组
 				</button>
@@ -273,7 +273,7 @@
 		<button
 			type="submit"
 			disabled={!canPublish}
-			class="hover-btn shrink-0 rounded-full px-5 py-2.5 text-base font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:border disabled:border-border-default disabled:bg-transparent disabled:text-text-secondary enabled:bg-accent-default enabled:text-white enabled:shadow-[0_6px_18px_var(--glow-accent)]"
+			class="hover-btn shrink-0 rounded-full px-5 py-2.5 text-base font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:border disabled:border-border-default disabled:bg-transparent disabled:text-text-secondary enabled:bg-accent-default enabled:text-text-on-accent enabled:shadow-[0_6px_18px_var(--glow-accent)]"
 		>
 			发布动态
 		</button>

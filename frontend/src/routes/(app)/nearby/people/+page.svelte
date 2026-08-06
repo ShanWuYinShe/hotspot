@@ -115,7 +115,7 @@
 									type="button"
 									onclick={() => (sort = option)}
 									aria-pressed={sort === option}
-									class="px-3.5 py-1 rounded-full outline-none transition-colors text-xs focus-visible:ring-2 focus-visible:ring-accent-default {sort === option ? 'bg-accent-default text-white font-semibold' : 'text-text-secondary'}"
+									class="px-3.5 py-1 rounded-full outline-none transition-colors text-xs focus-visible:ring-2 focus-visible:ring-accent-default {sort === option ? 'bg-accent-default text-text-on-accent font-semibold' : 'text-text-secondary'}"
 								>
 									{option}
 								</button>

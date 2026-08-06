@@ -117,7 +117,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 	] as tab}
 		<button
 			type="button"
-			class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none {activeTab === tab.id ? 'bg-accent-default text-white' : 'bg-surface-primary text-text-secondary'}"
+			class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none {activeTab === tab.id ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
 			style={activeTab === tab.id ? 'font-size:12px;box-shadow:0 3px 10px var(--glow-accent);' : 'font-size:12px;border:1px solid var(--border-default);'}
 			onclick={() => (activeTab = tab.id as 'nearby' | 'hot' | 'recent')}
 		>
@@ -132,7 +132,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 	{#if activeTab === 'nearby'}
 		<div class="animate-fade-in flex flex-col gap-2">
 			<!-- Current location card -->
-			<div class="flex items-center gap-3 p-3.5 rounded-control bg-accent-default text-white">
+			<div class="flex items-center gap-3 p-3.5 rounded-control bg-accent-default text-text-on-accent">
 				<div class="flex items-center justify-center rounded-full shrink-0 size-10.5"  style="background:var(--surface-map-control)">
 					<Navigation class="size-4.25"  strokeWidth={2} />
 				</div>
@@ -287,7 +287,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 	{/if}
 	<button
 		type="button"
-		class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-white"
+		class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-text-on-accent"
 		style="height:48px;font-size:14px;box-shadow:0 6px 20px var(--glow-accent);"
 		onclick={onConfirm}
 	>

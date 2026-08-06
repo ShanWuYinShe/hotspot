@@ -23,7 +23,6 @@
   --shape-relaxed: 1.125rem;
   --shape-panel: 1.25rem;
   --shape-feature: 1.5rem;
-  --shape-chip: var(--shape-compact);
 }
 
 /* ── System rhythm and interaction tokens ─────────────────────────── */

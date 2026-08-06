@@ -42,7 +42,7 @@
 					class="hover-btn tap-93 px-3 py-1 rounded-full outline-none transition-all"
 					style={followed
 						? 'background:transparent;color:var(--text-secondary);border:1px solid var(--border-strong);font-size:11px;'
-						: 'background:var(--accent-default);color:white;border:1px solid transparent;font-size:11px;'}
+						: 'background:var(--accent-default);color:var(--text-on-accent);border:1px solid transparent;font-size:11px;'}
 					onclick={() => onToggle(u.id)}
 				>
 					{followed ? '已关注' : '关注'}

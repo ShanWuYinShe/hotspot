@@ -24,7 +24,7 @@
 		<button
 			type="button"
 			class="hover-btn mt-2 rounded-xl px-8 py-2.5 text-base font-medium"
-			style="background:var(--accent-default);color:white;"
+			style="background:var(--accent-default);color:var(--text-on-accent);"
 			onclick={onAcknowledge}
 		>
 			知道了

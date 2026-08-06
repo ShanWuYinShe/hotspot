@@ -24,7 +24,7 @@
 			? 'rounded-[18px_4px_18px_18px]'
 			: 'rounded-[4px_18px_18px_18px]'}"
 	>
-		<p class="text-base leading-[1.55] {sent ? 'text-white' : 'text-text-primary'}">
+		<p class="text-base leading-[1.55] {sent ? 'text-text-on-accent' : 'text-text-primary'}">
 			{text}
 		</p>
 		<p

@@ -286,7 +286,7 @@
 					<div class="flex gap-2 shrink-0">
 						<button
 							type="button"
-							class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none bg-accent-default text-white"
+							class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none bg-accent-default text-text-on-accent"
 							style="font-size:13px;box-shadow:0 4px 14px var(--glow-accent);"
 							onclick={() => selectedPin && openPinDetail(selectedPin)}
 						>

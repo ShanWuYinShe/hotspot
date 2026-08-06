@@ -145,6 +145,14 @@ export const handlers = [
   http.post(`${API}/users/get_account`, () => requireMockAuth() ?? json(apiOk(mockAccount))),
   http.post(`${API}/users/update_account`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/users/get_settings`, () => requireMockAuth() ?? json(apiOk(mockSettings))),
+  // update_settings 合并进内存态，get_settings 读合并后的结果（开关切换后可回读）。
+  http.post(`${API}/users/update_settings`, async ({ request }) => {
+    const auth = requireMockAuth();
+    if (auth) return auth;
+    const body = (await request.json().catch(() => ({}))) as { settings?: Partial<typeof mockSettings> };
+    Object.assign(mockSettings, body.settings ?? {});
+    return json(apiOk(null));
+  }),
   http.post(`${API}/users/get_profile`, async ({ request }) => {
     // 按 user_id 路由（缺失/未知 id 回退第一位用户），stats/relation 用同一组
     // 派生数据，recent_moments 返回对应用户的瞬间（避免访问任意用户都看到同一个人）。

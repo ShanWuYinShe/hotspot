@@ -72,7 +72,7 @@
 
 	{#if chat.unread > 0}
 		<span
-			class="flex shrink-0 items-center justify-center rounded-full text-xs font-semibold {isSelected ? 'bg-content-inverse text-accent-default' : 'bg-accent-default text-white'}"
+			class="flex shrink-0 items-center justify-center rounded-full text-xs font-semibold {isSelected ? 'bg-content-inverse text-accent-default' : 'bg-accent-default text-text-on-accent'}"
 			style="width:20px;height:20px;{isSelected ? '' : 'box-shadow:0 2px 8px var(--glow-accent);'}"
 		>
 			{chat.unread}

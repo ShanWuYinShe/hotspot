@@ -124,6 +124,10 @@ export async function resetPassword(params: object)      { return request<AuthTo
 export async function getAccount()                        { return request<AccountData>(Endpoints.Users.GetAccount); }
 export async function updateAccount(params: object)       { return request<void>(Endpoints.Users.UpdateAccount, params); }
 export async function getSettings()                       { return request<UserSettings>(Endpoints.Users.GetSettings); }
+// spec: api_spec_user.md → users/update_settings（request 为 { settings: Partial<UserSettings> }）
+export async function updateSettings(params: { settings: Partial<UserSettings> }) {
+	return request<void>(Endpoints.Users.UpdateSettings, params);
+}
 export async function follow(params: object)              { return request<void>(Endpoints.Users.Follow, params); }
 export async function block(params: object)               { return request<void>(Endpoints.Users.Block, params); }
 export async function getProfile(userId: string)          { return request<UserProfileBundle>(Endpoints.Users.GetProfile, { user_id: userId }); }

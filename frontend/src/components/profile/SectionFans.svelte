@@ -93,7 +93,7 @@
 			{#snippet actions()}
 				<button
 					type="button"
-					class="hover-btn tap-93 flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs outline-none {isMutual ? 'bg-transparent text-text-secondary' : 'bg-accent-default text-white'}"
+					class="hover-btn tap-93 flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs outline-none {isMutual ? 'bg-transparent text-text-secondary' : 'bg-accent-default text-text-on-accent'}"
 					style={isMutual ? 'border:1px solid var(--border-strong);' : 'border:1px solid transparent;'}
 					onclick={(e) => {
 						e.stopPropagation();

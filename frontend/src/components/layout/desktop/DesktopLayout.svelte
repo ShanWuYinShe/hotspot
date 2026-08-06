@@ -192,7 +192,7 @@
 				<button
 					type="button"
 					class="hover-btn ml-1.5 shrink-0 rounded-full px-3 focus-ring"
-					style="height:32px;background:var(--accent-default);color:white;font-size:12px;"
+					style="height:32px;background:var(--accent-default);color:var(--text-on-accent);font-size:12px;"
 					aria-label="登录"
 					onclick={() => void goto(ROUTES.login)}
 				>

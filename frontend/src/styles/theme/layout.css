@@ -3,12 +3,6 @@
 ────────────────────────────────────────────────────────────────────── */
 
 @layer utilities {
-  :root {
-    --context-rail-width: 20rem;
-    --context-rail-inset: 1rem;
-    --context-rail-gap: 1.5rem;
-  }
-
   .context-rail {
     width: var(--context-rail-width);
     min-width: var(--context-rail-width);
@@ -43,18 +37,13 @@
 }
 
 @layer utilities {
-  @media (min-width: 1024px) {
-    .context-rail-grid { grid-template-columns: minmax(0, 1fr) var(--context-rail-width); }
-  }
-}
-
-@layer utilities {
   /* Shared content canvas — every routed view occupies the same right-hand
      working field. Pages may choose their internal composition, but never a
      different outer alignment or an arbitrary content ceiling.
      画布宽度跟随可用空间（桌面主区 = 视口 − 侧栏），不做硬性上限：
      超宽屏下内容继续自适应放大，而非右侧留白。 */
   :root {
+    --context-rail-inset: 1rem;
     --workspace-gutter: clamp(0.875rem, 1.75vw, 1.5rem);
     --workspace-gap: clamp(0.875rem, 1.5vw, 1.25rem);
     --context-rail-width: clamp(18rem, 20vw, 21rem);

@@ -249,7 +249,7 @@
 						</button>
 						<button
 							type="button"
-							class="hover-btn tap-93 flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all disabled:cursor-not-allowed disabled:opacity-45 text-xs {followed ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-white'}"
+							class="hover-btn tap-93 flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all disabled:cursor-not-allowed disabled:opacity-45 text-xs {followed ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
 							style={followed
 								? 'border:1.5px solid var(--accent-default);box-shadow:var(--shadow-neu-md);'
 								: 'box-shadow:0 4px 14px var(--glow-accent);border:1px solid transparent;'}

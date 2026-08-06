@@ -3,7 +3,7 @@ export {
   setApiBaseUrl,
   login, register, guest, logout, checkAuthStatus,
   requestPasswordReset, resetPassword,
-  getAccount, updateAccount, getSettings,
+  getAccount, updateAccount, getSettings, updateSettings,
   follow, block, getProfile,
   listFriends, listFollowing, listFollowers,
   getFeedNearby, getTrending, getNearbyUsers, getNearbyGroups,

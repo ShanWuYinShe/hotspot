@@ -311,7 +311,7 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 		<aside class="flex h-fit flex-col gap-3 rounded-panel ring-1 ring-border-default bg-surface-primary p-4">
 			<button
 				type="button"
-				class="hover-btn w-full rounded-full px-4 py-3 text-base font-medium focus-ring {joined ? 'border border-accent-default text-accent-default' : 'bg-accent-default text-white'}"
+				class="hover-btn w-full rounded-full px-4 py-3 text-base font-medium focus-ring {joined ? 'border border-accent-default text-accent-default' : 'bg-accent-default text-text-on-accent'}"
 				onclick={toggleJoin}
 			>
 				{#if joined}

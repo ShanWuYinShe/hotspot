@@ -176,7 +176,7 @@
 				{@const disabled = !active && tags.size >= 5}
 				<button
 					type="button"
-					class="hover-btn px-3.5 py-1.5 rounded-full outline-none transition-all text-sm {active ? 'bg-accent-default text-white' : 'bg-surface-primary text-text-secondary'}"
+					class="hover-btn px-3.5 py-1.5 rounded-full outline-none transition-all text-sm {active ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
 					style={active
 						? 'box-shadow:0 3px 10px var(--glow-accent);border:none;'
 						: 'border:1px solid var(--border-default);opacity:0.4;box-shadow:var(--shadow-neu-xs);'}

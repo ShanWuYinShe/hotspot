@@ -244,7 +244,7 @@
 				<div bind:this={filterAnchorEl}>
 					<button
 						type="button"
-						class="hover-btn flex items-center gap-2 rounded-full outline-none {showFilter ? 'bg-accent-default text-white' : 'bg-surface-primary text-text-primary'}"
+						class="hover-btn flex items-center gap-2 rounded-full outline-none {showFilter ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-primary'}"
 						style="padding:9px 16px;font-size:14px;border:{showFilter ? '1px solid transparent' : '1px solid var(--border-default)'};box-shadow:{showFilter ? '0 4px 16px var(--glow-accent)' : '0 2px 12px var(--elevation-shadow-dark), 0 1px 3px var(--elevation-shadow-dark)'};"
 						onclick={() => (showFilter = !showFilter)}
 					>
@@ -393,7 +393,7 @@
 		<div class="shrink-0"  style="padding:8px 14px 18px">
 			<button
 				type="button"
-				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-white"
+				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-text-on-accent"
 				style="height:50px;font-size:15px;box-shadow:0 6px 20px var(--glow-accent);"
 				onclick={handleConfirm}
 			>

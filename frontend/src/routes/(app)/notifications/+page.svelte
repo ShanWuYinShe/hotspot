@@ -165,7 +165,7 @@ const FILTER_TABS = [
 							onclick={() => (filter = t.id)}
 							class="tap-92 shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default"
 							style={filter === t.id
-								? 'background:var(--accent-default);color:white;font-size:12px;box-shadow:0 3px 10px var(--glow-accent);border:none;'
+								? 'background:var(--accent-default);color:var(--text-on-accent);font-size:12px;box-shadow:0 3px 10px var(--glow-accent);border:none;'
 								: 'background:var(--surface-primary);color:var(--text-secondary);font-size:12px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);'}
 						>
 							{t.label}

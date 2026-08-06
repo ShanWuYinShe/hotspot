@@ -15,8 +15,6 @@
   --color-border: var(--border);
   --color-ring: var(--ring);
   --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
   /* Semantic palette — enables bg-surface-primary, text-text-primary etc. */
@@ -33,13 +31,9 @@
   --color-status-online: var(--status-online);
   --color-status-danger: var(--status-danger);
   --color-status-warning: var(--status-warning);
-  --color-marker-user: var(--marker-user);
-  --color-marker-group: var(--marker-group);
-  --color-marker-content: var(--marker-content);
 
   /* Color-mix presets（引用 primitive 层，避免自引用） */
   --color-accent-bg: var(--pr-accent-bg);
-  --color-online-bg: var(--pr-online-bg);
   --color-danger-bg: var(--pr-danger-bg);
 
   /* Font size scale — Tailwind v4 字号命名空间必须是 --text-*（--font-size-* 不生成
@@ -58,30 +52,22 @@
   --radius-relaxed: var(--shape-relaxed);
   --radius-panel: var(--shape-panel);
   --radius-feature: var(--shape-feature);
-  --radius-chip: var(--shape-chip);
   --radius-sheet: 1.75rem;
 
   /* System rhythm — 动效 token 注册（ease 用字面量，避免 @theme inline 自引用） */
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* Interaction / shell semantic colors */
-  --color-surface-canvas: var(--surface-canvas);
-  --color-surface-panel: var(--surface-panel);
+  /* Interaction / shell semantic colors（仅注册有 Tailwind 类消费的；
+     其余 token 如 --surface-hover/--navigation-*/--marker-* 组件经 var() 直用，
+     无需类注册） */
   --color-surface-raised: var(--surface-raised);
-  --color-surface-hover: var(--surface-hover);
-  --color-surface-card-menu: var(--surface-card-menu);
-  --color-border-card-menu: var(--border-card-menu);
-  --color-content-secondary: var(--content-secondary);
   --color-content-inverse: var(--content-inverse);
   --color-content-inverse-muted: var(--content-inverse-muted);
-  --color-navigation-content: var(--navigation-content);
-  --color-navigation-content-active: var(--navigation-content-active);
+  --color-content-inverse-secondary: var(--content-inverse-secondary);
   --color-navigation-active-indicator: var(--navigation-active-indicator);
-  --color-surface-scrim: var(--surface-scrim);
   --color-surface-overlay: var(--surface-overlay);
   --color-surface-overlay-strong: var(--surface-overlay-strong);
   --color-surface-overlay-soft: var(--surface-overlay-soft);
-  --color-border-inverse: var(--border-inverse);
 
   /* Interaction feedback fill tokens（按压/悬停实底填充） */
   --color-interactive-hover-fill: var(--interactive-hover-fill);
@@ -96,6 +82,4 @@
   --shadow-neu-xl: 6px 6px 14px var(--elevation-shadow-dark), -6px -6px 14px var(--elevation-shadow-light);
   --shadow-neu-inset-xs: inset 2px 2px 5px var(--elevation-shadow-dark), inset -2px -2px 5px var(--elevation-shadow-light);
   --shadow-neu-inset-sm: inset 4px 4px 10px var(--elevation-shadow-dark), inset -4px -4px 10px var(--elevation-shadow-light);
-  --shadow-neu-inset-md: inset 5px 5px 10px var(--elevation-shadow-dark), inset -5px -5px 10px var(--elevation-shadow-light);
-  --shadow-neu-inset-lg: inset 8px 8px 16px var(--elevation-shadow-dark), inset -8px -8px 16px var(--elevation-shadow-light);
 }

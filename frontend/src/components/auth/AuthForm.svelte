@@ -292,7 +292,7 @@
 	<button
 		type="submit"
 		class="hover-btn flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-opacity"
-		style="background:var(--accent-default);color:white;opacity:{submitting ? 0.6 : 1};"
+		style="background:var(--accent-default);color:var(--text-on-accent);opacity:{submitting ? 0.6 : 1};"
 		disabled={submitting}
 	>
 		{submitting ? '处理中…' : submitLabel(mode)}

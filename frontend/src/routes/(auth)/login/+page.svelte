@@ -13,7 +13,7 @@
 
 <div class="flex min-h-dvh items-center justify-center bg-surface-primary px-5 py-10">
 	<section class="w-full max-w-100 border border-border-default p-6 sm:p-8" style="background:var(--surface-primary);">
-		<div class="flex items-center justify-center rounded-full size-11 shadow-[0_4px_14px_var(--glow-accent)]"   style="background:var(--accent-default);color:white">
+		<div class="flex items-center justify-center rounded-full size-11 shadow-[0_4px_14px_var(--glow-accent)]"   style="background:var(--accent-default);color:var(--text-on-accent)">
 			<Leaf class="size-5"  strokeWidth={1.8} />
 		</div>
 		<p class="mt-6 text-xs font-medium uppercase tracking-[0.14em] text-accent-default">热点</p>
