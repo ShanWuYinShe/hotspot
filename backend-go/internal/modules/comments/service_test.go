@@ -555,11 +555,11 @@ func TestServiceDeleteAllowsAdmin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create comment: %v", err)
 	}
-	// Admin deletes alice's comment — allowed
+	// Admin deletes alice's comment — allowed（注入真实验证 stub）
+	platformauth.SetAdminChecker(adminCheckStub{adminIDs: map[string]bool{"admin_1": true}})
 	adminCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{
-		UserID:          "admin_1",
-		SessionID:       "sess_admin",
-		AdminMembership: &platformauth.AdminMembership{},
+		UserID:    "admin_1",
+		SessionID: "sess_admin",
 	})
 	err = service.Delete(adminCtx, DeleteCommentRequest{CommentID: comment.CommentID})
 	if err != nil {
@@ -578,3 +578,10 @@ func TestServiceDeleteAllowsAdmin(t *testing.T) {
 
 // (Like/Unlike/ListLikes tests removed — like endpoints removed in favour of
 // the reactions module.)
+
+// adminCheckStub 是 platformauth.AdminChecker 的测试替身。
+type adminCheckStub struct{ adminIDs map[string]bool }
+
+func (s adminCheckStub) IsAdmin(_ context.Context, userID string) (bool, error) {
+	return s.adminIDs[userID], nil
+}

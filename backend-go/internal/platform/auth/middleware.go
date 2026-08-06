@@ -76,29 +76,6 @@ func RequiredAuth(next http.Handler) http.Handler {
 	})
 }
 
-// AdminAccess 校验当前 principal 是否为管理员（httpx.CodeForbidden/非系统管理员）。
-// 管理端点统一挂该中间件（admin 模块 /api/v1/admin 分组）。
-func AdminAccess(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		principal, ok := PrincipalFromContext(r.Context())
-		if !ok || !principal.IsAdmin() {
-			userID := ""
-			if ok {
-				userID = principal.UserID
-			}
-			observability.L().Warn("admin access denied: not an admin",
-				"method", r.Method,
-				"uri", r.URL.RequestURI(),
-				"user_id", userID,
-				"has_principal", ok,
-			)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "非系统管理员"))
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
 func detectPlatform(r *http.Request) string {
 	if readCookie(r, AccessTokenCookieName) != "" {
 		return "web"

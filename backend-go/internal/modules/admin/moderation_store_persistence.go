@@ -90,8 +90,7 @@ func (s *PersistenceModerationStore) GetTagDeleteState(ctx context.Context, name
 }
 
 func (s *PersistenceModerationStore) DeleteTag(ctx context.Context, name string, hardDelete bool) error {
-	queryable, ok := s.queryable()
-	if !ok {
+	if _, ok := s.queryable(); !ok {
 		return s.memory.DeleteTag(ctx, name, hardDelete)
 	}
 	tagName := normalizeTagName(name)
@@ -105,15 +104,19 @@ func (s *PersistenceModerationStore) DeleteTag(ctx context.Context, name string,
 	if isBlocked && !hasMomentRefs {
 		return nil
 	}
-	if hardDelete {
-		if err := queryable.Exec(ctx, queryDeleteMomentTagAssignments, tagName); err != nil {
-			return err
+	// hardDelete 的删关联 + 封禁标签两步包进同一事务。
+	return persistence.RunInTransaction(ctx, s.factory, func(txCtx context.Context) error {
+		txQueryable, ok := persistence.QueryableForTx(txCtx, s.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
 		}
-	}
-	if err := queryable.Exec(ctx, queryBlockTag, tagName, time.Now().UTC()); err != nil {
-		return err
-	}
-	return nil
+		if hardDelete {
+			if err := txQueryable.Exec(txCtx, queryDeleteMomentTagAssignments, tagName); err != nil {
+				return err
+			}
+		}
+		return txQueryable.Exec(txCtx, queryBlockTag, tagName, time.Now().UTC())
+	})
 }
 
 func (s *PersistenceModerationStore) SearchAnnouncements(ctx context.Context, filter systemmodule.AnnouncementSearchFilter) (systemmodule.AnnouncementPage, error) {

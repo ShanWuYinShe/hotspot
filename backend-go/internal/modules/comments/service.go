@@ -198,7 +198,7 @@ func (s *Service) Delete(ctx context.Context, req DeleteCommentRequest) error {
 	}
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	isOwner := comment.User.UserID == principal.UserID
-	isAdmin := principal.IsAdmin()
+	isAdmin := platformauth.IsAdminUser(ctx, principal.UserID)
 	if !isOwner && !isAdmin {
 		return ErrPermissionDenied
 	}

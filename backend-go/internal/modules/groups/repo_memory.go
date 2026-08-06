@@ -51,12 +51,13 @@ type inMemoryBanRecord struct {
 }
 
 type InMemoryRepository struct {
-	mu           sync.RWMutex
-	groups       map[string]GroupItem
-	members      map[string]map[string]inMemoryMembership
-	banned       map[string]map[string]inMemoryBanRecord
-	invites      map[string]inMemoryInviteRecord
-	applications map[string]inMemoryApplicationRecord
+	mu            sync.RWMutex
+	groups        map[string]GroupItem
+	members       map[string]map[string]inMemoryMembership
+	banned        map[string]map[string]inMemoryBanRecord
+	invites       map[string]inMemoryInviteRecord
+	applications  map[string]inMemoryApplicationRecord
+	announcements map[string]GroupAnnouncementItem
 	// seq disambiguates group ids generated within the same nanosecond so the
 	// in-memory map never overwrites an entry on rapid successive Create calls.
 	seq uint64
@@ -64,11 +65,12 @@ type InMemoryRepository struct {
 
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
-		groups:       make(map[string]GroupItem),
-		members:      make(map[string]map[string]inMemoryMembership),
-		banned:       make(map[string]map[string]inMemoryBanRecord),
-		invites:      make(map[string]inMemoryInviteRecord),
-		applications: make(map[string]inMemoryApplicationRecord),
+		groups:        make(map[string]GroupItem),
+		members:       make(map[string]map[string]inMemoryMembership),
+		announcements: make(map[string]GroupAnnouncementItem),
+		banned:        make(map[string]map[string]inMemoryBanRecord),
+		invites:       make(map[string]inMemoryInviteRecord),
+		applications:  make(map[string]inMemoryApplicationRecord),
 	}
 }
 
@@ -471,7 +473,8 @@ func (r *InMemoryRepository) CreateAnnouncement(_ context.Context, creatorID str
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	now := time.Now().UTC()
-	announcementID := "announce_" + now.Format("20060102150405.000000000")
+	r.seq++
+	announcementID := fmt.Sprintf("announce_%d_%d", now.UnixNano(), r.seq)
 	isPinned := false
 	if req.IsPinned != nil {
 		isPinned = *req.IsPinned
@@ -481,9 +484,11 @@ func (r *InMemoryRepository) CreateAnnouncement(_ context.Context, creatorID str
 		GroupID:        req.GroupID,
 		Title:          req.Title,
 		Content:        req.Content,
+		CreatedBy:      UserInfo{UserID: creatorID, Nickname: creatorID},
 		IsPinned:       isPinned,
 		CreatedAt:      now.Format(time.RFC3339),
 	}
+	r.announcements[announcementID] = item
 	return item, nil
 }
 
@@ -493,25 +498,49 @@ func (r *InMemoryRepository) ListAnnouncements(_ context.Context, groupID string
 	if _, ok := r.groups[groupID]; !ok {
 		return nil, ErrGroupNotFound
 	}
-	return []GroupAnnouncementItem{}, nil
+	items := make([]GroupAnnouncementItem, 0)
+	for _, item := range r.announcements {
+		if item.GroupID == groupID {
+			items = append(items, item)
+		}
+	}
+	return items, nil
 }
 
 func (r *InMemoryRepository) UpdateAnnouncement(_ context.Context, groupID string, req UpdateGroupAnnouncementRequest) error {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if _, ok := r.groups[groupID]; !ok {
 		return ErrGroupNotFound
 	}
+	item, ok := r.announcements[req.AnnouncementID]
+	if !ok || item.GroupID != groupID {
+		return ErrAnnouncementNotFound
+	}
+	if req.Title != nil {
+		item.Title = *req.Title
+	}
+	if req.Content != nil {
+		item.Content = *req.Content
+	}
+	if req.IsPinned != nil {
+		item.IsPinned = *req.IsPinned
+	}
+	r.announcements[req.AnnouncementID] = item
 	return nil
 }
 
 func (r *InMemoryRepository) DeleteAnnouncement(_ context.Context, groupID string, announcementID string) error {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if _, ok := r.groups[groupID]; !ok {
 		return ErrGroupNotFound
 	}
-	_ = announcementID
+	item, ok := r.announcements[announcementID]
+	if !ok || item.GroupID != groupID {
+		return ErrAnnouncementNotFound
+	}
+	delete(r.announcements, announcementID)
 	return nil
 }
 
@@ -589,8 +618,19 @@ func (r *InMemoryRepository) RejectApplication(_ context.Context, applicationID 
 }
 
 func (r *InMemoryRepository) UpdateMySettings(_ context.Context, userID string, req UpdateGroupMySettingsRequest) error {
-	_ = userID
-	_ = req
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.groups[req.GroupID]; !ok {
+		return ErrGroupNotFound
+	}
+	member, ok := r.members[req.GroupID][userID]
+	if !ok {
+		return ErrNotMember
+	}
+	if req.IsMuted != nil {
+		member.IsMuted = *req.IsMuted
+	}
+	r.members[req.GroupID][userID] = member
 	return nil
 }
 

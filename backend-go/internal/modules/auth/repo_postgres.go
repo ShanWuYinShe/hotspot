@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/geo"
-	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 
 	"github.com/jackc/pgx/v5"
@@ -82,28 +81,28 @@ func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams
 // the pool, without the caller caring which.
 
 func (r *PostgresRepository) CreateGuest(ctx context.Context, params GuestParams) (Account, error) {
-	queryable, ok := r.queryable()
-	if !ok {
-		return Account{}, persistence.ErrNotImplemented
-	}
 	userID, err := generateUserID()
 	if err != nil {
 		return Account{}, err
 	}
 	now := params.Defaults.CreatedAt.UTC()
 	s2CellID := geo.LeafCellID(geo.Point{Latitude: params.Defaults.Latitude, Longitude: params.Defaults.Longitude})
-	if err := queryable.Exec(ctx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "temp", "", params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, s2CellID, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
-		return Account{}, fmt.Errorf("auth.CreateGuest: profile insert: %w", err)
-	}
-	if err := queryable.Exec(ctx, queryUpsertUserSettings, userID); err != nil {
-		// Best-effort compensation: settings upsert failed right after the profile
-		// was inserted, so remove the profile to avoid leaving a half-created user.
-		// Log a compensation failure (e.g. DB down) — otherwise it is silently
-		// lost and operators cannot see the orphaned row.
-		if cerr := queryable.Exec(ctx, queryDeleteUserProfileByUserID, userID); cerr != nil {
-			observability.L().Error("auth.CreateGuest: compensation profile delete failed", "user_id", userID, "error", cerr)
+	// profile + settings 两步包进同一事务（替代原补偿式删除——进程中途
+	// 崩溃时补偿不会执行，会泄漏半创建用户）。
+	if err := persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		txQueryable, ok := persistence.QueryableForTx(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
 		}
-		return Account{}, fmt.Errorf("auth.CreateGuest: settings upsert: %w", err)
+		if err := txQueryable.Exec(txCtx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "temp", "", params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, s2CellID, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
+			return fmt.Errorf("auth.CreateGuest: profile insert: %w", err)
+		}
+		if err := txQueryable.Exec(txCtx, queryUpsertUserSettings, userID); err != nil {
+			return fmt.Errorf("auth.CreateGuest: settings upsert: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return Account{}, err
 	}
 	return Account{UserID: userID, Nickname: params.Nickname, UserType: "temp"}, nil
 }
@@ -188,11 +187,22 @@ func (r *PostgresRepository) ResetPassword(ctx context.Context, loginID, verific
 	if err != nil {
 		return Account{}, err
 	}
-	if err := queryable.Exec(ctx, queryUpdateAccountPassword, account.UserID, hashed, now); err != nil {
-		return Account{}, fmt.Errorf("auth.ResetPassword: password update: %w", err)
-	}
-	if err := queryable.Exec(ctx, queryUsePasswordReset, request.RequestID, now); err != nil {
-		return Account{}, fmt.Errorf("auth.ResetPassword: mark reset used: %w", err)
+	// 改密码 + 标记 reset 已用两步包进同一事务：避免「密码已改但 reset
+	// 记录未消耗」导致旧验证码可重放。
+	if err := persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		txQueryable, ok := persistence.QueryableForTx(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		if err := txQueryable.Exec(txCtx, queryUpdateAccountPassword, account.UserID, hashed, now); err != nil {
+			return fmt.Errorf("auth.ResetPassword: password update: %w", err)
+		}
+		if err := txQueryable.Exec(txCtx, queryUsePasswordReset, request.RequestID, now); err != nil {
+			return fmt.Errorf("auth.ResetPassword: mark reset used: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return Account{}, err
 	}
 	return account.Account, nil
 }

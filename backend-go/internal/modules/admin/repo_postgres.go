@@ -50,6 +50,17 @@ func (r *PostgresRepository) GetActor(ctx context.Context, userID string) (Admin
 	return r.getActorFromDB(ctx, queryable, userID)
 }
 
+// IsAdmin 真实验证 userID 是否为管理员（查 admin_users 表）。
+// 供平台 AdminAccess 中间件与业务侧管理员判断使用。
+func (r *PostgresRepository) IsAdmin(ctx context.Context, userID string) (bool, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return false, persistence.ErrNotImplemented
+	}
+	_, found, err := r.getAdminRecordByUserID(ctx, queryable, userID)
+	return found, err
+}
+
 func (r *PostgresRepository) ListPermissions(ctx context.Context) ([]AdminPermissionItem, error) {
 	if _, ok := r.queryable(); !ok {
 		return nil, persistence.ErrNotImplemented
@@ -276,18 +287,26 @@ func (r *PostgresRepository) GrantAdmin(ctx context.Context, grant AdminGrantUps
 	if grantedAt.IsZero() {
 		grantedAt = time.Now().UTC()
 	}
-	if err := queryable.Exec(ctx, queryAdminUpsert, grant.UserID, grant.GrantAllPermissions, grantedAt); err != nil {
-		return err
-	}
-	if err := queryable.Exec(ctx, queryAdminReplaceRoles, grant.UserID); err != nil {
-		return err
-	}
-	for _, roleID := range grant.RoleIDs {
-		if err := queryable.Exec(ctx, queryAdminInsertRole, grant.UserID, roleID, grantedAt); err != nil {
+	// upsert + 清旧角色 + 逐角色插入三步包进同一事务：中途失败不会留下
+	// 半套角色授权。
+	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		txQueryable, ok := persistence.QueryableForTx(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		if err := txQueryable.Exec(txCtx, queryAdminUpsert, grant.UserID, grant.GrantAllPermissions, grantedAt); err != nil {
 			return err
 		}
-	}
-	return nil
+		if err := txQueryable.Exec(txCtx, queryAdminReplaceRoles, grant.UserID); err != nil {
+			return err
+		}
+		for _, roleID := range grant.RoleIDs {
+			if err := txQueryable.Exec(txCtx, queryAdminInsertRole, grant.UserID, roleID, grantedAt); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (r *PostgresRepository) RevokeAdmin(ctx context.Context, userID string) error {
@@ -302,13 +321,17 @@ func (r *PostgresRepository) RevokeAdmin(ctx context.Context, userID string) err
 	if !found {
 		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "管理员不存在"}
 	}
-	if err := queryable.Exec(ctx, queryAdminReplaceRoles, userID); err != nil {
-		return err
-	}
-	if err := queryable.Exec(ctx, queryAdminRevoke, userID, time.Now().UTC()); err != nil {
-		return err
-	}
-	return nil
+	// 清角色 + 标记撤销两步包进同一事务。
+	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		txQueryable, ok := persistence.QueryableForTx(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		if err := txQueryable.Exec(txCtx, queryAdminReplaceRoles, userID); err != nil {
+			return err
+		}
+		return txQueryable.Exec(txCtx, queryAdminRevoke, userID, time.Now().UTC())
+	})
 }
 
 func (r *PostgresRepository) ListAuditLogs(ctx context.Context, filter AuditLogFilter, includeIPAddress bool) (auditLogPage, error) {

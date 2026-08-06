@@ -84,10 +84,11 @@ func TestPostgresRepositoryCreateGuestRollsBackProfileWhenSettingsWriteFails(t *
 	if err == nil {
 		t.Fatal("expected create guest error")
 	}
-	if len(backend.execs) != 3 {
+	// 事务化后：profile + settings 两次写入，settings 失败整体回滚，无补偿删除。
+	if len(backend.execs) != 2 {
 		t.Fatalf("unexpected exec count: %#v", backend.execs)
 	}
-	if backend.execs[0] != queryInsertUserProfile || backend.execs[1] != queryUpsertUserSettings || backend.execs[2] != queryDeleteUserProfileByUserID {
+	if backend.execs[0] != queryInsertUserProfile || backend.execs[1] != queryUpsertUserSettings {
 		t.Fatalf("unexpected exec order: %#v", backend.execs)
 	}
 	if got := backend.execArgs[0][11]; got != "203.0.113.10" {

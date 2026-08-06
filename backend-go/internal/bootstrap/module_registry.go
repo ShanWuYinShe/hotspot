@@ -90,6 +90,7 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	if svc := platformauth.DefaultService(); svc != nil {
 		svc.SetBanChecker(adminModule.Repo)
 	}
+	platformauth.SetAdminChecker(adminModule.Repo)
 	// Owner-dismiss audit entries are written through the admin module (spec
 	// api_spec_group.md: dismiss reason is audit-only).
 	groupsModule.Service.SetGroupDismissAuditWriter(adminModule)

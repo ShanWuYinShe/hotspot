@@ -877,16 +877,22 @@ func (r *PostgresRepository) BanMember(ctx context.Context, userID string, req B
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return persistence.ErrNotImplemented
 	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	if !ok {
+	if _, ok := r.factory.DB.(persistence.QueryableDB); !ok {
 		return persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
-	if err := queryable.Exec(ctx, queryInsertGroupBan, req.GroupID, req.UserID, userID, nullableStringPtr(req.Reason), now); err != nil {
-		return err
-	}
-	_ = queryable.Exec(ctx, queryDeleteGroupMember, req.GroupID, req.UserID)
-	return nil
+	// 插封禁 + 移除成员两步包进同一事务：避免「已封禁但仍是成员」的
+	// 中间状态，且删除成员失败不再被吞。
+	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		txQueryable, ok := persistence.QueryableForTx(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		if err := txQueryable.Exec(txCtx, queryInsertGroupBan, req.GroupID, req.UserID, userID, nullableStringPtr(req.Reason), now); err != nil {
+			return err
+		}
+		return txQueryable.Exec(txCtx, queryDeleteGroupMember, req.GroupID, req.UserID)
+	})
 }
 
 func (r *PostgresRepository) UnbanMember(ctx context.Context, userID string, req UnbanMemberRequest) error {
@@ -951,17 +957,24 @@ func (r *PostgresRepository) TransferOwnership(ctx context.Context, userID strin
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return persistence.ErrNotImplemented
 	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	if !ok {
+	if _, ok := r.factory.DB.(persistence.QueryableDB); !ok {
 		return persistence.ErrNotImplemented
 	}
-	if err := queryable.Exec(ctx, queryUpdateGroupMemberRole, req.GroupID, userID, string(GroupRoleAdmin)); err != nil {
-		return err
-	}
-	if err := queryable.Exec(ctx, queryUpdateGroupMemberRole, req.GroupID, req.NewOwnerID, string(GroupRoleOwner)); err != nil {
-		return err
-	}
-	return queryable.Exec(ctx, queryUpdateGroupOwner, req.GroupID, req.NewOwnerID)
+	// 降级旧 owner + 提升新 owner + 更新 owner_id 三步包进同一事务：
+	// 第三步失败不会留下 owner_id 与角色不一致的状态。
+	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		txQueryable, ok := persistence.QueryableForTx(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		if err := txQueryable.Exec(txCtx, queryUpdateGroupMemberRole, req.GroupID, userID, string(GroupRoleAdmin)); err != nil {
+			return err
+		}
+		if err := txQueryable.Exec(txCtx, queryUpdateGroupMemberRole, req.GroupID, req.NewOwnerID, string(GroupRoleOwner)); err != nil {
+			return err
+		}
+		return txQueryable.Exec(txCtx, queryUpdateGroupOwner, req.GroupID, req.NewOwnerID)
+	})
 }
 
 func nilOrString(s string) *string {

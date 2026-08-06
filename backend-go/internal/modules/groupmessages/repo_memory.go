@@ -13,6 +13,11 @@ type InMemoryRepository struct {
 	items      map[string][]GroupMessageItem
 	readCount  map[string]map[string]int // groupID -> messageID -> count
 	groupNames map[string]string         // groupID -> name（测试可注入）
+	// members 记录已发送过消息的成员（发送即视为成员，测试可预置）。
+	members map[string]map[string]bool
+	// mutedUntil 记录群成员的禁言截止时间（groupID::userID → RFC3339），
+	// 测试经 SetMemberMuted 注入。
+	mutedUntil map[string]string
 	// seq 保证同纳秒内连续发送的消息 ID 不碰撞（UnixNano 时间戳在快速
 	// 循环下会重复，导致消息覆盖与历史分页缺失）。
 	seq uint64
@@ -23,6 +28,8 @@ func NewInMemoryRepository() *InMemoryRepository {
 		items:      make(map[string][]GroupMessageItem),
 		readCount:  make(map[string]map[string]int),
 		groupNames: make(map[string]string),
+		members:    make(map[string]map[string]bool),
+		mutedUntil: make(map[string]string),
 	}
 }
 
@@ -52,6 +59,10 @@ func (r *InMemoryRepository) Send(_ context.Context, req SendGroupMessageRequest
 	}
 	r.mu.Lock()
 	r.items[req.GroupID] = append(r.items[req.GroupID], msg)
+	if r.members[req.GroupID] == nil {
+		r.members[req.GroupID] = make(map[string]bool)
+	}
+	r.members[req.GroupID][req.SenderUserID] = true
 	r.mu.Unlock()
 	return MessageSent{MessageID: msg.MessageID, SentAt: msg.SentAt}, nil
 }
@@ -221,12 +232,34 @@ func (r *InMemoryRepository) MarkAllRead(_ context.Context, _ string) error {
 	return nil
 }
 
-func (r *InMemoryRepository) IsMember(_ context.Context, _ string, _ string) (bool, error) {
-	return true, nil
+func (r *InMemoryRepository) IsMember(_ context.Context, groupID, userID string) (bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.members[groupID][userID], nil
 }
 
-func (r *InMemoryRepository) MemberMuteStatus(_ context.Context, _ string, _ string) (bool, string, bool, error) {
-	return false, "", true, nil
+func (r *InMemoryRepository) MemberMuteStatus(_ context.Context, groupID, userID string) (bool, string, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if !r.members[groupID][userID] {
+		return false, "", false, nil
+	}
+	until := r.mutedUntil[groupID+"::"+userID]
+	if until != "" && until <= time.Now().UTC().Format(time.RFC3339) {
+		return false, "", true, nil
+	}
+	return until != "", until, true, nil
+}
+
+// SetMemberMuted 供测试注入禁言状态（生产 mute 权威在 groups 模块）。
+func (r *InMemoryRepository) SetMemberMuted(groupID, userID, mutedUntil string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if mutedUntil == "" {
+		delete(r.mutedUntil, groupID+"::"+userID)
+		return
+	}
+	r.mutedUntil[groupID+"::"+userID] = mutedUntil
 }
 
 func (r *InMemoryRepository) markMessageRead(groupID, messageID string) {
@@ -236,12 +269,30 @@ func (r *InMemoryRepository) markMessageRead(groupID, messageID string) {
 	r.readCount[groupID][messageID]++
 }
 
-func (r *InMemoryRepository) GetMessageForReply(_ context.Context, _ string) (map[string]any, bool, error) {
-	return nil, false, nil
+func (r *InMemoryRepository) GetMessageForReply(_ context.Context, messageID string) (map[string]any, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	_, _, msg, found := r.findMessage(messageID)
+	if !found {
+		return nil, false, nil
+	}
+	return map[string]any{
+		"message_id": messageID,
+		"user_id":    msg.SenderUserID,
+		"nickname":   msg.SenderUserID,
+		"content":    msg.Content,
+		"share_code": "",
+	}, true, nil
 }
 
-func (r *InMemoryRepository) MessageExists(_ context.Context, _ string) (bool, string, error) {
-	return false, "", nil
+func (r *InMemoryRepository) MessageExists(_ context.Context, messageID string) (bool, string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	_, _, msg, found := r.findMessage(messageID)
+	if !found {
+		return false, "", nil
+	}
+	return true, msg.SenderUserID, nil
 }
 
 func (r *InMemoryRepository) LookupMessageMeta(_ context.Context, messageID string) (MessageOwnerMeta, bool, error) {

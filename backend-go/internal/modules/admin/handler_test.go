@@ -61,9 +61,6 @@ func newTestHandlerWithPushStore() (*Handler, *InMemoryRepository, *notify.InMem
 
 func adminContext(req *http.Request, userID string, admin bool) *http.Request {
 	principal := platformauth.Principal{UserID: userID, SessionID: "sess_" + userID}
-	if admin {
-		principal.AdminMembership = &platformauth.AdminMembership{}
-	}
 	return req.WithContext(platformauth.WithPrincipal(req.Context(), principal))
 }
 
@@ -104,6 +101,8 @@ func newMountedAdminRouter(t *testing.T) (http.Handler, func(string) string) {
 }
 
 func TestAdminModerationRoutesAreMounted(t *testing.T) {
+	// 路由级测试走真实 AdminAccess 中间件：注入真实验证 stub（admin 为管理员）。
+	platformauth.SetAdminChecker(adminCheckStub{adminIDs: map[string]bool{"admin": true}})
 	router, issueToken := newMountedAdminRouter(t)
 	adminToken := issueToken("admin")
 
@@ -1402,3 +1401,10 @@ func (f *failingProvider) UpdateAppConfig(_ context.Context, _ string, _ func(Ad
 }
 
 var errTestProviderFailure = errors.New("provider unavailable for test")
+
+// adminCheckStub 是 platformauth.AdminChecker 的测试替身。
+type adminCheckStub struct{ adminIDs map[string]bool }
+
+func (s adminCheckStub) IsAdmin(_ context.Context, userID string) (bool, error) {
+	return s.adminIDs[userID], nil
+}

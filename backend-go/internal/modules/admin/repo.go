@@ -4,6 +4,7 @@ import "context"
 
 type Repository interface {
 	GetActor(context.Context, string) (AdminActor, bool, error)
+	IsAdmin(context.Context, string) (bool, error)
 	ListPermissions(context.Context) ([]AdminPermissionItem, error)
 	ListRoles(context.Context) ([]AdminRoleItem, error)
 	CreateRole(context.Context, AdminRbacRoleCreateRequest) (AdminRoleItem, error)

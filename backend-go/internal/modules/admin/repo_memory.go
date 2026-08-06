@@ -214,6 +214,12 @@ func (r *InMemoryRepository) GetActor(_ context.Context, userID string) (AdminAc
 	}
 	return r.actorFromRecordLocked(record)
 }
+func (r *InMemoryRepository) IsAdmin(_ context.Context, userID string) (bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	_, ok := r.admins[userID]
+	return ok, nil
+}
 
 func (r *InMemoryRepository) ListPermissions(context.Context) ([]AdminPermissionItem, error) {
 	items := make([]AdminPermissionItem, len(permissionDictionary))

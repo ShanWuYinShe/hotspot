@@ -2,6 +2,7 @@ package groups
 
 import (
 	"context"
+	"errors"
 	"testing"
 )
 
@@ -131,9 +132,9 @@ func TestMemoryMySettingsAndCancelApplication(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	// 内存 repo 的 UpdateMySettings 为 no-op stub
-	if err := repo.UpdateMySettings(ctx, "u2", UpdateGroupMySettingsRequest{GroupID: created.Group.GroupID, IsMuted: boolPtr(true)}); err != nil {
-		t.Fatalf("settings update: %v", err)
+	// 非成员更新设置 → ErrNotMember（与 postgres 语义一致）
+	if err := repo.UpdateMySettings(ctx, "u2", UpdateGroupMySettingsRequest{GroupID: created.Group.GroupID, IsMuted: boolPtr(true)}); !errors.Is(err, ErrNotMember) {
+		t.Fatalf("non-member settings update: %v", err)
 	}
 	// 成员更新设置
 	if _, err := repo.JoinGroup(ctx, "u2", created.Group.GroupID, nil, nil); err != nil {

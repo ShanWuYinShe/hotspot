@@ -3,6 +3,7 @@ package groupmessages
 import (
 	"context"
 	"testing"
+	"time"
 )
 
 func TestMemoryGroupMessageLifecycle(t *testing.T) {
@@ -88,26 +89,66 @@ func TestMemoryMarkReadAndUnreadCounts(t *testing.T) {
 	}
 }
 
-func TestMemoryStubMethods(t *testing.T) {
+func TestMemoryMemberAndReplySemantics(t *testing.T) {
 	repo := NewInMemoryRepository()
 	ctx := context.Background()
+
+	// 未发送过消息的用户不是成员
+	if ok, err := repo.IsMember(ctx, "g1", "u1"); err != nil || ok {
+		t.Fatalf("non-member is member: %v %v", ok, err)
+	}
+	if _, _, found, err := repo.MemberMuteStatus(ctx, "g1", "u1"); err != nil || found {
+		t.Fatalf("non-member mute status: found=%v err=%v", found, err)
+	}
+
+	// 发送后成为成员；禁言经 SetMemberMuted 注入
+	if _, err := repo.Send(ctx, SendGroupMessageRequest{GroupID: "g1", SenderUserID: "u1", Type: "text", Content: "hi"}); err != nil {
+		t.Fatalf("send: %v", err)
+	}
 	if ok, err := repo.IsMember(ctx, "g1", "u1"); err != nil || !ok {
-		t.Fatalf("is member stub: %v %v", ok, err)
+		t.Fatalf("member after send: %v %v", ok, err)
 	}
-	if _, _, _, err := repo.MemberMuteStatus(ctx, "g1", "u1"); err != nil {
-		t.Fatalf("mute status: %v", err)
+	if muted, _, found, err := repo.MemberMuteStatus(ctx, "g1", "u1"); err != nil || !found || muted {
+		t.Fatalf("not muted: %v found=%v err=%v", muted, found, err)
 	}
+	repo.SetMemberMuted("g1", "u1", time.Now().UTC().Add(time.Hour).Format(time.RFC3339))
+	if muted, _, found, err := repo.MemberMuteStatus(ctx, "g1", "u1"); err != nil || !found || !muted {
+		t.Fatalf("muted: %v found=%v err=%v", muted, found, err)
+	}
+	repo.SetMemberMuted("g1", "u1", "")
+	if muted, _, _, err := repo.MemberMuteStatus(ctx, "g1", "u1"); err != nil || muted {
+		t.Fatalf("unmuted: %v err=%v", muted, err)
+	}
+
+	// 回复查找基于真实消息
 	if _, found, _ := repo.GetMessageForReply(ctx, "m1"); found {
-		t.Fatal("reply stub must not find")
+		t.Fatal("missing reply must not be found")
+	}
+	sent, err := repo.Send(ctx, SendGroupMessageRequest{GroupID: "g1", SenderUserID: "u2", Type: "text", Content: "reply me"})
+	if err != nil {
+		t.Fatalf("send2: %v", err)
+	}
+	reply, found, err := repo.GetMessageForReply(ctx, sent.MessageID)
+	if err != nil || !found || reply["content"] != "reply me" {
+		t.Fatalf("reply lookup: %#v found=%v err=%v", reply, found, err)
 	}
 	if _, found, _ := repo.GetMediaForMessage(ctx, "m1"); found {
 		t.Fatal("media stub must not find")
 	}
 }
 
-func TestMemoryMessageExistsStub(t *testing.T) {
+func TestMemoryMessageExists(t *testing.T) {
 	repo := NewInMemoryRepository()
-	if exists, groupID, err := repo.MessageExists(context.Background(), "m1"); err != nil || exists || groupID != "" {
-		t.Fatalf("message exists stub: %v %q %v", exists, groupID, err)
+	ctx := context.Background()
+	if exists, senderID, err := repo.MessageExists(ctx, "m1"); err != nil || exists || senderID != "" {
+		t.Fatalf("missing message exists: %v %q %v", exists, senderID, err)
+	}
+	sent, err := repo.Send(ctx, SendGroupMessageRequest{GroupID: "g1", SenderUserID: "u1", Type: "text", Content: "hi"})
+	if err != nil {
+		t.Fatalf("send: %v", err)
+	}
+	exists, senderID, err := repo.MessageExists(ctx, sent.MessageID)
+	if err != nil || !exists || senderID != "u1" {
+		t.Fatalf("message exists: %v %q %v", exists, senderID, err)
 	}
 }
