@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/types"
 	"strings"
 	"time"
@@ -100,7 +100,7 @@ func (r *PostgresRepository) CreateRole(ctx context.Context, req AdminRbacRoleCr
 	}
 	now := time.Now().UTC()
 	item := AdminRoleItem{
-		RoleID:      fmt.Sprintf("role_%d", now.UnixNano()),
+		RoleID:      idgen.MustWithPrefix("role_"),
 		Name:        name,
 		Description: strings.TrimSpace(req.Description),
 		Permissions: []string{},
@@ -375,7 +375,7 @@ func (r *PostgresRepository) AppendAuditLog(ctx context.Context, entry AuditLogE
 		return persistence.ErrNotImplemented
 	}
 	if entry.LogID == "" {
-		entry.LogID = fmt.Sprintf("audit_%d", time.Now().UTC().UnixNano())
+		entry.LogID = idgen.MustWithPrefix("audit_")
 	}
 	if entry.CreatedAt.IsZero() {
 		entry.CreatedAt = time.Now().UTC()

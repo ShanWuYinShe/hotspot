@@ -3,7 +3,7 @@ package groupmessages
 import (
 	"context"
 	"errors"
-	"fmt"
+	"hotspot/backend-go/internal/platform/idgen"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -27,7 +27,10 @@ func (r *PostgresRepository) Send(ctx context.Context, req SendGroupMessageReque
 		return MessageSent{}, persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
-	messageID := fmt.Sprintf("gm_%d", now.UnixNano())
+	messageID, err := idgen.WithPrefix("gm_")
+	if err != nil {
+		return MessageSent{}, err
+	}
 	var senderID interface{}
 	if req.SenderUserID != "" {
 		senderID = req.SenderUserID

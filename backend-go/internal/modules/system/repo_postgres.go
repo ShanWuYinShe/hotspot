@@ -3,7 +3,7 @@ package system
 import (
 	"context"
 	"errors"
-	"fmt"
+	"hotspot/backend-go/internal/platform/idgen"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -108,7 +108,7 @@ func (r *PostgresRepository) CreateAnnouncement(ctx context.Context, input Annou
 	}
 	now := time.Now().UTC()
 	item := AnnouncementRecord{
-		AnnouncementID: fmt.Sprintf("ann_%d", now.UnixNano()),
+		AnnouncementID: idgen.MustWithPrefix("ann_"),
 		Title:          input.Title,
 		Content:        input.Content,
 		Severity:       input.Severity,

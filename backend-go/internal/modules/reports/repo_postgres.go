@@ -3,7 +3,7 @@ package reports
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"hotspot/backend-go/internal/platform/idgen"
 	"strings"
 	"time"
 
@@ -24,7 +24,10 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		return ReportCreated{}, persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
-	reportID := fmt.Sprintf("report_%d", now.UnixNano())
+	reportID, err := idgen.WithPrefix("report_")
+	if err != nil {
+		return ReportCreated{}, err
+	}
 	var snapshotJSON any
 	if req.MessageSnapshot != nil {
 		raw, err := json.Marshal(req.MessageSnapshot)

@@ -28,10 +28,6 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return MomentItem{}, persistence.ErrNotImplemented
 	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	if !ok {
-		return MomentItem{}, persistence.ErrNotImplemented
-	}
 	now := time.Now().UTC()
 	createdAt := now.Format(time.RFC3339)
 	momentID, err := idgen.WithPrefix("moment_")
@@ -42,32 +38,46 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if privacy == "" {
 		privacy = "public"
 	}
-	if err := queryable.Exec(ctx, queryInsertMoment, momentID, userID, req.Description, createdAt, 0, 0, 0, req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, privacy, geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})); err != nil {
-		return MomentItem{}, fmt.Errorf("moments.Create: insert moment: %w", err)
-	}
-	tags := normalizeMomentTags(req.Tags)
-	allowedTags, err := filterAllowedMomentTags(ctx, queryable, tags)
-	if err != nil {
-		return MomentItem{}, fmt.Errorf("moments.Create: filter tags: %w", err)
-	}
-	if err := insertMomentTags(ctx, queryable, momentID, tags, now); err != nil {
-		return MomentItem{}, fmt.Errorf("moments.Create: insert tags: %w", err)
-	}
+	// moment + tags + mentions + images 五步写包进同一事务：任一步失败
+	// 整体回滚，避免「moment 已落库但接口报错」导致客户端重试产生重复。
+	var allowedTags []string
 	normalizedMentions := normalizeMomentMentions(req.Mentions)
-	if err := replaceMomentMentions(ctx, queryable, momentID, normalizedMentions, now); err != nil {
-		return MomentItem{}, fmt.Errorf("moments.Create: insert mentions: %w", err)
-	}
-	if len(req.ImageFileIDs) > 0 {
-		if err := insertMomentImages(ctx, queryable, momentID, req.ImageFileIDs, now); err != nil {
-			return MomentItem{}, fmt.Errorf("moments.Create: insert images: %w", err)
+	nickname := userID
+	if err := persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		txQueryable, ok := queryable(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
 		}
-	}
-	nickname, err := lookupUserNickname(ctx, queryable, userID)
-	if err != nil {
+		if err := txQueryable.Exec(txCtx, queryInsertMoment, momentID, userID, req.Description, createdAt, 0, 0, 0, req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, privacy, geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})); err != nil {
+			return fmt.Errorf("moments.Create: insert moment: %w", err)
+		}
+		tags := normalizeMomentTags(req.Tags)
+		allowed, err := filterAllowedMomentTags(txCtx, txQueryable, tags)
+		if err != nil {
+			return fmt.Errorf("moments.Create: filter tags: %w", err)
+		}
+		allowedTags = allowed
+		if err := insertMomentTags(txCtx, txQueryable, momentID, tags, now); err != nil {
+			return fmt.Errorf("moments.Create: insert tags: %w", err)
+		}
+		if err := replaceMomentMentions(txCtx, txQueryable, momentID, normalizedMentions, now); err != nil {
+			return fmt.Errorf("moments.Create: insert mentions: %w", err)
+		}
+		if len(req.ImageFileIDs) > 0 {
+			if err := insertMomentImages(txCtx, txQueryable, momentID, req.ImageFileIDs, now); err != nil {
+				return fmt.Errorf("moments.Create: insert images: %w", err)
+			}
+		}
+		n, err := lookupUserNickname(txCtx, txQueryable, userID)
+		if err != nil {
+			return err
+		}
+		if n != "" {
+			nickname = n
+		}
+		return nil
+	}); err != nil {
 		return MomentItem{}, err
-	}
-	if nickname == "" {
-		nickname = userID
 	}
 	return MomentItem{
 		MomentID:      momentID,
@@ -85,7 +95,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	}, nil
 }
 
-func lookupUserNickname(ctx context.Context, queryable persistence.QueryableDB, userID string) (string, error) {
+func lookupUserNickname(ctx context.Context, queryable persistence.Queryable, userID string) (string, error) {
 	var nickname string
 	err := queryable.QueryRow(ctx, queryGetUserNickname, userID).Scan(&nickname)
 	if err != nil {
@@ -236,10 +246,6 @@ func buildSearchMomentsQuery(bounds geo.Bounds, keyword *string, tag *string, so
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, userID string, req EditMomentRequest) error {
-	q, ok := queryable(ctx, r.factory)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
 	var locationName, latStr, lngStr *string
 	var s2CellID *int64
 	if req.Location != nil {
@@ -251,28 +257,36 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Edit
 		id := geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})
 		s2CellID = &id
 	}
-	if err := q.Exec(ctx, queryUpdateMoment, req.MomentID, req.Description, req.PrivacyLevel, locationName, latStr, lngStr, s2CellID); err != nil {
-		return fmt.Errorf("moments.Update: update moment: %w", err)
-	}
-	if req.Tags != nil {
-		if err := q.Exec(ctx, queryDeleteMomentTagsByMomentID, req.MomentID); err != nil {
-			return fmt.Errorf("moments.Update: delete tags: %w", err)
+	// update + tags/mentions/images 替换包进同一事务：中途失败不会留下
+	// 「标签已删但未插回」的半更新状态。
+	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		q, ok := queryable(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
 		}
-		if err := insertMomentTags(ctx, q, req.MomentID, req.Tags, time.Now().UTC()); err != nil {
-			return fmt.Errorf("moments.Update: insert tags: %w", err)
+		if err := q.Exec(txCtx, queryUpdateMoment, req.MomentID, req.Description, req.PrivacyLevel, locationName, latStr, lngStr, s2CellID); err != nil {
+			return fmt.Errorf("moments.Update: update moment: %w", err)
 		}
-	}
-	if req.Mentions != nil {
-		if err := replaceMomentMentions(ctx, q, req.MomentID, req.Mentions, time.Now().UTC()); err != nil {
-			return fmt.Errorf("moments.Update: replace mentions: %w", err)
+		if req.Tags != nil {
+			if err := q.Exec(txCtx, queryDeleteMomentTagsByMomentID, req.MomentID); err != nil {
+				return fmt.Errorf("moments.Update: delete tags: %w", err)
+			}
+			if err := insertMomentTags(txCtx, q, req.MomentID, req.Tags, time.Now().UTC()); err != nil {
+				return fmt.Errorf("moments.Update: insert tags: %w", err)
+			}
 		}
-	}
-	if req.ImageFileIDs != nil {
-		if err := replaceMomentImages(ctx, q, req.MomentID, req.ImageFileIDs, time.Now().UTC()); err != nil {
-			return fmt.Errorf("moments.Update: replace images: %w", err)
+		if req.Mentions != nil {
+			if err := replaceMomentMentions(txCtx, q, req.MomentID, req.Mentions, time.Now().UTC()); err != nil {
+				return fmt.Errorf("moments.Update: replace mentions: %w", err)
+			}
 		}
-	}
-	return nil
+		if req.ImageFileIDs != nil {
+			if err := replaceMomentImages(txCtx, q, req.MomentID, req.ImageFileIDs, time.Now().UTC()); err != nil {
+				return fmt.Errorf("moments.Update: replace images: %w", err)
+			}
+		}
+		return nil
+	})
 }
 
 func (r *PostgresRepository) Delete(ctx context.Context, momentID string) error {

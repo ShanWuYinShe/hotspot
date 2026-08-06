@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"hotspot/backend-go/internal/platform/idgen"
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
@@ -34,7 +34,10 @@ func (r *PostgresRepository) Create(ctx context.Context, cmd createShareCommand)
 		return ShareCreated{}, err
 	}
 	now := time.Now().UTC()
-	shareID := fmt.Sprintf("share_%d", now.UnixNano())
+	shareID, err := idgen.WithPrefix("share_")
+	if err != nil {
+		return ShareCreated{}, err
+	}
 	createdAt := now.Format(time.RFC3339)
 	var expiresAt string
 	var expiresAtValue any

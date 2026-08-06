@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 )
 
@@ -177,11 +178,12 @@ func TestReplayOrStoreProcessingStatus22002(t *testing.T) {
 	store := NewInMemoryStore()
 	SetStore(store)
 	store.Save(Record{
-		Key: "inprogress", Scope: "test_scope",
+		Key: "u:u1::inprogress", Scope: "test_scope",
 		Status:    StatusProcessing,
 		ExpiresAt: time.Now().Add(24 * time.Hour),
 	})
 	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 	req = req.WithContext(WithKey(req.Context(), "inprogress"))
 	rr := httptest.NewRecorder()
 	producerCalled := false

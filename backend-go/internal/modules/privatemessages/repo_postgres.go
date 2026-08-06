@@ -2,6 +2,7 @@ package privatemessages
 
 import (
 	"context"
+	"hotspot/backend-go/internal/platform/idgen"
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
@@ -38,7 +39,10 @@ func (r *PostgresRepository) Send(ctx context.Context, senderID, targetUserID st
 		return MessageSent{}, persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
-	messageID := "pm_" + now.Format("20060102150405.000000000")
+	messageID, err := idgen.WithPrefix("pm_")
+	if err != nil {
+		return MessageSent{}, err
+	}
 	chatKey := conversationKey(senderID, targetUserID)
 	userAID, userBID := orderedUsers(senderID, targetUserID)
 	// Wrap the chat upsert and the message insert in a single transaction so a

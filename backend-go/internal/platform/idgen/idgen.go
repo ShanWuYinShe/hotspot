@@ -51,3 +51,13 @@ func WithPrefix(prefix string) (string, error) {
 	}
 	return prefix + id, nil
 }
+
+// MustWithPrefix is the panic-on-error variant of WithPrefix, for struct
+// literal initialization where returning an error is impossible.
+func MustWithPrefix(prefix string) string {
+	id, err := WithPrefix(prefix)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
