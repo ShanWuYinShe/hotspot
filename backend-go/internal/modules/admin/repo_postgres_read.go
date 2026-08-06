@@ -9,8 +9,9 @@ import (
 	usersmodule "hotspot/backend-go/internal/modules/users"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"hotspot/backend-go/internal/platform/persistence"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type postgresRoleRecord struct {
