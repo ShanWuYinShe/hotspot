@@ -559,14 +559,6 @@ export class WebSocketService {
         this.forceLogout('session_revoked', revokeMessage);
         break;
       }
-
-      // 多端同步事件（⏳ 延期实现，由 eventHandlers 分发处理）
-      case 'SelfReadSync':
-      case 'SelfChatSettingsSync':
-      case 'SelfSettingsUpdated':
-      case 'SelfRelationSync':
-        hilog.debug(DOMAIN_NUMBER, TAG, `多端同步事件: ${event.type}`);
-        break;
     }
 
     // 触发事件处理器

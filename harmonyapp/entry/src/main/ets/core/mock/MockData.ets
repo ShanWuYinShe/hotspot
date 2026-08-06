@@ -241,18 +241,18 @@ export function getCannedResponse(url: string, loggedIn: boolean, scenario: stri
   // Users
   if (url === '/api/v1/users/get_account') return guard() ?? apiOk(MOCK_ACCOUNT);
   if (url === '/api/v1/users/get_profile') return apiOk(MOCK_PROFILE_BUNDLE);
-  if (url === '/api/v1/users/get_detail') return apiOk(MK_USER_ITEM);
+  if (url === '/api/v1/users/open_the_door') return apiOk(MK_USER_ITEM);
   if (url === '/api/v1/users/search') return paginated([MK_USER_ITEM]);
   if (url.startsWith('/api/v1/users/list_')) return guard() ?? paginated([] as UserItem[]);
 
   // Moments
   if (url === '/api/v1/moments/search') return paginated([MK_MOMENT]);
-  if (url === '/api/v1/moments/get_detail') return apiOk(MK_MOMENT);
+  if (url === '/api/v1/moments/open_the_door') return apiOk(MK_MOMENT);
   if (url === '/api/v1/moments/list_my') return guard() ?? paginated([] as MomentItem[]);
 
   // Groups
   if (url === '/api/v1/groups/search') return paginated([MK_GROUP]);
-  if (url === '/api/v1/groups/get_detail') return apiOk(MK_GROUP);
+  if (url === '/api/v1/groups/open_the_door') return apiOk(MK_GROUP);
 
   // Chat
   if (url === '/api/v1/private_chats/list') return guard() ?? paginated([] as PrivateChatItem[]);

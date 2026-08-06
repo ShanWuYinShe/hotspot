@@ -115,13 +115,7 @@ export enum ServerEventType {
   REPORT_DISMISSED = 'ReportDismissed',
 
   // 附近发现
-  NEARBY_NEW_MOMENT = 'NearbyNewMoment',
-
-  // 多端同步（⏳ 延期实现）
-  SELF_READ_SYNC = 'SelfReadSync',
-  SELF_CHAT_SETTINGS_SYNC = 'SelfChatSettingsSync',
-  SELF_SETTINGS_UPDATED = 'SelfSettingsUpdated',
-  SELF_RELATION_SYNC = 'SelfRelationSync'
+  NEARBY_NEW_MOMENT = 'NearbyNewMoment'
 }
 
 // ============================================================================
@@ -834,50 +828,6 @@ export interface ReportDismissedEvent {
   payload: ReportDismissedPayload
 }
 
-// ----- 多端同步事件（⏳ 延期实现）-----
-
-export interface SelfReadSyncPayload {
-  chat_type: 'private' | 'group'
-  target_id: string
-  up_to_message_id?: string
-}
-
-export interface SelfReadSyncEvent {
-  type: 'SelfReadSync'
-  payload: SelfReadSyncPayload
-}
-
-export interface SelfChatSettingsSyncPayload {
-  chat_type: 'private' | 'group'
-  target_id: string
-  is_muted?: boolean
-  is_pinned?: boolean
-}
-
-export interface SelfChatSettingsSyncEvent {
-  type: 'SelfChatSettingsSync'
-  payload: SelfChatSettingsSyncPayload
-}
-
-export interface SelfSettingsUpdatedPayload {
-  settings: UserSettings
-}
-
-export interface SelfSettingsUpdatedEvent {
-  type: 'SelfSettingsUpdated'
-  payload: SelfSettingsUpdatedPayload
-}
-
-export interface SelfRelationSyncPayload {
-  action: 'follow' | 'unfollow' | 'block' | 'unblock'
-  target_user_id: string
-}
-
-export interface SelfRelationSyncEvent {
-  type: 'SelfRelationSync'
-  payload: SelfRelationSyncPayload
-}
-
 // ----- 系统/订阅事件 -----
 
 export interface SubscribeAckPayload {
@@ -987,10 +937,6 @@ export type ServerEvent =
   | SubscribeAckEvent
   | SubscriptionsSnapshotEvent
   | ErrorEvent
-  | SelfReadSyncEvent
-  | SelfChatSettingsSyncEvent
-  | SelfSettingsUpdatedEvent
-  | SelfRelationSyncEvent
 
 // ============================================================================
 // 辅助类型
