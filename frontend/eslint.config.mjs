@@ -1,0 +1,35 @@
+/**
+ * ESLint flat config（v10）——最小化接入：只注册项目自定义规则，不启用任何
+ * 默认规则集，存量代码零噪音。后续要引入通用 JS/TS 规范时在此追加。
+ *
+ * 当前规则：
+ *   hotspot/no-list-item-card-classes —— ListItem 调用方禁止行级卡片类（多边框防线）
+ *
+ * 运行：bun run lint（已挂入 bun run check 与 pre-commit）。
+ */
+import svelteParser from 'svelte-eslint-parser';
+import { parser as tsParser } from 'typescript-eslint';
+import { noListItemCardClasses } from './eslint-rules/no-list-item-card-classes.mjs';
+
+export default [
+	{
+		ignores: ['node_modules/**', 'build/**', '.svelte-kit/**', 'static/**']
+	},
+	{
+		files: ['src/**/*.svelte'],
+		languageOptions: {
+			parser: svelteParser,
+			parserOptions: {
+				// <script lang="ts"> 段交给 typescript-eslint parser 解析
+				parser: tsParser,
+				extraFileExtensions: ['.svelte']
+			}
+		},
+		plugins: {
+			hotspot: { rules: { 'no-list-item-card-classes': noListItemCardClasses } }
+		},
+		rules: {
+			'hotspot/no-list-item-card-classes': 'error'
+		}
+	}
+];

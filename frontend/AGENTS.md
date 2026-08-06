@@ -169,8 +169,11 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
    joined 行（默认 tone）**禁止叠加 rounded/border/shadow/ring 卡片类**——行间分隔
    由容器 divide 线承担，圆角外框由容器级（`ListContainer bordered` 唯一外框）或
    `tone="card"`（独立卡片容器 + gap 分隔）承担；调用方 className/style 只允许布局
-   类。双防线：`bun run check` 内嵌 `check:list` 静态扫描（`scripts/check-list-contract.ts`，
-   规则见文件头）+ ListItem dev 模式运行时警告。
+   类。三重防线：ESLint 自定义规则 `hotspot/no-list-item-card-classes`
+   （`eslint-rules/`，Svelte AST 级，IDE 即时报错）挂入 `bun run lint`/`bun run check`；
+   仓库根 `lefthook.yml` pre-commit 提交前强制拦截；ListItem dev 模式运行时警告。
+   后续需扩展同类组件级契约时，在 `eslint-rules/` 新增规则并在
+   `eslint.config.mjs` 注册（最小化接入：不启用默认规则集）。
 
 ## 目录结构
 
