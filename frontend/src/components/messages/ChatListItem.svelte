@@ -41,8 +41,8 @@
 	pressed={isSelected}
 	onClick={onClick}
 	ariaLabel={`打开与 ${chat.name} 的会话`}
-	class="flex items-center gap-3.5 rounded-control"
-	style="padding:{compact ? '10px 16px' : '12px 16px'};box-shadow:{isSelected ? '0 3px 12px var(--cst-glow-accent)' : 'none'};"
+	class="flex items-center gap-3.5"
+	style="padding:{compact ? '10px 16px' : '12px 16px'};"
 >
 	<span class="relative shrink-0">
 		<span

@@ -165,6 +165,12 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
    布局分支），不得复制三份页面。
 6. **数据获取与状态**：`$effect` + `cancelled` 竞态清理模式（参照样板页）；加载中用
    spinner、空列表用 `EmptyState`（参照样板页 feedState snippet）。
+7. **列表骨架契约**：列表一律用 `ListContainer` + `ListItem`（`components/list/`）。
+   joined 行（默认 tone）**禁止叠加 rounded/border/shadow/ring 卡片类**——行间分隔
+   由容器 divide 线承担，圆角外框由容器级（`ListContainer bordered` 唯一外框）或
+   `tone="card"`（独立卡片容器 + gap 分隔）承担；调用方 className/style 只允许布局
+   类。双防线：`bun run check` 内嵌 `check:list` 静态扫描（`scripts/check-list-contract.ts`，
+   规则见文件头）+ ListItem dev 模式运行时警告。
 
 ## 目录结构
 

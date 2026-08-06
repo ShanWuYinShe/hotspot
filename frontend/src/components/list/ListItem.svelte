@@ -42,6 +42,22 @@
 	let hovered = $state(false);
 	let focused = $state(false);
 	let pointerDown = $state(false);
+	// 多边框防线（dev 提示）：joined 行调用方不得再叠卡片类（边框/圆角/阴影），
+	// 卡片化请用 tone="card"（独立卡片容器）或 ListContainer bordered（容器级唯一外框）；
+	// 静态防线见 scripts/check-list-contract.ts（已挂入 bun run check）
+	const checkRowCardStyles = () => {
+		if (!import.meta.env.DEV) return;
+		if (
+			/\b(?:rounded|border|shadow|ring)[\w-]*/.test(className) ||
+			/(?:border|box-shadow|outline)\s*:/.test(style ?? '')
+		) {
+			console.warn(
+				'[ListItem] 调用方叠加了行级卡片样式（边框/圆角/阴影）——joined 行禁止，' +
+					'卡片化请用 tone="card" 或 ListContainer bordered'
+			);
+		}
+	};
+	checkRowCardStyles();
 	// hover 或 focus 时行处于「激活表面」：叠加 hover-fill 背景
 	const surfaceActive = $derived(hovered || focused);
 	// 对齐 Figma Make：可点击时 tap → opacity 0.84（0.1s），无 scale
