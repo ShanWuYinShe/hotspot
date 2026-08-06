@@ -22,7 +22,6 @@ export {
   listUserMoments, listUserReactedMoments,
   listComments,
   getMapCanvas,
-  getEventDetail, getSimilarEvents,
   searchSuggest,
 } from '@/api/client';
 

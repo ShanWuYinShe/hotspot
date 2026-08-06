@@ -55,7 +55,7 @@
 	} = $props();
 </script>
 
-<!-- Post image（全幅封面：负 margin 抵消外层 SplitPageLayout 的 gutter，与 events/users 一致） -->
+<!-- Post image（全幅封面：负 margin 抵消外层 SplitPageLayout 的 gutter，与 users 详情一致） -->
 <div class="relative overflow-hidden -mx-[var(--cst-page-gutter)]" style="height:clamp(220px, 38vw, 380px);">
 	{#if moment.image}
 		<img src={moment.image} alt="moment" class="w-full h-full object-cover" />

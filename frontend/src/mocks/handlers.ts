@@ -4,7 +4,6 @@ import {
   mockUsers, mockAccount, mockSettings,
   mockMoments, mockGroups, mockNotifications, mockChats, mockTrending,
   mockFriends, mockFollowing, mockFollowers, mockNearbyUsers,
-  mockEvents, mockSimilarEvents,
   getMockAuthScenario, setMockLoggedIn, isMockLoggedIn,
 } from "@/mocks/data";
 
@@ -184,14 +183,14 @@ export const handlers = [
   http.post(`${API}/users/list_followers`, () => requireMockAuth() ?? json(paginated(mockFollowers))),
   http.post(`${API}/users/list_moments`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 12)))),
   http.post(`${API}/users/list_reacted_moments`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(6, 18)))),
-  http.post(`${API}/users/follow`, () => requireMockAuth() ?? json(apiOk(null))),
-  http.post(`${API}/users/block`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/users/set_follow`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/users/set_block`, () => requireMockAuth() ?? json(apiOk(null))),
 
   // ── Moments ────────────────────────────────────
-  // search/get_detail 是 auth-optional（匿名可见公开 moments）。
+  // search/open_the_door 是 auth-optional（匿名可见公开 moments）。
   http.post(`${API}/moments/search`, () => json(paginated(mockMoments.slice(0, 12)))),
-  // get_detail 按 moment_id 路由（缺失/未知 id 回退第一条，避免 404 打断浏览）
-  http.post(`${API}/moments/get_detail`, async ({ request }) => {
+  // open_the_door 按 moment_id 路由（缺失/未知 id 回退第一条，避免 404 打断浏览）
+  http.post(`${API}/moments/open_the_door`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as { moment_id?: string };
     const id = body?.moment_id;
     const found = mockMoments.find((m) => m.moment_id === id);
@@ -199,7 +198,7 @@ export const handlers = [
   }),
   http.post(`${API}/moments/list_my`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 9)))),
   http.post(`${API}/moments/list_favorites`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 6)))),
-  http.post(`${API}/moments/favorite`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/moments/set_favorite`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/moments/create`, () => requireMockAuth() ?? json(apiOk(mockMoments[0]))),
 
   // ── Comments ───────────────────────────────────
@@ -230,9 +229,9 @@ export const handlers = [
   http.post(`${API}/reactions/set`, () => requireMockAuth() ?? json(apiOk(null))),
 
   // ── Groups ─────────────────────────────────────
-  // get_detail/members/announcements 是 auth-optional；list_my 需要登录。
-  // get_detail 按 group_id 路由（缺失/未知 id 回退第一条）。
-  http.post(`${API}/groups/get_detail`, async ({ request }) => {
+  // open_the_door/members/announcements 是 auth-optional；list_my 需要登录。
+  // open_the_door 按 group_id 路由（缺失/未知 id 回退第一条）。
+  http.post(`${API}/groups/open_the_door`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as { group_id?: string };
     const found = mockGroups.find((g) => g.group.group_id === body?.group_id);
     return json(apiOk({ ...(found ?? mockGroups[0]), my_state: { role: "member" as const, is_joined: true, unread_count: 0, is_muted: false, is_pinned: false } }));
@@ -322,14 +321,6 @@ export const handlers = [
       { type: "tag" as const, payload: { name: "咖啡馆", usage_count: 25 } },
     ],
   }))),
-
-  // ── Events（spec 尚未定义，仅 MSW mock；后端契约就绪后按 spec 收编）──
-  http.post(`${API}/events/get_detail`, async ({ request }) => {
-    const body = (await request.json().catch(() => ({}))) as { event_id?: string };
-    const ev = mockEvents[body?.event_id ?? "1"] ?? mockEvents["1"];
-    return json(apiOk(ev));
-  }),
-  http.post(`${API}/events/list_similar`, () => json(paginated(mockSimilarEvents))),
 
   // ── System ─────────────────────────────────────
   http.post(`${API}/system/get_client_config`, () => json(apiOk({

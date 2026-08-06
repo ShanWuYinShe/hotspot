@@ -44,7 +44,6 @@ export const ROUTES = {
   user: (userId: string | number) => `/users/${userId}`,
   moment: (momentId: string | number) => `/moments/${momentId}`,
   group: (groupId: string | number) => `/groups/${groupId}`,
-  event: (eventId: string | number) => `/events/${eventId}`,
   message: (peerId: string | number) => `/messages/${peerId}`,
   /** 群聊窗口（与私聊 message() 区分;静态段 group 优先于 [peerId] 参数段）。 */
   groupMessage: (groupId: string | number) => `/messages/group/${groupId}`,
@@ -55,7 +54,7 @@ export const ROUTES = {
  * string surgery (`.replace(/\/$/, "")` on a helper result) when testing
  * whether a pathname lives under a parametrised route.
  */
-const DETAIL_PREFIXES = ["/users/", "/moments/", "/groups/", "/events/"] as const;
+const DETAIL_PREFIXES = ["/users/", "/moments/", "/groups/"] as const;
 
 export const SUB_PAGE_PATHS = [
   ROUTES.settings,

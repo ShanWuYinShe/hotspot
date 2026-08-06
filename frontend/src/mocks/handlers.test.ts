@@ -1,5 +1,5 @@
 // msw handlers 集成测试：验证按 id 路由的 handler 行为
-// （moments/get_detail、groups/get_detail、users/get_profile、
+// （moments/open_the_door、groups/open_the_door、users/get_profile、
 //  private_messages/get_history、group_messages/get_history、comments/create）。
 // 直接调用 handler resolver（msw/node 网络层与 vitest 4 fetch 不兼容）。
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -33,24 +33,24 @@ describe('msw id-routed handlers', () => {
 		setMockLoggedIn(true);
 	});
 
-	it('moments/get_detail 按 moment_id 返回对应瞬间，未知 id 回退第一条', async () => {
+	it('moments/open_the_door 按 moment_id 返回对应瞬间，未知 id 回退第一条', async () => {
 		const target = mockMoments[5];
-		const res = await run('/api/v1/moments/get_detail', { moment_id: target.moment_id });
+		const res = await run('/api/v1/moments/open_the_door', { moment_id: target.moment_id });
 		expect(res.code).toBe(0);
 		expect(res.data.moment_id).toBe(target.moment_id);
 
-		const fallback = await run('/api/v1/moments/get_detail', { moment_id: 'nope' });
+		const fallback = await run('/api/v1/moments/open_the_door', { moment_id: 'nope' });
 		expect(fallback.data.moment_id).toBe(mockMoments[0].moment_id);
 	});
 
-	it('groups/get_detail 按 group_id 返回对应群组，未知 id 回退第一条', async () => {
+	it('groups/open_the_door 按 group_id 返回对应群组，未知 id 回退第一条', async () => {
 		const target = mockGroups[2];
-		const res = await run('/api/v1/groups/get_detail', { group_id: target.group.group_id });
+		const res = await run('/api/v1/groups/open_the_door', { group_id: target.group.group_id });
 		expect(res.code).toBe(0);
 		expect(res.data.group.group_id).toBe(target.group.group_id);
 		expect(res.data.my_state.is_joined).toBe(true);
 
-		const fallback = await run('/api/v1/groups/get_detail', { group_id: 'nope' });
+		const fallback = await run('/api/v1/groups/open_the_door', { group_id: 'nope' });
 		expect(fallback.data.group.group_id).toBe(mockGroups[0].group.group_id);
 	});
 

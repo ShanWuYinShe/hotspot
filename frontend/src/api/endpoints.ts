@@ -29,7 +29,7 @@ export const Endpoints = {
   //   DeleteAccount/ListBlocked/SetRemark
   Users: {
     Search: `${PREFIX}/users/search`,
-    GetDetail: `${PREFIX}/users/get_detail`,
+    GetDetail: `${PREFIX}/users/open_the_door`,
     GetProfile: `${PREFIX}/users/get_profile`,
     BatchGet: `${PREFIX}/users/batch_get`,
     ListFriends: `${PREFIX}/users/list_friends`,
@@ -45,8 +45,8 @@ export const Endpoints = {
     UpdateLocation: `${PREFIX}/users/update_location`,
     Upgrade: `${PREFIX}/users/upgrade`,
     DeleteAccount: `${PREFIX}/users/delete_account`,
-    Follow: `${PREFIX}/users/follow`,
-    Block: `${PREFIX}/users/block`,
+    Follow: `${PREFIX}/users/set_follow`,
+    Block: `${PREFIX}/users/set_block`,
     ListBlocked: `${PREFIX}/users/list_blocked`,
     SetRemark: `${PREFIX}/users/set_remark`,
   },
@@ -57,7 +57,7 @@ export const Endpoints = {
   //   Announcements.Create|Update|Delete
   Groups: {
     Search: `${PREFIX}/groups/search`,
-    GetDetail: `${PREFIX}/groups/get_detail`,
+    GetDetail: `${PREFIX}/groups/open_the_door`,
     Create: `${PREFIX}/groups/create`,
     Update: `${PREFIX}/groups/update`,
     Dismiss: `${PREFIX}/groups/dismiss`,
@@ -68,22 +68,22 @@ export const Endpoints = {
     UpdatePreferences: `${PREFIX}/groups/update_preferences`,
     ListApplications: `${PREFIX}/groups/list_applications`,
     CancelApplication: `${PREFIX}/groups/cancel_application`,
-    ListInvites: `${PREFIX}/groups/list_invites`,
-    AcceptInvite: `${PREFIX}/groups/accept_invite`,
-    RejectInvite: `${PREFIX}/groups/reject_invite`,
+    ListInvites: `${PREFIX}/groups/invites/received/list`,
+    AcceptInvite: `${PREFIX}/groups/invites/received/accept`,
+    RejectInvite: `${PREFIX}/groups/invites/received/reject`,
     Members: {
       List: `${PREFIX}/groups/members/list`,
       Search: `${PREFIX}/groups/members/search`,
       Invite: `${PREFIX}/groups/members/invite`,
       SetRole: `${PREFIX}/groups/members/set_role`,
       SetMute: `${PREFIX}/groups/members/set_mute`,
-      Ban: `${PREFIX}/groups/members/ban`,
-      Unban: `${PREFIX}/groups/members/unban`,
+      Ban: `${PREFIX}/groups/members/set_ban`,
+      Unban: `${PREFIX}/groups/members/set_ban`,
       ListBanned: `${PREFIX}/groups/members/list_banned`,
       Remove: `${PREFIX}/groups/members/remove`,
       Invites: {
-        List: `${PREFIX}/groups/members/invites/list`,
-        Revoke: `${PREFIX}/groups/members/invites/revoke`,
+        List: `${PREFIX}/groups/invites/sent/list`,
+        Revoke: `${PREFIX}/groups/invites/sent/revoke`,
       },
     },
     Applications: {
@@ -103,12 +103,12 @@ export const Endpoints = {
   //   待接线: Update/Delete
   Moments: {
     Search: `${PREFIX}/moments/search`,
-    GetDetail: `${PREFIX}/moments/get_detail`,
+    GetDetail: `${PREFIX}/moments/open_the_door`,
     Create: `${PREFIX}/moments/create`,
     Update: `${PREFIX}/moments/update`,
     Delete: `${PREFIX}/moments/delete`,
     ListMy: `${PREFIX}/moments/list_my`,
-    Favorite: `${PREFIX}/moments/favorite`,
+    Favorite: `${PREFIX}/moments/set_favorite`,
     ListFavorites: `${PREFIX}/moments/list_favorites`,
   },
 
@@ -118,7 +118,7 @@ export const Endpoints = {
     Delete: `${PREFIX}/comments/delete`,
     List: `${PREFIX}/comments/list`,
     ListReplies: `${PREFIX}/comments/list_replies`,
-    GetDetail: `${PREFIX}/comments/get_detail`,
+    GetDetail: `${PREFIX}/comments/open_the_door`,
   },
 
   // Reactions — 已包装: Set；待接线: List
@@ -132,7 +132,7 @@ export const Endpoints = {
   //   待接线: PrivateChats.GetDetail|UpdatePreferences|Delete、消息 Update|Recall
   PrivateChats: {
     List: `${PREFIX}/private_chats/list`,
-    GetDetail: `${PREFIX}/private_chats/get_detail`,
+    GetDetail: `${PREFIX}/private_chats/open_the_door`,
     UpdatePreferences: `${PREFIX}/private_chats/update_preferences`,
     Delete: `${PREFIX}/private_chats/delete`,
   },
@@ -197,11 +197,5 @@ export const Endpoints = {
     Rbac: {
       GetMe: `${PREFIX}/admin/rbac/get_me`,
     },
-  },
-
-  // Events（spec 尚未定义，仅 MSW mock 提供；后端契约就绪后按 spec 收编）
-  Events: {
-    GetDetail: `${PREFIX}/events/get_detail`,
-    ListSimilar: `${PREFIX}/events/list_similar`,
   },
 } as const;
