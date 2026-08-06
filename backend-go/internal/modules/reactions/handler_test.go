@@ -9,13 +9,14 @@ import (
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/httpx"
 )
 
 // apiCode extracts the envelope code from a response body.
-func apiCode(t *testing.T, body string) int {
+func apiCode(t *testing.T, body string) httpx.Code {
 	t.Helper()
 	var env struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.Unmarshal([]byte(body), &env); err != nil {
 		t.Fatalf("unmarshal response %q: %v", body, err)
@@ -60,8 +61,8 @@ func TestHandlerSetRejectsMissingFields(t *testing.T) {
 	}
 	for i, body := range cases {
 		rr := do(t, h.Set, "u", body)
-		if code := apiCode(t, rr.Body.String()); code != 10000 {
-			t.Fatalf("case %d: expected 10000, got %d", i, code)
+		if code := apiCode(t, rr.Body.String()); code != httpx.CodeInvalidRequest {
+			t.Fatalf("case %d: expected httpx.CodeInvalidRequest, got %d", i, code)
 		}
 	}
 }
@@ -71,8 +72,8 @@ func TestHandlerSetRejectsBadTargetType(t *testing.T) {
 	h := NewHandler(svc)
 
 	rr := do(t, h.Set, "u", `{"target_type":"bogus","target_id":"x","emoji":"👍","active":true}`)
-	if code := apiCode(t, rr.Body.String()); code != 10000 {
-		t.Fatalf("bad target_type: expected 10000, got %d", code)
+	if code := apiCode(t, rr.Body.String()); code != httpx.CodeInvalidRequest {
+		t.Fatalf("bad target_type: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 }
 
@@ -82,8 +83,8 @@ func TestHandlerSetMapsTargetNotFoundTo10300(t *testing.T) {
 	h := NewHandler(svc)
 
 	rr := do(t, h.Set, "u", `{"target_type":"moment","target_id":"missing","emoji":"👍","active":true}`)
-	if code := apiCode(t, rr.Body.String()); code != 10300 {
-		t.Fatalf("missing target: expected 10300, got %d", code)
+	if code := apiCode(t, rr.Body.String()); code != httpx.CodeNotFound {
+		t.Fatalf("missing target: expected httpx.CodeNotFound, got %d", code)
 	}
 }
 
@@ -121,8 +122,8 @@ func TestHandlerListRejectsMissingTargetID(t *testing.T) {
 	h := NewHandler(svc)
 
 	rr := do(t, h.List, "", `{"target_type":"moment"}`)
-	if code := apiCode(t, rr.Body.String()); code != 10000 {
-		t.Fatalf("missing target_id: expected 10000, got %d", code)
+	if code := apiCode(t, rr.Body.String()); code != httpx.CodeInvalidRequest {
+		t.Fatalf("missing target_id: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 }
 
@@ -190,7 +191,7 @@ func TestHandlerListRejectsBadTargetType(t *testing.T) {
 	h := NewHandler(svc)
 
 	rr := do(t, h.List, "", `{"target_type":"bogus","target_id":"x"}`)
-	if code := apiCode(t, rr.Body.String()); code != 10000 {
-		t.Fatalf("bad target_type: expected 10000, got %d", code)
+	if code := apiCode(t, rr.Body.String()); code != httpx.CodeInvalidRequest {
+		t.Fatalf("bad target_type: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 }

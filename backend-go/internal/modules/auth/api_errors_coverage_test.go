@@ -11,17 +11,17 @@ func TestAPIErrorMappingCoversAllBranches(t *testing.T) {
 	tests := []struct {
 		name string
 		err  error
-		code int
+		code httpx.Code
 	}{
 		{"nil", nil, 0},
-		{"conflict", ErrLoginIDConflict, 10400},
-		{"invalid credentials", ErrInvalidCredentials, 10100},
-		{"account locked", ErrAccountLocked, 10500},
-		{"invalid old password", ErrInvalidOldPassword, 10100},
-		{"reset not found", ErrPasswordResetNotFound, 10300},
-		{"reset throttled", ErrPasswordResetThrottled, 10500},
-		{"email unavailable", ErrEmailServiceUnavailable, 10500},
-		{"unknown", errors.New("boom"), 10600},
+		{"conflict", ErrLoginIDConflict, httpx.CodeConflict},
+		{"invalid credentials", ErrInvalidCredentials, httpx.CodeUnauthorized},
+		{"account locked", ErrAccountLocked, httpx.CodeRateLimited},
+		{"invalid old password", ErrInvalidOldPassword, httpx.CodeUnauthorized},
+		{"reset not found", ErrPasswordResetNotFound, httpx.CodeNotFound},
+		{"reset throttled", ErrPasswordResetThrottled, httpx.CodeRateLimited},
+		{"email unavailable", ErrEmailServiceUnavailable, httpx.CodeRateLimited},
+		{"unknown", errors.New("boom"), httpx.CodeInternalUnavailable},
 	}
 	for _, tt := range tests {
 		apiErr := apiErrorFrom(tt.err)
@@ -36,15 +36,15 @@ func TestAPIErrorMappingCoversAllBranches(t *testing.T) {
 		}
 	}
 	// APIError 直接透传
-	apiErr := apiErrorFrom(&httpx.APIError{Code: 10300, Message: "x"})
-	if apiErr == nil || apiErr.Code != 10300 {
+	apiErr := apiErrorFrom(&httpx.APIError{Code: httpx.CodeNotFound, Message: "x"})
+	if apiErr == nil || apiErr.Code != httpx.CodeNotFound {
 		t.Fatalf("expected passthrough, got %#v", apiErr)
 	}
 	// 包装的 APIError 也能解包
 	wrapped := errors.New("inner")
-	wrapped = &httpx.APIError{Code: 10400, Message: "inner"}
+	wrapped = &httpx.APIError{Code: httpx.CodeConflict, Message: "inner"}
 	apiErr = apiErrorFrom(wrapped)
-	if apiErr == nil || apiErr.Code != 10400 {
+	if apiErr == nil || apiErr.Code != httpx.CodeConflict {
 		t.Fatalf("expected wrapped passthrough, got %#v", apiErr)
 	}
 }

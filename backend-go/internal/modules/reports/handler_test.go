@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/httpx"
 )
 
 type reportErrorRepo struct {
@@ -49,17 +50,17 @@ func TestCreateAndListReports(t *testing.T) {
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)
 	var replayResp struct {
-		Code int           `json:"code"`
+		Code httpx.Code    `json:"code"`
 		Data ReportCreated `json:"data"`
 	}
 	_ = json.NewDecoder(createRR.Body).Decode(&replayResp)
 	var replayResp2 struct {
-		Code int           `json:"code"`
+		Code httpx.Code    `json:"code"`
 		Data ReportCreated `json:"data"`
 	}
 	_ = json.NewDecoder(createRR2.Body).Decode(&replayResp2)
 	var listResp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data PaginatedReports `json:"data"`
 	}
 	_ = json.NewDecoder(listRR.Body).Decode(&listResp)
@@ -79,13 +80,13 @@ func TestReportsHandlerReturns10600OnServiceError(t *testing.T) {
 	createReq = createReq.WithContext(ctx)
 	createRR := httptest.NewRecorder()
 	handler.Create(createRR, createReq)
-	assertReportCode(t, createRR, 10600)
+	assertReportCode(t, createRR, httpx.CodeInternalUnavailable)
 
 	listReq := httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{}`))
 	listReq = listReq.WithContext(ctx)
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)
-	assertReportCode(t, listRR, 10600)
+	assertReportCode(t, listRR, httpx.CodeInternalUnavailable)
 }
 
 func TestCreateReportRejectsSelfAndDuplicateReport(t *testing.T) {
@@ -99,7 +100,7 @@ func TestCreateReportRejectsSelfAndDuplicateReport(t *testing.T) {
 	selfReq = selfReq.WithContext(ctx)
 	selfRR := httptest.NewRecorder()
 	handler.Create(selfRR, selfReq)
-	assertReportCode(t, selfRR, 10400)
+	assertReportCode(t, selfRR, httpx.CodeConflict)
 
 	dupReq := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"target_type":"moment","target_id":"moment_1","reason":"spam"}`))
 	dupReq = dupReq.WithContext(ctx)
@@ -112,7 +113,7 @@ func TestCreateReportRejectsSelfAndDuplicateReport(t *testing.T) {
 	dupRR2 := httptest.NewRecorder()
 	handler.Create(dupRR2, dupReq2)
 	var dupResp struct {
-		Code int           `json:"code"`
+		Code httpx.Code    `json:"code"`
 		Data ReportCreated `json:"data"`
 	}
 	if err := json.NewDecoder(dupRR2.Body).Decode(&dupResp); err != nil {
@@ -134,7 +135,7 @@ func TestCreateReportReturns10300OnTargetNotFound(t *testing.T) {
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Create(rr, req)
-	assertReportCode(t, rr, 10300)
+	assertReportCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestReportsMeListFiltersByStatus(t *testing.T) {
@@ -154,7 +155,7 @@ func TestReportsMeListFiltersByStatus(t *testing.T) {
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)
 	var resp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data PaginatedReports `json:"data"`
 	}
 	if err := json.NewDecoder(listRR.Body).Decode(&resp); err != nil {
@@ -165,10 +166,10 @@ func TestReportsMeListFiltersByStatus(t *testing.T) {
 	}
 }
 
-func assertReportCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+func assertReportCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx.Code) {
 	t.Helper()
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)

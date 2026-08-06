@@ -8,6 +8,7 @@ import (
 	"hotspot/backend-go/internal/platform/actor"
 	"hotspot/backend-go/internal/platform/appconfig"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
@@ -142,7 +143,7 @@ func TestResolveTargetBranches(t *testing.T) {
 	}
 }
 
-// --- emoji 白名单(spec api_spec_reaction.md:emoji 不在白名单返回 10000) ---
+// --- emoji 白名单(spec api_spec_reaction.md:emoji 不在白名单返回 httpx.CodeInvalidRequest) ---
 
 func TestSetRejectsEmojiOutsideWhitelist(t *testing.T) {
 	source := appconfig.NewStaticSource(config.Config{}) // 默认白名单:👍❤️😂😮😢🙏
@@ -171,8 +172,8 @@ func TestHandlerSetRejectsEmojiOutsideWhitelist(t *testing.T) {
 	h := NewHandler(svc)
 
 	rr := do(t, h.Set, "u", `{"target_type":"moment","target_id":"m1","emoji":"💩","active":true}`)
-	if code := apiCode(t, rr.Body.String()); code != 10000 {
-		t.Fatalf("expected 10000 for emoji outside whitelist, got %d", code)
+	if code := apiCode(t, rr.Body.String()); code != httpx.CodeInvalidRequest {
+		t.Fatalf("expected httpx.CodeInvalidRequest for emoji outside whitelist, got %d", code)
 	}
 }
 

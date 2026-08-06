@@ -59,15 +59,15 @@ func RequiredAuth(next http.Handler) http.Handler {
 				"has_auth_header", hasHeader,
 				"has_cookie", hasCookie,
 			)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10100, "Access Token 无效或过期"))
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeUnauthorized, "Access Token 无效或过期"))
 			return
 		}
-		// Banned accounts are force-logged-out and get 10201 so the client can
+		// Banned accounts are force-logged-out and get httpx.CodeAccountBanned so the client can
 		// show the dedicated ban page (spec/api_spec_errors.md). Web clients
 		// also get their auth cookies cleared.
 		if svc.IsUserBanned(ctx, principal.UserID) {
 			ClearAuthCookies(w)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10201, "账号已被封禁"))
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeAccountBanned, "账号已被封禁"))
 			return
 		}
 		ctx = WithPrincipal(ctx, principal)
@@ -76,7 +76,7 @@ func RequiredAuth(next http.Handler) http.Handler {
 	})
 }
 
-// AdminAccess 校验当前 principal 是否为管理员（10200/非系统管理员）。
+// AdminAccess 校验当前 principal 是否为管理员（httpx.CodeForbidden/非系统管理员）。
 // 管理端点统一挂该中间件（admin 模块 /api/v1/admin 分组）。
 func AdminAccess(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -92,7 +92,7 @@ func AdminAccess(next http.Handler) http.Handler {
 				"user_id", userID,
 				"has_principal", ok,
 			)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "非系统管理员"))
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "非系统管理员"))
 			return
 		}
 		next.ServeHTTP(w, r)

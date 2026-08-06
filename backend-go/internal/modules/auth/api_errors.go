@@ -26,20 +26,20 @@ func apiErrorFrom(err error) *httpx.APIError {
 	}
 	switch {
 	case errors.Is(err, ErrLoginIDConflict):
-		return &httpx.APIError{Code: 10400, Message: "账号已存在"}
+		return &httpx.APIError{Code: httpx.CodeConflict, Message: "账号已存在"}
 	case errors.Is(err, ErrInvalidCredentials):
-		return &httpx.APIError{Code: 10100, Message: "账号或密码错误"}
+		return &httpx.APIError{Code: httpx.CodeUnauthorized, Message: "账号或密码错误"}
 	case errors.Is(err, ErrAccountLocked):
-		return &httpx.APIError{Code: 10500, Message: "登录失败次数过多，请15分钟后重试"}
+		return &httpx.APIError{Code: httpx.CodeRateLimited, Message: "登录失败次数过多，请15分钟后重试"}
 	case errors.Is(err, ErrInvalidOldPassword):
-		return &httpx.APIError{Code: 10100, Message: "旧密码错误"}
+		return &httpx.APIError{Code: httpx.CodeUnauthorized, Message: "旧密码错误"}
 	case errors.Is(err, ErrPasswordResetNotFound):
-		return &httpx.APIError{Code: 10300, Message: "重置请求不存在或已过期"}
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "重置请求不存在或已过期"}
 	case errors.Is(err, ErrPasswordResetThrottled):
-		return &httpx.APIError{Code: 10500, Message: "请求过于频繁"}
+		return &httpx.APIError{Code: httpx.CodeRateLimited, Message: "请求过于频繁"}
 	case errors.Is(err, ErrEmailServiceUnavailable):
-		return &httpx.APIError{Code: 10500, Message: "邮件服务暂不可用"}
+		return &httpx.APIError{Code: httpx.CodeRateLimited, Message: "邮件服务暂不可用"}
 	default:
-		return &httpx.APIError{Code: 10600, Message: "服务暂时不可用"}
+		return &httpx.APIError{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 	}
 }

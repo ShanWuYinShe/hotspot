@@ -83,8 +83,8 @@ func TestServiceGetMeRejectsNoAuth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10100 {
-		t.Fatalf("expected 10100, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeUnauthorized {
+		t.Fatalf("expected httpx.CodeUnauthorized, got %v", apiErr)
 	}
 }
 
@@ -94,8 +94,8 @@ func TestServiceGetMeRejectsNonAdmin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10200 {
-		t.Fatalf("expected 10200, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeForbidden {
+		t.Fatalf("expected httpx.CodeForbidden, got %v", apiErr)
 	}
 }
 
@@ -122,8 +122,8 @@ func TestServiceListPermissionsRequiresAdmin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10200 {
-		t.Fatalf("expected 10200, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeForbidden {
+		t.Fatalf("expected httpx.CodeForbidden, got %v", apiErr)
 	}
 }
 
@@ -151,8 +151,8 @@ func TestServiceCreateRoleRequiresPermission(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10200 {
-		t.Fatalf("expected 10200, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeForbidden {
+		t.Fatalf("expected httpx.CodeForbidden, got %v", apiErr)
 	}
 }
 
@@ -163,8 +163,8 @@ func TestServiceCreateRoleRejectsEmptyName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10000 {
-		t.Fatalf("expected 10000, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeInvalidRequest {
+		t.Fatalf("expected httpx.CodeInvalidRequest, got %v", apiErr)
 	}
 }
 
@@ -192,8 +192,8 @@ func TestServiceUpdateRoleRejectsNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10300 {
-		t.Fatalf("expected 10300, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeNotFound {
+		t.Fatalf("expected httpx.CodeNotFound, got %v", apiErr)
 	}
 }
 
@@ -206,8 +206,8 @@ func TestServiceDeleteRoleRejectsNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10300 {
-		t.Fatalf("expected 10300, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeNotFound {
+		t.Fatalf("expected httpx.CodeNotFound, got %v", apiErr)
 	}
 }
 
@@ -257,8 +257,8 @@ func TestServiceRevokeAdminRejectsNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10300 {
-		t.Fatalf("expected 10300, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeNotFound {
+		t.Fatalf("expected httpx.CodeNotFound, got %v", apiErr)
 	}
 }
 
@@ -271,8 +271,8 @@ func TestServiceListAuditLogsRequiresPermission(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10200 {
-		t.Fatalf("expected 10200, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeForbidden {
+		t.Fatalf("expected httpx.CodeForbidden, got %v", apiErr)
 	}
 }
 
@@ -298,8 +298,8 @@ func TestServiceGetAuditLogRejectsEmptyID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10000 {
-		t.Fatalf("expected 10000, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeInvalidRequest {
+		t.Fatalf("expected httpx.CodeInvalidRequest, got %v", apiErr)
 	}
 }
 
@@ -342,8 +342,8 @@ func TestServiceOpenAdminUserRejectsNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10300 {
-		t.Fatalf("expected 10300, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeNotFound {
+		t.Fatalf("expected httpx.CodeNotFound, got %v", apiErr)
 	}
 }
 
@@ -356,8 +356,8 @@ func TestServiceBanUserRejectsSelf(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10400 {
-		t.Fatalf("expected 10400, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeConflict {
+		t.Fatalf("expected httpx.CodeConflict, got %v", apiErr)
 	}
 }
 
@@ -370,8 +370,8 @@ func TestServiceUnbanUserRejectsNotBanned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10300 {
-		t.Fatalf("expected 10300 (user not found or not banned), got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeNotFound {
+		t.Fatalf("expected httpx.CodeNotFound (user not found or not banned), got %v", apiErr)
 	}
 }
 
@@ -399,8 +399,8 @@ func TestServiceOpenAdminGroupRejectsNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10300 {
-		t.Fatalf("expected 10300, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeNotFound {
+		t.Fatalf("expected httpx.CodeNotFound, got %v", apiErr)
 	}
 }
 
@@ -428,8 +428,8 @@ func TestServiceHandleReportRejectsInvalidAction(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10000 {
-		t.Fatalf("expected 10000, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeInvalidRequest {
+		t.Fatalf("expected httpx.CodeInvalidRequest, got %v", apiErr)
 	}
 }
 
@@ -442,8 +442,8 @@ func TestServiceDeleteTagRejectsEmptyName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10000 {
-		t.Fatalf("expected 10000, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeInvalidRequest {
+		t.Fatalf("expected httpx.CodeInvalidRequest, got %v", apiErr)
 	}
 }
 
@@ -454,8 +454,8 @@ func TestServiceDeleteTagRejectsNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10300 {
-		t.Fatalf("expected 10300, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeNotFound {
+		t.Fatalf("expected httpx.CodeNotFound, got %v", apiErr)
 	}
 }
 
@@ -468,8 +468,8 @@ func TestServiceDeleteAnnouncementRejectsEmptyID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10000 {
-		t.Fatalf("expected 10000, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeInvalidRequest {
+		t.Fatalf("expected httpx.CodeInvalidRequest, got %v", apiErr)
 	}
 }
 
@@ -480,8 +480,8 @@ func TestServiceDeleteAnnouncementRejectsNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10300 {
-		t.Fatalf("expected 10300, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeNotFound {
+		t.Fatalf("expected httpx.CodeNotFound, got %v", apiErr)
 	}
 }
 
@@ -493,8 +493,8 @@ func TestServiceSearchUsersRejectsNoAuth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10100 {
-		t.Fatalf("expected 10100, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeUnauthorized {
+		t.Fatalf("expected httpx.CodeUnauthorized, got %v", apiErr)
 	}
 }
 
@@ -528,8 +528,8 @@ func TestServiceBanUserRejectsEmptyUserID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10000 {
-		t.Fatalf("expected 10000, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeInvalidRequest {
+		t.Fatalf("expected httpx.CodeInvalidRequest, got %v", apiErr)
 	}
 }
 
@@ -605,8 +605,8 @@ func TestServiceSearchReportsRejectsNoPermission(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10200 {
-		t.Fatalf("expected 10200, got %v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeForbidden {
+		t.Fatalf("expected httpx.CodeForbidden, got %v", apiErr)
 	}
 }
 

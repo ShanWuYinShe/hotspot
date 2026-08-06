@@ -3,13 +3,14 @@ package system
 import (
 	"context"
 	"errors"
+	"hotspot/backend-go/internal/platform/httpx"
 	"testing"
 	"time"
 )
 
 type stubRepo struct {
 	meta        ApiVersionMeta
-	healthCode  int
+	healthCode  httpx.Code
 	healthMsg   string
 	health      *HealthStatus
 	announces   []AnnouncementRecord
@@ -18,7 +19,7 @@ type stubRepo struct {
 
 func (r *stubRepo) GetMeta(_ context.Context) ApiVersionMeta { return r.meta }
 func (r *stubRepo) Health(_ context.Context) (int, string, *HealthStatus) {
-	return r.healthCode, r.healthMsg, r.health
+	return int(r.healthCode), r.healthMsg, r.health
 }
 func (r *stubRepo) ListAnnouncements(_ context.Context, _ int) ([]AnnouncementRecord, error) {
 	return r.announces, r.announceErr

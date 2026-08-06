@@ -9,10 +9,10 @@ import (
 func RequireKey(r *http.Request) *httpx.APIError {
 	key := r.Header.Get("Idempotency-Key")
 	if key == "" {
-		return &httpx.APIError{Code: 10000, Message: "缺少 Idempotency-Key"}
+		return &httpx.APIError{Code: httpx.CodeInvalidRequest, Message: "缺少 Idempotency-Key"}
 	}
 	if !keyPattern.MatchString(key) {
-		return &httpx.APIError{Code: 22000, Message: "该幂等键格式不合法"}
+		return &httpx.APIError{Code: httpx.CodeIdempotencyConflict, Message: "该幂等键格式不合法"}
 	}
 	*r = *r.WithContext(WithKey(r.Context(), key))
 	return nil

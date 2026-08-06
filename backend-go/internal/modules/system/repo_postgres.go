@@ -61,11 +61,11 @@ func (r *PostgresRepository) GetMeta(ctx context.Context) ApiVersionMeta {
 // the endpoint. The HTTP-layer response stays 200 so callers can read the body
 // to distinguish healthy/degraded/unhealthy.
 //
-// TODO: per spec, code=0 covers healthy and degraded, while code=10600 should
+// TODO: per spec, code=0 covers healthy and degraded, while code=httpx.CodeInternalUnavailable should
 // be reserved for truly unhealthy (e.g. database connection pool exhausted,
 // all replicas unreachable). Currently all failure modes are reported as
 // degraded (code=0); a future revision should distinguish transient vs. fatal
-// failures and return code=10600 for the latter.
+// failures and return code=httpx.CodeInternalUnavailable for the latter.
 func (r *PostgresRepository) Health(ctx context.Context) (int, string, *HealthStatus) {
 	status := SystemHealthHealthy
 	dbOK, redisOK := true, true

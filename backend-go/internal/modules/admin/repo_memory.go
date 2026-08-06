@@ -250,7 +250,7 @@ func (r *InMemoryRepository) CreateRole(_ context.Context, req AdminRbacRoleCrea
 			continue
 		}
 		if strings.EqualFold(record.item.Name, name) {
-			return AdminRoleItem{}, &httpx.APIError{Code: 10400, Message: "角色已存在"}
+			return AdminRoleItem{}, &httpx.APIError{Code: httpx.CodeConflict, Message: "角色已存在"}
 		}
 	}
 	now := time.Now().UTC()
@@ -271,7 +271,7 @@ func (r *InMemoryRepository) UpdateRole(_ context.Context, req AdminRbacRoleUpda
 	defer r.mu.Unlock()
 	record, ok := r.roles[req.RoleID]
 	if !ok || record.deleted {
-		return &httpx.APIError{Code: 10300, Message: "角色不存在"}
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}
 	}
 	if req.Name != nil {
 		name := normalizeRoleName(*req.Name)
@@ -280,7 +280,7 @@ func (r *InMemoryRepository) UpdateRole(_ context.Context, req AdminRbacRoleUpda
 				continue
 			}
 			if strings.EqualFold(other.item.Name, name) {
-				return &httpx.APIError{Code: 10400, Message: "角色已存在"}
+				return &httpx.APIError{Code: httpx.CodeConflict, Message: "角色已存在"}
 			}
 		}
 		record.item.Name = name
@@ -303,7 +303,7 @@ func (r *InMemoryRepository) DeleteRole(_ context.Context, roleID string) error 
 		if _, deleted := r.deletedRoleIDs[roleID]; deleted {
 			return nil
 		}
-		return &httpx.APIError{Code: 10300, Message: "角色不存在"}
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}
 	}
 	if record.deleted {
 		return nil
@@ -329,7 +329,7 @@ func (r *InMemoryRepository) SetRolePermissions(_ context.Context, roleID string
 	defer r.mu.Unlock()
 	record, ok := r.roles[roleID]
 	if !ok || record.deleted {
-		return &httpx.APIError{Code: 10300, Message: "角色不存在"}
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}
 	}
 	record.item.Permissions = cloneStrings(permissionKeys)
 	record.updatedAt = time.Now().UTC()
@@ -387,12 +387,12 @@ func (r *InMemoryRepository) GrantAdmin(_ context.Context, grant AdminGrantUpser
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, ok := r.lookupUserLocked(grant.UserID); !ok {
-		return &httpx.APIError{Code: 10300, Message: "用户不存在"}
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "用户不存在"}
 	}
 	for _, roleID := range grant.RoleIDs {
 		record, ok := r.roles[roleID]
 		if !ok || record.deleted {
-			return &httpx.APIError{Code: 10300, Message: "角色不存在"}
+			return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}
 		}
 	}
 	grantedAt := grant.GrantedAt
@@ -418,7 +418,7 @@ func (r *InMemoryRepository) RevokeAdmin(_ context.Context, userID string) error
 		if _, revoked := r.revokedAdmins[userID]; revoked {
 			return nil
 		}
-		return &httpx.APIError{Code: 10300, Message: "管理员不存在"}
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "管理员不存在"}
 	}
 	if record.revoked {
 		return nil
@@ -778,7 +778,7 @@ func (r *InMemoryRepository) SetUserBanState(_ context.Context, userID string, s
 	defer r.mu.Unlock()
 	item, ok := r.adminUsers[userID]
 	if !ok {
-		return &httpx.APIError{Code: 10300, Message: "用户不存在"}
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "用户不存在"}
 	}
 	if state.Status == "" {
 		state.Status = UserAccountStatusNormal

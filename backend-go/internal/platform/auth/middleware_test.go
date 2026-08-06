@@ -104,7 +104,7 @@ func (f *fakeBanChecker) IsBanned(_ context.Context, userID string) (bool, error
 }
 
 // TestRequiredAuthRejectsBannedUserWith10201 verifies a banned user with a
-// valid token gets 10201 + cleared cookies, never reaching the handler.
+// valid token gets httpx.CodeAccountBanned + cleared cookies, never reaching the handler.
 func TestRequiredAuthRejectsBannedUserWith10201(t *testing.T) {
 	service := NewService(config.Config{AuthTokenSecret: "test-secret"})
 	service.SetBanChecker(&fakeBanChecker{banned: map[string]bool{"user_banned": true}})

@@ -79,7 +79,7 @@ func TestPostgresAuthenticateAndUpdateLoginMeta(t *testing.T) {
 	if err != nil || account.UserID != "user_1" {
 		t.Fatalf("authenticate: %#v err=%v", account, err)
 	}
-	// 密码错误 → 统一 10100 语义错误
+	// 密码错误 → 统一 httpx.CodeUnauthorized 语义错误
 	if _, err := repo.Authenticate(context.Background(), "alice", "wrong"); !errors.Is(err, ErrInvalidCredentials) {
 		t.Fatalf("wrong password must be invalid credentials, got %v", err)
 	}

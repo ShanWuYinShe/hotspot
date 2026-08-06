@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/httpx"
 )
 
 // --- stub repo ---
@@ -91,10 +92,10 @@ func gmCtx(userID string) *http.Request {
 	return req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: userID}))
 }
 
-func gmAssertCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+func gmAssertCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx.Code) {
 	t.Helper()
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -113,7 +114,7 @@ func TestHandlerSendRejectsMissingIdempotencyKey(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.Send(rr, req)
-	gmAssertCode(t, rr, 10000)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerSendRejectsInvalidJSON(t *testing.T) {
@@ -124,7 +125,7 @@ func TestHandlerSendRejectsInvalidJSON(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.Send(rr, req)
-	gmAssertCode(t, rr, 10000)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerSendRejectsMissingGroupID(t *testing.T) {
@@ -135,7 +136,7 @@ func TestHandlerSendRejectsMissingGroupID(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.Send(rr, req)
-	gmAssertCode(t, rr, 10000)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerSendRejectsMissingType(t *testing.T) {
@@ -146,7 +147,7 @@ func TestHandlerSendRejectsMissingType(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.Send(rr, req)
-	gmAssertCode(t, rr, 10000)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerSendHappyPath(t *testing.T) {
@@ -159,7 +160,7 @@ func TestHandlerSendHappyPath(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.Send(rr, req)
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data struct {
 			MessageID string `json:"message_id"`
 		} `json:"data"`
@@ -179,7 +180,7 @@ func TestHandlerSendReturns10600OnError(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.Send(rr, req)
-	gmAssertCode(t, rr, 10600)
+	gmAssertCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 // --- Update tests ---
@@ -192,7 +193,7 @@ func TestHandlerUpdateRejectsInvalidJSON(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
-	gmAssertCode(t, rr, 10000)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerUpdateRejectsMissingMessageID(t *testing.T) {
@@ -203,7 +204,7 @@ func TestHandlerUpdateRejectsMissingMessageID(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
-	gmAssertCode(t, rr, 10000)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerUpdateRejectsEmptyContent(t *testing.T) {
@@ -214,20 +215,20 @@ func TestHandlerUpdateRejectsEmptyContent(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
-	gmAssertCode(t, rr, 10000)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerUpdateMapsErrors(t *testing.T) {
 	tests := []struct {
 		name     string
 		repoErr  error
-		expected int
+		expected httpx.Code
 	}{
-		{"not found", ErrMessageNotFound, 10300},
-		{"permission denied", ErrPermissionDenied, 10200},
-		{"recalled", ErrMessageRecalled, 10400},
-		{"not editable", ErrMessageNotEditable, 10400},
-		{"internal", errors.New("boom"), 10600},
+		{"not found", ErrMessageNotFound, httpx.CodeNotFound},
+		{"permission denied", ErrPermissionDenied, httpx.CodeForbidden},
+		{"recalled", ErrMessageRecalled, httpx.CodeConflict},
+		{"not editable", ErrMessageNotEditable, httpx.CodeConflict},
+		{"internal", errors.New("boom"), httpx.CodeInternalUnavailable},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -266,7 +267,7 @@ func TestHandlerRecallRejectsInvalidJSON(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.Recall(rr, req)
-	gmAssertCode(t, rr, 10000)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerRecallRejectsMissingMessageID(t *testing.T) {
@@ -277,20 +278,20 @@ func TestHandlerRecallRejectsMissingMessageID(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.Recall(rr, req)
-	gmAssertCode(t, rr, 10000)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerRecallMapsErrors(t *testing.T) {
 	tests := []struct {
 		name     string
 		repoErr  error
-		expected int
+		expected httpx.Code
 	}{
-		{"not found", ErrMessageNotFound, 10300},
-		{"permission denied", ErrPermissionDenied, 10200},
-		{"already recalled", ErrMessageRecalled, 10400},
-		{"recall window expired", ErrMessageRecallWindow, 10400},
-		{"internal", errors.New("boom"), 10600},
+		{"not found", ErrMessageNotFound, httpx.CodeNotFound},
+		{"permission denied", ErrPermissionDenied, httpx.CodeForbidden},
+		{"already recalled", ErrMessageRecalled, httpx.CodeConflict},
+		{"recall window expired", ErrMessageRecallWindow, httpx.CodeConflict},
+		{"internal", errors.New("boom"), httpx.CodeInternalUnavailable},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -328,7 +329,7 @@ func TestHandlerHistoryRejectsInvalidJSON(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.History(rr, req)
-	gmAssertCode(t, rr, 10000)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerHistoryRejectsMissingGroupID(t *testing.T) {
@@ -338,7 +339,7 @@ func TestHandlerHistoryRejectsMissingGroupID(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.History(rr, req)
-	gmAssertCode(t, rr, 10000)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerHistoryRejectsInvalidCursor(t *testing.T) {
@@ -348,7 +349,7 @@ func TestHandlerHistoryRejectsInvalidCursor(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.History(rr, req)
-	gmAssertCode(t, rr, 10000)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerHistoryRejectsInvalidLimit(t *testing.T) {
@@ -358,7 +359,7 @@ func TestHandlerHistoryRejectsInvalidLimit(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.History(rr, req)
-	gmAssertCode(t, rr, 10000)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerHistoryReturns10600OnError(t *testing.T) {
@@ -369,7 +370,7 @@ func TestHandlerHistoryReturns10600OnError(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.History(rr, req)
-	gmAssertCode(t, rr, 10600)
+	gmAssertCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 func TestHandlerHistoryHappyPath(t *testing.T) {
@@ -381,7 +382,7 @@ func TestHandlerHistoryHappyPath(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.History(rr, req)
 	var resp struct {
-		Code int                    `json:"code"`
+		Code httpx.Code             `json:"code"`
 		Data PaginatedGroupMessages `json:"data"`
 	}
 	json.NewDecoder(rr.Body).Decode(&resp)
@@ -399,7 +400,7 @@ func TestHandlerMarkReadRejectsInvalidJSON(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.MarkRead(rr, req)
-	gmAssertCode(t, rr, 10000)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerMarkReadRejectsMissingGroupID(t *testing.T) {
@@ -409,7 +410,7 @@ func TestHandlerMarkReadRejectsMissingGroupID(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.MarkRead(rr, req)
-	gmAssertCode(t, rr, 10000)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerMarkReadRejectsUnknownFields(t *testing.T) {
@@ -419,7 +420,7 @@ func TestHandlerMarkReadRejectsUnknownFields(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.MarkRead(rr, req)
-	gmAssertCode(t, rr, 10000)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerMarkReadHappyPath(t *testing.T) {
@@ -442,7 +443,7 @@ func TestHandlerMarkReadMapsNotFound(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.MarkRead(rr, req)
-	gmAssertCode(t, rr, 10300)
+	gmAssertCode(t, rr, httpx.CodeNotFound)
 }
 
 // --- MarkRead (all scope) tests ---
@@ -465,7 +466,7 @@ func TestHandlerMarkAllReadReturns10600OnError(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.MarkRead(rr, req)
-	gmAssertCode(t, rr, 10600)
+	gmAssertCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 func TestHandlerMarkReadRejectsBadScope(t *testing.T) {
@@ -475,5 +476,5 @@ func TestHandlerMarkReadRejectsBadScope(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler.MarkRead(rr, req)
-	gmAssertCode(t, rr, 10000)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
 }

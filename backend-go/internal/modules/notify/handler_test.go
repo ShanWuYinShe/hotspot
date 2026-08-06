@@ -12,6 +12,7 @@ import (
 
 	systemmodule "hotspot/backend-go/internal/modules/system"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/httpx"
 )
 
 type notificationErrorRepo struct {
@@ -53,7 +54,7 @@ func TestUnreadCountAndMarkRead(t *testing.T) {
 	handler.UnreadCount(unreadRR, unreadReq)
 
 	var unreadResp struct {
-		Code int               `json:"code"`
+		Code httpx.Code        `json:"code"`
 		Data UnreadCountResult `json:"data"`
 	}
 	if err := json.NewDecoder(unreadRR.Body).Decode(&unreadResp); err != nil {
@@ -67,7 +68,7 @@ func TestUnreadCountAndMarkRead(t *testing.T) {
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)
 	var listResp struct {
-		Code int             `json:"code"`
+		Code httpx.Code      `json:"code"`
 		Data PaginatedNotify `json:"data"`
 	}
 	if err := json.NewDecoder(listRR.Body).Decode(&listResp); err != nil {
@@ -94,22 +95,22 @@ func TestNotificationHandlerReturns10600OnServiceError(t *testing.T) {
 	listReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{}`)))
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)
-	assertNotificationCode(t, listRR, 10600)
+	assertNotificationCode(t, listRR, httpx.CodeInternalUnavailable)
 
 	unreadReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/get_unread_count", strings.NewReader(`{}`)))
 	unreadRR := httptest.NewRecorder()
 	handler.UnreadCount(unreadRR, unreadReq)
-	assertNotificationCode(t, unreadRR, 10600)
+	assertNotificationCode(t, unreadRR, httpx.CodeInternalUnavailable)
 
 	markReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"notify_ids":["notif_1"]}`)))
 	markRR := httptest.NewRecorder()
 	handler.MarkRead(markRR, markReq)
-	assertNotificationCode(t, markRR, 10600)
+	assertNotificationCode(t, markRR, httpx.CodeInternalUnavailable)
 
 	markAllReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{}`)))
 	markAllRR := httptest.NewRecorder()
 	handler.MarkRead(markAllRR, markAllReq)
-	assertNotificationCode(t, markAllRR, 10600)
+	assertNotificationCode(t, markAllRR, httpx.CodeInternalUnavailable)
 }
 
 func TestNotificationHandlerValidatesListRequest(t *testing.T) {
@@ -118,12 +119,12 @@ func TestNotificationHandlerValidatesListRequest(t *testing.T) {
 	badTypeReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"type":"bad"}`)))
 	badTypeRR := httptest.NewRecorder()
 	handler.List(badTypeRR, badTypeReq)
-	assertNotificationCode(t, badTypeRR, 10000)
+	assertNotificationCode(t, badTypeRR, httpx.CodeInvalidRequest)
 
 	badCursorReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"pagination":{"cursor":"%%%"}}`)))
 	badCursorRR := httptest.NewRecorder()
 	handler.List(badCursorRR, badCursorReq)
-	assertNotificationCode(t, badCursorRR, 10000)
+	assertNotificationCode(t, badCursorRR, httpx.CodeInvalidRequest)
 }
 
 func TestUnreadCountReturnsByTypeBreakdown(t *testing.T) {
@@ -142,7 +143,7 @@ func TestUnreadCountReturnsByTypeBreakdown(t *testing.T) {
 	handler.UnreadCount(rr, req)
 
 	var resp struct {
-		Code int               `json:"code"`
+		Code httpx.Code        `json:"code"`
 		Data UnreadCountResult `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -175,7 +176,7 @@ func TestMarkReadRejectsEmptyArray(t *testing.T) {
 	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"selected","notification_ids":[]}`)))
 	rr := httptest.NewRecorder()
 	handler.MarkRead(rr, req)
-	assertNotificationCode(t, rr, 10000)
+	assertNotificationCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestMarkReadRejectsTooManyIDs(t *testing.T) {
@@ -195,7 +196,7 @@ func TestMarkReadRejectsTooManyIDs(t *testing.T) {
 	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(b.String())))
 	rr := httptest.NewRecorder()
 	handler.MarkRead(rr, req)
-	assertNotificationCode(t, rr, 10000)
+	assertNotificationCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestMarkReadRejectsBothIDsAndType(t *testing.T) {
@@ -203,7 +204,7 @@ func TestMarkReadRejectsBothIDsAndType(t *testing.T) {
 	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"selected","notification_ids":["n1"],"type":"new_follower"}`)))
 	rr := httptest.NewRecorder()
 	handler.MarkRead(rr, req)
-	assertNotificationCode(t, rr, 10000)
+	assertNotificationCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestMarkReadRejectsBadScope(t *testing.T) {
@@ -211,13 +212,13 @@ func TestMarkReadRejectsBadScope(t *testing.T) {
 	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"unknown","notification_ids":["n1"]}`)))
 	rr := httptest.NewRecorder()
 	handler.MarkRead(rr, req)
-	assertNotificationCode(t, rr, 10000)
+	assertNotificationCode(t, rr, httpx.CodeInvalidRequest)
 }
 
-func assertNotificationCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+func assertNotificationCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx.Code) {
 	t.Helper()
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)

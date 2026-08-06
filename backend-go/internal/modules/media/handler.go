@@ -20,26 +20,26 @@ func logServerError(r *http.Request, method string, err error) {
 	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
 }
 
-func logBusinessError(r *http.Request, method string, code int, message string) {
+func logBusinessError(r *http.Request, method string, code httpx.Code, message string) {
 	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
 }
 
 func (h *Handler) PresignUpload(w http.ResponseWriter, r *http.Request) {
 	var req PresignUploadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		logBusinessError(r, "PresignUpload", 10000, "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		logBusinessError(r, "PresignUpload", httpx.CodeInvalidRequest, "参数错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	upload, err := h.service.Presign(r.Context(), req)
 	if err != nil {
 		if errors.Is(err, ErrInvalidMediaRequest) {
-			logBusinessError(r, "PresignUpload", 10000, "参数错误")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+			logBusinessError(r, "PresignUpload", httpx.CodeInvalidRequest, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
 		logServerError(r, "PresignUpload", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(upload))
@@ -48,19 +48,19 @@ func (h *Handler) PresignUpload(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) BatchPresignUpload(w http.ResponseWriter, r *http.Request) {
 	var req BatchPresignUploadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || len(req.Files) == 0 || len(req.Files) > 9 {
-		logBusinessError(r, "BatchPresignUpload", 10000, "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		logBusinessError(r, "BatchPresignUpload", httpx.CodeInvalidRequest, "参数错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	uploads, err := h.service.BatchPresign(r.Context(), req)
 	if err != nil {
 		if errors.Is(err, ErrInvalidMediaRequest) {
-			logBusinessError(r, "BatchPresignUpload", 10000, "参数错误")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+			logBusinessError(r, "BatchPresignUpload", httpx.CodeInvalidRequest, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
 		logServerError(r, "BatchPresignUpload", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(uploads))
@@ -69,25 +69,25 @@ func (h *Handler) BatchPresignUpload(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 	var req CompleteUploadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UploadID == "" {
-		logBusinessError(r, "CompleteUpload", 10000, "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		logBusinessError(r, "CompleteUpload", httpx.CodeInvalidRequest, "参数错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	file, err := h.service.Complete(r.Context(), req.UploadID)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrUploadNotFound):
-			logBusinessError(r, "CompleteUpload", 10300, "upload_id 不存在")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "upload_id 不存在"))
+			logBusinessError(r, "CompleteUpload", httpx.CodeNotFound, "upload_id 不存在")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "upload_id 不存在"))
 		case errors.Is(err, ErrUploadNotReady), errors.Is(err, ErrUploadConflict):
-			logBusinessError(r, "CompleteUpload", 10400, "上传状态冲突")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "上传状态冲突"))
+			logBusinessError(r, "CompleteUpload", httpx.CodeConflict, "上传状态冲突")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "上传状态冲突"))
 		case errors.Is(err, ErrInvalidMediaRequest):
-			logBusinessError(r, "CompleteUpload", 10000, "参数错误")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+			logBusinessError(r, "CompleteUpload", httpx.CodeInvalidRequest, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		default:
 			logServerError(r, "CompleteUpload", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		}
 		return
 	}
@@ -97,8 +97,8 @@ func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CompleteUploadBatch(w http.ResponseWriter, r *http.Request) {
 	var req BatchCompleteUploadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || len(req.UploadIDs) == 0 || len(req.UploadIDs) > 9 {
-		logBusinessError(r, "CompleteUploadBatch", 10000, "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		logBusinessError(r, "CompleteUploadBatch", httpx.CodeInvalidRequest, "参数错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	uploads := make([]UploadedMedia, 0, len(req.UploadIDs))
@@ -107,17 +107,17 @@ func (h *Handler) CompleteUploadBatch(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			switch {
 			case errors.Is(err, ErrUploadNotFound):
-				logBusinessError(r, "CompleteUploadBatch", 10300, "upload_id 不存在")
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "upload_id 不存在"))
+				logBusinessError(r, "CompleteUploadBatch", httpx.CodeNotFound, "upload_id 不存在")
+				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "upload_id 不存在"))
 			case errors.Is(err, ErrUploadNotReady), errors.Is(err, ErrUploadConflict):
-				logBusinessError(r, "CompleteUploadBatch", 10400, "上传状态冲突")
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "上传状态冲突"))
+				logBusinessError(r, "CompleteUploadBatch", httpx.CodeConflict, "上传状态冲突")
+				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "上传状态冲突"))
 			case errors.Is(err, ErrInvalidMediaRequest):
-				logBusinessError(r, "CompleteUploadBatch", 10000, "参数错误")
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+				logBusinessError(r, "CompleteUploadBatch", httpx.CodeInvalidRequest, "参数错误")
+				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			default:
 				logServerError(r, "CompleteUploadBatch", err)
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 			}
 			return
 		}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"hotspot/backend-go/internal/platform/httpx"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -31,7 +32,7 @@ func TestCanvasRejectsInvalidJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/canvas", strings.NewReader(`{"viewport":`))
 
 	handler.Canvas(rr, req)
-	assertMapCode(t, rr, 10000)
+	assertMapCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestCanvasRejectsInvalidBounds(t *testing.T) {
@@ -40,7 +41,7 @@ func TestCanvasRejectsInvalidBounds(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/canvas", strings.NewReader(`{"viewport":{"bounds":{"north":0,"south":1,"east":10,"west":0}}}`))
 
 	handler.Canvas(rr, req)
-	assertMapCode(t, rr, 10000)
+	assertMapCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestCanvasRejectsInvalidDataType(t *testing.T) {
@@ -49,7 +50,7 @@ func TestCanvasRejectsInvalidDataType(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/canvas", strings.NewReader(`{"viewport":{"bounds":{"north":1,"south":0,"east":1,"west":0}},"filter":{"data_type":"weird"}}`))
 
 	handler.Canvas(rr, req)
-	assertMapCode(t, rr, 10000)
+	assertMapCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestCanvasRejectsInvalidTimeFormat(t *testing.T) {
@@ -58,7 +59,7 @@ func TestCanvasRejectsInvalidTimeFormat(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/canvas", strings.NewReader(`{"viewport":{"bounds":{"north":1,"south":0,"east":1,"west":0}},"filter":{"time_range":{"start_time":"bad-time"}}}`))
 
 	handler.Canvas(rr, req)
-	assertMapCode(t, rr, 10000)
+	assertMapCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestCanvasRejectsReversedTimeRange(t *testing.T) {
@@ -67,7 +68,7 @@ func TestCanvasRejectsReversedTimeRange(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/canvas", strings.NewReader(`{"viewport":{"bounds":{"north":1,"south":0,"east":1,"west":0}},"filter":{"time_range":{"start_time":"2026-03-02T00:00:00Z","end_time":"2026-03-01T00:00:00Z"}}}`))
 
 	handler.Canvas(rr, req)
-	assertMapCode(t, rr, 10000)
+	assertMapCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestCanvasRejectsInvalidCursor(t *testing.T) {
@@ -76,7 +77,7 @@ func TestCanvasRejectsInvalidCursor(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/canvas", strings.NewReader(`{"viewport":{"bounds":{"north":0.2,"south":0,"east":0.2,"west":0}},"pagination":{"cursor":"bad-cursor"}}`))
 
 	handler.Canvas(rr, req)
-	assertMapCode(t, rr, 10000)
+	assertMapCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestCanvasReturns10600OnServiceError(t *testing.T) {
@@ -85,12 +86,12 @@ func TestCanvasReturns10600OnServiceError(t *testing.T) {
 	largeReq := httptest.NewRequest(http.MethodPost, "/canvas", strings.NewReader(`{"viewport":{"bounds":{"north":10,"south":0,"east":10,"west":0}}}`))
 	largeRR := httptest.NewRecorder()
 	handler.Canvas(largeRR, largeReq)
-	assertMapCode(t, largeRR, 10600)
+	assertMapCode(t, largeRR, httpx.CodeInternalUnavailable)
 
 	smallReq := httptest.NewRequest(http.MethodPost, "/canvas", strings.NewReader(`{"viewport":{"bounds":{"north":0.2,"south":0,"east":0.2,"west":0}}}`))
 	smallRR := httptest.NewRecorder()
 	handler.Canvas(smallRR, smallReq)
-	assertMapCode(t, smallRR, 10600)
+	assertMapCode(t, smallRR, httpx.CodeInternalUnavailable)
 }
 
 func TestCanvasReturnsHeatmapOnlyForLargeViewport(t *testing.T) {
@@ -130,7 +131,7 @@ func TestCanvasReturnsSuccessWithoutDataWhenRepositoryReturnsEmpty(t *testing.T)
 }
 
 type mapAPIResponse struct {
-	Code int                `json:"code"`
+	Code httpx.Code         `json:"code"`
 	Data *MapCanvasResponse `json:"data,omitempty"`
 }
 
@@ -143,7 +144,7 @@ func decodeMapResponse(t *testing.T, rr *httptest.ResponseRecorder) mapAPIRespon
 	return resp
 }
 
-func assertMapCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+func assertMapCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx.Code) {
 	t.Helper()
 	resp := decodeMapResponse(t, rr)
 	if resp.Code != expected {

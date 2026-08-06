@@ -63,10 +63,10 @@ func (s *Service) RevokeSession(ctx context.Context, userID, _ string, targetSes
 		return err
 	}
 	if !ok || target.RevokedAt != nil {
-		return &httpx.APIError{Code: 10300, Message: "会话不存在"}
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "会话不存在"}
 	}
 	if target.UserID != userID {
-		return &httpx.APIError{Code: 10200, Message: "无权撤销该会话"}
+		return &httpx.APIError{Code: httpx.CodeForbidden, Message: "无权撤销该会话"}
 	}
 	if _, err := s.sessions.Revoke(ctx, targetSessionID); err != nil {
 		return err

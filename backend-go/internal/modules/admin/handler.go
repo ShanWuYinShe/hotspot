@@ -494,7 +494,7 @@ func (h *Handler) CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 		payload, apiErr, err := h.service.CreateAnnouncement(ctx, req)
 		if err != nil {
 			observability.L().Error("handler error", "method", "CreateAnnouncement", "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
-			return httpx.ApiResponse[AnnouncementCreated]{Code: 10600, Message: "服务暂时不可用"}
+			return httpx.ApiResponse[AnnouncementCreated]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 		}
 		if apiErr != nil {
 			observability.L().Warn("handler business error", "method", "CreateAnnouncement", "code", apiErr.Code, "message", apiErr.Message, "request_id", observability.RequestIDFromContext(r.Context()))
@@ -547,7 +547,7 @@ func (h *Handler) writeAPIError(w http.ResponseWriter, r *http.Request, err *htt
 
 func (h *Handler) writeUnavailable(w http.ResponseWriter, r *http.Request) {
 	observability.L().Error("handler error", "method", handlerMethodName(r), "error", errHandlerUnavailable, "request_id", observability.RequestIDFromContext(r.Context()))
-	httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 }
 
 var errHandlerUnavailable = errors.New("服务暂时不可用")

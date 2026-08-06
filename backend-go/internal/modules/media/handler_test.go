@@ -11,6 +11,7 @@ import (
 	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
 )
 
@@ -70,13 +71,13 @@ func TestMediaHandlerPresignValidationAndSuccess(t *testing.T) {
 	badReq := mediaAuthedRequest(http.MethodPost, "/presign_upload", `{"file_name":"","file_size":100,"mime_type":"image/png","category":"avatar"}`)
 	badRR := httptest.NewRecorder()
 	handler.PresignUpload(badRR, badReq)
-	assertMediaCode(t, badRR, 10000)
+	assertMediaCode(t, badRR, httpx.CodeInvalidRequest)
 
 	okReq := mediaAuthedRequest(http.MethodPost, "/presign_upload", `{"file_name":"a.png","file_size":100,"mime_type":"image/png","category":"avatar"}`)
 	okRR := httptest.NewRecorder()
 	handler.PresignUpload(okRR, okReq)
 	var resp struct {
-		Code int             `json:"code"`
+		Code httpx.Code      `json:"code"`
 		Data PresignedUpload `json:"data"`
 	}
 	if err := json.NewDecoder(okRR.Body).Decode(&resp); err != nil {
@@ -95,18 +96,18 @@ func TestMediaHandlerBatchValidationAndSuccess(t *testing.T) {
 	emptyReq := mediaAuthedRequest(http.MethodPost, "/batch_presign_upload", `{"files":[]}`)
 	emptyRR := httptest.NewRecorder()
 	handler.BatchPresignUpload(emptyRR, emptyReq)
-	assertMediaCode(t, emptyRR, 10000)
+	assertMediaCode(t, emptyRR, httpx.CodeInvalidRequest)
 
 	invalidItemReq := mediaAuthedRequest(http.MethodPost, "/batch_presign_upload", `{"files":[{"file_name":"a.png","file_size":100,"mime_type":"video/mp4","category":"avatar"}]}`)
 	invalidItemRR := httptest.NewRecorder()
 	handler.BatchPresignUpload(invalidItemRR, invalidItemReq)
-	assertMediaCode(t, invalidItemRR, 10000)
+	assertMediaCode(t, invalidItemRR, httpx.CodeInvalidRequest)
 
 	okReq := mediaAuthedRequest(http.MethodPost, "/batch_presign_upload", `{"files":[{"file_name":"a.png","file_size":100,"mime_type":"image/png","category":"avatar"}]}`)
 	okRR := httptest.NewRecorder()
 	handler.BatchPresignUpload(okRR, okReq)
 	var resp struct {
-		Code int                  `json:"code"`
+		Code httpx.Code           `json:"code"`
 		Data BatchPresignedUpload `json:"data"`
 	}
 	if err := json.NewDecoder(okRR.Body).Decode(&resp); err != nil {
@@ -126,7 +127,7 @@ func TestMediaHandlerCompleteMapsSpecCodes(t *testing.T) {
 	notFoundReq := mediaAuthedCompleteRequest("upload_missing", "abcd1234abcd1234abcd1234abcd1234")
 	notFoundRR := httptest.NewRecorder()
 	handler.CompleteUpload(notFoundRR, notFoundReq)
-	assertMediaCode(t, notFoundRR, 10300)
+	assertMediaCode(t, notFoundRR, httpx.CodeNotFound)
 
 	notReadyRepo := NewInMemoryRepository()
 	_ = notReadyRepo.Save(context.Background(), pendingUpload{UploadID: "upload_not_ready", UserID: "u1", StorageKey: "uploads/u1/upload_not_ready.png", FileName: "a.png", DeclaredFileSize: 100, DeclaredMimeType: "image/png", Category: CategoryAvatar})
@@ -134,13 +135,13 @@ func TestMediaHandlerCompleteMapsSpecCodes(t *testing.T) {
 	notReadyReq := mediaAuthedCompleteRequest("upload_not_ready", "bbbb1234bbbb1234bbbb1234bbbb1234")
 	notReadyRR := httptest.NewRecorder()
 	notReadyHandler.CompleteUpload(notReadyRR, notReadyReq)
-	assertMediaCode(t, notReadyRR, 10400)
+	assertMediaCode(t, notReadyRR, httpx.CodeConflict)
 
 	foreignReq := mediaAuthedCompleteRequest("upload_ready", "ffff1234ffff1234ffff1234ffff1234")
 	foreignCtx := platformauth.WithPrincipal(foreignReq.Context(), platformauth.Principal{UserID: "u2"})
 	foreignRR := httptest.NewRecorder()
 	handler.CompleteUpload(foreignRR, foreignReq.WithContext(foreignCtx))
-	assertMediaCode(t, foreignRR, 10300)
+	assertMediaCode(t, foreignRR, httpx.CodeNotFound)
 
 	okReq := mediaAuthedCompleteRequest("upload_ready", "cccc1234cccc1234cccc1234cccc1234")
 	okRR := httptest.NewRecorder()
@@ -180,12 +181,12 @@ func TestMediaHandlerReturns10600OnServerErrors(t *testing.T) {
 	presignReq := mediaAuthedRequest(http.MethodPost, "/presign_upload", `{"file_name":"a.png","file_size":100,"mime_type":"image/png","category":"avatar"}`)
 	presignRR := httptest.NewRecorder()
 	handler.PresignUpload(presignRR, presignReq)
-	assertMediaCode(t, presignRR, 10600)
+	assertMediaCode(t, presignRR, httpx.CodeInternalUnavailable)
 
 	completeReq := mediaAuthedCompleteRequest("upload_1", "eeee1234eeee1234eeee1234eeee1234")
 	completeRR := httptest.NewRecorder()
 	handler.CompleteUpload(completeRR, completeReq)
-	assertMediaCode(t, completeRR, 10600)
+	assertMediaCode(t, completeRR, httpx.CodeInternalUnavailable)
 }
 
 func TestBatchPresignRejectsMoreThan9Files(t *testing.T) {
@@ -200,7 +201,7 @@ func TestBatchPresignRejectsMoreThan9Files(t *testing.T) {
 	req := mediaAuthedRequest(http.MethodPost, "/batch_presign_upload", reqBody)
 	rr := httptest.NewRecorder()
 	handler.BatchPresignUpload(rr, req)
-	assertMediaCode(t, rr, 10000)
+	assertMediaCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestBatchPresignReturns10600OnServiceError(t *testing.T) {
@@ -210,7 +211,7 @@ func TestBatchPresignReturns10600OnServiceError(t *testing.T) {
 	req := mediaAuthedRequest(http.MethodPost, "/batch_presign_upload", `{"files":[{"file_name":"a.png","file_size":100,"mime_type":"image/png","category":"avatar"}]}`)
 	rr := httptest.NewRecorder()
 	handler.BatchPresignUpload(rr, req)
-	assertMediaCode(t, rr, 10600)
+	assertMediaCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 func TestPresignRejectsInvalidCategory(t *testing.T) {
@@ -220,13 +221,13 @@ func TestPresignRejectsInvalidCategory(t *testing.T) {
 	req := mediaAuthedRequest(http.MethodPost, "/presign_upload", `{"file_name":"a.png","file_size":100,"mime_type":"image/png","category":"unknown_category"}`)
 	rr := httptest.NewRecorder()
 	handler.PresignUpload(rr, req)
-	assertMediaCode(t, rr, 10000)
+	assertMediaCode(t, rr, httpx.CodeInvalidRequest)
 }
 
-func assertMediaCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+func assertMediaCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx.Code) {
 	t.Helper()
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)

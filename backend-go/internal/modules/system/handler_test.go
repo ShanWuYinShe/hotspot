@@ -50,8 +50,8 @@ func TestGetMetaRejectsNonObjectBody(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if code, ok := resp["code"].(float64); !ok || int(code) != 10000 {
-		t.Fatalf("non-object body should be rejected (code 10000), got: %#v", resp["code"])
+	if code, ok := resp["code"].(float64); !ok || httpx.Code(int(code)) != httpx.CodeInvalidRequest {
+		t.Fatalf("non-object body should be rejected (code httpx.CodeInvalidRequest), got: %#v", resp["code"])
 	}
 }
 
@@ -70,7 +70,7 @@ func TestGetClientConfigReturnsSpecShape(t *testing.T) {
 	}
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data struct {
 			Contact struct {
 				SupportEmail    string `json:"support_email"`
@@ -142,15 +142,15 @@ func TestHealthReturnsHealthyStatus(t *testing.T) {
 }
 
 func TestHealthReturnsUnhealthyCode(t *testing.T) {
-	service := NewServiceWithDeps(&stubRepo{healthCode: 10600, healthMsg: "db down", health: nil}, &stubProvider{})
+	service := NewServiceWithDeps(&stubRepo{healthCode: httpx.CodeInternalUnavailable, healthMsg: "db down", health: nil}, &stubProvider{})
 	handler := NewHandler(service)
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/health", strings.NewReader(`{}`))
 	handler.Health(rr, req)
 	var resp httpx.ApiResponse[HealthStatus]
 	json.NewDecoder(rr.Body).Decode(&resp)
-	if resp.Code != 10600 {
-		t.Fatalf("expected code 10600, got %d", resp.Code)
+	if resp.Code != httpx.CodeInternalUnavailable {
+		t.Fatalf("expected code httpx.CodeInternalUnavailable, got %d", resp.Code)
 	}
 }
 
@@ -206,7 +206,7 @@ func TestListAnnouncementsReturnsRepoData(t *testing.T) {
 	handler.ListAnnouncements(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data struct {
 			Items []SystemAnnouncementItem `json:"items"`
 		} `json:"data"`
@@ -230,13 +230,13 @@ func TestListAnnouncementsReturnsUnavailableOnRepoError(t *testing.T) {
 	handler.ListAnnouncements(rr, req)
 
 	var resp struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
+		Code    httpx.Code `json:"code"`
+		Message string     `json:"message"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 10600 || resp.Message != "服务暂时不可用" {
+	if resp.Code != httpx.CodeInternalUnavailable || resp.Message != "服务暂时不可用" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -310,7 +310,7 @@ func TestSystemHandlerGetClientConfigReturnsConfig(t *testing.T) {
 		t.Fatalf("unexpected status: %d", rr.Code)
 	}
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data struct {
 			Features struct {
 				EnableNearbyPeople bool `json:"enable_nearby_people"`
@@ -348,7 +348,7 @@ func TestSystemHandlerListAnnouncementsReturnsSuccess(t *testing.T) {
 		t.Fatalf("unexpected status: %d", rr.Code)
 	}
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data struct {
 			Items []SystemAnnouncementItem `json:"items"`
 		} `json:"data"`
@@ -378,14 +378,14 @@ func TestSystemHandlerListAnnouncementsReturns10600OnError(t *testing.T) {
 		t.Fatalf("unexpected status: %d", rr.Code)
 	}
 	var resp struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
+		Code    httpx.Code `json:"code"`
+		Message string     `json:"message"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 10600 {
-		t.Fatalf("expected code 10600, got %d", resp.Code)
+	if resp.Code != httpx.CodeInternalUnavailable {
+		t.Fatalf("expected code httpx.CodeInternalUnavailable, got %d", resp.Code)
 	}
 	if resp.Message != "服务暂时不可用" {
 		t.Fatalf("expected 服务暂时不可用, got %s", resp.Message)
@@ -412,7 +412,7 @@ func TestGetClientConfigUsesSharedAppConfigSource(t *testing.T) {
 	handler.GetClientConfig(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data struct {
 			Features struct {
 				EnableNearbyPeople bool `json:"enable_nearby_people"`

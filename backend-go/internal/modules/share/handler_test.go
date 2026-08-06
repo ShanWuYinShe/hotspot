@@ -11,6 +11,7 @@ import (
 	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
 )
 
@@ -47,7 +48,7 @@ func TestCreateGetAndListShare(t *testing.T) {
 	createRR := httptest.NewRecorder()
 	handler.Create(createRR, createReq)
 	var createResp struct {
-		Code int          `json:"code"`
+		Code httpx.Code   `json:"code"`
 		Data ShareCreated `json:"data"`
 	}
 	_ = json.NewDecoder(createRR.Body).Decode(&createResp)
@@ -59,7 +60,7 @@ func TestCreateGetAndListShare(t *testing.T) {
 	getRR := httptest.NewRecorder()
 	handler.Get(getRR, getReq)
 	var getResp struct {
-		Code int         `json:"code"`
+		Code httpx.Code  `json:"code"`
 		Data ShareDetail `json:"data"`
 	}
 	_ = json.NewDecoder(getRR.Body).Decode(&getResp)
@@ -71,7 +72,7 @@ func TestCreateGetAndListShare(t *testing.T) {
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)
 	var listResp struct {
-		Code int             `json:"code"`
+		Code httpx.Code      `json:"code"`
 		Data PaginatedShares `json:"data"`
 	}
 	_ = json.NewDecoder(listRR.Body).Decode(&listResp)
@@ -87,17 +88,17 @@ func TestShareHandlerValidatesRequest(t *testing.T) {
 	badCreate.Header.Set("Idempotency-Key", "bbbb1234bbbb1234bbbb1234bbbb1234")
 	badCreateRR := httptest.NewRecorder()
 	handler.Create(badCreateRR, badCreate)
-	assertCode(t, badCreateRR, 10000)
+	assertCode(t, badCreateRR, httpx.CodeInvalidRequest)
 
 	badGet := httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"bad"}`))
 	badGetRR := httptest.NewRecorder()
 	handler.Get(badGetRR, badGet)
-	assertCode(t, badGetRR, 10000)
+	assertCode(t, badGetRR, httpx.CodeInvalidRequest)
 
 	badList := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{"share_type":"bad"}`)))
 	badListRR := httptest.NewRecorder()
 	handler.List(badListRR, badList)
-	assertCode(t, badListRR, 10000)
+	assertCode(t, badListRR, httpx.CodeInvalidRequest)
 }
 
 func TestShareHandlerReturnsBusinessErrors(t *testing.T) {
@@ -107,19 +108,19 @@ func TestShareHandlerReturnsBusinessErrors(t *testing.T) {
 	createReq.Header.Set("Idempotency-Key", "efgh1234efgh1234efgh1234efgh1234")
 	createRR := httptest.NewRecorder()
 	handler.Create(createRR, createReq)
-	assertCode(t, createRR, 10300)
+	assertCode(t, createRR, httpx.CodeNotFound)
 
 	getReq := httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"ABCDEFGHJKLM"}`))
 	getRR := httptest.NewRecorder()
 	handler.Get(getRR, getReq)
-	assertCode(t, getRR, 10300)
+	assertCode(t, getRR, httpx.CodeNotFound)
 
 	revokeReq := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/revoke", strings.NewReader(`{"share_id":"share_1"}`)))
 	revokeRR := httptest.NewRecorder()
 	handler.Revoke(revokeRR, revokeReq)
-	// 隐私一致性（spec api_spec_share.md）：share 存在但无权限时统一 10300，
-	// 不通过 10200 泄露 share 的存在性。
-	assertCode(t, revokeRR, 10300)
+	// 隐私一致性（spec api_spec_share.md）：share 存在但无权限时统一 httpx.CodeNotFound，
+	// 不通过 httpx.CodeForbidden 泄露 share 的存在性。
+	assertCode(t, revokeRR, httpx.CodeNotFound)
 }
 
 func TestShareHandlerReturns10600OnServiceError(t *testing.T) {
@@ -129,22 +130,22 @@ func TestShareHandlerReturns10600OnServiceError(t *testing.T) {
 	createReq.Header.Set("Idempotency-Key", "ijkl1234ijkl1234ijkl1234ijkl1234")
 	createRR := httptest.NewRecorder()
 	handler.Create(createRR, createReq)
-	assertCode(t, createRR, 10600)
+	assertCode(t, createRR, httpx.CodeInternalUnavailable)
 
 	getReq := httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"ABCDEFGHJKLM"}`))
 	getRR := httptest.NewRecorder()
 	handler.Get(getRR, getReq)
-	assertCode(t, getRR, 10600)
+	assertCode(t, getRR, httpx.CodeInternalUnavailable)
 
 	listReq := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{}`)))
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)
-	assertCode(t, listRR, 10600)
+	assertCode(t, listRR, httpx.CodeInternalUnavailable)
 
 	revokeReq := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/revoke", strings.NewReader(`{"share_id":"share_1"}`)))
 	revokeRR := httptest.NewRecorder()
 	handler.Revoke(revokeRR, revokeReq)
-	assertCode(t, revokeRR, 10600)
+	assertCode(t, revokeRR, httpx.CodeInternalUnavailable)
 }
 
 func TestShareCreateRequiresIdempotencyKey(t *testing.T) {
@@ -154,7 +155,7 @@ func TestShareCreateRequiresIdempotencyKey(t *testing.T) {
 	// No Idempotency-Key header set
 	rr := httptest.NewRecorder()
 	handler.Create(rr, req)
-	assertCode(t, rr, 10000)
+	assertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestShareGetExpiredReturns10300(t *testing.T) {
@@ -168,7 +169,7 @@ func TestShareGetExpiredReturns10300(t *testing.T) {
 	createRR := httptest.NewRecorder()
 	handler.Create(createRR, createReq)
 	var createResp struct {
-		Code int          `json:"code"`
+		Code httpx.Code   `json:"code"`
 		Data ShareCreated `json:"data"`
 	}
 	_ = json.NewDecoder(createRR.Body).Decode(&createResp)
@@ -183,9 +184,9 @@ func TestShareGetExpiredReturns10300(t *testing.T) {
 		getReq := httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"`+createResp.Data.ShareCode+`"}`))
 		getRR := httptest.NewRecorder()
 		handler.Get(getRR, getReq)
-		var checkResp struct{ Code int }
+		var checkResp struct{ Code httpx.Code }
 		_ = json.NewDecoder(getRR.Body).Decode(&checkResp)
-		if checkResp.Code == 10300 {
+		if checkResp.Code == httpx.CodeNotFound {
 			return // expired as expected
 		}
 		time.Sleep(50 * time.Millisecond)
@@ -203,7 +204,7 @@ func TestShareGetReturnsFullShareDetailShape(t *testing.T) {
 	createRR := httptest.NewRecorder()
 	handler.Create(createRR, createReq)
 	var createResp struct {
-		Code int          `json:"code"`
+		Code httpx.Code   `json:"code"`
 		Data ShareCreated `json:"data"`
 	}
 	_ = json.NewDecoder(createRR.Body).Decode(&createResp)
@@ -216,7 +217,7 @@ func TestShareGetReturnsFullShareDetailShape(t *testing.T) {
 	getRR := httptest.NewRecorder()
 	handler.Get(getRR, getReq)
 	var getResp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data struct {
 			Share struct {
 				ShareID   string `json:"share_id"`
@@ -248,7 +249,7 @@ func TestShareMeListRequiresAuth(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.List(rr, req)
-	assertCode(t, rr, 10000)
+	assertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestShareCodeValidationRejectsInvalidChars(t *testing.T) {
@@ -257,29 +258,29 @@ func TestShareCodeValidationRejectsInvalidChars(t *testing.T) {
 	for _, code := range []string{"abc", "ABCDEFGHJKLMN", "ABC0EFGHJKLM", "ABCOEFGHJKLM"} {
 		getRR := httptest.NewRecorder()
 		handler.Get(getRR, httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"`+code+`"}`)))
-		var resp struct{ Code int }
+		var resp struct{ Code httpx.Code }
 		_ = json.NewDecoder(getRR.Body).Decode(&resp)
-		if resp.Code != 10000 {
-			t.Fatalf("code %q: expected 10000, got %d", code, resp.Code)
+		if resp.Code != httpx.CodeInvalidRequest {
+			t.Fatalf("code %q: expected httpx.CodeInvalidRequest, got %d", code, resp.Code)
 		}
 	}
 
 	// "abcdefghjklm" is lowercase 12-char — it passes length check (12 chars)
 	// and normalizeShareCode uppercases it, so validShareCode() sees "ABCDEFGHJKLM"
-	// which is a valid code. We verify this by checking it does NOT return 10000.
+	// which is a valid code. We verify this by checking it does NOT return httpx.CodeInvalidRequest.
 	getRR := httptest.NewRecorder()
 	handler.Get(getRR, httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"abcdefghjklm"}`)))
-	var resp struct{ Code int }
+	var resp struct{ Code httpx.Code }
 	_ = json.NewDecoder(getRR.Body).Decode(&resp)
-	if resp.Code == 10000 {
-		t.Fatalf("lowercase 12-char code got 10000 — normalizeShareCode should have uppercased it")
+	if resp.Code == httpx.CodeInvalidRequest {
+		t.Fatalf("lowercase 12-char code got httpx.CodeInvalidRequest — normalizeShareCode should have uppercased it")
 	}
 }
 
-func assertCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+func assertCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx.Code) {
 	t.Helper()
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)

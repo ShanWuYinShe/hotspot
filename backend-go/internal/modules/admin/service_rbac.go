@@ -23,7 +23,7 @@ func (s *Service) GetMe(ctx context.Context) (AdminPermissions, *httpx.APIError,
 	}
 	if !found {
 		observability.L().Warn("admin.get_me not admin", "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return AdminPermissions{}, &httpx.APIError{Code: 10200, Message: "非系统管理员"}, nil
+		return AdminPermissions{}, &httpx.APIError{Code: httpx.CodeForbidden, Message: "非系统管理员"}, nil
 	}
 	observability.L().Info("admin.get_me completed", "user_id", actor.UserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return actor.Response(), nil, nil
@@ -111,7 +111,7 @@ func (s *Service) UpdateRole(ctx context.Context, req AdminRbacRoleUpdateRequest
 		return nil, err
 	}
 	if !found {
-		return &httpx.APIError{Code: 10300, Message: "角色不存在"}, nil
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}, nil
 	}
 	if err := s.repo.UpdateRole(ctx, req); err != nil {
 		if apiErr, ok := err.(*httpx.APIError); ok {
@@ -150,7 +150,7 @@ func (s *Service) DeleteRole(ctx context.Context, roleID string) (*httpx.APIErro
 		return nil, err
 	}
 	if !found {
-		return &httpx.APIError{Code: 10300, Message: "角色不存在"}, nil
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}, nil
 	}
 	if err := s.repo.DeleteRole(ctx, roleID); err != nil {
 		if apiErr, ok := err.(*httpx.APIError); ok {
@@ -184,14 +184,14 @@ func (s *Service) SetRolePermissions(ctx context.Context, req AdminRbacRoleSetPe
 		return httpx.InvalidRequest("参数错误"), nil
 	}
 	if containsString(permissionKeys, wildcardPermission) && !actor.IsSuperAdmin() {
-		return &httpx.APIError{Code: 10200, Message: "系统管理员权限不足: admin.rbac.manage"}, nil
+		return &httpx.APIError{Code: httpx.CodeForbidden, Message: "系统管理员权限不足: admin.rbac.manage"}, nil
 	}
 	before, found, err := s.findRole(ctx, req.RoleID)
 	if err != nil {
 		return nil, err
 	}
 	if !found {
-		return &httpx.APIError{Code: 10300, Message: "角色不存在"}, nil
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}, nil
 	}
 	if err := s.repo.SetRolePermissions(ctx, req.RoleID, permissionKeys); err != nil {
 		if apiErr, ok := err.(*httpx.APIError); ok {
@@ -247,7 +247,7 @@ func (s *Service) GrantAdmin(ctx context.Context, req AdminRbacGrantAdminRequest
 		return httpx.InvalidRequest("grant_all_permissions 与 role_ids 互斥"), nil
 	}
 	if req.GrantAllPermissions && !actor.IsSuperAdmin() {
-		return &httpx.APIError{Code: 10200, Message: "系统管理员权限不足: admin.rbac.manage"}, nil
+		return &httpx.APIError{Code: httpx.CodeForbidden, Message: "系统管理员权限不足: admin.rbac.manage"}, nil
 	}
 	roleIDs := sortAndUniqueStrings(req.RoleIDs)
 	if !req.GrantAllPermissions && len(roleIDs) == 0 {
@@ -287,10 +287,10 @@ func (s *Service) RevokeAdmin(ctx context.Context, userID string) (*httpx.APIErr
 		return nil, err
 	}
 	if !found {
-		return &httpx.APIError{Code: 10300, Message: "管理员不存在"}, nil
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "管理员不存在"}, nil
 	}
 	if target.IsSuperAdmin() && !actor.IsSuperAdmin() {
-		return &httpx.APIError{Code: 10200, Message: "系统管理员权限不足: admin.rbac.manage"}, nil
+		return &httpx.APIError{Code: httpx.CodeForbidden, Message: "系统管理员权限不足: admin.rbac.manage"}, nil
 	}
 	if err := s.repo.RevokeAdmin(ctx, userID); err != nil {
 		if apiErr, ok := err.(*httpx.APIError); ok {

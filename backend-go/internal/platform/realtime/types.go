@@ -126,8 +126,18 @@ type ConnectionEstablishedPayload struct {
 	} `json:"config"`
 }
 
+// ErrorCode 是 WebSocket 业务阶段错误码的类型化枚举
+// （权威定义：spec/api_spec_errors.md「WebSocket 连接后业务阶段错误码」）。
+type ErrorCode int
+
+const (
+	CodeWSProtocol   ErrorCode = 20000 // 连接/协议错误（鉴权失败/心跳超时/消息格式错误）
+	CodeWSRateLimit  ErrorCode = 20300 // 限流
+	CodeWSPermission ErrorCode = 20400 // 权限错误（无权限/操作受限/群组已解散）
+)
+
 type ErrorPayload struct {
-	Code       int               `json:"code"`
+	Code       ErrorCode         `json:"code"`
 	Message    string            `json:"message"`
 	Severity   string            `json:"severity"`
 	Retryable  bool              `json:"retryable"`

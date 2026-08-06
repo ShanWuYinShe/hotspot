@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"encoding/json"
+	"hotspot/backend-go/internal/platform/httpx"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -31,7 +32,7 @@ func TestNewHTTPRouterMountsSystemRoutes(t *testing.T) {
 	}
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data struct {
 			Version string `json:"version"`
 		} `json:"data"`

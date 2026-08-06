@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	systemmodule "hotspot/backend-go/internal/modules/system"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
@@ -179,13 +180,13 @@ func TestHandleReportAlreadyTerminalDoesNotNotify(t *testing.T) {
 	if apiErr, err := svc.HandleReport(adminCtx("admin1"), AdminReportHandleRequest{ReportID: "report_3", Action: ReportActionDismiss}); err != nil || apiErr != nil {
 		t.Fatalf("first handle: apiErr=%v err=%v", apiErr, err)
 	}
-	// 重复处理:10400 且不再产生通知/推送
+	// 重复处理:httpx.CodeConflict 且不再产生通知/推送
 	apiErr, err := svc.HandleReport(adminCtx("admin1"), AdminReportHandleRequest{ReportID: "report_3", Action: ReportActionDismiss})
 	if err != nil {
 		t.Fatalf("second handle error: %v", err)
 	}
-	if apiErr == nil || apiErr.Code != 10400 {
-		t.Fatalf("expected 10400 on terminal report, got %+v", apiErr)
+	if apiErr == nil || apiErr.Code != httpx.CodeConflict {
+		t.Fatalf("expected httpx.CodeConflict on terminal report, got %+v", apiErr)
 	}
 	if len(push.dismissCalls) != 1 {
 		t.Fatalf("expected only 1 dismiss notify call, got %d", len(push.dismissCalls))

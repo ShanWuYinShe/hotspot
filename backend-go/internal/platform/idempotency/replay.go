@@ -49,7 +49,7 @@ func ReplayOrStore[T any](w http.ResponseWriter, r *http.Request, scope string, 
 			_, _ = w.Write(existing.Response)
 			return true
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(22002, "请求正在处理中，请稍后重试"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeIdempotencyInFlight, "请求正在处理中，请稍后重试"))
 		return true
 	}
 

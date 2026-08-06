@@ -60,7 +60,7 @@ func (s *Service) DeleteTag(ctx context.Context, name string, hardDelete bool) (
 	}
 	if err := s.moderationStore.DeleteTag(ctx, tagName, hardDelete); err != nil {
 		if errors.Is(err, errTagNotFound) {
-			return &httpx.APIError{Code: 10300, Message: "标签不存在"}, nil
+			return &httpx.APIError{Code: httpx.CodeNotFound, Message: "标签不存在"}, nil
 		}
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateAnnouncement
 		return nil, err
 	}
 	if !found || current.IsDeleted() {
-		return &httpx.APIError{Code: 10300, Message: "公告不存在"}, nil
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "公告不存在"}, nil
 	}
 	changedFields := make([]string, 0, 4)
 	if req.Title != nil && strings.TrimSpace(*req.Title) != current.Title {
@@ -196,7 +196,7 @@ func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateAnnouncement
 	})
 	if err != nil {
 		if errors.Is(err, systemmodule.ErrAnnouncementNotFound()) {
-			return &httpx.APIError{Code: 10300, Message: "公告不存在"}, nil
+			return &httpx.APIError{Code: httpx.CodeNotFound, Message: "公告不存在"}, nil
 		}
 		return nil, err
 	}
@@ -224,14 +224,14 @@ func (s *Service) DeleteAnnouncement(ctx context.Context, announcementID string)
 		return nil, err
 	}
 	if !found {
-		return &httpx.APIError{Code: 10300, Message: "公告不存在"}, nil
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "公告不存在"}, nil
 	}
 	if current.IsDeleted() {
 		return nil, nil
 	}
 	if err := s.moderationStore.DeleteAnnouncement(ctx, announcementID); err != nil {
 		if errors.Is(err, systemmodule.ErrAnnouncementNotFound()) {
-			return &httpx.APIError{Code: 10300, Message: "公告不存在"}, nil
+			return &httpx.APIError{Code: httpx.CodeNotFound, Message: "公告不存在"}, nil
 		}
 		return nil, err
 	}
@@ -277,7 +277,7 @@ func (s *Service) OpenAdminUser(ctx context.Context, userID string) (AdminUserIt
 		return AdminUserItem{}, nil, err
 	}
 	if !found {
-		return AdminUserItem{}, &httpx.APIError{Code: 10300, Message: "用户不存在"}, nil
+		return AdminUserItem{}, &httpx.APIError{Code: httpx.CodeNotFound, Message: "用户不存在"}, nil
 	}
 	return item, nil, nil
 }
@@ -303,19 +303,19 @@ func (s *Service) UnbanUser(ctx context.Context, req AdminUnbanUserRequest) (*ht
 		return nil, err
 	}
 	if !found {
-		return &httpx.APIError{Code: 10300, Message: "用户不存在"}, nil
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "用户不存在"}, nil
 	}
 	state, ok, err := s.repo.GetUserBanState(ctx, req.UserID)
 	if err != nil {
 		return nil, err
 	}
 	if !ok || state.Status != UserAccountStatusBanned {
-		return &httpx.APIError{Code: 10400, Message: "用户未被封禁"}, nil
+		return &httpx.APIError{Code: httpx.CodeConflict, Message: "用户未被封禁"}, nil
 	}
 	if _, isAdmin, err := s.repo.GetActor(ctx, req.UserID); err != nil {
 		return nil, err
 	} else if isAdmin && !actor.IsSuperAdmin() {
-		return &httpx.APIError{Code: 10200, Message: "系统管理员权限不足: admin.users.write"}, nil
+		return &httpx.APIError{Code: httpx.CodeForbidden, Message: "系统管理员权限不足: admin.users.write"}, nil
 	}
 	if err := s.repo.SetUserBanState(ctx, req.UserID, UserBanState{Status: UserAccountStatusNormal}); err != nil {
 		if apiErr, ok := err.(*httpx.APIError); ok {
@@ -364,7 +364,7 @@ func (s *Service) OpenAdminGroup(ctx context.Context, groupID string) (AdminGrou
 		return AdminGroupItem{}, nil, err
 	}
 	if !found {
-		return AdminGroupItem{}, &httpx.APIError{Code: 10300, Message: "群组不存在"}, nil
+		return AdminGroupItem{}, &httpx.APIError{Code: httpx.CodeNotFound, Message: "群组不存在"}, nil
 	}
 	return item, nil, nil
 }
@@ -389,7 +389,7 @@ func (s *Service) DismissGroup(ctx context.Context, req AdminDismissGroupRequest
 		return nil, err
 	}
 	if !found {
-		return &httpx.APIError{Code: 10300, Message: "群组不存在"}, nil
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "群组不存在"}, nil
 	}
 	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: map[string]any{"group_id": req.GroupID, "dismissed_at": time.Now().UTC().Format(time.RFC3339), "reason": "policy_violation"}}
 	for _, userID := range memberIDs {
@@ -441,10 +441,10 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 		return nil, err
 	}
 	if !found {
-		return &httpx.APIError{Code: 10300, Message: "举报不存在"}, nil
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "举报不存在"}, nil
 	}
 	if record.Item.Status != ReportStatusPending {
-		return &httpx.APIError{Code: 10400, Message: "举报已处理"}, nil
+		return &httpx.APIError{Code: httpx.CodeConflict, Message: "举报已处理"}, nil
 	}
 	if req.Action == ReportActionResolve {
 		switch record.Item.TargetType {
@@ -500,7 +500,7 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 		return nil, err
 	}
 	if !ok {
-		return &httpx.APIError{Code: 10300, Message: "举报不存在"}, nil
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "举报不存在"}, nil
 	}
 	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("report.handle"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetType("report"), TargetID: req.ReportID, TargetName: req.ReportID, Details: map[string]any{"type": "report.handle", "report_id": req.ReportID, "action": string(req.Action), "note": strings.TrimSpace(req.Note)}}); err != nil {
 		return nil, err
@@ -563,14 +563,14 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 		return httpx.InvalidRequest("参数错误"), nil
 	}
 	if actor.UserID == userID {
-		return &httpx.APIError{Code: 10400, Message: "不能封禁自己"}, nil
+		return &httpx.APIError{Code: httpx.CodeConflict, Message: "不能封禁自己"}, nil
 	}
 	item, found, err := s.repo.GetUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 	if !found {
-		return &httpx.APIError{Code: 10300, Message: "用户不存在"}, nil
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "用户不存在"}, nil
 	}
 	targetActor, isAdmin, err := s.repo.GetActor(ctx, userID)
 	if err != nil {
@@ -578,10 +578,10 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 	}
 	if isAdmin {
 		if !actor.IsSuperAdmin() {
-			return &httpx.APIError{Code: 10200, Message: "系统管理员权限不足: admin.users.write"}, nil
+			return &httpx.APIError{Code: httpx.CodeForbidden, Message: "系统管理员权限不足: admin.users.write"}, nil
 		}
 		if targetActor.IsSuperAdmin() && !actor.IsSuperAdmin() {
-			return &httpx.APIError{Code: 10200, Message: "系统管理员权限不足: admin.users.write"}, nil
+			return &httpx.APIError{Code: httpx.CodeForbidden, Message: "系统管理员权限不足: admin.users.write"}, nil
 		}
 	}
 	duration := 0

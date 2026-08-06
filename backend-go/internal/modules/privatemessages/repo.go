@@ -17,7 +17,7 @@ var (
 )
 
 // BlockReason mirrors spec api_spec_chat.md BlockReason: the structured reason
-// returned in the 10200 error data of private_messages/send.
+// returned in the httpx.CodeForbidden error data of private_messages/send.
 // 拉黑明确返回 'blocked'（产品决策：拉黑就显示拉黑，见 spec）；
 // 'privacy' 仅用于 allow_private_chat 隐私设置限制。
 type BlockReason string
@@ -32,7 +32,7 @@ const (
 )
 
 // MessageBlockedError is returned by Service.Send when the message is refused
-// with a structured BlockReason (HTTP 200 + code 10200 + data {reason}).
+// with a structured BlockReason (HTTP 200 + code httpx.CodeForbidden + data {reason}).
 type MessageBlockedError struct {
 	Reason BlockReason
 }

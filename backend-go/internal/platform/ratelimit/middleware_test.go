@@ -11,6 +11,7 @@ import (
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/httpx"
 )
 
 func resetStores() {
@@ -32,10 +33,10 @@ func newTestSource(apply func(*appconfig.AppConfig)) appconfig.Source {
 	return cfg
 }
 
-func decodeCode(t *testing.T, rr *httptest.ResponseRecorder) int {
+func decodeCode(t *testing.T, rr *httptest.ResponseRecorder) httpx.Code {
 	t.Helper()
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -59,7 +60,7 @@ func TestAuthRegisterRateLimitByIP(t *testing.T) {
 	second.Header.Set("CF-Connecting-IP", "1.1.1.1")
 	secondRR := httptest.NewRecorder()
 	handler.ServeHTTP(secondRR, second)
-	if code := decodeCode(t, secondRR); code != 10500 {
+	if code := decodeCode(t, secondRR); code != httpx.CodeRateLimited {
 		t.Fatalf("unexpected code: %d", code)
 	}
 	if secondRR.Header().Get("Retry-After") == "" {
@@ -83,7 +84,7 @@ func TestSearchRateLimitUsesUserWhenAuthenticated(t *testing.T) {
 		req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice"}))
 		rr := httptest.NewRecorder()
 		handler.ServeHTTP(rr, req)
-		if i == 1 && decodeCode(t, rr) != 10500 {
+		if i == 1 && decodeCode(t, rr) != httpx.CodeRateLimited {
 			t.Fatal("expected authenticated user limit")
 		}
 	}
@@ -107,7 +108,7 @@ func TestAdminReadWriteUseDifferentLimits(t *testing.T) {
 	readReq2 = readReq2.WithContext(platformauth.WithPrincipal(readReq2.Context(), platformauth.Principal{UserID: "admin_1"}))
 	readRR2 := httptest.NewRecorder()
 	handler.ServeHTTP(readRR2, readReq2)
-	if decodeCode(t, readRR2) != 10500 {
+	if decodeCode(t, readRR2) != httpx.CodeRateLimited {
 		t.Fatal("expected admin read limit")
 	}
 	writeReq1 := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/ban", nil)
@@ -117,7 +118,7 @@ func TestAdminReadWriteUseDifferentLimits(t *testing.T) {
 	writeReq2 = writeReq2.WithContext(platformauth.WithPrincipal(writeReq2.Context(), platformauth.Principal{UserID: "admin_2"}))
 	writeRR2 := httptest.NewRecorder()
 	handler.ServeHTTP(writeRR2, writeReq2)
-	if decodeCode(t, writeRR2) != 10500 {
+	if decodeCode(t, writeRR2) != httpx.CodeRateLimited {
 		t.Fatal("expected admin write limit")
 	}
 }

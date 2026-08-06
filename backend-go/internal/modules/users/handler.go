@@ -20,7 +20,7 @@ func logServerError(r *http.Request, method string, err error) {
 	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
 }
 
-func logBusinessError(r *http.Request, method string, code int, message string) {
+func logBusinessError(r *http.Request, method string, code httpx.Code, message string) {
 	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
 }
 
@@ -40,7 +40,7 @@ func (h *Handler) GetMyProfile(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateMyProfile(w http.ResponseWriter, r *http.Request) {
 	var req UpdateAccountRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
 		return
 	}
 	if err := h.service.UpdateMyProfile(r.Context(), req); err != nil {
@@ -66,7 +66,7 @@ func (h *Handler) GetMySettings(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateMySettings(w http.ResponseWriter, r *http.Request) {
 	var req UpdateSettingsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
 		return
 	}
 	if err := h.service.UpdateMySettings(r.Context(), req); err != nil {
@@ -78,7 +78,7 @@ func (h *Handler) UpdateMySettings(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) writeServiceError(w http.ResponseWriter, r *http.Request, method string, err error) {
 	apiErr := apiErrorFromService(err)
-	if apiErr.Code == 10600 {
+	if apiErr.Code == httpx.CodeInternalUnavailable {
 		logServerError(r, method, err)
 	} else {
 		logBusinessError(r, method, apiErr.Code, apiErr.Message)
@@ -89,17 +89,17 @@ func (h *Handler) writeServiceError(w http.ResponseWriter, r *http.Request, meth
 func apiErrorFromService(err error) *httpx.APIError {
 	switch {
 	case errors.Is(err, ErrUnauthorized):
-		return &httpx.APIError{Code: 10100, Message: "认证失败"}
+		return &httpx.APIError{Code: httpx.CodeUnauthorized, Message: "认证失败"}
 	case errors.Is(err, ErrPermissionDenied):
-		return &httpx.APIError{Code: 10200, Message: "权限不足"}
+		return &httpx.APIError{Code: httpx.CodeForbidden, Message: "权限不足"}
 	case errors.Is(err, ErrUserNotFound):
-		return &httpx.APIError{Code: 10300, Message: "用户不存在"}
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "用户不存在"}
 	case errors.Is(err, ErrConflict):
-		return &httpx.APIError{Code: 10400, Message: "业务冲突"}
+		return &httpx.APIError{Code: httpx.CodeConflict, Message: "业务冲突"}
 	case errors.Is(err, ErrInvalidCursor):
-		return &httpx.APIError{Code: 10000, Message: "分页游标无效"}
+		return &httpx.APIError{Code: httpx.CodeInvalidRequest, Message: "分页游标无效"}
 	default:
-		return &httpx.APIError{Code: 10600, Message: "服务暂时不可用"}
+		return &httpx.APIError{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 	}
 }
 

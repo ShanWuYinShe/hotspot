@@ -19,7 +19,7 @@ func NewHandler(service *Service) *Handler {
 func (h *Handler) Following(w http.ResponseWriter, r *http.Request) {
 	var req GetFeedFollowingRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	resp, err := h.service.Following(r.Context(), req)
@@ -33,7 +33,7 @@ func (h *Handler) Following(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Nearby(w http.ResponseWriter, r *http.Request) {
 	var req GetFeedNearbyRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	resp, err := h.service.Nearby(r.Context(), req)
@@ -47,7 +47,7 @@ func (h *Handler) Nearby(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) NearbyGroups(w http.ResponseWriter, r *http.Request) {
 	var req GetFeedNearbyGroupsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	resp, err := h.service.NearbyGroups(r.Context(), req)
@@ -61,7 +61,7 @@ func (h *Handler) NearbyGroups(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) NearbyUsers(w http.ResponseWriter, r *http.Request) {
 	var req GetFeedNearbyUsersRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	resp, err := h.service.NearbyUsers(r.Context(), req)
@@ -75,7 +75,7 @@ func (h *Handler) NearbyUsers(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Trending(w http.ResponseWriter, r *http.Request) {
 	var req struct{}
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	bundle, err := h.service.Trending(r.Context())
@@ -88,7 +88,7 @@ func (h *Handler) Trending(w http.ResponseWriter, r *http.Request) {
 
 func handleFeedError(w http.ResponseWriter, r *http.Request, method string, err error) {
 	if errors.Is(err, ErrInvalidFeedRequest) || errors.Is(err, ErrInvalidCursor) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	observability.L().Error("handler error",
@@ -96,5 +96,5 @@ func handleFeedError(w http.ResponseWriter, r *http.Request, method string, err 
 		"error", err,
 		"request_id", observability.RequestIDFromContext(r.Context()),
 	)
-	httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 }

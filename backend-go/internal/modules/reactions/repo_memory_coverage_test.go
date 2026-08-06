@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"hotspot/backend-go/internal/platform/appconfig"
+	"hotspot/backend-go/internal/platform/httpx"
 )
 
 func TestInMemoryAggregateBatchAndReactedTargets(t *testing.T) {
@@ -92,45 +93,45 @@ func (p missingTargetProvider) Resolve(context.Context, string) (TargetContext, 
 }
 
 func TestHandlerSetAndListErrorPaths(t *testing.T) {
-	// Set: 目标不存在 → 10300
+	// Set: 目标不存在 → httpx.CodeNotFound
 	provider := missingTargetProvider{found: false}
 	handler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), []TargetProvider{provider}, nil, nil))
 	req := httptest.NewRequest(http.MethodPost, "/set", strings.NewReader(`{"target_type":"moment","target_id":"missing","emoji":"👍","active":true}`))
 	rr := httptest.NewRecorder()
 	handler.Set(rr, req)
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := decodeReactionResp(rr, &resp); err != nil {
 		t.Fatal(err)
 	}
-	if resp.Code != 10300 {
-		t.Fatalf("expected 10300 for missing target, got %d", resp.Code)
+	if resp.Code != httpx.CodeNotFound {
+		t.Fatalf("expected httpx.CodeNotFound for missing target, got %d", resp.Code)
 	}
 
-	// List: 非法 target_type → 10000
+	// List: 非法 target_type → httpx.CodeInvalidRequest
 	req = httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"target_type":"bogus","target_id":"m1"}`))
 	rr = httptest.NewRecorder()
 	handler.List(rr, req)
 	if err := decodeReactionResp(rr, &resp); err != nil {
 		t.Fatal(err)
 	}
-	if resp.Code != 10000 {
-		t.Fatalf("expected 10000 for invalid target type, got %d", resp.Code)
+	if resp.Code != httpx.CodeInvalidRequest {
+		t.Fatalf("expected httpx.CodeInvalidRequest for invalid target type, got %d", resp.Code)
 	}
 
-	// List: 空 target_id → 10000
+	// List: 空 target_id → httpx.CodeInvalidRequest
 	req = httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"target_type":"moment","target_id":""}`))
 	rr = httptest.NewRecorder()
 	handler.List(rr, req)
 	if err := decodeReactionResp(rr, &resp); err != nil {
 		t.Fatal(err)
 	}
-	if resp.Code != 10000 {
-		t.Fatalf("expected 10000 for empty target id, got %d", resp.Code)
+	if resp.Code != httpx.CodeInvalidRequest {
+		t.Fatalf("expected httpx.CodeInvalidRequest for empty target id, got %d", resp.Code)
 	}
 
-	// Set: 服务层错误 → 10600
+	// Set: 服务层错误 → httpx.CodeInternalUnavailable
 	failing := &reactionErrorRepo{setErr: errors.New("boom")}
 	handler = NewHandler(NewServiceWithDeps(failing, []TargetProvider{missingTargetProvider{found: true}}, nil, nil))
 	req = httptest.NewRequest(http.MethodPost, "/set", strings.NewReader(`{"target_type":"moment","target_id":"m1","emoji":"👍","active":true}`))
@@ -139,8 +140,8 @@ func TestHandlerSetAndListErrorPaths(t *testing.T) {
 	if err := decodeReactionResp(rr, &resp); err != nil {
 		t.Fatal(err)
 	}
-	if resp.Code != 10600 {
-		t.Fatalf("expected 10600 on service error, got %d", resp.Code)
+	if resp.Code != httpx.CodeInternalUnavailable {
+		t.Fatalf("expected httpx.CodeInternalUnavailable on service error, got %d", resp.Code)
 	}
 }
 
@@ -179,7 +180,7 @@ func TestHandlerListMissingTargetReturnsEmpty(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.List(rr, req)
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data struct {
 			Items []ReactionItem `json:"items"`
 		} `json:"data"`

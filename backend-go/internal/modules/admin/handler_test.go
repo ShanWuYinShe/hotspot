@@ -149,7 +149,7 @@ func TestAdminModerationRoutesRequireAuth(t *testing.T) {
 		t.Fatalf("unexpected status: %d body=%s", rr.Code, rr.Body.String())
 	}
 	resp := decodeResponse[struct{}](t, rr)
-	if resp.Code != 10100 {
+	if resp.Code != httpx.CodeUnauthorized {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -166,7 +166,7 @@ func TestAdminModerationRoutesRequireAdminPermission(t *testing.T) {
 		t.Fatalf("unexpected status: %d body=%s", rr.Code, rr.Body.String())
 	}
 	resp := decodeResponse[struct{}](t, rr)
-	if resp.Code != 10200 {
+	if resp.Code != httpx.CodeForbidden {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -219,7 +219,7 @@ func TestGetMeReturnsNonAdminMessage(t *testing.T) {
 	handler.GetMe(rr, req)
 
 	resp := decodeResponse[struct{}](t, rr)
-	if resp.Code != 10200 || resp.Message != "非系统管理员" {
+	if resp.Code != httpx.CodeForbidden || resp.Message != "非系统管理员" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -253,7 +253,7 @@ func TestListPermissionsRequiresRbacPermission(t *testing.T) {
 	handler.ListPermissions(rr, req)
 
 	resp := decodeResponse[struct{}](t, rr)
-	if resp.Code != 10200 || resp.Message != "系统管理员权限不足: admin.rbac.manage" {
+	if resp.Code != httpx.CodeForbidden || resp.Message != "系统管理员权限不足: admin.rbac.manage" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -291,8 +291,8 @@ func TestCreateRoleNaturalIdempotency(t *testing.T) {
 	handler.CreateRole(second, makeReq())
 	secondResp := decodeResponse[AdminRoleItem](t, second)
 	// create_role is naturally idempotent: a duplicate request returns the
-	// business error 10400 "角色已存在" without any Idempotency-Key mechanism.
-	if secondResp.Code != 10400 || secondResp.Message != "角色已存在" {
+	// business error httpx.CodeConflict "角色已存在" without any Idempotency-Key mechanism.
+	if secondResp.Code != httpx.CodeConflict || secondResp.Message != "角色已存在" {
 		t.Fatalf("unexpected second response: %#v", secondResp)
 	}
 }
@@ -307,7 +307,7 @@ func TestGrantAdminRejectsMutuallyExclusiveFields(t *testing.T) {
 	handler.GrantAdmin(rr, req)
 
 	resp := decodeResponse[struct{}](t, rr)
-	if resp.Code != 10000 || resp.Message != "grant_all_permissions 与 role_ids 互斥" {
+	if resp.Code != httpx.CodeInvalidRequest || resp.Message != "grant_all_permissions 与 role_ids 互斥" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -375,7 +375,7 @@ func TestGetAppConfigRequiresPermission(t *testing.T) {
 	handler.GetAppConfig(rr, req)
 
 	resp := decodeResponse[AppConfig](t, rr)
-	if resp.Code != 10200 || resp.Message != "系统管理员权限不足: admin.app_config.read" {
+	if resp.Code != httpx.CodeForbidden || resp.Message != "系统管理员权限不足: admin.app_config.read" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -478,7 +478,7 @@ func TestSearchUsersRequiresPermission(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.SearchUsers(rr, req)
 	resp := decodeResponse[PaginatedAdminUsers](t, rr)
-	if resp.Code != 10200 || resp.Message != "系统管理员权限不足: admin.users.read" {
+	if resp.Code != httpx.CodeForbidden || resp.Message != "系统管理员权限不足: admin.users.read" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -504,7 +504,7 @@ func TestOpenAdminUserReturnsNotFound(t *testing.T) {
 	handler.OpenAdminUser(rr, req)
 
 	resp := decodeResponse[AdminUserItem](t, rr)
-	if resp.Code != 10300 || resp.Message != "用户不存在" {
+	if resp.Code != httpx.CodeNotFound || resp.Message != "用户不存在" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -586,7 +586,7 @@ func TestOpenAdminGroupReturnsNotFound(t *testing.T) {
 	handler.OpenAdminGroup(rr, req)
 
 	resp := decodeResponse[AdminGroupItem](t, rr)
-	if resp.Code != 10300 || resp.Message != "群组不存在" {
+	if resp.Code != httpx.CodeNotFound || resp.Message != "群组不存在" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -749,7 +749,7 @@ func TestSearchTagsAndDeleteTag(t *testing.T) {
 	missingRR := httptest.NewRecorder()
 	handler.DeleteTag(missingRR, missingReq)
 	missingResp := decodeResponse[struct{}](t, missingRR)
-	if missingResp.Code != 10300 || missingResp.Message != "标签不存在" {
+	if missingResp.Code != httpx.CodeNotFound || missingResp.Message != "标签不存在" {
 		t.Fatalf("unexpected missing delete response: %#v", missingResp)
 	}
 	foundTagDeleteAudit := false
@@ -782,7 +782,7 @@ func TestCreateAnnouncementRequiresIdempotencyKey(t *testing.T) {
 	handler.CreateAnnouncement(rr, req)
 
 	resp := decodeResponse[AnnouncementCreated](t, rr)
-	if resp.Code != 10000 {
+	if resp.Code != httpx.CodeInvalidRequest {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -948,7 +948,7 @@ func TestAnnouncementMutationsReturnNotFound(t *testing.T) {
 	updateRR := httptest.NewRecorder()
 	handler.UpdateAnnouncement(updateRR, updateReq)
 	updateResp := decodeResponse[struct{}](t, updateRR)
-	if updateResp.Code != 10300 || updateResp.Message != "公告不存在" {
+	if updateResp.Code != httpx.CodeNotFound || updateResp.Message != "公告不存在" {
 		t.Fatalf("unexpected update response: %#v", updateResp)
 	}
 
@@ -956,7 +956,7 @@ func TestAnnouncementMutationsReturnNotFound(t *testing.T) {
 	deleteRR := httptest.NewRecorder()
 	handler.DeleteAnnouncement(deleteRR, deleteReq)
 	deleteResp := decodeResponse[struct{}](t, deleteRR)
-	if deleteResp.Code != 10300 || deleteResp.Message != "公告不存在" {
+	if deleteResp.Code != httpx.CodeNotFound || deleteResp.Message != "公告不存在" {
 		t.Fatalf("unexpected delete response: %#v", deleteResp)
 	}
 }
@@ -1054,7 +1054,7 @@ func TestUpdateRoleReturnsNotFoundForMissingRole(t *testing.T) {
 	updateRR := httptest.NewRecorder()
 	handler.UpdateRole(updateRR, updateReq)
 	updateResp := decodeResponse[struct{}](t, updateRR)
-	if updateResp.Code != 10300 || updateResp.Message != "角色不存在" {
+	if updateResp.Code != httpx.CodeNotFound || updateResp.Message != "角色不存在" {
 		t.Fatalf("unexpected update response: %#v", updateResp)
 	}
 }
@@ -1065,7 +1065,7 @@ func TestUpdateRoleRejectsEmptyRoleID(t *testing.T) {
 	updateRR := httptest.NewRecorder()
 	handler.UpdateRole(updateRR, updateReq)
 	updateResp := decodeResponse[struct{}](t, updateRR)
-	if updateResp.Code != 10000 || updateResp.Message != "参数错误" {
+	if updateResp.Code != httpx.CodeInvalidRequest || updateResp.Message != "参数错误" {
 		t.Fatalf("unexpected update response: %#v", updateResp)
 	}
 }
@@ -1123,7 +1123,7 @@ func TestDeleteRoleReturnsNotFoundForMissingRole(t *testing.T) {
 	deleteRR := httptest.NewRecorder()
 	handler.DeleteRole(deleteRR, deleteReq)
 	deleteResp := decodeResponse[struct{}](t, deleteRR)
-	if deleteResp.Code != 10300 || deleteResp.Message != "角色不存在" {
+	if deleteResp.Code != httpx.CodeNotFound || deleteResp.Message != "角色不存在" {
 		t.Fatalf("unexpected delete response: %#v", deleteResp)
 	}
 }
@@ -1187,7 +1187,7 @@ func TestSetRolePermissionsReturnsNotFoundForMissingRole(t *testing.T) {
 	setRR := httptest.NewRecorder()
 	handler.SetRolePermissions(setRR, setReq)
 	setResp := decodeResponse[struct{}](t, setRR)
-	if setResp.Code != 10300 || setResp.Message != "角色不存在" {
+	if setResp.Code != httpx.CodeNotFound || setResp.Message != "角色不存在" {
 		t.Fatalf("unexpected set response: %#v", setResp)
 	}
 }
@@ -1198,7 +1198,7 @@ func TestSetRolePermissionsRejectsEmptyRoleID(t *testing.T) {
 	setRR := httptest.NewRecorder()
 	handler.SetRolePermissions(setRR, setReq)
 	setResp := decodeResponse[struct{}](t, setRR)
-	if setResp.Code != 10000 || setResp.Message != "参数错误" {
+	if setResp.Code != httpx.CodeInvalidRequest || setResp.Message != "参数错误" {
 		t.Fatalf("unexpected set response: %#v", setResp)
 	}
 }
@@ -1253,7 +1253,7 @@ func TestRevokeAdminReturnsNotFoundForMissingAdmin(t *testing.T) {
 	revokeRR := httptest.NewRecorder()
 	handler.RevokeAdmin(revokeRR, revokeReq)
 	revokeResp := decodeResponse[struct{}](t, revokeRR)
-	if revokeResp.Code != 10300 || revokeResp.Message != "管理员不存在" {
+	if revokeResp.Code != httpx.CodeNotFound || revokeResp.Message != "管理员不存在" {
 		t.Fatalf("unexpected revoke response: %#v", revokeResp)
 	}
 }
@@ -1316,7 +1316,7 @@ func TestOpenAuditLogReturnsNotFoundForMissingLog(t *testing.T) {
 	openRR := httptest.NewRecorder()
 	handler.OpenAuditLog(openRR, openReq)
 	openResp := decodeResponse[AuditLogItem](t, openRR)
-	if openResp.Code != 10300 || openResp.Message != "审计日志不存在" {
+	if openResp.Code != httpx.CodeNotFound || openResp.Message != "审计日志不存在" {
 		t.Fatalf("unexpected open response: %#v", openResp)
 	}
 }
@@ -1350,7 +1350,7 @@ func TestUpdateAppConfigRejectsEmptySections(t *testing.T) {
 	updateRR := httptest.NewRecorder()
 	handler.UpdateAppConfig(updateRR, updateReq)
 	updateResp := decodeResponse[struct{}](t, updateRR)
-	if updateResp.Code != 10000 || updateResp.Message != "参数错误" {
+	if updateResp.Code != httpx.CodeInvalidRequest || updateResp.Message != "参数错误" {
 		t.Fatalf("unexpected update response: %#v", updateResp)
 	}
 }
@@ -1361,7 +1361,7 @@ func TestUpdateAppConfigRejectsInvalidValue(t *testing.T) {
 	updateRR := httptest.NewRecorder()
 	handler.UpdateAppConfig(updateRR, updateReq)
 	updateResp := decodeResponse[struct{}](t, updateRR)
-	if updateResp.Code != 10000 || updateResp.Message != "参数错误" {
+	if updateResp.Code != httpx.CodeInvalidRequest || updateResp.Message != "参数错误" {
 		t.Fatalf("unexpected update response: %#v", updateResp)
 	}
 }
@@ -1372,7 +1372,7 @@ func TestUpdateAppConfigRejectsInvalidJSON(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.UpdateAppConfig(rr, req)
 	resp := decodeResponse[struct{}](t, rr)
-	if resp.Code != 10000 || resp.Message != "参数错误" {
+	if resp.Code != httpx.CodeInvalidRequest || resp.Message != "参数错误" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -1384,13 +1384,13 @@ func TestUpdateAppConfigReturns10600OnError(t *testing.T) {
 	rr := httptest.NewRecorder()
 	module.handler.UpdateAppConfig(rr, req)
 	resp := decodeResponse[struct{}](t, rr)
-	if resp.Code != 10600 || resp.Message != "服务暂时不可用" {
+	if resp.Code != httpx.CodeInternalUnavailable || resp.Message != "服务暂时不可用" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
 
 // failingProvider is a Provider whose UpdateAppConfig always returns an error,
-// used to test the 10600 (服务暂时不可用) handler path.
+// used to test the httpx.CodeInternalUnavailable (服务暂时不可用) handler path.
 type failingProvider struct{}
 
 func (f *failingProvider) GetAppConfig(_ context.Context) (AppConfig, error) {

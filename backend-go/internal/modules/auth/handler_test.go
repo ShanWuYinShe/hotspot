@@ -15,6 +15,7 @@ import (
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
@@ -35,7 +36,7 @@ func registerAppUser(t *testing.T, handler *Handler, loginID, nickname, password
 	rr := httptest.NewRecorder()
 	handler.Register(rr, req)
 	var resp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data AuthTokenPairApp `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -58,7 +59,7 @@ func TestRegisterRequiresIdempotencyKey(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if int(resp["code"].(float64)) != 10000 {
+	if httpx.Code(int(resp["code"].(float64))) != httpx.CodeInvalidRequest {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -77,7 +78,7 @@ func TestRegisterDuplicateLoginIDReturnsConflict(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if int(resp["code"].(float64)) != 10400 {
+	if httpx.Code(int(resp["code"].(float64))) != httpx.CodeConflict {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -98,7 +99,7 @@ func TestLoginAppReturnsTokenPair(t *testing.T) {
 		t.Fatalf("unexpected status: %d", rr.Code)
 	}
 	var resp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data AuthTokenPairApp `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -121,7 +122,7 @@ func TestLoginWebReturnsEmptyDataAndCookiesOnly(t *testing.T) {
 	handler.Login(rr, req)
 
 	var resp struct {
-		Code int                    `json:"code"`
+		Code httpx.Code             `json:"code"`
 		Data map[string]interface{} `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -150,7 +151,7 @@ func TestLoginRejectsUnknownFields(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if int(resp["code"].(float64)) != 10000 {
+	if httpx.Code(int(resp["code"].(float64))) != httpx.CodeInvalidRequest {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 	if _, ok := resp["data"]; ok {
@@ -174,7 +175,7 @@ func TestLoginCollapsesUnknownUserAndWrongPassword(t *testing.T) {
 		if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 			t.Fatalf("decode response: %v", err)
 		}
-		if int(resp["code"].(float64)) != 10100 {
+		if httpx.Code(int(resp["code"].(float64))) != httpx.CodeUnauthorized {
 			t.Fatalf("unexpected response: %#v", resp)
 		}
 	}
@@ -188,7 +189,7 @@ func TestCheckStatusReturnsFalseWithoutPrincipal(t *testing.T) {
 	handler.CheckStatus(rr, req)
 
 	var resp struct {
-		Code int        `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data AuthStatus `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -210,7 +211,7 @@ func TestCheckStatusReturnsTrueWithPrincipal(t *testing.T) {
 	handler.CheckStatus(rr, req)
 
 	var resp struct {
-		Code int        `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data AuthStatus `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -234,14 +235,14 @@ func TestGuestWithIdempotencyKeyReturnsTokenPair(t *testing.T) {
 	handler.Guest(rr2, dupe)
 
 	var resp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data AuthTokenPairApp `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
 	var resp2 struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data AuthTokenPairApp `json:"data"`
 	}
 	_ = json.NewDecoder(rr2.Body).Decode(&resp2)
@@ -258,7 +259,7 @@ func TestRefreshTokenAppReturnsNewTokenPair(t *testing.T) {
 	loginRR := httptest.NewRecorder()
 	handler.Login(loginRR, loginReq)
 	var loginResp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data AuthTokenPairApp `json:"data"`
 	}
 	if err := json.NewDecoder(loginRR.Body).Decode(&loginResp); err != nil {
@@ -270,7 +271,7 @@ func TestRefreshTokenAppReturnsNewTokenPair(t *testing.T) {
 	handler.RefreshToken(refreshRR, refreshReq)
 
 	var refreshResp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data AuthTokenPairApp `json:"data"`
 	}
 	if err := json.NewDecoder(refreshRR.Body).Decode(&refreshResp); err != nil {
@@ -296,7 +297,7 @@ func TestListSessionsReturnsCurrentSession(t *testing.T) {
 	handler.ListSessions(rr, req)
 
 	var resp struct {
-		Code int         `json:"code"`
+		Code httpx.Code  `json:"code"`
 		Data SessionList `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -319,7 +320,7 @@ func TestListSessionsIncludesSessionMetadata(t *testing.T) {
 	registerRR := httptest.NewRecorder()
 	handler.Register(registerRR, registerReq)
 	var registerResp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data AuthTokenPairApp `json:"data"`
 	}
 	if err := json.NewDecoder(registerRR.Body).Decode(&registerResp); err != nil {
@@ -339,7 +340,7 @@ func TestListSessionsIncludesSessionMetadata(t *testing.T) {
 	handler.ListSessions(listRR, listReq)
 
 	var listResp struct {
-		Code int         `json:"code"`
+		Code httpx.Code  `json:"code"`
 		Data SessionList `json:"data"`
 	}
 	if err := json.NewDecoder(listRR.Body).Decode(&listResp); err != nil {
@@ -435,7 +436,7 @@ func TestResetPasswordRevokesExistingSessionsAndAllowsLoginWithNewPassword(t *te
 	handler.ResetPassword(confirmRR, confirmReq)
 
 	var confirmResp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data AuthTokenPairApp `json:"data"`
 	}
 	if err := json.NewDecoder(confirmRR.Body).Decode(&confirmResp); err != nil {
@@ -473,14 +474,14 @@ func TestResetPasswordUnknownOrInvalidRequestReturnsNotFound(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if int(resp["code"].(float64)) != 10300 {
+	if httpx.Code(int(resp["code"].(float64))) != httpx.CodeNotFound {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
 
 // TestChangePasswordWithoutIdempotencyKey：spec 移除 change_password 的幂等键
 // （旧密码自然去重，见 api_spec_base.md），无 Idempotency-Key 也可正常调用——
-// 旧密码错误返回 10100 而非参数错误。
+// 旧密码错误返回 httpx.CodeUnauthorized 而非参数错误。
 func TestChangePasswordWithoutIdempotencyKey(t *testing.T) {
 	handler := newTestHandler()
 	req := httptest.NewRequest(http.MethodPost, "/change_password", strings.NewReader(`{"old_password":"wrong-old","new_password":"new-pass"}`))
@@ -494,8 +495,8 @@ func TestChangePasswordWithoutIdempotencyKey(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if int(resp["code"].(float64)) != 10100 {
-		t.Fatalf("expected 10100 (old password mismatch, natural dedup), got: %#v", resp)
+	if httpx.Code(int(resp["code"].(float64))) != httpx.CodeUnauthorized {
+		t.Fatalf("expected httpx.CodeUnauthorized (old password mismatch, natural dedup), got: %#v", resp)
 	}
 }
 
@@ -511,7 +512,7 @@ func TestRevokeSessionRejectsCurrentSession(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if int(resp["code"].(float64)) != 10200 {
+	if httpx.Code(int(resp["code"].(float64))) != httpx.CodeForbidden {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -547,7 +548,7 @@ func TestChangePasswordValidatesOldPasswordAndRevokesOtherSessions(t *testing.T)
 	if err := json.NewDecoder(badRR.Body).Decode(&badResp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if int(badResp["code"].(float64)) != 10100 {
+	if httpx.Code(int(badResp["code"].(float64))) != httpx.CodeUnauthorized {
 		t.Fatalf("unexpected response: %#v", badResp)
 	}
 
@@ -572,7 +573,7 @@ func TestChangePasswordValidatesOldPasswordAndRevokesOtherSessions(t *testing.T)
 	if err := json.NewDecoder(oldLoginRR.Body).Decode(&oldLoginResp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if int(oldLoginResp["code"].(float64)) != 10100 {
+	if httpx.Code(int(oldLoginResp["code"].(float64))) != httpx.CodeUnauthorized {
 		t.Fatalf("unexpected old password login response: %#v", oldLoginResp)
 	}
 	if _, _, ok := handler.service.auth.AuthenticateRequest(goodReq.Context(), "Bearer "+register.AccessToken, ""); !ok {
@@ -728,7 +729,7 @@ func TestRegisterWebResponseHasNoTokenInBody(t *testing.T) {
 	}
 }
 
-// Task 6: auth/login — error code 10100 for wrong password and nonexistent user
+// Task 6: auth/login — error code httpx.CodeUnauthorized for wrong password and nonexistent user
 
 func TestLoginReturns10100OnWrongPassword(t *testing.T) {
 	handler := newTestHandler()
@@ -739,8 +740,8 @@ func TestLoginReturns10100OnWrongPassword(t *testing.T) {
 	var resp map[string]any
 	json.Unmarshal([]byte(rr.Body.String()), &resp)
 	code, _ := resp["code"].(float64)
-	if int(code) != 10100 {
-		t.Fatalf("expected code 10100, got %v", code)
+	if httpx.Code(int(code)) != httpx.CodeUnauthorized {
+		t.Fatalf("expected code httpx.CodeUnauthorized, got %v", code)
 	}
 }
 
@@ -752,8 +753,8 @@ func TestLoginReturns10100OnNonexistentUser(t *testing.T) {
 	var resp map[string]any
 	json.Unmarshal([]byte(rr.Body.String()), &resp)
 	code, _ := resp["code"].(float64)
-	if int(code) != 10100 {
-		t.Fatalf("expected code 10100, got %v", code)
+	if httpx.Code(int(code)) != httpx.CodeUnauthorized {
+		t.Fatalf("expected code httpx.CodeUnauthorized, got %v", code)
 	}
 }
 
@@ -804,8 +805,8 @@ func TestRefreshTokenWebRejectsBodyToken(t *testing.T) {
 	var resp map[string]any
 	json.Unmarshal([]byte(rr.Body.String()), &resp)
 	code, _ := resp["code"].(float64)
-	if int(code) != 10000 {
-		t.Fatalf("expected code 10000, got %v", code)
+	if httpx.Code(int(code)) != httpx.CodeInvalidRequest {
+		t.Fatalf("expected code httpx.CodeInvalidRequest, got %v", code)
 	}
 }
 
@@ -817,8 +818,8 @@ func TestRefreshTokenAppRejectsEmptyToken(t *testing.T) {
 	var resp map[string]any
 	json.Unmarshal([]byte(rr.Body.String()), &resp)
 	code, _ := resp["code"].(float64)
-	if int(code) != 10000 {
-		t.Fatalf("expected code 10000, got %v", code)
+	if httpx.Code(int(code)) != httpx.CodeInvalidRequest {
+		t.Fatalf("expected code httpx.CodeInvalidRequest, got %v", code)
 	}
 }
 
@@ -860,7 +861,7 @@ func TestHandlerRevokeAllSessionsReturnsSuccess(t *testing.T) {
 	handler.RevokeAllSessions(rr, req)
 
 	var resp struct {
-		Code int             `json:"code"`
+		Code httpx.Code      `json:"code"`
 		Data RevokeAllResult `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -876,7 +877,7 @@ func TestHandlerRevokeAllSessionsReturnsSuccess(t *testing.T) {
 
 func TestHandlerRevokeAllSessionsReturns10600OnError(t *testing.T) {
 	handler := newTestHandler()
-	// RevokeAllSessions without a principal context returns an empty result (no 10600 path).
+	// RevokeAllSessions without a principal context returns an empty result (no httpx.CodeInternalUnavailable path).
 	// The handler delegates to service.RevokeAll which returns RevokeAllResult{} when no principal.
 	// Verify that calling without principal returns success with zero revoked_count.
 	req := httptest.NewRequest(http.MethodPost, "/revoke_session_all", strings.NewReader(`{}`))
@@ -884,7 +885,7 @@ func TestHandlerRevokeAllSessionsReturns10600OnError(t *testing.T) {
 	handler.RevokeAllSessions(rr, req)
 
 	var resp struct {
-		Code int             `json:"code"`
+		Code httpx.Code      `json:"code"`
 		Data RevokeAllResult `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -909,7 +910,7 @@ func TestHandlerGuestReturnsSuccess(t *testing.T) {
 	handler.Guest(rr, req)
 
 	var resp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data AuthTokenPairApp `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -935,17 +936,17 @@ func TestHandlerGuestRejectsInvalidJSON(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if int(resp["code"].(float64)) != 10000 {
-		t.Fatalf("expected code 10000 for invalid JSON, got %#v", resp)
+	if httpx.Code(int(resp["code"].(float64))) != httpx.CodeInvalidRequest {
+		t.Fatalf("expected code httpx.CodeInvalidRequest for invalid JSON, got %#v", resp)
 	}
 }
 
 func TestHandlerGuestReturns10600OnError(t *testing.T) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
 	handler := newTestHandler()
-	// Missing nickname triggers parameter error (code 10000), not 10600.
-	// The Guest handler has no direct 10600 code path at handler level;
-	// 10600 only surfaces if the underlying service fails with an unmapped error.
+	// Missing nickname triggers parameter error (code httpx.CodeInvalidRequest), not httpx.CodeInternalUnavailable.
+	// The Guest handler has no direct httpx.CodeInternalUnavailable code path at handler level;
+	// httpx.CodeInternalUnavailable only surfaces if the underlying service fails with an unmapped error.
 	// Test the parameter validation path instead.
 	req := httptest.NewRequest(http.MethodPost, "/guest", strings.NewReader(`{"nickname":"","client_type":"app","device_id":"test-device"}`))
 	req.Header.Set("Idempotency-Key", "noNick1234abcd1234abcd1234abcd1234")
@@ -956,7 +957,7 @@ func TestHandlerGuestReturns10600OnError(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if int(resp["code"].(float64)) != 10000 {
-		t.Fatalf("expected code 10000 for missing nickname, got %#v", resp)
+	if httpx.Code(int(resp["code"].(float64))) != httpx.CodeInvalidRequest {
+		t.Fatalf("expected code httpx.CodeInvalidRequest for missing nickname, got %#v", resp)
 	}
 }

@@ -169,13 +169,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var authEvent Event
 	if err := conn.ReadJSON(&authEvent); err != nil || authEvent.Type != "Auth" {
 		observability.L().Warn("ws: auth failed, invalid auth message", "error", err)
-		_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "鉴权失败", Severity: "fatal", Retryable: false}})
+		_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "鉴权失败", Severity: "fatal", Retryable: false}})
 		return
 	}
 	var authPayload AuthPayload
 	if err := decodePayload(authEvent.Payload, &authPayload); err != nil {
 		observability.L().Warn("ws: auth failed, invalid payload", "error", err)
-		_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "鉴权失败", Severity: "fatal", Retryable: false}})
+		_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "鉴权失败", Severity: "fatal", Retryable: false}})
 		return
 	}
 	ctx := platformauth.WithPlatform(r.Context(), detectPlatform(r, authPayload.ClientType))
@@ -187,7 +187,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	principal, _, ok := h.auth.AuthenticateRequest(ctx, authorization, accessCookie)
 	if !ok {
 		observability.L().Warn("ws: auth failed, token invalid")
-		_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "鉴权失败", Severity: "fatal", Retryable: false}})
+		_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "鉴权失败", Severity: "fatal", Retryable: false}})
 		return
 	}
 	principalCtx := platformauth.WithPrincipal(ctx, principal)
@@ -230,7 +230,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "GetSubscriptions":
 			var payload GetSubscriptionsPayload
 			if err := decodePayload(msg.Payload, &payload); err != nil {
-				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
 				continue
 			}
 			snapshot := subs.snapshot()
@@ -239,12 +239,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "SetSubscriptions":
 			var payload SetSubscriptionsPayload
 			if err := decodePayload(msg.Payload, &payload); err != nil {
-				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
 				continue
 			}
 			if retryAfter, limited := ratelimit.AllowWebsocketSubscribe(r.Context(), principal.UserID, connectionID); limited {
 				observability.L().Warn("ws: subscribe rate limited", "user_id", principal.UserID, "connection_id", connectionID, "retry_after", retryAfter)
-				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20300, Message: "请求过于频繁", Severity: "recoverable", Retryable: true, RetryAfter: retryAfter}})
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSRateLimit, Message: "请求过于频繁", Severity: "recoverable", Retryable: true, RetryAfter: retryAfter}})
 				continue
 			}
 			limit := 500
@@ -272,11 +272,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "PrivateTyping":
 			var payload PrivateTypingSendPayload
 			if err := decodePayload(msg.Payload, &payload); err != nil {
-				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
 				continue
 			}
 			if !h.canSendPrivateTyping(principalCtx, principal.UserID, payload.TargetUserID) {
-				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20400, Message: "无权限", Severity: "warning", Retryable: false}})
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSPermission, Message: "无权限", Severity: "warning", Retryable: false}})
 				continue
 			}
 			typingKey := fmt.Sprintf("typing:%s:%s", principal.UserID, payload.TargetUserID)
@@ -292,11 +292,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "GroupTyping":
 			var payload GroupTypingSendPayload
 			if err := decodePayload(msg.Payload, &payload); err != nil {
-				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
 				continue
 			}
 			if !h.isGroupMember(principalCtx, principal.UserID, payload.GroupID) {
-				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20400, Message: "无权限", Severity: "warning", Retryable: false}})
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSPermission, Message: "无权限", Severity: "warning", Retryable: false}})
 				continue
 			}
 			typingKey := fmt.Sprintf("typing:%s:%s", principal.UserID, payload.GroupID)
@@ -308,9 +308,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.typingThrottle.Store(typingKey, time.Now())
 			DefaultHub().BroadcastToGroup(payload.GroupID, Event{Type: EventTypeGroupTyping, Payload: GroupTypingPayload{GroupID: payload.GroupID, Actor: h.resolveTypingActor(principalCtx, principal.UserID), IsTyping: payload.IsTyping}})
 		case "Auth":
-			_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "重复鉴权", Severity: "warning", Retryable: false}})
+			_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "重复鉴权", Severity: "warning", Retryable: false}})
 		default:
-			_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: 20000, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
+			_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
 		}
 	}
 }

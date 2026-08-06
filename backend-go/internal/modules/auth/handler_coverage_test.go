@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
 )
 
@@ -21,10 +22,10 @@ func authReqWithPrincipal(t *testing.T, handler *Handler, method, body string) *
 	return rr
 }
 
-func decodeAuthCode(t *testing.T, rr *httptest.ResponseRecorder) int {
+func decodeAuthCode(t *testing.T, rr *httptest.ResponseRecorder) httpx.Code {
 	t.Helper()
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode: %v", err)
@@ -37,48 +38,48 @@ func TestCheckStatusRejectsNonObjectBody(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/check_status", strings.NewReader(`[1]`))
 	rr := httptest.NewRecorder()
 	handler.CheckStatus(rr, req)
-	if code := decodeAuthCode(t, rr); code != 10000 {
-		t.Fatalf("expected 10000, got %d", code)
+	if code := decodeAuthCode(t, rr); code != httpx.CodeInvalidRequest {
+		t.Fatalf("expected httpx.CodeInvalidRequest, got %d", code)
 	}
 }
 
 func TestRevokeSessionErrorPaths(t *testing.T) {
 	handler := newTestHandler()
 
-	// 空 session_id → 10000
+	// 空 session_id → httpx.CodeInvalidRequest
 	req := httptest.NewRequest(http.MethodPost, "/revoke_session", strings.NewReader(`{"session_id":""}`))
 	req = req.WithContext(auth.WithPrincipal(req.Context(), auth.Principal{UserID: "u1", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.RevokeSession(rr, req)
-	if code := decodeAuthCode(t, rr); code != 10000 {
-		t.Fatalf("empty session id: expected 10000, got %d", code)
+	if code := decodeAuthCode(t, rr); code != httpx.CodeInvalidRequest {
+		t.Fatalf("empty session id: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 
-	// 畸形 body → 10000
+	// 畸形 body → httpx.CodeInvalidRequest
 	req = httptest.NewRequest(http.MethodPost, "/revoke_session", strings.NewReader(`not-json`))
 	req = req.WithContext(auth.WithPrincipal(req.Context(), auth.Principal{UserID: "u1", SessionID: "sess_1"}))
 	rr = httptest.NewRecorder()
 	handler.RevokeSession(rr, req)
-	if code := decodeAuthCode(t, rr); code != 10000 {
-		t.Fatalf("malformed body: expected 10000, got %d", code)
+	if code := decodeAuthCode(t, rr); code != httpx.CodeInvalidRequest {
+		t.Fatalf("malformed body: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 
-	// 撤销当前会话 → 10200（禁止）
+	// 撤销当前会话 → httpx.CodeForbidden（禁止）
 	req = httptest.NewRequest(http.MethodPost, "/revoke_session", strings.NewReader(`{"session_id":"sess_1"}`))
 	req = req.WithContext(auth.WithPrincipal(req.Context(), auth.Principal{UserID: "u1", SessionID: "sess_1"}))
 	rr = httptest.NewRecorder()
 	handler.RevokeSession(rr, req)
-	if code := decodeAuthCode(t, rr); code != 10200 {
-		t.Fatalf("revoke current session: expected 10200, got %d", code)
+	if code := decodeAuthCode(t, rr); code != httpx.CodeForbidden {
+		t.Fatalf("revoke current session: expected httpx.CodeForbidden, got %d", code)
 	}
 
-	// 撤销不存在的会话 → 10300（errors.As 解包 %w 包装的 APIError）
+	// 撤销不存在的会话 → httpx.CodeNotFound（errors.As 解包 %w 包装的 APIError）
 	req = httptest.NewRequest(http.MethodPost, "/revoke_session", strings.NewReader(`{"session_id":"no_such_session"}`))
 	req = req.WithContext(auth.WithPrincipal(req.Context(), auth.Principal{UserID: "u1", SessionID: "sess_1"}))
 	rr = httptest.NewRecorder()
 	handler.RevokeSession(rr, req)
-	if code := decodeAuthCode(t, rr); code != 10300 {
-		t.Fatalf("revoke missing session: expected 10300, got %d", code)
+	if code := decodeAuthCode(t, rr); code != httpx.CodeNotFound {
+		t.Fatalf("revoke missing session: expected httpx.CodeNotFound, got %d", code)
 	}
 }
 
@@ -96,7 +97,7 @@ func TestRevokeSessionSuccessPath(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.ListSessions(rr, req)
 	var listResp struct {
-		Code int         `json:"code"`
+		Code httpx.Code  `json:"code"`
 		Data SessionList `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&listResp); err != nil || listResp.Code != 0 {
@@ -110,7 +111,7 @@ func TestRevokeSessionSuccessPath(t *testing.T) {
 	loginRR := httptest.NewRecorder()
 	handler.Login(loginRR, loginReq)
 	var loginResp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data AuthTokenPairApp `json:"data"`
 	}
 	if err := json.NewDecoder(loginRR.Body).Decode(&loginResp); err != nil || loginResp.Code != 0 {
@@ -135,7 +136,7 @@ func TestRevokeAllSessionsRejectsNonEmptyBody(t *testing.T) {
 	req = req.WithContext(auth.WithPrincipal(req.Context(), auth.Principal{UserID: "u1", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.RevokeAllSessions(rr, req)
-	if code := decodeAuthCode(t, rr); code != 10000 {
-		t.Fatalf("expected 10000, got %d", code)
+	if code := decodeAuthCode(t, rr); code != httpx.CodeInvalidRequest {
+		t.Fatalf("expected httpx.CodeInvalidRequest, got %d", code)
 	}
 }

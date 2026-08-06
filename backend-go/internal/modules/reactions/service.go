@@ -52,7 +52,7 @@ func NewServiceWithDeps(repo Repository, providers []TargetProvider, notificatio
 
 // SetAppConfig wires the app config source whose Limits.ReactionEmojis is the
 // server-side emoji whitelist (spec api_spec_reaction.md: emoji 不在白名单返回
-// 10000). Optional: nil skips the check (tests / degraded mode).
+// httpx.CodeInvalidRequest). Optional: nil skips the check (tests / degraded mode).
 func (s *Service) SetAppConfig(source appconfig.Source) { s.appConfig = source }
 
 // emojiAllowed reports whether the emoji is on the AppConfig whitelist.
@@ -85,7 +85,7 @@ func (s *Service) Set(ctx context.Context, req SetReactionRequest) error {
 func (s *Service) react(ctx context.Context, req SetReactionRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	if !s.emojiAllowed(ctx, req.Emoji) {
-		// Spec api_spec_reaction.md: emoji 不在白名单返回 10000。
+		// Spec api_spec_reaction.md: emoji 不在白名单返回 httpx.CodeInvalidRequest。
 		return ErrInvalidEmoji
 	}
 	owner, targetExists, err := s.resolveTarget(ctx, req.TargetType, req.TargetID)

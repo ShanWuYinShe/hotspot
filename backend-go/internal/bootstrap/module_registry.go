@@ -84,7 +84,7 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	searchModule.Service.SetLocationProvider(usersModule.Service)
 	// Construct auth + admin before the module slice so the admin repo's
 	// IsBanned can be wired into the platform auth Service (BanChecker),
-	// enforcing 10201 for banned accounts on RequiredAuth endpoints.
+	// enforcing httpx.CodeAccountBanned for banned accounts on RequiredAuth endpoints.
 	authModule := auth.NewModule(ctx, cfg, factory, sharedAppConfig)
 	adminModule := admin.NewModule(factory, sharedAppConfig)
 	if svc := platformauth.DefaultService(); svc != nil {

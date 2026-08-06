@@ -12,6 +12,7 @@ import (
 
 	"hotspot/backend-go/internal/modules/notify"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
@@ -172,8 +173,8 @@ func TestCreateAndOpenGroup(t *testing.T) {
 	handler.Create(createRR, createReq)
 
 	var createResp struct {
-		Code int       `json:"code"`
-		Data GroupItem `json:"data"`
+		Code httpx.Code `json:"code"`
+		Data GroupItem  `json:"data"`
 	}
 	if err := json.NewDecoder(createRR.Body).Decode(&createResp); err != nil {
 		t.Fatalf("decode create response: %v", err)
@@ -188,8 +189,8 @@ func TestCreateAndOpenGroup(t *testing.T) {
 	handler.OpenTheDoor(openRR, openReq)
 
 	var openResp struct {
-		Code int       `json:"code"`
-		Data GroupItem `json:"data"`
+		Code httpx.Code `json:"code"`
+		Data GroupItem  `json:"data"`
 	}
 	if err := json.NewDecoder(openRR.Body).Decode(&openResp); err != nil {
 		t.Fatalf("decode open response: %v", err)
@@ -216,7 +217,7 @@ func TestSearchGroupsReturnsMatches(t *testing.T) {
 	handler.Search(rr, req)
 
 	var resp struct {
-		Code int             `json:"code"`
+		Code httpx.Code      `json:"code"`
 		Data PaginatedGroups `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -245,7 +246,7 @@ func TestSearchGroupsValidation(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(tc.body))
 			rr := httptest.NewRecorder()
 			handler.Search(rr, req)
-			assertGroupCode(t, rr, 10000)
+			assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 		})
 	}
 }
@@ -258,17 +259,17 @@ func TestGroupsHandlerReturns10600OnServiceError(t *testing.T) {
 	createReq = createReq.WithContext(platformauth.WithPrincipal(createReq.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	createRR := httptest.NewRecorder()
 	handler.Create(createRR, createReq)
-	assertGroupCode(t, createRR, 10600)
+	assertGroupCode(t, createRR, httpx.CodeInternalUnavailable)
 
 	openReq := httptest.NewRequest(http.MethodPost, "/open_the_door", strings.NewReader(`{"group_id":"group_1"}`))
 	openRR := httptest.NewRecorder()
 	handler.OpenTheDoor(openRR, openReq)
-	assertGroupCode(t, openRR, 10600)
+	assertGroupCode(t, openRR, httpx.CodeInternalUnavailable)
 
 	searchReq := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(`{"keyword":"Hot Group"}`))
 	searchRR := httptest.NewRecorder()
 	handler.Search(searchRR, searchReq)
-	assertGroupCode(t, searchRR, 10600)
+	assertGroupCode(t, searchRR, httpx.CodeInternalUnavailable)
 }
 
 func TestDismissGroupUsesGroupIDAndBroadcastsDismissedEvent(t *testing.T) {
@@ -420,22 +421,22 @@ func TestApproveApplicationHandlerMapsSpecificErrors(t *testing.T) {
 	tests := []struct {
 		name     string
 		repo     *groupErrorRepo
-		expected int
+		expected httpx.Code
 	}{
 		{
 			name:     "not found",
 			repo:     &groupErrorRepo{},
-			expected: 10300,
+			expected: httpx.CodeNotFound,
 		},
 		{
 			name:     "access restricted",
 			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusPending}}},
-			expected: 10200,
+			expected: httpx.CodeForbidden,
 		},
 		{
 			name:     "already processed",
 			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusAccepted}}},
-			expected: 10400,
+			expected: httpx.CodeConflict,
 		},
 	}
 
@@ -456,22 +457,22 @@ func TestRejectApplicationHandlerMapsSpecificErrors(t *testing.T) {
 	tests := []struct {
 		name     string
 		repo     *groupErrorRepo
-		expected int
+		expected httpx.Code
 	}{
 		{
 			name:     "not found",
 			repo:     &groupErrorRepo{},
-			expected: 10300,
+			expected: httpx.CodeNotFound,
 		},
 		{
 			name:     "access restricted",
 			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusPending}}},
-			expected: 10200,
+			expected: httpx.CodeForbidden,
 		},
 		{
 			name:     "already processed",
 			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusRejected}}},
-			expected: 10400,
+			expected: httpx.CodeConflict,
 		},
 	}
 
@@ -492,17 +493,17 @@ func TestRejectInviteHandlerMapsSpecificErrors(t *testing.T) {
 	tests := []struct {
 		name     string
 		repo     *groupErrorRepo
-		expected int
+		expected httpx.Code
 	}{
 		{
 			name:     "not found",
 			repo:     &groupErrorRepo{},
-			expected: 10300,
+			expected: httpx.CodeNotFound,
 		},
 		{
 			name:     "expired",
 			repo:     &groupErrorRepo{listMyInvitesItems: []GroupInviteItem{{InviteID: "invite_1", Status: ApplicationStatusRejected}}},
-			expected: 10400,
+			expected: httpx.CodeConflict,
 		},
 	}
 
@@ -534,10 +535,10 @@ func TestCreateGroupRecordsResourceGuard(t *testing.T) {
 	}
 }
 
-func assertGroupCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+func assertGroupCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx.Code) {
 	t.Helper()
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -584,7 +585,7 @@ func TestListMembersHandlerReturnsSuccess(t *testing.T) {
 	handler.ListMembers(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data struct {
 			Items []GroupMemberItem `json:"items"`
 		} `json:"data"`
@@ -603,7 +604,7 @@ func TestListMembersHandlerMapsGroupNotFound(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMembers(rr, req)
-	assertGroupCode(t, rr, 10300)
+	assertGroupCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestListMembersHandlerValidation(t *testing.T) {
@@ -620,7 +621,7 @@ func TestListMembersHandlerValidation(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/members/list", strings.NewReader(tc.body))
 			rr := httptest.NewRecorder()
 			handler.ListMembers(rr, req)
-			assertGroupCode(t, rr, 10000)
+			assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 		})
 	}
 }
@@ -642,7 +643,7 @@ func TestSearchMembersHandlerReturnsSuccess(t *testing.T) {
 	handler.SearchMembers(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -666,7 +667,7 @@ func TestSearchMembersHandlerValidation(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/members/search", strings.NewReader(tc.body))
 			rr := httptest.NewRecorder()
 			handler.SearchMembers(rr, req)
-			assertGroupCode(t, rr, 10000)
+			assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 		})
 	}
 }
@@ -681,7 +682,7 @@ func TestSetMuteUnmuteMapsAccessRestricted(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.SetMute(rr, req)
-	assertGroupCode(t, rr, 10200)
+	assertGroupCode(t, rr, httpx.CodeForbidden)
 }
 
 func TestSetMuteHandlerValidation(t *testing.T) {
@@ -698,7 +699,7 @@ func TestSetMuteHandlerValidation(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/members/set_mute", strings.NewReader(tc.body))
 			rr := httptest.NewRecorder()
 			handler.SetMute(rr, req)
-			assertGroupCode(t, rr, 10000)
+			assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 		})
 	}
 }
@@ -721,7 +722,7 @@ func TestBanMemberHandlerReturnsSuccess(t *testing.T) {
 	handler.BanMember(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -742,7 +743,7 @@ func TestBanMemberHandlerMapsAccessRestricted(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.BanMember(rr, req)
-	assertGroupCode(t, rr, 10200)
+	assertGroupCode(t, rr, httpx.CodeForbidden)
 }
 
 func TestBanMemberHandlerCannotBanSelf(t *testing.T) {
@@ -761,7 +762,7 @@ func TestBanMemberHandlerCannotBanSelf(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.BanMember(rr, req)
-	assertGroupCode(t, rr, 10200)
+	assertGroupCode(t, rr, httpx.CodeForbidden)
 }
 
 func TestUnbanMemberHandlerReturnsSuccess(t *testing.T) {
@@ -781,7 +782,7 @@ func TestUnbanMemberHandlerReturnsSuccess(t *testing.T) {
 	handler.UnbanMember(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -797,7 +798,7 @@ func TestUnbanMemberHandlerMapsGroupNotFound(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.UnbanMember(rr, req)
-	assertGroupCode(t, rr, 10300)
+	assertGroupCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestListBannedMembersHandlerReturnsSuccess(t *testing.T) {
@@ -817,7 +818,7 @@ func TestListBannedMembersHandlerReturnsSuccess(t *testing.T) {
 	handler.ListBannedMembers(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -837,7 +838,7 @@ func TestListBannedMembersHandlerMapsAccessRestricted(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListBannedMembers(rr, req)
-	assertGroupCode(t, rr, 10200)
+	assertGroupCode(t, rr, httpx.CodeForbidden)
 }
 
 func TestListSentInvitesHandlerReturnsSuccess(t *testing.T) {
@@ -857,7 +858,7 @@ func TestListSentInvitesHandlerReturnsSuccess(t *testing.T) {
 	handler.ListSentInvites(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -877,7 +878,7 @@ func TestListSentInvitesHandlerMapsAccessRestricted(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListSentInvites(rr, req)
-	assertGroupCode(t, rr, 10200)
+	assertGroupCode(t, rr, httpx.CodeForbidden)
 }
 
 func TestRevokeInviteHandlerReturnsSuccess(t *testing.T) {
@@ -897,7 +898,7 @@ func TestRevokeInviteHandlerReturnsSuccess(t *testing.T) {
 	handler.RevokeInvite(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -913,7 +914,7 @@ func TestRevokeInviteHandlerMapsGroupNotFound(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.RevokeInvite(rr, req)
-	assertGroupCode(t, rr, 10300)
+	assertGroupCode(t, rr, httpx.CodeNotFound)
 }
 
 // --- Announcements ---
@@ -936,7 +937,7 @@ func TestCreateAnnouncementHandlerReturnsSuccess(t *testing.T) {
 	handler.CreateAnnouncement(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -957,7 +958,7 @@ func TestCreateAnnouncementHandlerMapsAccessRestricted(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.CreateAnnouncement(rr, req)
-	assertGroupCode(t, rr, 10200)
+	assertGroupCode(t, rr, httpx.CodeForbidden)
 }
 
 func TestCreateAnnouncementHandlerValidation(t *testing.T) {
@@ -976,7 +977,7 @@ func TestCreateAnnouncementHandlerValidation(t *testing.T) {
 			req.Header.Set("Idempotency-Key", fmt.Sprintf("ann-val-%d-123456789012345678901234", len(tc.name)))
 			rr := httptest.NewRecorder()
 			handler.CreateAnnouncement(rr, req)
-			assertGroupCode(t, rr, 10000)
+			assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 		})
 	}
 }
@@ -988,7 +989,7 @@ func TestListAnnouncementsHandlerReturnsSuccess(t *testing.T) {
 	handler.ListAnnouncements(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -1003,7 +1004,7 @@ func TestListAnnouncementsHandlerMapsGroupNotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/announcements/list", strings.NewReader(`{"group_id":"missing"}`))
 	rr := httptest.NewRecorder()
 	handler.ListAnnouncements(rr, req)
-	assertGroupCode(t, rr, 10300)
+	assertGroupCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestListAnnouncementsHandlerValidation(t *testing.T) {
@@ -1019,7 +1020,7 @@ func TestListAnnouncementsHandlerValidation(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/announcements/list", strings.NewReader(tc.body))
 			rr := httptest.NewRecorder()
 			handler.ListAnnouncements(rr, req)
-			assertGroupCode(t, rr, 10000)
+			assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 		})
 	}
 }
@@ -1041,7 +1042,7 @@ func TestUpdateAnnouncementHandlerReturnsSuccess(t *testing.T) {
 	handler.UpdateAnnouncement(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -1061,7 +1062,7 @@ func TestUpdateAnnouncementHandlerMapsAccessRestricted(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.UpdateAnnouncement(rr, req)
-	assertGroupCode(t, rr, 10200)
+	assertGroupCode(t, rr, httpx.CodeForbidden)
 }
 
 func TestUpdateAnnouncementHandlerValidation(t *testing.T) {
@@ -1078,7 +1079,7 @@ func TestUpdateAnnouncementHandlerValidation(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/announcements/update", strings.NewReader(tc.body))
 			rr := httptest.NewRecorder()
 			handler.UpdateAnnouncement(rr, req)
-			assertGroupCode(t, rr, 10000)
+			assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 		})
 	}
 }
@@ -1100,7 +1101,7 @@ func TestDeleteAnnouncementHandlerReturnsSuccess(t *testing.T) {
 	handler.DeleteAnnouncement(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -1116,7 +1117,7 @@ func TestDeleteAnnouncementHandlerMapsGroupNotFound(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.DeleteAnnouncement(rr, req)
-	assertGroupCode(t, rr, 10300)
+	assertGroupCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestDeleteAnnouncementHandlerValidation(t *testing.T) {
@@ -1133,7 +1134,7 @@ func TestDeleteAnnouncementHandlerValidation(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/announcements/delete", strings.NewReader(tc.body))
 			rr := httptest.NewRecorder()
 			handler.DeleteAnnouncement(rr, req)
-			assertGroupCode(t, rr, 10000)
+			assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 		})
 	}
 }
@@ -1151,7 +1152,7 @@ func TestListMyGroupsHandlerReturnsSuccess(t *testing.T) {
 	handler.ListMyGroups(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -1167,7 +1168,7 @@ func TestListMyGroupsHandlerMapsServiceError(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyGroups(rr, req)
-	assertGroupCode(t, rr, 10600)
+	assertGroupCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 func TestJoinGroupHandlerReturnsSuccess(t *testing.T) {
@@ -1186,7 +1187,7 @@ func TestJoinGroupHandlerReturnsSuccess(t *testing.T) {
 	handler.JoinGroup(rr, req)
 
 	var resp struct {
-		Code int             `json:"code"`
+		Code httpx.Code      `json:"code"`
 		Data JoinGroupResult `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -1207,7 +1208,7 @@ func TestJoinGroupHandlerMapsGroupNotFound(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.JoinGroup(rr, req)
-	assertGroupCode(t, rr, 10300)
+	assertGroupCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestJoinGroupHandlerValidation(t *testing.T) {
@@ -1224,7 +1225,7 @@ func TestJoinGroupHandlerValidation(t *testing.T) {
 			req.Header.Set("Idempotency-Key", fmt.Sprintf("join-val-%d-123456789012345678901234", len(tc.name)))
 			rr := httptest.NewRecorder()
 			handler.JoinGroup(rr, req)
-			assertGroupCode(t, rr, 10000)
+			assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 		})
 	}
 }
@@ -1249,7 +1250,7 @@ func TestHandlerUpdateReturnsSuccess(t *testing.T) {
 	handler.Update(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -1265,7 +1266,7 @@ func TestHandlerUpdateRejectsInvalidJSON(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "update_invalid_json_groups_bbbbbbbb")
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
-	assertGroupCode(t, rr, 10000)
+	assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerUpdateReturns10300WhenNotFound(t *testing.T) {
@@ -1275,7 +1276,7 @@ func TestHandlerUpdateReturns10300WhenNotFound(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
-	assertGroupCode(t, rr, 10300)
+	assertGroupCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestHandlerUpdateReturns10200WhenAccessRestricted(t *testing.T) {
@@ -1289,7 +1290,7 @@ func TestHandlerUpdateReturns10200WhenAccessRestricted(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
-	assertGroupCode(t, rr, 10200)
+	assertGroupCode(t, rr, httpx.CodeForbidden)
 }
 
 func TestHandlerDismissReturnsSuccess(t *testing.T) {
@@ -1310,7 +1311,7 @@ func TestHandlerDismissReturnsSuccess(t *testing.T) {
 	handler.Dismiss(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -1327,7 +1328,7 @@ func TestHandlerDismissReachesServiceWithoutIdempotencyKey(t *testing.T) {
 	handler.Dismiss(rr, req)
 	// Without an Idempotency-Key the request still reaches the service and
 	// returns the business error (group "g1" does not exist here).
-	assertGroupCode(t, rr, 10300)
+	assertGroupCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestHandlerDismissRejectsInvalidJSON(t *testing.T) {
@@ -1336,7 +1337,7 @@ func TestHandlerDismissRejectsInvalidJSON(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "dismiss-invalid-12345678901234567890123")
 	rr := httptest.NewRecorder()
 	handler.Dismiss(rr, req)
-	assertGroupCode(t, rr, 10000)
+	assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerDismissReturns10300WhenNotFound(t *testing.T) {
@@ -1346,7 +1347,7 @@ func TestHandlerDismissReturns10300WhenNotFound(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.Dismiss(rr, req)
-	assertGroupCode(t, rr, 10300)
+	assertGroupCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestHandlerUpdateMySettingsReturnsSuccess(t *testing.T) {
@@ -1361,7 +1362,7 @@ func TestHandlerUpdateMySettingsReturnsSuccess(t *testing.T) {
 	handler.UpdateMySettings(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -1376,7 +1377,7 @@ func TestHandlerUpdateMySettingsRejectsInvalidJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/update_preferences", strings.NewReader(`{bad`))
 	rr := httptest.NewRecorder()
 	handler.UpdateMySettings(rr, req)
-	assertGroupCode(t, rr, 10000)
+	assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerUpdateMySettingsReturns10300WhenNotFound(t *testing.T) {
@@ -1385,7 +1386,7 @@ func TestHandlerUpdateMySettingsReturns10300WhenNotFound(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.UpdateMySettings(rr, req)
-	assertGroupCode(t, rr, 10300)
+	assertGroupCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestHandlerLeaveGroupReturnsSuccess(t *testing.T) {
@@ -1401,7 +1402,7 @@ func TestHandlerLeaveGroupReturnsSuccess(t *testing.T) {
 	handler.LeaveGroup(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -1417,7 +1418,7 @@ func TestHandlerLeaveGroupRejectsInvalidJSON(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "leave_invalid_json_groups_ffffffff")
 	rr := httptest.NewRecorder()
 	handler.LeaveGroup(rr, req)
-	assertGroupCode(t, rr, 10000)
+	assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerLeaveGroupReturns10300WhenNotFound(t *testing.T) {
@@ -1427,7 +1428,7 @@ func TestHandlerLeaveGroupReturns10300WhenNotFound(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.LeaveGroup(rr, req)
-	assertGroupCode(t, rr, 10300)
+	assertGroupCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestHandlerListMyApplicationsReturnsSuccess(t *testing.T) {
@@ -1438,7 +1439,7 @@ func TestHandlerListMyApplicationsReturnsSuccess(t *testing.T) {
 	handler.ListMyApplications(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -1454,7 +1455,7 @@ func TestHandlerListMyApplicationsRejectsInvalidJSON(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyApplications(rr, req)
-	assertGroupCode(t, rr, 10000)
+	assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerCancelApplicationReturnsSuccess(t *testing.T) {
@@ -1469,7 +1470,7 @@ func TestHandlerCancelApplicationReturnsSuccess(t *testing.T) {
 	handler.CancelApplication(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -1484,7 +1485,7 @@ func TestHandlerCancelApplicationRejectsMissingApplicationID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_applications/cancel", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.CancelApplication(rr, req)
-	assertGroupCode(t, rr, 10000)
+	assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 // --- TransferOwnership ---
@@ -1502,7 +1503,7 @@ func TestHandlerTransferOwnershipReturnsSuccess(t *testing.T) {
 	handler.TransferOwnership(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -1517,7 +1518,7 @@ func TestHandlerTransferOwnershipRejectsMissingGroupID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/transfer_ownership", strings.NewReader(`{"new_owner_id":"user_bob"}`))
 	rr := httptest.NewRecorder()
 	handler.TransferOwnership(rr, req)
-	assertGroupCode(t, rr, 10000)
+	assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerTransferOwnershipRejectsMissingNewOwnerID(t *testing.T) {
@@ -1525,7 +1526,7 @@ func TestHandlerTransferOwnershipRejectsMissingNewOwnerID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/transfer_ownership", strings.NewReader(`{"group_id":"g1"}`))
 	rr := httptest.NewRecorder()
 	handler.TransferOwnership(rr, req)
-	assertGroupCode(t, rr, 10000)
+	assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerTransferOwnershipReturns10300WhenNotFound(t *testing.T) {
@@ -1534,7 +1535,7 @@ func TestHandlerTransferOwnershipReturns10300WhenNotFound(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.TransferOwnership(rr, req)
-	assertGroupCode(t, rr, 10300)
+	assertGroupCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestHandlerTransferOwnershipReturns10200WhenAccessRestricted(t *testing.T) {
@@ -1547,7 +1548,7 @@ func TestHandlerTransferOwnershipReturns10200WhenAccessRestricted(t *testing.T) 
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.TransferOwnership(rr, req)
-	assertGroupCode(t, rr, 10200)
+	assertGroupCode(t, rr, httpx.CodeForbidden)
 }
 
 func TestHandlerTransferOwnershipReturns10400WhenTargetNotMember(t *testing.T) {
@@ -1561,7 +1562,7 @@ func TestHandlerTransferOwnershipReturns10400WhenTargetNotMember(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.TransferOwnership(rr, req)
-	assertGroupCode(t, rr, 10400)
+	assertGroupCode(t, rr, httpx.CodeConflict)
 }
 
 func TestHandlerTransferOwnershipReturns10600OnUnknownError(t *testing.T) {
@@ -1576,7 +1577,7 @@ func TestHandlerTransferOwnershipReturns10600OnUnknownError(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.TransferOwnership(rr, req)
-	assertGroupCode(t, rr, 10600)
+	assertGroupCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 // --- ListMyInvites ---
@@ -1593,7 +1594,7 @@ func TestHandlerListMyInvitesReturnsSuccess(t *testing.T) {
 	handler.ListMyInvites(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data struct {
 			Items []GroupInviteItem `json:"items"`
 		} `json:"data"`
@@ -1615,7 +1616,7 @@ func TestHandlerListMyInvitesRejectsInvalidJSON(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyInvites(rr, req)
-	assertGroupCode(t, rr, 10000)
+	assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerListMyInvitesReturns10600OnError(t *testing.T) {
@@ -1624,7 +1625,7 @@ func TestHandlerListMyInvitesReturns10600OnError(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyInvites(rr, req)
-	assertGroupCode(t, rr, 10600)
+	assertGroupCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 // --- AcceptInvite ---
@@ -1642,7 +1643,7 @@ func TestHandlerAcceptInviteReturnsSuccess(t *testing.T) {
 	handler.AcceptInvite(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -1658,7 +1659,7 @@ func TestHandlerAcceptInviteRejectsMissingInviteID(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "accept-invite-missing-12345678901234")
 	rr := httptest.NewRecorder()
 	handler.AcceptInvite(rr, req)
-	assertGroupCode(t, rr, 10000)
+	assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerAcceptInviteReturns10300WhenNotFound(t *testing.T) {
@@ -1668,7 +1669,7 @@ func TestHandlerAcceptInviteReturns10300WhenNotFound(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.AcceptInvite(rr, req)
-	assertGroupCode(t, rr, 10300)
+	assertGroupCode(t, rr, httpx.CodeNotFound)
 }
 
 // --- RemoveMember ---
@@ -1690,7 +1691,7 @@ func TestHandlerRemoveMemberReturnsSuccess(t *testing.T) {
 	handler.RemoveMember(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -1705,7 +1706,7 @@ func TestHandlerRemoveMemberRejectsMissingGroupID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/members/remove", strings.NewReader(`{"user_id":"user_bob"}`))
 	rr := httptest.NewRecorder()
 	handler.RemoveMember(rr, req)
-	assertGroupCode(t, rr, 10000)
+	assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerRemoveMemberRejectsMissingUserID(t *testing.T) {
@@ -1713,7 +1714,7 @@ func TestHandlerRemoveMemberRejectsMissingUserID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/members/remove", strings.NewReader(`{"group_id":"g1"}`))
 	rr := httptest.NewRecorder()
 	handler.RemoveMember(rr, req)
-	assertGroupCode(t, rr, 10000)
+	assertGroupCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerRemoveMemberReturns10300WhenNotFound(t *testing.T) {
@@ -1722,7 +1723,7 @@ func TestHandlerRemoveMemberReturns10300WhenNotFound(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.RemoveMember(rr, req)
-	assertGroupCode(t, rr, 10300)
+	assertGroupCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestHandlerRemoveMemberReturns10200WhenAccessRestricted(t *testing.T) {
@@ -1735,7 +1736,7 @@ func TestHandlerRemoveMemberReturns10200WhenAccessRestricted(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.RemoveMember(rr, req)
-	assertGroupCode(t, rr, 10200)
+	assertGroupCode(t, rr, httpx.CodeForbidden)
 }
 
 func TestHandlerRemoveMemberReturns10600OnUnknownError(t *testing.T) {
@@ -1749,5 +1750,5 @@ func TestHandlerRemoveMemberReturns10600OnUnknownError(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.RemoveMember(rr, req)
-	assertGroupCode(t, rr, 10600)
+	assertGroupCode(t, rr, httpx.CodeInternalUnavailable)
 }

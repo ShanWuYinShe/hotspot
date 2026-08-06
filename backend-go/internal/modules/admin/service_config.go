@@ -44,7 +44,7 @@ func (s *Service) GetAuditLog(ctx context.Context, logID string) (AuditLogItem, 
 		return AuditLogItem{}, nil, err
 	}
 	if !found {
-		return AuditLogItem{}, &httpx.APIError{Code: 10300, Message: "审计日志不存在"}, nil
+		return AuditLogItem{}, &httpx.APIError{Code: httpx.CodeNotFound, Message: "审计日志不存在"}, nil
 	}
 	return item, nil, nil
 }

@@ -18,7 +18,7 @@ import (
 type Module struct {
 	handler *Handler
 	// Repo is exposed so bootstrap can wire its IsBanned into the platform auth
-	// Service (BanChecker), enforcing 10201 for banned accounts.
+	// Service (BanChecker), enforcing httpx.CodeAccountBanned for banned accounts.
 	Repo Repository
 }
 

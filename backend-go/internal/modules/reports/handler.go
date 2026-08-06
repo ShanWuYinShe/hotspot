@@ -15,32 +15,32 @@ func logServerError(r *http.Request, method string, err error) {
 	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
 }
 
-func logBusinessError(r *http.Request, method string, code int, message string) {
+func logBusinessError(r *http.Request, method string, code httpx.Code, message string) {
 	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var req CreateReportRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.TargetType == "" || req.TargetID == "" || req.Reason == "" {
-		logBusinessError(r, "Create", 10000, "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		logBusinessError(r, "Create", httpx.CodeInvalidRequest, "参数错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	created, err := h.service.Create(r.Context(), req)
 	if err != nil {
 		switch err.Error() {
 		case "reports: invalid request":
-			logBusinessError(r, "Create", 10000, "参数错误")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+			logBusinessError(r, "Create", httpx.CodeInvalidRequest, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		case "reports: target not found":
-			logBusinessError(r, "Create", 10300, "举报目标不存在")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "举报目标不存在"))
+			logBusinessError(r, "Create", httpx.CodeNotFound, "举报目标不存在")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "举报目标不存在"))
 		case "reports: self report":
-			logBusinessError(r, "Create", 10400, "举报被拒绝")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "举报被拒绝"))
+			logBusinessError(r, "Create", httpx.CodeConflict, "举报被拒绝")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "举报被拒绝"))
 		default:
 			logServerError(r, "Create", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		}
 		return
 	}
@@ -50,14 +50,14 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	var req MyReportsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		logBusinessError(r, "List", 10000, "请求体格式错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		logBusinessError(r, "List", httpx.CodeInvalidRequest, "请求体格式错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
 		return
 	}
 	list, err := h.service.List(r.Context(), req)
 	if err != nil {
 		logServerError(r, "List", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))

@@ -10,10 +10,11 @@ import (
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
 )
 
-// momentErrRepo 以错误 repo 驱动 handler 的 10600 分支。
+// momentErrRepo 以错误 repo 驱动 handler 的 httpx.CodeInternalUnavailable 分支。
 type momentErrRepo struct {
 	repo *InMemoryRepository
 	err  error
@@ -75,10 +76,10 @@ func (r *momentErrRepo) FetchMomentImageRows(ctx context.Context, momentIDs []st
 	return r.repo.FetchMomentImageRows(ctx, momentIDs)
 }
 
-func decodeMomentCode(t *testing.T, rr *httptest.ResponseRecorder) int {
+func decodeMomentCode(t *testing.T, rr *httptest.ResponseRecorder) httpx.Code {
 	t.Helper()
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode: %v", err)
@@ -93,34 +94,34 @@ func TestMomentHandlerErrorPaths(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/get_detail", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.OpenTheDoor(rr, req)
-	if code := decodeMomentCode(t, rr); code != 10000 {
-		t.Fatalf("empty moment id: expected 10000, got %d", code)
+	if code := decodeMomentCode(t, rr); code != httpx.CodeInvalidRequest {
+		t.Fatalf("empty moment id: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 
-	// OpenTheDoor：不存在 → 10300
+	// OpenTheDoor：不存在 → httpx.CodeNotFound
 	req = httptest.NewRequest(http.MethodPost, "/get_detail", strings.NewReader(`{"moment_id":"missing"}`))
 	rr = httptest.NewRecorder()
 	handler.OpenTheDoor(rr, req)
-	if code := decodeMomentCode(t, rr); code != 10300 {
-		t.Fatalf("missing moment: expected 10300, got %d", code)
+	if code := decodeMomentCode(t, rr); code != httpx.CodeNotFound {
+		t.Fatalf("missing moment: expected httpx.CodeNotFound, got %d", code)
 	}
 
-	// OpenTheDoor：服务错误 → 10600
+	// OpenTheDoor：服务错误 → httpx.CodeInternalUnavailable
 	handler2 := NewHandler(NewServiceWithRepo(&momentErrRepo{repo: NewInMemoryRepository(), err: errors.New("boom")}))
 	req = httptest.NewRequest(http.MethodPost, "/get_detail", strings.NewReader(`{"moment_id":"m1"}`))
 	rr = httptest.NewRecorder()
 	handler2.OpenTheDoor(rr, req)
-	if code := decodeMomentCode(t, rr); code != 10600 {
-		t.Fatalf("service error: expected 10600, got %d", code)
+	if code := decodeMomentCode(t, rr); code != httpx.CodeInternalUnavailable {
+		t.Fatalf("service error: expected httpx.CodeInternalUnavailable, got %d", code)
 	}
 
-	// ListMine：服务错误 → 10600
+	// ListMine：服务错误 → httpx.CodeInternalUnavailable
 	handler3 := NewHandler(NewServiceWithRepo(&momentErrRepo{repo: NewInMemoryRepository(), err: errors.New("boom")}))
 	req = httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{}`))
 	rr = httptest.NewRecorder()
 	handler3.ListMine(rr, req)
-	if code := decodeMomentCode(t, rr); code != 10600 {
-		t.Fatalf("list error: expected 10600, got %d", code)
+	if code := decodeMomentCode(t, rr); code != httpx.CodeInternalUnavailable {
+		t.Fatalf("list error: expected httpx.CodeInternalUnavailable, got %d", code)
 	}
 }
 
@@ -132,8 +133,8 @@ func TestCreateMomentRejectsBadCoordinates(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "coords1234coords1234coords1234coords")
 	rr := httptest.NewRecorder()
 	handler.Create(rr, req)
-	if code := decodeMomentCode(t, rr); code != 10000 {
-		t.Fatalf("bad coordinates: expected 10000, got %d", code)
+	if code := decodeMomentCode(t, rr); code != httpx.CodeInvalidRequest {
+		t.Fatalf("bad coordinates: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 }
 
@@ -146,8 +147,8 @@ func TestCreateMomentRejectsOverlongDescription(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "overlong1234overlong1234over1234")
 	rr := httptest.NewRecorder()
 	handler.Create(rr, req)
-	if code := decodeMomentCode(t, rr); code != 10000 {
-		t.Fatalf("overlong description: expected 10000, got %d", code)
+	if code := decodeMomentCode(t, rr); code != httpx.CodeInvalidRequest {
+		t.Fatalf("overlong description: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 }
 
@@ -161,40 +162,40 @@ func TestMomentUpdateAndDeleteErrorPaths(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 
-	// Update 不存在 → 10300
+	// Update 不存在 → httpx.CodeNotFound
 	req := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"moment_id":"missing","description":"x"}`))
 	req = req.WithContext(principalMoments("u1"))
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
-	if code := decodeMomentCode(t, rr); code != 10300 {
-		t.Fatalf("update missing: expected 10300, got %d", code)
+	if code := decodeMomentCode(t, rr); code != httpx.CodeNotFound {
+		t.Fatalf("update missing: expected httpx.CodeNotFound, got %d", code)
 	}
 
-	// Update 非 owner → 10200
+	// Update 非 owner → httpx.CodeForbidden
 	req = httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"moment_id":"`+created.MomentID+`","description":"x"}`))
 	req = req.WithContext(principalMoments("u2"))
 	rr = httptest.NewRecorder()
 	handler.Update(rr, req)
-	if code := decodeMomentCode(t, rr); code != 10200 {
-		t.Fatalf("update foreign: expected 10200, got %d", code)
+	if code := decodeMomentCode(t, rr); code != httpx.CodeForbidden {
+		t.Fatalf("update foreign: expected httpx.CodeForbidden, got %d", code)
 	}
 
-	// Update 参数缺失 → 10000
+	// Update 参数缺失 → httpx.CodeInvalidRequest
 	req = httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{}`))
 	req = req.WithContext(principalMoments("u1"))
 	rr = httptest.NewRecorder()
 	handler.Update(rr, req)
-	if code := decodeMomentCode(t, rr); code != 10000 {
-		t.Fatalf("update empty: expected 10000, got %d", code)
+	if code := decodeMomentCode(t, rr); code != httpx.CodeInvalidRequest {
+		t.Fatalf("update empty: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 
-	// Delete 不存在 → 10300
+	// Delete 不存在 → httpx.CodeNotFound
 	req = httptest.NewRequest(http.MethodPost, "/delete", strings.NewReader(`{"moment_id":"missing"}`))
 	req = req.WithContext(principalMoments("u1"))
 	rr = httptest.NewRecorder()
 	handler.Delete(rr, req)
-	if code := decodeMomentCode(t, rr); code != 10300 {
-		t.Fatalf("delete missing: expected 10300, got %d", code)
+	if code := decodeMomentCode(t, rr); code != httpx.CodeNotFound {
+		t.Fatalf("delete missing: expected httpx.CodeNotFound, got %d", code)
 	}
 }
 
@@ -206,30 +207,30 @@ func TestMomentFavoriteErrorPaths(t *testing.T) {
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 
-	// 空 moment_id → 10000
+	// 空 moment_id → httpx.CodeInvalidRequest
 	req := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.Favorite(rr, req)
-	if code := decodeMomentCode(t, rr); code != 10000 {
-		t.Fatalf("empty favorite: expected 10000, got %d", code)
+	if code := decodeMomentCode(t, rr); code != httpx.CodeInvalidRequest {
+		t.Fatalf("empty favorite: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 
-	// 不存在的 moment → 10300
+	// 不存在的 moment → httpx.CodeNotFound
 	req = httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{"moment_id":"missing","active":true}`))
 	req = req.WithContext(principalMoments("u1"))
 	rr = httptest.NewRecorder()
 	handler.Favorite(rr, req)
-	if code := decodeMomentCode(t, rr); code != 10300 {
-		t.Fatalf("favorite missing: expected 10300, got %d", code)
+	if code := decodeMomentCode(t, rr); code != httpx.CodeNotFound {
+		t.Fatalf("favorite missing: expected httpx.CodeNotFound, got %d", code)
 	}
 
-	// ListFavorites 参数错误 → 10000
+	// ListFavorites 参数错误 → httpx.CodeInvalidRequest
 	req = httptest.NewRequest(http.MethodPost, "/list_favorites", strings.NewReader(`not-json`))
 	req = req.WithContext(principalMoments("u1"))
 	rr = httptest.NewRecorder()
 	handler.ListFavorites(rr, req)
-	if code := decodeMomentCode(t, rr); code != 10000 {
-		t.Fatalf("list favorites malformed: expected 10000, got %d", code)
+	if code := decodeMomentCode(t, rr); code != httpx.CodeInvalidRequest {
+		t.Fatalf("list favorites malformed: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 }
 
@@ -241,12 +242,12 @@ func TestMomentDeletePermissionDenied(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	// 非 owner 删除 → 10200
+	// 非 owner 删除 → httpx.CodeForbidden
 	req := httptest.NewRequest(http.MethodPost, "/delete", strings.NewReader(`{"moment_id":"`+created.MomentID+`"}`))
 	req = req.WithContext(principalMoments("u2"))
 	rr := httptest.NewRecorder()
 	handler.Delete(rr, req)
-	if code := decodeMomentCode(t, rr); code != 10200 {
-		t.Fatalf("foreign delete: expected 10200, got %d", code)
+	if code := decodeMomentCode(t, rr); code != httpx.CodeForbidden {
+		t.Fatalf("foreign delete: expected httpx.CodeForbidden, got %d", code)
 	}
 }

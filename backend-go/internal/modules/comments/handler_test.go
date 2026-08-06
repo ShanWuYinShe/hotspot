@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/httpx"
 )
 
 // --- stub repo ---
@@ -105,9 +106,9 @@ func setIDKey(req *http.Request) {
 }
 
 type apiResponse[T any] struct {
-	Code    int    `json:"code"`
-	Data    T      `json:"data"`
-	Message string `json:"message,omitempty"`
+	Code    httpx.Code `json:"code"`
+	Data    T          `json:"data"`
+	Message string     `json:"message,omitempty"`
 }
 
 func decodeResponse[T any](t *testing.T, rr *httptest.ResponseRecorder) apiResponse[T] {
@@ -119,7 +120,7 @@ func decodeResponse[T any](t *testing.T, rr *httptest.ResponseRecorder) apiRespo
 	return resp
 }
 
-func assertCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+func assertCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx.Code) {
 	t.Helper()
 	resp := decodeResponse[json.RawMessage](t, rr)
 	if resp.Code != expected {
@@ -159,7 +160,7 @@ func TestHandlerCreateRejectsMissingIdempotencyKey(t *testing.T) {
 	// no Idempotency-Key header
 
 	handler.Create(rr, req)
-	assertCode(t, rr, 10000)
+	assertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerCreateRejectsInvalidJSON(t *testing.T) {
@@ -170,7 +171,7 @@ func TestHandlerCreateRejectsInvalidJSON(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "bbbb1111bbbb1111bbbb1111bbbb1111")
 
 	handler.Create(rr, req)
-	assertCode(t, rr, 10000)
+	assertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerCreateRejectsMissingMomentID(t *testing.T) {
@@ -181,7 +182,7 @@ func TestHandlerCreateRejectsMissingMomentID(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "cccc1111cccc1111cccc1111cccc1111")
 
 	handler.Create(rr, req)
-	assertCode(t, rr, 10000)
+	assertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerCreateRejectsMissingContent(t *testing.T) {
@@ -192,7 +193,7 @@ func TestHandlerCreateRejectsMissingContent(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "dddd1111dddd1111dddd1111dddd1111")
 
 	handler.Create(rr, req)
-	assertCode(t, rr, 10000)
+	assertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerCreateRejectsMomentNotFound(t *testing.T) {
@@ -203,7 +204,7 @@ func TestHandlerCreateRejectsMomentNotFound(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "mmmm1234mmmm1234mmmm1234mmmm1234")
 
 	handler.Create(rr, req)
-	assertCode(t, rr, 10300)
+	assertCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestHandlerCreatePropagatesError(t *testing.T) {
@@ -215,7 +216,7 @@ func TestHandlerCreatePropagatesError(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "eeee1234eeee1234eeee1234eeee1234")
 
 	handler.Create(rr, req)
-	assertCode(t, rr, 10600)
+	assertCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 func TestHandlerCreateRejectsPrivateMomentNoPermission(t *testing.T) {
@@ -227,7 +228,7 @@ func TestHandlerCreateRejectsPrivateMomentNoPermission(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "pppp1234pppp1234pppp1234pppp1234")
 
 	handler.Create(rr, req)
-	assertCode(t, rr, 10200)
+	assertCode(t, rr, httpx.CodeForbidden)
 }
 
 // --- List tests ---
@@ -256,7 +257,7 @@ func TestHandlerListRejectsInvalidJSON(t *testing.T) {
 	req = withAuth(req, "u1")
 
 	handler.List(rr, req)
-	assertCode(t, rr, 10000)
+	assertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerListRejectsMissingMomentID(t *testing.T) {
@@ -266,7 +267,7 @@ func TestHandlerListRejectsMissingMomentID(t *testing.T) {
 	req = withAuth(req, "u1")
 
 	handler.List(rr, req)
-	assertCode(t, rr, 10000)
+	assertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerListRejectsMomentNotFound(t *testing.T) {
@@ -276,7 +277,7 @@ func TestHandlerListRejectsMomentNotFound(t *testing.T) {
 	req = withAuth(req, "u1")
 
 	handler.List(rr, req)
-	assertCode(t, rr, 10300)
+	assertCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestHandlerListPropagatesError(t *testing.T) {
@@ -287,7 +288,7 @@ func TestHandlerListPropagatesError(t *testing.T) {
 	req = withAuth(req, "u1")
 
 	handler.List(rr, req)
-	assertCode(t, rr, 10600)
+	assertCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 // --- Delete tests ---
@@ -312,7 +313,7 @@ func TestHandlerDeleteRejectsInvalidJSON(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "delete_invalid_json_cmnt_bbbbbbbbb")
 
 	handler.Delete(rr, req)
-	assertCode(t, rr, 10000)
+	assertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerDeleteRejectsMissingCommentID(t *testing.T) {
@@ -323,7 +324,7 @@ func TestHandlerDeleteRejectsMissingCommentID(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "delete_no_comment_id_cmnt_ccccccc")
 
 	handler.Delete(rr, req)
-	assertCode(t, rr, 10000)
+	assertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerDeleteRejectsNotFound(t *testing.T) {
@@ -335,7 +336,7 @@ func TestHandlerDeleteRejectsNotFound(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "delete_not_found_cmnt_ddddddddddd")
 
 	handler.Delete(rr, req)
-	assertCode(t, rr, 10300)
+	assertCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestHandlerDeleteRejectsNotOwner(t *testing.T) {
@@ -347,7 +348,7 @@ func TestHandlerDeleteRejectsNotOwner(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "delete_not_owner_cmnt_eeeeeeeeeeee")
 
 	handler.Delete(rr, req)
-	assertCode(t, rr, 10200)
+	assertCode(t, rr, httpx.CodeForbidden)
 }
 
 func TestHandlerDeletePropagatesError(t *testing.T) {
@@ -359,7 +360,7 @@ func TestHandlerDeletePropagatesError(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "delete_propagate_cmnt_fffffffffffff")
 
 	handler.Delete(rr, req)
-	assertCode(t, rr, 10600)
+	assertCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 // --- ListReplies tests ---
@@ -389,7 +390,7 @@ func TestHandlerListRepliesRejectsNotFound(t *testing.T) {
 	req = withAuth(req, "u1")
 
 	handler.ListReplies(rr, req)
-	assertCode(t, rr, 10300)
+	assertCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestHandlerListRepliesRejectsInvalidJSON(t *testing.T) {
@@ -399,7 +400,7 @@ func TestHandlerListRepliesRejectsInvalidJSON(t *testing.T) {
 	req = withAuth(req, "u1")
 
 	handler.ListReplies(rr, req)
-	assertCode(t, rr, 10000)
+	assertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 // TestHandlerListMapsInvalidCursorToParamError mirrors the above for the
@@ -412,7 +413,7 @@ func TestHandlerListMapsInvalidCursorToParamError(t *testing.T) {
 	req = withAuth(req, "u1")
 
 	handler.List(rr, req)
-	assertCode(t, rr, 10000)
+	assertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 // TestHandlerListRepliesMapsInvalidCursorToParamError mirrors the above for
@@ -425,13 +426,13 @@ func TestHandlerListRepliesMapsInvalidCursorToParamError(t *testing.T) {
 	req = withAuth(req, "u1")
 
 	handler.ListReplies(rr, req)
-	assertCode(t, rr, 10000)
+	assertCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 // TestDecodeCommentCursorRejectsMalformed verifies the repo-level cursor
 // decoder returns ErrInvalidCursor (not the catch-all persistence
 // ErrNotImplemented) for every malformed-input path. This is what the
-// handlers above rely on for the 10000 mapping.
+// handlers above rely on for the httpx.CodeInvalidRequest mapping.
 func TestDecodeCommentCursorRejectsMalformed(t *testing.T) {
 	cases := map[string]string{
 		"not base64":        "@@not-base64@@",
@@ -501,7 +502,7 @@ func TestHandlerGetDetailMapsNotFoundTo10300(t *testing.T) {
 	req := withAuth(httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"comment_id":"missing"}`)), "u1")
 
 	handler.GetDetail(rr, req)
-	assertCode(t, rr, 10300)
+	assertCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestHandlerGetDetailRejectsMissingCommentID(t *testing.T) {
@@ -510,5 +511,5 @@ func TestHandlerGetDetailRejectsMissingCommentID(t *testing.T) {
 	req := withAuth(httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{}`)), "u1")
 
 	handler.GetDetail(rr, req)
-	assertCode(t, rr, 10000)
+	assertCode(t, rr, httpx.CodeInvalidRequest)
 }

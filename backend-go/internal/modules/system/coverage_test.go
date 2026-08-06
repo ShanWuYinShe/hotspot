@@ -10,6 +10,7 @@ import (
 
 	"hotspot/backend-go/internal/platform/appconfig"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/httpx"
 )
 
 // fakeBootstrapResolver 提供确定性的 profile/unread 摘要，供 Bootstrap
@@ -77,7 +78,7 @@ func TestBootstrapHandlerReturnsSpecShape(t *testing.T) {
 	handler.Bootstrap(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data struct {
 			BootstrapVersion string `json:"bootstrap_version"`
 			Meta             struct {
@@ -101,13 +102,13 @@ func TestBootstrapHandlerRejectsMalformedBody(t *testing.T) {
 	handler.Bootstrap(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 10000 {
-		t.Fatalf("expected 10000 for malformed body, got %d", resp.Code)
+	if resp.Code != httpx.CodeInvalidRequest {
+		t.Fatalf("expected httpx.CodeInvalidRequest for malformed body, got %d", resp.Code)
 	}
 }
 
@@ -124,7 +125,7 @@ func TestBootstrapHandlerCarriesResolverData(t *testing.T) {
 	handler.Bootstrap(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data struct {
 			Profile       map[string]any `json:"profile"`
 			UnreadSummary *UnreadSummary `json:"unread_summary"`
@@ -145,12 +146,12 @@ func TestGetClientConfigRejectsNonEmptyBody(t *testing.T) {
 	handler.GetClientConfig(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 10000 {
-		t.Fatalf("expected 10000 for non-empty body, got %d", resp.Code)
+	if resp.Code != httpx.CodeInvalidRequest {
+		t.Fatalf("expected httpx.CodeInvalidRequest for non-empty body, got %d", resp.Code)
 	}
 }

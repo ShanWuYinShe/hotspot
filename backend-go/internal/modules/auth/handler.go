@@ -26,7 +26,7 @@ func logServerError(r *http.Request, method string, err error) {
 	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
 }
 
-func logBusinessError(r *http.Request, method string, code int, message string) {
+func logBusinessError(r *http.Request, method string, code httpx.Code, message string) {
 	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
 }
 
@@ -45,16 +45,16 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	var req RegisterRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
 		return
 	}
 	if req.LoginID == "" || req.Nickname == "" || req.Password == "" || (req.ClientType != ClientTypeWeb && req.ClientType != ClientTypeApp) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	deviceID := resolveDeviceID(r, req.DeviceID)
 	if deviceID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	if req.ClientType == ClientTypeWeb {
@@ -80,22 +80,22 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
 		return
 	}
 	if req.LoginID == "" || req.Password == "" || (req.ClientType != ClientTypeWeb && req.ClientType != ClientTypeApp) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	deviceID := resolveDeviceID(r, req.DeviceID)
 	if deviceID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	result, err := h.service.Login(r.Context(), req, sessionMetaFromRequest(r, req.ClientType, deviceID))
 	if err != nil {
 		apiErr := apiErrorFrom(err)
-		if apiErr.Code == 10600 {
+		if apiErr.Code == httpx.CodeInternalUnavailable {
 			logServerError(r, "Login", err)
 		} else {
 			logBusinessError(r, "Login", apiErr.Code, apiErr.Message)
@@ -113,16 +113,16 @@ func (h *Handler) Guest(w http.ResponseWriter, r *http.Request) {
 	}
 	var req GuestRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
 		return
 	}
 	if req.Nickname == "" || (req.ClientType != ClientTypeWeb && req.ClientType != ClientTypeApp) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	deviceID := resolveDeviceID(r, req.DeviceID)
 	if deviceID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	if req.ClientType == ClientTypeWeb {
@@ -148,24 +148,24 @@ func (h *Handler) Guest(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	var req RefreshTokenRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
 		return
 	}
 	if req.ClientType != ClientTypeWeb && req.ClientType != ClientTypeApp {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	if req.ClientType == ClientTypeWeb && req.RefreshToken != "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	if req.ClientType == ClientTypeApp && req.RefreshToken == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	deviceID := resolveDeviceID(r, req.DeviceID)
 	if req.ClientType == ClientTypeApp && deviceID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	refreshCookie := ""
@@ -174,8 +174,8 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.service.Refresh(r.Context(), req, deviceID, refreshCookie)
 	if err != nil {
-		logBusinessError(r, "RefreshToken", 10100, "Refresh Token 无效或过期")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10100, "Refresh Token 无效或过期"))
+		logBusinessError(r, "RefreshToken", httpx.CodeUnauthorized, "Refresh Token 无效或过期")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeUnauthorized, "Refresh Token 无效或过期"))
 		return
 	}
 	if req.ClientType == ClientTypeWeb {
@@ -197,11 +197,11 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 	var req RequestPasswordResetRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
 		return
 	}
 	if req.LoginID == "" || (req.ClientType != ClientTypeWeb && req.ClientType != ClientTypeApp) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	// 幂等语义（spec api_spec_auth.md）：本接口靠 IP 限流保护，无需
@@ -216,15 +216,15 @@ func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	var req ResetPasswordRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
 		return
 	}
 	if req.LoginID == "" || req.VerificationCode == "" || req.NewPassword == "" || (req.ClientType != ClientTypeWeb && req.ClientType != ClientTypeApp) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	// 自然去重（spec api_spec_auth.md）：验证码为一次性凭证，首次成功后即失效，
-	// 重发返回 10300（验证码已用/过期），不会重复改密。无需 Idempotency-Key。
+	// 重发返回 httpx.CodeNotFound（验证码已用/过期），不会重复改密。无需 Idempotency-Key。
 	if req.ClientType == ClientTypeWeb {
 		result, err := h.service.ResetPassword(r.Context(), req, sessionMetaFromRequest(r, req.ClientType, resolveDeviceID(r, "")))
 		if err != nil {
@@ -246,15 +246,15 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	var req ChangePasswordRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
 		return
 	}
 	if req.OldPassword == "" || req.NewPassword == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	// 自然去重（spec api_spec_auth.md）：首次成功后旧密码立即失效，
-	// 重发同一请求（仍带旧密码）返回 10100，不会重复改密。无需 Idempotency-Key。
+	// 重发同一请求（仍带旧密码）返回 httpx.CodeUnauthorized，不会重复改密。无需 Idempotency-Key。
 	if err := h.service.ChangePassword(r.Context(), req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, errorResponse[struct{}](apiErrorFrom(err)))
 		return
@@ -274,22 +274,22 @@ func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 	var req RevokeSessionRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
 		return
 	}
 	if req.SessionID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	if err := h.service.RevokeSession(r.Context(), req); err != nil {
 		// service 以 %w 包装底层错误，必须用 errors.As 解包 APIError
-		//（type assertion 会因包装而失效，导致业务错误码退化为 10600）。
+		//（type assertion 会因包装而失效，导致业务错误码退化为 httpx.CodeInternalUnavailable）。
 		var apiErr *httpx.APIError
 		if errors.As(err, &apiErr) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(apiErr.Code, apiErr.Message))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
@@ -343,7 +343,7 @@ func authSuccessApp(result platformauth.AuthResult) httpx.ApiResponse[AuthTokenP
 
 func errorResponse[T any](apiErr *httpx.APIError) httpx.ApiResponse[T] {
 	if apiErr == nil {
-		apiErr = &httpx.APIError{Code: 10600, Message: "服务暂时不可用"}
+		apiErr = &httpx.APIError{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 	}
 	return httpx.ApiResponse[T]{Code: apiErr.Code, Message: apiErr.Message}
 }

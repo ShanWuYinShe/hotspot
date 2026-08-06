@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/httpx"
 )
 
 func TestFollowingRejectsInvalidJSON(t *testing.T) {
@@ -18,7 +19,7 @@ func TestFollowingRejectsInvalidJSON(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
 	handler.Following(rr, req)
-	assertFeedCode(t, rr, 10000)
+	assertFeedCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestFollowingUsesDefaultLocationWhenMissingReferencePoint(t *testing.T) {
@@ -48,7 +49,7 @@ func TestNearbyRejectsInvalidReferencePoint(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
 	handler.Nearby(rr, req)
-	assertFeedCode(t, rr, 10000)
+	assertFeedCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestNearbyUsersRejectsInvalidRadiusViaService(t *testing.T) {
@@ -58,7 +59,7 @@ func TestNearbyUsersRejectsInvalidRadiusViaService(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
 	handler.NearbyUsers(rr, req)
-	assertFeedCode(t, rr, 10000)
+	assertFeedCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestNearbyGroupsRejectsInvalidCursor(t *testing.T) {
@@ -68,7 +69,7 @@ func TestNearbyGroupsRejectsInvalidCursor(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
 	handler.NearbyGroups(rr, req)
-	assertFeedCode(t, rr, 10000)
+	assertFeedCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestNearbyUsersReturns10600OnServiceError(t *testing.T) {
@@ -78,7 +79,7 @@ func TestNearbyUsersReturns10600OnServiceError(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
 
 	handler.NearbyUsers(rr, req)
-	assertFeedCode(t, rr, 10600)
+	assertFeedCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 func TestTrendingRejectsInvalidJSON(t *testing.T) {
@@ -87,7 +88,7 @@ func TestTrendingRejectsInvalidJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/trending", strings.NewReader(`[`))
 
 	handler.Trending(rr, req)
-	assertFeedCode(t, rr, 10000)
+	assertFeedCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestTrendingReturnsBundle(t *testing.T) {
@@ -206,12 +207,12 @@ func TestTrendingReturns10600OnRepoError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/trending", strings.NewReader(`{}`))
 
 	handler.Trending(rr, req)
-	assertFeedCode(t, rr, 10600)
+	assertFeedCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 type feedAPIResponse[T any] struct {
-	Code int `json:"code"`
-	Data T   `json:"data"`
+	Code httpx.Code `json:"code"`
+	Data T          `json:"data"`
 }
 
 func decodeFeedResponse[T any](t *testing.T, rr *httptest.ResponseRecorder) feedAPIResponse[T] {
@@ -223,7 +224,7 @@ func decodeFeedResponse[T any](t *testing.T, rr *httptest.ResponseRecorder) feed
 	return resp
 }
 
-func assertFeedCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+func assertFeedCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx.Code) {
 	t.Helper()
 	resp := decodeFeedResponse[map[string]any](t, rr)
 	if resp.Code != expected {

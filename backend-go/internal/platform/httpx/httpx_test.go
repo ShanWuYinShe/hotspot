@@ -9,7 +9,7 @@ import (
 )
 
 func TestAPIErrorError(t *testing.T) {
-	err := &APIError{Code: 10000, Message: "参数错误"}
+	err := &APIError{Code: CodeInvalidRequest, Message: "参数错误"}
 	if got := err.Error(); got != "api error 10000: 参数错误" {
 		t.Fatalf("unexpected error string: %s", got)
 	}
@@ -24,8 +24,8 @@ func TestSuccessAndErrorHelpers(t *testing.T) {
 	if empty.Code != 0 || empty.Data == nil {
 		t.Fatalf("unexpected empty success payload: %#v", empty)
 	}
-	failure := Error(10300, "不存在")
-	if failure.Code != 10300 || failure.Message != "不存在" {
+	failure := Error(CodeNotFound, "不存在")
+	if failure.Code != CodeNotFound || failure.Message != "不存在" {
 		t.Fatalf("unexpected error payload: %#v", failure)
 	}
 }
@@ -54,7 +54,7 @@ func TestDecodeStrictJSONRejectsUnknownFields(t *testing.T) {
 	}
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name":"ok","extra":1}`))
 	var out payload
-	if err := DecodeStrictJSON(req, &out); err == nil || err.Code != 10000 {
+	if err := DecodeStrictJSON(req, &out); err == nil || err.Code != CodeInvalidRequest {
 		t.Fatalf("expected invalid request, got %v", err)
 	}
 }
@@ -65,7 +65,7 @@ func TestDecodeStrictJSONRejectsTrailingJSON(t *testing.T) {
 	}
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name":"ok"} {}`))
 	var out payload
-	if err := DecodeStrictJSON(req, &out); err == nil || err.Code != 10000 {
+	if err := DecodeStrictJSON(req, &out); err == nil || err.Code != CodeInvalidRequest {
 		t.Fatalf("expected invalid request, got %v", err)
 	}
 }
@@ -98,7 +98,7 @@ func TestRequireEmptyObject(t *testing.T) {
 	// Non-object bodies (arrays, strings, numbers) are rejected.
 	for _, body := range []string{`[]`, `"str"`, `42`} {
 		bad := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
-		if err := RequireEmptyObject(bad); err == nil || err.Code != 10000 {
+		if err := RequireEmptyObject(bad); err == nil || err.Code != CodeInvalidRequest {
 			t.Fatalf("body %q should be rejected as non-object, got %v", body, err)
 		}
 	}
@@ -118,8 +118,8 @@ func TestRecovererReturnsEnvelopeOnPanic(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if resp.Code != 10600 {
-		t.Fatalf("expected code 10600, got %d", resp.Code)
+	if resp.Code != CodeInternalUnavailable {
+		t.Fatalf("expected code CodeInternalUnavailable, got %d", resp.Code)
 	}
 	if strings.Contains(rr.Body.String(), "runtime/debug") || strings.Contains(rr.Body.String(), "goroutine") {
 		t.Fatalf("response leaked stack trace: %s", rr.Body.String())
@@ -136,8 +136,8 @@ func TestNotFoundHandlerReturnsEnvelope(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if resp.Code != 10300 {
-		t.Fatalf("expected code 10300, got %d", resp.Code)
+	if resp.Code != CodeNotFound {
+		t.Fatalf("expected code CodeNotFound, got %d", resp.Code)
 	}
 }
 

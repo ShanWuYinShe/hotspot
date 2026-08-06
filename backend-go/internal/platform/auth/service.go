@@ -18,7 +18,7 @@ type Service struct {
 }
 
 // SetBanChecker injects a ban checker (typically the admin module's
-// repository). Once wired, RequiredAuth rejects banned users with 10201.
+// repository). Once wired, RequiredAuth rejects banned users with httpx.CodeAccountBanned.
 // nil disables ban checking (dev/test default).
 func (s *Service) SetBanChecker(bc BanChecker) { s.banChecker = bc }
 

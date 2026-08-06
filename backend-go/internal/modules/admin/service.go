@@ -40,7 +40,7 @@ func NewService(repo Repository, provider Provider, moderationStore ModerationSt
 func (s *Service) actorFromContext(ctx context.Context) (AdminActor, bool, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
 	if !ok || principal.UserID == "" {
-		return AdminActor{}, false, &httpx.APIError{Code: 10100, Message: "Access Token 无效或过期"}
+		return AdminActor{}, false, &httpx.APIError{Code: httpx.CodeUnauthorized, Message: "Access Token 无效或过期"}
 	}
 	actor, found, err := s.repo.GetActor(ctx, principal.UserID)
 	if err != nil {
@@ -58,10 +58,10 @@ func (s *Service) requirePermission(ctx context.Context, permission string) (Adm
 		return AdminActor{}, nil, err
 	}
 	if !found {
-		return AdminActor{}, &httpx.APIError{Code: 10200, Message: "非系统管理员"}, nil
+		return AdminActor{}, &httpx.APIError{Code: httpx.CodeForbidden, Message: "非系统管理员"}, nil
 	}
 	if !actor.HasPermission(permission) {
-		return AdminActor{}, &httpx.APIError{Code: 10200, Message: "系统管理员权限不足: " + permission}, nil
+		return AdminActor{}, &httpx.APIError{Code: httpx.CodeForbidden, Message: "系统管理员权限不足: " + permission}, nil
 	}
 	return actor, nil, nil
 }

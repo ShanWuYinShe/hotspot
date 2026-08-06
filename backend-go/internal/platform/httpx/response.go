@@ -6,21 +6,21 @@ import (
 )
 
 type ApiResponse[T any] struct {
-	Code    int    `json:"code"`
+	Code    Code   `json:"code"`
 	Message string `json:"message,omitempty"`
 	Data    *T     `json:"data,omitempty"`
 }
 
 func Success[T any](data T) ApiResponse[T] {
-	return ApiResponse[T]{Code: 0, Data: &data}
+	return ApiResponse[T]{Code: CodeOK, Data: &data}
 }
 
 func SuccessEmpty() ApiResponse[struct{}] {
 	empty := struct{}{}
-	return ApiResponse[struct{}]{Code: 0, Data: &empty}
+	return ApiResponse[struct{}]{Code: CodeOK, Data: &empty}
 }
 
-func Error(code int, message string) ApiResponse[struct{}] {
+func Error(code Code, message string) ApiResponse[struct{}] {
 	return ApiResponse[struct{}]{Code: code, Message: message}
 }
 

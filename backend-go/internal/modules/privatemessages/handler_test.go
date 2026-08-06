@@ -12,6 +12,7 @@ import (
 
 	"hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/realtime"
 )
@@ -329,7 +330,7 @@ func TestSendAndHistoryPrivateMessages(t *testing.T) {
 	handler.GetHistory(historyRR, historyReq)
 
 	var resp struct {
-		Code int               `json:"code"`
+		Code httpx.Code        `json:"code"`
 		Data PaginatedMessages `json:"data"`
 	}
 	if err := json.NewDecoder(historyRR.Body).Decode(&resp); err != nil {
@@ -353,7 +354,7 @@ func TestPrivateMessagesSendValidatesByType(t *testing.T) {
 		req.Header.Set("Idempotency-Key", "bbbb1234bbbb1234bbbb1234bbbb1234")
 		rr := httptest.NewRecorder()
 		handler.Send(rr, req)
-		assertPrivateMessageCode(t, rr, 10000)
+		assertPrivateMessageCode(t, rr, httpx.CodeInvalidRequest)
 	}
 }
 
@@ -363,12 +364,12 @@ func TestPrivateMessagesGetHistoryRejectsInvalidPaginationAndUnknownFields(t *te
 	invalidPaginationReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/get_history", strings.NewReader(`{"target_user_id":"user_bob","pagination":{"limit":101}}`)))
 	invalidPaginationRR := httptest.NewRecorder()
 	handler.GetHistory(invalidPaginationRR, invalidPaginationReq)
-	assertPrivateMessageCode(t, invalidPaginationRR, 10000)
+	assertPrivateMessageCode(t, invalidPaginationRR, httpx.CodeInvalidRequest)
 
 	unknownFieldReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/get_history", strings.NewReader(`{"target_user_id":"user_bob","extra":true}`)))
 	unknownFieldRR := httptest.NewRecorder()
 	handler.GetHistory(unknownFieldRR, unknownFieldReq)
-	assertPrivateMessageCode(t, unknownFieldRR, 10000)
+	assertPrivateMessageCode(t, unknownFieldRR, httpx.CodeInvalidRequest)
 }
 
 func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
@@ -379,17 +380,17 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 		sendReq.Header.Set("Idempotency-Key", "efgh1234efgh1234efgh1234efgh1234")
 		sendRR := httptest.NewRecorder()
 		handler.Send(sendRR, sendReq)
-		assertPrivateMessageCode(t, sendRR, 10600)
+		assertPrivateMessageCode(t, sendRR, httpx.CodeInternalUnavailable)
 
 		historyReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/get_history", strings.NewReader(`{"target_user_id":"user_bob"}`)))
 		historyRR := httptest.NewRecorder()
 		handler.GetHistory(historyRR, historyReq)
-		assertPrivateMessageCode(t, historyRR, 10600)
+		assertPrivateMessageCode(t, historyRR, httpx.CodeInternalUnavailable)
 
 		markAllReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"all"}`)))
 		markAllRR := httptest.NewRecorder()
 		handler.MarkRead(markAllRR, markAllReq)
-		assertPrivateMessageCode(t, markAllRR, 10600)
+		assertPrivateMessageCode(t, markAllRR, httpx.CodeInternalUnavailable)
 	})
 
 	t.Run("update maps domain errors", func(t *testing.T) {
@@ -397,11 +398,11 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 		cases := []struct {
 			name string
 			err  error
-			code int
+			code httpx.Code
 		}{
-			{name: "not found", err: ErrMessageNotFound, code: 10300},
-			{name: "permission", err: ErrMessagePermissionDenied, code: 10200},
-			{name: "not editable", err: ErrMessageNotEditable, code: 10400},
+			{name: "not found", err: ErrMessageNotFound, code: httpx.CodeNotFound},
+			{name: "permission", err: ErrMessagePermissionDenied, code: httpx.CodeForbidden},
+			{name: "not editable", err: ErrMessageNotEditable, code: httpx.CodeConflict},
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
@@ -420,11 +421,11 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 		cases := []struct {
 			name string
 			err  error
-			code int
+			code httpx.Code
 		}{
-			{name: "not found", err: ErrMessageNotFound, code: 10300},
-			{name: "permission", err: ErrMessagePermissionDenied, code: 10200},
-			{name: "not recallable", err: ErrMessageNotRecallable, code: 10400},
+			{name: "not found", err: ErrMessageNotFound, code: httpx.CodeNotFound},
+			{name: "permission", err: ErrMessagePermissionDenied, code: httpx.CodeForbidden},
+			{name: "not recallable", err: ErrMessageNotRecallable, code: httpx.CodeConflict},
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
@@ -443,7 +444,7 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"session","target_user_id":"user_bob","up_to_message_id":"pm_1"}`)))
 		rr := httptest.NewRecorder()
 		handler.MarkRead(rr, req)
-		assertPrivateMessageCode(t, rr, 10300)
+		assertPrivateMessageCode(t, rr, httpx.CodeNotFound)
 	})
 
 	t.Run("mark as read rejects missing target user", func(t *testing.T) {
@@ -451,7 +452,7 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"session","up_to_message_id":"pm_1"}`)))
 		rr := httptest.NewRecorder()
 		handler.MarkRead(rr, req)
-		assertPrivateMessageCode(t, rr, 10000)
+		assertPrivateMessageCode(t, rr, httpx.CodeInvalidRequest)
 	})
 
 	t.Run("mark all read happy path", func(t *testing.T) {
@@ -466,21 +467,21 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`[1,2]`)))
 		rr := httptest.NewRecorder()
 		handler.MarkRead(rr, req)
-		assertPrivateMessageCode(t, rr, 10000)
+		assertPrivateMessageCode(t, rr, httpx.CodeInvalidRequest)
 	})
 	t.Run("mark read rejects bad scope", func(t *testing.T) {
 		handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{}, &privateMessageUserStub{}))
 		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"unknown"}`)))
 		rr := httptest.NewRecorder()
 		handler.MarkRead(rr, req)
-		assertPrivateMessageCode(t, rr, 10000)
+		assertPrivateMessageCode(t, rr, httpx.CodeInvalidRequest)
 	})
 }
 
-func assertPrivateMessageCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+func assertPrivateMessageCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx.Code) {
 	t.Helper()
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)

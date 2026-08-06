@@ -19,7 +19,7 @@ func logServerError(r *http.Request, method string, err error) {
 	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
 }
 
-func logBusinessError(r *http.Request, method string, code int, message string) {
+func logBusinessError(r *http.Request, method string, code httpx.Code, message string) {
 	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
 }
 
@@ -34,11 +34,11 @@ func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 		Radius int      `json:"radius,omitempty"`
 	}
 	if err := httpx.DecodeStrictJSON(r, &body); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	if body.Prefix == "" || len(body.Prefix) > 50 {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	// reference_point 可选:缺失时由 service 按回退链解析(见 api_spec_types.md)
@@ -46,12 +46,12 @@ func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 	if body.ReferencePoint != nil && body.ReferencePoint.Latitude != nil && body.ReferencePoint.Longitude != nil {
 		point = GeoPoint{Latitude: *body.ReferencePoint.Latitude, Longitude: *body.ReferencePoint.Longitude}
 		if !isValidGeoPoint(point) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
 	}
 	if body.Radius != 0 && body.Radius < 100 {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	result, err := h.service.Suggest(r.Context(), SearchSuggestRequest{
@@ -62,7 +62,7 @@ func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		logServerError(r, "Suggest", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))

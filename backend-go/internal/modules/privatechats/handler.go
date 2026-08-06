@@ -23,20 +23,20 @@ func logServerError(r *http.Request, method string, err error) {
 	observability.L().Error("handler error", "method", method, "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
 }
 
-func logBusinessError(r *http.Request, method string, code int, message string) {
+func logBusinessError(r *http.Request, method string, code httpx.Code, message string) {
 	observability.L().Warn("handler business error", "method", method, "code", code, "message", message, "request_id", observability.RequestIDFromContext(r.Context()))
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	var req MyPrivateChatsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	list, err := h.service.List(r.Context(), req)
 	if err != nil {
 		logServerError(r, "List", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))
@@ -45,7 +45,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 	var req OpenTheDoorRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.TargetUserID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	cfg := h.appConfig.Get(r.Context())
@@ -60,7 +60,7 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	var req UpdatePrivateChatSettingsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.TargetUserID == "" || (req.IsMuted == nil && req.IsPinned == nil) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	if err := h.service.UpdateSettings(r.Context(), req); err != nil {
@@ -73,7 +73,7 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	var req DeletePrivateChatRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.TargetUserID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
 	if err := h.service.Delete(r.Context(), req.TargetUserID); err != nil {
@@ -85,10 +85,10 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleServiceError(w http.ResponseWriter, r *http.Request, method string, err error) {
 	if errors.Is(err, users.ErrUserNotFound) {
-		logBusinessError(r, method, 10300, "用户不存在")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "用户不存在"))
+		logBusinessError(r, method, httpx.CodeNotFound, "用户不存在")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "用户不存在"))
 		return
 	}
 	logServerError(r, method, err)
-	httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 }

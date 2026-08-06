@@ -15,6 +15,7 @@ import (
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
 )
 
@@ -130,7 +131,7 @@ func TestOpenTheDoorReturnsChatAndRecentMessages(t *testing.T) {
 	chatHandler.OpenTheDoor(rr, req)
 
 	var resp struct {
-		Code int                   `json:"code"`
+		Code httpx.Code            `json:"code"`
 		Data PrivateChatOpenResult `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -159,7 +160,7 @@ func TestSendAndHistoryWorkTogether(t *testing.T) {
 	messageHandler.GetHistory(historyRR, historyReq)
 
 	var historyResp struct {
-		Code int                               `json:"code"`
+		Code httpx.Code                        `json:"code"`
 		Data privatemessages.PaginatedMessages `json:"data"`
 	}
 	if err := json.NewDecoder(historyRR.Body).Decode(&historyResp); err != nil {
@@ -174,7 +175,7 @@ func TestSendAndHistoryWorkTogether(t *testing.T) {
 	openRR := httptest.NewRecorder()
 	chatHandler.OpenTheDoor(openRR, openReq)
 	var openResp struct {
-		Code int                   `json:"code"`
+		Code httpx.Code            `json:"code"`
 		Data PrivateChatOpenResult `json:"data"`
 	}
 	if err := json.NewDecoder(openRR.Body).Decode(&openResp); err != nil {
@@ -199,13 +200,13 @@ func TestPrivateChatsHandlerReturns10600OnServiceError(t *testing.T) {
 	listReq = listReq.WithContext(platformauth.WithPrincipal(listReq.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	listRR := httptest.NewRecorder()
 	chatHandler.List(listRR, listReq)
-	assertPrivateChatCode(t, listRR, 10600)
+	assertPrivateChatCode(t, listRR, httpx.CodeInternalUnavailable)
 
 	openReq := httptest.NewRequest(http.MethodPost, "/open_the_door", strings.NewReader(`{"target_user_id":"user_bob"}`))
 	openReq = openReq.WithContext(platformauth.WithPrincipal(openReq.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	openRR := httptest.NewRecorder()
 	chatHandler.OpenTheDoor(openRR, openReq)
-	assertPrivateChatCode(t, openRR, 10600)
+	assertPrivateChatCode(t, openRR, httpx.CodeInternalUnavailable)
 }
 
 func TestOpenTheDoorUsesSharedResponseDefaults(t *testing.T) {
@@ -241,7 +242,7 @@ func TestOpenTheDoorUsesSharedResponseDefaults(t *testing.T) {
 		sendRR := httptest.NewRecorder()
 		messageHandler.Send(sendRR, sendReq)
 		var sendResp struct {
-			Code int `json:"code"`
+			Code httpx.Code `json:"code"`
 		}
 		if err := json.NewDecoder(sendRR.Body).Decode(&sendResp); err != nil {
 			t.Fatalf("decode send response: %v", err)
@@ -257,7 +258,7 @@ func TestOpenTheDoorUsesSharedResponseDefaults(t *testing.T) {
 	chatHandler.OpenTheDoor(openRR, openReq)
 
 	var openResp struct {
-		Code int                   `json:"code"`
+		Code httpx.Code            `json:"code"`
 		Data PrivateChatOpenResult `json:"data"`
 	}
 	if err := json.NewDecoder(openRR.Body).Decode(&openResp); err != nil {
@@ -293,7 +294,7 @@ func TestUpdateSettingsAndDeleteHandlers(t *testing.T) {
 	listRR := httptest.NewRecorder()
 	chatHandler.List(listRR, listReq)
 	var listResp struct {
-		Code int                   `json:"code"`
+		Code httpx.Code            `json:"code"`
 		Data PaginatedPrivateChats `json:"data"`
 	}
 	if err := json.NewDecoder(listRR.Body).Decode(&listResp); err != nil {
@@ -317,7 +318,7 @@ func TestUpdateSettingsAndDeleteHandlers(t *testing.T) {
 	listAfterDeleteRR := httptest.NewRecorder()
 	chatHandler.List(listAfterDeleteRR, listAfterDeleteReq)
 	var listAfterDeleteResp struct {
-		Code int                   `json:"code"`
+		Code httpx.Code            `json:"code"`
 		Data PaginatedPrivateChats `json:"data"`
 	}
 	if err := json.NewDecoder(listAfterDeleteRR.Body).Decode(&listAfterDeleteResp); err != nil {
@@ -354,7 +355,7 @@ func TestDeleteOnlyAffectsCurrentUserView(t *testing.T) {
 	aliceListRR := httptest.NewRecorder()
 	chatHandler.List(aliceListRR, aliceListReq)
 	var aliceResp struct {
-		Code int                   `json:"code"`
+		Code httpx.Code            `json:"code"`
 		Data PaginatedPrivateChats `json:"data"`
 	}
 	if err := json.NewDecoder(aliceListRR.Body).Decode(&aliceResp); err != nil {
@@ -369,7 +370,7 @@ func TestDeleteOnlyAffectsCurrentUserView(t *testing.T) {
 	bobListRR := httptest.NewRecorder()
 	chatHandler.List(bobListRR, bobListReq)
 	var bobResp struct {
-		Code int                   `json:"code"`
+		Code httpx.Code            `json:"code"`
 		Data PaginatedPrivateChats `json:"data"`
 	}
 	if err := json.NewDecoder(bobListRR.Body).Decode(&bobResp); err != nil {
@@ -413,7 +414,7 @@ func TestDeleteThenNewMessageReappearsAsBlankConversation(t *testing.T) {
 	openRR := httptest.NewRecorder()
 	chatHandler.OpenTheDoor(openRR, openReq)
 	var openResp struct {
-		Code int                   `json:"code"`
+		Code httpx.Code            `json:"code"`
 		Data PrivateChatOpenResult `json:"data"`
 	}
 	if err := json.NewDecoder(openRR.Body).Decode(&openResp); err != nil {
@@ -443,7 +444,7 @@ func TestOpenTheDoorRespectsTargetPrivacy(t *testing.T) {
 	chatHandler.OpenTheDoor(openRR, openReq)
 
 	var openResp struct {
-		Code int                   `json:"code"`
+		Code httpx.Code            `json:"code"`
 		Data PrivateChatOpenResult `json:"data"`
 	}
 	if err := json.NewDecoder(openRR.Body).Decode(&openResp); err != nil {
@@ -483,7 +484,7 @@ func TestDeleteThenOpenTheDoorCreatesBlankConversation(t *testing.T) {
 	chatHandler.OpenTheDoor(openRR, openReq)
 
 	var openResp struct {
-		Code int                   `json:"code"`
+		Code httpx.Code            `json:"code"`
 		Data PrivateChatOpenResult `json:"data"`
 	}
 	if err := json.NewDecoder(openRR.Body).Decode(&openResp); err != nil {
@@ -506,7 +507,7 @@ func TestDeleteThenOpenTheDoorCreatesBlankConversation(t *testing.T) {
 	listRR := httptest.NewRecorder()
 	chatHandler.List(listRR, listReq)
 	var listResp struct {
-		Code int                   `json:"code"`
+		Code httpx.Code            `json:"code"`
 		Data PaginatedPrivateChats `json:"data"`
 	}
 	if err := json.NewDecoder(listRR.Body).Decode(&listResp); err != nil {
@@ -537,7 +538,7 @@ func TestListSupportsPaginationCursor(t *testing.T) {
 	firstRR := httptest.NewRecorder()
 	chatHandler.List(firstRR, firstReq)
 	var firstResp struct {
-		Code int                   `json:"code"`
+		Code httpx.Code            `json:"code"`
 		Data PaginatedPrivateChats `json:"data"`
 	}
 	if err := json.NewDecoder(firstRR.Body).Decode(&firstResp); err != nil {
@@ -555,7 +556,7 @@ func TestListSupportsPaginationCursor(t *testing.T) {
 	secondRR := httptest.NewRecorder()
 	chatHandler.List(secondRR, secondReq)
 	var secondResp struct {
-		Code int                   `json:"code"`
+		Code httpx.Code            `json:"code"`
 		Data PaginatedPrivateChats `json:"data"`
 	}
 	if err := json.NewDecoder(secondRR.Body).Decode(&secondResp); err != nil {
@@ -585,7 +586,7 @@ func TestOpenTheDoorReturns10300OnNotFound(t *testing.T) {
 	openReq = openReq.WithContext(ctx)
 	openRR := httptest.NewRecorder()
 	chatHandler.OpenTheDoor(openRR, openReq)
-	assertPrivateChatCode(t, openRR, 10300)
+	assertPrivateChatCode(t, openRR, httpx.CodeNotFound)
 }
 
 func TestPrivateChatDeleteReturns10300OnNotFound(t *testing.T) {
@@ -604,13 +605,13 @@ func TestPrivateChatDeleteReturns10300OnNotFound(t *testing.T) {
 	deleteReq = deleteReq.WithContext(ctx)
 	deleteRR := httptest.NewRecorder()
 	chatHandler.Delete(deleteRR, deleteReq)
-	assertPrivateChatCode(t, deleteRR, 10300)
+	assertPrivateChatCode(t, deleteRR, httpx.CodeNotFound)
 }
 
-func assertPrivateChatCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+func assertPrivateChatCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx.Code) {
 	t.Helper()
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)

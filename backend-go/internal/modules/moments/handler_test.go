@@ -12,6 +12,7 @@ import (
 	"hotspot/backend-go/internal/modules/comments"
 	"hotspot/backend-go/internal/modules/notify"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -77,14 +78,14 @@ func TestCreateOpenAndListMoment(t *testing.T) {
 	handler.Create(createRR2, createReq2)
 
 	var createResp struct {
-		Code int        `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data MomentItem `json:"data"`
 	}
 	if err := json.NewDecoder(createRR.Body).Decode(&createResp); err != nil {
 		t.Fatalf("decode create response: %v", err)
 	}
 	var createResp2 struct {
-		Code int        `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data MomentItem `json:"data"`
 	}
 	_ = json.NewDecoder(createRR2.Body).Decode(&createResp2)
@@ -101,7 +102,7 @@ func TestCreateOpenAndListMoment(t *testing.T) {
 	listRR := httptest.NewRecorder()
 	handler.ListMine(listRR, listReq)
 	var listResp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data PaginatedMoments `json:"data"`
 	}
 	if err := json.NewDecoder(listRR.Body).Decode(&listResp); err != nil {
@@ -127,7 +128,7 @@ func TestCreateCommentIncrementsMomentCount(t *testing.T) {
 	createMomentRR := httptest.NewRecorder()
 	momentHandler.Create(createMomentRR, createMomentReq)
 	var momentResp struct {
-		Code int        `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data MomentItem `json:"data"`
 	}
 	_ = json.NewDecoder(createMomentRR.Body).Decode(&momentResp)
@@ -142,7 +143,7 @@ func TestCreateCommentIncrementsMomentCount(t *testing.T) {
 	openRR := httptest.NewRecorder()
 	momentHandler.OpenTheDoor(openRR, openReq)
 	var openResp struct {
-		Code int        `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data MomentItem `json:"data"`
 	}
 	_ = json.NewDecoder(openRR.Body).Decode(&openResp)
@@ -173,13 +174,13 @@ func TestCreateCommentDoesNotIncrementMomentCountWhenCounterFails(t *testing.T) 
 	createCommentRR := httptest.NewRecorder()
 	commentHandler.Create(createCommentRR, createCommentReq)
 	var createCommentResp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(createCommentRR.Body).Decode(&createCommentResp); err != nil {
 		t.Fatalf("decode create comment response: %v", err)
 	}
-	if createCommentResp.Code != 10600 {
-		t.Fatalf("expected code 10600, got %#v", createCommentResp)
+	if createCommentResp.Code != httpx.CodeInternalUnavailable {
+		t.Fatalf("expected code httpx.CodeInternalUnavailable, got %#v", createCommentResp)
 	}
 	commentsList, err := commentRepo.List(context.Background(), createdMoment.MomentID, 20, "")
 	if err != nil {
@@ -192,7 +193,7 @@ func TestCreateCommentDoesNotIncrementMomentCountWhenCounterFails(t *testing.T) 
 	openRR := httptest.NewRecorder()
 	momentHandler.OpenTheDoor(openRR, openReq)
 	var openResp struct {
-		Code int        `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data MomentItem `json:"data"`
 	}
 	if err := json.NewDecoder(openRR.Body).Decode(&openResp); err != nil {
@@ -215,7 +216,7 @@ func TestCreateCommentReturns10300WhenMomentMissing(t *testing.T) {
 	createCommentReq = createCommentReq.WithContext(ctx)
 	createCommentRR := httptest.NewRecorder()
 	commentHandler.Create(createCommentRR, createCommentReq)
-	assertCommentCode(t, createCommentRR, 10300)
+	assertCommentCode(t, createCommentRR, httpx.CodeNotFound)
 }
 
 func TestListCommentsReturns10300WhenMomentMissing(t *testing.T) {
@@ -225,7 +226,7 @@ func TestListCommentsReturns10300WhenMomentMissing(t *testing.T) {
 	listReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"moment_id":"moment_missing"}`))
 	listRR := httptest.NewRecorder()
 	commentHandler.List(listRR, listReq)
-	assertCommentCode(t, listRR, 10300)
+	assertCommentCode(t, listRR, httpx.CodeNotFound)
 }
 
 func TestCreateMomentRecordsResourceGuard(t *testing.T) {
@@ -353,24 +354,24 @@ func TestDeleteMomentReturns10200WhenPermissionDenied(t *testing.T) {
 	handler.Delete(deleteRR, deleteReq)
 
 	var resp struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
+		Code    httpx.Code `json:"code"`
+		Message string     `json:"message"`
 	}
 	if err := json.NewDecoder(deleteRR.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 10200 {
-		t.Fatalf("expected code 10200, got code=%d message=%s", resp.Code, resp.Message)
+	if resp.Code != httpx.CodeForbidden {
+		t.Fatalf("expected code httpx.CodeForbidden, got code=%d message=%s", resp.Code, resp.Message)
 	}
 	if resp.Message != "权限不足" {
 		t.Fatalf("expected message '权限不足', got %s", resp.Message)
 	}
 }
 
-func assertCommentCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+func assertCommentCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx.Code) {
 	t.Helper()
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -402,13 +403,13 @@ func TestSearchRejectsInvalidSortBy(t *testing.T) {
 			rr := httptest.NewRecorder()
 			handler.Search(rr, req)
 			var resp struct {
-				Code int `json:"code"`
+				Code httpx.Code `json:"code"`
 			}
 			if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 				t.Fatalf("decode: %v", err)
 			}
-			if resp.Code != 10000 {
-				t.Fatalf("expected code 10000 for sort_by=%q, got %d", invalid, resp.Code)
+			if resp.Code != httpx.CodeInvalidRequest {
+				t.Fatalf("expected code httpx.CodeInvalidRequest for sort_by=%q, got %d", invalid, resp.Code)
 			}
 		})
 	}
@@ -428,7 +429,7 @@ func TestSearchAcceptsValidSortBy(t *testing.T) {
 			rr := httptest.NewRecorder()
 			handler.Search(rr, req)
 			var resp struct {
-				Code int `json:"code"`
+				Code httpx.Code `json:"code"`
 			}
 			if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 				t.Fatalf("decode: %v", err)
@@ -483,7 +484,7 @@ func TestSearchSortByNewest(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.Search(rr, req)
 	var resp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data PaginatedMoments `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -538,7 +539,7 @@ func TestSearchSortByDistance(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.Search(rr, req)
 	var resp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data PaginatedMoments `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -602,7 +603,7 @@ func TestSearchSortByPopular(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.Search(rr, req)
 	var resp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data PaginatedMoments `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -637,7 +638,7 @@ func TestCreateMomentAcceptsLocationWithoutName(t *testing.T) {
 	handler.Create(createRR, createReq)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data struct {
 			MomentID string `json:"moment_id"`
 		} `json:"data"`
@@ -665,13 +666,13 @@ func TestCreateMomentRejectsZeroLocation(t *testing.T) {
 	handler.Create(createRR, createReq)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(createRR.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 10000 {
-		t.Fatalf("expected code 10000 for zero coordinates, got %d", resp.Code)
+	if resp.Code != httpx.CodeInvalidRequest {
+		t.Fatalf("expected code httpx.CodeInvalidRequest for zero coordinates, got %d", resp.Code)
 	}
 }
 
@@ -683,7 +684,7 @@ func TestMomentHandlerUpdateRejectsInvalidJSON(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "update_invalid_json_moments_aaaaaa")
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
-	assertMomentCode(t, rr, 10000)
+	assertMomentCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestMomentHandlerUpdateRejectsMissingMomentID(t *testing.T) {
@@ -692,7 +693,7 @@ func TestMomentHandlerUpdateRejectsMissingMomentID(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "update_no_moment_id_moments_bbbbbb")
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
-	assertMomentCode(t, rr, 10000)
+	assertMomentCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestMomentHandlerUpdateReturnsSuccess(t *testing.T) {
@@ -716,7 +717,7 @@ func TestMomentHandlerUpdateReturnsSuccess(t *testing.T) {
 	handler.Update(rr, req)
 
 	var resp struct {
-		Code int        `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data MomentItem `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -740,7 +741,7 @@ func TestMomentHandlerUpdateReturns10600OnError(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.Update(rr, req)
 
-	assertMomentCode(t, rr, 10600)
+	assertMomentCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 func TestMomentHandlerDeleteRejectsMissingMomentID(t *testing.T) {
@@ -749,7 +750,7 @@ func TestMomentHandlerDeleteRejectsMissingMomentID(t *testing.T) {
 	req.Header.Set("Idempotency-Key", "delete_no_moment_id_moments_eeeeee")
 	rr := httptest.NewRecorder()
 	handler.Delete(rr, req)
-	assertMomentCode(t, rr, 10000)
+	assertMomentCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestMomentHandlerDeleteReturnsSuccess(t *testing.T) {
@@ -769,7 +770,7 @@ func TestMomentHandlerDeleteReturnsSuccess(t *testing.T) {
 	handler.Delete(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -791,7 +792,7 @@ func TestMomentHandlerFavoriteRejectsMissingMomentID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.Favorite(rr, req)
-	assertMomentCode(t, rr, 10000)
+	assertMomentCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestMomentHandlerFavoriteReturnsSuccess(t *testing.T) {
@@ -810,7 +811,7 @@ func TestMomentHandlerFavoriteReturnsSuccess(t *testing.T) {
 	handler.Favorite(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -825,7 +826,7 @@ func TestMomentHandlerUnfavoriteRejectsMissingMomentID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/favorite", strings.NewReader(`{"active":false}`))
 	rr := httptest.NewRecorder()
 	handler.Favorite(rr, req)
-	assertMomentCode(t, rr, 10000)
+	assertMomentCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestMomentHandlerUnfavoriteReturnsSuccess(t *testing.T) {
@@ -851,7 +852,7 @@ func TestMomentHandlerUnfavoriteReturnsSuccess(t *testing.T) {
 	handler.Favorite(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -886,7 +887,7 @@ func TestMomentHandlerListFavoritesReturnsSuccess(t *testing.T) {
 	handler.ListFavorites(rr, req)
 
 	var resp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data PaginatedMoments `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -910,7 +911,7 @@ func TestMomentHandlerSearchRejectsNoCriteria(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.Search(rr, req)
-	assertMomentCode(t, rr, 10000)
+	assertMomentCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestMomentHandlerSearchRejectsInvalidSortBy(t *testing.T) {
@@ -918,7 +919,7 @@ func TestMomentHandlerSearchRejectsInvalidSortBy(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(`{"keyword":"test","sort_by":"bogus","reference_point":{"latitude":0,"longitude":0}}`))
 	rr := httptest.NewRecorder()
 	handler.Search(rr, req)
-	assertMomentCode(t, rr, 10000)
+	assertMomentCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestMomentHandlerSearchReturnsSuccess(t *testing.T) {
@@ -939,7 +940,7 @@ func TestMomentHandlerSearchReturnsSuccess(t *testing.T) {
 	handler.Search(rr, req)
 
 	var resp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data PaginatedMoments `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -955,10 +956,10 @@ func TestMomentHandlerSearchReturnsSuccess(t *testing.T) {
 
 // --- helpers ---
 
-func assertMomentCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+func assertMomentCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx.Code) {
 	t.Helper()
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -969,7 +970,7 @@ func assertMomentCode(t *testing.T, rr *httptest.ResponseRecorder, expected int)
 }
 
 // errorRepo is a Repository implementation that always returns errors for Get,
-// used to trigger the 10600 server error path in Update handler.
+// used to trigger the httpx.CodeInternalUnavailable server error path in Update handler.
 type errorRepo struct{}
 
 func (r *errorRepo) Create(context.Context, string, CreateMomentRequest) (MomentItem, error) {

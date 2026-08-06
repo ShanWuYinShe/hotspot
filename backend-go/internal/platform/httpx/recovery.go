@@ -21,7 +21,7 @@ func LimitRequestBody(next http.Handler) http.Handler {
 	})
 }
 
-// Recoverer catches handler panics and returns a JSON envelope (code 10600)
+// Recoverer catches handler panics and returns a JSON envelope (code CodeInternalUnavailable)
 // instead of letting chi/net-http emit a plaintext 500 with a Go stack trace.
 // The spec (api_spec_base.md) forbids exposing stack traces to clients.
 func Recoverer(next http.Handler) http.Handler {
@@ -35,7 +35,7 @@ func Recoverer(next http.Handler) http.Handler {
 					"path", r.URL.Path,
 					"stack", string(debug.Stack()),
 				)
-				WriteJSON(w, http.StatusOK, Error(10600, "服务暂时不可用"))
+				WriteJSON(w, http.StatusOK, Error(CodeInternalUnavailable, "服务暂时不可用"))
 			}
 		}()
 		next.ServeHTTP(w, r)
@@ -46,10 +46,10 @@ func Recoverer(next http.Handler) http.Handler {
 // mandates all business responses be HTTP 200 + ApiResponse; a bare 404 would
 // leak that the path-matching layer is chi and confuse envelope-only clients.
 func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
-	WriteJSON(w, http.StatusOK, Error(10300, "资源不存在"))
+	WriteJSON(w, http.StatusOK, Error(CodeNotFound, "资源不存在"))
 }
 
 // MethodNotAllowedHandler returns the envelope for wrong-method requests.
 func MethodNotAllowedHandler(w http.ResponseWriter, r *http.Request) {
-	WriteJSON(w, http.StatusOK, Error(10000, "请求方法不被支持"))
+	WriteJSON(w, http.StatusOK, Error(CodeInvalidRequest, "请求方法不被支持"))
 }

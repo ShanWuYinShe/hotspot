@@ -3,6 +3,7 @@ package search
 import (
 	"encoding/json"
 	"errors"
+	"hotspot/backend-go/internal/platform/httpx"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -18,7 +19,7 @@ func TestSuggestReturnsItems(t *testing.T) {
 	handler.Suggest(rr, req)
 
 	var resp struct {
-		Code int                   `json:"code"`
+		Code httpx.Code            `json:"code"`
 		Data SearchSuggestResponse `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -36,12 +37,12 @@ func TestSuggestRejectsInvalidJSON(t *testing.T) {
 	handler.Suggest(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 10000 {
+	if resp.Code != httpx.CodeInvalidRequest {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -53,12 +54,12 @@ func TestSuggestRejectsEmptyPrefix(t *testing.T) {
 	handler.Suggest(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 10000 {
+	if resp.Code != httpx.CodeInvalidRequest {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -71,7 +72,7 @@ func TestSuggestAcceptsMissingReferencePoint(t *testing.T) {
 	handler.Suggest(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -96,7 +97,7 @@ func TestSuggestAcceptsPartialReferencePoint(t *testing.T) {
 		handler.Suggest(rr, req)
 
 		var resp struct {
-			Code int `json:"code"`
+			Code httpx.Code `json:"code"`
 		}
 		if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 			t.Fatalf("decode response: %v", err)
@@ -114,12 +115,12 @@ func TestSuggestRejectsInvalidReferencePoint(t *testing.T) {
 	handler.Suggest(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 10000 {
+	if resp.Code != httpx.CodeInvalidRequest {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -131,12 +132,12 @@ func TestSuggestRejectsShortRadius(t *testing.T) {
 	handler.Suggest(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 10000 {
+	if resp.Code != httpx.CodeInvalidRequest {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -149,7 +150,7 @@ func TestSuggestAllowsTooLargeRadiusForServiceClamp(t *testing.T) {
 	handler.Suggest(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -181,13 +182,13 @@ func TestSuggestReturnsServiceUnavailableOnRepositoryError(t *testing.T) {
 	handler.Suggest(rr, req)
 
 	var resp struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
+		Code    httpx.Code `json:"code"`
+		Message string     `json:"message"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 10600 {
+	if resp.Code != httpx.CodeInternalUnavailable {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }

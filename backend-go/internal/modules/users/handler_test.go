@@ -15,6 +15,7 @@ import (
 	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/modules/notify"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
@@ -171,8 +172,8 @@ func TestGetMyProfileReturnsCurrentUser(t *testing.T) {
 	handler.GetMyProfile(rr, req)
 
 	var resp struct {
-		Code int       `json:"code"`
-		Data MyProfile `json:"data"`
+		Code httpx.Code `json:"code"`
+		Data MyProfile  `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -198,8 +199,8 @@ func TestUpdateMyProfilePersistsChanges(t *testing.T) {
 	handler.GetMyProfile(getRR, getReq)
 
 	var resp struct {
-		Code int       `json:"code"`
-		Data MyProfile `json:"data"`
+		Code httpx.Code `json:"code"`
+		Data MyProfile  `json:"data"`
 	}
 	if err := json.NewDecoder(getRR.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -217,14 +218,14 @@ func TestUpdateMyProfileRejectsUnknownFieldsAndTrailingJSON(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/update_account", strings.NewReader(`{"nickname":"Alice","bogus":true}`)).WithContext(ctx)
 		rr := httptest.NewRecorder()
 		handler.UpdateMyProfile(rr, req)
-		assertUserCode(t, rr, 10000)
+		assertUserCode(t, rr, httpx.CodeInvalidRequest)
 	})
 
 	t.Run("trailing JSON", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/update_account", strings.NewReader(`{"nickname":"Alice"}{"bio":"x"}`)).WithContext(ctx)
 		rr := httptest.NewRecorder()
 		handler.UpdateMyProfile(rr, req)
-		assertUserCode(t, rr, 10000)
+		assertUserCode(t, rr, httpx.CodeInvalidRequest)
 	})
 }
 
@@ -236,14 +237,14 @@ func TestUpdateMySettingsRejectsUnknownFieldsAndTrailingJSON(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/update_settings", strings.NewReader(`{"settings":{"allow_follow":true},"bogus":1}`)).WithContext(ctx)
 		rr := httptest.NewRecorder()
 		handler.UpdateMySettings(rr, req)
-		assertUserCode(t, rr, 10000)
+		assertUserCode(t, rr, httpx.CodeInvalidRequest)
 	})
 
 	t.Run("trailing JSON", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/update_settings", strings.NewReader(`{"settings":{"allow_follow":true}}{}`)).WithContext(ctx)
 		rr := httptest.NewRecorder()
 		handler.UpdateMySettings(rr, req)
-		assertUserCode(t, rr, 10000)
+		assertUserCode(t, rr, httpx.CodeInvalidRequest)
 	})
 }
 
@@ -257,7 +258,7 @@ func TestGetMySettingsReturnsDefaults(t *testing.T) {
 	handler.GetMySettings(rr, req)
 
 	var resp struct {
-		Code int          `json:"code"`
+		Code httpx.Code   `json:"code"`
 		Data UserSettings `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -332,8 +333,8 @@ func TestFollowBlockRemarkAndOpenTheDoor(t *testing.T) {
 	openRR := httptest.NewRecorder()
 	handler.OpenTheDoor(openRR, openReq)
 	var openResp struct {
-		Code int      `json:"code"`
-		Data UserItem `json:"data"`
+		Code httpx.Code `json:"code"`
+		Data UserItem   `json:"data"`
 	}
 	if err := json.NewDecoder(openRR.Body).Decode(&openResp); err != nil {
 		t.Fatalf("decode open response: %v", err)
@@ -369,7 +370,7 @@ func TestFollowBlockRemarkAndOpenTheDoor(t *testing.T) {
 	blockedRR := httptest.NewRecorder()
 	handler.ListBlocked(blockedRR, blockedReq)
 	var blockedResp struct {
-		Code int                   `json:"code"`
+		Code httpx.Code            `json:"code"`
 		Data PaginatedBlockedUsers `json:"data"`
 	}
 	if err := json.NewDecoder(blockedRR.Body).Decode(&blockedResp); err != nil {
@@ -514,13 +515,13 @@ func TestListReactedMomentsRespectsVisibility(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.ListReactedMoments(rr, req)
 	var resp struct {
-		Code int                          `json:"code"`
+		Code httpx.Code                   `json:"code"`
 		Data momenttypes.PaginatedMoments `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 10200 {
+	if resp.Code != httpx.CodeForbidden {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -639,8 +640,8 @@ func TestOpenTheDoorCountsNonSearchableCommonGroups(t *testing.T) {
 	openRR := httptest.NewRecorder()
 	handler.OpenTheDoor(openRR, openReq)
 	var openResp struct {
-		Code int      `json:"code"`
-		Data UserItem `json:"data"`
+		Code httpx.Code `json:"code"`
+		Data UserItem   `json:"data"`
 	}
 	if err := json.NewDecoder(openRR.Body).Decode(&openResp); err != nil {
 		t.Fatalf("decode open response: %v", err)
@@ -692,43 +693,43 @@ func TestUsersHandlerReturns10600OnServiceError(t *testing.T) {
 	getProfileReq := httptest.NewRequest(http.MethodPost, "/get_account", strings.NewReader(`{}`)).WithContext(ctx)
 	getProfileRR := httptest.NewRecorder()
 	handler.GetMyProfile(getProfileRR, getProfileReq)
-	assertUserCode(t, getProfileRR, 10600)
+	assertUserCode(t, getProfileRR, httpx.CodeInternalUnavailable)
 
 	getSettingsReq := httptest.NewRequest(http.MethodPost, "/get_settings", strings.NewReader(`{}`)).WithContext(ctx)
 	getSettingsRR := httptest.NewRecorder()
 	handler.GetMySettings(getSettingsRR, getSettingsReq)
-	assertUserCode(t, getSettingsRR, 10600)
+	assertUserCode(t, getSettingsRR, httpx.CodeInternalUnavailable)
 
 	searchReq := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(`{"keyword":"Alice","reference_point":{"latitude":35,"longitude":112}}`)).WithContext(ctx)
 	searchRR := httptest.NewRecorder()
 	handler.Search(searchRR, searchReq)
-	assertUserCode(t, searchRR, 10600)
+	assertUserCode(t, searchRR, httpx.CodeInternalUnavailable)
 
 	invalidCursorHandler := NewHandler(NewServiceWithRepo(invalidCursorRepo{}))
 	invalidCursorReq := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(`{"keyword":"Alice","reference_point":{"latitude":35,"longitude":112},"pagination":{"cursor":"bad"}}`)).WithContext(ctx)
 	invalidCursorRR := httptest.NewRecorder()
 	invalidCursorHandler.Search(invalidCursorRR, invalidCursorReq)
-	assertUserCode(t, invalidCursorRR, 10000)
+	assertUserCode(t, invalidCursorRR, httpx.CodeInvalidRequest)
 
 	openReq := httptest.NewRequest(http.MethodPost, "/open_the_door", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
 	openRR := httptest.NewRecorder()
 	handler.OpenTheDoor(openRR, openReq)
-	assertUserCode(t, openRR, 10600)
+	assertUserCode(t, openRR, httpx.CodeInternalUnavailable)
 
 	followReq := httptest.NewRequest(http.MethodPost, "/follow", strings.NewReader(`{"user_id":"user_bob","active":true}`)).WithContext(ctx)
 	followRR := httptest.NewRecorder()
 	handler.Follow(followRR, followReq)
-	assertUserCode(t, followRR, 10600)
+	assertUserCode(t, followRR, httpx.CodeInternalUnavailable)
 
 	blockedReq := httptest.NewRequest(http.MethodPost, "/list_blocked", strings.NewReader(`{}`)).WithContext(ctx)
 	blockedRR := httptest.NewRecorder()
 	handler.ListBlocked(blockedRR, blockedReq)
-	assertUserCode(t, blockedRR, 10600)
+	assertUserCode(t, blockedRR, httpx.CodeInternalUnavailable)
 
 	likedReq := httptest.NewRequest(http.MethodPost, "/list_reacted_moments", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
 	likedRR := httptest.NewRecorder()
 	handler.ListReactedMoments(likedRR, likedReq)
-	assertUserCode(t, likedRR, 10600)
+	assertUserCode(t, likedRR, httpx.CodeInternalUnavailable)
 }
 
 // ---------------------------------------------------------------------------
@@ -741,7 +742,7 @@ func TestUnblockInvalidJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/block", strings.NewReader(`{invalid`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Block(rr, req)
-	assertUserCode(t, rr, 10000)
+	assertUserCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestUnblockMissingUserID(t *testing.T) {
@@ -750,7 +751,7 @@ func TestUnblockMissingUserID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/block", strings.NewReader(`{}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Block(rr, req)
-	assertUserCode(t, rr, 10000)
+	assertUserCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestUnblockUnauthorized(t *testing.T) {
@@ -758,7 +759,7 @@ func TestUnblockUnauthorized(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/block", strings.NewReader(`{"user_id":"user_bob","active":false}`))
 	rr := httptest.NewRecorder()
 	handler.Block(rr, req)
-	assertUserCode(t, rr, 10100)
+	assertUserCode(t, rr, httpx.CodeUnauthorized)
 }
 
 func TestUnblockUserNotFound(t *testing.T) {
@@ -768,7 +769,7 @@ func TestUnblockUserNotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/block", strings.NewReader(`{"user_id":"user_nonexistent","active":false}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Block(rr, req)
-	assertUserCode(t, rr, 10300)
+	assertUserCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestUnblockSelfReturnsConflict(t *testing.T) {
@@ -777,7 +778,7 @@ func TestUnblockSelfReturnsConflict(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/block", strings.NewReader(`{"user_id":"user_alice","active":false}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Block(rr, req)
-	assertUserCode(t, rr, 10400)
+	assertUserCode(t, rr, httpx.CodeConflict)
 }
 
 func TestUnblockHappyPath(t *testing.T) {
@@ -808,7 +809,7 @@ func TestUnblockServerError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/block", strings.NewReader(`{"user_id":"user_bob","active":false}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Block(rr, req)
-	assertUserCode(t, rr, 10600)
+	assertUserCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 // ---------------------------------------------------------------------------
@@ -821,7 +822,7 @@ func TestListFriendsInvalidJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_friends", strings.NewReader(`{invalid`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListFriends(rr, req)
-	assertUserCode(t, rr, 10000)
+	assertUserCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestListFriendsUnauthorizedWhenNoUserIDAndNoPrincipal(t *testing.T) {
@@ -829,7 +830,7 @@ func TestListFriendsUnauthorizedWhenNoUserIDAndNoPrincipal(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_friends", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.ListFriends(rr, req)
-	assertUserCode(t, rr, 10100)
+	assertUserCode(t, rr, httpx.CodeUnauthorized)
 }
 
 func TestListFriendsUserNotFound(t *testing.T) {
@@ -838,7 +839,7 @@ func TestListFriendsUserNotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_friends", strings.NewReader(`{"user_id":"user_nonexistent"}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListFriends(rr, req)
-	assertUserCode(t, rr, 10300)
+	assertUserCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestListFriendsPermissionDenied(t *testing.T) {
@@ -854,7 +855,7 @@ func TestListFriendsPermissionDenied(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_friends", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListFriends(rr, req)
-	assertUserCode(t, rr, 10200)
+	assertUserCode(t, rr, httpx.CodeForbidden)
 }
 
 func TestListFriendsHappyPath(t *testing.T) {
@@ -883,7 +884,7 @@ func TestListFriendsHappyPath(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.ListFriends(rr, req)
 	var resp struct {
-		Code int              `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data PaginatedFriends `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -906,7 +907,7 @@ func TestListFriendsServerError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_friends", strings.NewReader(`{}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListFriends(rr, req)
-	assertUserCode(t, rr, 10600)
+	assertUserCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 // ---------------------------------------------------------------------------
@@ -919,7 +920,7 @@ func TestListFollowingInvalidJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_following", strings.NewReader(`{invalid`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListFollowing(rr, req)
-	assertUserCode(t, rr, 10000)
+	assertUserCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestListFollowingUnauthorizedWhenNoUserIDAndNoPrincipal(t *testing.T) {
@@ -927,7 +928,7 @@ func TestListFollowingUnauthorizedWhenNoUserIDAndNoPrincipal(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_following", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.ListFollowing(rr, req)
-	assertUserCode(t, rr, 10100)
+	assertUserCode(t, rr, httpx.CodeUnauthorized)
 }
 
 func TestListFollowingUserNotFound(t *testing.T) {
@@ -936,7 +937,7 @@ func TestListFollowingUserNotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_following", strings.NewReader(`{"user_id":"user_nonexistent"}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListFollowing(rr, req)
-	assertUserCode(t, rr, 10300)
+	assertUserCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestListFollowingPermissionDenied(t *testing.T) {
@@ -952,7 +953,7 @@ func TestListFollowingPermissionDenied(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_following", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListFollowing(rr, req)
-	assertUserCode(t, rr, 10200)
+	assertUserCode(t, rr, httpx.CodeForbidden)
 }
 
 func TestListFollowingHappyPath(t *testing.T) {
@@ -978,7 +979,7 @@ func TestListFollowingHappyPath(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.ListFollowing(rr, req)
 	var resp struct {
-		Code int                `json:"code"`
+		Code httpx.Code         `json:"code"`
 		Data PaginatedFollowing `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -1001,7 +1002,7 @@ func TestListFollowingServerError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_following", strings.NewReader(`{}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListFollowing(rr, req)
-	assertUserCode(t, rr, 10600)
+	assertUserCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 // ---------------------------------------------------------------------------
@@ -1014,7 +1015,7 @@ func TestListFollowersInvalidJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_followers", strings.NewReader(`{invalid`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListFollowers(rr, req)
-	assertUserCode(t, rr, 10000)
+	assertUserCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestListFollowersUnauthorizedWhenNoUserIDAndNoPrincipal(t *testing.T) {
@@ -1022,7 +1023,7 @@ func TestListFollowersUnauthorizedWhenNoUserIDAndNoPrincipal(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_followers", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.ListFollowers(rr, req)
-	assertUserCode(t, rr, 10100)
+	assertUserCode(t, rr, httpx.CodeUnauthorized)
 }
 
 func TestListFollowersUserNotFound(t *testing.T) {
@@ -1031,7 +1032,7 @@ func TestListFollowersUserNotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_followers", strings.NewReader(`{"user_id":"user_nonexistent"}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListFollowers(rr, req)
-	assertUserCode(t, rr, 10300)
+	assertUserCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestListFollowersPermissionDenied(t *testing.T) {
@@ -1047,7 +1048,7 @@ func TestListFollowersPermissionDenied(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_followers", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListFollowers(rr, req)
-	assertUserCode(t, rr, 10200)
+	assertUserCode(t, rr, httpx.CodeForbidden)
 }
 
 func TestListFollowersHappyPath(t *testing.T) {
@@ -1073,7 +1074,7 @@ func TestListFollowersHappyPath(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.ListFollowers(rr, req)
 	var resp struct {
-		Code int                `json:"code"`
+		Code httpx.Code         `json:"code"`
 		Data PaginatedFollowers `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -1096,7 +1097,7 @@ func TestListFollowersServerError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_followers", strings.NewReader(`{}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListFollowers(rr, req)
-	assertUserCode(t, rr, 10600)
+	assertUserCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 // ---------------------------------------------------------------------------
@@ -1109,7 +1110,7 @@ func TestListGroupsInvalidJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_groups", strings.NewReader(`{invalid`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListGroups(rr, req)
-	assertUserCode(t, rr, 10000)
+	assertUserCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestListGroupsUnauthorizedWhenNoUserIDAndNoPrincipal(t *testing.T) {
@@ -1117,7 +1118,7 @@ func TestListGroupsUnauthorizedWhenNoUserIDAndNoPrincipal(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_groups", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.ListGroups(rr, req)
-	assertUserCode(t, rr, 10100)
+	assertUserCode(t, rr, httpx.CodeUnauthorized)
 }
 
 func TestListGroupsUserNotFound(t *testing.T) {
@@ -1126,7 +1127,7 @@ func TestListGroupsUserNotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_groups", strings.NewReader(`{"user_id":"user_nonexistent"}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListGroups(rr, req)
-	assertUserCode(t, rr, 10300)
+	assertUserCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestListGroupsPermissionDenied(t *testing.T) {
@@ -1142,7 +1143,7 @@ func TestListGroupsPermissionDenied(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_groups", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListGroups(rr, req)
-	assertUserCode(t, rr, 10200)
+	assertUserCode(t, rr, httpx.CodeForbidden)
 }
 
 func TestListGroupsHappyPath(t *testing.T) {
@@ -1161,7 +1162,7 @@ func TestListGroupsHappyPath(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.ListGroups(rr, req)
 	var resp struct {
-		Code int                        `json:"code"`
+		Code httpx.Code                 `json:"code"`
 		Data grouptypes.PaginatedGroups `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -1184,7 +1185,7 @@ func TestListGroupsServerError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_groups", strings.NewReader(`{}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListGroups(rr, req)
-	assertUserCode(t, rr, 10600)
+	assertUserCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
 // ---------------------------------------------------------------------------
@@ -1197,7 +1198,7 @@ func TestListMomentsInvalidJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_moments", strings.NewReader(`{invalid`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListMoments(rr, req)
-	assertUserCode(t, rr, 10000)
+	assertUserCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestListMomentsUnauthorizedWhenNoUserIDAndNoPrincipal(t *testing.T) {
@@ -1205,7 +1206,7 @@ func TestListMomentsUnauthorizedWhenNoUserIDAndNoPrincipal(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_moments", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.ListMoments(rr, req)
-	assertUserCode(t, rr, 10100)
+	assertUserCode(t, rr, httpx.CodeUnauthorized)
 }
 
 func TestListMomentsUserNotFound(t *testing.T) {
@@ -1214,7 +1215,7 @@ func TestListMomentsUserNotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_moments", strings.NewReader(`{"user_id":"user_nonexistent"}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListMoments(rr, req)
-	assertUserCode(t, rr, 10300)
+	assertUserCode(t, rr, httpx.CodeNotFound)
 }
 
 func TestListMomentsHappyPath(t *testing.T) {
@@ -1228,7 +1229,7 @@ func TestListMomentsHappyPath(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.ListMoments(rr, req)
 	var resp struct {
-		Code int                          `json:"code"`
+		Code httpx.Code                   `json:"code"`
 		Data momenttypes.PaginatedMoments `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -1248,13 +1249,13 @@ func TestListMomentsServerError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/list_moments", strings.NewReader(`{}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListMoments(rr, req)
-	assertUserCode(t, rr, 10600)
+	assertUserCode(t, rr, httpx.CodeInternalUnavailable)
 }
 
-func assertUserCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+func assertUserCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx.Code) {
 	t.Helper()
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -1283,7 +1284,7 @@ func TestBatchGetReturnsOnlyExistingUsers(t *testing.T) {
 	handler.BatchGet(rr, req)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code httpx.Code `json:"code"`
 		Data struct {
 			Users map[string]json.RawMessage `json:"users"`
 		} `json:"data"`
@@ -1321,7 +1322,7 @@ func TestBatchGetRejectsEmptyAndOversized(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/batch_get", strings.NewReader(tc.body)).WithContext(ctx)
 			rr := httptest.NewRecorder()
 			handler.BatchGet(rr, req)
-			assertUserCode(t, rr, 10000)
+			assertUserCode(t, rr, httpx.CodeInvalidRequest)
 		})
 	}
 
@@ -1334,7 +1335,7 @@ func TestBatchGetRejectsEmptyAndOversized(t *testing.T) {
 		strings.NewReader(`{"user_ids":["`+strings.Join(ids, `","`)+`"]}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.BatchGet(rr, req)
-	assertUserCode(t, rr, 10000)
+	assertUserCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 // --- Upgrade tests ---
@@ -1360,7 +1361,7 @@ func TestHandlerUpgradeRejectsInvalidLoginID(t *testing.T) {
 			rr := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"login_id":"`+tc.loginID+`","password":"pass"}`)).WithContext(ctx)
 			handler.Upgrade(rr, req)
-			assertUserCode(t, rr, 10000)
+			assertUserCode(t, rr, httpx.CodeInvalidRequest)
 		})
 	}
 }
@@ -1406,8 +1407,8 @@ func TestHandlerUpdateLocationRejectsEmptyLocationName(t *testing.T) {
 	var resp map[string]any
 	json.Unmarshal([]byte(rr.Body.String()), &resp)
 	code, _ := resp["code"].(float64)
-	if int(code) != 10000 {
-		t.Fatalf("expected code 10000 for empty location_name, got %v", code)
+	if code != float64(httpx.CodeInvalidRequest) {
+		t.Fatalf("expected code httpx.CodeInvalidRequest for empty location_name, got %v", code)
 	}
 }
 
@@ -1430,7 +1431,7 @@ func TestDeleteAccountHandlerRejectsWrongConfirmation(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/delete_account", strings.NewReader(`{"confirmation":"NO"}`)).WithContext(ctx)
 	handler.DeleteAccount(rr, req)
-	assertUserCode(t, rr, 10000)
+	assertUserCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestDeleteAccountHandlerRejectsMissingConfirmation(t *testing.T) {
@@ -1440,7 +1441,7 @@ func TestDeleteAccountHandlerRejectsMissingConfirmation(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/delete_account", strings.NewReader(`{}`)).WithContext(ctx)
 	handler.DeleteAccount(rr, req)
-	assertUserCode(t, rr, 10000)
+	assertUserCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestDeleteAccountHandlerRejectsInvalidJSON(t *testing.T) {
@@ -1450,5 +1451,5 @@ func TestDeleteAccountHandlerRejectsInvalidJSON(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/delete_account", strings.NewReader(`{broken`)).WithContext(ctx)
 	handler.DeleteAccount(rr, req)
-	assertUserCode(t, rr, 10000)
+	assertUserCode(t, rr, httpx.CodeInvalidRequest)
 }

@@ -96,7 +96,7 @@ func (r *PostgresRepository) CreateRole(ctx context.Context, req AdminRbacRoleCr
 		return AdminRoleItem{}, err
 	}
 	if found && !existing.deleted {
-		return AdminRoleItem{}, &httpx.APIError{Code: 10400, Message: "角色已存在"}
+		return AdminRoleItem{}, &httpx.APIError{Code: httpx.CodeConflict, Message: "角色已存在"}
 	}
 	now := time.Now().UTC()
 	item := AdminRoleItem{
@@ -107,7 +107,7 @@ func (r *PostgresRepository) CreateRole(ctx context.Context, req AdminRbacRoleCr
 	}
 	if err := queryable.Exec(ctx, queryRoleInsert, item.RoleID, item.Name, nullableString(item.Description), now, now); err != nil {
 		if isUniqueViolation(err) {
-			return AdminRoleItem{}, &httpx.APIError{Code: 10400, Message: "角色已存在"}
+			return AdminRoleItem{}, &httpx.APIError{Code: httpx.CodeConflict, Message: "角色已存在"}
 		}
 		return AdminRoleItem{}, err
 	}
@@ -124,7 +124,7 @@ func (r *PostgresRepository) UpdateRole(ctx context.Context, req AdminRbacRoleUp
 		return err
 	}
 	if !found || item.deleted {
-		return &httpx.APIError{Code: 10300, Message: "角色不存在"}
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}
 	}
 	name := item.item.Name
 	if req.Name != nil {
@@ -134,7 +134,7 @@ func (r *PostgresRepository) UpdateRole(ctx context.Context, req AdminRbacRoleUp
 			return err
 		}
 		if found && !existing.deleted && existing.item.RoleID != req.RoleID {
-			return &httpx.APIError{Code: 10400, Message: "角色已存在"}
+			return &httpx.APIError{Code: httpx.CodeConflict, Message: "角色已存在"}
 		}
 	}
 	description := item.item.Description
@@ -145,7 +145,7 @@ func (r *PostgresRepository) UpdateRole(ctx context.Context, req AdminRbacRoleUp
 	}
 	if err := queryable.Exec(ctx, queryRoleUpdate, req.RoleID, name, nullableString(description), time.Now().UTC()); err != nil {
 		if isUniqueViolation(err) {
-			return &httpx.APIError{Code: 10400, Message: "角色已存在"}
+			return &httpx.APIError{Code: httpx.CodeConflict, Message: "角色已存在"}
 		}
 		return err
 	}
@@ -162,7 +162,7 @@ func (r *PostgresRepository) DeleteRole(ctx context.Context, roleID string) erro
 		return err
 	}
 	if !found {
-		return &httpx.APIError{Code: 10300, Message: "角色不存在"}
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}
 	}
 	if item.deleted {
 		return nil
@@ -192,7 +192,7 @@ func (r *PostgresRepository) SetRolePermissions(ctx context.Context, roleID stri
 		return err
 	}
 	if !found || item.deleted {
-		return &httpx.APIError{Code: 10300, Message: "角色不存在"}
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}
 	}
 	// Wrap the permission delete + batch insert in a single tx so a failure
 	// cannot wipe a role's permissions with nothing replacing them.
@@ -261,7 +261,7 @@ func (r *PostgresRepository) GrantAdmin(ctx context.Context, grant AdminGrantUps
 	if _, found, err := r.lookupUser(ctx, queryable, grant.UserID); err != nil {
 		return err
 	} else if !found {
-		return &httpx.APIError{Code: 10300, Message: "用户不存在"}
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "用户不存在"}
 	}
 	for _, roleID := range grant.RoleIDs {
 		item, found, err := r.getRoleByID(ctx, queryable, roleID)
@@ -269,7 +269,7 @@ func (r *PostgresRepository) GrantAdmin(ctx context.Context, grant AdminGrantUps
 			return err
 		}
 		if !found || item.deleted {
-			return &httpx.APIError{Code: 10300, Message: "角色不存在"}
+			return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}
 		}
 	}
 	grantedAt := grant.GrantedAt
@@ -300,7 +300,7 @@ func (r *PostgresRepository) RevokeAdmin(ctx context.Context, userID string) err
 		return err
 	}
 	if !found {
-		return &httpx.APIError{Code: 10300, Message: "管理员不存在"}
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "管理员不存在"}
 	}
 	if err := queryable.Exec(ctx, queryAdminReplaceRoles, userID); err != nil {
 		return err
