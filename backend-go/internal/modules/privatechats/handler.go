@@ -27,8 +27,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.service.List(r.Context(), req)
 	if err != nil {
-		observability.LogServerError(r, "List", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteAPIError(w, r, "List", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))

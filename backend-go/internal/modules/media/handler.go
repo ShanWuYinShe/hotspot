@@ -19,19 +19,16 @@ func NewHandler(service *Service) *Handler {
 func (h *Handler) PresignUpload(w http.ResponseWriter, r *http.Request) {
 	var req PresignUploadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		observability.LogBusinessError(r, "PresignUpload", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "PresignUpload", "参数错误")
 		return
 	}
 	upload, err := h.service.Presign(r.Context(), req)
 	if err != nil {
 		if errors.Is(err, ErrInvalidMediaRequest) {
-			observability.LogBusinessError(r, "PresignUpload", int(httpx.CodeInvalidRequest), "参数错误")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteInvalidRequest(w, r, "PresignUpload", "参数错误")
 			return
 		}
-		observability.LogServerError(r, "PresignUpload", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteAPIError(w, r, "PresignUpload", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(upload))
@@ -40,19 +37,16 @@ func (h *Handler) PresignUpload(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) BatchPresignUpload(w http.ResponseWriter, r *http.Request) {
 	var req BatchPresignUploadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || len(req.Files) == 0 || len(req.Files) > 9 {
-		observability.LogBusinessError(r, "BatchPresignUpload", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "BatchPresignUpload", "参数错误")
 		return
 	}
 	uploads, err := h.service.BatchPresign(r.Context(), req)
 	if err != nil {
 		if errors.Is(err, ErrInvalidMediaRequest) {
-			observability.LogBusinessError(r, "BatchPresignUpload", int(httpx.CodeInvalidRequest), "参数错误")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteInvalidRequest(w, r, "BatchPresignUpload", "参数错误")
 			return
 		}
-		observability.LogServerError(r, "BatchPresignUpload", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteAPIError(w, r, "BatchPresignUpload", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(uploads))
@@ -61,8 +55,7 @@ func (h *Handler) BatchPresignUpload(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 	var req CompleteUploadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UploadID == "" {
-		observability.LogBusinessError(r, "CompleteUpload", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "CompleteUpload", "参数错误")
 		return
 	}
 	file, err := h.service.Complete(r.Context(), req.UploadID)
@@ -89,8 +82,7 @@ func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CompleteUploadBatch(w http.ResponseWriter, r *http.Request) {
 	var req BatchCompleteUploadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || len(req.UploadIDs) == 0 || len(req.UploadIDs) > 9 {
-		observability.LogBusinessError(r, "CompleteUploadBatch", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "CompleteUploadBatch", "参数错误")
 		return
 	}
 	uploads := make([]UploadedMedia, 0, len(req.UploadIDs))

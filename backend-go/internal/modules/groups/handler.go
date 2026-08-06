@@ -46,8 +46,7 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 	}
 	item, ok, err := h.service.OpenTheDoor(r.Context(), req.GroupID)
 	if err != nil {
-		observability.LogServerError(r, "OpenTheDoor", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteAPIError(w, r, "OpenTheDoor", err)
 		return
 	}
 	if !ok {
@@ -82,8 +81,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
 			return
 		}
-		observability.LogServerError(r, "Search", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteAPIError(w, r, "Search", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))

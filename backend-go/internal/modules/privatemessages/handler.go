@@ -19,19 +19,16 @@ func NewHandler(service *Service) *Handler {
 
 func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 	if err := idempotency.RequireKey(r); err != nil {
-		observability.LogBusinessError(r, "Send", int(err.Code), err.Message)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteAPIError(w, r, "Send", err)
 		return
 	}
 	var req SendPrivateMessageRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		observability.LogBusinessError(r, "Send", int(err.Code), err.Message)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteAPIError(w, r, "Send", err)
 		return
 	}
 	if !isValidSendRequest(req) {
-		observability.LogBusinessError(r, "Send", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "Send", "参数错误")
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "private_messages/send", func() httpx.ApiResponse[any] {
@@ -55,19 +52,16 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetHistory(w http.ResponseWriter, r *http.Request) {
 	var req GetHistoryRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		observability.LogBusinessError(r, "GetHistory", int(err.Code), err.Message)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteAPIError(w, r, "GetHistory", err)
 		return
 	}
 	if req.TargetUserID == "" || !isValidPagination(req.Pagination) {
-		observability.LogBusinessError(r, "GetHistory", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "GetHistory", "参数错误")
 		return
 	}
 	history, err := h.service.History(r.Context(), req)
 	if err != nil {
-		observability.LogServerError(r, "GetHistory", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteAPIError(w, r, "GetHistory", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(history))
@@ -76,8 +70,7 @@ func (h *Handler) GetHistory(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var req UpdatePrivateMessageRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MessageID == "" || req.Content == "" {
-		observability.LogBusinessError(r, "Update", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "Update", "参数错误")
 		return
 	}
 	if err := h.service.Update(r.Context(), req); err != nil {
@@ -103,8 +96,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 	var req RecallPrivateMessageRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MessageID == "" {
-		observability.LogBusinessError(r, "Recall", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "Recall", "参数错误")
 		return
 	}
 	if err := h.service.Recall(r.Context(), req); err != nil {
@@ -135,8 +127,7 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	var req MarkPrivateReadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		observability.LogBusinessError(r, "MarkRead", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "MarkRead", "参数错误")
 		return
 	}
 	scope := req.Scope
@@ -146,16 +137,14 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	switch scope {
 	case "all":
 		if err := h.service.MarkAllRead(r.Context()); err != nil {
-			observability.LogServerError(r, "MarkRead", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+			httpx.WriteAPIError(w, r, "MarkRead", err)
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 		return
 	case "session":
 		if req.TargetUserID == "" {
-			observability.LogBusinessError(r, "MarkRead", int(httpx.CodeInvalidRequest), "参数错误")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteInvalidRequest(w, r, "MarkRead", "参数错误")
 			return
 		}
 		if err := h.service.MarkAsRead(r.Context(), MarkPrivateMessagesReadRequest{
@@ -163,12 +152,10 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 			UpToMessageID: req.UpToMessageID,
 		}); err != nil {
 			if errors.Is(err, ErrMessageNotFound) {
-				observability.LogBusinessError(r, "MarkRead", int(httpx.CodeNotFound), "消息不存在")
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "消息不存在"))
+				httpx.WriteBusinessError(w, r, "MarkRead", httpx.CodeNotFound, "消息不存在")
 				return
 			}
-			observability.LogServerError(r, "MarkRead", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+			httpx.WriteAPIError(w, r, "MarkRead", err)
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())

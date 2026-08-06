@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
-	"hotspot/backend-go/internal/platform/observability"
 )
 
 type Handler struct {
@@ -28,8 +27,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
-		observability.LogServerError(r, "List", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteAPIError(w, r, "List", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))
@@ -42,8 +40,7 @@ func (h *Handler) UnreadCount(w http.ResponseWriter, r *http.Request) {
 	}
 	count, err := h.service.UnreadCount(r.Context())
 	if err != nil {
-		observability.LogServerError(r, "UnreadCount", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteAPIError(w, r, "UnreadCount", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(count))
@@ -60,8 +57,7 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(req.NotifyIDs) == 0 {
 		if err := h.service.MarkAllRead(r.Context()); err != nil {
-			observability.LogServerError(r, "MarkRead", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+			httpx.WriteAPIError(w, r, "MarkRead", err)
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
@@ -72,8 +68,7 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.MarkAsRead(r.Context(), req.NotifyIDs); err != nil {
-		observability.LogServerError(r, "MarkRead", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteAPIError(w, r, "MarkRead", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())

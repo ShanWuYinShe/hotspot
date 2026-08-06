@@ -15,19 +15,16 @@ func NewHandler(service *Service) *Handler { return &Handler{service: service} }
 
 func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 	if err := idempotency.RequireKey(r); err != nil {
-		observability.LogBusinessError(r, "Send", int(err.Code), err.Message)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteAPIError(w, r, "Send", err)
 		return
 	}
 	var req SendGroupMessageRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		observability.LogBusinessError(r, "Send", int(httpx.CodeInvalidRequest), "请求体格式错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteInvalidRequest(w, r, "Send", "请求体格式错误")
 		return
 	}
 	if req.GroupID == "" || req.Type == "" {
-		observability.LogBusinessError(r, "Send", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "Send", "参数错误")
 		return
 	}
 	principal, _ := platformauth.PrincipalFromContext(r.Context())
@@ -61,24 +58,20 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 	var req GetGroupMessagesHistoryRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		observability.LogBusinessError(r, "History", int(httpx.CodeInvalidRequest), "请求体格式错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteInvalidRequest(w, r, "History", "请求体格式错误")
 		return
 	}
 	if req.GroupID == "" || !isValidPagination(req.Pagination) {
-		observability.LogBusinessError(r, "History", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "History", "参数错误")
 		return
 	}
 	history, err := h.service.History(r.Context(), req.GroupID, req.Pagination)
 	if err != nil {
 		if errors.Is(err, ErrNotGroupMember) {
-			observability.LogBusinessError(r, "History", int(httpx.CodeConflict), "不是群组成员")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "不是群组成员"))
+			httpx.WriteBusinessError(w, r, "History", httpx.CodeConflict, "不是群组成员")
 			return
 		}
-		observability.LogServerError(r, "History", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteAPIError(w, r, "History", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(history))
@@ -87,13 +80,11 @@ func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var req UpdateGroupMessageRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		observability.LogBusinessError(r, "Update", int(httpx.CodeInvalidRequest), "请求体格式错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteInvalidRequest(w, r, "Update", "请求体格式错误")
 		return
 	}
 	if req.MessageID == "" || req.Content == "" {
-		observability.LogBusinessError(r, "Update", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "Update", "参数错误")
 		return
 	}
 	principal, _ := platformauth.PrincipalFromContext(r.Context())
@@ -124,13 +115,11 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 	var req RecallGroupMessageRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		observability.LogBusinessError(r, "Recall", int(httpx.CodeInvalidRequest), "请求体格式错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteInvalidRequest(w, r, "Recall", "请求体格式错误")
 		return
 	}
 	if req.MessageID == "" {
-		observability.LogBusinessError(r, "Recall", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "Recall", "参数错误")
 		return
 	}
 	principal, _ := platformauth.PrincipalFromContext(r.Context())
@@ -166,8 +155,7 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	var req MarkGroupReadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		observability.LogBusinessError(r, "MarkRead", int(httpx.CodeInvalidRequest), "请求体格式错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteInvalidRequest(w, r, "MarkRead", "请求体格式错误")
 		return
 	}
 	scope := req.Scope
@@ -177,16 +165,14 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	switch scope {
 	case "all":
 		if err := h.service.MarkAllRead(r.Context()); err != nil {
-			observability.LogServerError(r, "MarkRead", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+			httpx.WriteAPIError(w, r, "MarkRead", err)
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 		return
 	case "group":
 		if req.GroupID == "" {
-			observability.LogBusinessError(r, "MarkRead", int(httpx.CodeInvalidRequest), "参数错误")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteInvalidRequest(w, r, "MarkRead", "参数错误")
 			return
 		}
 		if err := h.service.MarkAsRead(r.Context(), MarkGroupMessagesReadRequest{

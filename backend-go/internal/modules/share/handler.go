@@ -15,14 +15,12 @@ func NewHandler(service *Service) *Handler { return &Handler{service: service} }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	if err := idempotency.RequireKey(r); err != nil {
-		observability.LogBusinessError(r, "Create", int(err.Code), err.Message)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteAPIError(w, r, "Create", err)
 		return
 	}
 	var req CreateShareRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "Create", "参数错误")
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "share/create", func() httpx.ApiResponse[ShareCreated] {
@@ -45,8 +43,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	var req GetShareRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		observability.LogBusinessError(r, "Get", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "Get", "参数错误")
 		return
 	}
 	detail, err := h.service.Get(r.Context(), req)
@@ -70,8 +67,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	var req ShareListRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		observability.LogBusinessError(r, "List", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "List", "参数错误")
 		return
 	}
 	list, err := h.service.List(r.Context(), req)
@@ -92,8 +88,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Revoke(w http.ResponseWriter, r *http.Request) {
 	var req RevokeShareRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		observability.LogBusinessError(r, "Revoke", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "Revoke", "参数错误")
 		return
 	}
 	if err := h.service.Revoke(r.Context(), req); err != nil {

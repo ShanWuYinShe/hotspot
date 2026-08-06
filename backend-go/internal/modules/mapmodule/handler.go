@@ -7,7 +7,6 @@ import (
 
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/httpx"
-	"hotspot/backend-go/internal/platform/observability"
 )
 
 type Handler struct {
@@ -71,8 +70,7 @@ func (h *Handler) Canvas(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
-		observability.LogServerError(r, "Canvas", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteAPIError(w, r, "Canvas", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))

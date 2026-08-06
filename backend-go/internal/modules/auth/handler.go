@@ -166,8 +166,7 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.service.Refresh(r.Context(), req, deviceID, refreshCookie)
 	if err != nil {
-		observability.LogBusinessError(r, "RefreshToken", int(httpx.CodeUnauthorized), "Refresh Token 无效或过期")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeUnauthorized, "Refresh Token 无效或过期"))
+		httpx.WriteBusinessError(w, r, "RefreshToken", httpx.CodeUnauthorized, "Refresh Token 无效或过期")
 		return
 	}
 	if req.ClientType == ClientTypeWeb {

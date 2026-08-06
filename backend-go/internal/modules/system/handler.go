@@ -44,8 +44,7 @@ func (h *Handler) ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 	}
 	payload, err := h.service.ListAnnouncements(r.Context())
 	if err != nil {
-		observability.LogServerError(r, "ListAnnouncements", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteAPIError(w, r, "ListAnnouncements", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))

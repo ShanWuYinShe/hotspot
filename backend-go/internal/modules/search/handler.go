@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
-	"hotspot/backend-go/internal/platform/observability"
 )
 
 type Handler struct {
@@ -53,8 +52,7 @@ func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 		Radius:         body.Radius,
 	})
 	if err != nil {
-		observability.LogServerError(r, "Suggest", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteAPIError(w, r, "Suggest", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))

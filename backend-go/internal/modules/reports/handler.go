@@ -14,8 +14,7 @@ func NewHandler(service *Service) *Handler { return &Handler{service: service} }
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var req CreateReportRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.TargetType == "" || req.TargetID == "" || req.Reason == "" {
-		observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteInvalidRequest(w, r, "Create", "参数错误")
 		return
 	}
 	created, err := h.service.Create(r.Context(), req)
@@ -42,14 +41,12 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	var req MyReportsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		observability.LogBusinessError(r, "List", int(httpx.CodeInvalidRequest), "请求体格式错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteInvalidRequest(w, r, "List", "请求体格式错误")
 		return
 	}
 	list, err := h.service.List(r.Context(), req)
 	if err != nil {
-		observability.LogServerError(r, "List", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteAPIError(w, r, "List", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))
