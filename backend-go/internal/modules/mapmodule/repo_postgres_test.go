@@ -3,6 +3,7 @@ package mapmodule
 import (
 	"context"
 	"errors"
+	"hotspot/backend-go/internal/platform/testdb"
 	"testing"
 	"time"
 
@@ -10,47 +11,6 @@ import (
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
 )
-
-type mapRowValues struct {
-	values []any
-	err    error
-}
-
-func (r mapRowValues) Scan(dest ...any) error {
-	if r.err != nil {
-		return r.err
-	}
-	for i := range dest {
-		switch d := dest[i].(type) {
-		case *string:
-			*d = r.values[i].(string)
-		case *float64:
-			*d = r.values[i].(float64)
-		case *time.Time:
-			*d = r.values[i].(time.Time)
-		case *int:
-			*d = r.values[i].(int)
-		default:
-			return errors.New("unsupported scan dest")
-		}
-	}
-	return nil
-}
-
-type mapRowsValues struct {
-	rows [][]any
-	idx  int
-	err  error
-}
-
-func (r *mapRowsValues) Next() bool { return r.idx < len(r.rows) }
-func (r *mapRowsValues) Scan(dest ...any) error {
-	row := mapRowValues{values: r.rows[r.idx]}
-	r.idx++
-	return row.Scan(dest...)
-}
-func (r *mapRowsValues) Close() error { return nil }
-func (r *mapRowsValues) Err() error   { return r.err }
 
 type mapBackendStub struct {
 	queryRowsByQuery map[string][][]any
@@ -63,14 +23,14 @@ func (b *mapBackendStub) Exec(context.Context, string, ...any) error {
 	return nil
 }
 func (b *mapBackendStub) QueryRow(context.Context, string, ...any) persistence.Row {
-	return mapRowValues{err: persistence.ErrNotImplemented}
+	return testdb.RowValues{Err: persistence.ErrNotImplemented}
 }
 func (b *mapBackendStub) Query(_ context.Context, query string, _ ...any) (persistence.Rows, error) {
 	if err := b.queryErrs[query]; err != nil {
 		return nil, err
 	}
 	if rows, ok := b.queryRowsByQuery[query]; ok {
-		return &mapRowsValues{rows: rows}, nil
+		return &testdb.RowsValues{Rows: rows}, nil
 	}
 	return &persistence.InMemoryRows{}, nil
 }

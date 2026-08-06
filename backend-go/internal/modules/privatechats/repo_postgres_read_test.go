@@ -3,61 +3,13 @@ package privatechats
 import (
 	"context"
 	"errors"
+	"hotspot/backend-go/internal/platform/testdb"
 	"testing"
 	"time"
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
 )
-
-type privateChatRowValues struct {
-	values []any
-	err    error
-}
-
-func (r privateChatRowValues) Scan(dest ...any) error {
-	if r.err != nil {
-		return r.err
-	}
-	for i := range dest {
-		switch d := dest[i].(type) {
-		case *string:
-			*d = r.values[i].(string)
-		case *bool:
-			*d = r.values[i].(bool)
-		case *time.Time:
-			*d = r.values[i].(time.Time)
-		case **time.Time:
-			if r.values[i] == nil {
-				*d = nil
-				continue
-			}
-			value := r.values[i].(*time.Time)
-			if value == nil {
-				*d = nil
-				continue
-			}
-			copied := value.UTC()
-			*d = &copied
-		}
-	}
-	return nil
-}
-
-type privateChatRowsValues struct {
-	rows [][]any
-	idx  int
-	err  error
-}
-
-func (r *privateChatRowsValues) Next() bool { return r.idx < len(r.rows) }
-func (r *privateChatRowsValues) Scan(dest ...any) error {
-	row := privateChatRowValues{values: r.rows[r.idx]}
-	r.idx++
-	return row.Scan(dest...)
-}
-func (r *privateChatRowsValues) Close() error { return nil }
-func (r *privateChatRowsValues) Err() error   { return r.err }
 
 type privateChatNonQueryableDB struct{}
 
@@ -129,21 +81,21 @@ func (b *privateChatBackendStub) Exec(_ context.Context, query string, args ...a
 }
 func (b *privateChatBackendStub) QueryRow(_ context.Context, query string, args ...any) persistence.Row {
 	if err := b.queryRowErrs[query]; err != nil {
-		return privateChatRowValues{err: err}
+		return testdb.RowValues{Err: err}
 	}
 	switch query {
 	case queryGetPrivateChatCreatedAt:
 		record, ok := b.chats[args[0].(string)]
 		if !ok {
-			return privateChatRowValues{err: persistence.ErrNotImplemented}
+			return testdb.RowValues{Err: persistence.ErrNotImplemented}
 		}
-		return privateChatRowValues{values: []any{record.CreatedAt}}
+		return testdb.RowValues{Values: []any{record.CreatedAt}}
 	case queryGetPrivateChatState:
 		userID := args[0].(string)
 		chatKey := args[1].(string)
 		record, ok := b.chats[chatKey]
 		if !ok {
-			return privateChatRowValues{err: persistence.ErrNotImplemented}
+			return testdb.RowValues{Err: persistence.ErrNotImplemented}
 		}
 		targetID := record.UserAID
 		if record.UserAID == userID {
@@ -153,9 +105,9 @@ func (b *privateChatBackendStub) QueryRow(_ context.Context, query string, args 
 		if b.states != nil && b.states[chatKey] != nil {
 			state = b.states[chatKey][userID]
 		}
-		return privateChatRowValues{values: []any{record.ChatKey, targetID, record.CreatedAt, state.IsMuted, state.IsPinned, state.VisibleSince, state.DeletedAt}}
+		return testdb.RowValues{Values: []any{record.ChatKey, targetID, record.CreatedAt, state.IsMuted, state.IsPinned, state.VisibleSince, state.DeletedAt}}
 	}
-	return privateChatRowValues{err: persistence.ErrNotImplemented}
+	return testdb.RowValues{Err: persistence.ErrNotImplemented}
 }
 func (b *privateChatBackendStub) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
 	if err := b.queryErrs[query]; err != nil {
@@ -178,7 +130,7 @@ func (b *privateChatBackendStub) Query(_ context.Context, query string, args ...
 			}
 			rows = append(rows, []any{record.ChatKey, targetID, record.CreatedAt, state.IsMuted, state.IsPinned, state.VisibleSince, state.DeletedAt})
 		}
-		return &privateChatRowsValues{rows: rows}, nil
+		return &testdb.RowsValues{Rows: rows}, nil
 	}
 	return &persistence.InMemoryRows{}, nil
 }

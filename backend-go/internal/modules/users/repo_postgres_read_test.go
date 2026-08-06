@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"hotspot/backend-go/internal/platform/testdb"
 	"strings"
 	"testing"
 	"time"
@@ -14,54 +15,6 @@ import (
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
 )
-
-type userRowValues struct {
-	values []any
-	err    error
-}
-
-func (r userRowValues) Scan(dest ...any) error {
-	if r.err != nil {
-		return r.err
-	}
-	for i := range dest {
-		switch d := dest[i].(type) {
-		case *string:
-			*d = r.values[i].(string)
-		case *float64:
-			*d = r.values[i].(float64)
-		case *bool:
-			*d = r.values[i].(bool)
-		case *int:
-			*d = r.values[i].(int)
-		case *time.Time:
-			*d = r.values[i].(time.Time)
-		case **time.Time:
-			if r.values[i] == nil {
-				*d = nil
-			} else {
-				value := r.values[i].(time.Time)
-				*d = &value
-			}
-		}
-	}
-	return nil
-}
-
-type userRowsValues struct {
-	rows [][]any
-	idx  int
-	err  error
-}
-
-func (r *userRowsValues) Next() bool { return r.idx < len(r.rows) }
-func (r *userRowsValues) Scan(dest ...any) error {
-	row := userRowValues{values: r.rows[r.idx]}
-	r.idx++
-	return row.Scan(dest...)
-}
-func (r *userRowsValues) Close() error { return nil }
-func (r *userRowsValues) Err() error   { return r.err }
 
 type userFallbackRepo struct{ used bool }
 
@@ -174,7 +127,7 @@ func (b *userBackendStub) QueryRow(_ context.Context, query string, _ ...any) pe
 	if row, ok := b.queryRowByQuery[query]; ok {
 		return row
 	}
-	return userRowValues{err: persistence.ErrNotImplemented}
+	return testdb.RowValues{Err: persistence.ErrNotImplemented}
 }
 func (b *userBackendStub) Query(_ context.Context, query string, _ ...any) (persistence.Rows, error) {
 	if err, ok := b.queryErrs[query]; ok {
@@ -186,11 +139,11 @@ func (b *userBackendStub) Query(_ context.Context, query string, _ ...any) (pers
 		}
 	}
 	if rows, ok := b.queryRowsByQuery[query]; ok {
-		return &userRowsValues{rows: rows}, nil
+		return &testdb.RowsValues{Rows: rows}, nil
 	}
 	for key, rows := range b.queryRowsByQuery {
 		if key != "" && strings.Contains(query, key) {
-			return &userRowsValues{rows: rows}, nil
+			return &testdb.RowsValues{Rows: rows}, nil
 		}
 	}
 	return &persistence.InMemoryRows{}, nil
@@ -206,17 +159,17 @@ func (b *userMomentCursorBackend) Ping(context.Context) error                 { 
 func (b *userMomentCursorBackend) Close() error                               { return nil }
 func (b *userMomentCursorBackend) Exec(context.Context, string, ...any) error { return nil }
 func (b *userMomentCursorBackend) QueryRow(context.Context, string, ...any) persistence.Row {
-	return userRowValues{err: persistence.ErrNotImplemented}
+	return testdb.RowValues{Err: persistence.ErrNotImplemented}
 }
 func (b *userMomentCursorBackend) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
 	switch query {
 	case queryListUserMoments:
 		if len(args) >= 4 && args[2] != nil && args[3] == "moment_2" {
-			return &userRowsValues{rows: b.secondPage}, nil
+			return &testdb.RowsValues{Rows: b.secondPage}, nil
 		}
-		return &userRowsValues{rows: b.firstPage}, nil
+		return &testdb.RowsValues{Rows: b.firstPage}, nil
 	case momenttypesQueryListMomentTagsByMomentID, momenttypesQueryListMomentTagsByMomentIDs:
-		return &userRowsValues{rows: b.tags}, nil
+		return &testdb.RowsValues{Rows: b.tags}, nil
 	default:
 		return &persistence.InMemoryRows{}, nil
 	}
@@ -225,10 +178,10 @@ func (b *userMomentCursorBackend) Query(_ context.Context, query string, args ..
 func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 	backend := &userBackendStub{
 		queryRowByQuery: map[string]persistence.Row{
-			queryGetUserProfile:  userRowValues{values: []any{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC), false}},
-			queryGetUserSettings: userRowValues{values: []any{"public", true, true, true, true, true, true, true, "everyone", true, false, true, true, false}},
-			queryGetUserRelation: userRowValues{values: []any{true, false, "buddy", time.Date(2026, 3, 18, 0, 0, 0, 0, time.UTC), nil, ""}},
-			queryCountUserStats:  userRowValues{values: []any{2, 1, 3, 4, 5}},
+			queryGetUserProfile:  testdb.RowValues{Values: []any{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC), false}},
+			queryGetUserSettings: testdb.RowValues{Values: []any{"public", true, true, true, true, true, true, true, "everyone", true, false, true, true, false}},
+			queryGetUserRelation: testdb.RowValues{Values: []any{true, false, "buddy", time.Date(2026, 3, 18, 0, 0, 0, 0, time.UTC), nil, ""}},
+			queryCountUserStats:  testdb.RowValues{Values: []any{2, 1, 3, 4, 5}},
 		},
 		queryRowsByQuery: map[string][][]any{
 			"FROM users u":                            {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC), false}},
@@ -292,7 +245,7 @@ func TestPostgresRepositorySearchAndListBlockedReturnErrorsWithoutFallback(t *te
 }
 
 func TestPostgresRepositoryWritesReturnExecErrors(t *testing.T) {
-	backend := &userBackendStub{queryRowByQuery: map[string]persistence.Row{queryGetUserRelation: userRowValues{values: []any{false, false, "", nil, nil, ""}}}, queryRowsByQuery: map[string][][]any{}, queryErrs: map[string]error{}, execErrs: map[string]error{queryUpsertUserProfile: errors.New("boom")}}
+	backend := &userBackendStub{queryRowByQuery: map[string]persistence.Row{queryGetUserRelation: testdb.RowValues{Values: []any{false, false, "", nil, nil, ""}}}, queryRowsByQuery: map[string][][]any{}, queryErrs: map[string]error{}, execErrs: map[string]error{queryUpsertUserProfile: errors.New("boom")}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)

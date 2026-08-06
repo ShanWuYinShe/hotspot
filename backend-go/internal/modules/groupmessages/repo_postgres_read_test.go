@@ -3,6 +3,7 @@ package groupmessages
 import (
 	"context"
 	"errors"
+	"hotspot/backend-go/internal/platform/testdb"
 	"sort"
 	"testing"
 	"time"
@@ -10,49 +11,6 @@ import (
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
 )
-
-type groupMessageRowValues struct {
-	values []any
-	err    error
-}
-
-func (r groupMessageRowValues) Scan(dest ...any) error {
-	if r.err != nil {
-		return r.err
-	}
-	for i := range dest {
-		switch d := dest[i].(type) {
-		case *string:
-			*d = r.values[i].(string)
-		case *int:
-			*d = r.values[i].(int)
-		case *time.Time:
-			switch v := r.values[i].(type) {
-			case time.Time:
-				*d = v
-			case string:
-				t, _ := time.Parse(time.RFC3339Nano, v)
-				*d = t
-			}
-		}
-	}
-	return nil
-}
-
-type groupMessageRowsValues struct {
-	rows [][]any
-	idx  int
-	err  error
-}
-
-func (r *groupMessageRowsValues) Next() bool { return r.idx < len(r.rows) }
-func (r *groupMessageRowsValues) Scan(dest ...any) error {
-	row := groupMessageRowValues{values: r.rows[r.idx]}
-	r.idx++
-	return row.Scan(dest...)
-}
-func (r *groupMessageRowsValues) Close() error { return nil }
-func (r *groupMessageRowsValues) Err() error   { return r.err }
 
 type groupMessageStubRecord struct {
 	MessageID string
@@ -157,12 +115,12 @@ func (b *groupMessageBackendStub) QueryRow(_ context.Context, query string, args
 		messageID := args[2].(string)
 		for _, record := range b.items[groupID] {
 			if record.MessageID == messageID {
-				return groupMessageRowValues{values: []any{record.SentAt, record.MessageID}}
+				return testdb.RowValues{Values: []any{record.SentAt, record.MessageID}}
 			}
 		}
-		return groupMessageRowValues{err: persistence.ErrNotImplemented}
+		return testdb.RowValues{Err: persistence.ErrNotImplemented}
 	}
-	return groupMessageRowValues{err: persistence.ErrNotImplemented}
+	return testdb.RowValues{Err: persistence.ErrNotImplemented}
 }
 func (b *groupMessageBackendStub) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
 	if err := b.queryErrs[query]; err != nil {
@@ -181,7 +139,7 @@ func (b *groupMessageBackendStub) Query(_ context.Context, query string, args ..
 		for _, record := range records {
 			rows = append(rows, []any{record.MessageID, record.Type, record.Content, record.SentAt, "", "", "", "", "", 0})
 		}
-		return &groupMessageRowsValues{rows: rows}, nil
+		return &testdb.RowsValues{Rows: rows}, nil
 	}
 	return &persistence.InMemoryRows{}, nil
 }

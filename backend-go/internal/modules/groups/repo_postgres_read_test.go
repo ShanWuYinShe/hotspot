@@ -3,6 +3,7 @@ package groups
 import (
 	"context"
 	"errors"
+	"hotspot/backend-go/internal/platform/testdb"
 	"reflect"
 	"strings"
 	"testing"
@@ -13,70 +14,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 )
-
-type groupRowValues struct {
-	values []any
-	err    error
-}
-
-func (r groupRowValues) Scan(dest ...any) error {
-	if r.err != nil {
-		return r.err
-	}
-	for i := range dest {
-		switch d := dest[i].(type) {
-		case *string:
-			*d = r.values[i].(string)
-		case *bool:
-			*d = r.values[i].(bool)
-		case *int:
-			*d = r.values[i].(int)
-		case *float64:
-			*d = r.values[i].(float64)
-		case *[]string:
-			*d = r.values[i].([]string)
-		case *time.Time:
-			if v, ok := r.values[i].(time.Time); ok {
-				*d = v
-			}
-		case **string:
-			if r.values[i] == nil {
-				*d = nil
-			} else if v, ok := r.values[i].(string); ok {
-				*d = &v
-			}
-		case **int:
-			if r.values[i] == nil {
-				*d = nil
-			} else if v, ok := r.values[i].(int); ok {
-				*d = &v
-			}
-		case **time.Time:
-			if r.values[i] == nil {
-				*d = nil
-			} else {
-				value := r.values[i].(time.Time)
-				*d = &value
-			}
-		}
-	}
-	return nil
-}
-
-type groupRowsValues struct {
-	rows [][]any
-	idx  int
-	err  error
-}
-
-func (r *groupRowsValues) Next() bool { return r.idx < len(r.rows) }
-func (r *groupRowsValues) Scan(dest ...any) error {
-	row := groupRowValues{values: r.rows[r.idx]}
-	r.idx++
-	return row.Scan(dest...)
-}
-func (r *groupRowsValues) Close() error { return nil }
-func (r *groupRowsValues) Err() error   { return r.err }
 
 type groupBackendStub struct {
 	rows      [][]any
@@ -98,12 +35,12 @@ func (b *groupBackendStub) QueryRow(_ context.Context, query string, _ ...any) p
 		return b.queryRow
 	}
 	if query == queryCountGroupMembers {
-		return groupRowValues{values: []any{1}}
+		return testdb.RowValues{Values: []any{1}}
 	}
 	if query == queryGetGroupMembership {
-		return groupRowValues{err: pgx.ErrNoRows}
+		return testdb.RowValues{Err: pgx.ErrNoRows}
 	}
-	return groupRowValues{err: persistence.ErrNotImplemented}
+	return testdb.RowValues{Err: persistence.ErrNotImplemented}
 }
 func (b *groupBackendStub) Query(_ context.Context, query string, _ ...any) (persistence.Rows, error) {
 	if err := b.queryErrs[query]; err != nil {
@@ -113,10 +50,10 @@ func (b *groupBackendStub) Query(_ context.Context, query string, _ ...any) (per
 		if err := b.queryErrs[querySearchGroups]; err != nil {
 			return nil, err
 		}
-		return &groupRowsValues{rows: b.rows}, nil
+		return &testdb.RowsValues{Rows: b.rows}, nil
 	}
 	if query == querySearchGroups {
-		return &groupRowsValues{rows: b.rows}, nil
+		return &testdb.RowsValues{Rows: b.rows}, nil
 	}
 	return &persistence.InMemoryRows{}, nil
 }
@@ -125,7 +62,7 @@ func TestPostgresRepositoryCreateGetAndSearch(t *testing.T) {
 	backend := &groupBackendStub{
 		rows:      [][]any{{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "direct", false, nil, true, 200, "user_alice", nil, nil, []string{"hiking"}, 1, 1}},
 		queryErrs: map[string]error{},
-		queryRow:  groupRowValues{values: []any{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "direct", false, nil, true, 200, "user_alice", nil, nil, []string{"hiking"}, 1}},
+		queryRow:  testdb.RowValues{Values: []any{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "direct", false, nil, true, 200, "user_alice", nil, nil, []string{"hiking"}, 1}},
 		execErrs:  map[string]error{},
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
@@ -156,7 +93,7 @@ func TestPostgresRepositoryCreateGetAndSearch(t *testing.T) {
 }
 
 func TestPostgresRepositoryGetReturnsNotFoundWithoutFallback(t *testing.T) {
-	backend := &groupBackendStub{rows: nil, queryErrs: map[string]error{}, queryRow: groupRowValues{err: errors.New("no rows")}, execErrs: map[string]error{}}
+	backend := &groupBackendStub{rows: nil, queryErrs: map[string]error{}, queryRow: testdb.RowValues{Err: errors.New("no rows")}, execErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
@@ -168,7 +105,7 @@ func TestPostgresRepositoryGetReturnsNotFoundWithoutFallback(t *testing.T) {
 }
 
 func TestPostgresRepositoryCreateReturnsErrorOnExecFailure(t *testing.T) {
-	backend := &groupBackendStub{rows: nil, queryErrs: map[string]error{}, queryRow: groupRowValues{err: persistence.ErrNotImplemented}, execErrs: map[string]error{queryInsertGroup: errors.New("boom")}}
+	backend := &groupBackendStub{rows: nil, queryErrs: map[string]error{}, queryRow: testdb.RowValues{Err: persistence.ErrNotImplemented}, execErrs: map[string]error{queryInsertGroup: errors.New("boom")}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
@@ -180,7 +117,7 @@ func TestPostgresRepositoryCreateReturnsErrorOnExecFailure(t *testing.T) {
 }
 
 func TestPostgresRepositorySearchReturnsErrorOnQueryFailure(t *testing.T) {
-	backend := &groupBackendStub{rows: nil, queryErrs: map[string]error{querySearchGroups: errors.New("boom")}, queryRow: groupRowValues{err: persistence.ErrNotImplemented}, execErrs: map[string]error{}}
+	backend := &groupBackendStub{rows: nil, queryErrs: map[string]error{querySearchGroups: errors.New("boom")}, queryRow: testdb.RowValues{Err: persistence.ErrNotImplemented}, execErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
@@ -203,7 +140,7 @@ func TestPostgresRepositorySearchFiltersSortsAndPaginatesInGo(t *testing.T) {
 			{"g_3", "Alpha Three", "", "", false, "loc_c", 35.01, 112.0, "direct", false, nil, true, 200, "user_c", nil, nil, []string{}, 2, 1},
 		},
 		queryErrs: map[string]error{},
-		queryRow:  groupRowValues{err: persistence.ErrNotImplemented},
+		queryRow:  testdb.RowValues{Err: persistence.ErrNotImplemented},
 		execErrs:  map[string]error{},
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
@@ -271,7 +208,7 @@ func TestPostgresRepositorySearchGoSorts(t *testing.T) {
 			{"g_c", "Zulu Alpha", "", "", false, "loc", 35.0, 112.0, "direct", false, nil, true, 200, "user_c", createdAt(2025), nil, []string{}, 30, 1},
 		},
 		queryErrs: map[string]error{},
-		queryRow:  groupRowValues{err: persistence.ErrNotImplemented},
+		queryRow:  testdb.RowValues{Err: persistence.ErrNotImplemented},
 		execErrs:  map[string]error{},
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})

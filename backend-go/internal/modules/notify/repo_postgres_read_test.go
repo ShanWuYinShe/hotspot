@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"hotspot/backend-go/internal/platform/testdb"
 	"sort"
 	"strconv"
 	"testing"
@@ -11,41 +12,6 @@ import (
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
 )
-
-type notificationRowValues struct {
-	values []any
-	err    error
-}
-
-func (r notificationRowValues) Scan(dest ...any) error {
-	if r.err != nil {
-		return r.err
-	}
-	for i := range dest {
-		switch d := dest[i].(type) {
-		case *string:
-			*d = r.values[i].(string)
-		case *bool:
-			*d = r.values[i].(bool)
-		}
-	}
-	return nil
-}
-
-type notificationRowsValues struct {
-	rows [][]any
-	idx  int
-	err  error
-}
-
-func (r *notificationRowsValues) Next() bool { return r.idx < len(r.rows) }
-func (r *notificationRowsValues) Scan(dest ...any) error {
-	row := notificationRowValues{values: r.rows[r.idx]}
-	r.idx++
-	return row.Scan(dest...)
-}
-func (r *notificationRowsValues) Close() error { return nil }
-func (r *notificationRowsValues) Err() error   { return r.err }
 
 type notificationNonQueryableDB struct{}
 
@@ -97,7 +63,7 @@ func (b *notificationBackendStub) Exec(_ context.Context, query string, args ...
 }
 
 func (b *notificationBackendStub) QueryRow(context.Context, string, ...any) persistence.Row {
-	return notificationRowValues{err: persistence.ErrNotImplemented}
+	return testdb.RowValues{Err: persistence.ErrNotImplemented}
 }
 
 func (b *notificationBackendStub) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
@@ -147,7 +113,7 @@ func (b *notificationBackendStub) Query(_ context.Context, query string, args ..
 				break
 			}
 		}
-		return &notificationRowsValues{rows: rows}, nil
+		return &testdb.RowsValues{Rows: rows}, nil
 	case queryUnreadNotificationCounts:
 		userID := args[0].(string)
 		counts := map[string]int{}
@@ -161,7 +127,7 @@ func (b *notificationBackendStub) Query(_ context.Context, query string, args ..
 		for notificationType, count := range counts {
 			rows = append(rows, []any{notificationType, strconv.Itoa(count)})
 		}
-		return &notificationRowsValues{rows: rows}, nil
+		return &testdb.RowsValues{Rows: rows}, nil
 	default:
 		return &persistence.InMemoryRows{}, nil
 	}

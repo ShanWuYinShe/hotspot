@@ -3,6 +3,7 @@ package system
 import (
 	"context"
 	"errors"
+	"hotspot/backend-go/internal/platform/testdb"
 	"sort"
 	"testing"
 	"time"
@@ -12,62 +13,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 )
-
-type announcementRowValues struct {
-	values []any
-	err    error
-}
-
-func (r announcementRowValues) Scan(dest ...any) error {
-	if r.err != nil {
-		return r.err
-	}
-	for i := range dest {
-		switch d := dest[i].(type) {
-		case *string:
-			*d = r.values[i].(string)
-		case *int:
-			*d = r.values[i].(int)
-		case *bool:
-			*d = r.values[i].(bool)
-		case *time.Time:
-			*d = r.values[i].(time.Time)
-		case **time.Time:
-			if r.values[i] == nil {
-				*d = nil
-			} else {
-				switch value := r.values[i].(type) {
-				case time.Time:
-					copied := value
-					*d = &copied
-				case *time.Time:
-					if value == nil {
-						*d = nil
-					} else {
-						copied := *value
-						*d = &copied
-					}
-				}
-			}
-		}
-	}
-	return nil
-}
-
-type announcementRowsValues struct {
-	rows [][]any
-	idx  int
-	err  error
-}
-
-func (r *announcementRowsValues) Next() bool { return r.idx < len(r.rows) }
-func (r *announcementRowsValues) Scan(dest ...any) error {
-	row := announcementRowValues{values: r.rows[r.idx]}
-	r.idx++
-	return row.Scan(dest...)
-}
-func (r *announcementRowsValues) Close() error { return nil }
-func (r *announcementRowsValues) Err() error   { return r.err }
 
 type announcementBackendStub struct {
 	announcements map[string]AnnouncementRecord
@@ -142,16 +87,16 @@ func (b *announcementBackendStub) Exec(_ context.Context, query string, args ...
 
 func (b *announcementBackendStub) QueryRow(_ context.Context, query string, args ...any) persistence.Row {
 	if err := b.queryRowErrs[query]; err != nil {
-		return announcementRowValues{err: err}
+		return testdb.RowValues{Err: err}
 	}
 	if query != queryAnnouncementByID {
-		return announcementRowValues{err: persistence.ErrNotImplemented}
+		return testdb.RowValues{Err: persistence.ErrNotImplemented}
 	}
 	item, ok := b.announcements[args[0].(string)]
 	if !ok {
-		return announcementRowValues{err: pgx.ErrNoRows}
+		return testdb.RowValues{Err: pgx.ErrNoRows}
 	}
-	return announcementRowValues{values: serializeAnnouncementRow(item, true)}
+	return testdb.RowValues{Values: serializeAnnouncementRow(item, true)}
 }
 
 func (b *announcementBackendStub) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
@@ -181,7 +126,7 @@ func (b *announcementBackendStub) Query(_ context.Context, query string, args ..
 				break
 			}
 		}
-		return &announcementRowsValues{rows: rows}, nil
+		return &testdb.RowsValues{Rows: rows}, nil
 	case querySearchAnnouncements:
 		severity := args[0].(string)
 		var cursor *AnnouncementCursor
@@ -208,7 +153,7 @@ func (b *announcementBackendStub) Query(_ context.Context, query string, args ..
 				break
 			}
 		}
-		return &announcementRowsValues{rows: rows}, nil
+		return &testdb.RowsValues{Rows: rows}, nil
 	default:
 		return &persistence.InMemoryRows{}, nil
 	}

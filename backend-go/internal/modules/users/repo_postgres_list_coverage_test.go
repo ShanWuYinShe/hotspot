@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 	"errors"
+	"hotspot/backend-go/internal/platform/testdb"
 	"testing"
 	"time"
 
@@ -46,7 +47,7 @@ func (r *listRowsValues) Scan(dest ...any) error {
 	if r.scanErr != nil {
 		return r.scanErr
 	}
-	row := userRowValues{values: r.rows[r.idx]}
+	row := testdb.RowValues{Values: r.rows[r.idx]}
 	r.idx++
 	return row.Scan(dest...)
 }
@@ -291,16 +292,16 @@ func TestCommonGroupCountAndUserExistsPostgres(t *testing.T) {
 
 func TestScanRowsPostgresErrorPaths(t *testing.T) {
 	scanErr := errors.New("scan")
-	if _, _, err := scanFriendRow(userRowValues{err: scanErr}); err == nil {
+	if _, _, err := scanFriendRow(testdb.RowValues{Err: scanErr}); err == nil {
 		t.Fatal("scanFriendRow error must propagate")
 	}
-	if _, _, err := scanFollowingRow(userRowValues{err: scanErr}); err == nil {
+	if _, _, err := scanFollowingRow(testdb.RowValues{Err: scanErr}); err == nil {
 		t.Fatal("scanFollowingRow error must propagate")
 	}
-	if _, _, err := scanFollowerRow(userRowValues{err: scanErr}); err == nil {
+	if _, _, err := scanFollowerRow(testdb.RowValues{Err: scanErr}); err == nil {
 		t.Fatal("scanFollowerRow error must propagate")
 	}
-	if _, _, err := scanUserGroupRow(userRowValues{err: scanErr}); err == nil {
+	if _, _, err := scanUserGroupRow(testdb.RowValues{Err: scanErr}); err == nil {
 		t.Fatal("scanUserGroupRow error must propagate")
 	}
 }

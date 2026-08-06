@@ -2,6 +2,7 @@ package search
 
 import (
 	"context"
+	"hotspot/backend-go/internal/platform/testdb"
 	"strings"
 	"testing"
 	"time"
@@ -9,43 +10,6 @@ import (
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
 )
-
-type searchRowValues struct {
-	values []any
-	err    error
-}
-
-func (r searchRowValues) Scan(dest ...any) error {
-	if r.err != nil {
-		return r.err
-	}
-	for i := range dest {
-		switch d := dest[i].(type) {
-		case *string:
-			*d = r.values[i].(string)
-		case *float64:
-			*d = r.values[i].(float64)
-		case *int:
-			*d = r.values[i].(int)
-		}
-	}
-	return nil
-}
-
-type searchRowsValues struct {
-	rows [][]any
-	idx  int
-	err  error
-}
-
-func (r *searchRowsValues) Next() bool { return r.idx < len(r.rows) }
-func (r *searchRowsValues) Scan(dest ...any) error {
-	row := searchRowValues{values: r.rows[r.idx]}
-	r.idx++
-	return row.Scan(dest...)
-}
-func (r *searchRowsValues) Close() error { return nil }
-func (r *searchRowsValues) Err() error   { return r.err }
 
 type searchBackendStub struct {
 	queryRowsByQuery map[string][][]any
@@ -62,7 +26,7 @@ func (b *searchBackendStub) Exec(context.Context, string, ...any) error {
 	return nil
 }
 func (b *searchBackendStub) QueryRow(context.Context, string, ...any) persistence.Row {
-	return searchRowValues{err: persistence.ErrNotImplemented}
+	return testdb.RowValues{Err: persistence.ErrNotImplemented}
 }
 func (b *searchBackendStub) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
 	b.lastQuery = query
@@ -71,7 +35,7 @@ func (b *searchBackendStub) Query(_ context.Context, query string, args ...any) 
 		return nil, err
 	}
 	if rows, ok := b.queryRowsByQuery[query]; ok {
-		return &searchRowsValues{rows: rows}, nil
+		return &testdb.RowsValues{Rows: rows}, nil
 	}
 	return &persistence.InMemoryRows{}, nil
 }

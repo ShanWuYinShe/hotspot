@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"hotspot/backend-go/internal/platform/testdb"
 	"sort"
 	"testing"
 	"time"
@@ -13,41 +14,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 )
-
-type shareRowValues struct {
-	values []any
-	err    error
-}
-
-func (r shareRowValues) Scan(dest ...any) error {
-	if r.err != nil {
-		return r.err
-	}
-	for i := range dest {
-		switch d := dest[i].(type) {
-		case *string:
-			*d = r.values[i].(string)
-		case *bool:
-			*d = r.values[i].(bool)
-		}
-	}
-	return nil
-}
-
-type shareRowsValues struct {
-	rows [][]any
-	idx  int
-	err  error
-}
-
-func (r *shareRowsValues) Next() bool { return r.idx < len(r.rows) }
-func (r *shareRowsValues) Scan(dest ...any) error {
-	row := shareRowValues{values: r.rows[r.idx]}
-	r.idx++
-	return row.Scan(dest...)
-}
-func (r *shareRowsValues) Close() error { return nil }
-func (r *shareRowsValues) Err() error   { return r.err }
 
 type shareStubRecord struct {
 	ShareID       string
@@ -127,43 +93,43 @@ func (b *shareBackendStub) Exec(_ context.Context, query string, args ...any) er
 
 func (b *shareBackendStub) QueryRow(_ context.Context, query string, args ...any) persistence.Row {
 	if err := b.queryRowErrs[query]; err != nil {
-		return shareRowValues{err: err}
+		return testdb.RowValues{Err: err}
 	}
 	switch query {
 	case queryGetShare:
 		shareID, ok := b.byCode[args[0].(string)]
 		if !ok {
-			return shareRowValues{err: pgx.ErrNoRows}
+			return testdb.RowValues{Err: pgx.ErrNoRows}
 		}
 		record := b.shares[shareID]
 		creator := b.users[record.CreatorUserID]
-		return shareRowValues{values: []any{record.ShareID, record.ShareCode, record.ShareType, record.CreatorUserID, creator[0], creator[1], record.PayloadJSON, record.CreatedAt, record.ExpiresAt, record.IsRevoked}}
+		return testdb.RowValues{Values: []any{record.ShareID, record.ShareCode, record.ShareType, record.CreatorUserID, creator[0], creator[1], record.PayloadJSON, record.CreatedAt, record.ExpiresAt, record.IsRevoked}}
 	case queryGetShareByID:
 		record, ok := b.shares[args[0].(string)]
 		if !ok {
-			return shareRowValues{err: pgx.ErrNoRows}
+			return testdb.RowValues{Err: pgx.ErrNoRows}
 		}
-		return shareRowValues{values: []any{record.ShareID, record.CreatorUserID, record.IsRevoked}}
+		return testdb.RowValues{Values: []any{record.ShareID, record.CreatorUserID, record.IsRevoked}}
 	case queryShareUserExists:
 		user, ok := b.users[args[0].(string)]
 		if !ok {
-			return shareRowValues{err: pgx.ErrNoRows}
+			return testdb.RowValues{Err: pgx.ErrNoRows}
 		}
-		return shareRowValues{values: []any{args[0].(string), user[0], user[1]}}
+		return testdb.RowValues{Values: []any{args[0].(string), user[0], user[1]}}
 	case queryShareGroupExists:
 		group, ok := b.groups[args[0].(string)]
 		if !ok {
-			return shareRowValues{err: pgx.ErrNoRows}
+			return testdb.RowValues{Err: pgx.ErrNoRows}
 		}
-		return shareRowValues{values: []any{args[0].(string), group[0], group[1], group[2]}}
+		return testdb.RowValues{Values: []any{args[0].(string), group[0], group[1], group[2]}}
 	case queryShareMomentExists:
 		moment, ok := b.moments[args[0].(string)]
 		if !ok {
-			return shareRowValues{err: pgx.ErrNoRows}
+			return testdb.RowValues{Err: pgx.ErrNoRows}
 		}
-		return shareRowValues{values: []any{args[0].(string), moment[0], moment[1], moment[2], moment[3]}}
+		return testdb.RowValues{Values: []any{args[0].(string), moment[0], moment[1], moment[2], moment[3]}}
 	default:
-		return shareRowValues{err: persistence.ErrNotImplemented}
+		return testdb.RowValues{Err: persistence.ErrNotImplemented}
 	}
 }
 
@@ -207,7 +173,7 @@ func (b *shareBackendStub) Query(_ context.Context, query string, args ...any) (
 	for _, record := range records {
 		rows = append(rows, []any{record.ShareID, record.ShareCode, record.ShareType, record.CreatedAt, record.ExpiresAt, record.IsRevoked, record.PayloadJSON})
 	}
-	return &shareRowsValues{rows: rows}, nil
+	return &testdb.RowsValues{Rows: rows}, nil
 }
 
 func sharePayloadJSON(value any) string {

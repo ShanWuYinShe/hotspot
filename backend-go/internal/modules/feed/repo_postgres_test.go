@@ -3,6 +3,7 @@ package feed
 import (
 	"context"
 	"errors"
+	"hotspot/backend-go/internal/platform/testdb"
 	"strings"
 	"testing"
 	"time"
@@ -10,51 +11,6 @@ import (
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
 )
-
-type feedRowValues struct {
-	values []any
-	err    error
-}
-
-func (r feedRowValues) Scan(dest ...any) error {
-	if r.err != nil {
-		return r.err
-	}
-	for i := range dest {
-		switch d := dest[i].(type) {
-		case *string:
-			*d = r.values[i].(string)
-		case *float64:
-			*d = r.values[i].(float64)
-		case *time.Time:
-			*d = r.values[i].(time.Time)
-		case *int:
-			*d = r.values[i].(int)
-		case *bool:
-			*d = r.values[i].(bool)
-		case *[]string:
-			*d = r.values[i].([]string)
-		default:
-			return errors.New("unsupported scan dest")
-		}
-	}
-	return nil
-}
-
-type feedRowsValues struct {
-	rows [][]any
-	idx  int
-	err  error
-}
-
-func (r *feedRowsValues) Next() bool { return r.idx < len(r.rows) }
-func (r *feedRowsValues) Scan(dest ...any) error {
-	row := feedRowValues{values: r.rows[r.idx]}
-	r.idx++
-	return row.Scan(dest...)
-}
-func (r *feedRowsValues) Close() error { return nil }
-func (r *feedRowsValues) Err() error   { return r.err }
 
 type feedBackendStub struct {
 	queryRowsByKey map[string][][]any
@@ -67,7 +23,7 @@ func (b *feedBackendStub) Exec(_ context.Context, _ string, _ ...any) error {
 	return nil
 }
 func (b *feedBackendStub) QueryRow(_ context.Context, query string, _ ...any) persistence.Row {
-	return feedRowValues{err: persistence.ErrNotImplemented}
+	return testdb.RowValues{Err: persistence.ErrNotImplemented}
 }
 func (b *feedBackendStub) Query(_ context.Context, query string, _ ...any) (persistence.Rows, error) {
 	for key, err := range b.queryErrs {
@@ -77,7 +33,7 @@ func (b *feedBackendStub) Query(_ context.Context, query string, _ ...any) (pers
 	}
 	for key, rows := range b.queryRowsByKey {
 		if strings.Contains(query, key) {
-			return &feedRowsValues{rows: rows}, nil
+			return &testdb.RowsValues{Rows: rows}, nil
 		}
 	}
 	return &persistence.InMemoryRows{}, nil

@@ -3,6 +3,7 @@ package privatemessages
 import (
 	"context"
 	"errors"
+	"hotspot/backend-go/internal/platform/testdb"
 	"sort"
 	"testing"
 	"time"
@@ -10,49 +11,6 @@ import (
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
 )
-
-type privateMessageRowValues struct {
-	values []any
-	err    error
-}
-
-func (r privateMessageRowValues) Scan(dest ...any) error {
-	if r.err != nil {
-		return r.err
-	}
-	for i := range dest {
-		switch d := dest[i].(type) {
-		case *string:
-			*d = r.values[i].(string)
-		case *bool:
-			*d = r.values[i].(bool)
-		case *time.Time:
-			switch v := r.values[i].(type) {
-			case time.Time:
-				*d = v
-			case string:
-				t, _ := time.Parse(time.RFC3339Nano, v)
-				*d = t
-			}
-		}
-	}
-	return nil
-}
-
-type privateMessageRowsValues struct {
-	rows [][]any
-	idx  int
-	err  error
-}
-
-func (r *privateMessageRowsValues) Next() bool { return r.idx < len(r.rows) }
-func (r *privateMessageRowsValues) Scan(dest ...any) error {
-	row := privateMessageRowValues{values: r.rows[r.idx]}
-	r.idx++
-	return row.Scan(dest...)
-}
-func (r *privateMessageRowsValues) Close() error { return nil }
-func (r *privateMessageRowsValues) Err() error   { return r.err }
 
 type privateMessageNonQueryableDB struct{}
 
@@ -226,7 +184,7 @@ func (b *privateMessageBackendStub) QueryRow(_ context.Context, query string, ar
 		messageID := args[1].(string)
 		for _, record := range b.items[chatKey] {
 			if record.MessageID == messageID {
-				return privateMessageRowValues{values: []any{record.SentAt, record.MessageID}}
+				return testdb.RowValues{Values: []any{record.SentAt, record.MessageID}}
 			}
 		}
 	case queryGetPrivateMessageMeta:
@@ -234,12 +192,12 @@ func (b *privateMessageBackendStub) QueryRow(_ context.Context, query string, ar
 		for _, items := range b.items {
 			for _, record := range items {
 				if record.MessageID == messageID {
-					return privateMessageRowValues{values: []any{record.ChatKey, record.SenderID, record.Type, record.RecalledAt != "", record.SentAt}}
+					return testdb.RowValues{Values: []any{record.ChatKey, record.SenderID, record.Type, record.RecalledAt != "", record.SentAt}}
 				}
 			}
 		}
 	}
-	return privateMessageRowValues{err: persistence.ErrNotImplemented}
+	return testdb.RowValues{Err: persistence.ErrNotImplemented}
 }
 
 func (b *privateMessageBackendStub) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
@@ -322,7 +280,7 @@ func (b *privateMessageBackendStub) Query(_ context.Context, query string, args 
 				isRead,
 			})
 		}
-		return &privateMessageRowsValues{rows: rows}, nil
+		return &testdb.RowsValues{Rows: rows}, nil
 	}
 	return &persistence.InMemoryRows{}, nil
 }

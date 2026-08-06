@@ -3,6 +3,7 @@ package groups
 import (
 	"context"
 	"errors"
+	"hotspot/backend-go/internal/platform/testdb"
 	"strings"
 	"testing"
 	"time"
@@ -32,12 +33,12 @@ func (b *groupFullStub) Exec(_ context.Context, query string, _ ...any) error {
 }
 func (b *groupFullStub) QueryRow(_ context.Context, query string, _ ...any) persistence.Row {
 	if err := b.queryRowErr[query]; err != nil {
-		return groupRowValues{err: err}
+		return testdb.RowValues{Err: err}
 	}
 	if values, ok := b.queryRow[query]; ok {
-		return groupRowValues{values: values}
+		return testdb.RowValues{Values: values}
 	}
-	return groupRowValues{err: persistence.ErrNotImplemented}
+	return testdb.RowValues{Err: persistence.ErrNotImplemented}
 }
 func (b *groupFullStub) Query(_ context.Context, query string, _ ...any) (persistence.Rows, error) {
 	for key, err := range b.queryRowsErr {
@@ -55,7 +56,7 @@ func (b *groupFullStub) Query(_ context.Context, query string, _ ...any) (persis
 	}
 	for key, rows := range b.queryRows {
 		if query == key || (strings.HasPrefix(query, key)) {
-			return &groupRowsValues{rows: rows}, nil
+			return &testdb.RowsValues{Rows: rows}, nil
 		}
 	}
 	return &persistence.InMemoryRows{}, nil
@@ -701,7 +702,7 @@ type groupRowsErrValues struct {
 
 func (r *groupRowsErrValues) Next() bool { return r.idx < len(r.rows) }
 func (r *groupRowsErrValues) Scan(dest ...any) error {
-	row := groupRowValues{values: r.rows[r.idx]}
+	row := testdb.RowValues{Values: r.rows[r.idx]}
 	r.idx++
 	return row.Scan(dest...)
 }
