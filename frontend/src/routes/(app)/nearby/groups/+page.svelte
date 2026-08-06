@@ -9,9 +9,9 @@
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-	import FeaturedGroupCard from './FeaturedGroupCard.svelte';
-	import GroupCard from './GroupCard.svelte';
-	import { mapGroup, type Group } from './group-data';
+	import FeaturedGroupCard from './shared/FeaturedGroupCard.svelte';
+	import GroupCard from './shared/GroupCard.svelte';
+	import { mapGroup, type Group } from './shared/group-data';
 	import { getNearbyGroups, joinGroup, leaveGroup } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 

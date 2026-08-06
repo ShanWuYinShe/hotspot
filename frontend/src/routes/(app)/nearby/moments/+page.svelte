@@ -10,8 +10,8 @@
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
-	import MomentCard from '@/components/moments/MomentCard.svelte';
-	import { createFeedInteractions, type FeedItem } from '@/components/moments/feed-interactions.svelte';
+	import MomentCard from './shared/MomentCard.svelte';
+	import { createFeedInteractions, type FeedItem } from './shared/feed-interactions.svelte';
 	import { getFeedNearby } from '@/api';
 	import { formatDateTime } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';

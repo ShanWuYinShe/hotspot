@@ -8,8 +8,8 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-	import NotificationRow from './NotificationRow.svelte';
-	import { TYPE_CONFIG, normalizeNotifType, type NotificationItem } from './notification-data';
+	import NotificationRow from './shared/NotificationRow.svelte';
+	import { TYPE_CONFIG, normalizeNotifType, type NotificationItem } from './shared/notification-data';
 	import { listNotifications, getUnreadCount, markRead } from '@/api';
 	import { WS_NOTIFY_EVENT } from '@/lib/ws/client';
 	import { formatDateTime } from '@/lib/utils';

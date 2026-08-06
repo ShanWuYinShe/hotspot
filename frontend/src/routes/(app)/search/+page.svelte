@@ -4,8 +4,8 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import { searchUsers, searchMoments, searchSuggest } from '@/api';
-	import SearchDiscovery from './SearchDiscovery.svelte';
-	import SearchResults, { type TabType, type SearchResultsData } from './SearchResults.svelte';
+	import SearchDiscovery from './shared/SearchDiscovery.svelte';
+	import SearchResults, { type TabType, type SearchResultsData } from './shared/SearchResults.svelte';
 
 	// 搜索页：最近搜索（localStorage）、热门搜索、推荐话题、全部/用户/动态/话题 Tab。
 	// 对齐 Figma Make SearchPage：shadcn 卡片设计语言（rounded-panel border bg-card），
