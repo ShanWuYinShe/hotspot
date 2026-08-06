@@ -49,13 +49,13 @@ func (s *Service) GetAuditLog(ctx context.Context, logID string) (AuditLogItem, 
 	return item, nil, nil
 }
 
-func (s *Service) GetAppConfig(ctx context.Context) (AppConfig, *httpx.APIError, error) {
+func (s *Service) GetAppConfig(ctx context.Context) (AdminAppConfig, *httpx.APIError, error) {
 	if _, apiErr, err := s.requirePermission(ctx, permissionAppConfigRead); apiErr != nil || err != nil {
-		return AppConfig{}, apiErr, err
+		return AdminAppConfig{}, apiErr, err
 	}
 	cfg, err := s.provider.GetAppConfig(ctx)
 	if err != nil {
-		return AppConfig{}, nil, err
+		return AdminAppConfig{}, nil, err
 	}
 	return cfg, nil, nil
 }
@@ -73,25 +73,25 @@ func (s *Service) UpdateAppConfig(ctx context.Context, req UpdateAppConfigReques
 	if err != nil {
 		return nil, err
 	}
-	updated, apiErr, err := s.provider.UpdateAppConfig(ctx, actor.UserID, func(cfg AppConfig) (AppConfig, *httpx.APIError) {
+	updated, apiErr, err := s.provider.UpdateAppConfig(ctx, actor.UserID, func(cfg AdminAppConfig) (AdminAppConfig, *httpx.APIError) {
 		if req.Upload != nil {
 			if err := applyUploadConfigPatch(&cfg.Upload, *req.Upload); err != nil {
-				return AppConfig{}, err
+				return AdminAppConfig{}, err
 			}
 		}
 		if req.Defaults != nil {
 			if err := applyDefaultsPatch(&cfg.Defaults, *req.Defaults); err != nil {
-				return AppConfig{}, err
+				return AdminAppConfig{}, err
 			}
 		}
 		if req.RateLimits != nil {
 			if err := applyRateLimitsPatch(&cfg.RateLimits, *req.RateLimits); err != nil {
-				return AppConfig{}, err
+				return AdminAppConfig{}, err
 			}
 		}
 		if req.ResponseDefaults != nil {
 			if err := applyResponseDefaultsPatch(&cfg.ResponseDefaults, *req.ResponseDefaults); err != nil {
-				return AppConfig{}, err
+				return AdminAppConfig{}, err
 			}
 		}
 		if req.Features != nil {
@@ -99,12 +99,12 @@ func (s *Service) UpdateAppConfig(ctx context.Context, req UpdateAppConfigReques
 		}
 		if req.Limits != nil {
 			if err := applyLimitsPatch(&cfg.Limits, *req.Limits); err != nil {
-				return AppConfig{}, err
+				return AdminAppConfig{}, err
 			}
 		}
 		if req.Contact != nil {
 			if err := applyContactPatch(&cfg.Contact, *req.Contact); err != nil {
-				return AppConfig{}, err
+				return AdminAppConfig{}, err
 			}
 		}
 		return cfg, nil
@@ -117,7 +117,7 @@ func (s *Service) UpdateAppConfig(ctx context.Context, req UpdateAppConfigReques
 
 // --- Patch helper functions for unified UpdateAppConfig ---
 
-func applyUploadConfigPatch(target *UploadConfig, patch PartialUploadConfig) *httpx.APIError {
+func applyUploadConfigPatch(target *AdminUploadConfig, patch PartialUploadConfig) *httpx.APIError {
 	if patch.ImageMaxSize != nil {
 		if *patch.ImageMaxSize <= 0 {
 			return httpx.InvalidRequest("参数错误")
@@ -201,7 +201,7 @@ func applyDefaultsPatch(target *ContentDefaults, patch UpdateDefaultsPayload) *h
 	return nil
 }
 
-func applyRateLimitsPatch(target *RateLimitConfig, patch PartialRateLimitConfig) *httpx.APIError {
+func applyRateLimitsPatch(target *AdminRateLimitConfig, patch PartialRateLimitConfig) *httpx.APIError {
 	fields := []struct {
 		target *int
 		patch  *int
@@ -231,7 +231,7 @@ func applyRateLimitsPatch(target *RateLimitConfig, patch PartialRateLimitConfig)
 	return nil
 }
 
-func applyResponseDefaultsPatch(target *ResponseDefaults, patch PartialResponseDefaults) *httpx.APIError {
+func applyResponseDefaultsPatch(target *AdminResponseDefaults, patch PartialResponseDefaults) *httpx.APIError {
 	fields := []struct {
 		target *int
 		patch  *int

@@ -12,17 +12,17 @@ import (
 // --- stub provider ---
 
 type stubProvider struct {
-	config AppConfig
+	config AdminAppConfig
 }
 
-func (p *stubProvider) GetAppConfig(_ context.Context) (AppConfig, error) {
+func (p *stubProvider) GetAppConfig(_ context.Context) (AdminAppConfig, error) {
 	return p.config, nil
 }
 
-func (p *stubProvider) UpdateAppConfig(_ context.Context, _ string, apply func(AppConfig) (AppConfig, *httpx.APIError)) (AppConfig, *httpx.APIError, error) {
+func (p *stubProvider) UpdateAppConfig(_ context.Context, _ string, apply func(AdminAppConfig) (AdminAppConfig, *httpx.APIError)) (AdminAppConfig, *httpx.APIError, error) {
 	updated, apiErr := apply(p.config)
 	if apiErr != nil {
-		return AppConfig{}, apiErr, nil
+		return AdminAppConfig{}, apiErr, nil
 	}
 	p.config = updated
 	return updated, nil, nil
@@ -62,8 +62,8 @@ func adminCtx(userID string) context.Context {
 	return platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: userID})
 }
 
-func defaultConfig() AppConfig {
-	return AppConfig{}
+func defaultConfig() AdminAppConfig {
+	return AdminAppConfig{}
 }
 
 func newTestService() (*Service, *InMemoryRepository, *stubProvider, *stubPushService) {

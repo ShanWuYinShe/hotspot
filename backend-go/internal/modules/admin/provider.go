@@ -10,8 +10,8 @@ import (
 )
 
 type Provider interface {
-	GetAppConfig(context.Context) (AppConfig, error)
-	UpdateAppConfig(context.Context, string, func(AppConfig) (AppConfig, *httpx.APIError)) (AppConfig, *httpx.APIError, error)
+	GetAppConfig(context.Context) (AdminAppConfig, error)
+	UpdateAppConfig(context.Context, string, func(AdminAppConfig) (AdminAppConfig, *httpx.APIError)) (AdminAppConfig, *httpx.APIError, error)
 }
 
 type AppConfigProvider struct {
@@ -22,15 +22,15 @@ func NewAppConfigProvider(source appconfig.MutableSource) *AppConfigProvider {
 	return &AppConfigProvider{source: source}
 }
 
-func (p *AppConfigProvider) GetAppConfig(ctx context.Context) (AppConfig, error) {
+func (p *AppConfigProvider) GetAppConfig(ctx context.Context) (AdminAppConfig, error) {
 	return adminAppConfigFromSource(p.source.Get(ctx)), nil
 }
 
-func (p *AppConfigProvider) UpdateAppConfig(ctx context.Context, updatedByUserID string, apply func(AppConfig) (AppConfig, *httpx.APIError)) (AppConfig, *httpx.APIError, error) {
+func (p *AppConfigProvider) UpdateAppConfig(ctx context.Context, updatedByUserID string, apply func(AdminAppConfig) (AdminAppConfig, *httpx.APIError)) (AdminAppConfig, *httpx.APIError, error) {
 	current := adminAppConfigFromSource(p.source.Get(ctx))
 	next, apiErr := apply(current)
 	if apiErr != nil {
-		return AppConfig{}, apiErr, nil
+		return AdminAppConfig{}, apiErr, nil
 	}
 	next.UpdatedByUserID = updatedByUserID
 	if next.UpdatedAt == "" {
@@ -40,13 +40,13 @@ func (p *AppConfigProvider) UpdateAppConfig(ctx context.Context, updatedByUserID
 		return sourceAppConfigFromAdmin(next)
 	})
 	if err != nil {
-		return AppConfig{}, nil, err
+		return AdminAppConfig{}, nil, err
 	}
 	return adminAppConfigFromSource(updated), nil, nil
 }
 
-func adminAppConfigFromSource(cfg appconfig.AppConfig) AppConfig {
-	return AppConfig{
+func adminAppConfigFromSource(cfg appconfig.AppConfig) AdminAppConfig {
+	return AdminAppConfig{
 		Features: FeatureSwitches{
 			EnablePublicRegistration: cfg.Features.EnablePublicRegistration,
 			EnableGuestLogin:         cfg.Features.EnableGuestLogin,
@@ -67,7 +67,7 @@ func adminAppConfigFromSource(cfg appconfig.AppConfig) AppConfig {
 			TermsOfServiceURL: cfg.Contact.TermsOfServiceURL,
 			OfficialWebsite:   cfg.Contact.OfficialWebsite,
 		},
-		Upload: UploadConfig{
+		Upload: AdminUploadConfig{
 			ImageMaxSize:      cfg.Upload.ImageMaxSize,
 			VideoMaxSize:      cfg.Upload.VideoMaxSize,
 			AudioMaxSize:      cfg.Upload.AudioMaxSize,
@@ -85,7 +85,7 @@ func adminAppConfigFromSource(cfg appconfig.AppConfig) AppConfig {
 			},
 			DefaultGroupAvatar: cfg.Defaults.DefaultGroupAvatar,
 			DefaultUserAvatar:  cfg.Defaults.DefaultUserAvatar,
-			DefaultGroupSettings: GroupSettings{
+			DefaultGroupSettings: AdminGroupSettings{
 				JoinMethod:   groupsmodule.GroupJoinMethod(cfg.Defaults.DefaultGroupSettings.JoinMethod),
 				IsSearchable: cfg.Defaults.DefaultGroupSettings.IsSearchable,
 				MaxMembers:   cfg.Defaults.DefaultGroupSettings.MaxMembers,
@@ -98,7 +98,7 @@ func adminAppConfigFromSource(cfg appconfig.AppConfig) AppConfig {
 				},
 			},
 		},
-		RateLimits: RateLimitConfig{
+		RateLimits: AdminRateLimitConfig{
 			GlobalPerHour:            cfg.RateLimits.GlobalPerHour,
 			UserPerHour:              cfg.RateLimits.UserPerHour,
 			AuthRegisterPer10Minutes: cfg.RateLimits.AuthRegisterPer10Minutes,
@@ -116,7 +116,7 @@ func adminAppConfigFromSource(cfg appconfig.AppConfig) AppConfig {
 			AdminReadPerMinute:       cfg.RateLimits.AdminReadPerMinute,
 			AdminWritePerMinute:      cfg.RateLimits.AdminWritePerMinute,
 		},
-		ResponseDefaults: ResponseDefaults{
+		ResponseDefaults: AdminResponseDefaults{
 			SearchSuggestCount:       cfg.ResponseDefaults.SearchSuggestCount,
 			HotMomentsCount:          cfg.ResponseDefaults.HotMomentsCount,
 			ChatRecentMessagesCount:  cfg.ResponseDefaults.ChatRecentMessagesCount,
@@ -130,7 +130,7 @@ func adminAppConfigFromSource(cfg appconfig.AppConfig) AppConfig {
 	}
 }
 
-func sourceAppConfigFromAdmin(cfg AppConfig) appconfig.AppConfig {
+func sourceAppConfigFromAdmin(cfg AdminAppConfig) appconfig.AppConfig {
 	return appconfig.AppConfig{
 		Features: appconfig.Features{
 			EnablePublicRegistration: cfg.Features.EnablePublicRegistration,

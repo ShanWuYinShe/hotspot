@@ -318,7 +318,7 @@ type AuditLogOpenTheDoorRequest struct {
 	LogID string `json:"log_id"`
 }
 
-type UploadConfig struct {
+type AdminUploadConfig struct {
 	ImageMaxSize      int      `json:"image_max_size"`
 	VideoMaxSize      int      `json:"video_max_size"`
 	AudioMaxSize      int      `json:"audio_max_size"`
@@ -327,7 +327,7 @@ type UploadConfig struct {
 	AllowedVideoTypes []string `json:"allowed_video_types"`
 }
 
-type GroupSettings struct {
+type AdminGroupSettings struct {
 	JoinMethod       groupsmodule.GroupJoinMethod `json:"join_method"`
 	RequiresApproval bool                         `json:"requires_approval"`
 	IsSearchable     bool                         `json:"is_searchable"`
@@ -336,13 +336,13 @@ type GroupSettings struct {
 }
 
 type ContentDefaults struct {
-	DefaultLocation      Location      `json:"default_location"`
-	DefaultGroupAvatar   string        `json:"default_group_avatar_url"`
-	DefaultUserAvatar    string        `json:"default_user_avatar_url"`
-	DefaultGroupSettings GroupSettings `json:"default_group_settings"`
+	DefaultLocation      Location           `json:"default_location"`
+	DefaultGroupAvatar   string             `json:"default_group_avatar_url"`
+	DefaultUserAvatar    string             `json:"default_user_avatar_url"`
+	DefaultGroupSettings AdminGroupSettings `json:"default_group_settings"`
 }
 
-type RateLimitConfig struct {
+type AdminRateLimitConfig struct {
 	GlobalPerHour            int `json:"global_per_hour"`
 	UserPerHour              int `json:"user_per_hour"`
 	AuthRegisterPer10Minutes int `json:"auth_register_per_10minutes"`
@@ -361,7 +361,7 @@ type RateLimitConfig struct {
 	AdminWritePerMinute      int `json:"admin_write_per_minute"`
 }
 
-type ResponseDefaults struct {
+type AdminResponseDefaults struct {
 	SearchSuggestCount       int `json:"search_suggest_count"`
 	HotMomentsCount          int `json:"hot_moments_count"`
 	ChatRecentMessagesCount  int `json:"chat_recent_messages_count"`
@@ -371,16 +371,16 @@ type ResponseDefaults struct {
 	UserProfileMomentsCount  int `json:"user_profile_moments_count"`
 }
 
-type AppConfig struct {
-	Features         FeatureSwitches  `json:"features"`
-	Limits           AppLimits        `json:"limits"`
-	Contact          ContactInfo      `json:"contact"`
-	Upload           UploadConfig     `json:"upload"`
-	Defaults         ContentDefaults  `json:"defaults"`
-	RateLimits       RateLimitConfig  `json:"rate_limits"`
-	ResponseDefaults ResponseDefaults `json:"response_defaults"`
-	UpdatedAt        string           `json:"updated_at,omitempty"`
-	UpdatedByUserID  string           `json:"updated_by_user_id,omitempty"`
+type AdminAppConfig struct {
+	Features         FeatureSwitches       `json:"features"`
+	Limits           AppLimits             `json:"limits"`
+	Contact          ContactInfo           `json:"contact"`
+	Upload           AdminUploadConfig     `json:"upload"`
+	Defaults         ContentDefaults       `json:"defaults"`
+	RateLimits       AdminRateLimitConfig  `json:"rate_limits"`
+	ResponseDefaults AdminResponseDefaults `json:"response_defaults"`
+	UpdatedAt        string                `json:"updated_at,omitempty"`
+	UpdatedByUserID  string                `json:"updated_by_user_id,omitempty"`
 }
 
 type UpdateAppConfigRequest struct {

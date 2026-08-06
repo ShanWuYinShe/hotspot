@@ -374,7 +374,7 @@ func TestGetAppConfigRequiresPermission(t *testing.T) {
 
 	handler.GetAppConfig(rr, req)
 
-	resp := decodeResponse[AppConfig](t, rr)
+	resp := decodeResponse[AdminAppConfig](t, rr)
 	if resp.Code != httpx.CodeForbidden || resp.Message != "系统管理员权限不足: admin.app_config.read" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
@@ -1393,12 +1393,12 @@ func TestUpdateAppConfigReturns10600OnError(t *testing.T) {
 // used to test the httpx.CodeInternalUnavailable (服务暂时不可用) handler path.
 type failingProvider struct{}
 
-func (f *failingProvider) GetAppConfig(_ context.Context) (AppConfig, error) {
-	return AppConfig{}, nil
+func (f *failingProvider) GetAppConfig(_ context.Context) (AdminAppConfig, error) {
+	return AdminAppConfig{}, nil
 }
 
-func (f *failingProvider) UpdateAppConfig(_ context.Context, _ string, _ func(AppConfig) (AppConfig, *httpx.APIError)) (AppConfig, *httpx.APIError, error) {
-	return AppConfig{}, nil, errTestProviderFailure
+func (f *failingProvider) UpdateAppConfig(_ context.Context, _ string, _ func(AdminAppConfig) (AdminAppConfig, *httpx.APIError)) (AdminAppConfig, *httpx.APIError, error) {
+	return AdminAppConfig{}, nil, errTestProviderFailure
 }
 
 var errTestProviderFailure = errors.New("provider unavailable for test")
