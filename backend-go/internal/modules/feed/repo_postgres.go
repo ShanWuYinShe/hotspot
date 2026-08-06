@@ -525,6 +525,8 @@ func paginateNearbyMoments(items []momentCandidate, limit int, cursor string) (P
 	return resp, nil
 }
 
+// compareUserCandidates 排序规则：距离升序 → 共同好友数降序 → userID 降序
+// （ID 大小写只作稳定 tie-break，保证分页键集序与游标一致）。
 func compareUserCandidates(left, right userCandidate) int {
 	if left.Distance != right.Distance {
 		return left.Distance - right.Distance
@@ -541,6 +543,7 @@ func compareUserCandidates(left, right userCandidate) int {
 	return 0
 }
 
+// compareGroupCandidates 排序规则：距离升序 → 群内好友数降序 → groupID 降序。
 func compareGroupCandidates(left, right groupCandidate) int {
 	if left.Distance != right.Distance {
 		return left.Distance - right.Distance
@@ -557,6 +560,7 @@ func compareGroupCandidates(left, right groupCandidate) int {
 	return 0
 }
 
+// compareFollowingCandidates 排序规则：发布时间降序（最新在前）→ momentID 降序。
 func compareFollowingCandidates(left, right momentCandidate) int {
 	if !left.CreatedAt.Equal(right.CreatedAt) {
 		if left.CreatedAt.After(right.CreatedAt) {
@@ -573,6 +577,8 @@ func compareFollowingCandidates(left, right momentCandidate) int {
 	return 0
 }
 
+// compareNearbyCandidates 排序规则：热度评分降序（likes+comments+shares）→
+// 距离升序 → 发布时间降序 → momentID 降序。
 func compareNearbyCandidates(left, right momentCandidate) int {
 	if left.Score != right.Score {
 		return right.Score - left.Score
