@@ -6,7 +6,8 @@ INSERT INTO reports (report_id, creator_user_id, target_type, target_id, reason,
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)`
 
 	queryListReports = `
-SELECT report_id, target_type, target_id, reason, description, status, created_at, message_snapshot::text
+SELECT report_id, target_type, target_id, reason, description, status, created_at, message_snapshot::text,
+       handled_at, COALESCE(handle_note, '')
 FROM reports
 WHERE creator_user_id = $1
   AND ($2 = '' OR status = $2)

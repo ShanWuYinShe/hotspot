@@ -34,7 +34,7 @@ type UserItem struct {
 	Bio            string             `json:"bio,omitempty"`
 	Tags           []string           `json:"tags,omitempty"`
 	PresenceStatus UserPresenceStatus `json:"presence_status,omitempty"`
-	LastOnline     string             `json:"last_online,omitempty"`
+	LastOnline     string             `json:"last_online_at,omitempty"`
 	Location       *RelativeLocation  `json:"location,omitempty"`
 	Stats          *UserStats         `json:"stats,omitempty"`
 	Relation       *Relationship      `json:"relation,omitempty"`
@@ -120,7 +120,7 @@ type ListFriendsRequest struct {
 type FriendItem struct {
 	User           UserInfo            `json:"user"`
 	PresenceStatus *UserPresenceStatus `json:"presence_status,omitempty"`
-	LastOnline     *string             `json:"last_online,omitempty"`
+	LastOnline     *string             `json:"last_online_at,omitempty"`
 	Remark         string              `json:"remark,omitempty"`
 	FollowedAt     string              `json:"followed_at"`
 	FollowedBackAt string              `json:"followed_back_at"`
@@ -141,7 +141,7 @@ type FollowingItem struct {
 	FollowedAt     string              `json:"followed_at"`
 	IsMutual       bool                `json:"is_mutual"`
 	PresenceStatus *UserPresenceStatus `json:"presence_status,omitempty"`
-	LastOnline     *string             `json:"last_online,omitempty"`
+	LastOnline     *string             `json:"last_online_at,omitempty"`
 }
 
 type PaginatedFollowing struct {
@@ -159,7 +159,7 @@ type FollowerItem struct {
 	FollowedAt     string              `json:"followed_at"`
 	IsMutual       bool                `json:"is_mutual"`
 	PresenceStatus *UserPresenceStatus `json:"presence_status,omitempty"`
-	LastOnline     *string             `json:"last_online,omitempty"`
+	LastOnline     *string             `json:"last_online_at,omitempty"`
 }
 
 type PaginatedFollowers struct {

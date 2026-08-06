@@ -129,7 +129,7 @@ func (r *groupErrorRepo) RejectInvite(context.Context, string) error {
 	return r.rejectInviteErr
 }
 func (r *groupErrorRepo) InviteMember(context.Context, string, InviteMemberRequest) (Invitation, error) {
-	return Invitation{}, nil
+	return Invitation{}, r.createErr
 }
 func (r *groupErrorRepo) ListSentInvites(context.Context, string, *ApplicationStatus, int, string) ([]GroupSentInviteItem, string, error) {
 	return nil, "", nil

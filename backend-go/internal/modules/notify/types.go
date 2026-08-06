@@ -56,23 +56,6 @@ type UnreadCountResult struct {
 	ByType UnreadCountByType `json:"by_type"`
 }
 
-type NearbyNewMomentPayload struct {
-	Actor         NearbyUserInfo `json:"actor"`
-	MomentID      string         `json:"moment_id"`
-	MomentSummary MomentSummary  `json:"moment_summary"`
-	Distance      int            `json:"distance"`
-}
-
-type NearbyUserInfo struct {
-	UserID   string `json:"user_id"`
-	Nickname string `json:"nickname"`
-}
-
-type MomentSummary struct {
-	Description string `json:"description,omitempty"`
-	ImageURL    string `json:"image_url,omitempty"`
-}
-
 type PaginationParams = types.PaginationParams
 
 type NotificationListRequest struct {

@@ -19,7 +19,14 @@ ORDER BY usage_count DESC
 LIMIT $2`
 
 	querySearchSuggestUsers = `
-SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), COALESCE(u.bio, ''), u.location_name, u.latitude, u.longitude
+SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), COALESCE(u.bio, ''), u.location_name, u.latitude, u.longitude,
+       u.presence_status, u.last_online,
+       COALESCE((SELECT ARRAY_AGG(tag_name ORDER BY tag_name) FROM user_profile_tags t WHERE t.user_id = u.user_id), '{}'),
+       COALESCE((SELECT COUNT(*) FROM moments m WHERE m.user_id = u.user_id AND m.is_deleted = FALSE), 0),
+       COALESCE((SELECT COUNT(*) FROM user_relations ur JOIN user_relations rev ON rev.user_id = ur.target_user_id AND rev.target_user_id = ur.user_id AND rev.is_following = TRUE WHERE ur.user_id = u.user_id AND ur.is_following = TRUE), 0),
+       COALESCE((SELECT COUNT(*) FROM user_relations ur WHERE ur.target_user_id = u.user_id AND ur.is_following = TRUE), 0),
+       COALESCE((SELECT COUNT(*) FROM user_relations ur WHERE ur.user_id = u.user_id AND ur.is_following = TRUE), 0),
+       COALESCE((SELECT COUNT(*) FROM group_members gm JOIN groups g ON g.group_id = gm.group_id WHERE gm.user_id = u.user_id AND g.deleted_at IS NULL), 0)
 FROM users u
 JOIN user_settings us ON us.user_id = u.user_id
 WHERE us.searchable = TRUE
@@ -32,13 +39,16 @@ WHERE us.searchable = TRUE
 LIMIT $2`
 
 	querySearchSuggestGroups = `
-SELECT g.group_id, g.name, COALESCE(g.avatar_url, ''), COALESCE(g.description, ''), g.location_name, g.latitude, g.longitude, COUNT(gm.user_id) AS members_count
+SELECT g.group_id, g.name, COALESCE(g.avatar_url, ''), COALESCE(g.description, ''), g.location_name, g.latitude, g.longitude, COUNT(gm.user_id) AS members_count,
+       g.join_method, g.requires_approval, g.tags, g.next_activity, g.is_searchable, g.max_members, g.created_at, g.owner_id,
+       COALESCE((SELECT COUNT(*) FROM group_members om JOIN users ou ON ou.user_id = om.user_id AND ou.presence_status = 'online' WHERE om.group_id = g.group_id), 0)
 FROM groups g
 LEFT JOIN group_members gm ON gm.group_id = g.group_id
 WHERE g.deleted_at IS NULL
   AND g.is_searchable = TRUE
   AND g.name ILIKE '%' || $1 || '%'
-GROUP BY g.group_id, g.name, g.avatar_url, g.description, g.location_name, g.latitude, g.longitude
+GROUP BY g.group_id, g.name, g.avatar_url, g.description, g.location_name, g.latitude, g.longitude,
+         g.join_method, g.requires_approval, g.tags, g.next_activity, g.is_searchable, g.max_members, g.created_at, g.owner_id
 LIMIT $2`
 
 	querySearchSuggestMoments = `

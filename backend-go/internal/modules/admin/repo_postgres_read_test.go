@@ -27,12 +27,30 @@ func (r adminRowValues) Scan(dest ...any) error {
 		switch d := dest[i].(type) {
 		case *string:
 			*d = r.values[i].(string)
+		case *UserAccountStatus:
+			*d = UserAccountStatus(r.values[i].(string))
 		case *bool:
 			*d = r.values[i].(bool)
+		case *int:
+			*d = r.values[i].(int)
+		case *float64:
+			*d = r.values[i].(float64)
 		case *time.Time:
 			*d = r.values[i].(time.Time)
 		case *[]string:
 			*d = append([]string(nil), r.values[i].([]string)...)
+		case **string:
+			if r.values[i] == nil {
+				*d = nil
+			} else if v, ok := r.values[i].(string); ok {
+				*d = &v
+			}
+		case **time.Time:
+			if r.values[i] == nil {
+				*d = nil
+			} else if v, ok := r.values[i].(time.Time); ok {
+				*d = &v
+			}
 		}
 	}
 	return nil

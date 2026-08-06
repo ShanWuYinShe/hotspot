@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -281,7 +282,10 @@ func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.RevokeSession(r.Context(), req); err != nil {
-		if apiErr, ok := err.(*httpx.APIError); ok {
+		// service 以 %w 包装底层错误，必须用 errors.As 解包 APIError
+		//（type assertion 会因包装而失效，导致业务错误码退化为 10600）。
+		var apiErr *httpx.APIError
+		if errors.As(err, &apiErr) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(apiErr.Code, apiErr.Message))
 			return
 		}

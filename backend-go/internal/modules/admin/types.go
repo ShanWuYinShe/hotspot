@@ -139,7 +139,7 @@ type AdminUserItem struct {
 	Bio               string                         `json:"bio,omitempty"`
 	Tags              []string                       `json:"tags,omitempty"`
 	PresenceStatus    usersmodule.UserPresenceStatus `json:"presence_status,omitempty"`
-	LastOnline        string                         `json:"last_online,omitempty"`
+	LastOnline        string                         `json:"last_online_at,omitempty"`
 	Location          *usersmodule.RelativeLocation  `json:"location,omitempty"`
 	Stats             *usersmodule.UserStats         `json:"stats,omitempty"`
 	Relation          usersmodule.Relationship       `json:"relation,omitempty"`
@@ -328,10 +328,11 @@ type UploadConfig struct {
 }
 
 type GroupSettings struct {
-	JoinMethod   groupsmodule.GroupJoinMethod `json:"join_method"`
-	IsSearchable bool                         `json:"is_searchable"`
-	MaxMembers   int                          `json:"max_members"`
-	Location     Location                     `json:"location"`
+	JoinMethod       groupsmodule.GroupJoinMethod `json:"join_method"`
+	RequiresApproval bool                         `json:"requires_approval"`
+	IsSearchable     bool                         `json:"is_searchable"`
+	MaxMembers       int                          `json:"max_members"`
+	Location         Location                     `json:"location"`
 }
 
 type ContentDefaults struct {

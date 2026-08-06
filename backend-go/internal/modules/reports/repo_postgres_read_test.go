@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sort"
 	"testing"
+	"time"
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -23,6 +24,18 @@ func (r reportRowValues) Scan(dest ...any) error {
 		switch d := dest[i].(type) {
 		case *string:
 			*d = r.values[i].(string)
+		case **string:
+			if r.values[i] == nil {
+				*d = nil
+			} else if v, ok := r.values[i].(string); ok {
+				*d = &v
+			}
+		case **time.Time:
+			if r.values[i] == nil {
+				*d = nil
+			} else if v, ok := r.values[i].(time.Time); ok {
+				*d = &v
+			}
 		}
 	}
 	return nil
@@ -86,7 +99,7 @@ func (b *reportBackendStub) Query(_ context.Context, query string, args ...any) 
 	})
 	rows := make([][]any, 0, len(items))
 	for _, item := range items {
-		rows = append(rows, []any{item.ReportID, item.TargetType, item.TargetID, item.Reason, item.Description, item.Status, item.CreatedAt})
+		rows = append(rows, []any{item.ReportID, item.TargetType, item.TargetID, item.Reason, item.Description, item.Status, item.CreatedAt, nil, nil, ""})
 	}
 	return &reportRowsValues{rows: rows}, nil
 }

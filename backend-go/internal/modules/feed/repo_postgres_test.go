@@ -32,6 +32,8 @@ func (r feedRowValues) Scan(dest ...any) error {
 			*d = r.values[i].(int)
 		case *bool:
 			*d = r.values[i].(bool)
+		case *[]string:
+			*d = r.values[i].([]string)
 		default:
 			return errors.New("unsupported scan dest")
 		}
@@ -111,9 +113,9 @@ func TestPostgresRepositoryReturnsNotImplementedWithoutDatabaseOrFallback(t *tes
 func TestPostgresRepositoryFiltersUsersByRadiusAndExcludesSelf(t *testing.T) {
 	backend := &feedBackendStub{queryRowsByKey: map[string][][]any{
 		"FROM users u": {
-			{"u1", "self", "", "", "loc", 35.0, 112.0, false, false, 0, 0},
-			{"u2", "near", "", "", "loc", 35.0001, 112.0, true, false, 2, 1},
-			{"u3", "far", "", "", "loc", 36.0, 112.0, false, false, 0, 0},
+			{"u1", "self", "", "", "loc", 35.0, 112.0, false, false, 0, 0, "online", time.Time{}, []string{}, 0, 0, 0, 0, 0},
+			{"u2", "near", "", "", "loc", 35.0001, 112.0, true, false, 2, 1, "online", time.Time{}, []string{"tag1"}, 3, 1, 2, 1, 1},
+			{"u3", "far", "", "", "loc", 36.0, 112.0, false, false, 0, 0, "offline", time.Time{}, []string{}, 0, 0, 0, 0, 0},
 		},
 	}}
 	repo := NewPostgresRepository(newFeedFactory(backend))
@@ -130,9 +132,9 @@ func TestPostgresRepositoryFiltersUsersByRadiusAndExcludesSelf(t *testing.T) {
 func TestPostgresRepositoryPaginatesUsersWithOpaqueCursor(t *testing.T) {
 	backend := &feedBackendStub{queryRowsByKey: map[string][][]any{
 		"FROM users u": {
-			{"u3", "c", "", "", "loc", 35.0001, 112.0, false, false, 0, 0},
-			{"u2", "b", "", "", "loc", 35.0002, 112.0, false, false, 0, 0},
-			{"u1", "a", "", "", "loc", 35.0003, 112.0, false, false, 0, 0},
+			{"u3", "c", "", "", "loc", 35.0001, 112.0, false, false, 0, 0, "online", time.Time{}, []string{}, 0, 0, 0, 0, 0},
+			{"u2", "b", "", "", "loc", 35.0002, 112.0, false, false, 0, 0, "online", time.Time{}, []string{}, 0, 0, 0, 0, 0},
+			{"u1", "a", "", "", "loc", 35.0003, 112.0, false, false, 0, 0, "online", time.Time{}, []string{}, 0, 0, 0, 0, 0},
 		},
 	}}
 	repo := NewPostgresRepository(newFeedFactory(backend))
@@ -157,9 +159,9 @@ func TestPostgresRepositoryPaginatesUsersWithOpaqueCursor(t *testing.T) {
 func TestPostgresRepositoryFiltersGroupsByRadiusAndSorts(t *testing.T) {
 	backend := &feedBackendStub{queryRowsByKey: map[string][][]any{
 		"FROM groups g": {
-			{"g0", "far", "", "", false, "loc", 35.03, 112.0, 10, false, 0},
-			{"g1", "near-a", "", "", false, "loc", 35.0001, 112.0, 10, true, 3},
-			{"g2", "near-b", "", "", false, "loc", 35.0001, 112.0, 10, true, 3},
+			{"g0", "far", "", "", false, "loc", 35.03, 112.0, 10, false, 0, "direct", false, []string{}, "", true, 500, time.Time{}, "owner1", 2, "owner", time.Time{}, time.Time{}, false, 0},
+			{"g1", "near-a", "", "", false, "loc", 35.0001, 112.0, 10, true, 3, "direct", false, []string{}, "", true, 500, time.Time{}, "owner1", 1, "member", time.Time{}, time.Time{}, false, 0},
+			{"g2", "near-b", "", "", false, "loc", 35.0001, 112.0, 10, true, 3, "direct", false, []string{}, "", true, 500, time.Time{}, "owner1", 1, "member", time.Time{}, time.Time{}, false, 0},
 		},
 	}}
 	repo := NewPostgresRepository(newFeedFactory(backend))

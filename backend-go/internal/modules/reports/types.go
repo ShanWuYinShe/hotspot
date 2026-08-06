@@ -66,6 +66,23 @@ type ReportCreated struct {
 	IsDuplicate bool   `json:"is_duplicate"`
 }
 
+// ReportAction 是举报处理动作（spec api_spec_types.md ReportAction）。
+type ReportAction string
+
+const (
+	ReportActionResolve ReportAction = "resolve"
+	ReportActionDismiss ReportAction = "dismiss"
+)
+
+// ReportResolution 是举报处理结果摘要（spec api_spec_types.md
+// ReportItem.resolution，@owner-only）：仅举报人自己可见（reports/list_my
+// 返回），不暴露处理管理员身份。
+type ReportResolution struct {
+	Action     ReportAction `json:"action"`
+	ResolvedAt string       `json:"resolved_at"`
+	Note       string       `json:"note,omitempty"`
+}
+
 type ReportItem struct {
 	ReportID    string           `json:"report_id"`
 	TargetType  ReportTargetType `json:"target_type"`
@@ -78,6 +95,8 @@ type ReportItem struct {
 	// MessageSnapshot 仅 target_type='message' 时返回（spec api_spec_types.md
 	// ReportItem.message_snapshot），供举报人回看与管理员审核。
 	MessageSnapshot *ReportSnapshot `json:"message_snapshot,omitempty"`
+	// Resolution 是处理结果摘要（@owner-only，仅 reports/list_my 返回）。
+	Resolution *ReportResolution `json:"resolution,omitempty"`
 }
 
 type PaginatedReports struct {

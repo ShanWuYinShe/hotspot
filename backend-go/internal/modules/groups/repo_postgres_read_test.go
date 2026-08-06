@@ -35,6 +35,22 @@ func (r groupRowValues) Scan(dest ...any) error {
 			*d = r.values[i].(float64)
 		case *[]string:
 			*d = r.values[i].([]string)
+		case *time.Time:
+			if v, ok := r.values[i].(time.Time); ok {
+				*d = v
+			}
+		case **string:
+			if r.values[i] == nil {
+				*d = nil
+			} else if v, ok := r.values[i].(string); ok {
+				*d = &v
+			}
+		case **int:
+			if r.values[i] == nil {
+				*d = nil
+			} else if v, ok := r.values[i].(int); ok {
+				*d = &v
+			}
 		case **time.Time:
 			if r.values[i] == nil {
 				*d = nil
@@ -107,9 +123,9 @@ func (b *groupBackendStub) Query(_ context.Context, query string, _ ...any) (per
 
 func TestPostgresRepositoryCreateGetAndSearch(t *testing.T) {
 	backend := &groupBackendStub{
-		rows:      [][]any{{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "direct", false, nil, true, 200, "user_alice", nil, nil, []string{"hiking"}, 1}},
+		rows:      [][]any{{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "direct", false, nil, true, 200, "user_alice", nil, nil, []string{"hiking"}, 1, 1}},
 		queryErrs: map[string]error{},
-		queryRow:  groupRowValues{values: []any{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "direct", false, nil, true, 200, "user_alice", nil, nil, []string{"hiking"}}},
+		queryRow:  groupRowValues{values: []any{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "direct", false, nil, true, 200, "user_alice", nil, nil, []string{"hiking"}, 1}},
 		execErrs:  map[string]error{},
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
@@ -182,9 +198,9 @@ func TestPostgresRepositorySearchReturnsErrorOnQueryFailure(t *testing.T) {
 func TestPostgresRepositorySearchFiltersSortsAndPaginatesInGo(t *testing.T) {
 	backend := &groupBackendStub{
 		rows: [][]any{
-			{"g_1", "Alpha One", "", "", false, "loc_a", 35.0, 112.0, "direct", false, nil, true, 200, "user_a", nil, nil, []string{}, 3},
-			{"g_2", "Beta Bar", "", "alpha den", false, "loc_b", 35.0005, 112.0, "direct", false, nil, true, 200, "user_b", nil, nil, []string{}, 1},
-			{"g_3", "Alpha Three", "", "", false, "loc_c", 35.01, 112.0, "direct", false, nil, true, 200, "user_c", nil, nil, []string{}, 2},
+			{"g_1", "Alpha One", "", "", false, "loc_a", 35.0, 112.0, "direct", false, nil, true, 200, "user_a", nil, nil, []string{}, 3, 1},
+			{"g_2", "Beta Bar", "", "alpha den", false, "loc_b", 35.0005, 112.0, "direct", false, nil, true, 200, "user_b", nil, nil, []string{}, 1, 1},
+			{"g_3", "Alpha Three", "", "", false, "loc_c", 35.01, 112.0, "direct", false, nil, true, 200, "user_c", nil, nil, []string{}, 2, 1},
 		},
 		queryErrs: map[string]error{},
 		queryRow:  groupRowValues{err: persistence.ErrNotImplemented},
@@ -250,9 +266,9 @@ func TestPostgresRepositorySearchGoSorts(t *testing.T) {
 	}
 	backend := &groupBackendStub{
 		rows: [][]any{
-			{"g_a", "Alpha Hub", "", "", false, "loc", 35.0, 112.0, "direct", false, nil, true, 200, "user_a", createdAt(2024), nil, []string{}, 10},
-			{"g_b", "Beacon", "", "alpha outpost", false, "loc", 35.0, 112.0, "direct", false, nil, true, 200, "user_b", createdAt(2026), nil, []string{}, 20},
-			{"g_c", "Zulu Alpha", "", "", false, "loc", 35.0, 112.0, "direct", false, nil, true, 200, "user_c", createdAt(2025), nil, []string{}, 30},
+			{"g_a", "Alpha Hub", "", "", false, "loc", 35.0, 112.0, "direct", false, nil, true, 200, "user_a", createdAt(2024), nil, []string{}, 10, 1},
+			{"g_b", "Beacon", "", "alpha outpost", false, "loc", 35.0, 112.0, "direct", false, nil, true, 200, "user_b", createdAt(2026), nil, []string{}, 20, 1},
+			{"g_c", "Zulu Alpha", "", "", false, "loc", 35.0, 112.0, "direct", false, nil, true, 200, "user_c", createdAt(2025), nil, []string{}, 30, 1},
 		},
 		queryErrs: map[string]error{},
 		queryRow:  groupRowValues{err: persistence.ErrNotImplemented},

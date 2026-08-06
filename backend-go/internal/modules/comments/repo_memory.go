@@ -15,6 +15,9 @@ type InMemoryRepository struct {
 	comments map[string][]CommentItem // momentID -> comments
 	byID     map[string]CommentItem   // commentID -> item
 	byParent map[string][]string      // parentID -> child commentIDs
+	// seq 保证同纳秒内连续创建的评论 ID 不碰撞（UnixNano 时间戳在快速
+	// 循环下会重复，导致 byID 覆盖与分页缺失）。
+	seq uint64
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
@@ -29,8 +32,9 @@ func (r *InMemoryRepository) Create(ctx context.Context, userID string, req Crea
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	now := time.Now().UTC()
+	r.seq++
 	item := CommentItem{
-		CommentID:    fmt.Sprintf("comment_%d", now.UnixNano()),
+		CommentID:    fmt.Sprintf("comment_%d_%d", now.UnixNano(), r.seq),
 		MomentID:     req.MomentID,
 		User:         UserInfo{UserID: userID, Nickname: userID},
 		Content:      req.Content,

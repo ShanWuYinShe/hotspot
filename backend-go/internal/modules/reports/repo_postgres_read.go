@@ -3,6 +3,7 @@ package reports
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
 )
@@ -24,7 +25,9 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req MyRepo
 	for rows.Next() {
 		var item ReportItem
 		var snapshotJSON *string
-		if err := rows.Scan(&item.ReportID, &item.TargetType, &item.TargetID, &item.Reason, &item.Description, &item.Status, &item.CreatedAt, &snapshotJSON); err != nil {
+		var handledAt *time.Time
+		var handleNote string
+		if err := rows.Scan(&item.ReportID, &item.TargetType, &item.TargetID, &item.Reason, &item.Description, &item.Status, &item.CreatedAt, &snapshotJSON, &handledAt, &handleNote); err != nil {
 			return PaginatedReports{}, err
 		}
 		if snapshotJSON != nil && *snapshotJSON != "" {
@@ -33,6 +36,19 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req MyRepo
 				return PaginatedReports{}, err
 			}
 			item.MessageSnapshot = &snapshot
+		}
+		// resolution 组装（@owner-only，spec api_spec_types.md）：action 从
+		// 终态 status 推断，不暴露处理管理员身份。
+		if handledAt != nil && (item.Status == ReportStatusResolved || item.Status == ReportStatusDismissed) {
+			action := ReportActionDismiss
+			if item.Status == ReportStatusResolved {
+				action = ReportActionResolve
+			}
+			item.Resolution = &ReportResolution{
+				Action:     action,
+				ResolvedAt: handledAt.UTC().Format(time.RFC3339),
+				Note:       handleNote,
+			}
 		}
 		items = append(items, item)
 	}

@@ -46,7 +46,7 @@ type MyProfile struct {
 	Phone          string             `json:"phone,omitempty"`
 	Location       Location           `json:"location"`
 	PresenceStatus UserPresenceStatus `json:"presence_status"`
-	LastOnline     string             `json:"last_online"`
+	LastOnline     string             `json:"last_online_at"`
 	CreatedAt      string             `json:"created_at"`
 	Stats          UserStats          `json:"stats"`
 	// IsDeleted 为内部标记（不序列化）：已注销用户（匿名化占位，见 api_spec_user.md）。

@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -108,8 +109,8 @@ func TestPostgresRepositoryReturnsEmptyForBlankPrefix(t *testing.T) {
 func TestPostgresRepositoryFiltersUnknownTypesAsAll(t *testing.T) {
 	backend := &searchBackendStub{queryRowsByQuery: map[string][][]any{
 		querySearchSuggestTags:    {{"hot", 8}},
-		querySearchSuggestUsers:   {{"user_1", "hot-user", "", "", "南天门", 35.0, 112.0}},
-		querySearchSuggestGroups:  {{"group_1", "hot-group", "", "", "南天门", 35.0, 112.0, 5}},
+		querySearchSuggestUsers:   {{"user_1", "hot-user", "", "", "南天门", 35.0, 112.0, "online", time.Time{}, []string{}, 0, 0, 0, 0, 0}},
+		querySearchSuggestGroups:  {{"group_1", "hot-group", "", "", "南天门", 35.0, 112.0, 5, "direct", false, []string{}, "", true, 500, time.Time{}, "owner1", 2}},
 		querySearchSuggestMoments: {{"moment_1", "user_1", "Alice", "hot moment", "南天门", 35.0, 112.0, 9}},
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
@@ -125,7 +126,7 @@ func TestPostgresRepositoryFiltersUnknownTypesAsAll(t *testing.T) {
 
 func TestPostgresRepositoryAppliesTypeFilter(t *testing.T) {
 	backend := &searchBackendStub{queryRowsByQuery: map[string][][]any{
-		querySearchSuggestUsers: {{"user_1", "hot-user", "", "", "南天门", 35.0, 112.0}},
+		querySearchSuggestUsers: {{"user_1", "hot-user", "", "", "南天门", 35.0, 112.0, "online", time.Time{}, []string{}, 0, 0, 0, 0, 0}},
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
 
@@ -141,7 +142,7 @@ func TestPostgresRepositoryAppliesTypeFilter(t *testing.T) {
 func TestPostgresRepositoryHonorsNicknameSearchableOnlyForNickname(t *testing.T) {
 	backend := &searchBackendStub{queryRowsByQuery: map[string][][]any{
 		querySearchSuggestUsers: {
-			{"user_bio", "plain-user", "", "hot bio", "南天门", 35.0, 112.0},
+			{"user_bio", "plain-user", "", "hot bio", "南天门", 35.0, 112.0, "online", time.Time{}, []string{}, 0, 0, 0, 0, 0},
 		},
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
@@ -150,7 +151,7 @@ func TestPostgresRepositoryHonorsNicknameSearchableOnlyForNickname(t *testing.T)
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
-	if len(resp.Items) != 1 || resp.Items[0].Payload["user_id"] != "user_bio" {
+	if len(resp.Items) != 1 || resp.Items[0].Payload["user"].(map[string]any)["user_id"] != "user_bio" {
 		t.Fatalf("expected bio-matched user result, got %#v", resp.Items)
 	}
 }
@@ -180,8 +181,8 @@ func TestPostgresRepositoryRanksExactBeforePrefixBeforeContains(t *testing.T) {
 func TestPostgresRepositoryUsesDistanceBeforePopularityWhenMatchRankTies(t *testing.T) {
 	backend := &searchBackendStub{queryRowsByQuery: map[string][][]any{
 		querySearchSuggestGroups: {
-			{"group_far", "hot-group", "", "", "远处", 35.1, 112.0, 100},
-			{"group_near", "hot-group", "", "", "近处", 35.0001, 112.0, 1},
+			{"group_far", "hot-group", "", "", "远处", 35.1, 112.0, 100, "direct", false, []string{}, "", true, 500, time.Time{}, "owner1", 2},
+			{"group_near", "hot-group", "", "", "近处", 35.0001, 112.0, 1, "direct", false, []string{}, "", true, 500, time.Time{}, "owner1", 2},
 		},
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
@@ -190,7 +191,7 @@ func TestPostgresRepositoryUsesDistanceBeforePopularityWhenMatchRankTies(t *test
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
-	if len(resp.Items) != 2 || resp.Items[0].Payload["group_id"] != "group_near" {
+	if len(resp.Items) != 2 || resp.Items[0].Payload["group"].(map[string]any)["group_id"] != "group_near" {
 		t.Fatalf("expected nearer group first, got %#v", resp.Items)
 	}
 }
@@ -201,8 +202,8 @@ func TestPostgresRepositoryAppliesRadiusFilter(t *testing.T) {
 	// backend returns both rows; the far one must be filtered out by the repo.
 	backend := &searchBackendStub{queryRowsByQuery: map[string][][]any{
 		querySearchSuggestUsers: {
-			{"user_near", "hot-near", "", "", "近处", 35.0001, 112.0},
-			{"user_far", "hot-far", "", "", "远处", 35.1, 112.0},
+			{"user_near", "hot-near", "", "", "近处", 35.0001, 112.0, "online", time.Time{}, []string{}, 0, 0, 0, 0, 0},
+			{"user_far", "hot-far", "", "", "远处", 35.1, 112.0, "online", time.Time{}, []string{}, 0, 0, 0, 0, 0},
 		},
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
@@ -214,8 +215,8 @@ func TestPostgresRepositoryAppliesRadiusFilter(t *testing.T) {
 	if len(resp.Items) != 1 {
 		t.Fatalf("expected only the near user after Go-side radius filter, got %#v", resp.Items)
 	}
-	if resp.Items[0].Payload["user_id"] != "user_near" {
-		t.Fatalf("expected user_near to survive the filter, got %#v", resp.Items[0].Payload["user_id"])
+	if resp.Items[0].Payload["user"].(map[string]any)["user_id"] != "user_near" {
+		t.Fatalf("expected user_near to survive the filter, got %#v", resp.Items[0].Payload)
 	}
 }
 

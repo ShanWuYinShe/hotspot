@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 	"strings"
+	"time"
 
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -137,23 +138,45 @@ func queryUserSuggestions(ctx context.Context, queryable persistence.QueryableDB
 	defer rows.Close()
 	items := make([]scoredSuggestItem, 0)
 	for rows.Next() {
-		var userID, nickname, avatarURL, bio, locationName string
+		var userID, nickname, avatarURL, bio, locationName, presenceStatus string
 		var latitude, longitude float64
-		if err := rows.Scan(&userID, &nickname, &avatarURL, &bio, &locationName, &latitude, &longitude); err != nil {
+		var lastOnline time.Time
+		var tags []string
+		var momentsCount, friendsCount, followersCount, followingCount, groupsCount int
+		if err := rows.Scan(&userID, &nickname, &avatarURL, &bio, &locationName, &latitude, &longitude, &presenceStatus, &lastOnline, &tags, &momentsCount, &friendsCount, &followersCount, &followingCount, &groupsCount); err != nil {
 			return nil, err
 		}
 		distance := distanceFrom(reference, latitude, longitude)
 		if radius > 0 && distance > radius {
 			continue
 		}
-		payload := map[string]any{"user_id": userID, "nickname": nickname}
+		// payload 复用通用 UserItem 结构（spec api_spec_types.md）：
+		// 不含 viewer 相关的 @auth-only 字段（relation/social_context），
+		// 与 suggest 无登录上下文的查询语义一致。
+		user := map[string]any{"user_id": userID, "nickname": nickname}
 		if avatarURL != "" {
-			payload["avatar_url"] = avatarURL
+			user["avatar_url"] = avatarURL
 		}
+		payload := map[string]any{"user": user, "location": relativeLocationPayload(reference, locationName, latitude, longitude)}
 		if bio != "" {
 			payload["bio"] = bio
 		}
-		payload["location"] = relativeLocationPayload(reference, locationName, latitude, longitude)
+		if len(tags) > 0 {
+			payload["tags"] = tags
+		}
+		if ps := presenceStatusPtr(presenceStatus); ps != "" {
+			payload["presence_status"] = ps
+		}
+		if !lastOnline.IsZero() {
+			payload["last_online_at"] = lastOnline.UTC().Format(time.RFC3339)
+		}
+		payload["stats"] = map[string]any{
+			"moments_count":   momentsCount,
+			"friends_count":   friendsCount,
+			"followers_count": followersCount,
+			"following_count": followingCount,
+			"groups_count":    groupsCount,
+		}
 		items = append(items, scoredSuggestItem{
 			Item:       SearchSuggestItem{Type: "user", Payload: payload},
 			TypeOrder:  1,
@@ -168,6 +191,17 @@ func queryUserSuggestions(ctx context.Context, queryable persistence.QueryableDB
 	return items, nil
 }
 
+// presenceStatusPtr normalizes the raw presence column; empty or unknown
+// values are omitted entirely (privacy-controlled field).
+func presenceStatusPtr(raw string) string {
+	switch raw {
+	case "online", "offline":
+		return raw
+	default:
+		return ""
+	}
+}
+
 func queryGroupSuggestions(ctx context.Context, queryable persistence.QueryableDB, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
 	rows, err := queryable.Query(ctx, querySearchSuggestGroups, prefix, maxSuggestRows)
 	if err != nil {
@@ -176,24 +210,52 @@ func queryGroupSuggestions(ctx context.Context, queryable persistence.QueryableD
 	defer rows.Close()
 	items := make([]scoredSuggestItem, 0)
 	for rows.Next() {
-		var groupID, name, avatarURL, description, locationName string
+		var groupID, name, avatarURL, description, locationName, joinMethod, nextActivity, ownerID string
 		var latitude, longitude float64
-		var membersCount int
-		if err := rows.Scan(&groupID, &name, &avatarURL, &description, &locationName, &latitude, &longitude, &membersCount); err != nil {
+		var requiresApproval, isSearchable bool
+		var membersCount, onlineMembersCount, maxMembers int
+		var tags []string
+		var createdAt time.Time
+		if err := rows.Scan(&groupID, &name, &avatarURL, &description, &locationName, &latitude, &longitude, &membersCount, &joinMethod, &requiresApproval, &tags, &nextActivity, &isSearchable, &maxMembers, &createdAt, &ownerID, &onlineMembersCount); err != nil {
 			return nil, err
 		}
 		distance := distanceFrom(reference, latitude, longitude)
 		if radius > 0 && distance > radius {
 			continue
 		}
-		payload := map[string]any{"group_id": groupID, "name": name, "members_count": membersCount}
+		// payload 复用通用 GroupItem 结构（spec api_spec_types.md）
+		group := map[string]any{"group_id": groupID, "name": name, "members_count": membersCount}
 		if avatarURL != "" {
-			payload["avatar_url"] = avatarURL
+			group["avatar_url"] = avatarURL
+		}
+		payload := map[string]any{
+			"group":                group,
+			"join_method":          joinMethod,
+			"requires_approval":    requiresApproval,
+			"location":             relativeLocationPayload(reference, locationName, latitude, longitude),
+			"online_members_count": onlineMembersCount,
 		}
 		if description != "" {
 			payload["description"] = description
 		}
-		payload["location"] = relativeLocationPayload(reference, locationName, latitude, longitude)
+		if len(tags) > 0 {
+			payload["tags"] = tags
+		}
+		if nextActivity != "" {
+			payload["next_activity"] = nextActivity
+		}
+		if isSearchable {
+			payload["is_searchable"] = isSearchable
+		}
+		if maxMembers > 0 {
+			payload["max_members"] = maxMembers
+		}
+		if !createdAt.IsZero() {
+			payload["created_at"] = createdAt.UTC().Format(time.RFC3339)
+		}
+		if ownerID != "" {
+			payload["owner_id"] = ownerID
+		}
 		items = append(items, scoredSuggestItem{
 			Item:       SearchSuggestItem{Type: "group", Payload: payload},
 			TypeOrder:  2,

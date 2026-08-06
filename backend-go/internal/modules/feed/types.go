@@ -4,6 +4,8 @@ import (
 	"errors"
 	"time"
 
+	groupsmodule "hotspot/backend-go/internal/modules/groups"
+	usersmodule "hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/types"
 )
 
@@ -38,6 +40,15 @@ type GetFeedNearbyUsersRequest struct {
 
 type UserInfo = types.UserInfo
 
+// 通用领域类型别名（规范定义于 users/groups 模块，spec api_spec_types.md）
+type UserPresenceStatus = usersmodule.UserPresenceStatus
+
+type UserStats = usersmodule.UserStats
+
+type GroupRole = groupsmodule.GroupRole
+
+type GroupJoinMethod = groupsmodule.GroupJoinMethod
+
 type UserRelation struct {
 	IsFollowing  bool `json:"is_following"`
 	IsFollowedBy bool `json:"is_followed_by"`
@@ -49,12 +60,19 @@ type UserSocialContext struct {
 	CommonGroupsCount  int `json:"common_groups_count,omitempty"`
 }
 
+// UserItem follows spec api_spec_types.md UserItem: privacy-controlled fields
+// (presence_status/last_online_at) are omitted when the target's
+// presence_visible is off; stats are returned on the detail path.
 type UserItem struct {
-	User          UserInfo           `json:"user"`
-	Bio           string             `json:"bio,omitempty"`
-	Location      *RelativeLocation  `json:"location,omitempty"`
-	Relation      *UserRelation      `json:"relation,omitempty"`
-	SocialContext *UserSocialContext `json:"social_context,omitempty"`
+	User           UserInfo            `json:"user"`
+	Bio            string              `json:"bio,omitempty"`
+	Tags           []string            `json:"tags,omitempty"`
+	PresenceStatus *UserPresenceStatus `json:"presence_status,omitempty"`
+	LastOnlineAt   *string             `json:"last_online_at,omitempty"`
+	Location       *RelativeLocation   `json:"location,omitempty"`
+	Stats          *UserStats          `json:"stats,omitempty"`
+	Relation       *UserRelation       `json:"relation,omitempty"`
+	SocialContext  *UserSocialContext  `json:"social_context,omitempty"`
 }
 
 type PaginatedUsers struct {
@@ -69,18 +87,36 @@ type GroupInfo struct {
 	MembersCount int    `json:"members_count"`
 }
 
+// MyGroupState follows spec api_spec_types.md MyGroupState. unread_count is
+// computed from group_message_read_state; is_pinned/muted_until come from the
+// member's group_members row.
 type MyGroupState struct {
-	IsJoined bool `json:"is_joined"`
+	Role        GroupRole `json:"role"`
+	IsJoined    bool      `json:"is_joined"`
+	UnreadCount int       `json:"unread_count"`
+	IsMuted     bool      `json:"is_muted"`
+	MutedUntil  *string   `json:"muted_until,omitempty"`
+	IsPinned    bool      `json:"is_pinned"`
+	JoinedAt    *string   `json:"joined_at,omitempty"`
 }
 
 type GroupItem struct {
-	Group          GroupInfo        `json:"group"`
-	Description    string           `json:"description,omitempty"`
-	HasPassword    bool             `json:"has_password,omitempty"`
-	Location       RelativeLocation `json:"location"`
-	MyState        *MyGroupState    `json:"my_state,omitempty"`
-	FriendsInGroup int              `json:"friends_in_group,omitempty"`
-	LastActivityAt string           `json:"last_activity_at,omitempty"`
+	Group              GroupInfo        `json:"group"`
+	Description        string           `json:"description,omitempty"`
+	Tags               []string         `json:"tags,omitempty"`
+	JoinMethod         GroupJoinMethod  `json:"join_method"`
+	RequiresApproval   bool             `json:"requires_approval"`
+	HasPassword        bool             `json:"has_password,omitempty"`
+	Location           RelativeLocation `json:"location"`
+	MyState            *MyGroupState    `json:"my_state,omitempty"`
+	FriendsInGroup     int              `json:"friends_in_group,omitempty"`
+	LastActivityAt     *string          `json:"last_activity_at,omitempty"`
+	OnlineMembersCount *int             `json:"online_members_count,omitempty"`
+	NextActivity       *string          `json:"next_activity,omitempty"`
+	CreatedAt          *string          `json:"created_at,omitempty"`
+	OwnerID            string           `json:"owner_id,omitempty"`
+	IsSearchable       bool             `json:"is_searchable,omitempty"`
+	MaxMembers         int              `json:"max_members,omitempty"`
 }
 
 type PaginatedGroups struct {

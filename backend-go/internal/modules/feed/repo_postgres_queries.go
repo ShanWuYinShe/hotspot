@@ -23,7 +23,22 @@ SELECT u.user_id,
          JOIN group_members gm2 ON gm2.group_id = gm1.group_id AND gm2.user_id = u.user_id
          JOIN groups g ON g.group_id = gm1.group_id
          WHERE gm1.user_id = $3 AND g.deleted_at IS NULL
-       ), 0)
+       ), 0),
+       u.presence_status,
+       u.last_online,
+       COALESCE((
+         SELECT ARRAY_AGG(tag_name ORDER BY tag_name)
+         FROM user_profile_tags t WHERE t.user_id = u.user_id
+       ), '{}'),
+       COALESCE((SELECT COUNT(*) FROM moments m WHERE m.user_id = u.user_id AND m.is_deleted = FALSE), 0),
+       COALESCE((
+         SELECT COUNT(*) FROM user_relations ur
+         JOIN user_relations rev ON rev.user_id = ur.target_user_id AND rev.target_user_id = ur.user_id AND rev.is_following = TRUE
+         WHERE ur.user_id = u.user_id AND ur.is_following = TRUE
+       ), 0),
+       COALESCE((SELECT COUNT(*) FROM user_relations ur WHERE ur.target_user_id = u.user_id AND ur.is_following = TRUE), 0),
+       COALESCE((SELECT COUNT(*) FROM user_relations ur WHERE ur.user_id = u.user_id AND ur.is_following = TRUE), 0),
+       COALESCE((SELECT COUNT(*) FROM group_members gm JOIN groups g ON g.group_id = gm.group_id WHERE gm.user_id = u.user_id AND g.deleted_at IS NULL), 0)
 FROM users u
 JOIN user_settings us ON us.user_id = u.user_id
 WHERE us.searchable = TRUE
@@ -49,14 +64,41 @@ SELECT g.group_id,
          FROM group_members gm_friend
          JOIN user_relations ur ON ur.target_user_id = gm_friend.user_id AND ur.user_id = $3 AND ur.is_following = TRUE
          WHERE gm_friend.group_id = g.group_id
+       ), 0),
+       g.join_method,
+       g.requires_approval,
+       g.tags,
+       g.next_activity,
+       g.is_searchable,
+       g.max_members,
+       g.created_at,
+       g.owner_id,
+       COALESCE((
+         SELECT COUNT(*)
+         FROM group_members om
+         JOIN users ou ON ou.user_id = om.user_id AND ou.presence_status = 'online'
+         WHERE om.group_id = g.group_id
+       ), 0),
+       viewer_gm2.role,
+       viewer_gm2.joined_at,
+       viewer_gm2.muted_until,
+       viewer_gm2.is_pinned,
+       COALESCE((
+         SELECT COUNT(*) FROM group_messages m
+         WHERE m.group_id = g.group_id
+           AND (grs.last_read_sent_at IS NULL OR m.sent_at > grs.last_read_sent_at)
        ), 0)
 FROM groups g
 LEFT JOIN group_members gm ON gm.group_id = g.group_id
+LEFT JOIN group_members viewer_gm2 ON viewer_gm2.group_id = g.group_id AND viewer_gm2.user_id = $3
+LEFT JOIN group_message_read_state grs ON grs.group_id = g.group_id AND grs.user_id = $3
 WHERE g.deleted_at IS NULL
   AND g.is_searchable = TRUE
   AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
               WHERE g.s2_cell_id BETWEEN t.lo AND t.hi)
-GROUP BY g.group_id, g.name, g.avatar_url, g.description, g.has_password, g.location_name, g.latitude, g.longitude`
+GROUP BY g.group_id, g.name, g.avatar_url, g.description, g.has_password, g.location_name, g.latitude, g.longitude,
+         g.join_method, g.requires_approval, g.tags, g.next_activity, g.is_searchable, g.max_members, g.created_at, g.owner_id,
+         viewer_gm2.role, viewer_gm2.joined_at, viewer_gm2.muted_until, viewer_gm2.is_pinned, grs.last_read_sent_at`
 
 	queryFeedMomentsFollowing = `
 SELECT m.moment_id,

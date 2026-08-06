@@ -180,7 +180,7 @@ type GroupMemberItem struct {
 	JoinedAt       string              `json:"joined_at"`
 	MutedUntil     *string             `json:"muted_until,omitempty"`
 	PresenceStatus *UserPresenceStatus `json:"presence_status,omitempty"`
-	LastOnline     *string             `json:"last_online,omitempty"`
+	LastOnline     *string             `json:"last_online_at,omitempty"`
 }
 
 type UserPresenceStatus string
