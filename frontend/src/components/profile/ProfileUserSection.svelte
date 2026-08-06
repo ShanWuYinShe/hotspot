@@ -58,7 +58,7 @@
 			<div>
 				<div class="flex items-center gap-2.5">
 					<span class="text-text-primary text-base">{title}</span>
-					<span class="rounded-full bg-accent-default px-2 py-0.5 text-xs text-white">
+					<span class="rounded-full bg-accent-default px-2 py-0.5 text-xs text-text-on-accent">
 						{count}{countSuffix}
 					</span>
 				</div>
@@ -98,7 +98,7 @@
 				<button
 					type="button"
 					class="hover-btn surface-ghost tap-93 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs outline-none {active ? 'bg-accent-soft font-medium text-accent-default' : 'text-text-secondary'}"
-					style={active ? 'border-color:var(--accent-border);' : ''}
+					style={active ? 'border-color:var(--cst-accent-border);' : ''}
 					onclick={() => onFilter?.(pill.id)}
 				>
 					{#if pill.icon}

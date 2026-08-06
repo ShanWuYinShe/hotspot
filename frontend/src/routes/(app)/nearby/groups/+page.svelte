@@ -94,7 +94,7 @@
 		{#snippet header()}
 			<PageHeader title="附近群组" subtitle={locationName ? `${locationName} · 5km 内` : '5km 内'} sticky glass contentClassName="pt-4 pb-0" onBack={() => history.back()}>
 				{#snippet subtitleIcon()}
-					<MapPin class="size-2.5"  style="color:var(--accent-default)" strokeWidth={1.8} />
+					<MapPin class="size-2.5"  style="color:var(--cst-accent-default)" strokeWidth={1.8} />
 				{/snippet}
 				{#snippet trailing()}
 					<!-- 计数统一在标题右侧（对齐首页/附近动态样板） -->
@@ -163,7 +163,7 @@
 		{:else}
 			<EmptyState bare title="没有找到相关群组">
 				{#snippet icon()}
-					<Users size={40} color="var(--text-secondary)" opacity={0.4} />
+					<Users size={40} color="var(--cst-text-secondary)" opacity={0.4} />
 				{/snippet}
 			</EmptyState>
 		{/if}

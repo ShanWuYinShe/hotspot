@@ -134,9 +134,9 @@ referencePoint = loc?.point ?? null;
 	>
 		{#snippet trailing()}
 			{#if device === 'tablet'}
-				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-default shadow-[0_3px_10px_var(--glow-accent)]" >
-					<Sparkles class="size-2.75"  style="color:var(--text-on-accent)" strokeWidth={2} />
-					<span class="text-white text-xs">精选</span>
+				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-default shadow-[0_3px_10px_var(--cst-glow-accent)]" >
+					<Sparkles class="size-2.75"  style="color:var(--cst-text-on-accent)" strokeWidth={2} />
+					<span class="text-text-on-accent text-xs">精选</span>
 				</div>
 			{:else}
 				<span class="text-text-secondary text-xs">{filtered.length} 条内容</span>
@@ -175,7 +175,7 @@ referencePoint = loc?.point ?? null;
 	{:else}
 		<EmptyState title="附近暂时没有瞬间">
 			{#snippet icon()}
-				<Sparkles size={24} color="var(--text-secondary)" opacity={0.4} />
+				<Sparkles size={24} color="var(--cst-text-secondary)" opacity={0.4} />
 			{/snippet}
 		</EmptyState>
 	{/if}

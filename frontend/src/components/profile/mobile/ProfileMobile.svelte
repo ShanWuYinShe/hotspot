@@ -33,7 +33,7 @@
 <StandardPageLayout contentClassName="pt-5 pb-8">
 	{#snippet header()}
 		<!-- 资料页眉（对齐 Figma Make：eyebrow + 设置入口） -->
-			<div class="border-b border-border-default" style="background:var(--surface-primary);">
+			<div class="border-b border-border-default" style="background:var(--cst-surface-primary);">
 				<ContentColumn class="flex items-center justify-between py-3">
 					<p class="text-xs font-medium uppercase tracking-[0.14em] text-accent-default">个人资料</p>
 					<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} variant="ghost" size={32} />
@@ -59,7 +59,7 @@
 							aria-label="更换头像"
 							onclick={() => void goto(ROUTES.meEdit)}
 							class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-accent-default text-text-on-accent"
-							style="width:24px;height:24px;border:2px solid var(--surface-primary);"
+							style="width:24px;height:24px;border:2px solid var(--cst-surface-primary);"
 						>
 							<Camera class="size-3.25"  strokeWidth={2} />
 						</button>
@@ -68,7 +68,7 @@
 						<h1 class="text-xl font-medium tracking-[-0.01em] text-text-primary">{nickname || '未设置昵称'}</h1>
 						<p class="mt-0.5 text-xs text-text-secondary">{handle}</p>
 						<p class="mt-2 flex items-center gap-1.5 text-xs text-text-secondary">
-							<MapPin class="size-3.5"  style="color:var(--accent-default)" strokeWidth={1.8} />
+							<MapPin class="size-3.5"  style="color:var(--cst-accent-default)" strokeWidth={1.8} />
 							{locationName || '未设置位置'}
 						</p>
 					</div>
@@ -110,14 +110,14 @@
 				ariaLabel={item.label}
 				class="flex items-center gap-3 px-5 py-3.5"
 			>
-				<span class="flex shrink-0 items-center justify-center size-8"  style="background:var(--color-accent-bg);color:var(--accent-default)">
+				<span class="flex shrink-0 items-center justify-center size-8"  style="background:var(--cst-color-accent-bg);color:var(--cst-accent-default)">
 					<item.icon class="size-4"  strokeWidth={1.8} />
 				</span>
 				<span class="min-w-0 flex-1">
 					<span class="block text-sm text-text-primary">{item.label}</span>
 					<span class="mt-0.5 block truncate text-xs text-text-secondary">{item.detail}</span>
 				</span>
-				<ChevronRight class="size-4 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.7} />
+				<ChevronRight class="size-4 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.7} />
 			</ListItem>
 		{/each}
 	</ListContainer>

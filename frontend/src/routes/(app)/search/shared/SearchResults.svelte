@@ -55,7 +55,7 @@
 
 <section class="mt-5" aria-label="搜索结果">
 	<!-- Tab 栏：简洁 pill，对齐 Figma（active=primary，inactive=border bg-card） -->
-	<div class="no-scrollbar flex gap-2 overflow-x-auto border-b pb-3" style="border-color:var(--border-default);">
+	<div class="no-scrollbar flex gap-2 overflow-x-auto border-b pb-3" style="border-color:var(--cst-border-default);">
 		{#each tabs as t (t.id)}
 			<button
 				type="button"
@@ -64,7 +64,7 @@
 				class="shrink-0 px-3 py-1.5 text-xs transition-colors {tab === t.id
 					? 'bg-accent-default text-text-on-accent'
 					: 'border bg-surface-primary text-text-secondary hover:bg-accent-soft hover:text-text-primary'}"
-				style={tab === t.id ? '' : 'border-color:var(--border-default);'}
+				style={tab === t.id ? '' : 'border-color:var(--cst-border-default);'}
 			>
 				{t.label}
 			</button>
@@ -88,9 +88,9 @@
 				<!-- 用户结果组 -->
 				<section
 					class="overflow-hidden rounded-panel border bg-surface-primary"
-					style="border-color:var(--border-default);"
+					style="border-color:var(--cst-border-default);"
 				>
-					<div class="flex items-center gap-2 border-b px-4 py-3" style="border-color:var(--border-default);">
+					<div class="flex items-center gap-2 border-b px-4 py-3" style="border-color:var(--cst-border-default);">
 						<Users class="size-4 text-accent-default" strokeWidth={1.7} />
 						<h2 class="text-sm font-medium text-text-primary">用户</h2>
 					</div>
@@ -119,9 +119,9 @@
 				<!-- 动态结果组（补缩略图，对齐 Figma size-10 image） -->
 				<section
 					class="overflow-hidden rounded-panel border bg-surface-primary"
-					style="border-color:var(--border-default);"
+					style="border-color:var(--cst-border-default);"
 				>
-					<div class="flex items-center gap-2 border-b px-4 py-3" style="border-color:var(--border-default);">
+					<div class="flex items-center gap-2 border-b px-4 py-3" style="border-color:var(--cst-border-default);">
 						<FileText class="size-4 text-accent-default" strokeWidth={1.7} />
 						<h2 class="text-sm font-medium text-text-primary">动态</h2>
 					</div>
@@ -137,7 +137,7 @@
 								{:else}
 									<div
 										class="flex size-10 items-center justify-center rounded-tight"
-										style="background:var(--accent-soft);"
+										style="background:var(--cst-accent-soft);"
 									>
 										<FileText class="size-4 text-accent-default" strokeWidth={1.5} />
 									</div>
@@ -159,9 +159,9 @@
 				<!-- 话题结果组 -->
 				<section
 					class="overflow-hidden rounded-panel border bg-surface-primary"
-					style="border-color:var(--border-default);"
+					style="border-color:var(--cst-border-default);"
 				>
-					<div class="flex items-center gap-2 border-b px-4 py-3" style="border-color:var(--border-default);">
+					<div class="flex items-center gap-2 border-b px-4 py-3" style="border-color:var(--cst-border-default);">
 						<Hash class="size-4 text-accent-default" strokeWidth={1.7} />
 						<h2 class="text-sm font-medium text-text-primary">话题</h2>
 					</div>

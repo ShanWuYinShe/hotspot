@@ -29,16 +29,16 @@
 	const isSubPage = $derived(isSubPagePath(pathname));
 
 	// FAB 光晕：统一走 --elevation-fab（每主题/暗色已定义）
-	const fabGlow = $derived(composer.composerOpen ? 'none' : 'var(--elevation-fab)');
+	const fabGlow = $derived(composer.composerOpen ? 'none' : 'var(--cst-elevation-fab)');
 </script>
 
 <div
 	class="min-h-dvh w-full flex justify-center items-start font-sans transition-colors duration-500"
-	style="background-color:var(--surface-page);"
+	style="background-color:var(--cst-surface-page);"
 >
 	<div
 		class={cn('flex flex-col h-dvh w-full', 'transition-colors duration-500 overflow-hidden relative')}
-		style="background-color:var(--surface-primary);color:var(--text-primary);"
+		style="background-color:var(--cst-surface-primary);color:var(--cst-text-primary);"
 	>
 		<StatusBar />
 
@@ -50,7 +50,7 @@
 			<nav
 				aria-label="Main navigation"
 				class="shrink-0 w-full"
-				style="background:var(--surface-nav-glass);backdrop-filter:blur(24px) saturate(1.8);-webkit-backdrop-filter:blur(24px) saturate(1.8);border-top:1px solid var(--border-nav-glass);box-shadow:var(--elevation-nav);transition:background 0.4s ease, border-color 0.4s ease;"
+				style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(24px) saturate(1.8);-webkit-backdrop-filter:blur(24px) saturate(1.8);border-top:1px solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);transition:background 0.4s ease, border-color 0.4s ease;"
 			>
 				<div
 					class="flex items-center justify-between px-2"
@@ -70,14 +70,14 @@
 						<button
 							type="button"
 							class="hover-btn scale-btn flex items-center justify-center outline-none select-none rounded-full"
-							style="width:50px;height:50px;background:{composer.composerOpen ? 'var(--text-secondary)' : 'var(--accent-default)'};box-shadow:{fabGlow};transition:background 0.22s ease, box-shadow 0.22s ease, transform 0.18s cubic-bezier(0.22,1,0.36,1), filter 0.18s ease;"
+							style="width:50px;height:50px;background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{fabGlow};transition:background 0.22s ease, box-shadow 0.22s ease, transform 0.18s cubic-bezier(0.22,1,0.36,1), filter 0.18s ease;"
 							onclick={toggleComposer}
 							aria-label={composer.composerOpen ? '关闭' : '发布'}
 						>
 							{#if composer.composerOpen}
-								<X class="size-5"  style="color:var(--text-on-accent)" strokeWidth={2.2} />
+								<X class="size-5"  style="color:var(--cst-text-on-accent)" strokeWidth={2.2} />
 							{:else}
-								<Plus class="size-5"  style="color:var(--text-on-accent)" strokeWidth={2.2} />
+								<Plus class="size-5"  style="color:var(--cst-text-on-accent)" strokeWidth={2.2} />
 							{/if}
 						</button>
 					</div>

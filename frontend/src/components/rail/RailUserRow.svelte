@@ -28,9 +28,9 @@
 			<img src={avatar} alt={name} class="w-full h-full object-cover" />
 		</div>
 		<div class="flex-1 min-w-0">
-			<p  style="color:var(--text-primary)" class="truncate text-base">{name}</p>
+			<p  style="color:var(--cst-text-primary)" class="truncate text-base">{name}</p>
 			{#if sub}
-				<p  style="color:var(--text-secondary)" class="truncate text-xs mt-px">{sub}</p>
+				<p  style="color:var(--cst-text-secondary)" class="truncate text-xs mt-px">{sub}</p>
 			{/if}
 		</div>
 	</button>

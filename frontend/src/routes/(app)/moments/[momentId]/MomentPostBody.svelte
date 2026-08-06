@@ -56,7 +56,7 @@
 </script>
 
 <!-- Post image（全幅封面：负 margin 抵消外层 SplitPageLayout 的 gutter，与 events/users 一致） -->
-<div class="relative overflow-hidden -mx-[var(--page-gutter)]" style="height:clamp(220px, 38vw, 380px);">
+<div class="relative overflow-hidden -mx-[var(--cst-page-gutter)]" style="height:clamp(220px, 38vw, 380px);">
 	{#if moment.image}
 		<img src={moment.image} alt="moment" class="w-full h-full object-cover" />
 	{:else}
@@ -65,7 +65,7 @@
 			<span class="text-text-secondary text-xs">来自 {moment.location || '附近'} 的动态</span>
 		</div>
 	{/if}
-	<div class="absolute top-3 left-3 px-2.5 py-0.5 rounded-full bg-accent-default shadow-[0_2px_8px_var(--glow-accent)]" >
+	<div class="absolute top-3 left-3 px-2.5 py-0.5 rounded-full bg-accent-default shadow-[0_2px_8px_var(--cst-glow-accent)]" >
 		<span class="text-text-on-accent text-xxs">#{moment.tag}</span>
 	</div>
 </div>
@@ -76,7 +76,7 @@
 		<button
 			type="button"
 			class="hover-btn rounded-full overflow-hidden shrink-0 cursor-pointer focus-ring focus-visible:ring-offset-surface-primary"
-			style="width:44px;height:44px;padding:0;background:transparent;border:2px solid var(--accent-default);"
+			style="width:44px;height:44px;padding:0;background:transparent;border:2px solid var(--cst-accent-default);"
 			aria-label={`查看${moment.user}的个人主页`}
 			onclick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}
 		>
@@ -85,7 +85,7 @@
 		<div class="flex-1">
 			<p class="text-text-primary text-base">{moment.user}</p>
 			<div class="flex items-center gap-1.5">
-				<MapPin class="size-2.5"  style="color:var(--accent-default)" strokeWidth={1.5} />
+				<MapPin class="size-2.5"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
 				<span class="text-text-secondary text-xs">{moment.location}</span>
 			</div>
 		</div>

@@ -24,7 +24,7 @@
 <!-- Dense, horizontally comparable metrics: counts, ratios, and relationship states. -->
 <dl
 	class="grid overflow-hidden rounded-xl ring-border {className}"
-	style="grid-template-columns:repeat({items.length}, minmax(0, 1fr));gap:1px;background:var(--border-default);"
+	style="grid-template-columns:repeat({items.length}, minmax(0, 1fr));gap:1px;background:var(--cst-border-default);"
 >
 	{#each items as item (item.label)}
 		<div class="flex min-w-0 flex-col items-center bg-surface-primary px-2 py-2.5 text-center">

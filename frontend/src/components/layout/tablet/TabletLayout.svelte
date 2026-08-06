@@ -36,7 +36,7 @@
 <div
 	data-platform="tablet"
 	class="flex flex-col h-dvh w-full overflow-hidden transition-colors duration-500 font-sans"
-	style="background-color:var(--surface-primary);color:var(--text-primary);"
+	style="background-color:var(--cst-surface-primary);color:var(--cst-text-primary);"
 >
 	<StatusBar />
 
@@ -56,11 +56,11 @@
 			class="shrink-0 w-full flex justify-center"
 			style={isWide
 				? 'padding:10px 24px max(16px, env(safe-area-inset-bottom, 16px));background-color:transparent;'
-				: 'padding:0;background-color:var(--surface-nav-glass);border-top:1px solid var(--border-nav-glass);box-shadow:var(--elevation-nav);'}
+				: 'padding:0;background-color:var(--cst-surface-nav-glass);border-top:1px solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);'}
 		>
 			<div
 				class="flex items-center"
-				style="width:100%;max-width:{isWide ? 680 : 'none'};border-radius:{isWide ? 32 : 0}px;background:var(--surface-nav-glass);backdrop-filter:blur(28px) saturate(1.8);-webkit-backdrop-filter:blur(28px) saturate(1.8);box-shadow:{isWide ? 'var(--elevation-nav)' : 'none'};border:{isWide ? '1px solid var(--border-nav-glass)' : 'none'};padding:{isWide ? '8px 14px' : '8px max(32px, env(safe-area-inset-left, 32px)) max(14px, env(safe-area-inset-bottom, 14px))'};gap:{isWide ? 6 : 14}px;"
+				style="width:100%;max-width:{isWide ? 680 : 'none'};border-radius:{isWide ? 32 : 0}px;background:var(--cst-surface-nav-glass);backdrop-filter:blur(28px) saturate(1.8);-webkit-backdrop-filter:blur(28px) saturate(1.8);box-shadow:{isWide ? 'var(--cst-elevation-nav)' : 'none'};border:{isWide ? '1px solid var(--cst-border-nav-glass)' : 'none'};padding:{isWide ? '8px 14px' : '8px max(32px, env(safe-area-inset-left, 32px)) max(14px, env(safe-area-inset-bottom, 14px))'};gap:{isWide ? 6 : 14}px;"
 			>
 				{#each NAV_ITEMS.slice(0, 2) as item}
 					<NavTab
@@ -77,14 +77,14 @@
 					<button
 						type="button"
 						class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none select-none"
-						style="width:48px;height:48px;background:{composer.composerOpen ? 'var(--text-secondary)' : 'var(--accent-default)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--elevation-fab)'};transition:background 0.22s, box-shadow 0.22s, transform 0.18s cubic-bezier(0.22,1,0.36,1), filter 0.18s ease;"
+						style="width:48px;height:48px;background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--cst-elevation-fab)'};transition:background 0.22s, box-shadow 0.22s, transform 0.18s cubic-bezier(0.22,1,0.36,1), filter 0.18s ease;"
 						aria-label={composer.composerOpen ? '关闭' : '发布'}
 						onclick={toggleComposer}
 					>
 						{#if composer.composerOpen}
-							<X class="size-4.75"  style="color:var(--text-on-accent)" strokeWidth={2.2} />
+							<X class="size-4.75"  style="color:var(--cst-text-on-accent)" strokeWidth={2.2} />
 						{:else}
-							<Plus class="size-4.75"  style="color:var(--text-on-accent)" strokeWidth={2.2} />
+							<Plus class="size-4.75"  style="color:var(--cst-text-on-accent)" strokeWidth={2.2} />
 						{/if}
 					</button>
 				</div>

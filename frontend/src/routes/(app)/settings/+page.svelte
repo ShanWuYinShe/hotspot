@@ -120,12 +120,12 @@
 	<!-- User card — hero with ambient glow -->
 	<div class="ambient-glow mb-3">
 		<button type="button" class="hover-btn flex items-center gap-4 px-4 py-3.5 rounded-panel w-full outline-none text-left surface-hero">
-			<Avatar class="border-2 border-surface-primary shadow-[0_4px_12px_var(--glow-accent)]" src={accountAvatar} name={accountName} size={48}  />
+			<Avatar class="border-2 border-surface-primary shadow-[0_4px_12px_var(--cst-glow-accent)]" src={accountAvatar} name={accountName} size={48}  />
 			<div class="flex-1 min-w-0">
 				<p class="text-base tracking-tight text-text-primary">{accountName || '用户'}</p>
 				<p class="text-xs mt-0.5 text-text-secondary">{accountEmail || '未绑定邮箱'}</p>
 			</div>
-			<ChevronRight class="size-3.75 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+			<ChevronRight class="size-3.75 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 		</button>
 	</div>
 
@@ -136,7 +136,7 @@
 			<div class="px-4 py-3.5">
 				<div class="flex items-center gap-3">
 					<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
-						<Palette class="size-3.75"  style="color:var(--accent-default)" strokeWidth={1.5} />
+						<Palette class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
 					</div>
 					<div class="flex-1 min-w-0">
 						<p class="text-base text-text-primary">应用主题</p>
@@ -150,12 +150,12 @@
 							aria-pressed={theme.theme === t.id}
 							onclick={() => setTheme(t.id)}
 							class="flex items-center gap-2 border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default"
-							style="border-color:{theme.theme === t.id ? 'var(--accent-default)' : 'var(--border-default)'};background:{theme.theme === t.id ? 'var(--accent-soft)' : 'transparent'};color:var(--text-primary);"
+							style="border-color:{theme.theme === t.id ? 'var(--cst-accent-default)' : 'var(--cst-border-default)'};background:{theme.theme === t.id ? 'var(--cst-accent-soft)' : 'transparent'};color:var(--cst-text-primary);"
 						>
 							{#if t.id === 'forest'}
-								<Trees class="size-3.75"  style="color:var(--accent-default)" strokeWidth={1.7} />
+								<Trees class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.7} />
 							{:else}
-								<Palette class="size-3.75"  style="color:var(--accent-default)" strokeWidth={1.7} />
+								<Palette class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.7} />
 							{/if}
 							<span class="text-xs">{t.label}</span>
 						</button>
@@ -165,9 +165,9 @@
 			<div class="flex items-center gap-3 px-4 py-3.5">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
 					{#if theme.isDark}
-						<Moon class="size-3.75"  style="color:var(--accent-default)" strokeWidth={1.5} />
+						<Moon class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
 					{:else}
-						<Sun class="size-3.75"  style="color:var(--accent-default)" strokeWidth={1.5} />
+						<Sun class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
 					{/if}
 				</div>
 				<div class="flex-1 min-w-0">
@@ -185,7 +185,7 @@
 		<ListContainer>
 			<div class="flex items-center gap-3 px-4 py-3.5">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
-					<Bell class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+					<Bell class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-base text-text-primary">推送通知</p>
@@ -195,7 +195,7 @@
 			</div>
 			<div class="flex items-center gap-3 px-4 py-3.5">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
-					<Volume2 class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+					<Volume2 class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-base text-text-primary">应用声音</p>
@@ -212,7 +212,7 @@
 		<ListContainer>
 			<div class="flex items-center gap-3 px-4 py-3.5">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
-					<Lock class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+					<Lock class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-base text-text-primary">私密账号</p>
@@ -222,7 +222,7 @@
 			</div>
 			<div class="flex items-center gap-3 px-4 py-3.5">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
-					<MapPin class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+					<MapPin class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-base text-text-primary">位置共享</p>
@@ -239,33 +239,33 @@
 		<ListContainer>
 			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="语言设置">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
-					<Globe class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+					<Globe class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-base text-text-primary">语言</p>
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary">中文</span>
-				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 			</ListItem>
 			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="账号信息">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
-					<User class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+					<User class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-base text-text-primary">账号信息</p>
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary"></span>
-				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 			</ListItem>
 			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="关于">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
-					<Info class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+					<Info class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-base text-text-primary">关于</p>
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary">v 1.0.0</span>
-				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 			</ListItem>
 		</ListContainer>
 	</div>

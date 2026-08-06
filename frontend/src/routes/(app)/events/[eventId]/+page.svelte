@@ -82,14 +82,14 @@
 	let showParticipants = $state(false);
 
 	const fillRate = $derived(ev ? Math.round((safeEv.participants.length / safeEv.maxParticipants) * 100) : 0);
-	const evTone = (amount: number) => `color-mix(in srgb, ${safeEv.color || 'var(--accent-default)'} ${amount}%, transparent)`;
+	const evTone = (amount: number) => `color-mix(in srgb, ${safeEv.color || 'var(--cst-accent-default)'} ${amount}%, transparent)`;
 	const walkMinutes = $derived(ev && safeEv.distance ? Math.ceil(parseFloat(safeEv.distance) * 12) : 0);
 </script>
 
 {#if ev}
 <SplitPageLayout contentClassName="pb-6">
 	<!-- 全幅封面（负 margin 抵消 SplitPageLayout 的 gutter） -->
-	<div class="relative shrink-0 overflow-hidden -mx-[var(--page-gutter)]" style="height:clamp(200px, 32vw, 280px);">
+	<div class="relative shrink-0 overflow-hidden -mx-[var(--cst-page-gutter)]" style="height:clamp(200px, 32vw, 280px);">
 				<img src={safeEv.cover} alt={safeEv.title} class="absolute inset-0 h-full w-full object-cover" />
 				<div class="absolute inset-0" style="background:linear-gradient(to bottom, transparent 30%, {safeEv.bg} 100%);"></div>
 
@@ -124,14 +124,14 @@
 				</div>
 
 				<!-- 发起人 -->
-				<div class="mb-4 flex items-center gap-3 rounded-panel px-4 py-3.5 shadow-neu-lg border border-border-default"  style="background:var(--surface-primary)">
+				<div class="mb-4 flex items-center gap-3 rounded-panel px-4 py-3.5 shadow-neu-lg border border-border-default"  style="background:var(--cst-surface-primary)">
 					<div class="shrink-0 overflow-hidden rounded-full" style="width:40px;height:40px;border:2px solid {safeEv.color};">
 						<img src={safeEv.host.avatar} alt={safeEv.host.name} class="h-full w-full object-cover" />
 					</div>
 					<div class="flex-1">
 						<p class="text-base text-text-primary">{safeEv.host.name}</p>
 						<div class="flex items-center gap-1">
-							<Star class="size-2.5"  style="color:var(--status-warning)" fill="var(--status-warning)" strokeWidth={1.5} />
+							<Star class="size-2.5"  style="color:var(--cst-status-warning)" fill="var(--cst-status-warning)" strokeWidth={1.5} />
 							<span class="text-xs text-text-secondary">活动发起人</span>
 						</div>
 					</div>
@@ -145,7 +145,7 @@
 				<!-- 亮点 -->
 				<div class="mb-5 grid gap-2.5" style="grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));">
 					{#each safeEv.highlights as h}
-						<div class="flex items-center gap-2.5 rounded-control px-3.5 py-3 shadow-neu-md border border-border-default"  style="background:var(--surface-primary)">
+						<div class="flex items-center gap-2.5 rounded-control px-3.5 py-3 shadow-neu-md border border-border-default"  style="background:var(--cst-surface-primary)">
 							<div class="flex shrink-0 items-center justify-center rounded-full" style="width:24px;height:24px;background:color-mix(in srgb, {safeEv.color} 14%, transparent);">
 								<Check style="width:11px;height:11px;color:{safeEv.color};" strokeWidth={2.5} />
 							</div>
@@ -158,26 +158,26 @@
 				<div class="mb-5">
 					<div class="mb-3 flex items-center justify-between">
 						<p class="text-base text-text-primary">参与者 · {safeEv.participants.length}/{safeEv.maxParticipants}</p>
-						<button type="button" class="hover-btn tap-93 flex items-center gap-0.5 outline-none" style="color:var(--accent-default);" onclick={() => (showParticipants = true)}>
+						<button type="button" class="hover-btn tap-93 flex items-center gap-0.5 outline-none" style="color:var(--cst-accent-default);" onclick={() => (showParticipants = true)}>
 							<span class="text-sm">查看全部</span>
 							<ChevronRight class="size-3.25"  strokeWidth={1.5} />
 						</button>
 					</div>
 
 					<!-- 进度条 -->
-					<div class="mb-3 overflow-hidden rounded-full h-1.5"  style="background:var(--border-default)">
+					<div class="mb-3 overflow-hidden rounded-full h-1.5"  style="background:var(--cst-border-default)">
 						<div style="width:{fillRate}%;height:100%;background:{safeEv.color};border-radius:3px;transition:width 0.8s ease-out;"></div>
 					</div>
 
 					<!-- 头像栈 -->
 					<div class="flex items-center gap-1">
 						{#each safeEv.participants as p, i (p.id)}
-							<div class="overflow-hidden rounded-full" style="width:36px;height:36px;border:2px solid var(--surface-primary);margin-left:{i > 0 ? '-10px' : '0'};z-index:{safeEv.participants.length - i};">
+							<div class="overflow-hidden rounded-full" style="width:36px;height:36px;border:2px solid var(--cst-surface-primary);margin-left:{i > 0 ? '-10px' : '0'};z-index:{safeEv.participants.length - i};">
 								<img src={p.avatar} alt={p.name} class="h-full w-full object-cover" />
 							</div>
 						{/each}
 						{#if safeEv.maxParticipants - safeEv.participants.length > 0}
-							<div class="flex items-center justify-center rounded-full" style="width:36px;height:36px;border:2px solid var(--surface-primary);margin-left:-10px;background:{evTone(18)};">
+							<div class="flex items-center justify-center rounded-full" style="width:36px;height:36px;border:2px solid var(--cst-surface-primary);margin-left:-10px;background:{evTone(18)};">
 								<span class="text-xs font-semibold" style="color:{safeEv.color};">+{safeEv.maxParticipants - safeEv.participants.length}</span>
 							</div>
 						{/if}
@@ -194,14 +194,14 @@
 
 	{#snippet footer()}
 		<!-- sticky 底部 CTA（按钮保持 640px 阅读宽度，页面布局全宽） -->
-		<div class="shrink-0 px-[var(--page-gutter)] pb-6 pt-3 border-t border-border-default"  style="background-color:var(--surface-primary)">
+		<div class="shrink-0 px-[var(--cst-page-gutter)] pb-6 pt-3 border-t border-border-default"  style="background-color:var(--cst-surface-primary)">
 			<div class="mx-auto w-full" style="max-width:640px;">
 			<button
 				type="button"
 				onclick={() => (joined = !joined)}
 				class="hover-btn tap-97 flex w-full items-center justify-center gap-2 rounded-feature py-4 text-base outline-none transition-all duration-300"
 				style={joined
-					? `background:var(--surface-primary);border:2px solid ${safeEv.color};color:${safeEv.color};box-shadow:0 0 0 4px ${evTone(18)};`
+					? `background:var(--cst-surface-primary);border:2px solid ${safeEv.color};color:${safeEv.color};box-shadow:0 0 0 4px ${evTone(18)};`
 					: `background:${safeEv.color};color:white;box-shadow:0 8px 24px ${evTone(45)};border:none;`}
 			>
 				{#if joined}
@@ -269,7 +269,7 @@
 				<p class="mt-0.5 text-xs text-text-secondary">{safeEv.participants.length} 人已报名 · 还可加入 {safeEv.maxParticipants - safeEv.participants.length} 人</p>
 			</div>
 			<Dialog.Close class="surface-ghost flex items-center justify-center rounded-full outline-none size-8"  aria-label="关闭报名名单">
-				<X size={16} color="var(--text-secondary)" />
+				<X size={16} color="var(--cst-text-secondary)" />
 			</Dialog.Close>
 		</header>
 		<div class="no-scrollbar max-h-[52dvh] overflow-y-auto px-5 py-3">

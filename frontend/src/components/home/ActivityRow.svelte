@@ -21,8 +21,8 @@
 		<item.icon style="width:16px;height:16px;color:{item.color};" strokeWidth={1.75} />
 	</div>
 	<div class="flex-1 min-w-0">
-		<p class="text-base"  style="color:var(--text-primary)">{item.title}</p>
-		<p class="text-xs mt-px"  style="color:var(--text-secondary)">{item.sub}</p>
+		<p class="text-base"  style="color:var(--cst-text-primary)">{item.title}</p>
+		<p class="text-xs mt-px"  style="color:var(--cst-text-secondary)">{item.sub}</p>
 	</div>
-	<ChevronRight class="size-3.25"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+	<ChevronRight class="size-3.25"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 </ListItem>

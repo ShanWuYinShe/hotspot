@@ -156,7 +156,7 @@
 	}
 
 	const sheetStyle = $derived(
-		`position:absolute;bottom:0;left:0;right:0;height:${sheetH}px;z-index:20;border-radius:22px 22px 0 0;border:1px solid var(--border-default);border-bottom:none;box-shadow:0 -6px 28px var(--elevation-shadow-dark);display:flex;flex-direction:column;overflow:hidden;${dragging ? '' : 'transition:height 0.3s cubic-bezier(0.34,1.56,0.64,1);'}`
+		`position:absolute;bottom:0;left:0;right:0;height:${sheetH}px;z-index:20;border-radius:22px 22px 0 0;border:1px solid var(--cst-border-default);border-bottom:none;box-shadow:0 -6px 28px var(--cst-elevation-shadow-dark);display:flex;flex-direction:column;overflow:hidden;${dragging ? '' : 'transition:height 0.3s cubic-bezier(0.34,1.56,0.64,1);'}`
 	);
 	const rightCtrlBottom = $derived(sheetH + 10);
 </script>
@@ -182,7 +182,7 @@
 
 		<!-- Current location pulsing dot（对齐 Figma Make：halo scale 1→1.8 / opacity 0.55→0 循环） -->
 		<div style="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:5;pointer-events:none;">
-			<div style="width:18px;height:18px;border-radius:50%;background:{PIN_COLORS.user};border:3px solid var(--surface-primary);box-shadow:0 2px 10px {pinTone('user', 55)};position:relative;">
+			<div style="width:18px;height:18px;border-radius:50%;background:{PIN_COLORS.user};border:3px solid var(--cst-surface-primary);box-shadow:0 2px 10px {pinTone('user', 55)};position:relative;">
 				<span class="map-pulse-halo absolute rounded-full" style="inset:-7px;background:{pinTone('user', 20)};border:1px solid {pinTone('user', 30)};"></span>
 			</div>
 		</div>
@@ -208,7 +208,7 @@
 		{/if}
 
 		{#if mapLoading}
-			<div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary shadow-[0_2px_12px_var(--elevation-shadow-dark)] border border-border-default" >
+			<div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary shadow-[0_2px_12px_var(--cst-elevation-shadow-dark)] border border-border-default" >
 				加载地图数据…
 			</div>
 		{/if}
@@ -229,7 +229,7 @@
 				style="width:42px;height:42px;{floatBtnStyle}"
 				onclick={() => history.back()}
 			>
-				<ArrowLeft class="size-4.25"  style="color:var(--text-primary)" strokeWidth={2} />
+				<ArrowLeft class="size-4.25"  style="color:var(--cst-text-primary)" strokeWidth={2} />
 			</button>
 
 			<!-- Filter toggle -->
@@ -238,7 +238,7 @@
 					<button
 						type="button"
 						class="hover-btn flex items-center gap-2 rounded-full outline-none {showFilter ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-primary'}"
-						style="padding:9px 16px;font-size:14px;border:{showFilter ? '1px solid transparent' : '1px solid var(--border-default)'};box-shadow:{showFilter ? '0 4px 16px var(--glow-accent)' : '0 2px 12px var(--elevation-shadow-dark), 0 1px 3px var(--elevation-shadow-dark)'};"
+						style="padding:9px 16px;font-size:14px;border:{showFilter ? '1px solid transparent' : '1px solid var(--cst-border-default)'};box-shadow:{showFilter ? '0 4px 16px var(--cst-glow-accent)' : '0 2px 12px var(--cst-elevation-shadow-dark), 0 1px 3px var(--cst-elevation-shadow-dark)'};"
 						onclick={() => (showFilter = !showFilter)}
 					>
 						<SlidersHorizontal class="size-3.5"  strokeWidth={showFilter ? 2.5 : 1.75} />
@@ -271,7 +271,7 @@
 							>
 								<img class="w-4.5 h-6 shrink-0" src={icon} alt={label}  />
 								<span class="text-text-primary text-base"  style="flex:1;text-align:left">{label}</span>
-								<div style="width:13px;height:13px;border-radius:50%;shrink:0;background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--border-default)'};box-shadow:{active ? `0 0 6px ${color}55` : 'none'};transition:all 0.18s;"></div>
+								<div style="width:13px;height:13px;border-radius:50%;shrink:0;background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--cst-border-default)'};box-shadow:{active ? `0 0 6px ${color}55` : 'none'};transition:all 0.18s;"></div>
 							</button>
 						{/each}
 					</Popover.Content>
@@ -292,7 +292,7 @@
 				searchQuery = '';
 			}}
 		>
-			<Crosshair class="size-4.5"  style="color:var(--accent-default)" strokeWidth={1.75} />
+			<Crosshair class="size-4.5"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
 		</button>
 
 		<!-- My location dot（对齐 Figma Make：用户位置圆点 + 白描边 + 主题色 glow） -->
@@ -308,7 +308,7 @@
 			}}
 		>
 			<div
-				style="width:14px;height:14px;border-radius:50%;background:var(--marker-user);border:2.5px solid var(--surface-primary);box-shadow:0 0 8px color-mix(in srgb, var(--marker-user) 65%, transparent);"
+				style="width:14px;height:14px;border-radius:50%;background:var(--cst-marker-user);border:2.5px solid var(--cst-surface-primary);box-shadow:0 0 8px color-mix(in srgb, var(--cst-marker-user) 65%, transparent);"
 			></div>
 		</button>
 	</div>
@@ -334,7 +334,7 @@
 		<!-- Search bar -->
 		<div class="shrink-0"  style="padding:0 14px 8px">
 			<div class="flex items-center gap-2.5 px-3.5 rounded-[15px] input-surface h-11" >
-				<Search class="size-3.75 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+				<Search class="size-3.75 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				<input
 					bind:value={searchQuery}
 					oninput={(e) => {
@@ -357,10 +357,10 @@
 							selectedLoc = null;
 						}}
 					>
-						<X class="size-3.5"  style="color:var(--text-secondary)" strokeWidth={2} />
+						<X class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={2} />
 					</button>
 				{:else if selectedLoc}
-					<Check class="size-3.5 shrink-0"  style="color:var(--accent-default)" strokeWidth={2.5} />
+					<Check class="size-3.5 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={2.5} />
 				{/if}
 			</div>
 		</div>
@@ -387,7 +387,7 @@
 			<button
 				type="button"
 				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-text-on-accent"
-				style="height:50px;font-size:15px;box-shadow:0 6px 20px var(--glow-accent);"
+				style="height:50px;font-size:15px;box-shadow:0 6px 20px var(--cst-glow-accent);"
 				onclick={handleConfirm}
 			>
 				<MapPin class="size-3.75"  strokeWidth={2} />

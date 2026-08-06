@@ -149,7 +149,7 @@
 			side="bottom"
 			class="inset-x-4 bottom-4 mx-auto max-w-md rounded-feature p-5"
 			aria-label={`${user.name} 的更多操作`}
-			style="box-shadow:var(--elevation-modal);"
+			style="box-shadow:var(--cst-elevation-modal);"
 		>
 			<div class="flex items-center justify-between">
 				<div>
@@ -224,7 +224,7 @@
 				<div class="flex items-end justify-between gap-4">
 					<div class="flex min-w-0 items-center gap-4">
 						<div class="relative shrink-0">
-							<div class="overflow-hidden rounded-full size-20 shadow-neu-xl"   style="border:3px solid var(--surface-primary)">
+							<div class="overflow-hidden rounded-full size-20 shadow-neu-xl"   style="border:3px solid var(--cst-surface-primary)">
 								<img src={user.avatar} alt={user.name} class="w-full h-full object-cover" />
 							</div>
 							<span class="absolute bottom-1 right-1 rounded-full bg-status-online size-3.5 border-2 border-surface-primary"  ></span>
@@ -240,7 +240,7 @@
 						<button
 							type="button"
 							class="hover-btn tap-93 flex items-center gap-1.5 px-3.5 py-2 rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-45 bg-surface-primary text-text-secondary text-xs"
-							style="border:1px solid var(--border-default);box-shadow:var(--shadow-neu-md);"
+							style="border:1px solid var(--cst-border-default);box-shadow:var(--shadow-neu-md);"
 							disabled={blocked}
 							onclick={() => !blocked && void goto(ROUTES.message(uid))}
 						>
@@ -251,8 +251,8 @@
 							type="button"
 							class="hover-btn tap-93 flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all disabled:cursor-not-allowed disabled:opacity-45 text-xs {followed ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
 							style={followed
-								? 'border:1.5px solid var(--accent-default);box-shadow:var(--shadow-neu-md);'
-								: 'box-shadow:0 4px 14px var(--glow-accent);border:1px solid transparent;'}
+								? 'border:1.5px solid var(--cst-accent-default);box-shadow:var(--shadow-neu-md);'
+								: 'box-shadow:0 4px 14px var(--cst-glow-accent);border:1px solid transparent;'}
 							disabled={blocked}
 							onclick={toggleFollow}
 						>
@@ -279,7 +279,7 @@
 			<div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
 				{#if user.location}
 					<span class="flex items-center gap-1.5 text-text-secondary text-base">
-						<MapPin class="size-3.25"  style="color:var(--accent-default)" strokeWidth={1.75} />
+						<MapPin class="size-3.25"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
 						{user.location}
 					</span>
 				{/if}
@@ -322,7 +322,7 @@
 				{#if activeTab === 'liked'}
 					<div class="absolute inset-0 flex items-end justify-end p-1.5 bg-surface-overlay-soft">
 						<div class="flex items-center justify-center rounded-full bg-accent-default size-5" >
-							<Heart class="size-2.5"  style="color:var(--text-on-accent)" strokeWidth={2} fill="white" />
+							<Heart class="size-2.5"  style="color:var(--cst-text-on-accent)" strokeWidth={2} fill="white" />
 						</div>
 					</div>
 				{/if}

@@ -30,16 +30,16 @@
 	} = $props();
 
 	const iconColor = $derived(
-		tone === 'inverse' ? 'var(--content-inverse)' : tone === 'accent' ? 'var(--accent-default)' : 'var(--content-secondary)'
+		tone === 'inverse' ? 'var(--cst-content-inverse)' : tone === 'accent' ? 'var(--cst-accent-default)' : 'var(--cst-content-secondary)'
 	);
 
 	const style = $derived.by(() => {
 		if (variant === 'overlay') {
-			return `width:${size}px;height:${size}px;background:var(--surface-overlay);backdrop-filter:blur(10px);border:1px solid var(--border-inverse);`;
+			return `width:${size}px;height:${size}px;background:var(--cst-surface-overlay);backdrop-filter:blur(10px);border:1px solid var(--cst-border-inverse);`;
 		} else if (variant === 'ghost') {
 			return `width:${size}px;height:${size}px;background:transparent;border:1px solid transparent;`;
 		}
-		return `width:${size}px;height:${size}px;background:var(--surface-raised);border:1px solid var(--border-subtle);box-shadow:${theme.theme === 'forest' ? 'none' : 'var(--shadow-neu-md)'};`;
+		return `width:${size}px;height:${size}px;background:var(--cst-surface-raised);border:1px solid var(--cst-border-subtle);box-shadow:${theme.theme === 'forest' ? 'none' : 'var(--shadow-neu-md)'};`;
 	});
 </script>
 

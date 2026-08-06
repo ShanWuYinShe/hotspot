@@ -29,9 +29,9 @@
 			{/snippet}
 			{#snippet subtitle()}
 				<p class="mt-1 flex items-center gap-1.5">
-					<span style="font-size:10px;color:var(--accent-default);">#{u.tag}</span>
-					<span style="font-size:10px;color:var(--text-secondary);opacity:0.5;">·</span>
-					<span style="font-size:10px;color:var(--text-secondary);">{u.distance}</span>
+					<span style="font-size:10px;color:var(--cst-accent-default);">#{u.tag}</span>
+					<span style="font-size:10px;color:var(--cst-text-secondary);opacity:0.5;">·</span>
+					<span style="font-size:10px;color:var(--cst-text-secondary);">{u.distance}</span>
 				</p>
 			{/snippet}
 			{#snippet actions()}
@@ -39,8 +39,8 @@
 					type="button"
 					class="hover-btn tap-93 px-3 py-1 rounded-full outline-none transition-all"
 					style={followed
-						? 'background:transparent;color:var(--text-secondary);border:1px solid var(--border-strong);font-size:11px;'
-						: 'background:var(--accent-default);color:var(--text-on-accent);border:1px solid transparent;font-size:11px;'}
+						? 'background:transparent;color:var(--cst-text-secondary);border:1px solid var(--cst-border-strong);font-size:11px;'
+						: 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);border:1px solid transparent;font-size:11px;'}
 					onclick={() => onToggle(u.id)}
 				>
 					{followed ? '已关注' : '关注'}

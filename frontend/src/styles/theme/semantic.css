@@ -9,68 +9,68 @@
 
 :root {
   /* Typography */
-  --text-primary: var(--pr-text);
-  --text-secondary: var(--pr-text-muted);
-  --text-on-accent: var(--pr-on-accent);
+  --cst-text-primary: var(--cst-pr-text);
+  --cst-text-secondary: var(--cst-pr-text-muted);
+  --cst-text-on-accent: var(--cst-pr-on-accent);
 
   /* Surface */
-  --surface-primary: var(--pr-bg);
-  --surface-page: var(--pr-page-bg);
-  --surface-overlay-soft: var(--pr-overlay-soft);
-  --surface-overlay-strong: var(--pr-overlay-strong);
+  --cst-surface-primary: var(--cst-pr-bg);
+  --cst-surface-page: var(--cst-pr-page-bg);
+  --cst-surface-overlay-soft: var(--cst-pr-overlay-soft);
+  --cst-surface-overlay-strong: var(--cst-pr-overlay-strong);
 
   /* Accent / Interactive */
-  --accent-default: var(--pr-accent-primary);
-  --accent-fill: var(--pr-accent);
-  --accent-soft: var(--pr-accent-soft);
-  --accent-border: var(--pr-accent-soft-border);
-  --interactive-hover: var(--pr-hover);
-  --interactive-active: var(--pr-active-hover);
-  --glow-accent: var(--pr-glow);
+  --cst-accent-default: var(--cst-pr-accent-primary);
+  --cst-accent-fill: var(--cst-pr-accent);
+  --cst-accent-soft: var(--cst-pr-accent-soft);
+  --cst-accent-border: var(--cst-pr-accent-soft-border);
+  --cst-interactive-hover: var(--cst-pr-hover);
+  --cst-interactive-active: var(--cst-pr-active-hover);
+  --cst-glow-accent: var(--cst-pr-glow);
 
   /* Border */
-  --border-default: var(--pr-border);
-  --border-strong: var(--pr-border-pressed);
+  --cst-border-default: var(--cst-pr-border);
+  --cst-border-strong: var(--cst-pr-border-pressed);
 
   /* Elevation */
-  --elevation-shadow-light: var(--pr-shadow-light);
-  --elevation-shadow-dark: var(--pr-shadow-dark);
-  --elevation-card: var(--pr-shadow-card);
-  --elevation-button: var(--pr-shadow-btn);
+  --cst-elevation-shadow-light: var(--cst-pr-shadow-light);
+  --cst-elevation-shadow-dark: var(--cst-pr-shadow-dark);
+  --cst-elevation-card: var(--cst-pr-shadow-card);
+  --cst-elevation-button: var(--cst-pr-shadow-btn);
 
   /* Color-mix presets */
-  --color-accent-bg: var(--pr-accent-bg);
-  --color-online-bg: var(--pr-online-bg);
-  --color-danger-bg: var(--pr-danger-bg);
+  --cst-color-accent-bg: var(--cst-pr-accent-bg);
+  --cst-color-online-bg: var(--cst-pr-online-bg);
+  --cst-color-danger-bg: var(--cst-pr-danger-bg);
 
   /* Status */
-  --status-online: var(--pr-online);
-  --status-danger: var(--pr-hot);
-  --status-warning: var(--pr-warning);
+  --cst-status-online: var(--cst-pr-online);
+  --cst-status-danger: var(--cst-pr-hot);
+  --cst-status-warning: var(--cst-pr-warning);
 
   /* Map markers */
-  --marker-user: var(--pr-map-user);
-  --marker-group: var(--pr-map-group);
-  --marker-content: var(--pr-map-moment);
+  --cst-marker-user: var(--cst-pr-map-user);
+  --cst-marker-group: var(--cst-pr-map-group);
+  --cst-marker-content: var(--cst-pr-map-moment);
 }
 
 /* ── Interaction token contract ────────────────────────────────────────
    通过 var() 派生的交互/导航 token，值随主题自动变化。 */
 :root {
-  --surface-canvas: var(--surface-page);
-  --surface-panel: var(--surface-primary);
-  --surface-raised: var(--surface-primary);
-  --surface-hover: color-mix(in srgb, var(--accent-default) 7%, var(--surface-primary));
-  --content-secondary: var(--text-secondary);
+  --cst-surface-canvas: var(--cst-surface-page);
+  --cst-surface-panel: var(--cst-surface-primary);
+  --cst-surface-raised: var(--cst-surface-primary);
+  --cst-surface-hover: color-mix(in srgb, var(--cst-accent-default) 7%, var(--cst-surface-primary));
+  --cst-content-secondary: var(--cst-text-secondary);
   /* Navigation states derive exclusively from the active theme/mode palette. */
-  --navigation-content: var(--content-secondary);
-  --navigation-content-active: var(--accent-default);
-  --navigation-active-indicator: var(--accent-default);
-  --surface-navigation-hover: var(--surface-hover);
-  --elevation-navigation-active: 0 2px 10px var(--glow-accent);
-  --elevation-side-sheet: -8px 0 40px rgba(0, 0, 0, 0.22);
-  --border-subtle: var(--border-default);
-  --interactive-hover-fill: var(--interactive-hover);
-  --interactive-hover-overlay: var(--interactive-hover);
-  --interactive-active-fill: var(--interactive-active);
+  --cst-navigation-content: var(--cst-content-secondary);
+  --cst-navigation-content-active: var(--cst-accent-default);
+  --cst-navigation-active-indicator: var(--cst-accent-default);
+  --cst-surface-navigation-hover: var(--cst-surface-hover);
+  --cst-elevation-navigation-active: 0 2px 10px var(--cst-glow-accent);
+  --cst-elevation-side-sheet: -8px 0 40px rgba(0, 0, 0, 0.22);
+  --cst-border-subtle: var(--cst-border-default);
+  --cst-interactive-hover-fill: var(--cst-interactive-hover);
+  --cst-interactive-hover-overlay: var(--cst-interactive-hover);
+  --cst-interactive-active-fill: var(--cst-interactive-active);
 }

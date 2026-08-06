@@ -22,7 +22,7 @@
 	<div class="mt-3 flex items-center justify-between">
 		<p class="text-sm text-text-secondary">共 {groups.length} 个群组</p>
 		<div class="flex items-center gap-1.5 text-sm text-status-online">
-			<span class="rounded-full size-1.5"  style="background:var(--status-online)"></span>
+			<span class="rounded-full size-1.5"  style="background:var(--cst-status-online)"></span>
 			{totalOnline} 人在线
 		</div>
 	</div>
@@ -34,17 +34,17 @@
 			<button
 				type="button"
 				class="card-hover tap-94 group flex min-h-37 w-full overflow-hidden rounded-relaxed border text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
-				style="background:var(--surface-primary);border-color:var(--border-default);box-shadow:var(--shadow-neu-lg);"
+				style="background:var(--cst-surface-primary);border-color:var(--cst-border-default);box-shadow:var(--shadow-neu-lg);"
 				aria-label={`进入群组：${g.name}`}
 				onclick={() => void goto(`${ROUTES.group(g.id)}?from=me`)}
 			>
 				<!-- 左侧 banner（固定宽 96-112px） -->
 				<div class="relative w-24 shrink-0 overflow-hidden sm:w-28">
 					<img src={g.banner} alt="" class="image-hover-frame__image h-full w-full object-cover" />
-					<div class="absolute inset-0" style="background:var(--surface-gallery-scrim);"></div>
+					<div class="absolute inset-0" style="background:var(--cst-surface-gallery-scrim);"></div>
 					<div
 						class="absolute left-2 top-2 rounded-full px-1.5 py-0.5"
-						style="background:var(--surface-gallery-label);color:var(--content-inverse);font-size:10px;backdrop-filter:blur(8px);"
+						style="background:var(--cst-surface-gallery-label);color:var(--cst-content-inverse);font-size:10px;backdrop-filter:blur(8px);"
 					>
 						{#if g.role === '管理员'}
 							<Shield class="mr-0.5 inline-block size-2.25"  strokeWidth={2} />
@@ -52,7 +52,7 @@
 						{g.role}
 					</div>
 					<div class="absolute bottom-2 left-2 flex items-center gap-1 text-white text-xxs">
-						<span class="rounded-full size-1.5"  style="background:var(--status-online)"></span>
+						<span class="rounded-full size-1.5"  style="background:var(--cst-status-online)"></span>
 						{g.online}
 					</div>
 				</div>
@@ -64,7 +64,7 @@
 							src={g.avatar}
 							alt=""
 							class="h-8 w-8 shrink-0 rounded-tight object-cover"
-							style="border:1px solid var(--border-default);"
+							style="border:1px solid var(--cst-border-default);"
 						/>
 						<p class="min-w-0 flex-1 truncate text-base font-medium text-text-primary">{g.name}</p>
 						<ChevronRight class="shrink-0 text-text-secondary size-3.75"  strokeWidth={1.7} />

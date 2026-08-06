@@ -32,14 +32,14 @@
 	{#snippet placeholder()}
 		<div
 			class="flex items-center justify-center rounded-xl"
-			style="width:46px;height:46px;background:var(--color-accent-bg);border:1px solid color-mix(in srgb, var(--accent-default) 25%, transparent);box-shadow:0 6px 18px color-mix(in srgb, var(--accent-default) 18%, transparent);"
+			style="width:46px;height:46px;background:var(--cst-color-accent-bg);border:1px solid color-mix(in srgb, var(--cst-accent-default) 25%, transparent);box-shadow:0 6px 18px color-mix(in srgb, var(--cst-accent-default) 18%, transparent);"
 		>
 			<MapPin size={20} class="text-accent-default" strokeWidth={1.5} />
 		</div>
 	{/snippet}
 
 	<!-- Tag chip -->
-	<div class="absolute top-2.5 left-2.5 z-[2] px-2 py-0.5 rounded-full bg-accent-default shadow-[0_2px_8px_var(--glow-accent)]" >
+	<div class="absolute top-2.5 left-2.5 z-[2] px-2 py-0.5 rounded-full bg-accent-default shadow-[0_2px_8px_var(--cst-glow-accent)]" >
 		<span class="text-white text-xxs">{item.tag}</span>
 	</div>
 
@@ -48,16 +48,16 @@
 		<div class="px-3 pb-2.5 pt-2.5">
 			<!-- 作者行：头像 + 昵称 + 位置 -->
 			<div class="flex min-w-0 items-center gap-2">
-				<Avatar src={item.avatar} name={item.user} size={22} style="border:1.5px solid var(--border-card-menu);" />
+				<Avatar src={item.avatar} name={item.user} size={22} style="border:1.5px solid var(--cst-border-card-menu);" />
 				<span class="truncate text-xs text-text-primary" style="font-weight:500;">{item.user}</span>
-				<span class="ml-auto flex min-w-0 items-center gap-0.5 truncate text-xxs" style="color:var(--text-secondary);">
-					<MapPin class="size-2.25 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+				<span class="ml-auto flex min-w-0 items-center gap-0.5 truncate text-xxs" style="color:var(--cst-text-secondary);">
+					<MapPin class="size-2.25 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 					{item.location}
 				</span>
 			</div>
 
 			<!-- 正文：单行省略，muted -->
-			<p class="mt-1 line-clamp-1 leading-[1.55] text-xs" style="color:var(--text-secondary);">
+			<p class="mt-1 line-clamp-1 leading-[1.55] text-xs" style="color:var(--cst-text-secondary);">
 				{item.content}
 			</p>
 

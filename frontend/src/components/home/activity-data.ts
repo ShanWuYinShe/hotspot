@@ -16,16 +16,16 @@ export interface Activity {
 
 const ICONS = [Coffee, Music, Users, Star] as const;
 const COLORS = [
-	'var(--status-warning)',
-	'var(--accent-default)',
-	'var(--marker-group)',
-	'var(--status-danger)'
+	'var(--cst-status-warning)',
+	'var(--cst-accent-default)',
+	'var(--cst-marker-group)',
+	'var(--cst-status-danger)'
 ] as const;
 const BGS = [
-	'color-mix(in srgb, var(--status-warning) 10%, transparent)',
-	'var(--accent-soft)',
-	'color-mix(in srgb, var(--marker-group) 10%, transparent)',
-	'color-mix(in srgb, var(--status-danger) 10%, transparent)'
+	'color-mix(in srgb, var(--cst-status-warning) 10%, transparent)',
+	'var(--cst-accent-soft)',
+	'color-mix(in srgb, var(--cst-marker-group) 10%, transparent)',
+	'color-mix(in srgb, var(--cst-status-danger) 10%, transparent)'
 ] as const;
 
 export function toActivities(trending: TrendingBundle | null): Activity[] {

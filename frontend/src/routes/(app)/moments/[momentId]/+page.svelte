@@ -220,7 +220,7 @@
 					</div>
 					<DropdownMenu.Content customAnchor={moreMenuEl}>
 						<DropdownMenu.Item onSelect={() => void copyMomentLink()}>
-							<Link2 class="size-3.5"  style="color:var(--accent-default)" strokeWidth={1.75} />
+							<Link2 class="size-3.5"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
 							复制链接
 						</DropdownMenu.Item>
 						<DropdownMenu.Item class="text-text-secondary">
@@ -266,10 +266,10 @@
 			<button
 				type="button"
 				class="hover-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0"
-				style="width:36px;height:36px;background:{input.trim() ? 'var(--accent-default)' : 'var(--surface-primary)'};box-shadow:{input.trim() ? '0 4px 14px var(--glow-accent)' : 'var(--shadow-neu-md)'};border:1px solid var(--border-default);transition:all 0.2s;"
+				style="width:36px;height:36px;background:{input.trim() ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};box-shadow:{input.trim() ? '0 4px 14px var(--cst-glow-accent)' : 'var(--shadow-neu-md)'};border:1px solid var(--cst-border-default);transition:all 0.2s;"
 				onclick={() => void handleComment()}
 			>
-				<Send style="width:14px;height:14px;color:{input.trim() ? 'var(--text-on-accent)' : 'var(--text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
+				<Send style="width:14px;height:14px;color:{input.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
 			</button>
 		</div>
 	{/snippet}
@@ -281,7 +281,7 @@
 				<button
 					type="button"
 					class="hover-btn px-2.5 py-1 rounded-full outline-none shrink-0 bg-accent-soft text-accent-default"
-					style="font-size:11px;border:1px solid var(--accent-border);"
+					style="font-size:11px;border:1px solid var(--cst-accent-border);"
 					onclick={(e) => {
 						e.stopPropagation();
 						if (moment.authorId) void goto(ROUTES.message(moment.authorId));

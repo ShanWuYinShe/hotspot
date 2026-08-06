@@ -208,8 +208,8 @@ export const mockEvents: Record<string, object> = {
     id: "1",
     title: "湖边晨咖小聚",
     tag: "社交",
-    color: "var(--status-warning)",
-    bg: "color-mix(in srgb, var(--status-warning) 12%, transparent)",
+    color: "var(--cst-status-warning)",
+    bg: "color-mix(in srgb, var(--cst-status-warning) 12%, transparent)",
     cover: "https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=1080",
     description:
       "每周六早上九点，我们聚集在老街手冲馆，分享一周的所见所闻。无论是设计师、程序员还是艺术家，都欢迎加入！带上你的好奇心就够了。",
@@ -226,8 +226,8 @@ export const mockEvents: Record<string, object> = {
     id: "2",
     title: "户部山周末弹唱",
     tag: "音乐",
-    color: "var(--accent-default)",
-    bg: "var(--accent-soft)",
+    color: "var(--cst-accent-default)",
+    bg: "var(--cst-accent-soft)",
     cover: "https://images.unsplash.com/photo-1768776179834-93e6cafc6d97?w=1080",
     description:
       "在城市的中心，用音乐连接每一颗心。本次户部山周末弹唱将邀请本地独立乐队和歌手进行现场表演，免费入场，欢迎所有人来感受音乐的力量。",

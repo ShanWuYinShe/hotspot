@@ -47,10 +47,10 @@
 	// hover 反馈（图片缩放 + accent 边框）完全由 CSS 驱动
 	// （.image-hover-frame:hover 规则，单一事实源——JS 状态与 :hover 不同步
 	// 会导致鼠标在卡片上滑动时反馈闪烁/丢失）。
-	// 整卡按压 scale 由 --card-tap-scale 驱动（vibrant 0.94 / forest 0.97，
+	// 整卡按压 scale 由 --cst-card-tap-scale 驱动（vibrant 0.94 / forest 0.97，
 	// 对齐 Figma useHoverConfig tap）。
 	let pressed = $state(false);
-	const cardTransform = $derived(pressed ? 'scale(var(--card-tap-scale, 0.94))' : 'scale(1)');
+	const cardTransform = $derived(pressed ? 'scale(var(--cst-card-tap-scale, 0.94))' : 'scale(1)');
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
@@ -86,7 +86,7 @@
 		</div>
 	{/if}
 	{#if imageSrc}
-		<div class="absolute inset-0" style="background:var(--surface-media-scrim-card);"></div>
+		<div class="absolute inset-0" style="background:var(--cst-surface-media-scrim-card);"></div>
 	{/if}
 	{#if children}
 		{@render children()}
@@ -94,7 +94,7 @@
 	{#if footer}
 		<div
 			class="absolute inset-x-0 bottom-0 border-t"
-			style="background:var(--surface-card-menu);border-color:var(--border-card-menu);"
+			style="background:var(--cst-surface-card-menu);border-color:var(--cst-border-card-menu);"
 		>
 			{@render footer()}
 		</div>

@@ -28,10 +28,10 @@
 		if (next !== on) onToggle();
 	}}
 	aria-label={label}
-	style="width:{width}px;height:28px;border-radius:14px;background:{on ? 'var(--accent-default)' : 'var(--surface-toggle-off)'};transition:background var(--motion-standard) var(--ease-standard);box-shadow:{on ? 'var(--elevation-toggle-on)' : 'var(--elevation-toggle-off)'};"
+	style="width:{width}px;height:28px;border-radius:14px;background:{on ? 'var(--cst-accent-default)' : 'var(--cst-surface-toggle-off)'};transition:background var(--cst-motion-standard) var(--cst-ease-standard);box-shadow:{on ? 'var(--cst-elevation-toggle-on)' : 'var(--cst-elevation-toggle-off)'};"
 >
 	<span
 		class="absolute"
-		style="top:3px;width:22px;height:22px;border-radius:11px;background:var(--surface-toggle-thumb);box-shadow:var(--elevation-toggle-thumb);left:{on ? thumbOffset : 2}px;transition:left var(--motion-standard) var(--ease-standard);"
+		style="top:3px;width:22px;height:22px;border-radius:11px;background:var(--cst-surface-toggle-thumb);box-shadow:var(--cst-elevation-toggle-thumb);left:{on ? thumbOffset : 2}px;transition:left var(--cst-motion-standard) var(--cst-ease-standard);"
 	></span>
 </Switch.Root>

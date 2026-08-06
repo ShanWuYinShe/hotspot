@@ -13,81 +13,86 @@
 :root,
 .vibrant {
   /* ── 原始色板 --pr-* ── */
-  --pr-bg: #F7FAFF;
-  --pr-page-bg: #F7FAFF;
-  --pr-text: #16233A;
-  --pr-text-muted: #52647F;
-  --pr-accent: #3578D4;
-  --pr-accent-primary: #3578D4;
-  --pr-glow: rgba(53, 120, 212, 0.22);
-  --pr-shadow-light: rgba(255, 255, 255, 1);
-  --pr-shadow-dark: rgba(99, 91, 200, 0.12);
-  --pr-border: rgba(53, 120, 212, 0.18);
-  --pr-border-pressed: rgba(53, 120, 212, 0.32);
-  --pr-accent-soft: rgba(53, 120, 212, 0.10);
-  --pr-accent-soft-border: rgba(53, 120, 212, 0.28);
-  --pr-hover: rgba(53, 120, 212, 0.10);
-  --pr-active-hover: rgba(53, 120, 212, 0.16);
-  --pr-on-accent: #FFFFFF;
-  --pr-online: #14B8A6;
-  --pr-hot: #F43F5E;
-  --pr-warning: #F59E0B;
-  --pr-map-user: #3578D4;
-  --pr-map-group: #10B981;
-  --pr-map-moment: #F97316;
-  --pr-overlay-soft: rgba(22, 35, 58, 0.08);
-  --pr-overlay-strong: rgba(12, 25, 48, 0.52);
-  --pr-shadow-card: 0 12px 28px rgba(53, 120, 212, 0.12), 0 3px 10px rgba(53, 120, 212, 0.07);
-  --pr-shadow-btn: 0 5px 14px rgba(53, 120, 212, 0.18);
+  --cst-pr-bg: #F7FAFF;
+  --cst-pr-page-bg: #F7FAFF;
+  --cst-pr-text: #16233A;
+  --cst-pr-text-muted: #52647F;
+  --cst-pr-accent: #3578D4;
+  --cst-pr-accent-primary: #3578D4;
+  --cst-pr-glow: rgba(53, 120, 212, 0.22);
+  --cst-pr-shadow-light: rgba(255, 255, 255, 1);
+  --cst-pr-shadow-dark: rgba(99, 91, 200, 0.12);
+  --cst-pr-border: rgba(53, 120, 212, 0.18);
+  --cst-pr-border-pressed: rgba(53, 120, 212, 0.32);
+  --cst-pr-accent-soft: rgba(53, 120, 212, 0.10);
+  --cst-pr-accent-soft-border: rgba(53, 120, 212, 0.28);
+  --cst-pr-hover: rgba(53, 120, 212, 0.10);
+  --cst-pr-active-hover: rgba(53, 120, 212, 0.16);
+  --cst-pr-on-accent: #FFFFFF;
+  --cst-pr-online: #14B8A6;
+  --cst-pr-hot: #F43F5E;
+  --cst-pr-warning: #F59E0B;
+  --cst-pr-map-user: #3578D4;
+  --cst-pr-map-group: #10B981;
+  --cst-pr-map-moment: #F97316;
+  --cst-pr-overlay-soft: rgba(22, 35, 58, 0.08);
+  --cst-pr-overlay-strong: rgba(12, 25, 48, 0.52);
+  --cst-pr-shadow-card: 0 12px 28px rgba(53, 120, 212, 0.12), 0 3px 10px rgba(53, 120, 212, 0.07);
+  --cst-pr-shadow-btn: 0 5px 14px rgba(53, 120, 212, 0.18);
 
   /* ── color-mix 预设 ── */
-  --pr-accent-bg: color-mix(in srgb, var(--pr-accent-primary) 12%, var(--pr-bg));
-  --pr-online-bg: color-mix(in srgb, var(--pr-online) 14%, transparent);
-  --pr-danger-bg: color-mix(in srgb, var(--pr-hot) 10%, transparent);
+  --cst-pr-accent-bg: color-mix(in srgb, var(--cst-pr-accent-primary) 12%, var(--cst-pr-bg));
+  --cst-pr-online-bg: color-mix(in srgb, var(--cst-pr-online) 14%, transparent);
+  --cst-pr-danger-bg: color-mix(in srgb, var(--cst-pr-hot) 10%, transparent);
 
   /* ── shadcn 桥接（仅 base.css @apply 消费的 4 个；其余 token 无引用，见 shadcn.css）── */
-  --background: var(--surface-primary);
-  --foreground: var(--text-primary);
-  --border: var(--border-default);
-  --ring: var(--accent-default);
-  --destructive: var(--status-danger);
+  --cst-background: var(--cst-surface-primary);
+  --cst-foreground: var(--cst-text-primary);
+  --cst-border: var(--cst-border-default);
+  --cst-ring: var(--cst-accent-default);
+  --cst-destructive: var(--cst-status-danger);
 
   /* ── Shell / overlay primitives ── */
-  --surface-nav-glass: color-mix(in srgb, var(--surface-panel) 90%, transparent);
-  --border-nav-glass: color-mix(in srgb, var(--accent-default) 14%, transparent);
-  --elevation-rail-hover: 0 6px 16px rgba(53, 120, 212, 0.18), 0 2px 6px rgba(53, 120, 212, 0.10);
-  --surface-overlay: rgba(14, 10, 35, 0.38);
-  --border-inverse: rgba(255, 255, 255, 0.25);
-  --content-inverse: #FFFFFF;
-  --content-inverse-muted: rgba(255, 255, 255, 0.70);
-  --content-inverse-secondary: rgba(255, 255, 255, 0.80);
-  --content-on-accent: var(--text-on-accent);
-  --surface-control-thumb: var(--content-inverse);
-  --elevation-menu: 0 16px 40px rgba(0, 0, 0, 0.16);
-  --elevation-control-thumb: 0 1px 3px rgba(0, 0, 0, 0.18);
-  --surface-toggle-off: rgba(120, 120, 128, 0.22);
-  --surface-toggle-thumb: var(--surface-panel);
-  --elevation-toggle-on: inset 0 1px 2px rgba(0, 0, 0, 0.12);
-  --elevation-toggle-off: inset 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(120, 120, 128, 0.15);
-  --elevation-toggle-thumb: 0 1px 4px rgba(0, 0, 0, 0.26), 0 0.5px 1px rgba(0, 0, 0, 0.14);
-  --surface-media-scrim-soft: linear-gradient(to top, rgba(0, 0, 0, 0.22), transparent 58%);
-  --surface-media-scrim-card: linear-gradient(to top, rgba(0, 0, 0, 0.28), transparent 60%);
-  --surface-gallery-scrim: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.48));
-  --surface-gallery-label: rgba(0, 0, 0, 0.46);
-  --surface-map-control: rgba(255, 255, 255, 0.20);
-  --surface-map-control-active: rgba(255, 255, 255, 0.25);
-  --elevation-profile-avatar: 0 6px 20px rgba(0, 0, 0, 0.22);
-  --elevation-modal: 0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--border-subtle);
-  --elevation-fab: 0 6px 18px var(--glow-accent), 0 2px 4px rgba(0, 0, 0, 0.10);
-  --elevation-nav: 0 -2px 16px rgba(0,0,0,0.04), 0 8px 24px var(--glow-accent);
-  --elevation-sheet: 0 -8px 40px rgba(0,0,0,0.18), 0 -2px 0 var(--border-subtle);
+  --cst-surface-nav-glass: color-mix(in srgb, var(--cst-surface-panel) 90%, transparent);
+  --cst-border-nav-glass: color-mix(in srgb, var(--cst-accent-default) 14%, transparent);
+  --cst-elevation-rail-hover: 0 6px 16px rgba(53, 120, 212, 0.18), 0 2px 6px rgba(53, 120, 212, 0.10);
+  --cst-surface-scrim: rgba(14, 10, 35, 0.38);
+  --cst-surface-overlay: rgba(14, 10, 35, 0.38);
+  --cst-border-inverse: rgba(255, 255, 255, 0.25);
+  --cst-content-inverse: #FFFFFF;
+  --cst-content-inverse-muted: rgba(255, 255, 255, 0.70);
+  --cst-content-inverse-secondary: rgba(255, 255, 255, 0.80);
+  --cst-content-on-accent: var(--cst-text-on-accent);
+  --cst-text-on-status: #0B1424;
+  --cst-surface-glass-badge: rgba(255, 255, 255, 0.18);
+  --cst-surface-control-thumb: var(--cst-content-inverse);
+  --cst-elevation-menu: 0 16px 40px rgba(0, 0, 0, 0.16);
+  --cst-elevation-control-thumb: 0 1px 3px rgba(0, 0, 0, 0.18);
+  --cst-surface-toggle-off: rgba(120, 120, 128, 0.22);
+  --cst-surface-toggle-thumb: var(--cst-surface-panel);
+  --cst-elevation-toggle-on: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+  --cst-elevation-toggle-off: inset 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(120, 120, 128, 0.15);
+  --cst-elevation-toggle-thumb: 0 1px 4px rgba(0, 0, 0, 0.26), 0 0.5px 1px rgba(0, 0, 0, 0.14);
+  --cst-surface-media-scrim-soft: linear-gradient(to top, rgba(0, 0, 0, 0.22), transparent 58%);
+  --cst-surface-media-scrim-card: linear-gradient(to top, rgba(0, 0, 0, 0.28), transparent 60%);
+  --cst-surface-media-scrim-strong: rgba(0, 0, 0, 0.55);
+  --cst-surface-cover-scrim: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent 65%);
+  --cst-surface-gallery-scrim: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.48));
+  --cst-surface-gallery-label: rgba(0, 0, 0, 0.46);
+  --cst-surface-map-control: rgba(255, 255, 255, 0.20);
+  --cst-surface-map-control-active: rgba(255, 255, 255, 0.25);
+  --cst-elevation-profile-avatar: 0 6px 20px rgba(0, 0, 0, 0.22);
+  --cst-elevation-modal: 0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--cst-border-subtle);
+  --cst-elevation-fab: 0 6px 18px var(--cst-glow-accent), 0 2px 4px rgba(0, 0, 0, 0.10);
+  --cst-elevation-nav: 0 -2px 16px rgba(0,0,0,0.04), 0 8px 24px var(--cst-glow-accent);
+  --cst-elevation-sheet: 0 -8px 40px rgba(0,0,0,0.18), 0 -2px 0 var(--cst-border-subtle);
 
   /* ── Nearby feed card-menu ── */
-  --surface-card-menu: color-mix(in srgb, var(--surface-primary) 88%, var(--accent-default));
-  --border-card-menu: color-mix(in srgb, var(--accent-default) 22%, var(--border-default));
+  --cst-surface-card-menu: color-mix(in srgb, var(--cst-surface-primary) 88%, var(--cst-accent-default));
+  --cst-border-card-menu: color-mix(in srgb, var(--cst-accent-default) 22%, var(--cst-border-default));
 
   /* ── 卡片按压缩放（vibrant tap 0.94）── */
-  --card-tap-scale: 0.94;
+  --cst-card-tap-scale: 0.94;
 }
 
 /* ═══ Vibrant 组件覆盖（@layer utilities，与 utilities.css 同层）═══ */
@@ -97,20 +102,20 @@
   .vibrant .flat,
   .vibrant .input-surface,
   .vibrant .icon-badge {
-    background: color-mix(in srgb, var(--surface-primary) 82%, white 18%);
-    border-color: var(--border-default);
+    background: color-mix(in srgb, var(--cst-surface-primary) 82%, white 18%);
+    border-color: var(--cst-border-default);
   }
   .vibrant.dark .surface-hero,
   .vibrant.dark .flat,
   .vibrant.dark .input-surface,
   .vibrant.dark .icon-badge {
-    background: color-mix(in srgb, var(--surface-primary) 86%, var(--accent-default) 6%);
+    background: color-mix(in srgb, var(--cst-surface-primary) 86%, var(--cst-accent-default) 6%);
   }
   .vibrant .surface-flat {
-    background: color-mix(in srgb, var(--surface-primary) 92%, var(--accent-default) 3%);
+    background: color-mix(in srgb, var(--cst-surface-primary) 92%, var(--cst-accent-default) 3%);
   }
   .vibrant .input-surface {
-    background: color-mix(in srgb, var(--surface-primary) 70%, var(--accent-default) 5%) !important;
+    background: color-mix(in srgb, var(--cst-surface-primary) 70%, var(--cst-accent-default) 5%) !important;
     backdrop-filter: blur(18px) saturate(1.25);
   }
   .vibrant .ambient-glow::before {
@@ -121,8 +126,8 @@
   }
   @media (hover: hover) and (pointer: fine) {
     .vibrant .surface-ghost:hover {
-      background: color-mix(in srgb, var(--accent-default) 10%, transparent);
-      border-color: color-mix(in srgb, var(--accent-default) 18%, transparent);
+      background: color-mix(in srgb, var(--cst-accent-default) 10%, transparent);
+      border-color: color-mix(in srgb, var(--cst-accent-default) 18%, transparent);
     }
   }
 }
@@ -130,56 +135,58 @@
 /* ═══ Vibrant Dark ═══ */
 .vibrant.dark {
   /* ── 原始色板 --pr-* ── */
-  --pr-bg: #0B1424;
-  --pr-page-bg: #0B1424;
-  --pr-text: #E8F1FF;
-  --pr-text-muted: #A5B6CE;
-  --pr-accent: #69A8FF;
-  --pr-accent-primary: #69A8FF;
-  --pr-glow: rgba(105, 168, 255, 0.25);
-  --pr-shadow-light: rgba(129, 140, 248, 0.07);
-  --pr-shadow-dark: rgba(0, 0, 0, 0.72);
-  --pr-border: rgba(136, 183, 255, 0.18);
-  --pr-border-pressed: rgba(136, 183, 255, 0.32);
-  --pr-accent-soft: rgba(105, 168, 255, 0.14);
-  --pr-accent-soft-border: rgba(105, 168, 255, 0.30);
-  --pr-hover: rgba(105, 168, 255, 0.15);
-  --pr-active-hover: rgba(105, 168, 255, 0.22);
-  --pr-on-accent: #071426;
-  --pr-online: #37C99A;
-  --pr-hot: #FB7185;
-  --pr-warning: #FBBF24;
-  --pr-map-user: #69A8FF;
-  --pr-map-group: #34D399;
-  --pr-map-moment: #FB923C;
-  --pr-overlay-soft: rgba(232, 241, 255, 0.08);
-  --pr-overlay-strong: rgba(0, 8, 20, 0.62);
-  --pr-shadow-card: 0 12px 28px rgba(36, 105, 194, 0.20), 0 3px 10px rgba(0, 0, 0, 0.26);
-  --pr-shadow-btn: 0 5px 14px rgba(105, 168, 255, 0.24);
+  --cst-pr-bg: #0B1424;
+  --cst-pr-page-bg: #0B1424;
+  --cst-pr-text: #E8F1FF;
+  --cst-pr-text-muted: #A5B6CE;
+  --cst-pr-accent: #69A8FF;
+  --cst-pr-accent-primary: #69A8FF;
+  --cst-pr-glow: rgba(105, 168, 255, 0.25);
+  --cst-pr-shadow-light: rgba(129, 140, 248, 0.07);
+  --cst-pr-shadow-dark: rgba(0, 0, 0, 0.72);
+  --cst-pr-border: rgba(136, 183, 255, 0.18);
+  --cst-pr-border-pressed: rgba(136, 183, 255, 0.32);
+  --cst-pr-accent-soft: rgba(105, 168, 255, 0.14);
+  --cst-pr-accent-soft-border: rgba(105, 168, 255, 0.30);
+  --cst-pr-hover: rgba(105, 168, 255, 0.15);
+  --cst-pr-active-hover: rgba(105, 168, 255, 0.22);
+  --cst-pr-on-accent: #071426;
+  --cst-pr-online: #37C99A;
+  --cst-pr-hot: #FB7185;
+  --cst-pr-warning: #FBBF24;
+  --cst-pr-map-user: #69A8FF;
+  --cst-pr-map-group: #34D399;
+  --cst-pr-map-moment: #FB923C;
+  --cst-pr-overlay-soft: rgba(232, 241, 255, 0.08);
+  --cst-pr-overlay-strong: rgba(0, 8, 20, 0.62);
+  --cst-pr-shadow-card: 0 12px 28px rgba(36, 105, 194, 0.20), 0 3px 10px rgba(0, 0, 0, 0.26);
+  --cst-pr-shadow-btn: 0 5px 14px rgba(105, 168, 255, 0.24);
 
   /* ── color-mix 预设 ── */
-  --pr-accent-bg: color-mix(in srgb, var(--pr-accent-primary) 14%, var(--pr-bg));
-  --pr-online-bg: color-mix(in srgb, var(--pr-online) 14%, transparent);
-  --pr-danger-bg: color-mix(in srgb, var(--pr-hot) 12%, transparent);
+  --cst-pr-accent-bg: color-mix(in srgb, var(--cst-pr-accent-primary) 14%, var(--cst-pr-bg));
+  --cst-pr-online-bg: color-mix(in srgb, var(--cst-pr-online) 14%, transparent);
+  --cst-pr-danger-bg: color-mix(in srgb, var(--cst-pr-hot) 12%, transparent);
 
   /* ── shadcn 桥接（dark，同上）── */
-  --background: var(--surface-primary);
-  --foreground: var(--text-primary);
-  --border: var(--border-default);
-  --ring: var(--accent-default);
-  --destructive: var(--status-danger);
+  --cst-background: var(--cst-surface-primary);
+  --cst-foreground: var(--cst-text-primary);
+  --cst-border: var(--cst-border-default);
+  --cst-ring: var(--cst-accent-default);
+  --cst-destructive: var(--cst-status-danger);
 
   /* ── Shell / overlay primitives (dark 覆盖) ── */
-  --surface-nav-glass: color-mix(in srgb, var(--surface-panel) 90%, transparent);
-  --border-nav-glass: color-mix(in srgb, var(--accent-default) 18%, transparent);
-  --elevation-rail-hover: 0 6px 16px rgba(105, 168, 255, 0.22), 0 2px 6px rgba(105, 168, 255, 0.12);
-  --surface-overlay: rgba(0, 0, 0, 0.42);
-  --elevation-fab: 0 6px 22px var(--glow-accent), 0 2px 6px rgba(0,0,0,0.20);
-  --elevation-nav: 0 -4px 24px rgba(0,0,0,0.40), 0 8px 32px rgba(0,0,0,0.28);
-  --elevation-sheet: 0 -8px 48px rgba(0,0,0,0.22), 0 -2px 0 var(--border-subtle);
-  --elevation-modal: 0 28px 88px rgba(0,0,0,0.42), 0 0 0 1px var(--border-subtle);
+  --cst-surface-nav-glass: color-mix(in srgb, var(--cst-surface-panel) 90%, transparent);
+  --cst-border-nav-glass: color-mix(in srgb, var(--cst-accent-default) 18%, transparent);
+  --cst-elevation-rail-hover: 0 6px 16px rgba(105, 168, 255, 0.22), 0 2px 6px rgba(105, 168, 255, 0.12);
+  --cst-surface-scrim: rgba(0, 0, 0, 0.42);
+  --cst-surface-overlay: rgba(0, 0, 0, 0.42);
+  --cst-text-on-status: #071426;
+  --cst-elevation-fab: 0 6px 22px var(--cst-glow-accent), 0 2px 6px rgba(0,0,0,0.20);
+  --cst-elevation-nav: 0 -4px 24px rgba(0,0,0,0.40), 0 8px 32px rgba(0,0,0,0.28);
+  --cst-elevation-sheet: 0 -8px 48px rgba(0,0,0,0.22), 0 -2px 0 var(--cst-border-subtle);
+  --cst-elevation-modal: 0 28px 88px rgba(0,0,0,0.42), 0 0 0 1px var(--cst-border-subtle);
 
   /* ── card-menu dark ── */
-  --surface-card-menu: color-mix(in srgb, var(--surface-primary) 82%, var(--accent-default));
-  --border-card-menu: color-mix(in srgb, var(--accent-default) 28%, var(--border-default));
+  --cst-surface-card-menu: color-mix(in srgb, var(--cst-surface-primary) 82%, var(--cst-accent-default));
+  --cst-border-card-menu: color-mix(in srgb, var(--cst-accent-default) 28%, var(--cst-border-default));
 }

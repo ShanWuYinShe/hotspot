@@ -25,13 +25,13 @@
 </script>
 
 <div class={cn('flex items-center gap-2.5 rounded-control input-surface', className)}>
-	<Search size={14} color="var(--text-secondary)" />
+	<Search size={14} color="var(--cst-text-secondary)" />
 	<input
 		bind:value
 		oninput={(e) => onChange(e.currentTarget.value)}
 		{placeholder}
 		class="min-w-0 flex-1 bg-transparent outline-none"
-		style="font-size:{fontSize}px;color:var(--text-primary);"
+		style="font-size:{fontSize}px;color:var(--cst-text-primary);"
 	/>
 	{#if value}
 		<button
@@ -40,7 +40,7 @@
 			aria-label="清空搜索"
 			onclick={() => onChange('')}
 		>
-			<X size={13} color="var(--text-secondary)" />
+			<X size={13} color="var(--cst-text-secondary)" />
 		</button>
 	{:else if trailing}
 		{@render trailing()}

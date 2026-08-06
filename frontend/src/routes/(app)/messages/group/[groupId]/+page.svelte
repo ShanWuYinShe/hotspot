@@ -7,6 +7,6 @@
 	let { params }: { params: { groupId: string } } = $props();
 </script>
 
-<div class="flex flex-col" style="height:100%;background-color:var(--surface-primary);">
+<div class="flex flex-col" style="height:100%;background-color:var(--cst-surface-primary);">
 	<GroupChatView groupId={params.groupId ?? ''} showBackButton onBack={() => history.back()} />
 </div>

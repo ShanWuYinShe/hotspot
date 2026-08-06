@@ -20,7 +20,7 @@
 	{/snippet}
 
 	<!-- 左上：精选徽章 -->
-	<div class="absolute top-3 left-3 z-[2] flex items-center gap-1.5 px-2 py-1 rounded-full" style="background:var(--surface-overlay-strong);backdrop-filter:blur(8px);">
+	<div class="absolute top-3 left-3 z-[2] flex items-center gap-1.5 px-2 py-1 rounded-full" style="background:var(--cst-surface-overlay-strong);backdrop-filter:blur(8px);">
 		<Sparkles size={11} color="white" />
 		<span class="text-white text-xxs">本周精选</span>
 	</div>
@@ -38,7 +38,7 @@
 							{group.members}
 						</span>
 						<span class="flex items-center gap-1 shrink-0 text-status-online">
-							<span class="rounded-full size-1.5"  style="background:var(--status-online)"></span>
+							<span class="rounded-full size-1.5"  style="background:var(--cst-status-online)"></span>
 							{group.online} 在线
 						</span>
 						<span class="shrink-0">{group.distance}</span>

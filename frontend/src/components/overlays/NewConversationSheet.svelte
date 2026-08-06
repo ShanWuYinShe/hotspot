@@ -53,8 +53,8 @@ function toggleAdd(id: number) {
 				type="button"
 				class="hover-btn flex items-center gap-2 px-4 py-2 rounded-full outline-none {tab === t.id ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
 				style={tab === t.id
-					? 'font-size:13px;font-weight:500;box-shadow:0 4px 12px var(--glow-accent);'
-					: 'font-size:13px;box-shadow:var(--shadow-neu-xs);border:1px solid var(--border-default);'}
+					? 'font-size:13px;font-weight:500;box-shadow:0 4px 12px var(--cst-glow-accent);'
+					: 'font-size:13px;box-shadow:var(--shadow-neu-xs);border:1px solid var(--cst-border-default);'}
 				onclick={() => {
 					tab = t.id as Tab;
 					searchQ = '';
@@ -90,7 +90,7 @@ function toggleAdd(id: number) {
 						ariaLabel={addedIds.has(u.id) ? `取消添加 ${u.name}` : `添加 ${u.name}`}
 						class="flex items-center gap-3.5 p-3"
 					>
-						<img src={u.avatar} alt={u.name} class="rounded-full object-cover shrink-0 size-11"  style="border:1.5px solid var(--border-default)" />
+						<img src={u.avatar} alt={u.name} class="rounded-full object-cover shrink-0 size-11"  style="border:1.5px solid var(--cst-border-default)" />
 						<div class="flex-1 min-w-0">
 							<p class="text-text-primary text-sm" >{u.name}</p>
 							<p class="text-text-secondary text-xs" >{u.subtitle}</p>
@@ -99,8 +99,8 @@ function toggleAdd(id: number) {
 							type="button"
 							class="hover-btn tap-92 flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none shrink-0 {addedIds.has(u.id) ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
 							style={addedIds.has(u.id)
-								? 'box-shadow:var(--shadow-neu-inset-xs);border:1px solid var(--border-strong);font-size:11px;'
-								: 'font-size:11px;box-shadow:0 3px 8px var(--glow-accent);'}
+								? 'box-shadow:var(--shadow-neu-inset-xs);border:1px solid var(--cst-border-strong);font-size:11px;'
+								: 'font-size:11px;box-shadow:0 3px 8px var(--cst-glow-accent);'}
 							onclick={(e) => {
 								e.stopPropagation();
 								toggleAdd(u.id);
@@ -129,8 +129,8 @@ function toggleAdd(id: number) {
 					ariaLabel="创建群聊"
 					class="mb-3 flex items-center gap-3.5 p-3"
 				>
-					<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default size-11 shadow-[0_3px_8px_var(--glow-accent)]"  >
-						<Users class="size-5"  style="color:var(--text-on-accent)" strokeWidth={1.75} />
+					<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default size-11 shadow-[0_3px_8px_var(--cst-glow-accent)]"  >
+						<Users class="size-5"  style="color:var(--cst-text-on-accent)" strokeWidth={1.75} />
 					</div>
 					<div>
 						<p class="text-text-primary text-sm"  style="font-weight:500">创建群聊</p>
@@ -152,7 +152,7 @@ function toggleAdd(id: number) {
 						class="flex items-center gap-3.5 p-3"
 					>
 						<div class="relative shrink-0">
-							<img src={c.avatar} alt={c.name} class="rounded-full object-cover size-11"  style="border:1.5px solid var(--border-default)" />
+							<img src={c.avatar} alt={c.name} class="rounded-full object-cover size-11"  style="border:1.5px solid var(--cst-border-default)" />
 							{#if c.online}
 								<span class="absolute bottom-0 right-0 rounded-full bg-status-online size-2.5 border-2 border-surface-primary"  ></span>
 							{/if}
@@ -163,7 +163,7 @@ function toggleAdd(id: number) {
 								{c.online ? '在线' : '离线'}
 							</p>
 						</div>
-						<MessageCircle class="size-4 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+						<MessageCircle class="size-4 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 					</ListItem>
 				{/each}
 			</div>

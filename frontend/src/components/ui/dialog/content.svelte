@@ -31,19 +31,19 @@
 	}: Props = $props();
 
 	const BASE =
-		'fixed z-[var(--z-modal)] bg-surface-primary outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0';
+		'fixed z-[var(--cst-z-modal)] bg-surface-primary outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0';
 
 	const SIDE_CLASSES: Record<DialogSide, string> = {
 		center:
-			'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-feature shadow-[var(--elevation-modal)] data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
+			'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-feature shadow-[var(--cst-elevation-modal)] data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
 		bottom:
-			'bottom-0 left-0 right-0 rounded-t-sheet shadow-[var(--elevation-sheet)] data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
+			'bottom-0 left-0 right-0 rounded-t-sheet shadow-[var(--cst-elevation-sheet)] data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
 		right:
-			'top-0 bottom-0 right-0 w-3/4 border-l border-border-default shadow-[var(--elevation-side-sheet)] data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right sm:max-w-sm',
+			'top-0 bottom-0 right-0 w-3/4 border-l border-border-default shadow-[var(--cst-elevation-side-sheet)] data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right sm:max-w-sm',
 		left:
-			'top-0 bottom-0 left-0 w-3/4 border-r border-border-default shadow-[var(--elevation-side-sheet)] data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left sm:max-w-sm',
+			'top-0 bottom-0 left-0 w-3/4 border-r border-border-default shadow-[var(--cst-elevation-side-sheet)] data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left sm:max-w-sm',
 		top:
-			'top-0 left-0 right-0 rounded-b-sheet shadow-[var(--elevation-sheet)] data-[state=open]:slide-in-from-top data-[state=closed]:slide-out-to-top'
+			'top-0 left-0 right-0 rounded-b-sheet shadow-[var(--cst-elevation-sheet)] data-[state=open]:slide-in-from-top data-[state=closed]:slide-out-to-top'
 	};
 
 	// 对齐 Figma Make Sheet：遮罩统一用 black/50（比 surface-overlay 更深，与设计一致）。
@@ -53,7 +53,7 @@
 <Dialog.Portal>
 	<Dialog.Overlay
 		class={cn(
-			'fixed inset-0 z-[var(--z-overlay)] bg-black/50 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
+			'fixed inset-0 z-[var(--cst-z-overlay)] bg-black/50 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
 			overlayClassName
 		)}
 	/>

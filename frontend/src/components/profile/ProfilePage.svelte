@@ -106,7 +106,7 @@
 							aria-label="更换头像"
 							onclick={() => void goto(ROUTES.meEdit)}
 							class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-accent-default text-text-on-accent"
-							style="width:28px;height:28px;border:2px solid var(--surface-primary);"
+							style="width:28px;height:28px;border:2px solid var(--cst-surface-primary);"
 						>
 							<Camera class="size-3.5"  strokeWidth={2} />
 						</button>
@@ -116,7 +116,7 @@
 						<p class="mt-1 text-sm text-text-secondary">{handle}</p>
 						<p class="mt-4 max-w-115 text-sm leading-6 text-text-secondary">{bio || '这个人还没有填写简介。'}</p>
 						<p class="mt-3 flex items-center gap-1.5 text-xs text-text-secondary">
-							<MapPin class="size-3.5"  style="color:var(--accent-default)" strokeWidth={1.8} />
+							<MapPin class="size-3.5"  style="color:var(--cst-accent-default)" strokeWidth={1.8} />
 							{locationName || '未设置位置'}
 						</p>
 					</div>
@@ -126,7 +126,7 @@
 						<button
 							type="button"
 							class="hover-bg border-l border-border-default px-5 py-4 text-left outline-none first:border-l-0"
-							style="background:var(--surface-primary);"
+							style="background:var(--cst-surface-primary);"
 							onclick={() => (stat.section ? void goto(ME_SECTION_PATHS[stat.section]) : undefined)}
 						>
 							<p class="text-lg font-medium tabular-nums text-text-primary">{stat.value}</p>
@@ -140,7 +140,7 @@
 			<aside class="rounded-panel border border-border-default surface-flat p-5" aria-label="资料状态">
 				<div class="flex items-center justify-between">
 					<h2 class="text-sm font-medium text-text-primary">资料状态</h2>
-					<ShieldCheck class="size-4"  style="color:var(--accent-default)" strokeWidth={1.8} />
+					<ShieldCheck class="size-4"  style="color:var(--cst-accent-default)" strokeWidth={1.8} />
 				</div>
 				<p class="mt-2 text-xs leading-5 text-text-secondary">你的基础资料已完善，可随时在编辑页更新。</p>
 				<div class="mt-5 h-1.5 overflow-hidden bg-border-default">
@@ -169,7 +169,7 @@
 					<div
 						class="flex items-start gap-3 px-6 py-4 {index > 1 ? 'border-t border-border-default' : ''} {index % 2 === 1 ? 'md:border-l md:border-border-default' : ''}"
 					>
-						<row.icon class="size-4 mt-0.5 shrink-0"  style="color:var(--accent-default)" strokeWidth={1.7} />
+						<row.icon class="size-4 mt-0.5 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={1.7} />
 						<div class="min-w-0">
 							<dt class="text-xs text-text-secondary">{row.label}</dt>
 							<dd class="mt-1 text-sm text-text-primary">{row.value}</dd>

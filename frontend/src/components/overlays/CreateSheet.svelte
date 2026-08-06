@@ -265,7 +265,7 @@
 		<button
 			type="submit"
 			disabled={!canPublish}
-			class="hover-btn shrink-0 rounded-full px-5 py-2.5 text-base font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:border disabled:border-border-default disabled:bg-transparent disabled:text-text-secondary enabled:bg-accent-default enabled:text-text-on-accent enabled:shadow-[0_6px_18px_var(--glow-accent)]"
+			class="hover-btn shrink-0 rounded-full px-5 py-2.5 text-base font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:border disabled:border-border-default disabled:bg-transparent disabled:text-text-secondary enabled:bg-accent-default enabled:text-text-on-accent enabled:shadow-[0_6px_18px_var(--cst-glow-accent)]"
 		>
 			发布动态
 		</button>

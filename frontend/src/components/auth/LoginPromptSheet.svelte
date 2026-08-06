@@ -26,15 +26,15 @@
 		class="left-1/2 w-full max-w-115 -translate-x-1/2 px-5 pb-8 pt-3"
 	>
 		<div class="mb-3 flex justify-center" aria-hidden="true">
-			<span class="h-1 w-9 rounded-full" style="background:var(--border-strong);"></span>
+			<span class="h-1 w-9 rounded-full" style="background:var(--cst-border-strong);"></span>
 		</div>
 		<div class="mb-4 flex items-start justify-between">
 			<div>
-				<Dialog.Title class="text-lg font-semibold tracking-tight" style="color:var(--text-primary);">
+				<Dialog.Title class="text-lg font-semibold tracking-tight" style="color:var(--cst-text-primary);">
 					登录后继续
 				</Dialog.Title>
 				{#if actionLabel}
-					<p class="mt-0.5 text-sm" style="color:var(--text-secondary);">
+					<p class="mt-0.5 text-sm" style="color:var(--cst-text-secondary);">
 						请先登录后再「{actionLabel}」
 					</p>
 				{/if}
@@ -42,7 +42,7 @@
 			<Dialog.Close
 				aria-label="关闭"
 				class="flex items-center justify-center rounded-full transition-opacity hover:opacity-70"
-				style="width:32px;height:32px;color:var(--text-secondary);"
+				style="width:32px;height:32px;color:var(--cst-text-secondary);"
 			>
 				<X size={18} />
 			</Dialog.Close>

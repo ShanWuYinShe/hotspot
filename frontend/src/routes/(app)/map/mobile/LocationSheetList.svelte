@@ -44,18 +44,18 @@ import PinMedia from '../shared/PinMedia.svelte';
 				class="app-list-row app-list-row--standard rounded-control px-5"
 			>
 				<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default size-8.5"  style="opacity:0.12">
-					<MapPin class="size-3.5"  style="color:var(--accent-default)" strokeWidth={1.75} />
+					<MapPin class="size-3.5"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
 				</div>
 				<span class="{isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm"  style="flex:1">{r.displayName}</span>
 				{#if isSelected}
-					<Check class="size-3.5 shrink-0"  style="color:var(--content-inverse)" strokeWidth={2.5} />
+					<Check class="size-3.5 shrink-0"  style="color:var(--cst-content-inverse)" strokeWidth={2.5} />
 				{/if}
 			</ListItem>
 		{/each}
 	</ListContainer>
 {:else if searchQuery && searchResults.length === 0}
 	<div class="flex flex-col items-center py-6">
-		<MapPin class="size-6.5"  style="color:var(--text-secondary);opacity:0.28" strokeWidth={1} />
+		<MapPin class="size-6.5"  style="color:var(--cst-text-secondary);opacity:0.28" strokeWidth={1} />
 		<p class="text-text-secondary text-base mt-2" >未找到匹配地点</p>
 	</div>
 {:else}
@@ -76,7 +76,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 					查看
 				</button>
 				<button type="button" class="hover-btn outline-none shrink-0 ml-0.5" onclick={onClearPin}>
-					<X class="size-3.25"  style="color:var(--text-secondary)" strokeWidth={2} />
+					<X class="size-3.25"  style="color:var(--cst-text-secondary)" strokeWidth={2} />
 				</button>
 			</div>
 		{/if}
@@ -90,7 +90,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 				<button
 					type="button"
 					class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none {activeTab === tab.id ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
-					style={activeTab === tab.id ? 'font-size:12px;box-shadow:0 3px 10px var(--glow-accent);' : 'font-size:12px;border:1px solid var(--border-default);'}
+					style={activeTab === tab.id ? 'font-size:12px;box-shadow:0 3px 10px var(--cst-glow-accent);' : 'font-size:12px;border:1px solid var(--cst-border-default);'}
 					onclick={() => (activeTab = tab.id as 'recent' | 'hot')}
 				>
 					<tab.icon class="size-2.75"  strokeWidth={activeTab === tab.id ? 2.5 : 1.5} />
@@ -124,9 +124,9 @@ import PinMedia from '../shared/PinMedia.svelte';
 								<p class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							{#if isSelected}
-								<Check class="size-3.5 shrink-0"  style="color:var(--content-inverse)" strokeWidth={2.5} />
+								<Check class="size-3.5 shrink-0"  style="color:var(--cst-content-inverse)" strokeWidth={2.5} />
 							{:else}
-								<ChevronRight class="size-3.25 shrink-0"  style="color:var(--border-default)" strokeWidth={1.5} />
+								<ChevronRight class="size-3.25 shrink-0"  style="color:var(--cst-border-default)" strokeWidth={1.5} />
 							{/if}
 						</ListItem>
 					{/each}
@@ -153,7 +153,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 								<p class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							<div class="flex items-center gap-1 shrink-0">
-								<Users style="width:11px;height:11px;color:{isSelected ? 'var(--content-inverse)' : 'var(--accent-default)'};" strokeWidth={1.5} />
+								<Users style="width:11px;height:11px;color:{isSelected ? 'var(--cst-content-inverse)' : 'var(--cst-accent-default)'};" strokeWidth={1.5} />
 								<span class="{isSelected ? 'text-content-inverse-secondary' : 'text-accent-default'} text-xs">{loc.users}</span>
 							</div>
 						</ListItem>
@@ -161,7 +161,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-8">
-					<Star class="size-5"  style="color:var(--text-secondary);opacity:0.3" strokeWidth={1} />
+					<Star class="size-5"  style="color:var(--cst-text-secondary);opacity:0.3" strokeWidth={1} />
 					<p class="text-text-secondary text-xs">暂无热门地点</p>
 				</div>
 			{/if}

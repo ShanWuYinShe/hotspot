@@ -184,15 +184,15 @@
 
 <div class="flex min-h-0 flex-col h-full bg-surface-primary">
 	<!-- Header -->
-	<div class="shrink-0 flex items-center gap-3 px-4 bg-surface-primary" style="height:{compact ? 52 : 60}px;border-bottom:1px solid var(--border-default);">
+	<div class="shrink-0 flex items-center gap-3 px-4 bg-surface-primary" style="height:{compact ? 52 : 60}px;border-bottom:1px solid var(--cst-border-default);">
 		{#if showBackButton}
 			<button
 				type="button"
 				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0 bg-surface-primary"
-				style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
+				style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--cst-border-default);"
 				onclick={onBack}
 			>
-				<ArrowLeft class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+				<ArrowLeft class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 			</button>
 		{/if}
 
@@ -201,7 +201,7 @@
 			src={contact?.avatar}
 			name={peerName}
 			size={compact ? 34 : 38}
-			style="border:1.5px solid var(--border-default);box-shadow:var(--shadow-neu-xs);"
+			style="border:1.5px solid var(--cst-border-default);box-shadow:var(--shadow-neu-xs);"
 		>
 			{#snippet badge()}
 				{#if onlineNow}
@@ -234,17 +234,17 @@
 				<button
 					type="button"
 					class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none bg-surface-primary"
-					style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
+					style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:var(--shadow-neu-md);border:1px solid var(--cst-border-default);"
 				>
-					<Icon class="size-3.5"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+					<Icon class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</button>
 			{/each}
 			<button
 				type="button"
 				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none bg-surface-primary"
-				style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
+				style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:var(--shadow-neu-md);border:1px solid var(--cst-border-default);"
 			>
-				<MoreHorizontal class="size-3.5"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+				<MoreHorizontal class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 			</button>
 		</div>
 	</div>
@@ -256,9 +256,9 @@
 			<div class="flex h-full flex-col items-center justify-center gap-2 px-6" style="min-height:240px;">
 				<div
 					class="flex items-center justify-center rounded-full"
-					style="width:56px;height:56px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xl);"
+					style="width:56px;height:56px;border:1px solid var(--cst-border-default);box-shadow:var(--shadow-neu-xl);"
 				>
-					<MessageCircle class="size-5.5"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+					<MessageCircle class="size-5.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</div>
 				<p class="text-text-primary text-sm"  style="font-weight:500">还没有消息</p>
 				<p class="text-center text-text-secondary text-xs"  style="max-width:220px">打个招呼，开始这段对话吧</p>
@@ -282,9 +282,9 @@
 		<button
 			type="button"
 			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0 bg-surface-primary"
-			style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
+			style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--cst-border-default);"
 		>
-			<Smile class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+			<Smile class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 		</button>
 
 		<div class="flex-1 flex items-center px-4 rounded-relaxed input-surface h-9.5" >
@@ -304,10 +304,10 @@
 		<button
 			type="button"
 			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'}"
-			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? '0 4px 14px var(--glow-accent)' : 'var(--shadow-neu-md)'};border:1px solid var(--border-default);"
+			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? '0 4px 14px var(--cst-glow-accent)' : 'var(--shadow-neu-md)'};border:1px solid var(--cst-border-default);"
 			onclick={() => void chat.handleSend()}
 		>
-			<Send style="width:14px;height:14px;color:{chat.inputVal.trim() ? 'var(--text-on-accent)' : 'var(--text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
+			<Send style="width:14px;height:14px;color:{chat.inputVal.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
 		</button>
 	</div>
 </div>

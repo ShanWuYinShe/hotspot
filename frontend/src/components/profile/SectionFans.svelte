@@ -63,7 +63,7 @@
 >
 	{#snippet headerExtra()}
 		{#if pendingCount > 0}
-			<span class="rounded-full px-2 py-0.5 text-xs text-status-warning" style="background:color-mix(in srgb, var(--status-warning) 13%, transparent);border:1px solid color-mix(in srgb, var(--status-warning) 24%, transparent);">
+			<span class="rounded-full px-2 py-0.5 text-xs text-status-warning" style="background:color-mix(in srgb, var(--cst-status-warning) 13%, transparent);border:1px solid color-mix(in srgb, var(--cst-status-warning) 24%, transparent);">
 				{pendingCount} 待回关
 			</span>
 		{/if}
@@ -79,7 +79,7 @@
 		>
 			{#snippet nameBadge()}
 				{#if isMutual}
-					<span class="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xxs text-status-online" style="background:var(--color-online-bg);">
+					<span class="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xxs text-status-online" style="background:var(--cst-color-online-bg);">
 						<Check class="size-2.25"  strokeWidth={2.5} />
 						互关
 					</span>
@@ -94,7 +94,7 @@
 				<button
 					type="button"
 					class="hover-btn tap-93 flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs outline-none {isMutual ? 'bg-transparent text-text-secondary' : 'bg-accent-default text-text-on-accent'}"
-					style={isMutual ? 'border:1px solid var(--border-strong);' : 'border:1px solid transparent;'}
+					style={isMutual ? 'border:1px solid var(--cst-border-strong);' : 'border:1px solid transparent;'}
 					onclick={(e) => {
 						e.stopPropagation();
 						toggleFollow(f.id);

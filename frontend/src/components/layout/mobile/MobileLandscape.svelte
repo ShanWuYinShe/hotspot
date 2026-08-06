@@ -29,12 +29,12 @@
 
 <div
 	class="flex h-dvh w-full overflow-hidden font-sans transition-colors duration-500"
-	style="background-color:var(--surface-page);color:var(--text-primary);"
+	style="background-color:var(--cst-surface-page);color:var(--cst-text-primary);"
 >
 	{#if !isSubPage}
 		<aside
 			class="shrink-0 flex flex-col items-center"
-			style="width:64px;padding-top:max(env(safe-area-inset-top, 8px), 8px);padding-bottom:max(env(safe-area-inset-bottom, 8px), 8px);padding-left:max(env(safe-area-inset-left, 0px), 0px);gap:8px;border-right:1px solid var(--border-default);background-color:var(--surface-primary);"
+			style="width:64px;padding-top:max(env(safe-area-inset-top, 8px), 8px);padding-bottom:max(env(safe-area-inset-bottom, 8px), 8px);padding-left:max(env(safe-area-inset-left, 0px), 0px);gap:8px;border-right:1px solid var(--cst-border-default);background-color:var(--cst-surface-primary);"
 		>
 			{#each NAV_ITEMS.slice(0, 2) as item}
 				<RailIcon
@@ -48,14 +48,14 @@
 			<button
 				type="button"
 				class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none my-1"
-				style="width:44px;height:44px;background:{composer.composerOpen ? 'var(--text-secondary)' : 'var(--accent-default)'};box-shadow:{composer.composerOpen ? 'none' : '0 4px 14px var(--glow-accent)'};transition:background 0.22s, transform 0.18s cubic-bezier(0.22,1,0.36,1), filter 0.18s ease;"
+				style="width:44px;height:44px;background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{composer.composerOpen ? 'none' : '0 4px 14px var(--cst-glow-accent)'};transition:background 0.22s, transform 0.18s cubic-bezier(0.22,1,0.36,1), filter 0.18s ease;"
 				aria-label={composer.composerOpen ? '关闭' : '发布'}
 				onclick={toggleComposer}
 			>
 				{#if composer.composerOpen}
-					<X class="size-4.5"  style="color:var(--text-on-accent)" strokeWidth={2.2} />
+					<X class="size-4.5"  style="color:var(--cst-text-on-accent)" strokeWidth={2.2} />
 				{:else}
-					<Plus class="size-4.5"  style="color:var(--text-on-accent)" strokeWidth={2.2} />
+					<Plus class="size-4.5"  style="color:var(--cst-text-on-accent)" strokeWidth={2.2} />
 				{/if}
 			</button>
 
@@ -70,7 +70,7 @@
 		</aside>
 	{/if}
 
-	<main class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar" style="background-color:var(--surface-primary);">
+	<main class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar" style="background-color:var(--cst-surface-primary);">
 		{@render children()}
 	</main>
 
@@ -78,7 +78,7 @@
 		<Dialog.Content
 			side="right"
 			class="overflow-hidden rounded-l-sheet border-l-0"
-			style="width:min(560px,90%);box-shadow:var(--elevation-side-sheet);"
+			style="width:min(560px,90%);box-shadow:var(--cst-elevation-side-sheet);"
 		>
 			<CreateSheet onClose={closeComposer} />
 		</Dialog.Content>

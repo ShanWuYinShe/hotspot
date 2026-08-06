@@ -7,24 +7,24 @@
 	let { message, onAcknowledge }: { message: string | null; onAcknowledge: () => void } = $props();
 </script>
 
-<div class="fixed inset-0 z-[var(--z-toast)] flex items-center justify-center p-6" style="background:var(--surface-primary);">
+<div class="fixed inset-0 z-[var(--cst-z-toast)] flex items-center justify-center p-6" style="background:var(--cst-surface-primary);">
 	<div class="flex flex-col items-center text-center gap-4"  style="max-width:360px">
 		<div
 			class="flex items-center justify-center rounded-full"
-			style="width:64px;height:64px;background:var(--color-danger-bg);"
+			style="width:64px;height:64px;background:var(--cst-color-danger-bg);"
 		>
-			<ShieldAlert size={30} color="var(--status-danger)" strokeWidth={1.6} />
+			<ShieldAlert size={30} color="var(--cst-status-danger)" strokeWidth={1.6} />
 		</div>
-		<h1 class="text-xl font-semibold tracking-tight" style="color:var(--text-primary);">
+		<h1 class="text-xl font-semibold tracking-tight" style="color:var(--cst-text-primary);">
 			账号已被封禁
 		</h1>
-		<p class="text-base leading-relaxed" style="color:var(--text-secondary);">
+		<p class="text-base leading-relaxed" style="color:var(--cst-text-secondary);">
 			{message ?? '你的账号因违规操作被封禁。如有疑问，请联系客服。'}
 		</p>
 		<button
 			type="button"
 			class="hover-btn mt-2 rounded-xl px-8 py-2.5 text-base font-medium"
-			style="background:var(--accent-default);color:var(--text-on-accent);"
+			style="background:var(--cst-accent-default);color:var(--cst-text-on-accent);"
 			onclick={onAcknowledge}
 		>
 			知道了

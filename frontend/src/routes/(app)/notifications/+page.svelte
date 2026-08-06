@@ -145,7 +145,7 @@ const FILTER_TABS = [
 						<button
 							type="button"
 							class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none bg-surface-primary text-accent-default text-sm"
-							style="border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);"
+							style="border:1px solid var(--cst-border-default);box-shadow:var(--shadow-neu-xs);"
 							onclick={markAllRead}
 						>
 							<CheckCheck class="size-3.25"  strokeWidth={2} />
@@ -165,8 +165,8 @@ const FILTER_TABS = [
 							onclick={() => (filter = t.id)}
 							class="tap-92 shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default"
 							style={filter === t.id
-								? 'background:var(--accent-default);color:var(--text-on-accent);font-size:12px;box-shadow:0 3px 10px var(--glow-accent);border:none;'
-								: 'background:var(--surface-primary);color:var(--text-secondary);font-size:12px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);'}
+								? 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);font-size:12px;box-shadow:0 3px 10px var(--cst-glow-accent);border:none;'
+								: 'background:var(--cst-surface-primary);color:var(--cst-text-secondary);font-size:12px;border:1px solid var(--cst-border-default);box-shadow:var(--shadow-neu-xs);'}
 						>
 							{t.label}
 						</button>
@@ -181,9 +181,9 @@ const FILTER_TABS = [
 				{#if unreadGroup.length > 0}
 					<!-- 新消息分组标题（emphasis：accent 点 + 计数 pill，对齐 Figma Make） -->
 					<div class="mb-3 flex h-5 items-center gap-2">
-						<span aria-hidden="true" class="h-1.5 w-1.5 rounded-full" style="background:var(--accent-default);"></span>
-						<p class="uppercase text-xxs"  style="font-weight:600;letter-spacing:0.14em;color:var(--text-primary)">新消息</p>
-						<span class="rounded-full px-1.5 py-0.5 text-xxs"  style="line-height:1;color:var(--accent-default);background:var(--accent-soft)">{unreadGroup.length}</span>
+						<span aria-hidden="true" class="h-1.5 w-1.5 rounded-full" style="background:var(--cst-accent-default);"></span>
+						<p class="uppercase text-xxs"  style="font-weight:600;letter-spacing:0.14em;color:var(--cst-text-primary)">新消息</p>
+						<span class="rounded-full px-1.5 py-0.5 text-xxs"  style="line-height:1;color:var(--cst-accent-default);background:var(--cst-accent-soft)">{unreadGroup.length}</span>
 					</div>
 					<ListContainer bordered>
 						{#each unreadGroup as n (n.id)}
@@ -195,8 +195,8 @@ const FILTER_TABS = [
 				{#if readGroup.length > 0}
 					<!-- 较早分组标题（非 emphasis：仅 label + flex 分隔线，对齐 Figma Make） -->
 					<div class="mb-3 flex h-5 items-center gap-2" style="margin-top:{unreadGroup.length > 0 ? '20px' : '0'};">
-						<p class="uppercase text-xxs"  style="font-weight:500;letter-spacing:0.14em;color:var(--text-secondary)">较早</p>
-						<span aria-hidden="true" class="h-px flex-1" style="background:var(--border-default);"></span>
+						<p class="uppercase text-xxs"  style="font-weight:500;letter-spacing:0.14em;color:var(--cst-text-secondary)">较早</p>
+						<span aria-hidden="true" class="h-px flex-1" style="background:var(--cst-border-default);"></span>
 					</div>
 					<ListContainer bordered>
 						{#each readGroup as n (n.id)}
@@ -208,7 +208,7 @@ const FILTER_TABS = [
 				{#if filtered.length === 0}
 					<EmptyState title="暂无通知">
 						{#snippet icon()}
-							<Bell class="size-6"  style="color:var(--text-secondary);opacity:0.5" strokeWidth={1.25} />
+							<Bell class="size-6"  style="color:var(--cst-text-secondary);opacity:0.5" strokeWidth={1.25} />
 						{/snippet}
 					</EmptyState>
 				{/if}

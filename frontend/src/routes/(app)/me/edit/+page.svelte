@@ -73,12 +73,12 @@
 	{#snippet trailing()}
 		<button
 			type="button"
-			class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all text-base {saved ? 'bg-status-online' : 'bg-accent-default'} text-white"
-			style="box-shadow:0 4px 14px {saved ? 'color-mix(in srgb, var(--status-online) 35%, transparent)' : 'var(--glow-accent)'};border:none;"
+			class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all text-base {saved ? 'bg-status-online' : 'bg-accent-default'} text-text-on-accent"
+			style="box-shadow:0 4px 14px {saved ? 'color-mix(in srgb, var(--cst-status-online) 35%, transparent)' : 'var(--cst-glow-accent)'};border:none;"
 			onclick={() => void handleSave()}
 		>
 			{#if saved}
-				<Check class="size-3.5"  style="color:var(--text-on-accent)" strokeWidth={2.5} />
+				<Check class="size-3.5"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
 			{:else}
 				保存
 			{/if}
@@ -94,7 +94,7 @@
 		<button
 			type="button"
 			class="hover-btn absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none bg-surface-overlay-strong text-white text-sm"
-			style="padding:6px 12px;backdrop-filter:blur(10px);border:1px solid var(--border-inverse);"
+			style="padding:6px 12px;backdrop-filter:blur(10px);border:1px solid var(--cst-border-inverse);"
 		>
 			<Camera class="size-3.25"  strokeWidth={1.75} />
 			更换横幅
@@ -104,15 +104,15 @@
 	<!-- Avatar edit -->
 	<div class="flex items-center gap-4 -mt-8 ml-2">
 		<div class="relative shrink-0">
-			<div class="rounded-[22px] overflow-hidden size-18"  style="border:3px solid var(--surface-primary);box-shadow:var(--elevation-profile-avatar)">
+			<div class="rounded-[22px] overflow-hidden size-18"  style="border:3px solid var(--cst-surface-primary);box-shadow:var(--cst-elevation-profile-avatar)">
 				<img src={avatar} alt="avatar" class="w-full h-full object-cover" />
 			</div>
 			<button
 				type="button"
 				class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-accent-default"
-				style="width:26px;height:26px;border:2px solid var(--surface-primary);box-shadow:0 2px 8px var(--glow-accent);"
+				style="width:26px;height:26px;border:2px solid var(--cst-surface-primary);box-shadow:0 2px 8px var(--cst-glow-accent);"
 			>
-				<Camera class="size-3"  style="color:var(--text-on-accent)" strokeWidth={2} />
+				<Camera class="size-3"  style="color:var(--cst-text-on-accent)" strokeWidth={2} />
 			</button>
 		</div>
 		<div>
@@ -126,7 +126,7 @@
 	<!-- Form fields — spec: nickname, bio, tags are the only user-editable profile fields. -->
 	<div class="flex flex-col gap-1.5">
 		<div class="flex items-center gap-1.5">
-			<User class="size-3.25"  style="color:var(--accent-default)" strokeWidth={1.75} />
+			<User class="size-3.25"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
 			<label class="text-text-secondary text-xs uppercase tracking-widest" for="edit-nickname">昵称</label>
 		</div>
 		<div class="px-4 py-3 rounded-relaxed input-surface">
@@ -142,7 +142,7 @@
 
 	<div class="flex flex-col gap-1.5">
 		<div class="flex items-center gap-1.5">
-			<FileText class="size-3.25"  style="color:var(--accent-default)" strokeWidth={1.75} />
+			<FileText class="size-3.25"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
 			<label class="text-text-secondary text-xs uppercase tracking-widest" for="edit-bio">个人简介</label>
 		</div>
 		<div class="px-4 py-3 rounded-relaxed input-surface">
@@ -178,8 +178,8 @@
 					type="button"
 					class="hover-btn px-3.5 py-1.5 rounded-full outline-none transition-all text-sm {active ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
 					style={active
-						? 'box-shadow:0 3px 10px var(--glow-accent);border:none;'
-						: 'border:1px solid var(--border-default);opacity:0.4;box-shadow:var(--shadow-neu-xs);'}
+						? 'box-shadow:0 3px 10px var(--cst-glow-accent);border:none;'
+						: 'border:1px solid var(--cst-border-default);opacity:0.4;box-shadow:var(--shadow-neu-xs);'}
 					onclick={() => !disabled && toggleTag(t)}
 				>
 					#{t}
@@ -194,7 +194,7 @@
 		<button
 			type="button"
 			class="hover-btn w-full text-left px-4 py-3.5 rounded-relaxed outline-none bg-surface-primary text-status-danger text-base"
-			style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--border-default);"
+			style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--cst-border-default);"
 		>
 			注销账号
 		</button>

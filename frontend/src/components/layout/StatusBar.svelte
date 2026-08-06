@@ -21,11 +21,11 @@
 
 <div
 	class="shrink-0 flex items-center justify-between px-5 select-none"
-	style="height:44px;background-color:var(--surface-primary);"
+	style="height:44px;background-color:var(--cst-surface-primary);"
 >
 	<!-- Time -->
 	<span
-		style="font-size:15px;font-weight:600;color:var(--text-primary);letter-spacing:-0.3px;font-variant-numeric:tabular-nums;"
+		style="font-size:15px;font-weight:600;color:var(--cst-text-primary);letter-spacing:-0.3px;font-variant-numeric:tabular-nums;"
 	>
 		{h}:{m}
 	</span>
@@ -35,22 +35,22 @@
 		<div class="flex items-end gap-0.5">
 			{#each signalHeights as hgt, i}
 				<div
-					style="width:3px;height:{hgt}px;border-radius:1px;background-color:var(--text-primary);opacity:{i < 3 ? 1 : 0.28};"
+					style="width:3px;height:{hgt}px;border-radius:1px;background-color:var(--cst-text-primary);opacity:{i < 3 ? 1 : 0.28};"
 				></div>
 			{/each}
 		</div>
-		<Wifi class="size-3.5"  style="color:var(--text-primary)" strokeWidth={2.5} />
+		<Wifi class="size-3.5"  style="color:var(--cst-text-primary)" strokeWidth={2.5} />
 		<!-- Battery -->
 		<div style="display:flex;align-items:center;">
 			<div
-				style="width:23px;height:11px;border-radius:3px;border:1.5px solid var(--text-primary);position:relative;overflow:hidden;box-sizing:border-box;"
+				style="width:23px;height:11px;border-radius:3px;border:1.5px solid var(--cst-text-primary);position:relative;overflow:hidden;box-sizing:border-box;"
 			>
 				<div
-					style="position:absolute;inset:1px;right:auto;width:calc({batteryLevel * 100}% - 2px);border-radius:1.5px;background-color:var(--text-primary);"
+					style="position:absolute;inset:1px;right:auto;width:calc({batteryLevel * 100}% - 2px);border-radius:1.5px;background-color:var(--cst-text-primary);"
 				></div>
 			</div>
 			<div
-				style="width:2px;height:5px;border-radius:0 1px 1px 0;background-color:var(--text-primary);opacity:0.45;margin-left:1px;"
+				style="width:2px;height:5px;border-radius:0 1px 1px 0;background-color:var(--cst-text-primary);opacity:0.45;margin-left:1px;"
 			></div>
 		</div>
 	</div>

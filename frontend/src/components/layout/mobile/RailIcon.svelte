@@ -22,11 +22,11 @@
 
 	// hover 背景恒为透明（vibrant/forest 两主题均无 rail hover 背景填充，
 	// 反馈由 --elevation-rail-hover 阴影承载）
-	const hoverShadow = $derived(showHover ? 'var(--elevation-rail-hover)' : 'none');
+	const hoverShadow = $derived(showHover ? 'var(--cst-elevation-rail-hover)' : 'none');
 
 	const hoverScale = $derived(showHover ? (theme.theme === 'forest' ? 1.08 : 1.14) : 1);
 	const iconColor = $derived(
-		isActive || showHover ? 'var(--accent-default)' : 'var(--text-secondary)'
+		isActive || showHover ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'
 	);
 </script>
 
@@ -42,7 +42,7 @@
 >
 	{#if isActive}
 		<div
-			style="position:absolute;inset:4px;border-radius:12px;background:var(--accent-default);opacity:0.14;"
+			style="position:absolute;inset:4px;border-radius:12px;background:var(--cst-accent-default);opacity:0.14;"
 		></div>
 	{/if}
 	<Icon
@@ -53,6 +53,6 @@
 		{label}
 	</span>
 	{#if isActive}
-		<div class="w-0.75 rounded-[2px]"  style="position:absolute;left:0;top:10px;bottom:10px;background:var(--accent-default)"></div>
+		<div class="w-0.75 rounded-[2px]"  style="position:absolute;left:0;top:10px;bottom:10px;background:var(--cst-accent-default)"></div>
 	{/if}
 </button>

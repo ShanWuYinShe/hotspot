@@ -53,18 +53,18 @@
 		const parts: string[] = [];
 		if (style) parts.push(style);
 		if (isCard) {
-			parts.push('background:var(--surface-primary);');
-			parts.push('border:1px solid var(--border-default);');
+			parts.push('background:var(--cst-surface-primary);');
+			parts.push('border:1px solid var(--cst-border-default);');
 			parts.push(
-				`box-shadow:${surfaceActive ? `${cardShadow}, inset 0 0 0 1px var(--accent-border)` : cardShadow};`
+				`box-shadow:${surfaceActive ? `${cardShadow}, inset 0 0 0 1px var(--cst-accent-border)` : cardShadow};`
 			);
 		}
 		// 选中态：accent 全背景（inline style 优先，hover 不再叠加填充）
 		if (pressed) {
-			parts.push('background:var(--accent-default);');
+			parts.push('background:var(--cst-accent-default);');
 		} else if (surfaceActive) {
 			// hover/focus 填充放在最后，确保覆盖行内背景（hover-fill 契约）
-			parts.push('background:var(--interactive-hover-fill);');
+			parts.push('background:var(--cst-interactive-hover-fill);');
 		}
 		return parts.join('');
 	});

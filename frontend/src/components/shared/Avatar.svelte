@@ -40,14 +40,14 @@
 
 <div
 	class="relative shrink-0 {className}"
-	style="width:{size}px;height:{size}px;border-radius:{borderRadius};overflow:hidden;background:var(--surface-primary);{ring ? `border:1px solid color-mix(in srgb, var(--accent-fill) 10%, var(--surface-primary));` : ''}{style}"
+	style="width:{size}px;height:{size}px;border-radius:{borderRadius};overflow:hidden;background:var(--cst-surface-primary);{ring ? `border:1px solid color-mix(in srgb, var(--cst-accent-fill) 10%, var(--cst-surface-primary));` : ''}{style}"
 >
 	{#if showImage}
 		<img src={src} alt={name ?? ''} class="h-full w-full object-cover" onerror={() => (hasError = true)} />
 	{:else}
 		<span
 			class="flex h-full w-full items-center justify-center"
-			style="font-size:{Math.round(size * 0.42)}px;color:var(--text-secondary);background:var(--color-accent-bg);"
+			style="font-size:{Math.round(size * 0.42)}px;color:var(--cst-text-secondary);background:var(--cst-color-accent-bg);"
 		>
 			{initial}
 		</span>

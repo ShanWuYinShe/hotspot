@@ -67,13 +67,13 @@
 					<span
 						class="shrink-0 rounded-full"
 						title="在线"
-						style="width:9px;height:9px;background:var(--status-online);box-shadow:0 0 0 2px var(--surface-card-menu);"
+						style="width:9px;height:9px;background:var(--cst-status-online);box-shadow:0 0 0 2px var(--cst-surface-card-menu);"
 					></span>
 				{/if}
 			</div>
 			<div class="mt-2 flex items-center justify-between gap-2">
 				{#if user.tag}
-					<span class="rounded-full px-1.5 py-0.5 text-xxs border border-accent-border"  style="background:var(--accent-soft);color:var(--accent-default)">#{user.tag}</span>
+					<span class="rounded-full px-1.5 py-0.5 text-xxs border border-accent-border"  style="background:var(--cst-accent-soft);color:var(--cst-accent-default)">#{user.tag}</span>
 				{:else}
 					<span></span>
 				{/if}
@@ -81,8 +81,8 @@
 					type="button"
 					class="hover-btn tap-90 flex items-center justify-center rounded-full outline-none shrink-0"
 					style="width:28px;height:28px;{followed
-						? 'background:var(--accent-soft);border:1px solid var(--accent-border);color:var(--accent-default);'
-						: 'background:var(--accent-default);color:var(--text-on-accent);box-shadow:0 2px 8px var(--glow-accent);'}"
+						? 'background:var(--cst-accent-soft);border:1px solid var(--cst-accent-border);color:var(--cst-accent-default);'
+						: 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);box-shadow:0 2px 8px var(--cst-glow-accent);'}"
 					aria-label={followed ? `取消关注 ${user.name}` : `关注 ${user.name}`}
 					onclick={(e) => {
 						e.stopPropagation();

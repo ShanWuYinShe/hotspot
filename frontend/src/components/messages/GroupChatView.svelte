@@ -166,15 +166,15 @@
 
 <div class="flex min-h-0 flex-col h-full bg-surface-primary">
 	<!-- Header -->
-	<div class="shrink-0 flex items-center gap-3 px-4 bg-surface-primary" style="height:{compact ? 52 : 60}px;border-bottom:1px solid var(--border-default);">
+	<div class="shrink-0 flex items-center gap-3 px-4 bg-surface-primary" style="height:{compact ? 52 : 60}px;border-bottom:1px solid var(--cst-border-default);">
 		{#if showBackButton}
 			<button
 				type="button"
 				class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none shrink-0 bg-surface-primary"
-				style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--border-default);"
+				style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--cst-border-default);"
 				onclick={onBack}
 			>
-				<ArrowLeft class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+				<ArrowLeft class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 			</button>
 		{/if}
 
@@ -184,7 +184,7 @@
 			name={groupName}
 			size={compact ? 34 : 38}
 			shape="rounded"
-			style="border:1.5px solid var(--border-default);box-shadow:var(--shadow-neu-xs);"
+			style="border:1.5px solid var(--cst-border-default);box-shadow:var(--shadow-neu-xs);"
 		/>
 
 		<!-- Name + status -->
@@ -245,10 +245,10 @@
 		<button
 			type="button"
 			class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'}"
-			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? '0 4px 14px var(--glow-accent)' : 'var(--shadow-neu-md)'};border:1px solid var(--border-default);"
+			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? '0 4px 14px var(--cst-glow-accent)' : 'var(--shadow-neu-md)'};border:1px solid var(--cst-border-default);"
 			onclick={() => void chat.handleSend()}
 		>
-			<Send style="width:14px;height:14px;color:{chat.inputVal.trim() ? 'var(--text-on-accent)' : 'var(--text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
+			<Send style="width:14px;height:14px;color:{chat.inputVal.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
 		</button>
 	</div>
 </div>

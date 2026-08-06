@@ -17,23 +17,23 @@
     outline: none;
   }
   .focus-ring:focus-visible {
-    box-shadow: 0 0 0 2px var(--accent-default);
+    box-shadow: 0 0 0 2px var(--cst-accent-default);
     outline: 2px solid transparent;
     outline-offset: 2px;
   }
 
   /* 1px border ring using box-shadow — avoids layout shift */
   .ring-border {
-    box-shadow: 0 0 0 1px var(--border-default);
+    box-shadow: 0 0 0 1px var(--cst-border-default);
   }
 
   /* Sticky page header — consistent across Messages, Nearby, Notifications etc. */
   .sticky-header {
     position: sticky;
     top: 0;
-    z-index: var(--z-dropdown);
-    background: var(--surface-primary);
-    border-bottom: 1px solid var(--border-default);
+    z-index: var(--cst-z-dropdown);
+    background: var(--cst-surface-primary);
+    border-bottom: 1px solid var(--cst-border-default);
   }
 }
 
@@ -41,20 +41,20 @@
   /*── Input surfaces ──────────────────────────────────────────────── */
 
   .input-surface {
-    background-color: var(--surface-primary);
-    box-shadow: 5px 5px 10px var(--elevation-shadow-dark), -5px -5px 10px var(--elevation-shadow-light);
-    border: 1px solid var(--border-default);
+    background-color: var(--cst-surface-primary);
+    box-shadow: 5px 5px 10px var(--cst-elevation-shadow-dark), -5px -5px 10px var(--cst-elevation-shadow-light);
+    border: 1px solid var(--cst-border-default);
     transition: box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease;
   }
   .input-surface:focus-within {
-    box-shadow: inset 5px 5px 10px var(--elevation-shadow-dark), inset -5px -5px 10px var(--elevation-shadow-light);
-    border-color: var(--border-strong);
+    box-shadow: inset 5px 5px 10px var(--cst-elevation-shadow-dark), inset -5px -5px 10px var(--cst-elevation-shadow-light);
+    border-color: var(--cst-border-strong);
   }
 
   .icon-badge {
-    background-color: var(--surface-primary);
-    box-shadow: 4px 4px 8px var(--elevation-shadow-dark), -4px -4px 8px var(--elevation-shadow-light);
-    border: 1px solid var(--border-default);
+    background-color: var(--cst-surface-primary);
+    box-shadow: 4px 4px 8px var(--cst-elevation-shadow-dark), -4px -4px 8px var(--cst-elevation-shadow-light);
+    border: 1px solid var(--cst-border-default);
   }
 
   /*── Hover surfaces ──────────────────────────────────────────────── */
@@ -64,10 +64,10 @@
     transition: box-shadow 0.26s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .card-hover:active { transform: scale(0.985); }
-  .card-hover:focus-visible { outline: 2px solid var(--accent-default); outline-offset: 2px; }
+  .card-hover:focus-visible { outline: 2px solid var(--cst-accent-default); outline-offset: 2px; }
   @media (hover: hover) and (pointer: fine) {
     .card-hover:hover {
-      box-shadow: 0 0 0 1px var(--accent-border), var(--elevation-card) !important;
+      box-shadow: 0 0 0 1px var(--cst-accent-border), var(--cst-elevation-card) !important;
     }
   }
 
@@ -79,10 +79,10 @@
     align-items: center;
     gap: 0.75rem;
     text-align: left;
-    background: var(--surface-primary);
+    background: var(--cst-surface-primary);
     border: 1px solid transparent;
   }
-  .app-list-row + .app-list-row { border-top-color: var(--border-default); }
+  .app-list-row + .app-list-row { border-top-color: var(--cst-border-default); }
   .app-list-row--standard { min-height: 4.125rem; padding: 0.75rem 0.875rem; }
 
   .circle-hover {
@@ -92,8 +92,8 @@
   @media (hover: hover) and (pointer: fine) {
     .circle-hover:hover {
       transform: scale(1.10);
-      border-color: var(--accent-border) !important;
-      box-shadow: var(--elevation-button) !important;
+      border-color: var(--cst-accent-border) !important;
+      box-shadow: var(--cst-elevation-button) !important;
     }
   }
 
@@ -107,51 +107,51 @@
 
   input::placeholder,
   textarea::placeholder {
-    color: var(--text-secondary);
+    color: var(--cst-text-secondary);
     opacity: 0.6;
   }
 
   /*── Surface depths ──────────────────────────────────────────────── */
 
   .flat {
-    background-color: var(--surface-primary);
-    box-shadow: 10px 10px 20px var(--elevation-shadow-dark), -10px -10px 20px var(--elevation-shadow-light);
-    color: var(--text-primary);
-    border: 1px solid var(--border-default);
+    background-color: var(--cst-surface-primary);
+    box-shadow: 10px 10px 20px var(--cst-elevation-shadow-dark), -10px -10px 20px var(--cst-elevation-shadow-light);
+    color: var(--cst-text-primary);
+    border: 1px solid var(--cst-border-default);
   }
   .pressed {
-    background-color: var(--surface-primary);
-    box-shadow: inset 8px 8px 16px var(--elevation-shadow-dark), inset -8px -8px 16px var(--elevation-shadow-light);
-    color: var(--text-primary);
-    border: 1px solid var(--border-strong);
+    background-color: var(--cst-surface-primary);
+    box-shadow: inset 8px 8px 16px var(--cst-elevation-shadow-dark), inset -8px -8px 16px var(--cst-elevation-shadow-light);
+    color: var(--cst-text-primary);
+    border: 1px solid var(--cst-border-strong);
   }
   .surface-hero {
-    background-color: var(--surface-primary);
-    border: 1px solid var(--border-default);
+    background-color: var(--cst-surface-primary);
+    border: 1px solid var(--cst-border-default);
     box-shadow:
-      8px 8px 18px var(--elevation-shadow-dark),
-      -8px -8px 18px var(--elevation-shadow-light);
+      8px 8px 18px var(--cst-elevation-shadow-dark),
+      -8px -8px 18px var(--cst-elevation-shadow-light);
   }
 
   .surface-flat {
-    background-color: var(--surface-primary);
-    box-shadow: 0 0 0 1px var(--border-default);
+    background-color: var(--cst-surface-primary);
+    box-shadow: 0 0 0 1px var(--cst-border-default);
     transition: box-shadow 0.18s ease, background-color 0.18s ease;
   }
   @media (hover: hover) and (pointer: fine) {
     .surface-flat:hover {
-      box-shadow: 0 0 0 1px var(--border-strong);
+      box-shadow: 0 0 0 1px var(--cst-border-strong);
     }
   }
 
   /* 无图卡片占位：accent 渐隐到 surface（MomentCard/GroupCard/UserCard 封面统一） */
   .surface-accent-gradient {
-    background: linear-gradient(135deg, color-mix(in srgb, var(--accent-default) 20%, var(--surface-primary)) 0%, color-mix(in srgb, var(--accent-default) 6%, var(--surface-primary)) 100%);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--cst-accent-default) 20%, var(--cst-surface-primary)) 0%, color-mix(in srgb, var(--cst-accent-default) 6%, var(--cst-surface-primary)) 100%);
   }
 
   /* 浮层内嵌面板：surface-primary 微混 surface-page 提亮（CreateSheet/AppearanceMenu 等） */
   .surface-tinted {
-    background-color: color-mix(in srgb, var(--surface-primary) 94%, var(--surface-page) 6%);
+    background-color: color-mix(in srgb, var(--cst-surface-primary) 94%, var(--cst-surface-page) 6%);
   }
 
   .surface-ghost {
@@ -160,18 +160,18 @@
     transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
   }
   .surface-ghost[aria-pressed="true"] {
-    background-color: var(--accent-soft);
-    border-color: var(--accent-border);
-    color: var(--accent-default);
+    background-color: var(--cst-accent-soft);
+    border-color: var(--cst-accent-border);
+    color: var(--cst-accent-default);
   }
   @media (hover: hover) and (pointer: fine) {
     .surface-ghost:hover {
-      background-color: var(--interactive-hover);
-      border-color: var(--accent-border);
+      background-color: var(--cst-interactive-hover);
+      border-color: var(--cst-accent-border);
     }
     .surface-ghost[aria-pressed="true"]:hover {
-      background-color: var(--interactive-active);
-      border-color: var(--accent-default);
+      background-color: var(--cst-interactive-active);
+      border-color: var(--cst-accent-default);
     }
   }
 
@@ -185,7 +185,7 @@
     height: 70%;
     background: radial-gradient(
       ellipse at top,
-      var(--glow-accent) 0%,
+      var(--cst-glow-accent) 0%,
       transparent 65%
     );
     opacity: 0.55;
@@ -204,7 +204,7 @@
     font-size: 10px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--text-secondary);
+    color: var(--cst-text-secondary);
     opacity: 0.75;
   }
 }
@@ -223,14 +223,14 @@
   /*── Input color-mix overrides ─────────────────────────────────── */
 
   .input-surface {
-    background: color-mix(in srgb, var(--surface-primary) 82%, var(--surface-page) 18%) !important;
-    box-shadow: inset 0 0 0 1px var(--border-default), inset 0 1px 2px color-mix(in srgb, var(--elevation-shadow-dark) 26%, transparent) !important;
-    border-color: var(--border-default) !important;
+    background: color-mix(in srgb, var(--cst-surface-primary) 82%, var(--cst-surface-page) 18%) !important;
+    box-shadow: inset 0 0 0 1px var(--cst-border-default), inset 0 1px 2px color-mix(in srgb, var(--cst-elevation-shadow-dark) 26%, transparent) !important;
+    border-color: var(--cst-border-default) !important;
   }
   .input-surface:focus-within {
     /* 对齐 Figma Make：focus 为中性内凹凹陷 + border-pressed，不用 accent 高亮环 */
-    box-shadow: inset 5px 5px 10px var(--elevation-shadow-dark), inset -5px -5px 10px var(--elevation-shadow-light) !important;
-    border-color: var(--border-strong) !important;
+    box-shadow: inset 5px 5px 10px var(--cst-elevation-shadow-dark), inset -5px -5px 10px var(--cst-elevation-shadow-light) !important;
+    border-color: var(--cst-border-strong) !important;
   }
 }
 
@@ -285,7 +285,7 @@
      覆盖 ActionIconButton 默认的 btn 契约 1.10/0.94）。hover 仅 fine pointer；tap 全设备。 */
   .header-action:active { transform: scale(0.84); transition-duration: 0.10s, 0.18s, 0.18s, 0.18s, 0.18s; }
   @media (hover: hover) and (pointer: fine) {
-    .header-action:hover { transform: scale(1.18); transition-duration: 0.14s, 0.18s, 0.18s, 0.18s, 0.18s; background-color: var(--interactive-hover-fill); }
+    .header-action:hover { transform: scale(1.18); transition-duration: 0.14s, 0.18s, 0.18s, 0.18s, 0.18s; background-color: var(--cst-interactive-hover-fill); }
   }
 
   /* 悬停背景（bgHover）：直接复用 --interactive-hover-fill token（= --pr-hover，
@@ -293,7 +293,7 @@
      填充一致，避免硬编码 color-mix 与 token 漂移。仅 fine pointer 生效。 */
   .hover-bg { transition: background-color 0.18s ease; }
   @media (hover: hover) and (pointer: fine) {
-    .hover-bg:hover { background-color: var(--interactive-hover-fill); }
+    .hover-bg:hover { background-color: var(--cst-interactive-hover-fill); }
   }
 
   /* 地图当前位置脉冲光晕（对齐 Figma Make LocationMobile motion.div：
@@ -312,18 +312,18 @@
    背景填充仅作用于透明/ghost 按钮，避免覆盖实色 accent 导致白字褪色。 */
 @layer utilities {
   :where(button:not(:disabled)) {
-    border-radius: var(--radius);
+    border-radius: var(--cst-radius);
     transition: background-color 160ms ease, background-image 160ms ease, border-color 160ms ease, color 160ms ease;
   }
   :where(button:not(:disabled):not([class*="bg-"])):active {
-    background-color: var(--interactive-active-fill);
+    background-color: var(--cst-interactive-active-fill);
   }
   @media (hover: hover) and (pointer: fine) {
     :where(button:not(:disabled)):hover {
-      background-image: linear-gradient(var(--interactive-hover-overlay), var(--interactive-hover-overlay)) !important;
+      background-image: linear-gradient(var(--cst-interactive-hover-overlay), var(--cst-interactive-hover-overlay)) !important;
     }
     :where(button:not(:disabled):not([class*="bg-"])):hover {
-      background-color: var(--interactive-hover-fill);
+      background-color: var(--cst-interactive-hover-fill);
     }
     :where(button[aria-current="page"], button[aria-pressed="true"], button[data-active="true"]):hover {
       background-color: transparent;
@@ -360,7 +360,7 @@
   }
   @media (hover: hover) and (pointer: fine) {
     .image-hover-frame:hover::after {
-      border-color: var(--accent-default);
+      border-color: var(--cst-accent-default);
     }
     .image-hover-frame:hover .image-hover-frame__image {
       transform: scale(1.045);
@@ -388,7 +388,7 @@
     }
     .avatar-entry:hover .avatar-entry__avatar {
       transform: none;
-      border-color: var(--accent-default) !important;
+      border-color: var(--cst-accent-default) !important;
       box-shadow: none;
     }
     .avatar-entry:hover .avatar-entry__avatar img {
@@ -403,8 +403,8 @@
    平板画布上以统一 24px 外 gutter 展开。 */
 @layer utilities {
   [data-page-viewport] {
-    background: var(--surface-page);
-    color: var(--text-primary);
+    background: var(--cst-surface-page);
+    color: var(--cst-text-primary);
   }
   [data-platform="tablet"] .tablet-content-fill {
     max-width: none !important;
@@ -412,6 +412,6 @@
     margin-right: 0 !important;
   }
   [data-desktop-main] .desktop-main-scroll > * {
-    background-color: var(--surface-page) !important;
+    background-color: var(--cst-surface-page) !important;
   }
 }

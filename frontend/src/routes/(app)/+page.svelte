@@ -104,8 +104,8 @@
 				{#snippet trailing()}
 					<div class="flex items-center gap-2">
 						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full surface-flat">
-							<span class="rounded-full size-1.5"  style="background:var(--status-online)"></span>
-							<span class="text-xs" style="color:var(--text-secondary);">{onlineCount} 在线</span>
+							<span class="rounded-full size-1.5"  style="background:var(--cst-status-online)"></span>
+							<span class="text-xs" style="color:var(--cst-text-secondary);">{onlineCount} 在线</span>
 						</div>
 						{#if platform.platform === 'tablet'}
 							<button
@@ -113,7 +113,7 @@
 								aria-label="搜索"
 								onclick={() => void goto(ROUTES.search)}
 								class="hover-btn flex size-8 items-center justify-center rounded-full outline-none bg-surface-primary text-text-secondary"
-								style="border:1px solid var(--border-default);"
+								style="border:1px solid var(--cst-border-default);"
 							>
 								<Search class="size-4"  strokeWidth={1.8} />
 							</button>
@@ -127,17 +127,17 @@
 				{#snippet trailing()}
 					<div class="flex items-center gap-2">
 						<div class="flex items-center gap-1.5 py-1.5 px-3 rounded-full surface-flat">
-							<span class="rounded-full size-1.5"  style="background:var(--status-online)"></span>
-							<span class="text-xs"  style="color:var(--text-secondary)">{defaultLocation?.location_name || '附近'}</span>
+							<span class="rounded-full size-1.5"  style="background:var(--cst-status-online)"></span>
+							<span class="text-xs"  style="color:var(--cst-text-secondary)">{defaultLocation?.location_name || '附近'}</span>
 						</div>
 						<button
 							type="button"
 							class="hover-btn flex size-8 items-center justify-center rounded-full border cursor-pointer transition-colors hover:bg-accent-soft"
-							style="border-color:var(--border-default);background:var(--surface-primary);"
+							style="border-color:var(--cst-border-default);background:var(--cst-surface-primary);"
 							onclick={() => void goto(ROUTES.search)}
 							aria-label="搜索"
 						>
-							<Search class="size-4" color="var(--text-secondary)" strokeWidth={1.8} />
+							<Search class="size-4" color="var(--cst-text-secondary)" strokeWidth={1.8} />
 						</button>
 					</div>
 				{/snippet}
@@ -163,7 +163,7 @@
 				<div class="flex items-end justify-between mb-5">
 					<div>
 						<span class="eyebrow">附近的人</span>
-						<p class="text-xs mt-1"  style="color:var(--text-secondary)">
+						<p class="text-xs mt-1"  style="color:var(--cst-text-secondary)">
 							5km 范围内 · 实时更新
 						</p>
 					</div>

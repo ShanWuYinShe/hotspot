@@ -155,7 +155,7 @@
 
 		<!-- Current location dot -->
 		<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:5;">
-			<div style="width:18px;height:18px;border-radius:50%;background:{PIN_COLORS.user};border:3px solid var(--surface-primary);box-shadow:0 2px 10px {pinTone('user', 55)};position:relative;">
+			<div style="width:18px;height:18px;border-radius:50%;background:{PIN_COLORS.user};border:3px solid var(--cst-surface-primary);box-shadow:0 2px 10px {pinTone('user', 55)};position:relative;">
 				<span class="absolute rounded-full" style="inset:-8px;background:{pinTone('user', 18)};border:1px solid {pinTone('user', 25)};"></span>
 			</div>
 		</div>
@@ -182,7 +182,7 @@
 
 		{#if mapLoading}
 			<!-- 加载中的轻量指示 -->
-			<div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary shadow-[0_2px_12px_var(--elevation-shadow-dark)] border border-border-default" >
+			<div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary shadow-[0_2px_12px_var(--cst-elevation-shadow-dark)] border border-border-default" >
 				加载地图数据…
 			</div>
 		{/if}
@@ -194,20 +194,20 @@
 			<button
 				type="button"
 				class="hover-btn flex items-center gap-2 rounded-full outline-none"
-				style="padding:9px 16px;font-size:13px;background:{showFilter ? 'var(--accent-default)' : 'var(--surface-primary)'};color:{showFilter ? 'white' : 'var(--text-primary)'};border:1px solid {showFilter ? 'transparent' : 'var(--border-default)'};box-shadow:{showFilter ? '0 4px 16px var(--glow-accent)' : '0 4px 16px var(--elevation-shadow-dark)'};"
+				style="padding:9px 16px;font-size:13px;background:{showFilter ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};color:{showFilter ? 'white' : 'var(--cst-text-primary)'};border:1px solid {showFilter ? 'transparent' : 'var(--cst-border-default)'};box-shadow:{showFilter ? '0 4px 16px var(--cst-glow-accent)' : '0 4px 16px var(--cst-elevation-shadow-dark)'};"
 				onclick={() => (showFilter = !showFilter)}
 			>
 				<SlidersHorizontal class="size-3.25"  strokeWidth={showFilter ? 2.5 : 1.75} />
 				筛选
 				{#if activeFilters.size < 3}
-					<span style="margin-left:2px;font-size:10px;padding:1px 6px;border-radius:999px;background:{showFilter ? 'var(--surface-map-control-active)' : 'var(--accent-soft)'};color:{showFilter ? 'white' : 'var(--accent-default)'};font-weight:500;">{activeFilters.size}</span>
+					<span style="margin-left:2px;font-size:10px;padding:1px 6px;border-radius:999px;background:{showFilter ? 'var(--cst-surface-map-control-active)' : 'var(--cst-accent-soft)'};color:{showFilter ? 'white' : 'var(--cst-accent-default)'};font-weight:500;">{activeFilters.size}</span>
 				{/if}
 			</button>
 			{#if showFilter}
-				<div class="mt-2 overflow-hidden rounded-control w-50 shadow-[0_8px_28px_var(--elevation-shadow-dark)] border border-border-default"   style="background:var(--surface-primary)">
+				<div class="mt-2 overflow-hidden rounded-control w-50 shadow-[0_8px_28px_var(--cst-elevation-shadow-dark)] border border-border-default"   style="background:var(--cst-surface-primary)">
 					{#each [{ type: 'user', label: '用户', icon: markerUserUrl, clusterIcon: markerUserClusterUrl, color: PIN_COLORS.user, count: userCount }, { type: 'group', label: '群组', icon: markerGroupUrl, clusterIcon: markerGroupClusterUrl, color: PIN_COLORS.group, count: groupCount }, { type: 'moment', label: '瞬间', icon: markerMomentUrl, clusterIcon: markerMomentClusterUrl, color: PIN_COLORS.moment, count: momentCount }] as item, i}
 						{#if i > 0}
-							<div class="h-0.25"  style="background:var(--border-default)"></div>
+							<div class="h-0.25"  style="background:var(--cst-border-default)"></div>
 						{/if}
 						{@const active = activeFilters.has(item.type as PinType)}
 						<button
@@ -220,16 +220,16 @@
 							<img class="w-3.75 h-5.25" src={item.clusterIcon} alt=""  style="opacity:0.65" />
 							<span class="flex-1 text-text-primary text-xs" >{item.label}</span>
 							<span style="font-size:12px;color:{item.color};font-weight:600;">{item.count}</span>
-							<span class="flex items-center justify-center shrink-0" style="width:14px;height:14px;border-radius:4px;background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--border-strong)'};transition:all 0.18s;">
+							<span class="flex items-center justify-center shrink-0" style="width:14px;height:14px;border-radius:4px;background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--cst-border-strong)'};transition:all 0.18s;">
 								{#if active}
 									<Check class="size-2.5"  style="color:white" strokeWidth={3} />
 								{/if}
 							</span>
 						</button>
 					{/each}
-					<div class="h-0.25"  style="background:var(--border-default)"></div>
+					<div class="h-0.25"  style="background:var(--cst-border-default)"></div>
 					<div class="flex items-center gap-2 px-3 py-2">
-						<span style="width:13px;height:13px;border-radius:50%;background:{PIN_COLORS.user};border:2px solid var(--surface-primary);box-shadow:0 0 5px {pinTone('user', 50)};"></span>
+						<span style="width:13px;height:13px;border-radius:50%;background:{PIN_COLORS.user};border:2px solid var(--cst-surface-primary);box-shadow:0 0 5px {pinTone('user', 50)};"></span>
 						<span class="text-text-secondary text-xs" >我的位置</span>
 					</div>
 				</div>
@@ -242,7 +242,7 @@
 			<div
 				data-map-popup
 				class="bg-surface-primary"
-				style="position:absolute;bottom:20px;left:20px;right:20px;z-index:25;border-radius:20px;padding:16px;box-shadow:0 0 0 1px var(--border-default), 0 16px 48px var(--elevation-shadow-dark);"
+				style="position:absolute;bottom:20px;left:20px;right:20px;z-index:25;border-radius:20px;padding:16px;box-shadow:0 0 0 1px var(--cst-border-default), 0 16px 48px var(--cst-elevation-shadow-dark);"
 			>
 				<div class="flex items-center gap-3">
 					<PinMedia pin={selectedPin} size={52} markerWidth={26} markerHeight={35} />
@@ -270,7 +270,7 @@
 							{/if}
 							{#if selectedPin.likes}
 								<span class="flex items-center gap-1">
-									<Heart class="size-2.5"  style="color:var(--status-danger)" strokeWidth={1.5} />
+									<Heart class="size-2.5"  style="color:var(--cst-status-danger)" strokeWidth={1.5} />
 									<span class="text-text-secondary text-xs">{selectedPin.likes}</span>
 								</span>
 							{/if}
@@ -280,7 +280,7 @@
 						<button
 							type="button"
 							class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none bg-accent-default text-text-on-accent"
-							style="font-size:13px;box-shadow:0 4px 14px var(--glow-accent);"
+							style="font-size:13px;box-shadow:0 4px 14px var(--cst-glow-accent);"
 							onclick={() => selectedPin && openPinDetail(selectedPin)}
 						>
 							查看详情
@@ -289,10 +289,10 @@
 						<button
 							type="button"
 							class="hover-btn outline-none flex items-center justify-center rounded-full bg-surface-primary"
-							style="width:36px;height:36px;border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);"
+							style="width:36px;height:36px;border:1px solid var(--cst-border-default);box-shadow:var(--shadow-neu-xs);"
 							onclick={() => (selectedPin = null)}
 						>
-							<X class="size-3.5"  style="color:var(--text-secondary)" strokeWidth={2} />
+							<X class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={2} />
 						</button>
 					</div>
 				</div>

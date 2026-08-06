@@ -65,7 +65,7 @@ referencePoint = loc?.point ?? null;
 	<button
 		type="button"
 		class="hover-btn flex w-full items-center gap-3 rounded-panel border bg-surface-primary p-3 text-left outline-none"
-		style="border-color:var(--border-default);"
+		style="border-color:var(--cst-border-default);"
 		onclick={() => void goto(ROUTES.search)}
 	>
 		<SearchIcon class="size-5 shrink-0 text-accent-default" strokeWidth={1.8} />

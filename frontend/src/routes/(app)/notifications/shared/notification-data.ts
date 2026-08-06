@@ -15,11 +15,11 @@ export interface NotificationItem {
 
 export const TYPE_CONFIG: Record<string, { icon: Component; color: string; label: string }> = {
 	// 点赞语义 = reaction_added(契约已删 moment_liked)。
-	reaction: { icon: Heart, color: 'var(--status-danger)', label: '点赞' },
-	follow: { icon: UserPlus, color: 'var(--accent-default)', label: '关注' },
-	comment: { icon: MessageCircle, color: 'var(--marker-user)', label: '评论' },
-	nearby: { icon: MapPin, color: 'var(--status-online)', label: '附近' },
-	event: { icon: Bell, color: 'var(--status-warning)', label: '活动' }
+	reaction: { icon: Heart, color: 'var(--cst-status-danger)', label: '点赞' },
+	follow: { icon: UserPlus, color: 'var(--cst-accent-default)', label: '关注' },
+	comment: { icon: MessageCircle, color: 'var(--cst-marker-user)', label: '评论' },
+	nearby: { icon: MapPin, color: 'var(--cst-status-online)', label: '附近' },
+	event: { icon: Bell, color: 'var(--cst-status-warning)', label: '活动' }
 };
 
 /**

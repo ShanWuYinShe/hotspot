@@ -18,5 +18,5 @@
 
 <span
 	class={className}
-	style="width:{px}px;height:{px}px;border-radius:9999px;background:{color ?? 'var(--status-online)'};border:2px solid var(--surface-primary);position:absolute;bottom:0;right:0;"
+	style="width:{px}px;height:{px}px;border-radius:9999px;background:{color ?? 'var(--cst-status-online)'};border:2px solid var(--cst-surface-primary);position:absolute;bottom:0;right:0;"
 ></span>

@@ -20,7 +20,7 @@
 
 <div class="animate-fade-in flex {sent ? 'justify-end' : 'justify-start'}">
 	<div
-		class="{sent ? 'bg-accent-default shadow-[0_4px_14px_var(--glow-accent)]' : 'bg-surface-primary shadow-neu-md border border-border-default'} max-w-[76%] px-3.5 py-2.5 {sent
+		class="{sent ? 'bg-accent-default shadow-[0_4px_14px_var(--cst-glow-accent)]' : 'bg-surface-primary shadow-neu-md border border-border-default'} max-w-[76%] px-3.5 py-2.5 {sent
 			? 'rounded-[18px_4px_18px_18px]'
 			: 'rounded-[4px_18px_18px_18px]'}"
 	>

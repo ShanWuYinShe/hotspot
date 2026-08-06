@@ -6,39 +6,39 @@
 /* ── Z-Index Scale ──────────────────────────────────────────────────────
    Single source of truth for stacking order. */
 :root {
-  --z-dropdown: 10;
-  --z-overlay: 40;
-  --z-modal: 50;
-  --z-toast: 60;
+  --cst-z-dropdown: 10;
+  --cst-z-overlay: 40;
+  --cst-z-modal: 50;
+  --cst-z-toast: 60;
 }
 
 /* ── Rounded-rectangle shape system ─────────────────────────────────
    Panels, controls, and compact chips share a deliberate rounded-rectangle
    family. */
 :root {
-  --shape-compact: 0.5rem;
-  --shape-tight: 0.625rem;
-  --shape-small: 0.75rem;
-  --shape-control: 1rem;
-  --shape-relaxed: 1.125rem;
-  --shape-panel: 1.25rem;
-  --shape-feature: 1.5rem;
+  --cst-shape-compact: 0.5rem;
+  --cst-shape-tight: 0.625rem;
+  --cst-shape-small: 0.75rem;
+  --cst-shape-control: 1rem;
+  --cst-shape-relaxed: 1.125rem;
+  --cst-shape-panel: 1.25rem;
+  --cst-shape-feature: 1.5rem;
 }
 
 /* ── System rhythm and interaction tokens ─────────────────────────── */
 :root {
-  --motion-standard: 220ms;
-  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --cst-motion-standard: 220ms;
+  --cst-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* ── Responsive page-content contract ──────────────────────────────── */
 :root {
-  --page-gutter: 1.25rem;
-  --page-content-max: 100%;
+  --cst-page-gutter: 1.25rem;
+  --cst-page-content-max: 100%;
 }
 @media (min-width: 600px) {
-  :root { --page-gutter: 1.5rem; }
+  :root { --cst-page-gutter: 1.5rem; }
 }
 @media (min-width: 1280px) {
-  :root { --page-gutter: 1.75rem; }
+  :root { --cst-page-gutter: 1.75rem; }
 }

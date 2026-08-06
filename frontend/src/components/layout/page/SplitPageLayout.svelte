@@ -38,11 +38,11 @@
 <section
 	data-split-page-layout
 	class="flex h-full min-h-full w-full flex-col"
-	style="background-color:var(--surface-primary);"
+	style="background-color:var(--cst-surface-primary);"
 >
 	{#if isDesktop}
 		<!-- 主区与 rail 之间用 --context-rail-gap 留白分隔（rail 自带 border-left 作边界） -->
-		<div class="flex h-full w-full" style="gap:var(--context-rail-gap);">
+		<div class="flex h-full w-full" style="gap:var(--cst-context-rail-gap);">
 			<!-- 主区：header + 滚动正文 + 固定 footer -->
 			<div class="flex min-w-0 flex-1 flex-col">
 				{#if header}

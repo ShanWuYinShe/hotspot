@@ -28,7 +28,7 @@
 		{#if icon}
 			{@render icon()}
 		{/if}
-		<p class="text-base" style="color:var(--text-secondary);">{title}</p>
+		<p class="text-base" style="color:var(--cst-text-secondary);">{title}</p>
 	</div>
 {:else}
 	<div class={cn('flex flex-col items-center justify-center py-20 gap-3', className)}>

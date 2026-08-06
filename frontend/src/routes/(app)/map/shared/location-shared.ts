@@ -26,15 +26,15 @@ export type SnapState = 'min' | 'mid' | 'max';
 export const SNAP_HEIGHTS: Record<SnapState, number> = { min: SNAP_MIN, mid: SNAP_MID, max: SNAP_MAX };
 
 export const PIN_COLORS: Record<PinType, string> = {
-	user: 'var(--marker-user)',
-	group: 'var(--marker-group)',
-	moment: 'var(--marker-content)'
+	user: 'var(--cst-marker-user)',
+	group: 'var(--cst-marker-group)',
+	moment: 'var(--cst-marker-content)'
 };
 export const PIN_LABELS: Record<PinType, string> = { user: '用户', group: '群组', moment: '瞬间' };
 export const pinTone = (type: PinType, amount: number) =>
 	`color-mix(in srgb, ${PIN_COLORS[type]} ${amount}%, transparent)`;
 export const floatBtnStyle =
-	'background:var(--surface-primary);border:1px solid var(--border-default);box-shadow:0 2px 12px var(--elevation-shadow-dark), 0 1px 3px var(--elevation-shadow-dark);';
+	'background:var(--cst-surface-primary);border:1px solid var(--cst-border-default);box-shadow:0 2px 12px var(--cst-elevation-shadow-dark), 0 1px 3px var(--cst-elevation-shadow-dark);';
 
 export interface MapBounds {
 	minLat: number;

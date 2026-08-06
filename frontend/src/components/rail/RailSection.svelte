@@ -24,7 +24,7 @@
 		<button
 			type="button"
 			class="hover-btn flex items-center gap-0.5 outline-none"
-			style="color:var(--accent-default);"
+			style="color:var(--cst-accent-default);"
 			onclick={onAction}
 		>
 				<span class="text-xs" >{action}</span>

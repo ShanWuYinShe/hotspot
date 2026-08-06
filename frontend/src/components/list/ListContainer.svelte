@@ -40,7 +40,7 @@
 	<!-- bordered：唯一外框 + 行分隔（gap-px + 容器底色形成 1px 线） -->
 	<div
 		class={cn('flex flex-col gap-px overflow-hidden rounded-control border', className)}
-		style={`background:var(--border-default);border-color:var(--border-default);${styleProp}`}
+		style={`background:var(--cst-border-default);border-color:var(--cst-border-default);${styleProp}`}
 		aria-label={ariaLabel}
 	>
 		{@render children()}

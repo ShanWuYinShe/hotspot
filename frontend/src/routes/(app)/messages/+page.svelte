@@ -159,7 +159,7 @@
 								showNewChat = true;
 							}}
 						>
-							<Plus class="size-3.5"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+							<Plus class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 						</button>
 					{/snippet}
 					{#snippet below()}
@@ -182,7 +182,7 @@
 								onclick={() => selectChat(c)}
 							>
 								<div class="relative">
-									<div class="avatar-entry__avatar rounded-full overflow-hidden" style="width:36px;height:36px;border:{selectedId === c.id ? '2px solid var(--accent-default)' : '1.5px solid var(--border-default)'};">
+									<div class="avatar-entry__avatar rounded-full overflow-hidden" style="width:36px;height:36px;border:{selectedId === c.id ? '2px solid var(--cst-accent-default)' : '1.5px solid var(--cst-border-default)'};">
 										<img src={c.avatar} alt={c.name} class="w-full h-full object-cover" />
 									</div>
 									<OnlineDot size="sm" />
@@ -228,7 +228,7 @@
 				<div class="h-full">
 					<EmptyState title="选择一个会话" description="从左侧选择联系人开始聊天" class="h-full justify-center py-0!" iconSize={72}>
 						{#snippet icon()}
-							<MessageSquareDashed class="size-7"  style="color:var(--text-secondary);opacity:0.5" strokeWidth={1.25} />
+							<MessageSquareDashed class="size-7"  style="color:var(--cst-text-secondary);opacity:0.5" strokeWidth={1.25} />
 						{/snippet}
 					</EmptyState>
 				</div>
@@ -289,7 +289,7 @@
 						showNewChat = true;
 					}}
 				>
-					<Plus class="size-4"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+					<Plus class="size-4"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</button>
 			</div>
 		{/snippet}
@@ -313,7 +313,7 @@
 							onclick={() => void goto(ROUTES.message(chat.peerUserId || chat.id))}
 						>
 							<div class="relative">
-								<div class="avatar-entry__avatar rounded-full overflow-hidden bg-surface-primary size-13"  style="padding:2px;border:2px solid var(--accent-default)">
+								<div class="avatar-entry__avatar rounded-full overflow-hidden bg-surface-primary size-13"  style="padding:2px;border:2px solid var(--cst-accent-default)">
 									<img src={chat.avatar} alt={chat.name} class="w-full h-full object-cover rounded-full" />
 								</div>
 								<OnlineDot size="lg" />
@@ -331,7 +331,7 @@
 		{#if filtered.length === 0}
 			<EmptyState bare class="py-12!" title="没有找到会话">
 				{#snippet icon()}
-					<MessageSquareDashed class="size-9"  style="color:var(--text-secondary);opacity:0.5" strokeWidth={1.25} />
+					<MessageSquareDashed class="size-9"  style="color:var(--cst-text-secondary);opacity:0.5" strokeWidth={1.25} />
 				{/snippet}
 			</EmptyState>
 		{:else}
@@ -349,7 +349,7 @@
 	</ContentColumn>
 
 	<Dialog.Root open={showNewChat} onOpenChange={(next) => (next ? undefined : (showNewChat = false))}>
-		<Dialog.Content side="bottom" class="overflow-hidden" style="height:85%;box-shadow:var(--elevation-sheet);">
+		<Dialog.Content side="bottom" class="overflow-hidden" style="height:85%;box-shadow:var(--cst-elevation-sheet);">
 			<NewConversationSheet
 				defaultTab={newChatTab}
 				onClose={() => (showNewChat = false)}
@@ -360,7 +360,7 @@
 	</Dialog.Root>
 
 	<Dialog.Root open={showCreateGroup} onOpenChange={(next) => (next ? undefined : (showCreateGroup = false))}>
-		<Dialog.Content side="bottom" class="overflow-hidden" style="height:92%;box-shadow:var(--elevation-sheet);">
+		<Dialog.Content side="bottom" class="overflow-hidden" style="height:92%;box-shadow:var(--cst-elevation-sheet);">
 			<CreateGroupSheet
 				onClose={() => (showCreateGroup = false)}
 				onCreated={(groupId) => {

@@ -42,12 +42,12 @@
 	onClick={onClick}
 	ariaLabel={`打开与 ${chat.name} 的会话`}
 	class="flex items-center gap-3.5 rounded-control"
-	style="padding:{compact ? '10px 16px' : '12px 16px'};box-shadow:{isSelected ? '0 3px 12px var(--glow-accent)' : 'none'};"
+	style="padding:{compact ? '10px 16px' : '12px 16px'};box-shadow:{isSelected ? '0 3px 12px var(--cst-glow-accent)' : 'none'};"
 >
 	<span class="relative shrink-0">
 		<span
 			class="block overflow-hidden rounded-full"
-			style="width:{compact ? 40 : 44}px;height:{compact ? 40 : 44}px;border:{isSelected ? '1.5px solid var(--border-inverse)' : '1.5px solid var(--border-default)'};"
+			style="width:{compact ? 40 : 44}px;height:{compact ? 40 : 44}px;border:{isSelected ? '1.5px solid var(--cst-border-inverse)' : '1.5px solid var(--cst-border-default)'};"
 		>
 			<img src={chat.avatar} alt="" class="h-full w-full object-cover" />
 		</span>
@@ -73,7 +73,7 @@
 	{#if chat.unread > 0}
 		<span
 			class="flex shrink-0 items-center justify-center rounded-full text-xs font-semibold {isSelected ? 'bg-content-inverse text-accent-default' : 'bg-accent-default text-text-on-accent'}"
-			style="width:20px;height:20px;{isSelected ? '' : 'box-shadow:0 2px 8px var(--glow-accent);'}"
+			style="width:20px;height:20px;{isSelected ? '' : 'box-shadow:0 2px 8px var(--cst-glow-accent);'}"
 		>
 			{chat.unread}
 		</span>

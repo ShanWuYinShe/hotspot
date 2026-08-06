@@ -22,13 +22,13 @@
 	let hovered = $state(false);
 	const showHover = $derived(hovered && !isActive);
 
-	const hoverBg = $derived(showHover ? 'var(--surface-navigation-hover)' : 'transparent');
+	const hoverBg = $derived(showHover ? 'var(--cst-surface-navigation-hover)' : 'transparent');
 </script>
 
 <button
 	type="button"
 	class="tap-985 relative flex h-10 outline-none {collapsed ? 'w-10 self-center items-center justify-center rounded-tight' : 'w-full items-center gap-3 rounded-tight px-3 text-left'}"
-	style="background:{isActive ? 'var(--accent-default)' : hoverBg};color:{isActive ? 'var(--content-on-accent)' : showHover ? 'var(--text-primary)' : 'var(--text-secondary)'};box-shadow:{isActive ? 'var(--elevation-navigation-active)' : 'none'};transition:background 0.16s ease, color 0.16s ease, box-shadow 0.2s ease;"
+	style="background:{isActive ? 'var(--cst-accent-default)' : hoverBg};color:{isActive ? 'var(--cst-content-on-accent)' : showHover ? 'var(--cst-text-primary)' : 'var(--cst-text-secondary)'};box-shadow:{isActive ? 'var(--cst-elevation-navigation-active)' : 'none'};transition:background 0.16s ease, color 0.16s ease, box-shadow 0.2s ease;"
 	aria-current={isActive ? 'page' : undefined}
 	data-active={isActive ? 'true' : undefined}
 	aria-label={item.label}
@@ -40,10 +40,10 @@
 	<!-- 左侧指示条 — 仅在 hover 时显示，主题色，细（选中态由实心填充表达） -->
 	<span
 		aria-hidden="true"
-		style="position:absolute;left:4px;top:50%;width:3px;height:{showHover ? 16 : 0}px;margin-top:{showHover ? -8 : 0}px;border-radius:2px;background:var(--accent-default);opacity:{showHover ? 0.9 : 0};transition:height 0.18s ease, opacity 0.18s ease, margin-top 0.18s ease;pointer-events:none;"
+		style="position:absolute;left:4px;top:50%;width:3px;height:{showHover ? 16 : 0}px;margin-top:{showHover ? -8 : 0}px;border-radius:2px;background:var(--cst-accent-default);opacity:{showHover ? 0.9 : 0};transition:height 0.18s ease, opacity 0.18s ease, margin-top 0.18s ease;pointer-events:none;"
 	></span>
 	<Icon
-		style="width:17px;height:17px;shrink:0;color:{isActive ? 'var(--content-on-accent)' : showHover ? 'var(--accent-default)' : 'var(--text-secondary)'};transition:color 0.16s ease;"
+		style="width:17px;height:17px;shrink:0;color:{isActive ? 'var(--cst-content-on-accent)' : showHover ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};transition:color 0.16s ease;"
 		strokeWidth={isActive ? 2 : 1.6}
 	/>
 	<span

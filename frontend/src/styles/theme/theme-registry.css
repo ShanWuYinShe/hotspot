@@ -9,32 +9,32 @@
   /* shadcn/ui palette — only the subset this project actually uses
      （--border/--ring/--background/--foreground 供 base.css @apply，
      --destructive 供 CreateSheet text-destructive） */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--cst-background);
+  --color-foreground: var(--cst-foreground);
+  --color-destructive: var(--cst-destructive);
+  --color-border: var(--cst-border);
+  --color-ring: var(--cst-ring);
+  --radius-sm: calc(var(--cst-radius) - 4px);
+  --radius-xl: calc(var(--cst-radius) + 4px);
 
   /* Semantic palette — enables bg-surface-primary, text-text-primary etc. */
-  --color-surface-primary: var(--surface-primary);
-  --color-surface-page: var(--surface-page);
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-text-on-accent: var(--text-on-accent);
-  --color-accent-default: var(--accent-default);
-  --color-accent-soft: var(--accent-soft);
-  --color-accent-border: var(--accent-border);
-  --color-border-default: var(--border-default);
-  --color-border-strong: var(--border-strong);
-  --color-status-online: var(--status-online);
-  --color-status-danger: var(--status-danger);
-  --color-status-warning: var(--status-warning);
+  --color-surface-primary: var(--cst-surface-primary);
+  --color-surface-page: var(--cst-surface-page);
+  --color-text-primary: var(--cst-text-primary);
+  --color-text-secondary: var(--cst-text-secondary);
+  --color-text-on-accent: var(--cst-text-on-accent);
+  --color-accent-default: var(--cst-accent-default);
+  --color-accent-soft: var(--cst-accent-soft);
+  --color-accent-border: var(--cst-accent-border);
+  --color-border-default: var(--cst-border-default);
+  --color-border-strong: var(--cst-border-strong);
+  --color-status-online: var(--cst-status-online);
+  --color-status-danger: var(--cst-status-danger);
+  --color-status-warning: var(--cst-status-warning);
 
   /* Color-mix presets（引用 primitive 层，避免自引用） */
-  --color-accent-bg: var(--pr-accent-bg);
-  --color-danger-bg: var(--pr-danger-bg);
+  --color-accent-bg: var(--cst-pr-accent-bg);
+  --color-danger-bg: var(--cst-pr-danger-bg);
 
   /* Font size scale — Tailwind v4 字号命名空间必须是 --text-*（--font-size-* 不生成
      utility，此前导致 text-xxs 全站失效）。严格对齐设计刻度：xxs=10 / xs=11 / sm=12 /
@@ -45,13 +45,13 @@
   --text-base: 13px;
 
   /* Border radius scale — Figma Make shape 系统（rounded-rectangle family） */
-  --radius-compact: var(--shape-compact);
-  --radius-tight: var(--shape-tight);
-  --radius-small: var(--shape-small);
-  --radius-control: var(--shape-control);
-  --radius-relaxed: var(--shape-relaxed);
-  --radius-panel: var(--shape-panel);
-  --radius-feature: var(--shape-feature);
+  --radius-compact: var(--cst-shape-compact);
+  --radius-tight: var(--cst-shape-tight);
+  --radius-small: var(--cst-shape-small);
+  --radius-control: var(--cst-shape-control);
+  --radius-relaxed: var(--cst-shape-relaxed);
+  --radius-panel: var(--cst-shape-panel);
+  --radius-feature: var(--cst-shape-feature);
   --radius-sheet: 1.75rem;
 
   /* System rhythm — 动效 token 注册（ease 用字面量，避免 @theme inline 自引用） */
@@ -60,26 +60,27 @@
   /* Interaction / shell semantic colors（仅注册有 Tailwind 类消费的；
      其余 token 如 --surface-hover/--navigation-*/--marker-* 组件经 var() 直用，
      无需类注册） */
-  --color-surface-raised: var(--surface-raised);
-  --color-content-inverse: var(--content-inverse);
-  --color-content-inverse-muted: var(--content-inverse-muted);
-  --color-content-inverse-secondary: var(--content-inverse-secondary);
-  --color-navigation-active-indicator: var(--navigation-active-indicator);
-  --color-surface-overlay: var(--surface-overlay);
-  --color-surface-overlay-strong: var(--surface-overlay-strong);
-  --color-surface-overlay-soft: var(--surface-overlay-soft);
+  --color-surface-raised: var(--cst-surface-raised);
+  --color-surface-scrim: var(--cst-surface-scrim);
+  --color-content-inverse: var(--cst-content-inverse);
+  --color-content-inverse-muted: var(--cst-content-inverse-muted);
+  --color-content-inverse-secondary: var(--cst-content-inverse-secondary);
+  --color-navigation-active-indicator: var(--cst-navigation-active-indicator);
+  --color-surface-overlay: var(--cst-surface-overlay);
+  --color-surface-overlay-strong: var(--cst-surface-overlay-strong);
+  --color-surface-overlay-soft: var(--cst-surface-overlay-soft);
 
   /* Interaction feedback fill tokens（按压/悬停实底填充） */
-  --color-interactive-hover-fill: var(--interactive-hover-fill);
-  --color-interactive-active: var(--interactive-active);
-  --color-content-inverse-secondary: var(--content-inverse-secondary);
+  --color-interactive-hover-fill: var(--cst-interactive-hover-fill);
+  --color-interactive-active: var(--cst-interactive-active);
+  --color-content-inverse-secondary: var(--cst-content-inverse-secondary);
 
   /* Neumorphic elevation shadows — 归一化手抄 box-shadow 分布
      原值归到最近刻度（blur 6~8px 差异视觉无感知），生成 shadow-neu-* 工具类 */
-  --shadow-neu-xs: 3px 3px 7px var(--elevation-shadow-dark), -3px -3px 7px var(--elevation-shadow-light);
-  --shadow-neu-md: 4px 4px 9px var(--elevation-shadow-dark), -4px -4px 9px var(--elevation-shadow-light);
-  --shadow-neu-lg: 5px 5px 12px var(--elevation-shadow-dark), -5px -5px 12px var(--elevation-shadow-light);
-  --shadow-neu-xl: 6px 6px 14px var(--elevation-shadow-dark), -6px -6px 14px var(--elevation-shadow-light);
-  --shadow-neu-inset-xs: inset 2px 2px 5px var(--elevation-shadow-dark), inset -2px -2px 5px var(--elevation-shadow-light);
-  --shadow-neu-inset-sm: inset 4px 4px 10px var(--elevation-shadow-dark), inset -4px -4px 10px var(--elevation-shadow-light);
+  --shadow-neu-xs: 3px 3px 7px var(--cst-elevation-shadow-dark), -3px -3px 7px var(--cst-elevation-shadow-light);
+  --shadow-neu-md: 4px 4px 9px var(--cst-elevation-shadow-dark), -4px -4px 9px var(--cst-elevation-shadow-light);
+  --shadow-neu-lg: 5px 5px 12px var(--cst-elevation-shadow-dark), -5px -5px 12px var(--cst-elevation-shadow-light);
+  --shadow-neu-xl: 6px 6px 14px var(--cst-elevation-shadow-dark), -6px -6px 14px var(--cst-elevation-shadow-light);
+  --shadow-neu-inset-xs: inset 2px 2px 5px var(--cst-elevation-shadow-dark), inset -2px -2px 5px var(--cst-elevation-shadow-light);
+  --shadow-neu-inset-sm: inset 4px 4px 10px var(--cst-elevation-shadow-dark), inset -4px -4px 10px var(--cst-elevation-shadow-light);
 }

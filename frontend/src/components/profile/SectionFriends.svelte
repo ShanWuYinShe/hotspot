@@ -56,7 +56,7 @@
 			ariaLabel={`查看 ${f.name} 的主页`}
 		>
 			{#snippet avatarBadge()}
-				<OnlineDot size="md" color={f.online ? undefined : 'var(--text-secondary)'} class={f.online ? '' : 'opacity-50'} />
+				<OnlineDot size="md" color={f.online ? undefined : 'var(--cst-text-secondary)'} class={f.online ? '' : 'opacity-50'} />
 			{/snippet}
 			{#snippet nameBadge()}
 				<TagPill size="sm">{f.tag}</TagPill>
@@ -68,8 +68,8 @@
 				<div class="flex flex-col gap-1.5 shrink-0">
 					<button
 						type="button"
-						class="hover-btn tap-93 flex items-center justify-center gap-1 rounded-full bg-accent-default px-2.5 py-1.5 text-xs text-white outline-none"
-						style="box-shadow:0 3px 8px var(--glow-accent);"
+						class="hover-btn tap-93 flex items-center justify-center gap-1 rounded-full bg-accent-default px-2.5 py-1.5 text-xs text-text-on-accent outline-none"
+						style="box-shadow:0 3px 8px var(--cst-glow-accent);"
 						onclick={(e) => {
 							e.stopPropagation();
 							void goto(ROUTES.message(f.id));
@@ -81,7 +81,7 @@
 					<button
 						type="button"
 						class="hover-btn tap-93 flex items-center justify-center gap-1 rounded-full bg-surface-primary px-2.5 py-1.5 text-xs text-text-secondary outline-none"
-						style="border:1px solid var(--border-default);box-shadow:var(--shadow-neu-xs);"
+						style="border:1px solid var(--cst-border-default);box-shadow:var(--shadow-neu-xs);"
 						onclick={(e) => {
 							e.stopPropagation();
 							void goto(`${ROUTES.user(f.id)}?from=relationships`);

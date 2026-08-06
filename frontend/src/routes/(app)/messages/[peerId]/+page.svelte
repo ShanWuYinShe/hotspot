@@ -6,6 +6,6 @@
 	let { params }: { params: { peerId: string } } = $props();
 </script>
 
-<div class="flex flex-col" style="height:100%;background-color:var(--surface-primary);">
+<div class="flex flex-col" style="height:100%;background-color:var(--cst-surface-primary);">
 	<ChatView peerUserId={params.peerId ?? ''} showBackButton onBack={() => history.back()} />
 </div>

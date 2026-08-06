@@ -114,9 +114,9 @@
 						>
 							<span
 								class="mb-2 block h-5 w-5 rounded-full"
-								style="background:{item.swatch};box-shadow:0 0 0 3px {selected ? 'var(--accent-soft)' : 'transparent'};"
+								style="background:{item.swatch};box-shadow:0 0 0 3px {selected ? 'var(--cst-accent-soft)' : 'transparent'};"
 							></span>
-							<span class="block text-sm font-medium" style="color:var(--text-primary);">{item.label}</span>
+							<span class="block text-sm font-medium" style="color:var(--cst-text-primary);">{item.label}</span>
 							<span class="mt-0.5 block text-xxs text-text-secondary">{item.note}</span>
 						</button>
 					{/each}
@@ -128,14 +128,14 @@
 				onclick={toggleDark}
 				aria-pressed={theme.isDark}
 				class="hover-btn surface-ghost mt-2 flex w-full items-center justify-between rounded-small px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
-				style="color:var(--text-primary);"
+				style="color:var(--cst-text-primary);"
 			>
 				<span class="flex items-center gap-2">
 					<span class="flex h-6.5 w-6.5 items-center justify-center rounded-full bg-accent-soft">
 						{#if theme.isDark}
-							<Sun size={13} color="var(--accent-default)" />
+							<Sun size={13} color="var(--cst-accent-default)" />
 						{:else}
-							<Moon size={13} color="var(--accent-default)" />
+							<Moon size={13} color="var(--cst-accent-default)" />
 						{/if}
 					</span>
 					<span>
@@ -143,10 +143,10 @@
 						<span class="block text-xxs text-text-secondary">点击切换</span>
 					</span>
 				</span>
-				<span class="relative h-5 w-8.5 overflow-hidden rounded-full" style="background:{theme.isDark ? 'var(--accent-default)' : 'var(--border-strong)'};">
+				<span class="relative h-5 w-8.5 overflow-hidden rounded-full" style="background:{theme.isDark ? 'var(--cst-accent-default)' : 'var(--cst-border-strong)'};">
 					<span
 						class="absolute top-0.75 h-3.5 w-3.5 rounded-full"
-						style="background:var(--surface-control-thumb);box-shadow:var(--elevation-control-thumb);left:{theme.isDark ? 17 : 3}px;transition:left 0.2s cubic-bezier(0.34,1.56,0.64,1);"
+						style="background:var(--cst-surface-control-thumb);box-shadow:var(--cst-elevation-control-thumb);left:{theme.isDark ? 17 : 3}px;transition:left 0.2s cubic-bezier(0.34,1.56,0.64,1);"
 					></span>
 				</span>
 			</button>
@@ -156,26 +156,26 @@
 					type="button"
 					onclick={handleMockToggle}
 					class="hover-btn mt-2 flex w-full items-center justify-between rounded-small ring-1 ring-border-default px-3 py-2.5 text-left outline-none transition-colors hover:bg-accent-soft focus-visible:ring-2 focus-visible:ring-accent-default"
-					style="color:var(--text-primary);"
+					style="color:var(--cst-text-primary);"
 				>
 					<span class="flex items-center gap-2">
 						<span class="flex h-6.5 w-6.5 items-center justify-center rounded-full bg-accent-soft">
-							<Database size={13} color="var(--accent-default)" />
+							<Database size={13} color="var(--cst-accent-default)" />
 						</span>
 						<span>
 							<span class="block text-sm font-medium">API 数据来源</span>
 							<span class="block text-xxs text-text-secondary">{mockEnabled ? '模拟数据' : '真实后端'}</span>
 						</span>
 					</span>
-					<span class="relative h-5 w-8.5 overflow-hidden rounded-full" style="background:{mockEnabled ? 'var(--accent-default)' : 'var(--border-strong)'};">
+					<span class="relative h-5 w-8.5 overflow-hidden rounded-full" style="background:{mockEnabled ? 'var(--cst-accent-default)' : 'var(--cst-border-strong)'};">
 						<span
-							class="absolute top-0.75 h-3.5 w-3.5 rounded-full bg-content-inverse shadow-[var(--elevation-control-thumb)]"
+							class="absolute top-0.75 h-3.5 w-3.5 rounded-full bg-content-inverse shadow-[var(--cst-elevation-control-thumb)]"
 							style="left:{mockEnabled ? 17 : 3}px;transition:left 0.2s cubic-bezier(0.34,1.56,0.64,1);"
 						></span>
 					</span>
 				</button>
 
-				<div class="mt-2 rounded-small ring-1 ring-border-default px-3 py-2.5" style="color:var(--text-primary);">
+				<div class="mt-2 rounded-small ring-1 ring-border-default px-3 py-2.5" style="color:var(--cst-text-primary);">
 					<span class="block text-sm font-medium">模拟登录态</span>
 					<span class="mb-2 block text-xxs text-text-secondary">影响 login/register/guest/reset 的返回</span>
 					<ListContainer>
@@ -188,7 +188,7 @@
 							>
 								<span class="{scenario === s.id ? 'text-content-inverse' : 'text-text-primary'} text-xs">{s.label}</span>
 								{#if scenario === s.id}
-									<Check size={12} style="color:var(--content-inverse);" />
+									<Check size={12} style="color:var(--cst-content-inverse);" />
 								{/if}
 							</ListItem>
 						{/each}
@@ -197,7 +197,7 @@
 						type="button"
 						onclick={() => void resetLoggedOut()}
 						class="mt-2 w-full rounded-compact ring-1 ring-border-default px-2 py-1.5 text-xs outline-none transition-colors hover:bg-accent-soft"
-						style="color:var(--text-secondary);"
+						style="color:var(--cst-text-secondary);"
 					>
 						重置为未登录（匿名浏览）
 					</button>

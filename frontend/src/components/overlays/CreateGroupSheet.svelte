@@ -72,9 +72,9 @@
 		<div class="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
 			<div
 				class="flex items-center justify-center rounded-full bg-accent-default"
-				style="width:72px;height:72px;box-shadow:0 8px 24px var(--glow-accent);"
+				style="width:72px;height:72px;box-shadow:0 8px 24px var(--cst-glow-accent);"
 			>
-				<Check class="size-8"  style="color:var(--text-on-accent)" strokeWidth={2.5} />
+				<Check class="size-8"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
 			</div>
 			<div>
 				<p class="text-xl font-semibold text-text-primary">群组已创建！</p>
@@ -84,7 +84,7 @@
 				type="button"
 				onclick={onClose}
 				class="hover-btn px-8 py-3 rounded-full outline-none bg-accent-default text-text-on-accent text-base font-medium"
-				style="box-shadow:0 6px 20px var(--glow-accent);"
+				style="box-shadow:0 6px 20px var(--cst-glow-accent);"
 			>
 				完成
 			</button>
@@ -96,9 +96,9 @@
 				<button
 					type="button"
 					class="hover-btn flex flex-col items-center justify-center gap-2 rounded-feature outline-none bg-surface-primary"
-					style="width:100%;height:110px;box-shadow:var(--shadow-neu-inset-sm);border:2px dashed var(--border-default);"
+					style="width:100%;height:110px;box-shadow:var(--shadow-neu-inset-sm);border:2px dashed var(--cst-border-default);"
 				>
-					<Camera class="size-6.5"  style="color:var(--text-secondary)" strokeWidth={1.25} />
+					<Camera class="size-6.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.25} />
 					<span class="text-sm text-text-secondary">添加封面图片</span>
 				</button>
 			</div>
@@ -145,8 +145,8 @@
 							onclick={() => (category = cat)}
 							class="hover-btn px-3.5 py-1.5 rounded-full outline-none text-sm {category === cat ? 'bg-accent-default text-text-on-accent font-medium' : 'bg-surface-primary text-text-secondary'}"
 							style={category === cat
-								? 'box-shadow:0 3px 8px var(--glow-accent);'
-								: 'box-shadow:var(--shadow-neu-xs);border:1px solid var(--border-default);'}
+								? 'box-shadow:0 3px 8px var(--cst-glow-accent);'
+								: 'box-shadow:var(--shadow-neu-xs);border:1px solid var(--cst-border-default);'}
 						>
 							{cat}
 						</button>
@@ -157,13 +157,13 @@
 			<!-- Privacy toggle -->
 			<div
 				class="flex items-center justify-between px-4 py-3.5 rounded-relaxed bg-surface-primary"
-				style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--border-default);"
+				style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--cst-border-default);"
 			>
 				<div class="flex items-center gap-3">
 					{#if isPrivate}
-						<Lock class="size-4.5"  style="color:var(--accent-default)" strokeWidth={1.5} />
+						<Lock class="size-4.5"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
 					{:else}
-						<Globe class="size-4.5"  style="color:var(--accent-default)" strokeWidth={1.5} />
+						<Globe class="size-4.5"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
 					{/if}
 					<div>
 						<p class="text-base text-text-primary">{isPrivate ? '私密群组' : '公开群组'}</p>
@@ -183,10 +183,10 @@
 			<!-- Approval toggle（requires_approval：审核通过后才算真正加入） -->
 			<div
 				class="flex items-center justify-between px-4 py-3.5 rounded-relaxed bg-surface-primary"
-				style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--border-default);"
+				style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--cst-border-default);"
 			>
 				<div class="flex items-center gap-3">
-					<Check style="width:18px;height:18px;color:{requiresApproval ? 'var(--accent-default)' : 'var(--text-secondary)'};" strokeWidth={1.5} />
+					<Check style="width:18px;height:18px;color:{requiresApproval ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};" strokeWidth={1.5} />
 					<div>
 						<p class="text-base text-text-primary">新人需审核</p>
 						<p class="text-xs text-text-secondary">
@@ -205,14 +205,14 @@
 			<!-- Location -->
 			<div
 				class="flex items-center gap-2.5 px-4 py-3 rounded-relaxed bg-surface-primary"
-				style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--border-default);"
+				style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--cst-border-default);"
 			>
-				<MapPin class="size-4 shrink-0"  style="color:var(--accent-default)" strokeWidth={1.5} />
+				<MapPin class="size-4 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
 				<div class="flex-1 min-w-0">
 					<p class="text-base text-text-primary">{locationName || '自动定位中…'}</p>
 					<p class="text-xs text-text-secondary">自动定位 — 可修改</p>
 				</div>
-				<ChevronRight class="size-3.25"  style="color:var(--text-secondary)" strokeWidth={1.5} />
+				<ChevronRight class="size-3.25"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 			</div>
 
 			{#if createError}
@@ -225,7 +225,7 @@
 				onclick={() => void handleCreate()}
 				disabled={!canCreate || creating}
 				class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-panel outline-none text-base font-medium {canCreate && !creating ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
-				style="box-shadow:{canCreate && !creating ? '0 6px 22px var(--glow-accent)' : 'var(--shadow-neu-inset-sm)'};border:{canCreate && !creating ? 'none' : '1px solid var(--border-default)'};transition:all 0.22s ease;cursor:{canCreate && !creating ? 'pointer' : 'not-allowed'};"
+				style="box-shadow:{canCreate && !creating ? '0 6px 22px var(--cst-glow-accent)' : 'var(--shadow-neu-inset-sm)'};border:{canCreate && !creating ? 'none' : '1px solid var(--cst-border-default)'};transition:all 0.22s ease;cursor:{canCreate && !creating ? 'pointer' : 'not-allowed'};"
 			>
 		{creating ? '创建中…' : '创建群组'}
 	</button>

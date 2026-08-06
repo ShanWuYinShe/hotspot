@@ -10,23 +10,23 @@
    各主题实际值由 themes/{vibrant,forest}.css 覆盖（这里仅是首帧 fallback）。
 ────────────────────────────────────────────────────────────────────── */
 :root {
-  --font-size: 16px;
-  --background: #ffffff;
-  --foreground: oklch(0.145 0 0);
-  --destructive: #d4183d;
-  --border: rgba(0, 0, 0, 0.1);
-  --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
+  --cst-font-size: 16px;
+  --cst-background: #ffffff;
+  --cst-foreground: oklch(0.145 0 0);
+  --cst-destructive: #d4183d;
+  --cst-border: rgba(0, 0, 0, 0.1);
+  --cst-ring: oklch(0.708 0 0);
+  --cst-radius: 0.625rem;
+  --cst-font-weight-medium: 500;
+  --cst-font-weight-normal: 400;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --border: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
+  --cst-background: oklch(0.145 0 0);
+  --cst-foreground: oklch(0.985 0 0);
+  --cst-destructive: oklch(0.396 0.141 25.723);
+  --cst-border: oklch(0.269 0 0);
+  --cst-ring: oklch(0.439 0 0);
+  --cst-font-weight-medium: 500;
+  --cst-font-weight-normal: 400;
 }
