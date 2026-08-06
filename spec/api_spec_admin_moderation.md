@@ -15,11 +15,10 @@
 |-----|------|------|
 
 | `POST /api/v1/admin/users/search` | 搜索用户 | 必须 + `admin.users.read` |
-| `POST /api/v1/admin/users/get_detail` | 用户详情 | 必须 + `admin.users.read` |
-| `POST /api/v1/admin/users/ban` | 封禁用户 | 必须 + `admin.users.write` |
-| `POST /api/v1/admin/users/unban` | 解封用户 | 必须 + `admin.users.write` |
+| `POST /api/v1/admin/users/open_the_door` | 用户详情 | 必须 + `admin.users.read` |
+| `POST /api/v1/admin/users/set_ban` | 设置用户封禁状态（两态统一） | 必须 + `admin.users.write` |
 | `POST /api/v1/admin/groups/search` | 搜索群组 | 必须 + `admin.groups.read` |
-| `POST /api/v1/admin/groups/get_detail` | 群组详情 | 必须 + `admin.groups.read` |
+| `POST /api/v1/admin/groups/open_the_door` | 群组详情 | 必须 + `admin.groups.read` |
 | `POST /api/v1/admin/groups/dismiss` | 解散群组 | 必须 + `admin.groups.write` |
 | `POST /api/v1/admin/reports/list` | 举报列表（按状态/类型过滤） | 必须 + `admin.reports.read` |
 | `POST /api/v1/admin/reports/handle` | 处理举报 | 必须 + `admin.reports.write` |
@@ -99,7 +98,7 @@ interface AdminUserItem extends UserItem {
 
 ---
 
-### POST /api/v1/admin/users/get_detail
+### POST /api/v1/admin/users/open_the_door
 
 获取用户详情（管理员）。
 
@@ -118,9 +117,11 @@ interface AdminUserOpenTheDoorRequest {
 
 ---
 
-### POST /api/v1/admin/users/ban
+### POST /api/v1/admin/users/set_ban
 
-封禁用户（管理员）。
+设置用户封禁状态（两态统一端点，管理员）。
+
+`active=true`：封禁用户。`active=false`：解封用户——对未处于封禁状态的用户调用视为 no-op，返回成功（与 group `members/set_ban` 一致，遵循设状态操作重复达同状态应成功的业界共识）。
 
 - **认证**: 必须 + `admin.users.write`
 
@@ -128,43 +129,21 @@ interface AdminUserOpenTheDoorRequest {
 - 禁止封禁自身（返回 `10400`）
 - 普通管理员禁止封禁其他管理员（返回 `10200`）
 - 封禁超级管理员仅限超级管理员执行（返回 `10200`）
-- 封禁操作会记录审计日志
+- 封禁/解封操作均记录审计日志（含 no-op 解封尝试，便于审计追溯）
 
-**Request**: `AdminBanUserRequest`
+**Request**: `AdminSetUserBanRequest`
 ```typescript
-interface AdminBanUserRequest {
+interface AdminSetUserBanRequest {
   user_id: string;
-  reason?: string;
-  duration_days?: number;  // 不提供或 0 = 永久封禁
+  active: boolean;        // true=封禁，false=解封
+  reason?: string;        // 封禁/解封原因（0-500 字符）
+  duration_days?: number; // 仅 active=true：封禁天数，不提供或 0 = 永久封禁；active=false 时忽略
 }
 ```
 
 **Response**: `ApiResponse`
 
 **错误码**: `10200` `10300` `10400`
-
----
-
-### POST /api/v1/admin/users/unban
-
-解封用户（管理员）。对未处于封禁状态的用户调用视为 no-op，返回成功（与 group `members/unban` 一致，遵循设状态操作重复达同状态应成功的业界共识）。
-
-- **认证**: 必须 + `admin.users.write`
-
-**安全约束**：
-- 解封操作会记录审计日志（含 no-op 解封尝试，便于审计追溯）
-
-**Request**: `AdminUnbanUserRequest`
-```typescript
-interface AdminUnbanUserRequest {
-  user_id: string;
-  reason?: string;  // 解封原因（0-500 字符）
-}
-```
-
-**Response**: `ApiResponse`
-
-**错误码**: `10200` `10300`
 
 ---
 
@@ -197,7 +176,7 @@ interface AdminGroupItem extends GroupItem {
 
 ---
 
-### POST /api/v1/admin/groups/get_detail
+### POST /api/v1/admin/groups/open_the_door
 
 获取群组详情（管理员）。
 

@@ -19,19 +19,18 @@
 |-----|------|------|
 
 | `POST /api/v1/groups/search` | 搜索群组（支持关键字/标签/位置组合） | 可选 |
-| `POST /api/v1/groups/get_detail` | 群组详情 | 可选 |
+| `POST /api/v1/groups/open_the_door` | 群组详情 | 可选 |
 | `POST /api/v1/groups/create` | 创建群组 | 必须 |
 | `POST /api/v1/groups/update` | 更新群组 | 必须 |
 | `POST /api/v1/groups/dismiss` | 解散群组 | 必须 |
 | `POST /api/v1/groups/members/list` | 成员列表 | 可选 |
 | `POST /api/v1/groups/members/search` | 搜索成员 | 可选 |
 | `POST /api/v1/groups/members/invite` | 邀请成员 | 必须 |
-| `POST /api/v1/groups/members/invites/list` | 我发出的邀请列表 | 必须 |
-| `POST /api/v1/groups/members/invites/revoke` | 撤销已发邀请 | 必须 |
+| `POST /api/v1/groups/invites/sent/list` | 我发出的邀请列表 | 必须 |
+| `POST /api/v1/groups/invites/sent/revoke` | 撤销已发邀请 | 必须 |
 | `POST /api/v1/groups/members/set_role` | 设置角色 | 必须 |
 | `POST /api/v1/groups/members/set_mute` | 设置禁言状态（两态统一） | 必须 |
-| `POST /api/v1/groups/members/ban` | 封禁成员 | 必须 |
-| `POST /api/v1/groups/members/unban` | 解除封禁 | 必须 |
+| `POST /api/v1/groups/members/set_ban` | 设置封禁状态（两态统一） | 必须 |
 | `POST /api/v1/groups/members/list_banned` | 封禁列表 | 必须 |
 | `POST /api/v1/groups/members/remove` | 移除成员 | 必须 |
 | `POST /api/v1/groups/applications/list` | 申请列表 | 必须 |
@@ -48,9 +47,9 @@
 | `POST /api/v1/groups/list_my` | 我的群组列表 | 必须 |
 | `POST /api/v1/groups/list_applications` | 我的申请列表 | 必须 |
 | `POST /api/v1/groups/cancel_application` | 取消申请 | 必须 |
-| `POST /api/v1/groups/list_invites` | 我的邀请列表 | 必须 |
-| `POST /api/v1/groups/accept_invite` | 接受邀请 | 必须 |
-| `POST /api/v1/groups/reject_invite` | 拒绝邀请 | 必须 |
+| `POST /api/v1/groups/invites/received/list` | 我收到的邀请列表 | 必须 |
+| `POST /api/v1/groups/invites/received/accept` | 接受邀请 | 必须 |
+| `POST /api/v1/groups/invites/received/reject` | 拒绝邀请 | 必须 |
 | `POST /api/v1/groups/leave` | 退出群组 | 必须 |
 ## 类型定义
 
@@ -114,7 +113,7 @@ interface SearchGroupsRequest {
 
 ---
 
-### POST /api/v1/groups/get_detail
+### POST /api/v1/groups/open_the_door
 
 获取群组详情。认证可选，字段可见性规则见 `api_spec_base.md`。
 
@@ -310,7 +309,7 @@ interface Invitation {
 
 ---
 
-### POST /api/v1/groups/members/invites/list
+### POST /api/v1/groups/invites/sent/list
 
 我发出的邀请列表。权限：群主、群管理员或系统管理员。
 
@@ -342,13 +341,13 @@ interface GroupSentInviteItem {
 
 `ApplicationStatus='revoked'` 表示邀请由发起者主动撤销（含过期自动撤销），客户端需与 `rejected`（受邀者拒绝）区分展示。
 
-**过期语义（契约级）**：超过 `expires_at` 的 pending 邀请由服务端自动置为 `revoked`（与发起者主动撤销同状态，便于客户端统一展示为"已失效"），并向受邀人推送 `GroupInviteExpired` 事件（见 `api_spec_websocket.md`）。`members/invites/list` 默认仅返回 `pending`，查历史需显式传 `status`。
+**过期语义（契约级）**：超过 `expires_at` 的 pending 邀请由服务端自动置为 `revoked`（与发起者主动撤销同状态，便于客户端统一展示为"已失效"），并向受邀人推送 `GroupInviteExpired` 事件（见 `api_spec_websocket.md`）。`invites/sent/list` 默认仅返回 `pending`，查历史需显式传 `status`。
 
 **错误码**: `10200` `10300` `10400`
 
 ---
 
-### POST /api/v1/groups/members/invites/revoke
+### POST /api/v1/groups/invites/sent/revoke
 
 撤销已发出的待处理邀请。权限：群主、群管理员或系统管理员。
 
@@ -377,7 +376,7 @@ interface RevokeSentInviteRequest {
 
 设置成员角色。设置为目标角色与当前一致时视为 no-op，返回成功。
 
-**降级与 pending 邀请**：邀请是群行为（非个人），inviter 降级为普通成员后，其历史发出的 pending 邀请由其他管理员/owner 继续可见与管理（不自动失效）。**owner 降级**（转交所有权）前若有 pending 邀请，需先 `members/invites/revoke` 或在 `transfer_ownership` 中一并转交管理权，否则返回 `10400`。
+**降级与 pending 邀请**：邀请是群行为（非个人），inviter 降级为普通成员后，其历史发出的 pending 邀请由其他管理员/owner 继续可见与管理（不自动失效）。**owner 降级**（转交所有权）前若有 pending 邀请，需先 `invites/sent/revoke` 或在 `transfer_ownership` 中一并转交管理权，否则返回 `10400`。
 
 - **认证**: 必须
 
@@ -418,46 +417,31 @@ interface SetMuteRequest {
 
 ---
 
-### POST /api/v1/groups/members/ban
+### POST /api/v1/groups/members/set_ban
 
-封禁成员。封禁后成员将被移出群组且无法再次加入。
+设置成员封禁状态（两态统一端点）。
+
+`active=true`：封禁成员，封禁后成员将被移出群组且无法再次加入。
 
 **级联处理（契约级）**：封禁时，被 ban 用户**发出的**该群 pending 申请置 `revoked`；**发给**被 ban 用户的该群 pending 邀请置 `revoked`（避免被封用户仍收到邀请再加入）。
 
+`active=false`：解除封禁。对未处于封禁状态的成员调用视为 no-op，返回成功（不报错），与 Discord/Slack 等"设状态操作重复达同状态应成功"的业界共识一致。
+
 - **认证**: 必须
 
-**Request**: `BanMemberRequest`
+**Request**: `SetMemberBanRequest`
 ```typescript
-interface BanMemberRequest {
+interface SetMemberBanRequest {
   group_id: string;
   user_id: string;
-  reason?: string;
+  active: boolean;     // true=封禁，false=解封
+  reason?: string;     // 封禁原因（仅 active=true 有意义）
 }
 ```
 
 **Response**: `ApiResponse`
 
 **错误码**: `10200` `10300` `10400`
-
----
-
-### POST /api/v1/groups/members/unban
-
-解除封禁成员。对未处于封禁状态的成员调用视为 no-op，返回成功（不报错），与 Discord/Slack 等"设状态操作重复达同状态应成功"的业界共识一致。
-
-- **认证**: 必须
-
-**Request**: `UnbanMemberRequest`
-```typescript
-interface UnbanMemberRequest {
-  group_id: string;
-  user_id: string;
-}
-```
-
-**Response**: `ApiResponse`
-
-**错误码**: `10200` `10300`
 
 ---
 
@@ -692,9 +676,9 @@ interface DeleteGroupAnnouncementRequest {
 
 - **认证**: 必须
 
-**Request**: `UpdateGroupMySettingsRequest`
+**Request**: `UpdateGroupPreferencesRequest`
 ```typescript
-interface UpdateGroupMySettingsRequest {
+interface UpdateGroupPreferencesRequest {
   group_id: string;
   is_muted?: boolean;
   is_pinned?: boolean;
@@ -835,7 +819,7 @@ interface CancelApplicationRequest {
 
 ---
 
-### POST /api/v1/groups/list_invites
+### POST /api/v1/groups/invites/received/list
 
 获取我的群组邀请列表。
 
@@ -867,7 +851,7 @@ interface GroupInviteItem {
 
 ---
 
-### POST /api/v1/groups/accept_invite
+### POST /api/v1/groups/invites/received/accept
 
 接受群组邀请。
 
@@ -891,7 +875,7 @@ interface InviteAcceptedResult {
 
 ---
 
-### POST /api/v1/groups/reject_invite
+### POST /api/v1/groups/invites/received/reject
 
 拒绝群组邀请。
 

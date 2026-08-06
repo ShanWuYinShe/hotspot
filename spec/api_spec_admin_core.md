@@ -68,7 +68,7 @@
 | `POST /api/v1/admin/rbac/admins/grant` | 授权/更新管理员 | 必须 + `admin.rbac.manage` |
 | `POST /api/v1/admin/rbac/admins/revoke` | 撤销管理员 | 必须 + `admin.rbac.manage` |
 | `POST /api/v1/admin/audit/list` | 审计日志列表 | 必须 + `admin.audit.read` |
-| `POST /api/v1/admin/audit/get_detail` | 审计日志详情 | 必须 + `admin.audit.read` |
+| `POST /api/v1/admin/audit/open_the_door` | 审计日志详情 | 必须 + `admin.audit.read` |
 | `POST /api/v1/admin/app_config/get` | 获取完整应用配置 | 必须 + `admin.app_config.read` |
 | `POST /api/v1/admin/app_config/update` | 更新应用配置（按 section 部分更新） | 必须 + `admin.app_config.write` |
 ## 类型定义
@@ -370,7 +370,7 @@ type AuditAction =
   | 'user.unban'         // 解封用户
   | 'group.dismiss'      // 解散群组
   | 'group.member_mute'  // 禁言群成员（由群管理员通过 groups/members/set_mute 触发）
-  | 'group.member_ban'   // 封禁群成员（由群管理员通过 groups/members/ban 触发）
+  | 'group.member_ban'   // 封禁群成员（由群管理员通过 groups/members/set_ban active=true 触发）
   | 'group.member_remove'// 移除群成员（由群管理员通过 groups/members/remove 触发）
   | 'announcement.create'// 创建公告
   | 'announcement.update'// 更新公告
@@ -432,7 +432,7 @@ interface AuditLogItem {
 
 ---
 
-### POST /api/v1/admin/audit/get_detail
+### POST /api/v1/admin/audit/open_the_door
 
 获取审计日志详情。
 
@@ -584,7 +584,7 @@ interface RateLimitConfig {
 interface ResponseDefaults {
   search_suggest_count: number;       // 搜索建议返回条数，默认 5
   hot_moments_count: number;          // feed/trending 热门瞬间返回条数，默认 20
-  chat_recent_messages_count: number; // get_detail 返回的最近消息条数，默认 20
+  chat_recent_messages_count: number; // open_the_door 返回的最近消息条数，默认 20
   group_announcements_count: number;  // 群公告列表返回条数，默认 10
   system_announcements_count: number; // 系统公告列表返回条数（system/list_announcements），默认 10
   comment_top_replies_count: number;  // 顶层评论内嵌的前 N 条回复（comments/list 场景），默认 3；消除展开回复的 N+1

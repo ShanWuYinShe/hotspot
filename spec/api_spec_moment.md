@@ -22,18 +22,18 @@
 |-----|------|------|
 
 | `POST /api/v1/moments/search` | 搜索瞬间（支持关键字/标签/位置组合） | 可选 |
-| `POST /api/v1/moments/get_detail` | 瞬间详情 | 可选 |
+| `POST /api/v1/moments/open_the_door` | 瞬间详情 | 可选 |
 | `POST /api/v1/moments/create` | 创建瞬间 | 必须 |
 | `POST /api/v1/moments/update` | 编辑瞬间 | 必须 |
 | `POST /api/v1/moments/delete` | 删除瞬间 | 必须 |
 | `POST /api/v1/moments/list_my` | 我发布的瞬间 | 必须 |
 | `POST /api/v1/moments/list_favorites` | 我的收藏 | 必须 |
-| `POST /api/v1/moments/favorite` | 设置收藏状态（两态统一） | 必须 |
+| `POST /api/v1/moments/set_favorite` | 设置收藏状态（两态统一） | 必须 |
 | `POST /api/v1/comments/create` | 创建评论/回复 | 必须 |
 | `POST /api/v1/comments/delete` | 删除评论 | 必须 |
 | `POST /api/v1/comments/list` | 顶层评论列表 | 可选 |
 | `POST /api/v1/comments/list_replies` | 子评论列表 | 可选 |
-| `POST /api/v1/comments/get_detail` | 评论详情 | 可选 |
+| `POST /api/v1/comments/open_the_door` | 评论详情 | 可选 |
 > 表情反应（reaction）统一由 `POST /api/v1/reactions/set` 处理，反应列表统一由 `POST /api/v1/reactions/list` 查询（见 `api_spec_reaction.md`）。
 
 ## 类型定义
@@ -82,7 +82,7 @@ interface SearchMomentsRequest {
 
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
-### POST /api/v1/moments/get_detail
+### POST /api/v1/moments/open_the_door
 
 获取瞬间详情。认证可选，字段可见性规则见 `api_spec_base.md`。
 
@@ -158,7 +158,7 @@ interface EditMomentRequest {
 **删除语义（软删除，与评论一致）**：
 - 瞬间**不物理删除**，标记 `is_deleted=true`，`description` 清空（客户端展示"内容已删除"占位）
 - **其下评论/反应数据保留**（不级联删除，保留对话上下文与审计）；瞬间不可见后，评论列表（`comments/list`）随之不可达（挂载瞬间按不存在处理）
-- **可见性**：作者本人的 `list_my`、收藏者的 `list_favorites` 返回软删占位项（`is_deleted=true`、description 为空）；其余场景（`get_detail`/Feed/搜索/评论挂载）按不存在处理（`10300`/过滤）
+- **可见性**：作者本人的 `list_my`、收藏者的 `list_favorites` 返回软删占位项（`is_deleted=true`、description 为空）；其余场景（`open_the_door`/Feed/搜索/评论挂载）按不存在处理（`10300`/过滤）
 - 删除后推送 `MomentDeleted` WebSocket 事件（见 `api_spec_websocket.md`），客户端据此更新本地列表/收藏展示
 
 - **认证**: 必须
@@ -179,7 +179,7 @@ interface DeleteMomentRequest {
 > 表情反应（reaction）统一由 `POST /api/v1/reactions/set` 处理（见 `api_spec_reaction.md`）。本模块不再单独定义 like/unlike 端点。
 > 收藏是 moment 专属的"我保存"概念（独立于 reaction 维度），保留为下方 `set_favorite` 单端点。
 
-### POST /api/v1/moments/favorite
+### POST /api/v1/moments/set_favorite
 
 设置瞬间收藏状态（两态统一端点）。
 
@@ -350,7 +350,7 @@ interface CommentRepliesRequest {
 
 > 评论反应列表由 `POST /api/v1/reactions/list` 查询（见 `api_spec_reaction.md`），传入 `{ target_type: 'comment', target_id: ... }` 即可。
 
-### POST /api/v1/comments/get_detail
+### POST /api/v1/comments/open_the_door
 
 获取单条评论详情。
 

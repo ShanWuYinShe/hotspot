@@ -27,7 +27,7 @@
 |-----|------|------|
 
 | `POST /api/v1/private_chats/list` | 私聊列表 | 必须 |
-| `POST /api/v1/private_chats/get_detail` | 私聊详情 | 必须 |
+| `POST /api/v1/private_chats/open_the_door` | 私聊详情 | 必须 |
 | `POST /api/v1/private_chats/update_preferences` | 更新会话偏好 | 必须 |
 | `POST /api/v1/private_chats/delete` | 删除私聊会话 | 必须 |
 ### 私聊消息（`private_messages`）
@@ -59,7 +59,9 @@
 
 `mark_read` 接口统一采用 up_to 语义：标记截至某条消息的所有消息为已读。
 
-**跨设备已读同步（已知取舍）**：当前协议不提供多端实时同步事件（self-sync 已从契约移除，见 `api_spec_index.md`「预留」）。单设备单会话模型下，同一设备的已读状态实时准确；但**跨设备**场景（用户在手机+Web 同时登录），在一端标记已读后，另一端的 `is_read`/`read_count` 不会实时更新——需等该端下次拉取 `get_history` 或冷启动 `system/bootstrap` 时刷新。这是有意的取舍（避免多端同步协议的复杂度）；未来若引入实时多端同步，将作为独立 WS 协议版本设计。客户端应在切前台/切会话时主动拉取一次历史以收敛已读状态。
+**跨设备已读同步（已知取舍）**：本协议**不提供专门的 self-sync 事件**（即不推送"你在另一端读了消息"给自己其他设备，见 `api_spec_index.md`「预留」）。单设备单会话模型下，同一设备的已读状态实时准确；但**跨设备**场景（用户在手机+Web 同时登录），在一端标记已读后，另一端的 `is_read`/`read_count` 不会实时更新——需等该端下次拉取 `get_history` 或冷启动 `system/bootstrap` 时刷新。
+
+> **多端推送 vs self-sync 的边界**：用户多设备各自独立鉴权、各自订阅 WebSocket，因此**消息内容类事件**（`PrivateMessageNew`/`Edited`/`Recalled` 等"推送给发送者其他设备"的事件）天然到达所有在线设备——这属于推送目标设计，**不是** self-sync。本段讨论的"不做实时同步"特指**已读状态字段**（`is_read`/`read_count`）：`PrivateMessageRead` 仅推给私聊对端（让对方得知已读），不回推给已读方自己的其他设备。未来若引入更通用的多端状态实时同步，将作为独立 WS 协议版本设计。客户端应在切前台/切会话时主动拉取一次历史以收敛已读状态。
 
 ## 类型定义
 
@@ -80,6 +82,13 @@ type BlockReason =
   | 'blocked'                  // 已被对方拉黑（明确提示，不掩饰拉黑状态）
   | 'privacy'                  // 对方隐私设置不允许（allow_private_chat 限制）
   | 'stranger_quota_exceeded'; // 陌生人消息限额已用完
+
+// 群聊禁言拒绝信息（`group_messages/send` 被禁言拦截时，随 10400 响应 data 返回）
+// 设计对齐私聊 BlockReason：结构化携带截止时间，避免客户端从 message 文本解析 ISO 时间戳
+// （errors.md 禁止客户端解析 message 决定行为）
+interface GroupMuteBlock {
+  muted_until: string;   // 禁言截止时间（UTC ISO 8601）；与 MyGroupState.muted_until 同源，客户端据此展示剩余时间
+}
 
 // 消息发送成功响应（私聊/群聊通用）
 interface MessageSent {
@@ -207,7 +216,7 @@ interface PrivateChatItem {
 
 ---
 
-### POST /api/v1/private_chats/get_detail
+### POST /api/v1/private_chats/open_the_door
 
 获取私聊详情（纯查询，无创建副作用）。
 
@@ -217,7 +226,7 @@ interface PrivateChatItem {
 - 会话的实际创建由 `private_messages/send` 即发即创承担（首次发消息时物化会话）
 
 **首次聊天流程**：
-1. 调用 `get_detail` 查询会话状态
+1. 调用 `open_the_door` 查询会话状态
 2. 会话存在 → 返回详情 + 最近消息；会话不存在 → 返回空态（`chat` 为空态对象，`recent_messages.items` 为空数组）
 3. 客户端展示"发起聊天"入口，用户发送首条消息时调用 `send`（send 即发即创）
 
@@ -421,7 +430,9 @@ interface MarkPrivateReadRequest {
 - **认证**: 必须
 - **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
-**禁言处理**：被禁言成员发消息返回 `10400`，`message` 含禁言截止时间（如"您已被禁言至 2024-01-15T08:30:00.000Z"）。客户端可据 `MyGroupState.is_muted` + `muted_until`（见 `api_spec_types.md`）预判，禁用群聊输入框并展示剩余时间，避免必失败的请求。
+**禁言处理**：被禁言成员发消息返回 `10400`。客户端可据 `MyGroupState.is_muted` + `muted_until`（见 `api_spec_types.md`）预判，禁用群聊输入框并展示剩余时间，避免必失败的请求。
+
+**错误响应 data（本端点显式声明，见 `api_spec_base.md` envelope 约定）**：当发送被禁言拦截（返回 `10400`，禁言原因）时，`data` 携带结构化信息 `{ mute: GroupMuteBlock }`（`GroupMuteBlock` 定义于本模块「类型定义」），含 `muted_until` 截止时间——客户端据此展示剩余时间，**无需从 `message` 文本解析时间戳**（与 errors.md「客户端禁止解析 message 决定行为」一致）。其余 `10400` 场景（非禁言冲突）与 `10300` 不返回 `data`。
 
 **Request**: `SendGroupMessageRequest`
 ```typescript

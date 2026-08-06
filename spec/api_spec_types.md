@@ -272,7 +272,7 @@ interface UserItem {
   // 位置信息（可见性规则见 RelativeLocation 类型定义）
   location?: RelativeLocation;
 
-  // 统计信息：详情页（get_detail）始终返回；搜索/列表由服务端根据接口语义决定是否返回（客户端不应依赖其在列表中的存在性）
+  // 统计信息：详情页（open_the_door）始终返回；搜索/列表由服务端根据接口语义决定是否返回（客户端不应依赖其在列表中的存在性）
   stats?: UserStats;
 
   // === @auth-only 以下字段仅登录态返回 ===
@@ -335,7 +335,7 @@ interface GroupItem {
 
   // 位置信息：统一使用 RelativeLocation
   // - 列表/搜索/Feed 场景：distance / bearing_degrees 由服务端基于 reference_point 计算
-  // - 详情场景（get_detail）：distance / bearing_degrees 为 undefined
+  // - 详情场景（open_the_door）：distance / bearing_degrees 为 undefined
   location: RelativeLocation;
 
   // 列表/详情页返回

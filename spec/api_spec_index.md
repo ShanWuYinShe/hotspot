@@ -80,7 +80,7 @@
 
 以下能力**当前不实现**，待未来版本落地时再定义端点/字段。客户端不应依赖其存在：
 
-- **多端实时同步（self-sync）**：单设备单会话模型下，跨设备状态同步通过冷启动 `system/bootstrap` + HTTP 补拉实现。未来如需实时多端同步，将作为独立 WS 协议版本重新设计。
+- **多端实时同步（self-sync）**：指**专门推送"本端状态变更"给自己其他设备**的独立协议事件（如"你在另一端读了消息"）。当前不提供此类事件——多设备各自独立鉴权订阅 WebSocket，消息内容类事件（`PrivateMessageNew`/`Edited`/`Recalled` 等）天然到达所有在线设备（属推送目标设计，非 self-sync），但已读状态等具体字段不做跨设备实时同步，通过冷启动 `system/bootstrap` + HTTP 补拉收敛。未来如需通用的多端状态实时同步，将作为独立 WS 协议版本重新设计。
 - **邮箱/手机号变更**：`users/email/request_change`、`users/email/confirm_change`、`users/phone/request_change`、`users/phone/confirm_change`——依赖邮件/短信验证码发送服务，待服务接入后实现。
 - **Feed 负反馈**：`feed/dismiss`——标记内容为"不感兴趣"，用于改善推荐质量。推荐算法优化为后续迭代重点，当前阶段优先完成核心 Feed 流。
 

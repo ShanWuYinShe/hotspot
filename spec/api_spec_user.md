@@ -17,7 +17,7 @@
 |-----|------|------|
 
 | `POST /api/v1/users/search` | 搜索用户（支持关键字/标签/位置组合） | 可选 |
-| `POST /api/v1/users/get_detail` | 用户资料详情 | 可选 |
+| `POST /api/v1/users/open_the_door` | 用户资料详情 | 可选 |
 | `POST /api/v1/users/get_profile` | 用户主页聚合（资料 + 近期瞬间，首屏骨架） | 可选 |
 | `POST /api/v1/users/list_friends` | 好友列表（user_id 可选，默认=当前用户） | 条件必须 |
 | `POST /api/v1/users/list_following` | 关注列表（user_id 可选，默认=当前用户） | 条件必须 |
@@ -33,8 +33,8 @@
 | `POST /api/v1/users/get_settings` | 我的设置 | 必须 |
 | `POST /api/v1/users/update_settings` | 更新我的设置 | 必须 |
 | `POST /api/v1/users/delete_account` | 删除账户 | 必须 |
-| `POST /api/v1/users/follow` | 设置关注状态（两态统一） | 必须 |
-| `POST /api/v1/users/block` | 设置拉黑状态（两态统一） | 必须 |
+| `POST /api/v1/users/set_follow` | 设置关注状态（两态统一） | 必须 |
+| `POST /api/v1/users/set_block` | 设置拉黑状态（两态统一） | 必须 |
 | `POST /api/v1/users/list_blocked` | 我的拉黑列表 | 必须 |
 | `POST /api/v1/users/set_remark` | 设置备注 | 必须 |
 > 表情反应（reaction）是跨 message/moment/comment 三类资源的统一动作，独立命名空间 `reactions/`（见 `api_spec_reaction.md`）。
@@ -98,7 +98,7 @@ interface SearchUsersRequest {
 
 ---
 
-### POST /api/v1/users/get_detail
+### POST /api/v1/users/open_the_door
 
 获取用户资料详情。认证可选，字段可见性规则见 `api_spec_base.md`。
 
@@ -123,7 +123,7 @@ interface UserOpenTheDoorRequest {
 
 获取用户主页首屏聚合数据（资料 + 近期瞬间）。一次请求拿到主页骨架，消除"资料 + 瞬间"的多次往返。
 
-- **认证**: 可选（与 `users/get_detail` 对齐，字段可见性规则见 `api_spec_base.md`）
+- **认证**: 可选（与 `users/open_the_door` 对齐，字段可见性规则见 `api_spec_base.md`）
 - **排序**: `recent_moments` 内部按 `created_at DESC`（最新在前），与 `users/list_moments` 一致
 
 **设计要点**：
@@ -325,7 +325,7 @@ interface UserReactedMomentsRequest {
 
 ### POST /api/v1/users/batch_get
 
-批量获取用户信息。用于列表/Feed/通知等场景中高效解析 `UserInfo`，消除逐个调用 `get_detail` 的 N+1 问题。
+批量获取用户信息。用于列表/Feed/通知等场景中高效解析 `UserInfo`，消除逐个调用 `open_the_door` 的 N+1 问题。
 
 - **认证**: 可选（已登录返回 `@auth-only` 字段）
 
@@ -493,7 +493,7 @@ interface DeleteAccountRequest {
 
 ---
 
-### POST /api/v1/users/follow
+### POST /api/v1/users/set_follow
 
 设置关注状态（两态统一端点）。
 
@@ -519,7 +519,7 @@ interface FollowRequest {
 
 ---
 
-### POST /api/v1/users/block
+### POST /api/v1/users/set_block
 
 设置拉黑状态（两态统一端点）。
 

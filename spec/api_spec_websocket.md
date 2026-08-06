@@ -27,7 +27,7 @@
 | **私聊消息** | `PrivateMessageNew` | 推送给消息接收者 + 发送者的其他在线设备 |
 | | `PrivateMessageEdited` | 推送给私聊对端 + 发送者的其他在线设备 |
 | | `PrivateMessageRecalled` | 推送给私聊对端 + 发送者的其他在线设备 |
-| | `PrivateMessageRead` | 推送给消息另一方 + 已读方的其他在线设备 |
+| | `PrivateMessageRead` | 推送给消息另一方（让发送方得知消息已读）；不推给任何一方的其他设备（跨设备已读同步见 `api_spec_chat.md` 取舍） |
 | **社交通知** | `NewFollower` | 推送给被关注者，告知是谁关注了 Ta |
 | | `MutualFollow` | 推送给刚形成互相关注关系的用户本身 |
 | **瞬间互动** | `MomentCommented` | 推送给瞬间作者，附评论内容摘要 |
@@ -82,7 +82,7 @@
 | | `GroupUpdated` | 群组信息更新（名称/头像/描述等所有可修改字段） |
 | | `GroupDismissed` | 群组解散 |
 
-> **多端同步（self-sync）**：当前不提供专用的多设备状态同步事件。单设备单会话模型下（见 `api_spec_auth.md`），同一用户在同一设备上只有一个活跃 session，跨设备状态同步通过冷启动 `system/bootstrap` + 各域 HTTP API 补拉实现。未来如需实时多端同步，将作为独立协议版本重新设计（不在此版本预留具体事件形状，避免预留形状与未来需求不匹配）。
+> **多端同步（self-sync）**：本协议不提供**专门的 self-sync 事件**（即不推送"本端状态变更"给自己其他设备的独立协议事件）。需注意与"多端推送"区分：用户多设备各自独立鉴权订阅 WebSocket，消息内容类事件（`PrivateMessageNew`/`Edited`/`Recalled` 等标注"推送给发送者其他设备"的事件）天然到达所有在线设备——这属于推送目标设计，不是 self-sync。self-sync 特指已读状态、UI 选中态等具体状态的跨设备实时同步，当前通过冷启动 `system/bootstrap` + 各域 HTTP API 补拉收敛。未来如需通用的多端状态实时同步，将作为独立协议版本重新设计（不在此版本预留具体事件形状，避免预留形状与未来需求不匹配）。
 
 ### 客户端能发送什么？
 
@@ -91,8 +91,8 @@
 | `Auth` | 鉴权（连接后 5 秒内必须发送） |
 | `Ping` | 心跳 |
 | `SetSubscriptions` | 设置订阅（覆盖式） |
-| `PrivateTyping` | 发送私聊输入状态 |
-| `GroupTyping` | 发送群聊输入状态 |
+| `SendPrivateTyping` | 发送私聊输入状态（服务端推送版用 `PrivateTyping`，收发 type 显式区分） |
+| `SendGroupTyping` | 发送群聊输入状态（服务端推送版用 `GroupTyping`，收发 type 显式区分） |
 
 ---
 
@@ -316,7 +316,7 @@ type ClientEventType =
   | "Auth"
   | "Ping"
   | "SetSubscriptions"
-  | "PrivateTyping" | "GroupTyping";
+  | "SendPrivateTyping" | "SendGroupTyping";
 
 ```
 
@@ -417,21 +417,21 @@ type UserOfflineEvent = { type: "UserOffline"; payload: UserOfflinePayload; };
   - 推送：推送给所有已订阅该用户状态（`type: 'user'`）的订阅者
   - 离线时间：`offline_at` 为服务端判定离线的时间（UTC ISO 8601）
 
-- **PrivateTyping / GroupTyping**
+- **PrivateTyping / GroupTyping**（服务端推送版 type；客户端发送版用 `SendPrivateTyping` / `SendGroupTyping`，见下方「客户端发送事件」）
   - 触发（客户端侧）：
-    - 私聊：发送 `PrivateTyping { target_user_id, is_typing }`
-    - 群聊：发送 `GroupTyping { group_id, is_typing }`
+    - 私聊：发送 `SendPrivateTyping { target_user_id, is_typing }`
+    - 群聊：发送 `SendGroupTyping { group_id, is_typing }`
   - 触发（服务端侧）：
     - `PrivateTyping`：推送给已订阅该用户状态（`type: 'user'`）且与其存在活跃私聊的订阅者；payload 携带 `target_user_id`（输入状态所属会话的对端）供订阅者定位会话
     - `GroupTyping`：推送给订阅该群聊的成员
   - Typing 状态属于"瞬时状态"，不落库、不补发历史
   - **隐私保护**：通过订阅机制和 target_user_id 限定保护隐私，无需额外权限检查
   - **节流**：服务端权威节流（默认 3 秒内同一用户重复 typing 只推送一次）；客户端建议"不超过 3 秒发一次"，以服务端为准
-  
+
   - **节流策略（性能优化，防止广播风暴）**：
-    
+
     **客户端发送限制**：
-    - 最多每 3 秒发送一次 `PrivateTyping`/`GroupTyping`
+    - 最多每 3 秒发送一次 `SendPrivateTyping`/`SendGroupTyping`
     - 使用防抖（debounce）：用户停止输入 3 秒后自动发送 `is_typing: false`
     - 切换聊天对象时立即发送 `is_typing: false` 到上一个对象
     
@@ -441,7 +441,8 @@ type UserOfflineEvent = { type: "UserOffline"; payload: UserOfflinePayload; };
 
 - **PrivateMessageRead**
   - 触发：已读状态发生变化时触发
-  - 推送目标：私聊对端 + 发送方的其他设备（多端同步时）
+  - 推送目标：**仅私聊对端**（A 发、B 读 → 推给 A，让发送方得知消息已读）
+  - **不推给任何一方的其他设备**：单设备单会话模型下，跨设备已读同步不在本协议范围（见 `api_spec_chat.md`「跨设备已读同步（已知取舍）」）；B 的其他设备已读状态需等该设备下次拉取 `get_history` 或冷启动 `system/bootstrap` 时刷新
   - 该事件用于即时交互反馈，不作为离线补偿依据
 
 **关注关系事件**：
@@ -694,7 +695,7 @@ interface GroupInviteReceivedPayload {
 }
 type GroupInviteReceivedEvent = { type: "GroupInviteReceived"; payload: GroupInviteReceivedPayload; };
 
-// 邀请被接受 → 推送给邀请发起方。纯实时事件，不落库通知（邀请状态可在 groups/members/invites/list 查询）
+// 邀请被接受 → 推送给邀请发起方。纯实时事件，不落库通知（邀请状态可在 groups/invites/sent/list 查询）
 interface GroupInviteResponsePayload {
   invite_id: string;
   group_id: string;
@@ -856,7 +857,7 @@ type GroupMemberRoleChangedEvent = { type: "GroupMemberRoleChanged"; payload: Gr
 //   - 推送：name/avatar_url/description/tags/location/has_password（@member-only，订阅者恒为成员）
 //     /join_method/requires_approval/next_activity
 //   - 不推送：is_searchable/max_members（@group-admin-only）——群广播通道无法按订阅者角色过滤，
-//     服务端有意省略；管理员可通过 HTTP groups/get_detail 获取
+//     服务端有意省略；管理员可通过 HTTP groups/open_the_door 获取
 //   - online_members_count 为聚合计数，随列表/详情 HTTP 响应返回，不随更新事件推送
 interface GroupUpdatedPayload {
   group_id: string;
@@ -1007,19 +1008,20 @@ type AuthEvent = { type: "Auth"; payload: AuthPayload; };
 // PingPayload 定义见上文「心跳机制」
 type PingEvent = { type: "Ping"; payload: PingPayload; };
 
-// 客户端发送版（服务端推送版结构不同，拆分命名）
+// 客户端发送版（type 与服务端推送版显式区分：发送用 "SendPrivateTyping"，推送用 "PrivateTyping"，
+// 避免收发共用同一 type 字面量导致方向性仅靠隐含约定）
 interface PrivateTypingSendPayload {
   target_user_id: string;
   is_typing: boolean;
 }
-type PrivateTypingSendEvent = { type: "PrivateTyping"; payload: PrivateTypingSendPayload; };
+type PrivateTypingSendEvent = { type: "SendPrivateTyping"; payload: PrivateTypingSendPayload; };
 
-// 客户端发送版（服务端推送版结构不同，拆分命名）
+// 客户端发送版（type 与服务端推送版显式区分：发送用 "SendGroupTyping"，推送用 "GroupTyping"）
 interface GroupTypingSendPayload {
   group_id: string;
   is_typing: boolean;
 }
-type GroupTypingSendEvent = { type: "GroupTyping"; payload: GroupTypingSendPayload; };
+type GroupTypingSendEvent = { type: "SendGroupTyping"; payload: GroupTypingSendPayload; };
 ```
 
 **订阅管理**：

@@ -71,6 +71,7 @@ interface ApiResponse<T = void> {
 - `X-Request-Id`：请求链路追踪 ID。客户端**可选**传入（用于跨端追踪关联）；服务端**始终**在响应头返回该字段——若请求携带则原样回显，未携带则由服务端生成。服务端是 `X-Request-Id` 的权威来源。
 - 服务端**不应**对客户端传入的 `X-Request-Id` 施加格式或熵值约束（如"必须不可推测"）——这是无法验证且无法强制的要求。客户端值仅用于追踪关联，服务端始终返回一个有效值即可。
 - `Idempotency-Key`：仅用于需要幂等性的写操作，具体要求见"幂等性（契约级）"
+- `If-None-Match`：条件请求，**仅 `system/bootstrap` 使用**（携带上次响应的 `bootstrap_version` 做缓存校验，模式见该端点）。其余端点不得引入条件请求语义，避免契约分叉
 
 说明：`X-Request-Id` 与 `Idempotency-Key` 相互独立；同一 `Idempotency-Key` 的多次请求可返回不同的 `X-Request-Id`。
 
