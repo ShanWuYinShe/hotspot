@@ -41,7 +41,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 				pressed={isSelected}
 				onClick={() => onSelectLoc(r)}
 				ariaLabel={`选择地点 ${r.displayName}`}
-				class="app-list-row app-list-row--standard rounded-control px-5"
+				class="app-list-row app-list-row--standard px-5"
 			>
 				<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default size-8.5"  style="opacity:0.12">
 					<MapPin class="size-3.5"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
@@ -114,7 +114,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 							pressed={isSelected}
 							onClick={() => onSelectLoc(loc)}
 							ariaLabel={`选择最近地点 ${loc.displayName}`}
-							class="app-list-row app-list-row--standard rounded-control px-4"
+							class="app-list-row app-list-row--standard px-4"
 						>
 							<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary size-9 text-lg border border-border-default shadow-neu-xs"  >
 								{loc.emoji}
@@ -143,7 +143,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 							pressed={isSelected}
 							onClick={() => onSelectLoc(loc)}
 							ariaLabel={`选择热门地点 ${loc.displayName}`}
-							class="app-list-row app-list-row--standard rounded-control px-4"
+							class="app-list-row app-list-row--standard px-4"
 						>
 							<div class="flex items-center justify-center rounded-[13px] shrink-0 bg-accent-default size-9 text-lg"  style="opacity:0.88">
 								{loc.emoji}

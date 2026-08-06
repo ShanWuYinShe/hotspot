@@ -145,7 +145,7 @@ locationName = loc?.location_name ?? '';
 							pressed={isSelected}
 							onClick={() => onSelectPin(pin)}
 							ariaLabel={`选择 ${pin.name || pin.title || ''}`}
-							class="app-list-row app-list-row--standard rounded-control"
+							class="app-list-row app-list-row--standard"
 						>
 						<PinMedia {pin} size={42} />
 						<div class="flex-1 min-w-0">
@@ -196,7 +196,7 @@ locationName = loc?.location_name ?? '';
 							pressed={isSelected}
 							onClick={() => onSelectLoc(loc)}
 							ariaLabel={`选择热门地点 ${loc.displayName}`}
-							class="app-list-row app-list-row--standard rounded-control"
+							class="app-list-row app-list-row--standard"
 						>
 							<div class="flex items-center justify-center rounded-small shrink-0 bg-accent-default size-9 text-lg"  style="opacity:0.88">
 								{loc.emoji}
@@ -234,7 +234,7 @@ locationName = loc?.location_name ?? '';
 							pressed={isSelected}
 							onClick={() => onSelectLoc(loc)}
 							ariaLabel={`选择最近地点 ${loc.displayName}`}
-							class="app-list-row app-list-row--standard rounded-control"
+							class="app-list-row app-list-row--standard"
 						>
 							<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary size-9 text-lg border border-border-default shadow-neu-xs"  >
 								{loc.emoji}
