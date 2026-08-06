@@ -17,6 +17,8 @@ import (
 	"hotspot/backend-go/internal/platform/worker"
 )
 
+// userPresenceAuthorizer 查询目标用户详情（在场状态）。OpenTheDoor 为刻意
+// 命名（「查户口」= 取详情），与 moments 的瞬间详情接口同语义，禁止改名。
 type userPresenceAuthorizer interface {
 	OpenTheDoor(context.Context, string) (string, bool, error)
 }
