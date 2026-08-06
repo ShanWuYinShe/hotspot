@@ -41,6 +41,10 @@ func (b *groupFullStub) QueryRow(_ context.Context, query string, _ ...any) pers
 	return testdb.RowValues{Err: persistence.ErrNotImplemented}
 }
 func (b *groupFullStub) Query(_ context.Context, query string, _ ...any) (persistence.Rows, error) {
+	// 匹配顺序：先精确（queryRowsErr/queryCustomRows/queryRows 的 map key），
+	// 再前缀兜底。前缀匹配是必要的——ListMyGroups 等查询在常量前缀后动态
+	// 拼接 keyset 谓词与 LIMIT（见 queryListMyGroupsBase），无法精确命中；
+	// 前缀 key 因此必须是「执行 SQL 的前缀」而非任意子串，防止掩盖漂移。
 	for key, err := range b.queryRowsErr {
 		if query == key || strings.HasPrefix(query, key) {
 			return nil, err
