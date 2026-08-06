@@ -17,6 +17,7 @@ import type {
 	GroupItem,
 	GroupMemberItem,
 	GroupMessageItem,
+	JoinGroupResult,
 	MessageSent,
 	MomentItem,
 	NotifyItem,
@@ -147,6 +148,11 @@ export async function getFavoriteMoments(params?: object)   { return request<Pag
 export async function getGroupDetail(groupId: string)     { return request<GroupItem>(Endpoints.Groups.GetDetail, { group_id: groupId }); }
 export async function createGroup(params: object)         { return request<GroupItem>(Endpoints.Groups.Create, params); }
 export async function listMyGroups(params?: object)       { return request<PaginatedData<GroupItem>>(Endpoints.Groups.ListMy, params ?? {}); }
+// spec: api_spec_group.md → groups/join（direct 直接加入 / approval 创建申请）、groups/leave
+export async function joinGroup(groupId: string, extra?: { password?: string; message?: string }) {
+	return request<JoinGroupResult>(Endpoints.Groups.Join, { group_id: groupId, ...extra });
+}
+export async function leaveGroup(groupId: string)          { return request<void>(Endpoints.Groups.Leave, { group_id: groupId }); }
 
 // Search
 export async function searchUsers(params: object)         { return request<PaginatedData<UserItem>>(Endpoints.Users.Search, params); }

@@ -1,9 +1,13 @@
 // API endpoint registry — MUST match spec/api_spec_*.md.
+// 块注释标注 client.ts 已包装的端点；未标注的为「待接线」——有 UI 需求时
+// 补 client 包装（spec 是契约权威，登记表必须完整，不删无消费端点）。
 
 const PREFIX = '/api/v1';
 
 export const Endpoints = {
-  // Auth
+  // Auth — 已包装: Register/Login/Logout/Guest/RefreshToken/CheckStatus/
+  //   RequestPasswordReset/ResetPassword；待接线: ChangePassword/ListSessions/
+  //   RevokeSession/RevokeAllSessions
   Auth: {
     Register: `${PREFIX}/auth/register`,
     Login: `${PREFIX}/auth/login`,
@@ -19,7 +23,10 @@ export const Endpoints = {
     RevokeAllSessions: `${PREFIX}/auth/revoke_all_sessions`,
   },
 
-  // Users
+  // Users — 已包装: Search/GetProfile/ListFriends/ListFollowing/ListFollowers/
+  //   ListMoments/ListReactedMoments/GetAccount/UpdateAccount/GetSettings/Follow/Block；
+  //   待接线: GetDetail/BatchGet/ListGroups/UpdateSettings/UpdateLocation/Upgrade/
+  //   DeleteAccount/ListBlocked/SetRemark
   Users: {
     Search: `${PREFIX}/users/search`,
     GetDetail: `${PREFIX}/users/get_detail`,
@@ -44,7 +51,10 @@ export const Endpoints = {
     SetRemark: `${PREFIX}/users/set_remark`,
   },
 
-  // Groups
+  // Groups — 已包装: GetDetail/Create/ListMy/Join/Leave/Members.List/Announcements.List；
+  //   待接线: Search/Update/Dismiss/TransferOwnership/UpdatePreferences/ListApplications/
+  //   CancelApplication/ListInvites/AcceptInvite/RejectInvite/Members.*/Applications.*/
+  //   Announcements.Create|Update|Delete
   Groups: {
     Search: `${PREFIX}/groups/search`,
     GetDetail: `${PREFIX}/groups/get_detail`,
@@ -89,7 +99,8 @@ export const Endpoints = {
     },
   },
 
-  // Moments
+  // Moments — 已包装: Search/GetDetail/Create/ListMy/Favorite/ListFavorites；
+  //   待接线: Update/Delete
   Moments: {
     Search: `${PREFIX}/moments/search`,
     GetDetail: `${PREFIX}/moments/get_detail`,
@@ -101,7 +112,7 @@ export const Endpoints = {
     ListFavorites: `${PREFIX}/moments/list_favorites`,
   },
 
-  // Comments
+  // Comments — 已包装: List/Create；待接线: Delete/ListReplies/GetDetail
   Comments: {
     Create: `${PREFIX}/comments/create`,
     Delete: `${PREFIX}/comments/delete`,
@@ -110,13 +121,15 @@ export const Endpoints = {
     GetDetail: `${PREFIX}/comments/get_detail`,
   },
 
-  // Reactions
+  // Reactions — 已包装: Set；待接线: List
   Reactions: {
     Set: `${PREFIX}/reactions/set`,
     List: `${PREFIX}/reactions/list`,
   },
 
-  // Chat
+  // Chat — 已包装: PrivateChats.List/PrivateMessages.Send|GetHistory|MarkRead/
+  //   GroupMessages.Send|GetHistory|MarkRead；
+  //   待接线: PrivateChats.GetDetail|UpdatePreferences|Delete、消息 Update|Recall
   PrivateChats: {
     List: `${PREFIX}/private_chats/list`,
     GetDetail: `${PREFIX}/private_chats/get_detail`,
@@ -138,7 +151,7 @@ export const Endpoints = {
     MarkRead: `${PREFIX}/group_messages/mark_read`,
   },
 
-  // Feed
+  // Feed — 已包装: Nearby/NearbyUsers/NearbyGroups/Trending；待接线: Following
   Feed: {
     Following: `${PREFIX}/feed/following`,
     Nearby: `${PREFIX}/feed/nearby`,
@@ -152,7 +165,7 @@ export const Endpoints = {
     Suggest: `${PREFIX}/search/suggest`,
   },
 
-  // System
+  // System — 已包装: GetClientConfig/Bootstrap；待接线: GetMeta/Health/ListAnnouncements
   System: {
     GetMeta: `${PREFIX}/system/get_meta`,
     Health: `${PREFIX}/system/health`,
@@ -166,14 +179,14 @@ export const Endpoints = {
     Canvas: `${PREFIX}/map/canvas`,
   },
 
-  // Notify
+  // Notify — 已包装: List/GetUnreadCount/MarkRead
   Notify: {
     List: `${PREFIX}/notify/list`,
     GetUnreadCount: `${PREFIX}/notify/get_unread_count`,
     MarkRead: `${PREFIX}/notify/mark_read`,
   },
 
-  // Reports
+  // Reports — 已包装: Create；待接线: ListMy
   Reports: {
     Create: `${PREFIX}/reports/create`,
     ListMy: `${PREFIX}/reports/list_my`,

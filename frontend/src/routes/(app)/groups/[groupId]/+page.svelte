@@ -8,7 +8,7 @@
 import TabBar from '@/components/navigation/TabBar.svelte';
 		import { ROUTES } from '@/lib/routes';
 	import { formatDistance, formatDateTime } from '@/lib/utils';
-	import { getGroupDetail, getGroupMembers, getGroupAnnouncements } from '@/api';
+	import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup } from '@/api';
 	import { wsClient } from '@/lib/ws/client';
 	import { presence, watchPresence } from '@/stores/presence.svelte';
 
@@ -43,6 +43,8 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 	}
 
 	let joined = $state(false);
+	/** 加入/退出请求进行中——防连点 */
+	let joinPending = $state(false);
 	let tab = $state<GroupTab>('overview');
 	let group = $state<Group>({
 		name: '',
@@ -61,6 +63,25 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 	let loadToken = 0;
 
 	// --- 加载函数（初始加载与 WS 事件刷新复用） ---
+
+	// 加入/退出：乐观更新 + 失败回滚（spec: groups/join、groups/leave）。
+	// join 对需审核群组返回 pending_approval——UI 仍标记 joined 简化（真实后端
+	// 以 my_state.is_joined 为准，审核通过前详情不会把它标为已加入）。
+	function toggleJoin() {
+		if (joinPending) return;
+		joinPending = true;
+		const next = !joined;
+		joined = next;
+		const done = (res: { code: number }) => {
+			joinPending = false;
+			if (res.code !== 0) joined = !next;
+		};
+		if (next) {
+			void joinGroup(params.groupId).then(done).catch(() => done({ code: -1 }));
+		} else {
+			void leaveGroup(params.groupId).then(done).catch(() => done({ code: -1 }));
+		}
+	}
 
 	async function loadDetail(gid: string) {
 		try {
@@ -291,8 +312,7 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 			<button
 				type="button"
 				class="hover-btn w-full rounded-full px-4 py-3 text-base font-medium focus-ring {joined ? 'border border-accent-default text-accent-default' : 'bg-accent-default text-white'}"
-				// TODO(mock): 加入/退出未接后端 API，当前仅本地状态翻转
-				onclick={() => (joined = !joined)}
+				onclick={toggleJoin}
 			>
 				{#if joined}
 					<span class="flex items-center justify-center gap-1.5">

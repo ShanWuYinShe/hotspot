@@ -208,6 +208,12 @@ export interface GroupMemberItem {
 	last_online_at?: string;
 }
 
+export interface JoinGroupResult {
+	// spec: api_spec_group.md → POST /groups/join
+	status: 'joined' | 'pending_approval';
+	application?: { application_id: string }; // 仅 pending_approval 时返回
+}
+
 export interface MomentItem {
 	// spec: types.md → MomentItem（list/search/detail/feed）
 	moment_id: string;

@@ -12,7 +12,7 @@
 	import FeaturedGroupCard from './FeaturedGroupCard.svelte';
 	import GroupCard from './GroupCard.svelte';
 	import { mapGroup, type Group } from './group-data';
-	import { getNearbyGroups } from '@/api';
+	import { getNearbyGroups, joinGroup, leaveGroup } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 
 	// 附近群组：分类过滤 + 精选卡 + 网格 / 桌面 BSP 卡片墙（对齐 Figma Make NearbyGroupsPage）。
@@ -76,9 +76,24 @@
 	const rest = $derived(filtered.slice(1));
 	const totalOnline = $derived(filtered.reduce((sum, group) => sum + group.online, 0));
 
-	// TODO: 接入 groups/join 与 groups/leave（client 包装就绪后）；当前仅本地切换反映按钮意图。
+	// 加入/退出：乐观更新 + 失败回滚（spec: groups/join、groups/leave）。
+	// join 对需审核群组返回 pending_approval——UI 仍标记 joined 简化（真实后端
+	// 以 is_joined 为准，审核通过前列表不会把它标为已加入）。
 	const toggleJoin = (id: string) => {
-		groups = groups.map((group) => (group.id === id ? { ...group, joined: !group.joined } : group));
+		const group = groups.find((g) => g.id === id);
+		if (!group) return;
+		const next = !group.joined;
+		groups = groups.map((g) => (g.id === id ? { ...g, joined: next } : g));
+		const done = (res: { code: number }) => {
+			if (res.code !== 0) {
+				groups = groups.map((g) => (g.id === id ? { ...g, joined: !next } : g));
+			}
+		};
+		if (next) {
+			void joinGroup(id).then(done).catch(() => done({ code: -1 }));
+		} else {
+			void leaveGroup(id).then(done).catch(() => done({ code: -1 }));
+		}
 	};
 </script>
 

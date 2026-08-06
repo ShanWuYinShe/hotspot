@@ -236,6 +236,22 @@ export const handlers = [
   ]}))),
   // create 是写操作 → 需要登录。
   http.post(`${API}/groups/create`, () => requireMockAuth() ?? json(apiOk(mockGroups[0]))),
+  // join/leave 是写操作 → 需要登录。join 按 join_method 路由：
+  // direct 直接加入（返回 joined）；需审核/邀请类返回 pending_approval（带 application_id）。
+  // 为让页面可重复演练，join 总是"可成功"：joined 状态以请求为准（服务端幂等，见 spec 自然去重）。
+  http.post(`${API}/groups/join`, async ({ request }) => {
+    const auth = requireMockAuth();
+    if (auth) return auth;
+    const body = (await request.json().catch(() => ({}))) as { group_id?: string; password?: string };
+    const group = mockGroups.find((g) => g.group.group_id === body?.group_id) ?? mockGroups[0];
+    const needsApproval = group.requires_approval || group.join_method === "invite_only";
+    return json(apiOk(
+      needsApproval
+        ? { status: "pending_approval", application: { application_id: `app_${body?.group_id ?? "group_1"}` } }
+        : { status: "joined" }
+    ));
+  }),
+  http.post(`${API}/groups/leave`, () => requireMockAuth() ?? json(apiOk(null))),
 
   // ── Chat ───────────────────────────────────────
   // All chat endpoints are auth-required (spec: private_chats/*, *_messages/*).
