@@ -78,7 +78,7 @@
 		<Dialog.Content
 			side="right"
 			class="overflow-hidden rounded-l-sheet border-l-0"
-			style="width:min(560px,90%);box-shadow:-8px 0 40px rgba(0,0,0,0.22);"
+			style="width:min(560px,90%);box-shadow:var(--elevation-side-sheet);"
 		>
 			<CreateSheet onClose={closeComposer} />
 		</Dialog.Content>

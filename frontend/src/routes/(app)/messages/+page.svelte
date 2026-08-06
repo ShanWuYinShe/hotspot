@@ -349,7 +349,7 @@
 	</ContentColumn>
 
 	<Dialog.Root open={showNewChat} onOpenChange={(next) => (next ? undefined : (showNewChat = false))}>
-		<Dialog.Content side="bottom" class="overflow-hidden" style="height:85%;box-shadow:0 -8px 40px rgba(0,0,0,0.18);">
+		<Dialog.Content side="bottom" class="overflow-hidden" style="height:85%;box-shadow:var(--elevation-sheet);">
 			<NewConversationSheet
 				defaultTab={newChatTab}
 				onClose={() => (showNewChat = false)}
@@ -360,7 +360,7 @@
 	</Dialog.Root>
 
 	<Dialog.Root open={showCreateGroup} onOpenChange={(next) => (next ? undefined : (showCreateGroup = false))}>
-		<Dialog.Content side="bottom" class="overflow-hidden" style="height:92%;box-shadow:0 -8px 40px rgba(0,0,0,0.18);">
+		<Dialog.Content side="bottom" class="overflow-hidden" style="height:92%;box-shadow:var(--elevation-sheet);">
 			<CreateGroupSheet
 				onClose={() => (showCreateGroup = false)}
 				onCreated={(groupId) => {

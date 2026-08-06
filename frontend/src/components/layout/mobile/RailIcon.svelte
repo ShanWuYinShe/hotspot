@@ -27,20 +27,7 @@
 		return t === 'forest' || t === 'vibrant' ? 'transparent' : 'var(--surface-primary)';
 	});
 
-	const hoverShadow = $derived.by(() => {
-		if (!showHover) return 'none';
-		const t = theme.theme;
-		const isDark = theme.isDark;
-		if (t === 'forest') {
-			return isDark ? '0 0 0 1px rgba(82,184,120,0.28)' : '0 0 0 1px rgba(61,122,85,0.22)';
-		}
-		if (t === 'vibrant') {
-			return isDark
-				? '0 6px 16px rgba(129,140,248,0.22), 0 2px 6px rgba(129,140,248,0.12)'
-				: '0 6px 16px rgba(99,102,241,0.18), 0 2px 6px rgba(99,102,241,0.10)';
-		}
-		return 'var(--shadow-neu-lg)';
-	});
+	const hoverShadow = $derived(showHover ? 'var(--elevation-rail-hover)' : 'none');
 
 	const hoverScale = $derived(showHover ? (theme.theme === 'forest' ? 1.08 : 1.14) : 1);
 	const iconColor = $derived(

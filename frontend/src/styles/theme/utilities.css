@@ -51,19 +51,6 @@
     border-color: var(--border-strong);
   }
 
-  .input-base {
-    background-color: var(--surface-primary);
-    box-shadow: 8px 8px 16px var(--elevation-shadow-dark), -8px -8px 16px var(--elevation-shadow-light);
-    border: 1px solid var(--border-default);
-    color: var(--text-primary);
-    transition: box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease;
-  }
-  .input-base:focus {
-    box-shadow: inset 8px 8px 16px var(--elevation-shadow-dark), inset -8px -8px 16px var(--elevation-shadow-light);
-    border-color: var(--border-strong);
-    outline: none;
-  }
-
   .icon-badge {
     background-color: var(--surface-primary);
     box-shadow: 4px 4px 8px var(--elevation-shadow-dark), -4px -4px 8px var(--elevation-shadow-light);
@@ -84,49 +71,8 @@
     }
   }
 
-  .row-hover {
-    position: relative;
-    cursor: pointer;
-    transition:
-      background-color 0.18s ease,
-      box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .row-hover:active {
-    transform: scale(0.985);
-  }
-  .row-hover[data-active="true"],
-  .row-hover[aria-pressed="true"] {
-    background-color: var(--accent-soft) !important;
-    box-shadow: inset 2px 0 0 var(--accent-default), 0 0 0 1px var(--accent-border), var(--elevation-row) !important;
-  }
-  .row-hover:focus-visible {
-    outline: 2px solid var(--accent-default);
-    outline-offset: 2px;
-  }
-  @media (hover: hover) and (pointer: fine) {
-    .row-hover:hover {
-      background-color: var(--surface-hover) !important;
-      box-shadow: 0 0 0 1px var(--accent-border), var(--elevation-row) !important;
-    }
-    .row-hover[data-active="true"]:hover,
-    .row-hover[aria-pressed="true"]:hover {
-      background-color: var(--interactive-active) !important;
-      box-shadow: inset 2px 0 0 var(--accent-default), 0 0 0 1px var(--accent-border), var(--elevation-row) !important;
-      transform: none;
-    }
-  }
-
   /*── App-list system ─────────────────────────────────────────────── */
 
-  .app-list {
-    box-shadow: 0 0 0 1px var(--border-default);
-    border-radius: 1rem;
-    background: var(--surface-primary);
-  }
-  .app-list-inner {
-    overflow: hidden;
-    border-radius: calc(1rem - 1px);
-  }
   .app-list-row {
     display: flex;
     width: 100%;
@@ -137,12 +83,7 @@
     border: 1px solid transparent;
   }
   .app-list-row + .app-list-row { border-top-color: var(--border-default); }
-  .app-list-row--compact { min-height: 3.25rem; padding: 0.625rem 0.875rem; }
   .app-list-row--standard { min-height: 4.125rem; padding: 0.75rem 0.875rem; }
-  .app-list-row--rich { min-height: 4.75rem; padding: 0.875rem; }
-  .app-list-row__main { min-width: 0; flex: 1; }
-  .app-list-row__title { color: var(--text-primary); font-size: 0.875rem; line-height: 1.25; }
-  .app-list-row__meta { margin-top: 0.1875rem; color: var(--text-secondary); font-size: 0.75rem; line-height: 1.3; }
 
   .circle-hover {
     transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.20s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.16s ease;
@@ -153,15 +94,6 @@
       transform: scale(1.10);
       border-color: var(--accent-border) !important;
       box-shadow: var(--elevation-button) !important;
-    }
-  }
-
-  .pill-hover {
-    transition: box-shadow 0.18s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  @media (hover: hover) and (pointer: fine) {
-    .pill-hover:hover {
-      box-shadow: var(--elevation-pill) !important;
     }
   }
 
@@ -193,28 +125,12 @@
     color: var(--text-primary);
     border: 1px solid var(--border-strong);
   }
-  .convex {
-    background-color: var(--surface-primary);
-    box-shadow: 12px 12px 24px var(--elevation-shadow-dark), -12px -12px 24px var(--elevation-shadow-light);
-    border: 1px solid var(--border-default);
-  }
-  .button-glow {
-    box-shadow: 8px 8px 16px var(--elevation-shadow-dark), -8px -8px 16px var(--elevation-shadow-light);
-  }
-  .dark .button-glow {
-    box-shadow: 8px 8px 16px var(--elevation-shadow-dark), -8px -8px 16px var(--elevation-shadow-light), 0 0 20px rgba(244, 200, 155, 0.15);
-  }
   .surface-hero {
     background-color: var(--surface-primary);
     border: 1px solid var(--border-default);
     box-shadow:
       8px 8px 18px var(--elevation-shadow-dark),
       -8px -8px 18px var(--elevation-shadow-light);
-  }
-  .forest .surface-hero,
-  .forest.dark .surface-hero {
-    box-shadow: 0 0 0 1.5px var(--border-strong);
-    border-color: var(--border-strong);
   }
 
   .surface-flat {
@@ -276,33 +192,12 @@
     pointer-events: none;
     z-index: 0;
   }
-  .forest .ambient-glow::before,
-  .forest.dark .ambient-glow::before {
-    opacity: 0.95;
-  }
-  .vibrant .ambient-glow::before {
-    opacity: 0.70;
-  }
-  .vibrant.dark .ambient-glow::before {
-    opacity: 0.80;
-  }
   .dark .ambient-glow::before {
     opacity: 0.85;
   }
   .ambient-glow > * {
     position: relative;
     z-index: 1;
-  }
-
-  .divider-soft {
-    height: 1px;
-    background: linear-gradient(
-      to right,
-      transparent 0%,
-      var(--border-default) 20%,
-      var(--border-default) 80%,
-      transparent 100%
-    );
   }
 
   .eyebrow {
@@ -316,121 +211,26 @@
 
 @layer utilities {
   /*── Theme coherence pass ────────────────────────────────────────── */
+  /* 主题专属覆盖（.vibrant/.forest 类选择器）已迁移到 themes/{vibrant,forest}.css，
+     与 semantic.css 的 per-theme 覆盖声明保持一致。 */
 
-  .theme-panel {
-    background: var(--surface-primary);
-    border: 1px solid var(--border-default);
-    color: var(--text-primary);
-  }
-
-  .theme-chip {
-    background: var(--accent-soft);
-    border: 1px solid var(--accent-border);
-    color: var(--accent-default);
-  }
-
-  /* 星际: glass/electric surfaces */
-  .vibrant .surface-hero,
-  .vibrant .convex,
-  .vibrant .flat,
-  .vibrant .input-surface,
-  .vibrant .input-base,
-  .vibrant .icon-badge,
-  .vibrant .button-glow {
-    background: color-mix(in srgb, var(--surface-primary) 82%, white 18%);
-    border-color: var(--border-default);
-  }
-  .vibrant.dark .surface-hero,
-  .vibrant.dark .convex,
-  .vibrant.dark .flat,
-  .vibrant.dark .input-surface,
-  .vibrant.dark .input-base,
-  .vibrant.dark .icon-badge,
-  .vibrant.dark .button-glow {
-    background: color-mix(in srgb, var(--surface-primary) 86%, var(--accent-default) 6%);
-  }
-  .vibrant .surface-flat {
-    background: color-mix(in srgb, var(--surface-primary) 92%, var(--accent-default) 3%);
-  }
-  @media (hover: hover) and (pointer: fine) {
-    .vibrant .surface-ghost:hover {
-      background: color-mix(in srgb, var(--accent-default) 10%, transparent);
-      border-color: color-mix(in srgb, var(--accent-default) 18%, transparent);
-    }
-  }
-
-  /* 清野: strict paper-flat */
-  .forest .input-surface,
-  .forest .input-base,
-  .forest .icon-badge,
-  .forest .flat,
-  .forest .pressed,
-  .forest .convex,
-  .forest .button-glow,
-  .forest .card-hover,
-  .forest .row-hover,
-  .forest .circle-hover,
-  .forest .pill-hover {
-    box-shadow: none !important;
-    background: var(--surface-primary);
-  }
-  .forest .input-surface:focus-within,
-  .forest .input-base:focus,
-  .forest .pressed {
-    box-shadow: inset 0 0 0 1px var(--border-strong) !important;
-  }
-  @media (hover: hover) and (pointer: fine) {
-    .forest .card-hover:hover,
-    .forest .row-hover:hover,
-    .forest .circle-hover:hover,
-    .forest .pill-hover:hover {
-      box-shadow: 0 0 0 1px var(--border-strong) !important;
-    }
-    .forest .surface-ghost:hover {
-      background: var(--interactive-hover);
-      border-color: var(--accent-border);
-    }
-    .forest .row-hover[data-active="true"]:hover,
-    .forest .row-hover[aria-pressed="true"]:hover {
-      background: var(--interactive-active) !important;
-      box-shadow: inset 2px 0 0 var(--accent-default), 0 0 0 1px var(--accent-border) !important;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .desktop-context-shell {
-      max-width: 1120px;
-      margin-left: auto;
-      margin-right: auto;
-      width: 100%;
-    }
+  .dark .ambient-glow::before {
+    opacity: 0.85;
   }
 }
 
 @layer utilities {
   /*── Input color-mix overrides ─────────────────────────────────── */
 
-  .input-surface,
-  .input-base {
+  .input-surface {
     background: color-mix(in srgb, var(--surface-primary) 82%, var(--surface-page) 18%) !important;
     box-shadow: inset 0 0 0 1px var(--border-default), inset 0 1px 2px color-mix(in srgb, var(--elevation-shadow-dark) 26%, transparent) !important;
     border-color: var(--border-default) !important;
   }
-  .input-surface:focus-within,
-  .input-base:focus {
+  .input-surface:focus-within {
     /* 对齐 Figma Make：focus 为中性内凹凹陷 + border-pressed，不用 accent 高亮环 */
     box-shadow: inset 5px 5px 10px var(--elevation-shadow-dark), inset -5px -5px 10px var(--elevation-shadow-light) !important;
     border-color: var(--border-strong) !important;
-  }
-  .vibrant .input-surface,
-  .vibrant .input-base {
-    background: color-mix(in srgb, var(--surface-primary) 70%, var(--accent-default) 5%) !important;
-    backdrop-filter: blur(18px) saturate(1.25);
-  }
-  .forest .input-surface,
-  .forest .input-base {
-    background: color-mix(in srgb, var(--surface-primary) 94%, var(--surface-page) 6%) !important;
-    box-shadow: inset 0 0 0 1px var(--border-default) !important;
   }
 }
 
@@ -440,9 +240,7 @@
      仅 fine pointer 设备启用 hover 缩放（withoutHover 契约）。 */
 
   .hover-btn,
-  .hover-action,
-  .hover-row,
-  .hover-card {
+  .hover-action {
     transition: transform 0.17s cubic-bezier(0.22, 1, 0.36, 1),
       box-shadow 0.18s ease,
       background-color 0.18s ease,
@@ -464,15 +262,6 @@
     .hover-action:hover { transform: scale(1.20); transition-duration: 0.14s, 0.18s, 0.18s, 0.18s, 0.18s; }
   }
 
-  /* 列表行（row）：仅背景填充，不位移不缩放；
-     大卡片（card）：仅阴影抬升，布局框体永不移动（对齐 Figma Make 契约）。
-     hover 填充/阴影仅 fine pointer 生效（触屏无 hover）。 */
-  .hover-row:active { }
-  @media (hover: hover) and (pointer: fine) {
-    .hover-row:hover { background-color: var(--surface-hover); }
-    .hover-card:hover { box-shadow: 0 10px 28px var(--elevation-shadow-dark); }
-  }
-
   /* 圆形图标按钮（ActionIconButton 等）：圆形允许缩放（Figma Make btn 契约 1.10/0.94）。
      hover 缩放仅 fine pointer；tap 全设备。 */
   .scale-btn:active { transform: scale(0.94); transition-duration: 0.10s; }
@@ -485,7 +274,6 @@
   .tap-985:active { transform: scale(0.985); }
   .tap-98:active { transform: scale(0.98); }
   .tap-97:active { transform: scale(0.97); }
-  .tap-95:active { transform: scale(0.95); }
   .tap-94:active { transform: scale(0.94); }
   .tap-93:active { transform: scale(0.93); }
   .tap-92:active { transform: scale(0.92); }
@@ -500,35 +288,12 @@
     .header-action:hover { transform: scale(1.18); transition-duration: 0.14s, 0.18s, 0.18s, 0.18s, 0.18s; background-color: var(--interactive-hover-fill); }
   }
 
-  /* vibrant：无阴影抬升（玻璃感），仅位移光晕（仅 fine pointer） */
-  @media (hover: hover) and (pointer: fine) {
-    .vibrant .hover-card:hover { box-shadow: 0 8px 24px var(--accent-soft); }
-  }
-
-  /* forest：扁平——无位移无阴影，仅背景色承载；缩放保留但略保守（Figma forest 1.08/0.97） */
-  .forest .hover-btn:active,
-  .forest .hover-action:active,
-  .forest .scale-btn:active { transform: scale(0.97); }
-  @media (hover: hover) and (pointer: fine) {
-    .forest .hover-row:hover { transform: none; box-shadow: none; }
-    .forest .hover-card:hover { transform: none; box-shadow: none; }
-    .forest .scale-btn:hover { transform: scale(1.08); }
-    .forest .hover-action:hover { transform: scale(1.18); }
-  }
-
   /* 悬停背景（bgHover）：直接复用 --interactive-hover-fill token（= --pr-hover，
      每主题/暗色已精确定义：vibrant 10%/15%、forest 12%/18%），与全局 button hover
      填充一致，避免硬编码 color-mix 与 token 漂移。仅 fine pointer 生效。 */
   .hover-bg { transition: background-color 0.18s ease; }
   @media (hover: hover) and (pointer: fine) {
     .hover-bg:hover { background-color: var(--interactive-hover-fill); }
-  }
-
-  /* 行级悬停位移（对齐 Figma Make SettingsPage NavRow whileHover x:3）：
-     整行在 hover 时右移 3px，与背景填充叠加形成"可点击行"的动效反馈。
-     仅 fine pointer 生效（触屏无 hover）。 */
-  @media (hover: hover) and (pointer: fine) {
-    .row-nudge:hover { transform: translateX(3px); }
   }
 
   /* 地图当前位置脉冲光晕（对齐 Figma Make LocationMobile motion.div：

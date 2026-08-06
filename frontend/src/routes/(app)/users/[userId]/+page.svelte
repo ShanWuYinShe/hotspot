@@ -149,7 +149,7 @@
 			side="bottom"
 			class="inset-x-4 bottom-4 mx-auto max-w-md rounded-feature p-5"
 			aria-label={`${user.name} 的更多操作`}
-			style="box-shadow:0 24px 80px rgba(0,0,0,.28);"
+			style="box-shadow:var(--elevation-modal);"
 		>
 			<div class="flex items-center justify-between">
 				<div>

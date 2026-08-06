@@ -133,7 +133,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 		<div class="animate-fade-in flex flex-col gap-2">
 			<!-- Current location card -->
 			<div class="flex items-center gap-3 p-3.5 rounded-control bg-accent-default text-white">
-				<div class="flex items-center justify-center rounded-full shrink-0 size-10.5"  style="background:rgba(255,255,255,0.2)">
+				<div class="flex items-center justify-center rounded-full shrink-0 size-10.5"  style="background:var(--surface-map-control)">
 					<Navigation class="size-4.25"  strokeWidth={2} />
 				</div>
 				<div class="flex-1">

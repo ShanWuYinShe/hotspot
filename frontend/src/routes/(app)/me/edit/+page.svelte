@@ -94,7 +94,7 @@
 		<button
 			type="button"
 			class="hover-btn absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none bg-surface-overlay-strong text-white text-sm"
-			style="padding:6px 12px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.25);"
+			style="padding:6px 12px;backdrop-filter:blur(10px);border:1px solid var(--border-inverse);"
 		>
 			<Camera class="size-3.25"  strokeWidth={1.75} />
 			更换横幅

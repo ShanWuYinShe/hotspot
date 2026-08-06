@@ -37,7 +37,6 @@
   --pr-map-moment: #F97316;
   --pr-overlay-soft: rgba(22, 35, 58, 0.08);
   --pr-overlay-strong: rgba(12, 25, 48, 0.52);
-  --pr-scrim: linear-gradient(to bottom, rgba(16, 35, 66, 0.03) 0%, rgba(16, 35, 66, 0.54) 100%);
   --pr-shadow-card: 0 12px 28px rgba(53, 120, 212, 0.12), 0 3px 10px rgba(53, 120, 212, 0.07);
   --pr-shadow-row: 0 6px 16px rgba(53, 120, 212, 0.10);
   --pr-shadow-btn: 0 5px 14px rgba(53, 120, 212, 0.18);
@@ -48,27 +47,17 @@
   --pr-online-bg: color-mix(in srgb, var(--pr-online) 14%, transparent);
   --pr-danger-bg: color-mix(in srgb, var(--pr-hot) 10%, transparent);
 
-  /* ── shadcn 桥接 ── */
+  /* ── shadcn 桥接（仅 base.css @apply 消费的 4 个；其余 token 无引用，见 shadcn.css）── */
   --background: var(--surface-primary);
   --foreground: var(--text-primary);
-  --card: var(--surface-primary);
-  --card-foreground: var(--text-primary);
-  --popover: var(--surface-primary);
-  --popover-foreground: var(--text-primary);
-  --secondary: #EEF5FF;
-  --secondary-foreground: var(--text-primary);
-  --muted: #EEF5FF;
-  --muted-foreground: var(--text-secondary);
-  --accent: var(--accent-soft);
-  --accent-foreground: var(--text-primary);
   --border: var(--border-default);
   --ring: var(--accent-default);
-  --input-background: #F2F7FF;
-  --switch-background: var(--border-strong);
+  --destructive: var(--status-danger);
 
   /* ── Shell / overlay primitives ── */
   --surface-nav-glass: color-mix(in srgb, var(--surface-panel) 90%, transparent);
   --border-nav-glass: color-mix(in srgb, var(--accent-default) 14%, transparent);
+  --elevation-rail-hover: 0 6px 16px rgba(53, 120, 212, 0.18), 0 2px 6px rgba(53, 120, 212, 0.10);
   --surface-scrim: rgba(14, 10, 35, 0.36);
   --surface-overlay: rgba(14, 10, 35, 0.38);
   --border-inverse: rgba(255, 255, 255, 0.25);
@@ -80,21 +69,16 @@
   --elevation-menu: 0 16px 40px rgba(0, 0, 0, 0.16);
   --elevation-control-thumb: 0 1px 3px rgba(0, 0, 0, 0.18);
   --surface-toggle-off: rgba(120, 120, 128, 0.22);
-  --surface-toggle-off-strong: rgba(120, 120, 128, 0.25);
   --surface-toggle-thumb: var(--surface-panel);
   --elevation-toggle-on: inset 0 1px 2px rgba(0, 0, 0, 0.12);
   --elevation-toggle-off: inset 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(120, 120, 128, 0.15);
   --elevation-toggle-thumb: 0 1px 4px rgba(0, 0, 0, 0.26), 0 0.5px 1px rgba(0, 0, 0, 0.14);
   --surface-media-scrim-soft: linear-gradient(to top, rgba(0, 0, 0, 0.22), transparent 58%);
   --surface-media-scrim-card: linear-gradient(to top, rgba(0, 0, 0, 0.28), transparent 60%);
-  --surface-media-scrim-rail: linear-gradient(to top, rgba(0, 0, 0, 0.24), transparent 58%);
-  --surface-profile-cover-scrim: linear-gradient(to bottom, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.55));
-  --surface-profile-edit-scrim: linear-gradient(to bottom, transparent 40%, rgba(0, 0, 0, 0.5));
   --surface-gallery-scrim: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.48));
   --surface-gallery-label: rgba(0, 0, 0, 0.46);
   --surface-map-control: rgba(255, 255, 255, 0.20);
   --surface-map-control-active: rgba(255, 255, 255, 0.25);
-  --elevation-profile-avatar: 0 6px 20px rgba(0, 0, 0, 0.22);
   --elevation-modal: 0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--border-subtle);
   --elevation-fab: 0 6px 18px var(--glow-accent), 0 2px 4px rgba(0, 0, 0, 0.10);
   --elevation-nav: 0 -2px 16px rgba(0,0,0,0.04), 0 8px 24px var(--glow-accent);
@@ -105,13 +89,45 @@
   --surface-card-menu: color-mix(in srgb, var(--surface-primary) 88%, var(--accent-default));
   --border-card-menu: color-mix(in srgb, var(--accent-default) 22%, var(--border-default));
 
-  /* ── 卡片图片上的信息区玻璃背景 ── */
-  --card-scrim: rgba(12, 25, 48, 0.55);
-  --accent-on-scrim: #93C5FD;
-  --online-on-scrim: #2DD4BF;
-
   /* ── 卡片按压缩放（vibrant tap 0.94）── */
   --card-tap-scale: 0.94;
+}
+
+/* ═══ Vibrant 组件覆盖（@layer utilities，与 utilities.css 同层）═══ */
+@layer utilities {
+  /* glass/electric surfaces */
+  .vibrant .surface-hero,
+  .vibrant .flat,
+  .vibrant .input-surface,
+  .vibrant .icon-badge {
+    background: color-mix(in srgb, var(--surface-primary) 82%, white 18%);
+    border-color: var(--border-default);
+  }
+  .vibrant.dark .surface-hero,
+  .vibrant.dark .flat,
+  .vibrant.dark .input-surface,
+  .vibrant.dark .icon-badge {
+    background: color-mix(in srgb, var(--surface-primary) 86%, var(--accent-default) 6%);
+  }
+  .vibrant .surface-flat {
+    background: color-mix(in srgb, var(--surface-primary) 92%, var(--accent-default) 3%);
+  }
+  .vibrant .input-surface {
+    background: color-mix(in srgb, var(--surface-primary) 70%, var(--accent-default) 5%) !important;
+    backdrop-filter: blur(18px) saturate(1.25);
+  }
+  .vibrant .ambient-glow::before {
+    opacity: 0.70;
+  }
+  .vibrant.dark .ambient-glow::before {
+    opacity: 0.80;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .vibrant .surface-ghost:hover {
+      background: color-mix(in srgb, var(--accent-default) 10%, transparent);
+      border-color: color-mix(in srgb, var(--accent-default) 18%, transparent);
+    }
+  }
 }
 
 /* ═══ Vibrant Dark ═══ */
@@ -141,7 +157,6 @@
   --pr-map-moment: #FB923C;
   --pr-overlay-soft: rgba(232, 241, 255, 0.08);
   --pr-overlay-strong: rgba(0, 8, 20, 0.62);
-  --pr-scrim: linear-gradient(to bottom, rgba(0, 10, 27, 0.02) 0%, rgba(0, 10, 27, 0.66) 100%);
   --pr-shadow-card: 0 12px 28px rgba(36, 105, 194, 0.20), 0 3px 10px rgba(0, 0, 0, 0.26);
   --pr-shadow-row: 0 6px 16px rgba(36, 105, 194, 0.18);
   --pr-shadow-btn: 0 5px 14px rgba(105, 168, 255, 0.24);
@@ -152,27 +167,17 @@
   --pr-online-bg: color-mix(in srgb, var(--pr-online) 14%, transparent);
   --pr-danger-bg: color-mix(in srgb, var(--pr-hot) 12%, transparent);
 
-  /* ── shadcn 桥接 ── */
+  /* ── shadcn 桥接（dark，同上）── */
   --background: var(--surface-primary);
   --foreground: var(--text-primary);
-  --card: var(--surface-primary);
-  --card-foreground: var(--text-primary);
-  --popover: var(--surface-primary);
-  --popover-foreground: var(--text-primary);
-  --secondary: #111E32;
-  --secondary-foreground: var(--text-primary);
-  --muted: #111E32;
-  --muted-foreground: var(--text-secondary);
-  --accent: var(--accent-soft);
-  --accent-foreground: var(--text-primary);
   --border: var(--border-default);
   --ring: var(--accent-default);
-  --input-background: #101D31;
-  --switch-background: var(--border-strong);
+  --destructive: var(--status-danger);
 
   /* ── Shell / overlay primitives (dark 覆盖) ── */
   --surface-nav-glass: color-mix(in srgb, var(--surface-panel) 90%, transparent);
   --border-nav-glass: color-mix(in srgb, var(--accent-default) 18%, transparent);
+  --elevation-rail-hover: 0 6px 16px rgba(105, 168, 255, 0.22), 0 2px 6px rgba(105, 168, 255, 0.12);
   --surface-scrim: rgba(0, 0, 0, 0.42);
   --surface-overlay: rgba(0, 0, 0, 0.42);
   --elevation-fab: 0 6px 22px var(--glow-accent), 0 2px 6px rgba(0,0,0,0.20);
@@ -183,9 +188,4 @@
   /* ── card-menu dark ── */
   --surface-card-menu: color-mix(in srgb, var(--surface-primary) 82%, var(--accent-default));
   --border-card-menu: color-mix(in srgb, var(--accent-default) 28%, var(--border-default));
-
-  /* ── 玻璃背景 dark ── */
-  --card-scrim: rgba(0, 0, 0, 0.62);
-  --accent-on-scrim: #93C5FD;
-  --online-on-scrim: #2DD4BF;
 }
