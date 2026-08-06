@@ -221,7 +221,7 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth
 	if err := s.loginTracker.Check(ctx, req.LoginID); err != nil {
 		observability.L().Warn("login blocked by lockout",
 			"method", "Login",
-			"login_id", req.LoginID,
+			"login_id", observability.Redact(req.LoginID),
 		)
 		return platformauth.AuthResult{}, err
 	}
@@ -402,7 +402,7 @@ func (s *Service) RequestPasswordReset(ctx context.Context, req RequestPasswordR
 	if sendErr := s.emailSender.SendPasswordReset(ctx, req.LoginID, code); sendErr != nil {
 		observability.L().Warn("email send failed for password reset",
 			"method", "RequestPasswordReset",
-			"login_id", req.LoginID,
+			"login_id", observability.Redact(req.LoginID),
 			"error", sendErr,
 		)
 	}

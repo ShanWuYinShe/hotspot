@@ -112,8 +112,7 @@ func (r *PostgresRepository) Follow(ctx context.Context, userID, targetUserID st
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	_, blocked, remark, _, blockedAt, blockReason, _ := r.getRelationFields(ctx, userID, targetUserID)
-	return queryable.Exec(ctx, queryUpsertUserRelation, userID, targetUserID, true, blocked, remark, nowRFC3339(), blockedAt, blockReason)
+	return queryable.Exec(ctx, queryUpsertUserRelationFollow, userID, targetUserID, nowRFC3339())
 }
 func (r *PostgresRepository) Unfollow(ctx context.Context, userID, targetUserID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
@@ -123,8 +122,7 @@ func (r *PostgresRepository) Unfollow(ctx context.Context, userID, targetUserID 
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	_, blocked, remark, _, blockedAt, blockReason, _ := r.getRelationFields(ctx, userID, targetUserID)
-	return queryable.Exec(ctx, queryUpsertUserRelation, userID, targetUserID, false, blocked, remark, nil, blockedAt, blockReason)
+	return queryable.Exec(ctx, queryUpsertUserRelationUnfollow, userID, targetUserID)
 }
 func (r *PostgresRepository) Block(ctx context.Context, userID, targetUserID, reason string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
@@ -134,9 +132,8 @@ func (r *PostgresRepository) Block(ctx context.Context, userID, targetUserID, re
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	following, _, remark, followedAt, _, _, _ := r.getRelationFields(ctx, userID, targetUserID)
 	blockedAt := nowRFC3339()
-	return queryable.Exec(ctx, queryUpsertUserRelation, userID, targetUserID, following, true, remark, followedAt, blockedAt, reason)
+	return queryable.Exec(ctx, queryUpsertUserRelationBlock, userID, targetUserID, blockedAt, reason)
 }
 func (r *PostgresRepository) Unblock(ctx context.Context, userID, targetUserID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
@@ -146,8 +143,7 @@ func (r *PostgresRepository) Unblock(ctx context.Context, userID, targetUserID s
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	following, _, remark, followedAt, _, _, _ := r.getRelationFields(ctx, userID, targetUserID)
-	return queryable.Exec(ctx, queryUpsertUserRelation, userID, targetUserID, following, false, remark, followedAt, nil, "")
+	return queryable.Exec(ctx, queryUpsertUserRelationUnblock, userID, targetUserID)
 }
 func (r *PostgresRepository) SetRemark(ctx context.Context, userID, targetUserID, remark string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
@@ -157,8 +153,7 @@ func (r *PostgresRepository) SetRemark(ctx context.Context, userID, targetUserID
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	following, blocked, _, followedAt, blockedAt, blockReason, _ := r.getRelationFields(ctx, userID, targetUserID)
-	return queryable.Exec(ctx, queryUpsertUserRelation, userID, targetUserID, following, blocked, remark, followedAt, blockedAt, blockReason)
+	return queryable.Exec(ctx, queryUpsertUserRelationRemark, userID, targetUserID, remark)
 }
 
 func (r *PostgresRepository) ListBlocked(ctx context.Context, userID string, limit int, cursor string) (PaginatedBlockedUsers, error) {

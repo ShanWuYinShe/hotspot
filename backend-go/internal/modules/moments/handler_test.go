@@ -179,15 +179,16 @@ func TestCreateCommentDoesNotIncrementMomentCountWhenCounterFails(t *testing.T) 
 	if err := json.NewDecoder(createCommentRR.Body).Decode(&createCommentResp); err != nil {
 		t.Fatalf("decode create comment response: %v", err)
 	}
-	if createCommentResp.Code != httpx.CodeInternalUnavailable {
-		t.Fatalf("expected code httpx.CodeInternalUnavailable, got %#v", createCommentResp)
+	// 计数失败不阻断评论创建（避免客户端重试产生重复评论）——评论成功、计数陈旧。
+	if createCommentResp.Code != 0 {
+		t.Fatalf("comment create should succeed despite counter failure, got %#v", createCommentResp)
 	}
 	commentsList, err := commentRepo.List(context.Background(), createdMoment.MomentID, 20, "")
 	if err != nil {
 		t.Fatalf("list comments: %v", err)
 	}
-	if len(commentsList.Items) != 0 {
-		t.Fatalf("comment should be rolled back, got %#v", commentsList)
+	if len(commentsList.Items) != 1 {
+		t.Fatalf("comment should be committed, got %#v", commentsList)
 	}
 	openReq := httptest.NewRequest(http.MethodPost, "/open_the_door", strings.NewReader(`{"moment_id":"`+createdMoment.MomentID+`"}`))
 	openRR := httptest.NewRecorder()

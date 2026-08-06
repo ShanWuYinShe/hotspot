@@ -253,7 +253,7 @@ func TestPostgresRepositoryWritesReturnExecErrors(t *testing.T) {
 	if err := repo.PutProfile(context.Background(), MyProfile{UserID: "user_alice", Nickname: "Alice", UserType: UserTypeNormal, Location: Location{LocationName: "南天门"}}); err == nil {
 		t.Fatal("expected put profile error")
 	}
-	backend.execErrs = map[string]error{queryUpsertUserRelation: errors.New("boom")}
+	backend.execErrs = map[string]error{queryUpsertUserRelationFollow: errors.New("boom")}
 	if err := repo.Follow(context.Background(), "user_alice", "user_bob", FollowSourceProfile, ""); err == nil {
 		t.Fatal("expected follow error")
 	}

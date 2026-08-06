@@ -54,7 +54,7 @@ func (s *Service) Get(ctx context.Context, req GetShareRequest) (ShareDetail, er
 	}
 	item, err := s.repo.Get(ctx, query)
 	if err != nil {
-		observability.L().Error("share.get failed", "error", err, "share_code", query.ShareCode)
+		observability.L().Error("share.get failed", "error", err, "share_code", observability.Redact(query.ShareCode))
 		return ShareDetail{}, err
 	}
 	return item, nil
@@ -104,7 +104,7 @@ func (s *Service) Revoke(ctx context.Context, req RevokeShareRequest) error {
 	if shareID == "" {
 		detail, err := s.repo.Get(ctx, getShareQuery{ShareCode: shareCode})
 		if err != nil {
-			observability.L().Error("share.revoke resolve by code failed", "error", err, "share_code", shareCode)
+			observability.L().Error("share.revoke resolve by code failed", "error", err, "share_code", observability.Redact(shareCode))
 			return err
 		}
 		shareID = detail.Share.ShareID

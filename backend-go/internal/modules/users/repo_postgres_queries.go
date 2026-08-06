@@ -129,16 +129,37 @@ nickname_searchable = EXCLUDED.nickname_searchable,
 location_searchable = EXCLUDED.location_searchable,
 nearby_moment_notify = EXCLUDED.nearby_moment_notify`
 
-	queryUpsertUserRelation = `
-INSERT INTO user_relations (user_id, target_user_id, is_following, is_blocked, remark, followed_at, blocked_at, block_reason)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+	// 关系操作的条件更新：每个操作只写自己的字段，避免 read-modify-write
+	// 的 lost update（并发 Follow+Block 互相覆盖对方字段）。
+	queryUpsertUserRelationFollow = `
+INSERT INTO user_relations (user_id, target_user_id, is_following, followed_at)
+VALUES ($1,$2,TRUE,$3)
 ON CONFLICT (user_id, target_user_id) DO UPDATE SET
-is_following = EXCLUDED.is_following,
-is_blocked = EXCLUDED.is_blocked,
-remark = EXCLUDED.remark,
-followed_at = EXCLUDED.followed_at,
-blocked_at = EXCLUDED.blocked_at,
-block_reason = EXCLUDED.block_reason`
+is_following = TRUE, followed_at = EXCLUDED.followed_at`
+
+	queryUpsertUserRelationUnfollow = `
+INSERT INTO user_relations (user_id, target_user_id, is_following)
+VALUES ($1,$2,FALSE)
+ON CONFLICT (user_id, target_user_id) DO UPDATE SET
+is_following = FALSE, followed_at = NULL`
+
+	queryUpsertUserRelationBlock = `
+INSERT INTO user_relations (user_id, target_user_id, is_blocked, blocked_at, block_reason)
+VALUES ($1,$2,TRUE,$3,$4)
+ON CONFLICT (user_id, target_user_id) DO UPDATE SET
+is_blocked = TRUE, blocked_at = EXCLUDED.blocked_at, block_reason = EXCLUDED.block_reason`
+
+	queryUpsertUserRelationUnblock = `
+INSERT INTO user_relations (user_id, target_user_id, is_blocked)
+VALUES ($1,$2,FALSE)
+ON CONFLICT (user_id, target_user_id) DO UPDATE SET
+is_blocked = FALSE, blocked_at = NULL, block_reason = NULL`
+
+	queryUpsertUserRelationRemark = `
+INSERT INTO user_relations (user_id, target_user_id, remark)
+VALUES ($1,$2,$3)
+ON CONFLICT (user_id, target_user_id) DO UPDATE SET
+remark = EXCLUDED.remark`
 
 	queryGetUserRelation = `
 SELECT is_following, is_blocked, COALESCE(remark, ''), followed_at, blocked_at, COALESCE(block_reason, '')

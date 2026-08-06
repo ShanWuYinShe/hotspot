@@ -62,9 +62,9 @@ func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (Comment
 		normalizedReq.ParentID = replyTarget.ParentID
 	}
 
-	// Insert the comment and bump the moment's comment counter inside a single
-	// transaction so that a counter failure rolls the insert back atomically
-	// (rather than the old SoftDelete, which left a stub List still returned).
+	// 评论插入与 moment 计数是跨模块两步写（无共享事务）：计数失败**不阻断**
+	// 评论创建——评论已落库，若返回错误，客户端重试会产生重复评论。计数陈旧
+	// 为已知限制（moment 侧读取时容忍、删除评论时递减修正）。
 	createAndCount := func(ctx context.Context) (CommentItem, error) {
 		item, err := s.repo.Create(ctx, principal.UserID, normalizedReq)
 		if err != nil {
@@ -72,8 +72,7 @@ func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (Comment
 			return CommentItem{}, err
 		}
 		if err := s.moments.IncrementCommentCount(ctx, normalizedReq.MomentID); err != nil {
-			observability.L().Error("comments.create increment comment count failed", "error", err, "moment_id", normalizedReq.MomentID, "comment_id", item.CommentID)
-			return CommentItem{}, err
+			observability.L().Warn("comments.create increment comment count failed", "error", err, "moment_id", normalizedReq.MomentID, "comment_id", item.CommentID)
 		}
 		return item, nil
 	}
