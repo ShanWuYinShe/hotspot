@@ -83,7 +83,7 @@
 			<Avatar src={moment.avatar} name={moment.user} size={44} style="border:none;" />
 		</button>
 		<div class="flex-1">
-			<p class="text-text-primary text-[15px]">{moment.user}</p>
+			<p class="text-text-primary text-base">{moment.user}</p>
 			<div class="flex items-center gap-1.5">
 				<MapPin class="size-2.5"  style="color:var(--accent-default)" strokeWidth={1.5} />
 				<span class="text-text-secondary text-xs">{moment.location}</span>

@@ -98,7 +98,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 				class="app-list-row app-list-row--standard"
 			>
 				<MapPin class="size-3.25 shrink-0"  style="color:var(--accent-default)" strokeWidth={1.5} />
-				<span class="{isSelected ? 'text-content-inverse' : 'text-text-primary'} flex-1 text-[13px]" >{r.displayName}</span>
+				<span class="{isSelected ? 'text-content-inverse' : 'text-text-primary'} flex-1 text-base" >{r.displayName}</span>
 				{#if isSelected}
 					<Check class="size-3.25"  style="color:var(--content-inverse)" strokeWidth={2.5} />
 				{/if}
@@ -137,8 +137,8 @@ import PinMedia from '../shared/PinMedia.svelte';
 					<Navigation class="size-4.25"  strokeWidth={2} />
 				</div>
 				<div class="flex-1">
-					<p class="text-[13px]" >当前位置</p>
-					<p class="text-[11px] mt-px"  style="opacity:0.8">{locationName || '自动定位'}</p>
+					<p class="text-base" >当前位置</p>
+					<p class="text-xs mt-px"  style="opacity:0.8">{locationName || '自动定位'}</p>
 				</div>
 				<div class="bg-status-online size-2 shrink-0"  style="border-radius:50%;box-shadow:0 0 6px var(--status-online)"></div>
 			</div>
@@ -209,7 +209,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 							</div>
 							<div class="flex-1 min-w-0">
 								<p class="truncate {isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm">{loc.displayName}</p>
-								<p class="truncate {isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-[11px] mt-px" >{loc.desc}</p>
+								<p class="truncate {isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							<div class="flex shrink-0 items-center gap-1">
 								<Users style="width:11px;height:11px;color:{isSelected ? 'var(--content-inverse)' : 'var(--accent-default)'};" strokeWidth={1.5} />
@@ -247,7 +247,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 							</div>
 							<div class="flex-1 min-w-0">
 								<p class="truncate {isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm">{loc.displayName}</p>
-								<p class="truncate {isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-[11px] mt-px" >{loc.desc}</p>
+								<p class="truncate {isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							{#if isSelected}
 								<Check class="size-3.5 shrink-0"  style="color:var(--content-inverse)" strokeWidth={2.5} />

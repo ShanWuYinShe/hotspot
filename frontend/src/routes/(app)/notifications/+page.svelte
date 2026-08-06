@@ -182,8 +182,8 @@ const FILTER_TABS = [
 					<!-- 新消息分组标题（emphasis：accent 点 + 计数 pill，对齐 Figma Make） -->
 					<div class="mb-3 flex h-5 items-center gap-2">
 						<span aria-hidden="true" class="h-1.5 w-1.5 rounded-full" style="background:var(--accent-default);"></span>
-						<p class="uppercase text-[10px]"  style="font-weight:600;letter-spacing:0.14em;color:var(--text-primary)">新消息</p>
-						<span class="rounded-full px-1.5 py-0.5 text-[10px]"  style="line-height:1;color:var(--accent-default);background:var(--accent-soft)">{unreadGroup.length}</span>
+						<p class="uppercase text-xxs"  style="font-weight:600;letter-spacing:0.14em;color:var(--text-primary)">新消息</p>
+						<span class="rounded-full px-1.5 py-0.5 text-xxs"  style="line-height:1;color:var(--accent-default);background:var(--accent-soft)">{unreadGroup.length}</span>
 					</div>
 					<ListContainer bordered>
 						{#each unreadGroup as n (n.id)}
@@ -195,7 +195,7 @@ const FILTER_TABS = [
 				{#if readGroup.length > 0}
 					<!-- 较早分组标题（非 emphasis：仅 label + flex 分隔线，对齐 Figma Make） -->
 					<div class="mb-3 flex h-5 items-center gap-2" style="margin-top:{unreadGroup.length > 0 ? '20px' : '0'};">
-						<p class="uppercase text-[10px]"  style="font-weight:500;letter-spacing:0.14em;color:var(--text-secondary)">较早</p>
+						<p class="uppercase text-xxs"  style="font-weight:500;letter-spacing:0.14em;color:var(--text-secondary)">较早</p>
 						<span aria-hidden="true" class="h-px flex-1" style="background:var(--border-default);"></span>
 					</div>
 					<ListContainer bordered>
@@ -219,7 +219,7 @@ const FILTER_TABS = [
 		<div>
 			<RailSection title="今日概览">
 				<div class="flex items-baseline gap-1.5 mb-3">
-					<span class="text-text-primary text-[30px] font-semibold leading-none">{unread}</span>
+					<span class="text-text-primary text-3xl font-semibold leading-none">{unread}</span>
 					<span class="text-text-secondary text-xs">条未读 · 共 {notifications.length} 条</span>
 				</div>
 				<div class="flex flex-col gap-2">

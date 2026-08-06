@@ -110,7 +110,7 @@
 		<div class="flex items-center justify-between gap-4">
 			<div class="min-w-0">
 				<p class="eyebrow">附近动态</p>
-				<h1 id="create-composer-title" class="mt-1 text-[20px] font-medium leading-none tracking-[-0.01em] text-text-primary">
+				<h1 id="create-composer-title" class="mt-1 text-xl font-medium leading-none tracking-[-0.01em] text-text-primary">
 					记录此刻
 				</h1>
 			</div>
@@ -150,7 +150,7 @@
 					bind:value={text}
 					oninput={(e) => (text = e.currentTarget.value.slice(0, 280))}
 					placeholder="写下此刻发生的事，或分享一个想被附近的人看见的瞬间…"
-					class="min-h-30.5 w-full resize-none bg-transparent text-[15px] leading-7 text-text-primary outline-none placeholder:text-text-secondary"
+					class="min-h-30.5 w-full resize-none bg-transparent text-base leading-7 text-text-primary outline-none placeholder:text-text-secondary"
 					aria-label="动态内容"
 				></textarea>
 				<div class="mt-3 flex items-center justify-between border-t border-border-default pt-3">

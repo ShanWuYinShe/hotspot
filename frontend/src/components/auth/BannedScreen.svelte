@@ -15,15 +15,15 @@
 		>
 			<ShieldAlert size={30} color="var(--status-danger)" strokeWidth={1.6} />
 		</div>
-		<h1 class="text-[20px] font-semibold tracking-tight" style="color:var(--text-primary);">
+		<h1 class="text-xl font-semibold tracking-tight" style="color:var(--text-primary);">
 			账号已被封禁
 		</h1>
-		<p class="text-[14px] leading-relaxed" style="color:var(--text-secondary);">
+		<p class="text-base leading-relaxed" style="color:var(--text-secondary);">
 			{message ?? '你的账号因违规操作被封禁。如有疑问，请联系客服。'}
 		</p>
 		<button
 			type="button"
-			class="hover-btn mt-2 rounded-xl px-8 py-2.5 text-[15px] font-medium"
+			class="hover-btn mt-2 rounded-xl px-8 py-2.5 text-base font-medium"
 			style="background:var(--accent-default);color:white;"
 			onclick={onAcknowledge}
 		>

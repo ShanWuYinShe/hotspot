@@ -255,7 +255,7 @@
 					<PinMedia pin={selectedPin} size={52} markerWidth={26} markerHeight={35} />
 					<div class="flex-1 min-w-0">
 						<div class="flex items-center gap-2">
-							<p class="text-text-primary text-[15px]">{selectedPin.name || selectedPin.title}</p>
+							<p class="text-text-primary text-base">{selectedPin.name || selectedPin.title}</p>
 							{#if (selectedPin.count ?? 1) > 1}
 								<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:{PIN_COLORS[selectedPin.type]};color:white;">
 									{selectedPin.count}个

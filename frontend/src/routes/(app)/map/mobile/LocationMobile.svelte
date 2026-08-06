@@ -277,7 +277,7 @@
 								onclick={() => toggleFilter(type as PinType)}
 							>
 								<img class="w-4.5 h-6 shrink-0" src={icon} alt={label}  />
-								<span class="text-text-primary text-[13px]"  style="flex:1;text-align:left">{label}</span>
+								<span class="text-text-primary text-base"  style="flex:1;text-align:left">{label}</span>
 								<div style="width:13px;height:13px;border-radius:50%;shrink:0;background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--border-default)'};box-shadow:{active ? `0 0 6px ${color}55` : 'none'};transition:all 0.18s;"></div>
 							</button>
 						{/each}

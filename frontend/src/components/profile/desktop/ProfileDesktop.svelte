@@ -74,7 +74,7 @@
 		<header class="flex items-start justify-between gap-6 border-b border-border-default pb-5">
 			<div>
 				<p class="text-xs font-medium uppercase tracking-[0.14em] text-accent-default">个人资料</p>
-				<h1 class="mt-2 text-[24px] font-medium tracking-[-0.015em] text-text-primary">管理你的公开信息</h1>
+				<h1 class="mt-2 text-2xl font-medium tracking-[-0.015em] text-text-primary">管理你的公开信息</h1>
 				<p class="mt-1.5 text-sm text-text-secondary">这些资料会展示给访问你主页的人。</p>
 			</div>
 			<button
@@ -110,7 +110,7 @@
 						</button>
 					</div>
 					<div class="min-w-0 pt-1">
-						<h2 class="text-[22px] font-medium tracking-[-0.01em] text-text-primary">{nickname || '未设置昵称'}</h2>
+						<h2 class="text-2xl font-medium tracking-[-0.01em] text-text-primary">{nickname || '未设置昵称'}</h2>
 						<p class="mt-1 text-sm text-text-secondary">{handle}</p>
 						<p class="mt-4 max-w-115 text-sm leading-6 text-text-secondary">{bio || '这个人还没有填写简介。'}</p>
 						<p class="mt-3 flex items-center gap-1.5 text-xs text-text-secondary">

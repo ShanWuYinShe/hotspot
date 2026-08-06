@@ -63,7 +63,7 @@
 		<div class="px-3 pt-2.5 pb-2.5">
 			<div class="flex items-center justify-between gap-2">
 				<div class="min-w-0">
-					<p class="flex items-center gap-1.5 truncate text-text-primary text-[14px]" style="font-weight:600;">
+					<p class="flex items-center gap-1.5 truncate text-text-primary text-base" style="font-weight:600;">
 						<span class="truncate">{user.name}</span>
 					</p>
 					<p class="truncate text-text-secondary text-xxs mt-0.5">{user.note}</p>

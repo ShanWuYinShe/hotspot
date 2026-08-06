@@ -92,8 +92,8 @@
 					<item.icon style="width:16px;height:16px;color:{item.color};" strokeWidth={1.75} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-[13px]"  style="color:var(--text-primary)">{item.title}</p>
-					<p class="text-[11px] mt-px"  style="color:var(--text-secondary)">{item.sub}</p>
+					<p class="text-base"  style="color:var(--text-primary)">{item.title}</p>
+					<p class="text-xs mt-px"  style="color:var(--text-secondary)">{item.sub}</p>
 				</div>
 				<ChevronRight class="size-3.25"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 			</ListItem>
@@ -150,7 +150,7 @@
 					<div class="flex items-center gap-2">
 						<div class="flex items-center gap-1.5 py-1.5 px-3 rounded-full surface-flat">
 							<span class="rounded-full size-1.5"  style="background:var(--status-online)"></span>
-							<span class="text-[11px]"  style="color:var(--text-secondary)">{defaultLocation?.location_name || '附近'}</span>
+							<span class="text-xs"  style="color:var(--text-secondary)">{defaultLocation?.location_name || '附近'}</span>
 						</div>
 						<button
 							type="button"

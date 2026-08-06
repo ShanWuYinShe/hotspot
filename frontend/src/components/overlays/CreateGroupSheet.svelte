@@ -82,13 +82,13 @@
 				<Check class="size-8"  style="color:var(--text-on-accent)" strokeWidth={2.5} />
 			</div>
 			<div>
-				<p class="text-[20px] font-semibold text-text-primary">群组已创建！</p>
+				<p class="text-xl font-semibold text-text-primary">群组已创建！</p>
 				<p class="text-base mt-1.5 text-text-secondary">「{name}」已成功创建，现在可以邀请好友加入了</p>
 			</div>
 			<button
 				type="button"
 				onclick={onClose}
-				class="hover-btn px-8 py-3 rounded-full outline-none bg-accent-default text-white text-[15px] font-medium"
+				class="hover-btn px-8 py-3 rounded-full outline-none bg-accent-default text-white text-base font-medium"
 				style="box-shadow:0 6px 20px var(--glow-accent);"
 			>
 				完成
@@ -114,7 +114,7 @@
 				<div class="flex items-center gap-2.5 mt-1.5 px-4 rounded-control input-surface h-11.5" >
 					<input
 						id="group-name"
-						class="flex-1 bg-transparent outline-none text-text-primary text-[14px]"
+						class="flex-1 bg-transparent outline-none text-text-primary text-base"
 						placeholder="给你的群组起个名字…"
 						bind:value={name}
 						maxlength={30}
@@ -171,7 +171,7 @@
 						<Globe class="size-4.5"  style="color:var(--accent-default)" strokeWidth={1.5} />
 					{/if}
 					<div>
-						<p class="text-[14px] text-text-primary">{isPrivate ? '私密群组' : '公开群组'}</p>
+						<p class="text-base text-text-primary">{isPrivate ? '私密群组' : '公开群组'}</p>
 						<p class="text-xs text-text-secondary">
 							{isPrivate ? '仅受邀请的人可加入' : '所有人都可以找到并加入'}
 						</p>
@@ -193,7 +193,7 @@
 				<div class="flex items-center gap-3">
 					<Check style="width:18px;height:18px;color:{requiresApproval ? 'var(--accent-default)' : 'var(--text-secondary)'};" strokeWidth={1.5} />
 					<div>
-						<p class="text-[14px] text-text-primary">新人需审核</p>
+						<p class="text-base text-text-primary">新人需审核</p>
 						<p class="text-xs text-text-secondary">
 							{requiresApproval ? '申请需群主/管理员审核通过后加入' : '申请后直接加入'}
 						</p>
@@ -229,7 +229,7 @@
 				type="button"
 				onclick={() => void handleCreate()}
 				disabled={!canCreate || creating}
-				class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-panel outline-none text-[15px] font-medium {canCreate && !creating ? 'bg-accent-default text-white' : 'bg-surface-primary text-text-secondary'}"
+				class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-panel outline-none text-base font-medium {canCreate && !creating ? 'bg-accent-default text-white' : 'bg-surface-primary text-text-secondary'}"
 				style="box-shadow:{canCreate && !creating ? '0 6px 22px var(--glow-accent)' : 'var(--shadow-neu-inset-sm)'};border:{canCreate && !creating ? 'none' : '1px solid var(--border-default)'};transition:all 0.22s ease;cursor:{canCreate && !creating ? 'pointer' : 'not-allowed'};"
 			>
 		{creating ? '创建中…' : '创建群组'}

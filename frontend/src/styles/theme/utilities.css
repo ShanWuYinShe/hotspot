@@ -329,15 +329,6 @@
     color: var(--accent-default);
   }
 
-  .dark button[style*="background: var(--accent-default)"],
-  .dark button[class*="bg-[var(--accent-default)]"] {
-    color: var(--text-on-accent) !important;
-  }
-  .dark button[style*="background: var(--accent-default)"] :is(svg, span),
-  .dark button[class*="bg-[var(--accent-default)]"] :is(svg, span) {
-    color: var(--text-on-accent) !important;
-  }
-
   /* 星际: glass/electric surfaces */
   .vibrant .surface-hero,
   .vibrant .convex,

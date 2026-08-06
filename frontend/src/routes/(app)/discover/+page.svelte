@@ -75,7 +75,7 @@
 		onclick={() => void goto(ROUTES.search)}
 	>
 		<SearchIcon class="size-5 shrink-0 text-accent-default" strokeWidth={1.8} />
-		<span class="min-w-0 flex-1 py-2 text-[15px] text-text-secondary">搜索用户、群组、动态、地点…</span>
+		<span class="min-w-0 flex-1 py-2 text-base text-text-secondary">搜索用户、群组、动态、地点…</span>
 	</button>
 
 	<!-- 附近的人 -->
@@ -107,8 +107,8 @@
 						<item.icon style="width:16px;height:16px;color:{item.color};" strokeWidth={1.75} />
 					</div>
 					<div class="flex-1 min-w-0">
-						<p class="text-[13px]"  style="color:var(--text-primary)">{item.title}</p>
-						<p class="text-[11px] mt-px"  style="color:var(--text-secondary)">{item.sub}</p>
+						<p class="text-base"  style="color:var(--text-primary)">{item.title}</p>
+						<p class="text-xs mt-px"  style="color:var(--text-secondary)">{item.sub}</p>
 					</div>
 					<ChevronRight class="size-3.25"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</ListItem>

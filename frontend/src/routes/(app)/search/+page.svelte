@@ -140,7 +140,7 @@
 					if (e.key === 'Enter' && query.trim()) remember(query.trim());
 				}}
 				placeholder="搜索用户、动态、地点或话题"
-				class="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-text-primary outline-none placeholder:text-text-secondary"
+				class="min-w-0 flex-1 bg-transparent py-2 text-base text-text-primary outline-none placeholder:text-text-secondary"
 			/>
 			{#if query}
 				<button

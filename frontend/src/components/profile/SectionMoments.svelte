@@ -58,7 +58,7 @@
 				<div class="flex flex-wrap items-end justify-between gap-5">
 					<div>
 						<p class="font-mono text-xxs font-semibold uppercase tracking-[0.16em] text-accent-default">Personal archive / 2024</p>
-						<h2 class="mt-2 text-[30px] font-medium leading-none tracking-[-0.02em] text-text-primary">个人影像档案</h2>
+						<h2 class="mt-2 text-3xl font-medium leading-none tracking-[-0.02em] text-text-primary">个人影像档案</h2>
 						<p class="mt-3 max-w-115 text-sm leading-6 text-text-secondary">{activeMeta[activeTab].description}</p>
 					</div>
 					<div class="flex items-center gap-5 border-l pl-5" style="border-color:var(--border-default);">
@@ -119,7 +119,7 @@
 										<span class="font-mono text-xxs font-semibold uppercase tracking-[0.14em] text-accent-default">Featured record</span>
 										<span class="text-xs text-text-secondary">06.18</span>
 									</div>
-									<h3 class="mt-5 text-[24px] font-medium leading-snug text-text-primary">在云龙湖边，<br />把傍晚收进相册。</h3>
+									<h3 class="mt-5 text-2xl font-medium leading-snug text-text-primary">在云龙湖边，<br />把傍晚收进相册。</h3>
 									<p class="mt-4 text-sm leading-6 text-text-secondary">风停下来以后，水面留下了比语言更完整的回答。今天没有目的地，只是沿着湖岸慢慢走。</p>
 								</div>
 								<div class="mt-8 flex items-center justify-between border-t pt-4" style="border-color:var(--border-default);">

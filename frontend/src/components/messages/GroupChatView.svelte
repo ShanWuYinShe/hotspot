@@ -192,7 +192,7 @@
 			<p class="truncate text-text-primary" style="font-size:{compact ? 13 : 14}px;">
 				{groupName || '群聊'}
 			</p>
-			<p class="{groupTyping ? 'text-accent-default' : 'text-text-secondary'} text-[11px]" >
+			<p class="{groupTyping ? 'text-accent-default' : 'text-text-secondary'} text-xs" >
 				{#if groupTyping}
 					{typingName || '有人'}正在输入…
 				{:else}
@@ -225,7 +225,7 @@
 
 	<!-- Input bar -->
 	{#if chat.sendError}
-		<p class="px-4 pb-1.5 text-status-warning text-[11px]" >{chat.sendError}</p>
+		<p class="px-4 pb-1.5 text-status-warning text-xs" >{chat.sendError}</p>
 	{/if}
 	<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary border-t border-border-default" >
 		<div class="flex-1 flex items-center px-4 rounded-relaxed input-surface h-9.5" >

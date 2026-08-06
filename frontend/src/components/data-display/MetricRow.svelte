@@ -28,7 +28,7 @@
 >
 	{#each items as item (item.label)}
 		<div class="flex min-w-0 flex-col items-center bg-surface-primary px-2 py-2.5 text-center">
-			<dd class="truncate text-[19px] font-semibold leading-none {tones[item.tone ?? 'default']}">
+			<dd class="truncate text-xl font-semibold leading-none {tones[item.tone ?? 'default']}">
 				{#if typeof item.value === 'function'}
 					{@render item.value()}
 				{:else}

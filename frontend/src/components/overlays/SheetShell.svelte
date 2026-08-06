@@ -24,7 +24,7 @@
 
 	<!-- Header -->
 	<div class="flex shrink-0 items-center justify-between px-5 py-3 border-b border-border-default" >
-		<h2 class="text-[17px] text-text-primary">{title}</h2>
+		<h2 class="text-lg text-text-primary">{title}</h2>
 		<button
 			type="button"
 			onclick={onClose}

@@ -82,7 +82,7 @@
 		<button type="button" class="hover-btn flex items-center gap-4 px-4 py-3.5 rounded-panel w-full outline-none text-left surface-hero">
 			<Avatar class="border-2 border-surface-primary shadow-[0_4px_12px_var(--glow-accent)]" src={accountAvatar} name={accountName} size={48}  />
 			<div class="flex-1 min-w-0">
-				<p class="text-[15px] tracking-tight text-text-primary">{accountName || '用户'}</p>
+				<p class="text-base tracking-tight text-text-primary">{accountName || '用户'}</p>
 				<p class="text-xs mt-0.5 text-text-secondary">{accountHandle}{accountEmail ? ` · ${accountEmail}` : ''}</p>
 			</div>
 			<ChevronRight class="size-3.75 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
@@ -99,7 +99,7 @@
 						<Palette class="size-3.75"  style="color:var(--accent-default)" strokeWidth={1.5} />
 					</div>
 					<div class="flex-1 min-w-0">
-						<p class="text-[14px] text-text-primary">应用主题</p>
+						<p class="text-base text-text-primary">应用主题</p>
 						<p class="text-xs text-text-secondary">选择一套全局视觉风格</p>
 					</div>
 				</div>
@@ -131,7 +131,7 @@
 					{/if}
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-[14px] text-text-primary">深色模式</p>
+					<p class="text-base text-text-primary">深色模式</p>
 					<p class="text-xs text-text-secondary">{theme.isDark ? '当前使用深色外观' : '当前使用浅色外观'}</p>
 				</div>
 				<Toggle on={theme.isDark} onToggle={toggleDark} label="深色模式" />
@@ -148,7 +148,7 @@
 					<Bell class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-[14px] text-text-primary">推送通知</p>
+					<p class="text-base text-text-primary">推送通知</p>
 					<p class="text-xs text-text-secondary">消息、提及与新动态提醒</p>
 				</div>
 				<Toggle on={notif} onToggle={() => (notif = !notif)} />
@@ -158,7 +158,7 @@
 					<Volume2 class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-[14px] text-text-primary">应用声音</p>
+					<p class="text-base text-text-primary">应用声音</p>
 					<p class="text-xs text-text-secondary">操作反馈音效</p>
 				</div>
 				<Toggle on={sounds} onToggle={() => (sounds = !sounds)} />
@@ -175,7 +175,7 @@
 					<Lock class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-[14px] text-text-primary">私密账号</p>
+					<p class="text-base text-text-primary">私密账号</p>
 					<p class="text-xs text-text-secondary">仅关注者可查看你的内容</p>
 				</div>
 				<Toggle on={privateProfile} onToggle={() => (privateProfile = !privateProfile)} />
@@ -185,7 +185,7 @@
 					<MapPin class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-[14px] text-text-primary">位置共享</p>
+					<p class="text-base text-text-primary">位置共享</p>
 					<p class="text-xs text-text-secondary">允许附近用户发现你</p>
 				</div>
 				<Toggle on={locationSharing} onToggle={() => (locationSharing = !locationSharing)} />
@@ -202,7 +202,7 @@
 					<Globe class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-[14px] text-text-primary">语言</p>
+					<p class="text-base text-text-primary">语言</p>
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary">中文</span>
 				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
@@ -212,7 +212,7 @@
 					<User class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-[14px] text-text-primary">账号信息</p>
+					<p class="text-base text-text-primary">账号信息</p>
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary"></span>
 				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
@@ -222,7 +222,7 @@
 					<Info class="size-3.75"  style="color:var(--text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-[14px] text-text-primary">关于</p>
+					<p class="text-base text-text-primary">关于</p>
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary">v 1.0.0</span>
 				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />
@@ -238,7 +238,7 @@
 			onclick={() => void handleLogout()}
 		>
 			<LogOut class="size-3.5"  strokeWidth={1.75} />
-			<span class="text-[14px]">退出登录</span>
+			<span class="text-base">退出登录</span>
 		</button>
 	</div>
 </StandardPageLayout>

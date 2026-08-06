@@ -22,7 +22,7 @@
 	<div class="flex-1 min-w-0">
 		<p  style="color:var(--text-primary)" class="truncate text-xs">{name}</p>
 		{#if desc}
-			<p  style="color:var(--text-secondary)" class="truncate text-[10px] mt-px">{desc}</p>
+			<p  style="color:var(--text-secondary)" class="truncate text-xxs mt-px">{desc}</p>
 		{/if}
 	</div>
 	<ChevronRight class="size-3 shrink-0"  style="color:var(--text-secondary)" strokeWidth={1.5} />

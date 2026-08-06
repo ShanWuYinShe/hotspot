@@ -135,7 +135,7 @@
 			}}
 		>
 			<img src={imgHotSpot} alt="HotSpot Logo" class="rounded-full object-cover shrink-0 size-7"  />
-			<span class="tracking-tight text-[17px]"  style="color:var(--text-primary)">HotSpot</span>
+			<span class="tracking-tight text-lg"  style="color:var(--text-primary)">HotSpot</span>
 		</button>
 
 		<!-- Spacer -->

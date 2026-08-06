@@ -56,7 +56,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 {:else if searchQuery && searchResults.length === 0}
 	<div class="flex flex-col items-center py-6">
 		<MapPin class="size-6.5"  style="color:var(--text-secondary);opacity:0.28" strokeWidth={1} />
-		<p class="text-text-secondary text-[13px] mt-2" >未找到匹配地点</p>
+		<p class="text-text-secondary text-base mt-2" >未找到匹配地点</p>
 	</div>
 {:else}
 	<div class="animate-fade-in">
@@ -66,7 +66,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 				<PinMedia pin={selectedPin} size={42} />
 				<div class="flex-1 min-w-0">
 					<p class="text-text-primary text-base">{selectedPin.name || selectedPin.title}</p>
-					<p class="text-text-secondary text-[11px] mt-px" >
+					<p class="text-text-secondary text-xs mt-px" >
 						{PIN_LABELS[selectedPin.type]}
 						{selectedPin.distance ? ` · ${selectedPin.distance}` : ''}
 						{selectedPin.tag ? ` · #${selectedPin.tag}` : ''}
@@ -121,7 +121,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 							</div>
 							<div class="flex-1 min-w-0">
 								<p class="truncate {isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm">{loc.displayName}</p>
-								<p class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-[11px] mt-px" >{loc.desc}</p>
+								<p class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							{#if isSelected}
 								<Check class="size-3.5 shrink-0"  style="color:var(--content-inverse)" strokeWidth={2.5} />
@@ -132,7 +132,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 					{/each}
 				</ListContainer>
 			{:else}
-				<p class="text-text-secondary text-[13px]"  style="padding:12px 20px">暂无最近记录</p>
+				<p class="text-text-secondary text-base"  style="padding:12px 20px">暂无最近记录</p>
 			{/if}
 		{:else}
 			{#if HOT_LOCATIONS.length}
@@ -150,7 +150,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 							</div>
 							<div class="flex-1 min-w-0">
 								<p class="truncate {isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm">{loc.displayName}</p>
-								<p class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-[11px] mt-px" >{loc.desc}</p>
+								<p class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							<div class="flex items-center gap-1 shrink-0">
 								<Users style="width:11px;height:11px;color:{isSelected ? 'var(--content-inverse)' : 'var(--accent-default)'};" strokeWidth={1.5} />

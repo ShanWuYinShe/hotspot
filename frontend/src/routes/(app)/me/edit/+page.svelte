@@ -135,7 +135,7 @@
 				bind:value={nickname}
 				oninput={(e) => (nickname = e.currentTarget.value.slice(0, 30))}
 				placeholder="你的名字"
-				class="w-full bg-transparent outline-none text-text-primary text-[14px]"
+				class="w-full bg-transparent outline-none text-text-primary text-base"
 			/>
 		</div>
 	</div>
@@ -153,7 +153,7 @@
 					oninput={(e) => (bio = e.currentTarget.value.slice(0, 150))}
 					placeholder="介绍一下自己…"
 					rows={3}
-					class="w-full bg-transparent outline-none resize-none text-text-primary text-[14px] leading-[1.65]"
+					class="w-full bg-transparent outline-none resize-none text-text-primary text-base leading-[1.65]"
 				></textarea>
 				<div class="flex justify-end mt-1">
 					<span class="{bio.length > 127 ? 'text-accent-default' : 'text-text-secondary'} text-xs">
@@ -193,7 +193,7 @@
 		<p class="uppercase mb-3 text-text-secondary text-xxs tracking-[0.14em]">账号</p>
 		<button
 			type="button"
-			class="hover-btn w-full text-left px-4 py-3.5 rounded-relaxed outline-none bg-surface-primary text-status-danger text-[14px]"
+			class="hover-btn w-full text-left px-4 py-3.5 rounded-relaxed outline-none bg-surface-primary text-status-danger text-base"
 			style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--border-default);"
 		>
 			注销账号

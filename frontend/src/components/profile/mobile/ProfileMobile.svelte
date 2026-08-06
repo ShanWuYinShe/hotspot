@@ -64,7 +64,7 @@
 						</button>
 					</div>
 					<div class="min-w-0">
-						<h1 class="text-[20px] font-medium tracking-[-0.01em] text-text-primary">{nickname || '未设置昵称'}</h1>
+						<h1 class="text-xl font-medium tracking-[-0.01em] text-text-primary">{nickname || '未设置昵称'}</h1>
 						<p class="mt-0.5 text-xs text-text-secondary">{handle}</p>
 						<p class="mt-2 flex items-center gap-1.5 text-xs text-text-secondary">
 							<MapPin class="size-3.5"  style="color:var(--accent-default)" strokeWidth={1.8} />

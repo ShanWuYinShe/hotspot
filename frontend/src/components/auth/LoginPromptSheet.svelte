@@ -30,7 +30,7 @@
 		</div>
 		<div class="mb-4 flex items-start justify-between">
 			<div>
-				<Dialog.Title class="text-[17px] font-semibold tracking-tight" style="color:var(--text-primary);">
+				<Dialog.Title class="text-lg font-semibold tracking-tight" style="color:var(--text-primary);">
 					登录后继续
 				</Dialog.Title>
 				{#if actionLabel}

@@ -246,7 +246,7 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 
 			{#if tab === 'overview'}
 				<div class="py-6">
-					<p class="max-w-3xl text-[15px] leading-7 text-text-secondary">{group.description}</p>
+					<p class="max-w-3xl text-base leading-7 text-text-secondary">{group.description}</p>
 				</div>
 				{:else if tab === 'members'}
 					<!-- 空旷内容区 → List bordered（有边框列表契约）；列表行不设独立边框 -->
@@ -266,7 +266,7 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 									{/if}
 								</div>
 								<span class="min-w-0 flex-1">
-									<span class="block text-[14px] text-text-primary">{member.name}</span>
+									<span class="block text-base text-text-primary">{member.name}</span>
 									<span class="text-xs text-text-secondary">{member.role}</span>
 								</span>
 								<span class="text-xs text-text-secondary">查看资料</span>
@@ -278,7 +278,7 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 				<ListContainer bordered class="mt-6">
 					{#each announcements as item (item.title)}
 						<article class="px-4 py-4">
-							<p class="text-[14px] font-medium text-text-primary">{item.title}</p>
+							<p class="text-base font-medium text-text-primary">{item.title}</p>
 							<p class="mt-1 text-sm leading-5 text-text-secondary">{item.body}</p>
 							<p class="mt-2 text-xs text-text-secondary">{item.time}</p>
 						</article>

@@ -42,11 +42,11 @@
 				<div class="absolute inset-x-0 bottom-0 border-t px-2.5 pb-2.5 pt-2" style="background:var(--surface-card-menu);border-color:var(--border-card-menu);">
 					<p class="truncate text-sm" style="color:var(--text-primary);font-weight:500;">{g.name}</p>
 					<div class="mt-1 flex items-center justify-between">
-						<span class="flex items-center gap-1 text-[10px]"  style="color:var(--text-secondary)">
+						<span class="flex items-center gap-1 text-xxs"  style="color:var(--text-secondary)">
 							<Users class="h-2.25 w-2.25" strokeWidth={1.5} />
 							{g.members} 成员
 						</span>
-						<span class="flex items-center gap-0.5 text-[10px]"  style="color:var(--accent-default)">
+						<span class="flex items-center gap-0.5 text-xxs"  style="color:var(--accent-default)">
 							<MapPin class="h-2.25 w-2.25" strokeWidth={2} />
 							{g.distance}
 						</span>

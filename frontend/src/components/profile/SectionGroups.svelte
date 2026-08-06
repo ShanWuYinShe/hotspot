@@ -66,7 +66,7 @@
 							class="h-8 w-8 shrink-0 rounded-tight object-cover"
 							style="border:1px solid var(--border-default);"
 						/>
-						<p class="min-w-0 flex-1 truncate text-[14px] font-medium text-text-primary">{g.name}</p>
+						<p class="min-w-0 flex-1 truncate text-base font-medium text-text-primary">{g.name}</p>
 						<ChevronRight class="shrink-0 text-text-secondary size-3.75"  strokeWidth={1.7} />
 					</div>
 

@@ -109,7 +109,7 @@
 
 	<!-- 内容（gutter 由 SplitPageLayout 提供） -->
 	<div class="pt-5">
-				<h1 class="text-text-primary text-[24px] mb-3">{safeEv.title}</h1>
+				<h1 class="text-text-primary text-2xl mb-3">{safeEv.title}</h1>
 
 				<!-- meta 行 -->
 				<div class="mb-6 flex flex-col gap-2.5">
@@ -140,7 +140,7 @@
 				</div>
 
 				<!-- 描述 -->
-				<p class="mb-5 text-[14px] leading-[1.75] text-text-secondary">{safeEv.description}</p>
+				<p class="mb-5 text-base leading-[1.75] text-text-secondary">{safeEv.description}</p>
 
 				<!-- 亮点 -->
 				<div class="mb-5 grid gap-2.5" style="grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));">
@@ -157,7 +157,7 @@
 				<!-- 参与者 -->
 				<div class="mb-5">
 					<div class="mb-3 flex items-center justify-between">
-						<p class="text-[14px] text-text-primary">参与者 · {safeEv.participants.length}/{safeEv.maxParticipants}</p>
+						<p class="text-base text-text-primary">参与者 · {safeEv.participants.length}/{safeEv.maxParticipants}</p>
 						<button type="button" class="hover-btn tap-93 flex items-center gap-0.5 outline-none" style="color:var(--accent-default);" onclick={() => (showParticipants = true)}>
 							<span class="text-sm">查看全部</span>
 							<ChevronRight class="size-3.25"  strokeWidth={1.5} />
@@ -199,7 +199,7 @@
 			<button
 				type="button"
 				onclick={() => (joined = !joined)}
-				class="hover-btn tap-97 flex w-full items-center justify-center gap-2 rounded-feature py-4 text-[15px] outline-none transition-all duration-300"
+				class="hover-btn tap-97 flex w-full items-center justify-center gap-2 rounded-feature py-4 text-base outline-none transition-all duration-300"
 				style={joined
 					? `background:var(--surface-primary);border:2px solid ${safeEv.color};color:${safeEv.color};box-shadow:0 0 0 4px ${evTone(18)};`
 					: `background:${safeEv.color};color:white;box-shadow:0 8px 24px ${evTone(45)};border:none;`}

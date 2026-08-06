@@ -49,7 +49,7 @@
 		<p class="text-xs"  style="color:var(--text-primary);font-weight:500">位置选择</p>
 		<div class="flex items-center gap-1">
 			<span class="inline-block rounded-full size-1.25"  style="background:var(--status-online)"></span>
-			<p class="text-[10px]"  style="line-height:1.4;color:var(--text-secondary)">{locationName || '自动定位'}</p>
+			<p class="text-xxs"  style="line-height:1.4;color:var(--text-secondary)">{locationName || '自动定位'}</p>
 		</div>
 	</div>
 

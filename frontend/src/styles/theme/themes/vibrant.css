@@ -75,7 +75,7 @@
   --content-inverse: #FFFFFF;
   --content-inverse-muted: rgba(255, 255, 255, 0.70);
   --content-inverse-secondary: rgba(255, 255, 255, 0.80);
-  --content-on-accent: var(--primary-foreground);
+  --content-on-accent: var(--text-on-accent);
   --surface-control-thumb: var(--content-inverse);
   --elevation-menu: 0 16px 40px rgba(0, 0, 0, 0.16);
   --elevation-control-thumb: 0 1px 3px rgba(0, 0, 0, 0.18);

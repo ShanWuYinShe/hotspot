@@ -214,7 +214,7 @@
 			<p class="truncate text-text-primary" style="font-size:{compact ? 13 : 14}px;">
 				{peerName || '会话'}
 			</p>
-			<p class="{peerTyping ? 'text-accent-default' : onlineNow ? 'text-status-online' : 'text-text-secondary'} text-[11px]" >
+			<p class="{peerTyping ? 'text-accent-default' : onlineNow ? 'text-status-online' : 'text-text-secondary'} text-xs" >
 				{#if peerTyping}
 					正在输入…
 				{:else if onlineNow}
@@ -275,7 +275,7 @@
 
 	<!-- Input bar -->
 	{#if chat.sendError}
-		<p class="px-4 pb-1.5 text-status-warning text-[11px]" >{chat.sendError}</p>
+		<p class="px-4 pb-1.5 text-status-warning text-xs" >{chat.sendError}</p>
 	{/if}
 	<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary border-t border-border-default" >
 		<button
