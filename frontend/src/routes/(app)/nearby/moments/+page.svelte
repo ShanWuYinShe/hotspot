@@ -2,7 +2,7 @@
 	import { Sparkles } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
-	import { loadDefaultLocation } from '@/lib/default-location';
+	import { startDefaultLocation } from '@/lib/start-default-location';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
@@ -28,15 +28,9 @@
 	let loading = $state(true);
 	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
 
-	$effect(() => {
-		let cancelled = false;
-		void loadDefaultLocation().then((loc) => {
-			if (!cancelled) referencePoint = loc?.point ?? null;
-		});
-		return () => {
-			cancelled = true;
-		};
-	});
+	$effect(() => startDefaultLocation((loc) => {
+referencePoint = loc?.point ?? null;
+}));
 
 	$effect(() => {
 		// spec: feed/nearby reference_point is optional — server resolves via fallback

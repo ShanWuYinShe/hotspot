@@ -4,7 +4,7 @@
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import { auth } from '@/stores/auth.svelte';
-	import { loadDefaultLocation, type GeoPoint } from '@/lib/default-location';
+	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { createMoment } from '@/api';
 
 	// 三端共用的发布器（手机 Sheet / 平板 Sheet / 桌面对话框）。
@@ -31,20 +31,12 @@
 	let audience = $state<'nearby' | 'friends' | 'private'>('nearby');
 	let topicActive = $state(false);
 	let submitting = $state(false);
-	let referencePoint = $state<GeoPoint | null>(null);
+	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
 
-	$effect(() => {
-		let cancelled = false;
-		void loadDefaultLocation().then((loc) => {
-			if (!cancelled) {
-				referencePoint = loc?.point ?? null;
-				locationName = loc?.location_name ?? '';
-			}
-		});
-		return () => {
-			cancelled = true;
-		};
-	});
+	$effect(() => startDefaultLocation((loc) => {
+		referencePoint = loc?.point ?? null;
+		locationName = loc?.location_name ?? '';
+	}));
 
 	const toggleMood = (tag: string) => {
 		const next = new Set(selectedMoods);

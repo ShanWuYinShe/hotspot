@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { MessageCircle, Users } from '@lucide/svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
+	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
@@ -55,7 +56,7 @@
 			ariaLabel={`查看 ${f.name} 的主页`}
 		>
 			{#snippet avatarBadge()}
-				<span class="absolute bottom-0 right-0 rounded-full {f.online ? 'bg-status-online' : 'bg-text-secondary'}" style="width:10px;height:10px;border:2px solid var(--surface-primary);opacity:{f.online ? 1 : 0.5};"></span>
+				<OnlineDot size="md" color={f.online ? undefined : 'var(--text-secondary)'} class={f.online ? '' : 'opacity-50'} />
 			{/snippet}
 			{#snippet nameBadge()}
 				<TagPill size="sm">{f.tag}</TagPill>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Navigation2, ChevronRight } from '@lucide/svelte';
-	import { loadDefaultLocation } from '@/lib/default-location';
+	import { startDefaultLocation } from '@/lib/start-default-location';
 
 	// 侧栏底部「位置选择」锚点卡片。
 	// 折叠态镜像侧栏导航项的 hover 语义：默认透明、hover 淡灰填充。
@@ -17,15 +17,9 @@
 	let locationName = $state('');
 	const collapsedHover = $derived('var(--interactive-hover-fill)');
 
-	$effect(() => {
-		let cancelled = false;
-		void loadDefaultLocation().then((loc) => {
-			if (!cancelled) locationName = loc?.location_name ?? '';
-		});
-		return () => {
-			cancelled = true;
-		};
-	});
+	$effect(() => startDefaultLocation((loc) => {
+locationName = loc?.location_name ?? '';
+}));
 </script>
 
 <button

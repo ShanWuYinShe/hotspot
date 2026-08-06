@@ -74,6 +74,7 @@
   --surface-gallery-label: rgba(0, 0, 0, 0.46);
   --surface-map-control: rgba(255, 255, 255, 0.20);
   --surface-map-control-active: rgba(255, 255, 255, 0.25);
+  --elevation-profile-avatar: 0 6px 20px rgba(0, 0, 0, 0.22);
   --elevation-modal: 0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--border-subtle);
   --elevation-fab: 0 6px 18px var(--glow-accent), 0 2px 4px rgba(0,0,0,0.10);
   --elevation-nav: 0 -2px 16px rgba(61,122,85,0.08), 0 8px 24px rgba(61,122,85,0.10);

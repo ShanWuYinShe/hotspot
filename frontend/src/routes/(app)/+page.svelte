@@ -8,11 +8,11 @@
 	import { type Activity } from '@/components/home/activity-data';
 	import { fetchHomeFeed } from '@/components/home/home-feed';
 	import ListContainer from '@/components/list/ListContainer.svelte';
-	import ListItem from '@/components/list/ListItem.svelte';
+	import ActivityRow from '@/components/home/ActivityRow.svelte';
 	import NearbyUserRows from '@/components/home/NearbyUserRows.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
 	import { ROUTES } from '@/lib/routes';
-	import { loadDefaultLocation, type DefaultLocation } from '@/lib/default-location';
+	import { startDefaultLocation, type DefaultLocation } from '@/lib/start-default-location';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 
@@ -29,15 +29,9 @@
 	let error = $state<string | null>(null);
 	let defaultLocation = $state<DefaultLocation | null>(null);
 
-	$effect(() => {
-		let cancelled = false;
-		void loadDefaultLocation().then((loc) => {
-			if (!cancelled) defaultLocation = loc ?? null;
-		});
-		return () => {
-			cancelled = true;
-		};
-	});
+	$effect(() => startDefaultLocation((loc) => {
+			defaultLocation = loc ?? null;
+}));
 
 	$effect(() => {
 		let cancelled = false;
@@ -80,23 +74,7 @@
 {#snippet activityRows(items: Activity[], onClick: (id: number) => void)}
 	<ListContainer bordered>
 		{#each items as item (item.id)}
-			<ListItem
-				onClick={() => onClick(item.id)}
-				ariaLabel={item.title}
-				class="flex items-center gap-3 px-4 py-3"
-			>
-				<div
-					class="rounded-tight flex items-center justify-center shrink-0"
-					style="width:34px;height:34px;background:{item.bg};"
-				>
-					<item.icon style="width:16px;height:16px;color:{item.color};" strokeWidth={1.75} />
-				</div>
-				<div class="flex-1 min-w-0">
-					<p class="text-base"  style="color:var(--text-primary)">{item.title}</p>
-					<p class="text-xs mt-px"  style="color:var(--text-secondary)">{item.sub}</p>
-				</div>
-				<ChevronRight class="size-3.25"  style="color:var(--text-secondary)" strokeWidth={1.5} />
-			</ListItem>
+			<ActivityRow item={item} onClick={() => onClick(item.id)} />
 		{/each}
 	</ListContainer>
 {/snippet}

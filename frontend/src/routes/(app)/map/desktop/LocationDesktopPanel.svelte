@@ -3,7 +3,7 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
-	import { loadDefaultLocation } from '@/lib/default-location';
+	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { PIN_COLORS, PIN_LABELS, pinTone } from '../shared/location-shared';
 import PinMedia from '../shared/PinMedia.svelte';
@@ -41,15 +41,9 @@ import PinMedia from '../shared/PinMedia.svelte';
 	} = $props();
 
 	let locationName = $state('');
-	$effect(() => {
-		let cancelled = false;
-		void loadDefaultLocation().then((loc) => {
-			if (!cancelled) locationName = loc?.location_name ?? '';
-		});
-		return () => {
-			cancelled = true;
-		};
-	});
+	$effect(() => startDefaultLocation((loc) => {
+locationName = loc?.location_name ?? '';
+}));
 </script>
 
 <!-- Header -->

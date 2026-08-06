@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ArrowLeft, Phone, Video, Send, Smile, MoreHorizontal, MessageCircle } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import MessageBubble from '@/components/messages/MessageBubble.svelte';
 	import ChatDatePill from '@/components/messages/ChatDatePill.svelte';
 	import { auth } from '@/stores/auth.svelte';
@@ -204,7 +205,7 @@
 		>
 			{#snippet badge()}
 				{#if onlineNow}
-					<span class="absolute bottom-0 right-0 rounded-full bg-status-online size-2.25 border-2 border-surface-primary"  ></span>
+					<OnlineDot size="sm" />
 				{/if}
 			{/snippet}
 		</Avatar>

@@ -2,7 +2,7 @@
 	import { MapPin, Users } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
-	import { loadDefaultLocation } from '@/lib/default-location';
+	import { startDefaultLocation } from '@/lib/start-default-location';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -27,18 +27,10 @@
 	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
 	let locationName = $state('');
 
-	$effect(() => {
-		let cancelled = false;
-		void loadDefaultLocation().then((loc) => {
-			if (!cancelled) {
+	$effect(() => startDefaultLocation((loc) => {
 				referencePoint = loc?.point ?? null;
 				locationName = loc?.location_name ?? '';
-			}
-		});
-		return () => {
-			cancelled = true;
-		};
-	});
+}));
 
 	$effect(() => {
 		// spec: feed/nearby_groups — reference_point 可选,服务端按回退链解析

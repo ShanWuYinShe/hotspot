@@ -2,6 +2,7 @@
 	import type { NearbyUser } from './nearby-users';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
+	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 
 	// 首页/发现页共用的「附近用户」行列表：ListContainer + UserCardRow
 	// （在线角标 + #tag · 距离副标题 + 关注按钮），两页一致避免重复实现。
@@ -23,10 +24,7 @@
 		<UserCardRow name={u.name} avatar={u.avatar}>
 			{#snippet avatarBadge()}
 				{#if u.isOnline}
-					<span
-						class="absolute bottom-0 right-0 rounded-full border-2"
-						style="width:10px;height:10px;background:var(--status-online);border-color:var(--surface-primary);"
-					></span>
+					<OnlineDot size="md" />
 				{/if}
 			{/snippet}
 			{#snippet subtitle()}

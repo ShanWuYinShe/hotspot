@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Camera, Globe, Lock, Check, ChevronRight, MapPin } from '@lucide/svelte';
 	import { createGroup } from '@/api';
+	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import Toggle from '@/components/forms/Toggle.svelte';
 	import SheetShell from '@/components/overlays/SheetShell.svelte';
@@ -26,15 +27,9 @@
 
 	const canCreate = $derived(name.trim().length >= 2);
 
-	$effect(() => {
-		let cancelled = false;
-		void loadDefaultLocation().then((loc) => {
-			if (!cancelled) locationName = loc?.location_name ?? '';
-		});
-		return () => {
-			cancelled = true;
-		};
-	});
+	$effect(() => startDefaultLocation((loc) => {
+		locationName = loc?.location_name ?? '';
+	}));
 
 	/** 群组位置：来自 ClientConfig default_location，取不到就不传。 */
 	async function resolveLocation() {

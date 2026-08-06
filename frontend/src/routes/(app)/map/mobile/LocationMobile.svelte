@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import * as Popover from '@/components/ui/popover';
-	import { loadDefaultLocation } from '@/lib/default-location';
+	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, pinTone, floatBtnStyle, buildMapData, fetchMapCanvas, type MapHeatBucket, markerUserUrl, markerGroupUrl, markerMomentUrl, type SnapState } from '../shared/location-shared';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
@@ -88,18 +88,11 @@
 	let activeTab = $state<'recent' | 'hot'>('recent');
 
 	// 初始/复位中心来自 ClientConfig default_location（MSW mock），不写死坐标。
-	$effect(() => {
-		let cancelled = false;
-		void loadDefaultLocation().then((loc) => {
-			if (cancelled) return;
-			const point = loc?.point ? { lat: loc.point.latitude, lng: loc.point.longitude } : null;
+	$effect(() => startDefaultLocation((loc) => {
+						const point = loc?.point ? { lat: loc.point.latitude, lng: loc.point.longitude } : null;
 			defaultCenter = point;
 			if (!mapCenter) mapCenter = point;
-		});
-		return () => {
-			cancelled = true;
-		};
-	});
+}));
 
 	// map/canvas 数据
 	let mapPins = $state<Pin[]>([]);

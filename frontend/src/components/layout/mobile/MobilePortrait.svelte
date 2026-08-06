@@ -28,10 +28,8 @@
 	const pathname = $derived(page.url.pathname);
 	const isSubPage = $derived(isSubPagePath(pathname));
 
-	// FAB 光晕：复用 --glow-accent（每主题/暗色已定义），叠加一层中性落影增强立体感。
-	const fabGlow = $derived(
-		composer.composerOpen ? 'none' : '0 6px 18px var(--glow-accent), 0 2px 6px rgba(0,0,0,0.14)'
-	);
+	// FAB 光晕：统一走 --elevation-fab（每主题/暗色已定义）
+	const fabGlow = $derived(composer.composerOpen ? 'none' : 'var(--elevation-fab)');
 </script>
 
 <div

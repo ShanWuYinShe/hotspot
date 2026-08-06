@@ -104,7 +104,7 @@
 	<!-- Avatar edit -->
 	<div class="flex items-center gap-4 -mt-8 ml-2">
 		<div class="relative shrink-0">
-			<div class="rounded-[22px] overflow-hidden size-18"  style="border:3px solid var(--surface-primary);box-shadow:0 6px 20px rgba(0,0,0,0.22)">
+			<div class="rounded-[22px] overflow-hidden size-18"  style="border:3px solid var(--surface-primary);box-shadow:var(--elevation-profile-avatar)">
 				<img src={avatar} alt="avatar" class="w-full h-full object-cover" />
 			</div>
 			<button

@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ChevronRight, Search as SearchIcon } from '@lucide/svelte';
+	import { Search as SearchIcon } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
-	import { loadDefaultLocation } from '@/lib/default-location';
+	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { fetchHomeFeed } from '@/components/home/home-feed';
 	import { type Activity } from '@/components/home/activity-data';
 	import NearbyUserRows from '@/components/home/NearbyUserRows.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
-	import ListItem from '@/components/list/ListItem.svelte';
+	import ActivityRow from '@/components/home/ActivityRow.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
 	import { type NearbyUser } from '@/components/home/nearby-users';
@@ -24,15 +24,9 @@
 	let nearbyGroups = $state<NearbyGroup[]>([]);
 	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
 
-	$effect(() => {
-		let cancelled = false;
-		void loadDefaultLocation().then((loc) => {
-			if (!cancelled) referencePoint = loc?.point ?? null;
-		});
-		return () => {
-			cancelled = true;
-		};
-	});
+	$effect(() => startDefaultLocation((loc) => {
+referencePoint = loc?.point ?? null;
+}));
 
 	$effect(() => {
 		let cancelled = false;
@@ -91,28 +85,12 @@
 	</div>
 
 	<!-- 附近动态 -->
-	<div class="mt-6">
-		<SectionHead title="附近动态" action="查看全部" onAction={() => void goto(ROUTES.nearbyMoments)} />
-		<ListContainer bordered>
-			{#each activities.slice(0, 3) as item (item.id)}
-				<ListItem
-					onClick={() => void goto(ROUTES.event(item.id))}
-					ariaLabel={item.title}
-					class="flex items-center gap-3 px-4 py-3"
-				>
-					<div
-						class="rounded-tight flex items-center justify-center shrink-0"
-						style="width:34px;height:34px;background:{item.bg};"
-					>
-						<item.icon style="width:16px;height:16px;color:{item.color};" strokeWidth={1.75} />
-					</div>
-					<div class="flex-1 min-w-0">
-						<p class="text-base"  style="color:var(--text-primary)">{item.title}</p>
-						<p class="text-xs mt-px"  style="color:var(--text-secondary)">{item.sub}</p>
-					</div>
-					<ChevronRight class="size-3.25"  style="color:var(--text-secondary)" strokeWidth={1.5} />
-				</ListItem>
-			{/each}
-		</ListContainer>
-	</div>
-</StandardPageLayout>
+		<div class="mt-6">
+			<SectionHead title="附近动态" action="查看全部" onAction={() => void goto(ROUTES.nearbyMoments)} />
+			<ListContainer bordered>
+				{#each activities.slice(0, 3) as item (item.id)}
+					<ActivityRow item={item} onClick={() => void goto(ROUTES.event(item.id))} />
+				{/each}
+			</ListContainer>
+		</div>
+	</StandardPageLayout>

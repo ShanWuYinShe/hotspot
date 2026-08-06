@@ -2,7 +2,7 @@
 	import { X, ChevronRight, SlidersHorizontal, Heart, Check } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
-	import { loadDefaultLocation } from '@/lib/default-location';
+	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import {
 		PIN_COLORS, PIN_LABELS, pinTone, buildMapData, fetchMapCanvas,
@@ -30,18 +30,11 @@
 	let defaultCenter = $state<{ lat: number; lng: number } | null>(null);
 
 	// 初始/复位中心来自 ClientConfig default_location（MSW mock），不写死坐标。
-	$effect(() => {
-		let cancelled = false;
-		void loadDefaultLocation().then((loc) => {
-			if (cancelled) return;
-			const point = loc?.point ? { lat: loc.point.latitude, lng: loc.point.longitude } : null;
+	$effect(() => startDefaultLocation((loc) => {
+						const point = loc?.point ? { lat: loc.point.latitude, lng: loc.point.longitude } : null;
 			defaultCenter = point;
 			if (!mapCenter) mapCenter = point;
-		});
-		return () => {
-			cancelled = true;
-		};
-	});
+}));
 
 	// map/canvas 数据
 	let mapPins = $state<Pin[]>([]);

@@ -169,7 +169,7 @@
 					</span>
 					<span class="relative h-5 w-8.5 overflow-hidden rounded-full" style="background:{mockEnabled ? 'var(--accent-default)' : 'var(--border-strong)'};">
 						<span
-							class="absolute top-0.75 h-3.5 w-3.5 rounded-full bg-white shadow-[var(--elevation-control-thumb)]"
+							class="absolute top-0.75 h-3.5 w-3.5 rounded-full bg-content-inverse shadow-[var(--elevation-control-thumb)]"
 							style="left:{mockEnabled ? 17 : 3}px;transition:left 0.2s cubic-bezier(0.34,1.56,0.64,1);"
 						></span>
 					</span>

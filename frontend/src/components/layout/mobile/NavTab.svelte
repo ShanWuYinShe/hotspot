@@ -10,12 +10,15 @@
 		label,
 		isActive,
 		onClick,
-		Icon
+		Icon,
+		iconSize = 22
 	}: {
 		label: string;
 		isActive: boolean;
 		onClick: () => void;
 		Icon: Component;
+		/** 图标尺寸 px（移动 22 / 平板 24） */
+		iconSize?: number;
 	} = $props();
 </script>
 
@@ -36,7 +39,7 @@
 
 	<div style="display:flex;align-items:center;justify-content:center;position:relative;z-index:1;">
 		<Icon
-			style="width:22px;height:22px;color:{isActive ? 'var(--navigation-content-active)' : 'var(--navigation-content)'};transition:color 0.22s ease;"
+			style="width:{iconSize}px;height:{iconSize}px;color:{isActive ? 'var(--navigation-content-active)' : 'var(--navigation-content)'};transition:color 0.22s ease;"
 			strokeWidth={isActive ? 2.1 : 1.5}
 		/>
 	</div>

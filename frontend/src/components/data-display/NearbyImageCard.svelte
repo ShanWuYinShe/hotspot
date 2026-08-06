@@ -28,6 +28,7 @@
 		imageAlt = '',
 		onClick,
 		onImageError,
+		placeholder,
 		footer,
 		children,
 		class: className = ''
@@ -36,6 +37,8 @@
 		imageAlt?: string;
 		onClick?: () => void;
 		onImageError?: () => void;
+		/** 无图时的占位内容（渲染在 accent 渐变层上；缺省为空白渐变层） */
+		placeholder?: Snippet;
 		footer?: Snippet;
 		children?: Snippet;
 		class?: string;
@@ -77,8 +80,14 @@
 			class="image-hover-frame__image absolute inset-0 h-full w-full object-cover will-change-transform"
 			onerror={onImageError}
 		/>
+	{:else if placeholder}
+		<div class="surface-accent-gradient absolute inset-0 z-[1] flex items-center justify-center">
+			{@render placeholder()}
+		</div>
 	{/if}
-	<div class="absolute inset-0" style="background:var(--surface-media-scrim-card);"></div>
+	{#if imageSrc}
+		<div class="absolute inset-0" style="background:var(--surface-media-scrim-card);"></div>
+	{/if}
 	{#if children}
 		{@render children()}
 	{/if}

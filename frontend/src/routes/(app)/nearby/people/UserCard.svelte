@@ -44,14 +44,9 @@
 	onImageError={() => (avatarFailed = true)}
 	class="rounded-panel aspect-[3/4] surface-flat"
 >
-	<!-- 无头像 / 加载失败：accent 主题渐变占位覆盖在图片层之上 -->
-	{#if avatarFailed || !user.avatar}
-		<div
-			class="surface-accent-gradient absolute inset-0 z-[1] flex items-center justify-center"
-		>
-			<span class="text-accent-default text-3xl font-semibold">{Array.from(user.name)[0] ?? '?'}</span>
-		</div>
-	{/if}
+	{#snippet placeholder()}
+		<span class="text-accent-default text-3xl font-semibold">{Array.from(user.name)[0] ?? '?'}</span>
+	{/snippet}
 
 	<!-- 右上：距离（单份，消除历史重复徽章 bug） -->
 	<div class="absolute top-2.5 right-2.5 z-[2] flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface-overlay-strong" style="backdrop-filter:blur(8px);">

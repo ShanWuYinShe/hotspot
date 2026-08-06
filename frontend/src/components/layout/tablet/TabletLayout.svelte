@@ -8,6 +8,7 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
 	import StatusBar from '@/components/layout/StatusBar.svelte';
+	import NavTab from '@/components/layout/mobile/NavTab.svelte';
 	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 
@@ -62,29 +63,13 @@
 				style="width:100%;max-width:{isWide ? 680 : 'none'};border-radius:{isWide ? 32 : 0}px;background:var(--surface-nav-glass);backdrop-filter:blur(28px) saturate(1.8);-webkit-backdrop-filter:blur(28px) saturate(1.8);box-shadow:{isWide ? 'var(--elevation-nav)' : 'none'};border:{isWide ? '1px solid var(--border-nav-glass)' : 'none'};padding:{isWide ? '8px 14px' : '8px max(32px, env(safe-area-inset-left, 32px)) max(14px, env(safe-area-inset-bottom, 14px))'};gap:{isWide ? 6 : 14}px;"
 			>
 				{#each NAV_ITEMS.slice(0, 2) as item}
-					<button
-						type="button"
-						class="hover-btn nav-tab relative flex flex-col items-center justify-center outline-none select-none rounded-panel"
-						style="flex:1;min-width:0;padding-top:9px;padding-bottom:9px;gap:5px;"
-						aria-label={item.label}
-						aria-current={isPrimaryRouteActive(pathname, item.path) ? 'page' : undefined}
-						onclick={() => void goto(item.path)}
-					>
-						{#if isPrimaryRouteActive(pathname, item.path)}
-							<div style="position:absolute;inset:4px 6px;border-radius:var(--shape-panel);background:var(--navigation-active-indicator);opacity:0.14;"></div>
-						{/if}
-						<div style="display:flex;align-items:center;justify-content:center;position:relative;z-index:1;">
-							<item.icon
-								style="width:24px;height:24px;color:{isPrimaryRouteActive(pathname, item.path) ? 'var(--navigation-content-active)' : 'var(--navigation-content)'};transition:color 0.22s ease;"
-								strokeWidth={isPrimaryRouteActive(pathname, item.path) ? 2.1 : 1.5}
-							/>
-						</div>
-						<span
-							style="font-size:11px;line-height:1;color:{isPrimaryRouteActive(pathname, item.path) ? 'var(--navigation-content-active)' : 'var(--navigation-content)'};font-weight:{isPrimaryRouteActive(pathname, item.path) ? 600 : 400};transition:color 0.22s ease;letter-spacing:0.02em;position:relative;z-index:1;"
-						>
-							{item.label}
-						</span>
-					</button>
+					<NavTab
+						label={item.label}
+						iconSize={24}
+						Icon={item.icon}
+						isActive={isPrimaryRouteActive(pathname, item.path)}
+						onClick={() => void goto(item.path)}
+					/>
 				{/each}
 
 				<!-- Centre FAB -->
@@ -105,29 +90,13 @@
 				</div>
 
 				{#each NAV_ITEMS.slice(2, 4) as item}
-					<button
-						type="button"
-						class="hover-btn nav-tab relative flex flex-col items-center justify-center outline-none select-none rounded-panel"
-						style="flex:1;min-width:0;padding-top:9px;padding-bottom:9px;gap:5px;"
-						aria-label={item.label}
-						aria-current={isPrimaryRouteActive(pathname, item.path) ? 'page' : undefined}
-						onclick={() => void goto(item.path)}
-					>
-						{#if isPrimaryRouteActive(pathname, item.path)}
-							<div style="position:absolute;inset:4px 6px;border-radius:var(--shape-panel);background:var(--navigation-active-indicator);opacity:0.14;"></div>
-						{/if}
-						<div style="display:flex;align-items:center;justify-content:center;position:relative;z-index:1;">
-							<item.icon
-								style="width:24px;height:24px;color:{isPrimaryRouteActive(pathname, item.path) ? 'var(--navigation-content-active)' : 'var(--navigation-content)'};transition:color 0.22s ease;"
-								strokeWidth={isPrimaryRouteActive(pathname, item.path) ? 2.1 : 1.5}
-							/>
-						</div>
-						<span
-							style="font-size:11px;line-height:1;color:{isPrimaryRouteActive(pathname, item.path) ? 'var(--navigation-content-active)' : 'var(--navigation-content)'};font-weight:{isPrimaryRouteActive(pathname, item.path) ? 600 : 400};transition:color 0.22s ease;letter-spacing:0.02em;position:relative;z-index:1;"
-						>
-							{item.label}
-						</span>
-					</button>
+					<NavTab
+						label={item.label}
+						iconSize={24}
+						Icon={item.icon}
+						isActive={isPrimaryRouteActive(pathname, item.path)}
+						onClick={() => void goto(item.path)}
+					/>
 				{/each}
 			</div>
 		</nav>

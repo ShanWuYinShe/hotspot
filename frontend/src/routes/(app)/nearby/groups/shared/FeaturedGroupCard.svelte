@@ -10,19 +10,14 @@
 </script>
 
 <NearbyImageCard
-	imageSrc={group.banner ?? group.name}
+	imageSrc={group.banner}
 	imageAlt={group.name}
 	onClick={onOpen}
 	class="rounded-feature min-h-85 surface-hero"
 >
-	<!-- 无封面时占位：覆盖在图片层之上 -->
-	{#if !group.banner}
-		<div
-			class="surface-accent-gradient absolute inset-0 z-[1] flex items-center justify-center"
-		>
-			<span class="text-accent-default text-4xl font-semibold">{Array.from(group.name)[0] ?? '群'}</span>
-		</div>
-	{/if}
+	{#snippet placeholder()}
+		<span class="text-accent-default text-4xl font-semibold">{Array.from(group.name)[0] ?? '群'}</span>
+	{/snippet}
 
 	<!-- 左上：精选徽章 -->
 	<div class="absolute top-3 left-3 z-[2] flex items-center gap-1.5 px-2 py-1 rounded-full" style="background:var(--surface-overlay-strong);backdrop-filter:blur(8px);">

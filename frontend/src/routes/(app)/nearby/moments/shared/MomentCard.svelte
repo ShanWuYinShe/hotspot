@@ -29,19 +29,14 @@
 	{onClick}
 	class="aspect-[4/3] rounded-relaxed surface-flat"
 >
-	<!-- 无图时占位：覆盖在图片层之上（NearbyImageCard 已渲染 item.image，此处仅在无图时遮挡） -->
-	{#if !item.image}
+	{#snippet placeholder()}
 		<div
-			class="surface-accent-gradient absolute inset-0 z-[1] flex items-center justify-center"
+			class="flex items-center justify-center rounded-xl"
+			style="width:46px;height:46px;background:var(--color-accent-bg);border:1px solid color-mix(in srgb, var(--accent-default) 25%, transparent);box-shadow:0 6px 18px color-mix(in srgb, var(--accent-default) 18%, transparent);"
 		>
-			<div
-				class="flex items-center justify-center rounded-xl"
-				style="width:46px;height:46px;background:var(--color-accent-bg);border:1px solid color-mix(in srgb, var(--accent-default) 25%, transparent);box-shadow:0 6px 18px color-mix(in srgb, var(--accent-default) 18%, transparent);"
-			>
-				<MapPin size={20} class="text-accent-default" strokeWidth={1.5} />
-			</div>
+			<MapPin size={20} class="text-accent-default" strokeWidth={1.5} />
 		</div>
-	{/if}
+	{/snippet}
 
 	<!-- Tag chip -->
 	<div class="absolute top-2.5 left-2.5 z-[2] px-2 py-0.5 rounded-full bg-accent-default shadow-[0_2px_8px_var(--glow-accent)]" >
