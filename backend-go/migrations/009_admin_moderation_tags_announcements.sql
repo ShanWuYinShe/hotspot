@@ -1,3 +1,4 @@
+-- 编号 009 段依赖字典序执行：009_admin_audit < 009_admin_moderation。
 CREATE TABLE IF NOT EXISTS moment_tags (
   moment_id TEXT NOT NULL REFERENCES moments(moment_id) ON DELETE CASCADE,
   tag_name TEXT NOT NULL,

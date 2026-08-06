@@ -18,7 +18,6 @@
 | `backend-go/` | Go 主后端（当前活跃） | Go / Chi / PostgreSQL / S2 |
 | `frontend/` | Web 主前端 | SvelteKit / Svelte 5 / TypeScript / Tailwind CSS |
 | `harmonyapp/` | HarmonyOS 客户端 | HarmonyOS ArkTS |
-| `backend/` | Rust 旧后端（已暂停） | Rust / Axum / PostgreSQL / PostGIS |
 | `spec/` | API 契约（只读权威） | — |
 
 ## 快速开始

@@ -1,3 +1,4 @@
+-- 编号 009 段依赖字典序执行：009_admin_audit < 009_admin_moderation。
 CREATE TABLE IF NOT EXISTS admin_audit_logs (
   log_id TEXT PRIMARY KEY,
   action TEXT NOT NULL,
