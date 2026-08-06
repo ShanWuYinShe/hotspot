@@ -20,6 +20,8 @@ type InMemoryRepository struct {
 	shares map[string]inMemoryShare
 	byCode map[string]string
 	byUser map[string][]string
+	// seq 保证同纳秒内连续创建的 ID 不碰撞（UnixNano 时间戳在快速循环下会重复）。
+	seq uint64
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
@@ -31,7 +33,8 @@ func (r *InMemoryRepository) Create(_ context.Context, cmd createShareCommand) (
 		return ShareCreated{}, err
 	}
 	now := time.Now().UTC()
-	shareID := fmt.Sprintf("share_%d", now.UnixNano())
+	r.seq++
+	shareID := fmt.Sprintf("share_%d_%d", now.UnixNano(), r.seq)
 	record := inMemoryShare{
 		shareRecord: shareRecord{
 			ShareID:       shareID,

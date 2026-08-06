@@ -11,6 +11,8 @@ type InMemoryRepository struct {
 	mu           sync.RWMutex
 	reports      map[string][]ReportItem
 	targetOwners map[ReportTargetType]map[string]string
+	// seq 保证同纳秒内连续创建的 ID 不碰撞（UnixNano 时间戳在快速循环下会重复）。
+	seq uint64
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
@@ -28,7 +30,8 @@ func NewInMemoryRepository() *InMemoryRepository {
 
 func (r *InMemoryRepository) Create(_ context.Context, userID string, req CreateReportRequest) (ReportCreated, error) {
 	now := time.Now().UTC()
-	report := ReportItem{ReportID: fmt.Sprintf("report_%d", now.UnixNano()), TargetType: req.TargetType, TargetID: req.TargetID, Reason: req.Reason, Description: req.Description, Status: ReportStatusPending, CreatedAt: now.Format(time.RFC3339), MessageSnapshot: req.MessageSnapshot}
+	r.seq++
+	report := ReportItem{ReportID: fmt.Sprintf("report_%d_%d", now.UnixNano(), r.seq), TargetType: req.TargetType, TargetID: req.TargetID, Reason: req.Reason, Description: req.Description, Status: ReportStatusPending, CreatedAt: now.Format(time.RFC3339), MessageSnapshot: req.MessageSnapshot}
 	r.mu.Lock()
 	r.reports[userID] = append(r.reports[userID], report)
 	r.mu.Unlock()

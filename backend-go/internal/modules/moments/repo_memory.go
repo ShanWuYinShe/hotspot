@@ -16,6 +16,8 @@ type InMemoryRepository struct {
 	moments   map[string]MomentItem
 	byUser    map[string][]string
 	favorites map[string]map[string]bool // userID -> momentID -> favorited
+	// seq 保证同纳秒内连续创建的 ID 不碰撞（UnixNano 时间戳在快速循环下会重复）。
+	seq uint64
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
@@ -30,7 +32,8 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	now := time.Now().UTC()
-	momentID := fmt.Sprintf("moment_%d", now.UnixNano())
+	r.seq++
+	momentID := fmt.Sprintf("moment_%d_%d", now.UnixNano(), r.seq)
 	privacy := req.PrivacyLevel
 	if privacy == "" {
 		privacy = "public"

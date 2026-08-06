@@ -28,14 +28,17 @@ type adminGrantRecord struct {
 }
 
 type InMemoryRepository struct {
-	mu              sync.RWMutex
-	roles           map[string]roleRecord
-	admins          map[string]adminGrantRecord
-	users           map[string]UserInfo
-	adminUsers      map[string]AdminUserItem
-	groups          map[string]AdminGroupItem
-	groupMembers    map[string][]string
-	reports         map[string]reportHandleRecord
+	mu           sync.RWMutex
+	roles        map[string]roleRecord
+	admins       map[string]adminGrantRecord
+	users        map[string]UserInfo
+	adminUsers   map[string]AdminUserItem
+	groups       map[string]AdminGroupItem
+	groupMembers map[string][]string
+	reports      map[string]reportHandleRecord
+	// seq 保证同纳秒内连续创建的 ID 不碰撞（UnixNano 时间戳在快速循环下会重复），
+	// 同时服务 role 与 audit ID 生成。
+	seq             uint64
 	banStates       map[string]UserBanState
 	userSessions    map[string][]string
 	auditLogs       map[string]AuditLogEntry
@@ -251,8 +254,9 @@ func (r *InMemoryRepository) CreateRole(_ context.Context, req AdminRbacRoleCrea
 		}
 	}
 	now := time.Now().UTC()
+	r.seq++
 	item := AdminRoleItem{
-		RoleID:      fmt.Sprintf("role_%d", now.UnixNano()),
+		RoleID:      fmt.Sprintf("role_%d_%d", now.UnixNano(), r.seq),
 		Name:        name,
 		Description: strings.TrimSpace(req.Description),
 		Permissions: []string{},
@@ -470,7 +474,8 @@ func (r *InMemoryRepository) AppendAuditLog(_ context.Context, entry AuditLogEnt
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if entry.LogID == "" {
-		entry.LogID = fmt.Sprintf("audit_%d", time.Now().UTC().UnixNano())
+		r.seq++
+		entry.LogID = fmt.Sprintf("audit_%d_%d", time.Now().UTC().UnixNano(), r.seq)
 	}
 	if entry.CreatedAt.IsZero() {
 		entry.CreatedAt = time.Now().UTC()

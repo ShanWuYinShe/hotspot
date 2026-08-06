@@ -12,6 +12,8 @@ import (
 type InMemoryRepository struct {
 	mu            sync.RWMutex
 	announcements map[string]AnnouncementRecord
+	// seq 保证同纳秒内连续创建的 ID 不碰撞（UnixNano 时间戳在快速循环下会重复）。
+	seq uint64
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
@@ -82,8 +84,9 @@ func (r *InMemoryRepository) CreateAnnouncement(_ context.Context, input Announc
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	now := time.Now().UTC()
+	r.seq++
 	item := AnnouncementRecord{
-		AnnouncementID: fmt.Sprintf("ann_%d", now.UnixNano()),
+		AnnouncementID: fmt.Sprintf("ann_%d_%d", now.UnixNano(), r.seq),
 		Title:          strings.TrimSpace(input.Title),
 		Content:        strings.TrimSpace(input.Content),
 		Severity:       input.Severity,

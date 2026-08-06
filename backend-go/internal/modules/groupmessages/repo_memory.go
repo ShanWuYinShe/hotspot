@@ -13,6 +13,9 @@ type InMemoryRepository struct {
 	items      map[string][]GroupMessageItem
 	readCount  map[string]map[string]int // groupID -> messageID -> count
 	groupNames map[string]string         // groupID -> name（测试可注入）
+	// seq 保证同纳秒内连续发送的消息 ID 不碰撞（UnixNano 时间戳在快速
+	// 循环下会重复，导致消息覆盖与历史分页缺失）。
+	seq uint64
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
@@ -38,8 +41,9 @@ func (r *InMemoryRepository) GetGroupName(_ context.Context, groupID string) (st
 }
 func (r *InMemoryRepository) Send(_ context.Context, req SendGroupMessageRequest) (MessageSent, error) {
 	now := time.Now().UTC()
+	r.seq++
 	msg := GroupMessageItem{
-		MessageID:    fmt.Sprintf("gm_%d", now.UnixNano()),
+		MessageID:    fmt.Sprintf("gm_%d_%d", now.UnixNano(), r.seq),
 		SenderUserID: req.SenderUserID,
 		Type:         req.Type,
 		Content:      req.Content,
