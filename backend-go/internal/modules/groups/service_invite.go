@@ -6,7 +6,6 @@ import (
 	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
-	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
@@ -139,23 +138,13 @@ func (s *Service) RevokeInvite(ctx context.Context, req RevokeSentInviteRequest)
 	return nil
 }
 
-// notifyGroupInviteRevoked persists a group_invite_revoked notification and
-// pushes the GroupInviteRevoked event to the invitee.
+// notifyGroupInviteRevoked pushes the GroupInviteRevoked event to the
+// invitee. 纯实时事件（spec api_spec_websocket.md：不落库通知）。
 func (s *Service) notifyGroupInviteRevoked(ctx context.Context, group GroupItem, inviteID string, inviteeUserID string, reason *string) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	revokedBy := s.resolveUserInfo(ctx, principal.UserID)
 	now := time.Now().UTC().Format(time.RFC3339)
-	notificationID := ""
-	if s.notifications != nil {
-		id, err := s.notifications.AppendGroupInviteRevoked(ctx, inviteeUserID, group.Group.GroupID, group.Group.Name, inviteID, revokedBy, reason)
-		if err != nil {
-			observability.L().Error("groups.notify_group_invite_revoked append failed", "error", err, "invite_id", inviteID)
-		} else {
-			notificationID = id
-		}
-	}
 	payload := map[string]any{
-		"notify_id":  notificationID,
 		"invite_id":  inviteID,
 		"group_id":   group.Group.GroupID,
 		"revoked_by": revokedBy,
@@ -167,22 +156,12 @@ func (s *Service) notifyGroupInviteRevoked(ctx context.Context, group GroupItem,
 	realtime.DefaultHub().BroadcastToUser(inviteeUserID, realtime.Event{Type: realtime.EventTypeGroupInviteRevoked, Payload: payload})
 }
 
-// notifyGroupInviteRejected persists a group_invite_rejected notification and
-// pushes the GroupInviteRejected event to the inviter (invite.Inviter).
+// notifyGroupInviteRejected pushes the GroupInviteRejected event to the
+// inviter (invite.Inviter). 纯实时事件（spec：不落库通知）。
 func (s *Service) notifyGroupInviteRejected(ctx context.Context, invite GroupInviteItem, rejectedByUserID string, reason *string) {
 	rejectedBy := s.resolveUserInfo(ctx, rejectedByUserID)
 	now := time.Now().UTC().Format(time.RFC3339)
-	notificationID := ""
-	if s.notifications != nil {
-		id, err := s.notifications.AppendGroupInviteRejected(ctx, invite.Inviter.UserID, invite.Group.GroupID, invite.Group.Name, invite.InviteID, rejectedBy, reason)
-		if err != nil {
-			observability.L().Error("groups.notify_group_invite_rejected append failed", "error", err, "invite_id", invite.InviteID)
-		} else {
-			notificationID = id
-		}
-	}
 	payload := map[string]any{
-		"notify_id":   notificationID,
 		"invite_id":   invite.InviteID,
 		"group_id":    invite.Group.GroupID,
 		"rejected_by": rejectedBy,
@@ -194,23 +173,13 @@ func (s *Service) notifyGroupInviteRejected(ctx context.Context, invite GroupInv
 	realtime.DefaultHub().BroadcastToUser(invite.Inviter.UserID, realtime.Event{Type: realtime.EventTypeGroupInviteRejected, Payload: payload})
 }
 
-// notifyGroupInviteExpired persists a group_invite_revoked notification
-// (revoked_by omitted) and pushes the GroupInviteExpired event to the invitee.
+// notifyGroupInviteExpired pushes the GroupInviteExpired event to the
+// invitee. 纯实时事件（spec：不落库通知）。
 func (s *Service) notifyGroupInviteExpired(ctx context.Context, inviteeUserID string, invite GroupInviteItem) {
 	now := time.Now().UTC().Format(time.RFC3339)
-	notificationID := ""
-	if s.notifications != nil {
-		id, err := s.notifications.AppendGroupInviteRevoked(ctx, inviteeUserID, invite.Group.GroupID, invite.Group.Name, invite.InviteID, nil, nil)
-		if err != nil {
-			observability.L().Error("groups.notify_group_invite_expired append failed", "error", err, "invite_id", invite.InviteID)
-		} else {
-			notificationID = id
-		}
-	}
 	realtime.DefaultHub().BroadcastToUser(inviteeUserID, realtime.Event{
 		Type: realtime.EventTypeGroupInviteExpired,
 		Payload: map[string]any{
-			"notify_id":  notificationID,
 			"invite_id":  invite.InviteID,
 			"group_id":   invite.Group.GroupID,
 			"expired_at": now,

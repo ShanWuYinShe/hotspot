@@ -55,12 +55,8 @@ type LocationProvider interface {
 
 type groupNotificationWriter interface {
 	AppendGroupInviteReceived(ctx context.Context, targetUserID string, actor map[string]any, groupID string, groupName string, inviteID string, message *string) (string, error)
-	AppendGroupInviteAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, user map[string]any) (string, error)
 	AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant map[string]any, groupID string, groupName string, applicationID string) (string, error)
 	AppendGroupApplicationAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string) (string, error)
-	AppendGroupInviteRevoked(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, revokedBy map[string]any, reason *string) (string, error)
-	AppendGroupInviteRejected(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, rejectedBy map[string]any, reason *string) (string, error)
-	AppendGroupApplicationCancelled(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, applicant map[string]any, reason *string) (string, error)
 	AppendGroupApplicationRejected(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, rejectedBy map[string]any, reason *string) (string, error)
 }
 
@@ -565,8 +561,8 @@ func (s *Service) CancelApplication(ctx context.Context, req CancelApplicationRe
 	return nil
 }
 
-// notifyGroupApplicationCancelled persists group_application_cancelled
-// notifications and pushes GroupApplicationCancelled events to the group admins.
+// notifyGroupApplicationCancelled pushes GroupApplicationCancelled events to
+// the group admins. 纯实时事件（spec api_spec_websocket.md：不落库通知）。
 func (s *Service) notifyGroupApplicationCancelled(ctx context.Context, application GroupApplicationItem, reason string) {
 	group, groupFound, err := s.repo.Get(ctx, application.GroupID)
 	if err != nil || !groupFound {
@@ -582,21 +578,7 @@ func (s *Service) notifyGroupApplicationCancelled(ctx context.Context, applicati
 		if member.Role != GroupRoleOwner && member.Role != GroupRoleAdmin {
 			continue
 		}
-		var reasonPtr *string
-		if reason != "" {
-			reasonPtr = &reason
-		}
-		notificationID := ""
-		if s.notifications != nil {
-			id, err := s.notifications.AppendGroupApplicationCancelled(ctx, member.User.UserID, group.Group.GroupID, group.Group.Name, application.ApplicationID, applicant, reasonPtr)
-			if err != nil {
-				observability.L().Error("groups.notify_group_application_cancelled append failed", "error", err, "application_id", application.ApplicationID)
-			} else {
-				notificationID = id
-			}
-		}
 		payload := map[string]any{
-			"notify_id":      notificationID,
 			"application_id": application.ApplicationID,
 			"group_id":       group.Group.GroupID,
 			"applicant":      applicant,
@@ -626,19 +608,9 @@ func (s *Service) notifyGroupApplicationExpired(ctx context.Context, group Group
 		if member.Role != GroupRoleOwner && member.Role != GroupRoleAdmin {
 			continue
 		}
-		notificationID := ""
-		if s.notifications != nil {
-			id, err := s.notifications.AppendGroupApplicationCancelled(ctx, member.User.UserID, group.Group.GroupID, group.Group.Name, application.ApplicationID, applicant, nil)
-			if err != nil {
-				observability.L().Error("groups.notify_group_application_expired append failed", "error", err, "application_id", application.ApplicationID)
-			} else {
-				notificationID = id
-			}
-		}
 		realtime.DefaultHub().BroadcastToUser(member.User.UserID, realtime.Event{
 			Type: realtime.EventTypeGroupApplicationExpired,
 			Payload: map[string]any{
-				"notify_id":      notificationID,
 				"application_id": application.ApplicationID,
 				"group_id":       group.Group.GroupID,
 				"applicant":      applicant,
@@ -746,18 +718,11 @@ func (s *Service) notifyGroupInviteReceived(ctx context.Context, group GroupItem
 	realtime.DefaultHub().BroadcastToUser(req.UserID, realtime.Event{Type: realtime.EventTypeGroupInviteReceived, Payload: payload})
 }
 
+// notifyGroupInviteAccepted pushes the GroupInviteResponse event to the
+// inviter. 纯实时事件（spec api_spec_websocket.md：不落库通知）。
 func (s *Service) notifyGroupInviteAccepted(ctx context.Context, invite GroupInviteItem, userID string) {
 	user := s.resolveUserInfo(ctx, userID)
-	notificationID := ""
-	if s.notifications != nil {
-		id, err := s.notifications.AppendGroupInviteAccepted(ctx, invite.Inviter.UserID, invite.Group.GroupID, invite.Group.Name, invite.InviteID, user)
-		if err != nil {
-			observability.L().Error("groups.notify_group_invite_accepted append failed", "error", err, "invite_id", invite.InviteID)
-		} else {
-			notificationID = id
-		}
-	}
-	realtime.DefaultHub().BroadcastToUser(invite.Inviter.UserID, realtime.Event{Type: realtime.EventTypeGroupInviteResponse, Payload: map[string]any{"notify_id": notificationID, "invite_id": invite.InviteID, "group_id": invite.Group.GroupID, "user": user, "responded_at": time.Now().UTC().Format(time.RFC3339)}})
+	realtime.DefaultHub().BroadcastToUser(invite.Inviter.UserID, realtime.Event{Type: realtime.EventTypeGroupInviteResponse, Payload: map[string]any{"invite_id": invite.InviteID, "group_id": invite.Group.GroupID, "user": user, "responded_at": time.Now().UTC().Format(time.RFC3339)}})
 }
 
 func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group GroupItem, applicantUserID string, application *struct {

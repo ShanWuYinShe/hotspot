@@ -375,11 +375,13 @@ func TestInviteAndAcceptFlowSendsNotifications(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list owner notifications: %v", err)
 	}
+	// 邀请接受是纯实时事件（spec：GroupInviteResponse 不落库通知），
+	// owner 只收到 WS 事件，通知中心无记录。
 	if len(ownerSink.events) != 1 || ownerSink.events[0].Type != "GroupInviteResponse" {
 		t.Fatalf("unexpected owner events: %#v", ownerSink.events)
 	}
-	if len(ownerNotifications.Items) != 1 || ownerNotifications.Items[0].Type != "group_invite_accepted" {
-		t.Fatalf("unexpected owner notifications: %#v", ownerNotifications)
+	if len(ownerNotifications.Items) != 0 {
+		t.Fatalf("expected no owner notifications, got %#v", ownerNotifications)
 	}
 }
 

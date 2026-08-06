@@ -142,20 +142,6 @@ func (s *Service) AppendGroupInviteReceived(ctx context.Context, targetUserID st
 	return id, err
 }
 
-// AppendGroupInviteAccepted records a group_invite_accepted notification and
-// returns the generated notify_id (embedded as the first field of the
-// pushed GroupInviteResponse payload, spec api_spec_websocket.md).
-func (s *Service) AppendGroupInviteAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, user map[string]any) (string, error) {
-	id := newNotificationID()
-	err := s.repo.Append(ctx, targetUserID, NotifyItem{
-		NotifyID: id,
-		Type:     "group_invite_accepted",
-		IsRead:   false,
-		Payload:  map[string]any{"type": "group_invite_accepted", "group_id": groupID, "group_name": groupName, "invite_id": inviteID, "user": user},
-	})
-	return id, err
-}
-
 // AppendGroupApplicationReceived records a group_application_received
 // notification and returns the generated notify_id (embedded as the
 // first field of the pushed GroupApplicationReceived payload, spec
@@ -183,65 +169,6 @@ func (s *Service) AppendGroupApplicationAccepted(ctx context.Context, targetUser
 		IsRead:   false,
 		Payload:  map[string]any{"type": "group_application_accepted", "group_id": groupID, "group_name": groupName, "application_id": applicationID},
 	})
-	return id, err
-}
-
-// AppendGroupInviteRevoked records a group_invite_revoked notification
-// (invite revoked by the inviter, or expired automatically). Returns the
-// generated notify_id for the realtime payload.
-func (s *Service) AppendGroupInviteRevoked(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, revokedBy map[string]any, reason *string) (string, error) {
-	payload := map[string]any{
-		"type":       "group_invite_revoked",
-		"group_id":   groupID,
-		"group_name": groupName,
-		"invite_id":  inviteID,
-	}
-	if revokedBy != nil {
-		payload["revoked_by"] = revokedBy
-	}
-	if reason != nil && *reason != "" {
-		payload["reason"] = *reason
-	}
-	id := newNotificationID()
-	err := s.repo.Append(ctx, targetUserID, NotifyItem{NotifyID: id, Type: "group_invite_revoked", IsRead: false, Payload: payload})
-	return id, err
-}
-
-// AppendGroupInviteRejected records a group_invite_rejected notification
-// (invite rejected by the invitee). Returns the generated notify_id for
-// the realtime payload.
-func (s *Service) AppendGroupInviteRejected(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, rejectedBy map[string]any, reason *string) (string, error) {
-	payload := map[string]any{
-		"type":        "group_invite_rejected",
-		"group_id":    groupID,
-		"group_name":  groupName,
-		"invite_id":   inviteID,
-		"rejected_by": rejectedBy,
-	}
-	if reason != nil && *reason != "" {
-		payload["reason"] = *reason
-	}
-	id := newNotificationID()
-	err := s.repo.Append(ctx, targetUserID, NotifyItem{NotifyID: id, Type: "group_invite_rejected", IsRead: false, Payload: payload})
-	return id, err
-}
-
-// AppendGroupApplicationCancelled records a group_application_cancelled
-// notification (application cancelled by the applicant, or expired
-// automatically). Returns the generated notify_id for the realtime payload.
-func (s *Service) AppendGroupApplicationCancelled(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, applicant map[string]any, reason *string) (string, error) {
-	payload := map[string]any{
-		"type":           "group_application_cancelled",
-		"group_id":       groupID,
-		"group_name":     groupName,
-		"application_id": applicationID,
-		"applicant":      applicant,
-	}
-	if reason != nil && *reason != "" {
-		payload["reason"] = *reason
-	}
-	id := newNotificationID()
-	err := s.repo.Append(ctx, targetUserID, NotifyItem{NotifyID: id, Type: "group_application_cancelled", IsRead: false, Payload: payload})
 	return id, err
 }
 

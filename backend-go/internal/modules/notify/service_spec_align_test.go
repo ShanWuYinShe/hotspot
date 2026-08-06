@@ -41,175 +41,6 @@ func requireSingleAppend(t *testing.T, repo *notificationListCaptureRepo, wantUs
 	return repo.appended[0]
 }
 
-// --- AppendGroupInviteAccepted ---
-
-func TestAppendGroupInviteAcceptedBuildsNotification(t *testing.T) {
-	repo := &notificationListCaptureRepo{}
-	service := NewServiceWithRepo(repo)
-	notificationID, err := service.AppendGroupInviteAccepted(context.Background(), "user_alice", "group_1", "Hot Group", "invite_1", map[string]any{"user_id": "user_bob", "nickname": "Bob"})
-	if err != nil {
-		t.Fatalf("append group invite accepted: %v", err)
-	}
-	if notificationID == "" {
-		t.Fatal("expected generated notification_id, got empty")
-	}
-	item := requireSingleAppend(t, repo, "user_alice")
-	if item.NotifyID != notificationID {
-		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
-	}
-	if item.Type != "group_invite_accepted" || item.Payload["type"] != "group_invite_accepted" {
-		t.Fatalf("unexpected type: %#v", item)
-	}
-	for _, key := range []string{"group_id", "group_name", "invite_id", "user"} {
-		if _, ok := item.Payload[key]; !ok {
-			t.Fatalf("expected payload key %q, got %#v", key, item.Payload)
-		}
-	}
-	if item.Payload["group_id"] != "group_1" || item.Payload["invite_id"] != "invite_1" {
-		t.Fatalf("unexpected payload: %#v", item.Payload)
-	}
-	user, ok := item.Payload["user"].(map[string]any)
-	if !ok || user["user_id"] != "user_bob" {
-		t.Fatalf("unexpected user payload: %#v", item.Payload["user"])
-	}
-}
-
-// --- AppendGroupInviteRevoked ---
-
-func TestAppendGroupInviteRevokedBuildsNotificationWithRevokerAndReason(t *testing.T) {
-	repo := &notificationListCaptureRepo{}
-	service := NewServiceWithRepo(repo)
-	reason := "group disbanded"
-	notificationID, err := service.AppendGroupInviteRevoked(context.Background(), "user_bob", "group_1", "Hot Group", "invite_1", map[string]any{"user_id": "user_alice", "nickname": "Alice"}, &reason)
-	if err != nil {
-		t.Fatalf("append group invite revoked: %v", err)
-	}
-	if notificationID == "" {
-		t.Fatal("expected generated notification_id, got empty")
-	}
-	item := requireSingleAppend(t, repo, "user_bob")
-	if item.NotifyID != notificationID {
-		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
-	}
-	if item.Type != "group_invite_revoked" || item.Payload["type"] != "group_invite_revoked" {
-		t.Fatalf("unexpected type: %#v", item)
-	}
-	if item.Payload["group_id"] != "group_1" || item.Payload["invite_id"] != "invite_1" {
-		t.Fatalf("unexpected payload: %#v", item.Payload)
-	}
-	revokedBy, ok := item.Payload["revoked_by"].(map[string]any)
-	if !ok || revokedBy["user_id"] != "user_alice" {
-		t.Fatalf("unexpected revoked_by payload: %#v", item.Payload["revoked_by"])
-	}
-	if item.Payload["reason"] != reason {
-		t.Fatalf("expected reason=%q, got %#v", reason, item.Payload["reason"])
-	}
-}
-
-func TestAppendGroupInviteRevokedOmitsOptionalFields(t *testing.T) {
-	// 过期自动失效场景:revoked_by 与 reason 均为空,payload 不得包含这两个键。
-	repo := &notificationListCaptureRepo{}
-	service := NewServiceWithRepo(repo)
-	if _, err := service.AppendGroupInviteRevoked(context.Background(), "user_bob", "group_1", "Hot Group", "invite_1", nil, nil); err != nil {
-		t.Fatalf("append group invite revoked: %v", err)
-	}
-	item := requireSingleAppend(t, repo, "user_bob")
-	if _, hasRevokedBy := item.Payload["revoked_by"]; hasRevokedBy {
-		t.Fatalf("expected no revoked_by, got %#v", item.Payload)
-	}
-	if _, hasReason := item.Payload["reason"]; hasReason {
-		t.Fatalf("expected no reason, got %#v", item.Payload)
-	}
-}
-
-// --- AppendGroupInviteRejected ---
-
-func TestAppendGroupInviteRejectedBuildsNotification(t *testing.T) {
-	repo := &notificationListCaptureRepo{}
-	service := NewServiceWithRepo(repo)
-	reason := "not interested"
-	notificationID, err := service.AppendGroupInviteRejected(context.Background(), "user_alice", "group_1", "Hot Group", "invite_1", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, &reason)
-	if err != nil {
-		t.Fatalf("append group invite rejected: %v", err)
-	}
-	if notificationID == "" {
-		t.Fatal("expected generated notification_id, got empty")
-	}
-	item := requireSingleAppend(t, repo, "user_alice")
-	if item.NotifyID != notificationID {
-		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
-	}
-	if item.Type != "group_invite_rejected" || item.Payload["type"] != "group_invite_rejected" {
-		t.Fatalf("unexpected type: %#v", item)
-	}
-	if item.Payload["group_id"] != "group_1" || item.Payload["group_name"] != "Hot Group" || item.Payload["invite_id"] != "invite_1" {
-		t.Fatalf("unexpected payload: %#v", item.Payload)
-	}
-	rejectedBy, ok := item.Payload["rejected_by"].(map[string]any)
-	if !ok || rejectedBy["user_id"] != "user_bob" {
-		t.Fatalf("unexpected rejected_by payload: %#v", item.Payload["rejected_by"])
-	}
-	if item.Payload["reason"] != reason {
-		t.Fatalf("expected reason=%q, got %#v", reason, item.Payload["reason"])
-	}
-}
-
-func TestAppendGroupInviteRejectedOmitsReasonWhenEmpty(t *testing.T) {
-	repo := &notificationListCaptureRepo{}
-	service := NewServiceWithRepo(repo)
-	if _, err := service.AppendGroupInviteRejected(context.Background(), "user_alice", "group_1", "Hot Group", "invite_1", map[string]any{"user_id": "user_bob"}, nil); err != nil {
-		t.Fatalf("append group invite rejected: %v", err)
-	}
-	item := requireSingleAppend(t, repo, "user_alice")
-	if _, hasReason := item.Payload["reason"]; hasReason {
-		t.Fatalf("expected no reason, got %#v", item.Payload)
-	}
-}
-
-// --- AppendGroupApplicationCancelled ---
-
-func TestAppendGroupApplicationCancelledBuildsNotification(t *testing.T) {
-	repo := &notificationListCaptureRepo{}
-	service := NewServiceWithRepo(repo)
-	reason := "changed my mind"
-	notificationID, err := service.AppendGroupApplicationCancelled(context.Background(), "user_admin", "group_1", "Hot Group", "app_1", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, &reason)
-	if err != nil {
-		t.Fatalf("append group application cancelled: %v", err)
-	}
-	if notificationID == "" {
-		t.Fatal("expected generated notification_id, got empty")
-	}
-	item := requireSingleAppend(t, repo, "user_admin")
-	if item.NotifyID != notificationID {
-		t.Fatalf("expected item.NotifyID=%q, got %q", notificationID, item.NotifyID)
-	}
-	if item.Type != "group_application_cancelled" || item.Payload["type"] != "group_application_cancelled" {
-		t.Fatalf("unexpected type: %#v", item)
-	}
-	if item.Payload["group_id"] != "group_1" || item.Payload["application_id"] != "app_1" {
-		t.Fatalf("unexpected payload: %#v", item.Payload)
-	}
-	applicant, ok := item.Payload["applicant"].(map[string]any)
-	if !ok || applicant["user_id"] != "user_bob" {
-		t.Fatalf("unexpected applicant payload: %#v", item.Payload["applicant"])
-	}
-	if item.Payload["reason"] != reason {
-		t.Fatalf("expected reason=%q, got %#v", reason, item.Payload["reason"])
-	}
-}
-
-func TestAppendGroupApplicationCancelledOmitsReasonWhenEmpty(t *testing.T) {
-	repo := &notificationListCaptureRepo{}
-	service := NewServiceWithRepo(repo)
-	if _, err := service.AppendGroupApplicationCancelled(context.Background(), "user_admin", "group_1", "Hot Group", "app_1", map[string]any{"user_id": "user_bob"}, nil); err != nil {
-		t.Fatalf("append group application cancelled: %v", err)
-	}
-	item := requireSingleAppend(t, repo, "user_admin")
-	if _, hasReason := item.Payload["reason"]; hasReason {
-		t.Fatalf("expected no reason, got %#v", item.Payload)
-	}
-}
-
 // --- AppendGroupApplicationRejected ---
 
 func TestAppendGroupApplicationRejectedBuildsNotification(t *testing.T) {
@@ -576,19 +407,17 @@ func TestPublishNearbyNewMomentProviderErrorPropagates(t *testing.T) {
 // --- 通知类型白名单(normalizeNotificationType) ---
 
 func TestNormalizeNotificationTypeAcceptsAllSpecTypes(t *testing.T) {
+	// 与 spec/api_spec_types.md NotifyType union 完全一致（15 种）。
 	legal := []string{
 		"new_follower",
 		"mutual_follow",
 		"moment_commented",
 		"comment_reply",
 		"mentioned",
+		"group_mentioned",
 		"reaction_added",
 		"group_invite_received",
-		"group_invite_revoked",
-		"group_invite_rejected",
-		"group_invite_accepted",
 		"group_application_received",
-		"group_application_cancelled",
 		"group_application_accepted",
 		"group_application_rejected",
 		"report_resolved",
@@ -596,8 +425,8 @@ func TestNormalizeNotificationTypeAcceptsAllSpecTypes(t *testing.T) {
 		"system_announcement",
 		"nearby_new_moment",
 	}
-	if len(legal) != 18 {
-		t.Fatalf("expected 18 legal types, got %d", len(legal))
+	if len(legal) != 15 {
+		t.Fatalf("expected 15 legal types, got %d", len(legal))
 	}
 	for _, typ := range legal {
 		if got := normalizeNotificationType(typ); got != typ {

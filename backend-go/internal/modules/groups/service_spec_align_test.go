@@ -52,37 +52,7 @@ func (r *captureGroupsRepo) CancelApplication(_ context.Context, applicationID s
 
 // notifyWriterStub 实现 groupNotificationWriter 并捕获本次 spec 对齐的调用。
 type notifyWriterStub struct {
-	inviteRevoked        []groupInviteRevokedCall
-	inviteRejected       []groupInviteRejectedCall
-	applicationCancelled []groupApplicationCancelledCall
-	applicationRejected  []groupApplicationRejectedCall
-}
-
-type groupInviteRevokedCall struct {
-	targetUserID string
-	groupID      string
-	groupName    string
-	inviteID     string
-	revokedBy    map[string]any
-	reason       *string
-}
-
-type groupInviteRejectedCall struct {
-	targetUserID string
-	groupID      string
-	groupName    string
-	inviteID     string
-	rejectedBy   map[string]any
-	reason       *string
-}
-
-type groupApplicationCancelledCall struct {
-	targetUserID  string
-	groupID       string
-	groupName     string
-	applicationID string
-	applicant     map[string]any
-	reason        *string
+	applicationRejected []groupApplicationRejectedCall
 }
 
 type groupApplicationRejectedCall struct {
@@ -98,30 +68,11 @@ func (w *notifyWriterStub) AppendGroupInviteReceived(context.Context, string, ma
 	return "notif_written", nil
 }
 
-func (w *notifyWriterStub) AppendGroupInviteAccepted(context.Context, string, string, string, string, map[string]any) (string, error) {
-	return "notif_written", nil
-}
-
 func (w *notifyWriterStub) AppendGroupApplicationReceived(context.Context, string, map[string]any, string, string, string) (string, error) {
 	return "notif_written", nil
 }
 
 func (w *notifyWriterStub) AppendGroupApplicationAccepted(context.Context, string, string, string, string) (string, error) {
-	return "notif_written", nil
-}
-
-func (w *notifyWriterStub) AppendGroupInviteRevoked(_ context.Context, targetUserID, groupID, groupName, inviteID string, revokedBy map[string]any, reason *string) (string, error) {
-	w.inviteRevoked = append(w.inviteRevoked, groupInviteRevokedCall{targetUserID, groupID, groupName, inviteID, revokedBy, reason})
-	return "notif_written", nil
-}
-
-func (w *notifyWriterStub) AppendGroupInviteRejected(_ context.Context, targetUserID, groupID, groupName, inviteID string, rejectedBy map[string]any, reason *string) (string, error) {
-	w.inviteRejected = append(w.inviteRejected, groupInviteRejectedCall{targetUserID, groupID, groupName, inviteID, rejectedBy, reason})
-	return "notif_written", nil
-}
-
-func (w *notifyWriterStub) AppendGroupApplicationCancelled(_ context.Context, targetUserID, groupID, groupName, applicationID string, applicant map[string]any, reason *string) (string, error) {
-	w.applicationCancelled = append(w.applicationCancelled, groupApplicationCancelledCall{targetUserID, groupID, groupName, applicationID, applicant, reason})
 	return "notif_written", nil
 }
 
@@ -186,19 +137,6 @@ func TestServiceRevokeInviteNotifiesInvitee(t *testing.T) {
 	if len(repo.revokeInviteCalls) != 1 || repo.revokeInviteCalls[0] != (revokeInviteCall{groupID: "g1", inviteID: "inv1"}) {
 		t.Fatalf("unexpected revoke calls: %#v", repo.revokeInviteCalls)
 	}
-	if len(writer.inviteRevoked) != 1 {
-		t.Fatalf("expected 1 AppendGroupInviteRevoked call, got %d", len(writer.inviteRevoked))
-	}
-	call := writer.inviteRevoked[0]
-	if call.targetUserID != "u2" || call.groupID != "g1" || call.groupName != "test" || call.inviteID != "inv1" {
-		t.Fatalf("unexpected invite revoked call: %#v", call)
-	}
-	if call.revokedBy == nil || call.revokedBy["user_id"] != "u1" {
-		t.Fatalf("expected revoked_by user u1, got %#v", call.revokedBy)
-	}
-	if call.reason == nil || *call.reason != reason {
-		t.Fatalf("expected reason %q, got %#v", reason, call.reason)
-	}
 	if len(inviteeSink.events) != 1 {
 		t.Fatalf("expected 1 event for invitee, got %d", len(inviteeSink.events))
 	}
@@ -210,7 +148,7 @@ func TestServiceRevokeInviteNotifiesInvitee(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected map payload, got %#v", event.Payload)
 	}
-	for _, key := range []string{"notify_id", "invite_id", "group_id", "revoked_by", "revoked_at"} {
+	for _, key := range []string{"invite_id", "group_id", "revoked_by", "revoked_at"} {
 		if payload[key] == nil {
 			t.Fatalf("expected payload key %q, got %#v", key, payload)
 		}
@@ -236,9 +174,6 @@ func TestServiceRevokeInviteSkipsNotificationWhenInviteeUnknown(t *testing.T) {
 	if len(repo.revokeInviteCalls) != 1 {
 		t.Fatalf("expected revoke call regardless of invitee, got %#v", repo.revokeInviteCalls)
 	}
-	if len(writer.inviteRevoked) != 0 {
-		t.Fatalf("expected no notification without invitee, got %#v", writer.inviteRevoked)
-	}
 }
 
 // --- RejectInvite ---
@@ -263,19 +198,6 @@ func TestServiceRejectInviteNotifiesInviter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reject invite: %v", err)
 	}
-	if len(writer.inviteRejected) != 1 {
-		t.Fatalf("expected 1 AppendGroupInviteRejected call, got %d", len(writer.inviteRejected))
-	}
-	call := writer.inviteRejected[0]
-	if call.targetUserID != "u2" || call.groupID != "g1" || call.groupName != "test" || call.inviteID != "inv1" {
-		t.Fatalf("unexpected invite rejected call: %#v", call)
-	}
-	if call.rejectedBy == nil || call.rejectedBy["user_id"] != "u1" {
-		t.Fatalf("expected rejected_by user u1, got %#v", call.rejectedBy)
-	}
-	if call.reason == nil || *call.reason != reason {
-		t.Fatalf("expected reason %q, got %#v", reason, call.reason)
-	}
 	if len(inviterSink.events) != 1 {
 		t.Fatalf("expected 1 event for inviter, got %d", len(inviterSink.events))
 	}
@@ -287,12 +209,12 @@ func TestServiceRejectInviteNotifiesInviter(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected map payload, got %#v", event.Payload)
 	}
-	for _, key := range []string{"notify_id", "invite_id", "group_id", "rejected_by", "rejected_at"} {
+	for _, key := range []string{"invite_id", "group_id", "rejected_by", "rejected_at"} {
 		if payload[key] == nil {
 			t.Fatalf("expected payload key %q, got %#v", key, payload)
 		}
 	}
-	if payload["notify_id"] != "notif_written" || payload["invite_id"] != "inv1" || payload["group_id"] != "g1" {
+	if payload["invite_id"] != "inv1" || payload["group_id"] != "g1" {
 		t.Fatalf("unexpected event payload: %#v", payload)
 	}
 	rejectedBy, ok := payload["rejected_by"].(map[string]any)
@@ -321,12 +243,6 @@ func TestServiceRejectInviteOmitsReasonWhenEmpty(t *testing.T) {
 
 	if err := svc.RejectInvite(grpCtx("u1"), RejectInviteRequest{InviteID: "inv1"}); err != nil {
 		t.Fatalf("reject invite: %v", err)
-	}
-	if len(writer.inviteRejected) != 1 {
-		t.Fatalf("expected 1 AppendGroupInviteRejected call, got %d", len(writer.inviteRejected))
-	}
-	if writer.inviteRejected[0].reason != nil {
-		t.Fatalf("expected nil reason for notification, got %#v", writer.inviteRejected[0].reason)
 	}
 	if len(inviterSink.events) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(inviterSink.events))
@@ -366,20 +282,6 @@ func TestServiceRejectInviteLazyExpiryRevokesAndPushesExpired(t *testing.T) {
 	if len(repo.revokeInviteCalls) != 1 || repo.revokeInviteCalls[0].inviteID != "inv1" {
 		t.Fatalf("expected lazy revoke call, got %#v", repo.revokeInviteCalls)
 	}
-	if len(writer.inviteRevoked) != 1 {
-		t.Fatalf("expected 1 AppendGroupInviteRevoked call, got %d", len(writer.inviteRevoked))
-	}
-	call := writer.inviteRevoked[0]
-	if call.targetUserID != "u1" || call.groupID != "g1" || call.inviteID != "inv1" {
-		t.Fatalf("unexpected invite revoked call: %#v", call)
-	}
-	// 过期场景:revoked_by 与 reason 必须省略。
-	if call.revokedBy != nil {
-		t.Fatalf("expected nil revoked_by for expiry, got %#v", call.revokedBy)
-	}
-	if call.reason != nil {
-		t.Fatalf("expected nil reason for expiry, got %#v", call.reason)
-	}
 	if len(inviteeSink.events) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(inviteeSink.events))
 	}
@@ -393,9 +295,6 @@ func TestServiceRejectInviteLazyExpiryRevokesAndPushesExpired(t *testing.T) {
 	}
 	if payload["invite_id"] != "inv1" || payload["group_id"] != "g1" {
 		t.Fatalf("unexpected event payload: %#v", payload)
-	}
-	if payload["notify_id"] != "notif_written" {
-		t.Fatalf("expected notification_id embedded, got %#v", payload["notify_id"])
 	}
 	if payload["expired_at"] == nil || payload["expired_at"] == "" {
 		t.Fatalf("expected expired_at, got %#v", payload)
@@ -452,20 +351,6 @@ func TestServiceCancelApplicationNotifiesAdmins(t *testing.T) {
 	if len(repo.cancelApplicationIDs) != 1 || repo.cancelApplicationIDs[0] != "app1" {
 		t.Fatalf("unexpected cancel calls: %#v", repo.cancelApplicationIDs)
 	}
-	if len(writer.applicationCancelled) != 2 {
-		t.Fatalf("expected 2 AppendGroupApplicationCancelled calls, got %d", len(writer.applicationCancelled))
-	}
-	for _, call := range writer.applicationCancelled {
-		if call.groupID != "g1" || call.groupName != "test" || call.applicationID != "app1" {
-			t.Fatalf("unexpected cancelled call: %#v", call)
-		}
-		if call.applicant == nil || call.applicant["user_id"] != "u2" {
-			t.Fatalf("expected applicant u2, got %#v", call.applicant)
-		}
-		if call.reason != nil {
-			t.Fatalf("expected nil reason, got %#v", call.reason)
-		}
-	}
 	// 事件只应送达管理员(owner/admin),普通成员不接收。
 	if len(ownerSink.events) != 1 || ownerSink.events[0].Type != realtime.EventTypeGroupApplicationCancelled {
 		t.Fatalf("unexpected owner events: %#v", ownerSink.events)
@@ -480,7 +365,7 @@ func TestServiceCancelApplicationNotifiesAdmins(t *testing.T) {
 	if !ok || payload["application_id"] != "app1" || payload["group_id"] != "g1" {
 		t.Fatalf("unexpected owner payload: %#v", ownerSink.events[0].Payload)
 	}
-	if payload["notify_id"] != "notif_written" || payload["cancelled_at"] == nil {
+	if payload["cancelled_at"] == nil {
 		t.Fatalf("unexpected owner payload fields: %#v", payload)
 	}
 	applicant, ok := payload["applicant"].(map[string]any)
@@ -599,13 +484,6 @@ func TestServiceRejectApplicationLazyExpiryCancelsAndPushesExpired(t *testing.T)
 	if len(repo.cancelApplicationIDs) != 1 || repo.cancelApplicationIDs[0] != "app1" {
 		t.Fatalf("expected lazy cancel call, got %#v", repo.cancelApplicationIDs)
 	}
-	if len(writer.applicationCancelled) != 1 {
-		t.Fatalf("expected 1 AppendGroupApplicationCancelled call, got %d", len(writer.applicationCancelled))
-	}
-	call := writer.applicationCancelled[0]
-	if call.targetUserID != "u1" || call.applicationID != "app1" {
-		t.Fatalf("unexpected cancelled call: %#v", call)
-	}
 	if len(adminSink.events) != 1 || adminSink.events[0].Type != realtime.EventTypeGroupApplicationExpired {
 		t.Fatalf("unexpected admin events: %#v", adminSink.events)
 	}
@@ -613,7 +491,7 @@ func TestServiceRejectApplicationLazyExpiryCancelsAndPushesExpired(t *testing.T)
 	if !ok || payload["application_id"] != "app1" || payload["group_id"] != "g1" {
 		t.Fatalf("unexpected expired payload: %#v", adminSink.events[0].Payload)
 	}
-	if payload["notify_id"] != "notif_written" || payload["expired_at"] == nil {
+	if payload["expired_at"] == nil {
 		t.Fatalf("unexpected expired payload fields: %#v", payload)
 	}
 }
