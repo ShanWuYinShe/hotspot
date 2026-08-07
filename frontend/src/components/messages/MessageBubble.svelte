@@ -19,17 +19,17 @@
 </script>
 
 <div class="animate-fade-in flex {sent ? 'justify-end' : 'justify-start'}">
-	<div
-		class="{sent ? 'bg-accent-default shadow-[0_4px_14px_var(--cst-glow-accent)]' : 'bg-surface-primary shadow-neu-md border border-border-default'} max-w-[76%] px-3.5 py-2.5 {sent
-			? 'rounded-[18px_4px_18px_18px]'
-			: 'rounded-[4px_18px_18px_18px]'}"
-	>
-		<p class="text-base leading-[1.55] {sent ? 'text-text-on-accent' : 'text-text-primary'}">
-			{text}
-		</p>
-		<p
-			class="mt-1 flex items-center gap-0.75 text-xxs {sent ? 'justify-end text-content-inverse-muted' : 'justify-start text-text-secondary'}"
+		<div
+			class="{sent ? 'bg-accent-default shadow-[0_4px_14px_var(--cst-glow-accent)]' : 'bg-surface-primary shadow-neu-md border border-border-default'} max-w-[76%] px-3.5 py-2.5 {sent
+				? 'rounded-[var(--cst-shape-relaxed)_var(--cst-shape-compact)_var(--cst-shape-relaxed)_var(--cst-shape-relaxed)]'
+				: 'rounded-[var(--cst-shape-compact)_var(--cst-shape-relaxed)_var(--cst-shape-relaxed)_var(--cst-shape-relaxed)]'}"
 		>
+			<p class="text-base leading-[1.55] {sent ? 'text-text-on-accent' : 'text-text-primary'}">
+				{text}
+			</p>
+			<p
+				class="mt-1 flex items-center gap-0.75 text-xxs {sent ? 'justify-end text-text-on-accent opacity-70' : 'justify-start text-text-secondary'}"
+			>
 			{time}
 			{#if sent && showCheck}
 				<CheckCheck class="size-3"  style="opacity:0.8" strokeWidth={2} />

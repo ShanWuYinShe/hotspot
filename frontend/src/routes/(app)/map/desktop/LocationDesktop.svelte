@@ -220,7 +220,7 @@
 								{@html markerSvg(item.type as PinType, 3, { w: 15, h: 21 })}
 							<span class="flex-1 text-text-primary text-xs" >{item.label}</span>
 							<span style="font-size:12px;color:{item.color};font-weight:600;">{item.count}</span>
-							<span class="flex items-center justify-center shrink-0" style="width:14px;height:14px;border-radius:4px;background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--cst-border-strong)'};transition:all 0.18s;">
+							<span class="flex items-center justify-center shrink-0" style="width:14px;height:14px;border-radius:var(--cst-shape-compact);background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--cst-border-strong)'};transition:all 0.18s;">
 								{#if active}
 									<Check class="size-2.5"  style="color:var(--cst-content-on-marker)" strokeWidth={3} />
 								{/if}
@@ -242,7 +242,7 @@
 			<div
 				data-map-popup
 				class="bg-surface-primary"
-				style="position:absolute;bottom:20px;left:20px;right:20px;z-index:25;border-radius:20px;padding:16px;box-shadow:0 0 0 1px var(--cst-border-default), 0 16px 48px var(--cst-elevation-shadow-dark);"
+				style="position:absolute;bottom:20px;left:20px;right:20px;z-index:25;border-radius:var(--cst-shape-panel);padding:16px;box-shadow:0 0 0 1px var(--cst-border-default), 0 16px 48px var(--cst-elevation-shadow-dark);"
 			>
 				<div class="flex items-center gap-3">
 					<PinMedia pin={selectedPin} size={52} markerWidth={26} markerHeight={35} />
@@ -250,13 +250,13 @@
 						<div class="flex items-center gap-2">
 							<p class="text-text-primary text-base">{selectedPin.name || selectedPin.title}</p>
 							{#if (selectedPin.count ?? 1) > 1}
-								<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);">
+								<span style="font-size:10px;padding:1px 6px;border-radius:var(--cst-shape-compact);background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);">
 									{selectedPin.count}个
 								</span>
 							{/if}
 						</div>
 						<div class="flex items-center gap-2 mt-1 flex-wrap">
-							<span style="font-size:11px;padding:1px 7px;border-radius:4px;background:{PIN_TONES[selectedPin.type].bg};color:{PIN_COLORS[selectedPin.type]};">
+							<span style="font-size:11px;padding:1px 7px;border-radius:var(--cst-shape-compact);background:{PIN_TONES[selectedPin.type].bg};color:{PIN_COLORS[selectedPin.type]};">
 								{PIN_LABELS[selectedPin.type]}
 							</span>
 							{#if selectedPin.tag}

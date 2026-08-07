@@ -186,9 +186,9 @@
 								ariaLabel={`切换登录态：${s.label}`}
 								class="flex items-center justify-between px-2 py-1.5"
 							>
-								<span class="{scenario === s.id ? 'text-content-inverse' : 'text-text-primary'} text-xs">{s.label}</span>
+								<span class="{scenario === s.id ? 'text-text-on-accent' : 'text-text-primary'} text-xs">{s.label}</span>
 								{#if scenario === s.id}
-									<Check size={12} style="color:var(--cst-content-inverse);" />
+									<Check size={12} style="color:var(--cst-text-on-accent);" />
 								{/if}
 							</ListItem>
 						{/each}

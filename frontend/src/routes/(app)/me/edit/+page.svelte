@@ -73,12 +73,12 @@
 	{#snippet trailing()}
 		<button
 			type="button"
-			class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all text-base {saved ? 'bg-status-online text-cst-text-on-status' : 'bg-accent-default text-text-on-accent'}"
+			class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all text-base {saved ? 'bg-status-online text-text-on-status' : 'bg-accent-default text-text-on-accent'}"
 			style="box-shadow:0 4px 14px {saved ? 'var(--cst-status-online-glow)' : 'var(--cst-glow-accent)'};border:none;"
 			onclick={() => void handleSave()}
 		>
 			{#if saved}
-				<Check class="size-3.5"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
+				<Check class="size-3.5"  style="color:var(--cst-text-on-status)" strokeWidth={2.5} />
 			{:else}
 				保存
 			{/if}
@@ -104,7 +104,7 @@
 	<!-- Avatar edit -->
 	<div class="flex items-center gap-4 -mt-8 ml-2">
 		<div class="relative shrink-0">
-			<div class="rounded-[22px] overflow-hidden size-18"  style="border:3px solid var(--cst-surface-primary);box-shadow:var(--cst-elevation-profile-avatar)">
+			<div class="rounded-feature overflow-hidden size-18"  style="border:3px solid var(--cst-surface-primary);box-shadow:var(--cst-elevation-profile-avatar)">
 				<img src={avatar} alt="avatar" class="w-full h-full object-cover" />
 			</div>
 			<button

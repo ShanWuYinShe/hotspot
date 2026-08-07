@@ -76,7 +76,7 @@
 				<button
 					type="button"
 					onclick={() => void goto(ROUTES.meEdit)}
-					class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default bg-surface-primary px-3 py-2 text-xs font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
+					class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-control bg-surface-primary px-3 py-2 text-xs font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
 				>
 					<Pencil class="size-3.5"  strokeWidth={1.8} />
 					编辑资料

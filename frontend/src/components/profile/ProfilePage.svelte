@@ -82,7 +82,7 @@
 			<button
 				type="button"
 				onclick={() => void goto(ROUTES.meEdit)}
-				class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default bg-surface-primary px-3.5 py-2.5 text-sm font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
+				class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-control bg-surface-primary px-3.5 py-2.5 text-sm font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
 			>
 				<Pencil class="size-4"  strokeWidth={1.8} />
 				编辑资料
@@ -150,7 +150,7 @@
 				<button
 					type="button"
 					onclick={() => void goto(ROUTES.settings)}
-					class="hover-btn mt-5 flex w-full items-center justify-center gap-2 border border-border-default bg-surface-primary py-2.5 text-xs font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
+					class="hover-btn mt-5 flex w-full items-center justify-center gap-2 border border-border-default rounded-control bg-surface-primary py-2.5 text-xs font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
 				>
 					账号与隐私设置
 					<ChevronRight class="size-3.5"  strokeWidth={1.8} />

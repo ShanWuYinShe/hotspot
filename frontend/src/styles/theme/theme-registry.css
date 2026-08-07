@@ -69,6 +69,10 @@
   --color-surface-overlay: var(--cst-surface-overlay);
   --color-surface-overlay-strong: var(--cst-surface-overlay-strong);
   --color-surface-overlay-soft: var(--cst-surface-overlay-soft);
+  /* 状态/标记背景上的文字（--cst-text-on-status / --cst-content-on-marker 定义于
+     themes/*.css，此处注册类名 text-text-on-status / text-content-on-marker） */
+  --color-text-on-status: var(--cst-text-on-status);
+  --color-content-on-marker: var(--cst-content-on-marker);
 
   /* Interaction feedback fill tokens（按压/悬停实底填充） */
   --color-interactive-hover-fill: var(--cst-interactive-hover-fill);

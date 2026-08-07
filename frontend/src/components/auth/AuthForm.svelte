@@ -149,7 +149,7 @@
 	{#if mode === 'register' || mode === 'guest'}
 		<label class="flex flex-col gap-1.5" >
 			<span class="text-xs"  style="letter-spacing:0.08em;color:var(--cst-text-secondary)">昵称</span>
-			<span class="flex items-center gap-2 border border-border-default px-3 py-3" style="background:var(--cst-surface-primary);">
+			<span class="flex items-center gap-2 border border-border-default rounded-control px-3 py-3" style="background:var(--cst-surface-primary);">
 				<input
 					type="text"
 					bind:value={nickname}
@@ -166,7 +166,7 @@
 	{#if mode === 'login' || mode === 'register'}
 		{#if mode === 'login'}
 			<!-- 登录方式双 tab（对齐 Figma Make LoginPage：容器 bg-secondary 无圆角，active 仅 bg-card） -->
-			<div class="grid grid-cols-2 border border-border-default p-1" style="background:var(--cst-color-accent-bg);">
+			<div class="grid grid-cols-2 border border-border-default rounded-control p-1" style="background:var(--cst-color-accent-bg);">
 				{#each ([['code', '验证码登录'], ['password', '密码登录']] as ['code' | 'password', string][]) as [id, label]}
 					<button
 						type="button"
@@ -182,7 +182,7 @@
 		{/if}
 		<label class="flex flex-col gap-1.5" >
 			<span class="text-xs"  style="font-weight:500;color:var(--cst-text-secondary)">手机号、邮箱或账号</span>
-			<span class="flex items-center gap-2 border border-border-default px-3 py-3" style="background:var(--cst-surface-primary);">
+			<span class="flex items-center gap-2 border border-border-default rounded-control px-3 py-3" style="background:var(--cst-surface-primary);">
 				<Mail class="size-4 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={1.8} />
 				<input
 					type="text"
@@ -199,7 +199,7 @@
 			<!-- 验证码登录：验证码输入 + 获取验证码 -->
 			<label class="flex flex-col gap-1.5" >
 				<span class="text-xs"  style="letter-spacing:0.08em;color:var(--cst-text-secondary)">验证码</span>
-				<span class="flex items-center gap-2 border border-border-default px-3 py-3" style="background:var(--cst-surface-primary);">
+				<span class="flex items-center gap-2 border border-border-default rounded-control px-3 py-3" style="background:var(--cst-surface-primary);">
 					<input
 						type="text"
 						bind:value={code}
@@ -213,7 +213,7 @@
 			</label>
 			<button
 				type="button"
-				class="hover-btn w-full border border-border-default px-3 py-3 text-sm text-text-primary outline-none transition-colors"
+				class="hover-btn w-full border border-border-default rounded-control px-3 py-3 text-sm text-text-primary outline-none transition-colors"
 				style="background:var(--cst-color-accent-bg);"
 				onclick={() => (error = '验证码发送功能即将开放，请使用密码登录')}
 			>
@@ -222,7 +222,7 @@
 		{:else if mode === 'login' || mode === 'register'}
 			<label class="flex flex-col gap-1.5" >
 				<span class="text-xs"  style="font-weight:500;color:var(--cst-text-secondary)">密码</span>
-				<span class="flex items-center gap-2 border border-border-default px-3 py-3" style="background:var(--cst-surface-primary);">
+				<span class="flex items-center gap-2 border border-border-default rounded-control px-3 py-3" style="background:var(--cst-surface-primary);">
 					<LockKeyhole class="size-4 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={1.8} />
 					<input
 						type="password"
@@ -241,7 +241,7 @@
 	{#if mode === 'forgot' || mode === 'reset'}
 		<label class="flex flex-col gap-1.5" >
 			<span class="text-xs"  style="letter-spacing:0.08em;color:var(--cst-text-secondary)">账号</span>
-			<span class="flex items-center gap-2 border border-border-default px-3 py-3" style="background:var(--cst-surface-primary);">
+			<span class="flex items-center gap-2 border border-border-default rounded-control px-3 py-3" style="background:var(--cst-surface-primary);">
 				<input
 					type="text"
 					bind:value={resetLoginId}
@@ -256,7 +256,7 @@
 		{#if mode === 'reset'}
 			<label class="flex flex-col gap-1.5" >
 				<span class="text-xs"  style="letter-spacing:0.08em;color:var(--cst-text-secondary)">验证码</span>
-				<span class="flex items-center gap-2 border border-border-default px-3 py-3" style="background:var(--cst-surface-primary);">
+				<span class="flex items-center gap-2 border border-border-default rounded-control px-3 py-3" style="background:var(--cst-surface-primary);">
 					<input
 						type="text"
 						bind:value={code}
@@ -270,7 +270,7 @@
 			</label>
 			<label class="flex flex-col gap-1.5" >
 				<span class="text-xs"  style="letter-spacing:0.08em;color:var(--cst-text-secondary)">新密码</span>
-				<span class="flex items-center gap-2 border border-border-default px-3 py-3" style="background:var(--cst-surface-primary);">
+				<span class="flex items-center gap-2 border border-border-default rounded-control px-3 py-3" style="background:var(--cst-surface-primary);">
 					<input
 						type="password"
 						bind:value={newPassword}
@@ -291,7 +291,7 @@
 
 	<button
 		type="submit"
-		class="hover-btn flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-opacity"
+		class="hover-btn flex w-full items-center justify-center gap-2 rounded-control px-4 py-3 text-sm font-medium transition-opacity"
 		style="background:var(--cst-accent-default);color:var(--cst-text-on-accent);opacity:{submitting ? 0.6 : 1};"
 		disabled={submitting}
 	>
@@ -310,7 +310,7 @@
 		</div>
 		<button
 			type="button"
-			class="hover-btn mt-4 flex w-full items-center justify-center gap-2 border border-border-default px-3 py-2.5 text-xs text-text-primary outline-none transition-colors"
+			class="hover-btn mt-4 flex w-full items-center justify-center gap-2 border border-border-default rounded-control px-3 py-2.5 text-xs text-text-primary outline-none transition-colors"
 			style="background:var(--cst-surface-primary);"
 			onclick={() => (error = '微信登录暂未开放，请使用密码登录')}
 		>

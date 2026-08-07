@@ -9,12 +9,16 @@
 		pin,
 		size = 42,
 		markerWidth = 20,
-		markerHeight = 27
+		markerHeight = 27,
+		selected = false
 	}: {
 		pin: Pin;
 		size?: number;
 		markerWidth?: number;
 		markerHeight?: number;
+		/** 所在列表行处于选中态（accent 背景）时传入：marker 底换实色，
+		    避免 type 色与 accent 背景同色隐形（user 色 = accent 色）。 */
+		selected?: boolean;
 	} = $props();
 </script>
 
@@ -30,7 +34,7 @@
 {:else}
 	<div
 		class="flex items-center justify-center rounded-small shrink-0"
-		style="width:{size}px;height:{size}px;background:{PIN_TONES[pin.type].bg};"
+		style="width:{size}px;height:{size}px;background:{selected ? 'var(--cst-surface-primary)' : PIN_TONES[pin.type].bg};"
 	>
 		
 		{@html markerSvg(pin.type, pin.count ?? 1, { w: markerWidth, h: markerHeight })}

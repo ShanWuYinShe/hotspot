@@ -92,9 +92,9 @@ locationName = loc?.location_name ?? '';
 				class="app-list-row app-list-row--standard"
 			>
 				<MapPin class="size-3.25 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
-				<span class="{isSelected ? 'text-content-inverse' : 'text-text-primary'} flex-1 text-base" >{r.displayName}</span>
+				<span class="{isSelected ? 'text-text-on-accent' : 'text-text-primary'} flex-1 text-base" >{r.displayName}</span>
 				{#if isSelected}
-					<Check class="size-3.25"  style="color:var(--cst-content-inverse)" strokeWidth={2.5} />
+					<Check class="size-3.25"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
 				{/if}
 			</ListItem>
 		{/each}
@@ -147,24 +147,26 @@ locationName = loc?.location_name ?? '';
 							ariaLabel={`选择 ${pin.name || pin.title || ''}`}
 							class="app-list-row app-list-row--standard"
 						>
-						<PinMedia {pin} size={42} />
+						<PinMedia {pin} size={42} selected={isSelected} />
 						<div class="flex-1 min-w-0">
-							<p class="{isSelected ? 'text-content-inverse' : 'text-text-primary'} text-base">{pin.name || pin.title}</p>
+							<p class="{isSelected ? 'text-text-on-accent' : 'text-text-primary'} text-base">{pin.name || pin.title}</p>
 							<div class="flex items-center gap-2 mt-0.5 flex-wrap">
-								<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:{PIN_TONES[pin.type].bg};color:{PIN_COLORS[pin.type]};">
+								<!-- 类型徽章：选中行背景为 accent 实色，type 色与 accent 同色（user），
+								     反色适配为 on-accent 底 + accent 字（对齐 ChatListItem 未读徽章模式） -->
+								<span style="font-size:10px;padding:1px 6px;border-radius:var(--cst-shape-compact);background:{isSelected ? 'var(--cst-text-on-accent)' : PIN_TONES[pin.type].bg};color:{isSelected ? 'var(--cst-accent-default)' : PIN_COLORS[pin.type]};">
 									{PIN_LABELS[pin.type]}
 								</span>
 								{#if pin.tag}
-									<span class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs">#{pin.tag}</span>
+									<span class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs">#{pin.tag}</span>
 								{/if}
 								{#if pin.distance}
-									<span class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs">{pin.distance}</span>
+									<span class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs">{pin.distance}</span>
 								{/if}
 								{#if pin.members}
-									<span class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs">{pin.members}人</span>
+									<span class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs">{pin.members}人</span>
 								{/if}
 								{#if pin.likes}
-									<span class="flex items-center gap-0.5 {isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'}">
+									<span class="flex items-center gap-0.5 {isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'}">
 										<Heart class="size-2.25"  strokeWidth={1.5} />
 										<span class="text-xs">{pin.likes}</span>
 									</span>
@@ -172,7 +174,7 @@ locationName = loc?.location_name ?? '';
 							</div>
 						</div>
 						{#if isSelected}
-							<span class="rounded-full px-2 py-1" style="font-size:10px;color:var(--cst-content-on-marker);background:{PIN_COLORS[pin.type]};shrink:0;">已定位</span>
+							<span class="rounded-full px-2 py-1" style="font-size:10px;color:var(--cst-accent-default);background:var(--cst-text-on-accent);shrink:0;">已定位</span>
 						{:else}
 							<ChevronRight class="size-3.5 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 						{/if}
@@ -202,15 +204,15 @@ locationName = loc?.location_name ?? '';
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
-								<p class="truncate {isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm">{loc.displayName}</p>
-								<p class="truncate {isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
+								<p class="truncate {isSelected ? 'text-text-on-accent' : 'text-text-primary'} text-sm">{loc.displayName}</p>
+								<p class="truncate {isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							<div class="flex shrink-0 items-center gap-1">
-								<Users style="width:11px;height:11px;color:{isSelected ? 'var(--cst-content-inverse)' : 'var(--cst-accent-default)'};" strokeWidth={1.5} />
-								<span class="{isSelected ? 'text-content-inverse-secondary' : 'text-accent-default'} text-xs">{loc.users}</span>
+								<Users style="width:11px;height:11px;color:{isSelected ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};" strokeWidth={1.5} />
+								<span class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-accent-default'} text-xs">{loc.users}</span>
 							</div>
 							{#if isSelected}
-								<Check class="size-3.5 shrink-0"  style="color:var(--cst-content-inverse)" strokeWidth={2.5} />
+								<Check class="size-3.5 shrink-0"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
 							{:else}
 								<ChevronRight class="size-3.25 shrink-0"  style="color:var(--cst-border-default)" strokeWidth={1.5} />
 							{/if}
@@ -240,11 +242,11 @@ locationName = loc?.location_name ?? '';
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
-								<p class="truncate {isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm">{loc.displayName}</p>
-								<p class="truncate {isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
+								<p class="truncate {isSelected ? 'text-text-on-accent' : 'text-text-primary'} text-sm">{loc.displayName}</p>
+								<p class="truncate {isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							{#if isSelected}
-								<Check class="size-3.5 shrink-0"  style="color:var(--cst-content-inverse)" strokeWidth={2.5} />
+								<Check class="size-3.5 shrink-0"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
 							{:else}
 								<ChevronRight class="size-3.25 shrink-0"  style="color:var(--cst-border-default)" strokeWidth={1.5} />
 							{/if}
@@ -264,7 +266,7 @@ locationName = loc?.location_name ?? '';
 <!-- Confirm -->
 <div class="shrink-0 border-t border-border-default"   style="padding:10px 12px 16px">
 	{#if selectedLoc}
-		<div class="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-[13px] bg-surface-primary" style="box-shadow:0 0 0 1px var(--cst-border-default), var(--shadow-neu-inset-xs);">
+		<div class="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-small bg-surface-primary" style="box-shadow:0 0 0 1px var(--cst-border-default), var(--shadow-neu-inset-xs);">
 			<Check class="size-3.25 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={2.5} />
 			<p class="flex-1 truncate text-accent-default text-xs">{selectedLoc.displayName}</p>
 			<button

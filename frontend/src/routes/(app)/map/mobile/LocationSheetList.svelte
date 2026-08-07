@@ -43,12 +43,12 @@ import PinMedia from '../shared/PinMedia.svelte';
 				ariaLabel={`选择地点 ${r.displayName}`}
 				class="app-list-row app-list-row--standard px-5"
 			>
-				<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default size-8.5"  style="opacity:0.12">
+				<div class="flex items-center justify-center rounded-full shrink-0 size-8.5 {isSelected ? 'bg-surface-primary' : 'bg-accent-default'}"  style="{isSelected ? '' : 'opacity:0.12'}">
 					<MapPin class="size-3.5"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
 				</div>
-				<span class="{isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm"  style="flex:1">{r.displayName}</span>
+				<span class="{isSelected ? 'text-text-on-accent' : 'text-text-primary'} text-sm"  style="flex:1">{r.displayName}</span>
 				{#if isSelected}
-					<Check class="size-3.5 shrink-0"  style="color:var(--cst-content-inverse)" strokeWidth={2.5} />
+					<Check class="size-3.5 shrink-0"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
 				{/if}
 			</ListItem>
 		{/each}
@@ -62,7 +62,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 	<div class="animate-fade-in">
 		<!-- Selected pin mini-card -->
 		{#if selectedPin}
-			<div class="flex items-center gap-3 mx-4 mb-2 p-3 rounded-[15px]" style="background:{PIN_TONES[selectedPin.type].bg};border:1px solid {PIN_TONES[selectedPin.type].border};">
+			<div class="flex items-center gap-3 mx-4 mb-2 p-3 rounded-control" style="background:{PIN_TONES[selectedPin.type].bg};border:1px solid {PIN_TONES[selectedPin.type].border};">
 				<PinMedia pin={selectedPin} size={42} />
 				<div class="flex-1 min-w-0">
 					<p class="text-text-primary text-base">{selectedPin.name || selectedPin.title}</p>
@@ -120,11 +120,11 @@ import PinMedia from '../shared/PinMedia.svelte';
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
-								<p class="truncate {isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm">{loc.displayName}</p>
-								<p class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
+								<p class="truncate {isSelected ? 'text-text-on-accent' : 'text-text-primary'} text-sm">{loc.displayName}</p>
+								<p class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							{#if isSelected}
-								<Check class="size-3.5 shrink-0"  style="color:var(--cst-content-inverse)" strokeWidth={2.5} />
+								<Check class="size-3.5 shrink-0"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
 							{:else}
 								<ChevronRight class="size-3.25 shrink-0"  style="color:var(--cst-border-default)" strokeWidth={1.5} />
 							{/if}
@@ -145,16 +145,16 @@ import PinMedia from '../shared/PinMedia.svelte';
 							ariaLabel={`选择热门地点 ${loc.displayName}`}
 							class="app-list-row app-list-row--standard px-4"
 						>
-							<div class="flex items-center justify-center rounded-[13px] shrink-0 bg-accent-default size-9 text-lg"  style="opacity:0.88">
+							<div class="flex items-center justify-center rounded-small shrink-0 size-9 text-lg {isSelected ? 'bg-surface-primary' : 'bg-accent-default'}"  style="opacity:0.88">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
-								<p class="truncate {isSelected ? 'text-content-inverse' : 'text-text-primary'} text-sm">{loc.displayName}</p>
-								<p class="{isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
+								<p class="truncate {isSelected ? 'text-text-on-accent' : 'text-text-primary'} text-sm">{loc.displayName}</p>
+								<p class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							<div class="flex items-center gap-1 shrink-0">
-								<Users style="width:11px;height:11px;color:{isSelected ? 'var(--cst-content-inverse)' : 'var(--cst-accent-default)'};" strokeWidth={1.5} />
-								<span class="{isSelected ? 'text-content-inverse-secondary' : 'text-accent-default'} text-xs">{loc.users}</span>
+								<Users style="width:11px;height:11px;color:{isSelected ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};" strokeWidth={1.5} />
+								<span class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-accent-default'} text-xs">{loc.users}</span>
 							</div>
 						</ListItem>
 					{/each}

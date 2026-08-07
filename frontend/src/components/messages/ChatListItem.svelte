@@ -6,9 +6,9 @@
 	//   - 基于公共 ListItem 行组件（hover 填充 / tap 反馈 / 键盘 / aria）
 	//   - 已读/未读不靠字号或字重区分（所有 item 大小一致），未读仅由
 	//     计数 chip 呈现；点击后未读清零（由页面 markRead 处理）
-	//   - selected：ListItem pressed 驱动 accent 全背景 + 反色文字
-	//     （content-inverse 系列）+ border-inverse 头像框；inline 背景避免
-	//     全局 button hover overlay 盖出白蒙蒙效果
+	//   - selected：ListItem pressed 驱动 accent 全背景 + on-accent 文字
+	//     （text-text-on-accent 系列，随明暗模式切换深浅）+ border-inverse
+	//     头像框；inline 背景避免全局 button hover overlay 盖出白蒙蒙效果
 	//   - unread 徽章：选中时保留占位并改为反色，避免行内 flex-1 文本区
 	//     宽度跳变导致点击位移
 
@@ -58,21 +58,21 @@
 
 	<span class="min-w-0 flex-1">
 		<span class="mb-0.5 flex items-baseline justify-between">
-			<span class="{isSelected ? 'text-content-inverse' : 'text-text-primary'} truncate text-sm">
+			<span class="{isSelected ? 'text-text-on-accent' : 'text-text-primary'} truncate text-sm">
 				{chat.name}
 			</span>
-			<span class="{isSelected ? 'text-content-inverse-muted' : 'text-text-secondary'} shrink-0 text-xs">
+			<span class="{isSelected ? 'text-text-on-accent opacity-70' : 'text-text-secondary'} shrink-0 text-xs">
 				{chat.time}
 			</span>
 		</span>
-		<span class="block truncate pr-4 {isSelected ? 'text-content-inverse-secondary' : 'text-text-secondary'} text-xs">
+		<span class="block truncate pr-4 {isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs">
 			{chat.lastMessage}
 		</span>
 	</span>
 
 	{#if chat.unread > 0}
 		<span
-			class="flex shrink-0 items-center justify-center rounded-full text-xs font-semibold {isSelected ? 'bg-content-inverse text-accent-default' : 'bg-accent-default text-text-on-accent'}"
+			class="flex shrink-0 items-center justify-center rounded-full text-xs font-semibold {isSelected ? 'bg-text-on-accent text-accent-default' : 'bg-accent-default text-text-on-accent'}"
 			style="width:20px;height:20px;{isSelected ? '' : 'box-shadow:0 2px 8px var(--cst-glow-accent);'}"
 		>
 			{chat.unread}

@@ -156,7 +156,7 @@
 	}
 
 	const sheetStyle = $derived(
-		`position:absolute;bottom:0;left:0;right:0;height:${sheetH}px;z-index:20;border-radius:22px 22px 0 0;border:1px solid var(--cst-border-default);border-bottom:none;box-shadow:0 -6px 28px var(--cst-elevation-shadow-dark);display:flex;flex-direction:column;overflow:hidden;${dragging ? '' : 'transition:height 0.3s cubic-bezier(0.34,1.56,0.64,1);'}`
+		`position:absolute;bottom:0;left:0;right:0;height:${sheetH}px;z-index:20;border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;border:1px solid var(--cst-border-default);border-bottom:none;box-shadow:0 -6px 28px var(--cst-elevation-shadow-dark);display:flex;flex-direction:column;overflow:hidden;${dragging ? '' : 'transition:height 0.3s cubic-bezier(0.34,1.56,0.64,1);'}`
 	);
 	const rightCtrlBottom = $derived(sheetH + 10);
 </script>
@@ -335,7 +335,7 @@
 
 		<!-- Search bar -->
 		<div class="shrink-0"  style="padding:0 14px 8px">
-			<div class="flex items-center gap-2.5 px-3.5 rounded-[15px] input-surface h-11" >
+			<div class="flex items-center gap-2.5 px-3.5 rounded-control input-surface h-11" >
 				<Search class="size-3.75 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				<input
 					bind:value={searchQuery}

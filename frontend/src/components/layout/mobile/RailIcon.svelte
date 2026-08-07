@@ -42,7 +42,7 @@
 >
 	{#if isActive}
 		<div
-			style="position:absolute;inset:4px;border-radius:12px;background:var(--cst-accent-default);opacity:0.14;"
+			style="position:absolute;inset:4px;border-radius:var(--cst-shape-small);background:var(--cst-accent-default);opacity:0.14;"
 		></div>
 	{/if}
 	<Icon
