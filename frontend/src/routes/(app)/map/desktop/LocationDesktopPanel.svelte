@@ -111,8 +111,8 @@ locationName = loc?.location_name ?? '';
 	] as tab}
 		<button
 			type="button"
-			class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none {activeTab === tab.id ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
-			style={activeTab === tab.id ? 'font-size:12px;box-shadow:0 3px 10px var(--cst-glow-accent);' : 'font-size:12px;border:1px solid var(--cst-border-default);'}
+			class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none text-sm {activeTab === tab.id ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
+			style={activeTab === tab.id ? 'box-shadow:0 3px 10px var(--cst-glow-accent);' : 'border:1px solid var(--cst-border-default);'}
 			onclick={() => (activeTab = tab.id as 'nearby' | 'hot' | 'recent')}
 		>
 			<tab.icon class="size-2.75"  strokeWidth={activeTab === tab.id ? 2.5 : 1.5} />
@@ -153,7 +153,7 @@ locationName = loc?.location_name ?? '';
 							<div class="flex items-center gap-2 mt-0.5 flex-wrap">
 								<!-- 类型徽章：选中行背景为 accent 实色，type 色与 accent 同色（user），
 								     反色适配为 on-accent 底 + accent 字（对齐 ChatListItem 未读徽章模式） -->
-								<span style="font-size:10px;padding:1px 6px;border-radius:var(--cst-shape-compact);background:{isSelected ? 'var(--cst-text-on-accent)' : PIN_TONES[pin.type].bg};color:{isSelected ? 'var(--cst-accent-default)' : PIN_COLORS[pin.type]};">
+								<span class="text-xxs" style="padding:1px 6px;border-radius:var(--cst-shape-compact);background:{isSelected ? 'var(--cst-text-on-accent)' : PIN_TONES[pin.type].bg};color:{isSelected ? 'var(--cst-accent-default)' : PIN_COLORS[pin.type]};">
 									{PIN_LABELS[pin.type]}
 								</span>
 								{#if pin.tag}
@@ -174,7 +174,7 @@ locationName = loc?.location_name ?? '';
 							</div>
 						</div>
 						{#if isSelected}
-							<span class="rounded-full px-2 py-1" style="font-size:10px;color:var(--cst-accent-default);background:var(--cst-text-on-accent);shrink:0;">已定位</span>
+							<span class="rounded-full px-2 py-1 text-xxs" style="color:var(--cst-accent-default);background:var(--cst-text-on-accent);shrink:0;">已定位</span>
 						{:else}
 							<ChevronRight class="size-3.5 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 						{/if}
@@ -283,8 +283,8 @@ locationName = loc?.location_name ?? '';
 	{/if}
 	<button
 		type="button"
-		class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-text-on-accent"
-		style="height:48px;font-size:14px;box-shadow:0 6px 20px var(--cst-glow-accent);"
+		class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-text-on-accent text-md"
+		style="height:48px;box-shadow:0 6px 20px var(--cst-glow-accent);"
 		onclick={onConfirm}
 	>
 		<MapPin class="size-3.5"  strokeWidth={2} />

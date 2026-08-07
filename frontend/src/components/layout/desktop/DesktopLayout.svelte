@@ -189,12 +189,12 @@
 					/>
 				</button>
 			{:else}
-				<button
-					type="button"
-					class="hover-btn ml-2 shrink-0 rounded-full px-3 focus-ring"
-					style="height:32px;background:var(--cst-accent-default);color:var(--cst-text-on-accent);font-size:12px;"
-					aria-label="登录"
-					onclick={() => void goto(ROUTES.login)}
+					<button
+						type="button"
+						class="hover-btn ml-2 shrink-0 rounded-full px-3 focus-ring text-sm"
+						style="height:32px;background:var(--cst-accent-default);color:var(--cst-text-on-accent);"
+						aria-label="登录"
+						onclick={() => void goto(ROUTES.login)}
 				>
 					登录
 				</button>
@@ -239,8 +239,8 @@
 
 				<!-- Section 2 label -->
 				<p
-					class={isSidebarCollapsed ? 'sr-only' : 'px-3 mb-2'}
-					style="font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--cst-text-secondary);opacity:0.65;"
+					class={isSidebarCollapsed ? 'sr-only' : 'px-3 mb-2 text-xxs'}
+					style="font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--cst-text-secondary);opacity:0.65;"
 				>
 					个人中心
 				</p>

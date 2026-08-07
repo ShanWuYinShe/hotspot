@@ -38,11 +38,14 @@
 
   /* Font size scale — Tailwind v4 字号命名空间必须是 --text-*（--font-size-* 不生成
      utility，此前导致 text-xxs 全站失效）。严格对齐设计刻度：xxs=10 / xs=11 / sm=12 /
-     base=13；text-lg 及以上沿用 Tailwind 默认（18/20/24/30/36）。 */
+     base=13 / md=14；text-lg 及以上沿用 Tailwind 默认（18/20/24/30/36）。
+     md=14 为界面强调字号（侧栏导航、大按钮、状态栏），填补 sm 与 lg 之间空档；
+     全站字号一律走 text-* 类，禁止 style 内联 font-size。 */
   --text-xxs: 10px;
   --text-xs: 11px;
   --text-sm: 12px;
   --text-base: 13px;
+  --text-md: 14px;
 
   /* Border radius scale — Figma Make shape 系统（rounded-rectangle family） */
   --radius-compact: var(--cst-shape-compact);

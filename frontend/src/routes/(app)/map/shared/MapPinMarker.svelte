@@ -31,8 +31,8 @@
 >
 	{#if (pin.count ?? 1) > 1}
 		<div
-			class="absolute -top-1 -right-1 flex items-center justify-center rounded-full z-10"
-			style="width:16px;height:16px;background:{PIN_COLORS[pin.type]};border:1.5px solid var(--cst-content-on-marker);font-size:9px;color:var(--cst-content-on-marker);font-weight:700;"
+			class="absolute -top-1 -right-1 flex items-center justify-center rounded-full z-10 text-xxs"
+			style="width:16px;height:16px;background:{PIN_COLORS[pin.type]};border:1.5px solid var(--cst-content-on-marker);color:var(--cst-content-on-marker);font-weight:700;"
 		>
 			{pin.count}
 		</div>

@@ -51,10 +51,10 @@ function toggleAdd(id: number) {
 		{#each [{ id: 'add', icon: UserPlus, label: '添加好友' }, { id: 'chat', icon: MessageCircle, label: '开始私聊' }] as t}
 			<button
 				type="button"
-				class="hover-btn flex items-center gap-2 px-4 py-2 rounded-full outline-none {tab === t.id ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
+				class="hover-btn flex items-center gap-2 px-4 py-2 rounded-full outline-none text-base {tab === t.id ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
 				style={tab === t.id
-					? 'font-size:13px;font-weight:500;box-shadow:0 4px 12px var(--cst-glow-accent);'
-					: 'font-size:13px;box-shadow:var(--shadow-neu-xs);border:1px solid var(--cst-border-default);'}
+					? 'font-weight:500;box-shadow:0 4px 12px var(--cst-glow-accent);'
+					: 'box-shadow:var(--shadow-neu-xs);border:1px solid var(--cst-border-default);'}
 				onclick={() => {
 					tab = t.id as Tab;
 					searchQ = '';
@@ -97,10 +97,10 @@ function toggleAdd(id: number) {
 						</div>
 						<button
 							type="button"
-							class="hover-btn tap-92 flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none shrink-0 {addedIds.has(u.id) ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
+							class="hover-btn tap-92 flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none shrink-0 text-xs {addedIds.has(u.id) ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
 							style={addedIds.has(u.id)
-								? 'box-shadow:var(--shadow-neu-inset-xs);border:1px solid var(--cst-border-strong);font-size:11px;'
-								: 'font-size:11px;box-shadow:0 3px 8px var(--cst-glow-accent);'}
+								? 'box-shadow:var(--shadow-neu-inset-xs);border:1px solid var(--cst-border-strong);'
+								: 'box-shadow:0 3px 8px var(--cst-glow-accent);'}
 							onclick={(e) => {
 								e.stopPropagation();
 								toggleAdd(u.id);

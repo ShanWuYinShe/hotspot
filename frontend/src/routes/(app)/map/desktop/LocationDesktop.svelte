@@ -191,14 +191,14 @@
 		<div data-map-filter class="absolute z-20" style="top:14px;left:14px;" onclick={(e) => e.stopPropagation()}>
 			<button
 				type="button"
-				class="hover-btn flex items-center gap-2 rounded-full outline-none"
-				style="padding:9px 16px;font-size:13px;background:{showFilter ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-text-primary)'};border:1px solid {showFilter ? 'transparent' : 'var(--cst-border-default)'};box-shadow:{showFilter ? '0 4px 16px var(--cst-glow-accent)' : '0 4px 16px var(--cst-elevation-shadow-dark)'};"
+				class="hover-btn flex items-center gap-2 rounded-full outline-none text-base"
+				style="padding:9px 16px;background:{showFilter ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-text-primary)'};border:1px solid {showFilter ? 'transparent' : 'var(--cst-border-default)'};box-shadow:{showFilter ? '0 4px 16px var(--cst-glow-accent)' : '0 4px 16px var(--cst-elevation-shadow-dark)'};"
 				onclick={() => (showFilter = !showFilter)}
 			>
 				<SlidersHorizontal class="size-3.25"  strokeWidth={showFilter ? 2.5 : 1.75} />
 				筛选
 				{#if activeFilters.size < 3}
-					<span style="margin-left:2px;font-size:10px;padding:1px 6px;border-radius:999px;background:{showFilter ? 'var(--cst-surface-map-control-active)' : 'var(--cst-accent-soft)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};font-weight:500;">{activeFilters.size}</span>
+					<span class="text-xxs" style="margin-left:2px;padding:1px 6px;border-radius:999px;background:{showFilter ? 'var(--cst-surface-map-control-active)' : 'var(--cst-accent-soft)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};font-weight:500;">{activeFilters.size}</span>
 				{/if}
 			</button>
 			{#if showFilter}
@@ -219,7 +219,7 @@
 								
 								{@html markerSvg(item.type as PinType, 3, { w: 15, h: 21 })}
 							<span class="flex-1 text-text-primary text-xs" >{item.label}</span>
-							<span style="font-size:12px;color:{item.color};font-weight:600;">{item.count}</span>
+							<span class="text-sm" style="color:{item.color};font-weight:600;">{item.count}</span>
 							<span class="flex items-center justify-center shrink-0" style="width:14px;height:14px;border-radius:var(--cst-shape-compact);background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--cst-border-strong)'};transition:all 0.18s;">
 								{#if active}
 									<Check class="size-2.5"  style="color:var(--cst-content-on-marker)" strokeWidth={3} />
@@ -250,13 +250,13 @@
 						<div class="flex items-center gap-2">
 							<p class="text-text-primary text-base">{selectedPin.name || selectedPin.title}</p>
 							{#if (selectedPin.count ?? 1) > 1}
-								<span style="font-size:10px;padding:1px 6px;border-radius:var(--cst-shape-compact);background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);">
+								<span class="text-xxs" style="padding:1px 6px;border-radius:var(--cst-shape-compact);background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);">
 									{selectedPin.count}个
 								</span>
 							{/if}
 						</div>
 						<div class="flex items-center gap-2 mt-1 flex-wrap">
-							<span style="font-size:11px;padding:1px 7px;border-radius:var(--cst-shape-compact);background:{PIN_TONES[selectedPin.type].bg};color:{PIN_COLORS[selectedPin.type]};">
+							<span class="text-xs" style="padding:1px 7px;border-radius:var(--cst-shape-compact);background:{PIN_TONES[selectedPin.type].bg};color:{PIN_COLORS[selectedPin.type]};">
 								{PIN_LABELS[selectedPin.type]}
 							</span>
 							{#if selectedPin.tag}
@@ -279,8 +279,8 @@
 					<div class="flex gap-2 shrink-0">
 						<button
 							type="button"
-							class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none bg-accent-default text-text-on-accent"
-							style="font-size:13px;box-shadow:0 4px 14px var(--cst-glow-accent);"
+							class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none bg-accent-default text-text-on-accent text-base"
+							style="box-shadow:0 4px 14px var(--cst-glow-accent);"
 							onclick={() => selectedPin && openPinDetail(selectedPin)}
 						>
 							查看详情

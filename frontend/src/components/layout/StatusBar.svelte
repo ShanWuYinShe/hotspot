@@ -25,7 +25,8 @@
 >
 	<!-- Time -->
 	<span
-		style="font-size:15px;font-weight:600;color:var(--cst-text-primary);letter-spacing:-0.3px;font-variant-numeric:tabular-nums;"
+		class="text-md"
+		style="font-weight:600;color:var(--cst-text-primary);letter-spacing:-0.3px;font-variant-numeric:tabular-nums;"
 	>
 		{h}:{m}
 	</span>

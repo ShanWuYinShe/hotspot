@@ -47,8 +47,8 @@
 		strokeWidth={isActive ? 2 : 1.6}
 	/>
 	<span
-		class={collapsed ? 'sr-only' : ''}
-		style={collapsed ? '' : `font-size:14px;font-weight:${isActive ? 500 : 400};letter-spacing:0.01em;`}
+		class={collapsed ? 'sr-only' : 'text-md'}
+		style={collapsed ? '' : `font-weight:${isActive ? 500 : 400};letter-spacing:0.01em;`}
 	>
 		{item.label}
 	</span>

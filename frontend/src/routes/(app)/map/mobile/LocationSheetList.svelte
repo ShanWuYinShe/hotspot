@@ -72,7 +72,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 						{selectedPin.tag ? ` · #${selectedPin.tag}` : ''}
 					</p>
 				</div>
-				<button type="button" class="hover-btn px-2.5 py-1.5 rounded-full outline-none shrink-0" style="background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);font-size:11px;" onclick={() => onOpenPinDetail(selectedPin)}>
+				<button type="button" class="hover-btn px-2.5 py-1.5 rounded-full outline-none shrink-0 text-xs" style="background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);" onclick={() => onOpenPinDetail(selectedPin)}>
 					查看
 				</button>
 				<button type="button" class="hover-btn outline-none shrink-0 ml-0.5" onclick={onClearPin}>
@@ -89,8 +89,8 @@ import PinMedia from '../shared/PinMedia.svelte';
 			] as tab}
 				<button
 					type="button"
-					class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none {activeTab === tab.id ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
-					style={activeTab === tab.id ? 'font-size:12px;box-shadow:0 3px 10px var(--cst-glow-accent);' : 'font-size:12px;border:1px solid var(--cst-border-default);'}
+					class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none text-sm {activeTab === tab.id ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
+					style={activeTab === tab.id ? 'box-shadow:0 3px 10px var(--cst-glow-accent);' : 'border:1px solid var(--cst-border-default);'}
 					onclick={() => (activeTab = tab.id as 'recent' | 'hot')}
 				>
 					<tab.icon class="size-2.75"  strokeWidth={activeTab === tab.id ? 2.5 : 1.5} />

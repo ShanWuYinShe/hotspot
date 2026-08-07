@@ -43,8 +43,8 @@
 					<img src={g.banner} alt="" class="image-hover-frame__image h-full w-full object-cover" />
 					<div class="absolute inset-0" style="background:var(--cst-surface-gallery-scrim);"></div>
 					<div
-						class="absolute left-2 top-2 rounded-full px-1.5 py-0.5"
-						style="background:var(--cst-surface-gallery-label);color:var(--cst-content-inverse);font-size:10px;backdrop-filter:blur(8px);"
+						class="absolute left-2 top-2 rounded-full px-1.5 py-0.5 text-xxs"
+						style="background:var(--cst-surface-gallery-label);color:var(--cst-content-inverse);backdrop-filter:blur(8px);"
 					>
 						{#if g.role === '管理员'}
 							<Shield class="mr-0.5 inline-block size-2.25"  strokeWidth={2} />

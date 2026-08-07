@@ -223,7 +223,7 @@ theme/
   themes/forest.css      # Layer 2: 清野主题（全部 --cst-pr-* 值）
   layout.css             # 布局变量（context-rail、workspace）
   base.css               # @layer base（排版 + 按钮基线）
-  theme-registry.css     # @theme inline Tailwind 注册
+  theme-registry.css     # @theme inline Tailwind 注册（含字号刻度 text-xxs/xs/sm/base/md）
   utilities.css          # @layer utilities（组件工具类 + hover-* 交互类）
 ```
 
@@ -300,10 +300,11 @@ theme/
    （开关半高圆角、状态条 1-3px 指示条、拖拽把手）
 2. **颜色**：组件内禁止 hex/rgba 字面量（数据层同样禁止）；arbitrary 类
    （`bg-[#...]`/`shadow-[...]`）禁止含色值
-3. **字号**：正文/辅助字号用 `text-xxs/xs/sm/base` 刻度类（10/11/12/13px，
-   `--text-*` token）；新增代码禁止 style 内联 `font-size:Npx`。存量硬编码
-   字号值均落在刻度内（视觉一致），可逐步清理；动态 style 拼接场景（ternary
-   内联）豁免
+3. **字号（强制）**：全站字号一律用 `text-*` 刻度类（`--text-*` token 五档：
+   xxs=10 / xs=11 / sm=12 / base=13 / md=14px；text-lg 及以上沿用 Tailwind 默认
+   18/20/24/30/36）。**禁止任何 style 内联 `font-size:Npx`**（含动态 style
+   ternary——把字号移到 class 上，style 只留颜色/布局）。已全量清理存量
+   硬编码；新增代码违反即视为样式规范错误
 4. **accent/status 实色背景上的内容**：文字/图标必须用对应 `on-*` token
    （`text-text-on-accent`/`text-text-on-status`/`text-content-on-marker`），
    禁止恒白 `content-inverse`；选中行内若有与 accent 同色的 marker 图标需

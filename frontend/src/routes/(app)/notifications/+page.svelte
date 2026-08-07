@@ -163,10 +163,10 @@ const FILTER_TABS = [
 							aria-pressed={filter === t.id}
 							data-active={filter === t.id ? 'true' : undefined}
 							onclick={() => (filter = t.id)}
-							class="tap-92 shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default"
+							class="tap-92 shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default text-sm"
 							style={filter === t.id
-								? 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);font-size:12px;box-shadow:0 3px 10px var(--cst-glow-accent);border:none;'
-								: 'background:var(--cst-surface-primary);color:var(--cst-text-secondary);font-size:12px;border:1px solid var(--cst-border-default);box-shadow:var(--shadow-neu-xs);'}
+								? 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);box-shadow:0 3px 10px var(--cst-glow-accent);border:none;'
+								: 'background:var(--cst-surface-primary);color:var(--cst-text-secondary);border:1px solid var(--cst-border-default);box-shadow:var(--shadow-neu-xs);'}
 						>
 							{t.label}
 						</button>
