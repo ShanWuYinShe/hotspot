@@ -44,8 +44,8 @@
 		/>
 	</div>
 	<span
-		class="text-xs {isActive ? 'font-semibold' : 'font-normal'}"
-		style="line-height:1;color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color 0.22s ease;position:relative;z-index:1;"
+		class="text-xs leading-none {isActive ? 'font-semibold' : 'font-normal'}"
+		style="color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color 0.22s ease;position:relative;z-index:1;"
 	>
 		{label}
 	</span>

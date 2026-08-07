@@ -93,7 +93,7 @@
 	</div>
 
 	<!-- Content -->
-	<p class="text-text-primary text-sm" style="line-height:1.75;">{moment.content}</p>
+	<p class="text-text-primary text-sm leading-copy">{moment.content}</p>
 
 	<!-- Actions -->
 	<div class="flex items-center justify-between mt-4 py-3 border-t border-border-default border-b border-border-default" >
@@ -147,7 +147,7 @@
 						<span class="text-text-primary text-sm">{c.user}</span>
 						<span class="text-text-secondary text-xs">{c.time}</span>
 					</div>
-					<p class="text-text-secondary text-sm mt-0.5"  style="line-height:1.6">{c.text}</p>
+					<p class="text-text-secondary text-sm mt-0.5 leading-relaxed">{c.text}</p>
 					<div class="flex items-center gap-1 mt-1.5">
 						<button type="button" class="tap-84 flex items-center gap-1 outline-none text-text-secondary">
 							<Heart class="size-3"  strokeWidth={1.5} />

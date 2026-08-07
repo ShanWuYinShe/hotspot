@@ -50,15 +50,15 @@
 		<!-- Stats row -->
 		<div class="grid grid-cols-3 mt-4 bg-border-default gap-px"  style="border-radius:var(--cst-shape-md);overflow:hidden">
 			<div class="flex flex-col items-center justify-center py-2.5 bg-surface-primary">
-				<span class="text-xl font-semibold" style="color:var(--cst-accent-default);line-height:1;">{stats.nearby}</span>
+				<span class="text-xl font-semibold leading-none" style="color:var(--cst-accent-default);">{stats.nearby}</span>
 				<span class="text-xxs mt-1"  style="color:var(--cst-text-secondary)">人附近</span>
 			</div>
 			<div class="flex flex-col items-center justify-center py-2.5 bg-surface-primary">
-				<span class="text-xl font-semibold" style="color:var(--cst-status-warning);line-height:1;">{stats.active}</span>
+				<span class="text-xl font-semibold leading-none" style="color:var(--cst-status-warning);">{stats.active}</span>
 				<span class="text-xxs mt-1"  style="color:var(--cst-text-secondary)">活动中</span>
 			</div>
 			<div class="flex flex-col items-center justify-center py-2.5 bg-surface-primary">
-				<span class="text-xl font-semibold" style="color:var(--cst-status-online);line-height:1;">{stats.online}</span>
+				<span class="text-xl font-semibold leading-none" style="color:var(--cst-status-online);">{stats.online}</span>
 				<span class="text-xxs mt-1"  style="color:var(--cst-text-secondary)">在线</span>
 			</div>
 		</div>

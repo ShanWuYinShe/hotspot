@@ -43,7 +43,7 @@ locationName = loc?.location_name ?? '';
 		<p class="text-xs font-medium" style="color:var(--cst-text-primary)">位置选择</p>
 		<div class="flex items-center gap-1">
 			<span class="inline-block rounded-full size-1.25"  style="background:var(--cst-status-online)"></span>
-			<p class="text-xxs"  style="line-height:1.4;color:var(--cst-text-secondary)">{locationName || '自动定位'}</p>
+			<p class="text-xxs leading-card" style="color:var(--cst-text-secondary)">{locationName || '自动定位'}</p>
 		</div>
 	</div>
 

@@ -351,11 +351,11 @@ theme/
      状态栏时钟收紧、连接横幅微扩等边界场景
    **动态字距**（如选中态切换）用 class 三元（`{active?'tracking-x':''}`），禁止
    `style="letter-spacing:..."` 内联
-9. **行高（强制）**：非默认行高一律用 `leading-*` 刻度类，禁止 `leading-[N]`
-   arbitrary 类：
-   - `leading-card`=1.55：卡片内摘要正文（MessageBubble、MomentCard 描述）
-   - `leading-copy`=1.65：长文输入区（textarea 个人简介）
-   - 其余沿用 Tailwind 默认行高或 `leading-relaxed`/`leading-none`
+9. **行高**：禁止 `leading-[N]` arbitrary 类与内联 `line-height:N`（一律移到
+   `leading-*` 类）。优先用语义档位 `leading-card`(1.55 摘要/副标题) /
+   `leading-copy`(1.75 正文阅读) / `leading-none`(单行紧凑如数字、徽标)；
+   多行正文段落允许用 Tailwind 默认 `leading-5/6/7`（固定 px 行高，对可读性
+   敏感、随字号变化需要不同行距，不强制收敛）。
 10. **阴影（强制，3+2+3 档）**：阴影一律用 `shadow-*` token 类或
     `var(--shadow-*)`/`var(--cst-elevation-*)` 引用，禁止 `shadow-[0_3px_10px_...]`
     arbitrary 类、禁止内联 `box-shadow:Npx...` 手抄值、禁止 utilities.css 自行组合
@@ -385,11 +385,13 @@ theme/
     间距）；`below` snippet 首元素必须 `mt-3`（与样板一致，见页面布局契约第 2 条）。
     **窄列特例**：桌面消息分栏左栏（`w-75`=300px）不进 `--cst-page-gutter`，用
     `px-4`（16px）压缩 gutter——已登记例外，其他窄列场景需在 AGENTS.md 补登记
-13. **尺寸（后续优化方向）**：UI 控件/图标尺寸优先用 Tailwind `size-*` 刻度类
-    （`size-9`=36px 等），减少内联 `style="width:Npx;height:Npx"`。当前存量内联尺寸
-    多见于 lucide 图标与 UI 容器——新增组件应直接用 `size-*`；存量内联尺寸
-    （含地图 PIN 标记、StatusBar 信号/电池等物理装饰细件）逐步迁移，物理装饰细件
-    可保留为例外
+13. **尺寸与间距**：UI 控件/图标尺寸优先用 Tailwind `size-*` 刻度类（`size-9`=36px
+    等），减少内联 `style="width:Npx;height:Npx"`。**间距**（gap/px/py/mt/mb）用
+    Tailwind 默认 4px 步进刻度（`gap-1/1.5/2/2.5/3...`），**不强制收敛、不建 spacing
+    token**——间距的 2px 差异是布局设计的一部分（卡片内 8px、section 间 16px 等
+    刻意微调），与字号/圆角的"1px 无感噪声"性质不同，强行归并会破坏视觉层次。
+    横向页面 gutter 是唯一例外（`--cst-page-gutter`，由 ContentColumn 统一管理）。
+    存量内联尺寸（地图 PIN、StatusBar 信号/电池等物理装饰细件）可保留为例外
 14. **动效曲线（强制）**：过渡缓动曲线一律用 `var(--cst-ease-*)` token，禁止内联
     `cubic-bezier(...)` 字面量：
     - `--cst-ease-standard`=(0.22,1,0.36,1)：标准减速曲线（绝大多数 transition）

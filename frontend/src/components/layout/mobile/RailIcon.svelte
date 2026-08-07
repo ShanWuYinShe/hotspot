@@ -49,7 +49,7 @@
 		style="width:22px;height:22px;color:{iconColor};transition:color 0.18s ease;position:relative;z-index:1;"
 		strokeWidth={isActive ? 2.1 : showHover ? 1.75 : 1.5}
 	/>
-	<span class="text-xxs {isActive ? 'font-semibold' : 'font-normal'}" style="line-height:1;color:{iconColor};position:relative;z-index:1;transition:color 0.18s ease;">
+	<span class="text-xxs leading-none {isActive ? 'font-semibold' : 'font-normal'}" style="color:{iconColor};position:relative;z-index:1;transition:color 0.18s ease;">
 		{label}
 	</span>
 	{#if isActive}
