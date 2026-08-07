@@ -49,7 +49,7 @@
 	{/snippet}
 
 	<!-- 右上：距离（单份，消除历史重复徽章 bug） -->
-	<div class="absolute top-2.5 right-2.5 z-[2] flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface-overlay-strong" style="backdrop-filter:blur(8px);">
+	<div class="absolute top-2.5 right-2.5 z-[2] flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface-overlay-strong" style="backdrop-filter:blur(var(--cst-blur-sm));">
 		<MapPin class="w-2.25 h-2.25 text-content-inverse" strokeWidth={1.5} />
 		<span class="text-content-inverse text-xxs">{user.distance}</span>
 	</div>

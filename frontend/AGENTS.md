@@ -392,6 +392,13 @@ theme/
     刻意微调），与字号/圆角的"1px 无感噪声"性质不同，强行归并会破坏视觉层次。
     横向页面 gutter 是唯一例外（`--cst-page-gutter`，由 ContentColumn 统一管理）。
     存量内联尺寸（地图 PIN、StatusBar 信号/电池等物理装饰细件）可保留为例外
+16. **毛玻璃模糊半径（强制，3 档）**：`backdrop-filter:blur()` 半径一律用
+    `var(--cst-blur-sm/md/lg)` token（sm=8 轻徽章、md=16 sticky header/overlay、
+    lg=24 底部导航/tablet dock），禁止内联 `blur(Npx)` 字面量（原 8/10/16/18/24/28px
+    六种已收敛到 3 档）
+17. **opacity**：优先用 Tailwind `opacity-*` 标准档类（10/20/30.../100），减少内联
+    `style="opacity:0.N"`。装饰性图标/文字透明度应归标准档（0.5→opacity-50 等）；
+    导航激活态背景等精确视觉调校允许保留内联值（0.12~0.15 区间属刻意微调）
 14. **动效曲线（强制）**：过渡缓动曲线一律用 `var(--cst-ease-*)` token，禁止内联
     `cubic-bezier(...)` 字面量：
     - `--cst-ease-standard`=(0.22,1,0.36,1)：标准减速曲线（绝大多数 transition）

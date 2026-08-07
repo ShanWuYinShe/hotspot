@@ -142,7 +142,7 @@
   }
   .vibrant .input-surface {
     background: color-mix(in srgb, var(--cst-surface-primary) 70%, var(--cst-accent-default) 5%) !important;
-    backdrop-filter: blur(18px) saturate(1.25);
+    backdrop-filter: blur(var(--cst-blur-md)) saturate(1.25);
   }
   .vibrant .ambient-glow::before {
     opacity: 0.70;

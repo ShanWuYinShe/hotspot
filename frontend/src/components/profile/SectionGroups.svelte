@@ -44,7 +44,7 @@
 					<div class="absolute inset-0" style="background:var(--cst-surface-gallery-scrim);"></div>
 					<div
 						class="absolute left-2 top-2 rounded-full px-1.5 py-0.5 text-xxs"
-						style="background:var(--cst-surface-gallery-label);color:var(--cst-content-inverse);backdrop-filter:blur(8px);"
+						style="background:var(--cst-surface-gallery-label);color:var(--cst-content-inverse);backdrop-filter:blur(var(--cst-blur-sm));"
 					>
 						{#if g.role === '管理员'}
 							<Shield class="mr-0.5 inline-block size-2.25"  strokeWidth={2} />

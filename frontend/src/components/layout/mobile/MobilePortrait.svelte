@@ -48,7 +48,7 @@
 			<nav
 				aria-label="Main navigation"
 				class="shrink-0 w-full"
-				style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(24px) saturate(1.8);-webkit-backdrop-filter:blur(24px) saturate(1.8);border-top:1px solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);transition:background 0.4s ease, border-color 0.4s ease;"
+				style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);-webkit-backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);border-top:1px solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);transition:background 0.4s ease, border-color 0.4s ease;"
 			>
 				<div
 					class="flex items-center px-2"

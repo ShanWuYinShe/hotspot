@@ -35,7 +35,7 @@
 
 	const style = $derived.by(() => {
 		if (variant === 'overlay') {
-			return `width:${size}px;height:${size}px;background:var(--cst-surface-overlay);backdrop-filter:blur(10px);border:1px solid var(--cst-border-inverse);`;
+			return `width:${size}px;height:${size}px;background:var(--cst-surface-overlay);backdrop-filter:blur(var(--cst-blur-md));border:1px solid var(--cst-border-inverse);`;
 		} else if (variant === 'ghost') {
 			return `width:${size}px;height:${size}px;background:transparent;border:1px solid transparent;`;
 		}

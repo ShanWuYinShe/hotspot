@@ -65,7 +65,7 @@
 <header
 	class={cn('shrink-0', sticky && 'sticky top-0 z-20', className)}
 	style={glass
-		? 'background-color:var(--cst-surface-nav-glass);backdrop-filter:blur(16px);border-bottom:1px solid var(--cst-border-default);'
+		? 'background-color:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md));border-bottom:1px solid var(--cst-border-default);'
 		: 'background-color:var(--cst-surface-page);border-bottom:1px solid var(--cst-border-default);'}
 >
 	<ContentColumn {maxWidth} class={cn('py-4', contentClassName)}>

@@ -31,6 +31,14 @@
   --cst-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* ── Backdrop blur scale — 毛玻璃模糊半径（3 档强制收敛）─────────────
+   原 8/10/16/18/24/28px 六种散落值归并到 3 档。随主题在 themes/*.css 可覆盖。 */
+:root {
+  --cst-blur-sm: 8px;    /* 轻徽章/角标毛玻璃（卡片浮层标签） */
+  --cst-blur-md: 16px;   /* 中等毛玻璃（sticky header、操作按钮 overlay） */
+  --cst-blur-lg: 24px;   /* 重毛玻璃（底部导航栏、tablet 浮动 dock） */
+}
+
 /* ── Responsive page-content contract ──────────────────────────────── */
 :root {
   --cst-page-gutter: 1.25rem;
