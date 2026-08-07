@@ -173,6 +173,7 @@
 				class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none shrink-0 bg-surface-primary"
 				style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--cst-border-default);"
 				onclick={onBack}
+				aria-label="返回"
 			>
 				<ArrowLeft class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 			</button>
@@ -247,6 +248,7 @@
 			class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'}"
 			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? '0 4px 14px var(--cst-glow-accent)' : 'var(--shadow-neu-md)'};border:1px solid var(--cst-border-default);"
 			onclick={() => void chat.handleSend()}
+			aria-label="发送"
 		>
 			<Send style="width:14px;height:14px;color:{chat.inputVal.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
 		</button>

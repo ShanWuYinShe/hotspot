@@ -191,6 +191,7 @@
 				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0 bg-surface-primary"
 				style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--cst-border-default);"
 				onclick={onBack}
+				aria-label="返回"
 			>
 				<ArrowLeft class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 			</button>
@@ -230,11 +231,12 @@
 
 		<!-- Actions -->
 		<div class="flex gap-1.5">
-			{#each [Phone, Video] as Icon}
+			{#each [{ icon: Phone, label: '语音通话' }, { icon: Video, label: '视频通话' }] as { icon: Icon, label }}
 				<button
 					type="button"
 					class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none bg-surface-primary"
 					style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:var(--shadow-neu-md);border:1px solid var(--cst-border-default);"
+					aria-label={label}
 				>
 					<Icon class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</button>
@@ -243,6 +245,7 @@
 				type="button"
 				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none bg-surface-primary"
 				style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:var(--shadow-neu-md);border:1px solid var(--cst-border-default);"
+				aria-label="更多操作"
 			>
 				<MoreHorizontal class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 			</button>
@@ -283,6 +286,7 @@
 			type="button"
 			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0 bg-surface-primary"
 			style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--cst-border-default);"
+			aria-label="表情"
 		>
 			<Smile class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 		</button>
@@ -306,6 +310,7 @@
 			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'}"
 			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? '0 4px 14px var(--cst-glow-accent)' : 'var(--shadow-neu-md)'};border:1px solid var(--cst-border-default);"
 			onclick={() => void chat.handleSend()}
+			aria-label="发送"
 		>
 			<Send style="width:14px;height:14px;color:{chat.inputVal.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
 		</button>
