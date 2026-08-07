@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ChevronRight, Search } from '@lucide/svelte';
+	import { ChevronRight, Search, Radar } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import HeroStats from '@/components/home/HeroStats.svelte';
@@ -15,6 +15,7 @@
 	import { startDefaultLocation, type DefaultLocation } from '@/lib/start-default-location';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
 
 	// 首页「附近」：Hero 统计 + 附近动态 + 群组轮播 + 推荐列表。
 	// 三端统一 PageHeader（title + 额外信息 + trailing 工具区）+ 内容区：
@@ -81,6 +82,27 @@
 
 {#snippet homeContent()}
 	<!-- 三端共用的业务组件（只写一次）。首页为大纲页：列表限长 + 「更多」链接导航到专区 -->
+	{#if loading}
+		<!-- 加载中：统一 spinner（对齐样板 feedState） -->
+		<div class="flex flex-col items-center gap-3 py-20">
+			<div class="spinner size-7" ></div>
+			<p class="text-text-secondary text-sm">加载首页数据…</p>
+		</div>
+	{:else if error}
+		<!-- 加载失败：错误提示（对齐 EmptyState bare 契约） -->
+		<EmptyState bare title="加载失败" description={error}>
+			{#snippet icon()}
+				<Radar class="size-6"  style="color:var(--cst-text-secondary);opacity:0.4" strokeWidth={1.5} />
+			{/snippet}
+		</EmptyState>
+	{:else if moments.length === 0 && nearbyUsers.length === 0 && nearbyGroups.length === 0}
+		<!-- 空态：无任何附近内容 -->
+		<EmptyState title="附近还没有内容" description="去发布第一条动态，或到附近的人认识新朋友。">
+			{#snippet icon()}
+				<Radar class="size-6"  style="color:var(--cst-text-secondary);opacity:0.4" strokeWidth={1.5} />
+			{/snippet}
+		</EmptyState>
+	{:else}
 	<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={defaultLocation?.location_name ?? ''} />
 		<div>
 			<SectionHead title="附近活动" action="更多" onAction={() => void goto(ROUTES.nearbyMoments)} />
@@ -92,6 +114,7 @@
 		<!-- 对齐 Figma HomePage：人物推荐仅展示前 4 位，其余引导到附近的人专区 -->
 		<NearbyUserRows users={nearbyUsers.slice(0, 4)} {followingIds} onToggle={toggleFollow} />
 	</div>
+	{/if}
 {/snippet}
 
 	<StandardPageLayout
