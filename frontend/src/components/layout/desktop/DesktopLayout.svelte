@@ -142,7 +142,7 @@
 		<div class="flex-1"></div>
 
 		<!-- Right Actions -->
-		<div class="flex items-center gap-0.5">
+		<div class="flex items-center gap-1.5">
 			<ActionIconButton
 				icon={Search}
 				label="搜索"
@@ -176,7 +176,7 @@
 			{#if auth.user}
 				<button
 					type="button"
-					class="hover-btn scale-btn relative ml-1.5 shrink-0 rounded-full focus-ring focus-visible:ring-offset-surface-page"
+					class="hover-btn scale-btn relative ml-2 shrink-0 rounded-full focus-ring focus-visible:ring-offset-surface-page"
 					style="width:32px;height:32px;"
 					aria-label="打开个人主页"
 					onclick={() => guardNav('打开个人主页', ROUTES.me)}
@@ -191,7 +191,7 @@
 			{:else}
 				<button
 					type="button"
-					class="hover-btn ml-1.5 shrink-0 rounded-full px-3 focus-ring"
+					class="hover-btn ml-2 shrink-0 rounded-full px-3 focus-ring"
 					style="height:32px;background:var(--cst-accent-default);color:var(--cst-text-on-accent);font-size:12px;"
 					aria-label="登录"
 					onclick={() => void goto(ROUTES.login)}
@@ -228,7 +228,7 @@
 			<!-- Scrollable nav region — takes all available space -->
 			<div class="flex-1 flex flex-col overflow-y-auto no-scrollbar min-h-0">
 			<!-- Section 1: 发现导航 -->
-			<div class="flex flex-col gap-0.5 {isSidebarCollapsed ? 'items-center' : ''}">
+			<div class="flex flex-col gap-1 {isSidebarCollapsed ? 'items-center' : ''}">
 					{#each TOP_NAV as item (item.id)}
 						<SidebarNavItem {item} isActive={activeNavId === item.id} onClick={() => handleNavClick(item)} collapsed={isSidebarCollapsed} />
 					{/each}
@@ -246,7 +246,7 @@
 				</p>
 
 				<!-- Section 2: Personal nav -->
-				<div class="flex flex-col gap-0.5 {isSidebarCollapsed ? 'items-center' : ''}">
+				<div class="flex flex-col gap-1 {isSidebarCollapsed ? 'items-center' : ''}">
 					{#each PERSONAL_NAV as item (item.id)}
 						<SidebarNavItem {item} isActive={activeNavId === item.id} onClick={() => handleNavClick(item)} collapsed={isSidebarCollapsed} />
 					{/each}
