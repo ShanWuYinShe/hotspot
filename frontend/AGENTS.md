@@ -133,12 +133,21 @@ src/routes/
 - **分栏页面**（桌面主区 + 右 rail）：`SplitPageLayout`
   （`components/layout/page/SplitPageLayout.svelte`），主区与 rail 滚动由组件统一管理，
   footer 固定于主区底部。当前分栏页：通知、动态详情、用户详情。
-- **临时豁免**：聊天页面（桌面端与移动端）因分栏/全屏会话布局特殊，可暂不套用；
-  但页头、列表与正文的 gutter/padding 仍必须与样板一致（沿用 `PageHeader` +
-  `ContentColumn` 的 `px-4` 布局，不得另起页面级横向 padding）。
-  地图（全画布）与登录页（无 MainLayout 外壳）不适用。
+- **临时豁免/已登记例外**：
+  - 聊天页面（桌面端与移动端）因分栏/全屏会话布局特殊，可暂不套用
+    `StandardPageLayout`/`SplitPageLayout`；但页头、列表与正文的 gutter/padding
+    仍必须与样板一致（沿用 `PageHeader` + `ContentColumn`）。桌面消息分栏左栏
+    （`w-75`=300px 窄列）不进 `--cst-page-gutter`，用 `px-4` 压缩 gutter（见样式
+    自查清单第 8 条窄列特例）。
+  - **封面/紧凑型资料头**（`groups/[groupId]`、`users/[userId]`）：标题与封面/头像
+    绑定，不在 header 操作行内，故不套 `PageHeader`，自建返回/分享/更多操作行 +
+    封面下方 `<h1>`。与 `moments/[momentId]`（有独立标题"动态详情"，套 PageHeader）
+    区分。
+  - 移动个人主页（`ProfileMobile`）：自建设置入口页眉（eyebrow + 设置按钮），非标准
+    列表页 header。
+  - 地图（全画布）与登录页（无 MainLayout 外壳）不适用。
 - 强制统一布局是为了保证切换页面时右侧内容区不发生水平偏移；存量页面需逐步对齐，
-  不得新增其他例外。
+  不得新增其他例外（新增例外必须在上方登记）。
 
 **权威样板页：`src/routes/(app)/nearby/moments/+page.svelte`。** 普通页面以它为基准，
 结构固定为：
@@ -225,7 +234,8 @@ theme/
   themes/forest.css      # Layer 2: 清野主题（全部 --cst-pr-* 值）
   layout.css             # 布局变量（context-rail、workspace）
   base.css               # @layer base（排版 + 按钮基线）
-  theme-registry.css     # @theme inline Tailwind 注册（含字号刻度 text-xxs/xs/sm/base/md）
+  theme-registry.css     # @theme inline Tailwind 注册（字号 text-*/字距 tracking-*/行高
+                         #   leading-*/圆角 radius-*/阴影 shadow-raised-*+inset-*+glow-*/动效 ease-*）
   utilities.css          # @layer utilities（组件工具类 + hover-* 交互类）
 ```
 
@@ -295,18 +305,31 @@ theme/
 
 ## 样式自查清单（新增/修改样式后逐条过）
 
-1. **圆角**：控件/卡片圆角一律用 `rounded-*` 类（`--radius-*` 档位：
-   compact 8 / tight 10 / small 12 / control 16 / relaxed 18 / panel 20 /
-   feature 24 / sheet 28px）或 `var(--cst-shape-*)`；禁止 `rounded-[13px]` 等
-   任意值、禁止 style 内硬编码 `border-radius:20px`。例外仅限物理形状细件
+> **核心原则：少档位 + 强制收敛**。设计系统的价值在约束而非自由——档位要少、
+> 近邻值必须归并（1-2px 差异人眼分不清，并存只会让界面碎、无节奏）。「不够用就
+> 归到最近档位」是默认动作，新增档位需充分论证。同一类东西禁止变体过多。
+
+1. **圆角（4 档 + full）**：控件/卡片圆角一律用 `rounded-*` 类（`--radius-*` 档位：
+   **sm 12 / md 16 / lg 20 / xl 24px** + `rounded-full` 圆形 + `rounded-sheet` 28px 弹层）
+   或 `var(--cst-shape-sm/md/lg/xl)`；禁止 `rounded-[13px]` 等任意值、禁止 style 内
+   硬编码 `border-radius:20px`、禁止近邻档位并存（原 compact/tight/small/control/
+   relaxed/panel/feature 7 档已收敛到 4 档）。例外仅限物理形状细件
    （开关半高圆角、状态条 1-3px 指示条、拖拽把手）
 2. **颜色**：组件内禁止 hex/rgba 字面量（数据层同样禁止）；arbitrary 类
-   （`bg-[#...]`/`shadow-[...]`）禁止含色值
-3. **字号（强制）**：全站字号一律用 `text-*` 刻度类（`--text-*` token 五档：
-   xxs=10 / xs=11 / sm=12 / base=13 / md=14px；text-lg 及以上沿用 Tailwind 默认
-   18/20/24/30/36）。**禁止任何 style 内联 `font-size:Npx`**（含动态 style
-   ternary——把字号移到 class 上，style 只留颜色/布局）。已全量清理存量
-   硬编码；新增代码违反即视为样式规范错误
+   （`bg-[#...]`/`shadow-[...]`）禁止含色值。阴影色值统一走 `--shadow-*` token
+   （见第 11 条），不得在 `shadow-[...]` 或内联 `box-shadow` 里手写色值
+3. **字号（强制，6 档）**：全站字号一律用 `text-*` 刻度类（`--text-*` token 6 档：
+   **xxs=10 / xs=11 / sm=12 / md=14**；text-lg 及以上沿用 Tailwind 默认 18/20/24/30/36）。
+   - xxs=10：极小 uppercase 标签（eyebrow、分组标）
+   - xs=11：辅助文字（副标题、计数、时间戳）
+   - sm=12：正文（原 13px 已归并，消除 1px 噪声）
+   - md=14：强调正文（昵称、按钮主标、侧栏导航）
+   **禁止 1-2px 近邻档位并存**（原 xxxs/15/16/base 已砍/归并）；**禁止 `text-[Npx]`
+   arbitrary 类、禁止 style 内联 `font-size:Npx`**（含动态 ternary——移到 class 三元）。
+   **已登记例外**（与 `base.css` 的 h1-h4 元素级映射同等地位）：
+   - `PageHeader` 的 `titleSize`/`subtitleSize`：因 Figma 各页 header 刻意差异
+     （16/18/20/22/24），保留 `style="font-size:{N}px"` 内联，取值须落在刻度上
+   - `Avatar` fallback 首字母 `font-size:{size*0.42}px`：随头像尺寸等比缩放，物理比例
 4. **accent/status 实色背景上的内容**：文字/图标必须用对应 `on-*` token
    （`text-text-on-accent`/`text-text-on-status`/`text-content-on-marker`），
    禁止恒白 `content-inverse`；选中行内若有与 accent 同色的 marker 图标需
@@ -317,3 +340,71 @@ theme/
    并核对类名不带 `cst-` 前缀（`text-text-on-status` 而非 `text-cst-...`）
 7. **hover/tap 类**：交互反馈用既有工具类（`hover-btn`/`hover-bg`/`scale-btn`/
    `tap-*`/`header-action`/`surface-ghost`/`card-hover`），不新发明交互类
+8. **字距（强制）**：字距一律用 `tracking-*` 刻度类，禁止 `tracking-[Nem]` arbitrary
+   类与内联 `letter-spacing:Nem`：
+   - `tracking-eyebrow`=0.14em：uppercase 分组标签（外观/通知/通用 section 标、
+     「在线/未读/最近」小标、「新消息/较早」通知分组标）
+   - `tracking-label`=0.12em：次级 uppercase 小标（DesktopLayout 侧栏分组）
+   - `tracking-field`=0.08em：表单字段标签（AuthForm 昵称/密码/验证码）
+   - `tracking-title`=-0.01em：大标题微收紧（用户名、昵称 h1/h2）
+   - Tailwind 内置 `tracking-tight`(-0.025em)/`tracking-wide`(0.025em) 用于
+     状态栏时钟收紧、连接横幅微扩等边界场景
+   **动态字距**（如选中态切换）用 class 三元（`{active?'tracking-x':''}`），禁止
+   `style="letter-spacing:..."` 内联
+9. **行高（强制）**：非默认行高一律用 `leading-*` 刻度类，禁止 `leading-[N]`
+   arbitrary 类：
+   - `leading-card`=1.55：卡片内摘要正文（MessageBubble、MomentCard 描述）
+   - `leading-copy`=1.65：长文输入区（textarea 个人简介）
+   - 其余沿用 Tailwind 默认行高或 `leading-relaxed`/`leading-none`
+10. **阴影（强制，3+2+3 档）**：阴影一律用 `shadow-*` token 类或
+    `var(--shadow-*)`/`var(--cst-elevation-*)` 引用，禁止 `shadow-[0_3px_10px_...]`
+    arbitrary 类、禁止内联 `box-shadow:Npx...` 手抄值、禁止 utilities.css 自行组合
+    双向投影表达式。两套投影语言，按语义选择：
+    - **双向凸起/凹陷**（控件/卡片/头像立体感）：`shadow-raised-sm/md/lg`（3 档：
+      sm=4/4/9 控件、md=5/5/12 卡片、lg=8/8/18 大卡片）+ `shadow-inset-sm/md`（2 档凹陷）。
+      消费 `--cst-elevation-shadow-{dark,light}` 原料——vibrant 显影、forest 透明（改由 border 表达层级）
+    - **accent 光晕**（accent 实色背景发光）：`shadow-glow-sm/md/lg`（3 档：
+      sm=0/3/10、md=0/4/14、lg=0/6/18）
+    - **Material 单向/弹层投影**：`var(--cst-elevation-card)`/`-button`/`-modal`/`-sheet`/`-menu`
+      （语义 token，themes/{vibrant,forest}.css 各自定义真值）
+    **命名原则**：按投影方向/语义命名（raised/inset/glow/elevation-card），禁止设计风格前缀（neu-/skeuo-/glass-）。
+    **已登记例外**：`me/edit` 保存按钮 `box-shadow:0 4px 14px {saved?'online-glow':'accent-glow'}`（固定尺寸+动态双色）
+11. **font-weight（强制）**：字重一律用 `font-*` 类（`font-medium`=500/
+    `font-semibold`=600/`font-bold`=700/`font-normal`=400），禁止内联
+    `style="font-weight:N"`。动态字重（选中态切换）用 class 三元
+    （`{active?'font-semibold':'font-normal'}`）
+12. **页面纵向间距（强制）**：正文 `contentClassName` 收敛到样板 `/nearby/moments`
+    的约定值，禁止 `py-5`/`py-6`/`py-7 lg:py-8` 等散乱值：
+    - 标准 header 页：`contentClassName="pt-4 pb-6"`（顶 padding 由 header `pt-4`
+      承接，正文上下 `pt-4 pb-6`）
+    - 长表单页（settings、me/edit）：`pt-4 pb-10`（尾部加大留白）
+    - 封面型页（无标准 header，顶由封面承担）：`pb-6`
+    - 资料总览长内容页（ProfilePage 总览）：`pt-6 pb-8`（呼吸型变体）
+    - 状态/空态区：`py-20`（样板 `feedState` + `EmptyState` 内置）
+    **header 内 ContentColumn** 统一 `pt-4 pb-0`（顶留白、底不留白，below 区自带头部
+    间距）；`below` snippet 首元素必须 `mt-3`（与样板一致，见页面布局契约第 2 条）。
+    **窄列特例**：桌面消息分栏左栏（`w-75`=300px）不进 `--cst-page-gutter`，用
+    `px-4`（16px）压缩 gutter——已登记例外，其他窄列场景需在 AGENTS.md 补登记
+13. **尺寸（后续优化方向）**：UI 控件/图标尺寸优先用 Tailwind `size-*` 刻度类
+    （`size-9`=36px 等），减少内联 `style="width:Npx;height:Npx"`。当前存量内联尺寸
+    多见于 lucide 图标与 UI 容器——新增组件应直接用 `size-*`；存量内联尺寸
+    （含地图 PIN 标记、StatusBar 信号/电池等物理装饰细件）逐步迁移，物理装饰细件
+    可保留为例外
+14. **动效曲线（强制）**：过渡缓动曲线一律用 `var(--cst-ease-*)` token，禁止内联
+    `cubic-bezier(...)` 字面量：
+    - `--cst-ease-standard`=(0.22,1,0.36,1)：标准减速曲线（绝大多数 transition）
+    - `--cst-ease-bounce`=(0.34,1.56,0.64,1)：弹簧 overshoot 曲线（FAB、toggle 滑块、
+      地图标记放大、sheet 拖拽回弹等「有弹性」的入场/位移）
+    - Tailwind 类消费经 `--ease-standard`（theme-registry 注册）
+    **duration 不强制 token 化**：`0.10s`~`0.30s` 的精细时长差异是 Figma 动效契约的
+   有意设计（btn 0.17s、action 0.14s、tap 0.10s 等），`--cst-motion-standard:220ms`
+    仅作基准参考，不代表统一时长；组件按 Figma 契约保留各自动效时长
+15. **z-index 层叠**：分两类，不混用：
+    - **全站页面级层叠**（弹层/抽屉/Toast 等跨组件浮层）：用 `--cst-z-*` token
+      （dropdown=10 / overlay=40 / modal=50 / toast=60），经 `z-[var(--cst-z-modal)]`
+      等引用
+    - **局部 stacking context 内层叠**（卡片角标盖图片、地图容器内部排序、sticky header）：
+      用 Tailwind 默认 `z-10/20/30` 或 arbitrary `z-[1]/z-[2]`，表达「盖几层」的相对
+      语义，**不套全站 token**——它们在各自 `position:relative` 容器内独立成层，
+      与全站 z-index 刻度无语义对应。地图组件内部的 `z-index:0~50` 内联属此类
+      （地图外层 `overflow:hidden` 形成独立 stacking context）

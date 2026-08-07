@@ -56,16 +56,16 @@ import PinMedia from '../shared/PinMedia.svelte';
 {:else if searchQuery && searchResults.length === 0}
 	<div class="flex flex-col items-center py-6">
 		<MapPin class="size-6.5"  style="color:var(--cst-text-secondary);opacity:0.28" strokeWidth={1} />
-		<p class="text-text-secondary text-base mt-2" >未找到匹配地点</p>
+		<p class="text-text-secondary text-sm mt-2" >未找到匹配地点</p>
 	</div>
 {:else}
 	<div class="animate-fade-in">
 		<!-- Selected pin mini-card -->
 		{#if selectedPin}
-			<div class="flex items-center gap-3 mx-4 mb-2 p-3 rounded-control" style="background:{PIN_TONES[selectedPin.type].bg};border:1px solid {PIN_TONES[selectedPin.type].border};">
+			<div class="flex items-center gap-3 mx-4 mb-2 p-3 rounded-md" style="background:{PIN_TONES[selectedPin.type].bg};border:1px solid {PIN_TONES[selectedPin.type].border};">
 				<PinMedia pin={selectedPin} size={42} />
 				<div class="flex-1 min-w-0">
-					<p class="text-text-primary text-base">{selectedPin.name || selectedPin.title}</p>
+					<p class="text-text-primary text-sm">{selectedPin.name || selectedPin.title}</p>
 					<p class="text-text-secondary text-xs mt-px" >
 						{PIN_LABELS[selectedPin.type]}
 						{selectedPin.distance ? ` · ${selectedPin.distance}` : ''}
@@ -90,7 +90,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 				<button
 					type="button"
 					class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none text-sm {activeTab === tab.id ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
-					style={activeTab === tab.id ? 'box-shadow:0 3px 10px var(--cst-glow-accent);' : 'border:1px solid var(--cst-border-default);'}
+					style={activeTab === tab.id ? 'box-shadow:var(--shadow-glow-sm);' : 'border:1px solid var(--cst-border-default);'}
 					onclick={() => (activeTab = tab.id as 'recent' | 'hot')}
 				>
 					<tab.icon class="size-2.75"  strokeWidth={activeTab === tab.id ? 2.5 : 1.5} />
@@ -116,7 +116,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 							ariaLabel={`选择最近地点 ${loc.displayName}`}
 							class="app-list-row app-list-row--standard px-4"
 						>
-							<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary size-9 text-lg border border-border-default shadow-neu-xs"  >
+							<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary size-9 text-lg border border-border-default shadow-raised-sm"  >
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
@@ -132,7 +132,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 					{/each}
 				</ListContainer>
 			{:else}
-				<p class="text-text-secondary text-base"  style="padding:12px 20px">暂无最近记录</p>
+				<p class="text-text-secondary text-sm"  style="padding:12px 20px">暂无最近记录</p>
 			{/if}
 		{:else}
 			{#if HOT_LOCATIONS.length}
@@ -145,7 +145,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 							ariaLabel={`选择热门地点 ${loc.displayName}`}
 							class="app-list-row app-list-row--standard px-4"
 						>
-							<div class="flex items-center justify-center rounded-small shrink-0 size-9 text-lg {isSelected ? 'bg-surface-primary' : 'bg-accent-default'}"  style="opacity:0.88">
+							<div class="flex items-center justify-center rounded-sm shrink-0 size-9 text-lg {isSelected ? 'bg-surface-primary' : 'bg-accent-default'}"  style="opacity:0.88">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
@@ -153,7 +153,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 								<p class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							<div class="flex items-center gap-1 shrink-0">
-								<Users style="width:11px;height:11px;color:{isSelected ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};" strokeWidth={1.5} />
+								<Users class="size-2.75" style="color:{isSelected ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};" strokeWidth={1.5} />
 								<span class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-accent-default'} text-xs">{loc.users}</span>
 							</div>
 						</ListItem>

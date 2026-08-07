@@ -26,13 +26,13 @@
 <button
 	type="button"
 	class="absolute outline-none"
-	style="left:{pos.x}%;top:{pos.y}%;transform:translate(-50%, -100%) scale({isSelected ? 1.32 : 1});z-index:{isSelected ? 30 : 10};transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1);"
+	style="left:{pos.x}%;top:{pos.y}%;transform:translate(-50%, -100%) scale({isSelected ? 1.32 : 1});z-index:{isSelected ? 30 : 10};transition:transform 0.2s var(--cst-ease-bounce);"
 	onclick={onSelect}
 >
 	{#if (pin.count ?? 1) > 1}
 		<div
-			class="absolute -top-1 -right-1 flex items-center justify-center rounded-full z-10 text-xxs"
-			style="width:16px;height:16px;background:{PIN_COLORS[pin.type]};border:1.5px solid var(--cst-content-on-marker);color:var(--cst-content-on-marker);font-weight:700;"
+			class="absolute -top-1 -right-1 flex items-center justify-center rounded-full z-10 text-xxs font-bold"
+			style="width:16px;height:16px;background:{PIN_COLORS[pin.type]};border:1.5px solid var(--cst-content-on-marker);color:var(--cst-content-on-marker);"
 		>
 			{pin.count}
 		</div>

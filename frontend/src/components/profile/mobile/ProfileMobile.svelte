@@ -30,19 +30,19 @@
 	];
 </script>
 
-<StandardPageLayout contentClassName="pt-5 pb-8">
+<StandardPageLayout contentClassName="pt-4 pb-6">
 	{#snippet header()}
 		<!-- 资料页眉（对齐 Figma Make：eyebrow + 设置入口） -->
 			<div class="border-b border-border-default" style="background:var(--cst-surface-primary);">
 				<ContentColumn class="flex items-center justify-between py-3">
-					<p class="text-xs font-medium uppercase tracking-[0.14em] text-accent-default">个人资料</p>
+					<p class="text-xs font-medium uppercase tracking-eyebrow text-accent-default">个人资料</p>
 					<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} variant="ghost" size={32} />
 				</ContentColumn>
 			</div>
 	{/snippet}
 
 	<!-- 身份卡（compact） -->
-	<section class="rounded-panel border border-border-default surface-flat" aria-label="个人资料">
+	<section class="rounded-lg border border-border-default surface-flat" aria-label="个人资料">
 		<div class="p-5">
 			<div class="flex items-start justify-between gap-5">
 				<div class="flex min-w-0 items-center gap-4">
@@ -51,7 +51,7 @@
 							{#if avatar}
 								<img src={avatar} alt={nickname || '用户'} class="rounded-full object-cover size-17"  />
 							{:else}
-								<span class="flex items-center justify-center text-text-secondary size-17 text-[28px]" >{(nickname || '?')[0]}</span>
+								<span class="flex items-center justify-center text-text-secondary size-17 text-3xl" >{(nickname || '?')[0]}</span>
 							{/if}
 						</div>
 						<button
@@ -65,7 +65,7 @@
 						</button>
 					</div>
 					<div class="min-w-0">
-						<h1 class="text-xl font-medium tracking-[-0.01em] text-text-primary">{nickname || '未设置昵称'}</h1>
+						<h1 class="text-xl font-medium tracking-title text-text-primary">{nickname || '未设置昵称'}</h1>
 						<p class="mt-0.5 text-xs text-text-secondary">{handle}</p>
 						<p class="mt-2 flex items-center gap-1.5 text-xs text-text-secondary">
 							<MapPin class="size-3.5"  style="color:var(--cst-accent-default)" strokeWidth={1.8} />
@@ -76,7 +76,7 @@
 				<button
 					type="button"
 					onclick={() => void goto(ROUTES.meEdit)}
-					class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-control bg-surface-primary px-3 py-2 text-xs font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
+					class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-md bg-surface-primary px-3 py-2 text-xs font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
 				>
 					<Pencil class="size-3.5"  strokeWidth={1.8} />
 					编辑资料
@@ -89,7 +89,7 @@
 		<div class="grid grid-cols-3 border-t border-border-default">
 			{#each statsList as stat}
 				<div class="border-l border-border-default px-4 py-3 first:border-l-0">
-					<p class="text-base font-medium tabular-nums text-text-primary">{stat.value}</p>
+					<p class="text-sm font-medium tabular-nums text-text-primary">{stat.value}</p>
 					<p class="mt-0.5 text-xs text-text-secondary">{stat.label}</p>
 				</div>
 			{/each}

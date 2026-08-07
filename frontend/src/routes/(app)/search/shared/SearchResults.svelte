@@ -87,7 +87,7 @@
 			{#if (tab === 'all' || tab === 'people') && results.users.length > 0}
 				<!-- 用户结果组 -->
 				<section
-					class="overflow-hidden rounded-panel border bg-surface-primary"
+					class="overflow-hidden rounded-lg border bg-surface-primary"
 					style="border-color:var(--cst-border-default);"
 				>
 					<div class="flex items-center gap-2 border-b px-4 py-3" style="border-color:var(--cst-border-default);">
@@ -118,7 +118,7 @@
 			{#if (tab === 'all' || tab === 'posts') && results.moments.length > 0}
 				<!-- 动态结果组（补缩略图，对齐 Figma size-10 image） -->
 				<section
-					class="overflow-hidden rounded-panel border bg-surface-primary"
+					class="overflow-hidden rounded-lg border bg-surface-primary"
 					style="border-color:var(--cst-border-default);"
 				>
 					<div class="flex items-center gap-2 border-b px-4 py-3" style="border-color:var(--cst-border-default);">
@@ -133,10 +133,10 @@
 								class="flex items-center gap-3 px-4 py-3.5"
 							>
 								{#if moment.images?.[0]?.url}
-									<img src={moment.images[0].url} alt="" class="size-10 rounded-tight object-cover" />
+									<img src={moment.images[0].url} alt="" class="size-10 rounded-sm object-cover" />
 								{:else}
 									<div
-										class="flex size-10 items-center justify-center rounded-tight"
+										class="flex size-10 items-center justify-center rounded-sm"
 										style="background:var(--cst-accent-soft);"
 									>
 										<FileText class="size-4 text-accent-default" strokeWidth={1.5} />
@@ -158,7 +158,7 @@
 			{#if (tab === 'all' || tab === 'topics') && results.topics.length > 0}
 				<!-- 话题结果组 -->
 				<section
-					class="overflow-hidden rounded-panel border bg-surface-primary"
+					class="overflow-hidden rounded-lg border bg-surface-primary"
 					style="border-color:var(--cst-border-default);"
 				>
 					<div class="flex items-center gap-2 border-b px-4 py-3" style="border-color:var(--cst-border-default);">

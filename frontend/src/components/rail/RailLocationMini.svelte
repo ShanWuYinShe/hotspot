@@ -11,7 +11,7 @@
 
 <button
 	type="button"
-	class="hover-bg flex items-center gap-2.5 w-full outline-none text-left rounded-small p-2 -m-2"
+	class="hover-bg flex items-center gap-2.5 w-full outline-none text-left rounded-sm p-2 -m-2"
 	onclick={() => void goto(ROUTES.map)}
 	onmouseenter={() => (hovered = true)}
 	onmouseleave={() => (hovered = false)}

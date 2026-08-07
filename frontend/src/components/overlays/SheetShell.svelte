@@ -28,7 +28,7 @@
 		<button
 			type="button"
 			onclick={onClose}
-			class="hover-btn scale-btn flex items-center justify-center rounded-full bg-surface-primary outline-none shadow-neu-xs"
+			class="hover-btn scale-btn flex items-center justify-center rounded-full bg-surface-primary outline-none shadow-raised-sm"
 			style="width:32px;height:32px;border:1px solid var(--cst-border-default);"
 		>
 			<X class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={2} />

@@ -52,7 +52,7 @@
 	</Avatar>
 	<div class="min-w-0 flex-1">
 		<div class="flex items-center gap-2">
-			<span class="text-text-primary text-base">{name}</span>
+			<span class="text-text-primary text-sm">{name}</span>
 			{#if nameBadge}
 				{@render nameBadge()}
 			{/if}

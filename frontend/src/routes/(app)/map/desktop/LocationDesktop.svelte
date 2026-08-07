@@ -191,18 +191,18 @@
 		<div data-map-filter class="absolute z-20" style="top:14px;left:14px;" onclick={(e) => e.stopPropagation()}>
 			<button
 				type="button"
-				class="hover-btn flex items-center gap-2 rounded-full outline-none text-base"
-				style="padding:9px 16px;background:{showFilter ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-text-primary)'};border:1px solid {showFilter ? 'transparent' : 'var(--cst-border-default)'};box-shadow:{showFilter ? '0 4px 16px var(--cst-glow-accent)' : '0 4px 16px var(--cst-elevation-shadow-dark)'};"
+				class="hover-btn flex items-center gap-2 rounded-full outline-none text-sm"
+				style="padding:9px 16px;background:{showFilter ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-text-primary)'};border:1px solid {showFilter ? 'transparent' : 'var(--cst-border-default)'};box-shadow:{showFilter ? 'var(--shadow-glow-md)' : '0 4px 16px var(--cst-elevation-shadow-dark)'};"
 				onclick={() => (showFilter = !showFilter)}
 			>
 				<SlidersHorizontal class="size-3.25"  strokeWidth={showFilter ? 2.5 : 1.75} />
 				筛选
 				{#if activeFilters.size < 3}
-					<span class="text-xxs" style="margin-left:2px;padding:1px 6px;border-radius:999px;background:{showFilter ? 'var(--cst-surface-map-control-active)' : 'var(--cst-accent-soft)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};font-weight:500;">{activeFilters.size}</span>
+					<span class="text-xxs font-medium" style="margin-left:2px;padding:1px 6px;border-radius:999px;background:{showFilter ? 'var(--cst-surface-map-control-active)' : 'var(--cst-accent-soft)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};">{activeFilters.size}</span>
 				{/if}
 			</button>
 			{#if showFilter}
-				<div class="mt-2 overflow-hidden rounded-control w-50 shadow-[0_8px_28px_var(--cst-elevation-shadow-dark)] border border-border-default"   style="background:var(--cst-surface-primary)">
+				<div class="mt-2 overflow-hidden rounded-md w-50 shadow-[0_8px_28px_var(--cst-elevation-shadow-dark)] border border-border-default"   style="background:var(--cst-surface-primary)">
 					{#each [{ type: 'user', label: '用户', color: PIN_COLORS.user, count: userCount }, { type: 'group', label: '群组', color: PIN_COLORS.group, count: groupCount }, { type: 'moment', label: '瞬间', color: PIN_COLORS.moment, count: momentCount }] as item, i}
 						{#if i > 0}
 							<div class="h-0.25"  style="background:var(--cst-border-default)"></div>
@@ -219,8 +219,8 @@
 								
 								{@html markerSvg(item.type as PinType, 3, { w: 15, h: 21 })}
 							<span class="flex-1 text-text-primary text-xs" >{item.label}</span>
-							<span class="text-sm" style="color:{item.color};font-weight:600;">{item.count}</span>
-							<span class="flex items-center justify-center shrink-0" style="width:14px;height:14px;border-radius:var(--cst-shape-compact);background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--cst-border-strong)'};transition:all 0.18s;">
+							<span class="text-sm font-semibold" style="color:{item.color}">{item.count}</span>
+							<span class="flex items-center justify-center shrink-0" style="width:14px;height:14px;border-radius:var(--cst-shape-sm);background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--cst-border-strong)'};transition:all 0.18s;">
 								{#if active}
 									<Check class="size-2.5"  style="color:var(--cst-content-on-marker)" strokeWidth={3} />
 								{/if}
@@ -242,21 +242,21 @@
 			<div
 				data-map-popup
 				class="bg-surface-primary"
-				style="position:absolute;bottom:20px;left:20px;right:20px;z-index:25;border-radius:var(--cst-shape-panel);padding:16px;box-shadow:0 0 0 1px var(--cst-border-default), 0 16px 48px var(--cst-elevation-shadow-dark);"
+				style="position:absolute;bottom:20px;left:20px;right:20px;z-index:25;border-radius:var(--cst-shape-lg);padding:16px;box-shadow:0 0 0 1px var(--cst-border-default), 0 16px 48px var(--cst-elevation-shadow-dark);"
 			>
 				<div class="flex items-center gap-3">
 					<PinMedia pin={selectedPin} size={52} markerWidth={26} markerHeight={35} />
 					<div class="flex-1 min-w-0">
 						<div class="flex items-center gap-2">
-							<p class="text-text-primary text-base">{selectedPin.name || selectedPin.title}</p>
+							<p class="text-text-primary text-sm">{selectedPin.name || selectedPin.title}</p>
 							{#if (selectedPin.count ?? 1) > 1}
-								<span class="text-xxs" style="padding:1px 6px;border-radius:var(--cst-shape-compact);background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);">
+								<span class="text-xxs" style="padding:1px 6px;border-radius:var(--cst-shape-sm);background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);">
 									{selectedPin.count}个
 								</span>
 							{/if}
 						</div>
 						<div class="flex items-center gap-2 mt-1 flex-wrap">
-							<span class="text-xs" style="padding:1px 7px;border-radius:var(--cst-shape-compact);background:{PIN_TONES[selectedPin.type].bg};color:{PIN_COLORS[selectedPin.type]};">
+							<span class="text-xs" style="padding:1px 7px;border-radius:var(--cst-shape-sm);background:{PIN_TONES[selectedPin.type].bg};color:{PIN_COLORS[selectedPin.type]};">
 								{PIN_LABELS[selectedPin.type]}
 							</span>
 							{#if selectedPin.tag}
@@ -279,8 +279,8 @@
 					<div class="flex gap-2 shrink-0">
 						<button
 							type="button"
-							class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none bg-accent-default text-text-on-accent text-base"
-							style="box-shadow:0 4px 14px var(--cst-glow-accent);"
+							class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none bg-accent-default text-text-on-accent text-sm"
+							style="box-shadow:var(--shadow-glow-md);"
 							onclick={() => selectedPin && openPinDetail(selectedPin)}
 						>
 							查看详情
@@ -289,7 +289,7 @@
 						<button
 							type="button"
 							class="hover-btn outline-none flex items-center justify-center rounded-full bg-surface-primary"
-							style="width:36px;height:36px;border:1px solid var(--cst-border-default);box-shadow:var(--shadow-neu-xs);"
+							style="width:36px;height:36px;border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
 							onclick={() => (selectedPin = null)}
 						>
 							<X class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={2} />
@@ -300,7 +300,7 @@
 		{/if}
 
 		<!-- Attribution -->
-		<div class="text-text-secondary text-[9px]"  style="position:absolute;bottom:4px;left:8px;opacity:0.38;pointer-events:none;z-index:1">
+		<div class="text-text-secondary text-xxs"  style="position:absolute;bottom:4px;left:8px;opacity:0.38;pointer-events:none;z-index:1">
 			© OpenStreetMap contributors
 		</div>
 	</div>

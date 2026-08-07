@@ -348,7 +348,7 @@
 					<div
 						aria-hidden="true"
 						class="h-full w-full"
-						style="border-radius:var(--cst-shape-panel);background:var(--cst-surface-primary);box-shadow:0 0 0 1px var(--cst-border-default);opacity:.55;"
+						style="border-radius:var(--cst-shape-lg);background:var(--cst-surface-primary);box-shadow:0 0 0 1px var(--cst-border-default);opacity:.55;"
 					></div>
 				{/if}
 			{/if}

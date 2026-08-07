@@ -24,7 +24,7 @@
 		{align}
 		{sideOffset}
 		class={cn(
-			'z-[var(--cst-z-modal)] rounded-xl surface-flat p-1.5 shadow-[var(--cst-elevation-menu)] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
+			'z-[var(--cst-z-modal)] rounded-sm surface-flat p-1.5 shadow-[var(--cst-elevation-menu)] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
 			className
 		)}
 		{...rest}

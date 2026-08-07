@@ -34,13 +34,13 @@
 	class="flex items-center gap-3 px-4 py-3"
 >
 	<div
-		class="rounded-tight flex items-center justify-center shrink-0"
+		class="rounded-sm flex items-center justify-center shrink-0"
 		style="width:34px;height:34px;background:{bg};"
 	>
-		<Icon style="width:16px;height:16px;color:{color};" strokeWidth={1.75} />
+		<Icon class="size-4" style="color:{color};" strokeWidth={1.75} />
 	</div>
 	<div class="flex-1 min-w-0">
-		<p class="text-base"  style="color:var(--cst-text-primary)">{moment.description}</p>
+		<p class="text-sm"  style="color:var(--cst-text-primary)">{moment.description}</p>
 		<p class="text-xs mt-px"  style="color:var(--cst-text-secondary)">{moment.location?.location_name ?? ''}</p>
 	</div>
 	<ChevronRight class="size-3.25"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />

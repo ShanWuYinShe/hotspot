@@ -57,8 +57,8 @@
 			<header class="border-b pb-6" style="border-color:var(--cst-border-default);">
 				<div class="flex flex-wrap items-end justify-between gap-5">
 					<div>
-						<p class="font-mono text-xxs font-semibold uppercase tracking-[0.16em] text-accent-default">Personal archive / 2024</p>
-						<h2 class="mt-2 text-3xl font-medium leading-none tracking-[-0.02em] text-text-primary">个人影像档案</h2>
+						<p class="font-mono text-xxs font-semibold uppercase tracking-eyebrow text-accent-default">Personal archive / 2024</p>
+						<h2 class="mt-2 text-3xl font-medium leading-none tracking-title text-text-primary">个人影像档案</h2>
 						<p class="mt-3 max-w-115 text-sm leading-6 text-text-secondary">{activeMeta[activeTab].description}</p>
 					</div>
 					<div class="flex items-center gap-5 border-l pl-5" style="border-color:var(--cst-border-default);">
@@ -105,7 +105,7 @@
 					<button
 						type="button"
 						onclick={() => void goto(`${ROUTES.moment(featured.id)}?from=me`)}
-						class="group image-hover-frame relative block w-full overflow-hidden rounded-feature border text-left transition-colors"
+						class="group image-hover-frame relative block w-full overflow-hidden rounded-xl border text-left transition-colors"
 						style="border-color:var(--cst-border-default);background:var(--cst-surface-primary);"
 						aria-label="查看精选瞬间"
 					>
@@ -116,7 +116,7 @@
 							<div class="flex flex-col justify-between border-t p-6 lg:border-l lg:border-t-0" style="border-color:var(--cst-border-default);">
 								<div>
 									<div class="flex items-center justify-between">
-										<span class="font-mono text-xxs font-semibold uppercase tracking-[0.14em] text-accent-default">Featured record</span>
+										<span class="font-mono text-xxs font-semibold uppercase tracking-eyebrow text-accent-default">Featured record</span>
 										<span class="text-xs text-text-secondary">06.18</span>
 									</div>
 									<h3 class="mt-5 text-2xl font-medium leading-snug text-text-primary">在云龙湖边，<br />把傍晚收进相册。</h3>
@@ -140,8 +140,8 @@
 				{#if remaining.length > 0}
 					<div class="mt-10 flex items-end justify-between border-b pb-3" style="border-color:var(--cst-border-default);">
 						<div>
-							<p class="font-mono text-xxs font-semibold uppercase tracking-[0.14em] text-accent-default">Recent entries</p>
-							<h3 class="mt-1 text-base font-medium text-text-primary">六月的城市笔记</h3>
+							<p class="font-mono text-xxs font-semibold uppercase tracking-eyebrow text-accent-default">Recent entries</p>
+							<h3 class="mt-1 text-sm font-medium text-text-primary">六月的城市笔记</h3>
 						</div>
 						<p class="text-xs text-text-secondary">{remaining.length} 个片段</p>
 					</div>
@@ -151,7 +151,7 @@
 					<button
 						type="button"
 						onclick={() => void goto(`${ROUTES.moment(moment.id)}?from=me`)}
-						class="group image-hover-frame relative overflow-hidden rounded-control border text-left transition-colors {index === 0 ? 'col-span-2' : ''}"
+						class="group image-hover-frame relative overflow-hidden rounded-md border text-left transition-colors {index === 0 ? 'col-span-2' : ''}"
 						style="border-color:var(--cst-border-default);background:var(--cst-surface-primary);"
 						aria-label="查看瞬间详情"
 					>

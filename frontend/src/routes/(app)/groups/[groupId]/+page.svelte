@@ -231,13 +231,13 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 		</div>
 		<div class="absolute bottom-5 left-6 right-6">
 			<span class="rounded-full bg-surface-glass-badge px-2.5 py-1 text-xs text-content-inverse backdrop-blur-sm">{group.category}</span>
-			<h1 class="mt-3 text-[clamp(24px,3vw,34px)] font-medium tracking-[-0.02em] text-content-inverse">{group.name}</h1>
+			<h1 class="mt-3 text-2xl md:text-3xl font-medium tracking-title text-content-inverse">{group.name}</h1>
 		</div>
 	</div>
 
 	<div class="grid gap-8 pt-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
 			<main class="min-w-0">
-			<div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-base text-text-secondary">
+			<div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-text-secondary">
 				<span class="flex items-center gap-1.5">
 					<Users size={14} />
 					{group.members} 位成员
@@ -267,7 +267,7 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 
 			{#if tab === 'overview'}
 				<div class="py-6">
-					<p class="max-w-3xl text-base leading-7 text-text-secondary">{group.description}</p>
+					<p class="max-w-3xl text-sm leading-7 text-text-secondary">{group.description}</p>
 				</div>
 				{:else if tab === 'members'}
 					<!-- 空旷内容区 → List bordered（有边框列表契约）；列表行不设独立边框 -->
@@ -287,7 +287,7 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 									{/if}
 								</div>
 								<span class="min-w-0 flex-1">
-									<span class="block text-base text-text-primary">{member.name}</span>
+									<span class="block text-sm text-text-primary">{member.name}</span>
 									<span class="text-xs text-text-secondary">{member.role}</span>
 								</span>
 								<span class="text-xs text-text-secondary">查看资料</span>
@@ -299,7 +299,7 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 				<ListContainer bordered class="mt-6">
 					{#each announcements as item (item.title)}
 						<article class="px-4 py-4">
-							<p class="text-base font-medium text-text-primary">{item.title}</p>
+							<p class="text-sm font-medium text-text-primary">{item.title}</p>
 							<p class="mt-1 text-sm leading-5 text-text-secondary">{item.body}</p>
 							<p class="mt-2 text-xs text-text-secondary">{item.time}</p>
 						</article>
@@ -308,10 +308,10 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 			{/if}
 		</main>
 
-		<aside class="flex h-fit flex-col gap-3 rounded-panel ring-1 ring-border-default bg-surface-primary p-4">
+		<aside class="flex h-fit flex-col gap-3 rounded-lg ring-1 ring-border-default bg-surface-primary p-4">
 			<button
 				type="button"
-				class="hover-btn w-full rounded-full px-4 py-3 text-base font-medium focus-ring {joined ? 'border border-accent-default text-accent-default' : 'bg-accent-default text-text-on-accent'}"
+				class="hover-btn w-full rounded-full px-4 py-3 text-sm font-medium focus-ring {joined ? 'border border-accent-default text-accent-default' : 'bg-accent-default text-text-on-accent'}"
 				onclick={toggleJoin}
 			>
 				{#if joined}
@@ -324,7 +324,7 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 				{/if}
 			</button>
 			{#if joined}
-				<button type="button" onclick={() => void goto(ROUTES.groupMessage(params.groupId))} class="hover-btn flex w-full items-center justify-center gap-2 rounded-full border border-border-default px-4 py-3 text-base text-text-primary focus-ring">
+				<button type="button" onclick={() => void goto(ROUTES.groupMessage(params.groupId))} class="hover-btn flex w-full items-center justify-center gap-2 rounded-full border border-border-default px-4 py-3 text-sm text-text-primary focus-ring">
 					<MessageCircle size={15} />
 					打开群聊
 				</button>

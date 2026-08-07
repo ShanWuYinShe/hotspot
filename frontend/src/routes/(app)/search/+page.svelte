@@ -8,7 +8,7 @@
 	import SearchResults, { type TabType, type SearchResultsData } from './shared/SearchResults.svelte';
 
 	// 搜索页：最近搜索（localStorage）、热门搜索、推荐话题、全部/用户/动态/话题 Tab。
-	// 对齐 Figma Make SearchPage：shadcn 卡片设计语言（rounded-panel border bg-card），
+	// 对齐 Figma Make SearchPage：shadcn 卡片设计语言（rounded-lg border bg-card），
 	// 简洁 pill Tab，结果行 border-b + 圆头像 + ArrowUpRight。
 	// 发现态与结果态分别由 SearchDiscovery / SearchResults 私有组件承载。
 
@@ -117,14 +117,14 @@
 	]);
 </script>
 
-<StandardPageLayout contentClassName="py-5 sm:py-6">
+<StandardPageLayout contentClassName="pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader title="搜索" onBack={() => history.back()} sticky={false} />
 	{/snippet}
 
-	<!-- 搜索输入卡片（对齐 Figma：rounded-panel border bg-card） -->
+	<!-- 搜索输入卡片（对齐 Figma：rounded-lg border bg-card） -->
 	<section
-		class="rounded-panel border bg-surface-primary p-3"
+		class="rounded-lg border bg-surface-primary p-3"
 		style="border-color:var(--cst-border-default);"
 		aria-label="搜索输入"
 	>
@@ -140,7 +140,7 @@
 					if (e.key === 'Enter' && query.trim()) remember(query.trim());
 				}}
 				placeholder="搜索用户、动态、地点或话题"
-				class="min-w-0 flex-1 bg-transparent py-2 text-base text-text-primary outline-none placeholder:text-text-secondary"
+				class="min-w-0 flex-1 bg-transparent py-2 text-sm text-text-primary outline-none placeholder:text-text-secondary"
 			/>
 			{#if query}
 				<button

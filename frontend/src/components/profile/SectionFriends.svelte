@@ -69,7 +69,7 @@
 					<button
 						type="button"
 						class="hover-btn tap-93 flex items-center justify-center gap-1 rounded-full bg-accent-default px-2.5 py-1.5 text-xs text-text-on-accent outline-none"
-						style="box-shadow:0 3px 8px var(--cst-glow-accent);"
+						style="box-shadow:var(--shadow-glow-sm);"
 						onclick={(e) => {
 							e.stopPropagation();
 							void goto(ROUTES.message(f.id));
@@ -81,7 +81,7 @@
 					<button
 						type="button"
 						class="hover-btn tap-93 flex items-center justify-center gap-1 rounded-full bg-surface-primary px-2.5 py-1.5 text-xs text-text-secondary outline-none"
-						style="border:1px solid var(--cst-border-default);box-shadow:var(--shadow-neu-xs);"
+						style="border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
 						onclick={(e) => {
 							e.stopPropagation();
 							void goto(`${ROUTES.user(f.id)}?from=relationships`);

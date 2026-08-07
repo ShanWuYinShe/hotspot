@@ -13,14 +13,14 @@
 	imageSrc={group.banner}
 	imageAlt={group.name}
 	onClick={onOpen}
-	class="rounded-relaxed aspect-[3/4] surface-flat"
+	class="rounded-md aspect-[3/4] surface-flat"
 >
 	{#snippet placeholder()}
 		<span class="text-accent-default text-3xl font-semibold">{Array.from(group.name)[0] ?? '群'}</span>
 	{/snippet}
 
 	<!-- 左上：分类 -->
-	<span class="absolute top-2 left-2 z-[2] px-1.5 py-0.5 rounded-full text-text-on-accent bg-accent-default text-[9px]">{group.category}</span>
+	<span class="absolute top-2 left-2 z-[2] px-1.5 py-0.5 rounded-full text-text-on-accent bg-accent-default text-xxs">{group.category}</span>
 
 	<!-- 右上：隐私 -->
 	<span class="absolute top-2 right-2 z-[2] flex items-center justify-center rounded-full size-5"  style="background:var(--cst-surface-overlay-strong)">
@@ -33,7 +33,7 @@
 
 	{#snippet footer()}
 		<div class="p-3">
-			<p class="line-clamp-1 text-text-primary text-base font-semibold">{group.name}</p>
+			<p class="line-clamp-1 text-text-primary text-sm font-semibold">{group.name}</p>
 			<!-- stats 行：头像堆叠 + 成员 / 距离（对齐 Figma GroupCard 行序） -->
 			<div class="mt-1 flex items-center justify-between gap-2 text-text-secondary text-xxs">
 				<div class="flex items-center gap-1.5 min-w-0">

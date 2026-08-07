@@ -28,21 +28,21 @@
 		{#if icon}
 			{@render icon()}
 		{/if}
-		<p class="text-base" style="color:var(--cst-text-secondary);">{title}</p>
+		<p class="text-sm" style="color:var(--cst-text-secondary);">{title}</p>
 	</div>
 {:else}
 	<div class={cn('flex flex-col items-center justify-center py-20 gap-3', className)}>
 		{#if icon}
 			<div
 				class="flex items-center justify-center rounded-full border border-border-default"
-				style="width:{iconSize}px;height:{iconSize}px;box-shadow:var(--shadow-neu-xl);"
+				style="width:{iconSize}px;height:{iconSize}px;box-shadow:var(--shadow-raised-lg);"
 			>
 				{@render icon()}
 			</div>
 		{/if}
-		<p class="text-text-primary text-base font-medium">{title}</p>
+		<p class="text-text-primary text-sm font-medium">{title}</p>
 		{#if description}
-			<p class="text-text-secondary text-center max-w-xs text-base leading-relaxed">{description}</p>
+			<p class="text-text-secondary text-center max-w-xs text-sm leading-relaxed">{description}</p>
 		{/if}
 		{#if action}
 			{@render action()}

@@ -156,7 +156,7 @@
 	}
 
 	const sheetStyle = $derived(
-		`position:absolute;bottom:0;left:0;right:0;height:${sheetH}px;z-index:20;border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;border:1px solid var(--cst-border-default);border-bottom:none;box-shadow:0 -6px 28px var(--cst-elevation-shadow-dark);display:flex;flex-direction:column;overflow:hidden;${dragging ? '' : 'transition:height 0.3s cubic-bezier(0.34,1.56,0.64,1);'}`
+		`position:absolute;bottom:0;left:0;right:0;height:${sheetH}px;z-index:20;border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;border:1px solid var(--cst-border-default);border-bottom:none;box-shadow:0 -6px 28px var(--cst-elevation-shadow-dark);display:flex;flex-direction:column;overflow:hidden;${dragging ? '' : 'transition:height 0.3s var(--cst-ease-bounce);'}`
 	);
 	const rightCtrlBottom = $derived(sheetH + 10);
 </script>
@@ -214,7 +214,7 @@
 		{/if}
 
 		<!-- Attribution -->
-		<div class="text-text-secondary text-[9px]"  style="position:absolute;bottom:4px;left:6px;opacity:0.4;pointer-events:none;z-index:1">
+		<div class="text-text-secondary text-xxs"  style="position:absolute;bottom:4px;left:6px;opacity:0.4;pointer-events:none;z-index:1">
 			© OpenStreetMap contributors
 		</div>
 	</div>
@@ -238,7 +238,7 @@
 					<button
 						type="button"
 						class="hover-btn flex items-center gap-2 rounded-full outline-none text-md {showFilter ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-primary'}"
-						style="padding:9px 16px;border:{showFilter ? '1px solid transparent' : '1px solid var(--cst-border-default)'};box-shadow:{showFilter ? '0 4px 16px var(--cst-glow-accent)' : '0 2px 12px var(--cst-elevation-shadow-dark), 0 1px 3px var(--cst-elevation-shadow-dark)'};"
+						style="padding:9px 16px;border:{showFilter ? '1px solid transparent' : '1px solid var(--cst-border-default)'};box-shadow:{showFilter ? 'var(--shadow-glow-md)' : '0 2px 12px var(--cst-elevation-shadow-dark), 0 1px 3px var(--cst-elevation-shadow-dark)'};"
 						onclick={() => (showFilter = !showFilter)}
 					>
 						<SlidersHorizontal class="size-3.5"  strokeWidth={showFilter ? 2.5 : 1.75} />
@@ -252,7 +252,7 @@
 						side="bottom"
 						align="end"
 						sideOffset={8}
-						class="w-34 overflow-hidden rounded-control p-0"
+						class="w-34 overflow-hidden rounded-md p-0"
 					>
 						{#each [
 							['user', '用户', PIN_COLORS.user],
@@ -272,7 +272,7 @@
 							>
 								
 								{@html markerSvg(type as PinType, 1, { w: 18, h: 24 })}
-								<span class="text-text-primary text-base"  style="flex:1;text-align:left">{label}</span>
+								<span class="text-text-primary text-sm"  style="flex:1;text-align:left">{label}</span>
 								<div style="width:13px;height:13px;border-radius:50%;shrink:0;background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--cst-border-default)'};box-shadow:{active ? `0 0 6px ${glow}` : 'none'};transition:all 0.18s;"></div>
 							</button>
 						{/each}
@@ -282,7 +282,7 @@
 	</div>
 
 	<!-- ══ RIGHT CONTROLS — bottom tracks sheet ══ -->
-	<div style="position:absolute;right:12px;bottom:{rightCtrlBottom}px;z-index:35;display:flex;flex-direction:column;gap:8px;align-items:center;transition:bottom 0.3s cubic-bezier(0.34,1.56,0.64,1);">
+	<div style="position:absolute;right:12px;bottom:{rightCtrlBottom}px;z-index:35;display:flex;flex-direction:column;gap:8px;align-items:center;transition:bottom 0.3s var(--cst-ease-bounce);">
 		<!-- GPS re-center -->
 		<button
 			type="button"
@@ -335,7 +335,7 @@
 
 		<!-- Search bar -->
 		<div class="shrink-0"  style="padding:0 14px 8px">
-			<div class="flex items-center gap-2.5 px-3.5 rounded-control input-surface h-11" >
+			<div class="flex items-center gap-2.5 px-3.5 rounded-md input-surface h-11" >
 				<Search class="size-3.75 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				<input
 					bind:value={searchQuery}
@@ -389,7 +389,7 @@
 			<button
 				type="button"
 				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-text-on-accent text-md"
-				style="height:50px;box-shadow:0 6px 20px var(--cst-glow-accent);"
+				style="height:50px;box-shadow:var(--shadow-glow-lg);"
 				onclick={handleConfirm}
 			>
 				<MapPin class="size-3.75"  strokeWidth={2} />

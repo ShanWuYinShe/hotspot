@@ -78,7 +78,7 @@
 					<button
 						type="button"
 						class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none select-none"
-						style="width:48px;height:48px;background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--cst-elevation-fab)'};transition:background 0.22s, box-shadow 0.22s, transform 0.18s cubic-bezier(0.22,1,0.36,1), filter 0.18s ease;"
+						style="width:48px;height:48px;background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--cst-elevation-fab)'};transition:background 0.22s, box-shadow 0.22s, transform 0.18s var(--cst-ease-standard), filter 0.18s ease;"
 						aria-label={composer.composerOpen ? '关闭' : '发布'}
 						onclick={toggleComposer}
 					>

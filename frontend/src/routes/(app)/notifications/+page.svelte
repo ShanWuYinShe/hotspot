@@ -145,7 +145,7 @@ const FILTER_TABS = [
 						<button
 							type="button"
 							class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none bg-surface-primary text-accent-default text-sm"
-							style="border:1px solid var(--cst-border-default);box-shadow:var(--shadow-neu-xs);"
+							style="border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
 							onclick={markAllRead}
 						>
 							<CheckCheck class="size-3.25"  strokeWidth={2} />
@@ -165,8 +165,8 @@ const FILTER_TABS = [
 							onclick={() => (filter = t.id)}
 							class="tap-92 shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default text-sm"
 							style={filter === t.id
-								? 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);box-shadow:0 3px 10px var(--cst-glow-accent);border:none;'
-								: 'background:var(--cst-surface-primary);color:var(--cst-text-secondary);border:1px solid var(--cst-border-default);box-shadow:var(--shadow-neu-xs);'}
+								? 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);box-shadow:var(--shadow-glow-sm);border:none;'
+								: 'background:var(--cst-surface-primary);color:var(--cst-text-secondary);border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);'}
 						>
 							{t.label}
 						</button>
@@ -182,7 +182,7 @@ const FILTER_TABS = [
 					<!-- 新消息分组标题（emphasis：accent 点 + 计数 pill，对齐 Figma Make） -->
 					<div class="mb-3 flex h-5 items-center gap-2">
 						<span aria-hidden="true" class="h-1.5 w-1.5 rounded-full" style="background:var(--cst-accent-default);"></span>
-						<p class="uppercase text-xxs"  style="font-weight:600;letter-spacing:0.14em;color:var(--cst-text-primary)">新消息</p>
+						<p class="uppercase text-xxs font-semibold tracking-eyebrow" style="color:var(--cst-text-primary)">新消息</p>
 						<span class="rounded-full px-1.5 py-0.5 text-xxs"  style="line-height:1;color:var(--cst-accent-default);background:var(--cst-accent-soft)">{unreadGroup.length}</span>
 					</div>
 					<ListContainer bordered>
@@ -195,7 +195,7 @@ const FILTER_TABS = [
 				{#if readGroup.length > 0}
 					<!-- 较早分组标题（非 emphasis：仅 label + flex 分隔线，对齐 Figma Make） -->
 					<div class="mb-3 flex h-5 items-center gap-2" style="margin-top:{unreadGroup.length > 0 ? '20px' : '0'};">
-						<p class="uppercase text-xxs"  style="font-weight:500;letter-spacing:0.14em;color:var(--cst-text-secondary)">较早</p>
+						<p class="uppercase text-xxs font-medium tracking-eyebrow" style="color:var(--cst-text-secondary)">较早</p>
 						<span aria-hidden="true" class="h-px flex-1" style="background:var(--cst-border-default);"></span>
 					</div>
 					<ListContainer bordered>
@@ -227,12 +227,12 @@ const FILTER_TABS = [
 						{@const cfg = TYPE_CONFIG[type] ?? TYPE_CONFIG.reaction}
 						<button
 							type="button"
-							class="hover-btn flex items-center gap-2.5 rounded-tight px-2 py-1.5 outline-none text-left"
+							class="hover-btn flex items-center gap-2.5 rounded-sm px-2 py-1.5 outline-none text-left"
 							style="background:{filter === type ? cfg.bg : 'transparent'};border:1px solid {filter === type ? cfg.border : 'transparent'};transition:background 0.15s;"
 							onclick={() => (filter = type)}
 						>
 							<div class="flex items-center justify-center rounded-full shrink-0" style="width:24px;height:24px;background:{cfg.bg};">
-								<cfg.icon style="width:11px;height:11px;color:{cfg.color};" strokeWidth={1.75} />
+								<cfg.icon class="size-2.75" style="color:{cfg.color};" strokeWidth={1.75} />
 							</div>
 							<span class="text-text-primary text-sm flex-1">{cfg.label}</span>
 							<span class="text-text-secondary text-xs">{count}</span>

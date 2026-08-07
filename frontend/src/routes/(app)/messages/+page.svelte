@@ -164,7 +164,7 @@
 					{/snippet}
 					{#snippet below()}
 						<div class="mt-3 pb-3">
-							<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索…" class="px-3 py-2" fontSize={12} />
+							<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索…" class="px-3 py-2" textClass="text-sm" />
 						</div>
 					{/snippet}
 				</PageHeader>
@@ -173,7 +173,7 @@
 			<!-- 在线 strip -->
 			{#if onlineChats.length > 0}
 				<div class="shrink-0 px-4 py-2.5 border-b border-border-default" >
-					<p class="uppercase mb-2 text-text-secondary text-[9px] tracking-[0.12em]">在线</p>
+					<p class="uppercase mb-2 text-text-secondary text-xxs tracking-label">在线</p>
 					<div class="flex gap-3 overflow-x-auto no-scrollbar">
 						{#each onlineChats as c (c.id)}
 							<button
@@ -199,7 +199,7 @@
 			     选中态 glow 不与相邻行重叠，分隔线嵌在间距中不显突兀） -->
 			<ListContainer class="flex-1 overflow-y-auto no-scrollbar px-2 py-2">
 				{#if totalUnread > 0}
-					<p class="uppercase px-2 mb-1 text-text-secondary text-[9px] tracking-[0.12em]">未读</p>
+					<p class="uppercase px-2 mb-1 text-text-secondary text-xxs tracking-label">未读</p>
 				{/if}
 				{#each filtered as chat (chat.id)}
 					<div class="px-3 py-1">
@@ -296,7 +296,7 @@
 		{#snippet below()}
 			<!-- 搜索框：sticky header 内第二行（对齐 Figma MessagesMobile） -->
 			<div class="mt-3 pb-3">
-				<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="rounded-relaxed px-4 py-2.5" />
+				<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="rounded-md px-4 py-2.5" />
 			</div>
 		{/snippet}
 	</PageHeader>
@@ -304,7 +304,7 @@
 	<ContentColumn class="animate-fade-in flex flex-col min-h-full pt-4 pb-4">
 		{#if onlineChats.length > 0}
 			<div class="mb-4">
-				<p class="uppercase mb-2.5 text-text-secondary text-xxs tracking-[0.14em]">在线</p>
+				<p class="uppercase mb-2.5 text-text-secondary text-xxs tracking-eyebrow">在线</p>
 				<div class="flex gap-4 overflow-x-auto no-scrollbar pb-1">
 					{#each onlineChats as chat (chat.id)}
 						<button
@@ -325,7 +325,7 @@
 			</div>
 		{/if}
 
-		<p class="uppercase mb-2.5 text-text-secondary text-xxs tracking-[0.14em]">最近</p>
+		<p class="uppercase mb-2.5 text-text-secondary text-xxs tracking-eyebrow">最近</p>
 
 		<!-- 列表：无外层容器，List 直接裸排（对齐 Figma）；每行 px-3 py-1 包裹 -->
 		{#if filtered.length === 0}

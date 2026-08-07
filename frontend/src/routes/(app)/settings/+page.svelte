@@ -112,17 +112,17 @@
 	};
 </script>
 
-<StandardPageLayout contentClassName="py-5 pb-10">
+<StandardPageLayout contentClassName="pt-4 pb-10">
 	{#snippet header()}
 		<PageHeader title="设置" sticky={false} onBack={() => history.back()} showBackOnDesktop />
 	{/snippet}
 
 	<!-- User card — hero with ambient glow -->
 	<div class="ambient-glow mb-3">
-		<button type="button" class="hover-btn flex items-center gap-4 px-4 py-3.5 rounded-panel w-full outline-none text-left surface-hero">
-			<Avatar class="border-2 border-surface-primary shadow-[0_4px_12px_var(--cst-glow-accent)]" src={accountAvatar} name={accountName} size={48}  />
+		<button type="button" class="hover-btn flex items-center gap-4 px-4 py-3.5 rounded-lg w-full outline-none text-left surface-hero">
+			<Avatar class="border-2 border-surface-primary shadow-glow-md" src={accountAvatar} name={accountName} size={48}  />
 			<div class="flex-1 min-w-0">
-				<p class="text-base tracking-tight text-text-primary">{accountName || '用户'}</p>
+				<p class="text-sm tracking-tight text-text-primary">{accountName || '用户'}</p>
 				<p class="text-xs mt-0.5 text-text-secondary">{accountEmail || '未绑定邮箱'}</p>
 			</div>
 			<ChevronRight class="size-3.75 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
@@ -130,8 +130,8 @@
 	</div>
 
 	<!-- Appearance（对齐 Figma Make SettingsPage：应用主题二选一 + 深色模式） -->
-	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-[0.14em] uppercase">外观</p>
-	<div class="rounded-panel overflow-hidden surface-flat">
+	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-eyebrow uppercase">外观</p>
+	<div class="rounded-lg overflow-hidden surface-flat">
 		<ListContainer>
 			<div class="px-4 py-3.5">
 				<div class="flex items-center gap-3">
@@ -139,7 +139,7 @@
 						<Palette class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
 					</div>
 					<div class="flex-1 min-w-0">
-						<p class="text-base text-text-primary">应用主题</p>
+						<p class="text-sm text-text-primary">应用主题</p>
 						<p class="text-xs text-text-secondary">选择一套全局视觉风格</p>
 					</div>
 				</div>
@@ -171,7 +171,7 @@
 					{/if}
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-base text-text-primary">深色模式</p>
+					<p class="text-sm text-text-primary">深色模式</p>
 					<p class="text-xs text-text-secondary">{theme.isDark ? '当前使用深色外观' : '当前使用浅色外观'}</p>
 				</div>
 				<Toggle on={theme.isDark} onToggle={toggleDark} label="深色模式" />
@@ -180,15 +180,15 @@
 	</div>
 
 	<!-- Notifications -->
-	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-[0.14em] uppercase">通知</p>
-	<div class="rounded-panel overflow-hidden surface-flat">
+	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-eyebrow uppercase">通知</p>
+	<div class="rounded-lg overflow-hidden surface-flat">
 		<ListContainer>
 			<div class="flex items-center gap-3 px-4 py-3.5">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
 					<Bell class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-base text-text-primary">推送通知</p>
+					<p class="text-sm text-text-primary">推送通知</p>
 					<p class="text-xs text-text-secondary">消息、提及与新动态提醒</p>
 				</div>
 				<Toggle on={notif} onToggle={toggleNotif} />
@@ -198,7 +198,7 @@
 					<Volume2 class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-base text-text-primary">应用声音</p>
+					<p class="text-sm text-text-primary">应用声音</p>
 					<p class="text-xs text-text-secondary">操作反馈音效</p>
 				</div>
 				<Toggle on={sounds} onToggle={toggleSounds} />
@@ -207,15 +207,15 @@
 	</div>
 
 	<!-- Privacy -->
-	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-[0.14em] uppercase">隐私与安全</p>
-	<div class="rounded-panel overflow-hidden surface-flat">
+	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-eyebrow uppercase">隐私与安全</p>
+	<div class="rounded-lg overflow-hidden surface-flat">
 		<ListContainer>
 			<div class="flex items-center gap-3 px-4 py-3.5">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
 					<Lock class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-base text-text-primary">私密账号</p>
+					<p class="text-sm text-text-primary">私密账号</p>
 					<p class="text-xs text-text-secondary">仅关注者可查看你的内容</p>
 				</div>
 				<Toggle on={privateProfile} onToggle={togglePrivateProfile} />
@@ -225,7 +225,7 @@
 					<MapPin class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-base text-text-primary">位置共享</p>
+					<p class="text-sm text-text-primary">位置共享</p>
 					<p class="text-xs text-text-secondary">允许附近用户发现你</p>
 				</div>
 				<Toggle on={locationSharing} onToggle={toggleLocationSharing} />
@@ -234,15 +234,15 @@
 	</div>
 
 	<!-- General -->
-	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-[0.14em] uppercase">通用</p>
-	<div class="rounded-panel overflow-hidden surface-flat">
+	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-eyebrow uppercase">通用</p>
+	<div class="rounded-lg overflow-hidden surface-flat">
 		<ListContainer>
 			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="语言设置">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
 					<Globe class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-base text-text-primary">语言</p>
+					<p class="text-sm text-text-primary">语言</p>
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary">中文</span>
 				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
@@ -252,7 +252,7 @@
 					<User class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-base text-text-primary">账号信息</p>
+					<p class="text-sm text-text-primary">账号信息</p>
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary"></span>
 				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
@@ -262,7 +262,7 @@
 					<Info class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-base text-text-primary">关于</p>
+					<p class="text-sm text-text-primary">关于</p>
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary">v 1.0.0</span>
 				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
@@ -274,11 +274,11 @@
 	<div class="mt-5">
 		<button
 			type="button"
-			class="hover-btn flex items-center justify-center gap-2 px-4 py-3 rounded-control w-full outline-none surface-flat text-accent-default"
+			class="hover-btn flex items-center justify-center gap-2 px-4 py-3 rounded-md w-full outline-none surface-flat text-accent-default"
 			onclick={() => void handleLogout()}
 		>
 			<LogOut class="size-3.5"  strokeWidth={1.75} />
-			<span class="text-base">退出登录</span>
+			<span class="text-sm">退出登录</span>
 		</button>
 	</div>
 </StandardPageLayout>

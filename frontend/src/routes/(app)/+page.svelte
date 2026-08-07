@@ -94,9 +94,9 @@
 	</div>
 {/snippet}
 
-<StandardPageLayout
-	contentClassName={platform.platform === 'mobile' ? 'animate-fade-in flex flex-col gap-7 pt-5 pb-8' : 'py-6'}
->
+	<StandardPageLayout
+		contentClassName={platform.platform === 'mobile' ? 'animate-fade-in flex flex-col gap-7 pt-4 pb-6' : 'pt-4 pb-6'}
+	>
 	{#snippet header()}
 		{#if platform.platform !== 'mobile'}
 			<!-- ═══ Desktop/Tablet Home — 统一 PageHeader + 2-column ═══ -->

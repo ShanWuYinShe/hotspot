@@ -42,7 +42,7 @@
 	imageAlt={user.name}
 	onClick={onNavigate}
 	onImageError={() => (avatarFailed = true)}
-	class="rounded-panel aspect-[3/4] surface-flat"
+	class="rounded-lg aspect-[3/4] surface-flat"
 >
 	{#snippet placeholder()}
 		<span class="text-accent-default text-3xl font-semibold">{Array.from(user.name)[0] ?? '?'}</span>
@@ -58,7 +58,7 @@
 		<div class="px-3 pt-2.5 pb-2.5">
 			<div class="flex items-center justify-between gap-2">
 				<div class="min-w-0">
-					<p class="flex items-center gap-1.5 truncate text-text-primary text-base" style="font-weight:600;">
+					<p class="flex items-center gap-1.5 truncate text-text-primary text-sm font-semibold">
 						<span class="truncate">{user.name}</span>
 					</p>
 					<p class="truncate text-text-secondary text-xxs mt-0.5">{user.note}</p>
@@ -82,7 +82,7 @@
 					class="hover-btn tap-90 flex items-center justify-center rounded-full outline-none shrink-0"
 					style="width:28px;height:28px;{followed
 						? 'background:var(--cst-accent-soft);border:1px solid var(--cst-accent-border);color:var(--cst-accent-default);'
-						: 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);box-shadow:0 2px 8px var(--cst-glow-accent);'}"
+						: 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);box-shadow:var(--shadow-glow-sm);'}"
 					aria-label={followed ? `取消关注 ${user.name}` : `关注 ${user.name}`}
 					onclick={(e) => {
 						e.stopPropagation();

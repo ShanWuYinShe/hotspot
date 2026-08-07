@@ -92,7 +92,7 @@
 	};
 </script>
 
-	<StandardPageLayout contentClassName="py-5 sm:py-6">
+	<StandardPageLayout contentClassName="pt-4 pb-6">
 		{#snippet header()}
 			<PageHeader title="附近的人" subtitle={locationName ? `${locationName} · 5km 内 · 每 3 分钟刷新` : '5km 内 · 每 3 分钟刷新'} sticky glass contentClassName="pt-4 pb-0" onBack={() => history.back()}>
 				{#snippet below()}

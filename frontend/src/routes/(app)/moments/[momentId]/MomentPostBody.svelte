@@ -65,7 +65,7 @@
 			<span class="text-text-secondary text-xs">来自 {moment.location || '附近'} 的动态</span>
 		</div>
 	{/if}
-	<div class="absolute top-3 left-3 px-2.5 py-0.5 rounded-full bg-accent-default shadow-[0_2px_8px_var(--cst-glow-accent)]" >
+	<div class="absolute top-3 left-3 px-2.5 py-0.5 rounded-full bg-accent-default shadow-glow-sm" >
 		<span class="text-text-on-accent text-xxs">#{moment.tag}</span>
 	</div>
 </div>
@@ -83,7 +83,7 @@
 			<Avatar src={moment.avatar} name={moment.user} size={44} style="border:none;" />
 		</button>
 		<div class="flex-1">
-			<p class="text-text-primary text-base">{moment.user}</p>
+			<p class="text-text-primary text-sm">{moment.user}</p>
 			<div class="flex items-center gap-1.5">
 				<MapPin class="size-2.5"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
 				<span class="text-text-secondary text-xs">{moment.location}</span>
@@ -104,11 +104,11 @@
 				onclick={onToggleLike}
 			>
 				<Heart class="size-4.75"  strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
-				<span class="text-base">{moment.likes + (liked ? 1 : 0)}</span>
+				<span class="text-sm">{moment.likes + (liked ? 1 : 0)}</span>
 			</button>
 			<div class="flex items-center gap-1.5 text-text-secondary">
 				<MessageCircle class="size-4.75"  strokeWidth={1.5} />
-				<span class="text-base">{commentCount}</span>
+				<span class="text-sm">{commentCount}</span>
 			</div>
 		</div>
 		<div class="flex gap-3">
@@ -135,7 +135,7 @@
 	</div>
 
 	<!-- Comments -->
-	<p class="uppercase mt-4 mb-3 text-text-secondary text-xxs" style="letter-spacing:0.14em;">
+	<p class="uppercase mt-4 mb-3 text-text-secondary text-xxs tracking-eyebrow">
 		评论 · {commentCount}
 	</p>
 	<div class="flex flex-col gap-4">
@@ -144,10 +144,10 @@
 				<Avatar src={c.avatar} name={c.user} size={34} />
 				<div class="flex-1">
 					<div class="flex items-baseline gap-2">
-						<span class="text-text-primary text-base">{c.user}</span>
+						<span class="text-text-primary text-sm">{c.user}</span>
 						<span class="text-text-secondary text-xs">{c.time}</span>
 					</div>
-					<p class="text-text-secondary text-base mt-0.5"  style="line-height:1.6">{c.text}</p>
+					<p class="text-text-secondary text-sm mt-0.5"  style="line-height:1.6">{c.text}</p>
 					<div class="flex items-center gap-1 mt-1.5">
 						<button type="button" class="tap-84 flex items-center gap-1 outline-none text-text-secondary">
 							<Heart class="size-3"  strokeWidth={1.5} />

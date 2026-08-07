@@ -35,7 +35,7 @@
 
 	const SIDE_CLASSES: Record<DialogSide, string> = {
 		center:
-			'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-feature shadow-[var(--cst-elevation-modal)] data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
+			'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl shadow-[var(--cst-elevation-modal)] data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
 		bottom:
 			'bottom-0 left-0 right-0 rounded-t-sheet shadow-[var(--cst-elevation-sheet)] data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
 		right:

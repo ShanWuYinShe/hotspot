@@ -134,7 +134,7 @@ referencePoint = loc?.point ?? null;
 	>
 		{#snippet trailing()}
 			{#if device === 'tablet'}
-				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-default shadow-[0_3px_10px_var(--cst-glow-accent)]" >
+				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-default shadow-glow-sm" >
 					<Sparkles class="size-2.75"  style="color:var(--cst-text-on-accent)" strokeWidth={2} />
 					<span class="text-text-on-accent text-xs">精选</span>
 				</div>
@@ -144,7 +144,7 @@ referencePoint = loc?.point ?? null;
 		{/snippet}
 		{#snippet below()}
 			<div class="mt-3 mb-2.5">
-				<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="地点、人物、关键词…" class="px-4 py-2.5 rounded-relaxed" />
+				<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="地点、人物、关键词…" class="px-4 py-2.5 rounded-md" />
 			</div>
 			{@render tabBar()}
 		{/snippet}
@@ -170,7 +170,7 @@ referencePoint = loc?.point ?? null;
 	{#if loading}
 		<div class="flex flex-col items-center gap-3 py-20">
 			<div class="rounded-full border-2 border-border-default border-t-accent-default animate-spin size-7" ></div>
-			<p class="text-text-secondary text-base">加载附近动态…</p>
+			<p class="text-text-secondary text-sm">加载附近动态…</p>
 		</div>
 	{:else}
 		<EmptyState title="附近暂时没有瞬间">

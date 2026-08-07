@@ -67,13 +67,13 @@
 	};
 </script>
 
-<StandardPageLayout contentClassName="py-5 pb-10">
+<StandardPageLayout contentClassName="pt-4 pb-10">
 	{#snippet header()}
 		<PageHeader title="编辑资料" onBack={() => history.back()} sticky={false}>
 	{#snippet trailing()}
 		<button
 			type="button"
-			class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all text-base {saved ? 'bg-status-online text-text-on-status' : 'bg-accent-default text-text-on-accent'}"
+			class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all text-sm {saved ? 'bg-status-online text-text-on-status' : 'bg-accent-default text-text-on-accent'}"
 			style="box-shadow:0 4px 14px {saved ? 'var(--cst-status-online-glow)' : 'var(--cst-glow-accent)'};border:none;"
 			onclick={() => void handleSave()}
 		>
@@ -89,7 +89,7 @@
 
 	<div class="animate-fade-in flex flex-col gap-5">
 	<!-- Avatar section -->
-	<div class="relative rounded-feature overflow-hidden" style="height:clamp(120px, 18vw, 160px);">
+	<div class="relative rounded-xl overflow-hidden" style="height:clamp(120px, 18vw, 160px);">
 		<div class="absolute inset-0 bg-surface-primary"></div>
 		<button
 			type="button"
@@ -104,19 +104,19 @@
 	<!-- Avatar edit -->
 	<div class="flex items-center gap-4 -mt-8 ml-2">
 		<div class="relative shrink-0">
-			<div class="rounded-feature overflow-hidden size-18"  style="border:3px solid var(--cst-surface-primary);box-shadow:var(--cst-elevation-profile-avatar)">
+			<div class="rounded-xl overflow-hidden size-18"  style="border:3px solid var(--cst-surface-primary);box-shadow:var(--cst-elevation-profile-avatar)">
 				<img src={avatar} alt="avatar" class="w-full h-full object-cover" />
 			</div>
 			<button
 				type="button"
 				class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-accent-default"
-				style="width:26px;height:26px;border:2px solid var(--cst-surface-primary);box-shadow:0 2px 8px var(--cst-glow-accent);"
+				style="width:26px;height:26px;border:2px solid var(--cst-surface-primary);box-shadow:var(--shadow-glow-sm);"
 			>
 				<Camera class="size-3"  style="color:var(--cst-text-on-accent)" strokeWidth={2} />
 			</button>
 		</div>
 		<div>
-			<p class="text-text-primary text-[16px]">{nickname || '未设置昵称'}</p>
+			<p class="text-text-primary text-md">{nickname || '未设置昵称'}</p>
 			{#if userId}
 				<p class="text-text-secondary text-sm mt-0.5">@{userId}</p>
 			{/if}
@@ -129,13 +129,13 @@
 			<User class="size-3.25"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
 			<label class="text-text-secondary text-xs uppercase tracking-widest" for="edit-nickname">昵称</label>
 		</div>
-		<div class="px-4 py-3 rounded-relaxed input-surface">
+		<div class="px-4 py-3 rounded-md input-surface">
 			<input
 				id="edit-nickname"
 				bind:value={nickname}
 				oninput={(e) => (nickname = e.currentTarget.value.slice(0, 30))}
 				placeholder="你的名字"
-				class="w-full bg-transparent outline-none text-text-primary text-base"
+				class="w-full bg-transparent outline-none text-text-primary text-sm"
 			/>
 		</div>
 	</div>
@@ -145,7 +145,7 @@
 			<FileText class="size-3.25"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
 			<label class="text-text-secondary text-xs uppercase tracking-widest" for="edit-bio">个人简介</label>
 		</div>
-		<div class="px-4 py-3 rounded-relaxed input-surface">
+		<div class="px-4 py-3 rounded-md input-surface">
 			<div>
 				<textarea
 					id="edit-bio"
@@ -153,7 +153,7 @@
 					oninput={(e) => (bio = e.currentTarget.value.slice(0, 150))}
 					placeholder="介绍一下自己…"
 					rows={3}
-					class="w-full bg-transparent outline-none resize-none text-text-primary text-base leading-[1.65]"
+					class="w-full bg-transparent outline-none resize-none text-text-primary text-sm leading-copy"
 				></textarea>
 				<div class="flex justify-end mt-1">
 					<span class="{bio.length > 127 ? 'text-accent-default' : 'text-text-secondary'} text-xs">
@@ -178,8 +178,8 @@
 					type="button"
 					class="hover-btn px-3.5 py-1.5 rounded-full outline-none transition-all text-sm {active ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
 					style={active
-						? 'box-shadow:0 3px 10px var(--cst-glow-accent);border:none;'
-						: 'border:1px solid var(--cst-border-default);opacity:0.4;box-shadow:var(--shadow-neu-xs);'}
+						? 'box-shadow:var(--shadow-glow-sm);border:none;'
+						: 'border:1px solid var(--cst-border-default);opacity:0.4;box-shadow:var(--shadow-raised-sm);'}
 					onclick={() => !disabled && toggleTag(t)}
 				>
 					#{t}
@@ -190,11 +190,11 @@
 
 	<!-- Danger zone -->
 	<div class="mt-3">
-		<p class="uppercase mb-3 text-text-secondary text-xxs tracking-[0.14em]">账号</p>
+		<p class="uppercase mb-3 text-text-secondary text-xxs tracking-eyebrow">账号</p>
 		<button
 			type="button"
-			class="hover-btn w-full text-left px-4 py-3.5 rounded-relaxed outline-none bg-surface-primary text-status-danger text-base"
-			style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--cst-border-default);"
+			class="hover-btn w-full text-left px-4 py-3.5 rounded-md outline-none bg-surface-primary text-status-danger text-sm"
+			style="box-shadow:var(--shadow-raised-md);border:1px solid var(--cst-border-default);"
 		>
 			注销账号
 		</button>

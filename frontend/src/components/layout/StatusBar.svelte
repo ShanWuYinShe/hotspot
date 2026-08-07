@@ -24,12 +24,12 @@
 	style="height:44px;background-color:var(--cst-surface-primary);"
 >
 	<!-- Time -->
-	<span
-		class="text-md"
-		style="font-weight:600;color:var(--cst-text-primary);letter-spacing:-0.3px;font-variant-numeric:tabular-nums;"
-	>
-		{h}:{m}
-	</span>
+		<span
+			class="text-md font-semibold tracking-tight"
+			style="color:var(--cst-text-primary);font-variant-numeric:tabular-nums;"
+		>
+			{h}:{m}
+		</span>
 
 	<!-- System indicators -->
 	<div class="flex items-center gap-1.25">

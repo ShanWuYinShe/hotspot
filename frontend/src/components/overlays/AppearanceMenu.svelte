@@ -85,7 +85,7 @@
 		/>
 	</div>
 
-	<Popover.Content customAnchor={rootEl} class="w-57.5 rounded-relaxed p-2.5" role="dialog" aria-label="外观设置">
+	<Popover.Content customAnchor={rootEl} class="w-57.5 rounded-md p-2.5" role="dialog" aria-label="外观设置">
 			<div class="px-2 pb-2">
 				<p class="eyebrow">外观</p>
 				<p class="mt-1 text-xs text-text-secondary">
@@ -95,7 +95,7 @@
 
 			<section
 				aria-labelledby="theme-choice-label"
-				class="rounded-relaxed ring-1 ring-border-default surface-tinted p-2"
+				class="rounded-md ring-1 ring-border-default surface-tinted p-2"
 			>
 				<div class="flex items-center justify-between px-2 pb-2 pt-1">
 					<p id="theme-choice-label" class="eyebrow">主题</p>
@@ -108,7 +108,7 @@
 							type="button"
 							onclick={() => setTheme(item.id)}
 							aria-pressed={selected}
-							class="rounded-small p-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {selected
+							class="rounded-sm p-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {selected
 								? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
 								: 'surface-ghost text-text-secondary'}"
 						>
@@ -127,7 +127,7 @@
 				type="button"
 				onclick={toggleDark}
 				aria-pressed={theme.isDark}
-				class="hover-btn surface-ghost mt-2 flex w-full items-center justify-between rounded-small px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
+				class="hover-btn surface-ghost mt-2 flex w-full items-center justify-between rounded-sm px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
 				style="color:var(--cst-text-primary);"
 			>
 				<span class="flex items-center gap-2">
@@ -146,7 +146,7 @@
 				<span class="relative h-5 w-8.5 overflow-hidden rounded-full" style="background:{theme.isDark ? 'var(--cst-accent-default)' : 'var(--cst-border-strong)'};">
 					<span
 						class="absolute top-0.75 h-3.5 w-3.5 rounded-full"
-						style="background:var(--cst-surface-control-thumb);box-shadow:var(--cst-elevation-control-thumb);left:{theme.isDark ? 17 : 3}px;transition:left 0.2s cubic-bezier(0.34,1.56,0.64,1);"
+						style="background:var(--cst-surface-control-thumb);box-shadow:var(--cst-elevation-control-thumb);left:{theme.isDark ? 17 : 3}px;transition:left 0.2s var(--cst-ease-bounce);"
 					></span>
 				</span>
 			</button>
@@ -155,7 +155,7 @@
 				<button
 					type="button"
 					onclick={handleMockToggle}
-					class="hover-btn mt-2 flex w-full items-center justify-between rounded-small ring-1 ring-border-default px-3 py-2.5 text-left outline-none transition-colors hover:bg-accent-soft focus-visible:ring-2 focus-visible:ring-accent-default"
+					class="hover-btn mt-2 flex w-full items-center justify-between rounded-sm ring-1 ring-border-default px-3 py-2.5 text-left outline-none transition-colors hover:bg-accent-soft focus-visible:ring-2 focus-visible:ring-accent-default"
 					style="color:var(--cst-text-primary);"
 				>
 					<span class="flex items-center gap-2">
@@ -170,12 +170,12 @@
 					<span class="relative h-5 w-8.5 overflow-hidden rounded-full" style="background:{mockEnabled ? 'var(--cst-accent-default)' : 'var(--cst-border-strong)'};">
 						<span
 							class="absolute top-0.75 h-3.5 w-3.5 rounded-full bg-content-inverse shadow-[var(--cst-elevation-control-thumb)]"
-							style="left:{mockEnabled ? 17 : 3}px;transition:left 0.2s cubic-bezier(0.34,1.56,0.64,1);"
+							style="left:{mockEnabled ? 17 : 3}px;transition:left 0.2s var(--cst-ease-bounce);"
 						></span>
 					</span>
 				</button>
 
-				<div class="mt-2 rounded-small ring-1 ring-border-default px-3 py-2.5" style="color:var(--cst-text-primary);">
+				<div class="mt-2 rounded-sm ring-1 ring-border-default px-3 py-2.5" style="color:var(--cst-text-primary);">
 					<span class="block text-sm font-medium">模拟登录态</span>
 					<span class="mb-2 block text-xxs text-text-secondary">影响 login/register/guest/reset 的返回</span>
 					<ListContainer>
@@ -196,7 +196,7 @@
 					<button
 						type="button"
 						onclick={() => void resetLoggedOut()}
-						class="mt-2 w-full rounded-compact ring-1 ring-border-default px-2 py-1.5 text-xs outline-none transition-colors hover:bg-accent-soft"
+						class="mt-2 w-full rounded-sm ring-1 ring-border-default px-2 py-1.5 text-xs outline-none transition-colors hover:bg-accent-soft"
 						style="color:var(--cst-text-secondary);"
 					>
 						重置为未登录（匿名浏览）

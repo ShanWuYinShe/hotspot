@@ -24,7 +24,7 @@
 
 <button
 	type="button"
-	class="hover-btn nav-tab relative flex flex-col items-center justify-center outline-none select-none rounded-panel"
+	class="hover-btn nav-tab relative flex flex-col items-center justify-center outline-none select-none rounded-lg"
 	style="flex:1;min-width:0;padding-top:10px;padding-bottom:8px;gap:4px;"
 	aria-label={label}
 	aria-current={isActive ? 'page' : undefined}
@@ -33,7 +33,7 @@
 	{#if isActive}
 		<div
 			class="transition-[opacity] duration-200"
-			style="position:absolute;inset:4px 6px;border-radius:var(--cst-shape-panel);background:var(--cst-navigation-active-indicator);opacity:0.13;"
+			style="position:absolute;inset:4px 6px;border-radius:var(--cst-shape-lg);background:var(--cst-navigation-active-indicator);opacity:0.13;"
 		></div>
 	{/if}
 
@@ -44,8 +44,8 @@
 		/>
 	</div>
 	<span
-		class="text-xs"
-		style="line-height:1;color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};font-weight:{isActive ? 600 : 400};transition:color 0.22s ease;letter-spacing:0.01em;position:relative;z-index:1;"
+		class="text-xs {isActive ? 'font-semibold' : 'font-normal'}"
+		style="line-height:1;color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color 0.22s ease;position:relative;z-index:1;"
 	>
 		{label}
 	</span>

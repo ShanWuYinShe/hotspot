@@ -147,14 +147,14 @@
 <Dialog.Root open={moreOpen} onOpenChange={(next) => (next ? undefined : (moreOpen = false))}>
 		<Dialog.Content
 			side="bottom"
-			class="inset-x-4 bottom-4 mx-auto max-w-md rounded-feature p-5"
+			class="inset-x-4 bottom-4 mx-auto max-w-md rounded-xl p-5"
 			aria-label={`${user.name} 的更多操作`}
 			style="box-shadow:var(--cst-elevation-modal);"
 		>
 			<div class="flex items-center justify-between">
 				<div>
 					<p class="eyebrow">关系与安全</p>
-					<p class="mt-1 text-[16px] text-text-primary">{user.name}</p>
+					<p class="mt-1 text-md text-text-primary">{user.name}</p>
 				</div>
 				<ActionIconButton icon={X} label="关闭" onClick={() => (moreOpen = false)} size={32} />
 			</div>
@@ -164,12 +164,12 @@
 						bind:value={remarkDraft}
 						oninput={(e) => (remarkDraft = e.currentTarget.value.slice(0, 24))}
 						placeholder="只对你可见"
-						class="mt-2 w-full rounded-xl ring-1 ring-border-default bg-transparent px-3 py-2.5 text-base text-text-primary focus-ring"
+						class="mt-2 w-full rounded-sm ring-1 ring-border-default bg-transparent px-3 py-2.5 text-sm text-text-primary focus-ring"
 					/>
 				</label>
 				<button
 					type="button"
-					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-xl ring-1 ring-border-default py-2.5 text-base text-text-primary focus-ring"
+					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-sm ring-1 ring-border-default py-2.5 text-sm text-text-primary focus-ring"
 					onclick={() => {
 						remark = remarkDraft.trim();
 						moreOpen = false;
@@ -180,7 +180,7 @@
 				</button>
 				<button
 					type="button"
-					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-base text-status-danger outline-none focus-visible:ring-2 focus-visible:ring-status-danger"
+					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-sm py-2.5 text-sm text-status-danger outline-none focus-visible:ring-2 focus-visible:ring-status-danger"
 					onclick={toggleBlock}
 				>
 					<UserX size={14} />
@@ -188,7 +188,7 @@
 				</button>
 				<button
 					type="button"
-					class="hover-btn mt-1 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-base text-text-secondary focus-ring"
+					class="hover-btn mt-1 flex w-full items-center justify-center gap-2 rounded-sm py-2.5 text-sm text-text-secondary focus-ring"
 					onclick={submitReport}
 				>
 					{#if reportSent}
@@ -202,7 +202,7 @@
 		</Dialog.Content>
 	</Dialog.Root>
 
-<SplitPageLayout contentClassName="pt-5 pb-6">
+<SplitPageLayout contentClassName="pt-4 pb-6">
 	<!-- 资料头（无封面数据：紧凑头部，返回/分享/更多 浮在首行，对齐动态详情作者行层级） -->
 	<div class="flex items-center justify-between">
 		<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => history.back()} />
@@ -224,13 +224,13 @@
 				<div class="flex items-end justify-between gap-4">
 					<div class="flex min-w-0 items-center gap-4">
 						<div class="relative shrink-0">
-							<div class="overflow-hidden rounded-full size-20 shadow-neu-xl"   style="border:3px solid var(--cst-surface-primary)">
+							<div class="overflow-hidden rounded-full size-20 shadow-raised-lg"   style="border:3px solid var(--cst-surface-primary)">
 								<img src={user.avatar} alt={user.name} class="w-full h-full object-cover" />
 							</div>
 							<span class="absolute bottom-1 right-1 rounded-full bg-status-online size-3.5 border-2 border-surface-primary"  ></span>
 						</div>
 						<div class="min-w-0 pt-1">
-							<h1 class="truncate text-[26px] font-medium tracking-[-0.01em] text-text-primary">{user.name}</h1>
+							<h1 class="truncate text-2xl font-medium tracking-title text-text-primary">{user.name}</h1>
 							<p class="mt-1 truncate text-text-secondary">{user.handle}{remark ? ` · ${remark}` : ''}</p>
 						</div>
 					</div>
@@ -240,7 +240,7 @@
 						<button
 							type="button"
 							class="hover-btn tap-93 flex items-center gap-1.5 px-3.5 py-2 rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-45 bg-surface-primary text-text-secondary text-xs"
-							style="border:1px solid var(--cst-border-default);box-shadow:var(--shadow-neu-md);"
+							style="border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
 							disabled={blocked}
 							onclick={() => !blocked && void goto(ROUTES.message(uid))}
 						>
@@ -251,8 +251,8 @@
 							type="button"
 							class="hover-btn tap-93 flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all disabled:cursor-not-allowed disabled:opacity-45 text-xs {followed ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
 							style={followed
-								? 'border:1.5px solid var(--cst-accent-default);box-shadow:var(--shadow-neu-md);'
-								: 'box-shadow:0 4px 14px var(--cst-glow-accent);border:1px solid transparent;'}
+								? 'border:1.5px solid var(--cst-accent-default);box-shadow:var(--shadow-raised-sm);'
+								: 'box-shadow:var(--shadow-glow-md);border:1px solid transparent;'}
 							disabled={blocked}
 							onclick={toggleFollow}
 						>
@@ -268,7 +268,7 @@
 				</div>
 
 			{#if blocked}
-				<div class="mt-4 flex items-center gap-2 rounded-small ring-1 ring-status-danger/30 bg-danger-bg px-3 py-2 text-sm text-status-danger">
+				<div class="mt-4 flex items-center gap-2 rounded-sm ring-1 ring-status-danger/30 bg-danger-bg px-3 py-2 text-sm text-status-danger">
 					<UserX size={14} />
 					你已屏蔽此用户；关注和私信已停用。
 				</div>
@@ -278,7 +278,7 @@
 			<!-- 位置 + 标签 -->
 			<div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
 				{#if user.location}
-					<span class="flex items-center gap-1.5 text-text-secondary text-base">
+					<span class="flex items-center gap-1.5 text-text-secondary text-sm">
 						<MapPin class="size-3.25"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
 						{user.location}
 					</span>
@@ -317,7 +317,7 @@
 	<!-- Gallery -->
 	<div class="mt-4 grid grid-cols-3 gap-1.5">
 		{#each galleryItems as src, i}
-			<div class="image-hover-frame tap-97 relative cursor-pointer rounded-small overflow-hidden" style="aspect-ratio:1;">
+			<div class="image-hover-frame tap-97 relative cursor-pointer rounded-sm overflow-hidden" style="aspect-ratio:1;">
 				<img src={src} alt={`photo ${i}`} class="image-hover-frame__image w-full h-full object-cover" />
 				{#if activeTab === 'liked'}
 					<div class="absolute inset-0 flex items-end justify-end p-1.5 bg-surface-overlay-soft">

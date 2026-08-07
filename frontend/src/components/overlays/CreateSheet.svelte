@@ -102,7 +102,7 @@
 		<div class="flex items-center justify-between gap-4">
 			<div class="min-w-0">
 				<p class="eyebrow">附近动态</p>
-				<h1 id="create-composer-title" class="mt-1 text-xl font-medium leading-none tracking-[-0.01em] text-text-primary">
+				<h1 id="create-composer-title" class="mt-1 text-xl font-medium leading-none tracking-title text-text-primary">
 					记录此刻
 				</h1>
 			</div>
@@ -125,7 +125,7 @@
 				<div class="flex min-w-0 items-center gap-2.5">
 					<Avatar src={auth.user?.avatar_url} name={auth.user?.nickname} size={36} class="border border-border-default" />
 					<div class="min-w-0">
-						<p class="text-base font-medium text-text-primary">{auth.user?.nickname || '用户'}</p>
+						<p class="text-sm font-medium text-text-primary">{auth.user?.nickname || '用户'}</p>
 						<span class="mt-0.5 flex items-center gap-1 text-xs text-text-secondary">
 							<MapPin size={12} class="text-accent-default" strokeWidth={1.75} />
 							<span class="truncate">{locationName || '当前位置'}</span>
@@ -137,12 +137,12 @@
 				</span>
 			</div>
 
-			<div class="input-surface rounded-panel p-4">
+			<div class="input-surface rounded-lg p-4">
 				<textarea
 					bind:value={text}
 					oninput={(e) => (text = e.currentTarget.value.slice(0, 280))}
 					placeholder="写下此刻发生的事，或分享一个想被附近的人看见的瞬间…"
-					class="min-h-30.5 w-full resize-none bg-transparent text-base leading-7 text-text-primary outline-none placeholder:text-text-secondary"
+					class="min-h-30.5 w-full resize-none bg-transparent text-sm leading-7 text-text-primary outline-none placeholder:text-text-secondary"
 					aria-label="动态内容"
 				></textarea>
 				<div class="mt-3 flex items-center justify-between border-t border-border-default pt-3">
@@ -185,8 +185,8 @@
 			</div>
 
 			{#if hasImage}
-				<div class="relative overflow-hidden rounded-relaxed ring-border bg-surface-page">
-					<div class="overflow-hidden rounded-relaxed">
+				<div class="relative overflow-hidden rounded-md ring-border bg-surface-page">
+					<div class="overflow-hidden rounded-md">
 						<div class="flex h-36 w-full items-center justify-center gap-2 bg-surface-page text-text-secondary">
 							<ImagePlus size={16} strokeWidth={1.6} />
 							<span class="text-xs">照片已添加</span>
@@ -230,7 +230,7 @@
 
 			<section
 				aria-labelledby="audience-label"
-				class="rounded-relaxed ring-1 ring-border-default surface-tinted p-2"
+				class="rounded-md ring-1 ring-border-default surface-tinted p-2"
 			>
 				<div class="flex items-center justify-between px-2 pb-2 pt-1">
 					<p id="audience-label" class="eyebrow">谁可以看到</p>
@@ -243,7 +243,7 @@
 							type="button"
 							onclick={() => (audience = id)}
 							aria-pressed={active}
-							class="flex min-w-0 flex-col items-center gap-1 rounded-small px-1 py-2 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {active
+							class="flex min-w-0 flex-col items-center gap-1 rounded-sm px-1 py-2 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {active
 								? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
 								: 'text-text-secondary hover:bg-accent-soft/50'}"
 						>
@@ -265,7 +265,7 @@
 		<button
 			type="submit"
 			disabled={!canPublish}
-			class="hover-btn shrink-0 rounded-full px-5 py-2.5 text-base font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:border disabled:border-border-default disabled:bg-transparent disabled:text-text-secondary enabled:bg-accent-default enabled:text-text-on-accent enabled:shadow-[0_6px_18px_var(--cst-glow-accent)]"
+			class="hover-btn shrink-0 rounded-full px-5 py-2.5 text-sm font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:border disabled:border-border-default disabled:bg-transparent disabled:text-text-secondary enabled:bg-accent-default enabled:text-text-on-accent enabled:shadow-glow-lg"
 		>
 			发布动态
 		</button>

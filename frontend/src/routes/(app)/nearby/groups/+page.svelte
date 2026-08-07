@@ -90,7 +90,7 @@
 </script>
 
 
-	<StandardPageLayout contentClassName="py-5 sm:py-6">
+	<StandardPageLayout contentClassName="pt-4 pb-6">
 		{#snippet header()}
 			<PageHeader title="附近群组" subtitle={locationName ? `${locationName} · 5km 内` : '5km 内'} sticky glass contentClassName="pt-4 pb-0" onBack={() => history.back()}>
 				{#snippet subtitleIcon()}
@@ -118,7 +118,7 @@
 		{#if loading}
 			<div class="flex flex-col items-center gap-3 py-20">
 				<div class="rounded-full border-2 border-border-default border-t-accent-default animate-spin size-7" ></div>
-				<p class="text-text-secondary text-base">加载附近群组…</p>
+				<p class="text-text-secondary text-sm">加载附近群组…</p>
 			</div>
 		{:else if filtered.length}
 			<div class="flex items-center justify-between mb-3">

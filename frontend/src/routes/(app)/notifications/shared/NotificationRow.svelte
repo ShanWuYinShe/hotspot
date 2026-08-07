@@ -31,7 +31,7 @@
 			</div>
 		{:else}
 			<div class="rounded-full flex items-center justify-center" style="width:44px;height:44px;background:{cfg.bg};">
-				<cfg.icon style="width:18px;height:18px;color:{cfg.color};" strokeWidth={1.75} />
+				<cfg.icon class="size-4.5" style="color:{cfg.color};" strokeWidth={1.75} />
 			</div>
 		{/if}
 		{#if notif.user.avatar}
@@ -43,8 +43,8 @@
 
 	<!-- Text -->
 	<div class="flex-1 min-w-0">
-		<p class="truncate text-text-primary text-base">
-			<span style="font-weight:{notif.read ? 400 : 500};">{notif.user.name}</span>
+		<p class="truncate text-text-primary text-sm">
+			<span class="{notif.read ? 'font-normal' : 'font-medium'}">{notif.user.name}</span>
 			{' '}{notif.text}
 		</p>
 		<p class="text-text-secondary text-xs mt-0.5">{notif.time}</p>
@@ -53,7 +53,7 @@
 	<!-- Moment thumb or unread dot -->
 	<div class="flex items-center gap-2 shrink-0">
 		{#if notif.momentImage}
-			<div class="rounded-tight overflow-hidden size-9.5" >
+			<div class="rounded-sm overflow-hidden size-9.5" >
 				<img src={notif.momentImage} alt="" class="w-full h-full object-cover" />
 			</div>
 		{/if}

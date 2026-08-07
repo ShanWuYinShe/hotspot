@@ -5,13 +5,13 @@
 	// 列表骨架组件（list）——列表只有两个公共组件：ListContainer（容器）+ ListItem（行）。
 	// ListItem 是唯一交互行组件（对齐 Figma Make InteractiveListRow 契约）：
 	//   - tone=joined：连接列表行（--surface-primary 表面，配合 ListContainer 使用）
-	//   - tone=card  ：独立卡片行（rounded-relaxed + 边框 + 凸起阴影）
+	//   - tone=card  ：独立卡片行（rounded-md + 边框 + 凸起阴影）
 	//   - hover：--interactive-hover-fill 背景填充；tap：轻微透明度按压反馈
 	//   - pressed：选中态（accent 全背景 + on-accent 文字）；children 需按选中态
 	//     切换文字类（text-text-on-accent 系列 + opacity-70/80 派生次级文字，
 	//     随明暗模式自动切换深浅；禁止用恒白 text-content-inverse——那是
 	//     图片/遮罩上的反色 token，在 dark 浅色 accent 背景上对比度不足）
-	//   - 高亮形状：joined 行 hover/focus/pressed 时背景带 rounded-small 圆角
+	//   - 高亮形状：joined 行 hover/focus/pressed 时背景带 rounded-sm 圆角
 	//     （非高亮保持直角连接行视觉；圆角由组件统一应用，调用方不得叠加）
 	//   - 可点击时提供 role=button / 键盘 Enter+Space / tabindex / aria-pressed
 	//
@@ -68,10 +68,10 @@
 	const itemOpacity = $derived(onClick && pointerDown ? 0.84 : 1);
 
 	const isCard = $derived(tone === 'card');
-	const cardShadow = 'var(--shadow-neu-lg)';
+	const cardShadow = 'var(--shadow-raised-md)';
 	// joined 行高亮（hover/focus/pressed）时背景呈圆角矩形；非高亮保持直角
-	// 连接行视觉。圆角由组件统一应用（token 档位 rounded-small），调用方不得叠加。
-	// card 行的圆角由 className（rounded-relaxed）承载，inline 不覆盖。
+	// 连接行视觉。圆角由组件统一应用（token 档位 rounded-sm），调用方不得叠加。
+	// card 行的圆角由 className（rounded-md）承载，inline 不覆盖。
 	const itemStyle = $derived.by(() => {
 		const parts: string[] = [];
 		if (style) parts.push(style);
@@ -83,7 +83,7 @@
 			);
 		} else if (pressed || surfaceActive) {
 			// 高亮圆角：只影响背景填充，不影响布局
-			parts.push('border-radius:var(--cst-shape-small);');
+			parts.push('border-radius:var(--cst-shape-sm);');
 		}
 		// 选中态：accent 全背景（inline style 优先，hover 不再叠加填充）
 		if (pressed) {
@@ -106,7 +106,7 @@
 	class={cn(
 		'relative transition-[background-color,border-radius,box-shadow,opacity] duration-200 ease-out focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default',
 		onClick && 'cursor-pointer',
-		isCard ? 'rounded-relaxed border' : 'bg-surface-primary',
+		isCard ? 'rounded-md border' : 'bg-surface-primary',
 		className
 	)}
 	style={`${itemStyle}opacity:${itemOpacity};transition-duration:${pointerDown ? '0.10s' : '0.20s'};`}

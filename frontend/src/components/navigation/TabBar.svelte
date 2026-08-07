@@ -26,7 +26,7 @@
 			type="button"
 			onclick={() => onChange(tab.id)}
 			aria-pressed={isActive}
-			class="relative flex shrink-0 items-center gap-1.5 rounded-t-small px-4.5 pb-3 pt-1 text-base outline-none transition-colors duration-200 {isActive ? 'font-medium text-accent-default' : 'font-normal text-text-secondary'}"
+			class="relative flex shrink-0 items-center gap-1.5 rounded-t-small px-4.5 pb-3 pt-1 text-sm outline-none transition-colors duration-200 {isActive ? 'font-medium text-accent-default' : 'font-normal text-text-secondary'}"
 		>
 			{#if tab.icon}
 				<tab.icon class="size-3.25"  strokeWidth={isActive ? 2 : 1.5} />

@@ -23,7 +23,7 @@
 
 <!-- Dense, horizontally comparable metrics: counts, ratios, and relationship states. -->
 <dl
-	class="grid overflow-hidden rounded-xl ring-border {className}"
+	class="grid overflow-hidden rounded-sm ring-border {className}"
 	style="grid-template-columns:repeat({items.length}, minmax(0, 1fr));gap:1px;background:var(--cst-border-default);"
 >
 	{#each items as item (item.label)}

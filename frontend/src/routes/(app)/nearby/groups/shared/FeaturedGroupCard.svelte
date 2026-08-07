@@ -13,7 +13,7 @@
 	imageSrc={group.banner}
 	imageAlt={group.name}
 	onClick={onOpen}
-	class="rounded-feature min-h-85 surface-hero"
+	class="rounded-xl min-h-85 surface-hero"
 >
 	{#snippet placeholder()}
 		<span class="text-accent-default text-4xl font-semibold">{Array.from(group.name)[0] ?? '群'}</span>

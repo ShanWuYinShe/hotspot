@@ -189,7 +189,7 @@
 			<button
 				type="button"
 				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0 bg-surface-primary"
-				style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--cst-border-default);"
+				style="width:36px;height:36px;box-shadow:var(--shadow-raised-sm);border:1px solid var(--cst-border-default);"
 				onclick={onBack}
 				aria-label="返回"
 			>
@@ -202,7 +202,7 @@
 			src={contact?.avatar}
 			name={peerName}
 			size={compact ? 34 : 38}
-			style="border:1.5px solid var(--cst-border-default);box-shadow:var(--shadow-neu-xs);"
+			style="border:1.5px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
 		>
 			{#snippet badge()}
 				{#if onlineNow}
@@ -213,7 +213,7 @@
 
 		<!-- Name + status -->
 		<div class="flex-1 min-w-0">
-			<p class="truncate text-text-primary" style="font-size:{compact ? 13 : 14}px;">
+			<p class="truncate text-text-primary {compact ? 'text-sm' : 'text-md'}">
 				{peerName || '会话'}
 			</p>
 			<p class="{peerTyping ? 'text-accent-default' : onlineNow ? 'text-status-online' : 'text-text-secondary'} text-xs" >
@@ -235,7 +235,7 @@
 				<button
 					type="button"
 					class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none bg-surface-primary"
-					style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:var(--shadow-neu-md);border:1px solid var(--cst-border-default);"
+					style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:var(--shadow-raised-sm);border:1px solid var(--cst-border-default);"
 					aria-label={label}
 				>
 					<Icon class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
@@ -244,7 +244,7 @@
 			<button
 				type="button"
 				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none bg-surface-primary"
-				style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:var(--shadow-neu-md);border:1px solid var(--cst-border-default);"
+				style="width:{compact ? 32 : 36}px;height:{compact ? 32 : 36}px;box-shadow:var(--shadow-raised-sm);border:1px solid var(--cst-border-default);"
 				aria-label="更多操作"
 			>
 				<MoreHorizontal class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
@@ -259,11 +259,11 @@
 			<div class="flex h-full flex-col items-center justify-center gap-2 px-6" style="min-height:240px;">
 				<div
 					class="flex items-center justify-center rounded-full"
-					style="width:56px;height:56px;border:1px solid var(--cst-border-default);box-shadow:var(--shadow-neu-xl);"
+					style="width:56px;height:56px;border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-lg);"
 				>
 					<MessageCircle class="size-5.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</div>
-				<p class="text-text-primary text-sm"  style="font-weight:500">还没有消息</p>
+				<p class="text-text-primary text-sm font-medium">还没有消息</p>
 				<p class="text-center text-text-secondary text-xs"  style="max-width:220px">打个招呼，开始这段对话吧</p>
 			</div>
 		{:else}
@@ -285,13 +285,13 @@
 		<button
 			type="button"
 			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0 bg-surface-primary"
-			style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--cst-border-default);"
+			style="width:36px;height:36px;box-shadow:var(--shadow-raised-sm);border:1px solid var(--cst-border-default);"
 			aria-label="表情"
 		>
 			<Smile class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 		</button>
 
-		<div class="flex-1 flex items-center px-4 rounded-relaxed input-surface h-9.5" >
+		<div class="flex-1 flex items-center px-4 rounded-md input-surface h-9.5" >
 			<input
 				type="text"
 				bind:value={chat.inputVal}
@@ -300,18 +300,18 @@
 					if (e.key === 'Enter') void chat.handleSend();
 				}}
 				placeholder="发消息…"
-				class="flex-1 bg-transparent outline-none text-text-primary text-base"
+				class="flex-1 bg-transparent outline-none text-text-primary text-sm"
 			/>
 		</div>
 
 		<button
 			type="button"
 			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'}"
-			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? '0 4px 14px var(--cst-glow-accent)' : 'var(--shadow-neu-md)'};border:1px solid var(--cst-border-default);"
+			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:1px solid var(--cst-border-default);"
 			onclick={() => void chat.handleSend()}
 			aria-label="发送"
 		>
-			<Send style="width:14px;height:14px;color:{chat.inputVal.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
+			<Send class="size-3.5" style="color:{chat.inputVal.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
 		</button>
 	</div>
 </div>

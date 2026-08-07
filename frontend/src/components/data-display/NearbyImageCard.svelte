@@ -59,7 +59,7 @@
 		'image-hover-frame card-hover relative h-full w-full cursor-pointer overflow-hidden',
 		className
 	)}
-	style="transform:{cardTransform};transition:transform 0.10s cubic-bezier(0.22,1,0.36,1);"
+	style="transform:{cardTransform};transition:transform 0.10s var(--cst-ease-standard);"
 	role={onClick ? 'button' : undefined}
 	tabindex={onClick ? 0 : undefined}
 	onpointerdown={() => (pressed = true)}

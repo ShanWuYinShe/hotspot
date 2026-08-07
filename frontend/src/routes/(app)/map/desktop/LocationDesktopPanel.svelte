@@ -53,7 +53,7 @@ locationName = loc?.location_name ?? '';
 			<button
 				type="button"
 				class="hover-btn flex items-center justify-center rounded-full outline-none shrink-0 circle-hover bg-surface-primary"
-				style="width:36px;height:36px;border:1px solid var(--cst-border-default);box-shadow:var(--shadow-neu-md);"
+				style="width:36px;height:36px;border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
 				onclick={onReset}
 			>
 				<Crosshair class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
@@ -64,7 +64,7 @@ locationName = loc?.location_name ?? '';
 
 <!-- Search -->
 <div class="shrink-0 px-4 pt-3 pb-2 relative">
-	<div class="flex items-center gap-2.5 px-3.5 rounded-xl input-surface h-10.5" >
+	<div class="flex items-center gap-2.5 px-3.5 rounded-sm input-surface h-10.5" >
 		<Search class="size-3.5 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 		<input
 			bind:value={searchQuery}
@@ -73,7 +73,7 @@ locationName = loc?.location_name ?? '';
 				selectedLoc = null;
 			}}
 			placeholder="搜索地点或地标…"
-			class="flex-1 bg-transparent outline-none text-text-primary text-base"
+			class="flex-1 bg-transparent outline-none text-text-primary text-sm"
 		/>
 		{#if searchQuery}
 			<button type="button" class="hover-btn outline-none" onclick={() => (searchQuery = '')}>
@@ -92,7 +92,7 @@ locationName = loc?.location_name ?? '';
 				class="app-list-row app-list-row--standard"
 			>
 				<MapPin class="size-3.25 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
-				<span class="{isSelected ? 'text-text-on-accent' : 'text-text-primary'} flex-1 text-base" >{r.displayName}</span>
+				<span class="{isSelected ? 'text-text-on-accent' : 'text-text-primary'} flex-1 text-sm" >{r.displayName}</span>
 				{#if isSelected}
 					<Check class="size-3.25"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
 				{/if}
@@ -112,7 +112,7 @@ locationName = loc?.location_name ?? '';
 		<button
 			type="button"
 			class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none text-sm {activeTab === tab.id ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
-			style={activeTab === tab.id ? 'box-shadow:0 3px 10px var(--cst-glow-accent);' : 'border:1px solid var(--cst-border-default);'}
+			style={activeTab === tab.id ? 'box-shadow:var(--shadow-glow-sm);' : 'border:1px solid var(--cst-border-default);'}
 			onclick={() => (activeTab = tab.id as 'nearby' | 'hot' | 'recent')}
 		>
 			<tab.icon class="size-2.75"  strokeWidth={activeTab === tab.id ? 2.5 : 1.5} />
@@ -126,12 +126,12 @@ locationName = loc?.location_name ?? '';
 	{#if activeTab === 'nearby'}
 		<div class="animate-fade-in flex flex-col gap-2">
 			<!-- Current location card -->
-			<div class="flex items-center gap-3 p-3.5 rounded-control bg-accent-default text-text-on-accent">
+			<div class="flex items-center gap-3 p-3.5 rounded-md bg-accent-default text-text-on-accent">
 				<div class="flex items-center justify-center rounded-full shrink-0 size-10.5"  style="background:var(--cst-surface-map-control)">
 					<Navigation class="size-4.25"  strokeWidth={2} />
 				</div>
 				<div class="flex-1">
-					<p class="text-base" >当前位置</p>
+					<p class="text-sm" >当前位置</p>
 					<p class="text-xs mt-px"  style="opacity:0.8">{locationName || '自动定位'}</p>
 				</div>
 				<div class="bg-status-online size-2 shrink-0"  style="border-radius:50%;box-shadow:0 0 6px var(--cst-status-online)"></div>
@@ -149,11 +149,11 @@ locationName = loc?.location_name ?? '';
 						>
 						<PinMedia {pin} size={42} selected={isSelected} />
 						<div class="flex-1 min-w-0">
-							<p class="{isSelected ? 'text-text-on-accent' : 'text-text-primary'} text-base">{pin.name || pin.title}</p>
+							<p class="{isSelected ? 'text-text-on-accent' : 'text-text-primary'} text-sm">{pin.name || pin.title}</p>
 							<div class="flex items-center gap-2 mt-0.5 flex-wrap">
 								<!-- 类型徽章：选中行背景为 accent 实色，type 色与 accent 同色（user），
 								     反色适配为 on-accent 底 + accent 字（对齐 ChatListItem 未读徽章模式） -->
-								<span class="text-xxs" style="padding:1px 6px;border-radius:var(--cst-shape-compact);background:{isSelected ? 'var(--cst-text-on-accent)' : PIN_TONES[pin.type].bg};color:{isSelected ? 'var(--cst-accent-default)' : PIN_COLORS[pin.type]};">
+								<span class="text-xxs" style="padding:1px 6px;border-radius:var(--cst-shape-sm);background:{isSelected ? 'var(--cst-text-on-accent)' : PIN_TONES[pin.type].bg};color:{isSelected ? 'var(--cst-accent-default)' : PIN_COLORS[pin.type]};">
 									{PIN_LABELS[pin.type]}
 								</span>
 								{#if pin.tag}
@@ -200,7 +200,7 @@ locationName = loc?.location_name ?? '';
 							ariaLabel={`选择热门地点 ${loc.displayName}`}
 							class="app-list-row app-list-row--standard"
 						>
-							<div class="flex items-center justify-center rounded-small shrink-0 bg-accent-default size-9 text-lg"  style="opacity:0.88">
+							<div class="flex items-center justify-center rounded-sm shrink-0 bg-accent-default size-9 text-lg"  style="opacity:0.88">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
@@ -208,7 +208,7 @@ locationName = loc?.location_name ?? '';
 								<p class="truncate {isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							<div class="flex shrink-0 items-center gap-1">
-								<Users style="width:11px;height:11px;color:{isSelected ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};" strokeWidth={1.5} />
+								<Users class="size-2.75" style="color:{isSelected ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};" strokeWidth={1.5} />
 								<span class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-accent-default'} text-xs">{loc.users}</span>
 							</div>
 							{#if isSelected}
@@ -238,7 +238,7 @@ locationName = loc?.location_name ?? '';
 							ariaLabel={`选择最近地点 ${loc.displayName}`}
 							class="app-list-row app-list-row--standard"
 						>
-							<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary size-9 text-lg border border-border-default shadow-neu-xs"  >
+							<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary size-9 text-lg border border-border-default shadow-raised-sm"  >
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
@@ -266,7 +266,7 @@ locationName = loc?.location_name ?? '';
 <!-- Confirm -->
 <div class="shrink-0 border-t border-border-default"   style="padding:10px 12px 16px">
 	{#if selectedLoc}
-		<div class="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-small bg-surface-primary" style="box-shadow:0 0 0 1px var(--cst-border-default), var(--shadow-neu-inset-xs);">
+		<div class="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-sm bg-surface-primary" style="box-shadow:0 0 0 1px var(--cst-border-default), var(--shadow-inset-sm);">
 			<Check class="size-3.25 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={2.5} />
 			<p class="flex-1 truncate text-accent-default text-xs">{selectedLoc.displayName}</p>
 			<button
@@ -284,7 +284,7 @@ locationName = loc?.location_name ?? '';
 	<button
 		type="button"
 		class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-text-on-accent text-md"
-		style="height:48px;box-shadow:0 6px 20px var(--cst-glow-accent);"
+		style="height:48px;box-shadow:var(--shadow-glow-lg);"
 		onclick={onConfirm}
 	>
 		<MapPin class="size-3.5"  strokeWidth={2} />

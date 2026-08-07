@@ -10,10 +10,10 @@
 
 <button
 	type="button"
-	class="hover-btn rounded-full outline-none text-xs px-3.25 py-1.5 shrink-0"
+	class="hover-btn rounded-full outline-none text-xs px-3.25 py-1.5 shrink-0 {group.joined ? '' : 'font-semibold'}"
 	style={group.joined
 		? 'border:1px solid var(--cst-border-strong);color:var(--cst-text-secondary);'
-		: 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);font-weight:600;box-shadow:0 2px 8px var(--cst-glow-accent);'}
+		: 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);box-shadow:var(--shadow-glow-sm);'}
 	onclick={(e) => {
 		e.stopPropagation();
 		onToggle();

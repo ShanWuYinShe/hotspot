@@ -33,8 +33,8 @@
 		{#each filtered as g (g.id)}
 			<button
 				type="button"
-				class="card-hover tap-94 group flex min-h-37 w-full overflow-hidden rounded-relaxed border text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
-				style="background:var(--cst-surface-primary);border-color:var(--cst-border-default);box-shadow:var(--shadow-neu-lg);"
+				class="card-hover tap-94 group flex min-h-37 w-full overflow-hidden rounded-md border text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
+				style="background:var(--cst-surface-primary);border-color:var(--cst-border-default);box-shadow:var(--shadow-raised-md);"
 				aria-label={`进入群组：${g.name}`}
 				onclick={() => void goto(`${ROUTES.group(g.id)}?from=me`)}
 			>
@@ -63,10 +63,10 @@
 						<img
 							src={g.avatar}
 							alt=""
-							class="h-8 w-8 shrink-0 rounded-tight object-cover"
+							class="h-8 w-8 shrink-0 rounded-sm object-cover"
 							style="border:1px solid var(--cst-border-default);"
 						/>
-						<p class="min-w-0 flex-1 truncate text-base font-medium text-text-primary">{g.name}</p>
+						<p class="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">{g.name}</p>
 						<ChevronRight class="shrink-0 text-text-secondary size-3.75"  strokeWidth={1.7} />
 					</div>
 
@@ -90,6 +90,6 @@
 	{#if filtered.length === 0}
 		<div class="flex flex-col items-center justify-center gap-2 py-16">
 			<Search class="text-text-secondary size-5.5"  strokeWidth={1.4} />
-			<p class="text-base text-text-secondary">没有找到匹配的群组</p>
+			<p class="text-sm text-text-secondary">没有找到匹配的群组</p>
 		</div>
 	{/if}

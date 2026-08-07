@@ -51,10 +51,10 @@ function toggleAdd(id: number) {
 		{#each [{ id: 'add', icon: UserPlus, label: '添加好友' }, { id: 'chat', icon: MessageCircle, label: '开始私聊' }] as t}
 			<button
 				type="button"
-				class="hover-btn flex items-center gap-2 px-4 py-2 rounded-full outline-none text-base {tab === t.id ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
+				class="hover-btn flex items-center gap-2 px-4 py-2 rounded-full outline-none text-sm {tab === t.id ? 'bg-accent-default text-text-on-accent font-medium' : 'bg-surface-primary text-text-secondary'}"
 				style={tab === t.id
-					? 'font-weight:500;box-shadow:0 4px 12px var(--cst-glow-accent);'
-					: 'box-shadow:var(--shadow-neu-xs);border:1px solid var(--cst-border-default);'}
+					? 'box-shadow:var(--shadow-glow-md);'
+					: 'box-shadow:var(--shadow-raised-sm);border:1px solid var(--cst-border-default);'}
 				onclick={() => {
 					tab = t.id as Tab;
 					searchQ = '';
@@ -80,7 +80,7 @@ function toggleAdd(id: number) {
 	<div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-6">
 		{#if tab === 'add'}
 			<div class="animate-fade-in flex flex-col gap-2">
-				<p class="uppercase mb-2 text-text-secondary text-xxs"  style="letter-spacing:0.14em">
+				<p class="uppercase mb-2 text-text-secondary text-xxs tracking-eyebrow">
 					附近推荐
 				</p>
 				{#each filteredSuggested as u (u.id)}
@@ -99,8 +99,8 @@ function toggleAdd(id: number) {
 							type="button"
 							class="hover-btn tap-92 flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none shrink-0 text-xs {addedIds.has(u.id) ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
 							style={addedIds.has(u.id)
-								? 'box-shadow:var(--shadow-neu-inset-xs);border:1px solid var(--cst-border-strong);'
-								: 'box-shadow:0 3px 8px var(--cst-glow-accent);'}
+								? 'box-shadow:var(--shadow-inset-sm);border:1px solid var(--cst-border-strong);'
+								: 'box-shadow:var(--shadow-glow-sm);'}
 							onclick={(e) => {
 								e.stopPropagation();
 								toggleAdd(u.id);
@@ -129,16 +129,16 @@ function toggleAdd(id: number) {
 					ariaLabel="创建群聊"
 					class="mb-3 flex items-center gap-3.5 p-3"
 				>
-					<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default size-11 shadow-[0_3px_8px_var(--cst-glow-accent)]"  >
+					<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default size-11 shadow-glow-sm"  >
 						<Users class="size-5"  style="color:var(--cst-text-on-accent)" strokeWidth={1.75} />
 					</div>
 					<div>
-						<p class="text-text-primary text-sm"  style="font-weight:500">创建群聊</p>
+						<p class="text-text-primary text-sm font-medium">创建群聊</p>
 						<p class="text-text-secondary text-xs" >邀请好友一起聊</p>
 					</div>
 				</ListItem>
 
-				<p class="uppercase mb-2 text-text-secondary text-xxs"  style="letter-spacing:0.14em">
+				<p class="uppercase mb-2 text-text-secondary text-xxs tracking-eyebrow">
 					联系人
 				</p>
 				{#each filteredContacts as c (c.id)}

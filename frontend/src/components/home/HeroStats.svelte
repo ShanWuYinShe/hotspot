@@ -24,7 +24,7 @@
 <div class="ambient-glow">
 	<button
 		type="button"
-		class="hover-btn tap-99 surface-hero rounded-feature cursor-pointer overflow-hidden text-left w-full"
+		class="hover-btn tap-99 surface-hero rounded-xl cursor-pointer overflow-hidden text-left w-full"
 		style="padding:18px 20px;"
 		aria-label="查看附近的人"
 		onclick={onExplore}
@@ -33,12 +33,12 @@
 			<div class="flex items-center gap-2.5">
 				<div
 					class="flex items-center justify-center rounded-full bg-accent-default"
-					style="width:38px;height:38px;box-shadow:0 4px 14px var(--cst-glow-accent);"
+					style="width:38px;height:38px;box-shadow:var(--shadow-glow-md);"
 				>
 					<Radar class="size-4.25"  style="color:var(--cst-text-on-accent)" strokeWidth={2} />
 				</div>
 				<div>
-					<p class="text-base" style="color:var(--cst-text-primary);font-weight:500;">实时附近</p>
+					<p class="text-sm font-medium" style="color:var(--cst-text-primary);">实时附近</p>
 					<p class="text-xs mt-px"  style="color:var(--cst-text-secondary)">
 						{rangeLabel}
 					</p>
@@ -48,7 +48,7 @@
 		</div>
 
 		<!-- Stats row -->
-		<div class="grid grid-cols-3 mt-4 bg-border-default gap-px"  style="border-radius:var(--cst-shape-control);overflow:hidden">
+		<div class="grid grid-cols-3 mt-4 bg-border-default gap-px"  style="border-radius:var(--cst-shape-md);overflow:hidden">
 			<div class="flex flex-col items-center justify-center py-2.5 bg-surface-primary">
 				<span class="text-xl font-semibold" style="color:var(--cst-accent-default);line-height:1;">{stats.nearby}</span>
 				<span class="text-xxs mt-1"  style="color:var(--cst-text-secondary)">人附近</span>

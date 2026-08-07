@@ -212,7 +212,7 @@
 
 <SplitPageLayout contentClassName="pb-6">
 	{#snippet header()}
-		<PageHeader title="动态详情" titleSize={16} onBack={() => history.back()} class="shrink-0 border-b border-border-default">
+		<PageHeader title="动态详情" titleSize={16} onBack={() => history.back()}>
 			{#snippet trailing()}
 				<DropdownMenu.Root bind:open={moreOpen}>
 					<div bind:this={moreMenuEl} class="relative">
@@ -253,23 +253,23 @@
 		<!-- 评论输入栏固定在主区底部，不随正文滚动 -->
 		<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary border-t border-border-default" >
 			<Avatar class="border border-border-default" src={auth.user?.avatar_url} name={auth.user?.nickname} size={30}  />
-			<div class="flex-1 flex items-center px-4 rounded-relaxed input-surface h-9.5" >
+			<div class="flex-1 flex items-center px-4 rounded-md input-surface h-9.5" >
 				<input
 					bind:value={input}
 					onkeydown={(e) => {
 						if (e.key === 'Enter') void handleComment();
 					}}
 					placeholder="写下你的评论…"
-					class="flex-1 bg-transparent outline-none text-text-primary text-base"
+					class="flex-1 bg-transparent outline-none text-text-primary text-sm"
 				/>
 			</div>
 			<button
 				type="button"
 				class="hover-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0"
-				style="width:36px;height:36px;background:{input.trim() ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};box-shadow:{input.trim() ? '0 4px 14px var(--cst-glow-accent)' : 'var(--shadow-neu-md)'};border:1px solid var(--cst-border-default);transition:all 0.2s;"
+				style="width:36px;height:36px;background:{input.trim() ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};box-shadow:{input.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:1px solid var(--cst-border-default);transition:all 0.2s;"
 				onclick={() => void handleComment()}
 			>
-				<Send style="width:14px;height:14px;color:{input.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
+				<Send class="size-3.5" style="color:{input.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
 			</button>
 		</div>
 	{/snippet}

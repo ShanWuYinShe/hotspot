@@ -18,12 +18,12 @@
 		<h1 class="text-xl font-semibold tracking-tight" style="color:var(--cst-text-primary);">
 			账号已被封禁
 		</h1>
-		<p class="text-base leading-relaxed" style="color:var(--cst-text-secondary);">
+		<p class="text-sm leading-relaxed" style="color:var(--cst-text-secondary);">
 			{message ?? '你的账号因违规操作被封禁。如有疑问，请联系客服。'}
 		</p>
 		<button
 			type="button"
-			class="hover-btn mt-2 rounded-xl px-8 py-2.5 text-base font-medium"
+			class="hover-btn mt-2 rounded-sm px-8 py-2.5 text-sm font-medium"
 			style="background:var(--cst-accent-default);color:var(--cst-text-on-accent);"
 			onclick={onAcknowledge}
 		>

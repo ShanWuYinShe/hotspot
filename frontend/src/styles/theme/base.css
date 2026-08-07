@@ -36,25 +36,25 @@
   }
 
   h4 {
-    font-size: var(--text-base);
+    font-size: var(--text-sm);
     font-weight: var(--cst-font-weight-medium);
     line-height: 1.5;
   }
 
   label {
-    font-size: var(--text-base);
+    font-size: var(--text-sm);
     font-weight: var(--cst-font-weight-medium);
     line-height: 1.5;
   }
 
   button {
-    font-size: var(--text-base);
+    font-size: var(--text-sm);
     font-weight: var(--cst-font-weight-medium);
     line-height: 1.5;
   }
 
   input {
-    font-size: var(--text-base);
+    font-size: var(--text-sm);
     font-weight: var(--cst-font-weight-normal);
     line-height: 1.5;
   }

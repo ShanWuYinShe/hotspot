@@ -171,7 +171,7 @@
 			<button
 				type="button"
 				class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none shrink-0 bg-surface-primary"
-				style="width:36px;height:36px;box-shadow:var(--shadow-neu-md);border:1px solid var(--cst-border-default);"
+				style="width:36px;height:36px;box-shadow:var(--shadow-raised-sm);border:1px solid var(--cst-border-default);"
 				onclick={onBack}
 				aria-label="返回"
 			>
@@ -185,12 +185,12 @@
 			name={groupName}
 			size={compact ? 34 : 38}
 			shape="rounded"
-			style="border:1.5px solid var(--cst-border-default);box-shadow:var(--shadow-neu-xs);"
+			style="border:1.5px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
 		/>
 
 		<!-- Name + status -->
 		<div class="flex-1 min-w-0">
-			<p class="truncate text-text-primary" style="font-size:{compact ? 13 : 14}px;">
+			<p class="truncate text-text-primary {compact ? 'text-sm' : 'text-md'}">
 				{groupName || '群聊'}
 			</p>
 			<p class="{groupTyping ? 'text-accent-default' : 'text-text-secondary'} text-xs" >
@@ -229,7 +229,7 @@
 		<p class="px-4 pb-1.5 text-status-warning text-xs" >{chat.sendError}</p>
 	{/if}
 	<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary border-t border-border-default" >
-		<div class="flex-1 flex items-center px-4 rounded-relaxed input-surface h-9.5" >
+		<div class="flex-1 flex items-center px-4 rounded-md input-surface h-9.5" >
 			<input
 				type="text"
 				bind:value={chat.inputVal}
@@ -238,18 +238,18 @@
 					if (e.key === 'Enter') void chat.handleSend();
 				}}
 				placeholder="发消息…"
-				class="flex-1 bg-transparent outline-none text-text-primary text-base"
+				class="flex-1 bg-transparent outline-none text-text-primary text-sm"
 			/>
 		</div>
 
 		<button
 			type="button"
 			class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'}"
-			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? '0 4px 14px var(--cst-glow-accent)' : 'var(--shadow-neu-md)'};border:1px solid var(--cst-border-default);"
+			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:1px solid var(--cst-border-default);"
 			onclick={() => void chat.handleSend()}
 			aria-label="发送"
 		>
-			<Send style="width:14px;height:14px;color:{chat.inputVal.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
+			<Send class="size-3.5" style="color:{chat.inputVal.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
 		</button>
 	</div>
 </div>

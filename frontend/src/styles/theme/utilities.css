@@ -42,18 +42,18 @@
 
   .input-surface {
     background-color: var(--cst-surface-primary);
-    box-shadow: 5px 5px 10px var(--cst-elevation-shadow-dark), -5px -5px 10px var(--cst-elevation-shadow-light);
+    box-shadow: var(--shadow-raised-sm);
     border: 1px solid var(--cst-border-default);
-    transition: box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease;
+    transition: box-shadow 0.2s var(--cst-ease-standard), border-color 0.2s ease;
   }
   .input-surface:focus-within {
-    box-shadow: inset 5px 5px 10px var(--cst-elevation-shadow-dark), inset -5px -5px 10px var(--cst-elevation-shadow-light);
+    box-shadow: var(--shadow-inset-sm);
     border-color: var(--cst-border-strong);
   }
 
   .icon-badge {
     background-color: var(--cst-surface-primary);
-    box-shadow: 4px 4px 8px var(--cst-elevation-shadow-dark), -4px -4px 8px var(--cst-elevation-shadow-light);
+    box-shadow: var(--shadow-raised-sm);
     border: 1px solid var(--cst-border-default);
   }
 
@@ -61,7 +61,7 @@
 
   .card-hover {
     cursor: pointer;
-    transition: box-shadow 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: box-shadow 0.26s var(--cst-ease-standard);
   }
   .card-hover:active { transform: scale(0.985); }
   .card-hover:focus-visible { outline: 2px solid var(--cst-accent-default); outline-offset: 2px; }
@@ -86,7 +86,7 @@
   .app-list-row--standard { min-height: 4.125rem; padding: 0.75rem 0.875rem; }
 
   .circle-hover {
-    transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.20s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.16s ease;
+    transition: transform 0.16s var(--cst-ease-standard), box-shadow 0.20s var(--cst-ease-standard), border-color 0.16s ease;
   }
   .circle-hover:active { transform: scale(0.94); }
   @media (hover: hover) and (pointer: fine) {
@@ -115,22 +115,20 @@
 
   .flat {
     background-color: var(--cst-surface-primary);
-    box-shadow: 10px 10px 20px var(--cst-elevation-shadow-dark), -10px -10px 20px var(--cst-elevation-shadow-light);
+    box-shadow: var(--shadow-raised-lg);
     color: var(--cst-text-primary);
     border: 1px solid var(--cst-border-default);
   }
   .pressed {
     background-color: var(--cst-surface-primary);
-    box-shadow: inset 8px 8px 16px var(--cst-elevation-shadow-dark), inset -8px -8px 16px var(--cst-elevation-shadow-light);
+    box-shadow: var(--shadow-inset-md);
     color: var(--cst-text-primary);
     border: 1px solid var(--cst-border-strong);
   }
   .surface-hero {
     background-color: var(--cst-surface-primary);
     border: 1px solid var(--cst-border-default);
-    box-shadow:
-      8px 8px 18px var(--cst-elevation-shadow-dark),
-      -8px -8px 18px var(--cst-elevation-shadow-light);
+    box-shadow: var(--shadow-raised-lg);
   }
 
   .surface-flat {
@@ -201,8 +199,8 @@
   }
 
   .eyebrow {
-    font-size: 10px;
-    letter-spacing: 0.14em;
+    font-size: var(--text-xxs);
+    letter-spacing: var(--tracking-eyebrow);
     text-transform: uppercase;
     color: var(--cst-text-secondary);
     opacity: 0.75;
@@ -229,7 +227,7 @@
   }
   .input-surface:focus-within {
     /* 对齐 Figma Make：focus 为中性内凹凹陷 + border-pressed，不用 accent 高亮环 */
-    box-shadow: inset 5px 5px 10px var(--cst-elevation-shadow-dark), inset -5px -5px 10px var(--cst-elevation-shadow-light) !important;
+    box-shadow: var(--shadow-inset-sm) !important;
     border-color: var(--cst-border-strong) !important;
   }
 }
@@ -241,7 +239,7 @@
 
   .hover-btn,
   .hover-action {
-    transition: transform 0.17s cubic-bezier(0.22, 1, 0.36, 1),
+    transition: transform 0.17s var(--cst-ease-standard),
       box-shadow 0.18s ease,
       background-color 0.18s ease,
       border-color 0.18s ease,
@@ -312,7 +310,7 @@
    背景填充仅作用于透明/ghost 按钮，避免覆盖实色 accent 导致白字褪色。 */
 @layer utilities {
   :where(button:not(:disabled)) {
-    border-radius: var(--cst-radius);
+    border-radius: var(--cst-shape-sm);
     transition: background-color 160ms ease, background-image 160ms ease, border-color 160ms ease, color 160ms ease;
   }
   :where(button:not(:disabled):not([class*="bg-"])):active {
@@ -355,7 +353,7 @@
     transition: border-color 160ms ease;
   }
   .image-hover-frame__image {
-    transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition: transform 240ms var(--cst-ease-standard);
     will-change: transform;
   }
   @media (hover: hover) and (pointer: fine) {
@@ -374,11 +372,11 @@
     background-image: none !important;
   }
   .avatar-entry__avatar {
-    transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1), border-color 160ms ease, box-shadow 160ms ease;
+    transition: transform 160ms var(--cst-ease-standard), border-color 160ms ease, box-shadow 160ms ease;
     transform-origin: center;
   }
   .avatar-entry__avatar img {
-    transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition: transform 180ms var(--cst-ease-standard);
     will-change: transform;
   }
   @media (hover: hover) and (pointer: fine) {

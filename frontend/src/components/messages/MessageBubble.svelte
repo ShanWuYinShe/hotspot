@@ -20,11 +20,11 @@
 
 <div class="animate-fade-in flex {sent ? 'justify-end' : 'justify-start'}">
 		<div
-			class="{sent ? 'bg-accent-default shadow-[0_4px_14px_var(--cst-glow-accent)]' : 'bg-surface-primary shadow-neu-md border border-border-default'} max-w-[76%] px-3.5 py-2.5 {sent
-				? 'rounded-[var(--cst-shape-relaxed)_var(--cst-shape-compact)_var(--cst-shape-relaxed)_var(--cst-shape-relaxed)]'
-				: 'rounded-[var(--cst-shape-compact)_var(--cst-shape-relaxed)_var(--cst-shape-relaxed)_var(--cst-shape-relaxed)]'}"
+			class="{sent ? 'bg-accent-default shadow-glow-md' : 'bg-surface-primary shadow-raised-sm border border-border-default'} max-w-[76%] px-3.5 py-2.5 {sent
+				? 'rounded-[var(--cst-shape-md)_var(--cst-shape-sm)_var(--cst-shape-md)_var(--cst-shape-md)]'
+				: 'rounded-[var(--cst-shape-sm)_var(--cst-shape-md)_var(--cst-shape-md)_var(--cst-shape-md)]'}"
 		>
-			<p class="text-base leading-[1.55] {sent ? 'text-text-on-accent' : 'text-text-primary'}">
+			<p class="text-sm leading-card {sent ? 'text-text-on-accent' : 'text-text-primary'}">
 				{text}
 			</p>
 			<p

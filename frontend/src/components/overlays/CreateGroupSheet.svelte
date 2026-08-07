@@ -72,19 +72,19 @@
 		<div class="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
 			<div
 				class="flex items-center justify-center rounded-full bg-accent-default"
-				style="width:72px;height:72px;box-shadow:0 8px 24px var(--cst-glow-accent);"
+				style="width:72px;height:72px;box-shadow:var(--shadow-glow-lg);"
 			>
 				<Check class="size-8"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
 			</div>
 			<div>
 				<p class="text-xl font-semibold text-text-primary">群组已创建！</p>
-				<p class="text-base mt-1.5 text-text-secondary">「{name}」已成功创建，现在可以邀请好友加入了</p>
+				<p class="text-sm mt-1.5 text-text-secondary">「{name}」已成功创建，现在可以邀请好友加入了</p>
 			</div>
 			<button
 				type="button"
 				onclick={onClose}
-				class="hover-btn px-8 py-3 rounded-full outline-none bg-accent-default text-text-on-accent text-base font-medium"
-				style="box-shadow:0 6px 20px var(--cst-glow-accent);"
+				class="hover-btn px-8 py-3 rounded-full outline-none bg-accent-default text-text-on-accent text-sm font-medium"
+				style="box-shadow:var(--shadow-glow-lg);"
 			>
 				完成
 			</button>
@@ -95,8 +95,8 @@
 			<div class="flex justify-center">
 				<button
 					type="button"
-					class="hover-btn flex flex-col items-center justify-center gap-2 rounded-feature outline-none bg-surface-primary"
-					style="width:100%;height:110px;box-shadow:var(--shadow-neu-inset-sm);border:2px dashed var(--cst-border-default);"
+					class="hover-btn flex flex-col items-center justify-center gap-2 rounded-xl outline-none bg-surface-primary"
+					style="width:100%;height:110px;box-shadow:var(--shadow-inset-sm);border:2px dashed var(--cst-border-default);"
 				>
 					<Camera class="size-6.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.25} />
 					<span class="text-sm text-text-secondary">添加封面图片</span>
@@ -106,10 +106,10 @@
 			<!-- Group name -->
 			<div>
 				<label class="text-xs tracking-widest uppercase text-text-secondary" for="group-name">群组名称 *</label>
-				<div class="flex items-center gap-2.5 mt-1.5 px-4 rounded-control input-surface h-11.5" >
+				<div class="flex items-center gap-2.5 mt-1.5 px-4 rounded-md input-surface h-11.5" >
 					<input
 						id="group-name"
-						class="flex-1 bg-transparent outline-none text-text-primary text-base"
+						class="flex-1 bg-transparent outline-none text-text-primary text-sm"
 						placeholder="给你的群组起个名字…"
 						bind:value={name}
 						maxlength={30}
@@ -121,10 +121,10 @@
 			<!-- Description -->
 			<div>
 				<label class="text-xs tracking-widest uppercase text-text-secondary" for="group-desc">简介</label>
-				<div class="mt-1.5 px-4 py-3 rounded-control input-surface">
+				<div class="mt-1.5 px-4 py-3 rounded-md input-surface">
 					<textarea
 						id="group-desc"
-						class="w-full bg-transparent outline-none resize-none text-text-primary text-base min-h-18"
+						class="w-full bg-transparent outline-none resize-none text-text-primary text-sm min-h-18"
 						placeholder="描述一下这个群组的主题…"
 						bind:value={desc}
 						maxlength={150}
@@ -145,8 +145,8 @@
 							onclick={() => (category = cat)}
 							class="hover-btn px-3.5 py-1.5 rounded-full outline-none text-sm {category === cat ? 'bg-accent-default text-text-on-accent font-medium' : 'bg-surface-primary text-text-secondary'}"
 							style={category === cat
-								? 'box-shadow:0 3px 8px var(--cst-glow-accent);'
-								: 'box-shadow:var(--shadow-neu-xs);border:1px solid var(--cst-border-default);'}
+								? 'box-shadow:var(--shadow-glow-sm);'
+								: 'box-shadow:var(--shadow-raised-sm);border:1px solid var(--cst-border-default);'}
 						>
 							{cat}
 						</button>
@@ -156,8 +156,8 @@
 
 			<!-- Privacy toggle -->
 			<div
-				class="flex items-center justify-between px-4 py-3.5 rounded-relaxed bg-surface-primary"
-				style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--cst-border-default);"
+				class="flex items-center justify-between px-4 py-3.5 rounded-md bg-surface-primary"
+				style="box-shadow:var(--shadow-raised-md);border:1px solid var(--cst-border-default);"
 			>
 				<div class="flex items-center gap-3">
 					{#if isPrivate}
@@ -166,7 +166,7 @@
 						<Globe class="size-4.5"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
 					{/if}
 					<div>
-						<p class="text-base text-text-primary">{isPrivate ? '私密群组' : '公开群组'}</p>
+						<p class="text-sm text-text-primary">{isPrivate ? '私密群组' : '公开群组'}</p>
 						<p class="text-xs text-text-secondary">
 							{isPrivate ? '仅受邀请的人可加入' : '所有人都可以找到并加入'}
 						</p>
@@ -182,13 +182,13 @@
 
 			<!-- Approval toggle（requires_approval：审核通过后才算真正加入） -->
 			<div
-				class="flex items-center justify-between px-4 py-3.5 rounded-relaxed bg-surface-primary"
-				style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--cst-border-default);"
+				class="flex items-center justify-between px-4 py-3.5 rounded-md bg-surface-primary"
+				style="box-shadow:var(--shadow-raised-md);border:1px solid var(--cst-border-default);"
 			>
 				<div class="flex items-center gap-3">
-					<Check style="width:18px;height:18px;color:{requiresApproval ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};" strokeWidth={1.5} />
+					<Check class="size-4.5" style="color:{requiresApproval ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};" strokeWidth={1.5} />
 					<div>
-						<p class="text-base text-text-primary">新人需审核</p>
+						<p class="text-sm text-text-primary">新人需审核</p>
 						<p class="text-xs text-text-secondary">
 							{requiresApproval ? '申请需群主/管理员审核通过后加入' : '申请后直接加入'}
 						</p>
@@ -204,12 +204,12 @@
 
 			<!-- Location -->
 			<div
-				class="flex items-center gap-2.5 px-4 py-3 rounded-relaxed bg-surface-primary"
-				style="box-shadow:var(--shadow-neu-lg);border:1px solid var(--cst-border-default);"
+				class="flex items-center gap-2.5 px-4 py-3 rounded-md bg-surface-primary"
+				style="box-shadow:var(--shadow-raised-md);border:1px solid var(--cst-border-default);"
 			>
 				<MapPin class="size-4 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
 				<div class="flex-1 min-w-0">
-					<p class="text-base text-text-primary">{locationName || '自动定位中…'}</p>
+					<p class="text-sm text-text-primary">{locationName || '自动定位中…'}</p>
 					<p class="text-xs text-text-secondary">自动定位 — 可修改</p>
 				</div>
 				<ChevronRight class="size-3.25"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
@@ -224,8 +224,8 @@
 				type="button"
 				onclick={() => void handleCreate()}
 				disabled={!canCreate || creating}
-				class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-panel outline-none text-base font-medium {canCreate && !creating ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
-				style="box-shadow:{canCreate && !creating ? '0 6px 22px var(--cst-glow-accent)' : 'var(--shadow-neu-inset-sm)'};border:{canCreate && !creating ? 'none' : '1px solid var(--cst-border-default)'};transition:all 0.22s ease;cursor:{canCreate && !creating ? 'pointer' : 'not-allowed'};"
+				class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-lg outline-none text-sm font-medium {canCreate && !creating ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
+				style="box-shadow:{canCreate && !creating ? 'var(--shadow-glow-lg)' : 'var(--shadow-inset-sm)'};border:{canCreate && !creating ? 'none' : '1px solid var(--cst-border-default)'};transition:all 0.22s ease;cursor:{canCreate && !creating ? 'pointer' : 'not-allowed'};"
 			>
 		{creating ? '创建中…' : '创建群组'}
 	</button>

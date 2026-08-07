@@ -30,10 +30,10 @@
 		{/if}
 	</div>
 {:else if pin.type === 'moment' && pin.image}
-	<img src={pin.image} alt={pin.title || pin.name || ''} class="rounded-tight object-cover shrink-0" style="width:{size}px;height:{size}px;" />
+	<img src={pin.image} alt={pin.title || pin.name || ''} class="rounded-sm object-cover shrink-0" style="width:{size}px;height:{size}px;" />
 {:else}
 	<div
-		class="flex items-center justify-center rounded-small shrink-0"
+		class="flex items-center justify-center rounded-sm shrink-0"
 		style="width:{size}px;height:{size}px;background:{selected ? 'var(--cst-surface-primary)' : PIN_TONES[pin.type].bg};"
 	>
 		

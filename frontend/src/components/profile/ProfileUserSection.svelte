@@ -57,7 +57,7 @@
 		<header class="flex items-center justify-between py-4 border-b border-border-default" >
 			<div>
 				<div class="flex items-center gap-2.5">
-					<span class="text-text-primary text-base">{title}</span>
+					<span class="text-text-primary text-sm">{title}</span>
 					<span class="rounded-full bg-accent-default px-2 py-0.5 text-xs text-text-on-accent">
 						{count}{countSuffix}
 					</span>

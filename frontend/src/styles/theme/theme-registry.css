@@ -14,8 +14,6 @@
   --color-destructive: var(--cst-destructive);
   --color-border: var(--cst-border);
   --color-ring: var(--cst-ring);
-  --radius-sm: calc(var(--cst-radius) - 4px);
-  --radius-xl: calc(var(--cst-radius) + 4px);
 
   /* Semantic palette — enables bg-surface-primary, text-text-primary etc. */
   --color-surface-primary: var(--cst-surface-primary);
@@ -37,25 +35,23 @@
   --color-danger-bg: var(--cst-pr-danger-bg);
 
   /* Font size scale — Tailwind v4 字号命名空间必须是 --text-*（--font-size-* 不生成
-     utility，此前导致 text-xxs 全站失效）。严格对齐设计刻度：xxs=10 / xs=11 / sm=12 /
-     base=13 / md=14；text-lg 及以上沿用 Tailwind 默认（18/20/24/30/36）。
-     md=14 为界面强调字号（侧栏导航、大按钮、状态栏），填补 sm 与 lg 之间空档；
-     全站字号一律走 text-* 类，禁止 style 内联 font-size。 */
-  --text-xxs: 10px;
-  --text-xs: 11px;
-  --text-sm: 12px;
-  --text-base: 13px;
-  --text-md: 14px;
+     utility）。设计原则：少档位 + 强制收敛，禁止 1-2px 近邻档位并存（人眼分不清，
+     反而让界面碎、无节奏）。正文区压到 2 档（xs 辅助 / sm 正文），1px 差异一律归并。
+     全站字号一律走 text-* 类，禁止 style 内联 font-size（已登记例外见 AGENTS.md）。 */
+  --text-xxs: 10px;   /* 极小 uppercase 标签（eyebrow、分组标） */
+  --text-xs: 11px;    /* 辅助文字（副标题、计数、时间戳） */
+  --text-sm: 12px;    /* 正文（原 13px 归并到此，消除 1px 噪声） */
+  --text-md: 14px;    /* 强调正文（昵称、按钮主标、侧栏导航） */
+  /* text-lg(18) 及以上沿用 Tailwind 默认（18/20/24/30/36），用于标题层级 */
 
-  /* Border radius scale — Figma Make shape 系统（rounded-rectangle family） */
-  --radius-compact: var(--cst-shape-compact);
-  --radius-tight: var(--cst-shape-tight);
-  --radius-small: var(--cst-shape-small);
-  --radius-control: var(--cst-shape-control);
-  --radius-relaxed: var(--cst-shape-relaxed);
-  --radius-panel: var(--cst-shape-panel);
-  --radius-feature: var(--cst-shape-feature);
-  --radius-sheet: 1.75rem;
+  /* Border radius scale — 圆角刻度（rounded-rectangle family）。
+     设计原则：少档位强制收敛，消除 2px 近邻档位并存（原 compact/tight/small/control/
+     relaxed/panel/feature 7 档 → 4 档 sm/md/lg/xl）。sheet 保留独立档（弹层专用大圆角）。 */
+  --radius-sm: var(--cst-shape-sm);      /* 12px：小控件、卡片角标、pill */
+  --radius-md: var(--cst-shape-md);      /* 16px：按钮、输入框、中等卡片 */
+  --radius-lg: var(--cst-shape-lg);      /* 20px：面板、列表容器、大卡片 */
+  --radius-xl: var(--cst-shape-xl);      /* 24px：封面、hero 区、feature 卡 */
+  --radius-sheet: 1.75rem;               /* 28px：底部 sheet/弹层专用 */
 
   /* System rhythm — 动效 token 注册（ease 用字面量，避免 @theme inline 自引用） */
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
@@ -82,12 +78,35 @@
   --color-interactive-active: var(--cst-interactive-active);
   --color-content-inverse-secondary: var(--cst-content-inverse-secondary);
 
-  /* Neumorphic elevation shadows — 归一化手抄 box-shadow 分布
-     原值归到最近刻度（blur 6~8px 差异视觉无感知），生成 shadow-neu-* 工具类 */
-  --shadow-neu-xs: 3px 3px 7px var(--cst-elevation-shadow-dark), -3px -3px 7px var(--cst-elevation-shadow-light);
-  --shadow-neu-md: 4px 4px 9px var(--cst-elevation-shadow-dark), -4px -4px 9px var(--cst-elevation-shadow-light);
-  --shadow-neu-lg: 5px 5px 12px var(--cst-elevation-shadow-dark), -5px -5px 12px var(--cst-elevation-shadow-light);
-  --shadow-neu-xl: 6px 6px 14px var(--cst-elevation-shadow-dark), -6px -6px 14px var(--cst-elevation-shadow-light);
-  --shadow-neu-inset-xs: inset 2px 2px 5px var(--cst-elevation-shadow-dark), inset -2px -2px 5px var(--cst-elevation-shadow-light);
-  --shadow-neu-inset-sm: inset 4px 4px 10px var(--cst-elevation-shadow-dark), inset -4px -4px 10px var(--cst-elevation-shadow-light);
+  /* Raised elevation shadows — 双向凸起投影刻度（凸起控件/卡片/头像）。
+     消费 --cst-elevation-shadow-{dark,light} 原料：vibrant 显影（凸起立体）、
+     forest 透明（改由 border 表达层级，投影语言随主题切换）。
+     3 档强制收敛：sm=4/4/9（控件/按钮）、md=5/5/12（卡片）、lg=8/8/18（大卡片/封面）。 */
+  --shadow-raised-sm: 4px 4px 9px var(--cst-elevation-shadow-dark), -4px -4px 9px var(--cst-elevation-shadow-light);
+  --shadow-raised-md: 5px 5px 12px var(--cst-elevation-shadow-dark), -5px -5px 12px var(--cst-elevation-shadow-light);
+  --shadow-raised-lg: 8px 8px 18px var(--cst-elevation-shadow-dark), -8px -8px 18px var(--cst-elevation-shadow-light);
+
+  /* Inset elevation shadows — 双向凹陷投影刻度（输入框聚焦凹陷、选中态凹陷）。2 档。 */
+  --shadow-inset-sm: inset 5px 5px 10px var(--cst-elevation-shadow-dark), inset -5px -5px 10px var(--cst-elevation-shadow-light);
+  --shadow-inset-md: inset 8px 8px 16px var(--cst-elevation-shadow-dark), inset -8px -8px 16px var(--cst-elevation-shadow-light);
+
+  /* Accent glow shadows — accent 光晕刻度。3 档强制收敛：
+     sm=0/3/10、md=0/4/14、lg=0/6/18。禁止组件手写 shadow-[0_Npx...] 或内联 glow。 */
+  --shadow-glow-sm: 0 3px 10px var(--cst-glow-accent);
+  --shadow-glow-md: 0 4px 14px var(--cst-glow-accent);
+  --shadow-glow-lg: 0 6px 18px var(--cst-glow-accent);
+
+  /* Letter-spacing scale — 对齐 Figma eyebrow/分组标签/标题收紧，生成 tracking-* 类。
+     eyebrow=0.14em（uppercase 分组标签）、label=0.12em（在线/未读小标）、
+     field=0.08em（表单字段标签）、title=-0.01em（大标题微收紧）。
+     禁止 tracking-[Npx] arbitrary 类与内联 letter-spacing。 */
+  --tracking-eyebrow: 0.14em;
+  --tracking-label: 0.12em;
+  --tracking-field: 0.08em;
+  --tracking-title: -0.01em;
+
+  /* Line-height scale — 正文行高档位（1.55 卡片摘要 / 1.65 长文），生成 leading-* 类。
+     禁止 leading-[N] arbitrary 类。 */
+  --leading-card: 1.55;
+  --leading-copy: 1.65;
 }

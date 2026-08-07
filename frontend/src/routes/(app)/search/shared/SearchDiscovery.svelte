@@ -24,7 +24,7 @@
 <div class="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)]">
 	<!-- 最近搜索 -->
 	<section
-		class="rounded-panel border bg-surface-primary"
+		class="rounded-lg border bg-surface-primary"
 		style="border-color:var(--cst-border-default);"
 		aria-label="最近搜索"
 	>
@@ -62,7 +62,7 @@
 
 	<!-- 正在关注（热门搜索） -->
 	<section
-		class="rounded-panel border bg-surface-primary p-5"
+		class="rounded-lg border bg-surface-primary p-5"
 		style="border-color:var(--cst-border-default);"
 		aria-label="热门搜索"
 	>
@@ -88,7 +88,7 @@
 
 	<!-- 推荐话题（跨两列） -->
 	<section
-		class="rounded-panel border bg-surface-primary p-5 lg:col-span-2"
+		class="rounded-lg border bg-surface-primary p-5 lg:col-span-2"
 		style="border-color:var(--cst-border-default);"
 		aria-label="推荐话题"
 	>

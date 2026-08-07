@@ -16,7 +16,6 @@
   --cst-destructive: #d4183d;
   --cst-border: rgba(0, 0, 0, 0.1);
   --cst-ring: oklch(0.708 0 0);
-  --cst-radius: 0.625rem;
   --cst-font-weight-medium: 500;
   --cst-font-weight-normal: 400;
 }

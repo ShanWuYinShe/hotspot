@@ -71,18 +71,20 @@
 	</StandardPageLayout>
 {:else}
 	<!-- 总览模式（对齐 Figma Make ProfilePage：单列资料页） -->
-	<StandardPageLayout contentClassName="py-7 lg:py-8">
+	<!-- 总览模式（对齐 Figma Make ProfilePage：单列资料页）。资料总览页是长内容呼吸型布局，
+	     顶/底 padding 略大于标准列表页（pt-6 pb-8），属于样板 pt-4 pb-6 的可登记变体。 -->
+	<StandardPageLayout contentClassName="pt-6 pb-8">
 		<!-- 资料页眉 -->
 		<header class="flex items-start justify-between gap-6 border-b border-border-default pb-5">
 			<div>
-				<p class="text-xs font-medium uppercase tracking-[0.14em] text-accent-default">个人资料</p>
-				<h1 class="mt-2 text-2xl font-medium tracking-[-0.015em] text-text-primary">管理你的公开信息</h1>
+				<p class="text-xs font-medium uppercase tracking-eyebrow text-accent-default">个人资料</p>
+				<h1 class="mt-2 text-2xl font-medium tracking-title text-text-primary">管理你的公开信息</h1>
 				<p class="mt-1.5 text-sm text-text-secondary">这些资料会展示给访问你主页的人。</p>
 			</div>
 			<button
 				type="button"
 				onclick={() => void goto(ROUTES.meEdit)}
-				class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-control bg-surface-primary px-3.5 py-2.5 text-sm font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
+				class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-md bg-surface-primary px-3.5 py-2.5 text-sm font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
 			>
 				<Pencil class="size-4"  strokeWidth={1.8} />
 				编辑资料
@@ -91,14 +93,14 @@
 
 		<!-- 双栏：公开资料卡 + 资料状态 -->
 		<div class="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
-			<section class="rounded-panel border border-border-default surface-flat" aria-label="公开个人资料">
+			<section class="rounded-lg border border-border-default surface-flat" aria-label="公开个人资料">
 				<div class="flex items-start gap-5 p-6">
 					<div class="relative shrink-0">
 						<div class="overflow-hidden rounded-full border-2 border-surface-primary bg-surface-primary p-1">
 							{#if avatar}
 								<img src={avatar} alt={nickname || '用户'} class="rounded-full object-cover size-20.5"  />
 							{:else}
-								<span class="flex items-center justify-center text-text-secondary size-20.5 text-[32px]" >{(nickname || '?')[0]}</span>
+								<span class="flex items-center justify-center text-text-secondary size-20.5 text-3xl" >{(nickname || '?')[0]}</span>
 							{/if}
 						</div>
 						<button
@@ -112,7 +114,7 @@
 						</button>
 					</div>
 					<div class="min-w-0 pt-1">
-						<h2 class="text-2xl font-medium tracking-[-0.01em] text-text-primary">{nickname || '未设置昵称'}</h2>
+						<h2 class="text-2xl font-medium tracking-title text-text-primary">{nickname || '未设置昵称'}</h2>
 						<p class="mt-1 text-sm text-text-secondary">{handle}</p>
 						<p class="mt-4 max-w-115 text-sm leading-6 text-text-secondary">{bio || '这个人还没有填写简介。'}</p>
 						<p class="mt-3 flex items-center gap-1.5 text-xs text-text-secondary">
@@ -137,7 +139,7 @@
 			</section>
 
 			<!-- 资料状态 -->
-			<aside class="rounded-panel border border-border-default surface-flat p-5" aria-label="资料状态">
+			<aside class="rounded-lg border border-border-default surface-flat p-5" aria-label="资料状态">
 				<div class="flex items-center justify-between">
 					<h2 class="text-sm font-medium text-text-primary">资料状态</h2>
 					<ShieldCheck class="size-4"  style="color:var(--cst-accent-default)" strokeWidth={1.8} />
@@ -150,7 +152,7 @@
 				<button
 					type="button"
 					onclick={() => void goto(ROUTES.settings)}
-					class="hover-btn mt-5 flex w-full items-center justify-center gap-2 border border-border-default rounded-control bg-surface-primary py-2.5 text-xs font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
+					class="hover-btn mt-5 flex w-full items-center justify-center gap-2 border border-border-default rounded-md bg-surface-primary py-2.5 text-xs font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
 				>
 					账号与隐私设置
 					<ChevronRight class="size-3.5"  strokeWidth={1.8} />
@@ -159,7 +161,7 @@
 		</div>
 
 		<!-- 资料详情 -->
-		<section class="mt-5 rounded-panel border border-border-default surface-flat" aria-label="资料详情">
+		<section class="mt-5 rounded-lg border border-border-default surface-flat" aria-label="资料详情">
 			<div class="border-b border-border-default px-6 py-4">
 				<h2 class="text-sm font-medium text-text-primary">资料详情</h2>
 				<p class="mt-1 text-xs text-text-secondary">以下内容将显示在你的个人主页。</p>

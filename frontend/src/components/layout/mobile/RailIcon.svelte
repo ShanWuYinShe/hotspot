@@ -32,8 +32,8 @@
 
 <button
 	type="button"
-	class="relative flex flex-col items-center justify-center outline-none rounded-control"
-	style="width:52px;height:52px;gap:3px;box-shadow:{hoverShadow};transform:scale({hoverScale});transition:background 0.16s ease, box-shadow 0.2s cubic-bezier(0.22,1,0.36,1), transform 0.2s cubic-bezier(0.34,1.56,0.64,1);"
+	class="relative flex flex-col items-center justify-center outline-none rounded-md"
+	style="width:52px;height:52px;gap:3px;box-shadow:{hoverShadow};transform:scale({hoverScale});transition:background 0.16s ease, box-shadow 0.2s var(--cst-ease-standard), transform 0.2s var(--cst-ease-bounce);"
 	aria-label={label}
 	aria-current={isActive ? 'page' : undefined}
 	onclick={onClick}
@@ -42,14 +42,14 @@
 >
 	{#if isActive}
 		<div
-			style="position:absolute;inset:4px;border-radius:var(--cst-shape-small);background:var(--cst-accent-default);opacity:0.14;"
+			style="position:absolute;inset:4px;border-radius:var(--cst-shape-sm);background:var(--cst-accent-default);opacity:0.14;"
 		></div>
 	{/if}
 	<Icon
 		style="width:22px;height:22px;color:{iconColor};transition:color 0.18s ease;position:relative;z-index:1;"
 		strokeWidth={isActive ? 2.1 : showHover ? 1.75 : 1.5}
 	/>
-	<span class="text-xxs" style="line-height:1;color:{iconColor};font-weight:{isActive ? 600 : 400};position:relative;z-index:1;transition:color 0.18s ease;">
+	<span class="text-xxs {isActive ? 'font-semibold' : 'font-normal'}" style="line-height:1;color:{iconColor};position:relative;z-index:1;transition:color 0.18s ease;">
 		{label}
 	</span>
 	{#if isActive}
