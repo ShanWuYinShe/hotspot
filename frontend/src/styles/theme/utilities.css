@@ -303,24 +303,35 @@
   }
   .map-pulse-halo { animation: map-pulse 2.4s ease-out infinite; }
 
-/*── Interaction contract（对齐 Figma Make theme.css 885-1102）──────────
+  /* Loading spinner（全站统一加载指示器：圆形 border + accent 顶边旋转）。
+     消除各页 border-2 border-border-default border-t-accent-default animate-spin 重复。
+     用法：<div class="spinner size-7"></div> */
+  .spinner {
+    border: 2px solid var(--cst-border-default);
+    border-top-color: var(--cst-accent-default);
+    border-radius: 9999px;
+    animation: spinner-rotate 0.7s linear infinite;
+  }
+  @keyframes spinner-rotate { to { transform: rotate(360deg); } }
    可见填充是基线 hover 提示；渐变叠加层对内联/Tailwind 实色背景同样
    生效，主按钮与图标按钮获得一致反馈而不抹掉其语义底色。
    注意：带显式背景类（bg-*）或内联背景的按钮已自带语义底色，
-   背景填充仅作用于透明/ghost 按钮，避免覆盖实色 accent 导致白字褪色。 */
+   背景填充仅作用于透明/ghost 按钮，避免覆盖实色 accent 导致白字褪色。
+   排除：[data-tab-bar] 内的导航 Tab（走 .tab-item subtle hover，见下）、
+   .nav-tab 胶囊导航（自带交互态）。 */
 @layer utilities {
-  :where(button:not(:disabled)) {
+  :where(button:not(:disabled):not([data-tab-bar] *):not(.nav-tab)) {
     border-radius: var(--cst-shape-sm);
     transition: background-color 160ms ease, background-image 160ms ease, border-color 160ms ease, color 160ms ease;
   }
-  :where(button:not(:disabled):not([class*="bg-"])):active {
+  :where(button:not(:disabled):not([class*="bg-"]):not([data-tab-bar] *)):active {
     background-color: var(--cst-interactive-active-fill);
   }
   @media (hover: hover) and (pointer: fine) {
-    :where(button:not(:disabled)):hover {
+    :where(button:not(:disabled):not([data-tab-bar] *)):hover {
       background-image: linear-gradient(var(--cst-interactive-hover-overlay), var(--cst-interactive-hover-overlay)) !important;
     }
-    :where(button:not(:disabled):not([class*="bg-"])):hover {
+    :where(button:not(:disabled):not([class*="bg-"]):not([data-tab-bar] *)):hover {
       background-color: var(--cst-interactive-hover-fill);
     }
     :where(button[aria-current="page"], button[aria-pressed="true"], button[data-active="true"]):hover {
@@ -332,6 +343,14 @@
   .nav-tab {
     border-radius: 1.5rem;
     overflow: hidden;
+  }
+  /* TabBar 导航项：subtle hover（极轻背景 + 圆角），不触发全局实色按压填充。
+     激活态 hover 保持透明（由下划线指示选中）。 */
+  .tab-item { border-radius: var(--cst-shape-sm); }
+  @media (hover: hover) and (pointer: fine) {
+    .tab-item:not([aria-pressed="true"]):hover {
+      background-color: var(--cst-interactive-hover-fill);
+    }
   }
 }
 

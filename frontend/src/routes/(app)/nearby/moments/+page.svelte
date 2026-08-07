@@ -169,7 +169,7 @@ referencePoint = loc?.point ?? null;
 {#snippet feedState()}
 	{#if loading}
 		<div class="flex flex-col items-center gap-3 py-20">
-			<div class="rounded-full border-2 border-border-default border-t-accent-default animate-spin size-7" ></div>
+			<div class="spinner size-7" ></div>
 			<p class="text-text-secondary text-sm">加载附近动态…</p>
 		</div>
 	{:else}
