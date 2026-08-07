@@ -29,7 +29,8 @@
   --cst-pr-on-accent: #FFFFFF;
   --cst-pr-online: #3D7A55;
   --cst-pr-hot: #8E6F35;
-  --cst-pr-warning: #9A7A35;
+  /* warning 加深（#9A7A35→#8A6A2F）确保浅色下白字对比度 ≥4.5:1（原 4.03 不达标） */
+  --cst-pr-warning: #8A6A2F;
   --cst-pr-map-user: #3D7A55;
   --cst-pr-map-group: #638B46;
   --cst-pr-map-moment: #A57C38;
