@@ -132,7 +132,7 @@ src/routes/
   main + aside、个人主页双栏），不属于分栏需求。
 - **分栏页面**（桌面主区 + 右 rail）：`SplitPageLayout`
   （`components/layout/page/SplitPageLayout.svelte`），主区与 rail 滚动由组件统一管理，
-  footer 固定于主区底部。当前分栏页：通知、动态详情、用户详情、活动详情。
+  footer 固定于主区底部。当前分栏页：通知、动态详情、用户详情。
 - **临时豁免**：聊天页面（桌面端与移动端）因分栏/全屏会话布局特殊，可暂不套用；
   但页头、列表与正文的 gutter/padding 仍必须与样板一致（沿用 `PageHeader` +
   `ContentColumn` 的 `px-4` 布局，不得另起页面级横向 padding）。
@@ -263,8 +263,8 @@ theme/
     `--cst-interactive-hover-fill` / `--cst-interactive-active`
 - **数据层禁止携带颜色**：mock 数据/API 响应只返回语义标识（tag/type/category），
   不得包含 `color`/`bg` 等展示字段；视觉色由前端按语义键映射到 token
-  （参照 `notifications/shared/notification-data.ts` 的 `TYPE_CONFIG`、
-  events 页 `EVENT_TONE` 模式）
+  （参照 `notifications/shared/notification-data.ts` 的 `TYPE_CONFIG` 语义键
+  → token 映射模式）
 - **组件/数据层禁止 color-mix 表达式**：需要淡底/淡边框/光晕时引用主题预定义
   档位 token——每个语义色族在 themes/{vibrant,forest}.css 定义三档：
   `-bg`（淡底）、`-border`（淡边框）、`-glow`（光晕），如
