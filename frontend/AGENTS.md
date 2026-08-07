@@ -177,7 +177,10 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
    joined 行（默认 tone）**禁止叠加 rounded/border/shadow/ring 卡片类**——行间分隔
    由容器 divide 线承担，圆角外框由容器级（`ListContainer bordered` 唯一外框）或
    `tone="card"`（独立卡片容器 + gap 分隔）承担；调用方 className/style 只允许布局
-   类。三重防线：ESLint 自定义规则 `hotspot/no-list-item-card-classes`
+   类。**高亮形状由组件统一应用**：joined 行 hover/focus/pressed 时背景自带
+   `rounded-small`（12px，`--cst-shape-small`）圆角，非高亮保持直角连接行视觉；
+   圆角随背景填充出现并纳入 transition——调用方不得重复设置。三重防线：
+   ESLint 自定义规则 `hotspot/no-list-item-card-classes`
    （`eslint-rules/`，Svelte AST 级，IDE 即时报错）挂入 `bun run lint`/`bun run check`；
    仓库根 `lefthook.yml` pre-commit 提交前强制拦截；ListItem dev 模式运行时警告。
    后续需扩展同类组件级契约时，在 `eslint-rules/` 新增规则并在
@@ -242,10 +245,17 @@ theme/
   （无旧名兼容层）
 - **配色映射速查**（页面中如何选 token）：
   - 正文/辅助文字：`--cst-text-primary` / `--cst-text-secondary`
-  - 主题色背景上的文字：`--cst-text-on-accent`（按钮/选中态）
+  - 主题色背景上的文字：`--cst-text-on-accent`（按钮/选中态；**随明暗模式切换
+    深浅**——light 白配深色 accent、dark 深配浅色 accent）
   - 状态色背景上的文字：`--cst-text-on-status`（online/warning 底）
-  - 图片/遮罩上的反色文字：`--cst-content-inverse`（浅色底深字/深色底白字）
+  - 图片/遮罩上的反色文字：`--cst-content-inverse`（**恒白**，仅用于图片/遮罩/
+    深色 overlay 上，禁止用于 accent/status 实色背景——那些背景在 dark 下是浅色，
+    恒白文字会低对比隐形；正确做法见下条）
   - 图钉色背景上的文字：`--cst-content-on-marker`（地图标记）
+  - **accent 背景上的文字/图标一律用 `--cst-text-on-accent` 系列**（含次级文字
+    用 `opacity-70/80` 派生，参照 ListItem/ChatListItem selected 态）；图钉等
+    marker 色与 accent 同色（`--cst-pr-map-user` = `--cst-pr-accent`），在
+    selected 行内需换实色底衬托（参照 `PinMedia` 的 `selected` prop）
   - 遮罩/玻璃：`--cst-surface-scrim`（弹层遮罩）、
     `--cst-surface-media-scrim-strong`（照片遮罩）、
     `--cst-surface-cover-scrim`（封面渐变）、`--cst-surface-glass-badge`（玻璃徽章）
@@ -262,6 +272,11 @@ theme/
   color-mix 只允许出现在 themes/*.css 的 token 值内部（值即最终定义）
 - 新增组件时若缺语义 token，先在 themes/{vibrant,forest}.css 补 `--cst-*`
   定义（light + dark），不得在组件里写死色值绕过
+- **新增 token 必须同步注册 Tailwind 类**：需要以 `bg-*/text-*/border-*` 类名
+  消费的 token，必须在 `theme-registry.css` 的 `@theme inline` 补 `--color-*`
+  注册（如 `--color-text-on-status`）；只经 `var()` 内联引用的才可跳过。
+  已踩坑：`--cst-text-on-status` 未注册导致 `text-cst-text-on-status` 死类名
+  静默失效（Tailwind 无此前缀，类名不生成任何样式，svelte-check 不报错）
 - **图钉 SVG 资源（assets/markers/*.svg）**：主题色 fill/stroke 一律用
   `currentColor`，由 `location-shared.ts` 的 `markerSvg()` 以
   `style="color:var(--cst-marker-*)"` 染色，随主题/明暗变化；资源内仅保留
@@ -275,3 +290,23 @@ theme/
   类（主题差异由 themes/*.css 的 `@layer utilities` 覆盖承载），避免 JS 状态动画
 - 主题专属组件覆盖（`.vibrant .foo` / `.forest .foo`）统一放对应 themes/*.css 的
   `@layer utilities` 块，utilities.css 只保留与主题无关的通用类
+
+## 样式自查清单（新增/修改样式后逐条过）
+
+1. **圆角**：控件/卡片圆角一律用 `rounded-*` 类（`--radius-*` 档位：
+   compact 8 / tight 10 / small 12 / control 16 / relaxed 18 / panel 20 /
+   feature 24 / sheet 28px）或 `var(--cst-shape-*)`；禁止 `rounded-[13px]` 等
+   任意值、禁止 style 内硬编码 `border-radius:20px`。例外仅限物理形状细件
+   （开关半高圆角、状态条 1-3px 指示条、拖拽把手）
+2. **颜色**：组件内禁止 hex/rgba 字面量（数据层同样禁止）；arbitrary 类
+   （`bg-[#...]`/`shadow-[...]`）禁止含色值
+3. **accent/status 实色背景上的内容**：文字/图标必须用对应 `on-*` token
+   （`text-text-on-accent`/`text-text-on-status`/`text-content-on-marker`），
+   禁止恒白 `content-inverse`；选中行内若有与 accent 同色的 marker 图标需
+   实色底衬托（PinMedia `selected`）
+4. **列表行**：交互行一律走 `ListItem`（高亮圆角/背景/反色由组件统一处理），
+   不在页面里自写 hover 背景或叠行级卡片类
+5. **token 注册**：新 token 若需类名消费，同步补 `theme-registry.css` 注册，
+   并核对类名不带 `cst-` 前缀（`text-text-on-status` 而非 `text-cst-...`）
+6. **hover/tap 类**：交互反馈用既有工具类（`hover-btn`/`hover-bg`/`scale-btn`/
+   `tap-*`/`header-action`/`surface-ghost`/`card-hover`），不新发明交互类
