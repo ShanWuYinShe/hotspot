@@ -317,32 +317,32 @@
    注意：带显式背景类（bg-*）或内联背景的按钮已自带语义底色，
    背景填充仅作用于透明/ghost 按钮，避免覆盖实色 accent 导致白字褪色。
    排除：[data-tab-bar] 内的导航 Tab（走 .tab-item subtle hover，见下）、
-   .nav-tab 胶囊导航（自带交互态）。 */
-@layer utilities {
-  :where(button:not(:disabled):not([data-tab-bar] *):not(.nav-tab)) {
-    border-radius: var(--cst-shape-sm);
-    transition: background-color 160ms var(--cst-ease-standard), background-image 160ms var(--cst-ease-standard), border-color 160ms var(--cst-ease-standard), color 160ms var(--cst-ease-standard);
+   .nav-tab 胶囊导航（自带交互态）。
+   ★ 必须是无 layer 规则：Tailwind v4 的 @layer utilities 内规则优先级不足，
+   带 !important 的 hover 渐变/背景会被同层 utility 压过（实测全部失效）。 */
+:where(button:not(:disabled):not([data-tab-bar] *):not(.nav-tab)) {
+  border-radius: var(--cst-shape-sm);
+  transition: background-color 160ms var(--cst-ease-standard), background-image 160ms var(--cst-ease-standard), border-color 160ms var(--cst-ease-standard), color 160ms var(--cst-ease-standard);
+}
+:where(button:not(:disabled):not([class*="bg-"]):not([data-tab-bar] *)):active {
+  background-color: var(--cst-interactive-active-fill);
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(button:not(:disabled):not([data-tab-bar] *)):hover {
+    background-image: linear-gradient(var(--cst-interactive-hover-overlay), var(--cst-interactive-hover-overlay)) !important;
   }
-  :where(button:not(:disabled):not([class*="bg-"]):not([data-tab-bar] *)):active {
-    background-color: var(--cst-interactive-active-fill);
+  :where(button:not(:disabled):not([class*="bg-"]):not([data-tab-bar] *)):hover {
+    background-color: var(--cst-interactive-hover-fill);
   }
-  @media (hover: hover) and (pointer: fine) {
-    :where(button:not(:disabled):not([data-tab-bar] *)):hover {
-      background-image: linear-gradient(var(--cst-interactive-hover-overlay), var(--cst-interactive-hover-overlay)) !important;
-    }
-    :where(button:not(:disabled):not([class*="bg-"]):not([data-tab-bar] *)):hover {
-      background-color: var(--cst-interactive-hover-fill);
-    }
-    :where(button[aria-current="page"], button[aria-pressed="true"], button[data-active="true"]):hover {
-      background-color: transparent;
-      background-image: none !important;
-    }
+  :where(button[aria-current="page"], button[aria-pressed="true"], button[data-active="true"]):hover {
+    background-color: transparent;
+    background-image: none !important;
   }
-  /* 紧凑导航控件需要真胶囊形，而非通用控件圆角 */
-  .nav-tab {
-    border-radius: 1.5rem;
-    overflow: hidden;
-  }
+}
+/* 紧凑导航控件需要真胶囊形，而非通用控件圆角 */
+.nav-tab {
+  border-radius: 1.5rem;
+  overflow: hidden;
 }
 
 /*── Shared image-first interaction ─────────────────────────────────────
