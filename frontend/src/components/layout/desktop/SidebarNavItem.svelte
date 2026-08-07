@@ -28,7 +28,7 @@
 <button
 	type="button"
 	class="tap-985 relative flex h-10 outline-none {collapsed ? 'w-10 self-center items-center justify-center rounded-sm' : 'w-full items-center gap-3 rounded-sm px-3 text-left'}"
-	style="background:{isActive ? 'var(--cst-accent-default)' : hoverBg};color:{isActive ? 'var(--cst-content-on-accent)' : showHover ? 'var(--cst-text-primary)' : 'var(--cst-text-secondary)'};box-shadow:{isActive ? 'var(--cst-elevation-navigation-active)' : 'none'};transition:background 0.16s ease, color 0.16s ease, box-shadow 0.2s var(--cst-ease-standard);"
+	style="background:{isActive ? 'var(--cst-accent-default)' : hoverBg};color:{isActive ? 'var(--cst-content-on-accent)' : showHover ? 'var(--cst-text-primary)' : 'var(--cst-text-secondary)'};box-shadow:{isActive ? 'var(--cst-elevation-navigation-active)' : 'none'};transition:background 0.16s var(--cst-ease-standard), color 0.16s var(--cst-ease-standard), box-shadow 0.2s var(--cst-ease-standard), transform 0.10s var(--cst-ease-standard);"
 	aria-current={isActive ? 'page' : undefined}
 	data-active={isActive ? 'true' : undefined}
 	aria-label={item.label}
