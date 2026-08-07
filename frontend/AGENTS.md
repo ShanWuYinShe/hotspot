@@ -160,7 +160,9 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
    PageHeader/ContentColumn/页面级滚动/页面级横向 padding（契约见对应组件注释，
    聊天页豁免见上）。gutter 一律由 `ContentColumn` 的 `px-[var(--cst-page-gutter)]` 管理。
 2. **页头**：一律用 `PageHeader`（`sticky` 默认开），`onBack` 在非桌面自动显示返回
-   按钮；`below` 只放搜索框与 Tab 栏等 header 附属区。
+   按钮；`below` 只放搜索框与 Tab 栏等 header 附属区。**below 首元素必须带
+   上间距**（`mt-3`，与样板 nearby/moments 一致）——TabBar/搜索框直接贴 title
+   属于间距错误；below 内多行元素之间用 `mt-3` 分隔。
 3. **分类 Tab 栏**：下划线样式（容器 `border-bottom` + 激活项底部 2px 指示条 +
    `aria-pressed`），放 `below` snippet 内随 header 吸顶；tab 状态可存 URL query
    （如 `?tab=`）以支持深链，切换用 `goto` 更新 URL。

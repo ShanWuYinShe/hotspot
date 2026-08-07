@@ -56,7 +56,10 @@
 			<span class="text-text-secondary text-xs">{activeCount} 人</span>
 		{/snippet}
 		{#snippet below()}
-			{@render relTabBar()}
+			<!-- TabBar 作为 below 首元素需带上间距（对齐 nearby/moments 样板 below 首元素 mt-3） -->
+			<div class="mt-3">
+				{@render relTabBar()}
+			</div>
 		{/snippet}
 	</PageHeader>
 {/snippet}
