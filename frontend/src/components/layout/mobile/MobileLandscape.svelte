@@ -2,7 +2,7 @@
 	import type { Component, Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { MapPin, Compass, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
+	import { MapPin, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
@@ -15,8 +15,6 @@
 
 	const NAV_ITEMS: { path: string; icon: Component; label: string }[] = [
 		{ path: ROUTES.home, icon: MapPin, label: '附近' },
-		// 平板/移动端无桌面侧栏空间放多个 nearby 菜单：聚合为「发现」页
-		{ path: ROUTES.discover, icon: Compass, label: '发现' },
 		{ path: ROUTES.messages, icon: MessageCircle, label: '消息' },
 		{ path: ROUTES.me, icon: CircleUser, label: '我的' }
 	];
@@ -36,7 +34,7 @@
 			class="shrink-0 flex flex-col items-center"
 			style="width:64px;padding-top:max(env(safe-area-inset-top, 8px), 8px);padding-bottom:max(env(safe-area-inset-bottom, 8px), 8px);padding-left:max(env(safe-area-inset-left, 0px), 0px);gap:8px;border-right:1px solid var(--cst-border-default);background-color:var(--cst-surface-primary);"
 		>
-			{#each NAV_ITEMS.slice(0, 2) as item}
+			{#each NAV_ITEMS.slice(0, 1) as item}
 				<RailIcon
 					Icon={item.icon}
 					label={item.label}
@@ -59,7 +57,7 @@
 				{/if}
 			</button>
 
-			{#each NAV_ITEMS.slice(2, 4) as item}
+			{#each NAV_ITEMS.slice(1, 3) as item}
 				<RailIcon
 					Icon={item.icon}
 					label={item.label}

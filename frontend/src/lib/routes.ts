@@ -29,8 +29,6 @@ export const ME_SECTION_PATHS: Record<ProfileSection, string> = {
 export const ROUTES = {
   home: "/",
   login: "/login",
-  /** 发现聚合页（平板/移动端顶级导航；聚合附近的人/群组/动态与搜索入口）。 */
-  discover: "/discover",
   messages: "/messages",
   me: "/me",
   meEdit: "/me/edit",
@@ -74,7 +72,7 @@ export function isSubPagePath(pathname: string) {
   return DETAIL_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
-/** Consistent active state for the four primary mobile/tablet navigation targets. */
+/** Consistent active state for the three primary mobile/tablet navigation targets. */
 export function isPrimaryRouteActive(pathname: string, target: string) {
   if (target === ROUTES.home) return pathname === ROUTES.home;
   return (

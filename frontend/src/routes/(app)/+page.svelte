@@ -5,10 +5,10 @@
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import HeroStats from '@/components/home/HeroStats.svelte';
 	import { type NearbyUser } from '@/components/home/nearby-users';
-	import { type Activity } from '@/components/home/activity-data';
+	import type { MomentItem } from '@/api/types';
 	import { fetchHomeFeed } from '@/components/home/home-feed';
 	import ListContainer from '@/components/list/ListContainer.svelte';
-	import ActivityRow from '@/components/home/ActivityRow.svelte';
+	import MomentRow from '@/components/home/ActivityRow.svelte';
 	import NearbyUserRows from '@/components/home/NearbyUserRows.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -16,14 +16,14 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 
-	// 首页「附近」：Hero 统计 + 话题活动 + 群组轮播 + 推荐列表。
+	// 首页「附近」：Hero 统计 + 附近动态 + 群组轮播 + 推荐列表。
 	// 三端统一 PageHeader（title + 额外信息 + trailing 工具区）+ 内容区：
 	// 桌面/平板：左侧 340px 摘要栏 + 右侧完整用户列表（2 栏 grid）。
 	// 移动：单栏堆叠。
 
 	// ── 数据获取（Promise.all + cancelled 竞态）────────
 	let nearbyUsers = $state<NearbyUser[]>([]);
-	let activities = $state<Activity[]>([]);
+	let moments = $state<MomentItem[]>([]);
 	let nearbyGroups = $state<NearbyGroup[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
@@ -41,7 +41,7 @@
 				error = null;
 				const feed = await fetchHomeFeed(defaultLocation?.point);
 				if (cancelled) return;
-				activities = feed.activities;
+				moments = feed.moments;
 				nearbyUsers = feed.users;
 				nearbyGroups = feed.groups;
 			} catch (e) {
@@ -65,16 +65,16 @@
 	const onlineCount = $derived(nearbyUsers.filter((u) => u.isOnline).length);
 	const heroStats = $derived({
 		nearby: String(nearbyUsers.length),
-		active: String(activities.length),
+		active: String(moments.length),
 		online: String(onlineCount)
 	});
 
 </script>
 
-{#snippet activityRows(items: Activity[], onClick: (id: number) => void)}
+{#snippet momentRows(items: MomentItem[], onClick: (momentId: string) => void)}
 	<ListContainer bordered>
-		{#each items as item (item.id)}
-			<ActivityRow item={item} onClick={() => onClick(item.id)} />
+		{#each items as moment, i (moment.moment_id)}
+			<MomentRow {moment} index={i} onClick={() => onClick(moment.moment_id)} />
 		{/each}
 	</ListContainer>
 {/snippet}
@@ -82,10 +82,10 @@
 {#snippet homeContent()}
 	<!-- 三端共用的业务组件（只写一次）。首页为大纲页：列表限长 + 「更多」链接导航到专区 -->
 	<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={defaultLocation?.location_name ?? ''} />
-	<div>
-		<SectionHead title="附近活动" action="更多" onAction={() => void goto(ROUTES.nearbyMoments)} />
-		{@render activityRows(activities.slice(0, 3), (id) => void goto(ROUTES.event(id)))}
-	</div>
+		<div>
+			<SectionHead title="附近活动" action="更多" onAction={() => void goto(ROUTES.nearbyMoments)} />
+			{@render momentRows(moments.slice(0, 3), (id) => void goto(ROUTES.moment(id)))}
+		</div>
 	<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
 	<div>
 		<SectionHead title="人物推荐" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
@@ -151,10 +151,10 @@
 			<!-- Left: hero + activity + groups (340px) -->
 			<div class="flex flex-col gap-6 border-r border-border-default pr-6">
 				<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={defaultLocation?.location_name ?? ''} />
-				<div>
-					<SectionHead title="附近活动" />
-					{@render activityRows(activities, (id) => void goto(ROUTES.event(id)))}
-				</div>
+					<div>
+						<SectionHead title="附近活动" />
+						{@render momentRows(moments, (id) => void goto(ROUTES.moment(id)))}
+					</div>
 				<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
 			</div>
 

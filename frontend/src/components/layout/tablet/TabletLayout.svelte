@@ -2,7 +2,7 @@
 	import type { Component, Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { MapPin, Compass, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
+	import { MapPin, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
 	import * as Dialog from '@/components/ui/dialog';
@@ -21,8 +21,6 @@
 
 	const NAV_ITEMS: { path: string; icon: Component; label: string }[] = [
 		{ path: ROUTES.home, icon: MapPin, label: '附近' },
-		// 平板/移动端无桌面侧栏空间放多个 nearby 菜单：聚合为「发现」页
-		{ path: ROUTES.discover, icon: Compass, label: '发现' },
 		{ path: ROUTES.messages, icon: MessageCircle, label: '消息' },
 		{ path: ROUTES.me, icon: CircleUser, label: '我的' }
 	];
@@ -60,17 +58,20 @@
 		>
 			<div
 				class="flex items-center"
-				style="width:100%;max-width:{isWide ? 680 : 'none'};border-radius:{isWide ? 32 : 0}px;background:var(--cst-surface-nav-glass);backdrop-filter:blur(28px) saturate(1.8);-webkit-backdrop-filter:blur(28px) saturate(1.8);box-shadow:{isWide ? 'var(--cst-elevation-nav)' : 'none'};border:{isWide ? '1px solid var(--cst-border-nav-glass)' : 'none'};padding:{isWide ? '8px 14px' : '8px max(32px, env(safe-area-inset-left, 32px)) max(14px, env(safe-area-inset-bottom, 14px))'};gap:{isWide ? 6 : 14}px;"
+				style="width:100%;max-width:{isWide ? 680 : 'none'};border-radius:{isWide ? 'var(--radius-sheet)' : 0};background:var(--cst-surface-nav-glass);backdrop-filter:blur(28px) saturate(1.8);-webkit-backdrop-filter:blur(28px) saturate(1.8);box-shadow:{isWide ? 'var(--cst-elevation-nav)' : 'none'};border:{isWide ? '1px solid var(--cst-border-nav-glass)' : 'none'};padding:{isWide ? '8px 14px' : '8px max(32px, env(safe-area-inset-left, 32px)) max(14px, env(safe-area-inset-bottom, 14px))'};gap:{isWide ? 6 : 14}px;"
 			>
-				{#each NAV_ITEMS.slice(0, 2) as item}
-					<NavTab
-						label={item.label}
-						iconSize={24}
-						Icon={item.icon}
-						isActive={isPrimaryRouteActive(pathname, item.path)}
-						onClick={() => void goto(item.path)}
-					/>
-				{/each}
+				<!-- 左侧：附近（flex-1 与右侧对称，保持 FAB 居中） -->
+				<div class="flex flex-1 justify-center">
+					{#each NAV_ITEMS.slice(0, 1) as item}
+						<NavTab
+							label={item.label}
+							iconSize={24}
+							Icon={item.icon}
+							isActive={isPrimaryRouteActive(pathname, item.path)}
+							onClick={() => goto(item.path)}
+						/>
+					{/each}
+				</div>
 
 				<!-- Centre FAB -->
 				<div class="flex items-center justify-center shrink-0 w-16" >
@@ -89,15 +90,18 @@
 					</button>
 				</div>
 
-				{#each NAV_ITEMS.slice(2, 4) as item}
-					<NavTab
-						label={item.label}
-						iconSize={24}
-						Icon={item.icon}
-						isActive={isPrimaryRouteActive(pathname, item.path)}
-						onClick={() => void goto(item.path)}
-					/>
-				{/each}
+				<!-- 右侧：消息 + 我的（flex-1 与左侧对称） -->
+				<div class="flex flex-1 justify-center gap-6">
+					{#each NAV_ITEMS.slice(1, 3) as item}
+						<NavTab
+							label={item.label}
+							iconSize={24}
+							Icon={item.icon}
+							isActive={isPrimaryRouteActive(pathname, item.path)}
+							onClick={() => goto(item.path)}
+						/>
+					{/each}
+				</div>
 			</div>
 		</nav>
 	{/if}

@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { MapPin, Compass, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
+	import { MapPin, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
 	import { cn } from '@/lib/utils';
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
 	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
@@ -19,8 +19,6 @@
 
 	const NAV_ITEMS: { path: string; icon: typeof MapPin; label: string }[] = [
 		{ path: ROUTES.home, icon: MapPin, label: '附近' },
-		// 平板/移动端无桌面侧栏空间放多个 nearby 菜单：聚合为「发现」页
-		{ path: ROUTES.discover, icon: Compass, label: '发现' },
 		{ path: ROUTES.messages, icon: MessageCircle, label: '消息' },
 		{ path: ROUTES.me, icon: CircleUser, label: '我的' }
 	];
@@ -53,17 +51,20 @@
 				style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(24px) saturate(1.8);-webkit-backdrop-filter:blur(24px) saturate(1.8);border-top:1px solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);transition:background 0.4s ease, border-color 0.4s ease;"
 			>
 				<div
-					class="flex items-center justify-between px-2"
+					class="flex items-center px-2"
 					style="padding-top:8px;padding-bottom:max(20px, env(safe-area-inset-bottom, 20px));"
 				>
-					{#each NAV_ITEMS.slice(0, 2) as item}
-						<NavTab
-							label={item.label}
-							isActive={isPrimaryRouteActive(pathname, item.path)}
-							onClick={() => goto(item.path)}
-							Icon={item.icon}
-						/>
-					{/each}
+					<!-- 左侧：附近（flex-1 与右侧对称，保持 FAB 居中） -->
+					<div class="flex flex-1 justify-center">
+						{#each NAV_ITEMS.slice(0, 1) as item}
+							<NavTab
+								label={item.label}
+								isActive={isPrimaryRouteActive(pathname, item.path)}
+								onClick={() => goto(item.path)}
+								Icon={item.icon}
+							/>
+						{/each}
+					</div>
 
 					<!-- Centre FAB -->
 					<div class="flex flex-col items-center w-17" >
@@ -82,14 +83,17 @@
 						</button>
 					</div>
 
-					{#each NAV_ITEMS.slice(2, 4) as item}
-						<NavTab
-							label={item.label}
-							isActive={isPrimaryRouteActive(pathname, item.path)}
-							onClick={() => goto(item.path)}
-							Icon={item.icon}
-						/>
-					{/each}
+					<!-- 右侧：消息 + 我的（flex-1 与左侧对称） -->
+					<div class="flex flex-1 justify-center gap-4">
+						{#each NAV_ITEMS.slice(1, 3) as item}
+							<NavTab
+								label={item.label}
+								isActive={isPrimaryRouteActive(pathname, item.path)}
+								onClick={() => goto(item.path)}
+								Icon={item.icon}
+							/>
+						{/each}
+					</div>
 				</div>
 			</nav>
 		{/if}

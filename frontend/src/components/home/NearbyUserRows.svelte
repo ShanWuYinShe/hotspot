@@ -4,8 +4,8 @@
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 
-	// 首页/发现页共用的「附近用户」行列表：ListContainer + UserCardRow
-	// （在线角标 + #tag · 距离副标题 + 关注按钮），两页一致避免重复实现。
+	// 首页的「附近用户」行列表：ListContainer + UserCardRow
+	// （在线角标 + #tag · 距离副标题 + 关注按钮）。
 
 	let {
 		users,
