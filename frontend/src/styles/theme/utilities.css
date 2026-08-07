@@ -44,7 +44,7 @@
     background-color: var(--cst-surface-primary);
     box-shadow: var(--shadow-raised-sm);
     border: 1px solid var(--cst-border-default);
-    transition: box-shadow 0.2s var(--cst-ease-standard), border-color 0.2s ease;
+    transition: box-shadow 0.2s var(--cst-ease-standard), border-color 0.2s var(--cst-ease-standard);
   }
   .input-surface:focus-within {
     box-shadow: var(--shadow-inset-sm);
@@ -86,7 +86,7 @@
   .app-list-row--standard { min-height: 4.125rem; padding: 0.75rem 0.875rem; }
 
   .circle-hover {
-    transition: transform 0.16s var(--cst-ease-standard), box-shadow 0.20s var(--cst-ease-standard), border-color 0.16s ease;
+    transition: transform 0.16s var(--cst-ease-standard), box-shadow 0.20s var(--cst-ease-standard), border-color 0.16s var(--cst-ease-standard);
   }
   .circle-hover:active { transform: scale(0.94); }
   @media (hover: hover) and (pointer: fine) {
@@ -134,7 +134,7 @@
   .surface-flat {
     background-color: var(--cst-surface-primary);
     box-shadow: 0 0 0 1px var(--cst-border-default);
-    transition: box-shadow 0.18s ease, background-color 0.18s ease;
+    transition: box-shadow 0.18s var(--cst-ease-standard), background-color 0.18s var(--cst-ease-standard);
   }
   @media (hover: hover) and (pointer: fine) {
     .surface-flat:hover {
@@ -155,7 +155,7 @@
   .surface-ghost {
     background-color: transparent;
     border: 1px solid transparent;
-    transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+    transition: background-color 0.16s var(--cst-ease-standard), border-color 0.16s var(--cst-ease-standard), color 0.16s var(--cst-ease-standard);
   }
   .surface-ghost[aria-pressed="true"] {
     background-color: var(--cst-accent-soft);
@@ -239,10 +239,10 @@
   .hover-btn,
   .hover-action {
     transition: transform 0.17s var(--cst-ease-standard),
-      box-shadow 0.18s ease,
-      background-color 0.18s ease,
-      border-color 0.18s ease,
-      color 0.18s ease;
+      box-shadow 0.18s var(--cst-ease-standard),
+      background-color 0.18s var(--cst-ease-standard),
+      border-color 0.18s var(--cst-ease-standard),
+      color 0.18s var(--cst-ease-standard);
     will-change: transform;
   }
 
@@ -288,7 +288,7 @@
   /* 悬停背景（bgHover）：直接复用 --interactive-hover-fill token（= --pr-hover，
      每主题/暗色已精确定义：vibrant 10%/15%、forest 12%/18%），与全局 button hover
      填充一致，避免硬编码 color-mix 与 token 漂移。仅 fine pointer 生效。 */
-  .hover-bg { transition: background-color 0.18s ease; }
+  .hover-bg { transition: background-color 0.18s var(--cst-ease-standard); }
   @media (hover: hover) and (pointer: fine) {
     .hover-bg:hover { background-color: var(--cst-interactive-hover-fill); }
   }
@@ -321,7 +321,7 @@
 @layer utilities {
   :where(button:not(:disabled):not([data-tab-bar] *):not(.nav-tab)) {
     border-radius: var(--cst-shape-sm);
-    transition: background-color 160ms ease, background-image 160ms ease, border-color 160ms ease, color 160ms ease;
+    transition: background-color 160ms var(--cst-ease-standard), background-image 160ms var(--cst-ease-standard), border-color 160ms var(--cst-ease-standard), color 160ms var(--cst-ease-standard);
   }
   :where(button:not(:disabled):not([class*="bg-"]):not([data-tab-bar] *)):active {
     background-color: var(--cst-interactive-active-fill);
@@ -360,7 +360,7 @@
     pointer-events: none;
     border: 2px solid transparent;
     border-radius: inherit;
-    transition: border-color 160ms ease;
+    transition: border-color 160ms var(--cst-ease-standard);
   }
   .image-hover-frame__image {
     transition: transform 240ms var(--cst-ease-standard);
@@ -382,7 +382,7 @@
     background-image: none !important;
   }
   .avatar-entry__avatar {
-    transition: transform 160ms var(--cst-ease-standard), border-color 160ms ease, box-shadow 160ms ease;
+    transition: transform 160ms var(--cst-ease-standard), border-color 160ms var(--cst-ease-standard), box-shadow 160ms var(--cst-ease-standard);
     transform-origin: center;
   }
   .avatar-entry__avatar img {

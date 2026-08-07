@@ -39,13 +39,13 @@
 
 	<div style="display:flex;align-items:center;justify-content:center;position:relative;z-index:1;">
 		<Icon
-			style="width:{iconSize}px;height:{iconSize}px;color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color 0.22s ease;"
+			style="width:{iconSize}px;height:{iconSize}px;color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color 0.22s var(--cst-ease-standard);"
 			strokeWidth={isActive ? 2.1 : 1.5}
 		/>
 	</div>
 	<span
 		class="text-xs leading-none {isActive ? 'font-semibold' : 'font-normal'}"
-		style="color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color 0.22s ease;position:relative;z-index:1;"
+		style="color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color 0.22s var(--cst-ease-standard);position:relative;z-index:1;"
 	>
 		{label}
 	</span>

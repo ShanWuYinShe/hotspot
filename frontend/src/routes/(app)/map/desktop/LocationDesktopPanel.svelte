@@ -132,7 +132,7 @@ locationName = loc?.location_name ?? '';
 				</div>
 				<div class="flex-1">
 					<p class="text-sm" >当前位置</p>
-					<p class="text-xs mt-px"  style="opacity:0.8">{locationName || '自动定位'}</p>
+					<p class="text-xs mt-px opacity-80">{locationName || '自动定位'}</p>
 				</div>
 				<div class="bg-status-online size-2 shrink-0"  style="border-radius:50%;box-shadow:0 0 6px var(--cst-status-online)"></div>
 			</div>
@@ -183,7 +183,7 @@ locationName = loc?.location_name ?? '';
 				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
-					<MapPin class="size-5.5"  style="color:var(--cst-text-secondary);opacity:0.3" strokeWidth={1} />
+					<MapPin class="size-5.5 opacity-30" style="color:var(--cst-text-secondary)" strokeWidth={1} />
 					<p class="text-text-secondary text-xs">附近暂无内容，放大或移动地图后刷新</p>
 				</div>
 			{/if}
@@ -221,7 +221,7 @@ locationName = loc?.location_name ?? '';
 				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
-					<Star class="size-5.5"  style="color:var(--cst-text-secondary);opacity:0.3" strokeWidth={1} />
+					<Star class="size-5.5 opacity-30" style="color:var(--cst-text-secondary)" strokeWidth={1} />
 					<p class="text-text-secondary text-xs">暂无热门地点</p>
 				</div>
 			{/if}
@@ -255,7 +255,7 @@ locationName = loc?.location_name ?? '';
 				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
-					<Clock class="size-5.5"  style="color:var(--cst-text-secondary);opacity:0.3" strokeWidth={1} />
+					<Clock class="size-5.5 opacity-30" style="color:var(--cst-text-secondary)" strokeWidth={1} />
 					<p class="text-text-secondary text-xs">暂无最近记录</p>
 				</div>
 			{/if}

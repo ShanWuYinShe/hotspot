@@ -46,10 +46,10 @@
 		></div>
 	{/if}
 	<Icon
-		style="width:22px;height:22px;color:{iconColor};transition:color 0.18s ease;position:relative;z-index:1;"
+		style="width:22px;height:22px;color:{iconColor};transition:color 0.18s var(--cst-ease-standard);position:relative;z-index:1;"
 		strokeWidth={isActive ? 2.1 : showHover ? 1.75 : 1.5}
 	/>
-	<span class="text-xxs leading-none {isActive ? 'font-semibold' : 'font-normal'}" style="color:{iconColor};position:relative;z-index:1;transition:color 0.18s ease;">
+	<span class="text-xxs leading-none {isActive ? 'font-semibold' : 'font-normal'}" style="color:{iconColor};position:relative;z-index:1;transition:color 0.18s var(--cst-ease-standard);">
 		{label}
 	</span>
 	{#if isActive}

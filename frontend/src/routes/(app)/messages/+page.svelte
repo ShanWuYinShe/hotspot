@@ -228,7 +228,7 @@
 				<div class="h-full">
 					<EmptyState title="选择一个会话" description="从左侧选择联系人开始聊天" class="h-full justify-center py-0!" iconSize={72}>
 						{#snippet icon()}
-							<MessageSquareDashed class="size-7"  style="color:var(--cst-text-secondary);opacity:0.5" strokeWidth={1.25} />
+							<MessageSquareDashed class="size-7 opacity-50" style="color:var(--cst-text-secondary)" strokeWidth={1.25} />
 						{/snippet}
 					</EmptyState>
 				</div>
@@ -331,7 +331,7 @@
 		{#if filtered.length === 0}
 			<EmptyState bare class="py-12!" title="没有找到会话">
 				{#snippet icon()}
-					<MessageSquareDashed class="size-9"  style="color:var(--cst-text-secondary);opacity:0.5" strokeWidth={1.25} />
+					<MessageSquareDashed class="size-9 opacity-50" style="color:var(--cst-text-secondary)" strokeWidth={1.25} />
 				{/snippet}
 			</EmptyState>
 		{:else}

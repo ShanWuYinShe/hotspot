@@ -46,7 +46,7 @@
 			<button
 				type="button"
 				class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none my-1"
-				style="width:44px;height:44px;background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--shadow-glow-md)'};transition:background 0.22s, transform 0.18s var(--cst-ease-standard), filter 0.18s ease;"
+				style="width:44px;height:44px;background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--shadow-glow-md)'};transition:background 0.22s, transform 0.18s var(--cst-ease-standard), filter 0.18s var(--cst-ease-standard);"
 				aria-label={composer.composerOpen ? '关闭' : '发布'}
 				onclick={toggleComposer}
 			>

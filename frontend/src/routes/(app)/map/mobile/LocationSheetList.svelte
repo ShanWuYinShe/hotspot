@@ -161,7 +161,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-8">
-					<Star class="size-5"  style="color:var(--cst-text-secondary);opacity:0.3" strokeWidth={1} />
+					<Star class="size-5 opacity-30" style="color:var(--cst-text-secondary)" strokeWidth={1} />
 					<p class="text-text-secondary text-xs">暂无热门地点</p>
 				</div>
 			{/if}

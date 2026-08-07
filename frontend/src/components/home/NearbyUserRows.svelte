@@ -30,7 +30,7 @@
 			{#snippet subtitle()}
 				<p class="mt-1 flex items-center gap-1.5 text-xxs">
 					<span style="color:var(--cst-accent-default);">#{u.tag}</span>
-					<span style="color:var(--cst-text-secondary);opacity:0.5;">·</span>
+					<span class="opacity-50" style="color:var(--cst-text-secondary);">·</span>
 					<span style="color:var(--cst-text-secondary);">{u.distance}</span>
 				</p>
 			{/snippet}

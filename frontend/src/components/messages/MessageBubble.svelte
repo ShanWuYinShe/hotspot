@@ -32,7 +32,7 @@
 			>
 			{time}
 			{#if sent && showCheck}
-				<CheckCheck class="size-3"  style="opacity:0.8" strokeWidth={2} />
+				<CheckCheck class="size-3 opacity-80" strokeWidth={2} />
 			{/if}
 		</p>
 	</div>

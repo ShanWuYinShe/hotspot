@@ -66,8 +66,8 @@
      Hover 背景填充契约由 utilities.css 的全局 button 规则提供
      （--interactive-hover-fill / 渐变叠加，仅 fine pointer）。 */
   button:not(:disabled) {
-    transition: background-color 160ms ease, background-image 160ms ease,
-      border-color 160ms ease, color 160ms ease, opacity 140ms ease;
+    transition: background-color 160ms var(--cst-ease-standard), background-image 160ms var(--cst-ease-standard),
+      border-color 160ms var(--cst-ease-standard), color 160ms var(--cst-ease-standard), opacity 140ms var(--cst-ease-standard);
   }
   /* Tap 可轻微压缩，但不得改变布局流（Figma Make tap 契约）。 */
   button:not(:disabled):active { transform: scale(0.975); }
