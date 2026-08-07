@@ -46,7 +46,7 @@
 							<Users class="h-2.25 w-2.25" strokeWidth={1.5} />
 							{g.members} 成员
 						</span>
-						<span class="flex items-center gap-0.5 text-xxs"  style="color:var(--cst-accent-default)">
+						<span class="flex items-center gap-0.5 text-xxs text-accent-default">
 							<MapPin class="h-2.25 w-2.25" strokeWidth={2} />
 							{g.distance}
 						</span>

@@ -21,12 +21,11 @@
 	<div class="flex items-end justify-between mb-3">
 		<span class="eyebrow">{title}</span>
 		{#if action && onAction}
-		<button
-			type="button"
-			class="hover-btn flex items-center gap-0.5 outline-none"
-			style="color:var(--cst-accent-default);"
-			onclick={onAction}
-		>
+			<button
+				type="button"
+				class="hover-btn flex items-center gap-0.5 outline-none text-accent-default"
+				onclick={onAction}
+			>
 				<span class="text-xs" >{action}</span>
 				<ChevronRight class="size-3"  strokeWidth={1.5} />
 			</button>
