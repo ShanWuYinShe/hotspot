@@ -12,7 +12,7 @@
 		onChange,
 		placeholder = '搜索...',
 		class: className = '',
-		/** 输入框字号（text-* 刻度类，默认 text-sm=13px）。禁止内联 font-size。 */
+		/** 输入框字号（text-* 刻度类，默认 text-sm=12px）。禁止内联 font-size。 */
 		textClass = 'text-sm',
 		trailing
 	}: {

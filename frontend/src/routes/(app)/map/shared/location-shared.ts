@@ -29,7 +29,7 @@ export const PIN_TONES: Record<PinType, { bg: string; border: string; glow: stri
 };
 export const PIN_LABELS: Record<PinType, string> = { user: '用户', group: '群组', moment: '瞬间' };
 export const floatBtnStyle =
-	'background:var(--cst-surface-primary);border:1px solid var(--cst-border-default);box-shadow:0 2px 12px var(--cst-elevation-shadow-dark), 0 1px 3px var(--cst-elevation-shadow-dark);';
+	'background:var(--cst-surface-primary);border:1px solid var(--cst-border-default);box-shadow:var(--cst-elevation-fab);';
 
 export interface MapBounds {
 	minLat: number;
