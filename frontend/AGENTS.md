@@ -300,13 +300,17 @@ theme/
    （开关半高圆角、状态条 1-3px 指示条、拖拽把手）
 2. **颜色**：组件内禁止 hex/rgba 字面量（数据层同样禁止）；arbitrary 类
    （`bg-[#...]`/`shadow-[...]`）禁止含色值
-3. **accent/status 实色背景上的内容**：文字/图标必须用对应 `on-*` token
+3. **字号**：正文/辅助字号用 `text-xxs/xs/sm/base` 刻度类（10/11/12/13px，
+   `--text-*` token）；新增代码禁止 style 内联 `font-size:Npx`。存量硬编码
+   字号值均落在刻度内（视觉一致），可逐步清理；动态 style 拼接场景（ternary
+   内联）豁免
+4. **accent/status 实色背景上的内容**：文字/图标必须用对应 `on-*` token
    （`text-text-on-accent`/`text-text-on-status`/`text-content-on-marker`），
    禁止恒白 `content-inverse`；选中行内若有与 accent 同色的 marker 图标需
    实色底衬托（PinMedia `selected`）
-4. **列表行**：交互行一律走 `ListItem`（高亮圆角/背景/反色由组件统一处理），
+5. **列表行**：交互行一律走 `ListItem`（高亮圆角/背景/反色由组件统一处理），
    不在页面里自写 hover 背景或叠行级卡片类
-5. **token 注册**：新 token 若需类名消费，同步补 `theme-registry.css` 注册，
+6. **token 注册**：新 token 若需类名消费，同步补 `theme-registry.css` 注册，
    并核对类名不带 `cst-` 前缀（`text-text-on-status` 而非 `text-cst-...`）
-6. **hover/tap 类**：交互反馈用既有工具类（`hover-btn`/`hover-bg`/`scale-btn`/
+7. **hover/tap 类**：交互反馈用既有工具类（`hover-btn`/`hover-bg`/`scale-btn`/
    `tap-*`/`header-action`/`surface-ghost`/`card-hover`），不新发明交互类
