@@ -16,8 +16,9 @@
 	const totalOnline = $derived(groups.reduce((sum, g) => sum + (g.online ?? 0), 0));
 </script>
 
-<!-- 搜索 + 统计行（对齐 Figma SectionGroups header） -->
-<div class="pb-3 pt-4">
+<!-- 搜索 + 统计行（对齐 Figma SectionGroups header）。
+     纯内容组件：顶部间距由外层 ContentColumn 的 pt-4 承担，不自建 pt 避免双重叠加。 -->
+<div class="pb-3">
 	<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索我的群组…" class="px-3.5 py-2.5" />
 	<div class="mt-3 flex items-center justify-between">
 		<p class="text-sm text-text-secondary">共 {groups.length} 个群组</p>

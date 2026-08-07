@@ -36,8 +36,9 @@
 </script>
 
 <!-- 我的瞬间分区（对齐 Figma Make ProfileSections SectionMoments）。
-     纯内容组件：滚动与 gutter 由外层 StandardPageLayout/ContentColumn 承担，不自建容器。 -->
-<div class="pb-10 pt-7">
+     纯内容组件：滚动与 gutter 由外层 StandardPageLayout/ContentColumn 承担，不自建容器。
+     顶部间距由外层 pt-4 承担（不自建 pt 避免双重叠加）；pb-10 是分区页尾部大留白。 -->
+<div class="pb-10">
 		{#if archive.length === 0}
 			<!-- 空态 -->
 			<EmptyState title="这里还没有瞬间" description="从一次路过、一次相遇开始记录。">
