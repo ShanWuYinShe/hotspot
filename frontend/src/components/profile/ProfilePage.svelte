@@ -77,7 +77,7 @@
 		<!-- 资料页眉 -->
 		<header class="flex items-start justify-between gap-6 border-b border-border-default pb-5">
 			<div>
-				<p class="text-xs font-medium uppercase tracking-eyebrow text-accent-default">个人资料</p>
+				<p class="eyebrow font-medium text-accent-default">个人资料</p>
 				<h1 class="mt-2 text-2xl font-medium tracking-title text-text-primary">管理你的公开信息</h1>
 				<p class="mt-1.5 text-sm text-text-secondary">这些资料会展示给访问你主页的人。</p>
 			</div>

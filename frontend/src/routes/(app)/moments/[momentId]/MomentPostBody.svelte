@@ -135,7 +135,7 @@
 	</div>
 
 	<!-- Comments -->
-	<p class="uppercase mt-4 mb-3 text-text-secondary text-xxs tracking-eyebrow">
+	<p class="eyebrow mt-4 mb-3">
 		评论 · {commentCount}
 	</p>
 	<div class="flex flex-col gap-4">

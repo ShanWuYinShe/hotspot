@@ -190,7 +190,7 @@
 
 	<!-- Danger zone -->
 	<div class="mt-3">
-		<p class="uppercase mb-3 text-text-secondary text-xxs tracking-eyebrow">账号</p>
+		<p class="eyebrow mb-3">账号</p>
 		<button
 			type="button"
 			class="hover-btn w-full text-left px-4 py-3.5 rounded-md outline-none bg-surface-primary text-status-danger text-sm"

@@ -6,6 +6,7 @@
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import Toggle from '@/components/forms/Toggle.svelte';
+	import SettingRow from '@/components/forms/SettingRow.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import { logout } from '@/stores/auth.svelte';
@@ -130,111 +131,87 @@
 	</div>
 
 	<!-- Appearance（对齐 Figma Make SettingsPage：应用主题二选一 + 深色模式） -->
-	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-eyebrow uppercase">外观</p>
+	<p class="eyebrow px-1 mt-3 mb-1.5">外观</p>
 	<div class="rounded-lg overflow-hidden surface-flat">
 		<ListContainer>
-			<div class="px-4 py-3.5">
-				<div class="flex items-center gap-3">
-					<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
-						<Palette class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
+			<SettingRow title="应用主题" description="选择一套全局视觉风格">
+				{#snippet icon()}
+					<Palette class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
+				{/snippet}
+				{#snippet extension()}
+					<div class="grid grid-cols-2 gap-2">
+						{#each THEME_OPTIONS as t}
+							<button
+								type="button"
+								aria-pressed={theme.theme === t.id}
+								onclick={() => setTheme(t.id)}
+								class="flex items-center gap-2 border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default"
+								style="border-color:{theme.theme === t.id ? 'var(--cst-accent-default)' : 'var(--cst-border-default)'};background:{theme.theme === t.id ? 'var(--cst-accent-soft)' : 'transparent'};color:var(--cst-text-primary);"
+							>
+								{#if t.id === 'forest'}
+									<Trees class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.7} />
+								{:else}
+									<Palette class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.7} />
+								{/if}
+								<span class="text-xs">{t.label}</span>
+							</button>
+						{/each}
 					</div>
-					<div class="flex-1 min-w-0">
-						<p class="text-sm text-text-primary">应用主题</p>
-						<p class="text-xs text-text-secondary">选择一套全局视觉风格</p>
-					</div>
-				</div>
-				<div class="mt-3 grid grid-cols-2 gap-2">
-					{#each THEME_OPTIONS as t}
-						<button
-							type="button"
-							aria-pressed={theme.theme === t.id}
-							onclick={() => setTheme(t.id)}
-							class="flex items-center gap-2 border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default"
-							style="border-color:{theme.theme === t.id ? 'var(--cst-accent-default)' : 'var(--cst-border-default)'};background:{theme.theme === t.id ? 'var(--cst-accent-soft)' : 'transparent'};color:var(--cst-text-primary);"
-						>
-							{#if t.id === 'forest'}
-								<Trees class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.7} />
-							{:else}
-								<Palette class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.7} />
-							{/if}
-							<span class="text-xs">{t.label}</span>
-						</button>
-					{/each}
-				</div>
-			</div>
-			<div class="flex items-center gap-3 px-4 py-3.5">
-				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
+				{/snippet}
+			</SettingRow>
+			<SettingRow title="深色模式" description={theme.isDark ? '当前使用深色外观' : '当前使用浅色外观'}>
+				{#snippet icon()}
 					{#if theme.isDark}
 						<Moon class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
 					{:else}
 						<Sun class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
 					{/if}
-				</div>
-				<div class="flex-1 min-w-0">
-					<p class="text-sm text-text-primary">深色模式</p>
-					<p class="text-xs text-text-secondary">{theme.isDark ? '当前使用深色外观' : '当前使用浅色外观'}</p>
-				</div>
+				{/snippet}
 				<Toggle on={theme.isDark} onToggle={toggleDark} label="深色模式" />
-			</div>
+			</SettingRow>
 		</ListContainer>
 	</div>
 
 	<!-- Notifications -->
-	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-eyebrow uppercase">通知</p>
+	<p class="eyebrow px-1 mt-3 mb-1.5">通知</p>
 	<div class="rounded-lg overflow-hidden surface-flat">
 		<ListContainer>
-			<div class="flex items-center gap-3 px-4 py-3.5">
-				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
+			<SettingRow title="推送通知" description="消息、提及与新动态提醒">
+				{#snippet icon()}
 					<Bell class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
-				</div>
-				<div class="flex-1 min-w-0">
-					<p class="text-sm text-text-primary">推送通知</p>
-					<p class="text-xs text-text-secondary">消息、提及与新动态提醒</p>
-				</div>
+				{/snippet}
 				<Toggle on={notif} onToggle={toggleNotif} />
-			</div>
-			<div class="flex items-center gap-3 px-4 py-3.5">
-				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
+			</SettingRow>
+			<SettingRow title="应用声音" description="操作反馈音效">
+				{#snippet icon()}
 					<Volume2 class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
-				</div>
-				<div class="flex-1 min-w-0">
-					<p class="text-sm text-text-primary">应用声音</p>
-					<p class="text-xs text-text-secondary">操作反馈音效</p>
-				</div>
+				{/snippet}
 				<Toggle on={sounds} onToggle={toggleSounds} />
-			</div>
+			</SettingRow>
 		</ListContainer>
 	</div>
 
 	<!-- Privacy -->
-	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-eyebrow uppercase">隐私与安全</p>
+	<p class="eyebrow px-1 mt-3 mb-1.5">隐私与安全</p>
 	<div class="rounded-lg overflow-hidden surface-flat">
 		<ListContainer>
-			<div class="flex items-center gap-3 px-4 py-3.5">
-				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
+			<SettingRow title="私密账号" description="仅关注者可查看你的内容">
+				{#snippet icon()}
 					<Lock class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
-				</div>
-				<div class="flex-1 min-w-0">
-					<p class="text-sm text-text-primary">私密账号</p>
-					<p class="text-xs text-text-secondary">仅关注者可查看你的内容</p>
-				</div>
+				{/snippet}
 				<Toggle on={privateProfile} onToggle={togglePrivateProfile} />
-			</div>
-			<div class="flex items-center gap-3 px-4 py-3.5">
-				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
+			</SettingRow>
+			<SettingRow title="位置共享" description="允许附近用户发现你">
+				{#snippet icon()}
 					<MapPin class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
-				</div>
-				<div class="flex-1 min-w-0">
-					<p class="text-sm text-text-primary">位置共享</p>
-					<p class="text-xs text-text-secondary">允许附近用户发现你</p>
-				</div>
+				{/snippet}
 				<Toggle on={locationSharing} onToggle={toggleLocationSharing} />
-			</div>
+			</SettingRow>
 		</ListContainer>
 	</div>
 
 	<!-- General -->
-	<p class="px-1 mt-3 mb-1.5 text-text-secondary text-xxs tracking-eyebrow uppercase">通用</p>
+	<p class="eyebrow px-1 mt-3 mb-1.5">通用</p>
 	<div class="rounded-lg overflow-hidden surface-flat">
 		<ListContainer>
 			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="语言设置">

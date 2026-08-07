@@ -16,7 +16,7 @@
 		<div class="flex items-center justify-center rounded-full size-11 shadow-glow-md"   style="background:var(--cst-accent-default);color:var(--cst-text-on-accent)">
 			<Leaf class="size-5"  strokeWidth={1.8} />
 		</div>
-		<p class="mt-6 text-xs font-medium uppercase tracking-eyebrow text-accent-default">热点</p>
+		<p class="mt-6 eyebrow font-medium text-accent-default">热点</p>
 		<h1 class="mt-2 text-2xl font-medium tracking-title text-text-primary">回来看看附近的故事。</h1>
 		<p class="mt-2 text-sm leading-6 text-text-secondary">使用手机号、邮箱或账号登录。</p>
 

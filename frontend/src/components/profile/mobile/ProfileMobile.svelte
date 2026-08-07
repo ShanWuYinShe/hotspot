@@ -35,7 +35,7 @@
 		<!-- 资料页眉（对齐 Figma Make：eyebrow + 设置入口） -->
 			<div class="border-b border-border-default" style="background:var(--cst-surface-primary);">
 				<ContentColumn class="flex items-center justify-between py-3">
-					<p class="text-xs font-medium uppercase tracking-eyebrow text-accent-default">个人资料</p>
+					<p class="eyebrow font-medium text-accent-default">个人资料</p>
 					<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} variant="ghost" size={32} />
 				</ContentColumn>
 			</div>

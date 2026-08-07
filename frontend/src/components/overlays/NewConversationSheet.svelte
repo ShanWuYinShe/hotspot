@@ -80,7 +80,7 @@ function toggleAdd(id: number) {
 	<div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-6">
 		{#if tab === 'add'}
 			<div class="animate-fade-in flex flex-col gap-2">
-				<p class="uppercase mb-2 text-text-secondary text-xxs tracking-eyebrow">
+				<p class="eyebrow mb-2">
 					附近推荐
 				</p>
 				{#each filteredSuggested as u (u.id)}
@@ -138,7 +138,7 @@ function toggleAdd(id: number) {
 					</div>
 				</ListItem>
 
-				<p class="uppercase mb-2 text-text-secondary text-xxs tracking-eyebrow">
+				<p class="eyebrow mb-2">
 					联系人
 				</p>
 				{#each filteredContacts as c (c.id)}

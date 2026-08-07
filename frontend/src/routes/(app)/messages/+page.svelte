@@ -304,7 +304,7 @@
 	<ContentColumn class="animate-fade-in flex flex-col min-h-full pt-4 pb-4">
 		{#if onlineChats.length > 0}
 			<div class="mb-4">
-				<p class="uppercase mb-2.5 text-text-secondary text-xxs tracking-eyebrow">在线</p>
+				<p class="eyebrow mb-2.5">在线</p>
 				<div class="flex gap-4 overflow-x-auto no-scrollbar pb-1">
 					{#each onlineChats as chat (chat.id)}
 						<button
@@ -325,7 +325,7 @@
 			</div>
 		{/if}
 
-		<p class="uppercase mb-2.5 text-text-secondary text-xxs tracking-eyebrow">最近</p>
+		<p class="eyebrow mb-2.5">最近</p>
 
 		<!-- 列表：无外层容器，List 直接裸排（对齐 Figma）；每行 px-3 py-1 包裹 -->
 		{#if filtered.length === 0}

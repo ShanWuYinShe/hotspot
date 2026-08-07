@@ -57,7 +57,7 @@
 			<header class="border-b pb-6" style="border-color:var(--cst-border-default);">
 				<div class="flex flex-wrap items-end justify-between gap-5">
 					<div>
-						<p class="font-mono text-xxs font-semibold uppercase tracking-eyebrow text-accent-default">Personal archive / 2024</p>
+						<p class="eyebrow font-semibold text-accent-default font-mono">Personal archive / 2024</p>
 						<h2 class="mt-2 text-3xl font-medium leading-none tracking-title text-text-primary">个人影像档案</h2>
 						<p class="mt-3 max-w-115 text-sm leading-6 text-text-secondary">{activeMeta[activeTab].description}</p>
 					</div>
@@ -116,7 +116,7 @@
 							<div class="flex flex-col justify-between border-t p-6 lg:border-l lg:border-t-0" style="border-color:var(--cst-border-default);">
 								<div>
 									<div class="flex items-center justify-between">
-										<span class="font-mono text-xxs font-semibold uppercase tracking-eyebrow text-accent-default">Featured record</span>
+										<span class="eyebrow font-semibold text-accent-default font-mono">Featured record</span>
 										<span class="text-xs text-text-secondary">06.18</span>
 									</div>
 									<h3 class="mt-5 text-2xl font-medium leading-snug text-text-primary">在云龙湖边，<br />把傍晚收进相册。</h3>
@@ -140,7 +140,7 @@
 				{#if remaining.length > 0}
 					<div class="mt-10 flex items-end justify-between border-b pb-3" style="border-color:var(--cst-border-default);">
 						<div>
-							<p class="font-mono text-xxs font-semibold uppercase tracking-eyebrow text-accent-default">Recent entries</p>
+							<p class="eyebrow font-semibold text-accent-default font-mono">Recent entries</p>
 							<h3 class="mt-1 text-sm font-medium text-text-primary">六月的城市笔记</h3>
 						</div>
 						<p class="text-xs text-text-secondary">{remaining.length} 个片段</p>

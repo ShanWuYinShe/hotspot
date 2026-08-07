@@ -203,7 +203,6 @@
     letter-spacing: var(--tracking-eyebrow);
     text-transform: uppercase;
     color: var(--cst-text-secondary);
-    opacity: 0.75;
   }
 }
 
