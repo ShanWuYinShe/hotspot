@@ -344,14 +344,6 @@
     border-radius: 1.5rem;
     overflow: hidden;
   }
-  /* TabBar 导航项：subtle hover（极轻背景 + 圆角），不触发全局实色按压填充。
-     激活态 hover 保持透明（由下划线指示选中）。 */
-  .tab-item { border-radius: var(--cst-shape-sm); }
-  @media (hover: hover) and (pointer: fine) {
-    .tab-item:not([aria-pressed="true"]):hover {
-      background-color: var(--cst-interactive-hover-fill);
-    }
-  }
 }
 
 /*── Shared image-first interaction ─────────────────────────────────────
@@ -430,5 +422,15 @@
   }
   [data-desktop-main] .desktop-main-scroll > * {
     background-color: var(--cst-surface-page) !important;
+  }
+}
+
+/*── TabBar 导航项 subtle hover（无 layer 规则，优先级高于 @layer utilities 内
+   的 Tailwind utility，确保 hover 背景生效）──────────────────────────────
+   不触发全局 button 实色按压填充（全局规则已用 :not([data-tab-bar] *) 排除）。 */
+.tab-item { border-radius: var(--cst-shape-sm); }
+@media (hover: hover) and (pointer: fine) {
+  .tab-item:not([aria-pressed="true"]):hover {
+    background-color: var(--cst-interactive-hover-fill);
   }
 }
