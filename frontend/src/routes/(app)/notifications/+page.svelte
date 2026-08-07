@@ -183,7 +183,7 @@ const FILTER_TABS = [
 					<div class="mb-3 flex h-5 items-center gap-2">
 						<span aria-hidden="true" class="h-1.5 w-1.5 rounded-full" style="background:var(--cst-accent-default);"></span>
 						<p class="eyebrow font-semibold" style="color:var(--cst-text-primary)">新消息</p>
-						<span class="rounded-full px-1.5 py-0.5 text-xxs leading-none"  style="color:var(--cst-accent-default);background:var(--cst-accent-soft)">{unreadGroup.length}</span>
+						<span class="badge"  style="color:var(--cst-accent-default);background:var(--cst-accent-soft)">{unreadGroup.length}</span>
 					</div>
 					<ListContainer bordered>
 						{#each unreadGroup as n (n.id)}

@@ -73,7 +73,7 @@
 			</div>
 			<div class="mt-2 flex items-center justify-between gap-2">
 				{#if user.tag}
-					<span class="rounded-full px-1.5 py-0.5 text-xxs border border-accent-border"  style="background:var(--cst-accent-soft);color:var(--cst-accent-default)">#{user.tag}</span>
+					<span class="badge border border-accent-border"  style="background:var(--cst-accent-soft);color:var(--cst-accent-default)">#{user.tag}</span>
 				{:else}
 					<span></span>
 				{/if}

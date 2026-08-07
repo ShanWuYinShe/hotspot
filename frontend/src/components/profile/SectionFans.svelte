@@ -79,7 +79,7 @@
 		>
 			{#snippet nameBadge()}
 				{#if isMutual}
-					<span class="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xxs text-status-online" style="background:var(--cst-color-online-bg);">
+					<span class="flex items-center gap-0.5 badge text-status-online" style="background:var(--cst-color-online-bg);">
 						<Check class="size-2.25"  strokeWidth={2.5} />
 						互关
 					</span>

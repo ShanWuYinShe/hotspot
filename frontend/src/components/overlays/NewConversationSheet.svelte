@@ -3,6 +3,7 @@
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import SheetShell from '@/components/overlays/SheetShell.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
+	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 
 	// 新会话底部 Sheet：添加好友 / 开始私聊 / 创建群聊入口。
 
@@ -154,7 +155,7 @@ function toggleAdd(id: number) {
 						<div class="relative shrink-0">
 							<img src={c.avatar} alt={c.name} class="rounded-full object-cover size-11"  style="border:1.5px solid var(--cst-border-default)" />
 							{#if c.online}
-								<span class="absolute bottom-0 right-0 rounded-full bg-status-online size-2.5 border-2 border-surface-primary"  ></span>
+								<OnlineDot size="md" />
 							{/if}
 						</div>
 						<div class="flex-1 min-w-0">

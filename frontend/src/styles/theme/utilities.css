@@ -433,3 +433,16 @@
     background-color: var(--cst-interactive-hover-fill);
   }
 }
+
+/*── Badge 小徽章基础类（圆角 + 紧凑 padding + 极小字距）─────────────────
+   收敛 6 处手写 rounded-full px-1.5 py-0.5 text-xxs 重复。
+   颜色/边框变体用追加类表达（如 bg-accent-soft text-accent-default）。 */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 2px 6px;
+  font-size: var(--text-xxs);
+  line-height: 1;
+  white-space: nowrap;
+}
