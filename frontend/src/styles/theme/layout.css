@@ -44,7 +44,6 @@
      超宽屏下内容继续自适应放大，而非右侧留白。 */
   :root {
     --cst-context-rail-inset: 1rem;
-    --cst-workspace-gutter: clamp(0.875rem, 1.75vw, 1.5rem);
     --cst-workspace-gap: clamp(0.875rem, 1.5vw, 1.25rem);
     --cst-context-rail-width: clamp(18rem, 20vw, 21rem);
     --cst-context-rail-gap: clamp(1rem, 1.75vw, 1.5rem);

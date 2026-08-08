@@ -225,7 +225,9 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 	<!-- 全幅封面（负 margin 抵消 ContentColumn gutter） -->
 	<div class="relative h-[var(--cst-cover-height)] overflow-hidden -mx-[var(--cst-page-gutter)]">
 		<img src={group.banner} alt={`${group.name} 的群组封面`} class="h-full w-full object-cover" />
-		<div class="absolute inset-0 bg-surface-cover-scrim"></div>
+		<!-- gradient scrim 走 inline background（gradient 不能作 background-color 值，
+		     与 NearbyImageCard 的 --cst-surface-media-scrim-card 用法一致） -->
+		<div class="absolute inset-0" style="background:var(--cst-surface-cover-scrim);"></div>
 		<div class="absolute left-5 top-4">
 			<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => history.back()} variant="overlay" tone="inverse" />
 		</div>

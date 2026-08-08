@@ -73,10 +73,16 @@
   --color-text-on-status: var(--cst-text-on-status);
   --color-content-on-marker: var(--cst-content-on-marker);
 
+  /* Media overlay scrims（图片上的压暗层）。gradient scrim（cover-scrim）经
+     inline background 引用 token（gradient 不能作 background-color 值），此处
+     仅注册颜色值类：bg-surface-glass-badge / bg-surface-media-scrim-strong，
+     此前缺注册导致规则不生成、样式静默丢失。 */
+  --color-surface-glass-badge: var(--cst-surface-glass-badge);
+  --color-surface-media-scrim-strong: var(--cst-surface-media-scrim-strong);
+
   /* Interaction feedback fill tokens（按压/悬停实底填充） */
   --color-interactive-hover-fill: var(--cst-interactive-hover-fill);
   --color-interactive-active: var(--cst-interactive-active);
-  --color-content-inverse-secondary: var(--cst-content-inverse-secondary);
 
   /* Raised elevation shadows — 双向凸起投影刻度（凸起控件/卡片/头像）。
      消费 --cst-elevation-shadow-{dark,light} 原料：vibrant 显影（凸起立体）、

@@ -54,8 +54,9 @@
 </script>
 
 <section class="mt-5" aria-label="搜索结果">
-	<!-- Tab 栏：简洁 pill，对齐 Figma（active=primary，inactive=border bg-card） -->
-	<div class="no-scrollbar flex gap-2 overflow-x-auto border-b pb-3" style="border-color:var(--cst-border-default);">
+	<!-- Tab 栏：简洁 pill，对齐 Figma（active=primary，inactive=border bg-card）。
+	     pill 自身已带描边/实底形态，不再叠加全宽分割线（下方结果区靠 mt-5 留白分隔）。 -->
+	<div class="no-scrollbar flex gap-2 overflow-x-auto pb-3">
 		{#each tabs as t (t.id)}
 			<button
 				type="button"

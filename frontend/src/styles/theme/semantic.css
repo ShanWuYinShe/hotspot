@@ -21,7 +21,6 @@
 
   /* Accent / Interactive */
   --cst-accent-default: var(--cst-pr-accent-primary);
-  --cst-accent-fill: var(--cst-pr-accent);
   --cst-accent-soft: var(--cst-pr-accent-soft);
   --cst-accent-border: var(--cst-pr-accent-soft-border);
   --cst-interactive-hover: var(--cst-pr-hover);
@@ -57,7 +56,6 @@
 /* ── Interaction token contract ────────────────────────────────────────
    通过 var() 派生的交互/导航 token，值随主题自动变化。 */
 :root {
-  --cst-surface-canvas: var(--cst-surface-page);
   --cst-surface-panel: var(--cst-surface-primary);
   --cst-surface-raised: var(--cst-surface-primary);
   --cst-surface-hover: color-mix(in srgb, var(--cst-accent-default) 7%, var(--cst-surface-primary));

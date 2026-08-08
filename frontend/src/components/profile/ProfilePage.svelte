@@ -123,11 +123,11 @@
 						</p>
 					</div>
 				</div>
-				<div class="grid grid-cols-3 border-t border-border-default">
+				<div class="grid grid-cols-3 gap-x-4 border-t border-border-default px-5">
 					{#each statsList as stat}
 						<button
 							type="button"
-							class="hover-bg border-l border-border-default px-5 py-4 text-left outline-none first:border-l-0"
+							class="hover-bg px-1 py-4 text-left outline-none"
 							style="background:var(--cst-surface-primary);"
 							onclick={() => (stat.section ? void goto(ME_SECTION_PATHS[stat.section]) : undefined)}
 						>
@@ -160,17 +160,15 @@
 			</aside>
 		</div>
 
-		<!-- 资料详情 -->
+		<!-- 资料详情：卡片容器 + 表头 border-b 分区；内部行间留白分层，不叠加网格线 -->
 		<section class="mt-5 rounded-lg border border-border-default surface-flat" aria-label="资料详情">
 			<div class="border-b border-border-default px-6 py-4">
 				<h2 class="text-sm font-medium text-text-primary">资料详情</h2>
 				<p class="mt-1 text-xs text-text-secondary">以下内容将显示在你的个人主页。</p>
 			</div>
 			<dl class="grid md:grid-cols-2">
-				{#each detailRows as row, index}
-					<div
-						class="flex items-start gap-3 px-6 py-4 {index > 1 ? 'border-t border-border-default' : ''} {index % 2 === 1 ? 'md:border-l md:border-border-default' : ''}"
-					>
+				{#each detailRows as row}
+					<div class="flex items-start gap-3 px-6 py-4">
 						<row.icon class="size-4 mt-0.5 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={1.7} />
 						<div class="min-w-0">
 							<dt class="text-xs text-text-secondary">{row.label}</dt>

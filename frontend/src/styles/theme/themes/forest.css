@@ -15,7 +15,6 @@
   --cst-pr-page-bg: #F6F7F3;
   --cst-pr-text: #152219;
   --cst-pr-text-muted: #3F5547;
-  --cst-pr-accent: #3D7A55;
   --cst-pr-accent-primary: #3D7A55;
   --cst-pr-glow: rgba(61, 122, 85, 0.18);
   --cst-pr-shadow-light: rgba(255, 255, 255, 0.0);
@@ -49,16 +48,13 @@
      组件与数据层一律引用这些预定义档位，不再自行 color-mix */
   --cst-accent-soft-bg: color-mix(in srgb, var(--cst-pr-accent-primary) 10%, transparent);
   --cst-accent-border-soft: color-mix(in srgb, var(--cst-pr-accent-primary) 24%, transparent);
-  --cst-accent-glow-soft: color-mix(in srgb, var(--cst-pr-accent-primary) 16%, transparent);
   --cst-status-online-bg: color-mix(in srgb, var(--cst-pr-online) 12%, transparent);
   --cst-status-online-border: color-mix(in srgb, var(--cst-pr-online) 22%, transparent);
   --cst-status-online-glow: color-mix(in srgb, var(--cst-pr-online) 32%, transparent);
   --cst-status-danger-bg: color-mix(in srgb, var(--cst-pr-hot) 12%, transparent);
   --cst-status-danger-border: color-mix(in srgb, var(--cst-pr-hot) 22%, transparent);
-  --cst-status-danger-glow: color-mix(in srgb, var(--cst-pr-hot) 38%, transparent);
   --cst-status-warning-bg: color-mix(in srgb, var(--cst-pr-warning) 12%, transparent);
   --cst-status-warning-border: color-mix(in srgb, var(--cst-pr-warning) 22%, transparent);
-  --cst-status-warning-glow: color-mix(in srgb, var(--cst-pr-warning) 38%, transparent);
   --cst-marker-user-bg: color-mix(in srgb, var(--cst-pr-map-user) 12%, transparent);
   --cst-marker-user-border: color-mix(in srgb, var(--cst-pr-map-user) 22%, transparent);
   --cst-marker-user-glow: color-mix(in srgb, var(--cst-pr-map-user) 42%, transparent);
@@ -173,7 +169,6 @@
   --cst-pr-page-bg: #161A16;
   --cst-pr-text: #E8F1E9;
   --cst-pr-text-muted: #A8BDAE;
-  --cst-pr-accent: #52B878;
   --cst-pr-accent-primary: #52B878;
   --cst-pr-glow: rgba(82, 184, 120, 0.20);
   --cst-pr-shadow-light: rgba(255, 255, 255, 0.0);
@@ -204,16 +199,13 @@
   /* ── 语义色族完整档位（dark）── */
   --cst-accent-soft-bg: color-mix(in srgb, var(--cst-pr-accent-primary) 12%, transparent);
   --cst-accent-border-soft: color-mix(in srgb, var(--cst-pr-accent-primary) 30%, transparent);
-  --cst-accent-glow-soft: color-mix(in srgb, var(--cst-pr-accent-primary) 20%, transparent);
   --cst-status-online-bg: color-mix(in srgb, var(--cst-pr-online) 14%, transparent);
   --cst-status-online-border: color-mix(in srgb, var(--cst-pr-online) 28%, transparent);
   --cst-status-online-glow: color-mix(in srgb, var(--cst-pr-online) 40%, transparent);
   --cst-status-danger-bg: color-mix(in srgb, var(--cst-pr-hot) 14%, transparent);
   --cst-status-danger-border: color-mix(in srgb, var(--cst-pr-hot) 28%, transparent);
-  --cst-status-danger-glow: color-mix(in srgb, var(--cst-pr-hot) 45%, transparent);
   --cst-status-warning-bg: color-mix(in srgb, var(--cst-pr-warning) 14%, transparent);
   --cst-status-warning-border: color-mix(in srgb, var(--cst-pr-warning) 28%, transparent);
-  --cst-status-warning-glow: color-mix(in srgb, var(--cst-pr-warning) 45%, transparent);
   --cst-marker-user-bg: color-mix(in srgb, var(--cst-pr-map-user) 14%, transparent);
   --cst-marker-user-border: color-mix(in srgb, var(--cst-pr-map-user) 30%, transparent);
   --cst-marker-user-glow: color-mix(in srgb, var(--cst-pr-map-user) 50%, transparent);
