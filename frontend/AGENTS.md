@@ -404,6 +404,10 @@ theme/
     刻意微调），与字号/圆角的"1px 无感噪声"性质不同，强行归并会破坏视觉层次。
     横向页面 gutter 是唯一例外（`--cst-page-gutter`，由 ContentColumn 统一管理）。
     存量内联尺寸（地图 PIN、StatusBar 信号/电池等物理装饰细件）可保留为例外
+    布局尺寸例外（非控件尺寸，可用类时仍优先用类）：对话框高度
+    `78vh/max-height:700px`、聊天空态 `min-height:240px/max-width:220px`、
+    上传占位 `height:110px`、封禁页 `max-width:360px`、横幅 `h-7` 类化后
+    仅剩物理例外——新增此类布局尺寸时优先 Tailwind 类，确需内联则登记
 16. **毛玻璃模糊半径（强制，3 档）**：`backdrop-filter:blur()` 半径一律用
     `var(--cst-blur-sm/md/lg)` token（sm=8 轻徽章、md=16 sticky header/overlay、
     lg=24 底部导航/tablet dock），禁止内联 `blur(Npx)` 字面量（原 8/10/16/18/24/28px
