@@ -40,16 +40,8 @@
 @layer utilities {
   /*── Input surfaces ──────────────────────────────────────────────── */
 
-  .input-surface {
-    background-color: var(--cst-surface-primary);
-    box-shadow: var(--shadow-raised-sm);
-    border: 1px solid var(--cst-border-default);
-    transition: box-shadow 0.2s var(--cst-ease-standard), border-color 0.2s var(--cst-ease-standard);
-  }
-  .input-surface:focus-within {
-    box-shadow: var(--shadow-inset-sm);
-    border-color: var(--cst-border-strong);
-  }
+  /* .input-surface 完整定义在下方「Input color-mix overrides」节（对齐 Figma Make：
+     focus 为中性内凹凹陷 + border-pressed，不用 accent 高亮环）。 */
 
   .icon-badge {
     background-color: var(--cst-surface-primary);
@@ -219,13 +211,17 @@
 @layer utilities {
   /*── Input color-mix overrides ─────────────────────────────────── */
 
+  /* .input-surface 唯一定义：浅色混合底 + 内凹 1px 描边（对齐 Figma Make，
+     focus 为中性内凹凹陷 + border-pressed，不用 accent 高亮环）。
+     !important 压过组件上的 Tailwind bg-* 类。 */
+
   .input-surface {
     background: color-mix(in srgb, var(--cst-surface-primary) 82%, var(--cst-surface-page) 18%) !important;
     box-shadow: inset 0 0 0 1px var(--cst-border-default), inset 0 1px 2px color-mix(in srgb, var(--cst-elevation-shadow-dark) 26%, transparent) !important;
-    border-color: var(--cst-border-default) !important;
+    border: 1px solid var(--cst-border-default) !important;
+    transition: box-shadow 0.2s var(--cst-ease-standard), border-color 0.2s var(--cst-ease-standard);
   }
   .input-surface:focus-within {
-    /* 对齐 Figma Make：focus 为中性内凹凹陷 + border-pressed，不用 accent 高亮环 */
     box-shadow: var(--shadow-inset-sm) !important;
     border-color: var(--cst-border-strong) !important;
   }
