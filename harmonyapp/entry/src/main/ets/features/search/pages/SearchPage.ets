@@ -687,7 +687,7 @@ export struct SearchPage {
             Text(`#${tag}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(this.getCurrentThemePalette().textSecondary)
-              .padding({ left: 7, right: 7, top: DesignConstants.SPACING.THREE, bottom: DesignConstants.SPACING.THREE })
+              .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.THREE, bottom: DesignConstants.SPACING.THREE })
               .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
               .backgroundColor(this.getSurfaceSubtle())
               .borderRadius(DesignConstants.RADIUS.XL)

@@ -661,7 +661,7 @@ export struct ProfilePage {
           .opacity(this.getCurrentThemePalette().isDarkTheme ? 0.04 : 0.12)
           .blur(DesignConstants.EFFECT.GLOW_BLUR_MEDIUM)
           .align(Alignment.TopEnd)
-          .margin({ top: 64, right: DesignConstants.SPACING.MD })
+          .margin({ top: DesignConstants.LAYOUT.GLOW_BLOB_MARGIN_TOP, right: DesignConstants.SPACING.MD })
 
         Column() {
           if (!this.isLoggedIn && !this.isExternalProfileMode() && !this.isLoading) {

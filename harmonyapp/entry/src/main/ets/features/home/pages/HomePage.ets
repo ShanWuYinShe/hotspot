@@ -709,12 +709,12 @@ export struct HomePage {
             if (this.groupsLoading && this.groups.length === 0) {
               // loading skeleton
               Column()
-                .width(140)
+                .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
                 .height(DesignConstants.COMPONENT.BANNER_HEIGHT)
                 .borderRadius(DesignConstants.SHAPE.CARD)
                 .backgroundColor(this.getPalette().surfaceSubtle)
               Column()
-                .width(140)
+                .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
                 .height(DesignConstants.COMPONENT.BANNER_HEIGHT)
                 .borderRadius(DesignConstants.SHAPE.CARD)
                 .backgroundColor(this.getPalette().surfaceSubtle)
@@ -747,7 +747,7 @@ export struct HomePage {
             .fontColor([this.getPalette().accentBackground])
         }
       }
-      .width(140)
+      .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
       .height(DesignConstants.COMPONENT.SKELETON_CARD_HEIGHT)
       .justifyContent(FlexAlign.Center)
       .borderRadius(DesignConstants.SHAPE.CARD)
@@ -759,7 +759,7 @@ export struct HomePage {
         .fontColor(this.getPalette().textPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width(140)
+        .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
 
       Row({ space: DesignConstants.SPACING.XS }) {
         Text(`${formatCount(group.group?.members_count ?? 0)} 人`)
@@ -771,7 +771,7 @@ export struct HomePage {
             .fontColor(this.getPalette().accentText)
         }
       }
-      .width(140)
+      .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
     }
     .alignItems(HorizontalAlign.Start)
     .borderRadius(DesignConstants.SHAPE.CARD)

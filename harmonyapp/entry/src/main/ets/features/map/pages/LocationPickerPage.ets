@@ -556,6 +556,7 @@ struct MainPanel {
     Column() {
       // 拖拽手柄区域（36px 高的触控热区，内含视觉指示条）
       Column() {
+        // 拖拽手柄视觉条 4vp：物理细件例外（对齐前端拖拽把手例外），不做间距档位
         Column()
           .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
           .height(4)
@@ -1779,7 +1780,7 @@ export struct LocationPickerPage {
                   ListItem() {
                     Row({ space: DesignConstants.SPACING.MD }) {
                       Image($rawfile(this.getTypeMarkerSvg(item.type)))
-                        .width(28)
+                        .width(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
                         .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
                         .objectFit(ImageFit.Contain)
                       Column({ space: DesignConstants.SPACING.HALF }) {
@@ -1861,7 +1862,7 @@ export struct LocationPickerPage {
 
           Column() {
             Image($rawfile('marker_center_pin.svg'))
-              .width(20)
+              .width(DesignConstants.COMPONENT.ICON_SIZE_SM)
               .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
               .objectFit(ImageFit.Contain)
           }

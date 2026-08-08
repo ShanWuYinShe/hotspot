@@ -243,6 +243,12 @@ export interface ComponentConstants {
   BRAND_ICON_SIZE: number;
   /** 资料页横幅高度（140） */
   BANNER_HEIGHT: number;
+  /** 首页群组横滑卡片宽度（140） */
+  GROUP_CARD_WIDTH: number;
+  /** 通知中心加载空态区域高度（200） */
+  LOADING_AREA_HEIGHT: number;
+  /** 创建群组人数输入框宽度（64） */
+  NUMBER_INPUT_WIDTH: number;
   /** 地图控件按钮尺寸（48） */
   MAP_CONTROL_SIZE: number;
   /** 细分隔线厚度（0.5） */
@@ -364,6 +370,8 @@ export interface LayoutSystem {
   GLOW_BLOB_LARGE: number;
   GLOW_BLOB_MEDIUM: number;
   GLOW_BLOB_SMALL: number;
+  /** 个人页 glow 光晕右上定位偏移（64） */
+  GLOW_BLOB_MARGIN_TOP: number;
 }
 
 // ==================== 页面内容栏档位接口（对齐前端 .page-shell / .feed-density-shell）====================
@@ -613,6 +621,9 @@ const COMPONENT: ComponentConstants = {
   LOADING_CONTAINER_SIZE: 72,
   BRAND_ICON_SIZE: 38,
   BANNER_HEIGHT: 140,
+  GROUP_CARD_WIDTH: 140,
+  LOADING_AREA_HEIGHT: 200,
+  NUMBER_INPUT_WIDTH: 64,
   MAP_CONTROL_SIZE: 48,
   DIVIDER_THIN: 0.5,
   ICON_SIZE_XS: 16,
@@ -663,6 +674,7 @@ const LAYOUT: LayoutSystem = {
   GLOW_BLOB_LARGE: 180,
   GLOW_BLOB_MEDIUM: 160,
   GLOW_BLOB_SMALL: 120,
+  GLOW_BLOB_MARGIN_TOP: 64,
 };
 
 // ==================== 页面内容栏档位（对齐前端 .page-shell / .feed-density-shell）====================

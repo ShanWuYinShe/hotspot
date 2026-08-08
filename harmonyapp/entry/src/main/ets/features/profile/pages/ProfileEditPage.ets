@@ -196,7 +196,7 @@ export struct ProfileEditPage {
                   }
                 }
                 .type(ButtonType.Normal)
-                .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: 5, bottom: 5 })
+                .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
                 .borderRadius(DesignConstants.SHAPE.BUTTON)
                 .backgroundColor(this.getCurrentThemePalette().overlayStrong)
                 .onClick(() => {

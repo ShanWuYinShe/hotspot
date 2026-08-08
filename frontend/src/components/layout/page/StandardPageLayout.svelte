@@ -20,7 +20,7 @@
 	let {
 		header,
 		children,
-		contentClassName = 'py-5',
+		contentClassName = 'pt-4 pb-6',
 		contentMaxWidth
 	}: {
 		header?: Snippet;

@@ -584,7 +584,7 @@ export struct CreateGroupPage {
 
                   TextInput({ text: this.maxMembers.toString() })
                     .type(InputType.Number)
-                    .width(64)
+                    .width(DesignConstants.COMPONENT.NUMBER_INPUT_WIDTH)
                     .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
                     .textAlign(TextAlign.Center)
                     .fontSize(DesignConstants.FONT.SIZE.MD)

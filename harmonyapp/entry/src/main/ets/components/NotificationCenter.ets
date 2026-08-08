@@ -484,7 +484,7 @@ export struct NotificationCenter {
             .fontColor(this.getPalette().textSecondary)
         }
         .width('100%')
-        .height(200)
+        .height(DesignConstants.COMPONENT.LOADING_AREA_HEIGHT)
         .justifyContent(FlexAlign.Center)
       } else if (this.visibleNotifications.length === 0 && this.errorMessage) {
         Column({ space: DesignConstants.SPACING.LG }) {
