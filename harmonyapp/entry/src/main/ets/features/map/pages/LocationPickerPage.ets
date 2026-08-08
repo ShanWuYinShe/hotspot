@@ -280,6 +280,8 @@ struct SearchPanel {
   onTextChange: (value: string) => void = (value) => {};
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @State cancelPressed: boolean = false;
+  @State clearPressed: boolean = false;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -334,6 +336,22 @@ struct SearchPanel {
         .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
         .justifyContent(FlexAlign.Center)
         .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
+        .scale(this.cancelPressed
+          ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON }
+          : { x: 1, y: 1 })
+        .animation({
+          curve: curves.springMotion(
+            DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+            DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+          )
+        })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.cancelPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.cancelPressed = false;
+          }
+        })
         .onClick(this.onClose)
       }
       .width('100%')
@@ -428,6 +446,16 @@ struct SearchPanel {
                 Text('清空')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textSecondary)
+                  .scale(this.clearPressed
+                    ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW }
+                    : { x: 1, y: 1 })
+                  .onTouch((event: TouchEvent) => {
+                    if (event.type === TouchType.Down) {
+                      this.clearPressed = true;
+                    } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                      this.clearPressed = false;
+                    }
+                  })
                   .onClick(this.onClearHistory)
               }
               .width('100%')
@@ -528,6 +556,7 @@ struct MainPanel {
   @Prop confirmLabel: string = '设为浏览锚点';
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @State clearPressed: boolean = false;
 
   private dragStartHeight: number = 0;
 
@@ -620,6 +649,16 @@ struct MainPanel {
                   .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textTertiary)
                   .padding({ left: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+                  .scale(this.clearPressed
+                    ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW }
+                    : { x: 1, y: 1 })
+                  .onTouch((event: TouchEvent) => {
+                    if (event.type === TouchType.Down) {
+                      this.clearPressed = true;
+                    } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                      this.clearPressed = false;
+                    }
+                  })
                   .onClick(this.onClearHistory)
               }
             }
@@ -752,6 +791,7 @@ export struct LocationPickerPage {
   @State showMoments: boolean = true;
 	@State showFilterPanel: boolean = false;
 	@State mapToastMessage: string = '';
+	@State closePanelPressed: boolean = false;
 	@State overlappingPanelItems: MapRenderItem[] = [];
   private mapToastTimerId: number = 0;
   @State anchorHistory: AnchorHistoryItem[] = [];
@@ -1765,6 +1805,16 @@ export struct LocationPickerPage {
                 Text('关闭')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
                   .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textSecondary)
+                  .scale(this.closePanelPressed
+                    ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW }
+                    : { x: 1, y: 1 })
+                  .onTouch((event: TouchEvent) => {
+                    if (event.type === TouchType.Down) {
+                      this.closePanelPressed = true;
+                    } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                      this.closePanelPressed = false;
+                    }
+                  })
                   .onClick(() => { this.overlappingPanelItems = []; })
               }
               .width('100%')

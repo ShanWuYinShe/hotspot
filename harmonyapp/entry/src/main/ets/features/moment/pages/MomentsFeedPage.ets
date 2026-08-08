@@ -18,6 +18,7 @@ import {
   SearchUsersRequest, SearchGroupsRequest, CreateReportRequest, Relationship, GeoPoint, PaginationParams,
   GetFeedFollowingRequest, GetFeedNearbyRequest
 } from '../../../core/types/api';
+import { curves } from '@kit.ArkUI';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemCard, CardVariant } from '../../../components/SystemCard';
@@ -48,6 +49,7 @@ class SearchParams {
 @Preview
 @Component
 export struct MomentsFeedPage {
+  @State userRowPressed: boolean = false;
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
@@ -661,6 +663,22 @@ export struct MomentsFeedPage {
         .constraintSize({ maxWidth: 60 })
     }
     .alignItems(HorizontalAlign.Center)
+    .scale(this.userRowPressed
+      ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW }
+      : { x: 1, y: 1 })
+    .animation({
+      curve: curves.springMotion(
+        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+      )
+    })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.userRowPressed = true;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.userRowPressed = false;
+      }
+    })
     .onClick(() => { this.openUserProfile(user); })
   }
 

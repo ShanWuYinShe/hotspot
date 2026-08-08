@@ -24,6 +24,7 @@ import { LoginPromptView } from '../LoginPromptView';
 import { NotificationCenter } from '../NotificationCenter';
 import { NotificationBanner } from '../NotificationBanner';
 import { PerformanceIndicator } from '../PerformanceIndicator';
+import { curves } from '@kit.ArkUI';
 import { AnchorEntry } from '../AnchorEntry';
 import { SystemBadge } from '../SystemBadge';
 import { SystemAvatar } from '../SystemAvatar';
@@ -61,6 +62,7 @@ export struct DesktopLayout {
 
   @State showUpgradeBanner: boolean = false;
   @State showThemeSheet: boolean = false;
+  @State logoPressed: boolean = false;
 
   aboutToAppear() {
     this.showUpgradeBanner = this.isLoggedIn && this.userType === 'temp';
@@ -186,6 +188,22 @@ export struct DesktopLayout {
           .fontColor(this.getPalette().textPrimary)
       }
       .alignItems(VerticalAlign.Center)
+      .scale(this.logoPressed
+        ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW }
+        : { x: 1, y: 1 })
+      .animation({
+        curve: curves.springMotion(
+          DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+          DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+        )
+      })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.logoPressed = true;
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.logoPressed = false;
+        }
+      })
       .onClick(() => {
         this.currentRoute = 'home';
       })
