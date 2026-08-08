@@ -3,6 +3,7 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="theme-color" content="#F7FAFF" />
 		<title>HotSpot</title>
 		<script>
 			// 首帧主题防闪烁：CSS 注入前先按持久化偏好设置 <html> 的 vibrant/forest + dark 类，
@@ -15,6 +16,13 @@
 					var root = document.documentElement;
 					root.classList.add(t);
 					if (dark) root.classList.add('dark');
+					// 浏览器 chrome 配色（移动端地址栏）：与 themes/*.css 的
+					// --cst-surface-page 保持一致；CSS 加载后由 theme store 动态接管
+					var themeColor = dark
+						? { vibrant: '#0B1424', forest: '#161A16' }
+						: { vibrant: '#F7FAFF', forest: '#F6F7F3' };
+					var meta = document.querySelector('meta[name="theme-color"]');
+					if (meta) meta.setAttribute('content', themeColor[t]);
 				} catch (e) {
 					// localStorage 不可用（隐私模式等）时保持默认 vibrant light
 				}

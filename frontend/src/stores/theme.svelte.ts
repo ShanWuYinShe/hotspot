@@ -31,6 +31,17 @@ function applyClasses(dark: boolean, t: AppTheme) {
 
   root.classList.remove('forest', 'vibrant');
   root.classList.add(t);
+
+  // 浏览器 chrome 配色跟随 token（读取当前主题的 --cst-surface-page）
+  syncThemeColor(root);
+}
+
+/** 将 <meta name="theme-color"> 同步为当前主题画布色（移动端地址栏/任务视图）。 */
+function syncThemeColor(root: HTMLElement): void {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) return;
+  const value = getComputedStyle(root).getPropertyValue('--cst-surface-page').trim();
+  if (value) meta.setAttribute('content', value);
 }
 
 function readInitial(): { isDark: boolean; theme: AppTheme } {
