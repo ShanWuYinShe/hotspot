@@ -82,7 +82,6 @@ export interface AppThemePalette {
   pageBackground: string;
   pageGlow: string;
   heroGlow: string;
-  textureTint: string;
   surfaceBackground: string;
   surfaceSubtle: string;
   surfaceElevated: string;
@@ -101,7 +100,6 @@ export interface AppThemePalette {
   textPrimary: string;
   textSecondary: string;
   textTertiary: string;
-  textOnAccentMuted: string;
   iconMuted: string;
   buttonSecondaryBackground: string;
   buttonSecondaryText: string;
@@ -129,8 +127,6 @@ export interface AppThemePalette {
   /** 状态色淡底（对齐前端 --cst-status-*-bg，随主题变） */
   dangerSoft: string;
   warningSoft: string;
-  successSoft: string;
-  infoSoft: string;
   visuals: AppThemeVisualTokens;
 }
 

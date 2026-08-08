@@ -9,7 +9,6 @@ export interface ColorConfig {
   pageBackground: string;
   pageGlow: string;
   heroGlow: string;
-  textureTint: string;
   surfaceBackground: string;
   surfaceSubtle: string;
   surfaceElevated: string;
@@ -27,7 +26,6 @@ export interface ColorConfig {
   textPrimary: string;
   textSecondary: string;
   textTertiary: string;
-  textOnAccentMuted: string;
   iconMuted: string;
   buttonSecondaryBackground: string;
   buttonSecondaryText: string;
@@ -50,8 +48,6 @@ export interface ColorConfig {
   /** 状态色淡底（对齐前端 --cst-status-*-bg 的 color-mix 12~14% 预混近似，随主题变） */
   dangerSoft: string;
   warningSoft: string;
-  successSoft: string;
-  infoSoft: string;
 }
 
 export interface ThemeShadows {
@@ -117,7 +113,6 @@ export class ThemeConstants {
     pageBackground: '#F6F7F3',
     pageGlow: '#F2F4F2',
     heroGlow: '#E8EDE8',
-    textureTint: '#FFFFFF0A',
     surfaceBackground: '#F6F7F3',
     surfaceSubtle: '#F0F1F0',
     surfaceElevated: '#F6F7F3',
@@ -133,7 +128,6 @@ export class ThemeConstants {
     textPrimary: '#152219',
     textSecondary: '#3F5547',
     textTertiary: '#AAB0AF',
-    textOnAccentMuted: '#2D5040',
     iconMuted: '#3F5547',
     buttonSecondaryBackground: '#F0F1F0',
     buttonSecondaryText: '#152219',
@@ -154,15 +148,12 @@ export class ThemeConstants {
     mapMoment: '#8A6426',
     dangerSoft: '#ECE9E0',
     warningSoft: '#E9E6DB',
-    successSoft: '#E0E8E0',
-    infoSoft: '#E3EAE3'
   };
 
   static readonly DEFAULT_CLEAN_DARK_COLORS: ColorConfig = {
     pageBackground: '#161A16',
     pageGlow: '#171A17',
     heroGlow: '#1A201A',
-    textureTint: '#FFFFFF06',
     surfaceBackground: '#161A16',
     surfaceSubtle: '#242624',
     surfaceElevated: '#181C18',
@@ -178,7 +169,6 @@ export class ThemeConstants {
     textPrimary: '#E8F1E9',
     textSecondary: '#A8BDAE',
     textTertiary: '#5A6B60',
-    textOnAccentMuted: '#D0F0D5',
     iconMuted: '#A8BDAE',
     buttonSecondaryBackground: '#242624',
     buttonSecondaryText: '#E8F1E9',
@@ -199,15 +189,12 @@ export class ThemeConstants {
     mapMoment: '#C4A75A',
     dangerSoft: '#2E2E20',
     warningSoft: '#2E2E20',
-    successSoft: '#1E3024',
-    infoSoft: '#1E3024'
   };
 
   static readonly FIGMA_NEU_LIGHT_COLORS: ColorConfig = {
     pageBackground: '#E2D6C5',
     pageGlow: '#EFE7DA',
     heroGlow: '#F4E9DE',
-    textureTint: '#FFFFFF16',
     surfaceBackground: '#EFE7DA',
     surfaceSubtle: '#E2D6C5',
     surfaceElevated: '#F4E9DE',
@@ -223,7 +210,6 @@ export class ThemeConstants {
     textPrimary: '#3F342A',
     textSecondary: '#65594A',
     textTertiary: '#8C7F6E',
-    textOnAccentMuted: '#7F533C',
     iconMuted: '#65594A',
     buttonSecondaryBackground: '#E2D6C5',
     buttonSecondaryText: '#3F342A',
@@ -244,15 +230,12 @@ export class ThemeConstants {
     mapMoment: '#96682A',
     dangerSoft: '#DEC3B3',
     warningSoft: '#DDCCB5',
-    successSoft: '#D3CCB9',
-    infoSoft: '#D3CCB9'
   };
 
   static readonly FIGMA_NEU_DARK_COLORS: ColorConfig = {
     pageBackground: '#15110E',
     pageGlow: '#211B17',
     heroGlow: '#2A2017',
-    textureTint: '#FFFFFF0A',
     surfaceBackground: '#211B17',
     surfaceSubtle: '#2A231C',
     surfaceElevated: '#26201A',
@@ -268,7 +251,6 @@ export class ThemeConstants {
     textPrimary: '#F1E4D2',
     textSecondary: '#A99682',
     textTertiary: '#8C7F6E',
-    textOnAccentMuted: '#F3CCB4',
     iconMuted: '#A99682',
     buttonSecondaryBackground: '#2A231C',
     buttonSecondaryText: '#F1E4D2',
@@ -289,8 +271,6 @@ export class ThemeConstants {
     mapMoment: '#D1A35D',
     dangerSoft: '#2D1712',
     warningSoft: '#2F2519',
-    successSoft: '#25261D',
-    infoSoft: '#25261D'
   };
 
   static readonly SHADOWS: ThemeShadowRegistry = new ThemeShadowRegistry();
@@ -299,7 +279,6 @@ export class ThemeConstants {
     pageBackground: '#F7FAFF',
     pageGlow: '#E8EDFF',
     heroGlow: '#DDE4FF',
-    textureTint: '#2E66C008',
     surfaceBackground: '#F7FAFF',
     surfaceSubtle: '#EAF1FA',
     surfaceElevated: '#F7FAFF',
@@ -315,7 +294,6 @@ export class ThemeConstants {
     textPrimary: '#16233A',
     textSecondary: '#52647F',
     textTertiary: '#8A97AD',
-    textOnAccentMuted: '#C9DCFF',
     iconMuted: '#52647F',
     buttonSecondaryBackground: '#EDF3FC',
     buttonSecondaryText: '#16233A',
@@ -336,15 +314,12 @@ export class ThemeConstants {
     mapMoment: '#C2470B',
     dangerSoft: '#F7E2EA',
     warningSoft: '#F7EEDF',
-    successSoft: '#D9F1F3',
-    infoSoft: '#DDE7F7'
   };
 
   static readonly VIBRANT_DARK_COLORS: ColorConfig = {
     pageBackground: '#0B1424',
     pageGlow: '#122036',
     heroGlow: '#16263E',
-    textureTint: '#FFFFFF08',
     surfaceBackground: '#0B1424',
     surfaceSubtle: '#14243A',
     surfaceElevated: '#16273C',
@@ -360,7 +335,6 @@ export class ThemeConstants {
     textPrimary: '#E8F1FF',
     textSecondary: '#A5B6CE',
     textTertiary: '#5E6C85',
-    textOnAccentMuted: '#B9CFFF',
     iconMuted: '#A5B6CE',
     buttonSecondaryBackground: '#14243A',
     buttonSecondaryText: '#E8F1FF',
@@ -381,7 +355,5 @@ export class ThemeConstants {
     mapMoment: '#FB923C',
     dangerSoft: '#2C2131',
     warningSoft: '#2C2B24',
-    successSoft: '#112D34',
-    infoSoft: '#182842'
   };
 }

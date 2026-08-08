@@ -92,7 +92,6 @@ function buildPalette(
     pageBackground: colors.pageBackground,
     pageGlow: colors.pageGlow,
     heroGlow: colors.heroGlow,
-    textureTint: colors.textureTint,
     surfaceBackground: colors.surfaceBackground,
     surfaceSubtle: colors.surfaceSubtle,
     surfaceElevated: colors.surfaceElevated,
@@ -110,7 +109,6 @@ function buildPalette(
     textPrimary: colors.textPrimary,
     textSecondary: colors.textSecondary,
     textTertiary: colors.textTertiary,
-    textOnAccentMuted: colors.textOnAccentMuted,
     iconMuted: colors.iconMuted,
     buttonSecondaryBackground: colors.buttonSecondaryBackground,
     buttonSecondaryText: colors.buttonSecondaryText,
@@ -135,8 +133,6 @@ function buildPalette(
     mapMoment: colors.mapMoment,
     dangerSoft: colors.dangerSoft,
     warningSoft: colors.warningSoft,
-    successSoft: colors.successSoft,
-    infoSoft: colors.infoSoft,
     visuals
   } as AppThemePalette;
 }

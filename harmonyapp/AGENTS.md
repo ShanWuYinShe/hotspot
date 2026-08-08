@@ -123,7 +123,7 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 - 品牌：`palette.accentBackground`（forest `#3D7A55`，与前端
   `--cst-pr-accent-primary`（`--cst-accent-default`）一致）
 - 语义：`palette.success` / `palette.warning` / `palette.error` / `palette.info`
-- 地图标记：`palette.mapUser / mapGroup / mapMoment`（对齐前端 `--cst-marker-user/group/moment`，随主题/明暗变）；状态淡底：`palette.dangerSoft / warningSoft / successSoft / infoSoft`（对齐前端 `--cst-status-*-bg` 12~14% 预混档位）
+- 地图标记：`palette.mapUser / mapGroup / mapMoment`（对齐前端 `--cst-marker-user/group/moment`，随主题/明暗变）；状态淡底：`palette.dangerSoft / warningSoft`（对齐前端 `--cst-status-danger/warning-bg` 12~14% 预混档位；success/info 淡底用 `getSoftStatusBackground('success' | 'info')` 派生）
 - 主题解析：`AppThemeManager.getPaletteById(resolvedThemeId)` → `@StorageProp(KEY_RESOLVED_THEME_ID)`
 - 明暗差异：本端明暗始终跟随系统（`isDarkMode`），与 Web 端可手动切换
   `isDark` 不同；主题族（vibrant/forest/figma_neu）双端可选集一致
