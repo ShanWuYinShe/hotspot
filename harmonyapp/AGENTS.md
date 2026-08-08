@@ -144,6 +144,26 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 - hover 抬升用 `HOVER_ELEVATION`（ArkUI elevation，对应前端 fine-pointer hover 缩放），
   弹簧动效用 `SPRING_RESPONSE_*` / `SPRING_DAMPING_*`（对应前端 `--cst-ease-bounce`）
 
+双端共享组件映射（新增/修改组件时先查此表，避免两端各自发明同类组件）：
+
+| 前端（Svelte） | 鸿蒙（ArkTS） | 说明 |
+|---|---|---|
+| `layout/page/PageHeader` | `SystemPageHeader` / `SearchPageHeader` / `ChatPageHeader` | 页面头部（含 below/搜索/聊天空态） |
+| `StandardPageLayout` / `SplitPageLayout` / `ContentColumn` | `PageShellContainer` | 页面内容栏档位（form/narrow/default/wide/feed） |
+| `MainLayout`（desktop/mobile/tablet） | `layout/DesktopLayout` / `PhoneLayout` / `ResponsiveContainer` | 设备外壳分派 |
+| `EmptyState` | `EmptyState` | 空态（同名同契约） |
+| `shared/Avatar` | `SystemAvatar` | 头像（尺寸/形状/状态点） |
+| `forms/SearchInput` | `SearchPageHeader` / `SmartSearchComponent` | 搜索输入 |
+| `navigation/TabBar` / `NavTab` / `RailIcon` | `TabsPillGroup` / `PhoneLayout` 底部导航 | 分类/导航 Tab |
+| `list/ListItem` / `ListContainer` | `SystemCard`（listItem 变体）/ `SettingsEntryRow` | 列表行（行级卡片禁止规则同前端） |
+| `overlays/SheetShell` / `ui/dialog` | `SystemDialog` / `bindSheet` | 弹层/抽屉 |
+| `forms/TagPill` | `TabsPillGroup` chip / `FILTER_CHIP_HEIGHT` | 标签/筛选胶囊 |
+| `data-display/EmptyState` 加载态 | `SystemLoadingView` / `Skeleton` | 加载/骨架 |
+| `data-display/MetricRow` / `HeroStats` | `StatSegments` | 统计段 |
+| `routes/moments/shared/MomentCard` | `MomentFeedCard` | 动态卡片 |
+| `auth/LoginPromptSheet` | `LoginPromptView` | 未登录引导 |
+| `messages/ChatView` 等 | `ChatPage` / `ChatPageHeader` | 聊天界面 |
+
 透明度（OPACITY）：`DISABLED 0.38` / `PRESSED 0.72` / `LOADING 0.58` / `SUBTLE 0.85` / `FADED 0.4` / `MUTED 0.5` / `EMPHASIZED 0.8`（对齐前端 opacity-40/50/80 标准档）。
 
 尺寸（COMPONENT / LAYOUT，禁止裸 `width(N)` / `height(N)`）：
