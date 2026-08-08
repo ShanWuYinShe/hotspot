@@ -144,6 +144,12 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 - hover 抬升用 `HOVER_ELEVATION`（ArkUI elevation，对应前端 fine-pointer hover 缩放），
   弹簧动效用 `SPRING_RESPONSE_*` / `SPRING_DAMPING_*`（对应前端 `--cst-ease-bounce`）
 
+玻璃效果（毛玻璃背景）：用系统 `BlurStyle` 枚举（平台原生，非数值 token），
+按模糊强度对应前端 `--cst-blur-*` 三档：
+- `BlurStyle.Thin` ↔ 前端 `--cst-blur-sm`（8px，轻徽章/浮层）
+- `BlurStyle.Regular` ↔ 前端 `--cst-blur-md`（16px，sticky header/overlay）
+- `BlurStyle.Medium`/`Thick` ↔ 前端 `--cst-blur-lg`（24px，底部导航/tablet dock）
+
 双端共享组件映射（新增/修改组件时先查此表，避免两端各自发明同类组件）：
 
 | 前端（Svelte） | 鸿蒙（ArkTS） | 说明 |
