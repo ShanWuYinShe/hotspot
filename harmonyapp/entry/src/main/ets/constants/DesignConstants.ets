@@ -504,9 +504,9 @@ const FONT: FontSystem = {
     XL: 20,
     XXL: 24,
     XXXL: 32,
-    XS_MINUS: 9,
+    XS_MINUS: 9, // HarmonyOS 渲染适配档（前端最小档为 10，本端保留 9 用于极小角标）
     XS2: 10,
-    SM_PLUS: 13,
+    SM_PLUS: 13, // HarmonyOS 渲染适配档（前端已把 13 归并到 12，本端保留为聊天气泡正文档）
     MD_PLUS: 15,
     LG_PLUS: 18,
     XL_PLUS: 22,
@@ -555,7 +555,9 @@ const SPACING: SpacingSystem = {
   XXXL: 48,
 };
 
-// ==================== 圆角系统（对齐前端 --radius: 0.625rem 基线）====================
+// ==================== 圆角系统（HarmonyOS vp 适配档）====================
+// 前端 --radius 已收敛 4 档（sm 12 / md 16 / lg 20 / xl 24，sheet 28）；
+// harmonyapp 按 vp 渲染保留 8/12/16/18/22 近似档，语义圆角由 SHAPE 档位对齐前端用法
 const RADIUS: RadiusSystem = {
   SM: 8,
   MD: 12,
@@ -570,8 +572,8 @@ const SHAPE: ShapeSemanticTokens = {
   HERO_CARD: 24,
   COMPACT_CARD: 18,
   INPUT: 18,
-  // 主按钮统一圆角矩形（28vp），对齐前端 SvelteKit Button base `rounded-[28px]`；
-  // 与 chip/头像的 RADIUS.FULL 胶囊区分，主操作走圆角矩形。
+  // 主按钮统一圆角矩形（28vp，HarmonyOS 控制件常规圆角；前端主按钮为 rounded-full
+  // 胶囊，本端用圆角矩形与胶囊 chip 区分主次操作）。
   BUTTON: 28,
   CHIP: RADIUS.FULL,
   TAB_BAR: 24,
