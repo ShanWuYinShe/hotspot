@@ -508,7 +508,7 @@ struct SearchPanel {
     })
     .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
     .border({ width: { top: 1 }, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
-    .borderRadius({ topLeft: 24, topRight: 24 })
+    .borderRadius({ topLeft: DesignConstants.SHAPE.SHEET_TOP_RADIUS, topRight: DesignConstants.SHAPE.SHEET_TOP_RADIUS })
     .onClick(() => {})
   }
 }
@@ -716,7 +716,7 @@ struct MainPanel {
     })
     .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
     .border({ width: { top: 1 }, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
-    .borderRadius({ topLeft: 24, topRight: 24 })
+    .borderRadius({ topLeft: DesignConstants.SHAPE.SHEET_TOP_RADIUS, topRight: DesignConstants.SHAPE.SHEET_TOP_RADIUS })
     .onClick(() => {})
   }
 }
