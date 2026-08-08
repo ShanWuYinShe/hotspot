@@ -6,10 +6,6 @@ export class SystemUiController {
     SystemUiThemeStore.setStyle(style);
   }
 
-  static resetToDefault(): void {
-    SystemUiThemeStore.reset();
-  }
-
   static syncWithCurrentTheme(): void {
     SystemUiThemeStore.setStyle(AppThemeManager.getCurrentSurfaceStyle());
   }

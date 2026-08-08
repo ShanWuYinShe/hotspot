@@ -33,15 +33,6 @@ export class SystemUiThemeStore {
     SystemUiThemeStore.notify();
   }
 
-  static reset(): void {
-    SystemUiThemeStore.currentStyle = {
-      baseColor: DEFAULT_SYSTEM_SURFACE_STYLE.baseColor,
-      overlayOpacity: DEFAULT_SYSTEM_SURFACE_STYLE.overlayOpacity,
-      preferDarkContent: DEFAULT_SYSTEM_SURFACE_STYLE.preferDarkContent
-    };
-    SystemUiThemeStore.notify();
-  }
-
   static subscribe(listener: SystemSurfaceListener): () => void {
     SystemUiThemeStore.listeners.push(listener);
     return () => {
