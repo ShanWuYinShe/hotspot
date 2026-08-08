@@ -58,7 +58,7 @@
 		>
 			<div
 				class="flex items-center"
-				style="width:100%;max-width:{isWide ? 680 : 'none'};border-radius:{isWide ? 'var(--radius-sheet)' : 0};background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);-webkit-backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);box-shadow:{isWide ? 'var(--cst-elevation-nav)' : 'none'};border:{isWide ? '1px solid var(--cst-border-nav-glass)' : 'none'};padding:{isWide ? '8px 14px' : '8px max(32px, env(safe-area-inset-left, 32px)) max(14px, env(safe-area-inset-bottom, 14px))'};gap:{isWide ? 6 : 14}px;"
+				style="width:100%;max-width:{isWide ? 'var(--cst-tablet-dock-max)' : 'none'};border-radius:{isWide ? 'var(--radius-sheet)' : 0};background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);-webkit-backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);box-shadow:{isWide ? 'var(--cst-elevation-nav)' : 'none'};border:{isWide ? '1px solid var(--cst-border-nav-glass)' : 'none'};padding:{isWide ? '8px 14px' : '8px max(32px, env(safe-area-inset-left, 32px)) max(14px, env(safe-area-inset-bottom, 14px))'};gap:{isWide ? 6 : 14}px;"
 			>
 				<!-- 左侧：附近（flex-1 与右侧对称，保持 FAB 居中） -->
 				<div class="flex flex-1 justify-center">
@@ -77,8 +77,8 @@
 				<div class="flex items-center justify-center shrink-0 w-16" >
 					<button
 						type="button"
-						class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none select-none"
-						style="width:48px;height:48px;background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--cst-elevation-fab)'};transition:background 0.22s, box-shadow 0.22s, transform 0.18s var(--cst-ease-standard), filter 0.18s var(--cst-ease-standard);"
+						class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none select-none size-12"
+						style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--cst-elevation-fab)'};transition:background 0.22s var(--cst-ease-standard), box-shadow 0.22s var(--cst-ease-standard), transform 0.18s var(--cst-ease-standard), filter 0.18s var(--cst-ease-standard);"
 						aria-label={composer.composerOpen ? '关闭' : '发布'}
 						onclick={toggleComposer}
 					>

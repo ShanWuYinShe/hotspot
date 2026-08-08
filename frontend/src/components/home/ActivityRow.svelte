@@ -34,8 +34,8 @@
 	class="flex items-center gap-3 px-4 py-3"
 >
 	<div
-		class="rounded-sm flex items-center justify-center shrink-0"
-		style="width:34px;height:34px;background:{bg};"
+		class="rounded-sm flex items-center justify-center shrink-0 size-8.5"
+		style="background:{bg};"
 	>
 		<Icon class="size-4" style="color:{color};" strokeWidth={1.75} />
 	</div>

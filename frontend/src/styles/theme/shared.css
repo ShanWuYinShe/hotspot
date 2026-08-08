@@ -39,6 +39,14 @@
   --cst-blur-lg: 24px;   /* 重毛玻璃（底部导航栏、tablet 浮动 dock） */
 }
 
+/* ── Map marker glow shadows — 地图标记光晕阴影结构（偏移固定，与主题无关；
+   色值由调用方按 marker tone token 提供，如 var(--cst-marker-user-glow)）。
+   对齐第 10 条阴影强制 token 化：禁止组件内联手抄偏移量。 */
+:root {
+  --cst-marker-shadow: 0 2px 10px;  /* 定位点/选中标记光晕 */
+  --cst-marker-halo: 0 0 8px;       /* 小光点（图例/当前位置点）光晕 */
+}
+
 /* ── Responsive page-content contract ──────────────────────────────── */
 :root {
   --cst-page-gutter: 1.25rem;

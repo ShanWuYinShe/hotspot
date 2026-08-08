@@ -25,7 +25,7 @@ locationName = loc?.location_name ?? '';
 <button
 	type="button"
 	class="hover-btn card-hover flex items-center outline-none text-left {collapsed ? 'h-10 w-10 self-center justify-center rounded-sm' : 'w-full gap-3 rounded-md'}"
-	style="padding:{collapsed ? 0 : '10px 12px'};background:{hovered ? collapsedHover : collapsed ? 'transparent' : 'var(--cst-surface-primary)'};border:1px solid var(--cst-border-default);box-shadow:{collapsed ? 'none' : 'var(--shadow-raised-md)'};transform:{hovered ? 'translateY(-2px)' : 'translateY(0)'};transition:background 0.16s ease, transform 0.22s var(--cst-ease-standard), box-shadow 0.22s var(--cst-ease-standard);"
+	style="padding:{collapsed ? 0 : '10px 12px'};background:{hovered ? collapsedHover : collapsed ? 'transparent' : 'var(--cst-surface-primary)'};border:1px solid var(--cst-border-default);box-shadow:{collapsed ? 'none' : 'var(--shadow-raised-md)'};transform:{hovered ? 'translateY(-2px)' : 'translateY(0)'};transition:background 0.16s var(--cst-ease-standard), transform 0.22s var(--cst-ease-standard), box-shadow 0.22s var(--cst-ease-standard);"
 	title={collapsed ? '位置选择' : undefined}
 	aria-label="位置选择"
 	onclick={onClick}
@@ -33,8 +33,8 @@ locationName = loc?.location_name ?? '';
 	onmouseleave={() => (hovered = false)}
 >
 	<div
-		class="flex items-center justify-center rounded-full shrink-0"
-		style="width:{collapsed ? 30 : 34}px;height:{collapsed ? 30 : 34}px;background:var(--cst-accent-default);box-shadow:none;"
+		class="flex items-center justify-center rounded-full shrink-0 {collapsed ? 'size-7.5' : 'size-8.5'}"
+		style="background:var(--cst-accent-default);box-shadow:none;"
 	>
 		<Navigation2 class="size-4.5"  style="color:var(--cst-text-on-accent)" strokeWidth={2} />
 	</div>

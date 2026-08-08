@@ -65,9 +65,9 @@
 				</div>
 				{#if user.isOnline}
 					<span
-						class="shrink-0 rounded-full"
+						class="shrink-0 rounded-full size-2.25"
 						title="在线"
-						style="width:9px;height:9px;background:var(--cst-status-online);box-shadow:0 0 0 2px var(--cst-surface-card-menu);"
+						style="background:var(--cst-status-online);box-shadow:0 0 0 2px var(--cst-surface-card-menu);"
 					></span>
 				{/if}
 			</div>
@@ -79,8 +79,8 @@
 				{/if}
 				<button
 					type="button"
-					class="hover-btn tap-90 flex items-center justify-center rounded-full outline-none shrink-0"
-					style="width:28px;height:28px;{followed
+					class="hover-btn tap-90 flex items-center justify-center rounded-full outline-none shrink-0 size-7"
+					style="{followed
 						? 'background:var(--cst-accent-soft);border:1px solid var(--cst-accent-border);color:var(--cst-accent-default);'
 						: 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);box-shadow:var(--shadow-glow-sm);'}"
 					aria-label={followed ? `取消关注 ${user.name}` : `关注 ${user.name}`}

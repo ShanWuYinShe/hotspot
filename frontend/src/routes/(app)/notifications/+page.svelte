@@ -194,7 +194,7 @@ const FILTER_TABS = [
 
 				{#if readGroup.length > 0}
 					<!-- 较早分组标题（非 emphasis：仅 label + flex 分隔线，对齐 Figma Make） -->
-					<div class="mb-3 flex h-5 items-center gap-2" style="margin-top:{unreadGroup.length > 0 ? '20px' : '0'};">
+					<div class="mb-3 flex h-5 items-center gap-2 {unreadGroup.length > 0 ? 'mt-5' : ''}">
 						<p class="eyebrow font-medium" style="color:var(--cst-text-secondary)">较早</p>
 						<span aria-hidden="true" class="h-px flex-1" style="background:var(--cst-border-default);"></span>
 					</div>
@@ -228,10 +228,10 @@ const FILTER_TABS = [
 						<button
 							type="button"
 							class="hover-btn flex items-center gap-2.5 rounded-sm px-2 py-1.5 outline-none text-left"
-							style="background:{filter === type ? cfg.bg : 'transparent'};border:1px solid {filter === type ? cfg.border : 'transparent'};transition:background 0.15s;"
+							style="background:{filter === type ? cfg.bg : 'transparent'};border:1px solid {filter === type ? cfg.border : 'transparent'};transition:background 0.15s var(--cst-ease-standard);"
 							onclick={() => (filter = type)}
 						>
-							<div class="flex items-center justify-center rounded-full shrink-0" style="width:24px;height:24px;background:{cfg.bg};">
+							<div class="flex items-center justify-center rounded-full shrink-0 size-6" style="background:{cfg.bg};">
 								<cfg.icon class="size-2.75" style="color:{cfg.color};" strokeWidth={1.75} />
 							</div>
 							<span class="text-text-primary text-sm flex-1">{cfg.label}</span>

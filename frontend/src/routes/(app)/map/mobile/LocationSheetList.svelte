@@ -55,7 +55,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 	</ListContainer>
 {:else if searchQuery && searchResults.length === 0}
 	<div class="flex flex-col items-center py-6">
-		<MapPin class="size-6.5"  style="color:var(--cst-text-secondary);opacity:0.28" strokeWidth={1} />
+		<MapPin class="size-6.5 opacity-30"  style="color:var(--cst-text-secondary)" strokeWidth={1} />
 		<p class="text-text-secondary text-sm mt-2" >未找到匹配地点</p>
 	</div>
 {:else}
@@ -132,7 +132,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 					{/each}
 				</ListContainer>
 			{:else}
-				<p class="text-text-secondary text-sm"  style="padding:12px 20px">暂无最近记录</p>
+				<p class="text-text-secondary text-sm px-5 py-3">暂无最近记录</p>
 			{/if}
 		{:else}
 			{#if HOT_LOCATIONS.length}
@@ -145,7 +145,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 							ariaLabel={`选择热门地点 ${loc.displayName}`}
 							class="app-list-row app-list-row--standard px-4"
 						>
-							<div class="flex items-center justify-center rounded-sm shrink-0 size-9 text-lg {isSelected ? 'bg-surface-primary' : 'bg-accent-default'}"  style="opacity:0.88">
+							<div class="flex items-center justify-center rounded-sm shrink-0 size-9 text-lg {isSelected ? 'bg-surface-primary' : 'bg-accent-default'} opacity-90">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">

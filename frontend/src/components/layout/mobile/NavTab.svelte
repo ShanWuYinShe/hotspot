@@ -24,10 +24,9 @@
 
 <button
 	type="button"
-	class="hover-btn nav-tab relative flex flex-col items-center justify-center outline-none select-none rounded-lg"
-	style="flex:1;min-width:0;padding-top:10px;padding-bottom:8px;gap:4px;"
-	aria-label={label}
-	aria-current={isActive ? 'page' : undefined}
+	class="hover-btn nav-tab relative flex flex-col items-center justify-center outline-none select-none rounded-lg pt-2.5 pb-2 gap-1"
+	style="flex:1;min-width:0;"
+	aria-label={label}	aria-current={isActive ? 'page' : undefined}
 	onclick={onClick}
 >
 	{#if isActive}

@@ -52,8 +52,8 @@ locationName = loc?.location_name ?? '';
 		{#snippet trailing()}
 			<button
 				type="button"
-				class="hover-btn flex items-center justify-center rounded-full outline-none shrink-0 circle-hover bg-surface-primary"
-				style="width:36px;height:36px;border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
+				class="hover-btn flex items-center justify-center rounded-full outline-none shrink-0 circle-hover bg-surface-primary size-9"
+				style="border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
 				onclick={onReset}
 			>
 				<Crosshair class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
@@ -82,7 +82,7 @@ locationName = loc?.location_name ?? '';
 		{/if}
 	</div>
 	{#if searchResults.length > 0}
-		<ListContainer bordered class="absolute top-full left-4 right-4 z-30 mt-1" style="box-shadow:0 0 0 1px var(--cst-border-default), 0 10px 36px var(--cst-elevation-shadow-dark);">
+		<ListContainer bordered class="absolute top-full left-4 right-4 z-30 mt-1" style="box-shadow:var(--cst-elevation-menu);">
 		{#each searchResults as r}
 			{@const isSelected = selectedLoc?.displayName === r.displayName}
 			<ListItem
@@ -134,7 +134,7 @@ locationName = loc?.location_name ?? '';
 					<p class="text-sm" >当前位置</p>
 					<p class="text-xs mt-px opacity-80">{locationName || '自动定位'}</p>
 				</div>
-				<div class="bg-status-online size-2 shrink-0"  style="border-radius:50%;box-shadow:0 0 6px var(--cst-status-online)"></div>
+				<div class="bg-status-online size-2 shrink-0"  style="border-radius:50%;box-shadow:var(--cst-marker-halo) var(--cst-status-online)"></div>
 			</div>
 
 			{#if nearbyPins.length}
@@ -200,7 +200,7 @@ locationName = loc?.location_name ?? '';
 							ariaLabel={`选择热门地点 ${loc.displayName}`}
 							class="app-list-row app-list-row--standard"
 						>
-							<div class="flex items-center justify-center rounded-sm shrink-0 bg-accent-default size-9 text-lg"  style="opacity:0.88">
+							<div class="flex items-center justify-center rounded-sm shrink-0 bg-accent-default size-9 text-lg opacity-90">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
@@ -264,9 +264,9 @@ locationName = loc?.location_name ?? '';
 </div>
 
 <!-- Confirm -->
-<div class="shrink-0 border-t border-border-default"   style="padding:10px 12px 16px">
+<div class="shrink-0 border-t border-border-default px-3 pt-2.5 pb-4">
 	{#if selectedLoc}
-		<div class="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-sm bg-surface-primary" style="box-shadow:0 0 0 1px var(--cst-border-default), var(--shadow-inset-sm);">
+		<div class="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-sm bg-surface-primary" style="box-shadow:var(--ring-border), var(--shadow-inset-sm);">
 			<Check class="size-3.25 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={2.5} />
 			<p class="flex-1 truncate text-accent-default text-xs">{selectedLoc.displayName}</p>
 			<button
@@ -283,8 +283,8 @@ locationName = loc?.location_name ?? '';
 	{/if}
 	<button
 		type="button"
-		class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-text-on-accent text-md"
-		style="height:48px;box-shadow:var(--shadow-glow-lg);"
+		class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-text-on-accent text-md h-12"
+		style="box-shadow:var(--shadow-glow-lg);"
 		onclick={onConfirm}
 	>
 		<MapPin class="size-3.5"  strokeWidth={2} />

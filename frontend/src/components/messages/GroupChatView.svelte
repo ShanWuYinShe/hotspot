@@ -166,12 +166,12 @@
 
 <div class="flex min-h-0 flex-col h-full bg-surface-primary">
 	<!-- Header -->
-	<div class="shrink-0 flex items-center gap-3 px-4 bg-surface-primary" style="height:{compact ? 52 : 60}px;border-bottom:1px solid var(--cst-border-default);">
+	<div class="shrink-0 flex items-center gap-3 px-4 bg-surface-primary {compact ? 'h-13' : 'h-15'}" style="border-bottom:1px solid var(--cst-border-default);">
 		{#if showBackButton}
 			<button
 				type="button"
-				class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none shrink-0 bg-surface-primary"
-				style="width:36px;height:36px;box-shadow:var(--shadow-raised-sm);border:1px solid var(--cst-border-default);"
+				class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none shrink-0 bg-surface-primary size-9"
+				style="box-shadow:var(--shadow-raised-sm);border:1px solid var(--cst-border-default);"
 				onclick={onBack}
 				aria-label="返回"
 			>
@@ -244,8 +244,8 @@
 
 		<button
 			type="button"
-			class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'}"
-			style="width:36px;height:36px;box-shadow:{chat.inputVal.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:1px solid var(--cst-border-default);"
+			class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'} size-9"
+			style="box-shadow:{chat.inputVal.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:1px solid var(--cst-border-default);"
 			onclick={() => void chat.handleSend()}
 			aria-label="发送"
 		>

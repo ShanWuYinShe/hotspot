@@ -71,8 +71,8 @@
 	{#if step === 'done'}
 		<div class="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
 			<div
-				class="flex items-center justify-center rounded-full bg-accent-default"
-				style="width:72px;height:72px;box-shadow:var(--shadow-glow-lg);"
+				class="flex items-center justify-center rounded-full bg-accent-default size-18"
+				style="box-shadow:var(--shadow-glow-lg);"
 			>
 				<Check class="size-8"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
 			</div>

@@ -10,8 +10,8 @@
 <div class="fixed inset-0 z-[var(--cst-z-toast)] flex items-center justify-center p-6" style="background:var(--cst-surface-primary);">
 	<div class="flex flex-col items-center text-center gap-4"  style="max-width:360px">
 		<div
-			class="flex items-center justify-center rounded-full"
-			style="width:64px;height:64px;background:var(--cst-color-danger-bg);"
+			class="flex items-center justify-center rounded-full size-16"
+			 style="background:var(--cst-color-danger-bg);"
 		>
 			<ShieldAlert size={30} color="var(--cst-status-danger)" strokeWidth={1.6} />
 		</div>

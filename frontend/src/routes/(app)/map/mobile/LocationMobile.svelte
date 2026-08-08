@@ -156,7 +156,7 @@
 	}
 
 	const sheetStyle = $derived(
-		`position:absolute;bottom:0;left:0;right:0;height:${sheetH}px;z-index:20;border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;border:1px solid var(--cst-border-default);border-bottom:none;box-shadow:0 -6px 28px var(--cst-elevation-shadow-dark);display:flex;flex-direction:column;overflow:hidden;${dragging ? '' : 'transition:height 0.3s var(--cst-ease-bounce);'}`
+		`position:absolute;bottom:0;left:0;right:0;height:${sheetH}px;z-index:20;border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;border:1px solid var(--cst-border-default);border-bottom:none;box-shadow:var(--cst-elevation-sheet);display:flex;flex-direction:column;overflow:hidden;${dragging ? '' : 'transition:height 0.3s var(--cst-ease-bounce);'}`
 	);
 	const rightCtrlBottom = $derived(sheetH + 10);
 </script>
@@ -182,7 +182,7 @@
 
 		<!-- Current location pulsing dot（对齐 Figma Make：halo scale 1→1.8 / opacity 0.55→0 循环） -->
 		<div style="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:5;pointer-events:none;">
-			<div style="width:18px;height:18px;border-radius:50%;background:{PIN_COLORS.user};border:3px solid var(--cst-surface-primary);box-shadow:0 2px 10px {PIN_TONES.user.glow};position:relative;">
+			<div style="width:18px;height:18px;border-radius:50%;background:{PIN_COLORS.user};border:3px solid var(--cst-surface-primary);box-shadow:var(--cst-marker-shadow) {PIN_TONES.user.glow};position:relative;">
 				<span class="map-pulse-halo absolute rounded-full" style="inset:-7px;background:{PIN_TONES.user.bg};border:1px solid {PIN_TONES.user.border};"></span>
 			</div>
 		</div>
@@ -208,29 +208,29 @@
 		{/if}
 
 		{#if mapLoading}
-			<div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary shadow-[0_2px_12px_var(--cst-elevation-shadow-dark)] border border-border-default" >
+			<div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary shadow-raised-sm border border-border-default" >
 				加载地图数据…
 			</div>
 		{/if}
 
 		<!-- Attribution -->
-		<div class="text-text-secondary text-xxs"  style="position:absolute;bottom:4px;left:6px;opacity:0.4;pointer-events:none;z-index:1">
+		<div class="text-text-secondary text-xxs opacity-40"  style="position:absolute;bottom:4px;left:6px;pointer-events:none;z-index:1">
 			© OpenStreetMap contributors
 		</div>
 	</div>
 
 	<!-- ══ TOP BAR (fixed, floating over map — 对齐 Figma Make：无标题，仅返回 + 筛选) ══ -->
-	<div style="position:absolute;top:0;left:0;right:0;z-index:50;padding:12px 14px 0;">
-		<div style="display:flex;align-items:center;justify-content:space-between;">
-			<!-- Back -->
-			<button
-				type="button"
-				class="hover-btn flex items-center justify-center rounded-full outline-none circle-hover"
-				style="width:42px;height:42px;{floatBtnStyle}"
-				onclick={() => history.back()}
-			>
-				<ArrowLeft class="size-4.25"  style="color:var(--cst-text-primary)" strokeWidth={2} />
-			</button>
+		<div style="position:absolute;top:0;left:0;right:0;z-index:50;padding:12px 14px 0;">
+			<div style="display:flex;align-items:center;justify-content:space-between;">
+				<!-- Back -->
+				<button
+					type="button"
+					class="hover-btn flex items-center justify-center rounded-full outline-none circle-hover size-10.5"
+					style="{floatBtnStyle}"
+					onclick={() => history.back()}
+				>
+					<ArrowLeft class="size-4.25"  style="color:var(--cst-text-primary)" strokeWidth={2} />
+				</button>
 
 			<!-- Filter toggle -->
 			<Popover.Root bind:open={showFilter}>
@@ -238,7 +238,7 @@
 					<button
 						type="button"
 						class="hover-btn flex items-center gap-2 rounded-full outline-none text-md {showFilter ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-primary'}"
-						style="padding:9px 16px;border:{showFilter ? '1px solid transparent' : '1px solid var(--cst-border-default)'};box-shadow:{showFilter ? 'var(--shadow-glow-md)' : '0 2px 12px var(--cst-elevation-shadow-dark), 0 1px 3px var(--cst-elevation-shadow-dark)'};"
+						style="padding:9px 16px;border:{showFilter ? '1px solid transparent' : '1px solid var(--cst-border-default)'};box-shadow:{showFilter ? 'var(--shadow-glow-md)' : 'var(--cst-elevation-fab)'};"
 						onclick={() => (showFilter = !showFilter)}
 					>
 						<SlidersHorizontal class="size-3.5"  strokeWidth={showFilter ? 2.5 : 1.75} />
@@ -266,14 +266,13 @@
 							{/if}
 							<button
 								type="button"
-								class="hover-btn w-full flex items-center gap-2 px-3 py-3 outline-none"
-								style="opacity:{active ? 1 : 0.38};"
+								class="hover-btn w-full flex items-center gap-2 px-3 py-3 outline-none {active ? 'opacity-100' : 'opacity-40'}"
 								onclick={() => toggleFilter(type as PinType)}
 							>
 								
 								{@html markerSvg(type as PinType, 1, { w: 18, h: 24 })}
 								<span class="text-text-primary text-sm"  style="flex:1;text-align:left">{label}</span>
-								<div style="width:13px;height:13px;border-radius:50%;shrink:0;background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--cst-border-default)'};box-shadow:{active ? `0 0 6px ${glow}` : 'none'};transition:all 0.18s;"></div>
+								<div class="size-3.25 rounded-full shrink-0" style="background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--cst-border-default)'};box-shadow:{active ? `var(--cst-marker-halo) ${glow}` : 'none'};transition:all 0.18s;"></div>
 							</button>
 						{/each}
 					</Popover.Content>
@@ -286,8 +285,8 @@
 		<!-- GPS re-center -->
 		<button
 			type="button"
-			class="hover-btn flex items-center justify-center rounded-full outline-none circle-hover"
-			style="width:42px;height:42px;{floatBtnStyle}"
+			class="hover-btn flex items-center justify-center rounded-full outline-none circle-hover size-10.5"
+			style="{floatBtnStyle}"
 			onclick={() => {
 				mapCenter = defaultCenter;
 				selectedLoc = null;
@@ -301,8 +300,8 @@
 		<button
 			type="button"
 			aria-label="我的位置"
-			class="hover-btn flex items-center justify-center rounded-full outline-none circle-hover"
-			style="width:42px;height:42px;{floatBtnStyle}"
+			class="hover-btn flex items-center justify-center rounded-full outline-none circle-hover size-10.5"
+			style="{floatBtnStyle}"
 			onclick={() => {
 				mapCenter = defaultCenter;
 				selectedLoc = null;
@@ -310,7 +309,7 @@
 			}}
 		>
 			<div
-				style="width:14px;height:14px;border-radius:50%;background:var(--cst-marker-user);border:2.5px solid var(--cst-surface-primary);box-shadow:0 0 8px var(--cst-marker-user-glow);"
+				style="width:14px;height:14px;border-radius:50%;background:var(--cst-marker-user);border:2.5px solid var(--cst-surface-primary);box-shadow:var(--cst-marker-halo) var(--cst-marker-user-glow);"
 			></div>
 		</button>
 	</div>
@@ -334,7 +333,7 @@
 		</div>
 
 		<!-- Search bar -->
-		<div class="shrink-0"  style="padding:0 14px 8px">
+		<div class="shrink-0 px-3.5 pb-2">
 			<div class="flex items-center gap-2.5 px-3.5 rounded-md input-surface h-11" >
 				<Search class="size-3.75 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				<input
@@ -385,11 +384,11 @@
 		{/if}
 
 		<!-- Confirm button — always at bottom of sheet -->
-		<div class="shrink-0"  style="padding:8px 14px 18px">
+		<div class="shrink-0 px-3.5 pt-2 pb-4.5">
 			<button
 				type="button"
-				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-text-on-accent text-md"
-				style="height:50px;box-shadow:var(--shadow-glow-lg);"
+				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-text-on-accent text-md h-12.5"
+				style="box-shadow:var(--shadow-glow-lg);"
 				onclick={handleConfirm}
 			>
 				<MapPin class="size-3.75"  strokeWidth={2} />

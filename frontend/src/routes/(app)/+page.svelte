@@ -92,14 +92,14 @@
 		<!-- 加载失败：错误提示（对齐 EmptyState bare 契约） -->
 		<EmptyState bare title="加载失败" description={error}>
 			{#snippet icon()}
-				<Radar class="size-6"  style="color:var(--cst-text-secondary);opacity:0.4" strokeWidth={1.5} />
+				<Radar class="size-6 opacity-40"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 			{/snippet}
 		</EmptyState>
 	{:else if moments.length === 0 && nearbyUsers.length === 0 && nearbyGroups.length === 0}
 		<!-- 空态：无任何附近内容 -->
 		<EmptyState title="附近还没有内容" description="去发布第一条动态，或到附近的人认识新朋友。">
 			{#snippet icon()}
-				<Radar class="size-6"  style="color:var(--cst-text-secondary);opacity:0.4" strokeWidth={1.5} />
+				<Radar class="size-6 opacity-40"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 			{/snippet}
 		</EmptyState>
 	{:else}
@@ -170,7 +170,7 @@
 
 	{#if platform.platform !== 'mobile'}
 		<!-- Desktop/Tablet：左摘要栏 + 右用户列表（正文多列 grid，随页面统一滚动） -->
-		<div class="grid grid-cols-[340px_minmax(0,1fr)] gap-6">
+		<div class="grid grid-cols-[85_minmax(0,1fr)] gap-6">
 			<!-- Left: hero + activity + groups (340px) -->
 			<div class="flex flex-col gap-6 border-r border-border-default pr-6">
 				<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={defaultLocation?.location_name ?? ''} />

@@ -48,6 +48,15 @@
     --cst-workspace-gap: clamp(0.875rem, 1.5vw, 1.25rem);
     --cst-context-rail-width: clamp(18rem, 20vw, 21rem);
     --cst-context-rail-gap: clamp(1rem, 1.75vw, 1.5rem);
+    /* 桌面常驻侧边栏宽度（展开/折叠两态）——消除组件内 224/72px 魔法数 */
+    --cst-desktop-sidebar-width: 14rem;   /* 224px 展开态 */
+    --cst-desktop-sidebar-collapsed: 4.5rem; /* 72px 折叠态 */
+    /* 宽平板浮动 Dock 最大宽度（对齐 Figma Make tablet dock 契约） */
+    --cst-tablet-dock-max: 42.5rem; /* 680px */
+    /* 封面/横幅高度（clamp 响应式）：groups/me 封面 220→340px，动态详情大封面 220→380px。
+       消除三处重复的 clamp(220px, ...) 魔法数。 */
+    --cst-cover-height: clamp(13.75rem, 28vw, 21.25rem);
+    --cst-cover-height-lg: clamp(13.75rem, 38vw, 23.75rem);
   }
 
   .desktop-workspace {

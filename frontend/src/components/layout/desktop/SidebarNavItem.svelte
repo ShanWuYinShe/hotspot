@@ -40,10 +40,11 @@
 	<!-- 左侧指示条 — 仅在 hover 时显示，主题色，细（选中态由实心填充表达） -->
 	<span
 		aria-hidden="true"
-		style="position:absolute;left:4px;top:50%;width:3px;height:{showHover ? 16 : 0}px;margin-top:{showHover ? -8 : 0}px;border-radius:2px;background:var(--cst-accent-default);opacity:{showHover ? 0.9 : 0};transition:height 0.18s ease, opacity 0.18s ease, margin-top 0.18s var(--cst-ease-standard);pointer-events:none;"
+		style="position:absolute;left:4px;top:50%;width:3px;height:{showHover ? 16 : 0}px;margin-top:{showHover ? -8 : 0}px;border-radius:2px;background:var(--cst-accent-default);opacity:{showHover ? 0.9 : 0};transition:height 0.18s var(--cst-ease-standard), opacity 0.18s var(--cst-ease-standard), margin-top 0.18s var(--cst-ease-standard);pointer-events:none;"
 	></span>
 	<Icon
-		style="width:17px;height:17px;shrink:0;color:{isActive ? 'var(--cst-content-on-accent)' : showHover ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};transition:color 0.16s var(--cst-ease-standard);"
+		class="shrink-0 size-4.25"
+		style="color:{isActive ? 'var(--cst-content-on-accent)' : showHover ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};transition:color 0.16s var(--cst-ease-standard);"
 		strokeWidth={isActive ? 2 : 1.6}
 	/>
 	<span

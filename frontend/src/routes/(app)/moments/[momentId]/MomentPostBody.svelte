@@ -56,7 +56,7 @@
 </script>
 
 <!-- Post image（全幅封面：负 margin 抵消外层 SplitPageLayout 的 gutter，与 users 详情一致） -->
-<div class="relative overflow-hidden -mx-[var(--cst-page-gutter)]" style="height:clamp(220px, 38vw, 380px);">
+<div class="relative overflow-hidden -mx-[var(--cst-page-gutter)]" style="height:var(--cst-cover-height-lg);">
 	{#if moment.image}
 		<img src={moment.image} alt="moment" class="w-full h-full object-cover" />
 	{:else}
@@ -75,8 +75,7 @@
 	<div class="flex items-center gap-3 mb-3">
 		<button
 			type="button"
-			class="hover-btn rounded-full overflow-hidden shrink-0 cursor-pointer focus-ring focus-visible:ring-offset-surface-primary"
-			style="width:44px;height:44px;padding:0;background:transparent;border:2px solid var(--cst-accent-default);"
+			class="hover-btn rounded-full overflow-hidden shrink-0 cursor-pointer focus-ring focus-visible:ring-offset-surface-primary size-11" style="padding:0;background:transparent;border:2px solid var(--cst-accent-default);"
 			aria-label={`查看${moment.user}的个人主页`}
 			onclick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}
 		>

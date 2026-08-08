@@ -48,7 +48,7 @@
 			<nav
 				aria-label="Main navigation"
 				class="shrink-0 w-full"
-				style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);-webkit-backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);border-top:1px solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);transition:background 0.4s ease, border-color 0.4s var(--cst-ease-standard);"
+				style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);-webkit-backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);border-top:1px solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);transition:background 0.4s var(--cst-ease-standard), border-color 0.4s var(--cst-ease-standard);"
 			>
 				<div
 					class="flex items-center px-2"
@@ -70,8 +70,8 @@
 					<div class="flex flex-col items-center w-17" >
 						<button
 							type="button"
-							class="hover-btn scale-btn flex items-center justify-center outline-none select-none rounded-full"
-							style="width:50px;height:50px;background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{fabGlow};transition:background 0.22s ease, box-shadow 0.22s ease, transform 0.18s var(--cst-ease-standard), filter 0.18s var(--cst-ease-standard);"
+							class="hover-btn scale-btn flex items-center justify-center outline-none select-none rounded-full size-12.5"
+							style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{fabGlow};transition:background 0.22s var(--cst-ease-standard), box-shadow 0.22s var(--cst-ease-standard), transform 0.18s var(--cst-ease-standard), filter 0.18s var(--cst-ease-standard);"
 							onclick={toggleComposer}
 							aria-label={composer.composerOpen ? '关闭' : '发布'}
 						>

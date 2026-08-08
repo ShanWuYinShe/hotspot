@@ -152,8 +152,7 @@
 					{#snippet trailing()}
 						<button
 							type="button"
-							class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none surface-flat"
-							style="width:30px;height:30px;"
+							class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none surface-flat size-7.5"
 							onclick={() => {
 								newChatTab = 'chat';
 								showNewChat = true;
@@ -182,7 +181,7 @@
 								onclick={() => selectChat(c)}
 							>
 								<div class="relative">
-									<div class="avatar-entry__avatar rounded-full overflow-hidden" style="width:36px;height:36px;border:{selectedId === c.id ? '2px solid var(--cst-accent-default)' : '1.5px solid var(--cst-border-default)'};">
+									<div class="avatar-entry__avatar rounded-full overflow-hidden size-9" style="border:{selectedId === c.id ? '2px solid var(--cst-accent-default)' : '1.5px solid var(--cst-border-default)'};">
 										<img src={c.avatar} alt={c.name} class="w-full h-full object-cover" />
 									</div>
 									<OnlineDot size="sm" />
@@ -240,7 +239,7 @@
 				side="center"
 				class="overflow-hidden"
 				aria-label="发起新会话"
-				style="width:440px;height:68vh;max-height:600px;"
+				style="width:27.5rem;height:68vh;max-height:37.5rem;"
 			>
 				<NewConversationSheet
 					defaultTab={newChatTab}
@@ -282,8 +281,7 @@
 				{/if}
 				<button
 					type="button"
-					class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none surface-flat"
-					style="width:36px;height:36px;"
+					class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none surface-flat size-9"
 					onclick={() => {
 						newChatTab = 'chat';
 						showNewChat = true;

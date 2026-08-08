@@ -139,8 +139,7 @@
 </script>
 
 <form
-	class="flex flex-col"
-	style="gap:{compact ? 12 : 16}px;"
+	class="flex flex-col {compact ? 'gap-3' : 'gap-4'}"
 	onsubmit={(e) => {
 		e.preventDefault();
 		void handleSubmit();
@@ -292,7 +291,7 @@
 	<button
 		type="submit"
 		class="hover-btn flex w-full items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-medium transition-opacity"
-		style="background:var(--cst-accent-default);color:var(--cst-text-on-accent);opacity:{submitting ? 0.6 : 1};"
+		style="background:var(--cst-accent-default);color:var(--cst-text-on-accent);class:{submitting ? 'opacity-60' : 'opacity-100'};"
 		disabled={submitting}
 	>
 		{submitting ? '处理中…' : submitLabel(mode)}

@@ -176,8 +176,7 @@
 			{#if auth.user}
 				<button
 					type="button"
-					class="hover-btn scale-btn relative ml-2 shrink-0 rounded-full focus-ring focus-visible:ring-offset-surface-page"
-					style="width:32px;height:32px;"
+					class="hover-btn scale-btn relative ml-2 shrink-0 rounded-full focus-ring focus-visible:ring-offset-surface-page size-8"
 					aria-label="打开个人主页"
 					onclick={() => guardNav('打开个人主页', ROUTES.me)}
 				>
@@ -191,8 +190,8 @@
 			{:else}
 					<button
 						type="button"
-						class="hover-btn ml-2 shrink-0 rounded-full px-3 focus-ring text-sm"
-						style="height:32px;background:var(--cst-accent-default);color:var(--cst-text-on-accent);"
+						class="hover-btn ml-2 shrink-0 rounded-full px-3 focus-ring text-sm h-8"
+						style="background:var(--cst-accent-default);color:var(--cst-text-on-accent);"
 						aria-label="登录"
 						onclick={() => void goto(ROUTES.login)}
 				>
@@ -207,13 +206,13 @@
 		<!-- Sidebar (224px expanded / 72px collapsed, fixed width) -->
 		<aside
 			class="relative flex flex-col shrink-0 overflow-visible box-border transition-[width] duration-200"
-			style="width:{isSidebarCollapsed ? 72 : 224}px;padding:0.75rem;"
+			style="width:{isSidebarCollapsed ? 'var(--cst-desktop-sidebar-collapsed)' : 'var(--cst-desktop-sidebar-width)'};padding:0.75rem;"
 		>
 			<!-- Edge-mounted collapse control: leaves the navigation rhythm untouched -->
 			<button
 				type="button"
 				class="hover-btn absolute -right-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border outline-none transition-colors hover:bg-accent-soft focus-visible:ring-2 focus-visible:ring-accent-default"
-				style="color:var(--cst-text-secondary);background:var(--cst-surface-page);border-color:var(--cst-border-default);box-shadow:0 2px 8px var(--cst-elevation-shadow-dark);"
+				style="color:var(--cst-text-secondary);background:var(--cst-surface-page);border-color:var(--cst-border-default);box-shadow:var(--cst-elevation-control-thumb);"
 				aria-label={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
 				aria-pressed={isSidebarCollapsed}
 				title={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}

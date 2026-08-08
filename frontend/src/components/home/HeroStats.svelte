@@ -24,16 +24,15 @@
 <div class="ambient-glow">
 	<button
 		type="button"
-		class="hover-btn tap-99 surface-hero rounded-xl cursor-pointer overflow-hidden text-left w-full"
-		style="padding:18px 20px;"
+		class="hover-btn tap-99 surface-hero rounded-xl cursor-pointer overflow-hidden text-left w-full p-4.5 px-5"
 		aria-label="查看附近的人"
 		onclick={onExplore}
 	>
 		<div class="flex items-center justify-between">
 			<div class="flex items-center gap-2.5">
 				<div
-					class="flex items-center justify-center rounded-full bg-accent-default"
-					style="width:38px;height:38px;box-shadow:var(--shadow-glow-md);"
+					class="flex items-center justify-center rounded-full bg-accent-default size-9.5"
+					style="box-shadow:var(--shadow-glow-md);"
 				>
 					<Radar class="size-4.25"  style="color:var(--cst-text-on-accent)" strokeWidth={2} />
 				</div>

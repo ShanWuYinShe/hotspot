@@ -153,7 +153,7 @@
 
 		<!-- Current location dot -->
 		<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:5;">
-			<div style="width:18px;height:18px;border-radius:50%;background:{PIN_COLORS.user};border:3px solid var(--cst-surface-primary);box-shadow:0 2px 10px {PIN_TONES.user.glow};position:relative;">
+			<div style="width:18px;height:18px;border-radius:50%;background:{PIN_COLORS.user};border:3px solid var(--cst-surface-primary);box-shadow:var(--cst-marker-shadow) {PIN_TONES.user.glow};position:relative;">
 				<span class="absolute rounded-full" style="inset:-8px;background:{PIN_TONES.user.bg};border:1px solid {PIN_TONES.user.border};"></span>
 			</div>
 		</div>
@@ -180,7 +180,7 @@
 
 		{#if mapLoading}
 			<!-- 加载中的轻量指示 -->
-			<div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary shadow-[0_2px_12px_var(--cst-elevation-shadow-dark)] border border-border-default" >
+			<div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary shadow-raised-sm border border-border-default" >
 				加载地图数据…
 			</div>
 		{/if}
@@ -192,7 +192,7 @@
 			<button
 				type="button"
 				class="hover-btn flex items-center gap-2 rounded-full outline-none text-sm"
-				style="padding:9px 16px;background:{showFilter ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-text-primary)'};border:1px solid {showFilter ? 'transparent' : 'var(--cst-border-default)'};box-shadow:{showFilter ? 'var(--shadow-glow-md)' : '0 4px 16px var(--cst-elevation-shadow-dark)'};"
+				style="padding:9px 16px;background:{showFilter ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-text-primary)'};border:1px solid {showFilter ? 'transparent' : 'var(--cst-border-default)'};box-shadow:{showFilter ? 'var(--shadow-glow-md)' : 'var(--cst-elevation-fab)'};"
 				onclick={() => (showFilter = !showFilter)}
 			>
 				<SlidersHorizontal class="size-3.25"  strokeWidth={showFilter ? 2.5 : 1.75} />
@@ -202,7 +202,7 @@
 				{/if}
 			</button>
 			{#if showFilter}
-				<div class="mt-2 overflow-hidden rounded-md w-50 shadow-[0_8px_28px_var(--cst-elevation-shadow-dark)] border border-border-default"   style="background:var(--cst-surface-primary)">
+				<div class="mt-2 overflow-hidden rounded-md w-50 shadow-raised-lg border border-border-default"   style="background:var(--cst-surface-primary)">
 					{#each [{ type: 'user', label: '用户', color: PIN_COLORS.user, count: userCount }, { type: 'group', label: '群组', color: PIN_COLORS.group, count: groupCount }, { type: 'moment', label: '瞬间', color: PIN_COLORS.moment, count: momentCount }] as item, i}
 						{#if i > 0}
 							<div class="h-0.25"  style="background:var(--cst-border-default)"></div>
@@ -210,8 +210,7 @@
 						{@const active = activeFilters.has(item.type as PinType)}
 						<button
 							type="button"
-							class="hover-btn flex w-full items-center gap-2 px-3 py-2.5 text-left outline-none"
-							style="opacity:{active ? 1 : 0.45};"
+							class="hover-btn flex w-full items-center gap-2 px-3 py-2.5 text-left outline-none {active ? 'opacity-100' : 'opacity-50'}"
 							onclick={() => toggleFilter(item.type as PinType)}
 						>
 								
@@ -220,7 +219,7 @@
 								{@html markerSvg(item.type as PinType, 3, { w: 15, h: 21 })}
 							<span class="flex-1 text-text-primary text-xs" >{item.label}</span>
 							<span class="text-sm font-semibold" style="color:{item.color}">{item.count}</span>
-							<span class="flex items-center justify-center shrink-0" style="width:14px;height:14px;border-radius:var(--cst-shape-sm);background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--cst-border-strong)'};transition:all 0.18s;">
+							<span class="flex items-center justify-center shrink-0 size-3.5" style="border-radius:var(--cst-shape-sm);background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--cst-border-strong)'};transition:all 0.18s var(--cst-ease-standard);">
 								{#if active}
 									<Check class="size-2.5"  style="color:var(--cst-content-on-marker)" strokeWidth={3} />
 								{/if}
@@ -229,7 +228,7 @@
 					{/each}
 					<div class="h-0.25"  style="background:var(--cst-border-default)"></div>
 					<div class="flex items-center gap-2 px-3 py-2">
-						<span style="width:13px;height:13px;border-radius:50%;background:{PIN_COLORS.user};border:2px solid var(--cst-surface-primary);box-shadow:0 0 5px {PIN_TONES.user.glow};"></span>
+						<span class="size-3.25 rounded-full" style="background:{PIN_COLORS.user};border:2px solid var(--cst-surface-primary);box-shadow:var(--cst-marker-halo) {PIN_TONES.user.glow};"></span>
 						<span class="text-text-secondary text-xs" >我的位置</span>
 					</div>
 				</div>
@@ -242,7 +241,7 @@
 			<div
 				data-map-popup
 				class="bg-surface-primary"
-				style="position:absolute;bottom:20px;left:20px;right:20px;z-index:25;border-radius:var(--cst-shape-lg);padding:16px;box-shadow:0 0 0 1px var(--cst-border-default), 0 16px 48px var(--cst-elevation-shadow-dark);"
+				style="position:absolute;bottom:20px;left:20px;right:20px;z-index:25;border-radius:var(--cst-shape-lg);padding:16px;box-shadow:var(--cst-elevation-modal);"
 			>
 				<div class="flex items-center gap-3">
 					<PinMedia pin={selectedPin} size={52} markerWidth={26} markerHeight={35} />
@@ -288,8 +287,8 @@
 						</button>
 						<button
 							type="button"
-							class="hover-btn outline-none flex items-center justify-center rounded-full bg-surface-primary"
-							style="width:36px;height:36px;border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
+							class="hover-btn outline-none flex items-center justify-center rounded-full bg-surface-primary size-9"
+							style="border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
 							onclick={() => (selectedPin = null)}
 						>
 							<X class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={2} />
@@ -300,7 +299,7 @@
 		{/if}
 
 		<!-- Attribution -->
-		<div class="text-text-secondary text-xxs"  style="position:absolute;bottom:4px;left:8px;opacity:0.38;pointer-events:none;z-index:1">
+		<div class="text-text-secondary text-xxs opacity-40"  style="position:absolute;bottom:4px;left:8px;pointer-events:none;z-index:1">
 			© OpenStreetMap contributors
 		</div>
 	</div>

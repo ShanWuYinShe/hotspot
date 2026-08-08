@@ -223,7 +223,7 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 
 <StandardPageLayout contentClassName="pb-6">
 	<!-- 全幅封面（负 margin 抵消 ContentColumn gutter） -->
-	<div class="relative h-[clamp(220px,28vw,340px)] overflow-hidden -mx-[var(--cst-page-gutter)]">
+	<div class="relative h-[var(--cst-cover-height)] overflow-hidden -mx-[var(--cst-page-gutter)]">
 		<img src={group.banner} alt={`${group.name} 的群组封面`} class="h-full w-full object-cover" />
 		<div class="absolute inset-0 bg-surface-cover-scrim"></div>
 		<div class="absolute left-5 top-4">
@@ -235,7 +235,7 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 		</div>
 	</div>
 
-	<div class="grid gap-8 pt-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+	<div class="grid gap-8 pt-6 lg:grid-cols-[minmax(0,1fr)_80]">
 			<main class="min-w-0">
 			<div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-text-secondary">
 				<span class="flex items-center gap-1.5">

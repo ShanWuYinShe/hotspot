@@ -113,8 +113,8 @@
 								: 'surface-ghost text-text-secondary'}"
 						>
 							<span
-								class="mb-2 block h-5 w-5 rounded-full"
-								style="background:{item.swatch};box-shadow:0 0 0 3px {selected ? 'var(--cst-accent-soft)' : 'transparent'};"
+								class="mb-2 block h-5 w-5 rounded-full ring-3"
+								style="background:{item.swatch};--tw-ring-color:{selected ? 'var(--cst-accent-soft)' : 'transparent'};"
 							></span>
 							<span class="block text-sm font-medium" style="color:var(--cst-text-primary);">{item.label}</span>
 							<span class="mt-0.5 block text-xxs text-text-secondary">{item.note}</span>

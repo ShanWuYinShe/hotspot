@@ -107,8 +107,8 @@
 							type="button"
 							aria-label="更换头像"
 							onclick={() => void goto(ROUTES.meEdit)}
-							class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-accent-default text-text-on-accent"
-							style="width:28px;height:28px;border:2px solid var(--cst-surface-primary);"
+							class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-accent-default text-text-on-accent size-7"
+							 style="border:2px solid var(--cst-surface-primary);"
 						>
 							<Camera class="size-3.5"  strokeWidth={2} />
 						</button>

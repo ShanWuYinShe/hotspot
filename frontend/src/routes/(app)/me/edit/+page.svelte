@@ -89,7 +89,7 @@
 
 	<div class="animate-fade-in flex flex-col gap-5">
 	<!-- Avatar section -->
-	<div class="relative rounded-xl overflow-hidden" style="height:clamp(120px, 18vw, 160px);">
+	<div class="relative rounded-xl overflow-hidden" style="height:clamp(7.5rem, 18vw, 10rem);">
 		<div class="absolute inset-0 bg-surface-primary"></div>
 		<button
 			type="button"
@@ -109,8 +109,8 @@
 			</div>
 			<button
 				type="button"
-				class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-accent-default"
-				style="width:26px;height:26px;border:2px solid var(--cst-surface-primary);box-shadow:var(--shadow-glow-sm);"
+				class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-accent-default size-6.5"
+				style="border:2px solid var(--cst-surface-primary);box-shadow:var(--shadow-glow-sm);"
 			>
 				<Camera class="size-3"  style="color:var(--cst-text-on-accent)" strokeWidth={2} />
 			</button>

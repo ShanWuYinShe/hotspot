@@ -41,13 +41,12 @@
 	pressed={isSelected}
 	onClick={onClick}
 	ariaLabel={`打开与 ${chat.name} 的会话`}
-	class="flex items-center gap-3.5"
-	style="padding:{compact ? '10px 16px' : '12px 16px'};"
+	class="flex items-center gap-3.5 {compact ? 'px-4 py-2.5' : 'px-4 py-3'}"
 >
 	<span class="relative shrink-0">
 		<span
-			class="block overflow-hidden rounded-full"
-			style="width:{compact ? 40 : 44}px;height:{compact ? 40 : 44}px;border:{isSelected ? '1.5px solid var(--cst-border-inverse)' : '1.5px solid var(--cst-border-default)'};"
+			class="block overflow-hidden rounded-full {compact ? 'size-10' : 'size-11'}"
+			style="border:{isSelected ? '1.5px solid var(--cst-border-inverse)' : '1.5px solid var(--cst-border-default)'};"
 		>
 			<img src={chat.avatar} alt="" class="h-full w-full object-cover" />
 		</span>
@@ -72,8 +71,8 @@
 
 	{#if chat.unread > 0}
 		<span
-			class="flex shrink-0 items-center justify-center rounded-full text-xs font-semibold {isSelected ? 'bg-text-on-accent text-accent-default' : 'bg-accent-default text-text-on-accent'}"
-			style="width:20px;height:20px;{isSelected ? '' : 'box-shadow:var(--shadow-glow-sm);'}"
+			class="flex shrink-0 items-center justify-center rounded-full text-xs font-semibold size-5 {isSelected ? 'bg-text-on-accent text-accent-default' : 'bg-accent-default text-text-on-accent'}"
+			style="{isSelected ? '' : 'box-shadow:var(--shadow-glow-sm);'}"
 		>
 			{chat.unread}
 		</span>

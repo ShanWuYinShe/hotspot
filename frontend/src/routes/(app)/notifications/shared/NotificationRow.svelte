@@ -30,12 +30,12 @@
 				<img src={notif.user.avatar} alt={notif.user.name} class="w-full h-full object-cover" />
 			</div>
 		{:else}
-			<div class="rounded-full flex items-center justify-center" style="width:44px;height:44px;background:{cfg.bg};">
+			<div class="rounded-full flex items-center justify-center size-11" style="background:{cfg.bg};">
 				<cfg.icon class="size-4.5" style="color:{cfg.color};" strokeWidth={1.75} />
 			</div>
 		{/if}
 		{#if notif.user.avatar}
-			<div class="absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full" style="width:18px;height:18px;background:{cfg.color};border:2px solid var(--cst-surface-primary);">
+			<div class="absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full size-4.5" style="background:{cfg.color};border:2px solid var(--cst-surface-primary);">
 				<cfg.icon class="size-2.25"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
 			</div>
 		{/if}
@@ -58,7 +58,7 @@
 			</div>
 		{/if}
 		{#if !notif.read}
-			<div class="rounded-full" style="width:8px;height:8px;background:{cfg.color};"></div>
+			<div class="rounded-full size-2" style="background:{cfg.color};"></div>
 		{/if}
 	</div>
 </ListItem>
