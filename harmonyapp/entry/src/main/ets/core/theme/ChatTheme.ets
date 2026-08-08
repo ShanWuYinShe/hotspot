@@ -26,33 +26,13 @@ export interface ChatThemeColors {
   divider: string;
 }
 
-export enum ThemeSettings {
-  FOLLOW_SYSTEM = 'follow_system',
-  LIGHT = 'light',
-  DARK = 'dark',
-}
-
 export class ChatThemeManager {
-  private static userSetting: ThemeSettings = ThemeSettings.FOLLOW_SYSTEM;
-
+  /** 聊天页专用色聚合：全部由当前主题 palette 派生，无独立色值 */
   static current(): ChatThemeColors {
-    return ChatThemeManager.fromPalette(AppThemeManager.getSafeCurrentPalette(), ChatThemeManager.resolveIsDark());
-  }
-
-  static light(): ChatThemeColors {
-    return ChatThemeManager.fromPalette(AppThemeManager.getPaletteForMode('default_clean', false), false);
-  }
-
-  static dark(): ChatThemeColors {
-    return ChatThemeManager.fromPalette(AppThemeManager.getPaletteForMode('default_clean', true), true);
-  }
-
-  static setTheme(setting: ThemeSettings): void {
-    ChatThemeManager.userSetting = setting;
-  }
-
-  static getThemeSetting(): ThemeSettings {
-    return ChatThemeManager.userSetting;
+    return ChatThemeManager.fromPalette(
+      AppThemeManager.getSafeCurrentPalette(),
+      AppStorage.get<boolean>('isDarkMode') === true
+    );
   }
 
   private static fromPalette(palette: AppThemePalette, isDark: boolean): ChatThemeColors {
@@ -76,17 +56,4 @@ export class ChatThemeManager {
     };
   }
 
-  private static resolveIsDark(): boolean {
-    switch (ChatThemeManager.userSetting) {
-      case ThemeSettings.LIGHT:
-        return false;
-      case ThemeSettings.DARK:
-        return true;
-      case ThemeSettings.FOLLOW_SYSTEM:
-      default: {
-        const isDark = AppStorage.get<boolean>('isDarkMode');
-        return isDark === true;
-      }
-    }
-  }
 }
