@@ -4,6 +4,22 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>HotSpot</title>
+		<script>
+			// 首帧主题防闪烁：CSS 注入前先按持久化偏好设置 <html> 的 vibrant/forest + dark 类，
+			// 与 stores/theme.svelte.ts 的 IS_DARK_KEY/appTheme 键保持一致。
+			(function () {
+				try {
+					var dark = localStorage.getItem('isDark') === 'true';
+					var t = localStorage.getItem('appTheme');
+					if (t !== 'forest' && t !== 'vibrant') t = 'vibrant';
+					var root = document.documentElement;
+					root.classList.add(t);
+					if (dark) root.classList.add('dark');
+				} catch (e) {
+					// localStorage 不可用（隐私模式等）时保持默认 vibrant light
+				}
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
