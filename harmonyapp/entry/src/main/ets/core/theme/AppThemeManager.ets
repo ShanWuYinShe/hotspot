@@ -270,7 +270,7 @@ const VIBRANT_LIGHT_VISUALS = buildVisualTokens(
     previewShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_LIGHT.elevated),
     insetShadow: new AppThemeShadow(10, '#635BC81A', 3, 3),
     highlightShadow: new AppThemeShadow(8, '#FFFFFFC0', -3, -3),
-    tabActiveGlow: new AppThemeShadow(20, '#6366F152', 0, 6)
+    tabActiveGlow: new AppThemeShadow(20, '#2E66C052', 0, 6)
   }
 );
 
@@ -282,8 +282,8 @@ const VIBRANT_DARK_VISUALS = buildVisualTokens(
     haloShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_DARK.control),
     previewShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_DARK.elevated),
     insetShadow: new AppThemeShadow(10, '#00000080', 3, 3),
-    highlightShadow: new AppThemeShadow(8, '#818CF818', -3, -3),
-    tabActiveGlow: new AppThemeShadow(20, '#818CF842', 0, 6)
+    highlightShadow: new AppThemeShadow(8, '#69A8FF18', -3, -3),
+    tabActiveGlow: new AppThemeShadow(20, '#69A8FF42', 0, 6)
   }
 );
 
@@ -329,8 +329,8 @@ const FIGMA_NEU_DARK = buildPalette(
 
 const VIBRANT_LIGHT = buildPalette(
   'vibrant_light',
-  '活力靛蓝',
-  '白底靛蓝强调、带色调单向阴影',
+  '星际',
+  '冷色玻璃、蓝调强调',
   ThemeConstants.VIBRANT_LIGHT_COLORS,
   ThemeConstants.SHADOWS.VIBRANT_LIGHT,
   VIBRANT_LIGHT_VISUALS,
@@ -339,8 +339,8 @@ const VIBRANT_LIGHT = buildPalette(
 
 const VIBRANT_DARK = buildPalette(
   'vibrant_dark',
-  '活力靛蓝',
-  '深靛底、明快薰衣草强调',
+  '星际',
+  '深空蓝底、明快蓝调强调',
   ThemeConstants.VIBRANT_DARK_COLORS,
   ThemeConstants.SHADOWS.VIBRANT_DARK,
   VIBRANT_DARK_VISUALS,

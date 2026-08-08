@@ -87,7 +87,7 @@ class ThemeShadowRegistry {
   readonly VIBRANT_LIGHT: ThemeShadows = {
     surface: new AppThemeShadow(8, '#635BC81A', 0, 3),
     elevated: new AppThemeShadow(14, '#635BC830', 0, 6),
-    accent: new AppThemeShadow(22, '#6366F152', 0, 8),
+    accent: new AppThemeShadow(22, '#2E66C052', 0, 8),
     control: new AppThemeShadow(4, '#635BC80D', 0, 1),
     tabBar: new AppThemeShadow(8, '#635BC818', 0, -2)
   };
@@ -95,8 +95,8 @@ class ThemeShadowRegistry {
   readonly VIBRANT_DARK: ThemeShadows = {
     surface: new AppThemeShadow(10, '#000000A6', 0, 3),
     elevated: new AppThemeShadow(16, '#00000080', 0, 5),
-    accent: new AppThemeShadow(22, '#818CF842', 0, 8),
-    control: new AppThemeShadow(4, '#818CF80F', 0, 0),
+    accent: new AppThemeShadow(22, '#69A8FF42', 0, 8),
+    control: new AppThemeShadow(4, '#69A8FF0F', 0, 0),
     tabBar: new AppThemeShadow(10, '#00000080', 0, -3)
   };
 }

@@ -273,7 +273,7 @@ export struct DesktopLayout {
         .width('100%')
         .textAlign(TextAlign.Center)
 
-      Text('切换整体观感。当前已对齐前端的森林 / 暖砂 / 靛蓝三族主题。')
+      Text('切换整体观感。当前已对齐前端的森林 / 暖砂 / 星际蓝三族主题。')
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontColor(this.getPalette().textSecondary)
         .width('100%')
