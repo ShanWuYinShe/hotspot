@@ -139,6 +139,8 @@ export interface AnimationSystem {
   DURATION_FAST: number;
   /** 即时反馈（100ms） */
   DURATION_INSTANT: number;
+  /** 脉冲/shimmer 循环周期（1500ms） */
+  DURATION_SLOW: number;
   /** 列表入场 stagger 延迟 */
   DURATION_STAGGER_DELAY: number;
   CURVE_EASE_IN_OUT: Curve;
@@ -531,6 +533,7 @@ const ANIMATION: AnimationSystem = {
   DURATION_280: 280,
   DURATION_FAST: 150,
   DURATION_INSTANT: 100,
+  DURATION_SLOW: 1500,
   DURATION_STAGGER_DELAY: 150,
   CURVE_EASE_IN_OUT: Curve.EaseInOut,
   CURVE_EASE_OUT: Curve.EaseOut,

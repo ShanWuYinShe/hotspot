@@ -65,7 +65,7 @@ export struct LocationBar {
   private doPulse(): void {
     try {
       this.getUIContext().animateTo({
-        duration: 1500, // 定位脉冲循环时长（行为常量）
+        duration: DesignConstants.ANIMATION.DURATION_SLOW, // 定位脉冲循环时长（脉冲档 1500ms）
         curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
       }, () => {
         this.pulseScale = 2.2;

@@ -52,7 +52,7 @@ export struct SkeletonShimmer {
   private startShimmer() {
     this.opacity = 1.0;
     animateTo({
-      duration: 1500, // shimmer 循环时长（行为常量）
+      duration: DesignConstants.ANIMATION.DURATION_SLOW, // 脉冲/shimmer 循环周期
       curve: DesignConstants.ANIMATION.CURVE_SMOOTH,
       iterations: -1,
       playMode: PlayMode.Alternate
