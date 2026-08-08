@@ -7,10 +7,12 @@
  */
 
 import { DesignConstants } from '../constants/DesignConstants';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
 
 @Component
 export struct SoftDivider {
-  @Prop color: ResourceColor = DesignConstants.COLOR.DIVIDER_LIGHT;
+  /** 默认取当前主题 borderColor；调用方可按上下文显式传色 */
+  @Prop color: ResourceColor = AppThemeManager.getSafeCurrentPalette().borderColor;
   @Prop thickness: number = 1;
 
   build() {

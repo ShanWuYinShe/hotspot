@@ -41,9 +41,6 @@
   --cst-pr-shadow-btn: 0 5px 14px rgba(53, 120, 212, 0.18);
 
   /* ── color-mix 预设（token 内部派生；组件/数据层不得再写 color-mix）── */
-  --cst-pr-accent-bg: color-mix(in srgb, var(--cst-pr-accent-primary) 12%, var(--cst-pr-bg));
-  --cst-pr-online-bg: color-mix(in srgb, var(--cst-pr-online) 14%, transparent);
-  --cst-pr-danger-bg: color-mix(in srgb, var(--cst-pr-hot) 10%, transparent);
 
   /* ── 语义色族完整档位（主色 → 淡底 -bg / 淡边框 -border / 光晕 -glow）──
      数据驱动色（通知/事件/图钉/活动）在前端只做语义键 → 本组 token 的映射，
@@ -185,9 +182,6 @@
   --cst-pr-shadow-btn: 0 5px 14px rgba(105, 168, 255, 0.24);
 
   /* ── color-mix 预设（dark）── */
-  --cst-pr-accent-bg: color-mix(in srgb, var(--cst-pr-accent-primary) 14%, var(--cst-pr-bg));
-  --cst-pr-online-bg: color-mix(in srgb, var(--cst-pr-online) 14%, transparent);
-  --cst-pr-danger-bg: color-mix(in srgb, var(--cst-pr-hot) 12%, transparent);
 
   /* ── 语义色族完整档位（dark）── */
   --cst-accent-soft-bg: color-mix(in srgb, var(--cst-pr-accent-primary) 12%, transparent);

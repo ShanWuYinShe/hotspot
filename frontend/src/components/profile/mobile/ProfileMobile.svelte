@@ -110,7 +110,7 @@
 				ariaLabel={item.label}
 				class="flex items-center gap-3 px-5 py-3.5"
 			>
-				<span class="flex shrink-0 items-center justify-center size-8"  style="background:var(--cst-color-accent-bg);color:var(--cst-accent-default)">
+				<span class="flex shrink-0 items-center justify-center size-8"  style="background:var(--cst-accent-soft-bg);color:var(--cst-accent-default)">
 					<item.icon class="size-4"  strokeWidth={1.8} />
 				</span>
 				<span class="min-w-0 flex-1">

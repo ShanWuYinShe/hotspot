@@ -38,9 +38,6 @@
   --cst-elevation-button: var(--cst-pr-shadow-btn);
 
   /* Color-mix presets */
-  --cst-color-accent-bg: var(--cst-pr-accent-bg);
-  --cst-color-online-bg: var(--cst-pr-online-bg);
-  --cst-color-danger-bg: var(--cst-pr-danger-bg);
 
   /* Status */
   --cst-status-online: var(--cst-pr-online);

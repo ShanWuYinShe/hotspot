@@ -165,7 +165,7 @@
 	{#if mode === 'login' || mode === 'register'}
 		{#if mode === 'login'}
 			<!-- 登录方式双 tab（对齐 Figma Make LoginPage：容器 bg-secondary 无圆角，active 仅 bg-card） -->
-			<div class="grid grid-cols-2 border border-border-default rounded-md p-1" style="background:var(--cst-color-accent-bg);">
+			<div class="grid grid-cols-2 border border-border-default rounded-md p-1" style="background:var(--cst-accent-soft-bg);">
 				{#each ([['code', '验证码登录'], ['password', '密码登录']] as ['code' | 'password', string][]) as [id, label]}
 					<button
 						type="button"
@@ -213,7 +213,7 @@
 			<button
 				type="button"
 				class="hover-btn w-full border border-border-default rounded-md px-3 py-3 text-sm text-text-primary outline-none transition-colors"
-				style="background:var(--cst-color-accent-bg);"
+				style="background:var(--cst-accent-soft-bg);"
 				onclick={() => (error = '验证码发送功能即将开放，请使用密码登录')}
 			>
 				获取验证码

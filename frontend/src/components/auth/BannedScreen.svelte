@@ -11,7 +11,7 @@
 	<div class="flex flex-col items-center text-center gap-4"  style="max-width:360px">
 		<div
 			class="flex items-center justify-center rounded-full size-16"
-			 style="background:var(--cst-color-danger-bg);"
+			 style="background:var(--cst-status-danger-bg);"
 		>
 			<ShieldAlert size={30} color="var(--cst-status-danger)" strokeWidth={1.6} />
 		</div>

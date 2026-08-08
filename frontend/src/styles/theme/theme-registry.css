@@ -30,9 +30,9 @@
   --color-status-danger: var(--cst-status-danger);
   --color-status-warning: var(--cst-status-warning);
 
-  /* Color-mix presets（引用 primitive 层，避免自引用） */
-  --color-accent-bg: var(--cst-pr-accent-bg);
-  --color-danger-bg: var(--cst-pr-danger-bg);
+  /* Color-mix presets（引用语义色淡底档位，随主题/明暗变） */
+  --color-accent-bg: var(--cst-accent-soft-bg);
+  --color-danger-bg: var(--cst-status-danger-bg);
 
   /* Font size scale — Tailwind v4 字号命名空间必须是 --text-*（--font-size-* 不生成
      utility）。设计原则：少档位 + 强制收敛，禁止 1-2px 近邻档位并存（人眼分不清，

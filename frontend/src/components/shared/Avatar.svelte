@@ -47,7 +47,7 @@
 	{:else}
 		<span
 			class="flex h-full w-full items-center justify-center"
-			style="font-size:{Math.round(size * 0.42)}px;color:var(--cst-text-secondary);background:var(--cst-color-accent-bg);"
+			style="font-size:{Math.round(size * 0.42)}px;color:var(--cst-text-secondary);background:var(--cst-accent-soft-bg);"
 		>
 			{initial}
 		</span>
