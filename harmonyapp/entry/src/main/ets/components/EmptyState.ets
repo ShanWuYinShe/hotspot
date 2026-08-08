@@ -21,7 +21,7 @@ export struct EmptyState {
   @Prop fillMode: boolean = false;
   onAction?: () => void;
 
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

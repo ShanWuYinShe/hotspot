@@ -29,7 +29,7 @@ export struct AnchorEntry {
   onAdjust?: () => void;
 
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State isPressed: boolean = false;
 
   private getPalette() {

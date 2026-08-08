@@ -57,7 +57,7 @@ export struct DesktopLayout {
   @Prop currentBreakpoint: BreakpointType = 'lg';
 
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   @State showUpgradeBanner: boolean = false;
   @State showThemeSheet: boolean = false;

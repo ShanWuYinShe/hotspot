@@ -45,7 +45,7 @@ const ADMIN_MODULES: AdminModule[] = [
 struct AdminOverviewPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
 
   @State permissions: string[] = [];

@@ -250,7 +250,7 @@ export struct SystemIcon {
   @Prop iconColor: string | ResourceColor = DEFAULT_THEME_ICON_SENTINEL;
   @Prop clickable: boolean = false;
   onIconClick?: () => void;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   private getDefaultIconColor(): string {
     return AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground;
@@ -288,7 +288,7 @@ export struct IconButton {
   @Prop paddingSize: number = 12;
   @Prop minButtonSize: number = 48;
   onButtonClick?: () => void;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

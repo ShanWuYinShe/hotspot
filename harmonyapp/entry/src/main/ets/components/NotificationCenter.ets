@@ -33,7 +33,7 @@ class NotificationFilterOption {
 
 @Component
 export struct NotificationCenter {
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   onClose?: () => void;
   @State private visibleNotifications: NotificationItem[] = [];
   @State private selectedFilter: NotificationFilterKey = 'all';

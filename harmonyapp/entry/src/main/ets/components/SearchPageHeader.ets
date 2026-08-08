@@ -29,7 +29,7 @@ export struct SearchPageHeader {
   /** 提交回调。 */
   onSubmit: (() => void) | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State private isBackPressed: boolean = false;
   @State private isFocused: boolean = false;
 

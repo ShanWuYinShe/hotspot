@@ -521,7 +521,7 @@ export class AppThemeVisuals {
   }
 
   /** 把 #RRGGBB（6 位）拼接 alpha（0-1）→ #RRGGBBAA（8 位），用于 shadow 软发光色 */
-  private static withAlpha(hex: string, alpha: number): string {
+  static withAlpha(hex: string, alpha: number): string {
     const a: number = Math.round(alpha * 255);
     const aHex: string = a < 16 ? '0' + a.toString(16).toUpperCase() : a.toString(16).toUpperCase();
     return hex + aHex;

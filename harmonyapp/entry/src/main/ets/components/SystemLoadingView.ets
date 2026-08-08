@@ -15,7 +15,7 @@ export struct SystemLoadingView {
   @Prop progressType: 'indeterminate' | 'determinate' = 'indeterminate';
   @Prop maxProgress: number = 100;
   @Prop externalProgress: number = 0;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

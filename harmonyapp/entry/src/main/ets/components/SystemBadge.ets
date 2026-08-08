@@ -16,7 +16,7 @@ export struct SystemBadge {
   /** count<=0 时是否降级为红点 */
   @Prop dotOnly: boolean = false;
 
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

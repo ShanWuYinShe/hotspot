@@ -29,7 +29,7 @@ export struct ChatPageHeader {
   onBack: () => void = () => {};
   /** 尾随操作回调（打开会话设置/操作）。 */
   onTrailingAction: () => void = () => {};
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

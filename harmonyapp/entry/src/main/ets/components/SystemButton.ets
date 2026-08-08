@@ -36,7 +36,7 @@ export struct SystemButton {
   @Prop fullWidth: boolean = false;
   onPress?: () => void;
 
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State isPressed: boolean = false;
 
   private getPalette() {

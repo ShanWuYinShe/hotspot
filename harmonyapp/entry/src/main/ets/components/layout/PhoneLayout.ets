@@ -68,7 +68,7 @@ export struct PhoneLayout {
   @Prop safeAreaBottom: number = 0;
   @Prop safeAreaTop: number = 0;
   @Prop isTablet: boolean = false;
-  @Prop resolvedThemeId: string = 'default_clean_light';
+  @Prop resolvedThemeId: string = 'vibrant_light';
 
   // 内部状态
   @State showUpgradeBanner: boolean = false;

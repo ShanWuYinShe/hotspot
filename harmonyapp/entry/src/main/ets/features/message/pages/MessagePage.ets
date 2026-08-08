@@ -63,7 +63,7 @@ export struct MessagePage {
   @StorageLink(KEY_LAST_MESSAGE_SYNC_TIME) @Watch('onMessageSync') lastMessageSyncTime: number = 0;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
 
   private chatListDataSource: BasicDataSource<ChatItem> = new BasicDataSource([]);

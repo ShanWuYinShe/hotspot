@@ -18,6 +18,7 @@ import {
   ThemeOptionItem
 } from './AppThemeTypes';
 import { ColorConfig, ThemeConstants, ThemeShadows } from './ThemeConstants';
+import { AppThemeVisuals } from './AppThemeVisuals';
 
 const DEFAULT_THEME_SHAPE: AppThemeShapeTokens = {
   surfaceCard: DesignConstants.SHAPE.CARD,
@@ -288,8 +289,8 @@ const VIBRANT_DARK_VISUALS = buildVisualTokens(
 
 const DEFAULT_CLEAN_LIGHT = buildPalette(
   'default_clean_light',
-  '当前默认',
-  '清爽、干净、通用',
+  '清野',
+  '自然纸面、森林绿强调',
   ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS,
   ThemeConstants.SHADOWS.DEFAULT_CLEAN_LIGHT,
   DEFAULT_CLEAN_LIGHT_VISUALS,
@@ -349,8 +350,8 @@ const VIBRANT_DARK = buildPalette(
 const THEME_OPTIONS: ThemeOptionItem[] = [
   { mode: 'follow_system', label: '跟随系统', description: '自动匹配系统明暗模式' } as ThemeOptionItem,
   { mode: 'figma_neu', label: '浮雕暖调', description: '柔和压边、暖灰底与立体按钮感' } as ThemeOptionItem,
-  { mode: 'vibrant', label: '活力靛蓝', description: '靛蓝强调、带色调单向阴影' } as ThemeOptionItem,
-  { mode: 'default_clean', label: '清新森林', description: '纯扁平设计、森林绿强调' } as ThemeOptionItem
+  { mode: 'vibrant', label: '星际', description: '冷色玻璃、蓝调强调' } as ThemeOptionItem,
+  { mode: 'default_clean', label: '清野', description: '自然纸面、森林绿强调' } as ThemeOptionItem
 ];
 
 export class AppThemeManager {
@@ -453,15 +454,16 @@ export class AppThemeManager {
   static getSoftStatusBackground(status: 'neutral' | 'success' | 'warning' | 'danger' | 'info'): string {
     const palette = AppThemeManager.getSafeCurrentPalette();
     const isDark = palette.isDarkTheme;
+    // 主题化派生：palette 语义色 + withAlpha 叠加，等效前端 color-mix(in srgb, 色 12~14%, transparent)
     switch (status) {
       case 'success':
-        return isDark ? '#1B352A' : '#EAF6ED';
+        return AppThemeVisuals.withAlpha(palette.success, isDark ? 0.14 : 0.12);
       case 'warning':
-        return isDark ? '#403019' : '#FFF4DF';
+        return AppThemeVisuals.withAlpha(palette.warning, isDark ? 0.14 : 0.12);
       case 'danger':
-        return isDark ? '#40242A' : '#FDEAEC';
+        return AppThemeVisuals.withAlpha(palette.error, isDark ? 0.14 : 0.12);
       case 'info':
-        return isDark ? '#223241' : '#EAF0F7';
+        return AppThemeVisuals.withAlpha(palette.info, isDark ? 0.14 : 0.12);
       case 'neutral':
       default:
         return palette.surfaceSubtle;

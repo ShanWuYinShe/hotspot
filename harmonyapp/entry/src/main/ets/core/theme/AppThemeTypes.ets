@@ -132,5 +132,6 @@ export interface ThemeOptionItem {
 export const KEY_THEME_MODE: string = 'themeMode';
 export const KEY_RESOLVED_THEME_ID: string = 'resolvedThemeId';
 
-export const DEFAULT_THEME_MODE: ThemeMode = 'default_clean';
-export const DEFAULT_RESOLVED_THEME_ID: ResolvedThemeId = 'default_clean_light';
+// 默认主题对齐前端（前端默认 vibrant 星际；存量用户 AppStorage 已存偏好不受影响）
+export const DEFAULT_THEME_MODE: ThemeMode = 'vibrant';
+export const DEFAULT_RESOLVED_THEME_ID: ResolvedThemeId = 'vibrant_light';

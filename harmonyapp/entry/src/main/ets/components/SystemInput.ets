@@ -27,7 +27,7 @@ export struct SystemInput {
   onChange?: (value: string) => void;
   onSubmit?: (value: string) => void;
 
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

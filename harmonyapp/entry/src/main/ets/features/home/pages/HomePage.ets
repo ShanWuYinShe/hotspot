@@ -52,7 +52,7 @@ export struct HomePage {
   @StorageLink(KEY_BROWSE_ANCHOR) @Watch('onBrowseAnchorChange') browseAnchor: LocationInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
 

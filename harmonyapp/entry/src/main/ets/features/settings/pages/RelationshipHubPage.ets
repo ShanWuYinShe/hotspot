@@ -16,7 +16,7 @@ import { curves } from '@kit.ArkUI';
 @Component
 export struct RelationshipHubPage {
   pathStack: NavPathStack = new NavPathStack();
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State friends: FriendItem[] = [];
   @State following: FollowingItem[] = [];
   @State followers: FollowerItem[] = [];

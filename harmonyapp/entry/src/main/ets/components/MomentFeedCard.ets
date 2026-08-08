@@ -30,7 +30,7 @@ export struct MomentFeedCard {
   onOpenDetail?: (moment: MomentItem) => void;
   onImagePreview?: (momentId: string, images: string[], index: number) => void;
   @StorageLink('interaction_moment_state') private momentStateMap: Record<string, MomentSocialState> = {};
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State private isPressed: boolean = false;
 
   private getPalette() {
