@@ -35,6 +35,7 @@ import { formatCount } from '../../../core/utils/FormatUtil';
 import pasteboard from '@ohos.pasteboard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { curves } from '@kit.ArkUI';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'NearbyPage';
@@ -70,6 +71,9 @@ export struct HomePage {
 
   @State userActionPendingIds: string[] = [];
   @State groupActionPendingIds: string[] = [];
+  @State viewAllPressedIndex: number = -1;
+  @State locationCardPressed: boolean = false;
+  @State retryPressed: boolean = false;
 
   private interactionStore = InteractionStateStore.getInstance();
   private isDestroyed: boolean = false;
@@ -537,13 +541,29 @@ export struct HomePage {
     .borderRadius(DesignConstants.SHAPE.HERO_CARD)
     .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: 1, color: this.getPalette().borderColor })
+    .scale(this.locationCardPressed
+      ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD }
+      : { x: 1, y: 1 })
+    .animation({
+      curve: curves.springMotion(
+        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+      )
+    })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.locationCardPressed = true;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.locationCardPressed = false;
+      }
+    })
     .onClick(() => AppRouter.push(PageNames.LOCATION_PICKER))
   }
 
   // ==================== 区块标题 (eyebrow) ====================
 
   @Builder
-  private buildSectionHeader(title: string, linkText: string, onViewAll: () => void) {
+  private buildSectionHeader(title: string, linkText: string, pressedIndex: number, onViewAll: () => void) {
     Row() {
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.XS2)
@@ -564,6 +584,22 @@ export struct HomePage {
             .fontColor([this.getPalette().accentBackground])
         }
       }
+      .scale(this.viewAllPressedIndex === pressedIndex
+        ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL }
+        : { x: 1, y: 1 })
+      .animation({
+        curve: curves.springMotion(
+          DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+          DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+        )
+      })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.viewAllPressedIndex = pressedIndex;
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.viewAllPressedIndex = -1;
+        }
+      })
       .onClick(onViewAll)
     }
     .width('100%')
@@ -575,7 +611,7 @@ export struct HomePage {
   @Builder
   private buildNearbyPeople() {
     Column() {
-      this.buildSectionHeader('附近的人', '查看全部', () => {
+      this.buildSectionHeader('附近的人', '查看全部', 0, () => {
         AppRouter.push(PageNames.NEARBY_USERS);
       })
 
@@ -592,6 +628,16 @@ export struct HomePage {
             .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
             .borderRadius(DesignConstants.RADIUS.FULL)
             .border({ width: 1, color: this.getPalette().accentText })
+            .scale(this.retryPressed
+              ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL }
+              : { x: 1, y: 1 })
+            .onTouch((event: TouchEvent) => {
+              if (event.type === TouchType.Down) {
+                this.retryPressed = true;
+              } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                this.retryPressed = false;
+              }
+            })
             .onClick(() => this.loadNearbyUsers())
         }
         .width('100%')
@@ -700,7 +746,7 @@ export struct HomePage {
     // 附近群组横滑条（对齐前端 GroupCarousel：水平滑动的群组卡片条）
     if (this.groupsLoading || this.groups.length > 0) {
       Column() {
-        this.buildSectionHeader('附近群组', '查看全部', () => {
+        this.buildSectionHeader('附近群组', '查看全部', 1, () => {
           AppRouter.push(PageNames.NEARBY_GROUPS);
         })
 
@@ -791,7 +837,7 @@ export struct HomePage {
   private buildMomentsSection() {
     if (this.momentsLoading || this.moments.length > 0) {
       Column() {
-        this.buildSectionHeader('附近动态', '查看全部', () => {
+        this.buildSectionHeader('附近动态', '查看全部', 2, () => {
           AppRouter.push(PageNames.MOMENT);
         })
 
