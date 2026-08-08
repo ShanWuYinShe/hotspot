@@ -384,8 +384,8 @@ export struct PerformanceIndicator {
           }
         }
         .columnsTemplate('1fr 1fr')
-        .rowsGap(12)
-        .columnsGap(12)
+        .rowsGap(DesignConstants.SPACING.MD)
+        .columnsGap(DesignConstants.SPACING.MD)
         .width('100%')
       }
 

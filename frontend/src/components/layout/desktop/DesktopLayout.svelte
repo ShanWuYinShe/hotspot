@@ -238,8 +238,8 @@
 
 				<!-- Section 2 label -->
 				<p
-					class={isSidebarCollapsed ? 'sr-only' : 'px-3 mb-2 text-xxs font-semibold tracking-label uppercase'}
-					style="color:var(--cst-text-secondary);opacity:0.65;"
+					class={isSidebarCollapsed ? 'sr-only' : 'px-3 mb-2 text-xxs font-semibold tracking-label uppercase opacity-65'}
+					style="color:var(--cst-text-secondary);"
 				>
 					个人中心
 				</p>

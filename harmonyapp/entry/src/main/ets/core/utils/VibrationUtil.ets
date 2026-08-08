@@ -46,7 +46,7 @@ export class VibrationUtil {
       // 降级方案：自定义时长
       await vibrator.startVibration({
         type: 'time',
-        duration: 50,
+        duration: 50, // 单次震动时长（行为常量，非视觉 token 范畴）
       }, {
         id: 0,
         usage: 'touch'

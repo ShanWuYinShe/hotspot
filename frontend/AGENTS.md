@@ -367,6 +367,9 @@ theme/
       sm=0/3/10、md=0/4/14、lg=0/6/18）
     - **Material 单向/弹层投影**：`var(--cst-elevation-card)`/`-button`/`-modal`/`-sheet`/`-menu`
       （语义 token，themes/{vibrant,forest}.css 各自定义真值）
+    **地图标记光晕**：结构 token `var(--cst-marker-shadow)`（0 2px 10px 定位点）/
+    `var(--cst-marker-halo)`（0 0 8px 小光点），色值由调用方按 marker tone 提供
+    （`var(--cst-marker-*-glow)`），定义于 shared.css——禁止组件内联手抄偏移量
     **命名原则**：按投影方向/语义命名（raised/inset/glow/elevation-card），禁止设计风格前缀（neu-/skeuo-/glass-）。
     **已登记例外**：`me/edit` 保存按钮 `box-shadow:0 4px 14px {saved?'online-glow':'accent-glow'}`（固定尺寸+动态双色）
 11. **font-weight（强制）**：字重一律用 `font-*` 类（`font-medium`=500/
@@ -385,6 +388,10 @@ theme/
     间距）；`below` snippet 首元素必须 `mt-3`（与样板一致，见页面布局契约第 2 条）。
     **窄列特例**：桌面消息分栏左栏（`w-75`=300px）不进 `--cst-page-gutter`，用
     `px-4`（16px）压缩 gutter——已登记例外，其他窄列场景需在 AGENTS.md 补登记
+    **布局尺寸 token**（layout.css 定义，禁止组件内裸数字）：
+    `--cst-desktop-sidebar-width`（224px 展开）/ `--cst-desktop-sidebar-collapsed`（72px 折叠）/
+    `--cst-tablet-dock-max`（680px 平板 Dock）/ `--cst-cover-height`（clamp 220→340px 封面）/
+    `--cst-cover-height-lg`（clamp 220→380px 大封面）
 13. **尺寸与间距**：UI 控件/图标尺寸优先用 Tailwind `size-*` 刻度类（`size-9`=36px
     等），减少内联 `style="width:Npx;height:Npx"`。**间距**（gap/px/py/mt/mb）用
     Tailwind 默认 4px 步进刻度（`gap-1/1.5/2/2.5/3...`），**不强制收敛、不建 spacing

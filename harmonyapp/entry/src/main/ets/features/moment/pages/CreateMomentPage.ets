@@ -430,8 +430,8 @@ export struct CreateMomentPage {
                   }, (url: string, index: number) => `existing_${index}_${url}`)
                 }
                 .columnsTemplate('1fr 1fr 1fr')
-                .rowsGap(8)
-                .columnsGap(8)
+                .rowsGap(DesignConstants.SPACING.SM)
+                .columnsGap(DesignConstants.SPACING.SM)
                 .margin({ bottom: DesignConstants.SPACING.MD })
               }
 
@@ -494,8 +494,8 @@ export struct CreateMomentPage {
                 }
               }
               .columnsTemplate('1fr 1fr 1fr')
-              .rowsGap(8)
-              .columnsGap(8)
+              .rowsGap(DesignConstants.SPACING.SM)
+              .columnsGap(DesignConstants.SPACING.SM)
               .height(this.calcGridHeight()) // 动态高度
               .width('100%')
             }

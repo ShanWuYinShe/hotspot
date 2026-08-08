@@ -151,8 +151,8 @@ export struct DebugPanel {
             }
           }
           .columnsTemplate('1fr 1fr')
-          .rowsGap(8)
-          .columnsGap(8)
+          .rowsGap(DesignConstants.SPACING.SM)
+          .columnsGap(DesignConstants.SPACING.SM)
           .height(DesignConstants.LAYOUT.LABEL_WIDTH)
 
           // 日志区域

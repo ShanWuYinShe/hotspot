@@ -176,10 +176,10 @@
 				{@const disabled = !active && tags.size >= 5}
 				<button
 					type="button"
-					class="hover-btn px-3.5 py-1.5 rounded-full outline-none transition-all text-sm {active ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
+					class="hover-btn px-3.5 py-1.5 rounded-full outline-none transition-all text-sm {active ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary opacity-40'}"
 					style={active
 						? 'box-shadow:var(--shadow-glow-sm);border:none;'
-						: 'border:1px solid var(--cst-border-default);opacity:0.4;box-shadow:var(--shadow-raised-sm);'}
+						: 'border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);'}
 					onclick={() => !disabled && toggleTag(t)}
 				>
 					#{t}
