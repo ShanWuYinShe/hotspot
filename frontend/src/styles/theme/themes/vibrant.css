@@ -154,7 +154,7 @@
 
 /* ═══ Vibrant Dark ═══ */
 .vibrant.dark {
-  /* ── 原始色板 --pr-* ── */
+  /* ── 原始色板 --cst-pr-* ── */
   --cst-pr-bg: #0B1424;
   --cst-pr-page-bg: #0B1424;
   --cst-pr-text: #E8F1FF;

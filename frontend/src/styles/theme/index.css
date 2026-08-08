@@ -6,7 +6,7 @@
      2. shared.css          — z-index/blur/shape/space/motion/ease（与主题无关）
 
    Layer 1 — Semantic alias
-     3. semantic.css        — --text-primary, --surface-page etc. → --pr-*
+     3. semantic.css        — --cst-text-primary, --cst-surface-page etc. → --cst-pr-*
 
    Layer 2 — Themes (each theme is a single self-contained file)
      4. themes/vibrant.css  — :root,.vibrant / .vibrant.dark（全部 vibrant 值）

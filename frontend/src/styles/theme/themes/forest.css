@@ -161,7 +161,7 @@
 
 /* ═══ Forest Dark ═══ */
 .forest.dark {
-  /* ── 原始色板 --pr-* ── */
+  /* ── 原始色板 --cst-pr-* ── */
   --cst-pr-bg: #161A16;
   --cst-pr-page-bg: #161A16;
   --cst-pr-text: #E8F1E9;

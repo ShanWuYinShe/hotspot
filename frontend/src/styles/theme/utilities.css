@@ -275,7 +275,7 @@
     .header-action:hover { transform: scale(1.18); transition-duration: 0.14s, 0.18s, 0.18s, 0.18s, 0.18s; background-color: var(--cst-interactive-hover-fill); }
   }
 
-  /* 悬停背景（bgHover）：直接复用 --interactive-hover-fill token（= --pr-hover，
+  /* 悬停背景（bgHover）：直接复用 --cst-interactive-hover-fill token（= --cst-pr-hover，
      每主题/暗色已精确定义：vibrant 10%/15%、forest 12%/18%），与全局 button hover
      填充一致，避免硬编码 color-mix 与 token 漂移。仅 fine pointer 生效。 */
   .hover-bg { transition: background-color 0.18s var(--cst-ease-standard); }
