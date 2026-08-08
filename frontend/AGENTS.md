@@ -302,6 +302,9 @@ theme/
 
 - 新组件优先使用语义名（`var(--cst-text-primary)`、`var(--cst-surface-page)` 等）+ Tailwind className
 - 主题切换通过 `<html>` 上的 `.vibrant` / `.forest` + `.dark` 类实现
+- 浏览器 chrome 配色（`<meta name="theme-color">`）随当前主题画布色同步：
+  首帧由 app.html 内联脚本按持久化偏好设置四态映射，之后由
+  theme store 的 `applyClasses` 读取 `--cst-surface-page` 动态更新
 - 悬停/按压反馈统一用 `hover-btn/action/bg`、`scale-btn`、`tap-*`、`header-action` CSS
   类（主题差异由 themes/*.css 的 `@layer utilities` 覆盖承载），避免 JS 状态动画
 - 主题专属组件覆盖（`.vibrant .foo` / `.forest .foo`）统一放对应 themes/*.css 的
