@@ -254,7 +254,7 @@ export struct PhoneLayout {
         this.FloatingTabItem(4)
       }
       .width('100%')
-      .constraintSize({ maxWidth: 520 })
+      .constraintSize({ maxWidth: DesignConstants.LAYOUT.TABLET_NAV_MAX_WIDTH })
       .justifyContent(FlexAlign.SpaceAround)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
       .borderRadius(DesignConstants.RADIUS.FULL)

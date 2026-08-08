@@ -68,7 +68,6 @@ export interface FontLetterSpacing {
 }
 
 export interface FontWeights {
-  LIGHT: number;
   REGULAR: number;
   MEDIUM: number;
   SEMIBOLD: number;
@@ -97,7 +96,6 @@ export interface SpacingSystem {
   LG2: number; // 20 — 16 与 24 之间的微步（弹层/分组间距）
   XL: number;
   XXL: number;
-  XXXL: number;
 }
 
 // ==================== 圆角系统接口 ====================
@@ -123,14 +121,12 @@ export interface ShadowSystem {
   MEDIUM: ShadowConfig;
   LARGE: ShadowConfig;
   INSET: ShadowConfig;
-  HIGHLIGHT: ShadowConfig;
 }
 
 // ==================== 动画系统接口 ====================
 export interface AnimationSystem {
   DURATION_SHORT: number;
   DURATION_MEDIUM: number;
-  DURATION_LONG: number;
   /** loading → content 交叉淡入淡出时长 */
   DURATION_CONTENT_SWITCH: number;
   /** bottom-sheet 转场统一时长（全应用 320ms，原散落魔法数收敛） */
@@ -143,13 +139,10 @@ export interface AnimationSystem {
   DURATION_FAST: number;
   /** 即时反馈（100ms） */
   DURATION_INSTANT: number;
-  /** 脉冲/shimmer 循环周期（1500ms） */
-  DURATION_SLOW: number;
   /** 列表入场 stagger 延迟 */
   DURATION_STAGGER_DELAY: number;
   CURVE_EASE_IN_OUT: Curve;
   CURVE_EASE_OUT: Curve;
-  CURVE_EMPHASIZED: Curve;
   CURVE_FAST_OUT_SLOW_IN: Curve;
   CURVE_SMOOTH: Curve;
 }
@@ -249,10 +242,6 @@ export interface ComponentConstants {
   LOADING_AREA_HEIGHT: number;
   /** 创建群组人数输入框宽度（64） */
   NUMBER_INPUT_WIDTH: number;
-  /** 地图控件按钮尺寸（48） */
-  MAP_CONTROL_SIZE: number;
-  /** 细分隔线厚度（0.5） */
-  DIVIDER_THIN: number;
   /** 通用图标尺寸档（16/20/24） */
   ICON_SIZE_XS: number;
   ICON_SIZE_SM: number;
@@ -265,8 +254,6 @@ export interface ComponentConstants {
   PLACEHOLDER_AREA_HEIGHT: number;
   /** 大图占位高度（110，创建页图片区） */
   IMAGE_PLACEHOLDER_HEIGHT: number;
-  /** 详情大图高度（160，作品大图） */
-  DETAIL_IMAGE_HEIGHT: number;
   /** 分享卡高度（130） */
   SHARE_CARD_HEIGHT: number;
   /** 日志区高度（300，调试面板） */
@@ -330,12 +317,7 @@ export interface ShapeSemanticTokens {
 
 // ==================== 设计常量聚合接口 ====================
 export interface MaterialEffectSystem {
-  BLUR_LIGHT: number;
-  BLUR_HEAVY: number;
   TEXTURE_SOFT: number;
-  TEXTURE_STRONG: number;
-  GLOW_SOFT: number;
-  GLOW_STRONG: number;
   /** 大号 glow 模糊（80，头像光晕） */
   GLOW_BLUR_LARGE: number;
   /** 中号 glow 模糊（64，头部光晕） */
@@ -446,7 +428,6 @@ const FONT: FontSystem = {
     HERO_LARGE: 56,
   },
   WEIGHT: {
-    LIGHT: 300,
     REGULAR: 400,
     MEDIUM: 500,
     SEMIBOLD: 600,
@@ -482,7 +463,6 @@ const SPACING: SpacingSystem = {
   LG2: 20,
   XL: 24,
   XXL: 32,
-  XXXL: 48,
 };
 
 // ==================== 圆角系统（HarmonyOS vp 适配档）====================
@@ -539,30 +519,21 @@ const SHADOW: ShadowSystem = {
     offsetX: 0,
     offsetY: 0,
   },
-  HIGHLIGHT: {
-    radius: 0,
-    color: '#00000000',
-    offsetX: 0,
-    offsetY: 0,
-  },
 };
 
 // ==================== 动画系统 ====================
 const ANIMATION: AnimationSystem = {
   DURATION_SHORT: 200,
   DURATION_MEDIUM: 300,
-  DURATION_LONG: 500,
   DURATION_CONTENT_SWITCH: 400,
   DURATION_SHEET: 320,
   DURATION_250: 250,
   DURATION_280: 280,
   DURATION_FAST: 150,
   DURATION_INSTANT: 100,
-  DURATION_SLOW: 1500,
   DURATION_STAGGER_DELAY: 150,
   CURVE_EASE_IN_OUT: Curve.EaseInOut,
   CURVE_EASE_OUT: Curve.EaseOut,
-  CURVE_EMPHASIZED: Curve.FastOutSlowIn,
   CURVE_FAST_OUT_SLOW_IN: Curve.FastOutSlowIn,
   CURVE_SMOOTH: Curve.Smooth,
 };
@@ -586,12 +557,7 @@ const INTERACTION: InteractionSystem = {
 
 // ==================== 组件特定常量 ====================
 const EFFECT: MaterialEffectSystem = {
-  BLUR_LIGHT: 12,
-  BLUR_HEAVY: 24,
   TEXTURE_SOFT: 0.12,
-  TEXTURE_STRONG: 0.22,
-  GLOW_SOFT: 16,
-  GLOW_STRONG: 32,
   GLOW_BLUR_LARGE: 80,
   GLOW_BLUR_MEDIUM: 64,
   GLOW_BLUR_SMALL: 22,
@@ -624,8 +590,6 @@ const COMPONENT: ComponentConstants = {
   GROUP_CARD_WIDTH: 140,
   LOADING_AREA_HEIGHT: 200,
   NUMBER_INPUT_WIDTH: 64,
-  MAP_CONTROL_SIZE: 48,
-  DIVIDER_THIN: 0.5,
   ICON_SIZE_XS: 16,
   ICON_SIZE_SM: 20,
   ICON_SIZE_MD: 24,
@@ -633,7 +597,6 @@ const COMPONENT: ComponentConstants = {
   SKELETON_AVATAR_SIZE: 66,
   PLACEHOLDER_AREA_HEIGHT: 120,
   IMAGE_PLACEHOLDER_HEIGHT: 110,
-  DETAIL_IMAGE_HEIGHT: 160,
   SHARE_CARD_HEIGHT: 130,
   LOG_AREA_HEIGHT: 300,
   LOADING_GLYPH_SIZE: 46,
