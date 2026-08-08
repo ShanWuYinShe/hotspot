@@ -381,7 +381,7 @@ export class AppThemeManager {
     return AppThemeManager.normalizeThemeMode(AppStorage.get<string>(KEY_THEME_MODE) ?? DEFAULT_THEME_MODE);
   }
 
-  static getResolvedThemeId(): ResolvedThemeId {
+  private static getResolvedThemeId(): ResolvedThemeId {
     const resolvedThemeId = AppStorage.get<string>(KEY_RESOLVED_THEME_ID) ?? DEFAULT_RESOLVED_THEME_ID;
     return AppThemeManager.normalizeResolvedThemeId(resolvedThemeId);
   }
@@ -391,7 +391,7 @@ export class AppThemeManager {
     AppThemeManager.refreshResolvedTheme();
   }
 
-  static getCurrentPalette(): AppThemePalette {
+  private static getCurrentPalette(): AppThemePalette {
     return AppThemeManager.getPalette();
   }
 
@@ -445,7 +445,7 @@ export class AppThemeManager {
     };
   }
 
-  static syncSystemSurface(): void {
+  private static syncSystemSurface(): void {
     SystemUiThemeStore.setStyle(AppThemeManager.getCurrentSurfaceStyle());
   }
 
@@ -476,14 +476,6 @@ export class AppThemeManager {
       default:
         return palette.surfaceSubtle;
     }
-  }
-
-  static getBrandAccent(): string {
-    return AppThemeManager.getSafeCurrentPalette().accentBackground;
-  }
-
-  static getBrandAccentText(): string {
-    return AppThemeManager.getSafeCurrentPalette().accentText;
   }
 
   private static refreshResolvedTheme(): void {
