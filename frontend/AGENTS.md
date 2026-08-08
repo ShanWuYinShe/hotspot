@@ -189,7 +189,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
    由容器 divide 线承担，圆角外框由容器级（`ListContainer bordered` 唯一外框）或
    `tone="card"`（独立卡片容器 + gap 分隔）承担；调用方 className/style 只允许布局
    类。**高亮形状由组件统一应用**：joined 行 hover/focus/pressed 时背景自带
-   `rounded-small`（12px，`--cst-shape-small`）圆角，非高亮保持直角连接行视觉；
+   `rounded-small`（12px，`--cst-shape-sm`）圆角，非高亮保持直角连接行视觉；
    圆角随背景填充出现并纳入 transition——调用方不得重复设置。三重防线：
    ESLint 自定义规则 `hotspot/no-list-item-card-classes`
    （`eslint-rules/`，Svelte AST 级，IDE 即时报错）挂入 `bun run lint`/`bun run check`；
@@ -266,7 +266,7 @@ theme/
   - 图钉色背景上的文字：`--cst-content-on-marker`（地图标记）
   - **accent 背景上的文字/图标一律用 `--cst-text-on-accent` 系列**（含次级文字
     用 `opacity-70/80` 派生，参照 ListItem/ChatListItem selected 态）；图钉等
-    marker 色与 accent 同色（`--cst-pr-map-user` = `--cst-pr-accent`），在
+    marker 色与 accent 同色（`--cst-pr-map-user` = `--cst-pr-accent-primary`），在
     selected 行内需换实色底衬托（参照 `PinMedia` 的 `selected` prop）
   - 遮罩/玻璃：`--cst-surface-scrim`（弹层遮罩）、
     `--cst-surface-media-scrim-strong`（照片遮罩）、

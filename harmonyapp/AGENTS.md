@@ -116,11 +116,13 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 所有颜色、字号、间距、圆角、阴影只用 DesignConstants / AppThemeManager token，对齐前端 design token 系统（vibrant / forest 双主题，单一事实源）。禁止在页面/组件里硬编码十六进制色值或裸数字 `fontSize(N)` / `padding({left:N})`。
 
 颜色：
-- 画布：`COLOR.PRIMARY_BG_*` / `SECONDARY_BG_*`
-- 表面：`COLOR.SURFACE_NEUTRAL_SOFT` / `SURFACE_INFO_SOFT` 等
-- 文字：`COLOR.TEXT_PRIMARY_*` / `TEXT_SECONDARY_*` / `TEXT_TERTIARY_*`
-- 品牌：`COLOR.BRAND_PRIMARY`（forest `#3D7A55`，与前端 `--cst-pr-accent-primary`（`--cst-accent-default`）一致）
-- 语义：`SUCCESS` / `WARNING` / `ERROR` / `INFO`
+- 画布：`palette.pageBackground` / `palette.surfaceBackground`（对齐前端
+  `--cst-surface-page` / `--cst-surface-primary`）
+- 表面：`palette.surfaceSubtle` / `palette.surfaceElevated` / `palette.chatBackground`
+- 文字：`palette.textPrimary` / `palette.textSecondary` / `palette.textTertiary`
+- 品牌：`palette.accentBackground`（forest `#3D7A55`，与前端
+  `--cst-pr-accent-primary`（`--cst-accent-default`）一致）
+- 语义：`palette.success` / `palette.warning` / `palette.error` / `palette.info`
 - 地图标记：`palette.mapUser / mapGroup / mapMoment`（对齐前端 `--cst-marker-user/group/moment`，随主题/明暗变）；状态淡底：`palette.dangerSoft / warningSoft / successSoft / infoSoft`（对齐前端 `--cst-status-*-bg` 12~14% 预混档位）
 - 主题解析：`AppThemeManager.getPaletteById(resolvedThemeId)` → `@StorageProp(KEY_RESOLVED_THEME_ID)`
 - 明暗差异：本端明暗始终跟随系统（`isDarkMode`），与 Web 端可手动切换
