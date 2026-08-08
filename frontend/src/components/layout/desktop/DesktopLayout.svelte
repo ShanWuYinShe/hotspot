@@ -123,7 +123,7 @@
 	<!-- HEADER — 52px, full width -->
 	<header
 		class="relative z-30 shrink-0 flex items-center px-5 gap-2"
-		style="height:52px;background-color:var(--cst-surface-page);border-bottom:1px solid var(--cst-border-default);"
+		style="height:var(--cst-desktop-header-height);background-color:var(--cst-surface-page);border-bottom:1px solid var(--cst-border-default);"
 	>
 		<!-- Logo -->
 		<button

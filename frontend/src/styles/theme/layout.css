@@ -51,6 +51,8 @@
     /* 桌面常驻侧边栏宽度（展开/折叠两态）——消除组件内 224/72px 魔法数 */
     --cst-desktop-sidebar-width: 14rem;   /* 224px 展开态 */
     --cst-desktop-sidebar-collapsed: 4.5rem; /* 72px 折叠态 */
+    /* 桌面顶栏高度（对齐 harmonyapp LAYOUT.DESKTOP_HEADER_HEIGHT: 52） */
+    --cst-desktop-header-height: 3.25rem; /* 52px */
     /* 宽平板浮动 Dock 最大宽度（对齐 Figma Make tablet dock 契约） */
     --cst-tablet-dock-max: 42.5rem; /* 680px */
     /* 封面/横幅高度（clamp 响应式）：groups/me 封面 220→340px，动态详情大封面 220→380px。
