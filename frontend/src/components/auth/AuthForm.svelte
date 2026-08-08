@@ -290,8 +290,8 @@
 
 	<button
 		type="submit"
-		class="hover-btn flex w-full items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-medium transition-opacity"
-		style="background:var(--cst-accent-default);color:var(--cst-text-on-accent);class:{submitting ? 'opacity-60' : 'opacity-100'};"
+		class="hover-btn flex w-full items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-medium transition-opacity {submitting ? 'opacity-60' : 'opacity-100'}"
+		style="background:var(--cst-accent-default);color:var(--cst-text-on-accent);"
 		disabled={submitting}
 	>
 		{submitting ? '处理中…' : submitLabel(mode)}
