@@ -33,8 +33,9 @@
   --cst-pr-hot: #F43F5E;
   --cst-pr-warning: #F59E0B;
   --cst-pr-map-user: #2E66C0;
-  --cst-pr-map-group: #10B981;
-  --cst-pr-map-moment: #F97316;
+  /* 图钉主色校准：确保白字 --cst-content-on-marker 对比度 ≥4.5（原 #10B981/#F97316 过浅） */
+  --cst-pr-map-group: #0B7A56;
+  --cst-pr-map-moment: #C2470B;
   --cst-pr-overlay-soft: rgba(22, 35, 58, 0.08);
   --cst-pr-overlay-strong: rgba(12, 25, 48, 0.52);
   --cst-pr-shadow-card: 0 12px 28px rgba(53, 120, 212, 0.12), 0 3px 10px rgba(53, 120, 212, 0.07);

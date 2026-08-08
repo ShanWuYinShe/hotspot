@@ -31,8 +31,9 @@
   /* warning 加深（#9A7A35→#8A6A2F）确保浅色下白字对比度 ≥4.5:1（原 4.03 不达标） */
   --cst-pr-warning: #8A6A2F;
   --cst-pr-map-user: #3D7A55;
-  --cst-pr-map-group: #638B46;
-  --cst-pr-map-moment: #A57C38;
+  /* 图钉主色校准：确保白字 --cst-content-on-marker 对比度 ≥4.5（原 #638B46/#A57C38 过浅） */
+  --cst-pr-map-group: #4A703F;
+  --cst-pr-map-moment: #8A6426;
   --cst-pr-overlay-soft: rgba(27, 31, 27, 0.08);
   --cst-pr-overlay-strong: rgba(20, 28, 20, 0.42);
   --cst-pr-shadow-card: 0 0 0 1.5px rgba(61, 122, 85, 0.22);
