@@ -22,6 +22,8 @@ export interface ColorConfig {
   chatBackground: string;
   systemSurfaceBaseColor: string;
   overlayStrong: string;
+  /** 在线状态色（对齐前端 --cst-pr-online，随主题变） */
+  online: string;
   textPrimary: string;
   textSecondary: string;
   textTertiary: string;
@@ -133,6 +135,7 @@ export class ThemeConstants {
     tabBarInactive: '#3F5547',
     tabBarActiveBackground: '#F0F2F0',
     isDarkTheme: false,
+    online: '#3D7A55',
     warning: '#8A6A2F',
     success: '#059669',
     error: '#8E6F35',
@@ -170,6 +173,7 @@ export class ThemeConstants {
     tabBarInactive: '#A8BDAE',
     tabBarActiveBackground: '#242624',
     isDarkTheme: true,
+    online: '#52B878',
     warning: '#C4A75A',
     success: '#34D399',
     error: '#C4A75A',
@@ -207,6 +211,7 @@ export class ThemeConstants {
     tabBarInactive: '#65594A',
     tabBarActiveBackground: '#F4E9DE',
     isDarkTheme: false,
+    online: '#B86F4B',
     warning: '#B8843F',
     success: '#66835D',
     error: '#C0392B',
@@ -244,6 +249,7 @@ export class ThemeConstants {
     tabBarInactive: '#A99682',
     tabBarActiveBackground: '#2A231C',
     isDarkTheme: true,
+    online: '#D18A5D',
     warning: '#D1A35D',
     success: '#8CA877',
     error: '#E06F6F',
@@ -283,6 +289,7 @@ export class ThemeConstants {
     tabBarInactive: '#52647F',
     tabBarActiveBackground: '#EDF3FC',
     isDarkTheme: false,
+    online: '#14B8A6',
     warning: '#F59E0B',
     success: '#14B8A6',
     error: '#F43F5E',
@@ -320,6 +327,7 @@ export class ThemeConstants {
     tabBarInactive: '#A5B6CE',
     tabBarActiveBackground: '#14243A',
     isDarkTheme: true,
+    online: '#37C99A',
     warning: '#FBBF24',
     success: '#37C99A',
     error: '#FB7185',

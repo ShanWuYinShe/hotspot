@@ -104,6 +104,7 @@ function buildPalette(
     accentMuted: colors.accentMuted,
     chatBackground: colors.chatBackground,
     systemSurfaceBaseColor: colors.systemSurfaceBaseColor,
+    online: colors.online,
     preferDarkContent,
     isDarkTheme: colors.isDarkTheme,
     textPrimary: colors.textPrimary,

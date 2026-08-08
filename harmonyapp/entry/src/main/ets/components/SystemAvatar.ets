@@ -90,7 +90,7 @@ export struct SystemAvatar {
         Row()
           .width(this.avatarSize * 0.28)
           .height(this.avatarSize * 0.28)
-          .backgroundColor(this.getPalette().accentBackground)
+          .backgroundColor(this.getPalette().online)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .border(this.getBorderOptions())
           .shadow(this.getPalette().controlShadow)
