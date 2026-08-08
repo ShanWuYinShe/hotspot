@@ -221,7 +221,7 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 	const onlineMemberCount = $derived(onlineMemberIds.size);
 </script>
 
-<StandardPageLayout contentClassName="pb-6">
+<StandardPageLayout contentClassName="animate-fade-in pb-6">
 	<!-- 全幅封面（负 margin 抵消 ContentColumn gutter） -->
 	<div class="relative h-[var(--cst-cover-height)] overflow-hidden -mx-[var(--cst-page-gutter)]">
 		<img src={group.banner} alt={`${group.name} 的群组封面`} class="h-full w-full object-cover" />

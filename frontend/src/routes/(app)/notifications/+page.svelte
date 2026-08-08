@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Bell, CheckCheck } from '@lucide/svelte';
+	import { platform } from '@/stores/platform.svelte';
 	import RailSection from '@/components/rail/RailSection.svelte';
 	import RailUserRow from '@/components/rail/RailUserRow.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
@@ -28,6 +29,8 @@ const FILTER_TABS = [
 
 	let notifications = $state<NotificationItem[]>([]);
 	let filter = $state('all');
+
+	const device = $derived(platform.platform);
 	let loading = $state(true);
 	// WS 推送（ws:notify）到来时 +1，触发下方加载 effect 重新拉取通知与未读。
 	let reloadKey = $state(0);
@@ -127,13 +130,12 @@ const FILTER_TABS = [
 	);
 </script>
 
-<SplitPageLayout contentClassName="pt-4 pb-6">
+<SplitPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader
 			title="通知"
 			sticky
-			titleSize={20}
-			subtitleSize={12}
+			titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}
 			contentClassName="pt-4 pb-0"
 			onBack={() => history.back()}
 		>

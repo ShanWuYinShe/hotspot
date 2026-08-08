@@ -202,7 +202,7 @@
 		</Dialog.Content>
 	</Dialog.Root>
 
-<SplitPageLayout contentClassName="pt-4 pb-6">
+<SplitPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	<!-- 资料头（无封面数据：紧凑头部，返回/分享/更多 浮在首行，对齐动态详情作者行层级） -->
 	<div class="flex items-center justify-between">
 		<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => history.back()} />

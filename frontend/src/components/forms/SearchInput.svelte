@@ -12,6 +12,10 @@
 		onChange,
 		placeholder = '搜索...',
 		class: className = '',
+		/** 进入页面后自动聚焦（搜索页样板行为）。 */
+		autofocus = false,
+		/** 回车回调（搜索页把当前词记入最近搜索）。 */
+		onEnter,
 		/** 输入框字号（text-* 刻度类，默认 text-sm=12px）。禁止内联 font-size。 */
 		textClass = 'text-sm',
 		trailing
@@ -20,6 +24,8 @@
 		onChange: (value: string) => void;
 		placeholder?: string;
 		class?: string;
+		autofocus?: boolean;
+		onEnter?: (value: string) => void;
 		textClass?: string;
 		trailing?: Snippet;
 	} = $props();
@@ -27,9 +33,14 @@
 
 <div class={cn('flex items-center gap-2.5 rounded-md input-surface', className)}>
 	<Search size={14} color="var(--cst-text-secondary)" />
+	<!-- svelte-ignore a11y_autofocus：搜索页进入自动聚焦是样板行为 -->
 	<input
+		{autofocus}
 		bind:value
 		oninput={(e) => onChange(e.currentTarget.value)}
+		onkeydown={(e) => {
+			if (e.key === 'Enter') onEnter?.(value);
+		}}
 		{placeholder}
 		class="min-w-0 flex-1 bg-transparent outline-none text-text-primary {textClass}"
 	/>

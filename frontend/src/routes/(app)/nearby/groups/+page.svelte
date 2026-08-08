@@ -53,6 +53,7 @@
 
 	const isDesktop = $derived(platform.platform === 'desktop');
 	const isTablet = $derived(platform.platform === 'tablet');
+	const device = $derived(platform.platform);
 	const filtered = $derived(
 		groups.filter((group) => {
 			const q = searchQuery.trim().toLowerCase();
@@ -89,9 +90,16 @@
 </script>
 
 
-	<StandardPageLayout contentClassName="pt-4 pb-6">
+	<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 		{#snippet header()}
-			<PageHeader title="附近群组" subtitle={locationName ? `${locationName} · 5km 内` : '5km 内'} sticky glass contentClassName="pt-4 pb-0" onBack={() => history.back()}>
+			<PageHeader
+				title="附近群组"
+				subtitle={locationName ? `${locationName} · 5km 内` : '5km 内'}
+				sticky
+				titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}
+				contentClassName="pt-4 pb-0"
+				onBack={() => history.back()}
+			>
 				{#snippet subtitleIcon()}
 					<MapPin class="size-2.5"  style="color:var(--cst-accent-default)" strokeWidth={1.8} />
 				{/snippet}
@@ -102,7 +110,7 @@
 			{#snippet below()}
 				<!-- 搜索框（全设备全宽，对齐 Figma） + 分类标签：同处 sticky header 内 -->
 				<div class="mt-3">
-					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" class="px-3.5 py-2" />
+					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" class="px-4 py-2.5 rounded-md" />
 				</div>
 				<div class="flex gap-1.5 overflow-x-auto no-scrollbar mt-3">
 					{#each CATEGORIES as category}

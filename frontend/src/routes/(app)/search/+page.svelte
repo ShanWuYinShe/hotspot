@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { Search as SearchIcon, X } from '@lucide/svelte';
+	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import { searchUsers, searchMoments, searchSuggest } from '@/api';
 	import SearchDiscovery from './shared/SearchDiscovery.svelte';
 	import SearchResults, { type TabType, type SearchResultsData } from './shared/SearchResults.svelte';
@@ -31,6 +31,8 @@
 		topics: []
 	});
 	let loading = $state(false);
+
+	const device = $derived(platform.platform);
 
 	$effect(() => {
 		localStorage.setItem('search_recent', JSON.stringify(recent));
@@ -92,12 +94,6 @@
 		return () => clearTimeout(timer);
 	});
 
-	// 对齐 Figma Make：进入搜索页自动聚焦输入框
-	let inputEl: HTMLInputElement | undefined;
-	onMount(() => {
-		inputEl?.focus();
-	});
-
 	const remember = (value: string) => {
 		recent = [value, ...recent.filter((r) => r !== value)].slice(0, 5);
 	};
@@ -117,42 +113,24 @@
 	]);
 </script>
 
-<StandardPageLayout contentClassName="pt-4 pb-6">
+<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
-		<PageHeader title="搜索" onBack={() => history.back()} sticky={false} />
+		<PageHeader title="搜索" onBack={() => history.back()} titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}>
+			{#snippet below()}
+				<!-- 搜索框随 sticky header 吸顶（对齐 nearby/moments 样板 below 结构） -->
+				<div class="mt-3 mb-2.5">
+					<SearchInput
+						value={query}
+						onChange={(v) => (query = v)}
+						placeholder="搜索用户、动态、地点或话题"
+						autofocus
+						onEnter={(v) => v.trim() && remember(v.trim())}
+						class="px-4 py-2.5 rounded-md"
+					/>
+				</div>
+			{/snippet}
+		</PageHeader>
 	{/snippet}
-
-	<!-- 搜索输入卡片（对齐 Figma：rounded-lg border bg-card） -->
-	<section
-		class="rounded-lg border border-border-default bg-surface-primary p-3"
-		aria-label="搜索输入"
-	>
-		<div class="flex items-center gap-3">
-			<SearchIcon class="size-5 shrink-0 text-accent-default" strokeWidth={1.8} />
-			<!-- svelte-ignore a11y_autofocus -->
-			<input
-				bind:this={inputEl}
-				autofocus
-				value={query}
-				oninput={(e) => (query = e.currentTarget.value)}
-				onkeydown={(e) => {
-					if (e.key === 'Enter' && query.trim()) remember(query.trim());
-				}}
-				placeholder="搜索用户、动态、地点或话题"
-				class="min-w-0 flex-1 bg-transparent py-2 text-sm text-text-primary outline-none placeholder:text-text-secondary"
-			/>
-			{#if query}
-				<button
-					type="button"
-					onclick={() => (query = '')}
-					aria-label="清除搜索"
-					class="hover-btn flex size-8 items-center justify-center text-text-secondary hover:text-text-primary"
-				>
-					<X class="size-4" />
-				</button>
-			{/if}
-		</div>
-	</section>
 
 	{#if !keyword}
 		<!-- 无查询发现态（对齐 Figma：双栏 grid + 推荐话题跨列） -->

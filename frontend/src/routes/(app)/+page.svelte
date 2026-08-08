@@ -29,6 +29,7 @@
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let defaultLocation = $state<DefaultLocation | null>(null);
+	const device = $derived(platform.platform);
 
 	$effect(() => startDefaultLocation((loc) => {
 			defaultLocation = loc ?? null;
@@ -118,12 +119,12 @@
 {/snippet}
 
 	<StandardPageLayout
-		contentClassName={platform.platform === 'mobile' ? 'animate-fade-in flex flex-col gap-7 pt-4 pb-6' : 'pt-4 pb-6'}
+		contentClassName={platform.platform === 'mobile' ? 'animate-fade-in flex flex-col gap-7 pt-4 pb-6' : 'animate-fade-in pt-4 pb-6'}
 	>
 	{#snippet header()}
 		{#if platform.platform !== 'mobile'}
 			<!-- ═══ Desktop/Tablet Home — 统一 PageHeader + 2-column ═══ -->
-			<PageHeader title="首页" titleSize={24} subtitle="发现周边有趣的人和事" sticky>
+			<PageHeader title="首页" titleSize={device === 'desktop' ? 20 : 24} subtitle="发现周边有趣的人和事" sticky>
 				{#snippet trailing()}
 					<div class="flex items-center gap-2">
 						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full surface-flat">

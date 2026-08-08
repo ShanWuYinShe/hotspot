@@ -83,6 +83,7 @@
 
 	const isDesktop = $derived(platform.platform === 'desktop');
 	const isTablet = $derived(platform.platform === 'tablet');
+	const device = $derived(platform.platform);
 	const gridColumns = $derived(platform.platform === 'mobile' ? 2 : isDesktop ? 3 : 2);
 
 	const toggleFollow = (id: string) => {
@@ -92,13 +93,20 @@
 	};
 </script>
 
-	<StandardPageLayout contentClassName="pt-4 pb-6">
+	<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 		{#snippet header()}
-			<PageHeader title="附近的人" subtitle={locationName ? `${locationName} · 5km 内 · 每 3 分钟刷新` : '5km 内 · 每 3 分钟刷新'} sticky glass contentClassName="pt-4 pb-0" onBack={() => history.back()}>
+			<PageHeader
+				title="附近的人"
+				subtitle={locationName ? `${locationName} · 5km 内 · 每 3 分钟刷新` : '5km 内 · 每 3 分钟刷新'}
+				sticky
+				titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}
+				contentClassName="pt-4 pb-0"
+				onBack={() => history.back()}
+			>
 				{#snippet below()}
 					<!-- 搜索框（全设备全宽，对齐附近群组样板） + 排序/标签过滤：同处 sticky header 内 -->
 					<div class="mt-3">
-						<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索昵称、兴趣或此刻状态" class="px-3.5 py-2" />
+						<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索昵称、兴趣或此刻状态" class="px-4 py-2.5 rounded-md" />
 					</div>
 					<div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 mt-3">
 						<div class="flex items-center gap-1 p-1 rounded-full input-surface w-fit">

@@ -2,6 +2,7 @@
 	import type { Component, Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { Bell, Lock, ChevronRight, LogOut, Globe, Info, Volume2, MapPin, User, Palette, Trees, Moon, Sun } from '@lucide/svelte';
+	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
@@ -22,6 +23,7 @@
 	// 本地偏好（推送通知/应用声音）——localStorage 持久化
 	const NOTIF_KEY = 'hotspot:notif';
 	const SOUNDS_KEY = 'hotspot:sounds';
+	const device = $derived(platform.platform);
 	const readLocal = (key: string, fallback: boolean) => {
 		try {
 			const v = localStorage.getItem(key);
@@ -113,9 +115,9 @@
 	};
 </script>
 
-<StandardPageLayout contentClassName="pt-4 pb-10">
+<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-10">
 	{#snippet header()}
-		<PageHeader title="设置" sticky={false} onBack={() => history.back()} showBackOnDesktop />
+		<PageHeader title="设置" onBack={() => history.back()} showBackOnDesktop titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22} />
 	{/snippet}
 
 	<!-- User card — hero with ambient glow -->

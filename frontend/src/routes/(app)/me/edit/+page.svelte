@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Camera, User, FileText, Check } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
+	import { platform } from '@/stores/platform.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -16,6 +17,8 @@
 	let saved = $state(false);
 	let avatar = $state('');
 	let userId = $state('');
+
+	const device = $derived(platform.platform);
 
 	$effect(() => {
 		let cancelled = false;
@@ -67,9 +70,9 @@
 	};
 </script>
 
-<StandardPageLayout contentClassName="pt-4 pb-10">
+<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-10">
 	{#snippet header()}
-		<PageHeader title="编辑资料" onBack={() => history.back()} sticky={false}>
+		<PageHeader title="编辑资料" onBack={() => history.back()} titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}>
 	{#snippet trailing()}
 		<button
 			type="button"

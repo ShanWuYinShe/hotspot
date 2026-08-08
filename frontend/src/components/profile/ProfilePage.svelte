@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Camera, MapPin, Pencil, ShieldCheck, AtSign, FileText, ChevronRight } from '@lucide/svelte';
+	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SectionMoments from '@/components/profile/SectionMoments.svelte';
@@ -30,6 +31,7 @@
 		fans: { title: '粉丝' }
 	};
 	const meta = $derived(section && SECTION_META[section] ? SECTION_META[section] : null);
+	const device = $derived(platform.platform);
 
 	const statsList = $derived(
 		([
@@ -55,7 +57,7 @@
 	     Section 组件为纯内容（不自建滚动/gutter），gutter 由 ContentColumn 统一提供 -->
 	<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 		{#snippet header()}
-			<PageHeader title={meta.title} sticky onBack={() => void goto(ROUTES.me)} />
+			<PageHeader title={meta.title} sticky titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22} onBack={() => void goto(ROUTES.me)} />
 		{/snippet}
 		{#if section === 'moments'}
 			<SectionMoments />
@@ -73,7 +75,7 @@
 	<!-- 总览模式（对齐 Figma Make ProfilePage：单列资料页） -->
 	<!-- 总览模式（对齐 Figma Make ProfilePage：单列资料页）。资料总览页是长内容呼吸型布局，
 	     顶/底 padding 略大于标准列表页（pt-6 pb-8），属于样板 pt-4 pb-6 的可登记变体。 -->
-	<StandardPageLayout contentClassName="pt-6 pb-8">
+	<StandardPageLayout contentClassName="animate-fade-in pt-6 pb-8">
 		<!-- 资料页眉 -->
 		<header class="flex items-start justify-between gap-6 border-b border-border-default pb-5">
 			<div>
