@@ -498,7 +498,8 @@ export class AppThemeManager {
   private static resolveThemeId(themeMode: ThemeMode, isDarkMode: boolean): ResolvedThemeId {
     switch (themeMode) {
       case 'follow_system':
-        return isDarkMode ? 'figma_neu_dark' : 'figma_neu_light';
+        // 跟随系统 = 默认主题族（vibrant 星际，对齐前端默认）随系统明暗切换
+        return isDarkMode ? 'vibrant_dark' : 'vibrant_light';
       case 'vibrant':
         return isDarkMode ? 'vibrant_dark' : 'vibrant_light';
       case 'default_clean':
