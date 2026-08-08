@@ -312,14 +312,16 @@
     animation: spinner-rotate 0.7s linear infinite;
   }
   @keyframes spinner-rotate { to { transform: rotate(360deg); } }
-   可见填充是基线 hover 提示；渐变叠加层对内联/Tailwind 实色背景同样
-   生效，主按钮与图标按钮获得一致反馈而不抹掉其语义底色。
-   注意：带显式背景类（bg-*）或内联背景的按钮已自带语义底色，
-   背景填充仅作用于透明/ghost 按钮，避免覆盖实色 accent 导致白字褪色。
-   排除：[data-tab-bar] 内的导航 Tab（走 .tab-item subtle hover，见下）、
-   .nav-tab 胶囊导航（自带交互态）。
-   ★ 必须是无 layer 规则：Tailwind v4 的 @layer utilities 内规则优先级不足，
-   带 !important 的 hover 渐变/背景会被同层 utility 压过（实测全部失效）。 */
+
+  /*── Global button hover feedback（必须是无 layer 规则：Tailwind v4 的
+     @layer utilities 内规则优先级不足，带 !important 的 hover 渐变/背景会被
+     同层 utility 压过——实测全部失效）─────────────────────────────
+     hover 背景填充是基线 hover 提示；渐变叠加层对内联/Tailwind 实色背景同样
+     生效，主按钮与图标按钮获得一致反馈而不抹掉其语义底色。
+     注意：带显式背景类（bg-*）或内联背景的按钮已自带语义底色，
+     背景填充仅作用于透明/ghost 按钮，避免覆盖实色 accent 导致白字褪色。
+     排除：[data-tab-bar] 内的导航 Tab（走 .tab-item subtle hover，见下）、
+     .nav-tab 胶囊导航（自带交互态）。 */
 :where(button:not(:disabled):not([data-tab-bar] *):not(.nav-tab)) {
   border-radius: var(--cst-shape-sm);
   transition: background-color 160ms var(--cst-ease-standard), background-image 160ms var(--cst-ease-standard), border-color 160ms var(--cst-ease-standard), color 160ms var(--cst-ease-standard);
