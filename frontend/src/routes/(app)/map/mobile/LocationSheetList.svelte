@@ -89,8 +89,9 @@ import PinMedia from '../shared/PinMedia.svelte';
 			] as tab}
 				<button
 					type="button"
-					class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none text-sm {activeTab === tab.id ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
-					style={activeTab === tab.id ? 'box-shadow:var(--shadow-glow-sm);' : 'border:1px solid var(--cst-border-default);'}
+					class="hover-btn flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm outline-none {activeTab === tab.id
+						? 'bg-accent-default text-text-on-accent shadow-glow-sm'
+						: 'border border-border-default bg-surface-primary text-text-secondary'}"
 					onclick={() => (activeTab = tab.id as 'recent' | 'hot')}
 				>
 					<tab.icon class="size-2.75"  strokeWidth={activeTab === tab.id ? 2.5 : 1.5} />

@@ -52,10 +52,9 @@ function toggleAdd(id: number) {
 		{#each [{ id: 'add', icon: UserPlus, label: '添加好友' }, { id: 'chat', icon: MessageCircle, label: '开始私聊' }] as t}
 			<button
 				type="button"
-				class="hover-btn flex items-center gap-2 px-4 py-2 rounded-full outline-none text-sm {tab === t.id ? 'bg-accent-default text-text-on-accent font-medium' : 'bg-surface-primary text-text-secondary'}"
-				style={tab === t.id
-					? 'box-shadow:var(--shadow-glow-md);'
-					: 'box-shadow:var(--shadow-raised-sm);border:1px solid var(--cst-border-default);'}
+				class="hover-btn flex items-center gap-2 rounded-full px-4 py-2 text-sm outline-none {tab === t.id
+					? 'bg-accent-default text-text-on-accent font-medium shadow-glow-md'
+					: 'border border-border-default bg-surface-primary text-text-secondary shadow-raised-sm'}"
 				onclick={() => {
 					tab = t.id as Tab;
 					searchQ = '';

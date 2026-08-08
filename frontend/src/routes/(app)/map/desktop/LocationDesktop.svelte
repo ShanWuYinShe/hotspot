@@ -205,7 +205,7 @@
 				<div class="mt-2 overflow-hidden rounded-md w-50 shadow-raised-lg border border-border-default"   style="background:var(--cst-surface-primary)">
 					{#each [{ type: 'user', label: '用户', color: PIN_COLORS.user, count: userCount }, { type: 'group', label: '群组', color: PIN_COLORS.group, count: groupCount }, { type: 'moment', label: '瞬间', color: PIN_COLORS.moment, count: momentCount }] as item, i}
 						{#if i > 0}
-							<div class="h-0.25"  style="background:var(--cst-border-default)"></div>
+							<div class="h-0.25 bg-border-default"></div>
 						{/if}
 						{@const active = activeFilters.has(item.type as PinType)}
 						<button
@@ -226,7 +226,7 @@
 							</span>
 						</button>
 					{/each}
-					<div class="h-0.25"  style="background:var(--cst-border-default)"></div>
+					<div class="h-0.25 bg-border-default"></div>
 					<div class="flex items-center gap-2 px-3 py-2">
 						<span class="size-3.25 rounded-full" style="background:{PIN_COLORS.user};border:2px solid var(--cst-surface-primary);box-shadow:var(--cst-marker-halo) {PIN_TONES.user.glow};"></span>
 						<span class="text-text-secondary text-xs" >我的位置</span>
@@ -287,8 +287,7 @@
 						</button>
 						<button
 							type="button"
-							class="hover-btn outline-none flex items-center justify-center rounded-full bg-surface-primary size-9"
-							style="border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
+							class="hover-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shadow-raised-sm outline-none"
 							onclick={() => (selectedPin = null)}
 						>
 							<X class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={2} />

@@ -55,14 +55,14 @@
 			</EmptyState>
 		{:else}
 			<!-- 编辑式档案头部（对齐 Figma SectionMoments header） -->
-			<header class="border-b pb-6" style="border-color:var(--cst-border-default);">
+			<header class="border-b border-border-default pb-6">
 				<div class="flex flex-wrap items-end justify-between gap-5">
 					<div>
 						<p class="eyebrow font-semibold text-accent-default font-mono">Personal archive / 2024</p>
 						<h2 class="mt-2 text-3xl font-medium leading-none tracking-title text-text-primary">个人影像档案</h2>
 						<p class="mt-3 max-w-115 text-sm leading-6 text-text-secondary">{activeMeta[activeTab].description}</p>
 					</div>
-					<div class="flex items-center gap-5 border-l pl-5" style="border-color:var(--cst-border-default);">
+					<div class="flex items-center gap-5 border-l border-border-default pl-5">
 						<div>
 							<p class="font-mono text-xl font-semibold leading-none text-text-primary">{archive.length}</p>
 							<p class="mt-1 text-xs text-text-secondary">{activeMeta[activeTab].label}</p>
@@ -76,7 +76,7 @@
 
 				<!-- pill tab（对齐 Figma：rounded-full border bg-secondary，active=bg-card+shadow） -->
 				<div class="mt-6 flex flex-wrap items-center justify-between gap-3">
-					<div class="flex rounded-full border p-1" style="border-color:var(--cst-border-default);background:var(--cst-accent-soft);" role="tablist" aria-label="瞬间分类">
+					<div class="flex rounded-full border border-border-default bg-accent-soft p-1" role="tablist" aria-label="瞬间分类">
 						{#each tabItems as item (item.id)}
 							{@const isActive = item.id === activeTab}
 							<button
@@ -105,15 +105,14 @@
 					<button
 						type="button"
 						onclick={() => void goto(`${ROUTES.moment(featured.id)}?from=me`)}
-						class="group image-hover-frame relative block w-full overflow-hidden rounded-xl border text-left transition-colors"
-						style="border-color:var(--cst-border-default);background:var(--cst-surface-primary);"
+						class="group image-hover-frame relative block w-full overflow-hidden rounded-xl border border-border-default bg-surface-primary text-left transition-colors"
 						aria-label="查看精选瞬间"
 					>
 						<div class="lg:grid lg:grid-cols-[minmax(0,1.38fr)_minmax(280px,0.62fr)]">
 							<div class="tap-97 relative aspect-[16/10] overflow-hidden lg:aspect-auto lg:min-h-97.5" style="background:var(--cst-surface-page);">
 								<img src={featured.img} alt="本期精选瞬间" class="image-hover-frame__image h-full w-full object-cover" />
 							</div>
-							<div class="flex flex-col justify-between border-t p-6 lg:border-l lg:border-t-0" style="border-color:var(--cst-border-default);">
+							<div class="flex flex-col justify-between border-t border-border-default p-6 lg:border-l lg:border-t-0">
 								<div>
 									<div class="flex items-center justify-between">
 										<span class="eyebrow font-semibold text-accent-default font-mono">Featured record</span>
@@ -122,7 +121,7 @@
 									<h3 class="mt-5 text-2xl font-medium leading-snug text-text-primary">在云龙湖边，<br />把傍晚收进相册。</h3>
 									<p class="mt-4 text-sm leading-6 text-text-secondary">风停下来以后，水面留下了比语言更完整的回答。今天没有目的地，只是沿着湖岸慢慢走。</p>
 								</div>
-								<div class="mt-8 flex items-center justify-between border-t pt-4" style="border-color:var(--cst-border-default);">
+								<div class="mt-8 flex items-center justify-between border-t border-border-default pt-4">
 									<div class="flex items-center gap-4 text-xs text-text-secondary">
 										<span class="flex items-center gap-1"><Heart class="size-3 text-accent-default" strokeWidth={1.8} />{featured.likes}</span>
 										<span class="flex items-center gap-1"><MessageCircle class="size-3 text-accent-default" strokeWidth={1.8} />{featured.comments}</span>
@@ -138,7 +137,7 @@
 
 				<!-- 近期条目（对齐 Figma Recent entries：4-col grid，item0 span 2） -->
 				{#if remaining.length > 0}
-					<div class="mt-10 flex items-end justify-between border-b pb-3" style="border-color:var(--cst-border-default);">
+					<div class="mt-10 flex items-end justify-between border-b border-border-default pb-3">
 						<div>
 							<p class="eyebrow font-semibold text-accent-default font-mono">Recent entries</p>
 							<h3 class="mt-1 text-sm font-medium text-text-primary">六月的城市笔记</h3>
@@ -151,8 +150,7 @@
 					<button
 						type="button"
 						onclick={() => void goto(`${ROUTES.moment(moment.id)}?from=me`)}
-						class="group image-hover-frame relative overflow-hidden rounded-md border text-left transition-colors {index === 0 ? 'col-span-2' : ''}"
-						style="border-color:var(--cst-border-default);background:var(--cst-surface-primary);"
+						class="group image-hover-frame relative overflow-hidden rounded-md border border-border-default bg-surface-primary text-left transition-colors {index === 0 ? 'col-span-2' : ''}"
 						aria-label="查看瞬间详情"
 					>
 						<div class="tap-97 relative overflow-hidden {index === 0 ? 'aspect-[16/8]' : 'aspect-square'}" style="background:var(--cst-surface-page);">

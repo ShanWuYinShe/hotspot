@@ -52,8 +52,7 @@ locationName = loc?.location_name ?? '';
 		{#snippet trailing()}
 			<button
 				type="button"
-				class="hover-btn flex items-center justify-center rounded-full outline-none shrink-0 circle-hover bg-surface-primary size-9"
-				style="border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
+				class="hover-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 circle-hover shadow-raised-sm outline-none"
 				onclick={onReset}
 			>
 				<Crosshair class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
@@ -111,8 +110,9 @@ locationName = loc?.location_name ?? '';
 	] as tab}
 		<button
 			type="button"
-			class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none text-sm {activeTab === tab.id ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
-			style={activeTab === tab.id ? 'box-shadow:var(--shadow-glow-sm);' : 'border:1px solid var(--cst-border-default);'}
+			class="hover-btn flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm outline-none {activeTab === tab.id
+				? 'bg-accent-default text-text-on-accent shadow-glow-sm'
+				: 'border border-border-default bg-surface-primary text-text-secondary'}"
 			onclick={() => (activeTab = tab.id as 'nearby' | 'hot' | 'recent')}
 		>
 			<tab.icon class="size-2.75"  strokeWidth={activeTab === tab.id ? 2.5 : 1.5} />

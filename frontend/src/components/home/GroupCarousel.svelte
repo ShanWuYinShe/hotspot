@@ -39,7 +39,7 @@
 						<Globe class="h-2.5 w-2.5 text-content-inverse" strokeWidth={2} />
 					{/if}
 				</div>
-				<div class="absolute inset-x-0 bottom-0 border-t px-2.5 pb-2.5 pt-2" style="background:var(--cst-surface-card-menu);border-color:var(--cst-border-card-menu);">
+				<div class="absolute inset-x-0 bottom-0 border-t border-border-card-menu bg-surface-card-menu px-2.5 pb-2.5 pt-2">
 					<p class="truncate text-sm font-medium" style="color:var(--cst-text-primary);">{g.name}</p>
 					<div class="mt-1 flex items-center justify-between">
 						<span class="flex items-center gap-1 text-xxs"  style="color:var(--cst-text-secondary)">

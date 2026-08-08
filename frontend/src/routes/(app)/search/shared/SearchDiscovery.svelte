@@ -24,11 +24,10 @@
 <div class="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)]">
 	<!-- 最近搜索 -->
 	<section
-		class="rounded-lg border bg-surface-primary"
-		style="border-color:var(--cst-border-default);"
+		class="rounded-lg border border-border-default bg-surface-primary"
 		aria-label="最近搜索"
 	>
-		<div class="flex items-center justify-between border-b px-5 py-4" style="border-color:var(--cst-border-default);">
+		<div class="flex items-center justify-between border-b border-border-default px-5 py-4">
 			<div>
 				<h2 class="text-sm font-medium text-text-primary">最近搜索</h2>
 				<p class="mt-1 text-xs text-text-secondary">继续上一次的探索</p>
@@ -62,8 +61,7 @@
 
 	<!-- 正在关注（热门搜索） -->
 	<section
-		class="rounded-lg border bg-surface-primary p-5"
-		style="border-color:var(--cst-border-default);"
+		class="rounded-lg border border-border-default bg-surface-primary p-5"
 		aria-label="热门搜索"
 	>
 		<div class="flex items-center gap-2">
@@ -88,8 +86,7 @@
 
 	<!-- 推荐话题（跨两列） -->
 	<section
-		class="rounded-lg border bg-surface-primary p-5 lg:col-span-2"
-		style="border-color:var(--cst-border-default);"
+		class="rounded-lg border border-border-default bg-surface-primary p-5 lg:col-span-2"
 		aria-label="推荐话题"
 	>
 		<div class="flex items-center gap-2">
@@ -101,8 +98,7 @@
 				<button
 					type="button"
 					onclick={() => onChoose(topic)}
-					class="hover-btn border bg-surface-primary px-3 py-2 text-xs text-text-primary transition-colors hover:bg-accent-soft"
-					style="border-color:var(--cst-border-default);"
+					class="hover-btn border border-border-default bg-surface-primary px-3 py-2 text-xs text-text-primary transition-colors hover:bg-accent-soft"
 				>
 					#{topic}
 				</button>

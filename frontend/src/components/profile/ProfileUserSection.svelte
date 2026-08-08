@@ -97,8 +97,7 @@
 				{@const active = filterValue === pill.id}
 				<button
 					type="button"
-					class="hover-btn surface-ghost tap-93 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs outline-none {active ? 'bg-accent-soft font-medium text-accent-default' : 'text-text-secondary'}"
-					style={active ? 'border-color:var(--cst-accent-border);' : ''}
+					class="hover-btn surface-ghost tap-93 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs outline-none {active ? 'border-accent-border bg-accent-soft font-medium text-accent-default' : 'text-text-secondary'}"
 					onclick={() => onFilter?.(pill.id)}
 				>
 					{#if pill.icon}

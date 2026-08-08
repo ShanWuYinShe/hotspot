@@ -135,8 +135,7 @@
 								type="button"
 								aria-label="搜索"
 								onclick={() => void goto(ROUTES.search)}
-								class="hover-btn flex size-8 items-center justify-center rounded-full outline-none bg-surface-primary text-text-secondary"
-								style="border:1px solid var(--cst-border-default);"
+								class="hover-btn flex size-8 items-center justify-center rounded-full border border-border-default bg-surface-primary text-text-secondary outline-none"
 							>
 								<Search class="size-4"  strokeWidth={1.8} />
 							</button>
@@ -155,8 +154,7 @@
 						</div>
 						<button
 							type="button"
-							class="hover-btn flex size-8 items-center justify-center rounded-full border cursor-pointer transition-colors hover:bg-accent-soft"
-							style="border-color:var(--cst-border-default);background:var(--cst-surface-primary);"
+							class="hover-btn flex size-8 items-center justify-center rounded-full border border-border-default bg-surface-primary cursor-pointer transition-colors hover:bg-accent-soft"
 							onclick={() => void goto(ROUTES.search)}
 							aria-label="搜索"
 						>

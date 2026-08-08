@@ -145,8 +145,7 @@
 								type="button"
 								aria-pressed={theme.theme === t.id}
 								onclick={() => setTheme(t.id)}
-								class="flex items-center gap-2 border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default"
-								style="border-color:{theme.theme === t.id ? 'var(--cst-accent-default)' : 'var(--cst-border-default)'};background:{theme.theme === t.id ? 'var(--cst-accent-soft)' : 'transparent'};color:var(--cst-text-primary);"
+								class="flex items-center gap-2 border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {theme.theme === t.id ? 'border-accent-default bg-accent-soft text-text-primary' : 'border-border-default bg-transparent text-text-primary'}"
 							>
 								{#if t.id === 'forest'}
 									<Trees class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.7} />

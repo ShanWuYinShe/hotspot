@@ -93,8 +93,7 @@
 	{/if}
 	{#if footer}
 		<div
-			class="absolute inset-x-0 bottom-0 border-t"
-			style="background:var(--cst-surface-card-menu);border-color:var(--cst-border-card-menu);"
+			class="absolute inset-x-0 bottom-0 border-t border-border-card-menu bg-surface-card-menu"
 		>
 			{@render footer()}
 		</div>

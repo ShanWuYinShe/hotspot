@@ -144,8 +144,7 @@ const FILTER_TABS = [
 						<span class="text-text-secondary text-xs">{unread} 条未读</span>
 						<button
 							type="button"
-							class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none bg-surface-primary text-accent-default text-sm"
-							style="border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
+							class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-default bg-surface-primary text-accent-default text-sm shadow-raised-sm outline-none"
 							onclick={markAllRead}
 						>
 							<CheckCheck class="size-3.25"  strokeWidth={2} />
@@ -196,7 +195,7 @@ const FILTER_TABS = [
 					<!-- 较早分组标题（非 emphasis：仅 label + flex 分隔线，对齐 Figma Make） -->
 					<div class="mb-3 flex h-5 items-center gap-2 {unreadGroup.length > 0 ? 'mt-5' : ''}">
 						<p class="eyebrow font-medium" style="color:var(--cst-text-secondary)">较早</p>
-						<span aria-hidden="true" class="h-px flex-1" style="background:var(--cst-border-default);"></span>
+						<span aria-hidden="true" class="h-px flex-1 bg-border-default"></span>
 					</div>
 					<ListContainer bordered>
 						{#each readGroup as n (n.id)}

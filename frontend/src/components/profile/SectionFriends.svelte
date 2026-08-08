@@ -80,8 +80,7 @@
 					</button>
 					<button
 						type="button"
-						class="hover-btn tap-93 flex items-center justify-center gap-1 rounded-full bg-surface-primary px-2.5 py-1.5 text-xs text-text-secondary outline-none"
-						style="border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
+						class="hover-btn tap-93 flex items-center justify-center gap-1 rounded-full border border-border-default bg-surface-primary px-2.5 py-1.5 text-xs text-text-secondary shadow-raised-sm outline-none"
 						onclick={(e) => {
 							e.stopPropagation();
 							void goto(`${ROUTES.user(f.id)}?from=relationships`);

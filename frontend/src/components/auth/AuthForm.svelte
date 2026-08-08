@@ -303,9 +303,9 @@
 	{#if mode === 'login' && !compact}
 		<!-- 其他方式（对齐 Figma Make LoginPage） -->
 		<div class="flex items-center gap-3 text-xs text-text-secondary">
-			<span class="h-px flex-1" style="background:var(--cst-border-default);"></span>
+			<span class="h-px flex-1 bg-border-default"></span>
 			其他方式
-			<span class="h-px flex-1" style="background:var(--cst-border-default);"></span>
+			<span class="h-px flex-1 bg-border-default"></span>
 		</div>
 		<button
 			type="button"

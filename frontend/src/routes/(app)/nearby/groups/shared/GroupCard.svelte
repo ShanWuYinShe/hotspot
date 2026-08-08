@@ -87,7 +87,7 @@
 						{#if group.avatars.length > 0}
 							<div class="flex -space-x-2 shrink-0">
 								{#each group.avatars as avatar, index (index)}
-									<img src={avatar} alt="群成员" class="w-5 h-5 rounded-full object-cover" style="border:1px solid var(--cst-border-card-menu);z-index:{3 - index};" />
+									<img src={avatar} alt="群成员" class="w-5 h-5 rounded-full border border-border-card-menu object-cover" style="z-index:{3 - index};" />
 								{/each}
 							</div>
 						{/if}

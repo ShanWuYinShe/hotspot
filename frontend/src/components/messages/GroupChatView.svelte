@@ -166,12 +166,11 @@
 
 <div class="flex min-h-0 flex-col h-full bg-surface-primary">
 	<!-- Header -->
-	<div class="shrink-0 flex items-center gap-3 px-4 bg-surface-primary {compact ? 'h-13' : 'h-15'}" style="border-bottom:1px solid var(--cst-border-default);">
+	<div class="shrink-0 flex items-center gap-3 border-b border-border-default bg-surface-primary px-4 {compact ? 'h-13' : 'h-15'}">
 		{#if showBackButton}
 			<button
 				type="button"
-				class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none shrink-0 bg-surface-primary size-9"
-				style="box-shadow:var(--shadow-raised-sm);border:1px solid var(--cst-border-default);"
+				class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 shadow-raised-sm outline-none"
 				onclick={onBack}
 				aria-label="返回"
 			>

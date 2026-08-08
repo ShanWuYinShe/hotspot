@@ -70,6 +70,7 @@
   --color-surface-overlay-soft: var(--cst-surface-overlay-soft);
   /* 卡片菜单表面/描边（UserCard 在线点 ring-2 ring-surface-card-menu 等类消费） */
   --color-surface-card-menu: var(--cst-surface-card-menu);
+  --color-border-card-menu: var(--cst-border-card-menu);
   /* 状态/标记背景上的文字（--cst-text-on-status / --cst-content-on-marker 定义于
      themes/*.css，此处注册类名 text-text-on-status / text-content-on-marker） */
   --color-text-on-status: var(--cst-text-on-status);

@@ -75,7 +75,7 @@
 	<div class="flex items-center gap-3 mb-3">
 		<button
 			type="button"
-			class="hover-btn rounded-full overflow-hidden shrink-0 cursor-pointer focus-ring focus-visible:ring-offset-surface-primary size-11" style="padding:0;background:transparent;border:2px solid var(--cst-accent-default);"
+			class="hover-btn size-11 shrink-0 cursor-pointer rounded-full border-2 border-accent-default bg-transparent p-0 overflow-hidden focus-ring focus-visible:ring-offset-surface-primary"
 			aria-label={`查看${moment.user}的个人主页`}
 			onclick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}
 		>

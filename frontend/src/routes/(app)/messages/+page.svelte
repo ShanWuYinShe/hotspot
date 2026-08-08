@@ -147,7 +147,7 @@
 		<!-- Left: chat list -->
 		<div class="flex flex-col shrink-0 overflow-hidden w-75 border-r border-border-default"  >
 			<!-- List header（对齐 Figma：px-4 pt-4 pb-3，标题 18 + Plus 30 + 搜索框） -->
-			<div class="shrink-0 border-b border-border-default" >
+			<div class="shrink-0">
 				<PageHeader title="消息" titleSize={18} contentClassName="px-4 pt-4 pb-0">
 					{#snippet trailing()}
 						<button

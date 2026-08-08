@@ -64,8 +64,7 @@
 				aria-pressed={tab === t.id}
 				class="shrink-0 px-3 py-1.5 text-xs transition-colors {tab === t.id
 					? 'bg-accent-default text-text-on-accent'
-					: 'border bg-surface-primary text-text-secondary hover:bg-accent-soft hover:text-text-primary'}"
-				style={tab === t.id ? '' : 'border-color:var(--cst-border-default);'}
+					: 'border border-border-default bg-surface-primary text-text-secondary hover:bg-accent-soft hover:text-text-primary'}"
 			>
 				{t.label}
 			</button>
@@ -88,10 +87,9 @@
 			{#if (tab === 'all' || tab === 'people') && results.users.length > 0}
 				<!-- 用户结果组 -->
 				<section
-					class="overflow-hidden rounded-lg border bg-surface-primary"
-					style="border-color:var(--cst-border-default);"
+					class="overflow-hidden rounded-lg border border-border-default bg-surface-primary"
 				>
-					<div class="flex items-center gap-2 border-b px-4 py-3" style="border-color:var(--cst-border-default);">
+					<div class="flex items-center gap-2 border-b border-border-default px-4 py-3">
 						<Users class="size-4 text-accent-default" strokeWidth={1.7} />
 						<h2 class="text-sm font-medium text-text-primary">用户</h2>
 					</div>
@@ -119,10 +117,9 @@
 			{#if (tab === 'all' || tab === 'posts') && results.moments.length > 0}
 				<!-- 动态结果组（补缩略图，对齐 Figma size-10 image） -->
 				<section
-					class="overflow-hidden rounded-lg border bg-surface-primary"
-					style="border-color:var(--cst-border-default);"
+					class="overflow-hidden rounded-lg border border-border-default bg-surface-primary"
 				>
-					<div class="flex items-center gap-2 border-b px-4 py-3" style="border-color:var(--cst-border-default);">
+					<div class="flex items-center gap-2 border-b border-border-default px-4 py-3">
 						<FileText class="size-4 text-accent-default" strokeWidth={1.7} />
 						<h2 class="text-sm font-medium text-text-primary">动态</h2>
 					</div>
@@ -159,10 +156,9 @@
 			{#if (tab === 'all' || tab === 'topics') && results.topics.length > 0}
 				<!-- 话题结果组 -->
 				<section
-					class="overflow-hidden rounded-lg border bg-surface-primary"
-					style="border-color:var(--cst-border-default);"
+					class="overflow-hidden rounded-lg border border-border-default bg-surface-primary"
 				>
-					<div class="flex items-center gap-2 border-b px-4 py-3" style="border-color:var(--cst-border-default);">
+					<div class="flex items-center gap-2 border-b border-border-default px-4 py-3">
 						<Hash class="size-4 text-accent-default" strokeWidth={1.7} />
 						<h2 class="text-sm font-medium text-text-primary">话题</h2>
 					</div>

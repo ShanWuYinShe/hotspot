@@ -193,8 +193,7 @@
 		<p class="eyebrow mb-3">账号</p>
 		<button
 			type="button"
-			class="hover-btn w-full text-left px-4 py-3.5 rounded-md outline-none bg-surface-primary text-status-danger text-sm"
-			style="box-shadow:var(--shadow-raised-md);border:1px solid var(--cst-border-default);"
+			class="hover-btn w-full rounded-md border border-border-default bg-surface-primary px-4 py-3.5 text-left text-sm text-status-danger shadow-raised-md outline-none"
 		>
 			注销账号
 		</button>

@@ -34,8 +34,7 @@
 		{#each filtered as g (g.id)}
 			<button
 				type="button"
-				class="card-hover tap-94 group flex min-h-37 w-full overflow-hidden rounded-md border text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
-				style="background:var(--cst-surface-primary);border-color:var(--cst-border-default);box-shadow:var(--shadow-raised-md);"
+				class="card-hover tap-94 group flex min-h-37 w-full overflow-hidden rounded-md border border-border-default bg-surface-primary shadow-raised-md text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
 				aria-label={`进入群组：${g.name}`}
 				onclick={() => void goto(`${ROUTES.group(g.id)}?from=me`)}
 			>
@@ -64,8 +63,7 @@
 						<img
 							src={g.avatar}
 							alt=""
-							class="h-8 w-8 shrink-0 rounded-sm object-cover"
-							style="border:1px solid var(--cst-border-default);"
+							class="h-8 w-8 shrink-0 rounded-sm border border-border-default object-cover"
 						/>
 						<p class="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">{g.name}</p>
 						<ChevronRight class="shrink-0 text-text-secondary size-3.75"  strokeWidth={1.7} />

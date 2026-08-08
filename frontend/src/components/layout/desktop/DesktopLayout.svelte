@@ -122,8 +122,8 @@
 >
 	<!-- HEADER — 52px, full width -->
 	<header
-		class="relative z-30 shrink-0 flex items-center px-5 gap-2"
-		style="height:var(--cst-desktop-header-height);background-color:var(--cst-surface-page);border-bottom:1px solid var(--cst-border-default);"
+		class="relative z-30 shrink-0 flex items-center border-b border-border-default bg-surface-page px-5 gap-2"
+		style="height:var(--cst-desktop-header-height);"
 	>
 		<!-- Logo -->
 		<button
@@ -211,8 +211,8 @@
 			<!-- Edge-mounted collapse control: leaves the navigation rhythm untouched -->
 			<button
 				type="button"
-				class="hover-btn absolute -right-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border outline-none transition-colors hover:bg-accent-soft focus-visible:ring-2 focus-visible:ring-accent-default"
-				style="color:var(--cst-text-secondary);background:var(--cst-surface-page);border-color:var(--cst-border-default);box-shadow:var(--cst-elevation-control-thumb);"
+				class="hover-btn absolute -right-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-border-default bg-surface-page text-text-secondary outline-none transition-colors hover:bg-accent-soft focus-visible:ring-2 focus-visible:ring-accent-default"
+				style="box-shadow:var(--cst-elevation-control-thumb);"
 				aria-label={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
 				aria-pressed={isSidebarCollapsed}
 				title={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
@@ -234,7 +234,7 @@
 				</div>
 
 				<!-- Divider -->
-				<div class="my-3 self-center" style="height:1px;width:{isSidebarCollapsed ? 24 : '100%'};background:var(--cst-border-default);"></div>
+				<div class="my-3 self-center h-px bg-border-default" style="width:{isSidebarCollapsed ? 24 : '100%'};"></div>
 
 				<!-- Section 2 label -->
 				<p
@@ -260,7 +260,7 @@
 
 		<!-- Main Content Card — RoutedContentViewport 是唯一滚动 owner（desktopPane 激活 sticky-header surface-page 强制规则）。
 		     全画布页（消息分栏 / 地图探索）禁用滚动，画布固定视口高度。 -->
-		<div class="desktop-main-panel flex-1 min-w-0 overflow-hidden border-l transition-colors duration-500" style="border-color:var(--cst-border-default);">
+		<div class="desktop-main-panel flex-1 min-w-0 overflow-hidden border-l border-border-default transition-colors duration-500">
 			<RoutedContentViewport
 				desktopPane
 				class="desktop-main-scroll"

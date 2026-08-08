@@ -184,12 +184,11 @@
 
 <div class="flex min-h-0 flex-col h-full bg-surface-primary">
 	<!-- Header -->
-	<div class="shrink-0 flex items-center gap-3 px-4 bg-surface-primary {compact ? 'h-13' : 'h-15'}" style="border-bottom:1px solid var(--cst-border-default);">
+	<div class="shrink-0 flex items-center gap-3 border-b border-border-default bg-surface-primary px-4 {compact ? 'h-13' : 'h-15'}">
 		{#if showBackButton}
 			<button
 				type="button"
-				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0 bg-surface-primary size-9"
-				style="box-shadow:var(--shadow-raised-sm);border:1px solid var(--cst-border-default);"
+				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 shadow-raised-sm outline-none"
 				onclick={onBack}
 				aria-label="返回"
 			>
@@ -234,8 +233,7 @@
 				{#each [{ icon: Phone, label: '语音通话' }, { icon: Video, label: '视频通话' }] as { icon: Icon, label }}
 					<button
 						type="button"
-						class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none bg-surface-primary {compact ? 'size-8' : 'size-9'}"
-						style="box-shadow:var(--shadow-raised-sm);border:1px solid var(--cst-border-default);"
+						class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary shadow-raised-sm outline-none {compact ? 'size-8' : 'size-9'}"
 						aria-label={label}
 					>
 						<Icon class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
@@ -243,8 +241,7 @@
 				{/each}
 				<button
 					type="button"
-					class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none bg-surface-primary {compact ? 'size-8' : 'size-9'}"
-					style="box-shadow:var(--shadow-raised-sm);border:1px solid var(--cst-border-default);"
+					class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary shadow-raised-sm outline-none {compact ? 'size-8' : 'size-9'}"
 					aria-label="更多操作"
 				>
 				<MoreHorizontal class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
@@ -258,8 +255,7 @@
 			<!-- 空会话：还没有消息时的引导空态 -->
 			<div class="flex h-full flex-col items-center justify-center gap-2 px-6" style="min-height:240px;">
 				<div
-					class="flex items-center justify-center rounded-full size-14"
-					style="border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-lg);"
+					class="flex items-center justify-center rounded-full border border-border-default size-14 shadow-raised-lg"
 				>
 					<MessageCircle class="size-5.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
 				</div>
@@ -284,8 +280,7 @@
 	<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary border-t border-border-default" >
 		<button
 			type="button"
-			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0 bg-surface-primary size-9"
-			style="box-shadow:var(--shadow-raised-sm);border:1px solid var(--cst-border-default);"
+			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 shadow-raised-sm outline-none"
 			aria-label="表情"
 		>
 			<Smile class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />

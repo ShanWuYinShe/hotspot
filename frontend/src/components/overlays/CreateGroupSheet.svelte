@@ -95,8 +95,8 @@
 			<div class="flex justify-center">
 				<button
 					type="button"
-					class="hover-btn flex flex-col items-center justify-center gap-2 rounded-xl outline-none bg-surface-primary"
-					style="width:100%;height:110px;box-shadow:var(--shadow-inset-sm);border:2px dashed var(--cst-border-default);"
+					class="hover-btn flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border-default bg-surface-primary shadow-inset-sm outline-none"
+					style="width:100%;height:110px;"
 				>
 					<Camera class="size-6.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.25} />
 					<span class="text-sm text-text-secondary">添加封面图片</span>
@@ -143,10 +143,9 @@
 						<button
 							type="button"
 							onclick={() => (category = cat)}
-							class="hover-btn px-3.5 py-1.5 rounded-full outline-none text-sm {category === cat ? 'bg-accent-default text-text-on-accent font-medium' : 'bg-surface-primary text-text-secondary'}"
-							style={category === cat
-								? 'box-shadow:var(--shadow-glow-sm);'
-								: 'box-shadow:var(--shadow-raised-sm);border:1px solid var(--cst-border-default);'}
+							class="hover-btn rounded-full px-3.5 py-1.5 text-sm outline-none {category === cat
+								? 'bg-accent-default text-text-on-accent font-medium shadow-glow-sm'
+								: 'border border-border-default bg-surface-primary text-text-secondary shadow-raised-sm'}"
 						>
 							{cat}
 						</button>
@@ -156,8 +155,7 @@
 
 			<!-- Privacy toggle -->
 			<div
-				class="flex items-center justify-between px-4 py-3.5 rounded-md bg-surface-primary"
-				style="box-shadow:var(--shadow-raised-md);border:1px solid var(--cst-border-default);"
+				class="flex items-center justify-between rounded-md border border-border-default bg-surface-primary px-4 py-3.5 shadow-raised-md"
 			>
 				<div class="flex items-center gap-3">
 					{#if isPrivate}
@@ -182,8 +180,7 @@
 
 			<!-- Approval toggle（requires_approval：审核通过后才算真正加入） -->
 			<div
-				class="flex items-center justify-between px-4 py-3.5 rounded-md bg-surface-primary"
-				style="box-shadow:var(--shadow-raised-md);border:1px solid var(--cst-border-default);"
+				class="flex items-center justify-between rounded-md border border-border-default bg-surface-primary px-4 py-3.5 shadow-raised-md"
 			>
 				<div class="flex items-center gap-3">
 					<Check class="size-4.5" style="color:{requiresApproval ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};" strokeWidth={1.5} />
@@ -204,8 +201,7 @@
 
 			<!-- Location -->
 			<div
-				class="flex items-center gap-2.5 px-4 py-3 rounded-md bg-surface-primary"
-				style="box-shadow:var(--shadow-raised-md);border:1px solid var(--cst-border-default);"
+				class="flex items-center gap-2.5 rounded-md border border-border-default bg-surface-primary px-4 py-3 shadow-raised-md"
 			>
 				<MapPin class="size-4 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
 				<div class="flex-1 min-w-0">

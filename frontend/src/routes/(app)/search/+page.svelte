@@ -124,8 +124,7 @@
 
 	<!-- 搜索输入卡片（对齐 Figma：rounded-lg border bg-card） -->
 	<section
-		class="rounded-lg border bg-surface-primary p-3"
-		style="border-color:var(--cst-border-default);"
+		class="rounded-lg border border-border-default bg-surface-primary p-3"
 		aria-label="搜索输入"
 	>
 		<div class="flex items-center gap-3">
