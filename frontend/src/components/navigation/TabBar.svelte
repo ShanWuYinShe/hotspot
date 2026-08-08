@@ -35,7 +35,7 @@
 			{/if}
 			{tab.label}
 			{#if tab.count !== undefined}
-				<span class="text-xxs opacity-75">{tab.count}</span>
+				<span class="text-xxs opacity-80">{tab.count}</span>
 			{/if}
 			{#if isActive}
 				<span class="absolute inset-x-3 bottom-[-1px] h-0.5 rounded-t-full bg-accent-default"></span>
