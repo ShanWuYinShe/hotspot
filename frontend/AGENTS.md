@@ -17,6 +17,9 @@ API 契约见 `spec/api_spec_*.md`（`spec/` 目录只读权威）。
 - UI 组件：bits-ui 生态组件（`components/ui/` 封装层：dialog、dropdown-menu、popover）+ 页面级自研视觉组件
 - 包管理：bun（`bun install` / `bun run`）
 - 测试：vitest + @testing-library/svelte（宿主机 `bun run test`）
+- 组件测试约定：与组件同目录的 `__tests__/Xxx.test.ts`（如
+  `components/shared/__tests__/Avatar.test.ts`）；snippet 类 props
+  在 jsdom 下传参不稳定，契约用例以渲染/交互/布局差异为准
 - Mock：MSW（仅 dev 且 `PUBLIC_API_MOCK !== 'false'` 时启用；`hooks.client.ts` 的
   `init()` 中注册——service worker 首次注册后需刷新一次才接管，带 sessionStorage
   防死循环标记。`mocks/browser.ts` 的 `setupWorker(...handlers)` 未配显式 scope
