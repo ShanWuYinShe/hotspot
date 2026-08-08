@@ -40,3 +40,28 @@ it('toggleDark / setTheme 持久化并应用类', async () => {
   expect(localStorage.getItem('appTheme')).toBe('forest');
   expect(document.documentElement.classList.contains('forest')).toBe(true);
 });
+
+it('非法持久化主题值回退默认 vibrant', async () => {
+  localStorage.setItem('appTheme', 'invalid-theme');
+  localStorage.setItem('isDark', 'not-boolean');
+  const { initTheme, theme } = await import('./theme.svelte');
+  initTheme();
+  expect(theme.theme).toBe('vibrant');
+  expect(theme.isDark).toBe(false);
+  expect(document.documentElement.classList.contains('vibrant')).toBe(true);
+  expect(document.documentElement.classList.contains('dark')).toBe(false);
+});
+
+it('initTheme 幂等：重复调用不改变已应用的主题', async () => {
+  localStorage.setItem('isDark', 'true');
+  localStorage.setItem('appTheme', 'forest');
+  const { initTheme, theme } = await import('./theme.svelte');
+  initTheme();
+  initTheme();
+  expect(theme.theme).toBe('forest');
+  expect(theme.isDark).toBe(true);
+  const cls = document.documentElement.classList;
+  expect(cls.contains('dark')).toBe(true);
+  expect(cls.contains('forest')).toBe(true);
+  expect(cls.contains('vibrant')).toBe(false);
+});
