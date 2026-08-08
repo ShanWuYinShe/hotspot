@@ -272,7 +272,7 @@
 								
 								{@html markerSvg(type as PinType, 1, { w: 18, h: 24 })}
 								<span class="text-text-primary text-sm"  style="flex:1;text-align:left">{label}</span>
-								<div class="size-3.25 rounded-full shrink-0" style="background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--cst-border-default)'};box-shadow:{active ? `var(--cst-marker-halo) ${glow}` : 'none'};transition:all 0.18s;"></div>
+								<div class="size-3.25 rounded-full shrink-0" style="background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--cst-border-default)'};box-shadow:{active ? `var(--cst-marker-halo) ${glow}` : 'none'};transition:all 0.18s var(--cst-ease-standard);"></div>
 							</button>
 						{/each}
 					</Popover.Content>

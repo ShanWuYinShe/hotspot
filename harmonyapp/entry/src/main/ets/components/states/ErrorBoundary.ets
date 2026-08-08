@@ -22,12 +22,19 @@
  */
 
 import { DesignConstants } from '../../constants/DesignConstants';
+import { AppThemeManager } from '../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../core/theme/AppThemeTypes';
 
 @Component
 export struct ErrorBoundary {
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @BuilderParam child: () => void = this.defaultChild;
   @Prop err: string = '';
   @Prop onRetry: () => void = () => {};
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
 
   @Builder
   defaultChild() {
@@ -40,25 +47,25 @@ export struct ErrorBoundary {
         Text() {
           SymbolSpan($r('sys.symbol.exclamationmark_triangle_fill'))
             .fontSize(DesignConstants.FONT.SIZE.HERO)
-            .fontColor([$r('app.color.color_danger')])
+            .fontColor([this.getPalette().error])
         }
 
         Text('加载失败')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor($r('app.color.brand_primary'))
+          .fontColor(this.getPalette().accentBackground)
 
         Text(this.err)
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor($r('app.color.chip_inactive_text'))
+          .fontColor(this.getPalette().textSecondary)
           .textAlign(TextAlign.Center)
           .constraintSize({ maxWidth: 280 })
 
         Button('重试')
           .type(ButtonType.Normal)
           .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
-          .backgroundColor($r('app.color.brand_primary'))
-          .fontColor($r('app.color.bg_primary'))
+          .backgroundColor(this.getPalette().accentBackground)
+          .fontColor(this.getPalette().accentText)
           .borderRadius(DesignConstants.RADIUS.MD)
           .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL })
           .onClick(() => {
@@ -68,7 +75,7 @@ export struct ErrorBoundary {
       .width('100%')
       .height('100%')
       .justifyContent(FlexAlign.Center)
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor(this.getPalette().pageBackground)
     } else {
       if (this.child) {
         this.child();

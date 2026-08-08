@@ -1,50 +1,17 @@
 /**
  * HarmonyOS 应用设计常量
- * 统一管理颜色、字体、间距、圆角等设计相关常量
- * 对齐前端 SvelteKit 项目的 forest 设计系统
+ * 统一管理字体、间距、圆角等设计相关常量；
+ * 业务色一律走 AppThemeManager palette（vibrant / forest，对齐前端 --cst-* token），
+ * 本 COLOR 仅保留主题无关的系统/图片固定色。
  */
 
-// ==================== 颜色系统接口 ====================
+// ==================== 颜色系统接口（仅主题无关固定色）====================
 export interface ColorPalette {
-  PRIMARY_BG_LIGHT: string;
-  PRIMARY_BG_DARK: string;
-  SECONDARY_BG_LIGHT: string;
-  SECONDARY_BG_DARK: string;
-  TERTIARY_BG_LIGHT: string;
-  TERTIARY_BG_DARK: string;
-  TEXT_PRIMARY_LIGHT: string;
+  /** 图片全屏预览固定反色文字（暗底上的浅色文字） */
   TEXT_PRIMARY_DARK: string;
-  TEXT_SECONDARY_LIGHT: string;
-  TEXT_SECONDARY_DARK: string;
-  TEXT_TERTIARY_LIGHT: string;
-  TEXT_TERTIARY_DARK: string;
-  BRAND_PRIMARY: string;
-  BRAND_PRIMARY_LIGHT: string;
-  BRAND_PRIMARY_DARK: string;
-  SUCCESS: string;
-  WARNING: string;
-  ERROR: string;
-  INFO: string;
-  DIVIDER_LIGHT: string;
-  DIVIDER_DARK: string;
-  ONLINE_STATUS: string;
-  OFFLINE_STATUS: string;
-  SURFACE_NEUTRAL_SOFT: string;
-  SURFACE_INFO_SOFT: string;
-  SURFACE_SUCCESS_SOFT: string;
-  SURFACE_WARNING_SOFT: string;
-  SURFACE_DANGER_SOFT: string;
-  CHIP_ACTIVE_BG: string;
-  CHIP_ACTIVE_TEXT: string;
-  CHIP_INACTIVE_TEXT: string;
-  HEADER_ICON_BG: string;
-  HEADER_ICON_BORDER: string;
-  HEADER_ICON_TEXT: string;
-  CHAT_TITLE_ICON_BG: string;
+  /** 图片遮罩/全屏预览固定遮罩色 */
   OVERLAY_LIGHT: string;
   OVERLAY_STRONG: string;
-  /** 中等遮罩（#66000000，图片上传/弹层半透明遮罩） */
-  OVERLAY_MEDIUM: string;
   /** 图片底部渐变起始（极淡黑） */
   IMAGE_OVERLAY_START: string;
   /** 图片底部渐变结束（深黑，承载正文） */
@@ -432,46 +399,11 @@ export interface DesignConstantsType {
   PAGE_SHELL: PageShellSystem;
 }
 
-// ==================== 颜色系统（forest 扁平风格，对齐前端设计系统）====================
+// ==================== 颜色系统（仅主题无关固定色）====================
 const COLOR: ColorPalette = {
-  PRIMARY_BG_LIGHT: '#F6F7F3',
-  PRIMARY_BG_DARK: '#161A16',
-  SECONDARY_BG_LIGHT: '#F6F7F3',
-  SECONDARY_BG_DARK: '#161A16',
-  TERTIARY_BG_LIGHT: '#F0F1F0',
-  TERTIARY_BG_DARK: '#242624',
-  TEXT_PRIMARY_LIGHT: '#152219',
   TEXT_PRIMARY_DARK: '#E8F1E9',
-  TEXT_SECONDARY_LIGHT: '#3F5547',
-  TEXT_SECONDARY_DARK: '#A8BDAE',
-  TEXT_TERTIARY_LIGHT: '#AAB0AF',
-  TEXT_TERTIARY_DARK: '#5A6B60',
-  BRAND_PRIMARY: '#3D7A55',
-  BRAND_PRIMARY_LIGHT: '#3D7A55',
-  BRAND_PRIMARY_DARK: '#52B878',
-  SUCCESS: '#059669',
-  WARNING: '#8A6A2F',
-  ERROR: '#8E6F35',
-  INFO: '#3D7A55',
-  DIVIDER_LIGHT: '#2A49343D',
-  DIVIDER_DARK: '#A9C7B22E',
-  ONLINE_STATUS: '#3D7A55',
-  OFFLINE_STATUS: '#9CA3AF',
-  SURFACE_NEUTRAL_SOFT: '#F0F1F0',
-  SURFACE_INFO_SOFT: '#E3EAE3',
-  SURFACE_SUCCESS_SOFT: '#E0E8E0',
-  SURFACE_WARNING_SOFT: '#E9E6DB',
-  SURFACE_DANGER_SOFT: '#ECE9E0',
-  CHIP_ACTIVE_BG: '#3D7A55',
-  CHIP_ACTIVE_TEXT: '#FFFFFF',
-  CHIP_INACTIVE_TEXT: '#566B5E',
-  HEADER_ICON_BG: '#E8F0E9',
-  HEADER_ICON_BORDER: '#3D7A5521',
-  HEADER_ICON_TEXT: '#3D7A55',
-  CHAT_TITLE_ICON_BG: '#F9F9F5',
   OVERLAY_LIGHT: '#59FFFFFF',
   OVERLAY_STRONG: '#80000000',
-  OVERLAY_MEDIUM: '#66000000',
   IMAGE_OVERLAY_START: 'rgba(0, 0, 0, 0.04)',
   IMAGE_OVERLAY_END: 'rgba(0, 0, 0, 0.44)',
   IMAGE_BADGE_BG: 'rgba(15, 23, 42, 0.58)',
