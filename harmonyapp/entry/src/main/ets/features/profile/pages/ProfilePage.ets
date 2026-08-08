@@ -645,23 +645,23 @@ export struct ProfilePage {
       Stack({ alignContent: Alignment.Top }) {
         Column() {}
           .width('50%')
-          .height(180)
+          .height(DesignConstants.LAYOUT.GLOW_BLOB_LARGE)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getCurrentThemePalette().pageGlow)
           .opacity(this.getCurrentThemePalette().isDarkTheme ? 0.06 : 0.18)
-          .blur(80)
+          .blur(DesignConstants.EFFECT.GLOW_BLUR_LARGE)
           .align(Alignment.Top)
-          .margin({ top: 12 })
+          .margin({ top: DesignConstants.SPACING.MD })
 
         Column() {}
           .width('32%')
-          .height(120)
+          .height(DesignConstants.LAYOUT.GLOW_BLOB_SMALL)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getCurrentThemePalette().heroGlow)
           .opacity(this.getCurrentThemePalette().isDarkTheme ? 0.04 : 0.12)
-          .blur(64)
+          .blur(DesignConstants.EFFECT.GLOW_BLUR_MEDIUM)
           .align(Alignment.TopEnd)
-          .margin({ top: 64, right: 12 })
+          .margin({ top: 64, right: DesignConstants.SPACING.MD })
 
         Column() {
           if (!this.isLoggedIn && !this.isExternalProfileMode() && !this.isLoading) {
@@ -686,15 +686,15 @@ export struct ProfilePage {
               .alignItems(HorizontalAlign.Start)
               .layoutWeight(1)
               .transition(
-                TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+                TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
               )
             } else if (this.isLoading) {
               SystemLoadingView({ message: '正在更新...' })
                 .layoutWeight(1)
                 .transition(
-                  TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-                    .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+                  TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+                    .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
                 )
             } else if (this.showUpgradeForm) {
               Column() {
@@ -702,8 +702,8 @@ export struct ProfilePage {
               }
               .layoutWeight(1)
               .transition(
-                TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+                TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
               )
             } else if (this.userType === 'temp') {
               Column() {
@@ -711,8 +711,8 @@ export struct ProfilePage {
               }
               .layoutWeight(1)
               .transition(
-                TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+                TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
               )
             } else {
               Column() {
@@ -720,8 +720,8 @@ export struct ProfilePage {
               }
               .layoutWeight(1)
               .transition(
-                TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+                TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
               )
             }
           }
@@ -778,7 +778,7 @@ export struct ProfilePage {
 
             Text(this.viewedUserProfile?.user?.nickname ?? '未知用户')
               .fontSize(DesignConstants.FONT.SIZE.XXL)
-              .fontWeight(FontWeight.Bold)
+              .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
               .fontColor(this.getPrimaryTextColor())
               .textAlign(TextAlign.Center)
               .maxLines(1)
@@ -813,7 +813,7 @@ export struct ProfilePage {
               .fontColor(this.getSecondaryTextColor())
             Text(this.viewedUserProfile?.bio?.length ? this.viewedUserProfile?.bio : '这个人很神秘，暂时还没有留下简介')
               .fontSize(DesignConstants.FONT.SIZE.MD)
-              .lineHeight(22)
+              .lineHeight(DesignConstants.FONT.LINE_HEIGHT.MD)
               .fontColor(this.getPrimaryTextColor())
           }
           .width('100%')
@@ -849,7 +849,7 @@ export struct ProfilePage {
               .layoutWeight(1)
               .height(this.getProfileVisualStyle().secondaryButton.height)
               .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontWeight(FontWeight.Medium)
+              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .backgroundColor(this.getAccentBackground())
               .fontColor(this.getAccentText())
               .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
@@ -863,7 +863,7 @@ export struct ProfilePage {
               .layoutWeight(1)
               .height(this.getProfileVisualStyle().secondaryButton.height)
               .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontWeight(FontWeight.Medium)
+              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .backgroundColor(this.getProfileVisualStyle().secondaryButton.backgroundColor)
               .fontColor(this.getProfileVisualStyle().secondaryButton.textColor)
               .borderRadius(this.getProfileVisualStyle().secondaryButton.borderRadius)
@@ -878,7 +878,7 @@ export struct ProfilePage {
               .layoutWeight(1)
               .height(this.getProfileVisualStyle().secondaryButton.height)
               .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontWeight(FontWeight.Medium)
+              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .backgroundColor(this.getProfileVisualStyle().secondaryButton.backgroundColor)
               .fontColor(this.getProfileVisualStyle().secondaryButton.textColor)
               .borderRadius(this.getProfileVisualStyle().secondaryButton.borderRadius)
@@ -981,10 +981,10 @@ export struct ProfilePage {
 
   @Builder
   private buildGuestHighlight(title: string, subtitle: string) {
-    Column({ space: 4 }) {
+    Column({ space: DesignConstants.SPACING.XS }) {
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontWeight(FontWeight.Medium)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getPrimaryTextColor())
       Text(subtitle)
         .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -1023,11 +1023,11 @@ export struct ProfilePage {
 
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontWeight(FontWeight.Medium)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getPrimaryTextColor())
       Text(subtitle)
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .lineHeight(20)
+        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.SM)
         .fontColor(this.getSecondaryTextColor())
         .textAlign(TextAlign.Center)
     }
@@ -1085,14 +1085,14 @@ export struct ProfilePage {
             }
             Text('临时身份')
               .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontWeight(FontWeight.Medium)
+              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getWarningTextColor())
           }
           .width('100%')
 
           Text('当前为临时身份，继续注册可保留资料、关系与个性化偏好，让你的触感主题长期保存。')
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .lineHeight(22)
+            .lineHeight(DesignConstants.FONT.LINE_HEIGHT.MD)
             .fontColor(this.getSecondaryTextColor())
 
           Button('升级为完整账号')
@@ -1100,7 +1100,7 @@ export struct ProfilePage {
             .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
             .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontWeight(FontWeight.Bold)
+            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
             .width('100%')
             .height(this.getProfileVisualStyle().primaryButton.height)
             .padding({
@@ -1185,13 +1185,13 @@ export struct ProfilePage {
                 .fontSize(DesignConstants.FONT.SIZE.SM)
                 .fontColor(this.getSecondaryTextColor())
                 .textAlign(TextAlign.Center)
-                .lineHeight(20)
-                .margin({ top: 4 })
+                .lineHeight(DesignConstants.FONT.LINE_HEIGHT.SM)
+                .margin({ top: DesignConstants.SPACING.XS })
             }
 
             // 所在地
             if (this.currentUser?.location?.location_name) {
-              Row({ space: 4 }) {
+              Row({ space: DesignConstants.SPACING.XS }) {
                 Text() {
                   SymbolSpan($r(AppIcon.LOCATION))
                     .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -1201,12 +1201,12 @@ export struct ProfilePage {
                   .fontSize(DesignConstants.FONT.SIZE.XS)
                   .fontColor(this.getSecondaryTextColor())
               }
-              .margin({ top: 8 })
+              .margin({ top: DesignConstants.SPACING.SM })
             }
 
             // 编辑按钮
             Button() {
-              Row({ space: 6 }) {
+              Row({ space: DesignConstants.SPACING.SM2 }) {
                 Text() {
                   SymbolSpan($r(AppIcon.EDIT))
                     .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
@@ -1219,12 +1219,12 @@ export struct ProfilePage {
             }
             .type(ButtonType.Normal)
             .width('100%')
-            .height(44)
+            .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
             .borderRadius(DesignConstants.SHAPE.BUTTON)
             .backgroundColor(this.getSurfaceBackground())
             .border({ width: 1, color: this.getSurfaceBorder() })
             .shadow(this.getCurrentThemePalette().controlShadow)
-            .margin({ top: 16, bottom: 20 })
+            .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG2 })
             .onClick(() => this.startEdit())
 
             // 统计行 (3列: posts/followers/friends)
@@ -1249,10 +1249,10 @@ export struct ProfilePage {
             .borderRadius(DesignConstants.SHAPE.CARD)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
-            .margin({ top: 24, bottom: 24 })
+            .margin({ top: DesignConstants.SPACING.XL, bottom: DesignConstants.SPACING.XL })
           }
           .alignItems(HorizontalAlign.Center)
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 8, bottom: 24 })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.XL })
         }
         .layoutWeight(1)
         .scrollBar(BarState.Auto)
@@ -1269,12 +1269,12 @@ export struct ProfilePage {
       Stack({ alignContent: Alignment.BottomEnd }) {
         // 发光效果
         Column()
-          .width(96)
-          .height(96)
+          .width(DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE)
+          .height(DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getCurrentThemePalette().accentShadow.color)
-          .blur(22)
-          .opacity(0.55)
+          .blur(DesignConstants.EFFECT.GLOW_BLUR_SMALL)
+          .opacity(DesignConstants.OPACITY.MUTED)
 
         // 头像
         SystemAvatar({
@@ -1293,19 +1293,19 @@ export struct ProfilePage {
           }
         }
         .type(ButtonType.Normal)
-        .width(26)
-        .height(26)
+        .width(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
+        .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .backgroundColor(this.getAccentBackground())
         .border({ width: 2.5, color: this.getCurrentThemePalette().pageBackground })
         .shadow(this.getCurrentThemePalette().accentShadow)
         .onClick(() => this.selectAvatarForEdit())
       }
-      .margin({ top: 20, bottom: 12 })
+      .margin({ top: DesignConstants.SPACING.LG2, bottom: DesignConstants.SPACING.MD })
 
       Text(this.currentUser?.nickname || '')
         .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
-        .fontWeight(FontWeight.Bold)
+        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
         .fontColor(this.getPrimaryTextColor())
     }
     .alignItems(HorizontalAlign.Center)
@@ -1323,26 +1323,26 @@ export struct ProfilePage {
           if (index > 0) {
             Column()
               .width(1)
-              .height(32)
+              .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
               .backgroundColor(this.getSurfaceBorder())
               .margin({ left: 0, right: 0 })
           }
-          Column({ space: 4 }) {
+          Column({ space: DesignConstants.SPACING.XS }) {
             Text(stat.value)
               .fontSize(DesignConstants.FONT.SIZE.XXL)
-              .fontWeight(FontWeight.Bold)
+              .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
               .fontColor(this.getPrimaryTextColor())
             Text(stat.label)
               .fontSize(DesignConstants.FONT.SIZE.XS2)
               .fontColor(this.getAccentBackground())
               .textCase(TextCase.UpperCase)
-              .letterSpacing(0.10 * 16)
-              .opacity(0.8)
+              .letterSpacing(DesignConstants.FONT.LETTER_SPACING.FIELD)
+              .opacity(DesignConstants.OPACITY.EMPHASIZED)
           }
         }
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
-        .padding({ top: 16, bottom: 16 })
+        .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
       }, (stat: StatItem) => stat.label)
     }
     .width('100%')
@@ -1350,7 +1350,7 @@ export struct ProfilePage {
     .backgroundColor(this.getSurfaceBackground())
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
-    .margin({ bottom: 20 })
+    .margin({ bottom: DesignConstants.SPACING.LG2 })
   }
 
   @Builder
@@ -1359,15 +1359,15 @@ export struct ProfilePage {
       ForEach(['帖子', '喜欢', '收藏'], (tab: string, index: number) => {
         if (index > 0) {
           Column()
-            .width(2)
-            .height(16)
+            .width(DesignConstants.SPACING.HALF)
+            .height(DesignConstants.COMPONENT.ICON_SIZE_XS)
             .backgroundColor(this.getSurfaceBorder())
-            .margin({ left: 8, right: 8 })
+            .margin({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
         }
         Text(tab)
           .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
           .fontColor(index === this.selectedTab ? this.getAccentBackground() : this.getSecondaryTextColor())
-          .fontWeight(index === this.selectedTab ? FontWeight.Medium : FontWeight.Normal)
+          .fontWeight(index === this.selectedTab ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
           .onClick(() => {
@@ -1376,9 +1376,9 @@ export struct ProfilePage {
       })
     }
     .width('100%')
-    .padding({ top: 12, bottom: 12 })
+    .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .border({ width: { top: 1 }, color: this.getSurfaceBorder() })
-    .margin({ bottom: 12 })
+    .margin({ bottom: DesignConstants.SPACING.MD })
   }
 
   @Builder
@@ -1386,20 +1386,20 @@ export struct ProfilePage {
     if (this.selectedTab === 0) {
       // 帖子 tab
       if (this.myMoments.length === 0) {
-        Column({ space: 12 }) {
+        Column({ space: DesignConstants.SPACING.MD }) {
           Text() {
             SymbolSpan($r(AppIcon.EMPTY))
               .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
               .fontColor([this.getSecondaryTextColor()])
           }
-          .opacity(0.5)
+          .opacity(DesignConstants.OPACITY.MUTED)
 
           Text('还没有发布帖子')
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor(this.getSecondaryTextColor())
         }
         .width('100%')
-        .height(160)
+        .height(DesignConstants.LAYOUT.GLOW_BLOB_MEDIUM)
         .justifyContent(FlexAlign.Center)
       } else {
         Column({ space: DesignConstants.SPACING.SM }) {
@@ -1411,20 +1411,20 @@ export struct ProfilePage {
       }
     } else {
       // 喜欢 / 收藏 tab
-      Column({ space: 12 }) {
+      Column({ space: DesignConstants.SPACING.MD }) {
         Text() {
           SymbolSpan($r(this.selectedTab === 1 ? AppIcon.HEART : AppIcon.STAR))
             .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
             .fontColor([this.getSecondaryTextColor()])
         }
-        .opacity(0.5)
+        .opacity(DesignConstants.OPACITY.MUTED)
 
         Text(this.selectedTab === 1 ? '喜欢的帖子将在这里展示' : '收藏的帖子将在这里展示')
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor(this.getSecondaryTextColor())
       }
       .width('100%')
-      .height(160)
+      .height(DesignConstants.LAYOUT.GLOW_BLOB_MEDIUM)
       .justifyContent(FlexAlign.Center)
     }
   }
@@ -1478,7 +1478,7 @@ export struct ProfilePage {
       Column({ space: DesignConstants.SPACING.LG }) {
         Text('升级为完整账号')
           .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Bold)
+          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
           .fontColor(this.getPrimaryTextColor())
           .alignSelf(ItemAlign.Start)
 
@@ -1572,7 +1572,7 @@ export struct ProfilePage {
         Column({ space: DesignConstants.SPACING.SM }) {
           Text(this.currentUser?.nickname || '')
             .fontSize(this.getProfileVisualStyle().identity.titleFontSize)
-            .fontWeight(FontWeight.Medium)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getPrimaryTextColor())
             .textAlign(TextAlign.Center)
             .maxLines(1)
@@ -1600,7 +1600,7 @@ export struct ProfilePage {
         if (this.currentUser?.bio) {
           Text(this.currentUser.bio)
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .lineHeight(24)
+            .lineHeight(DesignConstants.FONT.LINE_HEIGHT.LG)
             .fontColor(this.getSecondaryTextColor())
             .textAlign(TextAlign.Center)
             .maxLines(3)
@@ -1674,7 +1674,7 @@ export struct ProfilePage {
 
         TextInput({ placeholder: '请输入昵称', text: this.editNickname })
         .fontSize(DesignConstants.FONT.SIZE.LG)
-        .height(48)
+        .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.SHAPE.CHIP)
         .onChange((value: string) => {
@@ -1686,7 +1686,7 @@ export struct ProfilePage {
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.SHAPE.CHIP)
-        .height(80)
+        .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
         .onChange((value: string) => {
           this.editBio = value;
         })
@@ -1743,7 +1743,7 @@ export struct ProfilePage {
         }
         Text(value)
           .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPrimaryTextColor())
         Text(label)
           .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -1819,14 +1819,14 @@ export struct ProfilePage {
 
         Text(title)
           .fontSize(this.getProfileVisualStyle().intentCard.titleFontSize)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPrimaryTextColor())
           .width('100%')
           .textAlign(TextAlign.Start)
 
         Text(description)
           .fontSize(this.getProfileVisualStyle().intentCard.descriptionFontSize)
-          .lineHeight(24)
+          .lineHeight(DesignConstants.FONT.LINE_HEIGHT.LG)
           .fontColor(this.getSecondaryTextColor())
           .width('100%')
           .textAlign(TextAlign.Start)
@@ -1855,8 +1855,8 @@ export struct ProfilePage {
             .fontColor([this.getAccentBackground()])
         }
       }
-      .width(36)
-      .height(36)
+      .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+      .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.getSurfaceSubtle())
       .justifyContent(FlexAlign.Center)
@@ -1879,7 +1879,7 @@ export struct ProfilePage {
       top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD
     })
     .scale(this.pressedMenuItemKey === title ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
-    .animation({ duration: 100, curve: Curve.EaseOut })
+    .animation({ duration: DesignConstants.ANIMATION.DURATION_INSTANT, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.pressedMenuItemKey = title;
@@ -1898,7 +1898,7 @@ export struct ProfilePage {
       Column({ space: DesignConstants.SPACING.LG }) {
         Text('快速体验')
           .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Bold)
+          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
           .fontColor(this.getPrimaryTextColor())
 
         Text('无需注册，输入昵称即可快速体验')

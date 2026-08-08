@@ -227,8 +227,8 @@ export struct LoginPage {
           externalProgress: this.loadingProgress
         })
           .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+            TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
           )
       } else {
         Column() {
@@ -242,8 +242,8 @@ export struct LoginPage {
             .onClick(() => {
               AppRouter.pop();
             })
-            .width(48)
-            .height(48)
+            .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+            .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
             .textAlign(TextAlign.Center)
             .scale(this.isBackPressed ?
               { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
@@ -278,13 +278,13 @@ export struct LoginPage {
           // 标题区域（固定）
           Column({ space: DesignConstants.SPACING.SM }) {
             Image($r('app.media.foreground'))
-              .width(72)
-              .height(72)
+              .width(DesignConstants.COMPONENT.LOADING_CONTAINER_SIZE)
+              .height(DesignConstants.COMPONENT.LOADING_CONTAINER_SIZE)
               .objectFit(ImageFit.Contain)
 
             Text($r('app.string.app_name'))
               .fontSize(DesignConstants.FONT.SIZE.XXL_PLUS)
-              .fontWeight(FontWeight.Bold)
+              .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
               .fontColor(this.getCurrentThemePalette().textPrimary)
 
             Text($r('app.string.app_description'))
@@ -305,7 +305,7 @@ export struct LoginPage {
           .backgroundColor(this.getSurfaceSubtle())
           .borderRadius(DesignConstants.RADIUS.XXL)
           .border({ width: 1, color: this.getSurfaceBorder() })
-          .padding(3)
+          .padding(DesignConstants.SPACING.THREE)
           .margin({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL })
 
           // 表单区域（可滚动，凸起卡片包裹）
@@ -326,7 +326,7 @@ export struct LoginPage {
               .borderRadius(DesignConstants.RADIUS.XXL)
               .shadow(this.getCurrentThemePalette().elevatedShadow)
               .border({ width: 1, color: this.getSurfaceBorder() })
-              .margin({ bottom: 14 })
+              .margin({ bottom: DesignConstants.SPACING.MD3 })
             }
             .width('100%')
             .padding({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL,
@@ -340,8 +340,8 @@ export struct LoginPage {
         .width('100%')
         .height('100%')
         .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
         )
       }
     }
@@ -383,11 +383,11 @@ export struct LoginPage {
   private ModeTab(label: string, mode: string) {
     Text(label)
       .fontSize(DesignConstants.FONT.SIZE.MD)
-      .fontWeight(this.loginMode === mode ? FontWeight.Bold : FontWeight.Medium)
+      .fontWeight(this.loginMode === mode ? DesignConstants.FONT.WEIGHT.BOLD : DesignConstants.FONT.WEIGHT.MEDIUM)
       .fontColor(this.loginMode === mode ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().buttonSecondaryText)
       .backgroundColor(this.loginMode === mode ? this.getCurrentThemePalette().accentBackground : DesignConstants.COLOR.TRANSPARENT)
       .borderRadius(DesignConstants.RADIUS.XL)
-      .height(36)
+      .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .layoutWeight(1)
       .textAlign(TextAlign.Center)
       .shadow(this.loginMode === mode ? this.getCurrentThemePalette().controlShadow : { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 })
@@ -473,7 +473,7 @@ export struct LoginPage {
           : this.getCurrentThemePalette().textSecondary)
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .width('100%')
-        .height(48)
+        .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
         .borderRadius(DesignConstants.SHAPE.BUTTON)
         .shadow(this.getCurrentThemePalette().controlShadow)
         .border({ width: 1, color: this.getSurfaceBorder() })
@@ -503,8 +503,8 @@ export struct LoginPage {
     }
     .width('100%')
     .transition(
-      TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-        .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+      TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+        .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
     )
   }
 
@@ -606,7 +606,7 @@ export struct LoginPage {
           : this.getCurrentThemePalette().textSecondary)
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .width('100%')
-        .height(48)
+        .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
         .borderRadius(DesignConstants.SHAPE.BUTTON)
         .shadow(this.getCurrentThemePalette().controlShadow)
         .border({ width: 1, color: this.getSurfaceBorder() })
@@ -639,8 +639,8 @@ export struct LoginPage {
     }
     .width('100%')
     .transition(
-      TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-        .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+      TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+        .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
     )
   }
 
@@ -653,7 +653,7 @@ export struct LoginPage {
         .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
         .fontColor(this.getCurrentThemePalette().textSecondary)
         .width('100%')
-        .padding(12)
+        .padding(DesignConstants.SPACING.MD)
         .backgroundColor(this.getSurfaceBackground())
         .borderRadius(DesignConstants.RADIUS.XXL)
         .border({ width: 1, color: this.getSurfaceBorder() })
@@ -687,7 +687,7 @@ export struct LoginPage {
           : this.getCurrentThemePalette().textSecondary)
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .width('100%')
-        .height(48)
+        .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
         .borderRadius(DesignConstants.SHAPE.BUTTON)
         .shadow(this.getCurrentThemePalette().controlShadow)
         .border({ width: 1, color: this.getSurfaceBorder() })
@@ -717,8 +717,8 @@ export struct LoginPage {
     }
     .width('100%')
     .transition(
-      TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-        .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+      TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+        .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
     )
   }
 

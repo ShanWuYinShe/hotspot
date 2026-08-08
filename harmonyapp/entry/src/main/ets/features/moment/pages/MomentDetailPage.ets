@@ -278,7 +278,7 @@ export struct MomentDetailPage {
       title: '动态详情',
       showBackButton: true,
       onBack: () => { AppRouter.pop(); },
-      titleWeight: FontWeight.Bold,
+      titleWeight: DesignConstants.FONT.WEIGHT.BOLD,
       backgroundVariant: 'transparent',
       rightAction: this.isOwner()
         ? { icon: AppIcon.EDIT, onClick: () => this.editMoment() }
@@ -300,7 +300,7 @@ export struct MomentDetailPage {
         Column({ space: DesignConstants.SPACING.XS }) {
           Text(moment.user?.nickname ?? '未知用户')
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontWeight(FontWeight.Medium)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getCurrentThemePalette().textPrimary)
 
           Row({ space: DesignConstants.SPACING.SM }) {
@@ -323,7 +323,7 @@ export struct MomentDetailPage {
         .width('100%')
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontColor(this.getCurrentThemePalette().textPrimary)
-        .lineHeight(26)
+        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.XL)
 
       if (moment.images && moment.images.length > 0) {
         Grid() {
@@ -416,7 +416,7 @@ export struct MomentDetailPage {
   private buildActionBar(moment: MomentItem) {
     Row({ space: DesignConstants.SPACING.LG }) {
       Button() {
-        Row({ space: 6 }) {
+        Row({ space: DesignConstants.SPACING.SM2 }) {
           Text() {
             SymbolSpan($r(this.isMomentLiked(moment) ? AppIcon.HEART_FILL : AppIcon.HEART))
               .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
@@ -429,7 +429,7 @@ export struct MomentDetailPage {
       }
       .type(ButtonType.Capsule)
       .layoutWeight(1)
-      .height(40)
+      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
       .shadow(this.getCurrentThemePalette().controlShadow)
       .border({ width: 1, color: this.getSurfaceBorder() })
       .enabled(!this.likePending)
@@ -440,7 +440,7 @@ export struct MomentDetailPage {
       })
 
       Button() {
-        Row({ space: 6 }) {
+        Row({ space: DesignConstants.SPACING.SM2 }) {
           Text() {
             SymbolSpan($r(this.isMomentFavorited(moment) ? AppIcon.STAR_FILL : AppIcon.STAR))
               .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
@@ -453,7 +453,7 @@ export struct MomentDetailPage {
       }
       .type(ButtonType.Capsule)
       .layoutWeight(1)
-      .height(40)
+      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
       .shadow(this.getCurrentThemePalette().controlShadow)
       .border({ width: 1, color: this.getSurfaceBorder() })
       .enabled(!this.favoritePending)
@@ -464,7 +464,7 @@ export struct MomentDetailPage {
       })
 
       Button() {
-        Row({ space: 6 }) {
+        Row({ space: DesignConstants.SPACING.SM2 }) {
           Text() {
             SymbolSpan($r(AppIcon.SHARE))
               .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
@@ -477,7 +477,7 @@ export struct MomentDetailPage {
       }
       .type(ButtonType.Capsule)
       .layoutWeight(1)
-      .height(40)
+      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
       .shadow(this.getCurrentThemePalette().controlShadow)
       .border({ width: 1, color: this.getSurfaceBorder() })
       .backgroundColor(this.getSurfaceSubtle())

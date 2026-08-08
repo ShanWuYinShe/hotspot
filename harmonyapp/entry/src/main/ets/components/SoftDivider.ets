@@ -10,7 +10,7 @@ import { DesignConstants } from '../constants/DesignConstants';
 
 @Component
 export struct SoftDivider {
-  @Prop color: ResourceColor = '#00000014';
+  @Prop color: ResourceColor = DesignConstants.COLOR.DIVIDER_LIGHT;
   @Prop thickness: number = 1;
 
   build() {

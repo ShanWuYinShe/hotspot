@@ -32,8 +32,8 @@ export struct EmptyState {
       Column({ space: DesignConstants.SPACING.LG }) {
         Stack() {
           Column()
-            .width(64)
-            .height(64)
+            .width(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
+            .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
             .borderRadius(DesignConstants.RADIUS.FULL)
             .backgroundColor(this.getPalette().surfaceBackground)
             .border({ width: 1, color: this.getPalette().floatingBorderColor })
@@ -42,17 +42,17 @@ export struct EmptyState {
             SymbolSpan($r(this.icon))
               .fontSize(DesignConstants.FONT.SIZE.XXL_PLUS)
               .fontColor([this.getPalette().textSecondary])
-              .opacity(0.5)
+              .opacity(DesignConstants.OPACITY.MUTED)
           }
         }
-        .width(64)
-        .height(64)
+        .width(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
+        .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
 
         // 主标题（大字）—— 对齐前端 EmptyState title
         if ((this.title ?? '').length > 0) {
           Text(this.title)
             .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18
-            .fontWeight(FontWeight.Medium)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getPalette().textPrimary)
             .textAlign(TextAlign.Center)
         }
@@ -63,7 +63,7 @@ export struct EmptyState {
             .fontSize(DesignConstants.FONT.SIZE.SM) // 12
             .fontColor(this.getPalette().textSecondary)
             .textAlign(TextAlign.Center)
-            .lineHeight(20)
+            .lineHeight(DesignConstants.FONT.LINE_HEIGHT.SM)
         }
 
         if ((this.actionLabel ?? '').length > 0 && this.onAction) {
@@ -110,8 +110,8 @@ export struct LoadingMoreIndicator {
   build() {
     Row({ space: DesignConstants.SPACING.SM }) {
       LoadingProgress()
-        .width(20)
-        .height(20)
+        .width(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
+        .height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
         .color(AppThemeManager.getSafeCurrentPalette().accentBackground)
         .accessibilityText('正在加载')
       Text(this.message)
@@ -137,8 +137,8 @@ export struct LoadingMoreIndicator {
 export function RefreshIndicator() {
   Row() {
     LoadingProgress()
-      .width(24)
-      .height(24)
+      .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
+      .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
       .color(AppThemeManager.getSafeCurrentPalette().accentBackground)
       .accessibilityText('正在刷新')
     Text('正在刷新...')

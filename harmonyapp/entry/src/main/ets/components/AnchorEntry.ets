@@ -71,12 +71,12 @@ export struct AnchorEntry {
       Row() {
         Text() {
           SymbolSpan($r(AppIcon.NEARBY))
-            .fontSize(14)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor([this.getPalette().accentText])
         }
       }
-      .width(34)
-      .height(34)
+      .width(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
+      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.getPalette().accentBackground)
       .justifyContent(FlexAlign.Center)
@@ -85,7 +85,7 @@ export struct AnchorEntry {
         Text(this.getLabel())
           .fontSize(DesignConstants.FONT.SIZE.XS2) // 10
           .fontColor(this.getPalette().textSecondary)
-          .letterSpacing(0.6)
+          .letterSpacing(DesignConstants.FONT.LETTER_SPACING.ICON_LABEL)
         Row() {
           Text(this.getDisplayName())
             .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13
@@ -102,7 +102,7 @@ export struct AnchorEntry {
             .margin({ left: DesignConstants.SPACING.XS })
         }
         .width('100%')
-        .margin({ top: 2 })
+        .margin({ top: DesignConstants.SPACING.HALF })
       }
       .layoutWeight(1)
       .margin({ left: DesignConstants.SPACING.SM })
@@ -110,7 +110,7 @@ export struct AnchorEntry {
 
       Text() {
         SymbolSpan($r(AppIcon.ARROW_RIGHT))
-          .fontSize(14)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor([this.getPalette().textSecondary])
       }
     }
@@ -120,8 +120,8 @@ export struct AnchorEntry {
     .borderRadius(DesignConstants.SHAPE.INPUT) // 18
     .border({ width: 1, color: this.getPalette().borderColor })
     .alignItems(VerticalAlign.Center)
-    .scale(this.isPressed ? { x: 0.98, y: 0.98 } : { x: 1, y: 1 }) // 对齐前端输入行按压强度
-    .animation({ curve: curves.springMotion(0.3, 0.85) })
+    .scale(this.isPressed ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW } : { x: 1, y: 1 }) // 对齐前端输入行按压强度
+    .animation({ curve: curves.springMotion(DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS, DesignConstants.INTERACTION.SPRING_DAMPING_PRESS) })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.isPressed = true;
@@ -137,7 +137,7 @@ export struct AnchorEntry {
     Row() {
       Text() {
         SymbolSpan($r(AppIcon.LOCATION))
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor([this.getPalette().accentBackground])
       }
       Text(this.getDisplayName())
@@ -146,7 +146,7 @@ export struct AnchorEntry {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .constraintSize({ maxWidth: '55%' })
-        .margin({ left: 6 })
+        .margin({ left: DesignConstants.SPACING.SM2 })
       Text(`· ${this.getRadiusText()}`)
         .fontSize(DesignConstants.FONT.SIZE.XS) // 11
         .fontColor(this.getPalette().accentBackground)
@@ -156,8 +156,8 @@ export struct AnchorEntry {
     .border({ width: 1, color: this.getPalette().borderColor })
     .borderRadius(DesignConstants.RADIUS.FULL)
     .alignItems(VerticalAlign.Center)
-    .scale(this.isPressed ? { x: 0.94, y: 0.94 } : { x: 1, y: 1 }) // 对齐前端 pill 按钮按压强度
-    .animation({ curve: curves.springMotion(0.3, 0.85) })
+    .scale(this.isPressed ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL } : { x: 1, y: 1 }) // 对齐前端 pill 按钮按压强度
+    .animation({ curve: curves.springMotion(DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS, DesignConstants.INTERACTION.SPRING_DAMPING_PRESS) })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.isPressed = true;

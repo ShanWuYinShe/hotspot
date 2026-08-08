@@ -29,8 +29,8 @@ export struct LoadMoreButton {
       Row() {
         if (this.loading) {
           LoadingProgress()
-            .width(18)
-            .height(18)
+            .width(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
+            .height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
             .color(this.getPalette().textSecondary)
             .margin({ right: DesignConstants.SPACING.XS })
           Text(this.loadingText)
@@ -39,7 +39,7 @@ export struct LoadMoreButton {
         } else {
           Text() {
             SymbolSpan($r(AppIcon.ARROW_DOWN))
-              .fontSize(20)
+              .fontSize(DesignConstants.FONT.SIZE.XL)
               .fontColor([this.getPalette().textSecondary])
           }
           .margin({ right: DesignConstants.SPACING.XS })

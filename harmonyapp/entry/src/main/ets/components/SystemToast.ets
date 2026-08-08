@@ -69,7 +69,7 @@ export class SystemToast {
     try {
       uiContext.getPromptAction().showToast({
         message: message,
-        duration: 2000,
+        duration: 2000, // Toast 显示时长（行为常量，非动画时长）
         bottom: bottom
       });
     } catch (error) {

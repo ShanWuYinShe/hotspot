@@ -32,7 +32,7 @@ export struct NotificationBanner {
         Column() {
           Text(this.notification.title)
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontWeight(FontWeight.Bold)
+            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
             .fontColor(this.getPalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -70,7 +70,7 @@ export struct NotificationBanner {
           ForEach(this.notification.actions, (action: NotificationAction) => {
             Button(action.label)
               .type(ButtonType.Normal)
-              .height(28)
+              .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .backgroundColor(action.type === 'primary' ? this.getPalette().accentBackground : this.getPalette().buttonSecondaryBackground)
               .fontColor(action.type === 'primary' ? this.getPalette().accentText : this.getPalette().buttonSecondaryText)

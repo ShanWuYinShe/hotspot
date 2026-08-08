@@ -385,10 +385,10 @@ export struct NotificationCenter {
   }
 
   build() {
-    Column({ space: 16 }) {
+    Column({ space: DesignConstants.SPACING.LG }) {
       // 标题栏
       Row() {
-        Row({ space: 12 }) {
+        Row({ space: DesignConstants.SPACING.MD }) {
           if (this.onClose) {
             Row() {
               Text() {
@@ -397,8 +397,8 @@ export struct NotificationCenter {
                   .fontColor([this.getPalette().textSecondary])
               }
             }
-            .width(36)
-            .height(36)
+            .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+            .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
             .justifyContent(FlexAlign.Center)
             .borderRadius(DesignConstants.RADIUS.FULL)
             .backgroundColor(this.getPalette().surfaceBackground)
@@ -414,7 +414,7 @@ export struct NotificationCenter {
           Column({ space: 1 }) {
             Text('通知')
               .fontSize(DesignConstants.FONT.SIZE.XL)
-              .fontWeight(FontWeight.Bold)
+              .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
               .fontColor(this.getPalette().textPrimary)
             if (this.getUnreadCount() > 0) {
               Text(`${this.getUnreadCount()} 条未读`)
@@ -439,11 +439,11 @@ export struct NotificationCenter {
         }
       }
       .width('100%')
-      .padding({ left: 16, right: 16 })
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
       // 过滤器标签
       Scroll() {
-        Row({ space: 8 }) {
+        Row({ space: DesignConstants.SPACING.SM }) {
           ForEach(this.filterOptions, (filter: NotificationFilterOption) => {
             Text(filter.label)
               .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -456,12 +456,7 @@ export struct NotificationCenter {
               .borderRadius(DesignConstants.RADIUS.FULL)
               .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
               .shadow(this.selectedFilter === filter.key
-                ? {
-                  radius: 10,
-                  color: this.getPalette().accentShadow.color,
-                  offsetX: 0,
-                  offsetY: 3
-                }
+                ? this.getPalette().accentShadow
                 : this.getPalette().controlShadow)
               .border({
                 width: 1,
@@ -472,17 +467,17 @@ export struct NotificationCenter {
               .onClick(() => this.onFilterSelected(filter.key as NotificationFilterKey))
           }, (filter: NotificationFilterOption) => filter.key + '_' + (this.selectedFilter === filter.key))
         }
-        .padding({ left: 16, right: 16 })
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
       }
       .scrollable(ScrollDirection.Horizontal)
       .scrollBar(BarState.Off)
 
       // 内容区域
       if (this.isLoading) {
-        Column({ space: 12 }) {
+        Column({ space: DesignConstants.SPACING.MD }) {
           LoadingProgress()
-            .width(32)
-            .height(32)
+            .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+            .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
             .color(this.getPalette().accentBackground)
           Text('加载中...')
             .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -506,7 +501,7 @@ export struct NotificationCenter {
             .type(ButtonType.Normal)
             .backgroundColor(this.getPalette().accentBackground)
             .fontColor(this.getPalette().accentText)
-            .height(40)
+            .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
             .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => this.refreshNotifications())
         }
@@ -515,7 +510,7 @@ export struct NotificationCenter {
         .justifyContent(FlexAlign.Center)
       } else if (this.visibleNotifications.length === 0) {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          Column({ space: 12 }) {
+          Column({ space: DesignConstants.SPACING.MD }) {
             SystemIcon({
               icon: AppIcon.EMPTY,
               iconSize: 48,
@@ -537,11 +532,11 @@ export struct NotificationCenter {
         })
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          List({ space: 12 }) {
+          List({ space: DesignConstants.SPACING.MD }) {
             ForEach(this.getGroupedNotifications(), (group: GroupedNotification) => {
               ListItemGroup({
                 header: this.buildGroupHeader(group.label),
-                space: 8
+                space: DesignConstants.SPACING.SM
               }) {
                 ForEach(group.items, (notification: NotificationItem) => {
                   ListItem() {
@@ -559,7 +554,7 @@ export struct NotificationCenter {
             }
           }
           .width('100%')
-          .padding({ left: 16, right: 16, bottom: 4 })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XS })
           .onReachEnd(() => this.loadMoreNotifications())
         }
         .layoutWeight(1)
@@ -580,20 +575,20 @@ export struct NotificationCenter {
   private buildGroupHeader(label: string) {
     Text(label)
       .fontSize(DesignConstants.FONT.SIZE.SM)
-      .fontWeight(FontWeight.Medium)
+      .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
       .fontColor(this.getPalette().textSecondary)
-      .padding({ left: 4, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.XS })
+      .padding({ left: DesignConstants.SPACING.XS, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.XS })
   }
 
   @Builder
   private buildNotificationItem(notification: NotificationItem) {
-    Row({ space: 14 }) {
+    Row({ space: DesignConstants.SPACING.MD3 }) {
       // 头像 + 类型图标徽章
       Stack({ alignContent: Alignment.Center }) {
         if (notification.payload?.actor?.avatar_url) {
           Image(notification.payload.actor.avatar_url)
-            .width(44)
-            .height(44)
+            .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
+            .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
             .borderRadius(DesignConstants.RADIUS.FULL)
             .objectFit(ImageFit.Cover)
         } else {
@@ -604,8 +599,8 @@ export struct NotificationCenter {
                 .fontColor([this.getTypeColor(notification.type)])
             }
           }
-          .width(44)
-          .height(44)
+          .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
+          .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .justifyContent(FlexAlign.Center)
           .backgroundColor(this.getTypeColor(notification.type) + '18')
@@ -620,8 +615,8 @@ export struct NotificationCenter {
                 .fontColor([this.getPalette().accentText])
             }
           }
-          .width(18)
-          .height(18)
+          .width(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
+          .height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .justifyContent(FlexAlign.Center)
           .backgroundColor(this.getTypeColor(notification.type))
@@ -632,34 +627,34 @@ export struct NotificationCenter {
       }
 
       // 文本内容
-      Column({ space: 2 }) {
+      Column({ space: DesignConstants.SPACING.HALF }) {
         Text() {
           Span(this.buildNotificationTitle(notification))
             .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
             .fontColor(this.getPalette().textPrimary)
-            .fontWeight(notification.is_read ? FontWeight.Normal : FontWeight.Medium)
+            .fontWeight(notification.is_read ? DesignConstants.FONT.WEIGHT.REGULAR : DesignConstants.FONT.WEIGHT.MEDIUM)
           Span(' ' + this.buildNotificationMessage(notification))
             .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
             .fontColor(this.getPalette().textPrimary)
         }
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .lineHeight(18)
+        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.XS)
 
         Text(this.formatTimestamp(notification.created_at))
           .fontSize(DesignConstants.FONT.SIZE.XS)
           .fontColor(this.getPalette().textSecondary)
-          .margin({ top: 2 })
+          .margin({ top: DesignConstants.SPACING.HALF })
 
         // 群组操作按钮
         if (this.canHandleGroupInvite(notification)) {
-          Row({ space: 8 }) {
+          Row({ space: DesignConstants.SPACING.SM }) {
             Button(this.isActionLoading(notification.notification_id) ? '处理中...' : '接受')
               .type(ButtonType.Normal)
               .backgroundColor(this.getPalette().accentBackground)
               .fontColor(this.getPalette().accentText)
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .height(28)
+              .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .enabled(!this.isActionLoading(notification.notification_id))
               .onClick(() => this.handleGroupInviteAction(notification, 'accept'))
@@ -669,22 +664,22 @@ export struct NotificationCenter {
               .backgroundColor(this.getPalette().surfaceSubtle)
               .fontColor(this.getPalette().textPrimary)
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .height(28)
+              .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .borderWidth(1)
               .borderColor(this.getPalette().borderColor)
               .enabled(!this.isActionLoading(notification.notification_id))
               .onClick(() => this.handleGroupInviteAction(notification, 'reject'))
           }
-          .margin({ top: 6 })
+          .margin({ top: DesignConstants.SPACING.SM2 })
         } else if (this.canHandleGroupApplication(notification)) {
-          Row({ space: 8 }) {
+          Row({ space: DesignConstants.SPACING.SM }) {
             Button(this.isActionLoading(notification.notification_id) ? '处理中...' : '批准')
               .type(ButtonType.Normal)
               .backgroundColor(this.getPalette().accentBackground)
               .fontColor(this.getPalette().accentText)
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .height(28)
+              .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .enabled(!this.isActionLoading(notification.notification_id))
               .onClick(() => this.handleGroupApplicationAction(notification, 'approve'))
@@ -694,14 +689,14 @@ export struct NotificationCenter {
               .backgroundColor(this.getPalette().surfaceSubtle)
               .fontColor(this.getPalette().textPrimary)
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .height(28)
+              .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .borderWidth(1)
               .borderColor(this.getPalette().borderColor)
               .enabled(!this.isActionLoading(notification.notification_id))
               .onClick(() => this.handleGroupApplicationAction(notification, 'reject'))
           }
-          .margin({ top: 6 })
+          .margin({ top: DesignConstants.SPACING.SM2 })
         }
       }
       .layoutWeight(1)
@@ -709,14 +704,14 @@ export struct NotificationCenter {
       // 未读圆点
       if (!notification.is_read) {
         Row()
-          .width(8)
-          .height(8)
+          .width(DesignConstants.SPACING.SM)
+          .height(DesignConstants.SPACING.SM)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getTypeColor(notification.type))
       }
     }
     .width('100%')
-    .padding({ left: 12, right: 12, top: 12, bottom: 12 })
+    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .backgroundColor(notification.is_read ? DesignConstants.COLOR.TRANSPARENT : this.getTypeColor(notification.type) + '07')
     .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
     .border({

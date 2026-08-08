@@ -347,7 +347,7 @@ export struct CreateGroupPage {
           showBackButton: true,
           onBack: () => { AppRouter.pop(); },
           titleAlign: TextAlign.Center,
-          titleWeight: FontWeight.Medium,
+          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           backgroundVariant: 'transparent'
         })
 
@@ -362,7 +362,7 @@ export struct CreateGroupPage {
                   .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .width('100%')
-                  .margin({ bottom: 4 })
+                  .margin({ bottom: DesignConstants.SPACING.XS })
 
                 TextInput({ placeholder: '请输入群组名称', text: this.groupName })
                   .placeholderColor(this.getCurrentThemePalette().textTertiary)
@@ -370,7 +370,7 @@ export struct CreateGroupPage {
                     this.groupName = value;
                   })
                   .maxLength(GROUP_NAME_MAX)
-                  .height(40)
+                  .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
                   .backgroundColor(this.getSurfaceSubtle())
                   .border({ width: 1, color: this.fieldBorder(this.groupNameFocused, this.getGroupNameError() !== undefined).borderColor })
                   .shadow(this.fieldBorder(this.groupNameFocused, this.getGroupNameError() !== undefined).shadow)
@@ -401,7 +401,7 @@ export struct CreateGroupPage {
                   .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .width('100%')
-                  .margin({ bottom: 4 })
+                  .margin({ bottom: DesignConstants.SPACING.XS })
 
                 TextArea({ placeholder: '请输入群组描述（可选）', text: this.groupDescription })
                   .placeholderColor(this.getCurrentThemePalette().textTertiary)
@@ -409,7 +409,7 @@ export struct CreateGroupPage {
                     this.groupDescription = value;
                   })
                   .maxLength(GROUP_DESCRIPTION_MAX)
-                  .height(80)
+                  .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
                   .backgroundColor(this.getSurfaceSubtle())
                   .border({ width: 1, color: this.fieldBorder(this.groupDescriptionFocused, this.getGroupDescriptionError() !== undefined).borderColor })
                   .shadow(this.fieldBorder(this.groupDescriptionFocused, this.getGroupDescriptionError() !== undefined).shadow)
@@ -436,7 +436,7 @@ export struct CreateGroupPage {
             .borderRadius(DesignConstants.RADIUS.XXL)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
-            .margin({ bottom: 14 })
+            .margin({ bottom: DesignConstants.SPACING.MD3 })
 
             // 群组头像
             this.SectionHeader('群组头像')
@@ -445,7 +445,7 @@ export struct CreateGroupPage {
                 SystemAvatar({
                   avatarUrl: this.groupAvatarPreviewUrl,
                   name: this.groupName || '群组',
-                  avatarSize: 48,
+                  avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM,
                   shape: 'squircle'
                 })
 
@@ -468,7 +468,7 @@ export struct CreateGroupPage {
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .borderRadius(DesignConstants.RADIUS.XXL)
                     .border({ width: 1, color: this.getSurfaceBorder() })
-                    .height(34)
+                    .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
                     .enabled(!this.isCreating && !this.isGroupAvatarUploading)
                     .onClick(() => this.selectGroupAvatar())
 
@@ -480,7 +480,7 @@ export struct CreateGroupPage {
                       .fontSize(DesignConstants.FONT.SIZE.SM)
                       .borderRadius(DesignConstants.RADIUS.XXL)
                       .border({ width: 1, color: this.getSurfaceBorder() })
-                      .height(34)
+                      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
                       .enabled(!this.isCreating && !this.isGroupAvatarUploading)
                       .onClick(() => this.clearGroupAvatarSelection())
                   }
@@ -498,7 +498,7 @@ export struct CreateGroupPage {
             .borderRadius(DesignConstants.RADIUS.XXL)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
-            .margin({ bottom: 14 })
+            .margin({ bottom: DesignConstants.SPACING.MD3 })
 
             // 位置信息
             this.SectionHeader('位置信息')
@@ -528,7 +528,7 @@ export struct CreateGroupPage {
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .borderRadius(DesignConstants.RADIUS.XXL)
                     .border({ width: 1, color: this.getSurfaceBorder() })
-                    .height(36)
+                    .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
                     .onClick(() => this.openLocationPicker())
 
                   Button('刷新')
@@ -538,7 +538,7 @@ export struct CreateGroupPage {
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .borderRadius(DesignConstants.RADIUS.XXL)
                     .border({ width: 1, color: this.getSurfaceBorder() })
-                    .height(36)
+                    .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
                     .onClick(() => this.refreshLocation())
                 }
               }
@@ -552,7 +552,7 @@ export struct CreateGroupPage {
             .borderRadius(DesignConstants.RADIUS.XXL)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
-            .margin({ bottom: 14 })
+            .margin({ bottom: DesignConstants.SPACING.MD3 })
 
             // 隐私与限制
             this.SectionHeader('隐私与限制')
@@ -574,8 +574,8 @@ export struct CreateGroupPage {
                     }
                   }
                   .type(ButtonType.Capsule)
-                  .width(36)
-                  .height(36)
+                  .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+                  .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
                   .backgroundColor(this.getSurfaceSubtle())
                   .enabled(this.maxMembers > GROUP_MEMBERS_MIN)
                   .onClick(() => {
@@ -585,7 +585,7 @@ export struct CreateGroupPage {
                   TextInput({ text: this.maxMembers.toString() })
                     .type(InputType.Number)
                     .width(64)
-                    .height(36)
+                    .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
                     .textAlign(TextAlign.Center)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .fontColor(this.getCurrentThemePalette().textPrimary)
@@ -617,8 +617,8 @@ export struct CreateGroupPage {
                     }
                   }
                   .type(ButtonType.Capsule)
-                  .width(36)
-                  .height(36)
+                  .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+                  .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
                   .backgroundColor(this.getSurfaceSubtle())
                   .enabled(this.maxMembers < GROUP_MEMBERS_MAX)
                   .onClick(() => {
@@ -663,7 +663,7 @@ export struct CreateGroupPage {
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontColor(this.getCurrentThemePalette().textSecondary)
                     .width('100%')
-                    .margin({ bottom: 4 })
+                    .margin({ bottom: DesignConstants.SPACING.XS })
 
                   TextInput({ placeholder: `请输入群组密码（${GROUP_PASSWORD_MIN}-${GROUP_PASSWORD_MAX}位）`, text: this.groupPassword })
                     .type(InputType.Password)
@@ -672,7 +672,7 @@ export struct CreateGroupPage {
                       this.groupPassword = value;
                     })
                     .maxLength(GROUP_PASSWORD_MAX)
-                    .height(40)
+                    .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
                     .backgroundColor(this.getSurfaceSubtle())
                     .border({ width: 1, color: this.fieldBorder(this.groupPasswordFocused, this.getGroupPasswordError() !== undefined).borderColor })
                     .shadow(this.fieldBorder(this.groupPasswordFocused, this.getGroupPasswordError() !== undefined).shadow)
@@ -700,7 +700,7 @@ export struct CreateGroupPage {
             .borderRadius(DesignConstants.RADIUS.XXL)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
-            .margin({ bottom: 14 })
+            .margin({ bottom: DesignConstants.SPACING.MD3 })
 
             // 提交按钮
             Button('立即创建')
@@ -710,11 +710,11 @@ export struct CreateGroupPage {
               .shadow(this.getCurrentThemePalette().controlShadow)
               .border({ width: 1, color: this.getSurfaceBorder() })
               .width('100%')
-              .height(48)
+              .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
               .fontSize(DesignConstants.FONT.SIZE.LG)
               .enabled(!this.isCreating)
               .opacity(this.isCreating ? DesignConstants.OPACITY.LOADING : 1)
-              .animation({ duration: 200, curve: Curve.EaseInOut })
+              .animation({ duration: DesignConstants.ANIMATION.DURATION_SHORT, curve: DesignConstants.ANIMATION.CURVE_EASE_IN_OUT })
               .onClick(() => this.createGroup())
               .margin({ top: DesignConstants.SPACING.SM })
           }
@@ -736,8 +736,8 @@ export struct CreateGroupPage {
       if (this.isCreating) {
         SystemLoadingView()
           .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+            TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
           )
       }
     }

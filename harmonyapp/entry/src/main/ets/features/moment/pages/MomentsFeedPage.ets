@@ -253,7 +253,7 @@ export struct MomentsFeedPage {
         SystemPageHeader({
           title: '附近动态',
           titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
-          titleWeight: FontWeight.Medium,
+          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           backgroundVariant: 'transparent'
         }) {
           if (this.hotMoments.length > 0) {
@@ -264,7 +264,7 @@ export struct MomentsFeedPage {
         }
 
         // 搜索栏（对齐前端：search icon + input + clear button）
-        Row({ space: 10 }) {
+        Row({ space: DesignConstants.SPACING.MD2 }) {
           Text() {
             SymbolSpan($r(AppIcon.SEARCH))
               .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
@@ -301,8 +301,8 @@ export struct MomentsFeedPage {
       if (this.isLoading) {
         SystemLoadingView({ message: '正在加载发现内容...' })
           .layoutWeight(1)
-          .transition(TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn })))
+          .transition(TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })))
       } else if (!this.hasAnyData() && this.errorMessage) {
         EmptyState({
           icon: AppIcon.WARNING,
@@ -311,8 +311,8 @@ export struct MomentsFeedPage {
           onAction: () => { this.loadData(); }
         })
         .layoutWeight(1)
-        .transition(TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-          .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn })))
+        .transition(TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+          .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })))
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           if (useMasterDetail(this.currentBreakpoint)) {
@@ -333,7 +333,7 @@ export struct MomentsFeedPage {
               Column() {
                 this.buildRightSidebar()
               }
-              .width(220)
+              .width(DesignConstants.LAYOUT.RIGHT_SIDEBAR_WIDTH)
               .height('100%')
               .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
               .border({ width: { left: 1 }, color: this.getSurfaceBorder() })
@@ -358,8 +358,8 @@ export struct MomentsFeedPage {
         }
         .layoutWeight(1)
         .onRefreshing(() => { this.loadData(true); })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-          .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn })))
+        .transition(TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+          .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })))
       }
     }
     .width('100%')
@@ -376,7 +376,7 @@ export struct MomentsFeedPage {
       Row() {
         Text(this.getMomentsSectionTitle())
           .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18，对齐前端 page-title
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getCurrentThemePalette().textPrimary)
       }
       .width('100%')
@@ -449,10 +449,10 @@ export struct MomentsFeedPage {
         Column() {
           Text('活跃用户')
             .fontSize(DesignConstants.FONT.SIZE.XS2)
-            .fontWeight(FontWeight.Medium)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .textCase(TextCase.UpperCase)
-            .letterSpacing(1.2)
+            .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
             .padding({
               left: DesignConstants.SPACING.LG,
               right: DesignConstants.SPACING.LG,
@@ -481,7 +481,7 @@ export struct MomentsFeedPage {
                 .fontSize(DesignConstants.FONT.SIZE.XS2)
                 .fontColor(this.getCurrentThemePalette().accentText)
                 .backgroundColor(this.getCurrentThemePalette().accentBackground)
-                .height(26)
+                .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
                 .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
                 .borderRadius(DesignConstants.RADIUS.FULL)
                 .onClick(() => { this.followUser(user); })
@@ -512,19 +512,19 @@ export struct MomentsFeedPage {
       ForEach(this.TABS, (tab: string) => {
         Text(tab)
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(this.activeTab === tab ? FontWeight.Medium : FontWeight.Normal)
+          .fontWeight(this.activeTab === tab ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
           .fontColor(this.activeTab === tab
             ? this.getCurrentThemePalette().accentBackground
             : this.getCurrentThemePalette().textSecondary)
-          .padding({ top: 6, bottom: 12 })
-          .margin({ right: 24 })
+          .padding({ top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.MD })
+          .margin({ right: DesignConstants.SPACING.XL })
           .border({
             width: { bottom: 2 },
             color: this.activeTab === tab
               ? this.getCurrentThemePalette().accentBackground
               : DesignConstants.COLOR.TRANSPARENT
           })
-          .animation({ duration: 180, curve: Curve.EaseInOut })
+          .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_IN_OUT })
           .onClick(() => {
             this.activeTab = tab;
             this.loadData(true);
@@ -539,7 +539,7 @@ export struct MomentsFeedPage {
   @Builder
   buildTagChipsStrip() {
     Scroll() {
-      Row({ space: 8 }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
         ForEach(this.getAvailableTags(), (tag: string) => {
           Text(tag)
             .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -551,18 +551,13 @@ export struct MomentsFeedPage {
               : this.getCurrentThemePalette().surfaceBackground)
             .borderRadius(DesignConstants.RADIUS.FULL)
             .padding({
-              left: 14,
-              right: 14,
-              top: 6,
-              bottom: 6
+              left: DesignConstants.SPACING.MD3,
+              right: DesignConstants.SPACING.MD3,
+              top: DesignConstants.SPACING.SM2,
+              bottom: DesignConstants.SPACING.SM2
             })
             .shadow(this.activeTag === tag
-              ? {
-                radius: 10,
-                color: this.getCurrentThemePalette().accentShadow.color,
-                offsetX: 0,
-                offsetY: 3
-              }
+              ? this.getCurrentThemePalette().accentShadow
               : this.getCurrentThemePalette().controlShadow)
             .border({
               width: 1,
@@ -575,7 +570,7 @@ export struct MomentsFeedPage {
             })
         }, (tag: string) => tag)
       }
-      .padding({ left: 4, right: 4 })
+      .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS })
     }
     .scrollable(ScrollDirection.Horizontal)
     .scrollBar(BarState.Off)
@@ -583,8 +578,8 @@ export struct MomentsFeedPage {
     .padding({
       left: DesignConstants.SPACING.LG,
       right: DesignConstants.SPACING.LG,
-      top: 4,
-      bottom: 4
+      top: DesignConstants.SPACING.XS,
+      bottom: DesignConstants.SPACING.XS
     })
   }
 
@@ -594,15 +589,15 @@ export struct MomentsFeedPage {
     Row() {
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontWeight(FontWeight.Bold)
+        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
         .fontColor(this.getCurrentThemePalette().textPrimary)
     }
     .width('100%')
     .padding({
       left: DesignConstants.SPACING.LG,
       right: DesignConstants.SPACING.LG,
-      top: 16,
-      bottom: 4
+      top: DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.XS
     })
   }
 
@@ -615,7 +610,7 @@ export struct MomentsFeedPage {
         variant: CardVariant.OUTLINED
       }) {
         Scroll() {
-          Row({ space: 14 }) {
+          Row({ space: DesignConstants.SPACING.MD3 }) {
             ForEach(this.recommendedUsers.slice(0, 10), (user: UserItem) => {
               this.buildUserCard(user)
             }, (user: UserItem) => user.user?.user_id ?? '')
@@ -630,12 +625,12 @@ export struct MomentsFeedPage {
 
   @Builder
   buildUserCard(user: UserItem) {
-    Column({ space: 6 }) {
+    Column({ space: DesignConstants.SPACING.SM2 }) {
       Stack({ alignContent: Alignment.Center }) {
         SystemAvatar({
           avatarUrl: user.user?.avatar_url ?? '',
           name: user.user?.nickname ?? '',
-          avatarSize: 48,
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM,
           shape: 'squircle'
         })
 
@@ -647,7 +642,7 @@ export struct MomentsFeedPage {
                 .fontSize(DesignConstants.FONT.SIZE.XS_MINUS)
                 .fontColor(this.getCurrentThemePalette().accentText)
             }
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            .padding({ left: DesignConstants.SPACING.SM2, right: DesignConstants.SPACING.SM2, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
             .borderRadius(DesignConstants.RADIUS.FULL)
             .backgroundColor(this.getCurrentThemePalette().accentBackground)
           }
@@ -655,8 +650,8 @@ export struct MomentsFeedPage {
           .height('100%')
         }
       }
-      .width(60)
-      .height(64)
+      .width(DesignConstants.LAYOUT.LABEL_WIDTH)
+      .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
 
       Text(user.user?.nickname ?? '')
         .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -717,20 +712,20 @@ export struct MomentsFeedPage {
         }
       }
       .width('100%')
-      .height(48)
+      .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
       .justifyContent(FlexAlign.Center)
       .backgroundColor(this.getCurrentThemePalette().accentMuted)
       .borderRadius({ topLeft: DesignConstants.RADIUS.LG, topRight: DesignConstants.RADIUS.LG })
 
-      Column({ space: 4 }) {
+      Column({ space: DesignConstants.SPACING.XS }) {
         Text(group.group?.name ?? '')
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-        Row({ space: 6 }) {
+        Row({ space: DesignConstants.SPACING.SM2 }) {
           Text(`${group.group?.members_count ?? 0} 人`)
             .fontSize(DesignConstants.FONT.SIZE.XS2)
             .fontColor(this.getCurrentThemePalette().textSecondary)
@@ -741,7 +736,7 @@ export struct MomentsFeedPage {
           }
         }
       }
-      .padding({ left: 10, right: 10, top: 8, bottom: 10 })
+      .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.MD2 })
       .alignItems(HorizontalAlign.Start)
     }
     .width('100%')

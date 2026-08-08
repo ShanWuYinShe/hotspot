@@ -55,19 +55,19 @@ export struct LoginPromptView {
   }
 
   build() {
-    Column({ space: 20 }) {
+    Column({ space: DesignConstants.SPACING.LG2 }) {
       // 图标
       Text() {
         SymbolSpan($r(this.icon))
           .fontSize(DesignConstants.FONT.SIZE.HERO_LARGE)
           .fontColor([this.getPalette().iconMuted])
       }
-      .margin({ bottom: 4 })
+      .margin({ bottom: DesignConstants.SPACING.XS })
 
       // 主标题
       Text(this.title)
         .fontSize(DesignConstants.FONT.SIZE.XL)
-        .fontWeight(FontWeight.Bold)
+        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
         .fontColor(this.getPalette().textPrimary)
         .textAlign(TextAlign.Center)
 
@@ -76,17 +76,17 @@ export struct LoginPromptView {
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .fontColor(this.getPalette().textSecondary)
         .textAlign(TextAlign.Center)
-        .lineHeight(22)
+        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.MD)
 
       // 按钮区（胶囊化加阴影）
-      Column({ space: 12 }) {
+      Column({ space: DesignConstants.SPACING.MD }) {
         Button('快速体验（无需注册）')
           .type(ButtonType.Capsule)
           .backgroundColor(this.getPalette().accentBackground)
           .fontColor(this.getPalette().accentText)
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .width('100%')
-          .height(48)
+          .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
           .onClick(() => {
             this.showQuickStart = true;
           })
@@ -98,13 +98,13 @@ export struct LoginPromptView {
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .border({ width: 1, color: this.getPalette().borderColor })
           .width('100%')
-          .height(48)
+          .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
           .onClick(() => {
             this.navigateToLogin();
           })
       }
       .width('80%')
-      .margin({ top: 8 })
+      .margin({ top: DesignConstants.SPACING.SM })
 
       // 底部提示
       if (this.hint.length > 0) {
@@ -112,13 +112,13 @@ export struct LoginPromptView {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getPalette().textSecondary)
           .textAlign(TextAlign.Center)
-          .margin({ top: 4 })
+          .margin({ top: DesignConstants.SPACING.XS })
       }
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .padding(32)
+    .padding(DesignConstants.SPACING.XXL)
     .backgroundColor(this.getPalette().pageBackground)
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
     .bindSheet($$this.showQuickStart, this.buildQuickStartSheet(), {
@@ -136,7 +136,7 @@ export struct LoginPromptView {
       Column({ space: DesignConstants.SPACING.LG }) {
         Text('快速体验')
           .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Bold)
+          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
           .fontColor(this.getPalette().textPrimary)
 
         Text('无需注册，输入昵称即可快速体验')
@@ -165,7 +165,7 @@ export struct LoginPromptView {
           .fontColor(this.getPalette().accentText)
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .width('100%')
-          .height(48)
+          .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
           .enabled(!this.isQuickStarting)
           .opacity(this.isQuickStarting ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => {

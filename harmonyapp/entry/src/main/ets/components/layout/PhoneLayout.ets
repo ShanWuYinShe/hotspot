@@ -149,7 +149,7 @@ export struct PhoneLayout {
         Stack() {
           Column()
             .width('100%').height('100%')
-            .backgroundColor('#66000000')
+            .backgroundColor(DesignConstants.COLOR.OVERLAY_MEDIUM)
             .onClick(() => { this.showNotificationCenter = false; })
           Column() {
             NotificationCenter({ onClose: () => { this.showNotificationCenter = false; } })
@@ -203,8 +203,8 @@ export struct PhoneLayout {
             SystemBadge({ count: this.unreadCount })
           }
         }
-        .width(36)
-        .height(36)
+        .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+        .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
         .alignContent(Alignment.TopEnd)
         Text(TAB_ITEMS[index].label)
           .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -214,11 +214,11 @@ export struct PhoneLayout {
               : $r('app.color.chip_inactive_text')
           )
           .fontWeight(
-            this.currentTabIndex === index ? FontWeight.Medium : FontWeight.Regular
+            this.currentTabIndex === index ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR
           )
-          .margin({ top: 2 })
+          .margin({ top: DesignConstants.SPACING.HALF })
       }
-      .width(60)
+      .width(DesignConstants.LAYOUT.LABEL_WIDTH)
       .padding({ top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
       .borderRadius(DesignConstants.RADIUS.LG)
       .backgroundColor(
@@ -233,7 +233,7 @@ export struct PhoneLayout {
         )
       })
     }
-    .height(56)
+    .height(DesignConstants.LAYOUT.MOBILE_BOTTOM_NAV_HEIGHT)
     .justifyContent(FlexAlign.Center)
     .onClick(() => {
       if (index !== CREATE_TAB_INDEX) {
@@ -286,7 +286,7 @@ export struct PhoneLayout {
             ? $r('app.color.brand_primary')
             : $r('app.color.chip_inactive_text')
         )
-        .margin({ top: 2 })
+        .margin({ top: DesignConstants.SPACING.HALF })
     }
     .padding({ top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
     .justifyContent(FlexAlign.Center)
@@ -304,8 +304,8 @@ export struct PhoneLayout {
           .fontColor([$r('app.color.bg_primary')])
       }
     }
-    .width(48)
-    .height(48)
+    .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+    .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
     .justifyContent(FlexAlign.Center)
     .backgroundColor($r('app.color.brand_primary'))
     .borderRadius(DesignConstants.RADIUS.FULL)
@@ -324,7 +324,7 @@ export struct PhoneLayout {
             .fontColor([$r('app.color.bg_primary')])
         }
       }
-      .width(52).height(52)
+      .width(DesignConstants.LAYOUT.FAB_SIZE).height(DesignConstants.LAYOUT.FAB_SIZE)
       .justifyContent(FlexAlign.Center)
       .backgroundColor($r('app.color.brand_primary'))
       .borderRadius(DesignConstants.RADIUS.FULL)
@@ -347,7 +347,7 @@ export struct PhoneLayout {
         }
       })
     }
-    .height(56)
+    .height(DesignConstants.LAYOUT.MOBILE_BOTTOM_NAV_HEIGHT)
     .justifyContent(FlexAlign.Center)
     .onClick(() => {
       this.showCreateSheet = true;
@@ -358,7 +358,7 @@ export struct PhoneLayout {
     Column() {
       Text('创建')
         .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18
-        .fontWeight(FontWeight.Medium)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getPalette().textPrimary)
         .margin({ top: DesignConstants.SPACING.XL, bottom: DesignConstants.SPACING.LG })
       this.CreateSheetItem(AppIcon.PHOTO, '发布动态', () => {
@@ -383,7 +383,7 @@ export struct PhoneLayout {
     Row() {
       Text() {
         SymbolSpan($r(icon))
-          .fontSize(20)
+          .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontColor([this.getPalette().accentBackground])
       }
       Text(label)
@@ -392,7 +392,7 @@ export struct PhoneLayout {
         .margin({ left: DesignConstants.SPACING.MD })
     }
     .width('90%')
-    .height(52)
+    .height(DesignConstants.LAYOUT.FAB_SIZE)
     .padding({ left: DesignConstants.SPACING.LG })
     .borderRadius(DesignConstants.SHAPE.INPUT) // 18
     .backgroundColor(this.getPalette().surfaceSubtle)
@@ -411,15 +411,15 @@ export struct PhoneLayout {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
       Button('去注册')
         .type(ButtonType.Normal)
-        .height(28)
+        .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .backgroundColor($r('app.color.brand_primary'))
         .fontColor($r('app.color.bg_primary'))
         .borderRadius(DesignConstants.RADIUS.SM)
-        .padding({ left: 12, right: 12 })
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
     .backgroundColor($r('app.color.chip_selected_bg'))
   }
 }

@@ -136,7 +136,7 @@ export struct CreateMomentPage {
   }
 
   private getOverlayBorderColor(): string {
-    return this.getCurrentThemePalette().isDarkTheme ? '#40FFFFFF' : '#26000000';
+    return this.getCurrentThemePalette().isDarkTheme ? DesignConstants.COLOR.OVERLAY_BORDER_LIGHT : DesignConstants.COLOR.OVERLAY_BORDER_DARK;
   }
 
   private getSurfaceBorder(): string {
@@ -366,7 +366,7 @@ export struct CreateMomentPage {
         showBackButton: true,
         onBack: () => { AppRouter.pop(); },
         titleAlign: TextAlign.Center,
-        titleWeight: FontWeight.Medium,
+        titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
         backgroundVariant: 'transparent',
         action: {
           label: this.isEditMode ? '保存' : '发布',
@@ -384,7 +384,7 @@ export struct CreateMomentPage {
                   this.description = value;
                 })
                 .maxLength(500)
-                .height(120)
+                .height(DesignConstants.COMPONENT.PLACEHOLDER_AREA_HEIGHT)
                 .backgroundColor(this.getSurfaceSubtle())
                 .borderRadius(DesignConstants.RADIUS.XL)
                 .padding(DesignConstants.SPACING.SM)
@@ -392,7 +392,7 @@ export struct CreateMomentPage {
           }
         }
         .padding({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-        .margin({ bottom: 14 })
+        .margin({ bottom: DesignConstants.SPACING.MD3 })
 
         ListItem() {
           SystemCard({ cardPadding: DesignConstants.SPACING.LG }) {
@@ -416,14 +416,14 @@ export struct CreateMomentPage {
                 Text('已有图片')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor(this.getCurrentThemePalette().textSecondary)
-                  .margin({ top: 8 })
+                  .margin({ top: DesignConstants.SPACING.SM })
 
                 Grid() {
                   ForEach(this.existingImageUrls, (url: string, index: number) => {
                     GridItem() {
                       Image(MediaUrlUtil.normalize(url))
                         .width('100%')
-                        .height(110)
+                        .height(DesignConstants.COMPONENT.IMAGE_PLACEHOLDER_HEIGHT)
                         .objectFit(ImageFit.Cover)
                         .borderRadius(DesignConstants.RADIUS.MD)
                     }
@@ -502,7 +502,7 @@ export struct CreateMomentPage {
           }
         }
         .padding({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-        .margin({ bottom: 14 })
+        .margin({ bottom: DesignConstants.SPACING.MD3 })
 
         ListItem() {
           SystemCard({ cardPadding: DesignConstants.SPACING.LG }) {
@@ -551,7 +551,7 @@ export struct CreateMomentPage {
           }
         }
         .padding({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-        .margin({ bottom: 14 })
+        .margin({ bottom: DesignConstants.SPACING.MD3 })
 
         ListItem() {
           SystemCard({ cardPadding: DesignConstants.SPACING.LG }) {
@@ -681,7 +681,7 @@ export struct CreateMomentPage {
         paddingSize: 2,
         onButtonClick: (): void => this.removeTag(index)
       })
-      .margin({ left: 4 })
+      .margin({ left: DesignConstants.SPACING.XS })
     }
     .padding({
       left: DesignConstants.SPACING.SM,
@@ -714,11 +714,11 @@ export struct CreateMomentPage {
       }
       .type(ButtonType.Normal)
       .backgroundColor(this.getCurrentThemePalette().overlayStrong)
-      .width(28)
-      .height(28)
+      .width(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
+      .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
       .borderRadius(DesignConstants.RADIUS.XXL)
       .border({ width: 1, color: this.getOverlayBorderColor() })
-      .margin({ top: 2, right: 2 })
+      .margin({ top: DesignConstants.SPACING.HALF, right: DesignConstants.SPACING.HALF })
       .onClick(() => this.removeImage(index))
     }
     .width('100%')

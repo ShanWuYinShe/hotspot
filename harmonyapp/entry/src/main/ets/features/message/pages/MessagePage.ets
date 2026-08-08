@@ -533,7 +533,7 @@ export struct MessagePage {
         title: '消息',
         subtitle: this.getTotalUnread() > 0 ? `${this.getTotalUnread()} 条未读` : '',
         titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
-        titleWeight: FontWeight.Normal,
+        titleWeight: DesignConstants.FONT.WEIGHT.REGULAR,
         backgroundVariant: 'transparent'
       }) {
         // trailing: 添加(菜单) + 搜索
@@ -615,7 +615,7 @@ export struct MessagePage {
       }
 
       // 搜索栏
-      Row({ space: 10 }) {
+      Row({ space: DesignConstants.SPACING.MD2 }) {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
             .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
@@ -665,8 +665,8 @@ export struct MessagePage {
         SystemLoadingView({ message: '收取信件中...' })
           .layoutWeight(1)
           .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+            TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
           )
       } else if (!this.hasData && this.errorMessage) {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
@@ -675,8 +675,8 @@ export struct MessagePage {
         .layoutWeight(1)
         .onRefreshing(() => { this.loadData(true, true); })
         .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
         )
       } else if (!this.hasData) {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
@@ -685,8 +685,8 @@ export struct MessagePage {
         .layoutWeight(1)
         .onRefreshing(() => { this.loadData(true, true); })
         .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
         )
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
@@ -702,12 +702,12 @@ export struct MessagePage {
                 .fontSize(DesignConstants.FONT.SIZE.XS2)
                 .fontColor(this.getCurrentThemePalette().textSecondary)
                 .textCase(TextCase.UpperCase)
-                .letterSpacing(1.4)
+                .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
                 .padding({
                   left: DesignConstants.SPACING.LG,
                   right: DesignConstants.SPACING.LG,
-                  top: 8,
-                  bottom: 10
+                  top: DesignConstants.SPACING.SM,
+                  bottom: DesignConstants.SPACING.MD2
                 })
 
               // 聊天列表卡片（单个大卡片包裹所有项）
@@ -716,14 +716,14 @@ export struct MessagePage {
                   Column() {
                     this.buildChatItem(item)
                   }
-                  .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+                  .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
 
                   if (index < this.chatListDataSource.totalCount() - 1) {
                     Row()
                       .width('100%')
                       .height(0.5)
                       .backgroundColor(this.getSurfaceBorder())
-                      .margin({ left: 16, right: 16 })
+                      .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
                   }
                 }, (item: ChatItem) => item.id + item.type)
               }
@@ -740,7 +740,7 @@ export struct MessagePage {
 
               if (this.isLoadingMore) {
                 LoadingMoreIndicator()
-                  .margin({ top: 12, bottom: 12 })
+                  .margin({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
               }
             }
             .width('100%')
@@ -756,8 +756,8 @@ export struct MessagePage {
         .layoutWeight(1)
         .onRefreshing(() => { this.loadData(true, true); })
         .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
         )
       }
     }
@@ -774,12 +774,12 @@ export struct MessagePage {
         .fontSize(DesignConstants.FONT.SIZE.XS2)
         .fontColor(this.getCurrentThemePalette().textSecondary)
         .textCase(TextCase.UpperCase)
-        .padding({ left: DesignConstants.SPACING.LG, bottom: 10 })
+        .padding({ left: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD2 })
 
       Scroll() {
-        Row({ space: 16 }) {
+        Row({ space: DesignConstants.SPACING.LG }) {
           ForEach(this.getOnlineChats(), (chat: ChatItem) => {
-            Column({ space: 6 }) {
+            Column({ space: DesignConstants.SPACING.SM2 }) {
               Stack({ alignContent: Alignment.Center }) {
                 SystemAvatar({
                   avatarUrl: chat.avatarUrl,
@@ -796,8 +796,8 @@ export struct MessagePage {
                 // 在线状态点：贴头像右下角（用 alignContent 取代硬编码坐标）
                 Stack({ alignContent: Alignment.BottomEnd }) {
                   Row()
-                    .width(12)
-                    .height(12)
+                    .width(DesignConstants.SPACING.MD)
+                    .height(DesignConstants.SPACING.MD)
                     .borderRadius(DesignConstants.RADIUS.FULL)
                     .backgroundColor(this.getCurrentThemePalette().success)
                     .border({ width: 2, color: this.getCurrentThemePalette().surfaceBackground })
@@ -823,7 +823,7 @@ export struct MessagePage {
       .scrollBar(BarState.Off)
     }
     .width('100%')
-    .padding({ top: 4, bottom: 4 })
+    .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
   }
 
   @Builder
@@ -848,11 +848,11 @@ export struct MessagePage {
         })
       }
 
-      Column({ space: 2 }) {
+      Column({ space: DesignConstants.SPACING.HALF }) {
         Row() {
           Text(item.name)
             .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13 对齐前端 text-body
-            .fontWeight(item.unreadCount > 0 ? FontWeight.Medium : FontWeight.Regular)
+            .fontWeight(item.unreadCount > 0 ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .layoutWeight(1)
             .maxLines(1)

@@ -36,7 +36,7 @@ export struct ErrorBoundary {
 
   build() {
     if (this.err) {
-      Column({ space: 16 }) {
+      Column({ space: DesignConstants.SPACING.LG }) {
         Text() {
           SymbolSpan($r('sys.symbol.exclamationmark_triangle_fill'))
             .fontSize(DesignConstants.FONT.SIZE.HERO)
@@ -45,7 +45,7 @@ export struct ErrorBoundary {
 
         Text('加载失败')
           .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor($r('app.color.brand_primary'))
 
         Text(this.err)
@@ -56,11 +56,11 @@ export struct ErrorBoundary {
 
         Button('重试')
           .type(ButtonType.Normal)
-          .height(40)
+          .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
           .backgroundColor($r('app.color.brand_primary'))
           .fontColor($r('app.color.bg_primary'))
           .borderRadius(DesignConstants.RADIUS.MD)
-          .padding({ left: 24, right: 24 })
+          .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL })
           .onClick(() => {
             this.onRetry();
           })

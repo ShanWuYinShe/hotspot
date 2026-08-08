@@ -391,7 +391,7 @@ export struct SettingsPage {
               if (this.isLoggedIn) {
                 Button('退出登录')
                   .width('100%')
-                  .height(50)
+                  .height(DesignConstants.COMPONENT.LOGOUT_BUTTON_HEIGHT)
                   .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
                   .fontColor(this.getCurrentThemePalette().accentBackground)
                   .fontSize(DesignConstants.FONT.SIZE.LG)
@@ -437,7 +437,7 @@ export struct SettingsPage {
     Column({ space: DesignConstants.SPACING.LG }) {
       Text('外观主题')
         .fontSize(DesignConstants.FONT.SIZE.XL)
-        .fontWeight(FontWeight.Bold)
+        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
         .fontColor(this.getThemeSheetPalette().textPrimary)
 
       Text('切换整体观感，预览卡片、按钮与底栏风格。')
@@ -466,10 +466,10 @@ export struct SettingsPage {
   private ThemeOptionCard(option: ThemeOptionItem) {
     Column({ space: DesignConstants.SPACING.MD }) {
       Row({ space: DesignConstants.SPACING.SM }) {
-        Column({ space: 4 }) {
+        Column({ space: DesignConstants.SPACING.XS }) {
           Text(option.label)
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontWeight(FontWeight.Medium)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getThemeOptionPalette(option).textPrimary)
           Text(option.description)
             .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -481,15 +481,15 @@ export struct SettingsPage {
         Text(this.isThemeOptionActive(option) ? '当前使用' : '点击切换')
           .fontSize(DesignConstants.FONT.SIZE.XS)
           .fontColor(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentText : this.getThemeOptionPalette(option).accentBackground)
-          .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+          .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
           .backgroundColor(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentBackground : this.getThemeOptionPalette(option).surfaceSubtle)
           .borderRadius(DesignConstants.SHAPE.CHIP)
       }
       .width('100%')
 
-      Column({ space: 8 }) {
+      Column({ space: DesignConstants.SPACING.SM }) {
         Stack({ alignContent: Alignment.Top }) {
-          Column({ space: 8 }) {
+          Column({ space: DesignConstants.SPACING.SM }) {
             Blank()
               .width(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).heroAvatarSize)
               .height(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).heroAvatarSize)
@@ -505,24 +505,24 @@ export struct SettingsPage {
               .backgroundColor(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).primaryButton.backgroundColor)
               .shadow(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).primaryButton.shadow)
 
-            Row({ space: 10 }) {
-              Blank().layoutWeight(1).height(40).borderRadius(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).tileRadius).backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
-              Blank().layoutWeight(1).height(40).borderRadius(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).tileRadius).backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
+            Row({ space: DesignConstants.SPACING.MD2 }) {
+              Blank().layoutWeight(1).height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD).borderRadius(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).tileRadius).backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
+              Blank().layoutWeight(1).height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD).borderRadius(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).tileRadius).backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
             }
             .width('100%')
 
             Column() {
               Row() {}
                 .width('100%')
-                .height(22)
+                .height(DesignConstants.FONT.SIZE.XL_PLUS)
                 .borderRadius(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).radius)
                 .backgroundColor(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).backgroundColor)
                 .shadow(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).shadow)
 
               Row() {}
-                .width(54)
-                .height(16)
-                .margin({ top: -19, left: 8 })
+                .width(DesignConstants.COMPONENT.THEME_PREVIEW_BAR_WIDTH)
+                .height(DesignConstants.COMPONENT.THEME_PREVIEW_BAR_HEIGHT)
+                .margin({ top: -19, left: DesignConstants.SPACING.SM })
                 .borderRadius(DesignConstants.RADIUS.FULL)
                 .backgroundColor(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).activeBackgroundColor)
                 .shadow(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).activeGlow)

@@ -159,7 +159,7 @@ export struct MomentFeedCard {
           .height('100%')
           .linearGradient({
             direction: GradientDirection.Bottom,
-            colors: [['rgba(0,0,0,0.04)', 0], ['rgba(0,0,0,0.44)', 1]]
+            colors: [[DesignConstants.COLOR.IMAGE_OVERLAY_START, 0], [DesignConstants.COLOR.IMAGE_OVERLAY_END, 1]]
           })
 
         Column() {
@@ -170,27 +170,22 @@ export struct MomentFeedCard {
               .backgroundColor(this.getPalette().accentBackground)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
-              .shadow({
-                radius: 8,
-                color: this.getPalette().accentShadow.color,
-                offsetX: 0,
-                offsetY: 2
-              })
+              .shadow(this.getPalette().accentShadow)
           }
 
           Blank()
 
-          Row({ space: 6 }) {
+          Row({ space: DesignConstants.SPACING.SM2 }) {
             SystemAvatar({
               avatarUrl: this.moment.user?.avatar_url ?? '',
               name: this.moment.user?.nickname ?? '',
-              avatarSize: 40,
+              avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
               shape: 'circle'
             })
 
             Text(this.moment.user?.nickname ?? '')
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontWeight(FontWeight.Medium)
+              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(DesignConstants.COLOR.WHITE)
               .layoutWeight(1)
               .maxLines(1)
@@ -205,14 +200,14 @@ export struct MomentFeedCard {
               Text(this.moment.location.location_name)
                 .fontSize(DesignConstants.FONT.SIZE.XS2)
                 .fontColor(DesignConstants.COLOR.WHITE)
-                .opacity(0.8)
+                .opacity(DesignConstants.OPACITY.EMPHASIZED)
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
             }
           }
           .width('100%')
           .alignItems(VerticalAlign.Center)
-          .padding({ left: 12, right: 12 })
+          .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
         }
         .width('100%')
         .height('100%')
@@ -228,8 +223,8 @@ export struct MomentFeedCard {
           .fontColor(this.getPalette().textSecondary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .lineHeight(20)
-          .padding({ left: 16, right: 16, top: 12, bottom: 4 })
+          .lineHeight(DesignConstants.FONT.LINE_HEIGHT.SM)
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.XS })
           .width('100%')
       }
 
@@ -262,7 +257,7 @@ export struct MomentFeedCard {
           }
         }
 
-        Row({ space: 12 }) {
+        Row({ space: DesignConstants.SPACING.MD }) {
           Text() {
             SymbolSpan($r(AppIcon.STAR_FILL))
               .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
@@ -292,7 +287,7 @@ export struct MomentFeedCard {
     .scale(this.isPressed
       ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD }
       : { x: 1, y: 1 })
-    .animation({ duration: 150, curve: Curve.EaseOut })
+    .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.isPressed = true;
@@ -337,14 +332,14 @@ export struct MomentFeedCard {
       })
         .onClick(() => this.openUserProfile(this.moment.user))
 
-      Column({ space: 2 }) {
+      Column({ space: DesignConstants.SPACING.HALF }) {
         Text(this.moment.user?.nickname ?? '匿名用户')
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
 
         // meta：时间 · 距离（对齐前端 moment-card__meta）
-        Row({ space: 4 }) {
+        Row({ space: DesignConstants.SPACING.XS }) {
           if (this.showTime && this.moment.created_at) {
             Text(this.formatTime(this.moment.created_at))
               .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -366,15 +361,15 @@ export struct MomentFeedCard {
 
       // location pill（对齐前端 moment-card__location：品牌色胶囊 + MapPin + 地名）
       if (this.moment.location?.location_name) {
-        Row({ space: 3 }) {
+        Row({ space: DesignConstants.SPACING.THREE }) {
           Text() {
             SymbolSpan($r(AppIcon.LOCATION))
-              .fontSize(11)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor([this.getPalette().accentBackground])
           }
           Text(this.moment.location.location_name)
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontWeight(FontWeight.Medium)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getPalette().accentBackground)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -395,7 +390,7 @@ export struct MomentFeedCard {
       Text(this.moment.description)
         .fontSize(this.textFontSize)
         .fontColor(this.getPalette().textPrimary)
-        .lineHeight(24)
+        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.LG)
     } else {
       Text(this.moment.description)
         .fontSize(this.textFontSize)
@@ -419,11 +414,11 @@ export struct MomentFeedCard {
   @Builder
   private imageGrid(): void {
     Scroll() {
-      Row({ space: 8 }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
         ForEach((this.moment.images ?? []).slice(0, 4), (img: MomentImage, imgIndex: number) => {
           Image(MediaUrlUtil.normalize(img.url))
-            .width(80)
-            .height(80)
+            .width(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
+            .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
             .objectFit(ImageFit.Cover)
             .borderRadius(DesignConstants.RADIUS.MD)
             .backgroundColor(this.getPalette().surfaceSubtle)
@@ -441,8 +436,8 @@ export struct MomentFeedCard {
 
         if ((this.moment.images ?? []).length > 4) {
           Text(`+${(this.moment.images ?? []).length - 4}`)
-            .width(80)
-            .height(80)
+            .width(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
+            .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
             .textAlign(TextAlign.Center)
             .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
             .fontColor(this.getPalette().textSecondary)
@@ -472,13 +467,13 @@ export struct MomentFeedCard {
         if (this.moment.images.length > 1) {
           Text(`+${this.moment.images.length - 1}`)
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontWeight(FontWeight.Bold)
+            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
             .fontColor(DesignConstants.COLOR.WHITE)
-            .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
             .borderRadius(DesignConstants.RADIUS.FULL)
-            .border({ width: 1, color: 'rgba(255,255,255,0.24)' })
-            .backgroundColor('rgba(15,23,42,0.58)')
-            .margin({ right: 10, bottom: 10 })
+            .border({ width: 1, color: DesignConstants.COLOR.IMAGE_BADGE_BORDER })
+            .backgroundColor(DesignConstants.COLOR.IMAGE_BADGE_BG)
+            .margin({ right: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
         }
       }
       .width('100%')

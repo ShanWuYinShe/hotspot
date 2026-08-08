@@ -5,7 +5,7 @@
  *   SkeletonShimmer({ active: this.isLoading }) {
  *     Column() {
  *       Skeleton({ width: '100%', height: 16 })
- *       Skeleton({ width: '80%', height: 16 }).margin({ top: 8 })
+ *       Skeleton({ width: '80%', height: 16 }).margin({ top: DesignConstants.SPACING.SM })
  *     }
  *   }
  *
@@ -52,8 +52,8 @@ export struct SkeletonShimmer {
   private startShimmer() {
     this.opacity = 1.0;
     animateTo({
-      duration: 1500,
-      curve: Curve.Smooth,
+      duration: 1500, // shimmer 循环时长（行为常量）
+      curve: DesignConstants.ANIMATION.CURVE_SMOOTH,
       iterations: -1,
       playMode: PlayMode.Alternate
     }, () => {

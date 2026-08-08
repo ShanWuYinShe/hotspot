@@ -931,8 +931,8 @@ export struct GroupDetailPage {
         SystemLoadingView({ message: '加载群组信息中...' })
           .layoutWeight(1)
           .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+            TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
           )
       } else if (this.errorMessage) {
         Column() {
@@ -959,8 +959,8 @@ export struct GroupDetailPage {
         .justifyContent(FlexAlign.Center)
         .padding(DesignConstants.SPACING.XL)
         .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
         )
         } else if (this.groupInfo) {
         // 使用 List 布局（扁平风格）
@@ -1085,7 +1085,7 @@ export struct GroupDetailPage {
                  Text(`${formatCount(this.groupInfo?.group?.members_count)} 名成员`)
                   .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor(this.getCurrentThemePalette().textSecondary)
-                  .margin({ top: 2 })
+                  .margin({ top: DesignConstants.SPACING.HALF })
               }
               .layoutWeight(1)
               .alignItems(HorizontalAlign.Start)
@@ -1119,7 +1119,7 @@ export struct GroupDetailPage {
                   Text('处理待审核的入群请求')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontColor(this.getCurrentThemePalette().textSecondary)
-                    .margin({ top: 2 })
+                    .margin({ top: DesignConstants.SPACING.HALF })
                 }
                 .layoutWeight(1)
                 .alignItems(HorizontalAlign.Start)
@@ -1224,8 +1224,8 @@ export struct GroupDetailPage {
           bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
         })
         .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
         )
       }
     }
@@ -1284,7 +1284,7 @@ export struct GroupDetailPage {
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
-          .height(34)
+          .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
           .enabled(!this.isSavingGroupInfo && !this.isEditGroupAvatarUploading)
           .opacity(this.isSavingGroupInfo || this.isEditGroupAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => this.closeEditGroupSheet())
@@ -1296,7 +1296,7 @@ export struct GroupDetailPage {
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
-          .height(34)
+          .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
           .enabled(!this.isSavingGroupInfo && !this.isEditGroupAvatarUploading)
           .opacity(this.isSavingGroupInfo || this.isEditGroupAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => this.saveGroupInfo())
@@ -1335,7 +1335,7 @@ export struct GroupDetailPage {
                     .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
                     .fontColor(this.getCurrentThemePalette().textSecondary)
                     .borderRadius(DesignConstants.RADIUS.XL)
-                    .height(30)
+                    .height(DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT)
                     .onClick(() => this.resetEditGroupAvatarSelection())
                 }
               }
@@ -1359,7 +1359,7 @@ export struct GroupDetailPage {
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .maxLength(GROUP_NAME_MAX)
               .onChange((value: string) => { this.editGroupName = value; })
-              .height(42)
+              .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                .backgroundColor(this.getSurfaceSubtle())
               .shadow(this.getCurrentThemePalette().controlShadow)
               .borderRadius(DesignConstants.RADIUS.MD)
@@ -1387,7 +1387,7 @@ export struct GroupDetailPage {
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .maxLength(GROUP_DESCRIPTION_MAX)
               .onChange((value: string) => { this.editGroupDescription = value; })
-              .height(120)
+              .height(DesignConstants.COMPONENT.PLACEHOLDER_AREA_HEIGHT)
                .backgroundColor(this.getSurfaceSubtle())
               .shadow(this.getCurrentThemePalette().controlShadow)
               .borderRadius(DesignConstants.RADIUS.MD)
@@ -1458,7 +1458,7 @@ export struct GroupDetailPage {
             .backgroundColor(this.getCurrentThemePalette().accentBackground)
             .fontColor(this.getCurrentThemePalette().accentText)
             .borderRadius(DesignConstants.RADIUS.XL)
-            .height(40)
+            .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
             .onClick(() => { this.loadGroupMembers(); })
         }
         .width('100%')
@@ -1474,7 +1474,7 @@ export struct GroupDetailPage {
           if (this.membersLoadingMore) {
             ListItem() {
               Row({ space: DesignConstants.SPACING.SM }) {
-                LoadingProgress().width(20).height(20)
+                LoadingProgress().width(DesignConstants.COMPONENT.LOADING_ICON_SIZE).height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
                 Text('加载更多...')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor(this.getCurrentThemePalette().textSecondary)
@@ -1543,7 +1543,7 @@ export struct GroupDetailPage {
             .backgroundColor(this.getCurrentThemePalette().accentBackground)
             .fontColor(this.getCurrentThemePalette().accentText)
             .borderRadius(DesignConstants.RADIUS.XL)
-            .height(40)
+            .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
             .onClick(() => { this.loadGroupApplications(); })
         }
         .width('100%')
@@ -1560,7 +1560,7 @@ export struct GroupDetailPage {
           if (this.applicationsLoadingMore) {
             ListItem() {
               Row({ space: DesignConstants.SPACING.SM }) {
-                LoadingProgress().width(20).height(20)
+                LoadingProgress().width(DesignConstants.COMPONENT.LOADING_ICON_SIZE).height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
                 Text('加载更多...')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor(this.getCurrentThemePalette().textSecondary)
@@ -1616,7 +1616,7 @@ export struct GroupDetailPage {
           Text(`申请于 ${new Date(application.created_at).toLocaleString()}`)
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getCurrentThemePalette().textSecondary)
-            .margin({ top: 4 })
+            .margin({ top: DesignConstants.SPACING.XS })
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
@@ -1637,7 +1637,7 @@ export struct GroupDetailPage {
           .backgroundColor(this.getCurrentThemePalette().accentBackground)
           .fontColor(this.getCurrentThemePalette().accentText)
           .borderRadius(DesignConstants.RADIUS.XL)
-          .height(34)
+          .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
           .layoutWeight(1)
           .enabled(!this.isApplicationHandling(application.application_id))
           .opacity(this.isApplicationHandling(application.application_id) ? DesignConstants.OPACITY.LOADING : 1)
@@ -1648,7 +1648,7 @@ export struct GroupDetailPage {
           .backgroundColor(this.getSurfaceSubtle())
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .borderRadius(DesignConstants.RADIUS.XL)
-          .height(34)
+          .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
           .layoutWeight(1)
           .enabled(!this.isApplicationHandling(application.application_id))
           .opacity(this.isApplicationHandling(application.application_id) ? DesignConstants.OPACITY.LOADING : 1)
@@ -1687,7 +1687,7 @@ export struct GroupDetailPage {
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getRoleColor(member.role))
             .backgroundColor(this.getSurfaceSubtle())
-            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 2, bottom: 2 })
+            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
             .borderRadius(DesignConstants.RADIUS.SM)
 
           if (member.joined_at) {

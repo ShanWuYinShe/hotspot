@@ -149,7 +149,7 @@ export struct NearbyGroupsListPage {
 
   @Builder
   private buildGroupRow(group: GroupItem) {
-    Row({ space: 12 }) {
+    Row({ space: DesignConstants.SPACING.MD }) {
       Row() {
         Text() {
           SymbolSpan($r(AppIcon.GROUP))
@@ -157,21 +157,21 @@ export struct NearbyGroupsListPage {
             .fontColor([this.getCurrentThemePalette().accentBackground])
         }
       }
-      .width(48)
-      .height(48)
+      .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+      .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
       .justifyContent(FlexAlign.Center)
       .borderRadius(DesignConstants.RADIUS.LG)
       .backgroundColor(this.getCurrentThemePalette().accentMuted)
 
-      Column({ space: 4 }) {
+      Column({ space: DesignConstants.SPACING.XS }) {
         Text(group.group?.name ?? '')
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-        Row({ space: 8 }) {
+        Row({ space: DesignConstants.SPACING.SM }) {
           Text(`${formatCount(group.group?.members_count)} 人`)
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getCurrentThemePalette().textTertiary)
@@ -201,7 +201,7 @@ export struct NearbyGroupsListPage {
       }
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 12, bottom: 12 })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .onClick(() => {
       const groupId = group.group?.group_id;
       if (groupId) {
@@ -219,12 +219,12 @@ export struct NearbyGroupsListPage {
           title: '附近的群组',
           showBackButton: true,
           onBack: () => { AppRouter.pop(); },
-          titleWeight: FontWeight.Medium,
+          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           backgroundVariant: 'transparent'
         })
 
         // 搜索栏（对齐前端 /groups/nearby）
-        Row({ space: 10 }) {
+        Row({ space: DesignConstants.SPACING.MD2 }) {
           Text() {
             SymbolSpan($r(AppIcon.SEARCH))
               .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
@@ -251,7 +251,7 @@ export struct NearbyGroupsListPage {
             Text(tag)
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(tag === this.activeTag ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().textSecondary)
-              .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+              .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
               .borderRadius(DesignConstants.SHAPE.CHIP)
               .backgroundColor(tag === this.activeTag ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().surfaceSubtle)
               .onClick(() => {
@@ -267,10 +267,10 @@ export struct NearbyGroupsListPage {
         // Hero 统计卡（对齐前端「附近概览」）
         if (this.hasAnyData()) {
           Row({ space: DesignConstants.SPACING.MD }) {
-            Column({ space: 2 }) {
+            Column({ space: DesignConstants.SPACING.HALF }) {
               Text(`${this.groups.length}`)
                 .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontWeight(FontWeight.Bold)
+                .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
                 .fontColor(this.getCurrentThemePalette().accentBackground)
               Text('群组')
                 .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -280,13 +280,13 @@ export struct NearbyGroupsListPage {
             .layoutWeight(1)
 
             Column()
-              .width(1).height(28)
+              .width(1).height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
               .backgroundColor(this.getCurrentThemePalette().borderColor)
 
-            Column({ space: 2 }) {
+            Column({ space: DesignConstants.SPACING.HALF }) {
               Text('5km')
                 .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontWeight(FontWeight.Bold)
+                .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
                 .fontColor(this.getCurrentThemePalette().accentBackground)
               Text('半径')
                 .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -341,7 +341,7 @@ export struct NearbyGroupsListPage {
                     .fontColor(this.getCurrentThemePalette().textTertiary)
                     .width('100%')
                     .textAlign(TextAlign.Center)
-                    .padding({ top: 16, bottom: 16 })
+                    .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
                 }
               }
             }

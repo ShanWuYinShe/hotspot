@@ -78,8 +78,8 @@ export struct RelationshipHubPage {
     Text(count > 0 ? `${label} (${count})` : label)
       .fontColor(this.activeRelTab === index ? this.getPalette().accentText : this.getPalette().textSecondary)
       .fontSize(DesignConstants.FONT.SIZE.SM)
-      .fontWeight(FontWeight.Medium)
-      .padding({ left: 14, right: 14, top: 6, bottom: 6 })
+      .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+      .padding({ left: DesignConstants.SPACING.MD3, right: DesignConstants.SPACING.MD3, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.activeRelTab === index ? this.getPalette().accentBackground : this.getPalette().surfaceBackground)
       .border(this.activeRelTab === index

@@ -44,7 +44,7 @@ export struct AdvancedSettingsPage {
         showBackButton: true,
         onBack: () => { AppRouter.pop(); },
         titleAlign: TextAlign.Center,
-        titleWeight: FontWeight.Medium,
+        titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
         backgroundVariant: 'transparent'
       })
 
@@ -63,7 +63,7 @@ export struct AdvancedSettingsPage {
         .shadow(this.getCurrentThemePalette().elevatedShadow)
         .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
         .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
-          top: DesignConstants.SPACING.LG, bottom: 14 })
+          top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD3 })
       }
       .width('100%')
       .layoutWeight(1)
@@ -91,14 +91,14 @@ export struct AdvancedSettingsPage {
             .fontColor([this.getCurrentThemePalette().accentBackground])
         }
       }
-      .width(38)
-      .height(38)
+      .width(DesignConstants.COMPONENT.BRAND_ICON_SIZE)
+      .height(DesignConstants.COMPONENT.BRAND_ICON_SIZE)
       .borderRadius(DesignConstants.SHAPE.ICON_TILE)
       .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
 
-      Column({ space: 4 }) {
+      Column({ space: DesignConstants.SPACING.XS }) {
         Text(title)
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .fontColor(this.getCurrentThemePalette().textPrimary)
@@ -119,8 +119,8 @@ export struct AdvancedSettingsPage {
             .fontColor([this.getCurrentThemePalette().textSecondary])
         }
       }
-      .width(28)
-      .height(28)
+      .width(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
+      .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
       .borderRadius(DesignConstants.SHAPE.ICON_TILE)
       .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
       .justifyContent(FlexAlign.Center)

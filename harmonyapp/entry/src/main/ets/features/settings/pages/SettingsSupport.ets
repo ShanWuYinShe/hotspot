@@ -106,7 +106,7 @@ export struct SettingsSectionCard {
     Column({ space: DesignConstants.SPACING.SM }) {
       Text(this.title)
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontWeight(FontWeight.Medium)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getPalette().textSecondary)
         .width('100%')
 
@@ -146,17 +146,17 @@ export struct SettingsEntryRow {
             .fontColor([this.getPalette().textSecondary])
         }
       }
-      .width(36)
-      .height(36)
+      .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+      .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.getPalette().surfaceSubtle)
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
 
-      Column({ space: 4 }) {
+      Column({ space: DesignConstants.SPACING.XS }) {
         Text(this.item.title)
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         if (this.item.subtitle) {
           Text(this.item.subtitle)
@@ -178,7 +178,7 @@ export struct SettingsEntryRow {
       })
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD3, bottom: DesignConstants.SPACING.MD3 })
     .backgroundColor(this.getListItemStyle().backgroundColor)
     .borderRadius(this.getListItemStyle().borderRadius)
     .onClick(this.item.action)
@@ -229,10 +229,10 @@ export struct SettingsMetaCard {
   build() {
     Column({ space: DesignConstants.SPACING.MD }) {
       Row({ space: DesignConstants.SPACING.SM }) {
-        Column({ space: 4 }) {
+        Column({ space: DesignConstants.SPACING.XS }) {
           Text('系统版本状态')
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontWeight(FontWeight.Medium)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getPalette().textPrimary)
           Text(this.meta?.status === 'sunset' ? '可能影响正常使用' : '与服务端版本保持同步')
             .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -243,7 +243,7 @@ export struct SettingsMetaCard {
 
         Text(this.getStatusText())
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
           .backgroundColor(this.getStatusBackground())
           .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
@@ -335,10 +335,10 @@ export struct AnnouncementSummaryCard {
   build() {
     Column({ space: DesignConstants.SPACING.MD }) {
       Row() {
-        Column({ space: 4 }) {
+        Column({ space: DesignConstants.SPACING.XS }) {
           Text('系统公告')
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontWeight(FontWeight.Medium)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getPalette().textPrimary)
           Text(this.items.length > 0 ? '查看最近平台通知与维护提醒' : '当前暂无系统公告')
             .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -354,7 +354,7 @@ export struct AnnouncementSummaryCard {
             .fontColor(this.getPalette().accentBackground)
             .borderRadius(DesignConstants.RADIUS.XL)
             .border({ width: 1, color: this.getPalette().floatingBorderColor })
-            .height(34)
+            .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
             .onClick(this.openAll)
         }
       }
@@ -362,11 +362,11 @@ export struct AnnouncementSummaryCard {
 
       if (this.items.length > 0) {
         ForEach(this.maxItems > 0 ? this.items.slice(0, this.maxItems) : this.items, (item: SystemAnnouncementItem) => {
-          Column({ space: 6 }) {
+          Column({ space: DesignConstants.SPACING.SM2 }) {
             Row({ space: DesignConstants.SPACING.SM }) {
               Text(item.title)
                 .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontWeight(FontWeight.Medium)
+                .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                 .fontColor(this.getPalette().textPrimary)
                 .layoutWeight(1)
                 .maxLines(1)
@@ -382,7 +382,7 @@ export struct AnnouncementSummaryCard {
 
             Text(item.content)
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .lineHeight(20)
+              .lineHeight(DesignConstants.FONT.LINE_HEIGHT.SM)
               .fontColor(this.getPalette().textSecondary)
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -419,7 +419,7 @@ export struct SupportConfigCard {
     Column({ space: DesignConstants.SPACING.MD }) {
       Text('支持与服务信息')
         .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontWeight(FontWeight.Medium)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getPalette().textPrimary)
         .width('100%')
 
@@ -466,10 +466,10 @@ export struct ToggleSettingRow {
 
   build() {
     Row({ space: DesignConstants.SPACING.MD }) {
-      Column({ space: 4 }) {
+      Column({ space: DesignConstants.SPACING.XS }) {
         Text(this.item.title)
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         Text(this.item.subtitle)
           .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -503,10 +503,10 @@ export struct SessionListSection {
   build() {
     Column({ space: DesignConstants.SPACING.MD }) {
       Row() {
-        Column({ space: 4 }) {
+        Column({ space: DesignConstants.SPACING.XS }) {
           Text('当前会话')
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontWeight(FontWeight.Medium)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getPalette().textPrimary)
           Text('查看已登录设备，并可撤销其他会话。')
             .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -522,7 +522,7 @@ export struct SessionListSection {
             .fontColor(this.getPalette().accentBackground)
             .borderRadius(DesignConstants.RADIUS.XL)
             .border({ width: 1, color: this.getPalette().floatingBorderColor })
-            .height(34)
+            .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
             .onClick(this.revokeAll)
         }
       }
@@ -536,10 +536,10 @@ export struct SessionListSection {
       } else {
         ForEach(this.sessions, (item: SessionItem) => {
           Row({ space: DesignConstants.SPACING.MD }) {
-            Column({ space: 4 }) {
+            Column({ space: DesignConstants.SPACING.XS }) {
               Text(formatSessionLabel(item))
                 .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontWeight(FontWeight.Medium)
+                .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                 .fontColor(this.getPalette().textPrimary)
               Text(`创建于 ${formatDateTime(item.created_at)}`)
                 .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -558,7 +558,7 @@ export struct SessionListSection {
                 .fontColor(this.getPalette().accentBackground)
                 .borderRadius(DesignConstants.RADIUS.XL)
                 .border({ width: 1, color: this.getPalette().floatingBorderColor })
-                .height(34)
+                .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
                 .onClick(() => this.revokeOne(item))
             } else {
               Text('当前')
@@ -607,11 +607,11 @@ export struct RelationshipListSection {
   @Builder
   private buildUserLine(userId: string, nickname: string, meta: string, actionLabel?: string, action?: () => void) {
     Row({ space: DesignConstants.SPACING.MD }) {
-      SystemAvatar({ name: nickname, avatarSize: 40 })
-      Column({ space: 4 }) {
+      SystemAvatar({ name: nickname, avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL })
+      Column({ space: DesignConstants.SPACING.XS }) {
         Text(nickname)
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         if (meta) {
           Text(meta)
@@ -630,7 +630,7 @@ export struct RelationshipListSection {
           .fontColor(this.getPalette().accentBackground)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .border({ width: 1, color: this.getPalette().borderColor })
-          .height(34)
+          .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
           .onClick(action)
       }
     }
@@ -645,7 +645,7 @@ export struct RelationshipListSection {
     Column({ space: DesignConstants.SPACING.MD }) {
       Text(this.title)
         .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontWeight(FontWeight.Medium)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getPalette().textPrimary)
         .width('100%')
       if (this.subtitle) {

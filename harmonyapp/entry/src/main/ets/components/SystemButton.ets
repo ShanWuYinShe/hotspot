@@ -146,7 +146,7 @@ export struct SystemButton {
         if (this.label.length > 0) {
           Text(this.label)
             .fontSize(this.getFontSize())
-            .fontWeight(FontWeight.Medium)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getTextColor())
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })

@@ -508,15 +508,15 @@ export struct GroupPage {
       if (this.isLoading) {
         SystemLoadingView({ message: '正在加载我的群组...' })
           .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+            TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
           )
       } else if (this.errorMessage && this.groups.length === 0) {
         EmptyState({ icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试', onAction: () => { this.loadMyGroups(); } })
           .layoutWeight(1)
           .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+            TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
           )
       } else if (this.groups.length === 0) {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
@@ -524,8 +524,8 @@ export struct GroupPage {
         }
         .onRefreshing(() => { this.loadMyGroups(true); })
         .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
         )
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
@@ -534,8 +534,8 @@ export struct GroupPage {
         .layoutWeight(1)
         .onRefreshing(() => { this.loadMyGroups(true); })
         .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
         )
       }
     }
@@ -562,7 +562,7 @@ export struct GroupPage {
       Row() {
         Text('我的群邀请')
           .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Bold)
+          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
 
@@ -610,18 +610,18 @@ export struct GroupPage {
 
   @Builder
   private buildMyInviteItem(invite: GroupInviteItem) {
-    Column({ space: 8 }) {
+    Column({ space: DesignConstants.SPACING.SM }) {
       Row({ space: DesignConstants.SPACING.MD }) {
         SystemAvatar({
           avatarUrl: invite.group?.avatar_url ?? '',
           name: invite.group?.name ?? '群组',
-          avatarSize: 40,
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
           shape: 'squircle'
         })
-        Column({ space: 2 }) {
+        Column({ space: DesignConstants.SPACING.HALF }) {
           Text(invite.group?.name ?? '群组')
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontWeight(FontWeight.Medium)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -643,14 +643,14 @@ export struct GroupPage {
       }
       .width('100%')
 
-      Row({ space: 8 }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
         Button(this.isInviteHandling(invite.invite_id) ? '处理中...' : '接受')
           .type(ButtonType.Capsule)
           .backgroundColor(this.getCurrentThemePalette().accentBackground)
           .fontColor(this.getCurrentThemePalette().accentText)
           .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
-          .height(38)
+          .height(DesignConstants.COMPONENT.INLINE_BUTTON_HEIGHT)
           .layoutWeight(1)
           .enabled(!this.isInviteHandling(invite.invite_id))
           .opacity(this.isInviteHandling(invite.invite_id) ? DesignConstants.OPACITY.LOADING : 1)
@@ -662,7 +662,7 @@ export struct GroupPage {
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
-          .height(38)
+          .height(DesignConstants.COMPONENT.INLINE_BUTTON_HEIGHT)
           .layoutWeight(1)
           .enabled(!this.isInviteHandling(invite.invite_id))
           .opacity(this.isInviteHandling(invite.invite_id) ? DesignConstants.OPACITY.LOADING : 1)
@@ -676,7 +676,7 @@ export struct GroupPage {
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .backgroundColor(this.getSurfaceBackground())
     .border({ width: 1, color: this.getSurfaceBorder() })
-    .margin({ bottom: 12 })
+    .margin({ bottom: DesignConstants.SPACING.MD })
   }
 
   @Builder
@@ -685,7 +685,7 @@ export struct GroupPage {
       Row() {
         Text('我的入群申请')
           .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Bold)
+          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
 
@@ -733,18 +733,18 @@ export struct GroupPage {
 
   @Builder
   private buildMyApplicationItem(application: GroupApplicationItem) {
-    Column({ space: 8 }) {
+    Column({ space: DesignConstants.SPACING.SM }) {
       Row({ space: DesignConstants.SPACING.MD }) {
         SystemAvatar({
           avatarUrl: '',
           name: '群组申请',
-          avatarSize: 40,
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
           shape: 'squircle'
         })
-        Column({ space: 2 }) {
+        Column({ space: DesignConstants.SPACING.HALF }) {
           Text('群组申请')
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontWeight(FontWeight.Medium)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -773,7 +773,7 @@ export struct GroupPage {
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
-          .height(38)
+          .height(DesignConstants.COMPONENT.INLINE_BUTTON_HEIGHT)
           .layoutWeight(1)
           .enabled(!this.isApplicationHandling(application.application_id))
           .opacity(this.isApplicationHandling(application.application_id) ? DesignConstants.OPACITY.LOADING : 1)
@@ -787,7 +787,7 @@ export struct GroupPage {
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
     .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
-    .margin({ bottom: 12 })
+    .margin({ bottom: DesignConstants.SPACING.MD })
   }
 
   @Builder
@@ -827,10 +827,10 @@ export struct GroupPage {
         shape: 'squircle'
       })
 
-      Column({ space: 2 }) {
+      Column({ space: DesignConstants.SPACING.HALF }) {
         Text(group.group.name)
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -863,8 +863,8 @@ export struct GroupPage {
         .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
         .fontColor(this.getCurrentThemePalette().accentBackground)
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontWeight(FontWeight.Medium)
-        .height(34)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
         .shadow(this.getCurrentThemePalette().controlShadow)
         .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
         .enabled(!this.isGroupJoining(group.group.group_id))
@@ -881,7 +881,7 @@ export struct GroupPage {
     .borderRadius(AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).borderRadius)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-    .margin({ bottom: 12 })
+    .margin({ bottom: DesignConstants.SPACING.MD })
     .alignItems(VerticalAlign.Center)
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {

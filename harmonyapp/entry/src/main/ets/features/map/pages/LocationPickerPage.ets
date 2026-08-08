@@ -108,14 +108,14 @@ function TopBar(props: TopBarProps) {
           .fontColor([$r('sys.color.ohos_id_color_text_primary')])
       }
     }
-    .width(44)
-    .height(44)
+    .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
+    .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
     .justifyContent(FlexAlign.Center)
     .borderRadius(DesignConstants.RADIUS.FULL)
     .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceSubtle)
     .onClick(props.onBack)
 
-    Row({ space: 6 }) {
+    Row({ space: DesignConstants.SPACING.SM2 }) {
       Text() {
         SymbolSpan($r(AppIcon.FILTER))
           .fontSize(DesignConstants.FONT.SIZE.LG)
@@ -123,10 +123,10 @@ function TopBar(props: TopBarProps) {
       }
       Text('筛选')
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontWeight(FontWeight.Medium)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor($r('sys.color.ohos_id_color_text_primary'))
     }
-    .height(40)
+    .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
     .padding({
       left: DesignConstants.SPACING.MD,
       right: DesignConstants.SPACING.MD
@@ -161,25 +161,25 @@ interface FilterMenuItemProps {
 function FilterMenuItem(props: FilterMenuItemProps) {
   Row({ space: DesignConstants.SPACING.MD }) {
     Image($rawfile(props.markerSvg))
-      .width(24)
-      .height(32)
+      .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
+      .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
       .objectFit(ImageFit.Contain)
     Text(props.label)
       .fontSize(DesignConstants.FONT.SIZE.MD)
-      .fontWeight(props.active ? FontWeight.Medium : FontWeight.Normal)
+      .fontWeight(props.active ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
       .fontColor(props.active
         ? resolveLocationPickerPalette(props.resolvedThemeId).textPrimary
         : resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
       .layoutWeight(1)
     Row()
-      .width(14)
-      .height(14)
+      .width(DesignConstants.SPACING.MD3)
+      .height(DesignConstants.SPACING.MD3)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(props.active ? props.accentColor : DesignConstants.COLOR.TRANSPARENT)
       .border({ width: 1.5, color: props.accentColor })
   }
   .width('100%')
-  .height(44)
+  .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
   .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
   .justifyContent(FlexAlign.Center)
   .alignItems(VerticalAlign.Center)
@@ -229,7 +229,7 @@ function FilterDropdownPanel(props: FilterPanelProps) {
       onToggle: props.onToggleMoments
     })
   }
-  .width(180)
+  .width(DesignConstants.LAYOUT.FILTER_PANEL_WIDTH)
   .padding(DesignConstants.SPACING.SM)
   .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceBackground)
   .borderRadius(DesignConstants.SHAPE.CARD)
@@ -254,13 +254,13 @@ function MapToast(props: MapToastProps) {
       .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
       .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceElevated)
       .borderRadius(DesignConstants.RADIUS.XL)
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 8, bottom: 8 })
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
       .shadow(DesignConstants.SHADOW.SMALL)
       .position({ top: SafeAreaUtils.resolveTopPadding(props.safeAreaTop, 76), left: 20, right: 20 })
       .onClick(() => {})
       .transition(
-        TransitionEffect.OPACITY.animation({ duration: 280, curve: Curve.FastOutSlowIn })
-          .combine(TransitionEffect.move(TransitionEdge.TOP).animation({ duration: 280, curve: Curve.FastOutSlowIn }))
+        TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_280, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+          .combine(TransitionEffect.move(TransitionEdge.TOP).animation({ duration: DesignConstants.ANIMATION.DURATION_280, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
       )
   }
 }
@@ -301,7 +301,7 @@ struct SearchPanel {
         })
           .id('locationPickerSearchInput')
           .layoutWeight(1)
-          .height(40)
+          .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
           .backgroundColor(this.getPalette().surfaceSubtle)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .shadow(DesignConstants.SHADOW.INSET)
@@ -324,8 +324,8 @@ struct SearchPanel {
 
         if (this.isSearching) {
           LoadingProgress()
-            .width(18)
-            .height(18)
+            .width(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
+            .height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
             .color($r('sys.color.ohos_id_color_emphasize'))
         }
 
@@ -335,7 +335,7 @@ struct SearchPanel {
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
         }
-        .height(40)
+        .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
         .justifyContent(FlexAlign.Center)
         .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
         .onClick(this.onClose)
@@ -351,8 +351,8 @@ struct SearchPanel {
             // 加载中状态
             Row() {
               LoadingProgress()
-                .width(24)
-                .height(24)
+                .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
+                .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
                 .color($r('sys.color.ohos_id_color_emphasize'))
               Text('正在搜索...')
                 .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -360,7 +360,7 @@ struct SearchPanel {
                 .margin({ left: DesignConstants.SPACING.SM })
             }
             .width('100%')
-            .height(80)
+            .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
             .justifyContent(FlexAlign.Center)
           } else if (this.searchResults.length > 0) {
             // 搜索结果列表
@@ -375,8 +375,8 @@ struct SearchPanel {
                           .fontColor([$r('sys.color.ohos_id_color_emphasize')])
                       }
                     }
-                    .width(32)
-                    .height(32)
+                    .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+                    .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
                     .justifyContent(FlexAlign.Center)
                     .backgroundColor(this.getPalette().surfaceSubtle)
                     .borderRadius(DesignConstants.RADIUS.MD)
@@ -397,12 +397,7 @@ struct SearchPanel {
                   })
                   .backgroundColor(this.getPalette().surfaceBackground)
                   .borderRadius(DesignConstants.RADIUS.XXL)
-                  .shadow({
-                    radius: DesignConstants.SHADOW.MEDIUM.radius,
-                    color: DesignConstants.SHADOW.MEDIUM.color,
-                    offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
-                    offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
-                  })
+                  .shadow(DesignConstants.SHADOW.MEDIUM)
                   .border({ width: 1, color: this.getPalette().borderColor })
                   .onClick(() => { this.onSelectResult(item); })
                 }
@@ -422,16 +417,16 @@ struct SearchPanel {
                 .margin({ top: DesignConstants.SPACING.XS })
             }
             .width('100%')
-            .height(120)
+            .height(DesignConstants.COMPONENT.PLACEHOLDER_AREA_HEIGHT)
             .justifyContent(FlexAlign.Center)
             .alignItems(HorizontalAlign.Center)
           } else if (this.anchorHistory.length > 0) {
             // 历史锚点列表（搜索未输入时展示）
             Column({ space: DesignConstants.SPACING.SM }) {
-              Row({ space: 6 }) {
+              Row({ space: DesignConstants.SPACING.SM2 }) {
                 Text('最近使用')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontWeight(FontWeight.Medium)
+                  .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                   .fontColor($r('sys.color.ohos_id_color_text_primary'))
                 Blank()
                 Text('清空')
@@ -444,7 +439,7 @@ struct SearchPanel {
               List({ space: DesignConstants.SPACING.SM }) {
                 ForEach(this.anchorHistory.slice(0, MAX_HISTORY_ITEMS), (item: AnchorHistoryItem, index: number) => {
                   ListItem() {
-                    Row({ space: 12 }) {
+                    Row({ space: DesignConstants.SPACING.MD }) {
                       Column() {
                         Text() {
                           SymbolSpan($r(AppIcon.TIME))
@@ -452,8 +447,8 @@ struct SearchPanel {
                             .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
                         }
                       }
-                      .width(32)
-                      .height(32)
+                      .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+                      .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
                       .justifyContent(FlexAlign.Center)
                       .backgroundColor(this.getPalette().surfaceSubtle)
                       .borderRadius(DesignConstants.RADIUS.MD)
@@ -474,12 +469,7 @@ struct SearchPanel {
                     })
                     .backgroundColor(this.getPalette().surfaceBackground)
                     .borderRadius(DesignConstants.RADIUS.XXL)
-                    .shadow({
-                      radius: DesignConstants.SHADOW.MEDIUM.radius,
-                      color: DesignConstants.SHADOW.MEDIUM.color,
-                      offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
-                      offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
-                    })
+                    .shadow(DesignConstants.SHADOW.MEDIUM)
                     .border({ width: 1, color: this.getPalette().borderColor })
                     .onClick(() => {
                       this.onSelectHistory(item);
@@ -500,13 +490,13 @@ struct SearchPanel {
                 .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             }
             .width('100%')
-            .height(100)
+            .height(DesignConstants.COMPONENT.SKELETON_CARD_HEIGHT)
             .justifyContent(FlexAlign.Center)
             .alignItems(HorizontalAlign.Center)
           }
         }
         .width('100%')
-        .padding({ top: 4 })
+        .padding({ top: DesignConstants.SPACING.XS })
       }
       .scrollable(ScrollDirection.Vertical)
       .scrollBar(BarState.Auto)
@@ -561,7 +551,7 @@ struct MainPanel {
       }
     }
     this.getUIContext().animateTo(
-      { duration: 250, curve: curves.springMotion(0.6, 0.9) },
+      { duration: DesignConstants.ANIMATION.DURATION_250, curve: curves.springMotion(0.6, 0.9) },
       () => { this.panelHeight = target; }
     );
   }
@@ -571,13 +561,13 @@ struct MainPanel {
       // 拖拽手柄区域（36px 高的触控热区，内含视觉指示条）
       Column() {
         Column()
-          .width(36)
+          .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
           .height(4)
           .borderRadius(DesignConstants.RADIUS.SM)
           .backgroundColor(this.getPalette().surfaceSubtle)
       }
       .width('100%')
-      .height(36)
+      .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .justifyContent(FlexAlign.Center)
       .gesture(
         PanGesture({ direction: PanDirection.Vertical })
@@ -608,7 +598,7 @@ struct MainPanel {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
       .width('100%')
-      .height(40)
+      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
       .alignItems(VerticalAlign.Center)
       .backgroundColor(this.getPalette().surfaceSubtle)
@@ -625,7 +615,7 @@ struct MainPanel {
             Row() {
               Text('最近使用')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontWeight(FontWeight.Medium)
+                .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                 .fontColor($r('sys.color.ohos_id_color_text_secondary'))
               Blank()
               if (this.anchorHistory.length > 0) {
@@ -651,8 +641,8 @@ struct MainPanel {
                             .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
                         }
                       }
-                      .width(32)
-                      .height(32)
+                      .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+                      .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
                       .justifyContent(FlexAlign.Center)
                       .backgroundColor(this.getPalette().surfaceSubtle)
                       .borderRadius(DesignConstants.RADIUS.MD)
@@ -673,12 +663,7 @@ struct MainPanel {
                     })
                     .backgroundColor(this.getPalette().surfaceBackground)
                     .borderRadius(DesignConstants.RADIUS.XXL)
-                    .shadow({
-                      radius: DesignConstants.SHADOW.MEDIUM.radius,
-                      color: DesignConstants.SHADOW.MEDIUM.color,
-                      offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
-                      offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
-                    })
+                    .shadow(DesignConstants.SHADOW.MEDIUM)
                      .border({ width: 1, color: this.getPalette().borderColor })
                     .onClick(() => { this.onSelectHistory(item); })
                   }
@@ -699,7 +684,7 @@ struct MainPanel {
                   .margin({ top: DesignConstants.SPACING.XS })
               }
               .width('100%')
-              .padding({ top: 16 })
+              .padding({ top: DesignConstants.SPACING.LG })
             }
           }
           .width('100%')
@@ -714,11 +699,11 @@ struct MainPanel {
       Button(this.confirmLabel)
         .type(ButtonType.Capsule)
         .width('100%')
-        .height(48)
+        .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
         .backgroundColor(this.getPalette().accentBackground)
         .fontColor(this.getPalette().accentText)
         .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontWeight(FontWeight.Medium)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .shadow(DesignConstants.SHADOW.SMALL)
         .border({ width: 1, color: this.getPalette().borderColor })
         .margin({ top: DesignConstants.SPACING.SM })
@@ -1030,7 +1015,7 @@ export struct LocationPickerPage {
     }
     if (this.panelHeight > PANEL_SNAP_MIN) {
       this.getUIContext().animateTo(
-        { duration: 250, curve: curves.springMotion(0.6, 0.9) },
+        { duration: DesignConstants.ANIMATION.DURATION_250, curve: curves.springMotion(0.6, 0.9) },
         () => { this.panelHeight = PANEL_SNAP_MIN; }
       );
     }
@@ -1123,7 +1108,7 @@ export struct LocationPickerPage {
     this.overlappingPanelItems = [];
     this.searchText = '';
     this.searchResults = [];
-    this.getUIContext().animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => {
+    this.getUIContext().animateTo({ duration: DesignConstants.ANIMATION.DURATION_250, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }, () => {
       this.showSearchBar = true;
     });
     setTimeout(() => {
@@ -1133,7 +1118,7 @@ export struct LocationPickerPage {
 
   private closeSearchPanel(collapseToMin: boolean = false): void {
     this.getUIContext().animateTo(
-      { duration: 300, curve: Curve.FastOutSlowIn },
+      { duration: DesignConstants.ANIMATION.DURATION_MEDIUM, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN },
       () => {
         this.showSearchBar = false;
         this.searchText = '';
@@ -1145,7 +1130,7 @@ export struct LocationPickerPage {
     if (collapseToMin) {
       setTimeout(() => {
         this.getUIContext().animateTo(
-          { duration: 300, curve: curves.springMotion(0.6, 0.9) },
+          { duration: DesignConstants.ANIMATION.DURATION_MEDIUM, curve: curves.springMotion(0.6, 0.9) },
           () => { this.panelHeight = PANEL_SNAP_MIN; }
         );
       }, 350);
@@ -1739,9 +1724,9 @@ export struct LocationPickerPage {
             .transition(TransitionEffect.asymmetric(
               TransitionEffect.move(TransitionEdge.BOTTOM)
                 .combine(TransitionEffect.OPACITY)
-                .animation({ duration: 300, curve: Curve.FastOutSlowIn }),
+                .animation({ duration: DesignConstants.ANIMATION.DURATION_MEDIUM, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }),
               TransitionEffect.OPACITY
-                .animation({ duration: 200, curve: Curve.FastOutSlowIn })
+                .animation({ duration: DesignConstants.ANIMATION.DURATION_SHORT, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
             ))
         } else {
           MainPanel({
@@ -1758,9 +1743,9 @@ export struct LocationPickerPage {
             .transition(TransitionEffect.asymmetric(
               TransitionEffect.OPACITY
                 .combine(TransitionEffect.translate({ y: 30 }))
-                .animation({ duration: 300, delay: 150, curve: Curve.EaseOut }),
+                .animation({ duration: DesignConstants.ANIMATION.DURATION_MEDIUM, delay: DesignConstants.ANIMATION.DURATION_STAGGER_DELAY, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT }),
               TransitionEffect.OPACITY
-                .animation({ duration: 150 })
+                .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST })
             ))
         }
 
@@ -1777,7 +1762,7 @@ export struct LocationPickerPage {
               Row() {
                 Text(`该位置有 ${this.overlappingPanelItems.length} 个内容`)
                   .fontSize(DesignConstants.FONT.SIZE.LG)
-                  .fontWeight(FontWeight.Medium)
+                  .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                   .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   .layoutWeight(1)
                 Text('关闭')
@@ -1799,12 +1784,12 @@ export struct LocationPickerPage {
                     Row({ space: DesignConstants.SPACING.MD }) {
                       Image($rawfile(this.getTypeMarkerSvg(item.type)))
                         .width(28)
-                        .height(36)
+                        .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
                         .objectFit(ImageFit.Contain)
-                      Column({ space: 2 }) {
+                      Column({ space: DesignConstants.SPACING.HALF }) {
                         Text(item.entity ? item.entity.title : '')
                           .fontSize(DesignConstants.FONT.SIZE.MD)
-                          .fontWeight(FontWeight.Medium)
+                          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                           .fontColor($r('sys.color.ohos_id_color_text_primary'))
                           .maxLines(1)
                           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -1822,7 +1807,7 @@ export struct LocationPickerPage {
                       Text(this.getItemTypeLabel(item.type))
                         .fontSize(DesignConstants.FONT.SIZE.XS)
                         .fontColor(this.getTypeColor(item.type))
-                        .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+                        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                         .borderRadius(DesignConstants.RADIUS.SM)
                         .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
                     }
@@ -1847,20 +1832,15 @@ export struct LocationPickerPage {
             }
             .width('100%')
             .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-            .borderRadius({ topLeft: 20, topRight: 20 })
-            .shadow({
-              radius: DesignConstants.SHADOW.LARGE.radius,
-              color: DesignConstants.SHADOW.LARGE.color,
-              offsetX: DesignConstants.SHADOW.LARGE.offsetX,
-              offsetY: DesignConstants.SHADOW.LARGE.offsetY
-            })
+            .borderRadius({ topLeft: DesignConstants.SHAPE.SHEET_TOP_RADIUS, topRight: DesignConstants.SHAPE.SHEET_TOP_RADIUS })
+            .shadow(DesignConstants.SHADOW.LARGE)
           }
           .width('100%')
           .height('100%')
           .zIndex(50)
           .transition(
-            TransitionEffect.OPACITY.animation({ duration: 200, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 250, curve: Curve.FastOutSlowIn }))
+            TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHORT, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_250, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
           )
         }
 
@@ -1874,37 +1854,27 @@ export struct LocationPickerPage {
                 .fontColor([MARKER_COLOR_USER])
             }
           }
-          .width(48)
-          .height(48)
+          .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+          .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
           .justifyContent(FlexAlign.Center)
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow({
-            radius: DesignConstants.SHADOW.MEDIUM.radius,
-            color: DesignConstants.SHADOW.MEDIUM.color,
-            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
-            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
-          })
+          .shadow(DesignConstants.SHADOW.MEDIUM)
           .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { this.locateUser(); })
 
           Column() {
             Image($rawfile('marker_center_pin.svg'))
               .width(20)
-              .height(28)
+              .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
               .objectFit(ImageFit.Contain)
           }
-          .width(48)
-          .height(48)
+          .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+          .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
           .justifyContent(FlexAlign.Center)
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow({
-            radius: DesignConstants.SHADOW.MEDIUM.radius,
-            color: DesignConstants.SHADOW.MEDIUM.color,
-            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
-            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
-          })
+          .shadow(DesignConstants.SHADOW.MEDIUM)
           .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { this.locateBrowseAnchor(); })
 
@@ -1915,17 +1885,12 @@ export struct LocationPickerPage {
                 .fontColor([$r('sys.color.ohos_id_color_text_primary')])
             }
           }
-          .width(48)
-          .height(48)
+          .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+          .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
           .justifyContent(FlexAlign.Center)
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow({
-            radius: DesignConstants.SHADOW.MEDIUM.radius,
-            color: DesignConstants.SHADOW.MEDIUM.color,
-            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
-            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
-          })
+          .shadow(DesignConstants.SHADOW.MEDIUM)
           .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { if (this.mapActions) this.mapActions.zoomIn(); })
 
@@ -1936,17 +1901,12 @@ export struct LocationPickerPage {
                 .fontColor([$r('sys.color.ohos_id_color_text_primary')])
             }
           }
-          .width(48)
-          .height(48)
+          .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+          .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
           .justifyContent(FlexAlign.Center)
            .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow({
-            radius: DesignConstants.SHADOW.MEDIUM.radius,
-            color: DesignConstants.SHADOW.MEDIUM.color,
-            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
-            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
-          })
+          .shadow(DesignConstants.SHADOW.MEDIUM)
            .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { if (this.mapActions) this.mapActions.zoomOut(); })
         }

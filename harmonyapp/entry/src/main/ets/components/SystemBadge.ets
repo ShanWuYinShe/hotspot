@@ -33,7 +33,7 @@ export struct SystemBadge {
     if (this.count > 0) {
       Text(this.getDisplayText())
         .fontSize(DesignConstants.FONT.SIZE.XS_MINUS) // 9
-        .fontWeight(FontWeight.Medium)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getPalette().accentText)
         .backgroundColor(this.getPalette().accentBackground)
         .borderRadius(DesignConstants.RADIUS.FULL)
@@ -42,8 +42,8 @@ export struct SystemBadge {
         .maxLines(1)
     } else if (this.dotOnly) {
       Row()
-        .width(8)
-        .height(8)
+        .width(DesignConstants.SPACING.SM)
+        .height(DesignConstants.SPACING.SM)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .backgroundColor(this.getPalette().accentBackground)
     }

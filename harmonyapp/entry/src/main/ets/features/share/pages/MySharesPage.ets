@@ -216,7 +216,7 @@ export struct MySharesPage {
         showBackButton: true,
         onBack: () => { AppRouter.pop(); },
         titleAlign: TextAlign.Center,
-        titleWeight: FontWeight.Medium
+        titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM
       })
 
       if (!this.isLoggedIn) {
@@ -293,10 +293,10 @@ export struct MySharesPage {
   private buildShareCard(share: ShareListItem) {
     Column({ space: DesignConstants.SPACING.MD }) {
       Row({ space: DesignConstants.SPACING.SM }) {
-        Column({ space: 4 }) {
+        Column({ space: DesignConstants.SPACING.XS }) {
           Text(share.preview?.title ?? this.defaultShareTitle(share))
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontWeight(FontWeight.Medium)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -309,7 +309,7 @@ export struct MySharesPage {
 
         Text(this.shareStatusText(share))
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.shareStatusColor(share))
           .backgroundColor(this.shareStatusBackground(share))
           .borderRadius(DesignConstants.RADIUS.MD)
@@ -332,13 +332,13 @@ export struct MySharesPage {
       if (share.preview?.cover_url) {
         Image(MediaUrlUtil.normalize(share.preview.cover_url))
           .width('100%')
-          .height(130)
+          .height(DesignConstants.COMPONENT.SHARE_CARD_HEIGHT)
           .objectFit(ImageFit.Cover)
           .borderRadius(DesignConstants.RADIUS.LG)
           .backgroundColor(this.getSurfaceSubtle())
       }
 
-      Column({ space: 4 }) {
+      Column({ space: DesignConstants.SPACING.XS }) {
         Text(`类型：${this.formatShareType(share.share_type)}`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().textSecondary)
@@ -361,7 +361,7 @@ export struct MySharesPage {
       .borderRadius(DesignConstants.RADIUS.MD)
 
       Row({ space: DesignConstants.SPACING.MD }) {
-        Column({ space: 2 }) {
+        Column({ space: DesignConstants.SPACING.HALF }) {
           Text('分享状态')
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getCurrentThemePalette().textSecondary)
@@ -380,7 +380,7 @@ export struct MySharesPage {
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .shadow(this.getCurrentThemePalette().controlShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
-            .height(34)
+            .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
             .enabled(this.revokingShareId !== share.share_id)
             .onClick(() => this.revokeShare(share))
         } else {
@@ -396,7 +396,7 @@ export struct MySharesPage {
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .backgroundColor(this.getSurfaceBackground())
     .border({ width: 1, color: this.getSurfaceBorder() })
-    .margin({ bottom: 12 })
+    .margin({ bottom: DesignConstants.SPACING.MD })
   }
 
   private defaultShareTitle(share: ShareListItem): string {

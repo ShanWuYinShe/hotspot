@@ -347,7 +347,7 @@ export struct HomePage {
               this.buildGroupCarousel()
             }
             .width('100%')
-            .padding({ top: 16, bottom: 24 })
+            .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XL })
           }
           .layoutWeight(1)
           .scrollBar(BarState.Auto)
@@ -366,9 +366,9 @@ export struct HomePage {
               this.buildMomentsSection()
             }
             .width('100%')
-            .padding({ top: 16, bottom: 24 })
+            .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XL })
           }
-          .width(420)
+          .width(DesignConstants.LAYOUT.HOME_COLUMN_WIDTH)
           .scrollBar(BarState.Auto)
           .align(Alignment.TopStart)
         }
@@ -383,7 +383,7 @@ export struct HomePage {
             this.buildMomentsSection()
           }
           .width('100%')
-          .padding({ top: 16, bottom: 24 })
+          .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XL })
         }
         .layoutWeight(1)
         .scrollBar(BarState.Auto)
@@ -405,7 +405,7 @@ export struct HomePage {
       title: '首页',
       subtitle: '发现周边的有趣人和事',
       titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
-      titleWeight: FontWeight.Normal
+      titleWeight: DesignConstants.FONT.WEIGHT.REGULAR
     }) {
       // trailing: 位置 chip
       Row({ space: DesignConstants.SPACING.XS }) {
@@ -445,8 +445,8 @@ export struct HomePage {
                 .fontColor([this.getPalette().accentText])
             }
           }
-          .width(38)
-          .height(38)
+          .width(DesignConstants.COMPONENT.BRAND_ICON_SIZE)
+          .height(DesignConstants.COMPONENT.BRAND_ICON_SIZE)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getPalette().accentBackground)
           .justifyContent(FlexAlign.Center)
@@ -454,7 +454,7 @@ export struct HomePage {
           Column() {
             Text('实时附近')
               .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13 对齐前端 text-body
-              .fontWeight(FontWeight.Medium)
+              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getPalette().textPrimary)
             Text('持续更新')
               .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-caption
@@ -479,10 +479,10 @@ export struct HomePage {
       // Stats grid：三段统计 + 竖分割线
       Row({ space: DesignConstants.SPACING.MD }) {
         // 人附近
-        Column({ space: 2 }) {
+        Column({ space: DesignConstants.SPACING.HALF }) {
           Text(`${this.users.length}`)
             .fontSize(DesignConstants.FONT.SIZE.XXL)
-            .fontWeight(FontWeight.Bold)
+            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
             .fontColor(this.getPalette().accentBackground)
           Text('人附近')
             .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -494,14 +494,14 @@ export struct HomePage {
         // 分割竖线
         Column()
           .width(1)
-          .height(32)
+          .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
           .backgroundColor(this.getPalette().borderColor)
 
         // 活动中
-        Column({ space: 2 }) {
+        Column({ space: DesignConstants.SPACING.HALF }) {
           Text(`${this.groups.length}`)
             .fontSize(DesignConstants.FONT.SIZE.XXL)
-            .fontWeight(FontWeight.Bold)
+            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
             .fontColor(this.getPalette().warning)
           Text('活动中')
             .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -513,14 +513,14 @@ export struct HomePage {
         // 分割竖线
         Column()
           .width(1)
-          .height(32)
+          .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
           .backgroundColor(this.getPalette().borderColor)
 
         // 在线
-        Column({ space: 2 }) {
+        Column({ space: DesignConstants.SPACING.HALF }) {
           Text(`${this.getOnlineCount()}`)
             .fontSize(DesignConstants.FONT.SIZE.XXL)
-            .fontWeight(FontWeight.Bold)
+            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
             .fontColor(this.getPalette().success)
           Text('在线')
             .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -549,12 +549,12 @@ export struct HomePage {
         .fontSize(DesignConstants.FONT.SIZE.XS2)
         .fontColor(this.getPalette().textSecondary)
         .textCase(TextCase.UpperCase)
-        .letterSpacing(1.4)
-        .opacity(0.75)
+        .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
+        .opacity(DesignConstants.OPACITY.EMPHASIZED)
 
       Blank()
 
-      Row({ space: 2 }) {
+      Row({ space: DesignConstants.SPACING.HALF }) {
         Text(linkText)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getPalette().accentBackground)
@@ -567,7 +567,7 @@ export struct HomePage {
       .onClick(onViewAll)
     }
     .width('100%')
-    .margin({ bottom: 12 })
+    .margin({ bottom: DesignConstants.SPACING.MD })
   }
 
   // ==================== 附近的人 ====================
@@ -589,7 +589,7 @@ export struct HomePage {
           Text('重试')
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getPalette().accentText)
-            .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 6, bottom: 6 })
+            .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
             .borderRadius(DesignConstants.RADIUS.FULL)
             .border({ width: 1, color: this.getPalette().accentText })
             .onClick(() => this.loadNearbyUsers())
@@ -602,16 +602,16 @@ export struct HomePage {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getPalette().textSecondary)
           .width('100%')
-          .margin({ top: 2 })
+          .margin({ top: DesignConstants.SPACING.HALF })
       } else {
         Scroll() {
-          Row({ space: 12 }) {
+          Row({ space: DesignConstants.SPACING.MD }) {
             if (this.usersLoading) {
               ForEach(['1', '2', '3', '4', '5'], (_: string) => {
-              Column({ space: 6 }) {
+              Column({ space: DesignConstants.SPACING.SM2 }) {
                 Row()
-                  .width(66)
-                  .height(66)
+                  .width(DesignConstants.COMPONENT.SKELETON_AVATAR_SIZE)
+                  .height(DesignConstants.COMPONENT.SKELETON_AVATAR_SIZE)
                   .borderRadius(DesignConstants.RADIUS.FULL)
                   .backgroundColor(this.getPalette().surfaceSubtle)
               }
@@ -619,7 +619,7 @@ export struct HomePage {
             }, (_: string) => _)
           } else {
             ForEach(this.users.slice(0, 4), (user: UserItem) => {
-              Column({ space: 6 }) {
+              Column({ space: DesignConstants.SPACING.SM2 }) {
                 Stack({ alignContent: Alignment.Center }) {
                   SystemAvatar({
                     avatarUrl: user.user?.avatar_url ?? '',
@@ -634,8 +634,8 @@ export struct HomePage {
                   if (user.presence_status === 'online') {
                     Stack({ alignContent: Alignment.BottomEnd }) {
                       Row()
-                        .width(12)
-                        .height(12)
+                        .width(DesignConstants.SPACING.MD)
+                        .height(DesignConstants.SPACING.MD)
                         .borderRadius(DesignConstants.RADIUS.FULL)
                         .backgroundColor(this.getPalette().success)
                         .border({ width: 2, color: this.getPalette().surfaceBackground })
@@ -652,7 +652,7 @@ export struct HomePage {
                           .fontSize(DesignConstants.FONT.SIZE.XS_MINUS)
                           .fontColor(this.getPalette().accentText)
                       }
-                      .padding({ left: 6, right: 6, top: 1, bottom: 1 })
+                      .padding({ left: DesignConstants.SPACING.SM2, right: DesignConstants.SPACING.SM2, top: 1, bottom: 1 })
                       .borderRadius(DesignConstants.RADIUS.FULL)
                       .backgroundColor(this.getPalette().accentBackground)
                       .shadow(this.getPalette().accentShadow)
@@ -668,7 +668,7 @@ export struct HomePage {
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
                   .constraintSize({ maxWidth: 70 })
-                  .margin({ top: 4 })
+                  .margin({ top: DesignConstants.SPACING.XS })
               }
               .alignItems(HorizontalAlign.Center)
               .onClick(() => {
@@ -690,7 +690,7 @@ export struct HomePage {
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-    .margin({ bottom: 20 })
+    .margin({ bottom: DesignConstants.SPACING.LG2 })
   }
 
   // ==================== 附近活动 ====================
@@ -710,12 +710,12 @@ export struct HomePage {
               // loading skeleton
               Column()
                 .width(140)
-                .height(140)
+                .height(DesignConstants.COMPONENT.BANNER_HEIGHT)
                 .borderRadius(DesignConstants.SHAPE.CARD)
                 .backgroundColor(this.getPalette().surfaceSubtle)
               Column()
                 .width(140)
-                .height(140)
+                .height(DesignConstants.COMPONENT.BANNER_HEIGHT)
                 .borderRadius(DesignConstants.SHAPE.CARD)
                 .backgroundColor(this.getPalette().surfaceSubtle)
             } else {
@@ -733,7 +733,7 @@ export struct HomePage {
       }
       .width('100%')
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-      .margin({ bottom: 20 })
+      .margin({ bottom: DesignConstants.SPACING.LG2 })
     }
   }
 
@@ -748,7 +748,7 @@ export struct HomePage {
         }
       }
       .width(140)
-      .height(100)
+      .height(DesignConstants.COMPONENT.SKELETON_CARD_HEIGHT)
       .justifyContent(FlexAlign.Center)
       .borderRadius(DesignConstants.SHAPE.CARD)
       .backgroundColor(this.getPalette().accentMuted)
@@ -761,7 +761,7 @@ export struct HomePage {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width(140)
 
-      Row({ space: 4 }) {
+      Row({ space: DesignConstants.SPACING.XS }) {
         Text(`${formatCount(group.group?.members_count ?? 0)} 人`)
           .fontSize(DesignConstants.FONT.SIZE.XS2)
           .fontColor(this.getPalette().textTertiary)
@@ -796,18 +796,18 @@ export struct HomePage {
         })
 
         if (this.momentsLoading && this.moments.length === 0) {
-          Column({ space: 12 }) {
+          Column({ space: DesignConstants.SPACING.MD }) {
             ForEach(['1', '2'], (_: string) => {
               Column()
                 .width('100%')
-                .height(96)
+                .height(DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE)
                 .borderRadius(DesignConstants.SHAPE.CARD)
                 .backgroundColor(this.getPalette().surfaceSubtle)
             }, (_: string) => _)
           }
           .width('100%')
         } else {
-          Column({ space: 16 }) {
+          Column({ space: DesignConstants.SPACING.LG }) {
             ForEach(this.moments.slice(0, 5), (moment: MomentItem) => {
               MomentFeedCard({
                 moment: moment,
@@ -820,7 +820,7 @@ export struct HomePage {
       }
       .width('100%')
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-      .margin({ bottom: 24 })
+      .margin({ bottom: DesignConstants.SPACING.XL })
     }
   }
 }

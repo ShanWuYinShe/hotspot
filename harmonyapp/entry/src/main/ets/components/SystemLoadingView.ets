@@ -27,8 +27,8 @@ export struct SystemLoadingView {
         if (this.showProgress) {
           Stack() {
             Column()
-              .width(72)
-              .height(72)
+              .width(DesignConstants.COMPONENT.LOADING_CONTAINER_SIZE)
+              .height(DesignConstants.COMPONENT.LOADING_CONTAINER_SIZE)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .backgroundColor(this.getPalette().surfaceBackground)
               .shadow(this.getPalette().controlShadow)
@@ -40,20 +40,20 @@ export struct SystemLoadingView {
                 total: this.maxProgress,
                 type: ProgressType.Ring
               })
-                .width(46)
-                .height(46)
+                .width(DesignConstants.COMPONENT.LOADING_GLYPH_SIZE)
+                .height(DesignConstants.COMPONENT.LOADING_GLYPH_SIZE)
                 .color(this.getPalette().accentBackground)
-                .style({ strokeWidth: 4 })
+                .style({ strokeWidth: DesignConstants.COMPONENT.PROGRESS_STROKE_WIDTH })
             } else {
               LoadingProgress()
-                .width(34)
-                .height(34)
+                .width(DesignConstants.COMPONENT.LOADING_GLYPH_SIZE)
+                .height(DesignConstants.COMPONENT.LOADING_GLYPH_SIZE)
                 .color(this.getPalette().accentBackground)
                 .accessibilityText('正在加载')
             }
           }
-          .width(72)
-          .height(72)
+          .width(DesignConstants.COMPONENT.LOADING_CONTAINER_SIZE)
+          .height(DesignConstants.COMPONENT.LOADING_CONTAINER_SIZE)
         }
 
         Text(this.message)

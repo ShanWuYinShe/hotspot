@@ -65,7 +65,7 @@ export class VibrationUtil {
       // 连续两次短震动
       await vibrator.startVibration({
         type: 'time',
-        duration: 100,
+        duration: 100, // 触觉反馈时长（行为常量，非视觉 token 范畴）
       }, {
         id: 0,
         usage: 'touch'

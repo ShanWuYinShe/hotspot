@@ -105,7 +105,7 @@ struct AdminOverviewPage {
           showBackButton: true,
           onBack: () => { this.pathStack.pop(); },
           titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
-          titleWeight: FontWeight.Medium
+          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM
         })
 
         if (this.isLoading) {
@@ -153,16 +153,16 @@ struct AdminOverviewPage {
             .fontColor([this.getPalette().accentText])
         }
       }
-      .width(44)
-      .height(44)
+      .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
+      .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.getPalette().accentBackground)
       .justifyContent(FlexAlign.Center)
 
-      Column({ space: 2 }) {
+      Column({ space: DesignConstants.SPACING.HALF }) {
         Text(this.isSuperAdmin ? '超级管理员' : '管理员')
           .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         Text(`拥有 ${this.permissions.length} 项管理权限`)
           .fontSize(DesignConstants.FONT.SIZE.SM) // 12
@@ -184,9 +184,9 @@ struct AdminOverviewPage {
     Column({ space: DesignConstants.SPACING.SM }) {
       Text('管理模块')
         .fontSize(DesignConstants.FONT.SIZE.XS2) // 10
-        .fontWeight(FontWeight.Medium)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getPalette().textSecondary)
-        .letterSpacing(1.2)
+        .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
 
       ForEach(ADMIN_MODULES, (m: AdminModule) => {
         if (this.hasPermission(m.perm)) {
@@ -208,16 +208,16 @@ struct AdminOverviewPage {
             .fontColor([this.getPalette().accentBackground])
         }
       }
-      .width(40)
-      .height(40)
+      .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+      .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
       .borderRadius(DesignConstants.SHAPE.ICON_TILE)
       .backgroundColor(this.getPalette().accentMuted)
       .justifyContent(FlexAlign.Center)
 
-      Column({ space: 2 }) {
+      Column({ space: DesignConstants.SPACING.HALF }) {
         Text(m.title)
           .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         Text(m.desc)
           .fontSize(DesignConstants.FONT.SIZE.XS) // 11
@@ -254,13 +254,13 @@ struct AdminOverviewPage {
         }
         Text('完整管理请在 Web 端进行')
           .fontSize(DesignConstants.FONT.SIZE.SM) // 12
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
       }
       Text('移动端提供概览与引导。表格化的批量管理、角色配置、审计查询等复杂操作，请在电脑端访问 Web 管理后台以获得最佳体验。')
         .fontSize(DesignConstants.FONT.SIZE.XS) // 11
         .fontColor(this.getPalette().textSecondary)
-        .lineHeight(18)
+        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.XS)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)

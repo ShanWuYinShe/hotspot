@@ -50,7 +50,7 @@ export struct SystemDialog {
           if (this.title.length > 0) {
             Text(this.title)
               .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18
-              .fontWeight(FontWeight.Semibold)
+              .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
               .fontColor(this.getPalette().textPrimary)
               .textAlign(TextAlign.Center)
               .width('100%')
@@ -62,7 +62,7 @@ export struct SystemDialog {
               .textAlign(TextAlign.Center)
               .width('100%')
               .margin({ top: DesignConstants.SPACING.SM })
-              .lineHeight(20)
+              .lineHeight(DesignConstants.FONT.LINE_HEIGHT.SM)
           }
 
           Row() {

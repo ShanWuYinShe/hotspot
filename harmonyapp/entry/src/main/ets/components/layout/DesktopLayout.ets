@@ -177,12 +177,12 @@ export struct DesktopLayout {
       Row({ space: DesignConstants.SPACING.SM }) {
         Text() {
           SymbolSpan($r(AppIcon.NEARBY))
-            .fontSize(22)
+            .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
             .fontColor([this.getPalette().accentBackground])
         }
         Text('HotSpot')
           .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18
-          .fontWeight(FontWeight.Bold)
+          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
           .fontColor(this.getPalette().textPrimary)
       }
       .alignItems(VerticalAlign.Center)
@@ -237,8 +237,8 @@ export struct DesktopLayout {
               shape: 'circle'
             })
           }
-          .width(36)
-          .height(36)
+          .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+          .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .justifyContent(FlexAlign.Center)
           .onClick(() => {
@@ -268,7 +268,7 @@ export struct DesktopLayout {
     Column({ space: DesignConstants.SPACING.LG }) {
       Text('外观主题')
         .fontSize(DesignConstants.FONT.SIZE.XL)
-        .fontWeight(FontWeight.Bold)
+        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
         .fontColor(this.getPalette().textPrimary)
         .width('100%')
         .textAlign(TextAlign.Center)
@@ -299,10 +299,10 @@ export struct DesktopLayout {
   @Builder
   private ThemeOptionRow(option: ThemeOptionItem) {
     Row({ space: DesignConstants.SPACING.MD }) {
-      Column({ space: 4 }) {
+      Column({ space: DesignConstants.SPACING.XS }) {
         Text(option.label)
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         Text(option.description)
           .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -330,7 +330,7 @@ export struct DesktopLayout {
   Sidebar() {
     Column() {
       // 发现组
-      Column({ space: 2 }) {
+      Column({ space: DesignConstants.SPACING.HALF }) {
         ForEach(DESKTOP_PRIMARY_NAV, (item: AppNavItem) => {
           this.NavItemBuilder(item)
         }, (item: AppNavItem) => item.label)
@@ -347,13 +347,13 @@ export struct DesktopLayout {
       // 个人中心 section 标签
       Text('个人中心')
         .fontSize(DesignConstants.FONT.SIZE.XS2) // 10
-        .fontWeight(FontWeight.Medium)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getPalette().textSecondary)
-        .letterSpacing(1.2)
+        .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
         .margin({ left: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
 
       // 个人组
-      Column({ space: 2 }) {
+      Column({ space: DesignConstants.SPACING.HALF }) {
         ForEach(DESKTOP_PERSONAL_NAV, (item: AppNavItem) => {
           this.NavItemBuilder(item)
         }, (item: AppNavItem) => item.label)
@@ -370,7 +370,7 @@ export struct DesktopLayout {
       Row() {
         Text() {
           SymbolSpan($r(AppIcon.SHIELD))
-            .fontSize(17)
+            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
             .fontColor([this.getPalette().textSecondary])
         }
         Text('管理后台')
@@ -380,7 +380,7 @@ export struct DesktopLayout {
         Blank().layoutWeight(1)
       }
       .width('100%')
-      .height(40)
+      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
       .borderRadius(DesignConstants.SHAPE.INPUT)
       .alignItems(VerticalAlign.Center)
@@ -412,13 +412,13 @@ export struct DesktopLayout {
     Row() {
       Text() {
         SymbolSpan($r(item.icon))
-          .fontSize(17)
+          .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
           .fontColor([this.isItemActive(item) ? this.getPalette().accentBackground : this.getPalette().textSecondary])
       }
       Text(item.label)
         .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13
         .fontColor(this.isItemActive(item) ? this.getPalette().textPrimary : this.getPalette().textSecondary)
-        .fontWeight(this.isItemActive(item) ? FontWeight.Medium : FontWeight.Regular)
+        .fontWeight(this.isItemActive(item) ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
         .margin({ left: DesignConstants.SPACING.SM })
         .layoutWeight(1)
 
@@ -427,7 +427,7 @@ export struct DesktopLayout {
       }
     }
     .width('100%')
-    .height(40)
+    .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
     .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
     .borderRadius(DesignConstants.SHAPE.INPUT) // 18
     .backgroundColor(this.isItemActive(item) ? this.getPalette().tabBarActiveBackground : DesignConstants.COLOR.TRANSPARENT)
@@ -520,15 +520,15 @@ export struct DesktopLayout {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
       Button('去注册')
         .type(ButtonType.Normal)
-        .height(28)
+        .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .backgroundColor(this.getPalette().accentBackground)
         .fontColor(this.getPalette().accentText)
         .borderRadius(DesignConstants.RADIUS.SM)
-        .padding({ left: 12, right: 12 })
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
     .backgroundColor(this.getPalette().accentMuted)
   }
 
@@ -553,7 +553,7 @@ export struct DesktopLayout {
     Column() {
       Text('创建')
         .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18
-        .fontWeight(FontWeight.Medium)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getPalette().textPrimary)
         .margin({ top: DesignConstants.SPACING.XL, bottom: DesignConstants.SPACING.LG })
 
@@ -580,7 +580,7 @@ export struct DesktopLayout {
     Row() {
       Text() {
         SymbolSpan($r(icon))
-          .fontSize(20)
+          .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontColor([this.getPalette().accentBackground])
       }
       Text(label)
@@ -589,7 +589,7 @@ export struct DesktopLayout {
         .margin({ left: DesignConstants.SPACING.MD })
     }
     .width('90%')
-    .height(52)
+    .height(DesignConstants.LAYOUT.FAB_SIZE)
     .padding({ left: DesignConstants.SPACING.LG })
     .borderRadius(DesignConstants.SHAPE.INPUT)
     .backgroundColor(this.getPalette().surfaceSubtle)

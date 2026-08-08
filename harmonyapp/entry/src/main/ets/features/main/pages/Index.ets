@@ -290,7 +290,7 @@ struct Index {
     // 缓和主题硬切（ArkUI 无法做颜色插值过渡，这是最接近前端 transition-colors 500ms 的观感妥协）。
     this.themeFadeOpacity = 0.4;
     setTimeout(() => {
-      this.getUIContext().animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+      this.getUIContext().animateTo({ duration: DesignConstants.ANIMATION.DURATION_MEDIUM, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }, () => {
         this.themeFadeOpacity = 1;
       });
     }, 16);
@@ -907,14 +907,14 @@ struct Index {
       if (!this.isInitialized) {
         Column() {
           LoadingProgress()
-            .width(48)
-            .height(48)
+            .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+            .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
             .color(this.getCurrentThemePalette().accentBackground)
 
           Text($r('app.string.common_loading'))
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontColor(this.getCurrentThemePalette().textSecondary)
-            .margin({ top: 16 })
+            .margin({ top: DesignConstants.SPACING.LG })
         }
         .width('100%')
         .height('100%')
@@ -922,14 +922,14 @@ struct Index {
         .backgroundColor(this.getCurrentThemePalette().pageBackground)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
         )
       } else if (this.lastError) {
-        Column({ space: 16 }) {
+        Column({ space: DesignConstants.SPACING.LG }) {
           Text('应用初始化失败')
             .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-            .fontWeight(FontWeight.Bold)
+            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
             .fontColor(this.getCurrentThemePalette().textPrimary)
           Text(this.lastError)
             .fontSize(DesignConstants.FONT.SIZE.MD)

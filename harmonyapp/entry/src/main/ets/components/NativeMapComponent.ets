@@ -932,7 +932,7 @@ export struct NativeMapComponent {
     Stack() {
       if (this.mapError.length > 0) {
         // 地图加载失败提示
-        Column({ space: 12 }) {
+        Column({ space: DesignConstants.SPACING.MD }) {
           Text() {
             SymbolSpan($r(AppIcon.MAP))
               .fontSize(DesignConstants.FONT.SIZE.HERO)
@@ -941,7 +941,7 @@ export struct NativeMapComponent {
 
           Text('地图服务不可用')
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontWeight(FontWeight.Medium)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
 
           Text(this.mapError)
@@ -953,12 +953,12 @@ export struct NativeMapComponent {
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .textAlign(TextAlign.Center)
-            .lineHeight(18)
+            .lineHeight(DesignConstants.FONT.LINE_HEIGHT.XS)
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
-        .padding(32)
+        .padding(DesignConstants.SPACING.XXL)
         .backgroundColor(AppThemeManager.getPaletteById(this.resolvedThemeId).pageBackground)
       } else if (this.mapCallback) {
         MapComponent({
@@ -978,10 +978,10 @@ export struct NativeMapComponent {
         .width('100%')
         .height('100%')
       } else {
-        Column({ space: 12 }) {
+        Column({ space: DesignConstants.SPACING.MD }) {
           LoadingProgress()
-            .width(40)
-            .height(40)
+            .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+            .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
           Text('加载地图中...')
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))

@@ -187,10 +187,10 @@ export struct PerformanceIndicator {
    */
   @Builder
   private buildCompactView() {
-    Row({ space: 8 }) {
+    Row({ space: DesignConstants.SPACING.SM }) {
       // 性能等级指示器
       if (this.metrics) {
-        Row({ space: 4 }) {
+        Row({ space: DesignConstants.SPACING.XS }) {
           SystemIcon({
             icon: this.getPerformanceLevel().icon,
             iconSize: 16,
@@ -205,7 +205,7 @@ export struct PerformanceIndicator {
 
       // 告警指示器
       if (this.alerts.length > 0) {
-        Row({ space: 4 }) {
+        Row({ space: DesignConstants.SPACING.XS }) {
           SystemIcon({
             icon: AppIcon.WARNING,
             iconSize: 14,
@@ -227,7 +227,7 @@ export struct PerformanceIndicator {
         }
       })
     }
-    .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+    .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
     .backgroundColor(this.getPalette().surfaceBackground)
     .borderRadius(DesignConstants.RADIUS.LG)
     .onClick(() => {
@@ -253,16 +253,16 @@ export struct PerformanceIndicator {
    */
   @Builder
   private buildFullView() {
-    Column({ space: 16 }) {
+    Column({ space: DesignConstants.SPACING.LG }) {
       // 标题栏
       Row() {
         Text('性能监控')
           .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
           .layoutWeight(1)
 
-        Row({ space: 12 }) {
+        Row({ space: DesignConstants.SPACING.MD }) {
           SystemIcon({
             icon: AppIcon.REFRESH,
             iconSize: 20,
@@ -279,10 +279,10 @@ export struct PerformanceIndicator {
       .width('100%')
 
       if (this.refreshing) {
-        Row({ space: 8 }) {
+        Row({ space: DesignConstants.SPACING.SM }) {
           LoadingProgress()
-            .width(16)
-            .height(16)
+            .width(DesignConstants.COMPONENT.ICON_SIZE_XS)
+            .height(DesignConstants.COMPONENT.ICON_SIZE_XS)
             .color(this.getPalette().accentBackground)
 
           Text('刷新中...')
@@ -293,14 +293,14 @@ export struct PerformanceIndicator {
 
       // 性能概览
       if (this.metrics) {
-        Row({ space: 12 }) {
+        Row({ space: DesignConstants.SPACING.MD }) {
           SystemIcon({
             icon: this.getPerformanceLevel().icon,
             iconSize: 32,
             iconColor: this.getPerformanceLevel().color
           })
 
-          Column({ space: 4 }) {
+          Column({ space: DesignConstants.SPACING.XS }) {
             Text('整体性能')
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontColor(this.getPalette().textSecondary)
@@ -308,7 +308,7 @@ export struct PerformanceIndicator {
 
             Text(this.getPerformanceLevel().level)
               .fontSize(DesignConstants.FONT.SIZE.XL)
-              .fontWeight(FontWeight.Bold)
+              .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
               .fontColor(this.getPerformanceLevel().color)
               .alignSelf(ItemAlign.Start)
           }
@@ -316,7 +316,7 @@ export struct PerformanceIndicator {
           .layoutWeight(1)
         }
         .width('100%')
-        .padding(16)
+        .padding(DesignConstants.SPACING.LG)
         .backgroundColor(this.getPalette().surfaceBackground)
         .borderRadius(DesignConstants.RADIUS.MD)
       }
@@ -391,22 +391,22 @@ export struct PerformanceIndicator {
 
       // 性能告警
       if (this.alerts.length > 0) {
-        Column({ space: 8 }) {
+        Column({ space: DesignConstants.SPACING.SM }) {
           Text(`性能告警 (${this.alerts.length})`)
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontWeight(FontWeight.Medium)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getPalette().textPrimary)
             .alignSelf(ItemAlign.Start)
 
           ForEach(this.alerts, (alert: PerformanceAlert) => {
-            Row({ space: 12 }) {
+            Row({ space: DesignConstants.SPACING.MD }) {
               SystemIcon({
                 icon: alert.level === 'critical' ? AppIcon.ERROR : AppIcon.WARNING,
                 iconSize: 20,
                 iconColor: alert.level === 'critical' ? this.getPalette().textTertiary : this.getPalette().accentBackground
               })
 
-              Column({ space: 4 }) {
+              Column({ space: DesignConstants.SPACING.XS }) {
                 Text(alert.message)
                   .fontSize(DesignConstants.FONT.SIZE.MD)
                   .fontColor(this.getPalette().textPrimary)
@@ -421,7 +421,7 @@ export struct PerformanceIndicator {
               .layoutWeight(1)
             }
             .width('100%')
-            .padding(12)
+            .padding(DesignConstants.SPACING.MD)
             .backgroundColor(this.getPalette().surfaceBackground)
             .borderRadius(DesignConstants.RADIUS.MD)
           }, (alert: PerformanceAlert) => `${alert.timestamp}_${alert.message}`)
@@ -430,7 +430,7 @@ export struct PerformanceIndicator {
       }
     }
     .width('100%')
-    .padding(16)
+    .padding(DesignConstants.SPACING.LG)
   }
 
   /**
@@ -438,7 +438,7 @@ export struct PerformanceIndicator {
    */
   @Builder
   private buildMetricCard(title: string, value: string, color: ResourceColor, icon: AppIcon) {
-    Column({ space: 8 }) {
+    Column({ space: DesignConstants.SPACING.SM }) {
       SystemIcon({
         icon: icon,
         iconSize: 24,
@@ -447,7 +447,7 @@ export struct PerformanceIndicator {
 
       Text(value)
         .fontSize(DesignConstants.FONT.SIZE.XL)
-        .fontWeight(FontWeight.Bold)
+        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
         .fontColor(color)
 
       Text(title)
@@ -456,7 +456,7 @@ export struct PerformanceIndicator {
         .textAlign(TextAlign.Center)
     }
     .width('100%')
-    .padding(12)
+    .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getPalette().surfaceBackground)
     .borderRadius(DesignConstants.RADIUS.MD)
     .justifyContent(FlexAlign.Center)
@@ -470,18 +470,18 @@ export struct PerformanceIndicator {
    */
   @Builder
   private buildPopupContent() {
-    Column({ space: 8 }) {
+    Column({ space: DesignConstants.SPACING.SM }) {
       if (this.metrics) {
         Text('性能概览')
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
 
         Row() {
           Text('内存:')
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getPalette().textSecondary)
-            .width(60)
+            .width(DesignConstants.LAYOUT.LABEL_WIDTH)
 
           Text(`${(this.metrics.memoryUsage * 100).toFixed(1)}%`)
             .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -493,7 +493,7 @@ export struct PerformanceIndicator {
           Text('响应:')
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getPalette().textSecondary)
-            .width(60)
+            .width(DesignConstants.LAYOUT.LABEL_WIDTH)
 
           Text(`${this.metrics.averageResponseTime.toFixed(0)}ms`)
             .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -504,7 +504,7 @@ export struct PerformanceIndicator {
         if (this.alerts.length > 0) {
           Divider()
             .color(this.getPalette().borderColor)
-            .margin({ top: 4, bottom: 4 })
+            .margin({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
 
           Text(`${this.alerts.length} 个告警`)
             .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -512,7 +512,7 @@ export struct PerformanceIndicator {
         }
       }
     }
-    .width(200)
-    .padding(12)
+    .width(DesignConstants.CHAT.IMAGE_MAX_WIDTH)
+    .padding(DesignConstants.SPACING.MD)
   }
 }

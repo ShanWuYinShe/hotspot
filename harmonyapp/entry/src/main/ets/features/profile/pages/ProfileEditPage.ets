@@ -171,8 +171,8 @@ export struct ProfileEditPage {
             Stack({ alignContent: Alignment.TopStart }) {
               Column()
                 .width('100%')
-                .height(140)
-                .borderRadius({ topLeft: 20, topRight: 20 })
+                .height(DesignConstants.COMPONENT.BANNER_HEIGHT)
+                .borderRadius({ topLeft: DesignConstants.SHAPE.SHEET_TOP_RADIUS, topRight: DesignConstants.SHAPE.SHEET_TOP_RADIUS })
                 .linearGradient({
                   direction: GradientDirection.Bottom,
                   colors: [
@@ -184,7 +184,7 @@ export struct ProfileEditPage {
               // 更换横幅按钮：贴横幅右上角（用 alignContent 取代硬编码坐标）
               Stack({ alignContent: Alignment.TopEnd }) {
                 Button() {
-                  Row({ space: 4 }) {
+                  Row({ space: DesignConstants.SPACING.XS }) {
                     Text() {
                       SymbolSpan($r(AppIcon.CAMERA))
                         .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -196,7 +196,7 @@ export struct ProfileEditPage {
                   }
                 }
                 .type(ButtonType.Normal)
-                .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+                .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: 5, bottom: 5 })
                 .borderRadius(DesignConstants.SHAPE.BUTTON)
                 .backgroundColor(DesignConstants.COLOR.OVERLAY_STRONG)
                 .onClick(() => {
@@ -205,11 +205,11 @@ export struct ProfileEditPage {
               }
               .width('100%')
               .height('100%')
-              .padding({ top: 10, right: 12 })
+              .padding({ top: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD })
             }
             .width('100%')
-            .height(140)
-            .borderRadius({ topLeft: 20, topRight: 20 })
+            .height(DesignConstants.COMPONENT.BANNER_HEIGHT)
+            .borderRadius({ topLeft: DesignConstants.SHAPE.SHEET_TOP_RADIUS, topRight: DesignConstants.SHAPE.SHEET_TOP_RADIUS })
 
             // 头像 + 名称区
             Row({ space: DesignConstants.SPACING.MD }) {
@@ -230,8 +230,8 @@ export struct ProfileEditPage {
                   }
                 }
                 .type(ButtonType.Normal)
-                .width(26)
-                .height(26)
+                .width(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
+                .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
                 .borderRadius(DesignConstants.RADIUS.FULL)
                 .backgroundColor(this.getCurrentThemePalette().accentBackground)
                 .border({ width: 2.5, color: this.getSurfaceBackground() })
@@ -240,10 +240,10 @@ export struct ProfileEditPage {
                 })
               }
 
-              Column({ space: 2 }) {
+              Column({ space: DesignConstants.SPACING.HALF }) {
                 Text(this.nickname || (this.currentUser?.nickname ?? ''))
                   .fontSize(DesignConstants.FONT.SIZE.XL)
-                  .fontWeight(FontWeight.Bold)
+                  .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
                   .fontColor(this.getCurrentThemePalette().textPrimary)
 
                 Text('@' + (this.currentUser?.user_id?.substring(0, 8) ?? 'user'))
@@ -265,12 +265,12 @@ export struct ProfileEditPage {
 
             // 兴趣标签
             Column({ space: DesignConstants.SPACING.SM }) {
-              Row({ space: 4 }) {
+              Row({ space: DesignConstants.SPACING.XS }) {
                 Text('兴趣标签')
                   .fontSize(DesignConstants.FONT.SIZE.XS)
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .textCase(TextCase.UpperCase)
-                  .letterSpacing(0.08 * 16)
+                  .letterSpacing(DesignConstants.FONT.LETTER_SPACING.FIELD)
 
                 Text('(' + this.tags.length + '/' + MAX_TAGS + ')')
                   .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -286,7 +286,7 @@ export struct ProfileEditPage {
                       .fontColor(this.isTagSelected(tag) ? this.getCurrentThemePalette().accentText : (this.isTagDisabled(tag) ? this.getCurrentThemePalette().textTertiary : this.getCurrentThemePalette().textSecondary))
                   }
                   .type(ButtonType.Normal)
-                  .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+                  .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
                   .borderRadius(DesignConstants.SHAPE.BUTTON)
                   .backgroundColor(this.isTagSelected(tag) ? this.getCurrentThemePalette().accentBackground : this.getSurfaceBackground())
                   .border({ width: 1, color: this.isTagSelected(tag) ? DesignConstants.COLOR.TRANSPARENT : this.getSurfaceBorder() })
@@ -318,13 +318,13 @@ export struct ProfileEditPage {
                   Text(this.isSaving ? '保存中...' : '保存')
                     .fontSize(DesignConstants.FONT.SIZE.LG)
                     .fontColor(this.getCurrentThemePalette().accentText)
-                    .fontWeight(FontWeight.Medium)
+                    .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                 }
               }
             }
             .type(ButtonType.Normal)
             .width('100%')
-            .height(48)
+            .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
             .borderRadius(DesignConstants.RADIUS.FULL)
             .backgroundColor(this.isSaved ? this.getCurrentThemePalette().success : this.getCurrentThemePalette().accentBackground)
             .shadow(this.getCurrentThemePalette().accentShadow)
@@ -378,7 +378,7 @@ export struct ProfileEditPage {
   @Builder
   private buildInputField(label: string, placeholder: string, value: string, maxLen: number, multiline: boolean, onChange: (v: string) => void, focused: boolean, error: string, onFocus: () => void, onBlur: () => void) {
     Column({ space: DesignConstants.SPACING.SM }) {
-      Row({ space: 4 }) {
+      Row({ space: DesignConstants.SPACING.XS }) {
         Text() {
           SymbolSpan($r(AppIcon.EDIT))
             .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -388,7 +388,7 @@ export struct ProfileEditPage {
           .fontSize(DesignConstants.FONT.SIZE.XS)
           .fontColor(this.getCurrentThemePalette().textSecondary)
           .textCase(TextCase.UpperCase)
-          .letterSpacing(0.08 * 16)
+          .letterSpacing(DesignConstants.FONT.LETTER_SPACING.FIELD)
       }
       .width('100%')
 
@@ -424,7 +424,7 @@ export struct ProfileEditPage {
             : this.getCurrentThemePalette().textTertiary)
           .width('100%')
           .textAlign(TextAlign.End)
-          .margin({ top: 4 })
+          .margin({ top: DesignConstants.SPACING.XS })
 
         if (error.length > 0) {
           Text(error)
@@ -435,7 +435,7 @@ export struct ProfileEditPage {
         }
       }
       .width('100%')
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 10, bottom: 10 })
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
       .backgroundColor(this.getSurfaceSubtle())
       .borderRadius(DesignConstants.SHAPE.INPUT)
       .border({ width: 1, color: this.fieldBorder(focused, error.length > 0).borderColor })

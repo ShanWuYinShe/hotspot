@@ -141,7 +141,7 @@ export struct SystemPageHeader {
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
       .fontColor(this.getPalette().accentText)
       .fontSize(DesignConstants.FONT.SIZE.SM)
-      .fontWeight(FontWeight.Medium)
+      .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
       .enabled(!a.disabled)
       .onClick(() => {
         a?.onClick();

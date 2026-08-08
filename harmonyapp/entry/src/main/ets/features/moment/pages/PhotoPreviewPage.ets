@@ -80,7 +80,7 @@ export struct PhotoPreviewPage {
                   .onActionEnd(() => {
                     // 回弹效果：如果小于1则恢复到1
                     if (this.scaleValue < 1) {
-                      this.getUIContext().animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+                      this.getUIContext().animateTo({ duration: DesignConstants.ANIMATION.DURATION_MEDIUM, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }, () => {
                         this.scaleValue = 1;
                         this.offsetX = 0;
                         this.offsetY = 0;
@@ -125,7 +125,7 @@ export struct PhotoPreviewPage {
                       }
                       
                       if (needBounce) {
-                        this.getUIContext().animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+                        this.getUIContext().animateTo({ duration: DesignConstants.ANIMATION.DURATION_MEDIUM, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }, () => {
                           this.offsetX = targetX;
                           this.offsetY = targetY;
                         })
@@ -134,7 +134,7 @@ export struct PhotoPreviewPage {
                   }),
                 TapGesture({ count: 2 })
                   .onAction(() => {
-                    this.getUIContext().animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+                    this.getUIContext().animateTo({ duration: DesignConstants.ANIMATION.DURATION_MEDIUM, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }, () => {
                       if (this.scaleValue > 1) {
                         this.scaleValue = 1;
                         this.offsetX = 0;
@@ -172,7 +172,7 @@ export struct PhotoPreviewPage {
             AppRouter.pop();
           }
         })
-        .margin({ left: 16, top: 16 })
+        .margin({ left: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG })
       }
       .width('100%')
       .alignItems(VerticalAlign.Top)
@@ -184,16 +184,16 @@ export struct PhotoPreviewPage {
         Text(`${this.currentIndex + 1} / ${this.images.length}`)
           .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_DARK)
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .backgroundColor(DesignConstants.COLOR.OVERLAY_STRONG)
           .padding({
             left: DesignConstants.SPACING.LG,
             right: DesignConstants.SPACING.LG,
-            top: 8,
-            bottom: 8
+            top: DesignConstants.SPACING.SM,
+            bottom: DesignConstants.SPACING.SM
           })
           .borderRadius(DesignConstants.RADIUS.FULL)
-          .shadow(ShadowStyle.OUTER_DEFAULT_XS)
+          .shadow(DesignConstants.SHADOW.SMALL) // 扁平设计无投影（对齐 SHADOW 全零契约）
           .border({ width: 1, color: this.getSurfaceBorder() })
       }
       .width('100%')

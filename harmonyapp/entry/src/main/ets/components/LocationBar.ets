@@ -65,8 +65,8 @@ export struct LocationBar {
   private doPulse(): void {
     try {
       this.getUIContext().animateTo({
-        duration: 1500,
-        curve: Curve.EaseOut
+        duration: 1500, // 定位脉冲循环时长（行为常量）
+        curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
       }, () => {
         this.pulseScale = 2.2;
         this.pulseOpacity = 0;
@@ -103,19 +103,19 @@ export struct LocationBar {
                 .fontColor([this.getPalette().accentText as ResourceColor])
             }
           }
-          .width(28)
-          .height(28)
+          .width(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
+          .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
           .justifyContent(FlexAlign.Center)
           .backgroundColor(this.getPalette().accentBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
+          .transition(TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_250, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
         } else {
           // 当前位置模式：脉冲动画指示器
           Stack({ alignContent: Alignment.Center }) {
             // 脉冲扩散环
             Column()
-              .width(10)
-              .height(10)
+              .width(DesignConstants.SPACING.MD2)
+              .height(DesignConstants.SPACING.MD2)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .backgroundColor(this.getPalette().accentBackground)
               .scale({ x: this.pulseScale, y: this.pulseScale })
@@ -123,15 +123,15 @@ export struct LocationBar {
 
             // 核心圆点（白色描边 + 阴影，营造立体感）
             Column()
-              .width(10)
-              .height(10)
+              .width(DesignConstants.SPACING.MD2)
+              .height(DesignConstants.SPACING.MD2)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .backgroundColor(this.getPalette().accentBackground)
               .border({ width: 2, color: this.getPalette().pageBackground })
           }
-          .width(28)
-          .height(28)
-          .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
+          .width(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
+          .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
+          .transition(TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_250, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
           .onAppear(() => {
             this.startPulseAnimation();
           })
@@ -147,7 +147,7 @@ export struct LocationBar {
 
           Text(this.getDisplayLocation())
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontWeight(FontWeight.Medium)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getPalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -163,7 +163,7 @@ export struct LocationBar {
         }
       }
       .layoutWeight(1)
-      .height(40)
+      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.SM })
       .backgroundColor(this.isUsingAnchor()
         ? this.getPalette().buttonSecondaryBackground
@@ -182,7 +182,7 @@ export struct LocationBar {
       }
     }
     .width('100%')
-    .height(48)
+    .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
     .padding({
       left: 0,
       right: 0
@@ -198,8 +198,8 @@ export struct LocationBar {
           .fontColor([this.getPalette().buttonSecondaryText])
       }
     }
-    .width(40)
-    .height(40)
+    .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+    .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
     .justifyContent(FlexAlign.Center)
     .backgroundColor(this.getPalette().buttonSecondaryBackground)
     .borderRadius(DesignConstants.RADIUS.XL)

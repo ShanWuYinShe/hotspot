@@ -47,14 +47,14 @@ export struct StatSegments {
     Column() {
       Text(item.value)
         .fontSize(DesignConstants.FONT.SIZE.XL) // 20
-        .fontWeight(FontWeight.Bold)
+        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
         .fontColor(this.getPalette().textPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
       Text(item.label)
         .fontSize(DesignConstants.FONT.SIZE.XS2) // 10
         .fontColor(this.getPalette().textSecondary)
-        .margin({ top: 2 })
+        .margin({ top: DesignConstants.SPACING.HALF })
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
@@ -74,7 +74,7 @@ export struct StatSegments {
         if (this.layout === 'row' && index < this.getSegments().length - 1) {
           Divider()
             .vertical(true)
-            .height(28)
+            .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
             .color(this.getPalette().borderColor)
             .margin({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
         }

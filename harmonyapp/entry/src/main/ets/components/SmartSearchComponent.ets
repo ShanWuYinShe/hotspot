@@ -274,11 +274,11 @@ export struct SmartSearchComponent {
   private FilterChip(label: string, filter: string) {
     Text(label)
       .fontSize(DesignConstants.FONT.SIZE.SM)
-      .fontWeight(this.currentFilter === filter ? FontWeight.Medium : FontWeight.Normal)
+      .fontWeight(this.currentFilter === filter ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
       .fontColor(this.currentFilter === filter
         ? this.getPalette().accentBackground
         : this.getPalette().textSecondary)
-      .height(30)
+      .height(DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT)
       .layoutWeight(1)
       .textAlign(TextAlign.Center)
       .backgroundColor(this.currentFilter === filter
@@ -318,7 +318,7 @@ export struct SmartSearchComponent {
           }
         })
         .width('100%')
-        .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
 
       if (this.showResults) {
         Row({ space: 0 }) {
@@ -327,12 +327,12 @@ export struct SmartSearchComponent {
           this.FilterChip('群组', 'groups')
           this.FilterChip('瞬间', 'moments')
         }
-        .padding(3)
+        .padding(DesignConstants.SPACING.THREE)
         .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
           bottom: DesignConstants.SPACING.SM })
         .backgroundColor(this.getPalette().surfaceSubtle)
         .borderRadius(DesignConstants.RADIUS.XL)
-        .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
+        .transition(TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_250, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
       }
 
       if (this.showResults) {
@@ -364,8 +364,8 @@ export struct SmartSearchComponent {
 
                   Button('✕')
                     .type(ButtonType.Capsule)
-                    .width(24)
-                    .height(24)
+                    .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
+                    .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
                     .fontColor(this.getPalette().textSecondary)
@@ -398,7 +398,7 @@ export struct SmartSearchComponent {
                   Column() {
                     Text(result.title)
                       .fontSize(DesignConstants.FONT.SIZE.MD)
-                      .fontWeight(FontWeight.Medium)
+                      .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                       .maxLines(1)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
                       .alignSelf(ItemAlign.Start)
@@ -445,7 +445,7 @@ export struct SmartSearchComponent {
         .borderRadius({ topLeft: DesignConstants.RADIUS.XXL, topRight: DesignConstants.RADIUS.XXL })
         .border({ width: 1, color: this.getPalette().borderColor })
         .shadow(this.getPalette().elevatedShadow)
-        .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
+        .transition(TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_250, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
       }
     }
     .width('100%')

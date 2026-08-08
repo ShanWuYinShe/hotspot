@@ -1055,8 +1055,8 @@ export struct ChatPage {
             }
           })
           .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+            TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
           )
       } else if (this.messages.length === 0 && this.errorMessage) {
         Column({ space: DesignConstants.SPACING.LG }) {
@@ -1073,7 +1073,7 @@ export struct ChatPage {
             .type(ButtonType.Normal)
             .backgroundColor(this.getCurrentThemePalette().accentBackground)
             .fontColor(this.getCurrentThemePalette().accentText)
-            .height(40)
+            .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
             .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => { this.loadHistory(); })
         }
@@ -1086,8 +1086,8 @@ export struct ChatPage {
           }
         })
         .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
         )
       } else if (this.messages.length === 0) {
         Column({ space: DesignConstants.SPACING.LG }) {
@@ -1117,7 +1117,7 @@ export struct ChatPage {
         if (this.isLoadingMoreHistory) {
           ListItem() {
             Row({ space: DesignConstants.SPACING.SM }) {
-              LoadingProgress().width(20).height(20)
+              LoadingProgress().width(DesignConstants.COMPONENT.LOADING_ICON_SIZE).height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
               Text('加载更早消息...')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
                 .fontColor(this.getCurrentThemePalette().textSecondary)
@@ -1156,8 +1156,8 @@ export struct ChatPage {
         }
       })
       .transition(
-        TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-          .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+          .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
       )
       }
 
@@ -1216,8 +1216,8 @@ export struct ChatPage {
           }
         }
         .type(ButtonType.Circle)
-        .width(36)
-        .height(36)
+        .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+        .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
         .backgroundColor(this.getChatTheme().inputFieldBg)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .shadow(this.getChatVisualStyle().input.shadow)
@@ -1330,7 +1330,7 @@ export struct ChatPage {
     Column({ space: DesignConstants.SPACING.MD }) {
       Text('会话设置')
         .fontSize(DesignConstants.FONT.SIZE.XL)
-        .fontWeight(FontWeight.Bold)
+        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
         .fontColor(this.getCurrentThemePalette().textPrimary)
 
       Text(this.chatType === 'group_chat' ? '群聊会话' : '私聊会话')
@@ -1343,7 +1343,7 @@ export struct ChatPage {
         Button('查看个人主页')
           .type(ButtonType.Normal)
           .width('100%')
-          .height(44)
+          .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
           .backgroundColor(this.getSurfaceSubtle())
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .borderRadius(DesignConstants.RADIUS.FULL)
@@ -1359,7 +1359,7 @@ export struct ChatPage {
       Button(this.isMuted ? '取消静音' : '静音通知')
         .type(ButtonType.Normal)
         .width('100%')
-        .height(44)
+        .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
         .backgroundColor(this.getSurfaceSubtle())
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .borderRadius(DesignConstants.RADIUS.FULL)
@@ -1372,7 +1372,7 @@ export struct ChatPage {
       Button('回到最新消息')
         .type(ButtonType.Normal)
         .width('100%')
-        .height(44)
+        .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
         .backgroundColor(this.getSurfaceSubtle())
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .borderRadius(DesignConstants.RADIUS.FULL)
@@ -1385,7 +1385,7 @@ export struct ChatPage {
       Button('清空输入框')
         .type(ButtonType.Normal)
         .width('100%')
-        .height(44)
+        .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
         .backgroundColor(this.getSurfaceSubtle())
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .borderRadius(DesignConstants.RADIUS.FULL)
@@ -1400,7 +1400,7 @@ export struct ChatPage {
       Button('举报')
         .type(ButtonType.Normal)
         .width('100%')
-        .height(44)
+        .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
         .backgroundColor(this.getSurfaceSubtle())
         .fontColor(this.getCurrentThemePalette().error)
         .borderRadius(DesignConstants.RADIUS.FULL)
@@ -1423,7 +1423,7 @@ export struct ChatPage {
       Button('关闭')
         .type(ButtonType.Normal)
         .width('100%')
-        .height(44)
+        .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
         .backgroundColor(this.getSurfaceBackground())
         .fontColor(this.getAccentBackground())
         .borderRadius(DesignConstants.RADIUS.FULL)
@@ -1467,10 +1467,10 @@ export struct ChatPage {
           .fontColor(this.getCurrentThemePalette().textSecondary)
           .backgroundColor(this.getChatTheme().bubbleSystem)
           .padding({
-            left: DesignConstants.SPACING.MD + 2,
-            right: DesignConstants.SPACING.MD + 2,
-            top: DesignConstants.SPACING.XS + 2,
-            bottom: DesignConstants.SPACING.XS + 2
+            left: DesignConstants.CHAT.IMAGE_BUBBLE_PADDING_H,
+            right: DesignConstants.CHAT.IMAGE_BUBBLE_PADDING_H,
+            top: DesignConstants.CHAT.IMAGE_BUBBLE_PADDING_V,
+            bottom: DesignConstants.CHAT.IMAGE_BUBBLE_PADDING_V
           })
           .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
           .shadow(this.getCurrentThemePalette().controlShadow)
@@ -1501,7 +1501,7 @@ export struct ChatPage {
             Row() {
             if (msg.type === 'image') {
               Image(MediaUrlUtil.normalize(msg.content))
-                .width(200)
+                .width(DesignConstants.CHAT.IMAGE_MAX_WIDTH)
                 .objectFit(ImageFit.Cover)
                 .backgroundColor(this.getChatTheme().listBackground)
                 .borderRadius(this.getBubbleRadius(msg.isSelf))

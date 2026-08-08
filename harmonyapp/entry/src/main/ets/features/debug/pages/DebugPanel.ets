@@ -77,7 +77,7 @@ export struct DebugPanel {
 
         Text('调试面板')
           .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
@@ -105,16 +105,16 @@ export struct DebugPanel {
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       Scroll() {
-        Column({ space: 16 }) {
+        Column({ space: DesignConstants.SPACING.LG }) {
           // 状态卡片
           SystemCard({
             cardPadding: 16,
             cardBackgroundColor: this.getSurfaceBackground()
           }) {
-            Column({ space: 8 }) {
+            Column({ space: DesignConstants.SPACING.SM }) {
               Text('系统状态')
                 .fontSize(DesignConstants.FONT.SIZE.LG)
-                .fontWeight(FontWeight.Bold)
+                .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
               
               Text(`WebSocket: ${this.webSocketService.isConnected() ? '✅ 已连接' : '❌ 未连接'}`)
               Text(`User ID: ${this.currentUserId || 'N/A'}`)
@@ -153,16 +153,16 @@ export struct DebugPanel {
           .columnsTemplate('1fr 1fr')
           .rowsGap(8)
           .columnsGap(8)
-          .height(60)
+          .height(DesignConstants.LAYOUT.LABEL_WIDTH)
 
           // 日志区域
           Text('日志')
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontWeight(FontWeight.Bold)
+            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
             .width('100%')
-            .margin({ top: 8 })
+            .margin({ top: DesignConstants.SPACING.SM })
 
-          List({ space: 4 }) {
+          List({ space: DesignConstants.SPACING.XS }) {
             ForEach(this.logs, (log: string) => {
               ListItem() {
                 Text(log)
@@ -173,12 +173,12 @@ export struct DebugPanel {
             }, (_item: string, index: number) => index.toString())
           }
           .width('100%')
-          .height(300)
+          .height(DesignConstants.COMPONENT.LOG_AREA_HEIGHT)
           .backgroundColor(this.getSurfaceBackground())
-          .padding(8)
+          .padding(DesignConstants.SPACING.SM)
           .borderRadius(DesignConstants.RADIUS.MD)
         }
-        .padding(16)
+        .padding(DesignConstants.SPACING.LG)
         .width('100%')
       }
       .layoutWeight(1)

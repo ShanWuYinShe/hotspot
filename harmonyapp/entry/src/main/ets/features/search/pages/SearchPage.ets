@@ -391,7 +391,7 @@ export struct SearchPage {
           .width('100%')
           .layoutWeight(1)
           .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-          .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 12, bottom: 0 })
+          .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD, bottom: 0 })
         }
       }
       .width('100%')
@@ -426,17 +426,17 @@ export struct SearchPage {
             .fontColor([this.getCurrentThemePalette().accentBackground])
         }
       }
-      .width(40)
-      .height(40)
+      .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+      .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.getSurfaceSubtle())
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
 
-      Column({ space: 4 }) {
+      Column({ space: DesignConstants.SPACING.XS }) {
         Text(this.getSuggestTitle(item))
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -472,8 +472,8 @@ export struct SearchPage {
     Text(name)
       .fontColor(this.currentIndex === index ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().textSecondary)
       .fontSize(DesignConstants.FONT.SIZE.SM)
-      .fontWeight(FontWeight.Medium)
-      .padding({ left: 14, right: 14, top: 6, bottom: 6 })
+      .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+      .padding({ left: DesignConstants.SPACING.MD3, right: DesignConstants.SPACING.MD3, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.currentIndex === index ? this.getCurrentThemePalette().accentBackground : this.getSurfaceBackground())
       .shadow(this.currentIndex === index
@@ -499,19 +499,19 @@ export struct SearchPage {
   @Builder
   UserResultList() {
     if (this.hasSearched && this.userResults.length === 0) {
-      Column({ space: 16 }) {
+      Column({ space: DesignConstants.SPACING.LG }) {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
             .fontSize(DesignConstants.FONT.SIZE.XXXL_PLUS)
             .fontColor([this.getCurrentThemePalette().textSecondary])
-            .opacity(0.4)
+            .opacity(DesignConstants.OPACITY.FADED)
         }
         Text('未找到相关内容').fontSize(DesignConstants.FONT.SIZE.MD_PLUS).fontColor(this.getCurrentThemePalette().textPrimary)
         Text('尝试其他关键词').fontSize(DesignConstants.FONT.SIZE.SM_PLUS).fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
-      List({ space: 10 }) {
+      List({ space: DesignConstants.SPACING.MD2 }) {
         ForEach(this.userResults, (item: UserItem) => {
           ListItem() {
             this.buildUserItem(item)
@@ -531,12 +531,12 @@ export struct SearchPage {
   @Builder
   GroupResultList() {
     if (this.hasSearched && this.groupResults.length === 0) {
-      Column({ space: 16 }) {
+      Column({ space: DesignConstants.SPACING.LG }) {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
             .fontSize(DesignConstants.FONT.SIZE.XXXL_PLUS)
             .fontColor([this.getCurrentThemePalette().textSecondary])
-            .opacity(0.4)
+            .opacity(DesignConstants.OPACITY.FADED)
         }
         Text('未找到相关内容').fontSize(DesignConstants.FONT.SIZE.MD_PLUS).fontColor(this.getCurrentThemePalette().textPrimary)
         Text('尝试其他关键词').fontSize(DesignConstants.FONT.SIZE.SM_PLUS).fontColor(this.getCurrentThemePalette().textSecondary)
@@ -563,12 +563,12 @@ export struct SearchPage {
   @Builder
   MomentResultList() {
     if (this.hasSearched && this.momentResults.length === 0) {
-      Column({ space: 16 }) {
+      Column({ space: DesignConstants.SPACING.LG }) {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
             .fontSize(DesignConstants.FONT.SIZE.XXXL_PLUS)
             .fontColor([this.getCurrentThemePalette().textSecondary])
-            .opacity(0.4)
+            .opacity(DesignConstants.OPACITY.FADED)
         }
         Text('未找到相关内容').fontSize(DesignConstants.FONT.SIZE.MD_PLUS).fontColor(this.getCurrentThemePalette().textPrimary)
         Text('尝试其他关键词').fontSize(DesignConstants.FONT.SIZE.SM_PLUS).fontColor(this.getCurrentThemePalette().textSecondary)
@@ -619,20 +619,20 @@ export struct SearchPage {
 
   @Builder
   buildUserItem(item: UserItem) {
-    Column({ space: 8 }) {
-      Row({ space: 8 }) {
-        Row({ space: 8 }) {
+    Column({ space: DesignConstants.SPACING.SM }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
+        Row({ space: DesignConstants.SPACING.SM }) {
           SystemAvatar({
             avatarUrl: item.user?.avatar_url ?? '',
             name: item.user?.nickname ?? '',
-            avatarSize: 40,
+            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
             shape: 'circle'
           })
 
-          Column({ space: 2 }) {
+          Column({ space: DesignConstants.SPACING.HALF }) {
             Text(item.user?.nickname ?? '')
               .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontWeight(FontWeight.Medium)
+              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getCurrentThemePalette().textPrimary)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -658,8 +658,8 @@ export struct SearchPage {
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
         }
-        .width(24)
-        .height(24)
+        .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
+        .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
         .borderRadius(DesignConstants.RADIUS.XXL)
         .backgroundColor(this.getSurfaceSubtle())
         .justifyContent(FlexAlign.Center)
@@ -675,7 +675,7 @@ export struct SearchPage {
 
       Text(item.bio ? item.bio : '这个人还没有留下简介')
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .lineHeight(18)
+        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.XS)
         .fontColor(this.getCurrentThemePalette().textSecondary)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -687,8 +687,8 @@ export struct SearchPage {
             Text(`#${tag}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(this.getCurrentThemePalette().textSecondary)
-              .padding({ left: 7, right: 7, top: 3, bottom: 3 })
-              .margin({ right: 4, bottom: 4 })
+              .padding({ left: 7, right: 7, top: DesignConstants.SPACING.THREE, bottom: DesignConstants.SPACING.THREE })
+              .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
               .backgroundColor(this.getSurfaceSubtle())
               .borderRadius(DesignConstants.RADIUS.XL)
           }, (tag: string) => tag)
@@ -696,15 +696,15 @@ export struct SearchPage {
         .width('100%')
       }
 
-      Row({ space: 8 }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
         Button(this.isUserActionPending(item.user?.user_id ?? '') ? '处理中...' : (this.isUserFollowing(item.user?.user_id ?? '') ? '已关注' : '关注'))
           .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(36)
+          .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .enabled(!this.isUserActionPending(item.user?.user_id ?? ''))
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .backgroundColor(this.isUserFollowing(item.user?.user_id ?? '') ? DesignConstants.COLOR.TRANSPARENT : this.getCurrentThemePalette().accentBackground)
           .fontColor(this.isUserFollowing(item.user?.user_id ?? '') ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().accentText)
           .borderWidth(this.isUserFollowing(item.user?.user_id ?? '') ? 1 : 0)
@@ -717,10 +717,10 @@ export struct SearchPage {
         Button('私聊')
           .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(36)
+          .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .backgroundColor(this.getSurfaceSubtle())
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .shadow(this.getCurrentThemePalette().controlShadow)
@@ -746,14 +746,14 @@ export struct SearchPage {
           SystemAvatar({
             avatarUrl: item.group?.avatar_url ?? '',
             name: item.group?.name ?? '',
-            avatarSize: 40,
+            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
             shape: 'circle'
           })
 
-          Column({ space: 2 }) {
+          Column({ space: DesignConstants.SPACING.HALF }) {
             Text(item.group?.name ?? '')
               .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontWeight(FontWeight.Medium)
+              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getCurrentThemePalette().textPrimary)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -773,8 +773,8 @@ export struct SearchPage {
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
         }
-        .width(24)
-        .height(24)
+        .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
+        .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
         .borderRadius(DesignConstants.RADIUS.XXL)
         .backgroundColor(this.getSurfaceSubtle())
         .justifyContent(FlexAlign.Center)
@@ -790,7 +790,7 @@ export struct SearchPage {
 
       Text(item.description ? item.description : '这个群还没有群介绍')
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .lineHeight(18)
+        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.XS)
         .fontColor(this.getCurrentThemePalette().textSecondary)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -800,11 +800,11 @@ export struct SearchPage {
         Button(this.isGroupActionPending(item.group?.group_id ?? '') ? '处理中...' : (this.isGroupJoined(item) ? '进入群聊' : '加入群组'))
           .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(36)
+          .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .enabled(!this.isGroupActionPending(item.group?.group_id ?? ''))
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .backgroundColor(this.isGroupJoined(item) ? DesignConstants.COLOR.TRANSPARENT : this.getCurrentThemePalette().accentBackground)
           .fontColor(this.isGroupJoined(item) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().accentText)
           .borderWidth(this.isGroupJoined(item) ? 1 : 0)
@@ -817,10 +817,10 @@ export struct SearchPage {
         Button('详情')
           .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(36)
+          .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .backgroundColor(this.getSurfaceSubtle())
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .shadow(this.getCurrentThemePalette().controlShadow)
@@ -856,17 +856,17 @@ export struct SearchPage {
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
         .width('100%')
-        .height(120)
+        .height(DesignConstants.COMPONENT.PLACEHOLDER_AREA_HEIGHT)
         .padding(DesignConstants.SPACING.MD)
         .justifyContent(FlexAlign.Center)
         .backgroundColor(this.getSurfaceBackground())
       }
 
-      Row({ space: 6 }) {
+      Row({ space: DesignConstants.SPACING.SM2 }) {
         SystemAvatar({
           avatarUrl: item.user?.avatar_url ?? '',
           name: item.user?.nickname ?? '',
-          avatarSize: 40
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL
         })
 
         Text(item.user?.nickname ?? '')
@@ -876,7 +876,7 @@ export struct SearchPage {
           .layoutWeight(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-        Row({ space: 2 }) {
+        Row({ space: DesignConstants.SPACING.HALF }) {
           Text() {
             SymbolSpan($r(AppIcon.HEART))
               .fontSize(DesignConstants.FONT.SIZE.XS)

@@ -194,15 +194,15 @@ export struct AccountsPage {
         showBackButton: true,
         onBack: () => { AppRouter.pop(); },
         titleAlign: TextAlign.Center,
-        titleWeight: FontWeight.Medium,
+        titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
         backgroundVariant: 'transparent'
       })
 
       if (this.isLoading) {
         SystemLoadingView({ message: '加载账号列表...' })
           .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+            TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
           )
       } else if (this.accounts.length === 0 && this.errorMessage) {
         Column({ space: DesignConstants.SPACING.LG }) {
@@ -219,7 +219,7 @@ export struct AccountsPage {
             .type(ButtonType.Capsule)
             .backgroundColor(this.getCurrentThemePalette().accentBackground)
             .fontColor(this.getCurrentThemePalette().accentText)
-            .height(40)
+            .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
             .shadow(this.getCurrentThemePalette().controlShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
             .onClick(() => { this.load(); })
@@ -228,11 +228,11 @@ export struct AccountsPage {
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
         .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
         )
       } else if (this.accounts.length === 0) {
-        Column({ space: 12 }) {
+        Column({ space: DesignConstants.SPACING.MD }) {
           Text('暂无已保存账号')
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor(this.getCurrentThemePalette().textSecondary)
@@ -241,7 +241,7 @@ export struct AccountsPage {
             .type(ButtonType.Capsule)
             .backgroundColor(this.getCurrentThemePalette().accentBackground)
             .fontColor(this.getCurrentThemePalette().accentText)
-            .height(44)
+            .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
             .shadow(this.getCurrentThemePalette().controlShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
             .onClick(() => {
@@ -251,8 +251,8 @@ export struct AccountsPage {
         .width('100%')
         .padding(DesignConstants.SPACING.XL)
         .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
         )
       } else {
         List() {
@@ -266,15 +266,15 @@ export struct AccountsPage {
                       .fontColor([this.getCurrentThemePalette().accentBackground])
                   }
                 }
-                .width(40)
-                .height(40)
+                .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+                .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
                 .borderRadius(DesignConstants.RADIUS.XL)
                 .backgroundColor(this.getSurfaceSubtle())
                 .justifyContent(FlexAlign.Center)
                 .alignItems(VerticalAlign.Center)
 
-                Column({ space: 4 }) {
-                  Row({ space: 8 }) {
+                Column({ space: DesignConstants.SPACING.XS }) {
+                  Row({ space: DesignConstants.SPACING.SM }) {
                     Text(this.getAccountDisplayName(acc))
                       .fontSize(DesignConstants.FONT.SIZE.LG)
                       .fontColor(this.getCurrentThemePalette().textPrimary)
@@ -284,7 +284,7 @@ export struct AccountsPage {
                         .fontColor(this.getCurrentThemePalette().accentText)
                         .backgroundColor(this.getCurrentThemePalette().accentBackground)
                         .borderRadius(DesignConstants.RADIUS.XL)
-                        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 2, bottom: 2 })
+                        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
                     }
                   }
                   Text(`ID: ${acc.user_id}`)
@@ -294,11 +294,11 @@ export struct AccountsPage {
                 .layoutWeight(1)
                 .alignItems(HorizontalAlign.Start)
 
-                Row({ space: 8 }) {
+                Row({ space: DesignConstants.SPACING.SM }) {
                       Button('切换')
                         .type(ButtonType.Capsule)
                         .fontSize(DesignConstants.FONT.SIZE.SM)
-                        .height(32)
+                        .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
                         .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
                         .fontColor(this.getCurrentThemePalette().accentBackground)
                         .shadow(this.getCurrentThemePalette().controlShadow)
@@ -308,7 +308,7 @@ export struct AccountsPage {
                   Button('删除')
                     .type(ButtonType.Capsule)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .height(32)
+                    .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
                         .backgroundColor(this.getCurrentThemePalette().accentBackground)
                         .fontColor(this.getCurrentThemePalette().accentText)
                         .shadow(this.getCurrentThemePalette().controlShadow)
@@ -323,7 +323,7 @@ export struct AccountsPage {
             .borderRadius(DesignConstants.RADIUS.XXL)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
-            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 14 })
+            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD3 })
           }, (acc: AuthData) => acc.user_id)
         }
         .width('100%')
@@ -334,8 +334,8 @@ export struct AccountsPage {
           bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
         })
         .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
         )
       }
     }

@@ -48,7 +48,7 @@ export struct TabsPillGroup {
   @Builder
   private buildTab(tab: TabItem, index: number, isActiveTab: boolean) {
     Column() {
-      Row({ space: 6 }) {
+      Row({ space: DesignConstants.SPACING.SM2 }) {
         if (tab.icon) {
           Text() {
             SymbolSpan($r(tab.icon))
@@ -59,13 +59,13 @@ export struct TabsPillGroup {
 
         Text(tab.label)
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(isActiveTab ? FontWeight.Medium : FontWeight.Regular)
+          .fontWeight(isActiveTab ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
           .fontColor(isActiveTab ? this.getPalette().accentText : this.getPalette().tabBarInactive)
       }
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
       .width('100%')
-      .height(34)
+      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(isActiveTab ? this.getPalette().accentBackground : DesignConstants.COLOR.TRANSPARENT)
       .shadow(isActiveTab ? this.getPalette().accentShadow : {
@@ -110,7 +110,7 @@ export struct TabsPillGroup {
       }, (tab: TabItem, index: number) => `${tab.label}-${index}-${this.activeIndex}`)
     }
     .width('100%')
-    .padding(3)
+    .padding(DesignConstants.SPACING.THREE)
     .borderRadius(DesignConstants.RADIUS.XXL)
     .backgroundColor(this.getPalette().surfaceSubtle)
     .alignItems(VerticalAlign.Center)

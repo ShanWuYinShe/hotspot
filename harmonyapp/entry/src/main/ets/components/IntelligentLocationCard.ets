@@ -39,7 +39,7 @@ export struct IntelligentLocationCard {
   }
 
   build() {
-    Row({ space: 12 }) {
+    Row({ space: DesignConstants.SPACING.MD }) {
       // 位置图标 - 使用SymbolSpan
       Text() {
         SymbolSpan($r(AppIcon.LOCATION))
@@ -47,16 +47,16 @@ export struct IntelligentLocationCard {
           .fontColor([this.getPalette().accentBackground])
       }
 
-      Column({ space: 6 }) {
+      Column({ space: DesignConstants.SPACING.SM2 }) {
         // 地址信息
         Text(this.locationName || '未知位置')
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .fontColor(this.getPalette().textPrimary)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-        Row({ space: 12 }) {
+        Row({ space: DesignConstants.SPACING.MD }) {
           // 距离信息
           if (this.distance >= 0) {
               Row({ space: DesignConstants.SPACING.XS }) {
@@ -98,8 +98,8 @@ export struct IntelligentLocationCard {
               .fontColor([this.getPalette().accentText as ResourceColor])
           }
         }
-        .width(32)
-        .height(32)
+        .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+        .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
         .backgroundColor(this.getPalette().accentBackground)
         .borderRadius(DesignConstants.RADIUS.XL)
         .onClick(() => {
@@ -117,8 +117,8 @@ export struct IntelligentLocationCard {
               .fontColor([this.getPalette().accentBackground])
           }
         }
-        .width(32)
-        .height(32)
+        .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+        .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
         .backgroundColor(this.getPalette().surfaceBackground)
         .border({
           width: 1,
@@ -134,7 +134,7 @@ export struct IntelligentLocationCard {
       }
     }
     .width('100%')
-    .padding(16)
+    .padding(DesignConstants.SPACING.LG)
     .backgroundColor(this.getPalette().surfaceBackground)
     .borderRadius(DesignConstants.RADIUS.XL)
     .border({ width: 1, color: this.getPalette().borderColor })
@@ -146,11 +146,11 @@ export struct IntelligentLocationCard {
     })
     .onHover((isHover: boolean) => {
       // 使用最新的动画API
-      this.cardElevation = isHover ? 4 : 1;
+      this.cardElevation = isHover ? DesignConstants.INTERACTION.HOVER_ELEVATION : DesignConstants.INTERACTION.HOVER_ELEVATION_REST;
     })
     .animation({
-      duration: 250,
-      curve: Curve.EaseInOut
+      duration: DesignConstants.ANIMATION.DURATION_250,
+      curve: DesignConstants.ANIMATION.CURVE_EASE_IN_OUT
     })
     .gesture(
       TapGesture()

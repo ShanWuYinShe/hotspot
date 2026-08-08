@@ -66,7 +66,7 @@ export struct ChatPageHeader {
 
         Text(this.title)
           .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontWeight(FontWeight.Bold)
+          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
           .fontColor(this.getPalette().textPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })

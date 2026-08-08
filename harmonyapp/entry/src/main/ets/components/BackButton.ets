@@ -37,7 +37,7 @@ export struct BackButton {
         Text(this.label)
           .fontSize(DesignConstants.FONT.SIZE.MD_PLUS) // 15
           .fontColor(this.getPalette().textPrimary)
-          .margin({ left: 2 })
+          .margin({ left: DesignConstants.SPACING.HALF })
       }
     }
     .height(this.buttonSize)
@@ -46,9 +46,9 @@ export struct BackButton {
     .justifyContent(FlexAlign.Center)
     .alignItems(VerticalAlign.Center)
     .scale(this.isPressed
-      ? { x: 0.88, y: 0.88 }
+      ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_BACK, y: DesignConstants.INTERACTION.SCALE_PRESSED_BACK }
       : { x: 1, y: 1 })
-    .animation({ curve: curves.springMotion(0.3, 0.85) })
+    .animation({ curve: curves.springMotion(DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS, DesignConstants.INTERACTION.SPRING_DAMPING_PRESS) })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.isPressed = true;

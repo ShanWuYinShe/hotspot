@@ -50,7 +50,7 @@ export struct PageLoadingExample {
     if (this.isLoading) {
       // 加载态：SkeletonShimmer 包装 3 个 Skeleton 占位
       SkeletonShimmer({ active: true }) {
-        Column({ space: 16 }) {
+        Column({ space: DesignConstants.SPACING.LG }) {
           Skeleton({ width: '100%', height: 24, borderRadius: DesignConstants.RADIUS.MD })
           Skeleton({ width: '80%', height: 16, borderRadius: DesignConstants.RADIUS.SM })
           Skeleton({ width: '90%', height: 16, borderRadius: DesignConstants.RADIUS.SM })
@@ -58,7 +58,7 @@ export struct PageLoadingExample {
           Skeleton({ width: 200, height: 200, borderRadius: DesignConstants.RADIUS.FULL })
         }
         .width('100%')
-        .padding(16)
+        .padding(DesignConstants.SPACING.LG)
       }
     } else {
       // 成功 / 错误态：ErrorBoundary 包装 child

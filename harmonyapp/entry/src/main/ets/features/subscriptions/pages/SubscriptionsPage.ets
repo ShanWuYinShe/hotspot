@@ -185,7 +185,7 @@ export struct SubscriptionsPage {
         showBackButton: true,
         onBack: () => { AppRouter.pop(); },
         titleAlign: TextAlign.Center,
-        titleWeight: FontWeight.Medium,
+        titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
         backgroundVariant: 'transparent'
       })
 
@@ -251,14 +251,14 @@ export struct SubscriptionsPage {
             .fontColor([this.getCurrentThemePalette().accentBackground])
         }
       }
-      .width(40)
-      .height(40)
+      .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+      .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
       .borderRadius(DesignConstants.RADIUS.MD)
       .backgroundColor(this.getSurfaceSubtle())
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
 
-      Column({ space: 4 }) {
+      Column({ space: DesignConstants.SPACING.XS }) {
         Text(item.title)
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .fontColor(this.getCurrentThemePalette().textPrimary)
@@ -286,7 +286,7 @@ export struct SubscriptionsPage {
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .backgroundColor(this.getSurfaceBackground())
     .border({ width: 1, color: this.getSurfaceBorder() })
-    .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 12 })
+    .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD })
   }
 }
 

@@ -179,7 +179,7 @@ export struct NearbyUsersListPage {
 
   @Builder
   private buildUserRow(user: UserItem) {
-    Row({ space: 12 }) {
+    Row({ space: DesignConstants.SPACING.MD }) {
       Stack({ alignContent: Alignment.BottomEnd }) {
         SystemAvatar({
           avatarUrl: user.user?.avatar_url ?? '',
@@ -189,25 +189,25 @@ export struct NearbyUsersListPage {
         })
         if (user.presence_status === 'online') {
           Row()
-            .width(12)
-            .height(12)
+            .width(DesignConstants.SPACING.MD)
+            .height(DesignConstants.SPACING.MD)
             .borderRadius(DesignConstants.RADIUS.FULL)
             .backgroundColor(this.getCurrentThemePalette().success)
             .border({ width: 2, color: this.getCurrentThemePalette().surfaceBackground })
         }
       }
-      .width(48)
-      .height(48)
+      .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+      .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
 
-      Column({ space: 4 }) {
+      Column({ space: DesignConstants.SPACING.XS }) {
         Text(user.user?.nickname ?? '')
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-        Row({ space: 8 }) {
+        Row({ space: DesignConstants.SPACING.SM }) {
           if (user.presence_status === 'online') {
             Text('在线')
               .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -231,7 +231,7 @@ export struct NearbyUsersListPage {
       }
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 10, bottom: 10 })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
     .onClick(() => {
       const userId = user.user?.user_id;
       if (userId) {
@@ -249,12 +249,12 @@ export struct NearbyUsersListPage {
           title: '附近的人',
           showBackButton: true,
           onBack: () => { AppRouter.pop(); },
-          titleWeight: FontWeight.Medium,
+          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           backgroundVariant: 'transparent'
         })
 
         // 搜索栏（对齐前端 /users/nearby 搜索框）
-        Row({ space: 10 }) {
+        Row({ space: DesignConstants.SPACING.MD2 }) {
           Text() {
             SymbolSpan($r(AppIcon.SEARCH))
               .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
@@ -281,7 +281,7 @@ export struct NearbyUsersListPage {
             Text(chip)
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(chip === this.getSortLabel() ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().textSecondary)
-              .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+              .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
               .borderRadius(DesignConstants.SHAPE.CHIP)
               .backgroundColor(chip === this.getSortLabel() ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().surfaceSubtle)
               .onClick(() => {
@@ -299,10 +299,10 @@ export struct NearbyUsersListPage {
         // Hero 统计卡（对齐前端「附近概览」）
         if (this.hasAnyData()) {
           Row({ space: DesignConstants.SPACING.MD }) {
-            Column({ space: 2 }) {
+            Column({ space: DesignConstants.SPACING.HALF }) {
               Text(`${this.onlineCount}`)
                 .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontWeight(FontWeight.Bold)
+                .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
                 .fontColor(this.getCurrentThemePalette().success)
               Text('在线')
                 .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -312,13 +312,13 @@ export struct NearbyUsersListPage {
             .layoutWeight(1)
 
             Column()
-              .width(1).height(28)
+              .width(1).height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
               .backgroundColor(this.getCurrentThemePalette().borderColor)
 
-            Column({ space: 2 }) {
+            Column({ space: DesignConstants.SPACING.HALF }) {
               Text(`${this.users.length}`)
                 .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontWeight(FontWeight.Bold)
+                .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
                 .fontColor(this.getCurrentThemePalette().textPrimary)
               Text('总数')
                 .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -328,13 +328,13 @@ export struct NearbyUsersListPage {
             .layoutWeight(1)
 
             Column()
-              .width(1).height(28)
+              .width(1).height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
               .backgroundColor(this.getCurrentThemePalette().borderColor)
 
-            Column({ space: 2 }) {
+            Column({ space: DesignConstants.SPACING.HALF }) {
               Text('5km')
                 .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontWeight(FontWeight.Bold)
+                .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
                 .fontColor(this.getCurrentThemePalette().accentBackground)
               Text('半径')
                 .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -389,7 +389,7 @@ export struct NearbyUsersListPage {
                     .fontColor(this.getCurrentThemePalette().textTertiary)
                     .width('100%')
                     .textAlign(TextAlign.Center)
-                    .padding({ top: 16, bottom: 16 })
+                    .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
                 }
               }
             }
