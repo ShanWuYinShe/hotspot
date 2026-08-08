@@ -57,7 +57,7 @@
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* Interaction / shell semantic colors（仅注册有 Tailwind 类消费的；
-     其余 token 如 --surface-hover/--navigation-*/--marker-* 组件经 var() 直用，
+     其余 token 如 --surface-hover、--navigation-*、--marker-* 组件经 var() 直用，
      无需类注册） */
   --color-surface-raised: var(--cst-surface-raised);
   --color-surface-scrim: var(--cst-surface-scrim);

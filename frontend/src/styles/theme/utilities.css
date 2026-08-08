@@ -6,7 +6,7 @@
    3. App-list system (app-list-row)
    4. Surface depths (flat, pressed, surface-hero/-flat/-tinted/-ghost,
       surface-accent-gradient, ambient-glow, eyebrow)
-   5. Hover/active 反馈（hover-btn/hover-action/scale-btn/tap-*/header-action/
+   5. Hover/active 反馈（hover-btn / hover-action / scale-btn / tap-* / header-action /
       hover-bg/map-pulse-halo/spinner + 全局 button hover 规则）
    6. Image-first interaction（image-hover-frame、avatar-entry）
    7. Routed page canvas（data-page-viewport 等）
@@ -310,25 +310,25 @@
      生效，主按钮与图标按钮获得一致反馈而不抹掉其语义底色。
      注意：带显式背景类（bg-*）或内联背景的按钮已自带语义底色，
      背景填充仅作用于透明/ghost 按钮，避免覆盖实色 accent 导致白字褪色。
+     带选中/激活状态的按钮（aria-pressed / aria-current / data-active）整体
+     豁免全局 hover/active 反馈——状态背景由组件级规则负责（如 .surface-ghost
+     的 [aria-pressed="true"]:hover、显式 hover:bg-interactive-active 类），
+     不叠加也不清除，避免透明覆盖抹掉语义底色（白字+实色 accent 会隐形）。
      排除：[data-tab-bar] 内的导航 Tab（走 .tab-item subtle hover，见下）、
      .nav-tab 胶囊导航（自带交互态）。 */
 :where(button:not(:disabled):not([data-tab-bar] *):not(.nav-tab)) {
   border-radius: var(--cst-shape-sm);
   transition: background-color 160ms var(--cst-ease-standard), background-image 160ms var(--cst-ease-standard), border-color 160ms var(--cst-ease-standard), color 160ms var(--cst-ease-standard);
 }
-:where(button:not(:disabled):not([class*="bg-"]):not([data-tab-bar] *)):active {
+:where(button:not(:disabled):not([class*="bg-"]):not([data-tab-bar] *):not(.nav-tab):not(:where([aria-pressed="true"], [aria-current="page"], [data-active="true"]))):active {
   background-color: var(--cst-interactive-active-fill);
 }
 @media (hover: hover) and (pointer: fine) {
-  :where(button:not(:disabled):not([data-tab-bar] *)):hover {
+  :where(button:not(:disabled):not([data-tab-bar] *):not(.nav-tab):not(:where([aria-pressed="true"], [aria-current="page"], [data-active="true"]))):hover {
     background-image: linear-gradient(var(--cst-interactive-hover-overlay), var(--cst-interactive-hover-overlay)) !important;
   }
-  :where(button:not(:disabled):not([class*="bg-"]):not([data-tab-bar] *)):hover {
+  :where(button:not(:disabled):not([class*="bg-"]):not([data-tab-bar] *):not(.nav-tab):not(:where([aria-pressed="true"], [aria-current="page"], [data-active="true"]))):hover {
     background-color: var(--cst-interactive-hover-fill);
-  }
-  :where(button[aria-current="page"], button[aria-pressed="true"], button[data-active="true"]):hover {
-    background-color: transparent;
-    background-image: none !important;
   }
 }
 /* 紧凑导航控件需要真胶囊形，而非通用控件圆角 */
