@@ -40,7 +40,8 @@
 	<!-- 左侧指示条 — 仅在 hover 时显示，主题色，细（选中态由实心填充表达） -->
 	<span
 		aria-hidden="true"
-		style="position:absolute;left:4px;top:50%;width:3px;height:{showHover ? 16 : 0}px;margin-top:{showHover ? -8 : 0}px;border-radius:2px;background:var(--cst-accent-default);opacity:{showHover ? 0.9 : 0};transition:height 0.18s var(--cst-ease-standard), opacity 0.18s var(--cst-ease-standard), margin-top 0.18s var(--cst-ease-standard);pointer-events:none;"
+		class="{showHover ? 'opacity-90' : 'opacity-0'}"
+		style="position:absolute;left:4px;top:50%;width:3px;height:{showHover ? 16 : 0}px;margin-top:{showHover ? -8 : 0}px;border-radius:2px;background:var(--cst-accent-default);transition:height 0.18s var(--cst-ease-standard), opacity 0.18s var(--cst-ease-standard), margin-top 0.18s var(--cst-ease-standard);pointer-events:none;"
 	></span>
 	<Icon
 		class="shrink-0 size-4.25"

@@ -122,6 +122,15 @@ export interface AppThemePalette {
   success: string;
   error: string;
   info: string;
+  /** 地图标记主色（对齐前端 --cst-marker-*，随主题变） */
+  mapUser: string;
+  mapGroup: string;
+  mapMoment: string;
+  /** 状态色淡底（对齐前端 --cst-status-*-bg，随主题变） */
+  dangerSoft: string;
+  warningSoft: string;
+  successSoft: string;
+  infoSoft: string;
   visuals: AppThemeVisualTokens;
 }
 

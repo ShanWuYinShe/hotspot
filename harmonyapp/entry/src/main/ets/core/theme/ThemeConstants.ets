@@ -43,6 +43,15 @@ export interface ColorConfig {
   success: string;
   error: string;
   info: string;
+  /** 地图标记主色（对齐前端 --cst-marker-user/group/moment，随主题族/明暗变） */
+  mapUser: string;
+  mapGroup: string;
+  mapMoment: string;
+  /** 状态色淡底（对齐前端 --cst-status-*-bg 的 color-mix 12~14% 预混近似，随主题变） */
+  dangerSoft: string;
+  warningSoft: string;
+  successSoft: string;
+  infoSoft: string;
 }
 
 export interface ThemeShadows {
@@ -139,7 +148,14 @@ export class ThemeConstants {
     warning: '#8A6A2F',
     success: '#059669',
     error: '#8E6F35',
-    info: '#3D7A55'
+    info: '#3D7A55',
+    mapUser: '#3D7A55',
+    mapGroup: '#638B46',
+    mapMoment: '#A57C38',
+    dangerSoft: '#ECE9E0',
+    warningSoft: '#E9E6DB',
+    successSoft: '#E0E8E0',
+    infoSoft: '#E3EAE3'
   };
 
   static readonly DEFAULT_CLEAN_DARK_COLORS: ColorConfig = {
@@ -177,7 +193,14 @@ export class ThemeConstants {
     warning: '#C4A75A',
     success: '#34D399',
     error: '#C4A75A',
-    info: '#52B878'
+    info: '#52B878',
+    mapUser: '#52B878',
+    mapGroup: '#88B85A',
+    mapMoment: '#C4A75A',
+    dangerSoft: '#2E2E20',
+    warningSoft: '#2E2E20',
+    successSoft: '#1E3024',
+    infoSoft: '#1E3024'
   };
 
   static readonly FIGMA_NEU_LIGHT_COLORS: ColorConfig = {
@@ -215,7 +238,14 @@ export class ThemeConstants {
     warning: '#B8843F',
     success: '#66835D',
     error: '#C0392B',
-    info: '#66835D'
+    info: '#66835D',
+    mapUser: '#B86F4B',
+    mapGroup: '#66835D',
+    mapMoment: '#B8843F',
+    dangerSoft: '#DEC3B3',
+    warningSoft: '#DDCCB5',
+    successSoft: '#D3CCB9',
+    infoSoft: '#D3CCB9'
   };
 
   static readonly FIGMA_NEU_DARK_COLORS: ColorConfig = {
@@ -253,7 +283,14 @@ export class ThemeConstants {
     warning: '#D1A35D',
     success: '#8CA877',
     error: '#E06F6F',
-    info: '#8CA877'
+    info: '#8CA877',
+    mapUser: '#D18A5D',
+    mapGroup: '#8CA877',
+    mapMoment: '#D1A35D',
+    dangerSoft: '#2D1712',
+    warningSoft: '#2F2519',
+    successSoft: '#25261D',
+    infoSoft: '#25261D'
   };
 
   static readonly SHADOWS: ThemeShadowRegistry = new ThemeShadowRegistry();
@@ -293,7 +330,14 @@ export class ThemeConstants {
     warning: '#F59E0B',
     success: '#14B8A6',
     error: '#F43F5E',
-    info: '#2E66C0'
+    info: '#2E66C0',
+    mapUser: '#2E66C0',
+    mapGroup: '#10B981',
+    mapMoment: '#F97316',
+    dangerSoft: '#F7E2EA',
+    warningSoft: '#F7EEDF',
+    successSoft: '#D9F1F3',
+    infoSoft: '#DDE7F7'
   };
 
   static readonly VIBRANT_DARK_COLORS: ColorConfig = {
@@ -331,6 +375,13 @@ export class ThemeConstants {
     warning: '#FBBF24',
     success: '#37C99A',
     error: '#FB7185',
-    info: '#69A8FF'
+    info: '#69A8FF',
+    mapUser: '#69A8FF',
+    mapGroup: '#34D399',
+    mapMoment: '#FB923C',
+    dangerSoft: '#2C2131',
+    warningSoft: '#2C2B24',
+    successSoft: '#112D34',
+    infoSoft: '#182842'
   };
 }

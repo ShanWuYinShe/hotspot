@@ -130,6 +130,13 @@ function buildPalette(
     success: colors.success,
     error: colors.error,
     info: colors.info,
+    mapUser: colors.mapUser,
+    mapGroup: colors.mapGroup,
+    mapMoment: colors.mapMoment,
+    dangerSoft: colors.dangerSoft,
+    warningSoft: colors.warningSoft,
+    successSoft: colors.successSoft,
+    infoSoft: colors.infoSoft,
     visuals
   } as AppThemePalette;
 }

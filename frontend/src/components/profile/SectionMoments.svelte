@@ -84,8 +84,7 @@
 								role="tab"
 								aria-selected={isActive}
 								onclick={() => (activeTab = item.id)}
-								class="rounded-full px-3.5 py-2 text-xs transition-colors {isActive ? 'bg-surface-primary text-text-primary' : 'text-text-secondary hover:text-text-primary'}"
-								style={isActive ? 'box-shadow:0 2px 8px var(--cst-elevation-shadow-dark);' : ''}
+								class="rounded-full px-3.5 py-2 text-xs transition-colors {isActive ? 'bg-surface-primary text-text-primary shadow-raised-sm' : 'text-text-secondary hover:text-text-primary'}"
 							>
 								{item.label}<span class="ml-1.5 font-mono text-xxs opacity-70">{item.count}</span>
 							</button>

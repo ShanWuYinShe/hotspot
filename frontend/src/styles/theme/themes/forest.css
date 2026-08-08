@@ -10,7 +10,7 @@
 
 /* ═══ Forest Light ═══ */
 .forest {
-  /* ── 原始色板 --pr-* ── */
+  /* ── 原始色板 --cst-pr-* ── */
   --cst-pr-bg: #F6F7F3;
   --cst-pr-page-bg: #F6F7F3;
   --cst-pr-text: #152219;

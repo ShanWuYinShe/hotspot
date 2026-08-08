@@ -235,15 +235,6 @@ export interface OpacitySystem {
   EMPHASIZED: number;
 }
 
-// ==================== 地图标记颜色接口 ====================
-export interface MapMarkerColors {
-  PICKER: string;
-  USER: string;
-  GROUP: string;
-  MOMENT: string;
-  DEFAULT: string;
-}
-
 // ==================== 组件特定常量接口 ====================
 export interface AvatarSizes {
   XS: number;
@@ -437,7 +428,6 @@ export interface DesignConstantsType {
   COMPONENT: ComponentConstants;
   CHAT: ChatLayoutConstants;
   OPACITY: OpacitySystem;
-  MAP_MARKER: MapMarkerColors;
   LAYOUT: LayoutSystem;
   PAGE_SHELL: PageShellSystem;
 }
@@ -825,15 +815,6 @@ const OPACITY: OpacitySystem = {
   EMPHASIZED: 0.8,
 };
 
-// ==================== 地图标记颜色（对齐前端 --map-* tokens）====================
-const MAP_MARKER: MapMarkerColors = {
-  PICKER: '#3D7A55',
-  USER: '#3D7A55',
-  GROUP: '#638B46',
-  MOMENT: '#A57C38',
-  DEFAULT: '#566B5E',
-};
-
 export const DesignConstants: DesignConstantsType = {
   COLOR,
   FONT,
@@ -847,7 +828,6 @@ export const DesignConstants: DesignConstantsType = {
   COMPONENT,
   CHAT,
   OPACITY,
-  MAP_MARKER,
   LAYOUT,
   PAGE_SHELL,
 };

@@ -89,7 +89,7 @@
 
 	<div class="animate-fade-in flex flex-col gap-5">
 	<!-- Avatar section -->
-	<div class="relative rounded-xl overflow-hidden" style="height:clamp(7.5rem, 18vw, 10rem);">
+	<div class="relative rounded-xl overflow-hidden" style="height:var(--cst-cover-height-sm);">
 		<div class="absolute inset-0 bg-surface-primary"></div>
 		<button
 			type="button"
@@ -127,7 +127,7 @@
 	<div class="flex flex-col gap-1.5">
 		<div class="flex items-center gap-1.5">
 			<User class="size-3.25"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
-			<label class="text-text-secondary text-xs uppercase tracking-widest" for="edit-nickname">昵称</label>
+			<label class="text-text-secondary text-xs uppercase tracking-field" for="edit-nickname">昵称</label>
 		</div>
 		<div class="px-4 py-3 rounded-md input-surface">
 			<input
@@ -143,7 +143,7 @@
 	<div class="flex flex-col gap-1.5">
 		<div class="flex items-center gap-1.5">
 			<FileText class="size-3.25"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
-			<label class="text-text-secondary text-xs uppercase tracking-widest" for="edit-bio">个人简介</label>
+			<label class="text-text-secondary text-xs uppercase tracking-field" for="edit-bio">个人简介</label>
 		</div>
 		<div class="px-4 py-3 rounded-md input-surface">
 			<div>
@@ -166,7 +166,7 @@
 
 	<!-- Interest tags -->
 	<fieldset class="flex flex-col gap-2.5 border-0 p-0 m-0 min-w-0">
-		<legend class="flex items-center gap-1.5 text-text-secondary text-xs uppercase tracking-widest">
+		<legend class="flex items-center gap-1.5 text-text-secondary text-xs uppercase tracking-field">
 			兴趣标签
 			<span class="opacity-60">({tags.size}/5)</span>
 		</legend>

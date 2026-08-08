@@ -16,5 +16,5 @@
 
 <div
 	class="absolute rounded-full pointer-events-none"
-	style="transform:translate(-50%,-50%);background:var(--cst-accent-default);box-shadow:0 0 12px var(--cst-accent-default);{style}"
+	style="transform:translate(-50%,-50%);background:var(--cst-accent-default);box-shadow:var(--cst-marker-halo) var(--cst-accent-default);{style}"
 ></div>

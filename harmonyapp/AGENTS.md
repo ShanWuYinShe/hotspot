@@ -111,14 +111,15 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 
 ### 设计系统（design-tokens）
 
-所有颜色、字号、间距、圆角、阴影只用 DesignConstants / AppThemeManager token，对齐前端 forest 设计系统（单一事实源）。禁止在页面/组件里硬编码十六进制色值或裸数字 `fontSize(N)` / `padding({left:N})`。
+所有颜色、字号、间距、圆角、阴影只用 DesignConstants / AppThemeManager token，对齐前端 design token 系统（vibrant / forest 双主题，单一事实源）。禁止在页面/组件里硬编码十六进制色值或裸数字 `fontSize(N)` / `padding({left:N})`。
 
 颜色：
 - 画布：`COLOR.PRIMARY_BG_*` / `SECONDARY_BG_*`
 - 表面：`COLOR.SURFACE_NEUTRAL_SOFT` / `SURFACE_INFO_SOFT` 等
 - 文字：`COLOR.TEXT_PRIMARY_*` / `TEXT_SECONDARY_*` / `TEXT_TERTIARY_*`
-- 品牌：`COLOR.BRAND_PRIMARY`（forest `#3D7A55`，与前端 `--theme-accent-primary` 一致）
+- 品牌：`COLOR.BRAND_PRIMARY`（forest `#3D7A55`，与前端 `--cst-pr-accent-primary`（`--cst-accent-default`）一致）
 - 语义：`SUCCESS` / `WARNING` / `ERROR` / `INFO`
+- 地图标记：`palette.mapUser / mapGroup / mapMoment`（对齐前端 `--cst-marker-user/group/moment`，随主题/明暗变）；状态淡底：`palette.dangerSoft / warningSoft / successSoft / infoSoft`（对齐前端 `--cst-status-*-bg` 12~14% 预混档位）
 - 主题解析：`AppThemeManager.getPaletteById(resolvedThemeId)` → `@StorageProp(KEY_RESOLVED_THEME_ID)`
 
 字号（FONT.SIZE，禁用裸 `fontSize(N)`）：`XS_MINUS 9` / `XS2 10` / `XS 11` / `SM 12` / `SM_PLUS 13` / `MD 14` / `MD_PLUS 15` / `LG 16` / `LG_PLUS 18` / `XL 20` / `XL_PLUS 22` / `XXL 24` / `XXXL 32` / `HERO 48`。字重 `FONT.WEIGHT.{LIGHT,REGULAR,MEDIUM,SEMIBOLD,BOLD}`。行高 `FONT.LINE_HEIGHT.{XS 18, SM 20, MD 22, LG 24, XL 26}`；字距 `FONT.LETTER_SPACING.{EYEBROW 1.4, LABEL 1.2, FIELD 1.28, ICON_LABEL 0.6}`（对齐前端 tracking-eyebrow/label/field 刻度）。

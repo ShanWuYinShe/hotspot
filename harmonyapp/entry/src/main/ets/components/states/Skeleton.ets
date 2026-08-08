@@ -12,9 +12,12 @@
  */
 
 import { DesignConstants } from '../../constants/DesignConstants';
+import { AppThemeManager } from '../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../core/theme/AppThemeTypes';
 
 @Component
 export struct Skeleton {
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @Prop width: Length = '100%';
   @Prop height: Length = 16;
   @Prop borderRadius: Length | string = DesignConstants.RADIUS.SM;
@@ -25,6 +28,6 @@ export struct Skeleton {
       .width(this.width)
       .height(this.block ? this.width : this.height)
       .borderRadius(typeof this.borderRadius === 'string' ? 0 : this.borderRadius as Length)
-      .backgroundColor($r('app.color.bg_tertiary'))
+      .backgroundColor(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceSubtle)
   }
 }

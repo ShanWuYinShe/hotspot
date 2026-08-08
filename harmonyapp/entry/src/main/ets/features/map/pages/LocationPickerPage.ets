@@ -31,10 +31,6 @@ const DOUBLE_CLICK_PLACEMENT_HINT: string = '已为你定位到该位置';
 const LONG_PRESS_PLACEMENT_HINT: string = '已为你定位到该位置';
 const ANCHOR_PLACEMENT_HINT: string = '已回到浏览锚点位置';
 const GENERIC_PLACEMENT_HINT: string = '已定位到该位置';
-const MARKER_COLOR_PICKER: string = DesignConstants.MAP_MARKER.PICKER;
-const MARKER_COLOR_USER: string = DesignConstants.MAP_MARKER.USER;
-const MARKER_COLOR_GROUP: string = DesignConstants.MAP_MARKER.GROUP;
-const MARKER_COLOR_MOMENT: string = DesignConstants.MAP_MARKER.MOMENT;
 
 type MapRenderItemType = 'heat_bucket' | 'user' | 'group' | 'moment';
 
@@ -207,7 +203,7 @@ function FilterDropdownPanel(props: FilterPanelProps) {
     FilterMenuItem({
       markerSvg: 'marker_user.svg',
       label: '用户',
-      accentColor: MARKER_COLOR_USER,
+      accentColor: resolveLocationPickerPalette(props.resolvedThemeId).mapUser,
       active: props.showUsers,
       resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleUsers
@@ -215,7 +211,7 @@ function FilterDropdownPanel(props: FilterPanelProps) {
     FilterMenuItem({
       markerSvg: 'marker_group.svg',
       label: '群组',
-      accentColor: MARKER_COLOR_GROUP,
+      accentColor: resolveLocationPickerPalette(props.resolvedThemeId).mapGroup,
       active: props.showGroups,
       resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleGroups
@@ -223,7 +219,7 @@ function FilterDropdownPanel(props: FilterPanelProps) {
     FilterMenuItem({
       markerSvg: 'marker_moment.svg',
       label: '动态',
-      accentColor: MARKER_COLOR_MOMENT,
+      accentColor: resolveLocationPickerPalette(props.resolvedThemeId).mapMoment,
       active: props.showMoments,
       resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleMoments
@@ -511,7 +507,7 @@ struct SearchPanel {
       bottom: this.safeAreaBottom
     })
     .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
-    .border({ width: { top: 1 }, color: $r('app.color.divider') })
+    .border({ width: { top: 1 }, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
     .borderRadius({ topLeft: 24, topRight: 24 })
     .onClick(() => {})
   }
@@ -718,7 +714,7 @@ struct MainPanel {
       bottom: this.safeAreaBottom
     })
     .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
-    .border({ width: { top: 1 }, color: $r('app.color.divider') })
+    .border({ width: { top: 1 }, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
     .borderRadius({ topLeft: 24, topRight: 24 })
     .onClick(() => {})
   }
@@ -1617,10 +1613,10 @@ export struct LocationPickerPage {
 
   private getTypeColor(type: string): string {
     switch (type) {
-      case 'user': return MARKER_COLOR_USER;
-      case 'group': return MARKER_COLOR_GROUP;
-      case 'moment': return MARKER_COLOR_MOMENT;
-      default: return DesignConstants.MAP_MARKER.DEFAULT;
+      case 'user': return this.getCurrentThemePalette().mapUser;
+      case 'group': return this.getCurrentThemePalette().mapGroup;
+      case 'moment': return this.getCurrentThemePalette().mapMoment;
+      default: return this.getCurrentThemePalette().mapUser;
     }
   }
 
@@ -1826,7 +1822,7 @@ export struct LocationPickerPage {
                 }, (item: MapRenderItem) => item.render_id)
               }
               .width('100%')
-              .divider({ strokeWidth: 0.5, color: $r('app.color.divider'), startMargin: 60 })
+              .divider({ strokeWidth: 0.5, color: this.getCurrentThemePalette().borderColor, startMargin: 60 })
               .constraintSize({ maxHeight: 320 })
               .padding({ bottom: this.safeAreaBottom + DesignConstants.SPACING.MD })
             }
@@ -1851,7 +1847,7 @@ export struct LocationPickerPage {
             Text() {
               SymbolSpan($r(AppIcon.LOCATION))
                 .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontColor([MARKER_COLOR_USER])
+                .fontColor([this.getCurrentThemePalette().mapUser])
             }
           }
           .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)

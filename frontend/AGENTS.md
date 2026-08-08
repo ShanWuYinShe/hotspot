@@ -295,6 +295,10 @@ theme/
   图标固有固定对比色（深色底 `#102A43`、白色高光 `#FFFFFF`）不随主题，
   属合理例外。新增 marker 类 SVG 必须遵循：主题色走 currentColor，
   禁止内嵌主题色 hex
+- **主题选择器 swatch（stores/theme.svelte.ts `THEME_OPTIONS`）**：色板需在
+  主题激活前静态展示**目标主题**的 accent 代表色，而 CSS 变量只能解析“当前”
+  主题，故保留字面 hex（vibrant `#2E66C0` / forest `#3D7A55`）作为已登记例外；
+  必须与 themes/{vibrant,forest}.css 的 `--cst-pr-accent-primary` 保持同步
 
 - 新组件优先使用语义名（`var(--cst-text-primary)`、`var(--cst-surface-page)` 等）+ Tailwind className
 - 主题切换通过 `<html>` 上的 `.vibrant` / `.forest` + `.dark` 类实现
@@ -391,7 +395,8 @@ theme/
     **布局尺寸 token**（layout.css 定义，禁止组件内裸数字）：
     `--cst-desktop-sidebar-width`（224px 展开）/ `--cst-desktop-sidebar-collapsed`（72px 折叠）/
     `--cst-tablet-dock-max`（680px 平板 Dock）/ `--cst-cover-height`（clamp 220→340px 封面）/
-    `--cst-cover-height-lg`（clamp 220→380px 大封面）
+    `--cst-cover-height-lg`（clamp 220→380px 大封面）/ `--cst-cover-height-sm`
+    （clamp 120→160px 编辑资料小封面）
 13. **尺寸与间距**：UI 控件/图标尺寸优先用 Tailwind `size-*` 刻度类（`size-9`=36px
     等），减少内联 `style="width:Npx;height:Npx"`。**间距**（gap/px/py/mt/mb）用
     Tailwind 默认 4px 步进刻度（`gap-1/1.5/2/2.5/3...`），**不强制收敛、不建 spacing

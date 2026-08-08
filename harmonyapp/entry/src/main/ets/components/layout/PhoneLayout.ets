@@ -131,7 +131,7 @@ export struct PhoneLayout {
         })
         .barBackgroundColor(DesignConstants.COLOR.TRANSPARENT)
         .backgroundBlurStyle(BlurStyle.Thin)
-        .backgroundColor($r('app.color.bg_primary'))
+        .backgroundColor(this.getPalette().pageBackground)
         .layoutWeight(1)
         .padding({ bottom: this.safeAreaBottom })
         .constraintSize({ maxWidth: this.isTablet ? 720 : Infinity })
@@ -149,13 +149,13 @@ export struct PhoneLayout {
         Stack() {
           Column()
             .width('100%').height('100%')
-            .backgroundColor(DesignConstants.COLOR.OVERLAY_MEDIUM)
+            .backgroundColor(this.getPalette().overlayStrong)
             .onClick(() => { this.showNotificationCenter = false; })
           Column() {
             NotificationCenter({ onClose: () => { this.showNotificationCenter = false; } })
           }
           .width('100%').height('100%')
-          .backgroundColor($r('app.color.bg_primary'))
+          .backgroundColor(this.getPalette().pageBackground)
         }
         .width('100%').height('100%')
       }
@@ -166,7 +166,7 @@ export struct PhoneLayout {
           PerformanceIndicator({ showDetails: true, compact: false })
         }
         .width('100%').height('100%')
-        .backgroundColor($r('app.color.bg_primary'))
+        .backgroundColor(this.getPalette().pageBackground)
         .onClick(() => { this.showPerformanceDetails = false; })
       }
 
@@ -175,10 +175,10 @@ export struct PhoneLayout {
       height: SheetSize.FIT_CONTENT,
       dragBar: true,
       showClose: true,
-      backgroundColor: $r('app.color.bg_primary')
+      backgroundColor: this.getPalette().pageBackground
     })
     .width('100%').height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getPalette().pageBackground)
   }
 
   private getPalette() {
@@ -190,12 +190,12 @@ export struct PhoneLayout {
       Column() {
         Stack({ alignContent: Alignment.TopEnd }) {
           Text() {
-            SymbolSpan(TAB_ITEMS[index].symbolId)
+              SymbolSpan(TAB_ITEMS[index].symbolId)
               .fontSize(DesignConstants.FONT.SIZE.XXL)
               .fontColor([
                 this.currentTabIndex === index
-                  ? $r('app.color.brand_primary')
-                  : $r('app.color.chip_inactive_text')
+                  ? this.getPalette().accentBackground
+                  : this.getPalette().tabBarInactive
               ])
           }
           // 消息 tab（index 3）未读角标，对齐前端 inbox badge
@@ -210,8 +210,8 @@ export struct PhoneLayout {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(
             this.currentTabIndex === index
-              ? $r('app.color.brand_primary')
-              : $r('app.color.chip_inactive_text')
+              ? this.getPalette().accentBackground
+              : this.getPalette().tabBarInactive
           )
           .fontWeight(
             this.currentTabIndex === index ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR
@@ -275,16 +275,16 @@ export struct PhoneLayout {
           .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
           .fontColor([
             this.currentTabIndex === index
-              ? $r('app.color.brand_primary')
-              : $r('app.color.chip_inactive_text')
+              ? this.getPalette().accentBackground
+              : this.getPalette().tabBarInactive
           ])
       }
       Text(TAB_ITEMS[index].label)
         .fontSize(DesignConstants.FONT.SIZE.XS)
         .fontColor(
           this.currentTabIndex === index
-            ? $r('app.color.brand_primary')
-            : $r('app.color.chip_inactive_text')
+            ? this.getPalette().accentBackground
+            : this.getPalette().tabBarInactive
         )
         .margin({ top: DesignConstants.SPACING.HALF })
     }
@@ -301,13 +301,13 @@ export struct PhoneLayout {
       Text() {
         SymbolSpan($r('sys.symbol.plus'))
           .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
-          .fontColor([$r('app.color.bg_primary')])
+          .fontColor([this.getPalette().accentText])
       }
     }
     .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
     .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
     .justifyContent(FlexAlign.Center)
-    .backgroundColor($r('app.color.brand_primary'))
+    .backgroundColor(this.getPalette().accentBackground)
     .borderRadius(DesignConstants.RADIUS.FULL)
     .shadow(this.getPalette().accentShadow)
     .onClick(() => {
@@ -321,12 +321,12 @@ export struct PhoneLayout {
         Text() {
           SymbolSpan($r('sys.symbol.plus'))
             .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
-            .fontColor([$r('app.color.bg_primary')])
+            .fontColor([this.getPalette().accentText])
         }
       }
       .width(DesignConstants.LAYOUT.FAB_SIZE).height(DesignConstants.LAYOUT.FAB_SIZE)
       .justifyContent(FlexAlign.Center)
-      .backgroundColor($r('app.color.brand_primary'))
+      .backgroundColor(this.getPalette().accentBackground)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .scale(
         this.isCreateTabPressed
@@ -405,7 +405,7 @@ export struct PhoneLayout {
     Row() {
       Text('当前为临时用户，注册账号可保留所有数据')
         .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontColor($r('app.color.chip_inactive_text'))
+        .fontColor(this.getPalette().textSecondary)
         .layoutWeight(1)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -413,13 +413,13 @@ export struct PhoneLayout {
         .type(ButtonType.Normal)
         .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
         .fontSize(DesignConstants.FONT.SIZE.MD)
-        .backgroundColor($r('app.color.brand_primary'))
-        .fontColor($r('app.color.bg_primary'))
+        .backgroundColor(this.getPalette().accentBackground)
+        .fontColor(this.getPalette().accentText)
         .borderRadius(DesignConstants.RADIUS.SM)
         .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-    .backgroundColor($r('app.color.chip_selected_bg'))
+    .backgroundColor(this.getPalette().accentMuted)
   }
 }

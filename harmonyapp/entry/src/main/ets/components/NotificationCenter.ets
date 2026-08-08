@@ -757,7 +757,7 @@ export struct NotificationCenter {
   private getTypeColor(type: string): string {
     switch (this.mapTypeToCategory(type as NotificationType)) {
       case 'social':
-        return DesignConstants.COLOR.BRAND_PRIMARY;
+        return this.getPalette().accentBackground;
       case 'interaction':
         return this.getPalette().error;
       case 'group':
@@ -765,7 +765,7 @@ export struct NotificationCenter {
       case 'system':
         return this.getPalette().warning;
       default:
-        return DesignConstants.COLOR.BRAND_PRIMARY;
+        return this.getPalette().accentBackground;
     }
   }
 

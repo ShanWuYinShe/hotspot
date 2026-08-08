@@ -7,7 +7,7 @@
 
 <div class="mb-2 flex justify-center">
 	<span
-		class="rounded-full border border-border-default bg-surface-primary px-3 py-1 text-xxs tracking-wider text-text-secondary opacity-80"
+		class="rounded-full border border-border-default bg-surface-primary px-3 py-1 text-xxs tracking-wide text-text-secondary opacity-80"
 	>
 		{label}
 	</span>

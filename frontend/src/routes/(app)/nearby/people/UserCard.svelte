@@ -65,9 +65,9 @@
 				</div>
 				{#if user.isOnline}
 					<span
-						class="shrink-0 rounded-full size-2.25"
+						class="shrink-0 rounded-full size-2.25 ring-2 ring-surface-card-menu"
 						title="在线"
-						style="background:var(--cst-status-online);box-shadow:0 0 0 2px var(--cst-surface-card-menu);"
+						style="background:var(--cst-status-online);"
 					></span>
 				{/if}
 			</div>

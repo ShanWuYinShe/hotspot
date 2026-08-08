@@ -266,7 +266,7 @@ locationName = loc?.location_name ?? '';
 <!-- Confirm -->
 <div class="shrink-0 border-t border-border-default px-3 pt-2.5 pb-4">
 	{#if selectedLoc}
-		<div class="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-sm bg-surface-primary" style="box-shadow:0 0 0 1px var(--cst-border-default), var(--shadow-inset-sm);">
+		<div class="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-sm bg-surface-primary ring-1 ring-border-default" style="box-shadow:var(--shadow-inset-sm);">
 			<Check class="size-3.25 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={2.5} />
 			<p class="flex-1 truncate text-accent-default text-xs">{selectedLoc.displayName}</p>
 			<button

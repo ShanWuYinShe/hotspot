@@ -55,7 +55,7 @@
 		subtitleSize?: number;
 		glass?: boolean;
 		class?: string;
-		/** 内部 ContentColumn 的 className（默认 py-4；传 py-3 等可对齐 Figma 手写 header） */
+		/** 内部 ContentColumn 的 className（默认 pt-4 pb-0，对齐样板 nearby/moments；传其他值可覆盖） */
 		contentClassName?: string;
 	} = $props();
 
@@ -72,7 +72,7 @@
 		? 'background-color:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md));border-bottom:1px solid var(--cst-border-default);'
 		: 'background-color:var(--cst-surface-page);border-bottom:1px solid var(--cst-border-default);'}
 >
-	<ContentColumn {maxWidth} class={cn('py-4', contentClassName, belowPad)}>
+	<ContentColumn {maxWidth} class={cn('pt-4 pb-0', contentClassName, belowPad)}>
 		<div class="flex items-center gap-3">
 			{#if showBack}
 				<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={36} />

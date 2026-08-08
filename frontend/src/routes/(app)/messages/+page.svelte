@@ -299,7 +299,7 @@
 		{/snippet}
 	</PageHeader>
 
-	<ContentColumn class="animate-fade-in flex flex-col min-h-full pt-4 pb-4">
+	<ContentColumn class="animate-fade-in flex flex-col min-h-full pt-4 pb-6">
 		{#if onlineChats.length > 0}
 			<div class="mb-4">
 				<p class="eyebrow mb-2.5">在线</p>

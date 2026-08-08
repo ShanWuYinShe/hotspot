@@ -1,6 +1,6 @@
 /* ── Semantic tokens ────────────────────────────────────────────────────
    Meaning-based names that stay the same across all themes.
-   Each resolves through var(--pr-*) which changes per theme.
+   Each resolves through var(--cst-pr-*) which changes per theme.
 
    本文件只保留纯 :root alias 映射 + 通过 var() 派生的交互/导航 token。
    所有 per-theme 覆盖（scrim/overlay/card-menu 等）已迁移到

@@ -36,7 +36,8 @@
 		<div class="flex items-end gap-0.5">
 			{#each signalHeights as hgt, i}
 				<div
-					style="width:3px;height:{hgt}px;border-radius:1px;background-color:var(--cst-text-primary);opacity:{i < 3 ? 1 : 0.28};"
+					class="{i < 3 ? 'opacity-100' : 'opacity-30'}"
+					style="width:3px;height:{hgt}px;border-radius:1px;background-color:var(--cst-text-primary);"
 				></div>
 			{/each}
 		</div>
@@ -51,7 +52,8 @@
 				></div>
 			</div>
 			<div
-				style="width:2px;height:5px;border-radius:0 1px 1px 0;background-color:var(--cst-text-primary);opacity:0.45;margin-left:1px;"
+				class="opacity-50"
+				style="width:2px;height:5px;border-radius:0 1px 1px 0;background-color:var(--cst-text-primary);margin-left:1px;"
 			></div>
 		</div>
 	</div>

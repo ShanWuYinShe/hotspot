@@ -198,7 +198,7 @@ export struct ProfileEditPage {
                 .type(ButtonType.Normal)
                 .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: 5, bottom: 5 })
                 .borderRadius(DesignConstants.SHAPE.BUTTON)
-                .backgroundColor(DesignConstants.COLOR.OVERLAY_STRONG)
+                .backgroundColor(this.getCurrentThemePalette().overlayStrong)
                 .onClick(() => {
                   SystemToast.show('横幅更换功能开发中', this.getUIContext());
                 })

@@ -2,7 +2,7 @@
   "color": [
     {
       "name": "start_window_background",
-      "value": "#F9F9F5"
+      "value": "#F7FAFF"
     },
     {
       "name": "color_shadow",
@@ -10,7 +10,7 @@
     },
     {
       "name": "color_danger",
-      "value": "#EF4444"
+      "value": "#F43F5E"
     },
     {
       "name": "color_overlay_light",
@@ -26,35 +26,35 @@
     },
     {
       "name": "color_pin_halo",
-      "value": "#333D7A55"
+      "value": "#332E66C0"
     },
     {
       "name": "color_emphasize_bg",
-      "value": "#3D7A551A"
+      "value": "#2E66C01A"
     },
     {
       "name": "bg_primary",
-      "value": "#F9F9F5"
+      "value": "#F7FAFF"
     },
     {
       "name": "bg_secondary",
-      "value": "#EDECEA"
+      "value": "#EAF1FA"
     },
     {
       "name": "bg_tertiary",
-      "value": "#F0F1F0"
+      "value": "#EAF1FA"
     },
     {
       "name": "brand_primary",
-      "value": "#3D7A55"
+      "value": "#2E66C0"
     },
     {
       "name": "divider",
-      "value": "#3D7A5521"
+      "value": "#2E66C02E"
     },
     {
       "name": "status_online",
-      "value": "#3D7A55"
+      "value": "#14B8A6"
     },
     {
       "name": "status_offline",
@@ -62,19 +62,19 @@
     },
     {
       "name": "color_warning",
-      "value": "#D97706"
+      "value": "#F59E0B"
     },
     {
       "name": "color_success",
-      "value": "#059669"
+      "value": "#14B8A6"
     },
     {
       "name": "chip_selected_bg",
-      "value": "#3D7A551A"
+      "value": "#2E66C01A"
     },
     {
       "name": "chip_active_bg",
-      "value": "#3D7A55"
+      "value": "#2E66C0"
     },
     {
       "name": "chip_active_text",
@@ -82,99 +82,99 @@
     },
     {
       "name": "chip_inactive_text",
-      "value": "#566B5E"
+      "value": "#52647F"
     },
     {
       "name": "bubble_self_bg",
-      "value": "#3D7A55"
+      "value": "#2E66C0"
     },
     {
       "name": "bubble_other_bg",
-      "value": "#F0F1F0"
+      "value": "#EAF1FA"
     },
     {
       "name": "tab_bar_bg",
-      "value": "#F9F9F5"
+      "value": "#F7FAFF"
     },
     {
       "name": "section_header_bg",
-      "value": "#F9F9F5"
+      "value": "#F7FAFF"
     },
     {
       "name": "bg_inset",
-      "value": "#F0F1F0"
+      "value": "#EAF1FA"
     },
     {
       "name": "highlight_border",
-      "value": "#3D7A5521"
+      "value": "#2E66C02E"
     },
     {
       "name": "chat_bg",
-      "value": "#F2F3F2"
+      "value": "#EDF3FC"
     },
     {
       "name": "chat_list_bg",
-      "value": "#EDECEA"
+      "value": "#EDF3FC"
     },
     {
       "name": "chat_bubble_self",
-      "value": "#3D7A55"
+      "value": "#2E66C0"
     },
     {
       "name": "chat_bubble_peer",
-      "value": "#F9F9F5"
+      "value": "#F7FAFF"
     },
     {
       "name": "chat_bubble_system",
-      "value": "#F0F1F0"
+      "value": "#EAF1FA"
     },
     {
       "name": "chat_input_bar_bg",
-      "value": "#F9F9F5"
+      "value": "#F7FAFF"
     },
     {
       "name": "chat_input_field_bg",
-      "value": "#F0F1F0"
+      "value": "#EAF1FA"
     },
     {
       "name": "chat_input_border",
-      "value": "#3D7A5521"
+      "value": "#2E66C02E"
     },
     {
       "name": "chat_send_active",
-      "value": "#3D7A55"
+      "value": "#2E66C0"
     },
     {
       "name": "chat_send_disabled",
-      "value": "#F0F1F0"
+      "value": "#EAF1FA"
     },
     {
       "name": "header_icon_bg",
-      "value": "#3D7A551A"
+      "value": "#2E66C01A"
     },
     {
       "name": "header_icon_border",
-      "value": "#3D7A5521"
+      "value": "#2E66C02E"
     },
     {
       "name": "header_icon_text",
-      "value": "#3D7A55"
+      "value": "#2E66C0"
     },
     {
       "name": "chat_title_icon_bg",
-      "value": "#F9F9F5"
+      "value": "#F7FAFF"
     },
     {
       "name": "chat_title_bar_bg",
-      "value": "#F9F9F5"
+      "value": "#F7FAFF"
     },
     {
       "name": "chat_title_bar_border",
-      "value": "#3D7A5521"
+      "value": "#2E66C02E"
     },
     {
       "name": "chat_divider",
-      "value": "#3D7A5514"
+      "value": "#2E66C014"
     }
   ]
 }

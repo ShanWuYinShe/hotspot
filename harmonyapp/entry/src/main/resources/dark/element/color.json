@@ -2,7 +2,7 @@
   "color": [
     {
       "name": "start_window_background",
-      "value": "#161A16"
+      "value": "#0B1424"
     },
     {
       "name": "color_shadow",
@@ -10,7 +10,7 @@
     },
     {
       "name": "color_danger",
-      "value": "#EF4444"
+      "value": "#FB7185"
     },
     {
       "name": "color_overlay_light",
@@ -26,35 +26,35 @@
     },
     {
       "name": "color_pin_halo",
-      "value": "#3352B878"
+      "value": "#3369A8FF"
     },
     {
       "name": "color_emphasize_bg",
-      "value": "#52B8781A"
+      "value": "#69A8FF1A"
     },
     {
       "name": "bg_primary",
-      "value": "#161A16"
+      "value": "#0B1424"
     },
     {
       "name": "bg_secondary",
-      "value": "#0E110E"
+      "value": "#14243A"
     },
     {
       "name": "bg_tertiary",
-      "value": "#242624"
+      "value": "#14243A"
     },
     {
       "name": "brand_primary",
-      "value": "#52B878"
+      "value": "#69A8FF"
     },
     {
       "name": "divider",
-      "value": "#52B87821"
+      "value": "#88B7FF2E"
     },
     {
       "name": "status_online",
-      "value": "#52B878"
+      "value": "#37C99A"
     },
     {
       "name": "status_offline",
@@ -66,115 +66,115 @@
     },
     {
       "name": "color_success",
-      "value": "#34D399"
+      "value": "#37C99A"
     },
     {
       "name": "chip_selected_bg",
-      "value": "#52B8781A"
+      "value": "#69A8FF1A"
     },
     {
       "name": "chip_active_bg",
-      "value": "#52B878"
+      "value": "#69A8FF"
     },
     {
       "name": "chip_active_text",
-      "value": "#FFFFFF"
+      "value": "#071426"
     },
     {
       "name": "chip_inactive_text",
-      "value": "#7A9080"
+      "value": "#A5B6CE"
     },
     {
       "name": "bubble_self_bg",
-      "value": "#52B878"
+      "value": "#69A8FF"
     },
     {
       "name": "bubble_other_bg",
-      "value": "#242624"
+      "value": "#14243A"
     },
     {
       "name": "tab_bar_bg",
-      "value": "#161A16"
+      "value": "#0B1424"
     },
     {
       "name": "section_header_bg",
-      "value": "#161A16"
+      "value": "#0B1424"
     },
     {
       "name": "bg_inset",
-      "value": "#242624"
+      "value": "#14243A"
     },
     {
       "name": "highlight_border",
-      "value": "#52B87821"
+      "value": "#88B7FF2E"
     },
     {
       "name": "chat_bg",
-      "value": "#0E100E"
+      "value": "#0D1726"
     },
     {
       "name": "chat_list_bg",
-      "value": "#0E110E"
+      "value": "#0D1726"
     },
     {
       "name": "chat_bubble_self",
-      "value": "#52B878"
+      "value": "#69A8FF"
     },
     {
       "name": "chat_bubble_peer",
-      "value": "#242624"
+      "value": "#0B1424"
     },
     {
       "name": "chat_bubble_system",
-      "value": "#1A201A"
+      "value": "#16263E"
     },
     {
       "name": "chat_input_bar_bg",
-      "value": "#161A16"
+      "value": "#0B1424"
     },
     {
       "name": "chat_input_field_bg",
-      "value": "#242624"
+      "value": "#14243A"
     },
     {
       "name": "chat_input_border",
-      "value": "#52B87821"
+      "value": "#88B7FF2E"
     },
     {
       "name": "chat_send_active",
-      "value": "#52B878"
+      "value": "#69A8FF"
     },
     {
       "name": "chat_send_disabled",
-      "value": "#242624"
+      "value": "#14243A"
     },
     {
       "name": "header_icon_bg",
-      "value": "#52B8781A"
+      "value": "#69A8FF1A"
     },
     {
       "name": "header_icon_border",
-      "value": "#52B87821"
+      "value": "#88B7FF2E"
     },
     {
       "name": "header_icon_text",
-      "value": "#52B878"
+      "value": "#69A8FF"
     },
     {
       "name": "chat_title_icon_bg",
-      "value": "#161A16"
+      "value": "#0B1424"
     },
     {
       "name": "chat_title_bar_bg",
-      "value": "#161A16"
+      "value": "#0B1424"
     },
     {
       "name": "chat_title_bar_border",
-      "value": "#52B87821"
+      "value": "#88B7FF2E"
     },
     {
       "name": "chat_divider",
-      "value": "#52B87814"
+      "value": "#88B7FF14"
     }
   ]
 }

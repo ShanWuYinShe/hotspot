@@ -8,7 +8,6 @@ import { createLogger } from '../../utils/LogManager';
 import { ErrorHandler, ErrorType, ErrorLevel } from '../../utils/ErrorHandler';
 import { ConfigMerger } from '../../utils/ConfigMerger';
 import { UI_CONSTANTS } from '../../../constants/SystemConstants';
-import { DesignConstants } from '../../../constants/DesignConstants';
 import { SmartNotification, NotificationAction } from './NotificationDataManager';
 import { AppThemeManager } from '../../theme/AppThemeManager';
 
@@ -534,13 +533,13 @@ export class NotificationRenderer extends BaseSingleton {
     switch (priority) {
       case 'critical':
         if (!isDark) {
-          backgroundColor = DesignConstants.COLOR.SURFACE_DANGER_SOFT;
+          backgroundColor = palette.dangerSoft;
         }
         borderColor = palette.error;
         break;
       case 'high':
         if (!isDark) {
-          backgroundColor = DesignConstants.COLOR.SURFACE_WARNING_SOFT;
+          backgroundColor = palette.warningSoft;
         }
         borderColor = palette.warning;
         break;

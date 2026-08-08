@@ -105,7 +105,7 @@
 
 			<!-- Group name -->
 			<div>
-				<label class="text-xs tracking-widest uppercase text-text-secondary" for="group-name">群组名称 *</label>
+				<label class="text-xs tracking-field uppercase text-text-secondary" for="group-name">群组名称 *</label>
 				<div class="flex items-center gap-2.5 mt-1.5 px-4 rounded-md input-surface h-11.5" >
 					<input
 						id="group-name"
@@ -120,7 +120,7 @@
 
 			<!-- Description -->
 			<div>
-				<label class="text-xs tracking-widest uppercase text-text-secondary" for="group-desc">简介</label>
+				<label class="text-xs tracking-field uppercase text-text-secondary" for="group-desc">简介</label>
 				<div class="mt-1.5 px-4 py-3 rounded-md input-surface">
 					<textarea
 						id="group-desc"
@@ -137,7 +137,7 @@
 
 			<!-- Category chips -->
 			<fieldset class="flex flex-col border-0 p-0 m-0 min-w-0">
-				<legend class="text-xs tracking-widest uppercase text-text-secondary">分类</legend>
+				<legend class="text-xs tracking-field uppercase text-text-secondary">分类</legend>
 				<div class="flex flex-wrap gap-2 mt-2">
 					{#each CATEGORIES as cat}
 						<button

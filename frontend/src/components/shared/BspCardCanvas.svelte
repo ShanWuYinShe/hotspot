@@ -347,8 +347,8 @@
 					<!-- 补位格：无对应卡片，渲染空骨架保持满铺轮廓（不重复用户） -->
 					<div
 						aria-hidden="true"
-						class="h-full w-full"
-						style="border-radius:var(--cst-shape-lg);background:var(--cst-surface-primary);box-shadow:0 0 0 1px var(--cst-border-default);opacity:.55;"
+						class="h-full w-full ring-1 ring-border-default opacity-60"
+						style="border-radius:var(--cst-shape-lg);background:var(--cst-surface-primary);"
 					></div>
 				{/if}
 			{/if}

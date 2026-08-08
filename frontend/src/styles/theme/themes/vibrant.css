@@ -12,7 +12,7 @@
 /* ═══ Vibrant Light（:root 默认）═══ */
 :root,
 .vibrant {
-  /* ── 原始色板 --pr-* ── */
+  /* ── 原始色板 --cst-pr-* ── */
   --cst-pr-bg: #F7FAFF;
   --cst-pr-page-bg: #F7FAFF;
   --cst-pr-text: #16233A;
