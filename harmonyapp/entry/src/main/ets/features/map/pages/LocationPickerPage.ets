@@ -105,7 +105,7 @@ function TopBar(props: TopBarProps) {
       Text() {
         SymbolSpan($r(AppIcon.BACK))
           .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
-          .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+          .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textPrimary])
       }
     }
     .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
@@ -119,12 +119,12 @@ function TopBar(props: TopBarProps) {
       Text() {
         SymbolSpan($r(AppIcon.FILTER))
           .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+          .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textPrimary])
       }
       Text('筛选')
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
     }
     .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
     .padding({
@@ -302,12 +302,12 @@ struct SearchPanel {
           .id('locationPickerSearchInput')
           .layoutWeight(1)
           .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
-          .backgroundColor(this.getPalette().surfaceSubtle)
+          .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceSubtle)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .shadow(DesignConstants.SHADOW.INSET)
           .searchIcon({
             size: 18,
-            color: this.getPalette().textPrimary
+            color: resolveLocationPickerPalette(this.resolvedThemeId).textPrimary
           })
           .searchButton('搜索')
           .onChange((value: string) => {
@@ -326,14 +326,14 @@ struct SearchPanel {
           LoadingProgress()
             .width(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
             .height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
-            .color($r('sys.color.ohos_id_color_emphasize'))
+            .color(resolveLocationPickerPalette(this.resolvedThemeId).accentBackground)
         }
 
         // 取消按钮
         Column() {
           Text('取消')
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textPrimary)
         }
         .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
         .justifyContent(FlexAlign.Center)
@@ -353,10 +353,10 @@ struct SearchPanel {
               LoadingProgress()
                 .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
                 .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
-                .color($r('sys.color.ohos_id_color_emphasize'))
+                .color(resolveLocationPickerPalette(this.resolvedThemeId).accentBackground)
               Text('正在搜索...')
                 .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textSecondary)
                 .margin({ left: DesignConstants.SPACING.SM })
             }
             .width('100%')
@@ -372,18 +372,18 @@ struct SearchPanel {
                       Text() {
                         SymbolSpan($r(AppIcon.LOCATION))
                           .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-                          .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+                          .fontColor([resolveLocationPickerPalette(this.resolvedThemeId).accentBackground])
                       }
                     }
                     .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
                     .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
                     .justifyContent(FlexAlign.Center)
-                    .backgroundColor(this.getPalette().surfaceSubtle)
+                    .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceSubtle)
                     .borderRadius(DesignConstants.RADIUS.MD)
 
                     Text(item.locationName || '未知地点')
                       .fontSize(DesignConstants.FONT.SIZE.MD)
-                      .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                      .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textPrimary)
                       .layoutWeight(1)
                       .maxLines(2)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -395,25 +395,25 @@ struct SearchPanel {
                     top: DesignConstants.SPACING.MD,
                     bottom: DesignConstants.SPACING.MD
                   })
-                  .backgroundColor(this.getPalette().surfaceBackground)
+                  .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
                   .borderRadius(DesignConstants.RADIUS.XXL)
                   .shadow(DesignConstants.SHADOW.MEDIUM)
-                  .border({ width: 1, color: this.getPalette().borderColor })
+                  .border({ width: 1, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
                   .onClick(() => { this.onSelectResult(item); })
                 }
               }, (item: LocationInfo) => `search_${item.latitude}_${item.longitude}`)
             }
             .width('100%')
-            .divider({ strokeWidth: 0, color: $r('sys.color.ohos_id_color_list_separator') })
+            .divider({ strokeWidth: 0, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
           } else if (this.searchText.trim().length > 0) {
             // 无搜索结果
             Column() {
               Text('未找到该地点')
                 .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textPrimary)
               Text('请换个关键词试试')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textSecondary)
                 .margin({ top: DesignConstants.SPACING.XS })
             }
             .width('100%')
@@ -427,11 +427,11 @@ struct SearchPanel {
                 Text('最近使用')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                  .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textPrimary)
                 Blank()
                 Text('清空')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textSecondary)
                   .onClick(this.onClearHistory)
               }
               .width('100%')
@@ -444,18 +444,18 @@ struct SearchPanel {
                         Text() {
                           SymbolSpan($r(AppIcon.TIME))
                             .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-                            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+                            .fontColor([resolveLocationPickerPalette(this.resolvedThemeId).textSecondary])
                         }
                       }
                       .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
                       .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
                       .justifyContent(FlexAlign.Center)
-                      .backgroundColor(this.getPalette().surfaceSubtle)
+                      .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceSubtle)
                       .borderRadius(DesignConstants.RADIUS.MD)
 
                       Text(item.locationName || '未命名位置')
                         .fontSize(DesignConstants.FONT.SIZE.MD)
-                        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                        .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textPrimary)
                         .layoutWeight(1)
                         .maxLines(1)
                         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -467,10 +467,10 @@ struct SearchPanel {
                       top: DesignConstants.SPACING.MD,
                       bottom: DesignConstants.SPACING.MD
                     })
-                    .backgroundColor(this.getPalette().surfaceBackground)
+                    .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
                     .borderRadius(DesignConstants.RADIUS.XXL)
                     .shadow(DesignConstants.SHADOW.MEDIUM)
-                    .border({ width: 1, color: this.getPalette().borderColor })
+                    .border({ width: 1, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
                     .onClick(() => {
                       this.onSelectHistory(item);
                       this.onClose();
@@ -479,7 +479,7 @@ struct SearchPanel {
                 }, (item: AnchorHistoryItem) => `hist_s_${item.latitude}_${item.longitude}`)
               }
               .width('100%')
-              .divider({ strokeWidth: 0, color: $r('sys.color.ohos_id_color_list_separator') })
+              .divider({ strokeWidth: 0, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
             }
             .width('100%')
           } else {
@@ -487,7 +487,7 @@ struct SearchPanel {
             Column() {
               Text('暂无搜索历史')
                 .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textSecondary)
             }
             .width('100%')
             .height(DesignConstants.COMPONENT.SKELETON_CARD_HEIGHT)
@@ -510,7 +510,7 @@ struct SearchPanel {
       top: DesignConstants.SPACING.LG,
       bottom: this.safeAreaBottom
     })
-    .backgroundColor(this.getPalette().surfaceBackground)
+    .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
     .border({ width: { top: 1 }, color: $r('app.color.divider') })
     .borderRadius({ topLeft: 24, topRight: 24 })
     .onClick(() => {})
@@ -564,7 +564,7 @@ struct MainPanel {
           .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
           .height(4)
           .borderRadius(DesignConstants.RADIUS.SM)
-          .backgroundColor(this.getPalette().surfaceSubtle)
+          .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceSubtle)
       }
       .width('100%')
       .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
@@ -589,11 +589,11 @@ struct MainPanel {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+            .fontColor([resolveLocationPickerPalette(this.resolvedThemeId).textTertiary])
         }
         Text('搜索地点、地标或坐标')
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+          .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textTertiary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
@@ -601,7 +601,7 @@ struct MainPanel {
       .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(this.getPalette().surfaceSubtle)
+      .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceSubtle)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .shadow(DesignConstants.SHADOW.INSET)
       .margin({ bottom: DesignConstants.SPACING.MD })
@@ -616,12 +616,12 @@ struct MainPanel {
               Text('最近使用')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
                 .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textSecondary)
               Blank()
               if (this.anchorHistory.length > 0) {
                 Text('清空')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+                  .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textTertiary)
                   .padding({ left: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                   .onClick(this.onClearHistory)
               }
@@ -638,18 +638,18 @@ struct MainPanel {
                         Text() {
                           SymbolSpan($r(AppIcon.TIME))
                             .fontSize(DesignConstants.FONT.SIZE.LG)
-                            .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+                            .fontColor([resolveLocationPickerPalette(this.resolvedThemeId).textTertiary])
                         }
                       }
                       .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
                       .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
                       .justifyContent(FlexAlign.Center)
-                      .backgroundColor(this.getPalette().surfaceSubtle)
+                      .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceSubtle)
                       .borderRadius(DesignConstants.RADIUS.MD)
 
                       Text(item.locationName || '未命名位置')
                         .fontSize(DesignConstants.FONT.SIZE.MD)
-                        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                        .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textPrimary)
                         .layoutWeight(1)
                         .maxLines(1)
                         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -661,26 +661,26 @@ struct MainPanel {
                       top: DesignConstants.SPACING.MD,
                       bottom: DesignConstants.SPACING.MD
                     })
-                    .backgroundColor(this.getPalette().surfaceBackground)
+                    .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
                     .borderRadius(DesignConstants.RADIUS.XXL)
                     .shadow(DesignConstants.SHADOW.MEDIUM)
-                     .border({ width: 1, color: this.getPalette().borderColor })
+                     .border({ width: 1, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
                     .onClick(() => { this.onSelectHistory(item); })
                   }
                 }, (item: AnchorHistoryItem) => `hist_m_${item.latitude}_${item.longitude}`)
               }
               .width('100%')
-              .divider({ strokeWidth: 0, color: $r('sys.color.ohos_id_color_list_separator') })
+              .divider({ strokeWidth: 0, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
             } else {
               Column() {
                 Text() {
                   SymbolSpan($r(AppIcon.TIME))
                     .fontSize(DesignConstants.FONT.SIZE.LG)
-                    .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+                    .fontColor([resolveLocationPickerPalette(this.resolvedThemeId).textTertiary])
                 }
                 Text('暂无最近使用的地点')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+                  .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textTertiary)
                   .margin({ top: DesignConstants.SPACING.XS })
               }
               .width('100%')
@@ -700,12 +700,12 @@ struct MainPanel {
         .type(ButtonType.Capsule)
         .width('100%')
         .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
-        .backgroundColor(this.getPalette().accentBackground)
-        .fontColor(this.getPalette().accentText)
+        .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).accentBackground)
+        .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).accentText)
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .shadow(DesignConstants.SHADOW.SMALL)
-        .border({ width: 1, color: this.getPalette().borderColor })
+        .border({ width: 1, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
         .margin({ top: DesignConstants.SPACING.SM })
         .onClick(this.onConfirm)
     }
@@ -717,7 +717,7 @@ struct MainPanel {
       top: 0,
       bottom: this.safeAreaBottom
     })
-    .backgroundColor(this.getPalette().surfaceBackground)
+    .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
     .border({ width: { top: 1 }, color: $r('app.color.divider') })
     .borderRadius({ topLeft: 24, topRight: 24 })
     .onClick(() => {})
@@ -1763,11 +1763,11 @@ export struct LocationPickerPage {
                 Text(`该位置有 ${this.overlappingPanelItems.length} 个内容`)
                   .fontSize(DesignConstants.FONT.SIZE.LG)
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                  .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textPrimary)
                   .layoutWeight(1)
                 Text('关闭')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textSecondary)
                   .onClick(() => { this.overlappingPanelItems = []; })
               }
               .width('100%')
@@ -1790,13 +1790,13 @@ export struct LocationPickerPage {
                         Text(item.entity ? item.entity.title : '')
                           .fontSize(DesignConstants.FONT.SIZE.MD)
                           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                          .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textPrimary)
                           .maxLines(1)
                           .textOverflow({ overflow: TextOverflow.Ellipsis })
                         if (item.entity && item.entity.subtitle) {
                           Text(item.entity.subtitle)
                             .fontSize(DesignConstants.FONT.SIZE.SM)
-                            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                            .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textSecondary)
                             .maxLines(1)
                             .textOverflow({ overflow: TextOverflow.Ellipsis })
                         }
@@ -1882,7 +1882,7 @@ export struct LocationPickerPage {
             Text() {
               SymbolSpan($r(AppIcon.ADD))
                 .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+                .fontColor([resolveLocationPickerPalette(this.resolvedThemeId).textPrimary])
             }
           }
           .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
@@ -1898,7 +1898,7 @@ export struct LocationPickerPage {
             Text() {
               SymbolSpan($r(AppIcon.REMOVE))
                 .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+                .fontColor([resolveLocationPickerPalette(this.resolvedThemeId).textPrimary])
             }
           }
           .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
