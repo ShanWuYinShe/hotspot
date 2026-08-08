@@ -1445,7 +1445,7 @@ export struct ChatPage {
 
   private getBubbleRadius(isSelf: boolean): BorderRadiuses {
     const big: number = DesignConstants.CHAT.BUBBLE_RADIUS;
-    const notch: number = 4;
+    const notch: number = DesignConstants.SPACING.XS;
     if (this.chatType === 'group_chat') {
       // 群聊：缺角在底部
       return isSelf
