@@ -9,7 +9,6 @@
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-	import FeaturedGroupCard from './shared/FeaturedGroupCard.svelte';
 	import GroupCard from './shared/GroupCard.svelte';
 	import { mapGroup, type Group } from './shared/group-data';
 	import { getNearbyGroups, joinGroup, leaveGroup } from '@/api';
@@ -126,10 +125,10 @@
 				<span class="text-status-online text-xs">{totalOnline} 人正在群聊</span>
 			</div>
 			{#if isDesktop || isTablet}
-				<!-- index 0 用 FeaturedGroupCard（对齐 Figma），其余用 GroupCard；保留 BSP 布局（决策） -->
+				<!-- 精选卡用 GroupCard featured（对齐 Figma），其余用普通网格卡；保留 BSP 布局（决策） -->
 				{#if featured}
 					<div class="mb-5">
-						<FeaturedGroupCard group={featured} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
+						<GroupCard featured group={featured} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
 					</div>
 				{/if}
 				<BspCardCanvas
@@ -151,7 +150,7 @@
 			{:else}
 				{#if featured}
 					<div class="mb-5">
-						<FeaturedGroupCard group={featured} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
+						<GroupCard featured group={featured} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
 					</div>
 				{/if}
 				<div class="grid grid-cols-2 gap-4">

@@ -2,7 +2,9 @@
 	import type { Component } from 'svelte';
 
 	// TabBar — 下划线分类 Tab 栏（统一 nearby/moments、关系聚合页、用户详情等手写重复实现）。
-	// 容器 border-bottom + 激活项底部 2px 指示条 + aria-pressed，随 PageHeader below 吸顶。
+	// 只负责 Tab 行 + 激活项底部 2px 指示条 + aria-pressed，随 PageHeader below 吸顶；
+	// 底部边界线由上下文提供（PageHeader below 场景由 header 底线承担，
+	// 正文场景由调用方外层 border-b 承担），避免与 header 形成双线。
 	// 用 data-tab-bar 标记，全局 button:hover 规则据此排除（导航 Tab 不应触发实色按压填充），
 	// 改用极轻背景 + 圆角的 subtle hover（见 utilities.css 的 .tab-item 规则）。
 
@@ -21,7 +23,7 @@
 	} = $props();
 </script>
 
-<div data-tab-bar class="no-scrollbar flex overflow-x-auto border-b border-border-default {className}">
+<div data-tab-bar class="no-scrollbar flex overflow-x-auto {className}">
 	{#each items as tab}
 		{@const isActive = value === tab.id}
 		<button
@@ -38,7 +40,7 @@
 				<span class="text-xxs opacity-80">{tab.count}</span>
 			{/if}
 			{#if isActive}
-				<span class="absolute inset-x-3 bottom-[-1px] h-0.5 rounded-t-full bg-accent-default"></span>
+				<span class="absolute inset-x-3 bottom-0 h-0.5 rounded-t-full bg-accent-default"></span>
 			{/if}
 		</button>
 	{/each}

@@ -30,4 +30,26 @@ describe('GroupCard', () => {
 		await fireEvent.click(screen.getByRole('button', { name: '加入' }));
 		expect(onToggle).toHaveBeenCalledTimes(1);
 	});
+
+	it('featured 变体渲染精选徽章与扩展信息', () => {
+		const featured = {
+			id: 'g2',
+			name: '回龙窝胶片会',
+			desc: '城市漫游与胶片记录',
+			banner: 'https://example.com/b.jpg',
+			category: '摄影',
+			privacy: 'public',
+			members: 143,
+			online: 12,
+			distance: '0.4km',
+			activity: '周六外拍集合',
+			joined: false,
+			avatars: []
+		} as never;
+		render(GroupCard, { props: { group: featured, onToggle: () => {}, onOpen: () => {}, featured: true } });
+		expect(screen.getByText('本周精选')).toBeTruthy();
+		expect(screen.getByText('回龙窝胶片会')).toBeTruthy();
+		expect(screen.getByText('城市漫游与胶片记录')).toBeTruthy();
+		expect(screen.getByText('12 在线')).toBeTruthy();
+	});
 });

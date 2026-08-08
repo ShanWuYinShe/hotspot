@@ -302,7 +302,7 @@
 			</div>
 
 		<!-- Tabs（TabBar 统一下划线样式） -->
-	<div class="mt-8">
+	<div class="mt-8 border-b border-border-default">
 		<TabBar
 			items={[
 				{ id: 'moments', icon: Grid3X3, label: '瞬间' },
