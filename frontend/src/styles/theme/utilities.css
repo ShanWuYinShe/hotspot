@@ -1,12 +1,16 @@
 /* ── Component utility classes ──────────────────────────────────────────
    All @layer utilities in one file. Grouped logically:
-   0. Focus ring & border shortcuts (shared across all components)
-   1. Input surfaces (input-surface, input-base, icon-badge)
-   2. Hover surfaces (card-hover, row-hover, circle/pill-hover)
-   3. App-list system
-   4. Surface hierarchy (flat, pressed, convex, surface tiers)
-   5. Theme coherence (theme-panel, vibrant/forest overrides)
-   6. Input color-mix overrides
+   0. Focus ring & border shortcuts (focus-ring, ring-border, sticky-header)
+   1. Input surfaces (input-surface, icon-badge)
+   2. Hover surfaces (card-hover, circle-hover, no-scrollbar)
+   3. App-list system (app-list-row)
+   4. Surface depths (flat, pressed, surface-hero/-flat/-tinted/-ghost,
+      surface-accent-gradient, ambient-glow, eyebrow)
+   5. Hover/active 反馈（hover-btn/hover-action/scale-btn/tap-*/header-action/
+      hover-bg/map-pulse-halo/spinner + 全局 button hover 规则）
+   6. Image-first interaction（image-hover-frame、avatar-entry）
+   7. Routed page canvas（data-page-viewport 等）
+   8. TabBar 导航项（tab-item）+ Badge 徽章
 ────────────────────────────────────────────────────────────────────── */
 
 @layer utilities {
@@ -195,16 +199,6 @@
     letter-spacing: var(--tracking-eyebrow);
     text-transform: uppercase;
     color: var(--cst-text-secondary);
-  }
-}
-
-@layer utilities {
-  /*── Theme coherence pass ────────────────────────────────────────── */
-  /* 主题专属覆盖（.vibrant/.forest 类选择器）已迁移到 themes/{vibrant,forest}.css，
-     与 semantic.css 的 per-theme 覆盖声明保持一致。 */
-
-  .dark .ambient-glow::before {
-    opacity: 0.85;
   }
 }
 
