@@ -131,7 +131,7 @@
 								class="flex items-center gap-3 px-4 py-3.5"
 							>
 								{#if moment.images?.[0]?.url}
-									<img src={moment.images[0].url} alt="" class="size-10 rounded-sm object-cover" />
+		<img src={moment.images[0].url} alt="" loading="lazy" class="size-10 rounded-sm object-cover" />
 								{:else}
 									<div
 										class="flex size-10 items-center justify-center rounded-sm bg-accent-soft"

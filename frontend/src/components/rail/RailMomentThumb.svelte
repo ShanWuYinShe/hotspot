@@ -18,7 +18,7 @@
 
 <button type="button" class="hover-bg tap-97 flex items-center gap-2.5 w-full text-left rounded-sm {onClick ? 'cursor-pointer' : ''}" onclick={onClick}>
 	<div class="rounded-sm overflow-hidden shrink-0 size-11.5" >
-		<img src={image} alt={title} class="w-full h-full object-cover" />
+		<img src={image} alt={title} loading="lazy" class="w-full h-full object-cover" />
 	</div>
 	<div class="flex-1 min-w-0">
 		<p   class="truncate text-xs text-text-primary">{title}</p>

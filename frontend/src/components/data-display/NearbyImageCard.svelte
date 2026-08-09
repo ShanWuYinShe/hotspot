@@ -79,6 +79,7 @@
 		<img
 			src={imageSrc}
 			alt={imageAlt}
+			loading="lazy"
 			class="image-hover-frame__image absolute inset-0 h-full w-full object-cover will-change-transform"
 			onerror={onImageError}
 		/>

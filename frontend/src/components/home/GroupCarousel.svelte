@@ -30,7 +30,7 @@
 			<div
 				class="image-hover-frame card-hover tap-97 relative aspect-square w-35 shrink-0 cursor-pointer overflow-hidden rounded-md"
 			>
-				<img src={g.banner} alt={g.name} class="image-hover-frame__image absolute inset-0 h-full w-full object-cover" />
+				<img src={g.banner} alt={g.name} loading="lazy" class="image-hover-frame__image absolute inset-0 h-full w-full object-cover" />
 				<div class="absolute inset-0" style="background:var(--cst-surface-media-scrim-soft);"></div>
 				<div class="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-surface-overlay-strong" >
 					{#if g.privacy === 'private'}

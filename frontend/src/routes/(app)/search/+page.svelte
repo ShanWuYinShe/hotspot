@@ -22,6 +22,7 @@
 
 	let query = $state('');
 	let tab = $state<TabType>('all');
+	let searchSeq = 0;
 	let recent = $state<string[]>(readRecent());
 	let discoveryHot = $state<string[]>([]);
 	let discoveryTopics = $state<string[]>([]);
@@ -57,6 +58,7 @@
 	const keyword = $derived(query.trim().toLowerCase());
 
 	async function doSearch(term: string) {
+		const seq = ++searchSeq;
 		if (!term) {
 			results = { users: [], moments: [], topics: [] };
 			return;
@@ -79,11 +81,13 @@
 			for (const m of moments) {
 				m.tags?.forEach((t) => topicSet.add(t));
 			}
+			if (seq !== searchSeq) return; // 旧请求晚返回时丢弃，避免覆盖新关键词结果
 			results = { users, moments, topics: Array.from(topicSet) };
 		} catch {
+			if (seq !== searchSeq) return;
 			results = { users: [], moments: [], topics: [] };
 		} finally {
-			loading = false;
+			if (seq === searchSeq) loading = false;
 		}
 	}
 

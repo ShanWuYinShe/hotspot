@@ -186,7 +186,7 @@
 							>
 								<div class="relative">
 									<div class="avatar-entry__avatar rounded-full overflow-hidden size-9" style="border:{selectedId === c.id ? '2px solid var(--cst-accent-default)' : '1.5px solid var(--cst-border-default)'};">
-										<img src={c.avatar} alt={c.name} class="w-full h-full object-cover" />
+										<img src={c.avatar} alt={c.name} loading="lazy" class="w-full h-full object-cover" />
 									</div>
 									<OnlineDot size="sm" />
 								</div>

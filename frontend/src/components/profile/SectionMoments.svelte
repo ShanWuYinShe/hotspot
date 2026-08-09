@@ -110,7 +110,7 @@
 					>
 						<div class="lg:grid lg:grid-cols-[minmax(0,1.38fr)_minmax(280px,0.62fr)]">
 							<div class="tap-97 relative aspect-[16/10] overflow-hidden lg:aspect-auto lg:min-h-97.5 bg-surface-page" >
-								<img src={featured.img} alt="本期精选瞬间" class="image-hover-frame__image h-full w-full object-cover" />
+								<img src={featured.img} alt="本期精选瞬间" loading="lazy" class="image-hover-frame__image h-full w-full object-cover" />
 							</div>
 							<div class="flex flex-col justify-between border-t border-border-default p-6 lg:border-l lg:border-t-0">
 								<div>
@@ -154,7 +154,7 @@
 						aria-label="查看瞬间详情"
 					>
 						<div class="tap-97 relative overflow-hidden {index === 0 ? 'aspect-[16/8]' : 'aspect-square'} bg-surface-page" >
-									<img src={moment.img} alt={moment.title || '瞬间图片'} class="image-hover-frame__image h-full w-full object-cover" />
+									<img src={moment.img} alt={moment.title || '瞬间图片'} loading="lazy" class="image-hover-frame__image h-full w-full object-cover" />
 								</div>
 								<div class="flex items-center justify-between gap-2 px-3 py-2.5">
 									<p class="truncate text-xs text-text-primary">{moment.title || '瞬间'}</p>

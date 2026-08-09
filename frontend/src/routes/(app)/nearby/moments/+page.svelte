@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Sparkles } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { platform } from '@/stores/platform.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
@@ -95,9 +96,15 @@ referencePoint = loc?.point ?? null;
 
 	// 三端共用的过滤逻辑（收敛到单处实现）
 	let searchQuery = $state('');
-	let activeTab = $state('热门');
+	// tab 支持深链：?tab= 初始化（刷新/分享保留分类），切换写回 URL
+	let activeTab = $state(initTabFromUrl());
 	let activeTag = $state<string | null>(null);
 	let visibleCount = $state(12);
+
+	function initTabFromUrl(): string {
+		const t = page.url.searchParams.get('tab') ?? '';
+		return TABS.includes(t) ? t : '热门';
+	}
 
 	// 传入 getter 而非数组快照：interactions.items 需跟随 apiFeedItems 更新
 	const interactions = createFeedInteractions(() => apiFeedItems);
@@ -157,7 +164,14 @@ referencePoint = loc?.point ?? null;
 
 <!-- ═══ 分类 Tab 栏（下划线样式，随 header 吸顶）═══ -->
 {#snippet tabBar()}
-	<TabBar items={TABS.map((t) => ({ id: t, label: t }))} value={activeTab} onChange={(id) => (activeTab = id)} />
+	<TabBar
+		items={TABS.map((t) => ({ id: t, label: t }))}
+		value={activeTab}
+		onChange={(id) => {
+			activeTab = id;
+			void goto(`${ROUTES.nearbyMoments}?tab=${encodeURIComponent(id)}`);
+		}}
+	/>
 {/snippet}
 
 <!-- ═══ 热门 tag 列表（scrollable / flex-wrap 由调用处 className 决定，对齐 Figma TagChips）═══ -->

@@ -51,6 +51,18 @@ export function setApiBaseUrl(url: string) {
 }
 
 /**
+ * 生成幂等键（spec: api_spec_base.md「幂等性（契约级）」）。
+ * 仅用于 spec 明确要求 Idempotency-Key 的写操作（auth/register、auth/guest、
+ * groups/create）；优先 crypto.randomUUID，非安全上下文回退时间戳+随机数。
+ */
+export function newIdempotencyKey(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+}
+
+/**
  * Notify the app of an auth-state change observed at the transport layer.
  * 由 auth store 监听这些事件，API 层自身不依赖 UI 框架。
  *   'auth-failed' → session invalid / refresh failed → drop to anonymous.
@@ -61,12 +73,17 @@ function emitAuthEvent(type: 'auth-failed' | 'auth-banned', message?: string) {
   window.dispatchEvent(new CustomEvent(type, { detail: { type, message } }));
 }
 
-async function request<T>(endpoint: string, body?: unknown, retryCount = 0): Promise<ApiResponse<T>> {
+async function request<T>(
+  endpoint: string,
+  body?: unknown,
+  extraHeaders: Record<string, string> = {},
+  retryCount = 0,
+): Promise<ApiResponse<T>> {
   const url = `${baseUrl}${endpoint}`;
   const res = await fetch(url, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...extraHeaders },
     body: body ? JSON.stringify(body) : '{}',
   });
 
@@ -105,7 +122,7 @@ async function request<T>(endpoint: string, body?: unknown, retryCount = 0): Pro
       })().finally(() => { refreshLock = null; });
     }
     const ok = await refreshLock;
-    if (ok) return request<T>(endpoint, body, retryCount + 1);
+    if (ok) return request<T>(endpoint, body, extraHeaders, retryCount + 1);
     // Refresh failed: notify AuthContext so it can drop to anonymous and prompt.
     emitAuthEvent('auth-failed');
   }
@@ -114,9 +131,9 @@ async function request<T>(endpoint: string, body?: unknown, retryCount = 0): Pro
 }
 
 // Auth
-export async function register(params: object)           { return request<AuthTokenPair>(Endpoints.Auth.Register, params); }
+export async function register(params: object)           { return request<AuthTokenPair>(Endpoints.Auth.Register, params, { 'Idempotency-Key': newIdempotencyKey() }); }
 export async function login(params: object)              { return request<AuthTokenPair>(Endpoints.Auth.Login, params); }
-export async function guest(params?: object)             { return request<AuthTokenPair>(Endpoints.Auth.Guest, params ?? {}); }
+export async function guest(params?: object)             { return request<AuthTokenPair>(Endpoints.Auth.Guest, params ?? {}, { 'Idempotency-Key': newIdempotencyKey() }); }
 export async function checkAuthStatus()                   { return request<AuthStatus>(Endpoints.Auth.CheckStatus); }
 export async function logout()                            { return request<void>(Endpoints.Auth.Logout); }
 export async function requestPasswordReset(params: object) { return request<void>(Endpoints.Auth.RequestPasswordReset, params); }
@@ -161,7 +178,7 @@ export async function getFavoriteMoments(params?: object)   { return request<Pag
 
 // Groups
 export async function getGroupDetail(groupId: string)     { return request<GroupItem>(Endpoints.Groups.GetDetail, { group_id: groupId }); }
-export async function createGroup(params: object)         { return request<GroupItem>(Endpoints.Groups.Create, params); }
+export async function createGroup(params: object)         { return request<GroupItem>(Endpoints.Groups.Create, params, { 'Idempotency-Key': newIdempotencyKey() }); }
 export async function listMyGroups(params?: object)       { return request<PaginatedData<GroupItem>>(Endpoints.Groups.ListMy, params ?? {}); }
 // spec: api_spec_group.md → groups/join（direct 直接加入 / approval 创建申请）、groups/leave
 export async function joinGroup(groupId: string, extra?: { password?: string; message?: string }) {

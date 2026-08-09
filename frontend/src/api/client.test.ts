@@ -97,6 +97,35 @@ describe('10100 刷新重试', () => {
   });
 });
 
+describe('幂等键与认证头', () => {
+  it('newIdempotencyKey 返回非空字符串', () => {
+    expect(typeof client.newIdempotencyKey()).toBe('string');
+    expect(client.newIdempotencyKey().length).toBeGreaterThan(0);
+  });
+
+  it('register/guest/createGroup 携带 Idempotency-Key', async () => {
+    for (const call of [client.register, client.guest, client.createGroup]) {
+      const fetchMock = mockFetchOnce({ code: 0, data: {} });
+      vi.stubGlobal('fetch', fetchMock);
+      client.setApiBaseUrl(BASE);
+      await call({});
+      const headers = fetchMock.mock.calls[0][1].headers;
+      expect(typeof headers['Idempotency-Key']).toBe('string');
+      expect(headers['Idempotency-Key'].length).toBeGreaterThan(0);
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('login 不携带 Idempotency-Key（spec 未要求）', async () => {
+    const fetchMock = mockFetchOnce({ code: 0, data: {} });
+    vi.stubGlobal('fetch', fetchMock);
+    client.setApiBaseUrl(BASE);
+    await client.login({});
+    const headers = fetchMock.mock.calls[0][1].headers;
+    expect(headers['Idempotency-Key']).toBeUndefined();
+  });
+});
+
 describe('10201 封禁事件', () => {
   it('code=10201 时派发 auth-banned 并返回 envelope', async () => {
     const onBanned = vi.fn();

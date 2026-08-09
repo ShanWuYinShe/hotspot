@@ -25,7 +25,7 @@
 		onclick={onClick}
 	>
 		<div class="rounded-full overflow-hidden shrink-0 size-8.5 border border-border-default"  >
-			<img src={avatar} alt={name} class="w-full h-full object-cover" />
+		<img src={avatar} alt={name} loading="lazy" class="w-full h-full object-cover" />
 		</div>
 		<div class="flex-1 min-w-0">
 			<p   class="truncate text-sm text-text-primary">{name}</p>

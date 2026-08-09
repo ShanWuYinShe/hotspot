@@ -326,7 +326,7 @@
 	<div class="mt-4 grid grid-cols-3 gap-1.5">
 		{#each galleryItems as src, i}
 			<div class="image-hover-frame tap-97 relative cursor-pointer rounded-sm overflow-hidden" style="aspect-ratio:1;">
-				<img src={src} alt={`photo ${i}`} class="image-hover-frame__image w-full h-full object-cover" />
+		<img src={src} alt={`photo ${i}`} loading="lazy" class="image-hover-frame__image w-full h-full object-cover" />
 				{#if activeTab === 'liked'}
 					<div class="absolute inset-0 flex items-end justify-end p-1.5 bg-surface-overlay-soft">
 						<div class="flex items-center justify-center rounded-full bg-accent-default size-5" >

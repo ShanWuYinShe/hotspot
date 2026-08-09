@@ -287,7 +287,7 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 								class="app-list-row app-list-row--standard"
 							>
 								<div class="relative">
-									<img src={member.avatar} alt="" class="h-10 w-10 rounded-full object-cover" />
+		<img src={member.avatar} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
 									{#if onlineMemberIds.has(member.userId)}
 										<span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-surface-primary bg-status-online"></span>
 									{/if}

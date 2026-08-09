@@ -42,13 +42,18 @@
 		createError = '';
 		try {
 			const location = await resolveLocation();
+			// spec: groups/create 的 location 为必填字段；拿不到位置时明确报错，不发缺字段请求
+			if (!location) {
+				createError = '无法获取当前位置，请稍后重试';
+				return;
+			}
 			const res = await createGroup({
 				name: name.trim(),
 				description: desc.trim() || undefined,
 				tags: [category],
 				join_method: isPrivate ? 'invite_only' : 'direct',
 				requires_approval: requiresApproval,
-				location: location ?? undefined
+				location
 			});
 			if (res.code !== 0) {
 				createError = res.message ?? '创建失败，请稍后重试';

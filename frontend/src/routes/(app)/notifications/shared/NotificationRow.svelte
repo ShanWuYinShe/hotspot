@@ -27,7 +27,7 @@
 	<div class="relative shrink-0">
 		{#if notif.user.avatar}
 			<div class="rounded-full overflow-hidden size-11" >
-				<img src={notif.user.avatar} alt={notif.user.name} class="w-full h-full object-cover" />
+		<img src={notif.user.avatar} alt={notif.user.name} loading="lazy" class="w-full h-full object-cover" />
 			</div>
 		{:else}
 			<div class="rounded-full flex items-center justify-center size-11" style="background:{cfg.bg};">
@@ -54,7 +54,7 @@
 	<div class="flex items-center gap-2 shrink-0">
 		{#if notif.momentImage}
 			<div class="rounded-sm overflow-hidden size-9.5" >
-				<img src={notif.momentImage} alt="" class="w-full h-full object-cover" />
+		<img src={notif.momentImage} alt="" loading="lazy" class="w-full h-full object-cover" />
 			</div>
 		{/if}
 		{#if !notif.read}
