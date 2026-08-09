@@ -189,13 +189,13 @@
 				{#snippet icon()}
 					<Bell class="size-4 text-text-secondary"   strokeWidth={1.5} />
 				{/snippet}
-				<Toggle on={notif} onToggle={toggleNotif} />
+				<Toggle on={notif} onToggle={toggleNotif} label="推送通知" />
 			</SettingRow>
 			<SettingRow title="应用声音" description="操作反馈音效">
 				{#snippet icon()}
 					<Volume2 class="size-4 text-text-secondary"   strokeWidth={1.5} />
 				{/snippet}
-				<Toggle on={sounds} onToggle={toggleSounds} />
+				<Toggle on={sounds} onToggle={toggleSounds} label="应用声音" />
 			</SettingRow>
 		</ListContainer>
 	</div>
@@ -208,13 +208,13 @@
 				{#snippet icon()}
 					<Lock class="size-4 text-text-secondary"   strokeWidth={1.5} />
 				{/snippet}
-				<Toggle on={privateProfile} onToggle={togglePrivateProfile} />
+				<Toggle on={privateProfile} onToggle={togglePrivateProfile} label="私密账号" />
 			</SettingRow>
 			<SettingRow title="位置共享" description="允许附近用户发现你">
 				{#snippet icon()}
 					<MapPin class="size-4 text-text-secondary"   strokeWidth={1.5} />
 				{/snippet}
-				<Toggle on={locationSharing} onToggle={toggleLocationSharing} />
+				<Toggle on={locationSharing} onToggle={toggleLocationSharing} label="位置共享" />
 			</SettingRow>
 		</ListContainer>
 	</div>

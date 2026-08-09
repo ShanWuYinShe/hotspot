@@ -162,6 +162,7 @@
 </script>
 
 <div class="bg-surface-primary" style="position:relative;width:100%;height:100%;overflow:hidden;">
+	<h1 class="sr-only">地图</h1>
 	<!-- ══ MAP (full screen, tappable) ══ -->
 	<div
 		style="position:absolute;inset:0;z-index:0;"
