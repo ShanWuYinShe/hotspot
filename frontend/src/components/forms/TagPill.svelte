@@ -7,6 +7,7 @@
 		active = false,
 		onClick,
 		icon,
+		iconSnippet,
 		disabled = false,
 		size = 'md',
 		class: className = ''
@@ -16,6 +17,8 @@
 		onClick?: () => void;
 		/** 可选前置图标（与文字同色，随激活态变色） */
 		icon?: Component;
+		/** 可选前置自定义内容（如彩色圆点/图钉 SVG），优先级高于 icon */
+		iconSnippet?: Snippet;
 		disabled?: boolean;
 		size?: 'sm' | 'md';
 		class?: string;
@@ -43,7 +46,9 @@
 		)}
 		onclick={onClick}
 	>
-		{#if icon}
+		{#if iconSnippet}
+			{@render iconSnippet()}
+		{:else if icon}
 			<icon class="size-3.5" strokeWidth={active ? 2 : 1.5}></icon>
 		{/if}
 		{@render children()}

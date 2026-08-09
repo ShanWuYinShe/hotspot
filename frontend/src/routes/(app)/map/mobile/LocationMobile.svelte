@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Search, MapPin, X, SlidersHorizontal, Crosshair, Check, ArrowLeft } from '@lucide/svelte';
+	import { Search, MapPin, X, SlidersHorizontal, Crosshair, ArrowLeft } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import * as Popover from '@/components/ui/popover';
@@ -8,6 +8,7 @@
 	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, markerSvg, floatBtnStyle, buildMapData, fetchMapCanvas, type MapHeatBucket, type SnapState } from '../shared/location-shared';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
 	import MapHeatDot from '../shared/MapHeatDot.svelte';
+	import TagPill from '@/components/forms/TagPill.svelte';
 	import LocationSheetList from './LocationSheetList.svelte';
 
 	// 移动端地图探索：全屏 OSM + 可拖拽吸附底部 Sheet（148/318/540 三档）。
@@ -253,29 +254,23 @@
 						side="bottom"
 						align="end"
 						sideOffset={8}
-						class="w-34 overflow-hidden rounded-md p-0"
+						class="w-56 overflow-hidden rounded-md p-2"
 					>
-						{#each [
-							['user', '用户', PIN_COLORS.user],
-							['group', '群组', PIN_COLORS.group],
-							['moment', '瞬间', PIN_COLORS.moment]
-						] as [type, label, color], i}
-							{@const active = activeFilters.has(type as PinType)}
-							{@const glow = PIN_TONES[type as PinType].glow}
-							{#if i > 0}
-								<div class="bg-border-default h-0.25" ></div>
-							{/if}
-							<button
-								type="button"
-								class="hover-btn w-full flex items-center gap-2 px-3 py-3 focus-ring {active ? 'opacity-100' : 'opacity-40'}"
-								onclick={() => toggleFilter(type as PinType)}
-							>
-								
-								{@html markerSvg(type as PinType, 1, { w: 18, h: 24 })}
-								<span class="text-text-primary text-sm"  style="flex:1;text-align:left">{label}</span>
-								<div class="size-3.25 rounded-full shrink-0" style="background:{active ? color : 'transparent'};border:2px solid {active ? color : 'var(--cst-border-default)'};box-shadow:{active ? `var(--cst-marker-halo) ${glow}` : 'none'};transition:all 0.18s var(--cst-ease-standard);"></div>
-							</button>
-						{/each}
+						<div class="flex flex-wrap gap-1.5">
+							{#each [
+								['user', '用户'],
+								['group', '群组'],
+								['moment', '瞬间']
+							] as [type, label]}
+								{@const active = activeFilters.has(type as PinType)}
+								<TagPill active={active} onClick={() => toggleFilter(type as PinType)}>
+									{#snippet iconSnippet()}
+										<span class="inline-flex shrink-0">{@html markerSvg(type as PinType, 1, { w: 14, h: 19 })}</span>
+									{/snippet}
+									{label}
+								</TagPill>
+							{/each}
+						</div>
 					</Popover.Content>
 				</Popover.Root>
 		</div>

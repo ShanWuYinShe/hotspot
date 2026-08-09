@@ -11,6 +11,7 @@
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
 	import MapHeatDot from '../shared/MapHeatDot.svelte';
 	import PinMedia from '../shared/PinMedia.svelte';
+	import TagPill from '@/components/forms/TagPill.svelte';
 	import LocationDesktopPanel from './LocationDesktopPanel.svelte';
 
 	// 桌面地图探索：左侧栏（统计/搜索/Tab 列表/确认，由 LocationDesktopPanel 承载）
@@ -203,29 +204,17 @@
 			</button>
 			{#if showFilter}
 				<div class="mt-2 overflow-hidden rounded-md w-50 shadow-raised-lg border border-border-default bg-surface-primary">
-					{#each [{ type: 'user', label: '用户', color: PIN_COLORS.user, count: userCount }, { type: 'group', label: '群组', color: PIN_COLORS.group, count: groupCount }, { type: 'moment', label: '瞬间', color: PIN_COLORS.moment, count: momentCount }] as item, i}
-						{#if i > 0}
-							<div class="h-0.25 bg-border-default"></div>
-						{/if}
-						{@const active = activeFilters.has(item.type as PinType)}
-						<button
-							type="button"
-							class="hover-btn flex w-full items-center gap-2 px-3 py-2.5 text-left focus-ring {active ? 'opacity-100' : 'opacity-50'}"
-							onclick={() => toggleFilter(item.type as PinType)}
-						>
-								
-								{@html markerSvg(item.type as PinType, 1, { w: 15, h: 21 })}
-								
-								{@html markerSvg(item.type as PinType, 3, { w: 15, h: 21 })}
-							<span class="flex-1 text-text-primary text-xs" >{item.label}</span>
-							<span class="text-sm font-semibold" style="color:{item.color}">{item.count}</span>
-							<span class="flex items-center justify-center shrink-0 size-3.5" style="border-radius:var(--cst-shape-sm);background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--cst-border-strong)'};transition:all 0.18s var(--cst-ease-standard);">
-								{#if active}
-									<Check class="size-2.5 text-content-on-marker"   strokeWidth={2.5} />
-								{/if}
-							</span>
-						</button>
-					{/each}
+					<div class="flex flex-wrap gap-1.5 p-2">
+						{#each [{ type: 'user', label: '用户', count: userCount }, { type: 'group', label: '群组', count: groupCount }, { type: 'moment', label: '瞬间', count: momentCount }] as item}
+							{@const active = activeFilters.has(item.type as PinType)}
+							<TagPill active={active} onClick={() => toggleFilter(item.type as PinType)}>
+								{#snippet iconSnippet()}
+									<span class="inline-flex shrink-0">{@html markerSvg(item.type as PinType, 1, { w: 14, h: 19 })}</span>
+								{/snippet}
+								{item.label}{item.count ? ` ${item.count}` : ''}
+							</TagPill>
+						{/each}
+					</div>
 					<div class="h-0.25 bg-border-default"></div>
 					<div class="flex items-center gap-2 px-3 py-2">
 						<span class="size-3.25 rounded-full" style="background:{PIN_COLORS.user};border:2px solid var(--cst-surface-primary);box-shadow:var(--cst-marker-halo) {PIN_TONES.user.glow};"></span>
