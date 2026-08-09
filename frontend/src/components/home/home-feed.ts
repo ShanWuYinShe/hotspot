@@ -22,9 +22,9 @@ export async function fetchHomeFeed(
 	if (referencePoint) searchParams.reference_point = referencePoint;
 
 	const [trendingRes, nearbyUsersRes, nearbyGroupsRes] = await Promise.all([
-		getTrending().catch(() => ({ code: -1, data: null })),
-		getNearbyUsers(searchParams).catch(() => ({ code: -1, data: { items: [] } })),
-		getNearbyGroups(searchParams).catch(() => ({ code: -1, data: { items: [] } }))
+		getTrending().catch(() => ({ code: -1, message: '网络异常', data: null })),
+		getNearbyUsers(searchParams).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
+		getNearbyGroups(searchParams).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }))
 	]);
 
 	const trendingData = trendingRes.code === 0 ? trendingRes.data : null;

@@ -9,6 +9,7 @@
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
 	import GroupCard from './shared/GroupCard.svelte';
 	import { mapGroup, type Group } from './shared/group-data';
 	import { getNearbyGroups, joinGroup, leaveGroup } from '@/api';
@@ -26,6 +27,8 @@
 	let loading = $state(true);
 	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
 	let locationName = $state('');
+	let loadError = $state<string | null>(null);
+	let reloadKey = $state(0);
 
 	$effect(() => startDefaultLocation((loc) => {
 				referencePoint = loc?.point ?? null;
@@ -35,14 +38,20 @@
 	$effect(() => {
 		// spec: feed/nearby_groups — reference_point 可选,服务端按回退链解析
 		// (显式传参 → 最近 update_location → ClientConfig.defaults.default_location)。
+		void reloadKey;
 		let cancelled = false;
 		async function fetchGroups() {
 			loading = true;
+			loadError = null;
 			const res = await getNearbyGroups(
 				referencePoint ? { reference_point: referencePoint, pagination: { limit: 24 } } : { pagination: { limit: 24 } }
-			).catch(() => ({ code: -1, data: { items: [] } }));
+			).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
 			if (cancelled) return;
 			const items = res.code === 0 && res.data ? res.data.items : [];
+			if (res.code !== 0) {
+				if (!cancelled) loadError = res.message ?? '加载失败';
+				return;
+			}
 			groups = items.map(mapGroup);
 			loading = false;
 		}
@@ -135,6 +144,8 @@
 				<div class="spinner size-7" ></div>
 				<p class="text-text-secondary text-sm">加载附近群组…</p>
 			</div>
+		{:else if loadError}
+			<LoadError message={loadError} onRetry={() => reloadKey++} />
 		{:else if filtered.length}
 			<div class="flex items-center justify-between mb-3">
 				<span class="eyebrow">此刻附近群组</span>

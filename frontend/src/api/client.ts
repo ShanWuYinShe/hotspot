@@ -62,6 +62,11 @@ export function newIdempotencyKey(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 }
 
+/** 生成请求链路追踪 ID（spec: api_spec_base.md「请求与响应头」，可选、无格式约束）。 */
+export function newRequestId(): string {
+  return newIdempotencyKey();
+}
+
 /**
  * Notify the app of an auth-state change observed at the transport layer.
  * 由 auth store 监听这些事件，API 层自身不依赖 UI 框架。
@@ -78,12 +83,13 @@ async function request<T>(
   body?: unknown,
   extraHeaders: Record<string, string> = {},
   retryCount = 0,
+  requestId = newRequestId(),
 ): Promise<ApiResponse<T>> {
   const url = `${baseUrl}${endpoint}`;
   const res = await fetch(url, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...extraHeaders },
+    headers: { 'Content-Type': 'application/json', 'X-Request-Id': requestId, ...extraHeaders },
     body: body ? JSON.stringify(body) : '{}',
   });
 
@@ -122,7 +128,7 @@ async function request<T>(
       })().finally(() => { refreshLock = null; });
     }
     const ok = await refreshLock;
-    if (ok) return request<T>(endpoint, body, extraHeaders, retryCount + 1);
+    if (ok) return request<T>(endpoint, body, extraHeaders, retryCount + 1, requestId);
     // Refresh failed: notify AuthContext so it can drop to anonymous and prompt.
     emitAuthEvent('auth-failed');
   }

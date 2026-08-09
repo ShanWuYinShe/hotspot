@@ -3,6 +3,7 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
 	import { searchUsers, searchMoments, searchSuggest } from '@/api';
 	import SearchDiscovery from './shared/SearchDiscovery.svelte';
 	import SearchResults, { type TabType, type SearchResultsData } from './shared/SearchResults.svelte';
@@ -32,6 +33,7 @@
 		topics: []
 	});
 	let loading = $state(false);
+	let searchError = $state<string | null>(null);
 
 	const device = $derived(platform.platform);
 
@@ -59,6 +61,7 @@
 
 	async function doSearch(term: string) {
 		const seq = ++searchSeq;
+		searchError = null;
 		if (!term) {
 			results = { users: [], moments: [], topics: [] };
 			return;
@@ -66,11 +69,18 @@
 		loading = true;
 		try {
 			const [usersRes, momentsRes] = await Promise.all([
-				searchUsers({ keyword: term }).catch(() => ({ code: -1, data: { items: [] } })),
-				searchMoments({ keyword: term }).catch(() => ({ code: -1, data: { items: [] } }))
+				searchUsers({ keyword: term }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
+				searchMoments({ keyword: term }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }))
 			]);
 			const rawUsers = usersRes.code === 0 ? usersRes.data?.items : undefined;
 			const rawMoments = momentsRes.code === 0 ? momentsRes.data?.items : undefined;
+			if (usersRes.code !== 0 || momentsRes.code !== 0) {
+				if (seq === searchSeq) {
+					searchError = usersRes.message ?? momentsRes.message ?? '搜索失败，请稍后重试';
+					loading = false;
+				}
+				return;
+			}
 			const users = (rawUsers ?? []).map((u) => {
 				const inner = u.user;
 				return { user_id: inner.user_id, nickname: inner.nickname, avatar_url: inner.avatar_url, tags: u.tags };
@@ -85,6 +95,7 @@
 			results = { users, moments, topics: Array.from(topicSet) };
 		} catch {
 			if (seq !== searchSeq) return;
+			searchError = '搜索失败，请稍后重试';
 			results = { users: [], moments: [], topics: [] };
 		} finally {
 			if (seq === searchSeq) loading = false;
@@ -140,7 +151,9 @@
 		</PageHeader>
 	{/snippet}
 
-	{#if !keyword}
+	{#if searchError}
+		<LoadError message={searchError} onRetry={() => void doSearch(keyword)} />
+	{:else if !keyword}
 		<!-- 无查询发现态（对齐 Figma：双栏 grid + 推荐话题跨列） -->
 		<SearchDiscovery recent={recent} hot={discoveryHot} topics={discoveryTopics} onChoose={choose} onClear={() => (recent = [])} />
 	{:else}

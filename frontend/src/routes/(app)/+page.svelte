@@ -16,6 +16,7 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
 	import { follow } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 
@@ -30,6 +31,7 @@
 	let nearbyGroups = $state<NearbyGroup[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let reloadKey = $state(0);
 	let defaultLocation = $state<DefaultLocation | null>(null);
 	const device = $derived(platform.platform);
 
@@ -38,6 +40,7 @@
 }));
 
 	$effect(() => {
+		void reloadKey;
 		let cancelled = false;
 		async function fetchData() {
 			try {
@@ -104,12 +107,8 @@
 			<p class="text-text-secondary text-sm">加载首页数据…</p>
 		</div>
 	{:else if error}
-		<!-- 加载失败：错误提示（对齐 EmptyState bare 契约） -->
-		<EmptyState bare title="加载失败" description={error}>
-			{#snippet icon()}
-				<Radar class="size-6 opacity-40 text-text-secondary"   strokeWidth={1.5} />
-			{/snippet}
-		</EmptyState>
+		<!-- 加载失败：统一错误态（LoadError） -->
+		<LoadError message={error} onRetry={() => reloadKey++} />
 	{:else if moments.length === 0 && nearbyUsers.length === 0 && nearbyGroups.length === 0}
 		<!-- 空态：无任何附近内容 -->
 		<EmptyState title="附近还没有内容" description="去发布第一条动态，或到附近的人认识新朋友。">

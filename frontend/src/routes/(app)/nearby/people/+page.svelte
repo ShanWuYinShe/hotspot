@@ -9,6 +9,7 @@
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
 	import UserCard, { type NearbyUser } from './UserCard.svelte';
 	import { getNearbyUsers } from '@/api';
 	import { ROUTES } from '@/lib/routes';
@@ -30,6 +31,8 @@
 	let loading = $state(true);
 	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
 	let locationName = $state('');
+	let loadError = $state<string | null>(null);
+	let reloadKey = $state(0);
 
 	$effect(() => startDefaultLocation((loc) => {
 				referencePoint = loc?.point ?? null;
@@ -38,13 +41,19 @@
 
 	$effect(() => {
 		// reference_point 可选:有显式锚点就传,否则由服务端回退链解析。
+		void reloadKey;
 		let cancelled = false;
 		async function fetchUsers() {
 			try {
 				loading = true;
-				const res = await getNearbyUsers(referencePoint ? { reference_point: referencePoint } : {}).catch(() => ({ code: -1, data: { items: [] } }));
+				loadError = null;
+				const res = await getNearbyUsers(referencePoint ? { reference_point: referencePoint } : {}).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
 				if (cancelled) return;
 				const data = res.code === 0 ? res.data : null;
+				if (res.code !== 0) {
+					if (!cancelled) loadError = res.message ?? '加载失败';
+					return;
+				}
 				if (data) {
 					const items: NearbyUser[] = (data.items || []).map((u) => ({
 						// spec: feed/nearby_users → UserItem（user 嵌套 + presence_status + location）
@@ -60,7 +69,7 @@
 					allUsers = items;
 				}
 			} catch {
-				if (!cancelled) allUsers = [];
+				if (!cancelled) loadError = '加载失败，请稍后重试';
 			} finally {
 				if (!cancelled) loading = false;
 			}
@@ -182,6 +191,8 @@
 						{/each}
 					</div>
 				{/if}
+			{:else if loadError}
+				<LoadError message={loadError} onRetry={() => reloadKey++} />
 			{:else}
 				<EmptyState bare title="没有找到匹配的附近用户">
 					{#snippet icon()}

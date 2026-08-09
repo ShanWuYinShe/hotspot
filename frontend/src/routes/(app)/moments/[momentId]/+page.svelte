@@ -31,8 +31,8 @@
 	$effect(() => {
 		let cancelled = false;
 		void Promise.all([
-			getFeedNearby({ pagination: { limit: 3 } }).catch(() => ({ code: -1, data: null })),
-			searchMoments({ keyword: '', pagination: { limit: 3 } }).catch(() => ({ code: -1, data: null }))
+			getFeedNearby({ pagination: { limit: 3 } }).catch(() => ({ code: -1, message: '网络异常', data: null })),
+			searchMoments({ keyword: '', pagination: { limit: 3 } }).catch(() => ({ code: -1, message: '网络异常', data: null }))
 		]).then(([nearbyRes, relatedRes]) => {
 			if (cancelled) return;
 			const nearbyItems = nearbyRes.code === 0 ? nearbyRes.data?.items ?? [] : [];
@@ -95,8 +95,8 @@
 				moment = emptyMoment();
 				apiComments = [];
 				const [detailRes, commentsRes] = await Promise.all([
-					getMomentDetail(momentId).catch(() => ({ code: -1, data: null })),
-					listComments(momentId).catch(() => ({ code: -1, data: { items: [] } }))
+					getMomentDetail(momentId).catch(() => ({ code: -1, message: '网络异常', data: null })),
+					listComments(momentId).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }))
 				]);
 				if (cancelled) return;
 

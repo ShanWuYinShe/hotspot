@@ -6,6 +6,7 @@
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
@@ -28,6 +29,8 @@
 	let tags = $state<string[]>([]);
 	let loading = $state(true);
 	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
+	let loadError = $state<string | null>(null);
+	let reloadKey = $state(0);
 
 	$effect(() => startDefaultLocation((loc) => {
 referencePoint = loc?.point ?? null;
@@ -37,14 +40,20 @@ referencePoint = loc?.point ?? null;
 		// spec: feed/nearby reference_point is optional — server resolves via fallback
 		// chain (explicit point → last known location → ClientConfig default).
 		// 有 point 就传、没有就不传照常请求。
+		void reloadKey;
 		let cancelled = false;
 		async function fetchData() {
 			try {
 				loading = true;
-				const feedRes = await getFeedNearby(referencePoint ? { reference_point: referencePoint } : {}).catch(() => ({ code: -1, data: { items: [] } }));
+				loadError = null;
+				const feedRes = await getFeedNearby(referencePoint ? { reference_point: referencePoint } : {}).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
 				if (cancelled) return;
 
 				const feedData = feedRes.code === 0 ? feedRes.data : null;
+				if (feedRes.code !== 0) {
+					if (!cancelled) loadError = feedRes.message ?? '加载失败';
+					return;
+				}
 
 				if (feedData) {
 					const items: FeedItem[] = (feedData.items || []).map((m, i) => {
@@ -83,7 +92,7 @@ referencePoint = loc?.point ?? null;
 					tags = tagsList;
 				}
 			} catch {
-				// empty data is normal
+				if (!cancelled) loadError = '加载失败，请稍后重试';
 			} finally {
 				if (!cancelled) loading = false;
 			}
@@ -190,6 +199,8 @@ referencePoint = loc?.point ?? null;
 			<div class="spinner size-7" ></div>
 			<p class="text-text-secondary text-sm">加载附近动态…</p>
 		</div>
+	{:else if loadError}
+		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else}
 		<EmptyState title="附近暂时没有瞬间">
 			{#snippet icon()}

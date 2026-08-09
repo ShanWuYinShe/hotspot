@@ -35,7 +35,7 @@
 		let cancelled = false;
 		async function fetchAccount() {
 			try {
-				const res = await getAccount().catch(() => ({ code: -1, data: null }));
+				const res = await getAccount().catch(() => ({ code: -1, message: '网络异常', data: null }));
 				if (cancelled) return;
 				const data = res.code === 0 ? res.data : null;
 				if (data) {

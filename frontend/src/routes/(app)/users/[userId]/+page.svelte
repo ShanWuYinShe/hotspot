@@ -3,6 +3,7 @@
 	import { MapPin, MessageCircle, UserPlus, UserCheck, Share2, Heart, Grid3X3, Bookmark, MoreHorizontal, Flag, PencilLine, UserX, X, Check, ArrowLeft } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
 	import RailSection from '@/components/rail/RailSection.svelte';
 	import RailUserRow from '@/components/rail/RailUserRow.svelte';
 	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
@@ -43,6 +44,8 @@
 		tags: []
 	});
 	let loading = $state(true);
+	let loadError = $state<string | null>(null);
+	let reloadKey = $state(0);
 	let mutualFriends = $state<{ id: string; name: string; sub: string; avatar: string }[]>([]);
 	let followed = $state(false);
 	let activeTab = $state<'moments' | 'liked' | 'saved'>('moments');
@@ -57,13 +60,19 @@
 	const uid = $derived(params.userId ?? '');
 
 	$effect(() => {
+		void reloadKey;
 		let cancelled = false;
 		async function fetchProfile() {
 			try {
 				loading = true;
-				const res = await getProfile(uid).catch(() => ({ code: -1, data: null }));
+				loadError = null;
+				const res = await getProfile(uid).catch(() => ({ code: -1, message: '网络异常', data: null }));
 				if (cancelled) return;
 				const data = res.code === 0 ? res.data : null;
+				if (res.code !== 0) {
+					if (!cancelled) loadError = res.message ?? '加载失败';
+					return;
+				}
 				if (data) {
 					const u = data.user;
 					const s = u.stats;
@@ -98,7 +107,7 @@
 					}
 				}
 			} catch {
-				// empty data is normal
+				if (!cancelled) loadError = '加载失败，请稍后重试';
 			} finally {
 				if (!cancelled) loading = false;
 			}
@@ -211,6 +220,9 @@
 		</Dialog.Content>
 	</Dialog.Root>
 
+{#if loadError}
+	<LoadError message={loadError} onRetry={() => reloadKey++} />
+{:else}
 <SplitPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	<!-- 资料头（无封面数据：紧凑头部，返回/分享/更多 浮在首行，对齐动态详情作者行层级） -->
 	<div class="flex items-center justify-between">
@@ -365,3 +377,4 @@
 	{/if}
 	{/snippet}
 </SplitPageLayout>
+{/if}

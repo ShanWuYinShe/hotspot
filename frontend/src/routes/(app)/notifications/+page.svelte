@@ -9,6 +9,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import NotificationRow from './shared/NotificationRow.svelte';
 	import { TYPE_CONFIG, normalizeNotifType, type NotificationItem } from './shared/notification-data';
@@ -35,6 +36,7 @@ const FILTER_TABS = [
 
 	const device = $derived(platform.platform);
 	let loading = $state(true);
+	let loadError = $state<string | null>(null);
 	// WS 推送（ws:notify）到来时 +1，触发下方加载 effect 重新拉取通知与未读。
 	let reloadKey = $state(0);
 
@@ -53,13 +55,18 @@ const FILTER_TABS = [
 		async function fetchNotifs() {
 			try {
 				loading = true;
+				loadError = null;
 				const [notifRes, unreadRes] = await Promise.all([
-					listNotifications().catch(() => ({ code: -1, data: { items: [] } })),
-					getUnreadCount().catch(() => ({ code: -1, data: { total: 0 } }))
+					listNotifications().catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
+					getUnreadCount().catch(() => ({ code: -1, message: '网络异常', data: { total: 0 } }))
 				]);
 				if (cancelled) return;
 
 				const notifData = notifRes.code === 0 ? notifRes.data : null;
+				if (notifRes.code !== 0) {
+					if (!cancelled) loadError = notifRes.message ?? '加载失败';
+					return;
+				}
 
 				if (notifData) {
 					const items: NotificationItem[] = (notifData.items || []).map((n, i) => {
@@ -97,7 +104,7 @@ const FILTER_TABS = [
 					notifications = items;
 				}
 			} catch {
-				if (!cancelled) notifications = [];
+				if (!cancelled) loadError = '加载失败，请稍后重试';
 			} finally {
 				if (!cancelled) loading = false;
 			}
@@ -229,7 +236,9 @@ const FILTER_TABS = [
 					</ListContainer>
 				{/if}
 
-				{#if filtered.length === 0}
+				{#if loadError}
+					<LoadError message={loadError} onRetry={() => reloadKey++} />
+				{:else if filtered.length === 0}
 					<EmptyState title="暂无通知">
 						{#snippet icon()}
 							<Bell class="size-6 opacity-50 text-text-secondary"  strokeWidth={1.5} />

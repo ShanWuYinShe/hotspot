@@ -3,6 +3,7 @@
 	import { ArrowLeft, Bell, Check, MapPin, MessageCircle, Users } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 import TabBar from '@/components/navigation/TabBar.svelte';
@@ -58,6 +59,7 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 	let members = $state<Member[]>([]);
 	let announcements = $state<Announcement[]>([]);
 	let loading = $state(true);
+	let loadError = $state<string | null>(null);
 	let unwatchMembers: (() => void) | null = null;
 	/** 竞态防护：仅最后一次发起的加载允许落地。 */
 	let loadToken = 0;
@@ -85,7 +87,7 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 
 	async function loadDetail(gid: string) {
 		try {
-			const detailRes = await getGroupDetail(gid).catch(() => ({ code: -1, data: null }));
+			const detailRes = await getGroupDetail(gid).catch(() => ({ code: -1, message: '网络异常', data: null }));
 			// 竞态防护：页面已切到别的群组则丢弃本次结果
 			if (params.groupId !== gid) return;
 			const detailData = detailRes.code === 0 ? detailRes.data : null;
@@ -101,15 +103,17 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 					banner: g.avatar_url ?? group.banner
 				};
 				if (detailData.my_state?.is_joined) joined = true;
+			} else if (detailRes.code !== 0) {
+				loadError = detailRes.message ?? '加载失败，请稍后重试';
 			}
 		} catch {
-			// empty data is normal
+			loadError = '加载失败，请稍后重试';
 		}
 	}
 
 	async function loadMembers(gid: string) {
 		try {
-			const membersRes = await getGroupMembers(gid).catch(() => ({ code: -1, data: { items: [] } }));
+			const membersRes = await getGroupMembers(gid).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
 			// 竞态防护：页面已切到别的群组则丢弃本次结果
 			if (params.groupId !== gid) return;
 			const membersData = membersRes.code === 0 ? membersRes.data : null;
@@ -134,7 +138,7 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 
 	async function loadAnnouncements(gid: string) {
 		try {
-			const announcementsRes = await getGroupAnnouncements(gid).catch(() => ({ code: -1, data: { items: [] } }));
+			const announcementsRes = await getGroupAnnouncements(gid).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
 			// 竞态防护：页面已切到别的群组则丢弃本次结果
 			if (params.groupId !== gid) return;
 			const announcementsData = announcementsRes.code === 0 ? announcementsRes.data : null;
@@ -154,6 +158,7 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 	async function loadAll(gid: string) {
 		const token = ++loadToken;
 		loading = true;
+		loadError = null;
 		await Promise.all([loadDetail(gid), loadMembers(gid), loadAnnouncements(gid)]);
 		if (token !== loadToken) return; // 已被更新的请求取代
 		loading = false;
@@ -225,6 +230,9 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 </svelte:head>
 
 
+{#if loadError}
+	<LoadError message={loadError} onRetry={() => void loadAll(params.groupId ?? '')} />
+{:else}
 <StandardPageLayout contentClassName="animate-fade-in pb-6">
 	<!-- 全幅封面（负 margin 抵消 ContentColumn gutter） -->
 	<div class="relative h-[var(--cst-cover-height)] overflow-hidden -mx-[var(--cst-page-gutter)]">
@@ -343,3 +351,4 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 			</aside>
 	</div>
 </StandardPageLayout>
+{/if}

@@ -60,7 +60,7 @@
 				return;
 			}
 			// spec: groups/create 直接返回 GroupItem { group: GroupInfo }
-			const json = res as unknown as { data?: any };
+			const json = res as unknown as { data?: { group?: { group_id?: string }; group_id?: string } };
 			const groupId = json.data?.group?.group_id ?? json.data?.group_id ?? '';
 			step = 'done';
 			onCreated?.(groupId);

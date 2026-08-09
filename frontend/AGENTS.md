@@ -189,7 +189,9 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 5. **三端差异**：共用组件只写一次，设备差异用 `platform.platform` 派生（列数、字号、
    布局分支），不得复制三份页面。
 6. **数据获取与状态**：`$effect` + `cancelled` 竞态清理模式（参照样板页）；加载中用
-   spinner、空列表用 `EmptyState`（参照样板页 feedState snippet）。
+   spinner、空列表用 `EmptyState`（参照样板页 feedState snippet）；数据加载失败
+   必须展示 `LoadError`（`components/data-display/LoadError.svelte`）并提供重试
+   （`reloadKey` 递增触发 effect 重跑），禁止静默转空态。
 7. **列表骨架契约**：列表一律用 `ListContainer` + `ListItem`（`components/list/`）。
    joined 行（默认 tone）**禁止叠加 rounded/border/shadow/ring 卡片类**——行间分隔
    由容器 divide 线承担，圆角外框由容器级（`ListContainer bordered` 唯一外框）或

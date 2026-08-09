@@ -319,9 +319,9 @@ export function useRelationships() {
 
 	$effect(() => {
 		Promise.all([
-			listFriends({ pagination: { limit: 50 } }).catch(() => ({ code: -1, data: { items: [] } })),
-			listFollowing({ pagination: { limit: 50 } }).catch(() => ({ code: -1, data: { items: [] } })),
-			listFollowers({ pagination: { limit: 50 } }).catch(() => ({ code: -1, data: { items: [] } }))
+			listFriends({ pagination: { limit: 50 } }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
+			listFollowing({ pagination: { limit: 50 } }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
+			listFollowers({ pagination: { limit: 50 } }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }))
 		])
 			.then(([f, fo, fr]) => {
 				friends = f.code === 0 ? (f.data.items ?? []).map(mapFriend) : [];

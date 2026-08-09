@@ -6,6 +6,7 @@
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import ChatView from '@/components/messages/ChatView.svelte';
 	import GroupChatView from '@/components/messages/GroupChatView.svelte';
@@ -30,21 +31,29 @@
 
 	let chats = $state<ChatItem[]>([]);
 	let loading = $state(true);
+	let loadError = $state<string | null>(null);
+	let reloadKey = $state(0);
 	let unwatchPresence: (() => void) | null = null;
 
 	$effect(() => {
+		void reloadKey;
 		let cancelled = false;
 		async function fetchChats() {
 			try {
 				loading = true;
+				loadError = null;
 				// 并行加载私聊与我的群组，合并为统一会话列表（按时间倒序）。
 				const [privRes, groupRes] = await Promise.all([
-					getPrivateChats().catch(() => ({ code: -1, data: { items: [] } })),
-					listMyGroups().catch(() => ({ code: -1, data: { items: [] } }))
+					getPrivateChats().catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
+					listMyGroups().catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }))
 				]);
 				if (cancelled) return;
 				const privData = privRes.code === 0 && privRes.data ? privRes.data.items : [];
 				const groupData = groupRes.code === 0 && groupRes.data ? groupRes.data.items : [];
+				if (privRes.code !== 0 || groupRes.code !== 0) {
+					if (!cancelled) loadError = privRes.message ?? groupRes.message ?? '加载失败';
+					return;
+				}
 				const privateChats: ChatItem[] = privData.map((c, i) => ({
 					id: `chat-${i}`,
 					// spec: PrivateChatItem.other_user — the peer; private messages are
@@ -85,7 +94,7 @@
 					items.filter((c) => c.kind !== "group").map((c) => c.peerUserId).filter(Boolean)
 				);
 			} catch {
-				if (!cancelled) chats = [];
+				if (!cancelled) loadError = '加载失败，请稍后重试';
 			} finally {
 				if (!cancelled) loading = false;
 			}
@@ -330,7 +339,9 @@
 		<p class="eyebrow mb-2.5">最近</p>
 
 		<!-- 列表：无外层容器，List 直接裸排（对齐 Figma）；每行 px-3 py-1 包裹 -->
-		{#if filtered.length === 0}
+		{#if loadError}
+			<LoadError message={loadError} onRetry={() => reloadKey++} />
+		{:else if filtered.length === 0}
 			<EmptyState bare class="py-12!" title="没有找到会话">
 				{#snippet icon()}
 					<MessageSquareDashed class="size-9 opacity-50 text-text-secondary"  strokeWidth={1.5} />

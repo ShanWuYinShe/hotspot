@@ -77,8 +77,8 @@
 			try {
 				loading = true;
 				const [accountRes, settingsRes] = await Promise.all([
-					getAccount().catch(() => ({ code: -1, data: null })),
-					getSettings().catch(() => ({ code: -1, data: null }))
+					getAccount().catch(() => ({ code: -1, message: '网络异常', data: null })),
+					getSettings().catch(() => ({ code: -1, message: '网络异常', data: null }))
 				]);
 				if (cancelled) return;
 
