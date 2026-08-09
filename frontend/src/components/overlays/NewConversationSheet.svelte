@@ -52,7 +52,7 @@ function toggleAdd(id: number) {
 		{#each [{ id: 'add', icon: UserPlus, label: '添加好友' }, { id: 'chat', icon: MessageCircle, label: '开始私聊' }] as t}
 			<button
 				type="button"
-				class="hover-btn flex items-center gap-2 rounded-full px-4 py-2 text-sm outline-none {tab === t.id
+				class="hover-btn flex items-center gap-2 rounded-full px-4 py-2 text-sm focus-ring {tab === t.id
 					? 'bg-accent-default text-text-on-accent font-medium shadow-glow-md'
 					: 'border border-border-default bg-surface-primary text-text-secondary shadow-raised-sm'}"
 				onclick={() => {
@@ -60,7 +60,7 @@ function toggleAdd(id: number) {
 					searchQ = '';
 				}}
 			>
-				<t.icon class="size-3.25"  strokeWidth={1.75} />
+				<t.icon class="size-3.5"  strokeWidth={1.75} />
 				{t.label}
 			</button>
 		{/each}
@@ -97,7 +97,7 @@ function toggleAdd(id: number) {
 						</div>
 						<button
 							type="button"
-							class="hover-btn tap-92 flex items-center gap-1.5 px-3 py-1.5 rounded-full outline-none shrink-0 text-xs {addedIds.has(u.id) ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
+							class="hover-btn tap-92 flex items-center gap-1.5 px-3 py-1.5 rounded-full focus-ring shrink-0 text-xs {addedIds.has(u.id) ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
 							style={addedIds.has(u.id)
 								? 'box-shadow:var(--shadow-inset-sm);border:1px solid var(--cst-border-strong);'
 								: 'box-shadow:var(--shadow-glow-sm);'}
@@ -130,7 +130,7 @@ function toggleAdd(id: number) {
 					class="mb-3 flex items-center gap-3.5 p-3"
 				>
 					<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default size-11 shadow-glow-sm"  >
-						<Users class="size-5"  style="color:var(--cst-text-on-accent)" strokeWidth={1.75} />
+						<Users class="size-5 text-text-on-accent"   strokeWidth={1.75} />
 					</div>
 					<div>
 						<p class="text-text-primary text-sm font-medium">创建群聊</p>
@@ -163,7 +163,7 @@ function toggleAdd(id: number) {
 								{c.online ? '在线' : '离线'}
 							</p>
 						</div>
-						<MessageCircle class="size-4 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+						<MessageCircle class="size-4 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 					</ListItem>
 				{/each}
 			</div>

@@ -10,6 +10,8 @@
 import svelteParser from 'svelte-eslint-parser';
 import { parser as tsParser } from 'typescript-eslint';
 import { noListItemCardClasses } from './eslint-rules/no-list-item-card-classes.mjs';
+import { iconButtonHasLabel } from './eslint-rules/icon-button-has-label.mjs';
+import { noPlainOutlineNone } from './eslint-rules/no-plain-outline-none.mjs';
 
 export default [
 	{
@@ -26,10 +28,18 @@ export default [
 			}
 		},
 		plugins: {
-			hotspot: { rules: { 'no-list-item-card-classes': noListItemCardClasses } }
+			hotspot: {
+				rules: {
+					'no-list-item-card-classes': noListItemCardClasses,
+					'icon-button-has-label': iconButtonHasLabel,
+					'no-plain-outline-none': noPlainOutlineNone
+				}
+			}
 		},
 		rules: {
-			'hotspot/no-list-item-card-classes': 'error'
+			'hotspot/no-list-item-card-classes': 'error',
+			'hotspot/icon-button-has-label': 'error',
+			'hotspot/no-plain-outline-none': 'error'
 		}
 	}
 ];

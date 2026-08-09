@@ -61,13 +61,15 @@
 	)}
 	style="transform:{cardTransform};transition:transform 0.10s var(--cst-ease-standard);"
 	role={onClick ? 'button' : undefined}
+	aria-label={onClick ? imageAlt || undefined : undefined}
 	tabindex={onClick ? 0 : undefined}
 	onpointerdown={() => (pressed = true)}
 	onpointerup={() => (pressed = false)}
 	onpointerleave={() => (pressed = false)}
 	onclick={onClick}
 	onkeydown={(e) => {
-		if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+		// 仅卡片自身聚焦时响应；行内子按钮（点赞/收藏等）的键盘事件不得触发行导航
+		if (onClick && e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
 			e.preventDefault();
 			onClick();
 		}

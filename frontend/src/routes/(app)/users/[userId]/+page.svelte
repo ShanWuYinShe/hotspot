@@ -239,7 +239,7 @@
 					<div class="flex shrink-0 gap-2 pb-1">
 						<button
 							type="button"
-							class="hover-btn tap-93 flex items-center gap-1.5 rounded-full border border-border-default bg-surface-primary px-3.5 py-2 text-xs text-text-secondary shadow-raised-sm outline-none disabled:cursor-not-allowed disabled:opacity-50"
+							class="hover-btn tap-92 flex items-center gap-1.5 rounded-full border border-border-default bg-surface-primary px-3.5 py-2 text-xs text-text-secondary shadow-raised-sm focus-ring disabled:cursor-not-allowed disabled:opacity-50"
 							disabled={blocked}
 							onclick={() => !blocked && void goto(ROUTES.message(uid))}
 						>
@@ -248,7 +248,7 @@
 						</button>
 						<button
 							type="button"
-							class="hover-btn tap-93 flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all disabled:cursor-not-allowed disabled:opacity-50 text-xs {followed ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
+							class="hover-btn tap-92 flex items-center gap-1.5 px-4 py-2 rounded-full focus-ring transition-all disabled:cursor-not-allowed disabled:opacity-50 text-xs {followed ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
 							style={followed
 								? 'border:1.5px solid var(--cst-accent-default);box-shadow:var(--shadow-raised-sm);'
 								: 'box-shadow:var(--shadow-glow-md);border:1px solid transparent;'}
@@ -278,7 +278,7 @@
 			<div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
 				{#if user.location}
 					<span class="flex items-center gap-1.5 text-text-secondary text-sm">
-						<MapPin class="size-3.25"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
+						<MapPin class="size-3.5 text-accent-default"   strokeWidth={1.75} />
 						{user.location}
 					</span>
 				{/if}
@@ -321,7 +321,7 @@
 				{#if activeTab === 'liked'}
 					<div class="absolute inset-0 flex items-end justify-end p-1.5 bg-surface-overlay-soft">
 						<div class="flex items-center justify-center rounded-full bg-accent-default size-5" >
-							<Heart class="size-2.5"  style="color:var(--cst-text-on-accent)" strokeWidth={2} fill="var(--cst-text-on-accent)" />
+							<Heart class="size-2.5 text-text-on-accent"   strokeWidth={2} fill="var(--cst-text-on-accent)" />
 						</div>
 					</div>
 				{/if}

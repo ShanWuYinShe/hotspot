@@ -152,13 +152,13 @@
 					{#snippet trailing()}
 						<button
 							type="button"
-							class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none surface-flat size-7.5"
+							class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring surface-flat size-7.5"
 							onclick={() => {
 								newChatTab = 'chat';
 								showNewChat = true;
 							}}
 						>
-							<Plus class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+							<Plus class="size-3.5 text-text-secondary"   strokeWidth={1.5} />
 						</button>
 					{/snippet}
 					{#snippet below()}
@@ -177,7 +177,7 @@
 						{#each onlineChats as c (c.id)}
 							<button
 								type="button"
-								class="avatar-entry tap-93 flex flex-col items-center gap-1 shrink-0 cursor-pointer"
+								class="avatar-entry tap-92 flex flex-col items-center gap-1 shrink-0 cursor-pointer"
 								onclick={() => selectChat(c)}
 							>
 								<div class="relative">
@@ -227,7 +227,7 @@
 				<div class="h-full">
 					<EmptyState title="选择一个会话" description="从左侧选择联系人开始聊天" class="h-full justify-center py-0!" iconSize={72}>
 						{#snippet icon()}
-							<MessageSquareDashed class="size-7 opacity-50" style="color:var(--cst-text-secondary)" strokeWidth={1.25} />
+							<MessageSquareDashed class="size-7 opacity-50 text-text-secondary"  strokeWidth={1.5} />
 						{/snippet}
 					</EmptyState>
 				</div>
@@ -281,13 +281,13 @@
 				{/if}
 				<button
 					type="button"
-					class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none surface-flat size-9"
+					class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring surface-flat size-9"
 					onclick={() => {
 						newChatTab = 'chat';
 						showNewChat = true;
 					}}
 				>
-					<Plus class="size-4"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+					<Plus class="size-4 text-text-secondary"   strokeWidth={1.5} />
 				</button>
 			</div>
 		{/snippet}
@@ -307,7 +307,7 @@
 					{#each onlineChats as chat (chat.id)}
 						<button
 							type="button"
-							class="avatar-entry tap-93 flex flex-col items-center gap-1.5 shrink-0 cursor-pointer"
+							class="avatar-entry tap-92 flex flex-col items-center gap-1.5 shrink-0 cursor-pointer"
 							onclick={() => void goto(ROUTES.message(chat.peerUserId || chat.id))}
 						>
 							<div class="relative">
@@ -329,7 +329,7 @@
 		{#if filtered.length === 0}
 			<EmptyState bare class="py-12!" title="没有找到会话">
 				{#snippet icon()}
-					<MessageSquareDashed class="size-9 opacity-50" style="color:var(--cst-text-secondary)" strokeWidth={1.25} />
+					<MessageSquareDashed class="size-9 opacity-50 text-text-secondary"  strokeWidth={1.5} />
 				{/snippet}
 			</EmptyState>
 		{:else}

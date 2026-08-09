@@ -23,7 +23,7 @@
 		{#if action && onAction}
 			<button
 				type="button"
-				class="hover-btn flex items-center gap-0.5 outline-none text-accent-default"
+				class="hover-btn flex items-center gap-0.5 focus-ring text-accent-default"
 				onclick={onAction}
 			>
 				<span class="text-xs" >{action}</span>

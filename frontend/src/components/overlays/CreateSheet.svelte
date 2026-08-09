@@ -142,7 +142,7 @@
 					bind:value={text}
 					oninput={(e) => (text = e.currentTarget.value.slice(0, 280))}
 					placeholder="写下此刻发生的事，或分享一个想被附近的人看见的瞬间…"
-					class="min-h-30.5 w-full resize-none bg-transparent text-sm leading-7 text-text-primary outline-none placeholder:text-text-secondary"
+					class="min-h-30.5 w-full resize-none bg-transparent text-sm leading-7 text-text-primary focus-ring placeholder:text-text-secondary"
 					aria-label="动态内容"
 				></textarea>
 				<div class="mt-3 flex items-center justify-between border-t border-border-default pt-3">
@@ -156,7 +156,7 @@
 								? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
 								: 'text-text-secondary hover:bg-accent-soft hover:text-accent-default'}"
 						>
-							<ImagePlus size={16} strokeWidth={hasImage ? 2 : 1.6} />
+							<ImagePlus size={16} strokeWidth={hasImage ? 2 : 1.5} />
 						</button>
 						<button
 							type="button"
@@ -164,7 +164,7 @@
 							aria-label="添加心情"
 							class="flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default text-text-secondary hover:bg-accent-soft hover:text-accent-default"
 						>
-							<Smile size={16} strokeWidth={1.6} />
+							<Smile size={16} strokeWidth={1.5} />
 						</button>
 						<button
 							type="button"
@@ -175,7 +175,7 @@
 								? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
 								: 'text-text-secondary hover:bg-accent-soft hover:text-accent-default'}"
 						>
-							<Hash size={16} strokeWidth={topicActive ? 2 : 1.6} />
+							<Hash size={16} strokeWidth={topicActive ? 2 : 1.5} />
 						</button>
 					</div>
 					<span class="text-xs tabular-nums {text.length >= 260 ? 'text-destructive' : 'text-text-secondary'}">
@@ -188,7 +188,7 @@
 				<div class="relative overflow-hidden rounded-md ring-border bg-surface-page">
 					<div class="overflow-hidden rounded-md">
 						<div class="flex h-36 w-full items-center justify-center gap-2 bg-surface-page text-text-secondary">
-							<ImagePlus size={16} strokeWidth={1.6} />
+							<ImagePlus size={16} strokeWidth={1.5} />
 							<span class="text-xs">照片已添加</span>
 						</div>
 						<span class="absolute bottom-2.5 left-2.5 rounded-full bg-surface-media-scrim-strong px-2 py-1 text-xxs text-content-inverse backdrop-blur-sm">1 张照片</span>

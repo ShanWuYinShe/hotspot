@@ -54,7 +54,7 @@
 </script>
 
 <section class="mt-5" aria-label="搜索结果">
-	<!-- Tab 栏：简洁 pill，对齐 Figma（active=primary，inactive=border bg-card）。
+	<!-- Tab 栏：简洁 pill，对齐 Figma（active=accent 实底，inactive=surface-primary+border）。
 	     pill 自身已带描边/实底形态，不再叠加全宽分割线（下方结果区靠 mt-5 留白分隔）。 -->
 	<div class="no-scrollbar flex gap-2 overflow-x-auto pb-3">
 		{#each tabs as t (t.id)}
@@ -78,7 +78,7 @@
 	{:else if !hasResults}
 		<!-- 空态文案对齐 Figma -->
 		<div class="flex flex-col items-center py-20 text-center">
-			<SearchIcon class="size-8 text-text-secondary" strokeWidth={1.4} />
+			<SearchIcon class="size-8 text-text-secondary" strokeWidth={1.5} />
 			<p class="mt-4 text-sm text-text-primary">没有找到“{query}”</p>
 			<p class="mt-1 text-xs text-text-secondary">换个关键词再试试。</p>
 		</div>
@@ -90,7 +90,7 @@
 					class="overflow-hidden rounded-lg border border-border-default bg-surface-primary"
 				>
 					<div class="flex items-center gap-2 border-b border-border-default px-4 py-3">
-						<Users class="size-4 text-accent-default" strokeWidth={1.7} />
+						<Users class="size-4 text-accent-default" strokeWidth={1.75} />
 						<h2 class="text-sm font-medium text-text-primary">用户</h2>
 					</div>
 					<ListContainer>
@@ -120,7 +120,7 @@
 					class="overflow-hidden rounded-lg border border-border-default bg-surface-primary"
 				>
 					<div class="flex items-center gap-2 border-b border-border-default px-4 py-3">
-						<FileText class="size-4 text-accent-default" strokeWidth={1.7} />
+						<FileText class="size-4 text-accent-default" strokeWidth={1.75} />
 						<h2 class="text-sm font-medium text-text-primary">动态</h2>
 					</div>
 					<ListContainer>
@@ -134,8 +134,8 @@
 									<img src={moment.images[0].url} alt="" class="size-10 rounded-sm object-cover" />
 								{:else}
 									<div
-										class="flex size-10 items-center justify-center rounded-sm"
-										style="background:var(--cst-accent-soft);"
+										class="flex size-10 items-center justify-center rounded-sm bg-accent-soft"
+										
 									>
 										<FileText class="size-4 text-accent-default" strokeWidth={1.5} />
 									</div>
@@ -159,7 +159,7 @@
 					class="overflow-hidden rounded-lg border border-border-default bg-surface-primary"
 				>
 					<div class="flex items-center gap-2 border-b border-border-default px-4 py-3">
-						<Hash class="size-4 text-accent-default" strokeWidth={1.7} />
+						<Hash class="size-4 text-accent-default" strokeWidth={1.75} />
 						<h2 class="text-sm font-medium text-text-primary">话题</h2>
 					</div>
 					<ListContainer>

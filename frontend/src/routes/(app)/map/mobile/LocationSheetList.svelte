@@ -44,18 +44,18 @@ import PinMedia from '../shared/PinMedia.svelte';
 				class="app-list-row app-list-row--standard px-5"
 			>
 				<div class="flex items-center justify-center rounded-full shrink-0 size-8.5 {isSelected ? 'bg-surface-primary' : 'bg-accent-default'}"  style="{isSelected ? '' : 'opacity:0.12'}">
-					<MapPin class="size-3.5"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
+					<MapPin class="size-3.5 text-accent-default"   strokeWidth={1.75} />
 				</div>
 				<span class="{isSelected ? 'text-text-on-accent' : 'text-text-primary'} text-sm"  style="flex:1">{r.displayName}</span>
 				{#if isSelected}
-					<Check class="size-3.5 shrink-0"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
+					<Check class="size-3.5 shrink-0 text-text-on-accent"   strokeWidth={2.5} />
 				{/if}
 			</ListItem>
 		{/each}
 	</ListContainer>
 {:else if searchQuery && searchResults.length === 0}
 	<div class="flex flex-col items-center py-6">
-		<MapPin class="size-6.5 opacity-30"  style="color:var(--cst-text-secondary)" strokeWidth={1} />
+		<MapPin class="size-6.5 opacity-30 text-text-secondary"   strokeWidth={1.5} />
 		<p class="text-text-secondary text-sm mt-2" >未找到匹配地点</p>
 	</div>
 {:else}
@@ -72,11 +72,11 @@ import PinMedia from '../shared/PinMedia.svelte';
 						{selectedPin.tag ? ` · #${selectedPin.tag}` : ''}
 					</p>
 				</div>
-				<button type="button" class="hover-btn px-2.5 py-1.5 rounded-full outline-none shrink-0 text-xs" style="background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);" onclick={() => onOpenPinDetail(selectedPin)}>
+				<button type="button" class="hover-btn px-2.5 py-1.5 rounded-full focus-ring shrink-0 text-xs" style="background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);" onclick={() => onOpenPinDetail(selectedPin)}>
 					查看
 				</button>
-				<button type="button" class="hover-btn outline-none shrink-0 ml-0.5" onclick={onClearPin}>
-					<X class="size-3.25"  style="color:var(--cst-text-secondary)" strokeWidth={2} />
+				<button type="button" class="hover-btn hit-slop focus-ring shrink-0 ml-0.5" aria-label="清除选中地点" onclick={onClearPin}>
+					<X class="size-3.5 text-text-secondary"   strokeWidth={2} />
 				</button>
 			</div>
 		{/if}
@@ -89,17 +89,17 @@ import PinMedia from '../shared/PinMedia.svelte';
 			] as tab}
 				<button
 					type="button"
-					class="hover-btn flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm outline-none {activeTab === tab.id
+					class="hover-btn flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm focus-ring {activeTab === tab.id
 						? 'bg-accent-default text-text-on-accent shadow-glow-sm'
 						: 'border border-border-default bg-surface-primary text-text-secondary'}"
 					onclick={() => (activeTab = tab.id as 'recent' | 'hot')}
 				>
-					<tab.icon class="size-2.75"  strokeWidth={activeTab === tab.id ? 2.5 : 1.5} />
+					<tab.icon class="size-3"  strokeWidth={activeTab === tab.id ? 2.5 : 1.5} />
 					{tab.label}
 				</button>
 			{/each}
 			{#if activeTab === 'recent' && recentItems.length > 0}
-				<button type="button" class="hover-btn ml-auto outline-none text-text-secondary text-xs" onclick={() => (recentItems = [])}>
+				<button type="button" class="hover-btn ml-auto focus-ring text-text-secondary text-xs" onclick={() => (recentItems = [])}>
 					清空
 				</button>
 			{/if}
@@ -125,9 +125,9 @@ import PinMedia from '../shared/PinMedia.svelte';
 								<p class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							{#if isSelected}
-								<Check class="size-3.5 shrink-0"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
+								<Check class="size-3.5 shrink-0 text-text-on-accent"   strokeWidth={2.5} />
 							{:else}
-								<ChevronRight class="size-3.25 shrink-0"  style="color:var(--cst-border-default)" strokeWidth={1.5} />
+								<ChevronRight class="size-3.5 shrink-0 text-border-default" strokeWidth={1.5} />
 							{/if}
 						</ListItem>
 					{/each}
@@ -154,7 +154,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 								<p class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							<div class="flex items-center gap-1 shrink-0">
-								<Users class="size-2.75" style="color:{isSelected ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};" strokeWidth={1.5} />
+								<Users class="size-3" style="color:{isSelected ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};" strokeWidth={1.5} />
 								<span class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-accent-default'} text-xs">{loc.users}</span>
 							</div>
 						</ListItem>
@@ -162,7 +162,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-8">
-					<Star class="size-5 opacity-30" style="color:var(--cst-text-secondary)" strokeWidth={1} />
+					<Star class="size-5 opacity-30 text-text-secondary"  strokeWidth={1.5} />
 					<p class="text-text-secondary text-xs">暂无热门地点</p>
 				</div>
 			{/if}

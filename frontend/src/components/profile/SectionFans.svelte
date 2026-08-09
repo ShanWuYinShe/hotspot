@@ -80,7 +80,7 @@
 			{#snippet nameBadge()}
 				{#if isMutual}
 					<span class="flex items-center gap-0.5 badge text-status-online" style="background:var(--cst-status-online-bg);">
-						<Check class="size-2.25"  strokeWidth={2.5} />
+						<Check class="size-2.5"  strokeWidth={2.5} />
 						互关
 					</span>
 				{/if}
@@ -93,7 +93,7 @@
 			{#snippet actions()}
 				<button
 					type="button"
-					class="hover-btn tap-93 flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs outline-none {isMutual ? 'bg-transparent text-text-secondary' : 'bg-accent-default text-text-on-accent'}"
+					class="hover-btn tap-92 flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs focus-ring {isMutual ? 'bg-transparent text-text-secondary' : 'bg-accent-default text-text-on-accent'}"
 					style={isMutual ? 'border:1px solid var(--cst-border-strong);' : 'border:1px solid transparent;'}
 					onclick={(e) => {
 						e.stopPropagation();

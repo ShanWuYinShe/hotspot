@@ -24,7 +24,7 @@
 
 <button
 	type="button"
-	class="hover-btn nav-tab relative flex flex-col items-center justify-center outline-none select-none rounded-lg pt-2.5 pb-2 gap-1"
+	class="hover-btn nav-tab relative flex flex-col items-center justify-center focus-ring select-none rounded-lg pt-2.5 pb-2 gap-1"
 	style="flex:1;min-width:0;"
 	aria-label={label}	aria-current={isActive ? 'page' : undefined}
 	onclick={onClick}
@@ -39,7 +39,7 @@
 	<div style="display:flex;align-items:center;justify-content:center;position:relative;z-index:1;">
 		<Icon
 			style="width:{iconSize}px;height:{iconSize}px;color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color 0.22s var(--cst-ease-standard);"
-			strokeWidth={isActive ? 2.1 : 1.5}
+			strokeWidth={isActive ? 2 : 1.5}
 		/>
 	</div>
 	<span

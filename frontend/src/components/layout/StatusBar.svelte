@@ -25,8 +25,8 @@
 >
 	<!-- Time -->
 		<span
-			class="text-md font-semibold tracking-tight"
-			style="color:var(--cst-text-primary);font-variant-numeric:tabular-nums;"
+			class="text-md font-semibold tracking-tight text-text-primary"
+			style="font-variant-numeric:tabular-nums;"
 		>
 			{h}:{m}
 		</span>
@@ -41,7 +41,7 @@
 				></div>
 			{/each}
 		</div>
-		<Wifi class="size-3.5"  style="color:var(--cst-text-primary)" strokeWidth={2.5} />
+		<Wifi class="size-3.5 text-text-primary"   strokeWidth={2.5} />
 		<!-- Battery -->
 		<div style="display:flex;align-items:center;">
 			<div

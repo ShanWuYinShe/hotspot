@@ -30,10 +30,10 @@
 			type="button"
 			onclick={() => onChange(tab.id)}
 			aria-pressed={isActive}
-			class="tab-item relative flex shrink-0 items-center gap-1.5 px-4 py-2.5 text-sm outline-none transition-colors duration-200 {isActive ? 'font-medium text-accent-default' : 'font-normal text-text-secondary hover:text-text-primary'}"
+			class="tab-item relative flex shrink-0 items-center gap-1.5 px-4 py-2.5 text-sm focus-ring transition-colors duration-200 {isActive ? 'font-medium text-accent-default' : 'font-normal text-text-secondary hover:text-text-primary'}"
 		>
 			{#if tab.icon}
-				<tab.icon class="size-3.25"  strokeWidth={isActive ? 2 : 1.5} />
+				<tab.icon class="size-3.5"  strokeWidth={isActive ? 2 : 1.5} />
 			{/if}
 			{tab.label}
 			{#if tab.count !== undefined}

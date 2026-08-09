@@ -52,10 +52,11 @@ locationName = loc?.location_name ?? '';
 		{#snippet trailing()}
 			<button
 				type="button"
-				class="hover-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 circle-hover shadow-raised-sm outline-none"
+				class="hover-btn hit-slop flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 circle-hover shadow-raised-sm focus-ring"
+				aria-label="重置位置"
 				onclick={onReset}
 			>
-				<Crosshair class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
+				<Crosshair class="size-4 text-accent-default"   strokeWidth={1.75} />
 			</button>
 		{/snippet}
 	</PageHeader>
@@ -64,7 +65,7 @@ locationName = loc?.location_name ?? '';
 <!-- Search -->
 <div class="shrink-0 px-4 pt-3 pb-2 relative">
 	<div class="flex items-center gap-2.5 px-3.5 rounded-sm input-surface h-10.5" >
-		<Search class="size-3.5 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+		<Search class="size-3.5 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 		<input
 			bind:value={searchQuery}
 			oninput={(e) => {
@@ -72,11 +73,11 @@ locationName = loc?.location_name ?? '';
 				selectedLoc = null;
 			}}
 			placeholder="搜索地点或地标…"
-			class="flex-1 bg-transparent outline-none text-text-primary text-sm"
+			class="flex-1 bg-transparent focus-ring text-text-primary text-sm"
 		/>
 		{#if searchQuery}
-			<button type="button" class="hover-btn outline-none" onclick={() => (searchQuery = '')}>
-				<X class="size-3.25"  style="color:var(--cst-text-secondary)" strokeWidth={2} />
+			<button type="button" class="hover-btn focus-ring" onclick={() => (searchQuery = '')}>
+				<X class="size-3.5 text-text-secondary"   strokeWidth={2} />
 			</button>
 		{/if}
 	</div>
@@ -90,10 +91,10 @@ locationName = loc?.location_name ?? '';
 				ariaLabel={`选择地点 ${r.displayName}`}
 				class="app-list-row app-list-row--standard"
 			>
-				<MapPin class="size-3.25 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
+				<MapPin class="size-3.5 shrink-0 text-accent-default"   strokeWidth={1.5} />
 				<span class="{isSelected ? 'text-text-on-accent' : 'text-text-primary'} flex-1 text-sm" >{r.displayName}</span>
 				{#if isSelected}
-					<Check class="size-3.25"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
+					<Check class="size-3.5 text-text-on-accent"   strokeWidth={2.5} />
 				{/if}
 			</ListItem>
 		{/each}
@@ -110,12 +111,12 @@ locationName = loc?.location_name ?? '';
 	] as tab}
 		<button
 			type="button"
-			class="hover-btn flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm outline-none {activeTab === tab.id
+			class="hover-btn flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm focus-ring {activeTab === tab.id
 				? 'bg-accent-default text-text-on-accent shadow-glow-sm'
 				: 'border border-border-default bg-surface-primary text-text-secondary'}"
 			onclick={() => (activeTab = tab.id as 'nearby' | 'hot' | 'recent')}
 		>
-			<tab.icon class="size-2.75"  strokeWidth={activeTab === tab.id ? 2.5 : 1.5} />
+			<tab.icon class="size-3"  strokeWidth={activeTab === tab.id ? 2.5 : 1.5} />
 			{tab.label}
 		</button>
 	{/each}
@@ -128,7 +129,7 @@ locationName = loc?.location_name ?? '';
 			<!-- Current location card -->
 			<div class="flex items-center gap-3 p-3.5 rounded-md bg-accent-default text-text-on-accent">
 				<div class="flex items-center justify-center rounded-full shrink-0 size-10.5"  style="background:var(--cst-surface-map-control)">
-					<Navigation class="size-4.25"  strokeWidth={2} />
+					<Navigation class="size-4.5"  strokeWidth={2} />
 				</div>
 				<div class="flex-1">
 					<p class="text-sm" >当前位置</p>
@@ -167,23 +168,23 @@ locationName = loc?.location_name ?? '';
 								{/if}
 								{#if pin.likes}
 									<span class="flex items-center gap-0.5 {isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'}">
-										<Heart class="size-2.25"  strokeWidth={1.5} />
+										<Heart class="size-2.5"  strokeWidth={1.5} />
 										<span class="text-xs">{pin.likes}</span>
 									</span>
 								{/if}
 							</div>
 						</div>
 						{#if isSelected}
-							<span class="rounded-full px-2 py-1 text-xxs" style="color:var(--cst-accent-default);background:var(--cst-text-on-accent);shrink:0;">已定位</span>
+							<span class="shrink-0 rounded-full px-2 py-1 text-xxs text-accent-default bg-text-on-accent">已定位</span>
 						{:else}
-							<ChevronRight class="size-3.5 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+							<ChevronRight class="size-3.5 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 						{/if}
 					</ListItem>
 				{/each}
 				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
-					<MapPin class="size-5.5 opacity-30" style="color:var(--cst-text-secondary)" strokeWidth={1} />
+					<MapPin class="size-5.5 opacity-30 text-text-secondary"  strokeWidth={1.5} />
 					<p class="text-text-secondary text-xs">附近暂无内容，放大或移动地图后刷新</p>
 				</div>
 			{/if}
@@ -208,20 +209,20 @@ locationName = loc?.location_name ?? '';
 								<p class="truncate {isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							<div class="flex shrink-0 items-center gap-1">
-								<Users class="size-2.75" style="color:{isSelected ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};" strokeWidth={1.5} />
+								<Users class="size-3" style="color:{isSelected ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};" strokeWidth={1.5} />
 								<span class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-accent-default'} text-xs">{loc.users}</span>
 							</div>
 							{#if isSelected}
-								<Check class="size-3.5 shrink-0"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
+								<Check class="size-3.5 shrink-0 text-text-on-accent"   strokeWidth={2.5} />
 							{:else}
-								<ChevronRight class="size-3.25 shrink-0"  style="color:var(--cst-border-default)" strokeWidth={1.5} />
+								<ChevronRight class="size-3.5 shrink-0 text-border-default" strokeWidth={1.5} />
 							{/if}
 						</ListItem>
 					{/each}
 				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
-					<Star class="size-5.5 opacity-30" style="color:var(--cst-text-secondary)" strokeWidth={1} />
+					<Star class="size-5.5 opacity-30 text-text-secondary"  strokeWidth={1.5} />
 					<p class="text-text-secondary text-xs">暂无热门地点</p>
 				</div>
 			{/if}
@@ -246,16 +247,16 @@ locationName = loc?.location_name ?? '';
 								<p class="truncate {isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							{#if isSelected}
-								<Check class="size-3.5 shrink-0"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
+								<Check class="size-3.5 shrink-0 text-text-on-accent"   strokeWidth={2.5} />
 							{:else}
-								<ChevronRight class="size-3.25 shrink-0"  style="color:var(--cst-border-default)" strokeWidth={1.5} />
+								<ChevronRight class="size-3.5 shrink-0 text-border-default" strokeWidth={1.5} />
 							{/if}
 						</ListItem>
 					{/each}
 				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
-					<Clock class="size-5.5 opacity-30" style="color:var(--cst-text-secondary)" strokeWidth={1} />
+					<Clock class="size-5.5 opacity-30 text-text-secondary"  strokeWidth={1.5} />
 					<p class="text-text-secondary text-xs">暂无最近记录</p>
 				</div>
 			{/if}
@@ -267,23 +268,23 @@ locationName = loc?.location_name ?? '';
 <div class="shrink-0 border-t border-border-default px-3 pt-2.5 pb-4">
 	{#if selectedLoc}
 		<div class="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-sm bg-surface-primary ring-1 ring-border-default" style="box-shadow:var(--shadow-inset-sm);">
-			<Check class="size-3.25 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={2.5} />
+			<Check class="size-3.5 shrink-0 text-accent-default"   strokeWidth={2.5} />
 			<p class="flex-1 truncate text-accent-default text-xs">{selectedLoc.displayName}</p>
 			<button
 				type="button"
-				class="hover-btn outline-none"
+				class="hover-btn focus-ring"
 				onclick={() => {
 					selectedLoc = null;
 					searchQuery = '';
 				}}
 			>
-				<X class="size-3"  style="color:var(--cst-text-secondary)" strokeWidth={2} />
+				<X class="size-3 text-text-secondary"   strokeWidth={2} />
 			</button>
 		</div>
 	{/if}
 	<button
 		type="button"
-		class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-text-on-accent text-md h-12"
+		class="hover-btn w-full flex items-center justify-center gap-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-md h-12"
 		style="box-shadow:var(--shadow-glow-lg);"
 		onclick={onConfirm}
 	>

@@ -122,13 +122,13 @@
 
 	<!-- User card — hero with ambient glow -->
 	<div class="ambient-glow mb-3">
-		<button type="button" class="hover-btn flex items-center gap-4 px-4 py-3.5 rounded-lg w-full outline-none text-left surface-hero">
+		<button type="button" class="hover-btn flex items-center gap-4 px-4 py-3.5 rounded-lg w-full focus-ring text-left surface-hero">
 			<Avatar class="border-2 border-surface-primary shadow-glow-md" src={accountAvatar} name={accountName} size={48}  />
 			<div class="flex-1 min-w-0">
 				<p class="text-sm tracking-tight text-text-primary">{accountName || '用户'}</p>
 				<p class="text-xs mt-0.5 text-text-secondary">{accountEmail || '未绑定邮箱'}</p>
 			</div>
-			<ChevronRight class="size-3.75 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+			<ChevronRight class="size-4 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 		</button>
 	</div>
 
@@ -138,7 +138,7 @@
 		<ListContainer>
 			<SettingRow title="应用主题" description="选择一套全局视觉风格">
 				{#snippet icon()}
-					<Palette class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
+					<Palette class="size-4 text-accent-default"   strokeWidth={1.5} />
 				{/snippet}
 				{#snippet extension()}
 					<div class="grid grid-cols-2 gap-2">
@@ -150,9 +150,9 @@
 								class="flex items-center gap-2 border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {theme.theme === t.id ? 'border-accent-default bg-accent-soft text-text-primary' : 'border-border-default bg-transparent text-text-primary'}"
 							>
 								{#if t.id === 'forest'}
-									<Trees class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.7} />
+									<Trees class="size-4 text-accent-default"   strokeWidth={1.75} />
 								{:else}
-									<Palette class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.7} />
+									<Palette class="size-4 text-accent-default"   strokeWidth={1.75} />
 								{/if}
 								<span class="text-xs">{t.label}</span>
 							</button>
@@ -163,9 +163,9 @@
 			<SettingRow title="深色模式" description={theme.isDark ? '当前使用深色外观' : '当前使用浅色外观'}>
 				{#snippet icon()}
 					{#if theme.isDark}
-						<Moon class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
+						<Moon class="size-4 text-accent-default"   strokeWidth={1.5} />
 					{:else}
-						<Sun class="size-3.75"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
+						<Sun class="size-4 text-accent-default"   strokeWidth={1.5} />
 					{/if}
 				{/snippet}
 				<Toggle on={theme.isDark} onToggle={toggleDark} label="深色模式" />
@@ -179,13 +179,13 @@
 		<ListContainer>
 			<SettingRow title="推送通知" description="消息、提及与新动态提醒">
 				{#snippet icon()}
-					<Bell class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+					<Bell class="size-4 text-text-secondary"   strokeWidth={1.5} />
 				{/snippet}
 				<Toggle on={notif} onToggle={toggleNotif} />
 			</SettingRow>
 			<SettingRow title="应用声音" description="操作反馈音效">
 				{#snippet icon()}
-					<Volume2 class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+					<Volume2 class="size-4 text-text-secondary"   strokeWidth={1.5} />
 				{/snippet}
 				<Toggle on={sounds} onToggle={toggleSounds} />
 			</SettingRow>
@@ -198,13 +198,13 @@
 		<ListContainer>
 			<SettingRow title="私密账号" description="仅关注者可查看你的内容">
 				{#snippet icon()}
-					<Lock class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+					<Lock class="size-4 text-text-secondary"   strokeWidth={1.5} />
 				{/snippet}
 				<Toggle on={privateProfile} onToggle={togglePrivateProfile} />
 			</SettingRow>
 			<SettingRow title="位置共享" description="允许附近用户发现你">
 				{#snippet icon()}
-					<MapPin class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+					<MapPin class="size-4 text-text-secondary"   strokeWidth={1.5} />
 				{/snippet}
 				<Toggle on={locationSharing} onToggle={toggleLocationSharing} />
 			</SettingRow>
@@ -217,33 +217,33 @@
 		<ListContainer>
 			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="语言设置">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
-					<Globe class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+					<Globe class="size-4 text-text-secondary"   strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-sm text-text-primary">语言</p>
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary">中文</span>
-				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+				<ChevronRight class="size-4 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 			</ListItem>
 			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="账号信息">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
-					<User class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+					<User class="size-4 text-text-secondary"   strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-sm text-text-primary">账号信息</p>
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary"></span>
-				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+				<ChevronRight class="size-4 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 			</ListItem>
 			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="关于">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
-					<Info class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+					<Info class="size-4 text-text-secondary"   strokeWidth={1.5} />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-sm text-text-primary">关于</p>
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary">v 1.0.0</span>
-				<ChevronRight class="size-3.75 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+				<ChevronRight class="size-4 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 			</ListItem>
 		</ListContainer>
 	</div>
@@ -252,7 +252,7 @@
 	<div class="mt-5">
 		<button
 			type="button"
-			class="hover-btn flex items-center justify-center gap-2 px-4 py-3 rounded-md w-full outline-none surface-flat text-accent-default"
+			class="hover-btn flex items-center justify-center gap-2 px-4 py-3 rounded-md w-full focus-ring surface-flat text-accent-default"
 			onclick={() => void handleLogout()}
 		>
 			<LogOut class="size-3.5"  strokeWidth={1.75} />

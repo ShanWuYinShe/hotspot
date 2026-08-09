@@ -188,11 +188,11 @@
 		{#if showBackButton}
 			<button
 				type="button"
-				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 shadow-raised-sm outline-none"
+				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 shadow-raised-sm focus-ring"
 				onclick={onBack}
 				aria-label="返回"
 			>
-				<ArrowLeft class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+				<ArrowLeft class="size-4 text-text-secondary"   strokeWidth={1.5} />
 			</button>
 		{/if}
 
@@ -233,18 +233,18 @@
 				{#each [{ icon: Phone, label: '语音通话' }, { icon: Video, label: '视频通话' }] as { icon: Icon, label }}
 					<button
 						type="button"
-						class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary shadow-raised-sm outline-none {compact ? 'size-8' : 'size-9'}"
+						class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary shadow-raised-sm focus-ring {compact ? 'size-8' : 'size-9'}"
 						aria-label={label}
 					>
-						<Icon class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+						<Icon class="size-3.5 text-text-secondary"   strokeWidth={1.5} />
 					</button>
 				{/each}
 				<button
 					type="button"
-					class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary shadow-raised-sm outline-none {compact ? 'size-8' : 'size-9'}"
+					class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary shadow-raised-sm focus-ring {compact ? 'size-8' : 'size-9'}"
 					aria-label="更多操作"
 				>
-				<MoreHorizontal class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+				<MoreHorizontal class="size-3.5 text-text-secondary"   strokeWidth={1.5} />
 			</button>
 		</div>
 	</div>
@@ -257,7 +257,7 @@
 				<div
 					class="flex items-center justify-center rounded-full border border-border-default size-14 shadow-raised-lg"
 				>
-					<MessageCircle class="size-5.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+					<MessageCircle class="size-5.5 text-text-secondary"   strokeWidth={1.5} />
 				</div>
 				<p class="text-text-primary text-sm font-medium">还没有消息</p>
 				<p class="text-center text-text-secondary text-xs"  style="max-width:220px">打个招呼，开始这段对话吧</p>
@@ -280,10 +280,10 @@
 	<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary border-t border-border-default" >
 		<button
 			type="button"
-			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 shadow-raised-sm outline-none"
+			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 shadow-raised-sm focus-ring"
 			aria-label="表情"
 		>
-			<Smile class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+			<Smile class="size-4 text-text-secondary"   strokeWidth={1.5} />
 		</button>
 
 		<div class="flex-1 flex items-center px-4 rounded-md input-surface h-9.5" >
@@ -295,13 +295,13 @@
 					if (e.key === 'Enter') void chat.handleSend();
 				}}
 				placeholder="发消息…"
-				class="flex-1 bg-transparent outline-none text-text-primary text-sm"
+				class="flex-1 bg-transparent focus-ring text-text-primary text-sm"
 			/>
 		</div>
 
 		<button
 			type="button"
-			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'} size-9"
+			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full focus-ring shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'} size-9"
 			style="box-shadow:{chat.inputVal.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:1px solid var(--cst-border-default);"
 			onclick={() => void chat.handleSend()}
 			aria-label="发送"

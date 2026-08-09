@@ -70,15 +70,15 @@
 					<div class="flex flex-col items-center w-17" >
 						<button
 							type="button"
-							class="hover-btn scale-btn flex items-center justify-center outline-none select-none rounded-full size-12.5"
+							class="hover-btn scale-btn flex items-center justify-center focus-ring select-none rounded-full size-12.5"
 							style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{fabGlow};transition:background 0.22s var(--cst-ease-standard), box-shadow 0.22s var(--cst-ease-standard), transform 0.18s var(--cst-ease-standard), filter 0.18s var(--cst-ease-standard);"
 							onclick={toggleComposer}
 							aria-label={composer.composerOpen ? '关闭' : '发布'}
 						>
 							{#if composer.composerOpen}
-								<X class="size-5"  style="color:var(--cst-text-on-accent)" strokeWidth={2.2} />
+								<X class="size-5 text-text-on-accent"   strokeWidth={2} />
 							{:else}
-								<Plus class="size-5"  style="color:var(--cst-text-on-accent)" strokeWidth={2.2} />
+								<Plus class="size-5 text-text-on-accent"   strokeWidth={2} />
 							{/if}
 						</button>
 					</div>

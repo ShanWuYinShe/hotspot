@@ -97,11 +97,11 @@
 				{@const active = filterValue === pill.id}
 				<button
 					type="button"
-					class="hover-btn surface-ghost tap-93 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs outline-none {active ? 'border-accent-border bg-accent-soft font-medium text-accent-default' : 'text-text-secondary'}"
+					class="hover-btn surface-ghost tap-92 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs focus-ring {active ? 'border-accent-border bg-accent-soft font-medium text-accent-default' : 'text-text-secondary'}"
 					onclick={() => onFilter?.(pill.id)}
 				>
 					{#if pill.icon}
-						<pill.icon class="size-2.75"  strokeWidth={active ? 2 : 1.5} />
+						<pill.icon class="size-3"  strokeWidth={active ? 2 : 1.5} />
 					{/if}
 					{pill.label}
 				</button>

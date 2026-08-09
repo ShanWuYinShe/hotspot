@@ -28,11 +28,11 @@
 	<div class="flex gap-3 overflow-x-auto no-scrollbar pb-1">
 		{#each groups as g (g.id)}
 			<div
-				class="image-hover-frame card-hover tap-98 relative aspect-square w-35 shrink-0 cursor-pointer overflow-hidden rounded-md"
+				class="image-hover-frame card-hover tap-97 relative aspect-square w-35 shrink-0 cursor-pointer overflow-hidden rounded-md"
 			>
 				<img src={g.banner} alt={g.name} class="image-hover-frame__image absolute inset-0 h-full w-full object-cover" />
 				<div class="absolute inset-0" style="background:var(--cst-surface-media-scrim-soft);"></div>
-				<div class="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full" style="background:var(--cst-surface-overlay-strong);">
+				<div class="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-surface-overlay-strong" >
 					{#if g.privacy === 'private'}
 						<Lock class="h-2.5 w-2.5 text-content-inverse" strokeWidth={2} />
 					{:else}
@@ -40,14 +40,14 @@
 					{/if}
 				</div>
 				<div class="absolute inset-x-0 bottom-0 border-t border-border-card-menu bg-surface-card-menu px-2.5 pb-2.5 pt-2">
-					<p class="truncate text-sm font-medium" style="color:var(--cst-text-primary);">{g.name}</p>
+					<p class="truncate text-sm font-medium text-text-primary" >{g.name}</p>
 					<div class="mt-1 flex items-center justify-between">
-						<span class="flex items-center gap-1 text-xxs"  style="color:var(--cst-text-secondary)">
-							<Users class="h-2.25 w-2.25" strokeWidth={1.5} />
+						<span class="flex items-center gap-1 text-xxs text-text-secondary"  >
+							<Users class="h-2.5 w-2.5" strokeWidth={1.5} />
 							{g.members} 成员
 						</span>
 						<span class="flex items-center gap-0.5 text-xxs text-accent-default">
-							<MapPin class="h-2.25 w-2.25" strokeWidth={2} />
+							<MapPin class="h-2.5 w-2.5" strokeWidth={2} />
 							{g.distance}
 						</span>
 					</div>

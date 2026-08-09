@@ -21,16 +21,16 @@
 <div class="hover-bg flex items-center gap-2.5 rounded-sm {onClick ? 'cursor-pointer' : ''}">
 	<button
 		type="button"
-		class="tap-985 flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-sm outline-none"
+		class="tap-97 flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-sm focus-ring"
 		onclick={onClick}
 	>
 		<div class="rounded-full overflow-hidden shrink-0 size-8.5 border border-border-default"  >
 			<img src={avatar} alt={name} class="w-full h-full object-cover" />
 		</div>
 		<div class="flex-1 min-w-0">
-			<p  style="color:var(--cst-text-primary)" class="truncate text-sm">{name}</p>
+			<p   class="truncate text-sm text-text-primary">{name}</p>
 			{#if sub}
-				<p  style="color:var(--cst-text-secondary)" class="truncate text-xs mt-px">{sub}</p>
+				<p   class="truncate text-xs mt-px text-text-secondary">{sub}</p>
 			{/if}
 		</div>
 	</button>

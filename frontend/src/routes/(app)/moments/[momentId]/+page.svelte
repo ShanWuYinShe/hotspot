@@ -220,7 +220,7 @@
 					</div>
 					<DropdownMenu.Content customAnchor={moreMenuEl}>
 						<DropdownMenu.Item onSelect={() => void copyMomentLink()}>
-							<Link2 class="size-3.5"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
+							<Link2 class="size-3.5 text-accent-default"   strokeWidth={1.75} />
 							复制链接
 						</DropdownMenu.Item>
 						<DropdownMenu.Item class="text-text-secondary">
@@ -260,12 +260,12 @@
 						if (e.key === 'Enter') void handleComment();
 					}}
 					placeholder="写下你的评论…"
-					class="flex-1 bg-transparent outline-none text-text-primary text-sm"
+					class="flex-1 bg-transparent focus-ring text-text-primary text-sm"
 				/>
 			</div>
 			<button
 				type="button"
-				class="hover-btn tap-88 flex items-center justify-center rounded-full outline-none shrink-0 size-9" style="background:{input.trim() ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};box-shadow:{input.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:1px solid var(--cst-border-default);transition:all 0.2s var(--cst-ease-standard);"
+				class="hover-btn tap-88 flex items-center justify-center rounded-full focus-ring shrink-0 size-9" style="background:{input.trim() ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};box-shadow:{input.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:1px solid var(--cst-border-default);transition:all 0.2s var(--cst-ease-standard);"
 				onclick={() => void handleComment()}
 			>
 				<Send class="size-3.5" style="color:{input.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
@@ -279,7 +279,7 @@
 			{#snippet trailing()}
 				<button
 					type="button"
-					class="hover-btn shrink-0 rounded-full border border-accent-border bg-accent-soft px-2.5 py-1 text-xs text-accent-default outline-none"
+					class="hover-btn shrink-0 rounded-full border border-accent-border bg-accent-soft px-2.5 py-1 text-xs text-accent-default focus-ring"
 					onclick={(e) => {
 						e.stopPropagation();
 						if (moment.authorId) void goto(ROUTES.message(moment.authorId));

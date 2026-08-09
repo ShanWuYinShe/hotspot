@@ -32,7 +32,7 @@
 
 	{#if featured}
 		<!-- 左上：精选徽章 -->
-		<div class="absolute top-3 left-3 z-[2] flex items-center gap-1.5 px-2 py-1 rounded-full" style="background:var(--cst-surface-overlay-strong);backdrop-filter:blur(var(--cst-blur-sm));">
+		<div class="absolute top-3 left-3 z-[2] flex items-center gap-1.5 px-2 py-1 rounded-full bg-surface-overlay-strong" style="backdrop-filter:blur(var(--cst-blur-sm));">
 			<Sparkles size={11} color="var(--cst-content-inverse)" />
 			<span class="text-content-inverse text-xxs">本周精选</span>
 		</div>
@@ -41,7 +41,7 @@
 		<span class="absolute top-2 left-2 z-[2] px-1.5 py-0.5 rounded-full text-text-on-accent bg-accent-default text-xxs">{group.category}</span>
 
 		<!-- 右上：隐私 -->
-		<span class="absolute top-2 right-2 z-[2] flex items-center justify-center rounded-full size-5"  style="background:var(--cst-surface-overlay-strong)">
+		<span class="absolute top-2 right-2 z-[2] flex items-center justify-center rounded-full size-5 bg-surface-overlay-strong"  >
 			{#if group.privacy === 'private'}
 				<Lock size={10} color="var(--cst-content-inverse)" />
 			{:else}
@@ -64,7 +64,7 @@
 								{group.members}
 							</span>
 							<span class="flex items-center gap-1 shrink-0 text-status-online">
-								<span class="rounded-full size-1.5"  style="background:var(--cst-status-online)"></span>
+							<span class="rounded-full size-1.5 bg-status-online"></span>
 								{group.online} 在线
 							</span>
 							<span class="shrink-0">{group.distance}</span>

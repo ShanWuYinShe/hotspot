@@ -225,11 +225,11 @@
 				<!-- Back -->
 				<button
 					type="button"
-					class="hover-btn flex items-center justify-center rounded-full outline-none circle-hover size-10.5"
+					class="hover-btn flex items-center justify-center rounded-full focus-ring circle-hover size-10.5"
 					style="{floatBtnStyle}"
 					onclick={() => history.back()}
 				>
-					<ArrowLeft class="size-4.25"  style="color:var(--cst-text-primary)" strokeWidth={2} />
+					<ArrowLeft class="size-4.5 text-text-primary"   strokeWidth={2} />
 				</button>
 
 			<!-- Filter toggle -->
@@ -237,7 +237,7 @@
 				<div bind:this={filterAnchorEl}>
 					<button
 						type="button"
-						class="hover-btn flex items-center gap-2 rounded-full outline-none text-md {showFilter ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-primary'}"
+						class="hover-btn flex items-center gap-2 rounded-full focus-ring text-md {showFilter ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-primary'}"
 						style="padding:9px 16px;border:{showFilter ? '1px solid transparent' : '1px solid var(--cst-border-default)'};box-shadow:{showFilter ? 'var(--shadow-glow-md)' : 'var(--cst-elevation-fab)'};"
 						onclick={() => (showFilter = !showFilter)}
 					>
@@ -266,7 +266,7 @@
 							{/if}
 							<button
 								type="button"
-								class="hover-btn w-full flex items-center gap-2 px-3 py-3 outline-none {active ? 'opacity-100' : 'opacity-40'}"
+								class="hover-btn w-full flex items-center gap-2 px-3 py-3 focus-ring {active ? 'opacity-100' : 'opacity-40'}"
 								onclick={() => toggleFilter(type as PinType)}
 							>
 								
@@ -285,7 +285,7 @@
 		<!-- GPS re-center -->
 		<button
 			type="button"
-			class="hover-btn flex items-center justify-center rounded-full outline-none circle-hover size-10.5"
+			class="hover-btn flex items-center justify-center rounded-full focus-ring circle-hover size-10.5"
 			style="{floatBtnStyle}"
 			onclick={() => {
 				mapCenter = defaultCenter;
@@ -293,14 +293,14 @@
 				searchQuery = '';
 			}}
 		>
-			<Crosshair class="size-4.5"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
+			<Crosshair class="size-4.5 text-accent-default"   strokeWidth={1.75} />
 		</button>
 
 		<!-- My location dot（对齐 Figma Make：用户位置圆点 + 白描边 + 主题色 glow） -->
 		<button
 			type="button"
 			aria-label="我的位置"
-			class="hover-btn flex items-center justify-center rounded-full outline-none circle-hover size-10.5"
+			class="hover-btn flex items-center justify-center rounded-full focus-ring circle-hover size-10.5"
 			style="{floatBtnStyle}"
 			onclick={() => {
 				mapCenter = defaultCenter;
@@ -335,7 +335,7 @@
 		<!-- Search bar -->
 		<div class="shrink-0 px-3.5 pb-2">
 			<div class="flex items-center gap-2.5 px-3.5 rounded-md input-surface h-11" >
-				<Search class="size-3.75 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+				<Search class="size-4 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 				<input
 					bind:value={searchQuery}
 					oninput={(e) => {
@@ -347,21 +347,21 @@
 						if (snap === 'min') snapTo('mid');
 					}}
 					placeholder="搜索地点、地标或坐标"
-					class="flex-1 bg-transparent outline-none text-text-primary text-sm"
+					class="flex-1 bg-transparent focus-ring text-text-primary text-sm"
 				/>
 				{#if searchQuery}
 					<button
 						type="button"
-						class="hover-btn outline-none"
+						class="hover-btn focus-ring"
 						onclick={() => {
 							searchQuery = '';
 							selectedLoc = null;
 						}}
 					>
-						<X class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={2} />
+						<X class="size-3.5 text-text-secondary"   strokeWidth={2} />
 					</button>
 				{:else if selectedLoc}
-					<Check class="size-3.5 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={2.5} />
+					<Check class="size-3.5 shrink-0 text-accent-default"   strokeWidth={2.5} />
 				{/if}
 			</div>
 		</div>
@@ -387,11 +387,11 @@
 		<div class="shrink-0 px-3.5 pt-2 pb-4.5">
 			<button
 				type="button"
-				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full outline-none bg-accent-default text-text-on-accent text-md h-12.5"
+				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-md h-12.5"
 				style="box-shadow:var(--shadow-glow-lg);"
 				onclick={handleConfirm}
 			>
-				<MapPin class="size-3.75"  strokeWidth={2} />
+				<MapPin class="size-4"  strokeWidth={2} />
 				{selectedLoc ? `确认：${selectedLoc.displayName.slice(0, 11)}` : '设为浏览锚点'}
 			</button>
 		</div>

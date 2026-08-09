@@ -93,14 +93,14 @@
 		<!-- 加载失败：错误提示（对齐 EmptyState bare 契约） -->
 		<EmptyState bare title="加载失败" description={error}>
 			{#snippet icon()}
-				<Radar class="size-6 opacity-40"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+				<Radar class="size-6 opacity-40 text-text-secondary"   strokeWidth={1.5} />
 			{/snippet}
 		</EmptyState>
 	{:else if moments.length === 0 && nearbyUsers.length === 0 && nearbyGroups.length === 0}
 		<!-- 空态：无任何附近内容 -->
 		<EmptyState title="附近还没有内容" description="去发布第一条动态，或到附近的人认识新朋友。">
 			{#snippet icon()}
-				<Radar class="size-6 opacity-40"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+				<Radar class="size-6 opacity-40 text-text-secondary"   strokeWidth={1.5} />
 			{/snippet}
 		</EmptyState>
 	{:else}
@@ -128,17 +128,17 @@
 				{#snippet trailing()}
 					<div class="flex items-center gap-2">
 						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full surface-flat">
-							<span class="rounded-full size-1.5"  style="background:var(--cst-status-online)"></span>
-							<span class="text-xs" style="color:var(--cst-text-secondary);">{onlineCount} 在线</span>
+							<span class="rounded-full size-1.5 bg-status-online"></span>
+							<span class="text-xs text-text-secondary" >{onlineCount} 在线</span>
 						</div>
 						{#if platform.platform === 'tablet'}
 							<button
 								type="button"
 								aria-label="搜索"
 								onclick={() => void goto(ROUTES.search)}
-								class="hover-btn flex size-8 items-center justify-center rounded-full border border-border-default bg-surface-primary text-text-secondary outline-none"
+								class="hover-btn flex size-8 items-center justify-center rounded-full border border-border-default bg-surface-primary text-text-secondary focus-ring"
 							>
-								<Search class="size-4"  strokeWidth={1.8} />
+								<Search class="size-4"  strokeWidth={1.75} />
 							</button>
 						{/if}
 					</div>
@@ -150,8 +150,8 @@
 				{#snippet trailing()}
 					<div class="flex items-center gap-2">
 						<div class="flex items-center gap-1.5 py-1.5 px-3 rounded-full surface-flat">
-							<span class="rounded-full size-1.5"  style="background:var(--cst-status-online)"></span>
-							<span class="text-xs"  style="color:var(--cst-text-secondary)">{defaultLocation?.location_name || '附近'}</span>
+							<span class="rounded-full size-1.5 bg-status-online"></span>
+							<span class="text-xs text-text-secondary"  >{defaultLocation?.location_name || '附近'}</span>
 						</div>
 						<button
 							type="button"
@@ -159,7 +159,7 @@
 							onclick={() => void goto(ROUTES.search)}
 							aria-label="搜索"
 						>
-							<Search class="size-4" color="var(--cst-text-secondary)" strokeWidth={1.8} />
+							<Search class="size-4" color="var(--cst-text-secondary)" strokeWidth={1.75} />
 						</button>
 					</div>
 				{/snippet}
@@ -185,17 +185,17 @@
 				<div class="flex items-end justify-between mb-5">
 					<div>
 						<span class="eyebrow">附近的人</span>
-						<p class="text-xs mt-1"  style="color:var(--cst-text-secondary)">
+						<p class="text-xs mt-1 text-text-secondary"  >
 							5km 范围内 · 实时更新
 						</p>
 					</div>
 					<button
 						type="button"
-						class="hover-btn tap-93 flex items-center gap-0.5 outline-none surface-ghost rounded-full px-2 py-0.5 text-accent-default"
+						class="hover-btn tap-92 flex items-center gap-0.5 focus-ring surface-ghost rounded-full px-2 py-0.5 text-accent-default"
 						onclick={() => void goto(ROUTES.nearbyPeople)}
 					>
 						<span class="text-xs">查看全部</span>
-						<ChevronRight class="size-3.25"  strokeWidth={1.5} />
+						<ChevronRight class="size-3.5"  strokeWidth={1.5} />
 					</button>
 				</div>
 

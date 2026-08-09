@@ -33,7 +33,7 @@
 <StandardPageLayout contentClassName="pt-4 pb-6">
 	{#snippet header()}
 		<!-- 资料页眉（对齐 Figma Make：eyebrow + 设置入口） -->
-			<div class="border-b border-border-default" style="background:var(--cst-surface-primary);">
+			<div class="border-b border-border-default bg-surface-primary" >
 				<ContentColumn class="flex items-center justify-between py-3">
 					<p class="eyebrow font-medium text-accent-default">个人资料</p>
 					<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} variant="ghost" size={32} />
@@ -58,17 +58,17 @@
 							type="button"
 							aria-label="更换头像"
 							onclick={() => void goto(ROUTES.meEdit)}
-							class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-accent-default text-text-on-accent size-6"
+							class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default text-text-on-accent size-6"
 							 style="border:2px solid var(--cst-surface-primary);"
 						>
-							<Camera class="size-3.25"  strokeWidth={2} />
+							<Camera class="size-3.5"  strokeWidth={2} />
 						</button>
 					</div>
 					<div class="min-w-0">
 						<h1 class="text-xl font-medium tracking-title text-text-primary">{nickname || '未设置昵称'}</h1>
 						<p class="mt-0.5 text-xs text-text-secondary">{handle}</p>
 						<p class="mt-2 flex items-center gap-1.5 text-xs text-text-secondary">
-							<MapPin class="size-3.5"  style="color:var(--cst-accent-default)" strokeWidth={1.8} />
+							<MapPin class="size-3.5 text-accent-default"   strokeWidth={1.75} />
 							{locationName || '未设置位置'}
 						</p>
 					</div>
@@ -76,9 +76,9 @@
 				<button
 					type="button"
 					onclick={() => void goto(ROUTES.meEdit)}
-					class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-md bg-surface-primary px-3 py-2 text-xs font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
+					class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-md bg-surface-primary px-3 py-2 text-xs font-medium text-text-primary focus-ring transition-colors hover:bg-accent-soft"
 				>
-					<Pencil class="size-3.5"  strokeWidth={1.8} />
+					<Pencil class="size-3.5"  strokeWidth={1.75} />
 					编辑资料
 				</button>
 			</div>
@@ -111,13 +111,13 @@
 				class="flex items-center gap-3 px-5 py-3.5"
 			>
 				<span class="flex shrink-0 items-center justify-center size-8"  style="background:var(--cst-accent-soft-bg);color:var(--cst-accent-default)">
-					<item.icon class="size-4"  strokeWidth={1.8} />
+					<item.icon class="size-4"  strokeWidth={1.75} />
 				</span>
 				<span class="min-w-0 flex-1">
 					<span class="block text-sm text-text-primary">{item.label}</span>
 					<span class="mt-0.5 block truncate text-xs text-text-secondary">{item.detail}</span>
 				</span>
-				<ChevronRight class="size-4 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.7} />
+				<ChevronRight class="size-4 shrink-0 text-text-secondary"   strokeWidth={1.75} />
 			</ListItem>
 		{/each}
 	</ListContainer>

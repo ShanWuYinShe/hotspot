@@ -12,6 +12,7 @@
 	import GroupCard from './shared/GroupCard.svelte';
 	import { mapGroup, type Group } from './shared/group-data';
 	import { getNearbyGroups, joinGroup, leaveGroup } from '@/api';
+	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 附近群组：分类过滤 + 精选卡 + 网格 / 桌面 BSP 卡片墙（对齐 Figma Make NearbyGroupsPage）。
@@ -79,6 +80,9 @@
 		const done = (res: { code: number }) => {
 			if (res.code !== 0) {
 				groups = groups.map((g) => (g.id === id ? { ...g, joined: !next } : g));
+				showToast(next ? '加入失败，请重试' : '退出失败，请重试', 'danger');
+			} else {
+				showToast(next ? '已加入群组' : '已退出群组', 'success');
 			}
 		};
 		if (next) {
@@ -101,7 +105,7 @@
 				onBack={() => history.back()}
 			>
 				{#snippet subtitleIcon()}
-					<MapPin class="size-2.5"  style="color:var(--cst-accent-default)" strokeWidth={1.8} />
+					<MapPin class="size-2.5 text-accent-default"   strokeWidth={1.75} />
 				{/snippet}
 				{#snippet trailing()}
 					<!-- 计数统一在标题右侧（对齐首页/附近动态样板） -->

@@ -76,12 +76,12 @@
 	{#snippet trailing()}
 		<button
 			type="button"
-			class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none transition-all text-sm {saved ? 'bg-status-online text-text-on-status' : 'bg-accent-default text-text-on-accent'}"
+			class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full focus-ring transition-all text-sm {saved ? 'bg-status-online text-text-on-status' : 'bg-accent-default text-text-on-accent'}"
 			style="box-shadow:0 4px 14px {saved ? 'var(--cst-status-online-glow)' : 'var(--cst-glow-accent)'};border:none;"
 			onclick={() => void handleSave()}
 		>
 			{#if saved}
-				<Check class="size-3.5"  style="color:var(--cst-text-on-status)" strokeWidth={2.5} />
+				<Check class="size-3.5 text-text-on-status"   strokeWidth={2.5} />
 			{:else}
 				保存
 			{/if}
@@ -96,10 +96,10 @@
 		<div class="absolute inset-0 bg-surface-primary"></div>
 		<button
 			type="button"
-			class="hover-btn absolute top-3 right-3 flex items-center gap-1.5 rounded-full outline-none bg-surface-overlay-strong text-content-inverse text-sm px-3 py-1.5"
+			class="hover-btn absolute top-3 right-3 flex items-center gap-1.5 rounded-full focus-ring bg-surface-overlay-strong text-content-inverse text-sm px-3 py-1.5"
 			style="backdrop-filter:blur(var(--cst-blur-md));border:1px solid var(--cst-border-inverse);"
 		>
-			<Camera class="size-3.25"  strokeWidth={1.75} />
+			<Camera class="size-3.5"  strokeWidth={1.75} />
 			更换横幅
 		</button>
 	</div>
@@ -112,10 +112,11 @@
 			</div>
 			<button
 				type="button"
-				class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-accent-default size-6.5"
+				class="hover-btn hit-slop absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-6.5"
 				style="border:2px solid var(--cst-surface-primary);box-shadow:var(--shadow-glow-sm);"
+				aria-label="更换头像"
 			>
-				<Camera class="size-3"  style="color:var(--cst-text-on-accent)" strokeWidth={2} />
+				<Camera class="size-3 text-text-on-accent"   strokeWidth={2} />
 			</button>
 		</div>
 		<div>
@@ -129,7 +130,7 @@
 	<!-- Form fields — spec: nickname, bio, tags are the only user-editable profile fields. -->
 	<div class="flex flex-col gap-1.5">
 		<div class="flex items-center gap-1.5">
-			<User class="size-3.25"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
+			<User class="size-3.5 text-accent-default"   strokeWidth={1.75} />
 			<label class="text-text-secondary text-xs uppercase tracking-field" for="edit-nickname">昵称</label>
 		</div>
 		<div class="px-4 py-3 rounded-md input-surface">
@@ -138,14 +139,14 @@
 				bind:value={nickname}
 				oninput={(e) => (nickname = e.currentTarget.value.slice(0, 30))}
 				placeholder="你的名字"
-				class="w-full bg-transparent outline-none text-text-primary text-sm"
+				class="w-full bg-transparent focus-ring text-text-primary text-sm"
 			/>
 		</div>
 	</div>
 
 	<div class="flex flex-col gap-1.5">
 		<div class="flex items-center gap-1.5">
-			<FileText class="size-3.25"  style="color:var(--cst-accent-default)" strokeWidth={1.75} />
+			<FileText class="size-3.5 text-accent-default"   strokeWidth={1.75} />
 			<label class="text-text-secondary text-xs uppercase tracking-field" for="edit-bio">个人简介</label>
 		</div>
 		<div class="px-4 py-3 rounded-md input-surface">
@@ -156,7 +157,7 @@
 					oninput={(e) => (bio = e.currentTarget.value.slice(0, 150))}
 					placeholder="介绍一下自己…"
 					rows={3}
-					class="w-full bg-transparent outline-none resize-none text-text-primary text-sm leading-copy"
+					class="w-full bg-transparent focus-ring resize-none text-text-primary text-sm leading-copy"
 				></textarea>
 				<div class="flex justify-end mt-1">
 					<span class="{bio.length > 127 ? 'text-accent-default' : 'text-text-secondary'} text-xs">
@@ -179,7 +180,7 @@
 				{@const disabled = !active && tags.size >= 5}
 				<button
 					type="button"
-					class="hover-btn px-3.5 py-1.5 rounded-full outline-none transition-all text-sm {active ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary opacity-40'}"
+					class="hover-btn px-3.5 py-1.5 rounded-full focus-ring transition-all text-sm {active ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary opacity-40'}"
 					style={active
 						? 'box-shadow:var(--shadow-glow-sm);border:none;'
 						: 'border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);'}
@@ -196,7 +197,7 @@
 		<p class="eyebrow mb-3">账号</p>
 		<button
 			type="button"
-			class="hover-btn w-full rounded-md border border-border-default bg-surface-primary px-4 py-3.5 text-left text-sm text-status-danger shadow-raised-md outline-none"
+			class="hover-btn w-full rounded-md border border-border-default bg-surface-primary px-4 py-3.5 text-left text-sm text-status-danger shadow-raised-md focus-ring"
 		>
 			注销账号
 		</button>

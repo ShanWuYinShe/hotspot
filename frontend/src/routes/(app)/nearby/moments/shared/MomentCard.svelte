@@ -31,8 +31,8 @@
 >
 	{#snippet placeholder()}
 		<div
-			class="flex items-center justify-center rounded-sm size-11.5"
-			style="background:var(--cst-accent-soft-bg);border:1px solid var(--cst-accent-border-soft);box-shadow:var(--shadow-glow-lg);"
+			class="flex items-center justify-center rounded-sm size-11.5 bg-accent-bg"
+			style="border:1px solid var(--cst-accent-border-soft);box-shadow:var(--shadow-glow-lg);"
 		>
 			<MapPin size={20} class="text-accent-default" strokeWidth={1.5} />
 		</div>
@@ -50,14 +50,14 @@
 			<div class="flex min-w-0 items-center gap-2">
 				<Avatar src={item.avatar} name={item.user} size={22} style="border:1.5px solid var(--cst-border-card-menu);" />
 				<span class="truncate text-xs text-text-primary font-medium">{item.user}</span>
-				<span class="ml-auto flex min-w-0 items-center gap-0.5 truncate text-xxs" style="color:var(--cst-text-secondary);">
-					<MapPin class="size-2.25 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+				<span class="ml-auto flex min-w-0 items-center gap-0.5 truncate text-xxs text-text-secondary" >
+					<MapPin class="size-2.5 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 					{item.location}
 				</span>
 			</div>
 
 			<!-- 正文：单行省略，muted -->
-			<p class="mt-1 line-clamp-1 leading-card text-xs" style="color:var(--cst-text-secondary);">
+			<p class="mt-1 line-clamp-1 leading-card text-xs text-text-secondary" >
 				{item.content}
 			</p>
 
@@ -66,30 +66,32 @@
 				<div class="flex gap-3.5">
 					<button
 						type="button"
-						class="hover-action flex items-center gap-1.5 outline-none {liked ? 'text-accent-default' : 'text-text-secondary'}"
+						class="hover-action hit-slop flex items-center gap-1.5 focus-ring {liked ? 'text-accent-default' : 'text-text-secondary'}"
+						aria-label={liked ? '取消点赞' : '点赞'}
 						onclick={(e) => {
 							e.stopPropagation();
 							onLike();
 						}}
 					>
-						<Heart class="size-3.75"  strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
+						<Heart class="size-4"  strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
 						<span class="text-xs">{item.likes + (liked ? 1 : 0)}</span>
 					</button>
 					<span class="flex items-center gap-1.5 text-xs text-text-secondary">
-						<MessageCircle class="size-3.75"  strokeWidth={1.5} />
+						<MessageCircle class="size-4"  strokeWidth={1.5} />
 						{item.comments}
 					</span>
 				</div>
 				<div class="flex gap-3">
 					<button
 						type="button"
-						class="hover-action outline-none {saved ? 'text-accent-default' : 'text-text-secondary'}"
+						class="hover-action hit-slop focus-ring {saved ? 'text-accent-default' : 'text-text-secondary'}"
+						aria-label={saved ? '取消收藏' : '收藏'}
 						onclick={(e) => {
 							e.stopPropagation();
 							onSave();
 						}}
 					>
-						<Bookmark class="size-3.75"  strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />
+						<Bookmark class="size-4"  strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />
 					</button>
 				</div>
 			</div>

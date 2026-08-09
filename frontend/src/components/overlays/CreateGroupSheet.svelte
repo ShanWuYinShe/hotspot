@@ -74,7 +74,7 @@
 				class="flex items-center justify-center rounded-full bg-accent-default size-18"
 				style="box-shadow:var(--shadow-glow-lg);"
 			>
-				<Check class="size-8"  style="color:var(--cst-text-on-accent)" strokeWidth={2.5} />
+				<Check class="size-8 text-text-on-accent"   strokeWidth={2.5} />
 			</div>
 			<div>
 				<p class="text-xl font-semibold text-text-primary">群组已创建！</p>
@@ -83,7 +83,7 @@
 			<button
 				type="button"
 				onclick={onClose}
-				class="hover-btn px-8 py-3 rounded-full outline-none bg-accent-default text-text-on-accent text-sm font-medium"
+				class="hover-btn px-8 py-3 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm font-medium"
 				style="box-shadow:var(--shadow-glow-lg);"
 			>
 				完成
@@ -95,10 +95,10 @@
 			<div class="flex justify-center">
 				<button
 					type="button"
-					class="hover-btn flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border-default bg-surface-primary shadow-inset-sm outline-none"
+					class="hover-btn flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border-default bg-surface-primary shadow-inset-sm focus-ring"
 					style="width:100%;height:110px;"
 				>
-					<Camera class="size-6.5"  style="color:var(--cst-text-secondary)" strokeWidth={1.25} />
+					<Camera class="size-6.5 text-text-secondary"   strokeWidth={1.5} />
 					<span class="text-sm text-text-secondary">添加封面图片</span>
 				</button>
 			</div>
@@ -109,7 +109,7 @@
 				<div class="flex items-center gap-2.5 mt-1.5 px-4 rounded-md input-surface h-11.5" >
 					<input
 						id="group-name"
-						class="flex-1 bg-transparent outline-none text-text-primary text-sm"
+						class="flex-1 bg-transparent focus-ring text-text-primary text-sm"
 						placeholder="给你的群组起个名字…"
 						bind:value={name}
 						maxlength={30}
@@ -124,7 +124,7 @@
 				<div class="mt-1.5 px-4 py-3 rounded-md input-surface">
 					<textarea
 						id="group-desc"
-						class="w-full bg-transparent outline-none resize-none text-text-primary text-sm min-h-18"
+						class="w-full bg-transparent focus-ring resize-none text-text-primary text-sm min-h-18"
 						placeholder="描述一下这个群组的主题…"
 						bind:value={desc}
 						maxlength={150}
@@ -143,7 +143,7 @@
 						<button
 							type="button"
 							onclick={() => (category = cat)}
-							class="hover-btn rounded-full px-3.5 py-1.5 text-sm outline-none {category === cat
+							class="hover-btn rounded-full px-3.5 py-1.5 text-sm focus-ring {category === cat
 								? 'bg-accent-default text-text-on-accent font-medium shadow-glow-sm'
 								: 'border border-border-default bg-surface-primary text-text-secondary shadow-raised-sm'}"
 						>
@@ -159,9 +159,9 @@
 			>
 				<div class="flex items-center gap-3">
 					{#if isPrivate}
-						<Lock class="size-4.5"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
+						<Lock class="size-4.5 text-accent-default"   strokeWidth={1.5} />
 					{:else}
-						<Globe class="size-4.5"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
+						<Globe class="size-4.5 text-accent-default"   strokeWidth={1.5} />
 					{/if}
 					<div>
 						<p class="text-sm text-text-primary">{isPrivate ? '私密群组' : '公开群组'}</p>
@@ -203,12 +203,12 @@
 			<div
 				class="flex items-center gap-2.5 rounded-md border border-border-default bg-surface-primary px-4 py-3 shadow-raised-md"
 			>
-				<MapPin class="size-4 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
+				<MapPin class="size-4 shrink-0 text-accent-default"   strokeWidth={1.5} />
 				<div class="flex-1 min-w-0">
 					<p class="text-sm text-text-primary">{locationName || '自动定位中…'}</p>
 					<p class="text-xs text-text-secondary">自动定位 — 可修改</p>
 				</div>
-				<ChevronRight class="size-3.25"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+				<ChevronRight class="size-3.5 text-text-secondary"   strokeWidth={1.5} />
 			</div>
 
 			{#if createError}
@@ -220,7 +220,7 @@
 				type="button"
 				onclick={() => void handleCreate()}
 				disabled={!canCreate || creating}
-				class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-lg outline-none text-sm font-medium {canCreate && !creating ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
+				class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-lg focus-ring text-sm font-medium {canCreate && !creating ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
 				style="box-shadow:{canCreate && !creating ? 'var(--shadow-glow-lg)' : 'var(--shadow-inset-sm)'};border:{canCreate && !creating ? 'none' : '1px solid var(--cst-border-default)'};transition:all 0.22s var(--cst-ease-standard);cursor:{canCreate && !creating ? 'pointer' : 'not-allowed'};"
 			>
 		{creating ? '创建中…' : '创建群组'}

@@ -12,6 +12,7 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import AppearanceMenu from '@/components/overlays/AppearanceMenu.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
 	import SidebarNavItem from '@/components/layout/desktop/SidebarNavItem.svelte';
 	import LocationCard from '@/components/layout/desktop/LocationCard.svelte';
@@ -135,7 +136,7 @@
 			}}
 		>
 			<img src={imgHotSpot} alt="HotSpot Logo" class="rounded-full object-cover shrink-0 size-7"  />
-			<span class="tracking-tight text-lg"  style="color:var(--cst-text-primary)">HotSpot</span>
+			<span class="tracking-tight text-lg text-text-primary"  >HotSpot</span>
 		</button>
 
 		<!-- Spacer -->
@@ -188,15 +189,16 @@
 					/>
 				</button>
 			{:else}
-					<button
+					<Button
 						type="button"
-						class="hover-btn ml-2 shrink-0 rounded-full px-3 focus-ring text-sm h-8"
-						style="background:var(--cst-accent-default);color:var(--cst-text-on-accent);"
+						variant="primary"
+						size="sm"
+						class="ml-2 rounded-full px-3 text-sm"
 						aria-label="登录"
 						onclick={() => void goto(ROUTES.login)}
-				>
+					>
 					登录
-				</button>
+					</Button>
 			{/if}
 		</div>
 	</header>
@@ -219,9 +221,9 @@
 				onclick={() => (isSidebarCollapsed = !isSidebarCollapsed)}
 			>
 				{#if isSidebarCollapsed}
-					<PanelLeftOpen size={16} strokeWidth={1.7} />
+					<PanelLeftOpen size={16} strokeWidth={1.75} />
 				{:else}
-					<PanelLeftClose size={16} strokeWidth={1.7} />
+					<PanelLeftClose size={16} strokeWidth={1.75} />
 				{/if}
 			</button>
 			<!-- Scrollable nav region — takes all available space -->
@@ -238,8 +240,7 @@
 
 				<!-- Section 2 label -->
 				<p
-					class={isSidebarCollapsed ? 'sr-only' : 'px-3 mb-2 text-xxs font-semibold tracking-label uppercase opacity-70'}
-					style="color:var(--cst-text-secondary);"
+					class="text-text-secondary {isSidebarCollapsed ? 'sr-only' : 'px-3 mb-2 text-xxs font-semibold tracking-label uppercase opacity-70'}"
 				>
 					个人中心
 				</p>

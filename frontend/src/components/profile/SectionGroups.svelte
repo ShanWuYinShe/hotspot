@@ -23,7 +23,7 @@
 	<div class="mt-3 flex items-center justify-between">
 		<p class="text-sm text-text-secondary">共 {groups.length} 个群组</p>
 		<div class="flex items-center gap-1.5 text-sm text-status-online">
-			<span class="rounded-full size-1.5"  style="background:var(--cst-status-online)"></span>
+			<span class="rounded-full size-1.5 bg-status-online"></span>
 			{totalOnline} 人在线
 		</div>
 	</div>
@@ -47,12 +47,12 @@
 						style="background:var(--cst-surface-gallery-label);color:var(--cst-content-inverse);backdrop-filter:blur(var(--cst-blur-sm));"
 					>
 						{#if g.role === '管理员'}
-							<Shield class="mr-0.5 inline-block size-2.25"  strokeWidth={2} />
+							<Shield class="mr-0.5 inline-block size-2.5"  strokeWidth={2} />
 						{/if}
 						{g.role}
 					</div>
 					<div class="absolute bottom-2 left-2 flex items-center gap-1 text-content-inverse text-xxs">
-						<span class="rounded-full size-1.5"  style="background:var(--cst-status-online)"></span>
+						<span class="rounded-full size-1.5 bg-status-online"></span>
 						{g.online}
 					</div>
 				</div>
@@ -66,7 +66,7 @@
 							class="h-8 w-8 shrink-0 rounded-sm border border-border-default object-cover"
 						/>
 						<p class="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">{g.name}</p>
-						<ChevronRight class="shrink-0 text-text-secondary size-3.75"  strokeWidth={1.7} />
+						<ChevronRight class="shrink-0 text-text-secondary size-4"  strokeWidth={1.75} />
 					</div>
 
 					<p class="mt-2 truncate text-xs text-text-secondary">{g.desc}</p>
@@ -77,7 +77,7 @@
 							{g.members} 位成员
 						</span>
 						<span class="flex items-center gap-1">
-							<Clock class="size-2.75"  strokeWidth={1.5} />
+							<Clock class="size-3"  strokeWidth={1.5} />
 							{g.lastActive}
 						</span>
 					</div>
@@ -88,7 +88,7 @@
 
 	{#if filtered.length === 0}
 		<div class="flex flex-col items-center justify-center gap-2 py-16">
-			<Search class="text-text-secondary size-5.5"  strokeWidth={1.4} />
+			<Search class="text-text-secondary size-5.5"  strokeWidth={1.5} />
 			<p class="text-sm text-text-secondary">没有找到匹配的群组</p>
 		</div>
 	{/if}

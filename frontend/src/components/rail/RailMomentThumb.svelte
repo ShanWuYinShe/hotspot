@@ -16,13 +16,13 @@
 	} = $props();
 </script>
 
-<button type="button" class="hover-bg tap-985 flex items-center gap-2.5 w-full text-left rounded-sm {onClick ? 'cursor-pointer' : ''}" onclick={onClick}>
+<button type="button" class="hover-bg tap-97 flex items-center gap-2.5 w-full text-left rounded-sm {onClick ? 'cursor-pointer' : ''}" onclick={onClick}>
 	<div class="rounded-sm overflow-hidden shrink-0 size-11.5" >
 		<img src={image} alt={title} class="w-full h-full object-cover" />
 	</div>
 	<div class="flex-1 min-w-0">
-		<p  style="color:var(--cst-text-primary)" class="truncate text-xs">{title}</p>
-		<p  style="color:var(--cst-text-secondary)" class="truncate text-xxs mt-0.5">{meta}</p>
+		<p   class="truncate text-xs text-text-primary">{title}</p>
+		<p   class="truncate text-xxs mt-0.5 text-text-secondary">{meta}</p>
 	</div>
-	<ChevronRight class="size-3 shrink-0"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+	<ChevronRight class="size-3 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 </button>

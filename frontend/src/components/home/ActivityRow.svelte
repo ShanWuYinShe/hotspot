@@ -40,8 +40,8 @@
 		<Icon class="size-4" style="color:{color};" strokeWidth={1.75} />
 	</div>
 	<div class="flex-1 min-w-0">
-		<p class="text-sm"  style="color:var(--cst-text-primary)">{moment.description}</p>
-		<p class="text-xs mt-px"  style="color:var(--cst-text-secondary)">{moment.location?.location_name ?? ''}</p>
+		<p class="text-sm text-text-primary"  >{moment.description}</p>
+		<p class="text-xs mt-px text-text-secondary"  >{moment.location?.location_name ?? ''}</p>
 	</div>
-	<ChevronRight class="size-3.25"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+	<ChevronRight class="size-3.5 text-text-secondary"   strokeWidth={1.5} />
 </ListItem>

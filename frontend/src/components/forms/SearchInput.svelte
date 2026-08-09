@@ -42,12 +42,12 @@
 			if (e.key === 'Enter') onEnter?.(value);
 		}}
 		{placeholder}
-		class="min-w-0 flex-1 bg-transparent outline-none text-text-primary {textClass}"
+		class="min-w-0 flex-1 bg-transparent focus-ring text-text-primary {textClass}"
 	/>
 	{#if value}
 		<button
 			type="button"
-			class="shrink-0 outline-none"
+			class="hit-slop shrink-0 focus-ring"
 			aria-label="清空搜索"
 			onclick={() => onChange('')}
 		>

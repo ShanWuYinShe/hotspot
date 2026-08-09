@@ -135,7 +135,7 @@ referencePoint = loc?.point ?? null;
 		{#snippet trailing()}
 			{#if device === 'tablet'}
 				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-default shadow-glow-sm" >
-					<Sparkles class="size-2.75"  style="color:var(--cst-text-on-accent)" strokeWidth={2} />
+					<Sparkles class="size-3 text-text-on-accent"   strokeWidth={2} />
 					<span class="text-text-on-accent text-xs">精选</span>
 				</div>
 			{:else}

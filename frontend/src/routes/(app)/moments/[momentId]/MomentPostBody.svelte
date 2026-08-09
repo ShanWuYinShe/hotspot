@@ -84,7 +84,7 @@
 		<div class="flex-1">
 			<p class="text-text-primary text-sm">{moment.user}</p>
 			<div class="flex items-center gap-1.5">
-				<MapPin class="size-2.5"  style="color:var(--cst-accent-default)" strokeWidth={1.5} />
+				<MapPin class="size-2.5 text-accent-default"   strokeWidth={1.5} />
 				<span class="text-text-secondary text-xs">{moment.location}</span>
 			</div>
 		</div>
@@ -99,24 +99,25 @@
 		<div class="flex gap-4">
 			<button
 				type="button"
-				class="tap-84 flex items-center gap-1.5 outline-none {liked ? 'text-accent-default' : 'text-text-secondary'}"
+				class="tap-84 flex items-center gap-1.5 focus-ring {liked ? 'text-accent-default' : 'text-text-secondary'}"
 				onclick={onToggleLike}
 			>
-				<Heart class="size-4.75"  strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
+				<Heart class="size-5"  strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
 				<span class="text-sm">{moment.likes + (liked ? 1 : 0)}</span>
 			</button>
 			<div class="flex items-center gap-1.5 text-text-secondary">
-				<MessageCircle class="size-4.75"  strokeWidth={1.5} />
+				<MessageCircle class="size-5"  strokeWidth={1.5} />
 				<span class="text-sm">{commentCount}</span>
 			</div>
 		</div>
 		<div class="flex gap-3">
 			<button
 				type="button"
-				class="tap-84 outline-none {saved ? 'text-accent-default' : 'text-text-secondary'}"
+				class="tap-84 hit-slop focus-ring {saved ? 'text-accent-default' : 'text-text-secondary'}"
+				aria-label={saved ? '取消收藏' : '收藏'}
 				onclick={onToggleSave}
 			>
-				<Bookmark class="size-4.75"  strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />
+				<Bookmark class="size-5"  strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />
 			</button>
 			<button
 				type="button"
@@ -125,9 +126,9 @@
 				class="tap-84 rounded-full focus-ring {shareStatus === 'copied' ? 'text-accent-default' : 'text-text-secondary'}"
 			>
 				{#if shareStatus === 'copied'}
-					<Check class="size-4.75"  strokeWidth={1.8} />
+					<Check class="size-5"  strokeWidth={1.75} />
 				{:else}
-					<Share2 class="size-4.75"  strokeWidth={1.5} />
+					<Share2 class="size-5"  strokeWidth={1.5} />
 				{/if}
 			</button>
 		</div>
@@ -148,11 +149,11 @@
 					</div>
 					<p class="text-text-secondary text-sm mt-0.5 leading-relaxed">{c.text}</p>
 					<div class="flex items-center gap-1 mt-1.5">
-						<button type="button" class="tap-84 flex items-center gap-1 outline-none text-text-secondary">
+						<button type="button" class="tap-84 hit-slop flex items-center gap-1 focus-ring text-text-secondary" aria-label="点赞">
 							<Heart class="size-3"  strokeWidth={1.5} />
 							<span class="text-xs">{c.likes}</span>
 						</button>
-						<span class="text-text-secondary text-xs ml-2"  style="cursor:pointer">回复</span>
+						<span class="text-text-secondary text-xs ml-2">回复</span>
 					</div>
 				</div>
 			</div>

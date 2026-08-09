@@ -5,7 +5,7 @@
 	// ActionIconButton — 圆形图标按钮（对齐 Figma Make ActionIconButton 契约）。
 	// variant: surface（凸起）/ overlay（图片覆盖层 blur）/ ghost（透明）。
 	// tone: muted / accent / inverse 决定图标颜色；hover/tap 由 scale-btn 承载。
-	// Figma 无 active 态、无 strokeWidth 变化、无 focus ring（仅 outline-none）。
+	// Figma 无 active 态、无 strokeWidth 变化；焦点环由 focus-ring 统一承载。
 
 	let {
 		icon: Icon,
@@ -45,12 +45,12 @@
 
 <button
 	type={type}
-	class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none shrink-0 disabled:opacity-50 {className}"
+	class="hover-btn scale-btn hit-slop flex items-center justify-center rounded-full focus-ring shrink-0 disabled:opacity-50 {className}"
 	style={style}
 	aria-label={label}
 	title={label}
 	onclick={() => onClick?.()}
 	{disabled}
 >
-	<Icon size={Math.round(size * 0.42)} color={iconColor} strokeWidth={1.65} />
+	<Icon size={Math.round(size * 0.42)} color={iconColor} strokeWidth={1.75} />
 </button>

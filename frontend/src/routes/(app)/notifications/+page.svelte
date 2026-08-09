@@ -9,6 +9,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import NotificationRow from './shared/NotificationRow.svelte';
 	import { TYPE_CONFIG, normalizeNotifType, type NotificationItem } from './shared/notification-data';
 	import { listNotifications, getUnreadCount, markRead } from '@/api';
@@ -144,14 +145,16 @@ const FILTER_TABS = [
 				<div class="flex items-center gap-2">
 					{#if unread > 0}
 						<span class="text-text-secondary text-xs">{unread} 条未读</span>
-						<button
+						<Button
 							type="button"
-							class="hover-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-default bg-surface-primary text-accent-default text-sm shadow-raised-sm outline-none"
+							variant="secondary"
+							size="md"
+							class="rounded-full px-3 py-1.5 text-accent-default"
 							onclick={markAllRead}
 						>
-							<CheckCheck class="size-3.25"  strokeWidth={2} />
+							<CheckCheck class="size-3.5"  strokeWidth={2} />
 							全部已读
-						</button>
+						</Button>
 					{/if}
 				</div>
 			{/snippet}
@@ -182,9 +185,9 @@ const FILTER_TABS = [
 				{#if unreadGroup.length > 0}
 					<!-- 新消息分组标题（emphasis：accent 点 + 计数 pill，对齐 Figma Make） -->
 					<div class="mb-3 flex h-5 items-center gap-2">
-						<span aria-hidden="true" class="h-1.5 w-1.5 rounded-full" style="background:var(--cst-accent-default);"></span>
-						<p class="eyebrow font-semibold" style="color:var(--cst-text-primary)">新消息</p>
-						<span class="badge"  style="color:var(--cst-accent-default);background:var(--cst-accent-soft)">{unreadGroup.length}</span>
+						<span aria-hidden="true" class="h-1.5 w-1.5 rounded-full bg-accent-default" ></span>
+						<p class="eyebrow font-semibold text-text-primary" >新消息</p>
+						<span class="badge text-accent-default bg-accent-soft">{unreadGroup.length}</span>
 					</div>
 					<ListContainer bordered>
 						{#each unreadGroup as n (n.id)}
@@ -196,7 +199,7 @@ const FILTER_TABS = [
 				{#if readGroup.length > 0}
 					<!-- 较早分组标题（非 emphasis：仅 label + flex 分隔线，对齐 Figma Make） -->
 					<div class="mb-3 flex h-5 items-center gap-2 {unreadGroup.length > 0 ? 'mt-5' : ''}">
-						<p class="eyebrow font-medium" style="color:var(--cst-text-secondary)">较早</p>
+						<p class="eyebrow font-medium text-text-secondary" >较早</p>
 						<span aria-hidden="true" class="h-px flex-1 bg-border-default"></span>
 					</div>
 					<ListContainer bordered>
@@ -209,7 +212,7 @@ const FILTER_TABS = [
 				{#if filtered.length === 0}
 					<EmptyState title="暂无通知">
 						{#snippet icon()}
-							<Bell class="size-6 opacity-50" style="color:var(--cst-text-secondary)" strokeWidth={1.25} />
+							<Bell class="size-6 opacity-50 text-text-secondary"  strokeWidth={1.5} />
 						{/snippet}
 					</EmptyState>
 				{/if}
@@ -228,12 +231,12 @@ const FILTER_TABS = [
 						{@const cfg = TYPE_CONFIG[type] ?? TYPE_CONFIG.reaction}
 						<button
 							type="button"
-							class="hover-btn flex items-center gap-2.5 rounded-sm px-2 py-1.5 outline-none text-left"
+							class="hover-btn flex items-center gap-2.5 rounded-sm px-2 py-1.5 focus-ring text-left"
 							style="background:{filter === type ? cfg.bg : 'transparent'};border:1px solid {filter === type ? cfg.border : 'transparent'};transition:background 0.15s var(--cst-ease-standard);"
 							onclick={() => (filter = type)}
 						>
 							<div class="flex items-center justify-center rounded-full shrink-0 size-6" style="background:{cfg.bg};">
-								<cfg.icon class="size-2.75" style="color:{cfg.color};" strokeWidth={1.75} />
+								<cfg.icon class="size-3" style="color:{cfg.color};" strokeWidth={1.75} />
 							</div>
 							<span class="text-text-primary text-sm flex-1">{cfg.label}</span>
 							<span class="text-text-secondary text-xs">{count}</span>
@@ -247,7 +250,7 @@ const FILTER_TABS = [
 					{#each notifications.filter((n) => n.type === 'follow').slice(0, 3) as n (n.id)}
 						<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.time}>
 							{#snippet trailing()}
-								<button type="button" class="hover-btn px-2.5 py-1 rounded-full outline-none shrink-0 bg-accent-soft text-accent-default text-xs border border-accent-border" >
+								<button type="button" class="hover-btn px-2.5 py-1 rounded-full focus-ring shrink-0 bg-accent-soft text-accent-default text-xs border border-accent-border" >
 									回关
 								</button>
 							{/snippet}

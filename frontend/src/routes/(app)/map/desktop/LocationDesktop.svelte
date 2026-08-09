@@ -191,18 +191,18 @@
 		<div data-map-filter class="absolute z-20" style="top:14px;left:14px;" onclick={(e) => e.stopPropagation()}>
 			<button
 				type="button"
-				class="hover-btn flex items-center gap-2 rounded-full outline-none text-sm"
+				class="hover-btn flex items-center gap-2 rounded-full focus-ring text-sm"
 				style="padding:9px 16px;background:{showFilter ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-text-primary)'};border:1px solid {showFilter ? 'transparent' : 'var(--cst-border-default)'};box-shadow:{showFilter ? 'var(--shadow-glow-md)' : 'var(--cst-elevation-fab)'};"
 				onclick={() => (showFilter = !showFilter)}
 			>
-				<SlidersHorizontal class="size-3.25"  strokeWidth={showFilter ? 2.5 : 1.75} />
+				<SlidersHorizontal class="size-3.5"  strokeWidth={showFilter ? 2.5 : 1.75} />
 				筛选
 				{#if activeFilters.size < 3}
 					<span class="text-xxs font-medium" style="margin-left:2px;padding:1px 6px;border-radius:999px;background:{showFilter ? 'var(--cst-surface-map-control-active)' : 'var(--cst-accent-soft)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};">{activeFilters.size}</span>
 				{/if}
 			</button>
 			{#if showFilter}
-				<div class="mt-2 overflow-hidden rounded-md w-50 shadow-raised-lg border border-border-default"   style="background:var(--cst-surface-primary)">
+				<div class="mt-2 overflow-hidden rounded-md w-50 shadow-raised-lg border border-border-default bg-surface-primary">
 					{#each [{ type: 'user', label: '用户', color: PIN_COLORS.user, count: userCount }, { type: 'group', label: '群组', color: PIN_COLORS.group, count: groupCount }, { type: 'moment', label: '瞬间', color: PIN_COLORS.moment, count: momentCount }] as item, i}
 						{#if i > 0}
 							<div class="h-0.25 bg-border-default"></div>
@@ -210,7 +210,7 @@
 						{@const active = activeFilters.has(item.type as PinType)}
 						<button
 							type="button"
-							class="hover-btn flex w-full items-center gap-2 px-3 py-2.5 text-left outline-none {active ? 'opacity-100' : 'opacity-50'}"
+							class="hover-btn flex w-full items-center gap-2 px-3 py-2.5 text-left focus-ring {active ? 'opacity-100' : 'opacity-50'}"
 							onclick={() => toggleFilter(item.type as PinType)}
 						>
 								
@@ -221,7 +221,7 @@
 							<span class="text-sm font-semibold" style="color:{item.color}">{item.count}</span>
 							<span class="flex items-center justify-center shrink-0 size-3.5" style="border-radius:var(--cst-shape-sm);background:{active ? item.color : 'transparent'};border:1.5px solid {active ? item.color : 'var(--cst-border-strong)'};transition:all 0.18s var(--cst-ease-standard);">
 								{#if active}
-									<Check class="size-2.5"  style="color:var(--cst-content-on-marker)" strokeWidth={3} />
+									<Check class="size-2.5 text-content-on-marker"   strokeWidth={2.5} />
 								{/if}
 							</span>
 						</button>
@@ -269,7 +269,7 @@
 							{/if}
 							{#if selectedPin.likes}
 								<span class="flex items-center gap-1">
-									<Heart class="size-2.5"  style="color:var(--cst-status-danger)" strokeWidth={1.5} />
+									<Heart class="size-2.5 text-status-danger"   strokeWidth={1.5} />
 									<span class="text-text-secondary text-xs">{selectedPin.likes}</span>
 								</span>
 							{/if}
@@ -278,19 +278,19 @@
 					<div class="flex gap-2 shrink-0">
 						<button
 							type="button"
-							class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full outline-none bg-accent-default text-text-on-accent text-sm"
+							class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm"
 							style="box-shadow:var(--shadow-glow-md);"
 							onclick={() => selectedPin && openPinDetail(selectedPin)}
 						>
 							查看详情
-							<ChevronRight class="size-3.25"  strokeWidth={2} />
+							<ChevronRight class="size-3.5"  strokeWidth={2} />
 						</button>
 						<button
 							type="button"
-							class="hover-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shadow-raised-sm outline-none"
+							class="hover-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shadow-raised-sm focus-ring"
 							onclick={() => (selectedPin = null)}
 						>
-							<X class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={2} />
+							<X class="size-3.5 text-text-secondary"   strokeWidth={2} />
 						</button>
 					</div>
 				</div>

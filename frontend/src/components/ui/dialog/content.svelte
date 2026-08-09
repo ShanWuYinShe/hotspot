@@ -31,7 +31,7 @@
 	}: Props = $props();
 
 	const BASE =
-		'fixed z-[var(--cst-z-modal)] bg-surface-primary outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0';
+		'fixed z-[var(--cst-z-modal)] bg-surface-primary focus-ring data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0';
 
 	const SIDE_CLASSES: Record<DialogSide, string> = {
 		center:

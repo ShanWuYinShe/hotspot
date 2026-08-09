@@ -25,7 +25,7 @@
 
 <button
 	type="button"
-	class="absolute outline-none"
+	class="absolute focus-ring"
 	style="left:{pos.x}%;top:{pos.y}%;transform:translate(-50%, -100%) scale({isSelected ? 1.32 : 1});z-index:{isSelected ? 30 : 10};transition:transform 0.2s var(--cst-ease-bounce);"
 	onclick={onSelect}
 >

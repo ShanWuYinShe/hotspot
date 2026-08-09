@@ -41,7 +41,7 @@
 {:else}
 	<span
 		class={cn(
-			'rounded-full outline-none transition-colors px-3 py-1',
+			'rounded-full focus-ring transition-colors px-3 py-1',
 			sizeClasses[size],
 			active
 				? 'bg-accent-soft text-accent-default border border-accent-border font-semibold'

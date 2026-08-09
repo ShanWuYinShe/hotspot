@@ -8,7 +8,7 @@
 	import SearchResults, { type TabType, type SearchResultsData } from './shared/SearchResults.svelte';
 
 	// 搜索页：最近搜索（localStorage）、热门搜索、推荐话题、全部/用户/动态/话题 Tab。
-	// 对齐 Figma Make SearchPage：shadcn 卡片设计语言（rounded-lg border bg-card），
+	// 对齐 Figma Make SearchPage：卡片使用 surface-primary + border 的 token 类，
 	// 简洁 pill Tab，结果行 border-b + 圆头像 + ArrowUpRight。
 	// 发现态与结果态分别由 SearchDiscovery / SearchResults 私有组件承载。
 

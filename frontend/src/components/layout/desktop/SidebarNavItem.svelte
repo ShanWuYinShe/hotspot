@@ -27,7 +27,7 @@
 
 <button
 	type="button"
-	class="tap-985 relative flex h-10 outline-none {collapsed ? 'w-10 self-center items-center justify-center rounded-sm' : 'w-full items-center gap-3 rounded-sm px-3 text-left'}"
+	class="tap-97 relative flex h-10 focus-ring {collapsed ? 'w-10 self-center items-center justify-center rounded-sm' : 'w-full items-center gap-3 rounded-sm px-3 text-left'}"
 	style="background:{isActive ? 'var(--cst-accent-default)' : hoverBg};color:{isActive ? 'var(--cst-content-on-accent)' : showHover ? 'var(--cst-text-primary)' : 'var(--cst-text-secondary)'};box-shadow:{isActive ? 'var(--cst-elevation-navigation-active)' : 'none'};transition:background 0.16s var(--cst-ease-standard), color 0.16s var(--cst-ease-standard), box-shadow 0.2s var(--cst-ease-standard), transform 0.10s var(--cst-ease-standard);"
 	aria-current={isActive ? 'page' : undefined}
 	data-active={isActive ? 'true' : undefined}
@@ -44,9 +44,9 @@
 		style="position:absolute;left:4px;top:50%;width:3px;height:{showHover ? 16 : 0}px;margin-top:{showHover ? -8 : 0}px;border-radius:2px;background:var(--cst-accent-default);transition:height 0.18s var(--cst-ease-standard), opacity 0.18s var(--cst-ease-standard), margin-top 0.18s var(--cst-ease-standard);pointer-events:none;"
 	></span>
 	<Icon
-		class="shrink-0 size-4.25"
+		class="shrink-0 size-4.5"
 		style="color:{isActive ? 'var(--cst-content-on-accent)' : showHover ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};transition:color 0.16s var(--cst-ease-standard);"
-		strokeWidth={isActive ? 2 : 1.6}
+		strokeWidth={isActive ? 2 : 1.5}
 	/>
 	<span
 		class={collapsed ? 'sr-only' : `text-md ${isActive ? 'font-medium' : 'font-normal'}`}

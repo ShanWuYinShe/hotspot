@@ -50,7 +50,7 @@
 
 	<!-- 右上：距离（单份，消除历史重复徽章 bug） -->
 	<div class="absolute top-2.5 right-2.5 z-[2] flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface-overlay-strong" style="backdrop-filter:blur(var(--cst-blur-sm));">
-		<MapPin class="w-2.25 h-2.25 text-content-inverse" strokeWidth={1.5} />
+		<MapPin class="w-2.5 h-2.5 text-content-inverse" strokeWidth={1.5} />
 		<span class="text-content-inverse text-xxs">{user.distance}</span>
 	</div>
 
@@ -65,21 +65,20 @@
 				</div>
 				{#if user.isOnline}
 					<span
-						class="shrink-0 rounded-full size-2.25 ring-2 ring-surface-card-menu"
+						class="shrink-0 rounded-full size-2.25 ring-2 ring-surface-card-menu bg-status-online"
 						title="在线"
-						style="background:var(--cst-status-online);"
 					></span>
 				{/if}
 			</div>
 			<div class="mt-2 flex items-center justify-between gap-2">
 				{#if user.tag}
-					<span class="badge border border-accent-border"  style="background:var(--cst-accent-soft);color:var(--cst-accent-default)">#{user.tag}</span>
+					<span class="badge border border-accent-border bg-accent-soft text-accent-default">#{user.tag}</span>
 				{:else}
 					<span></span>
 				{/if}
 				<button
 					type="button"
-					class="hover-btn tap-90 flex items-center justify-center rounded-full outline-none shrink-0 size-7"
+					class="hover-btn tap-92 flex items-center justify-center rounded-full focus-ring shrink-0 size-7"
 					style="{followed
 						? 'background:var(--cst-accent-soft);border:1px solid var(--cst-accent-border);color:var(--cst-accent-default);'
 						: 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);box-shadow:var(--shadow-glow-sm);'}"

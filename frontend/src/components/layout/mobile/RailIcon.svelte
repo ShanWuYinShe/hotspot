@@ -32,7 +32,7 @@
 
 <button
 	type="button"
-	class="relative flex flex-col items-center justify-center outline-none rounded-md"
+	class="relative flex flex-col items-center justify-center focus-ring rounded-md"
 	style="width:52px;height:52px;gap:3px;box-shadow:{hoverShadow};transform:scale({hoverScale});transition:background 0.16s var(--cst-ease-standard), box-shadow 0.2s var(--cst-ease-standard), transform 0.2s var(--cst-ease-bounce);"
 	aria-label={label}
 	aria-current={isActive ? 'page' : undefined}
@@ -48,7 +48,7 @@
 	<Icon
 		class="size-5.5"
 		style="color:{iconColor};transition:color 0.18s var(--cst-ease-standard);position:relative;z-index:1;"
-		strokeWidth={isActive ? 2.1 : showHover ? 1.75 : 1.5}
+		strokeWidth={isActive ? 2 : showHover ? 1.75 : 1.5}
 	/>
 	<span class="text-xxs leading-none {isActive ? 'font-semibold' : 'font-normal'}" style="color:{iconColor};position:relative;z-index:1;transition:color 0.18s var(--cst-ease-standard);">
 		{label}

@@ -48,9 +48,9 @@
 						ariaLabel={`重新搜索 ${item}`}
 						class="flex items-center gap-3 px-5 py-4"
 					>
-						<Clock class="size-4 text-text-secondary" strokeWidth={1.7} />
+						<Clock class="size-4 text-text-secondary" strokeWidth={1.75} />
 						<span class="flex-1 text-sm text-text-primary">{item}</span>
-						<ArrowUpRight class="size-4 text-text-secondary" strokeWidth={1.7} />
+						<ArrowUpRight class="size-4 text-text-secondary" strokeWidth={1.75} />
 					</ListItem>
 				{/each}
 			</ListContainer>
@@ -65,7 +65,7 @@
 		aria-label="热门搜索"
 	>
 		<div class="flex items-center gap-2">
-			<TrendingUp class="size-4 text-accent-default" strokeWidth={1.8} />
+			<TrendingUp class="size-4 text-accent-default" strokeWidth={1.75} />
 			<h2 class="text-sm font-medium text-text-primary">正在关注</h2>
 		</div>
 		<div class="mt-4">
@@ -90,7 +90,7 @@
 		aria-label="推荐话题"
 	>
 		<div class="flex items-center gap-2">
-			<Hash class="size-4 text-accent-default" strokeWidth={1.8} />
+			<Hash class="size-4 text-accent-default" strokeWidth={1.75} />
 			<h2 class="text-sm font-medium text-text-primary">推荐话题</h2>
 		</div>
 		<div class="mt-4 flex flex-wrap gap-2">

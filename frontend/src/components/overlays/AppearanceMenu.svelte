@@ -116,7 +116,7 @@
 								class="mb-2 block h-5 w-5 rounded-full ring-3"
 								style="background:{item.swatch};--tw-ring-color:{selected ? 'var(--cst-accent-soft)' : 'transparent'};"
 							></span>
-							<span class="block text-sm font-medium" style="color:var(--cst-text-primary);">{item.label}</span>
+							<span class="block text-sm font-medium text-text-primary" >{item.label}</span>
 							<span class="mt-0.5 block text-xxs text-text-secondary">{item.note}</span>
 						</button>
 					{/each}
@@ -127,8 +127,8 @@
 				type="button"
 				onclick={toggleDark}
 				aria-pressed={theme.isDark}
-				class="hover-btn surface-ghost mt-2 flex w-full items-center justify-between rounded-sm px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
-				style="color:var(--cst-text-primary);"
+				class="hover-btn surface-ghost mt-2 flex w-full items-center justify-between rounded-sm px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default text-text-primary"
+				
 			>
 				<span class="flex items-center gap-2">
 					<span class="flex h-6.5 w-6.5 items-center justify-center rounded-full bg-accent-soft">
@@ -155,8 +155,8 @@
 				<button
 					type="button"
 					onclick={handleMockToggle}
-					class="hover-btn mt-2 flex w-full items-center justify-between rounded-sm ring-1 ring-border-default px-3 py-2.5 text-left outline-none transition-colors hover:bg-accent-soft focus-visible:ring-2 focus-visible:ring-accent-default"
-					style="color:var(--cst-text-primary);"
+					class="hover-btn mt-2 flex w-full items-center justify-between rounded-sm ring-1 ring-border-default px-3 py-2.5 text-left outline-none transition-colors hover:bg-accent-soft focus-visible:ring-2 focus-visible:ring-accent-default text-text-primary"
+					
 				>
 					<span class="flex items-center gap-2">
 						<span class="flex h-6.5 w-6.5 items-center justify-center rounded-full bg-accent-soft">
@@ -175,7 +175,7 @@
 					</span>
 				</button>
 
-				<div class="mt-2 rounded-sm ring-1 ring-border-default px-3 py-2.5" style="color:var(--cst-text-primary);">
+				<div class="mt-2 rounded-sm ring-1 ring-border-default px-3 py-2.5 text-text-primary" >
 					<span class="block text-sm font-medium">模拟登录态</span>
 					<span class="mb-2 block text-xxs text-text-secondary">影响 login/register/guest/reset 的返回</span>
 					<ListContainer>
@@ -188,7 +188,7 @@
 							>
 								<span class="{scenario === s.id ? 'text-text-on-accent' : 'text-text-primary'} text-xs">{s.label}</span>
 								{#if scenario === s.id}
-									<Check size={12} style="color:var(--cst-text-on-accent);" />
+									<Check size={12}  class="text-text-on-accent" />
 								{/if}
 							</ListItem>
 						{/each}
@@ -196,8 +196,8 @@
 					<button
 						type="button"
 						onclick={() => void resetLoggedOut()}
-						class="mt-2 w-full rounded-sm ring-1 ring-border-default px-2 py-1.5 text-xs outline-none transition-colors hover:bg-accent-soft"
-						style="color:var(--cst-text-secondary);"
+						class="mt-2 w-full rounded-sm ring-1 ring-border-default px-2 py-1.5 text-xs focus-ring transition-colors hover:bg-accent-soft text-text-secondary"
+						
 					>
 						重置为未登录（匿名浏览）
 					</button>

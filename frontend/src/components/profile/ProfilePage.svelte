@@ -86,9 +86,9 @@
 			<button
 				type="button"
 				onclick={() => void goto(ROUTES.meEdit)}
-				class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-md bg-surface-primary px-3.5 py-2.5 text-sm font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
+				class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-md bg-surface-primary px-3.5 py-2.5 text-sm font-medium text-text-primary focus-ring transition-colors hover:bg-accent-soft"
 			>
-				<Pencil class="size-4"  strokeWidth={1.8} />
+				<Pencil class="size-4"  strokeWidth={1.75} />
 				编辑资料
 			</button>
 		</header>
@@ -109,7 +109,7 @@
 							type="button"
 							aria-label="更换头像"
 							onclick={() => void goto(ROUTES.meEdit)}
-							class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full outline-none bg-accent-default text-text-on-accent size-7"
+							class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default text-text-on-accent size-7"
 							 style="border:2px solid var(--cst-surface-primary);"
 						>
 							<Camera class="size-3.5"  strokeWidth={2} />
@@ -120,7 +120,7 @@
 						<p class="mt-1 text-sm text-text-secondary">{handle}</p>
 						<p class="mt-4 max-w-115 text-sm leading-6 text-text-secondary">{bio || '这个人还没有填写简介。'}</p>
 						<p class="mt-3 flex items-center gap-1.5 text-xs text-text-secondary">
-							<MapPin class="size-3.5"  style="color:var(--cst-accent-default)" strokeWidth={1.8} />
+							<MapPin class="size-3.5 text-accent-default"   strokeWidth={1.75} />
 							{locationName || '未设置位置'}
 						</p>
 					</div>
@@ -129,8 +129,8 @@
 					{#each statsList as stat}
 						<button
 							type="button"
-							class="hover-bg px-1 py-4 text-left outline-none"
-							style="background:var(--cst-surface-primary);"
+							class="hover-bg px-1 py-4 text-left focus-ring bg-surface-primary"
+							
 							onclick={() => (stat.section ? void goto(ME_SECTION_PATHS[stat.section]) : undefined)}
 						>
 							<p class="text-lg font-medium tabular-nums text-text-primary">{stat.value}</p>
@@ -144,7 +144,7 @@
 			<aside class="rounded-lg border border-border-default surface-flat p-5" aria-label="资料状态">
 				<div class="flex items-center justify-between">
 					<h2 class="text-sm font-medium text-text-primary">资料状态</h2>
-					<ShieldCheck class="size-4"  style="color:var(--cst-accent-default)" strokeWidth={1.8} />
+					<ShieldCheck class="size-4 text-accent-default"   strokeWidth={1.75} />
 				</div>
 				<p class="mt-2 text-xs leading-5 text-text-secondary">你的基础资料已完善，可随时在编辑页更新。</p>
 				<div class="mt-5 h-1.5 overflow-hidden bg-border-default">
@@ -154,10 +154,10 @@
 				<button
 					type="button"
 					onclick={() => void goto(ROUTES.settings)}
-					class="hover-btn mt-5 flex w-full items-center justify-center gap-2 border border-border-default rounded-md bg-surface-primary py-2.5 text-xs font-medium text-text-primary outline-none transition-colors hover:bg-accent-soft"
+					class="hover-btn mt-5 flex w-full items-center justify-center gap-2 border border-border-default rounded-md bg-surface-primary py-2.5 text-xs font-medium text-text-primary focus-ring transition-colors hover:bg-accent-soft"
 				>
 					账号与隐私设置
-					<ChevronRight class="size-3.5"  strokeWidth={1.8} />
+					<ChevronRight class="size-3.5"  strokeWidth={1.75} />
 				</button>
 			</aside>
 		</div>
@@ -171,7 +171,7 @@
 			<dl class="grid md:grid-cols-2">
 				{#each detailRows as row}
 					<div class="flex items-start gap-3 px-6 py-4">
-						<row.icon class="size-4 mt-0.5 shrink-0"  style="color:var(--cst-accent-default)" strokeWidth={1.7} />
+						<row.icon class="size-4 mt-0.5 shrink-0 text-accent-default"   strokeWidth={1.75} />
 						<div class="min-w-0">
 							<dt class="text-xs text-text-secondary">{row.label}</dt>
 							<dd class="mt-1 text-sm text-text-primary">{row.value}</dd>

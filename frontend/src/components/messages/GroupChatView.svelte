@@ -170,11 +170,11 @@
 		{#if showBackButton}
 			<button
 				type="button"
-				class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 shadow-raised-sm outline-none"
+				class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 shadow-raised-sm focus-ring"
 				onclick={onBack}
 				aria-label="返回"
 			>
-				<ArrowLeft class="size-3.75"  style="color:var(--cst-text-secondary)" strokeWidth={1.5} />
+				<ArrowLeft class="size-4 text-text-secondary"   strokeWidth={1.5} />
 			</button>
 		{/if}
 
@@ -237,13 +237,13 @@
 					if (e.key === 'Enter') void chat.handleSend();
 				}}
 				placeholder="发消息…"
-				class="flex-1 bg-transparent outline-none text-text-primary text-sm"
+				class="flex-1 bg-transparent focus-ring text-text-primary text-sm"
 			/>
 		</div>
 
 		<button
 			type="button"
-			class="hover-btn scale-btn flex items-center justify-center rounded-full outline-none shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'} size-9"
+			class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'} size-9"
 			style="box-shadow:{chat.inputVal.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:1px solid var(--cst-border-default);"
 			onclick={() => void chat.handleSend()}
 			aria-label="发送"

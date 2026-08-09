@@ -12,9 +12,9 @@
 </script>
 
 <div class="flex min-h-dvh items-center justify-center bg-surface-primary px-5 py-10">
-	<section class="w-full max-w-100 border border-border-default rounded-lg p-6 sm:p-8" style="background:var(--cst-surface-primary);">
-		<div class="flex items-center justify-center rounded-full size-11 shadow-glow-md"   style="background:var(--cst-accent-default);color:var(--cst-text-on-accent)">
-			<Leaf class="size-5"  strokeWidth={1.8} />
+	<section class="w-full max-w-100 border border-border-default rounded-lg p-6 sm:p-8 bg-surface-primary" >
+		<div class="flex items-center justify-center rounded-full size-11 shadow-glow-md bg-accent-default text-text-on-accent">
+			<Leaf class="size-5"  strokeWidth={1.75} />
 		</div>
 		<p class="mt-6 eyebrow font-medium text-accent-default">热点</p>
 		<h1 class="mt-2 text-2xl font-medium tracking-title text-text-primary">回来看看附近的故事。</h1>

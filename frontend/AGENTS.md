@@ -14,7 +14,7 @@ API 契约见 `spec/api_spec_*.md`（`spec/` 目录只读权威）。
   （`ssr=false` + `fallback: 'index.html'`，nginx `try_files` 回退；全部页面客户端渲染。
   本项目不需要 SSR，禁止引入服务端渲染相关代码、依赖或 `hooks.server.ts`/`+server.ts`）
 - 样式：Tailwind CSS v4 + CSS Token 三层架构（`hover-*` CSS 类承载交互反馈）
-- UI 组件：bits-ui 生态组件（`components/ui/` 封装层：dialog、dropdown-menu、popover）+ 页面级自研视觉组件
+- UI 组件：bits-ui 生态组件（`components/ui/` 封装层：dialog、dropdown-menu、popover、button）+ 页面级自研视觉组件
 - 包管理：bun（`bun install` / `bun run`）
 - 测试：vitest + @testing-library/svelte（宿主机 `bun run test`）
 - 组件测试约定：与组件同目录的 `__tests__/Xxx.test.ts`（如
@@ -213,7 +213,7 @@ src/
                   #   PageViewport/RoutedContentViewport）
                   #   单路由私有组件不下沉到 components/（如 moments/ 域已清空——MomentCard
                   #   等随路由走 shared/）
-  stores/         # runes 模块单例（auth/theme/platform/presence/ws/composer，.svelte.ts）
+  stores/         # runes 模块单例（auth/theme/platform/presence/ws/composer/toast，.svelte.ts）
   lib/            # 工具函数 + 路由常量 + 数据工厂（.svelte.ts 响应式；ws/ 为 WebSocket
                   #   客户端封装 client.ts + types.ts）
   api/            # API 客户端层（client.ts 零框架依赖）
@@ -421,6 +421,14 @@ theme/
 17. **opacity**：优先用 Tailwind `opacity-*` 标准档类（10/20/30.../100），减少内联
     `style="opacity:0.N"`。装饰性图标/文字透明度应归标准档（0.5→opacity-50 等）；
     导航激活态背景等精确视觉调校允许保留内联值（0.12~0.15 区间属刻意微调）
+18. **焦点可见性（强制）**：所有可交互元素必须有可见键盘焦点环。统一用
+    `focus-ring` 类（`focus-visible` 时 accent outline）或等效的
+    `focus-visible:ring-2 focus-visible:ring-accent-default`；**禁止无替代地使用
+    `outline-none`**（Tailwind v4 的 `outline-none` 会压掉 base.css 的全局按钮轮廓）。
+    图标按钮必须同时提供 `aria-label`；紧凑图标按钮（<44px）叠加 `hit-slop` 扩展触控热区
+19. **减弱动效（强制）**：新增加载/装饰动画必须考虑 `prefers-reduced-motion`；
+    utilities.css 已提供全局降级（动画瞬时化、`map-pulse-halo` 停用、
+    spinner 放慢），不得绕过
 14. **动效曲线（强制）**：过渡缓动曲线一律用 `var(--cst-ease-*)` token，禁止内联
     `cubic-bezier(...)` 字面量：
     - `--cst-ease-standard`=(0.22,1,0.36,1)：标准减速曲线（绝大多数 transition）

@@ -28,9 +28,10 @@
 		<button
 			type="button"
 			onclick={onClose}
-			class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-8 shadow-raised-sm outline-none"
+			class="hover-btn scale-btn hit-slop flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-8 shadow-raised-sm focus-ring"
+			aria-label="关闭"
 		>
-			<X class="size-3.5"  style="color:var(--cst-text-secondary)" strokeWidth={2} />
+			<X class="size-3.5 text-text-secondary"   strokeWidth={2} />
 		</button>
 	</div>
 

@@ -8,6 +8,7 @@
 	import { initTheme } from '@/stores/theme.svelte';
 	import { initPlatform } from '@/stores/platform.svelte';
 	import AuthGate from '@/components/auth/AuthGate.svelte';
+	import ToastViewport from '@/components/overlays/ToastViewport.svelte';
 
 	let { children }: { children: Snippet } = $props();
 
@@ -26,3 +27,4 @@
 
 {@render children()}
 <AuthGate />
+<ToastViewport />
