@@ -74,15 +74,15 @@
 					</div>
 				</div>
 
-				<!-- pill tab（对齐 Figma：rounded-full border accent-soft 容器，active=surface-primary+shadow） -->
+				<!-- pill tab（对齐 Figma：rounded-full border accent-soft 容器，active=surface-primary+shadow；
+				     与 TabBar 一致用 aria-pressed 切换语义，避免同类控件两套 role） -->
 				<div class="mt-6 flex flex-wrap items-center justify-between gap-3">
-					<div class="flex rounded-full border border-border-default bg-accent-soft p-1" role="tablist" aria-label="瞬间分类">
+					<div class="flex rounded-full border border-border-default bg-accent-soft p-1" aria-label="瞬间分类">
 						{#each tabItems as item (item.id)}
 							{@const isActive = item.id === activeTab}
 							<button
 								type="button"
-								role="tab"
-								aria-selected={isActive}
+								aria-pressed={isActive}
 								onclick={() => (activeTab = item.id)}
 								class="rounded-full px-3.5 py-2 text-xs transition-colors {isActive ? 'bg-surface-primary text-text-primary shadow-raised-sm' : 'text-text-secondary hover:text-text-primary'}"
 							>

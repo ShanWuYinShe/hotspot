@@ -5,6 +5,10 @@
 
 	let { params }: { params: { peerId: string } } = $props();
 </script>
+<svelte:head>
+	<title>私聊 · HotSpot</title>
+</svelte:head>
+
 
 <div class="flex flex-col" style="height:100%;background-color:var(--cst-surface-primary);">
 	<ChatView peerUserId={params.peerId ?? ''} showBackButton onBack={() => history.back()} />

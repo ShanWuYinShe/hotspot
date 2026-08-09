@@ -114,6 +114,10 @@
 		void goto(ROUTES.home);
 	};
 </script>
+<svelte:head>
+	<title>设置 · HotSpot</title>
+</svelte:head>
+
 
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-10">
 	{#snippet header()}
@@ -122,7 +126,11 @@
 
 	<!-- User card — hero with ambient glow -->
 	<div class="ambient-glow mb-3">
-		<button type="button" class="hover-btn flex items-center gap-4 px-4 py-3.5 rounded-lg w-full focus-ring text-left surface-hero">
+		<button
+			type="button"
+			class="hover-btn flex items-center gap-4 px-4 py-3.5 rounded-lg w-full focus-ring text-left surface-hero"
+			onclick={() => void goto(ROUTES.meEdit)}
+		>
 			<Avatar class="border-2 border-surface-primary shadow-glow-md" src={accountAvatar} name={accountName} size={48}  />
 			<div class="flex-1 min-w-0">
 				<p class="text-sm tracking-tight text-text-primary">{accountName || '用户'}</p>

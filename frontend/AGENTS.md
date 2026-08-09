@@ -76,6 +76,9 @@ bun run --cwd frontend build   # adapter-static 产物输出到 build/
 - 修改 nginx 配置后必须重启对应容器
 - Svelte 组件互引必须写显式 `.svelte` 扩展名（默认导出）；Svelte 5 单文件单组件
 - 新增依赖后容器内需重装（entrypoint 有自动检测，或 `docker compose up -d --force-recreate frontend`）
+- 每个路由 `+page.svelte` 必须设置 `<svelte:head><title>`（格式 `页面名 · HotSpot`）；
+  `(app)` 组外层已提供 skip link（`#main-content`），路由内容滚动区
+  `RoutedContentViewport` 的 `<main id="main-content">` 不得移除
 
 ## 路由系统
 

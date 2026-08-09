@@ -548,3 +548,25 @@ export interface ReportCreated {
 	// spec: report.md → reports/create
 	report_id: string;
 }
+
+// --- Media（spec: api_spec_media.md）---
+export type MediaCategory = 'avatar' | 'group_avatar' | 'moment_image' | 'chat_image' | 'chat_video' | 'chat_audio' | 'chat_file';
+
+export interface PresignedUpload {
+	// spec: media.md → presign_upload 响应
+	upload_id: string;
+	upload_url: string;
+	headers: Record<string, string>;
+	expires_at: string;
+}
+
+export interface UploadedMedia {
+	// spec: media.md → complete_upload 响应
+	file_id: string;
+	thumbnail_url?: string;
+	file_size: number;
+	mime_type: string;
+	duration?: number;
+	width?: number;
+	height?: number;
+}

@@ -18,6 +18,8 @@ import type {
 	GroupMemberItem,
 	GroupMessageItem,
 	JoinGroupResult,
+	PresignedUpload,
+	UploadedMedia,
 	MessageSent,
 	MomentItem,
 	NotifyItem,
@@ -130,6 +132,7 @@ export async function updateSettings(params: { settings: Partial<UserSettings> }
 }
 export async function follow(params: object)              { return request<void>(Endpoints.Users.Follow, params); }
 export async function block(params: object)               { return request<void>(Endpoints.Users.Block, params); }
+export async function deleteAccount(params: object)       { return request<void>(Endpoints.Users.DeleteAccount, params); }
 export async function getProfile(userId: string)          { return request<UserProfileBundle>(Endpoints.Users.GetProfile, { user_id: userId }); }
 export async function listFriends(params?: object)        { return request<PaginatedData<FriendItem>>(Endpoints.Users.ListFriends, params ?? {}); }
 export async function listFollowing(params?: object)      { return request<PaginatedData<FollowingItem>>(Endpoints.Users.ListFollowing, params ?? {}); }
@@ -140,6 +143,14 @@ export async function getFeedNearby(params?: object)      { return request<Pagin
 export async function getNearbyUsers(params?: object)     { return request<PaginatedData<UserItem>>(Endpoints.Feed.NearbyUsers, params ?? {}); }
 export async function getNearbyGroups(params?: object)    { return request<PaginatedData<GroupItem>>(Endpoints.Feed.NearbyGroups, params ?? {}); }
 export async function getTrending(params?: object)        { return request<TrendingBundle>(Endpoints.Feed.Trending, params ?? {}); }
+
+// Media（spec: api_spec_media.md）—— presign → PUT 直传 → complete 三步流程的 API 包装
+export async function presignUpload(params: object) {
+	return request<PresignedUpload>(Endpoints.Media.PresignUpload, params);
+}
+export async function completeUpload(params: object) {
+	return request<UploadedMedia>(Endpoints.Media.CompleteUpload, params);
+}
 
 // Moments
 export async function searchMoments(params: object)       { return request<PaginatedData<MomentItem>>(Endpoints.Moments.Search, params); }

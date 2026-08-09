@@ -10,6 +10,10 @@
 	// 卡片结构对齐 Figma Make LoginPage：rounded-lg 400px 卡片 + 品牌区（Leaf 圆标 +
 	// 品牌 eyebrow + 标语），品牌名保留当前项目「热点」。
 </script>
+<svelte:head>
+	<title>登录 · HotSpot</title>
+</svelte:head>
+
 
 <div class="flex min-h-dvh items-center justify-center bg-surface-primary px-5 py-10">
 	<section class="w-full max-w-100 border border-border-default rounded-lg p-6 sm:p-8 bg-surface-primary" >

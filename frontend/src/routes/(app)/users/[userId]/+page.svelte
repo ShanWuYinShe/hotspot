@@ -11,6 +11,7 @@
 	import { getProfile, follow, block, createReport } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import * as Dialog from '@/components/ui/dialog';
+	import { showToast } from '@/stores/toast.svelte';
 
 	// 用户详情：关注/私信/屏蔽/举报/备注 + 瞬间画廊 + 桌面 Rail。
 
@@ -115,7 +116,10 @@
 		const next = !followed;
 		followed = next;
 		// spec: follow/unfollow uses user_id + active boolean.
-		follow({ user_id: uid, active: next }).catch(() => (followed = !next));
+		follow({ user_id: uid, active: next }).catch(() => {
+			followed = !next;
+			showToast('操作失败，请重试', 'danger');
+		});
 	};
 
 	const toggleBlock = () => {
@@ -127,6 +131,7 @@
 		block({ user_id: uid, active: next }).catch(() => {
 			blocked = !next;
 			followed = next;
+			showToast('操作失败，请重试', 'danger');
 		});
 	};
 
@@ -143,6 +148,10 @@
 		window.setTimeout(() => (shareCopied = false), 1600);
 	};
 </script>
+<svelte:head>
+	<title>用户主页 · HotSpot</title>
+</svelte:head>
+
 
 <Dialog.Root open={moreOpen} onOpenChange={(next) => (next ? undefined : (moreOpen = false))}>
 		<Dialog.Content

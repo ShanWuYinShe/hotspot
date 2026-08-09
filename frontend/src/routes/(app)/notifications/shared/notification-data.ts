@@ -8,7 +8,7 @@ export interface NotificationItem {
 	type: string;
 	read: boolean;
 	time: string;
-	user: { name: string; avatar: string };
+	user: { id: string; name: string; avatar: string };
 	text: string;
 	momentImage?: string;
 }

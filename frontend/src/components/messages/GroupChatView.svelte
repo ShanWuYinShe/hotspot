@@ -120,6 +120,8 @@
 			return null;
 		}
 	});
+	// 最后一条非本人消息，供屏幕阅读器 aria-live 播报（只播文本，避免整表重读）
+	const lastIncoming = $derived([...chat.messages].reverse().find((m) => !m.sent));
 
 	// --- typing 接收：仅处理本群（payload.group_id === gid）推送；true 时 3 秒超时自动重置。 ---
 	let groupTyping = $state(false);
@@ -165,6 +167,7 @@
 </script>
 
 <div class="flex min-h-0 flex-col h-full bg-surface-primary">
+	<p class="sr-only" aria-live="polite">{lastIncoming ? `新消息：${lastIncoming.text}` : ''}</p>
 	<!-- Header -->
 	<div class="shrink-0 flex items-center gap-3 border-b border-border-default bg-surface-primary px-4 {compact ? 'h-13' : 'h-15'}">
 		{#if showBackButton}
@@ -231,6 +234,7 @@
 		<div class="flex-1 flex items-center px-4 rounded-md input-surface h-9.5" >
 			<input
 				type="text"
+				aria-label="消息输入框"
 				bind:value={chat.inputVal}
 				oninput={(e) => chat.handleInputChange(e)}
 				onkeydown={(e) => {

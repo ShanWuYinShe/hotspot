@@ -149,10 +149,10 @@
 					</div>
 					<p class="text-text-secondary text-sm mt-0.5 leading-relaxed">{c.text}</p>
 					<div class="flex items-center gap-1 mt-1.5">
-						<button type="button" class="tap-84 hit-slop flex items-center gap-1 focus-ring text-text-secondary" aria-label="点赞">
+						<span class="flex items-center gap-1 text-text-secondary">
 							<Heart class="size-3"  strokeWidth={1.5} />
 							<span class="text-xs">{c.likes}</span>
-						</button>
+						</span>
 						<span class="text-text-secondary text-xs ml-2">回复</span>
 					</div>
 				</div>

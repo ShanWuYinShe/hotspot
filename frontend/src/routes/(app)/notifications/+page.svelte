@@ -16,6 +16,8 @@
 	import { WS_NOTIFY_EVENT } from '@/lib/ws/client';
 	import { formatDateTime } from '@/lib/utils';
 	import { ROUTES, ME_SECTION_PATHS } from '@/lib/routes';
+	import { follow } from '@/api';
+	import { showToast } from '@/stores/toast.svelte';
 
 	// 通知列表：类型过滤、单条/全部已读、桌面右侧概览 Rail。
 
@@ -87,7 +89,7 @@ const FILTER_TABS = [
 							type: normalizeNotifType(n.type ?? 'reaction_added'),
 							read: n.is_read ?? false,
 							time: formatDateTime(n.created_at),
-							user: { name: actor.nickname ?? '', avatar: actor.avatar_url ?? '' },
+							user: { id: actor.user_id ?? '', name: actor.nickname ?? '', avatar: actor.avatar_url ?? '' },
 							text,
 							momentImage: n.payload?.moment_summary?.cover_url ?? undefined
 						};
@@ -107,6 +109,20 @@ const FILTER_TABS = [
 	});
 
 	const unread = $derived(notifications.filter((n) => !n.read).length);
+	let followedBack = $state<Set<string>>(new Set());
+
+	// 桌面 Rail「回关」：直接关注通知中的 actor（spec: users/set_follow）
+	const followBack = async (n: NotificationItem) => {
+		if (!n.user.id || followedBack.has(n.user.id)) return;
+		followedBack = new Set([...followedBack, n.user.id]);
+		try {
+			await follow({ user_id: n.user.id, active: true });
+			showToast(`已关注 ${n.user.name}`, 'success');
+		} catch {
+			followedBack = new Set([...followedBack].filter((id) => id !== n.user.id));
+			showToast('操作失败，请重试', 'danger');
+		}
+	};
 
 	const markAllRead = () => {
 		// spec: scope='all' clears all unread. Update local state optimistically.
@@ -130,6 +146,10 @@ const FILTER_TABS = [
 		(Object.keys(TYPE_CONFIG) as string[]).map((t) => ({ type: t, count: notifications.filter((n) => n.type === t).length }))
 	);
 </script>
+<svelte:head>
+	<title>通知 · HotSpot</title>
+</svelte:head>
+
 
 <SplitPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
@@ -250,9 +270,16 @@ const FILTER_TABS = [
 					{#each notifications.filter((n) => n.type === 'follow').slice(0, 3) as n (n.id)}
 						<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.time}>
 							{#snippet trailing()}
-								<button type="button" class="hover-btn px-2.5 py-1 rounded-full focus-ring shrink-0 bg-accent-soft text-accent-default text-xs border border-accent-border" >
-									回关
-								</button>
+								<Button
+									type="button"
+									variant={followedBack.has(n.user.id) ? 'outline' : 'secondary'}
+									size="sm"
+									class="rounded-full px-2.5 py-1 text-accent-default"
+									disabled={followedBack.has(n.user.id)}
+									onclick={() => void followBack(n)}
+								>
+									{followedBack.has(n.user.id) ? '已关注' : '回关'}
+								</Button>
 							{/snippet}
 						</RailUserRow>
 					{/each}

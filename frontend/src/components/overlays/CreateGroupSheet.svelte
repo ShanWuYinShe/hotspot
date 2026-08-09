@@ -97,6 +97,8 @@
 					type="button"
 					class="hover-btn flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border-default bg-surface-primary shadow-inset-sm focus-ring"
 					style="width:100%;height:110px;"
+					disabled
+					title="暂未开放"
 				>
 					<Camera class="size-6.5 text-text-secondary"   strokeWidth={1.5} />
 					<span class="text-sm text-text-secondary">添加封面图片</span>

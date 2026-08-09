@@ -16,6 +16,8 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import { follow } from '@/api';
+	import { showToast } from '@/stores/toast.svelte';
 
 	// 首页「附近」：Hero 统计 + 附近动态 + 群组轮播 + 推荐列表。
 	// 三端统一 PageHeader（title + 额外信息 + trailing 工具区）+ 内容区：
@@ -61,8 +63,16 @@
 	let followingIds = $state<Set<string>>(new Set());
 	const toggleFollow = (id: string) => {
 		const n = new Set(followingIds);
-		n.has(id) ? n.delete(id) : n.add(id);
+		const next = !n.has(id);
+		next ? n.add(id) : n.delete(id);
 		followingIds = n;
+		// spec: users/set_follow 两态统一；乐观更新 + 失败回滚
+		follow({ user_id: id, active: next }).catch(() => {
+			const r = new Set(followingIds);
+			next ? r.delete(id) : r.add(id);
+			followingIds = r;
+			showToast('操作失败，请重试', 'danger');
+		});
 	};
 	const onlineCount = $derived(nearbyUsers.filter((u) => u.isOnline).length);
 	const heroStats = $derived({
@@ -72,6 +82,10 @@
 	});
 
 </script>
+<svelte:head>
+	<title>首页 · HotSpot</title>
+</svelte:head>
+
 
 {#snippet momentRows(items: MomentItem[], onClick: (momentId: string) => void)}
 	<ListContainer bordered>

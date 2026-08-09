@@ -112,6 +112,10 @@
 		{ id: 'topics', label: `话题 ${results.topics.length || ''}` }
 	]);
 </script>
+<svelte:head>
+	<title>搜索 · HotSpot</title>
+</svelte:head>
+
 
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}

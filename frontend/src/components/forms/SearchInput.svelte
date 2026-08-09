@@ -36,6 +36,7 @@
 	<!-- svelte-ignore a11y_autofocus：搜索页进入自动聚焦是样板行为 -->
 	<input
 		{autofocus}
+		aria-label="搜索"
 		bind:value
 		oninput={(e) => onChange(e.currentTarget.value)}
 		onkeydown={(e) => {

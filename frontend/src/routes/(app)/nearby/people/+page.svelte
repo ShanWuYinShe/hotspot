@@ -13,6 +13,8 @@
 	import { getNearbyUsers } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance } from '@/lib/utils';
+	import { follow } from '@/api';
+	import { showToast } from '@/stores/toast.svelte';
 
 	// 附近的人：排序/标签过滤 + BSP 卡片墙（桌面）/ 网格（移动/平板）。
 
@@ -88,10 +90,22 @@
 
 	const toggleFollow = (id: string) => {
 		const next = new Set(followedIds);
-		next.has(id) ? next.delete(id) : next.add(id);
+		const willFollow = !next.has(id);
+		willFollow ? next.add(id) : next.delete(id);
 		followedIds = next;
+		// spec: users/set_follow 两态统一；乐观更新 + 失败回滚
+		follow({ user_id: id, active: willFollow }).catch(() => {
+			const r = new Set(followedIds);
+			willFollow ? r.delete(id) : r.add(id);
+			followedIds = r;
+			showToast('操作失败，请重试', 'danger');
+		});
 	};
 </script>
+<svelte:head>
+	<title>附近的人 · HotSpot</title>
+</svelte:head>
+
 
 	<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 		{#snippet header()}

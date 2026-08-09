@@ -220,6 +220,10 @@ import TabBar from '@/components/navigation/TabBar.svelte';
 	);
 	const onlineMemberCount = $derived(onlineMemberIds.size);
 </script>
+<svelte:head>
+	<title>群组主页 · HotSpot</title>
+</svelte:head>
+
 
 <StandardPageLayout contentClassName="animate-fade-in pb-6">
 	<!-- 全幅封面（负 margin 抵消 ContentColumn gutter） -->

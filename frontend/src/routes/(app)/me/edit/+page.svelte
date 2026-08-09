@@ -2,10 +2,15 @@
 	import { Camera, User, FileText, Check } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
+	import { logout } from '@/stores/auth.svelte';
+	import { showToast } from '@/stores/toast.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
-	import { getAccount, updateAccount } from '@/api';
+	import { getAccount, updateAccount, deleteAccount } from '@/api';
+	import { uploadMediaFile } from '@/lib/upload';
+	import { ROUTES } from '@/lib/routes';
 
 	// 编辑资料：昵称/简介/兴趣标签（5 个上限）+ 注销按钮。
 
@@ -15,8 +20,14 @@
 	let bio = $state('');
 	let tags = $state<Set<string>>(new Set());
 	let saved = $state(false);
+	let saving = $state(false);
+	let uploadingAvatar = $state(false);
+	let deleteConfirmOpen = $state(false);
+	let deleteConfirmText = $state('');
+	let deleting = $state(false);
 	let avatar = $state('');
 	let userId = $state('');
+	let avatarInput = $state<HTMLInputElement | null>(null);
 
 	const device = $derived(platform.platform);
 
@@ -52,6 +63,8 @@
 	};
 
 	const handleSave = async () => {
+		if (saving) return;
+		saving = true;
 		try {
 			// spec: updateAccount { nickname?, avatar_file_id?, bio?, tags?, gender? }
 			await updateAccount({
@@ -60,32 +73,75 @@
 				tags: tags.size > 0 ? Array.from(tags) : undefined
 			});
 		} catch {
-			// ignore save error
+			saving = false;
+			showToast('保存失败，请重试', 'danger');
+			return;
 		}
+		saving = false;
 		saved = true;
 		setTimeout(() => {
 			saved = false;
 			history.back();
 		}, 800);
 	};
+
+	const handleAvatarChange = async (e: Event) => {
+		const input = e.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		input.value = '';
+		if (!file || uploadingAvatar) return;
+		uploadingAvatar = true;
+		try {
+			const fileId = await uploadMediaFile(file, 'avatar');
+			await updateAccount({ avatar_file_id: fileId });
+			// 重新拉取账户，拿服务端最终 avatar_url
+			const res = await getAccount().catch(() => null);
+			if (res?.code === 0 && res.data?.avatar_url) avatar = res.data.avatar_url;
+			showToast('头像已更新', 'success');
+		} catch {
+			showToast('头像上传失败，请重试', 'danger');
+		} finally {
+			uploadingAvatar = false;
+		}
+	};
+
+	const confirmDelete = async () => {
+		if (deleteConfirmText !== 'DELETE_MY_ACCOUNT' || deleting) return;
+		deleting = true;
+		try {
+			// spec: users/delete_account 需精确输入 DELETE_MY_ACCOUNT，删除不可逆
+			await deleteAccount({ confirmation: deleteConfirmText });
+			await logout();
+			void goto(ROUTES.home, { replaceState: true });
+		} catch {
+			deleting = false;
+			showToast('注销失败，请重试', 'danger');
+		}
+	};
 </script>
+<svelte:head>
+	<title>编辑资料 · HotSpot</title>
+</svelte:head>
+
 
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-10">
 	{#snippet header()}
 		<PageHeader title="编辑资料" onBack={() => history.back()} titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}>
 	{#snippet trailing()}
-		<button
+		<Button
 			type="button"
-			class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full focus-ring transition-all text-sm {saved ? 'bg-status-online text-text-on-status' : 'bg-accent-default text-text-on-accent'}"
-			style="box-shadow:0 4px 14px {saved ? 'var(--cst-status-online-glow)' : 'var(--cst-glow-accent)'};border:none;"
+			variant={saved ? 'secondary' : 'primary'}
+			size="md"
+			class="rounded-full px-4 py-2"
+			loading={saving}
+			disabled={saved || saving}
 			onclick={() => void handleSave()}
 		>
 			{#if saved}
-				<Check class="size-3.5 text-text-on-status"   strokeWidth={2.5} />
-			{:else}
-				保存
+				<Check class="size-3.5 text-text-on-status" strokeWidth={2.5} />
 			{/if}
-		</button>
+			{saved ? '已保存' : '保存'}
+		</Button>
 	{/snippet}
 	</PageHeader>
 {/snippet}
@@ -98,6 +154,8 @@
 			type="button"
 			class="hover-btn absolute top-3 right-3 flex items-center gap-1.5 rounded-full focus-ring bg-surface-overlay-strong text-content-inverse text-sm px-3 py-1.5"
 			style="backdrop-filter:blur(var(--cst-blur-md));border:1px solid var(--cst-border-inverse);"
+			disabled
+			title="暂未开放"
 		>
 			<Camera class="size-3.5"  strokeWidth={1.75} />
 			更换横幅
@@ -115,10 +173,19 @@
 				class="hover-btn hit-slop absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-6.5"
 				style="border:2px solid var(--cst-surface-primary);box-shadow:var(--shadow-glow-sm);"
 				aria-label="更换头像"
+				disabled={uploadingAvatar}
+				onclick={() => avatarInput?.click()}
 			>
 				<Camera class="size-3 text-text-on-accent"   strokeWidth={2} />
 			</button>
 		</div>
+		<input
+			bind:this={avatarInput}
+			type="file"
+			accept="image/jpeg,image/png,image/webp"
+			class="hidden"
+			onchange={(e) => void handleAvatarChange(e)}
+		/>
 		<div>
 			<p class="text-text-primary text-md">{nickname || '未设置昵称'}</p>
 			{#if userId}
@@ -185,6 +252,7 @@
 						? 'box-shadow:var(--shadow-glow-sm);border:none;'
 						: 'border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);'}
 					onclick={() => !disabled && toggleTag(t)}
+					{disabled}
 				>
 					#{t}
 				</button>
@@ -195,12 +263,44 @@
 	<!-- Danger zone -->
 	<div class="mt-3">
 		<p class="eyebrow mb-3">账号</p>
-		<button
-			type="button"
-			class="hover-btn w-full rounded-md border border-border-default bg-surface-primary px-4 py-3.5 text-left text-sm text-status-danger shadow-raised-md focus-ring"
-		>
-			注销账号
-		</button>
+		{#if deleteConfirmOpen}
+			<div class="flex flex-col gap-2.5 rounded-md border border-border-default bg-surface-primary p-4">
+				<p class="text-sm text-text-primary">删除不可恢复，请输入 <code class="font-mono text-xs text-status-danger">DELETE_MY_ACCOUNT</code> 确认：</p>
+				<input
+					type="text"
+					bind:value={deleteConfirmText}
+					placeholder="DELETE_MY_ACCOUNT"
+					autocomplete="off"
+					aria-label="注销确认码"
+					class="w-full rounded-md border border-border-default bg-surface-primary px-3 py-2 text-sm focus-ring text-text-primary"
+				/>
+				<div class="flex justify-end gap-2">
+					<Button type="button" variant="secondary" size="sm" onclick={() => (deleteConfirmOpen = false)}>
+						取消
+					</Button>
+					<Button
+						type="button"
+						variant="danger"
+						size="sm"
+						disabled={deleteConfirmText !== 'DELETE_MY_ACCOUNT' || deleting}
+						loading={deleting}
+						onclick={() => void confirmDelete()}
+					>
+						确认注销
+					</Button>
+				</div>
+			</div>
+		{:else}
+			<Button
+				type="button"
+				variant="outline"
+				size="md"
+				class="w-full justify-start rounded-md px-4 py-3.5 text-status-danger"
+				onclick={() => (deleteConfirmOpen = true)}
+			>
+				注销账号
+			</Button>
+		{/if}
 	</div>
 	</div>
 </StandardPageLayout>

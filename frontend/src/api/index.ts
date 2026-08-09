@@ -5,6 +5,8 @@ export {
   requestPasswordReset, resetPassword,
   getAccount, updateAccount, getSettings, updateSettings,
   follow, block, getProfile,
+  deleteAccount,
+  presignUpload, completeUpload,
   listFriends, listFollowing, listFollowers,
   getFeedNearby, getTrending, getNearbyUsers, getNearbyGroups,
   searchMoments, getMomentDetail, createMoment, listMyMoments, getFavoriteMoments,

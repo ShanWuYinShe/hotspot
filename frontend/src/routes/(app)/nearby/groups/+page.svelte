@@ -92,6 +92,10 @@
 		}
 	};
 </script>
+<svelte:head>
+	<title>附近群组 · HotSpot</title>
+</svelte:head>
+
 
 
 	<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">

@@ -138,6 +138,10 @@
 	const isDesktop = $derived(platform.platform !== 'mobile');
 	const selectedChat = $derived(liveChats.find((c) => c.id === selectedId));
 </script>
+<svelte:head>
+	<title>消息 · HotSpot</title>
+</svelte:head>
+
 
 {#if isDesktop}
 	<!-- ═══ Desktop Messages — split pane (list left + chat right) ═══ -->

@@ -8,6 +8,10 @@
 	// 分区页在任意设备上独立可寻址——复用全宽分区视图（ProfilePage 分区模式）。
 	// 设备分派：mobile 用 ProfileMobile；tablet 与 desktop 统一走 ProfilePage。
 </script>
+<svelte:head>
+	<title>我的主页 · HotSpot</title>
+</svelte:head>
+
 
 {#if platform.platform !== 'mobile'}
 	 <ProfilePage section={null} />

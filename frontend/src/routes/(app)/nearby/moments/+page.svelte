@@ -122,6 +122,10 @@ referencePoint = loc?.point ?? null;
 	const minCardHeight = $derived(device === 'mobile' ? 220 : 260);
 	const minCanvasHeight = $derived(device === 'mobile' ? 440 : 520);
 </script>
+<svelte:head>
+	<title>附近动态 · HotSpot</title>
+</svelte:head>
+
 
 <!-- ═══ 三端统一页面 header（样板：标题行 + trailing 计数/精选 + below 搜索 + 分类 Tab）═══ -->
 {#snippet feedHeader()}

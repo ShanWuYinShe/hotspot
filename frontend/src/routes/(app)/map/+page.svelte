@@ -5,6 +5,10 @@
 
 	// 地图探索入口：平台分派（桌面/移动）。
 </script>
+<svelte:head>
+	<title>地图 · HotSpot</title>
+</svelte:head>
+
 
 {#if platform.platform !== 'mobile'}
 	<LocationDesktop />

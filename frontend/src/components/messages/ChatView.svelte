@@ -131,6 +131,8 @@
 	const peerName = $derived(contact?.name ?? '');
 	// 在线状态实时化：优先 WS 推送（presence store），HTTP 快照 contact.online 仅作初始兜底。
 	const onlineNow = $derived(presence.isOnline(peerUserId));
+	// 最后一条非本人消息，供屏幕阅读器 aria-live 播报（只播文本，避免整表重读）
+	const lastIncoming = $derived([...chat.messages].reverse().find((m) => !m.sent));
 
 	// --- typing 接收：仅处理对端（payload.actor.user_id === peer）推送；true 时 3 秒超时自动重置。 ---
 	let peerTyping = $state(false);
@@ -183,6 +185,7 @@
 </script>
 
 <div class="flex min-h-0 flex-col h-full bg-surface-primary">
+	<p class="sr-only" aria-live="polite">{lastIncoming ? `新消息：${lastIncoming.text}` : ''}</p>
 	<!-- Header -->
 	<div class="shrink-0 flex items-center gap-3 border-b border-border-default bg-surface-primary px-4 {compact ? 'h-13' : 'h-15'}">
 		{#if showBackButton}
@@ -233,16 +236,20 @@
 				{#each [{ icon: Phone, label: '语音通话' }, { icon: Video, label: '视频通话' }] as { icon: Icon, label }}
 					<button
 						type="button"
-						class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary shadow-raised-sm focus-ring {compact ? 'size-8' : 'size-9'}"
+						class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary shadow-raised-sm focus-ring disabled:opacity-50 {compact ? 'size-8' : 'size-9'}"
 						aria-label={label}
+						disabled
+						title="暂未开放"
 					>
 						<Icon class="size-3.5 text-text-secondary"   strokeWidth={1.5} />
 					</button>
 				{/each}
 				<button
 					type="button"
-					class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary shadow-raised-sm focus-ring {compact ? 'size-8' : 'size-9'}"
+					class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary shadow-raised-sm focus-ring disabled:opacity-50 {compact ? 'size-8' : 'size-9'}"
 					aria-label="更多操作"
+					disabled
+					title="暂未开放"
 				>
 				<MoreHorizontal class="size-3.5 text-text-secondary"   strokeWidth={1.5} />
 			</button>
@@ -280,8 +287,10 @@
 	<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary border-t border-border-default" >
 		<button
 			type="button"
-			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 shadow-raised-sm focus-ring"
+			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 shadow-raised-sm focus-ring disabled:opacity-50"
 			aria-label="表情"
+			disabled
+			title="暂未开放"
 		>
 			<Smile class="size-4 text-text-secondary"   strokeWidth={1.5} />
 		</button>
@@ -289,6 +298,7 @@
 		<div class="flex-1 flex items-center px-4 rounded-md input-surface h-9.5" >
 			<input
 				type="text"
+				aria-label="消息输入框"
 				bind:value={chat.inputVal}
 				oninput={(e) => chat.handleInputChange(e)}
 				onkeydown={(e) => {

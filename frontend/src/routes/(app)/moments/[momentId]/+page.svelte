@@ -209,6 +209,10 @@
 
 	let moreMenuEl = $state<HTMLElement | null>(null);
 </script>
+<svelte:head>
+	<title>动态详情 · HotSpot</title>
+</svelte:head>
+
 
 <SplitPageLayout contentClassName="animate-fade-in pb-6">
 	{#snippet header()}

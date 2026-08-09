@@ -24,9 +24,10 @@ export const Endpoints = {
   },
 
   // Users — 已包装: Search/GetProfile/ListFriends/ListFollowing/ListFollowers/
-  //   ListMoments/ListReactedMoments/GetAccount/UpdateAccount/GetSettings/Follow/Block；
+  //   ListMoments/ListReactedMoments/GetAccount/UpdateAccount/GetSettings/Follow/Block/
+  //   DeleteAccount；
   //   待接线: GetDetail/BatchGet/ListGroups/UpdateSettings/UpdateLocation/Upgrade/
-  //   DeleteAccount/ListBlocked/SetRemark
+  //   ListBlocked/SetRemark
   Users: {
     Search: `${PREFIX}/users/search`,
     GetDetail: `${PREFIX}/users/open_the_door`,
@@ -125,6 +126,12 @@ export const Endpoints = {
   Reactions: {
     Set: `${PREFIX}/reactions/set`,
     List: `${PREFIX}/reactions/list`,
+  },
+
+  // Media — 已包装: PresignUpload/CompleteUpload（上传流程：presign → PUT 直传 → complete）
+  Media: {
+    PresignUpload: `${PREFIX}/media/presign_upload`,
+    CompleteUpload: `${PREFIX}/media/complete_upload`,
   },
 
   // Chat — 已包装: PrivateChats.List/PrivateMessages.Send|GetHistory|MarkRead/

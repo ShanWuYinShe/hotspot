@@ -40,6 +40,7 @@
 </script>
 
 <main
+	id="main-content"
 	{...(desktopPane ? { 'data-desktop-main': '' } : {})}
 	class={cn(
 		'h-full min-h-0 flex-1 w-full overflow-y-auto overflow-x-hidden no-scrollbar scroll-smooth',
