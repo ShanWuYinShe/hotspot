@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --tsgo && bun run lint && bun run check:theme",
     "check:theme": "node scripts/check-theme-parity.mjs",
+    "browser:qa": "bash scripts/browser-qa.sh",
+    "browser:qa:mobile": "bash scripts/browser-qa.sh --mobile",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --tsgo --watch",
     "test": "vitest run",
     "test:watch": "vitest",

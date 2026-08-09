@@ -58,6 +58,24 @@ Nginx 网关（`docker/nginx.dev.conf`）统一反代：
 - 测试：`bun run test`（vitest，不依赖 Docker）
 - 构建验证：`bun run build`
 
+### 浏览器巡检（可选，需 dev 环境已启动）
+
+前置：dev 环境已启动（见上），宿主机已安装 `agent-browser`
+（`npm i -g agent-browser && agent-browser install`）。
+
+```bash
+# 桌面 20 页
+bun run browser:qa
+# 桌面 20 页 + 移动 5 页（390×844）
+bun run browser:qa:mobile
+# 指定网关地址（如 worktree 独立环境 8889）
+bash scripts/browser-qa.sh --base http://localhost:8889 --mobile
+```
+
+以 MSW mock + 访客身份自动巡检：横向溢出 / 坏图 / h1 数量 / TabBar 数量 / 控制台错误，
+逐页截图并生成报告。输出统一在仓库根 `.workwork/browser-check/qa-<时间戳>/`
+（已 gitignore，不提交）。
+
 `bun run build` 是 `vite build`（不含 `svelte-kit sync`；重建 `.svelte-kit/` 的是
 `dev`/`check` 脚本里的 `svelte-kit sync`），但会读取并写入 `.svelte-kit/` 产物，
 与正在运行的 dev server 共用该目录，可能相互干扰。需要跑 build 前先停掉 frontend

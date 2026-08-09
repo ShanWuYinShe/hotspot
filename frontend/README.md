@@ -25,3 +25,15 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 ```
 
 **Do not** run `bun run dev` directly on the host and attempt to access the Vite dev server via its port — API calls will fail because they must go through the nginx gateway. See `AGENTS.md` in this directory for details.
+
+## 浏览器巡检
+
+前置：dev 环境已启动、宿主机已安装 `agent-browser`。
+
+```bash
+bun run browser:qa         # 桌面 20 页
+bun run browser:qa:mobile  # 桌面 + 移动 5 页（390×844）
+```
+
+自动以访客身份巡检全部主要页面（横向溢出 / 坏图 / h1 / TabBar / 控制台错误），
+截图与报告输出到仓库根 `.workwork/browser-check/qa-<时间戳>/`。
