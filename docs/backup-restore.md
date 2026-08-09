@@ -138,7 +138,7 @@ internal metadata that is not exposed via the S3 API.
 docker run --rm \
   -v hotspot_seaweedfs_data:/data:ro \
   -v "$(pwd)/backups/seaweedfs-$(date -u +%Y%m%d):/backup" \
-  alpine:3.22 \
+  alpine:3.24.1 \
   sh -c "cp -a /data/. /backup/"
 ```
 
@@ -149,7 +149,7 @@ docker compose stop seaweedfs
 docker run --rm \
   -v hotspot_seaweedfs_data:/data \
   -v "$(pwd)/backups/seaweedfs-20260101:/backup:ro" \
-  alpine:3.22 \
+  alpine:3.24.1 \
   sh -c "cp -a /backup/. /data/"
 docker compose start seaweedfs
 ```

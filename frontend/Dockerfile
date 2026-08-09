@@ -12,7 +12,7 @@ COPY . .
 RUN bun run build
 
 # Stage 2: Minimal production image（仅持有 SPA 静态产物）
-FROM alpine:${ALPINE_VERSION:-3.22}
+FROM alpine:${ALPINE_VERSION:-3.24.1}
 COPY --from=build /app/build/ /build/
 # 保持容器运行：命名卷首次挂载时从镜像复制产物（healthcheck 依赖存活容器）
 CMD ["sh", "-c", "sleep infinity"]
