@@ -82,8 +82,14 @@
 				return;
 			}
 			const users = (rawUsers ?? []).map((u) => {
-				const inner = u.user;
-				return { user_id: inner.user_id, nickname: inner.nickname, avatar_url: inner.avatar_url, tags: u.tags };
+				// spec: users/search 返回 UserItem（user 嵌套）；兼容扁平结构兜底，避免搜索崩溃
+				const inner = u.user ?? (u as unknown as { user_id?: string; nickname?: string; avatar_url?: string });
+				return {
+					user_id: inner.user_id ?? '',
+					nickname: inner.nickname ?? '',
+					avatar_url: inner.avatar_url ?? '',
+					tags: (u as { tags?: string[] }).tags ?? []
+				};
 			});
 			const moments = rawMoments ?? [];
 			// 话题从结果动态聚合

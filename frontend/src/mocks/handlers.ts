@@ -176,7 +176,10 @@ export const handlers = [
       favorited_moments: { items: mockMoments.slice((idx + 3) % 6, (idx + 3) % 6 + 3) },
     }));
   }),
-  http.post(`${API}/users/search`, () => json(paginated(mockUsers))),
+  // spec: users/search 返回 UserItem（user 嵌套 UserInfo）；mockUsers 是扁平结构，需包装
+  http.post(`${API}/users/search`, () =>
+    json(paginated(mockUsers.map((u) => ({ user: u, tags: [], presence_status: "offline" }))))
+  ),
   // list_* default to the current user → auth-required when no user_id given.
   http.post(`${API}/users/list_friends`, () => requireMockAuth() ?? json(paginated(mockFriends))),
   http.post(`${API}/users/list_following`, () => requireMockAuth() ?? json(paginated(mockFollowing))),
