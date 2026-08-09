@@ -8,6 +8,7 @@
 	import Button from '@/components/ui/button.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
+	import TagPill from '@/components/forms/TagPill.svelte';
 	import { getAccount, updateAccount, deleteAccount } from '@/api';
 	import { uploadMediaFile } from '@/lib/upload';
 	import { ROUTES } from '@/lib/routes';
@@ -245,17 +246,9 @@
 			{#each TAG_OPTIONS as t (t)}
 				{@const active = tags.has(t)}
 				{@const disabled = !active && tags.size >= 5}
-				<button
-					type="button"
-					class="hover-btn px-3.5 py-1.5 rounded-full focus-ring transition-all text-sm {active ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary opacity-40'}"
-					style={active
-						? 'box-shadow:var(--shadow-glow-sm);border:none;'
-						: 'border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);'}
-					onclick={() => !disabled && toggleTag(t)}
-					{disabled}
-				>
+				<TagPill active={active} onClick={() => toggleTag(t)} disabled={disabled}>
 					#{t}
-				</button>
+				</TagPill>
 			{/each}
 		</div>
 	</fieldset>

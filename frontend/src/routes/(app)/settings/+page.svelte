@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Component, Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Bell, Lock, ChevronRight, LogOut, Globe, Info, Volume2, MapPin, User, Palette, Trees, Moon, Sun } from '@lucide/svelte';
+	import { Bell, Lock, ChevronRight, LogOut, Info, MapPin, Palette, Trees, Moon, Sun } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -15,14 +15,13 @@
 	import { getAccount, getSettings, updateSettings } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 
-	// 设置页：通知/声音/隐私开关（iOS 式）、语言、账号信息、退出登录。
+	// 设置页：主题/深色、通知、隐私开关（iOS 式）、关于、退出登录。
 	// 服务端字段对齐 spec UserSettings：位置共享 → location_visible、私密账号 →
-	// privacy_level；推送通知/应用声音 spec 无服务端字段，是本地客户端偏好，
+	// privacy_level；推送通知 spec 无服务端字段，是本地客户端偏好，
 	// 用 localStorage 持久化（不冒充服务端设置）。
 
-	// 本地偏好（推送通知/应用声音）——localStorage 持久化
+	// 本地偏好（推送通知）——localStorage 持久化
 	const NOTIF_KEY = 'hotspot:notif';
-	const SOUNDS_KEY = 'hotspot:sounds';
 	const device = $derived(platform.platform);
 	const readLocal = (key: string, fallback: boolean) => {
 		try {
@@ -39,7 +38,6 @@
 	};
 
 	let notif = $state(readLocal(NOTIF_KEY, true));
-	let sounds = $state(readLocal(SOUNDS_KEY, true));
 	let privateProfile = $state(false);
 	let locationSharing = $state(true);
 	let accountName = $state('');
@@ -65,10 +63,6 @@
 	const toggleNotif = () => {
 		notif = !notif;
 		writeLocal(NOTIF_KEY, notif);
-	};
-	const toggleSounds = () => {
-		sounds = !sounds;
-		writeLocal(SOUNDS_KEY, sounds);
 	};
 
 	$effect(() => {
@@ -191,12 +185,6 @@
 				{/snippet}
 				<Toggle on={notif} onToggle={toggleNotif} label="推送通知" />
 			</SettingRow>
-			<SettingRow title="应用声音" description="操作反馈音效">
-				{#snippet icon()}
-					<Volume2 class="size-4 text-text-secondary"   strokeWidth={1.5} />
-				{/snippet}
-				<Toggle on={sounds} onToggle={toggleSounds} label="应用声音" />
-			</SettingRow>
 		</ListContainer>
 	</div>
 
@@ -223,26 +211,6 @@
 	<p class="eyebrow px-1 mt-3 mb-1.5">通用</p>
 	<div class="rounded-lg overflow-hidden surface-flat">
 		<ListContainer>
-			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="语言设置">
-				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
-					<Globe class="size-4 text-text-secondary"   strokeWidth={1.5} />
-				</div>
-				<div class="flex-1 min-w-0">
-					<p class="text-sm text-text-primary">语言</p>
-				</div>
-				<span class="text-sm shrink-0 text-text-secondary">中文</span>
-				<ChevronRight class="size-4 shrink-0 text-text-secondary"   strokeWidth={1.5} />
-			</ListItem>
-			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="账号信息">
-				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
-					<User class="size-4 text-text-secondary"   strokeWidth={1.5} />
-				</div>
-				<div class="flex-1 min-w-0">
-					<p class="text-sm text-text-primary">账号信息</p>
-				</div>
-				<span class="text-sm shrink-0 text-text-secondary"></span>
-				<ChevronRight class="size-4 shrink-0 text-text-secondary"   strokeWidth={1.5} />
-			</ListItem>
 			<ListItem class="flex items-center gap-3 px-4 py-3.5" ariaLabel="关于">
 				<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9" >
 					<Info class="size-4 text-text-secondary"   strokeWidth={1.5} />
@@ -251,7 +219,6 @@
 					<p class="text-sm text-text-primary">关于</p>
 				</div>
 				<span class="text-sm shrink-0 text-text-secondary">v 1.0.0</span>
-				<ChevronRight class="size-4 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 			</ListItem>
 		</ListContainer>
 	</div>

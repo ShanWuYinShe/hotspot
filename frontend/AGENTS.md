@@ -178,9 +178,13 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
    按钮；`below` 只放搜索框与 Tab 栏等 header 附属区。**below 首元素必须带
    上间距**（`mt-3`，与样板 nearby/moments 一致）——TabBar/搜索框直接贴 title
    属于间距错误；below 内多行元素之间用 `mt-3` 分隔。
-3. **分类 Tab 栏**：下划线样式（容器 `border-bottom` + 激活项底部 2px 指示条 +
+3. **分类/筛选/排序 Tab（强制统一）**：一律使用 `TabBar`
+   （`components/navigation/TabBar.svelte`，下划线样式 + 激活项底部 2px 指示条 +
    `aria-pressed`），放 `below` snippet 内随 header 吸顶；tab 状态可存 URL query
    （如 `?tab=`）以支持深链，切换用 `goto` 更新 URL。
+   **禁止再写 pill/胶囊式 tab**（通知/搜索/个人主页/地图 sheet 的手写胶囊已统一为
+   TabBar）。表单内的标签/多选 chips 一律用 `TagPill`；网格选择器
+   （主题 swatch、发布可见范围）属例外，不套 TabBar。
 4. **正文与滚动**：正文直接放 children；`StandardPageLayout` 页面滚动由
    `RoutedContentViewport`（main）唯一承担，`SplitPageLayout` 分栏页的主区/rail 滚动由
    组件统一管理；页面不得自建滚动容器（消息分栏、地图等全画布页面除外）。内嵌

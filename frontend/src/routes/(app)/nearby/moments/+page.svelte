@@ -10,7 +10,6 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
-	import TagPill from '@/components/forms/TagPill.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import MomentCard from './shared/MomentCard.svelte';
 	import { createFeedInteractions, type FeedItem } from './shared/feed-interactions.svelte';
@@ -185,11 +184,13 @@ referencePoint = loc?.point ?? null;
 
 <!-- ═══ 热门 tag 列表（scrollable / flex-wrap 由调用处 className 决定，对齐 Figma TagChips）═══ -->
 {#snippet tagChips(className: string)}
-	<div class="flex gap-1.5 no-scrollbar {className}">
-		{#each tags as tag}
-			<TagPill active={activeTag === tag} onClick={() => (activeTag = activeTag === tag ? null : tag)} size="md">{tag}</TagPill>
-		{/each}
-	</div>
+	<!-- 标签过滤统一走 TabBar（再次点击已激活项可取消筛选） -->
+	<TabBar
+		items={tags.map((t) => ({ id: t, label: t }))}
+		value={activeTag ?? ''}
+		onChange={(id) => (activeTag = activeTag === id ? null : id)}
+		class={className}
+	/>
 {/snippet}
 
 <!-- ═══ 加载中 / 空列表状态（与附近的人、附近群组一致）═══ -->

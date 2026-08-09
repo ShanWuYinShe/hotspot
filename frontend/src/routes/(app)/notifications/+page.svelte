@@ -7,7 +7,7 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
-	import TagPill from '@/components/forms/TagPill.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import Button from '@/components/ui/button.svelte';
@@ -186,22 +186,9 @@ const FILTER_TABS = [
 				</div>
 			{/snippet}
 			{#snippet below()}
-				<!-- Filter tabs（对齐 Figma Make：与标题同处 sticky header 内，滚动时吸顶） -->
-				<div class="mt-3 flex overflow-x-auto no-scrollbar gap-2 pb-3">
-					{#each FILTER_TABS as t}
-						<button
-							type="button"
-							aria-pressed={filter === t.id}
-							data-active={filter === t.id ? 'true' : undefined}
-							onclick={() => (filter = t.id)}
-							class="tap-92 shrink-0 px-3.5 py-1.5 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default text-sm"
-							style={filter === t.id
-								? 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);box-shadow:var(--shadow-glow-sm);border:none;'
-								: 'background:var(--cst-surface-primary);color:var(--cst-text-secondary);border:1px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);'}
-						>
-							{t.label}
-						</button>
-					{/each}
+				<!-- 分类过滤统一走 TabBar（下划线） -->
+				<div class="mt-3">
+					<TabBar items={FILTER_TABS.map((t) => ({ id: t.id, label: t.label }))} value={filter} onChange={(id) => (filter = id)} />
 				</div>
 			{/snippet}
 		</PageHeader>

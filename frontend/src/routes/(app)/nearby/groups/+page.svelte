@@ -7,7 +7,7 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
-	import TagPill from '@/components/forms/TagPill.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import GroupCard from './shared/GroupCard.svelte';
@@ -129,10 +129,9 @@
 				<div class="mt-3">
 					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" class="px-4 py-2.5 rounded-md" />
 				</div>
-				<div class="flex gap-1.5 overflow-x-auto no-scrollbar mt-3">
-					{#each CATEGORIES as category}
-						<TagPill active={activeCategory === category} onClick={() => (activeCategory = category)}>{category}</TagPill>
-					{/each}
+				<!-- 分类过滤统一走 TabBar（下划线） -->
+				<div class="mt-3">
+					<TabBar items={CATEGORIES.map((c) => ({ id: c, label: c }))} value={activeCategory} onChange={(id) => (activeCategory = id)} />
 				</div>
 			{/snippet}
 		</PageHeader>

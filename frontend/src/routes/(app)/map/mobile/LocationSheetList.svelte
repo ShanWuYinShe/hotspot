@@ -5,6 +5,7 @@
 	import { HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { PIN_COLORS, PIN_LABELS, PIN_TONES } from '../shared/location-shared';
 import PinMedia from '../shared/PinMedia.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
 
 	// 移动端地图「底部 Sheet 列表内容」：搜索建议 / 选中图钉 mini-card / Tab / 最近·热门列表。
 	// 页面私有组件（colocate），由 map/LocationMobile.svelte 渲染（仅 snap !== 'min' 时显示）。
@@ -81,23 +82,17 @@ import PinMedia from '../shared/PinMedia.svelte';
 			</div>
 		{/if}
 
-		<!-- Tab row -->
+		<!-- Tab row：统一 TabBar（下划线） -->
 		<div class="flex items-center gap-2 px-4 pb-2">
-			{#each [
-				{ id: 'recent', label: '最近使用', icon: Clock },
-				{ id: 'hot', label: '热门地点', icon: Star }
-			] as tab}
-				<button
-					type="button"
-					class="hover-btn flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm focus-ring {activeTab === tab.id
-						? 'bg-accent-default text-text-on-accent shadow-glow-sm'
-						: 'border border-border-default bg-surface-primary text-text-secondary'}"
-					onclick={() => (activeTab = tab.id as 'recent' | 'hot')}
-				>
-					<tab.icon class="size-3"  strokeWidth={activeTab === tab.id ? 2.5 : 1.5} />
-					{tab.label}
-				</button>
-			{/each}
+			<TabBar
+				items={[
+					{ id: 'recent', label: '最近使用', icon: Clock },
+					{ id: 'hot', label: '热门地点', icon: Star }
+				]}
+				value={activeTab}
+				onChange={(id) => (activeTab = id as 'recent' | 'hot')}
+				class="flex-1"
+			/>
 			{#if activeTab === 'recent' && recentItems.length > 0}
 				<button type="button" class="hover-btn ml-auto focus-ring text-text-secondary text-xs" onclick={() => (recentItems = [])}>
 					清空

@@ -7,7 +7,7 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
-	import TagPill from '@/components/forms/TagPill.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import UserCard, { type NearbyUser } from './UserCard.svelte';
@@ -131,24 +131,10 @@
 					<div class="mt-3">
 						<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索昵称、兴趣或此刻状态" class="px-4 py-2.5 rounded-md" />
 					</div>
-					<div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 mt-3">
-						<div class="flex items-center gap-1 p-1 rounded-full input-surface w-fit">
-							{#each SORT_OPTIONS as option}
-								<button
-									type="button"
-									onclick={() => (sort = option)}
-									aria-pressed={sort === option}
-									class="px-3.5 py-1 rounded-full outline-none transition-colors text-xs focus-visible:ring-2 focus-visible:ring-accent-default {sort === option ? 'bg-accent-default text-text-on-accent font-semibold' : 'text-text-secondary'}"
-								>
-									{option}
-								</button>
-							{/each}
-						</div>
-						<div class="flex gap-1.5 overflow-x-auto no-scrollbar">
-							{#each FILTER_TAGS as tag}
-								<TagPill active={tagFilter === tag} onClick={() => (tagFilter = tag)} size="md">{tag}</TagPill>
-							{/each}
-						</div>
+					<div class="flex flex-col gap-3 mt-3">
+						<!-- 排序/标签过滤统一走 TabBar（下划线，全站唯一 Tab 样式） -->
+						<TabBar items={SORT_OPTIONS.map((o) => ({ id: o, label: o }))} value={sort} onChange={(id) => (sort = id)} />
+						<TabBar items={FILTER_TAGS.map((t) => ({ id: t, label: t }))} value={tagFilter} onChange={(id) => (tagFilter = id)} />
 					</div>
 				{/snippet}
 			</PageHeader>

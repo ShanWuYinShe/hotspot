@@ -4,6 +4,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import MetricRow, { type MetricItem } from '@/components/data-display/MetricRow.svelte';
+	import TagPill from '@/components/forms/TagPill.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
 
 	// ProfileUserSection — 个人主页用户列表分区骨架（好友/关注/粉丝三 Section 共用）。
@@ -95,16 +96,13 @@
 		<div class="flex gap-1.5 pt-3 pb-3">
 			{#each filters as pill}
 				{@const active = filterValue === pill.id}
-				<button
-					type="button"
-					class="hover-btn surface-ghost tap-92 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs focus-ring {active ? 'border-accent-border bg-accent-soft font-medium text-accent-default' : 'text-text-secondary'}"
-					onclick={() => onFilter?.(pill.id)}
+				<TagPill
+					active={active}
+					icon={pill.icon}
+					onClick={() => onFilter?.(pill.id)}
 				>
-					{#if pill.icon}
-						<pill.icon class="size-3"  strokeWidth={active ? 2 : 1.5} />
-					{/if}
 					{pill.label}
-				</button>
+				</TagPill>
 			{/each}
 		</div>
 	{/if}

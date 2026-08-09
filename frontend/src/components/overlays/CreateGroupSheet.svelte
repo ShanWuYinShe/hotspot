@@ -4,6 +4,7 @@
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import Toggle from '@/components/forms/Toggle.svelte';
+	import TagPill from '@/components/forms/TagPill.svelte';
 	import SheetShell from '@/components/overlays/SheetShell.svelte';
 
 	// CreateGroupSheet — 创建群组的底部 Sheet / 模态。
@@ -147,15 +148,9 @@
 				<legend class="text-xs tracking-field uppercase text-text-secondary">分类</legend>
 				<div class="flex flex-wrap gap-2 mt-2">
 					{#each CATEGORIES as cat}
-						<button
-							type="button"
-							onclick={() => (category = cat)}
-							class="hover-btn rounded-full px-3.5 py-1.5 text-sm focus-ring {category === cat
-								? 'bg-accent-default text-text-on-accent font-medium shadow-glow-sm'
-								: 'border border-border-default bg-surface-primary text-text-secondary shadow-raised-sm'}"
-						>
+						<TagPill active={category === cat} onClick={() => (category = cat)}>
 							{cat}
-						</button>
+						</TagPill>
 					{/each}
 				</div>
 			</fieldset>

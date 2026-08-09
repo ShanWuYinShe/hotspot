@@ -3,6 +3,7 @@
 	import type { Component } from 'svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import TagPill from '@/components/forms/TagPill.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { createMoment } from '@/api';
@@ -214,16 +215,9 @@
 				<div class="flex flex-wrap gap-2">
 					{#each MOOD_TAGS as tag}
 						{@const active = selectedMoods.has(tag)}
-						<button
-							type="button"
-							onclick={() => toggleMood(tag)}
-							aria-pressed={active}
-							class="rounded-full border px-3 py-1.5 text-sm outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default {active
-								? 'border-accent-border bg-accent-soft font-medium text-accent-default hover:border-accent-default hover:bg-interactive-active'
-								: 'border-border-default bg-transparent text-text-secondary hover:border-border-strong hover:text-text-primary'}"
-						>
+						<TagPill active={active} onClick={() => toggleMood(tag)}>
 							{tag}
-						</button>
+						</TagPill>
 					{/each}
 				</div>
 			</section>

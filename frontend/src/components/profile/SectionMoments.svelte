@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { Heart, MessageCircle, CalendarDays, ArrowUpRight, Grid3X3 } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
 	import { openComposer } from '@/stores/composer.svelte';
 	import { useGalleryMoments, useReactedMoments, useFavoriteMoments, type GalleryMoment } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -74,21 +75,10 @@
 					</div>
 				</div>
 
-				<!-- pill tab（对齐 Figma：rounded-full border accent-soft 容器，active=surface-primary+shadow；
-				     与 TabBar 一致用 aria-pressed 切换语义，避免同类控件两套 role） -->
+				<!-- 分类 Tab 统一走 TabBar（下划线） -->
 				<div class="mt-6 flex flex-wrap items-center justify-between gap-3">
-					<div class="flex rounded-full border border-border-default bg-accent-soft p-1" aria-label="瞬间分类">
-						{#each tabItems as item (item.id)}
-							{@const isActive = item.id === activeTab}
-							<button
-								type="button"
-								aria-pressed={isActive}
-								onclick={() => (activeTab = item.id)}
-								class="rounded-full px-3.5 py-2 text-xs transition-colors {isActive ? 'bg-surface-primary text-text-primary shadow-raised-sm' : 'text-text-secondary hover:text-text-primary'}"
-							>
-								{item.label}<span class="ml-1.5 font-mono text-xxs opacity-70">{item.count}</span>
-							</button>
-						{/each}
+					<div class="min-w-0 flex-1" aria-label="瞬间分类">
+						<TabBar items={tabItems.map((t) => ({ id: t.id, label: t.label, count: t.count }))} value={activeTab} onChange={(id) => (activeTab = id as Tab)} />
 					</div>
 					<div class="flex items-center gap-1.5 text-xs text-text-secondary">
 						<CalendarDays class="size-3.5 text-accent-default" strokeWidth={1.75} />
