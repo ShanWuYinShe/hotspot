@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Search, MapPin, X, SlidersHorizontal, Crosshair, ArrowLeft } from '@lucide/svelte';
+	import { Search, MapPin, X, SlidersHorizontal, Crosshair, Check, ArrowLeft } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import * as Popover from '@/components/ui/popover';
