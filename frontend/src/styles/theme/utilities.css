@@ -55,7 +55,7 @@
   /*── Input surfaces ──────────────────────────────────────────────── */
 
   /* .input-surface 完整定义在下方「Input color-mix overrides」节（对齐 Figma Make：
-     focus 为中性内凹凹陷 + border-pressed，不用 accent 高亮环）。 */
+     focus 为 accent 描边 + 淡 accent 底色，整框高亮）。 */
 
   .icon-badge {
     background-color: var(--cst-surface-primary);
@@ -218,7 +218,7 @@
   /*── Input color-mix overrides ─────────────────────────────────── */
 
   /* .input-surface 唯一定义：浅色混合底 + 内凹 1px 描边（对齐 Figma Make，
-     focus 为中性内凹凹陷 + border-pressed，不用 accent 高亮环）。
+     focus 为 accent 描边 + 淡 accent 底色，无外环/内凹）。
      !important 压过组件上的 Tailwind bg-* 类。 */
 
   .input-surface {
@@ -235,7 +235,7 @@
   }
 
   /* 内层输入控件不画自身焦点框：input-surface:focus-within 已是整框焦点态
-     （加粗描边 + 内凹阴影），避免聚焦时在容器内再出现尺寸不一致的矩形 outline。 */
+     （accent 描边 + 淡底色），避免聚焦时在容器内再出现尺寸不一致的矩形 outline。 */
   .input-surface:focus-visible,
   .input-surface input:focus-visible,
   .input-surface textarea:focus-visible {
