@@ -98,6 +98,17 @@ bun run --cwd frontend build   # adapter-static 产物输出到 build/
   `(app)` 组外层已提供 skip link（`#main-content`），路由内容滚动区
   `RoutedContentViewport` 的 `<main id="main-content">` 不得移除
 
+## UI 设计原则（用户硬性要求）
+
+1. **好看**：效果克制、有节奏，不堆叠效果，不用生硬或突兀的视觉。
+2. **交互状态一眼可辨**：hover / focus / active / disabled 四态都必须有明确可感知的
+   差异，且差异长在元素本体上（变色、描边、内凹、缩放、投影），禁止「元素外再画一圈」。
+3. **风格统一**：复用既有原语（SearchInput、input-surface、card-hover、
+   image-hover-frame、focus-ring、hover-btn/scale-btn/tap-*、TabBar、ListItem…）
+   与 design token，禁止每页自造交互样式。
+
+> 具体状态契约见「样式自查清单 → 交互状态契约」。
+
 ## 路由系统
 
 基于 SvelteKit 文件路由（SPA fallback 服务一切路径，动态路由无需占位枚举）：
@@ -340,38 +351,6 @@ theme/
 - 主题专属组件覆盖（`.vibrant .foo` / `.forest .foo`）统一放对应 themes/*.css 的
   `@layer utilities` 块，utilities.css 只保留与主题无关的通用类
 
-## UI 设计原则与交互状态契约
-
-> 用户硬性要求：**好看、交互效果一眼可辨、风格统一**。任何样式改动必须同时满足，
-> 不满足这三条不得合入。
-
-1. 好看：状态差异克制但有节奏，不堆叠效果、不用突兀视觉。
-2. 一眼可辨：hover / focus / active / disabled 四态都要有明确可感知的差异，
-   且差异长在元素本体上（变色、描边、内凹、缩放、投影），禁止用「元素外再画一圈」
-   表达状态。
-3. 风格统一：复用既有原语（SearchInput、input-surface、card-hover、
-   image-hover-frame、focus-ring、hover-btn/scale-btn/tap-*、TabBar、ListItem…）
-   与 design token，禁止每页自造交互样式。
-
-### 交互状态契约（现状即规范，改动前先对齐）
-
-| 元素 | hover | focus / active |
-|------|-------|----------------|
-| 输入框（input-surface） | — | 边框加深（border-strong）+ 内缘 1px 加深线 + 内凹阴影（`--shadow-inset-sm`），底色保持中性 |
-| 图片卡（image-hover-frame） | 内嵌 accent 2px 描边 + 图片缩放 1.045（仅 fine pointer） | — |
-| 带边框卡片（card-hover） | 边框变 accent（`hover:border-accent-default`）或投影抬升，不额外画外环 | — |
-| 可交互 surface-flat | 描边加深（border-strong） | — |
-| 弹层 / 下拉菜单 | 无描边环 | — |
-
-硬性规则：
-- 输入框聚焦态由整框承载：内层 input/textarea 不画自身焦点框
-  （utilities.css `.input-surface:focus-visible` 统一压制）；底色保持中性，不引入
-  accent 色，避免与错误态等 accent 元素抢视觉。
-- 禁止双重边框：高亮与元素自带边框不得叠加成两圈。card-hover 只抬投影不画外环；
-  带边框的卡片 hover 用边框变 accent；surface-flat 的 hover 描边仅对可交互元素生效。
-- 图片缩放必须由外层 `overflow-hidden` + 圆角裁剪，图片任何像素不得溢出卡片。
-- 弹层/下拉菜单用 `elevation-menu` 投影表达层级，不依赖描边环。
-
 ## 样式自查清单（新增/修改样式后逐条过）
 
 > **核心原则：少档位 + 强制收敛**。设计系统的价值在约束而非自由——档位要少、
@@ -408,7 +387,9 @@ theme/
 6. **token 注册**：新 token 若需类名消费，同步补 `theme-registry.css` 注册，
    并核对类名不带 `cst-` 前缀（`text-text-on-status` 而非 `text-cst-...`）
 7. **hover/tap 类**：交互反馈用既有工具类（`hover-btn`/`hover-bg`/`scale-btn`/
-   `tap-*`/`header-action`/`surface-ghost`/`card-hover`），不新发明交互类
+   `tap-*`/`header-action`/`surface-ghost`/`card-hover`），不新发明交互类；
+   状态差异必须一眼可辨，且禁止双重边框（高亮与元素自带边框不得叠成两圈），
+   具体契约见本节末尾「交互状态契约」
 8. **字距（强制）**：字距一律用 `tracking-*` 刻度类，禁止 `tracking-[Nem]` arbitrary
    类与内联 `letter-spacing:Nem`：
    - `tracking-eyebrow`=0.14em：uppercase 分组标签（外观/通知/通用 section 标、
@@ -435,7 +416,8 @@ theme/
     - **accent 光晕**（accent 实色背景发光）：`shadow-glow-sm/md/lg`（3 档：
       sm=0/3/10、md=0/4/14、lg=0/6/18）
     - **Material 单向/弹层投影**：`var(--cst-elevation-card)`/`-button`/`-modal`/`-sheet`/`-menu`
-      （语义 token，themes/{vibrant,forest}.css 各自定义真值）
+      （语义 token，themes/{vibrant,forest}.css 各自定义真值）；弹层/下拉菜单用
+      投影表达层级，不依赖描边环
     **地图标记光晕**：结构 token `var(--cst-marker-shadow)`（0 2px 10px 定位点）/
     `var(--cst-marker-halo)`（0 0 8px 小光点），色值由调用方按 marker tone 提供
     （`var(--cst-marker-*-glow)`），定义于 shared.css——禁止组件内联手抄偏移量
@@ -506,3 +488,21 @@ theme/
       语义，**不套全站 token**——它们在各自 `position:relative` 容器内独立成层，
       与全站 z-index 刻度无语义对应。地图组件内部的 `z-index:0~50` 内联属此类
       （地图外层 `overflow:hidden` 形成独立 stacking context）
+
+### 交互状态契约（现状即规范，改动前先对齐）
+
+| 元素 | hover | focus / active |
+|------|-------|----------------|
+| 输入框（input-surface） | — | 边框加深（border-strong）+ 内缘 1px 加深线 + 内凹阴影（`--shadow-inset-sm`），底色保持中性 |
+| 图片卡（image-hover-frame） | 内嵌 accent 2px 描边 + 图片缩放 1.045（仅 fine pointer） | — |
+| 带边框卡片（card-hover） | 边框变 accent（`hover:border-accent-default`）或投影抬升，不画外环 | — |
+| 可交互 surface-flat | 描边加深（border-strong） | — |
+| 弹层 / 下拉菜单 | 无描边环，层级靠 elevation-menu 投影 | — |
+
+硬性规则：
+- 输入框聚焦态由整框承载：内层 input/textarea 不画自身焦点框
+  （utilities.css `.input-surface:focus-visible` 统一压制，与第 18 条焦点可见性配合）；
+  底色保持中性，不引入 accent 色，避免与错误态等 accent 元素抢视觉。
+- 禁止双重边框：card-hover 只抬投影不画外环；带边框的卡片 hover 用
+  `hover:border-accent-default`；surface-flat 的 hover 描边仅对可交互元素生效。
+- 图片缩放必须由外层 `overflow-hidden` + 圆角裁剪，图片任何像素不得溢出卡片。
