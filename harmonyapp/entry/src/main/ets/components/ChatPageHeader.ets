@@ -94,7 +94,7 @@ export struct ChatPageHeader {
     .width('100%')
     .margin({ bottom: DesignConstants.SPACING.XS })
     .shadow(this.getPalette().elevatedShadow)
-    .border({ width: 1, color: ChatThemeManager.current().titleBarBorder })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: ChatThemeManager.current().titleBarBorder })
     .borderRadius(DesignConstants.RADIUS.XL)
     .zIndex(1)
     .onTouch((event: TouchEvent) => {

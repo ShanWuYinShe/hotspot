@@ -18,9 +18,9 @@
  */
 
 import { HomePage } from '../../features/home/pages/HomePage';
-import { MomentsFeedPage } from '../../features/moment/pages/MomentsFeedPage';
 import { MessagePage } from '../../features/message/pages/MessagePage';
 import { ProfilePage } from '../../features/profile/pages/ProfilePage';
+import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
 import { LoginPromptView } from '../LoginPromptView';
 import { NotificationCenter } from '../NotificationCenter';
 import { NotificationBanner } from '../NotificationBanner';
@@ -42,7 +42,7 @@ interface TabItem {
 
 const TAB_ITEMS: TabItem[] = [
   { label: '首页', symbolId: $r('sys.symbol.house') },
-  { label: '发现', symbolId: $r('sys.symbol.compass') },
+  { label: '附近', symbolId: $r('sys.symbol.compass') },
   { label: '发布', symbolId: $r('sys.symbol.plus') },
   { label: '消息', symbolId: $r('sys.symbol.message') },
   { label: '我的', symbolId: $r('sys.symbol.person') }
@@ -101,7 +101,7 @@ export struct PhoneLayout {
         // 主体：Tabs + 5 TabContent（Nearby / Discover / Create / Message / Profile）
         Tabs({ barPosition: BarPosition.End, controller: this.tabsController, index: this.currentTabIndex }) {
           TabContent() { HomePage() }.tabBar(this.TabBarBuilder(0))
-          TabContent() { MomentsFeedPage() }.tabBar(this.TabBarBuilder(1))
+          TabContent() { NearbyPage() }.tabBar(this.TabBarBuilder(1))
           TabContent() { Column() {} }.tabBar(this.CreateTabBuilder())
           TabContent() {
             if (this.isLoggedIn) {
@@ -260,7 +260,7 @@ export struct PhoneLayout {
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.getPalette().tabBarBackground)
       .backgroundBlurStyle(BlurStyle.Thin)
-      .border({ width: 1, color: this.getPalette().floatingBorderColor })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
       .shadow(this.getPalette().elevatedShadow)
     }
     .width('100%')

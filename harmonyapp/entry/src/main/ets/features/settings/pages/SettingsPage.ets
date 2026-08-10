@@ -398,7 +398,7 @@ export struct SettingsPage {
                   .type(ButtonType.Normal)
                   .borderRadius(DesignConstants.SHAPE.BUTTON)
                   .shadow(this.getCurrentThemePalette().controlShadow)
-                  .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+                  .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
                   .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.XXL })
                   .onClick(() => { this.logout(); })
               }
@@ -495,7 +495,7 @@ export struct SettingsPage {
               .height(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).heroAvatarSize)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
-              .border({ width: 1, color: this.getThemeOptionPalette(option).borderColor })
+              .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getThemeOptionPalette(option).borderColor })
               .shadow(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).haloShadow)
 
             Blank()

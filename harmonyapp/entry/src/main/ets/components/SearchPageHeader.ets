@@ -60,7 +60,7 @@ export struct SearchPageHeader {
       .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .backgroundColor(this.getSurfaceBackground())
       .shadow(this.getPalette().surfaceShadow)
-      .border({ width: 1, color: this.getSurfaceBorder() })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
       .scale(this.isBackPressed
         ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON }
         : { x: 1, y: 1 })
@@ -127,7 +127,7 @@ export struct SearchPageHeader {
       .borderRadius(DesignConstants.SHAPE.INPUT)
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
       .backgroundColor(this.getSurfaceBackground())
-      .border({ width: 1, color: this.isFocused ? this.getPalette().accentText : this.getSurfaceBorder() })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.isFocused ? this.getPalette().accentText : this.getSurfaceBorder() })
       .shadow(this.isFocused ? this.getPalette().accentShadow : this.getPalette().surfaceShadow)
     }
     .width('100%')
@@ -138,7 +138,7 @@ export struct SearchPageHeader {
       bottom: DesignConstants.SPACING.SM
     })
     .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-    .border({ width: { bottom: 1 }, color: this.getSurfaceBorder() })
+    .border({ width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }
 }

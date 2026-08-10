@@ -649,7 +649,7 @@ export struct GroupPage {
           .backgroundColor(this.getCurrentThemePalette().accentBackground)
           .fontColor(this.getCurrentThemePalette().accentText)
           .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .height(DesignConstants.COMPONENT.INLINE_BUTTON_HEIGHT)
           .layoutWeight(1)
           .enabled(!this.isInviteHandling(invite.invite_id))
@@ -661,7 +661,7 @@ export struct GroupPage {
           .backgroundColor(this.getSurfaceSubtle())
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .height(DesignConstants.COMPONENT.INLINE_BUTTON_HEIGHT)
           .layoutWeight(1)
           .enabled(!this.isInviteHandling(invite.invite_id))
@@ -675,7 +675,7 @@ export struct GroupPage {
     .borderRadius(AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).borderRadius)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .backgroundColor(this.getSurfaceBackground())
-    .border({ width: 1, color: this.getSurfaceBorder() })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     .margin({ bottom: DesignConstants.SPACING.MD })
   }
 
@@ -772,7 +772,7 @@ export struct GroupPage {
           .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
           .height(DesignConstants.COMPONENT.INLINE_BUTTON_HEIGHT)
           .layoutWeight(1)
           .enabled(!this.isApplicationHandling(application.application_id))
@@ -786,7 +786,7 @@ export struct GroupPage {
     .borderRadius(AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).borderRadius)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-    .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
     .margin({ bottom: DesignConstants.SPACING.MD })
   }
 
@@ -866,7 +866,7 @@ export struct GroupPage {
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
         .shadow(this.getCurrentThemePalette().controlShadow)
-        .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
         .enabled(!this.isGroupJoining(group.group.group_id))
         .opacity(this.isGroupJoining(group.group.group_id) ? DesignConstants.OPACITY.LOADING : 1)
         .onClick(() => this.joinGroup(group))

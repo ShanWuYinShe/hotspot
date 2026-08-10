@@ -197,6 +197,17 @@ export interface OpacitySystem {
   EMPHASIZED: number;
 }
 
+export interface BorderWidthSystem {
+  /** 1vp 细线（默认边框，对齐前端 hairline） */
+  HAIRLINE: number;
+  /** 1.5vp 常规描边（头像/选中环，对齐前端 regular） */
+  REGULAR: number;
+  /** 2vp 强调边框（徽章/强分隔，对齐前端 strong） */
+  STRONG: number;
+  /** 3vp 重边框（头像环/定位点，对齐前端 heavy） */
+  HEAVY: number;
+}
+
 // ==================== 组件特定常量接口 ====================
 export interface AvatarSizes {
   XS: number;
@@ -387,6 +398,7 @@ export interface DesignConstantsType {
   COMPONENT: ComponentConstants;
   CHAT: ChatLayoutConstants;
   OPACITY: OpacitySystem;
+  BORDER_WIDTH: BorderWidthSystem;
   LAYOUT: LayoutSystem;
   PAGE_SHELL: PageShellSystem;
 }
@@ -725,6 +737,14 @@ const OPACITY: OpacitySystem = {
   EMPHASIZED: 0.8,
 };
 
+// ==================== 边框宽度系统（对齐前端 --cst-border-width-* 档位）====================
+const BORDER_WIDTH: BorderWidthSystem = {
+  HAIRLINE: 1,
+  REGULAR: 1.5,
+  STRONG: 2,
+  HEAVY: 3,
+};
+
 export const DesignConstants: DesignConstantsType = {
   COLOR,
   FONT,
@@ -738,6 +758,7 @@ export const DesignConstants: DesignConstantsType = {
   COMPONENT,
   CHAT,
   OPACITY,
+  BORDER_WIDTH,
   LAYOUT,
   PAGE_SHELL,
 };

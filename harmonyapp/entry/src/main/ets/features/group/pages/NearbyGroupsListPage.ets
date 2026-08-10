@@ -243,7 +243,7 @@ export struct NearbyGroupsListPage {
         .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
         .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
         .borderRadius(DesignConstants.SHAPE.INPUT)
-        .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
 
         // 分类 chips（对齐前端 filter categories）
         Row({ space: DesignConstants.SPACING.SM }) {
@@ -299,7 +299,7 @@ export struct NearbyGroupsListPage {
           .padding(DesignConstants.SPACING.MD)
           .borderRadius(DesignConstants.SHAPE.CARD)
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-          .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
         }
 

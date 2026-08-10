@@ -72,6 +72,7 @@ export interface PageNamesType {
   PROFILE_EDIT: string;
   NEARBY_USERS: string;
   NEARBY_GROUPS: string;
+  NEARBY: string;
   ADMIN_OVERVIEW: string;
 }
 
@@ -104,6 +105,7 @@ export const PageNames: PageNamesType = {
   PROFILE_EDIT: 'ProfileEditPage',
   NEARBY_USERS: 'NearbyUsersListPage',
   NEARBY_GROUPS: 'NearbyGroupsListPage',
+  NEARBY: 'NearbyPage',
   ADMIN_OVERVIEW: 'AdminOverviewPage'
 };
 

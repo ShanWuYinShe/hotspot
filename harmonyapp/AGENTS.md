@@ -132,6 +132,9 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 
 间距（SPACING，4px 网格 + 微步）：`HALF 2` / `THREE 3` / `XS 4` / `SM2 6` / `SM 8` / `MD2 10` / `MD 12` / `MD3 14` / `LG 16` / `LG2 20` / `XL 24` / `XXL 32`。禁止组件内 `padding({left:16})` 这类裸数——用 `SPACING.LG`。1vp 级微距（top:1 等）与 0 值允许保留（对齐前端间距不强制收敛原则）。
 
+边框宽度（BORDER_WIDTH，对齐前端 `--cst-border-width-*`）：`HAIRLINE 1` / `REGULAR 1.5` /
+`STRONG 2` / `HEAVY 3`。禁止 `.border({ width: 1 })` 裸数，一律 `DesignConstants.BORDER_WIDTH.*`。
+
 圆角（RADIUS / SHAPE）：`SM 8` / `MD 12` / `LG 16` / `XL 18` / `XXL 22` / `FULL 999`（HarmonyOS vp 适配档，非前端逐像素复制——前端为 12/16/20/24 四档收敛 + sheet 28）。语义形状 `SHAPE.{CARD 22, HERO_CARD 24, COMPACT_CARD 18, PREVIEW_CARD 22, LIST_ITEM 22, ICON_TILE 12, INPUT 18, BUTTON 28, CHIP FULL, TAB_BAR 24, SHEET_TOP_RADIUS 20}`，按前端语义用法对齐（hero/feature 24、主按钮 28、胶囊 chip FULL）。
 
 动效（ANIMATION，禁用裸 `duration: N`）：`DURATION_SHORT 200` / `DURATION_MEDIUM 300` / `DURATION_CONTENT_SWITCH 400` / `DURATION_SHEET 320`（底部弹层统一）/ `DURATION_250` / `DURATION_280` / `DURATION_FAST 150` / `DURATION_INSTANT 100` / `DURATION_SLOW 1500`（脉冲/shimmer）/ `DURATION_STAGGER_DELAY 150`；曲线 `CURVE_EASE_IN_OUT` / `CURVE_EASE_OUT` / `CURVE_FAST_OUT_SLOW_IN` / `CURVE_SMOOTH`。Toast/震动等行为时长保留字面量并注释（非视觉 token 范畴）。
@@ -169,6 +172,19 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 | `routes/moments/shared/MomentCard` | `MomentFeedCard` | 动态卡片 |
 | `auth/LoginPromptSheet` | `LoginPromptView` | 未登录引导 |
 | `messages/ChatView` 等 | `ChatPage` / `ChatPageHeader` | 聊天界面 |
+| `routes/(app)/nearby/+page.svelte`（附近聚合） | `features/nearby/pages/NearbyPage` | 附近聚合页（搜索 + 人/群组/动态三区块），手机/平板底栏「附近」tab |
+
+### 页面路由对齐（web → harmony）
+
+- 底栏 4 tab：首页 / 附近 / 消息 / 我的（`PhoneLayout` TAB_ITEMS + `AppNavigation.BOTTOM_TABS`，
+  与前端 `routes/(app)/+page.svelte`、`/nearby` 聚合页对齐）。
+- 桌面侧边栏：首页 / 附近瞬间（moments tab）/ 附近的人 / 附近群组 + 消息 / 通知 overlay /
+  我的瞬间 / 我的群组 / 关系（对齐前端 desktop nav 的 home / nearby-moments /
+  nearby-people / nearby-groups / messages / notifications / moments / my-groups /
+  relationships）。
+- 消息列表：排序 = 置顶优先 → 最新一条消息时间倒序（`last_message.sent_at` 优先，
+  回退 `last_activity_at`），已读/未读不参与排序；列表头部有「全部 / 未读 / 已读」过滤
+  （`TabsPillGroup`，对齐前端 messages 页 TabBar）；点击未读会话后徽章立即清零。
 
 透明度（OPACITY）：`DISABLED 0.38` / `PRESSED 0.72` / `LOADING 0.58` / `SUBTLE 0.85` / `FADED 0.4` / `MUTED 0.5` / `EMPHASIZED 0.8`（对齐前端 opacity-40/50/80 标准档）。
 

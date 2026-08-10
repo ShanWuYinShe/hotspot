@@ -175,7 +175,7 @@ struct AdminOverviewPage {
     .padding(DesignConstants.SPACING.LG)
     .backgroundColor(this.getPalette().surfaceBackground)
     .borderRadius(DesignConstants.SHAPE.CARD)
-    .border({ width: 1, color: this.getPalette().borderColor })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .alignItems(VerticalAlign.Center)
   }
 
@@ -236,7 +236,7 @@ struct AdminOverviewPage {
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getPalette().surfaceBackground)
     .borderRadius(DesignConstants.SHAPE.CARD)
-    .border({ width: 1, color: this.getPalette().borderColor })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .alignItems(VerticalAlign.Center)
     .onClick(() => {
       SystemToast.showWarning(`「${m.title}」请在 Web 管理后台完成`, this.getUIContext());

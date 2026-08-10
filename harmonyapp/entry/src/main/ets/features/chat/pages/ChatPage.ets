@@ -1221,7 +1221,7 @@ export struct ChatPage {
         .backgroundColor(this.getChatTheme().inputFieldBg)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .shadow(this.getChatVisualStyle().input.shadow)
-        .border({ width: 1, color: this.getChatTheme().inputBorder })
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getChatTheme().inputBorder })
         .margin({ right: DesignConstants.SPACING.SM })
         .onClick(() => this.pickAttachment())
 
@@ -1232,7 +1232,7 @@ export struct ChatPage {
           .backgroundColor(this.getChatTheme().inputFieldBg)
           .placeholderColor(this.getCurrentThemePalette().textTertiary)
           .borderRadius(this.getChatVisualStyle().input.borderRadius)
-          .border({ width: 1, color: AppThemeVisuals.resolveInputBorder(this.getChatVisualStyle().input, this.isInputFocused, false, this.resolvedThemeId).borderColor })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: AppThemeVisuals.resolveInputBorder(this.getChatVisualStyle().input, this.isInputFocused, false, this.resolvedThemeId).borderColor })
           .shadow(AppThemeVisuals.resolveInputBorder(this.getChatVisualStyle().input, this.isInputFocused, false, this.resolvedThemeId).shadow)
           .padding({ left: this.getChatVisualStyle().input.horizontalPadding, right: this.getChatVisualStyle().input.horizontalPadding })
           .onChange((value) => {
@@ -1266,7 +1266,7 @@ export struct ChatPage {
           .height(this.getChatVisualStyle().sendButton.height)
           .borderRadius(this.getChatVisualStyle().sendButton.borderRadius)
           .shadow(this.getChatVisualStyle().sendButton.shadow)
-          .border({ width: 1, color: this.getChatTheme().inputBorder })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getChatTheme().inputBorder })
           .padding({ left: this.getChatVisualStyle().sendButton.horizontalPadding, right: this.getChatVisualStyle().sendButton.horizontalPadding })
           .margin({ left: DesignConstants.SPACING.MD })
           .opacity(this.isSending || this.inputText.trim().length === 0 || this.isGroupServerMuted ? DesignConstants.OPACITY.PRESSED : 1)
@@ -1282,7 +1282,7 @@ export struct ChatPage {
       })
       .backgroundColor(this.getChatTheme().inputBarBg)
       .shadow(this.getCurrentThemePalette().elevatedShadow)
-      .border({ width: { top: 1 }, color: this.getChatTheme().inputBorder })
+      .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getChatTheme().inputBorder })
       .borderRadius({
         topLeft: this.getChatVisualStyle().composerRadius,
         topRight: this.getChatVisualStyle().composerRadius
@@ -1347,7 +1347,7 @@ export struct ChatPage {
           .backgroundColor(this.getSurfaceSubtle())
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .borderRadius(DesignConstants.RADIUS.FULL)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .onClick(() => {
             this.showConversationActionsSheet = false;
             const profileParam = new ProfileRouteParam();
@@ -1363,7 +1363,7 @@ export struct ChatPage {
         .backgroundColor(this.getSurfaceSubtle())
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: 1, color: this.getSurfaceBorder() })
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
         .onClick(() => {
           this.isMuted = !this.isMuted;
           SystemToast.show(this.isMuted ? '已静音' : '已取消静音', this.getUIContext());
@@ -1376,7 +1376,7 @@ export struct ChatPage {
         .backgroundColor(this.getSurfaceSubtle())
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: 1, color: this.getSurfaceBorder() })
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
         .onClick(() => {
           this.scrollToBottom();
           this.showConversationActionsSheet = false;
@@ -1389,7 +1389,7 @@ export struct ChatPage {
         .backgroundColor(this.getSurfaceSubtle())
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: 1, color: this.getSurfaceBorder() })
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
         .onClick(() => {
           this.inputText = '';
           this.showConversationActionsSheet = false;
@@ -1404,7 +1404,7 @@ export struct ChatPage {
         .backgroundColor(this.getSurfaceSubtle())
         .fontColor(this.getCurrentThemePalette().error)
         .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: 1, color: this.getSurfaceBorder() })
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
         .onClick(() => {
           this.showConversationActionsSheet = false;
           const reportReq: CreateReportRequest = {
@@ -1427,7 +1427,7 @@ export struct ChatPage {
         .backgroundColor(this.getSurfaceBackground())
         .fontColor(this.getAccentBackground())
         .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: 1, color: this.getSurfaceBorder() })
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
         .onClick(() => {
           this.showConversationActionsSheet = false;
         })
@@ -1474,7 +1474,7 @@ export struct ChatPage {
           })
           .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
           .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: 1, color: this.getChatTheme().divider })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getChatTheme().divider })
       }
       .width('100%')
       .justifyContent(FlexAlign.Center)
@@ -1506,7 +1506,7 @@ export struct ChatPage {
                 .backgroundColor(this.getChatTheme().listBackground)
                 .borderRadius(this.getBubbleRadius(msg.isSelf))
                 .shadow(this.getCurrentThemePalette().controlShadow)
-                .border({ width: 1, color: this.getChatTheme().divider })
+                .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getChatTheme().divider })
                 .margin(DesignConstants.SPACING.XS)
                 .accessibilityText('[图片消息]')
             } else {

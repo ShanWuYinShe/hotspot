@@ -431,7 +431,7 @@ export struct MomentDetailPage {
       .layoutWeight(1)
       .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
       .shadow(this.getCurrentThemePalette().controlShadow)
-      .border({ width: 1, color: this.getSurfaceBorder() })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
       .enabled(!this.likePending)
       .opacity(this.likePending ? DesignConstants.OPACITY.LOADING : 1)
       .backgroundColor(this.getSurfaceSubtle())
@@ -455,7 +455,7 @@ export struct MomentDetailPage {
       .layoutWeight(1)
       .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
       .shadow(this.getCurrentThemePalette().controlShadow)
-      .border({ width: 1, color: this.getSurfaceBorder() })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
       .enabled(!this.favoritePending)
       .opacity(this.favoritePending ? DesignConstants.OPACITY.LOADING : 1)
       .backgroundColor(this.getSurfaceSubtle())
@@ -479,7 +479,7 @@ export struct MomentDetailPage {
       .layoutWeight(1)
       .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
       .shadow(this.getCurrentThemePalette().controlShadow)
-      .border({ width: 1, color: this.getSurfaceBorder() })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
       .backgroundColor(this.getSurfaceSubtle())
       .onClick(() => {
         this.shareMoment();
@@ -493,7 +493,7 @@ export struct MomentDetailPage {
       bottom: DesignConstants.SPACING.MD + this.safeAreaBottom
     })
     .backgroundColor(this.getSurfaceBackground())
-    .border({ width: { top: 1 }, color: this.getSurfaceBorder() })
+    .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
     .borderRadius({ topLeft: DesignConstants.RADIUS.LG, topRight: DesignConstants.RADIUS.LG })
   }
 }

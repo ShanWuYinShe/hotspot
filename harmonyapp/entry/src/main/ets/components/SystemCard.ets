@@ -273,7 +273,7 @@ export struct MasonryCard {
         .width('100%')
         .backgroundColor(this.getPalette().surfaceBackground)
         .borderRadius(this.cardRadius)
-        .border({ width: 1, color: this.getPalette().borderColor })
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
         .shadow(this.getPalette().visuals.effects.insetShadow)
       }
       .width('100%')
@@ -309,7 +309,7 @@ export struct MasonryCard {
       .backgroundColor(this.getPalette().surfaceBackground)
       .borderRadius(this.cardRadius)
       .shadow(this.getPalette().surfaceShadow)
-      .border({ width: 1, color: this.getPalette().borderColor })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
       .scale(this.clickable && this.isPressed ?
         { x: DesignConstants.INTERACTION.SCALE_PRESSED_MASONRY, y: DesignConstants.INTERACTION.SCALE_PRESSED_MASONRY } :
         { x: 1, y: 1 })

@@ -90,7 +90,7 @@ export struct NotificationBanner {
     .padding(DesignConstants.SPACING.LG)
     .backgroundColor(this.getPalette().surfaceBackground)
     .borderRadius(DesignConstants.RADIUS.XL)
-    .border({ width: 1, color: this.getPalette().borderColor })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .shadow(this.getPalette().elevatedShadow)
     .onClick(() => {
       if (this.onBannerClick) {

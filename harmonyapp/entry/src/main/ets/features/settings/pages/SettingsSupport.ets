@@ -353,7 +353,7 @@ export struct AnnouncementSummaryCard {
             .backgroundColor(this.getPalette().surfaceSubtle)
             .fontColor(this.getPalette().accentBackground)
             .borderRadius(DesignConstants.RADIUS.XL)
-            .border({ width: 1, color: this.getPalette().floatingBorderColor })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
             .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
             .onClick(this.openAll)
         }
@@ -397,7 +397,7 @@ export struct AnnouncementSummaryCard {
           .padding(DesignConstants.SPACING.MD)
           .backgroundColor(this.getPalette().surfaceElevated)
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .border({ width: 1, color: this.getPalette().floatingBorderColor })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
         }, (item: SystemAnnouncementItem) => item.announcement_id)
       }
     }
@@ -521,7 +521,7 @@ export struct SessionListSection {
             .backgroundColor(this.getPalette().surfaceSubtle)
             .fontColor(this.getPalette().accentBackground)
             .borderRadius(DesignConstants.RADIUS.XL)
-            .border({ width: 1, color: this.getPalette().floatingBorderColor })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
             .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
             .onClick(this.revokeAll)
         }
@@ -557,7 +557,7 @@ export struct SessionListSection {
                 .backgroundColor(this.getPalette().surfaceSubtle)
                 .fontColor(this.getPalette().accentBackground)
                 .borderRadius(DesignConstants.RADIUS.XL)
-                .border({ width: 1, color: this.getPalette().floatingBorderColor })
+                .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
                 .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
                 .onClick(() => this.revokeOne(item))
             } else {
@@ -573,7 +573,7 @@ export struct SessionListSection {
           .padding(DesignConstants.SPACING.MD)
           .backgroundColor(this.getPalette().surfaceElevated)
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .border({ width: 1, color: this.getPalette().floatingBorderColor })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
         }, (item: SessionItem) => item.session_id)
       }
     }
@@ -629,7 +629,7 @@ export struct RelationshipListSection {
           .backgroundColor(this.getPalette().surfaceSubtle)
           .fontColor(this.getPalette().accentBackground)
           .borderRadius(DesignConstants.RADIUS.FULL)
-          .border({ width: 1, color: this.getPalette().borderColor })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
           .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
           .onClick(action)
       }
@@ -638,7 +638,7 @@ export struct RelationshipListSection {
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getPalette().surfaceSubtle)
     .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-    .border({ width: 1, color: this.getPalette().borderColor })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
   }
 
   build() {

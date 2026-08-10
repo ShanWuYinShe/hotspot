@@ -118,7 +118,7 @@ export struct AnchorEntry {
     .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
     .backgroundColor(this.getPalette().surfaceBackground)
     .borderRadius(DesignConstants.SHAPE.INPUT) // 18
-    .border({ width: 1, color: this.getPalette().borderColor })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .alignItems(VerticalAlign.Center)
     .scale(this.isPressed ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW } : { x: 1, y: 1 }) // 对齐前端输入行按压强度
     .animation({ curve: curves.springMotion(DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS, DesignConstants.INTERACTION.SPRING_DAMPING_PRESS) })
@@ -153,7 +153,7 @@ export struct AnchorEntry {
     }
     .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
     .backgroundColor(this.getPalette().surfaceBackground)
-    .border({ width: 1, color: this.getPalette().borderColor })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .borderRadius(DesignConstants.RADIUS.FULL)
     .alignItems(VerticalAlign.Center)
     .scale(this.isPressed ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL } : { x: 1, y: 1 }) // 对齐前端 pill 按钮按压强度

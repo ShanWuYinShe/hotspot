@@ -283,7 +283,7 @@ export struct MomentFeedCard {
     .borderRadius(DesignConstants.RADIUS.XXL)
     .backgroundColor(this.getPalette().surfaceBackground)
     .shadow(this.getPalette().elevatedShadow)
-    .border({ width: 1, color: this.getPalette().borderColor })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .scale(this.isPressed
       ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD }
       : { x: 1, y: 1 })
@@ -377,7 +377,7 @@ export struct MomentFeedCard {
         }
         .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
         .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: 1, color: this.getPalette().borderColor })
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
         .backgroundColor(this.getPalette().accentMuted)
         .alignItems(VerticalAlign.Center)
       }
@@ -442,7 +442,7 @@ export struct MomentFeedCard {
             .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
             .fontColor(this.getPalette().textSecondary)
             .borderRadius(DesignConstants.RADIUS.MD)
-            .border({ width: 1, color: this.getPalette().borderColor })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
             .onClick(() => this.openMomentDetail(this.moment))
         }
       }
@@ -471,7 +471,7 @@ export struct MomentFeedCard {
             .fontColor(DesignConstants.COLOR.WHITE)
             .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
             .borderRadius(DesignConstants.RADIUS.FULL)
-            .border({ width: 1, color: DesignConstants.COLOR.IMAGE_BADGE_BORDER })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: DesignConstants.COLOR.IMAGE_BADGE_BORDER })
             .backgroundColor(DesignConstants.COLOR.IMAGE_BADGE_BG)
             .margin({ right: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
         }

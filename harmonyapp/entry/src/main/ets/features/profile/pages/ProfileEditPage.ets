@@ -234,7 +234,7 @@ export struct ProfileEditPage {
                 .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
                 .borderRadius(DesignConstants.RADIUS.FULL)
                 .backgroundColor(this.getCurrentThemePalette().accentBackground)
-                .border({ width: 2.5, color: this.getSurfaceBackground() })
+                .border({ width: DesignConstants.BORDER_WIDTH.HEAVY, color: this.getSurfaceBackground() })
                 .onClick(() => {
                   SystemToast.show('头像更换功能开发中', this.getUIContext());
                 })
@@ -289,7 +289,7 @@ export struct ProfileEditPage {
                   .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
                   .borderRadius(DesignConstants.SHAPE.BUTTON)
                   .backgroundColor(this.isTagSelected(tag) ? this.getCurrentThemePalette().accentBackground : this.getSurfaceBackground())
-                  .border({ width: 1, color: this.isTagSelected(tag) ? DesignConstants.COLOR.TRANSPARENT : this.getSurfaceBorder() })
+                  .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.isTagSelected(tag) ? DesignConstants.COLOR.TRANSPARENT : this.getSurfaceBorder() })
                   .opacity(this.isTagDisabled(tag) ? 0.4 : 1.0)
                   .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
                   .enabled(!this.isTagDisabled(tag))
@@ -438,7 +438,7 @@ export struct ProfileEditPage {
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
       .backgroundColor(this.getSurfaceSubtle())
       .borderRadius(DesignConstants.SHAPE.INPUT)
-      .border({ width: 1, color: this.fieldBorder(focused, error.length > 0).borderColor })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.fieldBorder(focused, error.length > 0).borderColor })
       .shadow(this.fieldBorder(focused, error.length > 0).shadow)
     }
     .width('100%')

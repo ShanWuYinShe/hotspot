@@ -36,7 +36,7 @@ export const DESKTOP_PRIMARY_NAV: AppNavItem[] = [
     isTab: true, requiresAuth: false, badge: 'none', openNotificationCenter: false
   },
   {
-    label: '附近动态', icon: AppIcon.COMPASS, tabRoute: 'moments', pageName: '',
+    label: '附近瞬间', icon: AppIcon.COMPASS, tabRoute: 'moments', pageName: '',
     isTab: true, requiresAuth: false, badge: 'none', openNotificationCenter: false
   },
   {
@@ -85,7 +85,7 @@ export interface AppBottomTab {
 
 export const BOTTOM_TABS: AppBottomTab[] = [
   { label: '首页', icon: AppIcon.HOME, index: 0, requiresAuth: false, badge: 'none' },
-  { label: '附近动态', icon: AppIcon.COMPASS, index: 1, requiresAuth: false, badge: 'none' },
+  { label: '附近', icon: AppIcon.COMPASS, index: 1, requiresAuth: false, badge: 'none' },
   { label: '消息', icon: AppIcon.MESSAGE, index: 3, requiresAuth: true, badge: 'inbox' },
   { label: '我的', icon: AppIcon.PERSON, index: 4, requiresAuth: true, badge: 'none' }
 ];

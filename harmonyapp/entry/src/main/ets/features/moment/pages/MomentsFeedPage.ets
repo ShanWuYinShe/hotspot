@@ -283,7 +283,7 @@ export struct MomentsFeedPage {
         .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
         .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
         .borderRadius(DesignConstants.SHAPE.INPUT)
-        .border({ width: 1, color: this.getSurfaceBorder() })
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
         .onClick(() => { AppRouter.push(PageNames.SEARCH); })
         .margin({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
 
@@ -297,7 +297,7 @@ export struct MomentsFeedPage {
         bottom: 0
       })
       .backgroundColor(this.getCurrentThemePalette().pageBackground)
-      .border({ width: { bottom: 1 }, color: this.getSurfaceBorder() })
+      .border({ width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
 
       // 内容区
       if (this.isLoading) {
@@ -338,7 +338,7 @@ export struct MomentsFeedPage {
               .width(DesignConstants.LAYOUT.RIGHT_SIDEBAR_WIDTH)
               .height('100%')
               .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-              .border({ width: { left: 1 }, color: this.getSurfaceBorder() })
+              .border({ width: { left: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
             }
             .layoutWeight(1)
             .width('100%')
@@ -760,7 +760,7 @@ export struct MomentsFeedPage {
     .width('100%')
     .borderRadius(DesignConstants.RADIUS.LG)
     .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-    .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
     .shadow(this.getCurrentThemePalette().controlShadow)
     .onClick(() => { this.openGroupDetail(group); })
   }

@@ -463,7 +463,7 @@ export struct CreateMomentPage {
                     .width('100%')
                     .height('100%')
                     .borderRadius(DesignConstants.RADIUS.XL)
-                    .border({ width: 1, color: this.getSurfaceBorder() })
+                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
                     .onClick(() => this.selectImages())
                   }
                 }
@@ -488,7 +488,7 @@ export struct CreateMomentPage {
                     .width('100%')
                     .height('100%')
                     .borderRadius(DesignConstants.RADIUS.XL)
-                    .border({ width: 1, color: this.getSurfaceBorder() })
+                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
                     .onClick(() => this.capturePhoto())
                   }
                 }
@@ -531,7 +531,7 @@ export struct CreateMomentPage {
                   .backgroundColor(this.getCurrentThemePalette().accentBackground)
                   .fontColor(this.getCurrentThemePalette().accentText)
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .border({ width: 1, color: this.getSurfaceBorder() })
+                  .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
                   .shadow(this.getPrimaryButtonShadow())
                   .onClick(() => this.addTag())
                   .margin({ left: DesignConstants.SPACING.SM })
@@ -602,7 +602,7 @@ export struct CreateMomentPage {
                 .padding(DesignConstants.SPACING.MD)
                 .backgroundColor(this.getSurfaceSubtle())
                 .borderRadius(DesignConstants.RADIUS.MD)
-                .border({ width: 1, color: this.getSurfaceBorder() })
+                .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
               } else {
                 Text('正在获取位置信息...')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -691,7 +691,7 @@ export struct CreateMomentPage {
     })
     .backgroundColor(this.getSurfaceSubtle())
     .borderRadius(DesignConstants.RADIUS.LG)
-    .border({ width: 1, color: this.getSurfaceBorder() })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
   }
 
@@ -717,7 +717,7 @@ export struct CreateMomentPage {
       .width(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
       .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
       .borderRadius(DesignConstants.RADIUS.XXL)
-      .border({ width: 1, color: this.getOverlayBorderColor() })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getOverlayBorderColor() })
       .margin({ top: DesignConstants.SPACING.HALF, right: DesignConstants.SPACING.HALF })
       .onClick(() => this.removeImage(index))
     }

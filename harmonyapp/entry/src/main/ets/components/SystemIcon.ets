@@ -6,6 +6,7 @@
 
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DesignConstants } from '../constants/DesignConstants';
 
 const DEFAULT_THEME_ICON_SENTINEL: string = '__theme_icon_default__';
 const DEFAULT_THEME_BG_SENTINEL: string = '__theme_bg_default__';
@@ -313,7 +314,7 @@ export struct IconButton {
     .type(ButtonType.Normal)
     .stateEffect(true)
     .backgroundColor(this.getResolvedBackgroundColor())
-    .border({ width: 1, color: this.getPalette().borderColor })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .borderRadius(this.radius)
     .shadow(this.getPalette().controlShadow)
     .padding(this.paddingSize)

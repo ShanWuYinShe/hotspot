@@ -61,7 +61,7 @@ export struct AdvancedSettingsPage {
         .backgroundColor(this.getSurfaceBackground())
         .borderRadius(DesignConstants.RADIUS.XXL)
         .shadow(this.getCurrentThemePalette().elevatedShadow)
-        .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
         .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
           top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD3 })
       }

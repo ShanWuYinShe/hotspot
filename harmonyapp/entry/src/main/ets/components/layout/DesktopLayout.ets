@@ -108,7 +108,7 @@ export struct DesktopLayout {
           .height('100%')
           .borderRadius(DesignConstants.SHAPE.HERO_CARD) // 24
           .backgroundColor(this.getPalette().surfaceBackground)
-          .border({ width: 1, color: this.getPalette().borderColor })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
           .clip(true)
         }
         .layoutWeight(1)
@@ -277,7 +277,7 @@ export struct DesktopLayout {
     .height(DesignConstants.LAYOUT.DESKTOP_HEADER_HEIGHT) // 52
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
     .backgroundColor(this.getPalette().surfaceBackground)
-    .border({ width: { bottom: 1 }, color: this.getPalette().borderColor })
+    .border({ width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getPalette().borderColor })
   }
 
   // ==================== 主题家族切换 sheet（顶栏 PALETTE 按钮）====================
@@ -418,7 +418,7 @@ export struct DesktopLayout {
       }
       .width('100%')
       .padding({ top: DesignConstants.SPACING.SM })
-      .border({ width: { top: 1 }, color: this.getPalette().borderColor })
+      .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getPalette().borderColor })
     }
     .width('100%')
     .height('100%')

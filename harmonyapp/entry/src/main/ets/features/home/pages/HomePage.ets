@@ -427,7 +427,7 @@ export struct HomePage {
       }
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .border({ width: 1, color: this.getPalette().borderColor })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
       .backgroundColor(this.getPalette().surfaceBackground)
     }
   }
@@ -540,7 +540,7 @@ export struct HomePage {
     .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
     .borderRadius(DesignConstants.SHAPE.HERO_CARD)
     .backgroundColor(this.getPalette().surfaceBackground)
-    .border({ width: 1, color: this.getPalette().borderColor })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .scale(this.locationCardPressed
       ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD }
       : { x: 1, y: 1 })
@@ -627,7 +627,7 @@ export struct HomePage {
             .fontColor(this.getPalette().accentText)
             .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
             .borderRadius(DesignConstants.RADIUS.FULL)
-            .border({ width: 1, color: this.getPalette().accentText })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().accentText })
             .scale(this.retryPressed
               ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL }
               : { x: 1, y: 1 })
@@ -673,7 +673,7 @@ export struct HomePage {
                     avatarSize: 80,
                     shape: 'circle'
                   })
-                  .border({ width: 2, color: this.getPalette().borderColor })
+                  .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getPalette().borderColor })
                   .borderRadius(DesignConstants.RADIUS.FULL)
 
                   // 在线状态点：贴头像右下角（用 alignContent 取代硬编码坐标）
@@ -684,7 +684,7 @@ export struct HomePage {
                         .height(DesignConstants.SPACING.MD)
                         .borderRadius(DesignConstants.RADIUS.FULL)
                         .backgroundColor(this.getPalette().success)
-                        .border({ width: 2, color: this.getPalette().surfaceBackground })
+                        .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getPalette().surfaceBackground })
                     }
                     .width('100%')
                     .height('100%')

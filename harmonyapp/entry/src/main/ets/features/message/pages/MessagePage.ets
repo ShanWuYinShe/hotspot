@@ -23,6 +23,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { useMasterDetail } from '../../../core/responsive/Breakpoint';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
@@ -92,6 +93,9 @@ export struct MessagePage {
   @State pressedChatKey: string = '';
   @State searchKeyword: string = '';
   @State chatItems: ChatItem[] = [];
+  /** 已读/未读过滤（0=全部 1=未读 2=已读），对齐前端 messages 页 TabBar 过滤 */
+  @State chatFilterIndex: number = 0;
+  @State filteredChatItems: ChatItem[] = [];
 
   private getOnlineChats(): ChatItem[] {
     const online: ChatItem[] = [];
@@ -113,6 +117,16 @@ export struct MessagePage {
       count += this.chatListDataSource.getData(i).unreadCount;
     }
     return count;
+  }
+
+  private applyFilter(): void {
+    if (this.chatFilterIndex === 1) {
+      this.filteredChatItems = this.chatItems.filter((item: ChatItem) => item.unreadCount > 0);
+    } else if (this.chatFilterIndex === 2) {
+      this.filteredChatItems = this.chatItems.filter((item: ChatItem) => item.unreadCount === 0);
+    } else {
+      this.filteredChatItems = this.chatItems;
+    }
   }
 
   async aboutToAppear() {
@@ -174,6 +188,7 @@ export struct MessagePage {
 
       this.chatListDataSource.setData(allChats);
       this.chatItems = allChats;
+      this.applyFilter();
       this.hasData = allChats.length > 0;
 
       // 仅用户主动下拉刷新时触发振动反馈
@@ -225,6 +240,7 @@ export struct MessagePage {
       });
       this.chatListDataSource.setData(chats);
       this.chatItems = chats;
+      this.applyFilter();
       this.hasData = true;
       hilog.info(DOMAIN_NUMBER, TAG, `Loaded ${chats.length} chats from cache`);
     }
@@ -263,8 +279,8 @@ export struct MessagePage {
               name: item.other_user.nickname ?? '',
               avatarUrl: item.other_user.avatar_url,
               lastMessage: this.formatLastMessage(item.last_message),
-              lastTime: item.last_activity_at,
-              lastTimestamp: this.parseTimestamp(item.last_activity_at),
+              lastTime: item.last_message?.sent_at ?? item.last_activity_at,
+              lastTimestamp: this.parseTimestamp(item.last_message?.sent_at ?? item.last_activity_at),
               isPinned: item.is_pinned ?? false,
               unreadCount: item.unread_count,
               data: item
@@ -295,9 +311,9 @@ export struct MessagePage {
               type: 'group',
               name: item.group.name ?? '',
               avatarUrl: item.group.avatar_url,
-              lastMessage: '',
-              lastTime: item.last_activity_at || item.created_at || '',
-              lastTimestamp: this.parseTimestamp(item.last_activity_at || item.created_at || ''),
+              lastMessage: this.formatLastMessage(item.last_message),
+              lastTime: item.last_message?.sent_at ?? item.last_activity_at ?? item.created_at ?? '',
+              lastTimestamp: this.parseTimestamp(item.last_message?.sent_at ?? item.last_activity_at ?? item.created_at ?? ''),
               isPinned: item.my_state?.is_pinned ?? false,
               unreadCount: item.my_state?.unread_count || 0,
               data: item
@@ -336,6 +352,7 @@ export struct MessagePage {
         const mergedItems = this.mergeAndSortChats(existingItems, newChats);
         this.chatListDataSource.setData(mergedItems);
         this.chatItems = mergedItems;
+        this.applyFilter();
         this.updateCache(mergedItems);
       }
     } catch {
@@ -439,6 +456,31 @@ export struct MessagePage {
   private enterChat(item: ChatItem) {
     // 桌面宽屏（≥960）时记录选中项用于高亮，但依然 push 独立 ChatPage 保持聊天功能完整
     this.selectedChatKey = this.getChatKey(item);
+    // 对齐前端：点击未读会话后徽章立即清零（列表按时间排序，位置不跳动）
+    if (item.unreadCount > 0) {
+      const updated: ChatItem[] = [];
+      for (const chat of this.chatItems) {
+        if (chat.id === item.id && chat.type === item.type) {
+          updated.push({
+            id: chat.id,
+            type: chat.type,
+            name: chat.name,
+            avatarUrl: chat.avatarUrl,
+            lastMessage: chat.lastMessage,
+            lastTime: chat.lastTime,
+            lastTimestamp: chat.lastTimestamp,
+            isPinned: chat.isPinned,
+            unreadCount: 0,
+            data: chat.data
+          });
+        } else {
+          updated.push(chat);
+        }
+      }
+      this.chatItems = updated;
+      this.chatListDataSource.setData(updated);
+      this.applyFilter();
+    }
     const targetUserId = item.type === 'private' ? (item.data as PrivateChatItem).other_user?.user_id ?? item.id : item.id;
     const chatParams = new ChatRouteParam();
     chatParams.chatId = targetUserId;
@@ -508,6 +550,7 @@ export struct MessagePage {
         this.chatListDataSource.deleteData(index);
       }
       this.chatItems = this.getAllDataFromSource();
+      this.applyFilter();
       this.updateCache(this.getAllDataFromSource());
       SystemToast.show('操作成功', this.getUIContext());
     } catch {
@@ -550,7 +593,7 @@ export struct MessagePage {
           .justifyContent(FlexAlign.Center)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .bindMenu([
             {
               value: '发起群聊',
@@ -607,7 +650,7 @@ export struct MessagePage {
           .justifyContent(FlexAlign.Center)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .onClick(() => {
             AppRouter.push(PageNames.SEARCH);
           })
@@ -633,10 +676,28 @@ export struct MessagePage {
       .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
       .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
       .borderRadius(DesignConstants.SHAPE.INPUT)
-      .border({ width: 1, color: this.getSurfaceBorder() })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
       .onClick(() => {
         AppRouter.push(PageNames.SEARCH);
       })
+
+      // 已读/未读过滤（对齐前端 messages 页 TabBar：全部 / 未读 / 已读）
+      TabsPillGroup({
+        tabs: [
+          { label: '全部' },
+          { label: '未读' },
+          { label: '已读' }
+        ],
+        activeIndex: this.chatFilterIndex,
+        gap: DesignConstants.SPACING.XS,
+        actions: {
+          onChange: (index: number) => {
+            this.chatFilterIndex = index;
+            this.applyFilter();
+          }
+        }
+      })
+      .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
 
       // 宽屏（master-detail）提示：当前点击会话仍 push 独立页（保持聊天功能完整）
       if (useMasterDetail(this.currentBreakpoint)) {
@@ -692,51 +753,61 @@ export struct MessagePage {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           Scroll() {
             Column() {
+              // 过滤结果为空（对齐前端：无匹配会话空态）
+              if (this.filteredChatItems.length === 0) {
+                EmptyState({ icon: AppIcon.SEARCH, message: '没有找到会话' })
+                  .margin({ top: DesignConstants.SPACING.XXL })
+              }
+
               // 在线头像条
-              if (this.getOnlineChats().length > 0) {
+              if (this.filteredChatItems.length > 0 && this.getOnlineChats().length > 0) {
                 this.buildOnlineAvatarsStrip()
               }
 
-              // "最近" 标签
-              Text('最近')
-                .fontSize(DesignConstants.FONT.SIZE.XS2)
-                .fontColor(this.getCurrentThemePalette().textSecondary)
-                .textCase(TextCase.UpperCase)
-                .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
-                .padding({
-                  left: DesignConstants.SPACING.LG,
-                  right: DesignConstants.SPACING.LG,
-                  top: DesignConstants.SPACING.SM,
-                  bottom: DesignConstants.SPACING.MD2
-                })
+              if (this.filteredChatItems.length > 0) {
+                // "最近" 标签
+                Text('最近')
+                  .fontSize(DesignConstants.FONT.SIZE.XS2)
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+                  .textCase(TextCase.UpperCase)
+                  .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
+                  .padding({
+                    left: DesignConstants.SPACING.LG,
+                    right: DesignConstants.SPACING.LG,
+                    top: DesignConstants.SPACING.SM,
+                    bottom: DesignConstants.SPACING.MD2
+                  })
+              }
 
               // 聊天列表卡片（单个大卡片包裹所有项）
-              Column() {
-                LazyForEach(this.chatListDataSource, (item: ChatItem, index: number) => {
+              if (this.filteredChatItems.length > 0) {
+                Column() {
+                  ForEach(this.filteredChatItems, (item: ChatItem, index: number) => {
                   Column() {
                     this.buildChatItem(item)
                   }
                   .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
 
-                  if (index < this.chatListDataSource.totalCount() - 1) {
+                  if (index < this.filteredChatItems.length - 1) {
                     Row()
                       .width('100%')
                       .height(0.5)
                       .backgroundColor(this.getSurfaceBorder())
                       .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
                   }
-                }, (item: ChatItem) => item.id + item.type)
+                  }, (item: ChatItem) => item.id + item.type)
+                }
+                .width('100%')
+                .borderRadius(DesignConstants.RADIUS.XXL)
+                .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+                .shadow(this.getCurrentThemePalette().elevatedShadow)
+                .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+                .clip(true)
+                .margin({
+                  left: DesignConstants.SPACING.LG,
+                  right: DesignConstants.SPACING.LG
+                })
               }
-              .width('100%')
-              .borderRadius(DesignConstants.RADIUS.XXL)
-              .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-              .shadow(this.getCurrentThemePalette().elevatedShadow)
-              .border({ width: 1, color: this.getSurfaceBorder() })
-              .clip(true)
-              .margin({
-                left: DesignConstants.SPACING.LG,
-                right: DesignConstants.SPACING.LG
-              })
 
               if (this.isLoadingMore) {
                 LoadingMoreIndicator()
@@ -787,7 +858,7 @@ export struct MessagePage {
                   avatarSize: 40,
                   shape: 'circle'
                 })
-                .border({ width: 1.5, color: this.getCurrentThemePalette().accentBackground })
+                .border({ width: DesignConstants.BORDER_WIDTH.REGULAR, color: this.getCurrentThemePalette().accentBackground })
                 .borderRadius(DesignConstants.RADIUS.FULL)
                 .padding(2.5)
                 .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
@@ -800,7 +871,7 @@ export struct MessagePage {
                     .height(DesignConstants.SPACING.MD)
                     .borderRadius(DesignConstants.RADIUS.FULL)
                     .backgroundColor(this.getCurrentThemePalette().success)
-                    .border({ width: 2, color: this.getCurrentThemePalette().surfaceBackground })
+                    .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getCurrentThemePalette().surfaceBackground })
                 }
                 .width('100%')
                 .height('100%')

@@ -285,7 +285,7 @@ export struct SubscriptionsPage {
     .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .backgroundColor(this.getSurfaceBackground())
-    .border({ width: 1, color: this.getSurfaceBorder() })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD })
   }
 }

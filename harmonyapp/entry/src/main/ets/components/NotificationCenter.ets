@@ -403,7 +403,7 @@ export struct NotificationCenter {
             .borderRadius(DesignConstants.RADIUS.FULL)
             .backgroundColor(this.getPalette().surfaceBackground)
             .shadow(this.getPalette().controlShadow)
-            .border({ width: 1, color: this.getPalette().borderColor })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
             .onClick(() => {
               if (this.onClose) {
                 this.onClose();
@@ -434,7 +434,7 @@ export struct NotificationCenter {
             .borderRadius(DesignConstants.RADIUS.FULL)
             .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
             .shadow(this.getPalette().controlShadow)
-            .border({ width: 1, color: this.getPalette().borderColor })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
             .onClick(() => this.onMarkAllRead())
         }
       }
@@ -620,7 +620,7 @@ export struct NotificationCenter {
           .borderRadius(DesignConstants.RADIUS.FULL)
           .justifyContent(FlexAlign.Center)
           .backgroundColor(this.getTypeColor(notification.type))
-          .border({ width: 2, color: this.getPalette().pageBackground })
+          .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getPalette().pageBackground })
         }
         .width('100%')
         .height('100%')

@@ -379,7 +379,7 @@ export struct MySharesPage {
             .fontColor(this.getCurrentThemePalette().accentBackground)
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .shadow(this.getCurrentThemePalette().controlShadow)
-            .border({ width: 1, color: this.getSurfaceBorder() })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
             .enabled(this.revokingShareId !== share.share_id)
             .onClick(() => this.revokeShare(share))
@@ -395,7 +395,7 @@ export struct MySharesPage {
     .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .backgroundColor(this.getSurfaceBackground())
-    .border({ width: 1, color: this.getSurfaceBorder() })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     .margin({ bottom: DesignConstants.SPACING.MD })
   }
 

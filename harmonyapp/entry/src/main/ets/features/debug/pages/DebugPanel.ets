@@ -100,7 +100,7 @@ export struct DebugPanel {
         bottom: DesignConstants.SPACING.SM
       })
       .backgroundColor(this.getSurfaceBackground())
-      .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
       .borderRadius({ bottomLeft: DesignConstants.RADIUS.LG, bottomRight: DesignConstants.RADIUS.LG })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 

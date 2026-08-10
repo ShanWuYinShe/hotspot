@@ -96,7 +96,7 @@ export struct LoginPromptView {
           .backgroundColor(this.getPalette().buttonSecondaryBackground)
           .fontColor(this.getPalette().buttonSecondaryText)
           .fontSize(DesignConstants.FONT.SIZE.LG)
-          .border({ width: 1, color: this.getPalette().borderColor })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
           .width('100%')
           .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
           .onClick(() => {
@@ -191,7 +191,7 @@ export struct LoginPromptView {
     .scrollBar(BarState.Off)
     .backgroundColor(this.getPalette().surfaceBackground)
     .shadow(this.getPalette().elevatedShadow)
-    .border({ width: 1, color: this.getPalette().borderColor })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
   }
 
   private dismissQuickStartKeyboard(): void {

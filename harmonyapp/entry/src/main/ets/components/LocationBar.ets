@@ -127,7 +127,7 @@ export struct LocationBar {
               .height(DesignConstants.SPACING.MD2)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .backgroundColor(this.getPalette().accentBackground)
-              .border({ width: 2, color: this.getPalette().pageBackground })
+              .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getPalette().pageBackground })
           }
           .width(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
           .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
@@ -169,7 +169,7 @@ export struct LocationBar {
         ? this.getPalette().buttonSecondaryBackground
         : this.getPalette().surfaceSubtle)
       .borderRadius(DesignConstants.RADIUS.XL)
-      .border({ width: 1, color: this.getPalette().borderColor })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
       .onClick(() => {
         this.openLocationPicker();
       })
@@ -203,7 +203,7 @@ export struct LocationBar {
     .justifyContent(FlexAlign.Center)
     .backgroundColor(this.getPalette().buttonSecondaryBackground)
     .borderRadius(DesignConstants.RADIUS.XL)
-    .border({ width: 1, color: this.getPalette().borderColor })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .onClick(action)
   }
 

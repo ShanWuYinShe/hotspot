@@ -36,7 +36,7 @@ export struct EmptyState {
             .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
             .borderRadius(DesignConstants.RADIUS.FULL)
             .backgroundColor(this.getPalette().surfaceBackground)
-            .border({ width: 1, color: this.getPalette().floatingBorderColor })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
 
           Text() {
             SymbolSpan($r(this.icon))
@@ -74,7 +74,7 @@ export struct EmptyState {
             .fontColor(this.getPalette().accentText as ResourceColor)
             .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
             .borderRadius(DesignConstants.SHAPE.BUTTON)
-            .border({ width: 1, color: this.getPalette().primaryButtonBorderColor })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().primaryButtonBorderColor })
             .shadow(this.getPalette().accentShadow)
             .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL })
             .onClick(() => {
@@ -86,7 +86,7 @@ export struct EmptyState {
       .padding(DesignConstants.SPACING.XXL)
       .borderRadius(DesignConstants.SHAPE.HERO_CARD)
       .backgroundColor(this.getPalette().surfaceBackground)
-      .border({ width: 1, color: this.getPalette().floatingBorderColor })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
       .shadow(this.getPalette().elevatedShadow)
     }
     .width('100%')
@@ -123,7 +123,7 @@ export struct LoadingMoreIndicator {
     .padding(DesignConstants.SPACING.MD)
     .borderRadius(DesignConstants.SHAPE.CHIP)
     .backgroundColor(AppThemeManager.getSafeCurrentPalette().surfaceBackground)
-    .border({ width: 1, color: AppThemeManager.getSafeCurrentPalette().floatingBorderColor })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: AppThemeManager.getSafeCurrentPalette().floatingBorderColor })
     .shadow(AppThemeManager.getSafeCurrentPalette().surfaceShadow)
     .accessibilityText(this.message)
   }

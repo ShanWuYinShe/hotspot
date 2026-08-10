@@ -137,7 +137,7 @@ export struct IntelligentLocationCard {
     .padding(DesignConstants.SPACING.LG)
     .backgroundColor(this.getPalette().surfaceBackground)
     .borderRadius(DesignConstants.RADIUS.XL)
-    .border({ width: 1, color: this.getPalette().borderColor })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .shadow({
       radius: this.getPalette().surfaceShadow.radius + this.cardElevation * 2,
       color: this.getPalette().surfaceShadow.color,

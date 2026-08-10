@@ -193,7 +193,7 @@ export struct NearbyUsersListPage {
             .height(DesignConstants.SPACING.MD)
             .borderRadius(DesignConstants.RADIUS.FULL)
             .backgroundColor(this.getCurrentThemePalette().success)
-            .border({ width: 2, color: this.getCurrentThemePalette().surfaceBackground })
+            .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getCurrentThemePalette().surfaceBackground })
         }
       }
       .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
@@ -273,7 +273,7 @@ export struct NearbyUsersListPage {
         .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
         .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
         .borderRadius(DesignConstants.SHAPE.INPUT)
-        .border({ width: 1, color: this.getSurfaceBorder() })
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
         // 排序 chips（对齐前端 sort chips：距离/在线/共同好友）
         Row({ space: DesignConstants.SPACING.SM }) {
@@ -347,7 +347,7 @@ export struct NearbyUsersListPage {
           .padding(DesignConstants.SPACING.MD)
           .borderRadius(DesignConstants.SHAPE.CARD)
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-          .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
         }
 

@@ -1030,7 +1030,7 @@ export struct GroupDetailPage {
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow(this.getCurrentThemePalette().elevatedShadow)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .margin({ bottom: DesignConstants.SPACING.MD })
 
           // 2. 位置信息
@@ -1071,7 +1071,7 @@ export struct GroupDetailPage {
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow(this.getCurrentThemePalette().elevatedShadow)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .margin({ bottom: DesignConstants.SPACING.MD })
 
           // 3. 成员列表入口
@@ -1104,7 +1104,7 @@ export struct GroupDetailPage {
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow(this.getCurrentThemePalette().elevatedShadow)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .margin({ bottom: DesignConstants.SPACING.MD })
 
           if (this.canManageApplications()) {
@@ -1138,7 +1138,7 @@ export struct GroupDetailPage {
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
-            .border({ width: 1, color: this.getSurfaceBorder() })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD })
           }
 
@@ -1152,7 +1152,7 @@ export struct GroupDetailPage {
                       .backgroundColor(this.getSurfaceSubtle())
                       .fontColor(this.getCurrentThemePalette().accentBackground)
                       .shadow(this.getCurrentThemePalette().controlShadow)
-                      .border({ width: 1, color: this.getSurfaceBorder() })
+                      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
                       .width('100%')
                       .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                       .enabled(!this.isSavingGroupInfo)
@@ -1165,7 +1165,7 @@ export struct GroupDetailPage {
                     .backgroundColor(this.getCurrentThemePalette().accentBackground)
                     .fontColor(this.getCurrentThemePalette().accentText)
                     .shadow(this.getCurrentThemePalette().controlShadow)
-                    .border({ width: 1, color: this.getSurfaceBorder() })
+                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                     .onClick(() => this.enterChat())
@@ -1200,7 +1200,7 @@ export struct GroupDetailPage {
                     .backgroundColor(this.getCurrentThemePalette().accentBackground)
                     .fontColor(this.getCurrentThemePalette().accentText)
                     .shadow(this.getCurrentThemePalette().controlShadow)
-                    .border({ width: 1, color: this.getSurfaceBorder() })
+                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                     .enabled(!this.isJoining)
@@ -1213,7 +1213,7 @@ export struct GroupDetailPage {
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow(this.getCurrentThemePalette().elevatedShadow)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
         }
         .width('100%')
@@ -1283,7 +1283,7 @@ export struct GroupDetailPage {
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
           .enabled(!this.isSavingGroupInfo && !this.isEditGroupAvatarUploading)
           .opacity(this.isSavingGroupInfo || this.isEditGroupAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)
@@ -1295,7 +1295,7 @@ export struct GroupDetailPage {
           .fontColor(this.getCurrentThemePalette().accentText)
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
           .enabled(!this.isSavingGroupInfo && !this.isEditGroupAvatarUploading)
           .opacity(this.isSavingGroupInfo || this.isEditGroupAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)

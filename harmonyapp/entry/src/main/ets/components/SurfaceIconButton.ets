@@ -61,7 +61,7 @@ export struct SurfaceIconButton {
     .height(this.buttonSize)
     .backgroundColor(this.getBackgroundColor())
     .borderRadius(DesignConstants.RADIUS.FULL)
-    .border({ width: 1, color: this.getBorderColor() })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getBorderColor() })
     .shadow(this.getShadowColor())
     .enabled(!this.disabled)
     .opacity(this.disabled ? DesignConstants.OPACITY.LOADING : 1)

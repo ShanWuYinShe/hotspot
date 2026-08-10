@@ -32,7 +32,7 @@ export struct SystemLoadingView {
               .borderRadius(DesignConstants.RADIUS.FULL)
               .backgroundColor(this.getPalette().surfaceBackground)
               .shadow(this.getPalette().controlShadow)
-              .border({ width: 1, color: this.getPalette().floatingBorderColor })
+              .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
 
             if (this.progressType === 'determinate') {
               Progress({
@@ -71,7 +71,7 @@ export struct SystemLoadingView {
       .padding(DesignConstants.SPACING.XXL)
       .borderRadius(DesignConstants.SHAPE.HERO_CARD)
       .backgroundColor(this.getPalette().surfaceBackground)
-      .border({ width: 1, color: this.getPalette().floatingBorderColor })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
       .shadow(this.getPalette().elevatedShadow)
     }
     .width('100%')

@@ -372,7 +372,7 @@ export struct CreateGroupPage {
                   .maxLength(GROUP_NAME_MAX)
                   .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
                   .backgroundColor(this.getSurfaceSubtle())
-                  .border({ width: 1, color: this.fieldBorder(this.groupNameFocused, this.getGroupNameError() !== undefined).borderColor })
+                  .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.fieldBorder(this.groupNameFocused, this.getGroupNameError() !== undefined).borderColor })
                   .shadow(this.fieldBorder(this.groupNameFocused, this.getGroupNameError() !== undefined).shadow)
                   .borderRadius(DesignConstants.RADIUS.XL)
                   .padding({ left: DesignConstants.SPACING.MD })
@@ -411,7 +411,7 @@ export struct CreateGroupPage {
                   .maxLength(GROUP_DESCRIPTION_MAX)
                   .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
                   .backgroundColor(this.getSurfaceSubtle())
-                  .border({ width: 1, color: this.fieldBorder(this.groupDescriptionFocused, this.getGroupDescriptionError() !== undefined).borderColor })
+                  .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.fieldBorder(this.groupDescriptionFocused, this.getGroupDescriptionError() !== undefined).borderColor })
                   .shadow(this.fieldBorder(this.groupDescriptionFocused, this.getGroupDescriptionError() !== undefined).shadow)
                   .borderRadius(DesignConstants.RADIUS.XL)
                   .padding(DesignConstants.SPACING.MD)
@@ -435,7 +435,7 @@ export struct CreateGroupPage {
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
-            .border({ width: 1, color: this.getSurfaceBorder() })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD3 })
 
             // 群组头像
@@ -467,7 +467,7 @@ export struct CreateGroupPage {
                     .fontColor(this.getCurrentThemePalette().accentBackground)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .borderRadius(DesignConstants.RADIUS.XXL)
-                    .border({ width: 1, color: this.getSurfaceBorder() })
+                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
                     .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
                     .enabled(!this.isCreating && !this.isGroupAvatarUploading)
                     .onClick(() => this.selectGroupAvatar())
@@ -479,7 +479,7 @@ export struct CreateGroupPage {
                       .fontColor(this.getCurrentThemePalette().textSecondary)
                       .fontSize(DesignConstants.FONT.SIZE.SM)
                       .borderRadius(DesignConstants.RADIUS.XXL)
-                      .border({ width: 1, color: this.getSurfaceBorder() })
+                      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
                       .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
                       .enabled(!this.isCreating && !this.isGroupAvatarUploading)
                       .onClick(() => this.clearGroupAvatarSelection())
@@ -497,7 +497,7 @@ export struct CreateGroupPage {
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
-            .border({ width: 1, color: this.getSurfaceBorder() })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD3 })
 
             // 位置信息
@@ -527,7 +527,7 @@ export struct CreateGroupPage {
                     .fontColor(this.getCurrentThemePalette().accentBackground)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .borderRadius(DesignConstants.RADIUS.XXL)
-                    .border({ width: 1, color: this.getSurfaceBorder() })
+                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
                     .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
                     .onClick(() => this.openLocationPicker())
 
@@ -537,7 +537,7 @@ export struct CreateGroupPage {
                     .fontColor(this.getCurrentThemePalette().accentBackground)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .borderRadius(DesignConstants.RADIUS.XXL)
-                    .border({ width: 1, color: this.getSurfaceBorder() })
+                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
                     .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
                     .onClick(() => this.refreshLocation())
                 }
@@ -551,7 +551,7 @@ export struct CreateGroupPage {
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
-            .border({ width: 1, color: this.getSurfaceBorder() })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD3 })
 
             // 隐私与限制
@@ -590,7 +590,7 @@ export struct CreateGroupPage {
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .fontColor(this.getCurrentThemePalette().textPrimary)
                     .backgroundColor(this.getSurfaceSubtle())
-                    .border({ width: 1, color: this.fieldBorder(this.maxMembersFocused, false).borderColor })
+                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.fieldBorder(this.maxMembersFocused, false).borderColor })
                     .shadow(this.fieldBorder(this.maxMembersFocused, false).shadow)
                     .borderRadius(DesignConstants.RADIUS.MD)
                     .padding(0)
@@ -674,7 +674,7 @@ export struct CreateGroupPage {
                     .maxLength(GROUP_PASSWORD_MAX)
                     .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
                     .backgroundColor(this.getSurfaceSubtle())
-                    .border({ width: 1, color: this.fieldBorder(this.groupPasswordFocused, this.getGroupPasswordError() !== undefined).borderColor })
+                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.fieldBorder(this.groupPasswordFocused, this.getGroupPasswordError() !== undefined).borderColor })
                     .shadow(this.fieldBorder(this.groupPasswordFocused, this.getGroupPasswordError() !== undefined).shadow)
                     .borderRadius(DesignConstants.RADIUS.XL)
                     .padding({ left: DesignConstants.SPACING.MD })
@@ -699,7 +699,7 @@ export struct CreateGroupPage {
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
-            .border({ width: 1, color: this.getSurfaceBorder() })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD3 })
 
             // 提交按钮
@@ -708,7 +708,7 @@ export struct CreateGroupPage {
               .backgroundColor(this.getCurrentThemePalette().accentBackground)
               .fontColor(this.getCurrentThemePalette().accentText)
               .shadow(this.getCurrentThemePalette().controlShadow)
-              .border({ width: 1, color: this.getSurfaceBorder() })
+              .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
               .width('100%')
               .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
               .fontSize(DesignConstants.FONT.SIZE.LG)

@@ -460,7 +460,7 @@ export struct SearchPage {
     .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.SHAPE.CARD)
     .shadow(this.getCurrentThemePalette().surfaceShadow)
-    .border({ width: 1, color: this.getSurfaceBorder() })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     .onClick(() => this.handleSuggestItemTap(item))
   }
 
@@ -523,7 +523,7 @@ export struct SearchPage {
       }
       .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM + 2, bottom: DesignConstants.SPACING.MD })
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
       .scrollBar(BarState.Auto)
     }
   }
@@ -555,7 +555,7 @@ export struct SearchPage {
       }
       .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM + 2, bottom: DesignConstants.SPACING.MD })
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
       .scrollBar(BarState.Auto)
     }
   }
@@ -587,7 +587,7 @@ export struct SearchPage {
       .columnsTemplate('1fr 1fr')
       .columnsGap(DesignConstants.SPACING.MD)
       .rowsGap(DesignConstants.SPACING.MD)
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM + 2, bottom: DesignConstants.SPACING.MD })
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
       .cachedCount(6)
     }
   }
@@ -710,7 +710,7 @@ export struct SearchPage {
           .borderWidth(this.isUserFollowing(item.user?.user_id ?? '') ? 1 : 0)
           .borderColor(this.getCurrentThemePalette().accentBackground)
           .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .opacity(this.isUserActionPending(item.user?.user_id ?? '') ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => { this.toggleFollow(item); })
 
@@ -724,7 +724,7 @@ export struct SearchPage {
           .backgroundColor(this.getSurfaceSubtle())
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .opacity(this.isUserActionPending(item.user?.user_id ?? '') ? DesignConstants.OPACITY.PRESSED : 1)
           .onClick(() => { this.startPrivateChat(item); })
       }
@@ -735,7 +735,7 @@ export struct SearchPage {
     .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.SHAPE.CARD)
     .shadow(this.getCurrentThemePalette().surfaceShadow)
-    .border({ width: 1, color: this.getSurfaceBorder() })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
   }
 
   @Builder
@@ -810,7 +810,7 @@ export struct SearchPage {
           .borderWidth(this.isGroupJoined(item) ? 1 : 0)
           .borderColor(this.getCurrentThemePalette().accentBackground)
           .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .opacity(this.isGroupActionPending(item.group?.group_id ?? '') ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => { this.joinGroup(item); })
 
@@ -824,7 +824,7 @@ export struct SearchPage {
           .backgroundColor(this.getSurfaceSubtle())
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .opacity(this.isGroupActionPending(item.group?.group_id ?? '') ? DesignConstants.OPACITY.PRESSED : 1)
           .onClick(() => { this.openGroupDetail(item); })
       }
@@ -835,7 +835,7 @@ export struct SearchPage {
     .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.SHAPE.CARD)
     .shadow(this.getCurrentThemePalette().surfaceShadow)
-    .border({ width: 1, color: this.getSurfaceBorder() })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
   }
 
   @Builder
@@ -894,7 +894,7 @@ export struct SearchPage {
     .borderRadius(DesignConstants.RADIUS.XXL)
     .clip(true)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
-    .border({ width: 1, color: this.getSurfaceBorder() })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     .onClick(() => {
       this.openMomentDetail(item);
     })

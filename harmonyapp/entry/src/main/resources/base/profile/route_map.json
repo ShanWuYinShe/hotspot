@@ -131,6 +131,11 @@
       "buildFunction": "NearbyGroupsListPageBuilder"
     },
     {
+      "name": "NearbyPage",
+      "pageSourceFile": "src/main/ets/features/nearby/pages/NearbyPage.ets",
+      "buildFunction": "NearbyPageBuilder"
+    },
+    {
       "name": "AdminOverviewPage",
       "pageSourceFile": "src/main/ets/features/admin/pages/AdminOverviewPage.ets",
       "buildFunction": "AdminOverviewPageBuilder"

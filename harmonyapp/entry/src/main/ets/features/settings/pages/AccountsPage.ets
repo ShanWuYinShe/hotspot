@@ -221,7 +221,7 @@ export struct AccountsPage {
             .fontColor(this.getCurrentThemePalette().accentText)
             .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
             .shadow(this.getCurrentThemePalette().controlShadow)
-            .border({ width: 1, color: this.getSurfaceBorder() })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .onClick(() => { this.load(); })
         }
         .width('100%')
@@ -243,7 +243,7 @@ export struct AccountsPage {
             .fontColor(this.getCurrentThemePalette().accentText)
             .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
             .shadow(this.getCurrentThemePalette().controlShadow)
-            .border({ width: 1, color: this.getSurfaceBorder() })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .onClick(() => {
               AppRouter.push(PageNames.LOGIN);
             })
@@ -302,7 +302,7 @@ export struct AccountsPage {
                         .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
                         .fontColor(this.getCurrentThemePalette().accentBackground)
                         .shadow(this.getCurrentThemePalette().controlShadow)
-                        .border({ width: 1, color: this.getSurfaceBorder() })
+                        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
                         .onClick(() => this.switchTo(acc))
 
                   Button('删除')
@@ -312,7 +312,7 @@ export struct AccountsPage {
                         .backgroundColor(this.getCurrentThemePalette().accentBackground)
                         .fontColor(this.getCurrentThemePalette().accentText)
                         .shadow(this.getCurrentThemePalette().controlShadow)
-                        .border({ width: 1, color: this.getSurfaceBorder() })
+                        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
                         .onClick(() => this.remove(acc))
                 }
               }
@@ -322,7 +322,7 @@ export struct AccountsPage {
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
-            .border({ width: 1, color: this.getSurfaceBorder() })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD3 })
           }, (acc: AuthData) => acc.user_id)
         }

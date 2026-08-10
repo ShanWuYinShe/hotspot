@@ -132,7 +132,7 @@ function TopBar(props: TopBarProps) {
       : resolveLocationPickerPalette(props.resolvedThemeId).surfaceBackground)
     .borderRadius(DesignConstants.RADIUS.FULL)
     .shadow(DesignConstants.SHADOW.SMALL)
-    .border({ width: 1, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
     .onClick(props.onToggleFilter)
   }
   .width('100%')
@@ -172,7 +172,7 @@ function FilterMenuItem(props: FilterMenuItemProps) {
       .height(DesignConstants.SPACING.MD3)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(props.active ? props.accentColor : DesignConstants.COLOR.TRANSPARENT)
-      .border({ width: 1.5, color: props.accentColor })
+      .border({ width: DesignConstants.BORDER_WIDTH.REGULAR, color: props.accentColor })
   }
   .width('100%')
   .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
@@ -230,7 +230,7 @@ function FilterDropdownPanel(props: FilterPanelProps) {
   .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceBackground)
   .borderRadius(DesignConstants.SHAPE.CARD)
   .shadow(DesignConstants.SHADOW.MEDIUM)
-  .border({ width: 1, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
+  .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
   .onClick(() => {})
 }
 
@@ -412,7 +412,7 @@ struct SearchPanel {
                   .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
                   .borderRadius(DesignConstants.RADIUS.XXL)
                   .shadow(DesignConstants.SHADOW.MEDIUM)
-                  .border({ width: 1, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
+                  .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
                   .onClick(() => { this.onSelectResult(item); })
                 }
               }, (item: LocationInfo) => `search_${item.latitude}_${item.longitude}`)
@@ -494,7 +494,7 @@ struct SearchPanel {
                     .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
                     .borderRadius(DesignConstants.RADIUS.XXL)
                     .shadow(DesignConstants.SHADOW.MEDIUM)
-                    .border({ width: 1, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
+                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
                     .onClick(() => {
                       this.onSelectHistory(item);
                       this.onClose();
@@ -535,7 +535,7 @@ struct SearchPanel {
       bottom: this.safeAreaBottom
     })
     .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
-    .border({ width: { top: 1 }, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
+    .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
     .borderRadius({ topLeft: DesignConstants.SHAPE.SHEET_TOP_RADIUS, topRight: DesignConstants.SHAPE.SHEET_TOP_RADIUS })
     .onClick(() => {})
   }
@@ -700,7 +700,7 @@ struct MainPanel {
                     .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
                     .borderRadius(DesignConstants.RADIUS.XXL)
                     .shadow(DesignConstants.SHADOW.MEDIUM)
-                     .border({ width: 1, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
+                     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
                     .onClick(() => { this.onSelectHistory(item); })
                   }
                 }, (item: AnchorHistoryItem) => `hist_m_${item.latitude}_${item.longitude}`)
@@ -741,7 +741,7 @@ struct MainPanel {
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .shadow(DesignConstants.SHADOW.SMALL)
-        .border({ width: 1, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
         .margin({ top: DesignConstants.SPACING.SM })
         .onClick(this.onConfirm)
     }
@@ -754,7 +754,7 @@ struct MainPanel {
       bottom: this.safeAreaBottom
     })
     .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
-    .border({ width: { top: 1 }, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
+    .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
     .borderRadius({ topLeft: DesignConstants.SHAPE.SHEET_TOP_RADIUS, topRight: DesignConstants.SHAPE.SHEET_TOP_RADIUS })
     .onClick(() => {})
   }
@@ -1907,7 +1907,7 @@ export struct LocationPickerPage {
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow(DesignConstants.SHADOW.MEDIUM)
-          .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { this.locateUser(); })
 
           Column() {
@@ -1922,7 +1922,7 @@ export struct LocationPickerPage {
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow(DesignConstants.SHADOW.MEDIUM)
-          .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { this.locateBrowseAnchor(); })
 
           Column() {
@@ -1938,7 +1938,7 @@ export struct LocationPickerPage {
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow(DesignConstants.SHADOW.MEDIUM)
-          .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { if (this.mapActions) this.mapActions.zoomIn(); })
 
           Column() {
@@ -1954,7 +1954,7 @@ export struct LocationPickerPage {
            .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow(DesignConstants.SHADOW.MEDIUM)
-           .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { if (this.mapActions) this.mapActions.zoomOut(); })
         }
         .position({ right: DesignConstants.SPACING.MD, bottom: this.getControlsBottomOffset() })

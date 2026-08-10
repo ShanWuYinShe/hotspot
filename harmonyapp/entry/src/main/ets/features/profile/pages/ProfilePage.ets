@@ -839,7 +839,7 @@ export struct ProfilePage {
             .padding(DesignConstants.SPACING.LG)
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-            .border({ width: 1, color: this.getSurfaceBorder() })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .shadow(this.getProfileVisualStyle().card.shadow)
           }
 
@@ -958,7 +958,7 @@ export struct ProfilePage {
     .aspectRatio(1)
     .width('100%')
     .borderRadius(DesignConstants.RADIUS.LG)
-    .border({ width: 1, color: this.getSurfaceBorder() })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     .onClick(() => {
       if (moment.moment_id) {
         const params = new MomentDetailRouteParam();
@@ -994,7 +994,7 @@ export struct ProfilePage {
     .alignItems(HorizontalAlign.Center)
     .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
     .backgroundColor(this.getSurfaceSubtle())
-    .border({ width: 1, color: this.getSurfaceBorder() })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
   }
 
@@ -1017,7 +1017,7 @@ export struct ProfilePage {
       .height(this.getProfileVisualStyle().quickAction.iconWrapperSize)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.getSurfaceSubtle())
-      .border({ width: 1, color: this.getSurfaceBorder() })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
       .shadow(this.getProfileVisualStyle().quickAction.shadow)
       .justifyContent(FlexAlign.Center)
 
@@ -1120,7 +1120,7 @@ export struct ProfilePage {
       .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
       .borderRadius(this.getProfileVisualStyle().card.borderRadius)
       .shadow(this.getProfileVisualStyle().card.shadow)
-      .border({ width: 1, color: this.getSurfaceBorder() })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
       .margin({ bottom: DesignConstants.SPACING.MD })
 
       ListItemGroup() {
@@ -1152,7 +1152,7 @@ export struct ProfilePage {
       .backgroundColor(this.getSurfaceBackground())
       .borderRadius(this.getProfileVisualStyle().card.borderRadius)
       .shadow(this.getProfileVisualStyle().card.shadow)
-      .border({ width: 1, color: this.getSurfaceBorder() })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
       .margin({ bottom: DesignConstants.SPACING.MD })
     }
     .width('100%')
@@ -1222,7 +1222,7 @@ export struct ProfilePage {
             .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
             .borderRadius(DesignConstants.SHAPE.BUTTON)
             .backgroundColor(this.getSurfaceBackground())
-            .border({ width: 1, color: this.getSurfaceBorder() })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .shadow(this.getCurrentThemePalette().controlShadow)
             .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG2 })
             .onClick(() => this.startEdit())
@@ -1248,7 +1248,7 @@ export struct ProfilePage {
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.SHAPE.CARD)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
-            .border({ width: 1, color: this.getSurfaceBorder() })
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ top: DesignConstants.SPACING.XL, bottom: DesignConstants.SPACING.XL })
           }
           .alignItems(HorizontalAlign.Center)
@@ -1297,7 +1297,7 @@ export struct ProfilePage {
         .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .backgroundColor(this.getAccentBackground())
-        .border({ width: 2.5, color: this.getCurrentThemePalette().pageBackground })
+        .border({ width: DesignConstants.BORDER_WIDTH.HEAVY, color: this.getCurrentThemePalette().pageBackground })
         .shadow(this.getCurrentThemePalette().accentShadow)
         .onClick(() => this.selectAvatarForEdit())
       }
@@ -1349,7 +1349,7 @@ export struct ProfilePage {
     .borderRadius(DesignConstants.SHAPE.CARD)
     .backgroundColor(this.getSurfaceBackground())
     .shadow(this.getCurrentThemePalette().elevatedShadow)
-    .border({ width: 1, color: this.getSurfaceBorder() })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     .margin({ bottom: DesignConstants.SPACING.LG2 })
   }
 
@@ -1377,7 +1377,7 @@ export struct ProfilePage {
     }
     .width('100%')
     .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-    .border({ width: { top: 1 }, color: this.getSurfaceBorder() })
+    .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
     .margin({ bottom: DesignConstants.SPACING.MD })
   }
 
@@ -1453,7 +1453,7 @@ export struct ProfilePage {
         .aspectRatio(1)
         .borderRadius(DesignConstants.RADIUS.LG)
         .objectFit(ImageFit.Cover)
-        .border({ width: 1, color: this.getSurfaceBorder() })
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     }
     .layoutWeight(1)
   }
@@ -1698,7 +1698,7 @@ export struct ProfilePage {
           .fontColor(this.getPrimaryTextColor())
           .layoutWeight(1)
           .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .enabled(!this.isLoading && !this.isAvatarUploading)
           .opacity(this.isLoading || this.isAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => this.cancelEdit())
@@ -1755,7 +1755,7 @@ export struct ProfilePage {
     }
     .type(ButtonType.Normal)
     .backgroundColor(this.getSurfaceBackground())
-    .border({ width: 1, color: this.getSurfaceBorder() })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
     .shadow(this.getProfileVisualStyle().card.shadow)
     .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
