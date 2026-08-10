@@ -184,7 +184,7 @@
 
 		<!-- Current location pulsing dot（对齐 Figma Make：halo scale 1→1.8 / opacity 0.55→0 循环） -->
 		<div style="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:5;pointer-events:none;">
-			<div style="width:18px;height:18px;border-radius:50%;background:{PIN_COLORS.user};border:3px solid var(--cst-surface-primary);box-shadow:var(--cst-marker-shadow) {PIN_TONES.user.glow};position:relative;">
+			<div class="relative rounded-full" style="width:18px;height:18px;background:{PIN_COLORS.user};border:3px solid var(--cst-surface-primary);box-shadow:var(--cst-marker-shadow) {PIN_TONES.user.glow};">
 				<span class="map-pulse-halo absolute rounded-full" style="inset:-7px;background:{PIN_TONES.user.bg};border:1px solid {PIN_TONES.user.border};"></span>
 			</div>
 		</div>
@@ -305,7 +305,8 @@
 			}}
 		>
 			<div
-				style="width:14px;height:14px;border-radius:50%;background:var(--cst-marker-user);border:2.5px solid var(--cst-surface-primary);box-shadow:var(--cst-marker-halo) var(--cst-marker-user-glow);"
+				class="rounded-full"
+				style="width:14px;height:14px;background:var(--cst-marker-user);border:2.5px solid var(--cst-surface-primary);box-shadow:var(--cst-marker-halo) var(--cst-marker-user-glow);"
 			></div>
 		</button>
 	</div>
@@ -325,7 +326,7 @@
 			onpointerdown={onHandlePointerDown}
 			onkeydown={onHandleKeydown}
 		>
-			<div class="bg-border-default w-9.5 h-1 rounded-[2px]" ></div>
+			<div class="bg-border-default w-9.5 h-1 rounded-full" ></div>
 		</div>
 
 		<!-- Search bar -->

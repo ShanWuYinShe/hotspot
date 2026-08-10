@@ -135,7 +135,7 @@ locationName = loc?.location_name ?? '';
 					<p class="text-sm" >当前位置</p>
 					<p class="text-xs mt-px opacity-emphasis">{locationName || '自动定位'}</p>
 				</div>
-				<div class="bg-status-online size-2 shrink-0"  style="border-radius:50%;box-shadow:var(--cst-marker-halo) var(--cst-status-online)"></div>
+				<div class="bg-status-online size-2 shrink-0 rounded-full"  style="box-shadow:var(--cst-marker-halo) var(--cst-status-online)"></div>
 			</div>
 
 			{#if nearbyPins.length}

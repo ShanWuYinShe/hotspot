@@ -59,7 +59,7 @@
 	{...rest}
 >
 	{#if loading}
-		<span class="spinner size-4 border-[1.5px]" aria-hidden="true"></span>
+		<span class="spinner size-4" aria-hidden="true"></span>
 	{/if}
 	<span class={loading ? 'opacity-emphasis' : undefined}>{@render children()}</span>
 </button>
