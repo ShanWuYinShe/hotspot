@@ -210,9 +210,6 @@
 			     每行外层 px-3 py-1 包裹——对齐 Figma MessagesPage：行间有呼吸间距，
 			     选中态 glow 不与相邻行重叠，分隔线嵌在间距中不显突兀） -->
 			<ListContainer class="flex-1 overflow-y-auto no-scrollbar px-2 py-2">
-				{#if totalUnread > 0}
-					<p class="uppercase px-2 mb-1 text-text-secondary text-xxs tracking-label">未读</p>
-				{/if}
 				{#each filtered as chat (chat.id)}
 					<div class="px-3 py-1">
 						<ChatListItem
