@@ -66,7 +66,7 @@
 	{#if onTogglePin}
 		<button
 			type="button"
-			class="hover-btn scale-btn tap-88 focus-ring flex shrink-0 items-center justify-center rounded-full p-1"
+			class="hover-btn scale-btn tap-88 focus-ring flex shrink-0 items-center justify-center rounded-full p-1 {isSelected || chat.isPinned ? '' : 'opacity-50 hover:opacity-100 focus-visible:opacity-100'}"
 			aria-label={chat.isPinned ? '取消置顶' : '置顶'}
 			title={chat.isPinned ? '取消置顶' : '置顶'}
 			onclick={(e) => {
@@ -77,7 +77,7 @@
 			<Pin
 				class="size-3.5"
 				strokeWidth={2}
-				style="color:{isSelected ? 'var(--cst-text-on-accent)' : chat.isPinned ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};opacity:{isSelected || chat.isPinned ? 1 : 0.45};"
+				style="color:{isSelected ? 'var(--cst-text-on-accent)' : chat.isPinned ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};"
 			/>
 		</button>
 	{/if}

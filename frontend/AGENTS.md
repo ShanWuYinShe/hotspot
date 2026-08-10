@@ -106,6 +106,11 @@ bun run --cwd frontend build   # adapter-static 产物输出到 build/
 3. **风格统一**：复用既有原语（SearchInput、input-surface、card-hover、
    image-hover-frame、focus-ring、hover-btn/scale-btn/tap-*、TabBar、ListItem…）
    与 design token，禁止每页自造交互样式。
+4. **风格走 design token**：所有风格类变化（颜色、阴影、圆角、字号、字距、行高、
+   透明度等）必须落在三层 token 体系（primitive → semantic → registry），页面只消费
+   语义类（text-*、bg-*、border-*、shadow-*、rounded-*、tracking-* 等），禁止内联
+   硬编码风格值（如 `color:#xxx`、`opacity:0.45`、`border-radius:Npx`）。改主题只需
+   改 token 文件，全站一致生效。
 
 > 具体状态契约见「样式自查清单 → 交互状态契约」。
 
