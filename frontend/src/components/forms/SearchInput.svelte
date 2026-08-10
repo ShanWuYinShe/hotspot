@@ -3,8 +3,7 @@
 	import type { Snippet } from 'svelte';
 	import { cn } from '@/lib/utils';
 
-	// 搜索输入框（对齐 Figma Make SearchField）：
-	// rounded-md + input-surface，无内联 padding（由调用方通过 class 提供）。
+	// 搜索输入框：rounded-md + input-surface，无内联 padding（由调用方通过 class 提供）。
 	// value 非空时显示清空按钮，否则渲染 trailing。
 
 	let {
