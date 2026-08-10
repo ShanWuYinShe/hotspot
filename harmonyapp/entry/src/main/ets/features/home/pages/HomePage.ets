@@ -407,7 +407,7 @@ export struct HomePage {
     // 统一走 SystemPageHeader（标题 + 副标题 + 位置 chip trailing）
     SystemPageHeader({
       title: '首页',
-      subtitle: '发现周边的有趣人和事',
+      subtitle: '发现周边有趣的人和事',
       titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
       titleWeight: DesignConstants.FONT.WEIGHT.REGULAR
     }) {
