@@ -340,6 +340,38 @@ theme/
 - 主题专属组件覆盖（`.vibrant .foo` / `.forest .foo`）统一放对应 themes/*.css 的
   `@layer utilities` 块，utilities.css 只保留与主题无关的通用类
 
+## UI 设计原则与交互状态契约
+
+> 用户硬性要求：**好看、交互效果一眼可辨、风格统一**。任何样式改动必须同时满足，
+> 不满足这三条不得合入。
+
+1. 好看：状态差异克制但有节奏，不堆叠效果、不用突兀视觉。
+2. 一眼可辨：hover / focus / active / disabled 四态都要有明确可感知的差异，
+   且差异长在元素本体上（变色、描边、内凹、缩放、投影），禁止用「元素外再画一圈」
+   表达状态。
+3. 风格统一：复用既有原语（SearchInput、input-surface、card-hover、
+   image-hover-frame、focus-ring、hover-btn/scale-btn/tap-*、TabBar、ListItem…）
+   与 design token，禁止每页自造交互样式。
+
+### 交互状态契约（现状即规范，改动前先对齐）
+
+| 元素 | hover | focus / active |
+|------|-------|----------------|
+| 输入框（input-surface） | — | 边框加深（border-strong）+ 内缘 1px 加深线 + 内凹阴影（`--shadow-inset-sm`），底色保持中性 |
+| 图片卡（image-hover-frame） | 内嵌 accent 2px 描边 + 图片缩放 1.045（仅 fine pointer） | — |
+| 带边框卡片（card-hover） | 边框变 accent（`hover:border-accent-default`）或投影抬升，不额外画外环 | — |
+| 可交互 surface-flat | 描边加深（border-strong） | — |
+| 弹层 / 下拉菜单 | 无描边环 | — |
+
+硬性规则：
+- 输入框聚焦态由整框承载：内层 input/textarea 不画自身焦点框
+  （utilities.css `.input-surface:focus-visible` 统一压制）；底色保持中性，不引入
+  accent 色，避免与错误态等 accent 元素抢视觉。
+- 禁止双重边框：高亮与元素自带边框不得叠加成两圈。card-hover 只抬投影不画外环；
+  带边框的卡片 hover 用边框变 accent；surface-flat 的 hover 描边仅对可交互元素生效。
+- 图片缩放必须由外层 `overflow-hidden` + 圆角裁剪，图片任何像素不得溢出卡片。
+- 弹层/下拉菜单用 `elevation-menu` 投影表达层级，不依赖描边环。
+
 ## 样式自查清单（新增/修改样式后逐条过）
 
 > **核心原则：少档位 + 强制收敛**。设计系统的价值在约束而非自由——档位要少、
