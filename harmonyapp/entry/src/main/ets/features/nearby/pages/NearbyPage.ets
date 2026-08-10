@@ -222,7 +222,7 @@ export struct NearbyPage {
               }, (group: GroupItem) => group.group?.group_id ?? '')
 
               // 附近动态
-              this.buildSectionHeader('附近动态', '', () => {})
+              this.buildSectionHeader('附近动态', '查看全部', () => { AppRouter.push(PageNames.NEARBY_MOMENTS); })
               ForEach(this.moments, (moment: MomentItem) => {
                 this.buildMomentRow(moment)
               }, (moment: MomentItem) => moment.moment_id)

@@ -185,6 +185,12 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 - 消息列表：排序 = 置顶优先 → 最新一条消息时间倒序（`last_message.sent_at` 优先，
   回退 `last_activity_at`），已读/未读不参与排序；列表头部有「全部 / 未读 / 已读」过滤
   （`TabsPillGroup`，对齐前端 messages 页 TabBar）；点击未读会话后徽章立即清零。
+- 聊天记录：消息按 `sent_at` 正序渲染（越新越靠下，对齐前端 useChat 翻转）；
+  跨天自动插入日期胶囊（`FormatUtil.formatDateLabel` → 今天/昨天/M月D日，
+  对齐前端 groupMessagesByDay/formatDateLabel）。
+- 附近聚合页 `NearbyPage` 三区块「查看全部」分别 push `NEARBY_USERS` /
+  `NEARBY_GROUPS` / `NEARBY_MOMENTS`（MomentsFeedPage 已注册为路由页，push 场景
+  带返回按钮，对齐前端 `/nearby/people|groups|moments`）。
 
 透明度（OPACITY）：`DISABLED 0.38` / `PRESSED 0.72` / `LOADING 0.58` / `SUBTLE 0.85` / `FADED 0.4` / `MUTED 0.5` / `EMPHASIZED 0.8`（对齐前端 opacity-40/50/80 标准档）。
 

@@ -136,6 +136,11 @@
       "buildFunction": "NearbyPageBuilder"
     },
     {
+      "name": "MomentsFeedPage",
+      "pageSourceFile": "src/main/ets/features/moment/pages/MomentsFeedPage.ets",
+      "buildFunction": "MomentsFeedPageBuilder"
+    },
+    {
       "name": "AdminOverviewPage",
       "pageSourceFile": "src/main/ets/features/admin/pages/AdminOverviewPage.ets",
       "buildFunction": "AdminOverviewPageBuilder"

@@ -60,3 +60,22 @@ export function formatRelativeTime(dateTime: string | undefined): string {
   }
   return `${date.getFullYear()}-${month}-${dayStr}`;
 }
+
+/**
+ * 聊天日期分组胶囊文案（对齐前端 groupMessagesByDay / formatDateLabel）：
+ * 今天 / 昨天 / M月D日（跨年带年份）。
+ */
+export function formatDateLabel(iso: string): string {
+  if (!iso) return '今天';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '今天';
+  const now = new Date();
+  const startOfDay = (x: Date): number => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const dayDiff = Math.round((startOfDay(now) - startOfDay(date)) / 86400000);
+  if (dayDiff === 0) return '今天';
+  if (dayDiff === 1) return '昨天';
+  if (date.getFullYear() === now.getFullYear()) {
+    return `${date.getMonth() + 1}月${date.getDate()}日`;
+  }
+  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+}

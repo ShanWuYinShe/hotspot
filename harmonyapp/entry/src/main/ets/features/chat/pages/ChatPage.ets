@@ -6,6 +6,7 @@
 
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
+import { formatDateLabel } from '../../../core/utils/FormatUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MessageSyncManager } from '../../../core/state/MessageSyncManager';
 import { MyProfile, MessageType, PrivateMessageItem, GroupMessageItem, SendPrivateMessageRequest, SendGroupMessageRequest, GetPrivateMessagesHistoryRequest, GetGroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest, UserOpenTheDoorRequest, CreateReportRequest, MediaCategory } from '../../../core/types/api';
@@ -190,6 +191,22 @@ export struct ChatPage {
     const minutes = date.getMinutes();
     const pad = (n: number): string => (n < 10 ? `0${n}` : `${n}`);
     return `${pad(month)}-${pad(day)} ${pad(hours)}:${pad(minutes)}`;
+  }
+
+  /** 本地日期 key：用于判断两条消息是否跨天（对齐前端 groupMessagesByDay） */
+  private getLocalDayKey(iso: string): string {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  }
+
+  /** 该索引消息是否需要展示日期分隔胶囊（与上一条不同日 / 首条） */
+  private shouldShowDatePill(index: number): boolean {
+    const msg = this.messagesDataSource.getData(index);
+    if (!msg) return false;
+    if (index === 0) return true;
+    const prev = this.messagesDataSource.getData(index - 1);
+    return this.getLocalDayKey(msg.sentAt) !== this.getLocalDayKey(prev.sentAt);
   }
 
   private dismissKeyboardOnOutsideTap(): void {
@@ -1127,9 +1144,15 @@ export struct ChatPage {
             .padding(DesignConstants.SPACING.MD)
           }
         }
-        LazyForEach(this.messagesDataSource, (msg: ChatMessage) => {
+        LazyForEach(this.messagesDataSource, (msg: ChatMessage, index: number) => {
           ListItem() {
-            this.buildMessageItem(msg)
+            Column() {
+              if (this.shouldShowDatePill(index)) {
+                this.buildDatePill(formatDateLabel(msg.sentAt))
+              }
+              this.buildMessageItem(msg)
+            }
+            .width('100%')
           }
         }, (msg: ChatMessage) => msg.id)
       }
@@ -1456,6 +1479,27 @@ export struct ChatPage {
     return isSelf
       ? { topLeft: big, topRight: notch, bottomLeft: big, bottomRight: big }
       : { topLeft: notch, topRight: big, bottomLeft: big, bottomRight: big };
+  }
+
+  @Builder
+  buildDatePill(label: string) {
+    Row() {
+      Text(label)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontColor(this.getCurrentThemePalette().textSecondary)
+        .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
+        .padding({
+          left: DesignConstants.SPACING.MD,
+          right: DesignConstants.SPACING.MD,
+          top: DesignConstants.SPACING.XS,
+          bottom: DesignConstants.SPACING.XS
+        })
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+    }
+    .width('100%')
+    .justifyContent(FlexAlign.Center)
+    .margin({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
   }
 
   @Builder

@@ -59,6 +59,8 @@ export struct MomentsFeedPage {
   @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
   @StorageProp('isTablet') isTablet: boolean = false;
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
+  /** 作为路由页 push 时显示返回按钮（tab 场景隐藏，对齐前端 /nearby/moments 独立页） */
+  @Prop showBackButton: boolean = false;
 
   @State isLoading: boolean = true;
   @State errorMessage: string = '';
@@ -256,7 +258,9 @@ export struct MomentsFeedPage {
           title: '附近动态',
           titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
           titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
-          backgroundVariant: 'transparent'
+          backgroundVariant: 'transparent',
+          showBackButton: this.showBackButton,
+          onBack: this.showBackButton ? () => { AppRouter.pop(); } : null
         }) {
           if (this.hotMoments.length > 0) {
             Text(`${this.hotMoments.length} 条内容`)
@@ -918,4 +922,9 @@ export struct MomentsFeedPage {
   }
 
 
+}
+
+@Builder
+export function MomentsFeedPageBuilder() {
+  MomentsFeedPage({ showBackButton: true })
 }

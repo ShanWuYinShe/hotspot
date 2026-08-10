@@ -73,6 +73,7 @@ export interface PageNamesType {
   NEARBY_USERS: string;
   NEARBY_GROUPS: string;
   NEARBY: string;
+  NEARBY_MOMENTS: string;
   ADMIN_OVERVIEW: string;
 }
 
@@ -106,6 +107,7 @@ export const PageNames: PageNamesType = {
   NEARBY_USERS: 'NearbyUsersListPage',
   NEARBY_GROUPS: 'NearbyGroupsListPage',
   NEARBY: 'NearbyPage',
+  NEARBY_MOMENTS: 'MomentsFeedPage',
   ADMIN_OVERVIEW: 'AdminOverviewPage'
 };
 
