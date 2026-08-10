@@ -20,11 +20,32 @@
   --cst-shape-md: 1rem;       /* 16px */
   --cst-shape-lg: 1.25rem;    /* 20px */
   --cst-shape-xl: 1.5rem;     /* 24px */
+  --cst-shape-full: 9999px;   /* 圆/胶囊（rounded-full） */
+}
+
+/* ── Border width scale ───────────────────────────────────────────
+   边框粗细档位：hairline=1px（默认线）、regular=1.5px（头像描边等）、
+   strong=2px（强分隔/徽章）、heavy=3px（头像环/定位点）。 */
+:root {
+  --cst-border-width-hairline: 1px;
+  --cst-border-width-regular: 1.5px;
+  --cst-border-width-strong: 2px;
+  --cst-border-width-heavy: 3px;
 }
 
 /* ── System rhythm and interaction tokens ─────────────────────────── */
 :root {
+  --cst-motion-instant: 100ms;
+  --cst-motion-rapid: 150ms;
+  --cst-motion-snappy: 180ms;
   --cst-motion-standard: 220ms;
+  --cst-motion-relaxed: 260ms;
+  --cst-motion-spring: 300ms;
+  --cst-motion-slow: 400ms;
+  --cst-motion-gentle: 500ms;
+  --cst-motion-spinner: 700ms;
+  --cst-motion-pulse: 2400ms;
+  --cst-motion-reduced: 1400ms;
   --cst-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
   /* 弹簧曲线（overshoot）：FAB、toggle 滑块、地图标记放大、sheet 拖拽回弹等
      「有弹性」的入场/位移反馈。禁止组件内联 cubic-bezier 字面量。 */

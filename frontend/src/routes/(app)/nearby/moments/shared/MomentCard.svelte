@@ -32,7 +32,7 @@
 	{#snippet placeholder()}
 		<div
 			class="flex items-center justify-center rounded-sm size-11.5 bg-accent-bg"
-			style="border:1px solid var(--cst-accent-border-soft);box-shadow:var(--shadow-glow-lg);"
+			style="border:var(--cst-border-width-hairline) solid var(--cst-accent-border-soft);box-shadow:var(--shadow-glow-lg);"
 		>
 			<MapPin size={20} class="text-accent-default" strokeWidth={1.5} />
 		</div>
@@ -48,7 +48,7 @@
 		<div class="px-3 pb-2.5 pt-2.5">
 			<!-- 作者行：头像 + 昵称 + 位置 -->
 			<div class="flex min-w-0 items-center gap-2">
-				<Avatar src={item.avatar} name={item.user} size={22} style="border:1.5px solid var(--cst-border-card-menu);" />
+				<Avatar src={item.avatar} name={item.user} size={22} style="border:var(--cst-border-width-regular) solid var(--cst-border-card-menu);" />
 				<span class="truncate text-xs text-text-primary font-medium">{item.user}</span>
 				<span class="ml-auto flex min-w-0 items-center gap-0.5 truncate text-xxs text-text-secondary" >
 					<MapPin class="size-2.5 shrink-0 text-text-secondary"   strokeWidth={1.5} />

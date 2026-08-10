@@ -154,7 +154,7 @@
 		<button
 			type="button"
 			class="hover-btn absolute top-3 right-3 flex items-center gap-1.5 rounded-full focus-ring bg-surface-overlay-strong text-content-inverse text-sm px-3 py-1.5"
-			style="backdrop-filter:blur(var(--cst-blur-md));border:1px solid var(--cst-border-inverse);"
+			style="backdrop-filter:blur(var(--cst-blur-md));border:var(--cst-border-width-hairline) solid var(--cst-border-inverse);"
 			disabled
 			title="暂未开放"
 		>
@@ -166,13 +166,13 @@
 	<!-- Avatar edit -->
 	<div class="flex items-center gap-4 -mt-8 ml-2">
 		<div class="relative shrink-0">
-			<div class="rounded-xl overflow-hidden size-18"  style="border:3px solid var(--cst-surface-primary);box-shadow:var(--cst-elevation-profile-avatar)">
+			<div class="rounded-xl overflow-hidden size-18"  style="border:var(--cst-border-width-heavy) solid var(--cst-surface-primary);box-shadow:var(--cst-elevation-profile-avatar)">
 				<img src={avatar} alt="avatar" class="w-full h-full object-cover" />
 			</div>
 			<button
 				type="button"
 				class="hover-btn hit-slop absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-6.5"
-				style="border:2px solid var(--cst-surface-primary);box-shadow:var(--shadow-glow-sm);"
+				style="border:var(--cst-border-width-strong) solid var(--cst-surface-primary);box-shadow:var(--shadow-glow-sm);"
 				aria-label="更换头像"
 				disabled={uploadingAvatar}
 				onclick={() => avatarInput?.click()}

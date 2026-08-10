@@ -107,10 +107,13 @@ bun run --cwd frontend build   # adapter-static 产物输出到 build/
    image-hover-frame、focus-ring、hover-btn/scale-btn/tap-*、TabBar、ListItem…）
    与 design token，禁止每页自造交互样式。
 4. **风格走 design token**：所有风格类变化（颜色、阴影、圆角、字号、字距、行高、
-   透明度等）必须落在三层 token 体系（primitive → semantic → registry），页面只消费
-   语义类（text-*、bg-*、border-*、shadow-*、rounded-*、tracking-* 等），禁止内联
-   硬编码风格值（如 `color:#xxx`、`opacity:0.45`、`border-radius:Npx`）。改主题只需
-   改 token 文件，全站一致生效。
+   透明度、边框粗细、动效时长等）必须落在 token 体系（primitive → semantic →
+   shared/registry），页面只消费语义类（text-*、bg-*、border-*、shadow-*、
+   rounded-*、tracking-*、opacity-*、duration-* 等），禁止内联硬编码风格值
+   （如 `color:#xxx`、`opacity:0.45`、`border-radius:Npx`、`border:1px solid`、
+   `transition:... 0.2s ...`）。改主题/节奏只需改 token 文件，全站一致生效。
+   登记例外：布局几何（width/height/position/gap 的 px）与 StatusBar 模拟系统
+   chrome 的微圆角属于非主题风格，不受此条约束。
 
 > 具体状态契约见「样式自查清单 → 交互状态契约」。
 

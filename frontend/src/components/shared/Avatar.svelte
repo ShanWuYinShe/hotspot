@@ -40,7 +40,7 @@
 
 <div
 	class="relative shrink-0 {className}"
-	style="width:{size}px;height:{size}px;border-radius:{borderRadius};overflow:hidden;background:var(--cst-surface-primary);{ring ? 'border:1px solid var(--cst-accent-border-soft);' : ''}{style}"
+	style="width:{size}px;height:{size}px;border-radius:{borderRadius};overflow:hidden;background:var(--cst-surface-primary);{ring ? 'border:var(--cst-border-width-hairline) solid var(--cst-accent-border-soft);' : ''}{style}"
 >
 	{#if showImage}
 		<img src={src} alt={name ?? ''} class="h-full w-full object-cover" onerror={() => (hasError = true)} />

@@ -25,7 +25,7 @@ locationName = loc?.location_name ?? '';
 <button
 	type="button"
 	class="hover-btn card-hover flex items-center focus-ring text-left {collapsed ? 'h-10 w-10 self-center justify-center rounded-sm' : 'w-full gap-3 rounded-md'}"
-	style="padding:{collapsed ? 0 : '10px 12px'};background:{hovered ? collapsedHover : collapsed ? 'transparent' : 'var(--cst-surface-primary)'};border:1px solid {hovered ? 'var(--cst-accent-default)' : 'var(--cst-border-default)'};box-shadow:{collapsed ? 'none' : 'var(--shadow-raised-md)'};transform:{hovered ? 'translateY(-2px)' : 'translateY(0)'};transition:background 0.16s var(--cst-ease-standard), transform 0.22s var(--cst-ease-standard), box-shadow 0.22s var(--cst-ease-standard), border-color 0.18s var(--cst-ease-standard);"
+	style="padding:{collapsed ? 0 : '10px 12px'};background:{hovered ? collapsedHover : collapsed ? 'transparent' : 'var(--cst-surface-primary)'};border:var(--cst-border-width-hairline) solid {hovered ? 'var(--cst-accent-default)' : 'var(--cst-border-default)'};box-shadow:{collapsed ? 'none' : 'var(--shadow-raised-md)'};transform:{hovered ? 'translateY(-2px)' : 'translateY(0)'};transition:background var(--cst-motion-rapid) var(--cst-ease-standard), transform var(--cst-motion-standard) var(--cst-ease-standard), box-shadow var(--cst-motion-standard) var(--cst-ease-standard), border-color var(--cst-motion-snappy) var(--cst-ease-standard);"
 	title={collapsed ? '位置选择' : undefined}
 	aria-label="位置选择"
 	onclick={onClick}

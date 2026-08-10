@@ -77,7 +77,7 @@
 		if (style) parts.push(style);
 		if (isCard) {
 			parts.push('background:var(--cst-surface-primary);');
-			parts.push('border:1px solid var(--cst-border-default);');
+			parts.push('border:var(--cst-border-width-hairline) solid var(--cst-border-default);');
 			parts.push(
 				`box-shadow:${surfaceActive ? `${cardShadow}, inset 0 0 0 1px var(--cst-accent-border)` : cardShadow};`
 			);
@@ -104,12 +104,12 @@
 	data-active={pressed ? 'true' : undefined}
 	tabindex={onClick ? 0 : undefined}
 	class={cn(
-		'relative transition-[background-color,border-radius,box-shadow,opacity] duration-200 ease-out focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default',
+		'relative transition-[background-color,border-radius,box-shadow,opacity] duration-standard ease-out focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default',
 		onClick && 'cursor-pointer',
 		isCard ? 'rounded-md border' : 'bg-surface-primary',
 		className
 	)}
-	style={`${itemStyle}opacity:${itemOpacity};transition-duration:${pointerDown ? '0.10s' : '0.20s'};`}
+	style={`${itemStyle}opacity:${itemOpacity};transition-duration:${pointerDown ? 'var(--cst-motion-instant)' : 'var(--cst-motion-standard)'};`}
 	onmouseenter={() => (hovered = true)}
 	onmouseleave={() => {
 		hovered = false;

@@ -80,7 +80,7 @@
 					type="button"
 					class="hover-btn tap-92 flex items-center justify-center rounded-full focus-ring shrink-0 size-7"
 					style="{followed
-						? 'background:var(--cst-accent-soft);border:1px solid var(--cst-accent-border);color:var(--cst-accent-default);'
+						? 'background:var(--cst-accent-soft);border:var(--cst-border-width-hairline) solid var(--cst-accent-border);color:var(--cst-accent-default);'
 						: 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);box-shadow:var(--shadow-glow-sm);'}"
 					aria-label={followed ? `取消关注 ${user.name}` : `关注 ${user.name}`}
 					onclick={(e) => {

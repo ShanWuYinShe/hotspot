@@ -90,7 +90,7 @@ function toggleAdd(id: number) {
 						ariaLabel={addedIds.has(u.id) ? `取消添加 ${u.name}` : `添加 ${u.name}`}
 						class="flex items-center gap-3.5 p-3"
 					>
-						<img src={u.avatar} alt={u.name} loading="lazy" class="rounded-full object-cover shrink-0 size-11"  style="border:1.5px solid var(--cst-border-default)" />
+						<img src={u.avatar} alt={u.name} loading="lazy" class="rounded-full object-cover shrink-0 size-11"  style="border:var(--cst-border-width-regular) solid var(--cst-border-default)" />
 						<div class="flex-1 min-w-0">
 							<p class="text-text-primary text-sm" >{u.name}</p>
 							<p class="text-text-secondary text-xs" >{u.subtitle}</p>
@@ -99,7 +99,7 @@ function toggleAdd(id: number) {
 							type="button"
 							class="hover-btn tap-92 flex items-center gap-1.5 px-3 py-1.5 rounded-full focus-ring shrink-0 text-xs {addedIds.has(u.id) ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
 							style={addedIds.has(u.id)
-								? 'box-shadow:var(--shadow-inset-sm);border:1px solid var(--cst-border-strong);'
+								? 'box-shadow:var(--shadow-inset-sm);border:var(--cst-border-width-hairline) solid var(--cst-border-strong);'
 								: 'box-shadow:var(--shadow-glow-sm);'}
 							onclick={(e) => {
 								e.stopPropagation();
@@ -152,7 +152,7 @@ function toggleAdd(id: number) {
 						class="flex items-center gap-3.5 p-3"
 					>
 						<div class="relative shrink-0">
-							<img src={c.avatar} alt={c.name} loading="lazy" class="rounded-full object-cover size-11"  style="border:1.5px solid var(--cst-border-default)" />
+							<img src={c.avatar} alt={c.name} loading="lazy" class="rounded-full object-cover size-11"  style="border:var(--cst-border-width-regular) solid var(--cst-border-default)" />
 							{#if c.online}
 								<OnlineDot size="md" />
 							{/if}

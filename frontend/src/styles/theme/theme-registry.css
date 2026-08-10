@@ -51,7 +51,17 @@
   --radius-md: var(--cst-shape-md);      /* 16px：按钮、输入框、中等卡片 */
   --radius-lg: var(--cst-shape-lg);      /* 20px：面板、列表容器、大卡片 */
   --radius-xl: var(--cst-shape-xl);      /* 24px：封面、hero 区、feature 卡 */
+  --radius-full: var(--cst-shape-full);  /* 9999px：圆/胶囊（rounded-full） */
   --radius-sheet: 1.75rem;               /* 28px：底部 sheet/弹层专用 */
+
+  /* Border width scale — border 默认 1px / border-2 走 strong，均经 token 控制 */
+  --default-border-width: var(--cst-border-width-hairline);
+  --border-width-DEFAULT: var(--cst-border-width-hairline);
+  --border-width-2: var(--cst-border-width-strong);
+  --border-width-hairline: var(--cst-border-width-hairline);
+  --border-width-regular: var(--cst-border-width-regular);
+  --border-width-strong: var(--cst-border-width-strong);
+  --border-width-heavy: var(--cst-border-width-heavy);
 
   /* System rhythm — 动效 token 注册（ease 用字面量，避免 @theme inline 自引用） */
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
@@ -134,4 +144,15 @@
   --opacity-hover: var(--cst-opacity-hover);
   --opacity-full: var(--cst-opacity-full);
   --opacity-active: var(--cst-opacity-active);
+
+  /* Motion duration scale — 生成 duration-instant/rapid/snappy/standard/
+     relaxed/spring/slow/gentle 类；transition 与 animation 时长统一走 token。 */
+  --transition-duration-instant: var(--cst-motion-instant);
+  --transition-duration-rapid: var(--cst-motion-rapid);
+  --transition-duration-snappy: var(--cst-motion-snappy);
+  --transition-duration-standard: var(--cst-motion-standard);
+  --transition-duration-relaxed: var(--cst-motion-relaxed);
+  --transition-duration-spring: var(--cst-motion-spring);
+  --transition-duration-slow: var(--cst-motion-slow);
+  --transition-duration-gentle: var(--cst-motion-gentle);
 }

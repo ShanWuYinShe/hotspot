@@ -205,7 +205,7 @@
 			src={contact?.avatar}
 			name={peerName}
 			size={compact ? 34 : 38}
-			style="border:1.5px solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
+			style="border:var(--cst-border-width-regular) solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
 		>
 			{#snippet badge()}
 				{#if onlineNow}
@@ -313,8 +313,8 @@
 
 		<button
 			type="button"
-			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full focus-ring shrink-0 transition-all duration-200 {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'} size-9"
-			style="box-shadow:{chat.inputVal.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:1px solid var(--cst-border-default);"
+			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full focus-ring shrink-0 transition-all duration-standard {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'} size-9"
+			style="box-shadow:{chat.inputVal.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:var(--cst-border-width-hairline) solid var(--cst-border-default);"
 			onclick={() => void chat.handleSend()}
 			aria-label="发送"
 		>

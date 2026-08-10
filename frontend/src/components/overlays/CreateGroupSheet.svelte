@@ -223,7 +223,7 @@
 				onclick={() => void handleCreate()}
 				disabled={!canCreate || creating}
 				class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-lg focus-ring text-sm font-medium {canCreate && !creating ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
-				style="box-shadow:{canCreate && !creating ? 'var(--shadow-glow-lg)' : 'var(--shadow-inset-sm)'};border:{canCreate && !creating ? 'none' : '1px solid var(--cst-border-default)'};transition:all 0.22s var(--cst-ease-standard);cursor:{canCreate && !creating ? 'pointer' : 'not-allowed'};"
+				style="box-shadow:{canCreate && !creating ? 'var(--shadow-glow-lg)' : 'var(--shadow-inset-sm)'};border:{canCreate && !creating ? 'none' : '1px solid var(--cst-border-default)'};transition:all var(--cst-motion-standard) var(--cst-ease-standard);cursor:{canCreate && !creating ? 'pointer' : 'not-allowed'};"
 			>
 		{creating ? '创建中…' : '创建群组'}
 	</button>

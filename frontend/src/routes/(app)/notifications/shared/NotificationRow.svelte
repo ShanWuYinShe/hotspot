@@ -35,7 +35,7 @@
 			</div>
 		{/if}
 		{#if notif.user.avatar}
-			<div class="absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full size-4.5" style="background:{cfg.color};border:2px solid var(--cst-surface-primary);">
+			<div class="absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full size-4.5" style="background:{cfg.color};border:var(--cst-border-width-strong) solid var(--cst-surface-primary);">
 				<cfg.icon class="size-2.5 text-text-on-accent"   strokeWidth={2.5} />
 			</div>
 		{/if}

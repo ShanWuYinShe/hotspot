@@ -118,7 +118,7 @@
 </script>
 
 <div
-	class="flex flex-col h-screen w-screen overflow-hidden transition-colors duration-500 font-sans"
+	class="flex flex-col h-screen w-screen overflow-hidden transition-colors duration-gentle font-sans"
 	style="background-color:var(--cst-surface-page);color:var(--cst-text-primary);"
 >
 	<!-- HEADER — 52px, full width -->
@@ -201,7 +201,7 @@
 						src={auth.user.avatar_url || ''}
 						alt={auth.user.nickname || '用户'}
 						class="w-full h-full rounded-full object-cover"
-						style="border:1.5px solid var(--cst-border-default);"
+						style="border:var(--cst-border-width-regular) solid var(--cst-border-default);"
 					/>
 				</button>
 			{:else}
@@ -223,7 +223,7 @@
 	<div class="desktop-workspace relative z-0 flex flex-1 overflow-hidden gap-0" >
 		<!-- Sidebar (224px expanded / 72px collapsed, fixed width) -->
 		<aside
-			class="relative flex flex-col shrink-0 overflow-visible box-border transition-[width] duration-200"
+			class="relative flex flex-col shrink-0 overflow-visible box-border transition-[width] duration-standard"
 			style="width:{isSidebarCollapsed ? 'var(--cst-desktop-sidebar-collapsed)' : 'var(--cst-desktop-sidebar-width)'};padding:0.75rem;"
 		>
 			<!-- Scrollable nav region — takes all available space -->
@@ -261,7 +261,7 @@
 
 		<!-- Main Content Card — RoutedContentViewport 是唯一滚动 owner（desktopPane 激活 sticky-header surface-page 强制规则）。
 		     全画布页（消息分栏 / 地图探索）禁用滚动，画布固定视口高度。 -->
-		<div class="desktop-main-panel flex-1 min-w-0 overflow-hidden border-l border-border-default transition-colors duration-500">
+		<div class="desktop-main-panel flex-1 min-w-0 overflow-hidden border-l border-border-default transition-colors duration-gentle">
 			<RoutedContentViewport
 				desktopPane
 				class="desktop-main-scroll"

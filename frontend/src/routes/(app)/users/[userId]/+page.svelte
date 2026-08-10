@@ -245,7 +245,7 @@
 				<div class="flex items-end justify-between gap-4">
 					<div class="flex min-w-0 items-center gap-4">
 						<div class="relative shrink-0">
-							<div class="overflow-hidden rounded-full size-20 shadow-raised-lg"   style="border:3px solid var(--cst-surface-primary)">
+							<div class="overflow-hidden rounded-full size-20 shadow-raised-lg"   style="border:var(--cst-border-width-heavy) solid var(--cst-surface-primary)">
 								<img src={user.avatar} alt={user.name} class="w-full h-full object-cover" />
 							</div>
 							<span class="absolute bottom-1 right-1 rounded-full bg-status-online size-3.5 border-2 border-surface-primary"  ></span>
@@ -271,8 +271,8 @@
 							type="button"
 							class="hover-btn tap-92 flex items-center gap-1.5 px-4 py-2 rounded-full focus-ring transition-all disabled:cursor-not-allowed disabled:opacity-muted text-xs {followed ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
 							style={followed
-								? 'border:1.5px solid var(--cst-accent-default);box-shadow:var(--shadow-raised-sm);'
-								: 'box-shadow:var(--shadow-glow-md);border:1px solid transparent;'}
+								? 'border:var(--cst-border-width-regular) solid var(--cst-accent-default);box-shadow:var(--shadow-raised-sm);'
+								: 'box-shadow:var(--shadow-glow-md);border:var(--cst-border-width-hairline) solid transparent;'}
 							disabled={blocked}
 							onclick={toggleFollow}
 						>

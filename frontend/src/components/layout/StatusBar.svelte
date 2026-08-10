@@ -45,7 +45,7 @@
 		<!-- Battery -->
 		<div style="display:flex;align-items:center;">
 			<div
-				style="width:23px;height:11px;border-radius:3px;border:1.5px solid var(--cst-text-primary);position:relative;overflow:hidden;box-sizing:border-box;"
+				style="width:23px;height:11px;border-radius:3px;border:var(--cst-border-width-regular) solid var(--cst-text-primary);position:relative;overflow:hidden;box-sizing:border-box;"
 			>
 				<div
 					style="position:absolute;inset:1px;right:auto;width:calc({batteryLevel * 100}% - 2px);border-radius:1.5px;background-color:var(--cst-text-primary);"

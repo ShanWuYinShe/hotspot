@@ -154,8 +154,8 @@
 
 		<!-- Current location dot -->
 		<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:5;">
-			<div class="relative rounded-full" style="width:18px;height:18px;background:{PIN_COLORS.user};border:3px solid var(--cst-surface-primary);box-shadow:var(--cst-marker-shadow) {PIN_TONES.user.glow};">
-				<span class="absolute rounded-full" style="inset:-8px;background:{PIN_TONES.user.bg};border:1px solid {PIN_TONES.user.border};"></span>
+			<div class="relative rounded-full" style="width:18px;height:18px;background:{PIN_COLORS.user};border:var(--cst-border-width-heavy) solid var(--cst-surface-primary);box-shadow:var(--cst-marker-shadow) {PIN_TONES.user.glow};">
+				<span class="absolute rounded-full" style="inset:-8px;background:{PIN_TONES.user.bg};border:var(--cst-border-width-hairline) solid {PIN_TONES.user.border};"></span>
 			</div>
 		</div>
 
@@ -193,7 +193,7 @@
 			<button
 				type="button"
 				class="hover-btn flex items-center gap-2 rounded-full focus-ring text-sm"
-				style="padding:9px 16px;background:{showFilter ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-text-primary)'};border:1px solid {showFilter ? 'transparent' : 'var(--cst-border-default)'};box-shadow:{showFilter ? 'var(--shadow-glow-md)' : 'var(--cst-elevation-fab)'};"
+				style="padding:9px 16px;background:{showFilter ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-text-primary)'};border:var(--cst-border-width-hairline) solid {showFilter ? 'transparent' : 'var(--cst-border-default)'};box-shadow:{showFilter ? 'var(--shadow-glow-md)' : 'var(--cst-elevation-fab)'};"
 				onclick={() => (showFilter = !showFilter)}
 			>
 				<SlidersHorizontal class="size-3.5"  strokeWidth={showFilter ? 2.5 : 1.75} />
@@ -217,7 +217,7 @@
 					</div>
 					<div class="h-0.25 bg-border-default"></div>
 					<div class="flex items-center gap-2 px-3 py-2">
-						<span class="size-3.25 rounded-full" style="background:{PIN_COLORS.user};border:2px solid var(--cst-surface-primary);box-shadow:var(--cst-marker-halo) {PIN_TONES.user.glow};"></span>
+						<span class="size-3.25 rounded-full" style="background:{PIN_COLORS.user};border:var(--cst-border-width-strong) solid var(--cst-surface-primary);box-shadow:var(--cst-marker-halo) {PIN_TONES.user.glow};"></span>
 						<span class="text-text-secondary text-xs" >我的位置</span>
 					</div>
 				</div>

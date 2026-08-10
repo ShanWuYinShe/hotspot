@@ -8,7 +8,7 @@
     min-width: var(--cst-context-rail-width);
     flex-shrink: 0;
     align-self: stretch;
-    border-left: 1px solid var(--cst-border-default);
+    border-left:var(--cst-border-width-hairline) solid var(--cst-border-default);
     background: var(--cst-surface-primary);
   }
   .context-rail__content {

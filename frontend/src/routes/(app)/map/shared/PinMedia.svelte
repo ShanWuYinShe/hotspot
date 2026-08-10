@@ -26,7 +26,7 @@
 	<div class="relative shrink-0">
 		<img src={pin.avatar} alt={pin.name || pin.title || ''} class="rounded-full object-cover" style="width:{size}px;height:{size}px;" />
 		{#if pin.online}
-			<span class="absolute bottom-0 right-0 rounded-full bg-status-online" style="width:10px;height:10px;border:2px solid var(--cst-surface-primary);"></span>
+			<span class="absolute bottom-0 right-0 rounded-full bg-status-online" style="width:10px;height:10px;border:var(--cst-border-width-strong) solid var(--cst-surface-primary);"></span>
 		{/if}
 	</div>
 {:else if pin.type === 'moment' && pin.image}

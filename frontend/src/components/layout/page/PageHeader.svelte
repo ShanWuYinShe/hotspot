@@ -69,8 +69,8 @@
 <header
 	class={cn('shrink-0', sticky && 'sticky top-0 z-20', className)}
 	style={glass
-		? 'background-color:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md));border-bottom:1px solid var(--cst-border-default);'
-		: 'background-color:var(--cst-surface-page);border-bottom:1px solid var(--cst-border-default);'}
+		? 'background-color:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md));border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);'
+		: 'background-color:var(--cst-surface-page);border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);'}
 >
 	<ContentColumn {maxWidth} class={cn('pt-4 pb-3', contentClassName, belowPad)}>
 		<div class="flex items-center gap-3">

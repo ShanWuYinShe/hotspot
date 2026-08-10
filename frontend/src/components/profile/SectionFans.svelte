@@ -63,7 +63,7 @@
 >
 	{#snippet headerExtra()}
 		{#if pendingCount > 0}
-			<span class="rounded-full px-2 py-0.5 text-xs text-status-warning" style="background:var(--cst-status-warning-bg);border:1px solid var(--cst-status-warning-border);">
+			<span class="rounded-full px-2 py-0.5 text-xs text-status-warning" style="background:var(--cst-status-warning-bg);border:var(--cst-border-width-hairline) solid var(--cst-status-warning-border);">
 				{pendingCount} 待回关
 			</span>
 		{/if}
@@ -94,7 +94,7 @@
 				<button
 					type="button"
 					class="hover-btn tap-92 flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs focus-ring {isMutual ? 'bg-transparent text-text-secondary' : 'bg-accent-default text-text-on-accent'}"
-					style={isMutual ? 'border:1px solid var(--cst-border-strong);' : 'border:1px solid transparent;'}
+					style={isMutual ? 'border:var(--cst-border-width-hairline) solid var(--cst-border-strong);' : 'border:var(--cst-border-width-hairline) solid transparent;'}
 					onclick={(e) => {
 						e.stopPropagation();
 						toggleFollow(f.id);

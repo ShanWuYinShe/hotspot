@@ -47,7 +47,7 @@
     top: 0;
     z-index: var(--cst-z-dropdown);
     background: var(--cst-surface-primary);
-    border-bottom: 1px solid var(--cst-border-default);
+    border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);
   }
 }
 
@@ -59,14 +59,14 @@
   .icon-badge {
     background-color: var(--cst-surface-primary);
     box-shadow: var(--shadow-raised-sm);
-    border: 1px solid var(--cst-border-default);
+    border:var(--cst-border-width-hairline) solid var(--cst-border-default);
   }
 
   /*── Hover surfaces ──────────────────────────────────────────────── */
 
   .card-hover {
     cursor: pointer;
-    transition: box-shadow 0.26s var(--cst-ease-standard);
+    transition: box-shadow var(--cst-motion-relaxed) var(--cst-ease-standard);
   }
   .card-hover:active { transform: scale(0.985); }
   .card-hover:focus-visible { outline: 2px solid var(--cst-accent-default); outline-offset: 2px; }
@@ -86,13 +86,13 @@
     gap: 0.75rem;
     text-align: left;
     background: var(--cst-surface-primary);
-    border: 1px solid transparent;
+    border:var(--cst-border-width-hairline) solid transparent;
   }
   .app-list-row + .app-list-row { border-top-color: var(--cst-border-default); }
   .app-list-row--standard { min-height: 4.125rem; padding: 0.75rem 0.875rem; }
 
   .circle-hover {
-    transition: transform 0.16s var(--cst-ease-standard), box-shadow 0.20s var(--cst-ease-standard), border-color 0.16s var(--cst-ease-standard);
+    transition: transform var(--cst-motion-rapid) var(--cst-ease-standard), box-shadow var(--cst-motion-standard) var(--cst-ease-standard), border-color var(--cst-motion-rapid) var(--cst-ease-standard);
   }
   .circle-hover:active { transform: scale(0.94); }
   @media (hover: hover) and (pointer: fine) {
@@ -123,24 +123,24 @@
     background-color: var(--cst-surface-primary);
     box-shadow: var(--shadow-raised-lg);
     color: var(--cst-text-primary);
-    border: 1px solid var(--cst-border-default);
+    border:var(--cst-border-width-hairline) solid var(--cst-border-default);
   }
   .pressed {
     background-color: var(--cst-surface-primary);
     box-shadow: var(--shadow-inset-md);
     color: var(--cst-text-primary);
-    border: 1px solid var(--cst-border-strong);
+    border:var(--cst-border-width-hairline) solid var(--cst-border-strong);
   }
   .surface-hero {
     background-color: var(--cst-surface-primary);
-    border: 1px solid var(--cst-border-default);
+    border:var(--cst-border-width-hairline) solid var(--cst-border-default);
     box-shadow: var(--shadow-raised-lg);
   }
 
   .surface-flat {
     background-color: var(--cst-surface-primary);
     box-shadow: 0 0 0 1px var(--cst-border-default);
-    transition: box-shadow 0.18s var(--cst-ease-standard), background-color 0.18s var(--cst-ease-standard);
+    transition: box-shadow var(--cst-motion-snappy) var(--cst-ease-standard), background-color var(--cst-motion-snappy) var(--cst-ease-standard);
   }
   @media (hover: hover) and (pointer: fine) {
     /* hover 描边只给可交互元素；非交互容器/浮层悬停不应误出外环 */
@@ -161,8 +161,8 @@
 
   .surface-ghost {
     background-color: transparent;
-    border: 1px solid transparent;
-    transition: background-color 0.16s var(--cst-ease-standard), border-color 0.16s var(--cst-ease-standard), color 0.16s var(--cst-ease-standard);
+    border:var(--cst-border-width-hairline) solid transparent;
+    transition: background-color var(--cst-motion-rapid) var(--cst-ease-standard), border-color var(--cst-motion-rapid) var(--cst-ease-standard), color var(--cst-motion-rapid) var(--cst-ease-standard);
   }
   .surface-ghost[aria-pressed="true"] {
     background-color: var(--cst-accent-soft);
@@ -220,8 +220,8 @@
   .input-surface {
     background: color-mix(in srgb, var(--cst-surface-primary) 82%, var(--cst-surface-page) 18%) !important;
     box-shadow: inset 0 0 0 1px var(--cst-border-default), inset 0 1px 2px color-mix(in srgb, var(--cst-elevation-shadow-dark) 26%, transparent) !important;
-    border: 1px solid var(--cst-border-default) !important;
-    transition: box-shadow 0.2s var(--cst-ease-standard), border-color 0.2s var(--cst-ease-standard);
+    border:var(--cst-border-width-hairline) solid var(--cst-border-default) !important;
+    transition: box-shadow var(--cst-motion-standard) var(--cst-ease-standard), border-color var(--cst-motion-standard) var(--cst-ease-standard);
   }
   .input-surface:focus-within {
     /* 聚焦态整框高亮：边框加深 + 内缘 1px 加深线（视觉 2px 边缘）+
@@ -242,38 +242,38 @@
 }
 
   /*── Hover/active 反馈（对齐 Figma Make useHoverConfig 契约）───────── */
-  /* Figma 契约（vibrant 默认）：btn hover scale 1.10/0.17s、tap 0.94/0.10s；
-     action（行内小图标）hover 1.20/0.14s；tap 统一 0.94/0.10s。
+  /* Figma 契约（vibrant 默认）：btn hover scale 1.10/var(--cst-motion-snappy)、tap 0.94/var(--cst-motion-instant)；
+     action（行内小图标）hover 1.20/var(--cst-motion-rapid)；tap 统一 0.94/var(--cst-motion-instant)。
      仅 fine pointer 设备启用 hover 缩放（withoutHover 契约）。 */
 
   .hover-btn,
   .hover-action {
-    transition: transform 0.17s var(--cst-ease-standard),
-      box-shadow 0.18s var(--cst-ease-standard),
-      background-color 0.18s var(--cst-ease-standard),
-      border-color 0.18s var(--cst-ease-standard),
-      color 0.18s var(--cst-ease-standard);
+    transition: transform var(--cst-motion-snappy) var(--cst-ease-standard),
+      box-shadow var(--cst-motion-snappy) var(--cst-ease-standard),
+      background-color var(--cst-motion-snappy) var(--cst-ease-standard),
+      border-color var(--cst-motion-snappy) var(--cst-ease-standard),
+      color var(--cst-motion-snappy) var(--cst-ease-standard);
     will-change: transform;
   }
 
-  /* 通用按钮：按下 0.94 缩放（对齐 Figma tap 0.94/0.10s）；hover 由全局 button 规则的
+  /* 通用按钮：按下 0.94 缩放（对齐 Figma tap 0.94/var(--cst-motion-instant)）；hover 由全局 button 规则的
      --interactive-hover-fill 背景填充承载（Figma 无 brightness 滤镜） */
-  .hover-btn { transition-duration: 0.17s, 0.18s, 0.18s, 0.18s, 0.18s; }
-  .hover-btn:active { transform: scale(0.94); transition-duration: 0.10s, 0.18s, 0.18s, 0.18s, 0.18s; }
+  .hover-btn { transition-duration: var(--cst-motion-snappy), var(--cst-motion-snappy), var(--cst-motion-snappy), var(--cst-motion-snappy), var(--cst-motion-snappy); }
+  .hover-btn:active { transform: scale(0.94); transition-duration: var(--cst-motion-instant), var(--cst-motion-snappy), var(--cst-motion-snappy), var(--cst-motion-snappy), var(--cst-motion-snappy); }
 
   /* 行内小图标动作：hover 缩放 1.20（Figma action）、按下 0.94。
      hover 缩放仅 fine pointer 启用（对齐 useHoverConfig withoutHover 契约），
      tap（:active）在所有设备生效。 */
-  .hover-action:active { transform: scale(0.94); transition-duration: 0.10s, 0.18s, 0.18s, 0.18s, 0.18s; }
+  .hover-action:active { transform: scale(0.94); transition-duration: var(--cst-motion-instant), var(--cst-motion-snappy), var(--cst-motion-snappy), var(--cst-motion-snappy), var(--cst-motion-snappy); }
   @media (hover: hover) and (pointer: fine) {
-    .hover-action:hover { transform: scale(1.20); transition-duration: 0.14s, 0.18s, 0.18s, 0.18s, 0.18s; }
+    .hover-action:hover { transform: scale(1.20); transition-duration: var(--cst-motion-rapid), var(--cst-motion-snappy), var(--cst-motion-snappy), var(--cst-motion-snappy), var(--cst-motion-snappy); }
   }
 
   /* 圆形图标按钮（ActionIconButton 等）：圆形允许缩放（Figma Make btn 契约 1.10/0.94）。
      hover 缩放仅 fine pointer；tap 全设备。 */
-  .scale-btn:active { transform: scale(0.94); transition-duration: 0.10s; }
+  .scale-btn:active { transform: scale(0.94); transition-duration: var(--cst-motion-instant); }
   @media (hover: hover) and (pointer: fine) {
-    .scale-btn:hover { transform: scale(1.10); transition-duration: 0.17s; }
+    .scale-btn:hover { transform: scale(1.10); transition-duration: var(--cst-motion-snappy); }
   }
 
   /* 页面级按钮 tap 强度（近邻档位已收敛，5 档以内；对齐 Figma 各页 whileTap 硬编码值） */
@@ -285,36 +285,36 @@
 
   /* 顶栏图标按钮（Figma DesktopLayout HeaderBtn action 契约：hover 1.18 + 背景填充 + tap 0.84，
      覆盖 ActionIconButton 默认的 btn 契约 1.10/0.94）。hover 仅 fine pointer；tap 全设备。 */
-  .header-action:active { transform: scale(0.84); transition-duration: 0.10s, 0.18s, 0.18s, 0.18s, 0.18s; }
+  .header-action:active { transform: scale(0.84); transition-duration: var(--cst-motion-instant), var(--cst-motion-snappy), var(--cst-motion-snappy), var(--cst-motion-snappy), var(--cst-motion-snappy); }
   @media (hover: hover) and (pointer: fine) {
-    .header-action:hover { transform: scale(1.18); transition-duration: 0.14s, 0.18s, 0.18s, 0.18s, 0.18s; background-color: var(--cst-interactive-hover-fill); }
+    .header-action:hover { transform: scale(1.18); transition-duration: var(--cst-motion-rapid), var(--cst-motion-snappy), var(--cst-motion-snappy), var(--cst-motion-snappy), var(--cst-motion-snappy); background-color: var(--cst-interactive-hover-fill); }
   }
 
   /* 悬停背景（bgHover）：直接复用 --cst-interactive-hover-fill token（= --cst-pr-hover，
      每主题/暗色已精确定义：vibrant 10%/15%、forest 12%/18%），与全局 button hover
      填充一致，避免硬编码 color-mix 与 token 漂移。仅 fine pointer 生效。 */
-  .hover-bg { transition: background-color 0.18s var(--cst-ease-standard); }
+  .hover-bg { transition: background-color var(--cst-motion-snappy) var(--cst-ease-standard); }
   @media (hover: hover) and (pointer: fine) {
     .hover-bg:hover { background-color: var(--cst-interactive-hover-fill); }
   }
 
   /* 地图当前位置脉冲光晕（对齐 Figma Make LocationMobile motion.div：
-     scale 1→1.8 / opacity 0.55→0 无限循环，2.4s 节奏）。 */
+     scale 1→1.8 / opacity 0.55→0 无限循环，var(--cst-motion-pulse) 节奏）。 */
   @keyframes map-pulse {
     0% { transform: scale(1); opacity: var(--cst-opacity-dim); }
     70% { opacity: var(--cst-opacity-none); }
     100% { transform: scale(1.8); opacity: var(--cst-opacity-none); }
   }
-  .map-pulse-halo { animation: map-pulse 2.4s ease-out infinite; }
+  .map-pulse-halo { animation: map-pulse var(--cst-motion-pulse) ease-out infinite; }
 
   /* Loading spinner（全站统一加载指示器：圆形 border + accent 顶边旋转）。
      消除各页 border-2 border-border-default border-t-accent-default animate-spin 重复。
      用法：<div class="spinner size-7"></div> */
   .spinner {
-    border: 2px solid var(--cst-border-default);
+    border:var(--cst-border-width-strong) solid var(--cst-border-default);
     border-top-color: var(--cst-accent-default);
     border-radius: 9999px;
-    animation: spinner-rotate 0.7s linear infinite;
+    animation: spinner-rotate var(--cst-motion-spinner) linear infinite;
   }
   @keyframes spinner-rotate { to { transform: rotate(360deg); } }
 
@@ -331,7 +331,7 @@
       display: none;
     }
     .spinner {
-      animation-duration: 1.4s !important;
+      animation-duration: var(--cst-motion-reduced) !important;
     }
   }
 
@@ -382,7 +382,7 @@
     inset: 0;
     z-index: 30;
     pointer-events: none;
-    border: 2px solid transparent;
+    border:var(--cst-border-width-strong) solid transparent;
     border-radius: inherit;
     transition: border-color 160ms var(--cst-ease-standard);
   }

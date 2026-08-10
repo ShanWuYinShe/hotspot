@@ -31,20 +31,20 @@
 >
 	{#if isActive}
 		<div
-			class="transition-[opacity] duration-200"
+			class="transition-[opacity] duration-standard"
 			style="position:absolute;inset:4px 6px;border-radius:var(--cst-shape-lg);background:var(--cst-navigation-active-indicator);opacity:var(--cst-opacity-active);"
 		></div>
 	{/if}
 
 	<div style="display:flex;align-items:center;justify-content:center;position:relative;z-index:1;">
 		<Icon
-			style="width:{iconSize}px;height:{iconSize}px;color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color 0.22s var(--cst-ease-standard);"
+			style="width:{iconSize}px;height:{iconSize}px;color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color var(--cst-motion-standard) var(--cst-ease-standard);"
 			strokeWidth={isActive ? 2 : 1.5}
 		/>
 	</div>
 	<span
 		class="text-xs leading-none {isActive ? 'font-semibold' : 'font-normal'}"
-		style="color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color 0.22s var(--cst-ease-standard);position:relative;z-index:1;"
+		style="color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color var(--cst-motion-standard) var(--cst-ease-standard);position:relative;z-index:1;"
 	>
 		{label}
 	</span>

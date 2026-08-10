@@ -63,7 +63,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 	<div class="animate-fade-in">
 		<!-- Selected pin mini-card -->
 		{#if selectedPin}
-			<div class="flex items-center gap-3 mx-4 mb-2 p-3 rounded-md" style="background:{PIN_TONES[selectedPin.type].bg};border:1px solid {PIN_TONES[selectedPin.type].border};">
+			<div class="flex items-center gap-3 mx-4 mb-2 p-3 rounded-md" style="background:{PIN_TONES[selectedPin.type].bg};border:var(--cst-border-width-hairline) solid {PIN_TONES[selectedPin.type].border};">
 				<PinMedia pin={selectedPin} size={42} />
 				<div class="flex-1 min-w-0">
 					<p class="text-text-primary text-sm">{selectedPin.name || selectedPin.title}</p>

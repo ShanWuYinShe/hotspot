@@ -34,7 +34,7 @@
 
 <div
 	data-platform="tablet"
-	class="flex flex-col h-dvh w-full overflow-hidden transition-colors duration-500 font-sans"
+	class="flex flex-col h-dvh w-full overflow-hidden transition-colors duration-gentle font-sans"
 	style="background-color:var(--cst-surface-primary);color:var(--cst-text-primary);"
 >
 	<StatusBar />
@@ -55,7 +55,7 @@
 			class="shrink-0 w-full flex justify-center"
 			style={isWide
 				? 'padding:10px 24px max(16px, env(safe-area-inset-bottom, 16px));background-color:transparent;'
-				: 'padding:0;background-color:var(--cst-surface-nav-glass);border-top:1px solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);'}
+				: 'padding:0;background-color:var(--cst-surface-nav-glass);border-top:var(--cst-border-width-hairline) solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);'}
 		>
 			<div
 				class="flex items-center"
@@ -79,7 +79,7 @@
 					<button
 						type="button"
 						class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring select-none size-12"
-						style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--cst-elevation-fab)'};transition:background 0.22s var(--cst-ease-standard), box-shadow 0.22s var(--cst-ease-standard), transform 0.18s var(--cst-ease-standard), filter 0.18s var(--cst-ease-standard);"
+						style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--cst-elevation-fab)'};transition:background var(--cst-motion-standard) var(--cst-ease-standard), box-shadow var(--cst-motion-standard) var(--cst-ease-standard), transform var(--cst-motion-snappy) var(--cst-ease-standard), filter var(--cst-motion-snappy) var(--cst-ease-standard);"
 						aria-label={composer.composerOpen ? '关闭' : '发布'}
 						onclick={toggleComposer}
 					>

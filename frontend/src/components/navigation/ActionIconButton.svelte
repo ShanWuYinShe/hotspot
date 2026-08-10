@@ -35,11 +35,11 @@
 
 	const style = $derived.by(() => {
 		if (variant === 'overlay') {
-			return `width:${size}px;height:${size}px;background:var(--cst-surface-overlay);backdrop-filter:blur(var(--cst-blur-md));border:1px solid var(--cst-border-inverse);`;
+			return `width:${size}px;height:${size}px;background:var(--cst-surface-overlay);backdrop-filter:blur(var(--cst-blur-md));border:var(--cst-border-width-hairline) solid var(--cst-border-inverse);`;
 		} else if (variant === 'ghost') {
-			return `width:${size}px;height:${size}px;background:transparent;border:1px solid transparent;`;
+			return `width:${size}px;height:${size}px;background:transparent;border:var(--cst-border-width-hairline) solid transparent;`;
 		}
-		return `width:${size}px;height:${size}px;background:var(--cst-surface-raised);border:1px solid var(--cst-border-subtle);box-shadow:${theme.theme === 'forest' ? 'none' : 'var(--shadow-raised-sm)'};`;
+		return `width:${size}px;height:${size}px;background:var(--cst-surface-raised);border:var(--cst-border-width-hairline) solid var(--cst-border-subtle);box-shadow:${theme.theme === 'forest' ? 'none' : 'var(--shadow-raised-sm)'};`;
 	});
 </script>
 

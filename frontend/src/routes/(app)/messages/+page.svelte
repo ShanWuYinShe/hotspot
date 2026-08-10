@@ -363,7 +363,7 @@
 							onclick={() => void goto(ROUTES.message(chat.peerUserId || chat.id))}
 						>
 							<div class="relative">
-								<div class="avatar-entry__avatar rounded-full overflow-hidden bg-surface-primary size-13"  style="padding:2px;border:2px solid var(--cst-accent-default)">
+								<div class="avatar-entry__avatar rounded-full overflow-hidden bg-surface-primary size-13"  style="padding:2px;border:var(--cst-border-width-strong) solid var(--cst-accent-default)">
 									<img src={chat.avatar} alt={chat.name} class="w-full h-full object-cover rounded-full" />
 								</div>
 								<OnlineDot size="lg" />

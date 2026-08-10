@@ -32,11 +32,11 @@
 </script>
 
 <div
-	class="min-h-dvh w-full flex justify-center items-start font-sans transition-colors duration-500"
+	class="min-h-dvh w-full flex justify-center items-start font-sans transition-colors duration-gentle"
 	style="background-color:var(--cst-surface-page);"
 >
 	<div
-		class={cn('flex flex-col h-dvh w-full', 'transition-colors duration-500 overflow-hidden relative')}
+		class={cn('flex flex-col h-dvh w-full', 'transition-colors duration-gentle overflow-hidden relative')}
 		style="background-color:var(--cst-surface-primary);color:var(--cst-text-primary);"
 	>
 		<StatusBar />
@@ -49,7 +49,7 @@
 			<nav
 				aria-label="Main navigation"
 				class="shrink-0 w-full"
-				style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);-webkit-backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);border-top:1px solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);transition:background 0.4s var(--cst-ease-standard), border-color 0.4s var(--cst-ease-standard);"
+				style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);-webkit-backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);border-top:var(--cst-border-width-hairline) solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);transition:background var(--cst-motion-slow) var(--cst-ease-standard), border-color var(--cst-motion-slow) var(--cst-ease-standard);"
 			>
 				<div
 					class="flex items-center px-2"
@@ -72,7 +72,7 @@
 						<button
 							type="button"
 							class="hover-btn scale-btn flex items-center justify-center focus-ring select-none rounded-full size-12.5"
-							style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{fabGlow};transition:background 0.22s var(--cst-ease-standard), box-shadow 0.22s var(--cst-ease-standard), transform 0.18s var(--cst-ease-standard), filter 0.18s var(--cst-ease-standard);"
+							style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{fabGlow};transition:background var(--cst-motion-standard) var(--cst-ease-standard), box-shadow var(--cst-motion-standard) var(--cst-ease-standard), transform var(--cst-motion-snappy) var(--cst-ease-standard), filter var(--cst-motion-snappy) var(--cst-ease-standard);"
 							onclick={toggleComposer}
 							aria-label={composer.composerOpen ? '关闭' : '发布'}
 						>

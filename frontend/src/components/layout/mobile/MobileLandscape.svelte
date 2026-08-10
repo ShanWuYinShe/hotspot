@@ -27,13 +27,13 @@
 </script>
 
 <div
-	class="flex h-dvh w-full overflow-hidden font-sans transition-colors duration-500"
+	class="flex h-dvh w-full overflow-hidden font-sans transition-colors duration-gentle"
 	style="background-color:var(--cst-surface-page);color:var(--cst-text-primary);"
 >
 	{#if !isSubPage}
 		<aside
 			class="shrink-0 flex flex-col items-center"
-			style="width:64px;padding-top:max(env(safe-area-inset-top, 8px), 8px);padding-bottom:max(env(safe-area-inset-bottom, 8px), 8px);padding-left:max(env(safe-area-inset-left, 0px), 0px);gap:8px;border-right:1px solid var(--cst-border-default);background-color:var(--cst-surface-primary);"
+			style="width:64px;padding-top:max(env(safe-area-inset-top, 8px), 8px);padding-bottom:max(env(safe-area-inset-bottom, 8px), 8px);padding-left:max(env(safe-area-inset-left, 0px), 0px);gap:8px;border-right:var(--cst-border-width-hairline) solid var(--cst-border-default);background-color:var(--cst-surface-primary);"
 		>
 			{#each NAV_ITEMS.slice(0, 2) as item}
 				<RailIcon
@@ -47,7 +47,7 @@
 			<button
 				type="button"
 				class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring my-1 size-11"
-				style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--shadow-glow-md)'};transition:background 0.22s var(--cst-ease-standard), transform 0.18s var(--cst-ease-standard), filter 0.18s var(--cst-ease-standard);"
+				style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--shadow-glow-md)'};transition:background var(--cst-motion-standard) var(--cst-ease-standard), transform var(--cst-motion-snappy) var(--cst-ease-standard), filter var(--cst-motion-snappy) var(--cst-ease-standard);"
 				aria-label={composer.composerOpen ? '关闭' : '发布'}
 				onclick={toggleComposer}
 			>

@@ -61,7 +61,7 @@
 		'image-hover-frame focus-ring relative h-full w-full cursor-pointer overflow-hidden',
 		className
 	)}
-	style="transform:{cardTransform};transition:transform 0.10s var(--cst-ease-standard);"
+	style="transform:{cardTransform};transition:transform var(--cst-motion-instant) var(--cst-ease-standard);"
 	role={onClick ? 'button' : undefined}
 	aria-label={onClick ? imageAlt || undefined : undefined}
 	tabindex={onClick ? 0 : undefined}
