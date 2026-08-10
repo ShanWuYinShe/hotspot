@@ -13,6 +13,7 @@
 	import ChatListItem from '@/components/messages/ChatListItem.svelte';
 	import NewConversationSheet from '@/components/overlays/NewConversationSheet.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
 	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import { getPrivateChats, listMyGroups, markPrivateRead, markGroupRead, updatePrivateChatPreferences, updateGroupPreferences } from '@/api';
@@ -110,6 +111,13 @@
 
 	// 共享状态：搜索/新会话/建群（移动与桌面共用）
 	let searchQuery = $state('');
+	// 已读/未读只做过滤，不参与排序（避免读后列表跳动）
+	let chatFilter = $state<'all' | 'unread' | 'read'>('all');
+	const FILTER_TABS: { id: 'all' | 'unread' | 'read'; label: string }[] = [
+		{ id: 'all', label: '全部' },
+		{ id: 'unread', label: '未读' },
+		{ id: 'read', label: '已读' }
+	];
 	let showNewChat = $state(false);
 	let newChatTab = $state<'add' | 'chat'>('chat');
 	let showCreateGroup = $state(false);
@@ -122,8 +130,8 @@
 	const selectChat = (chat: ChatItem) => {
 		if (selectedId !== chat.id) selectedId = chat.id;
 		if (chat.unread > 0) {
-			// 清零后立即按优先级重排（已读会话下沉到未读组之后）
-			chats = chats.map((c) => (c.id === chat.id ? { ...c, unread: 0 } : c)).sort(compareChatItems);
+			// 只清零本地未读徽章；列表按时间排序，位置不跳动
+			chats = chats.map((c) => (c.id === chat.id ? { ...c, unread: 0 } : c));
 			// spec: private_messages/mark_read(scope=session) / group_messages/mark_read(scope=group)；
 			// 幂等语义，失败静默（徽章已本地清零，不打扰浏览）。
 			if (chat.kind === 'group') {
@@ -154,7 +162,11 @@
 	);
 
 	const filtered = $derived(
-		liveChats.filter((c) => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
+		liveChats.filter((c) => {
+			const byFilter =
+				chatFilter === 'all' || (chatFilter === 'unread' ? c.unread > 0 : c.unread === 0);
+			return byFilter && c.name.toLowerCase().includes(searchQuery.toLowerCase());
+		})
 	);
 	const onlineChats = $derived(liveChats.filter((c) => c.online));
 	const totalUnread = $derived(chats.reduce((s, c) => s + c.unread, 0));
@@ -192,6 +204,13 @@
 					{#snippet below()}
 						<div class="mt-3 pb-3">
 							<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索…" class="px-3 py-2" textClass="text-sm" />
+							<div class="mt-3">
+								<TabBar
+									items={FILTER_TABS}
+									value={chatFilter}
+									onChange={(id) => (chatFilter = id as typeof chatFilter)}
+								/>
+							</div>
 						</div>
 					{/snippet}
 				</PageHeader>
@@ -321,6 +340,13 @@
 			<!-- 搜索框：sticky header 内第二行（对齐 Figma MessagesMobile） -->
 			<div class="mt-3 pb-3">
 				<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="rounded-md px-4 py-2.5" />
+				<div class="mt-3">
+					<TabBar
+						items={FILTER_TABS}
+						value={chatFilter}
+						onChange={(id) => (chatFilter = id as typeof chatFilter)}
+					/>
+				</div>
 			</div>
 		{/snippet}
 	</PageHeader>
