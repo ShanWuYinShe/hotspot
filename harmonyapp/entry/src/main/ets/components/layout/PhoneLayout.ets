@@ -18,8 +18,8 @@
  */
 
 import { HomePage } from '../../features/home/pages/HomePage';
-import { MessagePage } from '../../features/message/pages/MessagePage';
-import { ProfilePage } from '../../features/profile/pages/ProfilePage';
+import { MessagePage } from '../../features/messages/pages/MessagePage';
+import { ProfilePage } from '../../features/me/pages/ProfilePage';
 import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
 import { LoginPromptView } from '../LoginPromptView';
 import { NotificationCenter } from '../NotificationCenter';

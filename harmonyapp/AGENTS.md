@@ -176,6 +176,11 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 
 ### 页面路由对齐（web → harmony）
 
+- 目录命名对齐前端路由域（复数）：`features/messages`（消息列表）/
+  `features/moments`（瞬间）/ `features/groups`（群组）/ `features/me`（个人中心，
+  同时承载前端 `/users/[userId]` 他人主页查看——同一 ProfilePage 复用，属平台例外）/
+  `features/nearby` / `features/settings` / `features/search` / `features/map` /
+  `features/auth` / `features/chat`（聊天窗口独立域）。
 - 底栏 4 tab：首页 / 附近 / 消息 / 我的（`PhoneLayout` TAB_ITEMS + `AppNavigation.BOTTOM_TABS`，
   与前端 `routes/(app)/+page.svelte`、`/nearby` 聚合页对齐）。
 - 桌面侧边栏：首页 / 附近瞬间（moments tab）/ 附近的人 / 附近群组 + 消息 / 通知 overlay /

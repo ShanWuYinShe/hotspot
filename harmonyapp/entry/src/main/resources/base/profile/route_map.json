@@ -7,22 +7,22 @@
     },
     {
       "name": "ProfilePage",
-      "pageSourceFile": "src/main/ets/features/profile/pages/ProfilePage.ets",
+      "pageSourceFile": "src/main/ets/features/me/pages/ProfilePage.ets",
       "buildFunction": "ProfilePageBuilder"
     },
     {
       "name": "MomentPage",
-      "pageSourceFile": "src/main/ets/features/moment/pages/MomentPage.ets",
+      "pageSourceFile": "src/main/ets/features/moments/pages/MomentPage.ets",
       "buildFunction": "MomentPageBuilder"
     },
     {
       "name": "MomentDetailPage",
-      "pageSourceFile": "src/main/ets/features/moment/pages/MomentDetailPage.ets",
+      "pageSourceFile": "src/main/ets/features/moments/pages/MomentDetailPage.ets",
       "buildFunction": "MomentDetailPageBuilder"
     },
     {
       "name": "GroupPage",
-      "pageSourceFile": "src/main/ets/features/group/pages/GroupPage.ets",
+      "pageSourceFile": "src/main/ets/features/groups/pages/GroupPage.ets",
       "buildFunction": "GroupPageBuilder"
     },
     {
@@ -32,22 +32,22 @@
     },
     {
       "name": "GroupDetailPage",
-      "pageSourceFile": "src/main/ets/features/group/pages/GroupDetailPage.ets",
+      "pageSourceFile": "src/main/ets/features/groups/pages/GroupDetailPage.ets",
       "buildFunction": "GroupDetailPageBuilder"
     },
     {
       "name": "CreateGroupPage",
-      "pageSourceFile": "src/main/ets/features/group/pages/CreateGroupPage.ets",
+      "pageSourceFile": "src/main/ets/features/groups/pages/CreateGroupPage.ets",
       "buildFunction": "CreateGroupPageBuilder"
     },
     {
       "name": "CreateMomentPage",
-      "pageSourceFile": "src/main/ets/features/moment/pages/CreateMomentPage.ets",
+      "pageSourceFile": "src/main/ets/features/moments/pages/CreateMomentPage.ets",
       "buildFunction": "CreateMomentPageBuilder"
     },
     {
       "name": "PhotoPreviewPage",
-      "pageSourceFile": "src/main/ets/features/moment/pages/PhotoPreviewPage.ets",
+      "pageSourceFile": "src/main/ets/features/moments/pages/PhotoPreviewPage.ets",
       "buildFunction": "PhotoPreviewPageBuilder"
     },
     {
@@ -117,7 +117,7 @@
     },
     {
       "name": "ProfileEditPage",
-      "pageSourceFile": "src/main/ets/features/profile/pages/ProfileEditPage.ets",
+      "pageSourceFile": "src/main/ets/features/me/pages/ProfileEditPage.ets",
       "buildFunction": "ProfileEditPageBuilder"
     },
     {
@@ -127,7 +127,7 @@
     },
     {
       "name": "NearbyGroupsListPage",
-      "pageSourceFile": "src/main/ets/features/group/pages/NearbyGroupsListPage.ets",
+      "pageSourceFile": "src/main/ets/features/groups/pages/NearbyGroupsListPage.ets",
       "buildFunction": "NearbyGroupsListPageBuilder"
     },
     {
@@ -137,7 +137,7 @@
     },
     {
       "name": "MomentsFeedPage",
-      "pageSourceFile": "src/main/ets/features/moment/pages/MomentsFeedPage.ets",
+      "pageSourceFile": "src/main/ets/features/moments/pages/MomentsFeedPage.ets",
       "buildFunction": "MomentsFeedPageBuilder"
     },
     {
