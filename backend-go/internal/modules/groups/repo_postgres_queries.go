@@ -48,10 +48,16 @@ ORDER BY gm.joined_at ASC, gm.user_id ASC`
 		SELECT g.group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, g.requires_approval, g.next_activity, is_searchable, max_members, g.owner_id, g.created_at, g.last_activity_at, COALESCE(g.tags, '{}'),
 		       COALESCE(mem.members_count, 0),
 		       (SELECT COUNT(*)::int FROM group_members gm JOIN users u ON u.user_id = gm.user_id WHERE gm.group_id = g.group_id AND u.presence_status = 'online') AS online_members_count,
-		       gm.role, gm.joined_at, gm.is_muted, gm.muted_until,
+		       gm.role, gm.joined_at, gm.is_muted, gm.muted_until, gm.is_pinned,
+		       COALESCE((
+		         SELECT COUNT(*) FROM group_messages m
+		         WHERE m.group_id = g.group_id
+		           AND (grs.last_read_sent_at IS NULL OR m.sent_at > grs.last_read_sent_at)
+		       ), 0) AS unread_count,
 		       lm.message_id, lm.type, lm.content, lm.sender_user_id, lm.sender_nickname, lm.sender_avatar_url, lm.sent_at
 		FROM groups g
 	JOIN group_members gm ON gm.group_id = g.group_id
+	LEFT JOIN group_message_read_state grs ON grs.group_id = g.group_id AND grs.user_id = $1
 	LEFT JOIN (
 		SELECT group_id, COUNT(*)::int AS members_count FROM group_members GROUP BY group_id
 	) mem ON mem.group_id = g.group_id

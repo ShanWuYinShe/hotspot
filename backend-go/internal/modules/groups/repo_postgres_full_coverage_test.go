@@ -262,8 +262,8 @@ func TestPostgresIsMemberAndGetApplication(t *testing.T) {
 
 func TestPostgresListMyGroupsPaginationAndFields(t *testing.T) {
 	ctx := context.Background()
-	myGroupRow := func(gid string, hasLastMessage bool) []any {
-		row := []any{gid, "群" + gid, "", "描述", false, "位置", 1.5, 2.5, "direct", false, nil, true, 200, "owner", gTestTime, gTestTime, []string{}, 3, 1, "member", gTestTime, false, nil}
+	myGroupRow := func(gid string, hasLastMessage bool, isPinned bool, unreadCount int) []any {
+		row := []any{gid, "群" + gid, "", "描述", false, "位置", 1.5, 2.5, "direct", false, nil, true, 200, "owner", gTestTime, gTestTime, []string{}, 3, 1, "member", gTestTime, false, nil, isPinned, unreadCount}
 		if hasLastMessage {
 			row = append(row, "m1", "text", "内容", "u9", "发件人", "", gTestNow)
 		} else {
@@ -273,7 +273,7 @@ func TestPostgresListMyGroupsPaginationAndFields(t *testing.T) {
 	}
 	// 3 行 + limit=2 → 分页
 	stub := &groupFullStub{queryRows: map[string][][]any{queryListMyGroupsBase: {
-		myGroupRow("g1", true), myGroupRow("g2", false), myGroupRow("g3", true),
+		myGroupRow("g1", true, true, 5), myGroupRow("g2", false, false, 0), myGroupRow("g3", true, false, 0),
 	}}}
 	items, next, err := newGroupsFullRepo(stub).ListMyGroups(ctx, "u1", 2, "")
 	if err != nil || len(items) != 2 || next == "" {
@@ -282,12 +282,15 @@ func TestPostgresListMyGroupsPaginationAndFields(t *testing.T) {
 	if items[0].LastMessage == nil || items[0].LastMessage.MessageID != "m1" || items[0].MyState == nil || items[0].OnlineMembersCount == nil {
 		t.Fatalf("my groups fields: %#v", items[0])
 	}
+	if items[0].MyState.IsPinned != true || items[0].MyState.UnreadCount != 5 {
+		t.Fatalf("my groups member state: %#v", items[0].MyState)
+	}
 	// 带 pageToken 的 keyset 路径
 	token, err := cursor.Encode(myGroupsCursorNamespace, myGroupsCursor{JoinedAt: gTestTime.Format(time.RFC3339Nano), GroupID: "g1"})
 	if err != nil {
 		t.Fatalf("encode token: %v", err)
 	}
-	stub = &groupFullStub{queryRows: map[string][][]any{queryListMyGroupsBase: {myGroupRow("g1", false)}}}
+	stub = &groupFullStub{queryRows: map[string][][]any{queryListMyGroupsBase: {myGroupRow("g1", false, false, 0)}}}
 	if _, _, err := newGroupsFullRepo(stub).ListMyGroups(ctx, "u1", 2, token); err != nil {
 		t.Fatalf("list my groups token: %v", err)
 	}
@@ -651,8 +654,8 @@ var jm2String = "invite_only"
 
 func TestPostgresRowsErrPaths(t *testing.T) {
 	ctx := context.Background()
-	// 31 列 my-groups 行
-	myRow := []any{"g1", "群", "", "d", false, "", 0.0, 0.0, "direct", false, nil, true, 10, "o", nil, nil, []string{}, 1, 0, "member", gTestTime, false, nil, nil, nil, nil, nil, nil, nil, nil, nil}
+	// 32 列 my-groups 行（含 is_pinned、unread_count）
+	myRow := []any{"g1", "群", "", "d", false, "", 0.0, 0.0, "direct", false, nil, true, 10, "o", nil, nil, []string{}, 1, 0, "member", gTestTime, false, nil, false, 0, nil, nil, nil, nil, nil, nil, nil}
 	tailStub := &groupFullStub{queryCustomRows: map[string]persistence.Rows{
 		queryListMyGroupsBase: &groupRowsErrValues{rows: [][]any{myRow}, err: errors.New("tail")},
 	}}

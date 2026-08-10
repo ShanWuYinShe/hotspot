@@ -135,49 +135,27 @@
 		contentClassName={platform.platform === 'mobile' ? 'animate-fade-in flex flex-col gap-7 pt-4 pb-6' : 'animate-fade-in pt-4 pb-6'}
 	>
 	{#snippet header()}
-		{#if platform.platform !== 'mobile'}
-			<!-- ═══ Desktop/Tablet Home — 统一 PageHeader + 2-column ═══ -->
-			<PageHeader title="首页" titleSize={device === 'desktop' ? 20 : 24} subtitle="发现周边有趣的人和事" sticky>
-				{#snippet trailing()}
-					<div class="flex items-center gap-2">
-						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full surface-flat">
-							<span class="rounded-full size-1.5 bg-status-online"></span>
-							<span class="text-xs text-text-secondary" >{onlineCount} 在线</span>
-						</div>
-						{#if platform.platform === 'tablet'}
-							<button
-								type="button"
-								aria-label="搜索"
-								onclick={() => void goto(ROUTES.search)}
-								class="hover-btn flex size-8 items-center justify-center rounded-full border border-border-default bg-surface-primary text-text-secondary focus-ring"
-							>
-								<Search class="size-4"  strokeWidth={1.75} />
-							</button>
-						{/if}
+		<!-- ═══ 首页 — 统一 PageHeader（三端同标题；附近内容拆分到 /nearby 聚合页）═══ -->
+		<PageHeader title="首页" titleSize={device === 'desktop' ? 20 : 24} subtitle="发现周边有趣的人和事" sticky>
+			{#snippet trailing()}
+				<div class="flex items-center gap-2">
+					<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full surface-flat">
+						<span class="rounded-full size-1.5 bg-status-online"></span>
+						<span class="text-xs text-text-secondary">{onlineCount} 在线</span>
 					</div>
-				{/snippet}
-			</PageHeader>
-		{:else}
-			<!-- ═══ Mobile Home — 统一 PageHeader + single column ═══ -->
-			<PageHeader title="附近" titleSize={22} subtitle="发现周边有趣的人和事" sticky>
-				{#snippet trailing()}
-					<div class="flex items-center gap-2">
-						<div class="flex items-center gap-1.5 py-1.5 px-3 rounded-full surface-flat">
-							<span class="rounded-full size-1.5 bg-status-online"></span>
-							<span class="text-xs text-text-secondary"  >{defaultLocation?.location_name || '附近'}</span>
-						</div>
+					{#if platform.platform !== 'desktop'}
 						<button
 							type="button"
-							class="hover-btn flex size-8 items-center justify-center rounded-full border border-border-default bg-surface-primary cursor-pointer transition-colors hover:bg-accent-soft"
-							onclick={() => void goto(ROUTES.search)}
 							aria-label="搜索"
+							onclick={() => void goto(ROUTES.search)}
+							class="hover-btn flex size-8 items-center justify-center rounded-full border border-border-default bg-surface-primary text-text-secondary focus-ring"
 						>
-							<Search class="size-4" color="var(--cst-text-secondary)" strokeWidth={1.75} />
+							<Search class="size-4" strokeWidth={1.75} />
 						</button>
-					</div>
-				{/snippet}
-			</PageHeader>
-		{/if}
+					{/if}
+				</div>
+			{/snippet}
+		</PageHeader>
 	{/snippet}
 
 	{#if platform.platform !== 'mobile'}

@@ -42,6 +42,7 @@ type inMemoryMembership struct {
 	JoinedAt   string
 	IsMuted    bool
 	MutedUntil string
+	IsPinned   bool
 }
 
 type inMemoryBanRecord struct {
@@ -399,6 +400,9 @@ func (r *InMemoryRepository) UpdatePreferences(_ context.Context, userID string,
 	}
 	if req.IsMuted != nil {
 		member.IsMuted = *req.IsMuted
+	}
+	if req.IsPinned != nil {
+		member.IsPinned = *req.IsPinned
 	}
 	r.members[req.GroupID][userID] = member
 	return nil

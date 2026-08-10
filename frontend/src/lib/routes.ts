@@ -34,6 +34,7 @@ export const ROUTES = {
   meEdit: "/me/edit",
   settings: "/settings",
   map: "/map",
+  nearby: "/nearby",
   nearbyPeople: "/nearby/people",
   nearbyGroups: "/nearby/groups",
   nearbyMoments: "/nearby/moments",
@@ -72,9 +73,10 @@ export function isSubPagePath(pathname: string) {
   return DETAIL_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
-/** Consistent active state for the three primary mobile/tablet navigation targets. */
+/** Consistent active state for the primary mobile/tablet navigation targets. */
 export function isPrimaryRouteActive(pathname: string, target: string) {
-  if (target === ROUTES.home) return pathname === ROUTES.home;
+  // 首页/附近聚合页是顶级 tab：只对自身路径高亮，不包含其子页面。
+  if (target === ROUTES.home || target === ROUTES.nearby) return pathname === target;
   return (
     pathname === target ||
     pathname.startsWith(`${target}/`) ||

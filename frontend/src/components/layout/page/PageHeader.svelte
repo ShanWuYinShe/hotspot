@@ -60,9 +60,9 @@
 	} = $props();
 
 	const showBack = $derived(Boolean(onBack) && (platform.platform !== 'desktop' || showBackOnDesktop));
-	// below 存在时（搜索框/Tab 栏等），header 底部预留呼吸：border-bottom 画在 below 内容
-	// 之后，与正文拉开间距，避免 Tab 栏紧贴正文。页面 contentClassName 的 pb-0 仍生效于
-	// 无 below 场景（纯标题 header）。
+	// header 底部统一预留呼吸：纯标题时标题与下边框之间留 pb-3，
+	// below 存在时（搜索框/Tab 栏等）同样给 below 内容与边框之间留 pb-3，
+	// 避免标题/附属区紧贴 border-bottom。页面可传 contentClassName 显式覆盖。
 	const belowPad = $derived(below ? 'pb-3' : '');
 </script>
 
@@ -72,7 +72,7 @@
 		? 'background-color:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md));border-bottom:1px solid var(--cst-border-default);'
 		: 'background-color:var(--cst-surface-page);border-bottom:1px solid var(--cst-border-default);'}
 >
-	<ContentColumn {maxWidth} class={cn('pt-4 pb-0', contentClassName, belowPad)}>
+	<ContentColumn {maxWidth} class={cn('pt-4 pb-3', contentClassName, belowPad)}>
 		<div class="flex items-center gap-3">
 			{#if showBack}
 				<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={36} />

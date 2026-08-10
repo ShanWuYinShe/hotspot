@@ -52,8 +52,8 @@ export const Endpoints = {
     SetRemark: `${PREFIX}/users/set_remark`,
   },
 
-  // Groups — 已包装: GetDetail/Create/ListMy/Join/Leave/Members.List/Announcements.List；
-  //   待接线: Search/Update/Dismiss/TransferOwnership/UpdatePreferences/ListApplications/
+  // Groups — 已包装: GetDetail/Create/ListMy/Join/Leave/UpdatePreferences/Members.List/Announcements.List；
+  //   待接线: Search/Update/Dismiss/TransferOwnership/ListApplications/
   //   CancelApplication/ListInvites/AcceptInvite/RejectInvite/Members.*/Applications.*/
   //   Announcements.Create|Update|Delete
   Groups: {
@@ -134,9 +134,9 @@ export const Endpoints = {
     CompleteUpload: `${PREFIX}/media/complete_upload`,
   },
 
-  // Chat — 已包装: PrivateChats.List/PrivateMessages.Send|GetHistory|MarkRead/
+  // Chat — 已包装: PrivateChats.List|UpdatePreferences/PrivateMessages.Send|GetHistory|MarkRead/
   //   GroupMessages.Send|GetHistory|MarkRead；
-  //   待接线: PrivateChats.GetDetail|UpdatePreferences|Delete、消息 Update|Recall
+  //   待接线: PrivateChats.GetDetail|Delete、消息 Update|Recall
   PrivateChats: {
     List: `${PREFIX}/private_chats/list`,
     GetDetail: `${PREFIX}/private_chats/open_the_door`,

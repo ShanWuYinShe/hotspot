@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { MapPin, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
+	import { Home, MapPin, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
 	import { cn } from '@/lib/utils';
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
 	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
@@ -18,7 +18,8 @@
 	let { children }: { children: Snippet } = $props();
 
 	const NAV_ITEMS: { path: string; icon: typeof MapPin; label: string }[] = [
-		{ path: ROUTES.home, icon: MapPin, label: '附近' },
+		{ path: ROUTES.home, icon: Home, label: '首页' },
+		{ path: ROUTES.nearby, icon: MapPin, label: '附近' },
 		{ path: ROUTES.messages, icon: MessageCircle, label: '消息' },
 		{ path: ROUTES.me, icon: CircleUser, label: '我的' }
 	];
@@ -54,9 +55,9 @@
 					class="flex items-center px-2"
 					style="padding-top:8px;padding-bottom:max(20px, env(safe-area-inset-bottom, 20px));"
 				>
-					<!-- 左侧：附近（flex-1 与右侧对称，保持 FAB 居中） -->
-					<div class="flex flex-1 justify-center">
-						{#each NAV_ITEMS.slice(0, 1) as item}
+					<!-- 左侧：首页 + 附近（flex-1 与右侧对称，保持 FAB 居中） -->
+					<div class="flex flex-1 justify-center gap-4">
+						{#each NAV_ITEMS.slice(0, 2) as item}
 							<NavTab
 								label={item.label}
 								isActive={isPrimaryRouteActive(pathname, item.path)}
@@ -85,7 +86,7 @@
 
 					<!-- 右侧：消息 + 我的（flex-1 与左侧对称） -->
 					<div class="flex flex-1 justify-center gap-4">
-						{#each NAV_ITEMS.slice(1, 3) as item}
+						{#each NAV_ITEMS.slice(2, 4) as item}
 							<NavTab
 								label={item.label}
 								isActive={isPrimaryRouteActive(pathname, item.path)}

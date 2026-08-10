@@ -216,6 +216,10 @@ export async function getGroupMessages(params: object)    { return request<Pagin
 export async function sendGroupMessage(params: object)    { return request<MessageSent>(Endpoints.GroupMessages.Send, params); }
 export async function markPrivateRead(params: object)     { return request<void>(Endpoints.PrivateMessages.MarkRead, params); }
 export async function markGroupRead(params: object)       { return request<void>(Endpoints.GroupMessages.MarkRead, params); }
+// spec: api_spec_chat.md → private_chats/update_preferences（静音/置顶）
+export async function updatePrivateChatPreferences(params: object) { return request<void>(Endpoints.PrivateChats.UpdatePreferences, params); }
+// spec: api_spec_group.md → groups/update_preferences（静音/置顶）
+export async function updateGroupPreferences(params: object) { return request<void>(Endpoints.Groups.UpdatePreferences, params); }
 
 // Reactions
 export async function setReaction(params: object)         { return request<void>(Endpoints.Reactions.Set, params); }

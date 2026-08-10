@@ -10,7 +10,9 @@ const chat = {
 	avatar: 'https://example.com/a.jpg',
 	lastMessage: '周末见',
 	time: '10:24',
+	timestamp: '2026-08-10T10:24:00Z',
 	unread: 3,
+	isPinned: false,
 	online: true
 };
 
@@ -33,5 +35,19 @@ describe('ChatListItem', () => {
 	it('isSelected 时行呈现选中态', () => {
 		render(ChatListItem, { props: { chat, onClick: () => {}, isSelected: true } });
 		expect(screen.getByRole('button').getAttribute('aria-pressed')).toBe('true');
+	});
+
+	it('点击置顶按钮触发 onTogglePin 且不触发行点击', async () => {
+		const onClick = vi.fn();
+		const onTogglePin = vi.fn();
+		render(ChatListItem, { props: { chat, onClick, onTogglePin } });
+		await fireEvent.click(screen.getByRole('button', { name: '置顶' }));
+		expect(onTogglePin).toHaveBeenCalledTimes(1);
+		expect(onClick).not.toHaveBeenCalled();
+	});
+
+	it('已置顶时按钮文案为取消置顶', () => {
+		render(ChatListItem, { props: { chat: { ...chat, isPinned: true }, onClick: () => {}, onTogglePin: () => {} } });
+		expect(screen.getByRole('button', { name: '取消置顶' })).toBeTruthy();
 	});
 });

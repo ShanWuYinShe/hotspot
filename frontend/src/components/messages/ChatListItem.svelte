@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { Pin } from '@lucide/svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
+	import type { ChatItem } from '@/lib/chat-list';
 
 	// 会话列表项（对齐 Figma Make ConversationListItem 契约）：
 	//   - 基于公共 ListItem 行组件（hover 填充 / tap 反馈 / 键盘 / aria）
@@ -11,28 +13,20 @@
 	//     头像框；inline 背景避免全局 button hover overlay 盖出白蒙蒙效果
 	//   - unread 徽章：选中时保留占位并改为反色，避免行内 flex-1 文本区
 	//     宽度跳变导致点击位移
-
-	export interface ChatItem {
-		id: string;
-		peerUserId: string;
-		name: string;
-		avatar: string;
-		lastMessage: string;
-		time: string;
-		unread: number;
-		online: boolean;
-		kind?: 'private' | 'group';
-	}
+	//   - 置顶：isPinned 高亮 Pin 图标；onTogglePin 可选（不传则不渲染），
+	//     点击时 stopPropagation，避免触发行选中/导航
 
 	let {
 		chat,
 		isSelected = false,
 		onClick,
+		onTogglePin,
 		compact = false
 	}: {
 		chat: ChatItem;
 		isSelected?: boolean;
 		onClick: () => void;
+		onTogglePin?: () => void;
 		compact?: boolean;
 	} = $props();
 </script>
@@ -68,6 +62,25 @@
 			{chat.lastMessage}
 		</span>
 	</span>
+
+	{#if onTogglePin}
+		<button
+			type="button"
+			class="hover-btn scale-btn tap-88 focus-ring flex shrink-0 items-center justify-center rounded-full p-1"
+			aria-label={chat.isPinned ? '取消置顶' : '置顶'}
+			title={chat.isPinned ? '取消置顶' : '置顶'}
+			onclick={(e) => {
+				e.stopPropagation();
+				onTogglePin();
+			}}
+		>
+			<Pin
+				class="size-3.5"
+				strokeWidth={2}
+				style="color:{isSelected ? 'var(--cst-text-on-accent)' : chat.isPinned ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};opacity:{isSelected || chat.isPinned ? 1 : 0.45};"
+			/>
+		</button>
+	{/if}
 
 	{#if chat.unread > 0}
 		<span

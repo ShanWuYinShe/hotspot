@@ -121,7 +121,8 @@ src/routes/
   (auth)/login/+page.svelte    # 登录页（无 MainLayout 外壳）
   (app)/
     +layout.svelte         # MainLayout 外壳（桌面/平板/移动/横屏四端分派）
-    +page.svelte           # 首页（附近动态；三端聚合视图——hero/动态/群组/用户）
+    +page.svelte           # 首页（hero/动态/群组/用户；三端统一标题）
+    nearby/+page.svelte    # 附近聚合页（平板/移动端顶级导航 tab——人/群组/动态 + 搜索）
     nearby/people/         # 附近的人
     nearby/groups/         # 附近的组
     nearby/moments/        # 附近时刻（页面样板结构权威基准）

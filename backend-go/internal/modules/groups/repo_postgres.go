@@ -208,6 +208,8 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 		joinedAt         time.Time
 		isMuted          bool
 		mutedUntil       *time.Time
+		isPinned         bool
+		unreadCount      int
 		// last_message 预览(LEFT JOIN LATERAL,可能为空)
 		lastMessageID    *string
 		lastMessageType  *string
@@ -220,7 +222,7 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 	scanned := make([]scannedItem, 0)
 	for rows.Next() {
 		var s scannedItem
-		if err := rows.Scan(&s.item.Group.GroupID, &s.item.Group.Name, &s.item.Group.AvatarURL, &s.item.Description, &s.item.HasPassword, &s.locationName, &s.latitude, &s.longitude, &s.joinMethod, &s.requiresApproval, &s.nextActivity, &s.item.IsSearchable, &s.item.MaxMembers, &s.item.OwnerID, &s.createdAt, &s.lastActivityAt, &s.tags, &s.membersCount, &s.onlineCount, &s.roleText, &s.joinedAt, &s.isMuted, &s.mutedUntil, &s.lastMessageID, &s.lastMessageType, &s.lastContent, &s.lastSenderID, &s.lastSenderName, &s.lastSenderAvatar, &s.lastSentAt); err != nil {
+		if err := rows.Scan(&s.item.Group.GroupID, &s.item.Group.Name, &s.item.Group.AvatarURL, &s.item.Description, &s.item.HasPassword, &s.locationName, &s.latitude, &s.longitude, &s.joinMethod, &s.requiresApproval, &s.nextActivity, &s.item.IsSearchable, &s.item.MaxMembers, &s.item.OwnerID, &s.createdAt, &s.lastActivityAt, &s.tags, &s.membersCount, &s.onlineCount, &s.roleText, &s.joinedAt, &s.isMuted, &s.mutedUntil, &s.isPinned, &s.unreadCount, &s.lastMessageID, &s.lastMessageType, &s.lastContent, &s.lastSenderID, &s.lastSenderName, &s.lastSenderAvatar, &s.lastSentAt); err != nil {
 			rows.Close()
 			return nil, "", err
 		}
@@ -252,7 +254,7 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 		s.item.CreatedAt = formatOptionalTime(s.createdAt)
 		s.item.LastActivityAt = formatOptionalTime(s.lastActivityAt)
 		s.item.Group.MembersCount = s.membersCount
-		s.item.MyState = &MyGroupState{Role: GroupRole(s.roleText), IsJoined: true, UnreadCount: 0, IsMuted: s.isMuted, MutedUntil: formatMutedUntil(s.mutedUntil), IsPinned: false, JoinedAt: s.joinedAt.UTC().Format(time.RFC3339)}
+		s.item.MyState = &MyGroupState{Role: GroupRole(s.roleText), IsJoined: true, UnreadCount: s.unreadCount, IsMuted: s.isMuted, MutedUntil: formatMutedUntil(s.mutedUntil), IsPinned: s.isPinned, JoinedAt: s.joinedAt.UTC().Format(time.RFC3339)}
 		if s.lastMessageID != nil && s.lastMessageType != nil && s.lastSenderID != nil && s.lastSentAt != nil {
 			s.item.LastMessage = &GroupLastMessage{
 				MessageID: *s.lastMessageID,

@@ -10,24 +10,19 @@
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import ChatView from '@/components/messages/ChatView.svelte';
 	import GroupChatView from '@/components/messages/GroupChatView.svelte';
-	import ChatListItem, { type ChatItem } from '@/components/messages/ChatListItem.svelte';
+	import ChatListItem from '@/components/messages/ChatListItem.svelte';
 	import NewConversationSheet from '@/components/overlays/NewConversationSheet.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
-	import { getPrivateChats, listMyGroups, markPrivateRead, markGroupRead } from '@/api';
+	import { getPrivateChats, listMyGroups, markPrivateRead, markGroupRead, updatePrivateChatPreferences, updateGroupPreferences } from '@/api';
 	import { formatTime } from '@/lib/chat.svelte';
+	import { compareChatItems, type ChatItem } from '@/lib/chat-list';
 	import { ROUTES } from '@/lib/routes';
 	import { presence, watchPresence } from '@/stores/presence.svelte';
 
 	// 消息列表：在线条 + 会话列表（私聊 + 群聊混合）+ 新会话 Sheet + 建群 Sheet；
 	// 桌面左右分栏（内嵌 ChatView / GroupChatView）。
-
-	/** 时间戳兜底：无效日期按 0 处理（用于私聊/群聊混合排序）。 */
-	function tsOf(t: string): number {
-		const n = new Date(t).getTime();
-		return isNaN(n) ? 0 : n;
-	}
 
 	let chats = $state<ChatItem[]>([]);
 	let loading = $state(true);
@@ -63,7 +58,9 @@
 					avatar: c.other_user?.avatar_url ?? '',
 					lastMessage: c.last_message?.content ?? '',
 					time: formatTime(c.last_message?.sent_at ?? c.last_activity_at),
+					timestamp: c.last_message?.sent_at ?? c.last_activity_at ?? '',
 					unread: c.unread_count ?? 0,
+					isPinned: c.is_pinned ?? false,
 					online: c.presence_status === 'online',
 					kind: 'private'
 				}));
@@ -77,15 +74,17 @@
 						avatar: g.avatar_url ?? '',
 						// spec: last_message 仅 groups/list_my 返回,非文本消息预览为空。
 						lastMessage: c.last_message?.content ?? '',
-						time: c.last_activity_at ?? '',
+						time: formatTime(c.last_activity_at ?? ''),
+						timestamp: c.last_activity_at ?? '',
 						unread: c.my_state?.unread_count ?? 0,
+						isPinned: c.my_state?.is_pinned ?? false,
 						online: false,
 						group: true,
 						kind: 'group'
 					};
 				});
-				// 私聊与群聊混合，统一按最近活跃时间倒序。
-				const items = [...privateChats, ...groupChats].sort((a, b) => tsOf(b.time) - tsOf(a.time));
+				// 私聊与群聊混合，统一按「置顶 > 未读 > 已读，组内时间倒序」排序。
+				const items = [...privateChats, ...groupChats].sort(compareChatItems);
 				chats = items;
 				// 在线状态实时化：仅对非 group 会话订阅全部对端（chats.id 语义即 peer user_id，
 				// 但显式用 peerUserId 更稳）；旧订阅先释放再建立新订阅。
@@ -122,7 +121,8 @@
 	const selectChat = (chat: ChatItem) => {
 		if (selectedId !== chat.id) selectedId = chat.id;
 		if (chat.unread > 0) {
-			chats = chats.map((c) => (c.id === chat.id ? { ...c, unread: 0 } : c));
+			// 清零后立即按优先级重排（已读会话下沉到未读组之后）
+			chats = chats.map((c) => (c.id === chat.id ? { ...c, unread: 0 } : c)).sort(compareChatItems);
 			// spec: private_messages/mark_read(scope=session) / group_messages/mark_read(scope=group)；
 			// 幂等语义，失败静默（徽章已本地清零，不打扰浏览）。
 			if (chat.kind === 'group') {
@@ -131,6 +131,20 @@
 				void markPrivateRead({ scope: 'session', target_user_id: chat.peerUserId || String(chat.id) }).catch(() => {});
 			}
 		}
+	};
+
+	// 置顶/取消置顶：乐观更新本地状态并立即重排（置顶优先），API 失败回滚。
+	const togglePin = (chat: ChatItem) => {
+		const next = !chat.isPinned;
+		chats = chats.map((c) => (c.id === chat.id ? { ...c, isPinned: next } : c)).sort(compareChatItems);
+		const req =
+			chat.kind === 'group'
+				? updateGroupPreferences({ group_id: String(chat.id), is_pinned: next })
+				: updatePrivateChatPreferences({ target_user_id: chat.peerUserId || String(chat.id), is_pinned: next });
+		void req.catch(() => {
+			// 失败回滚：置顶状态还原并恢复原排序
+			chats = chats.map((c) => (c.id === chat.id ? { ...c, isPinned: !next } : c)).sort(compareChatItems);
+		});
 	};
 
 	// 渲染用实时在线判定：WS 推送优先，HTTP 快照（chat.online）仅兜底
@@ -216,6 +230,7 @@
 							chat={chat}
 							isSelected={selectedId === chat.id}
 							onClick={() => selectChat(chat)}
+							onTogglePin={() => togglePin(chat)}
 							compact
 						/>
 					</div>
@@ -351,6 +366,7 @@
 						<ChatListItem
 							chat={chat}
 							onClick={() => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}
+							onTogglePin={() => togglePin(chat)}
 						/>
 					</div>
 				{/each}

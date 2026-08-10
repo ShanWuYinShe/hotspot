@@ -250,7 +250,7 @@ func (r *InMemoryRepository) cloneGroupForUser(group GroupItem, userID string) G
 	if memberships, ok := r.members[group.Group.GroupID]; ok {
 		cloned.Group.MembersCount = len(memberships)
 		if membership, joined := memberships[userID]; joined {
-			state := &MyGroupState{Role: membership.Role, IsJoined: true, UnreadCount: 0, IsMuted: membership.IsMuted, MutedUntil: membership.MutedUntil, IsPinned: false, JoinedAt: membership.JoinedAt}
+			state := &MyGroupState{Role: membership.Role, IsJoined: true, UnreadCount: 0, IsMuted: membership.IsMuted, MutedUntil: membership.MutedUntil, IsPinned: membership.IsPinned, JoinedAt: membership.JoinedAt}
 			cloned.MyState = state
 		} else {
 			cloned.MyState = nil
