@@ -228,7 +228,7 @@ const FILTER_TABS = [
 				{:else if filtered.length === 0}
 					<EmptyState title="暂无通知">
 						{#snippet icon()}
-							<Bell class="size-6 opacity-50 text-text-secondary"  strokeWidth={1.5} />
+							<Bell class="size-6 opacity-muted text-text-secondary"  strokeWidth={1.5} />
 						{/snippet}
 					</EmptyState>
 				{/if}

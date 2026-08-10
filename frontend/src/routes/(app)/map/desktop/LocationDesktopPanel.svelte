@@ -133,7 +133,7 @@ locationName = loc?.location_name ?? '';
 				</div>
 				<div class="flex-1">
 					<p class="text-sm" >当前位置</p>
-					<p class="text-xs mt-px opacity-80">{locationName || '自动定位'}</p>
+					<p class="text-xs mt-px opacity-emphasis">{locationName || '自动定位'}</p>
 				</div>
 				<div class="bg-status-online size-2 shrink-0"  style="border-radius:50%;box-shadow:var(--cst-marker-halo) var(--cst-status-online)"></div>
 			</div>
@@ -158,16 +158,16 @@ locationName = loc?.location_name ?? '';
 									{PIN_LABELS[pin.type]}
 								</span>
 								{#if pin.tag}
-									<span class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs">#{pin.tag}</span>
+									<span class="{isSelected ? 'text-text-on-accent opacity-emphasis' : 'text-text-secondary'} text-xs">#{pin.tag}</span>
 								{/if}
 								{#if pin.distance}
-									<span class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs">{pin.distance}</span>
+									<span class="{isSelected ? 'text-text-on-accent opacity-emphasis' : 'text-text-secondary'} text-xs">{pin.distance}</span>
 								{/if}
 								{#if pin.members}
-									<span class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs">{pin.members}人</span>
+									<span class="{isSelected ? 'text-text-on-accent opacity-emphasis' : 'text-text-secondary'} text-xs">{pin.members}人</span>
 								{/if}
 								{#if pin.likes}
-									<span class="flex items-center gap-0.5 {isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'}">
+									<span class="flex items-center gap-0.5 {isSelected ? 'text-text-on-accent opacity-emphasis' : 'text-text-secondary'}">
 										<Heart class="size-2.5"  strokeWidth={1.5} />
 										<span class="text-xs">{pin.likes}</span>
 									</span>
@@ -184,7 +184,7 @@ locationName = loc?.location_name ?? '';
 				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
-					<MapPin class="size-5.5 opacity-30 text-text-secondary"  strokeWidth={1.5} />
+					<MapPin class="size-5.5 opacity-faint text-text-secondary"  strokeWidth={1.5} />
 					<p class="text-text-secondary text-xs">附近暂无内容，放大或移动地图后刷新</p>
 				</div>
 			{/if}
@@ -201,16 +201,16 @@ locationName = loc?.location_name ?? '';
 							ariaLabel={`选择热门地点 ${loc.displayName}`}
 							class="app-list-row app-list-row--standard"
 						>
-							<div class="flex items-center justify-center rounded-sm shrink-0 bg-accent-default size-9 text-lg opacity-90">
+							<div class="flex items-center justify-center rounded-sm shrink-0 bg-accent-default size-9 text-lg opacity-hover">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
 								<p class="truncate {isSelected ? 'text-text-on-accent' : 'text-text-primary'} text-sm">{loc.displayName}</p>
-								<p class="truncate {isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
+								<p class="truncate {isSelected ? 'text-text-on-accent opacity-emphasis' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							<div class="flex shrink-0 items-center gap-1">
 								<Users class="size-3" style="color:{isSelected ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};" strokeWidth={1.5} />
-								<span class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-accent-default'} text-xs">{loc.users}</span>
+								<span class="{isSelected ? 'text-text-on-accent opacity-emphasis' : 'text-accent-default'} text-xs">{loc.users}</span>
 							</div>
 							{#if isSelected}
 								<Check class="size-3.5 shrink-0 text-text-on-accent"   strokeWidth={2.5} />
@@ -222,7 +222,7 @@ locationName = loc?.location_name ?? '';
 				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
-					<Star class="size-5.5 opacity-30 text-text-secondary"  strokeWidth={1.5} />
+					<Star class="size-5.5 opacity-faint text-text-secondary"  strokeWidth={1.5} />
 					<p class="text-text-secondary text-xs">暂无热门地点</p>
 				</div>
 			{/if}
@@ -244,7 +244,7 @@ locationName = loc?.location_name ?? '';
 							</div>
 							<div class="flex-1 min-w-0">
 								<p class="truncate {isSelected ? 'text-text-on-accent' : 'text-text-primary'} text-sm">{loc.displayName}</p>
-								<p class="truncate {isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
+								<p class="truncate {isSelected ? 'text-text-on-accent opacity-emphasis' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							{#if isSelected}
 								<Check class="size-3.5 shrink-0 text-text-on-accent"   strokeWidth={2.5} />
@@ -256,7 +256,7 @@ locationName = loc?.location_name ?? '';
 				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10">
-					<Clock class="size-5.5 opacity-30 text-text-secondary"  strokeWidth={1.5} />
+					<Clock class="size-5.5 opacity-faint text-text-secondary"  strokeWidth={1.5} />
 					<p class="text-text-secondary text-xs">暂无最近记录</p>
 				</div>
 			{/if}

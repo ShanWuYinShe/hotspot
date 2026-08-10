@@ -24,7 +24,7 @@ describe('ActionIconButton', () => {
 		});
 		const btn = container.querySelector('button') as HTMLButtonElement;
 		expect(btn.disabled).toBe(true);
-		expect(btn.className).toContain('disabled:opacity-50');
+		expect(btn.className).toContain('disabled:opacity-muted');
 	});
 
 	it('variant=overlay 使用遮罩背景 token', () => {

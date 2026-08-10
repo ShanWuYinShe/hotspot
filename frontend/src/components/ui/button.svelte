@@ -52,7 +52,7 @@
 		'inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap font-medium hover-btn focus-ring transition-colors',
 		VARIANTS[variant],
 		SIZES[size],
-		loading && 'pointer-events-none opacity-70',
+		loading && 'pointer-events-none opacity-soft',
 		className
 	)}
 	aria-busy={loading || undefined}
@@ -61,5 +61,5 @@
 	{#if loading}
 		<span class="spinner size-4 border-[1.5px]" aria-hidden="true"></span>
 	{/if}
-	<span class={loading ? 'opacity-80' : undefined}>{@render children()}</span>
+	<span class={loading ? 'opacity-emphasis' : undefined}>{@render children()}</span>
 </button>

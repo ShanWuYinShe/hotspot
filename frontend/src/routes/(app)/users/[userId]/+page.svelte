@@ -260,7 +260,7 @@
 					<div class="flex shrink-0 gap-2 pb-1">
 						<button
 							type="button"
-							class="hover-btn tap-92 flex items-center gap-1.5 rounded-full border border-border-default bg-surface-primary px-3.5 py-2 text-xs text-text-secondary shadow-raised-sm focus-ring disabled:cursor-not-allowed disabled:opacity-50"
+							class="hover-btn tap-92 flex items-center gap-1.5 rounded-full border border-border-default bg-surface-primary px-3.5 py-2 text-xs text-text-secondary shadow-raised-sm focus-ring disabled:cursor-not-allowed disabled:opacity-muted"
 							disabled={blocked}
 							onclick={() => !blocked && void goto(ROUTES.message(uid))}
 						>
@@ -269,7 +269,7 @@
 						</button>
 						<button
 							type="button"
-							class="hover-btn tap-92 flex items-center gap-1.5 px-4 py-2 rounded-full focus-ring transition-all disabled:cursor-not-allowed disabled:opacity-50 text-xs {followed ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
+							class="hover-btn tap-92 flex items-center gap-1.5 px-4 py-2 rounded-full focus-ring transition-all disabled:cursor-not-allowed disabled:opacity-muted text-xs {followed ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
 							style={followed
 								? 'border:1.5px solid var(--cst-accent-default);box-shadow:var(--shadow-raised-sm);'
 								: 'box-shadow:var(--shadow-glow-md);border:1px solid transparent;'}

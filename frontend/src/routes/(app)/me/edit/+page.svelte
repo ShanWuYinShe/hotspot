@@ -240,7 +240,7 @@
 	<fieldset class="flex flex-col gap-2.5 border-0 p-0 m-0 min-w-0">
 		<legend class="flex items-center gap-1.5 text-text-secondary text-xs uppercase tracking-field">
 			兴趣标签
-			<span class="opacity-60">({tags.size}/5)</span>
+			<span class="opacity-dim">({tags.size}/5)</span>
 		</legend>
 		<div class="flex flex-wrap gap-2">
 			{#each TAG_OPTIONS as t (t)}

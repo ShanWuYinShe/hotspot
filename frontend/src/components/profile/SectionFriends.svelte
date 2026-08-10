@@ -56,7 +56,7 @@
 			ariaLabel={`查看 ${f.name} 的主页`}
 		>
 			{#snippet avatarBadge()}
-				<OnlineDot size="md" color={f.online ? undefined : 'var(--cst-text-secondary)'} class={f.online ? '' : 'opacity-50'} />
+				<OnlineDot size="md" color={f.online ? undefined : 'var(--cst-text-secondary)'} class={f.online ? '' : 'opacity-muted'} />
 			{/snippet}
 			{#snippet nameBadge()}
 				<TagPill size="sm">{f.tag}</TagPill>

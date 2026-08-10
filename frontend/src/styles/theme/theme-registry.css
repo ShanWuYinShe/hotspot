@@ -119,4 +119,19 @@
      （leading-none=1 / leading-snug=1.375 / leading-relaxed=1.625 等）。 */
   --leading-card: 1.55;
   --leading-copy: 1.75;
+
+  /* Opacity scale — 生成 opacity-none/faint/subtle/muted/dim/soft/emphasis/
+     tap/hover/full/active 语义类，数值经 --cst-opacity-* 随主题/暗色变化。
+     禁止组件内联 opacity 字面量（AGENTS.md UI 原则 #4）。 */
+  --opacity-none: var(--cst-opacity-none);
+  --opacity-faint: var(--cst-opacity-faint);
+  --opacity-subtle: var(--cst-opacity-subtle);
+  --opacity-muted: var(--cst-opacity-muted);
+  --opacity-dim: var(--cst-opacity-dim);
+  --opacity-soft: var(--cst-opacity-soft);
+  --opacity-emphasis: var(--cst-opacity-emphasis);
+  --opacity-tap: var(--cst-opacity-tap);
+  --opacity-hover: var(--cst-opacity-hover);
+  --opacity-full: var(--cst-opacity-full);
+  --opacity-active: var(--cst-opacity-active);
 }

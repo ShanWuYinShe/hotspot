@@ -113,7 +113,7 @@
 		<!-- 空态：无任何附近内容 -->
 		<EmptyState title="附近还没有内容" description="去发布第一条动态，或到附近的人认识新朋友。">
 			{#snippet icon()}
-				<Radar class="size-6 opacity-40 text-text-secondary"   strokeWidth={1.5} />
+				<Radar class="size-6 opacity-subtle text-text-secondary"   strokeWidth={1.5} />
 			{/snippet}
 		</EmptyState>
 	{:else}

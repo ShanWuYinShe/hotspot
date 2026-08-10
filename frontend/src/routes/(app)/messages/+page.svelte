@@ -73,9 +73,10 @@
 						name: g.name,
 						avatar: g.avatar_url ?? '',
 						// spec: last_message 仅 groups/list_my 返回,非文本消息预览为空。
+						// 排序/展示统一以最新一条消息时间为准，无消息时回退群组活跃时间
 						lastMessage: c.last_message?.content ?? '',
-						time: formatTime(c.last_activity_at ?? ''),
-						timestamp: c.last_activity_at ?? '',
+						time: formatTime(c.last_message?.sent_at ?? c.last_activity_at ?? ''),
+						timestamp: c.last_message?.sent_at ?? c.last_activity_at ?? '',
 						unread: c.my_state?.unread_count ?? 0,
 						isPinned: c.my_state?.is_pinned ?? false,
 						online: false,
@@ -252,7 +253,7 @@
 				<div class="h-full">
 					<EmptyState title="选择一个会话" description="从左侧选择联系人开始聊天" class="h-full justify-center py-0!" iconSize={72}>
 						{#snippet icon()}
-							<MessageSquareDashed class="size-7 opacity-50 text-text-secondary"  strokeWidth={1.5} />
+							<MessageSquareDashed class="size-7 opacity-muted text-text-secondary"  strokeWidth={1.5} />
 						{/snippet}
 					</EmptyState>
 				</div>
@@ -356,7 +357,7 @@
 		{:else if filtered.length === 0}
 			<EmptyState bare class="py-12!" title="没有找到会话">
 				{#snippet icon()}
-					<MessageSquareDashed class="size-9 opacity-50 text-text-secondary"  strokeWidth={1.5} />
+					<MessageSquareDashed class="size-9 opacity-muted text-text-secondary"  strokeWidth={1.5} />
 				{/snippet}
 			</EmptyState>
 		{:else}

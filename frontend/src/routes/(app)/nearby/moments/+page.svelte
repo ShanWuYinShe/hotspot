@@ -205,7 +205,7 @@ referencePoint = loc?.point ?? null;
 	{:else}
 		<EmptyState title="附近暂时没有瞬间">
 			{#snippet icon()}
-				<Sparkles size={24} color="var(--cst-text-secondary)" opacity={0.4} />
+				<Sparkles size={24} color="var(--cst-text-secondary)" class="opacity-subtle" />
 			{/snippet}
 		</EmptyState>
 	{/if}

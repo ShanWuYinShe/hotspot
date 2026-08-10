@@ -8,7 +8,7 @@
 	//   - tone=card  ：独立卡片行（rounded-md + 边框 + 凸起阴影）
 	//   - hover：--interactive-hover-fill 背景填充；tap：轻微透明度按压反馈
 	//   - pressed：选中态（accent 全背景 + on-accent 文字）；children 需按选中态
-	//     切换文字类（text-text-on-accent 系列 + opacity-70/80 派生次级文字，
+	//     切换文字类（text-text-on-accent 系列 + opacity-soft/80 派生次级文字，
 	//     随明暗模式自动切换深浅；禁止用恒白 text-content-inverse——那是
 	//     图片/遮罩上的反色 token，在 dark 浅色 accent 背景上对比度不足）
 	//   - 高亮形状：joined 行 hover/focus/pressed 时背景带 rounded-sm 圆角
@@ -64,8 +64,8 @@
 	checkRowCardStyles();
 	// hover 或 focus 时行处于「激活表面」：叠加 hover-fill 背景
 	const surfaceActive = $derived(hovered || focused);
-	// 对齐 Figma Make：可点击时 tap → opacity 0.84（0.1s），无 scale
-	const itemOpacity = $derived(onClick && pointerDown ? 0.84 : 1);
+	// 对齐 Figma Make：可点击时 tap → opacity-tap 档（0.1s），无 scale
+	const itemOpacity = $derived(onClick && pointerDown ? 'var(--cst-opacity-tap)' : 'var(--cst-opacity-full)');
 
 	const isCard = $derived(tone === 'card');
 	const cardShadow = 'var(--shadow-raised-md)';

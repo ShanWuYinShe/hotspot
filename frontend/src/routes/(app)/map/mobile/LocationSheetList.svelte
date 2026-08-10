@@ -44,7 +44,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 				ariaLabel={`选择地点 ${r.displayName}`}
 				class="app-list-row app-list-row--standard px-5"
 			>
-				<div class="flex items-center justify-center rounded-full shrink-0 size-8.5 {isSelected ? 'bg-surface-primary' : 'bg-accent-default'}"  style="{isSelected ? '' : 'opacity:0.12'}">
+				<div class="flex items-center justify-center rounded-full shrink-0 size-8.5 {isSelected ? 'bg-surface-primary' : 'bg-accent-default'}"  style="{isSelected ? '' : 'opacity:var(--cst-opacity-active)'}">
 					<MapPin class="size-3.5 text-accent-default"   strokeWidth={1.75} />
 				</div>
 				<span class="{isSelected ? 'text-text-on-accent' : 'text-text-primary'} text-sm"  style="flex:1">{r.displayName}</span>
@@ -56,7 +56,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 	</ListContainer>
 {:else if searchQuery && searchResults.length === 0}
 	<div class="flex flex-col items-center py-6">
-		<MapPin class="size-6.5 opacity-30 text-text-secondary"   strokeWidth={1.5} />
+		<MapPin class="size-6.5 opacity-faint text-text-secondary"   strokeWidth={1.5} />
 		<p class="text-text-secondary text-sm mt-2" >未找到匹配地点</p>
 	</div>
 {:else}
@@ -117,7 +117,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 							</div>
 							<div class="flex-1 min-w-0">
 								<p class="truncate {isSelected ? 'text-text-on-accent' : 'text-text-primary'} text-sm">{loc.displayName}</p>
-								<p class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
+								<p class="{isSelected ? 'text-text-on-accent opacity-emphasis' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							{#if isSelected}
 								<Check class="size-3.5 shrink-0 text-text-on-accent"   strokeWidth={2.5} />
@@ -141,23 +141,23 @@ import PinMedia from '../shared/PinMedia.svelte';
 							ariaLabel={`选择热门地点 ${loc.displayName}`}
 							class="app-list-row app-list-row--standard px-4"
 						>
-							<div class="flex items-center justify-center rounded-sm shrink-0 size-9 text-lg {isSelected ? 'bg-surface-primary' : 'bg-accent-default'} opacity-90">
+							<div class="flex items-center justify-center rounded-sm shrink-0 size-9 text-lg {isSelected ? 'bg-surface-primary' : 'bg-accent-default'} opacity-hover">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
 								<p class="truncate {isSelected ? 'text-text-on-accent' : 'text-text-primary'} text-sm">{loc.displayName}</p>
-								<p class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
+								<p class="{isSelected ? 'text-text-on-accent opacity-emphasis' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
 							</div>
 							<div class="flex items-center gap-1 shrink-0">
 								<Users class="size-3" style="color:{isSelected ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};" strokeWidth={1.5} />
-								<span class="{isSelected ? 'text-text-on-accent opacity-80' : 'text-accent-default'} text-xs">{loc.users}</span>
+								<span class="{isSelected ? 'text-text-on-accent opacity-emphasis' : 'text-accent-default'} text-xs">{loc.users}</span>
 							</div>
 						</ListItem>
 					{/each}
 				</ListContainer>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-8">
-					<Star class="size-5 opacity-30 text-text-secondary"  strokeWidth={1.5} />
+					<Star class="size-5 opacity-faint text-text-secondary"  strokeWidth={1.5} />
 					<p class="text-text-secondary text-xs">暂无热门地点</p>
 				</div>
 			{/if}

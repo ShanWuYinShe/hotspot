@@ -287,7 +287,7 @@
 		{/if}
 
 		<!-- Attribution -->
-		<div class="text-text-secondary text-xxs opacity-40"  style="position:absolute;bottom:4px;left:8px;pointer-events:none;z-index:1">
+		<div class="text-text-secondary text-xxs opacity-subtle"  style="position:absolute;bottom:4px;left:8px;pointer-events:none;z-index:1">
 			© OpenStreetMap contributors
 		</div>
 	</div>

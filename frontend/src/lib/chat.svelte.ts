@@ -92,7 +92,9 @@ export function useChat(opts: UseChatOptions) {
 			const res = await opts.loadHistory();
 			if (cancelled) return;
 			if (res) {
-				messages = res.messages;
+				// 契约：服务端历史按 sent_at 倒序（新→旧）返回；渲染需要旧→新，
+				// 首屏翻转为正序，保证越新的消息在下方。
+				messages = res.messages.slice().reverse();
 				nextCursor = res.next_cursor ?? null;
 			}
 			loadingMore = false;
@@ -169,7 +171,8 @@ export function useChat(opts: UseChatOptions) {
 		sendTyping(false);
 	}
 
-	/** 滚动到顶加载更早的历史(游标分页;契约:服务端按 sent_at 倒序,next_cursor 指向更早批次)。 */
+	/** 滚动到顶加载更早的历史(游标分页;契约:服务端按 sent_at 倒序返回,next_cursor
+	    指向更早批次;每批内部同样翻转为正序后插到顶部,保持旧上新下)。 */
 	async function loadMore() {
 		if (loadingMore || !nextCursor) return;
 		loadingMore = true;
@@ -182,7 +185,7 @@ export function useChat(opts: UseChatOptions) {
 		if (opts.targetId() !== target) return;
 		loadingMore = false;
 		if (!res) return;
-		messages = [...res.messages, ...messages];
+		messages = [...res.messages.slice().reverse(), ...messages];
 		nextCursor = res.next_cursor ?? null;
 		// 新内容插在顶部:把可视位置下移新内容高度
 		requestAnimationFrame(() => {

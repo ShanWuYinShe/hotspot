@@ -41,7 +41,7 @@
 			</div>
 			<Dialog.Close
 				aria-label="关闭"
-				class="flex items-center justify-center rounded-full transition-opacity hover:opacity-70 size-8 text-text-secondary"
+				class="flex items-center justify-center rounded-full transition-opacity hover:opacity-soft size-8 text-text-secondary"
 				 
 			>
 				<X size={18} />

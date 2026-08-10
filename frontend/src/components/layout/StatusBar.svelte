@@ -36,7 +36,7 @@
 		<div class="flex items-end gap-0.5">
 			{#each signalHeights as hgt, i}
 				<div
-					class="{i < 3 ? 'opacity-100' : 'opacity-30'}"
+					class="{i < 3 ? 'opacity-full' : 'opacity-faint'}"
 					style="width:3px;height:{hgt}px;border-radius:1px;background-color:var(--cst-text-primary);"
 				></div>
 			{/each}
@@ -52,7 +52,7 @@
 				></div>
 			</div>
 			<div
-				class="opacity-50"
+				class="opacity-muted"
 				style="width:2px;height:5px;border-radius:0 1px 1px 0;background-color:var(--cst-text-primary);margin-left:1px;"
 			></div>
 		</div>

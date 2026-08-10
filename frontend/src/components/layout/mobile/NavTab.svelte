@@ -32,7 +32,7 @@
 	{#if isActive}
 		<div
 			class="transition-[opacity] duration-200"
-			style="position:absolute;inset:4px 6px;border-radius:var(--cst-shape-lg);background:var(--cst-navigation-active-indicator);opacity:0.13;"
+			style="position:absolute;inset:4px 6px;border-radius:var(--cst-shape-lg);background:var(--cst-navigation-active-indicator);opacity:var(--cst-opacity-active);"
 		></div>
 	{/if}
 

@@ -240,7 +240,7 @@
 
 				<!-- Section 2 label -->
 				<p
-					class="text-text-secondary {isSidebarCollapsed ? 'sr-only' : 'px-3 mb-2 text-xxs font-semibold tracking-label uppercase opacity-70'}"
+					class="text-text-secondary {isSidebarCollapsed ? 'sr-only' : 'px-3 mb-2 text-xxs font-semibold tracking-label uppercase opacity-soft'}"
 				>
 					个人中心
 				</p>

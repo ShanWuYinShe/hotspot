@@ -45,7 +45,7 @@
 
 <button
 	type={type}
-	class="hover-btn scale-btn hit-slop flex items-center justify-center rounded-full focus-ring shrink-0 disabled:opacity-50 {className}"
+	class="hover-btn scale-btn hit-slop flex items-center justify-center rounded-full focus-ring shrink-0 disabled:opacity-muted {className}"
 	style={style}
 	aria-label={label}
 	title={label}

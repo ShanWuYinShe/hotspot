@@ -54,11 +54,11 @@
 			<span class="{isSelected ? 'text-text-on-accent' : 'text-text-primary'} truncate text-sm">
 				{chat.name}
 			</span>
-			<span class="{isSelected ? 'text-text-on-accent opacity-70' : 'text-text-secondary'} shrink-0 text-xs">
+			<span class="{isSelected ? 'text-text-on-accent opacity-soft' : 'text-text-secondary'} shrink-0 text-xs">
 				{chat.time}
 			</span>
 		</span>
-		<span class="block truncate pr-4 {isSelected ? 'text-text-on-accent opacity-80' : 'text-text-secondary'} text-xs">
+		<span class="block truncate pr-4 {isSelected ? 'text-text-on-accent opacity-emphasis' : 'text-text-secondary'} text-xs">
 			{chat.lastMessage}
 		</span>
 	</span>
@@ -66,7 +66,7 @@
 	{#if onTogglePin}
 		<button
 			type="button"
-			class="hover-btn scale-btn tap-88 focus-ring flex shrink-0 items-center justify-center rounded-full p-1 {isSelected || chat.isPinned ? '' : 'opacity-50 hover:opacity-100 focus-visible:opacity-100'}"
+			class="hover-btn scale-btn tap-88 focus-ring flex shrink-0 items-center justify-center rounded-full p-1 {isSelected || chat.isPinned ? '' : 'opacity-muted hover:opacity-full focus-visible:opacity-full'}"
 			aria-label={chat.isPinned ? '取消置顶' : '置顶'}
 			title={chat.isPinned ? '取消置顶' : '置顶'}
 			onclick={(e) => {

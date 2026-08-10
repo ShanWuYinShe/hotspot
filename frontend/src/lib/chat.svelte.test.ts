@@ -83,4 +83,45 @@ describe('useChat', () => {
 			expect(h.chat!.sendError).toBe('对方已屏蔽你');
 		});
 	});
+
+	it('历史按服务端倒序返回时翻转为正序（越新的消息在下方）', async () => {
+		const loadHistory = vi.fn().mockResolvedValue({
+			messages: [
+				{ id: 'm3', text: '最新', sent: false, time: '12:03' },
+				{ id: 'm2', text: '中间', sent: false, time: '12:02' },
+				{ id: 'm1', text: '最早', sent: false, time: '12:01' }
+			] as ChatMessage[],
+			next_cursor: null
+		});
+		const h = setup({ loadHistory });
+		await vi.waitFor(() => expect(loadHistory).toHaveBeenCalledTimes(1));
+		await vi.waitFor(() => {
+			expect(h.chat!.messages.map((m) => m.id)).toEqual(['m1', 'm2', 'm3']);
+		});
+	});
+
+	it('加载更早历史时按正序插到顶部（保持旧上新下）', async () => {
+		const loadHistory = vi
+			.fn()
+			.mockResolvedValueOnce({
+				messages: [{ id: 'm2', text: '较新', sent: false, time: '12:02' }] as ChatMessage[],
+				next_cursor: 'older'
+			})
+			.mockResolvedValueOnce({
+				messages: [{ id: 'm1', text: '较旧', sent: false, time: '12:01' }] as ChatMessage[],
+				next_cursor: null
+			});
+		const h = setup({ loadHistory });
+		await vi.waitFor(() => expect(loadHistory).toHaveBeenCalledTimes(1));
+		const el = document.createElement('div');
+		el.scrollTop = 0;
+		// jsdom 未实现 scrollTo；测试仅关心消息顺序，桩掉滚动定位
+		el.scrollTo = (() => {}) as typeof el.scrollTo;
+		h.chat!.scrollEl = el;
+		h.chat!.handleScroll();
+		await vi.waitFor(() => expect(loadHistory).toHaveBeenCalledTimes(2));
+		await vi.waitFor(() => {
+			expect(h.chat!.messages.map((m) => m.id)).toEqual(['m1', 'm2']);
+		});
+	});
 });

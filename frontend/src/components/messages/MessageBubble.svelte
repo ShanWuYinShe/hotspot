@@ -28,11 +28,11 @@
 				{text}
 			</p>
 			<p
-				class="mt-1 flex items-center gap-0.75 text-xxs {sent ? 'justify-end text-text-on-accent opacity-70' : 'justify-start text-text-secondary'}"
+				class="mt-1 flex items-center gap-0.75 text-xxs {sent ? 'justify-end text-text-on-accent opacity-soft' : 'justify-start text-text-secondary'}"
 			>
 			{time}
 			{#if sent && showCheck}
-				<CheckCheck class="size-3 opacity-80" strokeWidth={2} />
+				<CheckCheck class="size-3 opacity-emphasis" strokeWidth={2} />
 			{/if}
 		</p>
 	</div>

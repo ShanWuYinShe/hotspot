@@ -31,7 +31,7 @@
 			{#snippet subtitle()}
 				<p class="mt-1 flex items-center gap-1.5 text-xxs">
 					<span  class="text-accent-default">#{u.tag}</span>
-					<span class="opacity-50 text-text-secondary" >·</span>
+					<span class="opacity-muted text-text-secondary" >·</span>
 					<span  class="text-text-secondary">{u.distance}</span>
 				</p>
 			{/snippet}

@@ -41,7 +41,7 @@
 	{@html markerSvg(pin.type, pin.count ?? 1, { w: 36, h: 48 })}
 	{#if isSelected}
 		<span
-			class="absolute rounded-full pointer-events-none opacity-30"
+			class="absolute rounded-full pointer-events-none opacity-faint"
 			style="inset:8px 2px;background:{PIN_COLORS[pin.type]};filter:blur(var(--cst-blur-sm));"
 		></span>
 	{/if}

@@ -61,7 +61,7 @@
 		{@render children?.()}
 		{#if canShowClose}
 			<Dialog.Close
-				class="absolute top-4 right-4 z-10 rounded-full opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-2 focus-visible:outline-accent-default focus-visible:outline-offset-2"
+				class="absolute top-4 right-4 z-10 rounded-full opacity-soft transition-opacity hover:opacity-full focus-visible:outline-2 focus-visible:outline-accent-default focus-visible:outline-offset-2"
 				aria-label="关闭"
 			>
 				<X class="size-4" strokeWidth={2} />

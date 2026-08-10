@@ -39,6 +39,20 @@
   --cst-pr-shadow-card: 0 0 0 1.5px rgba(61, 122, 85, 0.22);
   --cst-pr-shadow-btn: 0 0 0 1.5px rgba(61, 122, 85, 0.28);
 
+  /* ── 透明度档位（opacity-* 语义类经 theme-registry 映射；glow 随主题/暗色变化）── */
+  --cst-pr-opacity-none: 0;
+  --cst-pr-opacity-faint: 0.30;
+  --cst-pr-opacity-subtle: 0.40;
+  --cst-pr-opacity-muted: 0.50;
+  --cst-pr-opacity-dim: 0.60;
+  --cst-pr-opacity-soft: 0.70;
+  --cst-pr-opacity-emphasis: 0.80;
+  --cst-pr-opacity-tap: 0.84;
+  --cst-pr-opacity-hover: 0.90;
+  --cst-pr-opacity-full: 1;
+  --cst-pr-opacity-active: 0.13;
+  --cst-pr-opacity-glow: 0.95;
+
   /* ── color-mix 预设（token 内部派生；组件/数据层不得再写 color-mix）── */
 
   /* ── 语义色族完整档位（主色 → 淡底 -bg / 淡边框 -border / 光晕 -glow）──
@@ -142,9 +156,6 @@
     box-shadow: 0 0 0 1.5px var(--cst-border-strong);
     border-color: var(--cst-border-strong);
   }
-  .forest .ambient-glow::before {
-    opacity: 0.95;
-  }
   /* 扁平——无位移无阴影，仅背景色承载；缩放保留但略保守（Figma forest 1.08/0.97） */
   .forest .hover-btn:active,
   .forest .hover-action:active,
@@ -195,6 +206,20 @@
   --cst-pr-overlay-strong: rgba(0, 0, 0, 0.54);
   --cst-pr-shadow-card: 0 0 0 1.5px rgba(82, 184, 120, 0.26);
   --cst-pr-shadow-btn: 0 0 0 1.5px rgba(82, 184, 120, 0.32);
+
+  /* ── 透明度档位（dark）── */
+  --cst-pr-opacity-none: 0;
+  --cst-pr-opacity-faint: 0.30;
+  --cst-pr-opacity-subtle: 0.40;
+  --cst-pr-opacity-muted: 0.50;
+  --cst-pr-opacity-dim: 0.60;
+  --cst-pr-opacity-soft: 0.70;
+  --cst-pr-opacity-emphasis: 0.80;
+  --cst-pr-opacity-tap: 0.84;
+  --cst-pr-opacity-hover: 0.90;
+  --cst-pr-opacity-full: 1;
+  --cst-pr-opacity-active: 0.13;
+  --cst-pr-opacity-glow: 0.95;
 
   /* ── color-mix 预设（dark）── */
 

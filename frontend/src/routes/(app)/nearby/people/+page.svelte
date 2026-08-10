@@ -182,7 +182,7 @@
 			{:else}
 				<EmptyState bare title="没有找到匹配的附近用户">
 					{#snippet icon()}
-						<Users size={40} color="var(--cst-text-secondary)" opacity={0.4} />
+						<Users size={40} color="var(--cst-text-secondary)" class="opacity-subtle" />
 					{/snippet}
 				</EmptyState>
 			{/if}

@@ -38,7 +38,7 @@
 		class={cn(
 			'rounded-full outline-none transition-colors px-3 py-1 cursor-pointer surface-ghost focus-visible:ring-2 focus-visible:ring-accent-default',
 			sizeClasses[size],
-			disabled && 'pointer-events-none opacity-40',
+			disabled && 'pointer-events-none opacity-subtle',
 			active
 				? 'bg-accent-soft text-accent-default border border-accent-border font-semibold'
 				: 'text-text-secondary',

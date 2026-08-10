@@ -37,6 +37,20 @@
   --cst-elevation-card: var(--cst-pr-shadow-card);
   --cst-elevation-button: var(--cst-pr-shadow-btn);
 
+  /* Opacity scale（随主题/暗色可整体调整；组件只消费 opacity-* 语义类） */
+  --cst-opacity-none: var(--cst-pr-opacity-none);
+  --cst-opacity-faint: var(--cst-pr-opacity-faint);
+  --cst-opacity-subtle: var(--cst-pr-opacity-subtle);
+  --cst-opacity-muted: var(--cst-pr-opacity-muted);
+  --cst-opacity-dim: var(--cst-pr-opacity-dim);
+  --cst-opacity-soft: var(--cst-pr-opacity-soft);
+  --cst-opacity-emphasis: var(--cst-pr-opacity-emphasis);
+  --cst-opacity-tap: var(--cst-pr-opacity-tap);
+  --cst-opacity-hover: var(--cst-pr-opacity-hover);
+  --cst-opacity-full: var(--cst-pr-opacity-full);
+  --cst-opacity-active: var(--cst-pr-opacity-active);
+  --cst-opacity-glow: var(--cst-pr-opacity-glow);
+
   /* Color-mix presets */
 
   /* Status */

@@ -41,6 +41,20 @@
   --cst-pr-shadow-card: 0 12px 28px rgba(53, 120, 212, 0.12), 0 3px 10px rgba(53, 120, 212, 0.07);
   --cst-pr-shadow-btn: 0 5px 14px rgba(53, 120, 212, 0.18);
 
+  /* ── 透明度档位（opacity-* 语义类经 theme-registry 映射；glow 随主题/暗色变化）── */
+  --cst-pr-opacity-none: 0;
+  --cst-pr-opacity-faint: 0.30;
+  --cst-pr-opacity-subtle: 0.40;
+  --cst-pr-opacity-muted: 0.50;
+  --cst-pr-opacity-dim: 0.60;
+  --cst-pr-opacity-soft: 0.70;
+  --cst-pr-opacity-emphasis: 0.80;
+  --cst-pr-opacity-tap: 0.84;
+  --cst-pr-opacity-hover: 0.90;
+  --cst-pr-opacity-full: 1;
+  --cst-pr-opacity-active: 0.13;
+  --cst-pr-opacity-glow: 0.70;
+
   /* ── color-mix 预设（token 内部派生；组件/数据层不得再写 color-mix）── */
 
   /* ── 语义色族完整档位（主色 → 淡底 -bg / 淡边框 -border / 光晕 -glow）──
@@ -139,12 +153,6 @@
     background: color-mix(in srgb, var(--cst-surface-primary) 70%, var(--cst-accent-default) 5%) !important;
     backdrop-filter: blur(var(--cst-blur-md)) saturate(1.25);
   }
-  .vibrant .ambient-glow::before {
-    opacity: 0.70;
-  }
-  .vibrant.dark .ambient-glow::before {
-    opacity: 0.80;
-  }
   @media (hover: hover) and (pointer: fine) {
     .vibrant .surface-ghost:hover {
       background: color-mix(in srgb, var(--cst-accent-default) 10%, transparent);
@@ -181,6 +189,20 @@
   --cst-pr-overlay-strong: rgba(0, 8, 20, 0.62);
   --cst-pr-shadow-card: 0 12px 28px rgba(36, 105, 194, 0.20), 0 3px 10px rgba(0, 0, 0, 0.26);
   --cst-pr-shadow-btn: 0 5px 14px rgba(105, 168, 255, 0.24);
+
+  /* ── 透明度档位（dark）── */
+  --cst-pr-opacity-none: 0;
+  --cst-pr-opacity-faint: 0.30;
+  --cst-pr-opacity-subtle: 0.40;
+  --cst-pr-opacity-muted: 0.50;
+  --cst-pr-opacity-dim: 0.60;
+  --cst-pr-opacity-soft: 0.70;
+  --cst-pr-opacity-emphasis: 0.80;
+  --cst-pr-opacity-tap: 0.84;
+  --cst-pr-opacity-hover: 0.90;
+  --cst-pr-opacity-full: 1;
+  --cst-pr-opacity-active: 0.13;
+  --cst-pr-opacity-glow: 0.80;
 
   /* ── color-mix 预设（dark）── */
 

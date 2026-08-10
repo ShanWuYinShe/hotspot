@@ -52,7 +52,7 @@
 			tone={embedded ? 'card' : 'row'}
 			onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
 			ariaLabel={`查看 ${f.name} 的主页`}
-			style={`opacity:${unfollowedIds.has(f.id) ? 0.55 : 1};`}
+			style={`opacity:${unfollowedIds.has(f.id) ? 'var(--cst-opacity-muted)' : 'var(--cst-opacity-full)'};`}
 		>
 			{#snippet subtitle()}
 				<p class="truncate mt-px text-text-secondary text-xs">{f.desc}</p>
