@@ -182,7 +182,7 @@
 						bind:value={remarkDraft}
 						oninput={(e) => (remarkDraft = e.currentTarget.value.slice(0, 24))}
 						placeholder="只对你可见"
-						class="mt-2 w-full rounded-sm ring-1 ring-border-default bg-transparent px-3 py-2.5 text-sm text-text-primary focus-ring"
+						class="mt-2 w-full input-surface rounded-md px-3 py-2.5 text-sm text-text-primary"
 					/>
 				</label>
 				<button

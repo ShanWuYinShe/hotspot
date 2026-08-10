@@ -73,7 +73,8 @@
   .card-hover:focus-visible { outline: 2px solid var(--cst-accent-default); outline-offset: 2px; }
   @media (hover: hover) and (pointer: fine) {
     .card-hover:hover {
-      box-shadow: 0 0 0 1px var(--cst-accent-border), var(--cst-elevation-card) !important;
+      /* 只抬升投影，不画外环：卡片已有边框时避免“高亮外再叠一圈” */
+      box-shadow: var(--cst-elevation-card) !important;
     }
   }
 
@@ -234,6 +235,7 @@
 
   /* 内层输入控件不画自身焦点框：input-surface:focus-within 已是整框焦点态
      （加粗描边 + 内凹阴影），避免聚焦时在容器内再出现尺寸不一致的矩形 outline。 */
+  .input-surface:focus-visible,
   .input-surface input:focus-visible,
   .input-surface textarea:focus-visible {
     outline: none;

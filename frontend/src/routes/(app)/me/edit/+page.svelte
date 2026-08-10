@@ -265,7 +265,7 @@
 					placeholder="DELETE_MY_ACCOUNT"
 					autocomplete="off"
 					aria-label="注销确认码"
-					class="w-full rounded-md border border-border-default bg-surface-primary px-3 py-2 text-sm focus-ring text-text-primary"
+					class="w-full input-surface rounded-md px-3 py-2 text-sm text-text-primary"
 				/>
 				<div class="flex justify-end gap-2">
 					<Button type="button" variant="secondary" size="sm" onclick={() => (deleteConfirmOpen = false)}>

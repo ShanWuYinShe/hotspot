@@ -150,7 +150,10 @@
   .forest .hover-action:active,
   .forest .scale-btn:active { transform: scale(0.97); }
   @media (hover: hover) and (pointer: fine) {
-    .forest .card-hover:hover,
+    .forest .card-hover:hover {
+      /* forest 扁平：卡片 hover 不额外画外环，由边框色变化承载 */
+      box-shadow: none !important;
+    }
     .forest .circle-hover:hover {
       box-shadow: 0 0 0 1px var(--cst-border-strong) !important;
     }
