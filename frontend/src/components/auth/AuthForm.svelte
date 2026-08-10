@@ -186,7 +186,7 @@
 	{#if mode === 'register' || mode === 'guest'}
 		<label class="flex flex-col gap-1.5" for="auth-field-nickname">
 			<span class="text-xs tracking-field text-text-secondary" >昵称</span>
-			<span class="flex items-center gap-2 border border-border-default rounded-md px-3 py-3 bg-surface-primary" >
+			<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
 				<input
 					id="auth-field-nickname"
 					type="text"
@@ -226,7 +226,7 @@
 		{/if}
 		<label class="flex flex-col gap-1.5" for="auth-field-loginId">
 			<span class="text-xs font-medium text-text-secondary"  >手机号、邮箱或账号</span>
-			<span class="flex items-center gap-2 border border-border-default rounded-md px-3 py-3 bg-surface-primary" >
+			<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
 				<Mail class="size-4 shrink-0 text-accent-default"   strokeWidth={1.75} />
 				<input
 					id="auth-field-loginId"
@@ -250,7 +250,7 @@
 			<!-- 验证码登录：验证码输入 + 获取验证码 -->
 			<label class="flex flex-col gap-1.5" for="auth-field-code">
 				<span class="text-xs tracking-field text-text-secondary" >验证码</span>
-				<span class="flex items-center gap-2 border border-border-default rounded-md px-3 py-3 bg-surface-primary" >
+				<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
 					<input
 						id="auth-field-code"
 						type="text"
@@ -281,7 +281,7 @@
 		{:else if mode === 'login' || mode === 'register'}
 			<label class="flex flex-col gap-1.5" for="auth-field-password">
 				<span class="text-xs font-medium text-text-secondary"  >密码</span>
-				<span class="flex items-center gap-2 border border-border-default rounded-md px-3 py-3 bg-surface-primary" >
+				<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
 					<LockKeyhole class="size-4 shrink-0 text-accent-default"   strokeWidth={1.75} />
 					<input
 						id="auth-field-password"
@@ -319,7 +319,7 @@
 	{#if mode === 'forgot' || mode === 'reset'}
 		<label class="flex flex-col gap-1.5" for="auth-field-resetLoginId">
 			<span class="text-xs tracking-field text-text-secondary" >账号</span>
-			<span class="flex items-center gap-2 border border-border-default rounded-md px-3 py-3 bg-surface-primary" >
+			<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
 				<input
 					id="auth-field-resetLoginId"
 					type="text"
@@ -341,7 +341,7 @@
 		{#if mode === 'reset'}
 			<label class="flex flex-col gap-1.5" for="auth-field-code">
 				<span class="text-xs tracking-field text-text-secondary" >验证码</span>
-				<span class="flex items-center gap-2 border border-border-default rounded-md px-3 py-3 bg-surface-primary" >
+				<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
 					<input
 						id="auth-field-code"
 						type="text"
@@ -362,7 +362,7 @@
 			</label>
 			<label class="flex flex-col gap-1.5" for="auth-field-newPassword">
 				<span class="text-xs tracking-field text-text-secondary" >新密码</span>
-				<span class="flex items-center gap-2 border border-border-default rounded-md px-3 py-3 bg-surface-primary" >
+				<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
 					<input
 						id="auth-field-newPassword"
 						type={showPassword ? 'text' : 'password'}

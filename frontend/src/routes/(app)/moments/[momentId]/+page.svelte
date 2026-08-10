@@ -264,7 +264,7 @@
 						if (e.key === 'Enter') void handleComment();
 					}}
 					placeholder="写下你的评论…"
-					class="flex-1 bg-transparent focus-ring text-text-primary text-sm"
+					class="flex-1 bg-transparent text-text-primary text-sm"
 				/>
 			</div>
 			<button

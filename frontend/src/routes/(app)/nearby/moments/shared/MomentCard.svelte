@@ -27,7 +27,7 @@
 	imageSrc={item.image ?? item.avatar}
 	imageAlt={item.tag}
 	{onClick}
-	class="aspect-[4/3] rounded-md surface-flat"
+	class="aspect-[4/3] rounded-md"
 >
 	{#snippet placeholder()}
 		<div

@@ -139,6 +139,9 @@
     background: color-mix(in srgb, var(--cst-surface-primary) 70%, var(--cst-accent-default) 5%) !important;
     backdrop-filter: blur(var(--cst-blur-md)) saturate(1.25);
   }
+  .vibrant .input-surface:focus-within {
+    background: color-mix(in srgb, var(--cst-surface-primary) 90%, var(--cst-accent-default) 10%) !important;
+  }
   .vibrant .ambient-glow::before {
     opacity: 0.70;
   }

@@ -34,6 +34,7 @@
 <div class={cn('flex items-center gap-2.5 rounded-md input-surface', className)}>
 	<Search size={14} color="var(--cst-text-secondary)" />
 	<!-- svelte-ignore a11y_autofocus：搜索页进入自动聚焦是样板行为 -->
+	<!-- 聚焦态由外层 input-surface:focus-within 整框承担（见 utilities.css），内层不画自身焦点框 -->
 	<input
 		{autofocus}
 		aria-label="搜索"
@@ -43,7 +44,7 @@
 			if (e.key === 'Enter') onEnter?.(value);
 		}}
 		{placeholder}
-		class="min-w-0 flex-1 bg-transparent focus-ring text-text-primary {textClass}"
+		class="min-w-0 flex-1 bg-transparent text-text-primary {textClass}"
 	/>
 	{#if value}
 		<button

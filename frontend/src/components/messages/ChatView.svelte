@@ -305,7 +305,7 @@
 					if (e.key === 'Enter') void chat.handleSend();
 				}}
 				placeholder="发消息…"
-				class="flex-1 bg-transparent focus-ring text-text-primary text-sm"
+				class="flex-1 bg-transparent text-text-primary text-sm"
 			/>
 		</div>
 

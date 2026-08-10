@@ -331,7 +331,7 @@
 		<!-- Search bar -->
 		<div class="shrink-0 px-3.5 pb-2">
 			<div class="flex items-center gap-2.5 px-3.5 rounded-md input-surface h-11" >
-				<Search class="size-4 shrink-0 text-text-secondary"   strokeWidth={1.5} />
+				<Search class="size-3.5 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 				<input
 					bind:value={searchQuery}
 					oninput={(e) => {
@@ -343,7 +343,7 @@
 						if (snap === 'min') snapTo('mid');
 					}}
 					placeholder="搜索地点、地标或坐标"
-					class="flex-1 bg-transparent focus-ring text-text-primary text-sm"
+					class="flex-1 bg-transparent text-text-primary text-sm"
 				/>
 				{#if searchQuery}
 					<button

@@ -139,6 +139,22 @@
 			<span class="tracking-tight text-lg text-text-primary"  >HotSpot</span>
 		</button>
 
+		<!-- 侧边栏折叠开关：放在顶部栏、与 Logo 相邻，不占用/遮挡侧栏菜单布局 -->
+		<button
+			type="button"
+			class="header-action hover-btn scale-btn hit-slop flex size-9 shrink-0 items-center justify-center rounded-full focus-ring text-text-secondary"
+			aria-label={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
+			aria-pressed={isSidebarCollapsed}
+			title={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
+			onclick={() => (isSidebarCollapsed = !isSidebarCollapsed)}
+		>
+			{#if isSidebarCollapsed}
+				<PanelLeftOpen size={16} strokeWidth={1.75} />
+			{:else}
+				<PanelLeftClose size={16} strokeWidth={1.75} />
+			{/if}
+		</button>
+
 		<!-- Spacer -->
 		<div class="flex-1"></div>
 
@@ -210,22 +226,6 @@
 			class="relative flex flex-col shrink-0 overflow-visible box-border transition-[width] duration-200"
 			style="width:{isSidebarCollapsed ? 'var(--cst-desktop-sidebar-collapsed)' : 'var(--cst-desktop-sidebar-width)'};padding:0.75rem;"
 		>
-			<!-- Edge-mounted collapse control: leaves the navigation rhythm untouched -->
-			<button
-				type="button"
-				class="hover-btn absolute -right-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-border-default bg-surface-page text-text-secondary outline-none transition-colors hover:bg-accent-soft focus-visible:ring-2 focus-visible:ring-accent-default"
-				style="box-shadow:var(--cst-elevation-control-thumb);"
-				aria-label={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
-				aria-pressed={isSidebarCollapsed}
-				title={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
-				onclick={() => (isSidebarCollapsed = !isSidebarCollapsed)}
-			>
-				{#if isSidebarCollapsed}
-					<PanelLeftOpen size={16} strokeWidth={1.75} />
-				{:else}
-					<PanelLeftClose size={16} strokeWidth={1.75} />
-				{/if}
-			</button>
 			<!-- Scrollable nav region — takes all available space -->
 			<div class="flex-1 flex flex-col overflow-y-auto no-scrollbar min-h-0">
 			<!-- Section 1: 发现导航 -->

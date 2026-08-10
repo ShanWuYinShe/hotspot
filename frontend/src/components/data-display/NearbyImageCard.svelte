@@ -44,9 +44,11 @@
 		class?: string;
 	} = $props();
 
-	// hover 反馈（图片缩放 + accent 边框）完全由 CSS 驱动
+	// hover 反馈（图片缩放 + 内嵌 accent 边框）完全由 .image-hover-frame 规则驱动
 	// （.image-hover-frame:hover 规则，单一事实源——JS 状态与 :hover 不同步
 	// 会导致鼠标在卡片上滑动时反馈闪烁/丢失）。
+	// 不使用 card-hover：其 hover 外环会与 image-hover-frame 的内嵌 accent 边框叠加成双重边框；
+	// 键盘焦点由 focus-ring 承载。
 	// 整卡按压 scale 由 --cst-card-tap-scale 驱动（vibrant 0.94 / forest 0.97，
 	// 对齐 Figma useHoverConfig tap）。
 	let pressed = $state(false);
@@ -56,7 +58,7 @@
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <article
 	class={cn(
-		'image-hover-frame card-hover relative h-full w-full cursor-pointer overflow-hidden',
+		'image-hover-frame focus-ring relative h-full w-full cursor-pointer overflow-hidden',
 		className
 	)}
 	style="transform:{cardTransform};transition:transform 0.10s var(--cst-ease-standard);"

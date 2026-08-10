@@ -223,11 +223,20 @@
     background: color-mix(in srgb, var(--cst-surface-primary) 82%, var(--cst-surface-page) 18%) !important;
     box-shadow: inset 0 0 0 1px var(--cst-border-default), inset 0 1px 2px color-mix(in srgb, var(--cst-elevation-shadow-dark) 26%, transparent) !important;
     border: 1px solid var(--cst-border-default) !important;
-    transition: box-shadow 0.2s var(--cst-ease-standard), border-color 0.2s var(--cst-ease-standard);
+    transition: box-shadow 0.2s var(--cst-ease-standard), border-color 0.2s var(--cst-ease-standard), background-color 0.2s var(--cst-ease-standard);
   }
   .input-surface:focus-within {
-    box-shadow: var(--shadow-inset-sm) !important;
-    border-color: var(--cst-border-strong) !important;
+    /* 聚焦态长在输入框本体：accent 描边 + 淡 accent 底色；无外环/光晕/内凹，与输入框融为一体 */
+    border-color: var(--cst-accent-default) !important;
+    background: color-mix(in srgb, var(--cst-surface-primary) 88%, var(--cst-accent-default) 12%) !important;
+    box-shadow: none !important;
+  }
+
+  /* 内层输入控件不画自身焦点框：input-surface:focus-within 已是整框焦点态
+     （加粗描边 + 内凹阴影），避免聚焦时在容器内再出现尺寸不一致的矩形 outline。 */
+  .input-surface input:focus-visible,
+  .input-surface textarea:focus-visible {
+    outline: none;
   }
 }
 

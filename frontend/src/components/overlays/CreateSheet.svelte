@@ -143,7 +143,7 @@
 					bind:value={text}
 					oninput={(e) => (text = e.currentTarget.value.slice(0, 280))}
 					placeholder="写下此刻发生的事，或分享一个想被附近的人看见的瞬间…"
-					class="min-h-30.5 w-full resize-none bg-transparent text-sm leading-7 text-text-primary focus-ring placeholder:text-text-secondary"
+					class="min-h-30.5 w-full resize-none bg-transparent text-sm leading-7 text-text-primary placeholder:text-text-secondary"
 					aria-label="动态内容"
 				></textarea>
 				<div class="mt-3 flex items-center justify-between border-t border-border-default pt-3">

@@ -64,7 +64,7 @@ locationName = loc?.location_name ?? '';
 
 <!-- Search -->
 <div class="shrink-0 px-4 pt-3 pb-2 relative">
-	<div class="flex items-center gap-2.5 px-3.5 rounded-sm input-surface h-10.5" >
+	<div class="flex items-center gap-2.5 px-3.5 rounded-md input-surface h-10.5" >
 		<Search class="size-3.5 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 		<input
 			bind:value={searchQuery}
@@ -73,7 +73,7 @@ locationName = loc?.location_name ?? '';
 				selectedLoc = null;
 			}}
 			placeholder="搜索地点或地标…"
-			class="flex-1 bg-transparent focus-ring text-text-primary text-sm"
+			class="flex-1 bg-transparent text-text-primary text-sm"
 		/>
 		{#if searchQuery}
 			<button type="button" class="hover-btn focus-ring" onclick={() => (searchQuery = '')}>

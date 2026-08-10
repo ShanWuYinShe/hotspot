@@ -207,7 +207,7 @@
 				bind:value={nickname}
 				oninput={(e) => (nickname = e.currentTarget.value.slice(0, 30))}
 				placeholder="你的名字"
-				class="w-full bg-transparent focus-ring text-text-primary text-sm"
+				class="w-full bg-transparent text-text-primary text-sm"
 			/>
 		</div>
 	</div>
@@ -225,7 +225,7 @@
 					oninput={(e) => (bio = e.currentTarget.value.slice(0, 150))}
 					placeholder="介绍一下自己…"
 					rows={3}
-					class="w-full bg-transparent focus-ring resize-none text-text-primary text-sm leading-copy"
+					class="w-full bg-transparent resize-none text-text-primary text-sm leading-copy"
 				></textarea>
 				<div class="flex justify-end mt-1">
 					<span class="{bio.length > 127 ? 'text-accent-default' : 'text-text-secondary'} text-xs">

@@ -24,7 +24,7 @@
 	imageSrc={group.banner}
 	imageAlt={group.name}
 	onClick={onOpen}
-	class={featured ? 'rounded-xl min-h-85 surface-hero' : 'rounded-md aspect-[3/4] surface-flat'}
+	class={featured ? 'rounded-xl min-h-85 surface-hero' : 'rounded-md aspect-[3/4]'}
 >
 	{#snippet placeholder()}
 		<span class="text-accent-default {featured ? 'text-4xl' : 'text-3xl'} font-semibold">{Array.from(group.name)[0] ?? '群'}</span>
