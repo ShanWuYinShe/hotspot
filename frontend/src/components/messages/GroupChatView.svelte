@@ -69,7 +69,8 @@
 				text: m.recalled_at ? '[消息已撤回]' : (m.content ?? ''),
 				recalled: Boolean(m.recalled_at),
 				sent: m.sender.user_id === meId,
-				time: formatTime(m.sent_at)
+				time: formatTime(m.sent_at),
+				sentAt: m.sent_at
 			}));
 			return { messages: mapped, next_cursor: res.data.next_cursor ?? null };
 		},
@@ -217,10 +218,11 @@
 			</div>
 		{:else}
 			<div class="animate-fade-in flex flex-col gap-2 px-4 pt-4 pb-3">
-				<ChatDatePill />
-
-				{#each chat.messages as msg (msg.id)}
-					<MessageBubble text={msg.text} sent={msg.sent} time={msg.time} showCheck={msg.id === chat.lastSentId} />
+				{#each chat.dateGroups as group (group.label)}
+					<ChatDatePill label={group.label} />
+					{#each group.messages as msg (msg.id)}
+						<MessageBubble text={msg.text} sent={msg.sent} time={msg.time} showCheck={msg.id === chat.lastSentId} />
+					{/each}
 				{/each}
 			</div>
 		{/if}

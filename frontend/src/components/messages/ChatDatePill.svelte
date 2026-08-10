@@ -1,6 +1,7 @@
 <script lang="ts">
-	// ChatDatePill — 聊天时间分隔胶囊（消息列表顶部的「今天」标记，私聊/群聊共用）。
-	// 后续接入服务端日期分节时以 label 传入对应日期文案。
+	// ChatDatePill — 聊天日期分隔胶囊（私聊/群聊共用）。
+	// label 由 groupMessagesByDay 生成：今天 / 昨天 / M月D日（跨年带年份），
+	// 每个日期分组前渲染一次，避免只看时分误判跨天消息顺序。
 
 	let { label = '今天' }: { label?: string } = $props();
 </script>

@@ -3,7 +3,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import ChatHost from './__tests__/ChatHost.svelte';
-import type { ChatMessage, ChatMessageUpdate, UseChatOptions } from './chat.svelte';
+import { formatDateLabel, groupMessagesByDay, type ChatMessage, type ChatMessageUpdate, type UseChatOptions } from './chat.svelte';
 
 let chatRef: ReturnType<typeof import('./chat.svelte').useChat> | null = null;
 
@@ -123,5 +123,31 @@ describe('useChat', () => {
 		await vi.waitFor(() => {
 			expect(h.chat!.messages.map((m) => m.id)).toEqual(['m1', 'm2']);
 		});
+	});
+
+	it('groupMessagesByDay 按本地日期分组并保持组内顺序', () => {
+		const today = new Date();
+		const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 12, 0);
+		const msg = (id: string, sentAt: string): ChatMessage => ({
+			id,
+			text: id,
+			sent: false,
+			time: '12:00',
+			sentAt
+		});
+		const groups = groupMessagesByDay([
+			msg('a', yesterday.toISOString()),
+			msg('b', today.toISOString()),
+			msg('c', today.toISOString())
+		]);
+		expect(groups.map((g) => g.messages.map((m) => m.id))).toEqual([['a'], ['b', 'c']]);
+		expect(groups[0].label).toBe('昨天');
+		expect(groups[1].label).toBe('今天');
+	});
+
+	it('formatDateLabel 跨年日期带年份', () => {
+		const now = new Date();
+		const past = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate(), 10, 0);
+		expect(formatDateLabel(past.toISOString())).toBe(`${past.getFullYear()}年${past.getMonth() + 1}月${past.getDate()}日`);
 	});
 });

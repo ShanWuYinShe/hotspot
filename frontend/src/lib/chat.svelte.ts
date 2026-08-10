@@ -15,6 +15,8 @@ export interface ChatMessage {
 	text: string;
 	sent: boolean; // true = outgoing (from current user)
 	time: string;
+	/** 原始发送时间（ISO）；用于按本地日期分组。 */
+	sentAt?: string;
 	recalled?: boolean;
 }
 
@@ -61,6 +63,39 @@ export function formatTime(iso?: string): string {
 	const d = new Date(iso);
 	if (isNaN(d.getTime())) return '';
 	return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/** 日期分组胶囊文案：今天 / 昨天 / M月D日（跨年带年份）。 */
+export function formatDateLabel(iso?: string): string {
+	if (!iso) return '今天';
+	const d = new Date(iso);
+	if (isNaN(d.getTime())) return '今天';
+	const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+	const dayDiff = Math.round((startOfDay(new Date()) - startOfDay(d)) / 86400000);
+	if (dayDiff === 0) return '今天';
+	if (dayDiff === 1) return '昨天';
+	if (d.getFullYear() === new Date().getFullYear()) return `${d.getMonth() + 1}月${d.getDate()}日`;
+	return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+export interface ChatDateGroup {
+	label: string;
+	messages: ChatMessage[];
+}
+
+/** 把按时间正序（旧→新）的消息按本地日期切分为分组，保持组内顺序。 */
+export function groupMessagesByDay(messages: ChatMessage[]): ChatDateGroup[] {
+	const groups: ChatDateGroup[] = [];
+	let currentDay = '';
+	for (const msg of messages) {
+		const day = msg.sentAt ? new Date(msg.sentAt).toDateString() : '';
+		if (day !== currentDay) {
+			currentDay = day;
+			groups.push({ label: formatDateLabel(msg.sentAt), messages: [] });
+		}
+		groups[groups.length - 1].messages.push(msg);
+	}
+	return groups;
 }
 
 export function useChat(opts: UseChatOptions) {
@@ -230,7 +265,10 @@ export function useChat(opts: UseChatOptions) {
 		sending = true;
 		// Optimistic append so the user sees their message instantly.
 		const tempId = `temp-${Date.now()}`;
-		messages = [...messages, { id: tempId, text, sent: true, time: formatTime(new Date().toISOString()) }];
+		messages = [
+			...messages,
+			{ id: tempId, text, sent: true, time: formatTime(new Date().toISOString()), sentAt: new Date().toISOString() }
+		];
 		try {
 			const res = await opts.sendMessage(text);
 			if (res.code !== 0) {
@@ -257,10 +295,14 @@ export function useChat(opts: UseChatOptions) {
 			.map((m) => m.id)
 			.pop()
 	);
+	const dateGroups = $derived(groupMessagesByDay(messages));
 
 	return {
 		get messages() {
 			return messages;
+		},
+		get dateGroups() {
+			return dateGroups;
 		},
 		get inputVal() {
 			return inputVal;

@@ -70,7 +70,8 @@
 				id: m.message_id,
 				text: m.content ?? '',
 				sent: m.sender.user_id === meId,
-				time: formatTime(m.sent_at)
+				time: formatTime(m.sent_at),
+				sentAt: m.sent_at
 			}));
 			// 首屏加载且调用方未传 contact 时，从最新一条非自己消息的 sender 推导。
 			if (!cursor && !contactProp && !derivedContact) {
@@ -271,10 +272,11 @@
 			</div>
 		{:else}
 		<div class="animate-fade-in flex flex-col gap-2 px-4 pt-4 pb-3">
-			<ChatDatePill />
-
-			{#each chat.messages as msg (msg.id)}
-				<MessageBubble text={msg.text} sent={msg.sent} time={msg.time} showCheck={msg.id === chat.lastSentId} />
+			{#each chat.dateGroups as group (group.label)}
+				<ChatDatePill label={group.label} />
+				{#each group.messages as msg (msg.id)}
+					<MessageBubble text={msg.text} sent={msg.sent} time={msg.time} showCheck={msg.id === chat.lastSentId} />
+				{/each}
 			{/each}
 		</div>
 		{/if}
