@@ -227,9 +227,12 @@
     transition: box-shadow 0.2s var(--cst-ease-standard), border-color 0.2s var(--cst-ease-standard);
   }
   .input-surface:focus-within {
-    /* 聚焦态整框高亮：内凹阴影 + 边框加深（border-pressed），保持底色中性 */
+    /* 聚焦态整框高亮：边框加深 + 内缘 1px 加深线（视觉 2px 边缘）+
+       内凹阴影，保持底色中性，一眼可辨 */
     border-color: var(--cst-border-strong) !important;
-    box-shadow: var(--shadow-inset-sm) !important;
+    box-shadow:
+      inset 0 0 0 1px var(--cst-border-strong),
+      var(--shadow-inset-sm) !important;
   }
 
   /* 内层输入控件不画自身焦点框：input-surface:focus-within 已是整框焦点态，
