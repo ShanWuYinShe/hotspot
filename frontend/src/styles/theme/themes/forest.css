@@ -155,7 +155,8 @@
       box-shadow: none !important;
     }
     .forest .circle-hover:hover {
-      box-shadow: 0 0 0 1px var(--cst-border-strong) !important;
+      /* 圆形控件均自带边框：hover 由边框变 accent 承载，不再叠加外环 */
+      box-shadow: none !important;
     }
     .forest .surface-ghost:hover {
       background: var(--cst-interactive-hover);

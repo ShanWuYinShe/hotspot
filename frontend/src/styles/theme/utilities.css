@@ -144,7 +144,8 @@
     transition: box-shadow 0.18s var(--cst-ease-standard), background-color 0.18s var(--cst-ease-standard);
   }
   @media (hover: hover) and (pointer: fine) {
-    .surface-flat:hover {
+    /* hover 描边只给可交互元素；非交互容器/浮层悬停不应误出外环 */
+    .surface-flat:is(button, a, [role="button"]):hover {
       box-shadow: 0 0 0 1px var(--cst-border-strong);
     }
   }

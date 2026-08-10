@@ -187,7 +187,7 @@
 				</label>
 				<button
 					type="button"
-					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-sm ring-1 ring-border-default py-2.5 text-sm text-text-primary focus-ring"
+					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-sm border border-border-default py-2.5 text-sm text-text-primary focus-ring"
 					onclick={() => {
 						remark = remarkDraft.trim();
 						moreOpen = false;

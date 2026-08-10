@@ -40,7 +40,7 @@
 			>
 				<!-- 左侧 banner（固定宽 96-112px） -->
 				<div class="relative w-24 shrink-0 overflow-hidden sm:w-28">
-				<img src={g.banner} alt="" loading="lazy" class="image-hover-frame__image h-full w-full object-cover" />
+				<img src={g.banner} alt="" loading="lazy" class="h-full w-full object-cover" />
 					<div class="absolute inset-0" style="background:var(--cst-surface-gallery-scrim);"></div>
 					<div
 						class="absolute left-2 top-2 badge"
