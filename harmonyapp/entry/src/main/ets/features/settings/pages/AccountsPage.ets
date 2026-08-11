@@ -16,6 +16,7 @@ import { MyProfile, AuthData } from '../../../core/types/api';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { SystemButton } from '../../../components/SystemButton';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
@@ -215,14 +216,12 @@ export struct AccountsPage {
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .textAlign(TextAlign.Center)
-          Button('重试')
-            .type(ButtonType.Capsule)
-            .backgroundColor(this.getCurrentThemePalette().accentBackground)
-            .fontColor(this.getCurrentThemePalette().accentText)
-            .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
-            .shadow(this.getCurrentThemePalette().controlShadow)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .onClick(() => { this.load(); })
+          SystemButton({
+            label: '重试',
+            variant: 'primary',
+            buttonSize: 'default',
+            onPress: () => { this.load(); }
+          })
         }
         .width('100%')
         .layoutWeight(1)
@@ -237,16 +236,14 @@ export struct AccountsPage {
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor(this.getCurrentThemePalette().textSecondary)
 
-          Button('去登录/创建访客')
-            .type(ButtonType.Capsule)
-            .backgroundColor(this.getCurrentThemePalette().accentBackground)
-            .fontColor(this.getCurrentThemePalette().accentText)
-            .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
-            .shadow(this.getCurrentThemePalette().controlShadow)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .onClick(() => {
+          SystemButton({
+            label: '去登录/创建访客',
+            variant: 'primary',
+            buttonSize: 'default',
+            onPress: () => {
               AppRouter.push(PageNames.LOGIN);
-            })
+            }
+          })
         }
         .width('100%')
         .padding(DesignConstants.SPACING.XL)
@@ -295,25 +292,19 @@ export struct AccountsPage {
                 .alignItems(HorizontalAlign.Start)
 
                 Row({ space: DesignConstants.SPACING.SM }) {
-                      Button('切换')
-                        .type(ButtonType.Capsule)
-                        .fontSize(DesignConstants.FONT.SIZE.SM)
-                        .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
-                        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-                        .fontColor(this.getCurrentThemePalette().accentBackground)
-                        .shadow(this.getCurrentThemePalette().controlShadow)
-                        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-                        .onClick(() => this.switchTo(acc))
+                      SystemButton({
+                        label: '切换',
+                        variant: 'outline',
+                        buttonSize: 'small',
+                        onPress: () => { this.switchTo(acc); }
+                      })
 
-                  Button('删除')
-                    .type(ButtonType.Capsule)
-                    .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
-                        .backgroundColor(this.getCurrentThemePalette().accentBackground)
-                        .fontColor(this.getCurrentThemePalette().accentText)
-                        .shadow(this.getCurrentThemePalette().controlShadow)
-                        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-                        .onClick(() => this.remove(acc))
+                      SystemButton({
+                        label: '删除',
+                        variant: 'primary',
+                        buttonSize: 'small',
+                        onPress: () => { this.remove(acc); }
+                      })
                 }
               }
               .width('100%')
