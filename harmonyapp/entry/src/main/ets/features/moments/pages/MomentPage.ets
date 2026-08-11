@@ -216,7 +216,7 @@ export struct MomentPage {
 
       // 内容区域
       if (this.isLoading) {
-        SystemLoadingView({ message: '正在加载附近瞬间...' })
+        SystemLoadingView({ message: '正在加载我的瞬间...' })
           .transition(
             TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
               .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))

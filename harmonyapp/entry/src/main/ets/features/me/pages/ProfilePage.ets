@@ -229,7 +229,7 @@ export struct ProfilePage {
         'user',
         payload,
         `来认识 ${nickname}`,
-        this.viewedUserProfile?.bio ?? '快来 GeoTalk 和附近的人交流吧！'
+        this.viewedUserProfile?.bio ?? '快来 HotSpot 和附近的人交流吧！'
       );
     } catch {
       // 用户取消分享

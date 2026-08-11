@@ -469,7 +469,7 @@ export struct GroupDetailPage {
         'group',
         payload,
         `加入群组「${groupName}」`,
-        this.groupInfo.description ?? '在 GeoTalk 发现有趣的附近群组'
+        this.groupInfo.description ?? '在 HotSpot 发现有趣的附近群组'
       );
     } catch {
       // 用户取消分享

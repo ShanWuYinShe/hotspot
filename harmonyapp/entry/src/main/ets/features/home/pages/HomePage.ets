@@ -837,7 +837,7 @@ export struct HomePage {
   private buildMomentsSection() {
     if (this.momentsLoading || this.moments.length > 0) {
       Column() {
-        this.buildSectionHeader('附近动态', '查看全部', 2, () => {
+        this.buildSectionHeader('附近活动', '查看全部', 2, () => {
           AppRouter.push(PageNames.MOMENT);
         })
 

@@ -60,7 +60,7 @@ export class SystemShareService {
   static buildUserShareContent(nickname: string, bio: string = '', userId: string = ''): ShareContent {
     const content = new ShareContent();
     content.title = `来认识 ${nickname}`;
-    content.description = bio || '快来 GeoTalk 和附近的人交流吧！';
+    content.description = bio || '快来 HotSpot 和附近的人交流吧！';
     content.url = userId ? `https://geotalk.app/user/${userId}` : '';
     return content;
   }
@@ -69,7 +69,7 @@ export class SystemShareService {
   static buildGroupShareContent(groupName: string, description: string = '', groupId: string = ''): ShareContent {
     const content = new ShareContent();
     content.title = `加入群组「${groupName}」`;
-    content.description = description || '在 GeoTalk 发现有趣的附近群组';
+    content.description = description || '在 HotSpot 发现有趣的附近群组';
     content.url = groupId ? `https://geotalk.app/group/${groupId}` : '';
     return content;
   }

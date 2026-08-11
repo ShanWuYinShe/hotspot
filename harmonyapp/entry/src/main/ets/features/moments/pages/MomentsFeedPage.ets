@@ -1,5 +1,5 @@
 /**
- * 发现页面
+ * 附近动态页面
  * 展示热门话题、推荐用户、热门瞬间
  */
 
@@ -223,7 +223,7 @@ export struct MomentsFeedPage {
           this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         }
         if (usersResponse.code !== 0 && trendingResponse.code !== 0 && !this.hasAnyData()) {
-          this.errorMessage = trendingResponse.message ?? usersResponse.message ?? '加载发现数据失败';
+          this.errorMessage = trendingResponse.message ?? usersResponse.message ?? '加载附近动态失败';
         }
       } else {
         const trendingResponse = await LoadingUtil.withMinimumTime(() => trendingPromise);
@@ -234,13 +234,13 @@ export struct MomentsFeedPage {
           this.hotMomentsDataSource.setData(this.hotMoments);
           this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         } else if (!this.hasAnyData()) {
-          this.errorMessage = trendingResponse.message ?? '加载发现数据失败';
+          this.errorMessage = trendingResponse.message ?? '加载附近动态失败';
         }
       }
     } catch {
-      hilog.error(DOMAIN_NUMBER, TAG, '加载发现数据失败');
+      hilog.error(DOMAIN_NUMBER, TAG, '加载附近动态失败');
       if (!this.hasAnyData()) {
-        this.errorMessage = '加载发现数据失败';
+        this.errorMessage = '加载附近动态失败';
       }
     } finally {
       this.isLoading = false;
@@ -305,7 +305,7 @@ export struct MomentsFeedPage {
 
       // 内容区
       if (this.isLoading) {
-        SystemLoadingView({ message: '正在加载发现内容...' })
+        SystemLoadingView({ message: '正在加载附近动态...' })
           .layoutWeight(1)
           .transition(TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
             .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })))
