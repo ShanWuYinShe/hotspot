@@ -19,6 +19,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemCard } from '../../../components/SystemCard';
 import { ApiResponse, CreateMomentRequest, MomentItem, GeoPoint, PrivacyLevel } from '../../../core/types/api';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { SystemInput } from '../../../components/SystemInput';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
@@ -515,16 +516,17 @@ export struct CreateMomentPage {
                 .margin({ bottom: DesignConstants.SPACING.MD })
 
               Row() {
-                TextInput({ placeholder: '输入标签名称', text: this.currentTag })
-                  .onChange((value: string) => {
-                    this.currentTag = value;
-                  })
+                SystemInput({
+                  value: this.currentTag,
+                  placeholder: '输入标签名称',
+                  inputHeight: DesignConstants.COMPONENT.INPUT_HEIGHT,
+                  maxLength: 20,
+                  onChange: (value: string) => { this.currentTag = value; },
+                  onFocusChange: (focused: boolean) => {
+                    if (!focused) KeyboardDismissManager.getInstance().dismiss();
+                  }
+                })
                   .layoutWeight(1)
-                  .maxLength(20)
-                  .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
-                  .backgroundColor(this.getSurfaceSubtle())
-                  .borderRadius(DesignConstants.RADIUS.XL)
-                  .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
                 Button('添加')
                   .type(ButtonType.Capsule)

@@ -4,6 +4,7 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { SystemInput } from '../../../components/SystemInput';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemToast } from '../../../components/SystemToast';
 import { ApiClient } from '../../../core/api/ApiClient';
@@ -122,22 +123,20 @@ export struct SafetySettingsPage {
             Column() {
               SettingsSectionCard({ title: '修改密码' }) {
                 Column({ space: DesignConstants.SPACING.MD }) {
-                  TextInput({ placeholder: '当前密码', text: this.oldPassword })
-                    .type(InputType.Password)
-                    .height(DesignConstants.COMPONENT.PASSWORD_INPUT_HEIGHT)
-                    .backgroundColor(this.getPalette().surfaceSubtle)
-                    .borderRadius(DesignConstants.SHAPE.INPUT)
-                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
-                    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-                    .onChange((value: string) => { this.oldPassword = value; })
-                  TextInput({ placeholder: '新密码（至少 8 位）', text: this.newPassword })
-                    .type(InputType.Password)
-                    .height(DesignConstants.COMPONENT.PASSWORD_INPUT_HEIGHT)
-                    .backgroundColor(this.getPalette().surfaceSubtle)
-                    .borderRadius(DesignConstants.SHAPE.INPUT)
-                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
-                    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-                    .onChange((value: string) => { this.newPassword = value; })
+                  SystemInput({
+                    value: this.oldPassword,
+                    placeholder: '当前密码',
+                    passwordMode: true,
+                    inputHeight: DesignConstants.COMPONENT.PASSWORD_INPUT_HEIGHT,
+                    onChange: (value: string) => { this.oldPassword = value; }
+                  })
+                  SystemInput({
+                    value: this.newPassword,
+                    placeholder: '新密码（至少 8 位）',
+                    passwordMode: true,
+                    inputHeight: DesignConstants.COMPONENT.PASSWORD_INPUT_HEIGHT,
+                    onChange: (value: string) => { this.newPassword = value; }
+                  })
                   SystemButton({
                     label: '更新密码',
                     variant: 'primary',

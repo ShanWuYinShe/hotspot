@@ -13,6 +13,7 @@ import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
+import { SystemInput } from '../../../components/SystemInput';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SoftDivider } from '../../../components/SoftDivider';
@@ -365,15 +366,15 @@ export struct CreateGroupPage {
                   .width('100%')
                   .margin({ bottom: DesignConstants.SPACING.XS })
 
-                TextInput({ placeholder: '请输入群组名称', text: this.groupName })
-                  .placeholderColor(this.getCurrentThemePalette().textTertiary)
-                  .onChange((value: string) => {
-                    this.groupName = value;
-                  })
-                  .maxLength(GROUP_NAME_MAX)
-                  .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
-                  .backgroundColor(this.getSurfaceSubtle())
-                  .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.fieldBorder(this.groupNameFocused, this.getGroupNameError() !== undefined).borderColor })
+                SystemInput({
+                  value: this.groupName,
+                  placeholder: '请输入群组名称',
+                  inputHeight: DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD,
+                  maxLength: GROUP_NAME_MAX,
+                  hasError: this.getGroupNameError() !== undefined,
+                  onChange: (value: string) => { this.groupName = value; },
+                  onFocusChange: (focused: boolean) => { this.groupNameFocused = focused; }
+                })
                   .shadow(this.fieldBorder(this.groupNameFocused, this.getGroupNameError() !== undefined).shadow)
                   .borderRadius(DesignConstants.RADIUS.XL)
                   .padding({ left: DesignConstants.SPACING.MD })
@@ -666,21 +667,22 @@ export struct CreateGroupPage {
                     .width('100%')
                     .margin({ bottom: DesignConstants.SPACING.XS })
 
-                  TextInput({ placeholder: `请输入群组密码（${GROUP_PASSWORD_MIN}-${GROUP_PASSWORD_MAX}位）`, text: this.groupPassword })
-                    .type(InputType.Password)
-                    .placeholderColor(this.getCurrentThemePalette().textTertiary)
-                    .onChange((value: string) => {
-                      this.groupPassword = value;
-                    })
-                    .maxLength(GROUP_PASSWORD_MAX)
-                    .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
-                    .backgroundColor(this.getSurfaceSubtle())
-                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.fieldBorder(this.groupPasswordFocused, this.getGroupPasswordError() !== undefined).borderColor })
-                    .shadow(this.fieldBorder(this.groupPasswordFocused, this.getGroupPasswordError() !== undefined).shadow)
-                    .borderRadius(DesignConstants.RADIUS.XL)
-                    .padding({ left: DesignConstants.SPACING.MD })
-                    .onFocus(() => { this.groupPasswordFocused = true; })
-                    .onBlur(() => { this.groupPasswordFocused = false; this.groupPasswordTouched = true; KeyboardDismissManager.getInstance().dismiss(); })
+                  SystemInput({
+                    value: this.groupPassword,
+                    placeholder: `请输入群组密码（${GROUP_PASSWORD_MIN}-${GROUP_PASSWORD_MAX}位）`,
+                    passwordMode: true,
+                    inputHeight: DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD,
+                    maxLength: GROUP_PASSWORD_MAX,
+                    hasError: this.getGroupPasswordError() !== undefined,
+                    onChange: (value: string) => { this.groupPassword = value; },
+                    onFocusChange: (focused: boolean) => {
+                      this.groupPasswordFocused = focused;
+                      if (!focused) {
+                        this.groupPasswordTouched = true;
+                        KeyboardDismissManager.getInstance().dismiss();
+                      }
+                    }
+                  })
 
                   if (this.getGroupPasswordError()) {
                     Text(this.getGroupPasswordError())

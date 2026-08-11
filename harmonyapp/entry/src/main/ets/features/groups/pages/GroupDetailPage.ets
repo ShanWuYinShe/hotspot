@@ -13,6 +13,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemButton } from '../../../components/SystemButton';
+import { SystemInput } from '../../../components/SystemInput';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
 import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
 import { SystemShareService } from '../../../core/services/SystemShareService';
@@ -1184,12 +1185,13 @@ export struct GroupDetailPage {
                     .onClick(() => this.leaveGroup())
                 } else {
                   if (this.groupInfo?.has_password) {
-                    TextInput({ placeholder: '请输入群组密码', text: this.joinPassword })
-                      .type(InputType.Password)
-                      .onChange((value: string) => {
-                        this.joinPassword = value;
-                      })
-                      .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
+                    SystemInput({
+                      value: this.joinPassword,
+                      placeholder: '请输入群组密码',
+                      passwordMode: true,
+                      fontSize: DesignConstants.FONT.SIZE.MD_PLUS,
+                      onChange: (value: string) => { this.joinPassword = value; }
+                    })
                       .padding(DesignConstants.SPACING.MD)
                       .backgroundColor(this.getSurfaceSubtle())
                       .shadow(this.getCurrentThemePalette().controlShadow)
@@ -1354,11 +1356,14 @@ export struct GroupDetailPage {
               .fontColor(this.getCurrentThemePalette().textSecondary)
               .width('100%')
 
-            TextInput({ placeholder: '请输入群组名称', text: this.editGroupName })
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .maxLength(GROUP_NAME_MAX)
-              .onChange((value: string) => { this.editGroupName = value; })
-              .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
+            SystemInput({
+              value: this.editGroupName,
+              placeholder: '请输入群组名称',
+              fontSize: DesignConstants.FONT.SIZE.MD,
+              inputHeight: DesignConstants.COMPONENT.BUTTON_HEIGHT,
+              maxLength: GROUP_NAME_MAX,
+              onChange: (value: string) => { this.editGroupName = value; }
+            })
                .backgroundColor(this.getSurfaceSubtle())
               .shadow(this.getCurrentThemePalette().controlShadow)
               .borderRadius(DesignConstants.RADIUS.MD)
