@@ -211,6 +211,8 @@ export interface ConnectionEstablishedPayload {
   connection_id: string
   user_id: string
   server_time: string
+  resume_token: string
+  server_seq: string
   config: ConnectionConfig
 }
 
@@ -402,6 +404,7 @@ export interface AccountBannedPayload {
   reason: string
   duration_days: number
   banned_at: string
+  banned_until?: string
 }
 
 export interface AccountBannedEvent {
@@ -453,9 +456,7 @@ export interface PrivateMessageRecalledEvent {
 }
 
 export interface PrivateMessageReadPayload {
-  target_user_id: string
   up_to_message_id: string
-  reader_id: string
   read_at: string
 }
 
