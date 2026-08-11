@@ -308,7 +308,7 @@ export struct SmartSearchComponent {
 
   build() {
     Column() {
-      Search({ value: this.searchText, placeholder: '搜索用户、群组、瞬间...' })
+      Search({ value: this.searchText, placeholder: '搜索用户、动态、地点或话题' })
         .searchButton('搜索')
         .onChange((value: string) => this.onSearchTextChange(value))
         .onSubmit((value: string) => this.performSearch(value))

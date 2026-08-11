@@ -276,7 +276,7 @@ export struct MomentsFeedPage {
               .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
-          Text('地点、人物、关键词…')
+          Text('搜索用户、动态、地点或话题')
             .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .layoutWeight(1)

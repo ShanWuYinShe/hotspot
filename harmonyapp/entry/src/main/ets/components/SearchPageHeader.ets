@@ -19,7 +19,7 @@ export struct SearchPageHeader {
   /** 搜索关键词（双向绑定）。 */
   @Link keyword: string;
   /** 占位提示文案。 */
-  @Prop placeholder: string = '搜索用户、地点、话题…';
+  @Prop placeholder: string = '搜索用户、动态、地点或话题';
   /** 返回回调（通常 AppRouter.pop）。 */
   onBack: () => void = () => {};
   /** 聚焦态变化回调。 */

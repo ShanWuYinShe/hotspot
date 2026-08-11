@@ -415,7 +415,7 @@ export struct SearchPage {
         // Search header —— 统一走 SearchPageHeader（返回 + 内联搜索框）
         SearchPageHeader({
           keyword: this.keyword,
-          placeholder: '搜索用户、地点、话题…',
+          placeholder: '搜索用户、动态、地点或话题',
           onBack: () => { AppRouter.pop(); },
           onChange: (value: string) => {
             this.keyword = value;
