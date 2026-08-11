@@ -107,6 +107,17 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 - 字体大小、间距等使用 `DesignConstants` 常量
 - 核心服务使用单例模式（`GlobalStateManager.getInstance()`）
 
+## 组件原语强制（对齐前端 button/input 体系）
+
+- 通用文本操作按钮必须用 `SystemButton`（variant=primary/secondary/outline/ghost/danger，
+  size=small/default/large，支持 loading/disabled/fullWidth）；禁止手写
+  `Button('文案') + backgroundColor/fontColor/height/borderRadius` 重复样式。
+- 通用单行输入框必须用 `SystemInput`（前缀图标/清除按钮/错误态）；登录/表单等
+  密码框可用 `SystemInput({ passwordMode: true })`。
+- 已登记例外（可保留手写原生控件）：头像/图形按钮、地图全屏控件、搜索建议行、
+  动态卡片内嵌操作、主题色板 swatch、扫描/贴纸等特殊控件。存量页面中的手写
+  Button/TextInput 属遗留债务，改到该文件时优先迁移为原语。
+
 ## UI/UX 设计规范
 
 以下为内联设计规范（原 `.claude/rules/design-tokens.md` 已并入本文件），改 UI 前必读，避免硬编码色值/字号/间距、避免手搓页面头部。
