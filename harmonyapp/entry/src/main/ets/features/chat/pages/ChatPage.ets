@@ -1450,17 +1450,15 @@ export struct ChatPage {
         }
       })
 
-      Button('关闭')
-        .type(ButtonType.Normal)
-        .width('100%')
-        .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
-        .backgroundColor(this.getSurfaceBackground())
-        .fontColor(this.getAccentBackground())
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-        .onClick(() => {
+      SystemButton({
+        label: '关闭',
+        variant: 'surface-accent',
+        buttonSize: 'sheet',
+        fullWidth: true,
+        onPress: () => {
           this.showConversationActionsSheet = false;
-        })
+        }
+      })
     }
     .width('100%')
     .padding({

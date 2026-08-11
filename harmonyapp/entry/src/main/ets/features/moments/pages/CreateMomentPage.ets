@@ -20,6 +20,7 @@ import { SystemCard } from '../../../components/SystemCard';
 import { ApiResponse, CreateMomentRequest, MomentItem, GeoPoint, PrivacyLevel } from '../../../core/types/api';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemInput } from '../../../components/SystemInput';
+import { SystemButton } from '../../../components/SystemButton';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
@@ -528,14 +529,13 @@ export struct CreateMomentPage {
                 })
                   .layoutWeight(1)
 
-                Button('添加')
-                  .type(ButtonType.Capsule)
-                  .backgroundColor(this.getCurrentThemePalette().accentBackground)
-                  .fontColor(this.getCurrentThemePalette().accentText)
-                  .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-                  .shadow(this.getPrimaryButtonShadow())
-                  .onClick(() => this.addTag())
+                SystemButton({
+                  label: '添加',
+                  variant: 'primary',
+                  buttonSize: 'default',
+                  pill: true,
+                  onPress: () => { this.addTag(); }
+                })
                   .margin({ left: DesignConstants.SPACING.SM })
               }
               .width('100%')
@@ -566,18 +566,19 @@ export struct CreateMomentPage {
                   .layoutWeight(1)
 
                 Row({ space: DesignConstants.SPACING.SM }) {
-                  Button('选点')
-                    .type(ButtonType.Capsule)
-                    .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-                    .fontColor(this.getCurrentThemePalette().accentBackground)
-                    .fontSize(DesignConstants.FONT.SIZE.MD)
-                    .onClick(() => this.openLocationPicker())
+                  SystemButton({
+                    label: '选点',
+                    variant: 'ghost',
+                    buttonSize: 'small',
+                    onPress: () => { this.openLocationPicker(); }
+                  })
 
-                  Button('刷新')
-                    .type(ButtonType.Capsule)
-                    .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-                    .fontColor(this.getCurrentThemePalette().accentBackground)
-                    .fontSize(DesignConstants.FONT.SIZE.MD)
+                  SystemButton({
+                    label: '刷新',
+                    variant: 'ghost',
+                    buttonSize: 'small',
+                    onPress: () => { this.refreshLocation(); }
+                  })
                     .onClick(() => this.refreshLocation())
                 }
               }

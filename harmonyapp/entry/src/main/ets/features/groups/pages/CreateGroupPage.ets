@@ -523,25 +523,19 @@ export struct CreateGroupPage {
                 .alignItems(HorizontalAlign.Start)
 
                 Row({ space: DesignConstants.SPACING.SM }) {
-                  Button('选点')
-                    .type(ButtonType.Normal)
-                    .backgroundColor(this.getSurfaceSubtle())
-                    .fontColor(this.getCurrentThemePalette().accentBackground)
-                    .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .borderRadius(DesignConstants.RADIUS.XXL)
-                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-                    .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-                    .onClick(() => this.openLocationPicker())
+                  SystemButton({
+                    label: '选点',
+                    variant: 'surface-accent',
+                    buttonSize: 'small',
+                    onPress: () => { this.openLocationPicker(); }
+                  })
 
-                  Button('刷新')
-                    .type(ButtonType.Normal)
-                    .backgroundColor(this.getSurfaceSubtle())
-                    .fontColor(this.getCurrentThemePalette().accentBackground)
-                    .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .borderRadius(DesignConstants.RADIUS.XXL)
-                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-                    .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-                    .onClick(() => this.refreshLocation())
+                  SystemButton({
+                    label: '刷新',
+                    variant: 'surface-accent',
+                    buttonSize: 'small',
+                    onPress: () => { this.refreshLocation(); }
+                  })
                 }
               }
               .width('100%')
