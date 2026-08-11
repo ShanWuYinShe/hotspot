@@ -21,10 +21,12 @@ JAVA_HOME=/Applications/Android Studio.app/Contents/jbr/Contents/Home
 PATH=$JAVA_HOME/bin:$PATH
 ```
 
+- **所有 hvigor 命令一律 `--no-daemon`**：构建/check 完进程立即退出，禁止 `--daemon`（会常驻 Java 进程占资源）。历史残留 daemon 用 `$NODE $HVIGOR --stop-daemon` 清理；游离进程（`--stop-daemon` 报 0 但 `ps` 仍见 `hvigor-java-daemon`）用 `pkill -f hvigor-java-daemon`。
 - `$OHPM install --all --registry https://ohpm.openharmony.cn/ohpm/ --strict_ssl true` — 安装依赖
-- `$NODE $HVIGOR --mode project -p product=default assembleApp --analyze=normal --parallel --incremental --daemon` — 编译整个应用
-- `$NODE $HVIGOR assembleHap` — 仅编译 HAP 包（快速检查用）
-- `$NODE $HVIGOR clean` — 清理构建产物
+- `$NODE $HVIGOR --mode project -p product=default assembleApp --analyze=normal --parallel --incremental --no-daemon` — 编译整个应用（含 CompileArkTS + 打包 + 签名，约 45s）
+- `$NODE $HVIGOR clean --no-daemon` — 清理构建产物
+
+> 当前 hvigor 版本无 `assembleHap` 任务（旧文档废弃，调用报 `Task 'assembleHap' was not found`）；类型检查在 assembleApp 启动时自动执行（首行 `TYPE CHECK SUCCESSFUL`），完整验证统一用 assembleApp。
 
 如果修正 `DEVECO_SDK_HOME` / `JAVA_HOME` 后仍复用旧环境，先运行 `$NODE $HVIGOR --stop-daemon`，再重新构建。
 
