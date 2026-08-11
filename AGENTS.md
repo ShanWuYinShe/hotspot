@@ -45,7 +45,7 @@ worktree 内调试同样通过 Docker Compose，与主工作树自动隔离：
 ### worktree 目录名与主工作树同名（compose 项目名冲突）
 
 自动隔离依赖「worktree 目录名 ≠ `hotspot`」。若 worktree 目录名恰为 `hotspot`
-（如 `.codex/worktrees/<任务id>/hotspot`），compose 项目名会与主工作树同名，
+（如 `.worktrees/<任务id>/hotspot`），compose 项目名会与主工作树同名，
 直接 `up` 会**接管主实例**：容器标签/挂载指向主工作树，worktree 改动不会生效。
 此时必须显式指定独立项目名并重映射宿主端口，两套环境可同时运行：
 
