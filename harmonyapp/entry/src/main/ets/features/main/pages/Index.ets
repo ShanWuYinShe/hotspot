@@ -31,6 +31,7 @@ import { LoginPromptView } from '../../../components/LoginPromptView';
 import { NotificationRenderer } from '../../../core/services/notification/NotificationRenderer';
 import { SmartNotification, NotificationAction } from '../../../core/services/notification/NotificationDataManager';
 import { NotificationBanner } from '../../../components/NotificationBanner';
+import { SystemButton } from '../../../components/SystemButton';
 import { TimerManager } from '../../../core/utils/TimerManager';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
@@ -945,14 +946,17 @@ struct Index {
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .textAlign(TextAlign.Center)
             .constraintSize({ maxWidth: 280 })
-          Button('重试')
-            .type(ButtonType.Normal)
-            .borderRadius(DesignConstants.RADIUS.XL)
-            .onClick(() => {
+          SystemButton({
+            label: '重试',
+            variant: 'primary',
+            buttonSize: 'default',
+            pill: true,
+            onPress: () => {
               this.lastError = '';
               this.isInitialized = false;
               this.initializeApp();
-            })
+            }
+          })
         }
         .width('100%')
         .height('100%')

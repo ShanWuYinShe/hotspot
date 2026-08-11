@@ -1104,13 +1104,12 @@ export struct ChatPage {
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .textAlign(TextAlign.Center)
-          Button('重试')
-            .type(ButtonType.Normal)
-            .backgroundColor(this.getCurrentThemePalette().accentBackground)
-            .fontColor(this.getCurrentThemePalette().accentText)
-            .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
-            .borderRadius(DesignConstants.RADIUS.XL)
-            .onClick(() => { this.loadHistory(); })
+          SystemButton({
+            label: '重试',
+            variant: 'primary',
+            buttonSize: 'default',
+            onPress: () => { this.loadHistory(); }
+          })
         }
         .width('100%')
         .layoutWeight(1)

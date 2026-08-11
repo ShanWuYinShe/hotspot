@@ -492,14 +492,13 @@ export struct GroupPage {
             onPress: () => { this.loadMyApplications(); }
           })
 
-          Button('创建')
-            .type(ButtonType.Capsule)
-            .backgroundColor(this.getCurrentThemePalette().accentBackground)
-            .fontColor(this.getCurrentThemePalette().accentText)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
-            .shadow(this.getCurrentThemePalette().controlShadow)
-            .onClick(() => this.createGroup())
+          SystemButton({
+            label: '创建',
+            variant: 'primary',
+            buttonSize: 'default',
+            pill: true,
+            onPress: () => { this.createGroup(); }
+          })
         }
       }
 
@@ -643,29 +642,26 @@ export struct GroupPage {
       .width('100%')
 
       Row({ space: DesignConstants.SPACING.SM }) {
-        Button(this.isInviteHandling(invite.invite_id) ? '处理中...' : '接受')
-          .type(ButtonType.Capsule)
-          .backgroundColor(this.getCurrentThemePalette().accentBackground)
-          .fontColor(this.getCurrentThemePalette().accentText)
-          .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-          .height(DesignConstants.COMPONENT.INLINE_BUTTON_HEIGHT)
+        SystemButton({
+          label: this.isInviteHandling(invite.invite_id) ? '处理中...' : '接受',
+          variant: 'primary',
+          buttonSize: 'default',
+          pill: true,
+          disabled: this.isInviteHandling(invite.invite_id),
+          onPress: () => { this.handleInviteAction(invite, 'accept'); }
+        })
           .layoutWeight(1)
-          .enabled(!this.isInviteHandling(invite.invite_id))
-          .opacity(this.isInviteHandling(invite.invite_id) ? DesignConstants.OPACITY.LOADING : 1)
-          .onClick(() => this.handleInviteAction(invite, 'accept'))
 
-        Button('拒绝')
-          .type(ButtonType.Capsule)
-          .backgroundColor(this.getSurfaceSubtle())
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-          .height(DesignConstants.COMPONENT.INLINE_BUTTON_HEIGHT)
+        SystemButton({
+          label: '拒绝',
+          variant: 'surface',
+          buttonSize: 'default',
+          pill: true,
+          shadowed: true,
+          disabled: this.isInviteHandling(invite.invite_id),
+          onPress: () => { this.handleInviteAction(invite, 'reject'); }
+        })
           .layoutWeight(1)
-          .enabled(!this.isInviteHandling(invite.invite_id))
-          .opacity(this.isInviteHandling(invite.invite_id) ? DesignConstants.OPACITY.LOADING : 1)
-          .onClick(() => this.handleInviteAction(invite, 'reject'))
       }
       .width('100%')
     }

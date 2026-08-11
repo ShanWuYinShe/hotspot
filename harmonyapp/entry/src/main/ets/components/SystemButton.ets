@@ -39,6 +39,8 @@ export struct SystemButton {
   @Prop fullWidth: boolean = false;
   /** surface/surface-danger 变体是否带控制阴影（卡片内嵌小按钮用，弹层操作行不带） */
   @Prop shadowed: boolean = false;
+  /** 强制胶囊圆角（主操作 42vp 胶囊等场景） */
+  @Prop pill: boolean = false;
   onPress?: () => void;
 
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
@@ -137,7 +139,7 @@ export struct SystemButton {
   }
 
   private getRadius(): number {
-    if (this.buttonSize === 'compact' || this.buttonSize === 'sheet' ||
+    if (this.pill || this.buttonSize === 'compact' || this.buttonSize === 'sheet' ||
       this.variant === 'surface' || this.variant === 'surface-danger') {
       return DesignConstants.RADIUS.FULL;
     }

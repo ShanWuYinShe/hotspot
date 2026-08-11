@@ -12,6 +12,7 @@ import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemButton } from '../../../components/SystemButton';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
 import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
 import { SystemShareService } from '../../../core/services/SystemShareService';
@@ -947,12 +948,12 @@ export struct GroupDetailPage {
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .textAlign(TextAlign.Center)
             .margin({ bottom: DesignConstants.SPACING.XL })
-          Button('重试')
-            .type(ButtonType.Normal)
-            .backgroundColor(this.getCurrentThemePalette().accentBackground)
-            .fontColor(this.getCurrentThemePalette().accentText)
-            .borderRadius(DesignConstants.RADIUS.XL)
-            .onClick(() => this.loadGroupDetail())
+          SystemButton({
+            label: '重试',
+            variant: 'primary',
+            buttonSize: 'default',
+            onPress: () => { this.loadGroupDetail(); }
+          })
         }
         .width('100%')
         .layoutWeight(1)
@@ -1160,24 +1161,25 @@ export struct GroupDetailPage {
                       .onClick(() => this.openEditGroupSheet())
                   }
 
-                  Button('进入聊天')
-                    .type(ButtonType.Capsule)
-                    .backgroundColor(this.getCurrentThemePalette().accentBackground)
-                    .fontColor(this.getCurrentThemePalette().accentText)
-                    .shadow(this.getCurrentThemePalette().controlShadow)
-                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-                    .width('100%')
-                    .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
-                    .onClick(() => this.enterChat())
+                  SystemButton({
+                    label: '进入聊天',
+                    variant: 'primary',
+                    buttonSize: 'default',
+                    pill: true,
+                    fullWidth: true,
+                    onPress: () => { this.enterChat(); }
+                  })
 
-                  Button('离开群组')
-                    .type(ButtonType.Capsule)
-                    .backgroundColor(this.getSurfaceSubtle())
-                    .fontColor(this.getCurrentThemePalette().textTertiary)
-                    .shadow(this.getCurrentThemePalette().controlShadow)
-                    .width('100%')
-                    .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
-                    .enabled(!this.isLeaving)
+                  SystemButton({
+                    label: '离开群组',
+                    variant: 'surface',
+                    buttonSize: 'default',
+                    pill: true,
+                    fullWidth: true,
+                    shadowed: true,
+                    disabled: this.isLeaving,
+                    onPress: () => { this.leaveGroup(); }
+                  })
                     .opacity(this.isLeaving ? DesignConstants.OPACITY.LOADING : 1)
                     .onClick(() => this.leaveGroup())
                 } else {
@@ -1277,17 +1279,14 @@ export struct GroupDetailPage {
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
 
-        Button('取消')
-          .type(ButtonType.Normal)
-          .backgroundColor(this.getSurfaceSubtle())
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-          .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
-          .enabled(!this.isSavingGroupInfo && !this.isEditGroupAvatarUploading)
-          .opacity(this.isSavingGroupInfo || this.isEditGroupAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)
-          .onClick(() => this.closeEditGroupSheet())
+        SystemButton({
+          label: '取消',
+          variant: 'surface',
+          buttonSize: 'large',
+          shadowed: true,
+          disabled: this.isSavingGroupInfo || this.isEditGroupAvatarUploading,
+          onPress: () => { this.closeEditGroupSheet(); }
+        })
 
         Button(this.isSavingGroupInfo ? '保存中...' : '保存')
           .type(ButtonType.Normal)
@@ -1453,13 +1452,12 @@ export struct GroupDetailPage {
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .textAlign(TextAlign.Center)
-          Button('重试')
-            .type(ButtonType.Normal)
-            .backgroundColor(this.getCurrentThemePalette().accentBackground)
-            .fontColor(this.getCurrentThemePalette().accentText)
-            .borderRadius(DesignConstants.RADIUS.XL)
-            .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
-            .onClick(() => { this.loadGroupMembers(); })
+          SystemButton({
+            label: '重试',
+            variant: 'primary',
+            buttonSize: 'default',
+            onPress: () => { this.loadGroupMembers(); }
+          })
         }
         .width('100%')
         .layoutWeight(1)
@@ -1538,13 +1536,12 @@ export struct GroupDetailPage {
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .textAlign(TextAlign.Center)
-          Button('重试')
-            .type(ButtonType.Normal)
-            .backgroundColor(this.getCurrentThemePalette().accentBackground)
-            .fontColor(this.getCurrentThemePalette().accentText)
-            .borderRadius(DesignConstants.RADIUS.XL)
-            .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
-            .onClick(() => { this.loadGroupApplications(); })
+          SystemButton({
+            label: '重试',
+            variant: 'primary',
+            buttonSize: 'default',
+            onPress: () => { this.loadGroupApplications(); }
+          })
         }
         .width('100%')
         .layoutWeight(1)
@@ -1632,27 +1629,23 @@ export struct GroupDetailPage {
       }
 
       Row({ space: DesignConstants.SPACING.SM }) {
-        Button(this.isApplicationHandling(application.application_id) ? '处理中...' : '批准')
-          .type(ButtonType.Normal)
-          .backgroundColor(this.getCurrentThemePalette().accentBackground)
-          .fontColor(this.getCurrentThemePalette().accentText)
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
+        SystemButton({
+          label: this.isApplicationHandling(application.application_id) ? '处理中...' : '批准',
+          variant: 'primary',
+          buttonSize: 'large',
+          disabled: this.isApplicationHandling(application.application_id),
+          onPress: () => { this.approveApplication(application); }
+        })
           .layoutWeight(1)
-          .enabled(!this.isApplicationHandling(application.application_id))
-          .opacity(this.isApplicationHandling(application.application_id) ? DesignConstants.OPACITY.LOADING : 1)
-          .onClick(() => this.approveApplication(application))
 
-        Button('拒绝')
-          .type(ButtonType.Normal)
-          .backgroundColor(this.getSurfaceSubtle())
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
+        SystemButton({
+          label: '拒绝',
+          variant: 'surface',
+          buttonSize: 'large',
+          disabled: this.isApplicationHandling(application.application_id),
+          onPress: () => { this.rejectApplication(application); }
+        })
           .layoutWeight(1)
-          .enabled(!this.isApplicationHandling(application.application_id))
-          .opacity(this.isApplicationHandling(application.application_id) ? DesignConstants.OPACITY.LOADING : 1)
-          .onClick(() => this.rejectApplication(application))
       }
       .width('100%')
     }
