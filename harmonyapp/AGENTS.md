@@ -110,7 +110,7 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 ## 组件原语强制（对齐前端 button/input 体系）
 
 - 通用文本操作按钮必须用 `SystemButton`（variant=primary/secondary/outline/ghost/danger，
-  size=small/default/large，支持 loading/disabled/fullWidth）；禁止手写
+  surface/surface-danger，size=small/default/large/sheet，支持 loading/disabled/fullWidth）；禁止手写
   `Button('文案') + backgroundColor/fontColor/height/borderRadius` 重复样式。
 - 通用单行输入框必须用 `SystemInput`（前缀图标/清除按钮/错误态）；登录/表单等
   密码框可用 `SystemInput({ passwordMode: true })`。

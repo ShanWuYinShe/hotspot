@@ -23,6 +23,7 @@ import { ChatPageHeader } from '../../../components/ChatPageHeader';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemButton } from '../../../components/SystemButton';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SoftDivider } from '../../../components/SoftDivider';
@@ -1380,72 +1381,61 @@ export struct ChatPage {
       SoftDivider({ color: this.getSurfaceBorder() })
 
       if (this.chatType === 'private_chat' && this.targetId) {
-        Button('查看个人主页')
-          .type(ButtonType.Normal)
-          .width('100%')
-          .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
-          .backgroundColor(this.getSurfaceSubtle())
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-          .onClick(() => {
+        SystemButton({
+          label: '查看个人主页',
+          variant: 'surface',
+          buttonSize: 'sheet',
+          fullWidth: true,
+          onPress: () => {
             this.showConversationActionsSheet = false;
             const profileParam = new ProfileRouteParam();
             profileParam.userId = this.targetId ?? '';
             AppRouter.push(PageNames.PROFILE, profileParam);
-          })
+          }
+        })
       }
 
-      Button(this.isMuted ? '取消静音' : '静音通知')
-        .type(ButtonType.Normal)
-        .width('100%')
-        .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
-        .backgroundColor(this.getSurfaceSubtle())
-        .fontColor(this.getCurrentThemePalette().textPrimary)
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-        .onClick(() => {
+      SystemButton({
+        label: this.isMuted ? '取消静音' : '静音通知',
+        variant: 'surface',
+        buttonSize: 'sheet',
+        fullWidth: true,
+        onPress: () => {
           this.isMuted = !this.isMuted;
           SystemToast.show(this.isMuted ? '已静音' : '已取消静音', this.getUIContext());
-        })
+        }
+      })
 
-      Button('回到最新消息')
-        .type(ButtonType.Normal)
-        .width('100%')
-        .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
-        .backgroundColor(this.getSurfaceSubtle())
-        .fontColor(this.getCurrentThemePalette().textPrimary)
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-        .onClick(() => {
+      SystemButton({
+        label: '回到最新消息',
+        variant: 'surface',
+        buttonSize: 'sheet',
+        fullWidth: true,
+        onPress: () => {
           this.scrollToBottom();
           this.showConversationActionsSheet = false;
-        })
+        }
+      })
 
-      Button('清空输入框')
-        .type(ButtonType.Normal)
-        .width('100%')
-        .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
-        .backgroundColor(this.getSurfaceSubtle())
-        .fontColor(this.getCurrentThemePalette().textPrimary)
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-        .onClick(() => {
+      SystemButton({
+        label: '清空输入框',
+        variant: 'surface',
+        buttonSize: 'sheet',
+        fullWidth: true,
+        onPress: () => {
           this.inputText = '';
           this.showConversationActionsSheet = false;
-        })
+        }
+      })
 
       SoftDivider({ color: this.getSurfaceBorder() })
 
-      Button('举报')
-        .type(ButtonType.Normal)
-        .width('100%')
-        .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
-        .backgroundColor(this.getSurfaceSubtle())
-        .fontColor(this.getCurrentThemePalette().error)
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-        .onClick(() => {
+      SystemButton({
+        label: '举报',
+        variant: 'surface-danger',
+        buttonSize: 'sheet',
+        fullWidth: true,
+        onPress: () => {
           this.showConversationActionsSheet = false;
           const reportReq: CreateReportRequest = {
             target_type: 'user',
@@ -1458,7 +1448,8 @@ export struct ChatPage {
           }).catch(() => {
             SystemToast.showError('举报提交失败', this.getUIContext());
           });
-        })
+        }
+      })
 
       Button('关闭')
         .type(ButtonType.Normal)

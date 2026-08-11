@@ -14,12 +14,14 @@ import { curves } from '@kit.ArkUI';
  * - ghost：透明底 + 主文字色（对齐前端 ghost）
  * - danger：错误色填充 + 白字（删除/危险操作）
  *
- * 尺寸（size）：small(36) / default(42) / large(48)
+ * 尺寸（size）：small(36) / default(42) / large(48) / sheet(44，底部弹层操作行)
+ * 变体补充：surface（subtle 底 + 主文字 + 细边框，对齐 Sheet 操作行）、
+ *   surface-danger（同上但文字为 error 色，用于举报/危险操作）
  *
  * 交互：press 缩放 0.95（对齐前端 active:scale-[0.95]），springMotion 回弹
  */
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-export type ButtonSize = 'small' | 'default' | 'large';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'surface' | 'surface-danger';
+export type ButtonSize = 'small' | 'default' | 'large' | 'sheet';
 
 @Reusable
 @Component
@@ -44,12 +46,14 @@ export struct SystemButton {
   }
 
   private getHeight(): number {
+    if (this.buttonSize === 'sheet') return DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT; // 44
     if (this.buttonSize === 'small') return 36;
     if (this.buttonSize === 'large') return 48;
     return DesignConstants.COMPONENT.BUTTON_HEIGHT; // 42
   }
 
   private getFontSize(): number {
+    if (this.buttonSize === 'sheet') return DesignConstants.FONT.SIZE.MD_PLUS; // 15
     if (this.buttonSize === 'small') return DesignConstants.FONT.SIZE.SM; // 12
     if (this.buttonSize === 'large') return DesignConstants.FONT.SIZE.MD_PLUS; // 15
     return DesignConstants.FONT.SIZE.SM_PLUS; // 13
@@ -78,6 +82,9 @@ export struct SystemButton {
         return DesignConstants.COLOR.TRANSPARENT;
       case 'danger':
         return p.error;
+      case 'surface':
+      case 'surface-danger':
+        return p.surfaceSubtle;
       default:
         return p.accentBackground;
     }
@@ -96,12 +103,19 @@ export struct SystemButton {
         return p.accentBackground;
       case 'ghost':
         return p.textPrimary;
+      case 'surface':
+        return p.textPrimary;
+      case 'surface-danger':
+        return p.error;
       default:
         return p.accentText;
     }
   }
 
   private getBorderWidth(): number {
+    if (this.variant === 'surface' || this.variant === 'surface-danger') {
+      return DesignConstants.BORDER_WIDTH.HAIRLINE;
+    }
     return this.variant === 'outline' ? 1.5 : 0;
   }
 
@@ -110,7 +124,14 @@ export struct SystemButton {
     if (this.variant === 'outline') {
       return p.accentBackground;
     }
+    if (this.variant === 'surface' || this.variant === 'surface-danger') {
+      return p.borderColor;
+    }
     return DesignConstants.COLOR.TRANSPARENT;
+  }
+
+  private getRadius(): number {
+    return this.buttonSize === 'sheet' ? DesignConstants.RADIUS.FULL : DesignConstants.SHAPE.BUTTON;
   }
 
   private getShadow(): ShadowOptions | undefined {
@@ -161,7 +182,7 @@ export struct SystemButton {
     .width(this.fullWidth ? '100%' : undefined)
     .padding({ left: this.getHorizontalPadding(), right: this.getHorizontalPadding() })
     .backgroundColor(this.getBackgroundColor())
-    .borderRadius(DesignConstants.SHAPE.BUTTON) // 28
+    .borderRadius(this.getRadius())
     .border({ width: this.getBorderWidth(), color: this.getBorderColor() })
     .shadow(this.getShadow())
     .enabled(this.isInteractive())
