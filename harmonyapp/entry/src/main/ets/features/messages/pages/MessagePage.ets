@@ -120,12 +120,15 @@ export struct MessagePage {
   }
 
   private applyFilter(): void {
+    const keyword = this.searchKeyword.trim().toLowerCase();
+    const matchesKeyword = (item: ChatItem): boolean =>
+      keyword === '' || item.name.toLowerCase().indexOf(keyword) >= 0;
     if (this.chatFilterIndex === 1) {
-      this.filteredChatItems = this.chatItems.filter((item: ChatItem) => item.unreadCount > 0);
+      this.filteredChatItems = this.chatItems.filter((item: ChatItem) => matchesKeyword(item) && item.unreadCount > 0);
     } else if (this.chatFilterIndex === 2) {
-      this.filteredChatItems = this.chatItems.filter((item: ChatItem) => item.unreadCount === 0);
+      this.filteredChatItems = this.chatItems.filter((item: ChatItem) => matchesKeyword(item) && item.unreadCount === 0);
     } else {
-      this.filteredChatItems = this.chatItems;
+      this.filteredChatItems = this.chatItems.filter((item: ChatItem) => matchesKeyword(item));
     }
   }
 
@@ -707,12 +710,17 @@ export struct MessagePage {
             .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
             .fontColor([this.getCurrentThemePalette().textSecondary])
         }
-        Text('搜索会话…')
-          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
+        TextInput({ placeholder: '搜索会话…', text: this.searchKeyword })
           .layoutWeight(1)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .placeholderColor(this.getCurrentThemePalette().textSecondary)
+          .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
+          .caretColor(this.getCurrentThemePalette().accentBackground)
+          .onChange((value: string) => {
+            this.searchKeyword = value;
+            this.applyFilter();
+          })
       }
       .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
@@ -720,9 +728,6 @@ export struct MessagePage {
       .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
       .borderRadius(DesignConstants.SHAPE.INPUT)
       .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-      .onClick(() => {
-        AppRouter.push(PageNames.SEARCH);
-      })
 
       // 已读/未读过滤（对齐前端 messages 页 TabBar：全部 / 未读 / 已读）
       TabsPillGroup({
