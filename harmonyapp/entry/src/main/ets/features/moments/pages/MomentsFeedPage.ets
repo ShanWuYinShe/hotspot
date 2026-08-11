@@ -434,7 +434,7 @@ export struct MomentsFeedPage {
         Column() {
           EmptyState({
             icon: AppIcon.RECOMMEND,
-            message: '暂无推荐内容',
+            message: '附近暂时没有瞬间',
             actionLabel: '刷新',
             onAction: () => { this.loadData(true); }
           })

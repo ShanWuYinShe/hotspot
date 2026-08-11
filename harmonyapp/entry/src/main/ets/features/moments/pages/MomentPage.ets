@@ -232,7 +232,7 @@ export struct MomentPage {
           )
       } else if (!this.hasData) {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          EmptyState({ icon: AppIcon.CAMERA, message: '附近暂无瞬间\n快来分享第一个吧！' })
+          EmptyState({ icon: AppIcon.CAMERA, message: '还没有发布过瞬间\n快来分享第一个吧！' })
         }
         .onRefreshing(() => { this.loadNearbyMoments(true); })
         .transition(
