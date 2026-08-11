@@ -35,38 +35,24 @@ import { MockInterceptor } from '../mock/MockInterceptor';
 /**
  * Spec MUST 幂等端点列表
  * 这些端点的每次请求必须携带 Idempotency-Key，缺少则会被后端拒绝
+ * 对齐 spec/api_spec_base.md「需要实现幂等的接口」（自然去重接口无需 key，
+ * 如 reports/create、groups/join、members/invite、reset/change_password、
+ * media complete_upload 等均不在列表内）。
  */
 const MUST_IDEMPOTENT_ENDPOINTS: string[] = [
   // 认证
   ApiEndpoints.AUTH.REGISTER,
   ApiEndpoints.AUTH.GUEST,
-  ApiEndpoints.AUTH.REQUEST_PASSWORD_RESET,
-  ApiEndpoints.AUTH.RESET_PASSWORD,
-  ApiEndpoints.AUTH.CHANGE_PASSWORD,
-  ApiEndpoints.USER.EMAIL_REQUEST_CHANGE,
-  ApiEndpoints.USER.EMAIL_CONFIRM_CHANGE,
-  ApiEndpoints.USER.PHONE_REQUEST_CHANGE,
-  ApiEndpoints.USER.PHONE_CONFIRM_CHANGE,
   // 消息
   ApiEndpoints.CHAT.PRIVATE_MESSAGES.SEND,
   ApiEndpoints.CHAT.GROUP_MESSAGES.SEND,
   // 创建类
   ApiEndpoints.MOMENT.CREATE,
   ApiEndpoints.COMMENT.CREATE,
-  ApiEndpoints.REPORT.CREATE,
   ApiEndpoints.SHARE.CREATE,
   // 群组
   ApiEndpoints.GROUP.CREATE,
-  ApiEndpoints.GROUP.JOIN,
-  ApiEndpoints.GROUP.MEMBERS.INVITE,
-  ApiEndpoints.GROUP.MEMBERS.BAN,
   ApiEndpoints.GROUP.ANNOUNCEMENTS.CREATE,
-  ApiEndpoints.GROUP.APPLICATIONS.APPROVE,
-  ApiEndpoints.GROUP.APPLICATIONS.REJECT,
-  ApiEndpoints.GROUP.ACCEPT_INVITE,
-  ApiEndpoints.GROUP.REJECT_INVITE,
-  // 上传
-  ApiEndpoints.UPLOAD.COMPLETE_UPLOAD,
 ];
 
 /**
