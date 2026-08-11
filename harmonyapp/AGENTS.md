@@ -196,6 +196,8 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 - 附近聚合页 `NearbyPage` 三区块「查看全部」分别 push `NEARBY_USERS` /
   `NEARBY_GROUPS` / `NEARBY_MOMENTS`（MomentsFeedPage 已注册为路由页，push 场景
   带返回按钮，对齐前端 `/nearby/people|groups|moments`）。
+- 搜索页 Tab：全部 / 用户 / 动态 / 话题（话题从动态标签聚合，对齐前端搜索
+  全部/用户/动态/话题）；群组 Tab 为鸿蒙端扩展（前端搜索无群组 Tab）。
 
 透明度（OPACITY）：`DISABLED 0.38` / `PRESSED 0.72` / `LOADING 0.58` / `SUBTLE 0.85` / `FADED 0.4` / `MUTED 0.5` / `EMPHASIZED 0.8`（对齐前端 opacity-40/50/80 标准档）。
 

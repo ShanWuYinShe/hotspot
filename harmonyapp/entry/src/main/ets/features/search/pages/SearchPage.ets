@@ -64,6 +64,8 @@ export struct SearchPage {
   private groupResultsDataSource: BasicDataSource<GroupItem> = new BasicDataSource<GroupItem>([]);
   @State momentResults: MomentItem[] = [];
   private momentResultsDataSource: BasicDataSource<MomentItem> = new BasicDataSource<MomentItem>([]);
+  /** 话题（从动态标签聚合，对齐前端搜索「话题」Tab） */
+  @State topicResults: string[] = [];
   @State hasSearched: boolean = false;
   @State suggestItems: SearchSuggestItem[] = [];
   private suggestTimerId: number = 0;
@@ -197,6 +199,7 @@ export struct SearchPage {
     this.groupResultsDataSource.clear();
     this.momentResults = [];
     this.momentResultsDataSource.clear();
+    this.topicResults = [];
 
     try {
       await LoadingUtil.withMinimumTime(async () => {
@@ -242,6 +245,15 @@ export struct SearchPage {
         if (momentsResp.code === 0 && momentsResp.data) {
           this.momentResults = momentsResp.data.items.filter((m: MomentItem) => m.moment_id && m.user);
           this.momentResultsDataSource.setData(this.momentResults);
+          const topicSet = new Set<string>();
+          this.momentResults.forEach((moment: MomentItem) => {
+            (moment.tags ?? []).forEach((tag: string) => {
+              if (tag.trim().length > 0) {
+                topicSet.add(tag.trim());
+              }
+            });
+          });
+          this.topicResults = Array.from(topicSet);
         }
       });
     } catch (error) {
@@ -369,16 +381,24 @@ export struct SearchPage {
         } else {
           Tabs({ barPosition: BarPosition.Start, controller: this.controller, index: this.currentIndex }) {
             TabContent() {
+              this.AllResultList()
+            }.tabBar(this.TabBuilder(0, '全部'))
+
+            TabContent() {
               this.UserResultList()
-            }.tabBar(this.TabBuilder(0, this.tabLabel('用户', this.userResults.length)))
+            }.tabBar(this.TabBuilder(1, this.tabLabel('用户', this.userResults.length)))
 
             TabContent() {
               this.MomentResultList()
-            }.tabBar(this.TabBuilder(1, this.tabLabel('动态', this.momentResults.length)))
+            }.tabBar(this.TabBuilder(2, this.tabLabel('动态', this.momentResults.length)))
+
+            TabContent() {
+              this.TopicResultList()
+            }.tabBar(this.TabBuilder(3, this.tabLabel('话题', this.topicResults.length)))
 
             TabContent() {
               this.GroupResultList()
-            }.tabBar(this.TabBuilder(2, this.tabLabel('群组', this.groupResults.length)))
+            }.tabBar(this.TabBuilder(4, this.tabLabel('群组', this.groupResults.length)))
           }
           .vertical(false)
           .barMode(BarMode.Scrollable)
@@ -403,7 +423,7 @@ export struct SearchPage {
     .onReady((context: NavDestinationContext) => {
       this.pathStack = context.pathStack;
       const params = context.pathInfo?.param as SearchRouteParam | undefined;
-      if (params && params.initialTab >= 0 && params.initialTab <= 2) {
+      if (params && params.initialTab >= 0 && params.initialTab <= 4) {
         this.currentIndex = params.initialTab;
       }
       const initialKeyword = params?.keyword?.trim() ?? '';
@@ -494,6 +514,165 @@ export struct SearchPage {
           this.controller.changeIndex(index);
         }
       })
+  }
+
+  @Builder
+  private buildAllSectionLabel(label: string) {
+    Row() {
+      Text(label)
+        .fontSize(DesignConstants.FONT.SIZE.XS2)
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.getCurrentThemePalette().textSecondary)
+        .textCase(TextCase.UpperCase)
+        .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
+    }
+    .width('100%')
+    .padding({
+      left: DesignConstants.SPACING.MD,
+      right: DesignConstants.SPACING.MD,
+      top: DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.SM
+    })
+  }
+
+  @Builder
+  AllResultList() {
+    if (this.hasSearched && this.userResults.length === 0 && this.momentResults.length === 0 && this.groupResults.length === 0) {
+      Column({ space: DesignConstants.SPACING.LG }) {
+        Text() {
+          SymbolSpan($r(AppIcon.SEARCH))
+            .fontSize(DesignConstants.FONT.SIZE.XXXL_PLUS)
+            .fontColor([this.getCurrentThemePalette().textSecondary])
+            .opacity(DesignConstants.OPACITY.FADED)
+        }
+        Text('未找到相关内容').fontSize(DesignConstants.FONT.SIZE.MD_PLUS).fontColor(this.getCurrentThemePalette().textPrimary)
+        Text('尝试其他关键词').fontSize(DesignConstants.FONT.SIZE.SM_PLUS).fontColor(this.getCurrentThemePalette().textSecondary)
+      }
+      .width('100%').height('100%').justifyContent(FlexAlign.Center)
+    } else {
+      List({ space: DesignConstants.SPACING.MD2 }) {
+        if (this.userResults.length > 0) {
+          ListItem() { this.buildAllSectionLabel('用户') }
+          ForEach(this.userResults.slice(0, 3), (item: UserItem) => {
+            ListItem() { this.buildUserItem(item) }
+          }, (item: UserItem) => `all-user-${item.user?.user_id ?? ''}`)
+        }
+
+        if (this.momentResults.length > 0) {
+          ListItem() { this.buildAllSectionLabel('动态') }
+          ForEach(this.momentResults.slice(0, 3), (moment: MomentItem) => {
+            ListItem() { this.buildAllMomentRow(moment) }
+          }, (moment: MomentItem) => `all-moment-${moment.moment_id}`)
+        }
+
+        if (this.groupResults.length > 0) {
+          ListItem() { this.buildAllSectionLabel('群组') }
+          ForEach(this.groupResults.slice(0, 3), (group: GroupItem) => {
+            ListItem() { this.buildGroupItem(group) }
+          }, (group: GroupItem) => `all-group-${group.group?.group_id ?? ''}`)
+        }
+      }
+      .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
+      .width('100%').height('100%')
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+      .scrollBar(BarState.Auto)
+    }
+  }
+
+  @Builder
+  private buildAllMomentRow(moment: MomentItem) {
+    Row() {
+      Column({ space: DesignConstants.SPACING.XS }) {
+        Text(moment.description)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+        Text(moment.location?.location_name ?? '')
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+          .width('100%')
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+
+      Text() {
+        SymbolSpan($r(AppIcon.ARROW_RIGHT))
+          .fontSize(DesignConstants.FONT.SIZE.LG)
+          .fontColor([this.getCurrentThemePalette().textSecondary])
+      }
+    }
+    .width('100%')
+    .padding(DesignConstants.SPACING.MD)
+    .backgroundColor(this.getSurfaceBackground())
+    .borderRadius(DesignConstants.SHAPE.CARD)
+    .shadow(this.getCurrentThemePalette().surfaceShadow)
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+    .onClick(() => this.openMomentDetail(moment))
+  }
+
+  @Builder
+  TopicResultList() {
+    if (this.hasSearched && this.topicResults.length === 0) {
+      Column({ space: DesignConstants.SPACING.LG }) {
+        Text() {
+          SymbolSpan($r(AppIcon.SEARCH))
+            .fontSize(DesignConstants.FONT.SIZE.XXXL_PLUS)
+            .fontColor([this.getCurrentThemePalette().textSecondary])
+            .opacity(DesignConstants.OPACITY.FADED)
+        }
+        Text('未找到相关话题').fontSize(DesignConstants.FONT.SIZE.MD_PLUS).fontColor(this.getCurrentThemePalette().textPrimary)
+        Text('尝试其他关键词').fontSize(DesignConstants.FONT.SIZE.SM_PLUS).fontColor(this.getCurrentThemePalette().textSecondary)
+      }
+      .width('100%').height('100%').justifyContent(FlexAlign.Center)
+    } else {
+      List({ space: DesignConstants.SPACING.MD2 }) {
+        ForEach(this.topicResults, (tag: string) => {
+          ListItem() {
+            Row({ space: DesignConstants.SPACING.MD }) {
+              Row() {
+                Text() {
+                  SymbolSpan($r(AppIcon.CHART))
+                    .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
+                    .fontColor([this.getCurrentThemePalette().accentBackground])
+                }
+              }
+              .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+              .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .backgroundColor(this.getSurfaceSubtle())
+              .justifyContent(FlexAlign.Center)
+
+              Text(`#${tag}`)
+                .fontSize(DesignConstants.FONT.SIZE.MD)
+                .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                .fontColor(this.getCurrentThemePalette().textPrimary)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .layoutWeight(1)
+
+              Text() {
+                SymbolSpan($r(AppIcon.ARROW_RIGHT))
+                  .fontSize(DesignConstants.FONT.SIZE.LG)
+                  .fontColor([this.getCurrentThemePalette().textSecondary])
+              }
+            }
+            .width('100%')
+            .padding(DesignConstants.SPACING.MD)
+            .backgroundColor(this.getSurfaceBackground())
+            .borderRadius(DesignConstants.SHAPE.CARD)
+            .shadow(this.getCurrentThemePalette().surfaceShadow)
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+            .onClick(() => this.applyKeywordAndSearch(tag))
+          }
+        }, (tag: string) => `topic-${tag}`)
+      }
+      .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
+      .width('100%').height('100%')
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
+      .scrollBar(BarState.Auto)
+    }
   }
 
   @Builder
