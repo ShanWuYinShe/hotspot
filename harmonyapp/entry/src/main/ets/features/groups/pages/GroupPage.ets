@@ -762,17 +762,15 @@ export struct GroupPage {
       .width('100%')
 
       Row() {
-        Button(this.isApplicationHandling(application.application_id) ? '处理中...' : '取消申请')
-          .type(ButtonType.Capsule)
-          .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-          .height(DesignConstants.COMPONENT.INLINE_BUTTON_HEIGHT)
+        SystemButton({
+          label: '取消申请',
+          variant: 'surface',
+          buttonSize: 'small',
+          shadowed: true,
+          loading: this.isApplicationHandling(application.application_id),
+          onPress: () => { this.cancelMyApplication(application); }
+        })
           .layoutWeight(1)
-          .enabled(!this.isApplicationHandling(application.application_id))
-          .opacity(this.isApplicationHandling(application.application_id) ? DesignConstants.OPACITY.LOADING : 1)
-          .onClick(() => this.cancelMyApplication(application))
       }
       .width('100%')
     }
@@ -853,18 +851,14 @@ export struct GroupPage {
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
 
-      Button(this.isGroupJoining(group.group.group_id) ? '处理中...' : '加入')
-        .type(ButtonType.Capsule)
-        .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
-        .fontColor(this.getCurrentThemePalette().accentBackground)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-        .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
-        .shadow(this.getCurrentThemePalette().controlShadow)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-        .enabled(!this.isGroupJoining(group.group.group_id))
-        .opacity(this.isGroupJoining(group.group.group_id) ? DesignConstants.OPACITY.LOADING : 1)
-        .onClick(() => this.joinGroup(group))
+      SystemButton({
+        label: '加入',
+        variant: 'surface-accent',
+        buttonSize: 'small',
+        shadowed: true,
+        loading: this.isGroupJoining(group.group.group_id),
+        onPress: () => { this.joinGroup(group); }
+      })
     }
     .width('100%')
     .padding({

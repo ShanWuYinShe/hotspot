@@ -1268,15 +1268,6 @@ export struct ProfilePage {
   private buildProfileAvatar() {
     Column() {
       Stack({ alignContent: Alignment.BottomEnd }) {
-        // 发光效果
-        Column()
-          .width(DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE)
-          .height(DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(this.getCurrentThemePalette().accentShadow.color)
-          .blur(DesignConstants.EFFECT.GLOW_BLUR_SMALL)
-          .opacity(DesignConstants.OPACITY.MUTED)
-
         // 头像
         SystemAvatar({
           avatarUrl: this.currentUser?.avatar_url || '',
@@ -1316,9 +1307,9 @@ export struct ProfilePage {
   private buildFigmaStatsRow() {
     Row() {
       ForEach([
-        { label: '帖子', value: formatCount(this.myMomentsCount) },
+        { label: '瞬间', value: formatCount(this.myMomentsCount) },
         { label: '关注者', value: formatCount(this.myFollowersCount) },
-        { label: '足迹', value: formatCount(this.myFriendsCount) }
+        { label: '群组', value: formatCount(this.myGroupsCount) }
       ] as StatItem[], (stat: StatItem, index: number) => {
         Row() {
           if (index > 0) {

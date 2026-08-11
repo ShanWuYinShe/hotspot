@@ -1098,22 +1098,14 @@ export struct SearchPage {
       }
 
       Row({ space: DesignConstants.SPACING.SM }) {
-        Button(this.isUserActionPending(item.user?.user_id ?? '') ? '处理中...' : (this.isUserFollowing(item.user?.user_id ?? '') ? '已关注' : '关注'))
-          .type(ButtonType.Capsule)
+        SystemButton({
+          label: this.isUserFollowing(item.user?.user_id ?? '') ? '已关注' : '关注',
+          variant: this.isUserFollowing(item.user?.user_id ?? '') ? 'outline' : 'primary',
+          buttonSize: 'small',
+          loading: this.isUserActionPending(item.user?.user_id ?? ''),
+          onPress: () => { this.toggleFollow(item); }
+        })
           .layoutWeight(1)
-          .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .enabled(!this.isUserActionPending(item.user?.user_id ?? ''))
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .backgroundColor(this.isUserFollowing(item.user?.user_id ?? '') ? DesignConstants.COLOR.TRANSPARENT : this.getCurrentThemePalette().accentBackground)
-          .fontColor(this.isUserFollowing(item.user?.user_id ?? '') ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().accentText)
-          .borderWidth(this.isUserFollowing(item.user?.user_id ?? '') ? 1 : 0)
-          .borderColor(this.getCurrentThemePalette().accentBackground)
-          .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-          .opacity(this.isUserActionPending(item.user?.user_id ?? '') ? DesignConstants.OPACITY.LOADING : 1)
-          .onClick(() => { this.toggleFollow(item); })
 
         SystemButton({
           label: '私聊',
@@ -1194,22 +1186,14 @@ export struct SearchPage {
         .width('100%')
 
       Row({ space: DesignConstants.SPACING.SM }) {
-        Button(this.isGroupActionPending(item.group?.group_id ?? '') ? '处理中...' : (this.isGroupJoined(item) ? '进入群聊' : '加入群组'))
-          .type(ButtonType.Capsule)
+        SystemButton({
+          label: this.isGroupJoined(item) ? '进入群聊' : '加入群组',
+          variant: this.isGroupJoined(item) ? 'outline' : 'primary',
+          buttonSize: 'small',
+          loading: this.isGroupActionPending(item.group?.group_id ?? ''),
+          onPress: () => { this.joinGroup(item); }
+        })
           .layoutWeight(1)
-          .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .enabled(!this.isGroupActionPending(item.group?.group_id ?? ''))
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .backgroundColor(this.isGroupJoined(item) ? DesignConstants.COLOR.TRANSPARENT : this.getCurrentThemePalette().accentBackground)
-          .fontColor(this.isGroupJoined(item) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().accentText)
-          .borderWidth(this.isGroupJoined(item) ? 1 : 0)
-          .borderColor(this.getCurrentThemePalette().accentBackground)
-          .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-          .opacity(this.isGroupActionPending(item.group?.group_id ?? '') ? DesignConstants.OPACITY.LOADING : 1)
-          .onClick(() => { this.joinGroup(item); })
 
         SystemButton({
           label: '详情',

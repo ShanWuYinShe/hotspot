@@ -1149,17 +1149,16 @@ export struct GroupDetailPage {
              Column({ space: DesignConstants.SPACING.SM }) {
                 if (this.isMember) {
                   if (this.canEditGroupInfo()) {
-                    Button(this.isSavingGroupInfo ? '保存中...' : '编辑群组信息')
-                      .type(ButtonType.Capsule)
-                      .backgroundColor(this.getSurfaceSubtle())
-                      .fontColor(this.getCurrentThemePalette().accentBackground)
-                      .shadow(this.getCurrentThemePalette().controlShadow)
-                      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-                      .width('100%')
-                      .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
-                      .enabled(!this.isSavingGroupInfo)
-                      .opacity(this.isSavingGroupInfo ? DesignConstants.OPACITY.LOADING : 1)
-                      .onClick(() => this.openEditGroupSheet())
+                    SystemButton({
+                      label: '编辑群组信息',
+                      variant: 'surface-accent',
+                      buttonSize: 'default',
+                      pill: true,
+                      fullWidth: true,
+                      shadowed: true,
+                      loading: this.isSavingGroupInfo,
+                      onPress: () => { this.openEditGroupSheet(); }
+                    })
                   }
 
                   SystemButton({
@@ -1199,17 +1198,15 @@ export struct GroupDetailPage {
                       .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
                   }
 
-                    Button(this.groupInfo?.has_password ? '加入群组（需要密码）' : '加入群组')
-                    .type(ButtonType.Capsule)
-                    .backgroundColor(this.getCurrentThemePalette().accentBackground)
-                    .fontColor(this.getCurrentThemePalette().accentText)
-                    .shadow(this.getCurrentThemePalette().controlShadow)
-                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-                    .width('100%')
-                    .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
-                    .enabled(!this.isJoining)
-                    .opacity(this.isJoining ? DesignConstants.OPACITY.LOADING : 1)
-                    .onClick(() => this.joinGroup())
+                    SystemButton({
+                      label: this.groupInfo?.has_password ? '加入群组（需要密码）' : '加入群组',
+                      variant: 'primary',
+                      buttonSize: 'default',
+                      pill: true,
+                      fullWidth: true,
+                      loading: this.isJoining,
+                      onPress: () => { this.joinGroup(); }
+                    })
                 }
              }
              .padding(DesignConstants.SPACING.LG)
@@ -1290,17 +1287,14 @@ export struct GroupDetailPage {
           onPress: () => { this.closeEditGroupSheet(); }
         })
 
-        Button(this.isSavingGroupInfo ? '保存中...' : '保存')
-          .type(ButtonType.Normal)
-          .backgroundColor(this.getCurrentThemePalette().accentBackground)
-          .fontColor(this.getCurrentThemePalette().accentText)
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-          .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
-          .enabled(!this.isSavingGroupInfo && !this.isEditGroupAvatarUploading)
-          .opacity(this.isSavingGroupInfo || this.isEditGroupAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)
-          .onClick(() => this.saveGroupInfo())
+        SystemButton({
+          label: '保存',
+          variant: 'primary',
+          buttonSize: 'large',
+          loading: this.isSavingGroupInfo,
+          disabled: this.isEditGroupAvatarUploading,
+          onPress: () => { this.saveGroupInfo(); }
+        })
       }
       .width('100%')
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM })

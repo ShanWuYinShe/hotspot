@@ -8,6 +8,7 @@ import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { SystemButton } from '../../../components/SystemButton';
 import { AppIcon, IconButton, IconSize } from '../../../components/SystemIcon';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
@@ -373,16 +374,13 @@ export struct MySharesPage {
         .layoutWeight(1)
 
         if (!share.is_revoked) {
-          Button(this.revokingShareId === share.share_id ? '撤销中...' : '撤销分享')
-            .type(ButtonType.Capsule)
-            .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-            .fontColor(this.getCurrentThemePalette().accentBackground)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .shadow(this.getCurrentThemePalette().controlShadow)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
-            .enabled(this.revokingShareId !== share.share_id)
-            .onClick(() => this.revokeShare(share))
+          SystemButton({
+            label: '撤销分享',
+            variant: 'surface-danger',
+            buttonSize: 'small',
+            loading: this.revokingShareId === share.share_id,
+            onPress: () => { this.revokeShare(share); }
+          })
         } else {
           Text('已撤销')
             .fontSize(DesignConstants.FONT.SIZE.SM)

@@ -31,6 +31,7 @@ import { AppThemeManager } from '../../core/theme/AppThemeManager';
 import { DesignConstants } from '../../constants/DesignConstants';
 import { curves } from '@kit.ArkUI';
 import { SystemBadge } from '../SystemBadge';
+import { SystemButton } from '../SystemButton';
 import { AppIcon } from '../SystemIcon';
 import { AppRouter } from '../../core/router/AppRouter';
 import { PageNames } from '../../constants/AppConstants';
@@ -118,7 +119,7 @@ export struct PhoneLayout {
           }.tabBar(this.TabBarBuilder(3))
           TabContent() { ProfilePage() }.tabBar(this.TabBarBuilder(4))
         }
-        .barHeight(this.isTablet ? 0 : 56)
+        .barHeight(this.isTablet ? 0 : DesignConstants.LAYOUT.MOBILE_BOTTOM_NAV_HEIGHT)
         .scrollable(false)
         .barMode(BarMode.Fixed)
         .divider({ strokeWidth: 0, color: DesignConstants.COLOR.TRANSPARENT, startMargin: 0, endMargin: 0 })
@@ -409,14 +410,11 @@ export struct PhoneLayout {
         .layoutWeight(1)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-      Button('去注册')
-        .type(ButtonType.Normal)
-        .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .backgroundColor(this.getPalette().accentBackground)
-        .fontColor(this.getPalette().accentText)
-        .borderRadius(DesignConstants.RADIUS.SM)
-        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+      SystemButton({
+        label: '去注册',
+        variant: 'primary',
+        buttonSize: 'small'
+      })
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })

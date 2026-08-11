@@ -21,6 +21,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { MomentFeedCard } from '../../../components/MomentFeedCard';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { SystemButton } from '../../../components/SystemButton';
 import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -73,7 +74,6 @@ export struct HomePage {
   @State groupActionPendingIds: string[] = [];
   @State viewAllPressedIndex: number = -1;
   @State locationCardPressed: boolean = false;
-  @State retryPressed: boolean = false;
 
   private interactionStore = InteractionStateStore.getInstance();
   private isDestroyed: boolean = false;
@@ -622,23 +622,12 @@ export struct HomePage {
             .fontColor(this.getPalette().textSecondary)
             .width('100%')
             .textAlign(TextAlign.Center)
-          Text('重试')
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getPalette().accentText)
-            .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().accentText })
-            .scale(this.retryPressed
-              ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL }
-              : { x: 1, y: 1 })
-            .onTouch((event: TouchEvent) => {
-              if (event.type === TouchType.Down) {
-                this.retryPressed = true;
-              } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-                this.retryPressed = false;
-              }
-            })
-            .onClick(() => this.loadNearbyUsers())
+          SystemButton({
+            label: '重试',
+            variant: 'outline',
+            buttonSize: 'small',
+            onPress: () => { this.loadNearbyUsers(); }
+          })
         }
         .width('100%')
         .alignItems(HorizontalAlign.Center)

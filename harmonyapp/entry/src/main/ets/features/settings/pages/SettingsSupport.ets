@@ -619,14 +619,12 @@ export struct RelationshipListSection {
       .onClick(() => this.openProfile(userId))
 
       if (actionLabel && action) {
-        Button(actionLabel)
-          .type(ButtonType.Normal)
-          .backgroundColor(this.getPalette().surfaceSubtle)
-          .fontColor(this.getPalette().accentBackground)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
-          .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
-          .onClick(action)
+        SystemButton({
+          label: actionLabel,
+          variant: 'surface-accent',
+          buttonSize: 'small',
+          onPress: () => { action(); }
+        })
       }
     }
     .width('100%')
