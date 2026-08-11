@@ -12,6 +12,7 @@ import { AppRouter, GroupDetailRouteParam } from '../../../core/router/AppRouter
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { GroupItem, GeoPoint, SearchGroupsRequest } from '../../../core/types/api';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { SystemInput } from '../../../components/SystemInput';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
@@ -224,25 +225,16 @@ export struct NearbyGroupsListPage {
         })
 
         // 搜索栏（对齐前端 /groups/nearby）
-        Row({ space: DesignConstants.SPACING.MD2 }) {
-          Text() {
-            SymbolSpan($r(AppIcon.SEARCH))
-              .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
-              .fontColor([this.getCurrentThemePalette().textSecondary])
-          }
-          TextInput({ placeholder: '搜索群组', text: $$this.keyword })
-            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
-            .fontColor(this.getCurrentThemePalette().textPrimary)
-            .placeholderColor(this.getCurrentThemePalette().textSecondary)
-            .layoutWeight(1)
-            .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-            .onSubmit(() => { this.loadGroups(true); })
-        }
-        .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
-        .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
-        .borderRadius(DesignConstants.SHAPE.INPUT)
+        SystemInput({
+          value: this.keyword,
+          placeholder: '搜索群组',
+          prefixIcon: AppIcon.SEARCH,
+          showPrefixIcon: true,
+          inputHeight: DesignConstants.COMPONENT.INPUT_HEIGHT,
+          onChange: (value: string) => { this.keyword = value; },
+          onSubmit: () => { this.loadGroups(true); }
+        })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
 
         // 分类 chips（对齐前端 filter categories）

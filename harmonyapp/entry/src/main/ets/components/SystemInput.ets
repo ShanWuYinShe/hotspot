@@ -1,6 +1,7 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { AppThemeVisuals, InputBorderResolution } from '../core/theme/AppThemeVisuals';
 import { AppIcon } from './SystemIcon';
 
 /**
@@ -27,11 +28,25 @@ export struct SystemInput {
   @Prop clearIconSize: number = 13;
   onChange?: (value: string) => void;
   onSubmit?: (value: string) => void;
+  onFocusChange?: (focused: boolean) => void;
 
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @State isFocused: boolean = false;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getBorderResolution(): InputBorderResolution {
+    return AppThemeVisuals.resolveInputBorder({
+      backgroundColor: this.getPalette().inputBackgroundColor,
+      borderColor: this.getPalette().borderColor,
+      borderWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
+      borderRadius: DesignConstants.SHAPE.INPUT,
+      shadow: { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 },
+      height: this.inputHeight,
+      horizontalPadding: DesignConstants.SPACING.LG
+    }, this.isFocused, this.hasError, this.resolvedThemeId);
   }
 
   build() {
@@ -61,6 +76,14 @@ export struct SystemInput {
         .onSubmit(() => {
           this.onSubmit?.(this.value);
         })
+        .onFocus(() => {
+          this.isFocused = true;
+          this.onFocusChange?.(true);
+        })
+        .onBlur(() => {
+          this.isFocused = false;
+          this.onFocusChange?.(false);
+        })
 
       if (this.showClearButton && this.value.length > 0) {
         Text() {
@@ -78,9 +101,7 @@ export struct SystemInput {
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
     .backgroundColor(this.getPalette().inputBackgroundColor)
     .borderRadius(DesignConstants.SHAPE.INPUT) // 18
-    .border({
-      width: 1,
-      color: this.hasError ? this.getPalette().error : this.getPalette().borderColor
-    })
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getBorderResolution().borderColor })
+    .shadow(this.getBorderResolution().shadow)
   }
 }

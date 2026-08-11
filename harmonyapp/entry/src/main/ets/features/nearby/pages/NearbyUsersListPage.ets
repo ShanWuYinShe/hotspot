@@ -13,6 +13,7 @@ import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { UserItem, GeoPoint, SearchUsersRequest } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { SystemInput } from '../../../components/SystemInput';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
@@ -254,25 +255,16 @@ export struct NearbyUsersListPage {
         })
 
         // 搜索栏（对齐前端 /users/nearby 搜索框）
-        Row({ space: DesignConstants.SPACING.MD2 }) {
-          Text() {
-            SymbolSpan($r(AppIcon.SEARCH))
-              .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
-              .fontColor([this.getCurrentThemePalette().textSecondary])
-          }
-          TextInput({ placeholder: '搜索附近用户', text: $$this.keyword })
-            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
-            .fontColor(this.getCurrentThemePalette().textPrimary)
-            .placeholderColor(this.getCurrentThemePalette().textSecondary)
-            .layoutWeight(1)
-            .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-            .onSubmit(() => { this.loadUsers(true); })
-        }
-        .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
-        .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
-        .borderRadius(DesignConstants.SHAPE.INPUT)
+        SystemInput({
+          value: this.keyword,
+          placeholder: '搜索附近用户',
+          prefixIcon: AppIcon.SEARCH,
+          showPrefixIcon: true,
+          inputHeight: DesignConstants.COMPONENT.INPUT_HEIGHT,
+          onChange: (value: string) => { this.keyword = value; },
+          onSubmit: () => { this.loadUsers(true); }
+        })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
         // 排序 chips（对齐前端 sort chips：距离/在线/共同好友）
