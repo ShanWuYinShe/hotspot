@@ -20,6 +20,7 @@ export struct SystemInput {
   /** 输入类型（默认普通；email/number 对齐登录与数字场景） */
   @Prop inputType: 'normal' | 'email' | 'number' = 'normal';
   @Prop maxLength: number = 1000;
+  @Prop disabled: boolean = false;
   /** 输入框高度（不可命名为 height——与 CustomComponent 基类方法冲突，同 SystemButton.buttonSize） */
   @Prop inputHeight: number = DesignConstants.COMPONENT.INPUT_HEIGHT; // 42
   @Prop fontSize: number = DesignConstants.FONT.SIZE.SM_PLUS; // 13
@@ -79,6 +80,7 @@ export struct SystemInput {
         .placeholderColor(this.getPalette().textSecondary)
         .placeholderFont({ size: this.fontSize })
         .caretColor(this.getPalette().accentBackground)
+        .enabled(!this.disabled)
         .type(this.getInputType())
         .maxLength(this.maxLength)
         .onChange((v: string) => {

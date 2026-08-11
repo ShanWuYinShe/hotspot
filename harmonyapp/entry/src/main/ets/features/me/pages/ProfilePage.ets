@@ -19,6 +19,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { useMasterDetail } from '../../../core/responsive/Breakpoint';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemInput } from '../../../components/SystemInput';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { LoginPromptView } from '../../../components/LoginPromptView';
 import { MyProfile, UpdateLocationRequest, UpgradeAccountRequest, GuestRequest, UserItem, UserOpenTheDoorRequest, UserSharePayload, MomentItem, UserMomentsRequest } from '../../../core/types/api';
@@ -1486,38 +1487,38 @@ export struct ProfilePage {
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor(this.getSecondaryTextColor())
 
-        TextInput({ placeholder: '邮箱 / 用户名（登录凭证）' })
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .padding(DesignConstants.SPACING.LG)
-          .backgroundColor(this.getSurfaceSubtle())
-          .borderRadius(this.getProfileVisualStyle().input.borderRadius)
-          .type(InputType.Email)
-          .onChange((value: string) => {
-            this.upgradeLoginId = value;
-          })
-          .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+        SystemInput({
+          value: this.upgradeLoginId,
+          placeholder: '邮箱 / 用户名（登录凭证）',
+          inputType: 'email',
+          fontSize: DesignConstants.FONT.SIZE.LG,
+          onChange: (value: string) => { this.upgradeLoginId = value; },
+          onFocusChange: (focused: boolean) => {
+            if (!focused) KeyboardDismissManager.getInstance().dismiss();
+          }
+        })
 
-        TextInput({ placeholder: '密码（至少8位）' })
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .padding(DesignConstants.SPACING.LG)
-          .backgroundColor(this.getSurfaceSubtle())
-          .borderRadius(this.getProfileVisualStyle().input.borderRadius)
-          .type(InputType.Password)
-          .onChange((value: string) => {
-            this.upgradePassword = value;
-          })
-          .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+        SystemInput({
+          value: this.upgradePassword,
+          placeholder: '密码（至少8位）',
+          passwordMode: true,
+          fontSize: DesignConstants.FONT.SIZE.LG,
+          onChange: (value: string) => { this.upgradePassword = value; },
+          onFocusChange: (focused: boolean) => {
+            if (!focused) KeyboardDismissManager.getInstance().dismiss();
+          }
+        })
 
-        TextInput({ placeholder: '确认密码' })
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .padding(DesignConstants.SPACING.LG)
-          .backgroundColor(this.getSurfaceSubtle())
-          .borderRadius(this.getProfileVisualStyle().input.borderRadius)
-          .type(InputType.Password)
-          .onChange((value: string) => {
-            this.upgradePasswordConfirm = value;
-          })
-          .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+        SystemInput({
+          value: this.upgradePasswordConfirm,
+          placeholder: '确认密码',
+          passwordMode: true,
+          fontSize: DesignConstants.FONT.SIZE.LG,
+          onChange: (value: string) => { this.upgradePasswordConfirm = value; },
+          onFocusChange: (focused: boolean) => {
+            if (!focused) KeyboardDismissManager.getInstance().dismiss();
+          }
+        })
 
         Row({ space: DesignConstants.SPACING.MD }) {
           Button('取消')
@@ -1672,15 +1673,16 @@ export struct ProfilePage {
         }
       }
 
-        TextInput({ placeholder: '请输入昵称', text: this.editNickname })
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
-        .backgroundColor(this.getSurfaceSubtle())
-        .borderRadius(DesignConstants.SHAPE.CHIP)
-        .onChange((value: string) => {
-          this.editNickname = value;
+        SystemInput({
+          value: this.editNickname,
+          placeholder: '请输入昵称',
+          inputHeight: DesignConstants.COMPONENT.BUTTON_HEIGHT_LG,
+          fontSize: DesignConstants.FONT.SIZE.LG,
+          onChange: (value: string) => { this.editNickname = value; },
+          onFocusChange: (focused: boolean) => {
+            if (!focused) KeyboardDismissManager.getInstance().dismiss();
+          }
         })
-        .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
       TextArea({ placeholder: '请输入个人简介', text: this.editBio })
         .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -1905,20 +1907,17 @@ export struct ProfilePage {
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor(this.getSecondaryTextColor())
 
-        TextInput({ placeholder: '请输入你的昵称' })
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .padding(DesignConstants.SPACING.LG)
-          .backgroundColor(this.getSurfaceSubtle())
-          .borderRadius(this.getProfileVisualStyle().input.borderRadius)
-          .enabled(!this.isQuickStarting)
-          .onChange((value: string) => { this.quickNickname = value; })
-          .onFocus(() => {
-            this.isQuickInputFocused = true;
-          })
-          .onBlur(() => {
-            this.isQuickInputFocused = false;
-            KeyboardDismissManager.getInstance().dismiss();
-          })
+        SystemInput({
+          value: this.quickNickname,
+          placeholder: '请输入你的昵称',
+          fontSize: DesignConstants.FONT.SIZE.LG,
+          disabled: this.isQuickStarting,
+          onChange: (value: string) => { this.quickNickname = value; },
+          onFocusChange: (focused: boolean) => {
+            this.isQuickInputFocused = focused;
+            if (!focused) KeyboardDismissManager.getInstance().dismiss();
+          }
+        })
 
         Button(this.isQuickStarting ? '正在创建...' : '开始体验')
           .type(ButtonType.Normal)
