@@ -14,14 +14,15 @@ import { curves } from '@kit.ArkUI';
  * - ghost：透明底 + 主文字色（对齐前端 ghost）
  * - danger：错误色填充 + 白字（删除/危险操作）
  *
- * 尺寸（size）：small(36) / default(42) / large(48) / sheet(44，底部弹层操作行)
+ * 尺寸（size）：compact(28，卡片内小按钮) / small(36) / default(42) / large(48) /
+ *   sheet(44，底部弹层操作行)
  * 变体补充：surface（subtle 底 + 主文字 + 细边框，对齐 Sheet 操作行）、
  *   surface-danger（同上但文字为 error 色，用于举报/危险操作）
  *
  * 交互：press 缩放 0.95（对齐前端 active:scale-[0.95]），springMotion 回弹
  */
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'surface' | 'surface-danger';
-export type ButtonSize = 'small' | 'default' | 'large' | 'sheet';
+export type ButtonSize = 'compact' | 'small' | 'default' | 'large' | 'sheet';
 
 @Reusable
 @Component
@@ -36,6 +37,8 @@ export struct SystemButton {
   @Prop loading: boolean = false;
   @Prop disabled: boolean = false;
   @Prop fullWidth: boolean = false;
+  /** surface/surface-danger 变体是否带控制阴影（卡片内嵌小按钮用，弹层操作行不带） */
+  @Prop shadowed: boolean = false;
   onPress?: () => void;
 
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
@@ -46,6 +49,7 @@ export struct SystemButton {
   }
 
   private getHeight(): number {
+    if (this.buttonSize === 'compact') return DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT; // 28
     if (this.buttonSize === 'sheet') return DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT; // 44
     if (this.buttonSize === 'small') return 36;
     if (this.buttonSize === 'large') return 48;
@@ -53,6 +57,7 @@ export struct SystemButton {
   }
 
   private getFontSize(): number {
+    if (this.buttonSize === 'compact') return DesignConstants.FONT.SIZE.XS2; // 10
     if (this.buttonSize === 'sheet') return DesignConstants.FONT.SIZE.MD_PLUS; // 15
     if (this.buttonSize === 'small') return DesignConstants.FONT.SIZE.SM; // 12
     if (this.buttonSize === 'large') return DesignConstants.FONT.SIZE.MD_PLUS; // 15
@@ -64,6 +69,7 @@ export struct SystemButton {
   }
 
   private getHorizontalPadding(): number {
+    if (this.buttonSize === 'compact') return DesignConstants.SPACING.SM; // 8
     if (this.buttonSize === 'small') return DesignConstants.SPACING.MD; // 12
     if (this.buttonSize === 'large') return DesignConstants.SPACING.XXL; // 32
     return DesignConstants.SPACING.XL; // 24
@@ -131,7 +137,11 @@ export struct SystemButton {
   }
 
   private getRadius(): number {
-    return this.buttonSize === 'sheet' ? DesignConstants.RADIUS.FULL : DesignConstants.SHAPE.BUTTON;
+    if (this.buttonSize === 'compact' || this.buttonSize === 'sheet' ||
+      this.variant === 'surface' || this.variant === 'surface-danger') {
+      return DesignConstants.RADIUS.FULL;
+    }
+    return DesignConstants.SHAPE.BUTTON;
   }
 
   private getShadow(): ShadowOptions | undefined {
@@ -139,6 +149,9 @@ export struct SystemButton {
     // 扁平风格：仅 primary / danger 带品牌阴影（对齐前端 --shadow-brand-btn）
     if (this.variant === 'primary' || this.variant === 'danger') {
       return p.accentShadow;
+    }
+    if (this.shadowed) {
+      return p.controlShadow;
     }
     return undefined;
   }

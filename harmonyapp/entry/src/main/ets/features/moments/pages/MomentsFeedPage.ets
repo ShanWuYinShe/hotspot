@@ -33,6 +33,7 @@ import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { EmptyState, RefreshIndicator } from '../../../components/EmptyState';
+import { SystemButton } from '../../../components/SystemButton';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import pasteboard from '@ohos.pasteboard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
@@ -482,15 +483,12 @@ export struct MomentsFeedPage {
                 .layoutWeight(1)
                 .margin({ left: DesignConstants.SPACING.SM })
 
-              Button('关注')
-                .type(ButtonType.Normal)
-                .fontSize(DesignConstants.FONT.SIZE.XS2)
-                .fontColor(this.getCurrentThemePalette().accentText)
-                .backgroundColor(this.getCurrentThemePalette().accentBackground)
-                .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
-                .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
-                .borderRadius(DesignConstants.RADIUS.FULL)
-                .onClick(() => { this.followUser(user); })
+              SystemButton({
+                label: '关注',
+                variant: 'primary',
+                buttonSize: 'compact',
+                onPress: () => { this.followUser(user); }
+              })
             }
             .width('100%')
             .alignItems(VerticalAlign.Center)

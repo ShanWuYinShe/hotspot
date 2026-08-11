@@ -18,6 +18,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SearchPageHeader } from '../../../components/SearchPageHeader';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemButton } from '../../../components/SystemButton';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppThemeVisuals, InputBorderResolution } from '../../../core/theme/AppThemeVisuals';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
@@ -1114,19 +1115,15 @@ export struct SearchPage {
           .opacity(this.isUserActionPending(item.user?.user_id ?? '') ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => { this.toggleFollow(item); })
 
-        Button('私聊')
-          .type(ButtonType.Capsule)
+        SystemButton({
+          label: '私聊',
+          variant: 'surface',
+          buttonSize: 'small',
+          shadowed: true,
+          onPress: () => { this.startPrivateChat(item); }
+        })
           .layoutWeight(1)
-          .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .backgroundColor(this.getSurfaceSubtle())
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .opacity(this.isUserActionPending(item.user?.user_id ?? '') ? DesignConstants.OPACITY.PRESSED : 1)
-          .onClick(() => { this.startPrivateChat(item); })
       }
       .width('100%')
     }
@@ -1214,19 +1211,15 @@ export struct SearchPage {
           .opacity(this.isGroupActionPending(item.group?.group_id ?? '') ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => { this.joinGroup(item); })
 
-        Button('详情')
-          .type(ButtonType.Capsule)
+        SystemButton({
+          label: '详情',
+          variant: 'surface',
+          buttonSize: 'small',
+          shadowed: true,
+          onPress: () => { this.openGroupDetail(item); }
+        })
           .layoutWeight(1)
-          .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .backgroundColor(this.getSurfaceSubtle())
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .opacity(this.isGroupActionPending(item.group?.group_id ?? '') ? DesignConstants.OPACITY.PRESSED : 1)
-          .onClick(() => { this.openGroupDetail(item); })
       }
       .width('100%')
     }
