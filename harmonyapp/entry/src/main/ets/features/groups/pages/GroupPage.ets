@@ -19,6 +19,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { SystemButton } from '../../../components/SystemButton';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -475,23 +476,21 @@ export struct GroupPage {
       }) {
         // trailing: 三按钮簇（邀请/申请 次要 + 创建 主操作）
         Row({ space: DesignConstants.SPACING.SM }) {
-          Button('邀请')
-            .type(ButtonType.Capsule)
-            .backgroundColor(this.getSurfaceSubtle())
-            .fontColor(this.getCurrentThemePalette().textPrimary)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
-            .shadow(this.getCurrentThemePalette().controlShadow)
-            .onClick(() => this.loadMyInvites())
+          SystemButton({
+            label: '邀请',
+            variant: 'surface',
+            buttonSize: 'default',
+            shadowed: true,
+            onPress: () => { this.loadMyInvites(); }
+          })
 
-          Button('申请')
-            .type(ButtonType.Capsule)
-            .backgroundColor(this.getSurfaceSubtle())
-            .fontColor(this.getCurrentThemePalette().textPrimary)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
-            .shadow(this.getCurrentThemePalette().controlShadow)
-            .onClick(() => this.loadMyApplications())
+          SystemButton({
+            label: '申请',
+            variant: 'surface',
+            buttonSize: 'default',
+            shadowed: true,
+            onPress: () => { this.loadMyApplications(); }
+          })
 
           Button('创建')
             .type(ButtonType.Capsule)
