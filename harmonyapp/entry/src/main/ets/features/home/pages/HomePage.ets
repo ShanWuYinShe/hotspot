@@ -838,7 +838,7 @@ export struct HomePage {
     if (this.momentsLoading || this.moments.length > 0) {
       Column() {
         this.buildSectionHeader('附近活动', '查看全部', 2, () => {
-          AppRouter.push(PageNames.MOMENT);
+          AppRouter.push(PageNames.NEARBY_MOMENTS);
         })
 
         if (this.momentsLoading && this.moments.length === 0) {
