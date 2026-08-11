@@ -15,6 +15,10 @@ import {
   MomentItem,
   MomentSharePayload,
   MyProfile,
+  CommentItem,
+  CommentsRequest,
+  CreateCommentRequest,
+  UserInfo,
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -61,6 +65,12 @@ export struct MomentDetailPage {
   @State errorMessage: string = '';
   @State likePending: boolean = false;
   @State favoritePending: boolean = false;
+  @State comments: CommentItem[] = [];
+  @State commentText: string = '';
+  @State commentsLoading: boolean = false;
+  @State commentSending: boolean = false;
+  /** 本地新增评论数（服务端计数刷新前叠加展示，避免手动克隆 MomentItem） */
+  @State commentAdditions: number = 0;
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
 
   private isDestroyed: boolean = false;
@@ -124,6 +134,7 @@ export struct MomentDetailPage {
       if (response.code === 0 && response.data) {
         this.moment = response.data;
         InteractionStateStore.getInstance().patchMomentFromItem(response.data);
+        this.loadComments();
       } else {
         this.errorMessage = response.message || '加载动态详情失败';
       }
@@ -132,6 +143,68 @@ export struct MomentDetailPage {
       hilog.error(DOMAIN_NUMBER, TAG, `loadMomentDetail failed: ${JSON.stringify(error)}`);
     } finally {
       this.isLoading = false;
+    }
+  }
+
+  private async loadComments(): Promise<void> {
+    if (this.isDestroyed || !this.momentId) return;
+    this.commentsLoading = true;
+    try {
+      const request: CommentsRequest = { moment_id: this.momentId, pagination: { limit: 50 } };
+      const response = await ApiClient.getComments(request);
+      if (this.isDestroyed) return;
+      if (response.code === 0 && response.data) {
+        this.comments = (response.data.items ?? []).filter((c: CommentItem) => !c.is_deleted);
+      }
+    } catch (_) {
+      // 评论加载失败静默，保留空列表
+    } finally {
+      this.commentsLoading = false;
+    }
+  }
+
+  private async sendComment(): Promise<void> {
+    const content = this.commentText.trim();
+    if (!content || this.commentSending) return;
+    if (!this.currentUser) {
+      SystemToast.showWarning('请先登录后再评论', this.getUIContext());
+      return;
+    }
+    this.commentSending = true;
+    const tempId = `temp-${Date.now()}`;
+    const user: UserInfo = {
+      user_id: this.currentUser.user_id,
+      nickname: this.currentUser.nickname ?? '',
+      avatar_url: this.currentUser.avatar_url ?? ''
+    };
+    const tempComment: CommentItem = {
+      comment_id: tempId,
+      user: user,
+      content: content,
+      created_at: new Date().toISOString(),
+      replies_count: 0,
+      is_deleted: false
+    };
+    this.comments = [...this.comments, tempComment];
+    this.commentText = '';
+    try {
+      const request: CreateCommentRequest = { moment_id: this.momentId, content: content };
+      const response = await ApiClient.createComment(request);
+      if (this.isDestroyed) return;
+      if (response.code === 0 && response.data) {
+        this.comments = this.comments.map((c: CommentItem) =>
+          c.comment_id === tempId ? response.data as CommentItem : c
+        );
+        this.commentAdditions += 1;
+      } else {
+        this.comments = this.comments.filter((c: CommentItem) => c.comment_id !== tempId);
+        SystemToast.showError(response.message || '评论失败', this.getUIContext());
+      }
+    } catch (_) {
+      this.comments = this.comments.filter((c: CommentItem) => c.comment_id !== tempId);
+      SystemToast.showError('评论失败，请稍后重试', this.getUIContext());
+    } finally {
+      this.commentSending = false;
     }
   }
 
@@ -248,12 +321,17 @@ export struct MomentDetailPage {
           })
         } else {
           Scroll() {
-            this.buildMomentContent(this.moment as MomentItem)
+            Column() {
+              this.buildMomentContent(this.moment as MomentItem)
+              this.buildCommentsSection()
+            }
+            .width('100%')
           }
           .layoutWeight(1)
           .width('100%')
           .align(Alignment.TopStart)
 
+          this.buildCommentInput()
           this.buildActionBar(this.moment as MomentItem)
         }
       }
@@ -398,7 +476,7 @@ export struct MomentDetailPage {
         Text(`点赞 ${formatCount(this.getMomentLikesCount(moment))}`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().textSecondary)
-        Text(`评论 ${formatCount(moment.comments_count)}`)
+        Text(`评论 ${formatCount(this.getCommentCount(moment))}`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().textSecondary)
         Text(`分享 ${formatCount(moment.shares_count)}`)
@@ -410,6 +488,107 @@ export struct MomentDetailPage {
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
     .alignItems(HorizontalAlign.Start)
+  }
+
+  private getCommentCount(moment: MomentItem): number {
+    return (moment.comments_count ?? 0) + this.commentAdditions;
+  }
+
+  @Builder
+  private buildCommentRow(comment: CommentItem) {
+    Row({ space: DesignConstants.SPACING.MD }) {
+      SystemAvatar({
+        avatarUrl: comment.user?.avatar_url ?? '',
+        name: comment.user?.nickname ?? '匿名',
+        avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
+        shape: 'circle'
+      })
+      Column({ space: DesignConstants.SPACING.XS }) {
+        Row({ space: DesignConstants.SPACING.SM }) {
+          Text(comment.user?.nickname ?? '匿名')
+            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontColor(this.getCurrentThemePalette().textPrimary)
+          Text(this.formatTime(comment.created_at))
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+        }
+        .width('100%')
+        Text(comment.content)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .width('100%')
+          .textAlign(TextAlign.Start)
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Top)
+  }
+
+  @Builder
+  private buildCommentsSection() {
+    Column({ space: DesignConstants.SPACING.MD }) {
+      Text(`评论 ${formatCount(this.getCommentCount(this.moment as MomentItem))}`)
+        .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+        .width('100%')
+
+      if (this.commentsLoading && this.comments.length === 0) {
+        Text('加载评论中…')
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+          .width('100%')
+      } else if (this.comments.length === 0) {
+        Text('还没有评论，来抢沙发')
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+          .width('100%')
+      } else {
+        ForEach(this.comments, (comment: CommentItem) => {
+          this.buildCommentRow(comment)
+        }, (comment: CommentItem) => comment.comment_id)
+      }
+    }
+    .width('100%')
+    .padding(DesignConstants.SPACING.LG)
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  private buildCommentInput() {
+    Row({ space: DesignConstants.SPACING.SM }) {
+      TextInput({ placeholder: '写下你的评论…', text: $$this.commentText })
+        .layoutWeight(1)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+        .placeholderColor(this.getCurrentThemePalette().textSecondary)
+        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
+        .caretColor(this.getCurrentThemePalette().accentBackground)
+
+      Button() {
+        Text() {
+          SymbolSpan($r(AppIcon.SEND))
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontColor([this.commentText.trim().length > 0 ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().textSecondary])
+        }
+      }
+      .type(ButtonType.Circle)
+      .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+      .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+      .backgroundColor(this.commentText.trim().length > 0 ? this.getCurrentThemePalette().accentBackground : this.getSurfaceSubtle())
+      .opacity(this.commentSending ? DesignConstants.OPACITY.LOADING : 1)
+      .onClick(() => { this.sendComment(); })
+    }
+    .width('100%')
+    .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.MD })
+    .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
+    .borderRadius(DesignConstants.SHAPE.INPUT)
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+    .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
   }
 
   @Builder

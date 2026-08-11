@@ -204,6 +204,7 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 - 聊天记录：消息按 `sent_at` 正序渲染（越新越靠下，对齐前端 useChat 翻转）；
   跨天自动插入日期胶囊（`FormatUtil.formatDateLabel` → 今天/昨天/M月D日，
   对齐前端 groupMessagesByDay/formatDateLabel）。
+- 动态详情：点赞/收藏/分享/评论（评论列表 + 乐观发布，对齐前端 MomentDetailPage）。
 - 附近聚合页 `NearbyPage` 三区块「查看全部」分别 push `NEARBY_USERS` /
   `NEARBY_GROUPS` / `NEARBY_MOMENTS`（MomentsFeedPage 已注册为路由页，push 场景
   带返回按钮，对齐前端 `/nearby/people|groups|moments`）。
