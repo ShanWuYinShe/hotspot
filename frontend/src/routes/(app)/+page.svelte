@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ChevronRight, Search, Radar } from '@lucide/svelte';
+	import { ChevronRight, Search, Radar, Map } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import HeroStats from '@/components/home/HeroStats.svelte';
@@ -14,6 +14,7 @@
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation, type DefaultLocation } from '@/lib/start-default-location';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -144,15 +145,9 @@
 						<span class="text-xs text-text-secondary">{onlineCount} 在线</span>
 					</div>
 					{#if platform.platform !== 'desktop'}
-						<button
-							type="button"
-							aria-label="搜索"
-							onclick={() => void goto(ROUTES.search)}
-							class="hover-btn flex size-8 items-center justify-center rounded-full border border-border-default bg-surface-primary text-text-secondary focus-ring"
-						>
-							<Search class="size-4" strokeWidth={1.75} />
-						</button>
+						<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} />
 					{/if}
+					<ActionIconButton icon={Map} label="地图" onClick={() => void goto(ROUTES.map)} variant="ghost" size={36} />
 				</div>
 			{/snippet}
 		</PageHeader>

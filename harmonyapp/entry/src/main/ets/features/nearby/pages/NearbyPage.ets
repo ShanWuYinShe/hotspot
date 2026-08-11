@@ -8,6 +8,7 @@
  */
 
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -171,7 +172,14 @@ export struct NearbyPage {
           titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
           titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           backgroundVariant: 'transparent'
-        })
+        }) {
+          // trailing: 地图入口（移动/平板补齐地图入口，对齐前端 PageHeader trailing）
+          SurfaceIconButton({
+            icon: AppIcon.MAP,
+            kind: 'neutral',
+            onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
+          })
+        }
 
         // 搜索入口（对齐前端 /nearby 搜索卡片）
         Row({ space: DesignConstants.SPACING.MD2 }) {

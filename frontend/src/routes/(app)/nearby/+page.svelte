@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Search as SearchIcon, Radar } from '@lucide/svelte';
+	import { Search as SearchIcon, Radar, Map } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import MomentRow from '@/components/home/ActivityRow.svelte';
@@ -84,7 +85,10 @@
 	{#snippet header()}
 		<PageHeader title="附近" subtitle="发现周边有趣的人和事" sticky>
 			{#snippet trailing()}
-				<span class="text-text-secondary text-xs">{nearbyUsers.length} 人 · {nearbyGroups.length} 群</span>
+				<div class="flex items-center gap-2">
+					<span class="text-text-secondary text-xs">{nearbyUsers.length} 人 · {nearbyGroups.length} 群</span>
+					<ActionIconButton icon={Map} label="地图" onClick={() => void goto(ROUTES.map)} variant="ghost" size={36} />
+				</div>
 			{/snippet}
 		</PageHeader>
 	{/snippet}

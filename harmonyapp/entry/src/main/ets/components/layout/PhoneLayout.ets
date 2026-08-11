@@ -73,6 +73,8 @@ export struct PhoneLayout {
 
   // 内部状态
   @State showUpgradeBanner: boolean = false;
+  /** 当前按下的底部导航 Tab 索引（-1 表示无），用于按下缩放反馈，对齐前端 hover-btn:active */
+  @State pressedTabIndex: number = -1;
 
   private tabsController: TabsController = new TabsController();
 
@@ -189,9 +191,11 @@ export struct PhoneLayout {
   @Builder TabBarBuilder(index: number) {
     Column() {
       Column() {
+        // Stack 不设固定尺寸 → 跟随图标 Text 尺寸，图标居中撑满；
+        // 未读 badge 由 TopEnd 钉到图标右上角，不再把图标挤偏。
         Stack({ alignContent: Alignment.TopEnd }) {
           Text() {
-              SymbolSpan(TAB_ITEMS[index].symbolId)
+            SymbolSpan(TAB_ITEMS[index].symbolId)
               .fontSize(DesignConstants.FONT.SIZE.XXL)
               .fontColor([
                 this.currentTabIndex === index
@@ -204,9 +208,6 @@ export struct PhoneLayout {
             SystemBadge({ count: this.unreadCount })
           }
         }
-        .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-        .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-        .alignContent(Alignment.TopEnd)
         Text(TAB_ITEMS[index].label)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(
@@ -220,18 +221,30 @@ export struct PhoneLayout {
           .margin({ top: DesignConstants.SPACING.HALF })
       }
       .width(DesignConstants.LAYOUT.LABEL_WIDTH)
-      .padding({ top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
+      .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
       .borderRadius(DesignConstants.RADIUS.LG)
       .backgroundColor(
         this.currentTabIndex === index
           ? this.getPalette().tabBarActiveBackground
           : DesignConstants.COLOR.TRANSPARENT
       )
+      .scale(
+        this.pressedTabIndex === index
+          ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL }
+          : { x: 1, y: 1 }
+      )
       .animation({
         curve: curves.springMotion(
           DesignConstants.INTERACTION.SPRING_RESPONSE_TAB,
           DesignConstants.INTERACTION.SPRING_DAMPING_TAB
         )
+      })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.pressedTabIndex = index;
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.pressedTabIndex = -1;
+        }
       })
     }
     .height(DesignConstants.LAYOUT.MOBILE_BOTTOM_NAV_HEIGHT)
@@ -271,14 +284,20 @@ export struct PhoneLayout {
 
   @Builder FloatingTabItem(index: number) {
     Column() {
-      Text() {
-        SymbolSpan(TAB_ITEMS[index].symbolId)
-          .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
-          .fontColor([
-            this.currentTabIndex === index
-              ? this.getPalette().accentBackground
-              : this.getPalette().tabBarInactive
-          ])
+      Stack({ alignContent: Alignment.TopEnd }) {
+        Text() {
+          SymbolSpan(TAB_ITEMS[index].symbolId)
+            .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
+            .fontColor([
+              this.currentTabIndex === index
+                ? this.getPalette().accentBackground
+                : this.getPalette().tabBarInactive
+            ])
+        }
+        // 消息 tab 未读角标，与手机端 TabBarBuilder 一致
+        if (index === 3 && this.unreadCount > 0) {
+          SystemBadge({ count: this.unreadCount })
+        }
       }
       Text(TAB_ITEMS[index].label)
         .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -287,10 +306,37 @@ export struct PhoneLayout {
             ? this.getPalette().accentBackground
             : this.getPalette().tabBarInactive
         )
+        .fontWeight(
+          this.currentTabIndex === index ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR
+        )
         .margin({ top: DesignConstants.SPACING.HALF })
     }
-    .padding({ top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
-    .justifyContent(FlexAlign.Center)
+    .width(DesignConstants.LAYOUT.LABEL_WIDTH)
+    .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+    .borderRadius(DesignConstants.RADIUS.LG)
+    .backgroundColor(
+      this.currentTabIndex === index
+        ? this.getPalette().tabBarActiveBackground
+        : DesignConstants.COLOR.TRANSPARENT
+    )
+    .scale(
+      this.pressedTabIndex === index
+        ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL }
+        : { x: 1, y: 1 }
+    )
+    .animation({
+      curve: curves.springMotion(
+        DesignConstants.INTERACTION.SPRING_RESPONSE_TAB,
+        DesignConstants.INTERACTION.SPRING_DAMPING_TAB
+      )
+    })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedTabIndex = index;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedTabIndex = -1;
+      }
+    })
     .onClick(() => {
       this.tabsController.changeIndex(index);
       this.currentTabIndex = index;

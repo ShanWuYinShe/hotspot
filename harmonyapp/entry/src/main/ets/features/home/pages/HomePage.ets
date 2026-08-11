@@ -22,6 +22,7 @@ import { MomentFeedCard } from '../../../components/MomentFeedCard';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
+import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -411,24 +412,32 @@ export struct HomePage {
       titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
       titleWeight: DesignConstants.FONT.WEIGHT.REGULAR
     }) {
-      // trailing: 位置 chip
-      Row({ space: DesignConstants.SPACING.XS }) {
-        Text() {
-          SymbolSpan($r(AppIcon.LOCATION))
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor([this.getPalette().accentBackground])
-        }
+      // trailing: 位置 chip + 地图入口（移动/平板补齐地图入口，对齐前端 PageHeader trailing）
+      Row({ space: DesignConstants.SPACING.SM }) {
+        Row({ space: DesignConstants.SPACING.XS }) {
+          Text() {
+            SymbolSpan($r(AppIcon.LOCATION))
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor([this.getPalette().accentBackground])
+          }
 
-        Text(this.browseAnchor?.locationName ?? this.currentLocation?.locationName ?? '定位中...')
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(this.getPalette().textSecondary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(this.browseAnchor?.locationName ?? this.currentLocation?.locationName ?? '定位中...')
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getPalette().textSecondary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+        .backgroundColor(this.getPalette().surfaceBackground)
+
+        SurfaceIconButton({
+          icon: AppIcon.MAP,
+          kind: 'neutral',
+          onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
+        })
       }
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
-      .backgroundColor(this.getPalette().surfaceBackground)
     }
   }
 
