@@ -116,7 +116,13 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
   密码框可用 `SystemInput({ passwordMode: true })`。
 - 已登记例外（可保留手写原生控件）：头像/图形按钮、地图全屏控件、搜索建议行、
   动态卡片内嵌操作、主题色板 swatch、扫描/贴纸等特殊控件。存量页面中的手写
-  Button/TextInput 属遗留债务，改到该文件时优先迁移为原语。
+  Button/TextInput 属遗留债务，改到该文件时优先迁移为原语。当前存量例外清单：
+  - ProfilePage 外部主页/升级/编辑流程按钮（走 `getProfileVisualStyle()` 主题样式对象，
+    已 token 化，不套 SystemButton）；
+  - 创建页「移除」等 48vp 大 chip、群组详情「恢复原头像」ghost 小按钮；
+  - SettingsPage「退出登录」（50vp 透明底定制）、DebugPanel 调试按钮；
+  - ChatPage 隐藏键盘失焦占位 `Button('')`、LocationPicker 搜索栏内置 searchButton；
+  - ProfileEditPage 多行简介输入辅助、ChatPage 输入栏、CreateGroupPage 人数步进输入。
 
 ## UI/UX 设计规范
 
