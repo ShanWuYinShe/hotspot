@@ -193,6 +193,23 @@ export struct ChatPage {
     return `${pad(month)}-${pad(day)} ${pad(hours)}:${pad(minutes)}`;
   }
 
+  private formatMessageTime(iso: string): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+  }
+
+  /** 最后一条自己发送的消息 id（对齐前端 lastSentId 已读勾选） */
+  private getLastSentMessageId(): string {
+    for (let i = this.messages.length - 1; i >= 0; i--) {
+      if (this.messages[i].isSelf) {
+        return this.messages[i].id;
+      }
+    }
+    return '';
+  }
+
   /** 本地日期 key：用于判断两条消息是否跨天（对齐前端 groupMessagesByDay） */
   private getLocalDayKey(iso: string): string {
     const d = new Date(iso);
@@ -1570,6 +1587,23 @@ export struct ChatPage {
             }
           }
           .justifyContent(msg.isSelf ? FlexAlign.End : FlexAlign.Start)
+
+          Row({ space: DesignConstants.SPACING.XS }) {
+            Text(this.formatMessageTime(msg.sentAt))
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(msg.isSelf ? this.getChatTheme().sendButtonActiveText : this.getCurrentThemePalette().textSecondary)
+              .opacity(DesignConstants.OPACITY.SUBTLE)
+            if (msg.isSelf && msg.id === this.getLastSentMessageId()) {
+              Text() {
+                SymbolSpan($r(AppIcon.CHECK_ALL))
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .fontColor([this.getChatTheme().sendButtonActiveText])
+              }
+            }
+          }
+          .width('100%')
+          .justifyContent(msg.isSelf ? FlexAlign.End : FlexAlign.Start)
+          .margin({ top: DesignConstants.SPACING.XS })
         }
         .alignItems(msg.isSelf ? HorizontalAlign.End : HorizontalAlign.Start)
         .layoutWeight(1)
