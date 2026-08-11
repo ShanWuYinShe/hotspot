@@ -28,6 +28,7 @@ import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { formatCount } from '../../../core/utils/FormatUtil';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
@@ -66,6 +67,12 @@ export struct SearchPage {
   private momentResultsDataSource: BasicDataSource<MomentItem> = new BasicDataSource<MomentItem>([]);
   /** 话题（从动态标签聚合，对齐前端搜索「话题」Tab） */
   @State topicResults: string[] = [];
+  /** 无查询发现态（对齐前端 SearchDiscovery）：最近搜索 / 热门搜索 / 推荐话题 */
+  @State recentSearches: string[] = [];
+  @State discoveryHot: string[] = [];
+  @State discoveryTopics: string[] = [];
+
+  private readonly RECENT_SEARCHES_KEY: string = 'search_recent';
   @State hasSearched: boolean = false;
   @State suggestItems: SearchSuggestItem[] = [];
   private suggestTimerId: number = 0;
@@ -78,6 +85,8 @@ export struct SearchPage {
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
+    this.loadRecentSearches();
+    this.loadDiscovery();
   }
 
   aboutToDisappear(): void {
@@ -179,6 +188,59 @@ export struct SearchPage {
     }
   }
 
+  private async loadRecentSearches(): Promise<void> {
+    try {
+      const stored = await PreferencesUtil.getObject<string[]>(this.RECENT_SEARCHES_KEY);
+      if (!this.isDestroyed && Array.isArray(stored)) {
+        this.recentSearches = stored.filter((item: string) => item.trim().length > 0).slice(0, 5);
+      }
+    } catch (_) {
+      // 读取失败保持空记录
+    }
+  }
+
+  private async persistRecentSearches(): Promise<void> {
+    try {
+      await PreferencesUtil.setObject(this.RECENT_SEARCHES_KEY, this.recentSearches.slice(0, 5));
+    } catch (_) {
+      // 持久化失败静默
+    }
+  }
+
+  private rememberSearch(keyword: string): void {
+    const trimmed = keyword.trim();
+    if (!trimmed) return;
+    this.recentSearches = [trimmed, ...this.recentSearches.filter((item: string) => item !== trimmed)].slice(0, 5);
+    this.persistRecentSearches();
+  }
+
+  private clearRecentSearches(): void {
+    this.recentSearches = [];
+    this.persistRecentSearches();
+  }
+
+  /** 空查询发现态：热门搜索/推荐话题来自 search/suggest（对齐前端 SearchDiscovery） */
+  private async loadDiscovery(): Promise<void> {
+    try {
+      const request: SearchSuggestRequest = { prefix: '' };
+      const response = await ApiClient.searchSuggest(request);
+      if (this.isDestroyed) return;
+      if (response.code === 0 && response.data) {
+        const names: string[] = [];
+        (response.data.items ?? []).forEach((item: SearchSuggestItem) => {
+          const name = this.getSuggestTitle(item);
+          if (name.trim().length > 0) {
+            names.push(name.trim());
+          }
+        });
+        this.discoveryHot = names;
+        this.discoveryTopics = names;
+      }
+    } catch (_) {
+      // 发现态失败静默，保留空面板
+    }
+  }
+
   private async doSearch(): Promise<void> {
     if (this.suggestTimerId) {
       TimerManager.clearTimeout(this.suggestTimerId);
@@ -193,6 +255,7 @@ export struct SearchPage {
     this.hasSearched = true;
     this.keyword = trimmedKeyword;
     this.suggestItems = [];
+    this.rememberSearch(trimmedKeyword);
     this.userResults = [];
     this.userResultsDataSource.clear();
     this.groupResults = [];
@@ -366,6 +429,8 @@ export struct SearchPage {
         if (this.isLoading) {
           SystemLoadingView({ message: '搜索中...' })
             .layoutWeight(1)
+        } else if (this.keyword.trim().length === 0 && !this.hasSearched) {
+          this.DiscoveryView()
         } else if (this.keyword.trim().length > 0 && this.suggestItems.length > 0 && !this.hasSearched) {
           List({ space: DesignConstants.SPACING.SM }) {
             ForEach(this.suggestItems, (item: SearchSuggestItem) => {
@@ -673,6 +738,162 @@ export struct SearchPage {
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
       .scrollBar(BarState.Auto)
     }
+  }
+
+  @Builder
+  private buildDiscoveryCard(title: string, trailing?: () => void) {
+    Row() {
+      Text(title)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+        .layoutWeight(1)
+      if (trailing) {
+        Text('清除')
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().accentBackground)
+          .onClick(trailing)
+      }
+    }
+    .width('100%')
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.MD
+    })
+    .border({ width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
+  }
+
+  @Builder
+  DiscoveryView() {
+    Scroll() {
+      Column({ space: DesignConstants.SPACING.LG }) {
+        // 最近搜索
+        Column() {
+          this.buildDiscoveryCard('最近搜索', () => this.clearRecentSearches())
+          if (this.recentSearches.length === 0) {
+            Text('还没有搜索记录。')
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+              .width('100%')
+              .padding(DesignConstants.SPACING.LG)
+          } else {
+            ForEach(this.recentSearches, (item: string) => {
+              Row({ space: DesignConstants.SPACING.MD }) {
+                Text() {
+                  SymbolSpan($r(AppIcon.TIME))
+                    .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .fontColor([this.getCurrentThemePalette().textSecondary])
+                }
+                Text(item)
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .fontColor(this.getCurrentThemePalette().textPrimary)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .layoutWeight(1)
+                Text() {
+                  SymbolSpan($r(AppIcon.ARROW_RIGHT))
+                    .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .fontColor([this.getCurrentThemePalette().textSecondary])
+                }
+              }
+              .width('100%')
+              .padding({
+                left: DesignConstants.SPACING.LG,
+                right: DesignConstants.SPACING.LG,
+                top: DesignConstants.SPACING.MD,
+                bottom: DesignConstants.SPACING.MD
+              })
+              .onClick(() => this.applyKeywordAndSearch(item))
+            }, (item: string) => `recent-${item}`)
+          }
+        }
+        .width('100%')
+        .backgroundColor(this.getSurfaceBackground())
+        .borderRadius(DesignConstants.SHAPE.CARD)
+        .shadow(this.getCurrentThemePalette().surfaceShadow)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+
+        // 正在关注（热门搜索）
+        Column() {
+          this.buildDiscoveryCard('正在关注')
+          ForEach(this.discoveryHot.slice(0, 5), (item: string, index: number) => {
+            Row({ space: DesignConstants.SPACING.MD }) {
+              Text(String(index + 1))
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontColor(this.getCurrentThemePalette().accentBackground)
+                .width(DesignConstants.SPACING.LG)
+              Text(item)
+                .fontSize(DesignConstants.FONT.SIZE.MD)
+                .fontColor(this.getCurrentThemePalette().textPrimary)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .layoutWeight(1)
+            }
+            .width('100%')
+            .padding({
+              left: DesignConstants.SPACING.LG,
+              right: DesignConstants.SPACING.LG,
+              top: DesignConstants.SPACING.MD,
+              bottom: DesignConstants.SPACING.MD
+            })
+            .onClick(() => this.applyKeywordAndSearch(item))
+          }, (item: string) => `hot-${item}`)
+        }
+        .width('100%')
+        .backgroundColor(this.getSurfaceBackground())
+        .borderRadius(DesignConstants.SHAPE.CARD)
+        .shadow(this.getCurrentThemePalette().surfaceShadow)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+
+        // 推荐话题
+        Column() {
+          this.buildDiscoveryCard('推荐话题')
+          Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
+            ForEach(this.discoveryTopics, (topic: string) => {
+              Text(`#${topic}`)
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .fontColor(this.getCurrentThemePalette().textPrimary)
+                .backgroundColor(this.getSurfaceSubtle())
+                .padding({
+                  left: DesignConstants.SPACING.MD,
+                  right: DesignConstants.SPACING.MD,
+                  top: DesignConstants.SPACING.SM,
+                  bottom: DesignConstants.SPACING.SM
+                })
+                .borderRadius(DesignConstants.RADIUS.FULL)
+                .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+                .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+                .onClick(() => this.applyKeywordAndSearch(topic))
+            }, (topic: string) => `topic-chip-${topic}`)
+          }
+          .width('100%')
+          .padding({
+            left: DesignConstants.SPACING.LG,
+            right: DesignConstants.SPACING.LG,
+            top: DesignConstants.SPACING.MD,
+            bottom: DesignConstants.SPACING.LG
+          })
+        }
+        .width('100%')
+        .backgroundColor(this.getSurfaceBackground())
+        .borderRadius(DesignConstants.SHAPE.CARD)
+        .shadow(this.getCurrentThemePalette().surfaceShadow)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+      }
+      .width('100%')
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: DesignConstants.SPACING.LG,
+        bottom: DesignConstants.SPACING.LG
+      })
+    }
+    .width('100%')
+    .layoutWeight(1)
+    .scrollBar(BarState.Auto)
+    .edgeEffect(EdgeEffect.Spring)
   }
 
   @Builder
