@@ -178,6 +178,7 @@ struct Index {
         'GroupInviteRevoked', 'GroupInviteExpired',
         'GroupApplicationReceived', 'GroupApplicationResponse',
         'GroupApplicationCancelled', 'GroupApplicationRejected',
+        'GroupMessageReadCountUpdated', 'GroupMemberRoleChanged',
         'ReportResolved', 'ReportDismissed', 'NearbyNewMoment', 'SystemAnnouncement',
         'SessionRevoked',
       ];
@@ -805,6 +806,12 @@ struct Index {
             await this.notificationSyncService.syncUnreadCount();
             break;
           }
+          // 契约事件登记：群消息已读数/成员角色变更由群详情/聊天页按需刷新，
+          // 本端暂无精确展示，仅在类型层对齐 spec（见 WebSocketTypes.ets）。
+          case 'GroupMessageReadCountUpdated':
+          case 'GroupMemberRoleChanged': {
+            break;
+          }
           case 'SessionRevoked': {
             // 已由 WebSocketService.handleServerEvent 处理（清本地态 + 断开 + 提示），此处无需额外动作
             break;
@@ -833,6 +840,8 @@ struct Index {
       'GroupApplicationResponse',
       'GroupApplicationCancelled',
       'GroupApplicationRejected',
+      'GroupMessageReadCountUpdated',
+      'GroupMemberRoleChanged',
       'ReportResolved',
       'ReportDismissed',
       'NearbyNewMoment',

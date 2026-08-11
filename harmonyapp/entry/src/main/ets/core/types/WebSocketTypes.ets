@@ -78,6 +78,8 @@ export enum ServerEventType {
   GROUP_MESSAGE_NEW = 'GroupMessageNew',
   GROUP_MESSAGE_EDITED = 'GroupMessageEdited',
   GROUP_MESSAGE_RECALLED = 'GroupMessageRecalled',
+  GROUP_MESSAGE_READ_COUNT_UPDATED = 'GroupMessageReadCountUpdated',
+  GROUP_MEMBER_ROLE_CHANGED = 'GroupMemberRoleChanged',
   GROUP_TYPING = 'GroupTyping',
 
   // 群组
@@ -518,6 +520,19 @@ export interface GroupMessageRecalledEvent {
   payload: GroupMessageRecalledPayload
 }
 
+// 群消息已读数变更（服务端节流聚合推送，仅用于 UI「已有 N 人已读」刷新）
+export interface GroupMessageReadCountUpdatedPayload {
+  group_id: string
+  message_id: string
+  read_count: number
+  updated_at: string
+}
+
+export interface GroupMessageReadCountUpdatedEvent {
+  type: 'GroupMessageReadCountUpdated'
+  payload: GroupMessageReadCountUpdatedPayload
+}
+
 // 服务端推送版 payload（与客户端发送版 GroupTypingSendPayload 结构不同）
 export interface GroupTypingPayload {
   group_id: string
@@ -543,6 +558,21 @@ export interface GroupMemberJoinedPayload {
 export interface GroupMemberJoinedEvent {
   type: 'GroupMemberJoined'
   payload: GroupMemberJoinedPayload
+}
+
+// 成员角色变更（升/降级 admin）
+export interface GroupMemberRoleChangedPayload {
+  group_id: string
+  user: UserInfo
+  old_role: 'owner' | 'admin' | 'member'
+  new_role: 'owner' | 'admin' | 'member'
+  changed_by: UserInfo
+  changed_at: string
+}
+
+export interface GroupMemberRoleChangedEvent {
+  type: 'GroupMemberRoleChanged'
+  payload: GroupMemberRoleChangedPayload
 }
 
 export interface GroupMemberLeftPayload {
@@ -912,8 +942,10 @@ export type ServerEvent =
   | GroupMessageNewEvent
   | GroupMessageEditedEvent
   | GroupMessageRecalledEvent
+  | GroupMessageReadCountUpdatedEvent
   | GroupTypingEvent
   | GroupMemberJoinedEvent
+  | GroupMemberRoleChangedEvent
   | GroupMemberLeftEvent
   | GroupMemberRemovedEvent
   | GroupMemberMutedEvent

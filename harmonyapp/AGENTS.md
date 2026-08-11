@@ -212,6 +212,8 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
   全部/用户/动态/话题）；群组 Tab 为鸿蒙端扩展（前端搜索无群组 Tab）。
   空查询显示发现态（最近搜索 / 正在关注 / 推荐话题，对齐前端 SearchDiscovery）；
   最近搜索持久化在 PreferencesUtil（键 `search_recent`，最多 5 条）。
+- WS 事件类型与 spec/前端对齐：含 `GroupMessageReadCountUpdated` /
+  `GroupMemberRoleChanged`（已登记类型与订阅，展示由群详情/聊天页按需刷新）。
 
 透明度（OPACITY）：`DISABLED 0.38` / `PRESSED 0.72` / `LOADING 0.58` / `SUBTLE 0.85` / `FADED 0.4` / `MUTED 0.5` / `EMPHASIZED 0.8`（对齐前端 opacity-40/50/80 标准档）。
 
