@@ -21,7 +21,7 @@ import { curves } from '@kit.ArkUI';
  *
  * 交互：press 缩放 0.95（对齐前端 active:scale-[0.95]），springMotion 回弹
  */
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'surface' | 'surface-danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'surface' | 'surface-accent' | 'surface-danger';
 export type ButtonSize = 'compact' | 'small' | 'default' | 'large' | 'sheet';
 
 @Reusable
@@ -91,6 +91,7 @@ export struct SystemButton {
       case 'danger':
         return p.error;
       case 'surface':
+      case 'surface-accent':
       case 'surface-danger':
         return p.surfaceSubtle;
       default:
@@ -113,6 +114,8 @@ export struct SystemButton {
         return p.textPrimary;
       case 'surface':
         return p.textPrimary;
+      case 'surface-accent':
+        return p.accentBackground;
       case 'surface-danger':
         return p.error;
       default:
@@ -121,7 +124,7 @@ export struct SystemButton {
   }
 
   private getBorderWidth(): number {
-    if (this.variant === 'surface' || this.variant === 'surface-danger') {
+    if (this.variant === 'surface' || this.variant === 'surface-accent' || this.variant === 'surface-danger') {
       return DesignConstants.BORDER_WIDTH.HAIRLINE;
     }
     return this.variant === 'outline' ? 1.5 : 0;
@@ -132,7 +135,13 @@ export struct SystemButton {
     if (this.variant === 'outline') {
       return p.accentBackground;
     }
-    if (this.variant === 'surface' || this.variant === 'surface-danger') {
+    if (this.variant === 'surface') {
+      return p.borderColor;
+    }
+    if (this.variant === 'surface-accent') {
+      return p.floatingBorderColor;
+    }
+    if (this.variant === 'surface-danger') {
       return p.borderColor;
     }
     return DesignConstants.COLOR.TRANSPARENT;
@@ -140,7 +149,7 @@ export struct SystemButton {
 
   private getRadius(): number {
     if (this.pill || this.buttonSize === 'compact' || this.buttonSize === 'sheet' ||
-      this.variant === 'surface' || this.variant === 'surface-danger') {
+      this.variant === 'surface' || this.variant === 'surface-accent' || this.variant === 'surface-danger') {
       return DesignConstants.RADIUS.FULL;
     }
     return DesignConstants.SHAPE.BUTTON;

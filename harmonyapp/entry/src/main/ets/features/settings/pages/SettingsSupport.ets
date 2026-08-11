@@ -16,6 +16,7 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
+import { SystemButton } from '../../../components/SystemButton';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { AppRouter, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
@@ -348,14 +349,12 @@ export struct AnnouncementSummaryCard {
         .alignItems(HorizontalAlign.Start)
 
         if (this.items.length > 0 && this.showOpenAll) {
-          Button('全部查看')
-            .type(ButtonType.Normal)
-            .backgroundColor(this.getPalette().surfaceSubtle)
-            .fontColor(this.getPalette().accentBackground)
-            .borderRadius(DesignConstants.RADIUS.XL)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
-            .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
-            .onClick(this.openAll)
+          SystemButton({
+            label: '全部查看',
+            variant: 'surface-accent',
+            buttonSize: 'large',
+            onPress: () => { this.openAll(); }
+          })
         }
       }
       .width('100%')
@@ -516,14 +515,12 @@ export struct SessionListSection {
         .alignItems(HorizontalAlign.Start)
 
         if (this.sessions.length > 1) {
-          Button('全部下线')
-            .type(ButtonType.Normal)
-            .backgroundColor(this.getPalette().surfaceSubtle)
-            .fontColor(this.getPalette().accentBackground)
-            .borderRadius(DesignConstants.RADIUS.XL)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
-            .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
-            .onClick(this.revokeAll)
+          SystemButton({
+            label: '全部下线',
+            variant: 'surface-accent',
+            buttonSize: 'large',
+            onPress: () => { this.revokeAll(); }
+          })
         }
       }
       .width('100%')
@@ -552,14 +549,12 @@ export struct SessionListSection {
             .alignItems(HorizontalAlign.Start)
 
             if (!item.is_current) {
-              Button('撤销')
-                .type(ButtonType.Normal)
-                .backgroundColor(this.getPalette().surfaceSubtle)
-                .fontColor(this.getPalette().accentBackground)
-                .borderRadius(DesignConstants.RADIUS.XL)
-                .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
-                .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
-                .onClick(() => this.revokeOne(item))
+              SystemButton({
+                label: '撤销',
+                variant: 'surface-accent',
+                buttonSize: 'large',
+                onPress: () => { this.revokeOne(item); }
+              })
             } else {
               Text('当前')
                 .fontSize(DesignConstants.FONT.SIZE.XS)
