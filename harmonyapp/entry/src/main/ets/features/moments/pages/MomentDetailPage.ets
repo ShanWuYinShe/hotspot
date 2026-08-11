@@ -24,6 +24,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { SystemInput } from '../../../components/SystemInput';
 import { EmptyState } from '../../../components/EmptyState';
 import { AppIcon, IconButton, IconSize } from '../../../components/SystemIcon';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -560,35 +561,31 @@ export struct MomentDetailPage {
   @Builder
   private buildCommentInput() {
     Row({ space: DesignConstants.SPACING.SM }) {
-      TextInput({ placeholder: '写下你的评论…', text: $$this.commentText })
-        .layoutWeight(1)
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontColor(this.getCurrentThemePalette().textPrimary)
-        .placeholderColor(this.getCurrentThemePalette().textSecondary)
-        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-        .caretColor(this.getCurrentThemePalette().accentBackground)
-
-      Button() {
-        Text() {
-          SymbolSpan($r(AppIcon.SEND))
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([this.commentText.trim().length > 0 ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().textSecondary])
+      SystemInput({
+        value: this.commentText,
+        placeholder: '写下你的评论…',
+        showPrefixIcon: false,
+        inputHeight: DesignConstants.COMPONENT.INPUT_HEIGHT,
+        onChange: (value: string) => {
+          this.commentText = value;
         }
-      }
-      .type(ButtonType.Circle)
-      .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-      .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-      .backgroundColor(this.commentText.trim().length > 0 ? this.getCurrentThemePalette().accentBackground : this.getSurfaceSubtle())
-      .opacity(this.commentSending ? DesignConstants.OPACITY.LOADING : 1)
-      .onClick(() => { this.sendComment(); })
+      })
+        .layoutWeight(1)
+
+      IconButton({
+        icon: AppIcon.SEND,
+        iconSize: IconSize.SMALL,
+        bgColor: this.commentText.trim().length > 0 ? this.getCurrentThemePalette().accentBackground : this.getSurfaceSubtle(),
+        iconColor: this.commentText.trim().length > 0 ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().textSecondary,
+        radius: DesignConstants.RADIUS.FULL,
+        minButtonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
+        paddingSize: 6,
+        onButtonClick: () => { this.sendComment(); }
+      })
+        .opacity(this.commentSending ? DesignConstants.OPACITY.LOADING : 1)
     }
     .width('100%')
-    .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.MD })
-    .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
-    .borderRadius(DesignConstants.SHAPE.INPUT)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
   }
 
   @Builder

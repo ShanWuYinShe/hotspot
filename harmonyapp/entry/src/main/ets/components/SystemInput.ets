@@ -16,7 +16,8 @@ export struct SystemInput {
   @Prop prefixIcon: AppIcon = AppIcon.SEARCH;
   @Prop showPrefixIcon: boolean = false;
   @Prop passwordMode: boolean = false;
-  @Prop height: number = DesignConstants.COMPONENT.INPUT_HEIGHT; // 42
+  /** 输入框高度（不可命名为 height——与 CustomComponent 基类方法冲突，同 SystemButton.buttonSize） */
+  @Prop inputHeight: number = DesignConstants.COMPONENT.INPUT_HEIGHT; // 42
   @Prop fontSize: number = DesignConstants.FONT.SIZE.SM_PLUS; // 13
   /** 错误态：边框变 error 色 */
   @Prop hasError: boolean = false;
@@ -57,8 +58,8 @@ export struct SystemInput {
         .onChange((v: string) => {
           this.onChange?.(v);
         })
-        .onSubmit((v: string) => {
-          this.onSubmit?.(v);
+        .onSubmit(() => {
+          this.onSubmit?.(this.value);
         })
 
       if (this.showClearButton && this.value.length > 0) {
@@ -73,7 +74,7 @@ export struct SystemInput {
         })
       }
     }
-    .height(this.height)
+    .height(this.inputHeight)
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
     .backgroundColor(this.getPalette().inputBackgroundColor)
     .borderRadius(DesignConstants.SHAPE.INPUT) // 18

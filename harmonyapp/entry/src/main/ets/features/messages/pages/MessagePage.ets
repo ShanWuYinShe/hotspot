@@ -24,6 +24,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
+import { SystemInput } from '../../../components/SystemInput';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { useMasterDetail } from '../../../core/responsive/Breakpoint';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
@@ -703,31 +704,19 @@ export struct MessagePage {
         }
       }
 
-      // 搜索栏
-      Row({ space: DesignConstants.SPACING.MD2 }) {
-        Text() {
-          SymbolSpan($r(AppIcon.SEARCH))
-            .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
-            .fontColor([this.getCurrentThemePalette().textSecondary])
+      // 搜索栏（对齐前端 SearchInput：前缀图标 + 实时过滤）
+      SystemInput({
+        value: this.searchKeyword,
+        placeholder: '搜索会话…',
+        prefixIcon: AppIcon.SEARCH,
+        showPrefixIcon: true,
+        inputHeight: DesignConstants.COMPONENT.INPUT_HEIGHT,
+        onChange: (value: string) => {
+          this.searchKeyword = value;
+          this.applyFilter();
         }
-        TextInput({ placeholder: '搜索会话…', text: this.searchKeyword })
-          .layoutWeight(1)
-          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .placeholderColor(this.getCurrentThemePalette().textSecondary)
-          .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-          .caretColor(this.getCurrentThemePalette().accentBackground)
-          .onChange((value: string) => {
-            this.searchKeyword = value;
-            this.applyFilter();
-          })
-      }
-      .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+      })
       .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
-      .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
-      .borderRadius(DesignConstants.SHAPE.INPUT)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
       // 已读/未读过滤（对齐前端 messages 页 TabBar：全部 / 未读 / 已读）
       TabsPillGroup({
