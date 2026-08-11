@@ -194,7 +194,7 @@ export struct MomentPage {
     Column() {
       // 标题栏 —— 统一走 SystemPageHeader（透明背景 + 发布 action）
       SystemPageHeader({
-        title: '附近瞬间',
+        title: '我的瞬间',
         backgroundVariant: 'transparent',
         action: {
           label: '发布',

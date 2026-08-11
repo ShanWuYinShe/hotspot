@@ -574,7 +574,7 @@ export struct MessagePage {
       // 粘性头部 —— 统一走 SystemPageHeader（标题 + 未读副标题 + ADD/SEARCH trailing）
       SystemPageHeader({
         title: '消息',
-        subtitle: this.getTotalUnread() > 0 ? `${this.getTotalUnread()} 条未读` : '',
+        subtitle: this.getTotalUnread() > 0 ? `${this.getTotalUnread()} 条未读` : '全部已读',
         titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
         titleWeight: DesignConstants.FONT.WEIGHT.REGULAR,
         backgroundVariant: 'transparent'

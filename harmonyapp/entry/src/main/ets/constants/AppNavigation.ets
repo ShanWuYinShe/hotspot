@@ -29,7 +29,7 @@ export interface AppNavItem {
   openNotificationCenter: boolean;
 }
 
-/** 桌面侧边栏主导航组（首页/附近动态/附近的人/附近的群组） */
+/** 桌面侧边栏主导航组（首页/附近瞬间/附近的人/附近群组） */
 export const DESKTOP_PRIMARY_NAV: AppNavItem[] = [
   {
     label: '首页', icon: AppIcon.HOME, tabRoute: 'home', pageName: '',

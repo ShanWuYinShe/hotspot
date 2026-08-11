@@ -8,7 +8,7 @@
  * - 侧边栏（192vp）：发现组 + 个人中心组 + 底部 AnchorEntry（浏览锚点卡片）
  * - main card：内容区（页面自带 header，本布局不再叠加顶部应用栏）
  *
- * 导航：核心 tab（首页 / 发现 / 消息）切换 currentRoute；其余项 push 或打开通知中心 overlay。
+ * 导航：核心 tab（首页 / 附近瞬间 / 消息）切换 currentRoute；其余项 push 或打开通知中心 overlay。
  * sub-page（设置 / 通知 / 我的瞬间 / 我的群组 / 关系 等）push 全屏、自带返回。
  */
 

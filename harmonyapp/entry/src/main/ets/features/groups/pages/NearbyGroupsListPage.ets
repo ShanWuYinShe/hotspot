@@ -216,7 +216,7 @@ export struct NearbyGroupsListPage {
       Column() {
         // 头部 —— 统一走 SystemPageHeader（返回 + 标题）
         SystemPageHeader({
-          title: '附近的群组',
+        title: '附近群组',
           showBackButton: true,
           onBack: () => { AppRouter.pop(); },
           titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
