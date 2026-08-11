@@ -4,6 +4,7 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { SystemButton } from '../../../components/SystemButton';
 import { SystemToast } from '../../../components/SystemToast';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { ChangePasswordRequest, SessionItem } from '../../../core/types/api';
@@ -137,15 +138,14 @@ export struct SafetySettingsPage {
                     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
                     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
                     .onChange((value: string) => { this.newPassword = value; })
-                  Button('更新密码')
-                    .width('100%')
-                    .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
-                    .type(ButtonType.Normal)
-                    .backgroundColor(this.getPalette().accentBackground)
-                    .fontColor(this.getPalette().accentText)
-                    .borderRadius(DesignConstants.RADIUS.FULL)
-                    .shadow(this.getPalette().accentShadow)
-                    .onClick(() => this.changePassword())
+                  SystemButton({
+                    label: '更新密码',
+                    variant: 'primary',
+                    buttonSize: 'large',
+                    pill: true,
+                    fullWidth: true,
+                    onPress: () => { this.changePassword(); }
+                  })
                 }
                 .width('100%')
                 .padding(DesignConstants.SPACING.LG)

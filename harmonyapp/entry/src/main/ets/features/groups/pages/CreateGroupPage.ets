@@ -12,6 +12,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { SystemButton } from '../../../components/SystemButton';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SoftDivider } from '../../../components/SoftDivider';
@@ -703,19 +704,15 @@ export struct CreateGroupPage {
             .margin({ bottom: DesignConstants.SPACING.MD3 })
 
             // 提交按钮
-            Button('立即创建')
-              .type(ButtonType.Capsule)
-              .backgroundColor(this.getCurrentThemePalette().accentBackground)
-              .fontColor(this.getCurrentThemePalette().accentText)
-              .shadow(this.getCurrentThemePalette().controlShadow)
-              .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-              .width('100%')
-              .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
-              .fontSize(DesignConstants.FONT.SIZE.LG)
-              .enabled(!this.isCreating)
-              .opacity(this.isCreating ? DesignConstants.OPACITY.LOADING : 1)
-              .animation({ duration: DesignConstants.ANIMATION.DURATION_SHORT, curve: DesignConstants.ANIMATION.CURVE_EASE_IN_OUT })
-              .onClick(() => this.createGroup())
+            SystemButton({
+              label: '立即创建',
+              variant: 'primary',
+              buttonSize: 'large',
+              pill: true,
+              fullWidth: true,
+              disabled: this.isCreating,
+              onPress: () => { this.createGroup(); }
+            })
               .margin({ top: DesignConstants.SPACING.SM })
           }
           .padding({
