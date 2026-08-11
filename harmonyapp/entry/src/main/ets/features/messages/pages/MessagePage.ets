@@ -568,6 +568,49 @@ export struct MessagePage {
     return items;
   }
 
+  private withPinned(chat: ChatItem, pinned: boolean): ChatItem {
+    return {
+      id: chat.id,
+      type: chat.type,
+      name: chat.name,
+      avatarUrl: chat.avatarUrl,
+      lastMessage: chat.lastMessage,
+      lastTime: chat.lastTime,
+      lastTimestamp: chat.lastTimestamp,
+      isPinned: pinned,
+      unreadCount: chat.unreadCount,
+      data: chat.data
+    };
+  }
+
+  /** 置顶/取消置顶：乐观更新并重排，失败回滚（对齐前端 togglePin） */
+  private async togglePin(item: ChatItem): Promise<void> {
+    const next = !item.isPinned;
+    const apply = (pinned: boolean): void => {
+      this.chatItems = this.chatItems.map((chat: ChatItem) =>
+        chat.id === item.id && chat.type === item.type ? this.withPinned(chat, pinned) : chat
+      );
+      const merged = this.mergeAndSortChats([], this.chatItems);
+      this.chatItems = merged;
+      this.chatListDataSource.setData(merged);
+      this.applyFilter();
+    };
+
+    apply(next);
+    try {
+      if (item.type === 'private') {
+        const targetUserId = (item.data as PrivateChatItem).other_user?.user_id ?? item.id;
+        await ApiClient.updatePrivateChatSettings({ target_user_id: targetUserId, is_pinned: next });
+      } else {
+        await ApiClient.updateGroupMySettings({ group_id: item.id, is_pinned: next });
+      }
+      this.updateCache(this.chatItems);
+    } catch {
+      apply(!next);
+      SystemToast.showError('操作失败', this.getUIContext());
+    }
+  }
+
   build() {
   ResponsiveContainer() {
     Column() {
@@ -969,6 +1012,10 @@ export struct MessagePage {
       this.enterChat(item);
     })
     .bindMenu([
+      {
+        value: item.isPinned ? '取消置顶' : '置顶',
+        action: () => { this.togglePin(item); }
+      },
       {
         value: '删除',
         action: () => { this.deleteChat(item); }
