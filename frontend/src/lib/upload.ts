@@ -2,7 +2,7 @@
 // 三步：presign_upload 申请预签名 → PUT 直传对象存储 → complete_upload 换业务 file_id。
 // 上传成功后返回 file_id，由业务 API（update_account / groups/create 等）消费。
 
-import { presignUpload, completeUpload } from '@/api';
+import { presignUpload, completeUpload, batchPresignUpload, batchCompleteUpload } from '@/api';
 import type { MediaCategory } from '@/api/types';
 
 export async function uploadMediaFile(file: File, category: MediaCategory): Promise<string> {
@@ -31,4 +31,39 @@ export async function uploadMediaFile(file: File, category: MediaCategory): Prom
 		throw new Error(complete.message ?? '上传确认失败');
 	}
 	return complete.data.file_id;
+}
+
+/**
+ * 批量上传（瞬间多图等场景）。流程：batch_presign → 并发 PUT 直传 → batch_complete。
+ * spec 保证 uploads 与请求 files 一一对应、顺序一致，返回 file_id[] 与入参 files 顺序一致。
+ */
+export async function uploadMediaFiles(files: File[], category: MediaCategory): Promise<string[]> {
+	if (files.length === 0) return [];
+	const presign = await batchPresignUpload({
+		files: files.map((f) => ({
+			file_name: f.name,
+			file_size: f.size,
+			mime_type: f.type || 'application/octet-stream',
+			category
+		}))
+	});
+	if (presign.code !== 0 || !presign.data) {
+		throw new Error(presign.message ?? '批量上传申请失败');
+	}
+
+	const uploads = presign.data.uploads;
+	// 并发 PUT 直传（uploads[i] 对应 files[i]，spec 保证顺序一致）
+	await Promise.all(
+		uploads.map((u, i) =>
+			fetch(u.upload_url, { method: 'PUT', headers: u.headers, body: files[i] }).then((res) => {
+				if (!res.ok) throw new Error(`第 ${i + 1} 张图片上传失败`);
+			})
+		)
+	);
+
+	const complete = await batchCompleteUpload({ upload_ids: uploads.map((u) => u.upload_id) });
+	if (complete.code !== 0 || !complete.data) {
+		throw new Error(complete.message ?? '批量上传确认失败');
+	}
+	return complete.data.uploads.map((u) => u.file_id);
 }

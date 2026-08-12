@@ -244,6 +244,52 @@ export const handlers = [
   // set 需要登录。返回 spec ReactionItem。
   http.post(`${API}/reactions/set`, () => requireMockAuth() ?? json(apiOk(null))),
 
+  // ── Media（spec: api_spec_media.md）──────────────
+  // presign/complete/batch_* 需登录。PUT 直传到 mock CDN 由末尾 http.put 拦截返回 200。
+  http.post(`${API}/media/presign_upload`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { file_name?: string };
+    const uploadId = `up-${Date.now()}`;
+    return requireMockAuth() ?? json(apiOk({
+      upload_id: uploadId,
+      upload_url: `https://mock-cdn.local/upload/${uploadId}`,
+      headers: { 'Content-Type': 'application/octet-stream' },
+      expires_at: new Date(Date.now() + 600000).toISOString(),
+    }));
+  }),
+  http.post(`${API}/media/complete_upload`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { upload_id?: string };
+    return requireMockAuth() ?? json(apiOk({
+      file_id: `fid-${body?.upload_id ?? Date.now()}`,
+      file_size: 1024,
+      mime_type: 'image/jpeg',
+    }));
+  }),
+  http.post(`${API}/media/batch_presign_upload`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { files?: { file_name?: string }[] };
+    const files = body?.files ?? [];
+    const ts = Date.now();
+    return requireMockAuth() ?? json(apiOk({
+      uploads: files.map((f, i) => {
+        const uploadId = `up-${ts}-${i}`;
+        return {
+          upload_id: uploadId,
+          upload_url: `https://mock-cdn.local/upload/${uploadId}`,
+          headers: { 'Content-Type': 'application/octet-stream' },
+          expires_at: new Date(Date.now() + 600000).toISOString(),
+        };
+      }),
+    }));
+  }),
+  http.post(`${API}/media/batch_complete_upload`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { upload_ids?: string[] };
+    const ids = body?.upload_ids ?? [];
+    return requireMockAuth() ?? json(apiOk({
+      uploads: ids.map((id) => ({ file_id: `fid-${id}`, file_size: 1024, mime_type: 'image/jpeg' })),
+    }));
+  }),
+  // 对象存储 PUT 直传拦截（mock CDN），让发图/头像上传在 mock 环境完整跑通
+  http.put('https://mock-cdn.local/upload/*', () => new HttpResponse(null, { status: 200 })),
+
   // ── Groups ─────────────────────────────────────
   // open_the_door/members/announcements 是 auth-optional；list_my 需要登录。
   // open_the_door 按 group_id 路由（缺失/未知 id 回退第一条）。

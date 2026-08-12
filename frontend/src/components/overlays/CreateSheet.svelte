@@ -1,12 +1,14 @@
 <script lang="ts">
-	import { Hash, ImagePlus, Lock, MapPin, Smile, Users, X } from '@lucide/svelte';
+	import { Hash, Lock, MapPin, Smile, Users, X } from '@lucide/svelte';
 	import type { Component } from 'svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
+	import ImagePicker from '@/components/forms/ImagePicker.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { createMoment } from '@/api';
+	import { uploadMediaFiles } from '@/lib/upload';
 
 	// 三端共用的发布器（手机 Sheet / 平板 Sheet / 桌面对话框）。
 	// 对齐 Figma Make：header 提供「创建群组」surface 切换。
@@ -27,7 +29,7 @@
 
 	let text = $state('');
 	let selectedMoods = $state<Set<string>>(new Set());
-	let hasImage = $state(false);
+	let imageFiles = $state<File[]>([]);
 	let locationName = $state('');
 	let audience = $state<'nearby' | 'friends' | 'private'>('nearby');
 	let topicActive = $state(false);
@@ -69,6 +71,10 @@
 		if (!canPublish) return;
 		submitting = true;
 		try {
+			// 多图上传（spec：batch_presign → 并发 PUT → batch_complete），拿 file_id[] 随动态一起创建
+			const image_file_ids = imageFiles.length > 0
+				? await uploadMediaFiles(imageFiles, 'moment_image')
+				: undefined;
 			const res = await createMoment({
 				description: text.trim(),
 				tags: Array.from(selectedMoods),
@@ -77,7 +83,8 @@
 					? { point: referencePoint, location_name: locationName || '' }
 					: undefined,
 				// spec PrivacyLevel 仅有 'public' | 'private'：nearby→public，其余（含 UI 的 friends 占位）→private
-				privacy_level: audience === 'nearby' ? 'public' : 'private'
+				privacy_level: audience === 'nearby' ? 'public' : 'private',
+				image_file_ids
 			});
 			if (res.code === 0) {
 				onClose();
@@ -150,17 +157,6 @@
 					<div class="flex items-center gap-1">
 						<button
 							type="button"
-							onclick={() => (hasImage = !hasImage)}
-							aria-label={hasImage ? '已添加照片' : '添加照片'}
-							aria-pressed={hasImage}
-							class="flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {hasImage
-								? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
-								: 'text-text-secondary hover:bg-accent-soft hover:text-accent-default'}"
-						>
-							<ImagePlus size={16} strokeWidth={hasImage ? 2 : 1.5} />
-						</button>
-						<button
-							type="button"
 							onclick={() => appendText('✨')}
 							aria-label="添加心情"
 							class="flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default text-text-secondary hover:bg-accent-soft hover:text-accent-default"
@@ -185,25 +181,10 @@
 				</div>
 			</div>
 
-			{#if hasImage}
-				<div class="relative overflow-hidden rounded-md ring-border bg-surface-page">
-					<div class="overflow-hidden rounded-md">
-						<div class="flex h-36 w-full items-center justify-center gap-2 bg-surface-page text-text-secondary">
-							<ImagePlus size={16} strokeWidth={1.5} />
-							<span class="text-xs">照片已添加</span>
-						</div>
-						<span class="absolute bottom-2.5 left-2.5 rounded-full bg-surface-media-scrim-strong px-2 py-1 text-xxs text-content-inverse backdrop-blur-sm">1 张照片</span>
-						<button
-							type="button"
-							onclick={() => (hasImage = false)}
-							class="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-surface-media-scrim-strong text-content-inverse outline-none backdrop-blur-sm hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-content-inverse"
-							aria-label="移除照片"
-						>
-							<X size={14} strokeWidth={2} />
-						</button>
-					</div>
-				</div>
-			{/if}
+			<section aria-labelledby="image-label">
+				<p id="image-label" class="mb-2 eyebrow">照片</p>
+				<ImagePicker files={imageFiles} onFilesChange={(f) => (imageFiles = f)} max={9} />
+			</section>
 
 			<section aria-labelledby="mood-label">
 				<div class="mb-2 flex items-center justify-between">

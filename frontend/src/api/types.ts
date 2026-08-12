@@ -570,3 +570,27 @@ export interface UploadedMedia {
 	width?: number;
 	height?: number;
 }
+
+// spec: media.md → 批量上传（瞬间多图等场景，最多 9 个，原子操作）
+export interface PresignUploadRequest {
+	file_name: string;
+	file_size: number;
+	mime_type: string;
+	category: MediaCategory;
+}
+
+export interface BatchPresignUploadRequest {
+	files: PresignUploadRequest[];
+}
+
+export interface BatchPresignedUpload {
+	uploads: PresignedUpload[];     // 与请求 files 一一对应
+}
+
+export interface BatchCompleteUploadRequest {
+	upload_ids: string[];
+}
+
+export interface BatchCompleteUpload {
+	uploads: UploadedMedia[];       // 与请求 upload_ids 一一对应、顺序一致
+}

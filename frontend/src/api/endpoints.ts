@@ -128,10 +128,13 @@ export const Endpoints = {
     List: `${PREFIX}/reactions/list`,
   },
 
-  // Media — 已包装: PresignUpload/CompleteUpload（上传流程：presign → PUT 直传 → complete）
+  // Media — 已包装: PresignUpload/CompleteUpload/BatchPresignUpload/BatchCompleteUpload
+  //   （上传流程：presign → PUT 直传 → complete，支持单文件与批量，最多 9 个）
   Media: {
     PresignUpload: `${PREFIX}/media/presign_upload`,
     CompleteUpload: `${PREFIX}/media/complete_upload`,
+    BatchPresignUpload: `${PREFIX}/media/batch_presign_upload`,
+    BatchCompleteUpload: `${PREFIX}/media/batch_complete_upload`,
   },
 
   // Chat — 已包装: PrivateChats.List|UpdatePreferences/PrivateMessages.Send|GetHistory|MarkRead/

@@ -19,6 +19,9 @@ import type {
 	GroupMessageItem,
 	JoinGroupResult,
 	PresignedUpload,
+	PresignUploadRequest,
+	BatchPresignedUpload,
+	BatchCompleteUpload,
 	UploadedMedia,
 	MessageSent,
 	MomentItem,
@@ -175,6 +178,13 @@ export async function presignUpload(params: object) {
 }
 export async function completeUpload(params: object) {
 	return request<UploadedMedia>(Endpoints.Media.CompleteUpload, params);
+}
+// spec: api_spec_media.md → 媒体批量预签名/完成（瞬间多图等，最多 9 个，原子操作）
+export async function batchPresignUpload(params: BatchPresignUploadRequest) {
+	return request<BatchPresignedUpload>(Endpoints.Media.BatchPresignUpload, params);
+}
+export async function batchCompleteUpload(params: BatchCompleteUploadRequest) {
+	return request<BatchCompleteUpload>(Endpoints.Media.BatchCompleteUpload, params);
 }
 
 // Moments

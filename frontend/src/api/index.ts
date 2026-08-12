@@ -6,7 +6,7 @@ export {
   getAccount, updateAccount, getSettings, updateSettings,
   follow, block, getProfile, setRemark,
   deleteAccount,
-  presignUpload, completeUpload,
+  presignUpload, completeUpload, batchPresignUpload, batchCompleteUpload,
   listFriends, listFollowing, listFollowers,
   getFeedNearby, getTrending, getNearbyUsers, getNearbyGroups,
   searchMoments, getMomentDetail, createMoment, updateMoment, deleteMoment, listMyMoments, getFavoriteMoments,
