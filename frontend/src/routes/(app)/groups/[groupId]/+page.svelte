@@ -130,6 +130,13 @@
 		return res;
 	};
 
+	// 退出群组需确认（危险操作确认范式，参照删除公告 Dialog）；加入无需确认
+	let leaveConfirmOpen = $state(false);
+	const handleLeaveConfirm = () => {
+		gd.toggleJoin(); // 当前 joined=true，toggleJoin 执行离开分支
+		leaveConfirmOpen = false;
+	};
+
 	// 申请审批（owner/admin）：同意后成员列表由工厂同步刷新
 	const handleApproveApplication = async (applicationId: string) => {
 		const res = await gd.approveApplication(applicationId);
@@ -379,7 +386,7 @@
 			<button
 				type="button"
 				class="hover-btn w-full rounded-full px-4 py-3 text-sm font-medium focus-ring {gd.joined ? 'border border-accent-default text-accent-default' : 'bg-accent-default text-text-on-accent'}"
-				onclick={gd.toggleJoin}
+				onclick={() => (gd.joined ? (leaveConfirmOpen = true) : gd.toggleJoin())}
 			>
 				{#if gd.joined}
 					<span class="flex items-center justify-center gap-1.5">
@@ -424,6 +431,17 @@
 		<div class="mt-4 flex items-center justify-end gap-3">
 			<button type="button" onclick={() => (deleteAnnounceId = null)} class="hover-btn rounded-full px-4 py-2 text-sm text-text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent-default">取消</button>
 			<button type="button" onclick={handleDeleteAnnouncement} class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-status-danger enabled:bg-status-danger">确认删除</button>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root open={leaveConfirmOpen} onOpenChange={(next) => (next ? undefined : (leaveConfirmOpen = false))}>
+	<Dialog.Content side="center" class="inset-x-4 mx-auto max-w-sm rounded-xl bg-surface-primary p-5" aria-label="确认退出群组" style="box-shadow:var(--cst-elevation-modal);">
+		<p class="text-md text-text-primary">退出群组「{gd.detail.name}」？</p>
+		<p class="mt-1 text-sm text-text-secondary">退出后将不再接收该群的聊天与公告。</p>
+		<div class="mt-4 flex items-center justify-end gap-3">
+			<button type="button" onclick={() => (leaveConfirmOpen = false)} class="hover-btn rounded-full px-4 py-2 text-sm text-text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent-default">取消</button>
+			<button type="button" onclick={handleLeaveConfirm} class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-status-danger enabled:bg-status-danger">确认退出</button>
 		</div>
 	</Dialog.Content>
 </Dialog.Root>
