@@ -306,6 +306,22 @@ export const handlers = [
   http.post(`${API}/groups/members/set_mute`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/groups/members/invite`, () => requireMockAuth() ?? json(apiOk({ invite_id: `inv-${Date.now()}`, expires_at: new Date(Date.now() + 86400000).toISOString() }))),
   http.post(`${API}/groups/members/remove`, () => requireMockAuth() ?? json(apiOk(null))),
+  // 封禁名单（读，owner/admin 可见；最近封禁在前）
+  http.post(`${API}/groups/members/list_banned`, () => json(apiOk(paginated([
+    { user: mockUsers[5], banned_at: "2026-07-20T08:00:00Z", reason: "恶意刷屏" },
+    { user: mockUsers[6], banned_at: "2026-07-18T08:00:00Z", reason: "发布违规内容" },
+  ])))),
+  // 已发邀请：sent/list 默认仅返回 pending（契约过期语义：过期自动置 revoked）
+  http.post(`${API}/groups/invites/sent/list`, () => json(apiOk(paginated(mockUsers.slice(1, 4).map((u, i) => ({
+    invite_id: `inv-sent-${i + 1}`,
+    invitee: u,
+    inviter: mockUsers[0],
+    status: "pending",
+    created_at: new Date(Date.now() - (i + 1) * 86400000).toISOString(),
+    expires_at: new Date(Date.now() + (7 - i) * 86400000).toISOString(),
+  })))))),
+  // 撤销已发邀请（写操作 → 需登录）
+  http.post(`${API}/groups/invites/sent/revoke`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/groups/announcements/list`, () => json(apiOk({ items: [
     { announcement_id: "ann1", group_id: "group_1", title: "本周六弹唱活动", content: "下午3点户部山，带上你的乐器", created_by: mockUsers[0], created_at: "2026-07-25T10:00:00Z", is_pinned: true },
   ]}))),

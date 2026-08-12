@@ -163,6 +163,7 @@ export const mockMoments = Array.from({ length: 24 }, (_, i) => {
     likes_count: Math.floor(Math.random() * 300) + 20,
     comments_count: Math.floor(Math.random() * 30) + 1,
     shares_count: 0,
+    privacy_level: "public" as "public" | "private",
     reactions: [{ emoji: "👍", count: Math.floor(Math.random() * 200) + 10, reacted_by_me: i % 3 === 0 }],
     location: { point: { latitude: 34.26 + i * 0.002, longitude: 117.18 + i * 0.003 }, location_name: ["植物园", "市中心", "老街手冲馆", "云龙湖", "彭城广场", "汉文化景区"][i % 6], distance: `${(0.3 + i * 0.2).toFixed(1)}km` },
     my_state: { is_favorited: i % 4 === 0 },

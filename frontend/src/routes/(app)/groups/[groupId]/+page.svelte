@@ -12,6 +12,7 @@
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { useGroupDetail } from '@/lib/group-data.svelte';
+	import { formatDateTime } from '@/lib/utils';
 	import { presence, watchPresence } from '@/stores/presence.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { setGroupMemberRole, setGroupMemberMute, banGroupMember, removeGroupMember } from '@/api';
@@ -82,6 +83,24 @@
 		canManageMembers && m.role !== 'owner' && m.userId !== meId;
 	let actionMember = $state<{ userId: string; name: string; role: string; mutedUntil?: string } | null>(null);
 	let inviteOpen = $state(false);
+
+	// 成员 Tab 子区（owner/admin 可见：成员/邀请管理/封禁名单）
+	type MemberSubTab = 'members' | 'invites' | 'banned';
+	let memberTab = $state<MemberSubTab>('members');
+	// 邀请状态文案（契约：revoked 含过期自动撤销，统一展示"已失效"，与 rejected 区分）
+	const inviteStatusText = (s: string) =>
+		({ pending: '等待接受', accepted: '已接受', rejected: '已拒绝', revoked: '已失效' })[s] ?? s;
+
+	const handleRevokeInvite = async (inviteId: string) => {
+		const res = await gd.revokeSentInvite(inviteId);
+		if (res.code === 0) showToast('邀请已撤销', 'success');
+		else showToast(res.message || '撤销失败', 'danger');
+	};
+	const handleUnban = async (userId: string) => {
+		const res = await gd.unbanMember(userId);
+		if (res.code === 0) showToast('已解封', 'success');
+		else showToast(res.message || '解封失败', 'danger');
+	};
 
 	const handleMemberAction = async (action: MemberAction, durationMinutes?: number) => {
 		if (!actionMember) return;
@@ -167,47 +186,97 @@
 				</div>
 			{:else if tab === 'members'}
 				{#if canManageMembers}
-					<div class="mt-6 flex justify-end">
-						<button type="button" onclick={() => (inviteOpen = true)} class="hover-btn flex items-center gap-1 rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring">
-							<UserPlus size={12} strokeWidth={1.75} />
-							添加成员
-						</button>
+					<!-- 成员 Tab 子区（owner/admin）：成员 / 邀请管理 / 封禁名单 -->
+					<div class="mt-4 border-b border-border-default">
+						<TabBar
+							items={[
+								{ id: 'members', label: '成员' },
+								{ id: 'invites', label: '邀请管理' },
+								{ id: 'banned', label: '封禁名单' }
+							]}
+							value={memberTab}
+							onChange={(id) => (memberTab = id as MemberSubTab)}
+						/>
 					</div>
 				{/if}
-				<!-- 空旷内容区 → List bordered（有边框列表契约）；列表行不设独立边框 -->
-				<ListContainer bordered class="mt-3">
-					{#each gd.members as member (member.id)}
-						<ListItem
-							onClick={() => {
-								if (member.userId) void goto(ROUTES.user(member.userId));
-							}}
-							ariaLabel={`查看 ${member.name} 的资料`}
-							class="app-list-row app-list-row--standard"
-						>
-							<div class="relative">
-								<img src={member.avatar} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
-								{#if gd.onlineMemberIds.has(member.userId)}
-									<span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-surface-primary bg-status-online"></span>
+				{#if !canManageMembers || memberTab === 'members'}
+					{#if canManageMembers}
+						<div class="mt-6 flex justify-end">
+							<button type="button" onclick={() => (inviteOpen = true)} class="hover-btn flex items-center gap-1 rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring">
+								<UserPlus size={12} strokeWidth={1.75} />
+								添加成员
+							</button>
+						</div>
+					{/if}
+					<!-- 空旷内容区 → List bordered（有边框列表契约）；列表行不设独立边框 -->
+					<ListContainer bordered class="mt-3">
+						{#each gd.members as member (member.id)}
+							<ListItem
+								onClick={() => {
+									if (member.userId) void goto(ROUTES.user(member.userId));
+								}}
+								ariaLabel={`查看 ${member.name} 的资料`}
+								class="app-list-row app-list-row--standard"
+							>
+								<div class="relative">
+									<img src={member.avatar} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
+									{#if gd.onlineMemberIds.has(member.userId)}
+										<span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-surface-primary bg-status-online"></span>
+									{/if}
+								</div>
+								<span class="min-w-0 flex-1">
+									<span class="block text-sm text-text-primary">{member.name}</span>
+									<span class="text-xs text-text-secondary">{member.role}</span>
+								</span>
+								<span class="text-xs text-text-secondary">查看资料</span>
+								{#if canManageMember(member)}
+									<button
+										type="button"
+										onclick={(e) => { e.stopPropagation(); actionMember = member; }}
+										class="flex h-7 w-7 items-center justify-center rounded-full text-text-tertiary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default"
+										aria-label={`管理 ${member.name}`}
+									>
+										<MoreHorizontal size={15} strokeWidth={2} />
+									</button>
+								{/if}
+							</ListItem>
+						{/each}
+					</ListContainer>
+				{:else if memberTab === 'invites'}
+					<!-- 已发邀请（owner/admin；默认仅 pending，revoked 含过期自动撤销） -->
+					<ListContainer bordered class="mt-6">
+						{#each gd.sentInvites as inv (inv.invite_id)}
+							<div class="flex items-center gap-3 px-4 py-3">
+								<img src={inv.invitee.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
+								<span class="min-w-0 flex-1">
+									<span class="block truncate text-sm text-text-primary">{inv.invitee.nickname}</span>
+									<span class="text-xs text-text-secondary">{inviteStatusText(inv.status)} · {formatDateTime(inv.created_at)}</span>
+								</span>
+								{#if inv.status === 'pending'}
+									<button type="button" onclick={() => void handleRevokeInvite(inv.invite_id)} class="hover-btn rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring">撤销</button>
 								{/if}
 							</div>
-							<span class="min-w-0 flex-1">
-								<span class="block text-sm text-text-primary">{member.name}</span>
-								<span class="text-xs text-text-secondary">{member.role}</span>
-							</span>
-							<span class="text-xs text-text-secondary">查看资料</span>
-							{#if canManageMember(member)}
-								<button
-									type="button"
-									onclick={(e) => { e.stopPropagation(); actionMember = member; }}
-									class="flex h-7 w-7 items-center justify-center rounded-full text-text-tertiary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default"
-									aria-label={`管理 ${member.name}`}
-								>
-									<MoreHorizontal size={15} strokeWidth={2} />
-								</button>
-							{/if}
-						</ListItem>
-					{/each}
-				</ListContainer>
+						{:else}
+							<p class="px-4 py-6 text-center text-sm text-text-secondary">暂无待处理的邀请</p>
+						{/each}
+					</ListContainer>
+				{:else}
+					<!-- 封禁名单（owner/admin） -->
+					<ListContainer bordered class="mt-6">
+						{#each gd.bannedMembers as item (item.user.user_id)}
+							<div class="flex items-center gap-3 px-4 py-3">
+								<img src={item.user.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
+								<span class="min-w-0 flex-1">
+									<span class="block truncate text-sm text-text-primary">{item.user.nickname}</span>
+									<span class="text-xs text-text-secondary">{formatDateTime(item.banned_at)}{item.reason ? ` · ${item.reason}` : ''}</span>
+								</span>
+								<button type="button" onclick={() => void handleUnban(item.user.user_id)} class="hover-btn rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring">解封</button>
+							</div>
+						{:else}
+							<p class="px-4 py-6 text-center text-sm text-text-secondary">暂无封禁成员</p>
+						{/each}
+					</ListContainer>
+				{/if}
 			{:else}
 				<div class="mt-6 flex items-center justify-between">
 					<p class="text-sm text-text-secondary">群公告</p>

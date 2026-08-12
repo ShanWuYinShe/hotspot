@@ -5,10 +5,10 @@
 // 调用方式：组件 <script> 顶层 const gd = useGroupDetail({...})；工厂内的
 // $state/$effect 生命周期绑定组件实例，卸载自动清理（WS 订阅 + presence 订阅）。
 
-import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement } from '@/api';
+import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement, listSentGroupInvites, revokeSentGroupInvite, listBannedGroupMembers, unbanGroupMember } from '@/api';
 import { wsClient } from '@/lib/ws/client';
 import { formatDistance, formatDateTime } from '@/lib/utils';
-import type { GroupRole } from '@/api/types';
+import type { GroupRole, GroupSentInviteItem, BannedMemberItem } from '@/api/types';
 
 export interface GroupDetail {
 	name: string;
@@ -52,6 +52,10 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 	let detail = $state<GroupDetail>({ name: '', category: '', members: 0, online: 0, distance: '', description: '', banner: '' });
 	let members = $state<GroupMember[]>([]);
 	let announcements = $state<GroupAnnouncement[]>([]);
+	/** 已发邀请（owner/admin；API 原始项，页面直读字段） */
+	let sentInvites = $state<GroupSentInviteItem[]>([]);
+	/** 封禁名单（owner/admin；API 原始项） */
+	let bannedMembers = $state<BannedMemberItem[]>([]);
 	let joined = $state(false);
 	/** 加入/退出请求进行中——防连点 */
 	let joinPending = $state(false);
@@ -139,11 +143,31 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		}
 	}
 
+	async function loadSentInvites(gid: string) {
+		try {
+			const res = await listSentGroupInvites({ group_id: gid }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
+			if (currentGid() !== gid) return;
+			if (res.code === 0) sentInvites = res.data?.items ?? [];
+		} catch {
+			// empty data is normal
+		}
+	}
+
+	async function loadBannedMembers(gid: string) {
+		try {
+			const res = await listBannedGroupMembers({ group_id: gid }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
+			if (currentGid() !== gid) return;
+			if (res.code === 0) bannedMembers = res.data?.items ?? [];
+		} catch {
+			// empty data is normal
+		}
+	}
+
 	async function loadAll(gid: string) {
 		const token = ++loadToken;
 		loading = true;
 		loadError = null;
-		await Promise.all([loadDetail(gid), loadMembers(gid), loadAnnouncements(gid)]);
+		await Promise.all([loadDetail(gid), loadMembers(gid), loadAnnouncements(gid), loadSentInvites(gid), loadBannedMembers(gid)]);
 		if (token !== loadToken) return; // 已被更新的请求取代
 		loading = false;
 	}
@@ -190,6 +214,19 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		return res;
 	}
 
+	// 已发邀请管理（owner/admin）：撤销后刷新列表（受邀人可能已处理，以服务端为准）。
+	async function revokeSentInvite(inviteId: string) {
+		const res = await revokeSentGroupInvite({ group_id: currentGid(), invite_id: inviteId });
+		if (res.code === 0) void loadSentInvites(currentGid());
+		return res;
+	}
+	// 封禁名单管理（owner/admin）：解封后刷新名单。
+	async function unbanMember(userId: string) {
+		const res = await unbanGroupMember({ group_id: currentGid(), user_id: userId });
+		if (res.code === 0) void loadBannedMembers(currentGid());
+		return res;
+	}
+
 	// 初始加载 + 会话切换重载
 	$effect(() => {
 		const gid = opts.groupId();
@@ -230,6 +267,13 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 			wsClient.on('GroupAnnouncementCreated', (p) => {
 				if (isForThisGroup(p)) void loadAnnouncements(gid);
 			}),
+			// 受邀人接受/拒绝 → 推给邀请发起方（管理员），刷新已发邀请列表
+			wsClient.on('GroupInviteResponse', (p) => {
+				if (isForThisGroup(p)) void loadSentInvites(gid);
+			}),
+			wsClient.on('GroupInviteRejected', (p) => {
+				if (isForThisGroup(p)) void loadSentInvites(gid);
+			}),
 			wsClient.on('GroupDismissed', (p) => {
 				if (!isForThisGroup(p)) return;
 				opts.onDismissed?.();
@@ -254,6 +298,8 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		get detail() { return detail; },
 		get members() { return members; },
 		get announcements() { return announcements; },
+		get sentInvites() { return sentInvites; },
+		get bannedMembers() { return bannedMembers; },
 		get joined() { return joined; },
 		get joinPending() { return joinPending; },
 		get loading() { return loading; },
@@ -268,6 +314,8 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		createAnnouncement,
 		updateAnnouncement,
 		deleteAnnouncement,
+		revokeSentInvite,
+		unbanMember,
 		toggleJoin
 	};
 }
