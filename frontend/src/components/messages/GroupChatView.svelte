@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { ArrowLeft, Send } from '@lucide/svelte';
+	import { ArrowLeft, Send, MessageCircle } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import MessageBubble from '@/components/messages/MessageBubble.svelte';
 	import ChatDatePill from '@/components/messages/ChatDatePill.svelte';
 	import { auth } from '@/stores/auth.svelte';
@@ -233,9 +234,12 @@
 				<p class="text-text-secondary text-xs" >加载中…</p>
 			</div>
 		{:else if chat.messages.length === 0}
-			<div class="flex h-full items-center justify-center">
-				<p class="text-text-secondary text-xs" >还没有消息，来打个招呼吧</p>
-			</div>
+			<!-- 空会话：与 ChatView 同形态的 EmptyState（消除纯文本空态） -->
+			<EmptyState iconSize={56} class="h-full" title="还没有消息" description="来打个招呼吧">
+				{#snippet icon()}
+					<MessageCircle class="size-5.5 text-text-secondary" strokeWidth={1.5} />
+				{/snippet}
+			</EmptyState>
 		{:else}
 			<div class="animate-fade-in flex flex-col gap-2 px-4 pt-4 pb-3">
 				{#each chat.dateGroups as group (group.label)}

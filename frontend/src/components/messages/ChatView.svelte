@@ -2,6 +2,7 @@
 	import { ArrowLeft, Phone, Video, Send, Smile, MoreHorizontal, MessageCircle } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import MessageBubble from '@/components/messages/MessageBubble.svelte';
 	import ChatDatePill from '@/components/messages/ChatDatePill.svelte';
 	import { auth } from '@/stores/auth.svelte';
@@ -277,16 +278,12 @@
 	<!-- Messages -->
 	<div bind:this={chat.scrollEl} onscroll={chat.handleScroll} class="flex-1 overflow-y-auto no-scrollbar" style="overscroll-behavior:contain;">
 		{#if !chat.loading && chat.messages.length === 0}
-			<!-- 空会话：还没有消息时的引导空态 -->
-			<div class="flex h-full flex-col items-center justify-center gap-2 px-6" style="min-height:240px;">
-				<div
-					class="flex items-center justify-center rounded-full border border-border-default size-14 shadow-raised-lg"
-				>
-					<MessageCircle class="size-5.5 text-text-secondary"   strokeWidth={1.5} />
-				</div>
-				<p class="text-text-primary text-sm font-medium">还没有消息</p>
-				<p class="text-center text-text-secondary text-xs"  style="max-width:220px">打个招呼，开始这段对话吧</p>
-			</div>
+			<!-- 空会话：统一 EmptyState 空态（对齐 GroupChatView/全局空态契约） -->
+			<EmptyState iconSize={56} class="h-full" title="还没有消息" description="打个招呼，开始这段对话吧">
+				{#snippet icon()}
+					<MessageCircle class="size-5.5 text-text-secondary" strokeWidth={1.5} />
+				{/snippet}
+			</EmptyState>
 		{:else}
 		<div class="animate-fade-in flex flex-col gap-2 px-4 pt-4 pb-3">
 			{#each chat.dateGroups as group (group.label)}
