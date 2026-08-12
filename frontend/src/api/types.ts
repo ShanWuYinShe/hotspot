@@ -214,6 +214,218 @@ export interface JoinGroupResult {
 	application?: { application_id: string }; // 仅 pending_approval 时返回
 }
 
+// --- 群组管理（spec: api_spec_group.md）---
+// set_role 可设置的角色（owner 不可设置）
+export type SettableGroupRole = 'admin' | 'member';
+
+// 入群申请项（管理员 applications/list、申请人 list_applications 复用）
+export interface GroupApplicationItem {
+	application_id: string;
+	group: GroupInfo;
+	applicant: UserInfo;
+	message?: string;
+	status: ApplicationStatus;
+	created_at: string;
+	expires_at?: string;
+	handled_at?: string;
+	handled_by?: UserInfo;
+}
+
+// 收到的邀请项（invites/received/list）
+export interface GroupInviteItem {
+	invite_id: string;
+	group: GroupInfo;
+	inviter: UserInfo;
+	message?: string;
+	status: ApplicationStatus;
+	created_at: string;
+	expires_at?: string;
+	responded_at?: string;
+}
+
+// 已发出的邀请项（invites/sent/list，群主/管理员视角）
+export interface GroupSentInviteItem {
+	invite_id: string;
+	invitee: UserInfo;
+	inviter: UserInfo;
+	status: ApplicationStatus;
+	message?: string;
+	created_at: string;
+	expires_at?: string;
+	responded_at?: string;
+}
+
+// 封禁成员项（members/list_banned）
+export interface BannedMemberItem {
+	user: UserInfo;
+	banned_at: string;
+	reason?: string;
+	banned_by?: UserInfo;
+}
+
+// members/invite 返回
+export interface Invitation {
+	invite_id: string;
+	expires_at: string;
+}
+
+// invites/received/accept 返回
+export interface InviteAcceptedResult {
+	group_id: string;
+}
+
+// --- 群组管理 Request 类型（逐端点对齐 spec）---
+export interface SearchGroupsRequest {
+	keyword?: string;
+	tag?: string;
+	radius?: number;
+	sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';
+	reference_point?: GeoPoint;
+	pagination?: PaginationParams;
+}
+
+export interface UpdateGroupRequest {
+	group_id: string;
+	name?: string;
+	description?: string;
+	avatar_file_id?: string;
+	tags?: string[];
+	password?: string;
+	clear_password?: boolean;
+	join_method?: GroupJoinMethod;
+	requires_approval?: boolean;
+	is_searchable?: boolean;
+	max_members?: number;
+	location?: Location;
+}
+
+export interface DismissGroupRequest {
+	group_id: string;
+	reason?: string;
+}
+
+export interface TransferOwnershipRequest {
+	group_id: string;
+	new_owner_id: string;
+}
+
+export interface SearchGroupMembersRequest {
+	group_id: string;
+	keyword: string;
+	role?: GroupRole;
+	pagination?: PaginationParams;
+}
+
+export interface InviteMemberRequest {
+	group_id: string;
+	user_id: string;
+	message?: string;
+}
+
+export interface GroupSentInvitesRequest {
+	group_id: string;
+	status?: ApplicationStatus | 'all';
+	pagination?: PaginationParams;
+}
+
+export interface RevokeSentInviteRequest {
+	group_id: string;
+	invite_id: string;
+	reason?: string;
+}
+
+export interface SetMemberRoleRequest {
+	group_id: string;
+	user_id: string;
+	role: SettableGroupRole;
+}
+
+export interface SetMuteRequest {
+	group_id: string;
+	user_id: string;
+	active: boolean;
+	duration_minutes?: number;
+}
+
+export interface SetMemberBanRequest {
+	group_id: string;
+	user_id: string;
+	active: boolean;
+	reason?: string;
+}
+
+export interface BannedMembersRequest {
+	group_id: string;
+	pagination?: PaginationParams;
+}
+
+export interface RemoveMemberRequest {
+	group_id: string;
+	user_id: string;
+}
+
+export interface GroupApplicationsRequest {
+	group_id: string;
+	status?: ApplicationStatus | 'all';
+	pagination?: PaginationParams;
+}
+
+export interface ApproveGroupApplicationRequest {
+	group_id: string;
+	application_id: string;
+}
+
+export interface RejectGroupApplicationRequest {
+	group_id: string;
+	application_id: string;
+	reason?: string;
+}
+
+export interface CreateGroupAnnouncementRequest {
+	group_id: string;
+	title: string;
+	content: string;
+	is_pinned?: boolean;
+}
+
+export interface UpdateGroupAnnouncementRequest {
+	group_id: string;
+	announcement_id: string;
+	title?: string;
+	content?: string;
+	is_pinned?: boolean;
+}
+
+export interface DeleteGroupAnnouncementRequest {
+	group_id: string;
+	announcement_id: string;
+}
+
+export interface MyApplicationsRequest {
+	status?: ApplicationStatus | 'all';
+	pagination?: PaginationParams;
+}
+
+export interface CancelApplicationRequest {
+	group_id: string;
+	application_id: string;
+	reason?: string;
+}
+
+export interface MyInvitesRequest {
+	status?: ApplicationStatus | 'all';
+	pagination?: PaginationParams;
+}
+
+export interface AcceptInviteRequest {
+	invite_id: string;
+}
+
+export interface RejectInviteRequest {
+	invite_id: string;
+	reason?: string;
+}
+
 export interface MomentItem {
 	// spec: types.md → MomentItem（list/search/detail/feed）
 	moment_id: string;

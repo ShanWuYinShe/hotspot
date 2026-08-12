@@ -18,6 +18,36 @@ import type {
 	GroupMemberItem,
 	GroupMessageItem,
 	JoinGroupResult,
+	GroupApplicationItem,
+	GroupInviteItem,
+	GroupSentInviteItem,
+	BannedMemberItem,
+	Invitation,
+	InviteAcceptedResult,
+	SearchGroupsRequest,
+	UpdateGroupRequest,
+	DismissGroupRequest,
+	TransferOwnershipRequest,
+	SearchGroupMembersRequest,
+	InviteMemberRequest,
+	GroupSentInvitesRequest,
+	RevokeSentInviteRequest,
+	SetMemberRoleRequest,
+	SetMuteRequest,
+	SetMemberBanRequest,
+	BannedMembersRequest,
+	RemoveMemberRequest,
+	GroupApplicationsRequest,
+	ApproveGroupApplicationRequest,
+	RejectGroupApplicationRequest,
+	CreateGroupAnnouncementRequest,
+	UpdateGroupAnnouncementRequest,
+	DeleteGroupAnnouncementRequest,
+	MyApplicationsRequest,
+	CancelApplicationRequest,
+	MyInvitesRequest,
+	AcceptInviteRequest,
+	RejectInviteRequest,
 	PresignedUpload,
 	PresignUploadRequest,
 	BatchPresignedUpload,
@@ -256,6 +286,36 @@ export async function getGroupMembers(groupId: string, pagination?: object) {
 export async function getGroupAnnouncements(groupId: string) {
   return request<{ items: GroupAnnouncementItem[] }>(Endpoints.Groups.Announcements.List, { group_id: groupId });
 }
+
+// Groups admin（spec: api_spec_group.md → 群组管理：搜索/更新/解散/转让/申请/邀请/成员/公告）
+export async function searchGroups(params: SearchGroupsRequest) { return request<PaginatedData<GroupItem>>(Endpoints.Groups.Search, params); }
+export async function updateGroup(params: UpdateGroupRequest) { return request<GroupItem>(Endpoints.Groups.Update, params); }
+export async function dismissGroup(params: DismissGroupRequest) { return request<void>(Endpoints.Groups.Dismiss, params); }
+export async function transferGroupOwnership(params: TransferOwnershipRequest) { return request<void>(Endpoints.Groups.TransferOwnership, params); }
+export async function listMyApplications(params?: MyApplicationsRequest) { return request<PaginatedData<GroupApplicationItem>>(Endpoints.Groups.ListApplications, params ?? {}); }
+export async function cancelGroupApplication(params: CancelApplicationRequest) { return request<void>(Endpoints.Groups.CancelApplication, params); }
+export async function listMyInvites(params?: MyInvitesRequest) { return request<PaginatedData<GroupInviteItem>>(Endpoints.Groups.ListInvites, params ?? {}); }
+export async function acceptGroupInvite(params: AcceptInviteRequest) { return request<InviteAcceptedResult>(Endpoints.Groups.AcceptInvite, params); }
+export async function rejectGroupInvite(params: RejectInviteRequest) { return request<void>(Endpoints.Groups.RejectInvite, params); }
+
+export async function searchGroupMembers(params: SearchGroupMembersRequest) { return request<PaginatedData<GroupMemberItem>>(Endpoints.Groups.Members.Search, params); }
+export async function inviteGroupMember(params: InviteMemberRequest) { return request<Invitation>(Endpoints.Groups.Members.Invite, params); }
+export async function setGroupMemberRole(params: SetMemberRoleRequest) { return request<void>(Endpoints.Groups.Members.SetRole, params); }
+export async function setGroupMemberMute(params: SetMuteRequest) { return request<void>(Endpoints.Groups.Members.SetMute, params); }
+export async function banGroupMember(params: Omit<SetMemberBanRequest, 'active'>) { return request<void>(Endpoints.Groups.Members.Ban, { ...params, active: true }); }
+export async function unbanGroupMember(params: Omit<SetMemberBanRequest, 'active'>) { return request<void>(Endpoints.Groups.Members.Unban, { ...params, active: false }); }
+export async function listBannedGroupMembers(params: BannedMembersRequest) { return request<PaginatedData<BannedMemberItem>>(Endpoints.Groups.Members.ListBanned, params); }
+export async function removeGroupMember(params: RemoveMemberRequest) { return request<void>(Endpoints.Groups.Members.Remove, params); }
+export async function listSentGroupInvites(params: GroupSentInvitesRequest) { return request<PaginatedData<GroupSentInviteItem>>(Endpoints.Groups.Members.Invites.List, params); }
+export async function revokeSentGroupInvite(params: RevokeSentInviteRequest) { return request<void>(Endpoints.Groups.Members.Invites.Revoke, params); }
+
+export async function listGroupApplications(params: GroupApplicationsRequest) { return request<PaginatedData<GroupApplicationItem>>(Endpoints.Groups.Applications.List, params); }
+export async function approveGroupApplication(params: ApproveGroupApplicationRequest) { return request<void>(Endpoints.Groups.Applications.Approve, params); }
+export async function rejectGroupApplication(params: RejectGroupApplicationRequest) { return request<void>(Endpoints.Groups.Applications.Reject, params); }
+
+export async function createGroupAnnouncement(params: CreateGroupAnnouncementRequest) { return request<GroupAnnouncementItem>(Endpoints.Groups.Announcements.Create, params, { 'Idempotency-Key': newIdempotencyKey() }); }
+export async function updateGroupAnnouncement(params: UpdateGroupAnnouncementRequest) { return request<GroupAnnouncementItem>(Endpoints.Groups.Announcements.Update, params); }
+export async function deleteGroupAnnouncement(params: DeleteGroupAnnouncementRequest) { return request<void>(Endpoints.Groups.Announcements.Delete, params); }
 
 // Users extended
 export async function listUserMoments(userId: string, pagination?: object) {
