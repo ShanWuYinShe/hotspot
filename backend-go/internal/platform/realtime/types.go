@@ -104,8 +104,8 @@ const (
 // WS 协议版本重新设计，届时再定义事件形状。
 
 // Event 是 WS 协议的服务端出站事件。ServerSeq 在 resume 续传路径上由 Hub 分配
-// （per-user 单调递增，见 resume_store.go），客户端可按 seq 去重（spec L173）；
-// 非 resume 路径（握手/心跳/群消息等）事件 omitempty 不下发该字段。
+// （全局单调递增，见 resume_store.go），客户端可按 seq 去重（spec L173）；
+// 非 resume 路径（握手/心跳/presence 等）事件 omitempty 不下发该字段。
 type Event struct {
 	Type      string `json:"type"`
 	Payload   any    `json:"payload"`

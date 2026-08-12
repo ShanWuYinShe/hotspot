@@ -20,17 +20,24 @@ const DefaultResumeTTL = 60 * time.Second
 
 // ResumeStore 维护 resume 增量恢复所需的跨实例状态（spec L156, L159）。
 //
+// seq 为全局单调（单一 INCR 计数器）：user 事件与 group 事件共享同一 seq 空间，
+// 保证客户端视角的 server_seq 单调递增（spec L173）——若 user/group 各用独立
+// 计数器，两套 seq 不可比，客户端按 seq 去重/排序会错乱。
+//
 // 实现中立（spec L159）：Redis 不可用时用 NopResumeStore 降级——Record 返回 0
 // （event 不带 seq），resume 恒失效，客户端回退全量重放（spec L161 降级保证）。
 type ResumeStore interface {
-	// Record 为 userID 的一条出站事件分配 per-user 单调 seq 并写入事件流，
+	// Record 为 userID 的一条出站事件分配全局单调 seq 并写入该 user 的事件流，
 	// 返回分配的 seq（供 Hub enrich 到 event.ServerSeq）。失败/降级返回 0。
 	Record(userID string, event Event) int64
-	// Replay 返回 userID 事件流中 seq > fromSeq 的事件（按 seq 升序，已带 ServerSeq）。
-	// 存储不可用或无事件时返回 nil。
-	Replay(userID string, fromSeq int64) []Event
-	// LastSeq 返回 userID 事件流的当前最大 seq（连接建立时下发，供客户端记录基线）。
-	LastSeq(userID string) int64
+	// RecordGroup 为 groupID 的一条出站事件分配全局单调 seq 并写入该 group 的
+	// 事件流（断线成员重连时按订阅快照聚合回放，见 Replay）。失败/降级返回 0。
+	RecordGroup(groupID string, event Event) int64
+	// Replay 返回 userID 的 user 流 + groupIDs 各 group 流中 seq > fromSeq 的事件，
+	// 跨流按全局 seq 升序归并（已带 ServerSeq）。存储不可用或无事件时返回 nil。
+	Replay(userID string, groupIDs []string, fromSeq int64) []Event
+	// LastSeq 返回当前全局最大 seq（连接建立时下发，供客户端记录基线）。
+	LastSeq() int64
 	// SaveState 将 resume 状态与 token 绑定并设置 TTL（spec L156「订阅状态由服务端恢复」）。
 	SaveState(token string, state ResumeState)
 	// LoadState 读取 token 绑定的 resume 状态；token 不存在/过期返回 ok=false。
@@ -43,31 +50,34 @@ type ResumeStore interface {
 // 触发客户端全量重放兜底（spec L161）。零值可用。
 type NopResumeStore struct{}
 
-func (NopResumeStore) Record(string, Event) int64           { return 0 }
-func (NopResumeStore) Replay(string, int64) []Event         { return nil }
-func (NopResumeStore) LastSeq(string) int64                 { return 0 }
-func (NopResumeStore) SaveState(string, ResumeState)        {}
-func (NopResumeStore) LoadState(string) (ResumeState, bool) { return ResumeState{}, false }
-func (NopResumeStore) Close() error                         { return nil }
+func (NopResumeStore) Record(string, Event) int64             { return 0 }
+func (NopResumeStore) RecordGroup(string, Event) int64        { return 0 }
+func (NopResumeStore) Replay(string, []string, int64) []Event { return nil }
+func (NopResumeStore) LastSeq() int64                         { return 0 }
+func (NopResumeStore) SaveState(string, ResumeState)          {}
+func (NopResumeStore) LoadState(string) (ResumeState, bool)   { return ResumeState{}, false }
+func (NopResumeStore) Close() error                           { return nil }
 
 // Redis 键命名约定：
-//   - resume:user:<userID>  Stream：该 user 的出站事件队列（entry ID = seq）
-//   - resume:seq:<userID>   INCR 计数器：该 user 的 per-user 单调 seq
-//   - resume:state:<token>  String：resume_token ↔ ResumeState（JSON）
+//   - resume:gseq             INCR 计数器：全局单调 seq（不过期，保证单调性）
+//   - resume:user:<userID>    Stream：该 user 的私聊/通知出站事件队列（entry ID = 全局 seq）
+//   - resume:group:<groupID>  Stream：该 group 的群事件队列（entry ID = 全局 seq）
+//   - resume:state:<token>    String：resume_token ↔ ResumeState（JSON）
 const (
-	resumeStreamPrefix = "resume:user:"
-	resumeSeqPrefix    = "resume:seq:"
-	resumeStatePrefix  = "resume:state:"
+	resumeGlobalSeqKey      = "resume:gseq"
+	resumeStreamPrefix      = "resume:user:"
+	resumeGroupStreamPrefix = "resume:group:"
+	resumeStatePrefix       = "resume:state:"
 )
 
-// recordScript 原子完成「per-user seq 分配 + Stream 写入 + TTL 续期」（一次往返）。
+// recordScript 原子完成「全局 seq 分配 + Stream 写入 + Stream TTL 续期」（一次往返）。
 // 用整数 seq 作为 Stream entry ID（Redis 允许纯数字递增 ID），使 seq 与 entry ID
 // 一致——Replay 时直接用 XRANGE by ID 精确续传，并从 entry ID 反推 ServerSeq。
-// event 以原始形态（不含 seq）存储以省空间；seq 在 Replay 时由 entry ID 补回。
+// gseq 键不设 TTL（全局单调性必须持久）；event 以原始形态（不含 seq）存储以省空间，
+// seq 在 Replay 时由 entry ID 补回。
 var recordScript = redis.NewScript(`
 local seq = redis.call('INCR', KEYS[1])
 redis.call('XADD', KEYS[2], seq, 'e', ARGV[1])
-redis.call('PEXPIRE', KEYS[1], ARGV[2])
 redis.call('PEXPIRE', KEYS[2], ARGV[2])
 return seq
 `)
@@ -88,68 +98,133 @@ func NewRedisResumeStore(rdb *redis.Client, ttl time.Duration) *RedisResumeStore
 	return &RedisResumeStore{rdb: rdb, ttl: ttl}
 }
 
-func (s *RedisResumeStore) seqKey(userID string) string    { return resumeSeqPrefix + userID }
 func (s *RedisResumeStore) streamKey(userID string) string { return resumeStreamPrefix + userID }
-func (s *RedisResumeStore) stateKey(token string) string   { return resumeStatePrefix + token }
+func (s *RedisResumeStore) groupStreamKey(groupID string) string {
+	return resumeGroupStreamPrefix + groupID
+}
+func (s *RedisResumeStore) stateKey(token string) string { return resumeStatePrefix + token }
 
-// Record 分配 seq 并写入 Stream。best-effort：任何 Redis 错误只记日志并返回 0，
-// 不阻塞 Hub 广播（event 不带 seq → 客户端按全量重放兜底，spec L161）。
-func (s *RedisResumeStore) Record(userID string, event Event) int64 {
-	if userID == "" {
-		return 0
-	}
+// recordInto 分配全局 seq 并写入指定 Stream。best-effort：任何 Redis 错误只记日志
+// 并返回 0，不阻塞 Hub 广播（event 不带 seq → 客户端按全量重放兜底，spec L161）。
+func (s *RedisResumeStore) recordInto(streamKey string, event Event) int64 {
 	blob, err := json.Marshal(event)
 	if err != nil {
-		observability.L().Warn("resume: marshal event failed", "user_id", userID, "err", err)
+		observability.L().Warn("resume: marshal event failed", "stream", streamKey, "err", err)
 		return 0
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	ttlMs := int64(s.ttl / time.Millisecond)
 	seq, err := recordScript.Run(ctx, s.rdb,
-		[]string{s.seqKey(userID), s.streamKey(userID)},
+		[]string{resumeGlobalSeqKey, streamKey},
 		string(blob), ttlMs).Int64()
 	if err != nil {
-		observability.L().Warn("resume: record failed, client will fall back to full replay", "user_id", userID, "err", err)
+		observability.L().Warn("resume: record failed, client will fall back to full replay", "stream", streamKey, "err", err)
 		return 0
 	}
 	return seq
 }
 
-// Replay 回放 seq > fromSeq 的事件。从 entry ID（=seq）反推 ServerSeq 补回 event。
-func (s *RedisResumeStore) Replay(userID string, fromSeq int64) []Event {
+// Record 为 user 私聊/通知事件分配全局 seq 并写入 user Stream。
+func (s *RedisResumeStore) Record(userID string, event Event) int64 {
+	if userID == "" {
+		return 0
+	}
+	return s.recordInto(s.streamKey(userID), event)
+}
+
+// RecordGroup 为群事件分配全局 seq 并写入 group Stream。断线成员重连时按订阅快照
+// 聚合回放（Replay），无需在广播时解析成员（成员查询放广播热路径会放大写压力）。
+func (s *RedisResumeStore) RecordGroup(groupID string, event Event) int64 {
+	if groupID == "" {
+		return 0
+	}
+	return s.recordInto(s.groupStreamKey(groupID), event)
+}
+
+// Replay 回放 user 流 + groupIDs 各 group 流中 seq > fromSeq 的事件，跨流按全局
+// seq 升序归并（k-way merge）。各流内部 XRANGE 已按 entry ID（=seq）升序，且全局
+// INCR 保证同一 seq 只写入一个流，故归并结果严格递增。groupIDs 上限由订阅上限
+// （spec：group ≤ 100）约束，resume 为低频操作，k ≤ 101 的归并可接受。
+func (s *RedisResumeStore) Replay(userID string, groupIDs []string, fromSeq int64) []Event {
 	if userID == "" {
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	start := fmt.Sprintf("%d", fromSeq+1)
-	vals, err := s.rdb.XRange(ctx, s.streamKey(userID), start, "+").Result()
-	if err != nil {
-		observability.L().Warn("resume: replay failed", "user_id", userID, "err", err)
-		return nil
-	}
-	events := make([]Event, 0, len(vals))
-	for _, m := range vals {
-		var ev Event
-		if raw, ok := m.Values["e"].(string); ok {
-			if err := json.Unmarshal([]byte(raw), &ev); err == nil {
-				ev.ServerSeq = seqFromStreamID(m.ID)
-				events = append(events, ev)
-			}
+	keys := make([]string, 0, len(groupIDs)+1)
+	keys = append(keys, s.streamKey(userID))
+	for _, gid := range groupIDs {
+		if gid != "" {
+			keys = append(keys, s.groupStreamKey(gid))
 		}
 	}
-	return events
+	pipe := s.rdb.Pipeline()
+	cmds := make([]*redis.XMessageSliceCmd, len(keys))
+	for i, key := range keys {
+		cmds[i] = pipe.XRange(ctx, key, start, "+")
+	}
+	if _, err := pipe.Exec(ctx); err != nil {
+		// Exec 只报传输级错误；单键错误在各 cmd.Err() 中，下面按流降级。
+		observability.L().Debug("resume: replay pipeline exec failed", "user_id", userID, "err", err)
+	}
+
+	streams := make([][]Event, 0, len(keys))
+	for i, cmd := range cmds {
+		vals, err := cmd.Result()
+		if err != nil {
+			observability.L().Warn("resume: replay stream failed, skipping", "user_id", userID, "stream", keys[i], "err", err)
+			streams = append(streams, nil)
+			continue
+		}
+		events := make([]Event, 0, len(vals))
+		for _, m := range vals {
+			var ev Event
+			if raw, ok := m.Values["e"].(string); ok {
+				if err := json.Unmarshal([]byte(raw), &ev); err == nil {
+					ev.ServerSeq = seqFromStreamID(m.ID)
+					events = append(events, ev)
+				}
+			}
+		}
+		streams = append(streams, events)
+	}
+	return mergeEvents(streams)
 }
 
-// LastSeq 返回当前最大 seq（INCR 计数器当前值）。
-func (s *RedisResumeStore) LastSeq(userID string) int64 {
-	if userID == "" {
-		return 0
+// mergeEvents 对多个「按 ServerSeq 升序」的事件流做 k-way 归并。
+func mergeEvents(streams [][]Event) []Event {
+	total := 0
+	for _, s := range streams {
+		total += len(s)
 	}
+	if total == 0 {
+		return nil
+	}
+	idx := make([]int, len(streams))
+	out := make([]Event, 0, total)
+	for len(out) < total {
+		pick := -1
+		for i, s := range streams {
+			if idx[i] >= len(s) {
+				continue
+			}
+			if pick == -1 || s[idx[i]].ServerSeq < streams[pick][idx[pick]].ServerSeq {
+				pick = i
+			}
+		}
+		out = append(out, streams[pick][idx[pick]])
+		idx[pick]++
+	}
+	return out
+}
+
+// LastSeq 返回全局 INCR 计数器的当前值（全局单调，不过期）。
+func (s *RedisResumeStore) LastSeq() int64 {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	seq, err := s.rdb.Get(ctx, s.seqKey(userID)).Int64()
+	seq, err := s.rdb.Get(ctx, resumeGlobalSeqKey).Int64()
 	if err != nil {
 		return 0 // redis.Nil 或其他错误都视为 0（无历史事件）
 	}

@@ -136,10 +136,9 @@ func (h *Hub) SetGroupSubscriptions(groupIDs []string, sink FanoutSink) {
 }
 
 func (h *Hub) BroadcastToUser(userID string, event Event) {
-	// resume enrich（spec L173）：为该 user 的事件分配 per-user 单调 seq 并写入跨实例
-	// 事件流。这是 resume 续传的唯一收口——BroadcastToUser 同时掌握 userID 与事件投递，
-	// 断线期间（无在线 sink）仍能按 user 累积事件。其余广播路径（group/userSub/all）
-	// 暂不走 resume，靠前端全量重放兜底（见 .workwork/resume-sdd.md「MVP 取舍」）。
+	// resume enrich（spec L173）：为事件分配全局单调 seq 并写入跨实例 user 事件流。
+	// 这是 resume 续传的唯一收口——BroadcastToUser 同时掌握 userID 与事件投递，
+	// 断线期间（无在线 sink）仍能按 user 累积事件。
 	h.mu.RLock()
 	store := h.resumeStore
 	h.mu.RUnlock()
@@ -162,6 +161,8 @@ func (h *Hub) deliverUserLocal(userID string, event Event) {
 }
 
 func (h *Hub) BroadcastToUserSubscribers(userID string, event Event) {
+	// presence/typing 类瞬态事件不写 resume 流：断线期间的状态无重放价值（重连后
+	// 通过订阅重建 + presence 快照恢复），写入反而让 60s 窗口内的 Stream 无谓膨胀。
 	h.deliverUserSubscribersLocal(userID, event)
 	h.publish("usersub:"+userID, event)
 }
@@ -176,6 +177,17 @@ func (h *Hub) deliverUserSubscribersLocal(userID string, event Event) {
 }
 
 func (h *Hub) BroadcastToGroup(groupID string, event Event) {
+	// resume enrich（spec L156, L173）：群事件分配全局单调 seq 并写入 per-group 事件流。
+	// 断线成员重连时按订阅快照聚合其订阅 group 流回放（handler Replay）；广播侧不做
+	// 成员解析（成员查询放热路径会放大写压力，且 Hub 路由层不应依赖业务 repo）。
+	h.mu.RLock()
+	store := h.resumeStore
+	h.mu.RUnlock()
+	if store != nil {
+		if seq := store.RecordGroup(groupID, event); seq > 0 {
+			event.ServerSeq = seq
+		}
+	}
 	h.deliverGroupLocal(groupID, event)
 	h.publish("group:"+groupID, event)
 }

@@ -207,6 +207,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resumeToken := generateResumeToken()
 	observability.L().Info("ws: connected", "user_id", principal.UserID, "session_id", principal.SessionID, "connection_id", connectionID)
 
+	// subs 提前声明：断线 defer 需保存订阅快照（spec L156「订阅状态由服务端恢复」），
+	// resume 回放聚合也依赖断线时快照中的 GroupIDs。
+	subs := newSubscriptions()
 	sink := &socketSink{conn: conn}
 	if DefaultHub().RegisterUser(principal.UserID, principal.SessionID, sink) {
 		DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOnline, Payload: UserOnlinePayload{UserID: principal.UserID, OnlineAt: time.Now().UTC().Format(time.RFC3339)}})
@@ -216,18 +219,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOffline, Payload: UserOfflinePayload{UserID: principal.UserID, OfflineAt: time.Now().UTC().Format(time.RFC3339)}})
 		}
 		observability.L().Info("ws: disconnected", "user_id", principal.UserID, "session_id", principal.SessionID, "connection_id", connectionID)
-		// resume：连接断开时刷新 state 的 LastSeq 为当前 user 最大 seq，作为重连
-		// 续传起点（spec L156）。多端登录共享 per-user seq 流，LastSeq 取 user 级。
+		// resume：连接断开时保存 state（LastSeq + 订阅快照），作为重连续传起点与
+		// 服务端订阅恢复依据（spec L156）。多端登录共享全局 seq 流，LastSeq 取全局。
 		if h.resumeStore != nil {
-			h.resumeStore.SaveState(resumeToken, ResumeState{UserID: principal.UserID, LastSeq: h.resumeStore.LastSeq(principal.UserID)})
+			h.resumeStore.SaveState(resumeToken, ResumeState{UserID: principal.UserID, LastSeq: h.resumeStore.LastSeq(), Subs: subs.snapshot()})
 		}
 	}()
 
-	// 当前 user 事件流的最大 seq（连接建立基线）。store 为 nil（Redis 不可用）时
+	// 全局事件流的最大 seq（连接建立基线）。store 为 nil（Redis 不可用）时
 	// ServerSeq=0、ResumeToken 仍下发但 LoadState 恒空 → 客户端回退全量重放（spec L161）。
 	currentLastSeq := int64(0)
 	if h.resumeStore != nil {
-		currentLastSeq = h.resumeStore.LastSeq(principal.UserID)
+		currentLastSeq = h.resumeStore.LastSeq()
 	}
 	payload := ConnectionEstablishedPayload{ConnectionID: connectionID, UserID: principal.UserID, ServerTime: time.Now().UTC().Format(time.RFC3339), ResumeToken: resumeToken, ServerSeq: currentLastSeq}
 	payload.Config.PingInterval = 30
@@ -238,20 +241,23 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// resume 回放（spec L156）：客户端携带的旧 token 有效且属同一 user 时，补拉断线
-	// 期间事件（按 seq 升序，已带 ServerSeq）。回放事件经 sink.Send 直达、不经
-	// BroadcastToUser，故不会重复 Record。订阅状态不在服务端主动恢复——前端重连后
-	// 无条件 replaySubscriptions（frontend/src/lib/ws/client.ts），由 SetSubscriptions
-	// 触发服务端重建订阅，达成 spec L156「订阅状态恢复」语义。
+	// resume 续传（spec L156）：客户端携带的旧 token 有效且属同一 user 时——
+	// 1. 服务端按断线时订阅快照恢复订阅（带权限校验：断线期间已退出的群不恢复、
+	//    不聚合回放，防止越权接收）；
+	// 2. 补拉断线期间事件：user 流 + 快照内各 group 流按全局 seq 归并回放（已带
+	//    ServerSeq）。回放事件经 sink.Send 直达、不经 BroadcastToUser/Group，故不会
+	//    重复 Record。前端重连后仍会 replaySubscriptions（set 幂等覆盖，本地订阅
+	//    为权威），服务端恢复订阅保证两者一致前的事件送达。
 	if h.resumeStore != nil && authPayload.ResumeToken != "" {
 		if state, ok := h.resumeStore.LoadState(authPayload.ResumeToken); ok && state.UserID == principal.UserID {
-			for _, ev := range h.resumeStore.Replay(principal.UserID, state.LastSeq) {
+			_, snapGroup := h.applyAuthorizedSubscriptions(principalCtx, principal.UserID, SetSubscriptionsPayload{Operation: "set", Type: "group", IDs: state.Subs.GroupIDs}, subs, sink)
+			h.applyAuthorizedSubscriptions(principalCtx, principal.UserID, SetSubscriptionsPayload{Operation: "set", Type: "user", IDs: state.Subs.UserIDs}, subs, sink)
+			for _, ev := range h.resumeStore.Replay(principal.UserID, snapGroup.GroupIDs, state.LastSeq) {
 				_ = sink.Send(ev)
 			}
 		}
 	}
 
-	subs := newSubscriptions()
 	for {
 		var msg Event
 		if err := conn.ReadJSON(&msg); err != nil {
