@@ -11,6 +11,8 @@ export interface NotificationItem {
 	user: { id: string; name: string; avatar: string };
 	text: string;
 	momentImage?: string;
+	/** 入群邀请通知携带的 invite_id（payload.invite_id），供接受/拒绝操作使用。 */
+	inviteId?: string;
 }
 
 // 通知类型语义 → design token 色族档位（主色 + 淡底/淡边框，参照主题 -bg/-border 定义）。

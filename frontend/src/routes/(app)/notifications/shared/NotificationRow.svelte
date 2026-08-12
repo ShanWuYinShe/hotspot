@@ -8,11 +8,16 @@
 	let {
 		notif,
 		onRead,
-		onRemove
+		onRemove,
+		onAccept,
+		onReject
 	}: {
 		notif: NotificationItem;
 		onRead: (id: string) => void;
 		onRemove: (id: string) => void;
+		/** 入群邀请通知的可选操作（inviteId 存在时渲染接受/拒绝按钮）。 */
+		onAccept?: (inviteId: string) => void;
+		onReject?: (inviteId: string) => void;
 	} = $props();
 
 	const cfg = $derived(TYPE_CONFIG[notif.type] ?? TYPE_CONFIG.reaction);
@@ -52,6 +57,19 @@
 
 	<!-- Moment thumb or unread dot -->
 	<div class="flex items-center gap-2 shrink-0">
+		{#if notif.inviteId}
+			<!-- 入群邀请操作：行内接受/拒绝（stopPropagation 避免触发行已读） -->
+			<button
+				type="button"
+				onclick={(e) => { e.stopPropagation(); onAccept?.(notif.inviteId!); }}
+				class="hover-btn rounded-full bg-accent-default px-3 py-1.5 text-xs font-medium text-text-on-accent focus-ring"
+			>接受</button>
+			<button
+				type="button"
+				onclick={(e) => { e.stopPropagation(); onReject?.(notif.inviteId!); }}
+				class="hover-btn rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring"
+			>拒绝</button>
+		{/if}
 		{#if notif.momentImage}
 			<div class="rounded-sm overflow-hidden size-9.5" >
 		<img src={notif.momentImage} alt="" loading="lazy" class="w-full h-full object-cover" />

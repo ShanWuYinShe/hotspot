@@ -382,6 +382,13 @@ export const handlers = [
   ])))),
   http.post(`${API}/groups/applications/approve`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/groups/applications/reject`, () => requireMockAuth() ?? json(apiOk(null))),
+  // 我收到的邀请（received/list 默认仅 pending；inv_1 与通知 notif_4 呼应，演示通知与待办双入口）
+  http.post(`${API}/groups/invites/received/list`, () => json(apiOk(paginated([
+    { invite_id: "inv_1", group: mockGroups[0].group, inviter: mockUsers[4], message: "周末一起拍照呀", status: "pending", created_at: new Date(Date.now() - 10 * 3600000).toISOString(), expires_at: new Date(Date.now() + 38 * 3600000).toISOString() },
+    { invite_id: "inv_3", group: mockGroups[3].group, inviter: mockUsers[2], status: "pending", created_at: new Date(Date.now() - 26 * 3600000).toISOString(), expires_at: new Date(Date.now() + 22 * 3600000).toISOString() },
+  ])))),
+  http.post(`${API}/groups/invites/received/accept`, () => requireMockAuth() ?? json(apiOk({ group_id: "group_1" }))),
+  http.post(`${API}/groups/invites/received/reject`, () => requireMockAuth() ?? json(apiOk(null))),
 
   // ── Chat ───────────────────────────────────────
   // All chat endpoints are auth-required (spec: private_chats/*, *_messages/*).

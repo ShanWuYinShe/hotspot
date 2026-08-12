@@ -13,14 +13,17 @@
 	import Button from '@/components/ui/button.svelte';
 	import NotificationRow from './shared/NotificationRow.svelte';
 	import { TYPE_CONFIG, normalizeNotifType, type NotificationItem } from './shared/notification-data';
-	import { listNotifications, getUnreadCount, markRead } from '@/api';
+	import { listNotifications, getUnreadCount, markRead, listMyInvites, acceptGroupInvite, rejectGroupInvite } from '@/api';
 	import { WS_NOTIFY_EVENT } from '@/lib/ws/client';
 	import { formatDateTime } from '@/lib/utils';
 	import { ROUTES, ME_SECTION_PATHS } from '@/lib/routes';
 	import { follow } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
+	import type { GroupInviteItem } from '@/api/types';
 
 	// 通知列表：类型过滤、单条/全部已读、桌面右侧概览 Rail。
+	// 入群邀请：通知行内联接受/拒绝（实时路径）+ 顶部「入群邀请」待办区块
+	// （listMyInvites 补拉路径，覆盖通知被清理/未落通知的 pending 邀请）。
 
 const FILTER_TABS = [
 	{ id: 'all', label: '全部' },
@@ -32,6 +35,8 @@ const FILTER_TABS = [
 ];
 
 	let notifications = $state<NotificationItem[]>([]);
+	/** 我收到的待处理入群邀请（listMyInvites，默认仅 pending） */
+	let invites = $state<GroupInviteItem[]>([]);
 	let filter = $state('all');
 
 	const device = $derived(platform.platform);
@@ -56,9 +61,10 @@ const FILTER_TABS = [
 			try {
 				loading = true;
 				loadError = null;
-				const [notifRes, unreadRes] = await Promise.all([
+				const [notifRes, unreadRes, invitesRes] = await Promise.all([
 					listNotifications().catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
-					getUnreadCount().catch(() => ({ code: -1, message: '网络异常', data: { total: 0 } }))
+					getUnreadCount().catch(() => ({ code: -1, message: '网络异常', data: { total: 0 } })),
+					listMyInvites().catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }))
 				]);
 				if (cancelled) return;
 
@@ -67,6 +73,8 @@ const FILTER_TABS = [
 					if (!cancelled) loadError = notifRes.message ?? '加载失败';
 					return;
 				}
+
+				if (invitesRes.code === 0) invites = invitesRes.data?.items ?? [];
 
 				if (notifData) {
 					const items: NotificationItem[] = (notifData.items || []).map((n, i) => {
@@ -98,7 +106,9 @@ const FILTER_TABS = [
 							time: formatDateTime(n.created_at),
 							user: { id: actor.user_id ?? '', name: actor.nickname ?? '', avatar: actor.avatar_url ?? '' },
 							text,
-							momentImage: n.payload?.moment_summary?.cover_url ?? undefined
+							momentImage: n.payload?.moment_summary?.cover_url ?? undefined,
+							// 入群邀请通知携带 invite_id，供行内接受/拒绝
+							inviteId: n.type === 'group_invite_received' ? (n.payload as { invite_id?: string })?.invite_id : undefined
 						};
 					});
 					notifications = items;
@@ -143,6 +153,30 @@ const FILTER_TABS = [
 	};
 	const remove = (id: string) => {
 		notifications = notifications.filter((n) => n.id !== id);
+	};
+
+	// 入群邀请：接受/拒绝成功后同步移除待办区块与该邀请的通知行
+	const removeInvite = (inviteId: string) => {
+		invites = invites.filter((i) => i.invite_id !== inviteId);
+		notifications = notifications.filter((n) => n.inviteId !== inviteId);
+	};
+	const handleAcceptInvite = async (inviteId: string) => {
+		try {
+			const res = await acceptGroupInvite({ invite_id: inviteId });
+			if (res.code === 0) { showToast('已加入群组', 'success'); removeInvite(inviteId); }
+			else showToast(res.message || '操作失败', 'danger');
+		} catch {
+			showToast('操作失败，请重试', 'danger');
+		}
+	};
+	const handleRejectInvite = async (inviteId: string) => {
+		try {
+			const res = await rejectGroupInvite({ invite_id: inviteId });
+			if (res.code === 0) { showToast('已拒绝邀请', 'success'); removeInvite(inviteId); }
+			else showToast(res.message || '操作失败', 'danger');
+		} catch {
+			showToast('操作失败，请重试', 'danger');
+		}
 	};
 
 	// 归一化后 n.type 已是语义键（reaction/follow/comment/nearby/event），直接与 tab id 比较。
@@ -196,6 +230,35 @@ const FILTER_TABS = [
 
 	<!-- List：每个分组一个连接列表表面（List bordered 契约；heading 在列表外） -->
 	<div class="flex flex-col">
+				{#if invites.length > 0}
+					<!-- 入群邀请待办区块（listMyInvites 补拉路径；接受/拒绝后移除） -->
+					<div class="mb-3 flex h-5 items-center gap-2">
+						<span class="eyebrow font-semibold text-text-primary">入群邀请</span>
+						<span class="badge text-accent-default bg-accent-soft">{invites.length}</span>
+					</div>
+					<ListContainer bordered class="mb-5">
+						{#each invites as inv (inv.invite_id)}
+							<div class="flex items-center gap-3 px-3 py-3">
+								<img src={inv.group.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
+								<span class="min-w-0 flex-1">
+									<span class="block truncate text-sm text-text-primary">{inv.group.name}</span>
+									<span class="text-xs text-text-secondary">{inv.inviter.nickname} 邀请你 · {formatDateTime(inv.created_at)}</span>
+								</span>
+								<button
+									type="button"
+									onclick={() => void handleAcceptInvite(inv.invite_id)}
+									class="hover-btn rounded-full bg-accent-default px-3 py-1.5 text-xs font-medium text-text-on-accent focus-ring"
+								>接受</button>
+								<button
+									type="button"
+									onclick={() => void handleRejectInvite(inv.invite_id)}
+									class="hover-btn rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring"
+								>拒绝</button>
+							</div>
+						{/each}
+					</ListContainer>
+				{/if}
+
 				{#if unreadGroup.length > 0}
 					<!-- 新消息分组标题（emphasis：accent 点 + 计数 pill，对齐 Figma Make） -->
 					<div class="mb-3 flex h-5 items-center gap-2">
@@ -205,7 +268,7 @@ const FILTER_TABS = [
 					</div>
 					<ListContainer bordered>
 						{#each unreadGroup as n (n.id)}
-							<NotificationRow notif={n} onRead={markSingleRead} onRemove={remove} />
+							<NotificationRow notif={n} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
 						{/each}
 					</ListContainer>
 				{/if}
@@ -218,7 +281,7 @@ const FILTER_TABS = [
 					</div>
 					<ListContainer bordered>
 						{#each readGroup as n (n.id)}
-							<NotificationRow notif={n} onRead={markSingleRead} onRemove={remove} />
+							<NotificationRow notif={n} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
 						{/each}
 					</ListContainer>
 				{/if}
