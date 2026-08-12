@@ -87,7 +87,7 @@
 
 		<div class="flex items-center gap-2 input-surface rounded-md px-3 py-2.5">
 			<Search size={14} class="text-text-secondary" strokeWidth={1.75} />
-			<input bind:value={keyword} oninput={onInput} placeholder="搜索用户昵称…" class="flex-1 bg-transparent text-sm text-text-primary outline-none" />
+			<input bind:value={keyword} oninput={onInput} placeholder="搜索用户昵称…" class="flex-1 bg-transparent text-sm text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-accent-default" />
 		</div>
 
 		<div class="mt-3 max-h-72 overflow-y-auto no-scrollbar">
@@ -96,16 +96,16 @@
 			{:else if results.length === 0}
 				<p class="py-6 text-center text-sm text-text-secondary">{keyword.trim() ? '无匹配用户' : '输入昵称搜索用户'}</p>
 			{:else}
-				{#each results as u (u.user_id)}
-					<button type="button" onclick={() => toggle(u.user_id)} class="hover-btn flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default">
+				{#each results as u (u.user.user_id)}
+					<button type="button" onclick={() => toggle(u.user.user_id)} class="hover-btn flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default">
 						<div class="relative">
-							<Avatar src={u.avatar_url} name={u.nickname} size={36} />
-							{#if selected.has(u.user_id)}
+							<Avatar src={u.user.avatar_url} name={u.user.nickname} size={36} />
+							{#if selected.has(u.user.user_id)}
 								<span class="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent-default text-text-on-accent"><Check size={10} strokeWidth={3} /></span>
 							{/if}
 						</div>
 						<span class="min-w-0 flex-1">
-							<span class="block truncate text-sm text-text-primary">{u.nickname}</span>
+							<span class="block truncate text-sm text-text-primary">{u.user.nickname}</span>
 						</span>
 					</button>
 				{/each}

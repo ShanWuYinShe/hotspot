@@ -37,7 +37,8 @@
 	let editing = $state(false);
 	let draft = $state('');
 
-	const hasMenu = sent && !recalled && (canRecall || canEdit);
+	// $derived：keyed each 复用实例时 props（recalled/canRecall/canEdit）会变化，需响应式重算
+	const hasMenu = $derived(sent && !recalled && (canRecall || canEdit));
 
 	const startEdit = () => {
 		draft = text;
@@ -74,13 +75,13 @@
 					<button
 						type="button"
 						onclick={() => (editing = false)}
-						class="rounded-full px-2 py-0.5 text-xxs text-text-secondary outline-none hover-btn"
+						class="rounded-full px-2 py-0.5 text-xxs text-text-secondary outline-none hover-btn focus-visible:ring-2 focus-visible:ring-accent-default"
 					>取消</button>
 					<button
 						type="button"
 						onclick={confirmEdit}
 						disabled={!draft.trim()}
-						class="flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xxs text-text-on-accent enabled:bg-accent-default disabled:opacity-50 outline-none hover-btn"
+						class="flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xxs text-text-on-accent enabled:bg-accent-default disabled:opacity-50 outline-none hover-btn focus-visible:ring-2 focus-visible:ring-accent-default"
 					>
 						<Check size={11} strokeWidth={2} />完成
 					</button>

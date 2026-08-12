@@ -600,6 +600,12 @@ export interface ContactInfo {
 
 // ─────────────────────────── 端点响应 data 形状 ───────────────────────────
 
+// 分页请求参数（spec: api_spec_types.md → 分页与元数据）
+export interface PaginationParams {
+	limit?: number;  // default: 20, max: 100
+	cursor?: string; // 不透明字符串，客户端只透传
+}
+
 // 分页信封在此重声明，结构等价于 client.ts 的 PaginatedData<T>，
 // 供仅 import types.ts 的调用方使用，避免与 client 循环依赖。
 export interface PaginatedData<T> {

@@ -52,6 +52,8 @@ import type {
 	PresignUploadRequest,
 	BatchPresignedUpload,
 	BatchCompleteUpload,
+	BatchPresignUploadRequest,
+	BatchCompleteUploadRequest,
 	UploadedMedia,
 	MessageSent,
 	MomentItem,

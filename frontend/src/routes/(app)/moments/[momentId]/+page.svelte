@@ -165,7 +165,7 @@
 	});
 
 	const commentCount = $derived(apiComments.length);
-	const isAuthor = $derived(Boolean(auth.user?.user_id) && auth.user.user_id === moment.authorId);
+	const isAuthor = $derived(Boolean(auth.user?.user_id) && auth.user?.user_id === moment.authorId);
 
 	const handleComment = async () => {
 		const text = input.trim();
