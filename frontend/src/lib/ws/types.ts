@@ -5,6 +5,9 @@
 export interface WsEvent<T extends string = string, P = unknown> {
   type: T;
   payload: P;
+  /** 服务端出站事件的全局单调序号（spec L173），仅 resume 路径事件携带（后端 omitempty）；
+   *  客户端发送事件无此字段。 */
+  server_seq?: number;
 }
 
 // ---------------------------------------------------------------------------

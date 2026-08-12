@@ -15,7 +15,8 @@ const mocks = vi.hoisted(() => ({
 		sendGroupTyping: vi.fn(),
 		on: () => () => {},
 		off: () => {},
-		setSubscriptions: () => {}
+		setSubscriptions: () => {},
+		onStatusChange: vi.fn(() => () => {})
 	}
 }));
 

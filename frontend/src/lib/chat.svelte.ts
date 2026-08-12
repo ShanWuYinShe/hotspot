@@ -9,6 +9,12 @@
 // 生命周期绑定组件实例，卸载自动清理。
 
 import type { PrivateMessageNewPayload } from '@/lib/ws/types';
+import { wsClient } from '@/lib/ws/client';
+
+// 断线补拉阈值（spec L163-165）：WS 断开超过该时长后，重连时主动 get_history
+// 首页补拉（HTTP 与 WS 推送重复按主键去重，spec L169）；未超阈值直接依赖
+// WS 推送 / resume 续传。
+const RECONNECT_HISTORY_FETCH_THRESHOLD_MS = 10_000;
 
 export interface ChatMessage {
 	id: string;
@@ -104,6 +110,17 @@ export function groupMessagesByDay(messages: ChatMessage[]): ChatDateGroup[] {
 	return groups;
 }
 
+/** 按服务端 sent_at 保持时间正序（旧→新）。sent_at 均为服务端下发的 ISO 8601
+ * （同格式字典序等价于时间序）；无 sentAt 的乐观消息排最后。V8 sort 稳定，
+ * 同刻消息保持到达序。 */
+function sortBySentAt(list: ChatMessage[]): ChatMessage[] {
+	return list.sort((a, b) => {
+		const x = a.sentAt ?? '\uffff';
+		const y = b.sentAt ?? '\uffff';
+		return x < y ? -1 : x > y ? 1 : 0;
+	});
+}
+
 export function useChat(opts: UseChatOptions) {
 	let messages = $state<ChatMessage[]>([]);
 	let inputVal = $state('');
@@ -169,7 +186,10 @@ export function useChat(opts: UseChatOptions) {
 			if (!msg || !msg.id) return;
 			// 按 message_id 去重（乐观追加已替换为真实 id / 自己发送的推送由实现方返回 null）
 			if (messages.some((m) => m.id === msg.id)) return;
-			messages = [...messages, msg];
+			// 按 sent_at 保持时间正序：resume 续传回放（旧事件）与实时事件交错到达时，
+			// 简单 append 会把回放消息排到实时消息之后（spec L173 按 seq 排序语义，
+			// 以服务端 sent_at 同源时间实现）。
+			messages = sortBySentAt([...messages, msg]);
 		};
 
 		const onMessageUpdate = (e: Event) => {
@@ -196,6 +216,39 @@ export function useChat(opts: UseChatOptions) {
 			lastTypingSentAt = 0;
 		};
 	});
+
+	// 断线补拉（spec L163-165）：WS 断开记录时间点，重连后断开时长超阈值（10s）时
+	// 主动 get_history 首页补拉并按 id 去重合并——resume 失效/降级时断线期间消息
+	// 只能靠 HTTP 补齐；未超阈值直接依赖 WS 推送 / resume 续传。resume 成功时补拉
+	// 结果与续传事件按主键去重（spec L169），冗余无害。
+	let disconnectedAt = 0;
+	$effect(() => {
+		return wsClient.onStatusChange((s) => {
+			if (s === 'disconnected') {
+				disconnectedAt = Date.now();
+			} else if (s === 'connected' && disconnectedAt > 0) {
+				const gap = Date.now() - disconnectedAt;
+				disconnectedAt = 0;
+				if (gap > RECONNECT_HISTORY_FETCH_THRESHOLD_MS) void refetchHistory();
+			}
+		});
+	});
+
+	/** 重连补拉：重新拉取首屏历史，与本地消息按 id 去重合并后按 sent_at 正序。
+	 * 会话切换竞态用 targetId 前后比对丢弃（与 loadMore 同模式）。 */
+	async function refetchHistory() {
+		const target = opts.targetId();
+		if (!target) return;
+		const res = await opts.loadHistory();
+		if (opts.targetId() !== target) return;
+		if (!res) return;
+		const fresh = res.messages.slice().reverse(); // 服务端倒序（新→旧）→ 正序
+		const freshIds = new Set(fresh.map((m) => m.id));
+		const kept = messages.filter((m) => !freshIds.has(m.id)); // 本地独有（乐观/更早历史）
+		messages = sortBySentAt([...fresh, ...kept]);
+		nextCursor = res.next_cursor ?? null;
+		opts.markRead();
+	}
 
 	/** 发送输入状态（未连接由实现方静默丢弃）。 */
 	function sendTyping(isTyping: boolean) {

@@ -116,7 +116,8 @@
 			if (!id) return null;
 			// 会话有新消息即视为已读（与加载行为一致）
 			void markPrivateRead({ scope: 'session', target_user_id: peerUserId }).catch(() => {});
-			return { id, text: payload.content ?? '', sent: false, time: formatTime(payload.sent_at) };
+			// sentAt 供 useChat 按服务端时间保持正序（resume 回放/实时交错不乱序）
+			return { id, text: payload.content ?? '', sent: false, time: formatTime(payload.sent_at), sentAt: payload.sent_at };
 		},
 		wsMessageUpdate: (e) => {
 			const detail = (e as CustomEvent<{ type: 'edited' | 'recalled' | 'read'; payload: PrivateMessageNewPayload }>).detail;

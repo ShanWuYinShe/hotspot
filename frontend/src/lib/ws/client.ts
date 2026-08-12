@@ -355,8 +355,8 @@ export class WsClient {
         break;
     }
 
-    // emitter 分发（on/onAny 全部事件可见）
-    this.dispatch(type, payload);
+    // emitter 分发（on/onAny 全部事件可见，含 server_seq）
+    this.dispatch(type, payload, event.server_seq);
   }
 
   /** SubscribeAck：failed_ids 记录并 console.warn，同时回滚本地状态保持与服务端一致。 */
@@ -461,13 +461,13 @@ export class WsClient {
     this.ws.send(JSON.stringify(event));
   }
 
-  private dispatch(type: ServerEventType, payload: unknown): void {
+  private dispatch(type: ServerEventType, payload: unknown, serverSeq?: number): void {
     const set = this.handlers.get(type);
     if (set) {
       for (const h of [...set]) h(payload);
     }
     if (this.anyHandlers.size > 0) {
-      const event = { type, payload } as ServerWsEvent;
+      const event = { type, payload, server_seq: serverSeq } as ServerWsEvent;
       for (const h of [...this.anyHandlers]) h(event);
     }
   }

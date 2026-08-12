@@ -110,7 +110,8 @@
 			const sent = payload.sender?.user_id === meId;
 			// 收到非自己消息即视为已读（与加载行为一致）
 			if (!sent) void markGroupRead({ scope: 'group', group_id: groupId }).catch(() => {});
-			return { id, text: payload.content ?? '', sent, time: formatTime(payload.sent_at) };
+			// sentAt 供 useChat 按服务端时间保持正序（resume 回放/实时交错不乱序）
+			return { id, text: payload.content ?? '', sent, time: formatTime(payload.sent_at), sentAt: payload.sent_at };
 		},
 		wsMessageUpdate: (e) => {
 			const detail = (e as CustomEvent<{
