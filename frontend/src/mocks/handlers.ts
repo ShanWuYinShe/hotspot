@@ -353,6 +353,28 @@ export const handlers = [
     ));
   }),
   http.post(`${API}/groups/leave`, () => requireMockAuth() ?? json(apiOk(null))),
+  // 群设置更新（写操作 → 需登录；内容类更新返回更新后完整 GroupItem，见 spec 设计规范）
+  http.post(`${API}/groups/update`, async ({ request }) => {
+    const auth = requireMockAuth();
+    if (auth) return auth;
+    const body = (await request.json().catch(() => ({}))) as {
+      group_id?: string; name?: string; description?: string; tags?: string[];
+      join_method?: string; requires_approval?: boolean; avatar_file_id?: string;
+    };
+    const base = mockGroups.find((g) => g.group.group_id === body?.group_id) ?? mockGroups[0];
+    return json(apiOk({
+      ...base,
+      group: {
+        ...base.group,
+        name: body.name ?? base.group.name,
+        avatar_url: body.avatar_file_id ? `https://mock-cdn.local/files/${body.avatar_file_id}` : base.group.avatar_url,
+      },
+      description: body.description ?? base.description,
+      tags: body.tags ?? base.tags,
+      join_method: (body.join_method ?? base.join_method) as "direct" | "password" | "invite_only",
+      requires_approval: body.requires_approval ?? base.requires_approval,
+    }));
+  }),
 
   // ── Chat ───────────────────────────────────────
   // All chat endpoints are auth-required (spec: private_chats/*, *_messages/*).

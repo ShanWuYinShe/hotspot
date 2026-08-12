@@ -5,10 +5,10 @@
 // 调用方式：组件 <script> 顶层 const gd = useGroupDetail({...})；工厂内的
 // $state/$effect 生命周期绑定组件实例，卸载自动清理（WS 订阅 + presence 订阅）。
 
-import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement, listSentGroupInvites, revokeSentGroupInvite, listBannedGroupMembers, unbanGroupMember } from '@/api';
+import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement, listSentGroupInvites, revokeSentGroupInvite, listBannedGroupMembers, unbanGroupMember, updateGroup } from '@/api';
 import { wsClient } from '@/lib/ws/client';
 import { formatDistance, formatDateTime } from '@/lib/utils';
-import type { GroupRole, GroupSentInviteItem, BannedMemberItem } from '@/api/types';
+import type { GroupRole, GroupSentInviteItem, BannedMemberItem, GroupItem, UpdateGroupRequest } from '@/api/types';
 
 export interface GroupDetail {
 	name: string;
@@ -50,6 +50,8 @@ export interface UseGroupDetailOptions {
 
 export function useGroupDetail(opts: UseGroupDetailOptions) {
 	let detail = $state<GroupDetail>({ name: '', category: '', members: 0, online: 0, distance: '', description: '', banner: '' });
+	/** 群详情原始响应（GroupItem），供设置编辑等场景回填；未加载成功为 null。 */
+	let rawGroup = $state<GroupItem | null>(null);
 	let members = $state<GroupMember[]>([]);
 	let announcements = $state<GroupAnnouncement[]>([]);
 	/** 已发邀请（owner/admin；API 原始项，页面直读字段） */
@@ -78,6 +80,7 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 			if (currentGid() !== gid) return;
 			const detailData = detailRes.code === 0 ? detailRes.data : null;
 			if (detailData) {
+				rawGroup = detailData;
 				const g = detailData.group;
 				detail = {
 					name: g.name,
@@ -226,6 +229,12 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		if (res.code === 0) void loadBannedMembers(currentGid());
 		return res;
 	}
+	// 群设置编辑（owner/admin）：更新后刷新详情（响应即最新 GroupItem，rawGroup 随之更新）。
+	async function updateGroupSettings(patch: Omit<UpdateGroupRequest, 'group_id'>) {
+		const res = await updateGroup({ group_id: currentGid(), ...patch });
+		if (res.code === 0) void loadDetail(currentGid());
+		return res;
+	}
 
 	// 初始加载 + 会话切换重载
 	$effect(() => {
@@ -296,6 +305,7 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 
 	return {
 		get detail() { return detail; },
+		get rawGroup() { return rawGroup; },
 		get members() { return members; },
 		get announcements() { return announcements; },
 		get sentInvites() { return sentInvites; },
@@ -316,6 +326,7 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		deleteAnnouncement,
 		revokeSentInvite,
 		unbanMember,
+		updateGroupSettings,
 		toggleJoin
 	};
 }

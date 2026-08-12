@@ -18,7 +18,9 @@
 	import { setGroupMemberRole, setGroupMemberMute, banGroupMember, removeGroupMember } from '@/api';
 	import MemberActionSheet from '@/components/groups/MemberActionSheet.svelte';
 	import InviteMembersSheet from '@/components/groups/InviteMembersSheet.svelte';
+	import GroupSettingsSheet from '@/components/groups/GroupSettingsSheet.svelte';
 	import type { MemberAction } from '@/components/groups/MemberActionSheet.svelte';
+	import type { UpdateGroupRequest } from '@/api/types';
 
 	// 群组详情：封面 + 简介/成员/公告三 Tab + 加入按钮 + 桌面侧栏。
 	// 状态/加载/WS/操作收敛到 useGroupDetail 工厂；本页只保留 UI + 角色门控。
@@ -100,6 +102,15 @@
 		const res = await gd.unbanMember(userId);
 		if (res.code === 0) showToast('已解封', 'success');
 		else showToast(res.message || '解封失败', 'danger');
+	};
+
+	// 群设置编辑（owner/admin；入口在侧栏「群管理」）
+	let settingsOpen = $state(false);
+	const handleGroupSettingsSubmit = async (patch: Omit<UpdateGroupRequest, 'group_id'>): Promise<boolean> => {
+		const res = await gd.updateGroupSettings(patch);
+		if (res.code === 0) { showToast('群设置已更新', 'success'); return true; }
+		showToast(res.message || '保存失败', 'danger');
+		return false;
 	};
 
 	const handleMemberAction = async (action: MemberAction, durationMinutes?: number) => {
@@ -332,17 +343,17 @@
 					加入群组
 				{/if}
 			</button>
-			{#if gd.joined && (gd.myRole === 'owner' || gd.myRole === 'admin')}
-				<!-- 角色门控：仅群主/管理员可见的管理入口（占位，实际管理 UI 由后续批次填充） -->
-				<button
-					type="button"
-					onclick={() => { /* TODO 群管理批次 N：打开群管理抽屉 */ }}
-					class="hover-btn flex w-full items-center justify-center gap-2 rounded-full border border-border-default px-4 py-3 text-sm text-text-primary focus-ring"
-				>
-					<Settings size={15} />
-					群管理
-				</button>
-			{/if}
+				{#if gd.joined && (gd.myRole === 'owner' || gd.myRole === 'admin')}
+					<!-- 角色门控：仅群主/管理员可见的管理入口（群设置编辑；转让/解散为批次 4d） -->
+					<button
+						type="button"
+						onclick={() => (settingsOpen = true)}
+						class="hover-btn flex w-full items-center justify-center gap-2 rounded-full border border-border-default px-4 py-3 text-sm text-text-primary focus-ring"
+					>
+						<Settings size={15} />
+						群管理
+					</button>
+				{/if}
 			{#if gd.joined}
 				<button type="button" onclick={() => void goto(ROUTES.groupMessage(params.groupId))} class="hover-btn flex w-full items-center justify-center gap-2 rounded-full border border-border-default px-4 py-3 text-sm text-text-primary focus-ring">
 					<MessageCircle size={15} />
@@ -390,4 +401,11 @@
 	groupId={params.groupId}
 	onClose={() => (inviteOpen = false)}
 	onInvited={() => void gd.loadMembers(params.groupId)}
+/>
+
+<GroupSettingsSheet
+	open={settingsOpen}
+	initial={gd.rawGroup}
+	onClose={() => (settingsOpen = false)}
+	onSubmit={handleGroupSettingsSubmit}
 />
