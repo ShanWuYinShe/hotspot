@@ -146,7 +146,7 @@ export class NotificationSyncService {
       return;
     }
 
-    const request: MarkAsReadRequest = { notification_ids: ids };
+    const request: MarkAsReadRequest = { notify_ids: ids };
     const response = await ApiClient.markNotificationsRead(request);
     if (response.code !== 0) {
       throw new Error(response.message || '标记通知失败');

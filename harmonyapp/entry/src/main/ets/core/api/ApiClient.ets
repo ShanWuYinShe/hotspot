@@ -744,10 +744,12 @@ export class ApiClient {
   }
 
   static async banMember(params: BanMemberRequest): Promise<ApiResponse<void>> {
+    params.active = true;
     return HttpUtil.post<ApiResponse<void>, BanMemberRequest>(ApiEndpoints.GROUP.MEMBERS.BAN, params);
   }
 
   static async unbanMember(params: UnbanMemberRequest): Promise<ApiResponse<void>> {
+    params.active = false;
     return HttpUtil.post<ApiResponse<void>, UnbanMemberRequest>(ApiEndpoints.GROUP.MEMBERS.UNBAN, params);
   }
 
@@ -928,6 +930,6 @@ export class ApiClient {
   }
 
   static async markAllNotificationsRead(): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, MarkAsReadRequest>(ApiEndpoints.NOTIFY.MARK_READ, { scope: 'all' });
+    return HttpUtil.post<ApiResponse<void>, MarkAsReadRequest>(ApiEndpoints.NOTIFY.MARK_READ, {});
   }
 }

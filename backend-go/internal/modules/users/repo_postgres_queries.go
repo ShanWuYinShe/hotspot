@@ -6,15 +6,6 @@ SELECT user_id, nickname, COALESCE(avatar_url, ''), user_type, COALESCE(bio, '')
 FROM users
 WHERE user_id = $1`
 
-	querySearchUserProfiles = `
-SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), u.user_type, COALESCE(u.bio, ''), COALESCE(u.gender, ''), COALESCE(u.email, ''), COALESCE(u.phone, ''), u.location_name, u.latitude, u.longitude, u.presence_status, u.last_online, u.created_at
-FROM users u
-JOIN user_settings us ON us.user_id = u.user_id
-WHERE us.searchable = TRUE
-  AND u.is_deleted = FALSE
-  AND ($1 = '' OR (us.nickname_searchable = TRUE AND u.nickname ILIKE '%' || $1 || '%') OR u.bio ILIKE '%' || $1 || '%')
-ORDER BY u.created_at DESC, u.user_id ASC`
-
 	queryListUserProfileTags = `
 SELECT tag_name
 FROM user_profile_tags

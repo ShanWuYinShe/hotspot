@@ -304,7 +304,7 @@ export struct ProfilePage {
   }
 
   private getWarningTextColor(): string {
-    return this.getCurrentThemePalette().accentBackground;
+    return this.getCurrentThemePalette().warning;
   }
 
   private getProfileVisualStyle() {

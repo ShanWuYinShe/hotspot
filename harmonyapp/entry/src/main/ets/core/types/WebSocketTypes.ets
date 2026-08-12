@@ -19,6 +19,7 @@ export interface SubscriptionItem {
 }
 
 export interface FailedSubscriptionId {
+  type: 'group' | 'user'
   subscription_id: string
   reason: 'invalid' | 'denied' | 'limit_exceeded' | 'error'
 }
@@ -37,8 +38,8 @@ export enum ClientEventType {
   PING = 'Ping',
   SET_SUBSCRIPTIONS = 'SetSubscriptions',
   GET_SUBSCRIPTIONS = 'GetSubscriptions',
-  PRIVATE_TYPING = 'PrivateTyping',
-  GROUP_TYPING = 'GroupTyping'
+  PRIVATE_TYPING = 'SendPrivateTyping',
+  GROUP_TYPING = 'SendGroupTyping'
 }
 
 /**
@@ -145,8 +146,7 @@ export interface PingEvent {
 export interface SetSubscriptionsPayload {
   client_request_id: string
   operation: SubscriptionOperation
-  type: 'group' | 'user'
-  ids: string[]
+  items: SubscriptionItem[]
 }
 
 export interface SetSubscriptionsEvent {
@@ -170,7 +170,7 @@ export interface PrivateTypingSendPayload {
 }
 
 export interface PrivateTypingSendEvent {
-  type: 'PrivateTyping'
+  type: 'SendPrivateTyping'
   payload: PrivateTypingSendPayload
 }
 
@@ -181,7 +181,7 @@ export interface GroupTypingSendPayload {
 }
 
 export interface GroupTypingSendEvent {
-  type: 'GroupTyping'
+  type: 'SendGroupTyping'
   payload: GroupTypingSendPayload
 }
 
@@ -864,8 +864,7 @@ export interface ReportDismissedEvent {
 export interface SubscribeAckPayload {
   client_request_id: string
   operation: SubscriptionOperation
-  type: 'group' | 'user'
-  ids: string[]
+  accepted: SubscriptionItem[]
   code: number
   message?: string
   failed_ids?: FailedSubscriptionId[]
@@ -1012,7 +1011,7 @@ export function createAuthEvent(clientType: ClientType, accessToken?: string): A
 
 export function createSetSubscriptionsEvent(
   operation: SubscriptionOperation,
-  item: SubscriptionItem,
+  items: SubscriptionItem[],
   clientMsgId?: string
 ): SetSubscriptionsEvent {
   return {
@@ -1020,8 +1019,7 @@ export function createSetSubscriptionsEvent(
     payload: {
       client_request_id: clientMsgId ?? generateClientMsgId(),
       operation: operation,
-      type: item.type,
-      ids: item.ids
+      items: items
     }
   }
 }
@@ -1044,7 +1042,7 @@ export function createPrivateTypingEvent(
   is_typing: boolean
 ): PrivateTypingSendEvent {
   return {
-    type: 'PrivateTyping',
+    type: 'SendPrivateTyping',
     payload: { target_user_id, is_typing }
   }
 }
@@ -1054,7 +1052,7 @@ export function createGroupTypingEvent(
   is_typing: boolean
 ): GroupTypingSendEvent {
   return {
-    type: 'GroupTyping',
+    type: 'SendGroupTyping',
     payload: { group_id, is_typing }
   }
 }

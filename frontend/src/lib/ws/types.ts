@@ -12,7 +12,7 @@ export interface WsEvent<T extends string = string, P = unknown> {
 // ---------------------------------------------------------------------------
 
 /** 客户端可发送的事件类型。 */
-export type ClientEventType = 'Auth' | 'Ping' | 'SetSubscriptions' | 'PrivateTyping' | 'GroupTyping';
+export type ClientEventType = 'Auth' | 'Ping' | 'SetSubscriptions' | 'SendPrivateTyping' | 'SendGroupTyping';
 
 /** 服务端可推送的全部事件类型（与 spec ServerEventType 枚举对齐）。 */
 export type ServerEventType =
@@ -357,8 +357,8 @@ export interface ClientEventPayloadMap {
   Auth: AuthPayload;
   Ping: PingPayload;
   SetSubscriptions: SetSubscriptionsPayload;
-  PrivateTyping: PrivateTypingSendPayload;
-  GroupTyping: GroupTypingSendPayload;
+  SendPrivateTyping: PrivateTypingSendPayload;
+  SendGroupTyping: GroupTypingSendPayload;
 }
 
 /** 服务端推送事件（type 强约束为 ServerEventType 的判别联合）。 */

@@ -516,12 +516,11 @@ export class HttpUtil {
             idempotencyRetryCount + 1, omitAuthHeader, rateLimitRetryCount
           );
         }
-        // 22001 CACHE_EXPIRED：仅缓存响应过期，原始请求未产生副作用 →
-        // 必须用「同一个键」重试一次以保留去重语义，避免新生成键导致重复创建资源
+        // 22001 CACHE_EXPIRED：缓存响应过期且无法恢复 → 生成新键重试（spec: api_spec_base.md「幂等性」）
         if (resultCode === ErrorCode.IDEMPOTENCY_CACHE_EXPIRED) {
-          hilog.warn(DOMAIN_NUMBER, TAG, `收到 ${ErrorCode.IDEMPOTENCY_CACHE_EXPIRED} 幂等缓存过期，以同键重试一次`);
+          hilog.warn(DOMAIN_NUMBER, TAG, `收到 ${ErrorCode.IDEMPOTENCY_CACHE_EXPIRED} 幂等缓存过期，换新键重试`);
           return await HttpUtil.request<TResponse, TRequest>(
-            url, method, data, retried, currentIdempotencyKey,
+            url, method, data, retried, generateIdempotencyKey(),
             idempotencyRetryCount + 1, omitAuthHeader, rateLimitRetryCount
           );
         }

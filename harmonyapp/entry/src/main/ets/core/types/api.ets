@@ -975,12 +975,14 @@ export interface UnmuteMemberRequest {
 export interface BanMemberRequest {
   group_id: string;
   user_id: string;
+  active?: boolean;
   reason?: string;
 }
 
 export interface UnbanMemberRequest {
   group_id: string;
   user_id: string;
+  active?: boolean;
 }
 
 export interface BannedMembersRequest {
@@ -2049,7 +2051,7 @@ export interface NotificationListRequest {
 }
 
 export interface MarkAsReadRequest {
-  notification_ids?: string[];
+  notify_ids?: string[];
   type?: NotificationType;
   scope?: string;
 }

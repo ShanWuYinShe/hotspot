@@ -218,7 +218,7 @@ export class WebSocketService {
       hilog.info(DOMAIN_NUMBER, TAG, `WebSocket未连接，订阅请求已入队: type=${normalizedItem.type}, ids=${JSON.stringify(normalizedItem.ids)}`);
       return;
     }
-    this.send(createSetSubscriptionsEvent('subscribe', normalizedItem));
+    this.send(createSetSubscriptionsEvent('subscribe', [normalizedItem]));
   }
 
   unsubscribe(item: SubscriptionItem): void {
@@ -234,7 +234,7 @@ export class WebSocketService {
       hilog.info(DOMAIN_NUMBER, TAG, `WebSocket未连接，取消订阅请求已入队: type=${normalizedItem.type}, ids=${JSON.stringify(normalizedItem.ids)}`);
       return;
     }
-    this.send(createSetSubscriptionsEvent('unsubscribe', normalizedItem));
+    this.send(createSetSubscriptionsEvent('unsubscribe', [normalizedItem]));
   }
 
   setSubscriptions(item: SubscriptionItem, operation: SubscriptionOperation = 'set'): void {
@@ -256,7 +256,7 @@ export class WebSocketService {
       hilog.info(DOMAIN_NUMBER, TAG, `WebSocket未连接，set订阅请求已入队: operation=${operation}, type=${normalizedItem.type}, ids=${JSON.stringify(normalizedItem.ids)}`);
       return;
     }
-    this.send(createSetSubscriptionsEvent(operation, normalizedItem));
+    this.send(createSetSubscriptionsEvent(operation, [normalizedItem]));
   }
 
   getSubscriptionsState(): void {
@@ -295,17 +295,17 @@ export class WebSocketService {
     });
   }
 
-  private rollbackSubscriptionByFailedIds(
+  // 订阅回滚：按失败项的 type + subscription_id 修正本地预判状态。
+  // - subscribe 失败：本地之前 merge 了失败项，现移除；
+  // - unsubscribe 失败：本地之前 remove 了失败项，现加回（仍处于订阅中）；
+  // - set：失败项不在 accepted 内，已由 accepted 覆盖时排除，此处无需处理。
+  private rollbackFailedIdsByType(
     operation: SubscriptionOperation,
     type: 'group' | 'user',
-    failedIds: string[],
-    serverIds: string[]
+    failedIds: string[]
   ): void {
     const normalizedFailedIds = this.normalizeIds(failedIds);
-    if (normalizedFailedIds.length === 0) {
-      this.setSubscriptionIdsByType(type, serverIds);
-      return;
-    }
+    if (normalizedFailedIds.length === 0) return;
 
     if (operation === 'subscribe') {
       const currentIds = this.getSubscriptionIdsByType(type);
@@ -319,13 +319,7 @@ export class WebSocketService {
     if (operation === 'unsubscribe') {
       const currentIds = this.getSubscriptionIdsByType(type);
       this.setSubscriptionIdsByType(type, this.normalizeIds(currentIds.concat(normalizedFailedIds)));
-      return;
     }
-
-    const successfulIds = this
-      .normalizeIds(serverIds)
-      .filter((id: string) => normalizedFailedIds.indexOf(id) === -1);
-    this.setSubscriptionIdsByType(type, successfulIds);
   }
 
   subscribeGroupChats(groupChatIds: string[]): void {
@@ -488,29 +482,34 @@ export class WebSocketService {
       case 'SubscribeAck':
         const ackPayload = event.payload as SubscribeAckPayload;
         const failedItems: FailedSubscriptionId[] = ackPayload.failed_ids ?? [];
-        const failedIds: string[] = failedItems.map((item: FailedSubscriptionId): string => item.subscription_id);
-        if (failedIds.length > 0) {
-          this.rollbackSubscriptionByFailedIds(
-            ackPayload.operation,
-            ackPayload.type,
-            failedIds,
-            ackPayload.ids
-          );
-        } else {
-          this.setSubscriptionIdsByType(ackPayload.type, ackPayload.ids);
+
+        // set 操作：accepted 是该批 type 的最终权威列表，按 type 覆盖本地状态。
+        // subscribe/unsubscribe 为增量：本地已预先合并/移除，无需再用 accepted 刷新。
+        if (ackPayload.operation === 'set') {
+          ackPayload.accepted.forEach((acceptedItem: SubscriptionItem) => {
+            this.setSubscriptionIdsByType(acceptedItem.type, acceptedItem.ids);
+          });
         }
-        const effectiveIds = this.getSubscriptionIdsByType(ackPayload.type);
+
+        // failed_ids 回滚本地预判（每项含 type + subscription_id，按 type 分组处理）
+        if (failedItems.length > 0) {
+          const failedByType = new Map<'group' | 'user', string[]>();
+          failedItems.forEach((f: FailedSubscriptionId) => {
+            const list = failedByType.get(f.type) ?? [];
+            list.push(f.subscription_id);
+            failedByType.set(f.type, list);
+          });
+          failedByType.forEach((ids: string[], type: 'group' | 'user') => {
+            this.rollbackFailedIdsByType(ackPayload.operation, type, ids);
+          });
+        }
+
         if (ackPayload.code === 0) {
-          hilog.info(DOMAIN_NUMBER, TAG, `订阅成功: operation=${ackPayload.operation}, type=${ackPayload.type}, ids=${JSON.stringify(effectiveIds)}`);
-        } else if (ackPayload.failed_ids && ackPayload.failed_ids.length > 0) {
-          hilog.warn(
-            DOMAIN_NUMBER,
-            TAG,
-            `订阅部分失败: operation=${ackPayload.operation}, type=${ackPayload.type}, failed=${JSON.stringify(ackPayload.failed_ids)}, current=${JSON.stringify(effectiveIds)}`
-          );
+          hilog.info(DOMAIN_NUMBER, TAG, `订阅成功: operation=${ackPayload.operation}, accepted=${JSON.stringify(ackPayload.accepted)}`);
+        } else if (failedItems.length > 0) {
+          hilog.warn(DOMAIN_NUMBER, TAG, `订阅部分失败: operation=${ackPayload.operation}, failed=${JSON.stringify(failedItems)}`);
         } else {
-          const message = typeof ackPayload.message === 'string' ? ackPayload.message : '';
-          hilog.error(DOMAIN_NUMBER, TAG, `订阅失败: operation=${ackPayload.operation}, type=${ackPayload.type}, message=${message}`);
+          hilog.error(DOMAIN_NUMBER, TAG, `订阅失败: operation=${ackPayload.operation}, message=${ackPayload.message ?? ''}`);
         }
         break;
 

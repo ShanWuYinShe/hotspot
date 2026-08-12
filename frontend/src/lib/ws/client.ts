@@ -211,21 +211,21 @@ export class WsClient {
     return clientRequestId;
   }
 
-  /** 发送私聊输入状态（契约 PrivateTyping）。未连接时静默丢弃并返回 false。 */
+  /** 发送私聊输入状态（契约 SendPrivateTyping）。未连接时静默丢弃并返回 false。 */
   sendPrivateTyping(targetUserId: string, isTyping: boolean): boolean {
     if (!targetUserId || this.ws?.readyState !== WebSocket.OPEN) return false;
     this.send({
-      type: 'PrivateTyping',
+      type: 'SendPrivateTyping',
       payload: { target_user_id: targetUserId, is_typing: isTyping }
     });
     return true;
   }
 
-  /** 发送群聊输入状态（契约 GroupTyping）。未连接时静默丢弃并返回 false。 */
+  /** 发送群聊输入状态（契约 SendGroupTyping）。未连接时静默丢弃并返回 false。 */
   sendGroupTyping(groupId: string, isTyping: boolean): boolean {
     if (!groupId || this.ws?.readyState !== WebSocket.OPEN) return false;
     this.send({
-      type: 'GroupTyping',
+      type: 'SendGroupTyping',
       payload: { group_id: groupId, is_typing: isTyping }
     });
     return true;

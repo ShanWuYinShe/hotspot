@@ -360,11 +360,11 @@ describe('事件映射', () => {
     expect(client.sendPrivateTyping('u2', true)).toBe(true);
     expect(client.sendGroupTyping('g1', false)).toBe(true);
 
-    expect(sentOfType(socket, 'PrivateTyping')).toEqual([
-      { type: 'PrivateTyping', payload: { target_user_id: 'u2', is_typing: true } }
+    expect(sentOfType(socket, 'SendPrivateTyping')).toEqual([
+      { type: 'SendPrivateTyping', payload: { target_user_id: 'u2', is_typing: true } }
     ]);
-    expect(sentOfType(socket, 'GroupTyping')).toEqual([
-      { type: 'GroupTyping', payload: { group_id: 'g1', is_typing: false } }
+    expect(sentOfType(socket, 'SendGroupTyping')).toEqual([
+      { type: 'SendGroupTyping', payload: { group_id: 'g1', is_typing: false } }
     ]);
   });
 });
