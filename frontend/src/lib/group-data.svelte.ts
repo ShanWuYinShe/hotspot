@@ -5,7 +5,7 @@
 // 调用方式：组件 <script> 顶层 const gd = useGroupDetail({...})；工厂内的
 // $state/$effect 生命周期绑定组件实例，卸载自动清理（WS 订阅 + presence 订阅）。
 
-import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement, listSentGroupInvites, revokeSentGroupInvite, listBannedGroupMembers, unbanGroupMember, updateGroup, listGroupApplications, approveGroupApplication, rejectGroupApplication } from '@/api';
+import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement, listSentGroupInvites, revokeSentGroupInvite, listBannedGroupMembers, unbanGroupMember, updateGroup, listGroupApplications, approveGroupApplication, rejectGroupApplication, transferGroupOwnership, dismissGroup as dismissGroupApi } from '@/api';
 import { wsClient } from '@/lib/ws/client';
 import { formatDistance, formatDateTime } from '@/lib/utils';
 import type { GroupRole, GroupSentInviteItem, BannedMemberItem, GroupItem, UpdateGroupRequest, GroupApplicationItem } from '@/api/types';
@@ -262,6 +262,22 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		if (res.code === 0) void loadApplications(currentGid());
 		return res;
 	}
+	// 转让群主（owner）：成功后刷新详情（myRole 降级）与成员列表（角色变化）。
+	async function transferOwnership(newOwnerId: string) {
+		const res = await transferGroupOwnership({ group_id: currentGid(), new_owner_id: newOwnerId });
+		if (res.code === 0) {
+			void loadDetail(currentGid());
+			void loadMembers(currentGid());
+		}
+		return res;
+	}
+	// 解散群组（owner，危险操作）：HTTP 成功后立即走 onDismissed（页面 alert + 跳转）；
+	// 真实后端还会推 GroupDismissed（组件卸载后订阅自动清理，页面侧已做防重入）。
+	async function dismissGroup(reason?: string) {
+		const res = await dismissGroupApi({ group_id: currentGid(), reason });
+		if (res.code === 0) opts.onDismissed?.();
+		return res;
+	}
 
 	// 初始加载 + 会话切换重载
 	$effect(() => {
@@ -361,6 +377,8 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		updateGroupSettings,
 		approveApplication,
 		rejectApplication,
+		transferOwnership,
+		dismissGroup,
 		toggleJoin
 	};
 }

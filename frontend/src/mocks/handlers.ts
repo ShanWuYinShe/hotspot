@@ -389,6 +389,9 @@ export const handlers = [
   ])))),
   http.post(`${API}/groups/invites/received/accept`, () => requireMockAuth() ?? json(apiOk({ group_id: "group_1" }))),
   http.post(`${API}/groups/invites/received/reject`, () => requireMockAuth() ?? json(apiOk(null))),
+  // 转让/解散（仅群主；dismiss 成功后由前端 onDismissed 处理跳转，WS GroupDismissed 真实后端推送）
+  http.post(`${API}/groups/transfer_ownership`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/dismiss`, () => requireMockAuth() ?? json(apiOk(null))),
 
   // ── Chat ───────────────────────────────────────
   // All chat endpoints are auth-required (spec: private_chats/*, *_messages/*).

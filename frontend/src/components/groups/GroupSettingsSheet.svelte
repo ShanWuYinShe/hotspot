@@ -2,24 +2,35 @@
 	// 群设置编辑（owner/admin）：复用 CreateGroupSheet 字段结构 + 封面上传。
 	// 提交走 onSubmit 回调（页面注入 gd.updateGroupSettings），本组件保持纯 UI；
 	// 封面在上传时先 uploadMediaFile('group_avatar') 换 file_id 再随 patch 提交。
-	import { Camera, Check, Globe, Lock } from '@lucide/svelte';
+	import { Camera, Check, Globe, Lock, ShieldAlert, UserMinus, Users } from '@lucide/svelte';
 	import { uploadMediaFile } from '@/lib/upload';
 	import Toggle from '@/components/forms/Toggle.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import SheetShell from '@/components/overlays/SheetShell.svelte';
+	import * as Dialog from '@/components/ui/dialog';
 	import type { GroupItem, UpdateGroupRequest } from '@/api/types';
 
 	let {
 		open,
 		initial,
 		onClose,
-		onSubmit
+		onSubmit,
+		isOwner = false,
+		members = [],
+		onTransferOwnership,
+		onDismiss
 	}: {
 		open: boolean;
 		initial: GroupItem | null;
 		onClose: () => void;
 		/** 返回 true 表示提交成功（父组件负责 toast 与刷新）。 */
 		onSubmit: (patch: Omit<UpdateGroupRequest, 'group_id'>) => Promise<boolean>;
+		/** 危险区（仅群主可见）：转让/解散 */
+		isOwner?: boolean;
+		/** 群成员（转让目标候选，页面注入 gd.members） */
+		members?: { userId: string; name: string; role: string }[];
+		onTransferOwnership?: (userId: string) => Promise<{ code: number; message?: string }>;
+		onDismiss?: (reason?: string) => Promise<{ code: number; message?: string }>;
 	} = $props();
 
 	const CATEGORIES = ['摄影', '音乐', '户外', '阅读', '美食', '健身', '游戏', '其他'];
@@ -89,6 +100,61 @@
 			saveError = '保存失败，请检查网络后重试';
 		} finally {
 			saving = false;
+		}
+	};
+
+	// ── 危险区（owner）：转让群主 / 解散群组 ──
+	let transferOpen = $state(false);
+	let transferTarget = $state<{ userId: string; name: string } | null>(null);
+	let transferring = $state(false);
+	let dismissConfirmText = $state('');
+	let dismissing = $state(false);
+	let dangerError = $state('');
+	// 可转让成员：非群主、非自己
+	const transferableMembers = $derived(members.filter((m) => m.role !== 'owner' && m.userId));
+	// 解散精确确认：输入群名（参照 me/edit 注销范式）
+	const dismissReady = $derived(dismissConfirmText === initial?.group.name);
+
+	// 打开时重置危险区状态
+	$effect(() => {
+		if (!open) return;
+		transferOpen = false;
+		transferTarget = null;
+		dismissConfirmText = '';
+		dangerError = '';
+	});
+
+	const handleConfirmTransfer = async () => {
+		if (!transferTarget || !onTransferOwnership || transferring) return;
+		transferring = true;
+		dangerError = '';
+		try {
+			const res = await onTransferOwnership(transferTarget.userId);
+			if (res.code === 0) {
+				transferTarget = null;
+				transferOpen = false;
+				onClose();
+			} else {
+				dangerError = res.message ?? '转让失败';
+			}
+		} catch {
+			dangerError = '转让失败，请重试';
+		} finally {
+			transferring = false;
+		}
+	};
+
+	const handleDismiss = async () => {
+		if (!dismissReady || !onDismiss || dismissing) return;
+		dismissing = true;
+		dangerError = '';
+		try {
+			const res = await onDismiss();
+			if (res.code !== 0) dangerError = res.message ?? '解散失败';
+		} catch {
+			dangerError = '解散失败，请重试';
+		} finally {
+			dismissing = false;
 		}
 	};
 </script>
@@ -222,5 +288,90 @@
 		>
 			{saving ? '保存中…' : '保存设置'}
 		</button>
+
+		{#if isOwner}
+			<!-- 危险区（仅群主；转让后原群主降级，解散不可逆） -->
+			<section aria-labelledby="danger-zone-label" class="mt-2 rounded-md border border-status-danger-border bg-status-danger-bg p-4">
+				<p id="danger-zone-label" class="flex items-center gap-1.5 text-sm font-medium text-status-danger">
+					<ShieldAlert class="size-4" strokeWidth={1.75} />
+					危险区
+				</p>
+
+				<!-- 转让群主 -->
+				<div class="mt-3">
+					<button
+						type="button"
+						onclick={() => (transferOpen = !transferOpen)}
+						class="hover-btn flex w-full items-center justify-between rounded-md px-1 py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
+					>
+						<span class="flex items-center gap-2 text-sm text-text-primary">
+							<Users class="size-4 text-text-secondary" strokeWidth={1.75} />
+							转让群主
+						</span>
+						<span class="text-xs text-text-secondary">{transferOpen ? '收起' : '选择成员'}</span>
+					</button>
+					{#if transferOpen}
+						<div class="mt-2 flex flex-col gap-1">
+							{#each transferableMembers as m (m.userId)}
+								<div class="flex items-center gap-2.5 rounded-md px-2 py-2">
+									<span class="min-w-0 flex-1 truncate text-sm text-text-primary">{m.name}</span>
+									<span class="text-xs text-text-secondary">{m.role === 'admin' ? '管理员' : '成员'}</span>
+									<button
+										type="button"
+										onclick={() => (transferTarget = { userId: m.userId, name: m.name })}
+										class="hover-btn rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring"
+									>转让</button>
+								</div>
+							{:else}
+								<p class="px-2 py-1 text-xs text-text-secondary">群内暂无其他成员可转让</p>
+							{/each}
+						</div>
+					{/if}
+				</div>
+
+				<!-- 解散群组（输入群名精确确认，参照 me/edit 注销范式） -->
+				<div class="mt-3 border-t border-status-danger-border pt-3">
+					<p class="flex items-center gap-2 text-sm text-text-primary">
+						<UserMinus class="size-4 text-text-secondary" strokeWidth={1.75} />
+						解散群组
+					</p>
+					<p class="mt-1 text-xs leading-5 text-text-secondary">解散后不可恢复，所有成员将被移出。输入群名 <code class="font-mono text-xs text-status-danger">{initial?.group.name}</code> 确认：</p>
+					<input
+						type="text"
+						bind:value={dismissConfirmText}
+						placeholder={initial?.group.name}
+						autocomplete="off"
+						aria-label="解散确认群名"
+						class="mt-2 w-full input-surface rounded-md px-3 py-2 text-sm text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-status-danger"
+					/>
+					<div class="mt-2 flex justify-end">
+						<button
+							type="button"
+							onclick={() => void handleDismiss()}
+							disabled={!dismissReady || dismissing}
+							class="hover-btn rounded-full px-4 py-2 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-status-danger disabled:cursor-not-allowed disabled:opacity-50 enabled:bg-status-danger enabled:text-text-on-accent"
+						>
+							{dismissing ? '解散中…' : '解散群组'}
+						</button>
+					</div>
+				</div>
+
+				{#if dangerError}
+					<p class="mt-2 text-sm text-status-warning">{dangerError}</p>
+				{/if}
+			</section>
+		{/if}
 	</div>
 </SheetShell>
+
+<!-- 转让确认（危险操作，参照删除公告的 Dialog 范式） -->
+<Dialog.Root open={transferTarget !== null} onOpenChange={(next) => (next ? undefined : (transferTarget = null))}>
+	<Dialog.Content side="center" class="inset-x-4 mx-auto max-w-sm rounded-xl bg-surface-primary p-5" aria-label="确认转让群主" style="box-shadow:var(--cst-elevation-modal);">
+		<p class="text-md text-text-primary">确定将群主转让给 {transferTarget?.name}？</p>
+		<p class="mt-1 text-sm text-text-secondary">转让后你将变为普通成员，无法再执行群管理操作。</p>
+		<div class="mt-4 flex items-center justify-end gap-3">
+			<button type="button" onclick={() => (transferTarget = null)} class="hover-btn rounded-full px-4 py-2 text-sm text-text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent-default">取消</button>
+			<button type="button" onclick={() => void handleConfirmTransfer()} disabled={transferring} class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-accent-default enabled:bg-accent-default">确认转让</button>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>

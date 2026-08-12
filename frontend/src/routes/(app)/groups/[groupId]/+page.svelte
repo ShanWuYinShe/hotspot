@@ -31,9 +31,13 @@
 	type GroupTab = 'overview' | 'members' | 'announcements';
 	let tab = $state<GroupTab>('overview');
 
+	// 解散跳转防重入：HTTP 成功与 WS GroupDismissed 都可能触发 onDismissed
+	let dismissedHandled = false;
 	const gd = useGroupDetail({
 		groupId: () => params.groupId,
 		onDismissed: () => {
+			if (dismissedHandled) return;
+			dismissedHandled = true;
 			window.alert('该群组已被解散');
 			void goto(ROUTES.nearbyGroups);
 		},
@@ -111,6 +115,18 @@
 		if (res.code === 0) { showToast('群设置已更新', 'success'); return true; }
 		showToast(res.message || '保存失败', 'danger');
 		return false;
+	};
+
+	// 危险区（仅 owner）：转让群主 / 解散群组
+	const handleTransferOwnership = async (userId: string) => {
+		const res = await gd.transferOwnership(userId);
+		if (res.code === 0) showToast('群主已转让', 'success');
+		return res;
+	};
+	const handleDismissGroup = async () => {
+		const res = await gd.dismissGroup();
+		if (res.code === 0) showToast('群组已解散', 'success');
+		return res;
 	};
 
 	// 申请审批（owner/admin）：同意后成员列表由工厂同步刷新
@@ -436,6 +452,10 @@
 <GroupSettingsSheet
 	open={settingsOpen}
 	initial={gd.rawGroup}
+	isOwner={gd.myRole === 'owner'}
+	members={gd.members}
 	onClose={() => (settingsOpen = false)}
 	onSubmit={handleGroupSettingsSubmit}
+	onTransferOwnership={handleTransferOwnership}
+	onDismiss={handleDismissGroup}
 />
