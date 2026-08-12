@@ -128,6 +128,7 @@ export enum ServerEventType {
 export interface AuthPayload {
   client_type: ClientType
   access_token?: string
+  resume_token?: string   // 重连时透传上次连接的 resume_token（spec L155），尝试增量恢复
 }
 
 export interface AuthEvent {
@@ -212,7 +213,9 @@ export interface ConnectionEstablishedPayload {
   user_id: string
   server_time: string
   resume_token: string
-  server_seq: string
+  // spec L330 标注为 string（仅透传与去重），但后端实现实际下发整数（Go int64）；
+  // 以运行时事实为准定义为 number，去重比较才语义正确。
+  server_seq: number
   config: ConnectionConfig
 }
 
@@ -999,12 +1002,13 @@ export function createPingEvent(): PingEvent {
   }
 }
 
-export function createAuthEvent(clientType: ClientType, accessToken?: string): AuthEvent {
+export function createAuthEvent(clientType: ClientType, accessToken?: string, resumeToken?: string): AuthEvent {
   return {
     type: 'Auth',
     payload: {
       client_type: clientType,
-      access_token: accessToken
+      access_token: accessToken,
+      resume_token: resumeToken
     }
   }
 }

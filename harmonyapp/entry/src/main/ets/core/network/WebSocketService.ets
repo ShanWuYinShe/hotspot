@@ -61,6 +61,11 @@ export class WebSocketService {
   private pongTimeoutSec: number = SPEC_REFERENCE_PONG_TIMEOUT;
   private awaitingPong: boolean = false;
   private currentToken: string = '';
+  // resume 增量恢复（spec L155-156）：上次连接的恢复令牌与服务端序号基线。
+  // CE 下发时更新，重连 Auth 时透传；disconnect 不清除（同一用户重连仍可续传，
+  // token 过期/跨用户时服务端拒绝，走全量重放兜底）。
+  private resumeToken: string = '';
+  private serverSeq: number = 0;
   private subscriptions: SubscriptionItem[] = [];
   private eventHandlers: Map<string, ((event: ServerEvent) => void)[]> = new Map();
   private lastServerTimeMs: number = 0;
@@ -93,7 +98,7 @@ export class WebSocketService {
       const wsUrl = await this.getWsUrl();
       hilog.info(DOMAIN_NUMBER, TAG, `正在连接WebSocket服务器: ${wsUrl}`);
       await this.webSocketUtil.connect(wsUrl);
-      this.webSocketUtil.sendRaw(serializeClientEvent(createAuthEvent('app', token)));
+      this.webSocketUtil.sendRaw(serializeClientEvent(createAuthEvent('app', token, this.resumeToken)));
       hilog.info(DOMAIN_NUMBER, TAG, 'WebSocket握手成功，已发送Auth，等待ConnectionEstablished');
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `WebSocket连接失败: ${JSON.stringify(error)}`);
@@ -444,6 +449,12 @@ export class WebSocketService {
         hilog.info(DOMAIN_NUMBER, TAG, `连接已建立: connection_id=${connPayload.connection_id}, user_id=${connPayload.user_id}`);
         hilog.debug(DOMAIN_NUMBER, TAG, `服务端时间: ${connPayload.server_time}`);
         hilog.debug(DOMAIN_NUMBER, TAG, `配置: ping_interval=${connPayload.config.ping_interval}s, ping_timeout=${connPayload.config.ping_timeout}s`);
+
+        // resume（spec L155-156）：记录本次连接令牌与序号基线，重连时透传
+        // resume_token 尝试增量续传；服务端未下发（Redis 不可用降级）时保留旧值。
+        this.resumeToken = connPayload.resume_token || this.resumeToken;
+        this.serverSeq = connPayload.server_seq || this.serverSeq;
+        hilog.debug(DOMAIN_NUMBER, TAG, `resume: token=${this.resumeToken ? 'set' : 'none'}, server_seq=${this.serverSeq}`);
 
         this.state = WebSocketState.CONNECTED;
         this.reconnectAttempts = 0;
