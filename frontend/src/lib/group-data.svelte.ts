@@ -5,10 +5,10 @@
 // 调用方式：组件 <script> 顶层 const gd = useGroupDetail({...})；工厂内的
 // $state/$effect 生命周期绑定组件实例，卸载自动清理（WS 订阅 + presence 订阅）。
 
-import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement, listSentGroupInvites, revokeSentGroupInvite, listBannedGroupMembers, unbanGroupMember, updateGroup } from '@/api';
+import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement, listSentGroupInvites, revokeSentGroupInvite, listBannedGroupMembers, unbanGroupMember, updateGroup, listGroupApplications, approveGroupApplication, rejectGroupApplication } from '@/api';
 import { wsClient } from '@/lib/ws/client';
 import { formatDistance, formatDateTime } from '@/lib/utils';
-import type { GroupRole, GroupSentInviteItem, BannedMemberItem, GroupItem, UpdateGroupRequest } from '@/api/types';
+import type { GroupRole, GroupSentInviteItem, BannedMemberItem, GroupItem, UpdateGroupRequest, GroupApplicationItem } from '@/api/types';
 
 export interface GroupDetail {
 	name: string;
@@ -58,6 +58,8 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 	let sentInvites = $state<GroupSentInviteItem[]>([]);
 	/** 封禁名单（owner/admin；API 原始项） */
 	let bannedMembers = $state<BannedMemberItem[]>([]);
+	/** 入群申请（owner/admin 工作台；默认仅 pending） */
+	let applications = $state<GroupApplicationItem[]>([]);
 	let joined = $state(false);
 	/** 加入/退出请求进行中——防连点 */
 	let joinPending = $state(false);
@@ -166,11 +168,21 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		}
 	}
 
+	async function loadApplications(gid: string) {
+		try {
+			const res = await listGroupApplications({ group_id: gid }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
+			if (currentGid() !== gid) return;
+			if (res.code === 0) applications = res.data?.items ?? [];
+		} catch {
+			// empty data is normal
+		}
+	}
+
 	async function loadAll(gid: string) {
 		const token = ++loadToken;
 		loading = true;
 		loadError = null;
-		await Promise.all([loadDetail(gid), loadMembers(gid), loadAnnouncements(gid), loadSentInvites(gid), loadBannedMembers(gid)]);
+		await Promise.all([loadDetail(gid), loadMembers(gid), loadAnnouncements(gid), loadSentInvites(gid), loadBannedMembers(gid), loadApplications(gid)]);
 		if (token !== loadToken) return; // 已被更新的请求取代
 		loading = false;
 	}
@@ -235,6 +247,21 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		if (res.code === 0) void loadDetail(currentGid());
 		return res;
 	}
+	// 申请审批（owner/admin）：通过后刷新申请列表 + 成员列表（新成员已入群）；
+	// 拒绝带 reason（spec 0-200 字符，随通知送达申请人）。
+	async function approveApplication(applicationId: string) {
+		const res = await approveGroupApplication({ group_id: currentGid(), application_id: applicationId });
+		if (res.code === 0) {
+			void loadApplications(currentGid());
+			void loadMembers(currentGid());
+		}
+		return res;
+	}
+	async function rejectApplication(applicationId: string, reason?: string) {
+		const res = await rejectGroupApplication({ group_id: currentGid(), application_id: applicationId, reason });
+		if (res.code === 0) void loadApplications(currentGid());
+		return res;
+	}
 
 	// 初始加载 + 会话切换重载
 	$effect(() => {
@@ -283,6 +310,10 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 			wsClient.on('GroupInviteRejected', (p) => {
 				if (isForThisGroup(p)) void loadSentInvites(gid);
 			}),
+			// 新申请到达 → 推给群管理员，刷新申请列表
+			wsClient.on('GroupApplicationReceived', (p) => {
+				if (isForThisGroup(p)) void loadApplications(gid);
+			}),
 			wsClient.on('GroupDismissed', (p) => {
 				if (!isForThisGroup(p)) return;
 				opts.onDismissed?.();
@@ -310,6 +341,7 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		get announcements() { return announcements; },
 		get sentInvites() { return sentInvites; },
 		get bannedMembers() { return bannedMembers; },
+		get applications() { return applications; },
 		get joined() { return joined; },
 		get joinPending() { return joinPending; },
 		get loading() { return loading; },
@@ -327,6 +359,8 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		revokeSentInvite,
 		unbanMember,
 		updateGroupSettings,
+		approveApplication,
+		rejectApplication,
 		toggleJoin
 	};
 }

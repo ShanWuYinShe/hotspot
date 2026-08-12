@@ -375,6 +375,13 @@ export const handlers = [
       requires_approval: body.requires_approval ?? base.requires_approval,
     }));
   }),
+  // 申请审批（管理员视角；list 默认仅返回 pending，与契约工作台语义一致）
+  http.post(`${API}/groups/applications/list`, () => json(apiOk(paginated([
+    { application_id: "app_1", group: mockGroups[0].group, applicant: mockUsers[1], message: "想加入一起拍照", status: "pending", created_at: new Date(Date.now() - 2 * 3600000).toISOString(), expires_at: new Date(Date.now() + 46 * 3600000).toISOString() },
+    { application_id: "app_2", group: mockGroups[0].group, applicant: mockUsers[2], status: "pending", created_at: new Date(Date.now() - 5 * 3600000).toISOString(), expires_at: new Date(Date.now() + 43 * 3600000).toISOString() },
+  ])))),
+  http.post(`${API}/groups/applications/approve`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/applications/reject`, () => requireMockAuth() ?? json(apiOk(null))),
 
   // ── Chat ───────────────────────────────────────
   // All chat endpoints are auth-required (spec: private_chats/*, *_messages/*).

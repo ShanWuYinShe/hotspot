@@ -87,7 +87,7 @@
 	let inviteOpen = $state(false);
 
 	// 成员 Tab 子区（owner/admin 可见：成员/邀请管理/封禁名单）
-	type MemberSubTab = 'members' | 'invites' | 'banned';
+		type MemberSubTab = 'members' | 'applications' | 'invites' | 'banned';
 	let memberTab = $state<MemberSubTab>('members');
 	// 邀请状态文案（契约：revoked 含过期自动撤销，统一展示"已失效"，与 rejected 区分）
 	const inviteStatusText = (s: string) =>
@@ -111,6 +111,18 @@
 		if (res.code === 0) { showToast('群设置已更新', 'success'); return true; }
 		showToast(res.message || '保存失败', 'danger');
 		return false;
+	};
+
+	// 申请审批（owner/admin）：同意后成员列表由工厂同步刷新
+	const handleApproveApplication = async (applicationId: string) => {
+		const res = await gd.approveApplication(applicationId);
+		if (res.code === 0) showToast('已同意申请', 'success');
+		else showToast(res.message || '操作失败', 'danger');
+	};
+	const handleRejectApplication = async (applicationId: string) => {
+		const res = await gd.rejectApplication(applicationId);
+		if (res.code === 0) showToast('已拒绝申请', 'success');
+		else showToast(res.message || '操作失败', 'danger');
 	};
 
 	const handleMemberAction = async (action: MemberAction, durationMinutes?: number) => {
@@ -195,21 +207,22 @@
 				<div class="py-6">
 					<p class="max-w-3xl text-sm leading-7 text-text-secondary">{gd.detail.description}</p>
 				</div>
-			{:else if tab === 'members'}
-				{#if canManageMembers}
-					<!-- 成员 Tab 子区（owner/admin）：成员 / 邀请管理 / 封禁名单 -->
-					<div class="mt-4 border-b border-border-default">
-						<TabBar
-							items={[
-								{ id: 'members', label: '成员' },
-								{ id: 'invites', label: '邀请管理' },
-								{ id: 'banned', label: '封禁名单' }
-							]}
-							value={memberTab}
-							onChange={(id) => (memberTab = id as MemberSubTab)}
-						/>
-					</div>
-				{/if}
+				{:else if tab === 'members'}
+					{#if canManageMembers}
+						<!-- 成员 Tab 子区（owner/admin）：成员 / 申请审批 / 邀请管理 / 封禁名单 -->
+						<div class="mt-4 border-b border-border-default">
+							<TabBar
+								items={[
+									{ id: 'members', label: '成员' },
+									{ id: 'applications', label: '申请审批' },
+									{ id: 'invites', label: '邀请管理' },
+									{ id: 'banned', label: '封禁名单' }
+								]}
+								value={memberTab}
+								onChange={(id) => (memberTab = id as MemberSubTab)}
+							/>
+						</div>
+					{/if}
 				{#if !canManageMembers || memberTab === 'members'}
 					{#if canManageMembers}
 						<div class="mt-6 flex justify-end">
@@ -253,7 +266,24 @@
 							</ListItem>
 						{/each}
 					</ListContainer>
-				{:else if memberTab === 'invites'}
+					{:else if memberTab === 'applications'}
+						<!-- 申请审批（owner/admin；默认仅 pending，管理员工作台语义） -->
+						<ListContainer bordered class="mt-6">
+							{#each gd.applications as app (app.application_id)}
+								<div class="flex items-center gap-3 px-4 py-3">
+									<img src={app.applicant.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
+									<span class="min-w-0 flex-1">
+										<span class="block truncate text-sm text-text-primary">{app.applicant.nickname}</span>
+										<span class="text-xs text-text-secondary">{formatDateTime(app.created_at)}{app.message ? ` · ${app.message}` : ''}</span>
+									</span>
+									<button type="button" onclick={() => void handleApproveApplication(app.application_id)} class="hover-btn rounded-full bg-accent-default px-3 py-1.5 text-xs font-medium text-text-on-accent focus-ring">同意</button>
+									<button type="button" onclick={() => void handleRejectApplication(app.application_id)} class="hover-btn rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring">拒绝</button>
+								</div>
+							{:else}
+								<p class="px-4 py-6 text-center text-sm text-text-secondary">暂无待处理的申请</p>
+							{/each}
+						</ListContainer>
+					{:else if memberTab === 'invites'}
 					<!-- 已发邀请（owner/admin；默认仅 pending，revoked 含过期自动撤销） -->
 					<ListContainer bordered class="mt-6">
 						{#each gd.sentInvites as inv (inv.invite_id)}
