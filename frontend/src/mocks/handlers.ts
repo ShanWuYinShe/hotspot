@@ -303,6 +303,8 @@ export const handlers = [
   // 成员管理写操作（owner/admin）
   http.post(`${API}/groups/members/set_role`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/groups/members/set_ban`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/members/set_mute`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/members/invite`, () => requireMockAuth() ?? json(apiOk({ invite_id: `inv-${Date.now()}`, expires_at: new Date(Date.now() + 86400000).toISOString() }))),
   http.post(`${API}/groups/members/remove`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/groups/announcements/list`, () => json(apiOk({ items: [
     { announcement_id: "ann1", group_id: "group_1", title: "本周六弹唱活动", content: "下午3点户部山，带上你的乐器", created_by: mockUsers[0], created_at: "2026-07-25T10:00:00Z", is_pinned: true },

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, Bell, Check, MapPin, Megaphone, MessageCircle, MoreHorizontal, PencilLine, Pin, Settings, Trash2, Users } from '@lucide/svelte';
+	import { ArrowLeft, Bell, Check, MapPin, Megaphone, MessageCircle, MoreHorizontal, PencilLine, Pin, Settings, Trash2, UserPlus, Users } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -14,8 +14,9 @@
 	import { useGroupDetail } from '@/lib/group-data.svelte';
 	import { presence, watchPresence } from '@/stores/presence.svelte';
 	import { auth } from '@/stores/auth.svelte';
-	import { setGroupMemberRole, banGroupMember, removeGroupMember } from '@/api';
+	import { setGroupMemberRole, setGroupMemberMute, banGroupMember, removeGroupMember } from '@/api';
 	import MemberActionSheet from '@/components/groups/MemberActionSheet.svelte';
+	import InviteMembersSheet from '@/components/groups/InviteMembersSheet.svelte';
 	import type { MemberAction } from '@/components/groups/MemberActionSheet.svelte';
 
 	// 群组详情：封面 + 简介/成员/公告三 Tab + 加入按钮 + 桌面侧栏。
@@ -79,9 +80,10 @@
 	const canManageMembers = $derived(gd.joined && (gd.myRole === 'owner' || gd.myRole === 'admin'));
 	const canManageMember = (m: { userId: string; role: string }) =>
 		canManageMembers && m.role !== 'owner' && m.userId !== meId;
-	let actionMember = $state<{ userId: string; name: string; role: string } | null>(null);
+	let actionMember = $state<{ userId: string; name: string; role: string; mutedUntil?: string } | null>(null);
+	let inviteOpen = $state(false);
 
-	const handleMemberAction = async (action: MemberAction) => {
+	const handleMemberAction = async (action: MemberAction, durationMinutes?: number) => {
 		if (!actionMember) return;
 		const m = actionMember;
 		const gid = params.groupId;
@@ -89,6 +91,8 @@
 			let res: { code: number; message?: string } = { code: -1 };
 			if (action === 'set_admin') res = await setGroupMemberRole({ group_id: gid, user_id: m.userId, role: 'admin' });
 			else if (action === 'unset_admin') res = await setGroupMemberRole({ group_id: gid, user_id: m.userId, role: 'member' });
+			else if (action === 'mute') res = await setGroupMemberMute({ group_id: gid, user_id: m.userId, active: true, duration_minutes: durationMinutes });
+			else if (action === 'unmute') res = await setGroupMemberMute({ group_id: gid, user_id: m.userId, active: false });
 			else if (action === 'ban') res = await banGroupMember({ group_id: gid, user_id: m.userId });
 			else if (action === 'remove') res = await removeGroupMember({ group_id: gid, user_id: m.userId });
 			if (res.code === 0) {
@@ -162,8 +166,16 @@
 					<p class="max-w-3xl text-sm leading-7 text-text-secondary">{gd.detail.description}</p>
 				</div>
 			{:else if tab === 'members'}
+				{#if canManageMembers}
+					<div class="mt-6 flex justify-end">
+						<button type="button" onclick={() => (inviteOpen = true)} class="hover-btn flex items-center gap-1 rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring">
+							<UserPlus size={12} strokeWidth={1.75} />
+							添加成员
+						</button>
+					</div>
+				{/if}
 				<!-- 空旷内容区 → List bordered（有边框列表契约）；列表行不设独立边框 -->
-				<ListContainer bordered class="mt-6">
+				<ListContainer bordered class="mt-3">
 					{#each gd.members as member (member.id)}
 						<ListItem
 							onClick={() => {
@@ -302,4 +314,11 @@
 	member={actionMember}
 	onClose={() => (actionMember = null)}
 	onSelect={handleMemberAction}
+/>
+
+<InviteMembersSheet
+	open={inviteOpen}
+	groupId={params.groupId}
+	onClose={() => (inviteOpen = false)}
+	onInvited={() => void gd.loadMembers(params.groupId)}
 />

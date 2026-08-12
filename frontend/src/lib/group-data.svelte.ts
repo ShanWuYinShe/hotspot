@@ -26,6 +26,7 @@ export interface GroupMember {
 	name: string;
 	role: string;
 	avatar: string;
+	mutedUntil?: string;
 }
 
 export interface GroupAnnouncement {
@@ -104,7 +105,8 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 					userId: m.user?.user_id ?? '',
 					name: m.user?.nickname ?? '',
 					role: m.role ?? '成员',
-					avatar: m.user?.avatar_url ?? ''
+					avatar: m.user?.avatar_url ?? '',
+					mutedUntil: m.muted_until ?? undefined
 				}));
 				members = items;
 				// 成员在线状态实时化：订阅全部成员（先释放旧订阅再建新订阅）
