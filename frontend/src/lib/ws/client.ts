@@ -103,7 +103,8 @@ export class WsClient {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private pongTimer: ReturnType<typeof setTimeout> | null = null;
   private resumeToken: string | null = null;
-  private serverSeq = 0;
+  /** server_seq 基线：跨端为字符串（JS number 无法无损表示 int64，spec L330），仅透传/比对，不运算。 */
+  private serverSeq = '';
   private pingIntervalMs = 30_000;
   private pingTimeoutMs = 10_000;
   private status: WsStatus = 'idle';
@@ -291,7 +292,7 @@ export class WsClient {
       case 'ConnectionEstablished': {
         const p = payload as ConnectionEstablishedPayload;
         this.resumeToken = p.resume_token ?? this.resumeToken;
-        this.serverSeq = p.server_seq ?? 0;
+        this.serverSeq = p.server_seq ?? '';
         this.pingIntervalMs = Math.max(1, p.config?.ping_interval ?? 30) * 1000;
         this.pingTimeoutMs = Math.max(1, p.config?.ping_timeout ?? 10) * 1000;
         this.reconnectAttempts = 0;
@@ -461,7 +462,7 @@ export class WsClient {
     this.ws.send(JSON.stringify(event));
   }
 
-  private dispatch(type: ServerEventType, payload: unknown, serverSeq?: number): void {
+  private dispatch(type: ServerEventType, payload: unknown, serverSeq?: string): void {
     const set = this.handlers.get(type);
     if (set) {
       for (const h of [...set]) h(payload);

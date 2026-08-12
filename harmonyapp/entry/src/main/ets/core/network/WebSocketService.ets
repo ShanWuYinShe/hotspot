@@ -65,7 +65,9 @@ export class WebSocketService {
   // CE 下发时更新，重连 Auth 时透传；disconnect 不清除（同一用户重连仍可续传，
   // token 过期/跨用户时服务端拒绝，走全量重放兜底）。
   private resumeToken: string = '';
-  private serverSeq: number = 0;
+  // server_seq 跨端为字符串（ArkTS/JS number 无法无损表示 int64，spec L330），
+  // 仅保存/透传基线，不做数值运算。
+  private serverSeq: string = '';
   private subscriptions: SubscriptionItem[] = [];
   private eventHandlers: Map<string, ((event: ServerEvent) => void)[]> = new Map();
   private lastServerTimeMs: number = 0;

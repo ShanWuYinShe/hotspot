@@ -106,10 +106,16 @@ const (
 // Event 是 WS 协议的服务端出站事件。ServerSeq 在 resume 续传路径上由 Hub 分配
 // （全局单调递增，见 resume_store.go），客户端可按 seq 去重（spec L173）；
 // 非 resume 路径（握手/心跳/presence 等）事件 omitempty 不下发该字段。
+//
+// ServerSeq 的 JSON 序列化用 `,string`（int64 → JSON 字符串）：spec 契约定义
+// server_seq 为 string——JS/ArkTS 的 number 是 IEEE754 double，无法无损表示
+// int64（安全整数上限 2^53），跨端统一用字符串透传/去重，客户端不做数值运算
+// （spec L330「客户端仅透传与去重，不做数值运算」）。后端内部仍用 int64 保持
+// 数值单调语义与运算正确性。
 type Event struct {
 	Type      string `json:"type"`
 	Payload   any    `json:"payload"`
-	ServerSeq int64  `json:"server_seq,omitempty"`
+	ServerSeq int64  `json:"server_seq,omitempty,string"`
 }
 
 type ConnectionEstablishedPayload struct {
@@ -121,7 +127,8 @@ type ConnectionEstablishedPayload struct {
 	ResumeToken string `json:"resume_token,omitempty"`
 	// ServerSeq 是当前该 user 事件流的最新序列号（spec L133：CE 含 server_seq，
 	// 即使为 0 也下发，故不加 omitempty）；客户端据此判断 resume 起点。
-	ServerSeq int64 `json:"server_seq"`
+	// `,string`：与 Event.ServerSeq 同因——int64 跨端统一序列化为字符串（spec L330）。
+	ServerSeq int64 `json:"server_seq,string"`
 	Config    struct {
 		PingInterval     int `json:"ping_interval"`
 		PingTimeout      int `json:"ping_timeout"`

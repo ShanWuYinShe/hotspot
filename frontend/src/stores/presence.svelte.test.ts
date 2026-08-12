@@ -52,7 +52,7 @@ const ESTABLISHED = {
     user_id: 'u1',
     server_time: '2025-01-01T00:00:00.000Z',
     resume_token: 'tok-1',
-    server_seq: 42,
+    server_seq: '42',
     config: { ping_interval: 30, ping_timeout: 10, max_subscriptions: { user: 500, group: 100 } }
   }
 };

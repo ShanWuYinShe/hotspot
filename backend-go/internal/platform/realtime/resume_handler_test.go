@@ -3,6 +3,7 @@ package realtime
 import (
 	"context"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -142,8 +143,10 @@ func TestConnectionEstablishedHasResumeToken(t *testing.T) {
 	if token, _ := payload["resume_token"].(string); token == "" {
 		t.Fatal("resume_token should be non-empty when store is configured")
 	}
-	if seq, ok := payload["server_seq"].(float64); !ok || seq < 0 {
-		t.Fatalf("server_seq missing or negative: %v", payload["server_seq"])
+	// spec L330：server_seq 跨端为 string（JS/ArkTS 无 int64，number 有 2^53 精度上限），
+	// 后端 int64 经 `,string` 序列化为 JSON 字符串。
+	if seq, ok := payload["server_seq"].(string); !ok || seq == "" {
+		t.Fatalf("server_seq should be a non-empty string, got %v", payload["server_seq"])
 	}
 }
 
@@ -489,5 +492,47 @@ func TestResumeReplaySkipsDepartedGroup(t *testing.T) {
 	var extra Event
 	if err := connB.ReadJSON(&extra); err == nil {
 		t.Fatalf("departed group should not be replayed, got %+v", extra)
+	}
+}
+
+// TestServerSeqSerializedAsString：spec L330 契约——server_seq 跨端为 JSON 字符串
+// （JS/ArkTS 的 number 无法无损表示 int64，安全上限 2^53），后端 int64 经
+// `,string` 序列化下发。断言原始 JSON 形态，防止回退为数字序列化。
+func TestServerSeqSerializedAsString(t *testing.T) {
+	SetDefaultHub(NewHub())
+	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
+	result, err := authService.IssueSession(context.Background(), "user_alice")
+	if err != nil {
+		t.Fatalf("issue session: %v", err)
+	}
+	fake := newFakeResumeStore()
+	handler := newRealtimeHandlerForTest(authService)
+	handler.SetResumeStore(fake)
+	DefaultHub().SetResumeStore(fake)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+	if err := conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}}); err != nil {
+		t.Fatalf("write auth: %v", err)
+	}
+
+	// CE：server_seq 无 omitempty，初始为 0 也下发，JSON 形态应为字符串 "0"
+	if _, raw, err := conn.ReadMessage(); err != nil {
+		t.Fatalf("read CE: %v", err)
+	} else if !strings.Contains(string(raw), `"server_seq":"0"`) {
+		t.Fatalf("CE server_seq should serialize as JSON string \"0\", got %s", raw)
+	}
+
+	// 广播事件：server_seq 为字符串 "1"
+	DefaultHub().BroadcastToUser("user_alice", Event{Type: EventTypePrivateMessageNew, Payload: map[string]any{"message_id": "m1"}})
+	if _, raw, err := conn.ReadMessage(); err != nil {
+		t.Fatalf("read event: %v", err)
+	} else if !strings.Contains(string(raw), `"server_seq":"1"`) {
+		t.Fatalf("event server_seq should serialize as JSON string \"1\", got %s", raw)
 	}
 }

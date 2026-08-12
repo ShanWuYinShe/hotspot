@@ -6,8 +6,10 @@ export interface WsEvent<T extends string = string, P = unknown> {
   type: T;
   payload: P;
   /** 服务端出站事件的全局单调序号（spec L173），仅 resume 路径事件携带（后端 omitempty）；
-   *  客户端发送事件无此字段。 */
-  server_seq?: number;
+   *  客户端发送事件无此字段。
+   *  类型为 string（非 number）：JS 的 number 是 IEEE754 double，无法无损表示后端
+   *  int64（安全整数上限 2^53），spec 契约统一用字符串透传/去重，客户端不做数值运算。 */
+  server_seq?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -121,7 +123,9 @@ export interface ConnectionEstablishedPayload {
   user_id: string;
   server_time: string; // UTC ISO 8601
   resume_token: string; // 重连时透传给 Auth 尝试增量恢复
-  server_seq: number;
+  // string（非 number）：JS number 无法无损表示后端 int64（2^53 安全上限），
+  // spec L330 契约统一字符串，客户端仅透传/去重，不做数值运算。
+  server_seq: string;
   config: ConnectionEstablishedConfig;
 }
 

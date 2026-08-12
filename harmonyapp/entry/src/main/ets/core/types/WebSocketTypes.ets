@@ -213,9 +213,10 @@ export interface ConnectionEstablishedPayload {
   user_id: string
   server_time: string
   resume_token: string
-  // spec L330 标注为 string（仅透传与去重），但后端实现实际下发整数（Go int64）；
-  // 以运行时事实为准定义为 number，去重比较才语义正确。
-  server_seq: number
+  // server_seq 为 string（非 number）：ArkTS/JS 的 number 是 IEEE754 double，无法
+  // 无损表示后端 int64（安全整数上限 2^53），spec L330 契约统一字符串跨端透传/去重，
+  // 客户端不做数值运算。后端 int64 经 JSON `,string` 序列化为字符串下发。
+  server_seq: string
   config: ConnectionConfig
 }
 
