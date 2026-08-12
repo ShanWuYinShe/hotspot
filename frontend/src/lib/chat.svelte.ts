@@ -18,12 +18,14 @@ export interface ChatMessage {
 	/** 原始发送时间（ISO）；用于按本地日期分组。 */
 	sentAt?: string;
 	recalled?: boolean;
+	editedAt?: string;
 }
 
 export interface ChatMessageUpdate {
 	type: 'edited' | 'recalled';
 	id: string;
 	content?: string;
+	editedAt?: string;
 }
 
 export interface LoadHistoryResult {
@@ -56,6 +58,10 @@ export interface UseChatOptions {
 	wsNewMessage: (e: Event) => ChatMessage | null;
 	/** 从 WS 更新事件提取编辑/撤回；返回 null 表示忽略（非本会话/无关类型）。 */
 	wsMessageUpdate: (e: Event) => ChatMessageUpdate | null;
+	/** 撤回消息（spec：发送者窗口内 / 群管理员豁免）；返回 code，非 0 失败。可选，未注入则不提供撤回。 */
+	recallMessage?: (id: string) => Promise<{ code: number; error?: string }>;
+	/** 编辑消息（spec：仅本人 + type=text + 未撤回）；返回 code，非 0 失败。可选，未注入则不提供编辑。 */
+	updateMessage?: (id: string, content: string) => Promise<{ code: number; error?: string }>;
 }
 
 export function formatTime(iso?: string): string {
@@ -171,7 +177,7 @@ export function useChat(opts: UseChatOptions) {
 			if (!upd) return;
 			// 消息不在本地列表则忽略（保持空操作）
 			if (upd.type === 'edited') {
-				messages = messages.map((m) => (m.id === upd.id ? { ...m, text: upd.content ?? m.text } : m));
+				messages = messages.map((m) => (m.id === upd.id ? { ...m, text: upd.content ?? m.text, editedAt: upd.editedAt ?? new Date().toISOString() } : m));
 			} else if (upd.type === 'recalled') {
 				messages = messages.map((m) => (m.id === upd.id ? { ...m, text: '[消息已撤回]', recalled: true } : m));
 			}
@@ -289,6 +295,36 @@ export function useChat(opts: UseChatOptions) {
 		}
 	};
 
+	/** 撤回消息：调注入函数，成功后本地标记已撤回（WS 回环到达再幂等覆盖）。 */
+	async function handleRecall(id: string) {
+		if (!opts.recallMessage) return;
+		try {
+			const res = await opts.recallMessage(id);
+			if (res.code === 0) {
+				messages = messages.map((m) => (m.id === id ? { ...m, text: '[消息已撤回]', recalled: true } : m));
+			} else {
+				sendError = res.error ?? '撤回失败';
+			}
+		} catch {
+			sendError = '撤回失败,请稍后重试';
+		}
+	}
+
+	/** 编辑消息：调注入函数，成功后本地更新文本 + 标记已编辑（WS 回环到达再幂等覆盖）。 */
+	async function handleEdit(id: string, content: string) {
+		if (!opts.updateMessage) return;
+		try {
+			const res = await opts.updateMessage(id, content);
+			if (res.code === 0) {
+				messages = messages.map((m) => (m.id === id ? { ...m, text: content, editedAt: new Date().toISOString() } : m));
+			} else {
+				sendError = res.error ?? '编辑失败';
+			}
+		} catch {
+			sendError = '编辑失败,请稍后重试';
+		}
+	}
+
 	const lastSentId = $derived(
 		messages
 			.filter((m) => m.sent)
@@ -331,6 +367,8 @@ export function useChat(opts: UseChatOptions) {
 		handleScroll,
 		handleInputChange,
 		handleSend,
+		handleRecall,
+		handleEdit,
 		cancelTyping
 	};
 }

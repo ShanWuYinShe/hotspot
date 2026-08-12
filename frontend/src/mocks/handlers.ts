@@ -367,6 +367,17 @@ export const handlers = [
     }));
   }),
   http.post(`${API}/group_messages/mark_read`, () => requireMockAuth() ?? json(apiOk(null))),
+  // 消息撤回/编辑（spec chat：recall 受窗口/群管理员豁免，update 仅 type=text）
+  http.post(`${API}/private_messages/recall`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/private_messages/update`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { message_id?: string; content?: string };
+    return requireMockAuth() ?? json(apiOk({ message_id: body?.message_id ?? 'm1', content: body?.content ?? '', edited_at: new Date().toISOString() }));
+  }),
+  http.post(`${API}/group_messages/recall`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/group_messages/update`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { message_id?: string; content?: string };
+    return requireMockAuth() ?? json(apiOk({ message_id: body?.message_id ?? 'm1', content: body?.content ?? '', edited_at: new Date().toISOString() }));
+  }),
 
   // ── Feed ───────────────────────────────────────
   // nearby 需要登录；nearby_users/nearby_groups/trending 可选（匿名可见公开数据）。

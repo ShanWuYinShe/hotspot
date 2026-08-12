@@ -228,6 +228,11 @@ export async function getPrivateMessages(params: object)  { return request<Pagin
 export async function sendPrivateMessage(params: object)  { return request<MessageSent>(Endpoints.PrivateMessages.Send, params); }
 export async function getGroupMessages(params: object)    { return request<PaginatedData<GroupMessageItem>>(Endpoints.GroupMessages.GetHistory, params); }
 export async function sendGroupMessage(params: object)    { return request<MessageSent>(Endpoints.GroupMessages.Send, params); }
+// spec: api_spec_chat.md → 消息撤回/编辑（recall 受窗口限制/群管理员豁免，update 仅 type=text）
+export async function recallPrivateMessage(params: { message_id: string }) { return request<void>(Endpoints.PrivateMessages.Recall, params); }
+export async function updatePrivateMessage(params: { message_id: string; content: string }) { return request<PrivateMessageItem>(Endpoints.PrivateMessages.Update, params); }
+export async function recallGroupMessage(params: { message_id: string }) { return request<void>(Endpoints.GroupMessages.Recall, params); }
+export async function updateGroupMessage(params: { message_id: string; content: string }) { return request<GroupMessageItem>(Endpoints.GroupMessages.Update, params); }
 export async function markPrivateRead(params: object)     { return request<void>(Endpoints.PrivateMessages.MarkRead, params); }
 export async function markGroupRead(params: object)       { return request<void>(Endpoints.GroupMessages.MarkRead, params); }
 // spec: api_spec_chat.md → private_chats/update_preferences（静音/置顶）

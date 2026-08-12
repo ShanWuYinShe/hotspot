@@ -4,7 +4,7 @@
 	import MessageBubble from '@/components/messages/MessageBubble.svelte';
 	import ChatDatePill from '@/components/messages/ChatDatePill.svelte';
 	import { auth } from '@/stores/auth.svelte';
-	import { getGroupDetail, getGroupMessages, sendGroupMessage, markGroupRead } from '@/api';
+	import { getGroupDetail, getGroupMessages, sendGroupMessage, markGroupRead, recallGroupMessage, updateGroupMessage } from '@/api';
 	import { WS_GROUP_MESSAGE_EVENT, WS_GROUP_MESSAGE_UPDATE_EVENT, wsClient } from '@/lib/ws/client';
 	import type { UserInfo } from '@/lib/ws/types';
 	import { useChat, formatTime, type ChatMessage } from '@/lib/chat.svelte';
@@ -37,6 +37,7 @@
 	let groupAvatar = $state('');
 
 	const meId = $derived(auth.user?.user_id ?? '__me__');
+	let myRole = $state<'owner' | 'admin' | 'member'>('member');
 
 	// 群信息：失败静默，标题回退"群聊"。
 	$effect(() => {
@@ -49,6 +50,7 @@
 				const d = res.data;
 				groupName = d.group.name;
 				groupAvatar = d.group.avatar_url ?? '';
+				myRole = d.my_state?.role ?? 'member';
 			})
 			.catch(() => {});
 		return () => {
@@ -66,8 +68,9 @@
 			const items = res.data.items;
 			const mapped: ChatMessage[] = items.map((m) => ({
 				id: m.message_id,
-				text: m.recalled_at ? '[消息已撤回]' : (m.content ?? ''),
+				text: m.recalled_at ? '消息已撤回' : (m.content ?? ''),
 				recalled: Boolean(m.recalled_at),
+				editedAt: m.edited_at,
 				sent: m.sender.user_id === meId,
 				time: formatTime(m.sent_at),
 				sentAt: m.sent_at
@@ -119,8 +122,25 @@
 			if (detail.type === 'recalled') return { type: 'recalled', id };
 			// 'read_count'：本地无已读数展示字段，忽略
 			return null;
+		},
+		recallMessage: async (id) => {
+			const res = await recallGroupMessage({ message_id: id });
+			return { code: res.code, error: res.code !== 0 ? '撤回失败' : undefined };
+		},
+		updateMessage: async (id, content) => {
+			const res = await updateGroupMessage({ message_id: id, content });
+			return { code: res.code, error: res.code !== 0 ? '编辑失败' : undefined };
 		}
 	});
+	// 撤回时间窗（spec message_recall_window_seconds，默认 300s；群主/管理员豁免，服务端 10400 兜底）
+	const RECALL_WINDOW_MS = 300_000;
+	const inRecallWindow = (sentAt?: string) => {
+		if (!sentAt) return true;
+		return Date.now() - new Date(sentAt).getTime() < RECALL_WINDOW_MS;
+	};
+	const canRecallMessage = (msg: ChatMessage) =>
+		(msg.sent && inRecallWindow(msg.sentAt)) || myRole === 'admin' || myRole === 'owner';
+
 	// 最后一条非本人消息，供屏幕阅读器 aria-live 播报（只播文本，避免整表重读）
 	const lastIncoming = $derived([...chat.messages].reverse().find((m) => !m.sent));
 
@@ -221,7 +241,19 @@
 				{#each chat.dateGroups as group (group.label)}
 					<ChatDatePill label={group.label} />
 					{#each group.messages as msg (msg.id)}
-						<MessageBubble text={msg.text} sent={msg.sent} time={msg.time} showCheck={msg.id === chat.lastSentId} />
+						<MessageBubble
+							text={msg.text}
+							sent={msg.sent}
+							time={msg.time}
+							showCheck={msg.id === chat.lastSentId}
+							messageId={msg.id}
+							recalled={msg.recalled}
+							editedAt={msg.editedAt}
+							canRecall={canRecallMessage(msg)}
+							canEdit={msg.sent}
+							onRecall={(id) => void chat.handleRecall(id)}
+							onEdit={(id, content) => void chat.handleEdit(id, content)}
+						/>
 					{/each}
 				{/each}
 			</div>

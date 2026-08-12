@@ -5,7 +5,7 @@
 	import MessageBubble from '@/components/messages/MessageBubble.svelte';
 	import ChatDatePill from '@/components/messages/ChatDatePill.svelte';
 	import { auth } from '@/stores/auth.svelte';
-	import { getPrivateMessages, sendPrivateMessage, markPrivateRead } from '@/api';
+	import { getPrivateMessages, sendPrivateMessage, markPrivateRead, recallPrivateMessage, updatePrivateMessage } from '@/api';
 	import {
 		WS_PRIVATE_MESSAGE_EVENT,
 		WS_PRIVATE_MESSAGE_UPDATE_EVENT,
@@ -68,7 +68,9 @@
 			const items = res.data.items;
 			const mapped: ChatMessage[] = items.map((m) => ({
 				id: m.message_id,
-				text: m.content ?? '',
+				text: m.recalled_at ? '消息已撤回' : (m.content ?? ''),
+				recalled: Boolean(m.recalled_at),
+				editedAt: m.edited_at,
 				sent: m.sender.user_id === meId,
 				time: formatTime(m.sent_at),
 				sentAt: m.sent_at
@@ -123,8 +125,23 @@
 			if (detail.type === 'recalled') return { type: 'recalled', id };
 			// 'read'：本地列表无已读状态字段，忽略
 			return null;
+		},
+		recallMessage: async (id) => {
+			const res = await recallPrivateMessage({ message_id: id });
+			return { code: res.code, error: res.code !== 0 ? '撤回失败' : undefined };
+		},
+		updateMessage: async (id, content) => {
+			const res = await updatePrivateMessage({ message_id: id, content });
+			return { code: res.code, error: res.code !== 0 ? '编辑失败' : undefined };
 		}
 	});
+
+	// 撤回时间窗（spec message_recall_window_seconds，默认 300s；服务端 10400 兜底，ClientConfig 接入留后续）
+	const RECALL_WINDOW_MS = 300_000;
+	const inRecallWindow = (sentAt?: string) => {
+		if (!sentAt) return true;
+		return Date.now() - new Date(sentAt).getTime() < RECALL_WINDOW_MS;
+	};
 
 	// 展示用联系人：调用方传入优先，否则用历史推导值。
 	const contact = $derived(contactProp ?? derivedContact);
@@ -275,7 +292,19 @@
 			{#each chat.dateGroups as group (group.label)}
 				<ChatDatePill label={group.label} />
 				{#each group.messages as msg (msg.id)}
-					<MessageBubble text={msg.text} sent={msg.sent} time={msg.time} showCheck={msg.id === chat.lastSentId} />
+					<MessageBubble
+						text={msg.text}
+						sent={msg.sent}
+						time={msg.time}
+						showCheck={msg.id === chat.lastSentId}
+						messageId={msg.id}
+						recalled={msg.recalled}
+						editedAt={msg.editedAt}
+						canRecall={msg.sent && inRecallWindow(msg.sentAt)}
+						canEdit={msg.sent}
+						onRecall={(id) => void chat.handleRecall(id)}
+						onEdit={(id, content) => void chat.handleEdit(id, content)}
+					/>
 				{/each}
 			{/each}
 		</div>

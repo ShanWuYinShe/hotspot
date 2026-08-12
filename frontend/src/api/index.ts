@@ -17,6 +17,7 @@ export {
   createReport,
   getPrivateChats, getPrivateMessages, sendPrivateMessage,
   getGroupMessages, sendGroupMessage, markPrivateRead, markGroupRead,
+  recallPrivateMessage, updatePrivateMessage, recallGroupMessage, updateGroupMessage,
   updatePrivateChatPreferences, updateGroupPreferences,
   setReaction,
   createComment,
