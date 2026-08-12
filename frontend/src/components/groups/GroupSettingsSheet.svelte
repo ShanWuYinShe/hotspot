@@ -371,7 +371,7 @@
 		<p class="mt-1 text-sm text-text-secondary">转让后你将变为普通成员，无法再执行群管理操作。</p>
 		<div class="mt-4 flex items-center justify-end gap-3">
 			<button type="button" onclick={() => (transferTarget = null)} class="hover-btn rounded-full px-4 py-2 text-sm text-text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent-default">取消</button>
-			<button type="button" onclick={() => void handleConfirmTransfer()} disabled={transferring} class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-accent-default enabled:bg-accent-default">确认转让</button>
+			<button type="button" onclick={() => void handleConfirmTransfer()} disabled={transferring} class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:opacity-50 enabled:bg-accent-default">确认转让</button>
 		</div>
 	</Dialog.Content>
 </Dialog.Root>

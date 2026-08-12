@@ -38,7 +38,8 @@
 		onDismissed: () => {
 			if (dismissedHandled) return;
 			dismissedHandled = true;
-			window.alert('该群组已被解散');
+			// 全项目统一无原生对话框（UI 一致性：解散通知走 Toast）
+			showToast('该群组已被解散', 'danger');
 			void goto(ROUTES.nearbyGroups);
 		},
 		watchPresence,
@@ -286,7 +287,7 @@
 						<!-- 申请审批（owner/admin；默认仅 pending，管理员工作台语义） -->
 						<ListContainer bordered class="mt-6">
 							{#each gd.applications as app (app.application_id)}
-								<div class="flex items-center gap-3 px-4 py-3">
+								<ListItem class="app-list-row app-list-row--standard" ariaLabel={`${app.applicant.nickname} 的入群申请`}>
 									<img src={app.applicant.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
 									<span class="min-w-0 flex-1">
 										<span class="block truncate text-sm text-text-primary">{app.applicant.nickname}</span>
@@ -294,7 +295,7 @@
 									</span>
 									<button type="button" onclick={() => void handleApproveApplication(app.application_id)} class="hover-btn rounded-full bg-accent-default px-3 py-1.5 text-xs font-medium text-text-on-accent focus-ring">同意</button>
 									<button type="button" onclick={() => void handleRejectApplication(app.application_id)} class="hover-btn rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring">拒绝</button>
-								</div>
+								</ListItem>
 							{:else}
 								<p class="px-4 py-6 text-center text-sm text-text-secondary">暂无待处理的申请</p>
 							{/each}
@@ -303,7 +304,7 @@
 					<!-- 已发邀请（owner/admin；默认仅 pending，revoked 含过期自动撤销） -->
 					<ListContainer bordered class="mt-6">
 						{#each gd.sentInvites as inv (inv.invite_id)}
-							<div class="flex items-center gap-3 px-4 py-3">
+							<ListItem class="app-list-row app-list-row--standard" ariaLabel={`${inv.invitee.nickname} 的入群邀请`}>
 								<img src={inv.invitee.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm text-text-primary">{inv.invitee.nickname}</span>
@@ -312,7 +313,7 @@
 								{#if inv.status === 'pending'}
 									<button type="button" onclick={() => void handleRevokeInvite(inv.invite_id)} class="hover-btn rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring">撤销</button>
 								{/if}
-							</div>
+							</ListItem>
 						{:else}
 							<p class="px-4 py-6 text-center text-sm text-text-secondary">暂无待处理的邀请</p>
 						{/each}
@@ -321,14 +322,14 @@
 					<!-- 封禁名单（owner/admin） -->
 					<ListContainer bordered class="mt-6">
 						{#each gd.bannedMembers as item (item.user.user_id)}
-							<div class="flex items-center gap-3 px-4 py-3">
+							<ListItem class="app-list-row app-list-row--standard" ariaLabel={`${item.user.nickname} 的封禁记录`}>
 								<img src={item.user.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm text-text-primary">{item.user.nickname}</span>
 									<span class="text-xs text-text-secondary">{formatDateTime(item.banned_at)}{item.reason ? ` · ${item.reason}` : ''}</span>
 								</span>
 								<button type="button" onclick={() => void handleUnban(item.user.user_id)} class="hover-btn rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring">解封</button>
-							</div>
+							</ListItem>
 						{:else}
 							<p class="px-4 py-6 text-center text-sm text-text-secondary">暂无封禁成员</p>
 						{/each}
@@ -347,7 +348,7 @@
 				<!-- 空旷内容区 → List bordered（有边框列表契约） -->
 				<ListContainer bordered class="mt-3">
 					{#each gd.announcements as item (item.id)}
-						<article class="relative px-4 py-4">
+						<ListItem class="flex flex-col items-start px-4 py-4" ariaLabel={item.title}>
 							<div class="flex items-center gap-1.5 pr-16">
 								{#if item.isPinned}
 									<Pin size={12} class="shrink-0 text-accent-default" strokeWidth={1.75} />
@@ -366,7 +367,7 @@
 									</button>
 								</div>
 							{/if}
-						</article>
+						</ListItem>
 					{:else}
 						<p class="px-4 py-6 text-center text-sm text-text-secondary">暂无公告</p>
 					{/each}
