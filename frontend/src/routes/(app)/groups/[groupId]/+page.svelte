@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, Bell, Check, MapPin, Megaphone, MessageCircle, PencilLine, Pin, Settings, Trash2, Users } from '@lucide/svelte';
+	import { ArrowLeft, Bell, Check, MapPin, Megaphone, MessageCircle, MoreHorizontal, PencilLine, Pin, Settings, Trash2, Users } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -13,6 +13,10 @@
 	import { ROUTES } from '@/lib/routes';
 	import { useGroupDetail } from '@/lib/group-data.svelte';
 	import { presence, watchPresence } from '@/stores/presence.svelte';
+	import { auth } from '@/stores/auth.svelte';
+	import { setGroupMemberRole, banGroupMember, removeGroupMember } from '@/api';
+	import MemberActionSheet from '@/components/groups/MemberActionSheet.svelte';
+	import type { MemberAction } from '@/components/groups/MemberActionSheet.svelte';
 
 	// 群组详情：封面 + 简介/成员/公告三 Tab + 加入按钮 + 桌面侧栏。
 	// 状态/加载/WS/操作收敛到 useGroupDetail 工厂；本页只保留 UI + 角色门控。
@@ -68,6 +72,35 @@
 		if (res.code === 0) showToast('公告已删除', 'success');
 		else showToast(res.message || '删除失败', 'danger');
 		deleteAnnounceId = null;
+	};
+
+	// 成员管理（owner/admin；不能操作群主/自己）
+	const meId = $derived(auth.user?.user_id ?? '');
+	const canManageMembers = $derived(gd.joined && (gd.myRole === 'owner' || gd.myRole === 'admin'));
+	const canManageMember = (m: { userId: string; role: string }) =>
+		canManageMembers && m.role !== 'owner' && m.userId !== meId;
+	let actionMember = $state<{ userId: string; name: string; role: string } | null>(null);
+
+	const handleMemberAction = async (action: MemberAction) => {
+		if (!actionMember) return;
+		const m = actionMember;
+		const gid = params.groupId;
+		try {
+			let res: { code: number; message?: string } = { code: -1 };
+			if (action === 'set_admin') res = await setGroupMemberRole({ group_id: gid, user_id: m.userId, role: 'admin' });
+			else if (action === 'unset_admin') res = await setGroupMemberRole({ group_id: gid, user_id: m.userId, role: 'member' });
+			else if (action === 'ban') res = await banGroupMember({ group_id: gid, user_id: m.userId });
+			else if (action === 'remove') res = await removeGroupMember({ group_id: gid, user_id: m.userId });
+			if (res.code === 0) {
+				showToast('操作成功', 'success');
+				void gd.loadMembers(gid);
+				actionMember = null;
+			} else {
+				showToast(res.message || '操作失败', 'danger');
+			}
+		} catch {
+			showToast('操作失败，请重试', 'danger');
+		}
 	};
 </script>
 <svelte:head>
@@ -150,6 +183,16 @@
 								<span class="text-xs text-text-secondary">{member.role}</span>
 							</span>
 							<span class="text-xs text-text-secondary">查看资料</span>
+							{#if canManageMember(member)}
+								<button
+									type="button"
+									onclick={(e) => { e.stopPropagation(); actionMember = member; }}
+									class="flex h-7 w-7 items-center justify-center rounded-full text-text-tertiary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default"
+									aria-label={`管理 ${member.name}`}
+								>
+									<MoreHorizontal size={15} strokeWidth={2} />
+								</button>
+							{/if}
 						</ListItem>
 					{/each}
 				</ListContainer>
@@ -252,4 +295,11 @@
 	initial={announceEditing ?? undefined}
 	onClose={() => (announceOpen = false)}
 	onSubmit={handleAnnouncementSubmit}
+/>
+
+<MemberActionSheet
+	open={actionMember !== null}
+	member={actionMember}
+	onClose={() => (actionMember = null)}
+	onSelect={handleMemberAction}
 />

@@ -300,6 +300,10 @@ export const handlers = [
   }),
   http.post(`${API}/groups/list_my`, () => requireMockAuth() ?? json(paginated(mockGroups.slice(0, 2)))),
   http.post(`${API}/groups/members/list`, () => json(paginated(mockUsers.slice(0, 4).map(u => ({ user: u, role: "member", joined_at: "2026-01-01T00:00:00Z" }))))),
+  // 成员管理写操作（owner/admin）
+  http.post(`${API}/groups/members/set_role`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/members/set_ban`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/members/remove`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/groups/announcements/list`, () => json(apiOk({ items: [
     { announcement_id: "ann1", group_id: "group_1", title: "本周六弹唱活动", content: "下午3点户部山，带上你的乐器", created_by: mockUsers[0], created_at: "2026-07-25T10:00:00Z", is_pinned: true },
   ]}))),
