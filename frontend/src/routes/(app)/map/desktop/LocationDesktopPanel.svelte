@@ -3,6 +3,7 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { PIN_COLORS, PIN_LABELS, PIN_TONES } from '../shared/location-shared';
@@ -183,10 +184,11 @@ locationName = loc?.location_name ?? '';
 				{/each}
 				</ListContainer>
 			{:else}
-				<div class="flex flex-col items-center gap-2 py-10">
-					<MapPin class="size-5.5 opacity-faint text-text-secondary"  strokeWidth={1.5} />
-					<p class="text-text-secondary text-xs">附近暂无内容，放大或移动地图后刷新</p>
-				</div>
+				<EmptyState bare title="附近暂无内容，放大或移动地图后刷新">
+					{#snippet icon()}
+						<MapPin class="size-5.5 opacity-faint text-text-secondary" strokeWidth={1.5} />
+					{/snippet}
+				</EmptyState>
 			{/if}
 		</div>
 	{:else if activeTab === 'hot'}
@@ -221,10 +223,11 @@ locationName = loc?.location_name ?? '';
 					{/each}
 				</ListContainer>
 			{:else}
-				<div class="flex flex-col items-center gap-2 py-10">
-					<Star class="size-5.5 opacity-faint text-text-secondary"  strokeWidth={1.5} />
-					<p class="text-text-secondary text-xs">暂无热门地点</p>
-				</div>
+				<EmptyState bare title="暂无热门地点">
+					{#snippet icon()}
+						<Star class="size-5.5 opacity-faint text-text-secondary" strokeWidth={1.5} />
+					{/snippet}
+				</EmptyState>
 			{/if}
 		</div>
 	{:else}
@@ -255,10 +258,11 @@ locationName = loc?.location_name ?? '';
 					{/each}
 				</ListContainer>
 			{:else}
-				<div class="flex flex-col items-center gap-2 py-10">
-					<Clock class="size-5.5 opacity-faint text-text-secondary"  strokeWidth={1.5} />
-					<p class="text-text-secondary text-xs">暂无最近记录</p>
-				</div>
+				<EmptyState bare title="暂无最近记录">
+					{#snippet icon()}
+						<Clock class="size-5.5 opacity-faint text-text-secondary" strokeWidth={1.5} />
+					{/snippet}
+				</EmptyState>
 			{/if}
 		</div>
 	{/if}

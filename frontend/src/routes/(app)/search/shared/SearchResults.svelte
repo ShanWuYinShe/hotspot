@@ -4,6 +4,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 
@@ -70,12 +71,12 @@
 			<p class="text-sm text-text-secondary">搜索中...</p>
 		</div>
 	{:else if !hasResults}
-		<!-- 空态文案对齐 Figma -->
-		<div class="flex flex-col items-center py-20 text-center">
-			<SearchIcon class="size-8 text-text-secondary" strokeWidth={1.5} />
-			<p class="mt-4 text-sm text-text-primary">没有找到“{query}”</p>
-			<p class="mt-1 text-xs text-text-secondary">换个关键词再试试。</p>
-		</div>
+		<!-- 空态统一 EmptyState（对齐全局空态契约） -->
+		<EmptyState iconSize={56} title={`没有找到“${query}”`} description="换个关键词再试试。">
+			{#snippet icon()}
+				<SearchIcon class="size-5.5 text-text-secondary" strokeWidth={1.5} />
+			{/snippet}
+		</EmptyState>
 	{:else}
 		<div class="mt-5 grid gap-5 xl:grid-cols-2">
 			{#if (tab === 'all' || tab === 'people') && results.users.length > 0}

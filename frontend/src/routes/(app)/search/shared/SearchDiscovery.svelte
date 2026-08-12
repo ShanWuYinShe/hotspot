@@ -2,6 +2,7 @@
 	import { TrendingUp, Clock, Hash, ArrowUpRight } from '@lucide/svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
 
 	// 搜索页「无查询发现态」：最近搜索 + 热门搜索 + 推荐话题。
 	// 页面私有组件（colocate），由 search/+page.svelte 渲染。
@@ -55,7 +56,7 @@
 				{/each}
 			</ListContainer>
 		{:else}
-			<p class="px-5 py-8 text-sm text-text-secondary">还没有搜索记录。</p>
+			<EmptyState bare title="还没有搜索记录。" />
 		{/if}
 	</section>
 
