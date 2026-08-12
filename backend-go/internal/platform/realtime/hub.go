@@ -25,6 +25,7 @@ type Hub struct {
 	byUserWatchers map[string][]FanoutSink
 	byGroup        map[string][]FanoutSink
 	publisher      EventPublisher
+	resumeStore    ResumeStore
 }
 
 func NewHub() *Hub {
@@ -35,6 +36,15 @@ func (h *Hub) SetPublisher(p EventPublisher) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.publisher = p
+}
+
+// SetResumeStore 注入 resume 增量恢复存储（spec L156, L159）。nil 时 BroadcastToUser
+// 不分配 seq（降级为客户端全量重放，spec L161）。由 bootstrap 在 Redis 可用时注入
+// RedisResumeStore；多实例共享同一 Redis，跨实例 resume 一致。
+func (h *Hub) SetResumeStore(store ResumeStore) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.resumeStore = store
 }
 
 func (h *Hub) RegisterUser(userID, sessionID string, sink FanoutSink) bool {
@@ -126,6 +136,18 @@ func (h *Hub) SetGroupSubscriptions(groupIDs []string, sink FanoutSink) {
 }
 
 func (h *Hub) BroadcastToUser(userID string, event Event) {
+	// resume enrich（spec L173）：为该 user 的事件分配 per-user 单调 seq 并写入跨实例
+	// 事件流。这是 resume 续传的唯一收口——BroadcastToUser 同时掌握 userID 与事件投递，
+	// 断线期间（无在线 sink）仍能按 user 累积事件。其余广播路径（group/userSub/all）
+	// 暂不走 resume，靠前端全量重放兜底（见 .workwork/resume-sdd.md「MVP 取舍」）。
+	h.mu.RLock()
+	store := h.resumeStore
+	h.mu.RUnlock()
+	if store != nil {
+		if seq := store.Record(userID, event); seq > 0 {
+			event.ServerSeq = seq
+		}
+	}
 	h.deliverUserLocal(userID, event)
 	h.publish("user:"+userID, event)
 }

@@ -3,6 +3,7 @@ module hotspot/backend-go
 go 1.26
 
 require (
+	github.com/alicebob/miniredis/v2 v2.38.0
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/golang/geo v0.0.0-20251030142647-5906ab3d21fa
@@ -11,6 +12,8 @@ require (
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.43.0
 )
+
+require github.com/yuin/gopher-lua v1.1.1 // indirect
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

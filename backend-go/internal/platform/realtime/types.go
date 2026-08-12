@@ -103,16 +103,26 @@ const (
 // （见 api_spec_index.md「预留」）。未来如需通用的多端状态实时同步，将作为独立
 // WS 协议版本重新设计，届时再定义事件形状。
 
+// Event 是 WS 协议的服务端出站事件。ServerSeq 在 resume 续传路径上由 Hub 分配
+// （per-user 单调递增，见 resume_store.go），客户端可按 seq 去重（spec L173）；
+// 非 resume 路径（握手/心跳/群消息等）事件 omitempty 不下发该字段。
 type Event struct {
-	Type    string `json:"type"`
-	Payload any    `json:"payload"`
+	Type      string `json:"type"`
+	Payload   any    `json:"payload"`
+	ServerSeq int64  `json:"server_seq,omitempty"`
 }
 
 type ConnectionEstablishedPayload struct {
 	ConnectionID string `json:"connection_id"`
 	UserID       string `json:"user_id"`
 	ServerTime   string `json:"server_time"`
-	Config       struct {
+	// ResumeToken 用于断线重连增量恢复（spec L155-156）：客户端在重连 Auth 中
+	// 原样带回。Redis 不可用时为空（omitempty），客户端回退全量重放（spec L161）。
+	ResumeToken string `json:"resume_token,omitempty"`
+	// ServerSeq 是当前该 user 事件流的最新序列号（spec L133：CE 含 server_seq，
+	// 即使为 0 也下发，故不加 omitempty）；客户端据此判断 resume 起点。
+	ServerSeq int64 `json:"server_seq"`
+	Config    struct {
 		PingInterval     int `json:"ping_interval"`
 		PingTimeout      int `json:"ping_timeout"`
 		MaxSubscriptions struct {
@@ -173,6 +183,17 @@ type SubscriptionsSnapshotPayload struct {
 type AuthPayload struct {
 	ClientType  string `json:"client_type,omitempty"`
 	AccessToken string `json:"access_token,omitempty"`
+	// ResumeToken 由客户端在重连时携带（spec L155），服务端据此尝试增量续传。
+	ResumeToken string `json:"resume_token,omitempty"`
+}
+
+// ResumeState 是 resume_token 在服务端缓存的可恢复状态（spec L156, L159）：
+// 连接断开后，服务端在 TTL 内保留该用户的最后序列号与订阅快照，重连时据此回放
+// 增量事件并恢复订阅。存储于跨实例共享的 Redis——单实例内存不可用（spec L159）。
+type ResumeState struct {
+	UserID  string
+	LastSeq int64
+	Subs    SubscriptionsSnapshotPayload
 }
 
 type PingPayload struct{}

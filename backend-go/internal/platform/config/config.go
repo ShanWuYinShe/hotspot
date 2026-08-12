@@ -39,6 +39,9 @@ type Config struct {
 	S3ForcePathStyle       bool
 	S3PublicForcePathStyle bool
 	RedisURL               string
+	// ResumeTTLSeconds 控制 resume 增量恢复状态的保留秒数（spec L156：TTL ≈ 2×
+	// ping_interval，默认 60）。连接断开后服务端在该窗口内可增量续传；超期回退全量。
+	ResumeTTLSeconds int
 	// BcryptCost controls the work factor for password hashing. Must be within
 	// [bcrypt.MinCost, bcrypt.MaxCost]; Validate() rejects anything outside
 	// that range. Defaults to defaultBcryptCost (OWASP minimum).
@@ -71,6 +74,7 @@ func Load() Config {
 		S3ForcePathStyle:       envBoolOrDefault("S3_FORCE_PATH_STYLE", true),
 		S3PublicForcePathStyle: envBoolOrDefault("S3_PUBLIC_FORCE_PATH_STYLE", true),
 		RedisURL:               os.Getenv("REDIS_URL"),
+		ResumeTTLSeconds:       envIntOrDefault("RESUME_TTL_SECONDS", 60),
 		BcryptCost:             bcryptCostOrDefault("BCRYPT_COST", defaultBcryptCost),
 	}
 }
@@ -92,6 +96,19 @@ func envBoolOrDefault(key string, fallback bool) bool {
 		return fallback
 	}
 	return value == "1" || value == "true" || value == "TRUE" || value == "True"
+}
+
+// envIntOrDefault 解析正整数环境变量；空/非法/非正则返回 fallback。
+func envIntOrDefault(key string, fallback int) int {
+	raw := os.Getenv(key)
+	if raw == "" {
+		return fallback
+	}
+	v, err := strconv.Atoi(raw)
+	if err != nil || v <= 0 {
+		return fallback
+	}
+	return v
 }
 
 // bcryptCostOrDefault parses BCRYPT_COST. An empty/unset env var yields the

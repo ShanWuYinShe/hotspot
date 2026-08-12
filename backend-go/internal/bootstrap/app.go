@@ -76,6 +76,14 @@ func NewApp(cfg config.Config) (*App, error) {
 	userService := users.NewServiceWithRepo(userRepo)
 	realtimeHandler := realtime.NewHandlerWithContext(rootCtx, platformauth.DefaultService(), realtimeUserService{svc: userService}, realtimeUserRepo{repo: userRepo}, realtimeGroupRepo{repo: groupRepo})
 	realtimeHandler.SetActorProvider(realtimeUserService{svc: userService})
+	// resume 增量恢复（spec L156, L159）：Redis 可用时创建跨实例事件存储并注入
+	// Hub（seq 分配/事件累积）与 Handler（token 生命周期/回放）。Redis 不可用时
+	// Hub/Handler 的 resumeStore 为 nil，退化为全量重放（spec L161）。
+	if redisClient != nil {
+		resumeStore := realtime.NewRedisResumeStore(redisClient, time.Duration(cfg.ResumeTTLSeconds)*time.Second)
+		realtime.DefaultHub().SetResumeStore(resumeStore)
+		realtimeHandler.SetResumeStore(resumeStore)
+	}
 	rootMux.Handle("/ws/v1", realtimeHandler)
 
 	return &App{

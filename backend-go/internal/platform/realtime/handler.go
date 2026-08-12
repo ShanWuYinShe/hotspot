@@ -2,6 +2,8 @@ package realtime
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -48,6 +50,7 @@ type Handler struct {
 	groupRepo      groupMembershipAuthorizer
 	actorProvider  typingActorProvider
 	typingThrottle sync.Map
+	resumeStore    ResumeStore
 	stop           context.CancelFunc
 	wg             sync.WaitGroup
 }
@@ -85,6 +88,10 @@ func (h *Handler) Close() {
 // (UserInfo) field of pushed typing payloads. Optional: nil falls back to
 // {user_id, nickname=user_id}.
 func (h *Handler) SetActorProvider(p typingActorProvider) { h.actorProvider = p }
+
+// SetResumeStore 注入 resume 增量恢复存储（spec L156, L159）。nil 时退化为 NopResumeStore
+// 语义：token 仍下发但 LoadState 恒空，客户端回退全量重放（spec L161 降级保证）。
+func (h *Handler) SetResumeStore(s ResumeStore) { h.resumeStore = s }
 
 // resolveTypingActor builds the actor UserInfo map for the typing event.
 func (h *Handler) resolveTypingActor(ctx context.Context, userID string) map[string]any {
@@ -197,6 +204,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_ = conn.SetReadDeadline(time.Now().Add(90 * time.Second))
 
 	connectionID := fmt.Sprintf("conn_%d", time.Now().UTC().UnixNano())
+	resumeToken := generateResumeToken()
 	observability.L().Info("ws: connected", "user_id", principal.UserID, "session_id", principal.SessionID, "connection_id", connectionID)
 
 	sink := &socketSink{conn: conn}
@@ -208,15 +216,39 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOffline, Payload: UserOfflinePayload{UserID: principal.UserID, OfflineAt: time.Now().UTC().Format(time.RFC3339)}})
 		}
 		observability.L().Info("ws: disconnected", "user_id", principal.UserID, "session_id", principal.SessionID, "connection_id", connectionID)
+		// resume：连接断开时刷新 state 的 LastSeq 为当前 user 最大 seq，作为重连
+		// 续传起点（spec L156）。多端登录共享 per-user seq 流，LastSeq 取 user 级。
+		if h.resumeStore != nil {
+			h.resumeStore.SaveState(resumeToken, ResumeState{UserID: principal.UserID, LastSeq: h.resumeStore.LastSeq(principal.UserID)})
+		}
 	}()
 
-	payload := ConnectionEstablishedPayload{ConnectionID: connectionID, UserID: principal.UserID, ServerTime: time.Now().UTC().Format(time.RFC3339)}
+	// 当前 user 事件流的最大 seq（连接建立基线）。store 为 nil（Redis 不可用）时
+	// ServerSeq=0、ResumeToken 仍下发但 LoadState 恒空 → 客户端回退全量重放（spec L161）。
+	currentLastSeq := int64(0)
+	if h.resumeStore != nil {
+		currentLastSeq = h.resumeStore.LastSeq(principal.UserID)
+	}
+	payload := ConnectionEstablishedPayload{ConnectionID: connectionID, UserID: principal.UserID, ServerTime: time.Now().UTC().Format(time.RFC3339), ResumeToken: resumeToken, ServerSeq: currentLastSeq}
 	payload.Config.PingInterval = 30
 	payload.Config.PingTimeout = 10
 	payload.Config.MaxSubscriptions.User = 500
 	payload.Config.MaxSubscriptions.Group = 100
 	if err := sink.Send(Event{Type: EventTypeConnectionEstablished, Payload: payload}); err != nil {
 		return
+	}
+
+	// resume 回放（spec L156）：客户端携带的旧 token 有效且属同一 user 时，补拉断线
+	// 期间事件（按 seq 升序，已带 ServerSeq）。回放事件经 sink.Send 直达、不经
+	// BroadcastToUser，故不会重复 Record。订阅状态不在服务端主动恢复——前端重连后
+	// 无条件 replaySubscriptions（frontend/src/lib/ws/client.ts），由 SetSubscriptions
+	// 触发服务端重建订阅，达成 spec L156「订阅状态恢复」语义。
+	if h.resumeStore != nil && authPayload.ResumeToken != "" {
+		if state, ok := h.resumeStore.LoadState(authPayload.ResumeToken); ok && state.UserID == principal.UserID {
+			for _, ev := range h.resumeStore.Replay(principal.UserID, state.LastSeq) {
+				_ = sink.Send(ev)
+			}
+		}
 	}
 
 	subs := newSubscriptions()
@@ -434,4 +466,12 @@ func readCookie(r *http.Request, name string) string {
 		return ""
 	}
 	return cookie.Value
+}
+
+// generateResumeToken 生成不可预测的 opaque resume 凭证（spec L155）。crypto/rand
+// 保证不可猜测，避免攻击者伪造他人 token 续传他人事件流。
+func generateResumeToken() string {
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
 }
