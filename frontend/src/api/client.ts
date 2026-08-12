@@ -157,6 +157,8 @@ export async function follow(params: object)              { return request<void>
 export async function block(params: object)               { return request<void>(Endpoints.Users.Block, params); }
 export async function deleteAccount(params: object)       { return request<void>(Endpoints.Users.DeleteAccount, params); }
 export async function getProfile(userId: string)          { return request<UserProfileBundle>(Endpoints.Users.GetProfile, { user_id: userId }); }
+// spec: api_spec_user.md → users/set_remark（需已关注对方；remark 传空串清除备注）
+export async function setRemark(params: { user_id: string; remark: string }) { return request<void>(Endpoints.Users.SetRemark, params); }
 export async function listFriends(params?: object)        { return request<PaginatedData<FriendItem>>(Endpoints.Users.ListFriends, params ?? {}); }
 export async function listFollowing(params?: object)      { return request<PaginatedData<FollowingItem>>(Endpoints.Users.ListFollowing, params ?? {}); }
 export async function listFollowers(params?: object)      { return request<PaginatedData<FollowerItem>>(Endpoints.Users.ListFollowers, params ?? {}); }
@@ -178,7 +180,9 @@ export async function completeUpload(params: object) {
 // Moments
 export async function searchMoments(params: object)       { return request<PaginatedData<MomentItem>>(Endpoints.Moments.Search, params); }
 export async function getMomentDetail(momentId: string)   { return request<MomentItem>(Endpoints.Moments.GetDetail, { moment_id: momentId }); }
-export async function createMoment(params: object)        { return request<MomentItem>(Endpoints.Moments.Create, params); }
+export async function createMoment(params: object)        { return request<MomentItem>(Endpoints.Moments.Create, params, { 'Idempotency-Key': newIdempotencyKey() }); }
+export async function updateMoment(params: object)        { return request<MomentItem>(Endpoints.Moments.Update, params); }
+export async function deleteMoment(params: { moment_id: string }) { return request<void>(Endpoints.Moments.Delete, params); }
 export async function listMyMoments(params?: object)      { return request<PaginatedData<MomentItem>>(Endpoints.Moments.ListMy, params ?? {}); }
 export async function getFavoriteMoments(params?: object)   { return request<PaginatedData<MomentItem>>(Endpoints.Moments.ListFavorites, params ?? {}); }
 

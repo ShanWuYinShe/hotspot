@@ -9,7 +9,7 @@
 	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
-	import { getProfile, follow, block, createReport } from '@/api';
+	import { getProfile, follow, block, createReport, setRemark } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import * as Dialog from '@/components/ui/dialog';
 	import { showToast } from '@/stores/toast.svelte';
@@ -54,6 +54,7 @@
 	let blocked = $state(false);
 	let remark = $state('');
 	let remarkDraft = $state('');
+	let savingRemark = $state(false);
 	let reportSent = $state(false);
 	let shareCopied = $state(false);
 
@@ -185,17 +186,35 @@
 						class="mt-2 w-full input-surface rounded-md px-3 py-2.5 text-sm text-text-primary"
 					/>
 				</label>
-				<button
-					type="button"
-					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-sm border border-border-default py-2.5 text-sm text-text-primary focus-ring"
-					onclick={() => {
-						remark = remarkDraft.trim();
-						moreOpen = false;
-					}}
-				>
-					<PencilLine size={14} />
-					保存备注
-				</button>
+			<button
+				type="button"
+				disabled={!followed || savingRemark}
+				class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-sm border border-border-default py-2.5 text-sm text-text-primary focus-ring disabled:opacity-60"
+				onclick={async () => {
+					if (!followed) return;
+					savingRemark = true;
+					try {
+						const res = await setRemark({ user_id: uid, remark: remarkDraft.trim() });
+						if (res.code === 0) {
+							remark = remarkDraft.trim();
+							moreOpen = false;
+							showToast('备注已保存', 'success');
+						} else {
+							showToast(res.message || '保存失败', 'danger');
+						}
+					} catch {
+						showToast('保存失败，请重试', 'danger');
+					} finally {
+						savingRemark = false;
+					}
+				}}
+			>
+				<PencilLine size={14} />
+				{savingRemark ? '保存中…' : '保存备注'}
+			</button>
+			{#if !followed}
+				<p class="mt-1 text-xs text-text-tertiary">关注对方后可设备注</p>
+			{/if}
 				<button
 					type="button"
 					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-sm py-2.5 text-sm text-status-danger outline-none focus-visible:ring-2 focus-visible:ring-status-danger"

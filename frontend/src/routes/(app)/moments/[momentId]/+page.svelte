@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { MoreHorizontal, Link2, Send } from '@lucide/svelte';
+	import { MoreHorizontal, Link2, Send, PencilLine, Trash2 } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
@@ -12,7 +12,10 @@
 	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
 	import RailMomentThumb from '@/components/rail/RailMomentThumb.svelte';
 	import MomentPostBody from './MomentPostBody.svelte';
-	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment, getFeedNearby, searchMoments } from '@/api';
+	import MomentEditDialog from '@/components/overlays/MomentEditDialog.svelte';
+	import * as Dialog from '@/components/ui/dialog';
+	import { showToast } from '@/stores/toast.svelte';
+	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment, getFeedNearby, searchMoments, deleteMoment } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance, formatDateTime } from '@/lib/utils';
 
@@ -85,6 +88,11 @@
 	let liked = $state(false);
 	let saved = $state(false);
 	let likeEmoji = $state('👍');
+	// 编辑所需原始字段（扁平 moment 未保留 description/tags/privacy_level）
+	let momentRaw = $state<{ description: string; tags: string[]; privacy_level: 'public' | 'private' }>({ description: '', tags: [], privacy_level: 'public' });
+	let deleteOpen = $state(false);
+	let editOpen = $state(false);
+	let deleting = $state(false);
 
 	$effect(() => {
 		let cancelled = false;
@@ -126,6 +134,11 @@
 						liked = false;
 					}
 					saved = Boolean(detailData.my_state?.is_favorited);
+					momentRaw = {
+						description: detailData.description ?? '',
+						tags: detailData.tags ?? [],
+						privacy_level: detailData.privacy_level === 'private' ? 'private' : 'public'
+					};
 				}
 
 				if (commentsData) {
@@ -152,6 +165,7 @@
 	});
 
 	const commentCount = $derived(apiComments.length);
+	const isAuthor = $derived(Boolean(auth.user?.user_id) && auth.user.user_id === moment.authorId);
 
 	const handleComment = async () => {
 		const text = input.trim();
@@ -194,6 +208,28 @@
 		}
 	};
 
+	const handleDelete = async () => {
+		deleting = true;
+		try {
+			const res = await deleteMoment({ moment_id: momentId });
+			if (res.code === 0) {
+				showToast('动态已删除', 'success');
+				history.back();
+			} else {
+				showToast(res.message || '删除失败', 'danger');
+			}
+		} catch {
+			showToast('删除失败，请重试', 'danger');
+		} finally {
+			deleting = false;
+		}
+	};
+
+	const handleUpdated = (updated: { description: string; tags: string[]; privacy_level: 'public' | 'private' }) => {
+		moment = { ...moment, content: updated.description, tag: updated.tags[0] ?? '' };
+		momentRaw = updated;
+	};
+
 	const copyMomentLink = async () => {
 		const momentUrl = `${window.location.origin}${ROUTES.moment(momentId)}`;
 		try {
@@ -227,6 +263,16 @@
 							<Link2 class="size-3.5 text-accent-default"   strokeWidth={1.75} />
 							复制链接
 						</DropdownMenu.Item>
+						{#if isAuthor}
+							<DropdownMenu.Item onSelect={() => { editOpen = true; moreOpen = false; }}>
+								<PencilLine class="size-3.5 text-accent-default" strokeWidth={1.75} />
+								编辑动态
+							</DropdownMenu.Item>
+							<DropdownMenu.Item class="text-status-danger" onSelect={() => { deleteOpen = true; moreOpen = false; }}>
+								<Trash2 class="size-3.5" strokeWidth={1.75} />
+								删除动态
+							</DropdownMenu.Item>
+						{/if}
 						<DropdownMenu.Item class="text-text-secondary">
 							取消
 						</DropdownMenu.Item>
@@ -318,3 +364,40 @@
 	</RailSection>
 	{/snippet}
 </SplitPageLayout>
+
+<Dialog.Root open={deleteOpen} onOpenChange={(next) => (next ? undefined : (deleteOpen = false))}>
+	<Dialog.Content
+		side="center"
+		class="inset-x-4 mx-auto max-w-sm rounded-xl bg-surface-primary p-5"
+		aria-label="确认删除动态"
+		style="box-shadow:var(--cst-elevation-modal);"
+	>
+		<p class="text-md text-text-primary">删除这条动态？</p>
+		<p class="mt-1 text-sm text-text-secondary">删除后无法恢复，相关评论也将一并移除。</p>
+		<div class="mt-4 flex items-center justify-end gap-3">
+			<button
+				type="button"
+				onclick={() => (deleteOpen = false)}
+				class="hover-btn rounded-full px-4 py-2 text-sm text-text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
+			>
+				取消
+			</button>
+			<button
+				type="button"
+				disabled={deleting}
+				onclick={handleDelete}
+				class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-status-danger enabled:bg-status-danger disabled:opacity-60"
+			>
+				{deleting ? '删除中…' : '确认删除'}
+			</button>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<MomentEditDialog
+	open={editOpen}
+	{momentId}
+	initial={momentRaw}
+	onClose={() => (editOpen = false)}
+	onUpdated={handleUpdated}
+/>

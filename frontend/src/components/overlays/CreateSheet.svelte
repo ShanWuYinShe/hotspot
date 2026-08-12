@@ -76,8 +76,8 @@
 				location: referencePoint
 					? { point: referencePoint, location_name: locationName || '' }
 					: undefined,
-				// spec PrivacyLevel: nearby→public, friends→friends, private→private
-				privacy_level: audience === 'nearby' ? 'public' : audience
+				// spec PrivacyLevel 仅有 'public' | 'private'：nearby→public，其余（含 UI 的 friends 占位）→private
+				privacy_level: audience === 'nearby' ? 'public' : 'private'
 			});
 			if (res.code === 0) {
 				onClose();

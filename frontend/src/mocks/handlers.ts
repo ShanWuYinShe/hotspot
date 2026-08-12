@@ -203,6 +203,19 @@ export const handlers = [
   http.post(`${API}/moments/list_favorites`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 6)))),
   http.post(`${API}/moments/set_favorite`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/moments/create`, () => requireMockAuth() ?? json(apiOk(mockMoments[0]))),
+  http.post(`${API}/moments/update`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { moment_id?: string; description?: string; tags?: string[]; privacy_level?: string };
+    const base = mockMoments.find((m) => m.moment_id === body?.moment_id) ?? mockMoments[0];
+    return requireMockAuth() ?? json(apiOk({
+      ...base,
+      description: body.description ?? base.description,
+      tags: body.tags ?? base.tags,
+      privacy_level: body.privacy_level ?? base.privacy_level,
+    }));
+  }),
+  http.post(`${API}/moments/delete`, () => requireMockAuth() ?? json(apiOk(null))),
+  // users/set_remark（需登录；remark 传空串=清除备注）
+  http.post(`${API}/users/set_remark`, () => requireMockAuth() ?? json(apiOk(null))),
 
   // ── Comments ───────────────────────────────────
   // list 是 auth-optional；create 需要登录。返回 spec CommentItem
