@@ -303,6 +303,16 @@ export const handlers = [
   http.post(`${API}/groups/announcements/list`, () => json(apiOk({ items: [
     { announcement_id: "ann1", group_id: "group_1", title: "本周六弹唱活动", content: "下午3点户部山，带上你的乐器", created_by: mockUsers[0], created_at: "2026-07-25T10:00:00Z", is_pinned: true },
   ]}))),
+  // 公告写操作（owner/admin；create 自带幂等键）
+  http.post(`${API}/groups/announcements/create`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { group_id?: string; title?: string; content?: string; is_pinned?: boolean };
+    return requireMockAuth() ?? json(apiOk({ announcement_id: `ann-${Date.now()}`, group_id: body?.group_id ?? 'group_1', title: body?.title ?? '', content: body?.content ?? '', created_by: mockUsers[0], created_at: new Date().toISOString(), is_pinned: Boolean(body?.is_pinned) }));
+  }),
+  http.post(`${API}/groups/announcements/update`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { group_id?: string; announcement_id?: string; title?: string; content?: string; is_pinned?: boolean };
+    return requireMockAuth() ?? json(apiOk({ announcement_id: body?.announcement_id ?? 'ann1', group_id: body?.group_id ?? 'group_1', title: body?.title ?? '', content: body?.content ?? '', created_by: mockUsers[0], created_at: new Date().toISOString(), is_pinned: Boolean(body?.is_pinned) }));
+  }),
+  http.post(`${API}/groups/announcements/delete`, () => requireMockAuth() ?? json(apiOk(null))),
   // create 是写操作 → 需要登录。
   http.post(`${API}/groups/create`, () => requireMockAuth() ?? json(apiOk(mockGroups[0]))),
   // join/leave 是写操作 → 需要登录。join 按 join_method 路由：

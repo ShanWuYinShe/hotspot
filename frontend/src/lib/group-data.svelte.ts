@@ -5,7 +5,7 @@
 // 调用方式：组件 <script> 顶层 const gd = useGroupDetail({...})；工厂内的
 // $state/$effect 生命周期绑定组件实例，卸载自动清理（WS 订阅 + presence 订阅）。
 
-import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup } from '@/api';
+import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement } from '@/api';
 import { wsClient } from '@/lib/ws/client';
 import { formatDistance, formatDateTime } from '@/lib/utils';
 import type { GroupRole } from '@/api/types';
@@ -29,9 +29,11 @@ export interface GroupMember {
 }
 
 export interface GroupAnnouncement {
+	id: string;
 	title: string;
 	body: string;
 	time: string;
+	isPinned: boolean;
 }
 
 export interface UseGroupDetailOptions {
@@ -123,9 +125,11 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 			const announcementsData = announcementsRes.code === 0 ? announcementsRes.data : null;
 			if (announcementsData) {
 				announcements = (announcementsData.items || []).map((a) => ({
+					id: a.announcement_id,
 					title: a.title ?? '',
 					body: a.content ?? '',
-					time: formatDateTime(a.created_at)
+					time: formatDateTime(a.created_at),
+					isPinned: Boolean(a.is_pinned)
 				}));
 			}
 		} catch {
@@ -165,6 +169,23 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		} else {
 			void leaveGroup(gid).then(done).catch(() => done({ code: -1 }));
 		}
+	}
+
+	// 公告管理（owner/admin；createGroupAnnouncement 自带幂等键）。成功后刷新公告列表（WS 也会推，幂等）。
+	async function createAnnouncement(title: string, content: string, isPinned?: boolean) {
+		const res = await createGroupAnnouncement({ group_id: currentGid(), title, content, is_pinned: isPinned });
+		if (res.code === 0) void loadAnnouncements(currentGid());
+		return res;
+	}
+	async function updateAnnouncement(announcementId: string, patch: { title?: string; content?: string; is_pinned?: boolean }) {
+		const res = await updateGroupAnnouncement({ group_id: currentGid(), announcement_id: announcementId, ...patch });
+		if (res.code === 0) void loadAnnouncements(currentGid());
+		return res;
+	}
+	async function deleteAnnouncement(announcementId: string) {
+		const res = await deleteGroupAnnouncement({ group_id: currentGid(), announcement_id: announcementId });
+		if (res.code === 0) void loadAnnouncements(currentGid());
+		return res;
 	}
 
 	// 初始加载 + 会话切换重载
@@ -242,6 +263,9 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		loadDetail,
 		loadMembers,
 		loadAnnouncements,
+		createAnnouncement,
+		updateAnnouncement,
+		deleteAnnouncement,
 		toggleJoin
 	};
 }

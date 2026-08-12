@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, Bell, Check, MapPin, MessageCircle, Settings, Users } from '@lucide/svelte';
+	import { ArrowLeft, Bell, Check, MapPin, Megaphone, MessageCircle, PencilLine, Pin, Settings, Trash2, Users } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
+	import * as Dialog from '@/components/ui/dialog';
+	import GroupAnnouncementDialog from '@/components/groups/GroupAnnouncementDialog.svelte';
+	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { useGroupDetail } from '@/lib/group-data.svelte';
 	import { presence, watchPresence } from '@/stores/presence.svelte';
@@ -29,6 +32,43 @@
 		watchPresence,
 		isOnline: (id) => presence.isOnline(id)
 	});
+
+	// 公告管理 UI 状态（owner/admin 门控）
+	let announceOpen = $state(false);
+	let announceMode = $state<'create' | 'edit'>('create');
+	let announceEditing = $state<{ id: string; title: string; content: string; isPinned: boolean } | null>(null);
+	let deleteAnnounceId = $state<string | null>(null);
+	const canManageAnnouncements = $derived(gd.joined && (gd.myRole === 'owner' || gd.myRole === 'admin'));
+
+	const openCreateAnnouncement = () => {
+		announceMode = 'create';
+		announceEditing = null;
+		announceOpen = true;
+	};
+	const openEditAnnouncement = (item: { id: string; title: string; body: string; isPinned: boolean }) => {
+		announceMode = 'edit';
+		announceEditing = { id: item.id, title: item.title, content: item.body, isPinned: item.isPinned };
+		announceOpen = true;
+	};
+	const handleAnnouncementSubmit = async (title: string, content: string, isPinned: boolean): Promise<boolean> => {
+		if (announceMode === 'create') {
+			const res = await gd.createAnnouncement(title, content, isPinned);
+			if (res.code === 0) { showToast('公告已发布', 'success'); return true; }
+			showToast(res.message || '发布失败', 'danger'); return false;
+		} else if (announceEditing) {
+			const res = await gd.updateAnnouncement(announceEditing.id, { title, content, is_pinned: isPinned });
+			if (res.code === 0) { showToast('公告已更新', 'success'); return true; }
+			showToast(res.message || '保存失败', 'danger'); return false;
+		}
+		return false;
+	};
+	const handleDeleteAnnouncement = async () => {
+		if (!deleteAnnounceId) return;
+		const res = await gd.deleteAnnouncement(deleteAnnounceId);
+		if (res.code === 0) showToast('公告已删除', 'success');
+		else showToast(res.message || '删除失败', 'danger');
+		deleteAnnounceId = null;
+	};
 </script>
 <svelte:head>
 	<title>群组主页 · HotSpot</title>
@@ -114,14 +154,40 @@
 					{/each}
 				</ListContainer>
 			{:else}
+				<div class="mt-6 flex items-center justify-between">
+					<p class="text-sm text-text-secondary">群公告</p>
+					{#if canManageAnnouncements}
+						<button type="button" onclick={openCreateAnnouncement} class="hover-btn flex items-center gap-1 rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring">
+							<Megaphone size={12} strokeWidth={1.75} />
+							发公告
+						</button>
+					{/if}
+				</div>
 				<!-- 空旷内容区 → List bordered（有边框列表契约） -->
-				<ListContainer bordered class="mt-6">
-					{#each gd.announcements as item (item.title)}
-						<article class="px-4 py-4">
-							<p class="text-sm font-medium text-text-primary">{item.title}</p>
+				<ListContainer bordered class="mt-3">
+					{#each gd.announcements as item (item.id)}
+						<article class="relative px-4 py-4">
+							<div class="flex items-center gap-1.5 pr-16">
+								{#if item.isPinned}
+									<Pin size={12} class="shrink-0 text-accent-default" strokeWidth={1.75} />
+								{/if}
+								<p class="text-sm font-medium text-text-primary">{item.title}</p>
+							</div>
 							<p class="mt-1 text-sm leading-5 text-text-secondary">{item.body}</p>
 							<p class="mt-2 text-xs text-text-secondary">{item.time}</p>
+							{#if canManageAnnouncements}
+								<div class="absolute right-3 top-3 flex gap-1">
+									<button type="button" onclick={() => openEditAnnouncement(item)} class="flex h-6 w-6 items-center justify-center rounded-full text-text-tertiary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default" aria-label="编辑公告">
+										<PencilLine size={12} strokeWidth={1.75} />
+									</button>
+									<button type="button" onclick={() => (deleteAnnounceId = item.id)} class="flex h-6 w-6 items-center justify-center rounded-full text-status-danger outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-status-danger" aria-label="删除公告">
+										<Trash2 size={12} strokeWidth={1.75} />
+									</button>
+								</div>
+							{/if}
 						</article>
+					{:else}
+						<p class="px-4 py-6 text-center text-sm text-text-secondary">暂无公告</p>
 					{/each}
 				</ListContainer>
 			{/if}
@@ -166,5 +232,24 @@
 			{/if}
 		</aside>
 	</div>
-</StandardPageLayout>
+	</StandardPageLayout>
 {/if}
+
+<Dialog.Root open={deleteAnnounceId !== null} onOpenChange={(next) => (next ? undefined : (deleteAnnounceId = null))}>
+	<Dialog.Content side="center" class="inset-x-4 mx-auto max-w-sm rounded-xl bg-surface-primary p-5" aria-label="确认删除公告" style="box-shadow:var(--cst-elevation-modal);">
+		<p class="text-md text-text-primary">删除这条公告？</p>
+		<p class="mt-1 text-sm text-text-secondary">删除后无法恢复。</p>
+		<div class="mt-4 flex items-center justify-end gap-3">
+			<button type="button" onclick={() => (deleteAnnounceId = null)} class="hover-btn rounded-full px-4 py-2 text-sm text-text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent-default">取消</button>
+			<button type="button" onclick={handleDeleteAnnouncement} class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-status-danger enabled:bg-status-danger">确认删除</button>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<GroupAnnouncementDialog
+	open={announceOpen}
+	mode={announceMode}
+	initial={announceEditing ?? undefined}
+	onClose={() => (announceOpen = false)}
+	onSubmit={handleAnnouncementSubmit}
+/>
