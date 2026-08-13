@@ -55,12 +55,11 @@
 
 ### POST /api/v1/moments/search
 
-统一搜索生活瞬间。支持关键字、标签、位置范围三种条件的自由组合。
+统一搜索生活瞬间（关键字/标签）。**不承担附近发现职责**——按位置发现瞬间的唯一入口为 `feed/nearby`（认证分层与排序语义见 `api_spec_feed.md`）。
 
 - **认证**: 可选
 - **排序**:
-  - `sort_by='relevance'`（默认）：按相关性优先；同分时按 `created_at` 倒序，再以 `moment_id ASC` 作为稳定 tie-breaker
-  - `sort_by='distance'`：按距离由近到远（未提供 `radius` 时按默认 `5_000` 米计算）
+  - `sort_by='relevance'`（默认）：按相关性优先；同分时按 `created_at` 倒序，再以 `moment_id DESC` 作为稳定 tie-breaker
   - `sort_by='newest'`：按发布时间倒序
   - `sort_by='popular'`：按互动热度排序（评论/表情反应等，含时间衰减因子，避免老内容长期占榜；具体衰减算法为服务端实现细节）
   - 一致性级别为弱一致（搜索场景允许短暂延迟）
@@ -70,14 +69,11 @@
 interface SearchMomentsRequest {
   keyword?: string;    // 关键字搜索（匹配描述等）
   tag?: string;        // 标签筛选
-  radius?: number;     // 搜索半径（米），约束见 api_spec_base.md 字段校验约束
-  sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';  // 默认: relevance
-  reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
+  sort_by?: 'relevance' | 'newest' | 'popular';  // 默认: relevance
   pagination?: PaginationParams;
 }
-// 至少提供 keyword、tag、radius 中的一个；不满足时请求失败
-// reference_point 不算搜索条件，仅用于距离计算和排序，不能单独作为搜索条件
-// 提供 keyword/tag 但缺省 radius 时，服务端按默认半径计算
+// 至少提供 keyword、tag 中的一个；不满足时请求失败
+// 搜索为全局匹配（不受位置过滤）；附近发现请使用 feed/nearby
 ```
 
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
@@ -132,9 +128,9 @@ interface CreateMomentRequest {
 
 - **认证**: 必须
 
-**Request**: `EditMomentRequest`
+**Request**: `UpdateMomentRequest`
 ```typescript
-interface EditMomentRequest {
+interface UpdateMomentRequest {
   moment_id: string;
   description?: string;
   location?: Location;
@@ -227,7 +223,13 @@ interface MyFavoritesRequest {
 }
 ```
 
-**Response**: `ApiResponse<PaginatedData<MomentItem>>`
+**Response**: `ApiResponse<PaginatedData<FavoritedMomentItem>>`
+```typescript
+// 收藏列表项：MomentItem 基础上附加收藏时间（排序键，随响应返回，客户端可展示"收藏于"时间）
+interface FavoritedMomentItem extends MomentItem {
+  favorited_at: string;   // 收藏时间（UTC ISO 8601）
+}
+```
 
 > 瞬间反应列表由 `POST /api/v1/reactions/list` 查询（见 `api_spec_reaction.md`），传入 `{ target_type: 'moment', target_id: ... }` 即可。
 
@@ -282,7 +284,7 @@ interface CommentItem {
 }
 ```
 
-**错误码**: `10200` `10300`
+**错误码**: `10200`（瞬间作者限制评论或调用方被对方拉黑）`10300`（瞬间不存在或不可见）
 
 ### POST /api/v1/comments/delete
 

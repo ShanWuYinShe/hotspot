@@ -52,7 +52,7 @@ type ShareType = 'user' | 'group' | 'moment' | 'location';
 - **校验**：必须完全匹配字符集与长度，禁止空格、连字符、前后缀
 
 **反滥用要求（契约级）**：
-- `share/get` 为公开端点，必须启用多维度限流（IP 维度 + 用户维度），具体阈值由服务端 `RateLimitConfig` 配置（见 `api_spec_admin_core.md`），超限返回 `10500` 并携带 `Retry-After`
+- `share/get` 为公开端点，必须启用多维度限流（IP 维度 + 用户维度），具体阈值由服务端 `RateLimitConfig` 配置（见 `api_spec_admin_core.md`）；超限时按 `api_spec_base.md`「限流策略」返回限流类错误并携带 `Retry-After` 响应头
 - 对连续失败（share_code 无效/过期）的访问需有递进式惩罚策略（如临时封禁或要求验证码），具体阈值由服务端安全策略决定
 - 失败请求应记录日志，用于离线分析潜在暴力破解行为
 - 限流策略统一遵循 `api_spec_base.md`「限流策略（契约级）」，不在本模块重复硬编码阈值
@@ -213,6 +213,8 @@ interface RevokeShareRequest {
 **Response**: `ApiResponse`
 
 **错误码**: `10300`
+
+**重复撤销语义**：对已撤销的分享再次撤销返回成功（no-op，与 base.md 删除类幂等语义一致）。
 
 > 隐私一致性：非创建者撤销（share 存在但无权限）统一返回 `10300`，与本模块「资源存在但不可访问按不存在处理」规则一致（见上方隐私规则），不通过 `10200` 泄露 share 的存在性。
 > 设计说明：revoke 同时支持 share_id 与 share_code，消除"创建者只保留了链接码却无法撤销"的寻址不对称。

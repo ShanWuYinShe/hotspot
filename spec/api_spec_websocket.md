@@ -121,7 +121,7 @@
 - `MessageMedia`、`MessageReplyTo`
 - `GroupInfo`、`GroupRole`、`GroupJoinMethod`、`GroupAnnouncementItem`
 - `SystemAnnouncementItem`、`MomentSummary`
-- `FollowSource`、`UserSettings`、`Location`
+- `FollowSource`、`Location`
 
 - 错误码定义于 `api_spec_errors.md`
 - 所有事件类型和负载结构必须严格遵循本规范定义
@@ -377,7 +377,7 @@ interface FailedSubscriptionId {
 interface SubscribeAckPayload {
   client_request_id: string;                          // 回传客户端请求ID
   operation: SubscriptionOperation;                  // 回传操作类型
-  accepted: { type: 'user' | 'group'; ids: string[] }[];  // 已接受的订阅项（按 type 分组）
+  accepted: SubscriptionItem[];                      // 已接受的订阅项（按 type 分组；SubscriptionItem 定义见下文「SetSubscriptions」）
   code: number;                                      // 0表示成功，非0表示失败
   message?: string;                                  // 错误消息（失败时）
   failed_ids?: FailedSubscriptionId[];               // 失败的订阅项
@@ -659,6 +659,7 @@ type GroupMessageReadCountUpdatedEvent = { type: "GroupMessageReadCountUpdated";
 interface GroupMessageMentionedPayload {
   notify_id: string;
   group_id: string;
+  group_name: string;      // 群名称（与 notify 的 group_mentioned payload 对齐，客户端直接渲染通知标题）
   message_id: string;
   actor: UserInfo;          // 发送者（@ 的发起人）
   content_preview?: string; // 消息内容截断预览
@@ -690,7 +691,7 @@ interface GroupInviteReceivedPayload {
   notify_id: string;
   invite_id: string;
   group: GroupInfo;  // 引用 api_spec_types.md
-  inviter: UserInfo;
+  actor: UserInfo;   // 邀请发起人（统一 actor 命名，与 WS 全事件约定一致；notify 的 group_invite_received payload 同为 actor）
   message?: string;
   created_at: string;
 }
@@ -925,15 +926,10 @@ type UserProfileUpdatedEvent = { type: "UserProfileUpdated"; payload: UserProfil
 
 **系统事件**：
 ```typescript
-// SystemAnnouncementItem 定义于 api_spec_types.md
+// SystemAnnouncementItem 定义于 api_spec_types.md；announcement 字段直接复用该类型（避免同义字段重复）
 interface SystemAnnouncementPayload {
   notify_id: string;
-  announcement_id: string;
-  title: string;
-  content: string;
-  severity: AnnounceLevel;
-  action_url?: string;
-  created_at: string;
+  announcement: SystemAnnouncementItem;
 }
 type SystemAnnouncementEvent = { type: "SystemAnnouncement"; payload: SystemAnnouncementPayload; };
 

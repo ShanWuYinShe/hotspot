@@ -17,8 +17,7 @@
 |-----|------|------|
 
 | `POST /api/v1/users/search` | 搜索用户（支持关键字/标签/位置组合） | 可选 |
-| `POST /api/v1/users/open_the_door` | 用户资料详情 | 可选 |
-| `POST /api/v1/users/get_profile` | 用户主页聚合（资料 + 近期瞬间，首屏骨架） | 可选 |
+| `POST /api/v1/users/open_the_door` | 用户资料详情（可选主页首屏聚合） | 可选 |
 | `POST /api/v1/users/list_friends` | 好友列表（user_id 可选，默认=当前用户） | 条件必须 |
 | `POST /api/v1/users/list_following` | 关注列表（user_id 可选，默认=当前用户） | 条件必须 |
 | `POST /api/v1/users/list_followers` | 粉丝列表（user_id 可选，默认=当前用户） | 条件必须 |
@@ -63,6 +62,19 @@
 // Gender 为本模块类型
 // 'other' 为包容性取值，覆盖非二元/不愿透露等场景
 type Gender = 'male' | 'female' | 'other';
+
+// 用户关系列表项（list_friends / list_following / list_followers 共用）
+// 字段可见性按端点语义返回，未标注场景的字段省略：
+// - followed_back_at：仅 list_friends 返回（好友形成时间）
+// - remark：@owner-only，仅查询自己（未指定 user_id）时返回
+// - presence_status / last_online_at：随 user: UserItem 返回，受对方 presence_visible 隐私控制
+interface RelatedUserItem {
+  user: UserItem;              // 完整用户信息（含隐私受控的 presence 字段）
+  followed_at: string;         // 关注时间（list_followers 为"对方关注我的时间"，即成为粉丝的时间）
+  followed_back_at?: string;   // 对方回关时间（成为好友的时间）；仅 list_friends 返回
+  is_mutual: boolean;          // 是否互相关注（list_followers 语义：该粉丝是否也关注了我）
+  remark?: string;             // @owner-only：仅查询自己时返回
+}
 ```
 
 ## 端点详情
@@ -71,10 +83,20 @@ type Gender = 'male' | 'female' | 'other';
 
 统一搜索用户。支持关键字、标签、位置范围三种条件的自由组合。
 
+**radius 语义（契约级）**：
+- `radius` 仅**显式提供时**按半径过滤结果；缺省时不做半径过滤（keyword/tag 搜索为全局匹配，可命中任意距离用户）
+- `sort_by='distance'` 的距离计算依赖 `reference_point`（按 `api_spec_types.md`「reference_point 解析规则」回退链解析）；`relevance`/`newest` 排序不依赖位置
+
+**隐私过滤（契约级，searchable 系列开关）**：
+- `searchable=false`：该用户不出现在任何搜索结果（本端点与 `feed/nearby_users`）
+- `nickname_searchable=false`：昵称关键字搜索不命中该用户（其他维度不受影响）
+- `phone_searchable=false`：手机号精确搜索不命中该用户
+- `location_searchable=false`：位置/半径维度搜索与附近发现不返回该用户（keyword/tag 维度不受影响）
+
 - **认证**: 可选
 - **排序**: 
   - 默认 `sort_by='relevance'`：按相关性优先排序，同分时以最近活跃时间做稳定 tie-breaker
-  - `sort_by='distance'`：按距离由近到远排序（未提供 `radius` 时按默认 `5_000` 米计算），距离相近时体现关键词相关性
+  - `sort_by='distance'`：按距离由近到远排序（依赖 reference_point 回退链），距离相近时体现关键词相关性
   - `sort_by='newest'`：按注册时间倒序
   - **稳定 tie-breaker**：任意排序模式下，当主序字段和次序均相同时，以 `user_id ASC` 作为最终稳定排序，保证游标分页一致性
   - 一致性级别为弱一致（搜索场景允许短暂延迟；同一 `cursor` 会话内保持排序基准一致，跨会话允许排序轻微波动）
@@ -84,14 +106,13 @@ type Gender = 'male' | 'female' | 'other';
 interface SearchUsersRequest {
   keyword?: string;    // 关键字搜索（匹配昵称、bio 等）
   tag?: string;        // 标签筛选
-  radius?: number;     // 搜索半径（米），约束见 api_spec_base.md 字段校验约束
+  radius?: number;     // 搜索半径（米），约束见 api_spec_base.md 字段校验约束；显式提供时按半径过滤，缺省不过滤
   sort_by?: 'relevance' | 'distance' | 'newest';  // 默认: relevance（有意不提供 popular：用户无明确的公开热度指标，与 moments/groups 不同）
   reference_point?: GeoPoint; // 浏览锚点位置（可选；不传时服务端按 api_spec_types.md「reference_point 解析规则」回退链解析）
   pagination?: PaginationParams;
 }
 // 至少提供 keyword、tag、radius 中的一个；不满足时请求失败
 // reference_point 不算搜索条件，仅用于距离计算和排序，不能单独作为搜索条件
-// 提供 keyword/tag 但缺省 radius 时，服务端按默认半径计算
 ```
 
 **Response**: `ApiResponse<PaginatedData<UserItem>>`
@@ -104,37 +125,21 @@ interface SearchUsersRequest {
 
 **隐私说明**：用户存在但对其资料设置了完全隐藏（或调用方被对方拉黑等隐私限制）时，返回 `10300`（按不存在处理，不暴露存在性，见 `api_spec_base.md` 隐私拒绝策略）；用户不存在时返回 `10300`。
 
+**主页聚合能力**：`include_recent_moments=true` 时附加主页首屏数据（资料 + 近期瞬间），客户端一次请求拿到主页骨架，消除"资料 + 瞬间"的多次往返（原 `users/get_profile` 能力并入本端点，命名保留为 `open_the_door`）。
+
 - **认证**: 可选
-
-**Request**: `UserOpenTheDoorRequest`
-```typescript
-interface UserOpenTheDoorRequest {
-  user_id: string;
-}
-```
-
-**Response**: `ApiResponse<UserItem>`
-
-**错误码**: `10300`
-
----
-
-### POST /api/v1/users/get_profile
-
-获取用户主页首屏聚合数据（资料 + 近期瞬间）。一次请求拿到主页骨架，消除"资料 + 瞬间"的多次往返。
-
-- **认证**: 可选（与 `users/open_the_door` 对齐，字段可见性规则见 `api_spec_base.md`）
-- **排序**: `recent_moments` 内部按 `created_at DESC`（最新在前），与 `users/list_moments` 一致
+- **排序**: `recent_moments` 内部按 `created_at DESC`（最新在前），`moment_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **设计要点**：
 - `user.stats` 始终返回（含 `moments_count`/`friends_count`/`followers_count`/`following_count`/`groups_count`），客户端据此渲染主页各 tab 的数量角标，无需单独拉取列表
 - 好友/关注/粉丝/群组的**明细列表**仍用现有 `users/list_friends`、`users/list_following` 等按需懒加载（用户点进对应 tab 时再拉）
 - `recent_moments` 条数受 `AppConfig.response_defaults.user_profile_moments_count` 控制（默认 6）；客户端翻页加载更多瞬间时切换到 `users/list_moments`
 
-**Request**: `UserProfileBundleRequest`
+**Request**: `UserOpenTheDoorRequest`
 ```typescript
-interface UserProfileBundleRequest {
+interface UserOpenTheDoorRequest {
   user_id: string;
+  include_recent_moments?: boolean;  // 默认 false；true 时返回 recent_moments（主页首屏聚合）
 }
 ```
 
@@ -142,7 +147,7 @@ interface UserProfileBundleRequest {
 ```typescript
 interface UserProfileBundle {
   user: UserItem;                                  // 资料 + stats（stats 始终返回）
-  recent_moments: PaginatedData<MomentItem>;       // 近期瞬间首屏；条数受 response_defaults.user_profile_moments_count 控制
+  recent_moments?: PaginatedData<MomentItem>;      // 主页首屏近期瞬间；仅 include_recent_moments=true 时返回；条数受 response_defaults.user_profile_moments_count 控制
 }
 ```
 
@@ -167,21 +172,11 @@ interface ListFriendsRequest {
 }
 ```
 
-**Response**: `ApiResponse<PaginatedData<FriendItem>>`
-```typescript
-interface FriendItem {
-  user: UserInfo;
-  presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
-  last_online_at?: string;
-  remark?: string;             // @owner-only：仅查询自己时返回
-  followed_at: string;         // 我关注对方的时间
-  followed_back_at: string;    // 对方回关我的时间（成为好友的时间）
-}
-```
+**Response**: `ApiResponse<PaginatedData<RelatedUserItem>>`（类型定义见本模块「类型定义」小节；`followed_back_at` 仅本端点返回）
 
-**可见性说明**：`remark` 为 `@owner-only`（仅查询自己时返回），`presence_status`/`last_online_at` 受对方 `presence_visible` 隐私设置控制。
+**可见性说明**：`remark` 为 `@owner-only`（仅查询自己时返回）；`presence_status`/`last_online_at` 随 `user` 返回、受对方 `presence_visible` 隐私设置控制。
 
-**错误码**: `10200` `10300`
+**错误码**: `10200`（对方 `social_lists_visible=false`，整表隐私拒绝，见 base.md）`10300`（用户不存在）
 
 ---
 
@@ -202,21 +197,11 @@ interface ListFollowingRequest {
 }
 ```
 
-**Response**: `ApiResponse<PaginatedData<FollowingItem>>`
-```typescript
-interface FollowingItem {
-  user: UserInfo;
-  followed_at: string;
-  is_mutual: boolean;
-  remark?: string;             // @owner-only：仅查询自己时返回
-  presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
-  last_online_at?: string;
-}
-```
+**Response**: `ApiResponse<PaginatedData<RelatedUserItem>>`
 
-**可见性说明**：`remark` 为 `@owner-only`（仅查询自己时返回）；`presence_status`/`last_online_at` 受对方 `presence_visible` 隐私设置控制。
+**可见性说明**：`remark` 为 `@owner-only`（仅查询自己时返回）；`presence_status`/`last_online_at` 随 `user` 返回、受对方 `presence_visible` 隐私设置控制。
 
-**错误码**: `10200` `10300`
+**错误码**: `10200`（对方 `social_lists_visible=false`，整表隐私拒绝，见 base.md）`10300`（用户不存在）
 
 ---
 
@@ -237,20 +222,11 @@ interface ListFollowersRequest {
 }
 ```
 
-**Response**: `ApiResponse<PaginatedData<FollowerItem>>`
-```typescript
-interface FollowerItem {
-  user: UserInfo;
-  followed_at: string;
-  is_mutual: boolean;          // 是否互相关注（该粉丝是否也关注了我），与 FollowingItem.is_mutual 语义一致
-  presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
-  last_online_at?: string;
-}
-```
+**Response**: `ApiResponse<PaginatedData<RelatedUserItem>>`
 
-**可见性说明**：`presence_status`/`last_online_at` 受对方 `presence_visible` 隐私设置控制。
+**可见性说明**：`remark` 为 `@owner-only`（仅查询自己时返回；互关的粉丝即"我关注的人"，`set_remark` 设置的备注在粉丝列表可返回）；`presence_status`/`last_online_at` 随 `user` 返回、受对方 `presence_visible` 隐私设置控制。
 
-**错误码**: `10200` `10300`
+**错误码**: `10200`（对方 `social_lists_visible=false`，整表隐私拒绝，见 base.md）`10300`（用户不存在）
 
 ---
 
@@ -273,7 +249,7 @@ interface UserGroupsRequest {
 
 **Response**: `ApiResponse<PaginatedData<GroupItem>>`
 
-**错误码**: `10200` `10300`
+**错误码**: `10200`（对方 `groups_visible=false`，整表隐私拒绝，见 base.md）`10300`（用户不存在）
 
 ---
 
@@ -319,7 +295,7 @@ interface UserReactedMomentsRequest {
 
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
-**错误码**: `10200` `10300`
+**错误码**: `10200`（对方 `reacted_moments_visible=false`，整表隐私拒绝，见 base.md）`10300`（用户不存在）
 
 ---
 
@@ -383,7 +359,7 @@ interface AccountData {
 ```typescript
 interface UpdateAccountRequest {
   nickname?: string;
-  avatar_file_id?: string;   // 来自 media/complete_upload 返回的 file_id
+  avatar_file_id?: string;   // 来自 media/complete_upload 返回的 file_id；传空字符串 "" 表示清除头像（恢复默认头像）
   bio?: string;
   tags?: string[];
   gender?: Gender;
@@ -394,7 +370,7 @@ interface UpdateAccountRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10300`
+**错误码**: `10300`（`avatar_file_id` 对应的媒体资源不存在或不属于当前用户）
 
 ---
 
@@ -419,12 +395,16 @@ interface UpdateLocationRequest {
 
 账户升级（访客升级为正式用户）。
 
+**前置条件（契约级）**：仅 `user_type='temp'`（访客）可调用；已是 `normal` 的正式用户重复调用返回 `10400`（已是正式用户）。
+
+**login_id 所有权验证**：`login_id` 为手机号/邮箱时，服务端须验证该凭证归属调用方（验证码流程，与 `api_spec_index.md` 预留的验证码能力一致）；验证码发送/校验服务接入前，手机号/邮箱型 `login_id` 暂不支持升级，仅允许用户名型。防止访客抢占他人手机号/邮箱。
+
 - **认证**: 必须
 
 **Request**: `UpgradeAccountRequest`
 ```typescript
 interface UpgradeAccountRequest {
-  login_id: string;   // 手机号/邮箱/用户名
+  login_id: string;   // 用户名；手机号/邮箱需先接入验证码服务（见上方「login_id 所有权验证」）
   password: string;
 }
 ```
@@ -511,11 +491,13 @@ interface FollowRequest {
   source?: FollowSource;        // 可选：关注来源（用于来源归因，仅 active=true 有意义）
   source_moment_id?: string;    // 可选：通过瞬间关注时提供瞬间 ID
 }
+// 组合约束：source='moment' 时 source_moment_id 必填（缺失返回 10000）；
+// 提供 source_moment_id 但 source != 'moment' 视为参数冲突（10000）
 ```
 
 **Response**: `ApiResponse`
 
-**错误码**: `10200` `10300` `10400`（不能关注/取关自己）
+**错误码**: `10200`（对方 `allow_follow=false`）`10300`（目标用户不存在）`10400`（不能关注/取关自己）
 
 ---
 
@@ -538,7 +520,7 @@ interface BlockRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10300` `10400`（不能拉黑/解除拉黑自己）
+**错误码**: `10300`（目标用户不存在）`10400`（不能拉黑/解除拉黑自己）
 
 ---
 

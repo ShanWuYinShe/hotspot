@@ -70,10 +70,9 @@ interface SearchSuggestRequest {
 // - group：GroupItem
 // - moment：MomentSuggestItem（基于 MomentSummary 的轻量扩展，仅用于建议场景）
 
-// 瞬间建议项（MomentSummary 定义于 api_spec_types.md；author 为发布者，location 为相对浏览锚点的位置）
-interface MomentSuggestItem {
-  moment_id: string;
-  description_preview: string;
+// 瞬间建议项（基于 MomentSummary 的轻量扩展，仅用于建议场景；author 为发布者，location 为相对浏览锚点的位置）
+// MomentSummary 定义于 api_spec_types.md（含 moment_id + description_preview + cover_url?）
+interface MomentSuggestItem extends MomentSummary {
   author: UserInfo;
   location?: RelativeLocation;
 }
