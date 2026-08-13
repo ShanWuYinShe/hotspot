@@ -14,9 +14,7 @@ import {
 } from '@/api';
 import type {
 	AccountData,
-	FollowerItem,
-	FollowingItem,
-	FriendItem,
+	RelatedUserItem,
 	GroupItem,
 	MomentItem
 } from '@/api/types';
@@ -266,37 +264,38 @@ export interface MappedFollower {
  * Map the three spec relationship items to the flat shapes the Section components
  * expect. The spec nests UserInfo under `user:` and uses presence_status / is_mutual.
  */
-function mapFriend(item: FriendItem): MappedFriend {
+// spec 三列表统一为 RelatedUserItem（user: UserItem 承载 presence 隐私字段；
+// remark 仅查询自己时返回，followers 列表在互关场景同样返回）。
+function mapFriend(item: RelatedUserItem): MappedFriend {
 	const u = item.user;
 	return {
-		id: u.user_id,
-		name: u.nickname,
-		avatar: u.avatar_url ?? '',
-		online: item.presence_status === 'online',
-		handle: item.remark ? `@${item.remark}` : `@${u.user_id}`,
+		id: u.user.user_id,
+		name: u.user.nickname,
+		avatar: u.user.avatar_url ?? '',
+		online: u.presence_status === 'online',
+		handle: item.remark ? `@${item.remark}` : `@${u.user.user_id}`,
 		tag: '好友'
 	};
 }
 
-function mapFollowing(item: FollowingItem): MappedFollowing {
+function mapFollowing(item: RelatedUserItem): MappedFollowing {
 	const u = item.user;
 	return {
-		id: u.user_id,
-		name: u.nickname,
-		avatar: u.avatar_url ?? '',
+		id: u.user.user_id,
+		name: u.user.nickname,
+		avatar: u.user.avatar_url ?? '',
 		desc: item.remark ?? '',
 		isMutual: Boolean(item.is_mutual)
 	};
 }
 
-function mapFollower(item: FollowerItem): MappedFollower {
+function mapFollower(item: RelatedUserItem): MappedFollower {
 	const u = item.user;
 	return {
-		id: u.user_id,
-		name: u.nickname,
-		avatar: u.avatar_url ?? '',
-		// spec FollowerItem 无 remark；用 user_id 作 handle 占位
-		handle: `@${u.user_id}`,
+		id: u.user.user_id,
+		name: u.user.nickname,
+		avatar: u.user.avatar_url ?? '',
+		handle: item.remark ? `@${item.remark}` : `@${u.user.user_id}`,
 		joinedDays: daysSince(item.followed_at),
 		isMutual: Boolean(item.is_mutual)
 	};

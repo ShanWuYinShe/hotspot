@@ -55,7 +55,7 @@ const mockMomentHotspots = mockMoments.slice(0, 6).map((m) => ({
  * the session is valid, so handlers can early-return the guard's result.
  *
  * Optional-auth endpoints (moments/search, groups/search, search/*, map,
- * system/*, users/get_profile, feed/trending) are NOT guarded — anonymous
+ * system/*, users/open_the_door, feed/trending) are NOT guarded — anonymous
  * users see public data per spec.
  */
 function requireMockAuth(): ReturnType<typeof json> | null {
@@ -69,8 +69,8 @@ function requireMockAuth(): ReturnType<typeof json> | null {
  */
 function authOkResponse() {
   setMockLoggedIn(true);
-  // Web: AuthTokenPairWeb = {} ; tokens in HttpOnly cookies (same names as spec).
-  return HttpResponse.json(apiOk({}), {
+  // Web: AuthTokenPairWeb = { client_type: 'web' }（判别字段）；tokens in HttpOnly cookies (same names as spec).
+  return HttpResponse.json(apiOk({ client_type: 'web' }), {
     headers: {
       "Set-Cookie": [
         "access_token=mock-jwt; Path=/; HttpOnly; SameSite=Strict",
@@ -139,7 +139,7 @@ export const handlers = [
   http.post(`${API}/auth/reset_password`, () => authFormScenarioError() ?? authOkResponse()),
 
   // ── Users ──────────────────────────────────────
-  // get_account / get_settings are auth-required → guarded. get_profile is
+  // get_account / get_settings are auth-required → guarded. open_the_door is
   // optional → not guarded (anonymous sees public profile, my_state omitted).
   http.post(`${API}/users/get_account`, () => requireMockAuth() ?? json(apiOk(mockAccount))),
   http.post(`${API}/users/update_account`, () => requireMockAuth() ?? json(apiOk(null))),
@@ -152,14 +152,15 @@ export const handlers = [
     Object.assign(mockSettings, body.settings ?? {});
     return json(apiOk(null));
   }),
-  http.post(`${API}/users/get_profile`, async ({ request }) => {
+  http.post(`${API}/users/open_the_door`, async ({ request }) => {
     // 按 user_id 路由（缺失/未知 id 回退第一位用户），stats/relation 用同一组
-    // 派生数据，recent_moments 返回对应用户的瞬间（避免访问任意用户都看到同一个人）。
-    const body = (await request.json().catch(() => ({}))) as { user_id?: string };
+    // 派生数据，recent_moments 返回对应用户的瞬间（避免访问任意用户都看到同一个人）；
+    // include_recent_moments=false 时省略 recent_moments（spec: user.md → open_the_door）。
+    const body = (await request.json().catch(() => ({}))) as { user_id?: string; include_recent_moments?: boolean };
     const idx = Math.max(0, mockUsers.findIndex((u) => u.user_id === body?.user_id));
     const u = mockUsers[idx];
     const userMoments = mockMoments.filter((m) => m.user.user_id === u.user_id);
-    return json(apiOk({
+    const profile: Record<string, unknown> = {
       // spec: UserProfileBundle — user 为 UserItem（嵌套 user: UserInfo + stats/relation 内嵌）
       user: {
         user: { user_id: u.user_id, nickname: u.nickname, avatar_url: u.avatar_url },
@@ -169,9 +170,12 @@ export const handlers = [
         location: { point: { latitude: 34.26, longitude: 117.18 }, location_name: '徐州', distance: '0.3km' },
         stats: { moments_count: userMoments.length || 24, friends_count: 18, followers_count: 89, following_count: 42, groups_count: 5 },
         relation: { is_following: idx !== 0, is_followed_by: false, is_blocked: false }
-      },
-      recent_moments: { items: userMoments.length ? userMoments : mockMoments.slice(idx * 2, idx * 2 + 4) },
-    }));
+      }
+    };
+    if (body.include_recent_moments) {
+      profile.recent_moments = { items: userMoments.length ? userMoments : mockMoments.slice(idx * 2, idx * 2 + 4) };
+    }
+    return json(apiOk(profile));
   }),
   // spec: users/search 返回 UserItem（user 嵌套 UserInfo）；mockUsers 是扁平结构，需包装
   http.post(`${API}/users/search`, () =>
@@ -197,7 +201,7 @@ export const handlers = [
     return json(apiOk(found ?? mockMoments[0]));
   }),
   http.post(`${API}/moments/list_my`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 9)))),
-  http.post(`${API}/moments/list_favorites`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 6)))),
+  http.post(`${API}/moments/list_favorites`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 6).map((m) => ({ ...m, favorited_at: '2026-08-01T08:00:00.000Z' }))))),
   http.post(`${API}/moments/set_favorite`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/moments/create`, () => requireMockAuth() ?? json(apiOk(mockMoments[0]))),
   http.post(`${API}/moments/update`, async ({ request }) => {
@@ -466,7 +470,7 @@ export const handlers = [
   // ── System ─────────────────────────────────────
   http.post(`${API}/system/get_client_config`, () => json(apiOk({
     features: { enable_public_registration: true, enable_guest_login: true, enable_moments: true, enable_nearby_people: true },
-    limits: { max_group_members: 200, max_moment_tags: 5, max_moment_images: 9, moment_description_max_length: 500, comment_max_length: 200, search_radius_max: 50000, message_recall_window_seconds: 300, stranger_message_daily_quota: 10, reaction_emojis: ["👍", "❤️", "🔥", "😂", "😮", "😢", "🙏"], group_invite_ttl_hours: 72, group_application_ttl_hours: 72 },
+    limits: { max_group_members: 200, max_moment_tags: 5, max_moment_images: 9, moment_description_max_length: 500, comment_max_length: 200, search_radius_max: 50000, max_chat_files: 9, message_recall_window_seconds: 300, stranger_message_daily_quota: 10, reaction_emojis: ["👍", "❤️", "🔥", "😂", "😮", "😢", "🙏"], group_invite_ttl_hours: 72, group_application_ttl_hours: 72 },
     contact: { support_email: "support@hotspot.app", privacy_policy_url: "", terms_of_service_url: "", official_website_url: "" },
     defaults: { default_location: { point: { latitude: 34.2604, longitude: 117.1855 }, location_name: "徐州" }, default_user_avatar_url: "", default_group_avatar_url: "" },
   }))),
@@ -475,7 +479,7 @@ export const handlers = [
     meta: { version: "v1", status: "active" },
     client_config: {
       features: { enable_public_registration: true, enable_guest_login: true, enable_moments: true, enable_nearby_people: true },
-      limits: { max_group_members: 200, max_moment_tags: 5, max_moment_images: 9, moment_description_max_length: 500, comment_max_length: 200, search_radius_max: 50000, message_recall_window_seconds: 300, stranger_message_daily_quota: 10, reaction_emojis: ["👍", "❤️", "🔥", "😂", "😮", "😢", "🙏"], group_invite_ttl_hours: 72, group_application_ttl_hours: 72 },
+      limits: { max_group_members: 200, max_moment_tags: 5, max_moment_images: 9, moment_description_max_length: 500, comment_max_length: 200, search_radius_max: 50000, max_chat_files: 9, message_recall_window_seconds: 300, stranger_message_daily_quota: 10, reaction_emojis: ["👍", "❤️", "🔥", "😂", "😮", "😢", "🙏"], group_invite_ttl_hours: 72, group_application_ttl_hours: 72 },
       contact: { support_email: "support@hotspot.app", privacy_policy_url: "", terms_of_service_url: "", official_website_url: "" },
       defaults: { default_location: { point: { latitude: 34.2604, longitude: 117.1855 }, location_name: "徐州" }, default_user_avatar_url: "", default_group_avatar_url: "" },
     },

@@ -108,7 +108,11 @@ describe('幂等键与认证头', () => {
       const fetchMock = mockFetchOnce({ code: 0, data: {} });
       vi.stubGlobal('fetch', fetchMock);
       client.setApiBaseUrl(BASE);
-      await call({});
+      // createGroup 为强类型签名（spec: groups/create），其余为宽松 object
+      const params = call === client.createGroup
+        ? { name: '测试群', location: { point: { latitude: 34.26, longitude: 117.18 }, location_name: '徐州' } }
+        : {};
+      await call(params as never);
       const headers = fetchMock.mock.calls[0][1].headers;
       expect(typeof headers['Idempotency-Key']).toBe('string');
       expect(headers['Idempotency-Key'].length).toBeGreaterThan(0);

@@ -23,7 +23,7 @@ export const Endpoints = {
     RevokeAllSessions: `${PREFIX}/auth/revoke_all_sessions`,
   },
 
-  // Users — 已包装: Search/GetProfile/ListFriends/ListFollowing/ListFollowers/
+  // Users — 已包装: Search/OpenTheDoor/ListFriends/ListFollowing/ListFollowers/
   //   ListMoments/ListReactedMoments/GetAccount/UpdateAccount/GetSettings/Follow/Block/
   //   DeleteAccount；
   //   待接线: GetDetail/BatchGet/ListGroups/UpdateSettings/UpdateLocation/Upgrade/
@@ -31,7 +31,6 @@ export const Endpoints = {
   Users: {
     Search: `${PREFIX}/users/search`,
     GetDetail: `${PREFIX}/users/open_the_door`,
-    GetProfile: `${PREFIX}/users/get_profile`,
     BatchGet: `${PREFIX}/users/batch_get`,
     ListFriends: `${PREFIX}/users/list_friends`,
     ListFollowing: `${PREFIX}/users/list_following`,

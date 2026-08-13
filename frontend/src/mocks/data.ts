@@ -68,21 +68,24 @@ export const mockUsers: MockUser[] = [
   { user_id: "user_xiaoman", nickname: "小满", avatar_url: avatarA },
 ];
 
-// ── Relationship lists (spec FriendItem / FollowingItem / FollowerItem) ──
-// Each item nests UserInfo under `user:` and carries the spec's relationship
-// fields. Previously the handlers returned the bare mockUsers array (flat
-// {user_id, nickname, avatar_url}), which did not match the spec item shape and
-// left pages reading user.avatar_url / presence_status with undefined values.
+// ── Relationship lists (spec RelatedUserItem: list_friends/list_following/list_followers 共用) ──
+// user 为 UserItem（user 嵌套 UserInfo + presence 隐私受控字段）；
+// followed_back_at 仅 list_friends；remark 仅查询自己时返回。
 const PRESENCES = ["online", "offline", "online", "online", "offline", "online"] as const;
 const isoDaysAgo = (days: number) => new Date(Date.now() - days * 86400000).toISOString();
 
-export const mockFriends = mockUsers.slice(0, 6).map((u, i) => ({
-  user: u,
+const wrapUser = (u: (typeof mockUsers)[number], i: number) => ({
+  user: { user_id: u.user_id, nickname: u.nickname, avatar_url: u.avatar_url },
   presence_status: PRESENCES[i],
-  last_online_at: isoDaysAgo(i),
+  last_online_at: isoDaysAgo(i + 1),
+});
+
+export const mockFriends = mockUsers.slice(0, 6).map((u, i) => ({
+  user: wrapUser(u, i),
   remark: i % 3 === 0 ? `${u.nickname}备注` : undefined,
   followed_at: isoDaysAgo(30 + i),
   followed_back_at: isoDaysAgo(20 + i),
+  is_mutual: true,
 }));
 
 // feed/nearby_users 返回 spec UserItem（user 嵌套 + presence_status + location）。
@@ -96,11 +99,10 @@ export const mockNearbyUsers = mockUsers.slice(0, 5).map((u, i) => ({
 }));
 
 export const mockFollowing = mockUsers.slice(1, 6).map((u, i) => ({
-  user: u,
+  user: wrapUser(u, i + 1),
   followed_at: isoDaysAgo(15 + i),
   is_mutual: i % 2 === 0,
-  presence_status: PRESENCES[i + 1],
-  last_online_at: isoDaysAgo(i + 1),
+  remark: i === 0 ? `${u.nickname}备注` : undefined,
 }));
 
 export const mockFollowers = mockUsers.slice(2, 7).map((u, i) => ({
@@ -184,7 +186,7 @@ export const mockNotifications = [
   { notify_id: "notif_2", type: "reaction_added", is_read: false, created_at: "2026-07-26T13:30:00Z", payload: { type: "reaction_added", actor: mockUsers[2], target_type: "moment", target_id: mockMoments[0].moment_id, emoji: "❤️" } },
   { notify_id: "notif_3", type: "moment_commented", is_read: true, created_at: "2026-07-26T12:00:00Z", payload: { type: "moment_commented", actor: mockUsers[3], moment_id: mockMoments[1].moment_id, moment_summary: { moment_id: mockMoments[1].moment_id, description_preview: mockMoments[1].description.slice(0, 100) }, comment_id: "c1", comment_preview: "好美！" } },
   { notify_id: "notif_4", type: "group_invite_received", is_read: false, created_at: "2026-07-26T10:00:00Z", payload: { type: "group_invite_received", actor: mockUsers[4], group_id: mockGroups[0].group.group_id, group_name: mockGroups[0].group.name, group_avatar_url: mockGroups[0].group.avatar_url, invite_id: "inv_1" } },
-  { notify_id: "notif_5", type: "system_announcement", is_read: true, created_at: "2026-07-25T08:00:00Z", payload: { type: "system_announcement", announcement_id: "ann_1", severity: "info" } },
+  { notify_id: "notif_5", type: "system_announcement", is_read: true, created_at: "2026-07-25T08:00:00Z", payload: { type: "system_announcement", announcement_id: "ann_1", title: "服务升级通知", severity: "info" } },
   { notify_id: "notif_6", type: "reaction_added", is_read: false, created_at: "2026-07-26T09:00:00Z", payload: { type: "reaction_added", actor: mockUsers[5], target_type: "moment", target_id: mockMoments[2].moment_id, emoji: "🔥" } },
   { notify_id: "notif_7", type: "nearby_new_moment", is_read: false, created_at: "2026-07-26T08:30:00Z", payload: { type: "nearby_new_moment", actor: mockUsers[6], moment_id: mockMoments[3].moment_id, moment_summary: { moment_id: mockMoments[3].moment_id, description_preview: mockMoments[3].description.slice(0, 100), cover_url: mockMoments[3].images?.[0]?.url }, distance: 850 } },
   { notify_id: "notif_8", type: "group_application_rejected", is_read: true, created_at: "2026-07-25T20:00:00Z", payload: { type: "group_application_rejected", group_id: mockGroups[1].group.group_id, group_name: mockGroups[1].group.name, application_id: "appl_1", rejected_by: mockUsers[3], reason: "名额已满" } },

@@ -10,9 +10,7 @@ import type {
 	BootstrapData,
 	ClientConfig,
 	CommentItem,
-	FollowerItem,
-	FriendItem,
-	FollowingItem,
+	RelatedUserItem,
 	GroupAnnouncementItem,
 	GroupItem,
 	GroupMemberItem,
@@ -57,6 +55,7 @@ import type {
 	UploadedMedia,
 	MessageSent,
 	MomentItem,
+	FavoritedMomentItem,
 	NotifyItem,
 	PaginatedData,
 	PrivateChatItem,
@@ -68,6 +67,7 @@ import type {
 	UserItem,
 	UserProfileBundle,
 	UserSettings,
+	CreateGroupRequest,
 } from '@/api/types';
 
 // 分页信封由 types.ts 提供；此处集中重导出供页面直接使用。
@@ -192,12 +192,15 @@ export async function updateSettings(params: { settings: Partial<UserSettings> }
 export async function follow(params: object)              { return request<void>(Endpoints.Users.Follow, params); }
 export async function block(params: object)               { return request<void>(Endpoints.Users.Block, params); }
 export async function deleteAccount(params: object)       { return request<void>(Endpoints.Users.DeleteAccount, params); }
-export async function getProfile(userId: string)          { return request<UserProfileBundle>(Endpoints.Users.GetProfile, { user_id: userId }); }
+// spec: api_spec_user.md → users/open_the_door（include_recent_moments=true 时返回主页首屏聚合）
+export async function openTheDoor(userId: string, includeRecentMoments = false) {
+	return request<UserProfileBundle>(Endpoints.Users.GetDetail, { user_id: userId, include_recent_moments: includeRecentMoments });
+}
 // spec: api_spec_user.md → users/set_remark（需已关注对方；remark 传空串清除备注）
 export async function setRemark(params: { user_id: string; remark: string }) { return request<void>(Endpoints.Users.SetRemark, params); }
-export async function listFriends(params?: object)        { return request<PaginatedData<FriendItem>>(Endpoints.Users.ListFriends, params ?? {}); }
-export async function listFollowing(params?: object)      { return request<PaginatedData<FollowingItem>>(Endpoints.Users.ListFollowing, params ?? {}); }
-export async function listFollowers(params?: object)      { return request<PaginatedData<FollowerItem>>(Endpoints.Users.ListFollowers, params ?? {}); }
+export async function listFriends(params?: object)        { return request<PaginatedData<RelatedUserItem>>(Endpoints.Users.ListFriends, params ?? {}); }
+export async function listFollowing(params?: object)      { return request<PaginatedData<RelatedUserItem>>(Endpoints.Users.ListFollowing, params ?? {}); }
+export async function listFollowers(params?: object)      { return request<PaginatedData<RelatedUserItem>>(Endpoints.Users.ListFollowers, params ?? {}); }
 
 // Feed
 export async function getFeedNearby(params?: object)      { return request<PaginatedData<MomentItem>>(Endpoints.Feed.Nearby, params ?? {}); }
@@ -227,11 +230,11 @@ export async function createMoment(params: object)        { return request<Momen
 export async function updateMoment(params: object)        { return request<MomentItem>(Endpoints.Moments.Update, params); }
 export async function deleteMoment(params: { moment_id: string }) { return request<void>(Endpoints.Moments.Delete, params); }
 export async function listMyMoments(params?: object)      { return request<PaginatedData<MomentItem>>(Endpoints.Moments.ListMy, params ?? {}); }
-export async function getFavoriteMoments(params?: object)   { return request<PaginatedData<MomentItem>>(Endpoints.Moments.ListFavorites, params ?? {}); }
+export async function getFavoriteMoments(params?: object)   { return request<PaginatedData<FavoritedMomentItem>>(Endpoints.Moments.ListFavorites, params ?? {}); }
 
 // Groups
 export async function getGroupDetail(groupId: string)     { return request<GroupItem>(Endpoints.Groups.GetDetail, { group_id: groupId }); }
-export async function createGroup(params: object)         { return request<GroupItem>(Endpoints.Groups.Create, params, { 'Idempotency-Key': newIdempotencyKey() }); }
+export async function createGroup(params: CreateGroupRequest) { return request<GroupItem>(Endpoints.Groups.Create, params, { 'Idempotency-Key': newIdempotencyKey() }); }
 export async function listMyGroups(params?: object)       { return request<PaginatedData<GroupItem>>(Endpoints.Groups.ListMy, params ?? {}); }
 // spec: api_spec_group.md → groups/join（direct 直接加入 / approval 创建申请）、groups/leave
 export async function joinGroup(groupId: string, extra?: { password?: string; message?: string }) {

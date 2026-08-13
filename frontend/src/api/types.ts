@@ -169,13 +169,7 @@ export interface GroupItem {
 	last_activity_at?: string;
 	online_members_count?: number;
 	next_activity?: string;
-	last_message?: {
-		message_id: string;
-		type: MessageType;
-		content?: string;
-		sender: UserInfo;
-		sent_at: string;
-	};
+	last_message?: LastMessagePreview; // 群列表场景返回（仅 groups/list_my）；LastMessagePreview 定义见消息节
 	created_at?: string;
 	owner_id?: string;
 	my_state?: MyGroupState;
@@ -260,10 +254,11 @@ export interface BannedMemberItem {
 	banned_by?: UserInfo;
 }
 
-// members/invite 返回
+// members/invite 返回（spec: group.md → Invitation）
+// invite_id/expires_at 可选：被邀请者已是成员（no-op）时省略；TTL=0（永不过期）时 expires_at 省略
 export interface Invitation {
-	invite_id: string;
-	expires_at: string;
+	invite_id?: string;
+	expires_at?: string;
 }
 
 // invites/received/accept 返回
@@ -292,8 +287,24 @@ export interface UpdateGroupRequest {
 	join_method?: GroupJoinMethod;
 	requires_approval?: boolean;
 	is_searchable?: boolean;
+	members_searchable?: boolean; // 是否允许非成员检索群成员列表（groups/members/search）
 	max_members?: number;
 	location?: Location;
+}
+
+// spec: group.md → groups/create
+export interface CreateGroupRequest {
+	name: string;
+	description?: string;
+	avatar_file_id?: string;
+	tags?: string[];
+	password?: string;
+	join_method?: GroupJoinMethod; // 默认 'direct'
+	requires_approval?: boolean;   // 默认 false
+	is_searchable?: boolean;       // 默认 true
+	members_searchable?: boolean;  // 默认 true
+	max_members?: number;          // 默认 200
+	location: Location;
 }
 
 export interface DismissGroupRequest {
@@ -443,6 +454,11 @@ export interface MomentItem {
 	is_deleted: boolean; // 软删除标记；true 时 description 为空，客户端展示"内容已删除"占位
 }
 
+// 收藏列表项（spec: moment.md → FavoritedMomentItem，list_favorites 返回）
+export interface FavoritedMomentItem extends MomentItem {
+	favorited_at: string; // 收藏时间（UTC ISO 8601）
+}
+
 export interface CommentItem {
 	// spec: api_spec_moment.md → comments/create & comments/list
 	comment_id: string;
@@ -464,6 +480,16 @@ export interface MessageReplyTo {
 	sender: UserInfo;
 	content?: string;
 	share_code?: string;
+	sent_at: string;
+}
+
+// 会话最近消息预览（GroupItem.last_message 与 PrivateChatItem.last_message 共用，spec: types.md → LastMessagePreview）
+export interface LastMessagePreview {
+	message_id: string;
+	type: MessageType;
+	content?: string;    // 文本预览（仅 text 类型有意义）
+	share_code?: string; // 最后一条消息为 share 类型时包含，客户端据此渲染分享卡片预览
+	sender: UserInfo;
 	sent_at: string;
 }
 
@@ -536,6 +562,7 @@ export interface NotifyPayload {
 	dismissed_at?: string;
 	note?: string;
 	announcement_id?: string;
+	title?: string;        // system_announcement：公告标题（直接渲染通知行）
 	severity?: AnnounceLevel;
 	distance?: number;
 }
@@ -583,6 +610,7 @@ export interface AppLimits {
 	moment_description_max_length: number;
 	comment_max_length: number;
 	search_radius_max: number;
+	max_chat_files: number; // 单条聊天消息可附带的最大文件数（媒体批量上传的 chat 类上限）
 	message_recall_window_seconds: number;
 	stranger_message_daily_quota: number;
 	reaction_emojis: string[];
@@ -614,11 +642,23 @@ export interface PaginatedData<T> {
 }
 
 // --- Auth（spec: api_spec_auth.md）---
-// web client_type：data 为空对象——token 走 HttpOnly cookie
-export type AuthTokenPair = Record<string, never>;
+// client_type 为判别字段：web 仅含判别字段（token 走 HttpOnly cookie）；app 含 token 字段
+export interface AuthTokenPairApp {
+	client_type: 'app';
+	user_id: string;
+	access_token: string;
+	refresh_token: string;
+	access_token_expires_at: string;
+	refresh_token_expires_at: string;
+}
+export interface AuthTokenPairWeb {
+	client_type: 'web';
+}
+export type AuthTokenPair = AuthTokenPairApp | AuthTokenPairWeb;
 export interface AuthStatus {
 	// spec: auth.md → check_status
 	is_valid: boolean;
+	user_id?: string;   // is_valid=true 时返回，客户端可直接获得身份
 	expires_at?: string;
 }
 
@@ -642,38 +682,19 @@ export interface AccountData {
 }
 
 export interface UserProfileBundle {
-	// spec: user.md → get_profile
+	// spec: user.md → open_the_door（include_recent_moments=true 时返回 recent_moments）
 	user: UserItem;
-	recent_moments: PaginatedData<MomentItem>;
+	recent_moments?: PaginatedData<MomentItem>;
 }
 
-export interface FriendItem {
-	// spec: user.md → list_friends
-	user: UserInfo;
-	presence_status?: UserPresenceStatus;
-	last_online_at?: string;
-	remark?: string;
+// 用户关系列表项（list_friends / list_following / list_followers 共用，spec: user.md → RelatedUserItem）
+// 字段可见性按端点语义返回：followed_back_at 仅 list_friends；remark 仅查询自己时返回
+export interface RelatedUserItem {
+	user: UserItem;
 	followed_at: string;
-	followed_back_at: string;
-}
-
-export interface FollowingItem {
-	// spec: user.md → list_following
-	user: UserInfo;
-	followed_at: string;
+	followed_back_at?: string; // 对方回关时间（成为好友的时间）；仅 list_friends 返回
 	is_mutual: boolean;
-	remark?: string;
-	presence_status?: UserPresenceStatus;
-	last_online_at?: string;
-}
-
-export interface FollowerItem {
-	// spec: user.md → list_followers
-	user: UserInfo;
-	followed_at: string;
-	is_mutual: boolean;
-	presence_status?: UserPresenceStatus;
-	last_online_at?: string;
+	remark?: string; // @owner-only：仅查询自己时返回
 }
 
 // --- Feed（spec: api_spec_feed.md）---
@@ -720,10 +741,10 @@ export interface UnreadSummary {
 	total_badge: number;
 }
 export interface BootstrapData {
-	// spec: system.md → bootstrap
+	// spec: system.md → bootstrap（缓存命中时 meta/client_config 省略，客户端用缓存）
 	bootstrap_version: string;
-	meta: ApiVersionMeta;
-	client_config: ClientConfig;
+	meta?: ApiVersionMeta;
+	client_config?: ClientConfig;
 	profile?: AccountData;
 	unread_summary?: UnreadSummary;
 }
@@ -736,14 +757,7 @@ export interface PrivateChatItem {
 	is_muted: boolean;
 	is_pinned: boolean;
 	last_activity_at: string;
-	last_message?: {
-		message_id: string;
-		content?: string;
-		type: MessageType;
-		share_code?: string;
-		sender: UserInfo;
-		sent_at: string;
-	};
+	last_message?: LastMessagePreview; // 列表场景返回
 	presence_status?: UserPresenceStatus;
 	created_at?: string;
 	can_message: boolean;

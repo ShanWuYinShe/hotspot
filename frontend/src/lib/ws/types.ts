@@ -242,7 +242,7 @@ export interface GroupInviteReceivedPayload {
   notify_id: string;
   invite_id: string;
   group: unknown; // GroupInfo
-  inviter: UserInfo;
+  actor: UserInfo; // 邀请发起人（spec 统一 actor 命名，notify 的 group_invite_received payload 同为 actor）
   message?: string;
   created_at: string;
 }
@@ -265,14 +265,17 @@ export interface ReportResolvedPayload {
   note?: string;
 }
 
+// spec: websocket.md → SystemAnnouncement（payload 复用 SystemAnnouncementItem，避免同义字段重复）
 export interface SystemAnnouncementPayload {
   notify_id: string;
-  announcement_id: string;
-  title: string;
-  content: string;
-  severity: string; // AnnounceLevel
-  action_url?: string;
-  created_at: string;
+  announcement: {
+    announcement_id: string;
+    title: string;
+    content: string;
+    severity: string; // AnnounceLevel
+    action_url?: string;
+    created_at: string;
+  };
 }
 
 // ---------------------------------------------------------------------------

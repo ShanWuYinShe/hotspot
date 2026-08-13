@@ -1,5 +1,5 @@
 // msw handlers 集成测试：验证按 id 路由的 handler 行为
-// （moments/open_the_door、groups/open_the_door、users/get_profile、
+// （moments/open_the_door、groups/open_the_door、users/open_the_door、
 //  private_messages/get_history、group_messages/get_history、comments/create）。
 // 直接调用 handler resolver（msw/node 网络层与 vitest 4 fetch 不兼容）。
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -54,13 +54,17 @@ describe('msw id-routed handlers', () => {
 		expect(fallback.data.group.group_id).toBe(mockGroups[0].group.group_id);
 	});
 
-	it('users/get_profile 按 user_id 返回对应用户，未知 id 回退第一位', async () => {
+	it('users/open_the_door 按 user_id 返回对应用户，未知 id 回退第一位', async () => {
 		const target = mockUsers[3];
-		const res = await run('/api/v1/users/get_profile', { user_id: target.user_id });
+		const res = await run('/api/v1/users/open_the_door', { user_id: target.user_id });
 		expect(res.code).toBe(0);
 		// spec: UserProfileBundle — user 为 UserItem（嵌套 user: UserInfo）
 		expect(res.data.user.user.user_id).toBe(target.user_id);
-		expect(Array.isArray(res.data.recent_moments.items)).toBe(true);
+		// include_recent_moments 缺省时不返回 recent_moments（可选段语义）
+		expect(res.data.recent_moments).toBeUndefined();
+
+		const withMoments = await run('/api/v1/users/open_the_door', { user_id: target.user_id, include_recent_moments: true });
+		expect(Array.isArray(withMoments.data.recent_moments.items)).toBe(true);
 	});
 
 	it('private_messages/get_history：命中会话返回种子消息，新会话返回空', async () => {

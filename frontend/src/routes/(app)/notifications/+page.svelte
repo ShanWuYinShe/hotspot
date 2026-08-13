@@ -93,7 +93,7 @@ const FILTER_TABS = [
 						else if (n.type === 'report_resolved') text = `你举报的内容已处理${n.payload?.note ? `:${n.payload.note}` : ''}`;
 						else if (n.type === 'report_dismissed') text = `你的举报未通过审核${n.payload?.note ? `:${n.payload.note}` : ''}`;
 						else if (n.type === 'nearby_new_moment') text = `${actor.nickname ?? ''} 在附近发布了新瞬间`;
-						else if (n.type === 'system_announcement') text = '系统公告';
+						else if (n.type === 'system_announcement') text = n.payload?.title ?? '系统公告';
 						else text = n.payload?.message ?? '';
 						return {
 							id: n.notify_id ?? String(i + 1),

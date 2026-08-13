@@ -4,7 +4,7 @@ export {
   login, register, guest, logout, checkAuthStatus,
   requestPasswordReset, resetPassword,
   getAccount, updateAccount, getSettings, updateSettings,
-  follow, block, getProfile, setRemark,
+  follow, block, openTheDoor, setRemark,
   deleteAccount,
   presignUpload, completeUpload, batchPresignUpload, batchCompleteUpload,
   listFriends, listFollowing, listFollowers,

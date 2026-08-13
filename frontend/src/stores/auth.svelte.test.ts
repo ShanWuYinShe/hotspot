@@ -45,7 +45,7 @@ it('登录成功后重放 pending action', async () => {
 
   const run = vi.fn();
   requireAuth({ action: '发帖', run });
-  vi.mocked(api.login).mockResolvedValue({ code: 0, data: {} });
+  vi.mocked(api.login).mockResolvedValue({ code: 0, data: { client_type: 'web' } });
   const res = await login({ login_id: 'u1', password: 'x' });
   expect(res.code).toBe(0);
   expect(auth.status).toBe('authenticated');
@@ -60,7 +60,7 @@ it('已认证时 requireAuth 直接放行', async () => {
   const { initAuth, requireAuth, login, auth } = await import('./auth.svelte');
   void initAuth();
   await new Promise((r) => setTimeout(r, 10));
-  vi.mocked(api.login).mockResolvedValue({ code: 0, data: {} });
+  vi.mocked(api.login).mockResolvedValue({ code: 0, data: { client_type: 'web' } });
   await login({ login_id: 'u1', password: 'x' });
   expect(auth.status).toBe('authenticated');
 
@@ -75,7 +75,7 @@ it('auth-failed 事件降级为 anonymous', async () => {
   const { initAuth, auth } = await import('./auth.svelte');
   void initAuth();
   await new Promise((r) => setTimeout(r, 10));
-  vi.mocked(api.login).mockResolvedValue({ code: 0, data: {} });
+  vi.mocked(api.login).mockResolvedValue({ code: 0, data: { client_type: 'web' } });
   const { login } = await import('./auth.svelte');
   await login({ login_id: 'u1', password: 'x' });
   expect(auth.status).toBe('authenticated');
