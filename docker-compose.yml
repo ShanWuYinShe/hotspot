@@ -55,7 +55,22 @@ services:
   seaweedfs:
     image: chrislusf/seaweedfs:${SEAWEEDFS_VERSION:-4.41}
     restart: always
-    command: server -s3 -dir=/data
+    # 启动时从环境变量生成 S3 身份配置，凭证与 backend 服务保持一致（同源 .env），
+    # 保证后端签发的 presigned URL 可被验签。无此配置时 SeaweedFS 处于 allow-all 模式，
+    # 但 presigned 请求携带 access key 签名，因无对应 identity → 403 AccessDenied。
+    user: root
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        set -e;
+        mkdir -p /etc/seaweedfs &&
+        printf '{"identities":[{"name":"hotspot-backend","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Read","Write","List","Tagging","Admin"]}]}\n'
+        "$${S3_ACCESS_KEY}" "$${S3_SECRET_KEY}" > /etc/seaweedfs/s3.json &&
+        chown seaweed:seaweed /etc/seaweedfs/s3.json &&
+        exec /entrypoint.sh server -s3 -dir=/data -s3.config=/etc/seaweedfs/s3.json
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-change-me}
     volumes:
       # 持久化上传的媒体文件。此前 /data 没有 volume，
       # docker compose down 会丢失所有已上传的图片/视频。

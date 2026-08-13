@@ -1339,7 +1339,10 @@ func TestMedia_E2E_BatchPresignUploadComplete(t *testing.T) {
 }
 
 func TestMedia_E2E_SizeMismatchRejected(t *testing.T) {
-	createGuestUser(t)
+	_, token := createGuestUser(t)
+	oldToken := accessToken
+	accessToken = token
+	defer func() { accessToken = oldToken }()
 
 	var presignResp ApiResponse[map[string]any]
 	apiRespOK(t, "/api/v1/media/presign_upload", map[string]any{
@@ -1378,7 +1381,10 @@ func TestMedia_E2E_SizeMismatchRejected(t *testing.T) {
 }
 
 func TestMedia_E2E_CompleteBeforeUpload(t *testing.T) {
-	createGuestUser(t)
+	_, token := createGuestUser(t)
+	oldToken := accessToken
+	accessToken = token
+	defer func() { accessToken = oldToken }()
 
 	var presignResp ApiResponse[map[string]any]
 	apiRespOK(t, "/api/v1/media/presign_upload", map[string]any{
