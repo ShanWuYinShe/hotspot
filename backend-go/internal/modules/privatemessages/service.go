@@ -17,6 +17,8 @@ type ReadService interface {
 	Last(context.Context, string, *time.Time) (*PrivateMessageItem, error)
 	UnreadCount(context.Context, string, *time.Time) (int, error)
 	LookupMessage(ctx context.Context, messageID string) (found bool, senderID string, err error)
+	// IsReactionTargetVisible 判定消息对当前调用方可反应（spec reaction.md 目标可见性）
+	IsReactionTargetVisible(ctx context.Context, messageID string) (found bool, visible bool, err error)
 }
 
 type Runtime struct {
@@ -344,4 +346,15 @@ func (s *Service) buildMedia(ctx context.Context, fileID, ownerUserID string) ma
 
 func (s *Service) LookupMessage(ctx context.Context, messageID string) (found bool, senderID string, err error) {
 	return s.repo.MessageExists(ctx, messageID)
+}
+
+// IsReactionTargetVisible 判定私聊消息对当前调用方可反应（spec reaction.md 目标可见性）：
+// 仅会话参与者可见；不可见按不存在处理。
+func (s *Service) IsReactionTargetVisible(ctx context.Context, messageID string) (found bool, visible bool, err error) {
+	senderID, receiverID, found, err := s.repo.MessageParticipants(ctx, messageID)
+	if err != nil || !found {
+		return found, false, err
+	}
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	return true, principal.UserID == senderID || principal.UserID == receiverID, nil
 }

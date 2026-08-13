@@ -57,6 +57,10 @@ func (r *stubRepo) MarkAllRead(_ context.Context, _ string) error {
 func (r *stubRepo) GetMessageForReply(_ context.Context, _ string) (map[string]any, bool, error) {
 	return r.replyToResult, r.replyToOk, r.replyToErr
 }
+func (r *stubRepo) MessageGroupID(_ context.Context, _ string) (string, bool, error) {
+	return "", false, nil
+}
+
 func (r *stubRepo) MessageExists(_ context.Context, _ string) (bool, string, error) {
 	return false, "", nil
 }

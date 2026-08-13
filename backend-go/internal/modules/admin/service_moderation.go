@@ -242,7 +242,8 @@ func (s *Service) DeleteAnnouncement(ctx context.Context, announcementID string)
 }
 
 func (s *Service) SearchUsers(ctx context.Context, req AdminUserSearchRequest) (PaginatedAdminUsers, *httpx.APIError, error) {
-	if _, apiErr, err := s.requirePermission(ctx, permissionUsersRead); apiErr != nil || err != nil {
+	actor, apiErr, err := s.requirePermission(ctx, permissionUsersRead)
+	if apiErr != nil || err != nil {
 		return PaginatedAdminUsers{}, apiErr, err
 	}
 	if err := validateAdminUserSearchRequest(req); err != nil {
@@ -255,6 +256,13 @@ func (s *Service) SearchUsers(ctx context.Context, req AdminUserSearchRequest) (
 		}
 		return PaginatedAdminUsers{}, nil, err
 	}
+	// IP 字段为敏感 PII（spec admin_core.md admin.users.read_ip）：权限不足时字段缺省
+	if !actor.HasPermission(permissionUsersReadIP) {
+		for i := range page.Items {
+			page.Items[i].RegisterIP = ""
+			page.Items[i].LastLoginIP = ""
+		}
+	}
 	resp := PaginatedAdminUsers{Items: page.Items}
 	if page.Next != nil {
 		resp.NextCursor = encodeAdminUserCursor(*page.Next)
@@ -263,7 +271,8 @@ func (s *Service) SearchUsers(ctx context.Context, req AdminUserSearchRequest) (
 }
 
 func (s *Service) OpenAdminUser(ctx context.Context, userID string) (AdminUserItem, *httpx.APIError, error) {
-	if _, apiErr, err := s.requirePermission(ctx, permissionUsersRead); apiErr != nil || err != nil {
+	actor, apiErr, err := s.requirePermission(ctx, permissionUsersRead)
+	if apiErr != nil || err != nil {
 		return AdminUserItem{}, apiErr, err
 	}
 	if strings.TrimSpace(userID) == "" {
@@ -278,6 +287,11 @@ func (s *Service) OpenAdminUser(ctx context.Context, userID string) (AdminUserIt
 	}
 	if !found {
 		return AdminUserItem{}, &httpx.APIError{Code: httpx.CodeNotFound, Message: "用户不存在"}, nil
+	}
+	// IP 字段为敏感 PII（spec admin_core.md admin.users.read_ip）：权限不足时字段缺省
+	if !actor.HasPermission(permissionUsersReadIP) {
+		item.RegisterIP = ""
+		item.LastLoginIP = ""
 	}
 	return item, nil, nil
 }
@@ -442,6 +456,12 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 	}
 	if record.Item.Status != ReportStatusPending {
 		return &httpx.APIError{Code: httpx.CodeConflict, Message: "举报已处理"}, nil
+	}
+	// 权限蕴含（spec admin_moderation.md → reports/handle）：resolve 且携带
+	// ban_duration_days 时实际执行封禁，须同时具备 admin.users.write，
+	// 防止低权限管理员经举报通道绕过用户封禁权限边界。
+	if req.Action == ReportActionResolve && req.BanDurationDays != nil && !actor.HasPermission(permissionUsersWrite) {
+		return &httpx.APIError{Code: httpx.CodeForbidden, Message: "系统管理员权限不足: " + permissionUsersWrite}, nil
 	}
 	if req.Action == ReportActionResolve {
 		switch record.Item.TargetType {

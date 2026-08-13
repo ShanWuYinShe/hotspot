@@ -30,6 +30,7 @@ type Limits struct {
 	MaxGroupMembers            int      `json:"max_group_members"`
 	MaxMomentTags              int      `json:"max_moment_tags"`
 	MaxMomentImages            int      `json:"max_moment_images"`
+	MaxChatFiles               int      `json:"max_chat_files"`
 	MomentDescriptionMaxLength int      `json:"moment_description_max_length"`
 	CommentMaxLength           int      `json:"comment_max_length"`
 	SearchRadiusMax            int      `json:"search_radius_max"`

@@ -76,6 +76,10 @@ func (r *privateChatMessageReader) UnreadCount(context.Context, string, *time.Ti
 	}
 	return r.unreadCount, nil
 }
+func (r *privateChatMessageReader) IsReactionTargetVisible(_ context.Context, _ string) (bool, bool, error) {
+	return false, false, nil
+}
+
 func (r *privateChatMessageReader) LookupMessage(_ context.Context, _ string) (bool, string, error) {
 	return false, "", nil
 }

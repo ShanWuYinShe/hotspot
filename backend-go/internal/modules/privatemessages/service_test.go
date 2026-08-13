@@ -66,6 +66,10 @@ func (r *stubMsgRepo) GetMessageForReply(_ context.Context, _ string, _ string) 
 func (r *stubMsgRepo) GetMediaForMessage(_ context.Context, _ string, _ string) (map[string]any, bool, error) {
 	return nil, false, nil
 }
+func (r *stubMsgRepo) MessageParticipants(_ context.Context, _ string) (string, string, bool, error) {
+	return "", "", false, nil
+}
+
 func (r *stubMsgRepo) MessageExists(_ context.Context, _ string) (bool, string, error) {
 	return false, "", nil
 }

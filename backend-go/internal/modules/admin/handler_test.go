@@ -817,7 +817,12 @@ func TestSearchAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 	if !ok {
 		t.Fatalf("unexpected alice payload type: %#v", aliceSink.events[0].Payload)
 	}
-	if adminPayload["announcement_id"] != createResp.Data.AnnouncementID || adminPayload["title"] != "维护通知" || adminPayload["content"] != "今晚维护" || adminPayload["severity"] != AnnounceLevelWarning || adminPayload["action_url"] != "https://example.com/maint" {
+	// spec websocket.md → SystemAnnouncement：payload 结构为 {notify_id, announcement}
+	adminAnnouncement, ok := adminPayload["announcement"].(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected admin announcement payload: %#v", adminPayload)
+	}
+	if adminAnnouncement["announcement_id"] != createResp.Data.AnnouncementID || adminAnnouncement["title"] != "维护通知" || adminAnnouncement["content"] != "今晚维护" || adminAnnouncement["severity"] != AnnounceLevelWarning || adminAnnouncement["action_url"] != "https://example.com/maint" {
 		t.Fatalf("unexpected admin payload: %#v", adminPayload)
 	}
 	if adminPayload["notify_id"] == "" || adminPayload["notify_id"] != alicePayload["notify_id"] {

@@ -293,6 +293,20 @@ func (r *InMemoryRepository) GetMessageForReply(ctx context.Context, messageID, 
 	return nil, false, nil
 }
 
+func (r *InMemoryRepository) MessageParticipants(_ context.Context, messageID string) (string, string, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for key, items := range r.messages {
+		for _, item := range items {
+			if item.MessageID == messageID {
+				// 会话键为 userA:userB；接收方为键中除发送者外的另一方
+				return item.Sender.UserID, otherUserID(key, item.Sender.UserID), true, nil
+			}
+		}
+	}
+	return "", "", false, nil
+}
+
 func (r *InMemoryRepository) MessageExists(_ context.Context, messageID string) (bool, string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

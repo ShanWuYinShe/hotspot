@@ -108,10 +108,10 @@ type BootstrapRequest struct {
 
 type BootstrapData struct {
 	BootstrapVersion string         `json:"bootstrap_version"`
-	Meta             ApiVersionMeta `json:"meta"`
-	ClientConfig     ClientConfig   `json:"client_config"`
-	Profile          any            `json:"profile,omitempty"`
-	UnreadSummary    *UnreadSummary `json:"unread_summary,omitempty"`
+	Meta             *ApiVersionMeta `json:"meta,omitempty"`         // 缓存命中时省略（spec system.md → bootstrap）
+	ClientConfig     *ClientConfig   `json:"client_config,omitempty"` // 缓存命中时省略
+	Profile          any             `json:"profile,omitempty"`
+	UnreadSummary    *UnreadSummary  `json:"unread_summary,omitempty"`
 }
 
 type UnreadSummary struct {

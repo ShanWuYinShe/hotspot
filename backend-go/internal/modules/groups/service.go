@@ -55,7 +55,7 @@ type LocationProvider interface {
 
 type groupNotificationWriter interface {
 	AppendGroupInviteReceived(ctx context.Context, targetUserID string, actor types.UserInfo, groupID string, groupName string, inviteID string, message *string) (string, error)
-	AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant types.UserInfo, groupID string, groupName string, applicationID string) (string, error)
+	AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant types.UserInfo, groupID string, groupName string, applicationID string, message *string) (string, error)
 	AppendGroupApplicationAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string) (string, error)
 	AppendGroupApplicationRejected(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, rejectedBy types.UserInfo, reason *string) (string, error)
 }
@@ -739,7 +739,7 @@ func (s *Service) notifyGroupInviteReceived(ctx context.Context, group GroupItem
 			"avatar_url":    group.Group.AvatarURL,
 			"members_count": group.Group.MembersCount,
 		},
-		"inviter":    actor,
+		"actor":      actor, // spec websocket.md：统一 actor 命名（原 inviter）
 		"created_at": time.Now().UTC().Format(time.RFC3339),
 	}
 	if req.Message != nil && *req.Message != "" {
@@ -772,7 +772,7 @@ func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group Grou
 		}
 		notificationID := ""
 		if s.notifications != nil {
-			id, err := s.notifications.AppendGroupApplicationReceived(ctx, member.User.UserID, applicant, group.Group.GroupID, group.Group.Name, application.ApplicationID)
+			id, err := s.notifications.AppendGroupApplicationReceived(ctx, member.User.UserID, applicant, group.Group.GroupID, group.Group.Name, application.ApplicationID, message)
 			if err != nil {
 				observability.L().Error("groups.notify AppendGroupApplicationReceived failed", "error", err, "application_id", application.ApplicationID)
 			} else {

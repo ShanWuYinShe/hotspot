@@ -61,6 +61,7 @@ type Repository interface {
 	GetMessageForReply(context.Context, string, string) (map[string]any, bool, error)
 	GetMediaForMessage(context.Context, string, string) (map[string]any, bool, error)
 	MessageExists(ctx context.Context, messageID string) (found bool, senderID string, err error)
+	MessageParticipants(ctx context.Context, messageID string) (senderID, receiverID string, found bool, err error)
 	// CountMessagesByTarget counts messages sent by senderID since the given
 	// time, grouped by the receiving user (used for the stranger daily quota
 	// check which is total-volume based across all non-mutual targets).

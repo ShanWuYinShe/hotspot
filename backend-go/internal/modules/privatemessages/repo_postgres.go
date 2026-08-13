@@ -242,6 +242,22 @@ func orderedUsers(a, b string) (string, string) {
 	return b, a
 }
 
+func (r *PostgresRepository) MessageParticipants(ctx context.Context, messageID string) (string, string, bool, error) {
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return "", "", false, persistence.ErrNotImplemented
+	}
+	var senderUserID, receiverUserID string
+	err := queryable.QueryRow(ctx, queryPrivateMessageParticipants, messageID).Scan(&senderUserID, &receiverUserID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", "", false, nil
+		}
+		return "", "", false, err
+	}
+	return senderUserID, receiverUserID, true, nil
+}
+
 func (r *PostgresRepository) MessageExists(ctx context.Context, messageID string) (bool, string, error) {
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {

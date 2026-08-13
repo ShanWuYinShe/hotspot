@@ -43,6 +43,7 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	usersModule := users.NewModule(factory, sharedAppConfig)
 	groupsModule := groups.NewModule(factory, usersModule.Service)
 	mediaModule := media.NewModule(cfg, factory)
+	mediaModule.Service.SetAppConfig(sharedAppConfig)
 	imageResolver := NewMomentImageResolver(mediaModule.Service)
 	feedImageResolver := NewFeedImageResolver(mediaModule.Service)
 	momentsModule := moments.NewModule(factory, usersModule.Service, sharedAppConfig, imageResolver)
@@ -62,7 +63,7 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 
 	reactionProviders := []reactions.TargetProvider{
 		momentReactionProvider{moments: momentsModule.Service},
-		commentReactionProvider{comments: momentsModule.CommentsService()},
+		commentReactionProvider{comments: momentsModule.CommentsService(), moments: momentsModule.Service},
 		messageReactionProvider{groupMessages: gmModule.Service, privateMessages: pcModule.MessageService()},
 	}
 	reactionsModule := reactions.NewModule(factory, reactionProviders, notificationService, usersModule.Service)

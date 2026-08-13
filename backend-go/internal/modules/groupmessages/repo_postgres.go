@@ -210,6 +210,19 @@ func (r *PostgresRepository) MessageExists(ctx context.Context, messageID string
 	return true, senderUserID, nil
 }
 
+func (r *PostgresRepository) MessageGroupID(ctx context.Context, messageID string) (string, bool, error) {
+	queryable, ok := r.getQueryable()
+	if !ok {
+		return "", false, persistence.ErrNotImplemented
+	}
+	var groupID string
+	err := queryable.QueryRow(ctx, queryGetGroupMessageGroupID, messageID).Scan(&groupID)
+	if err != nil {
+		return "", false, nil
+	}
+	return groupID, true, nil
+}
+
 func (r *PostgresRepository) GetGroupName(ctx context.Context, groupID string) (string, bool, error) {
 	queryable, ok := r.getQueryable()
 	if !ok {

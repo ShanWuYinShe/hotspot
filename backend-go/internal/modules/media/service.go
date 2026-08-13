@@ -2,6 +2,7 @@ package media
 
 import (
 	"context"
+	"hotspot/backend-go/internal/platform/appconfig"
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
@@ -26,6 +27,7 @@ var (
 )
 
 type Service struct {
+	appConfig appconfig.Source
 	repo     Repository
 	provider Provider
 }
@@ -36,6 +38,29 @@ func NewService() *Service {
 func NewServiceWithRepo(repo Repository) *Service {
 	return NewServiceWithRepoAndProvider(repo, NewObjectStorageProvider(config.Load()))
 }
+// SetAppConfig wires the dynamic app config source (batch limits, spec types.md AppLimits).
+func (s *Service) SetAppConfig(src appconfig.Source) { s.appConfig = src }
+
+// BatchLimitFor returns the per-category batch size limit (spec media.md：
+// moment_image → max_moment_images；chat_* → max_chat_files；默认 9)。
+func (s *Service) BatchLimitFor(category string) int {
+	if s.appConfig == nil {
+		return 9
+	}
+	limits := s.appConfig.Get(context.Background()).Limits
+	switch category {
+	case "moment_image":
+		if limits.MaxMomentImages > 0 {
+			return limits.MaxMomentImages
+		}
+	case "chat_image", "chat_video", "chat_audio", "chat_file":
+		if limits.MaxChatFiles > 0 {
+			return limits.MaxChatFiles
+		}
+	}
+	return 9
+}
+
 func NewServiceWithRepoAndProvider(repo Repository, provider Provider) *Service {
 	return &Service{repo: repo, provider: provider}
 }

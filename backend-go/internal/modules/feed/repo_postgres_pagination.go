@@ -128,14 +128,16 @@ func compareFollowingCandidates(left, right momentCandidate) int {
 	return 0
 }
 
-// compareNearbyCandidates 排序规则：热度评分降序（likes+comments+shares）→
-// 距离升序 → 发布时间降序 → momentID 降序。
+// compareNearbyCandidates 排序规则（spec feed.md → nearby 排序主序）：
+// 距离升序为主序（服务端计算 distance）；热度评分仅作为次级信号——实现为
+// 距离差在近似阈值内时优先热度，否则严格按距离。简化实现：距离升序 → 热度降序
+// → 发布时间降序 → momentID 降序。
 func compareNearbyCandidates(left, right momentCandidate) int {
-	if left.Score != right.Score {
-		return right.Score - left.Score
-	}
 	if left.Distance != right.Distance {
 		return left.Distance - right.Distance
+	}
+	if left.Score != right.Score {
+		return right.Score - left.Score
 	}
 	if !left.CreatedAt.Equal(right.CreatedAt) {
 		if left.CreatedAt.After(right.CreatedAt) {

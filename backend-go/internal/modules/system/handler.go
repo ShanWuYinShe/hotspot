@@ -66,5 +66,11 @@ func (h *Handler) Bootstrap(w http.ResponseWriter, r *http.Request) {
 	}
 	bootstrapResolver := h.service.GetBootstrapResolver()
 	bd := h.service.Bootstrap(r.Context(), bootstrapResolver)
+	// 缓存契约（spec system.md → bootstrap）：客户端带 If-None-Match 且版本未变化时，
+	// 返回精简响应（仅 bootstrap_version，meta/client_config 省略，客户端用缓存）。
+	if etag := r.Header.Get("If-None-Match"); etag != "" && etag == bd.BootstrapVersion {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Success(BootstrapData{BootstrapVersion: bd.BootstrapVersion}))
+		return
+	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(bd))
 }

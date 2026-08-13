@@ -36,8 +36,13 @@ func (h *Handler) PresignUpload(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) BatchPresignUpload(w http.ResponseWriter, r *http.Request) {
 	var req BatchPresignUploadRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil || len(req.Files) == 0 || len(req.Files) > 9 {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || len(req.Files) == 0 {
 		httpx.WriteInvalidRequest(w, r, "BatchPresignUpload", "参数错误")
+		return
+	}
+	// 批量上限 = 批次内各类别上限的最大值（spec media.md：moment_image → max_moment_images；chat_* → max_chat_files）
+	if limit := h.service.BatchLimitFor(string(req.Files[0].Category)); len(req.Files) > limit {
+		httpx.WriteInvalidRequest(w, r, "BatchPresignUpload", "批量文件数超出上限")
 		return
 	}
 	uploads, err := h.service.BatchPresign(r.Context(), req)

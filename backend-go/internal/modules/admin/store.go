@@ -20,6 +20,7 @@ const (
 	permissionAnnouncementsRead  = "admin.announcements.read"
 	permissionAnnouncementsWrite = "admin.announcements.write"
 	permissionUsersRead          = "admin.users.read"
+	permissionUsersReadIP        = "admin.users.read_ip"
 	permissionUsersWrite         = "admin.users.write"
 	permissionGroupsRead         = "admin.groups.read"
 	permissionGroupsWrite        = "admin.groups.write"
@@ -39,6 +40,7 @@ var permissionDictionary = []AdminPermissionItem{
 	{Key: permissionAnnouncementsRead, Description: "查看公告列表"},
 	{Key: permissionAnnouncementsWrite, Description: "发布/删除公告"},
 	{Key: "admin.users.read", Description: "查看用户列表/详情"},
+	{Key: "admin.users.read_ip", Description: "查看用户详情中的 IP 字段（register_ip/last_login_ip，敏感 PII）"},
 	{Key: "admin.users.write", Description: "封禁/解封用户"},
 	{Key: "admin.groups.read", Description: "查看群组列表/详情"},
 	{Key: "admin.groups.write", Description: "解散群组"},

@@ -69,7 +69,7 @@ func (w *notifyWriterStub) AppendGroupInviteReceived(context.Context, string, ty
 	return "notif_written", nil
 }
 
-func (w *notifyWriterStub) AppendGroupApplicationReceived(context.Context, string, types.UserInfo, string, string, string) (string, error) {
+func (w *notifyWriterStub) AppendGroupApplicationReceived(context.Context, string, types.UserInfo, string, string, string, *string) (string, error) {
 	return "notif_written", nil
 }
 

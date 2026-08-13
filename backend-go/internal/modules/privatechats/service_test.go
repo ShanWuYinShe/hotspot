@@ -64,6 +64,10 @@ func (m *stubMsgReadService) Last(_ context.Context, _ string, _ *time.Time) (*p
 func (m *stubMsgReadService) UnreadCount(_ context.Context, _ string, _ *time.Time) (int, error) {
 	return m.unreadCount, m.unreadErr
 }
+func (m *stubMsgReadService) IsReactionTargetVisible(_ context.Context, _ string) (bool, bool, error) {
+	return false, false, nil
+}
+
 func (m *stubMsgReadService) LookupMessage(_ context.Context, _ string) (bool, string, error) {
 	return false, "", nil
 }

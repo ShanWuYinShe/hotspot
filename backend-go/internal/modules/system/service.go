@@ -64,10 +64,12 @@ func (s *Service) GetClientConfig(ctx context.Context) ClientConfig {
 
 func (s *Service) Bootstrap(ctx context.Context, bootstrapResolver BootstrapResolver) BootstrapData {
 	bootstrapVersion := s.repo.GetMeta(ctx).Version
+	meta := s.GetMeta(ctx)
+	clientConfig := s.GetClientConfig(ctx)
 	bd := BootstrapData{
 		BootstrapVersion: bootstrapVersion,
-		Meta:             s.GetMeta(ctx),
-		ClientConfig:     s.GetClientConfig(ctx),
+		Meta:             &meta,
+		ClientConfig:     &clientConfig,
 	}
 	if bootstrapResolver != nil {
 		if profile, ok := bootstrapResolver.ResolveProfile(ctx); ok {

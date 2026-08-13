@@ -172,7 +172,7 @@ func (r *reactionErrorRepo) ListReactedTargets(context.Context, ReactTarget, str
 	return nil, "", r.setErr
 }
 
-func TestHandlerListMissingTargetReturnsEmpty(t *testing.T) {
+func TestHandlerListMissingTargetReturnsNotFound(t *testing.T) {
 	// service.List 是纯查询（无目标存在性校验）：不存在的目标返回空列表。
 	svc := NewServiceWithDeps(NewInMemoryRepository(), []TargetProvider{missingTargetProvider{found: false}}, nil, nil)
 	handler := NewHandler(svc)
@@ -188,8 +188,9 @@ func TestHandlerListMissingTargetReturnsEmpty(t *testing.T) {
 	if err := decodeReactionResp(rr, &resp); err != nil {
 		t.Fatal(err)
 	}
-	if resp.Code != 0 || resp.Data.Items == nil {
-		t.Fatalf("expected success with empty items, got %#v", resp)
+	// 契约（spec reaction.md → reactions/list 目标可见性）：目标不存在/不可见统一 10300
+	if resp.Code != httpx.CodeNotFound {
+		t.Fatalf("expected httpx.CodeNotFound for missing target, got %#v", resp)
 	}
 }
 

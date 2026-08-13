@@ -76,7 +76,7 @@ func TestAppendGroupApplicationRejectedBuildsNotification(t *testing.T) {
 func TestAppendGroupApplicationReceivedBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	id, err := service.AppendGroupApplicationReceived(context.Background(), "user_admin", types.UserInfo{UserID: "user_bob", Nickname: "Bob"}, "group_1", "Hot Group", "app_1")
+	id, err := service.AppendGroupApplicationReceived(context.Background(), "user_admin", types.UserInfo{UserID: "user_bob", Nickname: "Bob"}, "group_1", "Hot Group", "app_1", nil)
 	if err != nil {
 		t.Fatalf("append group application received: %v", err)
 	}

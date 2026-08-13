@@ -117,4 +117,9 @@ FROM group_members WHERE group_id = $1 AND user_id = $2`
 		FROM group_messages gm
 		LEFT JOIN users u ON u.user_id = gm.sender_user_id
 		WHERE gm.message_id = $1`
+
+	queryGetGroupMessageGroupID = `
+		SELECT group_id
+		FROM group_messages
+		WHERE message_id = $1`
 )

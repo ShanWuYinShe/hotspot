@@ -41,6 +41,11 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 				var data any = map[string]string{"reason": string(blocked.Reason)}
 				return httpx.ApiResponse[any]{Code: httpx.CodeForbidden, Message: "发送被拒绝", Data: &data}
 			}
+			// 契约(api_spec_chat.md → private_messages/send 10400)：share_code 无效等业务冲突
+			if errors.Is(err, ErrInvalidShareCode) {
+				observability.LogBusinessError(r, "Send", int(httpx.CodeConflict), "share_code 无效")
+				return httpx.ApiResponse[any]{Code: httpx.CodeConflict, Message: "分享链接无效或已过期"}
+			}
 			observability.LogServerError(r, "Send", err)
 			return httpx.ApiResponse[any]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 		}
@@ -133,6 +138,11 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	scope := req.Scope
 	if scope == "" {
 		scope = "session"
+	}
+	// 参数互斥（spec chat.md → mark_read）：scope='all' 时不得传 up_to_message_id
+	if scope == "all" && req.UpToMessageID != "" {
+		httpx.WriteInvalidRequest(w, r, "MarkRead", "scope=all 时不得传 up_to_message_id")
+		return
 	}
 	switch scope {
 	case "all":

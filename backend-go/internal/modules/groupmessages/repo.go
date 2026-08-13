@@ -31,6 +31,7 @@ type Repository interface {
 	GetMediaForMessage(context.Context, string) (map[string]any, bool, error)
 	MemberMuteStatus(context.Context, string, string) (isMuted bool, mutedUntil string, found bool, err error)
 	MessageExists(ctx context.Context, messageID string) (found bool, senderID string, err error)
+	MessageGroupID(ctx context.Context, messageID string) (groupID string, found bool, err error)
 	// GetGroupName returns the group name for the given group (used in
 	// GroupMessageMentioned notification payloads).
 	GetGroupName(ctx context.Context, groupID string) (string, bool, error)

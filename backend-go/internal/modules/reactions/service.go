@@ -156,6 +156,12 @@ func (s *Service) List(ctx context.Context, req ListReactionsRequest) (Paginated
 	if !ValidReactTarget(req.TargetType) {
 		return PaginatedReactions{}, ErrReactionTargetNotFound
 	}
+	// 目标可见性（spec reaction.md → reactions/list）：存在但调用方不可见按不存在处理
+	if _, targetExists, err := s.resolveTarget(ctx, req.TargetType, req.TargetID); err != nil {
+		return PaginatedReactions{}, err
+	} else if !targetExists {
+		return PaginatedReactions{}, ErrReactionTargetNotFound
+	}
 	limit := 20
 	cursor := ""
 	if req.Pagination != nil {

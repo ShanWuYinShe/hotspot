@@ -148,6 +148,7 @@ func (s *Service) notifyMentions(ctx context.Context, actorUserID string, req Se
 		realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeGroupMessageMentioned, Payload: map[string]any{
 			"notify_id":       notificationID,
 			"group_id":        req.GroupID,
+			"group_name":      groupName, // spec websocket.md：与 notify payload 对齐，直接渲染通知标题
 			"message_id":      msg.MessageID,
 			"actor":           actor,
 			"content_preview": contentPreview,
@@ -285,6 +286,21 @@ func (s *Service) buildMedia(ctx context.Context, fileID string) map[string]any 
 
 func (s *Service) LookupMessage(ctx context.Context, messageID string) (found bool, senderID string, err error) {
 	return s.repo.MessageExists(ctx, messageID)
+}
+
+// IsReactionTargetVisible 判定群消息对当前调用方可反应（spec reaction.md 目标可见性）：
+// 仅群成员可见（被移除/退群用户对历史消息不可见）；不可见按不存在处理。
+func (s *Service) IsReactionTargetVisible(ctx context.Context, messageID string) (found bool, visible bool, err error) {
+	groupID, found, err := s.repo.MessageGroupID(ctx, messageID)
+	if err != nil || !found {
+		return found, false, err
+	}
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	isMember, err := s.repo.IsMember(ctx, groupID, principal.UserID)
+	if err != nil {
+		return false, false, err
+	}
+	return true, isMember, nil
 }
 
 // resolveGroupName 解析群名用于 @ 通知负载（查询失败时回退为空串，不阻塞发送）。

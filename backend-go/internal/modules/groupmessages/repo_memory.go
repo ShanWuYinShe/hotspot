@@ -295,6 +295,16 @@ func (r *InMemoryRepository) MessageExists(_ context.Context, messageID string) 
 	return true, msg.SenderUserID, nil
 }
 
+func (r *InMemoryRepository) MessageGroupID(_ context.Context, messageID string) (string, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	groupID, _, _, found := r.findMessage(messageID)
+	if !found {
+		return "", false, nil
+	}
+	return groupID, true, nil
+}
+
 func (r *InMemoryRepository) LookupMessageMeta(_ context.Context, messageID string) (MessageOwnerMeta, bool, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

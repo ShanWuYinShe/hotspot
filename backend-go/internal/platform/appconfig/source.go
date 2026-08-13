@@ -191,6 +191,7 @@ func defaultConfig(runtime config.Config) AppConfig {
 			MaxGroupMembers:            500,
 			MaxMomentTags:              10,
 			MaxMomentImages:            9,
+			MaxChatFiles:               9,
 			MomentDescriptionMaxLength: 2000,
 			CommentMaxLength:           500,
 			SearchRadiusMax:            50000,

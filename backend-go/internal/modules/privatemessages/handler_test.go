@@ -58,6 +58,10 @@ func (r *privateMessageErrorRepo) MarkAllRead(context.Context, string) error {
 func (r *privateMessageErrorRepo) GetMessageForReply(context.Context, string, string) (map[string]any, bool, error) {
 	return nil, false, nil
 }
+func (r *privateMessageErrorRepo) MessageParticipants(_ context.Context, _ string) (string, string, bool, error) {
+	return "", "", false, nil
+}
+
 func (r *privateMessageErrorRepo) MessageExists(_ context.Context, _ string) (bool, string, error) {
 	return false, "", nil
 }

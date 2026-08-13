@@ -118,6 +118,7 @@ func (s *Service) AppendSystemAnnouncement(ctx context.Context, userIDs []string
 		Payload: map[string]any{
 			"type":            "system_announcement",
 			"announcement_id": item.AnnouncementID,
+			"title":           item.Title, // spec notify.md：客户端直接渲染通知行
 			"severity":        item.Severity,
 		},
 	})
@@ -147,13 +148,17 @@ func (s *Service) AppendGroupInviteReceived(ctx context.Context, targetUserID st
 // notification and returns the generated notify_id (embedded as the
 // first field of the pushed GroupApplicationReceived payload, spec
 // api_spec_websocket.md).
-func (s *Service) AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant types.UserInfo, groupID string, groupName string, applicationID string) (string, error) {
+func (s *Service) AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant types.UserInfo, groupID string, groupName string, applicationID string, message *string) (string, error) {
+	payload := map[string]any{"type": "group_application_received", "applicant": applicant, "group_id": groupID, "group_name": groupName, "application_id": applicationID}
+	if message != nil && *message != "" {
+		payload["message"] = *message // spec notify.md：申请附言与 WS GroupApplicationReceivedPayload 对齐
+	}
 	id := newNotificationID()
 	err := s.repo.Append(ctx, targetUserID, NotifyItem{
 		NotifyID: id,
 		Type:     "group_application_received",
 		IsRead:   false,
-		Payload:  map[string]any{"type": "group_application_received", "applicant": applicant, "group_id": groupID, "group_name": groupName, "application_id": applicationID},
+		Payload:  payload,
 	})
 	return id, err
 }
@@ -348,8 +353,8 @@ func (s *Service) AppendGroupMentioned(ctx context.Context, targetUserID string,
 // AppendSystemAnnouncement persisted, so clients can deduplicate the realtime
 // event against the HTTP notify/list record (spec api_spec_websocket.md).
 func (s *Service) PushSystemAnnouncement(item systemmodule.SystemAnnouncementItem, notificationID string) {
-	payload := map[string]any{
-		"notify_id":       notificationID,
+	// 契约(api_spec_websocket.md → SystemAnnouncement)：payload 复用 SystemAnnouncementItem
+	announcement := map[string]any{
 		"announcement_id": item.AnnouncementID,
 		"title":           item.Title,
 		"content":         item.Content,
@@ -357,9 +362,9 @@ func (s *Service) PushSystemAnnouncement(item systemmodule.SystemAnnouncementIte
 		"created_at":      item.CreatedAt,
 	}
 	if item.ActionURL != "" {
-		payload["action_url"] = item.ActionURL
+		announcement["action_url"] = item.ActionURL
 	}
-	realtime.DefaultHub().BroadcastToAll(realtime.Event{Type: realtime.EventTypeSystemAnnouncement, Payload: payload})
+	realtime.DefaultHub().BroadcastToAll(realtime.Event{Type: realtime.EventTypeSystemAnnouncement, Payload: map[string]any{"notify_id": notificationID, "announcement": announcement}})
 }
 
 func (s *Service) PublishNearbyNewMoment(ctx context.Context, targetUserID, actorID, momentID string, distance int, actorPayload types.UserInfo, momentSummaryPayload types.MomentSummary) error {
