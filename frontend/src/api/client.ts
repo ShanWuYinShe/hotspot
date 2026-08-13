@@ -72,6 +72,36 @@ import type {
 	MapCanvasResponse,
 	SearchSuggestRequest,
 	SearchSuggestResponse,
+	RegisterRequest,
+	LoginRequest,
+	GuestRequest,
+	RequestPasswordResetRequest,
+	ResetPasswordRequest,
+	UpdateAccountRequest,
+	SetFollowRequest,
+	SetBlockRequest,
+	SearchUsersRequest,
+	NearbyFeedRequest,
+	TrendingRequest,
+	CreateMomentRequest,
+	UpdateMomentRequest,
+	SearchMomentsRequest,
+	FavoriteMomentRequest,
+	SendPrivateMessageRequest,
+	GetPrivateMessageHistoryRequest,
+	SendGroupMessageRequest,
+	GetGroupMessageHistoryRequest,
+	MarkPrivateReadRequest,
+	MarkGroupReadRequest,
+	UpdatePrivateChatPreferencesRequest,
+	UpdateGroupPreferencesRequest,
+	SetReactionRequest,
+	CreateCommentRequest,
+	CreateReportRequest,
+	MarkNotifyReadRequest,
+	CompleteUploadRequest,
+	BootstrapRequest,
+	PaginationParams,
 } from '@/api/types';
 
 // 分页信封由 types.ts 提供；此处集中重导出供页面直接使用。
@@ -177,24 +207,24 @@ async function request<T>(
 }
 
 // Auth
-export async function register(params: object)           { return request<AuthTokenPair>(Endpoints.Auth.Register, params, { 'Idempotency-Key': newIdempotencyKey() }); }
-export async function login(params: object)              { return request<AuthTokenPair>(Endpoints.Auth.Login, params); }
-export async function guest(params?: object)             { return request<AuthTokenPair>(Endpoints.Auth.Guest, params ?? {}, { 'Idempotency-Key': newIdempotencyKey() }); }
+export async function register(params: RegisterRequest)           { return request<AuthTokenPair>(Endpoints.Auth.Register, params, { 'Idempotency-Key': newIdempotencyKey() }); }
+export async function login(params: LoginRequest)              { return request<AuthTokenPair>(Endpoints.Auth.Login, params); }
+export async function guest(params?: GuestRequest)             { return request<AuthTokenPair>(Endpoints.Auth.Guest, params ?? {}, { 'Idempotency-Key': newIdempotencyKey() }); }
 export async function checkAuthStatus()                   { return request<AuthStatus>(Endpoints.Auth.CheckStatus); }
 export async function logout()                            { return request<void>(Endpoints.Auth.Logout); }
-export async function requestPasswordReset(params: object) { return request<void>(Endpoints.Auth.RequestPasswordReset, params); }
-export async function resetPassword(params: object)      { return request<AuthTokenPair>(Endpoints.Auth.ResetPassword, params); }
+export async function requestPasswordReset(params: RequestPasswordResetRequest) { return request<void>(Endpoints.Auth.RequestPasswordReset, params); }
+export async function resetPassword(params: ResetPasswordRequest)      { return request<AuthTokenPair>(Endpoints.Auth.ResetPassword, params); }
 
 // Users
 export async function getAccount()                        { return request<AccountData>(Endpoints.Users.GetAccount); }
-export async function updateAccount(params: object)       { return request<void>(Endpoints.Users.UpdateAccount, params); }
+export async function updateAccount(params: UpdateAccountRequest)       { return request<void>(Endpoints.Users.UpdateAccount, params); }
 export async function getSettings()                       { return request<UserSettings>(Endpoints.Users.GetSettings); }
 // spec: api_spec_user.md → users/update_settings（request 为 { settings: Partial<UserSettings> }）
 export async function updateSettings(params: { settings: Partial<UserSettings> }) {
 	return request<void>(Endpoints.Users.UpdateSettings, params);
 }
-export async function follow(params: object)              { return request<void>(Endpoints.Users.Follow, params); }
-export async function block(params: object)               { return request<void>(Endpoints.Users.Block, params); }
+export async function follow(params: SetFollowRequest)              { return request<void>(Endpoints.Users.Follow, params); }
+export async function block(params: SetBlockRequest)               { return request<void>(Endpoints.Users.Block, params); }
 export async function deleteAccount(params: object)       { return request<void>(Endpoints.Users.DeleteAccount, params); }
 // spec: api_spec_user.md → users/open_the_door（include_recent_moments=true 时返回主页首屏聚合）
 export async function openTheDoor(userId: string, includeRecentMoments = false) {
@@ -202,21 +232,21 @@ export async function openTheDoor(userId: string, includeRecentMoments = false) 
 }
 // spec: api_spec_user.md → users/set_remark（需已关注对方；remark 传空串清除备注）
 export async function setRemark(params: { user_id: string; remark: string }) { return request<void>(Endpoints.Users.SetRemark, params); }
-export async function listFriends(params?: object)        { return request<PaginatedData<RelatedUserItem>>(Endpoints.Users.ListFriends, params ?? {}); }
-export async function listFollowing(params?: object)      { return request<PaginatedData<RelatedUserItem>>(Endpoints.Users.ListFollowing, params ?? {}); }
-export async function listFollowers(params?: object)      { return request<PaginatedData<RelatedUserItem>>(Endpoints.Users.ListFollowers, params ?? {}); }
+export async function listFriends(params?: { pagination?: PaginationParams })        { return request<PaginatedData<RelatedUserItem>>(Endpoints.Users.ListFriends, params ?? {}); }
+export async function listFollowing(params?: { pagination?: PaginationParams })      { return request<PaginatedData<RelatedUserItem>>(Endpoints.Users.ListFollowing, params ?? {}); }
+export async function listFollowers(params?: { pagination?: PaginationParams })      { return request<PaginatedData<RelatedUserItem>>(Endpoints.Users.ListFollowers, params ?? {}); }
 
 // Feed
-export async function getFeedNearby(params?: object)      { return request<PaginatedData<MomentItem>>(Endpoints.Feed.Nearby, params ?? {}); }
-export async function getNearbyUsers(params?: object)     { return request<PaginatedData<UserItem>>(Endpoints.Feed.NearbyUsers, params ?? {}); }
-export async function getNearbyGroups(params?: object)    { return request<PaginatedData<GroupItem>>(Endpoints.Feed.NearbyGroups, params ?? {}); }
-export async function getTrending(params?: object)        { return request<TrendingBundle>(Endpoints.Feed.Trending, params ?? {}); }
+export async function getFeedNearby(params?: NearbyFeedRequest)      { return request<PaginatedData<MomentItem>>(Endpoints.Feed.Nearby, params ?? {}); }
+export async function getNearbyUsers(params?: NearbyFeedRequest)     { return request<PaginatedData<UserItem>>(Endpoints.Feed.NearbyUsers, params ?? {}); }
+export async function getNearbyGroups(params?: NearbyFeedRequest)    { return request<PaginatedData<GroupItem>>(Endpoints.Feed.NearbyGroups, params ?? {}); }
+export async function getTrending(params?: TrendingRequest)        { return request<TrendingBundle>(Endpoints.Feed.Trending, params ?? {}); }
 
 // Media（spec: api_spec_media.md）—— presign → PUT 直传 → complete 三步流程的 API 包装
-export async function presignUpload(params: object) {
+export async function presignUpload(params: PresignUploadRequest) {
 	return request<PresignedUpload>(Endpoints.Media.PresignUpload, params);
 }
-export async function completeUpload(params: object) {
+export async function completeUpload(params: CompleteUploadRequest) {
 	return request<UploadedMedia>(Endpoints.Media.CompleteUpload, params);
 }
 // spec: api_spec_media.md → 媒体批量预签名/完成（瞬间多图等，最多 9 个，原子操作）
@@ -228,18 +258,18 @@ export async function batchCompleteUpload(params: BatchCompleteUploadRequest) {
 }
 
 // Moments
-export async function searchMoments(params: object)       { return request<PaginatedData<MomentItem>>(Endpoints.Moments.Search, params); }
+export async function searchMoments(params: SearchMomentsRequest)       { return request<PaginatedData<MomentItem>>(Endpoints.Moments.Search, params); }
 export async function getMomentDetail(momentId: string)   { return request<MomentItem>(Endpoints.Moments.GetDetail, { moment_id: momentId }); }
-export async function createMoment(params: object)        { return request<MomentItem>(Endpoints.Moments.Create, params, { 'Idempotency-Key': newIdempotencyKey() }); }
-export async function updateMoment(params: object)        { return request<MomentItem>(Endpoints.Moments.Update, params); }
+export async function createMoment(params: CreateMomentRequest)        { return request<MomentItem>(Endpoints.Moments.Create, params, { 'Idempotency-Key': newIdempotencyKey() }); }
+export async function updateMoment(params: UpdateMomentRequest)        { return request<MomentItem>(Endpoints.Moments.Update, params); }
 export async function deleteMoment(params: { moment_id: string }) { return request<void>(Endpoints.Moments.Delete, params); }
-export async function listMyMoments(params?: object)      { return request<PaginatedData<MomentItem>>(Endpoints.Moments.ListMy, params ?? {}); }
-export async function getFavoriteMoments(params?: object)   { return request<PaginatedData<FavoritedMomentItem>>(Endpoints.Moments.ListFavorites, params ?? {}); }
+export async function listMyMoments(params?: { pagination?: PaginationParams })      { return request<PaginatedData<MomentItem>>(Endpoints.Moments.ListMy, params ?? {}); }
+export async function getFavoriteMoments(params?: { pagination?: PaginationParams })   { return request<PaginatedData<FavoritedMomentItem>>(Endpoints.Moments.ListFavorites, params ?? {}); }
 
 // Groups
 export async function getGroupDetail(groupId: string)     { return request<GroupItem>(Endpoints.Groups.GetDetail, { group_id: groupId }); }
 export async function createGroup(params: CreateGroupRequest) { return request<GroupItem>(Endpoints.Groups.Create, params, { 'Idempotency-Key': newIdempotencyKey() }); }
-export async function listMyGroups(params?: object)       { return request<PaginatedData<GroupItem>>(Endpoints.Groups.ListMy, params ?? {}); }
+export async function listMyGroups(params?: { pagination?: PaginationParams })       { return request<PaginatedData<GroupItem>>(Endpoints.Groups.ListMy, params ?? {}); }
 // spec: api_spec_group.md → groups/join（direct 直接加入 / approval 创建申请）、groups/leave
 export async function joinGroup(groupId: string, extra?: { password?: string; message?: string }) {
 	return request<JoinGroupResult>(Endpoints.Groups.Join, { group_id: groupId, ...extra });
@@ -247,48 +277,48 @@ export async function joinGroup(groupId: string, extra?: { password?: string; me
 export async function leaveGroup(groupId: string)          { return request<void>(Endpoints.Groups.Leave, { group_id: groupId }); }
 
 // Search
-export async function searchUsers(params: object)         { return request<PaginatedData<UserItem>>(Endpoints.Users.Search, params); }
+export async function searchUsers(params: SearchUsersRequest)         { return request<PaginatedData<UserItem>>(Endpoints.Users.Search, params); }
 
 // Notifications
 export async function getUnreadCount()                    { return request<UnreadCountResult>(Endpoints.Notify.GetUnreadCount); }
-export async function listNotifications(params?: object)  { return request<PaginatedData<NotifyItem>>(Endpoints.Notify.List, params ?? {}); }
+export async function listNotifications(params?: { pagination?: PaginationParams })  { return request<PaginatedData<NotifyItem>>(Endpoints.Notify.List, params ?? {}); }
 // spec: notify.md → mark_read：notify_ids 指定 1-50 条；不传或空数组 = 全部已读。
-export async function markRead(params: object)            { return request<void>(Endpoints.Notify.MarkRead, params); }
+export async function markRead(params: MarkNotifyReadRequest)            { return request<void>(Endpoints.Notify.MarkRead, params); }
 
 // System
 export async function getClientConfig()                   { return request<ClientConfig>(Endpoints.System.GetClientConfig); }
-export async function bootstrap(params?: object)          { return request<BootstrapData>(Endpoints.System.Bootstrap, params ?? {}); }
+export async function bootstrap(params?: BootstrapRequest)          { return request<BootstrapData>(Endpoints.System.Bootstrap, params ?? {}); }
 
 // Reports
-export async function createReport(params: object)        { return request<ReportCreated>(Endpoints.Reports.Create, params); }
+export async function createReport(params: CreateReportRequest)        { return request<ReportCreated>(Endpoints.Reports.Create, params); }
 
 // Chat
-export async function getPrivateChats(params?: object)    { return request<PaginatedData<PrivateChatItem>>(Endpoints.PrivateChats.List, params ?? {}); }
+export async function getPrivateChats(params?: { pagination?: PaginationParams })    { return request<PaginatedData<PrivateChatItem>>(Endpoints.PrivateChats.List, params ?? {}); }
 export async function getPrivateChatDetail(params: { target_user_id: string }) { return request<PrivateChatOpenResult>(Endpoints.PrivateChats.GetDetail, params); }
-export async function getPrivateMessages(params: object)  { return request<PaginatedData<PrivateMessageItem>>(Endpoints.PrivateMessages.GetHistory, params); }
-export async function sendPrivateMessage(params: object)  { return request<MessageSent>(Endpoints.PrivateMessages.Send, params); }
-export async function getGroupMessages(params: object)    { return request<PaginatedData<GroupMessageItem>>(Endpoints.GroupMessages.GetHistory, params); }
-export async function sendGroupMessage(params: object)    { return request<MessageSent>(Endpoints.GroupMessages.Send, params); }
+export async function getPrivateMessages(params: GetPrivateMessageHistoryRequest)  { return request<PaginatedData<PrivateMessageItem>>(Endpoints.PrivateMessages.GetHistory, params); }
+export async function sendPrivateMessage(params: SendPrivateMessageRequest)  { return request<MessageSent>(Endpoints.PrivateMessages.Send, params); }
+export async function getGroupMessages(params: GetGroupMessageHistoryRequest)    { return request<PaginatedData<GroupMessageItem>>(Endpoints.GroupMessages.GetHistory, params); }
+export async function sendGroupMessage(params: SendGroupMessageRequest)    { return request<MessageSent>(Endpoints.GroupMessages.Send, params); }
 // spec: api_spec_chat.md → 消息撤回/编辑（recall 受窗口限制/群管理员豁免，update 仅 type=text）
 export async function recallPrivateMessage(params: { message_id: string }) { return request<void>(Endpoints.PrivateMessages.Recall, params); }
 export async function updatePrivateMessage(params: { message_id: string; content: string }) { return request<PrivateMessageItem>(Endpoints.PrivateMessages.Update, params); }
 export async function recallGroupMessage(params: { message_id: string }) { return request<void>(Endpoints.GroupMessages.Recall, params); }
 export async function updateGroupMessage(params: { message_id: string; content: string }) { return request<GroupMessageItem>(Endpoints.GroupMessages.Update, params); }
-export async function markPrivateRead(params: object)     { return request<void>(Endpoints.PrivateMessages.MarkRead, params); }
-export async function markGroupRead(params: object)       { return request<void>(Endpoints.GroupMessages.MarkRead, params); }
+export async function markPrivateRead(params: MarkPrivateReadRequest)     { return request<void>(Endpoints.PrivateMessages.MarkRead, params); }
+export async function markGroupRead(params: MarkGroupReadRequest)       { return request<void>(Endpoints.GroupMessages.MarkRead, params); }
 // spec: api_spec_chat.md → private_chats/update_preferences（静音/置顶）
-export async function updatePrivateChatPreferences(params: object) { return request<void>(Endpoints.PrivateChats.UpdatePreferences, params); }
+export async function updatePrivateChatPreferences(params: UpdatePrivateChatPreferencesRequest) { return request<void>(Endpoints.PrivateChats.UpdatePreferences, params); }
 // spec: api_spec_group.md → groups/update_preferences（静音/置顶）
-export async function updateGroupPreferences(params: object) { return request<void>(Endpoints.Groups.UpdatePreferences, params); }
+export async function updateGroupPreferences(params: UpdateGroupPreferencesRequest) { return request<void>(Endpoints.Groups.UpdatePreferences, params); }
 
 // Reactions
-export async function setReaction(params: object)         { return request<void>(Endpoints.Reactions.Set, params); }
+export async function setReaction(params: SetReactionRequest)         { return request<void>(Endpoints.Reactions.Set, params); }
 
 // Comments
-export async function createComment(params: object)       { return request<CommentItem>(Endpoints.Comments.Create, params); }
+export async function createComment(params: CreateCommentRequest)       { return request<CommentItem>(Endpoints.Comments.Create, params); }
 
 // Moments — favorite (two-state via active per spec)
-export async function favoriteMoment(params: object)      { return request<void>(Endpoints.Moments.Favorite, params); }
+export async function favoriteMoment(params: FavoriteMomentRequest)      { return request<void>(Endpoints.Moments.Favorite, params); }
 
 // Groups extended
 export async function getGroupMembers(groupId: string, pagination?: object) {

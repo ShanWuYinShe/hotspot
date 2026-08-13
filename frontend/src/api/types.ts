@@ -882,3 +882,174 @@ export interface SearchSuggestItem {
 export interface SearchSuggestResponse {
 	items: SearchSuggestItem[];
 }
+
+// ── 请求参数类型（对齐后端 json tag）─────────────────────────
+
+// Auth
+export interface RegisterRequest {
+	login_id: string;
+	nickname: string;
+	password: string;
+	client_type: string;
+	device_id: string;
+}
+export interface LoginRequest {
+	login_id: string;
+	password: string;
+	client_type: string;
+	device_id: string;
+}
+export interface GuestRequest {
+	nickname?: string;
+	client_type: string;
+	device_id: string;
+}
+export interface RequestPasswordResetRequest {
+	login_id: string;
+	client_type: string;
+}
+export interface ResetPasswordRequest {
+	login_id: string;
+	verification_code: string;
+	new_password: string;
+	client_type: string;
+	device_id?: string;
+}
+
+// Users
+export interface UpdateAccountRequest {
+	nickname?: string;
+	avatar_file_id?: string;
+	bio?: string;
+	tags?: string[];
+	gender?: Gender;
+}
+export interface SetFollowRequest {
+	user_id: string;
+	active: boolean;
+}
+export interface SetBlockRequest {
+	user_id: string;
+	active: boolean;
+}
+export interface SearchUsersRequest {
+	keyword?: string;
+	tag?: string;
+	radius?: number;
+	sort_by?: string;
+	reference_point?: GeoPoint;
+	pagination?: PaginationParams;
+}
+export interface UpdateSettingsRequest {
+	settings: Record<string, unknown>;
+}
+
+// Feed
+export interface NearbyFeedRequest {
+	reference_point?: GeoPoint;
+	radius?: number;
+	pagination?: PaginationParams;
+}
+export interface TrendingRequest {
+	radius?: number;
+	reference_point?: GeoPoint;
+	pagination?: PaginationParams;
+}
+
+// Moments
+export interface CreateMomentRequest {
+	description: string;
+	location?: Location;
+	privacy_level?: string;
+	tags?: string[];
+	image_file_ids?: string[];
+	mentions?: string[];
+}
+export interface UpdateMomentRequest {
+	moment_id: string;
+	description?: string;
+	location?: Location;
+	privacy_level?: string;
+	tags?: string[];
+	image_file_ids?: string[];
+	mentions?: string[];
+}
+export interface SearchMomentsRequest {
+	keyword?: string;
+	tag?: string;
+	sort_by?: string;
+	pagination?: PaginationParams;
+}
+export interface FavoriteMomentRequest {
+	moment_id: string;
+	active: boolean;
+}
+
+// Messages
+export interface SendPrivateMessageRequest {
+	target_user_id: string;
+	type: string;
+	content: string;
+}
+export interface GetPrivateMessageHistoryRequest {
+	target_user_id: string;
+	pagination?: PaginationParams;
+}
+export interface SendGroupMessageRequest {
+	group_id: string;
+	type: string;
+	content: string;
+}
+export interface GetGroupMessageHistoryRequest {
+	group_id: string;
+	pagination?: PaginationParams;
+}
+export interface MarkPrivateReadRequest {
+	scope: string;
+	target_user_id?: string;
+}
+export interface MarkGroupReadRequest {
+	scope: string;
+	group_id?: string;
+}
+export interface UpdatePrivateChatPreferencesRequest {
+	target_user_id: string;
+	is_muted?: boolean;
+	is_pinned?: boolean;
+}
+export interface UpdateGroupPreferencesRequest {
+	group_id: string;
+	is_muted?: boolean;
+	is_pinned?: boolean;
+}
+
+// Reactions / Comments / Reports / Notify
+export interface SetReactionRequest {
+	target_type: string;
+	target_id: string;
+	emoji: string;
+	active: boolean;
+}
+export interface CreateCommentRequest {
+	moment_id: string;
+	content: string;
+	parent_id?: string;
+	mentions?: string[];
+}
+export interface CreateReportRequest {
+	target_type: string;
+	target_id: string;
+	reason: string;
+	description?: string;
+}
+export interface MarkNotifyReadRequest {
+	notify_ids?: string[];
+}
+
+// Media / System
+export interface CompleteUploadRequest {
+	upload_id: string;
+}
+export interface BootstrapRequest {
+	bootstrap_version?: string;
+}

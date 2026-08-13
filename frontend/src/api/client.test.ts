@@ -124,7 +124,7 @@ describe('幂等键与认证头', () => {
     const fetchMock = mockFetchOnce({ code: 0, data: {} });
     vi.stubGlobal('fetch', fetchMock);
     client.setApiBaseUrl(BASE);
-    await client.login({});
+    await client.login({ login_id: 'u', password: 'p', client_type: 'web', device_id: 'd' });
     const headers = fetchMock.mock.calls[0][1].headers;
     expect(headers['Idempotency-Key']).toBeUndefined();
   });
