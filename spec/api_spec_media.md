@@ -121,12 +121,12 @@ interface PresignedUpload {
 **说明**：
 - 批量预签名是原子操作：任一文件校验失败则整批失败
 - 每个文件独立获得 `upload_url`，客户端可并发上传
-- 上传完成后逐个调用 `complete_upload` 确认
+- 上传完成后可逐个调用 `complete_upload` 或一次调用 `batch_complete_upload` 确认
 
 **Request**: `BatchPresignUploadRequest`
 ```typescript
 interface BatchPresignUploadRequest {
-  files: PresignUploadRequest[];  // 最多 9 个文件（与瞬间图片上限一致）
+  files: PresignUploadRequest[];  // 批量上限 = 批次内各类别上限的最大值（moment_image → AppConfig.limits.max_moment_images；chat_* → AppConfig.limits.max_chat_files；默认均为 9）
 }
 
 interface BatchPresignedUpload {
@@ -137,7 +137,7 @@ interface BatchPresignedUpload {
 **Response**: `ApiResponse<BatchPresignedUpload>`
 
 **参数校验**：
-- `files` 为空、超过 9 项、或单项字段不合法
+- `files` 为空、超过批内各类别上限的最大值（见 Request 注释）、或单项字段不合法
 - 任一文件的 `category` / `mime_type` / `file_size` / `file_name` / `md5` 校验失败（批量请求原子失败）
 
 ### POST /api/v1/media/complete_upload
@@ -188,7 +188,7 @@ interface UploadedMedia {
 **Request**: `BatchCompleteUploadRequest`
 ```typescript
 interface BatchCompleteUploadRequest {
-  upload_ids: string[];  // 最多 9 个（与 batch_presign_upload 上限一致）
+  upload_ids: string[];  // 上限与 batch_presign_upload 一致（见其 Request 说明）
 }
 ```
 

@@ -78,6 +78,8 @@ interface AdminUserSearchRequest {
 
 **Response**: `ApiResponse<PaginatedData<AdminUserItem>>`
 ```typescript
+// AdminUserItem 继承 UserItem 的 @auth-only 个人状态字段（relation/social_context 等）在管理端无业务意义，
+// 管理员视角下这些继承字段一律省略（不返回）；管理员专属字段见下方定义
 interface AdminUserItem extends UserItem {
   status: UserAccountStatus;
   banned_until?: string;   // 封禁到期时间（UTC ISO 8601）；status='banned' 时返回，不传/不存在表示永久封禁
@@ -85,9 +87,9 @@ interface AdminUserItem extends UserItem {
   created_at: string;
   last_active_at?: string;
   login_id: string;
-  register_ip?: string;
+  register_ip?: string;       // 敏感 PII：需 admin.users.read_ip（对齐审计日志的 IP 权限控制），权限不足时字段缺省
   register_location?: string;
-  last_login_ip?: string;
+  last_login_ip?: string;     // 敏感 PII：需 admin.users.read_ip，权限不足时字段缺省
   last_login_location?: string;
   email?: string;
   phone?: string;
@@ -141,6 +143,8 @@ interface AdminSetUserBanRequest {
 }
 ```
 
+**推送**：`active=true` 时向被封禁用户的当前 WebSocket 连接推送 `AccountBanned` 事件后断开连接（客户端收到后应立即登出并展示封禁页，见 `api_spec_websocket.md`）。
+
 **Response**: `ApiResponse`
 
 **错误码**: `10200` `10300` `10400`
@@ -166,8 +170,8 @@ interface AdminGroupSearchRequest {
 
 **Response**: `ApiResponse<PaginatedData<AdminGroupItem>>`
 ```typescript
+// AdminGroupItem 继承 GroupItem；created_at 继承自基类（管理员视角必填），不重复声明
 interface AdminGroupItem extends GroupItem {
-  created_at: string;
   owner: UserInfo;
 }
 ```
@@ -268,7 +272,7 @@ interface AdminReportItem extends ReportItem {
 ```typescript
 interface AdminReportHandleRequest {
   report_id: string;
-  action: 'resolve' | 'dismiss';
+  action: ReportAction;           // ReportAction 定义于 api_spec_types.md（'resolve' | 'dismiss'）
   note?: string;                // 处理备注（0-500 字符）
   ban_duration_days?: number;   // action=resolve 时可选：封禁天数（0=永久），不提供则仅标记处理不执行封禁。
                                 // target_type='user': 直接封禁该用户
@@ -279,6 +283,8 @@ interface AdminReportHandleRequest {
                                 //   若群主本人确为违规者，由管理员单独对其发起 users/ban。
 }
 ```
+
+**权限蕴含（契约级）**：`action='resolve'` 且携带 `ban_duration_days` 时，实际执行封禁操作——调用方除 `admin.reports.write` 外**必须同时具备 `admin.users.write`**（权限不足返回 `10200`），防止低权限管理员经举报通道绕过用户封禁权限边界。仅 `dismiss` 或 resolve 不携带 `ban_duration_days` 时只要求 `admin.reports.write`。
 
 **字段映射说明**：本端点的 `note` 会写入举报详情中的 `handle_note` 字段，并记录到审计日志 `AuditDetails.report.handle.note`。
 

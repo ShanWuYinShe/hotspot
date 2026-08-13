@@ -69,6 +69,7 @@
 **业务规则**：
 - 禁止自举报：当 `target_type='user'` 且 `target_id` 为当前用户时，返回 `10400`
 - 当 `target_type='moment'`/`'comment'`/`'message'` 且目标资源属于当前用户时，返回 `10400`
+- 当 `target_type='group'` 且调用方为该群群主时，返回 `10400`（群主举报自己的群无审核意义，且可被用于对抗审核或骚扰性举报；群内违规应由成员举报或管理员直接处理）
 - 重复举报：同一 `target_type + target_id` 已存在 `pending` 记录时，**返回成功**（`code=0`），`data` 中包含已有举报的 `report_id` 及 `is_duplicate: true`，不创建新举报单。这本质是天然幂等——`(reporter_id, target_type, target_id, pending_status)` 构成自然去重键
 - 若该目标历史举报均已进入终态（`resolved` / `dismissed`），允许再次举报（视为新举报单）
 - **消息举报快照**（隐私边界）：当 `target_type='message'` 时，`message_snapshot` 为**必填**——举报人必须提交举报时的消息内容快照。服务端原样存储，管理员审核**基于快照**判断，不直接查询私聊消息库。这既保证管理员有足够信息审核，又避免管理员随意翻阅用户私聊内容的隐私风险。缺少 `message_snapshot` 或快照不完整时请求失败。

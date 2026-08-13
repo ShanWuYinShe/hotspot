@@ -1,6 +1,6 @@
 # HotSpot API - 信息流
 
-> 本文档定义 HotSpot 信息流 (`feed`) 相关的 RPC 接口。标签相关 API 定义于 `api_spec_search.md`。
+> 本文档定义 HotSpot 信息流 (`feed`) 相关的 RPC 接口。标签类型（`TagItem`/`TagTrend`）定义于 `api_spec_types.md`，标签管理接口见 `api_spec_admin_moderation.md`。
 
 ## 模块信息
 
@@ -53,10 +53,10 @@ interface GetFeedFollowingRequest {
 
 ### POST /api/v1/feed/nearby
 
-附近范围内的瞬间，按距离和热度综合排序。当前用户的主要发现流入口。
+附近范围内的瞬间。当前用户的主要发现流入口。
 
 - **认证**: 必须
-- **排序**: 以地理位置相关信号为主，`moment_id DESC` 作为稳定 tie-breaker；一致性级别为弱一致
+- **排序**: 主序为服务端计算的 `distance` 升序（相对 `reference_point`）；仅当距离差在服务端定义的近似阈值内时，热度/活跃度作为次级信号参与排序；`moment_id DESC` 作为稳定 tie-breaker；一致性级别为弱一致
 
 **Request**: `GetFeedNearbyRequest`
 ```typescript
@@ -75,10 +75,12 @@ interface GetFeedNearbyRequest {
 
 获取附近的用户推荐。认证可选——未登录也可浏览附近用户，支持匿名发现（拉新关键路径）。
 
+**隐私过滤（契约级）**：`location_searchable=false` 的用户不出现（位置发现被关闭）；`searchable=false` 的用户不出现（整体不被发现）。其余用户按各自 `presence_visible` 等隐私设置返回对应字段。
+
 - **认证**: 可选
 - **排序**: 
-  - 主序：以地理位置相关信号为主（距离/活跃度的组合）
-  - 次序：允许综合"社交信号"（共同好友数、共同标签）提升前排质量
+  - 主序：服务端计算的 `distance` 升序（相对 `reference_point`）
+  - 次序：仅当距离差在服务端定义的近似阈值内时，允许综合"社交信号"（共同好友数、共同标签）与活跃度提升前排质量
   - tie-breaker：`user_id DESC`；一致性级别为弱一致
 
 **Request**: `GetFeedNearbyUsersRequest`
@@ -100,8 +102,8 @@ interface GetFeedNearbyUsersRequest {
 
 - **认证**: 可选
 - **排序**: 
-  - 主序：以地理位置相关信号为主（距离/热度/活跃度的组合）
-  - 次序：允许在距离接近时体现"社交信号"（共同好友/同标签）
+  - 主序：服务端计算的 `distance` 升序（相对 `reference_point`）
+  - 次序：仅当距离差在服务端定义的近似阈值内时，允许体现"社交信号"（共同好友/同标签）与热度/活跃度
   - tie-breaker：`group_id DESC`；一致性级别为弱一致
 
 **Request**: `GetFeedNearbyGroupsRequest`
@@ -126,6 +128,7 @@ interface GetFeedNearbyGroupsRequest {
 - `search/suggest`：**有输入前缀**的"搜索框联想"——用户在搜索框输入时，按前缀匹配的用户/群组/瞬间/标签建议。
 
 - **认证**: 可选
+- **排序**: 按热度降序（含时间衰减因子，避免老内容长期占榜；具体衰减算法为服务端实现细节），`moment_id DESC` 作为稳定 tie-breaker；一致性级别为弱一致
 
 **Request**: `GetFeedTrendingRequest`
 ```typescript

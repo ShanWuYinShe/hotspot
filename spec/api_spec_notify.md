@@ -82,12 +82,12 @@ type NotifyPayload =
   | { type: 'group_mentioned'; actor: UserInfo; group_id: string; group_name: string; message_id: string; content_preview?: string }  // 群聊消息中被 @（被 @ 者收到；群申请等群事件为双向契约，群 @ 也明确告知发送者身份）
   | { type: 'reaction_added'; actor: UserInfo; target_type: 'message' | 'moment' | 'comment'; target_id: string; emoji: string }  // 表情反应被添加（资源作者收到；actor 为反应者；自我反应不产生通知）
   | { type: 'group_invite_received'; actor: UserInfo; group_id: string; group_name: string; group_avatar_url?: string; invite_id: string; message?: string }
-  | { type: 'group_application_received'; applicant: UserInfo; group_id: string; group_name: string; application_id: string }  // 推送给群主/管理员
+  | { type: 'group_application_received'; applicant: UserInfo; group_id: string; group_name: string; application_id: string; message?: string }  // 推送给群主/管理员；message 为申请附言（与 WS GroupApplicationReceivedPayload 对齐）
   | { type: 'group_application_accepted'; group_id: string; group_name: string; application_id: string }  // 不暴露审批者身份（隐私考虑：审批者可能是群管理员或群主，不应在通知中暴露其身份给申请者）
   | { type: 'group_application_rejected'; group_id: string; group_name: string; application_id: string; rejected_by: UserInfo; reason?: string }  // 申请被拒绝（申请人收到；群申请为双向契约，申请人可见审批者身份，与 WS GroupApplicationRejected 一致）
   | { type: 'report_resolved'; report_id: string; target_type: ReportTargetType; target_id: string; resolved_at: string; note?: string }      // 举报被处理，note 为管理员脱敏后的处理说明
   | { type: 'report_dismissed'; report_id: string; target_type: ReportTargetType; target_id: string; dismissed_at: string; note?: string }    // 举报被驳回
-  | { type: 'system_announcement'; announcement_id: string; severity: AnnounceLevel }
+  | { type: 'system_announcement'; announcement_id: string; title: string; severity: AnnounceLevel }  // title 为公告标题（客户端据此直接渲染通知行，无需回拉公告列表）
   | { type: 'nearby_new_moment'; actor: UserInfo; moment_id: string; moment_summary: MomentSummary; distance: number };  // 附近新瞬间，distance 为距离（米）
 ```
 

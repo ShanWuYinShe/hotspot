@@ -192,22 +192,15 @@ interface PrivateChatItem {
   is_pinned: boolean;
   last_activity_at: string;
   
-  // 列表场景返回
-  last_message?: {
-    message_id: string;
-    content?: string;
-    type: MessageType;
-    share_code?: string;
-    sender: UserInfo;
-    sent_at: string;
-  };
+  // 列表场景返回（LastMessagePreview 定义于 api_spec_types.md）
+  last_message?: LastMessagePreview;
   
   // 隐私受控（对方隐私设置时不返回）
   presence_status?: UserPresenceStatus;
   
   // 详情场景返回
   created_at?: string;
-  can_message: boolean;
+  can_message: boolean;          // 列表与详情场景均返回；列表场景由服务端批量校验（缓存隐私判定），反映调用当下的隐私校验结果
   message_blocked_reason?: BlockReason; // 仅 can_message=false 时返回
 }
 ```
@@ -334,7 +327,7 @@ interface SendPrivateMessageRequest {
 
 **Response**: `ApiResponse<MessageSent>`
 
-**错误码**: `10200` `10300`
+**错误码**: `10200` `10300` `10400`（`share_code` 无效/已撤销/已过期、`reply_to_message_id` 无效等，见上方「消息发送统一规则」）
 
 ### POST /api/v1/private_messages/get_history
 
@@ -411,6 +404,7 @@ interface MarkPrivateReadRequest {
   target_user_id?: string;       // scope='session' 时必填：指定私聊会话
   up_to_message_id?: string;     // scope='session' 时可选：标记截至此消息；不传则标记该会话全部
 }
+// 参数互斥：scope='all' 时不得传 up_to_message_id（同传视为参数冲突 10000）；scope='session' 时 target_user_id 必填
 ```
 
 **Response**: `ApiResponse`
@@ -525,6 +519,7 @@ interface MarkGroupReadRequest {
   group_id?: string;              // scope='group' 时必填：指定群组
   up_to_message_id?: string;      // scope='group' 时可选：标记截至此消息；不传则标记该群全部
 }
+// 参数互斥：scope='all' 时不得传 up_to_message_id（同传视为参数冲突 10000）；scope='group' 时 group_id 必填
 ```
 
 **Response**: `ApiResponse`
