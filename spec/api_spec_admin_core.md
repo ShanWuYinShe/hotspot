@@ -46,6 +46,7 @@
 | `admin.announcements.read` | 查看公告列表 |
 | `admin.announcements.write` | 发布/删除公告 |
 | `admin.users.read` | 查看用户列表/详情 |
+| `admin.users.read_ip` | 查看用户详情中的 IP 字段（`register_ip`/`last_login_ip`，敏感 PII，独立权限控制，需同时具备 admin.users.read；权限不足时字段缺省） |
 | `admin.users.write` | 封禁/解封用户 |
 | `admin.groups.read` | 查看群组列表/详情 |
 | `admin.groups.write` | 解散群组 |
@@ -124,6 +125,7 @@ interface AdminPermissions {
 获取权限字典。
 
 - **认证**: 必须 + `admin.rbac.manage`
+- **排序**: 按 `key ASC` 作为确定性顺序（权限字典为有界数据，无分页）
 
 **Request**: `{}`
 
@@ -145,6 +147,7 @@ interface AdminPermissionItem {
 获取角色列表。
 
 - **认证**: 必须 + `admin.rbac.manage`
+- **排序**: 按 `name ASC` 作为确定性顺序（角色为有界数据，无分页）
 
 **Request**: `AdminRbacRolesListRequest`
 ```typescript
@@ -391,6 +394,9 @@ type AuditTargetType = 'user' | 'group' | 'announcement' | 'role' | 'admin' | 'r
 
 // 注意：AuditDetails.type 必须与 AuditLogItem.action 一致（即每个 action 对应唯一的 details 变体）
 // ReportAction 定义于 api_spec_types.md
+// ConfigValue：JSON 可表达配置值快照（config.update 变更前后对比用，替代 unknown 以保持强类型）
+type ConfigValue = string | number | boolean | null | ConfigValue[] | { [key: string]: ConfigValue };
+
 type AuditDetails = 
   | { type: 'user.ban'; reason?: string; duration_days?: number }
   | { type: 'user.unban'; reason?: string }
@@ -411,7 +417,7 @@ type AuditDetails =
   | { type: 'tag.delete'; name: string }
   | { type: 'permission.grant'; permission: string }
   | { type: 'permission.revoke'; permission: string }
-  | { type: 'config.update'; config_key: string; old_value: unknown; new_value: unknown };
+  | { type: 'config.update'; config_key: string; old_value: ConfigValue; new_value: ConfigValue };
 
 interface AuditLogItem {
   log_id: string;
@@ -588,6 +594,6 @@ interface ResponseDefaults {
   group_announcements_count: number;  // 群公告列表返回条数，默认 10
   system_announcements_count: number; // 系统公告列表返回条数（system/list_announcements），默认 10
   comment_top_replies_count: number;  // 顶层评论内嵌的前 N 条回复（comments/list 场景），默认 3；消除展开回复的 N+1
-  user_profile_moments_count: number; // 用户主页聚合（users/get_profile）返回的近期瞬间条数，默认 6
+  user_profile_moments_count: number; // users/open_the_door（include_recent_moments=true）返回的近期瞬间条数，默认 6
 }
 ```

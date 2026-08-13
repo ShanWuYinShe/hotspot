@@ -272,7 +272,7 @@ interface UserItem {
   // 位置信息（可见性规则见 RelativeLocation 类型定义）
   location?: RelativeLocation;
 
-  // 统计信息：详情页（open_the_door）与主页（get_profile）返回；搜索/列表由服务端
+  // 统计信息：详情页（open_the_door）返回；搜索/列表由服务端
   // 根据接口语义决定是否返回（客户端不应依赖其在列表中的存在性）
   stats?: UserStats;
 
@@ -347,13 +347,7 @@ interface GroupItem {
   next_activity?: string;        // 下次活动预告（群主通过 update 设置）
 
   // 群列表场景返回（仅 groups/list_my；其他场景省略）
-  last_message?: {
-    message_id: string;
-    type: MessageType;
-    content?: string;
-    sender: UserInfo;
-    sent_at: string;
-  };
+  last_message?: LastMessagePreview;
 
   // 详情页返回，搜索/列表不返回
   created_at?: string;
@@ -377,6 +371,7 @@ interface GroupSettings {
   join_method: GroupJoinMethod;   // 默认 'direct'
   requires_approval: boolean;     // 默认 false
   is_searchable: boolean;
+  members_searchable: boolean;    // 默认 true；是否允许非成员检索群成员列表（groups/members/search）
   max_members: number;
   location: Location;  // 直接映射自请求，不经过距离/角度计算
 }
@@ -494,6 +489,18 @@ interface MessageReplyTo {
 
 > 设计说明：`sender` 采用嵌套 `UserInfo` 而非扁平 `user_id`/`nickname`，与 spec 中所有"对用户的引用"（`sender`/`actor`/`creator`/`applicant` 等）保持一致；`type` 字段是渲染回复引用的必需信息（区分文本/图片/分享等），扁平结构无法表达非文本消息的引用。
 
+**LastMessagePreview**: 会话最近消息预览（群列表 `GroupItem.last_message` 与私聊列表 `PrivateChatItem.last_message` 共用）
+```typescript
+interface LastMessagePreview {
+  message_id: string;
+  type: MessageType;
+  content?: string;       // 文本预览（仅 text 类型有意义；非文本类型可省略）
+  share_code?: string;    // 若最后一条消息为 share 类型，包含 share_code（客户端据此渲染分享卡片预览）
+  sender: UserInfo;       // 最后一条消息的发送者
+  sent_at: string;        // 最后一条消息的发送时间
+}
+```
+
 私聊/群聊消息项类型定义在模块文档中：`api_spec_chat.md`。
 
 ### 标签 (Tag)
@@ -557,8 +564,8 @@ interface UserSettings {
   location_visible: boolean;          // false 时，普通用户视角的 UserItem.location 字段不返回
   presence_visible: boolean;         // 在线状态和最后在线时间的可见性（统一控制），false 时 `presence_status`/`last_online_at` 均不返回
   social_lists_visible: boolean;     // 好友/关注/粉丝列表是否公开（统一控制）
-  groups_visible: boolean;           // 群组列表是否公开（false 时 users/list_groups 直接过滤）
-  reacted_moments_visible: boolean;  // 反应过的瞬间列表是否公开
+  groups_visible: boolean;           // 群组列表是否公开（false 时 users/list_groups 返回 10200，见 base.md「整表隐私拒绝」）
+  reacted_moments_visible: boolean;  // 反应过的瞬间列表是否公开（false 时 users/list_reacted_moments 返回 10200）
   stats_visible: boolean;            // 统计信息是否公开
   allow_follow: boolean;
   allow_private_chat: ChatPerm;
@@ -591,6 +598,7 @@ interface AppLimits {
   moment_description_max_length: number;
   comment_max_length: number;
   search_radius_max: number;  // 搜索半径上限（米），用于搜索和 Feed 相关接口
+  max_chat_files: number;     // 单条聊天消息可附带的最大文件数（媒体批量上传的 chat 类上限，见 api_spec_media.md）
   message_recall_window_seconds: number;  // 消息撤回时间窗（秒），发送者仅可撤回该窗口内的消息；0 表示不允许撤回
   stranger_message_daily_quota: number;   // 每日可向非互相关注（陌生人）用户发送的私聊消息上限；超过返回 BlockReason='stranger_quota_exceeded'，0 表示禁止任何陌生人消息
   reaction_emojis: string[];              // 允许的表情反应 emoji 白名单（Unicode 码点字符串数组），客户端据此渲染反应面板
