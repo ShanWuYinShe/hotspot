@@ -1,9 +1,12 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { MapPin, Users, Lock, Globe } from '@lucide/svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
+	import { ROUTES } from '@/lib/routes';
 
 	// 附近群组横向轮播（对齐 Figma Make HomePage GroupCarousel）。
-	// 140×140 正方形卡片：banner 铺满 + 底部 card-menu 信息 tray 覆盖在图上。
+	// 140×140 正方形卡片：banner 铺满 + 底部 card-menu 信息 tray 覆盖在图上；
+	// 卡片可点击进入群组详情，键盘契约对齐 NearbyImageCard（role=button + Enter/Space）。
 
 	export interface NearbyGroup {
 		id: string;
@@ -21,14 +24,19 @@
 		groups: NearbyGroup[];
 		onSeeAll: () => void;
 	} = $props();
+
+	const openGroup = (id: string) => void goto(ROUTES.group(id));
 </script>
 
 <div>
 	<SectionHead title="附近群组" action="更多" onAction={onSeeAll} />
 	<div class="flex gap-3 overflow-x-auto no-scrollbar pb-1">
 		{#each groups as g (g.id)}
-			<div
-				class="image-hover-frame card-hover tap-97 relative aspect-square w-35 shrink-0 cursor-pointer overflow-hidden rounded-md"
+			<button
+				type="button"
+				class="image-hover-frame card-hover tap-97 focus-ring relative aspect-square w-35 shrink-0 cursor-pointer overflow-hidden rounded-md text-left"
+				aria-label={`查看群组 ${g.name}`}
+				onclick={() => openGroup(g.id)}
 			>
 				<img src={g.banner} alt={g.name} loading="lazy" class="image-hover-frame__image absolute inset-0 h-full w-full object-cover" />
 				<div class="absolute inset-0" style="background:var(--cst-surface-media-scrim-soft);"></div>
@@ -52,7 +60,7 @@
 						</span>
 					</div>
 				</div>
-			</div>
+			</button>
 		{/each}
 	</div>
 </div>

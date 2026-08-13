@@ -118,27 +118,39 @@
 
 	<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 		{#snippet header()}
-			<PageHeader
-				title="附近的人"
-				subtitle={locationName ? `${locationName} · 5km 内 · 每 3 分钟刷新` : '5km 内 · 每 3 分钟刷新'}
-				sticky
-				titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}
-				contentClassName="pt-4 pb-0"
-				onBack={() => history.back()}
-			>
-				{#snippet below()}
-					<!-- 搜索框（全设备全宽，对齐附近群组样板） + 排序/标签过滤：同处 sticky header 内 -->
-					<div class="mt-3">
-						<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索昵称、兴趣或此刻状态" class="px-4 py-2.5 rounded-md" />
-					</div>
-					<div class="flex flex-col gap-3 mt-3">
-						<!-- 排序/标签过滤统一走 TabBar（下划线，全站唯一 Tab 样式） -->
-						<TabBar items={SORT_OPTIONS.map((o) => ({ id: o, label: o }))} value={sort} onChange={(id) => (sort = id)} />
-						<TabBar items={FILTER_TAGS.map((t) => ({ id: t, label: t }))} value={tagFilter} onChange={(id) => (tagFilter = id)} />
-					</div>
-				{/snippet}
-			</PageHeader>
-		{/snippet}
+		<PageHeader
+			title="附近的人"
+			subtitle={locationName ? `${locationName} · 5km 内` : '5km 内'}
+			sticky
+			titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}
+			contentClassName="pt-4 pb-0"
+			onBack={() => history.back()}
+		>
+			{#snippet trailing()}
+				<!-- 计数统一在标题右侧（对齐附近群组样板） -->
+				<span class="text-text-secondary text-xs">{list.length} 人</span>
+			{/snippet}
+			{#snippet below()}
+				<!-- 搜索框 + 排序：sticky header 内只保留搜索与排序；标签过滤放正文首行
+				     （对齐附近动态样板，压缩 header 高度、把空间还给内容） -->
+				<div class="mt-3">
+					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索昵称、兴趣或此刻状态" class="px-4 py-2.5 rounded-md" />
+				</div>
+				<div class="mt-3">
+					<TabBar items={SORT_OPTIONS.map((o) => ({ id: o, label: o }))} value={sort} onChange={(id) => (sort = id)} />
+				</div>
+			{/snippet}
+		</PageHeader>
+	{/snippet}
+
+	<div class="mb-5">
+		<TabBar
+			items={FILTER_TAGS.map((t) => ({ id: t, label: t }))}
+			value={tagFilter}
+			onChange={(id) => (tagFilter = id)}
+			class={device === 'desktop' ? 'flex-wrap' : 'overflow-x-auto'}
+		/>
+	</div>
 
 		<div class={isTablet ? 'grid gap-6' : ''}>
 			<div class="min-w-0">

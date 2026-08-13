@@ -1,80 +1,23 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Search as SearchIcon, Radar, Map } from '@lucide/svelte';
+	import { Search as SearchIcon, Users, UsersRound, Sparkles, Map, ChevronRight } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
-	import SectionHead from '@/components/home/SectionHead.svelte';
-	import MomentRow from '@/components/home/ActivityRow.svelte';
-	import NearbyUserRows from '@/components/home/NearbyUserRows.svelte';
-	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
-	import ListContainer from '@/components/list/ListContainer.svelte';
-	import EmptyState from '@/components/data-display/EmptyState.svelte';
-	import LoadError from '@/components/data-display/LoadError.svelte';
-	import { type NearbyUser } from '@/components/home/nearby-users';
-	import { fetchHomeFeed } from '@/components/home/home-feed';
-	import { startDefaultLocation } from '@/lib/start-default-location';
-	import { follow } from '@/api';
-	import { showToast } from '@/stores/toast.svelte';
-	import type { MomentItem } from '@/api/types';
+	import { platform } from '@/stores/platform.svelte';
 	import { ROUTES } from '@/lib/routes';
 
-	// 附近聚合页（平板/移动端顶级导航「附近」tab）：
-	// 搜索入口 + 附近的人 / 附近群组 / 附近动态，各区块「查看全部」跳对应专区。
-	// 数据复用首页同一组接口（fetchHomeFeed），与首页信息架构一致。
+	// 附近门户页（平板/移动端顶级导航「附近」tab）：搜索入口 + 三分区入口卡。
+	// 内容流由各专区页承担（首页为大纲页），本页不拉取数据，避免与首页重复展示
+	// 同一组附近的人/群组/动态。
 
-	let nearbyUsers = $state<NearbyUser[]>([]);
-	let moments = $state<MomentItem[]>([]);
-	let nearbyGroups = $state<NearbyGroup[]>([]);
-	let loading = $state(true);
-	let error = $state<string | null>(null);
-	let reloadKey = $state(0);
-	let defaultLocation = $state<{ latitude: number; longitude: number } | null>(null);
+	const SECTIONS: { id: string; icon: typeof Users; title: string; description: string; href: string }[] = [
+		{ id: 'people', icon: Users, title: '附近的人', description: '认识 5km 内的新朋友', href: ROUTES.nearbyPeople },
+		{ id: 'groups', icon: UsersRound, title: '附近群组', description: '加入身边的兴趣小组', href: ROUTES.nearbyGroups },
+		{ id: 'moments', icon: Sparkles, title: '附近动态', description: '看看周边正在发生什么', href: ROUTES.nearbyMoments }
+	];
 
-	$effect(() =>
-		startDefaultLocation((loc) => {
-			defaultLocation = loc?.point ?? null;
-		})
-	);
-
-	$effect(() => {
-		void reloadKey;
-		let cancelled = false;
-		async function fetchData() {
-			try {
-				loading = true;
-				error = null;
-				const feed = await fetchHomeFeed(defaultLocation);
-				if (cancelled) return;
-				moments = feed.moments;
-				nearbyUsers = feed.users;
-				nearbyGroups = feed.groups;
-			} catch (e) {
-				if (!cancelled) error = e instanceof Error ? e.message : '加载失败';
-			} finally {
-				if (!cancelled) loading = false;
-			}
-		}
-		void fetchData();
-		return () => {
-			cancelled = true;
-		};
-	});
-
-	let followingIds = $state<Set<string>>(new Set());
-	const toggleFollow = (id: string) => {
-		const n = new Set(followingIds);
-		const next = !n.has(id);
-		next ? n.add(id) : n.delete(id);
-		followingIds = n;
-		// spec: users/set_follow 两态统一；乐观更新 + 失败回滚
-		follow({ user_id: id, active: next }).catch(() => {
-			const r = new Set(followingIds);
-			next ? r.delete(id) : r.add(id);
-			followingIds = r;
-			showToast('操作失败，请重试', 'danger');
-		});
-	};
+	const device = $derived(platform.platform);
 </script>
 
 <svelte:head>
@@ -83,57 +26,45 @@
 
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
-		<PageHeader title="附近" subtitle="发现周边有趣的人和事" sticky>
+		<PageHeader
+			title="附近"
+			subtitle="发现周边有趣的人和事"
+			sticky
+			titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}
+		>
 			{#snippet trailing()}
-				<div class="flex items-center gap-2">
-					<span class="text-text-secondary text-xs">{nearbyUsers.length} 人 · {nearbyGroups.length} 群</span>
-					<ActionIconButton icon={Map} label="地图" onClick={() => void goto(ROUTES.map)} variant="ghost" size={36} />
-				</div>
+				<ActionIconButton icon={Map} label="地图" onClick={() => void goto(ROUTES.map)} variant="ghost" size={36} />
 			{/snippet}
 		</PageHeader>
 	{/snippet}
 
-	{#if loading}
-		<div class="flex flex-col items-center gap-3 py-20">
-			<div class="spinner size-7"></div>
-			<p class="text-text-secondary text-sm">加载附近内容…</p>
-		</div>
-	{:else if error}
-		<LoadError message={error} onRetry={() => reloadKey++} />
-	{:else if moments.length === 0 && nearbyUsers.length === 0 && nearbyGroups.length === 0}
-		<EmptyState title="附近还没有内容" description="去发布第一条动态，或到附近的人认识新朋友。">
-			{#snippet icon()}
-				<Radar class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
-			{/snippet}
-		</EmptyState>
-	{:else}
-		<!-- 搜索入口（对齐旧发现聚合页/首页样板） -->
-		<button
-			type="button"
-			class="hover-btn flex w-full items-center gap-3 rounded-panel border border-border-default bg-surface-primary p-3 text-left focus-ring"
-			onclick={() => void goto(ROUTES.search)}
-		>
-			<SearchIcon class="size-5 shrink-0 text-accent-default" strokeWidth={1.8} />
-			<span class="min-w-0 flex-1 py-2 text-base text-text-secondary">搜索用户、群组、动态、地点…</span>
-		</button>
+	<!-- 搜索入口（门户第一入口） -->
+	<button
+		type="button"
+		class="hover-btn flex w-full items-center gap-3 rounded-md border border-border-default bg-surface-primary p-3 text-left focus-ring"
+		onclick={() => void goto(ROUTES.search)}
+	>
+		<SearchIcon class="size-5 shrink-0 text-accent-default" strokeWidth={1.8} />
+		<span class="min-w-0 flex-1 py-2 text-md text-text-secondary">搜索用户、群组、动态、地点…</span>
+	</button>
 
-		<div class="mt-6">
-			<SectionHead title="附近的人" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
-			<NearbyUserRows users={nearbyUsers.slice(0, 4)} {followingIds} onToggle={toggleFollow} />
-		</div>
-
-		<div class="mt-6">
-			<SectionHead title="附近群组" action="查看全部" onAction={() => void goto(ROUTES.nearbyGroups)} />
-			<GroupCarousel groups={nearbyGroups.slice(0, 4)} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
-		</div>
-
-		<div class="mt-6">
-			<SectionHead title="附近动态" action="查看全部" onAction={() => void goto(ROUTES.nearbyMoments)} />
-			<ListContainer bordered>
-				{#each moments.slice(0, 3) as moment, i (moment.moment_id)}
-					<MomentRow {moment} index={i} onClick={() => void goto(ROUTES.moment(moment.moment_id))} />
-				{/each}
-			</ListContainer>
-		</div>
-	{/if}
+	<!-- 三分区入口卡（内容在各专区页，这里只做导航门户） -->
+	<div class="mt-5 grid gap-3">
+		{#each SECTIONS as section (section.id)}
+			<button
+				type="button"
+				class="hover-btn flex w-full items-center gap-3.5 rounded-md border border-border-default bg-surface-primary p-4 text-left focus-ring"
+				onclick={() => void goto(section.href)}
+			>
+				<span class="flex shrink-0 items-center justify-center rounded-full icon-badge size-9">
+					<section.icon class="size-5 text-accent-default" strokeWidth={1.75} />
+				</span>
+				<span class="min-w-0 flex-1">
+					<span class="block text-md font-medium text-text-primary">{section.title}</span>
+					<span class="mt-0.5 block text-xs text-text-secondary">{section.description}</span>
+				</span>
+				<ChevronRight class="size-4 shrink-0 text-text-secondary" strokeWidth={1.75} />
+			</button>
+		{/each}
+	</div>
 </StandardPageLayout>

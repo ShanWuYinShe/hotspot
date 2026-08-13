@@ -386,7 +386,7 @@
 				type="button"
 				disabled={deleting}
 				onclick={handleDelete}
-				class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-status-danger enabled:bg-status-danger disabled:opacity-60"
+				class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-status-danger enabled:bg-status-danger disabled:opacity-muted"
 			>
 				{deleting ? '删除中…' : '确认删除'}
 			</button>

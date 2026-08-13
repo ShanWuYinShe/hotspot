@@ -21,11 +21,12 @@
 
 	const postsMap = $derived({ posts: myPosts.posts, liked: reacted.posts, saved: savedP.posts } as Record<Tab, GalleryMoment[]>);
 	const archive = $derived(postsMap[activeTab]);
+	const loading = $derived(activeTab === 'posts' ? myPosts.loading : activeTab === 'liked' ? reacted.loading : savedP.loading);
 	const featured = $derived(archive[0]);
 	const remaining = $derived(archive.slice(1));
 
 	const activeMeta: Record<Tab, { label: string; description: string; note: string }> = {
-		posts: { label: '已发布', description: '把正在发生的事，留成可回看的片段。', note: '本年 48 则记录' },
+		posts: { label: '已发布', description: '把正在发生的事，留成可回看的片段。', note: '已发布记录' },
 		liked: { label: '喜欢', description: '被光线、路途和陌生叙事打动的瞬间。', note: '最近收藏的灵感' },
 		saved: { label: '收藏', description: '留给以后慢慢打开的城市线索。', note: '可随时继续整理' }
 	};
@@ -40,7 +41,12 @@
      纯内容组件：滚动与 gutter 由外层 StandardPageLayout/ContentColumn 承担，不自建容器。
      顶部间距由外层 pt-4 承担（不自建 pt 避免双重叠加）；pb-10 是分区页尾部大留白。 -->
 <div class="pb-10">
-		{#if archive.length === 0}
+		{#if loading}
+			<div class="flex flex-col items-center gap-3 py-20">
+				<div class="spinner size-7"></div>
+				<p class="text-text-secondary text-sm">加载我的瞬间…</p>
+			</div>
+		{:else if archive.length === 0}
 			<!-- 空态 -->
 			<EmptyState title="这里还没有瞬间" description="从一次路过、一次相遇开始记录。">
 				{#snippet icon()}
@@ -48,7 +54,7 @@
 				{/snippet}
 				{#snippet action()}
 					{#if activeTab === 'posts'}
-						<button type="button" onclick={openComposer} class="rounded-full bg-accent-default px-4 py-2 text-xs font-medium text-text-on-accent focus-ring">
+						<button type="button" onclick={openComposer} class="hover-btn rounded-full bg-accent-default px-4 py-2 text-xs font-medium text-text-on-accent focus-ring">
 							发布第一条
 						</button>
 					{/if}
@@ -68,10 +74,6 @@
 							<p class="font-mono text-xl font-semibold leading-none text-text-primary">{archive.length}</p>
 							<p class="mt-1 text-xs text-text-secondary">{activeMeta[activeTab].label}</p>
 						</div>
-						<div>
-							<p class="font-mono text-xl font-semibold leading-none text-text-primary">27</p>
-							<p class="mt-1 text-xs text-text-secondary">到过的地方</p>
-						</div>
 					</div>
 				</div>
 
@@ -82,7 +84,7 @@
 					</div>
 					<div class="flex items-center gap-1.5 text-xs text-text-secondary">
 						<CalendarDays class="size-3.5 text-accent-default" strokeWidth={1.75} />
-						<span>{activeMeta[activeTab].note}</span>
+						<span>{activeTab === 'posts' ? `本年 ${archive.length} 则记录` : activeMeta[activeTab].note}</span>
 					</div>
 				</div>
 			</header>
@@ -106,10 +108,8 @@
 								<div>
 									<div class="flex items-center justify-between">
 										<span class="eyebrow font-semibold text-accent-default font-mono">Featured record</span>
-										<span class="text-xs text-text-secondary">06.18</span>
 									</div>
-									<h3 class="mt-5 text-2xl font-medium leading-snug text-text-primary">在云龙湖边，<br />把傍晚收进相册。</h3>
-									<p class="mt-4 text-sm leading-6 text-text-secondary">风停下来以后，水面留下了比语言更完整的回答。今天没有目的地，只是沿着湖岸慢慢走。</p>
+									<h3 class="mt-5 text-2xl font-medium leading-snug text-text-primary">{featured.title || '精选瞬间'}</h3>
 								</div>
 								<div class="mt-8 flex items-center justify-between border-t border-border-default pt-4">
 									<div class="flex items-center gap-4 text-xs text-text-secondary">
@@ -127,13 +127,13 @@
 
 				<!-- 近期条目（对齐 Figma Recent entries：4-col grid，item0 span 2） -->
 				{#if remaining.length > 0}
-					<div class="mt-10 flex items-end justify-between border-b border-border-default pb-3">
-						<div>
-							<p class="eyebrow font-semibold text-accent-default font-mono">Recent entries</p>
-							<h3 class="mt-1 text-sm font-medium text-text-primary">六月的城市笔记</h3>
+						<div class="mt-10 flex items-end justify-between border-b border-border-default pb-3">
+							<div>
+								<p class="eyebrow font-semibold text-accent-default font-mono">Recent entries</p>
+								<h3 class="mt-1 text-sm font-medium text-text-primary">近期记录</h3>
+							</div>
+							<p class="text-xs text-text-secondary">{remaining.length} 个片段</p>
 						</div>
-						<p class="text-xs text-text-secondary">{remaining.length} 个片段</p>
-					</div>
 
 					<div class="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
 				{#each remaining as moment, index (moment.id)}

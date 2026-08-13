@@ -62,8 +62,13 @@ export function useAccountData() {
 		groups_count: 0
 	});
 	let loading = $state(true);
+	let error = $state<string | null>(null);
+	let reloadKey = $state(0);
 
 	$effect(() => {
+		void reloadKey;
+		loading = true;
+		error = null;
 		getAccount()
 			.then((res) => {
 				if (res.code === 0 && res.data) {
@@ -74,8 +79,11 @@ export function useAccountData() {
 					locationName = d.location?.location_name ?? '';
 					handle = d.nickname ? `@${d.nickname.replace(/\s/g, '_')}` : '';
 					stats = d.stats ?? stats;
+				} else {
+					error = res.message ?? '加载失败';
 				}
 			})
+			.catch(() => (error = '网络异常，请稍后重试'))
 			.finally(() => (loading = false));
 	});
 
@@ -100,6 +108,12 @@ export function useAccountData() {
 		},
 		get loading() {
 			return loading;
+		},
+		get error() {
+			return error;
+		},
+		retry() {
+			reloadKey++;
 		}
 	};
 }

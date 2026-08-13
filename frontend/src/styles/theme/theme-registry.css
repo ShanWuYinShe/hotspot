@@ -94,6 +94,7 @@
   --color-surface-media-scrim-strong: var(--cst-surface-media-scrim-strong);
 
   /* Interaction feedback fill tokens（按压/悬停实底填充） */
+  --color-interactive-hover: var(--cst-interactive-hover);
   --color-interactive-hover-fill: var(--cst-interactive-hover-fill);
   --color-interactive-active: var(--cst-interactive-active);
 

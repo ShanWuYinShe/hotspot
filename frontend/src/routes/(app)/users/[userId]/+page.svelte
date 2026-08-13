@@ -183,7 +183,7 @@
 			<button
 				type="button"
 				disabled={!followed || savingRemark}
-				class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-sm border border-border-default py-2.5 text-sm text-text-primary focus-ring disabled:opacity-60"
+				class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-sm border border-border-default py-2.5 text-sm text-text-primary focus-ring disabled:opacity-muted"
 				onclick={async () => {
 					if (!followed) return;
 					savingRemark = true;
@@ -207,7 +207,7 @@
 				{savingRemark ? '保存中…' : '保存备注'}
 			</button>
 			{#if !followed}
-				<p class="mt-1 text-xs text-text-tertiary">关注对方后可设备注</p>
+				<p class="mt-1 text-xs text-text-secondary">关注对方后可设备注</p>
 			{/if}
 				<button
 					type="button"

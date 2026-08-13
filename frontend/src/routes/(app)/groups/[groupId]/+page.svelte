@@ -281,7 +281,7 @@
 									<button
 										type="button"
 										onclick={(e) => { e.stopPropagation(); actionMember = member; }}
-										class="flex h-7 w-7 items-center justify-center rounded-full text-text-tertiary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default"
+										class="flex h-7 w-7 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default"
 										aria-label={`管理 ${member.name}`}
 									>
 										<MoreHorizontal size={15} strokeWidth={2} />
@@ -366,7 +366,7 @@
 							<p class="mt-2 text-xs text-text-secondary">{item.time}</p>
 							{#if canManageAnnouncements}
 								<div class="absolute right-3 top-3 flex gap-1">
-									<button type="button" onclick={() => openEditAnnouncement(item)} class="flex h-6 w-6 items-center justify-center rounded-full text-text-tertiary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default" aria-label="编辑公告">
+									<button type="button" onclick={() => openEditAnnouncement(item)} class="flex h-6 w-6 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default" aria-label="编辑公告">
 										<PencilLine size={12} strokeWidth={1.75} />
 									</button>
 									<button type="button" onclick={() => (deleteAnnounceId = item.id)} class="flex h-6 w-6 items-center justify-center rounded-full text-status-danger outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-status-danger" aria-label="删除公告">

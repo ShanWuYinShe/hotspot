@@ -81,7 +81,7 @@
 						type="button"
 						onclick={confirmEdit}
 						disabled={!draft.trim()}
-						class="flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xxs text-text-on-accent enabled:bg-accent-default disabled:opacity-50 outline-none hover-btn focus-visible:ring-2 focus-visible:ring-accent-default"
+						class="flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xxs text-text-on-accent enabled:bg-accent-default disabled:opacity-muted outline-none hover-btn focus-visible:ring-2 focus-visible:ring-accent-default"
 					>
 						<Check size={11} strokeWidth={2} />完成
 					</button>
@@ -92,7 +92,7 @@
 				class="text-sm leading-card {recalled ? 'italic opacity-soft' : ''} {sent
 					? 'text-text-on-accent'
 					: recalled
-						? 'text-text-tertiary'
+						? 'text-text-secondary'
 						: 'text-text-primary'}"
 			>
 				{recalled ? '消息已撤回' : text}
@@ -119,7 +119,7 @@
 				<button
 					type="button"
 					onclick={() => (menuOpen = !menuOpen)}
-					class="ml-1 flex h-6 w-6 self-center items-center justify-center rounded-full text-text-tertiary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default"
+					class="ml-1 flex h-6 w-6 self-center items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default"
 					aria-label="消息操作"
 				>
 					<MoreHorizontal size={14} strokeWidth={2} />
