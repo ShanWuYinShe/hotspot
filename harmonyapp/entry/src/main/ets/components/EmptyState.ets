@@ -19,6 +19,8 @@ export struct EmptyState {
   @Prop actionLabel: string = '';
   /** 整页空态：撑开 min-height 垂直居中（对齐前端 fill 模式，用于下方无并列内容的空态） */
   @Prop fillMode: boolean = false;
+  /** 极简空态：不画卡片背景/边框/阴影（对齐前端 bare 形态，用于 tab 内容区/列表内空态） */
+  @Prop bare: boolean = false;
   onAction?: () => void;
 
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
@@ -40,7 +42,7 @@ export struct EmptyState {
 
           Text() {
             SymbolSpan($r(this.icon))
-              .fontSize(DesignConstants.FONT.SIZE.XXL_PLUS)
+              .fontSize(DesignConstants.FONT.SIZE.XXL)
               .fontColor([this.getPalette().textSecondary])
               .opacity(DesignConstants.OPACITY.MUTED)
           }
@@ -83,11 +85,15 @@ export struct EmptyState {
         }
       }
       .width('100%')
-      .padding(DesignConstants.SPACING.XXL)
-      .borderRadius(DesignConstants.SHAPE.HERO_CARD)
-      .backgroundColor(this.getPalette().surfaceBackground)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
-      .shadow(this.getPalette().elevatedShadow)
+      .padding(this.bare ? 0 : DesignConstants.SPACING.XXL)
+      .borderRadius(this.bare ? 0 : DesignConstants.SHAPE.HERO_CARD)
+      .backgroundColor(this.bare ? DesignConstants.COLOR.TRANSPARENT : this.getPalette().surfaceBackground)
+      .border(this.bare
+        ? { width: 0 }
+        : { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
+      .shadow(this.bare
+        ? { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 }
+        : this.getPalette().elevatedShadow)
     }
     .width('100%')
     .height('100%')

@@ -100,7 +100,7 @@ function TopBar(props: TopBarProps) {
     Row() {
       Text() {
         SymbolSpan($r(AppIcon.BACK))
-          .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
+          .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textPrimary])
       }
     }

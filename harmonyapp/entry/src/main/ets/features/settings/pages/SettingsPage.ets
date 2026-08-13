@@ -514,7 +514,7 @@ export struct SettingsPage {
             Column() {
               Row() {}
                 .width('100%')
-                .height(DesignConstants.FONT.SIZE.XL_PLUS)
+                .height(DesignConstants.FONT.SIZE.XL)
                 .borderRadius(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).radius)
                 .backgroundColor(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).backgroundColor)
                 .shadow(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).shadow)

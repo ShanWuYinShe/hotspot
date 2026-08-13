@@ -1210,11 +1210,11 @@ export struct ProfilePage {
               Row({ space: DesignConstants.SPACING.SM2 }) {
                 Text() {
                   SymbolSpan($r(AppIcon.EDIT))
-                    .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontColor([this.getSecondaryTextColor()])
                 }
                 Text('编辑资料')
-                  .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor(this.getSecondaryTextColor())
               }
             }
@@ -1296,7 +1296,7 @@ export struct ProfilePage {
       .margin({ top: DesignConstants.SPACING.LG2, bottom: DesignConstants.SPACING.MD })
 
       Text(this.currentUser?.nickname || '')
-        .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
+        .fontSize(DesignConstants.FONT.SIZE.XL)
         .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
         .fontColor(this.getPrimaryTextColor())
     }
@@ -1357,7 +1357,7 @@ export struct ProfilePage {
             .margin({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
         }
         Text(tab)
-          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(index === this.selectedTab ? this.getAccentBackground() : this.getSecondaryTextColor())
           .fontWeight(index === this.selectedTab ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
           .layoutWeight(1)
@@ -1381,7 +1381,7 @@ export struct ProfilePage {
         Column({ space: DesignConstants.SPACING.MD }) {
           Text() {
             SymbolSpan($r(AppIcon.EMPTY))
-              .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
+              .fontSize(DesignConstants.FONT.SIZE.XL)
               .fontColor([this.getSecondaryTextColor()])
           }
           .opacity(DesignConstants.OPACITY.MUTED)
@@ -1406,7 +1406,7 @@ export struct ProfilePage {
       Column({ space: DesignConstants.SPACING.MD }) {
         Text() {
           SymbolSpan($r(this.selectedTab === 1 ? AppIcon.HEART : AppIcon.STAR))
-            .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
+            .fontSize(DesignConstants.FONT.SIZE.XL)
             .fontColor([this.getSecondaryTextColor()])
         }
         .opacity(DesignConstants.OPACITY.MUTED)

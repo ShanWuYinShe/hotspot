@@ -1251,7 +1251,7 @@ export struct ChatPage {
         Button() {
           Text() {
             SymbolSpan($r(AppIcon.ADD))
-              .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
+              .fontSize(DesignConstants.FONT.SIZE.XL)
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
         }

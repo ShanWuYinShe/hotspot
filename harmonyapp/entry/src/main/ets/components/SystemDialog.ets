@@ -57,7 +57,7 @@ export struct SystemDialog {
           }
           if (this.description.length > 0) {
             Text(this.description)
-              .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13
+              .fontSize(DesignConstants.FONT.SIZE.SM) // 13
               .fontColor(this.getPalette().textSecondary)
               .textAlign(TextAlign.Center)
               .width('100%')

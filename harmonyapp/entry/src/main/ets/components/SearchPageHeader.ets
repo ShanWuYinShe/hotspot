@@ -51,7 +51,7 @@ export struct SearchPageHeader {
       Button() {
         Text() {
           SymbolSpan($r(AppIcon.BACK))
-            .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor([this.getPalette().textSecondary])
         }
       }
@@ -93,7 +93,7 @@ export struct SearchPageHeader {
           .layoutWeight(1)
           .height(DesignConstants.CHAT.INPUT_HEIGHT)
           .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .placeholderColor(this.getPalette().textTertiary)
           .fontColor(this.getPalette().textPrimary)
           .border({ width: 0 })

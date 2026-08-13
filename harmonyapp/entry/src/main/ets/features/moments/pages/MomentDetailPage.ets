@@ -511,7 +511,7 @@ export struct MomentDetailPage {
       Column({ space: DesignConstants.SPACING.XS }) {
         Row({ space: DesignConstants.SPACING.SM }) {
           Text(comment.user?.nickname ?? '匿名')
-            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getCurrentThemePalette().textPrimary)
           Text(this.formatTime(comment.created_at))
@@ -536,7 +536,7 @@ export struct MomentDetailPage {
   private buildCommentsSection() {
     Column({ space: DesignConstants.SPACING.MD }) {
       Text(`评论 ${formatCount(this.getCommentCount(this.moment as MomentItem))}`)
-        .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .width('100%')

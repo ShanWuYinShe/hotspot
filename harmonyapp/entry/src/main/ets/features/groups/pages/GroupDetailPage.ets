@@ -1188,7 +1188,7 @@ export struct GroupDetailPage {
                       value: this.joinPassword,
                       placeholder: '请输入群组密码',
                       passwordMode: true,
-                      fontSize: DesignConstants.FONT.SIZE.MD_PLUS,
+                      fontSize: DesignConstants.FONT.SIZE.MD,
                       onChange: (value: string) => { this.joinPassword = value; }
                     })
                       .padding(DesignConstants.SPACING.MD)

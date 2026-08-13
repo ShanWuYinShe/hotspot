@@ -285,7 +285,7 @@ export struct LoginPage {
               .objectFit(ImageFit.Contain)
 
             Text($r('app.string.app_name'))
-              .fontSize(DesignConstants.FONT.SIZE.XXL_PLUS)
+              .fontSize(DesignConstants.FONT.SIZE.XXL)
               .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
               .fontColor(this.getCurrentThemePalette().textPrimary)
 
@@ -637,7 +637,7 @@ export struct LoginPage {
   private buildGuestForm() {
     Column({ space: DesignConstants.SPACING.LG }) {
       Text('访客模式可快速体验，部分功能受限。')
-        .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontColor(this.getCurrentThemePalette().textSecondary)
         .width('100%')
         .padding(DesignConstants.SPACING.MD)

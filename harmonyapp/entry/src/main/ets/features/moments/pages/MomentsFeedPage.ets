@@ -257,7 +257,7 @@ export struct MomentsFeedPage {
         // 标题行 —— 统一走 SystemPageHeader（标题 + 内容数 trailing，透明背景自带安全区）
         SystemPageHeader({
           title: '附近动态',
-          titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
+          titleSize: DesignConstants.FONT.SIZE.XL,
           titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           backgroundVariant: 'transparent',
           showBackButton: this.showBackButton,
@@ -274,11 +274,11 @@ export struct MomentsFeedPage {
         Row({ space: DesignConstants.SPACING.MD2 }) {
           Text() {
             SymbolSpan($r(AppIcon.SEARCH))
-              .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
+              .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           Text('搜索用户、动态、地点或话题')
-            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .layoutWeight(1)
             .maxLines(1)

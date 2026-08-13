@@ -60,10 +60,10 @@ export struct SystemButton {
 
   private getFontSize(): number {
     if (this.buttonSize === 'compact') return DesignConstants.FONT.SIZE.XS2; // 10
-    if (this.buttonSize === 'sheet') return DesignConstants.FONT.SIZE.MD_PLUS; // 15
+    if (this.buttonSize === 'sheet') return DesignConstants.FONT.SIZE.MD; // 15
     if (this.buttonSize === 'small') return DesignConstants.FONT.SIZE.SM; // 12
-    if (this.buttonSize === 'large') return DesignConstants.FONT.SIZE.MD_PLUS; // 15
-    return DesignConstants.FONT.SIZE.SM_PLUS; // 13
+    if (this.buttonSize === 'large') return DesignConstants.FONT.SIZE.MD; // 15
+    return DesignConstants.FONT.SIZE.SM; // 13
   }
 
   private getIconSize(): number {

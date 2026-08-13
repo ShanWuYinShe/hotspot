@@ -623,7 +623,7 @@ export struct MessagePage {
       SystemPageHeader({
         title: '消息',
         subtitle: this.getTotalUnread() > 0 ? `${this.getTotalUnread()} 条未读` : '全部已读',
-        titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
+        titleSize: DesignConstants.FONT.SIZE.XL,
         titleWeight: DesignConstants.FONT.WEIGHT.REGULAR,
         backgroundVariant: 'transparent'
       }) {
@@ -963,7 +963,7 @@ export struct MessagePage {
       Column({ space: DesignConstants.SPACING.HALF }) {
         Row() {
           Text(item.name)
-            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13 对齐前端 text-body
+            .fontSize(DesignConstants.FONT.SIZE.SM) // 13 对齐前端 text-body
             .fontWeight(item.unreadCount > 0 ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .layoutWeight(1)

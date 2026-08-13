@@ -16,6 +16,7 @@ import { interactionActions } from '../../../core/state/InteractionActions';
 import { UserRelationState } from '../../../core/state/InteractionStateStore';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { Pressable } from '../../../components/Pressable';
+import { EmptyState } from '../../../components/EmptyState';
 import { SearchPageHeader } from '../../../components/SearchPageHeader';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
@@ -606,17 +607,13 @@ export struct SearchPage {
   @Builder
   AllResultList() {
     if (this.hasSearched && this.userResults.length === 0 && this.momentResults.length === 0 && this.groupResults.length === 0) {
-      Column({ space: DesignConstants.SPACING.LG }) {
-        Text() {
-          SymbolSpan($r(AppIcon.SEARCH))
-            .fontSize(DesignConstants.FONT.SIZE.XXXL_PLUS)
-            .fontColor([this.getCurrentThemePalette().textSecondary])
-            .opacity(DesignConstants.OPACITY.FADED)
-        }
-        Text('未找到相关内容').fontSize(DesignConstants.FONT.SIZE.MD_PLUS).fontColor(this.getCurrentThemePalette().textPrimary)
-        Text('尝试其他关键词').fontSize(DesignConstants.FONT.SIZE.SM_PLUS).fontColor(this.getCurrentThemePalette().textSecondary)
-      }
-      .width('100%').height('100%').justifyContent(FlexAlign.Center)
+      EmptyState({
+        icon: AppIcon.SEARCH,
+        title: '未找到相关内容',
+        message: '尝试其他关键词',
+        bare: true,
+        fillMode: true
+      })
     } else {
       List({ space: DesignConstants.SPACING.MD2 }) {
         if (this.userResults.length > 0) {
@@ -684,17 +681,13 @@ export struct SearchPage {
   @Builder
   TopicResultList() {
     if (this.hasSearched && this.topicResults.length === 0) {
-      Column({ space: DesignConstants.SPACING.LG }) {
-        Text() {
-          SymbolSpan($r(AppIcon.SEARCH))
-            .fontSize(DesignConstants.FONT.SIZE.XXXL_PLUS)
-            .fontColor([this.getCurrentThemePalette().textSecondary])
-            .opacity(DesignConstants.OPACITY.FADED)
-        }
-        Text('未找到相关话题').fontSize(DesignConstants.FONT.SIZE.MD_PLUS).fontColor(this.getCurrentThemePalette().textPrimary)
-        Text('尝试其他关键词').fontSize(DesignConstants.FONT.SIZE.SM_PLUS).fontColor(this.getCurrentThemePalette().textSecondary)
-      }
-      .width('100%').height('100%').justifyContent(FlexAlign.Center)
+      EmptyState({
+        icon: AppIcon.SEARCH,
+        title: '未找到相关话题',
+        message: '尝试其他关键词',
+        bare: true,
+        fillMode: true
+      })
     } else {
       List({ space: DesignConstants.SPACING.MD2 }) {
         ForEach(this.topicResults, (tag: string) => {
@@ -907,17 +900,13 @@ export struct SearchPage {
   @Builder
   UserResultList() {
     if (this.hasSearched && this.userResults.length === 0) {
-      Column({ space: DesignConstants.SPACING.LG }) {
-        Text() {
-          SymbolSpan($r(AppIcon.SEARCH))
-            .fontSize(DesignConstants.FONT.SIZE.XXXL_PLUS)
-            .fontColor([this.getCurrentThemePalette().textSecondary])
-            .opacity(DesignConstants.OPACITY.FADED)
-        }
-        Text('未找到相关内容').fontSize(DesignConstants.FONT.SIZE.MD_PLUS).fontColor(this.getCurrentThemePalette().textPrimary)
-        Text('尝试其他关键词').fontSize(DesignConstants.FONT.SIZE.SM_PLUS).fontColor(this.getCurrentThemePalette().textSecondary)
-      }
-      .width('100%').height('100%').justifyContent(FlexAlign.Center)
+      EmptyState({
+        icon: AppIcon.SEARCH,
+        title: '未找到相关内容',
+        message: '尝试其他关键词',
+        bare: true,
+        fillMode: true
+      })
     } else {
       List({ space: DesignConstants.SPACING.MD2 }) {
         ForEach(this.userResults, (item: UserItem) => {
@@ -939,17 +928,13 @@ export struct SearchPage {
   @Builder
   GroupResultList() {
     if (this.hasSearched && this.groupResults.length === 0) {
-      Column({ space: DesignConstants.SPACING.LG }) {
-        Text() {
-          SymbolSpan($r(AppIcon.SEARCH))
-            .fontSize(DesignConstants.FONT.SIZE.XXXL_PLUS)
-            .fontColor([this.getCurrentThemePalette().textSecondary])
-            .opacity(DesignConstants.OPACITY.FADED)
-        }
-        Text('未找到相关内容').fontSize(DesignConstants.FONT.SIZE.MD_PLUS).fontColor(this.getCurrentThemePalette().textPrimary)
-        Text('尝试其他关键词').fontSize(DesignConstants.FONT.SIZE.SM_PLUS).fontColor(this.getCurrentThemePalette().textSecondary)
-      }
-      .width('100%').height('100%').justifyContent(FlexAlign.Center)
+      EmptyState({
+        icon: AppIcon.SEARCH,
+        title: '未找到相关内容',
+        message: '尝试其他关键词',
+        bare: true,
+        fillMode: true
+      })
     } else {
       List() {
         ForEach(this.groupResults, (item: GroupItem) => {
@@ -971,17 +956,13 @@ export struct SearchPage {
   @Builder
   MomentResultList() {
     if (this.hasSearched && this.momentResults.length === 0) {
-      Column({ space: DesignConstants.SPACING.LG }) {
-        Text() {
-          SymbolSpan($r(AppIcon.SEARCH))
-            .fontSize(DesignConstants.FONT.SIZE.XXXL_PLUS)
-            .fontColor([this.getCurrentThemePalette().textSecondary])
-            .opacity(DesignConstants.OPACITY.FADED)
-        }
-        Text('未找到相关内容').fontSize(DesignConstants.FONT.SIZE.MD_PLUS).fontColor(this.getCurrentThemePalette().textPrimary)
-        Text('尝试其他关键词').fontSize(DesignConstants.FONT.SIZE.SM_PLUS).fontColor(this.getCurrentThemePalette().textSecondary)
-      }
-      .width('100%').height('100%').justifyContent(FlexAlign.Center)
+      EmptyState({
+        icon: AppIcon.SEARCH,
+        title: '未找到相关内容',
+        message: '尝试其他关键词',
+        bare: true,
+        fillMode: true
+      })
     } else {
       WaterFlow() {
         LazyForEach(this.momentResultsDataSource, (item: MomentItem) => {

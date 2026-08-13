@@ -410,7 +410,7 @@ export struct HomePage {
     SystemPageHeader({
       title: '首页',
       subtitle: '发现周边有趣的人和事',
-      titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
+      titleSize: DesignConstants.FONT.SIZE.XL,
       titleWeight: DesignConstants.FONT.WEIGHT.REGULAR
     }) {
       // trailing: 位置 chip + 地图入口（移动/平板补齐地图入口，对齐前端 PageHeader trailing）
@@ -455,7 +455,7 @@ export struct HomePage {
           Row() {
             Text() {
               SymbolSpan($r(AppIcon.NEARBY))
-                .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
+                .fontSize(DesignConstants.FONT.SIZE.MD)
                 .fontColor([this.getPalette().accentText])
             }
           }
@@ -467,7 +467,7 @@ export struct HomePage {
 
           Column() {
             Text('实时附近')
-              .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13 对齐前端 text-body
+              .fontSize(DesignConstants.FONT.SIZE.SM) // 13 对齐前端 text-body
               .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getPalette().textPrimary)
             Text('持续更新')
@@ -590,7 +590,7 @@ export struct HomePage {
           .fontColor(this.getPalette().accentBackground)
         Text() {
           SymbolSpan($r(AppIcon.ARROW_RIGHT))
-            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor([this.getPalette().accentBackground])
         }
       }

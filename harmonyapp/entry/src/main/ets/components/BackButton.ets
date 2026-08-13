@@ -35,7 +35,7 @@ export struct BackButton {
       }
       if (this.label.length > 0) {
         Text(this.label)
-          .fontSize(DesignConstants.FONT.SIZE.MD_PLUS) // 15
+          .fontSize(DesignConstants.FONT.SIZE.MD) // 15
           .fontColor(this.getPalette().textPrimary)
           .margin({ left: DesignConstants.SPACING.HALF })
       }

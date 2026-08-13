@@ -287,7 +287,7 @@ export struct PhoneLayout {
       Stack({ alignContent: Alignment.TopEnd }) {
         Text() {
           SymbolSpan(TAB_ITEMS[index].symbolId)
-            .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
+            .fontSize(DesignConstants.FONT.SIZE.XL)
             .fontColor([
               this.currentTabIndex === index
                 ? this.getPalette().accentBackground
@@ -347,7 +347,7 @@ export struct PhoneLayout {
     Row() {
       Text() {
         SymbolSpan($r('sys.symbol.plus'))
-          .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
+          .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontColor([this.getPalette().accentText])
       }
     }
@@ -367,7 +367,7 @@ export struct PhoneLayout {
       Row() {
         Text() {
           SymbolSpan($r('sys.symbol.plus'))
-            .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
+            .fontSize(DesignConstants.FONT.SIZE.XL)
             .fontColor([this.getPalette().accentText])
         }
       }

@@ -179,7 +179,7 @@ export struct DesktopLayout {
       Row({ space: DesignConstants.SPACING.SM }) {
         Text() {
           SymbolSpan($r(AppIcon.NEARBY))
-            .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
+            .fontSize(DesignConstants.FONT.SIZE.XL)
             .fontColor([this.getPalette().accentBackground])
         }
         Text('HotSpot')
@@ -392,7 +392,7 @@ export struct DesktopLayout {
             .fontColor([this.getPalette().textSecondary])
         }
         Text('管理后台')
-          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13
+          .fontSize(DesignConstants.FONT.SIZE.SM) // 13
           .fontColor(this.getPalette().textPrimary)
           .margin({ left: DesignConstants.SPACING.SM })
         Blank().layoutWeight(1)
@@ -434,7 +434,7 @@ export struct DesktopLayout {
           .fontColor([this.isItemActive(item) ? this.getPalette().accentBackground : this.getPalette().textSecondary])
       }
       Text(item.label)
-        .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13
+        .fontSize(DesignConstants.FONT.SIZE.SM) // 13
         .fontColor(this.isItemActive(item) ? this.getPalette().textPrimary : this.getPalette().textSecondary)
         .fontWeight(this.isItemActive(item) ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
         .margin({ left: DesignConstants.SPACING.SM })

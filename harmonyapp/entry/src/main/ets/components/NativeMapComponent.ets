@@ -945,7 +945,7 @@ export struct NativeMapComponent {
             .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
 
           Text(this.mapError)
-            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
             .textAlign(TextAlign.Center)
 

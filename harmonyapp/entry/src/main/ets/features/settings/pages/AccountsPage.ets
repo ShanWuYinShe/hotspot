@@ -17,6 +17,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
+import { EmptyState } from '../../../components/EmptyState';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
@@ -206,51 +207,25 @@ export struct AccountsPage {
               .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
           )
       } else if (this.accounts.length === 0 && this.errorMessage) {
-        Column({ space: DesignConstants.SPACING.LG }) {
-          Text() {
-            SymbolSpan($r(AppIcon.WARNING))
-              .fontSize(DesignConstants.FONT.SIZE.HERO)
-              .fontColor([this.getCurrentThemePalette().textSecondary])
-          }
-          Text(this.errorMessage)
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-            .textAlign(TextAlign.Center)
-          SystemButton({
-            label: '重试',
-            variant: 'primary',
-            buttonSize: 'default',
-            onPress: () => { this.load(); }
-          })
-        }
-        .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-        .transition(
-          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
-        )
+        EmptyState({
+          icon: AppIcon.WARNING,
+          title: this.errorMessage,
+          actionLabel: '重试',
+          bare: true,
+          fillMode: true,
+          onAction: () => { this.load(); }
+        })
       } else if (this.accounts.length === 0) {
-        Column({ space: DesignConstants.SPACING.MD }) {
-          Text('暂无已保存账号')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-
-          SystemButton({
-            label: '去登录/创建访客',
-            variant: 'primary',
-            buttonSize: 'default',
-            onPress: () => {
-              AppRouter.push(PageNames.LOGIN);
-            }
-          })
-        }
-        .width('100%')
-        .padding(DesignConstants.SPACING.XL)
-        .transition(
-          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
-        )
+        EmptyState({
+          icon: AppIcon.EMPTY,
+          title: '暂无已保存账号',
+          actionLabel: '去登录/创建访客',
+          bare: true,
+          fillMode: true,
+          onAction: () => {
+            AppRouter.push(PageNames.LOGIN);
+          }
+        })
       } else {
         List() {
           ForEach(this.accounts, (acc: AuthData) => {

@@ -88,7 +88,7 @@ export struct AnchorEntry {
           .letterSpacing(DesignConstants.FONT.LETTER_SPACING.ICON_LABEL)
         Row() {
           Text(this.getDisplayName())
-            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13
+            .fontSize(DesignConstants.FONT.SIZE.SM) // 13
             .fontColor(this.getPalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })

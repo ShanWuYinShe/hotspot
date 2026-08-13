@@ -42,11 +42,7 @@ export interface FontSizes {
   // 扩展值（覆盖高频实际使用的字号）
   XS_MINUS: number;
   XS2: number;
-  SM_PLUS: number;
-  MD_PLUS: number;
   LG_PLUS: number;
-  XL_PLUS: number;
-  XXL_PLUS: number;
   XXXL_PLUS: number;
   HERO: number;
   HERO_LARGE: number;
@@ -431,11 +427,9 @@ const FONT: FontSystem = {
     XXXL: 32,
     XS_MINUS: 9, // HarmonyOS 渲染适配档（前端最小档为 10，本端保留 9 用于极小角标）
     XS2: 10,
-    SM_PLUS: 13, // HarmonyOS 渲染适配档（前端已把 13 归并到 12，本端保留为聊天气泡正文档）
-    MD_PLUS: 15,
+    // 近邻档（13/15/22/28）已按前端口径归并：13→12、15→14、22→20、28→24，
+    // 消除 1-2px 近邻档位（前端 theme-registry 同原则）
     LG_PLUS: 18,
-    XL_PLUS: 22,
-    XXL_PLUS: 28,
     XXXL_PLUS: 36,
     HERO: 48,
     HERO_LARGE: 56,

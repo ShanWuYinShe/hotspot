@@ -104,7 +104,7 @@ struct AdminOverviewPage {
           title: '管理后台',
           showBackButton: true,
           onBack: () => { this.pathStack.pop(); },
-          titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
+          titleSize: DesignConstants.FONT.SIZE.XL,
           titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM
         })
 
@@ -149,7 +149,7 @@ struct AdminOverviewPage {
       Row() {
         Text() {
           SymbolSpan($r(AppIcon.SHIELD))
-            .fontSize(DesignConstants.FONT.SIZE.XL_PLUS)
+            .fontSize(DesignConstants.FONT.SIZE.XL)
             .fontColor([this.getPalette().accentText])
         }
       }
@@ -216,7 +216,7 @@ struct AdminOverviewPage {
 
       Column({ space: DesignConstants.SPACING.HALF }) {
         Text(m.title)
-          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS) // 13
+          .fontSize(DesignConstants.FONT.SIZE.SM) // 13
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         Text(m.desc)

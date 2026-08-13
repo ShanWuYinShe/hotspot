@@ -115,7 +115,7 @@ export struct AdvancedSettingsPage {
       Row() {
         Text() {
           SymbolSpan($r(AppIcon.ARROW_RIGHT))
-            .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor([this.getCurrentThemePalette().textSecondary])
         }
       }

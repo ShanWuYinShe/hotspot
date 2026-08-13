@@ -146,7 +146,7 @@ export struct NearbyPage {
   private buildSectionHeader(title: string, actionLabel: string, onAction: () => void) {
     Row() {
       Text(title)
-        .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .layoutWeight(1)
@@ -170,7 +170,7 @@ export struct NearbyPage {
         SystemPageHeader({
           title: '附近',
           subtitle: `${this.users.length} 人 · ${this.groups.length} 群`,
-          titleSize: DesignConstants.FONT.SIZE.XL_PLUS,
+          titleSize: DesignConstants.FONT.SIZE.XL,
           titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           backgroundVariant: 'transparent'
         }) {
@@ -186,11 +186,11 @@ export struct NearbyPage {
         Row({ space: DesignConstants.SPACING.MD2 }) {
           Text() {
             SymbolSpan($r(AppIcon.SEARCH))
-              .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
+              .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           Text('搜索用户、群组、动态、地点…')
-            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .layoutWeight(1)
             .maxLines(1)
@@ -270,7 +270,7 @@ export struct NearbyPage {
         })
         Column({ space: DesignConstants.SPACING.HALF }) {
           Text(user.user?.nickname ?? '')
-            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -308,7 +308,7 @@ export struct NearbyPage {
         })
         Column({ space: DesignConstants.SPACING.HALF }) {
           Text(group.group?.name ?? '')
-            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -338,7 +338,7 @@ export struct NearbyPage {
     } }) {
       Column({ space: DesignConstants.SPACING.XS }) {
         Text(moment.description)
-          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })

@@ -219,7 +219,7 @@ export struct MomentFeedCard {
 
       if (this.moment.description) {
         Text(this.moment.description)
-          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getPalette().textSecondary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -233,7 +233,7 @@ export struct MomentFeedCard {
           Row({ space: DesignConstants.SPACING.XS }) {
             Text() {
               SymbolSpan($r(AppIcon.HEART))
-                .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
+                .fontSize(DesignConstants.FONT.SIZE.MD)
                 .fontColor([this.isLikedByMe()
                   ? this.getPalette().accentBackground
                   : this.getPalette().textSecondary])
@@ -248,7 +248,7 @@ export struct MomentFeedCard {
           Row({ space: DesignConstants.SPACING.XS }) {
             Text() {
               SymbolSpan($r(AppIcon.MESSAGE))
-                .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
+                .fontSize(DesignConstants.FONT.SIZE.MD)
                 .fontColor([this.getPalette().textSecondary])
             }
             .padding(DesignConstants.SPACING.MD3)
@@ -262,7 +262,7 @@ export struct MomentFeedCard {
         Row({ space: DesignConstants.SPACING.MD }) {
           Text() {
             SymbolSpan($r(AppIcon.STAR_FILL))
-              .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
+              .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontColor([this.getMomentState()?.my_state?.is_favorited
                 ? this.getPalette().accentBackground
                 : this.getPalette().textSecondary])
@@ -272,7 +272,7 @@ export struct MomentFeedCard {
 
           Text() {
             SymbolSpan($r(AppIcon.SHARE))
-              .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
+              .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontColor([this.getPalette().textSecondary])
           }
           .padding(DesignConstants.SPACING.MD3)
@@ -443,7 +443,7 @@ export struct MomentFeedCard {
             .width(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
             .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
             .textAlign(TextAlign.Center)
-            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getPalette().textSecondary)
             .borderRadius(DesignConstants.RADIUS.MD)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })

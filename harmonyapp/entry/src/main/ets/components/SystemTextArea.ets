@@ -13,7 +13,7 @@ export struct SystemTextArea {
   @Prop value: string = '';
   @Prop placeholder: string = '';
   @Prop minHeight: number = 96;
-  @Prop fontSize: number = DesignConstants.FONT.SIZE.SM_PLUS; // 13
+  @Prop fontSize: number = DesignConstants.FONT.SIZE.SM; // 13
   /** 最大行数（约束高度），0 表示不限 */
   @Prop maxLines: number = 0;
   @Prop hasError: boolean = false;
