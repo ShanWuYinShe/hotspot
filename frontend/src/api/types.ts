@@ -830,3 +830,55 @@ export interface BatchCompleteUploadRequest {
 export interface BatchCompleteUpload {
 	uploads: UploadedMedia[];       // 与请求 upload_ids 一一对应、顺序一致
 }
+
+// ── Map Canvas ──────────────────────────────────────────────
+
+export interface MapCanvasRequest {
+	viewport: {
+		bounds: { north: number; south: number; east: number; west: number };
+	};
+	filter?: { data_type?: string; time_range?: { start_time?: string; end_time?: string } };
+	pagination?: { limit?: number; cursor?: string };
+}
+
+export interface MapHeatBucket {
+	cell_token: string;
+	level: number;
+	location: GeoPoint;
+	total_count: number;
+	breakdown?: { user?: number; group?: number; moment?: number };
+}
+
+export interface MapHotspotItem {
+	object_type: string;
+	object_id: string;
+	title: string;
+	subtitle?: string;
+	cover_url?: string;
+	location: GeoPoint;
+	created_at?: string;
+	distance_meters?: number;
+}
+
+export interface MapCanvasResponse {
+	heatmap?: { items: MapHeatBucket[] };
+	hotspots?: { items: MapHotspotItem[]; next_cursor?: string };
+}
+
+// ── Search Suggest ──────────────────────────────────────────
+
+export interface SearchSuggestRequest {
+	prefix: string;
+	reference_point: GeoPoint;
+	types?: string[];
+	radius?: number;
+}
+
+export interface SearchSuggestItem {
+	type: string;
+	payload: Record<string, unknown>;
+}
+
+export interface SearchSuggestResponse {
+	items: SearchSuggestItem[];
+}

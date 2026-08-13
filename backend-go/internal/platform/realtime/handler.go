@@ -122,7 +122,7 @@ func (h *Handler) sweepTypingThrottle(ctx context.Context) {
 		case <-ticker.C:
 			cutoff := time.Now().Add(-time.Minute)
 			h.typingThrottle.Range(func(key, value any) bool {
-				if value.(time.Time).Before(cutoff) {
+				if t, ok := value.(time.Time); ok && t.Before(cutoff) {
 					h.typingThrottle.Delete(key)
 				}
 				return true
@@ -338,7 +338,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			typingKey := fmt.Sprintf("typing:%s:%s", principal.UserID, payload.TargetUserID)
 			if last, ok := h.typingThrottle.Load(typingKey); ok {
-				if time.Since(last.(time.Time)) < 3*time.Second {
+				if t, ok := last.(time.Time); ok && time.Since(t) < 3*time.Second {
 					continue
 				}
 			}
@@ -358,7 +358,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			typingKey := fmt.Sprintf("typing:%s:%s", principal.UserID, payload.GroupID)
 			if last, ok := h.typingThrottle.Load(typingKey); ok {
-				if time.Since(last.(time.Time)) < 3*time.Second {
+				if t, ok := last.(time.Time); ok && time.Since(t) < 3*time.Second {
 					continue
 				}
 			}

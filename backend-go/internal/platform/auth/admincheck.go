@@ -30,7 +30,11 @@ func IsAdminUser(ctx context.Context, userID string) bool {
 	if value == nil {
 		return false
 	}
-	checker := *value.(*AdminChecker)
+	checkerPtr, ok := value.(*AdminChecker)
+	if !ok || checkerPtr == nil {
+		return false
+	}
+	checker := *checkerPtr
 	isAdmin, err := checker.IsAdmin(ctx, userID)
 	return err == nil && isAdmin
 }

@@ -68,6 +68,10 @@ import type {
 	UserProfileBundle,
 	UserSettings,
 	CreateGroupRequest,
+	MapCanvasRequest,
+	MapCanvasResponse,
+	SearchSuggestRequest,
+	SearchSuggestResponse,
 } from '@/api/types';
 
 // 分页信封由 types.ts 提供；此处集中重导出供页面直接使用。
@@ -338,9 +342,9 @@ export async function listComments(momentId: string, pagination?: object) {
 }
 
 // Map
-export async function getMapCanvas(params: object)        { return request<object>(Endpoints.Map.Canvas, params); }
+export async function getMapCanvas(params: MapCanvasRequest) { return request<MapCanvasResponse>(Endpoints.Map.Canvas, params); }
 
 // Search
-export async function searchSuggest(params?: object)      { return request<object>(Endpoints.Search.Suggest, params ?? {}); }
+export async function searchSuggest(params?: SearchSuggestRequest) { return request<SearchSuggestResponse>(Endpoints.Search.Suggest, params ?? {}); }
 
 export { Endpoints };
