@@ -17,7 +17,13 @@ export interface WsEvent<T extends string = string, P = unknown> {
 // ---------------------------------------------------------------------------
 
 /** 客户端可发送的事件类型。 */
-export type ClientEventType = 'Auth' | 'Ping' | 'SetSubscriptions' | 'SendPrivateTyping' | 'SendGroupTyping';
+export type ClientEventType =
+  | 'Auth'
+  | 'Ping'
+  | 'SetSubscriptions'
+  | 'GetSubscriptions'
+  | 'SendPrivateTyping'
+  | 'SendGroupTyping';
 
 /** 服务端可推送的全部事件类型（与 spec ServerEventType 枚举对齐）。 */
 export type ServerEventType =
@@ -36,6 +42,8 @@ export type ServerEventType =
   | 'ReactionAdded'
   | 'ReactionRemoved'
   | 'MomentCommented'
+  | 'MomentUpdated'
+  | 'MomentDeleted'
   | 'CommentReply'
   | 'MessageMentioned'
   // 私聊
@@ -49,6 +57,7 @@ export type ServerEventType =
   | 'GroupMessageEdited'
   | 'GroupMessageRecalled'
   | 'GroupMessageReadCountUpdated'
+  | 'GroupMessageMentioned'
   | 'GroupTyping'
   // 群组管理
   | 'GroupMemberJoined'
@@ -82,7 +91,8 @@ export type ServerEventType =
   | 'AccountBanned'
   // 协议控制
   | 'Error'
-  | 'SubscribeAck';
+  | 'SubscribeAck'
+  | 'SubscriptionsSnapshot';
 
 // ---------------------------------------------------------------------------
 // 通用类型
@@ -159,6 +169,11 @@ export interface SubscribeAckPayload {
   code: number; // 0 = 成功
   message?: string;
   failed_ids?: FailedSubscriptionId[];
+}
+
+/** 服务端推送的当前全部订阅快照（GetSubscriptions 响应 / SetSubscriptions 处理后）。 */
+export interface SubscriptionsSnapshotPayload {
+  accepted: { type: 'user' | 'group'; ids: string[] }[];
 }
 
 export interface SessionRevokedPayload {
@@ -316,6 +331,7 @@ export interface ServerEventPayloadMap {
   Pong: PingPayload;
   Error: ErrorPayload;
   SubscribeAck: SubscribeAckPayload;
+  SubscriptionsSnapshot: SubscriptionsSnapshotPayload;
   SessionRevoked: SessionRevokedPayload;
   AccountBanned: AccountBannedPayload;
   PrivateMessageNew: PrivateMessageNewPayload;
@@ -325,6 +341,8 @@ export interface ServerEventPayloadMap {
   PrivateTyping: PrivateTypingPayload;
   NewFollower: NewFollowerPayload;
   MomentCommented: MomentCommentedPayload;
+  MomentUpdated: Record<string, unknown>;
+  MomentDeleted: Record<string, unknown>;
   GroupInviteReceived: GroupInviteReceivedPayload;
   GroupInviteRejected: GroupInviteRejectedPayload;
   ReportResolved: ReportResolvedPayload;
@@ -341,6 +359,7 @@ export interface ServerEventPayloadMap {
   GroupMessageEdited: Record<string, unknown>;
   GroupMessageRecalled: Record<string, unknown>;
   GroupMessageReadCountUpdated: Record<string, unknown>;
+  GroupMessageMentioned: Record<string, unknown>;
   GroupTyping: Record<string, unknown>;
   GroupMemberJoined: Record<string, unknown>;
   GroupMemberLeft: Record<string, unknown>;
@@ -368,6 +387,7 @@ export interface ClientEventPayloadMap {
   Auth: AuthPayload;
   Ping: PingPayload;
   SetSubscriptions: SetSubscriptionsPayload;
+  GetSubscriptions: Record<string, unknown>;
   SendPrivateTyping: PrivateTypingSendPayload;
   SendGroupTyping: GroupTypingSendPayload;
 }

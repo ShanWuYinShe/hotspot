@@ -23,11 +23,10 @@ export const Endpoints = {
     RevokeAllSessions: `${PREFIX}/auth/revoke_all_sessions`,
   },
 
-  // Users — 已包装: Search/OpenTheDoor/ListFriends/ListFollowing/ListFollowers/
-  //   ListMoments/ListReactedMoments/GetAccount/UpdateAccount/GetSettings/Follow/Block/
-  //   DeleteAccount；
-  //   待接线: GetDetail/BatchGet/ListGroups/UpdateSettings/UpdateLocation/Upgrade/
-  //   ListBlocked/SetRemark
+  // Users — 已包装: Search/OpenTheDoor(=GetDetail)/ListFriends/ListFollowing/ListFollowers/
+  //   ListMoments/ListReactedMoments/GetAccount/UpdateAccount/GetSettings/UpdateSettings/
+  //   Follow/Block/DeleteAccount/SetRemark；
+  //   待接线: BatchGet/ListGroups/UpdateLocation/Upgrade/ListBlocked
   Users: {
     Search: `${PREFIX}/users/search`,
     GetDetail: `${PREFIX}/users/open_the_door`,
@@ -51,10 +50,11 @@ export const Endpoints = {
     SetRemark: `${PREFIX}/users/set_remark`,
   },
 
-  // Groups — 已包装: GetDetail/Create/ListMy/Join/Leave/UpdatePreferences/Members.List/Announcements.List；
-  //   待接线: Search/Update/Dismiss/TransferOwnership/ListApplications/
-  //   CancelApplication/ListInvites/AcceptInvite/RejectInvite/Members.*/Applications.*/
-  //   Announcements.Create|Update|Delete
+  // Groups — 已包装: GetDetail/Create/ListMy/Join/Leave/UpdatePreferences/Search/Update/Dismiss/
+  //   TransferOwnership/Members.List/Members.Search/Members.Invite/Members.SetRole/Members.Mute/
+  //   Members.Ban/Members.Unban/Members.ListBanned/Members.Remove/ListApplications/ApproveApplication/
+  //   RejectApplication/ListInvites/AcceptInvite/RejectInvite/ListSentInvites/RevokeSentInvite/
+  //   Announcements.List/Create/Update/Delete
   Groups: {
     Search: `${PREFIX}/groups/search`,
     GetDetail: `${PREFIX}/groups/open_the_door`,
