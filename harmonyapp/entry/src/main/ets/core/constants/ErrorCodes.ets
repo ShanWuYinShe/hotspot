@@ -12,6 +12,7 @@ export class ErrorCode {
   static readonly ACCOUNT_BANNED: number = 10201;
   static readonly RESOURCE_NOT_FOUND: number = 10300;
   static readonly BUSINESS_CONFLICT: number = 10400;
+  static readonly INVALID_OLD_CREDENTIAL: number = 10401; // 旧凭证验证失败（spec errors.md）
   static readonly RATE_LIMITED: number = 10500;
   static readonly SERVICE_UNAVAILABLE: number = 10600;
   static readonly IDEMPOTENCY_KEY_CONFLICT: number = 22000;

@@ -281,9 +281,9 @@ export struct SearchPage {
           reference_point: refPoint,
           pagination: { limit: 10 }
         };
+        // spec moment.md → moments/search 收口：全球 keyword 搜索（无 reference_point）
         const momentsReq: SearchMomentsRequest = {
           keyword: trimmedKeyword,
-          reference_point: refPoint,
           pagination: { limit: 10 }
         };
 

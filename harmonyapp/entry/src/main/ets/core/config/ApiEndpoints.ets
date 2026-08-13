@@ -24,7 +24,6 @@ class AuthEndpoints {
 class UserEndpoints {
   readonly SEARCH: string = '/api/v1/users/search';
   readonly GET_DETAIL: string = '/api/v1/users/open_the_door';
-  readonly GET_PROFILE: string = '/api/v1/users/get_profile';
   readonly BATCH_GET: string = '/api/v1/users/batch_get';
   readonly LIST_FRIENDS: string = '/api/v1/users/list_friends';
   readonly LIST_FOLLOWING: string = '/api/v1/users/list_following';

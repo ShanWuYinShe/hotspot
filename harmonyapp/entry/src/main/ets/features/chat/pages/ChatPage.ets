@@ -1061,7 +1061,7 @@ export struct ChatPage {
     try {
       const resp = await ApiClient.getUserProfile({ user_id: this.targetId } as UserOpenTheDoorRequest);
       if (resp.code === 0 && resp.data) {
-        this.targetAvatar = resp.data.user.avatar_url ?? '';
+        this.targetAvatar = resp.data.user.user.avatar_url ?? '';
       }
     } catch (e) {
       hilog.warn(DOMAIN_NUMBER, TAG, `加载目标用户头像失败: ${e}`);

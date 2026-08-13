@@ -100,6 +100,7 @@ const MK_GROUP: GroupItem = {
 };
 
 const MOCK_AUTH: AuthData = {
+  client_type: 'app',
   user_id: 'user_lumos',
   access_token: 'mock_access_token',
   refresh_token: 'mock_refresh_token',
@@ -155,6 +156,7 @@ const MOCK_CLIENT_CONFIG: ClientConfig = {
     max_group_members: 200,
     max_moment_tags: 5,
     max_moment_images: 9,
+    max_chat_files: 9,
     moment_description_max_length: 500,
     comment_max_length: 200,
     search_radius_max: 50000,
@@ -240,8 +242,12 @@ export function getCannedResponse(url: string, loggedIn: boolean, scenario: stri
 
   // Users
   if (url === '/api/v1/users/get_account') return guard() ?? apiOk(MOCK_ACCOUNT);
-  if (url === '/api/v1/users/get_profile') return apiOk(MOCK_PROFILE_BUNDLE);
-  if (url === '/api/v1/users/open_the_door') return apiOk(MK_USER_ITEM);
+  if (url === '/api/v1/users/open_the_door') {
+    // spec user.md → open_the_door：UserProfileBundle（user 嵌套 UserItem）
+    const profile: UserProfileBundle = { user: MK_USER_ITEM };
+    profile.recent_moments = { items: [MK_MOMENT], next_cursor: undefined };
+    return apiOk(profile);
+  }
   if (url === '/api/v1/users/search') return paginated([MK_USER_ITEM]);
   if (url.startsWith('/api/v1/users/list_')) return guard() ?? paginated([] as UserItem[]);
 

@@ -108,6 +108,10 @@ export struct ProfilePage {
 
   private isValidLoginId(loginId: string): boolean {
     const trimmed = loginId.trim();
+    // spec user.md → upgrade：仅支持用户名型 login_id（手机号/邮箱需验证码服务，接入前拒绝）
+    if (trimmed.includes('@') || /^\d+$/.test(trimmed)) {
+      return false;
+    }
     return trimmed.length >= 3 && trimmed.length <= 64;
   }
 
@@ -164,7 +168,7 @@ export struct ProfilePage {
     this.viewedUserMoments = [];
     try {
       const response = await LoadingUtil.withMinimumTime(() =>
-        ApiClient.getUserProfileBundle({ user_id: this.viewedUserId } as UserOpenTheDoorRequest),
+        ApiClient.getUserProfileBundle({ user_id: this.viewedUserId, include_recent_moments: true } as UserOpenTheDoorRequest),
       DesignConstants.ANIMATION.DURATION_CONTENT_SWITCH);
       if (this.isDestroyed) return;
       if (response.code === 0 && response.data?.user?.user?.user_id) {
@@ -597,7 +601,7 @@ export struct ProfilePage {
   private async upgradeAccount(): Promise<void> {
     const trimmedLoginId = this.upgradeLoginId.trim();
     if (!trimmedLoginId) {
-      SystemToast.showWarning('请输入邮箱/用户名', this.getUIContext());
+      SystemToast.showWarning('请输入用户名（手机号/邮箱升级需验证码，暂未开放）', this.getUIContext());
       return;
     }
     if (!this.isValidLoginId(trimmedLoginId)) {

@@ -392,6 +392,7 @@ struct Index {
         const currentAuth = await AuthAccountManager.getCurrentAuth();
         if (currentAuth) {
           const updatedAuth: AuthData = {
+            client_type: 'app',
             user_id: currentAuth.user_id,
             access_token: currentAuth.access_token,
             refresh_token: currentAuth.refresh_token,
@@ -570,7 +571,7 @@ struct Index {
               type: 'social',
               priority: 'high',
               title: '群组邀请',
-              message: `${(payloadRecord.inviter as Record<string, Object>).nickname} 邀请你加入「${String(groupRecord.name)}」`,
+              message: `${(payloadRecord.actor as Record<string, Object>).nickname} 邀请你加入「${String(groupRecord.name)}」`,
               read: false,
               actionable: true,
               metadata: metadata

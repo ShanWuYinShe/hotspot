@@ -222,10 +222,12 @@ export interface MyGroupState {
   joined_at?: string;
 }
 
-export interface GroupLastMessage {
+// 会话最近消息预览（spec types.md → LastMessagePreview，GroupItem 与 PrivateChatItem 共用）
+export interface LastMessagePreview {
   message_id: string;
   type: MessageType;
   content?: string;
+  share_code?: string; // 最后一条消息为 share 类型时包含
   sender: UserInfo;
   sent_at: string;
 }
@@ -239,7 +241,7 @@ export interface GroupItem {
   last_activity_at?: string;
 
   // 群列表场景返回（仅 groups/list_my；其他场景省略，见 spec api_spec_types.md）
-  last_message?: GroupLastMessage;
+  last_message?: LastMessagePreview;
 
   created_at?: string;
   owner_id?: string;
@@ -263,6 +265,7 @@ export interface GroupSettings {
   join_method: GroupJoinMethod;   // 默认 'direct'
   requires_approval: boolean;     // 默认 false
   is_searchable: boolean;
+  members_searchable: boolean;    // 默认 true（spec types.md → GroupSettings）
   max_members: number;
   location: Location;
 }
@@ -386,23 +389,17 @@ export interface CommentItem {
   top_replies?: CommentItem[];
 }
 
+// spec user.md → open_the_door：recent_moments 仅 include_recent_moments=true 时返回
 export interface UserProfileBundle {
   user: UserItem;
-  recent_moments: PaginatedData<MomentItem>;
+  recent_moments?: PaginatedData<MomentItem>;
 }
 
 // ReactionItem 已在通用类型区域定义; LikeItem 为历史遗留,删除以消除混淆。
 
 // 6. 私聊 (Private Chat)
 
-export interface PrivateChatLastMessage {
-  message_id: string;
-  content?: string;
-  type: MessageType;
-  share_code?: string;
-  sender: UserInfo;
-  sent_at: string;
-}
+
 
 export interface PrivateChatItem {
   other_user: UserInfo;
@@ -410,7 +407,7 @@ export interface PrivateChatItem {
   is_muted: boolean;
   is_pinned: boolean;
   last_activity_at: string;
-  last_message?: PrivateChatLastMessage;
+  last_message?: LastMessagePreview;
   presence_status?: UserPresenceStatus;
   created_at?: string;
   can_message: boolean;
@@ -425,6 +422,7 @@ export interface PrivateChatOpenResult {
 // ==================== 认证API类型 ====================
 
 export interface AuthTokenPairApp {
+  client_type: 'app'; // 判别字段（spec auth.md → AuthTokenPair）
   user_id: string;
   access_token: string;
   refresh_token: string;
@@ -464,6 +462,7 @@ export interface RefreshTokenRequest {
 
 export interface AuthStatus {
   is_valid: boolean;
+  user_id?: string; // is_valid=true 时返回（spec auth.md → check_status）
   expires_at?: string;
 }
 
@@ -499,6 +498,7 @@ export interface ResetPasswordRequest {
   verification_code: string;
   new_password: string;
   client_type: ClientType;
+  device_id: DeviceId; // App 必传（spec auth.md → reset_password）
 }
 
 export interface ChangePasswordRequest {
@@ -524,6 +524,7 @@ export interface SearchUsersRequest {
 
 export interface UserOpenTheDoorRequest {
   user_id: string;
+  include_recent_moments?: boolean; // true 时返回主页首屏聚合（spec user.md → open_the_door）
 }
 
 // UserFriendsRequest / UserFollowingRequest / UserFollowersRequest 已合并入
@@ -652,29 +653,14 @@ export interface SetRemarkRequest {
   remark: string;
 }
 
-export interface FriendItem {
-  user: UserInfo;
-  presence_status?: UserPresenceStatus;
-  last_online_at?: string;
-  remark?: string;
+// 用户关系列表项（list_friends / list_following / list_followers 共用，spec user.md → RelatedUserItem）
+// user 为 UserItem（presence 隐私受控字段随 user 返回）；followed_back_at 仅 list_friends
+export interface RelatedUserItem {
+  user: UserItem;
   followed_at: string;
-  followed_back_at: string;
-}
-
-export interface FollowingItem {
-  user: UserInfo;
-  followed_at: string;
+  followed_back_at?: string; // 对方回关时间（成为好友的时间）；仅 list_friends 返回
   is_mutual: boolean;
-  presence_status?: UserPresenceStatus;
-  last_online_at?: string;
-}
-
-export interface FollowerItem {
-  user: UserInfo;
-  followed_at: string;
-  is_mutual: boolean;
-  presence_status?: UserPresenceStatus;
-  last_online_at?: string;
+  remark?: string; // @owner-only：仅查询自己时返回
 }
 
 export interface BlockedUserItem {
@@ -685,12 +671,11 @@ export interface BlockedUserItem {
 
 // ==================== 生活瞬间API类型 ====================
 
+// 全球 keyword/tag 搜索（spec moment.md → moments/search 收口：附近发现走 feed/nearby）
 export interface SearchMomentsRequest {
   keyword?: string;
   tag?: string;
-  radius?: number;
-  sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';
-  reference_point?: GeoPoint;
+  sort_by?: 'relevance' | 'newest' | 'popular';
   pagination?: PaginationParams;
 }
 
@@ -873,6 +858,7 @@ export interface CreateGroupRequest {
   join_method?: GroupJoinMethod;
   requires_approval?: boolean;
   is_searchable?: boolean;
+  members_searchable?: boolean; // 默认 true
   max_members?: number;
   location: Location;
 }
@@ -889,6 +875,7 @@ export interface UpdateGroupRequest {
   requires_approval?: boolean;
   next_activity?: string;
   is_searchable?: boolean;
+  members_searchable?: boolean;
   max_members?: number;
   location?: Location;
 }
@@ -933,9 +920,10 @@ export interface InviteMemberRequest {
   message?: string;
 }
 
+// invite_id/expires_at 可选（spec group.md → Invitation：no-op 已是成员/TTL=0 时省略）
 export interface Invitation {
-  invite_id: string;
-  expires_at: string;
+  invite_id?: string;
+  expires_at?: string;
 }
 
 export interface JoinGroupRequest {
@@ -1351,9 +1339,11 @@ export interface GroupSuggestItem {
   location?: RelativeLocation;
 }
 
+// 基于 MomentSummary 的轻量扩展（spec search.md → MomentSuggestItem，含 cover_url）
 export interface MomentSuggestItem {
   moment_id: string;
   description_preview: string;
+  cover_url?: string;
   author: UserInfo;
   location?: RelativeLocation;
 }
@@ -1409,6 +1399,7 @@ export interface AppLimits {
   moment_description_max_length: number;
   comment_max_length: number;
   search_radius_max: number;
+  max_chat_files: number; // 单条聊天消息可附带的最大文件数（spec types.md → AppLimits）
   message_recall_window_seconds: number;
   stranger_message_daily_quota: number;
   reaction_emojis: string[];
@@ -2012,6 +2003,7 @@ export interface NotificationPayload {
   message?: string;
   application_id?: string;
   announcement_id?: string;
+  title?: string; // system_announcement：公告标题（spec notify.md）
   severity?: AnnounceLevel;
   revoked_by?: UserInfo;
   rejected_by?: UserInfo;

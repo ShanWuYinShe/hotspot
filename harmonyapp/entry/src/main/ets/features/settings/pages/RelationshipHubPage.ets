@@ -6,7 +6,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { BlockedUserItem, FollowerItem, FollowingItem, FriendItem } from '../../../core/types/api';
+import { BlockedUserItem, RelatedUserItem } from '../../../core/types/api';
 import { RelationshipListSection } from './SettingsSupport';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
@@ -17,9 +17,9 @@ import { curves } from '@kit.ArkUI';
 export struct RelationshipHubPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
-  @State friends: FriendItem[] = [];
-  @State following: FollowingItem[] = [];
-  @State followers: FollowerItem[] = [];
+  @State friends: RelatedUserItem[] = [];
+  @State following: RelatedUserItem[] = [];
+  @State followers: RelatedUserItem[] = [];
   @State blocked: BlockedUserItem[] = [];
   @State activeRelTab: number = 0;
 

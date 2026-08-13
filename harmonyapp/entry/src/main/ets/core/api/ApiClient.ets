@@ -53,9 +53,7 @@ import {
   UnfollowRequest,
   BlockRequest,
   UnblockRequest,
-  FriendItem,
-  FollowingItem,
-  FollowerItem,
+  RelatedUserItem,
   BlockedUserItem,
   SetRemarkRequest,
   ListFriendsRequest,
@@ -454,12 +452,13 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<PaginatedData<UserItem>>, SearchUsersRequest>(ApiEndpoints.USER.SEARCH, params);
   }
 
-  static async getUserProfile(params: UserOpenTheDoorRequest): Promise<ApiResponse<UserItem>> {
-    return HttpUtil.post<ApiResponse<UserItem>, UserOpenTheDoorRequest>(ApiEndpoints.USER.GET_DETAIL, params);
+  // spec user.md → open_the_door：响应为 UserProfileBundle（include_recent_moments 可选段）
+  static async getUserProfile(params: UserOpenTheDoorRequest): Promise<ApiResponse<UserProfileBundle>> {
+    return HttpUtil.post<ApiResponse<UserProfileBundle>, UserOpenTheDoorRequest>(ApiEndpoints.USER.GET_DETAIL, params);
   }
 
   static async getUserProfileBundle(params: UserOpenTheDoorRequest): Promise<ApiResponse<UserProfileBundle>> {
-    return HttpUtil.post<ApiResponse<UserProfileBundle>, UserOpenTheDoorRequest>(ApiEndpoints.USER.GET_PROFILE, params);
+    return HttpUtil.post<ApiResponse<UserProfileBundle>, UserOpenTheDoorRequest>(ApiEndpoints.USER.GET_DETAIL, params);
   }
 
   static async getUserGroups(params: UserGroupsRequest): Promise<ApiResponse<PaginatedData<GroupItem>>> {
@@ -524,16 +523,16 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<void>, UnblockRequest>(ApiEndpoints.USER.BLOCK, params);
   }
 
-  static async getFriendsList(params: ListFriendsRequest): Promise<ApiResponse<PaginatedData<FriendItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<FriendItem>>, ListFriendsRequest>(ApiEndpoints.USER.LIST_FRIENDS, params);
+  static async getFriendsList(params: ListFriendsRequest): Promise<ApiResponse<PaginatedData<RelatedUserItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<RelatedUserItem>>, ListFriendsRequest>(ApiEndpoints.USER.LIST_FRIENDS, params);
   }
 
-  static async getFollowingList(params: ListFollowingRequest): Promise<ApiResponse<PaginatedData<FollowingItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<FollowingItem>>, ListFollowingRequest>(ApiEndpoints.USER.LIST_FOLLOWING, params);
+  static async getFollowingList(params: ListFollowingRequest): Promise<ApiResponse<PaginatedData<RelatedUserItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<RelatedUserItem>>, ListFollowingRequest>(ApiEndpoints.USER.LIST_FOLLOWING, params);
   }
 
-  static async getFollowersList(params: ListFollowersRequest): Promise<ApiResponse<PaginatedData<FollowerItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<FollowerItem>>, ListFollowersRequest>(ApiEndpoints.USER.LIST_FOLLOWERS, params);
+  static async getFollowersList(params: ListFollowersRequest): Promise<ApiResponse<PaginatedData<RelatedUserItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<RelatedUserItem>>, ListFollowersRequest>(ApiEndpoints.USER.LIST_FOLLOWERS, params);
   }
 
   static async getBlockedList(params: MyBlockedRequest): Promise<ApiResponse<PaginatedData<BlockedUserItem>>> {

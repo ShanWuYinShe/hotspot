@@ -8,9 +8,7 @@ import {
   SystemAnnouncementItem,
   UserSettings,
   ContactInfo,
-  FriendItem,
-  FollowingItem,
-  FollowerItem
+  RelatedUserItem
 } from '../../../core/types/api';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
@@ -582,9 +580,9 @@ export struct RelationshipListSection {
   @Prop title: string = '';
   @Prop subtitle: string = '';
   @Prop emptyText: string = '';
-  @Prop friends: FriendItem[] = [];
-  @Prop following: FollowingItem[] = [];
-  @Prop followers: FollowerItem[] = [];
+  @Prop friends: RelatedUserItem[] = [];
+  @Prop following: RelatedUserItem[] = [];
+  @Prop followers: RelatedUserItem[] = [];
   @Prop blocked: BlockedUserItem[] = [];
   unblockUserAction: (userId: string) => void = () => {};
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
@@ -656,21 +654,21 @@ export struct RelationshipListSection {
       }
 
       if (this.friends.length > 0) {
-        ForEach(this.friends, (item: FriendItem) => {
-          this.buildUserLine(item.user.user_id, item.user.nickname, `成为好友于 ${formatDateTime(item.followed_back_at)}`)
-        }, (item: FriendItem) => item.user.user_id)
+        ForEach(this.friends, (item: RelatedUserItem) => {
+          this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `成为好友于 ${formatDateTime(item.followed_back_at)}`)
+        }, (item: RelatedUserItem) => item.user.user.user_id)
       }
 
       if (this.following.length > 0) {
-        ForEach(this.following, (item: FollowingItem) => {
-          this.buildUserLine(item.user.user_id, item.user.nickname, `关注于 ${formatDateTime(item.followed_at)}`)
-        }, (item: FollowingItem) => item.user.user_id)
+        ForEach(this.following, (item: RelatedUserItem) => {
+          this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注于 ${formatDateTime(item.followed_at)}`)
+        }, (item: RelatedUserItem) => item.user.user.user_id)
       }
 
       if (this.followers.length > 0) {
-        ForEach(this.followers, (item: FollowerItem) => {
-          this.buildUserLine(item.user.user_id, item.user.nickname, `关注你于 ${formatDateTime(item.followed_at)}`)
-        }, (item: FollowerItem) => item.user.user_id)
+        ForEach(this.followers, (item: RelatedUserItem) => {
+          this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注你于 ${formatDateTime(item.followed_at)}`)
+        }, (item: RelatedUserItem) => item.user.user.user_id)
       }
 
       if (this.blocked.length > 0) {

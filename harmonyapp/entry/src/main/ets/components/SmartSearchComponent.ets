@@ -195,12 +195,9 @@ export struct SmartSearchComponent {
     }
 
     try {
+      // spec moment.md → moments/search 收口：全球 keyword 搜索（无 reference_point）
       const response = await ApiClient.searchMoments({
         keyword: query,
-        reference_point: {
-          latitude: refLoc.latitude,
-          longitude: refLoc.longitude
-        },
         pagination: { limit: 10 }
       });
 

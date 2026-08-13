@@ -14,7 +14,7 @@ import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { Pressable } from '../../../components/Pressable';
 import {
   MomentItem, UserItem, GroupItem, GeoPoint,
-  SearchMomentsRequest, SearchUsersRequest, SearchGroupsRequest,
+  GetFeedNearbyRequest, SearchUsersRequest, SearchGroupsRequest,
   JoinGroupRequest,
   BlockRequest, UnblockRequest, CreateReportRequest, Relationship
 } from '../../../core/types/api';
@@ -136,11 +136,12 @@ export struct HomePage {
     this.momentsLoading = true;
     this.momentsError = '';
     try {
-      const request: SearchMomentsRequest = {
+      // spec moment.md → moments/search 收口：附近瞬间走 feed/nearby
+      const request: GetFeedNearbyRequest = {
         reference_point: ref, radius: DefaultConfig.NEARBY_RADIUS,
-        sort_by: 'distance', pagination: { limit: 10 }
+        pagination: { limit: 10 }
       };
-      const response = await LoadingUtil.withMinimumTime(() => ApiClient.searchMoments(request));
+      const response = await LoadingUtil.withMinimumTime(() => ApiClient.getFeedNearby(request));
       if (this.isDestroyed) return;
       if (response.code === 0) {
         const items = response.data?.items ?? [];

@@ -376,6 +376,22 @@ export interface MessageMentionedEvent {
   payload: MessageMentionedPayload
 }
 
+// 群聊消息中被 @（spec websocket.md → GroupMessageMentioned，含 group_name）
+export interface GroupMessageMentionedPayload {
+  notify_id: string
+  group_id: string
+  group_name: string
+  message_id: string
+  actor: UserInfo
+  content_preview?: string
+  mentioned_at: string
+}
+
+export interface GroupMessageMentionedEvent {
+  type: 'GroupMessageMentioned'
+  payload: GroupMessageMentionedPayload
+}
+
 // ----- 用户事件 -----
 
 export interface UserProfileUpdatedPayload {
@@ -390,14 +406,19 @@ export interface UserProfileUpdatedEvent {
 
 // ----- 系统事件 -----
 
-export interface SystemAnnouncementPayload {
-  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
+// 复用 SystemAnnouncementItem 字段（spec websocket.md → SystemAnnouncement：payload 为 {notify_id, announcement}）
+export interface SystemAnnouncementItemPayload {
   announcement_id: string
   title: string
   content: string
   severity: 'info' | 'warning' | 'error'
   action_url?: string
   created_at: string
+}
+
+export interface SystemAnnouncementPayload {
+  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
+  announcement: SystemAnnouncementItemPayload
 }
 
 export interface SystemAnnouncementEvent {
@@ -695,7 +716,7 @@ export interface GroupInviteReceivedPayload {
   notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
   invite_id: string
   group: GroupInfo
-  inviter: UserInfo
+  actor: UserInfo // 邀请发起人（spec 统一 actor 命名）
   message?: string
   created_at: string
 }

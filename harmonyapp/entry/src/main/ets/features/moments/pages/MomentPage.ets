@@ -10,7 +10,7 @@ import { InteractionStateStore } from '../../../core/state/InteractionStateStore
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
-import { MomentItem, SearchMomentsRequest } from '../../../core/types/api';
+import { MomentItem, GetFeedNearbyRequest } from '../../../core/types/api';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemPageHeader, PageHeaderAction } from '../../../components/SystemPageHeader';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
@@ -98,16 +98,16 @@ export struct MomentPage {
     this.errorMessage = '';
 
     try {
-      const request: SearchMomentsRequest = {
+      // spec moment.md → moments/search 收口：附近瞬间走 feed/nearby
+      const request: GetFeedNearbyRequest = {
         reference_point: {
           latitude: refLoc.latitude,
           longitude: refLoc.longitude
         },
         radius: DefaultConfig.MOMENT_RADIUS,
-        sort_by: 'distance',
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE }
       };
-      const response = await LoadingUtil.withMinimumTime(() => ApiClient.searchMoments(request));
+      const response = await LoadingUtil.withMinimumTime(() => ApiClient.getFeedNearby(request));
       if (this.isDestroyed) return;
 
       if (response.code === 0) {
@@ -141,16 +141,16 @@ export struct MomentPage {
     if (this.isLoadingMore || !this.hasMore || !refLoc) return;
     this.isLoadingMore = true;
     try {
-      const request: SearchMomentsRequest = {
+      // spec moment.md → moments/search 收口：附近瞬间走 feed/nearby
+      const request: GetFeedNearbyRequest = {
         reference_point: {
           latitude: refLoc.latitude,
           longitude: refLoc.longitude
         },
         radius: DefaultConfig.MOMENT_RADIUS,
-        sort_by: 'distance',
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.nextCursor }
       };
-      const response = await ApiClient.searchMoments(request);
+      const response = await ApiClient.getFeedNearby(request);
       if (this.isDestroyed) return;
       if (response.code === 0) {
         const items = response.data?.items ?? [];

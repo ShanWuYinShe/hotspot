@@ -25,9 +25,9 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import {
+  GetFeedNearbyRequest,
   SearchUsersRequest,
   SearchGroupsRequest,
-  SearchMomentsRequest,
   UserItem,
   GroupItem,
   MomentItem,
@@ -92,7 +92,8 @@ export struct NearbyPage {
         Promise.allSettled([
           ApiClient.searchUsers({ reference_point: ref, radius: DefaultConfig.NEARBY_RADIUS, sort_by: 'distance', pagination: { limit: 4 } } as SearchUsersRequest),
           ApiClient.searchGroups({ reference_point: ref, radius: DefaultConfig.NEARBY_RADIUS, sort_by: 'distance', pagination: { limit: 4 } } as SearchGroupsRequest),
-          ApiClient.searchMoments({ reference_point: ref, radius: DefaultConfig.NEARBY_RADIUS, sort_by: 'distance', pagination: { limit: 3 } } as SearchMomentsRequest)
+          // spec moment.md → moments/search 收口：附近发现唯一入口为 feed/nearby
+          ApiClient.getFeedNearby({ reference_point: ref, radius: DefaultConfig.NEARBY_RADIUS, pagination: { limit: 3 } })
         ])
       );
       if (this.isDestroyed || capturedVersion !== this.loadVersion) return;
