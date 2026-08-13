@@ -15,7 +15,7 @@
 
 地图模块不再依赖任何行政区或 region 概念，完全基于 S2 网格进行空间划分与聚合：
 
-- 所有带位置的实体（用户、群组、动态）在服务端被投影到固定层级的 S2 网格单元；
+- 所有带位置的实体（用户、群组、动态）在服务端被投影到服务端选定层级的 S2 网格单元（层级由视口跨度与数据密度自动决定，对客户端不透明）；
 - 服务端根据当前视口的物理跨度和预估结果规模，自动选择合适的 S2 层级（`level`），并使用 S2 覆盖算法确定视口内的网格集合；
 - 在大尺度视野下返回**网格热力统计**，在小尺度视野下返回**具体热点对象列表**，对客户端透明；
 - 查询实现依赖预聚合的 S2 统计表，而不是直接扫描明细记录，以保证在大数据量和高并发场景下的可扩展性。
@@ -117,7 +117,7 @@ interface MapHeatBucket {
   /** 当前过滤条件下，该网格内参与统计实体的总数 */
   total_count: number;
 
-  /** 按类型拆分；当 data_type != 'all' 时可选 */
+  /** 按类型拆分；当 data_type = 'all' 时返回完整三分类拆分，否则仅返回对应类型计数（此时可省略） */
   breakdown?: MapHeatBreakdown;
 }
 
@@ -139,10 +139,7 @@ interface MapHotspotItem {
   created_at?: string;            // 对于动态等有时间语义的对象可返回创建时间（UTC ISO 8601）
 }
 
-interface MapHotspotsCanvas {
-  items: MapHotspotItem[];
-  next_cursor?: string;    // 若有下一页则返回游标
-}
+// hotspots 明细即 PaginatedData<MapHotspotItem>（游标分页，见下方 MapCanvasResponse）
 ```
 
 ### 请求与响应
@@ -166,7 +163,7 @@ interface MapCanvasRequest {
 // 客户端按 mode 分支渲染；结构本身编码了互斥规则，无需散文约束
 type MapCanvasResponse =
   | { mode: 'heatmap'; heatmap: MapHeatCanvas }
-  | { mode: 'hotspots'; hotspots: MapHotspotsCanvas }
+  | { mode: 'hotspots'; hotspots: PaginatedData<MapHotspotItem> }
   | { mode: 'empty' };   // 视口内无足够数据时返回空态（既无 heatmap 也无 hotspots）
 ```
 
@@ -192,6 +189,7 @@ type MapCanvasResponse =
 
 - 仅在返回 `hotspots` 时支持游标分页（`pagination` 生效）
 - `limit` 默认 50、最大 200（本端点显式覆盖 base.md 的全局默认 20/100，因为地图热点明细单次需返回较多点位）；返回的明细条数受服务端单次上限裁剪
+- **排序**：主序为服务端计算的 `distance` 升序（相对视口几何中心），`object_type` + `object_id` 组合作为稳定 tie-breaker（游标翻页依赖确定性顺序）；一致性级别为弱一致（聚合统计场景允许短暂延迟，同一 `cursor` 会话内保持排序基准一致）
 
 #### 实现中立
 

@@ -16,10 +16,10 @@
 | 端点 | 说明 | 认证 |
 |-----|------|------|
 
-| `POST /api/v1/system/get_meta` | API 版本元信息 | 无 |
-| `POST /api/v1/system/health` | 健康检查 | 无 |
-| `POST /api/v1/system/list_announcements` | 系统公告列表 | 无 |
-| `POST /api/v1/system/get_client_config` | 客户端公开配置 | 无 |
+| `POST /api/v1/system/get_meta` | API 版本元信息 | 可选 |
+| `POST /api/v1/system/health` | 健康检查 | 可选 |
+| `POST /api/v1/system/list_announcements` | 系统公告列表 | 可选 |
+| `POST /api/v1/system/get_client_config` | 客户端公开配置 | 可选 |
 | `POST /api/v1/system/bootstrap` | 冷启动聚合（config + meta + profile + unread） | 可选 |
 ## 类型定义
 
@@ -36,7 +36,7 @@
 
 获取当前 API 版本的元信息，包括废弃状态和下线计划。
 
-- **认证**: 无
+- **认证**: 可选（公开资源；「可选」语义下无 @auth-only 字段，匿名与登录态响应一致）
 
 **说明**：各 API 版本路径下都应提供此端点；客户端启动时调用以检查当前版本状态。
 
@@ -73,7 +73,7 @@ type ApiVersionStatus =
 
 系统健康检查。
 
-- **认证**: 无
+- **认证**: 可选（公开资源；「可选」语义下无 @auth-only 字段，匿名与登录态响应一致）
 
 **说明**：HTTP 非 200 表示未进入业务层；HTTP 200 时，`code=0` 表示系统可用（`data.status` 为 `healthy` 或 `degraded`），`code=10600` 表示系统不可用（`unhealthy`，`data` 省略，原因见 `message`）。
 
@@ -97,17 +97,17 @@ interface HealthStatus {
 
 获取系统公告列表。
 
-- **认证**: 无
+- **认证**: 可选（公开资源；「可选」语义下无 @auth-only 字段，匿名与登录态响应一致）
 
 **Request**: `{}`
 
 **Response**: `ApiResponse<{ items: SystemAnnouncementItem[] }>`
 
 **说明**：
-- 返回当前有效的最新公告（"有效"= 未被管理员删除且状态为已发布），返回条数由服务端 `AppConfig.response_defaults.system_announcements_count` 控制，客户端不传数量参数
+- 返回当前有效的公告（"有效"= 未被管理员删除的公告；create 即发布，delete 即下线），返回条数由服务端 `AppConfig.response_defaults.system_announcements_count` 控制，客户端不传数量参数
 - 普通用户只需获取最新的 N 条公告，无需分页翻阅历史
 - 管理员查看/搜索全部公告（含历史）请使用 `admin/announcements/search`（定义于 `api_spec_admin_moderation.md`）
-- 按 `created_at` 倒序排列
+- **排序**: 按 `created_at` 倒序，`announcement_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 ---
 
@@ -115,7 +115,7 @@ interface HealthStatus {
 
 获取客户端公开配置。
 
-- **认证**: 无
+- **认证**: 可选（公开资源；「可选」语义下无 @auth-only 字段，匿名与登录态响应一致）
 
 **说明**：
 - 返回的 `ClientConfig` 由 `AppConfig`（见 `api_spec_admin_core.md`）投影得来，包含功能开关、输入限制、联系方式
@@ -156,6 +156,8 @@ interface ClientDefaults {
 **缓存契约（防惊群）**：响应携带 `bootstrap_version`（服务端在 config/version 变更时递增）。客户端可缓存响应并在后续冷启动时通过 `If-None-Match: <bootstrap_version>` 请求头询问；服务端无变化时返回精简响应（`code=0` + `data.bootstrap_version` 不变 + 其余字段省略，由客户端使用缓存）。`bootstrap_version` 的失效由服务端在 admin 修改 `AppConfig` 或发布新版本/公告时主动递增。
 
 > **防惊群**：`bootstrap_version` 变更会让所有客户端同时 miss 缓存并全量重拉，客户端应加随机 jitter 延迟后刷新，避免集中请求。`meta`/`client_config` 为公共数据可做 CDN 缓存；`profile`/`unread_summary` 为用户私有数据，不可缓存。
+>
+> **缓存命中形态（契约级）**：客户端携带 `If-None-Match: <bootstrap_version>` 且版本未变化时，响应为 `code=0` + `data.bootstrap_version` + **其余字段全部省略**（`meta`/`client_config` 的可选声明与此一致，客户端用缓存数据渲染）。
 
 **Request**: `BootstrapRequest`
 ```typescript
@@ -169,8 +171,9 @@ interface BootstrapRequest {
 ```typescript
 interface BootstrapData {
   bootstrap_version: string;        // 缓存版本号，客户端下次冷启动透传给 If-None-Match
-  meta: ApiVersionMeta;             // 同 get_meta 响应（ApiVersionMeta 定义于本文件 get_meta 段）
-  client_config: ClientConfig;      // 同 get_client_config 响应
+  // === 缓存命中时以下字段省略（客户端使用缓存）；未命中/无缓存时必填 ===
+  meta?: ApiVersionMeta;             // 同 get_meta 响应（ApiVersionMeta 定义于本文件 get_meta 段）
+  client_config?: ClientConfig;      // 同 get_client_config 响应
 
   // === @auth-only 以下字段仅登录态返回 ===
   profile?: AccountData;         // 同 users/get_account（AccountData 定义于 api_spec_user.md）
