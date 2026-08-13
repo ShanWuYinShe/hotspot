@@ -302,12 +302,12 @@ func containsString(haystack []string, needle string) bool {
 // keep working without setting every env var. Call it once at startup; a
 // returned error means the process must refuse to serve traffic.
 //
-// In production (or when APP_ENV is unset — see isProductionLike), it rejects:
+// In production (or when APP_ENV is unset — see IsProductionLike), it rejects:
 //   - empty / weak / short AUTH_TOKEN_SECRET
 //   - any insecure default from checkInsecureDefaults() (registry-driven)
 //   - empty PostgresDSN / RedisURL (a prod server with no DB is unsafe)
 func (c Config) Validate() error {
-	if !c.isProductionLike() {
+	if !c.IsProductionLike() {
 		return nil
 	}
 	if c.BcryptCost < bcrypt.MinCost || c.BcryptCost > bcrypt.MaxCost {
@@ -350,10 +350,10 @@ func formatFindings(findings []DefaultFinding) string {
 	return b.String()
 }
 
-// isProductionLike reports whether the environment is not explicitly a
+// IsProductionLike reports whether the environment is not explicitly a
 // development or test environment. Anything unset defaults to "production"
 // (see Load), so an operator who forgets APP_ENV gets the safe (strict) path.
-func (c Config) isProductionLike() bool {
+func (c Config) IsProductionLike() bool {
 	env := strings.ToLower(strings.TrimSpace(c.AppEnv))
 	return env == "" || env == "production" || env == "prod" || env == "staging" || env == "stage"
 }

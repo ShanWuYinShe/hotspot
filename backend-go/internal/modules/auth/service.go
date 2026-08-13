@@ -163,9 +163,37 @@ func NewServiceWithSource(ctx context.Context, auth *platformauth.Service, repo 
 	if source == nil {
 		source = appconfig.NewStaticSource(cfg)
 	}
-	return &Service{auth: auth, repo: repo, cfg: cfg, appConfig: source, emailSender: &noopEmailSender{}, loginTracker: newInMemoryLoginTracker(ctx)}
+	return &Service{auth: auth, repo: repo, cfg: cfg, appConfig: source, emailSender: defaultEmailSender(cfg), loginTracker: newInMemoryLoginTracker(ctx)}
 }
 
+// defaultEmailSender picks the verification-code delivery backend based on the
+// environment. In dev/test a logEmailSender writes the code to the application
+// log so the password-reset flow is end-to-end usable without an external
+// gateway. In production-like environments a noopEmailSender preserves the
+// previous "not configured" behavior until a real SMS/SMTP gateway is wired.
+func defaultEmailSender(cfg config.Config) emailSender {
+	if !cfg.IsProductionLike() {
+		return &logEmailSender{}
+	}
+	return &noopEmailSender{}
+}
+
+// logEmailSender "delivers" verification codes by writing them to the log.
+// This makes the password-reset flow exercisable in dev/test (the developer
+// reads the code from the log) without an external SMS/SMTP gateway.
+type logEmailSender struct{}
+
+func (*logEmailSender) SendPasswordReset(_ context.Context, to string, code string) error {
+	observability.L().Info("verification code generated (dev/test mode — no external gateway, read code from log)",
+		"method", "RequestPasswordReset",
+		"login_id", observability.Redact(to),
+		"code", code,
+	)
+	return nil
+}
+
+// noopEmailSender is the production fallback when no SMS/SMTP gateway is
+// configured; SendPasswordReset reports the service as unavailable.
 type noopEmailSender struct{}
 
 func (*noopEmailSender) SendPasswordReset(_ context.Context, _ string, _ string) error {

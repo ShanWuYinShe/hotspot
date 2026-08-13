@@ -551,3 +551,38 @@ func (s *testSink) Send(event realtime.Event) error {
 }
 
 func (s *testSink) Close() error { return nil }
+
+// --- email sender selection ---
+
+func TestDefaultEmailSenderDevMode(t *testing.T) {
+	if _, ok := defaultEmailSender(config.Config{AppEnv: "dev"}).(*logEmailSender); !ok {
+		t.Fatal("expected *logEmailSender in dev")
+	}
+	if _, ok := defaultEmailSender(config.Config{AppEnv: "test"}).(*logEmailSender); !ok {
+		t.Fatal("expected *logEmailSender in test")
+	}
+}
+
+func TestDefaultEmailSenderProductionLike(t *testing.T) {
+	for _, env := range []string{"", "production", "staging"} {
+		if _, ok := defaultEmailSender(config.Config{AppEnv: env}).(*noopEmailSender); !ok {
+			t.Fatalf("expected *noopEmailSender for AppEnv=%q", env)
+		}
+	}
+}
+
+func TestLogEmailSenderReturnsNil(t *testing.T) {
+	if err := (&logEmailSender{}).SendPasswordReset(context.Background(), "a@b.com", "123456"); err != nil {
+		t.Fatalf("logEmailSender must succeed in dev, got %v", err)
+	}
+}
+
+// NewServiceWithSource must wire the log sender in dev so the password-reset
+// flow is usable end-to-end without an external gateway.
+func TestNewServiceWithSourceDevWiresLogSender(t *testing.T) {
+	cfg := config.Config{AppEnv: "dev", AuthTokenSecret: "test-secret"}
+	svc := NewServiceWithSource(context.Background(), platformauth.NewService(cfg), nil, cfg, nil)
+	if _, ok := svc.emailSender.(*logEmailSender); !ok {
+		t.Fatalf("expected *logEmailSender in dev, got %T", svc.emailSender)
+	}
+}
