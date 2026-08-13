@@ -73,7 +73,7 @@ func (r *InMemoryRepository) RejectInvite(_ context.Context, inviteID string) er
 	return nil
 }
 
-func (r *InMemoryRepository) InviteMember(_ context.Context, userID string, req InviteMemberRequest) (Invitation, error) {
+func (r *InMemoryRepository) InviteMember(_ context.Context, userID string, req InviteMemberRequest, expiresAt *time.Time) (Invitation, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	group, ok := r.groups[req.GroupID]
@@ -89,13 +89,17 @@ func (r *InMemoryRepository) InviteMember(_ context.Context, userID string, req 
 		}
 	}
 	now := time.Now().UTC()
-	expiresAt := now.Add(24 * time.Hour).Format(time.RFC3339)
+	var expiresAtStr *string
+	if expiresAt != nil {
+		v := expiresAt.UTC().Format(time.RFC3339)
+		expiresAtStr = &v
+	}
 	inviteID := "invite_" + now.Format("20060102150405.000000000")
-	record := inMemoryInviteRecord{InviteID: inviteID, GroupID: req.GroupID, InviterID: userID, InviteeID: req.UserID, Status: ApplicationStatusPending, Message: req.Message, CreatedAt: now.Format(time.RFC3339), ExpiresAt: &expiresAt}
+	record := inMemoryInviteRecord{InviteID: inviteID, GroupID: req.GroupID, InviterID: userID, InviteeID: req.UserID, Status: ApplicationStatusPending, Message: req.Message, CreatedAt: now.Format(time.RFC3339), ExpiresAt: expiresAtStr}
 	r.invites[inviteID] = record
 	group.Group.MembersCount = len(r.members[req.GroupID])
 	r.groups[req.GroupID] = group
-	return Invitation{InviteID: inviteID, ExpiresAt: expiresAt}, nil
+	return Invitation{InviteID: inviteID, ExpiresAt: derefString(expiresAtStr)}, nil
 }
 
 func (r *InMemoryRepository) ListSentInvites(_ context.Context, groupID string, status *ApplicationStatus, limit int, cursor string) ([]GroupSentInviteItem, string, error) {

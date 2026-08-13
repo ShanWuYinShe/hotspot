@@ -1,6 +1,7 @@
 package groups
 
 import (
+	"time"
 	"context"
 	"errors"
 	"strings"
@@ -168,7 +169,7 @@ func (r *stubGroupsRepo) AcceptInvite(_ context.Context, _ string, _ string) err
 	return r.acceptErr
 }
 func (r *stubGroupsRepo) RejectInvite(_ context.Context, _ string) error { return r.rejectInvErr }
-func (r *stubGroupsRepo) InviteMember(_ context.Context, _ string, _ InviteMemberRequest) (Invitation, error) {
+func (r *stubGroupsRepo) InviteMember(_ context.Context, _ string, _ InviteMemberRequest, _ *time.Time) (Invitation, error) {
 	return r.inviteResult, r.inviteErr
 }
 func (r *stubGroupsRepo) ListSentInvites(_ context.Context, _ string, _ *ApplicationStatus, _ int, _ string) ([]GroupSentInviteItem, string, error) {

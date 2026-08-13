@@ -232,8 +232,12 @@ func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "群组已满"))
 			return
 		}
+		if errors.Is(err, ErrBusinessConflict) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "该群组仅限邀请加入，请通过邀请加入"))
+			return
+		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "该群组仅限邀请加入"))
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))

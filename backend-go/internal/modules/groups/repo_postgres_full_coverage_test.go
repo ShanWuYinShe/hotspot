@@ -80,7 +80,8 @@ var (
 // 18 列，与 queryGetGroup/scanGroupBase 对应；requiresApproval 由第 10 列控制。
 // 注意 groupRowValues 的 **time.Time/**int/**string case 接受裸值。
 func groupBaseRow(requiresApproval bool) []any {
-	return []any{"group_1", "群", "", "描述", false, "位置", 1.5, 2.5, "direct", requiresApproval, nil, true, 200, "owner", gTestTime, gTestTime, []string{"tag"}, 1}
+	// 列序对齐 queryGetGroup：... is_searchable, members_searchable, max_members, ...
+	return []any{"group_1", "群", "", "描述", false, "位置", 1.5, 2.5, "direct", requiresApproval, nil, true, true, 200, "owner", gTestTime, gTestTime, []string{"tag"}, 1}
 }
 
 func TestPostgresUpdateDismissAndExecWrappers(t *testing.T) {
@@ -569,22 +570,29 @@ func TestPostgresApproveAcceptTxAndInviteMember(t *testing.T) {
 
 	// InviteMember：已有 pending → 返回现有
 	stub = &groupFullStub{queryRow: map[string][]any{queryFindPendingGroupInvite: {"i_exist", gTestTime}}}
-	inv, err := newGroupsFullRepo(stub).InviteMember(ctx, "u1", InviteMemberRequest{GroupID: "group_1", UserID: "u2"})
+	inv, err := newGroupsFullRepo(stub).InviteMember(ctx, "u1", InviteMemberRequest{GroupID: "group_1", UserID: "u2"}, nil)
 	if err != nil || inv.InviteID != "i_exist" {
 		t.Fatalf("invite existing: %#v err=%v", inv, err)
 	}
-	// 新建
+	// 新建（TTL=0 永不过期 → expires_at 省略）
 	stub = &groupFullStub{queryRowErr: map[string]error{queryFindPendingGroupInvite: pgx.ErrNoRows}}
-	inv, err = newGroupsFullRepo(stub).InviteMember(ctx, "u1", InviteMemberRequest{GroupID: "group_1", UserID: "u2", Message: strPtr("来")})
+	inv, err = newGroupsFullRepo(stub).InviteMember(ctx, "u1", InviteMemberRequest{GroupID: "group_1", UserID: "u2", Message: strPtr("来")}, nil)
+	if err != nil || inv.InviteID == "" || inv.ExpiresAt != "" {
+		t.Fatalf("invite new (nil ttl): %#v err=%v", inv, err)
+	}
+	// 新建（有 TTL → expires_at 返回）
+	exp := time.Now().UTC().Add(72 * time.Hour)
+	stub = &groupFullStub{queryRowErr: map[string]error{queryFindPendingGroupInvite: pgx.ErrNoRows}}
+	inv, err = newGroupsFullRepo(stub).InviteMember(ctx, "u1", InviteMemberRequest{GroupID: "group_1", UserID: "u2"}, &exp)
 	if err != nil || inv.InviteID == "" || inv.ExpiresAt == "" {
-		t.Fatalf("invite new: %#v err=%v", inv, err)
+		t.Fatalf("invite new (with ttl): %#v err=%v", inv, err)
 	}
 	// 插入失败
 	stub = &groupFullStub{
 		queryRowErr: map[string]error{queryFindPendingGroupInvite: pgx.ErrNoRows},
 		execErrs:    map[string]error{queryInsertGroupInvite: errors.New("boom")},
 	}
-	if _, err := newGroupsFullRepo(stub).InviteMember(ctx, "u1", InviteMemberRequest{GroupID: "g", UserID: "u2"}); err == nil {
+	if _, err := newGroupsFullRepo(stub).InviteMember(ctx, "u1", InviteMemberRequest{GroupID: "g", UserID: "u2"}, nil); err == nil {
 		t.Fatal("invite insert error must propagate")
 	}
 }

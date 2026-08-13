@@ -228,9 +228,11 @@ func defaultConfig(runtime config.Config) AppConfig {
 			DefaultUserAvatar:  runtime.DefaultUserAvatar,
 			DefaultGroupAvatar: runtime.DefaultGroupAvatar,
 			DefaultGroupSettings: GroupSettings{
-				JoinMethod:   "direct",
-				IsSearchable: true,
-				MaxMembers:   500,
+				JoinMethod:        "direct",
+				RequiresApproval:  false,
+				IsSearchable:      true,
+				MembersSearchable: true,
+				MaxMembers:        500,
 				Location: Location{
 					Point: GeoPoint{
 						Latitude:  35.154922,

@@ -74,7 +74,7 @@ func TestMemoryInviteLifecycle(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 
-	invite, err := repo.InviteMember(ctx, "u1", InviteMemberRequest{GroupID: created.Group.GroupID, UserID: "u2", Message: nil})
+	invite, err := repo.InviteMember(ctx, "u1", InviteMemberRequest{GroupID: created.Group.GroupID, UserID: "u2", Message: nil}, nil)
 	if err != nil || invite.InviteID == "" {
 		t.Fatalf("invite: %#v err=%v", invite, err)
 	}
@@ -95,7 +95,7 @@ func TestMemoryInviteLifecycle(t *testing.T) {
 	}
 
 	// 新邀请 → 拒绝
-	invite2, err := repo.InviteMember(ctx, "u1", InviteMemberRequest{GroupID: created.Group.GroupID, UserID: "u3"})
+	invite2, err := repo.InviteMember(ctx, "u1", InviteMemberRequest{GroupID: created.Group.GroupID, UserID: "u3"}, nil)
 	if err != nil {
 		t.Fatalf("invite2: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestMemoryInviteLifecycle(t *testing.T) {
 	}
 
 	// 撤销邀请
-	invite3, err := repo.InviteMember(ctx, "u1", InviteMemberRequest{GroupID: created.Group.GroupID, UserID: "u4"})
+	invite3, err := repo.InviteMember(ctx, "u1", InviteMemberRequest{GroupID: created.Group.GroupID, UserID: "u4"}, nil)
 	if err != nil {
 		t.Fatalf("invite3: %v", err)
 	}

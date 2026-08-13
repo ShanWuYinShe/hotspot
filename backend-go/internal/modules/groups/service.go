@@ -341,7 +341,7 @@ func (s *Service) SearchMembers(ctx context.Context, req SearchGroupMembersReque
 		return nil, "", ErrGroupNotFound
 	}
 	// 搜索资格（spec api_spec_group.md members/search 10400）：非成员仅当群设置
-	// 允许检索（is_searchable）时可见成员列表；成员不受限。
+	// members_searchable=true 时可见成员列表；成员不受限。
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	isMember := principal.UserID != ""
 	if isMember {
@@ -351,7 +351,7 @@ func (s *Service) SearchMembers(ctx context.Context, req SearchGroupMembersReque
 			return nil, "", err
 		}
 	}
-	if !isMember && !group.IsSearchable {
+	if !isMember && !group.MembersSearchable {
 		observability.L().Warn("groups.search_members not eligible", "group_id", req.GroupID, "user_id", principal.UserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return nil, "", ErrNotMember
 	}
@@ -396,6 +396,12 @@ func (s *Service) JoinGroup(ctx context.Context, req JoinGroupRequest) (JoinGrou
 		observability.L().Info("groups.join_group already joined", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
 	}
+	// spec group.md → join 收口：invite_only 群不支持 join（加入唯一入口为
+	// groups/invites/received/accept），一律返回 10400。
+	if group.JoinMethod == GroupJoinMethodInviteOnly {
+		observability.L().Warn("groups.join_group invite_only not supported", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return JoinGroupResult{}, ErrBusinessConflict
+	}
 	result, err := s.repo.JoinGroup(ctx, principal.UserID, req.GroupID, req.Password, req.Message)
 	if err != nil {
 		observability.L().Error("groups.join_group failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -404,6 +410,19 @@ func (s *Service) JoinGroup(ctx context.Context, req JoinGroupRequest) (JoinGrou
 	if result.Status == JoinGroupStatusPendingApproval && result.IsNewApplication {
 		// 仅新创建的申请才通知管理员；命中已有 pending 申请（自然去重）不重复通知
 		s.notifyGroupApplicationReceived(ctx, group, principal.UserID, result.Application, req.Message)
+	}
+	if result.Status == JoinGroupStatusJoined {
+		// 直接加入（spec group.md → join 推送）：向群内广播 GroupMemberJoined
+		realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
+			Type: realtime.EventTypeGroupMemberJoined,
+			Payload: map[string]any{
+				"group_id":     req.GroupID,
+				"user":         s.resolveUserInfo(ctx, principal.UserID),
+				"role":         string(GroupRoleMember),
+				"member_count": group.Group.MembersCount,
+				"joined_at":    time.Now().UTC().Format(time.RFC3339),
+			},
+		})
 	}
 	observability.L().Info("groups.join_group completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return result, nil

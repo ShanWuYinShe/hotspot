@@ -11,10 +11,12 @@ type Location struct {
 }
 
 type GroupSettings struct {
-	JoinMethod   string   `json:"join_method"`
-	IsSearchable bool     `json:"is_searchable"`
-	MaxMembers   int      `json:"max_members"`
-	Location     Location `json:"location"`
+	JoinMethod        string   `json:"join_method"`
+	RequiresApproval  bool     `json:"requires_approval"`
+	IsSearchable      bool     `json:"is_searchable"`
+	MembersSearchable bool     `json:"members_searchable"`
+	MaxMembers        int      `json:"max_members"`
+	Location          Location `json:"location"`
 }
 
 type Features struct {

@@ -86,6 +86,10 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	if req.IsSearchable != nil {
 		isSearchable = *req.IsSearchable
 	}
+	membersSearchable := true
+	if req.MembersSearchable != nil {
+		membersSearchable = *req.MembersSearchable
+	}
 	maxMembers := req.MaxMembers
 	if maxMembers == 0 {
 		maxMembers = 200
@@ -98,7 +102,7 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	if req.RequiresApproval != nil {
 		requiresApproval = *req.RequiresApproval
 	}
-	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: req.Tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, RequiresApproval: requiresApproval, IsSearchable: isSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: userID}
+	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: req.Tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, RequiresApproval: requiresApproval, IsSearchable: isSearchable, MembersSearchable: membersSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: userID}
 	r.groups[groupID] = item
 	r.members[groupID] = map[string]inMemoryMembership{userID: {Role: GroupRoleOwner, JoinedAt: nowRFC3339}}
 	return item, nil
@@ -233,6 +237,9 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 	}
 	if req.IsSearchable != nil {
 		item.IsSearchable = *req.IsSearchable
+	}
+	if req.MembersSearchable != nil {
+		item.MembersSearchable = *req.MembersSearchable
 	}
 	if req.MaxMembers != nil {
 		item.MaxMembers = *req.MaxMembers

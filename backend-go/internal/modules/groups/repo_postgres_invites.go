@@ -89,7 +89,7 @@ func (r *PostgresRepository) RejectInvite(ctx context.Context, inviteID string) 
 	return queryable.Exec(ctx, queryUpdateGroupInvite, inviteID, string(ApplicationStatusRejected), time.Now().UTC())
 }
 
-func (r *PostgresRepository) InviteMember(ctx context.Context, userID string, req InviteMemberRequest) (Invitation, error) {
+func (r *PostgresRepository) InviteMember(ctx context.Context, userID string, req InviteMemberRequest, expiresAt *time.Time) (Invitation, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return Invitation{}, persistence.ErrNotImplemented
 	}
@@ -102,16 +102,22 @@ func (r *PostgresRepository) InviteMember(ctx context.Context, userID string, re
 	if err := queryable.QueryRow(ctx, queryFindPendingGroupInvite, req.GroupID, req.UserID).Scan(&existingID, &existingExpiresAt); err == nil && existingID != "" {
 		return Invitation{InviteID: existingID, ExpiresAt: derefTime(existingExpiresAt)}, nil
 	}
-	now := time.Now().UTC()
-	expiresAt := now.Add(24 * time.Hour)
 	inviteID, err := idgen.WithPrefix("invite_")
 	if err != nil {
 		return Invitation{}, err
 	}
-	if err := queryable.Exec(ctx, queryInsertGroupInvite, inviteID, req.GroupID, userID, req.UserID, nullableStringPtr(req.Message), string(ApplicationStatusPending), now, expiresAt); err != nil {
+	// expiresAt 为 nil 表示永不过期（TTL=0，spec types.md group_invite_ttl_hours）
+	var expiresAtDB *time.Time
+	if expiresAt != nil {
+		expiresAtDB = expiresAt
+	}
+	if err := queryable.Exec(ctx, queryInsertGroupInvite, inviteID, req.GroupID, userID, req.UserID, nullableStringPtr(req.Message), string(ApplicationStatusPending), time.Now().UTC(), expiresAtDB); err != nil {
 		return Invitation{}, err
 	}
-	return Invitation{InviteID: inviteID, ExpiresAt: expiresAt.Format(time.RFC3339)}, nil
+	if expiresAtDB == nil {
+		return Invitation{InviteID: inviteID}, nil
+	}
+	return Invitation{InviteID: inviteID, ExpiresAt: expiresAtDB.UTC().Format(time.RFC3339)}, nil
 }
 
 func (r *PostgresRepository) ListSentInvites(ctx context.Context, groupID string, status *ApplicationStatus, limit int, cursor string) ([]GroupSentInviteItem, string, error) {

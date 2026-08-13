@@ -88,7 +88,31 @@ func (s *Service) SetMemberRole(ctx context.Context, req SetMemberRoleRequest) e
 	if req.Role != GroupRoleAdmin && req.Role != GroupRoleMember {
 		return ErrAccessRestricted
 	}
-	return s.repo.SetMemberRole(ctx, principal.UserID, req)
+	if err := s.repo.SetMemberRole(ctx, principal.UserID, req); err != nil {
+		return err
+	}
+	// 推送（spec group.md → set_role）：向群内广播 GroupMemberRoleChanged
+	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
+		Type: realtime.EventTypeGroupMemberRoleChanged,
+		Payload: map[string]any{
+			"group_id": req.GroupID,
+			"user":     s.resolveUserInfo(ctx, req.UserID),
+			"role":     string(req.Role),
+			"changed_by": s.resolveUserInfo(ctx, principal.UserID),
+			"changed_at": time.Now().UTC().Format(time.RFC3339),
+		},
+	})
+	realtime.DefaultHub().BroadcastToUser(req.UserID, realtime.Event{
+		Type: realtime.EventTypeGroupMemberRoleChanged,
+		Payload: map[string]any{
+			"group_id": req.GroupID,
+			"user":     s.resolveUserInfo(ctx, req.UserID),
+			"role":     string(req.Role),
+			"changed_by": s.resolveUserInfo(ctx, principal.UserID),
+			"changed_at": time.Now().UTC().Format(time.RFC3339),
+		},
+	})
+	return nil
 }
 
 func (s *Service) MuteMember(ctx context.Context, req MuteMemberRequest) error {
@@ -102,6 +126,10 @@ func (s *Service) MuteMember(ctx context.Context, req MuteMemberRequest) error {
 	}
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
 		return ErrAccessRestricted
+	}
+	// 目标保护（spec group.md → set_mute）：群主不受禁言
+	if group.OwnerID == req.UserID {
+		return ErrBusinessConflict
 	}
 	if req.DurationMinutes < 1 || req.DurationMinutes > MaxMuteDurationMinutes {
 		return ErrAccessRestricted
@@ -168,6 +196,10 @@ func (s *Service) SetMemberBan(ctx context.Context, req SetMemberBanRequest) err
 	if req.Active && req.UserID == principal.UserID {
 		return ErrAccessRestricted
 	}
+	// 目标保护（spec group.md → set_ban）：群主不可被封禁
+	if req.Active && group.OwnerID == req.UserID {
+		return ErrBusinessConflict
+	}
 	if req.Active {
 		if err := s.repo.BanMember(ctx, principal.UserID, BanMemberRequest{
 			GroupID: req.GroupID,
@@ -227,6 +259,10 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 	if req.UserID == principal.UserID {
 		return ErrAccessRestricted
 	}
+	// 目标保护（spec group.md → members/remove）：群主不可被移除
+	if group.OwnerID == req.UserID {
+		return ErrBusinessConflict
+	}
 	if err := s.repo.RemoveMember(ctx, principal.UserID, req); err != nil {
 		return err
 	}
@@ -279,7 +315,21 @@ func (s *Service) TransferOwnership(ctx context.Context, req TransferOwnershipRe
 		return ErrTargetNotMember
 	}
 
-	return s.repo.TransferOwnership(ctx, principal.UserID, req)
+	if err := s.repo.TransferOwnership(ctx, principal.UserID, req); err != nil {
+		return err
+	}
+	// 推送（spec group.md → transfer_ownership）：owner 变更即角色变更，向群内广播
+	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
+		Type: realtime.EventTypeGroupMemberRoleChanged,
+		Payload: map[string]any{
+			"group_id":   req.GroupID,
+			"user":       s.resolveUserInfo(ctx, req.NewOwnerID),
+			"role":       string(GroupRoleOwner),
+			"changed_by": s.resolveUserInfo(ctx, principal.UserID),
+			"changed_at": time.Now().UTC().Format(time.RFC3339),
+		},
+	})
+	return nil
 }
 
 func (s *Service) findApplicationForApprover(ctx context.Context, approverUserID string, applicationID string) (GroupApplicationItem, GroupItem, error) {

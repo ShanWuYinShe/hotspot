@@ -60,9 +60,10 @@ func (b *groupBackendStub) Query(_ context.Context, query string, _ ...any) (per
 
 func TestPostgresRepositoryCreateGetAndSearch(t *testing.T) {
 	backend := &groupBackendStub{
-		rows:      [][]any{{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "direct", false, nil, true, 200, "user_alice", nil, nil, []string{"hiking"}, 1, 1}},
+		// 列序对齐 queryGetGroup/querySearchGroups：... is_searchable, members_searchable, max_members, ...
+		rows:      [][]any{{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "direct", false, nil, true, true, 200, "user_alice", nil, nil, []string{"hiking"}, 1, 1}},
 		queryErrs: map[string]error{},
-		queryRow:  testdb.RowValues{Values: []any{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "direct", false, nil, true, 200, "user_alice", nil, nil, []string{"hiking"}, 1}},
+		queryRow:  testdb.RowValues{Values: []any{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "direct", false, nil, true, true, 200, "user_alice", nil, nil, []string{"hiking"}, 1}},
 		execErrs:  map[string]error{},
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
@@ -135,9 +136,9 @@ func TestPostgresRepositorySearchReturnsErrorOnQueryFailure(t *testing.T) {
 func TestPostgresRepositorySearchFiltersSortsAndPaginatesInGo(t *testing.T) {
 	backend := &groupBackendStub{
 		rows: [][]any{
-			{"g_1", "Alpha One", "", "", false, "loc_a", 35.0, 112.0, "direct", false, nil, true, 200, "user_a", nil, nil, []string{}, 3, 1},
-			{"g_2", "Beta Bar", "", "alpha den", false, "loc_b", 35.0005, 112.0, "direct", false, nil, true, 200, "user_b", nil, nil, []string{}, 1, 1},
-			{"g_3", "Alpha Three", "", "", false, "loc_c", 35.01, 112.0, "direct", false, nil, true, 200, "user_c", nil, nil, []string{}, 2, 1},
+			{"g_1", "Alpha One", "", "", false, "loc_a", 35.0, 112.0, "direct", false, nil, true, true, 200, "user_a", nil, nil, []string{}, 3, 1},
+			{"g_2", "Beta Bar", "", "alpha den", false, "loc_b", 35.0005, 112.0, "direct", false, nil, true, true, 200, "user_b", nil, nil, []string{}, 1, 1},
+			{"g_3", "Alpha Three", "", "", false, "loc_c", 35.01, 112.0, "direct", false, nil, true, true, 200, "user_c", nil, nil, []string{}, 2, 1},
 		},
 		queryErrs: map[string]error{},
 		queryRow:  testdb.RowValues{Err: persistence.ErrNotImplemented},
@@ -203,9 +204,9 @@ func TestPostgresRepositorySearchGoSorts(t *testing.T) {
 	}
 	backend := &groupBackendStub{
 		rows: [][]any{
-			{"g_a", "Alpha Hub", "", "", false, "loc", 35.0, 112.0, "direct", false, nil, true, 200, "user_a", createdAt(2024), nil, []string{}, 10, 1},
-			{"g_b", "Beacon", "", "alpha outpost", false, "loc", 35.0, 112.0, "direct", false, nil, true, 200, "user_b", createdAt(2026), nil, []string{}, 20, 1},
-			{"g_c", "Zulu Alpha", "", "", false, "loc", 35.0, 112.0, "direct", false, nil, true, 200, "user_c", createdAt(2025), nil, []string{}, 30, 1},
+			{"g_a", "Alpha Hub", "", "", false, "loc", 35.0, 112.0, "direct", false, nil, true, true, 200, "user_a", createdAt(2024), nil, []string{}, 10, 1},
+			{"g_b", "Beacon", "", "alpha outpost", false, "loc", 35.0, 112.0, "direct", false, nil, true, true, 200, "user_b", createdAt(2026), nil, []string{}, 20, 1},
+			{"g_c", "Zulu Alpha", "", "", false, "loc", 35.0, 112.0, "direct", false, nil, true, true, 200, "user_c", createdAt(2025), nil, []string{}, 30, 1},
 		},
 		queryErrs: map[string]error{},
 		queryRow:  testdb.RowValues{Err: persistence.ErrNotImplemented},

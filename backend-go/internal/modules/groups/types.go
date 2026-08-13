@@ -79,6 +79,7 @@ type GroupItem struct {
 	OnlineMembersCount *int              `json:"online_members_count,omitempty"`
 	NextActivity       *string           `json:"next_activity,omitempty"`
 	IsSearchable       bool              `json:"is_searchable,omitempty"`
+	MembersSearchable  bool              `json:"members_searchable,omitempty"` // 非成员检索成员列表资格（@group-admin-only，spec types.md GroupSettings）
 	MaxMembers         int               `json:"max_members,omitempty"`
 	LastActivityAt     *string           `json:"last_activity_at,omitempty"`
 	CreatedAt          *string           `json:"created_at,omitempty"`
@@ -101,11 +102,12 @@ type CreateGroupRequest struct {
 	AvatarFileID     string          `json:"avatar_file_id,omitempty"`
 	Tags             []string        `json:"tags,omitempty"`
 	Password         string          `json:"password,omitempty"`
-	JoinMethod       GroupJoinMethod `json:"join_method,omitempty"`
-	RequiresApproval *bool           `json:"requires_approval,omitempty"`
-	IsSearchable     *bool           `json:"is_searchable,omitempty"`
-	MaxMembers       int             `json:"max_members,omitempty"`
-	Location         Location        `json:"location"`
+	JoinMethod        GroupJoinMethod `json:"join_method,omitempty"`
+	RequiresApproval  *bool           `json:"requires_approval,omitempty"`
+	IsSearchable      *bool           `json:"is_searchable,omitempty"`
+	MembersSearchable *bool           `json:"members_searchable,omitempty"` // 默认 true
+	MaxMembers        int             `json:"max_members,omitempty"`
+	Location          Location        `json:"location"`
 }
 
 type GroupOpenTheDoorRequest struct {
@@ -131,12 +133,13 @@ type UpdateGroupRequest struct {
 	Tags             []string         `json:"tags,omitempty"`
 	Password         *string          `json:"password,omitempty"`
 	ClearPassword    *bool            `json:"clear_password,omitempty"`
-	JoinMethod       *GroupJoinMethod `json:"join_method,omitempty"`
-	RequiresApproval *bool            `json:"requires_approval,omitempty"`
-	NextActivity     *string          `json:"next_activity,omitempty"`
-	IsSearchable     *bool            `json:"is_searchable,omitempty"`
-	MaxMembers       *int             `json:"max_members,omitempty"`
-	Location         *Location        `json:"location,omitempty"`
+	JoinMethod        *GroupJoinMethod `json:"join_method,omitempty"`
+	RequiresApproval  *bool            `json:"requires_approval,omitempty"`
+	NextActivity      *string          `json:"next_activity,omitempty"`
+	IsSearchable      *bool            `json:"is_searchable,omitempty"`
+	MembersSearchable *bool            `json:"members_searchable,omitempty"`
+	MaxMembers        *int             `json:"max_members,omitempty"`
+	Location          *Location        `json:"location,omitempty"`
 }
 
 // DismissGroupRequest dismisses a group (owner only). Reason is audit-only:
@@ -184,9 +187,11 @@ type InviteMemberRequest struct {
 	Message *string `json:"message,omitempty"`
 }
 
+// Invitation：邀请响应（spec group.md → members/invite）
+// invite_id/expires_at 可选：被邀请者已是成员（no-op 成功）时省略；TTL=0（永不过期）时 expires_at 省略
 type Invitation struct {
-	InviteID  string `json:"invite_id"`
-	ExpiresAt string `json:"expires_at"`
+	InviteID  string `json:"invite_id,omitempty"`
+	ExpiresAt string `json:"expires_at,omitempty"`
 }
 
 type GroupSentInvitesRequest struct {

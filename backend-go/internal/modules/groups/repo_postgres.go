@@ -42,6 +42,10 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if req.IsSearchable != nil {
 		isSearchable = *req.IsSearchable
 	}
+	membersSearchable := true
+	if req.MembersSearchable != nil {
+		membersSearchable = *req.MembersSearchable
+	}
 	maxMembers := req.MaxMembers
 	if maxMembers == 0 {
 		maxMembers = 200
@@ -59,7 +63,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if tags == nil {
 		tags = []string{}
 	}
-	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, RequiresApproval: requiresApproval, IsSearchable: isSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: userID}
+	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, RequiresApproval: requiresApproval, IsSearchable: isSearchable, MembersSearchable: membersSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: userID}
 	s2CellToken := geo.CellTokenAtLevel(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude}, 14)
 	s2CellID := geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})
 	ownerRole := string(GroupRoleOwner)
@@ -68,7 +72,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
-		if err := queryable.Exec(txCtx, queryInsertGroup, groupID, req.Name, req.AvatarFileID, req.Description, req.Password != "", req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, joinMethod, requiresApproval, nil, isSearchable, maxMembers, userID, now, now, tags, s2CellToken, s2CellID); err != nil {
+		if err := queryable.Exec(txCtx, queryInsertGroup, groupID, req.Name, req.AvatarFileID, req.Description, req.Password != "", req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, joinMethod, requiresApproval, nil, isSearchable, membersSearchable, maxMembers, userID, now, now, tags, s2CellToken, s2CellID); err != nil {
 			return fmt.Errorf("groups.CreateGroup: insert group: %w", err)
 		}
 		if err := queryable.Exec(txCtx, queryInsertGroupMember, groupID, userID, ownerRole, now); err != nil {
@@ -112,7 +116,7 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 		s2CellID = &id
 	}
 	_ = userID
-	err := queryable.Exec(ctx, queryUpdateGroup, req.GroupID, nilOrString(req.Name), nilOrString(req.AvatarFileID), nilOrString(req.Description), hasPassword, nilOrStringJoinMethod(req.JoinMethod), req.RequiresApproval, req.NextActivity, nilOrBool(req.IsSearchable), nilOrInt(req.MaxMembers), locationName, latitude, longitude, nilOrStrings(req.Tags), s2CellToken, s2CellID)
+	err := queryable.Exec(ctx, queryUpdateGroup, req.GroupID, nilOrString(req.Name), nilOrString(req.AvatarFileID), nilOrString(req.Description), hasPassword, nilOrStringJoinMethod(req.JoinMethod), req.RequiresApproval, req.NextActivity, nilOrBool(req.IsSearchable), nilOrBool(req.MembersSearchable), nilOrInt(req.MaxMembers), locationName, latitude, longitude, nilOrStrings(req.Tags), s2CellToken, s2CellID)
 	if err != nil {
 		return fmt.Errorf("groups.Update: %w", err)
 	}

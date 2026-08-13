@@ -124,7 +124,7 @@ func scanGroupBase(scanner interface{ Scan(...any) error }) (GroupItem, error) {
 	var latitude, longitude float64
 	var createdAt, lastActivityAt *time.Time
 	var tags []string
-	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.RequiresApproval, &item.NextActivity, &item.IsSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &tags, &item.OnlineMembersCount); err != nil {
+	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.RequiresApproval, &item.NextActivity, &item.IsSearchable, &item.MembersSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &tags, &item.OnlineMembersCount); err != nil {
 		return GroupItem{}, err
 	}
 	item.Location = RelativeLocation{Point: struct {
@@ -144,7 +144,7 @@ func scanSearchGroupRow(scanner interface{ Scan(...any) error }) (GroupItem, err
 	var latitude, longitude float64
 	var createdAt, lastActivityAt *time.Time
 	var tags []string
-	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.RequiresApproval, &item.NextActivity, &item.IsSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &tags, &item.Group.MembersCount, &item.OnlineMembersCount); err != nil {
+	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.RequiresApproval, &item.NextActivity, &item.IsSearchable, &item.MembersSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &tags, &item.Group.MembersCount, &item.OnlineMembersCount); err != nil {
 		return GroupItem{}, err
 	}
 	item.Location = RelativeLocation{Point: struct {

@@ -2,6 +2,7 @@ package groups
 
 import (
 	"context"
+	"errors"
 	"hotspot/backend-go/internal/platform/types"
 	"time"
 
@@ -84,8 +85,20 @@ func (s *Service) InviteMember(ctx context.Context, req InviteMemberRequest) (In
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
 		return Invitation{}, ErrAccessRestricted
 	}
-	invitation, err := s.repo.InviteMember(ctx, principal.UserID, req)
+	// TTL（spec types.md group_invite_ttl_hours）：0 = 永不过期（expires_at 省略）
+	var expiresAt *time.Time
+	if s.appConfig != nil {
+		if ttl := s.appConfig.Get(ctx).Limits.GroupInviteTTLHours; ttl > 0 {
+			exp := time.Now().UTC().Add(time.Duration(ttl) * time.Hour)
+			expiresAt = &exp
+		}
+	}
+	invitation, err := s.repo.InviteMember(ctx, principal.UserID, req, expiresAt)
 	if err != nil {
+		if errors.Is(err, ErrAlreadyMember) {
+			// 被邀请者已是成员（spec group.md → members/invite no-op 成功，invite_id/expires_at 省略）
+			return Invitation{}, nil
+		}
 		return Invitation{}, err
 	}
 	s.notifyGroupInviteReceived(ctx, group, principal.UserID, req, invitation)

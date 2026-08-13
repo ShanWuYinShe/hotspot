@@ -1,6 +1,9 @@
 package groups
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type Repository interface {
 	Create(context.Context, string, CreateGroupRequest) (GroupItem, error)
@@ -28,7 +31,7 @@ type Repository interface {
 	ListMyInvites(context.Context, string, *ApplicationStatus, int, string) ([]GroupInviteItem, string, error)
 	AcceptInvite(context.Context, string, string) error
 	RejectInvite(context.Context, string) error
-	InviteMember(context.Context, string, InviteMemberRequest) (Invitation, error)
+	InviteMember(context.Context, string, InviteMemberRequest, *time.Time) (Invitation, error)
 	ListSentInvites(context.Context, string, *ApplicationStatus, int, string) ([]GroupSentInviteItem, string, error)
 	RevokeInvite(context.Context, string, string) error
 	SetMemberRole(context.Context, string, SetMemberRoleRequest) error

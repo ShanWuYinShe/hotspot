@@ -1,6 +1,7 @@
 package groups
 
 import (
+	"time"
 	"context"
 	"encoding/json"
 	"errors"
@@ -129,7 +130,7 @@ func (r *groupErrorRepo) AcceptInvite(context.Context, string, string) error {
 func (r *groupErrorRepo) RejectInvite(context.Context, string) error {
 	return r.rejectInviteErr
 }
-func (r *groupErrorRepo) InviteMember(context.Context, string, InviteMemberRequest) (Invitation, error) {
+func (r *groupErrorRepo) InviteMember(context.Context, string, InviteMemberRequest, *time.Time) (Invitation, error) {
 	return Invitation{}, r.createErr
 }
 func (r *groupErrorRepo) ListSentInvites(context.Context, string, *ApplicationStatus, int, string) ([]GroupSentInviteItem, string, error) {
@@ -673,7 +674,7 @@ func TestSearchMembersDeniesNonMemberWhenNotSearchable(t *testing.T) {
 
 func TestSearchMembersAllowsNonMemberWhenSearchable(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, IsSearchable: true},
+		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, IsSearchable: true, MembersSearchable: true},
 		getFound:       true,
 		isMemberResult: false,
 	}

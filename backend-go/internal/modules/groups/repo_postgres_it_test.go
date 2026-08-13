@@ -548,7 +548,7 @@ func TestPostgresIT_InviteFlow(t *testing.T) {
 			GroupID: groupID,
 			UserID:  inviteeID,
 			Message: &msg,
-		})
+		}, nil)
 		if err != nil {
 			t.Fatalf("InviteMember: %v", err)
 		}
@@ -572,7 +572,7 @@ func TestPostgresIT_InviteFlow(t *testing.T) {
 		inv2, err := repo.InviteMember(ctx, ownerID, InviteMemberRequest{
 			GroupID: groupID,
 			UserID:  inviteeID,
-		})
+		}, nil)
 		if err != nil {
 			t.Fatalf("InviteMember (duplicate): %v", err)
 		}
@@ -616,7 +616,7 @@ func TestPostgresIT_InviteFlow(t *testing.T) {
 			GroupID: groupID,
 			UserID:  invitee2ID,
 			Message: &msg2,
-		})
+		}, nil)
 		if err != nil {
 			t.Fatalf("InviteMember (2): %v", err)
 		}
@@ -648,7 +648,7 @@ func TestPostgresIT_RevokeInvite(t *testing.T) {
 		inv, err := repo.InviteMember(ctx, ownerID, InviteMemberRequest{
 			GroupID: groupID,
 			UserID:  inviteeID,
-		})
+		}, nil)
 		if err != nil {
 			t.Fatalf("InviteMember: %v", err)
 		}
