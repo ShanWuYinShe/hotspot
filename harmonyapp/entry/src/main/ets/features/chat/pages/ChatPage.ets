@@ -860,12 +860,12 @@ export struct ChatPage {
       const errRecord = error as Object as Record<string, Object>;
       const reason = typeof errRecord.reason === 'string' ? errRecord.reason : '';
       let failMessage = '发送失败';
-      if (reason === 'privacy') {
+      if (reason === 'blocked') {
+        failMessage = '你已被对方拉黑';
+      } else if (reason === 'privacy') {
         failMessage = '对方隐私设置不允许发送消息';
       } else if (reason === 'stranger_quota_exceeded') {
         failMessage = '今日陌生人消息额度已用完';
-      } else if (reason === 'account_suspended') {
-        failMessage = '账号被限制';
       }
       SystemToast.showError(failMessage, this.getUIContext());
     } finally {

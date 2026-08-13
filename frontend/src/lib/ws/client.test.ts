@@ -240,7 +240,7 @@ describe('事件映射', () => {
     window.removeEventListener('auth-failed', onFailed);
   });
 
-  it('通知类事件派发 ws:notify（detail 含 type 与 payload.notification_id）', () => {
+  it('通知类事件派发 ws:notify（detail 含 type 与 payload.notify_id）', () => {
     const client = new WsClient({ url: 'ws://test.local/ws/v1' });
     const onNotify = vi.fn();
     window.addEventListener('ws:notify', onNotify);
@@ -249,12 +249,12 @@ describe('事件映射', () => {
     FakeWebSocket.instances[0].open();
     FakeWebSocket.instances[0].message({
       type: 'NewFollower',
-      payload: { notification_id: 'n-1', actor: { user_id: 'u2', nickname: '小美' }, followed_at: '2025-01-01T00:00:00.000Z' }
+      payload: { notify_id: 'n-1', actor: { user_id: 'u2', nickname: '小美' }, followed_at: '2025-01-01T00:00:00.000Z' }
     });
     expect(onNotify).toHaveBeenCalledTimes(1);
     const detail = (onNotify.mock.calls[0][0] as CustomEvent).detail;
     expect(detail.type).toBe('NewFollower');
-    expect(detail.payload.notification_id).toBe('n-1');
+    expect(detail.payload.notify_id).toBe('n-1');
 
     window.removeEventListener('ws:notify', onNotify);
   });

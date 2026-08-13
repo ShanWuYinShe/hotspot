@@ -60,6 +60,7 @@ import type {
 	NotifyItem,
 	PaginatedData,
 	PrivateChatItem,
+	PrivateChatOpenResult,
 	PrivateMessageItem,
 	ReportCreated,
 	TrendingBundle,
@@ -244,7 +245,7 @@ export async function searchUsers(params: object)         { return request<Pagin
 // Notifications
 export async function getUnreadCount()                    { return request<UnreadCountResult>(Endpoints.Notify.GetUnreadCount); }
 export async function listNotifications(params?: object)  { return request<PaginatedData<NotifyItem>>(Endpoints.Notify.List, params ?? {}); }
-// spec: scope='selected' needs exactly one of notification_ids|type; scope='all' clears all.
+// spec: notify.md → mark_read：notify_ids 指定 1-50 条；不传或空数组 = 全部已读。
 export async function markRead(params: object)            { return request<void>(Endpoints.Notify.MarkRead, params); }
 
 // System
@@ -256,6 +257,7 @@ export async function createReport(params: object)        { return request<Repor
 
 // Chat
 export async function getPrivateChats(params?: object)    { return request<PaginatedData<PrivateChatItem>>(Endpoints.PrivateChats.List, params ?? {}); }
+export async function getPrivateChatDetail(params: { target_user_id: string }) { return request<PrivateChatOpenResult>(Endpoints.PrivateChats.GetDetail, params); }
 export async function getPrivateMessages(params: object)  { return request<PaginatedData<PrivateMessageItem>>(Endpoints.PrivateMessages.GetHistory, params); }
 export async function sendPrivateMessage(params: object)  { return request<MessageSent>(Endpoints.PrivateMessages.Send, params); }
 export async function getGroupMessages(params: object)    { return request<PaginatedData<GroupMessageItem>>(Endpoints.GroupMessages.GetHistory, params); }

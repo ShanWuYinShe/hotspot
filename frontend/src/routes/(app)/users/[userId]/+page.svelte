@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { MapPin, MessageCircle, UserPlus, UserCheck, Share2, Heart, Grid3X3, Bookmark, MoreHorizontal, Flag, PencilLine, UserX, X, Check, ArrowLeft } from '@lucide/svelte';
+	import { MapPin, MessageCircle, UserPlus, UserCheck, Share2, MoreHorizontal, Flag, PencilLine, UserX, X, Check, ArrowLeft } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import RailSection from '@/components/rail/RailSection.svelte';
 	import RailUserRow from '@/components/rail/RailUserRow.svelte';
 	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
-	import TabBar from '@/components/navigation/TabBar.svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
 	import { getProfile, follow, block, createReport, setRemark } from '@/api';
 	import { ROUTES } from '@/lib/routes';
@@ -27,7 +26,7 @@
 		followers: number;
 		following: number;
 		moments: number;
-		gallery: { moments: string[]; liked: string[]; saved: string[] };
+		galleryMoments: string[];
 		tags: string[];
 	}
 
@@ -40,7 +39,7 @@
 		followers: 0,
 		following: 0,
 		moments: 0,
-		gallery: { moments: [], liked: [], saved: [] },
+		galleryMoments: [],
 		tags: []
 	});
 	let loading = $state(true);
@@ -48,8 +47,6 @@
 	let reloadKey = $state(0);
 	let mutualFriends = $state<{ id: string; name: string; sub: string; avatar: string }[]>([]);
 	let followed = $state(false);
-	let activeTab = $state<'moments' | 'liked' | 'saved'>('moments');
-	const galleryItems = $derived(user.gallery[activeTab]);
 	let moreOpen = $state(false);
 	let blocked = $state(false);
 	let remark = $state('');
@@ -87,11 +84,8 @@
 						followers: s?.followers_count ?? 0,
 						following: s?.following_count ?? 0,
 						moments: s?.moments_count ?? 0,
-						gallery: {
-		moments: data.recent_moments?.items?.map((m) => m.images?.[0]?.url ?? '') ?? [],
-		liked: data.liked_moments?.items?.map((m) => m.images?.[0]?.url ?? '') ?? [],
-		saved: data.favorited_moments?.items?.map((m) => m.images?.[0]?.url ?? '') ?? []
-	},
+						galleryMoments:
+	data.recent_moments?.items?.map((m) => m.images?.[0]?.url ?? '') ?? [],
 						tags: u.tags ?? []
 					};
 					if (r?.is_following !== undefined) followed = r.is_following;
@@ -340,31 +334,11 @@
 				/>
 			</div>
 
-		<!-- Tabs（TabBar 统一下划线样式） -->
-	<div class="mt-8 border-b border-border-default">
-		<TabBar
-			items={[
-				{ id: 'moments', icon: Grid3X3, label: '瞬间' },
-				{ id: 'liked', icon: Heart, label: '喜欢' },
-				{ id: 'saved', icon: Bookmark, label: '收藏' }
-			]}
-			value={activeTab}
-			onChange={(id) => (activeTab = id as 'moments' | 'liked' | 'saved')}
-		/>
-	</div>
-
-	<!-- Gallery -->
+	<!-- Gallery（spec UserProfileBundle 仅含 recent_moments，无喜欢/收藏流） -->
 	<div class="mt-4 grid grid-cols-3 gap-1.5">
-		{#each galleryItems as src, i}
+		{#each user.galleryMoments as src, i}
 			<div class="image-hover-frame tap-97 relative cursor-pointer rounded-sm overflow-hidden" style="aspect-ratio:1;">
-		<img src={src} alt={`photo ${i}`} loading="lazy" class="image-hover-frame__image w-full h-full object-cover" />
-				{#if activeTab === 'liked'}
-					<div class="absolute inset-0 flex items-end justify-end p-1.5 bg-surface-overlay-soft">
-						<div class="flex items-center justify-center rounded-full bg-accent-default size-5" >
-							<Heart class="size-2.5 text-text-on-accent"   strokeWidth={2} fill="var(--cst-text-on-accent)" />
-						</div>
-					</div>
-				{/if}
+				<img src={src} alt={`photo ${i}`} loading="lazy" class="image-hover-frame__image w-full h-full object-cover" />
 			</div>
 		{/each}
 	</div>

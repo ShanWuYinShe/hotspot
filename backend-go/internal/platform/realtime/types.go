@@ -166,17 +166,22 @@ type SessionRevokedPayload struct {
 	RevokedAt string `json:"revoked_at"`
 }
 
+// SubscribeAckPayload 是 SetSubscriptions 的确认事件（spec api_spec_websocket.md
+// SubscribeAckPayload）：accepted 按 type 分组回传已接受项；只要 failed_ids 非空
+// code 必须为 20100。
 type SubscribeAckPayload struct {
 	ClientRequestID string               `json:"client_request_id"`
 	Operation       string               `json:"operation"`
-	Type            string               `json:"type"`
-	IDs             []string             `json:"ids"`
+	Accepted        []SubscriptionItem   `json:"accepted"`
 	Code            int                  `json:"code"`
 	Message         string               `json:"message,omitempty"`
 	FailedIDs       []FailedSubscription `json:"failed_ids,omitempty"`
 }
 
+// FailedSubscription 对应 spec FailedSubscriptionId（含 type：批量请求需明确
+// 失败项的订阅类型，客户端按 type+subscription_id 回滚本地订阅）。
 type FailedSubscription struct {
+	Type           string `json:"type"`
 	SubscriptionID string `json:"subscription_id"`
 	Reason         string `json:"reason"`
 }
@@ -188,8 +193,11 @@ type SubscriptionsSnapshotPayload struct {
 }
 
 type AuthPayload struct {
-	ClientType  string `json:"client_type,omitempty"`
+	ClientType string `json:"client_type,omitempty"`
+	// AccessToken 由 App 端携带（Web 端用 Cookie）；DeviceID 支撑单设备单会话
+	// 模型（spec AuthPayload：App 端必填）。
 	AccessToken string `json:"access_token,omitempty"`
+	DeviceID    string `json:"device_id,omitempty"`
 	// ResumeToken 由客户端在重连时携带（spec L155），服务端据此尝试增量续传。
 	ResumeToken string `json:"resume_token,omitempty"`
 }
@@ -205,11 +213,19 @@ type ResumeState struct {
 
 type PingPayload struct{}
 
+// SubscriptionItem 是 SetSubscriptions/SubscribeAck 的订阅项
+// （spec api_spec_websocket.md SubscriptionItem：type + ids 分组）。
+type SubscriptionItem struct {
+	Type string   `json:"type"`
+	IDs  []string `json:"ids"`
+}
+
+// SetSubscriptionsPayload 是客户端订阅管理事件（spec api_spec_websocket.md
+// SetSubscriptionsPayload）：批量结构，单请求可同时操作 user 和 group 两类订阅。
 type SetSubscriptionsPayload struct {
-	ClientRequestID string   `json:"client_request_id"`
-	Operation       string   `json:"operation"`
-	Type            string   `json:"type"`
-	IDs             []string `json:"ids"`
+	ClientRequestID string             `json:"client_request_id"`
+	Operation       string             `json:"operation"`
+	Items           []SubscriptionItem `json:"items"`
 }
 
 type GetSubscriptionsPayload struct {

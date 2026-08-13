@@ -212,7 +212,7 @@ export struct NotificationCenter {
       return;
     }
     try {
-      await this.syncService.markAsRead([notification.notification_id]);
+      await this.syncService.markAsRead([notification.notify_id]);
       await this.syncService.syncUnreadCount();
       this.applyFilter();
       await this.accessibilityManager.announceText('通知已标记为已读');
@@ -278,12 +278,9 @@ export struct NotificationCenter {
         return true;
       }
       case 'group_invite_received':
-      case 'group_invite_accepted':
-      case 'group_invite_revoked':
-      case 'group_invite_rejected':
+      case 'group_mentioned':
       case 'group_application_received':
       case 'group_application_accepted':
-      case 'group_application_cancelled':
       case 'group_application_rejected': {
         const groupId = notification.payload?.group_id ?? '';
         if (!groupId) return false;
@@ -326,7 +323,7 @@ export struct NotificationCenter {
   }
 
   private async handleGroupInviteAction(notification: NotificationItem, action: 'accept' | 'reject'): Promise<void> {
-    if (!this.canHandleGroupInvite(notification) || this.isActionLoading(notification.notification_id)) {
+    if (!this.canHandleGroupInvite(notification) || this.isActionLoading(notification.notify_id)) {
       return;
     }
     const inviteId = notification.payload?.invite_id ?? '';
@@ -334,7 +331,7 @@ export struct NotificationCenter {
       SystemToast.showWarning('邀请信息缺失，无法处理', this.getUIContext());
       return;
     }
-    this.setActionLoading(notification.notification_id, true);
+    this.setActionLoading(notification.notify_id, true);
     try {
       const response = action === 'accept'
         ? await ApiClient.acceptGroupInvite({ invite_id: inviteId })
@@ -350,12 +347,12 @@ export struct NotificationCenter {
       const message = error instanceof Error ? error.message : (action === 'accept' ? '接受邀请失败' : '拒绝邀请失败');
       SystemToast.showError(message, this.getUIContext());
     } finally {
-      this.setActionLoading(notification.notification_id, false);
+      this.setActionLoading(notification.notify_id, false);
     }
   }
 
   private async handleGroupApplicationAction(notification: NotificationItem, action: 'approve' | 'reject'): Promise<void> {
-    if (!this.canHandleGroupApplication(notification) || this.isActionLoading(notification.notification_id)) {
+    if (!this.canHandleGroupApplication(notification) || this.isActionLoading(notification.notify_id)) {
       return;
     }
     const applicationId = notification.payload?.application_id ?? '';
@@ -364,7 +361,7 @@ export struct NotificationCenter {
       SystemToast.showWarning('申请信息缺失，无法处理', this.getUIContext());
       return;
     }
-    this.setActionLoading(notification.notification_id, true);
+    this.setActionLoading(notification.notify_id, true);
     try {
       const response = action === 'approve'
         ? await ApiClient.approveGroupApplication({ group_id: groupId, application_id: applicationId })
@@ -380,7 +377,7 @@ export struct NotificationCenter {
       const message = error instanceof Error ? error.message : (action === 'approve' ? '批准申请失败' : '拒绝申请失败');
       SystemToast.showError(message, this.getUIContext());
     } finally {
-      this.setActionLoading(notification.notification_id, false);
+      this.setActionLoading(notification.notify_id, false);
     }
   }
 
@@ -543,7 +540,7 @@ export struct NotificationCenter {
                     this.buildNotificationItem(notification)
                   }
                 }, (notification: NotificationItem) =>
-                  notification.notification_id + '_p' + (this.actionLoadingIds.indexOf(notification.notification_id) >= 0))
+                  notification.notify_id + '_p' + (this.actionLoadingIds.indexOf(notification.notify_id) >= 0))
               }
             }, (group: GroupedNotification) => group.label)
 
@@ -649,14 +646,14 @@ export struct NotificationCenter {
         // 群组操作按钮
         if (this.canHandleGroupInvite(notification)) {
           Row({ space: DesignConstants.SPACING.SM }) {
-            Button(this.isActionLoading(notification.notification_id) ? '处理中...' : '接受')
+            Button(this.isActionLoading(notification.notify_id) ? '处理中...' : '接受')
               .type(ButtonType.Normal)
               .backgroundColor(this.getPalette().accentBackground)
               .fontColor(this.getPalette().accentText)
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
               .borderRadius(DesignConstants.RADIUS.FULL)
-              .enabled(!this.isActionLoading(notification.notification_id))
+              .enabled(!this.isActionLoading(notification.notify_id))
               .onClick(() => this.handleGroupInviteAction(notification, 'accept'))
 
             Button('拒绝')
@@ -668,20 +665,20 @@ export struct NotificationCenter {
               .borderRadius(DesignConstants.RADIUS.FULL)
               .borderWidth(1)
               .borderColor(this.getPalette().borderColor)
-              .enabled(!this.isActionLoading(notification.notification_id))
+              .enabled(!this.isActionLoading(notification.notify_id))
               .onClick(() => this.handleGroupInviteAction(notification, 'reject'))
           }
           .margin({ top: DesignConstants.SPACING.SM2 })
         } else if (this.canHandleGroupApplication(notification)) {
           Row({ space: DesignConstants.SPACING.SM }) {
-            Button(this.isActionLoading(notification.notification_id) ? '处理中...' : '批准')
+            Button(this.isActionLoading(notification.notify_id) ? '处理中...' : '批准')
               .type(ButtonType.Normal)
               .backgroundColor(this.getPalette().accentBackground)
               .fontColor(this.getPalette().accentText)
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
               .borderRadius(DesignConstants.RADIUS.FULL)
-              .enabled(!this.isActionLoading(notification.notification_id))
+              .enabled(!this.isActionLoading(notification.notify_id))
               .onClick(() => this.handleGroupApplicationAction(notification, 'approve'))
 
             Button('拒绝')
@@ -693,7 +690,7 @@ export struct NotificationCenter {
               .borderRadius(DesignConstants.RADIUS.FULL)
               .borderWidth(1)
               .borderColor(this.getPalette().borderColor)
-              .enabled(!this.isActionLoading(notification.notification_id))
+              .enabled(!this.isActionLoading(notification.notify_id))
               .onClick(() => this.handleGroupApplicationAction(notification, 'reject'))
           }
           .margin({ top: DesignConstants.SPACING.SM2 })
@@ -805,18 +802,12 @@ export struct NotificationCenter {
         return '收到表情反应';
       case 'group_invite_received':
         return '群组邀请';
-      case 'group_invite_accepted':
-        return '邀请已接受';
-      case 'group_invite_revoked':
-        return '邀请已撤销';
-      case 'group_invite_rejected':
-        return '邀请被拒绝';
+      case 'group_mentioned':
+        return '群聊提及';
       case 'group_application_received':
         return '新的入群申请';
       case 'group_application_accepted':
         return '申请已通过';
-      case 'group_application_cancelled':
-        return '申请已取消';
       case 'group_application_rejected':
         return '申请被拒绝';
       case 'report_resolved':
@@ -856,18 +847,14 @@ export struct NotificationCenter {
           : `${actor} 对你的内容添加了表情反应`;
       case 'group_invite_received':
         return `${payload?.group_name ?? '某群组'} 邀请你加入`;
-      case 'group_invite_accepted':
-        return `${actor} 接受了群组邀请`;
-      case 'group_invite_revoked':
-        return `${payload?.group_name ?? '某群组'} 的邀请已被撤销`;
-      case 'group_invite_rejected':
-        return `${actor} 拒绝了 ${payload?.group_name ?? '某群组'} 的邀请`;
+      case 'group_mentioned':
+        return payload?.content_preview
+          ? `${actor} 在「${payload?.group_name ?? '群组'}」中 @ 了你：${payload.content_preview}`
+          : `${actor} 在「${payload?.group_name ?? '群组'}」中 @ 了你`;
       case 'group_application_received':
         return `${actor} 申请加入 ${payload?.group_name ?? '群组'}`;
       case 'group_application_accepted':
         return `你加入了 ${payload?.group_name ?? '群组'}`;
-      case 'group_application_cancelled':
-        return `${actor} 撤回了对 ${payload?.group_name ?? '群组'} 的申请`;
       case 'group_application_rejected':
         return `你加入 ${payload?.group_name ?? '群组'} 的申请被拒绝`;
       case 'report_resolved':

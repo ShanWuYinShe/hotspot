@@ -42,7 +42,7 @@ export type DeviceId = string;
 export type UserPresenceStatus = 'online' | 'offline';
 
 // 举报状态
-export type ReportStatus = 'pending' | 'reviewing' | 'escalated' | 'resolved' | 'dismissed';
+export type ReportStatus = 'pending' | 'resolved' | 'dismissed';
 
 // 举报目标类型
 export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
@@ -510,7 +510,7 @@ export interface ChangePasswordRequest {
 
 export type Gender = 'male' | 'female' | 'other';
 export type ChatPerm = 'everyone' | 'friends' | 'nobody';
-export type BlockReason = 'privacy' | 'stranger_quota_exceeded' | 'account_suspended';
+export type BlockReason = 'blocked' | 'privacy' | 'stranger_quota_exceeded';
 export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'revoked';
 
 export interface SearchUsersRequest {
@@ -1974,10 +1974,10 @@ export interface GroupAnnouncementListData {
 
 export type NotificationType =
   'new_follower' | 'mutual_follow' | 'moment_commented'
-  | 'comment_reply' | 'mentioned'
+  | 'comment_reply' | 'mentioned' | 'group_mentioned'
   | 'reaction_added'
-  | 'group_invite_received' | 'group_invite_accepted' | 'group_invite_revoked' | 'group_invite_rejected'
-  | 'group_application_received' | 'group_application_accepted' | 'group_application_cancelled' | 'group_application_rejected'
+  | 'group_invite_received'
+  | 'group_application_received' | 'group_application_accepted' | 'group_application_rejected'
   | 'report_resolved' | 'report_dismissed'
   | 'system_announcement'
   | 'nearby_new_moment';
@@ -2006,6 +2006,8 @@ export interface NotificationPayload {
   group_id?: string;
   group_name?: string;
   group_avatar_url?: string;
+  message_id?: string;
+  content_preview?: string;
   invite_id?: string;
   message?: string;
   application_id?: string;
@@ -2023,7 +2025,7 @@ export interface NotificationPayload {
 }
 
 export interface NotificationItem {
-  notification_id: string;
+  notify_id: string;
   type: NotificationType;
   is_read: boolean;
   created_at: string;
@@ -2052,6 +2054,4 @@ export interface NotificationListRequest {
 
 export interface MarkAsReadRequest {
   notify_ids?: string[];
-  type?: NotificationType;
-  scope?: string;
 }

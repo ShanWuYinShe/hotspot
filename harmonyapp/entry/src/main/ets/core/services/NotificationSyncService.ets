@@ -154,9 +154,9 @@ export class NotificationSyncService {
 
     const idSet = new Set<string>(ids);
     this.notifications = this.notifications.map((item: NotificationItem): NotificationItem => {
-      if (idSet.has(item.notification_id)) {
+      if (idSet.has(item.notify_id)) {
         const readItem: NotificationItem = {
-          notification_id: item.notification_id,
+          notify_id: item.notify_id,
           type: item.type,
           is_read: true,
           created_at: item.created_at,
@@ -177,7 +177,7 @@ export class NotificationSyncService {
 
     this.notifications = this.notifications.map((item: NotificationItem): NotificationItem => {
       const readItem: NotificationItem = {
-        notification_id: item.notification_id,
+        notify_id: item.notify_id,
         type: item.type,
         is_read: true,
         created_at: item.created_at,

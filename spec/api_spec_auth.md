@@ -16,14 +16,14 @@
 | 端点 | 说明 | 认证 |
 |------|------|------|
 
-| `POST /api/v1/auth/register` | 用户注册 | 否 |
-| `POST /api/v1/auth/login` | 用户登录 | 否 |
+| `POST /api/v1/auth/register` | 用户注册 | 无 |
+| `POST /api/v1/auth/login` | 用户登录 | 无 |
 | `POST /api/v1/auth/logout` | 用户登出 | 必须 |
-| `POST /api/v1/auth/guest` | 创建访客用户 | 否 |
+| `POST /api/v1/auth/guest` | 创建访客用户 | 无 |
 | `POST /api/v1/auth/refresh_token` | 刷新 Token | 可选 |
 | `POST /api/v1/auth/check_status` | 检查认证状态 | 可选 |
-| `POST /api/v1/auth/request_password_reset` | 请求密码重置 | 否 |
-| `POST /api/v1/auth/reset_password` | 重置密码 | 否 |
+| `POST /api/v1/auth/request_password_reset` | 请求密码重置 | 无 |
+| `POST /api/v1/auth/reset_password` | 重置密码 | 无 |
 | `POST /api/v1/auth/change_password` | 修改密码 | 必须 |
 | `POST /api/v1/auth/list_sessions` | 获取会话列表 | 必须 |
 | `POST /api/v1/auth/revoke_session` | 撤销会话 | 必须 |

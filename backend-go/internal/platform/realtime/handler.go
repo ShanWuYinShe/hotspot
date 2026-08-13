@@ -250,9 +250,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//    为权威），服务端恢复订阅保证两者一致前的事件送达。
 	if h.resumeStore != nil && authPayload.ResumeToken != "" {
 		if state, ok := h.resumeStore.LoadState(authPayload.ResumeToken); ok && state.UserID == principal.UserID {
-			_, snapGroup := h.applyAuthorizedSubscriptions(principalCtx, principal.UserID, SetSubscriptionsPayload{Operation: "set", Type: "group", IDs: state.Subs.GroupIDs}, subs, sink)
-			h.applyAuthorizedSubscriptions(principalCtx, principal.UserID, SetSubscriptionsPayload{Operation: "set", Type: "user", IDs: state.Subs.UserIDs}, subs, sink)
-			for _, ev := range h.resumeStore.Replay(principal.UserID, snapGroup.GroupIDs, state.LastSeq) {
+			// 断线快照转 items（spec：SetSubscriptions 批量结构，单请求覆盖两类订阅）
+			items := make([]SubscriptionItem, 0, 2)
+			if len(state.Subs.GroupIDs) > 0 {
+				items = append(items, SubscriptionItem{Type: "group", IDs: state.Subs.GroupIDs})
+			}
+			if len(state.Subs.UserIDs) > 0 {
+				items = append(items, SubscriptionItem{Type: "user", IDs: state.Subs.UserIDs})
+			}
+			_, snap := h.applyAuthorizedSubscriptions(principalCtx, principal.UserID, SetSubscriptionsPayload{Operation: "set", Items: items}, subs, sink)
+			for _, ev := range h.resumeStore.Replay(principal.UserID, snap.GroupIDs, state.LastSeq) {
 				_ = sink.Send(ev)
 			}
 		}
@@ -288,18 +295,27 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSRateLimit, Message: "请求过于频繁", Severity: "recoverable", Retryable: true, RetryAfter: retryAfter}})
 				continue
 			}
-			limit := 500
-			if payload.Type == "group" {
-				limit = 100
-			}
+			// 按类型限额裁剪（user 500 / group 100，与 CE config 一致）；超限与
+			// 未知类型计入 failed_ids（reason: limit_exceeded / invalid）。
 			failed := []FailedSubscription{}
-			if len(payload.IDs) > limit {
-				for _, id := range payload.IDs[limit:] {
-					failed = append(failed, FailedSubscription{SubscriptionID: id, Reason: "limit_exceeded"})
+			items := make([]SubscriptionItem, 0, len(payload.Items))
+			for _, item := range payload.Items {
+				limit, ok := map[string]int{"user": 500, "group": 100}[item.Type]
+				if !ok {
+					for _, id := range item.IDs {
+						failed = append(failed, FailedSubscription{Type: item.Type, SubscriptionID: id, Reason: "invalid"})
+					}
+					continue
 				}
-				payload.IDs = append([]string(nil), payload.IDs[:limit]...)
+				if len(item.IDs) > limit {
+					for _, id := range item.IDs[limit:] {
+						failed = append(failed, FailedSubscription{Type: item.Type, SubscriptionID: id, Reason: "limit_exceeded"})
+					}
+					item.IDs = append([]string(nil), item.IDs[:limit]...)
+				}
+				items = append(items, item)
 			}
-			ack, snapshot := h.applyAuthorizedSubscriptions(principalCtx, principal.UserID, payload, subs, sink)
+			ack, snapshot := h.applyAuthorizedSubscriptions(principalCtx, principal.UserID, SetSubscriptionsPayload{ClientRequestID: payload.ClientRequestID, Operation: payload.Operation, Items: items}, subs, sink)
 			ack.FailedIDs = append(ack.FailedIDs, failed...)
 			if len(ack.FailedIDs) > 0 {
 				ack.Code = 20100
@@ -357,20 +373,30 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) applyAuthorizedSubscriptions(ctx context.Context, viewerUserID string, payload SetSubscriptionsPayload, subs *subscriptions, sink FanoutSink) (SubscribeAckPayload, SubscriptionsSnapshotPayload) {
-	ack := SubscribeAckPayload{ClientRequestID: payload.ClientRequestID, Operation: payload.Operation, Type: payload.Type, IDs: payload.IDs, Code: 0}
-	allowed := make([]string, 0, len(payload.IDs))
-	for _, id := range payload.IDs {
-		if payload.Operation == "unsubscribe" || h.isSubscriptionAllowed(ctx, viewerUserID, payload.Type, id) {
-			allowed = append(allowed, id)
-			continue
+	ack := SubscribeAckPayload{ClientRequestID: payload.ClientRequestID, Operation: payload.Operation, Code: 0, Accepted: []SubscriptionItem{}}
+	// allowedByType 汇总同类型多 item 的通过 ID（订阅项可按 type 分多条提交）
+	allowedByType := map[string][]string{}
+	for _, item := range payload.Items {
+		allowed := make([]string, 0, len(item.IDs))
+		for _, id := range item.IDs {
+			if payload.Operation == "unsubscribe" || h.isSubscriptionAllowed(ctx, viewerUserID, item.Type, id) {
+				allowed = append(allowed, id)
+				continue
+			}
+			ack.FailedIDs = append(ack.FailedIDs, FailedSubscription{Type: item.Type, SubscriptionID: id, Reason: "denied"})
 		}
-		ack.FailedIDs = append(ack.FailedIDs, FailedSubscription{SubscriptionID: id, Reason: "denied"})
+		if len(allowed) > 0 {
+			ack.Accepted = append(ack.Accepted, SubscriptionItem{Type: item.Type, IDs: allowed})
+		}
+		allowedByType[item.Type] = append(allowedByType[item.Type], allowed...)
 	}
 	if len(ack.FailedIDs) > 0 {
 		ack.Code = 20100
 		ack.Message = "订阅权限不足"
 	}
-	subs.apply(payload.Operation, payload.Type, allowed)
+	for _, item := range payload.Items {
+		subs.apply(payload.Operation, item.Type, allowedByType[item.Type])
+	}
 	snapshot := subs.snapshot()
 	DefaultHub().SetUserSubscriptions(snapshot.UserIDs, sink)
 	DefaultHub().SetGroupSubscriptions(snapshot.GroupIDs, sink)

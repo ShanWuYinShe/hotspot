@@ -86,20 +86,17 @@ const FILTER_TABS = [
 						else if (n.type === 'new_follower') text = `${actor.nickname ?? ''} 关注了你`;
 						else if (n.type === 'mutual_follow') text = `${actor.nickname ?? ''} 和你互相关注了`;
 						else if (n.type === 'group_invite_received') text = `${actor.nickname ?? ''} 邀请你加入 ${groupName}`;
-						else if (n.type === 'group_invite_revoked') text = `${n.payload?.revoked_by?.nickname ?? '对方'} 撤销了「${groupName}」的入群邀请`;
-						else if (n.type === 'group_invite_accepted') text = `${n.payload?.user?.nickname ?? ''} 接受了你的「${groupName}」入群邀请`;
-						else if (n.type === 'group_invite_rejected') text = `${n.payload?.rejected_by?.nickname ?? '对方'} 拒绝了你的「${groupName}」入群邀请${n.payload?.reason ? `:${n.payload.reason}` : ''}`;
-						else if (n.type === 'group_application_cancelled') text = `${n.payload?.applicant?.nickname ?? '申请人'} 取消了「${groupName}」的入群申请`;
 						else if (n.type === 'group_application_accepted') text = `你加入「${groupName}」的申请已通过`;
 						else if (n.type === 'group_application_rejected') text = `${n.payload?.rejected_by?.nickname ?? '管理员'} 拒绝了你的「${groupName}」入群申请`;
 						else if (n.type === 'reaction_added') text = `${actor.nickname ?? ''} 做出了反应 ${n.payload?.emoji ?? ''}`;
+						else if (n.type === 'group_mentioned') text = `${actor.nickname ?? ''} 在「${groupName}」群聊中 @ 了你${n.payload?.content_preview ? `:${n.payload.content_preview}` : ''}`;
 						else if (n.type === 'report_resolved') text = `你举报的内容已处理${n.payload?.note ? `:${n.payload.note}` : ''}`;
 						else if (n.type === 'report_dismissed') text = `你的举报未通过审核${n.payload?.note ? `:${n.payload.note}` : ''}`;
 						else if (n.type === 'nearby_new_moment') text = `${actor.nickname ?? ''} 在附近发布了新瞬间`;
 						else if (n.type === 'system_announcement') text = '系统公告';
 						else text = n.payload?.message ?? '';
 						return {
-							id: n.notification_id ?? String(i + 1),
+							id: n.notify_id ?? String(i + 1),
 							// 归一化为语义键，使图标/计数/分区过滤都能命中 TYPE_CONFIG。
 							type: normalizeNotifType(n.type ?? 'reaction_added'),
 							read: n.is_read ?? false,
@@ -142,14 +139,14 @@ const FILTER_TABS = [
 	};
 
 	const markAllRead = () => {
-		// spec: scope='all' clears all unread. Update local state optimistically.
+		// spec: notify.md → mark_read：notify_ids 不传或空数组 = 全部已读。乐观更新本地状态。
 		notifications = notifications.map((n) => ({ ...n, read: true }));
-		void markRead({ scope: 'all' }).catch(() => {});
+		void markRead({ notify_ids: [] }).catch(() => {});
 	};
 	const markSingleRead = (id: string) => {
 		notifications = notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
-		// spec: scope='selected' with notification_ids (one of notification_ids|type).
-		void markRead({ scope: 'selected', notification_ids: [id] }).catch(() => {});
+		// spec: notify.md → mark_read：notify_ids 指定 1-50 条。
+		void markRead({ notify_ids: [id] }).catch(() => {});
 	};
 	const remove = (id: string) => {
 		notifications = notifications.filter((n) => n.id !== id);

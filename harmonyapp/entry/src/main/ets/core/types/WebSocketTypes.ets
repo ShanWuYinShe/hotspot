@@ -128,6 +128,7 @@ export enum ServerEventType {
 export interface AuthPayload {
   client_type: ClientType
   access_token?: string
+  device_id?: string     // 设备标识（spec：App 端必填，支撑单设备单会话模型）
   resume_token?: string   // 重连时透传上次连接的 resume_token（spec L155），尝试增量恢复
 }
 
@@ -273,7 +274,7 @@ export interface UserOfflineEvent {
 // ----- 关注关系事件 -----
 
 export interface NewFollowerPayload {
-  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
+  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
   actor: UserInfo
   followed_at: string
   source?: FollowSource
@@ -286,7 +287,7 @@ export interface NewFollowerEvent {
 }
 
 export interface MutualFollowPayload {
-  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
+  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
   actor: UserInfo
   mutual_at: string
 }
@@ -300,7 +301,7 @@ export interface MutualFollowEvent {
 
 // 表情反应（统一 message/moment/comment 三类目标）
 export interface ReactionAddedPayload {
-  notification_id?: string   // 仅当 actor ≠ 资源作者时携带（自我反应不通知）；自反应时省略
+  notify_id?: string   // 仅当 actor ≠ 资源作者时携带（自我反应不通知）；自反应时省略
   target_type: 'message' | 'moment' | 'comment'
   target_id: string
   emoji: string
@@ -313,7 +314,7 @@ export interface ReactionAddedEvent {
   payload: ReactionAddedPayload
 }
 
-// 反应移除不产生通知（非持久化通知），无 notification_id
+// 反应移除不产生通知（非持久化通知），无 notify_id
 export interface ReactionRemovedPayload {
   target_type: 'message' | 'moment' | 'comment'
   target_id: string
@@ -328,7 +329,7 @@ export interface ReactionRemovedEvent {
 }
 
 export interface MomentCommentedPayload {
-  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
+  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
   moment_id: string
   moment_summary: MomentSummary
   comment_id: string
@@ -343,7 +344,7 @@ export interface MomentCommentedEvent {
 }
 
 export interface CommentReplyPayload {
-  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
+  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
   moment_id: string
   moment_summary: MomentSummary
   comment_id: string
@@ -360,7 +361,7 @@ export interface CommentReplyEvent {
 }
 
 export interface MessageMentionedPayload {
-  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
+  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
   target_type: 'moment' | 'comment'
   moment_id: string
   comment_id?: string
@@ -390,7 +391,7 @@ export interface UserProfileUpdatedEvent {
 // ----- 系统事件 -----
 
 export interface SystemAnnouncementPayload {
-  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
+  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
   announcement_id: string
   title: string
   content: string
@@ -677,7 +678,7 @@ export interface GroupDismissedEvent {
 // ----- 附近发现事件 -----
 
 export interface NearbyNewMomentPayload {
-  notification_id: string
+  notify_id: string
   moment_id: string
   moment_summary: MomentSummary
   actor: UserInfo
@@ -691,7 +692,7 @@ export interface NearbyNewMomentEvent {
 }
 
 export interface GroupInviteReceivedPayload {
-  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
+  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
   invite_id: string
   group: GroupInfo
   inviter: UserInfo
@@ -706,7 +707,6 @@ export interface GroupInviteReceivedEvent {
 
 export interface GroupInviteResponsePayload {
   // 仅邀请被接受时推送（拒绝不推送）。原 status:'accepted' 单值字段已移除——事件名即语义
-  notification_id: string
   invite_id: string
   group_id: string
   user: UserInfo       // 接受邀请的用户
@@ -718,9 +718,8 @@ export interface GroupInviteResponseEvent {
   payload: GroupInviteResponsePayload
 }
 
-// 邀请被受邀人拒绝 → 推送给邀请发起方（对应 NotifyType='group_invite_rejected'，含 reason）
+// 邀请被受邀人拒绝 → 推送给邀请发起方。纯实时事件，不落库通知（spec 无 notify_id）
 export interface GroupInviteRejectedPayload {
-  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
   invite_id: string
   group_id: string
   rejected_by: UserInfo     // 拒绝邀请的受邀人（邀请发起方可见其身份，群邀请为双向契约）
@@ -733,9 +732,8 @@ export interface GroupInviteRejectedEvent {
   payload: GroupInviteRejectedPayload
 }
 
-// 邀请被发起方（管理员）主动撤销 → 推送给受邀人
+// 邀请被发起方（管理员）主动撤销 → 推送给受邀人（纯实时，无 notify_id）
 export interface GroupInviteRevokedPayload {
-  notification_id: string
   invite_id: string
   group_id: string
   revoked_by: UserInfo   // 撤销邀请的管理员
@@ -748,9 +746,8 @@ export interface GroupInviteRevokedEvent {
   payload: GroupInviteRevokedPayload
 }
 
-// 邀请过期（超 expires_at 自动失效）→ 推送给受邀人
+// 邀请过期（超 expires_at 自动失效）→ 推送给受邀人（纯实时，无 notify_id）
 export interface GroupInviteExpiredPayload {
-  notification_id: string
   invite_id: string
   group_id: string
   expired_at: string
@@ -762,7 +759,7 @@ export interface GroupInviteExpiredEvent {
 }
 
 export interface GroupApplicationReceivedPayload {
-  notification_id: string   // 与 notify/list 的 NotifyItem.notification_id 同主键
+  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
   application_id: string
   group_id: string
   applicant: UserInfo
@@ -775,9 +772,8 @@ export interface GroupApplicationReceivedEvent {
   payload: GroupApplicationReceivedPayload
 }
 
-// 申请被发起方（申请人）主动取消 → 推送给群管理员
+// 申请被发起方（申请人）主动取消 → 推送给群管理员（纯实时，无 notify_id）
 export interface GroupApplicationCancelledPayload {
-  notification_id: string
   application_id: string
   group_id: string
   applicant: UserInfo
@@ -790,9 +786,8 @@ export interface GroupApplicationCancelledEvent {
   payload: GroupApplicationCancelledPayload
 }
 
-// 申请过期（超 expires_at 自动失效）→ 推送给群管理员
+// 申请过期（超 expires_at 自动失效）→ 推送给群管理员（纯实时，无 notify_id）
 export interface GroupApplicationExpiredPayload {
-  notification_id: string
   application_id: string
   group_id: string
   applicant: UserInfo
@@ -806,7 +801,7 @@ export interface GroupApplicationExpiredEvent {
 
 // 申请被群管理员拒绝 → 推送给申请人
 export interface GroupApplicationRejectedPayload {
-  notification_id: string
+  notify_id: string
   application_id: string
   group: GroupInfo
   rejected_by: UserInfo   // 处理管理员（申请人可见管理员身份）
@@ -821,7 +816,7 @@ export interface GroupApplicationRejectedEvent {
 
 export interface GroupApplicationResponsePayload {
   // 仅申请被接受时推送。原 status:'accepted' 单值字段已移除——事件名即语义
-  notification_id: string
+  notify_id: string
   application_id: string
   group: GroupInfo
   responded_at: string
@@ -836,7 +831,7 @@ export interface GroupApplicationResponseEvent {
 
 // 举报处理结果（推送给举报人）
 export interface ReportResolvedPayload {
-  notification_id: string
+  notify_id: string
   report_id: string
   target_type: 'user' | 'moment' | 'comment' | 'message' | 'group'
   target_id: string
@@ -850,7 +845,7 @@ export interface ReportResolvedEvent {
 }
 
 export interface ReportDismissedPayload {
-  notification_id: string
+  notify_id: string
   report_id: string
   target_type: 'user' | 'moment' | 'comment' | 'message' | 'group'
   target_id: string
@@ -1003,12 +998,13 @@ export function createPingEvent(): PingEvent {
   }
 }
 
-export function createAuthEvent(clientType: ClientType, accessToken?: string, resumeToken?: string): AuthEvent {
+export function createAuthEvent(clientType: ClientType, accessToken?: string, resumeToken?: string, deviceId?: string): AuthEvent {
   return {
     type: 'Auth',
     payload: {
       client_type: clientType,
       access_token: accessToken,
+      device_id: deviceId,
       resume_token: resumeToken
     }
   }

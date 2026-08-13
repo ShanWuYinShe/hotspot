@@ -331,7 +331,7 @@ func (s *Service) ListMembers(ctx context.Context, req GroupMembersRequest) ([]G
 func (s *Service) SearchMembers(ctx context.Context, req SearchGroupMembersRequest) ([]GroupMemberItem, string, error) {
 	startedAt := time.Now()
 	observability.L().Info("groups.search_members started", "group_id", req.GroupID)
-	_, ok, err := s.repo.Get(ctx, req.GroupID)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
 		observability.L().Error("groups.search_members failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return nil, "", err
@@ -339,6 +339,21 @@ func (s *Service) SearchMembers(ctx context.Context, req SearchGroupMembersReque
 	if !ok {
 		observability.L().Warn("groups.search_members not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return nil, "", ErrGroupNotFound
+	}
+	// 搜索资格（spec api_spec_group.md members/search 10400）：非成员仅当群设置
+	// 允许检索（is_searchable）时可见成员列表；成员不受限。
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	isMember := principal.UserID != ""
+	if isMember {
+		isMember, err = s.repo.IsMember(ctx, req.GroupID, principal.UserID)
+		if err != nil {
+			observability.L().Error("groups.search_members failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			return nil, "", err
+		}
+	}
+	if !isMember && !group.IsSearchable {
+		observability.L().Warn("groups.search_members not eligible", "group_id", req.GroupID, "user_id", principal.UserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return nil, "", ErrNotMember
 	}
 	limit := types.PaginationLimitWith(req.Pagination, 20, 100)
 	items, cursor, err := s.repo.SearchMembers(ctx, req.GroupID, req.Keyword, req.Role, limit, types.PaginationCursor(req.Pagination))

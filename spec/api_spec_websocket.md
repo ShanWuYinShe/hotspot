@@ -309,13 +309,14 @@ type ServerEventType =
   // 系统
   | "SystemAnnouncement" | "AccountBanned"
   // 协议控制
-  | "Error" | "SubscribeAck";
+  | "Error" | "SubscribeAck"
+  | "SubscriptionsSnapshot"       // 订阅快照（GetSubscriptions 响应；SetSubscriptions 处理完成后亦推送）;
 
 // 客户端发送事件类型枚举（强制：WebSocketEvent.type 必须来自该枚举）
 type ClientEventType =
   | "Auth"
   | "Ping"
-  | "SetSubscriptions"
+  | "SetSubscriptions" | "GetSubscriptions"
   | "SendPrivateTyping" | "SendGroupTyping";
 
 ```
@@ -1043,6 +1044,22 @@ interface SubscriptionItem {
   ids: string[];                 // 订阅目标 ID 列表（user_id 或 group_id）
 }
 type SetSubscriptionsEvent = { type: "SetSubscriptions"; payload: SetSubscriptionsPayload; };
+
+// GetSubscriptions - 查询当前连接的订阅快照（状态对齐/调试用，幂等只读）
+interface GetSubscriptionsPayload {
+  client_request_id?: string;    // 可选：响应 SubscriptionsSnapshot 时原样回传
+}
+type GetSubscriptionsEvent = { type: "GetSubscriptions"; payload: GetSubscriptionsPayload; };
+
+// SubscriptionsSnapshot - 服务端推送的当前订阅快照：
+// - 客户端发送 GetSubscriptions 时作为响应下发（client_request_id 原样回传）
+// - 每次 SetSubscriptions 处理完成后主动推送，客户端据此对齐本地订阅状态
+interface SubscriptionsSnapshotPayload {
+  client_request_id?: string;    // 仅响应 GetSubscriptions 时携带
+  user_ids?: string[];           // 当前 user 类型订阅；缺省视为空
+  group_ids?: string[];          // 当前 group 类型订阅；缺省视为空
+}
+type SubscriptionsSnapshotEvent = { type: "SubscriptionsSnapshot"; payload: SubscriptionsSnapshotPayload; };
 ```
 
 ---

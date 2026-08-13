@@ -171,9 +171,6 @@ export const handlers = [
         relation: { is_following: idx !== 0, is_followed_by: false, is_blocked: false }
       },
       recent_moments: { items: userMoments.length ? userMoments : mockMoments.slice(idx * 2, idx * 2 + 4) },
-      // 喜欢/收藏流（mock 演示数据：与最近动态区分，避免三 tab 完全同图）
-      liked_moments: { items: mockMoments.slice((idx + 1) % 6, (idx + 1) % 6 + 3) },
-      favorited_moments: { items: mockMoments.slice((idx + 3) % 6, (idx + 3) % 6 + 3) },
     }));
   }),
   // spec: users/search 返回 UserItem（user 嵌套 UserInfo）；mockUsers 是扁平结构，需包装

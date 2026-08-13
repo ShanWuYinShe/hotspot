@@ -196,6 +196,14 @@ export const Endpoints = {
     MarkRead: `${PREFIX}/notify/mark_read`,
   },
 
+  // Share — 待接线: Create/Get/ListMy/Revoke（分享码模块，登记表保持完整）
+  Share: {
+    Create: `${PREFIX}/share/create`,
+    Get: `${PREFIX}/share/get`,
+    ListMy: `${PREFIX}/share/list_my`,
+    Revoke: `${PREFIX}/share/revoke`,
+  },
+
   // Reports — 已包装: Create；待接线: ListMy
   Reports: {
     Create: `${PREFIX}/reports/create`,

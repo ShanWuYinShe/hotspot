@@ -377,7 +377,7 @@ func TestResumeReplayGroupEventsOnReconnect(t *testing.T) {
 	}
 	ceA := readEventWithTimeout(t, connA)
 	token1 := ceA.Payload.(map[string]any)["resume_token"].(string)
-	if err := connA.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{Operation: "subscribe", Type: "group", IDs: []string{"g1"}}}); err != nil {
+	if err := connA.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{Operation: "subscribe", Items: []SubscriptionItem{{Type: "group", IDs: []string{"g1"}}}}}); err != nil {
 		t.Fatalf("write subscribe A: %v", err)
 	}
 	readEventWithTimeout(t, connA) // SubscribeAck
@@ -454,7 +454,7 @@ func TestResumeReplaySkipsDepartedGroup(t *testing.T) {
 	}
 	ceA := readEventWithTimeout(t, connA)
 	token1 := ceA.Payload.(map[string]any)["resume_token"].(string)
-	if err := connA.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{Operation: "subscribe", Type: "group", IDs: []string{"g1"}}}); err != nil {
+	if err := connA.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{Operation: "subscribe", Items: []SubscriptionItem{{Type: "group", IDs: []string{"g1"}}}}}); err != nil {
 		t.Fatalf("write subscribe A: %v", err)
 	}
 	readEventWithTimeout(t, connA)

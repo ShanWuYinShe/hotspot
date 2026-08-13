@@ -149,7 +149,7 @@ func TestRealtimeWebsocketLifecycle(t *testing.T) {
 		t.Fatalf("unexpected pong: %#v", pong)
 	}
 
-	if err := conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "req1", Operation: "set", Type: "user", IDs: []string{"user_bob"}}}); err != nil {
+	if err := conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "req1", Operation: "set", Items: []SubscriptionItem{{Type: "user", IDs: []string{"user_bob"}}}}}); err != nil {
 		t.Fatalf("write subscriptions: %v", err)
 	}
 	var ack Event
@@ -259,7 +259,7 @@ func TestRealtimeSubscriptionLimit(t *testing.T) {
 	for i := range ids {
 		ids[i] = "u"
 	}
-	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "req2", Operation: "set", Type: "user", IDs: ids}})
+	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "req2", Operation: "set", Items: []SubscriptionItem{{Type: "user", IDs: ids}}}})
 	var ack struct {
 		Type    string              `json:"type"`
 		Payload SubscribeAckPayload `json:"payload"`
@@ -294,7 +294,7 @@ func TestRealtimeSubscriptionRateLimit(t *testing.T) {
 	_ = conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}})
 	var established Event
 	_ = conn.ReadJSON(&established)
-	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "conn-1", Operation: "set", Type: "user", IDs: []string{"user_bob"}}})
+	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "conn-1", Operation: "set", Items: []SubscriptionItem{{Type: "user", IDs: []string{"user_bob"}}}}})
 	var ack Event
 	if err := conn.ReadJSON(&ack); err != nil {
 		t.Fatalf("read ack: %v", err)
@@ -303,7 +303,7 @@ func TestRealtimeSubscriptionRateLimit(t *testing.T) {
 	if err := conn.ReadJSON(&snapshot); err != nil {
 		t.Fatalf("read snapshot: %v", err)
 	}
-	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "conn-1", Operation: "set", Type: "user", IDs: []string{"user_charlie"}}})
+	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "conn-1", Operation: "set", Items: []SubscriptionItem{{Type: "user", IDs: []string{"user_charlie"}}}}})
 	var limited struct {
 		Type    string       `json:"type"`
 		Payload ErrorPayload `json:"payload"`
@@ -344,7 +344,7 @@ func TestRealtimeRejectsUserSubscriptionWhenPresenceHidden(t *testing.T) {
 	_ = conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}})
 	var established Event
 	_ = conn.ReadJSON(&established)
-	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "req-hidden", Operation: "set", Type: "user", IDs: []string{"user_hidden"}}})
+	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "req-hidden", Operation: "set", Items: []SubscriptionItem{{Type: "user", IDs: []string{"user_hidden"}}}}})
 	var ack struct {
 		Type    string              `json:"type"`
 		Payload SubscribeAckPayload `json:"payload"`
@@ -355,6 +355,83 @@ func TestRealtimeRejectsUserSubscriptionWhenPresenceHidden(t *testing.T) {
 	if ack.Payload.Code != 20100 || len(ack.Payload.FailedIDs) != 1 || ack.Payload.FailedIDs[0].Reason != "denied" {
 		payload, _ := json.Marshal(ack)
 		t.Fatalf("unexpected ack: %s", payload)
+	}
+}
+
+// TestRealtimeSetSubscriptionsMixedItems 验证 spec 批量结构：单请求可混合
+// user/group 两类订阅项，SubscribeAck 按 type 分组回传 accepted，failed_ids
+// 逐项携带 type（客户端按 type+subscription_id 回滚本地订阅）。
+func TestRealtimeSetSubscriptionsMixedItems(t *testing.T) {
+	SetDefaultHub(NewHub())
+	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
+	result, _ := authService.IssueSession(context.Background(), "user_alice")
+	handler := NewHandler(
+		authService,
+		stubUserPresenceService{items: map[string]string{"user_bob": "online", "user_hidden": ""}},
+		stubUserRepo{settings: map[string]struct {
+			presenceVisible  bool
+			allowPrivateChat string
+		}{"user_hidden": {presenceVisible: false}}, relations: map[string]map[string]struct {
+			isFollowing  bool
+			isFollowedBy bool
+			isBlocked    bool
+		}{}},
+		stubGroupRepo{members: map[string][]string{"group_1": {"user_bob"}}},
+	)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+	_ = conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}})
+	var established Event
+	_ = conn.ReadJSON(&established)
+	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{
+		ClientRequestID: "req-mixed",
+		Operation:       "set",
+		Items: []SubscriptionItem{
+			{Type: "user", IDs: []string{"user_bob", "user_hidden"}},
+			{Type: "group", IDs: []string{"group_1"}},
+		},
+	}})
+	var ack struct {
+		Type    string              `json:"type"`
+		Payload SubscribeAckPayload `json:"payload"`
+	}
+	if err := conn.ReadJSON(&ack); err != nil {
+		t.Fatalf("read ack: %v", err)
+	}
+	if ack.Type != "SubscribeAck" || ack.Payload.Code != 20100 {
+		payload, _ := json.Marshal(ack)
+		t.Fatalf("unexpected ack: %s", payload)
+	}
+	if len(ack.Payload.Accepted) != 1 || ack.Payload.Accepted[0].Type != "user" ||
+		len(ack.Payload.Accepted[0].IDs) != 1 || ack.Payload.Accepted[0].IDs[0] != "user_bob" {
+		payload, _ := json.Marshal(ack)
+		t.Fatalf("accepted should group user_bob only: %s", payload)
+	}
+	if len(ack.Payload.FailedIDs) != 2 {
+		payload, _ := json.Marshal(ack)
+		t.Fatalf("want 2 failed ids, got: %s", payload)
+	}
+	types := map[string]string{}
+	for _, f := range ack.Payload.FailedIDs {
+		types[f.SubscriptionID] = f.Type
+	}
+	if types["user_hidden"] != "user" || types["group_1"] != "group" {
+		payload, _ := json.Marshal(ack)
+		t.Fatalf("failed ids should carry type: %s", payload)
+	}
+	var snapshot Event
+	if err := conn.ReadJSON(&snapshot); err != nil {
+		t.Fatalf("read snapshot: %v", err)
+	}
+	snap := snapshot.Payload.(map[string]any)
+	if userIDs, ok := snap["user_ids"].([]any); !ok || len(userIDs) != 1 || userIDs[0] != "user_bob" {
+		payload, _ := json.Marshal(snapshot)
+		t.Fatalf("snapshot should contain only user_bob: %s", payload)
 	}
 }
 
@@ -385,7 +462,7 @@ func TestRealtimeRejectsGroupSubscriptionForNonMember(t *testing.T) {
 	_ = conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}})
 	var established Event
 	_ = conn.ReadJSON(&established)
-	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "req-group", Operation: "set", Type: "group", IDs: []string{"group_1"}}})
+	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "req-group", Operation: "set", Items: []SubscriptionItem{{Type: "group", IDs: []string{"group_1"}}}}})
 	var ack struct {
 		Type    string              `json:"type"`
 		Payload SubscribeAckPayload `json:"payload"`
@@ -426,7 +503,7 @@ func TestRealtimeAllowsUnsubscribeEvenWhenTargetNowDenied(t *testing.T) {
 	_ = conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}})
 	var established Event
 	_ = conn.ReadJSON(&established)
-	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "req-unsub", Operation: "unsubscribe", Type: "user", IDs: []string{"user_hidden"}}})
+	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "req-unsub", Operation: "unsubscribe", Items: []SubscriptionItem{{Type: "user", IDs: []string{"user_hidden"}}}}})
 	var ack struct {
 		Type    string              `json:"type"`
 		Payload SubscribeAckPayload `json:"payload"`
@@ -557,7 +634,7 @@ func TestRealtimeAllowsGroupSubscriptionAndTypingBeyondFirstHundredMembers(t *te
 	_ = conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}})
 	var established Event
 	_ = conn.ReadJSON(&established)
-	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "req-big", Operation: "set", Type: "group", IDs: []string{"group_big"}}})
+	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "req-big", Operation: "set", Items: []SubscriptionItem{{Type: "group", IDs: []string{"group_big"}}}}})
 	var ack struct {
 		Type    string              `json:"type"`
 		Payload SubscribeAckPayload `json:"payload"`

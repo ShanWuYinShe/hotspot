@@ -173,6 +173,11 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return
 		}
+		if errors.Is(err, ErrNotMember) {
+			// spec api_spec_group.md members/search 10400：不具备成员搜索资格
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "不具备群组成员搜索资格"))
+			return
+		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}

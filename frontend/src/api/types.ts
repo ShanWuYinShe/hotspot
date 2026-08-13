@@ -69,9 +69,9 @@ export type ReportReason =
 	| 'impersonation'
 	| 'self_harm'
 	| 'other';
-export type ReportStatus = 'pending' | 'reviewing' | 'escalated' | 'resolved' | 'dismissed';
+export type ReportStatus = 'pending' | 'resolved' | 'dismissed';
 export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
-export type BlockReason = 'privacy' | 'stranger_quota_exceeded' | 'account_suspended';
+export type BlockReason = 'blocked' | 'privacy' | 'stranger_quota_exceeded';
 export type AnnounceLevel = 'info' | 'warning' | 'error';
 export type NotifyCategory = 'social' | 'interaction' | 'group' | 'report' | 'nearby' | 'system';
 export type NotifyType =
@@ -80,13 +80,10 @@ export type NotifyType =
 	| 'moment_commented'
 	| 'comment_reply'
 	| 'mentioned'
+	| 'group_mentioned'
 	| 'reaction_added'
 	| 'group_invite_received'
-	| 'group_invite_revoked'
-	| 'group_invite_accepted'
-	| 'group_invite_rejected'
 	| 'group_application_received'
-	| 'group_application_cancelled'
 	| 'group_application_accepted'
 	| 'group_application_rejected'
 	| 'report_resolved'
@@ -443,6 +440,7 @@ export interface MomentItem {
 	privacy_level?: PrivacyLevel;
 	my_state?: { is_favorited: boolean };
 	recommendation?: 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
+	is_deleted: boolean; // 软删除标记；true 时 description 为空，客户端展示"内容已删除"占位
 }
 
 export interface CommentItem {
@@ -523,6 +521,8 @@ export interface NotifyPayload {
 	group_id?: string;
 	group_name?: string;
 	group_avatar_url?: string;
+	message_id?: string;
+	content_preview?: string;
 	invite_id?: string;
 	application_id?: string;
 	message?: string;
@@ -542,7 +542,7 @@ export interface NotifyPayload {
 
 export interface NotifyItem {
 	// spec: api_spec_notify.md → NotifyItem
-	notification_id: string;
+	notify_id: string;
 	type: NotifyType;
 	is_read: boolean;
 	created_at: string;
@@ -645,9 +645,6 @@ export interface UserProfileBundle {
 	// spec: user.md → get_profile
 	user: UserItem;
 	recent_moments: PaginatedData<MomentItem>;
-	/** 喜欢/收藏流（mock 演示数据，spec 未定义独立字段，扩展字段） */
-	liked_moments?: PaginatedData<MomentItem>;
-	favorited_moments?: PaginatedData<MomentItem>;
 }
 
 export interface FriendItem {
@@ -752,6 +749,11 @@ export interface PrivateChatItem {
 	can_message: boolean;
 	message_blocked_reason?: BlockReason;
 }
+export interface PrivateChatOpenResult {
+	// spec: chat.md → private_chats/open_the_door（纯查询，无创建副作用）
+	chat: PrivateChatItem; // 会话不存在时返回空态对象（unread_count=0、is_muted/is_pinned=false）
+	recent_messages: PaginatedData<PrivateMessageItem>; // 始终返回，会话不存在时 items 为空数组
+}
 export interface MessageSent {
 	// spec: chat.md → MessageSent（private_messages/send、group_messages/send）
 	message_id: string;
@@ -765,6 +767,7 @@ export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'revoked';
 export interface ReportCreated {
 	// spec: report.md → reports/create
 	report_id: string;
+	is_duplicate: boolean; // true 表示幂等回放（已有举报单），report_id 为已有举报的 ID
 }
 
 // --- Media（spec: api_spec_media.md）---
@@ -795,6 +798,7 @@ export interface PresignUploadRequest {
 	file_size: number;
 	mime_type: string;
 	category: MediaCategory;
+	md5?: string; // 文件内容 MD5（可选，服务端用于校验完整性）
 }
 
 export interface BatchPresignUploadRequest {

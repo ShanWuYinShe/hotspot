@@ -272,7 +272,8 @@ interface UserItem {
   // 位置信息（可见性规则见 RelativeLocation 类型定义）
   location?: RelativeLocation;
 
-  // 统计信息：详情页（open_the_door）始终返回；搜索/列表由服务端根据接口语义决定是否返回（客户端不应依赖其在列表中的存在性）
+  // 统计信息：详情页（open_the_door）与主页（get_profile）返回；搜索/列表由服务端
+  // 根据接口语义决定是否返回（客户端不应依赖其在列表中的存在性）
   stats?: UserStats;
 
   // === @auth-only 以下字段仅登录态返回 ===

@@ -680,7 +680,7 @@ export class ApiClient {
   }
 
   static async markAllPrivateMessagesRead(): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, MarkAsReadRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.MARK_READ, { scope: 'all' });
+    return HttpUtil.post<ApiResponse<void>, MarkPrivateMessagesReadRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.MARK_READ, { scope: 'all' });
   }
 
   // ==================== 群组管理 API ====================
@@ -848,7 +848,7 @@ export class ApiClient {
   }
 
   static async markAllGroupMessagesRead(): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, MarkAsReadRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.MARK_READ, { scope: 'all' });
+    return HttpUtil.post<ApiResponse<void>, MarkGroupMessagesReadRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.MARK_READ, { scope: 'all' });
   }
 
   // ==================== 举报 API ====================

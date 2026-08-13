@@ -166,8 +166,8 @@ export interface SessionRevokedPayload {
   revoked_at: string;
 }
 
+// 纯实时事件（spec：不落库通知），无 notify_id。
 export interface AccountBannedPayload {
-  notification_id: string;
   reason: string;
   duration_days: number; // 0 = 永久
   banned_at: string;
@@ -221,7 +221,7 @@ export interface PrivateTypingPayload {
 // ---------------------------------------------------------------------------
 
 export interface NewFollowerPayload {
-  notification_id: string;
+  notify_id: string;
   actor: UserInfo;
   followed_at: string;
   source?: string; // FollowSource: 'moment' | 'search' | 'recommendation' | 'profile' | 'group'
@@ -229,7 +229,7 @@ export interface NewFollowerPayload {
 }
 
 export interface MomentCommentedPayload {
-  notification_id: string;
+  notify_id: string;
   moment_id: string;
   comment_id: string;
   actor: UserInfo;
@@ -239,7 +239,7 @@ export interface MomentCommentedPayload {
 }
 
 export interface GroupInviteReceivedPayload {
-  notification_id: string;
+  notify_id: string;
   invite_id: string;
   group: unknown; // GroupInfo
   inviter: UserInfo;
@@ -247,8 +247,8 @@ export interface GroupInviteReceivedPayload {
   created_at: string;
 }
 
+// 纯实时事件（spec：不落库通知），无 notify_id。
 export interface GroupInviteRejectedPayload {
-  notification_id: string;
   invite_id: string;
   group_id: string;
   rejected_by: UserInfo;
@@ -257,7 +257,7 @@ export interface GroupInviteRejectedPayload {
 }
 
 export interface ReportResolvedPayload {
-  notification_id: string;
+  notify_id: string;
   report_id: string;
   target_type: string; // ReportTargetType
   target_id: string;
@@ -266,7 +266,7 @@ export interface ReportResolvedPayload {
 }
 
 export interface SystemAnnouncementPayload {
-  notification_id: string;
+  notify_id: string;
   announcement_id: string;
   title: string;
   content: string;
@@ -282,6 +282,7 @@ export interface SystemAnnouncementPayload {
 /** Web 端不传 access_token/device_id（由 HttpOnly Cookie 自动鉴权）。 */
 export interface AuthPayload {
   client_type: ClientType;
+  device_id?: string; // Web 端由 Cookie 自动携带，通常不传；App 端必填
   resume_token?: string; // 重连时携带上次连接的 resume_token
 }
 

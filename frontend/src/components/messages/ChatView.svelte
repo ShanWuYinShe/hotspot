@@ -51,9 +51,9 @@
 
 	// spec: private_messages/send 返回 10200 时 data 携带 { reason: BlockReason }。
 	const SEND_BLOCK_REASONS: Record<string, string> = {
+		blocked: '你已被对方拉黑',
 		privacy: '对方隐私设置不允许发送消息',
-		stranger_quota_exceeded: '今日陌生人消息额度已用完',
-		account_suspended: '账号被限制'
+		stranger_quota_exceeded: '今日陌生人消息额度已用完'
 	};
 
 	const meId = $derived(auth.user?.user_id ?? '__me__');

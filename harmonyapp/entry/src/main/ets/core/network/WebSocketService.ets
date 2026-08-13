@@ -11,6 +11,7 @@ import { API_BASE_URL, StorageKeys, WS_BASE_URL } from '../../constants/AppConst
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
 import { InteractionStateStore } from '../state/InteractionStateStore';
+import { DeviceIdUtil } from '../util/DeviceIdUtil';
 import {
   ClientEvent,
   ServerEvent,
@@ -100,7 +101,7 @@ export class WebSocketService {
       const wsUrl = await this.getWsUrl();
       hilog.info(DOMAIN_NUMBER, TAG, `正在连接WebSocket服务器: ${wsUrl}`);
       await this.webSocketUtil.connect(wsUrl);
-      this.webSocketUtil.sendRaw(serializeClientEvent(createAuthEvent('app', token, this.resumeToken)));
+      this.webSocketUtil.sendRaw(serializeClientEvent(createAuthEvent('app', token, this.resumeToken, DeviceIdUtil.getDeviceId())));
       hilog.info(DOMAIN_NUMBER, TAG, 'WebSocket握手成功，已发送Auth，等待ConnectionEstablished');
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `WebSocket连接失败: ${JSON.stringify(error)}`);

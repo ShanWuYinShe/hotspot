@@ -630,13 +630,52 @@ func TestListMembersHandlerValidation(t *testing.T) {
 
 func TestSearchMembersHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
-		getFound:  true,
+		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getFound:       true,
+		isMemberResult: true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
 			GroupID:        "g1",
 			Title:          "Updated",
 		}},
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/members/search", strings.NewReader(`{"group_id":"g1","keyword":"alice"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.SearchMembers(rr, req)
+
+	var resp struct {
+		Code httpx.Code `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestSearchMembersDeniesNonMemberWhenNotSearchable(t *testing.T) {
+	// spec api_spec_group.md members/search 10400：未加入群组且群设置不允许检索。
+	repo := &groupErrorRepo{
+		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}},
+		getFound:       true,
+		isMemberResult: false,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/members/search", strings.NewReader(`{"group_id":"g1","keyword":"alice"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.SearchMembers(rr, req)
+	assertGroupCode(t, rr, httpx.CodeConflict)
+}
+
+func TestSearchMembersAllowsNonMemberWhenSearchable(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, IsSearchable: true},
+		getFound:       true,
+		isMemberResult: false,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/members/search", strings.NewReader(`{"group_id":"g1","keyword":"alice"}`))
