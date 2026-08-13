@@ -20,7 +20,7 @@ func TestAPIErrorMappingCoversAllBranches(t *testing.T) {
 		{"invalid old password", ErrInvalidOldPassword, httpx.CodeInvalidOldCredential},
 		{"reset not found", ErrPasswordResetNotFound, httpx.CodeNotFound},
 		{"reset throttled", ErrPasswordResetThrottled, httpx.CodeRateLimited},
-		{"email unavailable", ErrEmailServiceUnavailable, httpx.CodeRateLimited},
+		{"verification unavailable", ErrVerificationServiceUnavailable, httpx.CodeRateLimited},
 		{"unknown", errors.New("boom"), httpx.CodeInternalUnavailable},
 	}
 	for _, tt := range tests {

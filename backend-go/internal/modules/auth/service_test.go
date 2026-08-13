@@ -552,28 +552,43 @@ func (s *testSink) Send(event realtime.Event) error {
 
 func (s *testSink) Close() error { return nil }
 
-// --- email sender selection ---
+// --- verification sender selection ---
 
-func TestDefaultEmailSenderDevMode(t *testing.T) {
-	if _, ok := defaultEmailSender(config.Config{AppEnv: "dev"}).(*logEmailSender); !ok {
-		t.Fatal("expected *logEmailSender in dev")
+func TestDefaultVerificationSenderDevMode(t *testing.T) {
+	if _, ok := defaultVerificationSender(config.Config{AppEnv: "dev"}).(*logVerificationSender); !ok {
+		t.Fatal("expected *logVerificationSender in dev")
 	}
-	if _, ok := defaultEmailSender(config.Config{AppEnv: "test"}).(*logEmailSender); !ok {
-		t.Fatal("expected *logEmailSender in test")
+	if _, ok := defaultVerificationSender(config.Config{AppEnv: "test"}).(*logVerificationSender); !ok {
+		t.Fatal("expected *logVerificationSender in test")
 	}
 }
 
-func TestDefaultEmailSenderProductionLike(t *testing.T) {
+func TestDefaultVerificationSenderProductionLike(t *testing.T) {
 	for _, env := range []string{"", "production", "staging"} {
-		if _, ok := defaultEmailSender(config.Config{AppEnv: env}).(*noopEmailSender); !ok {
-			t.Fatalf("expected *noopEmailSender for AppEnv=%q", env)
+		if _, ok := defaultVerificationSender(config.Config{AppEnv: env}).(*noopVerificationSender); !ok {
+			t.Fatalf("expected *noopVerificationSender for AppEnv=%q", env)
 		}
 	}
 }
 
-func TestLogEmailSenderReturnsNil(t *testing.T) {
-	if err := (&logEmailSender{}).SendPasswordReset(context.Background(), "a@b.com", "123456"); err != nil {
-		t.Fatalf("logEmailSender must succeed in dev, got %v", err)
+func TestLogVerificationSenderReturnsNil(t *testing.T) {
+	if err := (&logVerificationSender{}).SendVerification(context.Background(), "a@b.com", ChannelEmail, "123456"); err != nil {
+		t.Fatalf("logVerificationSender must succeed in dev, got %v", err)
+	}
+}
+
+func TestDetectChannel(t *testing.T) {
+	for _, tc := range []struct {
+		loginID string
+		want    VerificationChannel
+	}{
+		{"user@mail.com", ChannelEmail},
+		{"13800138000", ChannelSMS},
+		{"alice", ChannelEmail}, // username defaults to email
+	} {
+		if got := detectChannel(tc.loginID); got != tc.want {
+			t.Fatalf("detectChannel(%q) = %q, want %q", tc.loginID, got, tc.want)
+		}
 	}
 }
 
@@ -582,7 +597,7 @@ func TestLogEmailSenderReturnsNil(t *testing.T) {
 func TestNewServiceWithSourceDevWiresLogSender(t *testing.T) {
 	cfg := config.Config{AppEnv: "dev", AuthTokenSecret: "test-secret"}
 	svc := NewServiceWithSource(context.Background(), platformauth.NewService(cfg), nil, cfg, nil)
-	if _, ok := svc.emailSender.(*logEmailSender); !ok {
-		t.Fatalf("expected *logEmailSender in dev, got %T", svc.emailSender)
+	if _, ok := svc.codeSender.(*logVerificationSender); !ok {
+		t.Fatalf("expected *logVerificationSender in dev, got %T", svc.codeSender)
 	}
 }

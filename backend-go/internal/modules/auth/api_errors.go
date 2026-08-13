@@ -12,7 +12,7 @@ var (
 	ErrInvalidOldPassword      = errors.New("auth: invalid old password")
 	ErrPasswordResetNotFound   = errors.New("auth: password reset not found")
 	ErrPasswordResetThrottled  = errors.New("auth: password reset throttled")
-	ErrEmailServiceUnavailable = errors.New("auth: email service not available")
+	ErrVerificationServiceUnavailable = errors.New("auth: verification service not available")
 	ErrAccountLocked           = errors.New("auth: account locked due to too many failed attempts")
 )
 
@@ -37,8 +37,8 @@ func apiErrorFrom(err error) *httpx.APIError {
 		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "重置请求不存在或已过期"}
 	case errors.Is(err, ErrPasswordResetThrottled):
 		return &httpx.APIError{Code: httpx.CodeRateLimited, Message: "请求过于频繁"}
-	case errors.Is(err, ErrEmailServiceUnavailable):
-		return &httpx.APIError{Code: httpx.CodeRateLimited, Message: "邮件服务暂不可用"}
+	case errors.Is(err, ErrVerificationServiceUnavailable):
+		return &httpx.APIError{Code: httpx.CodeRateLimited, Message: "验证码服务暂不可用"}
 	default:
 		return &httpx.APIError{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 	}
