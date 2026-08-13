@@ -8,6 +8,7 @@ import (
 
 	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 // PostgresRepository implements Repository over the configured postgres pool.
@@ -196,8 +197,8 @@ func normalizeReactionLimit(limit int) int {
 	switch {
 	case limit <= 0:
 		return 20
-	case limit > 100:
-		return 100
+	case limit > types.MaxPageSize:
+		return types.MaxPageSize
 	default:
 		return limit
 	}

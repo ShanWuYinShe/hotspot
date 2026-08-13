@@ -47,6 +47,10 @@ func (r *PostgresRepository) ListMyInvites(ctx context.Context, userID string, s
 			value := expiresAt.UTC().Format(time.RFC3339)
 			item.ExpiresAt = &value
 		}
+		if respondedAt != nil {
+			value := respondedAt.UTC().Format(time.RFC3339)
+			item.RespondedAt = &value
+		}
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -185,10 +189,10 @@ func (r *PostgresRepository) loadInvite(ctx context.Context, inviteID string) (G
 		return GroupInviteItem{}, persistence.ErrNotImplemented
 	}
 	var item GroupInviteItem
-	var groupID, inviterUserID, inviteeUserID, message, statusText string
+	var groupID, inviterUserID, message, statusText string
 	var createdAt time.Time
 	var expiresAt, respondedAt *time.Time
-	if err := queryable.QueryRow(ctx, queryGetGroupInvite, inviteID).Scan(&item.InviteID, &groupID, &inviterUserID, &inviteeUserID, &message, &statusText, &createdAt, &expiresAt, &respondedAt); err != nil {
+	if err := queryable.QueryRow(ctx, queryGetGroupInvite, inviteID).Scan(&item.InviteID, &groupID, &inviterUserID, &message, &statusText, &createdAt, &expiresAt, &respondedAt); err != nil {
 		return GroupInviteItem{}, err
 	}
 	group, err := getGroupBase(ctx, queryable, groupID)
@@ -211,7 +215,9 @@ func (r *PostgresRepository) loadInvite(ctx context.Context, inviteID string) (G
 		value := expiresAt.UTC().Format(time.RFC3339)
 		item.ExpiresAt = &value
 	}
-	_ = respondedAt
-	_ = inviteeUserID
+	if respondedAt != nil {
+		value := respondedAt.UTC().Format(time.RFC3339)
+		item.RespondedAt = &value
+	}
 	return item, nil
 }

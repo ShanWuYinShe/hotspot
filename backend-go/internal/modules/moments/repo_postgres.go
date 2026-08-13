@@ -11,6 +11,7 @@ import (
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -145,8 +146,8 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 	if req.Pagination != nil && req.Pagination.Limit > 0 {
 		limit = req.Pagination.Limit
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > types.MaxPageSize {
+		limit = types.MaxPageSize
 	}
 	sortBy := req.SortBy
 	if sortBy == "" {
@@ -402,8 +403,8 @@ func normalizeMomentInteractionLimit(limit int) int {
 	switch {
 	case limit <= 0:
 		return 20
-	case limit > 100:
-		return 100
+	case limit > types.MaxPageSize:
+		return types.MaxPageSize
 	default:
 		return limit
 	}

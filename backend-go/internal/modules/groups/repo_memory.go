@@ -278,8 +278,8 @@ func (r *InMemoryRepository) ListMyGroups(_ context.Context, userID string, limi
 	if limit <= 0 {
 		limit = 20
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > types.MaxPageSize {
+		limit = types.MaxPageSize
 	}
 	// Decode the opaque keyset cursor (joined_at DESC, group_id DESC) so the
 	// in-memory path mirrors the postgres pagination contract.

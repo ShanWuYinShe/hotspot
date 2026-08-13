@@ -22,7 +22,6 @@ type Config struct {
 	Port                   string
 	PostgresDSN            string
 	AuthTokenSecret        string
-	SuperAdminPassword     string
 	SupportEmail           string
 	PrivacyPolicyURL       string
 	TermsOfServiceURL      string
@@ -57,7 +56,6 @@ func Load() Config {
 		Port:                   envOrDefault("APP_PORT", "8081"),
 		PostgresDSN:            os.Getenv("POSTGRES_DSN"),
 		AuthTokenSecret:        envOrDefault("AUTH_TOKEN_SECRET", devDefaultAuthTokenSecret),
-		SuperAdminPassword:     os.Getenv("SUPER_ADMIN_PASSWORD"),
 		SupportEmail:           envOrDefault("APP_SUPPORT_EMAIL", "support@example.com"),
 		PrivacyPolicyURL:       envOrDefault("APP_PRIVACY_POLICY_URL", ""),
 		TermsOfServiceURL:      envOrDefault("APP_TERMS_OF_SERVICE_URL", ""),
@@ -200,12 +198,6 @@ func (c Config) insecureDefaultRegistry() []DefaultCheck {
 			Field:     "AUTH_TOKEN_SECRET",
 			Value:     c.AuthTokenSecret,
 			Sentinels: []string{devDefaultAuthTokenSecret, "change-me", "dev-secret-key-change-in-production", "your-super-secret-jwt-key-change-this-in-production", "dev-only-do-not-use-in-production-please-change-to-random-48-bytes"},
-			Severity:  SeverityCritical,
-		},
-		{
-			Field:     "SUPER_ADMIN_PASSWORD",
-			Value:     c.SuperAdminPassword,
-			Sentinels: []string{"liyou19890317", "change-this-strong-password", "change-me"},
 			Severity:  SeverityCritical,
 		},
 		{

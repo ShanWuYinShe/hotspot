@@ -1,5 +1,11 @@
 package types
 
+// 全后端统一的分页常量。各模块的分页上限应引用 MaxPageSize 而非内联 100。
+const (
+	DefaultPageSize = 20
+	MaxPageSize     = 100
+)
+
 // PaginationParams is the shared request-pagination shape (api_spec_base.md
 // PaginationParams). Modules embed/reference this instead of redefining it,
 // so a field rename or limit change doesn't drift across 14 copies.
@@ -8,14 +14,14 @@ type PaginationParams struct {
 	Cursor string `json:"cursor,omitempty"`
 }
 
-// NormalizeLimit 归一化分页 limit：≤0 取 20，>100 截断 100。
+// NormalizeLimit 归一化分页 limit：≤0 取 DefaultPageSize，>MaxPageSize 截断。
 // 全后端统一入口，替代各模块重复的 normalizeLimit/paginationLimit。
 func NormalizeLimit(limit int) int {
 	switch {
 	case limit <= 0:
-		return 20
-	case limit > 100:
-		return 100
+		return DefaultPageSize
+	case limit > MaxPageSize:
+		return MaxPageSize
 	default:
 		return limit
 	}

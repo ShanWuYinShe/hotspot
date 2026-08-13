@@ -112,7 +112,6 @@ func prodBootable() Config {
 	return Config{
 		AppEnv:             "production",
 		AuthTokenSecret:    stringOfLen(48),
-		SuperAdminPassword: "a-real-strong-password-9kQ2!",
 		PostgresDSN:        "postgres://postgres:realpw@db:5432/hotspot",
 		RedisURL:           "redis://redis:6379/0",
 		S3AccessKey:        "real-access-key",
@@ -150,27 +149,6 @@ func TestCheckInsecureDefaultsDetectsLegacyJWTDefault(t *testing.T) {
 	}
 }
 
-func TestCheckInsecureDefaultsDetectsSuperAdminPassword(t *testing.T) {
-	cfg := prodBootable()
-	cfg.SuperAdminPassword = "liyou19890317"
-	findings := cfg.checkInsecureDefaults()
-	if len(findings) != 1 {
-		t.Fatalf("expected 1 finding for super admin password, got %+v", findings)
-	}
-	if findings[0].Field != "SUPER_ADMIN_PASSWORD" {
-		t.Fatalf("unexpected field: %+v", findings[0])
-	}
-}
-
-func TestCheckInsecureDefaultsDetectsSuperAdminPlaceholder(t *testing.T) {
-	// Value copied from backend/.env.example — also must be blocked.
-	cfg := prodBootable()
-	cfg.SuperAdminPassword = "change-this-strong-password"
-	if findings := cfg.checkInsecureDefaults(); !cfg.hasCritical(findings) {
-		t.Fatalf("expected critical finding for super admin placeholder, got %+v", findings)
-	}
-}
-
 func TestCheckInsecureDefaultsRequiresBothS3Defaults(t *testing.T) {
 	// Rotating just one side must NOT fire — single-side rotation is the
 	// meaningful change and shouldn't be blocked.
@@ -205,7 +183,6 @@ func TestCheckInsecureDefaultsAllowsDevModeBoot(t *testing.T) {
 	cfg := Config{
 		AppEnv:             "development",
 		AuthTokenSecret:    devDefaultAuthTokenSecret,
-		SuperAdminPassword: "liyou19890317",
 		S3AccessKey:        "minioadmin",
 		S3SecretKey:        "minioadmin",
 	}
@@ -238,7 +215,6 @@ func TestValidateRejectsEmptyRedisURLInProduction(t *testing.T) {
 func TestValidateRejectsAnyCriticalDefaultInProduction(t *testing.T) {
 	cases := map[string]func(Config) Config{
 		"dev auth secret":      func(c Config) Config { c.AuthTokenSecret = devDefaultAuthTokenSecret; return c },
-		"super admin password": func(c Config) Config { c.SuperAdminPassword = "liyou19890317"; return c },
 		"both s3 default":      func(c Config) Config { c.S3AccessKey = "minioadmin"; c.S3SecretKey = "minioadmin"; return c },
 		"legacy jwt default":   func(c Config) Config { c.AuthTokenSecret = "dev-secret-key-change-in-production"; return c },
 	}

@@ -12,6 +12,7 @@ import (
 	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -714,7 +715,7 @@ func normalizeUserMomentLimit(limit int) int {
 	switch {
 	case limit <= 0:
 		return 20
-	case limit > 100:
+	case limit > types.MaxPageSize:
 		return 100
 	default:
 		return limit

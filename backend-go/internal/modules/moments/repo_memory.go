@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type InMemoryRepository struct {
@@ -56,8 +57,8 @@ func (r *InMemoryRepository) ListMine(_ context.Context, userID string, limit in
 	if limit <= 0 {
 		limit = 20
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > types.MaxPageSize {
+		limit = types.MaxPageSize
 	}
 	ids := append([]string(nil), r.byUser[userID]...)
 	sort.Slice(ids, func(i, j int) bool { return ids[i] > ids[j] })
@@ -274,8 +275,8 @@ func (r *InMemoryRepository) ListFavorites(_ context.Context, userID string, lim
 	if limit <= 0 {
 		limit = 20
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > types.MaxPageSize {
+		limit = types.MaxPageSize
 	}
 	favMap := r.favorites[userID]
 	if favMap == nil {
@@ -290,7 +291,16 @@ func (r *InMemoryRepository) ListFavorites(_ context.Context, userID string, lim
 	sort.Slice(items, func(i, j int) bool {
 		return items[i].CreatedAt > items[j].CreatedAt
 	})
-	_ = cursor
+	start := 0
+	if cursor != "" {
+		for i, item := range items {
+			if item.MomentID == cursor {
+				start = i + 1
+				break
+			}
+		}
+	}
+	items = items[start:]
 	if len(items) > limit {
 		return PaginatedMoments{Items: items[:limit], NextCursor: items[limit].MomentID}, nil
 	}

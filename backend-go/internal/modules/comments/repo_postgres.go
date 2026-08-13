@@ -8,7 +8,9 @@ import (
 
 	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/idgen"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -45,7 +47,12 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		}
 	}
 	var nickname string
-	_ = queryable.QueryRow(ctx, queryGetNickname, userID).Scan(&nickname)
+	if err := queryable.QueryRow(ctx, queryGetNickname, userID).Scan(&nickname); err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			observability.L().Warn("comments.Create: nickname lookup failed, falling back to user_id", "user_id", userID, "error", err)
+		}
+		nickname = userID
+	}
 	if nickname == "" {
 		nickname = userID
 	}
@@ -234,8 +241,8 @@ func normalizeCommentLimit(limit int) int {
 	switch {
 	case limit <= 0:
 		return 20
-	case limit > 100:
-		return 100
+	case limit > types.MaxPageSize:
+		return types.MaxPageSize
 	default:
 		return limit
 	}

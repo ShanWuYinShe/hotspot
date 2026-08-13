@@ -389,13 +389,14 @@ type MyInvitesRequest struct {
 }
 
 type GroupInviteItem struct {
-	InviteID  string            `json:"invite_id"`
-	Group     GroupInfo         `json:"group"`
-	Inviter   UserInfo          `json:"inviter"`
-	Message   *string           `json:"message,omitempty"`
-	Status    ApplicationStatus `json:"status"`
-	CreatedAt string            `json:"created_at"`
-	ExpiresAt *string           `json:"expires_at,omitempty"`
+	InviteID    string            `json:"invite_id"`
+	Group       GroupInfo         `json:"group"`
+	Inviter     UserInfo          `json:"inviter"`
+	Message     *string           `json:"message,omitempty"`
+	Status      ApplicationStatus `json:"status"`
+	CreatedAt   string            `json:"created_at"`
+	ExpiresAt   *string           `json:"expires_at,omitempty"`
+	RespondedAt *string           `json:"responded_at,omitempty"`
 }
 
 type AcceptInviteRequest struct {

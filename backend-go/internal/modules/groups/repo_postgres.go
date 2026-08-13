@@ -10,6 +10,7 @@ import (
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -170,8 +171,8 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 	if limit <= 0 {
 		limit = 20
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > types.MaxPageSize {
+		limit = types.MaxPageSize
 	}
 	// Decode the opaque cursor (keyset over joined_at DESC, group_id DESC).
 	var pageCursor myGroupsCursor

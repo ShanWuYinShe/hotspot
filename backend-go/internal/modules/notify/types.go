@@ -10,7 +10,7 @@ import (
 
 const (
 	defaultNotificationListLimit = 20
-	maxNotificationListLimit     = 100
+	maxNotificationListLimit     = types.MaxPageSize
 )
 
 var ErrInvalidNotificationRequest = errors.New("notifications: invalid request")

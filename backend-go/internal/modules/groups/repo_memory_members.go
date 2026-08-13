@@ -2,9 +2,8 @@ package groups
 
 import (
 	"context"
-
 	"sort"
-
+	"strings"
 	"time"
 )
 
@@ -31,6 +30,20 @@ func (r *InMemoryRepository) ListMembers(_ context.Context, groupID string, role
 	for i := range items {
 		if items[i].User.UserID == group.Group.GroupID+"_owner" {
 			items[i].User.Nickname = group.Group.Name + " Owner"
+		}
+	}
+	// 消费游标：跳过 (JoinedAt, UserID) <= cursor 的项
+	if cursor != "" {
+		if parts := strings.SplitN(cursor, ":", 2); len(parts) == 2 {
+			cursorAt, cursorUID := parts[0], parts[1]
+			start := 0
+			for i, item := range items {
+				if item.JoinedAt > cursorAt || (item.JoinedAt == cursorAt && item.User.UserID > cursorUID) {
+					break
+				}
+				start = i + 1
+			}
+			items = items[start:]
 		}
 	}
 	if len(items) > limit {
@@ -187,13 +200,31 @@ func (r *InMemoryRepository) ListBannedMembers(_ context.Context, groupID string
 		items = append(items, item)
 	}
 	sort.Slice(items, func(i, j int) bool {
+		if items[i].BannedAt == items[j].BannedAt {
+			return items[i].User.UserID < items[j].User.UserID
+		}
 		return items[i].BannedAt > items[j].BannedAt
 	})
 	if limit <= 0 {
 		limit = 20
 	}
+	// 消费游标：跳过 (BannedAt, UserID) >= cursor 的项（DESC 序）
+	if cursor != "" {
+		if parts := strings.SplitN(cursor, ":", 2); len(parts) == 2 {
+			cursorAt, cursorUID := parts[0], parts[1]
+			start := 0
+			for i, item := range items {
+				if item.BannedAt < cursorAt || (item.BannedAt == cursorAt && item.User.UserID > cursorUID) {
+					break
+				}
+				start = i + 1
+			}
+			items = items[start:]
+		}
+	}
 	if len(items) > limit {
-		items = items[:limit]
+		last := items[limit-1]
+		return items[:limit], last.BannedAt + ":" + last.User.UserID, nil
 	}
 	return items, "", nil
 }

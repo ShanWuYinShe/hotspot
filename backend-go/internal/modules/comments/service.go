@@ -126,8 +126,8 @@ func (s *Service) List(ctx context.Context, req ListCommentsRequest) (PaginatedC
 		if req.Pagination.Limit > 0 {
 			limit = req.Pagination.Limit
 		}
-		if limit > 100 {
-			limit = 100
+		if limit > types.MaxPageSize {
+			limit = types.MaxPageSize
 		}
 		cursor = req.Pagination.Cursor
 	}
@@ -229,8 +229,8 @@ func (s *Service) ListReplies(ctx context.Context, req CommentRepliesRequest) (P
 		if req.Pagination.Limit > 0 {
 			limit = req.Pagination.Limit
 		}
-		if limit > 100 {
-			limit = 100
+		if limit > types.MaxPageSize {
+			limit = types.MaxPageSize
 		}
 		cursor = req.Pagination.Cursor
 	}

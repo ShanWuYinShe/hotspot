@@ -8,6 +8,7 @@ import (
 	momenttypes "hotspot/backend-go/internal/modules/moments"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 func (s *Service) GetMySettings(ctx context.Context) (UserSettings, error) {
@@ -270,8 +271,8 @@ func normalizePagination(p *PaginationParams) (int, string) {
 		if p.Limit > 0 {
 			limit = p.Limit
 		}
-		if limit > 100 {
-			limit = 100
+		if limit > types.MaxPageSize {
+			limit = types.MaxPageSize
 		}
 		cursor = p.Cursor
 	}
@@ -285,8 +286,8 @@ func normalizeMomentPagination(p *momenttypes.PaginationParams) (int, string) {
 		if p.Limit > 0 {
 			limit = p.Limit
 		}
-		if limit > 100 {
-			limit = 100
+		if limit > types.MaxPageSize {
+			limit = types.MaxPageSize
 		}
 		cursor = p.Cursor
 	}

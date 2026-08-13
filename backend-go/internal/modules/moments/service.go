@@ -125,8 +125,8 @@ func (s *Service) ListMine(ctx context.Context, req MyMomentsRequest) (Paginated
 		if req.Pagination.Limit > 0 {
 			limit = req.Pagination.Limit
 		}
-		if limit > 100 {
-			limit = 100
+		if limit > types.MaxPageSize {
+			limit = types.MaxPageSize
 		}
 		cursor = req.Pagination.Cursor
 	}
@@ -299,8 +299,8 @@ func (s *Service) ListFavorites(ctx context.Context, req MyFavoritesRequest) (Pa
 	if req.Pagination != nil && req.Pagination.Limit > 0 {
 		limit = req.Pagination.Limit
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > types.MaxPageSize {
+		limit = types.MaxPageSize
 	}
 	cursor := ""
 	if req.Pagination != nil {

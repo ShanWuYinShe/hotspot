@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type tagCursor struct {
@@ -65,8 +66,8 @@ func normalizeCursorLimit(limit int) int {
 	switch {
 	case limit <= 0:
 		return 20
-	case limit > 100:
-		return 100
+	case limit > types.MaxPageSize:
+		return types.MaxPageSize
 	default:
 		return limit
 	}

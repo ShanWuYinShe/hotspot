@@ -194,9 +194,5 @@ func (r *PostgresRepository) loadApplication(ctx context.Context, applicationID 
 	if handledByUserID != nil && *handledByUserID != "" {
 		item.HandledBy = &UserInfo{UserID: *handledByUserID, Nickname: *handledByUserID}
 	}
-	group, err := getGroupBase(ctx, queryable, groupID)
-	if err == nil {
-		_ = group
-	}
 	return item, nil
 }

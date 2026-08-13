@@ -120,7 +120,7 @@ INSERT INTO group_invites (invite_id, group_id, inviter_user_id, invitee_user_id
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
 	queryGetGroupInvite = `
-SELECT invite_id, group_id, inviter_user_id, invitee_user_id, COALESCE(message, ''), status, created_at, expires_at, responded_at
+SELECT invite_id, group_id, inviter_user_id, COALESCE(message, ''), status, created_at, expires_at, responded_at
 FROM group_invites
 WHERE invite_id = $1`
 

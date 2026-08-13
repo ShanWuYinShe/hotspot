@@ -17,7 +17,7 @@ const (
 	ShareTypeLocation = "location"
 
 	defaultShareListLimit = 20
-	maxShareListLimit     = 100
+	maxShareListLimit     = types.MaxPageSize
 	maxShareExpiresInSec  = 30 * 24 * 60 * 60
 	shareCodeAlphabet     = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 	shareCodeLength       = 12

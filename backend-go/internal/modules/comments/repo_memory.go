@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type InMemoryRepository struct {
@@ -160,8 +161,8 @@ func (r *InMemoryRepository) List(_ context.Context, momentID string, limit int,
 	if limit <= 0 {
 		limit = 20
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > types.MaxPageSize {
+		limit = types.MaxPageSize
 	}
 	if len(items) > limit {
 		return PaginatedComments{Items: items[:limit], NextCursor: items[limit-1].CommentID}, nil
