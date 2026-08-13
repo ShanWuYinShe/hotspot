@@ -17,7 +17,7 @@ func TestAPIErrorMappingCoversAllBranches(t *testing.T) {
 		{"conflict", ErrLoginIDConflict, httpx.CodeConflict},
 		{"invalid credentials", ErrInvalidCredentials, httpx.CodeUnauthorized},
 		{"account locked", ErrAccountLocked, httpx.CodeRateLimited},
-		{"invalid old password", ErrInvalidOldPassword, httpx.CodeUnauthorized},
+		{"invalid old password", ErrInvalidOldPassword, httpx.CodeInvalidOldCredential},
 		{"reset not found", ErrPasswordResetNotFound, httpx.CodeNotFound},
 		{"reset throttled", ErrPasswordResetThrottled, httpx.CodeRateLimited},
 		{"email unavailable", ErrEmailServiceUnavailable, httpx.CodeRateLimited},

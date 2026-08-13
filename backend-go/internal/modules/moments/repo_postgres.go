@@ -152,16 +152,7 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 	if sortBy == "" {
 		sortBy = "relevance"
 	}
-	refPt := geo.Point{Latitude: req.ReferencePoint.Latitude, Longitude: req.ReferencePoint.Longitude}
-	radius := 50000
-	if req.Radius != nil && *req.Radius > 0 {
-		radius = *req.Radius
-	}
-	if radius > 50000 {
-		radius = 50000
-	}
-	bounds := geo.BoundsAround(refPt, radius)
-	sql, args := buildSearchMomentsQuery(bounds, req.Keyword, req.Tag, sortBy, limit+1)
+	sql, args := buildSearchMomentsQuery(req.Keyword, req.Tag, sortBy, limit+1)
 	if sql == "" {
 		return PaginatedMoments{}, nil
 	}
@@ -170,17 +161,12 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 		return PaginatedMoments{}, err
 	}
 	defer rows.Close()
-	plan := geo.NewSearchPlan(refPt, radius, sortBy)
 	items := make([]MomentItem, 0)
 	momentIDs := make([]string, 0)
 	for rows.Next() {
 		item, err := scanMomentRow(rows)
 		if err != nil {
 			return PaginatedMoments{}, err
-		}
-		_, _, within := plan.Match(geo.Point{Latitude: item.Location.Point.Latitude, Longitude: item.Location.Point.Longitude})
-		if !within {
-			continue
 		}
 		items = append(items, item)
 		momentIDs = append(momentIDs, item.MomentID)
@@ -204,22 +190,19 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 	if req.Tag != nil {
 		sortTag = *req.Tag
 	}
-	sortMoments(items, sortBy, refPt, sortKeyword, sortTag)
+	sortMoments(items, sortBy, sortKeyword, sortTag)
 	if len(items) > limit {
 		return PaginatedMoments{Items: items[:limit], NextCursor: items[limit].MomentID}, nil
 	}
 	return PaginatedMoments{Items: items}, nil
 }
 
-func buildSearchMomentsQuery(bounds geo.Bounds, keyword *string, tag *string, sortBy string, limit int) (string, []any) {
-	mins, maxs := geo.CoveringArrays(bounds)
-	if len(mins) == 0 {
-		return "", nil
-	}
+// buildSearchMomentsQuery：全球 keyword/tag 搜索（spec moment.md → moments/search 收口，
+// 无半径过滤；附近发现走 feed/nearby）
+func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit int) (string, []any) {
 	args := make([]any, 0, 6)
 	var builder strings.Builder
-	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted FROM moments m LEFT JOIN users u ON u.user_id = m.user_id WHERE m.privacy_level = 'public' AND m.is_deleted = FALSE AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi) WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)`)
-	args = append(args, mins, maxs)
+	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted FROM moments m LEFT JOIN users u ON u.user_id = m.user_id WHERE m.privacy_level = 'public' AND m.is_deleted = FALSE`)
 	if keyword != nil && *keyword != "" {
 		args = append(args, *keyword)
 		builder.WriteString(fmt.Sprintf(" AND description ILIKE '%%' || $%d || '%%'", len(args)))
@@ -244,7 +227,7 @@ func buildSearchMomentsQuery(bounds geo.Bounds, keyword *string, tag *string, so
 	return builder.String(), args
 }
 
-func (r *PostgresRepository) Update(ctx context.Context, userID string, req EditMomentRequest) error {
+func (r *PostgresRepository) Update(ctx context.Context, userID string, req UpdateMomentRequest) error {
 	var locationName, latStr, lngStr *string
 	var s2CellID *int64
 	if req.Location != nil {
@@ -355,6 +338,7 @@ func (r *PostgresRepository) ListFavorites(ctx context.Context, userID string, l
 			return PaginatedMoments{}, err
 		}
 		item.MyState = &MyMomentState{IsFavorited: true}
+		item.FavoritedAt = favoritedAt // spec moment.md → FavoritedMomentItem.favorited_at
 		items = append(items, item)
 		momentIDs = append(momentIDs, item.MomentID)
 		cursors = append(cursors, encodeMomentFavoriteCursor(favoritedAt, item.MomentID))

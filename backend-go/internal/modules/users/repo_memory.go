@@ -117,6 +117,8 @@ func (r *InMemoryRepository) SearchProfiles(_ context.Context, req SearchUsersRe
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	sortBy := normalizeSearchSort(req.SortBy)
+	// radius 语义（spec user.md → users/search）：显式提供才按半径过滤；缺省不过滤（全球匹配）
+	radiusFilter := req.Radius != nil && *req.Radius > 0
 	radius := normalizeSearchRadius(req.Radius)
 	plan := geo.NewSearchPlan(geo.Point{Latitude: req.ReferencePoint.Latitude, Longitude: req.ReferencePoint.Longitude}, radius, sortBy)
 	keyword := strings.ToLower(strings.TrimSpace(req.Keyword))
@@ -130,6 +132,10 @@ func (r *InMemoryRepository) SearchProfiles(_ context.Context, req SearchUsersRe
 		if !settings.Searchable {
 			continue
 		}
+		// location_searchable：仅位置/半径维度过滤；keyword/tag 维度不受影响
+		if radiusFilter && !settings.LocationSearchable {
+			continue
+		}
 		if keyword != "" {
 			nickname := strings.ToLower(profile.Nickname)
 			bio := strings.ToLower(profile.Bio)
@@ -141,7 +147,7 @@ func (r *InMemoryRepository) SearchProfiles(_ context.Context, req SearchUsersRe
 			continue
 		}
 		distance, bearing, within := plan.Match(geo.Point{Latitude: profile.Location.Point.Latitude, Longitude: profile.Location.Point.Longitude})
-		if !within {
+		if radiusFilter && !within {
 			continue
 		}
 		items = append(items, searchProfileCandidate{Profile: profile, Distance: distance, BearingDegrees: bearing, SortBy: sortBy, RelevanceScore: searchRelevanceScore(profile, keyword, tag)})

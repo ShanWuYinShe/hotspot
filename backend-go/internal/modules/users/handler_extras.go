@@ -32,27 +32,9 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
-	item, ok, err := h.service.OpenTheDoor(r.Context(), req.UserID)
+	bundle, ok, err := h.service.GetProfileBundle(r.Context(), req.UserID, req.IncludeRecentMoments)
 	if err != nil {
 		h.writeServiceError(w, r, "OpenTheDoor", err)
-		return
-	}
-	if !ok {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "用户不存在"))
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(item))
-}
-
-func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
-	var req UserProfileBundleRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
-		return
-	}
-	bundle, ok, err := h.service.GetProfileBundle(r.Context(), req)
-	if err != nil {
-		h.writeServiceError(w, r, "GetProfile", err)
 		return
 	}
 	if !ok {
@@ -105,6 +87,12 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
+	// login_id 所有权验证（spec api_spec_user.md → upgrade）：手机号/邮箱需验证码
+	// 服务校验所有权，接入前暂仅支持用户名型 login_id（防止访客抢占他人手机号/邮箱）。
+	if strings.Contains(req.LoginID, "@") || isNumericLoginID(req.LoginID) {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "手机号/邮箱升级需验证码验证，暂仅支持用户名"))
+		return
+	}
 	// 升级成功返回完整账户数据（spec api_spec_user.md users/upgrade），
 	// 客户端无需额外调 get_account 即可获取新的 user_type。
 	profile, err := h.service.Upgrade(r.Context(), req)
@@ -149,6 +137,22 @@ func (h *Handler) Follow(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
+	}
+	// 组合约束（spec user.md → set_follow）：source='moment' 时 source_moment_id 必填；
+	// 提供 source_moment_id 但 source != 'moment' 视为参数冲突
+	if req.Active {
+		if req.Source == FollowSourceMoment && req.SourceMomentID == "" {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "source 为 moment 时 source_moment_id 必填"))
+			return
+		}
+		if req.SourceMomentID != "" && req.Source != FollowSourceMoment {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "source_moment_id 仅在 source=moment 时有意义"))
+			return
+		}
+	} else if req.SourceMomentID != "" || req.Source != "" {
+		// active=false 时来源字段无意义；宽容处理（忽略），与 spec 一致
+		req.Source = ""
+		req.SourceMomentID = ""
 	}
 	if req.Active {
 		if err := h.service.Follow(r.Context(), req.UserID, req.Source, req.SourceMomentID); err != nil {

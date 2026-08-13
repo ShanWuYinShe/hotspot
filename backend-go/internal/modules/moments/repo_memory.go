@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"hotspot/backend-go/internal/platform/geo"
 )
 
 type InMemoryRepository struct {
@@ -156,7 +155,6 @@ func (r *InMemoryRepository) Search(_ context.Context, req SearchMomentsRequest)
 	if sortBy == "" {
 		sortBy = "relevance"
 	}
-	refPt := geo.Point{Latitude: req.ReferencePoint.Latitude, Longitude: req.ReferencePoint.Longitude}
 	keyword := ""
 	if req.Keyword != nil {
 		keyword = *req.Keyword
@@ -165,14 +163,14 @@ func (r *InMemoryRepository) Search(_ context.Context, req SearchMomentsRequest)
 	if req.Tag != nil {
 		tag = *req.Tag
 	}
-	sortMoments(items, sortBy, refPt, keyword, tag)
+	sortMoments(items, sortBy, keyword, tag)
 	if len(items) == 0 {
 		items = []MomentItem{}
 	}
 	return PaginatedMoments{Items: items}, nil
 }
 
-func (r *InMemoryRepository) Update(_ context.Context, userID string, req EditMomentRequest) error {
+func (r *InMemoryRepository) Update(_ context.Context, userID string, req UpdateMomentRequest) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	item, ok := r.moments[req.MomentID]
@@ -316,17 +314,8 @@ func (r *InMemoryRepository) ListFavoriteUserIDs(_ context.Context, momentID str
 
 // sortMoments sorts a slice of MomentItem in place according to the given mode.
 // refPt is used for distance calculation; keyword and tag are used for relevance scoring.
-func sortMoments(items []MomentItem, sortBy string, refPt geo.Point, keyword, tag string) {
+func sortMoments(items []MomentItem, sortBy string, keyword, tag string) {
 	switch sortBy {
-	case "distance":
-		sort.SliceStable(items, func(i, j int) bool {
-			di := geo.DistanceMeters(refPt, geo.Point{Latitude: items[i].Location.Point.Latitude, Longitude: items[i].Location.Point.Longitude})
-			dj := geo.DistanceMeters(refPt, geo.Point{Latitude: items[j].Location.Point.Latitude, Longitude: items[j].Location.Point.Longitude})
-			if di != dj {
-				return di < dj
-			}
-			return items[i].MomentID < items[j].MomentID
-		})
 	case "newest":
 		sort.SliceStable(items, func(i, j int) bool {
 			if items[i].CreatedAt != items[j].CreatedAt {

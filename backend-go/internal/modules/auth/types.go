@@ -36,12 +36,16 @@ type RefreshTokenRequest struct {
 
 type AuthStatus struct {
 	IsValid   bool   `json:"is_valid"`
+	UserID    string `json:"user_id,omitempty"` // is_valid=true 时返回（spec auth.md → check_status）
 	ExpiresAt string `json:"expires_at,omitempty"`
 }
 
-type AuthTokenPairWeb struct{}
+type AuthTokenPairWeb struct {
+	ClientType string `json:"client_type"` // 判别字段（spec auth.md → AuthTokenPair）
+}
 
 type AuthTokenPairApp struct {
+	ClientType            string `json:"client_type"` // 判别字段
 	UserID                string `json:"user_id"`
 	AccessToken           string `json:"access_token"`
 	RefreshToken          string `json:"refresh_token"`
@@ -79,6 +83,7 @@ type ResetPasswordRequest struct {
 	VerificationCode string     `json:"verification_code"`
 	NewPassword      string     `json:"new_password"`
 	ClientType       ClientType `json:"client_type"`
+	DeviceID         string     `json:"device_id"` // App 必传（spec auth.md → reset_password）
 }
 
 type ChangePasswordRequest struct {

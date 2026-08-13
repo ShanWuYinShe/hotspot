@@ -132,7 +132,9 @@ func TestLoginWebReturnsEmptyDataAndCookiesOnly(t *testing.T) {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 	if len(resp.Data) != 0 {
-		t.Fatalf("expected empty web data, got %#v", resp.Data)
+		if len(resp.Data) != 1 || resp.Data["client_type"] != "web" {
+			t.Fatalf("expected web data {client_type:web}, got %#v", resp.Data)
+		}
 	}
 	cookies := rr.Result().Cookies()
 	if len(cookies) == 0 {
@@ -495,8 +497,8 @@ func TestChangePasswordWithoutIdempotencyKey(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if httpx.Code(int(resp["code"].(float64))) != httpx.CodeUnauthorized {
-		t.Fatalf("expected httpx.CodeUnauthorized (old password mismatch, natural dedup), got: %#v", resp)
+	if httpx.Code(int(resp["code"].(float64))) != httpx.CodeInvalidOldCredential {
+		t.Fatalf("expected httpx.CodeInvalidOldCredential (old password mismatch, natural dedup), got: %#v", resp)
 	}
 }
 
@@ -548,7 +550,7 @@ func TestChangePasswordValidatesOldPasswordAndRevokesOtherSessions(t *testing.T)
 	if err := json.NewDecoder(badRR.Body).Decode(&badResp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if httpx.Code(int(badResp["code"].(float64))) != httpx.CodeUnauthorized {
+	if httpx.Code(int(badResp["code"].(float64))) != httpx.CodeInvalidOldCredential {
 		t.Fatalf("unexpected response: %#v", badResp)
 	}
 
@@ -717,7 +719,9 @@ func TestRegisterWebResponseHasNoTokenInBody(t *testing.T) {
 	json.Unmarshal([]byte(body), &resp)
 	data, _ := resp["data"].(map[string]any)
 	if len(data) != 0 {
-		t.Fatalf("web response data should be empty object, got: %v", data)
+		if len(data) != 1 || data["client_type"] != "web" {
+			t.Fatalf("web response data should be {client_type:web}, got: %v", data)
+		}
 	}
 	// Verify Set-Cookie headers are present
 	setCookie := rr.Header().Get("Set-Cookie")

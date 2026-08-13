@@ -235,13 +235,19 @@ func (s *Service) ListMoments(ctx context.Context, req UserMomentsRequest) (mome
 	return result, nil
 }
 
-func (s *Service) GetProfileBundle(ctx context.Context, req UserProfileBundleRequest) (UserProfileBundle, bool, error) {
-	user, ok, err := s.OpenTheDoor(ctx, req.UserID)
+// GetProfileBundle 支撑 users/open_the_door 的 include_recent_moments 可选段
+// （spec user.md → open_the_door：false/缺省仅返回 user，true 时附加主页首屏 recent_moments）。
+func (s *Service) GetProfileBundle(ctx context.Context, userID string, includeRecentMoments bool) (UserProfileBundle, bool, error) {
+	user, ok, err := s.OpenTheDoor(ctx, userID)
 	if err != nil {
 		return UserProfileBundle{}, false, err
 	}
 	if !ok {
 		return UserProfileBundle{}, false, nil
+	}
+	bundle := UserProfileBundle{User: user}
+	if !includeRecentMoments {
+		return bundle, true, nil
 	}
 	momentLimit := 6
 	if s.appConfig != nil {
@@ -249,11 +255,12 @@ func (s *Service) GetProfileBundle(ctx context.Context, req UserProfileBundleReq
 			momentLimit = n
 		}
 	}
-	moments, err := s.ListMoments(ctx, UserMomentsRequest{UserID: req.UserID, Pagination: &PaginationParams{Limit: momentLimit}})
+	moments, err := s.ListMoments(ctx, UserMomentsRequest{UserID: userID, Pagination: &PaginationParams{Limit: momentLimit}})
 	if err != nil {
 		return UserProfileBundle{}, false, err
 	}
-	return UserProfileBundle{User: user, RecentMoments: moments}, true, nil
+	bundle.RecentMoments = moments
+	return bundle, true, nil
 }
 
 func normalizePagination(p *PaginationParams) (int, string) {

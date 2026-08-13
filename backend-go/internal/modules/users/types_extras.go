@@ -42,7 +42,8 @@ type UserItem struct {
 }
 
 type UserOpenTheDoorRequest struct {
-	UserID string `json:"user_id"`
+	UserID               string `json:"user_id"`
+	IncludeRecentMoments bool   `json:"include_recent_moments,omitempty"` // true 时返回主页首屏 recent_moments（spec user.md → open_the_door）
 }
 
 // BatchGetUsersRequest backs POST /api/v1/users/batch_get
@@ -177,13 +178,9 @@ type UserMomentsRequest struct {
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
-type UserProfileBundleRequest struct {
-	UserID string `json:"user_id"`
-}
-
 type UserProfileBundle struct {
 	User          UserItem                     `json:"user"`
-	RecentMoments momenttypes.PaginatedMoments `json:"recent_moments"`
+	RecentMoments momenttypes.PaginatedMoments `json:"recent_moments,omitempty"` // 仅 include_recent_moments=true 时返回
 }
 
 type MyBlockedRequest struct {

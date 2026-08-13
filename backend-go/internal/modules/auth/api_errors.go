@@ -32,7 +32,7 @@ func apiErrorFrom(err error) *httpx.APIError {
 	case errors.Is(err, ErrAccountLocked):
 		return &httpx.APIError{Code: httpx.CodeRateLimited, Message: "登录失败次数过多，请15分钟后重试"}
 	case errors.Is(err, ErrInvalidOldPassword):
-		return &httpx.APIError{Code: httpx.CodeUnauthorized, Message: "旧密码错误"}
+		return &httpx.APIError{Code: httpx.CodeInvalidOldCredential, Message: "旧密码错误"}
 	case errors.Is(err, ErrPasswordResetNotFound):
 		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "重置请求不存在或已过期"}
 	case errors.Is(err, ErrPasswordResetThrottled):

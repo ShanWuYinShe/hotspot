@@ -17,6 +17,7 @@ const (
 	CodeAccountBanned       Code = 10201 // 账号被封禁（强制登出 + 封禁页）
 	CodeNotFound            Code = 10300 // 资源不存在
 	CodeConflict            Code = 10400 // 业务冲突（已存在/满员/已撤回）
+	CodeInvalidOldCredential Code = 10401 // 旧凭证验证失败（旧密码错误/验证码错误；不触发 token 刷新流程）
 	CodeRateLimited         Code = 10500 // 请求过于频繁（按 Retry-After 重试）
 	CodeInternalUnavailable Code = 10600 // 服务器错误/系统不可用
 

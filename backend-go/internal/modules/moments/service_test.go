@@ -41,7 +41,7 @@ func (r *stubMomentRepo) Get(_ context.Context, _ string) (MomentItem, bool, err
 func (r *stubMomentRepo) Search(_ context.Context, _ SearchMomentsRequest) (PaginatedMoments, error) {
 	return r.searchRes, r.searchErr
 }
-func (r *stubMomentRepo) Update(_ context.Context, _ string, _ EditMomentRequest) error {
+func (r *stubMomentRepo) Update(_ context.Context, _ string, _ UpdateMomentRequest) error {
 	return r.updateErr
 }
 func (r *stubMomentRepo) Delete(_ context.Context, _ string) error { return r.deleteErr }
@@ -138,7 +138,7 @@ func TestServiceOpenTheDoorNotFound(t *testing.T) {
 func TestServiceUpdateRequiresOwner(t *testing.T) {
 	repo := &stubMomentRepo{getResult: MomentItem{MomentID: "m1", User: UserInfo{UserID: "other"}}, getFound: true}
 	svc := NewServiceWithRepo(repo)
-	_, err := svc.Update(momentCtx("u1"), EditMomentRequest{MomentID: "m1"})
+	_, err := svc.Update(momentCtx("u1"), UpdateMomentRequest{MomentID: "m1"})
 	if !errors.Is(err, ErrPermissionDenied) {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
@@ -146,7 +146,7 @@ func TestServiceUpdateRequiresOwner(t *testing.T) {
 
 func TestServiceUpdateRejectsNotFound(t *testing.T) {
 	svc := NewServiceWithRepo(&stubMomentRepo{})
-	_, err := svc.Update(momentCtx("u1"), EditMomentRequest{MomentID: "m1"})
+	_, err := svc.Update(momentCtx("u1"), UpdateMomentRequest{MomentID: "m1"})
 	if !errors.Is(err, ErrMomentNotFound) {
 		t.Fatalf("expected not found, got %v", err)
 	}
@@ -158,7 +158,7 @@ func TestServiceUpdateHappyPath(t *testing.T) {
 		getFound:  true,
 	}
 	svc := NewServiceWithRepo(repo)
-	_, err := svc.Update(momentCtx("u1"), EditMomentRequest{MomentID: "m1"})
+	_, err := svc.Update(momentCtx("u1"), UpdateMomentRequest{MomentID: "m1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

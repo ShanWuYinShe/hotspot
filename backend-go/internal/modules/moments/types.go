@@ -53,6 +53,8 @@ type MomentItem struct {
 	// all emojis, kept for sort/heat computations and legacy clients.
 	Reactions []Reaction     `json:"reactions,omitempty"`
 	MyState   *MyMomentState `json:"my_state,omitempty"`
+	// FavoritedAt 仅 list_favorites 返回（spec moment.md → FavoritedMomentItem）
+	FavoritedAt string `json:"favorited_at,omitempty"`
 }
 
 type CreateMomentRequest struct {
@@ -73,20 +75,20 @@ type PaginatedMoments struct {
 	NextCursor string       `json:"next_cursor,omitempty"`
 }
 
+// SearchMomentsRequest：全球 keyword/tag 搜索（spec moment.md → moments/search 收口——
+// 已删除 radius/sort_by='distance'/reference_point，附近发现唯一入口为 feed/nearby）
 type SearchMomentsRequest struct {
-	Keyword        *string           `json:"keyword,omitempty"`
-	Tag            *string           `json:"tag,omitempty"`
-	Radius         *int              `json:"radius,omitempty"`
-	SortBy         string            `json:"sort_by,omitempty"`
-	ReferencePoint GeoPoint          `json:"reference_point"`
-	Pagination     *PaginationParams `json:"pagination,omitempty"`
+	Keyword    *string           `json:"keyword,omitempty"`
+	Tag        *string           `json:"tag,omitempty"`
+	SortBy     string            `json:"sort_by,omitempty"` // relevance | newest | popular
+	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
 type GeoPoint = types.GeoPoint
 
 type PaginationParams = types.PaginationParams
 
-type EditMomentRequest struct {
+type UpdateMomentRequest struct {
 	MomentID     string    `json:"moment_id"`
 	Description  *string   `json:"description,omitempty"`
 	Location     *Location `json:"location,omitempty"`

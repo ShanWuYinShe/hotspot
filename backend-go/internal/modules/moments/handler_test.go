@@ -303,7 +303,7 @@ func TestUpdateMomentReplacesMentionNotificationsAndState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create moment: %v", err)
 	}
-	updated, err := service.Update(ctxAlice, EditMomentRequest{MomentID: created.MomentID, Mentions: []string{"user_carol"}})
+	updated, err := service.Update(ctxAlice, UpdateMomentRequest{MomentID: created.MomentID, Mentions: []string{"user_carol"}})
 	if err != nil {
 		t.Fatalf("update moment: %v", err)
 	}
@@ -400,7 +400,7 @@ func TestSearchRejectsInvalidSortBy(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
 	for _, invalid := range []string{"random", "RELEVANCE", "distancee", "new", "popularity"} {
 		t.Run(invalid, func(t *testing.T) {
-			body := `{"keyword":"test","sort_by":"` + invalid + `","reference_point":{"latitude":0,"longitude":0}}`
+			body := `{"keyword":"test","sort_by":"` + invalid + `"}`
 			req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(body))
 			rr := httptest.NewRecorder()
 			handler.Search(rr, req)
@@ -420,13 +420,13 @@ func TestSearchRejectsInvalidSortBy(t *testing.T) {
 func TestSearchAcceptsValidSortBy(t *testing.T) {
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
-	for _, valid := range []string{"relevance", "distance", "newest", "popular", ""} {
+	for _, valid := range []string{"relevance", "newest", "popular", ""} {
 		t.Run("sort_by="+valid, func(t *testing.T) {
 			sortField := ""
 			if valid != "" {
 				sortField = `,"sort_by":"` + valid + `"`
 			}
-			body := `{"keyword":"test"` + sortField + `,"reference_point":{"latitude":0,"longitude":0}}`
+			body := `{"keyword":"test"` + sortField + `}`
 			req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(body))
 			rr := httptest.NewRecorder()
 			handler.Search(rr, req)
@@ -481,7 +481,7 @@ func TestSearchSortByNewest(t *testing.T) {
 	repo.moments[m3.MomentID] = m3
 
 	req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(
-		`{"keyword":"test","sort_by":"newest","reference_point":{"latitude":0,"longitude":0}}`))
+		`{"keyword":"test","sort_by":"newest"}`))
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Search(rr, req)
@@ -505,61 +505,6 @@ func TestSearchSortByNewest(t *testing.T) {
 			order = append(order, it.MomentID)
 		}
 		t.Fatalf("expected [moment_b, moment_c, moment_a], got %v", order)
-	}
-}
-
-func TestSearchSortByDistance(t *testing.T) {
-	repo := NewInMemoryRepository()
-	handler := NewHandler(NewServiceWithRepo(repo))
-	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_test", SessionID: "s1"})
-
-	m1 := MomentItem{
-		MomentID: "moment_far", Description: "far away", PrivacyLevel: "public",
-		CreatedAt: "2025-01-01T00:00:00Z",
-		Location: Location{Point: struct {
-			Latitude  float64 `json:"latitude"`
-			Longitude float64 `json:"longitude"`
-		}{Latitude: 40.0, Longitude: -74.0}, LocationName: "NYC"},
-		User: UserInfo{UserID: "user_test"},
-	}
-	m2 := MomentItem{
-		MomentID: "moment_near", Description: "nearby", PrivacyLevel: "public",
-		CreatedAt: "2025-06-01T00:00:00Z",
-		Location: Location{Point: struct {
-			Latitude  float64 `json:"latitude"`
-			Longitude float64 `json:"longitude"`
-		}{Latitude: 39.0, Longitude: -77.0}, LocationName: "DC"},
-		User: UserInfo{UserID: "user_test"},
-	}
-	repo.moments[m1.MomentID] = m1
-	repo.moments[m2.MomentID] = m2
-
-	// reference point near DC (39.0, -77.0)
-	req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(
-		`{"radius":500000,"sort_by":"distance","reference_point":{"latitude":39.0,"longitude":-77.0}}`))
-	req = req.WithContext(ctx)
-	rr := httptest.NewRecorder()
-	handler.Search(rr, req)
-	var resp struct {
-		Code httpx.Code       `json:"code"`
-		Data PaginatedMoments `json:"data"`
-	}
-	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	if resp.Code != 0 {
-		t.Fatalf("expected code 0, got %d", resp.Code)
-	}
-	if len(resp.Data.Items) != 2 {
-		t.Fatalf("expected 2 items, got %d", len(resp.Data.Items))
-	}
-	// nearest first: near (DC) then far (NYC)
-	if resp.Data.Items[0].MomentID != "moment_near" || resp.Data.Items[1].MomentID != "moment_far" {
-		var order []string
-		for _, it := range resp.Data.Items {
-			order = append(order, it.MomentID)
-		}
-		t.Fatalf("expected [moment_near, moment_far], got %v", order)
 	}
 }
 
@@ -600,7 +545,7 @@ func TestSearchSortByPopular(t *testing.T) {
 	repo.moments[m3.MomentID] = m3
 
 	req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(
-		`{"keyword":"","radius":50000,"sort_by":"popular","reference_point":{"latitude":0,"longitude":0}}`))
+		`{"keyword":"","sort_by":"popular"}`))
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.Search(rr, req)
@@ -918,7 +863,7 @@ func TestMomentHandlerSearchRejectsNoCriteria(t *testing.T) {
 
 func TestMomentHandlerSearchRejectsInvalidSortBy(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
-	req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(`{"keyword":"test","sort_by":"bogus","reference_point":{"latitude":0,"longitude":0}}`))
+	req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(`{"keyword":"test","sort_by":"bogus"}`))
 	rr := httptest.NewRecorder()
 	handler.Search(rr, req)
 	assertMomentCode(t, rr, httpx.CodeInvalidRequest)
@@ -937,7 +882,7 @@ func TestMomentHandlerSearchReturnsSuccess(t *testing.T) {
 		t.Fatalf("create moment: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(`{"keyword":"findme","reference_point":{"latitude":1,"longitude":2}}`))
+	req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(`{"keyword":"findme"}`))
 	rr := httptest.NewRecorder()
 	handler.Search(rr, req)
 
@@ -984,7 +929,7 @@ func (r *errorRepo) Get(context.Context, string) (MomentItem, bool, error) {
 func (r *errorRepo) Search(context.Context, SearchMomentsRequest) (PaginatedMoments, error) {
 	return PaginatedMoments{}, nil
 }
-func (r *errorRepo) Update(context.Context, string, EditMomentRequest) error {
+func (r *errorRepo) Update(context.Context, string, UpdateMomentRequest) error {
 	return errors.New("db error")
 }
 func (r *errorRepo) Delete(context.Context, string) error { return nil }

@@ -6,10 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"hotspot/backend-go/internal/platform/actor"
-	"hotspot/backend-go/internal/platform/appconfig"
-	"hotspot/backend-go/internal/platform/config"
-	"hotspot/backend-go/internal/platform/geo"
 )
 
 // momentsReactionAggregator records AggregateMoments calls and returns canned
@@ -28,16 +24,6 @@ func (a *momentsReactionAggregator) AggregateMoments(_ context.Context, momentID
 		return nil, a.err
 	}
 	return a.result, nil
-}
-
-// momentsLocationProvider serves the reference_point fallback level 2.
-type momentsLocationProvider struct {
-	point geo.Point
-	found bool
-}
-
-func (p momentsLocationProvider) RecentLocation(_ context.Context, _ string) (geo.Point, bool) {
-	return p.point, p.found
 }
 
 // momentsImageResolver resolves file_ids to assets and presigns keys.
@@ -154,149 +140,3 @@ func TestServiceFillReactionsNilAggregatorIsNoop(t *testing.T) {
 	}
 }
 
-// --- resolveReferencePoint 回退链(用户位置 → default_location → geo 常量) ---
-
-func TestMomentsResolveReferencePointUserRecentLocation(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{})
-	svc.SetLocationProvider(momentsLocationProvider{point: geo.Point{Latitude: 3.5, Longitude: 4.5}, found: true})
-
-	pt := svc.resolveReferencePoint(momentCtx("u1"))
-	if pt.Latitude != 3.5 || pt.Longitude != 4.5 {
-		t.Fatalf("expected user recent location, got %+v", pt)
-	}
-}
-
-func TestMomentsResolveReferencePointDefaultLocation(t *testing.T) {
-	source := appconfig.NewStaticSource(config.Config{})
-	_, _ = source.Update(context.Background(), func(cfg appconfig.AppConfig) appconfig.AppConfig {
-		cfg.Defaults.DefaultLocation.Point = appconfig.GeoPoint{Latitude: 5.5, Longitude: 6.5}
-		return cfg
-	})
-	svc := NewServiceWithDepsAndImagesAndConfig(&stubMomentRepo{}, nil, nil, nil, source, nil)
-
-	pt := svc.resolveReferencePoint(momentCtx("u1"))
-	if pt.Latitude != 5.5 || pt.Longitude != 6.5 {
-		t.Fatalf("expected appConfig default_location, got %+v", pt)
-	}
-}
-
-func TestMomentsResolveReferencePointGeoFallback(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{}) // 无 appConfig
-
-	pt := svc.resolveReferencePoint(momentCtx("u1"))
-	if pt.Latitude != geo.DefaultFallbackLatitude || pt.Longitude != geo.DefaultFallbackLongitude {
-		t.Fatalf("expected geo default fallback, got %+v", pt)
-	}
-}
-
-// --- validateImageOwnership(Create 路径) ---
-
-func TestServiceCreateValidatesImageOwnership(t *testing.T) {
-	resolver := momentsImageResolver{assets: map[string]ImageAsset{
-		"f1": {FileID: "f1", StorageKey: "sk/1"},
-	}}
-	svc := NewServiceWithDepsAndImagesAndConfig(&stubMomentRepo{}, nil, nil, resolver, nil, nil)
-
-	_, err := svc.Create(momentCtx("u1"), CreateMomentRequest{Description: "hi", ImageFileIDs: []string{"f1"}})
-	if err != nil {
-		t.Fatalf("owned image must pass ownership validation: %v", err)
-	}
-}
-
-func TestServiceCreateRejectsUnownedImages(t *testing.T) {
-	resolver := momentsImageResolver{err: errors.New("not owned")}
-	svc := NewServiceWithDepsAndImagesAndConfig(&stubMomentRepo{}, nil, nil, resolver, nil, nil)
-
-	_, err := svc.Create(momentCtx("u1"), CreateMomentRequest{Description: "hi", ImageFileIDs: []string{"f1"}})
-	if !errors.Is(err, ErrImagesNotOwned) {
-		t.Fatalf("expected ErrImagesNotOwned, got %v", err)
-	}
-}
-
-func TestServiceCreateAcceptsEmptyImageList(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{})
-	_, err := svc.Create(momentCtx("u1"), CreateMomentRequest{Description: "no images"})
-	if err != nil {
-		t.Fatalf("empty image list must pass: %v", err)
-	}
-}
-
-func TestServiceCreateRejectsTooManyImages(t *testing.T) {
-	source := appconfig.NewStaticSource(config.Config{})
-	_, _ = source.Update(context.Background(), func(cfg appconfig.AppConfig) appconfig.AppConfig {
-		cfg.Limits.MaxMomentImages = 1
-		return cfg
-	})
-	svc := NewServiceWithDepsAndImagesAndConfig(&stubMomentRepo{}, nil, nil, nil, source, nil)
-
-	_, err := svc.Create(momentCtx("u1"), CreateMomentRequest{Description: "hi", ImageFileIDs: []string{"f1", "f2"}})
-	if !errors.Is(err, ErrTooManyImages) {
-		t.Fatalf("expected ErrTooManyImages, got %v", err)
-	}
-}
-
-// --- buildMomentActor / actorFromInfo ---
-
-type stubActorProvider struct {
-	infos map[string]actor.Info
-	err   error
-}
-
-func (s stubActorProvider) GetActorInfo(_ context.Context, userID string) (actor.Info, error) {
-	if s.err != nil {
-		return actor.Info{}, s.err
-	}
-	if info, ok := s.infos[userID]; ok {
-		return info, nil
-	}
-	return actor.Info{UserID: userID, Nickname: userID}, nil
-}
-
-func TestServiceBuildMomentActorWithProvider(t *testing.T) {
-	svc := NewServiceWithDeps(&stubMomentRepo{}, nil, stubActorProvider{infos: map[string]actor.Info{
-		"u1": {UserID: "u1", Nickname: "Alice", AvatarURL: "https://a.example/alice.png"},
-	}})
-
-	a, err := svc.buildMomentActor(context.Background(), "u1")
-	if err != nil {
-		t.Fatalf("buildMomentActor: %v", err)
-	}
-	if a.UserID != "u1" || a.Nickname != "Alice" || a.AvatarURL != "https://a.example/alice.png" {
-		t.Fatalf("unexpected actor: %+v", a)
-	}
-}
-
-func TestServiceBuildMomentActorProviderError(t *testing.T) {
-	svc := NewServiceWithDeps(&stubMomentRepo{}, nil, stubActorProvider{err: errors.New("boom")})
-
-	_, err := svc.buildMomentActor(context.Background(), "u1")
-	if err == nil {
-		t.Fatal("expected error from provider")
-	}
-}
-
-func TestServiceBuildMomentActorFallback(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{}) // users == nil
-
-	a, err := svc.buildMomentActor(context.Background(), "u1")
-	if err != nil {
-		t.Fatalf("fallback actor must not error: %v", err)
-	}
-	if a.UserID != "u1" || a.Nickname != "u1" {
-		t.Fatalf("expected fallback actor, got %+v", a)
-	}
-}
-
-func TestActorFromInfo(t *testing.T) {
-	withAvatar := actorFromInfo(actor.Info{UserID: "u1", Nickname: "Alice", AvatarURL: "https://a"})
-	if withAvatar.AvatarURL != "https://a" {
-		t.Fatalf("avatar_url must be present: %+v", withAvatar)
-	}
-	withoutAvatar := actorFromInfo(actor.Info{UserID: "u2", Nickname: "Bob"})
-	if withoutAvatar.AvatarURL != "" {
-		t.Fatalf("avatar_url must be omitted when empty: %+v", withoutAvatar)
-	}
-	if withoutAvatar.UserID != "u2" || withoutAvatar.Nickname != "Bob" {
-		t.Fatalf("unexpected actor: %+v", withoutAvatar)
-	}
-}

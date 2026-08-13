@@ -97,13 +97,13 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteInvalidRequest(w, r, "Search", "参数错误")
 		return
 	}
-	if req.Keyword == nil && req.Tag == nil && req.Radius == nil {
+	if req.Keyword == nil && req.Tag == nil {
 		httpx.WriteInvalidRequest(w, r, "Search", "参数错误")
 		return
 	}
 	if req.SortBy != "" {
 		switch req.SortBy {
-		case "relevance", "distance", "newest", "popular":
+		case "relevance", "newest", "popular":
 		default:
 			httpx.WriteInvalidRequest(w, r, "Search", "参数错误")
 			return
@@ -118,7 +118,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	var req EditMomentRequest
+	var req UpdateMomentRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MomentID == "" {
 		httpx.WriteInvalidRequest(w, r, "Update", "参数错误")
 		return

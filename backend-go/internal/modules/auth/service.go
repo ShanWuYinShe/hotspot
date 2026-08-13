@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -178,9 +179,9 @@ func (s *Service) CheckStatus(ctx context.Context) AuthStatus {
 	}
 	expiresAt, ok := platformauth.AccessExpiryFromContext(ctx)
 	if !ok {
-		return AuthStatus{IsValid: true}
+		return AuthStatus{IsValid: true, UserID: principal.UserID}
 	}
-	return AuthStatus{IsValid: true, ExpiresAt: expiresAt.UTC().Format(time.RFC3339)}
+	return AuthStatus{IsValid: true, UserID: principal.UserID, ExpiresAt: expiresAt.UTC().Format(time.RFC3339)}
 }
 
 func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
@@ -348,6 +349,16 @@ func (s *Service) ListSessions(ctx context.Context) SessionList {
 		return SessionList{Items: []SessionItem{}}
 	}
 	sessions := s.auth.ListSessions(ctx, principal.UserID, principal.SessionID)
+	// 排序（spec auth.md → list_sessions）：当前会话置顶，其余按 last_active_at 倒序
+	sort.SliceStable(sessions, func(i, j int) bool {
+		if sessions[i].SessionID == principal.SessionID {
+			return true
+		}
+		if sessions[j].SessionID == principal.SessionID {
+			return false
+		}
+		return sessions[i].LastActiveAt.After(sessions[j].LastActiveAt)
+	})
 	items := make([]SessionItem, 0, len(sessions))
 	for _, session := range sessions {
 		items = append(items, SessionItem{

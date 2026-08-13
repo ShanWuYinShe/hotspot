@@ -100,10 +100,15 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 	if !ok {
 		return PaginatedProfiles{}, persistence.ErrNotImplemented
 	}
+	// radius 语义（spec user.md → users/search）：显式提供才按半径过滤；缺省不过滤（全球匹配）
+	radiusFilter := req.Radius != nil && *req.Radius > 0
 	radius := normalizeSearchRadius(req.Radius)
 	refPt := geo.Point{Latitude: req.ReferencePoint.Latitude, Longitude: req.ReferencePoint.Longitude}
-	bounds := geo.BoundsAround(refPt, radius)
-	sql, args := buildSearchUsersQuery(bounds, req.Keyword)
+	var bounds geo.Bounds
+	if radiusFilter {
+		bounds = geo.BoundsAround(refPt, radius)
+	}
+	sql, args := buildSearchUsersQuery(bounds, req.Keyword, radiusFilter)
 	if sql == "" {
 		return PaginatedProfiles{}, nil
 	}
@@ -148,7 +153,7 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 			continue
 		}
 		distance, bearing, within := plan.Match(geo.Point{Latitude: profile.Location.Point.Latitude, Longitude: profile.Location.Point.Longitude})
-		if !within {
+		if radiusFilter && !within {
 			continue
 		}
 		candidates = append(candidates, searchProfileCandidate{Profile: profile, Distance: distance, BearingDegrees: bearing, SortBy: sortBy, RelevanceScore: searchRelevanceScore(profile, keyword, tag)})
@@ -157,15 +162,19 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 	return paginateSearchCandidates(candidates, req.Pagination), nil
 }
 
-func buildSearchUsersQuery(bounds geo.Bounds, keyword string) (string, []any) {
-	mins, maxs := geo.CoveringArrays(bounds)
-	if len(mins) == 0 {
-		return "", nil
-	}
+func buildSearchUsersQuery(bounds geo.Bounds, keyword string, radiusFilter bool) (string, []any) {
 	args := make([]any, 0, 4)
 	var builder strings.Builder
-	builder.WriteString(`SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), u.user_type, COALESCE(u.bio, ''), COALESCE(u.gender, ''), COALESCE(u.email, ''), COALESCE(u.phone, ''), u.location_name, u.latitude, u.longitude, u.presence_status, u.last_online, u.created_at, u.is_deleted FROM users u JOIN user_settings us ON us.user_id = u.user_id WHERE us.searchable = TRUE AND u.is_deleted = FALSE AND us.location_visible = TRUE AND us.privacy_level = 'public' AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi) WHERE u.s2_cell_id BETWEEN t.lo AND t.hi)`)
-	args = append(args, mins, maxs)
+	builder.WriteString(`SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), u.user_type, COALESCE(u.bio, ''), COALESCE(u.gender, ''), COALESCE(u.email, ''), COALESCE(u.phone, ''), u.location_name, u.latitude, u.longitude, u.presence_status, u.last_online, u.created_at, u.is_deleted FROM users u JOIN user_settings us ON us.user_id = u.user_id WHERE us.searchable = TRUE AND u.is_deleted = FALSE AND us.privacy_level = 'public'`)
+	if radiusFilter {
+		mins, maxs := geo.CoveringArrays(bounds)
+		if len(mins) == 0 {
+			return "", nil
+		}
+		// location_searchable 控制位置/半径维度（spec user.md → searchable 系列开关）
+		args = append(args, mins, maxs)
+		builder.WriteString(` AND us.location_searchable = TRUE AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi) WHERE u.s2_cell_id BETWEEN t.lo AND t.hi)`)
+	}
 	if keyword != "" {
 		args = append(args, keyword)
 		builder.WriteString(fmt.Sprintf(" AND ($%d = '' OR (us.nickname_searchable = TRUE AND u.nickname ILIKE '%%' || $%d || '%%') OR u.bio ILIKE '%%' || $%d || '%%')", len(args), len(args), len(args)))

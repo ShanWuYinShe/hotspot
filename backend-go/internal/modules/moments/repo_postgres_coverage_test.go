@@ -125,7 +125,7 @@ func TestPostgresMomentUpdateBranches(t *testing.T) {
 
 	// 纯文本更新（无 tags/mentions/images）
 	desc := "new"
-	req := EditMomentRequest{MomentID: "m1", Description: &desc}
+	req := UpdateMomentRequest{MomentID: "m1", Description: &desc}
 	if err := repo.Update(ctx, "u1", req); err != nil {
 		t.Fatalf("update text: %v", err)
 	}

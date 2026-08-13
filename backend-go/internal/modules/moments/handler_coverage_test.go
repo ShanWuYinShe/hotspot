@@ -33,7 +33,7 @@ func (r *momentErrRepo) Get(ctx context.Context, momentID string) (MomentItem, b
 func (r *momentErrRepo) Search(ctx context.Context, req SearchMomentsRequest) (PaginatedMoments, error) {
 	return r.repo.Search(ctx, req)
 }
-func (r *momentErrRepo) Update(ctx context.Context, userID string, req EditMomentRequest) error {
+func (r *momentErrRepo) Update(ctx context.Context, userID string, req UpdateMomentRequest) error {
 	return r.repo.Update(ctx, userID, req)
 }
 func (r *momentErrRepo) Delete(ctx context.Context, momentID string) error {

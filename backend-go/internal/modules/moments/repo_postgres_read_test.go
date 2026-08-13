@@ -181,8 +181,9 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 	if b.queryErr != nil {
 		return nil, b.queryErr
 	}
-	if strings.Contains(query, "FROM moments") && strings.Contains(query, "privacy_level =") && strings.Contains(query, "unnest($1::bigint[], $2::bigint[])") {
-		argIndex := 2
+	if strings.Contains(query, "FROM moments") && strings.Contains(query, "privacy_level =") {
+		// 全球搜索（spec moment.md → moments/search 收口）：无 S2 半径子句，keyword 从 $1 起
+		argIndex := 0
 		var keywordStr string
 		if len(args) > argIndex {
 			if s, ok := args[argIndex].(string); ok {
@@ -567,10 +568,9 @@ func TestPostgresRepositorySearchSortByPopularReturnsOlderPopularMoments(t *test
 
 	keyword := "post"
 	result, err := repo.Search(context.Background(), SearchMomentsRequest{
-		Keyword:        &keyword,
-		SortBy:         "popular",
-		Pagination:     &PaginationParams{Limit: 1},
-		ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0},
+		Keyword:    &keyword,
+		SortBy:     "popular",
+		Pagination: &PaginationParams{Limit: 1},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -580,50 +580,6 @@ func TestPostgresRepositorySearchSortByPopularReturnsOlderPopularMoments(t *test
 	}
 	if result.Items[0].MomentID != "moment_old_popular" {
 		t.Fatalf("expected most popular moment (moment_old_popular), got %s — older popular moment was excluded by newest-first limit", result.Items[0].MomentID)
-	}
-}
-
-func TestPostgresRepositorySearchSortByDistanceReturnsCloserOlderMoments(t *testing.T) {
-	// Regression test: sort_by=distance must return the closest moment even if it's
-	// older than the LIMIT window of newest-first ordering.
-	backend := newBackendStub()
-	// newest but far
-	backend.moments["moment_new_far"] = MomentItem{
-		MomentID: "moment_new_far", Description: "far away", CreatedAt: "2026-04-15T00:00:00Z",
-		LikesCount: 0, CommentsCount: 0, SharesCount: 0,
-		User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public",
-		Location: Location{Point: struct {
-			Latitude  float64 `json:"latitude"`
-			Longitude float64 `json:"longitude"`
-		}{Latitude: 40.0, Longitude: 116.0}},
-	}
-	// older but very close
-	backend.moments["moment_old_close"] = MomentItem{
-		MomentID: "moment_old_close", Description: "nearby", CreatedAt: "2026-04-01T00:00:00Z",
-		LikesCount: 0, CommentsCount: 0, SharesCount: 0,
-		User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public",
-		Location: Location{Point: struct {
-			Latitude  float64 `json:"latitude"`
-			Longitude float64 `json:"longitude"`
-		}{Latitude: 35.001, Longitude: 112.001}},
-	}
-	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
-	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory)
-
-	result, err := repo.Search(context.Background(), SearchMomentsRequest{
-		SortBy:         "distance",
-		Pagination:     &PaginationParams{Limit: 1},
-		ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0},
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(result.Items) != 1 {
-		t.Fatalf("expected 1 item, got %d", len(result.Items))
-	}
-	if result.Items[0].MomentID != "moment_old_close" {
-		t.Fatalf("expected closest moment (moment_old_close), got %s — closer older moment was excluded by newest-first limit", result.Items[0].MomentID)
 	}
 }
 
@@ -648,9 +604,8 @@ func TestPostgresRepositorySearchSortByNewestAppliesLimit(t *testing.T) {
 	repo := NewPostgresRepository(factory)
 
 	result, err := repo.Search(context.Background(), SearchMomentsRequest{
-		SortBy:         "newest",
-		Pagination:     &PaginationParams{Limit: 3},
-		ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0},
+		SortBy:     "newest",
+		Pagination: &PaginationParams{Limit: 3},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

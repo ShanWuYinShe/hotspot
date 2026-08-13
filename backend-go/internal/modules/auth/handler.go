@@ -56,7 +56,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 				return errorResponse[AuthTokenPairWeb](apiErrorFrom(err))
 			}
 			platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour)
-			return httpx.Success(AuthTokenPairWeb{})
+			return httpx.Success(AuthTokenPairWeb{ClientType: "web"})
 		})
 		return
 	}
@@ -124,7 +124,7 @@ func (h *Handler) Guest(w http.ResponseWriter, r *http.Request) {
 				return errorResponse[AuthTokenPairWeb](apiErrorFrom(err))
 			}
 			platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour)
-			return httpx.Success(AuthTokenPairWeb{})
+			return httpx.Success(AuthTokenPairWeb{ClientType: "web"})
 		})
 		return
 	}
@@ -223,10 +223,11 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Success(AuthTokenPairWeb{}))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Success(AuthTokenPairWeb{ClientType: "web"}))
 		return
 	}
-	result, err := h.service.ResetPassword(r.Context(), req, sessionMetaFromRequest(r, req.ClientType, resolveDeviceID(r, "")))
+	// App 端：device_id 来自请求体（spec auth.md → reset_password，自动登录会话纳入单设备单会话模型）
+	result, err := h.service.ResetPassword(r.Context(), req, sessionMetaFromRequest(r, req.ClientType, resolveDeviceID(r, req.DeviceID)))
 	if err != nil {
 		httpx.WriteJSON(w, http.StatusOK, errorResponse[AuthTokenPairApp](apiErrorFrom(err)))
 		return
@@ -316,7 +317,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) writeAuthSuccess(w http.ResponseWriter, clientType ClientType, result platformauth.AuthResult) {
 	if clientType == ClientTypeWeb {
 		platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Success(AuthTokenPairWeb{}))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Success(AuthTokenPairWeb{ClientType: "web"}))
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, authSuccessApp(result))
@@ -324,6 +325,7 @@ func (h *Handler) writeAuthSuccess(w http.ResponseWriter, clientType ClientType,
 
 func authSuccessApp(result platformauth.AuthResult) httpx.ApiResponse[AuthTokenPairApp] {
 	return httpx.Success(AuthTokenPairApp{
+		ClientType:            "app",
 		UserID:                result.Principal.UserID,
 		AccessToken:           result.AccessToken,
 		RefreshToken:          result.RefreshToken,

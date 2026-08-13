@@ -332,27 +332,32 @@ func TestFollowBlockRemarkAndOpenTheDoor(t *testing.T) {
 	openReq = openReq.WithContext(ctx)
 	openRR := httptest.NewRecorder()
 	handler.OpenTheDoor(openRR, openReq)
+	// spec user.md → open_the_door：响应为 UserProfileBundle（user 嵌套 UserItem），
+	// include_recent_moments 缺省时不返回 recent_moments
 	var openResp struct {
-		Code httpx.Code `json:"code"`
-		Data UserItem   `json:"data"`
+		Code httpx.Code        `json:"code"`
+		Data UserProfileBundle `json:"data"`
 	}
 	if err := json.NewDecoder(openRR.Body).Decode(&openResp); err != nil {
 		t.Fatalf("decode open response: %v", err)
 	}
-	if openResp.Code != 0 || openResp.Data.User.UserID != "user_bob" || openResp.Data.Relation == nil || !openResp.Data.Relation.IsBlocked {
+	if openResp.Code != 0 || openResp.Data.User.User.UserID != "user_bob" || openResp.Data.User.Relation == nil || !openResp.Data.User.Relation.IsBlocked {
 		t.Fatalf("unexpected open response: %#v", openResp)
 	}
-	if openResp.Data.SocialContext == nil || openResp.Data.SocialContext.MutualFriendsCount != 1 {
-		t.Fatalf("unexpected social context: %#v", openResp.Data.SocialContext)
+	if openResp.Data.User.SocialContext == nil || openResp.Data.User.SocialContext.MutualFriendsCount != 1 {
+		t.Fatalf("unexpected social context: %#v", openResp.Data.User.SocialContext)
 	}
-	if len(openResp.Data.SocialContext.MutualFriendsPreview) != 1 || openResp.Data.SocialContext.MutualFriendsPreview[0].UserID != "user_charlie" {
-		t.Fatalf("unexpected mutual friends preview: %#v", openResp.Data.SocialContext)
+	if len(openResp.Data.User.SocialContext.MutualFriendsPreview) != 1 || openResp.Data.User.SocialContext.MutualFriendsPreview[0].UserID != "user_charlie" {
+		t.Fatalf("unexpected mutual friends preview: %#v", openResp.Data.User.SocialContext)
 	}
-	if openResp.Data.SocialContext.CommonGroupsCount == nil || *openResp.Data.SocialContext.CommonGroupsCount != 1 {
-		t.Fatalf("unexpected common groups count: %#v", openResp.Data.SocialContext)
+	if openResp.Data.RecentMoments.Items != nil {
+		t.Fatalf("recent_moments should be omitted when include_recent_moments=false: %#v", openResp.Data.RecentMoments)
 	}
-	if len(openResp.Data.SocialContext.CommonTags) != 1 || openResp.Data.SocialContext.CommonTags[0] != "music" {
-		t.Fatalf("unexpected common tags: %#v", openResp.Data.SocialContext)
+	if openResp.Data.User.SocialContext.CommonGroupsCount == nil || *openResp.Data.User.SocialContext.CommonGroupsCount != 1 {
+		t.Fatalf("unexpected common groups count: %#v", openResp.Data.User.SocialContext)
+	}
+	if len(openResp.Data.User.SocialContext.CommonTags) != 1 || openResp.Data.User.SocialContext.CommonTags[0] != "music" {
+		t.Fatalf("unexpected common tags: %#v", openResp.Data.User.SocialContext)
 	}
 
 	notificationRepo := notify.NewInMemoryRepository()
@@ -640,13 +645,13 @@ func TestOpenTheDoorCountsNonSearchableCommonGroups(t *testing.T) {
 	openRR := httptest.NewRecorder()
 	handler.OpenTheDoor(openRR, openReq)
 	var openResp struct {
-		Code httpx.Code `json:"code"`
-		Data UserItem   `json:"data"`
+		Code httpx.Code        `json:"code"`
+		Data UserProfileBundle `json:"data"`
 	}
 	if err := json.NewDecoder(openRR.Body).Decode(&openResp); err != nil {
 		t.Fatalf("decode open response: %v", err)
 	}
-	if openResp.Code != 0 || openResp.Data.SocialContext == nil || openResp.Data.SocialContext.CommonGroupsCount == nil || *openResp.Data.SocialContext.CommonGroupsCount != 1 {
+	if openResp.Code != 0 || openResp.Data.User.SocialContext == nil || openResp.Data.User.SocialContext.CommonGroupsCount == nil || *openResp.Data.User.SocialContext.CommonGroupsCount != 1 {
 		t.Fatalf("unexpected open response: %#v", openResp)
 	}
 }
@@ -1366,7 +1371,7 @@ func TestHandlerUpgradeRejectsInvalidLoginID(t *testing.T) {
 	}
 }
 
-func TestHandlerUpgradeAcceptsValidEmail(t *testing.T) {
+func TestHandlerUpgradeRejectsEmailWithoutVerification(t *testing.T) {
 	service := NewService()
 	handler := NewHandler(service)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
@@ -1376,13 +1381,14 @@ func TestHandlerUpgradeAcceptsValidEmail(t *testing.T) {
 		t.Fatalf("put profile: %v", err)
 	}
 
+	// 契约（spec user.md → upgrade）：手机号/邮箱需验证码服务校验所有权，接入前仅支持用户名 → 10000
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"login_id":"alice@example.com","password":"secret"}`)).WithContext(ctx)
 	handler.Upgrade(rr, req)
-	assertUserCode(t, rr, 0)
+	assertUserCode(t, rr, httpx.CodeInvalidRequest)
 }
 
-func TestHandlerUpgradeAcceptsValidPhone(t *testing.T) {
+func TestHandlerUpgradeRejectsPhoneWithoutVerification(t *testing.T) {
 	service := NewService()
 	handler := NewHandler(service)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
@@ -1392,10 +1398,11 @@ func TestHandlerUpgradeAcceptsValidPhone(t *testing.T) {
 		t.Fatalf("put profile: %v", err)
 	}
 
+	// 契约（spec user.md → upgrade）：手机号/邮箱需验证码服务校验所有权，接入前仅支持用户名 → 10000
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"login_id":"13800138000","password":"secret"}`)).WithContext(ctx)
 	handler.Upgrade(rr, req)
-	assertUserCode(t, rr, 0)
+	assertUserCode(t, rr, httpx.CodeInvalidRequest)
 }
 
 func TestHandlerUpdateLocationRejectsEmptyLocationName(t *testing.T) {
