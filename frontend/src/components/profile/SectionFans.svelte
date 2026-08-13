@@ -13,7 +13,7 @@
 
 	let fanFilter = $state<'all' | 'mutual' | 'pending'>('all');
 
-	const { followers } = useRelationships();
+	const { followers, loading } = useRelationships();
 	let followedBack = $state<Set<string>>(new Set(followers.filter((f) => f.isMutual).map((f) => f.id)));
 
 	const toggleFollow = (id: string) => {
@@ -59,6 +59,7 @@
 	emptyTitle="还没有粉丝"
 	emptyDescription="分享你的瞬间，让更多人发现你。"
 	emptyIcon={UserPlus}
+	loading={loading}
 	items={filtered}
 >
 	{#snippet headerExtra()}

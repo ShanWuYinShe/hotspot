@@ -11,7 +11,7 @@
 
 	let searchQ = $state('');
 
-	const { groups } = useMyGroups();
+	const { groups, loading } = useMyGroups();
 	const filtered = $derived(groups.filter((g) => searchQ === '' || g.name.toLowerCase().includes(searchQ.toLowerCase())));
 	const totalOnline = $derived(groups.reduce((sum, g) => sum + (g.online ?? 0), 0));
 </script>
@@ -30,7 +30,13 @@
 </div>
 
 <!-- 横向媒体卡网格（对齐 Figma：1/2 列，min-h 148px，左 banner + 右详情） -->
-<div class="grid grid-cols-1 gap-3 pb-6 sm:grid-cols-2">
+{#if loading}
+	<div class="flex flex-col items-center gap-3 py-16">
+		<div class="spinner size-7"></div>
+		<p class="text-text-secondary text-sm">加载我的群组…</p>
+	</div>
+{:else if filtered.length > 0}
+	<div class="grid grid-cols-1 gap-3 pb-6 sm:grid-cols-2">
 		{#each filtered as g (g.id)}
 			<button
 				type="button"
@@ -85,9 +91,9 @@
 				</div>
 			</button>
 		{/each}
-	</div>
+		</div>
 
-	{#if filtered.length === 0}
+	{:else}
 		<div class="flex flex-col items-center justify-center gap-2 py-16">
 			<Search class="text-text-secondary size-5.5"  strokeWidth={1.5} />
 			<p class="text-sm text-text-secondary">没有找到匹配的群组</p>

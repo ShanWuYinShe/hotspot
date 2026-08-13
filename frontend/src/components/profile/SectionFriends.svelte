@@ -16,7 +16,7 @@
 	let searchQ = $state('');
 	let activeFilter = $state<'all' | 'online' | 'offline'>('all');
 
-	const { friends } = useRelationships();
+	const { friends, loading } = useRelationships();
 
 	const filtered = $derived(
 		friends
@@ -45,6 +45,7 @@
 	emptyTitle="还没有好友"
 	emptyDescription="去附近的人里认识新朋友。"
 	emptyIcon={Users}
+	loading={loading}
 	items={filtered}
 >
 	{#snippet children(f: MappedFriend)}

@@ -29,6 +29,7 @@
 		emptyIcon,
 		headerExtra,
 		embedded = false,
+		loading = false,
 		items,
 		children
 	}: {
@@ -47,6 +48,8 @@
 		emptyIcon: Component;
 		headerExtra?: Snippet;
 		embedded?: boolean;
+		/** 数据加载中：列表区显示统一 spinner（加载完成前不渲染空态，避免误报） */
+		loading?: boolean;
 		items: T[];
 		children: Snippet<[T]>;
 	} = $props();
@@ -110,7 +113,12 @@
 	{#if embedded}
 		<!-- Card grid（relationships 聚合页 embedded 模式） -->
 		<div class="grid w-full grid-cols-1 gap-4 pb-8 md:grid-cols-2 xl:grid-cols-3">
-			{#if items.length === 0}
+			{#if loading}
+				<div class="col-span-full flex flex-col items-center gap-3 py-16">
+					<div class="spinner size-7"></div>
+					<p class="text-text-secondary text-sm">加载中…</p>
+				</div>
+			{:else if items.length === 0}
 				<div class="col-span-full">
 					<EmptyState title={emptyTitle} description={emptyDescription}>
 						{#snippet icon()}
@@ -127,7 +135,12 @@
 	{:else}
 		<!-- Bordered list（独立分区页） -->
 		<div class="pb-6">
-			{#if items.length === 0}
+			{#if loading}
+				<div class="flex flex-col items-center gap-3 py-16">
+					<div class="spinner size-7"></div>
+					<p class="text-text-secondary text-sm">加载中…</p>
+				</div>
+			{:else if items.length === 0}
 				<EmptyState title={emptyTitle} description={emptyDescription}>
 					{#snippet icon()}
 						<emptyIcon size={18}></emptyIcon>

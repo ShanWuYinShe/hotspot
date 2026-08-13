@@ -14,7 +14,7 @@
 	let followingFilter = $state<'all' | 'mutual'>('all');
 	let unfollowedIds = $state<Set<string>>(new Set());
 
-	const { following } = useRelationships();
+	const { following, loading } = useRelationships();
 
 	const toggleUnfollow = (id: string) => {
 		const next = new Set(unfollowedIds);
@@ -43,6 +43,7 @@
 	emptyTitle="还没有关注"
 	emptyDescription="去发现附近的人，找到有趣的创作者。"
 	emptyIcon={Heart}
+	loading={loading}
 	items={filtered}
 >
 	{#snippet children(f)}
