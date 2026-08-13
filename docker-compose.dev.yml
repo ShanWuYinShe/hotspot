@@ -83,6 +83,7 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-dev-secret-change-me}
       APP_NAME: hotspot-backend-go
+      TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
       S3_ENDPOINT: http://seaweedfs:8333
       S3_PUBLIC_ENDPOINT: http://localhost:${NGINX_PORT:-8888}/s3
       S3_PUBLIC_FORCE_PATH_STYLE: "true"

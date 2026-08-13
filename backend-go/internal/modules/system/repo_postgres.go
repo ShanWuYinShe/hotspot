@@ -3,6 +3,7 @@ package system
 import (
 	"context"
 	"errors"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idgen"
 	"time"
 
@@ -57,40 +58,34 @@ func (r *PostgresRepository) GetMeta(ctx context.Context) ApiVersionMeta {
 }
 
 // Health probes the dependencies the service actually depends on (Postgres and,
-// when configured, Redis) and reports degraded status if any fails its liveness
-// check. Each probe runs under a 2s timeout so a hung dependency can't stall
-// the endpoint. The HTTP-layer response stays 200 so callers can read the body
-// to distinguish healthy/degraded/unhealthy.
-//
-// TODO: per spec, code=0 covers healthy and degraded, while code=httpx.CodeInternalUnavailable should
-// be reserved for truly unhealthy (e.g. database connection pool exhausted,
-// all replicas unreachable). Currently all failure modes are reported as
-// degraded (code=0); a future revision should distinguish transient vs. fatal
-// failures and return code=httpx.CodeInternalUnavailable for the latter.
+// when configured, Redis) and reports status per spec: code=0 covers healthy
+// and degraded; code=10600 (CodeInternalUnavailable) means unhealthy. Postgres
+// is a hard dependency — without it the service cannot serve any request, so a
+// ping failure is unhealthy. Redis is a soft dependency — its absence degrades
+// WebSocket fanout and resume but the service stays usable, so it is degraded.
+// Each probe runs under a 2s timeout so a hung dependency can't stall the
+// endpoint. The HTTP-layer response stays 200 so callers read the body to
+// distinguish healthy/degraded/unhealthy.
 func (r *PostgresRepository) Health(ctx context.Context) (int, string, *HealthStatus) {
 	status := SystemHealthHealthy
-	dbOK, redisOK := true, true
 
 	if r.factory != nil && r.factory.DB != nil {
 		probeCtx, cancel := context.WithTimeout(ctx, healthProbeTimeout)
-		if err := r.factory.DB.Ping(probeCtx); err != nil {
-			status = SystemHealthDegraded
-			dbOK = false
-			observability.L().Warn("health check: postgres ping failed", "error", err)
-		}
+		err := r.factory.DB.Ping(probeCtx)
 		cancel()
+		if err != nil {
+			observability.L().Warn("health check: postgres ping failed", "error", err)
+			return int(httpx.CodeInternalUnavailable), "数据库不可用", nil
+		}
 	}
 	if r.redisPinger != nil {
 		probeCtx, cancel := context.WithTimeout(ctx, healthProbeTimeout)
 		if err := r.redisPinger(probeCtx); err != nil {
 			status = SystemHealthDegraded
-			redisOK = false
 			observability.L().Warn("health check: redis ping failed", "error", err)
 		}
 		cancel()
 	}
-	_ = dbOK
-	_ = redisOK
 	return 0, "", &HealthStatus{Status: status, Timestamp: time.Now().UTC().Format(time.RFC3339)}
 }
 
