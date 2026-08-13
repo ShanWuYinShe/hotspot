@@ -106,25 +106,30 @@ export struct EmptyState {
 @Component
 export struct LoadingMoreIndicator {
   @Prop message: string = '加载更多...';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
 
   build() {
     Row({ space: DesignConstants.SPACING.SM }) {
       LoadingProgress()
         .width(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
         .height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
-        .color(AppThemeManager.getSafeCurrentPalette().accentBackground)
+        .color(this.getPalette().accentBackground)
         .accessibilityText('正在加载')
       Text(this.message)
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor(AppThemeManager.getSafeCurrentPalette().textSecondary)
+        .fontColor(this.getPalette().textSecondary)
     }
     .width('100%')
     .justifyContent(FlexAlign.Center)
     .padding(DesignConstants.SPACING.MD)
     .borderRadius(DesignConstants.SHAPE.CHIP)
-    .backgroundColor(AppThemeManager.getSafeCurrentPalette().surfaceBackground)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: AppThemeManager.getSafeCurrentPalette().floatingBorderColor })
-    .shadow(AppThemeManager.getSafeCurrentPalette().surfaceShadow)
+    .backgroundColor(this.getPalette().surfaceBackground)
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
+    .shadow(this.getPalette().surfaceShadow)
     .accessibilityText(this.message)
   }
 }

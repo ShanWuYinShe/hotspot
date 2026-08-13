@@ -719,7 +719,7 @@ export struct CreateMomentPage {
       .backgroundColor(this.getCurrentThemePalette().overlayStrong)
       .width(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
       .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
-      .borderRadius(DesignConstants.RADIUS.XXL)
+      .borderRadius(DesignConstants.RADIUS.LG)
       .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getOverlayBorderColor() })
       .margin({ top: DesignConstants.SPACING.HALF, right: DesignConstants.SPACING.HALF })
       .onClick(() => this.removeImage(index))

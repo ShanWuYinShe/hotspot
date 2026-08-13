@@ -111,7 +111,7 @@ export struct TabsPillGroup {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.THREE)
-    .borderRadius(DesignConstants.RADIUS.XXL)
+    .borderRadius(DesignConstants.RADIUS.LG)
     .backgroundColor(this.getPalette().surfaceSubtle)
     .alignItems(VerticalAlign.Center)
   }

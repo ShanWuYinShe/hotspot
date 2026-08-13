@@ -472,7 +472,7 @@ export struct MomentsFeedPage {
               SystemAvatar({
                 avatarUrl: user.user?.avatar_url ?? '',
                 name: user.user?.nickname ?? '',
-                avatarSize: 32,
+                avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
                 shape: 'circle'
               })
               Text(user.user?.nickname ?? '')

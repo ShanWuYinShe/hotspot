@@ -915,12 +915,9 @@ export struct NotificationCenter {
       case 'reaction_added':
         return 'interaction';
       case 'group_invite_received':
-      case 'group_invite_accepted':
-      case 'group_invite_revoked':
-      case 'group_invite_rejected':
+      case 'group_mentioned':
       case 'group_application_received':
       case 'group_application_accepted':
-      case 'group_application_cancelled':
       case 'group_application_rejected':
         return 'group';
       case 'report_resolved':

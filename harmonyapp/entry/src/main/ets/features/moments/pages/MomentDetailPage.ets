@@ -26,6 +26,7 @@ import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemInput } from '../../../components/SystemInput';
 import { EmptyState } from '../../../components/EmptyState';
+import { Pressable } from '../../../components/Pressable';
 import { AppIcon, IconButton, IconSize } from '../../../components/SystemIcon';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
@@ -408,15 +409,16 @@ export struct MomentDetailPage {
         Grid() {
           ForEach(moment.images.slice(0, 9), (img: MomentImage, imgIndex: number) => {
             GridItem() {
-              Image(MediaUrlUtil.normalize(img.url))
-                .width('100%')
-                .height('100%')
-                .objectFit(ImageFit.Cover)
-                .borderRadius(DesignConstants.RADIUS.LG)
-                .backgroundColor(this.getSurfaceBackground())
-                .onClick(() => {
-                  this.previewImage(imgIndex);
-                })
+              Pressable({ onPress: () => {
+                this.previewImage(imgIndex);
+              } }) {
+                Image(MediaUrlUtil.normalize(img.url))
+                  .width('100%')
+                  .height('100%')
+                  .objectFit(ImageFit.Cover)
+                  .borderRadius(DesignConstants.RADIUS.LG)
+                  .backgroundColor(this.getSurfaceBackground())
+              }
             }
           }, (img: MomentImage, index: number) => `${img.url}_${index}`)
         }
@@ -440,7 +442,7 @@ export struct MomentDetailPage {
                 top: DesignConstants.SPACING.XS,
                 bottom: DesignConstants.SPACING.XS
               })
-              .borderRadius(DesignConstants.RADIUS.MD)
+              .borderRadius(DesignConstants.SHAPE.CHIP)
               .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
           }, (tag: string, index: number) => `${tag}_${index}`)
         }
@@ -448,19 +450,7 @@ export struct MomentDetailPage {
       }
 
       if (moment.location?.location_name) {
-        Row({ space: DesignConstants.SPACING.XS }) {
-          Text() {
-            SymbolSpan($r(AppIcon.LOCATION))
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor([this.getCurrentThemePalette().textSecondary])
-          }
-          Text(moment.location.location_name)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .onClick(() => {
+        Pressable({ onPress: () => {
           if (moment.location?.point) {
             const locationInfo: LocationInfo = {
               latitude: moment.location.point.latitude,
@@ -470,7 +460,21 @@ export struct MomentDetailPage {
             AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, locationInfo);
             SystemToast.showSuccess('已设为浏览锚点', this.getUIContext());
           }
-        })
+        } }) {
+          Row({ space: DesignConstants.SPACING.XS }) {
+            Text() {
+              SymbolSpan($r(AppIcon.LOCATION))
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .fontColor([this.getCurrentThemePalette().textSecondary])
+            }
+            Text(moment.location.location_name)
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+          .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+        }
       }
 
       Row({ space: DesignConstants.SPACING.LG }) {
@@ -670,7 +674,7 @@ export struct MomentDetailPage {
     })
     .backgroundColor(this.getSurfaceBackground())
     .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
-    .borderRadius({ topLeft: DesignConstants.RADIUS.LG, topRight: DesignConstants.RADIUS.LG })
+    .borderRadius({ topLeft: DesignConstants.SHAPE.SHEET_TOP_RADIUS, topRight: DesignConstants.SHAPE.SHEET_TOP_RADIUS })
   }
 }
 

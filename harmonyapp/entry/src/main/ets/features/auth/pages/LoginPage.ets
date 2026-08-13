@@ -305,7 +305,7 @@ export struct LoginPage {
             this.ModeTab('访客', 'guest')
           }
           .backgroundColor(this.getSurfaceSubtle())
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .borderRadius(DesignConstants.RADIUS.LG)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .padding(DesignConstants.SPACING.THREE)
           .margin({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL })
@@ -325,7 +325,7 @@ export struct LoginPage {
               .width('100%')
               .padding(DesignConstants.SPACING.LG)
               .backgroundColor(this.getSurfaceBackground())
-              .borderRadius(DesignConstants.RADIUS.XXL)
+              .borderRadius(DesignConstants.RADIUS.LG)
               .shadow(this.getCurrentThemePalette().elevatedShadow)
               .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
               .margin({ bottom: DesignConstants.SPACING.MD3 })
@@ -642,7 +642,7 @@ export struct LoginPage {
         .width('100%')
         .padding(DesignConstants.SPACING.MD)
         .backgroundColor(this.getSurfaceBackground())
-        .borderRadius(DesignConstants.RADIUS.XXL)
+        .borderRadius(DesignConstants.RADIUS.LG)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
       SystemInput({

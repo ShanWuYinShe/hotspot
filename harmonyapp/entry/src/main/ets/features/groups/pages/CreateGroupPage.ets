@@ -435,7 +435,7 @@ export struct CreateGroupPage {
               })
             }
             .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.RADIUS.XXL)
+            .borderRadius(DesignConstants.RADIUS.LG)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD3 })
@@ -468,7 +468,7 @@ export struct CreateGroupPage {
                     .backgroundColor(this.getSurfaceSubtle())
                     .fontColor(this.getCurrentThemePalette().accentBackground)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .borderRadius(DesignConstants.RADIUS.XXL)
+                    .borderRadius(DesignConstants.RADIUS.LG)
                     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
                     .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
                     .enabled(!this.isCreating && !this.isGroupAvatarUploading)
@@ -480,7 +480,7 @@ export struct CreateGroupPage {
                       .backgroundColor(this.getSurfaceSubtle())
                       .fontColor(this.getCurrentThemePalette().textSecondary)
                       .fontSize(DesignConstants.FONT.SIZE.SM)
-                      .borderRadius(DesignConstants.RADIUS.XXL)
+                      .borderRadius(DesignConstants.RADIUS.LG)
                       .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
                       .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
                       .enabled(!this.isCreating && !this.isGroupAvatarUploading)
@@ -497,7 +497,7 @@ export struct CreateGroupPage {
               })
             }
             .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.RADIUS.XXL)
+            .borderRadius(DesignConstants.RADIUS.LG)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD3 })
@@ -545,7 +545,7 @@ export struct CreateGroupPage {
               })
             }
             .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.RADIUS.XXL)
+            .borderRadius(DesignConstants.RADIUS.LG)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD3 })
@@ -694,7 +694,7 @@ export struct CreateGroupPage {
               }
             }
             .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.RADIUS.XXL)
+            .borderRadius(DesignConstants.RADIUS.LG)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD3 })

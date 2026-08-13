@@ -185,7 +185,7 @@ export struct NearbyUsersListPage {
         SystemAvatar({
           avatarUrl: user.user?.avatar_url ?? '',
           name: user.user?.nickname ?? '',
-          avatarSize: 48,
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM,
           shape: 'circle'
         })
         if (user.presence_status === 'online') {

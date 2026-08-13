@@ -13,6 +13,7 @@ import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState } from '../../../components/EmptyState';
+import { Pressable } from '../../../components/Pressable';
 import { AppIcon } from '../../../components/SystemIcon';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, ProfileRouteParam, GroupDetailRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
@@ -256,103 +257,106 @@ export struct NearbyPage {
 
   @Builder
   private buildUserRow(user: UserItem) {
-    Row({ space: DesignConstants.SPACING.MD }) {
-      SystemAvatar({
-        avatarUrl: user.user?.avatar_url ?? '',
-        name: user.user?.nickname ?? '',
-        avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
-        shape: 'circle'
-      })
-      Column({ space: DesignConstants.SPACING.HALF }) {
-        Text(user.user?.nickname ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(`${user.tags?.[0] ?? '附近'} · ${LocationUtil.formatDistance(user.location?.distance ?? 0)}`)
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
-    }
-    .width('100%')
-    .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.SM2,
-      bottom: DesignConstants.SPACING.SM2
-    })
-    .onClick(() => {
+    Pressable({ onPress: () => {
       const userId = user.user?.user_id ?? '';
       if (userId) this.openProfile(userId);
-    })
+    } }) {
+      Row({ space: DesignConstants.SPACING.MD }) {
+        SystemAvatar({
+          avatarUrl: user.user?.avatar_url ?? '',
+          name: user.user?.nickname ?? '',
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
+          shape: 'circle'
+        })
+        Column({ space: DesignConstants.SPACING.HALF }) {
+          Text(user.user?.nickname ?? '')
+            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+            .fontColor(this.getCurrentThemePalette().textPrimary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(`${user.tags?.[0] ?? '附近'} · ${LocationUtil.formatDistance(user.location?.distance ?? 0)}`)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+      }
+      .width('100%')
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: DesignConstants.SPACING.SM2,
+        bottom: DesignConstants.SPACING.SM2
+      })
+    }
   }
 
   @Builder
   private buildGroupRow(group: GroupItem) {
-    Row({ space: DesignConstants.SPACING.MD }) {
-      SystemAvatar({
-        avatarUrl: group.group?.avatar_url ?? '',
-        name: group.group?.name ?? '',
-        avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
-        shape: 'squircle'
-      })
-      Column({ space: DesignConstants.SPACING.HALF }) {
-        Text(group.group?.name ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(`${group.group?.members_count ?? 0} 位成员 · ${LocationUtil.formatDistance(group.location?.distance ?? 0)}`)
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
-    }
-    .width('100%')
-    .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.SM2,
-      bottom: DesignConstants.SPACING.SM2
-    })
-    .onClick(() => {
+    Pressable({ onPress: () => {
       const groupId = group.group?.group_id ?? '';
       if (groupId) this.openGroup(groupId);
-    })
+    } }) {
+      Row({ space: DesignConstants.SPACING.MD }) {
+        SystemAvatar({
+          avatarUrl: group.group?.avatar_url ?? '',
+          name: group.group?.name ?? '',
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
+          shape: 'squircle'
+        })
+        Column({ space: DesignConstants.SPACING.HALF }) {
+          Text(group.group?.name ?? '')
+            .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+            .fontColor(this.getCurrentThemePalette().textPrimary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(`${group.group?.members_count ?? 0} 位成员 · ${LocationUtil.formatDistance(group.location?.distance ?? 0)}`)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+      }
+      .width('100%')
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: DesignConstants.SPACING.SM2,
+        bottom: DesignConstants.SPACING.SM2
+      })
+    }
   }
 
   @Builder
   private buildMomentRow(moment: MomentItem) {
-    Column({ space: DesignConstants.SPACING.XS }) {
-      Text(moment.description)
-        .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
-        .fontColor(this.getCurrentThemePalette().textPrimary)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
-      Text(moment.location?.location_name ?? '附近')
-        .fontSize(DesignConstants.FONT.SIZE.XS)
-        .fontColor(this.getCurrentThemePalette().textSecondary)
-        .width('100%')
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-    .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.SM2,
-      bottom: DesignConstants.SPACING.SM2
-    })
-    .onClick(() => {
+    Pressable({ onPress: () => {
       this.openMoment(moment.moment_id);
-    })
+    } }) {
+      Column({ space: DesignConstants.SPACING.XS }) {
+        Text(moment.description)
+          .fontSize(DesignConstants.FONT.SIZE.SM_PLUS)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+        Text(moment.location?.location_name ?? '附近')
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+          .width('100%')
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: DesignConstants.SPACING.SM2,
+        bottom: DesignConstants.SPACING.SM2
+      })
+    }
   }
 }
 

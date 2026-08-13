@@ -125,7 +125,7 @@ export struct MomentFeedCard {
         SystemCard({
           variant: CardVariant.DEFAULT,
           cardPadding: DesignConstants.SPACING.LG,
-          cardBorderRadius: DesignConstants.RADIUS.XXL,
+          cardBorderRadius: DesignConstants.RADIUS.LG,
           cardBorderColor: this.getPalette().borderColor,
           cardBackgroundColor: this.getPalette().surfaceBackground,
           clickable: true
@@ -214,7 +214,7 @@ export struct MomentFeedCard {
         .padding({ left: 0, right: 0, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
       }
       .width('100%')
-      .borderRadius({ topLeft: DesignConstants.RADIUS.XXL, topRight: DesignConstants.RADIUS.XXL })
+      .borderRadius({ topLeft: DesignConstants.RADIUS.LG, topRight: DesignConstants.RADIUS.LG })
       .clip(true)
 
       if (this.moment.description) {
@@ -238,6 +238,7 @@ export struct MomentFeedCard {
                   ? this.getPalette().accentBackground
                   : this.getPalette().textSecondary])
             }
+            .padding(DesignConstants.SPACING.MD3)
             .onClick(() => this.onLikeClick(this.moment))
             Text(this.formatCount(this.getMomentState()?.likes_count ?? this.moment.likes_count))
               .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -250,6 +251,7 @@ export struct MomentFeedCard {
                 .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
                 .fontColor([this.getPalette().textSecondary])
             }
+            .padding(DesignConstants.SPACING.MD3)
             .onClick(() => this.openMomentDetail(this.moment))
             Text(this.formatCount(this.getMomentState()?.comments_count ?? this.moment.comments_count))
               .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -265,6 +267,7 @@ export struct MomentFeedCard {
                 ? this.getPalette().accentBackground
                 : this.getPalette().textSecondary])
           }
+          .padding(DesignConstants.SPACING.MD3)
           .onClick(() => this.onFavoriteClick(this.moment))
 
           Text() {
@@ -272,6 +275,7 @@ export struct MomentFeedCard {
               .fontSize(DesignConstants.FONT.SIZE.MD_PLUS)
               .fontColor([this.getPalette().textSecondary])
           }
+          .padding(DesignConstants.SPACING.MD3)
           .onClick(() => this.shareMoment(this.moment))
         }
       }
@@ -280,7 +284,7 @@ export struct MomentFeedCard {
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.MD })
     }
     .width('100%')
-    .borderRadius(DesignConstants.RADIUS.XXL)
+    .borderRadius(DesignConstants.RADIUS.LG)
     .backgroundColor(this.getPalette().surfaceBackground)
     .shadow(this.getPalette().elevatedShadow)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
@@ -490,7 +494,7 @@ export struct MomentFeedCard {
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getPalette().accentBackground)
             .backgroundColor(this.getPalette().surfaceSubtle)
-            .borderRadius(DesignConstants.RADIUS.SM)
+            .borderRadius(DesignConstants.SHAPE.CHIP)
             .padding({
               left: DesignConstants.SPACING.SM,
               right: DesignConstants.SPACING.SM,

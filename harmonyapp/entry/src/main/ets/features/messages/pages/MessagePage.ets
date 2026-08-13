@@ -9,6 +9,7 @@ import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, ChatRouteParam } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { Pressable } from '../../../components/Pressable';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { PageNames } from '../../../constants/AppConstants';
 import {
@@ -835,7 +836,7 @@ export struct MessagePage {
                   }, (item: ChatItem) => item.id + item.type)
                 }
                 .width('100%')
-                .borderRadius(DesignConstants.RADIUS.XXL)
+                .borderRadius(DesignConstants.RADIUS.LG)
                 .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
                 .shadow(this.getCurrentThemePalette().elevatedShadow)
                 .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
@@ -887,42 +888,45 @@ export struct MessagePage {
       Scroll() {
         Row({ space: DesignConstants.SPACING.LG }) {
           ForEach(this.getOnlineChats(), (chat: ChatItem) => {
-            Column({ space: DesignConstants.SPACING.SM2 }) {
-              Stack({ alignContent: Alignment.Center }) {
-                SystemAvatar({
-                  avatarUrl: chat.avatarUrl,
-                  name: chat.name,
-                  avatarSize: 40,
-                  shape: 'circle'
-                })
-                .border({ width: DesignConstants.BORDER_WIDTH.REGULAR, color: this.getCurrentThemePalette().accentBackground })
-                .borderRadius(DesignConstants.RADIUS.FULL)
-                .padding(2.5)
-                .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-                .shadow(this.getCurrentThemePalette().controlShadow)
+            Pressable({ onPress: () => {
+              this.enterChat(chat);
+            } }) {
+              Column({ space: DesignConstants.SPACING.SM2 }) {
+                Stack({ alignContent: Alignment.Center }) {
+                  SystemAvatar({
+                    avatarUrl: chat.avatarUrl,
+                    name: chat.name,
+                    avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
+                    shape: 'circle'
+                  })
+                  .border({ width: DesignConstants.BORDER_WIDTH.REGULAR, color: this.getCurrentThemePalette().accentBackground })
+                  .borderRadius(DesignConstants.RADIUS.FULL)
+                  .padding(2.5)
+                  .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+                  .shadow(this.getCurrentThemePalette().controlShadow)
 
-                // 在线状态点：贴头像右下角（用 alignContent 取代硬编码坐标）
-                Stack({ alignContent: Alignment.BottomEnd }) {
-                  Row()
-                    .width(DesignConstants.SPACING.MD)
-                    .height(DesignConstants.SPACING.MD)
-                    .borderRadius(DesignConstants.RADIUS.FULL)
-                    .backgroundColor(this.getCurrentThemePalette().success)
-                    .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getCurrentThemePalette().surfaceBackground })
+                  // 在线状态点：贴头像右下角（用 alignContent 取代硬编码坐标）
+                  Stack({ alignContent: Alignment.BottomEnd }) {
+                    Row()
+                      .width(DesignConstants.SPACING.MD)
+                      .height(DesignConstants.SPACING.MD)
+                      .borderRadius(DesignConstants.RADIUS.FULL)
+                      .backgroundColor(this.getCurrentThemePalette().success)
+                      .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getCurrentThemePalette().surfaceBackground })
+                  }
+                  .width('100%')
+                  .height('100%')
                 }
-                .width('100%')
-                .height('100%')
-              }
 
-              Text(chat.name)
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor(this.getCurrentThemePalette().textSecondary)
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .constraintSize({ maxWidth: 56 })
+                Text(chat.name)
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .constraintSize({ maxWidth: 56 })
+              }
+              .alignItems(HorizontalAlign.Center)
             }
-            .alignItems(HorizontalAlign.Center)
-            .onClick(() => this.enterChat(chat))
           }, (chat: ChatItem) => chat.id + chat.type)
         }
         .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })

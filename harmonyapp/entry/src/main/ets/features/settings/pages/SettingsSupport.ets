@@ -395,7 +395,7 @@ export struct AnnouncementSummaryCard {
           .width('100%')
           .padding(DesignConstants.SPACING.MD)
           .backgroundColor(this.getPalette().surfaceElevated)
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .borderRadius(DesignConstants.RADIUS.LG)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
         }, (item: SystemAnnouncementItem) => item.announcement_id)
       }
@@ -444,7 +444,7 @@ export struct SupportConfigCard {
         .width('100%')
         .padding(DesignConstants.SPACING.MD)
         .backgroundColor(this.getPalette().surfaceElevated)
-        .borderRadius(DesignConstants.RADIUS.XXL)
+        .borderRadius(DesignConstants.RADIUS.LG)
       }
     }
     .width('100%')
@@ -567,7 +567,7 @@ export struct SessionListSection {
           .width('100%')
           .padding(DesignConstants.SPACING.MD)
           .backgroundColor(this.getPalette().surfaceElevated)
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .borderRadius(DesignConstants.RADIUS.LG)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
         }, (item: SessionItem) => item.session_id)
       }

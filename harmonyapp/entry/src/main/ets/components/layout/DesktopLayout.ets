@@ -251,7 +251,7 @@ export struct DesktopLayout {
             SystemAvatar({
               avatarUrl: this.currentUser?.avatar_url ?? '',
               name: this.currentUser?.nickname ?? '',
-              avatarSize: 32,
+              avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
               shape: 'circle'
             })
           }

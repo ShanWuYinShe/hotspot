@@ -107,7 +107,7 @@ export struct LocationBar {
           .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
           .justifyContent(FlexAlign.Center)
           .backgroundColor(this.getPalette().accentBackground)
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .borderRadius(DesignConstants.RADIUS.LG)
           .transition(TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_250, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
         } else {
           // 当前位置模式：脉冲动画指示器

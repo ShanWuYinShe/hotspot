@@ -11,6 +11,7 @@ import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil'
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, ChatRouteParam, GroupDetailRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam, SearchRouteParam } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
+import { Pressable } from '../../../components/Pressable';
 import {
   MomentItem, UserItem, GroupItem, GeoPoint,
   SearchMomentsRequest, SearchUsersRequest, SearchGroupsRequest,
@@ -663,66 +664,67 @@ export struct HomePage {
             }, (_: string) => _)
           } else {
             ForEach(this.users.slice(0, 4), (user: UserItem) => {
-              Column({ space: DesignConstants.SPACING.SM2 }) {
-                Stack({ alignContent: Alignment.Center }) {
-                  SystemAvatar({
-                    avatarUrl: user.user?.avatar_url ?? '',
-                    name: user.user?.nickname ?? '',
-                    avatarSize: 80,
-                    shape: 'circle'
-                  })
-                  .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getPalette().borderColor })
-                  .borderRadius(DesignConstants.RADIUS.FULL)
-
-                  // 在线状态点：贴头像右下角（用 alignContent 取代硬编码坐标）
-                  if (user.presence_status === 'online') {
-                    Stack({ alignContent: Alignment.BottomEnd }) {
-                      Row()
-                        .width(DesignConstants.SPACING.MD)
-                        .height(DesignConstants.SPACING.MD)
-                        .borderRadius(DesignConstants.RADIUS.FULL)
-                        .backgroundColor(this.getPalette().success)
-                        .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getPalette().surfaceBackground })
-                    }
-                    .width('100%')
-                    .height('100%')
-                  }
-
-                  // 距离徽标：贴头像底部居中（取代百分比 + translate 硬定位）
-                  if (user.location?.distance !== undefined && user.location?.distance !== null) {
-                    Stack({ alignContent: Alignment.Bottom }) {
-                      Row() {
-                        Text(LocationUtil.formatDistance(user.location.distance))
-                          .fontSize(DesignConstants.FONT.SIZE.XS_MINUS)
-                          .fontColor(this.getPalette().accentText)
-                      }
-                      .padding({ left: DesignConstants.SPACING.SM2, right: DesignConstants.SPACING.SM2, top: 1, bottom: 1 })
-                      .borderRadius(DesignConstants.RADIUS.FULL)
-                      .backgroundColor(this.getPalette().accentBackground)
-                      .shadow(this.getPalette().accentShadow)
-                    }
-                    .width('100%')
-                    .height('100%')
-                  }
-                }
-
-                Text(user.user?.nickname ?? '')
-                  .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor(this.getPalette().textPrimary)
-                  .maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  .constraintSize({ maxWidth: 70 })
-                  .margin({ top: DesignConstants.SPACING.XS })
-              }
-              .alignItems(HorizontalAlign.Center)
-              .onClick(() => {
+              Pressable({ onPress: () => {
                 const userId = user.user?.user_id;
                 if (userId) {
                   const params = new ProfileRouteParam();
                   params.userId = userId;
                   AppRouter.push(PageNames.PROFILE, params);
                 }
-              })
+              } }) {
+                Column({ space: DesignConstants.SPACING.SM2 }) {
+                  Stack({ alignContent: Alignment.Center }) {
+                    SystemAvatar({
+                      avatarUrl: user.user?.avatar_url ?? '',
+                      name: user.user?.nickname ?? '',
+                      avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.LARGE,
+                      shape: 'circle'
+                    })
+                    .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getPalette().borderColor })
+                    .borderRadius(DesignConstants.RADIUS.FULL)
+
+                    // 在线状态点：贴头像右下角（用 alignContent 取代硬编码坐标）
+                    if (user.presence_status === 'online') {
+                      Stack({ alignContent: Alignment.BottomEnd }) {
+                        Row()
+                          .width(DesignConstants.SPACING.MD)
+                          .height(DesignConstants.SPACING.MD)
+                          .borderRadius(DesignConstants.RADIUS.FULL)
+                          .backgroundColor(this.getPalette().success)
+                          .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getPalette().surfaceBackground })
+                      }
+                      .width('100%')
+                      .height('100%')
+                    }
+
+                    // 距离徽标：贴头像底部居中（取代百分比 + translate 硬定位）
+                    if (user.location?.distance !== undefined && user.location?.distance !== null) {
+                      Stack({ alignContent: Alignment.Bottom }) {
+                        Row() {
+                          Text(LocationUtil.formatDistance(user.location.distance))
+                            .fontSize(DesignConstants.FONT.SIZE.XS_MINUS)
+                            .fontColor(this.getPalette().accentText)
+                        }
+                        .padding({ left: DesignConstants.SPACING.SM2, right: DesignConstants.SPACING.SM2, top: 1, bottom: 1 })
+                        .borderRadius(DesignConstants.RADIUS.FULL)
+                        .backgroundColor(this.getPalette().accentBackground)
+                        .shadow(this.getPalette().accentShadow)
+                      }
+                      .width('100%')
+                      .height('100%')
+                    }
+                  }
+
+                  Text(user.user?.nickname ?? '')
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .fontColor(this.getPalette().textPrimary)
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                    .constraintSize({ maxWidth: 70 })
+                    .margin({ top: DesignConstants.SPACING.XS })
+                }
+                .alignItems(HorizontalAlign.Center)
+              }
             }, (user: UserItem) => user.user?.user_id ?? '')
           }
         }
@@ -783,50 +785,51 @@ export struct HomePage {
 
   @Builder
   private buildGroupCarouselCard(group: GroupItem) {
-    Column({ space: DesignConstants.SPACING.XS }) {
-      Column() {
-        Text() {
-          SymbolSpan($r(AppIcon.GROUP))
-            .fontSize(DesignConstants.FONT.SIZE.XXL)
-            .fontColor([this.getPalette().accentBackground])
-        }
-      }
-      .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
-      .height(DesignConstants.COMPONENT.SKELETON_CARD_HEIGHT)
-      .justifyContent(FlexAlign.Center)
-      .borderRadius(DesignConstants.SHAPE.CARD)
-      .backgroundColor(this.getPalette().accentMuted)
-      .clip(true)
-
-      Text(group.group?.name ?? '')
-        .fontSize(DesignConstants.FONT.SIZE.XS)
-        .fontColor(this.getPalette().textPrimary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
-
-      Row({ space: DesignConstants.SPACING.XS }) {
-        Text(`${formatCount(group.group?.members_count ?? 0)} 人`)
-          .fontSize(DesignConstants.FONT.SIZE.XS2)
-          .fontColor(this.getPalette().textTertiary)
-        if (group.location?.distance !== undefined) {
-          Text(LocationUtil.formatDistance(group.location.distance))
-            .fontSize(DesignConstants.FONT.SIZE.XS2)
-            .fontColor(this.getPalette().accentText)
-        }
-      }
-      .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
-    }
-    .alignItems(HorizontalAlign.Start)
-    .borderRadius(DesignConstants.SHAPE.CARD)
-    .onClick(() => {
+    Pressable({ onPress: () => {
       const groupId = group.group?.group_id;
       if (groupId) {
         const params = new GroupDetailRouteParam();
         params.groupId = groupId;
         AppRouter.push(PageNames.GROUP_DETAIL, params);
       }
-    })
+    } }) {
+      Column({ space: DesignConstants.SPACING.XS }) {
+        Column() {
+          Text() {
+            SymbolSpan($r(AppIcon.GROUP))
+              .fontSize(DesignConstants.FONT.SIZE.XXL)
+              .fontColor([this.getPalette().accentBackground])
+          }
+        }
+        .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
+        .height(DesignConstants.COMPONENT.SKELETON_CARD_HEIGHT)
+        .justifyContent(FlexAlign.Center)
+        .borderRadius(DesignConstants.SHAPE.CARD)
+        .backgroundColor(this.getPalette().accentMuted)
+        .clip(true)
+
+        Text(group.group?.name ?? '')
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor(this.getPalette().textPrimary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
+
+        Row({ space: DesignConstants.SPACING.XS }) {
+          Text(`${formatCount(group.group?.members_count ?? 0)} 人`)
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .fontColor(this.getPalette().textTertiary)
+          if (group.location?.distance !== undefined) {
+            Text(LocationUtil.formatDistance(group.location.distance))
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .fontColor(this.getPalette().accentText)
+          }
+        }
+        .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
+      }
+      .alignItems(HorizontalAlign.Start)
+      .borderRadius(DesignConstants.SHAPE.CARD)
+    }
   }
 
   // ==================== 附近动态 ====================

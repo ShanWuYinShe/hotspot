@@ -104,7 +104,6 @@ export interface RadiusSystem {
   MD: number;
   LG: number;
   XL: number;
-  XXL: number;
   FULL: number;
 }
 
@@ -479,32 +478,30 @@ const SPACING: SpacingSystem = {
   XXL: 32,
 };
 
-// ==================== 圆角系统（HarmonyOS vp 适配档）====================
-// 前端 --radius 已收敛 4 档（sm 12 / md 16 / lg 20 / xl 24，sheet 28）；
-// harmonyapp 按 vp 渲染保留 8/12/16/18/22 近似档，语义圆角由 SHAPE 档位对齐前端用法
+// ==================== 圆角系统（HarmonyOS vp 适配档，向前端 --radius 收敛）====================
+// 前端刻度：sm 12 / md 16 / lg 20 / xl 24（sheet 28），禁止近邻档位（8/18/22 已删除）。
+// 语义圆角由 SHAPE 档位表达（CARD/INPUT/BUTTON/SHEET 等），页面禁止再出现数值字面量。
 const RADIUS: RadiusSystem = {
-  SM: 8,
-  MD: 12,
-  LG: 16,
-  XL: 18,
-  XXL: 22,
+  SM: 12,
+  MD: 16,
+  LG: 20,
+  XL: 24,
   FULL: 999,
 };
 
 const SHAPE: ShapeSemanticTokens = {
-  CARD: 22,
-  HERO_CARD: 24,
-  COMPACT_CARD: 18,
-  INPUT: 18,
-  // 主按钮统一圆角矩形（28vp，HarmonyOS 控制件常规圆角；前端主按钮为 rounded-full
-  // 胶囊，本端用圆角矩形与胶囊 chip 区分主次操作）。
-  BUTTON: 28,
+  CARD: RADIUS.LG,          // 20：普通卡片（前端 rounded-lg 主流档）
+  HERO_CARD: RADIUS.XL,     // 24：封面/hero 区
+  COMPACT_CARD: RADIUS.MD,  // 16：紧凑卡片/列表容器（前端 rounded-md）
+  INPUT: RADIUS.MD,         // 16：输入框（对齐前端 input-surface）
+  // 主按钮胶囊（对齐前端 rounded-full 主按钮；原 28 圆角矩形档已删除）
+  BUTTON: RADIUS.FULL,
   CHIP: RADIUS.FULL,
-  TAB_BAR: 24,
-  PREVIEW_CARD: 22,
-  LIST_ITEM: 22,
-  ICON_TILE: RADIUS.MD,
-  SHEET_TOP_RADIUS: 20,
+  TAB_BAR: RADIUS.XL,
+  PREVIEW_CARD: RADIUS.LG,
+  LIST_ITEM: RADIUS.LG,
+  ICON_TILE: RADIUS.SM,
+  SHEET_TOP_RADIUS: 28,     // 对齐前端 --radius-sheet（弹层专用大圆角）
 };
 
 // ==================== 阴影系统（扁平风格，默认归零）====================

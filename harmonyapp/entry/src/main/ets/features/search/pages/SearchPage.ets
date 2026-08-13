@@ -15,6 +15,7 @@ import {
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { UserRelationState } from '../../../core/state/InteractionStateStore';
 import { SystemAvatar } from '../../../components/SystemAvatar';
+import { Pressable } from '../../../components/Pressable';
 import { SearchPageHeader } from '../../../components/SearchPageHeader';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
@@ -502,52 +503,53 @@ export struct SearchPage {
 
   @Builder
   private buildSuggestRow(item: SearchSuggestItem) {
-    Row({ space: DesignConstants.SPACING.MD }) {
-      Row() {
+    Pressable({ onPress: () => this.handleSuggestItemTap(item) }) {
+      Row({ space: DesignConstants.SPACING.MD }) {
+        Row() {
+          Text() {
+            SymbolSpan($r(
+              item.type === 'tag' ? AppIcon.CHART : item.type === 'user' ? AppIcon.PERSON : item.type === 'group' ? AppIcon.GROUP : AppIcon.CAMERA
+            ))
+              .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
+              .fontColor([this.getCurrentThemePalette().accentBackground])
+          }
+        }
+        .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+        .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(this.getSurfaceSubtle())
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+
+        Column({ space: DesignConstants.SPACING.XS }) {
+          Text(this.getSuggestTitle(item))
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontColor(this.getCurrentThemePalette().textPrimary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(this.getSuggestSubtitle(item))
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+
         Text() {
-          SymbolSpan($r(
-            item.type === 'tag' ? AppIcon.CHART : item.type === 'user' ? AppIcon.PERSON : item.type === 'group' ? AppIcon.GROUP : AppIcon.CAMERA
-          ))
-            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-            .fontColor([this.getCurrentThemePalette().accentBackground])
+          SymbolSpan($r(AppIcon.ARROW_RIGHT))
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontColor([this.getCurrentThemePalette().textSecondary])
         }
       }
-      .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
-      .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(this.getSurfaceSubtle())
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
-
-      Column({ space: DesignConstants.SPACING.XS }) {
-        Text(this.getSuggestTitle(item))
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(this.getSuggestSubtitle(item))
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
-
-      Text() {
-        SymbolSpan($r(AppIcon.ARROW_RIGHT))
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor([this.getCurrentThemePalette().textSecondary])
-      }
+      .width('100%')
+      .padding(DesignConstants.SPACING.MD)
+      .backgroundColor(this.getSurfaceBackground())
+      .borderRadius(DesignConstants.SHAPE.CARD)
+      .shadow(this.getCurrentThemePalette().surfaceShadow)
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     }
-    .width('100%')
-    .padding(DesignConstants.SPACING.MD)
-    .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.SHAPE.CARD)
-    .shadow(this.getCurrentThemePalette().surfaceShadow)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    .onClick(() => this.handleSuggestItemTap(item))
   }
 
   private tabLabel(base: string, count: number): string {
@@ -647,35 +649,36 @@ export struct SearchPage {
 
   @Builder
   private buildAllMomentRow(moment: MomentItem) {
-    Row() {
-      Column({ space: DesignConstants.SPACING.XS }) {
-        Text(moment.description)
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
-        Text(moment.location?.location_name ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-          .width('100%')
-      }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
+    Pressable({ onPress: () => this.openMomentDetail(moment) }) {
+      Row() {
+        Column({ space: DesignConstants.SPACING.XS }) {
+          Text(moment.description)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontColor(this.getCurrentThemePalette().textPrimary)
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .width('100%')
+          Text(moment.location?.location_name ?? '')
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+            .width('100%')
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
 
-      Text() {
-        SymbolSpan($r(AppIcon.ARROW_RIGHT))
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor([this.getCurrentThemePalette().textSecondary])
+        Text() {
+          SymbolSpan($r(AppIcon.ARROW_RIGHT))
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontColor([this.getCurrentThemePalette().textSecondary])
+        }
       }
+      .width('100%')
+      .padding(DesignConstants.SPACING.MD)
+      .backgroundColor(this.getSurfaceBackground())
+      .borderRadius(DesignConstants.SHAPE.CARD)
+      .shadow(this.getCurrentThemePalette().surfaceShadow)
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     }
-    .width('100%')
-    .padding(DesignConstants.SPACING.MD)
-    .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.SHAPE.CARD)
-    .shadow(this.getCurrentThemePalette().surfaceShadow)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    .onClick(() => this.openMomentDetail(moment))
   }
 
   @Builder
@@ -696,41 +699,42 @@ export struct SearchPage {
       List({ space: DesignConstants.SPACING.MD2 }) {
         ForEach(this.topicResults, (tag: string) => {
           ListItem() {
-            Row({ space: DesignConstants.SPACING.MD }) {
-              Row() {
+            Pressable({ onPress: () => this.applyKeywordAndSearch(tag) }) {
+              Row({ space: DesignConstants.SPACING.MD }) {
+                Row() {
+                  Text() {
+                    SymbolSpan($r(AppIcon.CHART))
+                      .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
+                      .fontColor([this.getCurrentThemePalette().accentBackground])
+                  }
+                }
+                .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+                .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+                .borderRadius(DesignConstants.RADIUS.FULL)
+                .backgroundColor(this.getSurfaceSubtle())
+                .justifyContent(FlexAlign.Center)
+
+                Text(`#${tag}`)
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                  .fontColor(this.getCurrentThemePalette().textPrimary)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .layoutWeight(1)
+
                 Text() {
-                  SymbolSpan($r(AppIcon.CHART))
-                    .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-                    .fontColor([this.getCurrentThemePalette().accentBackground])
+                  SymbolSpan($r(AppIcon.ARROW_RIGHT))
+                    .fontSize(DesignConstants.FONT.SIZE.LG)
+                    .fontColor([this.getCurrentThemePalette().textSecondary])
                 }
               }
-              .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
-              .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
-              .borderRadius(DesignConstants.RADIUS.FULL)
-              .backgroundColor(this.getSurfaceSubtle())
-              .justifyContent(FlexAlign.Center)
-
-              Text(`#${tag}`)
-                .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                .fontColor(this.getCurrentThemePalette().textPrimary)
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .layoutWeight(1)
-
-              Text() {
-                SymbolSpan($r(AppIcon.ARROW_RIGHT))
-                  .fontSize(DesignConstants.FONT.SIZE.LG)
-                  .fontColor([this.getCurrentThemePalette().textSecondary])
-              }
+              .width('100%')
+              .padding(DesignConstants.SPACING.MD)
+              .backgroundColor(this.getSurfaceBackground())
+              .borderRadius(DesignConstants.SHAPE.CARD)
+              .shadow(this.getCurrentThemePalette().surfaceShadow)
+              .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             }
-            .width('100%')
-            .padding(DesignConstants.SPACING.MD)
-            .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.SHAPE.CARD)
-            .shadow(this.getCurrentThemePalette().surfaceShadow)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .onClick(() => this.applyKeywordAndSearch(tag))
           }
         }, (tag: string) => `topic-${tag}`)
       }
@@ -753,6 +757,7 @@ export struct SearchPage {
         Text('清除')
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().accentBackground)
+          .padding(DesignConstants.SPACING.MD)
           .onClick(trailing)
       }
     }
@@ -781,32 +786,33 @@ export struct SearchPage {
               .padding(DesignConstants.SPACING.LG)
           } else {
             ForEach(this.recentSearches, (item: string) => {
-              Row({ space: DesignConstants.SPACING.MD }) {
-                Text() {
-                  SymbolSpan($r(AppIcon.TIME))
+              Pressable({ onPress: () => this.applyKeywordAndSearch(item) }) {
+                Row({ space: DesignConstants.SPACING.MD }) {
+                  Text() {
+                    SymbolSpan($r(AppIcon.TIME))
+                      .fontSize(DesignConstants.FONT.SIZE.MD)
+                      .fontColor([this.getCurrentThemePalette().textSecondary])
+                  }
+                  Text(item)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
-                    .fontColor([this.getCurrentThemePalette().textSecondary])
+                    .fontColor(this.getCurrentThemePalette().textPrimary)
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                    .layoutWeight(1)
+                  Text() {
+                    SymbolSpan($r(AppIcon.ARROW_RIGHT))
+                      .fontSize(DesignConstants.FONT.SIZE.MD)
+                      .fontColor([this.getCurrentThemePalette().textSecondary])
+                  }
                 }
-                Text(item)
-                  .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor(this.getCurrentThemePalette().textPrimary)
-                  .maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  .layoutWeight(1)
-                Text() {
-                  SymbolSpan($r(AppIcon.ARROW_RIGHT))
-                    .fontSize(DesignConstants.FONT.SIZE.MD)
-                    .fontColor([this.getCurrentThemePalette().textSecondary])
-                }
+                .width('100%')
+                .padding({
+                  left: DesignConstants.SPACING.LG,
+                  right: DesignConstants.SPACING.LG,
+                  top: DesignConstants.SPACING.MD,
+                  bottom: DesignConstants.SPACING.MD
+                })
               }
-              .width('100%')
-              .padding({
-                left: DesignConstants.SPACING.LG,
-                right: DesignConstants.SPACING.LG,
-                top: DesignConstants.SPACING.MD,
-                bottom: DesignConstants.SPACING.MD
-              })
-              .onClick(() => this.applyKeywordAndSearch(item))
             }, (item: string) => `recent-${item}`)
           }
         }
@@ -820,26 +826,27 @@ export struct SearchPage {
         Column() {
           this.buildDiscoveryCard('正在关注')
           ForEach(this.discoveryHot.slice(0, 5), (item: string, index: number) => {
-            Row({ space: DesignConstants.SPACING.MD }) {
-              Text(String(index + 1))
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor(this.getCurrentThemePalette().accentBackground)
-                .width(DesignConstants.SPACING.LG)
-              Text(item)
-                .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor(this.getCurrentThemePalette().textPrimary)
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .layoutWeight(1)
+            Pressable({ onPress: () => this.applyKeywordAndSearch(item) }) {
+              Row({ space: DesignConstants.SPACING.MD }) {
+                Text(String(index + 1))
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .fontColor(this.getCurrentThemePalette().accentBackground)
+                  .width(DesignConstants.SPACING.LG)
+                Text(item)
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .fontColor(this.getCurrentThemePalette().textPrimary)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .layoutWeight(1)
+              }
+              .width('100%')
+              .padding({
+                left: DesignConstants.SPACING.LG,
+                right: DesignConstants.SPACING.LG,
+                top: DesignConstants.SPACING.MD,
+                bottom: DesignConstants.SPACING.MD
+              })
             }
-            .width('100%')
-            .padding({
-              left: DesignConstants.SPACING.LG,
-              right: DesignConstants.SPACING.LG,
-              top: DesignConstants.SPACING.MD,
-              bottom: DesignConstants.SPACING.MD
-            })
-            .onClick(() => this.applyKeywordAndSearch(item))
           }, (item: string) => `hot-${item}`)
         }
         .width('100%')
@@ -1061,7 +1068,7 @@ export struct SearchPage {
         }
         .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
         .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
-        .borderRadius(DesignConstants.RADIUS.XXL)
+        .borderRadius(DesignConstants.RADIUS.LG)
         .backgroundColor(this.getSurfaceSubtle())
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
@@ -1164,7 +1171,7 @@ export struct SearchPage {
         }
         .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
         .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
-        .borderRadius(DesignConstants.RADIUS.XXL)
+        .borderRadius(DesignConstants.RADIUS.LG)
         .backgroundColor(this.getSurfaceSubtle())
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
@@ -1268,7 +1275,7 @@ export struct SearchPage {
       .width('100%')
     }
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL)
+    .borderRadius(DesignConstants.RADIUS.LG)
     .clip(true)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })

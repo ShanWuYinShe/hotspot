@@ -442,7 +442,7 @@ export struct SmartSearchComponent {
         .width('100%')
         .layoutWeight(1)
         .backgroundColor(this.getPalette().surfaceBackground)
-        .borderRadius({ topLeft: DesignConstants.RADIUS.XXL, topRight: DesignConstants.RADIUS.XXL })
+        .borderRadius({ topLeft: DesignConstants.RADIUS.LG, topRight: DesignConstants.RADIUS.LG })
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
         .shadow(this.getPalette().elevatedShadow)
         .transition(TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_250, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))

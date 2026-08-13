@@ -975,7 +975,7 @@ export struct GroupDetailPage {
                 SystemAvatar({
                   src: this.groupInfo?.group?.avatar_url ?? '',
                   name: this.groupInfo?.group?.name ?? '',
-                  avatarSize: 96
+                  avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE
                 })
                 Text(this.groupInfo?.group?.name ?? '')
                   .fontSize(DesignConstants.FONT.SIZE.XL)
@@ -1030,7 +1030,7 @@ export struct GroupDetailPage {
             .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           }
           .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .borderRadius(DesignConstants.RADIUS.LG)
           .shadow(this.getCurrentThemePalette().elevatedShadow)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .margin({ bottom: DesignConstants.SPACING.MD })
@@ -1071,7 +1071,7 @@ export struct GroupDetailPage {
                top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
           }
           .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .borderRadius(DesignConstants.RADIUS.LG)
           .shadow(this.getCurrentThemePalette().elevatedShadow)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .margin({ bottom: DesignConstants.SPACING.MD })
@@ -1104,7 +1104,7 @@ export struct GroupDetailPage {
               top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
           }
           .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .borderRadius(DesignConstants.RADIUS.LG)
           .shadow(this.getCurrentThemePalette().elevatedShadow)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .margin({ bottom: DesignConstants.SPACING.MD })
@@ -1138,7 +1138,7 @@ export struct GroupDetailPage {
                 top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
             }
             .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.RADIUS.XXL)
+            .borderRadius(DesignConstants.RADIUS.LG)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD })
@@ -1212,7 +1212,7 @@ export struct GroupDetailPage {
              .padding(DesignConstants.SPACING.LG)
           }
           .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .borderRadius(DesignConstants.RADIUS.LG)
           .shadow(this.getCurrentThemePalette().elevatedShadow)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
@@ -1597,7 +1597,7 @@ export struct GroupDetailPage {
         SystemAvatar({
           src: application.applicant?.avatar_url ?? '',
           name: application.applicant?.nickname ?? '',
-          avatarSize: 40,
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
           userInfo: application.applicant
         })
 
@@ -1662,7 +1662,7 @@ export struct GroupDetailPage {
       SystemAvatar({
         src: member.user?.avatar_url ?? '',
         name: member.user?.nickname ?? '',
-        avatarSize: 40,
+        avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
         userInfo: member.user
       })
 
@@ -1680,7 +1680,7 @@ export struct GroupDetailPage {
             .fontColor(this.getRoleColor(member.role))
             .backgroundColor(this.getSurfaceSubtle())
             .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
-            .borderRadius(DesignConstants.RADIUS.SM)
+            .borderRadius(DesignConstants.SHAPE.CHIP)
 
           if (member.joined_at) {
             Text(`加入于 ${new Date(member.joined_at).toLocaleDateString()}`)

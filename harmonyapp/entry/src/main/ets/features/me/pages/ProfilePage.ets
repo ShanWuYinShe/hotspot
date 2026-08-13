@@ -1272,7 +1272,7 @@ export struct ProfilePage {
         SystemAvatar({
           avatarUrl: this.currentUser?.avatar_url || '',
           name: this.currentUser?.nickname || '',
-          avatarSize: 96,
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE,
           shape: 'circle'
         })
 
@@ -1642,7 +1642,7 @@ export struct ProfilePage {
           SystemAvatar({
             avatarUrl: this.editAvatarPreviewUrl || this.currentUser?.avatar_url || '',
             name: this.editNickname,
-            avatarSize: 80
+            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.LARGE
           })
         }
         .type(ButtonType.Normal)

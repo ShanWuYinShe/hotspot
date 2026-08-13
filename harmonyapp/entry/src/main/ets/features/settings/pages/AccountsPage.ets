@@ -280,7 +280,7 @@ export struct AccountsPage {
                         .fontSize(DesignConstants.FONT.SIZE.SM)
                         .fontColor(this.getCurrentThemePalette().accentText)
                         .backgroundColor(this.getCurrentThemePalette().accentBackground)
-                        .borderRadius(DesignConstants.RADIUS.XL)
+                        .borderRadius(DesignConstants.SHAPE.CHIP)
                         .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
                     }
                   }
@@ -311,7 +311,7 @@ export struct AccountsPage {
               .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
             }
             .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.RADIUS.XXL)
+            .borderRadius(DesignConstants.RADIUS.LG)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD3 })

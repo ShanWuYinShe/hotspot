@@ -355,7 +355,7 @@ export class AppThemeVisuals {
         borderColor: palette.floatingBorderColor,
         borderWidth: 1,
         shadow: palette.elevatedShadow,
-        borderRadius: 18,
+        borderRadius: DesignConstants.SHAPE.COMPACT_CARD,
         padding: DesignConstants.SPACING.MD,
         iconSize: 22,
         iconWrapperSize: 56,
