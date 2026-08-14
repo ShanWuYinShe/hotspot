@@ -26,7 +26,7 @@
 <button
 	type="button"
 	class="absolute focus-ring"
-	style="left:{pos.x}%;top:{pos.y}%;transform:translate(-50%, -100%) scale({isSelected ? 1.32 : 1});z-index:{isSelected ? 30 : 10};transition:transform var(--cst-motion-standard) var(--cst-ease-bounce);"
+	style="left:{pos.x}%;top:{pos.y}%;transform:translate(-50%, -100%) scale({isSelected ? 1.32 : 1});z-index:{isSelected ? 30 : 10};transition:transform var(--cst-motion-standard) var(--cst-ease-bounce);background:transparent;"
 	onclick={onSelect}
 >
 	{#if (pin.count ?? 1) > 1}

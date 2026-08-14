@@ -99,7 +99,7 @@
 		<div class="flex gap-4">
 			<button
 				type="button"
-				class="tap-84 flex items-center gap-1.5 focus-ring {liked ? 'text-accent-default' : 'text-text-secondary'}"
+				class="tap-84 flex items-center gap-1.5 focus-ring hover:text-accent-default {liked ? 'text-accent-default' : 'text-text-secondary'}"
 				onclick={onToggleLike}
 			>
 				<Heart class="size-5"  strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
@@ -113,7 +113,7 @@
 		<div class="flex gap-3">
 			<button
 				type="button"
-				class="tap-84 hit-slop focus-ring {saved ? 'text-accent-default' : 'text-text-secondary'}"
+				class="tap-84 hit-slop focus-ring hover:text-accent-default {saved ? 'text-accent-default' : 'text-text-secondary'}"
 				aria-label={saved ? '取消收藏' : '收藏'}
 				onclick={onToggleSave}
 			>
@@ -123,7 +123,7 @@
 				type="button"
 				onclick={onShare}
 				aria-label={shareStatus === 'failed' ? '复制动态链接失败' : '复制动态链接'}
-				class="tap-84 rounded-full focus-ring {shareStatus === 'copied' ? 'text-accent-default' : 'text-text-secondary'}"
+				class="tap-84 rounded-full focus-ring hover:text-accent-default {shareStatus === 'copied' ? 'text-accent-default' : 'text-text-secondary'}"
 			>
 				{#if shareStatus === 'copied'}
 					<Check class="size-5"  strokeWidth={1.75} />

@@ -14,11 +14,13 @@
 	type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 	type ButtonSize = 'sm' | 'md' | 'lg';
 
+	// hover 反馈走组件级 token（全局 button hover 填充只兜底透明裸按钮）：
+	// primary = accent 光晕抬档；secondary/outline = 描边加深；ghost = 淡底填充。
 	const VARIANTS: Record<ButtonVariant, string> = {
-		primary: 'bg-accent-default text-text-on-accent shadow-glow-sm',
-		secondary: 'bg-surface-primary text-text-primary border border-border-default shadow-raised-sm',
-		outline: 'bg-transparent text-text-primary border border-border-default',
-		ghost: 'bg-transparent text-text-primary',
+		primary: 'bg-accent-default text-text-on-accent shadow-glow-sm hover:shadow-glow-md',
+		secondary: 'bg-surface-primary text-text-primary border border-border-default shadow-raised-sm hover:border-border-strong',
+		outline: 'bg-transparent text-text-primary border border-border-default hover:border-border-strong',
+		ghost: 'bg-transparent text-text-primary hover:bg-interactive-hover',
 		danger: 'bg-status-danger text-text-on-status'
 	};
 

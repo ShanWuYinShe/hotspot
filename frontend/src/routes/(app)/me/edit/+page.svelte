@@ -164,7 +164,7 @@
 	</div>
 
 	<!-- Avatar edit -->
-	<div class="flex items-center gap-4 -mt-8 ml-2">
+	<div class="flex items-center gap-4 -mt-8">
 		<div class="relative shrink-0">
 			<div class="rounded-xl overflow-hidden size-18"  style="border:var(--cst-border-width-heavy) solid var(--cst-surface-primary);box-shadow:var(--cst-elevation-profile-avatar)">
 				<img src={avatar} alt="avatar" class="w-full h-full object-cover" />

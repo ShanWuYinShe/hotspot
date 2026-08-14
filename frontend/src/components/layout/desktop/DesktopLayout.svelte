@@ -223,30 +223,30 @@
 	<div class="desktop-workspace relative z-0 flex flex-1 overflow-hidden gap-0" >
 		<!-- Sidebar (224px expanded / 72px collapsed, fixed width) -->
 		<aside
-			class="relative flex flex-col shrink-0 overflow-visible box-border transition-[width] duration-standard"
+			class="relative flex flex-col shrink-0 overflow-hidden box-border transition-[width] duration-standard ease-standard"
 			style="width:{isSidebarCollapsed ? 'var(--cst-desktop-sidebar-collapsed)' : 'var(--cst-desktop-sidebar-width)'};padding:0.75rem;"
 		>
 			<!-- Scrollable nav region — takes all available space -->
 			<div class="flex-1 flex flex-col overflow-y-auto no-scrollbar min-h-0">
-			<!-- Section 1: 发现导航 -->
-			<div class="flex flex-col gap-1 {isSidebarCollapsed ? 'items-center' : ''}">
+				<!-- Section 1: 发现导航 -->
+				<div class="flex flex-col gap-1">
 					{#each TOP_NAV as item (item.id)}
 						<SidebarNavItem {item} isActive={activeNavId === item.id} onClick={() => handleNavClick(item)} collapsed={isSidebarCollapsed} />
 					{/each}
 				</div>
 
-				<!-- Divider -->
-				<div class="my-3 self-center h-px bg-border-default" style="width:{isSidebarCollapsed ? 24 : '100%'};"></div>
+				<!-- Divider — 宽度随侧栏同步收缩 -->
+				<div class="my-3 self-center h-px bg-border-default transition-[width] duration-standard ease-standard" style="width:{isSidebarCollapsed ? 24 : '100%'};"></div>
 
-				<!-- Section 2 label -->
+				<!-- Section 2 label — 折叠时高度/透明度同步收起（不用 sr-only 硬切） -->
 				<p
-					class="text-text-secondary {isSidebarCollapsed ? 'sr-only' : 'px-3 mb-2 text-xxs font-semibold tracking-label uppercase opacity-soft'}"
+					class="overflow-hidden whitespace-nowrap text-text-secondary text-xxs font-semibold tracking-label uppercase transition-[max-height,opacity,margin] duration-standard ease-standard {isSidebarCollapsed ? 'max-h-0 mb-0 opacity-none' : 'max-h-6 px-3 mb-2 opacity-soft'}"
 				>
 					个人中心
 				</p>
 
 				<!-- Section 2: Personal nav -->
-				<div class="flex flex-col gap-1 {isSidebarCollapsed ? 'items-center' : ''}">
+				<div class="flex flex-col gap-1">
 					{#each PERSONAL_NAV as item (item.id)}
 						<SidebarNavItem {item} isActive={activeNavId === item.id} onClick={() => handleNavClick(item)} collapsed={isSidebarCollapsed} />
 					{/each}
@@ -254,7 +254,7 @@
 			</div>
 
 			<!-- Location Anchor — ALWAYS pinned to bottom -->
-			<div class="flex shrink-0 pt-3 {isSidebarCollapsed ? 'justify-center' : ''}">
+			<div class="flex shrink-0 pt-3">
 				<LocationCard collapsed={isSidebarCollapsed} onClick={() => void goto(ROUTES.map)} />
 			</div>
 		</aside>

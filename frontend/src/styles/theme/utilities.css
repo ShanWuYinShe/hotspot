@@ -292,6 +292,20 @@
     .hover-bg:hover { background-color: var(--cst-interactive-hover-fill); }
   }
 
+  /*── 文字链接按钮（link）────────────────────────────────────────────
+     行内文字动作（"查看全部"、"忘记密码"、"清空"等）：hover 反馈 = 下划线，
+     颜色变化由元素上的 hover:text-* 类表达；永不出背景块（全局 button hover
+     填充已排除 .link-btn）。文字没有背景，圆角无意义。 */
+  .link-btn {
+    border-radius: 0;
+    text-decoration: underline transparent;
+    text-underline-offset: 3px;
+    transition: color var(--cst-motion-rapid) var(--cst-ease-standard), text-decoration-color var(--cst-motion-rapid) var(--cst-ease-standard);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .link-btn:hover { text-decoration-color: currentColor; }
+  }
+
   /* 地图当前位置脉冲光晕（对齐 Figma Make LocationMobile motion.div：
      scale 1→1.8 / opacity 0.55→0 无限循环，var(--cst-motion-pulse) 节奏）。 */
   @keyframes map-pulse {
@@ -330,30 +344,31 @@
   }
 
   /*── Global button hover feedback（必须是无 layer 规则：Tailwind v4 的
-     @layer utilities 内规则优先级不足，带 !important 的 hover 渐变/背景会被
-     同层 utility 压过——实测全部失效）─────────────────────────────
-     hover 背景填充是基线 hover 提示；渐变叠加层对内联/Tailwind 实色背景同样
-     生效，主按钮与图标按钮获得一致反馈而不抹掉其语义底色。
-     注意：带显式背景类（bg-*）或内联背景的按钮已自带语义底色，
-     背景填充仅作用于透明/ghost 按钮，避免覆盖实色 accent 导致白字褪色。
-     带选中/激活状态的按钮（aria-pressed / aria-current / data-active）整体
-     豁免全局 hover/active 反馈——状态背景由组件级规则负责（如 .surface-ghost
-     的 [aria-pressed="true"]:hover、显式 hover:bg-interactive-active 类），
-     不叠加也不清除，避免透明覆盖抹掉语义底色（白字+实色 accent 会隐形）。
-     排除：[data-tab-bar] 内的导航 Tab（走 .tab-item subtle hover，见下）、
-     .nav-tab 胶囊导航（自带交互态）。 */
+     @layer utilities 内规则优先级不足，会被同层 utility 压过——实测失效）─────
+     全局规则只做「兜底」：仅对没有任何自有 hover 反馈的透明按钮给淡背景填充。
+     排除集（任一命中即不走全局 hover/active 反馈）：
+     - [class*="hover:"]：作者已写自有 hover 工具类（hover:bg-* / hover:text-* /
+       hover:opacity-* 等），全局再叠背景必然重影；
+     - .link-btn：文字链接，反馈 = 下划线 + 颜色变化，永不出背景块（见定义）；
+     - .scale-btn / .hover-action：反馈走缩放契约（Figma btn/action），叠背景重影；
+     - 带显式背景类（bg-*）：自带语义底色，叠淡填充会使其褪色；
+     - 带选中/激活状态的按钮（aria-pressed / aria-current / data-active）：状态
+       底色由组件级规则负责，全局叠加或清除都会抹掉语义底色。
+     排除：[data-tab-bar] 内的导航 Tab（走 .tab-item subtle hover）、.nav-tab
+     胶囊导航（自带交互态）。 */
 :where(button:not(:disabled):not([data-tab-bar] *):not(.nav-tab)) {
-  border-radius: var(--cst-shape-sm);
-  transition: background-color 160ms var(--cst-ease-standard), background-image 160ms var(--cst-ease-standard), border-color 160ms var(--cst-ease-standard), color 160ms var(--cst-ease-standard);
+  transition: background-color 160ms var(--cst-ease-standard), border-color 160ms var(--cst-ease-standard), color 160ms var(--cst-ease-standard);
 }
-:where(button:not(:disabled):not([class*="bg-"]):not([data-tab-bar] *):not(.nav-tab):not(:where([aria-pressed="true"], [aria-current="page"], [data-active="true"]))):active {
+/* 圆角仅对无 rounded-* 类的裸按钮兜底；此前无条件强制 shape-sm 会把
+   rounded-full 圆钮 / 胶囊按钮全部压成 12px 圆角矩形 */
+:where(button:not(:disabled):not([data-tab-bar] *):not(.nav-tab):not([class*="rounded"])) {
+  border-radius: var(--cst-shape-sm);
+}
+:where(button:not(:disabled):not([class*="bg-"]):not([data-tab-bar] *):not(.nav-tab):not([class*="hover:"]):not(.link-btn):not(.scale-btn):not(.hover-action):not(:where([aria-pressed="true"], [aria-current="page"], [data-active="true"]))):active {
   background-color: var(--cst-interactive-active-fill);
 }
 @media (hover: hover) and (pointer: fine) {
-  :where(button:not(:disabled):not([data-tab-bar] *):not(.nav-tab):not(:where([aria-pressed="true"], [aria-current="page"], [data-active="true"]))):hover {
-    background-image: linear-gradient(var(--cst-interactive-hover-overlay), var(--cst-interactive-hover-overlay)) !important;
-  }
-  :where(button:not(:disabled):not([class*="bg-"]):not([data-tab-bar] *):not(.nav-tab):not(:where([aria-pressed="true"], [aria-current="page"], [data-active="true"]))):hover {
+  :where(button:not(:disabled):not([class*="bg-"]):not([data-tab-bar] *):not(.nav-tab):not([class*="hover:"]):not(.link-btn):not(.scale-btn):not(.hover-action):not(:where([aria-pressed="true"], [aria-current="page"], [data-active="true"]))):hover {
     background-color: var(--cst-interactive-hover-fill);
   }
 }

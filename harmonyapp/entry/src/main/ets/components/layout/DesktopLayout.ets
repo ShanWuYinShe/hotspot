@@ -63,6 +63,8 @@ export struct DesktopLayout {
   @State showUpgradeBanner: boolean = false;
   @State showThemeSheet: boolean = false;
   @State logoPressed: boolean = false;
+  // 当前按压中的侧栏行（nav label / '__admin__'），驱动整行 tap-97 按压缩放
+  @State pressedNavLabel: string = '';
 
   aboutToAppear() {
     this.showUpgradeBanner = this.isLoggedIn && this.userType === 'temp';
@@ -119,13 +121,15 @@ export struct DesktopLayout {
       .height('100%')
       .backgroundColor(this.getPalette().pageBackground)
 
-      // 通知中心 overlay
+      // 通知中心 overlay（遮罩淡入淡出，避免 if 硬切闪现）
       if (this.showNotificationCenter) {
         Stack() {
           Column()
             .width('100%')
             .height('100%')
             .backgroundColor(this.getPalette().overlayStrong)
+            .transition(TransitionEffect.OPACITY
+              .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT }))
             .onClick(() => {
               this.showNotificationCenter = false;
             })
@@ -137,6 +141,8 @@ export struct DesktopLayout {
           .width('100%')
           .height('100%')
           .backgroundColor(this.getPalette().surfaceBackground)
+          .transition(TransitionEffect.OPACITY
+            .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT }))
         }
         .width('100%')
         .height('100%')
@@ -150,6 +156,8 @@ export struct DesktopLayout {
         .width('100%')
         .height('100%')
         .backgroundColor(this.getPalette().surfaceBackground)
+        .transition(TransitionEffect.OPACITY
+          .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT }))
         .onClick(() => {
           this.showPerformanceDetails = false;
         })
@@ -402,6 +410,21 @@ export struct DesktopLayout {
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
       .borderRadius(DesignConstants.SHAPE.INPUT)
       .alignItems(VerticalAlign.Center)
+      // 按压反馈与 NavItemBuilder 同款（tap-97 + spring）
+      .scale(this.pressedNavLabel === '__admin__' ?
+        { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+        { x: 1, y: 1 })
+      .animation({ curve: curves.springMotion(
+        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+      ) })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.pressedNavLabel = '__admin__';
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.pressedNavLabel = '';
+        }
+      })
       .onClick(() => {
         if (this.isLoggedIn) {
           AppRouter.push(PageNames.ADMIN_OVERVIEW);
@@ -449,7 +472,24 @@ export struct DesktopLayout {
     .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
     .borderRadius(DesignConstants.SHAPE.INPUT) // 18
     .backgroundColor(this.isItemActive(item) ? this.getPalette().tabBarActiveBackground : DesignConstants.COLOR.TRANSPARENT)
+    // 激活底色/文字色切换过渡（对齐前端侧栏导航 transition-colors，避免硬跳）
+    .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
+    // 按压反馈（对齐前端 tap-97）；滑出/抬起经 onTouch 统一复位
+    .scale(this.pressedNavLabel === item.label ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+      { x: 1, y: 1 })
+    .animation({ curve: curves.springMotion(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ) })
     .alignItems(VerticalAlign.Center)
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedNavLabel = item.label;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedNavLabel = '';
+      }
+    })
     .onClick(() => this.handleNavClick(item))
   }
 

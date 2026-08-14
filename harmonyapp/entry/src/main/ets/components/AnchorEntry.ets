@@ -116,9 +116,10 @@ export struct AnchorEntry {
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
-    .backgroundColor(this.getPalette().surfaceBackground)
+    // 对齐前端 LocationCard 语义：card 变体融入侧栏（透明底、无常驻边框/阴影），
+    // 入口语义由 accent 图标圆表达；pill 变体保留 chip 边框（移动端头部 chip 语义）
+    .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
     .borderRadius(DesignConstants.SHAPE.INPUT) // 18
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .alignItems(VerticalAlign.Center)
     .scale(this.isPressed ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW } : { x: 1, y: 1 }) // 对齐前端输入行按压强度
     .animation({ curve: curves.springMotion(DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS, DesignConstants.INTERACTION.SPRING_DAMPING_PRESS) })

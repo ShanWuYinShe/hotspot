@@ -94,7 +94,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 				class="flex-1"
 			/>
 			{#if activeTab === 'recent' && recentItems.length > 0}
-				<button type="button" class="hover-btn ml-auto focus-ring text-text-secondary text-xs" onclick={() => (recentItems = [])}>
+				<button type="button" class="link-btn ml-auto focus-ring text-xs text-text-secondary hover:text-accent-default" onclick={() => (recentItems = [])}>
 					清空
 				</button>
 			{/if}

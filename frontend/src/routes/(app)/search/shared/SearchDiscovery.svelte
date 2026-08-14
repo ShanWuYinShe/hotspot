@@ -36,7 +36,7 @@
 			<button
 				type="button"
 				onclick={onClear}
-				class="hover-btn text-xs text-accent-default hover:underline"
+				class="link-btn text-xs text-accent-default"
 			>
 				清除
 			</button>

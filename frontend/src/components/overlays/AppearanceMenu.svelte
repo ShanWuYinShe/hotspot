@@ -82,6 +82,7 @@
 			onClick={() => (open = !open)}
 			variant="ghost"
 			size={34}
+			class="header-action"
 		/>
 	</div>
 

@@ -437,25 +437,25 @@
 	<!-- Mode switcher -->
 	<div class="flex flex-wrap items-center justify-center gap-3.5 mt-1" >
 		{#if mode !== 'login' && mode !== 'forgot' && mode !== 'reset'}
-			<button type="button" onclick={() => switchMode('login')} class="text-sm transition-opacity hover:opacity-soft focus-ring text-accent-default" >
+			<button type="button" onclick={() => switchMode('login')} class="link-btn text-sm focus-ring text-accent-default" >
 				已有账号？登录
 			</button>
 		{/if}
 		{#if mode === 'login'}
-			<button type="button" onclick={() => switchMode('register')} class="text-sm transition-opacity hover:opacity-soft focus-ring text-accent-default" >
+			<button type="button" onclick={() => switchMode('register')} class="link-btn text-sm focus-ring text-accent-default" >
 				注册新账号
 			</button>
-			<button type="button" onclick={() => switchMode('forgot')} class="text-sm transition-opacity hover:opacity-soft focus-ring text-accent-default" >
+			<button type="button" onclick={() => switchMode('forgot')} class="link-btn text-sm focus-ring text-accent-default" >
 				忘记密码
 			</button>
 		{/if}
 		{#if mode === 'register' || mode === 'forgot' || mode === 'reset'}
-			<button type="button" onclick={() => switchMode('login')} class="text-sm transition-opacity hover:opacity-soft focus-ring text-accent-default" >
+			<button type="button" onclick={() => switchMode('login')} class="link-btn text-sm focus-ring text-accent-default" >
 				返回登录
 			</button>
 		{/if}
 		{#if mode !== 'guest' && mode !== 'forgot' && mode !== 'reset'}
-			<button type="button" onclick={() => switchMode('guest')} class="text-sm transition-opacity hover:opacity-soft focus-ring text-accent-default" >
+			<button type="button" onclick={() => switchMode('guest')} class="link-btn text-sm focus-ring text-accent-default" >
 				随便逛逛（访客）
 			</button>
 		{/if}

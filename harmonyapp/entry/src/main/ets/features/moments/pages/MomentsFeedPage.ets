@@ -331,6 +331,8 @@ export struct MomentsFeedPage {
               }
               .layoutWeight(1)
               .scrollBar(BarState.Auto)
+              // 桌面分支同样给滚动尾部留呼吸（对齐移动分支的 bottom 安全区语义）
+              .padding({ bottom: DesignConstants.SPACING.LG })
 
               // 右栏：热门话题 + 活跃用户（对齐前端 rightSidebar，宽 220vp + border-left）
               Column() {
