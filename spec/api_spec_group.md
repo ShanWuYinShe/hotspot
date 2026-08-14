@@ -177,10 +177,6 @@ interface InviteAcceptedResult {
   group_id: string;   // 接受的群组 ID，便于客户端直接跳转/拉取群详情
 }
 
-// 群公告列表（有界数据，不分页）
-interface GroupAnnouncementList {
-  items: GroupAnnouncementItem[];
-}
 ```
 
 ## 公开/成员路径端点详情

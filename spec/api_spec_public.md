@@ -18,7 +18,7 @@
 - **无身份类资源约束**：本节点仅适用可见性过滤（privacy_level / searchable 系列 / social_lists_visible 等），无 owner/participant/member/self 类约束
 - **限流**：本节点请求一律按 **IP 维度**限流（见 `api_spec_base.md`「限流策略」）
 - **类型隔离**：本节点端点的 Request/Response 使用专属类型，与 `/api/v1`（含 groups/admin 子树）、`/admin/v1` **禁止共用**（规则见下方「类型体系」）
-- **镜像判定原则**：仅当登录版存在真实增量——查看者状态字段，或可见性判定依赖身份（如 `reactions/fetch` 的私聊消息仅参与者可见）——才在 `/api/v1` 设登录镜像版；无任何增量的端点仅在本节点提供（如 `map/canvas`、`share/fetch`、`groups/announcements/fetch`、system 4 端点）
+- **镜像判定原则**：仅当登录版存在真实增量——查看者状态字段，或可见性判定依赖身份（如 `reactions/fetch` 的私聊消息仅参与者可见）——才在 `/api/v1` 设登录镜像版；无任何增量的端点仅在本节点提供（如 `map/canvas`、`share/fetch`、`groups/announcements/fetch`、system 的 meta/health/announcements/fetch/client_config）
 
 ## 类型体系（契约级）
 

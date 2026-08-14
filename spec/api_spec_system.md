@@ -19,7 +19,7 @@
 | 端点 | 说明 | 节点 |
 |-----|------|------|
 | `POST /api/v1/system/bootstrap` | 登录态冷启动聚合（config + meta + profile + unread） | /api/v1 |
-| `POST /public/v1/system/meta` 等 5 个 | 系统公开信息（匿名版），见 `api_spec_public.md` | /public/v1 |
+| `POST /public/v1/system/meta` 等 | 系统公开信息（匿名版），见 `api_spec_public.md` | /public/v1 |
 
 ## 端点详情
 

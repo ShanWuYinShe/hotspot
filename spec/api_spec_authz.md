@@ -47,7 +47,7 @@
 
 **守卫（子树级统一中间件）**：解析请求中的 `group_id`，判定调用者在该群的角色，要求 `owner` 或 `admin`；不满足返回 `10200` + `forbidden_reason='not_group_admin'`（非成员为 `not_group_member`）。
 
-**owner 专属端点（守卫内再判一次，仅 2 个）**：
+**owner 专属端点（守卫内再判一次）**：
 - `groups/admin/dismiss`：`not_group_owner`
 - `groups/admin/transfer_ownership`：`not_group_owner`
 
@@ -63,7 +63,7 @@
 
 ---
 
-## 平台权限键（/admin/v1 专用，17 个）
+## 平台权限键（/admin/v1 专用）
 
 | 权限键 | 说明 |
 |--------|------|
@@ -118,7 +118,7 @@
 
 ---
 
-## 权限矩阵（契约附件，170 行）
+## 权限矩阵（契约附件）
 
 > 列说明：
 > - **节点即档位**：块标题即节点，节点身份语义见上（/public/v1 纯匿名、/api/v1 注册用户、groups/admin 守卫子树、/admin/v1 平台管理员）；认证档位列已废除
@@ -126,9 +126,9 @@
 > - reason = 10200 时的 forbidden_reason
 > - 幂等 = 幂等键/自然去重/no-op 语义
 > - 「登录视角」= 原 optional 端点收紧为 required 后的登录版；其匿名镜像版在 `/public/v1`（类型独立，见 `api_spec_public.md`）
-> - **镜像判定原则**：仅当登录版存在真实增量（查看者状态字段，或可见性判定依赖身份——如 `reactions/fetch` 的私聊消息）才拆双版本；无任何增量的端点仅保留 `/public/v1` 版（如 `map/canvas`、`share/fetch`、`groups/announcements/fetch`、system 4 端点），不设登录镜像
+> - **镜像判定原则**：仅当登录版存在真实增量（查看者状态字段，或可见性判定依赖身份——如 `reactions/fetch` 的私聊消息）才拆双版本；无任何增量的端点仅保留 `/public/v1` 版（如 `map/canvas`、`share/fetch`、`groups/announcements/fetch`、system 的 meta/health/announcements/fetch/client_config），不设登录镜像
 
-### /public/v1（未注册用户节点，纯匿名，37 行）
+### /public/v1（未注册用户节点，纯匿名）
 
 | # | 端点 | 守卫/约束 | 10200 reason | 特有失败 | 幂等/no-op |
 |---|------|-----------|--------------|----------|------------|
@@ -170,7 +170,7 @@
 | 36 | `/public/v1/system/client_config` | — | — | — | — |
 | 37 | `/public/v1/system/bootstrap` | — | — | — | If-None-Match |
 
-### /api/v1（注册用户节点，必须有效 Token，86 行）
+### /api/v1（注册用户节点，必须有效 Token）
 
 | # | 端点 | 守卫/约束 | 10200 reason | 特有失败 | 幂等/no-op |
 |---|------|-----------|--------------|----------|------------|
@@ -261,7 +261,7 @@
 | 122 | `/api/v1/notify/mark_read` | self(scope 显式) | — | — | — |
 | 123 | `/api/v1/system/bootstrap` | self（登录态聚合） | — | — | If-None-Match |
 
-### /api/v1/groups/admin（群管理守卫子树，20 行）
+### /api/v1/groups/admin（群管理守卫子树）
 
 | # | 端点 | 守卫 | 10200 reason | 特有失败 | 幂等/no-op |
 |---|------|------|--------------|----------|------------|
@@ -286,7 +286,7 @@
 | 142 | `/api/v1/groups/admin/transfer_ownership` | owner 专属 | not_group_owner | 10300/10400(目标非成员) | 自然去重 |
 | 143 | `/api/v1/groups/admin/messages/recall` | 守卫(owner/admin) | not_group_admin | 10300/10400 | — |
 
-### /admin/v1（平台管理员节点，27 行）
+### /admin/v1（平台管理员节点）
 
 | # | 端点 | 守卫 | 10200 reason | 特有失败 | 幂等/no-op |
 |---|------|------|--------------|----------|------------|
@@ -318,4 +318,3 @@
 | 169 | `/admin/v1/announcements/update` | admin.announcements.write | not_admin/insufficient_admin_permission | 10300 | — |
 | 170 | `/admin/v1/announcements/delete` | admin.announcements.write | not_admin/insufficient_admin_permission | 10300 | — |
 
-（共 170 行：public 37 + api 86 + groups/admin 20 + admin 27，与端点总数一致。）

@@ -24,7 +24,7 @@
 | `POST /api/v1/auth/fetch_sessions` | 获取会话列表 | /api/v1 |
 | `POST /api/v1/auth/revoke_session` | 撤销会话 | /api/v1 |
 | `POST /api/v1/auth/revoke_other_sessions` | 撤销所有其他会话 | /api/v1 |
-| `POST /public/v1/auth/register` 等 6 个 | 账号生命周期（注册/登录/访客/刷新/密码重置），见 `api_spec_public.md` | /public/v1 |
+| `POST /public/v1/auth/register` 等 | 账号生命周期（注册/登录/访客/刷新/密码重置），见 `api_spec_public.md` | /public/v1 |
 
 ## 类型定义
 
@@ -186,14 +186,14 @@ interface RevokeSessionRequest {
 - 所有被撤销会话的 token 都会写入黑名单
 - 操作不可逆，被撤销的设备需要重新登录；每个被撤销会话的在线连接收到 `SessionRevoked` 后断开
 
-**Request**: `RevokeAllSessionsRequest`
+**Request**: `RevokeOtherSessionsRequest`
 ```typescript
-interface RevokeAllSessionsRequest {}
+interface RevokeOtherSessionsRequest {}
 ```
 
-**Response**: `ApiResponse<RevokeAllResult>`
+**Response**: `ApiResponse<RevokeOtherSessionsResult>`
 ```typescript
-interface RevokeAllResult {
+interface RevokeOtherSessionsResult {
   revoked_count: number;  // 被撤销的会话数量
 }
 ```

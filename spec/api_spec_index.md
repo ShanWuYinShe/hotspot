@@ -11,7 +11,7 @@
 | 文件 | 说明 |
 |-----|------|
 | [api_spec_base.md](api_spec_base.md) | API 设计原则、节点与路径架构（三节点+守卫子树）、命名规范、参数必显式、类型稳定性、Token 语义、分页排序、幂等性、安全性 |
-| [api_spec_authz.md](api_spec_authz.md) | 守卫与权限模型：节点身份语义、资源约束、群管理守卫子树、平台权限键、ForbiddenReason、权限矩阵（170 端点全表，按节点分块） |
+| [api_spec_authz.md](api_spec_authz.md) | 守卫与权限模型：节点身份语义、资源约束、群管理守卫子树、平台权限键、ForbiddenReason、权限矩阵（按节点分块） |
 | [api_spec_types.md](api_spec_types.md) | 跨模块复用的通用类型定义（Domain Primitives + Domain Entities，恒定 nullable 通则） |
 | [api_spec_errors.md](api_spec_errors.md) | 所有 HTTP API 和 WebSocket 错误码定义 + ForbiddenReason 权威定义 |
 | [api_spec_websocket.md](api_spec_websocket.md) | WebSocket 事件、连接与鉴权规范、订阅机制 |
@@ -81,9 +81,9 @@
 
 **三节点架构改版（受众分段）**：
 - 新增顶级节点 `/public/v1`（未注册用户，纯匿名：不解析 Token），与 `/api/v1`（注册用户）、`/admin/v1`（平台管理员）对称
-- 原 `optional` 档 32 个端点处置：24 个拆双版本（public 匿名版 + api 登录版，类型隔离——`PublicXxxItem` 不含查看者字段）；`auth/session` 收紧为 required（未登录 → 10100）；7 个登录无增量仅保留 public 版（system 的 meta/health/announcements/client_config、map/canvas、share/fetch、groups/announcements/fetch）。镜像判定原则：登录版有真实增量（查看者字段或身份相关可见性，如 reactions/fetch 私聊消息）才拆双版本
+- 原 `optional` 档端点处置：拆双版本（public 匿名版 + api 登录版，类型隔离——`PublicXxxItem` 不含查看者字段）；`auth/session` 收紧为 required（未登录 → 10100）；登录无增量的仅保留 public 版（system 的 meta/health/announcements/client_config、map/canvas、share/fetch、groups/announcements/fetch）。镜像判定原则：登录版有真实增量（查看者字段或身份相关可见性，如 reactions/fetch 私聊消息）才拆双版本
 - 账号生命周期端点（register/login/guest/refresh_token/forgot_password/reset_password）从 `/api/v1/auth/` 迁至 `/public/v1/auth/`
-- 认证档位（public/optional/required/credential）作为端点属性废除，「节点即档位」；端点总数 148 → 170（public 37 + api 86 + groups/admin 20 + admin 27）；media 单/批 4 端点合并为 2（数组参数 1..N）
+- 认证档位（public/optional/required/credential）作为端点属性废除，「节点即档位」；media 单/批端点合并（数组参数 1..N）
 - **动词审美治理**（主观个案评估、不机械排除字母形状，见 base.md「动词审美规则」）：确认丑并废除 `get_*`（全量名词化：account/session/meta/me 等）与 `list_*`（全量更名 `fetch_*`，含裸 `/fetch`）；个案更名 `login`/`logout` → `signin`/`signout`、`join`/`leave` → `enter`/`exit`、`grant` → `award`、`request_password_reset` → `forgot_password`、`batch_get` → `batch_fetch`；`presign_upload` 经评估保留原名
 
 **争议保留（记录理由）**：

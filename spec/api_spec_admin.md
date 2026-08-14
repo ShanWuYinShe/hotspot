@@ -83,9 +83,9 @@ type UserAccountStatus = 'normal' | 'banned';
 
 - **权限**: 是平台管理员即可（不要求 `admin.rbac.manage`）
 
-**Request**: `FetchAdminPermissionsRequest`
+**Request**: `RbacMeRequest`
 ```typescript
-interface FetchAdminPermissionsRequest {}
+interface RbacMeRequest {}
 ```
 
 **Response**: `ApiResponse<AdminPermissions>`
