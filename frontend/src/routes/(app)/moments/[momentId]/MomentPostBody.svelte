@@ -95,7 +95,7 @@
 	<p class="text-text-primary text-sm leading-copy">{moment.content}</p>
 
 	<!-- Actions -->
-	<div class="flex items-center justify-between mt-4 py-3 border-t border-border-default border-b border-border-default" >
+	<div class="flex items-center justify-between py-3 border-t border-border-default border-b border-border-default" >
 		<div class="flex gap-4">
 			<button
 				type="button"

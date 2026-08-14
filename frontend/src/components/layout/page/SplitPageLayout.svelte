@@ -61,7 +61,8 @@
 		</div>
 	{:else}
 		{#if header}
-			<div class="shrink-0">{@render header()}</div>
+			<!-- 移动端 header 吸顶（滚动时内容上探，避免固定 header 常驻挤压内容区） -->
+			<div class="sticky top-0 z-20 shrink-0">{@render header()}</div>
 		{/if}
 		<div class="no-scrollbar min-h-0 flex-1 overflow-y-auto">
 			<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>

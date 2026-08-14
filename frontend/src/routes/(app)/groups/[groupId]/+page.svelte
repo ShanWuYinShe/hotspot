@@ -4,6 +4,7 @@
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
@@ -214,7 +215,7 @@
 				</span>
 			</div>
 
-			<!-- 分类 Tab（统一 TabBar 下划线样式） -->
+			<!-- 分类 Tab（统一 TabBar 胶囊样式） -->
 			<div class="mt-4 border-b border-border-default">
 				<TabBar
 					items={[
@@ -257,7 +258,7 @@
 						</div>
 					{/if}
 					<!-- 空旷内容区 → List bordered（有边框列表契约）；列表行不设独立边框 -->
-					<ListContainer bordered class="mt-3">
+					<ListContainer bordered class="mt-4">
 						{#each gd.members as member (member.id)}
 							<ListItem
 								onClick={() => {
@@ -281,7 +282,7 @@
 									<button
 										type="button"
 										onclick={(e) => { e.stopPropagation(); actionMember = member; }}
-										class="flex h-7 w-7 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default"
+										class="hit-slop flex h-7 w-7 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default"
 										aria-label={`管理 ${member.name}`}
 									>
 										<MoreHorizontal size={15} strokeWidth={2} />
@@ -292,7 +293,7 @@
 					</ListContainer>
 					{:else if memberTab === 'applications'}
 						<!-- 申请审批（owner/admin；默认仅 pending，管理员工作台语义） -->
-						<ListContainer bordered class="mt-6">
+						<ListContainer bordered class="mt-4">
 							{#each gd.applications as app (app.application_id)}
 								<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${app.applicant.nickname} 的入群申请`}>
 									<img src={app.applicant.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
@@ -304,12 +305,12 @@
 									<button type="button" onclick={() => void handleRejectApplication(app.application_id)} class="hover-btn rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring">拒绝</button>
 								</ListItem>
 							{:else}
-								<p class="px-4 py-6 text-center text-sm text-text-secondary">暂无待处理的申请</p>
+								<EmptyState bare title="暂无待处理的申请" />
 							{/each}
 						</ListContainer>
 					{:else if memberTab === 'invites'}
 					<!-- 已发邀请（owner/admin；默认仅 pending，revoked 含过期自动撤销） -->
-					<ListContainer bordered class="mt-6">
+					<ListContainer bordered class="mt-4">
 						{#each gd.sentInvites as inv (inv.invite_id)}
 							<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${inv.invitee.nickname} 的入群邀请`}>
 								<img src={inv.invitee.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
@@ -322,12 +323,12 @@
 								{/if}
 							</ListItem>
 						{:else}
-							<p class="px-4 py-6 text-center text-sm text-text-secondary">暂无待处理的邀请</p>
+							<EmptyState bare title="暂无待处理的邀请" />
 						{/each}
 					</ListContainer>
 				{:else}
 					<!-- 封禁名单（owner/admin） -->
-					<ListContainer bordered class="mt-6">
+					<ListContainer bordered class="mt-4">
 						{#each gd.bannedMembers as item (item.user.user_id)}
 							<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${item.user.nickname} 的封禁记录`}>
 								<img src={item.user.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
@@ -338,7 +339,7 @@
 								<button type="button" onclick={() => void handleUnban(item.user.user_id)} class="hover-btn rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring">解封</button>
 							</ListItem>
 						{:else}
-							<p class="px-4 py-6 text-center text-sm text-text-secondary">暂无封禁成员</p>
+							<EmptyState bare title="暂无封禁成员" />
 						{/each}
 					</ListContainer>
 				{/if}
@@ -353,7 +354,7 @@
 					{/if}
 				</div>
 				<!-- 空旷内容区 → List bordered（有边框列表契约） -->
-				<ListContainer bordered class="mt-3">
+				<ListContainer bordered class="mt-4">
 					{#each gd.announcements as item (item.id)}
 						<ListItem class="flex flex-col items-start px-4 py-4" ariaLabel={item.title}>
 							<div class="flex items-center gap-1.5 pr-16">
@@ -366,17 +367,17 @@
 							<p class="mt-2 text-xs text-text-secondary">{item.time}</p>
 							{#if canManageAnnouncements}
 								<div class="absolute right-3 top-3 flex gap-1">
-									<button type="button" onclick={() => openEditAnnouncement(item)} class="flex h-6 w-6 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default" aria-label="编辑公告">
+									<button type="button" onclick={() => openEditAnnouncement(item)} class="hit-slop flex h-6 w-6 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default" aria-label="编辑公告">
 										<PencilLine size={12} strokeWidth={1.75} />
 									</button>
-									<button type="button" onclick={() => (deleteAnnounceId = item.id)} class="flex h-6 w-6 items-center justify-center rounded-full text-status-danger outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-status-danger" aria-label="删除公告">
+									<button type="button" onclick={() => (deleteAnnounceId = item.id)} class="hit-slop flex h-6 w-6 items-center justify-center rounded-full text-status-danger outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-status-danger" aria-label="删除公告">
 										<Trash2 size={12} strokeWidth={1.75} />
 									</button>
 								</div>
 							{/if}
 						</ListItem>
 					{:else}
-						<p class="px-4 py-6 text-center text-sm text-text-secondary">暂无公告</p>
+						<EmptyState bare title="暂无公告" />
 					{/each}
 				</ListContainer>
 			{/if}
