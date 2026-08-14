@@ -40,7 +40,7 @@
 	<span class="relative shrink-0">
 		<span
 			class="block overflow-hidden rounded-full {compact ? 'size-10' : 'size-11'}"
-			style="border:{isSelected ? '1.5px solid var(--cst-border-inverse)' : '1.5px solid var(--cst-border-default)'};"
+			style="border:{isSelected ? 'var(--cst-border-width-regular) solid var(--cst-border-inverse)' : 'var(--cst-border-width-regular) solid var(--cst-border-default)'};"
 		>
 			<img src={chat.avatar} alt="" loading="lazy" class="h-full w-full object-cover" />
 		</span>

@@ -91,18 +91,18 @@
 
 			<div class="pt-7">
 				<!-- 特色精选卡（对齐 Figma Featured record：16/10 图 + 标题段落 + ArrowUpRight）。
-				     hover 反馈（image-hover-frame 边框 + 图片缩放）绑定整卡按钮而非图片容器：
+				     hover 反馈（外边缘 accent 边框）绑定整卡按钮而非图片容器：
 				     鼠标在卡片任意位置（含文本区）反馈持续。 -->
 				{#if featured}
 					<button
 						type="button"
 						onclick={() => void goto(`${ROUTES.moment(featured.id)}?from=me`)}
-						class="group image-hover-frame relative block w-full overflow-hidden rounded-xl border border-border-default bg-surface-primary text-left transition-colors hover:border-accent-default"
+						class="relative block w-full overflow-hidden rounded-xl border border-border-default bg-surface-primary text-left transition-colors hover:border-accent-default focus-ring"
 						aria-label="查看精选瞬间"
 					>
 						<div class="lg:grid lg:grid-cols-[minmax(0,1.38fr)_minmax(280px,0.62fr)]">
 							<div class="tap-97 relative aspect-[16/10] overflow-hidden lg:aspect-auto lg:min-h-97.5 bg-surface-page" >
-								<img src={featured.img} alt="本期精选瞬间" loading="lazy" class="image-hover-frame__image h-full w-full object-cover" />
+								<img src={featured.img} alt="本期精选瞬间" loading="lazy" class="h-full w-full object-cover" />
 							</div>
 							<div class="flex flex-col justify-between border-t border-border-default p-6 lg:border-l lg:border-t-0">
 								<div>
@@ -140,11 +140,11 @@
 					<button
 						type="button"
 						onclick={() => void goto(`${ROUTES.moment(moment.id)}?from=me`)}
-						class="group image-hover-frame relative overflow-hidden rounded-md border border-border-default bg-surface-primary text-left transition-colors hover:border-accent-default {index === 0 ? 'col-span-2' : ''}"
+						class="relative overflow-hidden rounded-md border border-border-default bg-surface-primary text-left transition-colors hover:border-accent-default focus-ring {index === 0 ? 'col-span-2' : ''}"
 						aria-label="查看瞬间详情"
 					>
 						<div class="tap-97 relative overflow-hidden {index === 0 ? 'aspect-[16/8]' : 'aspect-square'} bg-surface-page" >
-									<img src={moment.img} alt={moment.title || '瞬间图片'} loading="lazy" class="image-hover-frame__image h-full w-full object-cover" />
+									<img src={moment.img} alt={moment.title || '瞬间图片'} loading="lazy" class="h-full w-full object-cover" />
 								</div>
 								<div class="flex items-center justify-between gap-2 px-3 py-2.5">
 									<p class="truncate text-xs text-text-primary">{moment.title || '瞬间'}</p>

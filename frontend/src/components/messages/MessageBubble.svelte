@@ -58,7 +58,7 @@
 
 <div class="animate-fade-in flex {sent ? 'justify-end' : 'justify-start'}">
 	<div
-		class="max-w-[76%] px-3.5 py-2.5 {sent
+		class="max-w-chat-bubble px-3.5 py-2.5 {sent
 			? 'bg-accent-default shadow-glow-md'
 			: 'bg-surface-primary shadow-raised-sm border border-border-default'} {sent
 			? 'rounded-[var(--cst-shape-md)_var(--cst-shape-sm)_var(--cst-shape-md)_var(--cst-shape-md)]'

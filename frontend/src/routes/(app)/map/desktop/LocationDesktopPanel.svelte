@@ -90,7 +90,7 @@ locationName = loc?.location_name ?? '';
 				pressed={isSelected}
 				onClick={() => onSelectLoc(r)}
 				ariaLabel={`选择地点 ${r.displayName}`}
-				class="app-list-row app-list-row--standard"
+				class="flex list-row-standard items-center gap-3 px-3.5 py-3"
 			>
 				<MapPin class="size-3.5 shrink-0 text-accent-default"   strokeWidth={1.5} />
 				<span class="{isSelected ? 'text-text-on-accent' : 'text-text-primary'} flex-1 text-sm" >{r.displayName}</span>
@@ -147,7 +147,7 @@ locationName = loc?.location_name ?? '';
 							pressed={isSelected}
 							onClick={() => onSelectPin(pin)}
 							ariaLabel={`选择 ${pin.name || pin.title || ''}`}
-							class="app-list-row app-list-row--standard"
+							class="flex list-row-standard items-center gap-3 px-3.5 py-3"
 						>
 						<PinMedia {pin} size={42} selected={isSelected} />
 						<div class="flex-1 min-w-0">
@@ -201,7 +201,7 @@ locationName = loc?.location_name ?? '';
 							pressed={isSelected}
 							onClick={() => onSelectLoc(loc)}
 							ariaLabel={`选择热门地点 ${loc.displayName}`}
-							class="app-list-row app-list-row--standard"
+							class="flex list-row-standard items-center gap-3 px-3.5 py-3"
 						>
 							<div class="flex items-center justify-center rounded-sm shrink-0 bg-accent-default size-9 text-lg opacity-hover">
 								{loc.emoji}
@@ -240,7 +240,7 @@ locationName = loc?.location_name ?? '';
 							pressed={isSelected}
 							onClick={() => onSelectLoc(loc)}
 							ariaLabel={`选择最近地点 ${loc.displayName}`}
-							class="app-list-row app-list-row--standard"
+							class="flex list-row-standard items-center gap-3 px-3.5 py-3"
 						>
 							<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary size-9 text-lg border border-border-default shadow-raised-sm"  >
 								{loc.emoji}
@@ -271,7 +271,7 @@ locationName = loc?.location_name ?? '';
 <!-- Confirm -->
 <div class="shrink-0 border-t border-border-default px-3 pt-2.5 pb-4">
 	{#if selectedLoc}
-		<div class="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-sm bg-surface-primary ring-1 ring-border-default" style="box-shadow:var(--shadow-inset-sm);">
+		<div class="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-sm bg-surface-primary" style="box-shadow:var(--shadow-inset-sm);">
 			<Check class="size-3.5 shrink-0 text-accent-default"   strokeWidth={2.5} />
 			<p class="flex-1 truncate text-accent-default text-xs">{selectedLoc.displayName}</p>
 			<button

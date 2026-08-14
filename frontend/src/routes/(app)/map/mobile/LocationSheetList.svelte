@@ -42,7 +42,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 				pressed={isSelected}
 				onClick={() => onSelectLoc(r)}
 				ariaLabel={`选择地点 ${r.displayName}`}
-				class="app-list-row app-list-row--standard px-5"
+				class="flex list-row-standard items-center gap-3 px-5 py-3"
 			>
 				<div class="flex items-center justify-center rounded-full shrink-0 size-8.5 {isSelected ? 'bg-surface-primary' : 'bg-accent-default'}"  style="{isSelected ? '' : 'opacity:var(--cst-opacity-active)'}">
 					<MapPin class="size-3.5 text-accent-default"   strokeWidth={1.75} />
@@ -110,7 +110,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 							pressed={isSelected}
 							onClick={() => onSelectLoc(loc)}
 							ariaLabel={`选择最近地点 ${loc.displayName}`}
-							class="app-list-row app-list-row--standard px-4"
+							class="flex list-row-standard items-center gap-3 px-4 py-3"
 						>
 							<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary size-9 text-lg border border-border-default shadow-raised-sm"  >
 								{loc.emoji}
@@ -139,7 +139,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 							pressed={isSelected}
 							onClick={() => onSelectLoc(loc)}
 							ariaLabel={`选择热门地点 ${loc.displayName}`}
-							class="app-list-row app-list-row--standard px-4"
+							class="flex list-row-standard items-center gap-3 px-4 py-3"
 						>
 							<div class="flex items-center justify-center rounded-sm shrink-0 size-9 text-lg {isSelected ? 'bg-surface-primary' : 'bg-accent-default'} opacity-hover">
 								{loc.emoji}

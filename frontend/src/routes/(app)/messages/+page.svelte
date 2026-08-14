@@ -228,7 +228,7 @@
 								onclick={() => selectChat(c)}
 							>
 								<div class="relative">
-									<div class="avatar-entry__avatar rounded-full overflow-hidden size-9" style="border:{selectedId === c.id ? '2px solid var(--cst-accent-default)' : '1.5px solid var(--cst-border-default)'};">
+									<div class="avatar-entry__avatar rounded-full overflow-hidden size-9" style="border:{selectedId === c.id ? 'var(--cst-border-width-strong) solid var(--cst-accent-default)' : 'var(--cst-border-width-regular) solid var(--cst-border-default)'};">
 										<img src={c.avatar} alt={c.name} loading="lazy" class="w-full h-full object-cover" />
 									</div>
 									<OnlineDot size="sm" />

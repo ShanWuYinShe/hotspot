@@ -284,7 +284,7 @@
 			onclick={() => void handleSave()}
 			disabled={!canSave}
 			class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-lg focus-ring text-sm font-medium {canSave ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
-			style="box-shadow:{canSave ? 'var(--shadow-glow-lg)' : 'var(--shadow-inset-sm)'};border:{canSave ? 'none' : '1px solid var(--cst-border-default)'};transition:all var(--cst-motion-standard) var(--cst-ease-standard);cursor:{canSave ? 'pointer' : 'not-allowed'};"
+			style="box-shadow:{canSave ? 'var(--shadow-glow-lg)' : 'var(--shadow-inset-sm)'};border:{canSave ? 'none' : 'var(--cst-border-width-hairline) solid var(--cst-border-default)'};transition:all var(--cst-motion-standard) var(--cst-ease-standard);cursor:{canSave ? 'pointer' : 'not-allowed'};"
 		>
 			{saving ? '保存中…' : '保存设置'}
 		</button>

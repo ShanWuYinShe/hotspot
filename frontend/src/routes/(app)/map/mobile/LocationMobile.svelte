@@ -240,7 +240,7 @@
 					<button
 						type="button"
 						class="hover-btn flex items-center gap-2 rounded-full focus-ring text-md {showFilter ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-primary'}"
-						style="padding:9px 16px;border:{showFilter ? '1px solid transparent' : '1px solid var(--cst-border-default)'};box-shadow:{showFilter ? 'var(--shadow-glow-md)' : 'var(--cst-elevation-fab)'};"
+						style="padding:9px 16px;border:{showFilter ? 'var(--cst-border-width-hairline) solid transparent' : 'var(--cst-border-width-hairline) solid var(--cst-border-default)'};box-shadow:{showFilter ? 'var(--shadow-glow-md)' : 'var(--cst-elevation-fab)'};"
 						onclick={() => (showFilter = !showFilter)}
 					>
 						<SlidersHorizontal class="size-3.5"  strokeWidth={showFilter ? 2.5 : 1.75} />

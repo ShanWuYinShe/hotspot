@@ -264,7 +264,7 @@
 									if (member.userId) void goto(ROUTES.user(member.userId));
 								}}
 								ariaLabel={`查看 ${member.name} 的资料`}
-								class="app-list-row app-list-row--standard"
+								class="flex list-row-standard items-center gap-3 px-3.5 py-3"
 							>
 								<div class="relative">
 									<img src={member.avatar} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
@@ -294,7 +294,7 @@
 						<!-- 申请审批（owner/admin；默认仅 pending，管理员工作台语义） -->
 						<ListContainer bordered class="mt-6">
 							{#each gd.applications as app (app.application_id)}
-								<ListItem class="app-list-row app-list-row--standard" ariaLabel={`${app.applicant.nickname} 的入群申请`}>
+								<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${app.applicant.nickname} 的入群申请`}>
 									<img src={app.applicant.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
 									<span class="min-w-0 flex-1">
 										<span class="block truncate text-sm text-text-primary">{app.applicant.nickname}</span>
@@ -311,7 +311,7 @@
 					<!-- 已发邀请（owner/admin；默认仅 pending，revoked 含过期自动撤销） -->
 					<ListContainer bordered class="mt-6">
 						{#each gd.sentInvites as inv (inv.invite_id)}
-							<ListItem class="app-list-row app-list-row--standard" ariaLabel={`${inv.invitee.nickname} 的入群邀请`}>
+							<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${inv.invitee.nickname} 的入群邀请`}>
 								<img src={inv.invitee.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm text-text-primary">{inv.invitee.nickname}</span>
@@ -329,7 +329,7 @@
 					<!-- 封禁名单（owner/admin） -->
 					<ListContainer bordered class="mt-6">
 						{#each gd.bannedMembers as item (item.user.user_id)}
-							<ListItem class="app-list-row app-list-row--standard" ariaLabel={`${item.user.nickname} 的封禁记录`}>
+							<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${item.user.nickname} 的封禁记录`}>
 								<img src={item.user.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm text-text-primary">{item.user.nickname}</span>

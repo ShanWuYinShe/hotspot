@@ -40,7 +40,7 @@
 		{#each filtered as g (g.id)}
 			<button
 				type="button"
-				class="card-hover tap-94 group flex min-h-37 w-full overflow-hidden rounded-md border border-border-default bg-surface-primary shadow-raised-md text-left outline-none transition-colors hover:border-accent-default focus-visible:ring-2 focus-visible:ring-accent-default"
+				class="tap-94 group flex min-h-37 w-full overflow-hidden rounded-md border border-border-default bg-surface-primary shadow-raised-md text-left outline-none transition-colors hover:border-accent-default focus-visible:ring-2 focus-visible:ring-accent-default"
 				aria-label={`进入群组：${g.name}`}
 				onclick={() => void goto(`${ROUTES.group(g.id)}?from=me`)}
 			>
