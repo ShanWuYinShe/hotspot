@@ -83,7 +83,7 @@
 | | `GroupUpdated` | 群组信息更新（名称/头像/描述等所有可修改字段） |
 | | `GroupDismissed` | 群组解散 |
 
-> **多端同步（self-sync）**：本协议不提供**专门的 self-sync 事件**（即不推送"本端状态变更"给自己其他设备的独立协议事件）。需注意与"多端推送"区分：用户多设备各自独立鉴权订阅 WebSocket，消息内容类事件（`PrivateMessageNew`/`Edited`/`Recalled` 等标注"推送给发送者其他设备"的事件）天然到达所有在线设备——这属于推送目标设计，不是 self-sync。self-sync 特指已读状态、UI 选中态等具体状态的跨设备实时同步，当前通过冷启动 `/api/v1/system/bootstrap` + 各域 HTTP API 补拉收敛。未来如需通用的多端状态实时同步，将作为独立协议版本重新设计（不在此版本预留具体事件形状，避免预留形状与未来需求不匹配）。
+> **多端同步（self-sync）**：本协议不提供**专门的 self-sync 事件**（即不推送"本端状态变更"给自己其他设备的独立协议事件）。需注意与"多端推送"区分：用户多设备各自独立鉴权订阅 WebSocket，消息内容类事件（`PrivateMessageNew`/`Edited`/`Recalled` 等标注"推送给发送者其他设备"的事件）天然到达所有在线设备——这属于推送目标设计，不是 self-sync。self-sync 特指已读状态、UI 选中态等具体状态的跨设备实时同步，当前通过冷启动 `/api/v1/system/bootstrap` + 各域 HTTP API 补拉收敛。
 
 ### 客户端能发送什么？
 
@@ -121,10 +121,10 @@
 
 以下类型定义于 `api_spec_types.md`，本模块事件负载直接引用：
 - `UserInfo`、`ClientType`、`MessageType`
-- `MessageMedia`、`MessageReplyTo`
+- `MessageMedia`、`MessageBrief`
 - `GroupInfo`、`GroupRole`、`GroupJoinMethod`、`GroupAnnouncementItem`
 - `SystemAnnouncementItem`、`MomentSummary`
-- `FollowSource`、`Location`
+- `FollowSource`、`RelativeLocation`
 
 - 错误码定义于 `api_spec_errors.md`
 - 所有事件类型和负载结构必须严格遵循本规范定义
@@ -169,12 +169,7 @@ WebSocket close code 受 RFC 6455 约束（范围 1000-4999），应用层错误
 
 #### 3. 去重规则
 
-HTTP API 返回的数据可能与 WebSocket 推送的事件重复（resume 续传或补拉都可能产生）。去重方式按资源主键执行（参见 `api_spec_base.md`）：
-
-- **持久化事件**：去重规则分两类：
-  - **携带 `notify_id` 的事件**（关注/瞬间互动/群邀请申请/群聊 @/系统公告/reaction）：客户端按 `notify_id` 去重——它与 HTTP `notify/fetch` 返回的 `NotifyItem.notify_id` 为同一主键（见 api_spec_notify.md）。
-  - **其它持久化事件**（消息等）：按业务主键或稳定组合键去重（如 `message_id`、`comment_id`）。resume 续传的事件携带单调递增的 `server_seq`，客户端也可按 seq 去重。
-- **状态快照事件**：直接覆盖（保留最新状态），无需去重。
+HTTP API 返回的数据可能与 WebSocket 推送的事件重复（resume 续传或补拉都可能产生）；去重规则见下方「消息可靠性与去重」（权威定义）。
 
 ---
 
@@ -260,12 +255,13 @@ type ServerWebSocketEvent = WebSocketEvent<ServerEventType, unknown>;
 type ClientWebSocketEvent = WebSocketEvent<ClientEventType, unknown>;
 ```
 
-**消息可靠性与去重**：
-- 基于 TCP：协议层保证消息不丢失、不乱序、不重复，应用层无需维护 seq。
-- **携带 `notify_id` 的事件**：按 `notify_id` 去重（与 HTTP 通知 API 同主键，见 `api_spec_notify.md`「通知与 WebSocket 事件的关系」）；此类事件同时落库了一条通知记录，客户端需处理通知已读同步（用户已阅读对应内容时调用 `notify/mark_read` 标记已读）
-- **不携带 `notify_id` 的事件**：纯实时事件（消息、群成员变动、群公告等），与通知中心无关，直接更新对应界面即可
-- **其他持久化事件**（消息等）：按业务主键去重（如 `message_id`、`comment_id`）。resume 续传的事件携带单调递增的 `server_seq`，客户端也可按 seq 去重
-- **状态快照事件**：表示最新状态（如在线状态、输入状态、成员变更），按 `user_id + 事件类型` 或 `group_id + user_id + 事件类型` 覆盖即可。
+**空值表达（契约级）**：WS 载荷与 HTTP 类型同样遵循「恒定 nullable」（`api_spec_base.md`「类型稳定性」）——可选值用显式 `| null`（null = 无/不适用），数组字段恒在（空数组 = 无元素）；唯一例外是增量更新类载荷（如 `GroupUpdatedPayload.updated_fields`），其 `?` 表示「该字段不在本次变更中」。
+
+**消息可靠性与去重（权威定义）**：
+- 基于 TCP：协议层保证消息不丢失、不乱序、不重复，应用层无需维护 seq
+- **携带 `notify_id` 的事件**（关注/瞬间互动/群邀请申请/群聊 @/系统公告/reaction）：客户端按 `notify_id` 去重——它与 HTTP `notify/fetch` 返回的 `NotifyItem.notify_id` 为同一主键（权威定义见 `api_spec_notify.md`「通知与 WebSocket 事件的关系」）；此类事件同时落库了一条通知记录，客户端需处理通知已读同步（用户已阅读对应内容时调用 `notify/mark_read` 标记已读）
+- **其它持久化事件**（消息等）：按业务主键或稳定组合键去重（如 `message_id`、`comment_id`）；resume 续传的事件携带单调递增的 `server_seq`，客户端也可按 seq 去重
+- **状态快照事件**（在线状态、输入状态、成员变更等）：表示最新状态，按 `user_id + 事件类型` 或 `group_id + user_id + 事件类型` 直接覆盖，无需去重
 
 > 重连后的数据补拉与去重策略详见「连接与鉴权」中的「重连恢复策略」。
 
@@ -313,7 +309,7 @@ type ServerEventType =
   | "SystemAnnouncement" | "AccountBanned"
   // 协议控制
   | "Error" | "SubscribeAck"
-  | "SubscriptionsSnapshot"       // 订阅快照（GetSubscriptions 响应；SetSubscriptions 处理完成后亦推送）;
+  | "SubscriptionsSnapshot"          // 订阅快照（GetSubscriptions 响应；SetSubscriptions 处理完成后亦推送）;
 
 // 客户端发送事件类型枚举（强制：WebSocketEvent.type 必须来自该枚举）
 type ClientEventType =
@@ -348,7 +344,7 @@ type ConnectionEstablishedEvent = { type: "ConnectionEstablished"; payload: Conn
 // PongPayload 定义见上文「心跳机制」
 type PongEvent = { type: "Pong"; payload: PongPayload; };
 
-// 会话被驱逐/撤销（单设备单会话模型下，同设备新登录或 admin 撤销触发）
+// 会话被驱逐/撤销（单设备单会话模型下，同设备重新登录驱逐 device_evicted；或用户自助撤销会话 revoke_session/revoke_other_sessions 触发 revoked_by_user）
 // 客户端收到后必须：清本地用户态 + 断开连接 + 不自动重连（提示"账号在其他设备登录"或"会话已失效"）
 interface SessionRevokedPayload {
   reason: 'device_evicted' | 'revoked_by_user' | 'password_changed';
@@ -382,8 +378,8 @@ interface SubscribeAckPayload {
   operation: SubscriptionOperation;                  // 回传操作类型
   accepted: SubscriptionItem[];                      // 已接受的订阅项（按 type 分组；SubscriptionItem 定义见下文「SetSubscriptions」）
   code: number;                                      // 0表示成功，非0表示失败
-  message?: string;                                  // 错误消息（失败时）
-  failed_ids?: FailedSubscriptionId[];               // 失败的订阅项
+  message: string | null;                            // 错误消息（成功时 null）
+  failed_ids: FailedSubscriptionId[];                // 失败的订阅项（空数组 = 全部成功）
 }
 type SubscribeAckEvent = { type: "SubscribeAck"; payload: SubscribeAckPayload; };
 
@@ -430,18 +426,8 @@ type UserOfflineEvent = { type: "UserOffline"; payload: UserOfflinePayload; };
     - `GroupTyping`：推送给订阅该群聊的成员
   - Typing 状态属于"瞬时状态"，不落库、不补发历史
   - **隐私保护**：通过订阅机制和 target_user_id 限定保护隐私，无需额外权限检查
-  - **节流**：服务端权威节流（默认 3 秒内同一用户重复 typing 只推送一次）；客户端建议"不超过 3 秒发一次"，以服务端为准
-
-  - **节流策略（性能优化，防止广播风暴）**：
-
-    **客户端发送限制**：
-    - 最多每 3 秒发送一次 `SendPrivateTyping`/`SendGroupTyping`
-    - 使用防抖（debounce）：用户停止输入 3 秒后自动发送 `is_typing: false`
-    - 切换聊天对象时立即发送 `is_typing: false` 到上一个对象
-    
-    **服务端推送限制**：
-    - 3 秒内的重复输入状态自动过滤（相同用户+相同状态）
-    - 群聊输入状态合并推送：同一群组多人同时输入时，合并为批量通知
+  - **节流（服务端权威，防广播风暴）**：默认 3 秒内同一用户重复 typing 只推送一次（相同用户 + 相同状态自动过滤）；群聊多人同时输入时合并为批量推送。客户端发送频率不超过 3 秒一次
+  - **客户端约定**：使用防抖（用户停止输入 3 秒后自动发送 `is_typing: false`）；切换聊天对象时立即向上一个对象发送 `is_typing: false`
 
 - **PrivateMessageRead**
   - 触发：已读状态发生变化时触发
@@ -457,19 +443,16 @@ type UserOfflineEvent = { type: "UserOffline"; payload: UserOfflinePayload; };
 // - actor: 执行操作的人（如关注者、评论者、反应者），与 NotifyPayload.actor 语义一致
 // - user: 事件主体（如加入群的人、被操作的人），不一定是操作发起者
 //
-// notify_id 字段约定：
-// - 携带 notify_id 的事件 = 该业务事件同时落库了一条通知记录（见 api_spec_notify.md「通知与 WebSocket 事件的关系」）
-// - notify_id 与 HTTP notify/fetch 返回的 NotifyItem.notify_id 为同一主键，客户端据此在实时路径与补拉路径间去重
-// - 不携带 notify_id 的事件为纯实时事件（消息、群成员变动、群公告等），与通知中心无关
+// notify_id 字段约定见上方「消息可靠性与去重」（权威定义）与 api_spec_notify.md「通知与 WebSocket 事件的关系」
 
 interface NewFollowerPayload {
   notify_id: string;
   actor: UserInfo;
   followed_at: string;
   
-  // 关注来源（可选，让用户了解被关注的原因）
-  source?: FollowSource;
-  source_moment_id?: string;  // 如果是通过瞬间关注，提供瞬间 ID
+  // 关注来源（null = 自然关注，让用户了解被关注的原因）
+  source: FollowSource | null;
+  source_moment_id: string | null;  // 如果是通过瞬间关注，提供瞬间 ID
 }
 type NewFollowerEvent = { type: "NewFollower"; payload: NewFollowerPayload; };
 
@@ -489,7 +472,7 @@ type MutualFollowEvent = { type: "MutualFollow"; payload: MutualFollowPayload; }
 // ReactTarget / Reaction 定义于 api_spec_types.md
 // 事件统一推送（服务端不做自反应判断）；自反应（actor 为资源作者）不落库通知，此时事件不携带 notify_id，客户端自行过滤展示
 interface ReactionAddedPayload {
-  notify_id?: string;        // 有通知落盘时携带（与 notify/fetch 同主键）；自反应时无此字段
+  notify_id: string | null;  // 通知落盘时携带（与 notify/fetch 同主键）；null = 自反应不落通知
   target_type: ReactTarget;  // 'message' | 'moment' | 'comment'
   target_id: string;         // message_id / moment_id / comment_id
   emoji: string;
@@ -532,14 +515,14 @@ interface CommentReplyPayload {
 }
 type CommentReplyEvent = { type: "CommentReply"; payload: CommentReplyPayload; };
 
-// 瞬间/评论内容中被 @（曾名 MessageMentioned——message 为聊天消息领域词，为避免与群聊 @ 事件混淆而更名）
+// 瞬间/评论内容中被 @（与群聊 @ 事件 GroupMessageMentioned 相区分）
 interface ContentMentionedPayload {
   notify_id: string;
   target_type: 'moment' | 'comment';
   moment_id: string;
-  comment_id?: string;
+  comment_id: string | null;        // 仅 comment 场景非 null
   moment_summary: MomentSummary;
-  comment_preview?: string;
+  comment_preview: string | null;   // 仅 comment 场景非 null
   actor: UserInfo;
   mentioned_at: string;
 }
@@ -569,11 +552,11 @@ interface PrivateMessageNewPayload {
   target_user_id: string; // 接收者ID (对于发送者多端同步=接收方ID)
   sender: UserInfo;       // 统一使用 UserInfo
   type: MessageType;
-  content?: string;       // 文本内容
-  share_code?: string;    // share 类型消息
-  reply_to?: MessageReplyTo;
+  content: string | null;       // 文本内容
+  share_code: string | null;    // share 类型消息
+  reply_to: MessageBrief | null;
   // 媒体信息
-  media?: MessageMedia;
+  media: MessageMedia | null;
   sent_at: string;
 }
 type PrivateMessageNewEvent = { type: "PrivateMessageNew"; payload: PrivateMessageNewPayload; };
@@ -617,12 +600,12 @@ interface GroupMessageNewPayload {
   group_id: string;
   sender: UserInfo;
   type: MessageType;
-  content?: string;
-  share_code?: string;    // share 类型消息
-  reply_to?: MessageReplyTo;
-  mentions?: string[];     // user_id
+  content: string | null;
+  share_code: string | null;    // share 类型消息
+  reply_to: MessageBrief | null;
+  mentions: string[];           // 被 @ 的 user_id 列表（空数组 = 无 @）
   // 媒体信息
-  media?: MessageMedia;
+  media: MessageMedia | null;
   sent_at: string;
 }
 type GroupMessageNewEvent = { type: "GroupMessageNew"; payload: GroupMessageNewPayload; };
@@ -666,7 +649,7 @@ interface GroupMessageMentionedPayload {
   group_name: string;      // 群名称（与 notify 的 group_mentioned payload 对齐，客户端直接渲染通知标题）
   message_id: string;
   actor: UserInfo;          // 发送者（@ 的发起人）
-  content_preview?: string; // 消息内容截断预览
+  content_preview: string | null; // 消息内容截断预览（null = 无文本内容）
   mentioned_at: string;
 }
 type GroupMessageMentionedEvent = { type: "GroupMessageMentioned"; payload: GroupMessageMentionedPayload; };
@@ -696,7 +679,7 @@ interface GroupInviteReceivedPayload {
   invite_id: string;
   group: GroupInfo;  // 引用 api_spec_types.md
   actor: UserInfo;   // 邀请发起人（统一 actor 命名，与 WS 全事件约定一致；notify 的 group_invite_received payload 同为 actor）
-  message?: string;
+  message: string | null;  // 邀请附言（null = 无附言）
   created_at: string;
 }
 type GroupInviteReceivedEvent = { type: "GroupInviteReceived"; payload: GroupInviteReceivedPayload; };
@@ -716,7 +699,7 @@ interface GroupInviteRejectedPayload {
   group_id: string;
   rejected_by: UserInfo;   // 拒绝邀请的受邀人（邀请发起方可见其身份——群邀请是双向契约）
   rejected_at: string;
-  reason?: string;
+  reason: string | null;   // 拒绝理由（null = 无）
 }
 type GroupInviteRejectedEvent = { type: "GroupInviteRejected"; payload: GroupInviteRejectedPayload; };
 
@@ -726,7 +709,7 @@ interface GroupInviteRevokedPayload {
   group_id: string;
   revoked_by: UserInfo;   // 撤销邀请的管理员
   revoked_at: string;
-  reason?: string;
+  reason: string | null;  // 撤销理由（null = 无）
 }
 type GroupInviteRevokedEvent = { type: "GroupInviteRevoked"; payload: GroupInviteRevokedPayload; };
 
@@ -743,7 +726,7 @@ interface GroupApplicationReceivedPayload {
   application_id: string;
   group_id: string;
   applicant: UserInfo;
-  message?: string;
+  message: string | null;  // 申请附言（null = 无附言）
   created_at: string;
 }
 type GroupApplicationReceivedEvent = { type: "GroupApplicationReceived"; payload: GroupApplicationReceivedPayload; };
@@ -762,7 +745,7 @@ interface GroupApplicationCancelledPayload {
   group_id: string;
   applicant: UserInfo;
   cancelled_at: string;
-  reason?: string;
+  reason: string | null;  // 取消理由（null = 无）
 }
 type GroupApplicationCancelledEvent = { type: "GroupApplicationCancelled"; payload: GroupApplicationCancelledPayload; };
 
@@ -783,7 +766,7 @@ interface GroupApplicationRejectedPayload {
   application_id: string;
   group: GroupInfo;
   rejected_at: string;
-  reason?: string;
+  reason: string | null;   // 拒绝理由（null = 无）
 }
 type GroupApplicationRejectedEvent = { type: "GroupApplicationRejected"; payload: GroupApplicationRejectedPayload; };
 
@@ -795,7 +778,7 @@ interface ReportResolvedPayload {
   target_type: ReportTargetType;
   target_id: string;
   resolved_at: string;
-  note?: string;               // 管理员处理说明（脱敏后，与 ReportItem.resolution.note 一致）
+  note: string | null;         // 管理员处理说明（脱敏后，与 ReportItem.resolution.note 一致；null = 无说明）
 }
 type ReportResolvedEvent = { type: "ReportResolved"; payload: ReportResolvedPayload; };
 
@@ -805,7 +788,7 @@ interface ReportDismissedPayload {
   target_type: ReportTargetType;
   target_id: string;
   dismissed_at: string;
-  note?: string;               // 管理员处理说明（脱敏后）
+  note: string | null;         // 管理员处理说明（脱敏后；null = 无说明）
 }
 type ReportDismissedEvent = { type: "ReportDismissed"; payload: ReportDismissedPayload; };
 
@@ -840,7 +823,7 @@ interface GroupMemberRemovedPayload {
   group_id: string;
   user: UserInfo;
   removed_by: UserInfo;         // 操作者
-  reason?: 'kicked' | 'banned'; // 移除原因
+  reason: 'kicked' | 'banned';  // 移除原因
   removed_at: string;
   member_count: number;
 }
@@ -862,7 +845,7 @@ type GroupMemberRoleChangedEvent = { type: "GroupMemberRoleChanged"; payload: Gr
 // 字段可见性：GroupUpdated 事件推送给所有群订阅者（订阅者恒为已加入成员，见下方「隐私约束」）。
 // 推送范围与 HTTP GroupItem 公开类型一致（见 api_spec_types.md）：
 //   - 推送：name/avatar_url/description/tags/location
-//     /join_method/requires_approval/next_activity
+//     /join_method/requires_approval/next_activity_at
 //   - 不推送：has_password/is_searchable/max_members（群管理字段，见 GroupSettings）——群广播通道无法按订阅者角色过滤，
 //     服务端有意省略；群管理员可通过 HTTP groups/admin/settings 获取
 //   - online_members_count 为聚合计数，随列表/详情 HTTP 响应返回，不随更新事件推送
@@ -875,8 +858,8 @@ interface GroupUpdatedPayload {
     tags?: string[];
     join_method?: GroupJoinMethod;
     requires_approval?: boolean;
-    next_activity?: string;
-    location?: Location;
+    next_activity_at?: string;
+    location?: RelativeLocation | null;  // null = 清除位置
   };
   updated_by: UserInfo;        // 操作者（嵌套 UserInfo，与 types.md「对用户引用」约定一致）
   updated_at: string;
@@ -884,14 +867,14 @@ interface GroupUpdatedPayload {
 type GroupUpdatedEvent = { type: "GroupUpdated"; payload: GroupUpdatedPayload; };
 
 // 群组解散（群主主动解散或因违规被解散）
-// 注意：系统管理员解散群组时，服务端必须向所有在线群成员推送此事件（无论客户端是否主动订阅该群组频道）。
-// 设计说明：不暴露操作者身份（deleted_by），不暴露系统管理员的存在。
+// 注意：平台管理员解散群组时，服务端必须向所有在线群成员推送此事件（无论客户端是否主动订阅该群组频道）。
+// 设计说明：不暴露操作者身份（deleted_by），不暴露平台管理员的存在。
 // 'policy_violation' 表示因违反平台规则被解散，不透露具体操作方式。
 // 详细操作记录保留在审计日志中（仅管理员可见）。
 interface GroupDismissedPayload {
   group_id: string;
   dismissed_at: string;
-  reason?: 'owner_dismissed' | 'policy_violation';  // 解散原因
+  reason: 'owner_dismissed' | 'policy_violation';   // 解散原因
 }
 type GroupDismissedEvent = { type: "GroupDismissed"; payload: GroupDismissedPayload; };
 
@@ -944,21 +927,21 @@ type ErrorSeverity =
   | 'warning';     // 警告：仅提示（订阅失败、权限不足）
 
 interface ErrorPayload {
-  code: number;          // 错误码：WebSocket 业务期错误优先使用 20000-20999，幂等相关错误使用 22000-22099（详见 api_spec_errors.md）
+  code: number;          // 错误码：WebSocket 业务期错误使用 20000-20500，幂等相关错误使用 22000-22002（详见 api_spec_errors.md）
                          // 禁止使用 HTTP API 的 10000-19999 作为 WebSocket Error 事件 code
   message: string;       // 错误消息（用户友好，不泄露内部细节）
   
   // 错误分级和处理指导
   severity: ErrorSeverity;       // 错误严重程度
   retryable: boolean;            // 是否可重试
-  retry_after?: number;          // 建议重试延迟（秒），仅当 retryable=true 时有效
+  retry_after: number | null;    // 建议重试延迟（秒），仅 retryable=true 时非 null
   
-  // 上下文信息（帮助调试）
-  context?: {
-    operation?: string;          // 失败的操作（如 "subscribe", "send_message"）
-    resource_type?: string;      // 资源类型（如 "user", "group"）
-    resource_id?: string;        // 资源ID
-  };
+  // 上下文信息（帮助调试；null = 无上下文）
+  context: {
+    operation: string | null;    // 失败的操作（如 "subscribe", "send_message"）
+    resource_type: string | null;// 资源类型（如 "user", "group"）
+    resource_id: string | null;  // 资源ID
+  } | null;
 }
 type ErrorEvent = { type: "Error"; payload: ErrorPayload; };
 
@@ -968,14 +951,14 @@ interface AccountBannedPayload {
   reason: string;              // 封禁原因
   duration_days: number;       // 封禁时长（天），0=永久
   banned_at: string;
-  banned_until?: string;       // 封禁到期时间（UTC ISO 8601）；不返回/省略表示永久封禁。客户端据此提示"何时可重新登录"，无需自行计算 banned_at + duration_days
+  banned_until: string | null; // 封禁到期时间（UTC ISO 8601）；null = 永久封禁。客户端据此提示"何时可重新登录"，无需自行计算 banned_at + duration_days
 }
 type AccountBannedEvent = { type: "AccountBanned"; payload: AccountBannedPayload; };
 ```
 
 **错误码定义**：
 
-错误码定义以 `api_spec_errors.md` 为准（精简后每个类型仅一个错误码，具体场景通过 `message` 描述）。
+错误码定义以 `api_spec_errors.md` 为准；下表补充各码的**严重性映射**（ws 特有，具体场景通过 `message` 描述）。
 
 | 错误码 | 类型 | 严重性 | message 示例 |
 |-------|------|--------|-------------|
@@ -1000,9 +983,9 @@ type AccountBannedEvent = { type: "AccountBanned"; payload: AccountBannedPayload
 ```typescript
 interface AuthPayload {
   client_type: ClientType;
-  access_token?: string;   // App 端必填，Web 端不传（使用 Cookie）
-  device_id?: DeviceId;    // 设备标识（支撑单设备单会话模型；App 端必填，Web 端由 Cookie 自动携带）
-  resume_token?: string;   // 可选：上次连接的 resume_token，用于尝试增量恢复（见「重连恢复策略」）
+  access_token: string | null;   // App 端必填非 null；Web 端 null（使用 Cookie）
+  device_id: DeviceId | null;    // 设备标识（支撑单设备单会话模型；App 端必填非 null，Web 端由 Cookie 自动携带、null）
+  resume_token: string | null;   // 上次连接的 resume_token，用于尝试增量恢复（null = 全量恢复，见「重连恢复策略」）
 }
 type AuthEvent = { type: "Auth"; payload: AuthPayload; };
 
@@ -1011,23 +994,23 @@ type PingEvent = { type: "Ping"; payload: PingPayload; };
 
 // 客户端发送版（type 与服务端推送版显式区分：发送用 "SendPrivateTyping"，推送用 "PrivateTyping"，
 // 避免收发共用同一 type 字面量导致方向性仅靠隐含约定）
-interface PrivateTypingSendPayload {
+interface SendPrivateTypingPayload {
   target_user_id: string;
   is_typing: boolean;
 }
-type SendPrivateTypingEvent = { type: "SendPrivateTyping"; payload: PrivateTypingSendPayload; };
+type SendPrivateTypingEvent = { type: "SendPrivateTyping"; payload: SendPrivateTypingPayload; };
 
 // 客户端发送版（type 与服务端推送版显式区分：发送用 "SendGroupTyping"，推送用 "GroupTyping"）
-interface GroupTypingSendPayload {
+interface SendGroupTypingPayload {
   group_id: string;
   is_typing: boolean;
 }
-type SendGroupTypingEvent = { type: "SendGroupTyping"; payload: GroupTypingSendPayload; };
+type SendGroupTypingEvent = { type: "SendGroupTyping"; payload: SendGroupTypingPayload; };
 ```
 
 **订阅管理**：
 
-WebSocket订阅机制提供用户状态订阅和群组订阅两种类型：
+WebSocket 订阅机制提供用户状态订阅和群组订阅两种类型：
 
 ```typescript
 // SubscriptionOperation 定义见上文「连接管理事件」
@@ -1047,7 +1030,7 @@ type SetSubscriptionsEvent = { type: "SetSubscriptions"; payload: SetSubscriptio
 
 // GetSubscriptions - 查询当前连接的订阅快照（状态对齐/调试用，幂等只读）
 interface GetSubscriptionsPayload {
-  client_request_id?: string;    // 可选：响应 SubscriptionsSnapshot 时原样回传
+  client_request_id: string | null;  // 响应 SubscriptionsSnapshot 时原样回传
 }
 type GetSubscriptionsEvent = { type: "GetSubscriptions"; payload: GetSubscriptionsPayload; };
 
@@ -1055,9 +1038,9 @@ type GetSubscriptionsEvent = { type: "GetSubscriptions"; payload: GetSubscriptio
 // - 客户端发送 GetSubscriptions 时作为响应下发（client_request_id 原样回传）
 // - 每次 SetSubscriptions 处理完成后主动推送，客户端据此对齐本地订阅状态
 interface SubscriptionsSnapshotPayload {
-  client_request_id?: string;    // 仅响应 GetSubscriptions 时携带
-  user_ids?: string[];           // 当前 user 类型订阅；缺省视为空
-  group_ids?: string[];          // 当前 group 类型订阅；缺省视为空
+  client_request_id: string | null;  // 仅响应 GetSubscriptions 时携带（主动推送时 null）
+  user_ids: string[];                // 当前 user 类型订阅（空数组 = 无）
+  group_ids: string[];               // 当前 group 类型订阅（空数组 = 无）
 }
 type SubscriptionsSnapshotEvent = { type: "SubscriptionsSnapshot"; payload: SubscriptionsSnapshotPayload; };
 ```
@@ -1109,11 +1092,8 @@ WebSocket 推送分为**自动推送**和**订阅推送**两种模式（详见�
 | 群聊（`group`） | 最多 100 个 | 返回错误码 `20100` |
 
 **限制说明**：
-- 服务端按 `ids` 的顺序逐个处理订阅，直到达到该类型限制为止；超过上限的 `ids` 会被收集到 `failed_ids` 并返回 `reason='limit_exceeded'`，但之前已成功订阅的部分继续生效。
-- 客户端需根据 `failed_ids` 自行回滚本地状态，确保与服务端保持一致。
-- 超出限制时：服务端在 `SubscribeAck` 事件中返回 `code !== 0`，错误码为 `20100`（订阅错误），message 描述具体原因
-- `failed_ids` 字段会包含失败的订阅 id 及其原因
-- 限制数量由服务端配置决定，客户端不得硬编码假设具体数值
+- 服务端按 `ids` 的顺序逐个处理订阅，直到达到该类型限制为止；超过上限的 `ids` 收集到 `failed_ids` 并返回 `reason='limit_exceeded'`，已成功订阅的部分继续生效（SubscribeAck 语义见「连接管理事件」）
+- 限制数量由服务端配置决定（经 `ConnectionEstablished.config.max_subscriptions` 下发），客户端不得硬编码假设具体数值
 
 **订阅失败处理**：
 

@@ -2,7 +2,7 @@
 
 > 定义 HotSpot API 跨模块复用的基础值对象（Domain Primitives）和业务核心对象（Domain Entities）。
 >
-> **本文件贯彻「恒定 nullable 通则」**（见 `api_spec_base.md`「类型稳定性」）：权限/隐私条件字段**恒定存在**，`null = 隐藏/不适用`，每个 nullable 字段的 null 语义在注释中写明；内容性可选字段（如无图片的 `images?`）保持 `?`。所有 `@auth-only`/`@owner-only`/`@group-admin-only`/`@member-only`/`@participant-only` 注解已废除——视角差异一律由不同端点 + 不同扩展类型承载（`OwnerXxxItem`/`AdminXxxItem`/`XxxViewerState`）。
+> 空值表达与视角分离遵循 `api_spec_base.md`「类型稳定性」（恒定 nullable 通则；视角差异由不同端点 + 扩展类型承载，注解已废除）。
 
 ## 契约引用
 
@@ -79,7 +79,7 @@ type ReportReason =
 type GroupJoinMethod = 'direct' | 'password' | 'invite_only';
 
 // === 公告 ===
-type AnnounceLevel = 'info' | 'warning' | 'error';
+type AnnounceSeverity = 'info' | 'warning' | 'error';
 
 // === 关注来源（用于来源归因展示）===
 type FollowSource = 'moment' | 'search' | 'recommendation' | 'profile' | 'group';
@@ -141,7 +141,7 @@ type NotifyCategory = 'social' | 'interaction' | 'group' | 'report' | 'nearby' |
 发现类与搜索类接口（所有 `feed/*`、`search/*` 及各资源 `search` 端点）的 `reference_point` 字段统一为**可选**（`reference_point?: GeoPoint`）。当客户端不传时，服务端按以下回退链解析浏览锚点位置：
 
 1. 请求显式传入的 `reference_point`（如地图浏览场景传地图中心点）
-2. 已登录用户最近一次 `users/update_location` 的位置（`/public/v1` 请求无登录身份，跳过本环；登录用户未更新过位置时同样跳过）
+2. 最近一次 `users/update_location` 的位置（仅 `/api/v1` 登录请求可命中本环；未更新过位置时跳过，`/public/v1` 请求无登录身份恒跳过）
 3. `ClientConfig.defaults.default_location.point`
 
 不适用：`map/canvas` 用 `viewport.bounds` 锚定视口，无 `reference_point` 字段，不经此规则。
@@ -212,6 +212,8 @@ interface MessageMedia extends MediaAsset {
 ## 领域实体定义 (Domain Entities)
 
 本节定义业务核心对象。遵循 **Info (嵌入用) -> Item (统一数据类型)** 的分层模式。查看者相关字段一律「恒定存在 + null 表达不适用」，不同视角由不同端点承载（`OwnerXxxItem`/`AdminXxxItem`/`XxxViewerState`）。
+
+> **节点归属**：本节 Item 类型内嵌查看者字段（`relation` / `viewer_state` / `is_favorited` / `Reaction.reacted_by_me` 等），仅服务 `/api/v1`（含 groups/admin 子树）与 `/admin/v1` 登录视角；`/public/v1` 使用 `api_spec_public.md` 的 `PublicXxxItem` 对偶类型。
 
 ### 用户 (User)
 
@@ -310,7 +312,7 @@ interface GroupItem {
 
   last_activity_at: string | null;   // 最近活跃时间；详情/列表返回，其他场景可为 null
   online_members_count: number | null; // 在线成员数（聚合计数；不暴露具体成员在线状态）
-  next_activity: string | null;      // 下次活动预告（群主设置）；null = 无预告
+  next_activity_at: string | null;      // 下次活动预告（群主设置）；null = 无预告
   created_at: string | null;         // 详情返回；搜索/列表为 null
   owner_id: string | null;           // 详情返回；搜索/列表为 null
 
@@ -334,10 +336,10 @@ interface GroupViewerState {
 // 群列表成员视角扩展（仅 groups/fetch_joined 返回；viewer_state 恒有值）
 interface GroupJoinedItem extends GroupItem {
   viewer_state: GroupViewerState;          // 本端点必非 null
-  last_message: LastMessagePreview | null; // 最近消息预览；null = 无消息
+  last_message: MessageBrief | null;     // 最近消息预览；null = 无消息
 }
 
-// 群组设置（仅群管理守卫子树：groups/admin/settings 响应；create/update 请求同构）
+// 群组设置（groups/admin/settings 响应；groups/create 与 groups/admin/update 请求中的同名设置字段与此同构）
 interface GroupSettings {
   join_method: GroupJoinMethod;   // 默认 'direct'
   requires_approval: boolean;     // 默认 false
@@ -368,7 +370,7 @@ interface SystemAnnouncementItem {
   announcement_id: string;
   title: string;
   content: string;
-  severity: AnnounceLevel;
+  severity: AnnounceSeverity;
   action_url: string | null;
   created_at: string;
 }
@@ -385,7 +387,6 @@ interface MomentItem {
   tags: string[];
   mentions: string[];
   created_at: string;
-  likes_count: number;
   comments_count: number;
   shares_count: number;
   reactions: Reaction[];       // 表情反应聚合（空数组 = 无反应）
@@ -448,26 +449,14 @@ interface ReactionItem {
 
 ### 消息 (Message)
 
-**MessageReplyTo**: 回复引用快照（用于消息回复时引用被回复消息的上下文）
+**MessageBrief**: 消息摘要快照（`reply_to` 回复引用与 `last_message` 会话最近消息预览共用；完整消息项见 `api_spec_chat.md`）
 ```typescript
-interface MessageReplyTo {
+interface MessageBrief {
   message_id: string;
-  type: MessageType;       // 被回复消息的类型（决定前端渲染方式）
+  type: MessageType;          // 消息类型（决定前端渲染方式）
   sender: UserInfo;
-  content: string | null;  // 文本预览（仅 text 类型有意义）
-  share_code: string | null; // 若被回复的消息为 share 类型，则包含该 share_code
-  sent_at: string;
-}
-```
-
-**LastMessagePreview**: 会话最近消息预览（`GroupJoinedItem.last_message` 与 `PrivateChatItem.last_message` 共用）
-```typescript
-interface LastMessagePreview {
-  message_id: string;
-  type: MessageType;
   content: string | null;     // 文本预览（仅 text 类型有意义）
-  share_code: string | null;  // 若最后一条消息为 share 类型，包含 share_code
-  sender: UserInfo;
+  share_code: string | null;  // 若为 share 类型消息，包含该 share_code
   sent_at: string;
 }
 ```
@@ -518,7 +507,7 @@ interface ReportResolution {
 // 消息举报快照（隐私边界设计：平台管理员基于快照审核，不直接查询私聊消息库）
 interface ReportSnapshot {
   chat_type: 'private' | 'group';   // 会话类型
-  target_chat_id: string;           // private: target_user_id；group: group_id
+  target_chat_id: string;           // 会话目标 ID：private 会话 = 对方 user_id，group 会话 = group_id
   message_type: MessageType;
   snapshot_content: string | null;  // 文本内容（text 类型）；非文本类型为 null
   snapshot_media: MessageMedia | null; // 媒体引用（图片/视频等）；文本类型为 null
@@ -556,7 +545,7 @@ interface UserSettings {
 // 功能开关（客户端可见，由平台管理员配置）
 interface FeatureSwitches {
   enable_public_registration: boolean;
-  enable_guest_login: boolean;
+  enable_guest_register: boolean;
   enable_moments: boolean;
   enable_nearby_people: boolean;
 }
@@ -678,9 +667,9 @@ interface SharePreview {
 }
 ```
 
-### 搜索建议与地图渲染（discovery 域，跨节点共享）
+### 搜索建议（discovery 域，跨节点共享）
 
-> 以下类型无查看者字段。search 为双版本端点（双方主体类型 `SearchSuggestResponse`/`PublicSearchSuggestResponse` 分别定义于 `api_spec_discovery.md`/`api_spec_public.md`）；`map/canvas` 仅 public 版，其主体类型 `MapCanvasRequest`/`MapCanvasResponse` 定义于 `api_spec_public.md`。
+> 以下类型无查看者字段。search 为双版本端点（双方主体类型 `SearchSuggestResponse`/`PublicSearchSuggestResponse` 分别定义于 `api_spec_discovery.md`/`api_spec_public.md`）。
 
 ```typescript
 // === 搜索建议 ===
@@ -692,69 +681,5 @@ type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
 interface MomentSuggestItem extends MomentSummary {
   author: UserInfo;
   location: RelativeLocation | null;
-}
-
-// === 地图渲染（S2 网格）===
-
-// 过滤器：限定参与统计/热点的类别（'all' 或未传：用户/群组/动态都参与）
-type MapDataType = 'user' | 'group' | 'moment' | 'all';
-
-interface Bounds {
-  north: number;  // [-90, 90]
-  south: number;  // [-90, 90]
-  east: number;   // [-180, 180]
-  west: number;   // [-180, 180]
-}
-// 约束：north >= south；east >= west（允许退化视口）。
-// 暂不支持跨国际日期变更线视口（需由客户端拆分请求）。
-
-// 地图视口：仅由经纬度边界决定，不需要客户端提供 zoom
-interface MapViewport {
-  bounds: Bounds;
-}
-
-interface TimeRangeParams {
-  start_time: string | null;  // UTC ISO 8601
-  end_time: string | null;    // UTC ISO 8601；若同时提供，必须满足 start_time <= end_time
-}
-
-interface MapHeatBreakdown {
-  user: number | null;   // 该网格内用户数量
-  group: number | null;  // 该网格内群组数量
-  moment: number | null; // 该网格内动态数量
-}
-
-// S2 网格的标识。为避免 JS 精度问题，对外暴露的是 S2 cell 的字符串 token。
-type S2CellToken = string;
-
-interface MapHeatBucket {
-  cell_token: S2CellToken;  // S2 单元格的字符串 token，可用于前端作为 key 或调试
-  level: number;            // 该单元格所在的 S2 level
-  location: GeoPoint;       // 聚合单元的代表坐标（例如 S2 单元格的中心点）
-  total_count: number;      // 当前过滤条件下，该网格内参与统计实体的总数
-  breakdown: MapHeatBreakdown | null;  // 按类型拆分；当 data_type = 'all' 时返回完整三分类拆分
-}
-
-interface MapHeatCanvas {
-  items: MapHeatBucket[];
-}
-
-type HotspotObjectType = 'user' | 'group' | 'moment';
-
-interface MapHotspotItem {
-  object_type: HotspotObjectType; // 对象类型
-  object_id: string;              // 业务 ID（user_id / group_id / moment_id）
-  title: string;                  // 昵称 / 群名 / 动态标题
-  subtitle: string | null;        // 简短描述 / 地点名等
-  cover_url: string | null;       // 头像 / 群头像 / 动态封面
-  // 位置统一使用 RelativeLocation（含 distance/bearing），与 feed/search 对齐
-  // distance/bearing 相对于视口几何中心计算，由服务端计算
-  location: RelativeLocation;
-  created_at: string | null;      // 对于动态等有时间语义的对象可返回创建时间
-}
-
-interface MapCanvasFilter {
-  data_type: MapDataType | null;
-  time_range: TimeRangeParams | null;
 }
 ```

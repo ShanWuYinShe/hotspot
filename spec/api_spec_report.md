@@ -17,7 +17,7 @@
 | 端点 | 说明 | 节点 |
 |-----|------|------|
 | `POST /api/v1/reports/create` | 创建举报 | /api/v1 |
-| `POST /api/v1/reports/fetch` | 我的举报记录（命名空间天生私有，直接 list） | /api/v1 |
+| `POST /api/v1/reports/fetch` | 我的举报记录（命名空间天生私有，直接 fetch） | /api/v1 |
 
 ## 举报审核流程说明
 

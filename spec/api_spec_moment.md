@@ -88,7 +88,7 @@ interface SearchMomentsRequest {
 
 获取瞬间详情（登录视角 `MomentItem`，含查看者字段 `is_favorited`/`recommendation`；匿名版返回 `PublicMomentItem`）。
 
-**隐私说明**：`privacy_level='private'` 的瞬间仅拥有者可见；非拥有者（含未登录用户）访问 private 瞬间统一返回 `10300`（按不存在处理，不通过 10200 暴露瞬间存在性）。
+**隐私说明**：`privacy_level='private'` 的瞬间仅拥有者可见；非拥有者访问 private 瞬间统一返回 `10300`（按不存在处理，不通过 10200 暴露瞬间存在性；匿名视角走 `/public/v1/moments/open_the_door`，同样仅公开瞬间）。
 
 - **节点**: /api/v1（双版本端点：匿名版 `/public/v1/moments/open_the_door` 见 `api_spec_public.md`）
 
@@ -188,9 +188,9 @@ interface DeleteMomentRequest {
 
 - **节点**: /api/v1
 
-**Request**: `FavoriteRequest`
+**Request**: `SetFavoriteRequest`
 ```typescript
-interface FavoriteRequest {
+interface SetFavoriteRequest {
   moment_id: string;
   active: boolean;   // true=收藏，false=取消收藏
 }

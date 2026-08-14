@@ -71,27 +71,20 @@
 
 ## 端点存废审查记录（契约级）
 
-本版（v1 重设计）对端点集做过一次完整存废审查，结论如下，后续端点增删沿用同一标准：
+v1 重设计对端点集做过一次完整存废审查，后续端点增删沿用同一标准。现行架构规则（三节点、镜像判定原则、动词审美）以 `api_spec_base.md` 与 `api_spec_authz.md` 为权威，此处只记录审查结论。
 
 **存废判定标准**：① 两端点返回的是否**同一份数据**；② 是否已有跨用户端点天然支持「自己视角」——同时满足才合并，否则保留。
 
-**删除/合并**：
-- `moments/fetch_my`：拥有者视角（private + 软删占位）与公开视角是不同数据，按「视角分离」保留为独立端点并改名 `moments/fetch_created`；`users/fetch_moments` 收紧为纯公开视角（user_id 必传）
-- `admin/audit/open_the_door`：删除——审计列表项已含全量 `details`，纯冗余
-
-**三节点架构改版（受众分段）**：
-- 新增顶级节点 `/public/v1`（未注册用户，纯匿名：不解析 Token），与 `/api/v1`（注册用户）、`/admin/v1`（平台管理员）对称
-- 原 `optional` 档端点处置：拆双版本（public 匿名版 + api 登录版，类型隔离——`PublicXxxItem` 不含查看者字段）；`auth/session` 收紧为 required（未登录 → 10100）；登录无增量的仅保留 public 版（system 的 meta/health/announcements/client_config、map/canvas、share/fetch、groups/announcements/fetch）。镜像判定原则：登录版有真实增量（查看者字段或身份相关可见性，如 reactions/fetch 私聊消息）才拆双版本
-- 账号生命周期端点（register/login/guest/refresh_token/forgot_password/reset_password）从 `/api/v1/auth/` 迁至 `/public/v1/auth/`
-- 认证档位（public/optional/required/credential）作为端点属性废除，「节点即档位」；media 单/批端点合并（数组参数 1..N）
-- **动词审美治理**（主观个案评估、不机械排除字母形状，见 base.md「动词审美规则」）：确认丑并废除 `get_*`（全量名词化：account/session/meta/me 等）与 `list_*`（全量更名 `fetch_*`，含裸 `/fetch`）；个案更名 `login`/`logout` → `signin`/`signout`、`join`/`leave` → `enter`/`exit`、`grant` → `award`、`request_password_reset` → `forgot_password`、`batch_get` → `batch_fetch`；`presign_upload` 经评估保留原名
+**删除/合并结论**：
+- `moments/fetch_created`（拥有者视角：private + 软删占位）与 `users/fetch_moments`（纯公开视角，user_id 必传）不合并——两视角是不同数据，按「视角分离」各自独立
+- `admin/audit/open_the_door` 不设——审计列表项已含全量 `details`，纯冗余
+- `media` 单/批上传端点不拆——两段式（`presign_upload` + `complete_upload`）数组参数 1..N 天然覆盖单/批
 
 **争议保留（记录理由）**：
 - `users/fetch_friends`/`fetch_following`/`fetch_followers` 三个不合并：排序键不同、UI 独立分页，合并成判别参数反而增加心智负担
 - `groups/fetch_joined` 与 `users/fetch_groups` 并存：成员视角（viewer_state/私密群）vs 公开主页视角（仅 searchable 群），数据不同
 - `admin/users|groups/open_the_door` 保留：单资源全量详情 ≠ 分页搜索
 - `system/meta` 保留：版本状态巡检（sunset 机制依赖）
-- `media` 两段式上传（`presign_upload` + `complete_upload`，数组 1..N 覆盖单/批）
 
 ## 设计要点速览（v1 重设计）
 
@@ -100,7 +93,7 @@
 - **恒定 nullable**：权限/隐私条件字段恒在，null = 隐藏/不适用；`next_cursor: string | null`
 - **命名**：动词表 + 状态限定词（created/joined/submitted/sent/received/favorites/blocked/banned/reacted）；`_my` 后缀与 `My` 类型前缀全量废除；`open_the_door` 为详情动词（玩梗保护条款保留）；禁用 `notification`（统一 `notify`）
 - **参数必显式**：目标 ID 一律必传；行为范围参数显式声明（如 `scope: 'ids' | 'all'`）；禁止缺省翻转语义
-- **失败语义**：`10200` 必附 `data.forbidden_reason`（12 项枚举，见 api_spec_errors.md）
+- **失败语义**：`10200` 必附 `data.forbidden_reason`（11 项枚举，见 api_spec_errors.md）
 
 ## 快速索引（按路径前缀）
 

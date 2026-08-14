@@ -14,8 +14,7 @@
 
 ## 错误码定义
 
-本系统 `ApiResponse.code` 为**稳定业务错误码**，与 HTTP 状态码**无任何绑定关系**。
-仅当 HTTP 状态码为 200 时才返回 `ApiResponse`；HTTP 非 200 视为请求失败（未进入业务层）。
+`ApiResponse.code` 为**稳定业务错误码**，与 HTTP 状态码**无任何绑定关系**（envelope 与 HTTP 语义见 `api_spec_base.md`「统一响应格式」）。
 
 失败响应（`code != 0`）必须包含 `message`，并且 `data` 必须省略（除非端点显式声明错误时 data 的结构）。
 请求追踪通过响应头 `X-Request-Id` 提供。
@@ -32,7 +31,7 @@
 | 错误码 | 隐含适用范围 |
 |-------|-------------|
 | `10000` | 所有端点（参数错误/请求体非法） |
-| `10100` | `/api/v1`、`/admin/v1` 全部端点、`signin`（凭证错误防枚举统一此码）与 `refresh_token`（credential 特例）；`/public/v1` 其余端点不解析 token，不产生此码 |
+| `10100` | `/api/v1`、`/admin/v1` 全部端点、`signin`（凭证错误防枚举统一此码）与 `refresh_token`（凭证特例）；`/public/v1` 其余端点不解析 token，不产生此码 |
 | `10201` | `/api/v1`、`/admin/v1` 全部端点（账号被封禁，中间件级检查） |
 | `10500` | 所有端点（触发限流） |
 | `10600` | 所有端点（服务端错误/系统不可用） |
@@ -50,7 +49,7 @@ interface ForbiddenErrorData {
   forbidden_reason: ForbiddenReason;
 }
 
-// 权限拒绝原因枚举（12 项，权威定义）
+// 权限拒绝原因枚举（11 项，权威定义）
 type ForbiddenReason =
   | 'not_admin'                    // /admin/v1：非平台管理员
   | 'insufficient_admin_permission'// /admin/v1：是平台管理员但缺权限键（message 指明缺哪个键）
@@ -59,20 +58,17 @@ type ForbiddenReason =
   | 'not_group_admin'              // 群管理守卫子树：非目标群 owner/admin
   | 'not_group_owner'              // owner 专属端点：非群主
   | 'not_resource_owner'           // 非资源作者（如编辑他人瞬间/撤回他人消息）
-  | 'not_chat_participant'         // 非私聊会话参与者
   | 'privacy_setting'              // 对方隐私设置拒绝（allow_follow/allow_private_chat/列表可见性）
   | 'blocked_by_user'              // 被对方拉黑
   | 'stranger_quota_exceeded'      // 陌生人私聊限额已用完
   | 'banned_in_group'              // 被群封禁，无法加入
 ```
 
-**语义迁移（契约级）**：
-- 原 `private_messages/send` 的 `data.reason: BlockReason`（blocked/privacy/stranger_quota_exceeded）**并入本枚举**，映射为 `blocked_by_user` / `privacy_setting` / `stranger_quota_exceeded`；`BlockReason` 类型删除
-- 「不是群成员」由 `10400` **迁移**为 `10200` + `not_group_member`（授权语义归位，业务冲突码只留给真正的状态冲突）
-- 隐私隐藏（private 内容、被拉黑、资料隐藏）**不返回** 10200——统一按 `10300` 处理（防枚举，见 `api_spec_base.md`「隐私拒绝策略」）
+**失败语义补充（契约级）**：
+- 隐私隐藏（private 内容、被拉黑、资料隐藏）**不返回** 10200——统一按 `10300` 处理（防枚举，权威定义见 `api_spec_authz.md`「失败语义」）
 - 整表隐私拒绝（social_lists_visible 等=false）返回 `10200` + `privacy_setting`
 
-**10400 可声明的结构化 data 示例**：`group_messages/send` 禁言拦截时 `data: { mute: { muted_until: string } }`（`GroupMuteBlock`，仅此端点；客户端据此展示剩余禁言时间，无需解析 message 中的时间戳）。
+**10400 可声明的结构化 data 示例**：`group_messages/send` 禁言拦截时 `data: { mute: { muted_until: string } }`（`GroupMuteStatus`，仅此端点；客户端据此展示剩余禁言时间，无需解析 message 中的时间戳）。
 
 ---
 
@@ -90,7 +86,7 @@ type ForbiddenReason =
 | `10500` | 请求过于频繁 | 按 `Retry-After` 响应头等待后重试 | "超过每分钟请求限制" |
 | `10600` | 服务器错误/系统不可用 | 显示"服务异常"提示 | "服务器内部错误"、"服务暂时不可用"、"系统维护中" |
 
-**`10400` 适用边界**：仅用于**真正无法完成**的状态冲突（创建已存在资源、满员、撤回超时、权限前置不满足等）。对于**设状态操作重复达同状态**（如 `set_follow` 取消已未关注、`set_ban` 解封未封禁、`set_role` 设成相同角色），应返回成功（no-op），**不得**使用 `10400`。注意：**「不是群成员」已迁移为 `10200` + `not_group_member`，不再属于 10400**。
+**`10400` 适用边界**：仅用于**真正无法完成**的状态冲突（创建已存在资源、满员、撤回超时、权限前置不满足等）。对于**设状态操作重复达同状态**（如 `set_follow` 取消已未关注、`set_ban` 解封未封禁、`set_role` 设成相同角色），应返回成功（no-op），**不得**使用 `10400`。
 
 **`10100` 与 `10401` 的区分**：`10100` 是**当前会话凭证**无效（access/refresh token），客户端需走刷新/重新登录流程；`10401` 是业务请求中提交的**旧凭证校验失败**（如 `auth/change_password` 的旧密码、验证码校验），不涉及当前会话失效，客户端只提示用户修正输入。
 

@@ -56,7 +56,7 @@
 
 `mark_read` 接口统一采用 up_to 语义：标记截至某条消息的所有消息为已读。
 
-**跨设备已读同步（已知取舍）**：本协议**不提供专门的 self-sync 事件**（即不推送"你在另一端读了消息"给自己其他设备）。单设备单会话模型下，同一设备的已读状态实时准确；但**跨设备**场景（用户在手机+Web 同时登录），在一端标记已读后，另一端的 `is_read`/`read_count` 不会实时更新——需等该端下次拉取 `list` 或冷启动 `/api/v1/system/bootstrap` 时刷新。客户端应在切前台/切会话时主动拉取一次历史以收敛已读状态。
+**跨设备已读同步（已知取舍）**：本协议**不提供专门的 self-sync 事件**（即不推送"你在另一端读了消息"给自己其他设备）。单设备单会话模型下，同一设备的已读状态实时准确；但**跨设备**场景（用户在手机+Web 同时登录），在一端标记已读后，另一端的 `is_read`/`read_count` 不会实时更新——需等该端下次拉取 `private_messages/fetch`/`group_messages/fetch` 或冷启动 `/api/v1/system/bootstrap` 时刷新。客户端应在切前台/切会话时主动拉取一次历史以收敛已读状态。
 
 > **多端推送 vs self-sync 的边界**：用户多设备各自独立鉴权、各自订阅 WebSocket，因此**消息内容类事件**（`PrivateMessageNew`/`Edited`/`Recalled` 等"推送给发送者其他设备"的事件）天然到达所有在线设备——这属于推送目标设计，**不是** self-sync。self-sync 特指已读状态等具体状态的跨设备实时同步，当前通过冷启动 + HTTP 补拉收敛。
 
@@ -65,12 +65,12 @@
 以下类型定义于 `api_spec_types.md`：
 - `UserInfo`
 - `MessageType`
-- `MessageMedia`、`MessageReplyTo`、`Reaction`、`ReactionItem`
+- `MessageMedia`、`MessageBrief`、`Reaction`、`ReactionItem`
 - `PaginatedData`、`PaginationParams`
-- `LastMessagePreview`
+- （`last_message` 亦为 `MessageBrief`）
 - `UserPresenceStatus`
 
-> 不可发消息原因不再使用独立 `BlockReason` 类型——统一为 `10200` + `data.forbidden_reason`（`blocked_by_user` / `privacy_setting` / `stranger_quota_exceeded`），权威定义见 `api_spec_errors.md`。
+> 不可发消息原因统一为 `10200` + `data.forbidden_reason`（`blocked_by_user` / `privacy_setting` / `stranger_quota_exceeded`），权威定义见 `api_spec_errors.md`。
 
 ### 本模块类型
 
@@ -80,12 +80,12 @@ type SendMessageType = Exclude<MessageType, 'system'>;
 
 // 群聊禁言拒绝信息（group_messages/send 被禁言拦截时，随 10400 响应 data 返回）
 // 结构化携带截止时间，避免客户端从 message 文本解析 ISO 时间戳（errors.md 禁止客户端解析 message 决定行为）
-interface GroupMuteBlock {
+interface GroupMuteStatus {
   muted_until: string;   // 禁言截止时间（UTC ISO 8601）；与 GroupViewerState.muted_until 同源
 }
 
 // 消息发送成功响应（私聊/群聊通用）
-interface MessageSent {
+interface MessageSentResult {
   message_id: string;
   sent_at: string;
 }
@@ -106,7 +106,7 @@ interface PrivateMessageItem {
 
   sender: UserInfo;
 
-  reply_to: MessageReplyTo | null;
+  reply_to: MessageBrief | null;
 
   sent_at: string;
   edited_at: string | null;
@@ -131,7 +131,7 @@ interface GroupMessageItem {
 
   sender: UserInfo;
 
-  reply_to: MessageReplyTo | null;
+  reply_to: MessageBrief | null;
   mentions: string[];  // @UserIDs
   recalled_by: UserInfo | null;  // 撤回操作者（群管理员撤回时非作者本人）
 
@@ -187,7 +187,7 @@ interface PrivateChatItem {
   last_activity_at: string;
   
   // 列表场景返回（详情场景可为 null）
-  last_message: LastMessagePreview | null;
+  last_message: MessageBrief | null;
   
   // 隐私受控（恒定 nullable：null = 对方 presence_visible=false）
   presence_status: UserPresenceStatus | null;
@@ -195,7 +195,7 @@ interface PrivateChatItem {
   // 详情场景返回（列表为 null）
   created_at: string | null;
   can_message: boolean;          // 反映调用当下的隐私校验结果（列表场景由服务端批量校验缓存）
-  blocked_reason: ForbiddenReason | null; // 仅 can_message=false 时返回：blocked_by_user / privacy_setting / stranger_quota_exceeded
+  forbidden_reason: ForbiddenReason | null; // 仅 can_message=false 时非 null：blocked_by_user / privacy_setting / stranger_quota_exceeded
 }
 ```
 
@@ -293,7 +293,7 @@ interface DeletePrivateChatRequest {
 
 发送私聊消息。
 
-**简化设计**：支持**即发即创**，客户端无需预先调用 create 接口。
+**简化设计**：支持**即发即创**（首次发消息自动创建会话）。
 
 **安全性与权限**：
 - 必须校验接收方的隐私设置（`allow_private_chat`）
@@ -321,7 +321,7 @@ interface SendPrivateMessageRequest {
 }
 ```
 
-**Response**: `ApiResponse<MessageSent>`
+**Response**: `ApiResponse<MessageSentResult>`
 
 **错误码**: `10200`（blocked_by_user / privacy_setting / stranger_quota_exceeded） `10300` `10400`（`share_code` 无效/已撤销/已过期、`reply_to_message_id` 无效）
 
@@ -430,7 +430,7 @@ interface MarkPrivateReadRequest {
 
 **禁言处理**：被禁言成员发消息返回 `10400`。客户端可据 `GroupViewerState.is_muted` + `muted_until`（见 `api_spec_types.md`）预判，禁用群聊输入框并展示剩余时间，避免必失败的请求。
 
-**错误响应 data（本端点显式声明）**：当发送被禁言拦截（返回 `10400`，禁言原因）时，`data` 携带结构化信息 `{ mute: GroupMuteBlock }`（`GroupMuteBlock` 定义于本模块「类型定义」），含 `muted_until` 截止时间——客户端据此展示剩余时间，**无需从 `message` 文本解析时间戳**。其余 `10400` 场景与 `10300` 不返回 data。
+**错误响应 data（本端点显式声明）**：当发送被禁言拦截（返回 `10400`，禁言原因）时，`data` 携带结构化信息 `{ mute: GroupMuteStatus }`（`GroupMuteStatus` 定义于本模块「类型定义」），含 `muted_until` 截止时间——客户端据此展示剩余时间，**无需从 `message` 文本解析时间戳**。其余 `10400` 场景与 `10300` 不返回 data。
 
 **Request**: `SendGroupMessageRequest`
 ```typescript
@@ -445,7 +445,7 @@ interface SendGroupMessageRequest {
 }
 ```
 
-**Response**: `ApiResponse<MessageSent>`
+**Response**: `ApiResponse<MessageSentResult>`
 
 **错误码**: `10200`（not_group_member 非群成员） `10300` `10400`（禁言等）
 

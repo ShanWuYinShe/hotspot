@@ -11,7 +11,7 @@
   - 通用类型：`api_spec_types.md`
   - 守卫与权限：`api_spec_authz.md`
   - 错误码：`api_spec_errors.md`
-  - 分享落地端点（仅 public 版）：`api_spec_public.md`
+  - 分享码解析端点：`api_spec_public.md`
 
 ## 设计理念
 
@@ -24,13 +24,13 @@
 | 端点 | 说明 | 节点 |
 |-----|------|------|
 | `POST /api/v1/share/create` | 创建分享 | /api/v1 |
-| `POST /api/v1/share/fetch` | 我的分享列表（命名空间天生私有，直接 list） | /api/v1 |
-| `POST /public/v1/share/fetch` | 获取分享详情（仅 public 版，见 `api_spec_public.md`） | /public/v1 |
+| `POST /api/v1/share/fetch` | 我的分享列表（命名空间天生私有，直接 fetch） | /api/v1 |
+| `POST /public/v1/share/fetch` | 分享码解析（见 `api_spec_public.md`；与登录版同名但为不同功能） | /public/v1 |
 | `POST /api/v1/share/revoke` | 撤销分享 | /api/v1 |
 
 ## 类型定义
 
-以下类型定义于 `api_spec_types.md`：`UserInfo`、`Location`、`PaginationParams`、`ShareType`、`SharePayload`（含 User/Group/Moment/Location 四个载荷）、`ShareBase`、`SharePreview`（share 域跨节点共享类型；落地响应 `ShareDetail` 定义于 `api_spec_public.md`——share/fetch 仅 public 版）。
+以下类型定义于 `api_spec_types.md`：`UserInfo`、`Location`、`PaginationParams`、`ShareType`、`SharePayload`（含 User/Group/Moment/Location 四个载荷）、`ShareBase`、`SharePreview`（share 域跨节点共享类型；落地响应 `ShareDetail` 定义于 `api_spec_public.md` 的分享码解析端点）。
 
 **说明**：`preview` 为展示用摘要。分享存在但目标资源不可访问时（如目标被删除/隐私变更），不返回 `preview`，仅返回 `share` 与 `payload`（让客户端知道分享类型与目标 ID，可提示"内容已不可访问"）；分享本身已撤销/过期时整体返回 `10300`。
 
@@ -42,15 +42,12 @@
 - **大小写**：不区分大小写，服务端统一转换为大写
 - **校验**：必须完全匹配字符集与长度，禁止空格、连字符、前后缀
 
-**反滥用要求（契约级）**：
-- `share/fetch`（位于 `/public/v1`）为公开端点，必须启用 IP 维度限流，超限时返回限流类错误并携带 `Retry-After` 响应头
-- 对连续失败（share_code 无效/过期）的访问需有递进式惩罚策略（如临时封禁或要求验证码）
-- 失败请求应记录日志，用于离线分析潜在暴力破解行为
+**反滥用要求（契约级）**：定义于 `api_spec_public.md` 分享码解析端点（IP 维度限流 + 递进式惩罚 + 失败日志），此处不重复。
 
 ## 有效期规则
 
 - 分享可设置有效期（`expires_at`）
-- 过期分享在 `get` 中返回 `10300`
+- 过期分享在分享码解析（`/public/v1/share/fetch`）中返回 `10300`
 
 ## 端点详情
 
@@ -123,7 +120,7 @@ interface ShareListItem {
 
 ### POST /api/v1/share/revoke
 
-撤销分享。撤销后分享码不可再用于 `get`。
+撤销分享。撤销后分享码不可再用于分享码解析。
 
 - **节点**: /api/v1（仅分享创建者可撤销）
 

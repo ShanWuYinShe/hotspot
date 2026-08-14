@@ -18,7 +18,7 @@
 - **无身份类资源约束**：本节点仅适用可见性过滤（privacy_level / searchable 系列 / social_lists_visible 等），无 owner/participant/member/self 类约束
 - **限流**：本节点请求一律按 **IP 维度**限流（见 `api_spec_base.md`「限流策略」）
 - **类型隔离**：本节点端点的 Request/Response 使用专属类型，与 `/api/v1`（含 groups/admin 子树）、`/admin/v1` **禁止共用**（规则见下方「类型体系」）
-- **镜像判定原则**：仅当登录版存在真实增量——查看者状态字段，或可见性判定依赖身份（如 `reactions/fetch` 的私聊消息仅参与者可见）——才在 `/api/v1` 设登录镜像版；无任何增量的端点仅在本节点提供（如 `map/canvas`、`share/fetch`、`groups/announcements/fetch`、system 的 meta/health/announcements/fetch/client_config）
+- **镜像判定原则**：仅当登录版存在真实增量——查看者状态字段，或可见性判定依赖身份（如 `reactions/fetch` 的私聊消息仅参与者可见）——才在 `/api/v1` 设登录镜像版；无任何增量的端点仅在本节点提供（如 `map/canvas`、`groups/announcements/fetch`、system 的 meta/health/announcements/fetch/client_config）
 
 ## 类型体系（契约级）
 
@@ -28,9 +28,9 @@
 - 登录版保持原名（`XxxRequest` / `XxxItem`），定义于对应模块文档
 - 匿名版类型**不含查看者状态字段**（`relation` / `social_context` / `viewer_state` / `is_favorited` / `reacted_by_me` / `remark` / `friends_in_group` / `recommendation` 等）——这些字段只存在于登录版类型中；嵌套结构里含查看者字段的类型同样必须拆出 Public 版（如 `PublicReaction`）
 
-**无对偶类型不加前缀**：仅存在于本节点、没有登录版对偶的端点类型保持常规命名（如 `RegisterRequest`、`AuthTokenPair`、`ApiVersionMeta`——后两者定义于 `api_spec_types.md`）。
+**无对偶类型不加前缀**：仅存在于本节点、没有登录版对偶的端点类型保持常规命名（如 `RegisterRequest`、`AuthTokenPair`，均定义于本文档；`ApiVersionMeta` 定义于 `api_spec_types.md`）。
 
-**共享 Domain Primitives**：无视角的基础值对象（`GeoPoint` / `Location` / `RelativeLocation` / `PaginationParams` / `PaginatedData` / `UserInfo` / `UserStats` / `MediaAsset` / `TagItem` / `GroupInfo` 等，定义于 `api_spec_types.md`）跨节点共享，不复制。
+**共享 Domain Primitives**：无视角的基础值对象（`GeoPoint` / `Location` / `RelativeLocation` / `PaginationParams` / `PaginatedData` / `UserInfo` / `UserStats` / `MediaAsset` / `TagItem` / `GroupInfo` 等，定义于 `api_spec_types.md`）跨节点共享，不复制；双版本端点的响应主体若本身即无查看者字段的共享类型（如 `reactions/fetch` 匿名版的 `ReactionItem`），同样直接共用。
 
 ## 单设备单会话模型（契约级）
 
@@ -86,12 +86,7 @@ type AuthTokenPair = AuthTokenPairApp | AuthTokenPairWeb;
 
 ### Web 端（`client_type='web'`）
 
-Token 通过服务端 `Set-Cookie` 响应头投递，**禁止**使用 `Authorization` Header。
-
-```http
-Set-Cookie: access_token=<token>; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=<ttl>
-Set-Cookie: refresh_token=<token>; HttpOnly; Secure; SameSite=Strict; Path=/public/v1/auth/refresh_token; Max-Age=<ttl>
-```
+Token 通过服务端 `Set-Cookie` 响应头投递，**禁止**使用 `Authorization` Header。Cookie 名称、Path 与属性见 `api_spec_base.md`「Web 端 Cookie 契约」。
 
 **响应体**：返回 `ApiResponse<AuthTokenPairWeb>`，`data` 仅含判别字段 `client_type: 'web'`（Token 仅在 Cookie 中传递，响应体不包含任何 token 值）。
 
@@ -99,16 +94,15 @@ Set-Cookie: refresh_token=<token>; HttpOnly; Secure; SameSite=Strict; Path=/publ
 
 Token 通过响应体投递：返回 `ApiResponse<AuthTokenPairApp>`，响应体中包含 `access_token`、`refresh_token` 及各自过期时间；客户端负责安全存储（Keychain / Keystore）。后续调用 `/api/v1`、`/admin/v1` 端点时以 `Authorization: Bearer <token>` 携带。
 
-### Cookie 生命周期（Web 端）
+### Cookie 更新时机（Web 端）
 
 | 场景 | `access_token` Cookie | `refresh_token` Cookie |
 |---|---|---|
 | 登录 / 注册 / 访客 | `Set-Cookie` 设置 | `Set-Cookie` 设置 |
 | 刷新 Token | `Set-Cookie` 更新 | `Set-Cookie` 更新 |
 | 登出（`/api/v1/auth/signout`） | `Max-Age=0` 清除 | `Max-Age=0` 清除 |
-| `/public/v1` 请求 | 自动携带（`Path=/`）但服务端**忽略** | **不**携带（`Path` 不匹配） |
-| 调用 refresh_token API | 自动携带 | 自动携带（`Path` 匹配） |
-| `/api/v1`、`/admin/v1`、`/ws/v1` | 自动携带并校验 | **不**携带 |
+
+Cookie 的 Path 覆盖与自动携带规则（`/public/v1` 忽略、refresh 精确 Path 等）见 `api_spec_base.md`「Web 端 Cookie 契约」。
 
 ## 端点总览
 
@@ -117,7 +111,7 @@ Token 通过响应体投递：返回 `ApiResponse<AuthTokenPairApp>`，响应体
 | `POST /public/v1/auth/register` | 用户注册 |
 | `POST /public/v1/auth/signin` | 用户登录 |
 | `POST /public/v1/auth/guest` | 创建访客用户（临时注册） |
-| `POST /public/v1/auth/refresh_token` | 刷新 Token（credential 特例） |
+| `POST /public/v1/auth/refresh_token` | 刷新 Token（凭证特例） |
 | `POST /public/v1/auth/forgot_password` | 忘记密码（发送重置验证码） |
 | `POST /public/v1/auth/reset_password` | 验证码重置密码（自动登录） |
 | `POST /public/v1/users/search` | 搜索用户（关键字/标签/位置组合） |
@@ -194,7 +188,6 @@ interface PublicMomentItem {
   tags: string[];
   mentions: string[];
   created_at: string;
-  likes_count: number;
   comments_count: number;
   shares_count: number;
   reactions: PublicReaction[];
@@ -230,7 +223,7 @@ interface PublicGroupItem {
   location: RelativeLocation | null;
   last_activity_at: string | null;
   online_members_count: number | null;
-  next_activity: string | null;
+  next_activity_at: string | null;
   created_at: string | null;
   owner_id: string | null;
 }
@@ -376,7 +369,7 @@ interface GuestRequest {
 
 刷新 Token。
 
-- **节点**: /public/v1（credential 特例：以请求体中的 refresh_token 为凭证，无效/过期/被撤销返回 `10100`；节点本身不解析 access_token）
+- **节点**: /public/v1（凭证特例：以请求体中的 refresh_token 为凭证，无效/过期/被撤销返回 `10100`；节点本身不解析 access_token）
 
 **刷新规则**：
 - 刷新成功后：access_token 和 refresh_token 都会更新
@@ -412,7 +405,7 @@ interface RefreshTokenRequest {
 
 ### POST /public/v1/auth/forgot_password
 
-忘记密码（发送重置验证码）。原名 `request_password_reset`——3 段 21 字符的笨重组合，按视觉简洁原则更名（与 `reset_password` 对仗：忘记 → 重置）。
+忘记密码（发送重置验证码）。与 `reset_password` 对仗：忘记 → 重置。
 
 - **节点**: /public/v1（纯匿名）
 
@@ -517,7 +510,7 @@ interface PublicSearchUsersRequest {
 **设计要点**：
 - `user.stats` 详情场景返回（含 moments_count/friends_count/followers_count/following_count/groups_count），客户端据此渲染主页各 tab 的数量角标
 - 好友/关注/粉丝/群组的**明细列表**用本节点 `users/fetch_friends`、`users/fetch_following` 等按需懒加载
-- `recent_moments` 条数受 `AppConfig.response_defaults.user_profile_moments_count` 控制（默认 6）；翻页加载更多时切换到 `users/fetch_moments`
+- `recent_moments` 条数控制与翻页策略与登录版一致（见 `api_spec_user.md`）
 
 **Request**: `PublicOpenUserDoorRequest`
 ```typescript
@@ -659,7 +652,7 @@ interface PublicFetchUserReactedMomentsRequest {
 
 ### POST /public/v1/users/batch_fetch
 
-批量获取用户公开信息。用于列表/Feed/通知等场景中高效解析 `UserInfo`，消除逐个调用 `open_the_door` 的 N+1 问题。
+批量获取用户公开信息。用于列表/Feed 等场景中高效解析 `UserInfo`，消除逐个调用 `open_the_door` 的 N+1 问题。
 
 **Request**: `PublicBatchFetchUsersRequest`
 ```typescript
@@ -900,11 +893,13 @@ interface PublicSearchGroupMembersRequest {
 
 ## 公开信息流（feed）
 
-> 个性化信息流（关注动态 `following`、附近瞬间 `nearby`）依赖登录身份，位于 `/api/v1/feed/`（见 `api_spec_discovery.md`）。
+> 个性化信息流（关注动态 `following`、附近瞬间 `nearby_moments`）依赖登录身份，位于 `/api/v1/feed/`（见 `api_spec_discovery.md`）。
 
 ### POST /public/v1/feed/nearby_users
 
 获取附近的用户推荐。匿名发现（拉新关键路径）。
+
+> 双版本关系：登录镜像 `/api/v1/feed/nearby_users`（登录视角见 `api_spec_discovery.md`）。
 
 **隐私过滤（契约级）**：`location_searchable=false` 的用户不出现（位置发现被关闭）；`searchable=false` 的用户不出现（整体不被发现）。其余用户按各自 `presence_visible` 等隐私设置返回对应字段（null = 隐藏）。
 
@@ -930,6 +925,8 @@ interface PublicNearbyUsersRequest {
 
 获取附近可加入的群组推荐。
 
+> 双版本关系：登录镜像 `/api/v1/feed/nearby_groups`（登录视角见 `api_spec_discovery.md`）。
+
 - **排序**:
   - 主序：服务端计算的 `distance` 升序（相对 `reference_point`）
   - 次序：仅当距离差在服务端定义的近似阈值内时，允许体现热度/活跃度
@@ -951,6 +948,8 @@ interface PublicNearbyGroupsRequest {
 ### POST /public/v1/feed/trending
 
 获取热门瞬间（发现页默认内容，无输入场景）。
+
+> 双版本关系：登录镜像 `/api/v1/feed/trending`（登录视角见 `api_spec_discovery.md`）。
 
 **与 search/suggest 的边界（契约级）**：
 - `feed/trending`：**无输入**的"发现页默认内容"——用户刚进入 App/发现页时，平台主动推荐的热门瞬间。全局热门，不依赖用户输入或位置。
@@ -974,6 +973,8 @@ interface PublicTrendingRequest {}
 
 综合搜索建议（标签、用户、群组、瞬间）。
 
+> 双版本关系：登录镜像 `/api/v1/search/suggest`（登录视角见 `api_spec_discovery.md`）。
+
 - **排序**:
   - 完全匹配优先
   - 在匹配度相近时按距离优先，热度/活跃度作为辅助信号
@@ -990,7 +991,7 @@ interface PublicSearchSuggestRequest {
   prefix: string;
   reference_point: GeoPoint | null;
   types: SearchSuggestType[];  // 空数组表示返回所有类型
-  radius: number | null;  // 搜索半径（米）；不传默认 5_000 并受 search_radius_max 裁剪
+  radius: number | null;  // 搜索半径（米）；不传默认 5000 并受 search_radius_max 裁剪
 }
 ```
 
@@ -1010,6 +1011,74 @@ interface PublicSearchSuggestRequest {
 - 服务端根据当前视口的物理跨度和预估结果规模，自动选择合适的 S2 层级（`level`），并使用 S2 覆盖算法确定视口内的网格集合
 - 在大尺度视野下返回**网格热力统计**，在小尺度视野下返回**具体热点对象列表**，对客户端透明
 - 查询实现依赖预聚合的 S2 统计表，而不是直接扫描明细记录
+
+### 类型定义（map 域专属）
+
+```typescript
+// === 地图渲染（S2 网格）===
+
+// 过滤器：限定参与统计/热点的类别（'all' 或未传：用户/群组/动态都参与）
+type MapDataType = 'user' | 'group' | 'moment' | 'all';
+
+interface Bounds {
+  north: number;  // [-90, 90]
+  south: number;  // [-90, 90]
+  east: number;   // [-180, 180]
+  west: number;   // [-180, 180]
+}
+// 约束：north >= south；east >= west（允许退化视口）。
+// 暂不支持跨国际日期变更线视口（需由客户端拆分请求）。
+
+// 地图视口：仅由经纬度边界决定，不需要客户端提供 zoom
+interface MapViewport {
+  bounds: Bounds;
+}
+
+interface TimeRangeParams {
+  start_time: string | null;  // UTC ISO 8601
+  end_time: string | null;    // UTC ISO 8601；若同时提供，必须满足 start_time <= end_time
+}
+
+interface MapHeatBreakdown {
+  user: number | null;   // 该网格内用户数量
+  group: number | null;  // 该网格内群组数量
+  moment: number | null; // 该网格内动态数量
+}
+
+// S2 网格的标识。为避免 JS 精度问题，对外暴露的是 S2 cell 的字符串 token。
+type S2CellToken = string;
+
+interface MapHeatBucket {
+  cell_token: S2CellToken;  // S2 单元格的字符串 token，可用于前端作为 key 或调试
+  level: number;            // 该单元格所在的 S2 level
+  location: GeoPoint;       // 聚合单元的代表坐标（例如 S2 单元格的中心点）
+  total_count: number;      // 当前过滤条件下，该网格内参与统计实体的总数
+  breakdown: MapHeatBreakdown | null;  // 按类型拆分；当 data_type = 'all' 时返回完整三分类拆分
+}
+
+interface MapHeatCanvas {
+  items: MapHeatBucket[];
+}
+
+type HotspotObjectType = 'user' | 'group' | 'moment';
+
+interface MapHotspotItem {
+  object_type: HotspotObjectType; // 对象类型
+  object_id: string;              // 业务 ID（user_id / group_id / moment_id）
+  title: string;                  // 昵称 / 群名 / 动态标题
+  subtitle: string | null;        // 简短描述 / 地点名等
+  cover_url: string | null;       // 头像 / 群头像 / 动态封面
+  // 位置统一使用 RelativeLocation（含 distance/bearing），与 feed/search 对齐
+  // distance/bearing 相对于视口几何中心计算，由服务端计算
+  location: RelativeLocation;
+  created_at: string | null;      // 对于动态等有时间语义的对象可返回创建时间
+}
+
+interface MapCanvasFilter {
+  data_type: MapDataType | null;
+  time_range: TimeRangeParams | null;
+}
+```
 
 ### POST /public/v1/map/canvas
 
@@ -1052,7 +1121,7 @@ type MapCanvasResponse =
 
 ### POST /public/v1/share/fetch
 
-获取分享详情（分享码创建/管理位于 `/api/v1/share/`）。
+解析分享码换取目标详情（分享的创建/管理位于 `/api/v1/share/`，见 `api_spec_share.md`）。
 
 **仅 public 版说明**：目标可见性按资源状态判定（目标被删除/隐私变更时 `preview` 为 null），不依赖查看者身份，登录用户与匿名用户行为一致——故不设登录镜像（镜像判定原则见「节点级规则」）。
 

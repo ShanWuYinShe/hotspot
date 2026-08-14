@@ -11,7 +11,7 @@
 
 - **未注册用户**：指没有任何有效会话身份的调用方（匿名）。只能调用 `/public/v1` 节点
 - **注册用户**：指持有有效会话身份的调用方，包含**正式注册**（`user_type='normal'`）与**临时注册**（`user_type='temp'`，访客）两类；两者在权限上完全同权，差异仅在账号生命周期（`upgrade` 转正）。调用 `/api/v1` 节点
-- **当前用户**：指已鉴权的调用方用户。个人视角操作由 Token 隐含标识，无独立 `/me/` 路径段
+- **当前用户**：指已鉴权的调用方用户。个人视角操作由 Token 隐含标识，不设 `/users/me` 类资源域；单值读取用名词化端点（如 `auth/session`、`rbac/me`，见「无动词端点」清单）
 - **自身**：指"对自己执行操作"的语义，用于错误码与规则描述
 - **群成员**：指已加入群组的用户
 - **会话参与者**：指私聊会话的双方用户
@@ -42,7 +42,7 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 - 只有**全局身份**才配顶级节点（`/public/v1`、`/admin/v1`）；群管理是群组资源的附属视角，挂在 `groups/admin` 守卫子树之下（群管理员属于普通用户范畴，故子树位于 `/api/v1` 内）
 - 每个端点**单一角色、单一检查**：禁止「作者或管理员」「成员或管理员」等双角色端点；双角色语义一律拆分为两个端点（如消息撤回拆为 `group_messages/recall` 与 `groups/admin/messages/recall`）
 - 同一功能面向匿名与登录两类身份时，**拆分为两个端点**（匿名版在 `/public/v1`，登录版在 `/api/v1`），且 Request/Response 类型**各自独立、禁止共用**（见「强类型要求」）
-- 三处共用同一 token 体系、同一 envelope 与同一错误码空间；仅 `/admin/v1` 需要独立反向代理与独立限流
+- 三处共用同一 token 体系、同一 envelope 与同一错误码空间；`/public/v1`（IP 维度）与 `/admin/v1`（独立反向代理）各自有限流策略（见「限流策略」）
 - WebSocket 端点为 `/ws/v1`，独立于 HTTP 节点，仅服务于注册用户的实时事件（连接后必须通过 `Auth` 事件完成鉴权，见 `api_spec_websocket.md`）
 
 ### 统一路径结构
@@ -74,7 +74,6 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 ├── group_messages/    # 群聊消息
 ├── feed/              # 信息流（关注/附近/热门）
 ├── search/            # 搜索建议
-├── map/               # 地图渲染
 ├── reports/           # 举报
 ├── notify/            # 通知中心
 ├── media/             # 媒体上传
@@ -98,8 +97,8 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 
 ### 端点形态
 
-- 端点形态统一为 `/{node}/{version}/{resource}/{action}`（node ∈ public / api / admin）；守卫子树为 `/{node}/{version}/{resource}/admin/{action}`
-- **资源域单复数规则**：可数实体资源域用复数（users / moments / comments / reactions / groups / private_chats / private_messages / group_messages / reports / sessions）；服务域、动作域与不可数概念域用单数（auth / feed / search / map / share / media / notify / system）。禁止混用（如 `shares/`、`moment/`）
+- 端点形态统一为 `/{node}/{version}/{resource}/{action}`（node ∈ public / api / admin），`{resource}` 可含多级子资源路径（如 `groups/applications/fetch_submitted`、`rbac/roles/set_permissions`）；守卫子树为 `/{node}/{version}/{resource}/admin/{action}`（如 `groups/admin/members/set_mute`）
+- **资源域单复数规则**：可数实体资源域用复数（users / moments / comments / reactions / groups / private_chats / private_messages / group_messages / reports）；服务域、动作域与不可数概念域用单数（auth / feed / search / map / share / media / notify / system）。禁止混用（如 `shares/`、`moment/`）
 - 全小写 snake_case；ID 字段显式 `xxx_id` 命名（禁止裸 `id`）；所有 `xxx_id` 字段在 API 层统一为 `string`
 - 两态参数统一 `active: boolean`（true=执行/开启，false=撤销/关闭）
 - 所有 `*_url` 字段的值必须为**完整的绝对 URL**（含协议和域名），客户端无需拼接 base URL
@@ -118,7 +117,6 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 | `search` | 关键字/条件搜索 |
 | `set_<state>` | 设置两态状态（set_follow / set_block / set_favorite / set_remark / set_role / set_mute / set_ban） |
 | `batch_fetch` | 批量按 ID 获取 |
-| `get_<subresource>` | 获取当前用户的非资源性数据（account / settings / session / meta / client_config / unread_count） |
 
 域专属动词：
 
@@ -127,7 +125,7 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 | `send` / `recall` / `mark_read` | 消息域动词 | private_messages / group_messages |
 | `register` / `signin` / `signout` / `guest` | 账号生命周期（guest = 访客注册，与 register 对仗） | auth |
 | `refresh_token` / `change_password` / `forgot_password` / `reset_password` | 凭证类动宾动词（忘记→重置两步对仗） | auth |
-| `revoke_session` / `revoke_other_sessions` | 会话撤销（other_sessions 明确「除当前外」，含当前是 logout） | auth |
+| `revoke_session` / `revoke_other_sessions` | 会话撤销（other_sessions 明确「除当前外」，含当前是 `signout` 的职责） | auth |
 | `upgrade` | 访客转正（账号状态转移） | users |
 | `enter` / `exit` / `dismiss` / `remove` | 成员进出与生命周期动词 | groups |
 | `transfer_ownership` | 转让所有权 | groups/admin |
@@ -141,17 +139,15 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 - **读取类名词化**（读单值/配置/当前对象，直接以名词命名）：`users/account`、`users/settings`、`auth/session`、`system/meta`、`system/client_config`、`notify/unread_count`、`rbac/me`、`groups/admin/settings`、`app_config`（裸域读取）
 - **惯例例外**：`system/health`（健康检查行业惯例）、`system/bootstrap`（冷启动聚合，协议级入口）、`map/canvas`（地图画布资源）、`feed/` 流槽位名（`following` / `trending` / `nearby_moments` / `nearby_users` / `nearby_groups`，业界通用命名，非动作）
 
-**动词审美规则（契约级，主观个案评估）**：动作词的观感以**整体字形与组合的协调感**为准，**不做机械的字母形状排除**——下伸部/上伸部字母本身不构成禁用理由（`presign` 即为无问题的反例，经评估保留原名）。已确认丑并废除的仅两类：`get_*` 前缀（全量名词化）与 `list_*` 前缀（全量更名 `fetch_*`）。个案更名记录：`login`/`logout` → `signin`/`signout`、`join`/`leave` → `enter`/`exit`、`grant` → `award`、`request_password_reset` → `forgot_password`。新增动作词时按整体观感个案评估，存疑时向维护者确认（玩梗保护条款优先级更高）
+**动词审美规则（契约级，主观个案评估）**：动作词的观感以**整体字形与组合的协调感**为准，**不做机械的字母形状排除**——下伸部/上伸部字母本身不构成禁用理由（`presign` 即为无问题的反例，经评估保留原名）。已确认丑并废除的仅两类：`get_*` 前缀（全量名词化，改用「无动词端点」清单的名词化命名）与 `list_*` 前缀（全量更名 `fetch_*`）。新增动作词时按整体观感个案评估，存疑时向维护者确认（玩梗保护条款优先级更高）
 
 **范围语义的表达约定（契约级）**：动作作用范围用 `scope` 参数表达（`notify/mark_read` 的 `'ids'|'all'`、`group_messages/mark_read` 的 `'group'|'all'`）；**仅当「全部」实际不含当前对象且行为链不同时**才拆独立端点并以名写实（`auth/revoke_other_sessions`——撤销除当前会话外的全部，含当前是 `signout` 的职责），禁止名实不符的 `*_all_*` 命名。
 
 ### 状态限定词（列表场景区分视角的唯一手段）
 
-同一命名空间存在多视角列表时，用**状态限定词**区分，只描述资源状态、不标记视角：
+同一命名空间存在多视角列表时，用**状态限定词**区分，只描述资源状态、不标记视角。现有：`created / joined / submitted / sent / received / favorites / blocked / banned / reacted`，以及关系/子资源维度（`friends / following / followers / groups / moments`）。
 
-`created / joined / submitted / sent / received / favorites / blocked / banned / reacted`
-
-- **`_my` 后缀与 `My` 类型前缀全量禁止**：命名空间天生私有（每人只见自己的数据）的列表直接 `list`（如 `reports/fetch`、`share/fetch`、`notify/fetch`）；不存在「非 my 版本」需要区分时不得加任何视角后缀
+- **`_my` 后缀与 `My` 类型前缀全量禁止**：命名空间天生私有（每人只见自己的数据）的列表直接 `fetch`（如 `reports/fetch`、`share/fetch`、`notify/fetch`）；不存在「非 my 版本」需要区分时不得加任何视角后缀
 - 例：`groups/fetch_joined`（我加入的群）、`groups/applications/fetch_submitted`（我提交的申请）、`moments/fetch_created`（我创建的瞬间）、`groups/invites/fetch_sent`（我发出的邀请）
 
 ### 参数必显式（契约级）
@@ -187,7 +183,7 @@ interface ApiResponse<T = void> {
 
 ### 通用隐含错误码
 
-隐含错误码（`10000`/`10100`/`10201`/`10500`/`10600`）与幂等错误码（`22000`/`22001`/`22002`）为**所有相关端点隐含支持**，唯一权威定义在 `api_spec_errors.md`「隐含错误码（无需在端点重复列出）」小节。各模块端点文档的"错误码"字段只列该端点**特有**的业务错误码（如 `10200`、`10300`、`10400` 等），不得重复列出隐含码——若出现隐含码，视为文档缺陷，应删除。
+部分错误码为**所有相关端点隐含支持**（清单见 `api_spec_errors.md`「隐含错误码（无需在端点重复列出）」，唯一权威）。各模块端点文档的"错误码"字段只列该端点**特有**的业务错误码，不得重复列出隐含码——若出现隐含码，视为文档缺陷，应删除。
 
 ---
 
@@ -248,19 +244,19 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 
 ### 节点身份语义（契约级）
 
-认证档位作为**端点属性**已废除——身份要求由节点前缀直接表达，全规范无例外：
+身份要求由节点前缀直接表达，全规范无例外：
 
 | 节点 | Token 处理 | 语义 |
 |------|-----------|------|
 | `/public/v1/*` | **完全不解析**（Cookie/Header 中的 Token 一律忽略） | 纯匿名视角：仅返回公开数据，响应形状与调用者是否恰好持有 Token 无关 |
 | `/api/v1/*` | 必须携带有效 access_token | 缺少/无效/黑名单 → `10100`；封禁 → `10201` |
 | `/admin/v1/*` | 必须携带有效 access_token + 平台管理员身份 | 未认证 → `10100`；非平台管理员 → `10200` + `not_admin`；细粒度权限见 `api_spec_authz.md` |
-| `auth/refresh_token`（credential 特例） | 以请求体中的 refresh_token 为凭证 | 无效/过期/被撤销 → `10100`。该端点位于 `/public/v1`，但凭证语义独立于节点匿名语义 |
+| `auth/refresh_token`（凭证特例） | 以请求体中的 refresh_token 为凭证 | 无效/过期/被撤销 → `10100`。该端点位于 `/public/v1`，但凭证语义独立于节点匿名语义 |
 
 说明：
-- **原 `optional` 档位已废除**：匿名与登录两种视角一律拆分为 `/public/v1` 匿名版 + `/api/v1` 登录版两个端点；不存在「同一端点按登录态返回不同数据」的隐式行为
+- 匿名与登录两种视角一律拆分为 `/public/v1` 匿名版 + `/api/v1` 登录版两个端点；不存在「同一端点按登录态返回不同数据」的隐式行为
 - `/public/v1` 不解析 Token 意味着：即便请求携带了有效 Token，也**不会**返回 viewer_state / relation 等登录视角增强字段；需要增强视角时客户端必须调用 `/api/v1` 的对应端点
-- 已废除「条件必须」档位与「目标缺省=当前用户」语义：目标 ID 一律必传；拉取自己的数据时客户端显式传入自己的 ID
+- 目标 ID 一律必传（禁止「缺省 = 当前用户」的身份缺省语义）；拉取自己的数据时客户端显式传入自己的 ID
 - Web 端通过 Cookie 自动携带，无需前端代码手动处理；App 端在每个请求的 Header 中手动添加 `Authorization` 字段（`/public/v1` 请求可不携带）
 
 **黑名单规则（契约级）**：
@@ -307,14 +303,14 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 - **创建操作 (create)**: 内容类创建（瞬间/评论/群组/公告等用户可见资源）统一返回完整对象（`XxxItem`）；非内容类创建（如分享码、角色）返回必要的标识字段即可
 - **更新操作 (update)**: 内容类更新（瞬间/群组/公告/消息等）统一返回更新后的完整对象；偏好/设置类更新（settings/preferences/角色/禁言等状态设值）返回空 `ApiResponse`
 - **列表/搜索/详情/Feed**: 统一使用固定公开类型（`XxxItem`）；不同视角使用**不同端点 + 不同扩展类型**（见「类型稳定性」）；`/admin/v1` 使用独立的 `AdminXxxItem` 扩展类型
-- **上下文敏感已废除**：不再通过 `@auth-only` 等注解让同一端点按调用者返回不同形状——视角差异一律拆端点
+- **上下文敏感已废除**：同一端点不按调用者返回不同形状——视角差异一律拆端点（注解废除声明见「类型稳定性」）
 
 ### 强类型要求
 
 - 所有 request/response 必须强类型
 - **每个端点必须有命名的 Request 类型**：空请求体也须 `interface XxxRequest {}`，禁止裸 `{}` 与匿名结构
 - **禁止匿名响应容器**：响应必须引用命名类型（列表容器统一 `PaginatedData<T>` 或命名 `XxxList`）
-- **public 节点类型完全隔离**：`/public/v1` 双版本端点的 Request/Response 主体类型使用专属 `Public` 前缀（`PublicXxxRequest` / `PublicXxxItem` 等，定义在 `api_spec_public.md`），**禁止**与 `/api/v1`、`/admin/v1` 的对偶类型互相引用。匿名视角类型**不含** viewer_state / relation / reacted_by_me / remark 等查看者状态字段——这些字段只存在于登录视角类型中；嵌套结构里含查看者字段的类型同样必须拆出 Public 版（如 `PublicReaction`）。**例外**：无视角的 Domain Primitives 与纯配置类型（`GeoPoint`、`PaginationParams`、`UserInfo`、`MediaAsset`、`ApiVersionMeta` 等，定义于 `api_spec_types.md`）跨节点共享，不复制；仅存在于 public 节点、无登录版对偶的类型（如 `RegisterRequest`、`AuthTokenPair`）保持常规命名
+- **public 节点类型完全隔离**：`/public/v1` 双版本端点的 Request/Response 主体类型使用专属 `Public` 前缀（`PublicXxxRequest` / `PublicXxxItem` 等，定义在 `api_spec_public.md`），**禁止**与 `/api/v1`、`/admin/v1` 的对偶类型互相引用。匿名视角类型**不含** viewer_state / relation / reacted_by_me / remark 等查看者状态字段——这些字段只存在于登录视角类型中；嵌套结构里含查看者字段的类型同样必须拆出 Public 版（如 `PublicReaction`）。**例外**：无视角的共享类型跨节点共用、不复制——Domain Primitives 与纯配置类型（`GeoPoint`、`PaginationParams`、`UserInfo`、`MediaAsset`、`ApiVersionMeta` 等，定义于 `api_spec_types.md`）；双版本端点的响应主体若本身即无查看者字段的共享类型（如 `reactions/fetch` 匿名版的 `ReactionItem`），同样直接共用；仅存在于 public 节点、无登录版对偶的类型（如 `RegisterRequest`、`AuthTokenPair`）保持常规命名
 - 类型命名遵循：
   - 统一数据类型: `XxxItem`（公开固定形状）
   - 匿名视角类型: `PublicXxxItem`（/public/v1 专用，定义在 `api_spec_public.md`）
@@ -365,7 +361,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 
 **额外能力**：查看者状态字段有值、个性化信息流、私聊/群聊/通知、所有写操作和互动操作；按角色访问 `groups/admin` 守卫子树；平台管理员身份另走 `/admin/v1`。
 
-**登录态切换**：客户端在登录/登出时切换调用节点（同一浏览功能的两个版本端点路径仅节点前缀不同，如 `/public/v1/moments/open_the_door` ↔ `/api/v1/moments/open_the_door`，但类型独立）。**无需随登录态切换的端点**（仅 public 版，登录用户与匿名用户调用同一 URL）：`map/canvas`、`share/fetch`、`groups/announcements/fetch`、system 的 `meta`/`health`/`announcements/fetch`/`client_config`、auth 生命周期 6 端点（`/public/v1/auth/*`）——客户端此类模块无需感知登录态。
+**登录态切换**：客户端在登录/登出时切换调用节点（同一浏览功能的两个版本端点路径仅节点前缀不同，如 `/public/v1/moments/open_the_door` ↔ `/api/v1/moments/open_the_door`，但类型独立）。**无需随登录态切换的端点**（仅 public 版，登录用户与匿名用户调用同一 URL）：`map/canvas`、`groups/announcements/fetch`、system 的 `meta`/`health`/`announcements/fetch`/`client_config`、auth 生命周期 6 端点（`/public/v1/auth/*`）、分享码解析（`/public/v1/share/fetch`；`/api/v1/share/fetch` 为我的分享列表，是不同功能）——客户端此类模块无需感知登录态。
 
 ---
 
@@ -420,7 +416,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 |-----|------|------|
 | `keyword` | 1-100 字符 | 搜索关键字 |
 | `prefix` | 1-50 字符 | 搜索建议前缀 |
-| `radius` | 100-50000 米（默认 `5_000`） | 搜索半径 |
+| `radius` | 100-50000 米（默认 `5000`） | 搜索半径 |
 | `bounds`（map） | north/south ∈ [-90,90]；east/west ∈ [-180,180]；north>=south、east>=west | 地图视口 |
 
 ### 平台管理字段约束
@@ -468,7 +464,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 
 #### 计数器一致性（契约级）
 
-所有 `*_count` 字段（如 `likes_count`、`comments_count`、`shares_count`、`members_count`、`followers_count`、`reaction.count`、`read_count` 等）均为**最终一致**，非强一致实时值：
+所有 `*_count` 字段（如 `comments_count`、`shares_count`、`members_count`、`followers_count`、`reaction.count`、`read_count` 等）均为**最终一致**，非强一致实时值：
 
 - **更新策略**：服务端采用异步累计（写入队列 + 定时刷新到主存储 + 缓存），容忍秒级到分钟级延迟
 - **客户端约束**：不得用于精确对账；不得在收到互动事件后立即期望本地 count +1 与服务端一致；不得轮询 count 字段
@@ -484,7 +480,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 
 | 接口类型 | 限流维度 | 策略 | 默认限制值 | `RateLimitConfig` 对应字段 |
 |---------|---------|------|--------|--------------------------|
-| 登录/注册/游客/重置 | IP | 滑动窗口 | 10次/10分钟 | `auth_login_per_10minutes` 等 |
+| 登录/注册/游客/重置 | IP | 滑动窗口 | 10次/10分钟 | `auth_signin_per_10minutes` 等 |
 | 搜索类 | 用户（`/api/v1`）；IP（`/public/v1` 匿名版） | 令牌桶 | 60次/分钟 | `search_per_minute` |
 | 通用写操作 | 用户 | 滑动窗口 | 30次/分钟 | `write_per_minute` |
 | 业务写操作（动态/评论/举报） | 用户 | 滑动窗口 | 各不同 | `moments_create_per_minute` 等 |
@@ -497,7 +493,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 
 > 各字段的完整定义和取值范围见 `api_spec_admin.md` 的 `RateLimitConfig`。
 
-**匿名请求限流**：`/public/v1` 节点请求（节点本身不解析 Token，一律按匿名处理）一律按 **IP 维度**限流，防止爬虫批量拉取公开数据。登录请求（`/api/v1`、`/admin/v1`）按用户维度限流；两种维度独立计费、分别触发。
+**匿名请求限流**：`/public/v1` 节点请求（节点本身不解析 Token，一律按匿名处理）按 **IP 维度**限流，防止爬虫批量拉取公开数据。登录请求（`/api/v1`、`/admin/v1`）按用户维度限流；两种维度独立计费、分别触发。
 
 **客户端真实 IP 解析**（IP 维度限流的前提）：
 

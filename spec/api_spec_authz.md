@@ -1,7 +1,7 @@
 # HotSpot API - 守卫与权限模型
 
 > 定义 HotSpot 的统一守卫模型：节点划分、节点身份语义、资源约束、守卫子树规则、平台权限键与失败语义。
-> 本文档是权限判定的唯一权威来源；各模块端点文档的「守卫/认证」字段只引用本文档，不重复定义规则。
+> 本文档是权限判定的唯一权威来源；各模块端点文档的守卫说明只引用本文档，不重复定义规则。
 
 ## 契约引用
 
@@ -13,14 +13,16 @@
 
 ## 守卫位置总览（契约级）
 
-| 位置 | 调用者 | 守卫 | 判定时机 |
-|------|--------|------|----------|
-| `/public/v1/` | 未注册用户（纯匿名） | 节点级：**完全不解析 Token**；仅可见性过滤，无身份类约束 | 资源约束在引擎 |
-| `/api/v1/` | 注册用户（正式 + 临时同权） | 节点级：必须有效 Token（`10100`）+ 资源约束 | 认证在平台层中间件；资源约束在引擎 |
-| `/api/v1/groups/admin/` | 群管理员 | 守卫子树：调用者必须是**请求目标群**的 owner/admin | 子树级统一中间件（惰性解析 group_id → 角色） |
-| `/admin/v1/` | 平台管理员 | 节点级：必须 Token + 平台管理员 + `admin.*` 权限键 | 节点级统一中间件 |
+节点划分与守卫语义见 `api_spec_base.md`「节点与路径架构」；各位置的判定时机：
 
-**节点即档位（契约级）**：身份要求由节点前缀唯一表达——`/public/v1` = 纯匿名（不解析 Token）、`/api/v1` = 注册用户、`/admin/v1` = 平台管理员。原「认证档位」（public/optional/required/credential）作为端点属性已废除；唯一特例是 `/public/v1/auth/refresh_token` 以请求体中的 refresh_token 为凭证（credential 语义）。详见 `api_spec_base.md`「节点身份语义」。
+| 位置 | 判定时机 |
+|------|----------|
+| `/public/v1/` | 无身份判定；仅可见性过滤（资源约束在引擎） |
+| `/api/v1/` | 认证在平台层中间件；资源约束在引擎 |
+| `/api/v1/groups/admin/` | 子树级统一中间件（惰性解析 group_id → 角色） |
+| `/admin/v1/` | 节点级统一中间件（身份 + `admin.*` 权限键） |
+
+**节点即档位（契约级）**：身份要求由节点前缀唯一表达——`/public/v1` = 纯匿名（不解析 Token）、`/api/v1` = 注册用户、`/admin/v1` = 平台管理员。唯一特例：`/public/v1/auth/refresh_token` 以请求体中的 refresh_token 为凭证（凭证语义独立于节点匿名语义）。详见 `api_spec_base.md`「节点身份语义」。
 
 **判定顺序（契约级）**：认证（仅 /api/v1、/admin/v1）→ 可见性（10300 防枚举）→ 守卫/授权（10200 + forbidden_reason）。可见性失败必须先于授权失败返回，不可见资源连「无权限」都不暴露。
 
@@ -59,7 +61,7 @@
 - 禁言（mute）为成员资格上的临时条件约束：被禁言成员调用 `group_messages/send` 返回 `10400` + `data.mute`（含 muted_until）
 - `groups/admin/messages/recall`：管理员撤回任意成员消息，无时间窗限制
 
-原 14 个 `group.*` 权限键已删除，由本子树守卫取代；「自身例外」规则已删除（muted_until 归位到 `GroupViewerState` 与 `AdminGroupMemberItem`）。
+群管理权限由本子树统一守卫表达（无独立权限键）；禁言状态 `muted_until` 位于 `GroupViewerState` 与 `AdminGroupMemberItem`。
 
 ---
 
@@ -87,7 +89,7 @@
 **角色模型**：
 - **superadmin**：`permissions=['*']`，拥有全部权限键；仅 PII 键（`read_ip` ×2）要求显式持有
 - **admin**：绑定 `AdminRole`（roles/* 机制），permissions = 角色集合并集
-- 权限蕴含（契约级）：`admin/reports/handle` 在 `action='resolve'` 且携带 `ban_duration_days` 时，实际执行封禁——调用方除 `admin.reports.write` 外必须同时具备 `admin.users.write`，权限不足返回 `10200` + `insufficient_admin_permission`
+- 权限蕴含（契约级）：`/admin/v1/reports/handle` 在 `action='resolve'` 且携带 `ban_duration_days` 时，实际执行封禁——调用方除 `admin.reports.write` 外必须同时具备 `admin.users.write`，权限不足返回 `10200` + `insufficient_admin_permission`
 
 ---
 
@@ -106,13 +108,13 @@
 
 | 失败 | 码 | data | 适用节点 |
 |------|-----|------|----------|
-| 未认证（/api/v1、/admin/v1 及 credential 特例） | 10100 | 无 | 非 public |
+| 未认证（/api/v1、/admin/v1 及 refresh_token 凭证特例） | 10100 | 无 | /public/v1 之外 |
 | 不存在/不可见（含隐私隐藏，防枚举） | 10300 | 无 | 全部 |
 | 权限不足 | 10200 | `{ forbidden_reason: ForbiddenReason }`（**必填**） | 全部（public 节点为隐私类 reason：privacy_setting / not_group_member） |
 | 业务冲突/前置不满足 | 10400 | 端点可显式声明结构化 data（如 `data.mute`） | 全部 |
 | 账号封禁（强制登出） | 10201 | 无（中间件级） | /api/v1、/admin/v1 |
 
-`ForbiddenReason` 枚举（12 项）的权威定义在 `api_spec_errors.md`；`BlockReason` 已并入。
+`ForbiddenReason` 枚举（11 项）的权威定义在 `api_spec_errors.md`。
 
 **隐私拒绝**：资源存在但不可见（private/被拉黑/资料隐藏）→ 10300，先于授权判定；整表隐私拒绝（social_lists_visible 等=false）→ 10200 + `privacy_setting`。
 
@@ -121,12 +123,12 @@
 ## 权限矩阵（契约附件）
 
 > 列说明：
-> - **节点即档位**：块标题即节点，节点身份语义见上（/public/v1 纯匿名、/api/v1 注册用户、groups/admin 守卫子树、/admin/v1 平台管理员）；认证档位列已废除
+> - **节点即档位**：块标题即节点，节点身份语义见上（/public/v1 纯匿名、/api/v1 注册用户、groups/admin 守卫子树、/admin/v1 平台管理员）
 > - 守卫/约束 = 守卫子树（groups/admin）、平台权限键（admin.*）或资源约束（owner=resource.owner、part=chat.participant、gmember=group.member、self、可见性过滤）
 > - reason = 10200 时的 forbidden_reason
 > - 幂等 = 幂等键/自然去重/no-op 语义
-> - 「登录视角」= 原 optional 端点收紧为 required 后的登录版；其匿名镜像版在 `/public/v1`（类型独立，见 `api_spec_public.md`）
-> - **镜像判定原则**：仅当登录版存在真实增量（查看者状态字段，或可见性判定依赖身份——如 `reactions/fetch` 的私聊消息）才拆双版本；无任何增量的端点仅保留 `/public/v1` 版（如 `map/canvas`、`share/fetch`、`groups/announcements/fetch`、system 的 meta/health/announcements/fetch/client_config），不设登录镜像
+> - 「登录视角」= /api/v1 登录版端点的可见性判定语义；其匿名镜像版在 `/public/v1`（类型独立，见 `api_spec_public.md`）
+> - **镜像判定原则**：仅当登录版存在真实增量（查看者状态字段，或可见性判定依赖身份——如 `reactions/fetch` 的私聊消息）才拆双版本；无任何增量的端点仅保留 `/public/v1` 版（如 `map/canvas`、`groups/announcements/fetch`、system 的 meta/health/announcements/fetch/client_config），不设登录镜像
 
 ### /public/v1（未注册用户节点，纯匿名）
 
@@ -135,7 +137,7 @@
 | 1 | `/public/v1/auth/register` | —（login_id 唯一） | — | 10400 login_id 占用 | 幂等 |
 | 2 | `/public/v1/auth/signin` | — | — | 10100（防枚举） | — |
 | 3 | `/public/v1/auth/guest` | — | — | — | 幂等 |
-| 4 | `/public/v1/auth/refresh_token` | credential 特例（refresh 归属+黑名单） | — | 10100 | — |
+| 4 | `/public/v1/auth/refresh_token` | 凭证特例（refresh 归属+黑名单） | — | 10100 | — |
 | 5 | `/public/v1/auth/forgot_password` | — | — | 限流 | — |
 | 6 | `/public/v1/auth/reset_password` | 一次性验证码 | — | 10300 | 自然去重 |
 | 7 | `/public/v1/users/search` | searchable 系列过滤 | — | — | — |
@@ -175,7 +177,7 @@
 | # | 端点 | 守卫/约束 | 10200 reason | 特有失败 | 幂等/no-op |
 |---|------|-----------|--------------|----------|------------|
 | 38 | `/api/v1/auth/signout` | self.session | — | — | no-op |
-| 39 | `/api/v1/auth/session` | self（原 optional 收紧） | — | — | — |
+| 39 | `/api/v1/auth/session` | self | — | — | — |
 | 40 | `/api/v1/auth/change_password` | self+旧密码 | — | 10401 | 自然去重 |
 | 41 | `/api/v1/auth/fetch_sessions` | self | — | — | — |
 | 42 | `/api/v1/auth/revoke_session` | self.session | — | 10300/10400(当前会话) | — |
@@ -298,7 +300,7 @@
 | 149 | `/admin/v1/rbac/roles/delete` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300/10400 | — |
 | 150 | `/admin/v1/rbac/roles/set_permissions` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300；* 仅超管 | — |
 | 151 | `/admin/v1/rbac/admins/fetch` | admin.rbac.manage | not_admin/insufficient_admin_permission | — | — |
-| 152 | `/admin/v1/rbac/admins/award` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300；grant_all 仅超管 | — |
+| 152 | `/admin/v1/rbac/admins/award` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300；award_all 仅超管 | — |
 | 153 | `/admin/v1/rbac/admins/revoke` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300；撤超管仅超管 | — |
 | 154 | `/admin/v1/audit/fetch` | admin.audit.read | not_admin/insufficient_admin_permission | — | — |
 | 155 | `/admin/v1/app_config` | admin.app_config.read | not_admin/insufficient_admin_permission | — | — |

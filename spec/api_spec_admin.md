@@ -5,8 +5,8 @@
 
 ## 模块信息
 
+- **节点**: `/admin/v1`（平台管理员）
 - **命名空间**: `rbac` / `audit` / `app_config` / `users` / `groups` / `reports` / `tags` / `announcements`
-- **基础路径**: `/admin/v1/`
 - **引用**: 
   - 基础规范：`api_spec_base.md`
   - 通用类型：`api_spec_types.md`
@@ -52,14 +52,14 @@
 | `POST /admin/v1/reports/handle` | 处理举报 | admin.reports.write |
 | `POST /admin/v1/tags/search` | 搜索标签 | admin.tags.read |
 | `POST /admin/v1/tags/delete` | 删除/屏蔽标签 | admin.tags.write |
-| `POST /admin/v1/announcements/fetch` | 搜索系统公告 | admin.announcements.read |
+| `POST /admin/v1/announcements/fetch` | 系统公告列表（按 severity 过滤） | admin.announcements.read |
 | `POST /admin/v1/announcements/create` | 发布系统公告 | admin.announcements.write |
 | `POST /admin/v1/announcements/update` | 更新系统公告 | admin.announcements.write |
 | `POST /admin/v1/announcements/delete` | 删除系统公告 | admin.announcements.write |
 
 ## 类型定义
 
-以下类型定义于 `api_spec_types.md`：`UserInfo`、`Location`、`GroupSettings`、`FeatureSwitches`、`AppLimits`、`ContactInfo`、`PaginationParams`、`PaginatedData`、`UserItem`、`GroupItem`、`SystemAnnouncementItem`、`UserType`、`PrivacyLevel`、`ReportStatus`、`ReportTargetType`、`ReportAction`、`TagTrend`、`AnnounceLevel`、`ReportItem`。
+以下类型定义于 `api_spec_types.md`：`UserInfo`、`Location`、`GroupSettings`、`FeatureSwitches`、`AppLimits`、`ContactInfo`、`PaginationParams`、`PaginatedData`、`UserItem`、`GroupItem`、`SystemAnnouncementItem`、`UserType`、`PrivacyLevel`、`ReportStatus`、`ReportTargetType`、`ReportAction`、`TagItem`、`TagTrend`、`AnnounceSeverity`、`ReportItem`。
 
 以下 Admin 扩展类型在通用类型基础上扩展平台管理视角字段（`AdminXxxItem` 仅存在于本节点）。
 
@@ -68,7 +68,6 @@
 ```typescript
 // 账号状态（平台管理视角）
 type UserAccountStatus = 'normal' | 'banned';
-}
 ```
 
 ## RBAC 管理 API
@@ -118,10 +117,10 @@ interface AdminPermissions {
 interface FetchAdminPermissionsRequest {}
 ```
 
-**Response**: `ApiResponse<AdminPermissionList>`
+**Response**: `ApiResponse<AdminPermissionDictionary>`
 
 ```typescript
-interface AdminPermissionList {
+interface AdminPermissionDictionary {
   items: AdminPermissionItem[];
 }
 
@@ -272,6 +271,7 @@ interface FetchAdminsRequest {
 ```typescript
 interface AdminOperatorItem {
   user: UserInfo;
+  granted_at: string;     // 最近一次授权时间（排序主序）
   permissions: string[];  // '*' 表示拥有全部权限
   roles: AdminRoleBasic[];
 }
@@ -287,21 +287,21 @@ interface AdminOperatorItem {
 
 - **权限**: `admin.rbac.manage`
 
-**额外约束**：仅 superadmin 可将 `grant_all_permissions=true`
+**额外约束**：仅 superadmin 可将 `award_all_permissions=true`
 
 **Request**: `AwardAdminRequest`
 ```typescript
 interface AwardAdminRequest {
   user_id: string;
-  grant_all_permissions: boolean | null;
+  award_all_permissions: boolean | null;
   role_ids: string[];
 }
 ```
 
 **参数互斥说明**：
-- 当 `grant_all_permissions === true` 时，`role_ids` 必须为空数组或省略，服务端将忽略传入的角色列表。
-- 当 `grant_all_permissions !== true` 时，`role_ids` 为必填，至少包含一个角色。
-- 若同时传入 `grant_all_permissions=true` 且 `role_ids` 非空，视为参数冲突（10000）。
+- 当 `award_all_permissions === true` 时，`role_ids` 必须为空数组或省略，服务端将忽略传入的角色列表。
+- 当 `award_all_permissions !== true` 时，`role_ids` 为必填，至少包含一个角色。
+- 若同时传入 `award_all_permissions=true` 且 `role_ids` 非空，视为参数冲突（10000）。
 
 **Response**: `ApiResponse`
 
@@ -379,7 +379,7 @@ type AuditAction =
   | 'role.update'        // 更新角色
   | 'role.delete'        // 删除角色
   | 'role.set_permissions' // 设置角色权限
-  | 'admin.grant'        // 授权平台管理员
+  | 'admin.award'        // 授权平台管理员
   | 'admin.revoke'       // 撤销平台管理员
   | 'report.handle'      // 处理举报
   | 'tag.delete'         // 删除/屏蔽标签
@@ -404,7 +404,7 @@ type AuditDetails =
   | { type: 'role.update'; role_name: string; added_permissions: string[]; removed_permissions: string[] }
   | { type: 'role.delete'; role_name: string }
   | { type: 'role.set_permissions'; role_name: string; permissions: string[] }
-  | { type: 'admin.grant'; target_user_id: string; role_ids: string[]; grant_all_permissions: boolean | null }
+  | { type: 'admin.award'; target_user_id: string; role_ids: string[]; award_all_permissions: boolean | null }
   | { type: 'admin.revoke'; target_user_id: string }
   | { type: 'report.handle'; report_id: string; action: ReportAction; note: string | null }
   | { type: 'tag.delete'; name: string }
@@ -539,7 +539,7 @@ interface RateLimitConfig {
   user_per_hour: number;
   // 认证类（IP 维度）
   auth_register_per_10minutes: number;
-  auth_login_per_10minutes: number;
+  auth_signin_per_10minutes: number;
   auth_guest_per_10minutes: number;
   auth_refresh_per_10minutes: number;
   auth_reset_per_10minutes: number;
@@ -745,7 +745,7 @@ interface DismissAdminGroupRequest {
 
 ### POST /admin/v1/reports/fetch
 
-举报列表（平台管理）。按状态/目标类型过滤（无关键字搜索语义，故命名为 list）。
+举报列表（平台管理）。按状态/目标类型过滤（无关键字搜索语义，故命名 `fetch` 而非 `search`）。
 
 - **权限**: `admin.reports.read`
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `report_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
@@ -870,7 +870,7 @@ interface DeleteAdminTagRequest {
 系统公告列表（平台管理视角），返回包含平台管理字段的公告列表。
 
 - **权限**: `admin.announcements.read`
-- **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `announcement_id DESC` 作为稳定 tie-breaker；一致性级别为弱一致。
+- **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `announcement_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
 
 **说明**：
 - 普通用户通过 `POST /public/v1/system/announcements/fetch`（定义于 `api_spec_public.md`）获取公开公告
@@ -879,7 +879,7 @@ interface DeleteAdminTagRequest {
 **Request**: `FetchAdminAnnouncementsRequest`
 ```typescript
 interface FetchAdminAnnouncementsRequest {
-  severity: AnnounceLevel | null;
+  severity: AnnounceSeverity | null;
   pagination: PaginationParams | null;
 }
 ```
@@ -910,7 +910,7 @@ interface AdminAnnouncementItem extends SystemAnnouncementItem {
 interface CreateAnnouncementRequest {
   title: string;
   content: string;
-  severity: AnnounceLevel;
+  severity: AnnounceSeverity;
   action_url: string | null;
   send_push: boolean | null;
 }
@@ -934,7 +934,7 @@ interface UpdateAnnouncementRequest {
   announcement_id: string;
   title: string | null;
   content: string | null;
-  severity: AnnounceLevel | null;
+  severity: AnnounceSeverity | null;
   action_url: string | null;
 }
 ```

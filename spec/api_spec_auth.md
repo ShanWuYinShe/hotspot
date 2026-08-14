@@ -61,8 +61,8 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/public/v1/a
 **App 端行为**：客户端需要自行清除存储的 access_token 和 refresh_token。
 
 **WebSocket 处理**：
-- 服务端在处理 logout 时会主动断开该用户当前会话关联的 WebSocket 连接
-- 客户端也可以在调用 logout 之前先主动断开 WebSocket
+- 服务端在处理 `signout` 时会主动断开该用户当前会话关联的 WebSocket 连接
+- 客户端也可以在调用 `signout` 之前先主动断开 WebSocket
 - 无论哪种顺序，服务端都会确保 WebSocket 连接被清理
 
 ---
@@ -78,9 +78,9 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/public/v1/a
 interface SessionRequest {}
 ```
 
-**Response**: `ApiResponse<AuthStatus>`
+**Response**: `ApiResponse<SessionStatus>`
 ```typescript
-interface AuthStatus {
+interface SessionStatus {
   user_id: string;    // 当前用户身份（App 冷启动校验免二次调用 account）
   expires_at: string; // 当前 access_token 的过期时间
 }
@@ -159,7 +159,7 @@ interface SessionItem {
 
 **安全说明**：
 - 撤销操作会将对应会话的 token 写入黑名单，直至过期
-- 不允许撤销当前会话（使用 logout 代替），返回 `10400`
+- 不允许撤销当前会话（使用 `signout` 代替），返回 `10400`
 - 被撤销会话关联的在线 WebSocket 连接会收到 `SessionRevoked` 事件后断开
 
 **Request**: `RevokeSessionRequest`

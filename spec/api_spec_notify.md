@@ -24,7 +24,7 @@
 
 ## 类型定义
 
-以下类型定义于 `api_spec_types.md`：`UserInfo`、`MomentSummary`、`FollowSource`、`AnnounceLevel`、`NotifyType`、`NotifyCategory`、`PaginationParams`、`PaginatedData`。
+以下类型定义于 `api_spec_types.md`：`UserInfo`、`MomentSummary`、`FollowSource`、`AnnounceSeverity`、`NotifyType`、`NotifyCategory`、`PaginationParams`、`PaginatedData`。
 
 ### 通知与 WebSocket 事件的关系（契约级）
 
@@ -76,7 +76,7 @@ type NotifyPayload =
   | { type: 'group_application_rejected'; group_id: string; group_name: string; application_id: string; reason: string | null }  // 不暴露审批者身份（F7 对称化）
   | { type: 'report_resolved'; report_id: string; target_type: ReportTargetType; target_id: string; resolved_at: string; note: string | null }      // note 为脱敏后的处理说明
   | { type: 'report_dismissed'; report_id: string; target_type: ReportTargetType; target_id: string; dismissed_at: string; note: string | null }
-  | { type: 'system_announcement'; announcement_id: string; title: string; severity: AnnounceLevel }  // title 为公告标题（客户端据此直接渲染通知行）
+  | { type: 'system_announcement'; announcement_id: string; title: string; severity: AnnounceSeverity }  // title 为公告标题（客户端据此直接渲染通知行）
   | { type: 'nearby_new_moment'; actor: UserInfo; moment_id: string; moment_summary: MomentSummary; distance: number };  // distance 为距离（米）
 ```
 
@@ -150,7 +150,7 @@ interface UnreadCountResult {
 **Request**: `MarkReadRequest`
 ```typescript
 interface MarkReadRequest {
-  scope: 'ids' | 'all';     // 必填：标记范围（废除「不传=全部已读」的缺省翻转语义）
+  scope: 'ids' | 'all';     // 必填：标记范围（参数必显式通则，见 api_spec_base.md）
   notify_ids: string[] | null;  // scope='ids' 时必填（1-50 个）
 }
 ```

@@ -42,6 +42,8 @@
 
 ## 类型定义
 
+Request 类型命名：跨资源域的列表加 `User` 前缀（`FetchUserGroupsRequest`/`FetchUserMomentsRequest`，表达「某用户的 X」）；本域关系资源不加（`FetchFriendsRequest`/`FetchFollowingRequest`/`FetchFollowersRequest`）。
+
 以下类型定义于 `api_spec_types.md`：
 - `PrivacyLevel`
 - `UserStats`

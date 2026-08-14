@@ -23,7 +23,6 @@
 |-----|------|------|
 | `POST /api/v1/groups/search` | 搜索群组（支持关键字/标签/位置组合；双版本，匿名版在 /public/v1） | /api/v1 |
 | `POST /api/v1/groups/open_the_door` | 群组详情（双版本） | /api/v1 |
-| `POST /public/v1/groups/announcements/fetch` | 群公告列表（仅 public 版，见 `api_spec_public.md`） | /public/v1 |
 | `POST /api/v1/groups/create` | 创建群组 | /api/v1 |
 | `POST /api/v1/groups/enter` | 加入群组（根据 join_method 自动处理） | /api/v1 |
 | `POST /api/v1/groups/exit` | 退出群组 | /api/v1 |
@@ -36,6 +35,8 @@
 | `POST /api/v1/groups/invites/fetch_received` | 我收到的邀请列表 | /api/v1 |
 | `POST /api/v1/groups/invites/accept` | 接受邀请 | /api/v1 |
 | `POST /api/v1/groups/invites/reject` | 拒绝邀请 | /api/v1 |
+
+> 群公告列表 `POST /public/v1/groups/announcements/fetch` 仅 public 版（无登录镜像），定义于 `api_spec_public.md`。
 
 ### 群管理守卫子树（`/api/v1/groups/admin/`，调用者必须是目标群 owner/admin）
 
@@ -92,7 +93,7 @@ type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'revoked';
 
 // 公开成员列表项（members/fetch 与 members/search 共用，形状恒定）
 // role/joined_at 对所有可见（用于展示成员规模与角色构成）
-// presence 字段为隐私受控恒定 nullable（null = 成员 presence_visible=false 或未登录）
+// presence 字段为隐私受控恒定 nullable（null = 成员 presence_visible=false）
 interface GroupMemberItem {
   user: UserInfo;
   role: GroupRole;
@@ -154,22 +155,17 @@ interface GroupInviteItem {
 }
 
 // 封禁成员列表项（仅守卫子树 fetch_banned 返回）
-interface BannedMemberItem {
+interface AdminBannedMemberItem {
   user: UserInfo;
   banned_at: string;
   reason: string | null;
   banned_by: UserInfo | null;
 }
 
-// 申请响应
-interface Application {
-  application_id: string;
-}
-
 // 加入群组响应
 interface EnterGroupResult {
   status: 'joined' | 'pending_approval';
-  application: Application | null;  // 仅 pending_approval 时返回
+  application_id: string | null;  // 仅 pending_approval 时非 null（创建的申请 ID，可用于后续取消）
 }
 
 // 接受邀请响应
@@ -268,7 +264,7 @@ interface CreateGroupRequest {
 - `direct` + 无需审核：直接加入，返回 `status: 'joined'`
 - `direct` + 需审核：创建加入申请，返回 `status: 'pending_approval'`
 - `password`：需提供 `password`，验证通过后按 `requires_approval` 直接加入或创建申请
-- `invite_only`：**本端点不支持**——仅受邀用户可加入，加入唯一入口为 `groups/invites/accept`（对 invite_only 群调用 join 返回 `10400`（该群组仅限邀请加入）；受邀后按 `requires_approval` 直接加入或创建申请）
+- `invite_only`：**本端点不支持**——仅受邀用户可加入，加入唯一入口为 `groups/invites/accept`（对 invite_only 群调用本端点返回 `10400`（该群组仅限邀请加入）；受邀后按 `requires_approval` 直接加入或创建申请）
 
 - **节点**: /api/v1
 
@@ -518,7 +514,6 @@ interface RejectInviteRequest {
 
 更新群组信息（owner/admin）。
 
-- **守卫**: 守卫(owner/admin)
 
 **Request**: `UpdateGroupRequest`
 ```typescript
@@ -532,7 +527,7 @@ interface UpdateGroupRequest {
   clear_password: boolean | null;  // true 时移除群密码（与 password 互斥，同时传入视为参数冲突）
   join_method: GroupJoinMethod | null;
   requires_approval: boolean | null;
-  next_activity: string | null;    // 设置/更新下次活动预告；传空字符串清除
+  next_activity_at: string | null;    // 设置/更新下次活动预告；传空字符串清除
   is_searchable: boolean | null;
   members_searchable: boolean | null;
   max_members: number | null;
@@ -552,7 +547,6 @@ interface UpdateGroupRequest {
 
 获取群组设置（管理视角）。
 
-- **守卫**: 守卫(owner/admin)
 
 **Request**: `GroupSettingsRequest`
 ```typescript
@@ -575,7 +569,6 @@ interface GroupSettingsRequest {
 
 **级联处理（契约级）**：解散时，该群所有 `pending` 状态的申请与邀请由服务端自动置为 `revoked`（群已不存在，无需推送单独事件）。
 
-- **守卫**: owner 专属
 
 **Request**: `DismissGroupRequest`
 ```typescript
@@ -599,7 +592,6 @@ interface DismissGroupRequest {
 - 若对同一用户存在 pending 状态的邀请，返回已有邀请信息（不重复创建），避免重复通知骚扰。
 - 被邀请用户**已是群成员**时，视为目标已达，返回成功（no-op，不创建邀请、不报错）。
 
-- **守卫**: 守卫(owner/admin)
 
 **Request**: `CreateGroupInviteRequest`
 ```typescript
@@ -622,7 +614,6 @@ interface CreateGroupInviteRequest {
 
 我发出的邀请列表。
 
-- **守卫**: 守卫(owner/admin)
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `invite_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `FetchSentInvitesRequest`
@@ -650,7 +641,6 @@ interface FetchSentInvitesRequest {
 
 **推送**：撤销成功后向受邀人推送 `GroupInviteRevoked` 事件。
 
-- **守卫**: 守卫(owner/admin)
 
 **Request**: `RevokeSentInviteRequest`
 ```typescript
@@ -671,7 +661,6 @@ interface RevokeSentInviteRequest {
 
 获取成员列表（管理视角：含 `muted_until` 真值）。
 
-- **守卫**: 守卫(owner/admin)
 - **排序**: 按 `joined_at` 时间正序，`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `FetchAdminGroupMembersRequest`
@@ -697,7 +686,6 @@ interface FetchAdminGroupMembersRequest {
 
 **推送**：成功后向群内推送 `GroupMemberRoleChanged` 事件（含 `transfer_ownership` 触发的 owner 变更）。
 
-- **守卫**: 守卫(owner/admin)
 
 **Request**: `SetMemberRoleRequest`
 ```typescript
@@ -718,11 +706,10 @@ interface SetMemberRoleRequest {
 
 设置成员禁言状态（两态统一端点）。
 
-- **守卫**: 守卫(owner/admin)
 
-**Request**: `SetMuteRequest`
+**Request**: `SetMemberMuteRequest`
 ```typescript
-interface SetMuteRequest {
+interface SetMemberMuteRequest {
   group_id: string;
   user_id: string;
   active: boolean;
@@ -750,7 +737,6 @@ interface SetMuteRequest {
 
 `active=false`：解除封禁。对未处于封禁状态的成员调用视为 no-op，返回成功。
 
-- **守卫**: 守卫(owner/admin)
 
 **Request**: `SetMemberBanRequest`
 ```typescript
@@ -776,7 +762,6 @@ interface SetMemberBanRequest {
 
 获取封禁列表。封禁名单属群管理信息，仅守卫子树可见（普通成员返回 `10200`）。
 
-- **守卫**: 守卫(owner/admin)
 - **排序**: 按 `banned_at` 时间倒序（最近封禁在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `FetchBannedMembersRequest`
@@ -787,7 +772,7 @@ interface FetchBannedMembersRequest {
 }
 ```
 
-**Response**: `ApiResponse<PaginatedData<BannedMemberItem>>`
+**Response**: `ApiResponse<PaginatedData<AdminBannedMemberItem>>`
 
 **错误码**: `10200`（not_group_admin） `10300`
 
@@ -801,7 +786,6 @@ interface FetchBannedMembersRequest {
 
 **推送**：成功后向群内推送 `GroupMemberRemoved` 事件。
 
-- **守卫**: 守卫(owner/admin)
 
 **Request**: `RemoveMemberRequest`
 ```typescript
@@ -821,7 +805,6 @@ interface RemoveMemberRequest {
 
 获取群组申请列表（群收件箱，管理员工作台）。
 
-- **守卫**: 守卫(owner/admin)
 - **排序**: 按 `created_at` 时间倒序（最新申请在前），`application_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `FetchGroupApplicationsRequest`
@@ -847,7 +830,6 @@ interface FetchGroupApplicationsRequest {
 
 **推送**：审批通过后向申请人推送 `GroupApplicationResponse` 事件并落库通知（见 `api_spec_notify.md`）。
 
-- **守卫**: 守卫(owner/admin)
 
 **Request**: `ApproveGroupApplicationRequest`
 ```typescript
@@ -867,7 +849,6 @@ interface ApproveGroupApplicationRequest {
 
 拒绝群组申请。拒绝后向申请人推送 `GroupApplicationRejected` 事件并落库通知（含 `reason`；**不暴露审批者身份**，与 accepted 对称，见 `api_spec_notify.md`）。
 
-- **守卫**: 守卫(owner/admin)
 
 **Request**: `RejectGroupApplicationRequest`
 ```typescript
@@ -888,7 +869,6 @@ interface RejectGroupApplicationRequest {
 
 发布群公告。
 
-- **守卫**: 守卫(owner/admin)
 - **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `CreateGroupAnnouncementRequest`
@@ -911,7 +891,6 @@ interface CreateGroupAnnouncementRequest {
 
 更新群公告。
 
-- **守卫**: 守卫(owner/admin)
 
 **Request**: `UpdateGroupAnnouncementRequest`
 ```typescript
@@ -934,7 +913,6 @@ interface UpdateGroupAnnouncementRequest {
 
 删除群公告。
 
-- **守卫**: 守卫(owner/admin)
 
 **Request**: `DeleteGroupAnnouncementRequest`
 ```typescript
@@ -956,7 +934,6 @@ interface DeleteGroupAnnouncementRequest {
 
 **边界情况**：`new_owner_id` 不是该群成员时，返回 `10400`（"目标用户不是群成员"）。
 
-- **守卫**: owner 专属
 
 **自然去重**：首次成功后原群主失去群主权限，重发同一请求返回 `10200`（not_group_owner），不会重复转让。无需 `Idempotency-Key`。
 
@@ -982,7 +959,6 @@ interface TransferOwnershipRequest {
 
 **无时间窗限制**：管理员撤回不受 `AppConfig.limits.message_recall_window_seconds` 约束。
 
-- **守卫**: 守卫(owner/admin)
 
 **Request**: `RecallGroupMessageAdminRequest`
 ```typescript

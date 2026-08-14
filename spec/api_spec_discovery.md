@@ -37,7 +37,7 @@
 - `UserItem`（Feed 场景下 `relation` 与 `social_context` 字段会被填充）
 - `PaginationParams`、`GeoPoint`、`RelativeLocation`、`UserInfo`、`GroupInfo`、`TagItem`、`MomentSummary`
 - `MomentSuggestItem`、`SearchSuggestType`（搜索建议，与 public 版共享）
-- 地图结构类型（`MapViewport`、`MapHotspotItem`、`MapHeatBucket` 等；`map/canvas` 仅 public 版，类型由其引用）
+- 地图结构类型（`MapViewport`、`MapHotspotItem`、`MapHeatBucket` 等；`map/canvas` 仅 public 版，类型定义于 `api_spec_public.md`）
 
 ## 信息流 API（feed）
 
@@ -67,9 +67,9 @@ interface FollowingRequest {
 - **节点**: /api/v1
 - **排序**: 主序为服务端计算的 `distance` 升序（相对 `reference_point`）；仅当距离差在服务端定义的近似阈值内时，热度/活跃度作为次级信号参与排序；`moment_id DESC` 作为稳定 tie-breaker；一致性级别为弱一致
 
-**Request**: `NearbyRequest`
+**Request**: `NearbyMomentsRequest`
 ```typescript
-interface NearbyRequest {
+interface NearbyMomentsRequest {
   radius: number | null;  // 搜索半径（米）
   reference_point: GeoPoint | null;
   pagination: PaginationParams | null;
@@ -167,7 +167,6 @@ interface TrendingResult {
   - 各类型结果内部以对应资源 ID（`user_id`/`group_id`/`moment_id`/tag name）作为稳定 tie-breaker；一致性级别为弱一致
 
 **说明**：
-- Token 可选；未登录时仅返回公开内容。
 - 建议用于搜索框输入提示与全局发现入口。
 - **LBS 优化**：`reference_point` 可选，不传时服务端按 `api_spec_types.md`「reference_point 解析规则」回退链解析。
 - **类型过滤**：通过 `types` 参数可限定返回特定类型的结果。
@@ -178,7 +177,7 @@ interface SearchSuggestRequest {
   prefix: string;
   reference_point: GeoPoint | null;
   types: SearchSuggestType[];  // 空数组表示返回所有类型
-  radius: number | null;  // 搜索半径（米）；不传默认 5_000 并受 search_radius_max 裁剪
+  radius: number | null;  // 搜索半径（米）；不传默认 5000 并受 search_radius_max 裁剪
 }
 ```
 
