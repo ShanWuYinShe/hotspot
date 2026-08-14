@@ -74,10 +74,6 @@ export struct MySharesPage {
     this.isLoadingMore = false;
   }
 
-  private getHeaderTopPadding(): number {
-    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
-  }
-
   private getCurrentThemePalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }

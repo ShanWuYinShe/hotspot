@@ -74,10 +74,6 @@ export struct MessagePage {
   private isDestroyed: boolean = false;
   private loadVersion: number = 0;
 
-  private getHeaderTopPadding(): number {
-    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
-  }
-
   @State isLoading: boolean = true;
   @State isRefreshing: boolean = false;
   @State errorMessage: string = '';

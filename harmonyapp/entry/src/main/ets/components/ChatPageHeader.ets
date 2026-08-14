@@ -16,9 +16,12 @@ import { ChatThemeManager } from '../core/theme/ChatTheme';
 import { AppIcon } from './SystemIcon';
 import { SystemAvatar } from './SystemAvatar';
 import { KeyboardDismissManager } from '../core/utils/KeyboardDismissManager';
+import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
 
 @Component
 export struct ChatPageHeader {
+  /** 顶部安全区高度（全屏 edge-to-edge 下标题避让状态栏，SystemPageHeader 内聚同款逻辑） */
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   /** 标题（会话名）。 */
   @Prop title: string = '';
   /** 私聊时对方头像 URL；提供则显示 leading 头像。 */
@@ -92,7 +95,7 @@ export struct ChatPageHeader {
       })
     }
     .width('100%')
-    .margin({ bottom: DesignConstants.SPACING.XS })
+    .margin({ top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop), bottom: DesignConstants.SPACING.XS })
     .shadow(this.getPalette().elevatedShadow)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: ChatThemeManager.current().titleBarBorder })
     .borderRadius(DesignConstants.RADIUS.XL)

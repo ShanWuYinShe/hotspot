@@ -213,12 +213,13 @@ export struct SystemPageHeader {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
-      // 修复地基 token 泄漏：原硬编码 left:16/right:16/top:12/bottom:12
+      // 标题行垂直 padding 收紧（MD→SM）：header 总高从 ~105vp 压到 ~88vp，
+      // 全站页面首屏内容多出 ~17vp（安全区 52vp 不变，仅压缩行内呼吸）
       .padding({
         left: DesignConstants.SPACING.LG,
         right: DesignConstants.SPACING.LG,
-        top: DesignConstants.SPACING.MD,
-        bottom: DesignConstants.SPACING.MD
+        top: DesignConstants.SPACING.SM,
+        bottom: DesignConstants.SPACING.SM
       })
     }
     .width('100%')

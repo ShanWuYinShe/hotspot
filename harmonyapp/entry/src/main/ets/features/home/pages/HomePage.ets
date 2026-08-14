@@ -33,7 +33,6 @@ import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { WidgetDataService } from '../../../core/services/WidgetDataService';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
-import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { formatCount } from '../../../core/utils/FormatUtil';
 import pasteboard from '@ohos.pasteboard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
@@ -122,10 +121,6 @@ export struct HomePage {
     const loc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
     if (!loc) return null;
     return { latitude: loc.latitude, longitude: loc.longitude };
-  }
-
-  private getHeaderTopPadding(): number {
-    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
   }
 
   // ==================== 数据加载 ====================
