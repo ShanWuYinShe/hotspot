@@ -77,19 +77,13 @@
     }
   }
 
-  /*── App-list system ─────────────────────────────────────────────── */
-
-  .app-list-row {
-    display: flex;
-    width: 100%;
-    align-items: center;
-    gap: 0.75rem;
-    text-align: left;
-    background: var(--cst-surface-primary);
-    border:var(--cst-border-width-hairline) solid transparent;
+  /*── List row standard（行高/内边距契约）────────────────────────────
+     列表行统一行高 66px（4.125rem）+ 内边距，收敛 11 处手写
+     min-h-[4.125rem] 重复（行高调整只改这一处）。仅几何布局，
+     不携带分隔线/边框——行分隔由 ListContainer 统一管理。 */
+  .list-row-standard {
+    min-height: 4.125rem;
   }
-  .app-list-row + .app-list-row { border-top-color: var(--cst-border-default); }
-  .app-list-row--standard { min-height: 4.125rem; padding: 0.75rem 0.875rem; }
 
   .circle-hover {
     transition: transform var(--cst-motion-rapid) var(--cst-ease-standard), box-shadow var(--cst-motion-standard) var(--cst-ease-standard), border-color var(--cst-motion-rapid) var(--cst-ease-standard);
@@ -290,7 +284,7 @@
     .header-action:hover { transform: scale(1.18); transition-duration: var(--cst-motion-rapid), var(--cst-motion-snappy), var(--cst-motion-snappy), var(--cst-motion-snappy), var(--cst-motion-snappy); background-color: var(--cst-interactive-hover-fill); }
   }
 
-  /* 悬停背景（bgHover）：直接复用 --cst-interactive-hover-fill token（= --cst-pr-hover，
+  /* 悬停背景（bgHover）：直接复用 --cst-interactive-hover-fill token（= --cst-palette-hover，
      每主题/暗色已精确定义：vibrant 10%/15%、forest 12%/18%），与全局 button hover
      填充一致，避免硬编码 color-mix 与 token 漂移。仅 fine pointer 生效。 */
   .hover-bg { transition: background-color var(--cst-motion-snappy) var(--cst-ease-standard); }

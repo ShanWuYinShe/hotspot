@@ -19,7 +19,7 @@ export const SNAP_HEIGHTS: Record<SnapState, number> = { min: SNAP_MIN, mid: SNA
 export const PIN_COLORS: Record<PinType, string> = {
 	user: 'var(--cst-marker-user)',
 	group: 'var(--cst-marker-group)',
-	moment: 'var(--cst-marker-content)'
+	moment: 'var(--cst-marker-moment)'
 };
 // 图钉淡底/边框/光晕档位：直接引用主题预定义 token，不自行 color-mix 派生
 export const PIN_TONES: Record<PinType, { bg: string; border: string; glow: string }> = {
@@ -29,7 +29,7 @@ export const PIN_TONES: Record<PinType, { bg: string; border: string; glow: stri
 };
 export const PIN_LABELS: Record<PinType, string> = { user: '用户', group: '群组', moment: '瞬间' };
 export const floatBtnStyle =
-	'background:var(--cst-surface-primary);border:1px solid var(--cst-border-default);box-shadow:var(--cst-elevation-fab);';
+	'background:var(--cst-surface-primary);border:var(--cst-border-width-hairline) solid var(--cst-border-default);box-shadow:var(--cst-elevation-fab);';
 
 export interface MapBounds {
 	minLat: number;

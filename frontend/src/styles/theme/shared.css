@@ -68,6 +68,12 @@
   --cst-marker-halo: 0 0 8px;       /* 小光点（图例/当前位置点）光晕 */
 }
 
+/* ── Chat layout tokens — 聊天布局契约（对齐 harmonyapp DesignConstants.CHAT）──
+   气泡最大宽度占比两端统一 75%（前端原 76% 漂移已收敛）；行高/圆角随页面内 token。 */
+:root {
+  --cst-chat-bubble-max-width: 75%;  /* 聊天气泡最大宽度占比（对齐 BUBBLE_MAX_WIDTH） */
+}
+
 /* ── Responsive page-content contract ──────────────────────────────── */
 :root {
   --cst-page-gutter: 1.25rem;

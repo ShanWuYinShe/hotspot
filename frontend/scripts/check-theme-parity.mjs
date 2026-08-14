@@ -1,6 +1,6 @@
 /**
  * 主题变量一致性检查：vibrant / forest 两个主题（light + dark）的 --cst-* 变量
- * 集合必须完全一致，且 semantic.css 引用的 --cst-pr-* 原语必须在每个主题中定义。
+ * 集合必须完全一致，且 semantic.css 引用的 --cst-palette-* 原语必须在每个主题中定义。
  *
  * 背景：主题缺失变量时不会报错，而是静默回落到另一主题/模式的值，导致跨主题
  * 视觉漂移。此前靠 AGENTS.md 手写约束，这里固化为可执行检查。
@@ -56,9 +56,9 @@ function diff(label, left, right) {
 diff('light', vibrantLight, forestLight);
 diff('dark', vibrantDark, forestDark);
 
-// semantic.css 引用的 --cst-pr-* 原语必须在每个主题的 light+dark 中都有定义
+// semantic.css 引用的 --cst-palette-* 原语必须在每个主题的 light+dark 中都有定义
 const semantic = readFileSync(join(root, 'semantic.css'), 'utf8');
-const requiredPrimitives = new Set([...semantic.matchAll(/var\((--cst-pr-[a-zA-Z0-9-]+)\)/g)].map((m) => m[1]));
+const requiredPrimitives = new Set([...semantic.matchAll(/var\((--cst-palette-[a-zA-Z0-9-]+)\)/g)].map((m) => m[1]));
 for (const [name, blocks] of [
 	['vibrant', new Set([...vibrantLight, ...vibrantDark])],
 	['forest', new Set([...forestLight, ...forestDark])]

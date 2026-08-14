@@ -279,9 +279,9 @@ theme/
   index.css              # 入口，按依赖顺序导入所有分片
   shadcn.css             # Layer 0: shadcn/ui 基础变量
   shared.css             # Layer 0: z-index/shape/motion/ease（与主题无关）
-  semantic.css           # Layer 1: 语义 token（--cst-text-primary 等 → --cst-pr-*）
-  themes/vibrant.css     # Layer 2: 星际主题（全部 --cst-pr-* 值）
-  themes/forest.css      # Layer 2: 清野主题（全部 --cst-pr-* 值）
+  semantic.css           # Layer 1: 语义 token（--cst-text-primary 等 → --cst-palette-*）
+  themes/vibrant.css     # Layer 2: 星际主题（全部 --cst-palette-* 值）
+  themes/forest.css      # Layer 2: 清野主题（全部 --cst-palette-* 值）
   layout.css             # 布局变量（context-rail、workspace）
   base.css               # @layer base（排版 + 按钮基线）
   theme-registry.css     # @theme inline Tailwind 注册（字号 text-*/字距 tracking-*/行高
@@ -303,7 +303,7 @@ theme/
   （`--color-*`、`--text-xxs` 等字号、`--radius-*`、`--shadow-*`、
   `--ease-standard`）是 Tailwind 工具类生成机制，**必须保持原名**；
   其值引用 `var(--cst-*)`。
-- **Token 两层链**：`--cst-text-primary` 等语义名 → `--cst-pr-*` 原始值
+- **Token 两层链**：`--cst-text-primary` 等语义名 → `--cst-palette-*` 原始值
   （无旧名兼容层）
 - **配色映射速查**（页面中如何选 token）：
   - 正文/辅助文字：`--cst-text-primary` / `--cst-text-secondary`
@@ -316,7 +316,7 @@ theme/
   - 图钉色背景上的文字：`--cst-content-on-marker`（地图标记）
   - **accent 背景上的文字/图标一律用 `--cst-text-on-accent` 系列**（含次级文字
     用 `opacity-70/80` 派生，参照 ListItem/ChatListItem selected 态）；图钉等
-    marker 色与 accent 同色（`--cst-pr-map-user` = `--cst-pr-accent-primary`），在
+    marker 色与 accent 同色（`--cst-palette-map-user` = `--cst-palette-accent-primary`），在
     selected 行内需换实色底衬托（参照 `PinMedia` 的 `selected` prop）
   - 遮罩/玻璃：`--cst-surface-scrim`（弹层遮罩）、
     `--cst-surface-media-scrim-strong`（照片遮罩）、
@@ -348,7 +348,7 @@ theme/
 - **主题选择器 swatch（stores/theme.svelte.ts `THEME_OPTIONS`）**：色板需在
   主题激活前静态展示**目标主题**的 accent 代表色，而 CSS 变量只能解析“当前”
   主题，故保留字面 hex（vibrant `#2E66C0` / forest `#3D7A55`）作为已登记例外；
-  必须与 themes/{vibrant,forest}.css 的 `--cst-pr-accent-primary` 保持同步
+  必须与 themes/{vibrant,forest}.css 的 `--cst-palette-accent-primary` 保持同步
 
 - 新组件优先使用语义名（`var(--cst-text-primary)`、`var(--cst-surface-page)` 等）+ Tailwind className
 - 主题切换通过 `<html>` 上的 `.vibrant` / `.forest` + `.dark` 类实现

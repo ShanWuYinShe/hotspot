@@ -1,6 +1,6 @@
 /* ── Semantic tokens ────────────────────────────────────────────────────
    Meaning-based names that stay the same across all themes.
-   Each resolves through var(--cst-pr-*) which changes per theme.
+   Each resolves through var(--cst-palette-*) which changes per theme.
 
    本文件只保留纯 :root alias 映射 + 通过 var() 派生的交互/导航 token。
    所有 per-theme 覆盖（scrim/overlay/card-menu 等）已迁移到
@@ -9,59 +9,59 @@
 
 :root {
   /* Typography */
-  --cst-text-primary: var(--cst-pr-text);
-  --cst-text-secondary: var(--cst-pr-text-muted);
-  --cst-text-on-accent: var(--cst-pr-on-accent);
+  --cst-text-primary: var(--cst-palette-text);
+  --cst-text-secondary: var(--cst-palette-text-muted);
+  --cst-text-on-accent: var(--cst-palette-on-accent);
 
   /* Surface */
-  --cst-surface-primary: var(--cst-pr-bg);
-  --cst-surface-page: var(--cst-pr-page-bg);
-  --cst-surface-overlay-soft: var(--cst-pr-overlay-soft);
-  --cst-surface-overlay-strong: var(--cst-pr-overlay-strong);
+  --cst-surface-primary: var(--cst-palette-bg);
+  --cst-surface-page: var(--cst-palette-page-bg);
+  --cst-surface-overlay-soft: var(--cst-palette-overlay-soft);
+  --cst-surface-overlay-strong: var(--cst-palette-overlay-strong);
 
   /* Accent / Interactive */
-  --cst-accent-default: var(--cst-pr-accent-primary);
-  --cst-accent-soft: var(--cst-pr-accent-soft);
-  --cst-accent-border: var(--cst-pr-accent-soft-border);
-  --cst-interactive-hover: var(--cst-pr-hover);
-  --cst-interactive-active: var(--cst-pr-active-hover);
-  --cst-glow-accent: var(--cst-pr-glow);
+  --cst-accent-default: var(--cst-palette-accent-primary);
+  --cst-accent-soft: var(--cst-palette-accent-soft);
+  --cst-accent-border: var(--cst-palette-accent-soft-border);
+  --cst-interactive-hover: var(--cst-palette-hover);
+  --cst-interactive-active: var(--cst-palette-active-hover);
+  --cst-glow-accent: var(--cst-palette-glow);
 
   /* Border */
-  --cst-border-default: var(--cst-pr-border);
-  --cst-border-strong: var(--cst-pr-border-pressed);
+  --cst-border-default: var(--cst-palette-border);
+  --cst-border-strong: var(--cst-palette-border-pressed);
 
   /* Elevation */
-  --cst-elevation-shadow-light: var(--cst-pr-shadow-light);
-  --cst-elevation-shadow-dark: var(--cst-pr-shadow-dark);
-  --cst-elevation-card: var(--cst-pr-shadow-card);
-  --cst-elevation-button: var(--cst-pr-shadow-btn);
+  --cst-elevation-shadow-light: var(--cst-palette-shadow-light);
+  --cst-elevation-shadow-dark: var(--cst-palette-shadow-dark);
+  --cst-elevation-card: var(--cst-palette-shadow-card);
+  --cst-elevation-button: var(--cst-palette-shadow-btn);
 
   /* Opacity scale（随主题/暗色可整体调整；组件只消费 opacity-* 语义类） */
-  --cst-opacity-none: var(--cst-pr-opacity-none);
-  --cst-opacity-faint: var(--cst-pr-opacity-faint);
-  --cst-opacity-subtle: var(--cst-pr-opacity-subtle);
-  --cst-opacity-muted: var(--cst-pr-opacity-muted);
-  --cst-opacity-dim: var(--cst-pr-opacity-dim);
-  --cst-opacity-soft: var(--cst-pr-opacity-soft);
-  --cst-opacity-emphasis: var(--cst-pr-opacity-emphasis);
-  --cst-opacity-tap: var(--cst-pr-opacity-tap);
-  --cst-opacity-hover: var(--cst-pr-opacity-hover);
-  --cst-opacity-full: var(--cst-pr-opacity-full);
-  --cst-opacity-active: var(--cst-pr-opacity-active);
-  --cst-opacity-glow: var(--cst-pr-opacity-glow);
+  --cst-opacity-none: var(--cst-palette-opacity-none);
+  --cst-opacity-faint: var(--cst-palette-opacity-faint);
+  --cst-opacity-subtle: var(--cst-palette-opacity-subtle);
+  --cst-opacity-muted: var(--cst-palette-opacity-muted);
+  --cst-opacity-dim: var(--cst-palette-opacity-dim);
+  --cst-opacity-soft: var(--cst-palette-opacity-soft);
+  --cst-opacity-emphasis: var(--cst-palette-opacity-emphasis);
+  --cst-opacity-tap: var(--cst-palette-opacity-tap);
+  --cst-opacity-hover: var(--cst-palette-opacity-hover);
+  --cst-opacity-full: var(--cst-palette-opacity-full);
+  --cst-opacity-active: var(--cst-palette-opacity-active);
+  --cst-opacity-glow: var(--cst-palette-opacity-glow);
 
   /* Color-mix presets */
 
   /* Status */
-  --cst-status-online: var(--cst-pr-online);
-  --cst-status-danger: var(--cst-pr-hot);
-  --cst-status-warning: var(--cst-pr-warning);
+  --cst-status-online: var(--cst-palette-online);
+  --cst-status-danger: var(--cst-palette-hot);
+  --cst-status-warning: var(--cst-palette-warning);
 
   /* Map markers */
-  --cst-marker-user: var(--cst-pr-map-user);
-  --cst-marker-group: var(--cst-pr-map-group);
-  --cst-marker-content: var(--cst-pr-map-moment);
+  --cst-marker-user: var(--cst-palette-map-user);
+  --cst-marker-group: var(--cst-palette-map-group);
+  --cst-marker-moment: var(--cst-palette-map-moment);
 }
 
 /* ── Interaction token contract ────────────────────────────────────────

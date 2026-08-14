@@ -140,7 +140,7 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 - 表面：`palette.surfaceSubtle` / `palette.surfaceElevated` / `palette.chatBackground`
 - 文字：`palette.textPrimary` / `palette.textSecondary` / `palette.textTertiary`
 - 品牌：`palette.accentBackground`（forest `#3D7A55`，与前端
-  `--cst-pr-accent-primary`（`--cst-accent-default`）一致）
+  `--cst-palette-accent-primary`（`--cst-accent-default`）一致）
 - 语义：`palette.success` / `palette.warning` / `palette.error` / `palette.info`
 - 地图标记：`palette.mapUser / mapGroup / mapMoment`（对齐前端 `--cst-marker-user/group/moment`，随主题/明暗变）；状态淡底：`palette.dangerSoft / warningSoft`（对齐前端 `--cst-status-danger/warning-bg` 12~14% 预混档位；success/info 淡底用 `getSoftStatusBackground('success' | 'info')` 派生）
 - 主题解析：`AppThemeManager.getPaletteById(resolvedThemeId)` → `@StorageProp(KEY_RESOLVED_THEME_ID)`

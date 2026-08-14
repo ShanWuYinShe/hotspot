@@ -21,7 +21,7 @@ export interface ColorConfig {
   chatBackground: string;
   systemSurfaceBaseColor: string;
   overlayStrong: string;
-  /** 在线状态色（对齐前端 --cst-pr-online，随主题变） */
+  /** 在线状态色（对齐前端 --cst-palette-online，随主题变） */
   online: string;
   textPrimary: string;
   textSecondary: string;

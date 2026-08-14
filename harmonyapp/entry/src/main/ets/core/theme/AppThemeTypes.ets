@@ -93,7 +93,7 @@ export interface AppThemePalette {
   accentMuted: string;
   chatBackground: string;
   systemSurfaceBaseColor: string;
-  /** 在线状态色（对齐前端 --cst-pr-online） */
+  /** 在线状态色（对齐前端 --cst-palette-online） */
   online: string;
   preferDarkContent: boolean;
   isDarkTheme: boolean;

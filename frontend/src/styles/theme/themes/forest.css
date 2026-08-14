@@ -10,72 +10,72 @@
 
 /* ═══ Forest Light ═══ */
 .forest {
-  /* ── 原始色板 --cst-pr-* ── */
-  --cst-pr-bg: #F6F7F3;
-  --cst-pr-page-bg: #F6F7F3;
-  --cst-pr-text: #152219;
-  --cst-pr-text-muted: #3F5547;
-  --cst-pr-accent-primary: #3D7A55;
-  --cst-pr-glow: rgba(61, 122, 85, 0.18);
-  --cst-pr-shadow-light: rgba(255, 255, 255, 0.0);
-  --cst-pr-shadow-dark: rgba(0, 0, 0, 0.0);
-  --cst-pr-border: rgba(42, 73, 52, 0.24);
-  --cst-pr-border-pressed: rgba(42, 73, 52, 0.38);
-  --cst-pr-accent-soft: rgba(61, 122, 85, 0.11);
-  --cst-pr-accent-soft-border: rgba(61, 122, 85, 0.30);
-  --cst-pr-hover: rgba(61, 122, 85, 0.12);
-  --cst-pr-active-hover: rgba(61, 122, 85, 0.17);
-  --cst-pr-on-accent: #FFFFFF;
-  --cst-pr-online: #3D7A55;
-  --cst-pr-hot: #8E6F35;
+  /* ── 原始色板 --cst-palette-* ── */
+  --cst-palette-bg: #F6F7F3;
+  --cst-palette-page-bg: #F6F7F3;
+  --cst-palette-text: #152219;
+  --cst-palette-text-muted: #3F5547;
+  --cst-palette-accent-primary: #3D7A55;
+  --cst-palette-glow: rgba(61, 122, 85, 0.18);
+  --cst-palette-shadow-light: rgba(255, 255, 255, 0.0);
+  --cst-palette-shadow-dark: rgba(0, 0, 0, 0.0);
+  --cst-palette-border: rgba(42, 73, 52, 0.24);
+  --cst-palette-border-pressed: rgba(42, 73, 52, 0.38);
+  --cst-palette-accent-soft: rgba(61, 122, 85, 0.11);
+  --cst-palette-accent-soft-border: rgba(61, 122, 85, 0.30);
+  --cst-palette-hover: rgba(61, 122, 85, 0.12);
+  --cst-palette-active-hover: rgba(61, 122, 85, 0.17);
+  --cst-palette-on-accent: #FFFFFF;
+  --cst-palette-online: #3D7A55;
+  --cst-palette-hot: #8E6F35;
   /* warning 加深（#9A7A35→#8A6A2F）确保浅色下白字对比度 ≥4.5:1（原 4.03 不达标） */
-  --cst-pr-warning: #8A6A2F;
-  --cst-pr-map-user: #3D7A55;
+  --cst-palette-warning: #8A6A2F;
+  --cst-palette-map-user: #3D7A55;
   /* 图钉主色校准：确保白字 --cst-content-on-marker 对比度 ≥4.5（原 #638B46/#A57C38 过浅） */
-  --cst-pr-map-group: #4A703F;
-  --cst-pr-map-moment: #8A6426;
-  --cst-pr-overlay-soft: rgba(27, 31, 27, 0.08);
-  --cst-pr-overlay-strong: rgba(20, 28, 20, 0.42);
-  --cst-pr-shadow-card: 0 0 0 1.5px rgba(61, 122, 85, 0.22);
-  --cst-pr-shadow-btn: 0 0 0 1.5px rgba(61, 122, 85, 0.28);
+  --cst-palette-map-group: #4A703F;
+  --cst-palette-map-moment: #8A6426;
+  --cst-palette-overlay-soft: rgba(27, 31, 27, 0.08);
+  --cst-palette-overlay-strong: rgba(20, 28, 20, 0.42);
+  --cst-palette-shadow-card: 0 0 0 1.5px rgba(61, 122, 85, 0.22);
+  --cst-palette-shadow-btn: 0 0 0 1.5px rgba(61, 122, 85, 0.28);
 
   /* ── 透明度档位（opacity-* 语义类经 theme-registry 映射；glow 随主题/暗色变化）── */
-  --cst-pr-opacity-none: 0;
-  --cst-pr-opacity-faint: 0.30;
-  --cst-pr-opacity-subtle: 0.40;
-  --cst-pr-opacity-muted: 0.50;
-  --cst-pr-opacity-dim: 0.60;
-  --cst-pr-opacity-soft: 0.70;
-  --cst-pr-opacity-emphasis: 0.80;
-  --cst-pr-opacity-tap: 0.84;
-  --cst-pr-opacity-hover: 0.90;
-  --cst-pr-opacity-full: 1;
-  --cst-pr-opacity-active: 0.13;
-  --cst-pr-opacity-glow: 0.95;
+  --cst-palette-opacity-none: 0;
+  --cst-palette-opacity-faint: 0.30;
+  --cst-palette-opacity-subtle: 0.40;
+  --cst-palette-opacity-muted: 0.50;
+  --cst-palette-opacity-dim: 0.60;
+  --cst-palette-opacity-soft: 0.70;
+  --cst-palette-opacity-emphasis: 0.80;
+  --cst-palette-opacity-tap: 0.84;
+  --cst-palette-opacity-hover: 0.90;
+  --cst-palette-opacity-full: 1;
+  --cst-palette-opacity-active: 0.13;
+  --cst-palette-opacity-glow: 0.95;
 
   /* ── color-mix 预设（token 内部派生；组件/数据层不得再写 color-mix）── */
 
   /* ── 语义色族完整档位（主色 → 淡底 -bg / 淡边框 -border / 光晕 -glow）──
      数据驱动色（通知/事件/图钉/活动）在前端只做语义键 → 本组 token 的映射，
      组件与数据层一律引用这些预定义档位，不再自行 color-mix */
-  --cst-accent-soft-bg: color-mix(in srgb, var(--cst-pr-accent-primary) 10%, transparent);
-  --cst-accent-border-soft: color-mix(in srgb, var(--cst-pr-accent-primary) 24%, transparent);
-  --cst-status-online-bg: color-mix(in srgb, var(--cst-pr-online) 12%, transparent);
-  --cst-status-online-border: color-mix(in srgb, var(--cst-pr-online) 22%, transparent);
-  --cst-status-online-glow: color-mix(in srgb, var(--cst-pr-online) 32%, transparent);
-  --cst-status-danger-bg: color-mix(in srgb, var(--cst-pr-hot) 12%, transparent);
-  --cst-status-danger-border: color-mix(in srgb, var(--cst-pr-hot) 22%, transparent);
-  --cst-status-warning-bg: color-mix(in srgb, var(--cst-pr-warning) 12%, transparent);
-  --cst-status-warning-border: color-mix(in srgb, var(--cst-pr-warning) 22%, transparent);
-  --cst-marker-user-bg: color-mix(in srgb, var(--cst-pr-map-user) 12%, transparent);
-  --cst-marker-user-border: color-mix(in srgb, var(--cst-pr-map-user) 22%, transparent);
-  --cst-marker-user-glow: color-mix(in srgb, var(--cst-pr-map-user) 42%, transparent);
-  --cst-marker-group-bg: color-mix(in srgb, var(--cst-pr-map-group) 12%, transparent);
-  --cst-marker-group-border: color-mix(in srgb, var(--cst-pr-map-group) 22%, transparent);
-  --cst-marker-group-glow: color-mix(in srgb, var(--cst-pr-map-group) 42%, transparent);
-  --cst-marker-moment-bg: color-mix(in srgb, var(--cst-pr-map-moment) 12%, transparent);
-  --cst-marker-moment-border: color-mix(in srgb, var(--cst-pr-map-moment) 22%, transparent);
-  --cst-marker-moment-glow: color-mix(in srgb, var(--cst-pr-map-moment) 42%, transparent);
+  --cst-accent-soft-bg: color-mix(in srgb, var(--cst-palette-accent-primary) 10%, transparent);
+  --cst-accent-border-soft: color-mix(in srgb, var(--cst-palette-accent-primary) 24%, transparent);
+  --cst-status-online-bg: color-mix(in srgb, var(--cst-palette-online) 12%, transparent);
+  --cst-status-online-border: color-mix(in srgb, var(--cst-palette-online) 22%, transparent);
+  --cst-status-online-glow: color-mix(in srgb, var(--cst-palette-online) 32%, transparent);
+  --cst-status-danger-bg: color-mix(in srgb, var(--cst-palette-hot) 12%, transparent);
+  --cst-status-danger-border: color-mix(in srgb, var(--cst-palette-hot) 22%, transparent);
+  --cst-status-warning-bg: color-mix(in srgb, var(--cst-palette-warning) 12%, transparent);
+  --cst-status-warning-border: color-mix(in srgb, var(--cst-palette-warning) 22%, transparent);
+  --cst-marker-user-bg: color-mix(in srgb, var(--cst-palette-map-user) 12%, transparent);
+  --cst-marker-user-border: color-mix(in srgb, var(--cst-palette-map-user) 22%, transparent);
+  --cst-marker-user-glow: color-mix(in srgb, var(--cst-palette-map-user) 42%, transparent);
+  --cst-marker-group-bg: color-mix(in srgb, var(--cst-palette-map-group) 12%, transparent);
+  --cst-marker-group-border: color-mix(in srgb, var(--cst-palette-map-group) 22%, transparent);
+  --cst-marker-group-glow: color-mix(in srgb, var(--cst-palette-map-group) 42%, transparent);
+  --cst-marker-moment-bg: color-mix(in srgb, var(--cst-palette-map-moment) 12%, transparent);
+  --cst-marker-moment-border: color-mix(in srgb, var(--cst-palette-map-moment) 22%, transparent);
+  --cst-marker-moment-glow: color-mix(in srgb, var(--cst-palette-map-moment) 42%, transparent);
 
   /* ── shadcn 桥接（仅 base.css @apply 消费的 4 个；其余 token 无引用，见 shadcn.css）── */
   --cst-background: var(--cst-surface-primary);
@@ -180,68 +180,68 @@
 
 /* ═══ Forest Dark ═══ */
 .forest.dark {
-  /* ── 原始色板 --cst-pr-* ── */
-  --cst-pr-bg: #161A16;
-  --cst-pr-page-bg: #161A16;
-  --cst-pr-text: #E8F1E9;
-  --cst-pr-text-muted: #A8BDAE;
-  --cst-pr-accent-primary: #52B878;
-  --cst-pr-glow: rgba(82, 184, 120, 0.20);
-  --cst-pr-shadow-light: rgba(255, 255, 255, 0.0);
-  --cst-pr-shadow-dark: rgba(0, 0, 0, 0.0);
-  --cst-pr-border: rgba(169, 199, 178, 0.18);
-  --cst-pr-border-pressed: rgba(169, 199, 178, 0.30);
-  --cst-pr-accent-soft: rgba(82, 184, 120, 0.12);
-  --cst-pr-accent-soft-border: rgba(82, 184, 120, 0.34);
-  --cst-pr-hover: rgba(82, 184, 120, 0.18);
-  --cst-pr-active-hover: rgba(82, 184, 120, 0.24);
-  --cst-pr-on-accent: #0C1911;
-  --cst-pr-online: #52B878;
-  --cst-pr-hot: #C4A75A;
-  --cst-pr-warning: #C4A75A;
-  --cst-pr-map-user: #52B878;
-  --cst-pr-map-group: #88B85A;
-  --cst-pr-map-moment: #C4A75A;
-  --cst-pr-overlay-soft: rgba(220, 232, 222, 0.07);
-  --cst-pr-overlay-strong: rgba(0, 0, 0, 0.54);
-  --cst-pr-shadow-card: 0 0 0 1.5px rgba(82, 184, 120, 0.26);
-  --cst-pr-shadow-btn: 0 0 0 1.5px rgba(82, 184, 120, 0.32);
+  /* ── 原始色板 --cst-palette-* ── */
+  --cst-palette-bg: #161A16;
+  --cst-palette-page-bg: #161A16;
+  --cst-palette-text: #E8F1E9;
+  --cst-palette-text-muted: #A8BDAE;
+  --cst-palette-accent-primary: #52B878;
+  --cst-palette-glow: rgba(82, 184, 120, 0.20);
+  --cst-palette-shadow-light: rgba(255, 255, 255, 0.0);
+  --cst-palette-shadow-dark: rgba(0, 0, 0, 0.0);
+  --cst-palette-border: rgba(169, 199, 178, 0.18);
+  --cst-palette-border-pressed: rgba(169, 199, 178, 0.30);
+  --cst-palette-accent-soft: rgba(82, 184, 120, 0.12);
+  --cst-palette-accent-soft-border: rgba(82, 184, 120, 0.34);
+  --cst-palette-hover: rgba(82, 184, 120, 0.18);
+  --cst-palette-active-hover: rgba(82, 184, 120, 0.24);
+  --cst-palette-on-accent: #0C1911;
+  --cst-palette-online: #52B878;
+  --cst-palette-hot: #C4A75A;
+  --cst-palette-warning: #C4A75A;
+  --cst-palette-map-user: #52B878;
+  --cst-palette-map-group: #88B85A;
+  --cst-palette-map-moment: #C4A75A;
+  --cst-palette-overlay-soft: rgba(220, 232, 222, 0.07);
+  --cst-palette-overlay-strong: rgba(0, 0, 0, 0.54);
+  --cst-palette-shadow-card: 0 0 0 1.5px rgba(82, 184, 120, 0.26);
+  --cst-palette-shadow-btn: 0 0 0 1.5px rgba(82, 184, 120, 0.32);
 
   /* ── 透明度档位（dark）── */
-  --cst-pr-opacity-none: 0;
-  --cst-pr-opacity-faint: 0.30;
-  --cst-pr-opacity-subtle: 0.40;
-  --cst-pr-opacity-muted: 0.50;
-  --cst-pr-opacity-dim: 0.60;
-  --cst-pr-opacity-soft: 0.70;
-  --cst-pr-opacity-emphasis: 0.80;
-  --cst-pr-opacity-tap: 0.84;
-  --cst-pr-opacity-hover: 0.90;
-  --cst-pr-opacity-full: 1;
-  --cst-pr-opacity-active: 0.13;
-  --cst-pr-opacity-glow: 0.95;
+  --cst-palette-opacity-none: 0;
+  --cst-palette-opacity-faint: 0.30;
+  --cst-palette-opacity-subtle: 0.40;
+  --cst-palette-opacity-muted: 0.50;
+  --cst-palette-opacity-dim: 0.60;
+  --cst-palette-opacity-soft: 0.70;
+  --cst-palette-opacity-emphasis: 0.80;
+  --cst-palette-opacity-tap: 0.84;
+  --cst-palette-opacity-hover: 0.90;
+  --cst-palette-opacity-full: 1;
+  --cst-palette-opacity-active: 0.13;
+  --cst-palette-opacity-glow: 0.95;
 
   /* ── color-mix 预设（dark）── */
 
   /* ── 语义色族完整档位（dark）── */
-  --cst-accent-soft-bg: color-mix(in srgb, var(--cst-pr-accent-primary) 12%, transparent);
-  --cst-accent-border-soft: color-mix(in srgb, var(--cst-pr-accent-primary) 30%, transparent);
-  --cst-status-online-bg: color-mix(in srgb, var(--cst-pr-online) 14%, transparent);
-  --cst-status-online-border: color-mix(in srgb, var(--cst-pr-online) 28%, transparent);
-  --cst-status-online-glow: color-mix(in srgb, var(--cst-pr-online) 40%, transparent);
-  --cst-status-danger-bg: color-mix(in srgb, var(--cst-pr-hot) 14%, transparent);
-  --cst-status-danger-border: color-mix(in srgb, var(--cst-pr-hot) 28%, transparent);
-  --cst-status-warning-bg: color-mix(in srgb, var(--cst-pr-warning) 14%, transparent);
-  --cst-status-warning-border: color-mix(in srgb, var(--cst-pr-warning) 28%, transparent);
-  --cst-marker-user-bg: color-mix(in srgb, var(--cst-pr-map-user) 14%, transparent);
-  --cst-marker-user-border: color-mix(in srgb, var(--cst-pr-map-user) 30%, transparent);
-  --cst-marker-user-glow: color-mix(in srgb, var(--cst-pr-map-user) 50%, transparent);
-  --cst-marker-group-bg: color-mix(in srgb, var(--cst-pr-map-group) 14%, transparent);
-  --cst-marker-group-border: color-mix(in srgb, var(--cst-pr-map-group) 30%, transparent);
-  --cst-marker-group-glow: color-mix(in srgb, var(--cst-pr-map-group) 50%, transparent);
-  --cst-marker-moment-bg: color-mix(in srgb, var(--cst-pr-map-moment) 14%, transparent);
-  --cst-marker-moment-border: color-mix(in srgb, var(--cst-pr-map-moment) 30%, transparent);
-  --cst-marker-moment-glow: color-mix(in srgb, var(--cst-pr-map-moment) 50%, transparent);
+  --cst-accent-soft-bg: color-mix(in srgb, var(--cst-palette-accent-primary) 12%, transparent);
+  --cst-accent-border-soft: color-mix(in srgb, var(--cst-palette-accent-primary) 30%, transparent);
+  --cst-status-online-bg: color-mix(in srgb, var(--cst-palette-online) 14%, transparent);
+  --cst-status-online-border: color-mix(in srgb, var(--cst-palette-online) 28%, transparent);
+  --cst-status-online-glow: color-mix(in srgb, var(--cst-palette-online) 40%, transparent);
+  --cst-status-danger-bg: color-mix(in srgb, var(--cst-palette-hot) 14%, transparent);
+  --cst-status-danger-border: color-mix(in srgb, var(--cst-palette-hot) 28%, transparent);
+  --cst-status-warning-bg: color-mix(in srgb, var(--cst-palette-warning) 14%, transparent);
+  --cst-status-warning-border: color-mix(in srgb, var(--cst-palette-warning) 28%, transparent);
+  --cst-marker-user-bg: color-mix(in srgb, var(--cst-palette-map-user) 14%, transparent);
+  --cst-marker-user-border: color-mix(in srgb, var(--cst-palette-map-user) 30%, transparent);
+  --cst-marker-user-glow: color-mix(in srgb, var(--cst-palette-map-user) 50%, transparent);
+  --cst-marker-group-bg: color-mix(in srgb, var(--cst-palette-map-group) 14%, transparent);
+  --cst-marker-group-border: color-mix(in srgb, var(--cst-palette-map-group) 30%, transparent);
+  --cst-marker-group-glow: color-mix(in srgb, var(--cst-palette-map-group) 50%, transparent);
+  --cst-marker-moment-bg: color-mix(in srgb, var(--cst-palette-map-moment) 14%, transparent);
+  --cst-marker-moment-border: color-mix(in srgb, var(--cst-palette-map-moment) 30%, transparent);
+  --cst-marker-moment-glow: color-mix(in srgb, var(--cst-palette-map-moment) 50%, transparent);
 
   /* ── shadcn 桥接（dark，同上）── */
   --cst-background: var(--cst-surface-primary);

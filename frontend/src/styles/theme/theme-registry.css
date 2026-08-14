@@ -33,6 +33,7 @@
   /* Color-mix presets（引用语义色淡底档位，随主题/明暗变） */
   --color-accent-bg: var(--cst-accent-soft-bg);
   --color-danger-bg: var(--cst-status-danger-bg);
+  --color-status-danger-border: var(--cst-status-danger-border);
 
   /* Font size scale — Tailwind v4 字号命名空间必须是 --text-*（--font-size-* 不生成
      utility）。设计原则：少档位 + 强制收敛，禁止 1-2px 近邻档位并存（人眼分不清，
@@ -53,6 +54,9 @@
   --radius-xl: var(--cst-shape-xl);      /* 24px：封面、hero 区、feature 卡 */
   --radius-full: var(--cst-shape-full);  /* 9999px：圆/胶囊（rounded-full） */
   --radius-sheet: 1.75rem;               /* 28px：底部 sheet/弹层专用 */
+
+  /* Chat layout — 聊天气泡最大宽度（对齐 harmonyapp CHAT.BUBBLE_MAX_WIDTH 75%） */
+  --container-chat-bubble: var(--cst-chat-bubble-max-width);
 
   /* Border width scale — border 默认 1px / border-2 走 strong，均经 token 控制 */
   --default-border-width: var(--cst-border-width-hairline);
