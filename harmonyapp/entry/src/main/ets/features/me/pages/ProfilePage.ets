@@ -7,6 +7,7 @@
  */
 
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
+import { curves } from '@kit.ArkUI';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
@@ -97,6 +98,8 @@ export struct ProfilePage {
   @State isUpgrading: boolean = false;
   @State hasAdminPrivileges: boolean = false;
   @State pressedMenuItemKey: string = '';
+  @State pressedFeatureKey: string = '';
+  @State pressedThumbKey: string = '';
   @State viewedUserId: string = '';
   @State viewedUserProfile: UserItem | null = null;
   @State viewedUserMoments: MomentItem[] = [];
@@ -964,6 +967,21 @@ export struct ProfilePage {
     .width('100%')
     .borderRadius(DesignConstants.RADIUS.LG)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+    // 缩略图按压反馈（对齐 tap-97 语义）
+    .scale(this.pressedThumbKey === (moment.moment_id ?? '') ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+      { x: 1, y: 1 })
+    .animation({ curve: curves.springMotion(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ) })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedThumbKey = moment.moment_id ?? '';
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedThumbKey = '';
+      }
+    })
     .onClick(() => {
       if (moment.moment_id) {
         const params = new MomentDetailRouteParam();
@@ -1045,6 +1063,21 @@ export struct ProfilePage {
     .borderRadius(this.getProfileVisualStyle().quickAction.borderRadius)
     .border({ width: this.getProfileVisualStyle().quickAction.borderWidth, color: this.getProfileVisualStyle().quickAction.borderColor })
     .shadow(this.getProfileVisualStyle().quickAction.shadow)
+    // 入口卡按压反馈（对齐 tap-97 语义）
+    .scale(this.pressedFeatureKey === title ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+      { x: 1, y: 1 })
+    .animation({ curve: curves.springMotion(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ) })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedFeatureKey = title;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedFeatureKey = '';
+      }
+    })
     .onClick(() => {
       if (onTap) {
         onTap();
@@ -1366,6 +1399,8 @@ export struct ProfilePage {
           .fontWeight(index === this.selectedTab ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
+          // 选中字色/字重切换过渡（对齐 DesktopLayout 导航项，避免硬跳）
+          .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
           .onClick(() => {
             this.selectedTab = index;
           })
@@ -1876,7 +1911,10 @@ export struct ProfilePage {
       top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD
     })
     .scale(this.pressedMenuItemKey === title ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
-    .animation({ duration: DesignConstants.ANIMATION.DURATION_INSTANT, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT })
+    .animation({ curve: curves.springMotion(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ) })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.pressedMenuItemKey = title;

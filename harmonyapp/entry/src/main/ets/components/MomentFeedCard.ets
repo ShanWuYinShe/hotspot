@@ -8,6 +8,7 @@ import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
 import { LocationUtil } from '../core/location/LocationUtil';
 import { SystemShareService } from '../core/services/SystemShareService';
 import { common } from '@kit.AbilityKit';
+import { curves } from '@kit.ArkUI';
 import { AppRouter, MomentDetailRouteParam, ProfileRouteParam } from '../core/router/AppRouter';
 import { PageNames } from '../constants/AppConstants';
 import { SystemCard, CardVariant } from './SystemCard';
@@ -32,6 +33,7 @@ export struct MomentFeedCard {
   @StorageLink('interaction_moment_state') private momentStateMap: Record<string, MomentSocialState> = {};
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State private isPressed: boolean = false;
+  @State private pressedActionKey: string = '';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -229,55 +231,121 @@ export struct MomentFeedCard {
       }
 
       Row() {
-        Row({ space: DesignConstants.SPACING.MD }) {
-          Row({ space: DesignConstants.SPACING.XS }) {
+          Row({ space: DesignConstants.SPACING.MD }) {
+            Row({ space: DesignConstants.SPACING.XS }) {
+              Text() {
+                SymbolSpan($r(AppIcon.HEART))
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .fontColor([this.isLikedByMe()
+                    ? this.getPalette().accentBackground
+                    : this.getPalette().textSecondary])
+              }
+              .padding(DesignConstants.SPACING.MD3)
+              // 按压反馈 + 点赞色过渡（对齐前端动作条颜色变化语义）
+              .scale(this.pressedActionKey === 'like' ?
+                { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+                { x: 1, y: 1 })
+              .animation({
+                duration: DesignConstants.ANIMATION.DURATION_FAST,
+                curve: DesignConstants.ANIMATION.CURVE_SMOOTH
+              })
+              .animation({ curve: curves.springMotion(
+                DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+                DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+              ) })
+              .onTouch((event: TouchEvent) => {
+                if (event.type === TouchType.Down) {
+                  this.pressedActionKey = 'like';
+                } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                  this.pressedActionKey = '';
+                }
+              })
+              .onClick(() => this.onLikeClick(this.moment))
+              Text(this.formatCount(this.getMomentState()?.likes_count ?? this.moment.likes_count))
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontColor(this.getPalette().textSecondary)
+            }
+
+            Row({ space: DesignConstants.SPACING.XS }) {
+              Text() {
+                SymbolSpan($r(AppIcon.MESSAGE))
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .fontColor([this.getPalette().textSecondary])
+              }
+              .padding(DesignConstants.SPACING.MD3)
+              .scale(this.pressedActionKey === 'comment' ?
+                { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+                { x: 1, y: 1 })
+              .animation({ curve: curves.springMotion(
+                DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+                DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+              ) })
+              .onTouch((event: TouchEvent) => {
+                if (event.type === TouchType.Down) {
+                  this.pressedActionKey = 'comment';
+                } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                  this.pressedActionKey = '';
+                }
+              })
+              .onClick(() => this.openMomentDetail(this.moment))
+              Text(this.formatCount(this.getMomentState()?.comments_count ?? this.moment.comments_count))
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontColor(this.getPalette().textSecondary)
+            }
+          }
+
+          Row({ space: DesignConstants.SPACING.MD }) {
             Text() {
-              SymbolSpan($r(AppIcon.HEART))
+              SymbolSpan($r(AppIcon.STAR_FILL))
                 .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor([this.isLikedByMe()
+                .fontColor([this.getMomentState()?.my_state?.is_favorited
                   ? this.getPalette().accentBackground
                   : this.getPalette().textSecondary])
             }
             .padding(DesignConstants.SPACING.MD3)
-            .onClick(() => this.onLikeClick(this.moment))
-            Text(this.formatCount(this.getMomentState()?.likes_count ?? this.moment.likes_count))
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getPalette().textSecondary)
-          }
+            // 按压反馈 + 收藏色过渡（对齐前端动作条颜色变化语义）
+            .scale(this.pressedActionKey === 'favorite' ?
+              { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+              { x: 1, y: 1 })
+            .animation({
+              duration: DesignConstants.ANIMATION.DURATION_FAST,
+              curve: DesignConstants.ANIMATION.CURVE_SMOOTH
+            })
+            .animation({ curve: curves.springMotion(
+              DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+              DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+            ) })
+            .onTouch((event: TouchEvent) => {
+              if (event.type === TouchType.Down) {
+                this.pressedActionKey = 'favorite';
+              } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                this.pressedActionKey = '';
+              }
+            })
+            .onClick(() => this.onFavoriteClick(this.moment))
 
-          Row({ space: DesignConstants.SPACING.XS }) {
             Text() {
-              SymbolSpan($r(AppIcon.MESSAGE))
+              SymbolSpan($r(AppIcon.SHARE))
                 .fontSize(DesignConstants.FONT.SIZE.MD)
                 .fontColor([this.getPalette().textSecondary])
             }
             .padding(DesignConstants.SPACING.MD3)
-            .onClick(() => this.openMomentDetail(this.moment))
-            Text(this.formatCount(this.getMomentState()?.comments_count ?? this.moment.comments_count))
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getPalette().textSecondary)
+            .scale(this.pressedActionKey === 'share' ?
+              { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+              { x: 1, y: 1 })
+            .animation({ curve: curves.springMotion(
+              DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+              DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+            ) })
+            .onTouch((event: TouchEvent) => {
+              if (event.type === TouchType.Down) {
+                this.pressedActionKey = 'share';
+              } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                this.pressedActionKey = '';
+              }
+            })
+            .onClick(() => this.shareMoment(this.moment))
           }
-        }
-
-        Row({ space: DesignConstants.SPACING.MD }) {
-          Text() {
-            SymbolSpan($r(AppIcon.STAR_FILL))
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontColor([this.getMomentState()?.my_state?.is_favorited
-                ? this.getPalette().accentBackground
-                : this.getPalette().textSecondary])
-          }
-          .padding(DesignConstants.SPACING.MD3)
-          .onClick(() => this.onFavoriteClick(this.moment))
-
-          Text() {
-            SymbolSpan($r(AppIcon.SHARE))
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontColor([this.getPalette().textSecondary])
-          }
-          .padding(DesignConstants.SPACING.MD3)
-          .onClick(() => this.shareMoment(this.moment))
-        }
       }
       .width('100%')
       .justifyContent(FlexAlign.SpaceBetween)

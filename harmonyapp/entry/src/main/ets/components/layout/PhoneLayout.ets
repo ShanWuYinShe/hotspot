@@ -75,6 +75,8 @@ export struct PhoneLayout {
   @State showUpgradeBanner: boolean = false;
   /** 当前按下的底部导航 Tab 索引（-1 表示无），用于按下缩放反馈，对齐前端 hover-btn:active */
   @State pressedTabIndex: number = -1;
+  @State private tabletFabPressed: boolean = false;
+  @State private pressedSheetItem: string = '';
 
   private tabsController: TabsController = new TabsController();
 
@@ -95,6 +97,8 @@ export struct PhoneLayout {
                 onBannerClick: () => NotificationRenderer.getInstance().handleClick(notification),
                 onAction: (action: NotificationAction) => NotificationRenderer.getInstance().handleAction(action, notification)
               })
+                .transition(TransitionEffect.OPACITY
+                  .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT }))
             }, (item: SmartNotification) => item.id)
           }
           .width('100%')
@@ -147,18 +151,22 @@ export struct PhoneLayout {
       .width('100%')
       .height('100%')
 
-      // 通知中心 overlay（模态遮罩，保留在叠加层）
+      // 通知中心 overlay（模态遮罩，保留在叠加层；淡入淡出对齐 DesktopLayout）
       if (this.showNotificationCenter) {
         Stack() {
           Column()
             .width('100%').height('100%')
             .backgroundColor(this.getPalette().overlayStrong)
+            .transition(TransitionEffect.OPACITY
+              .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT }))
             .onClick(() => { this.showNotificationCenter = false; })
           Column() {
             NotificationCenter({ onClose: () => { this.showNotificationCenter = false; } })
           }
           .width('100%').height('100%')
           .backgroundColor(this.getPalette().pageBackground)
+          .transition(TransitionEffect.OPACITY
+            .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT }))
         }
         .width('100%').height('100%')
       }
@@ -170,6 +178,8 @@ export struct PhoneLayout {
         }
         .width('100%').height('100%')
         .backgroundColor(this.getPalette().pageBackground)
+        .transition(TransitionEffect.OPACITY
+          .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT }))
         .onClick(() => { this.showPerformanceDetails = false; })
       }
 
@@ -357,6 +367,23 @@ export struct PhoneLayout {
     .backgroundColor(this.getPalette().accentBackground)
     .borderRadius(DesignConstants.RADIUS.FULL)
     .shadow(this.getPalette().accentShadow)
+    // 按压反馈（对齐手机端 CreateTabBuilder FAB 语义）
+    .scale(this.tabletFabPressed ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON } :
+      { x: 1, y: 1 })
+    .animation({
+      curve: curves.springMotion(
+        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+      )
+    })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.tabletFabPressed = true;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.tabletFabPressed = false;
+      }
+    })
     .onClick(() => {
       this.showCreateSheet = true;
     })
@@ -445,6 +472,21 @@ export struct PhoneLayout {
     .backgroundColor(this.getPalette().surfaceSubtle)
     .alignItems(VerticalAlign.Center)
     .margin({ bottom: DesignConstants.SPACING.SM })
+    // 按压反馈（对齐 DesktopLayout 创建菜单行 tap-97 语义）
+    .scale(this.pressedSheetItem === label ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+      { x: 1, y: 1 })
+    .animation({ curve: curves.springMotion(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ) })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedSheetItem = label;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedSheetItem = '';
+      }
+    })
     .onClick(() => action())
   }
 

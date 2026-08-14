@@ -365,7 +365,7 @@
 
 		<!-- Scrollable content — ONLY shown when snap is not "min" -->
 		{#if snap !== 'min'}
-			<div style="flex:1;min-height:0;overflow-y:auto;" class="no-scrollbar">
+			<div style="flex:1;min-height:0;overflow-y:auto;" class="no-scrollbar pb-3">
 				<LocationSheetList
 					bind:searchQuery
 					{searchResults}

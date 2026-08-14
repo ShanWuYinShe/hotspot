@@ -8,6 +8,7 @@
  */
 
 import { ApiClient } from '../../../core/api/ApiClient';
+import { curves } from '@kit.ArkUI';
 import { AdminPermissions } from '../../../core/types/api';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
@@ -52,6 +53,7 @@ struct AdminOverviewPage {
   @State isSuperAdmin: boolean = false;
   @State isLoading: boolean = true;
   @State errorMessage: string = '';
+  @State private pressedModuleKey: string = '';
 
   private isDestroyed: boolean = false;
 
@@ -238,6 +240,21 @@ struct AdminOverviewPage {
     .borderRadius(DesignConstants.SHAPE.CARD)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .alignItems(VerticalAlign.Center)
+    // 按压反馈（对齐侧栏管理后台行 tap-97 语义）
+    .scale(this.pressedModuleKey === m.title ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+      { x: 1, y: 1 })
+    .animation({ curve: curves.springMotion(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ) })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedModuleKey = m.title;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedModuleKey = '';
+      }
+    })
     .onClick(() => {
       SystemToast.showWarning(`「${m.title}」请在 Web 管理后台完成`, this.getUIContext());
     })

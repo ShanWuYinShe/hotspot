@@ -218,7 +218,7 @@ referencePoint = loc?.point ?? null;
 	{/snippet}
 
 	<div class="mb-5">
-		{@render tagChips(device === 'desktop' ? 'flex-wrap' : 'overflow-x-auto')}
+		{@render tagChips(device === 'desktop' ? 'flex-wrap' : 'overflow-x-auto pr-1')}
 	</div>
 
 	{#if loading || !filtered.length}

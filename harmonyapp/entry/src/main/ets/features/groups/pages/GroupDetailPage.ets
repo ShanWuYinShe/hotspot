@@ -4,6 +4,7 @@
  */
 
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
+import { curves } from '@kit.ArkUI';
 import { AccountInfo } from '../../../core/types/api';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames } from '../../../constants/AppConstants';
@@ -84,6 +85,7 @@ export struct GroupDetailPage {
   private accessibilityManager = AccessibilityManager.getInstance();
   @State groupInfo: GroupItem | null = null;
   @State members: GroupMemberItem[] = [];
+  @State private pressedEntryKey: string = '';
   private membersDataSource: BasicDataSource<GroupMemberItem> = new BasicDataSource<GroupMemberItem>([]);
   @State applications: GroupApplicationItem[] = [];
   private applicationsDataSource: BasicDataSource<GroupApplicationItem> = new BasicDataSource<GroupApplicationItem>([]);
@@ -1074,7 +1076,6 @@ export struct GroupDetailPage {
                   .fontSize(DesignConstants.FONT.SIZE.LG)
                   .fontColor([this.getCurrentThemePalette().textSecondary])
               }
-              .onClick(() => this.loadGroupMembers())
             }
             .width('100%')
             .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
@@ -1085,6 +1086,22 @@ export struct GroupDetailPage {
           .shadow(this.getCurrentThemePalette().elevatedShadow)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .margin({ bottom: DesignConstants.SPACING.MD })
+          // 整卡可点（扩大热区，chevron 仅作视觉指示）+ 按压反馈（对齐 tap-97 语义）
+          .scale(this.pressedEntryKey === 'members' ?
+            { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+            { x: 1, y: 1 })
+          .animation({ curve: curves.springMotion(
+            DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+            DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+          ) })
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.pressedEntryKey = 'members';
+            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+              this.pressedEntryKey = '';
+            }
+          })
+          .onClick(() => this.loadGroupMembers())
 
           if (this.canManageApplications()) {
             // 3.5 入群申请入口（仅群主/管理员可见）
@@ -1108,7 +1125,6 @@ export struct GroupDetailPage {
                     .fontSize(DesignConstants.FONT.SIZE.LG)
                     .fontColor([this.getCurrentThemePalette().textSecondary])
                 }
-                .onClick(() => this.loadGroupApplications())
               }
               .width('100%')
               .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
@@ -1119,6 +1135,22 @@ export struct GroupDetailPage {
             .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD })
+            // 整卡可点（扩大热区，chevron 仅作视觉指示）+ 按压反馈（对齐 tap-97 语义）
+            .scale(this.pressedEntryKey === 'applications' ?
+              { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+              { x: 1, y: 1 })
+            .animation({ curve: curves.springMotion(
+              DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+              DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+            ) })
+            .onTouch((event: TouchEvent) => {
+              if (event.type === TouchType.Down) {
+                this.pressedEntryKey = 'applications';
+              } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                this.pressedEntryKey = '';
+              }
+            })
+            .onClick(() => this.loadGroupApplications())
           }
 
           // 4. 操作按钮区域
@@ -1158,7 +1190,6 @@ export struct GroupDetailPage {
                     onPress: () => { this.leaveGroup(); }
                   })
                     .opacity(this.isLeaving ? DesignConstants.OPACITY.LOADING : 1)
-                    .onClick(() => this.leaveGroup())
                 } else {
                   if (this.groupInfo?.has_password) {
                     SystemInput({

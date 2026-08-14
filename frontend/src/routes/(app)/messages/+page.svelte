@@ -220,7 +220,7 @@
 			{#if onlineChats.length > 0}
 				<div class="shrink-0 px-4 py-2.5 border-b border-border-default" >
 					<p class="uppercase mb-2 text-text-secondary text-xxs tracking-label">在线</p>
-					<div class="flex gap-3 overflow-x-auto no-scrollbar">
+					<div class="flex gap-3 overflow-x-auto no-scrollbar pr-1">
 						{#each onlineChats as c (c.id)}
 							<button
 								type="button"
@@ -355,7 +355,7 @@
 		{#if onlineChats.length > 0}
 			<div class="mb-4">
 				<p class="eyebrow mb-2.5">在线</p>
-				<div class="flex gap-4 overflow-x-auto no-scrollbar pb-1">
+				<div class="flex gap-4 overflow-x-auto no-scrollbar pb-1 pr-1">
 					{#each onlineChats as chat (chat.id)}
 						<button
 							type="button"

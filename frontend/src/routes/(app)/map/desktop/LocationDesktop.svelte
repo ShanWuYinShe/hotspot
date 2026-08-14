@@ -192,7 +192,7 @@
 		<div data-map-filter class="absolute z-20" style="top:14px;left:14px;" onclick={(e) => e.stopPropagation()}>
 			<button
 				type="button"
-				class="hover-btn flex items-center gap-2 rounded-full focus-ring text-sm"
+				class="hover-btn scale-btn flex items-center gap-2 rounded-full focus-ring text-sm"
 				style="padding:9px 16px;background:{showFilter ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-text-primary)'};border:var(--cst-border-width-hairline) solid {showFilter ? 'transparent' : 'var(--cst-border-default)'};box-shadow:{showFilter ? 'var(--shadow-glow-md)' : 'var(--cst-elevation-fab)'};"
 				onclick={() => (showFilter = !showFilter)}
 			>

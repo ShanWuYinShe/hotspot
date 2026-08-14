@@ -90,7 +90,7 @@
 			<input bind:value={keyword} oninput={onInput} placeholder="搜索用户昵称…" class="flex-1 bg-transparent text-sm text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-accent-default" />
 		</div>
 
-		<div class="mt-3 max-h-72 overflow-y-auto no-scrollbar">
+		<div class="mt-3 max-h-72 overflow-y-auto no-scrollbar pb-3">
 			{#if loading}
 				<p class="py-6 text-center text-sm text-text-secondary">搜索中…</p>
 			{:else if results.length === 0}

@@ -75,7 +75,7 @@
 					<button
 						type="button"
 						onclick={() => (editing = false)}
-						class="rounded-full px-2 py-0.5 text-xxs text-text-secondary outline-none hover-btn focus-visible:ring-2 focus-visible:ring-accent-default"
+						class="link-btn text-xxs text-text-secondary hover:text-accent-default outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
 					>取消</button>
 					<button
 						type="button"

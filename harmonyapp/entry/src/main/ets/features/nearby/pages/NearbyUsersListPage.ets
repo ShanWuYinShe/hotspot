@@ -5,6 +5,7 @@
  */
 
 import { GlobalStateManager, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
+import { curves } from '@kit.ArkUI';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
@@ -42,6 +43,7 @@ export struct NearbyUsersListPage {
   @State keyword: string = '';
   @State activeSort: string = 'distance';
   @State onlineCount: number = 0;
+  @State private pressedUserKey: string = '';
   private usersDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
   private isDestroyed: boolean = false;
   private loadVersion: number = 0;
@@ -228,6 +230,21 @@ export struct NearbyUsersListPage {
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
+    // 整行按压反馈（对齐 tap-97 语义）
+    .scale(this.pressedUserKey === (user.user?.user_id ?? '') ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+      { x: 1, y: 1 })
+    .animation({ curve: curves.springMotion(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ) })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedUserKey = user.user?.user_id ?? '';
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedUserKey = '';
+      }
+    })
     .onClick(() => {
       const userId = user.user?.user_id;
       if (userId) {
@@ -271,6 +288,8 @@ export struct NearbyUsersListPage {
               .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
               .borderRadius(DesignConstants.SHAPE.CHIP)
               .backgroundColor(chip === this.getSortLabel() ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().surfaceSubtle)
+              // 选中底色/字色切换过渡（对齐 DesktopLayout 导航项，避免硬跳）
+              .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
               .onClick(() => {
                 const sortMap: Record<string, string> = { '距离': 'distance', '在线': 'distance', '共同好友': 'relevance' };
                 const newSort = sortMap[chip] || 'distance';

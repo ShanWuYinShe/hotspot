@@ -2,6 +2,7 @@ import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
+import { curves } from '@kit.ArkUI';
 
 /**
  * 加载更多指示器（对齐前端 load-more-button.svelte）
@@ -19,6 +20,7 @@ export struct LoadMoreButton {
   onLoadMore?: () => void;
 
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @State private isPressed: boolean = false;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -52,6 +54,21 @@ export struct LoadMoreButton {
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
       .padding({ top: DesignConstants.SPACING.XL, bottom: DesignConstants.SPACING.XL })
+      // 按压反馈（对齐 tap-97 语义；仅可点击态启用）
+      .scale(this.isPressed && !this.loading ?
+        { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+        { x: 1, y: 1 })
+      .animation({ curve: curves.springMotion(
+        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+      ) })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.isPressed = true;
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.isPressed = false;
+        }
+      })
       .onClick(() => {
         if (!this.loading && this.hasMore && this.onLoadMore) {
           this.onLoadMore();

@@ -5,6 +5,7 @@
  */
 
 import { GlobalStateManager, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
+import { curves } from '@kit.ArkUI';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
@@ -41,6 +42,7 @@ export struct NearbyGroupsListPage {
   @State errorMessage: string = '';
   @State keyword: string = '';
   @State activeTag: string = '全部';
+  @State private pressedGroupKey: string = '';
   private readonly TAGS: string[] = ['全部', '摄影', '音乐', '户外', '阅读', '美食', '健身', '游戏'];
   private groupsDataSource: BasicDataSource<GroupItem> = new BasicDataSource<GroupItem>([]);
   private isDestroyed: boolean = false;
@@ -198,6 +200,21 @@ export struct NearbyGroupsListPage {
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+    // 整行按压反馈（对齐 tap-97 语义）
+    .scale(this.pressedGroupKey === (group.group?.group_id ?? '') ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+      { x: 1, y: 1 })
+    .animation({ curve: curves.springMotion(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ) })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedGroupKey = group.group?.group_id ?? '';
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedGroupKey = '';
+      }
+    })
     .onClick(() => {
       const groupId = group.group?.group_id;
       if (groupId) {
@@ -241,6 +258,8 @@ export struct NearbyGroupsListPage {
               .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
               .borderRadius(DesignConstants.SHAPE.CHIP)
               .backgroundColor(tag === this.activeTag ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().surfaceSubtle)
+              // 选中底色/字色切换过渡（对齐 DesktopLayout 导航项，避免硬跳）
+              .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
               .onClick(() => {
                 if (tag !== this.activeTag) {
                   this.activeTag = tag;

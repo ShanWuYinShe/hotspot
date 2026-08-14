@@ -1,5 +1,6 @@
 import { AppIcon } from '../../../components/SystemIcon';
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { curves } from '@kit.ArkUI';
 import {
   ApiVersionMeta,
   BlockedUserItem,
@@ -127,6 +128,7 @@ export struct SettingsSectionCard {
 export struct SettingsEntryRow {
   @Prop item: SettingsEntryItem;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @State private isPressed: boolean = false;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -180,6 +182,21 @@ export struct SettingsEntryRow {
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD3, bottom: DesignConstants.SPACING.MD3 })
     .backgroundColor(this.getListItemStyle().backgroundColor)
     .borderRadius(this.getListItemStyle().borderRadius)
+    // 整行按压反馈（对齐 tap-97 语义）
+    .scale(this.isPressed ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+      { x: 1, y: 1 })
+    .animation({ curve: curves.springMotion(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ) })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.isPressed = true;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.isPressed = false;
+      }
+    })
     .onClick(this.item.action)
   }
 }
@@ -586,6 +603,7 @@ export struct RelationshipListSection {
   @Prop blocked: BlockedUserItem[] = [];
   unblockUserAction: (userId: string) => void = () => {};
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @State private pressedMemberKey: string = '';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -614,6 +632,21 @@ export struct RelationshipListSection {
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
+      // 成员信息区按压反馈（对齐 tap-97 语义）
+      .scale(this.pressedMemberKey === userId ?
+        { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+        { x: 1, y: 1 })
+      .animation({ curve: curves.springMotion(
+        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+      ) })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.pressedMemberKey = userId;
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.pressedMemberKey = '';
+        }
+      })
       .onClick(() => this.openProfile(userId))
 
       if (actionLabel && action) {

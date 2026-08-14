@@ -5,6 +5,7 @@
 
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { curves } from '@kit.ArkUI';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
@@ -21,6 +22,7 @@ export struct AdvancedSettingsPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @State private pressedSettingKey: string = '';
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
@@ -128,6 +130,21 @@ export struct AdvancedSettingsPage {
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+    // 整行按压反馈（对齐 tap-97 语义）
+    .scale(this.pressedSettingKey === title ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+      { x: 1, y: 1 })
+    .animation({ curve: curves.springMotion(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ) })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedSettingKey = title;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedSettingKey = '';
+      }
+    })
     .onClick(onClick)
   }
 }

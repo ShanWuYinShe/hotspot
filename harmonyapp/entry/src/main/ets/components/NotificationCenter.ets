@@ -10,6 +10,7 @@ import { PageNames } from '../constants/AppConstants';
 import { SystemToast } from './SystemToast';
 import { AccessibilityManager } from '../core/accessibility/AccessibilityManager';
 import { DesignConstants } from '../constants/DesignConstants';
+import { curves } from '@kit.ArkUI';
 import { SmartNotificationService, NotificationEvent, SmartNotification } from '../core/services/SmartNotificationService';
 import { LoadingMoreIndicator, RefreshIndicator } from './EmptyState';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
@@ -43,6 +44,8 @@ export struct NotificationCenter {
   @State private hasMore: boolean = false;
   @State private errorMessage: string = '';
   @State private actionLoadingIds: string[] = [];
+  @State private pressedNotificationId: string = '';
+  @State private pressedClose: boolean = false;
 
   private syncService = NotificationSyncService.getInstance();
   private accessibilityManager = AccessibilityManager.getInstance();
@@ -401,6 +404,21 @@ export struct NotificationCenter {
             .backgroundColor(this.getPalette().surfaceBackground)
             .shadow(this.getPalette().controlShadow)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+            // 按压反馈（对齐 SurfaceIconButton 的 spring 缩放语义）
+            .scale(this.pressedClose ?
+              { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+              { x: 1, y: 1 })
+            .animation({ curve: curves.springMotion(
+              DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+              DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+            ) })
+            .onTouch((event: TouchEvent) => {
+              if (event.type === TouchType.Down) {
+                this.pressedClose = true;
+              } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                this.pressedClose = false;
+              }
+            })
             .onClick(() => {
               if (this.onClose) {
                 this.onClose();
@@ -461,6 +479,8 @@ export struct NotificationCenter {
                   ? DesignConstants.COLOR.TRANSPARENT
                   : this.getPalette().borderColor
               })
+              // 选中底色/字色/阴影切换过渡（对齐 DesktopLayout 导航项，避免硬跳）
+              .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
               .onClick(() => this.onFilterSelected(filter.key as NotificationFilterKey))
           }, (filter: NotificationFilterOption) => filter.key + '_' + (this.selectedFilter === filter.key))
         }
@@ -551,7 +571,7 @@ export struct NotificationCenter {
             }
           }
           .width('100%')
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XS })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
           .onReachEnd(() => this.loadMoreNotifications())
         }
         .layoutWeight(1)
@@ -714,6 +734,21 @@ export struct NotificationCenter {
     .border({
       width: DesignConstants.BORDER_WIDTH.HAIRLINE,
       color: notification.is_read ? DesignConstants.COLOR.TRANSPARENT : this.getTypeColor(notification.type) + '18'
+    })
+    // 整行按压反馈（对齐 DesktopLayout 导航项 tap-97 语义）
+    .scale(this.pressedNotificationId === notification.notify_id ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+      { x: 1, y: 1 })
+    .animation({ curve: curves.springMotion(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ) })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedNotificationId = notification.notify_id;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedNotificationId = '';
+      }
     })
     .onClick(() => this.handleNotificationClick(notification))
     .accessibilityGroup(true)

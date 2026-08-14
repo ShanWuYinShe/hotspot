@@ -4,6 +4,7 @@ import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AnchorHistoryItem, AnchorHistoryUtil } from '../../../core/utils/AnchorHistoryUtil';
 import { NativeMapComponent, NativeMapActions, MapRegion, MapCoordinate, MapMarker, MapCameraPosition, MapVisibleRegion } from '../../../components/NativeMapComponent';
 import { SystemToast } from '../../../components/SystemToast';
+import { Pressable } from '../../../components/Pressable';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { curves } from '@kit.ArkUI';
@@ -155,36 +156,38 @@ interface FilterMenuItemProps {
 
 @Builder
 function FilterMenuItem(props: FilterMenuItemProps) {
-  Row({ space: DesignConstants.SPACING.MD }) {
-    Image($rawfile(props.markerSvg))
-      .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
-      .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
-      .objectFit(ImageFit.Contain)
-    Text(props.label)
-      .fontSize(DesignConstants.FONT.SIZE.MD)
-      .fontWeight(props.active ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
-      .fontColor(props.active
-        ? resolveLocationPickerPalette(props.resolvedThemeId).textPrimary
-        : resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
-      .layoutWeight(1)
-    Row()
-      .width(DesignConstants.SPACING.MD3)
-      .height(DesignConstants.SPACING.MD3)
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(props.active ? props.accentColor : DesignConstants.COLOR.TRANSPARENT)
-      .border({ width: DesignConstants.BORDER_WIDTH.REGULAR, color: props.accentColor })
+  // 整行按压反馈收敛到 Pressable（顶层 @Builder 无组件状态可用）
+  Pressable({ onPress: () => props.onToggle() }) {
+    Row({ space: DesignConstants.SPACING.MD }) {
+      Image($rawfile(props.markerSvg))
+        .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
+        .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+        .objectFit(ImageFit.Contain)
+      Text(props.label)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .fontWeight(props.active ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
+        .fontColor(props.active
+          ? resolveLocationPickerPalette(props.resolvedThemeId).textPrimary
+          : resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
+        .layoutWeight(1)
+      Row()
+        .width(DesignConstants.SPACING.MD3)
+        .height(DesignConstants.SPACING.MD3)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(props.active ? props.accentColor : DesignConstants.COLOR.TRANSPARENT)
+        .border({ width: DesignConstants.BORDER_WIDTH.REGULAR, color: props.accentColor })
+    }
+    .width('100%')
+    .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
+    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+    .justifyContent(FlexAlign.Center)
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor(props.active
+      ? resolveLocationPickerPalette(props.resolvedThemeId).surfaceSubtle
+      : DesignConstants.COLOR.TRANSPARENT)
+    .borderRadius(DesignConstants.RADIUS.LG)
+    .opacity(props.active ? 1.0 : DesignConstants.OPACITY.SUBTLE)
   }
-  .width('100%')
-  .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
-  .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-  .justifyContent(FlexAlign.Center)
-  .alignItems(VerticalAlign.Center)
-  .backgroundColor(props.active
-    ? resolveLocationPickerPalette(props.resolvedThemeId).surfaceSubtle
-    : DesignConstants.COLOR.TRANSPARENT)
-  .borderRadius(DesignConstants.RADIUS.LG)
-  .opacity(props.active ? 1.0 : DesignConstants.OPACITY.SUBTLE)
-  .onClick(() => props.onToggle())
 }
 
 interface FilterPanelProps {
@@ -282,6 +285,7 @@ struct SearchPanel {
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State cancelPressed: boolean = false;
   @State clearPressed: boolean = false;
+  @State pressedRowKey: string = '';
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -409,10 +413,23 @@ struct SearchPanel {
                     top: DesignConstants.SPACING.MD,
                     bottom: DesignConstants.SPACING.MD
                   })
-                  .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
+                  // 面板内行去三件套（surface 叠 surface + 边框 + 阴影），改 tint 行 + 按压反馈
+                  .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceSubtle)
                   .borderRadius(DesignConstants.RADIUS.LG)
-                  .shadow(DesignConstants.SHADOW.MEDIUM)
-                  .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
+                  .scale(this.pressedRowKey === `search_${item.latitude}_${item.longitude}` ?
+                    { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+                    { x: 1, y: 1 })
+                  .animation({ curve: curves.springMotion(
+                    DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+                    DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+                  ) })
+                  .onTouch((event: TouchEvent) => {
+                    if (event.type === TouchType.Down) {
+                      this.pressedRowKey = `search_${item.latitude}_${item.longitude}`;
+                    } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                      this.pressedRowKey = '';
+                    }
+                  })
                   .onClick(() => { this.onSelectResult(item); })
                 }
               }, (item: LocationInfo) => `search_${item.latitude}_${item.longitude}`)
@@ -491,10 +508,23 @@ struct SearchPanel {
                       top: DesignConstants.SPACING.MD,
                       bottom: DesignConstants.SPACING.MD
                     })
-                    .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
+                    // 面板内行去三件套（surface 叠 surface + 边框 + 阴影），改 tint 行 + 按压反馈
+                    .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceSubtle)
                     .borderRadius(DesignConstants.RADIUS.LG)
-                    .shadow(DesignConstants.SHADOW.MEDIUM)
-                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
+                    .scale(this.pressedRowKey === `hist_s_${item.latitude}_${item.longitude}` ?
+                      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+                      { x: 1, y: 1 })
+                    .animation({ curve: curves.springMotion(
+                      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+                      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+                    ) })
+                    .onTouch((event: TouchEvent) => {
+                      if (event.type === TouchType.Down) {
+                        this.pressedRowKey = `hist_s_${item.latitude}_${item.longitude}`;
+                      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                        this.pressedRowKey = '';
+                      }
+                    })
                     .onClick(() => {
                       this.onSelectHistory(item);
                       this.onClose();
@@ -557,6 +587,8 @@ struct MainPanel {
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State clearPressed: boolean = false;
+  @State searchEntryPressed: boolean = false;
+  @State pressedRowKey: string = '';
 
   private dragStartHeight: number = 0;
 
@@ -631,6 +663,21 @@ struct MainPanel {
       .borderRadius(DesignConstants.RADIUS.FULL)
       .shadow(DesignConstants.SHADOW.INSET)
       .margin({ bottom: DesignConstants.SPACING.MD })
+      // 按压反馈（对齐 tap-97 语义）
+      .scale(this.searchEntryPressed ?
+        { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+        { x: 1, y: 1 })
+      .animation({ curve: curves.springMotion(
+        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+      ) })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.searchEntryPressed = true;
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.searchEntryPressed = false;
+        }
+      })
       .onClick(this.onSearchClick)
 
       // 可滚动历史记录（面板最低档时隐藏，由 clip(true) 保证拖拽过程平滑裁剪）
@@ -697,10 +744,23 @@ struct MainPanel {
                       top: DesignConstants.SPACING.MD,
                       bottom: DesignConstants.SPACING.MD
                     })
-                    .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
+                    // 面板内行去三件套（surface 叠 surface + 边框 + 阴影），改 tint 行 + 按压反馈
+                    .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceSubtle)
                     .borderRadius(DesignConstants.RADIUS.LG)
-                    .shadow(DesignConstants.SHADOW.MEDIUM)
-                     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
+                    .scale(this.pressedRowKey === `hist_m_${item.latitude}_${item.longitude}` ?
+                      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+                      { x: 1, y: 1 })
+                    .animation({ curve: curves.springMotion(
+                      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+                      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+                    ) })
+                    .onTouch((event: TouchEvent) => {
+                      if (event.type === TouchType.Down) {
+                        this.pressedRowKey = `hist_m_${item.latitude}_${item.longitude}`;
+                      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                        this.pressedRowKey = '';
+                      }
+                    })
                     .onClick(() => { this.onSelectHistory(item); })
                   }
                 }, (item: AnchorHistoryItem) => `hist_m_${item.latitude}_${item.longitude}`)
@@ -724,6 +784,8 @@ struct MainPanel {
             }
           }
           .width('100%')
+          // 滚动尾部呼吸间距（避免末行贴面板底缘，对齐 MomentsFeed 桌面分支语义）
+          .padding({ bottom: DesignConstants.SPACING.LG })
         }
         .scrollable(ScrollDirection.Vertical)
         .scrollBar(BarState.Off)
@@ -792,6 +854,8 @@ export struct LocationPickerPage {
 	@State showFilterPanel: boolean = false;
 	@State mapToastMessage: string = '';
 	@State closePanelPressed: boolean = false;
+	@State pressedMapControl: string = '';
+	@State pressedOverlapKey: string = '';
 	@State overlappingPanelItems: MapRenderItem[] = [];
   private mapToastTimerId: number = 0;
   @State anchorHistory: AnchorHistoryItem[] = [];
@@ -1737,6 +1801,9 @@ export struct LocationPickerPage {
             .width('100%')
             .justifyContent(FlexAlign.End)
             .padding({ right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS })
+            // 面板显隐淡入淡出（对齐 DesktopLayout overlay 过渡语义）
+            .transition(TransitionEffect.OPACITY
+              .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT }))
           }
         }
         .width('100%')
@@ -1865,6 +1932,21 @@ export struct LocationPickerPage {
                       top: DesignConstants.SPACING.SM,
                       bottom: DesignConstants.SPACING.SM
                     })
+                    // 整行按压反馈（对齐 tap-97 语义）
+                    .scale(this.pressedOverlapKey === item.render_id ?
+                      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+                      { x: 1, y: 1 })
+                    .animation({ curve: curves.springMotion(
+                      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+                      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+                    ) })
+                    .onTouch((event: TouchEvent) => {
+                      if (event.type === TouchType.Down) {
+                        this.pressedOverlapKey = item.render_id;
+                      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                        this.pressedOverlapKey = '';
+                      }
+                    })
                     .onClick(() => {
                       this.overlappingPanelItems = [];
                       this.navigateToItem(item);
@@ -1908,6 +1990,21 @@ export struct LocationPickerPage {
           .borderRadius(DesignConstants.RADIUS.LG)
           .shadow(DesignConstants.SHADOW.MEDIUM)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+          // 按压反馈（对齐圆钮 SCALE_PRESSED_ICON 语义）
+          .scale(this.pressedMapControl === 'locate' ?
+            { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+            { x: 1, y: 1 })
+          .animation({ curve: curves.springMotion(
+            DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+            DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+          ) })
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.pressedMapControl = 'locate';
+            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+              this.pressedMapControl = '';
+            }
+          })
           .onClick(() => { this.locateUser(); })
 
           Column() {
@@ -1923,6 +2020,21 @@ export struct LocationPickerPage {
           .borderRadius(DesignConstants.RADIUS.LG)
           .shadow(DesignConstants.SHADOW.MEDIUM)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+          // 按压反馈（对齐圆钮 SCALE_PRESSED_ICON 语义）
+          .scale(this.pressedMapControl === 'anchor' ?
+            { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+            { x: 1, y: 1 })
+          .animation({ curve: curves.springMotion(
+            DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+            DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+          ) })
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.pressedMapControl = 'anchor';
+            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+              this.pressedMapControl = '';
+            }
+          })
           .onClick(() => { this.locateBrowseAnchor(); })
 
           Column() {
@@ -1939,6 +2051,21 @@ export struct LocationPickerPage {
           .borderRadius(DesignConstants.RADIUS.LG)
           .shadow(DesignConstants.SHADOW.MEDIUM)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+          // 按压反馈（对齐圆钮 SCALE_PRESSED_ICON 语义）
+          .scale(this.pressedMapControl === 'zoomIn' ?
+            { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+            { x: 1, y: 1 })
+          .animation({ curve: curves.springMotion(
+            DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+            DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+          ) })
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.pressedMapControl = 'zoomIn';
+            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+              this.pressedMapControl = '';
+            }
+          })
           .onClick(() => { if (this.mapActions) this.mapActions.zoomIn(); })
 
           Column() {
@@ -1955,6 +2082,21 @@ export struct LocationPickerPage {
           .borderRadius(DesignConstants.RADIUS.LG)
           .shadow(DesignConstants.SHADOW.MEDIUM)
            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+          // 按压反馈（对齐圆钮 SCALE_PRESSED_ICON 语义）
+          .scale(this.pressedMapControl === 'zoomOut' ?
+            { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+            { x: 1, y: 1 })
+          .animation({ curve: curves.springMotion(
+            DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+            DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+          ) })
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.pressedMapControl = 'zoomOut';
+            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+              this.pressedMapControl = '';
+            }
+          })
           .onClick(() => { if (this.mapActions) this.mapActions.zoomOut(); })
         }
         .position({ right: DesignConstants.SPACING.MD, bottom: this.getControlsBottomOffset() })

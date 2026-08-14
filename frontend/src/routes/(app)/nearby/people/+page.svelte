@@ -148,7 +148,7 @@
 			items={FILTER_TAGS.map((t) => ({ id: t, label: t }))}
 			value={tagFilter}
 			onChange={(id) => (tagFilter = id)}
-			class={device === 'desktop' ? 'flex-wrap' : 'overflow-x-auto'}
+			class={device === 'desktop' ? 'flex-wrap' : 'overflow-x-auto pr-1'}
 		/>
 	</div>
 

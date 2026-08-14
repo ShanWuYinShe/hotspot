@@ -215,8 +215,8 @@
 				</span>
 			</div>
 
-			<!-- 分类 Tab（统一 TabBar 胶囊样式） -->
-			<div class="mt-4 border-b border-border-default">
+			<!-- 分类 Tab（统一 TabBar 胶囊样式；pb-3 让胶囊与 border-b 分离，对齐 PageHeader below 约定） -->
+			<div class="mt-4 pb-3 border-b border-border-default">
 				<TabBar
 					items={[
 						{ id: 'overview', label: '简介' },
@@ -235,7 +235,7 @@
 				{:else if tab === 'members'}
 					{#if canManageMembers}
 						<!-- 成员 Tab 子区（owner/admin）：成员 / 申请审批 / 邀请管理 / 封禁名单 -->
-						<div class="mt-4 border-b border-border-default">
+						<div class="mt-4 pb-3 border-b border-border-default">
 							<TabBar
 								items={[
 									{ id: 'members', label: '成员' },

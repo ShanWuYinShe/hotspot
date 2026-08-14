@@ -273,7 +273,7 @@ export struct SmartSearchComponent {
       .fontSize(DesignConstants.FONT.SIZE.SM)
       .fontWeight(this.currentFilter === filter ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
       .fontColor(this.currentFilter === filter
-        ? this.getPalette().accentBackground
+        ? this.getPalette().accentText
         : this.getPalette().textSecondary)
       .height(DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT)
       .layoutWeight(1)
@@ -281,11 +281,10 @@ export struct SmartSearchComponent {
       .backgroundColor(this.currentFilter === filter
         ? this.getPalette().accentBackground
         : DesignConstants.COLOR.TRANSPARENT)
-      .fontColor(this.currentFilter === filter
-        ? this.getPalette().accentText
-        : this.getPalette().textSecondary)
       .borderRadius(DesignConstants.RADIUS.XL)
       .padding({ left: DesignConstants.SPACING.HALF, right: DesignConstants.SPACING.HALF })
+      // 选中底色/字色切换过渡（对齐 DesktopLayout 导航项，避免硬跳）
+      .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
       .onClick(() => {
         this.switchFilter(filter as 'all' | 'users' | 'groups' | 'moments');
       })

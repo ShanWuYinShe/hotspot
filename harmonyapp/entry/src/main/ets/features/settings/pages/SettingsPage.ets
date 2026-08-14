@@ -548,6 +548,8 @@ export struct SettingsPage {
     .backgroundColor(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).surfaceBackground : this.getThemeOptionPalette(option).surfaceSubtle)
     .border({ width: this.isThemeOptionActive(option) ? 1.5 : 1, color: this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentBackground : this.getThemeOptionPalette(option).borderColor })
     .shadow(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentShadow : this.getThemeOptionPalette(option).surfaceShadow)
+    // 选中底色/边框/阴影切换过渡（对齐 DesktopLayout 导航项，避免硬跳）
+    .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
     .onClick(() => {
       this.handleThemeChange(option.mode).catch(() => {
         SystemToast.showError('切换主题失败', this.getUIContext());

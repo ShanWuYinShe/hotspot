@@ -575,7 +575,6 @@ export struct CreateMomentPage {
                     buttonSize: 'small',
                     onPress: () => { this.refreshLocation(); }
                   })
-                    .onClick(() => this.refreshLocation())
                 }
               }
               .width('100%')

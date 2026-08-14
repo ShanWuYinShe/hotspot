@@ -65,6 +65,12 @@ export struct DesktopLayout {
   @State logoPressed: boolean = false;
   // 当前按压中的侧栏行（nav label / '__admin__'），驱动整行 tap-97 按压缩放
   @State pressedNavLabel: string = '';
+  // hover 中的侧栏导航行（桌面断点淡填充反馈）
+  @State hoveredNavLabel: string = '';
+  // 其余可按压入口：主题行 / 创建菜单行 / 顶栏头像
+  @State pressedThemeMode: string = '';
+  @State pressedCreateItem: string = '';
+  @State avatarPressed: boolean = false;
 
   aboutToAppear() {
     this.showUpgradeBanner = this.isLoggedIn && this.userType === 'temp';
@@ -267,6 +273,21 @@ export struct DesktopLayout {
           .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .justifyContent(FlexAlign.Center)
+          // 按压反馈（对齐顶栏圆钮语义）
+          .scale(this.avatarPressed ?
+            { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+            { x: 1, y: 1 })
+          .animation({ curve: curves.springMotion(
+            DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+            DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+          ) })
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.avatarPressed = true;
+            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+              this.avatarPressed = false;
+            }
+          })
           .onClick(() => {
             this.currentRoute = 'profile';
           })
@@ -348,6 +369,21 @@ export struct DesktopLayout {
     .padding(DesignConstants.SPACING.MD)
     .borderRadius(DesignConstants.SHAPE.CARD)
     .backgroundColor(this.getPalette().surfaceSubtle)
+    // 按压反馈（对齐侧栏导航行 tap-97 语义）
+    .scale(this.pressedThemeMode === option.mode ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+      { x: 1, y: 1 })
+    .animation({ curve: curves.springMotion(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ) })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedThemeMode = option.mode;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedThemeMode = '';
+      }
+    })
     .onClick(() => { this.handleThemeChange(option.mode).catch(() => {}); })
   }
 
@@ -471,7 +507,10 @@ export struct DesktopLayout {
     .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
     .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
     .borderRadius(DesignConstants.SHAPE.INPUT) // 18
-    .backgroundColor(this.isItemActive(item) ? this.getPalette().tabBarActiveBackground : DesignConstants.COLOR.TRANSPARENT)
+    // 激活/hover 底色：激活项常驻淡底，非激活项仅 hover 时淡填充（对齐前端侧栏导航 hover 反馈）
+    .backgroundColor(this.isItemActive(item) || this.hoveredNavLabel === item.label
+      ? this.getPalette().tabBarActiveBackground
+      : DesignConstants.COLOR.TRANSPARENT)
     // 激活底色/文字色切换过渡（对齐前端侧栏导航 transition-colors，避免硬跳）
     .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
     // 按压反馈（对齐前端 tap-97）；滑出/抬起经 onTouch 统一复位
@@ -483,6 +522,9 @@ export struct DesktopLayout {
       DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
     ) })
     .alignItems(VerticalAlign.Center)
+    .onHover((isHover: boolean) => {
+      this.hoveredNavLabel = isHover ? item.label : '';
+    })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.pressedNavLabel = item.label;
@@ -653,6 +695,21 @@ export struct DesktopLayout {
     .backgroundColor(this.getPalette().surfaceSubtle)
     .alignItems(VerticalAlign.Center)
     .margin({ bottom: DesignConstants.SPACING.SM })
+    // 按压反馈（对齐侧栏导航行 tap-97 语义）
+    .scale(this.pressedCreateItem === label ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+      { x: 1, y: 1 })
+    .animation({ curve: curves.springMotion(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ) })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedCreateItem = label;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedCreateItem = '';
+      }
+    })
     .onClick(() => action())
   }
 }

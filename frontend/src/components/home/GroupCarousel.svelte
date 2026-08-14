@@ -32,7 +32,7 @@
 
 <div>
 	<SectionHead title="附近群组" action="更多" onAction={onSeeAll} />
-	<div class="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+	<div class="flex gap-3 overflow-x-auto no-scrollbar pb-1 pr-1">
 		{#each groups as g (g.id)}
 			<NearbyImageCard
 				imageSrc={g.banner}

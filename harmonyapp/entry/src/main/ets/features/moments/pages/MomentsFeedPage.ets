@@ -567,6 +567,8 @@ export struct MomentsFeedPage {
                 ? DesignConstants.COLOR.TRANSPARENT
                 : this.getSurfaceBorder()
             })
+            // 选中底色/字色/阴影切换过渡（对齐 DesktopLayout 导航项，避免硬跳）
+            .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
             .onClick(() => {
               this.activeTag = this.activeTag === tag ? '' : tag;
             })

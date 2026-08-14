@@ -3,6 +3,7 @@ import { DesignConstants } from '../constants/DesignConstants';
 import { SystemIcon, AppIcon } from './SystemIcon';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { curves } from '@kit.ArkUI';
 
 @Reusable
 @Component
@@ -12,6 +13,7 @@ export struct NotificationBanner {
   onAction?: (action: NotificationAction) => void;
   onBannerClick?: () => void;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @State private isPressed: boolean = false;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -92,6 +94,21 @@ export struct NotificationBanner {
     .borderRadius(DesignConstants.RADIUS.XL)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .shadow(this.getPalette().elevatedShadow)
+    // 整卡按压反馈（对齐 tap-97 语义）
+    .scale(this.isPressed ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+      { x: 1, y: 1 })
+    .animation({ curve: curves.springMotion(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ) })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.isPressed = true;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.isPressed = false;
+      }
+    })
     .onClick(() => {
       if (this.onBannerClick) {
         this.onBannerClick();

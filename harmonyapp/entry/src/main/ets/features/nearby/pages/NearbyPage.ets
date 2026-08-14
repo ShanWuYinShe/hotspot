@@ -9,6 +9,7 @@
 
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
+import { curves } from '@kit.ArkUI';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -49,6 +50,8 @@ export struct NearbyPage {
   @State moments: MomentItem[] = [];
   @State isLoading: boolean = true;
   @State errorMessage: string = '';
+  @State private pressedSeeAllKey: string = '';
+  @State private searchEntryPressed: boolean = false;
 
   private isDestroyed: boolean = false;
   private loadVersion: number = 0;
@@ -154,6 +157,21 @@ export struct NearbyPage {
       Text(actionLabel)
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontColor(this.getCurrentThemePalette().accentBackground)
+        // 行内文字动作按压反馈（对齐前端 link-btn 弱缩放语义，不出背景块）
+        .scale(this.pressedSeeAllKey === title ?
+          { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW } :
+          { x: 1, y: 1 })
+        .animation({ curve: curves.springMotion(
+          DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+          DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+        ) })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.pressedSeeAllKey = title;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.pressedSeeAllKey = '';
+          }
+        })
         .onClick(onAction)
     }
     .width('100%')
@@ -203,6 +221,21 @@ export struct NearbyPage {
         .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
         .borderRadius(DesignConstants.SHAPE.INPUT)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+        // 按压反馈（对齐 tap-97 语义）
+        .scale(this.searchEntryPressed ?
+          { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+          { x: 1, y: 1 })
+        .animation({ curve: curves.springMotion(
+          DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+          DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+        ) })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.searchEntryPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.searchEntryPressed = false;
+          }
+        })
         .onClick(() => { AppRouter.push(PageNames.SEARCH); })
 
         if (this.isLoading) {
