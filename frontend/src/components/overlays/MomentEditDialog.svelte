@@ -23,9 +23,10 @@
 
 	const MOOD_TAGS = ['松弛', '漫游', '咖啡', '展览', '自然', '夜色'];
 
-	let text = $state(initial.description);
-	let selectedTags = $state<Set<string>>(new Set(initial.tags));
-	let privacy = $state<'public' | 'private'>(initial.privacy_level);
+	// 初值不引用 props（快照由下方 $effect 在打开时回填，与 GroupSettingsSheet 模式一致）
+	let text = $state('');
+	let selectedTags = $state<Set<string>>(new Set());
+	let privacy = $state<'public' | 'private'>('public');
 	let submitting = $state(false);
 
 	// 打开时按 initial 重置表单（切换不同动态编辑）
