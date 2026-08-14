@@ -50,7 +50,7 @@ locationName = loc?.location_name ?? '';
 
 <!-- Header -->
 <div class="shrink-0">
-	<PageHeader title="位置选择" onBack={() => history.back()} subtitle={locationName || '位置选择'} sticky>
+	<PageHeader title="位置选择" onBack={() => history.back()} subtitle={locationName || '位置选择'} sticky contentClassName="px-4 pt-4 pb-0">
 		{#snippet trailing()}
 			<button
 				type="button"
@@ -120,7 +120,7 @@ locationName = loc?.location_name ?? '';
 </div>
 
 <!-- List -->
-<div class="flex-1 min-h-0 overflow-y-auto no-scrollbar px-3 pb-3">
+<div class="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 pb-3">
 	{#if activeTab === 'nearby'}
 		<div class="animate-fade-in flex flex-col gap-2">
 			<!-- Current location card -->
@@ -265,7 +265,7 @@ locationName = loc?.location_name ?? '';
 </div>
 
 <!-- Confirm -->
-<div class="shrink-0 border-t border-border-default px-3 pt-2.5 pb-4">
+<div class="shrink-0 border-t border-border-default px-4 pt-2.5 pb-4">
 	{#if selectedLoc}
 		<div class="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-sm bg-surface-primary" style="box-shadow:var(--shadow-inset-sm);">
 			<Check class="size-3.5 shrink-0 text-accent-default"   strokeWidth={2.5} />

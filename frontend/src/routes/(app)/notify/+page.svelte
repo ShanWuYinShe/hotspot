@@ -235,7 +235,7 @@ const FILTER_TABS = [
 					</div>
 					<ListContainer bordered class="mb-5">
 						{#each invites as inv (inv.invite_id)}
-							<div class="flex items-center gap-3 px-3 py-3">
+							<div class="flex items-center gap-3.5 px-3 py-3.5">
 								<img src={inv.group.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm text-text-primary">{inv.group.name}</span>

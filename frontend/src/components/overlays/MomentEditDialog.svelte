@@ -75,9 +75,8 @@
 <Dialog.Root open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
 	<Dialog.Content
 		side="center"
-		class="inset-x-4 mx-auto max-w-md rounded-xl bg-surface-primary p-5"
+		class="max-w-md p-5"
 		aria-label="编辑动态"
-		style="box-shadow:var(--cst-elevation-modal);"
 	>
 		<div class="flex items-center justify-between">
 			<div>

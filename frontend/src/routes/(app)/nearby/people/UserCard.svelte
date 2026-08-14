@@ -42,7 +42,7 @@
 	imageAlt={user.name}
 	onClick={onNavigate}
 	onImageError={() => (avatarFailed = true)}
-	class="rounded-lg aspect-[3/4]"
+	class="rounded-md aspect-[3/4]"
 >
 	{#snippet placeholder()}
 		<span class="text-accent-default text-3xl font-semibold">{Array.from(user.name)[0] ?? '?'}</span>

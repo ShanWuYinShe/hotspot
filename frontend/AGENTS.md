@@ -447,8 +447,11 @@ theme/
     - 状态/空态区：`py-20`（样板 `feedState` + `EmptyState` 内置）
     **header 内 ContentColumn** 统一 `pt-4 pb-0`（顶留白、底不留白，below 区自带头部
     间距）；`below` snippet 首元素必须 `mt-3`（与样板一致，见页面布局契约第 2 条）。
-    **窄列特例**：桌面消息分栏左栏（`w-75`=300px）不进 `--cst-page-gutter`，用
-    `px-4`（16px）压缩 gutter——已登记例外，其他窄列场景需在 AGENTS.md 补登记
+    **窄列特例**（不进 `--cst-page-gutter`，用 `px-4`（16px）压缩 gutter，已登记例外，
+    其他窄列场景需在 AGENTS.md 补登记）：
+    - 桌面消息分栏左栏（`w-75`=300px）
+    - 桌面地图左侧面板（`w-85`=340px，`LocationDesktopPanel`：PageHeader 传
+      `contentClassName="px-4 pt-4 pb-0"`，搜索/Tab/列表/确认区统一 `px-4`）
     **布局尺寸 token**（layout.css 定义，禁止组件内裸数字）：
     `--cst-desktop-sidebar-width`（224px 展开）/ `--cst-desktop-sidebar-collapsed`（72px 折叠）/
     `--cst-tablet-dock-max`（680px 平板 Dock）/ `--cst-cover-height`（clamp 220→340px 封面）/

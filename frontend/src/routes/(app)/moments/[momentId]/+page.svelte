@@ -414,9 +414,8 @@
 <Dialog.Root open={deleteOpen} onOpenChange={(next) => (next ? undefined : (deleteOpen = false))}>
 	<Dialog.Content
 		side="center"
-		class="inset-x-4 mx-auto max-w-sm rounded-xl bg-surface-primary p-5"
+		class="max-w-sm p-5"
 		aria-label="确认删除动态"
-		style="box-shadow:var(--cst-elevation-modal);"
 	>
 		<p class="text-md text-text-primary">删除这条动态？</p>
 		<p class="mt-1 text-sm text-text-secondary">删除后无法恢复，相关评论也将一并移除。</p>

@@ -6,7 +6,9 @@
 
 	// 附近群组卡片（基于 NearbyImageCard 统一图片优先原语）。
 	// featured=false：网格卡（分类/隐私徽章 + 紧凑 footer）；
-	// featured=true：移动全宽精选卡（精选徽章 + 大号 footer），对齐 Figma FeaturedGroupCard。
+	// featured=true：移动全宽精选卡（精选徽章 + 大号 footer）。
+	// 两种形态共用图片卡语言：无边框、hover 内嵌 accent 描边（image-hover-frame）、
+	// rounded-md；精选的突出靠全宽大尺寸 + 徽章 + 大号 footer 表达。
 	let {
 		group,
 		onToggle,
@@ -24,7 +26,7 @@
 	imageSrc={group.banner}
 	imageAlt={group.name}
 	onClick={onOpen}
-	class={featured ? 'rounded-xl min-h-85 surface-hero' : 'rounded-md aspect-[3/4]'}
+	class={featured ? 'rounded-md min-h-85' : 'rounded-md aspect-[3/4]'}
 >
 	{#snippet placeholder()}
 		<span class="text-accent-default {featured ? 'text-4xl' : 'text-3xl'} font-semibold">{Array.from(group.name)[0] ?? '群'}</span>

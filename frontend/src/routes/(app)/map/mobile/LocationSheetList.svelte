@@ -42,7 +42,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 				pressed={isSelected}
 				onClick={() => onSelectLoc(r)}
 				ariaLabel={`选择地点 ${r.displayName}`}
-				class="flex list-row-standard items-center gap-3 px-5 py-3"
+				class="flex list-row-standard items-center gap-3 px-4 py-3"
 			>
 				<div class="flex items-center justify-center rounded-full shrink-0 size-8.5 {isSelected ? 'bg-surface-primary' : 'bg-accent-default'}"  style="{isSelected ? '' : 'opacity:var(--cst-opacity-active)'}">
 					<MapPin class="size-3.5 text-accent-default"   strokeWidth={1.75} />
@@ -128,7 +128,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 					{/each}
 				</ListContainer>
 			{:else}
-				<p class="text-text-secondary text-sm px-5 py-3">暂无最近记录</p>
+				<p class="text-text-secondary text-sm px-4 py-3">暂无最近记录</p>
 			{/if}
 		{:else}
 			{#if HOT_LOCATIONS.length}

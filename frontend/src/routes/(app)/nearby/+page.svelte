@@ -41,7 +41,7 @@
 	<!-- 搜索入口（门户第一入口） -->
 	<button
 		type="button"
-		class="hover-btn flex w-full items-center gap-3 rounded-md border border-border-default bg-surface-primary p-3 text-left focus-ring"
+		class="hover-btn flex w-full items-center gap-3 rounded-md border border-border-default bg-surface-primary shadow-raised-md p-3 text-left focus-ring"
 		onclick={() => void goto(ROUTES.search)}
 	>
 		<SearchIcon class="size-5 shrink-0 text-accent-default" strokeWidth={1.75} />
@@ -53,7 +53,7 @@
 		{#each SECTIONS as section (section.id)}
 			<button
 				type="button"
-				class="hover-btn flex w-full items-center gap-3.5 rounded-md border border-border-default bg-surface-primary p-4 text-left focus-ring"
+				class="hover-btn flex w-full items-center gap-3.5 rounded-md border border-border-default bg-surface-primary shadow-raised-md p-4 text-left focus-ring"
 				onclick={() => void goto(section.href)}
 			>
 				<span class="flex shrink-0 items-center justify-center rounded-full icon-badge size-9">

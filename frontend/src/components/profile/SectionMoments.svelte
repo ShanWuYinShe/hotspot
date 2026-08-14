@@ -97,7 +97,7 @@
 					<button
 						type="button"
 						onclick={() => void goto(`${ROUTES.moment(featured.id)}?from=me`)}
-						class="relative block w-full overflow-hidden rounded-xl border border-border-default bg-surface-primary text-left transition-colors hover:border-accent-default focus-ring"
+						class="relative block w-full overflow-hidden rounded-lg border border-border-default bg-surface-primary shadow-raised-md text-left transition-colors hover:border-accent-default focus-ring"
 						aria-label="查看精选瞬间"
 					>
 						<div class="lg:grid lg:grid-cols-[minmax(0,1.38fr)_minmax(280px,0.62fr)]">
@@ -140,7 +140,7 @@
 					<button
 						type="button"
 						onclick={() => void goto(`${ROUTES.moment(moment.id)}?from=me`)}
-						class="relative overflow-hidden rounded-md border border-border-default bg-surface-primary text-left transition-colors hover:border-accent-default focus-ring {index === 0 ? 'col-span-2' : ''}"
+						class="relative overflow-hidden rounded-md border border-border-default bg-surface-primary shadow-raised-md text-left transition-colors hover:border-accent-default focus-ring {index === 0 ? 'col-span-2' : ''}"
 						aria-label="查看瞬间详情"
 					>
 						<div class="tap-97 relative overflow-hidden {index === 0 ? 'aspect-[16/8]' : 'aspect-square'} bg-surface-page" >

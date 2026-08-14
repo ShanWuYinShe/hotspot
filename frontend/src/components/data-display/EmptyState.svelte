@@ -35,7 +35,7 @@
 		{#if icon}
 			<div
 				class="flex items-center justify-center rounded-full border border-border-default"
-				style="width:{iconSize}px;height:{iconSize}px;box-shadow:var(--shadow-raised-lg);"
+				style="width:{iconSize}px;height:{iconSize}px;box-shadow:var(--shadow-raised-sm);"
 			>
 				{@render icon()}
 			</div>

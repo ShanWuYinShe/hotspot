@@ -330,7 +330,7 @@
 		</div>
 
 		<!-- Search bar -->
-		<div class="shrink-0 px-3.5 pb-2">
+		<div class="shrink-0 px-4 pb-2">
 			<div class="flex items-center gap-2.5 px-3.5 rounded-md input-surface h-11" >
 				<Search class="size-3.5 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 				<input
@@ -381,7 +381,7 @@
 		{/if}
 
 		<!-- Confirm button — always at bottom of sheet -->
-		<div class="shrink-0 px-3.5 pt-2 pb-4.5">
+		<div class="shrink-0 px-4 pt-2 pb-4.5">
 			<button
 				type="button"
 				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-md h-12.5"

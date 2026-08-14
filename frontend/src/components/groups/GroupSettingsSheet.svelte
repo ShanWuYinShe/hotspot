@@ -366,7 +366,7 @@
 
 <!-- 转让确认（危险操作，参照删除公告的 Dialog 范式） -->
 <Dialog.Root open={transferTarget !== null} onOpenChange={(next) => (next ? undefined : (transferTarget = null))}>
-	<Dialog.Content side="center" class="inset-x-4 mx-auto max-w-sm rounded-xl bg-surface-primary p-5" aria-label="确认转让群主" style="box-shadow:var(--cst-elevation-modal);">
+	<Dialog.Content side="center" class="max-w-sm p-5" aria-label="确认转让群主">
 		<p class="text-md text-text-primary">确定将群主转让给 {transferTarget?.name}？</p>
 		<p class="mt-1 text-sm text-text-secondary">转让后你将变为普通成员，无法再执行群管理操作。</p>
 		<div class="mt-4 flex items-center justify-end gap-3">

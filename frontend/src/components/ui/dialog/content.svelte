@@ -6,6 +6,10 @@
 	//   right   → 右侧全高面板（左边缘线 + 左抛阴影）
 	//   left    → 左侧全高面板
 	//   top     → 顶部面板
+	// center 定位用 inset + margin:auto（无 translate）：translate 定位会被调用方
+	// 的 inset-x-* 覆盖类经 tailwind-merge 撕裂（left 被删而 translate 残留→左移半宽），
+	// 且 zoom 动画的 keyframes transform 会整体覆盖 translate 造成入场位置跳动。
+	// 调用方只需传宽度（max-w-*/w-*）与内距，定位由组件统一承担。
 	// 对齐 Figma Make overlays/Sheet：遮罩用更深 scrim（black/50）；side sheet 可选自动右上角 X 关闭按钮。
 	// 交互能力（Escape / 外部点击 / 焦点圈 / 滚动锁 / body 滚动锁定）由 bits-ui Dialog.Content 提供。
 	import { Dialog } from 'bits-ui';
@@ -35,7 +39,7 @@
 
 	const SIDE_CLASSES: Record<DialogSide, string> = {
 		center:
-			'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl shadow-[var(--cst-elevation-modal)] data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
+			'inset-x-4 inset-y-4 m-auto rounded-xl shadow-[var(--cst-elevation-modal)] data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
 		bottom:
 			'bottom-0 left-0 right-0 rounded-t-sheet shadow-[var(--cst-elevation-sheet)] data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
 		right:

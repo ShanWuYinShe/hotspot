@@ -169,7 +169,7 @@
 		</EmptyState>
 	{:else if platform.platform !== 'mobile'}
 		<!-- Desktop/Tablet：左摘要栏 + 右用户列表（正文多列 grid，随页面统一滚动） -->
-		<div class="grid grid-cols-[85_minmax(0,1fr)] gap-6">
+		<div class="grid grid-cols-[21.25rem_minmax(0,1fr)] gap-6">
 			<!-- Left: hero + activity + groups (340px) -->
 			<div class="flex flex-col gap-6 border-r border-border-default pr-6">
 				<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={defaultLocation?.location_name ?? ''} />

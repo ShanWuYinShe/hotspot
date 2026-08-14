@@ -198,7 +198,7 @@
 		</div>
 	</div>
 
-	<div class="grid gap-8 pt-6 lg:grid-cols-[minmax(0,1fr)_80]">
+	<div class="grid gap-8 pt-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
 		<main class="min-w-0">
 			<div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-text-secondary">
 				<span class="flex items-center gap-1.5">
@@ -383,7 +383,7 @@
 			{/if}
 		</main>
 
-		<aside class="flex h-fit flex-col gap-3 rounded-lg ring-1 ring-border-default bg-surface-primary p-4">
+		<aside class="flex h-fit flex-col gap-3 rounded-lg border border-border-default bg-surface-primary p-4">
 			<button
 				type="button"
 				class="hover-btn w-full rounded-full px-4 py-3 text-sm font-medium focus-ring {gd.joined ? 'border border-accent-default text-accent-default' : 'bg-accent-default text-text-on-accent'}"
@@ -426,7 +426,7 @@
 {/if}
 
 <Dialog.Root open={deleteAnnounceId !== null} onOpenChange={(next) => (next ? undefined : (deleteAnnounceId = null))}>
-	<Dialog.Content side="center" class="inset-x-4 mx-auto max-w-sm rounded-xl bg-surface-primary p-5" aria-label="确认删除公告" style="box-shadow:var(--cst-elevation-modal);">
+	<Dialog.Content side="center" class="max-w-sm p-5" aria-label="确认删除公告">
 		<p class="text-md text-text-primary">删除这条公告？</p>
 		<p class="mt-1 text-sm text-text-secondary">删除后无法恢复。</p>
 		<div class="mt-4 flex items-center justify-end gap-3">
@@ -437,7 +437,7 @@
 </Dialog.Root>
 
 <Dialog.Root open={leaveConfirmOpen} onOpenChange={(next) => (next ? undefined : (leaveConfirmOpen = false))}>
-	<Dialog.Content side="center" class="inset-x-4 mx-auto max-w-sm rounded-xl bg-surface-primary p-5" aria-label="确认退出群组" style="box-shadow:var(--cst-elevation-modal);">
+	<Dialog.Content side="center" class="max-w-sm p-5" aria-label="确认退出群组">
 		<p class="text-md text-text-primary">退出群组「{gd.detail.name}」？</p>
 		<p class="mt-1 text-sm text-text-secondary">退出后将不再接收该群的聊天与公告。</p>
 		<div class="mt-4 flex items-center justify-end gap-3">

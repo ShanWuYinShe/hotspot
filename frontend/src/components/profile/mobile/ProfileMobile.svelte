@@ -51,7 +51,7 @@
 		<LoadError message={error} onRetry={retry} />
 	{:else}
 		<!-- 身份卡（compact）：头像复用 Avatar，统计横条居中（对齐桌面 MetricRow 原语） -->
-		<section class="rounded-lg border border-border-default surface-flat" aria-label="个人资料">
+		<section class="rounded-lg surface-flat" aria-label="个人资料">
 			<div class="p-5">
 				<div class="flex items-start justify-between gap-5">
 					<div class="flex min-w-0 items-center gap-4">
