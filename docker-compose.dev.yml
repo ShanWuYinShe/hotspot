@@ -154,10 +154,9 @@ services:
       - ./docker/amap.default.inc:/etc/nginx/conf.d/amap.inc:ro
 
 # ── 命名卷（隔离跨平台原生模块与编译产物）───────────────────────────
+# 卷名不覆盖 name：默认 <compose 项目名>_<卷名>，worktree 按目录名自动隔离
+# （根 AGENTS.md「worktree 调试与清理」——硬编码 name 会让多套环境共享同一批卷）
 volumes:
-  backend_tmp:
-    name: hotspot-dev-backend-tmp       # air 编译输出隔离
-  backend_gocache:
-    name: hotspot-dev-backend-gocache   # Go 编译缓存持久化（air / backend-test 增量编译）
-  frontend_node_modules:
-    name: hotspot-dev-frontend-node-modules  # Linux native modules（不污染 host）
+  backend_tmp:          # air 编译输出隔离
+  backend_gocache:      # Go 编译缓存持久化（air / backend-test 增量编译）
+  frontend_node_modules:  # Linux native modules（不污染 host）
