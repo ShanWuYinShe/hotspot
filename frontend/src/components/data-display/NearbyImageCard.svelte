@@ -86,12 +86,13 @@
 			onerror={onImageError}
 		/>
 	{:else if placeholder}
-		<div class="surface-accent-gradient absolute inset-0 z-[1] flex items-center justify-center">
+		<!-- 装饰占位层：pointer-events-none 防止拦截 footer 行内按钮（关注等）的点击/悬停 -->
+		<div class="surface-accent-gradient pointer-events-none absolute inset-0 z-[1] flex items-center justify-center">
 			{@render placeholder()}
 		</div>
 	{/if}
 	{#if imageSrc}
-		<div class="absolute inset-0" style="background:var(--cst-surface-media-scrim-card);"></div>
+		<div class="pointer-events-none absolute inset-0" style="background:var(--cst-surface-media-scrim-card);"></div>
 	{/if}
 	{#if children}
 		{@render children()}
