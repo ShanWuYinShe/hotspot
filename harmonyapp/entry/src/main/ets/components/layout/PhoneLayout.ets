@@ -42,11 +42,11 @@ interface TabItem {
 }
 
 const TAB_ITEMS: TabItem[] = [
-  { label: '首页', symbolId: $r('sys.symbol.house') },
-  { label: '附近', symbolId: $r('sys.symbol.compass') },
-  { label: '发布', symbolId: $r('sys.symbol.plus') },
-  { label: '消息', symbolId: $r('sys.symbol.message') },
-  { label: '我的', symbolId: $r('sys.symbol.person') }
+  { label: '首页', symbolId: $r(AppIcon.HOME) },
+  { label: '附近', symbolId: $r(AppIcon.COMPASS) },
+  { label: '发布', symbolId: $r(AppIcon.ADD) },
+  { label: '消息', symbolId: $r(AppIcon.MESSAGE) },
+  { label: '我的', symbolId: $r(AppIcon.PERSON) }
 ];
 
 const CREATE_TAB_INDEX: number = 2;
@@ -346,13 +346,13 @@ export struct PhoneLayout {
   @Builder FloatingFab() {
     Row() {
       Text() {
-        SymbolSpan($r('sys.symbol.plus'))
+        SymbolSpan($r(AppIcon.ADD))
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontColor([this.getPalette().accentText])
       }
     }
-    .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
-    .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+    .width(DesignConstants.LAYOUT.FAB_SIZE)
+    .height(DesignConstants.LAYOUT.FAB_SIZE)
     .justifyContent(FlexAlign.Center)
     .backgroundColor(this.getPalette().accentBackground)
     .borderRadius(DesignConstants.RADIUS.FULL)
@@ -366,7 +366,7 @@ export struct PhoneLayout {
     Column() {
       Row() {
         Text() {
-          SymbolSpan($r('sys.symbol.plus'))
+          SymbolSpan($r(AppIcon.ADD))
             .fontSize(DesignConstants.FONT.SIZE.XL)
             .fontColor([this.getPalette().accentText])
         }

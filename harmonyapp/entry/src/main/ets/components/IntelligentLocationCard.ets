@@ -121,7 +121,7 @@ export struct IntelligentLocationCard {
         .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
         .backgroundColor(this.getPalette().surfaceBackground)
         .border({
-          width: 1,
+          width: DesignConstants.BORDER_WIDTH.HAIRLINE,
           color: this.getPalette().accentBackground
         })
         .borderRadius(DesignConstants.RADIUS.XL)

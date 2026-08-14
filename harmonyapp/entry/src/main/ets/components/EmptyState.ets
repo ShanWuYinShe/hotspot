@@ -32,30 +32,41 @@ export struct EmptyState {
   build() {
     Column() {
       Column({ space: DesignConstants.SPACING.LG }) {
-        Stack() {
-          Column()
-            .width(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
-            .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .backgroundColor(this.getPalette().surfaceBackground)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
-
+        // bare：无圆形容器，图标直接渲染 + muted 文案（对齐前端 EmptyState bare 契约）
+        if (this.bare) {
           Text() {
             SymbolSpan($r(this.icon))
               .fontSize(DesignConstants.FONT.SIZE.XXL)
               .fontColor([this.getPalette().textSecondary])
               .opacity(DesignConstants.OPACITY.MUTED)
           }
-        }
-        .width(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
-        .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
+        } else {
+          Stack() {
+            Column()
+              .width(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
+              .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .backgroundColor(this.getPalette().surfaceBackground)
+              .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
 
-        // 主标题（大字）—— 对齐前端 EmptyState title
+            Text() {
+              SymbolSpan($r(this.icon))
+                .fontSize(DesignConstants.FONT.SIZE.XXL)
+                .fontColor([this.getPalette().textSecondary])
+                .opacity(DesignConstants.OPACITY.MUTED)
+            }
+          }
+          .width(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
+          .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
+        }
+
+        // 主标题（大字）—— 对齐前端 EmptyState title；
+        // bare 变体 title 用 textSecondary（对齐前端 bare 契约 muted 文案）
         if ((this.title ?? '').length > 0) {
           Text(this.title)
             .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-            .fontColor(this.getPalette().textPrimary)
+            .fontColor(this.bare ? this.getPalette().textSecondary : this.getPalette().textPrimary)
             .textAlign(TextAlign.Center)
         }
 

@@ -84,7 +84,7 @@ export struct RelationshipHubPage {
       .backgroundColor(this.activeRelTab === index ? this.getPalette().accentBackground : this.getPalette().surfaceBackground)
       .border(this.activeRelTab === index
         ? { width: 0 }
-        : { width: 1, color: this.getPalette().borderColor })
+        : { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
       .animation({
         curve: curves.springMotion(
           DesignConstants.INTERACTION.SPRING_RESPONSE_TAB,

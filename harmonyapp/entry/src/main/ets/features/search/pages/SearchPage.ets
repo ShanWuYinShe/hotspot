@@ -570,7 +570,7 @@ export struct SearchPage {
         : this.getCurrentThemePalette().surfaceShadow)
       .border(this.currentIndex === index
         ? { width: 0 }
-        : { width: 1, color: this.getSurfaceBorder() })
+        : { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
       .animation({
         curve: curves.springMotion(
           DesignConstants.INTERACTION.SPRING_RESPONSE_TAB,

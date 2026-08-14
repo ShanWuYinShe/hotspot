@@ -564,7 +564,7 @@ export struct MomentsFeedPage {
               ? this.getCurrentThemePalette().accentShadow
               : this.getCurrentThemePalette().controlShadow)
             .border({
-              width: 1,
+              width: DesignConstants.BORDER_WIDTH.HAIRLINE,
               color: this.activeTag === tag
                 ? DesignConstants.COLOR.TRANSPARENT
                 : this.getSurfaceBorder()

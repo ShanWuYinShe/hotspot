@@ -122,7 +122,7 @@ export struct SystemCard {
     if (!this.showBorder) {
       return { width: 0, color: DesignConstants.COLOR.TRANSPARENT };
     }
-    return { width: 1, color: (this.cardBorderColor || this.getPalette().floatingBorderColor || this.getPalette().borderColor) as ResourceColor };
+    return { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: (this.cardBorderColor || this.getPalette().floatingBorderColor || this.getPalette().borderColor) as ResourceColor };
   }
 
   // 获取毛玻璃效果

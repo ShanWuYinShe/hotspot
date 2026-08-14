@@ -36,7 +36,7 @@ export struct SystemTextArea {
       .backgroundColor(this.getPalette().inputBackgroundColor)
       .borderRadius(DesignConstants.SHAPE.INPUT) // 18
       .border({
-        width: 1,
+        width: DesignConstants.BORDER_WIDTH.HAIRLINE,
         color: this.hasError ? this.getPalette().error : this.getPalette().borderColor
       })
       .fontColor(this.getPalette().textPrimary)

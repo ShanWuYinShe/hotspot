@@ -22,6 +22,7 @@
  */
 
 import { DesignConstants } from '../../constants/DesignConstants';
+import { AppIcon } from '../SystemIcon';
 import { AppThemeManager } from '../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../core/theme/AppThemeTypes';
 
@@ -45,7 +46,7 @@ export struct ErrorBoundary {
     if (this.err) {
       Column({ space: DesignConstants.SPACING.LG }) {
         Text() {
-          SymbolSpan($r('sys.symbol.exclamationmark_triangle_fill'))
+          SymbolSpan($r(AppIcon.WARNING))
             .fontSize(DesignConstants.FONT.SIZE.HERO)
             .fontColor([this.getPalette().error])
         }

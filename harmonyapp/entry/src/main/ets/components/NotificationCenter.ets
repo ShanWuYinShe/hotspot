@@ -456,7 +456,7 @@ export struct NotificationCenter {
                 ? this.getPalette().accentShadow
                 : this.getPalette().controlShadow)
               .border({
-                width: 1,
+                width: DesignConstants.BORDER_WIDTH.HAIRLINE,
                 color: this.selectedFilter === filter.key
                   ? DesignConstants.COLOR.TRANSPARENT
                   : this.getPalette().borderColor
@@ -663,7 +663,7 @@ export struct NotificationCenter {
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
               .borderRadius(DesignConstants.RADIUS.FULL)
-              .borderWidth(1)
+              .borderWidth(DesignConstants.BORDER_WIDTH.HAIRLINE)
               .borderColor(this.getPalette().borderColor)
               .enabled(!this.isActionLoading(notification.notify_id))
               .onClick(() => this.handleGroupInviteAction(notification, 'reject'))
@@ -688,7 +688,7 @@ export struct NotificationCenter {
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
               .borderRadius(DesignConstants.RADIUS.FULL)
-              .borderWidth(1)
+              .borderWidth(DesignConstants.BORDER_WIDTH.HAIRLINE)
               .borderColor(this.getPalette().borderColor)
               .enabled(!this.isActionLoading(notification.notify_id))
               .onClick(() => this.handleGroupApplicationAction(notification, 'reject'))
@@ -712,7 +712,7 @@ export struct NotificationCenter {
     .backgroundColor(notification.is_read ? DesignConstants.COLOR.TRANSPARENT : this.getTypeColor(notification.type) + '07')
     .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
     .border({
-      width: 1,
+      width: DesignConstants.BORDER_WIDTH.HAIRLINE,
       color: notification.is_read ? DesignConstants.COLOR.TRANSPARENT : this.getTypeColor(notification.type) + '18'
     })
     .onClick(() => this.handleNotificationClick(notification))
