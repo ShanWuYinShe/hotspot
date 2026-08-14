@@ -583,7 +583,7 @@ export struct MomentDetailPage {
         iconColor: this.commentText.trim().length > 0 ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().textSecondary,
         radius: DesignConstants.RADIUS.FULL,
         minButtonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
-        paddingSize: 6,
+        paddingSize: DesignConstants.SPACING.SM2,
         onButtonClick: () => { this.sendComment(); }
       })
         .opacity(this.commentSending ? DesignConstants.OPACITY.LOADING : 1)

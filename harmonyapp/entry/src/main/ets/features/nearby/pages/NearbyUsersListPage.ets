@@ -20,7 +20,6 @@ import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { EmptyState, RefreshIndicator, LoadingMoreIndicator } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
-import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
@@ -49,10 +48,6 @@ export struct NearbyUsersListPage {
 
   private getCurrentThemePalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
-  }
-
-  private getHeaderTopPadding(): number {
-    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
   }
 
   private getSurfaceBorder(): ResourceColor {

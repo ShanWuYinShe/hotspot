@@ -108,7 +108,7 @@ export struct DebugPanel {
         Column({ space: DesignConstants.SPACING.LG }) {
           // 状态卡片
           SystemCard({
-            cardPadding: 16,
+            cardPadding: DesignConstants.SPACING.LG,
             cardBackgroundColor: this.getSurfaceBackground()
           }) {
             Column({ space: DesignConstants.SPACING.SM }) {

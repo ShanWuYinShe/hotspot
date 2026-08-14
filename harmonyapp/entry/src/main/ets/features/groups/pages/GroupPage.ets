@@ -77,10 +77,6 @@ export struct GroupPage {
   @State pressedGroupId: string = '';
   private isDestroyed: boolean = false;
 
-  private getHeaderTopPadding(): number {
-    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
-  }
-
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
     await this.loadMyGroups();

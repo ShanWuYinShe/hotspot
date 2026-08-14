@@ -19,7 +19,6 @@ import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { EmptyState, RefreshIndicator, LoadingMoreIndicator } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
-import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { formatCount } from '../../../core/utils/FormatUtil';
@@ -48,10 +47,6 @@ export struct NearbyGroupsListPage {
 
   private getCurrentThemePalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
-  }
-
-  private getHeaderTopPadding(): number {
-    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
   }
 
   private getReferencePoint(): GeoPoint | null {

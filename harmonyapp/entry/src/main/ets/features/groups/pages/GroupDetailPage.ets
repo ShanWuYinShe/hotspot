@@ -10,6 +10,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { EmptyState } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemButton } from '../../../components/SystemButton';
@@ -115,10 +116,6 @@ export struct GroupDetailPage {
   @State editGroupAvatarFileId: string = '';
   @State isSavingGroupInfo: boolean = false;
   @State isEditGroupAvatarUploading: boolean = false;
-
-  private getHeaderTopPadding(): number {
-    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
-  }
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
@@ -921,7 +918,7 @@ export struct GroupDetailPage {
         showBackButton: true,
         onBack: () => { AppRouter.pop(); },
         titleAlign: TextAlign.Center,
-        titleSize: DesignConstants.FONT.SIZE.LG,
+        titleSize: DesignConstants.FONT.SIZE.XL,
         titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
         rightAction: {
           icon: AppIcon.SHARE,
@@ -937,33 +934,13 @@ export struct GroupDetailPage {
               .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
           )
       } else if (this.errorMessage) {
-        Column() {
-          Text() {
-            SymbolSpan($r(AppIcon.WARNING))
-              .fontSize(DesignConstants.FONT.SIZE.HERO)
-              .fontColor([this.getCurrentThemePalette().textSecondary])
-          }
-          .margin({ bottom: DesignConstants.SPACING.MD })
-          Text(this.errorMessage)
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-            .textAlign(TextAlign.Center)
-            .margin({ bottom: DesignConstants.SPACING.XL })
-          SystemButton({
-            label: '重试',
-            variant: 'primary',
-            buttonSize: 'default',
-            onPress: () => { this.loadGroupDetail(); }
-          })
-        }
-        .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-        .padding(DesignConstants.SPACING.XL)
-        .transition(
-          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
-        )
+        EmptyState({
+          icon: AppIcon.WARNING,
+          title: this.errorMessage,
+          actionLabel: '重试',
+          fillMode: true,
+          onAction: () => { this.loadGroupDetail(); }
+        })
         } else if (this.groupInfo) {
         // 使用 List 布局（扁平风格）
         List() {
@@ -1441,26 +1418,13 @@ export struct GroupDetailPage {
       if (this.isLoadingMembers && this.members.length === 0) {
         SystemLoadingView({ message: '加载成员列表中...' }).layoutWeight(1)
       } else if (this.members.length === 0 && this.membersErrorMessage) {
-        Column({ space: DesignConstants.SPACING.LG }) {
-          Text() {
-            SymbolSpan($r(AppIcon.WARNING))
-              .fontSize(DesignConstants.FONT.SIZE.HERO)
-              .fontColor([this.getCurrentThemePalette().textSecondary])
-          }
-          Text(this.membersErrorMessage)
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-            .textAlign(TextAlign.Center)
-          SystemButton({
-            label: '重试',
-            variant: 'primary',
-            buttonSize: 'default',
-            onPress: () => { this.loadGroupMembers(); }
-          })
-        }
-        .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
+        EmptyState({
+          icon: AppIcon.WARNING,
+          title: this.membersErrorMessage,
+          actionLabel: '重试',
+          fillMode: true,
+          onAction: () => { this.loadGroupMembers(); }
+        })
       } else if (this.members.length > 0) {
         List() {
           LazyForEach(this.membersDataSource, (member: GroupMemberItem) => {
@@ -1489,14 +1453,12 @@ export struct GroupDetailPage {
         .cachedCount(5)
         .onReachEnd(() => { this.loadMoreMembers(); })
       } else {
-        Column() {
-          Text('暂无成员信息')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-        }
-        .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
+        EmptyState({
+          icon: AppIcon.EMPTY,
+          title: '暂无成员信息',
+          bare: true,
+          fillMode: true
+        })
       }
     }
     .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
@@ -1525,26 +1487,13 @@ export struct GroupDetailPage {
       if (this.isLoadingApplications && this.applications.length === 0) {
         SystemLoadingView({ message: '加载入群申请中...' }).layoutWeight(1)
       } else if (this.applications.length === 0 && this.applicationsErrorMessage) {
-        Column({ space: DesignConstants.SPACING.LG }) {
-          Text() {
-            SymbolSpan($r(AppIcon.WARNING))
-              .fontSize(DesignConstants.FONT.SIZE.HERO)
-              .fontColor([this.getCurrentThemePalette().textSecondary])
-          }
-          Text(this.applicationsErrorMessage)
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-            .textAlign(TextAlign.Center)
-          SystemButton({
-            label: '重试',
-            variant: 'primary',
-            buttonSize: 'default',
-            onPress: () => { this.loadGroupApplications(); }
-          })
-        }
-        .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
+        EmptyState({
+          icon: AppIcon.WARNING,
+          title: this.applicationsErrorMessage,
+          actionLabel: '重试',
+          fillMode: true,
+          onAction: () => { this.loadGroupApplications(); }
+        })
       } else if (this.applications.length > 0) {
         List() {
           LazyForEach(this.applicationsDataSource, (application: GroupApplicationItem) => {
@@ -1574,14 +1523,12 @@ export struct GroupDetailPage {
         .cachedCount(5)
         .onReachEnd(() => { this.loadMoreGroupApplications(); })
       } else {
-        Column() {
-          Text('暂无待处理申请')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-        }
-        .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
+        EmptyState({
+          icon: AppIcon.EMPTY,
+          title: '暂无待处理申请',
+          bare: true,
+          fillMode: true
+        })
       }
     }
     .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })

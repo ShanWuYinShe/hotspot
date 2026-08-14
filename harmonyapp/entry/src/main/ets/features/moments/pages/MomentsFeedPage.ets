@@ -89,10 +89,6 @@ export struct MomentsFeedPage {
     return Array.from(tagSet);
   }
 
-  private getHeaderTopPadding(): number {
-    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
-  }
-
   private isUserActionPending(userId: string): boolean {
     return this.userActionPendingIds.indexOf(userId) >= 0;
   }
@@ -290,7 +286,7 @@ export struct MomentsFeedPage {
         .borderRadius(DesignConstants.SHAPE.INPUT)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
         .onClick(() => { AppRouter.push(PageNames.SEARCH); })
-        .margin({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+        .margin({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.XS })
 
         // 下划线式标签栏（热门/附近/活动/关注，对齐前端 TABS）
         this.buildTabBar()

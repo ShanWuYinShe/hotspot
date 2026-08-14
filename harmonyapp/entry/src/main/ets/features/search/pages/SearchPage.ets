@@ -445,7 +445,7 @@ export struct SearchPage {
           .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
           .layoutWeight(1)
           .width('100%')
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+          .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
         } else {
           Tabs({ barPosition: BarPosition.Start, controller: this.controller, index: this.currentIndex }) {
             TabContent() {
@@ -639,7 +639,7 @@ export struct SearchPage {
       }
       .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+      .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
       .scrollBar(BarState.Auto)
     }
   }
@@ -733,7 +733,7 @@ export struct SearchPage {
       }
       .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
+      .padding({ top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
       .scrollBar(BarState.Auto)
     }
   }
@@ -920,7 +920,7 @@ export struct SearchPage {
       }
       .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
+      .padding({ top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
       .scrollBar(BarState.Auto)
     }
   }
@@ -948,7 +948,7 @@ export struct SearchPage {
       }
       .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
+      .padding({ top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
       .scrollBar(BarState.Auto)
     }
   }
@@ -976,7 +976,7 @@ export struct SearchPage {
       .columnsTemplate('1fr 1fr')
       .columnsGap(DesignConstants.SPACING.MD)
       .rowsGap(DesignConstants.SPACING.MD)
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
+      .padding({ top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
       .cachedCount(6)
     }
   }
