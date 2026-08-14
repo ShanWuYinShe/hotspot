@@ -388,7 +388,8 @@ struct Index {
       this.stateManager.updateUser(profileResp.data);
 
       // 更新 token 过期时间（如果 checkStatus 返回了 expires_at）
-      if (statusResp.data.expires_at) {
+      const statusData = statusResp.data;
+      if (statusData && statusData.expires_at) {
         const currentAuth = await AuthAccountManager.getCurrentAuth();
         if (currentAuth) {
           const updatedAuth: AuthData = {
@@ -396,7 +397,7 @@ struct Index {
             user_id: currentAuth.user_id,
             access_token: currentAuth.access_token,
             refresh_token: currentAuth.refresh_token,
-            access_token_expires_at: statusResp.data.expires_at,
+            access_token_expires_at: statusData.expires_at,
             refresh_token_expires_at: currentAuth.refresh_token_expires_at
           };
           await HttpUtil.setToken(updatedAuth.access_token);

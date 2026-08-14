@@ -15,7 +15,9 @@ import {
   PaginatedData,
   PresignUploadRequest,
   PresignedUpload,
+  PresignedUploads,
   CompleteUploadRequest,
+  CompletedUploads,
   UploadedMedia,
   MediaCategory,
 
@@ -321,18 +323,23 @@ export class ApiClient {
     const fileName = ApiClient.extractFileName(fileUri, readablePath);
     const mimeType = ApiClient.inferMimeType(fileName, category);
 
+    // spec 契约为批量（files 1..N），单文件上传包一层单元素数组
     const presignReq: PresignUploadRequest = {
-      file_name: fileName,
-      file_size: size,
-      mime_type: mimeType,
-      category: category
+      files: [
+        {
+          file_name: fileName,
+          file_size: size,
+          mime_type: mimeType,
+          category: category
+        }
+      ]
     };
 
     const presignRes = await ApiClient.presignUpload(presignReq);
-    if (presignRes.code !== 0 || !presignRes.data) {
+    const presignData = presignRes.data?.uploads[0];
+    if (presignRes.code !== 0 || !presignData) {
       throw new Error(presignRes.message || 'Presign failed');
     }
-    const presignData = presignRes.data;
     const upload_url = presignData.upload_url;
     const upload_id = presignData.upload_id;
     const presignHeaders = presignData.headers;
@@ -340,9 +347,9 @@ export class ApiClient {
     const headers: Record<string, string> = {};
     if (presignHeaders) {
       const headerKeys = Object.keys(presignHeaders);
-      for (let i = 0; i < headerKeys.length; i++) {
+      for (let i = 0; i < headerKeys.length; i += 1) {
         const key = headerKeys[i];
-        const value = presignHeaders[key];
+        const value: string | undefined = presignHeaders[key];
         if (typeof value === 'string') {
           headers[key] = value;
         }
@@ -354,12 +361,13 @@ export class ApiClient {
     }
     await HttpUtil.uploadToUrl(upload_url, buffer, headers);
 
-    const completeReq: CompleteUploadRequest = { upload_id };
+    const completeReq: CompleteUploadRequest = { upload_ids: [upload_id] };
     const completeRes = await ApiClient.completeUpload(completeReq);
-    if (completeRes.code !== 0 || !completeRes.data) {
+    const completed = completeRes.data?.uploads[0];
+    if (completeRes.code !== 0 || !completed) {
       throw new Error(completeRes.message || 'Complete failed');
     }
-    return completeRes.data;
+    return completed;
   }
 
   // ==================== 系统 API ====================
