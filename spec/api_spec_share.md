@@ -24,13 +24,13 @@
 | 端点 | 说明 | 节点 |
 |-----|------|------|
 | `POST /api/v1/share/create` | 创建分享 | /api/v1 |
-| `POST /api/v1/share/fetch` | 我的分享列表（命名空间天生私有，直接 fetch） | /api/v1 |
-| `POST /public/v1/share/fetch` | 分享码解析（见 `api_spec_public.md`；与登录版同名但为不同功能） | /public/v1 |
+| `POST /api/v1/share/show_me_your_code` | 我的分享列表（玩梗命名，见 `api_spec_base.md` 动词审美规则） | /api/v1 |
+| `POST /public/v1/share/open_the_door` | 分享码解析（见 `api_spec_public.md`） | /public/v1 |
 | `POST /api/v1/share/revoke` | 撤销分享 | /api/v1 |
 
 ## 类型定义
 
-以下类型定义于 `api_spec_types.md`：`UserInfo`、`Location`、`PaginationParams`、`ShareType`、`SharePayload`（含 User/Group/Moment/Location 四个载荷）、`ShareBase`、`SharePreview`（share 域跨节点共享类型；落地响应 `ShareDetail` 定义于 `api_spec_public.md` 的分享码解析端点）。
+以下类型定义于 `api_spec_types.md`：`UserInfo`、`Location`、`PaginationParams`、`ShareType`、`SharePayload`（含 User/Group/Moment/Location 四个载荷）、`ShareBase`、`SharePreview`（share 域跨节点共享类型；落地响应 `ShareDetail` 定义于 `api_spec_public.md` 的 `share/open_the_door`）。
 
 **说明**：`preview` 为展示用摘要。分享存在但目标资源不可访问时（如目标被删除/隐私变更），不返回 `preview`，仅返回 `share` 与 `payload`（让客户端知道分享类型与目标 ID，可提示"内容已不可访问"）；分享本身已撤销/过期时整体返回 `10300`。
 
@@ -47,7 +47,7 @@
 ## 有效期规则
 
 - 分享可设置有效期（`expires_at`）
-- 过期分享在分享码解析（`/public/v1/share/fetch`）中返回 `10300`
+- 过期分享在分享码解析（`/public/v1/share/open_the_door`）中返回 `10300`
 
 ## 端点详情
 
@@ -88,16 +88,16 @@ interface ShareCreated {
 
 ---
 
-### POST /api/v1/share/fetch
+### POST /api/v1/share/show_me_your_code
 
 获取当前用户创建的分享列表。
 
 - **节点**: /api/v1
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `share_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
 
-**Request**: `FetchSharesRequest`
+**Request**: `ShowMeYourCodeRequest`
 ```typescript
-interface FetchSharesRequest {
+interface ShowMeYourCodeRequest {
   share_type: ShareType | null;   // 按类型筛选
   pagination: PaginationParams | null;
 }
@@ -127,7 +127,7 @@ interface ShareListItem {
 **Request**: `RevokeShareRequest`
 ```typescript
 interface RevokeShareRequest {
-  share_id: string | null;    // 分享 ID（来自 share/create 或 share/fetch）
+  share_id: string | null;    // 分享 ID（来自 share/create 或 share/show_me_your_code）
   share_code: string | null;  // 或分享码（创建者可能仅保留了复制出的链接码）
 }
 // 二选一：必须且只能传 share_id 或 share_code 其中之一；同时传或都不传请求失败（10000）

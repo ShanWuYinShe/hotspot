@@ -128,7 +128,7 @@
 > - reason = 10200 时的 forbidden_reason
 > - 幂等 = 幂等键/自然去重/no-op 语义
 > - 「登录视角」= /api/v1 登录版端点的可见性判定语义；其匿名镜像版在 `/public/v1`（类型独立，见 `api_spec_public.md`）
-> - **镜像判定原则**：仅当登录版存在真实增量（查看者状态字段，或可见性判定依赖身份——如 `reactions/fetch` 的私聊消息）才拆双版本；无任何增量的端点仅保留 `/public/v1` 版（如 `map/canvas`、`groups/announcements/fetch`、system 的 meta/health/announcements/fetch/client_config），不设登录镜像
+> - **镜像判定原则**：仅当登录版存在真实增量（查看者状态字段，或可见性判定依赖身份——如 `reactions/fetch` 的私聊消息）才拆双版本；无任何增量的端点仅保留 `/public/v1` 版（如 `map/canvas`、`share/open_the_door`、`groups/announcements/fetch`、system 的 meta/health/announcements/fetch/client_config），不设登录镜像
 
 ### /public/v1（未注册用户节点，纯匿名）
 
@@ -164,7 +164,7 @@
 | 28 | `/public/v1/feed/trending` | — | — | — | — |
 | 29 | `/public/v1/search/suggest` | 可见性过滤 | — | — | — |
 | 30 | `/public/v1/map/canvas` | 公开对象过滤 | — | — | — |
-| 31 | `/public/v1/share/fetch` | 撤销/过期 | — | 10300 | 反滥用限流 |
+| 31 | `/public/v1/share/open_the_door` | 撤销/过期 | — | 10300 | 反滥用限流 |
 | 32 | `/public/v1/reactions/fetch` | 目标可见性 | — | 10300 | — |
 | 33 | `/public/v1/system/meta` | — | — | — | — |
 | 34 | `/public/v1/system/health` | — | — | 10600 | — |
@@ -254,7 +254,7 @@
 | 113 | `/api/v1/media/presign_upload` | — | — | 限流 | — |
 | 114 | `/api/v1/media/complete_upload` | owner(upload_id) | not_resource_owner | 10300/10400 | 自然去重 |
 | 115 | `/api/v1/share/create` | 目标可见 | — | 10300 | 幂等 |
-| 116 | `/api/v1/share/fetch` | self | — | — | — |
+| 116 | `/api/v1/share/show_me_your_code` | self | — | — | — |
 | 117 | `/api/v1/share/revoke` | owner | — | 10300(隐私一致性) | no-op |
 | 118 | `/api/v1/reports/create` | 目标存在+非自举报 | — | 10300/10400 | 自然去重 |
 | 119 | `/api/v1/reports/fetch` | self | — | — | — |

@@ -622,7 +622,7 @@ interface ClientDefaults {
 
 ### 分享载荷与摘要（share 域，跨节点共享）
 
-> 以下类型无查看者字段，被 `/public/v1/share/fetch` 与 `/api/v1/share/*` 共同引用，故定义于共享层。`ShareCreated`/`ShareListItem` 仅登录端点使用，定义于 `api_spec_share.md`。
+> 以下类型无查看者字段，被 `/public/v1/share/open_the_door` 与 `/api/v1/share/*` 共同引用，故定义于共享层。`ShareCreated`/`ShareListItem` 仅登录端点使用，定义于 `api_spec_share.md`。
 
 ```typescript
 // 分享目标类型

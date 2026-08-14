@@ -18,7 +18,7 @@
 - **无身份类资源约束**：本节点仅适用可见性过滤（privacy_level / searchable 系列 / social_lists_visible 等），无 owner/participant/member/self 类约束
 - **限流**：本节点请求一律按 **IP 维度**限流（见 `api_spec_base.md`「限流策略」）
 - **类型隔离**：本节点端点的 Request/Response 使用专属类型，与 `/api/v1`（含 groups/admin 子树）、`/admin/v1` **禁止共用**（规则见下方「类型体系」）
-- **镜像判定原则**：仅当登录版存在真实增量——查看者状态字段，或可见性判定依赖身份（如 `reactions/fetch` 的私聊消息仅参与者可见）——才在 `/api/v1` 设登录镜像版；无任何增量的端点仅在本节点提供（如 `map/canvas`、`groups/announcements/fetch`、system 的 meta/health/announcements/fetch/client_config）
+- **镜像判定原则**：仅当登录版存在真实增量——查看者状态字段，或可见性判定依赖身份（如 `reactions/fetch` 的私聊消息仅参与者可见）——才在 `/api/v1` 设登录镜像版；无任何增量的端点仅在本节点提供（如 `map/canvas`、`share/open_the_door`、`groups/announcements/fetch`、system 的 meta/health/announcements/fetch/client_config）
 
 ## 类型体系（契约级）
 
@@ -138,7 +138,7 @@ Cookie 的 Path 覆盖与自动携带规则（`/public/v1` 忽略、refresh 精�
 | `POST /public/v1/feed/trending` | 热门瞬间（发现页默认） |
 | `POST /public/v1/search/suggest` | 综合搜索建议 |
 | `POST /public/v1/map/canvas` | 地图视口渲染（热力/热点；仅 public 版，无登录镜像） |
-| `POST /public/v1/share/fetch` | 分享码落地（公开访问；仅 public 版，无登录镜像） |
+| `POST /public/v1/share/open_the_door` | 分享码落地（公开访问；仅 public 版，无登录镜像） |
 | `POST /public/v1/reactions/fetch` | 反应列表（统一三类目标） |
 | `POST /public/v1/system/meta` | API 版本元信息 |
 | `POST /public/v1/system/health` | 健康检查 |
@@ -1119,7 +1119,7 @@ type MapCanvasResponse =
 
 ## 分享落地（share）
 
-### POST /public/v1/share/fetch
+### POST /public/v1/share/open_the_door
 
 解析分享码换取目标详情（分享的创建/管理位于 `/api/v1/share/`，见 `api_spec_share.md`）。
 
@@ -1130,9 +1130,9 @@ type MapCanvasResponse =
 - 对连续失败（share_code 无效/过期）的访问需有递进式惩罚策略（如临时封禁或要求验证码）
 - 失败请求应记录日志，用于离线分析潜在暴力破解行为
 
-**Request**: `FetchShareRequest`
+**Request**: `OpenShareDoorRequest`
 ```typescript
-interface FetchShareRequest {
+interface OpenShareDoorRequest {
   share_code: string;         // 不区分大小写，服务端统一转换为大写
 }
 ```

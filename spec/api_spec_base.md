@@ -134,6 +134,7 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 | `suggest` | 前缀联想 | search |
 | `presign_upload` / `complete_upload` | 媒体两段式上传（数组参数 1..N 天然覆盖单/批，无独立批量端点） | media |
 | `accept` / `reject` / `approve` / `cancel` / `revoke` | 工作流动词 | invites / applications / share |
+| `show_me_your_code` | 我的分享码列表（玩梗列表动词，见下方保护条款） | share |
 
 **无动词端点**（名词直接做端点，两类规则）：
 - **读取类名词化**（读单值/配置/当前对象，直接以名词命名）：`users/account`、`users/settings`、`auth/session`、`system/meta`、`system/client_config`、`notify/unread_count`、`rbac/me`、`groups/admin/settings`、`app_config`（裸域读取）
@@ -147,7 +148,7 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 
 同一命名空间存在多视角列表时，用**状态限定词**区分，只描述资源状态、不标记视角。现有：`created / joined / submitted / sent / received / favorites / blocked / banned / reacted`，以及关系/子资源维度（`friends / following / followers / groups / moments`）。
 
-- **`_my` 后缀与 `My` 类型前缀全量禁止**：命名空间天生私有（每人只见自己的数据）的列表直接 `fetch`（如 `reports/fetch`、`share/fetch`、`notify/fetch`）；不存在「非 my 版本」需要区分时不得加任何视角后缀
+- **`_my` 后缀与 `My` 类型前缀全量禁止**：命名空间天生私有（每人只见自己的数据）的列表直接 `fetch`（如 `reports/fetch`、`notify/fetch`）；不存在「非 my 版本」需要区分时不得加任何视角后缀
 - 例：`groups/fetch_joined`（我加入的群）、`groups/applications/fetch_submitted`（我提交的申请）、`moments/fetch_created`（我创建的瞬间）、`groups/invites/fetch_sent`（我发出的邀请）
 
 ### 参数必显式（契约级）
@@ -159,7 +160,7 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 ### 禁用词表
 
 - 禁用 `notification`（统一 `notify`）；新增禁用词需维护者确认
-- **玩梗/彩蛋命名保护条款**：禁止以"不专业/不规范"为由修改规范中刻意为之的**无害**玩梗/彩蛋命名（如 `open_the_door`），存疑时应向维护者确认；但冒犯性或针对特定群体的内容不属于保护范围
+- **玩梗/彩蛋命名保护条款**：禁止以"不专业/不规范"为由修改规范中刻意为之的**无害**玩梗/彩蛋命名（如 `open_the_door`、`share/show_me_your_code`），存疑时应向维护者确认；但冒犯性或针对特定群体的内容不属于保护范围
 
 ---
 
@@ -361,7 +362,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 
 **额外能力**：查看者状态字段有值、个性化信息流、私聊/群聊/通知、所有写操作和互动操作；按角色访问 `groups/admin` 守卫子树；平台管理员身份另走 `/admin/v1`。
 
-**登录态切换**：客户端在登录/登出时切换调用节点（同一浏览功能的两个版本端点路径仅节点前缀不同，如 `/public/v1/moments/open_the_door` ↔ `/api/v1/moments/open_the_door`，但类型独立）。**无需随登录态切换的端点**（仅 public 版，登录用户与匿名用户调用同一 URL）：`map/canvas`、`groups/announcements/fetch`、system 的 `meta`/`health`/`announcements/fetch`/`client_config`、auth 生命周期 6 端点（`/public/v1/auth/*`）、分享码解析（`/public/v1/share/fetch`；`/api/v1/share/fetch` 为我的分享列表，是不同功能）——客户端此类模块无需感知登录态。
+**登录态切换**：客户端在登录/登出时切换调用节点（同一浏览功能的两个版本端点路径仅节点前缀不同，如 `/public/v1/moments/open_the_door` ↔ `/api/v1/moments/open_the_door`，但类型独立）。**无需随登录态切换的端点**（仅 public 版，登录用户与匿名用户调用同一 URL）：`map/canvas`、`groups/announcements/fetch`、system 的 `meta`/`health`/`announcements/fetch`/`client_config`、auth 生命周期 6 端点（`/public/v1/auth/*`）、分享码解析（`share/open_the_door`）——客户端此类模块无需感知登录态。
 
 ---
 
