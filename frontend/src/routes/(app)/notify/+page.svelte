@@ -307,8 +307,8 @@ const FILTER_TABS = [
 						{@const cfg = TYPE_CONFIG[type] ?? TYPE_CONFIG.reaction}
 						<button
 							type="button"
-							class="hover-btn flex items-center gap-2.5 rounded-sm px-2 py-1.5 focus-ring text-left"
-							style="background:{filter === type ? cfg.bg : 'transparent'};border:var(--cst-border-width-hairline) solid {filter === type ? cfg.border : 'transparent'};transition:background var(--cst-motion-rapid) var(--cst-ease-standard);"
+							class="hover-btn flex items-center gap-2.5 rounded-sm px-2 py-1.5 focus-ring text-left {filter === type ? '' : 'hover:bg-interactive-hover'}"
+							style="{filter === type ? `background:${cfg.bg};border:var(--cst-border-width-hairline) solid ${cfg.border};` : ''}transition:background var(--cst-motion-rapid) var(--cst-ease-standard);"
 							onclick={() => (filter = type)}
 						>
 							<div class="flex items-center justify-center rounded-full shrink-0 size-6" style="background:{cfg.bg};">

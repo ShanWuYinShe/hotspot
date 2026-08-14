@@ -36,9 +36,11 @@
 	const style = $derived.by(() => {
 		if (variant === 'overlay') {
 			return `width:${size}px;height:${size}px;background:var(--cst-surface-overlay);backdrop-filter:blur(var(--cst-blur-md));border:var(--cst-border-width-hairline) solid var(--cst-border-inverse);`;
-		} else if (variant === 'ghost') {
-			return `width:${size}px;height:${size}px;background:transparent;border:var(--cst-border-width-hairline) solid transparent;`;
-		}
+	} else if (variant === 'ghost') {
+		// 不写 inline background：默认即透明，写死会以 inline 优先级压掉
+		// header-action 等类的 hover 背景填充
+		return `width:${size}px;height:${size}px;border:var(--cst-border-width-hairline) solid transparent;`;
+	}
 		return `width:${size}px;height:${size}px;background:var(--cst-surface-raised);border:var(--cst-border-width-hairline) solid var(--cst-border-subtle);box-shadow:${theme.theme === 'forest' ? 'none' : 'var(--shadow-raised-sm)'};`;
 	});
 </script>

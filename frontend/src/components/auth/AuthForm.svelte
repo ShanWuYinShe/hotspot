@@ -216,8 +216,8 @@
 						type="button"
 						aria-pressed={method === id}
 						onclick={() => (method = id)}
-						class="px-3 py-2 text-xs focus-ring transition-colors"
-						style="background:{method === id ? 'var(--cst-surface-primary)' : 'transparent'};color:{method === id ? 'var(--cst-text-primary)' : 'var(--cst-text-secondary)'};"
+						class="rounded-sm px-3 py-2 text-xs focus-ring transition-colors {method === id ? '' : 'hover:bg-interactive-hover'}"
+						style="{method === id ? 'background:var(--cst-surface-primary);color:var(--cst-text-primary)' : 'color:var(--cst-text-secondary)'}"
 					>
 						{label}
 					</button>
