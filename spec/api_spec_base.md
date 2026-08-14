@@ -134,10 +134,9 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 | `suggest` | 前缀联想 | search |
 | `presign_upload` / `complete_upload` | 媒体两段式上传（数组参数 1..N 天然覆盖单/批，无独立批量端点） | media |
 | `accept` / `reject` / `approve` / `cancel` / `revoke` | 工作流动词 | invites / applications / share |
-| `show_me_your_code` | 我的分享码列表（玩梗列表动词，见下方保护条款） | share |
 
 **无动词端点**（名词直接做端点，两类规则）：
-- **读取类名词化**（读单值/配置/当前对象，直接以名词命名）：`users/account`、`users/settings`、`auth/session`、`system/meta`、`system/client_config`、`notify/unread_count`、`rbac/me`、`groups/admin/settings`、`app_config`（裸域读取）
+- **读取类名词化**（读单值/配置/当前对象，直接以名词命名）：`users/account`、`users/settings`、`auth/session`、`system/meta`、`system/client_config`、`notify/unread_summary`、`rbac/me`、`groups/admin/settings`、`app_config`（裸域读取）
 - **惯例例外**：`system/health`（健康检查行业惯例）、`system/bootstrap`（冷启动聚合，协议级入口）、`map/canvas`（地图画布资源）、`feed/` 流槽位名（`following` / `trending` / `nearby_moments` / `nearby_users` / `nearby_groups`，业界通用命名，非动作）
 
 **动词审美规则（契约级，主观个案评估）**：动作词的观感以**整体字形与组合的协调感**为准，**不做机械的字母形状排除**——下伸部/上伸部字母本身不构成禁用理由（`presign` 即为无问题的反例，经评估保留原名）。已确认丑并废除的仅两类：`get_*` 前缀（全量名词化，改用「无动词端点」清单的名词化命名）与 `list_*` 前缀（全量更名 `fetch_*`）。新增动作词时按整体观感个案评估，存疑时向维护者确认（玩梗保护条款优先级更高）
@@ -160,7 +159,7 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 ### 禁用词表
 
 - 禁用 `notification`（统一 `notify`）；新增禁用词需维护者确认
-- **玩梗/彩蛋命名保护条款**：禁止以"不专业/不规范"为由修改规范中刻意为之的**无害**玩梗/彩蛋命名（如 `open_the_door`、`share/show_me_your_code`），存疑时应向维护者确认；但冒犯性或针对特定群体的内容不属于保护范围
+- **玩梗/彩蛋命名保护条款**：禁止以"不专业/不规范"为由修改规范中刻意为之的**无害**玩梗/彩蛋命名（如 `open_the_door`），存疑时应向维护者确认；但冒犯性或针对特定群体的内容不属于保护范围
 
 ---
 

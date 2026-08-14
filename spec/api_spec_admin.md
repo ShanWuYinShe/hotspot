@@ -30,7 +30,7 @@
 | 端点 | 说明 | 权限键 |
 |-----|------|------|
 | `POST /admin/v1/rbac/me` | 我的平台管理员权限 | 是平台管理员即可 |
-| `POST /admin/v1/rbac/fetch_permissions` | 权限字典 | admin.rbac.manage |
+| `POST /admin/v1/rbac/permissions/fetch` | 权限字典 | admin.rbac.manage |
 | `POST /admin/v1/rbac/roles/fetch` | 角色列表 | admin.rbac.manage |
 | `POST /admin/v1/rbac/roles/create` | 创建角色 | admin.rbac.manage |
 | `POST /admin/v1/rbac/roles/update` | 更新角色 | admin.rbac.manage |
@@ -105,16 +105,16 @@ interface AdminPermissions {
 
 ---
 
-### POST /admin/v1/rbac/fetch_permissions
+### POST /admin/v1/rbac/permissions/fetch
 
 获取权限字典。
 
 - **权限**: `admin.rbac.manage`
 - **排序**: 按 `key ASC` 作为确定性顺序（权限字典为有界数据，无分页）
 
-**Request**: `FetchAdminPermissionsRequest`
+**Request**: `FetchPermissionsRequest`
 ```typescript
-interface FetchAdminPermissionsRequest {}
+interface FetchPermissionsRequest {}
 ```
 
 **Response**: `ApiResponse<AdminPermissionDictionary>`
@@ -161,7 +161,7 @@ interface AdminRoleItem {
 }
 ```
 
-**说明**：RBAC 角色为系统配置数据，数量有限，无需分页；与 `fetch_permissions` 返回格式保持一致。
+**说明**：RBAC 角色为系统配置数据，数量有限，无需分页；与 `permissions/fetch` 返回格式保持一致。
 
 **错误码**: `10200`（not_admin / insufficient_admin_permission）
 
@@ -243,7 +243,7 @@ interface SetAdminRolePermissionsRequest {
 ```
 
 **说明**：
-- `permission_keys` 必须来自权限字典（`POST /admin/v1/rbac/fetch_permissions` 返回值）
+- `permission_keys` 必须来自权限字典（`POST /admin/v1/rbac/permissions/fetch` 返回值）
 - 仅 superadmin 可以设置 `'*'`（全量权限）；普通平台管理员设置 `'*'` 时返回 `10200`
 
 **Response**: `ApiResponse`

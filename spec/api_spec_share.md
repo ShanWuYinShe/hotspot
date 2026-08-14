@@ -24,7 +24,7 @@
 | 端点 | 说明 | 节点 |
 |-----|------|------|
 | `POST /api/v1/share/create` | 创建分享 | /api/v1 |
-| `POST /api/v1/share/show_me_your_code` | 我的分享列表（玩梗命名，见 `api_spec_base.md` 动词审美规则） | /api/v1 |
+| `POST /api/v1/share/fetch_created` | 我的分享列表（我创建的分享，与 `moments/fetch_created` 同构） | /api/v1 |
 | `POST /public/v1/share/open_the_door` | 分享码解析（见 `api_spec_public.md`） | /public/v1 |
 | `POST /api/v1/share/revoke` | 撤销分享 | /api/v1 |
 
@@ -88,16 +88,16 @@ interface ShareCreated {
 
 ---
 
-### POST /api/v1/share/show_me_your_code
+### POST /api/v1/share/fetch_created
 
 获取当前用户创建的分享列表。
 
 - **节点**: /api/v1
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `share_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
 
-**Request**: `ShowMeYourCodeRequest`
+**Request**: `FetchCreatedSharesRequest`
 ```typescript
-interface ShowMeYourCodeRequest {
+interface FetchCreatedSharesRequest {
   share_type: ShareType | null;   // 按类型筛选
   pagination: PaginationParams | null;
 }
@@ -127,7 +127,7 @@ interface ShareListItem {
 **Request**: `RevokeShareRequest`
 ```typescript
 interface RevokeShareRequest {
-  share_id: string | null;    // 分享 ID（来自 share/create 或 share/show_me_your_code）
+  share_id: string | null;    // 分享 ID（来自 share/create 或 share/fetch_created）
   share_code: string | null;  // 或分享码（创建者可能仅保留了复制出的链接码）
 }
 // 二选一：必须且只能传 share_id 或 share_code 其中之一；同时传或都不传请求失败（10000）

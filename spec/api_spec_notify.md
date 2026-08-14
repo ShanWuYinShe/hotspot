@@ -19,7 +19,7 @@
 | 端点 | 说明 | 节点 |
 |-----|------|------|
 | `POST /api/v1/notify/fetch` | 通知列表 | /api/v1 |
-| `POST /api/v1/notify/unread_count` | 未读通知数 | /api/v1 |
+| `POST /api/v1/notify/unread_summary` | 未读通知摘要 | /api/v1 |
 | `POST /api/v1/notify/mark_read` | 标记已读 | /api/v1 |
 
 ## 类型定义
@@ -55,7 +55,7 @@
 
 **客户端处理约定**：
 - **实时路径**：在线时收到 WS 事件 → 直接更新本地通知列表/未读角标（无需立即拉 HTTP）
-- **补拉路径**：冷启动或 WS 断线超阈值时，调用 `notify/fetch` + `notify/unread_count` 校准
+- **补拉路径**：冷启动或 WS 断线超阈值时，调用 `notify/fetch` + `notify/unread_summary` 校准
 - **WS 负载 ≠ 通知负载**：WS 事件字段以 `api_spec_websocket.md` 为准（含完整 content 等）；通知 `payload` 字段以本文件为准（含截断 preview）。两者结构不同，客户端不应混用
 
 ### 通知负载（按 type 区分的联合类型）
@@ -116,20 +116,20 @@ interface FetchNotifyRequest {
 
 ---
 
-### POST /api/v1/notify/unread_count
+### POST /api/v1/notify/unread_summary
 
-获取当前用户的未读通知数。冷启动/重连时调用，用于显示 badge 角标。
+获取当前用户的未读通知摘要（总数 + 按分类细分）。冷启动/重连时调用，用于显示 badge 角标。
 
 - **节点**: /api/v1
 
-**Request**: `UnreadCountRequest`
+**Request**: `UnreadSummaryRequest`
 ```typescript
-interface UnreadCountRequest {}
+interface UnreadSummaryRequest {}
 ```
 
-**Response**: `ApiResponse<UnreadCountResult>`
+**Response**: `ApiResponse<UnreadSummaryResult>`
 ```typescript
-interface UnreadCountResult {
+interface UnreadSummaryResult {
   total: number;               // 总未读通知数
   by_type: Record<NotifyCategory, number>;  // 按类型分类的未读数；NotifyCategory 与映射见 api_spec_types.md
 }

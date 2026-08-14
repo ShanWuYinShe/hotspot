@@ -254,12 +254,12 @@
 | 113 | `/api/v1/media/presign_upload` | — | — | 限流 | — |
 | 114 | `/api/v1/media/complete_upload` | owner(upload_id) | not_resource_owner | 10300/10400 | 自然去重 |
 | 115 | `/api/v1/share/create` | 目标可见 | — | 10300 | 幂等 |
-| 116 | `/api/v1/share/show_me_your_code` | self | — | — | — |
+| 116 | `/api/v1/share/fetch_created` | self | — | — | — |
 | 117 | `/api/v1/share/revoke` | owner | — | 10300(隐私一致性) | no-op |
 | 118 | `/api/v1/reports/create` | 目标存在+非自举报 | — | 10300/10400 | 自然去重 |
 | 119 | `/api/v1/reports/fetch` | self | — | — | — |
 | 120 | `/api/v1/notify/fetch` | self | — | — | — |
-| 121 | `/api/v1/notify/unread_count` | self | — | — | — |
+| 121 | `/api/v1/notify/unread_summary` | self | — | — | — |
 | 122 | `/api/v1/notify/mark_read` | self(scope 显式) | — | — | — |
 | 123 | `/api/v1/system/bootstrap` | self（登录态聚合） | — | — | If-None-Match |
 
@@ -293,7 +293,7 @@
 | # | 端点 | 守卫 | 10200 reason | 特有失败 | 幂等/no-op |
 |---|------|------|--------------|----------|------------|
 | 144 | `/admin/v1/rbac/me` | 平台管理员 | not_admin | — | — |
-| 145 | `/admin/v1/rbac/fetch_permissions` | admin.rbac.manage | not_admin/insufficient_admin_permission | — | — |
+| 145 | `/admin/v1/rbac/permissions/fetch` | admin.rbac.manage | not_admin/insufficient_admin_permission | — | — |
 | 146 | `/admin/v1/rbac/roles/fetch` | admin.rbac.manage | not_admin/insufficient_admin_permission | — | — |
 | 147 | `/admin/v1/rbac/roles/create` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10400 重名 | — |
 | 148 | `/admin/v1/rbac/roles/update` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300/10400 | — |

@@ -25,7 +25,7 @@
 
 ### POST /api/v1/system/bootstrap
 
-登录态冷启动聚合端点。一次请求拉齐客户端冷启动所需的全部基础数据，替代分别调用 `/public/v1/system/meta` + `/public/v1/system/client_config` + `users/account` + `notify/unread_count` 的多次往返。
+登录态冷启动聚合端点。一次请求拉齐客户端冷启动所需的全部基础数据，替代分别调用 `/public/v1/system/meta` + `/public/v1/system/client_config` + `users/account` + `notify/unread_summary` 的多次往返。
 
 - **节点**: /api/v1（双版本端点：匿名版 `/public/v1/system/bootstrap` 见 `api_spec_public.md`；必须有效 Token）
 
@@ -55,10 +55,10 @@ interface BootstrapData {
 }
 
 // 未读摘要（聚合各域未读，冷启动时一次性渲染角标）
-// 通知部分的字段与 notify/unread_count 的 UnreadCountResult 对齐
+// 通知部分的字段与 notify/unread_summary 的 UnreadSummaryResult 对齐（定义见 api_spec_notify.md）
 interface UnreadSummary {
-  notify_total: number;               // 通知未读总数（同 notify/unread_count.total）
-  notify_by_type: Record<NotifyCategory, number>;  // 按分类的未读数（同 notify/unread_count.by_type）
+  notify_total: number;               // 通知未读总数（同 notify/unread_summary.total）
+  notify_by_type: Record<NotifyCategory, number>;  // 按分类的未读数（同 notify/unread_summary.by_type）
   private_chat_unread_count: number;  // 私聊会话未读消息总数
   group_chat_unread_count: number;    // 群聊会话未读消息总数
   total_badge: number;                // 综合角标数 = notify_total + private_chat_unread_count + group_chat_unread_count
