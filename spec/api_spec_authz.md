@@ -36,7 +36,7 @@
 |------|------|----------|
 | `resource.owner` | 调用者是目标资源的作者/本人 | moments/update、comments/delete、private_messages/update、share/revoke、media/complete_upload |
 | `chat.participant` | 调用者是私聊会话的双方之一 | private_chats/*、private_messages/* |
-| `group.member` | 调用者是目标群的成员 | group_messages/send、list、mark_read、groups/update_preferences、groups/exit |
+| `group.member` | 调用者是目标群的成员 | group_messages/send、fetch、mark_read、groups/update_preferences、groups/exit |
 | `self` | 操作对象即当前用户本人 | users/account 系列、auth/fetch_sessions 系列、notify/*、各天生私有列表 |
 
 资源约束判定所需的角色/关系数据由引擎惰性解析；业务 service 不再自行判断角色。

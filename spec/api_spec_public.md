@@ -678,7 +678,7 @@ interface PublicBatchFetchUsersRequest {
 
 ### POST /public/v1/moments/search
 
-统一搜索生活瞬间（关键字/标签）。**不承担附近发现职责**——按位置发现瞬间的入口为 `/api/v1/feed/nearby_moments`（登录）与本节点 `feed/nearby_moments`（匿名）。
+统一搜索生活瞬间（关键字/标签）。**不承担附近发现职责**——按位置发现瞬间（`feed/nearby_moments`）仅登录用户可用（见 `api_spec_discovery.md`），匿名节点不提供附近瞬间发现。
 
 - **排序**:
   - `sort_by='relevance'`（默认）：按相关性优先；同分时按 `created_at` 倒序，再以 `moment_id DESC` 作为稳定 tie-breaker
