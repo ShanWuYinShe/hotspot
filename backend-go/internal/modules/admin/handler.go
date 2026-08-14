@@ -210,24 +210,6 @@ func (h *Handler) ListAuditLogs(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
 }
 
-func (h *Handler) OpenAuditLog(w http.ResponseWriter, r *http.Request) {
-	var req AuditLogOpenTheDoorRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
-		return
-	}
-	payload, apiErr, err := h.service.GetAuditLog(r.Context(), req.LogID)
-	if err != nil {
-		h.writeUnavailable(w, r)
-		return
-	}
-	if apiErr != nil {
-		h.writeAPIError(w, r, apiErr)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
-}
-
 func (h *Handler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 	var req AdminUserSearchRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
@@ -443,13 +425,13 @@ func (h *Handler) DeleteTag(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
-func (h *Handler) SearchAnnouncements(w http.ResponseWriter, r *http.Request) {
-	var req AdminAnnouncementSearchRequest
+func (h *Handler) ListAdminAnnouncements(w http.ResponseWriter, r *http.Request) {
+	var req ListAdminAnnouncementsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	payload, apiErr, err := h.service.SearchAnnouncements(r.Context(), req)
+	payload, apiErr, err := h.service.ListAdminAnnouncements(r.Context(), req)
 	if err != nil {
 		h.writeUnavailable(w, r)
 		return
@@ -524,6 +506,10 @@ func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) writeAPIError(w http.ResponseWriter, r *http.Request, err *httpx.APIError) {
 	observability.L().Warn("handler business error", "method", handlerMethodName(r), "code", err.Code, "message", err.Message, "request_id", observability.RequestIDFromContext(r.Context()))
+	if err.Data != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.ErrorWithData(err.Code, err.Message, err.Data))
+		return
+	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 }
 

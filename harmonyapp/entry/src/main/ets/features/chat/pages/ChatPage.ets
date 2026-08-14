@@ -9,7 +9,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { formatDateLabel } from '../../../core/utils/FormatUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MessageSyncManager } from '../../../core/state/MessageSyncManager';
-import { MyProfile, MessageType, PrivateMessageItem, GroupMessageItem, SendPrivateMessageRequest, SendGroupMessageRequest, GetPrivateMessagesHistoryRequest, GetGroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest, UserOpenTheDoorRequest, CreateReportRequest, MediaCategory } from '../../../core/types/api';
+import { AccountInfo, MessageType, PrivateMessageItem, GroupMessageItem, SendPrivateMessageRequest, SendGroupMessageRequest, GetPrivateMessagesHistoryRequest, GetGroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest, UserOpenTheDoorRequest, CreateReportRequest, MediaCategory } from '../../../core/types/api';
 import type {
   ServerEvent,
   PrivateMessageNewEvent,
@@ -83,7 +83,7 @@ interface ChatParams {
 @Component
 export struct ChatPage {
   pathStack: NavPathStack = new NavPathStack();
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
@@ -856,13 +856,13 @@ export struct ChatPage {
     } catch (error) {
       this.lastSendSignature = '';
       this.lastSendAtMs = 0;
-      // 契约 chat.md：send 返回 10200 时 data = { reason: BlockReason }
+      // 契约 errors.md：send 返回 10200 时 data = { forbidden_reason: ForbiddenReason }（blocked_by_user/privacy_setting/stranger_quota_exceeded）
       const errRecord = error as Object as Record<string, Object>;
-      const reason = typeof errRecord.reason === 'string' ? errRecord.reason : '';
+      const reason = typeof errRecord.forbidden_reason === 'string' ? errRecord.forbidden_reason : '';
       let failMessage = '发送失败';
-      if (reason === 'blocked') {
+      if (reason === 'blocked_by_user') {
         failMessage = '你已被对方拉黑';
-      } else if (reason === 'privacy') {
+      } else if (reason === 'privacy_setting') {
         failMessage = '对方隐私设置不允许发送消息';
       } else if (reason === 'stranger_quota_exceeded') {
         failMessage = '今日陌生人消息额度已用完';

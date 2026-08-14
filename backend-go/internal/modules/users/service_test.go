@@ -104,6 +104,9 @@ func (r *stubUserRepo) Unblock(_ context.Context, _, _ string) error  { return r
 func (r *stubUserRepo) SetRemark(_ context.Context, _, _, _ string) error {
 	return r.setRemarkErr
 }
+func (r *stubUserRepo) CheckBlockedTags(_ context.Context, _ []string) ([]string, error) {
+	return nil, nil
+}
 func (r *stubUserRepo) ListBlocked(_ context.Context, _ string, _ int, _ string) (PaginatedBlockedUsers, error) {
 	return r.blockedResult, r.blockedErr
 }
@@ -379,8 +382,8 @@ func TestServiceDeleteAccountAnonymizesContentAuthor(t *testing.T) {
 func TestServiceDeleteAccountRejectsWrongConfirmation(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{})
 	err := svc.DeleteAccount(userCtx("u1"), DeleteAccountRequest{Confirmation: "WRONG"})
-	if !errors.Is(err, ErrConflict) {
-		t.Fatalf("expected conflict, got %v", err)
+	if !errors.Is(err, ErrInvalidRequest) {
+		t.Fatalf("expected invalid request, got %v", err)
 	}
 }
 
@@ -486,11 +489,11 @@ func TestServiceSearchRejectsInvalidCursor(t *testing.T) {
 
 // --- ListFriends ---
 
-func TestServiceListFriendsRequiresAuth(t *testing.T) {
+func TestServiceListFriendsRequiresUserID(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{})
 	_, err := svc.ListFriends(context.Background(), ListFriendsRequest{})
-	if !errors.Is(err, ErrUnauthorized) {
-		t.Fatalf("expected unauthorized, got %v", err)
+	if !errors.Is(err, ErrInvalidRequest) {
+		t.Fatalf("expected invalid request (user_id required), got %v", err)
 	}
 }
 

@@ -9,7 +9,7 @@ import { common } from '@kit.AbilityKit';
 import { ApiClient } from '../api/ApiClient';
 import { GlobalStateManager } from '../state/GlobalStateManager';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
-import { MyProfile, UserMomentsRequest, MyGroupsRequest } from '../types/api';
+import { AccountInfo, UserMomentsRequest, ListJoinedGroupsRequest } from '../types/api';
 import { AuthAccountManager } from '../state/AuthAccountManager';
 
 export interface SyncData {
@@ -270,7 +270,7 @@ export class DistributedSyncService {
    */
   private async updateLocalUserProfile(syncData: SyncData): Promise<void> {
     try {
-      const remoteUser = syncData.data as MyProfile;
+      const remoteUser = syncData.data as AccountInfo;
       const currentUser = GlobalStateManager.getInstance().getCurrentUser();
       const currentUserId = await AuthAccountManager.getCurrentUserId();
       
@@ -365,7 +365,7 @@ export class DistributedSyncService {
    */
   private async fetchUserGroups(userId: string): Promise<Object[]> {
     try {
-      const params: MyGroupsRequest = {
+      const params: ListJoinedGroupsRequest = {
         pagination: { limit: 50 }
       };
       const response = await ApiClient.getJoinedGroups(params);

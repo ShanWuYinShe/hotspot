@@ -82,7 +82,7 @@ func (s *Service) InviteMember(ctx context.Context, req InviteMemberRequest) (In
 		}
 		return Invitation{}, ErrGroupNotFound
 	}
-	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
 		return Invitation{}, ErrAccessRestricted
 	}
 	// TTL（spec types.md group_invite_ttl_hours）：0 = 永不过期（expires_at 省略）
@@ -113,7 +113,7 @@ func (s *Service) ListSentInvites(ctx context.Context, req GroupSentInvitesReque
 		}
 		return nil, "", ErrGroupNotFound
 	}
-	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
 		return nil, "", ErrAccessRestricted
 	}
 	limit := types.PaginationLimitWith(req.Pagination, 20, 100)
@@ -128,7 +128,7 @@ func (s *Service) RevokeInvite(ctx context.Context, req RevokeSentInviteRequest)
 		}
 		return ErrGroupNotFound
 	}
-	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
 		return ErrAccessRestricted
 	}
 	// Locate the invite to address the notification/event to the invitee.

@@ -100,10 +100,10 @@ func TestPostgresRepositoryPaginatesUsersWithOpaqueCursor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListNearbyUsers returned error: %v", err)
 	}
-	if len(first.Items) != 2 || first.Items[0].User.UserID != "u3" || first.Items[1].User.UserID != "u2" || first.NextCursor == "" {
+	if len(first.Items) != 2 || first.Items[0].User.UserID != "u3" || first.Items[1].User.UserID != "u2" || first.NextCursor == nil {
 		t.Fatalf("expected next cursor, got %#v", first)
 	}
-	second, err := repo.ListNearbyUsers(context.Background(), usersQuery{ViewerUserID: "viewer", ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112}, Radius: 2000, Limit: 2, Cursor: first.NextCursor})
+	second, err := repo.ListNearbyUsers(context.Background(), usersQuery{ViewerUserID: "viewer", ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112}, Radius: 2000, Limit: 2, Cursor: *first.NextCursor})
 	if err != nil {
 		t.Fatalf("ListNearbyUsers second page error: %v", err)
 	}
@@ -126,8 +126,9 @@ func TestPostgresRepositoryFiltersGroupsByRadiusAndSorts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListNearbyGroups returned error: %v", err)
 	}
-	if len(resp.Items) != 2 || resp.Items[0].Group.GroupID != "g2" || resp.Items[1].Group.GroupID != "g1" {
-		t.Fatalf("expected near groups sorted by group_id desc on tie, got %#v", resp)
+	// spec api_spec_discovery.md：距离并列时 tie-breaker 为 group_id ASC
+	if len(resp.Items) != 2 || resp.Items[0].Group.GroupID != "g1" || resp.Items[1].Group.GroupID != "g2" {
+		t.Fatalf("expected near groups sorted by group_id asc on tie, got %#v", resp)
 	}
 }
 
@@ -146,10 +147,10 @@ func TestPostgresRepositoryLoadsFollowingMomentsOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListFollowingMoments returned error: %v", err)
 	}
-	if len(resp.Items) != 2 || resp.Items[0].MomentID != "m3" || resp.Items[1].MomentID != "m2" || resp.Items[0].Recommendation == nil || *resp.Items[0].Recommendation != "following" || resp.NextCursor == "" {
+	if len(resp.Items) != 2 || resp.Items[0].MomentID != "m3" || resp.Items[1].MomentID != "m2" || resp.Items[0].Recommendation == nil || *resp.Items[0].Recommendation != "following" || resp.NextCursor == nil {
 		t.Fatalf("unexpected following moments: %#v", resp)
 	}
-	second, err := repo.ListFollowingMoments(context.Background(), momentsQuery{ViewerUserID: "viewer", ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112}, Limit: 2, Cursor: resp.NextCursor})
+	second, err := repo.ListFollowingMoments(context.Background(), momentsQuery{ViewerUserID: "viewer", ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112}, Limit: 2, Cursor: *resp.NextCursor})
 	if err != nil {
 		t.Fatalf("ListFollowingMoments second page error: %v", err)
 	}
@@ -193,10 +194,10 @@ func TestPostgresRepositoryNearbyMomentsUsesStableCursorPagination(t *testing.T)
 	if err != nil {
 		t.Fatalf("ListNearbyMoments returned error: %v", err)
 	}
-	if len(first.Items) != 2 || first.NextCursor == "" {
+	if len(first.Items) != 2 || first.NextCursor == nil {
 		t.Fatalf("expected first page with cursor, got %#v", first)
 	}
-	second, err := repo.ListNearbyMoments(context.Background(), momentsQuery{ViewerUserID: "viewer", ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112}, Radius: 5000, Limit: 2, Cursor: first.NextCursor})
+	second, err := repo.ListNearbyMoments(context.Background(), momentsQuery{ViewerUserID: "viewer", ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112}, Radius: 5000, Limit: 2, Cursor: *first.NextCursor})
 	if err != nil {
 		t.Fatalf("ListNearbyMoments second page error: %v", err)
 	}

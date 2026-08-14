@@ -13,7 +13,9 @@ import (
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/geo"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/rbac"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
@@ -22,6 +24,47 @@ const (
 	// MaxMuteDurationMinutes is the maximum duration for muting a group member (30 days)
 	MaxMuteDurationMinutes = 43200
 )
+
+// ownerIDValue dereferences a group's owner_id pointer (nil → "").
+func ownerIDValue(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
+}
+
+// isGroupOwner reports whether userID is the group owner (nil owner → false).
+func isGroupOwner(owner *string, userID string) bool {
+	return owner != nil && *owner == userID
+}
+
+// groupBlockedTagChecker 校验标签是否被平台屏蔽。由 bootstrap 注入 admin 实现；
+// nil（未注入）时跳过校验（fail-open），避免创建群组被误拦。
+type groupBlockedTagChecker interface {
+	IsBlocked(tag string) bool
+}
+
+// blockedTagChecker 是包级注入点（bootstrap 通过 SetBlockedTagChecker 接入 admin 实现）。
+// C.4：create 的 tags 含被屏蔽标签 → 10400。nil 时跳过校验。
+var blockedTagChecker groupBlockedTagChecker
+
+// SetBlockedTagChecker 注入被屏蔽标签检查器（bootstrap 接线）。
+func SetBlockedTagChecker(checker groupBlockedTagChecker) {
+	blockedTagChecker = checker
+}
+
+// serviceGroupRoleResolver 解析调用者在目标群的角色（守卫子树用）。由 bootstrap 注入
+// groups 的 Service.RoleOf 实现。
+var serviceGroupRoleResolver rbac.GroupRoleResolver
+
+// SetGroupRoleResolver 注入群角色解析器（bootstrap 接线，守卫 fail-closed）。
+func SetGroupRoleResolver(resolver rbac.GroupRoleResolver) {
+	serviceGroupRoleResolver = resolver
+}
+
+// RecallMessageAsAdmin 由 bootstrap 注入 groupmessages 实现。未注入时 groups 返回 10600
+// （管理员撤回任意成员消息仅经群守卫子树暴露，见 C.8）。
+var RecallMessageAsAdmin func(ctx context.Context, groupID, messageID, operatorID string) error
 
 type Service struct {
 	repo          Repository
@@ -57,7 +100,7 @@ type groupNotificationWriter interface {
 	AppendGroupInviteReceived(ctx context.Context, targetUserID string, actor types.UserInfo, groupID string, groupName string, inviteID string, message *string) (string, error)
 	AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant types.UserInfo, groupID string, groupName string, applicationID string, message *string) (string, error)
 	AppendGroupApplicationAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string) (string, error)
-	AppendGroupApplicationRejected(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, rejectedBy types.UserInfo, reason *string) (string, error)
+	AppendGroupApplicationRejected(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, reason *string) (string, error)
 }
 
 func NewService() *Service {
@@ -84,6 +127,15 @@ func (s *Service) Create(ctx context.Context, req CreateGroupRequest) (GroupItem
 	startedAt := time.Now()
 	observability.L().Info("groups.create started")
 	principal, _ := platformauth.PrincipalFromContext(ctx)
+	// C.4：tags 含被屏蔽标签 → 10400（经注入的 BlockedTagChecker；未注入时跳过）
+	if blockedTagChecker != nil {
+		for _, tag := range req.Tags {
+			if blockedTagChecker.IsBlocked(tag) {
+				observability.L().Warn("groups.create blocked tag", "tag", tag)
+				return GroupItem{}, ErrBusinessConflict
+			}
+		}
+	}
 	item, err := s.repo.Create(ctx, principal.UserID, req)
 	if err != nil {
 		observability.L().Error("groups.create failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -108,29 +160,22 @@ func (s *Service) OpenTheDoor(ctx context.Context, groupID string) (GroupItem, b
 }
 
 // redactGroupFields enforces the spec's field-visibility rules (api_spec_types.md
-// GroupItem) based on the viewer's membership/role carried in MyState:
-//   - has_password is @member-only — hidden from non-members (don't tip off
-//     crawlers/brute-forcers about which groups have passwords)
-//   - join_method / requires_approval are @all — visible to everyone (users must
-//     know how to join before attempting to)
-//   - is_searchable / max_members are @group-admin-only
-//   - owner_id is detail-page-only (kept here; search/list redact it separately)
+// GroupItem) based on the viewer's membership/role carried in ViewerState.
+// The admin-management fields (has_password/is_searchable/members_searchable/
+// max_members) are no longer serialized on GroupItem (they live in GroupSettings,
+// groups/admin/get_settings), so no JSON-level redaction is required for them
+// here; the viewer's member state is carried by a nil-vs-set ViewerState.
 //
 // Call this at every serialization boundary.
 func redactGroupFields(item *GroupItem) {
 	if item == nil {
 		return
 	}
-	isMember := item.MyState != nil && item.MyState.IsJoined
-	if !isMember {
-		item.HasPassword = false
-	}
-	isAdmin := item.MyState != nil && (item.MyState.Role == GroupRoleOwner || item.MyState.Role == GroupRoleAdmin)
-	if !isAdmin {
-		item.IsSearchable = false
-		item.MaxMembers = 0
-	}
+	// OwnerID is detail-page-only: search/list clear it to null separately.
+	// The admin-management fields need no redaction because they are not
+	// serialized on GroupItem (json:"-").
 }
+
 
 func (s *Service) Search(ctx context.Context, req SearchGroupsRequest) (PaginatedGroups, error) {
 	startedAt := time.Now()
@@ -152,7 +197,7 @@ func (s *Service) Search(ctx context.Context, req SearchGroupsRequest) (Paginate
 		result.Items[i].Location.BearingDegrees = &bearing
 		// Search/list context: owner_id is detail-page-only per spec, and
 		// member/admin fields are redacted per viewer membership/role.
-		result.Items[i].OwnerID = ""
+		result.Items[i].OwnerID = nil
 		redactGroupFields(&result.Items[i])
 	}
 	observability.L().Info("groups.search completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -190,9 +235,10 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) (GroupItem
 		observability.L().Warn("groups.update not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return GroupItem{}, ErrGroupNotFound
 	}
-	if group.MyState == nil || group.MyState.Role != GroupRoleOwner {
+	// C.1：update 权限从 owner-only 改为 owner/admin（守卫中间件已拦非 admin；此处防御性再判）
+	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
 		observability.L().Warn("groups.update permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return GroupItem{}, ErrAccessRestricted
+		return GroupItem{}, httpx.Forbidden(httpx.ReasonNotGroupAdmin, "非群管理员")
 	}
 	if err := s.repo.Update(ctx, principal.UserID, req); err != nil {
 		observability.L().Error("groups.update failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -250,9 +296,6 @@ func buildGroupUpdatedFields(before, after GroupItem, req UpdateGroupRequest) ma
 	if !equalStringPtr(after.NextActivity, before.NextActivity) {
 		fields["next_activity"] = derefStringPtr(after.NextActivity)
 	}
-	if after.HasPassword != before.HasPassword {
-		fields["has_password"] = after.HasPassword
-	}
 	if req.Location != nil {
 		fields["location"] = after.Location
 	}
@@ -279,7 +322,7 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 		observability.L().Warn("groups.dismiss not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return ErrGroupNotFound
 	}
-	if group.MyState == nil || group.MyState.Role != GroupRoleOwner {
+	if group.ViewerState == nil || group.ViewerState.Role != GroupRoleOwner {
 		observability.L().Warn("groups.dismiss permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return ErrAccessRestricted
 	}
@@ -309,7 +352,7 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 func (s *Service) ListMembers(ctx context.Context, req GroupMembersRequest) ([]GroupMemberItem, string, error) {
 	startedAt := time.Now()
 	observability.L().Info("groups.list_members started", "group_id", req.GroupID)
-	_, ok, err := s.repo.Get(ctx, req.GroupID)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
 		observability.L().Error("groups.list_members failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return nil, "", err
@@ -317,6 +360,19 @@ func (s *Service) ListMembers(ctx context.Context, req GroupMembersRequest) ([]G
 	if !ok {
 		observability.L().Warn("groups.list_members not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return nil, "", ErrGroupNotFound
+	}
+	// C.2：调用者非成员且群 members_searchable=false → 10200+not_group_member（httpx.Forbidden）
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	isMember := principal.UserID != ""
+	if isMember {
+		isMember, err = s.repo.IsMember(ctx, req.GroupID, principal.UserID)
+		if err != nil {
+			return nil, "", err
+		}
+	}
+	if !isMember && !group.MembersSearchable {
+		observability.L().Warn("groups.list_members not eligible", "group_id", req.GroupID, "user_id", principal.UserID)
+		return nil, "", httpx.Forbidden(httpx.ReasonNotGroupMember, "非群成员")
 	}
 	limit := types.PaginationLimitWith(req.Pagination, 20, 100)
 	items, cursor, err := s.repo.ListMembers(ctx, req.GroupID, req.Role, limit, types.PaginationCursor(req.Pagination))
@@ -353,7 +409,7 @@ func (s *Service) SearchMembers(ctx context.Context, req SearchGroupMembersReque
 	}
 	if !isMember && !group.MembersSearchable {
 		observability.L().Warn("groups.search_members not eligible", "group_id", req.GroupID, "user_id", principal.UserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return nil, "", ErrNotMember
+		return nil, "", httpx.Forbidden(httpx.ReasonNotGroupMember, "非群成员")
 	}
 	limit := types.PaginationLimitWith(req.Pagination, 20, 100)
 	items, cursor, err := s.repo.SearchMembers(ctx, req.GroupID, req.Keyword, req.Role, limit, types.PaginationCursor(req.Pagination))
@@ -392,12 +448,19 @@ func (s *Service) JoinGroup(ctx context.Context, req JoinGroupRequest) (JoinGrou
 		observability.L().Warn("groups.join_group not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return JoinGroupResult{}, ErrGroupNotFound
 	}
-	if group.MyState != nil && group.MyState.IsJoined {
+	if group.ViewerState != nil {
 		observability.L().Info("groups.join_group already joined", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
 	}
+	// C.3：被封禁用户无法加入群，返回 10200+banned_in_group（httpx.Forbidden）
+	if banned, err := s.repo.IsBanned(ctx, req.GroupID, principal.UserID); err != nil {
+		return JoinGroupResult{}, err
+	} else if banned {
+		observability.L().Warn("groups.join_group banned", "group_id", req.GroupID, "user_id", principal.UserID)
+		return JoinGroupResult{}, httpx.Forbidden(httpx.ReasonBannedInGroup, "已被群封禁，无法加入")
+	}
 	// spec group.md → join 收口：invite_only 群不支持 join（加入唯一入口为
-	// groups/invites/received/accept），一律返回 10400。
+	// groups/invites/accept），一律返回 10400。
 	if group.JoinMethod == GroupJoinMethodInviteOnly {
 		observability.L().Warn("groups.join_group invite_only not supported", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return JoinGroupResult{}, ErrBusinessConflict
@@ -441,7 +504,7 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateGroupAnnounc
 		observability.L().Warn("groups.create_announcement not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return GroupAnnouncementItem{}, ErrGroupNotFound
 	}
-	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
 		observability.L().Warn("groups.create_announcement permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return GroupAnnouncementItem{}, ErrAccessRestricted
 	}
@@ -484,7 +547,7 @@ func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateGroupAnnounc
 	if !ok {
 		return GroupAnnouncementItem{}, ErrGroupNotFound
 	}
-	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
 		return GroupAnnouncementItem{}, ErrAccessRestricted
 	}
 	if err := s.repo.UpdateAnnouncement(ctx, req.GroupID, req); err != nil {
@@ -511,7 +574,7 @@ func (s *Service) DeleteAnnouncement(ctx context.Context, req DeleteGroupAnnounc
 	if !ok {
 		return ErrGroupNotFound
 	}
-	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
 		return ErrAccessRestricted
 	}
 	return s.repo.DeleteAnnouncement(ctx, req.GroupID, req.AnnouncementID)
@@ -526,7 +589,7 @@ func (s *Service) UpdatePreferences(ctx context.Context, req UpdateGroupPreferen
 	if !ok {
 		return ErrGroupNotFound
 	}
-	if group.MyState == nil || !group.MyState.IsJoined {
+	if group.ViewerState == nil {
 		return ErrNotMember
 	}
 	return s.repo.UpdatePreferences(ctx, principal.UserID, req)
@@ -541,10 +604,10 @@ func (s *Service) LeaveGroup(ctx context.Context, req LeaveGroupRequest) error {
 	if !ok {
 		return ErrGroupNotFound
 	}
-	if group.MyState == nil || !group.MyState.IsJoined {
+	if group.ViewerState == nil {
 		return ErrNotMember
 	}
-	if group.MyState.Role == GroupRoleOwner {
+	if group.ViewerState.Role == GroupRoleOwner {
 		return ErrAccessRestricted
 	}
 	if err := s.repo.LeaveGroup(ctx, principal.UserID, req.GroupID); err != nil {
@@ -656,11 +719,11 @@ func (s *Service) notifyGroupApplicationExpired(ctx context.Context, group Group
 
 // notifyGroupApplicationRejected persists a group_application_rejected
 // notification and pushes GroupApplicationRejected to the applicant.
-func (s *Service) notifyGroupApplicationRejected(ctx context.Context, group GroupItem, application GroupApplicationItem, rejectedByUserID string, reason *string) {
-	rejectedBy := s.resolveUserInfo(ctx, rejectedByUserID)
+// F7: 不暴露审批者身份（与 accepted 对称），事件与通知不含 rejected_by。
+func (s *Service) notifyGroupApplicationRejected(ctx context.Context, group GroupItem, application GroupApplicationItem, reason *string) {
 	notificationID := ""
 	if s.notifications != nil {
-		id, err := s.notifications.AppendGroupApplicationRejected(ctx, application.Applicant.UserID, group.Group.GroupID, group.Group.Name, application.ApplicationID, rejectedBy, reason)
+		id, err := s.notifications.AppendGroupApplicationRejected(ctx, application.Applicant.UserID, group.Group.GroupID, group.Group.Name, application.ApplicationID, reason)
 		if err != nil {
 			observability.L().Error("groups.notify_group_application_rejected append failed", "error", err, "application_id", application.ApplicationID)
 		} else {
@@ -676,7 +739,6 @@ func (s *Service) notifyGroupApplicationRejected(ctx context.Context, group Grou
 			"avatar_url":    group.Group.AvatarURL,
 			"members_count": group.Group.MembersCount,
 		},
-		"rejected_by": rejectedBy,
 		"rejected_at": time.Now().UTC().Format(time.RFC3339),
 	}
 	if reason != nil && *reason != "" {

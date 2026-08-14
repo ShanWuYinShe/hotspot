@@ -21,7 +21,7 @@ type reportErrorRepo struct {
 func (r *reportErrorRepo) Create(context.Context, string, CreateReportRequest) (ReportCreated, error) {
 	return ReportCreated{}, r.createErr
 }
-func (r *reportErrorRepo) List(context.Context, string, MyReportsRequest) (PaginatedReports, error) {
+func (r *reportErrorRepo) List(context.Context, string, ListReportsRequest) (PaginatedReports, error) {
 	return PaginatedReports{}, r.listErr
 }
 func (r *reportErrorRepo) FindExistingReport(context.Context, string, ReportTargetType, string) (string, bool, error) {
@@ -45,7 +45,7 @@ func TestCreateAndListReports(t *testing.T) {
 	createReq2 = createReq2.WithContext(ctx)
 	handler.Create(createRR2, createReq2)
 
-	listReq := httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{"target_type":"moment"}`))
+	listReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"target_type":"moment"}`))
 	listReq = listReq.WithContext(ctx)
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)
@@ -82,7 +82,7 @@ func TestReportsHandlerReturns10600OnServiceError(t *testing.T) {
 	handler.Create(createRR, createReq)
 	assertReportCode(t, createRR, httpx.CodeInternalUnavailable)
 
-	listReq := httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{}`))
+	listReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{}`))
 	listReq = listReq.WithContext(ctx)
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)
@@ -150,7 +150,7 @@ func TestReportsMeListFiltersByStatus(t *testing.T) {
 	}
 	repo.mu.Unlock()
 
-	listReq := httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{"status":"pending"}`))
+	listReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"status":"pending"}`))
 	listReq = listReq.WithContext(ctx)
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)

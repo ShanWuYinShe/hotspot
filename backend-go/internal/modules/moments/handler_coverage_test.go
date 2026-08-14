@@ -106,9 +106,9 @@ func TestMomentHandlerErrorPaths(t *testing.T) {
 
 	// ListMine：服务错误 → httpx.CodeInternalUnavailable
 	handler3 := NewHandler(NewServiceWithRepo(&momentErrRepo{repo: NewInMemoryRepository(), err: errors.New("boom")}))
-	req = httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{}`))
+	req = httptest.NewRequest(http.MethodPost, "/list_created", strings.NewReader(`{}`))
 	rr = httptest.NewRecorder()
-	handler3.ListMine(rr, req)
+	handler3.ListCreated(rr, req)
 	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInternalUnavailable {
 		t.Fatalf("list error: expected httpx.CodeInternalUnavailable, got %d", code)
 	}

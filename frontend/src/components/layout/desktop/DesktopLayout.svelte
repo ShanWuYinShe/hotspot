@@ -184,7 +184,7 @@
 				class="header-action"
 			/>
 
-			<ActionIconButton icon={Bell} label="通知" onClick={() => guardNav('查看通知', ROUTES.notifications)} variant="ghost" size={36} class="header-action" />
+			<ActionIconButton icon={Bell} label="通知" onClick={() => guardNav('查看通知', ROUTES.notify)} variant="ghost" size={36} class="header-action" />
 
 			<AppearanceMenu />
 

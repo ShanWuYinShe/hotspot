@@ -8,7 +8,7 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
-func (r *PostgresRepository) List(ctx context.Context, userID string, req NotificationListRequest) (PaginatedNotify, error) {
+func (r *PostgresRepository) List(ctx context.Context, userID string, req NotifyListRequest) (PaginatedNotify, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return PaginatedNotify{}, persistence.ErrNotImplemented
 	}
@@ -16,17 +16,17 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req Notifi
 	if !ok {
 		return PaginatedNotify{}, persistence.ErrNotImplemented
 	}
-	query, err := normalizeNotificationListQuery(req)
+	query, err := normalizeNotifyListQuery(req)
 	if err != nil {
 		return PaginatedNotify{}, err
 	}
 	var cursorCreatedAt any
-	cursorNotificationID := ""
+	cursorNotifyID := ""
 	if query.Cursor != nil {
 		cursorCreatedAt = query.Cursor.CreatedAt
-		cursorNotificationID = query.Cursor.NotifyID
+		cursorNotifyID = query.Cursor.NotifyID
 	}
-	rows, err := queryable.Query(ctx, queryListNotifications, userID, query.Type, query.IsRead, cursorCreatedAt, cursorNotificationID, query.Limit+1)
+	rows, err := queryable.Query(ctx, queryListNotifys, userID, query.Type, query.IsRead, cursorCreatedAt, cursorNotifyID, query.Limit+1)
 	if err != nil {
 		return PaginatedNotify{}, err
 	}
@@ -51,7 +51,7 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req Notifi
 	page := PaginatedNotify{}
 	if len(items) > query.Limit {
 		last := items[query.Limit-1]
-		page.NextCursor = encodeNotificationCursor(notificationCursor{CreatedAt: last.CreatedAt, NotifyID: last.NotifyID})
+		page.NextCursor = encodeNotifyCursor(notifyCursor{CreatedAt: last.CreatedAt, NotifyID: last.NotifyID})
 		items = items[:query.Limit]
 	}
 	page.Items = items
@@ -66,15 +66,15 @@ func (r *PostgresRepository) UnreadCount(ctx context.Context, userID string) (Un
 	if !ok {
 		return UnreadCountResult{}, persistence.ErrNotImplemented
 	}
-	rows, err := queryable.Query(ctx, queryUnreadNotificationCounts, userID)
+	rows, err := queryable.Query(ctx, queryUnreadNotifyCounts, userID)
 	if err != nil {
 		return UnreadCountResult{}, err
 	}
 	defer rows.Close()
 	result := UnreadCountResult{ByType: UnreadCountByType{}}
 	for rows.Next() {
-		var notificationType, countText string
-		if err := rows.Scan(&notificationType, &countText); err != nil {
+		var notifyType, countText string
+		if err := rows.Scan(&notifyType, &countText); err != nil {
 			return UnreadCountResult{}, err
 		}
 		count := 0
@@ -82,7 +82,7 @@ func (r *PostgresRepository) UnreadCount(ctx context.Context, userID string) (Un
 			return UnreadCountResult{}, err
 		}
 		result.Total += count
-		switch bucket(notificationType) {
+		switch bucket(notifyType) {
 		case "social":
 			result.ByType.Social += count
 		case "interaction":

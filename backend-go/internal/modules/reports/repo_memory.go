@@ -38,7 +38,7 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	return ReportCreated{ReportID: report.ReportID}, nil
 }
 
-func (r *InMemoryRepository) List(_ context.Context, userID string, req MyReportsRequest) (PaginatedReports, error) {
+func (r *InMemoryRepository) List(_ context.Context, userID string, req ListReportsRequest) (PaginatedReports, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	items := make([]ReportItem, 0, len(r.reports[userID]))

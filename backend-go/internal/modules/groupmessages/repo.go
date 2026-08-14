@@ -24,6 +24,12 @@ type Repository interface {
 
 	Update(context.Context, UpdateGroupMessageRequest) (MessageEventMeta, error)
 	Recall(context.Context, RecallGroupMessageRequest) (MessageEventMeta, error)
+	// RecallAsAdmin recalls a group message regardless of who sent it, with no
+	// recall-window enforcement. Used by the groups module's admin guard
+	// endpoint groups/admin/messages/recall (spec api_spec_group.md). Only
+	// not-found (ErrMessageNotFound) and already-recalled (ErrMessageRecalled)
+	// conflicts are returned.
+	RecallAsAdmin(ctx context.Context, messageID string) (MessageEventMeta, error)
 	MarkAsRead(context.Context, string, MarkGroupMessagesReadRequest) error
 	MarkAllRead(context.Context, string) error
 	IsMember(context.Context, string, string) (bool, error)

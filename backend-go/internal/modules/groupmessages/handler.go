@@ -32,9 +32,11 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 	idempotency.ReplayOrStore(w, r, "group_messages/send", func() httpx.ApiResponse[any] {
 		msg, err := h.service.Send(r.Context(), req)
 		if err != nil {
+			// 契约(api_spec_errors.md)：不是群成员 → 10200 + forbidden_reason=not_group_member（不再是 10400）
 			if errors.Is(err, ErrNotGroupMember) {
-				observability.LogBusinessError(r, "Send", int(httpx.CodeConflict), "不是群组成员")
-				return httpx.ApiResponse[any]{Code: httpx.CodeConflict, Message: "不是群组成员"}
+				observability.LogBusinessError(r, "Send", int(httpx.CodeForbidden), "不是群组成员")
+				data := any(httpx.ForbiddenErrorData{ForbiddenReason: httpx.ReasonNotGroupMember})
+				return httpx.ApiResponse[any]{Code: httpx.CodeForbidden, Message: "不是群组成员", Data: &data}
 			}
 			if errors.Is(err, ErrUserMuted) {
 				mutedUntil := ""
@@ -62,7 +64,7 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 	})
 }
 func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
-	var req GetGroupMessagesHistoryRequest
+	var req ListGroupMessagesRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteInvalidRequest(w, r, "History", "请求体格式错误")
 		return
@@ -74,7 +76,8 @@ func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 	history, err := h.service.History(r.Context(), req.GroupID, req.Pagination)
 	if err != nil {
 		if errors.Is(err, ErrNotGroupMember) {
-			httpx.WriteBusinessError(w, r, "History", httpx.CodeConflict, "不是群组成员")
+			// 契约(api_spec_errors.md)：不是群成员 → 10200 + forbidden_reason=not_group_member
+			httpx.WriteAPIError(w, r, "History", httpx.Forbidden(httpx.ReasonNotGroupMember, "不是群组成员"))
 			return
 		}
 		httpx.WriteAPIError(w, r, "History", err)
@@ -101,8 +104,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			observability.LogBusinessError(r, "Update", int(httpx.CodeNotFound), "消息不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "消息不存在"))
 		case errors.Is(err, ErrPermissionDenied):
-			observability.LogBusinessError(r, "Update", int(httpx.CodeForbidden), "权限不足")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			// 契约(api_spec_chat.md → group_messages/update)：非作者编辑 → 10200 + not_resource_owner
+			httpx.WriteAPIError(w, r, "Update", httpx.Forbidden(httpx.ReasonNotResourceOwner, "权限不足"))
 		case errors.Is(err, ErrMessageRecalled):
 			observability.LogBusinessError(r, "Update", int(httpx.CodeConflict), "消息已被撤回")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "消息已被撤回"))
@@ -136,8 +139,8 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 			observability.LogBusinessError(r, "Recall", int(httpx.CodeNotFound), "消息不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "消息不存在"))
 		case errors.Is(err, ErrPermissionDenied):
-			observability.LogBusinessError(r, "Recall", int(httpx.CodeForbidden), "权限不足")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			// 契约(api_spec_chat.md → group_messages/recall)：非作者撤回 → 10200 + not_resource_owner
+			httpx.WriteAPIError(w, r, "Recall", httpx.Forbidden(httpx.ReasonNotResourceOwner, "权限不足"))
 		case errors.Is(err, ErrMessageRecalled):
 			observability.LogBusinessError(r, "Recall", int(httpx.CodeConflict), "消息已被撤回")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "消息已被撤回"))

@@ -12,8 +12,10 @@ type Repository interface {
 	Update(context.Context, string, UpdateGroupRequest) error
 	Dismiss(context.Context, string) error
 	ListMembers(context.Context, string, *GroupRole, int, string) ([]GroupMemberItem, string, error)
+	ListAdminMembers(context.Context, string, *GroupRole, int, string) ([]AdminGroupMemberItem, string, error)
 	SearchMembers(context.Context, string, string, *GroupRole, int, string) ([]GroupMemberItem, string, error)
 	IsMember(context.Context, string, string) (bool, error)
+	IsBanned(context.Context, string, string) (bool, error)
 	GetApplication(context.Context, string) (GroupApplicationItem, bool, error)
 	ListMyGroups(context.Context, string, int, string) ([]GroupItem, string, error)
 	JoinGroup(context.Context, string, string, *string, *string) (JoinGroupResult, error)

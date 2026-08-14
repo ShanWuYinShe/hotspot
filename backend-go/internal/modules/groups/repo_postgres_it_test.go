@@ -49,8 +49,8 @@ func TestPostgresIT_CreateAndGetGroup(t *testing.T) {
 		if group.Group.Name != "Test Group" {
 			t.Fatalf("name: got %q", group.Group.Name)
 		}
-		if group.OwnerID != ownerID {
-			t.Fatalf("owner_id: got %q, want %q", group.OwnerID, ownerID)
+		if (group.OwnerID == nil || *group.OwnerID != ownerID) {
+			t.Fatalf("owner_id: got %s, want %q", *group.OwnerID, ownerID)
 		}
 
 		got, found, err := repo.Get(ctx, group.Group.GroupID)
@@ -813,8 +813,8 @@ func TestPostgresIT_TransferOwnership(t *testing.T) {
 		if !found {
 			t.Fatal("expected found=true")
 		}
-		if got.OwnerID != memberID {
-			t.Fatalf("owner_id: got %q, want %q", got.OwnerID, memberID)
+		if got.OwnerID == nil || *got.OwnerID != memberID {
+			t.Fatalf("owner_id: got %s, want %q", *got.OwnerID, memberID)
 		}
 
 		members, _, err := repo.ListMembers(ctx, groupID, nil, 10, "")

@@ -252,6 +252,11 @@ func (s *Service) buildSocialContext(ctx context.Context, viewerUserID string, t
 	if len(commonTags) > 0 {
 		context.CommonTags = commonTags
 	}
+	// 无任何共同点 → null（恒定 nullable：null = 不适用，spec api_spec_base.md）。
+	// 不返回 {"mutual_friends_count":0} 这类空壳对象。
+	if len(mutualFriends) == 0 && len(commonTags) == 0 && (context.CommonGroupsCount == nil || *context.CommonGroupsCount == 0) {
+		return nil, nil
+	}
 	return context, nil
 }
 

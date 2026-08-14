@@ -183,12 +183,12 @@ func TestLoginCollapsesUnknownUserAndWrongPassword(t *testing.T) {
 	}
 }
 
-func TestCheckStatusReturnsFalseWithoutPrincipal(t *testing.T) {
+func TestGetStatusReturnsFalseWithoutPrincipal(t *testing.T) {
 	handler := newTestHandler()
-	req := httptest.NewRequest(http.MethodPost, "/check_status", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/get_status", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 
-	handler.CheckStatus(rr, req)
+	handler.GetStatus(rr, req)
 
 	var resp struct {
 		Code httpx.Code `json:"code"`
@@ -200,17 +200,21 @@ func TestCheckStatusReturnsFalseWithoutPrincipal(t *testing.T) {
 	if resp.Code != 0 || resp.Data.IsValid {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
+	// 恒定 nullable：未认证时 user_id/expires_at 为 null（nil 指针不带 omitempty）
+	if resp.Data.UserID != nil || resp.Data.ExpiresAt != nil {
+		t.Fatalf("expected null user_id/expires_at when not authenticated, got %#v", resp.Data)
+	}
 }
 
-func TestCheckStatusReturnsTrueWithPrincipal(t *testing.T) {
+func TestGetStatusReturnsTrueWithPrincipal(t *testing.T) {
 	handler := newTestHandler()
-	req := httptest.NewRequest(http.MethodPost, "/check_status", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/get_status", strings.NewReader(`{}`))
 	ctx := platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice"})
 	ctx = platformauth.WithAccessExpiry(ctx, time.Now().UTC().Add(time.Minute))
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
-	handler.CheckStatus(rr, req)
+	handler.GetStatus(rr, req)
 
 	var resp struct {
 		Code httpx.Code `json:"code"`
@@ -219,8 +223,14 @@ func TestCheckStatusReturnsTrueWithPrincipal(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 0 || !resp.Data.IsValid || resp.Data.ExpiresAt == "" {
+	if resp.Code != 0 || !resp.Data.IsValid {
 		t.Fatalf("unexpected response: %#v", resp)
+	}
+	if resp.Data.UserID == nil || *resp.Data.UserID != "user_alice" {
+		t.Fatalf("expected user_id user_alice, got %v", resp.Data.UserID)
+	}
+	if resp.Data.ExpiresAt == nil || *resp.Data.ExpiresAt == "" {
+		t.Fatalf("expected expires_at, got %v", resp.Data.ExpiresAt)
 	}
 }
 
@@ -514,7 +524,7 @@ func TestRevokeSessionRejectsCurrentSession(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if httpx.Code(int(resp["code"].(float64))) != httpx.CodeForbidden {
+	if httpx.Code(int(resp["code"].(float64))) != httpx.CodeConflict {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }

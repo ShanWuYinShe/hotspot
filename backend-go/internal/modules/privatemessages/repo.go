@@ -16,31 +16,6 @@ var (
 	ErrInvalidShareCode = errors.New("private_messages: invalid share code")
 )
 
-// BlockReason mirrors spec api_spec_chat.md BlockReason: the structured reason
-// returned in the httpx.CodeForbidden error data of private_messages/send.
-// 拉黑明确返回 'blocked'（产品决策：拉黑就显示拉黑，见 spec）；
-// 'privacy' 仅用于 allow_private_chat 隐私设置限制。
-type BlockReason string
-
-const (
-	// BlockReasonBlocked: the recipient has blocked the sender.
-	BlockReasonBlocked BlockReason = "blocked"
-	// BlockReasonPrivacy: privacy settings (allow_private_chat) disallow the message.
-	BlockReasonPrivacy BlockReason = "privacy"
-	// BlockReasonStrangerQuotaExceeded: daily stranger-message quota used up.
-	BlockReasonStrangerQuotaExceeded BlockReason = "stranger_quota_exceeded"
-)
-
-// MessageBlockedError is returned by Service.Send when the message is refused
-// with a structured BlockReason (HTTP 200 + code httpx.CodeForbidden + data {reason}).
-type MessageBlockedError struct {
-	Reason BlockReason
-}
-
-func (e *MessageBlockedError) Error() string {
-	return "private_messages: send blocked: " + string(e.Reason)
-}
-
 type MessageEventMeta struct {
 	TargetUserID string
 	MessageID    string
@@ -50,7 +25,7 @@ type MessageEventMeta struct {
 
 type Repository interface {
 	Send(context.Context, string, string, SendPrivateMessageRequest) (MessageSent, error)
-	History(context.Context, string, GetHistoryRequest) (PaginatedMessages, error)
+	History(context.Context, string, ListPrivateMessagesRequest) (PaginatedMessages, error)
 	Recent(context.Context, string, string, int, *time.Time) (PaginatedMessages, error)
 	Last(context.Context, string, string, *time.Time) (*PrivateMessageItem, error)
 	UnreadCount(context.Context, string, string, *time.Time) (int, error)

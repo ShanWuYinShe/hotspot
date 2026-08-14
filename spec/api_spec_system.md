@@ -1,6 +1,6 @@
 # HotSpot API - 系统与全局配置
 
-> 本文档定义 HotSpot 系统级公开接口，包括健康检查、版本元信息、客户端配置和系统公告。所有端点为公开资源，无需认证，统一在 `/api/v1/system/` 路径下。
+> 本文档定义 HotSpot 系统级公开接口，包括健康检查、版本元信息、客户端配置和系统公告。所有端点为公开资源，统一在 `/api/v1/system/` 路径下。
 
 ## 模块信息
 
@@ -9,26 +9,22 @@
 - **引用**: 
   - 基础规范：`api_spec_base.md`
   - 通用类型：`api_spec_types.md`
+  - 守卫与权限：`api_spec_authz.md`
   - 错误码：`api_spec_errors.md`
 
 ## 端点总览
 
 | 端点 | 说明 | 认证 |
 |-----|------|------|
+| `POST /api/v1/system/get_meta` | API 版本元信息 | optional |
+| `POST /api/v1/system/health` | 健康检查 | optional |
+| `POST /api/v1/system/announcements/list` | 系统公告列表 | optional |
+| `POST /api/v1/system/get_client_config` | 客户端公开配置 | optional |
+| `POST /api/v1/system/bootstrap` | 冷启动聚合（config + meta + profile + unread） | optional |
 
-| `POST /api/v1/system/get_meta` | API 版本元信息 | 可选 |
-| `POST /api/v1/system/health` | 健康检查 | 可选 |
-| `POST /api/v1/system/list_announcements` | 系统公告列表 | 可选 |
-| `POST /api/v1/system/get_client_config` | 客户端公开配置 | 可选 |
-| `POST /api/v1/system/bootstrap` | 冷启动聚合（config + meta + profile + unread） | 可选 |
 ## 类型定义
 
-以下类型定义于 `api_spec_types.md`：
-- `SystemAnnouncementItem`
-- `FeatureSwitches`
-- `AppLimits`
-- `ContactInfo`
-- `Location`
+以下类型定义于 `api_spec_types.md`：`SystemAnnouncementItem`、`FeatureSwitches`、`AppLimits`、`ContactInfo`、`Location`。
 
 ## 端点详情
 
@@ -36,7 +32,7 @@
 
 获取当前 API 版本的元信息，包括废弃状态和下线计划。
 
-- **认证**: 可选（公开资源；「可选」语义下无 @auth-only 字段，匿名与登录态响应一致）
+- **认证**: optional（公开资源；无查看者字段，匿名与登录态响应一致）
 
 **说明**：各 API 版本路径下都应提供此端点；客户端启动时调用以检查当前版本状态。
 
@@ -45,7 +41,10 @@
 - `deprecated`: 提示用户升级；可展示 `message` 并引导更新
 - `sunset`: 强制升级或提示服务不可用
 
-**Request**: `{}`
+**Request**: `GetMetaRequest`
+```typescript
+interface GetMetaRequest {}
+```
 
 **Response**: `ApiResponse<ApiVersionMeta>`
 
@@ -54,10 +53,10 @@
 interface ApiVersionMeta {
   version: string;                    // 当前 API 版本号，如 "v1"
   status: ApiVersionStatus;           // 版本状态
-  deprecated_at?: string;             // 进入废弃状态时间（UTC ISO 8601）
-  sunset_at?: string;                 // 计划下线时间（UTC ISO 8601）
-  message?: string;                   // 面向客户端的提示信息
-  recommended_version?: string;       // 推荐升级的版本号（如 "v2"）
+  deprecated_at: string | null;       // 进入废弃状态时间（UTC ISO 8601）
+  sunset_at: string | null;           // 计划下线时间（UTC ISO 8601）
+  message: string | null;             // 面向客户端的提示信息
+  recommended_version: string | null; // 推荐升级的版本号（如 "v2"）
 }
 
 // API 版本状态
@@ -73,11 +72,14 @@ type ApiVersionStatus =
 
 系统健康检查。
 
-- **认证**: 可选（公开资源；「可选」语义下无 @auth-only 字段，匿名与登录态响应一致）
+- **认证**: optional（公开资源）
 
 **说明**：HTTP 非 200 表示未进入业务层；HTTP 200 时，`code=0` 表示系统可用（`data.status` 为 `healthy` 或 `degraded`），`code=10600` 表示系统不可用（`unhealthy`，`data` 省略，原因见 `message`）。
 
-**Request**: `{}`
+**Request**: `GetHealthRequest`
+```typescript
+interface GetHealthRequest {}
+```
 
 **Response**: `ApiResponse<HealthStatus>`（仅当 `code=0` 时返回 `data`）
 
@@ -93,20 +95,28 @@ interface HealthStatus {
 
 ---
 
-### POST /api/v1/system/list_announcements
+### POST /api/v1/system/announcements/list
 
 获取系统公告列表。
 
-- **认证**: 可选（公开资源；「可选」语义下无 @auth-only 字段，匿名与登录态响应一致）
+- **认证**: optional（公开资源）
 
-**Request**: `{}`
+**Request**: `ListSystemAnnouncementsRequest`
+```typescript
+interface ListSystemAnnouncementsRequest {}
+```
 
-**Response**: `ApiResponse<{ items: SystemAnnouncementItem[] }>`
+**Response**: `ApiResponse<SystemAnnouncementList>`
+```typescript
+interface SystemAnnouncementList {
+  items: SystemAnnouncementItem[];
+}
+```
 
 **说明**：
-- 返回当前有效的公告（"有效"= 未被管理员删除的公告；create 即发布，delete 即下线），返回条数由服务端 `AppConfig.response_defaults.system_announcements_count` 控制，客户端不传数量参数
+- 返回当前有效的公告（"有效"= 未被平台管理员删除的公告；create 即发布，delete 即下线），返回条数由服务端 `AppConfig.response_defaults.system_announcements_count` 控制，客户端不传数量参数
 - 普通用户只需获取最新的 N 条公告，无需分页翻阅历史
-- 管理员查看/搜索全部公告（含历史）请使用 `admin/announcements/search`（定义于 `api_spec_admin_moderation.md`）
+- 平台管理员查看/搜索全部公告（含历史）请使用 `/admin/v1/announcements/list`（定义于 `api_spec_admin.md`）
 - **排序**: 按 `created_at` 倒序，`announcement_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 ---
@@ -115,20 +125,22 @@ interface HealthStatus {
 
 获取客户端公开配置。
 
-- **认证**: 可选（公开资源；「可选」语义下无 @auth-only 字段，匿名与登录态响应一致）
+- **认证**: optional（公开资源）
 
 **说明**：
-- 返回的 `ClientConfig` 由 `AppConfig`（见 `api_spec_admin_core.md`）投影得来，包含功能开关、输入限制、联系方式
+- 返回的 `ClientConfig` 由 `AppConfig`（见 `api_spec_admin.md`）投影得来，包含功能开关、输入限制、联系方式
 - 客户端应在启动时调用并缓存，配置变更频率低
 - `defaults.default_location` 必须满足 `Location` 类型约束（尤其 `location_name` 非空）
 
-**Request**: `{}`
+**Request**: `GetClientConfigRequest`
+```typescript
+interface GetClientConfigRequest {}
+```
 
 **Response**: `ApiResponse<ClientConfig>`
 
 ```typescript
 // 客户端公开配置（AppConfig 的可见投影；客户端启动时获取并缓存）
-// FeatureSwitches / AppLimits / ContactInfo 定义于 api_spec_types.md
 interface ClientConfig {
   features: FeatureSwitches;
   limits: AppLimits;
@@ -136,10 +148,9 @@ interface ClientConfig {
   defaults: ClientDefaults;
 }
 
-// 客户端可见的默认值
-// 由管理员在后台配置（见 api_spec_admin_core.md 中 ContentDefaults）
+// 客户端可见的默认值（由平台管理员在后台配置，见 api_spec_admin.md 中 ContentDefaults）
 interface ClientDefaults {
-  default_location: Location;        // 默认位置（必须满足 Location 约束），Location 定义于 api_spec_types.md
+  default_location: Location;        // 默认位置（必须满足 Location 约束）
   default_user_avatar_url: string;   // 默认用户头像 URL
   default_group_avatar_url: string;  // 默认群组头像 URL
 }
@@ -151,19 +162,17 @@ interface ClientDefaults {
 
 冷启动聚合端点。一次请求拉齐客户端冷启动所需的全部基础数据，替代分别调用 `get_meta` + `get_client_config` + `users/get_account` + `notify/get_unread_count` 的多次往返。
 
-- **认证**: 可选（未登录时 `profile`/`unread_summary` 省略，仅返回 `meta` + `client_config`）
+- **认证**: optional（未登录时 `profile`/`unread_summary` 为 null，仅返回 `meta` + `client_config`）
 
-**缓存契约（防惊群）**：响应携带 `bootstrap_version`（服务端在 config/version 变更时递增）。客户端可缓存响应并在后续冷启动时通过 `If-None-Match: <bootstrap_version>` 请求头询问；服务端无变化时返回精简响应（`code=0` + `data.bootstrap_version` 不变 + 其余字段省略，由客户端使用缓存）。`bootstrap_version` 的失效由服务端在 admin 修改 `AppConfig` 或发布新版本/公告时主动递增。
+**缓存契约（防惊群）**：响应携带 `bootstrap_version`（服务端在 config/version 变更时递增）。客户端可缓存响应并在后续冷启动时通过 `If-None-Match: <bootstrap_version>` 请求头询问；服务端无变化时返回精简响应（`code=0` + `data.bootstrap_version` 不变 + 其余字段省略，由客户端使用缓存）。`bootstrap_version` 的失效由服务端在平台管理员修改 `AppConfig` 或发布新版本/公告时主动递增。
 
 > **防惊群**：`bootstrap_version` 变更会让所有客户端同时 miss 缓存并全量重拉，客户端应加随机 jitter 延迟后刷新，避免集中请求。`meta`/`client_config` 为公共数据可做 CDN 缓存；`profile`/`unread_summary` 为用户私有数据，不可缓存。
->
-> **缓存命中形态（契约级）**：客户端携带 `If-None-Match: <bootstrap_version>` 且版本未变化时，响应为 `code=0` + `data.bootstrap_version` + **其余字段全部省略**（`meta`/`client_config` 的可选声明与此一致，客户端用缓存数据渲染）。
 
 **Request**: `BootstrapRequest`
 ```typescript
 interface BootstrapRequest {
   client_type: ClientType;
-  device_id?: DeviceId;        // 可选：携带设备标识（App 端通常已有，便于服务端记录设备绑定）
+  device_id: DeviceId | null;        // 可选：携带设备标识（App 端通常已有，便于服务端记录设备绑定）
 }
 ```
 
@@ -172,26 +181,27 @@ interface BootstrapRequest {
 interface BootstrapData {
   bootstrap_version: string;        // 缓存版本号，客户端下次冷启动透传给 If-None-Match
   // === 缓存命中时以下字段省略（客户端使用缓存）；未命中/无缓存时必填 ===
-  meta?: ApiVersionMeta;             // 同 get_meta 响应（ApiVersionMeta 定义于本文件 get_meta 段）
-  client_config?: ClientConfig;      // 同 get_client_config 响应
+  meta: ApiVersionMeta | null;             // 同 get_meta 响应
+  client_config: ClientConfig | null;      // 同 get_client_config 响应
 
-  // === @auth-only 以下字段仅登录态返回 ===
-  profile?: AccountData;         // 同 users/get_account（AccountData 定义于 api_spec_user.md）
-  unread_summary?: UnreadSummary;   // 未读摘要（聚合私聊/群聊/通知，替代多次 unread_count 调用）
+  // === 登录态字段（匿名时为 null） ===
+  profile: AccountData | null;             // 同 users/get_account（AccountData 定义于 api_spec_user.md）
+  unread_summary: UnreadSummary | null;    // 未读摘要（聚合私聊/群聊/通知）
 }
 
 // 未读摘要（聚合各域未读，冷启动时一次性渲染角标）
 // 通知部分的字段与 notify/get_unread_count 的 UnreadCountResult 对齐
 interface UnreadSummary {
-  notification_total: number;               // 通知未读总数（同 notify/get_unread_count.total）
-  notification_by_type: Record<NotifyCategory, number>;  // 按分类的未读数（同 notify/get_unread_count.by_type）
-  private_chat_unread_count: number;        // 私聊会话未读消息总数
-  group_chat_unread_count: number;          // 群聊未读消息总数
-  total_badge: number;                      // 综合角标数 = notification_total + private_chat_unread_count + group_chat_unread_count（客户端展示用）
+  notify_total: number;               // 通知未读总数（同 notify/get_unread_count.total）
+  notify_by_type: Record<NotifyCategory, number>;  // 按分类的未读数（同 notify/get_unread_count.by_type）
+  private_chat_unread_count: number;  // 私聊会话未读消息总数
+  group_chat_unread_count: number;    // 群聊未读消息总数
+  total_badge: number;                // 综合角标数 = notify_total + private_chat_unread_count + group_chat_unread_count
 }
 ```
 
 **说明**：
 - 这是**聚合端点**，不引入新数据，仅合并现有端点的响应；各字段语义与原端点完全一致
-- 登录态下若 `profile` 所在的 token 已过期，按"认证可选"语义降级为匿名（返回 `meta` + `client_config`，省略 `profile`/`unread_summary`），不返回 `10100`
+- `total_badge` 语义说明（F10）：群聊 @（group_mentioned）等通知会同时计入 `notify_total` 与该群的 `group_chat_unread_count`，故 `total_badge` 是「各域角标之和」而非「互斥未读条数」，允许同一内容在两域各计一次；客户端仅用于角标展示，不做精确对账
+- 登录态下若 `profile` 所在的 token 已过期，按 optional 语义降级为匿名（返回 `meta` + `client_config`，省略 `profile`/`unread_summary`），不返回 `10100`
 - 客户端应优先调用此端点；各原子端点（`get_meta`/`get_client_config` 等）仍保留，供需要单项刷新的场景

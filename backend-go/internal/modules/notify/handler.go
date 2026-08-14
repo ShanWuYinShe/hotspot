@@ -16,14 +16,14 @@ func NewHandler(service *Service) *Handler {
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	var req NotificationListRequest
+	var req NotifyListRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
 		return
 	}
 	list, err := h.service.List(r.Context(), req)
 	if err != nil {
-		if errors.Is(err, ErrInvalidNotificationRequest) {
+		if errors.Is(err, ErrInvalidNotifyRequest) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
@@ -46,8 +46,9 @@ func (h *Handler) UnreadCount(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(count))
 }
 
-// MarkRead marks notifications as read (spec api_spec_notify.md). notify_ids
-// selects 1-50 notifications; absent or empty means "mark everything read".
+// MarkRead marks notifys as read (spec api_spec_notify.md).
+// scope='ids' requires notify_ids (1-50); scope='all' marks everything read and
+// ignores notify_ids. scope is mandatory — a missing scope is invalid (10000).
 // Unknown or foreign ids are silently ignored by the repository.
 func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	var req MarkReadRequest
@@ -55,20 +56,23 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
-	if len(req.NotifyIDs) == 0 {
+	switch MarkReadScope(req.Scope) {
+	case MarkReadScopeIDs:
+		if len(req.NotifyIDs) == 0 || len(req.NotifyIDs) > maxMarkReadIDs {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			return
+		}
+		if err := h.service.MarkAsRead(r.Context(), req.NotifyIDs); err != nil {
+			httpx.WriteAPIError(w, r, "MarkRead", err)
+			return
+		}
+	case MarkReadScopeAll:
 		if err := h.service.MarkAllRead(r.Context()); err != nil {
 			httpx.WriteAPIError(w, r, "MarkRead", err)
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
-		return
-	}
-	if len(req.NotifyIDs) > 50 {
+	default:
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
-		return
-	}
-	if err := h.service.MarkAsRead(r.Context(), req.NotifyIDs); err != nil {
-		httpx.WriteAPIError(w, r, "MarkRead", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())

@@ -5,6 +5,7 @@ import (
 
 	"hotspot/backend-go/internal/modules/privatemessages"
 	platformcursor "hotspot/backend-go/internal/platform/cursor"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/types"
 )
 
@@ -56,10 +57,13 @@ type PrivateChatItem struct {
 	IsPinned       bool         `json:"is_pinned"`
 	LastActivityAt string       `json:"last_activity_at"`
 	LastMessage    *LastMessage `json:"last_message,omitempty"`
-	PresenceStatus string       `json:"presence_status,omitempty"`
-	CreatedAt      string       `json:"created_at,omitempty"`
-	CanMessage     bool         `json:"can_message"`
-	BlockReason    string       `json:"message_blocked_reason,omitempty"`
+	// presence_status 恒定 nullable（null = 对方 presence_visible=false 隐藏）
+	PresenceStatus *string `json:"presence_status"`
+	CreatedAt      string  `json:"created_at,omitempty"`
+	CanMessage     bool    `json:"can_message"`
+	// blocked_reason 恒定 nullable：can_message=false 时返回 blocked_by_user /
+	// privacy_setting / stranger_quota_exceeded，否则为 null
+	BlockedReason *httpx.ForbiddenReason `json:"blocked_reason"`
 }
 
 type PaginatedPrivateChats struct {

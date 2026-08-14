@@ -36,7 +36,7 @@ import { MockInterceptor } from '../mock/MockInterceptor';
  * Spec MUST 幂等端点列表
  * 这些端点的每次请求必须携带 Idempotency-Key，缺少则会被后端拒绝
  * 对齐 spec/api_spec_base.md「需要实现幂等的接口」（自然去重接口无需 key，
- * 如 reports/create、groups/join、members/invite、reset/change_password、
+ * 如 reports/create、groups/join、groups/admin/invites/create、reset/change_password、
  * media complete_upload 等均不在列表内）。
  */
 const MUST_IDEMPOTENT_ENDPOINTS: string[] = [
@@ -60,7 +60,7 @@ const MUST_IDEMPOTENT_ENDPOINTS: string[] = [
  * 当携带过期/无效 token 调用这些接口时，允许降级为匿名重试一次，避免“可选认证接口被强制报错”
  */
 const TOKEN_OPTIONAL_ENDPOINTS: string[] = [
-  ApiEndpoints.AUTH.CHECK_STATUS,
+  ApiEndpoints.AUTH.GET_STATUS,
   ApiEndpoints.SEARCH.SUGGEST,
   ApiEndpoints.USER.SEARCH,
   ApiEndpoints.USER.GET_DETAIL,
@@ -540,14 +540,14 @@ export class HttpUtil {
         if (snapshot.status !== undefined) {
           errRecord.status = snapshot.status;
         }
-        // 附带响应 data（如 chat send 被拒时 data = { reason: BlockReason }），供调用方读取
+        // 附带响应 data（10200 权限失败时 data = { forbidden_reason: ForbiddenReason }，见 spec api_spec_errors.md），供调用方读取
         const responseData = resultRecord.data;
         if (responseData !== undefined && responseData !== null) {
           errRecord.data = responseData;
           const dataRecord = responseData as Record<string, Object>;
-          const dataReason = dataRecord.reason;
+          const dataReason = dataRecord.forbidden_reason;
           if (typeof dataReason === 'string' && dataReason.length > 0) {
-            errRecord.reason = dataReason;
+            errRecord.forbidden_reason = dataReason;
           }
         }
         throw err;

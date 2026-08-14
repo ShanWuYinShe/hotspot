@@ -62,6 +62,9 @@ func (s *Service) UpdateMySettings(ctx context.Context, req UpdateSettingsReques
 func (s *Service) ListReactedMoments(ctx context.Context, req UserReactedMomentsRequest) (momenttypes.PaginatedMoments, error) {
 	startedAt := time.Now()
 	observability.L().Info("users.list_reacted_moments started", "user_id", req.UserID)
+	if req.UserID == "" {
+		return momenttypes.PaginatedMoments{}, ErrInvalidRequest
+	}
 	if err := ensureUserExists(ctx, s.repo, req.UserID); err != nil {
 		return momenttypes.PaginatedMoments{}, err
 	}
@@ -97,18 +100,17 @@ func (s *Service) ListReactedMoments(ctx context.Context, req UserReactedMoments
 }
 
 func (s *Service) ListFriends(ctx context.Context, req ListFriendsRequest) (PaginatedFriends, error) {
-	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
+	// 契约（spec api_spec_user.md）：user_id 必传，认证 optional，缺省不回退当前用户。
 	targetUserID := req.UserID
 	if targetUserID == "" {
-		if !hasPrincipal || principal.UserID == "" {
-			return PaginatedFriends{}, ErrUnauthorized
-		}
-		targetUserID = principal.UserID
+		return PaginatedFriends{}, ErrInvalidRequest
 	}
+	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
 	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
 		return PaginatedFriends{}, err
 	}
-	if err := ensureSocialListsVisible(ctx, s.repo, targetUserID, hasPrincipal && principal.UserID == targetUserID); err != nil {
+	isSelf := hasPrincipal && principal.UserID == targetUserID
+	if err := ensureSocialListsVisible(ctx, s.repo, targetUserID, isSelf); err != nil {
 		return PaginatedFriends{}, err
 	}
 	limit, cursor := normalizePagination(req.Pagination)
@@ -117,27 +119,27 @@ func (s *Service) ListFriends(ctx context.Context, req ListFriendsRequest) (Pagi
 		return PaginatedFriends{}, err
 	}
 	applyPresenceVisibilityToFriends(ctx, s.repo, result.Items)
-	if !(hasPrincipal && principal.UserID == targetUserID) {
+	if !isSelf {
 		for i := range result.Items {
-			result.Items[i].Remark = ""
+			// 查他人列表 remark 恒定 null（spec api_spec_user.md RelatedUserItem.remark）。
+			result.Items[i].Remark = nil
 		}
 	}
 	return result, nil
 }
 
 func (s *Service) ListFollowing(ctx context.Context, req ListFollowingRequest) (PaginatedFollowing, error) {
-	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
+	// 契约（spec api_spec_user.md）：user_id 必传，认证 optional，缺省不回退当前用户。
 	targetUserID := req.UserID
 	if targetUserID == "" {
-		if !hasPrincipal || principal.UserID == "" {
-			return PaginatedFollowing{}, ErrUnauthorized
-		}
-		targetUserID = principal.UserID
+		return PaginatedFollowing{}, ErrInvalidRequest
 	}
+	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
 	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
 		return PaginatedFollowing{}, err
 	}
-	if err := ensureSocialListsVisible(ctx, s.repo, targetUserID, hasPrincipal && principal.UserID == targetUserID); err != nil {
+	isSelf := hasPrincipal && principal.UserID == targetUserID
+	if err := ensureSocialListsVisible(ctx, s.repo, targetUserID, isSelf); err != nil {
 		return PaginatedFollowing{}, err
 	}
 	limit, cursor := normalizePagination(req.Pagination)
@@ -146,22 +148,25 @@ func (s *Service) ListFollowing(ctx context.Context, req ListFollowingRequest) (
 		return PaginatedFollowing{}, err
 	}
 	applyPresenceVisibilityToFollowing(ctx, s.repo, result.Items)
+	for i := range result.Items {
+		// list_following 返回 RelatedUserItem。该端点不返回备注，恒为 null。
+		result.Items[i].Remark = nil
+	}
 	return result, nil
 }
 
 func (s *Service) ListFollowers(ctx context.Context, req ListFollowersRequest) (PaginatedFollowers, error) {
-	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
+	// 契约（spec api_spec_user.md）：user_id 必传，认证 optional，缺省不回退当前用户。
 	targetUserID := req.UserID
 	if targetUserID == "" {
-		if !hasPrincipal || principal.UserID == "" {
-			return PaginatedFollowers{}, ErrUnauthorized
-		}
-		targetUserID = principal.UserID
+		return PaginatedFollowers{}, ErrInvalidRequest
 	}
+	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
 	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
 		return PaginatedFollowers{}, err
 	}
-	if err := ensureSocialListsVisible(ctx, s.repo, targetUserID, hasPrincipal && principal.UserID == targetUserID); err != nil {
+	isSelf := hasPrincipal && principal.UserID == targetUserID
+	if err := ensureSocialListsVisible(ctx, s.repo, targetUserID, isSelf); err != nil {
 		return PaginatedFollowers{}, err
 	}
 	limit, cursor := normalizePagination(req.Pagination)
@@ -170,18 +175,20 @@ func (s *Service) ListFollowers(ctx context.Context, req ListFollowersRequest) (
 		return PaginatedFollowers{}, err
 	}
 	applyPresenceVisibilityToFollowers(ctx, s.repo, result.Items)
+	for i := range result.Items {
+		// list_followers 返回 RelatedUserItem。该端点不返回备注，恒为 null。
+		result.Items[i].Remark = nil
+	}
 	return result, nil
 }
 
 func (s *Service) ListGroups(ctx context.Context, req UserGroupsRequest) (grouptypes.PaginatedGroups, error) {
-	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
+	// 契约（spec api_spec_user.md）：user_id 必传，认证 optional，缺省不回退当前用户。
 	targetUserID := req.UserID
 	if targetUserID == "" {
-		if !hasPrincipal || principal.UserID == "" {
-			return grouptypes.PaginatedGroups{}, ErrUnauthorized
-		}
-		targetUserID = principal.UserID
+		return grouptypes.PaginatedGroups{}, ErrInvalidRequest
 	}
+	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
 	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
 		return grouptypes.PaginatedGroups{}, err
 	}
@@ -201,37 +208,33 @@ func (s *Service) ListGroups(ctx context.Context, req UserGroupsRequest) (groupt
 	if err != nil {
 		return grouptypes.PaginatedGroups{}, err
 	}
+	// 公开主页视角（spec api_spec_user.md）：只剥离查看者状态；
+	// join_method 等加入门槛字段本就是公开字段；群管理字段已移入 GroupSettings。
 	for i := range result.Items {
-		result.Items[i].MyState = nil
-		result.Items[i].JoinMethod = ""
-		result.Items[i].IsSearchable = false
-		result.Items[i].MaxMembers = 0
+		result.Items[i].ViewerState = nil
 	}
 	return result, nil
 }
 
 func (s *Service) ListMoments(ctx context.Context, req UserMomentsRequest) (momenttypes.PaginatedMoments, error) {
-	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
+	// 契约（spec api_spec_user.md）：user_id 必传，认证 optional，缺省不回退当前用户。
+	// 纯公开视角：本端点只返回 privacy_level='public' 的瞬间；拥有者视角（含 private 与软删占位）
+	// 见 moments/list_created。
 	targetUserID := req.UserID
 	if targetUserID == "" {
-		if !hasPrincipal || principal.UserID == "" {
-			return momenttypes.PaginatedMoments{}, ErrUnauthorized
-		}
-		targetUserID = principal.UserID
+		return momenttypes.PaginatedMoments{}, ErrInvalidRequest
 	}
 	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
 		return momenttypes.PaginatedMoments{}, err
 	}
-	isSelf := hasPrincipal && principal.UserID == targetUserID
 	limit, cursor := normalizePagination(req.Pagination)
-	result, err := s.repo.ListMoments(ctx, targetUserID, limit, cursor, isSelf)
+	result, err := s.repo.ListMoments(ctx, targetUserID, limit, cursor, false)
 	if err != nil {
 		return momenttypes.PaginatedMoments{}, err
 	}
 	for i := range result.Items {
-		if !isSelf {
-			result.Items[i].PrivacyLevel = ""
-		}
+		// privacy_level 属拥有者数据（OwnerMomentItem），公开视角不返回。
+		result.Items[i].PrivacyLevel = ""
 	}
 	return result, nil
 }

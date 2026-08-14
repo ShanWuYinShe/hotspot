@@ -9,6 +9,7 @@ import (
 	"hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/httpx"
 )
 
 type stubMsgRepo struct {
@@ -36,7 +37,7 @@ type stubMsgRepo struct {
 func (r *stubMsgRepo) Send(_ context.Context, _, _ string, _ SendPrivateMessageRequest) (MessageSent, error) {
 	return r.sendResult, r.sendErr
 }
-func (r *stubMsgRepo) History(_ context.Context, _ string, _ GetHistoryRequest) (PaginatedMessages, error) {
+func (r *stubMsgRepo) History(_ context.Context, _ string, _ ListPrivateMessagesRequest) (PaginatedMessages, error) {
 	return r.histResult, r.histErr
 }
 func (r *stubMsgRepo) Recent(_ context.Context, _, _ string, _ int, _ *time.Time) (PaginatedMessages, error) {
@@ -175,7 +176,7 @@ func TestServiceSendPropagatesError(t *testing.T) {
 func TestServiceHistoryDelegates(t *testing.T) {
 	repo := &stubMsgRepo{histResult: PaginatedMessages{Items: []PrivateMessageItem{{MessageID: "pm1"}}}}
 	svc := NewServiceWithRepo(repo)
-	result, err := svc.History(msgCtx("u1"), GetHistoryRequest{TargetUserID: "u2"})
+	result, err := svc.History(msgCtx("u1"), ListPrivateMessagesRequest{TargetUserID: "u2"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -334,10 +335,7 @@ func TestServiceSendStrangerQuotaAggregatesAcrossTargets(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected stranger quota exceeded when combined stranger volume >= quota")
 	}
-	var blocked *MessageBlockedError
-	if !errors.As(err, &blocked) || blocked.Reason != BlockReasonStrangerQuotaExceeded {
-		t.Fatalf("expected MessageBlockedError{stranger_quota_exceeded}, got %v", err)
-	}
+	assertForbiddenReason(t, err, httpx.ReasonStrangerQuotaExceeded)
 }
 
 func TestServiceSendStrangerQuotaAllowsUnderTotal(t *testing.T) {
@@ -394,8 +392,24 @@ func TestServiceSendStrangerQuotaZeroRejects(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected rejection when quota is 0")
 	}
-	var blocked *MessageBlockedError
-	if !errors.As(err, &blocked) || blocked.Reason != BlockReasonStrangerQuotaExceeded {
-		t.Fatalf("expected MessageBlockedError{stranger_quota_exceeded}, got %v", err)
+	assertForbiddenReason(t, err, httpx.ReasonStrangerQuotaExceeded)
+}
+
+// assertForbiddenReason 断言 err 为 httpx.APIError 且 forbidden_reason 匹配。
+func assertForbiddenReason(t *testing.T, err error, reason httpx.ForbiddenReason) {
+	t.Helper()
+	var apiErr *httpx.APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("expected *httpx.APIError, got %v", err)
+	}
+	if apiErr.Code != httpx.CodeForbidden {
+		t.Fatalf("expected code httpx.CodeForbidden, got %d", apiErr.Code)
+	}
+	data, ok := apiErr.Data.(httpx.ForbiddenErrorData)
+	if !ok {
+		t.Fatalf("expected ForbiddenErrorData data, got %#v", apiErr.Data)
+	}
+	if data.ForbiddenReason != reason {
+		t.Fatalf("expected forbidden_reason=%q, got %q", reason, data.ForbiddenReason)
 	}
 }

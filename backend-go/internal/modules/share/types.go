@@ -74,7 +74,7 @@ type ShareDetail struct {
 
 type PaginationParams = types.PaginationParams
 
-type ShareListRequest struct {
+type ListSharesRequest struct {
 	ShareType  string            `json:"share_type,omitempty"`
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }

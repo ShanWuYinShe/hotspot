@@ -3,7 +3,7 @@
  */
 import { NotificationSyncService } from '../core/services/NotificationSyncService';
 import { ApiClient } from '../core/api/ApiClient';
-import { NotificationItem, NotificationPayload, NotificationType } from '../core/types/api';
+import { NotifyItem, NotifyPayload, NotifyType } from '../core/types/api';
 import { SystemIcon, AppIcon } from './SystemIcon';
 import { AppRouter, AnnouncementsRouteParam, GroupDetailRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../core/router/AppRouter';
 import { PageNames } from '../constants/AppConstants';
@@ -19,7 +19,7 @@ type NotificationFilterKey = 'all' | 'unread' | 'social' | 'interaction' | 'grou
 
 interface GroupedNotification {
   label: string;
-  items: NotificationItem[];
+  items: NotifyItem[];
 }
 
 class NotificationFilterOption {
@@ -35,7 +35,7 @@ class NotificationFilterOption {
 export struct NotificationCenter {
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   onClose?: () => void;
-  @State private visibleNotifications: NotificationItem[] = [];
+  @State private visibleNotifications: NotifyItem[] = [];
   @State private selectedFilter: NotificationFilterKey = 'all';
   @State private isLoading: boolean = false;
   @State private isRefreshing: boolean = false;
@@ -80,7 +80,7 @@ export struct NotificationCenter {
       const label = this.getTimeGroupLabel(notification.created_at);
       let group = groups.find(g => g.label === label);
       if (!group) {
-        group = { label: label, items: [] as NotificationItem[] } as GroupedNotification;
+        group = { label: label, items: [] as NotifyItem[] } as GroupedNotification;
         groups.push(group);
       }
       group.items.push(notification);
@@ -207,7 +207,7 @@ export struct NotificationCenter {
     }
   }
 
-  private async onMarkRead(notification: NotificationItem): Promise<void> {
+  private async onMarkRead(notification: NotifyItem): Promise<void> {
     if (notification.is_read) {
       return;
     }
@@ -222,7 +222,7 @@ export struct NotificationCenter {
     }
   }
 
-  private async handleNotificationClick(notification: NotificationItem): Promise<void> {
+  private async handleNotificationClick(notification: NotifyItem): Promise<void> {
     await this.onMarkRead(notification);
     if (this.navigateByNotification(notification)) {
       if (this.onClose) {
@@ -236,7 +236,7 @@ export struct NotificationCenter {
     }
   }
 
-  private navigateByNotification(notification: NotificationItem): boolean {
+  private navigateByNotification(notification: NotifyItem): boolean {
     switch (notification.type) {
       case 'new_follower':
       case 'mutual_follow': {
@@ -314,15 +314,15 @@ export struct NotificationCenter {
     this.actionLoadingIds = this.actionLoadingIds.filter((id: string) => id !== notificationId);
   }
 
-  private canHandleGroupInvite(notification: NotificationItem): boolean {
+  private canHandleGroupInvite(notification: NotifyItem): boolean {
     return notification.type === 'group_invite_received' && !!notification.payload?.invite_id;
   }
 
-  private canHandleGroupApplication(notification: NotificationItem): boolean {
+  private canHandleGroupApplication(notification: NotifyItem): boolean {
     return notification.type === 'group_application_received' && !!notification.payload?.application_id;
   }
 
-  private async handleGroupInviteAction(notification: NotificationItem, action: 'accept' | 'reject'): Promise<void> {
+  private async handleGroupInviteAction(notification: NotifyItem, action: 'accept' | 'reject'): Promise<void> {
     if (!this.canHandleGroupInvite(notification) || this.isActionLoading(notification.notify_id)) {
       return;
     }
@@ -351,7 +351,7 @@ export struct NotificationCenter {
     }
   }
 
-  private async handleGroupApplicationAction(notification: NotificationItem, action: 'approve' | 'reject'): Promise<void> {
+  private async handleGroupApplicationAction(notification: NotifyItem, action: 'approve' | 'reject'): Promise<void> {
     if (!this.canHandleGroupApplication(notification) || this.isActionLoading(notification.notify_id)) {
       return;
     }
@@ -535,11 +535,11 @@ export struct NotificationCenter {
                 header: this.buildGroupHeader(group.label),
                 space: DesignConstants.SPACING.SM
               }) {
-                ForEach(group.items, (notification: NotificationItem) => {
+                ForEach(group.items, (notification: NotifyItem) => {
                   ListItem() {
-                    this.buildNotificationItem(notification)
+                    this.buildNotifyItem(notification)
                   }
-                }, (notification: NotificationItem) =>
+                }, (notification: NotifyItem) =>
                   notification.notify_id + '_p' + (this.actionLoadingIds.indexOf(notification.notify_id) >= 0))
               }
             }, (group: GroupedNotification) => group.label)
@@ -578,7 +578,7 @@ export struct NotificationCenter {
   }
 
   @Builder
-  private buildNotificationItem(notification: NotificationItem) {
+  private buildNotifyItem(notification: NotifyItem) {
     Row({ space: DesignConstants.SPACING.MD3 }) {
       // 头像 + 类型图标徽章
       Stack({ alignContent: Alignment.Center }) {
@@ -752,7 +752,7 @@ export struct NotificationCenter {
   }
 
   private getTypeColor(type: string): string {
-    switch (this.mapTypeToCategory(type as NotificationType)) {
+    switch (this.mapTypeToCategory(type as NotifyType)) {
       case 'social':
         return this.getPalette().accentBackground;
       case 'interaction':
@@ -786,7 +786,7 @@ export struct NotificationCenter {
     return value < 10 ? `0${value}` : `${value}`;
   }
 
-  private buildNotificationTitle(notification: NotificationItem): string {
+  private buildNotificationTitle(notification: NotifyItem): string {
     switch (notification.type) {
       case 'new_follower':
         return '新的关注者';
@@ -823,7 +823,7 @@ export struct NotificationCenter {
     }
   }
 
-  private buildNotificationMessage(notification: NotificationItem): string {
+  private buildNotificationMessage(notification: NotifyItem): string {
     const payload = notification.payload;
     const actor = this.getActorName(payload);
     switch (notification.type) {
@@ -870,7 +870,7 @@ export struct NotificationCenter {
     }
   }
 
-  private getNotificationIcon(type: NotificationType): AppIcon {
+  private getNotificationIcon(type: NotifyType): AppIcon {
     switch (this.mapTypeToCategory(type)) {
       case 'social':
         return AppIcon.PERSON;
@@ -885,7 +885,7 @@ export struct NotificationCenter {
     }
   }
 
-  private getActorName(payload?: NotificationPayload): string {
+  private getActorName(payload?: NotifyPayload): string {
     if (!payload) {
       return '有人';
     }
@@ -904,7 +904,7 @@ export struct NotificationCenter {
     return '有人';
   }
 
-  private mapTypeToCategory(type: NotificationType): NotificationFilterKey {
+  private mapTypeToCategory(type: NotifyType): NotificationFilterKey {
     switch (type) {
       case 'new_follower':
       case 'mutual_follow':

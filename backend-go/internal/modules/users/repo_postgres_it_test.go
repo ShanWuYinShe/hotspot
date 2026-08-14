@@ -219,8 +219,8 @@ func TestPostgresIT_ListFriendsReturnsMutualFollows(t *testing.T) {
 		if friends.Items[0].User.UserID != bob {
 			t.Fatalf("expected friend bob, got %q", friends.Items[0].User.UserID)
 		}
-		if friends.Items[0].Remark != "" {
-			t.Fatalf("expected empty remark, got %q", friends.Items[0].Remark)
+		if friends.Items[0].Remark == nil || *friends.Items[0].Remark != "" {
+			t.Fatalf("expected empty remark, got %q", *friends.Items[0].Remark)
 		}
 	})
 }

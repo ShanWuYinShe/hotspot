@@ -9,25 +9,26 @@
 - **引用**: 
   - 基础规范：`api_spec_base.md`
   - 通用类型：`api_spec_types.md`
+  - 守卫与权限：`api_spec_authz.md`
   - 错误码：`api_spec_errors.md`
 
 ## 端点总览
 
 | 端点 | 说明 | 认证 |
 |------|------|------|
+| `POST /api/v1/auth/register` | 用户注册 | public |
+| `POST /api/v1/auth/login` | 用户登录 | public |
+| `POST /api/v1/auth/logout` | 用户登出 | required |
+| `POST /api/v1/auth/guest` | 创建访客用户 | public |
+| `POST /api/v1/auth/refresh_token` | 刷新 Token | credential |
+| `POST /api/v1/auth/get_status` | 检查认证状态 | optional |
+| `POST /api/v1/auth/request_password_reset` | 请求密码重置 | public |
+| `POST /api/v1/auth/reset_password` | 重置密码 | public |
+| `POST /api/v1/auth/change_password` | 修改密码 | required |
+| `POST /api/v1/auth/list_sessions` | 获取会话列表 | required |
+| `POST /api/v1/auth/revoke_session` | 撤销会话 | required |
+| `POST /api/v1/auth/revoke_all_sessions` | 撤销所有其他会话 | required |
 
-| `POST /api/v1/auth/register` | 用户注册 | 无 |
-| `POST /api/v1/auth/login` | 用户登录 | 无 |
-| `POST /api/v1/auth/logout` | 用户登出 | 必须 |
-| `POST /api/v1/auth/guest` | 创建访客用户 | 无 |
-| `POST /api/v1/auth/refresh_token` | 刷新 Token | 凭证可选 |
-| `POST /api/v1/auth/check_status` | 检查认证状态 | 可选 |
-| `POST /api/v1/auth/request_password_reset` | 请求密码重置 | 无 |
-| `POST /api/v1/auth/reset_password` | 重置密码 | 无 |
-| `POST /api/v1/auth/change_password` | 修改密码 | 必须 |
-| `POST /api/v1/auth/list_sessions` | 获取会话列表 | 必须 |
-| `POST /api/v1/auth/revoke_session` | 撤销会话 | 必须 |
-| `POST /api/v1/auth/revoke_all_sessions` | 撤销所有其他会话 | 必须 |
 ## 类型定义
 
 以下类型定义于 `api_spec_types.md`：
@@ -40,7 +41,7 @@ HotSpot 采用「**同一用户在同一设备上只有一个活跃 session**」
 
 **设备标识的稳定性**：
 - **App**：客户端首次启动生成 UUID v4 并持久化到 Keychain（iOS）/ Keystore（Android）；卸载重装视为新设备（新 device_id）
-- **Web**：由服务端通过独立 `device_id` Cookie 下发（见 `api_spec_base.md`「Web 端 device_id Cookie」），登出不清除；不同浏览器档案/无痕窗口天然对应不同 device_id
+- **Web**：由服务端通过独立 `device_id` Cookie 下发（见 `api_spec_base.md`「Web 端 Cookie 契约」），登出不清除；不同浏览器档案/无痕窗口天然对应不同 device_id
 - 客户端**不得**自造或预测 device_id（App 端虽本地生成，但一经生成即稳定，禁止为绕过驱逐而轮换）
 
 **驱逐规则**：
@@ -50,7 +51,7 @@ HotSpot 采用「**同一用户在同一设备上只有一个活跃 session**」
 **跨设备共存**：用户可在多个设备（手机、平板、Web）同时登录，各自 `device_id` 不同、互不驱逐。`list_sessions` 返回所有活跃设备的 session 列表。
 
 **与既有失效机制的协同**：
-- `change_password`：撤销除当前外所有 session（跨设备，含其他设备）——强度高于单设备驱逐，用于密码泄露场景
+- `change_password`：撤销除当前外所有 session（跨设备）——强度高于单设备驱逐，用于密码泄露场景
 - `reset_password`：撤销所有 session（含当前）——最强，用于忘密码重置
 - `logout`：仅撤销当前 session
 - `revoke_session` / `revoke_all_sessions`：用户主动管理多设备
@@ -67,7 +68,6 @@ HotSpot 采用「**同一用户在同一设备上只有一个活跃 session**」
 // JWT 设计原则：
 // - JWT (access_token) 中只存储不可变信息：user_id
 // - 可变信息（nickname、头像等）应通过 /api/v1/users/get_account 获取
-// - 避免 JWT 中的信息与实际数据不一致
 // - Token 失效通过黑名单机制实现（登出/撤销时写入黑名单，直至过期）
 
 // 判别字段：client_type 标明投递形态，客户端按类型分支解析（app 取 token 字段，web 取 Cookie）
@@ -100,9 +100,7 @@ Set-Cookie: refresh_token=<token>; HttpOnly; Secure; SameSite=Strict; Path=/api/
 
 #### App 端（`client_type='app'`）
 
-Token 通过响应体投递：
-- 返回 `ApiResponse<AuthTokenPairApp>`，响应体中包含 `access_token`、`refresh_token` 及各自过期时间
-- 客户端负责安全存储（Keychain / Keystore）
+Token 通过响应体投递：返回 `ApiResponse<AuthTokenPairApp>`，响应体中包含 `access_token`、`refresh_token` 及各自过期时间；客户端负责安全存储（Keychain / Keystore）。
 
 #### Cookie 生命周期（Web 端）
 
@@ -120,7 +118,7 @@ Token 通过响应体投递：
 
 用户注册。
 
-- **认证**: 无
+- **认证**: public
 - **幂等**: 是（客户端必须携带 `Idempotency-Key`）；`auth/register` 是全规范唯一保留幂等键的「有唯一约束」接口，理由见 `api_spec_base.md`「唯一约束特例」
 
 **Request**: `RegisterRequest`
@@ -130,19 +128,19 @@ interface RegisterRequest {
   nickname: string;
   password: string;
   client_type: ClientType;
-  device_id: DeviceId;   // 设备标识（详见「单设备单会话模型」）
+  device_id: DeviceId;          // App 端必填；Web 端服务端从 device_id Cookie 读取
 }
 ```
 
 **Response**: `ApiResponse<AuthTokenPair>`
 
-**错误码**: `10400`
+**错误码**: `10400`（login_id 已被占用）
 
 ### POST /api/v1/auth/login
 
 用户登录（密码方式）。
 
-- **认证**: 无
+- **认证**: public
 
 **Request**: `LoginRequest`
 ```typescript
@@ -150,13 +148,13 @@ interface LoginRequest {
   login_id: string;            // 手机号/邮箱/用户名
   password: string;            // 密码
   client_type: ClientType;
-  device_id: DeviceId;         // 设备标识（详见「单设备单会话模型」）
+  device_id: DeviceId;         // App 端必填；Web 端服务端从 device_id Cookie 读取
 }
 ```
 
 **Response**: `ApiResponse<AuthTokenPair>`
 
-**单设备单会话驱逐**：登录成功时，服务端查找 `(user_id, device_id)` 已有的活跃 session，若存在则立即将其 access_token + refresh_token 写入黑名单（沿用 `change_password` 机制），并向被驱逐设备的在线 WebSocket 连接推送 `SessionRevoked` 事件（见 `api_spec_websocket.md`）。新 session 取代旧 session，保证「同一用户在同一设备上只有一个活跃 session」。
+**单设备单会话驱逐**：登录成功时，服务端查找 `(user_id, device_id)` 已有的活跃 session，若存在则立即将其 access_token + refresh_token 写入黑名单（沿用 `change_password` 机制），并向被驱逐设备的在线 WebSocket 连接推送 `SessionRevoked` 事件（见 `api_spec_websocket.md`）。新 session 取代旧 session。
 
 **安全说明**：用户不存在和密码错误统一返回 `10100`（认证失败），不区分具体原因，防止账号枚举攻击。
 
@@ -168,11 +166,14 @@ interface LoginRequest {
 
 用户登出。
 
-- **认证**: 必须
+- **认证**: required
 
 **失效规则**：登出会将当前 access_token 与 refresh_token 写入黑名单，直至过期。
 
-**Request**: `{}`
+**Request**: `LogoutRequest`
+```typescript
+interface LogoutRequest {}
+```
 
 **Response**: `ApiResponse`
 
@@ -181,11 +182,9 @@ interface LoginRequest {
 Set-Cookie: access_token=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0
 Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth/refresh_token; Max-Age=0
 ```
-- 通过 `Max-Age=0` 立即清除 access_token 和 refresh_token Cookie
-- 前端无需手动清除 Cookie
+- 通过 `Max-Age=0` 立即清除 access_token 和 refresh_token Cookie；前端无需手动清除 Cookie
 
-**App 端行为**：
-- 客户端需要自行清除存储的 access_token 和 refresh_token
+**App 端行为**：客户端需要自行清除存储的 access_token 和 refresh_token。
 
 **WebSocket 处理**：
 - 服务端在处理 logout 时会主动断开该用户当前会话关联的 WebSocket 连接
@@ -198,7 +197,7 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 
 创建访客用户。
 
-- **认证**: 无
+- **认证**: public
 - **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `GuestRequest`
@@ -206,7 +205,7 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 interface GuestRequest {
   nickname: string;
   client_type: ClientType;
-  device_id: DeviceId;   // 设备标识（详见「单设备单会话模型」）
+  device_id: DeviceId;   // App 端必填；Web 端服务端从 device_id Cookie 读取
 }
 ```
 
@@ -218,11 +217,11 @@ interface GuestRequest {
 
 刷新 Token。
 
-- **认证**: 凭证可选（仅限本端点：以 refresh_token 为凭证，无效/过期/被撤销返回 `10100`，不适用"可选"端点的匿名降级规则，见 `api_spec_base.md`「认证档位说明」）
+- **认证**: credential（仅限本端点：以 refresh_token 为凭证，无效/过期/被撤销返回 `10100`，不适用 optional 端点的匿名降级规则）
 
 **刷新规则**：
 - 刷新成功后：access_token 和 refresh_token 都会更新
-- 此 API 允许在 access_token 过期或缺失时调用（Token 可选）
+- 此 API 允许在 access_token 过期或缺失时调用
 
 **并发刷新策略（宽限期机制）**：
 - 旧 refresh_token 在被轮换后，仍有 **30 秒宽限期**可用
@@ -237,37 +236,40 @@ interface GuestRequest {
 - `client_type='web'`：请求体不得包含 `refresh_token` 字段（若包含则请求失败）
 - `client_type='app'`：请求体必须包含非空 `refresh_token`（缺少或为空则请求失败）
 
-**错误码**: `10100`
-
 **Request**: `RefreshTokenRequest`
 ```typescript
 interface RefreshTokenRequest {
   client_type: ClientType;
-  device_id: DeviceId;     // 设备标识（用于校验 refresh_token 归属当前设备，防止跨设备 token 挪用）
-  refresh_token?: string;  // App 端必填，Web 端留空（使用 Cookie）
+  device_id: DeviceId;     // 用于校验 refresh_token 归属当前设备，防止跨设备 token 挪用（Web 端服务端从 device_id Cookie 读取）
+  refresh_token: string | null;  // App 端必填；Web 端为 null（使用 Cookie）
 }
 ```
 
 **Response**: `ApiResponse<AuthTokenPair>`
 
+**错误码**: `10100`
+
 ---
 
-### POST /api/v1/auth/check_status
+### POST /api/v1/auth/get_status
 
 检查认证状态。
 
-- **认证**: 可选
+- **认证**: optional
 
 **说明**：Token 可选；未登录或携带无效/过期 Token 时返回 `is_valid: false`（不会触发 `10100`），仅当 Token 验证通过时返回 `is_valid: true` 并附 `expires_at`。
 
-**Request**: `{}`
+**Request**: `GetStatusRequest`
+```typescript
+interface GetStatusRequest {}
+```
 
 **Response**: `ApiResponse<AuthStatus>`
 ```typescript
 interface AuthStatus {
   is_valid: boolean;
-  user_id?: string;    // 仅当 is_valid === true 时返回，客户端可直接获得身份（App 冷启动校验免二次调用 get_account）
-  expires_at?: string; // 仅当 is_valid === true 时返回，对应 access_token 的过期时间
+  user_id: string | null;    // 仅当 is_valid === true 时返回，客户端可直接获得身份（App 冷启动校验免二次调用 get_account）
+  expires_at: string | null; // 仅当 is_valid === true 时返回，对应 access_token 的过期时间
 }
 ```
 
@@ -277,7 +279,7 @@ interface AuthStatus {
 
 请求密码重置（发送验证码）。
 
-- **认证**: 无
+- **认证**: public
 
 **安全说明**：
 - 无论 `login_id` 是否存在，均返回成功响应，不暴露账号是否注册
@@ -299,7 +301,7 @@ interface RequestPasswordResetRequest {
 
 验证验证码并重置密码。重置成功后自动登录并返回 Token。
 
-- **认证**: 无
+- **认证**: public
 
 **自然去重**：验证码为一次性凭证，首次成功后即失效——重发同一请求返回 `10300`（验证码已用/过期），不会重复改密。无需 `Idempotency-Key`（判定见 `api_spec_base.md`「自然去重键」）。
 
@@ -307,7 +309,7 @@ interface RequestPasswordResetRequest {
 - 重置密码成功后，服务端自动吊销该账号所有现有会话（与 `change_password` 一致）
 - 所有被吊销会话的 token 写入黑名单
 - 被吊销设备的 WebSocket 连接会被服务端主动断开
-- 重置成功后自动登录：按 `(user_id, device_id)` 建立新会话；若该设备已有活跃会话则立即驱逐（与 `login` 的驱逐规则一致，见「单设备单会话模型」）
+- 重置成功后自动登录：按 `(user_id, device_id)` 建立新会话；若该设备已有活跃会话则立即驱逐（与 `login` 的驱逐规则一致）
 
 **Request**: `ResetPasswordRequest`
 ```typescript
@@ -316,7 +318,7 @@ interface ResetPasswordRequest {
   verification_code: string;
   new_password: string;
   client_type: ClientType;
-  device_id: DeviceId;       // 设备标识（详见「单设备单会话模型」；Web 端亦可由服务端从 device_id Cookie 读取）
+  device_id: DeviceId;       // App 端必填；Web 端服务端从 device_id Cookie 读取
 }
 ```
 
@@ -333,9 +335,9 @@ interface ResetPasswordRequest {
 
 修改密码（需要验证旧密码）。
 
-- **认证**: 必须
+- **认证**: required
 
-**自然去重**：首次成功后旧密码立即失效，重发同一请求（仍带旧密码）返回 `10401`（旧密码错误），不会重复改密。无需 `Idempotency-Key`（判定见 `api_spec_base.md`「自然去重键」）。
+**自然去重**：首次成功后旧密码立即失效，重发同一请求（仍带旧密码）返回 `10401`（旧密码错误），不会重复改密。无需 `Idempotency-Key`。
 
 **Request**: `ChangePasswordRequest`
 ```typescript
@@ -352,28 +354,34 @@ interface ChangePasswordRequest {
 - 所有被吊销会话的 token 写入黑名单
 - 被吊销设备的 WebSocket 连接收到 `SessionRevoked`（`reason='password_changed'`）事件后被服务端主动断开（见 `api_spec_websocket.md`）
 
+**错误码**: `10401`（旧密码错误）
+
 ---
 
 ### POST /api/v1/auth/list_sessions
 
 获取活跃会话列表。
 
-- **认证**: 必须
+- **认证**: required
 
-**Request**: `SessionsRequest`
+**Request**: `ListSessionsRequest`
 ```typescript
-interface SessionsRequest {} // 直接返回全部活跃会话，无需分页
+interface ListSessionsRequest {} // 直接返回全部活跃会话，无需分页
 ```
 
-**Response**: `ApiResponse<{ items: SessionItem[] }>`
+**Response**: `ApiResponse<SessionList>`
 ```typescript
+interface SessionList {
+  items: SessionItem[];
+}
+
 interface SessionItem {
   session_id: string;           // 会话标识，用于展示和撤销操作
-  device_id: DeviceId;          // 设备标识（会话主键的一部分，支撑单设备单会话模型）
-  device_type?: string;         // 设备类型展示（如 "iOS" / "Android" / "Web"），来自 client_type 与 UA 解析
-  device_name?: string;         // 设备名称展示（如 "iPhone 15 Pro" / "Chrome on macOS"），来自 UA 解析
-  ip_address?: string;          // 脱敏显示（如 "192.168.xxx.xxx"），防止被用于跟踪
-  ip_location?: string;         // IP 地理位置（如 "北京市"）
+  device_id: DeviceId;          // 设备标识（会话主键的一部分）
+  device_type: string | null;   // 设备类型展示（如 "iOS" / "Android" / "Web"），来自 client_type 与 UA 解析
+  device_name: string | null;   // 设备名称展示（如 "iPhone 15 Pro" / "Chrome on macOS"），来自 UA 解析
+  ip_address: string | null;    // 脱敏显示（如 "192.168.xxx.xxx"），防止被用于跟踪
+  ip_location: string | null;   // IP 地理位置（如 "北京市"）
   created_at: string;
   last_active_at: string;
   is_current: boolean;          // 判定：session.session_id === 当前请求所属会话的 session_id
@@ -383,7 +391,6 @@ interface SessionItem {
 **说明**：
 - 单设备单会话模型下，同一 `device_id` 最多一个活跃 session；活跃会话数 = 用户活跃设备数，无需分页
 - 排序：当前会话置顶，其余按 `last_active_at` 倒序
-- 跨设备场景：用户可在手机、平板、Web 各自登录（不同 `device_id`），互不驱逐；同设备重复登录则驱逐旧 session
 
 ---
 
@@ -391,7 +398,7 @@ interface SessionItem {
 
 撤销会话（设备下线）。
 
-- **认证**: 必须
+- **认证**: required
 
 **安全说明**：
 - 撤销操作会将对应会话的 token 写入黑名单，直至过期
@@ -407,7 +414,7 @@ interface RevokeSessionRequest {
 
 **Response**: `ApiResponse`
 
-**错误码**: `10300` `10400`
+**错误码**: `10300`（会话不存在） `10400`（不能撤销当前会话）
 
 ---
 
@@ -415,14 +422,17 @@ interface RevokeSessionRequest {
 
 撤销当前会话之外的所有其他活跃会话。适用于账号被盗、密码泄露等紧急安全场景。
 
-- **认证**: 必须
+- **认证**: required
 
 **安全说明**：
 - 当前会话（发起请求的会话）不会被撤销
 - 所有被撤销会话的 token 都会写入黑名单
 - 操作不可逆，被撤销的设备需要重新登录；每个被撤销会话的在线连接收到 `SessionRevoked` 后断开
 
-**Request**: `{}`
+**Request**: `RevokeAllSessionsRequest`
+```typescript
+interface RevokeAllSessionsRequest {}
+```
 
 **Response**: `ApiResponse<RevokeAllResult>`
 ```typescript

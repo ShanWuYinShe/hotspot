@@ -1,8 +1,8 @@
 <script lang="ts">
 	import ListItem from '@/components/list/ListItem.svelte';
-	import { TYPE_CONFIG, type NotificationItem } from './notification-data';
+	import { TYPE_CONFIG, type NotifyViewItem } from './notify-data';
 
-	// 通知行（对齐 Figma Make NotificationsPage 行契约：ListItem
+	// 通知行（对齐 Figma Make NotifyPage 行契约：ListItem
 	// hover 背景填充 + tap opacity 0.84，无 scale 位移）。
 
 	let {
@@ -12,7 +12,7 @@
 		onAccept,
 		onReject
 	}: {
-		notif: NotificationItem;
+		notif: NotifyViewItem;
 		onRead: (id: string) => void;
 		onRemove: (id: string) => void;
 		/** 入群邀请通知的可选操作（inviteId 存在时渲染接受/拒绝按钮）。 */

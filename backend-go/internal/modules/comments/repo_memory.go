@@ -39,12 +39,11 @@ func (r *InMemoryRepository) Create(ctx context.Context, userID string, req Crea
 		MomentID:     req.MomentID,
 		User:         UserInfo{UserID: userID, Nickname: userID},
 		Content:      req.Content,
-		ParentID:     req.ParentID,
+		ParentID:     strPtr(req.ParentID),
 		Mentions:     req.Mentions,
 		CreatedAt:    now.Format(time.RFC3339),
 		LikesCount:   0,
 		RepliesCount: 0,
-		MyState:      &MyCommentState{},
 	}
 	r.comments[req.MomentID] = append(r.comments[req.MomentID], item)
 	r.byID[item.CommentID] = item
@@ -123,13 +122,13 @@ func (r *InMemoryRepository) SoftDelete(_ context.Context, commentID string) err
 		}
 	}
 	// Decrement parent comment's RepliesCount if this is a reply
-	if item.ParentID != "" {
-		if parent, ok := r.byID[item.ParentID]; ok {
+	if item.ParentID != nil {
+		if parent, ok := r.byID[*item.ParentID]; ok {
 			parent.RepliesCount--
 			if parent.RepliesCount < 0 {
 				parent.RepliesCount = 0
 			}
-			r.byID[item.ParentID] = parent
+			r.byID[*item.ParentID] = parent
 		}
 	}
 	return nil
@@ -140,7 +139,7 @@ func (r *InMemoryRepository) List(_ context.Context, momentID string, limit int,
 	defer r.mu.RUnlock()
 	var items []CommentItem
 	for _, item := range r.comments[momentID] {
-		if item.ParentID == "" {
+		if item.ParentID == nil {
 			items = append(items, item)
 		}
 	}

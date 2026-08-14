@@ -444,7 +444,8 @@ func listUserGroupsPostgres(ctx context.Context, factory *persistence.Factory, u
 		items = append(items, item)
 		cursors = append(cursors, encodeUserCursor(joinedAt, item.Group.GroupID))
 		if len(items) == limit+1 {
-			return grouptypes.PaginatedGroups{Items: items[:limit], NextCursor: cursors[limit-1]}, nil
+			next := cursors[limit-1]
+			return grouptypes.PaginatedGroups{Items: items[:limit], NextCursor: &next}, nil
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -530,7 +531,9 @@ func listReactedMomentsPostgres(ctx context.Context, factory *persistence.Factor
 		if err != nil {
 			return momenttypes.PaginatedMoments{}, err
 		}
-		item.MyState = &momenttypes.MyMomentState{}
+		// 已反应列表：对查看者本人而言必然已收藏（spec api_spec_moment.md → moments/list_reacted）
+		item.IsFavorited = true
+		item.FavoritedAt = reactedAt
 		items = append(items, item)
 		momentIDs = append(momentIDs, item.MomentID)
 		cursors = append(cursors, encodeUserMomentCursor(reactedAt, item.MomentID))
@@ -596,12 +599,14 @@ func scanFriendRow(scanner interface{ Scan(...any) error }) (FriendItem, time.Ti
 	var lastOnline time.Time
 	var sortableLastOnline time.Time
 	var followedAt, followedBackAt time.Time
-	if err := scanner.Scan(&item.User.UserID, &item.User.Nickname, &avatarURL, &presenceStatus, &lastOnline, &sortableLastOnline, &item.Remark, &followedAt, &followedBackAt); err != nil {
+	var remark string
+	if err := scanner.Scan(&item.User.UserID, &item.User.Nickname, &avatarURL, &presenceStatus, &lastOnline, &sortableLastOnline, &remark, &followedAt, &followedBackAt); err != nil {
 		return FriendItem{}, time.Time{}, err
 	}
 	item.User.AvatarURL = avatarURL
 	ps := UserPresenceStatus(presenceStatus)
 	item.PresenceStatus = &ps
+	item.Remark = &remark
 	lastOnlineStr := lastOnline.UTC().Format(time.RFC3339)
 	item.LastOnline = &lastOnlineStr
 	item.FollowedAt = followedAt.UTC().Format(time.RFC3339)
@@ -677,7 +682,7 @@ func scanMomentItem(scanner interface{ Scan(...any) error }) (momenttypes.Moment
 	}
 	item.User = momenttypes.UserInfo{UserID: userID, Nickname: nickname}
 	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
-	item.Location = momenttypes.Location{Point: struct {
+	item.Location = &momenttypes.Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
@@ -698,7 +703,7 @@ func scanUserReactedMomentRow(scanner interface{ Scan(...any) error }) (momentty
 	}
 	item.User = momenttypes.UserInfo{UserID: userID, Nickname: nickname}
 	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
-	item.Location = momenttypes.Location{Point: struct {
+	item.Location = &momenttypes.Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}

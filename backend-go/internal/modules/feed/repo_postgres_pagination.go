@@ -18,7 +18,7 @@ func paginateUsers(items []userCandidate, limit int, cursor string) (PaginatedUs
 		resp.Items = append(resp.Items, item.Item)
 	}
 	if end < len(items) && end > start {
-		resp.NextCursor = encodeFeedCursor(itemCursor{Distance: items[end-1].Distance, ID: items[end-1].Item.User.UserID})
+		resp.NextCursor = strPtr(encodeFeedCursor(itemCursor{Distance: items[end-1].Distance, ID: items[end-1].Item.User.UserID}))
 	}
 	return resp, nil
 }
@@ -35,7 +35,7 @@ func paginateGroups(items []groupCandidate, limit int, cursor string) (Paginated
 		resp.Items = append(resp.Items, item.Item)
 	}
 	if end < len(items) && end > start {
-		resp.NextCursor = encodeFeedCursor(itemCursor{Distance: items[end-1].Distance, ID: items[end-1].Item.Group.GroupID})
+		resp.NextCursor = strPtr(encodeFeedCursor(itemCursor{Distance: items[end-1].Distance, ID: items[end-1].Item.Group.GroupID}))
 	}
 	return resp, nil
 }
@@ -53,7 +53,7 @@ func paginateFollowingMoments(items []momentCandidate, limit int, cursor string)
 	}
 	if end < len(items) && end > start {
 		last := items[end-1]
-		resp.NextCursor = encodeFeedCursor(itemCursor{CreatedAt: last.CreatedAt.UTC().Format(time.RFC3339), ID: last.Item.MomentID})
+		resp.NextCursor = strPtr(encodeFeedCursor(itemCursor{CreatedAt: last.CreatedAt.UTC().Format(time.RFC3339), ID: last.Item.MomentID}))
 	}
 	return resp, nil
 }
@@ -71,13 +71,13 @@ func paginateNearbyMoments(items []momentCandidate, limit int, cursor string) (P
 	}
 	if end < len(items) && end > start {
 		last := items[end-1]
-		resp.NextCursor = encodeFeedCursor(itemCursor{Score: last.Score, Distance: last.Distance, CreatedAt: last.CreatedAt.UTC().Format(time.RFC3339), ID: last.Item.MomentID})
+		resp.NextCursor = strPtr(encodeFeedCursor(itemCursor{Score: last.Score, Distance: last.Distance, CreatedAt: last.CreatedAt.UTC().Format(time.RFC3339), ID: last.Item.MomentID}))
 	}
 	return resp, nil
 }
 
-// compareUserCandidates 排序规则：距离升序 → 共同好友数降序 → userID 降序
-// （ID 大小写只作稳定 tie-break，保证分页键集序与游标一致）。
+// compareUserCandidates 排序规则：距离升序 → 共同好友数降序 → userID 升序
+// （ID 仅作稳定 tie-break，保证分页键集序与游标一致；与 users/search 统一为 ASC）。
 func compareUserCandidates(left, right userCandidate) int {
 	if left.Distance != right.Distance {
 		return left.Distance - right.Distance
@@ -85,27 +85,35 @@ func compareUserCandidates(left, right userCandidate) int {
 	if left.Item.SocialContext != nil && right.Item.SocialContext != nil && left.Item.SocialContext.MutualFriendsCount != right.Item.SocialContext.MutualFriendsCount {
 		return right.Item.SocialContext.MutualFriendsCount - left.Item.SocialContext.MutualFriendsCount
 	}
-	if left.Item.User.UserID > right.Item.User.UserID {
+	if left.Item.User.UserID < right.Item.User.UserID {
 		return -1
 	}
-	if left.Item.User.UserID < right.Item.User.UserID {
+	if left.Item.User.UserID > right.Item.User.UserID {
 		return 1
 	}
 	return 0
 }
 
-// compareGroupCandidates 排序规则：距离升序 → 群内好友数降序 → groupID 降序。
+// compareGroupCandidates 排序规则：距离升序 → 群内好友数降序 → groupID 升序
+// （与 groups/search 统一为 ASC）。
+func friendsInGroup(item GroupItem) int {
+	if item.FriendsInGroup == nil {
+		return 0
+	}
+	return *item.FriendsInGroup
+}
+
 func compareGroupCandidates(left, right groupCandidate) int {
 	if left.Distance != right.Distance {
 		return left.Distance - right.Distance
 	}
-	if left.Item.FriendsInGroup != right.Item.FriendsInGroup {
-		return right.Item.FriendsInGroup - left.Item.FriendsInGroup
-	}
-	if left.Item.Group.GroupID > right.Item.Group.GroupID {
-		return -1
+	if lf, rf := friendsInGroup(left.Item), friendsInGroup(right.Item); lf != rf {
+		return rf - lf
 	}
 	if left.Item.Group.GroupID < right.Item.Group.GroupID {
+		return -1
+	}
+	if left.Item.Group.GroupID > right.Item.Group.GroupID {
 		return 1
 	}
 	return 0

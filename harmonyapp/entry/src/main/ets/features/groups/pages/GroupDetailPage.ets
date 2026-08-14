@@ -4,7 +4,7 @@
  */
 
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
-import { MyProfile } from '../../../core/types/api';
+import { AccountInfo } from '../../../core/types/api';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -72,7 +72,7 @@ interface MemberActionMenuItem {
 @Component
 export struct GroupDetailPage {
   pathStack: NavPathStack = new NavPathStack();
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';

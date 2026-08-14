@@ -40,16 +40,6 @@ func (r *InMemoryRepository) ListAuditLogs(_ context.Context, filter AuditLogFil
 	return page, nil
 }
 
-func (r *InMemoryRepository) GetAuditLog(_ context.Context, logID string, includeIPAddress bool) (AuditLogItem, bool, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	entry, ok := r.auditLogs[logID]
-	if !ok {
-		return AuditLogItem{}, false, nil
-	}
-	return auditLogItemFromEntry(entry, includeIPAddress), true, nil
-}
-
 func (r *InMemoryRepository) AppendAuditLog(_ context.Context, entry AuditLogEntry) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

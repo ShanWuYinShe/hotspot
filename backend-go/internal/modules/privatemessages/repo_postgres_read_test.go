@@ -294,7 +294,7 @@ func TestPostgresRepositoryFailsClosedWhenQueryableUnavailable(t *testing.T) {
 	if _, err := repo.Send(context.Background(), "user_alice", "user_bob", SendPrivateMessageRequest{Type: "text", Content: "hello"}); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("expected ErrNotImplemented for send, got %v", err)
 	}
-	if _, err := repo.History(context.Background(), "user_alice", GetHistoryRequest{TargetUserID: "user_bob"}); !errors.Is(err, persistence.ErrNotImplemented) {
+	if _, err := repo.History(context.Background(), "user_alice", ListPrivateMessagesRequest{TargetUserID: "user_bob"}); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("expected ErrNotImplemented for history, got %v", err)
 	}
 	if _, err := repo.Update(context.Background(), "user_alice", UpdatePrivateMessageRequest{MessageID: "pm_1", Content: "updated"}); !errors.Is(err, persistence.ErrNotImplemented) {
@@ -321,7 +321,7 @@ func TestPostgresRepositorySendHistoryRecentAndLast(t *testing.T) {
 	if err != nil {
 		t.Fatalf("send: %v", err)
 	}
-	history, err := repo.History(context.Background(), "user_alice", GetHistoryRequest{TargetUserID: "user_bob"})
+	history, err := repo.History(context.Background(), "user_alice", ListPrivateMessagesRequest{TargetUserID: "user_bob"})
 	if err != nil {
 		t.Fatalf("history: %v", err)
 	}
@@ -362,7 +362,7 @@ func TestPostgresRepositoryHistorySupportsMediaReplyAndPagination(t *testing.T) 
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
 
-	history, err := repo.History(context.Background(), "user_alice", GetHistoryRequest{TargetUserID: "user_bob", Pagination: &PaginationParams{Limit: 2}})
+	history, err := repo.History(context.Background(), "user_alice", ListPrivateMessagesRequest{TargetUserID: "user_bob", Pagination: &PaginationParams{Limit: 2}})
 	if err != nil {
 		t.Fatalf("history: %v", err)
 	}
@@ -376,7 +376,7 @@ func TestPostgresRepositoryHistorySupportsMediaReplyAndPagination(t *testing.T) 
 		t.Fatalf("expected reply_to payload, got %#v", history.Items[1])
 	}
 
-	next, err := repo.History(context.Background(), "user_alice", GetHistoryRequest{TargetUserID: "user_bob", Pagination: &PaginationParams{Cursor: history.NextCursor, Limit: 2}})
+	next, err := repo.History(context.Background(), "user_alice", ListPrivateMessagesRequest{TargetUserID: "user_bob", Pagination: &PaginationParams{Cursor: history.NextCursor, Limit: 2}})
 	if err != nil {
 		t.Fatalf("history next page: %v", err)
 	}
@@ -391,7 +391,7 @@ func TestPostgresRepositoryHistoryReturnsEmptyWithoutFallback(t *testing.T) {
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
 
-	history, err := repo.History(context.Background(), "user_alice", GetHistoryRequest{TargetUserID: "user_bob"})
+	history, err := repo.History(context.Background(), "user_alice", ListPrivateMessagesRequest{TargetUserID: "user_bob"})
 	if err != nil {
 		t.Fatalf("history: %v", err)
 	}
@@ -418,7 +418,7 @@ func TestPostgresRepositoryHistoryReturnsErrorOnQueryFailure(t *testing.T) {
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
 
-	_, err := repo.History(context.Background(), "user_alice", GetHistoryRequest{TargetUserID: "user_bob"})
+	_, err := repo.History(context.Background(), "user_alice", ListPrivateMessagesRequest{TargetUserID: "user_bob"})
 	if err == nil {
 		t.Fatal("expected history error")
 	}
@@ -498,7 +498,7 @@ func TestPostgresRepositoryHistoryReflectsReadStateSemantics(t *testing.T) {
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
 
-	history, err := repo.History(context.Background(), "user_alice", GetHistoryRequest{TargetUserID: "user_bob"})
+	history, err := repo.History(context.Background(), "user_alice", ListPrivateMessagesRequest{TargetUserID: "user_bob"})
 	if err != nil {
 		t.Fatalf("history: %v", err)
 	}

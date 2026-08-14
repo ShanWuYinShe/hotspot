@@ -15,7 +15,7 @@
 	import MomentEditDialog from '@/components/overlays/MomentEditDialog.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import { showToast } from '@/stores/toast.svelte';
-	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment, getFeedNearby, searchMoments, deleteMoment } from '@/api';
+	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment, getFeedNearby, searchMoments, deleteMoment, listMyMoments } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance, formatDateTime } from '@/lib/utils';
 
@@ -133,12 +133,30 @@
 					} else {
 						liked = false;
 					}
-					saved = Boolean(detailData.my_state?.is_favorited);
+					saved = Boolean(detailData.is_favorited);
 					momentRaw = {
 						description: detailData.description ?? '',
 						tags: detailData.tags ?? [],
-						privacy_level: detailData.privacy_level === 'private' ? 'private' : 'public'
+						privacy_level: 'public'
 					};
+					// privacy_level 属拥有者数据（OwnerMomentItem），不在公开详情类型 MomentItem 中：
+					// 拥有者编辑前经 moments/list_created 取回实际可见性（视角分离）。
+					if (detailData.user?.user_id === auth.user?.user_id) {
+						void (async () => {
+							let cursor: string | null = null;
+							for (let i = 0; i < 10; i++) {
+								const ownRes: Awaited<ReturnType<typeof listMyMoments>> | null = await listMyMoments({ pagination: { limit: 100, cursor: cursor ?? undefined } }).catch(() => null);
+								if (!ownRes || ownRes.code !== 0 || !ownRes.data) break;
+								const found = ownRes.data.items.find((m) => m.moment_id === momentId);
+								if (found) {
+									momentRaw = { ...momentRaw, privacy_level: found.privacy_level };
+									break;
+								}
+								cursor = ownRes.data.next_cursor;
+								if (!cursor) break;
+							}
+						})();
+					}
 				}
 
 				if (commentsData) {

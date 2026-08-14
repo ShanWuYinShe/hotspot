@@ -43,7 +43,7 @@ func (r *PostgresRepository) Append(ctx context.Context, userID string, item Not
 	if err != nil {
 		return err
 	}
-	return queryable.Exec(ctx, queryInsertNotification, item.NotifyID, userID, item.Type, item.IsRead, item.CreatedAt, string(payloadJSON))
+	return queryable.Exec(ctx, queryInsertNotify, item.NotifyID, userID, item.Type, item.IsRead, item.CreatedAt, string(payloadJSON))
 }
 
 func (r *PostgresRepository) AppendMany(ctx context.Context, userIDs []string, item NotifyItem) error {
@@ -71,14 +71,14 @@ func (r *PostgresRepository) AppendMany(ctx context.Context, userIDs []string, i
 	// Insert all rows in a single transaction (and a single round trip). The
 	// previous per-user loop would commit partial fan-out on a mid-loop
 	// failure, leaving some members notified and others not. Each row gets a
-	// distinct notification_id derived from the shared id prefix, since the
-	// table's PK is notification_id alone and a shared id would collide.
+	// distinct notify_id derived from the shared id prefix, since the
+	// table's PK is notify_id alone and a shared id would collide.
 	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
 		txQueryable, ok := r.txQueryable(txCtx)
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
-		return txQueryable.Exec(txCtx, queryInsertNotificationsBatch, targets, item.NotifyID, item.Type, item.IsRead, item.CreatedAt, string(payloadJSON))
+		return txQueryable.Exec(txCtx, queryInsertNotifysBatch, targets, item.NotifyID, item.Type, item.IsRead, item.CreatedAt, string(payloadJSON))
 	})
 }
 
@@ -90,7 +90,7 @@ func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, ids 
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, queryMarkNotificationsRead, userID, ids)
+	return queryable.Exec(ctx, queryMarkNotifysRead, userID, ids)
 }
 
 func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) error {
@@ -101,5 +101,5 @@ func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) err
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, queryMarkAllNotificationsRead, userID)
+	return queryable.Exec(ctx, queryMarkAllNotifysRead, userID)
 }

@@ -21,7 +21,6 @@ func MountRoutes(r chi.Router, handler *Handler) {
 	})
 	r.Route("/audit", func(audit chi.Router) {
 		audit.Post("/list", handler.ListAuditLogs)
-		audit.Post("/open_the_door", handler.OpenAuditLog)
 	})
 	r.Route("/app_config", func(appConfig chi.Router) {
 		appConfig.Post("/get", handler.GetAppConfig)
@@ -46,7 +45,7 @@ func MountRoutes(r chi.Router, handler *Handler) {
 		tags.Post("/delete", handler.DeleteTag)
 	})
 	r.Route("/announcements", func(announcements chi.Router) {
-		announcements.Post("/search", handler.SearchAnnouncements)
+		announcements.Post("/list", handler.ListAdminAnnouncements)
 		announcements.Post("/create", handler.CreateAnnouncement)
 		announcements.Post("/update", handler.UpdateAnnouncement)
 		announcements.Post("/delete", handler.DeleteAnnouncement)

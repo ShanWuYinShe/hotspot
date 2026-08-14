@@ -102,7 +102,7 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	if req.RequiresApproval != nil {
 		requiresApproval = *req.RequiresApproval
 	}
-	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: req.Tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, RequiresApproval: requiresApproval, IsSearchable: isSearchable, MembersSearchable: membersSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: userID}
+	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: req.Tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), ViewerState: &GroupViewerState{Role: "owner", UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, RequiresApproval: requiresApproval, IsSearchable: isSearchable, MembersSearchable: membersSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: &userID}
 	r.groups[groupID] = item
 	r.members[groupID] = map[string]inMemoryMembership{userID: {Role: GroupRoleOwner, JoinedAt: nowRFC3339}}
 	return item, nil
@@ -197,7 +197,7 @@ func (r *InMemoryRepository) Search(ctx context.Context, req SearchGroupsRequest
 	if err != nil {
 		return PaginatedGroups{}, err
 	}
-	response.NextCursor = next
+	response.NextCursor = &next
 	return response, nil
 }
 
@@ -296,14 +296,14 @@ func (r *InMemoryRepository) ListMyGroups(_ context.Context, userID string, limi
 			continue
 		}
 		clone := r.cloneGroupForUser(group, userID)
-		if clone.MyState != nil {
-			clone.MyState.JoinedAt = member.JoinedAt
+		if clone.ViewerState != nil {
+			clone.ViewerState.JoinedAt = member.JoinedAt
 		}
 		items = append(items, clone)
 	}
 	// Sort by joined_at DESC, then group_id DESC (matches the SQL ORDER BY).
 	sort.Slice(items, func(i, j int) bool {
-		ji, jj := items[i].MyState.JoinedAt, items[j].MyState.JoinedAt
+		ji, jj := items[i].ViewerState.JoinedAt, items[j].ViewerState.JoinedAt
 		if ji != jj {
 			return ji > jj
 		}
@@ -313,11 +313,11 @@ func (r *InMemoryRepository) ListMyGroups(_ context.Context, userID string, limi
 	if pageCursor.GroupID != "" && pageCursor.JoinedAt != "" {
 		filtered := items[:0]
 		for _, it := range items {
-			if it.MyState == nil {
+			if it.ViewerState == nil {
 				continue
 			}
-			if it.MyState.JoinedAt < pageCursor.JoinedAt ||
-				(it.MyState.JoinedAt == pageCursor.JoinedAt && it.Group.GroupID < pageCursor.GroupID) {
+			if it.ViewerState.JoinedAt < pageCursor.JoinedAt ||
+				(it.ViewerState.JoinedAt == pageCursor.JoinedAt && it.Group.GroupID < pageCursor.GroupID) {
 				filtered = append(filtered, it)
 			}
 		}
@@ -327,8 +327,8 @@ func (r *InMemoryRepository) ListMyGroups(_ context.Context, userID string, limi
 	nextCursor := ""
 	if len(items) > limit {
 		last := items[limit-1]
-		if last.MyState != nil {
-			nextCursor = encodeMyGroupsCursor(myGroupsCursor{JoinedAt: last.MyState.JoinedAt, GroupID: last.Group.GroupID})
+		if last.ViewerState != nil {
+			nextCursor = encodeMyGroupsCursor(myGroupsCursor{JoinedAt: last.ViewerState.JoinedAt, GroupID: last.Group.GroupID})
 		}
 		items = items[:limit]
 	}
@@ -423,13 +423,13 @@ func (r *InMemoryRepository) LeaveGroup(_ context.Context, userID string, groupI
 	if !ok {
 		return ErrGroupNotFound
 	}
-	if group.MyState == nil || !group.MyState.IsJoined {
+	if group.ViewerState == nil {
 		return ErrNotMember
 	}
-	if group.MyState.Role == GroupRoleOwner {
+	if group.ViewerState.Role == GroupRoleOwner {
 		return ErrAccessRestricted
 	}
-	group.MyState = nil
+	group.ViewerState = nil
 	r.groups[groupID] = group
 	return nil
 }

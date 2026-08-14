@@ -22,7 +22,7 @@ import { SystemToast } from '../../../components/SystemToast';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { LoginPromptView } from '../../../components/LoginPromptView';
-import { MyProfile, UpdateLocationRequest, UpgradeAccountRequest, GuestRequest, UserItem, UserOpenTheDoorRequest, UserSharePayload, MomentItem, UserMomentsRequest } from '../../../core/types/api';
+import { AccountInfo, UpdateLocationRequest, UpgradeAccountRequest, GuestRequest, UserItem, UserOpenTheDoorRequest, UserSharePayload, MomentItem, UserMomentsRequest } from '../../../core/types/api';
 import { DeviceIdUtil } from '../../../core/util/DeviceIdUtil';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -60,7 +60,7 @@ interface StatItem {
 @Component
 export struct ProfilePage {
   pathStack: NavPathStack = new NavPathStack();
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_USER_TYPE) userType: string = '';
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
@@ -521,7 +521,7 @@ export struct ProfilePage {
             throw new Error(updateProfileResponse.message || '资料更新失败');
           }
 
-          const response = await ApiClient.getMyProfile();
+          const response = await ApiClient.getAccountInfo();
           if (response.code === 0 && response.data) {
             this.stateManager.updateUser(response.data);
           }
@@ -626,7 +626,7 @@ export struct ProfilePage {
       const response = await ApiClient.upgradeAccount(request);
       if (response.code === 0) {
         // 升级成功，刷新用户信息
-        const profileResp = await ApiClient.getMyProfile();
+        const profileResp = await ApiClient.getAccountInfo();
         if (profileResp.code === 0 && profileResp.data) {
           this.stateManager.updateUser(profileResp.data);
         }
@@ -1965,7 +1965,7 @@ export struct ProfilePage {
         await AuthAccountManager.upsertAndActivate(authData);
         await HttpUtil.setToken(authData.access_token);
 
-        const basicUserInfo: MyProfile = {
+        const basicUserInfo: AccountInfo = {
           user_id: authData.user_id, nickname: '', avatar_url: '', user_type: 'temp',
           bio: '', tags: [], email: '', phone: '',
           location: { point: { latitude: 0, longitude: 0 }, location_name: '' },
@@ -1975,7 +1975,7 @@ export struct ProfilePage {
         this.stateManager.updateUser(basicUserInfo);
 
         try {
-          const profileResp = await ApiClient.getMyProfile();
+          const profileResp = await ApiClient.getAccountInfo();
           if (profileResp.code === 0 && profileResp.data) {
             this.stateManager.updateUser(profileResp.data);
           }

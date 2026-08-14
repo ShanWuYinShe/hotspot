@@ -24,12 +24,11 @@ func (s *Store) Create(userID string, req CreateCommentRequest) CommentItem {
 		CommentID:    fmt.Sprintf("comment_%d", now.UnixNano()),
 		User:         UserInfo{UserID: userID, Nickname: userID},
 		Content:      req.Content,
-		ParentID:     req.ParentID,
+		ParentID:     strPtr(req.ParentID),
 		Mentions:     req.Mentions,
 		CreatedAt:    now.Format(time.RFC3339),
 		LikesCount:   0,
 		RepliesCount: 0,
-		MyState:      &MyCommentState{},
 	}
 	s.comments[req.MomentID] = append(s.comments[req.MomentID], item)
 	return item

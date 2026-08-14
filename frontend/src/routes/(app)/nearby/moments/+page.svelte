@@ -69,7 +69,7 @@ referencePoint = loc?.point ?? null;
 							comments: m.comments_count ?? 0,
 							time: formatDateTime(m.created_at),
 							liked: Boolean(mine),
-							saved: Boolean(m.my_state?.is_favorited),
+							saved: Boolean(m.is_favorited),
 							likeEmoji: mine?.emoji ?? '👍'
 						};
 					});

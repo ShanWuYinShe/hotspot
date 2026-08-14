@@ -14,7 +14,7 @@ type stubRepository struct {
 	momentsResult        PaginatedMoments
 	groupsResult         PaginatedGroups
 	usersResult          PaginatedUsers
-	trendingResult       TrendingBundle
+	trendingResult       TrendingResult
 	err                  error
 	lastFollowingMoments momentsQuery
 	lastNearbyMoments    momentsQuery
@@ -43,7 +43,7 @@ func (r *stubRepository) ListNearbyUsers(_ context.Context, query usersQuery) (P
 	return r.usersResult, r.err
 }
 
-func (r *stubRepository) ListTrending(_ context.Context, viewerUserID string) (TrendingBundle, error) {
+func (r *stubRepository) ListTrending(_ context.Context, viewerUserID string) (TrendingResult, error) {
 	r.lastViewerID = viewerUserID
 	return r.trendingResult, r.err
 }
@@ -130,7 +130,7 @@ func TestServiceNearbyGroupsWithOptionalAuth(t *testing.T) {
 }
 
 func TestServiceTrendingAppliesResponseDefaults(t *testing.T) {
-	repo := &stubRepository{trendingResult: TrendingBundle{
+	repo := &stubRepository{trendingResult: TrendingResult{
 		HotMoments: []MomentItem{{MomentID: "m1"}, {MomentID: "m2"}},
 	}}
 	source := appconfig.NewStaticSource(config.Config{})

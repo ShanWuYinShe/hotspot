@@ -15,8 +15,8 @@ import { PageNames } from '../../../constants/AppConstants';
 import {
   PrivateChatItem,
   GroupItem,
-  MyProfile,
-  MyGroupsRequest,
+  AccountInfo,
+  ListJoinedGroupsRequest,
   LeaveGroupRequest,
   DeletePrivateChatRequest
 } from '../../../core/types/api';
@@ -62,7 +62,7 @@ interface ChatItem {
 @Preview
 @Component
 export struct MessagePage {
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
   @StorageLink(KEY_LAST_MESSAGE_SYNC_TIME) @Watch('onMessageSync') lastMessageSyncTime: number = 0;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
@@ -302,7 +302,7 @@ export struct MessagePage {
 
   private async loadGroupChats(cursor?: string): Promise<ChatItem[]> {
     try {
-      const request: MyGroupsRequest = { pagination: { limit: 50, cursor: cursor } };
+      const request: ListJoinedGroupsRequest = { pagination: { limit: 50, cursor: cursor } };
       const response = await ApiClient.getJoinedGroups(request);
       if (response.code === 0) {
         const items = response.data?.items ?? [];

@@ -130,10 +130,6 @@ SELECT log_id, action, operator_id, operator_name, COALESCE(operator_avatar_url,
 FROM admin_audit_logs
 ORDER BY created_at DESC, log_id DESC`
 
-	queryAuditByID = `
-SELECT log_id, action, operator_id, operator_name, COALESCE(operator_avatar_url, ''), target_type, target_id, COALESCE(target_name, ''), COALESCE(details_json, '{}'), COALESCE(ip_location, ''), COALESCE(ip_address, ''), COALESCE(device_summary, ''), created_at
-FROM admin_audit_logs
-WHERE log_id = $1`
 	queryAdminSearchUsers = `
 SELECT u.user_id,
        u.nickname,

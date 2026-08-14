@@ -12,20 +12,20 @@ type RegisterRequest struct {
 	Nickname   string     `json:"nickname"`
 	Password   string     `json:"password"`
 	ClientType ClientType `json:"client_type"`
-	DeviceID   string     `json:"device_id"`
+	DeviceID   string     `json:"device_id"` // App 端必填；Web 端由服务端从 device_id Cookie 读取（spec auth.md → register）
 }
 
 type LoginRequest struct {
 	LoginID    string     `json:"login_id"`
 	Password   string     `json:"password"`
 	ClientType ClientType `json:"client_type"`
-	DeviceID   string     `json:"device_id"`
+	DeviceID   string     `json:"device_id"` // App 端必填；Web 端由服务端从 device_id Cookie 读取（spec auth.md → login）
 }
 
 type GuestRequest struct {
 	Nickname   string     `json:"nickname"`
 	ClientType ClientType `json:"client_type"`
-	DeviceID   string     `json:"device_id"`
+	DeviceID   string     `json:"device_id"` // App 端必填；Web 端由服务端从 device_id Cookie 读取（spec auth.md → guest）
 }
 
 type RefreshTokenRequest struct {
@@ -34,10 +34,13 @@ type RefreshTokenRequest struct {
 	RefreshToken string     `json:"refresh_token,omitempty"`
 }
 
+// AuthStatus 是 get_status 的响应（spec auth.md → get_status）。
+// user_id / expires_at 为恒定 nullable：未通过认证（is_valid=false）或未知过期时为 null，
+// 字段恒在（Go 侧 nil 指针序列化为 null），而非缺省。
 type AuthStatus struct {
-	IsValid   bool   `json:"is_valid"`
-	UserID    string `json:"user_id,omitempty"` // is_valid=true 时返回（spec auth.md → check_status）
-	ExpiresAt string `json:"expires_at,omitempty"`
+	IsValid   bool    `json:"is_valid"`
+	UserID    *string `json:"user_id"`    // 恒定 nullable：is_valid=false 时为 null
+	ExpiresAt *string `json:"expires_at"` // 恒定 nullable：is_valid=false 或过期未知时为 null
 }
 
 type AuthTokenPairWeb struct {
@@ -83,7 +86,7 @@ type ResetPasswordRequest struct {
 	VerificationCode string     `json:"verification_code"`
 	NewPassword      string     `json:"new_password"`
 	ClientType       ClientType `json:"client_type"`
-	DeviceID         string     `json:"device_id"` // App 必传（spec auth.md → reset_password）
+	DeviceID         string     `json:"device_id"` // App 端必填；Web 端由服务端从 device_id Cookie 读取（spec auth.md → reset_password）
 }
 
 type ChangePasswordRequest struct {

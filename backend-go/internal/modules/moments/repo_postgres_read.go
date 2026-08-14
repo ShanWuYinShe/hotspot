@@ -163,7 +163,7 @@ func scanMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, error) 
 	}
 	item.User = UserInfo{UserID: userID, Nickname: nickname}
 	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
-	item.Location = Location{Point: struct {
+	item.Location = &Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
@@ -230,7 +230,7 @@ func scanFavoriteMomentRow(scanner interface{ Scan(...any) error }) (MomentItem,
 	}
 	item.User = UserInfo{UserID: userID, Nickname: nickname}
 	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
-	item.Location = Location{Point: struct {
+	item.Location = &Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}

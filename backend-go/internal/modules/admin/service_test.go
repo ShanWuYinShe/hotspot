@@ -289,20 +289,6 @@ func TestServiceListAuditLogsHappyPath(t *testing.T) {
 	_ = result
 }
 
-// --- GetAuditLog ---
-
-func TestServiceGetAuditLogRejectsEmptyID(t *testing.T) {
-	svc, repo, _, _ := newTestService()
-	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
-	_, apiErr, err := svc.GetAuditLog(adminCtx("admin1"), "")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if apiErr == nil || apiErr.Code != httpx.CodeInvalidRequest {
-		t.Fatalf("expected httpx.CodeInvalidRequest, got %v", apiErr)
-	}
-}
-
 // --- GetAppConfig ---
 
 func TestServiceGetAppConfigHappyPath(t *testing.T) {

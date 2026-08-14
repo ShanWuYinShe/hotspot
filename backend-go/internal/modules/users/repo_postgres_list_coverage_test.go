@@ -161,7 +161,7 @@ func TestListFollowingFollowersGroupsPostgres(t *testing.T) {
 		groupRow("g1", now), groupRow("g2", now.Add(-time.Hour)), groupRow("g3", now.Add(-2*time.Hour)),
 	}}}}
 	gpage, err := newUserListRepo(stub).ListGroups(ctx, "u1", 2, "")
-	if err != nil || len(gpage.Items) != 2 || gpage.NextCursor == "" {
+	if err != nil || len(gpage.Items) != 2 || gpage.NextCursor == nil || *gpage.NextCursor == "" {
 		t.Fatalf("list groups: %#v err=%v", gpage, err)
 	}
 	if gpage.Items[0].Location.Point.Latitude != 1.5 || gpage.Items[0].JoinMethod == "" {

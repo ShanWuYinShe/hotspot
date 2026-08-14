@@ -30,15 +30,15 @@ type SocialContext struct {
 }
 
 type UserItem struct {
-	User           UserInfo           `json:"user"`
-	Bio            string             `json:"bio,omitempty"`
-	Tags           []string           `json:"tags,omitempty"`
-	PresenceStatus UserPresenceStatus `json:"presence_status,omitempty"`
-	LastOnline     string             `json:"last_online_at,omitempty"`
-	Location       *RelativeLocation  `json:"location,omitempty"`
-	Stats          *UserStats         `json:"stats,omitempty"`
-	Relation       *Relationship      `json:"relation,omitempty"`
-	SocialContext  *SocialContext     `json:"social_context,omitempty"`
+	User           UserInfo            `json:"user"`
+	Bio            *string             `json:"bio"`
+	Tags           []string            `json:"tags"`
+	PresenceStatus *UserPresenceStatus `json:"presence_status"`
+	LastOnline     *string             `json:"last_online_at"`
+	Location       *RelativeLocation   `json:"location"`
+	Stats          *UserStats          `json:"stats"`
+	Relation       *Relationship       `json:"relation"`
+	SocialContext  *SocialContext      `json:"social_context"`
 }
 
 type UserOpenTheDoorRequest struct {
@@ -50,6 +50,12 @@ type UserOpenTheDoorRequest struct {
 // (spec api_spec_user.md). At most 100 user ids per call.
 type BatchGetUsersRequest struct {
 	UserIDs []string `json:"user_ids"`
+}
+
+// UsersBatchResult is the users/batch_get response (spec api_spec_user.md).
+// users: user_id -> UserItem map; ids that do not exist are absent.
+type UsersBatchResult struct {
+	Users map[string]UserItem `json:"users"`
 }
 
 type FollowSource string
@@ -120,9 +126,9 @@ type ListFriendsRequest struct {
 
 type FriendItem struct {
 	User           UserInfo            `json:"user"`
-	PresenceStatus *UserPresenceStatus `json:"presence_status,omitempty"`
-	LastOnline     *string             `json:"last_online_at,omitempty"`
-	Remark         string              `json:"remark,omitempty"`
+	PresenceStatus *UserPresenceStatus `json:"presence_status"`
+	LastOnline     *string             `json:"last_online_at"`
+	Remark         *string             `json:"remark"`
 	FollowedAt     string              `json:"followed_at"`
 	FollowedBackAt string              `json:"followed_back_at"`
 }
@@ -141,8 +147,9 @@ type FollowingItem struct {
 	User           UserInfo            `json:"user"`
 	FollowedAt     string              `json:"followed_at"`
 	IsMutual       bool                `json:"is_mutual"`
-	PresenceStatus *UserPresenceStatus `json:"presence_status,omitempty"`
-	LastOnline     *string             `json:"last_online_at,omitempty"`
+	PresenceStatus *UserPresenceStatus `json:"presence_status"`
+	LastOnline     *string             `json:"last_online_at"`
+	Remark         *string             `json:"remark"`
 }
 
 type PaginatedFollowing struct {
@@ -159,8 +166,9 @@ type FollowerItem struct {
 	User           UserInfo            `json:"user"`
 	FollowedAt     string              `json:"followed_at"`
 	IsMutual       bool                `json:"is_mutual"`
-	PresenceStatus *UserPresenceStatus `json:"presence_status,omitempty"`
-	LastOnline     *string             `json:"last_online_at,omitempty"`
+	PresenceStatus *UserPresenceStatus `json:"presence_status"`
+	LastOnline     *string             `json:"last_online_at"`
+	Remark         *string             `json:"remark"`
 }
 
 type PaginatedFollowers struct {

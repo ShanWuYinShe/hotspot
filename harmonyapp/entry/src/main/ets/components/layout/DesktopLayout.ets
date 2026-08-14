@@ -35,7 +35,7 @@ import { NotificationRenderer } from '../../core/services/notification/Notificat
 import { type SmartNotification, type NotificationAction } from '../../core/services/notification/NotificationDataManager';
 import { AppRouter, LoginRouteParam } from '../../core/router/AppRouter';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../core/state/GlobalStateManager';
-import { MyProfile } from '../../core/types/api';
+import { AccountInfo } from '../../core/types/api';
 import { AppThemeManager } from '../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../core/theme/AppThemeTypes';
 import { SystemUiController } from '../../core/utils/SystemUiController';
@@ -57,7 +57,7 @@ export struct DesktopLayout {
   @Prop userType: string = '';
   @Prop currentBreakpoint: BreakpointType = 'lg';
 
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   @State showUpgradeBanner: boolean = false;

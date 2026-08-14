@@ -56,38 +56,61 @@ type Location struct {
 
 type RelativeLocation = Location
 
-type MyGroupState struct {
+// GroupViewerState is the viewer's group member state (GroupItem.viewer_state).
+// A nil viewer_state means the viewer is not a member. MutedUntil is a truthy
+// nullable (null = not muted) and is only visible to the muted member
+// themselves. spec api_spec_types.md GroupViewerState.
+type GroupViewerState struct {
 	Role        GroupRole `json:"role"`
-	IsJoined    bool      `json:"is_joined"`
 	UnreadCount int       `json:"unread_count"`
 	IsMuted     bool      `json:"is_muted"`
-	MutedUntil  string    `json:"muted_until,omitempty"`
+	MutedUntil  *string   `json:"muted_until"`
 	IsPinned    bool      `json:"is_pinned"`
-	JoinedAt    string    `json:"joined_at,omitempty"`
+	JoinedAt    string    `json:"joined_at"`
 }
 
+// GroupSettings 是群组管理设置（仅群管理守卫子树 groups/admin/get_settings
+// 响应；create/update 请求同构）。spec api_spec_types.md GroupSettings。
+// 群管理字段不再随 GroupItem 下发，统一经本类型获取。
+type GroupSettings struct {
+	JoinMethod        GroupJoinMethod `json:"join_method"`
+	RequiresApproval  bool            `json:"requires_approval"`
+	HasPassword       bool            `json:"has_password"`
+	IsSearchable      bool            `json:"is_searchable"`
+	MembersSearchable bool            `json:"members_searchable"`
+	MaxMembers        int             `json:"max_members"`
+	Location          Location        `json:"location"`
+}
+
+// GroupItem 是群组统一公开类型（搜索/详情/Feed；对所有人形状恒定）。
+// 群管理字段（has_password/is_searchable/members_searchable/max_members）不在本类型，
+// 见 GroupSettings（groups/admin/get_settings）。spec api_spec_types.md GroupItem。
+//
+// HasPassword/IsSearchable/MembersSearchable/MaxMembers 仍是服务内部用于准入/
+// 搜索/设置的存储字段，但不对外序列化（json:"-"），避免泄露群管理信息。
 type GroupItem struct {
-	Group              GroupInfo         `json:"group"`
-	Description        string            `json:"description,omitempty"`
-	Tags               []string          `json:"tags,omitempty"`
-	JoinMethod         GroupJoinMethod   `json:"join_method,omitempty"`
-	RequiresApproval   bool              `json:"requires_approval"`
-	HasPassword        bool              `json:"has_password,omitempty"`
-	Location           RelativeLocation  `json:"location"`
-	MyState            *MyGroupState     `json:"my_state,omitempty"`
-	FriendsInGroup     int               `json:"friends_in_group,omitempty"`
-	OnlineMembersCount *int              `json:"online_members_count,omitempty"`
-	NextActivity       *string           `json:"next_activity,omitempty"`
-	IsSearchable       bool              `json:"is_searchable,omitempty"`
-	MembersSearchable  bool              `json:"members_searchable,omitempty"` // 非成员检索成员列表资格（@group-admin-only，spec types.md GroupSettings）
-	MaxMembers         int               `json:"max_members,omitempty"`
-	LastActivityAt     *string           `json:"last_activity_at,omitempty"`
-	CreatedAt          *string           `json:"created_at,omitempty"`
-	OwnerID            string            `json:"owner_id,omitempty"`
-	LastMessage        *GroupLastMessage `json:"last_message,omitempty"`
+	Group            GroupInfo         `json:"group"`
+	Description      string            `json:"description,omitempty"`
+	Tags             []string          `json:"tags,omitempty"`
+	JoinMethod       GroupJoinMethod   `json:"join_method,omitempty"`
+	RequiresApproval bool              `json:"requires_approval"`
+	// 群管理字段（内部存储/准入逻辑使用，不对外序列化）
+	HasPassword       bool   `json:"-"`
+	IsSearchable      bool   `json:"-"`
+	MembersSearchable bool   `json:"-"`
+	MaxMembers        int    `json:"-"`
+	Location          RelativeLocation  `json:"location"`
+	ViewerState       *GroupViewerState `json:"viewer_state"`
+	FriendsInGroup    *int              `json:"friends_in_group"`
+	OnlineMembersCount *int              `json:"online_members_count"`
+	NextActivity      *string           `json:"next_activity"`
+	LastActivityAt    *string           `json:"last_activity_at"`
+	CreatedAt         *string           `json:"created_at"`
+	OwnerID           *string           `json:"owner_id"`
+	LastMessage       *GroupLastMessage `json:"last_message"`
 }
 
-// GroupLastMessage 群列表最后一条消息预览（仅 groups/list_my 返回，见 api_spec_types.md GroupItem）。
+// GroupLastMessage 群列表最后一条消息预览（仅 groups/list_joined 返回，见 api_spec_types.md GroupJoinedItem）。
 type GroupLastMessage struct {
 	MessageID string   `json:"message_id"`
 	Type      string   `json:"type"`
@@ -142,6 +165,12 @@ type UpdateGroupRequest struct {
 	Location          *Location        `json:"location,omitempty"`
 }
 
+// GetGroupSettingsRequest fetches the admin-visible group settings
+// (groups/admin/get_settings, guard subtree).
+type GetGroupSettingsRequest struct {
+	GroupID string `json:"group_id"`
+}
+
 // DismissGroupRequest dismisses a group (owner only). Reason is audit-only:
 // it is never surfaced to members (they receive the owner_dismissed category,
 // spec api_spec_group.md).
@@ -156,13 +185,33 @@ type GroupMembersRequest struct {
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
+// ListAdminGroupMembersRequest lists members from the admin perspective
+// (groups/admin/members/list, returns AdminGroupMemberItem with truthy
+// muted_until). spec api_spec_group.md.
+type ListAdminGroupMembersRequest struct {
+	GroupID    string            `json:"group_id"`
+	Role       *GroupRole        `json:"role,omitempty"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+// GroupMemberItem 是公开成员列表项（members/list 与 members/search 共用）。
+// 公开视角不携带禁言信息（muted_until 归位到 AdminGroupMemberItem 与
+// GroupViewerState）。presence 字段为隐私受控恒定 nullable。spec api_spec_types.md。
 type GroupMemberItem struct {
 	User           UserInfo            `json:"user"`
 	Role           GroupRole           `json:"role"`
 	JoinedAt       string              `json:"joined_at"`
-	MutedUntil     *string             `json:"muted_until,omitempty"`
-	PresenceStatus *UserPresenceStatus `json:"presence_status,omitempty"`
-	LastOnline     *string             `json:"last_online_at,omitempty"`
+	PresenceStatus *UserPresenceStatus `json:"presence_status"`
+	LastOnline     *string             `json:"last_online_at"`
+}
+
+// AdminGroupMemberItem 是管理视角成员列表项（仅 groups/admin/members/list
+// 返回；muted_until 为真值，null=未禁言）。spec api_spec_types.md。
+type AdminGroupMemberItem struct {
+	User       UserInfo  `json:"user"`
+	Role       GroupRole `json:"role"`
+	JoinedAt   string    `json:"joined_at"`
+	MutedUntil *string   `json:"muted_until"`
 }
 
 type UserPresenceStatus string
@@ -181,11 +230,15 @@ type SearchGroupMembersRequest struct {
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
-type InviteMemberRequest struct {
+// CreateGroupInviteRequest 是守卫子树 groups/admin/invites/create 的请求类型。
+type CreateGroupInviteRequest struct {
 	GroupID string  `json:"group_id"`
 	UserID  string  `json:"user_id"`
 	Message *string `json:"message,omitempty"`
 }
+
+// InviteMemberRequest 是 repo/service 内部沿用类型（与 CreateGroupInviteRequest 同构）。
+type InviteMemberRequest = CreateGroupInviteRequest
 
 // Invitation：邀请响应（spec group.md → members/invite）
 // invite_id/expires_at 可选：被邀请者已是成员（no-op 成功）时省略；TTL=0（永不过期）时 expires_at 省略
@@ -194,11 +247,15 @@ type Invitation struct {
 	ExpiresAt string `json:"expires_at,omitempty"`
 }
 
-type GroupSentInvitesRequest struct {
+// ListSentInvitesRequest 是守卫子树 groups/admin/invites/list_sent 的请求类型。
+type ListSentInvitesRequest struct {
 	GroupID    string             `json:"group_id"`
 	Status     *ApplicationStatus `json:"status,omitempty"`
 	Pagination *PaginationParams  `json:"pagination,omitempty"`
 }
+
+// GroupSentInvitesRequest 是内部沿用类型。
+type GroupSentInvitesRequest = ListSentInvitesRequest
 
 type GroupSentInviteItem struct {
 	InviteID    string            `json:"invite_id"`
@@ -210,11 +267,15 @@ type GroupSentInviteItem struct {
 	RespondedAt *string           `json:"responded_at,omitempty"`
 }
 
-type RevokeSentInviteRequest struct {
+// RevokeGroupInviteRequest 是守卫子树 groups/admin/invites/revoke 的请求类型。
+type RevokeGroupInviteRequest struct {
 	GroupID  string  `json:"group_id"`
 	InviteID string  `json:"invite_id"`
 	Reason   *string `json:"reason,omitempty"`
 }
+
+// RevokeSentInviteRequest 是内部沿用类型。
+type RevokeSentInviteRequest = RevokeGroupInviteRequest
 
 type SetMemberRoleRequest struct {
 	GroupID string    `json:"group_id"`
@@ -222,6 +283,17 @@ type SetMemberRoleRequest struct {
 	Role    GroupRole `json:"role"`
 }
 
+// SetMuteRequest 是两态统一禁言端点 groups/admin/members/set_mute 的请求类型
+// （契约级）。active=true 时 duration_minutes 必填（1-43200）；active=false 时忽略。
+type SetMuteRequest struct {
+	GroupID         string `json:"group_id"`
+	UserID          string `json:"user_id"`
+	Active          bool   `json:"active"`
+	DurationMinutes *int   `json:"duration_minutes,omitempty"`
+}
+
+// MuteMemberRequest / UnmuteMemberRequest 为 repo/service 内部请求结构
+// （service 按 SetMuteRequest.Active 拆分后传入 repo），不对外暴露。
 type MuteMemberRequest struct {
 	GroupID         string `json:"group_id"`
 	UserID          string `json:"user_id"`
@@ -234,7 +306,7 @@ type UnmuteMemberRequest struct {
 	UserID  string `json:"user_id"`
 }
 
-// SetMemberBanRequest 是两态统一端点 groups/members/set_ban 的请求类型（契约级）。
+// SetMemberBanRequest 是两态统一端点 groups/admin/members/set_ban 的请求类型（契约级）。
 type SetMemberBanRequest struct {
 	GroupID string  `json:"group_id"`
 	UserID  string  `json:"user_id"`
@@ -278,6 +350,8 @@ type GroupApplicationsRequest struct {
 	Pagination *PaginationParams  `json:"pagination,omitempty"`
 }
 
+// GroupApplicationItem 是群组申请列表项（群管理员视角与申请人视角共用此类型）。
+// F7 对称化后不再暴露审批者身份（HandledBy 已删除）。spec api_spec_types.md。
 type GroupApplicationItem struct {
 	ApplicationID string            `json:"application_id"`
 	GroupID       string            `json:"-"`
@@ -286,7 +360,6 @@ type GroupApplicationItem struct {
 	Status        ApplicationStatus `json:"status"`
 	CreatedAt     string            `json:"created_at"`
 	HandledAt     *string           `json:"handled_at,omitempty"`
-	HandledBy     *UserInfo         `json:"handled_by,omitempty"`
 }
 
 // ApproveGroupApplicationRequest approves a group application. GroupID is the
@@ -365,14 +438,29 @@ type TransferOwnershipRequest struct {
 	NewOwnerID string `json:"new_owner_id"`
 }
 
-type MyGroupsRequest struct {
+// RecallGroupMessageAdminRequest 是守卫子树 groups/admin/messages/recall 的请求类型。
+// 管理员撤回任意成员消息，无时间窗限制。spec api_spec_group.md。
+type RecallGroupMessageAdminRequest struct {
+	GroupID   string `json:"group_id"`
+	MessageID string `json:"message_id"`
+}
+
+// ListJoinedGroupsRequest（groups/list_joined，成员视角）。spec api_spec_group.md。
+type ListJoinedGroupsRequest struct {
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
-type MyApplicationsRequest struct {
+// MyGroupsRequest 是内部沿用类型。
+type MyGroupsRequest = ListJoinedGroupsRequest
+
+// ListSubmittedApplicationsRequest（groups/applications/list_submitted，申请人视角）。
+type ListSubmittedApplicationsRequest struct {
 	Status     *ApplicationStatus `json:"status,omitempty"`
 	Pagination *PaginationParams  `json:"pagination,omitempty"`
 }
+
+// MyApplicationsRequest 是内部沿用类型。
+type MyApplicationsRequest = ListSubmittedApplicationsRequest
 
 // CancelApplicationRequest cancels a pending group application. GroupID must
 // match the application's group; Reason (0-200 chars) is delivered to the
@@ -383,10 +471,14 @@ type CancelApplicationRequest struct {
 	Reason        *string `json:"reason,omitempty"`
 }
 
-type MyInvitesRequest struct {
+// ListReceivedInvitesRequest（groups/invites/list_received，受邀人视角）。
+type ListReceivedInvitesRequest struct {
 	Status     *ApplicationStatus `json:"status,omitempty"`
 	Pagination *PaginationParams  `json:"pagination,omitempty"`
 }
+
+// MyInvitesRequest 是内部沿用类型。
+type MyInvitesRequest = ListReceivedInvitesRequest
 
 type GroupInviteItem struct {
 	InviteID    string            `json:"invite_id"`
@@ -412,34 +504,40 @@ type LeaveGroupRequest struct {
 	GroupID string `json:"group_id"`
 }
 
+// PaginatedGroups 通用分页容器（响应侧恒定 nullable：next_cursor 恒在，null=没有更多）。
 type PaginatedGroups struct {
 	Items      []GroupItem `json:"items"`
-	NextCursor string      `json:"next_cursor,omitempty"`
+	NextCursor *string     `json:"next_cursor"`
 }
 
 type PaginatedGroupMembers struct {
 	Items      []GroupMemberItem `json:"items"`
-	NextCursor string            `json:"next_cursor,omitempty"`
+	NextCursor *string           `json:"next_cursor"`
+}
+
+type PaginatedAdminGroupMembers struct {
+	Items      []AdminGroupMemberItem `json:"items"`
+	NextCursor *string                `json:"next_cursor"`
 }
 
 type PaginatedSentInvites struct {
 	Items      []GroupSentInviteItem `json:"items"`
-	NextCursor string                `json:"next_cursor,omitempty"`
+	NextCursor *string               `json:"next_cursor"`
 }
 
 type PaginatedBannedMembers struct {
 	Items      []BannedMemberItem `json:"items"`
-	NextCursor string             `json:"next_cursor,omitempty"`
+	NextCursor *string            `json:"next_cursor"`
 }
 
 type PaginatedApplications struct {
 	Items      []GroupApplicationItem `json:"items"`
-	NextCursor string                 `json:"next_cursor,omitempty"`
+	NextCursor *string                `json:"next_cursor"`
 }
 
 type PaginatedInvites struct {
 	Items      []GroupInviteItem `json:"items"`
-	NextCursor string            `json:"next_cursor,omitempty"`
+	NextCursor *string           `json:"next_cursor"`
 }
 
 // myGroupsCursor is the keyset cursor for ListMyGroups, ordered by

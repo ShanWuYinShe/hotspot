@@ -150,18 +150,18 @@ src/routes/
     groups/[groupId]/      # 群组详情
     settings/              # 设置
     map/                   # 地图（+page.svelte 设备分派；desktop/ mobile/ shared/ 子目录）
-    notifications/         # 通知
+    notify/               # 通知
     search/                # 搜索
 ```
 
-> 分栏页（`notifications/`、`moments/[momentId]/`、`users/[userId]/`）
+> 分栏页（`notify/`、`moments/[momentId]/`、`users/[userId]/`）
 > 使用 `SplitPageLayout`；其余 `(app)` 页面（含首页、群组详情、个人主页）使用 `StandardPageLayout`。
 
 > 注：管理后台（spec `api_spec_admin_core.md` / `api_spec_admin_moderation.md`）已有后端契约，前端 `src/api/endpoints.ts` 也登记了 `Admin` 端点（如 `admin/rbac/get_me`），但**页面尚未实现，后续再补**——功能边界中的「管理后台」为待建项，勿误判为遗漏。
 
 路由常量见 `@/lib/routes`（个人主页分区路径用 `ME_SECTION_PATHS` 静态映射，不走动态段）。
 
-页面私有组件与路由同目录，**按设备分目录**：每个路由目录下，`+page.svelte` 做设备分派（`platform.platform`），设备专属组件放 `desktop/` / `mobile/` 子目录，跨设备共享的组件与逻辑放 `shared/` 子目录（如 `map/desktop/LocationDesktop.svelte` + `map/mobile/LocationMobile.svelte` + `map/shared/location-data.ts`）。**多组件路由的私有组件一律拆 `shared/`**（如 `nearby/groups/shared/`、`notifications/shared/`、`search/shared/`）；单组件路由（如 `nearby/people/UserCard.svelte`）保持平铺。跨路由复用的页面组件（如 `components/profile/SectionFriends.svelte` 同时被 `me/moments` 分区页与 `me/relationships` 聚合页复用）放在 `components/` 对应域目录；共享组件统一在 `components/`，设备专属共享组件按 `components/<域>/{desktop,tablet,mobile}/` 分目录（如 `layout/mobile/MobileLandscape.svelte`、`layout/desktop/DesktopLayout.svelte`）。**设备分派规则（页面内布局分支）**：
+页面私有组件与路由同目录，**按设备分目录**：每个路由目录下，`+page.svelte` 做设备分派（`platform.platform`），设备专属组件放 `desktop/` / `mobile/` 子目录，跨设备共享的组件与逻辑放 `shared/` 子目录（如 `map/desktop/LocationDesktop.svelte` + `map/mobile/LocationMobile.svelte` + `map/shared/location-data.ts`）。**多组件路由的私有组件一律拆 `shared/`**（如 `nearby/groups/shared/`、`notify/shared/`、`search/shared/`）；单组件路由（如 `nearby/people/UserCard.svelte`）保持平铺。跨路由复用的页面组件（如 `components/profile/SectionFriends.svelte` 同时被 `me/moments` 分区页与 `me/relationships` 聚合页复用）放在 `components/` 对应域目录；共享组件统一在 `components/`，设备专属共享组件按 `components/<域>/{desktop,tablet,mobile}/` 分目录（如 `layout/mobile/MobileLandscape.svelte`、`layout/desktop/DesktopLayout.svelte`）。**设备分派规则（页面内布局分支）**：
 - **默认两分支**：`isDesktop = platform.platform !== 'mobile'`（tablet 与 desktop 同分支），适用于大多数页面（tablet 在字号/边距等细节差异由组件内 `platform` 派生，不需要独立 if 分支）。
 - **按需三分支**：当 tablet 在**列数、栏宽、整段布局**上确实与 desktop 表现不同时（如 `nearby/moments` 桌面 3 列 / 平板 2 列、`nearby/people`、`nearby/groups`），显式写 `isDesktop` + `isTablet` + mobile 三分支是**合规**的，不算"逐页发明"。判断标准是"tablet 是否有独立的**布局结构**"，而非"字号/间距不同"。
 - **反模式**：仅为字号/颜色/间距等可在组件内用 `platform` 单值派生的差异而开三分支——这种情况一律用两分支 + 组件内派生。
@@ -325,7 +325,7 @@ theme/
     `--cst-interactive-hover-fill` / `--cst-interactive-active`
 - **数据层禁止携带颜色**：mock 数据/API 响应只返回语义标识（tag/type/category），
   不得包含 `color`/`bg` 等展示字段；视觉色由前端按语义键映射到 token
-  （参照 `notifications/shared/notification-data.ts` 的 `TYPE_CONFIG` 语义键
+  （参照 `notify/shared/notify-data.ts` 的 `TYPE_CONFIG` 语义键
   → token 映射模式）
 - **组件/数据层禁止 color-mix 表达式**：需要淡底/淡边框/光晕时引用主题预定义
   档位 token——每个语义色族在 themes/{vibrant,forest}.css 定义三档：

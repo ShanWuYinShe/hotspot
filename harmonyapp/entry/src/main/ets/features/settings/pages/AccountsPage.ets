@@ -12,7 +12,7 @@ import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/Global
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
 import { MomentCacheService } from '../../../core/database/MomentCacheService';
-import { MyProfile, AuthData } from '../../../core/types/api';
+import { AccountInfo, AuthData } from '../../../core/types/api';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
@@ -33,7 +33,7 @@ import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 @Component
 export struct AccountsPage {
   pathStack: NavPathStack = new NavPathStack();
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
@@ -99,7 +99,7 @@ export struct AccountsPage {
     return auth.user_id;
   }
 
-  private toProfile(auth: AuthData): MyProfile {
+  private toProfile(auth: AuthData): AccountInfo {
     const nickname = auth.user_id;
     return {
       user_id: auth.user_id,
@@ -143,7 +143,7 @@ export struct AccountsPage {
 
       // 3) 用真实 profile 更新 UI 层
       try {
-        const profileRes = await ApiClient.getMyProfile();
+        const profileRes = await ApiClient.getAccountInfo();
         if (profileRes.code === 0 && profileRes.data) {
           this.stateManager.updateUser(profileRes.data);
         } else {

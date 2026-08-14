@@ -42,6 +42,13 @@ const (
 	SET is_recalled = TRUE, recalled_at = NOW()
 	WHERE message_id = $1 AND sender_user_id = $2`
 
+	// queryRecallGroupMessageAsAdmin recalls a message regardless of who sent
+	// it, with no recall-window enforcement（groups/admin/messages/recall）。
+	queryRecallGroupMessageAsAdmin = `
+	UPDATE group_messages
+	SET is_recalled = TRUE, recalled_at = NOW()
+	WHERE message_id = $1`
+
 	// queryLookupMessageOwner fetches only what the authorization layer needs:
 	// the group a message belongs to and who sent it. NULL sender becomes ""
 	// so the service can refuse to mutate legacy/anonymous messages.

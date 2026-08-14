@@ -77,14 +77,14 @@ func TestPostgresRepositoryCreateGetAndSearch(t *testing.T) {
 	if created.Group.GroupID == "" {
 		t.Fatalf("expected created group id, got %#v", created)
 	}
-	if created.OwnerID != "user_alice" || created.CreatedAt == nil {
+	if (created.OwnerID == nil || *created.OwnerID != "user_alice") || created.CreatedAt == nil {
 		t.Fatalf("expected owner metadata on created group, got %#v", created)
 	}
 	item, ok, err := repo.Get(context.Background(), "group_1")
 	if err != nil || !ok || item.Group.GroupID != "group_1" {
 		t.Fatalf("unexpected item: %#v err=%v", item, err)
 	}
-	if item.OwnerID != "user_alice" {
+	if item.OwnerID == nil || *item.OwnerID != "user_alice" {
 		t.Fatalf("expected owner id in fetched item, got %#v", item)
 	}
 	list, err := repo.Search(context.Background(), SearchGroupsRequest{Keyword: "Hot Group", ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
@@ -169,19 +169,19 @@ func TestPostgresRepositorySearchFiltersSortsAndPaginatesInGo(t *testing.T) {
 	if page1.Items[0].Location.Distance == nil || *page1.Items[0].Location.Distance != 0 {
 		t.Fatalf("expected zero distance on reference-point match, got %#v", page1.Items[0].Location)
 	}
-	if page1.NextCursor == "" {
+	if page1.NextCursor == nil || *page1.NextCursor == "" {
 		t.Fatal("expected next cursor on page 1")
 	}
 
-	page2, err := repo.Search(context.Background(), newReq(page1.NextCursor))
+	page2, err := repo.Search(context.Background(), newReq(*page1.NextCursor))
 	if err != nil {
 		t.Fatalf("search page 2: %v", err)
 	}
 	if len(page2.Items) != 1 || page2.Items[0].Group.GroupID != "g_2" {
 		t.Fatalf("expected g_2 second (farther, still within radius), got %#v", page2.Items)
 	}
-	if page2.NextCursor != "" {
-		t.Fatalf("expected no next cursor on page 2, got %q", page2.NextCursor)
+	if page2.NextCursor != nil && *page2.NextCursor != "" {
+		t.Fatalf("expected no next cursor on page 2, got %q", *page2.NextCursor)
 	}
 
 	// g_3 sits ~1.1km away — outside the 100m radius — and must be dropped by

@@ -28,6 +28,10 @@ func WriteAPIError(w http.ResponseWriter, r *http.Request, op string, err error)
 	var apiErr *APIError
 	if errors.As(err, &apiErr) {
 		observability.LogBusinessError(r, op, int(apiErr.Code), apiErr.Message)
+		if apiErr.Data != nil {
+			WriteJSON(w, http.StatusOK, ErrorWithData(apiErr.Code, apiErr.Message, apiErr.Data))
+			return
+		}
 		WriteJSON(w, http.StatusOK, Error(apiErr.Code, apiErr.Message))
 		return
 	}

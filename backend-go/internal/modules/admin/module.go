@@ -37,7 +37,7 @@ func NewModuleWithDeps(repo Repository, provider Provider, moderationStore Moder
 }
 
 func (m *Module) Mount(r chi.Router) {
-	r.Route("/api/v1/admin", func(adminRouter chi.Router) {
+	r.Route("/admin/v1", func(adminRouter chi.Router) {
 		adminRouter.Group(func(group chi.Router) {
 			group.Use(platformauth.RequiredAuth)
 			// AdminAccess is a middleware backstop on top of the service-layer RBAC:
@@ -50,6 +50,23 @@ func (m *Module) Mount(r chi.Router) {
 			MountRoutes(group, m.handler)
 		})
 	})
+}
+
+// tagBlockChecker 实现 groups 注入接口（IsBlocked）：新内容 tags 含被屏蔽标签 → 10400
+// （spec api_spec_admin.md tags/delete「新内容约束」）。软屏蔽（deleted=true）即拦截。
+type tagBlockChecker struct{ m *Module }
+
+func (c tagBlockChecker) IsBlocked(tag string) bool {
+	if c.m == nil || c.m.handler == nil || c.m.handler.service == nil {
+		return false
+	}
+	deleted, _, err := c.m.handler.service.moderationStore.GetTagDeleteState(context.Background(), tag)
+	return err == nil && deleted
+}
+
+// BlockedTagChecker 供 groups 模块注入（bootstrap 接线）。
+func (m *Module) BlockedTagChecker() tagBlockChecker {
+	return tagBlockChecker{m: m}
 }
 
 // AppendGroupDismissAudit implements groups.GroupDismissAuditWriter so the

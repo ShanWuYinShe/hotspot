@@ -23,11 +23,11 @@ func authReqWithPrincipal(t *testing.T, handler *Handler, method, body string) *
 	return rr
 }
 
-func TestCheckStatusRejectsNonObjectBody(t *testing.T) {
+func TestGetStatusRejectsNonObjectBody(t *testing.T) {
 	handler := newTestHandler()
-	req := httptest.NewRequest(http.MethodPost, "/check_status", strings.NewReader(`[1]`))
+	req := httptest.NewRequest(http.MethodPost, "/get_status", strings.NewReader(`[1]`))
 	rr := httptest.NewRecorder()
-	handler.CheckStatus(rr, req)
+	handler.GetStatus(rr, req)
 	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInvalidRequest {
 		t.Fatalf("expected httpx.CodeInvalidRequest, got %d", code)
 	}
@@ -54,13 +54,13 @@ func TestRevokeSessionErrorPaths(t *testing.T) {
 		t.Fatalf("malformed body: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 
-	// 撤销当前会话 → httpx.CodeForbidden（禁止）
+	// 撤销当前会话 → httpx.CodeConflict（10400，spec auth.md → revoke_session）
 	req = httptest.NewRequest(http.MethodPost, "/revoke_session", strings.NewReader(`{"session_id":"sess_1"}`))
 	req = req.WithContext(auth.WithPrincipal(req.Context(), auth.Principal{UserID: "u1", SessionID: "sess_1"}))
 	rr = httptest.NewRecorder()
 	handler.RevokeSession(rr, req)
-	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeForbidden {
-		t.Fatalf("revoke current session: expected httpx.CodeForbidden, got %d", code)
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeConflict {
+		t.Fatalf("revoke current session: expected httpx.CodeConflict, got %d", code)
 	}
 
 	// 撤销不存在的会话 → httpx.CodeNotFound（errors.As 解包 %w 包装的 APIError）

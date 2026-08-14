@@ -16,7 +16,10 @@ type realtimeGroupRepo struct{ repo groups.Repository }
 
 func (a realtimeUserService) OpenTheDoor(ctx context.Context, userID string) (string, bool, error) {
 	item, ok, err := a.svc.OpenTheDoor(ctx, userID)
-	return string(item.PresenceStatus), ok, err
+	if !ok || err != nil || item.PresenceStatus == nil {
+		return "", ok, err
+	}
+	return string(*item.PresenceStatus), ok, nil
 }
 
 func (a realtimeUserService) GetActorInfo(ctx context.Context, userID string) (actor.Info, error) {

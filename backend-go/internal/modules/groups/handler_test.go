@@ -19,6 +19,7 @@ import (
 )
 
 type groupErrorRepo struct {
+	Repository // 嵌入接口：未显式 stub 的方法走 nil 接口（不应被覆盖测试调用）
 	getResult             GroupItem
 	getFound              bool
 	createErr             error
@@ -326,7 +327,7 @@ func TestJoinApprovalSendsApplicationNotification(t *testing.T) {
 	if len(ownerSink.events) != 1 || ownerSink.events[0].Type != "GroupApplicationReceived" {
 		t.Fatalf("unexpected owner events: %#v", ownerSink.events)
 	}
-	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notify.NotificationListRequest{})
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notify.NotifyListRequest{})
 	if err != nil {
 		t.Fatalf("list notifications: %v", err)
 	}
@@ -358,7 +359,7 @@ func TestInviteAndAcceptFlowSendsNotifications(t *testing.T) {
 	if invitation.InviteID == "" {
 		t.Fatalf("expected invite id, got %#v", invitation)
 	}
-	inviteNotifications, err := notificationRepo.List(context.Background(), "user_bob", notify.NotificationListRequest{})
+	inviteNotifications, err := notificationRepo.List(context.Background(), "user_bob", notify.NotifyListRequest{})
 	if err != nil {
 		t.Fatalf("list invite notifications: %v", err)
 	}
@@ -372,7 +373,7 @@ func TestInviteAndAcceptFlowSendsNotifications(t *testing.T) {
 	if err := service.AcceptInvite(inviteeCtx, AcceptInviteRequest{InviteID: invitation.InviteID}); err != nil {
 		t.Fatalf("accept invite: %v", err)
 	}
-	ownerNotifications, err := notificationRepo.List(context.Background(), "user_alice", notify.NotificationListRequest{})
+	ownerNotifications, err := notificationRepo.List(context.Background(), "user_alice", notify.NotifyListRequest{})
 	if err != nil {
 		t.Fatalf("list owner notifications: %v", err)
 	}
@@ -408,7 +409,7 @@ func TestApproveApplicationSendsAcceptedNotification(t *testing.T) {
 	if err := service.ApproveApplication(ownerCtx, ApproveGroupApplicationRequest{GroupID: created.Group.GroupID, ApplicationID: result.Application.ApplicationID}); err != nil {
 		t.Fatalf("approve application: %v", err)
 	}
-	memberNotifications, err := notificationRepo.List(context.Background(), "user_bob", notify.NotificationListRequest{})
+	memberNotifications, err := notificationRepo.List(context.Background(), "user_bob", notify.NotifyListRequest{})
 	if err != nil {
 		t.Fatalf("list member notifications: %v", err)
 	}
@@ -433,12 +434,12 @@ func TestApproveApplicationHandlerMapsSpecificErrors(t *testing.T) {
 		},
 		{
 			name:     "access restricted",
-			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusPending}}},
+			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusPending}}},
 			expected: httpx.CodeForbidden,
 		},
 		{
 			name:     "already processed",
-			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusAccepted}}},
+			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusAccepted}}},
 			expected: httpx.CodeConflict,
 		},
 	}
@@ -469,12 +470,12 @@ func TestRejectApplicationHandlerMapsSpecificErrors(t *testing.T) {
 		},
 		{
 			name:     "access restricted",
-			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusPending}}},
+			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusPending}}},
 			expected: httpx.CodeForbidden,
 		},
 		{
 			name:     "already processed",
-			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusRejected}}},
+			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusRejected}}},
 			expected: httpx.CodeConflict,
 		},
 	}
@@ -513,7 +514,7 @@ func TestRejectInviteHandlerMapsSpecificErrors(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			handler := NewHandler(NewServiceWithRepo(tc.repo))
-			req := httptest.NewRequest(http.MethodPost, "/invites/received/reject", strings.NewReader(`{"invite_id":"invite_1"}`))
+			req := httptest.NewRequest(http.MethodPost, "/groups/invites/reject", strings.NewReader(`{"invite_id":"invite_1"}`))
 			req.Header.Set("Idempotency-Key", fmt.Sprintf("reject-inv-%024d", tc.expected))
 			req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 			rr := httptest.NewRecorder()
@@ -573,8 +574,9 @@ func (c *groupRecordingChecker) Record(_ context.Context, kind resourceguard.Res
 
 func TestListMembersHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
-		getFound:  true,
+		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
+		getFound:       true,
+		isMemberResult: true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
 			GroupID:        "g1",
@@ -631,7 +633,7 @@ func TestListMembersHandlerValidation(t *testing.T) {
 
 func TestSearchMembersHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:       true,
 		isMemberResult: true,
 		announceItems: []GroupAnnouncementItem{{
@@ -658,7 +660,8 @@ func TestSearchMembersHandlerReturnsSuccess(t *testing.T) {
 }
 
 func TestSearchMembersDeniesNonMemberWhenNotSearchable(t *testing.T) {
-	// spec api_spec_group.md members/search 10400：未加入群组且群设置不允许检索。
+	// spec api_spec_group.md members/search：未加入群组且 members_searchable=false
+	// → 10200 + forbidden_reason=not_group_member（由 10400 迁移，api_spec_errors.md）。
 	repo := &groupErrorRepo{
 		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}},
 		getFound:       true,
@@ -669,7 +672,7 @@ func TestSearchMembersDeniesNonMemberWhenNotSearchable(t *testing.T) {
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.SearchMembers(rr, req)
-	assertGroupCode(t, rr, httpx.CodeConflict)
+	assertGroupCode(t, rr, httpx.CodeForbidden)
 }
 
 func TestSearchMembersAllowsNonMemberWhenSearchable(t *testing.T) {
@@ -716,7 +719,7 @@ func TestSearchMembersHandlerValidation(t *testing.T) {
 
 func TestSetMuteUnmuteMapsAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -748,7 +751,7 @@ func TestSetMuteHandlerValidation(t *testing.T) {
 
 func TestBanMemberHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -776,7 +779,7 @@ func TestBanMemberHandlerReturnsSuccess(t *testing.T) {
 
 func TestBanMemberHandlerMapsAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -790,7 +793,7 @@ func TestBanMemberHandlerMapsAccessRestricted(t *testing.T) {
 
 func TestBanMemberHandlerCannotBanSelf(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -809,7 +812,7 @@ func TestBanMemberHandlerCannotBanSelf(t *testing.T) {
 
 func TestUnbanMemberHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -845,7 +848,7 @@ func TestUnbanMemberHandlerMapsGroupNotFound(t *testing.T) {
 
 func TestListBannedMembersHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -872,7 +875,7 @@ func TestListBannedMembersHandlerReturnsSuccess(t *testing.T) {
 
 func TestListBannedMembersHandlerMapsAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -885,7 +888,7 @@ func TestListBannedMembersHandlerMapsAccessRestricted(t *testing.T) {
 
 func TestListSentInvitesHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -894,7 +897,7 @@ func TestListSentInvitesHandlerReturnsSuccess(t *testing.T) {
 		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
-	req := httptest.NewRequest(http.MethodPost, "/invites/sent/list", strings.NewReader(`{"group_id":"g1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/admin/invites/list_sent", strings.NewReader(`{"group_id":"g1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListSentInvites(rr, req)
@@ -912,11 +915,11 @@ func TestListSentInvitesHandlerReturnsSuccess(t *testing.T) {
 
 func TestListSentInvitesHandlerMapsAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
-	req := httptest.NewRequest(http.MethodPost, "/invites/sent/list", strings.NewReader(`{"group_id":"g1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/admin/invites/list_sent", strings.NewReader(`{"group_id":"g1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListSentInvites(rr, req)
@@ -925,7 +928,7 @@ func TestListSentInvitesHandlerMapsAccessRestricted(t *testing.T) {
 
 func TestRevokeInviteHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -934,7 +937,7 @@ func TestRevokeInviteHandlerReturnsSuccess(t *testing.T) {
 		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
-	req := httptest.NewRequest(http.MethodPost, "/invites/sent/revoke", strings.NewReader(`{"group_id":"g1","invite_id":"inv1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/admin/invites/revoke", strings.NewReader(`{"group_id":"g1","invite_id":"inv1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.RevokeInvite(rr, req)
@@ -952,7 +955,7 @@ func TestRevokeInviteHandlerReturnsSuccess(t *testing.T) {
 
 func TestRevokeInviteHandlerMapsGroupNotFound(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
-	req := httptest.NewRequest(http.MethodPost, "/invites/sent/revoke", strings.NewReader(`{"group_id":"missing","invite_id":"inv1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/admin/invites/revoke", strings.NewReader(`{"group_id":"missing","invite_id":"inv1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.RevokeInvite(rr, req)
@@ -963,7 +966,7 @@ func TestRevokeInviteHandlerMapsGroupNotFound(t *testing.T) {
 
 func TestCreateAnnouncementHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -991,7 +994,7 @@ func TestCreateAnnouncementHandlerReturnsSuccess(t *testing.T) {
 
 func TestCreateAnnouncementHandlerMapsAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -1069,7 +1072,7 @@ func TestListAnnouncementsHandlerValidation(t *testing.T) {
 
 func TestUpdateAnnouncementHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -1096,7 +1099,7 @@ func TestUpdateAnnouncementHandlerReturnsSuccess(t *testing.T) {
 
 func TestUpdateAnnouncementHandlerMapsAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -1128,7 +1131,7 @@ func TestUpdateAnnouncementHandlerValidation(t *testing.T) {
 
 func TestDeleteAnnouncementHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -1185,10 +1188,10 @@ func TestDeleteAnnouncementHandlerValidation(t *testing.T) {
 
 func TestListMyGroupsHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		listMyGroupsItems: []GroupItem{{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}}},
+		listMyGroupsItems: []GroupItem{{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
-	req := httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/list_joined", strings.NewReader(`{}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyGroups(rr, req)
@@ -1206,7 +1209,7 @@ func TestListMyGroupsHandlerReturnsSuccess(t *testing.T) {
 
 func TestListMyGroupsHandlerMapsServiceError(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{listMyGroupsErr: errors.New("boom")}))
-	req := httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/list_joined", strings.NewReader(`{}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyGroups(rr, req)
@@ -1276,7 +1279,7 @@ func TestJoinGroupHandlerValidation(t *testing.T) {
 
 func TestHandlerUpdateReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -1323,7 +1326,7 @@ func TestHandlerUpdateReturns10300WhenNotFound(t *testing.T) {
 
 func TestHandlerUpdateReturns10200WhenAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -1337,7 +1340,7 @@ func TestHandlerUpdateReturns10200WhenAccessRestricted(t *testing.T) {
 
 func TestHandlerDismissReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -1394,7 +1397,7 @@ func TestHandlerDismissReturns10300WhenNotFound(t *testing.T) {
 
 func TestHandlerUpdatePreferencesReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -1433,7 +1436,7 @@ func TestHandlerUpdatePreferencesReturns10300WhenNotFound(t *testing.T) {
 
 func TestHandlerLeaveGroupReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -1475,7 +1478,7 @@ func TestHandlerLeaveGroupReturns10300WhenNotFound(t *testing.T) {
 
 func TestHandlerListMyApplicationsReturnsSuccess(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
-	req := httptest.NewRequest(http.MethodPost, "/list_applications", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/applications/list_submitted", strings.NewReader(`{}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyApplications(rr, req)
@@ -1493,7 +1496,7 @@ func TestHandlerListMyApplicationsReturnsSuccess(t *testing.T) {
 
 func TestHandlerListMyApplicationsRejectsInvalidJSON(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
-	req := httptest.NewRequest(http.MethodPost, "/list_applications", strings.NewReader(`{invalid`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/applications/list_submitted", strings.NewReader(`{invalid`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyApplications(rr, req)
@@ -1506,7 +1509,7 @@ func TestHandlerCancelApplicationReturnsSuccess(t *testing.T) {
 			{ApplicationID: "app_1", GroupID: "g1", Applicant: UserInfo{UserID: "user_alice"}},
 		},
 	}))
-	req := httptest.NewRequest(http.MethodPost, "/list_applications/cancel", strings.NewReader(`{"group_id":"g1","application_id":"app_1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/applications/cancel", strings.NewReader(`{"group_id":"g1","application_id":"app_1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.CancelApplication(rr, req)
@@ -1524,7 +1527,7 @@ func TestHandlerCancelApplicationReturnsSuccess(t *testing.T) {
 
 func TestHandlerCancelApplicationRejectsMissingApplicationID(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
-	req := httptest.NewRequest(http.MethodPost, "/list_applications/cancel", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/applications/cancel", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 	handler.CancelApplication(rr, req)
 	assertGroupCode(t, rr, httpx.CodeInvalidRequest)
@@ -1534,7 +1537,7 @@ func TestHandlerCancelApplicationRejectsMissingApplicationID(t *testing.T) {
 
 func TestHandlerTransferOwnershipReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:       true,
 		isMemberResult: true,
 	}
@@ -1582,7 +1585,7 @@ func TestHandlerTransferOwnershipReturns10300WhenNotFound(t *testing.T) {
 
 func TestHandlerTransferOwnershipReturns10200WhenAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -1595,7 +1598,7 @@ func TestHandlerTransferOwnershipReturns10200WhenAccessRestricted(t *testing.T) 
 
 func TestHandlerTransferOwnershipReturns10400WhenTargetNotMember(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:       true,
 		isMemberResult: false,
 	}
@@ -1609,7 +1612,7 @@ func TestHandlerTransferOwnershipReturns10400WhenTargetNotMember(t *testing.T) {
 
 func TestHandlerTransferOwnershipReturns10600OnUnknownError(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult:            GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult:            GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:             true,
 		isMemberResult:       true,
 		transferOwnershipErr: errors.New("boom"),
@@ -1630,7 +1633,7 @@ func TestHandlerListMyInvitesReturnsSuccess(t *testing.T) {
 			{InviteID: "inv1", Group: GroupInfo{GroupID: "g1"}, Status: ApplicationStatusPending},
 		},
 	}))
-	req := httptest.NewRequest(http.MethodPost, "/invites/received/list", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/invites/list_received", strings.NewReader(`{}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyInvites(rr, req)
@@ -1654,7 +1657,7 @@ func TestHandlerListMyInvitesReturnsSuccess(t *testing.T) {
 
 func TestHandlerListMyInvitesRejectsInvalidJSON(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
-	req := httptest.NewRequest(http.MethodPost, "/invites/received/list", strings.NewReader(`{broken`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/invites/list_received", strings.NewReader(`{broken`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyInvites(rr, req)
@@ -1663,7 +1666,7 @@ func TestHandlerListMyInvitesRejectsInvalidJSON(t *testing.T) {
 
 func TestHandlerListMyInvitesReturns10600OnError(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{listMyInvitesErr: errors.New("boom")}))
-	req := httptest.NewRequest(http.MethodPost, "/invites/received/list", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/invites/list_received", strings.NewReader(`{}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyInvites(rr, req)
@@ -1678,7 +1681,7 @@ func TestHandlerAcceptInviteReturnsSuccess(t *testing.T) {
 			{InviteID: "inv1", Group: GroupInfo{GroupID: "g1"}, Status: ApplicationStatusPending},
 		},
 	}))
-	req := httptest.NewRequest(http.MethodPost, "/invites/received/accept", strings.NewReader(`{"invite_id":"inv1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/invites/accept", strings.NewReader(`{"invite_id":"inv1"}`))
 	req.Header.Set("Idempotency-Key", "accept-invite-12345678901234567890")
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
@@ -1697,7 +1700,7 @@ func TestHandlerAcceptInviteReturnsSuccess(t *testing.T) {
 
 func TestHandlerAcceptInviteRejectsMissingInviteID(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
-	req := httptest.NewRequest(http.MethodPost, "/invites/received/accept", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/invites/accept", strings.NewReader(`{}`))
 	req.Header.Set("Idempotency-Key", "accept-invite-missing-12345678901234")
 	rr := httptest.NewRecorder()
 	handler.AcceptInvite(rr, req)
@@ -1706,7 +1709,7 @@ func TestHandlerAcceptInviteRejectsMissingInviteID(t *testing.T) {
 
 func TestHandlerAcceptInviteReturns10300WhenNotFound(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{acceptInviteErr: ErrGroupNotFound}))
-	req := httptest.NewRequest(http.MethodPost, "/invites/received/accept", strings.NewReader(`{"invite_id":"missing"}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/invites/accept", strings.NewReader(`{"invite_id":"missing"}`))
 	req.Header.Set("Idempotency-Key", "accept-invite-nf-12345678901234567890")
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
@@ -1718,7 +1721,7 @@ func TestHandlerAcceptInviteReturns10300WhenNotFound(t *testing.T) {
 
 func TestHandlerRemoveMemberReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -1770,7 +1773,7 @@ func TestHandlerRemoveMemberReturns10300WhenNotFound(t *testing.T) {
 
 func TestHandlerRemoveMemberReturns10200WhenAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -1783,7 +1786,7 @@ func TestHandlerRemoveMemberReturns10200WhenAccessRestricted(t *testing.T) {
 
 func TestHandlerRemoveMemberReturns10600OnUnknownError(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult:       GroupItem{Group: GroupInfo{GroupID: "g1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult:       GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:        true,
 		removeMemberErr: errors.New("boom"),
 	}

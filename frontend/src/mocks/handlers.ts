@@ -2,7 +2,7 @@ import { http, HttpResponse, type JsonBodyType } from "msw";
 import {
   apiOk, apiError, paginated,
   mockUsers, mockAccount, mockSettings,
-  mockMoments, mockGroups, mockNotifications, mockChats, mockTrending,
+  mockMoments, mockGroups, mockNotifies, mockChats, mockTrending,
   mockFriends, mockFollowing, mockFollowers, mockNearbyUsers,
   getMockAuthScenario, setMockLoggedIn, isMockLoggedIn,
 } from "@/mocks/data";
@@ -115,7 +115,7 @@ export const handlers = [
   http.post(`${API}/auth/login`, () => loginScenarioError() ?? authOkResponse()),
   http.post(`${API}/auth/register`, () => authFormScenarioError() ?? authOkResponse()),
   http.post(`${API}/auth/guest`, () => authFormScenarioError() ?? authOkResponse()),
-  http.post(`${API}/auth/check_status`, () => {
+  http.post(`${API}/auth/get_status`, () => {
     // Reflect the mock login state so AuthContext's boot flow works correctly.
     if (isMockLoggedIn()) {
       return json(apiOk({ is_valid: true, expires_at: new Date(Date.now() + 3600000).toISOString() }));
@@ -200,7 +200,7 @@ export const handlers = [
     const found = mockMoments.find((m) => m.moment_id === id);
     return json(apiOk(found ?? mockMoments[0]));
   }),
-  http.post(`${API}/moments/list_my`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 9)))),
+  http.post(`${API}/moments/list_created`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 9)))),
   http.post(`${API}/moments/list_favorites`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 6).map((m) => ({ ...m, favorited_at: '2026-08-01T08:00:00.000Z' }))))),
   http.post(`${API}/moments/set_favorite`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/moments/create`, () => requireMockAuth() ?? json(apiOk(mockMoments[0]))),
@@ -299,21 +299,21 @@ export const handlers = [
     const found = mockGroups.find((g) => g.group.group_id === body?.group_id);
     return json(apiOk({ ...(found ?? mockGroups[0]), my_state: { role: "member" as const, is_joined: true, unread_count: 0, is_muted: false, is_pinned: false } }));
   }),
-  http.post(`${API}/groups/list_my`, () => requireMockAuth() ?? json(paginated(mockGroups.slice(0, 2)))),
+  http.post(`${API}/groups/list_joined`, () => requireMockAuth() ?? json(paginated(mockGroups.slice(0, 2)))),
   http.post(`${API}/groups/members/list`, () => json(paginated(mockUsers.slice(0, 4).map(u => ({ user: u, role: "member", joined_at: "2026-01-01T00:00:00Z" }))))),
   // 成员管理写操作（owner/admin）
-  http.post(`${API}/groups/members/set_role`, () => requireMockAuth() ?? json(apiOk(null))),
-  http.post(`${API}/groups/members/set_ban`, () => requireMockAuth() ?? json(apiOk(null))),
-  http.post(`${API}/groups/members/set_mute`, () => requireMockAuth() ?? json(apiOk(null))),
-  http.post(`${API}/groups/members/invite`, () => requireMockAuth() ?? json(apiOk({ invite_id: `inv-${Date.now()}`, expires_at: new Date(Date.now() + 86400000).toISOString() }))),
-  http.post(`${API}/groups/members/remove`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/admin/members/set_role`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/admin/members/set_ban`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/admin/members/set_mute`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/admin/invites/create`, () => requireMockAuth() ?? json(apiOk({ invite_id: `inv-${Date.now()}`, expires_at: new Date(Date.now() + 86400000).toISOString() }))),
+  http.post(`${API}/groups/admin/members/remove`, () => requireMockAuth() ?? json(apiOk(null))),
   // 封禁名单（读，owner/admin 可见；最近封禁在前）
-  http.post(`${API}/groups/members/list_banned`, () => json(apiOk(paginated([
+  http.post(`${API}/groups/admin/members/list_banned`, () => json(apiOk(paginated([
     { user: mockUsers[5], banned_at: "2026-07-20T08:00:00Z", reason: "恶意刷屏" },
     { user: mockUsers[6], banned_at: "2026-07-18T08:00:00Z", reason: "发布违规内容" },
   ])))),
   // 已发邀请：sent/list 默认仅返回 pending（契约过期语义：过期自动置 revoked）
-  http.post(`${API}/groups/invites/sent/list`, () => json(apiOk(paginated(mockUsers.slice(1, 4).map((u, i) => ({
+  http.post(`${API}/groups/admin/invites/list_sent`, () => json(apiOk(paginated(mockUsers.slice(1, 4).map((u, i) => ({
     invite_id: `inv-sent-${i + 1}`,
     invitee: u,
     inviter: mockUsers[0],
@@ -322,20 +322,20 @@ export const handlers = [
     expires_at: new Date(Date.now() + (7 - i) * 86400000).toISOString(),
   })))))),
   // 撤销已发邀请（写操作 → 需登录）
-  http.post(`${API}/groups/invites/sent/revoke`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/admin/invites/revoke`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/groups/announcements/list`, () => json(apiOk({ items: [
     { announcement_id: "ann1", group_id: "group_1", title: "本周六弹唱活动", content: "下午3点户部山，带上你的乐器", created_by: mockUsers[0], created_at: "2026-07-25T10:00:00Z", is_pinned: true },
   ]}))),
   // 公告写操作（owner/admin；create 自带幂等键）
-  http.post(`${API}/groups/announcements/create`, async ({ request }) => {
+  http.post(`${API}/groups/admin/announcements/create`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as { group_id?: string; title?: string; content?: string; is_pinned?: boolean };
     return requireMockAuth() ?? json(apiOk({ announcement_id: `ann-${Date.now()}`, group_id: body?.group_id ?? 'group_1', title: body?.title ?? '', content: body?.content ?? '', created_by: mockUsers[0], created_at: new Date().toISOString(), is_pinned: Boolean(body?.is_pinned) }));
   }),
-  http.post(`${API}/groups/announcements/update`, async ({ request }) => {
+  http.post(`${API}/groups/admin/announcements/update`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as { group_id?: string; announcement_id?: string; title?: string; content?: string; is_pinned?: boolean };
     return requireMockAuth() ?? json(apiOk({ announcement_id: body?.announcement_id ?? 'ann1', group_id: body?.group_id ?? 'group_1', title: body?.title ?? '', content: body?.content ?? '', created_by: mockUsers[0], created_at: new Date().toISOString(), is_pinned: Boolean(body?.is_pinned) }));
   }),
-  http.post(`${API}/groups/announcements/delete`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/admin/announcements/delete`, () => requireMockAuth() ?? json(apiOk(null))),
   // create 是写操作 → 需要登录。
   http.post(`${API}/groups/create`, () => requireMockAuth() ?? json(apiOk(mockGroups[0]))),
   // join/leave 是写操作 → 需要登录。join 按 join_method 路由：
@@ -355,7 +355,7 @@ export const handlers = [
   }),
   http.post(`${API}/groups/leave`, () => requireMockAuth() ?? json(apiOk(null))),
   // 群设置更新（写操作 → 需登录；内容类更新返回更新后完整 GroupItem，见 spec 设计规范）
-  http.post(`${API}/groups/update`, async ({ request }) => {
+  http.post(`${API}/groups/admin/update`, async ({ request }) => {
     const auth = requireMockAuth();
     if (auth) return auth;
     const body = (await request.json().catch(() => ({}))) as {
@@ -377,29 +377,29 @@ export const handlers = [
     }));
   }),
   // 申请审批（管理员视角；list 默认仅返回 pending，与契约工作台语义一致）
-  http.post(`${API}/groups/applications/list`, () => json(apiOk(paginated([
+  http.post(`${API}/groups/admin/applications/list`, () => json(apiOk(paginated([
     { application_id: "app_1", group: mockGroups[0].group, applicant: mockUsers[1], message: "想加入一起拍照", status: "pending", created_at: new Date(Date.now() - 2 * 3600000).toISOString(), expires_at: new Date(Date.now() + 46 * 3600000).toISOString() },
     { application_id: "app_2", group: mockGroups[0].group, applicant: mockUsers[2], status: "pending", created_at: new Date(Date.now() - 5 * 3600000).toISOString(), expires_at: new Date(Date.now() + 43 * 3600000).toISOString() },
   ])))),
-  http.post(`${API}/groups/applications/approve`, () => requireMockAuth() ?? json(apiOk(null))),
-  http.post(`${API}/groups/applications/reject`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/admin/applications/approve`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/admin/applications/reject`, () => requireMockAuth() ?? json(apiOk(null))),
   // 我收到的邀请（received/list 默认仅 pending；inv_1 与通知 notif_4 呼应，演示通知与待办双入口）
-  http.post(`${API}/groups/invites/received/list`, () => json(apiOk(paginated([
+  http.post(`${API}/groups/invites/list_received`, () => json(apiOk(paginated([
     { invite_id: "inv_1", group: mockGroups[0].group, inviter: mockUsers[4], message: "周末一起拍照呀", status: "pending", created_at: new Date(Date.now() - 10 * 3600000).toISOString(), expires_at: new Date(Date.now() + 38 * 3600000).toISOString() },
     { invite_id: "inv_3", group: mockGroups[3].group, inviter: mockUsers[2], status: "pending", created_at: new Date(Date.now() - 26 * 3600000).toISOString(), expires_at: new Date(Date.now() + 22 * 3600000).toISOString() },
   ])))),
-  http.post(`${API}/groups/invites/received/accept`, () => requireMockAuth() ?? json(apiOk({ group_id: "group_1" }))),
-  http.post(`${API}/groups/invites/received/reject`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/invites/accept`, () => requireMockAuth() ?? json(apiOk({ group_id: "group_1" }))),
+  http.post(`${API}/groups/invites/reject`, () => requireMockAuth() ?? json(apiOk(null))),
   // 转让/解散（仅群主；dismiss 成功后由前端 onDismissed 处理跳转，WS GroupDismissed 真实后端推送）
-  http.post(`${API}/groups/transfer_ownership`, () => requireMockAuth() ?? json(apiOk(null))),
-  http.post(`${API}/groups/dismiss`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/admin/transfer_ownership`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/admin/dismiss`, () => requireMockAuth() ?? json(apiOk(null))),
 
   // ── Chat ───────────────────────────────────────
   // All chat endpoints are auth-required (spec: private_chats/*, *_messages/*).
   http.post(`${API}/private_chats/list`, () => requireMockAuth() ?? json(paginated(mockChats))),
   // get_history 按 target_user_id 路由：命中 mockChats 时返回 last_message 种子
   // + 一条历史消息（刷新后会话内容仍在）；新会话（未命中）返回空列表，走引导空态。
-  http.post(`${API}/private_messages/get_history`, async ({ request }) => {
+  http.post(`${API}/private_messages/list`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as { target_user_id?: string };
     const chat = mockChats.find((c) => c.other_user.user_id === body?.target_user_id);
     if (!chat) return requireMockAuth() ?? json(paginated([]));
@@ -419,7 +419,7 @@ export const handlers = [
     }));
   }),
   http.post(`${API}/private_messages/mark_read`, () => requireMockAuth() ?? json(apiOk(null))),
-  http.post(`${API}/group_messages/get_history`, async ({ request }) => {
+  http.post(`${API}/group_messages/list`, async ({ request }) => {
     // 按 group_id 路由：命中 mockGroups 时返回种子消息（刷新后群聊内容仍在）；
     // 未命中返回空列表。种子消息 sender 取群成员（mockUsers 前几位）。
     const body = (await request.json().catch(() => ({}))) as { group_id?: string };
@@ -484,12 +484,12 @@ export const handlers = [
       defaults: { default_location: { point: { latitude: 34.2604, longitude: 117.1855 }, location_name: "徐州" }, default_user_avatar_url: "", default_group_avatar_url: "" },
     },
     profile: mockAccount,
-    unread_summary: { notification_total: 3, notification_by_type: { social: 1, interaction: 1, group: 1, report: 0, system: 0 }, private_chat_unread_count: 2, group_chat_unread_count: 1, total_badge: 6 },
+    unread_summary: { notify_total: 3, notify_by_type: { social: 1, interaction: 1, group: 1, report: 0, system: 0 }, private_chat_unread_count: 2, group_chat_unread_count: 1, total_badge: 6 },
   }))),
 
   // ── Notify ─────────────────────────────────────
   // All notify endpoints are auth-required.
-  http.post(`${API}/notify/list`, () => requireMockAuth() ?? json(paginated(mockNotifications))),
+  http.post(`${API}/notify/list`, () => requireMockAuth() ?? json(paginated(mockNotifies))),
   http.post(`${API}/notify/get_unread_count`, () => requireMockAuth() ?? json(apiOk({ total: 3, by_type: { social: 1, interaction: 1, group: 1, report: 0, system: 0 } }))),
   http.post(`${API}/notify/mark_read`, () => requireMockAuth() ?? json(apiOk(null))),
 

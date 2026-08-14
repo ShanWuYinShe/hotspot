@@ -306,7 +306,7 @@ func appendAuthRules(rules *[]rule, path, ip string, cfg appconfig.RateLimitConf
 
 func classifyRoute(path string) (routeClass, bool) {
 	switch {
-	case strings.HasPrefix(path, "/api/v1/admin/"):
+	case strings.HasPrefix(path, "/admin/v1/"):
 		return routeClass{adminOnly: true, readOnly: isAdminReadPath(path)}, true
 	case strings.HasPrefix(path, "/api/v1/system/"):
 		return routeClass{readOnly: true}, true
@@ -319,7 +319,7 @@ func classifyRoute(path string) (routeClass, bool) {
 	case strings.HasPrefix(path, "/api/v1/media/"):
 		return routeClass{readOnly: false}, true
 	case strings.HasPrefix(path, "/api/v1/reports/"):
-		return routeClass{readOnly: strings.HasSuffix(path, "/list_my")}, true
+		return routeClass{readOnly: strings.HasSuffix(path, "/list_created") || strings.HasSuffix(path, "/list_joined") || strings.HasSuffix(path, "/list_submitted") || strings.HasSuffix(path, "/list_received") || strings.HasSuffix(path, "/list_sent") || strings.HasSuffix(path, "/list") || strings.HasSuffix(path, "/list_favorites") || strings.HasSuffix(path, "/list_blocked") || strings.HasSuffix(path, "/list_friends") || strings.HasSuffix(path, "/list_following") || strings.HasSuffix(path, "/list_followers") || strings.HasSuffix(path, "/list_groups") || strings.HasSuffix(path, "/list_moments") || strings.HasSuffix(path, "/list_reacted_moments") || strings.HasSuffix(path, "/list_banned")}, true
 	case strings.HasPrefix(path, "/api/v1/moments/"):
 		return routeClass{readOnly: !strings.HasSuffix(path, "/create")}, true
 	case strings.HasPrefix(path, "/api/v1/comments/"):
@@ -331,13 +331,13 @@ func classifyRoute(path string) (routeClass, bool) {
 	case strings.HasPrefix(path, "/api/v1/private_chats/"):
 		return routeClass{readOnly: true}, true
 	case strings.HasPrefix(path, "/api/v1/private_messages/"):
-		return routeClass{readOnly: strings.HasSuffix(path, "/get_history")}, true
+		return routeClass{readOnly: strings.HasSuffix(path, "/list")}, true
 	case strings.HasPrefix(path, "/api/v1/group_messages/"):
-		return routeClass{readOnly: strings.HasSuffix(path, "/get_history")}, true
+		return routeClass{readOnly: strings.HasSuffix(path, "/list")}, true
 	case strings.HasPrefix(path, "/api/v1/notify/"):
 		return routeClass{readOnly: strings.HasSuffix(path, "/list") || strings.HasSuffix(path, "/get_unread_count")}, true
 	case strings.HasPrefix(path, "/api/v1/share/"):
-		return routeClass{readOnly: strings.HasSuffix(path, "/get") || strings.HasSuffix(path, "/list_my")}, true
+		return routeClass{readOnly: strings.HasSuffix(path, "/get") || strings.HasSuffix(path, "/list") || strings.HasSuffix(path, "/list_created")}, true
 	case strings.HasPrefix(path, "/api/v1/map/"):
 		return routeClass{readOnly: true}, true
 	default:
@@ -347,7 +347,7 @@ func classifyRoute(path string) (routeClass, bool) {
 
 func isAuthReadPath(path string) bool {
 	switch path {
-	case "/api/v1/auth/check_status", "/api/v1/auth/list_sessions":
+	case "/api/v1/auth/get_status", "/api/v1/auth/list_sessions":
 		return true
 	default:
 		return false

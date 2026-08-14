@@ -22,6 +22,10 @@ type Reaction struct {
 	ReactedByMe bool   `json:"reacted_by_me"`
 }
 
+// MyMomentState 是 Logged-in 查看者的收藏状态内部载体。契约要求 MomentItem
+// 恒定输出 is_favorited 布尔（见 api_spec_types.md MomentItem），故响应不再把
+// my_state 作为一个嵌套对象序列化；repo 的 LoadMyState 仍以 MyMomentState
+// 返回，由 Service 中转为 item.IsFavorited。
 type MyMomentState struct {
 	IsFavorited bool `json:"is_favorited"`
 }
@@ -34,6 +38,9 @@ type MomentImage struct {
 	MimeType     string `json:"mime_type,omitempty"`
 }
 
+// MomentItem 是瞬间的公开固定形状（spec api_spec_types.md MomentItem）。
+// 拥有者专属字段 privacy_level 不在此类型（见 OwnerMomentItem）；
+// privacy_level 仅作 repo 内部存储/过滤载体，json:"-" 保证不对外输出。
 type MomentItem struct {
 	MomentID      string        `json:"moment_id"`
 	Description   string        `json:"description"`
@@ -46,15 +53,24 @@ type MomentItem struct {
 	SharesCount   int           `json:"shares_count"`
 	User          UserInfo      `json:"user"`
 	IsDeleted     bool          `json:"is_deleted"`
-	Location      Location      `json:"location"`
-	PrivacyLevel  string        `json:"privacy_level,omitempty"`
-	// Reactions is the per-emoji aggregate (@auth-only reacted_by_me). Omitted
-	// when the moment has no reactions. LikesCount above is the total across
-	// all emojis, kept for sort/heat computations and legacy clients.
-	Reactions []Reaction     `json:"reactions,omitempty"`
-	MyState   *MyMomentState `json:"my_state,omitempty"`
-	// FavoritedAt 仅 list_favorites 返回（spec moment.md → FavoritedMomentItem）
+	// location 恒定 nullable（spec MomentItem）：nil = 隐私隐藏/未设置，恒输出 null。
+	Location *Location `json:"location"`
+	// is_favorited 恒定布尔（spec MomentItem）：匿名/未收藏为 false，恒输出。
+	IsFavorited bool `json:"is_favorited"`
+	// Reactions 表情反应聚合（spec MomentItem reactions: 空数组 = 无反应）。
+	Reactions []Reaction `json:"reactions"`
+	// PrivacyLevel 仅 repo 内部使用（过滤/收藏/拥有者端点），不对外序列化。
+	PrivacyLevel string `json:"-"`
+	// FavoritedAt 仅 list_favorites 返回（spec moment.md → FavoritedMomentItem）。
 	FavoritedAt string `json:"favorited_at,omitempty"`
+}
+
+// OwnerMomentItem 拥有者视角扩展（spec moment.md → OwnerMomentItem）：
+// = MomentItem + privacy_level 必填。仅拥有者端点返回
+// （moments/list_created、moments/create、moments/update）。
+type OwnerMomentItem struct {
+	MomentItem
+	PrivacyLevel string `json:"privacy_level"`
 }
 
 type CreateMomentRequest struct {
@@ -70,9 +86,16 @@ type MomentOpenTheDoorRequest struct {
 	MomentID string `json:"moment_id"`
 }
 
+// PaginatedMoments 公开瞬间分页容器（spec moment.md → moments/search）。
 type PaginatedMoments struct {
 	Items      []MomentItem `json:"items"`
-	NextCursor string       `json:"next_cursor,omitempty"`
+	NextCursor string       `json:"next_cursor"`
+}
+
+// PaginatedOwnerMoments 拥有者瞬间分页容器（spec moment.md → moments/list_created）。
+type PaginatedOwnerMoments struct {
+	Items      []OwnerMomentItem `json:"items"`
+	NextCursor string            `json:"next_cursor"`
 }
 
 // SearchMomentsRequest：全球 keyword/tag 搜索（spec moment.md → moments/search 收口——
@@ -111,7 +134,9 @@ type UnfavoriteMomentRequest struct {
 	MomentID string `json:"moment_id"`
 }
 
-type MyMomentsRequest struct {
+// ListCreatedMomentsRequest 我创建的瞬间列表（spec moment.md。
+// 原 list_my 已废除，统一为 list_created）。返回拥有者视角 OwnerMomentItem。
+type ListCreatedMomentsRequest struct {
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 

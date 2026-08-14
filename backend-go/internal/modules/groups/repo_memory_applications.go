@@ -23,7 +23,6 @@ func (r *InMemoryRepository) GetApplication(_ context.Context, applicationID str
 		Status:        record.Status,
 		CreatedAt:     record.CreatedAt,
 		HandledAt:     record.HandledAt,
-		HandledBy:     record.HandledBy,
 	}, true, nil
 }
 
@@ -48,7 +47,6 @@ func (r *InMemoryRepository) ListApplications(_ context.Context, groupID string,
 			Status:        record.Status,
 			CreatedAt:     record.CreatedAt,
 			HandledAt:     record.HandledAt,
-			HandledBy:     record.HandledBy,
 		})
 	}
 	return items, "", nil
@@ -111,7 +109,7 @@ func (r *InMemoryRepository) ListMyApplications(_ context.Context, userID string
 		if status != nil && *status != record.Status {
 			continue
 		}
-		items = append(items, GroupApplicationItem{ApplicationID: record.ApplicationID, Applicant: UserInfo{UserID: record.ApplicantID, Nickname: record.ApplicantID}, Message: record.Message, Status: record.Status, CreatedAt: record.CreatedAt, HandledAt: record.HandledAt, HandledBy: record.HandledBy})
+		items = append(items, GroupApplicationItem{ApplicationID: record.ApplicationID, Applicant: UserInfo{UserID: record.ApplicantID, Nickname: record.ApplicantID}, Message: record.Message, Status: record.Status, CreatedAt: record.CreatedAt, HandledAt: record.HandledAt})
 	}
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].CreatedAt == items[j].CreatedAt {

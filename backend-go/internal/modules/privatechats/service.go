@@ -8,6 +8,7 @@ import (
 	"hotspot/backend-go/internal/modules/privatemessages"
 	"hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 )
 
@@ -179,29 +180,34 @@ func (s *Service) buildChat(ctx context.Context, userID string, state ChatState)
 		CreatedAt:      state.CreatedAt.UTC().Format(time.RFC3339Nano),
 		CanMessage:     true,
 	}
-	if userItem.PresenceStatus != "" {
-		item.PresenceStatus = string(userItem.PresenceStatus)
+	if userItem.PresenceStatus != nil {
+		ps := string(*userItem.PresenceStatus)
+		item.PresenceStatus = &ps
+	}
+	// 契约(api_spec_chat.md → PrivateChatItem)：blocked_reason 仅 can_message=false
+	// 时返回 blocked_by_user / privacy_setting / stranger_quota_exceeded。
+	blockReason := func(reason httpx.ForbiddenReason) {
+		r := reason
+		item.CanMessage = false
+		item.BlockedReason = &r
 	}
 	if userItem.Relation != nil && userItem.Relation.IsBlocked {
-		item.CanMessage = false
-		item.BlockReason = "privacy"
+		blockReason(httpx.ReasonBlockedByUser)
 	}
 	settings, settingsErr := s.users.GetMySettings(platformauth.WithPrincipal(ctx, platformauth.Principal{UserID: state.TargetID, SessionID: "private-chat-probe"}))
 	if settingsErr == nil {
 		switch settings.AllowPrivateChat {
 		case users.ChatPermNobody:
-			item.CanMessage = false
-			item.BlockReason = "privacy"
+			blockReason(httpx.ReasonPrivacySetting)
 		case users.ChatPermFriends:
 			if userItem.Relation == nil || !(userItem.Relation.IsFollowing && userItem.Relation.IsFollowedBy) {
-				item.CanMessage = false
-				item.BlockReason = "privacy"
+				blockReason(httpx.ReasonPrivacySetting)
 			}
 		}
 	}
 	if userID == state.TargetID {
 		item.CanMessage = true
-		item.BlockReason = ""
+		item.BlockedReason = nil
 	}
 	if last != nil {
 		item.LastActivityAt = last.SentAt

@@ -30,8 +30,8 @@ func (r systemBootstrapResolver) ResolveProfile(ctx context.Context) (any, bool)
 func (r systemBootstrapResolver) ResolveUnreadSummary(ctx context.Context) system.UnreadSummary {
 	summary := system.UnreadSummary{}
 	if result, err := r.notify.UnreadCount(ctx); err == nil {
-		summary.NotificationTotal = result.Total
-		summary.NotificationByType = map[string]int{
+		summary.NotifyTotal = result.Total
+		summary.NotifyByType = map[string]int{
 			"social":      result.ByType.Social,
 			"interaction": result.ByType.Interaction,
 			"group":       result.ByType.Group,

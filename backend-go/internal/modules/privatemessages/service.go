@@ -7,6 +7,7 @@ import (
 	"hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -144,7 +145,7 @@ func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (Mess
 	return msg, nil
 }
 
-func (s *Service) History(ctx context.Context, req GetHistoryRequest) (PaginatedMessages, error) {
+func (s *Service) History(ctx context.Context, req ListPrivateMessagesRequest) (PaginatedMessages, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	return s.repo.History(ctx, principal.UserID, req)
 }
@@ -245,9 +246,9 @@ func (s *Service) ensureCanSend(ctx context.Context, userID, targetUserID string
 	if userID == targetUserID {
 		return nil
 	}
-	// 拉黑明确返回 'blocked'（产品决策：拉黑就显示拉黑，见 api_spec_chat.md BlockReason）
+	// 拉黑明确返回 blocked_by_user（产品决策：拉黑就显示拉黑，见 api_spec_errors.md ForbiddenReason）
 	if item.Relation != nil && item.Relation.IsBlocked {
-		return &MessageBlockedError{Reason: BlockReasonBlocked}
+		return httpx.Forbidden(httpx.ReasonBlockedByUser, "已被对方拉黑")
 	}
 	settings, settingsErr := s.users.GetMySettings(platformauth.WithPrincipal(ctx, platformauth.Principal{UserID: targetUserID, SessionID: "private-message-probe"}))
 	if settingsErr != nil {
@@ -256,10 +257,10 @@ func (s *Service) ensureCanSend(ctx context.Context, userID, targetUserID string
 	isMutual := item.Relation != nil && item.Relation.IsFollowing && item.Relation.IsFollowedBy
 	switch settings.AllowPrivateChat {
 	case users.ChatPermNobody:
-		return &MessageBlockedError{Reason: BlockReasonPrivacy}
+		return httpx.Forbidden(httpx.ReasonPrivacySetting, "对方隐私设置不允许")
 	case users.ChatPermFriends:
 		if !isMutual {
-			return &MessageBlockedError{Reason: BlockReasonPrivacy}
+			return httpx.Forbidden(httpx.ReasonPrivacySetting, "对方隐私设置不允许")
 		}
 	}
 	// 陌生人消息每日额度:仅对非互相关注用户生效(0 = 禁止任何陌生人消息)
@@ -285,7 +286,7 @@ func (s *Service) enforceStrangerQuota(ctx context.Context, userID string) error
 		quota = 0
 	}
 	if quota == 0 {
-		return &MessageBlockedError{Reason: BlockReasonStrangerQuotaExceeded}
+		return httpx.Forbidden(httpx.ReasonStrangerQuotaExceeded, "陌生人消息限额已用完")
 	}
 	now := time.Now().UTC()
 	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
@@ -310,7 +311,7 @@ func (s *Service) enforceStrangerQuota(ctx context.Context, userID string) error
 		}
 	}
 	if strangerTotal >= quota {
-		return &MessageBlockedError{Reason: BlockReasonStrangerQuotaExceeded}
+		return httpx.Forbidden(httpx.ReasonStrangerQuotaExceeded, "陌生人消息限额已用完")
 	}
 	return nil
 }

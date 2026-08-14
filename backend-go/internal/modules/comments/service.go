@@ -26,7 +26,14 @@ type Service struct {
 	appConfig     appconfig.Source
 	runInTx       persistence.TxRunner // optional; nil => no transaction wrapping
 	reactions     ReactionAggregator   // optional; nil => reactions[] not filled
+	// blockChecks 可选注入：判定 caller 是否被目标瞬间作者拉黑（spec comment create →
+	// 被拉黑 → 10200 + blocked_by_user）。生产由 users 侧实现注入；nil 表示不启用
+	//（不产生误判，仅暴露 privacy_setting 路径）。返回 true 表示被拉黑。
+	blockChecks func(callerID, authorID string) bool
 }
+
+// SetBlockChecker 注入拉黑判定（依赖倒置：comments 不直接 import users）。
+func (s *Service) SetBlockChecker(fn func(callerID, authorID string) bool) { s.blockChecks = fn }
 
 // ReactionAggregator computes per-emoji reaction aggregates for comments.
 // Implemented by the reactions module (dependency inversion). viewerID drives
@@ -59,8 +66,8 @@ func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (Comment
 	if err != nil {
 		return CommentItem{}, err
 	}
-	if hasReplyTarget && replyTarget.ParentID != "" {
-		normalizedReq.ParentID = replyTarget.ParentID
+	if hasReplyTarget && replyTarget.ParentID != nil {
+		normalizedReq.ParentID = *replyTarget.ParentID
 	}
 
 	// 评论插入与 moment 计数是跨模块两步写（无共享事务）：计数失败**不阻断**
@@ -197,9 +204,10 @@ func (s *Service) Delete(ctx context.Context, req DeleteCommentRequest) error {
 		return ErrCommentNotFound
 	}
 	principal, _ := platformauth.PrincipalFromContext(ctx)
+	// 评论删除仅作者（spec api_spec_comment.md「删除评论（仅评论作者）」）。
+	// 平台审核删除统一走 /admin/v1/reports/handle，本端点没有「平台管理员」分支。
 	isOwner := comment.User.UserID == principal.UserID
-	isAdmin := platformauth.IsAdminUser(ctx, principal.UserID)
-	if !isOwner && !isAdmin {
+	if !isOwner {
 		return ErrPermissionDenied
 	}
 	// Already soft-deleted — no-op (idempotent)
@@ -458,10 +466,26 @@ func (s *Service) ensureMomentCommentable(ctx context.Context, momentID string) 
 		return err
 	}
 	if !found {
+		// 瞬间不存在或不可见（private 非拥有者）→ 10300
 		return ErrMomentNotFound
 	}
 	if !canComment {
-		return ErrMomentNoPermission
+		// 瞬间作者限制评论（spec comment create → 10200 + privacy_setting）
+		return ErrCommentPrivacyDenied
+	}
+	if s.blockChecks != nil {
+		caller := ""
+		author := ""
+		if p, ok := platformauth.PrincipalFromContext(ctx); ok {
+			caller = p.UserID
+		}
+		if mc, ok, err := s.moments.NotificationContext(ctx, momentID); err == nil && ok {
+			author = mc.UserID
+		}
+		if author != "" && caller != "" && s.blockChecks(caller, author) {
+			// 被瞬间作者拉黑（spec comment create → 10200 + blocked_by_user）
+			return ErrCommentBlockedByUser
+		}
 	}
 	return nil
 }

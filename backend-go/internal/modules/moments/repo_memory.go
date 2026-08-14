@@ -16,8 +16,22 @@ type InMemoryRepository struct {
 	moments   map[string]MomentItem
 	byUser    map[string][]string
 	favorites map[string]map[string]bool // userID -> momentID -> favorited
+	// blockedTags 记录被屏蔽的标签（spec moment create：含被屏蔽标签 → 10400）。
+	blockedTags map[string]struct{}
 	// seq 保证同纳秒内连续创建的 ID 不碰撞（UnixNano 时间戳在快速循环下会重复）。
 	seq uint64
+}
+
+// SetBlockedTags 注入需视为被屏蔽的标签（仅测试/内存实现使用；生产走 Postgres admin_blocked_tags 表）。
+func (r *InMemoryRepository) SetBlockedTags(tags ...string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, tag := range tags {
+		if r.blockedTags == nil {
+			r.blockedTags = make(map[string]struct{})
+		}
+		r.blockedTags[tag] = struct{}{}
+	}
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
@@ -38,7 +52,12 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	if privacy == "" {
 		privacy = "public"
 	}
-	item := MomentItem{MomentID: momentID, Description: req.Description, Tags: normalizeMomentTags(req.Tags), Mentions: normalizeMomentMentions(req.Mentions), CreatedAt: now.Format(time.RFC3339), LikesCount: 0, CommentsCount: 0, SharesCount: 0, User: UserInfo{UserID: userID, Nickname: userID}, Location: req.Location, PrivacyLevel: privacy, MyState: &MyMomentState{IsFavorited: false}}
+	for _, tag := range normalizeMomentTags(req.Tags) {
+		if _, blocked := r.blockedTags[tag]; blocked {
+			return MomentItem{}, ErrBlockedTag
+		}
+	}
+	item := MomentItem{MomentID: momentID, Description: req.Description, Tags: normalizeMomentTags(req.Tags), Mentions: normalizeMomentMentions(req.Mentions), CreatedAt: now.Format(time.RFC3339), LikesCount: 0, CommentsCount: 0, SharesCount: 0, User: UserInfo{UserID: userID, Nickname: userID}, Location: &req.Location, PrivacyLevel: privacy, IsFavorited: false}
 	r.moments[momentID] = item
 	r.byUser[userID] = append(r.byUser[userID], momentID)
 	return item, nil
@@ -185,7 +204,8 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 		item.Description = *req.Description
 	}
 	if req.Location != nil {
-		item.Location = *req.Location
+		loc := *req.Location
+		item.Location = &loc
 	}
 	if req.PrivacyLevel != nil {
 		item.PrivacyLevel = *req.PrivacyLevel

@@ -183,6 +183,25 @@ func (r *InMemoryRepository) Recall(_ context.Context, req RecallGroupMessageReq
 	return MessageEventMeta{GroupID: groupID, MessageID: req.MessageID, SentAt: msg.SentAt}, nil
 }
 
+// RecallAsAdmin recalls a message regardless of sender, skipping the owner and
+// recall-window checks (admin path, see spec api_spec_group.md). Only
+// not-found and already-recalled conflicts are returned.
+func (r *InMemoryRepository) RecallAsAdmin(_ context.Context, messageID string) (MessageEventMeta, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	groupID, index, msg, found := r.findMessage(messageID)
+	if !found {
+		return MessageEventMeta{}, ErrMessageNotFound
+	}
+	if msg.RecalledAt != "" {
+		return MessageEventMeta{}, ErrMessageRecalled
+	}
+	msg.RecalledAt = time.Now().UTC().Format(time.RFC3339Nano)
+	r.items[groupID][index] = *msg
+	return MessageEventMeta{GroupID: groupID, MessageID: messageID, SentAt: msg.SentAt}, nil
+}
+
 func (r *InMemoryRepository) MarkAsRead(_ context.Context, _ string, req MarkGroupMessagesReadRequest) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

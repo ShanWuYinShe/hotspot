@@ -255,6 +255,6 @@ func paginateSearchGroups(items []GroupItem, metas map[string]groupSearchMeta, s
 	if err != nil {
 		return PaginatedGroups{}, err
 	}
-	response.NextCursor = next
+	response.NextCursor = &next
 	return response, nil
 }

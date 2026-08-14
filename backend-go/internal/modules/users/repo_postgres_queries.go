@@ -294,6 +294,13 @@ FROM (
 	queryUserExists = `
 SELECT 1 FROM users WHERE user_id = $1`
 
+	// queryListBlockedUserTags 返回 tags 中命中平台屏蔽标签（admin_blocked_tags）的标签名（update_account 10400）。
+	queryListBlockedUserTags = `
+SELECT bt.name
+FROM unnest($1::text[]) AS candidate(tag_name)
+JOIN admin_blocked_tags bt ON bt.name = candidate.tag_name
+ORDER BY bt.name ASC`
+
 	momenttypesQueryListMomentTagsByMomentID = `
 SELECT tag_name
 FROM moment_tags

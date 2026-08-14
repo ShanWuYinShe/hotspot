@@ -200,7 +200,7 @@ func TestListAnnouncementsReturnsRepoData(t *testing.T) {
 		CreatedAt:      time.Date(2026, 3, 23, 12, 0, 0, 0, time.UTC),
 	}}}
 	handler := NewHandler(NewServiceWithDeps(repo, fixedProvider{count: 5}))
-	req := httptest.NewRequest(http.MethodPost, "/list_announcements", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/announcements/list", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 
 	handler.ListAnnouncements(rr, req)
@@ -224,7 +224,7 @@ func TestListAnnouncementsReturnsRepoData(t *testing.T) {
 
 func TestListAnnouncementsReturnsUnavailableOnRepoError(t *testing.T) {
 	handler := NewHandler(NewServiceWithDeps(&staticRepo{err: errors.New("db down")}, fixedProvider{count: 5}))
-	req := httptest.NewRequest(http.MethodPost, "/list_announcements", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/announcements/list", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 
 	handler.ListAnnouncements(rr, req)
@@ -339,7 +339,7 @@ func TestSystemHandlerListAnnouncementsReturnsSuccess(t *testing.T) {
 		{AnnouncementID: "h1", Title: "公告", Content: "内容", Severity: AnnounceLevelInfo, CreatedAt: time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)},
 	}}
 	handler := NewHandler(NewServiceWithDeps(repo, fixedProvider{count: 5}))
-	req := httptest.NewRequest(http.MethodPost, "/list_announcements", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/announcements/list", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 
 	handler.ListAnnouncements(rr, req)
@@ -369,7 +369,7 @@ func TestSystemHandlerListAnnouncementsReturnsSuccess(t *testing.T) {
 
 func TestSystemHandlerListAnnouncementsReturns10600OnError(t *testing.T) {
 	handler := NewHandler(NewServiceWithDeps(&staticRepo{err: errors.New("connection refused")}, fixedProvider{count: 5}))
-	req := httptest.NewRequest(http.MethodPost, "/list_announcements", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/announcements/list", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 
 	handler.ListAnnouncements(rr, req)

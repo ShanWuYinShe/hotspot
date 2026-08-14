@@ -6,7 +6,7 @@ import (
 )
 
 // TestInMemoryAppendMany_FansOutToAllUsers verifies AppendMany delivers the
-// notification to every recipient (the postgres path now does this in a single
+// notify to every recipient (the postgres path now does this in a single
 // batched transaction; this guards the in-memory mirror used by tests).
 func TestInMemoryAppendMany_FansOutToAllUsers(t *testing.T) {
 	repo := NewInMemoryRepository()
@@ -18,12 +18,12 @@ func TestInMemoryAppendMany_FansOutToAllUsers(t *testing.T) {
 	}
 
 	for _, uid := range users {
-		page, err := repo.List(context.Background(), uid, NotificationListRequest{})
+		page, err := repo.List(context.Background(), uid, NotifyListRequest{})
 		if err != nil {
 			t.Fatalf("List(%s) failed: %v", uid, err)
 		}
 		if len(page.Items) != 1 {
-			t.Fatalf("user %s: expected 1 notification, got %d", uid, len(page.Items))
+			t.Fatalf("user %s: expected 1 notify, got %d", uid, len(page.Items))
 		}
 		if page.Items[0].Type != "mention" {
 			t.Fatalf("user %s: expected type mention, got %s", uid, page.Items[0].Type)
@@ -43,9 +43,9 @@ func TestInMemoryAppendMany_SkipsEmptyUserIDs(t *testing.T) {
 	}
 
 	for _, uid := range []string{"u1", "u2"} {
-		page, _ := repo.List(context.Background(), uid, NotificationListRequest{})
+		page, _ := repo.List(context.Background(), uid, NotifyListRequest{})
 		if len(page.Items) != 1 {
-			t.Fatalf("user %s: expected 1 notification, got %d", uid, len(page.Items))
+			t.Fatalf("user %s: expected 1 notify, got %d", uid, len(page.Items))
 		}
 	}
 }
@@ -63,10 +63,10 @@ func TestInMemoryAppendMany_EmptyListIsNoop(t *testing.T) {
 }
 
 // TestInMemoryAppendMany_DeliversAllWithSharedId verifies every recipient
-// gets a notification even though the in-memory AppendMany passes the same
+// gets a notify even though the in-memory AppendMany passes the same
 // NotifyItem (and thus the same NotifyID) to each Append. The postgres
 // batch path now derives a distinct per-row id from a shared prefix (the
-// table PK is notification_id alone, so a shared id would collide); this test
+// table PK is notify_id alone, so a shared id would collide); this test
 // confirms the in-memory fan-out still delivers to all users.
 func TestInMemoryAppendMany_DeliversAllWithSharedId(t *testing.T) {
 	repo := NewInMemoryRepository()
@@ -76,9 +76,9 @@ func TestInMemoryAppendMany_DeliversAllWithSharedId(t *testing.T) {
 		t.Fatalf("AppendMany failed: %v", err)
 	}
 	for _, uid := range users {
-		page, _ := repo.List(context.Background(), uid, NotificationListRequest{})
+		page, _ := repo.List(context.Background(), uid, NotifyListRequest{})
 		if len(page.Items) != 1 {
-			t.Fatalf("user %s: expected 1 notification, got %d", uid, len(page.Items))
+			t.Fatalf("user %s: expected 1 notify, got %d", uid, len(page.Items))
 		}
 	}
 }

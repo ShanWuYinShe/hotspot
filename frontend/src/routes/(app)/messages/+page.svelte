@@ -73,13 +73,13 @@
 						peerUserId: '',
 						name: g.name,
 						avatar: g.avatar_url ?? '',
-						// spec: last_message 仅 groups/list_my 返回,非文本消息预览为空。
+						// spec: last_message 仅 groups/list_joined 返回,非文本消息预览为空。
 						// 排序/展示统一以最新一条消息时间为准，无消息时回退群组活跃时间
 						lastMessage: c.last_message?.content ?? '',
 						time: formatTime(c.last_message?.sent_at ?? c.last_activity_at ?? ''),
 						timestamp: c.last_message?.sent_at ?? c.last_activity_at ?? '',
-						unread: c.my_state?.unread_count ?? 0,
-						isPinned: c.my_state?.is_pinned ?? false,
+						unread: c.viewer_state?.unread_count ?? 0,
+						isPinned: c.viewer_state?.is_pinned ?? false,
 						online: false,
 						group: true,
 						kind: 'group'

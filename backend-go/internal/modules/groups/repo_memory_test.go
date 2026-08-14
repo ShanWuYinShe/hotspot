@@ -30,11 +30,11 @@ func TestInMemoryCreate_AddsOwnerAsMember(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
-	if item.OwnerID != "user_1" {
-		t.Fatalf("expected owner user_1, got %s", item.OwnerID)
+	if (item.OwnerID == nil || *item.OwnerID != "user_1") {
+		t.Fatalf("expected owner user_1, got %s", *item.OwnerID)
 	}
-	if item.MyState == nil || item.MyState.Role != GroupRoleOwner {
-		t.Fatalf("expected owner role, got %+v", item.MyState)
+	if item.ViewerState == nil || item.ViewerState.Role != GroupRoleOwner {
+		t.Fatalf("expected owner role, got %+v", item.ViewerState)
 	}
 
 	// The owner must be recorded as a member.
@@ -77,8 +77,8 @@ func TestServiceCreate_ReturnsItemWithOwnerState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
-	if item.MyState == nil || !item.MyState.IsJoined || item.MyState.Role != GroupRoleOwner {
-		t.Fatalf("expected joined owner state, got %+v", item.MyState)
+	if item.ViewerState == nil || item.ViewerState.Role != GroupRoleOwner {
+		t.Fatalf("expected joined owner state, got %+v", item.ViewerState)
 	}
 }
 

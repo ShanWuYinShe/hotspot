@@ -357,7 +357,7 @@ func TestSystem_GetClientConfig(t *testing.T) {
 
 func TestSystem_ListAnnouncements(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiOK(t, "/api/v1/system/list_announcements", map[string]any{}, &resp)
+	apiOK(t, "/api/v1/system/announcements/list", map[string]any{}, &resp)
 }
 
 // =============================================================================
@@ -387,10 +387,10 @@ func TestAuth_Login_InvalidCredentials(t *testing.T) {
 
 func TestAuth_CheckStatus_Anonymous(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiOK(t, "/api/v1/auth/check_status", map[string]any{}, &resp)
+	apiOK(t, "/api/v1/auth/get_status", map[string]any{}, &resp)
 	if resp.Data != nil {
 		if valid, ok := (*resp.Data)["is_valid"].(bool); ok && valid {
-			t.Log("anonymous check_status returned is_valid=true — unexpected but acceptable if CSRF or session-based")
+			t.Log("anonymous get_status returned is_valid=true — unexpected but acceptable if CSRF or session-based")
 		}
 	}
 }
@@ -633,7 +633,7 @@ func TestMoments_CreateList(t *testing.T) {
 			t.Fatalf("create moment failed: code=%d message=%s", createResp.Code, createResp.Message)
 		}
 		var listResp ApiResponse[map[string]any]
-		apiOK(t, "/api/v1/moments/list_my", map[string]any{}, &listResp)
+		apiOK(t, "/api/v1/moments/list_created", map[string]any{}, &listResp)
 	})
 }
 
@@ -819,7 +819,7 @@ func TestGroups_CreateUpdateDismiss(t *testing.T) {
 func TestGroups_MyGroups(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/groups/list_my", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/groups/list_joined", map[string]any{}, &resp)
 	})
 }
 
@@ -916,7 +916,7 @@ func TestShare_CreateGet(t *testing.T) {
 func TestShare_MeList(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/share/list_my", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/share/list", map[string]any{}, &resp)
 	})
 }
 
@@ -987,7 +987,7 @@ func TestPrivateMessages_SendGetHistory(t *testing.T) {
 		}, &sendResp)
 		// Get history
 		var histResp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/private_messages/get_history", map[string]any{
+		apiRespOK(t, "/api/v1/private_messages/list", map[string]any{
 			"target_user_id": tok2uid,
 		}, &histResp)
 	})
@@ -1132,7 +1132,7 @@ func TestReports_Create(t *testing.T) {
 func TestReports_MeList(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/reports/list_my", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/reports/list", map[string]any{}, &resp)
 	})
 }
 
@@ -1414,76 +1414,76 @@ func TestMedia_E2E_CompleteBeforeUpload(t *testing.T) {
 func TestAdmin_RBAC_GetMe(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/admin/rbac/get_me", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/rbac/get_me", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_RBAC_ListPermissions(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/admin/rbac/list_permissions", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/rbac/list_permissions", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_RBAC_RolesList(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/admin/rbac/roles/list", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/rbac/roles/list", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_RBAC_AdminsList(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/admin/rbac/admins/list", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/rbac/admins/list", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_AppConfigGet(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/admin/app_config/get", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/app_config/get", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_UsersSearch(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/admin/users/search", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/users/search", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_GroupsSearch(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/admin/groups/search", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/groups/search", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_ReportsSearch(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/admin/reports/list", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/reports/list", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_TagsSearch(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/admin/tags/search", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/tags/search", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_Announcements(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/admin/announcements/search", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/announcements/list", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_Audit(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/admin/audit/list", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/audit/list", map[string]any{}, &resp)
 	})
 }

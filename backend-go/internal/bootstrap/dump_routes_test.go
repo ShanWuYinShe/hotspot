@@ -19,7 +19,9 @@ func walkRouteList(routes []chi.Route, prefix string, out *[]string) {
 			walkRouteList(rt.SubRoutes.Routes(), full, out)
 			continue
 		}
-		*out = append(*out, full)
+		// chi 挂载层贡献 "/*" 分隔符，收敛为具体路径（/admin/v1/announcements/create）
+		clean := strings.ReplaceAll(full, "/*", "")
+		*out = append(*out, clean)
 	}
 }
 

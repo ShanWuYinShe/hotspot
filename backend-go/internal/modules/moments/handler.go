@@ -41,19 +41,22 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteInvalidRequest(w, r, "Create", "参数错误: 经纬度超出有效范围")
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "moments/create", func() httpx.ApiResponse[MomentItem] {
+	idempotency.ReplayOrStore(w, r, "moments/create", func() httpx.ApiResponse[OwnerMomentItem] {
 		item, err := h.service.Create(r.Context(), req)
 		if err != nil {
 			switch {
 			case errors.Is(err, ErrTooManyImages):
 				observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "图片数量超过上限")
-				return httpx.ApiResponse[MomentItem]{Code: httpx.CodeInvalidRequest, Message: "图片数量超过上限"}
+				return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeInvalidRequest, Message: "图片数量超过上限"}
 			case errors.Is(err, ErrImagesNotOwned):
 				observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "图片校验失败")
-				return httpx.ApiResponse[MomentItem]{Code: httpx.CodeInvalidRequest, Message: "图片校验失败"}
+				return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeInvalidRequest, Message: "图片校验失败"}
+			case errors.Is(err, ErrBlockedTag):
+				observability.LogBusinessError(r, "Create", int(httpx.CodeConflict), "标签包含被屏蔽的内容")
+				return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeConflict, Message: "标签包含被屏蔽的内容"}
 			}
 			observability.LogServerError(r, "Create", err)
-			return httpx.ApiResponse[MomentItem]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
+			return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 		}
 		return httpx.Success(item)
 	})
@@ -77,15 +80,15 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(item))
 }
 
-func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
-	var req MyMomentsRequest
+func (h *Handler) ListCreated(w http.ResponseWriter, r *http.Request) {
+	var req ListCreatedMomentsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteInvalidRequest(w, r, "ListMine", "参数错误")
+		httpx.WriteInvalidRequest(w, r, "ListCreated", "参数错误")
 		return
 	}
-	list, err := h.service.ListMine(r.Context(), req)
+	list, err := h.service.ListCreated(r.Context(), req)
 	if err != nil {
-		httpx.WriteAPIError(w, r, "ListMine", err)
+		httpx.WriteAPIError(w, r, "ListCreated", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))
@@ -130,7 +133,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrPermissionDenied) {
-			httpx.WriteBusinessError(w, r, "Update", httpx.CodeForbidden, "权限不足")
+			httpx.WriteAPIError(w, r, "Update", httpx.Forbidden(httpx.ReasonNotResourceOwner, "非瞬间作者，无权编辑"))
 			return
 		}
 		if errors.Is(err, ErrTooManyImages) {
@@ -159,7 +162,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrPermissionDenied) {
-			httpx.WriteBusinessError(w, r, "Delete", httpx.CodeForbidden, "权限不足")
+			httpx.WriteAPIError(w, r, "Delete", httpx.Forbidden(httpx.ReasonNotResourceOwner, "权限不足"))
 			return
 		}
 		httpx.WriteAPIError(w, r, "Delete", err)

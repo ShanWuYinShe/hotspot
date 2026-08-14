@@ -11,7 +11,7 @@ import {
   GroupApplicationItem,
   GroupInviteItem,
   GroupItem,
-  MyGroupsRequest
+  ListJoinedGroupsRequest
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 
@@ -209,7 +209,7 @@ export struct GroupPage {
     this.errorMessage = '';
 
     try {
-      const request: MyGroupsRequest = {
+      const request: ListJoinedGroupsRequest = {
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE }
       };
       const response = await LoadingUtil.withMinimumTime(() => ApiClient.getJoinedGroups(request));
@@ -237,7 +237,7 @@ export struct GroupPage {
     if (this.isLoadingMore || !this.hasMore) return;
     this.isLoadingMore = true;
     try {
-      const request: MyGroupsRequest = {
+      const request: ListJoinedGroupsRequest = {
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.nextCursor }
       };
       const response = await ApiClient.getJoinedGroups(request);

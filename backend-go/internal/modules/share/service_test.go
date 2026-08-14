@@ -72,7 +72,7 @@ func TestServiceGetValidatesShareCode(t *testing.T) {
 func TestServiceListNormalizesPagination(t *testing.T) {
 	repo := &shareStubRepo{}
 	service := NewServiceWithRepo(repo)
-	_, err := service.List(shareContextWithUser("u1"), ShareListRequest{ShareType: ShareTypeUser, Pagination: &PaginationParams{Limit: 0}})
+	_, err := service.List(shareContextWithUser("u1"), ListSharesRequest{ShareType: ShareTypeUser, Pagination: &PaginationParams{Limit: 0}})
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}

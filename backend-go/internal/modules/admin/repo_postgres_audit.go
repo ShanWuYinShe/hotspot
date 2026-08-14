@@ -56,18 +56,6 @@ func (r *PostgresRepository) ListAuditLogs(ctx context.Context, filter AuditLogF
 	return page, nil
 }
 
-func (r *PostgresRepository) GetAuditLog(ctx context.Context, logID string, includeIPAddress bool) (AuditLogItem, bool, error) {
-	queryable, ok := r.queryable()
-	if !ok {
-		return AuditLogItem{}, false, persistence.ErrNotImplemented
-	}
-	entry, found, err := r.getAuditEntryByID(ctx, queryable, logID)
-	if err != nil || !found {
-		return AuditLogItem{}, found, err
-	}
-	return auditLogItemFromEntry(entry, includeIPAddress), true, nil
-}
-
 func (r *PostgresRepository) AppendAuditLog(ctx context.Context, entry AuditLogEntry) error {
 	queryable, ok := r.queryable()
 	if !ok {

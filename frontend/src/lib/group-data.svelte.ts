@@ -93,8 +93,8 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 					description: detailData.description ?? detail.description,
 					banner: g.avatar_url ?? detail.banner
 				};
-				if (detailData.my_state?.is_joined) joined = true;
-				myRole = detailData.my_state?.role ?? null;
+				if (detailData.viewer_state) joined = true;
+				myRole = detailData.viewer_state?.role ?? null;
 			} else if (detailRes.code !== 0) {
 				loadError = detailRes.message ?? '加载失败，请稍后重试';
 			}
@@ -114,8 +114,9 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 					userId: m.user?.user_id ?? '',
 					name: m.user?.nickname ?? '',
 					role: m.role ?? '成员',
-					avatar: m.user?.avatar_url ?? '',
-					mutedUntil: m.muted_until ?? undefined
+					avatar: m.user?.avatar_url ?? ''
+					// 禁言截止时间在群管理视角（groups/admin/members/list，AdminGroupMemberItem）；
+					// 公开 members/list 已不含 muted_until（视角分离）。
 				}));
 				members = items;
 				// 成员在线状态实时化：订阅全部成员（先释放旧订阅再建新订阅）

@@ -117,10 +117,6 @@ func (r *adminFallbackRepo) ListAuditLogs(context.Context, AuditLogFilter, bool)
 	r.used = true
 	return auditLogPage{}, nil
 }
-func (r *adminFallbackRepo) GetAuditLog(context.Context, string, bool) (AuditLogItem, bool, error) {
-	r.used = true
-	return AuditLogItem{}, false, nil
-}
 func (r *adminFallbackRepo) AppendAuditLog(context.Context, AuditLogEntry) error {
 	r.used = true
 	return nil

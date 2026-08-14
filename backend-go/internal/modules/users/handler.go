@@ -75,6 +75,10 @@ func (h *Handler) writeServiceError(w http.ResponseWriter, r *http.Request, meth
 	} else {
 		observability.LogBusinessError(r, method, int(apiErr.Code), apiErr.Message)
 	}
+	if apiErr.Data != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.ErrorWithData(apiErr.Code, apiErr.Message, apiErr.Data))
+		return
+	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Error(apiErr.Code, apiErr.Message))
 }
 
@@ -83,11 +87,17 @@ func apiErrorFromService(err error) *httpx.APIError {
 	case errors.Is(err, ErrUnauthorized):
 		return &httpx.APIError{Code: httpx.CodeUnauthorized, Message: "认证失败"}
 	case errors.Is(err, ErrPermissionDenied):
-		return &httpx.APIError{Code: httpx.CodeForbidden, Message: "权限不足"}
+		// 10200 一律通过 httpx.Forbidden 构造，携带 data.forbidden_reason（spec api_spec_errors.md）。
+		// users 模块内 ErrPermissionDenied 均为对方隐私设置拒绝（allow_follow/social_lists_visible/groups_visible/reacted_moments_visible）。
+		return httpx.Forbidden(httpx.ReasonPrivacySetting, "对方隐私设置不允许")
 	case errors.Is(err, ErrUserNotFound):
 		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "用户不存在"}
+	case errors.Is(err, ErrBlockedTag):
+		return &httpx.APIError{Code: httpx.CodeConflict, Message: "标签包含被屏蔽内容"}
 	case errors.Is(err, ErrConflict):
 		return &httpx.APIError{Code: httpx.CodeConflict, Message: "业务冲突"}
+	case errors.Is(err, ErrInvalidRequest):
+		return &httpx.APIError{Code: httpx.CodeInvalidRequest, Message: "参数错误"}
 	case errors.Is(err, ErrInvalidCursor):
 		return &httpx.APIError{Code: httpx.CodeInvalidRequest, Message: "分页游标无效"}
 	default:

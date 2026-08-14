@@ -23,7 +23,9 @@ func (r rowValues) Scan(dest ...any) error {
 	for i := range dest {
 		switch d := dest[i].(type) {
 		case *string:
-			*d = r.values[i].(string)
+			if v, ok := r.values[i].(string); ok {
+				*d = v
+			}
 		case *int:
 			*d = r.values[i].(int)
 		case *time.Time:
@@ -87,10 +89,9 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 			LikesCount:   args[6].(int),
 			RepliesCount: args[7].(int),
 			User:         UserInfo{UserID: args[2].(string), Nickname: args[2].(string)},
-			MyState:      &MyCommentState{},
 		}
 		if parentID, ok := args[3].(string); ok {
-			item.ParentID = parentID
+			item.ParentID = strPtr(parentID)
 		}
 		momentID := args[1].(string)
 		b.comments[momentID] = append(b.comments[momentID], item)
@@ -118,7 +119,7 @@ func (b *backendStub) QueryRow(_ context.Context, query string, args ...any) per
 		for _, items := range b.comments {
 			for _, item := range items {
 				if item.CommentID == commentID {
-					return rowValues{values: []any{item.CommentID, item.MomentID, item.User.UserID, item.User.Nickname, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount, item.IsDeleted}}
+					return rowValues{values: []any{item.CommentID, item.MomentID, item.User.UserID, item.User.Nickname, parentIDStr(item.ParentID), item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount, item.IsDeleted}}
 				}
 			}
 		}
@@ -141,7 +142,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		items := append([]CommentItem(nil), b.comments[momentID]...)
 		filtered := items[:0]
 		for _, item := range items {
-			if item.ParentID == "" {
+			if item.ParentID == nil {
 				filtered = append(filtered, item)
 			}
 		}
@@ -166,7 +167,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.CommentID, item.User.UserID, item.User.Nickname, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount, item.IsDeleted})
+			rows = append(rows, []any{item.CommentID, item.User.UserID, item.User.Nickname, parentIDStr(item.ParentID), item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount, item.IsDeleted})
 		}
 		return &rowsValues{rows: rows}, nil
 	case queryListCommentReplies:
@@ -180,7 +181,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		items := make([]CommentItem, 0)
 		for _, momentItems := range b.comments {
 			for _, item := range momentItems {
-				if item.ParentID == parentID {
+				if item.ParentID != nil && *item.ParentID == parentID {
 					items = append(items, item)
 				}
 			}
@@ -205,7 +206,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.CommentID, item.User.UserID, item.User.Nickname, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount, item.IsDeleted})
+			rows = append(rows, []any{item.CommentID, item.User.UserID, item.User.Nickname, parentIDStr(item.ParentID), item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount, item.IsDeleted})
 		}
 		return &rowsValues{rows: rows}, nil
 	default:
@@ -222,7 +223,7 @@ func TestPostgresRepositoryWritesAndReadsQueryableDB(t *testing.T) {
 	if err != nil || created.CommentID == "" || created.Content != "nice" {
 		t.Fatalf("unexpected created comment: %#v err=%v", created, err)
 	}
-	if created.ParentID != "" || len(created.Mentions) != 0 {
+	if created.ParentID != nil || len(created.Mentions) != 0 {
 		t.Fatalf("postgres create should not return non-persisted fields: %#v", created)
 	}
 	list, err := repo.List(context.Background(), "moment_1", 20, "")
@@ -253,7 +254,6 @@ func TestPostgresRepositoryGetReturnsMomentID(t *testing.T) {
 		LikesCount:   1,
 		RepliesCount: 0,
 		User:         UserInfo{UserID: "user_alice", Nickname: "user_alice"},
-		MyState:      &MyCommentState{},
 	}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
@@ -271,9 +271,9 @@ func TestPostgresRepositoryGetReturnsMomentID(t *testing.T) {
 func TestPostgresRepositoryListRepliesUsesCursor(t *testing.T) {
 	backend := newBackendStub()
 	backend.comments["moment_1"] = []CommentItem{
-		{CommentID: "reply_3", MomentID: "moment_1", ParentID: "comment_0", Content: "c", CreatedAt: "2026-03-28T10:02:00Z", User: UserInfo{UserID: "u3", Nickname: "u3"}, MyState: &MyCommentState{}},
-		{CommentID: "reply_2", MomentID: "moment_1", ParentID: "comment_0", Content: "b", CreatedAt: "2026-03-28T10:01:00Z", User: UserInfo{UserID: "u2", Nickname: "u2"}, MyState: &MyCommentState{}},
-		{CommentID: "reply_1", MomentID: "moment_1", ParentID: "comment_0", Content: "a", CreatedAt: "2026-03-28T10:00:00Z", User: UserInfo{UserID: "u1", Nickname: "u1"}, MyState: &MyCommentState{}},
+		{CommentID: "reply_3", MomentID: "moment_1", ParentID: strPtr("comment_0"), Content: "c", CreatedAt: "2026-03-28T10:02:00Z", User: UserInfo{UserID: "u3", Nickname: "u3"}},
+		{CommentID: "reply_2", MomentID: "moment_1", ParentID: strPtr("comment_0"), Content: "b", CreatedAt: "2026-03-28T10:01:00Z", User: UserInfo{UserID: "u2", Nickname: "u2"}},
+		{CommentID: "reply_1", MomentID: "moment_1", ParentID: strPtr("comment_0"), Content: "a", CreatedAt: "2026-03-28T10:00:00Z", User: UserInfo{UserID: "u1", Nickname: "u1"}},
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend

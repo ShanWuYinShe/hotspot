@@ -1,5 +1,5 @@
 import { ApiClient } from '../api/ApiClient';
-import { NotificationItem, NotificationListRequest, MarkAsReadRequest, UnreadCountResult } from '../types/api';
+import { NotifyItem, NotifyListRequest, NotifyMarkReadRequest, UnreadCountResult } from '../types/api';
 import { DefaultConfig } from '../../constants/AppConstants';
 import { GlobalStateManager, UnreadCount as GlobalUnreadCount } from '../state/GlobalStateManager';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
@@ -13,7 +13,7 @@ type Listener = () => void;
 export class NotificationSyncService {
   private static instance: NotificationSyncService | null = null;
 
-  private notifications: NotificationItem[] = [];
+  private notifies: NotifyItem[] = [];
   private nextCursor: string = '';
   private hasMore: boolean = false;
   private isLoading: boolean = false;
@@ -43,8 +43,8 @@ export class NotificationSyncService {
     }
   }
 
-  getNotifications(): NotificationItem[] {
-    return [...this.notifications];
+  getNotifications(): NotifyItem[] {
+    return [...this.notifies];
   }
 
   hasMoreData(): boolean {
@@ -64,7 +64,7 @@ export class NotificationSyncService {
   }
 
   reset(): void {
-    this.notifications = [];
+    this.notifies = [];
     this.nextCursor = '';
     this.hasMore = false;
     this.lastError = '';
@@ -81,15 +81,15 @@ export class NotificationSyncService {
     this.notify();
 
     try {
-      const response = await ApiClient.listNotifications({
+      const response = await ApiClient.listNotifies({
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE }
-      } as NotificationListRequest);
+      } as NotifyListRequest);
 
       if (response.code !== 0 || !response.data) {
         throw new Error(response.message || '加载通知失败');
       }
 
-      this.notifications = response.data.items ?? [];
+      this.notifies = response.data.items ?? [];
       this.nextCursor = response.data.next_cursor ?? '';
       this.hasMore = !!response.data.next_cursor;
     } catch (error) {
@@ -113,12 +113,12 @@ export class NotificationSyncService {
     this.notify();
 
     try {
-      const response = await ApiClient.listNotifications({
+      const response = await ApiClient.listNotifies({
         pagination: {
           limit: DefaultConfig.PAGE_SIZE_LARGE,
           cursor: this.nextCursor
         }
-      } as NotificationListRequest);
+      } as NotifyListRequest);
 
       if (response.code !== 0 || !response.data) {
         throw new Error(response.message || '加载通知失败');
@@ -126,7 +126,7 @@ export class NotificationSyncService {
 
       const items = response.data.items ?? [];
       if (items.length > 0) {
-        this.notifications = this.notifications.concat(items);
+        this.notifies = this.notifies.concat(items);
       }
       this.nextCursor = response.data.next_cursor ?? '';
       this.hasMore = !!response.data.next_cursor;
@@ -146,16 +146,16 @@ export class NotificationSyncService {
       return;
     }
 
-    const request: MarkAsReadRequest = { notify_ids: ids };
-    const response = await ApiClient.markNotificationsRead(request);
+    const request: NotifyMarkReadRequest = { scope: 'ids', notify_ids: ids };
+    const response = await ApiClient.markNotifiesRead(request);
     if (response.code !== 0) {
       throw new Error(response.message || '标记通知失败');
     }
 
     const idSet = new Set<string>(ids);
-    this.notifications = this.notifications.map((item: NotificationItem): NotificationItem => {
+    this.notifies = this.notifies.map((item: NotifyItem): NotifyItem => {
       if (idSet.has(item.notify_id)) {
-        const readItem: NotificationItem = {
+        const readItem: NotifyItem = {
           notify_id: item.notify_id,
           type: item.type,
           is_read: true,
@@ -170,13 +170,13 @@ export class NotificationSyncService {
   }
 
   async markAllAsRead(): Promise<void> {
-    const response = await ApiClient.markAllNotificationsRead();
+    const response = await ApiClient.markAllNotifiesRead();
     if (response.code !== 0) {
       throw new Error(response.message || '标记全部已读失败');
     }
 
-    this.notifications = this.notifications.map((item: NotificationItem): NotificationItem => {
-      const readItem: NotificationItem = {
+    this.notifies = this.notifies.map((item: NotifyItem): NotifyItem => {
+      const readItem: NotifyItem = {
         notify_id: item.notify_id,
         type: item.type,
         is_read: true,
@@ -190,7 +190,7 @@ export class NotificationSyncService {
 
   async syncUnreadCount(): Promise<void> {
     try {
-      const response = await ApiClient.getUnreadNotifications();
+      const response = await ApiClient.getUnreadCount();
       if (response.code !== 0 || !response.data) {
         throw new Error(response.message || '获取未读通知失败');
       }

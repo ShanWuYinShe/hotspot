@@ -15,7 +15,6 @@ type Repository interface {
 	GrantAdmin(context.Context, AdminGrantUpsert) error
 	RevokeAdmin(context.Context, string) error
 	ListAuditLogs(context.Context, AuditLogFilter, bool) (auditLogPage, error)
-	GetAuditLog(context.Context, string, bool) (AuditLogItem, bool, error)
 	SearchUsers(context.Context, AdminUserSearchRequest) (adminUserPage, error)
 	GetUser(context.Context, string) (AdminUserItem, bool, error)
 	GetUserBanState(context.Context, string) (UserBanState, bool, error)

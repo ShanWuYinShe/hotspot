@@ -56,6 +56,11 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		if err != nil {
 			return fmt.Errorf("moments.Create: filter tags: %w", err)
 		}
+		if len(allowed) != len(tags) {
+			// 请求 tags 含被屏蔽标签 → 10400（spec api_spec_moment.md create 错误码）。
+			// 整个事务回滚，不允许“部分允许 tag 落库”的半屏蔽语义。
+			return ErrBlockedTag
+		}
 		allowedTags = allowed
 		if err := insertMomentTags(txCtx, txQueryable, momentID, tags, now); err != nil {
 			return fmt.Errorf("moments.Create: insert tags: %w", err)
@@ -89,9 +94,9 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		CommentsCount: 0,
 		SharesCount:   0,
 		User:          UserInfo{UserID: userID, Nickname: nickname},
-		Location:      req.Location,
+		Location:      &req.Location,
 		PrivacyLevel:  privacy,
-		MyState:       &MyMomentState{IsFavorited: false},
+		IsFavorited:   false,
 	}, nil
 }
 
@@ -181,7 +186,7 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 	}
 	for i := range items {
 		items[i].Tags = tagsByMomentID[items[i].MomentID]
-		items[i].MyState = &MyMomentState{}
+		items[i].IsFavorited = false
 	}
 	sortKeyword := ""
 	if req.Keyword != nil {
@@ -338,7 +343,7 @@ func (r *PostgresRepository) ListFavorites(ctx context.Context, userID string, l
 		if err != nil {
 			return PaginatedMoments{}, err
 		}
-		item.MyState = &MyMomentState{IsFavorited: true}
+		item.IsFavorited = true
 		item.FavoritedAt = favoritedAt // spec moment.md → FavoritedMomentItem.favorited_at
 		items = append(items, item)
 		momentIDs = append(momentIDs, item.MomentID)

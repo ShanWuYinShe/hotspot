@@ -42,7 +42,7 @@ import {
   UserItem,
   SearchUsersRequest,
   UserOpenTheDoorRequest,
-  MyProfile,
+  AccountInfo,
   UpdateProfileRequest,
   UpdateLocationRequest,
   UpgradeAccountRequest,
@@ -59,7 +59,7 @@ import {
   ListFriendsRequest,
   ListFollowingRequest,
   ListFollowersRequest,
-  MyBlockedRequest,
+  ListBlockedRequest,
   UserGroupsRequest,
   UserMomentsRequest,
   UserLikedMomentsRequest,
@@ -77,8 +77,8 @@ import {
   UnfavoriteMomentRequest,
   MomentLikesRequest,
   ReactionItem,
-  MyMomentsRequest,
-  MyFavoritesRequest,
+  ListCreatedMomentsRequest,
+  ListFavoriteMomentsRequest,
 
   // 评论
   CreateCommentRequest,
@@ -95,7 +95,7 @@ import {
   ListReactionsRequest,
 
   // 私聊管理
-  MyPrivateChatsRequest,
+  ListPrivateChatsRequest,
   PrivateChatItem,
   PrivateChatOpenTheDoorRequest,
   PrivateChatOpenResult,
@@ -137,13 +137,13 @@ import {
   ApproveGroupApplicationRequest,
   RejectGroupApplicationRequest,
   TransferOwnershipRequest,
-  MyGroupsRequest,
-  MyApplicationsRequest,
+  ListJoinedGroupsRequest,
+  ListSubmittedApplicationsRequest,
   CancelApplicationRequest,
   GroupSentInvitesRequest,
   SentInviteItem,
   RevokeSentInviteRequest,
-  MyInvitesRequest,
+  ListReceivedInvitesRequest,
   GroupInviteItem,
   AcceptInviteRequest,
   InviteAcceptedResult,
@@ -169,7 +169,7 @@ import {
   CreateReportRequest,
   ReportCreated,
   ReportItem,
-  MyReportsRequest,
+  ListReportsRequest,
 
   // 信息流
   GetFeedFollowingRequest,
@@ -214,10 +214,10 @@ import {
   GroupAnnouncementListData,
 
   // 通知中心
-  NotificationItem,
-  NotificationListRequest,
+  NotifyItem,
+  NotifyListRequest,
   UnreadCountResult,
-  MarkAsReadRequest,
+  NotifyMarkReadRequest,
 } from '../types/api';
 
 const DOMAIN_NUMBER: number = 0xFF21;
@@ -415,7 +415,7 @@ export class ApiClient {
   }
 
   static async checkAuthStatus(): Promise<ApiResponse<AuthStatus>> {
-    return HttpUtil.post<ApiResponse<AuthStatus>, EmptyRequest>(ApiEndpoints.AUTH.CHECK_STATUS, new EmptyRequest());
+    return HttpUtil.post<ApiResponse<AuthStatus>, EmptyRequest>(ApiEndpoints.AUTH.GET_STATUS, new EmptyRequest());
   }
 
   static async logout(): Promise<ApiResponse<void>> {
@@ -475,8 +475,8 @@ export class ApiClient {
 
   // ==================== 当前用户 API（/me/）====================
 
-  static async getMyProfile(): Promise<ApiResponse<MyProfile>> {
-    return HttpUtil.post<ApiResponse<MyProfile>, EmptyRequest>(ApiEndpoints.USER.GET_ACCOUNT, new EmptyRequest());
+  static async getAccountInfo(): Promise<ApiResponse<AccountInfo>> {
+    return HttpUtil.post<ApiResponse<AccountInfo>, EmptyRequest>(ApiEndpoints.USER.GET_ACCOUNT, new EmptyRequest());
   }
 
   static async updateProfile(params: UpdateProfileRequest): Promise<ApiResponse<void>> {
@@ -535,8 +535,8 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<PaginatedData<RelatedUserItem>>, ListFollowersRequest>(ApiEndpoints.USER.LIST_FOLLOWERS, params);
   }
 
-  static async getBlockedList(params: MyBlockedRequest): Promise<ApiResponse<PaginatedData<BlockedUserItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<BlockedUserItem>>, MyBlockedRequest>(ApiEndpoints.USER.LIST_BLOCKED, params);
+  static async getBlockedList(params: ListBlockedRequest): Promise<ApiResponse<PaginatedData<BlockedUserItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<BlockedUserItem>>, ListBlockedRequest>(ApiEndpoints.USER.LIST_BLOCKED, params);
   }
 
   static async setFriendRemark(params: SetRemarkRequest): Promise<ApiResponse<void>> {
@@ -594,12 +594,12 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<PaginatedData<ReactionItem>>, ListReactionsRequest>(ApiEndpoints.REACTIONS.LIST, req);
   }
 
-  static async getMyMoments(params: MyMomentsRequest): Promise<ApiResponse<PaginatedData<MomentItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<MomentItem>>, MyMomentsRequest>(ApiEndpoints.MOMENT.LIST_MY, params);
+  static async getMyMoments(params: ListCreatedMomentsRequest): Promise<ApiResponse<PaginatedData<MomentItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<MomentItem>>, ListCreatedMomentsRequest>(ApiEndpoints.MOMENT.LIST_CREATED, params);
   }
 
-  static async getMyFavorites(params: MyFavoritesRequest): Promise<ApiResponse<PaginatedData<MomentItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<MomentItem>>, MyFavoritesRequest>(ApiEndpoints.MOMENT.LIST_FAVORITES, params);
+  static async getMyFavorites(params: ListFavoriteMomentsRequest): Promise<ApiResponse<PaginatedData<MomentItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<MomentItem>>, ListFavoriteMomentsRequest>(ApiEndpoints.MOMENT.LIST_FAVORITES, params);
   }
 
   // ==================== 评论 API ====================
@@ -640,8 +640,8 @@ export class ApiClient {
 
   // ==================== 私聊管理 API ====================
 
-  static async getPrivateChats(params: MyPrivateChatsRequest): Promise<ApiResponse<PaginatedData<PrivateChatItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<PrivateChatItem>>, MyPrivateChatsRequest>(ApiEndpoints.CHAT.PRIVATE_CHATS.LIST, params);
+  static async getPrivateChats(params: ListPrivateChatsRequest): Promise<ApiResponse<PaginatedData<PrivateChatItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<PrivateChatItem>>, ListPrivateChatsRequest>(ApiEndpoints.CHAT.PRIVATE_CHATS.LIST, params);
   }
 
   static async privateChatOpenTheDoor(params: PrivateChatOpenTheDoorRequest): Promise<ApiResponse<PrivateChatOpenResult>> {
@@ -663,7 +663,7 @@ export class ApiClient {
   }
 
   static async getPrivateMessages(params: GetPrivateMessagesHistoryRequest): Promise<ApiResponse<PaginatedData<PrivateMessageItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<PrivateMessageItem>>, GetPrivateMessagesHistoryRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.GET_HISTORY, params);
+    return HttpUtil.post<ApiResponse<PaginatedData<PrivateMessageItem>>, GetPrivateMessagesHistoryRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.LIST, params);
   }
 
   static async updatePrivateMessage(params: UpdatePrivateMessageRequest): Promise<ApiResponse<void>> {
@@ -796,20 +796,20 @@ export class ApiClient {
 
   // ==================== 当前用户群组 API（/me/）====================
 
-  static async getJoinedGroups(params: MyGroupsRequest): Promise<ApiResponse<PaginatedData<GroupItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<GroupItem>>, MyGroupsRequest>(ApiEndpoints.GROUP.LIST_MY, params);
+  static async getJoinedGroups(params: ListJoinedGroupsRequest): Promise<ApiResponse<PaginatedData<GroupItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupItem>>, ListJoinedGroupsRequest>(ApiEndpoints.GROUP.LIST_JOINED, params);
   }
 
-  static async getMyGroupApplications(params: MyApplicationsRequest): Promise<ApiResponse<PaginatedData<GroupApplicationItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<GroupApplicationItem>>, MyApplicationsRequest>(ApiEndpoints.GROUP.LIST_APPLICATIONS, params);
+  static async getMyGroupApplications(params: ListSubmittedApplicationsRequest): Promise<ApiResponse<PaginatedData<GroupApplicationItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupApplicationItem>>, ListSubmittedApplicationsRequest>(ApiEndpoints.GROUP.LIST_SUBMITTED_APPLICATIONS, params);
   }
 
   static async cancelGroupApplication(params: CancelApplicationRequest): Promise<ApiResponse<void>> {
     return HttpUtil.post<ApiResponse<void>, CancelApplicationRequest>(ApiEndpoints.GROUP.CANCEL_APPLICATION, params);
   }
 
-  static async getGroupInvites(params: MyInvitesRequest): Promise<ApiResponse<PaginatedData<GroupInviteItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<GroupInviteItem>>, MyInvitesRequest>(ApiEndpoints.GROUP.LIST_INVITES, params);
+  static async getGroupInvites(params: ListReceivedInvitesRequest): Promise<ApiResponse<PaginatedData<GroupInviteItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupInviteItem>>, ListReceivedInvitesRequest>(ApiEndpoints.GROUP.LIST_INVITES, params);
   }
 
   static async acceptGroupInvite(params: AcceptInviteRequest): Promise<ApiResponse<InviteAcceptedResult>> {
@@ -831,7 +831,7 @@ export class ApiClient {
   }
 
   static async getGroupMessages(params: GetGroupMessagesHistoryRequest): Promise<ApiResponse<PaginatedData<GroupMessageItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<GroupMessageItem>>, GetGroupMessagesHistoryRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.GET_HISTORY, params);
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupMessageItem>>, GetGroupMessagesHistoryRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.LIST, params);
   }
 
   static async updateGroupMessage(params: UpdateGroupMessageRequest): Promise<ApiResponse<void>> {
@@ -856,8 +856,8 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<ReportCreated>, CreateReportRequest>(ApiEndpoints.REPORT.CREATE, params);
   }
 
-  static async getMyReports(params: MyReportsRequest): Promise<ApiResponse<PaginatedData<ReportItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<ReportItem>>, MyReportsRequest>(ApiEndpoints.REPORT.LIST_MY, params);
+  static async getMyReports(params: ListReportsRequest): Promise<ApiResponse<PaginatedData<ReportItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<ReportItem>>, ListReportsRequest>(ApiEndpoints.REPORT.LIST, params);
   }
 
   // ==================== 信息流 API ====================
@@ -910,25 +910,25 @@ export class ApiClient {
 
   static async listMyShares(params?: ShareListRequest): Promise<ApiResponse<PaginatedData<ShareListItem>>> {
     const payload: ShareListRequest = params ?? {};
-    return HttpUtil.post<ApiResponse<PaginatedData<ShareListItem>>, ShareListRequest>(ApiEndpoints.SHARE.LIST_MY, payload);
+    return HttpUtil.post<ApiResponse<PaginatedData<ShareListItem>>, ShareListRequest>(ApiEndpoints.SHARE.LIST, payload);
   }
 
-  // ==================== 通知 API ====================
+  // ==================== Notify API ====================
 
-  static async listNotifications(params?: NotificationListRequest): Promise<ApiResponse<PaginatedData<NotificationItem>>> {
-    const payload: NotificationListRequest = params ?? {};
-    return HttpUtil.post<ApiResponse<PaginatedData<NotificationItem>>, NotificationListRequest>(ApiEndpoints.NOTIFY.LIST, payload);
+  static async listNotifies(params?: NotifyListRequest): Promise<ApiResponse<PaginatedData<NotifyItem>>> {
+    const payload: NotifyListRequest = params ?? {};
+    return HttpUtil.post<ApiResponse<PaginatedData<NotifyItem>>, NotifyListRequest>(ApiEndpoints.NOTIFY.LIST, payload);
   }
 
-  static async getUnreadNotifications(): Promise<ApiResponse<UnreadCountResult>> {
+  static async getUnreadCount(): Promise<ApiResponse<UnreadCountResult>> {
     return HttpUtil.post<ApiResponse<UnreadCountResult>, EmptyRequest>(ApiEndpoints.NOTIFY.GET_UNREAD_COUNT, new EmptyRequest());
   }
 
-  static async markNotificationsRead(params: MarkAsReadRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, MarkAsReadRequest>(ApiEndpoints.NOTIFY.MARK_READ, params);
+  static async markNotifiesRead(params: NotifyMarkReadRequest): Promise<ApiResponse<void>> {
+    return HttpUtil.post<ApiResponse<void>, NotifyMarkReadRequest>(ApiEndpoints.NOTIFY.MARK_READ, params);
   }
 
-  static async markAllNotificationsRead(): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, MarkAsReadRequest>(ApiEndpoints.NOTIFY.MARK_READ, {});
+  static async markAllNotifiesRead(): Promise<ApiResponse<void>> {
+    return HttpUtil.post<ApiResponse<void>, NotifyMarkReadRequest>(ApiEndpoints.NOTIFY.MARK_READ, { scope: 'all' });
   }
 }

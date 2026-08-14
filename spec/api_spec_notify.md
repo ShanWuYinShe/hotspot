@@ -10,31 +10,20 @@
 - **引用**: 
   - 基础规范：`api_spec_base.md`
   - 通用类型：`api_spec_types.md`
+  - 守卫与权限：`api_spec_authz.md`
   - 错误码：`api_spec_errors.md`
 
 ## 端点总览
 
 | 端点 | 说明 | 认证 |
 |-----|------|------|
+| `POST /api/v1/notify/list` | 通知列表 | required |
+| `POST /api/v1/notify/get_unread_count` | 未读通知数 | required |
+| `POST /api/v1/notify/mark_read` | 标记已读 | required |
 
-| `POST /api/v1/notify/list` | 通知列表 | 必须 |
-| `POST /api/v1/notify/get_unread_count` | 未读通知数 | 必须 |
-| `POST /api/v1/notify/mark_read` | 标记已读 | 必须 |
 ## 类型定义
 
-以下类型定义于 `api_spec_types.md`：
-- `UserInfo`
-- `MomentSummary`
-- `FollowSource`
-- `AnnounceLevel`
-- `NotifyType`
-- `NotifyCategory`
-- `PaginationParams`
-- `PaginatedData`
-
-### 通知类型枚举
-
-`NotifyType` 定义于 `api_spec_types.md`。
+以下类型定义于 `api_spec_types.md`：`UserInfo`、`MomentSummary`、`FollowSource`、`AnnounceLevel`、`NotifyType`、`NotifyCategory`、`PaginationParams`、`PaginatedData`。
 
 ### 通知与 WebSocket 事件的关系（契约级）
 
@@ -42,8 +31,8 @@
 
 - **WS 事件**：实时事件流。payload 携带 `notify_id` 的事件 = 该业务事件同时落库了一条通知记录（`notify_id` 与 `notify/list` 返回的 `NotifyItem.notify_id` 为同一主键）；**不携带 `notify_id` 的事件为纯实时事件**（消息、群成员变动、群公告等），与通知中心无关
 - **通知记录**：`notify/list` 是通知的唯一权威来源，客户端冷启动/补拉时调用一次即可拉取全部通知（含未读）
-- **已读同步**：客户端收到带 `notify_id` 的 WS 事件并即时展示后，若用户已在对应界面阅读该内容，调用 `notify/mark_read`（`notify_ids: [notify_id]`）标记已读，避免下次冷启动时重复显示未读
-- **去重**：WS 事件与 `notify/list` 记录共用 `notify_id` 主键，客户端按 `notify_id` 去重即可，无需业务组合键
+- **已读同步**：客户端收到带 `notify_id` 的 WS 事件并即时展示后，若用户已在对应界面阅读该内容，调用 `notify/mark_read`（`scope='ids'`，`notify_ids: [notify_id]`）标记已读，避免下次冷启动时重复显示未读
+- **去重**：WS 事件与 `notify/list` 记录共用 `notify_id` 主键，客户端按 `notify_id` 去重即可
 
 | `NotifyType` | 对应 WebSocket 事件（均携带 `notify_id`） | 触发场景 |
 |-------------------|--------------------|---------|
@@ -72,23 +61,22 @@
 
 ```typescript
 // 注意：NotifyPayload.type 必须与 NotifyItem.type 一致
-// 设计模式与 AuditDetails（见 api_spec_admin_core.md）保持一致
 type NotifyPayload =
-  | { type: 'new_follower'; actor: UserInfo; source?: FollowSource; source_moment_id?: string }
+  | { type: 'new_follower'; actor: UserInfo; source: FollowSource | null; source_moment_id: string | null }
   | { type: 'mutual_follow'; actor: UserInfo }
   | { type: 'moment_commented'; actor: UserInfo; moment_id: string; moment_summary: MomentSummary; comment_id: string; comment_preview: string }
   | { type: 'comment_reply'; actor: UserInfo; comment_id: string; replied_comment_preview: string; reply_id: string; reply_content_preview: string; moment_id: string; moment_summary: MomentSummary }
-  | { type: 'mentioned'; actor: UserInfo; target_type: 'moment' | 'comment'; moment_id: string; moment_summary: MomentSummary; comment_id?: string; comment_preview?: string }
-  | { type: 'group_mentioned'; actor: UserInfo; group_id: string; group_name: string; message_id: string; content_preview?: string }  // 群聊消息中被 @（被 @ 者收到；群申请等群事件为双向契约，群 @ 也明确告知发送者身份）
-  | { type: 'reaction_added'; actor: UserInfo; target_type: 'message' | 'moment' | 'comment'; target_id: string; emoji: string }  // 表情反应被添加（资源作者收到；actor 为反应者；自我反应不产生通知）
-  | { type: 'group_invite_received'; actor: UserInfo; group_id: string; group_name: string; group_avatar_url?: string; invite_id: string; message?: string }
-  | { type: 'group_application_received'; applicant: UserInfo; group_id: string; group_name: string; application_id: string; message?: string }  // 推送给群主/管理员；message 为申请附言（与 WS GroupApplicationReceivedPayload 对齐）
-  | { type: 'group_application_accepted'; group_id: string; group_name: string; application_id: string }  // 不暴露审批者身份（隐私考虑：审批者可能是群管理员或群主，不应在通知中暴露其身份给申请者）
-  | { type: 'group_application_rejected'; group_id: string; group_name: string; application_id: string; rejected_by: UserInfo; reason?: string }  // 申请被拒绝（申请人收到；群申请为双向契约，申请人可见审批者身份，与 WS GroupApplicationRejected 一致）
-  | { type: 'report_resolved'; report_id: string; target_type: ReportTargetType; target_id: string; resolved_at: string; note?: string }      // 举报被处理，note 为管理员脱敏后的处理说明
-  | { type: 'report_dismissed'; report_id: string; target_type: ReportTargetType; target_id: string; dismissed_at: string; note?: string }    // 举报被驳回
-  | { type: 'system_announcement'; announcement_id: string; title: string; severity: AnnounceLevel }  // title 为公告标题（客户端据此直接渲染通知行，无需回拉公告列表）
-  | { type: 'nearby_new_moment'; actor: UserInfo; moment_id: string; moment_summary: MomentSummary; distance: number };  // 附近新瞬间，distance 为距离（米）
+  | { type: 'mentioned'; actor: UserInfo; target_type: 'moment' | 'comment'; moment_id: string; moment_summary: MomentSummary; comment_id: string | null; comment_preview: string | null }
+  | { type: 'group_mentioned'; actor: UserInfo; group_id: string; group_name: string; message_id: string; content_preview: string | null }
+  | { type: 'reaction_added'; actor: UserInfo; target_type: 'message' | 'moment' | 'comment'; target_id: string; emoji: string }  // 自我反应不产生通知
+  | { type: 'group_invite_received'; actor: UserInfo; group_id: string; group_name: string; group_avatar_url: string | null; invite_id: string; message: string | null }
+  | { type: 'group_application_received'; applicant: UserInfo; group_id: string; group_name: string; application_id: string; message: string | null }  // 推送给群主/群管理员
+  | { type: 'group_application_accepted'; group_id: string; group_name: string; application_id: string }  // 不暴露审批者身份（与 rejected 对称，隐私统一）
+  | { type: 'group_application_rejected'; group_id: string; group_name: string; application_id: string; reason: string | null }  // 不暴露审批者身份（F7 对称化）
+  | { type: 'report_resolved'; report_id: string; target_type: ReportTargetType; target_id: string; resolved_at: string; note: string | null }      // note 为脱敏后的处理说明
+  | { type: 'report_dismissed'; report_id: string; target_type: ReportTargetType; target_id: string; dismissed_at: string; note: string | null }
+  | { type: 'system_announcement'; announcement_id: string; title: string; severity: AnnounceLevel }  // title 为公告标题（客户端据此直接渲染通知行）
+  | { type: 'nearby_new_moment'; actor: UserInfo; moment_id: string; moment_summary: MomentSummary; distance: number };  // distance 为距离（米）
 ```
 
 ### 通知项
@@ -111,15 +99,15 @@ interface NotifyItem {
 
 获取当前用户的通知列表。
 
-- **认证**: 必须
+- **认证**: required
 - **排序**: 按 `created_at DESC` 排序（最新在前），`notify_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `NotificationListRequest`
+**Request**: `ListNotifyRequest`
 ```typescript
-interface NotificationListRequest {
-  type?: NotifyType;            // 按通知类型筛选（不传则返回所有类型）
-  is_read?: boolean;                  // 按已读状态筛选（不传则返回全部）
-  pagination?: PaginationParams;
+interface ListNotifyRequest {
+  type: NotifyType | null;          // 按通知类型筛选（不传则返回所有类型）
+  is_read: boolean | null;          // 按已读状态筛选（不传则返回全部）
+  pagination: PaginationParams | null;
 }
 ```
 
@@ -131,9 +119,12 @@ interface NotificationListRequest {
 
 获取当前用户的未读通知数。冷启动/重连时调用，用于显示 badge 角标。
 
-- **认证**: 必须
+- **认证**: required
 
-**Request**: `{}`
+**Request**: `GetUnreadCountRequest`
+```typescript
+interface GetUnreadCountRequest {}
+```
 
 **Response**: `ApiResponse<UnreadCountResult>`
 ```typescript
@@ -141,8 +132,6 @@ interface UnreadCountResult {
   total: number;               // 总未读通知数
   by_type: Record<NotifyCategory, number>;  // 按类型分类的未读数；NotifyCategory 与映射见 api_spec_types.md
 }
-// by_type 的 key 为 NotifyCategory（定义于 api_spec_types.md），其与 NotifyType 的契约级映射亦在 types.md 中声明。
-// 新增 NotifyType 时必须在该映射中归类，否则 unread_count 分组计数会遗漏。
 ```
 
 ---
@@ -151,16 +140,17 @@ interface UnreadCountResult {
 
 标记通知为已读。
 
-**范围语义**：
-- 传 `notify_ids`：精确标记指定通知（1-50 个；超限返回参数错误）
-- 不传或传空数组：全部标记为已读（"全部已读"按钮）
+**范围语义（参数必显式，无缺省翻转）**：
+- `scope='ids'`：精确标记指定通知，`notify_ids` 必填（1-50 个；超限返回参数错误）
+- `scope='all'`：全部标记为已读（"全部已读"按钮）
 
-- **认证**: 必须
+- **认证**: required
 
 **Request**: `MarkReadRequest`
 ```typescript
 interface MarkReadRequest {
-  notify_ids?: string[];  // 标记指定通知已读（1-50 个）；不传或空数组 = 全部已读
+  scope: 'ids' | 'all';     // 必填：标记范围（废除「不传=全部已读」的缺省翻转语义）
+  notify_ids: string[] | null;  // scope='ids' 时必填（1-50 个）
 }
 ```
 

@@ -1,7 +1,7 @@
-// NotificationRow 契约测试：通知渲染与已读回调。
+// NotifyRow 契约测试：通知渲染与已读回调。
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
-import NotificationRow from '../NotificationRow.svelte';
+import NotifyRow from '../NotifyRow.svelte';
 
 const notif = {
 	id: 'n1',
@@ -12,9 +12,9 @@ const notif = {
 	text: '赞了你的动态'
 } as never;
 
-describe('NotificationRow', () => {
+describe('NotifyRow', () => {
 	it('渲染用户/文本/时间', () => {
-		render(NotificationRow, {
+		render(NotifyRow, {
 			props: { notif, onRead: () => {}, onRemove: () => {} }
 		});
 		expect(screen.getByText('鹿鸣')).toBeTruthy();
@@ -24,7 +24,7 @@ describe('NotificationRow', () => {
 
 	it('点击行触发 onRead 并传 id', async () => {
 		const onRead = vi.fn();
-		render(NotificationRow, {
+		render(NotifyRow, {
 			props: { notif, onRead, onRemove: () => {} }
 		});
 		await fireEvent.click(screen.getByRole('button'));

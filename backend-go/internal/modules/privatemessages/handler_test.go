@@ -31,7 +31,7 @@ type privateMessageErrorRepo struct {
 func (r *privateMessageErrorRepo) Send(context.Context, string, string, SendPrivateMessageRequest) (MessageSent, error) {
 	return MessageSent{}, r.sendErr
 }
-func (r *privateMessageErrorRepo) History(context.Context, string, GetHistoryRequest) (PaginatedMessages, error) {
+func (r *privateMessageErrorRepo) History(context.Context, string, ListPrivateMessagesRequest) (PaginatedMessages, error) {
 	return PaginatedMessages{}, r.historyErr
 }
 func (r *privateMessageErrorRepo) Recent(context.Context, string, string, int, *time.Time) (PaginatedMessages, error) {
@@ -328,9 +328,9 @@ func TestSendAndHistoryPrivateMessages(t *testing.T) {
 
 	assertPrivateMessageCode(t, sendRR, 0)
 
-	historyReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/get_history", strings.NewReader(`{"target_user_id":"user_bob"}`)))
+	historyReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"target_user_id":"user_bob"}`)))
 	historyRR := httptest.NewRecorder()
-	handler.GetHistory(historyRR, historyReq)
+	handler.List(historyRR, historyReq)
 
 	var resp struct {
 		Code httpx.Code        `json:"code"`
@@ -361,17 +361,17 @@ func TestPrivateMessagesSendValidatesByType(t *testing.T) {
 	}
 }
 
-func TestPrivateMessagesGetHistoryRejectsInvalidPaginationAndUnknownFields(t *testing.T) {
+func TestPrivateMessagesListRejectsInvalidPaginationAndUnknownFields(t *testing.T) {
 	handler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), &privateMessageUserStub{}))
 
-	invalidPaginationReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/get_history", strings.NewReader(`{"target_user_id":"user_bob","pagination":{"limit":101}}`)))
+	invalidPaginationReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"target_user_id":"user_bob","pagination":{"limit":101}}`)))
 	invalidPaginationRR := httptest.NewRecorder()
-	handler.GetHistory(invalidPaginationRR, invalidPaginationReq)
+	handler.List(invalidPaginationRR, invalidPaginationReq)
 	assertPrivateMessageCode(t, invalidPaginationRR, httpx.CodeInvalidRequest)
 
-	unknownFieldReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/get_history", strings.NewReader(`{"target_user_id":"user_bob","extra":true}`)))
+	unknownFieldReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"target_user_id":"user_bob","extra":true}`)))
 	unknownFieldRR := httptest.NewRecorder()
-	handler.GetHistory(unknownFieldRR, unknownFieldReq)
+	handler.List(unknownFieldRR, unknownFieldReq)
 	assertPrivateMessageCode(t, unknownFieldRR, httpx.CodeInvalidRequest)
 }
 
@@ -385,9 +385,9 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 		handler.Send(sendRR, sendReq)
 		assertPrivateMessageCode(t, sendRR, httpx.CodeInternalUnavailable)
 
-		historyReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/get_history", strings.NewReader(`{"target_user_id":"user_bob"}`)))
+		historyReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"target_user_id":"user_bob"}`)))
 		historyRR := httptest.NewRecorder()
-		handler.GetHistory(historyRR, historyReq)
+		handler.List(historyRR, historyReq)
 		assertPrivateMessageCode(t, historyRR, httpx.CodeInternalUnavailable)
 
 		markAllReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_read", strings.NewReader(`{"scope":"all"}`)))

@@ -28,13 +28,17 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "groups/create", func() httpx.ApiResponse[GroupItem] {
+	idempotency.ReplayOrStore(w, r, "groups/create", func() httpx.ApiResponse[any] {
 		item, err := h.service.Create(r.Context(), req)
 		if err != nil {
+			if apiErr, ok := err.(*httpx.APIError); ok {
+				return httpx.ApiResponse[any]{Code: apiErr.Code, Message: apiErr.Message, Data: &apiErr.Data}
+			}
 			observability.LogServerError(r, "Create", err)
-			return httpx.ApiResponse[GroupItem]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
+			return httpx.ApiResponse[any]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 		}
-		return httpx.Success(item)
+		var data any = item
+		return httpx.ApiResponse[any]{Code: httpx.CodeOK, Data: &data}
 	})
 }
 
@@ -46,6 +50,10 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 	}
 	item, ok, err := h.service.OpenTheDoor(r.Context(), req.GroupID)
 	if err != nil {
+		if _, ok := err.(*httpx.APIError); ok {
+			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
 		httpx.WriteAPIError(w, r, "OpenTheDoor", err)
 		return
 	}
@@ -77,6 +85,10 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	req = normalizedSearchRequest(req)
 	list, err := h.service.Search(r.Context(), req)
 	if err != nil {
+		if _, ok := err.(*httpx.APIError); ok {
+			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
 		if errors.Is(err, ErrAccessRestricted) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
 			return
@@ -99,6 +111,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	item, err := h.service.Update(r.Context(), req)
 	if err != nil {
+		if _, ok := err.(*httpx.APIError); ok {
+			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return
@@ -147,6 +163,10 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	}
 	items, nextCursor, err := h.service.ListMembers(r.Context(), req)
 	if err != nil {
+		if _, ok := err.(*httpx.APIError); ok {
+			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return
@@ -169,6 +189,10 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 	}
 	items, nextCursor, err := h.service.SearchMembers(r.Context(), req)
 	if err != nil {
+		if _, ok := err.(*httpx.APIError); ok {
+			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return
@@ -196,6 +220,10 @@ func (h *Handler) ListMyGroups(w http.ResponseWriter, r *http.Request) {
 	}
 	items, nextCursor, err := h.service.ListMyGroups(r.Context(), req)
 	if err != nil {
+		if _, ok := err.(*httpx.APIError); ok {
+			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -216,6 +244,10 @@ func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
 	// application_id（不重复创建/通知）；direct/invite 路径成员关系唯一。无需 Idempotency-Key。
 	result, err := h.service.JoinGroup(r.Context(), req)
 	if err != nil {
+		if _, ok := err.(*httpx.APIError); ok {
+			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return
@@ -256,18 +288,23 @@ func (h *Handler) CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "groups/announcements/create", func() httpx.ApiResponse[GroupAnnouncementItem] {
+	idempotency.ReplayOrStore(w, r, "groups/announcements/create", func() httpx.ApiResponse[any] {
 		item, err := h.service.CreateAnnouncement(r.Context(), req)
 		if err != nil {
+			if apiErr, ok := err.(*httpx.APIError); ok {
+				return httpx.ApiResponse[any]{Code: apiErr.Code, Message: apiErr.Message, Data: &apiErr.Data}
+			}
 			if errors.Is(err, ErrGroupNotFound) {
-				return httpx.ApiResponse[GroupAnnouncementItem]{Code: httpx.CodeNotFound, Message: "群组不存在"}
+				return httpx.ApiResponse[any]{Code: httpx.CodeNotFound, Message: "群组不存在"}
 			}
 			if errors.Is(err, ErrAccessRestricted) {
-				return httpx.ApiResponse[GroupAnnouncementItem]{Code: httpx.CodeForbidden, Message: "权限不足"}
+				data := any(httpx.ForbiddenErrorData{ForbiddenReason: httpx.ReasonNotGroupAdmin})
+				return httpx.ApiResponse[any]{Code: httpx.CodeForbidden, Message: "权限不足", Data: &data}
 			}
-			return httpx.ApiResponse[GroupAnnouncementItem]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
+			return httpx.ApiResponse[any]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 		}
-		return httpx.Success(item)
+		var data any = item
+		return httpx.ApiResponse[any]{Code: httpx.CodeOK, Data: &data}
 	})
 }
 
@@ -279,6 +316,10 @@ func (h *Handler) ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 	}
 	items, err := h.service.ListAnnouncements(r.Context(), req)
 	if err != nil {
+		if _, ok := err.(*httpx.APIError); ok {
+			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return
@@ -298,6 +339,10 @@ func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	}
 	item, err := h.service.UpdateAnnouncement(r.Context(), req)
 	if err != nil {
+		if _, ok := err.(*httpx.APIError); ok {
+			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return
@@ -396,6 +441,10 @@ func (h *Handler) ListMyApplications(w http.ResponseWriter, r *http.Request) {
 	}
 	items, nextCursor, err := h.service.ListMyApplications(r.Context(), req)
 	if err != nil {
+		if _, ok := err.(*httpx.APIError); ok {
+			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}

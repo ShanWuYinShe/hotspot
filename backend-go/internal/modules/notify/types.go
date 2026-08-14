@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	defaultNotificationListLimit = 20
-	maxNotificationListLimit     = types.MaxPageSize
+	defaultNotifyListLimit = 20
+	maxNotifyListLimit     = types.MaxPageSize
 )
 
-var ErrInvalidNotificationRequest = errors.New("notifications: invalid request")
+var ErrInvalidNotifyRequest = errors.New("notifys: invalid request")
 
 type NotifyCategory = string
 
@@ -57,32 +57,50 @@ type UnreadCountResult struct {
 
 type PaginationParams = types.PaginationParams
 
-type NotificationListRequest struct {
+// ListNotifyRequest 是 notify/list 的请求类型（spec api_spec_notify.md）。
+type ListNotifyRequest struct {
 	Type       string            `json:"type,omitempty"`
 	IsRead     *bool             `json:"is_read,omitempty"`
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
-// MarkReadRequest marks notifications as read (spec api_spec_notify.md):
-// notify_ids selects the notifications to mark (1-50); absent or empty means
-// "mark everything read". Unknown or foreign ids are silently ignored.
+// NotifyListRequest 是内部沿用类型（与 ListNotifyRequest 同构）。
+type NotifyListRequest = ListNotifyRequest
+
+// MarkReadScope enumera the two mark-read scopes (spec api_spec_notify.md).
+// scope is mandatory and must be explicit — there is no default-to-all semantics.
+type MarkReadScope string
+
+const (
+	MarkReadScopeIDs MarkReadScope = "ids"
+	MarkReadScopeAll MarkReadScope = "all"
+)
+
+// MarkReadRequest marks notifys as read (spec api_spec_notify.md):
+// scope='ids' requires notify_ids (1-50); scope='all' marks everything read and
+// ignores notify_ids. Unknown or foreign ids are silently ignored by the repo.
 type MarkReadRequest struct {
+	Scope     string   `json:"scope"`
 	NotifyIDs []string `json:"notify_ids,omitempty"`
 }
 
-type notificationListQuery struct {
+const (
+	maxMarkReadIDs = 50
+)
+
+type notifyListQuery struct {
 	Type   string
 	IsRead *bool
 	Limit  int
-	Cursor *notificationCursor
+	Cursor *notifyCursor
 }
 
-type notificationCursor struct {
+type notifyCursor struct {
 	CreatedAt string `json:"created_at"`
 	NotifyID  string `json:"notify_id"`
 }
 
-func normalizeNotificationType(value string) string {
+func normalizeNotifyType(value string) string {
 	value = strings.TrimSpace(value)
 	// 与 spec/api_spec_types.md NotifyType union 保持一致（15 种）。
 	switch value {
@@ -93,50 +111,50 @@ func normalizeNotificationType(value string) string {
 	}
 }
 
-func normalizeNotificationListQuery(req NotificationListRequest) (notificationListQuery, error) {
-	normalizedType := normalizeNotificationType(req.Type)
+func normalizeNotifyListQuery(req NotifyListRequest) (notifyListQuery, error) {
+	normalizedType := normalizeNotifyType(req.Type)
 	if strings.TrimSpace(req.Type) != "" && normalizedType == "" {
-		return notificationListQuery{}, ErrInvalidNotificationRequest
+		return notifyListQuery{}, ErrInvalidNotifyRequest
 	}
-	limit := defaultNotificationListLimit
+	limit := defaultNotifyListLimit
 	cursorValue := ""
 	if req.Pagination != nil {
 		if req.Pagination.Limit > 0 {
 			limit = req.Pagination.Limit
 		}
-		if limit > maxNotificationListLimit {
-			limit = maxNotificationListLimit
+		if limit > maxNotifyListLimit {
+			limit = maxNotifyListLimit
 		}
 		cursorValue = strings.TrimSpace(req.Pagination.Cursor)
 	}
-	cursor, err := decodeNotificationCursor(cursorValue)
+	cursor, err := decodeNotifyCursor(cursorValue)
 	if err != nil {
-		return notificationListQuery{}, err
+		return notifyListQuery{}, err
 	}
-	return notificationListQuery{Type: normalizedType, IsRead: req.IsRead, Limit: limit, Cursor: cursor}, nil
+	return notifyListQuery{Type: normalizedType, IsRead: req.IsRead, Limit: limit, Cursor: cursor}, nil
 }
 
-// notificationCursorNamespace 是通知列表分页游标的加密命名空间。
-const notificationCursorNamespace = "notify.list"
+// notifyCursorNamespace 是通知列表分页游标的加密命名空间。
+const notifyCursorNamespace = "notify.list"
 
-func encodeNotificationCursor(c notificationCursor) string {
-	value, err := cursor.Encode(notificationCursorNamespace, c)
+func encodeNotifyCursor(c notifyCursor) string {
+	value, err := cursor.Encode(notifyCursorNamespace, c)
 	if err != nil {
 		return ""
 	}
 	return value
 }
 
-func decodeNotificationCursor(value string) (*notificationCursor, error) {
+func decodeNotifyCursor(value string) (*notifyCursor, error) {
 	if strings.TrimSpace(value) == "" {
 		return nil, nil
 	}
-	var c notificationCursor
-	if err := cursor.Decode(notificationCursorNamespace, value, &c); err != nil {
-		return nil, ErrInvalidNotificationRequest
+	var c notifyCursor
+	if err := cursor.Decode(notifyCursorNamespace, value, &c); err != nil {
+		return nil, ErrInvalidNotifyRequest
 	}
 	if c.CreatedAt == "" || c.NotifyID == "" {
-		return nil, ErrInvalidNotificationRequest
+		return nil, ErrInvalidNotifyRequest
 	}
 	return &c, nil
 }

@@ -98,8 +98,9 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 			SharesCount:   args[6].(int),
 			User:          UserInfo{UserID: args[1].(string), Nickname: args[1].(string)},
 			PrivacyLevel:  args[10].(string),
-			MyState:       &MyMomentState{IsFavorited: false},
+			IsFavorited:   false,
 		}
+		item.Location = &Location{}
 		item.Location.LocationName = args[7].(string)
 		item.Location.Point.Latitude = args[8].(float64)
 		item.Location.Point.Longitude = args[9].(float64)
@@ -351,7 +352,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 
 func TestPostgresRepositoryReadsQueryableDB(t *testing.T) {
 	backend := newBackendStub()
-	backend.moments["moment_1"] = MomentItem{MomentID: "moment_1", Description: "hello", CreatedAt: "2026-03-20T00:00:00Z", LikesCount: 1, CommentsCount: 2, SharesCount: 3, User: UserInfo{UserID: "user_alice", Nickname: "user_alice"}, PrivacyLevel: "public", Location: Location{Point: struct {
+	backend.moments["moment_1"] = MomentItem{MomentID: "moment_1", Description: "hello", CreatedAt: "2026-03-20T00:00:00Z", LikesCount: 1, CommentsCount: 2, SharesCount: 3, User: UserInfo{UserID: "user_alice", Nickname: "user_alice"}, PrivacyLevel: "public", Location: &Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: 35.0, Longitude: 112.0}, LocationName: "南天门"}}
@@ -457,38 +458,32 @@ func TestPostgresRepositoryIncrementCommentCountReturnsErrorOnExecFailure(t *tes
 	}
 }
 
-func TestPostgresRepositoryCreateFiltersBlockedTags(t *testing.T) {
+func TestPostgresRepositoryCreateRejectsBlockedTags(t *testing.T) {
 	backend := newBackendStub()
 	backend.blockedTags["blocked"] = struct{}{}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
-	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Tags: []string{"travel", "blocked", "hotspot"}, Location: Location{LocationName: "南天门"}})
+	// 含被屏蔽标签 → ErrBlockedTag（handler 映射为 10400，spec moment.md create 错误码）
+	_, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Tags: []string{"travel", "blocked", "hotspot"}, Location: Location{LocationName: "南天门"}})
+	if !errors.Is(err, ErrBlockedTag) {
+		t.Fatalf("expected ErrBlockedTag, got %v", err)
+	}
+	// 全部标签允许 → 成功
+	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Tags: []string{"travel", "hotspot"}, Location: Location{LocationName: "南天门"}})
 	if err != nil {
 		t.Fatalf("unexpected create error: %v", err)
 	}
 	if len(created.Tags) != 2 || created.Tags[0] != "travel" || created.Tags[1] != "hotspot" {
-		t.Fatalf("unexpected filtered tags: %#v", created.Tags)
-	}
-	opened, ok, err := repo.Get(context.Background(), created.MomentID)
-	if err != nil || !ok {
-		t.Fatalf("unexpected opened moment: %#v ok=%v err=%v", opened, ok, err)
-	}
-	if len(opened.Tags) != 2 || opened.Tags[0] != "hotspot" && opened.Tags[0] != "travel" {
-		t.Fatalf("unexpected stored tags: %#v", opened.Tags)
-	}
-	for _, tag := range opened.Tags {
-		if tag == "blocked" {
-			t.Fatalf("blocked tag should not be persisted: %#v", opened.Tags)
-		}
+		t.Fatalf("unexpected persisted tags: %#v", created.Tags)
 	}
 }
 
 func TestPostgresRepositoryListsFavorites(t *testing.T) {
 	backend := newBackendStub()
-	backend.moments["moment_1"] = MomentItem{MomentID: "moment_1", Description: "one", CreatedAt: "2026-03-20T00:00:00Z", User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public", Location: Location{LocationName: "南天门"}, Tags: []string{"a"}}
-	backend.moments["moment_2"] = MomentItem{MomentID: "moment_2", Description: "two", CreatedAt: "2026-03-19T00:00:00Z", User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public", Location: Location{LocationName: "南天门"}, Tags: []string{"b"}}
-	backend.moments["moment_3"] = MomentItem{MomentID: "moment_3", Description: "three", CreatedAt: "2026-03-18T00:00:00Z", User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public", Location: Location{LocationName: "南天门"}, Tags: []string{"c"}}
+	backend.moments["moment_1"] = MomentItem{MomentID: "moment_1", Description: "one", CreatedAt: "2026-03-20T00:00:00Z", User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public", Location: &Location{LocationName: "南天门"}, Tags: []string{"a"}}
+	backend.moments["moment_2"] = MomentItem{MomentID: "moment_2", Description: "two", CreatedAt: "2026-03-19T00:00:00Z", User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public", Location: &Location{LocationName: "南天门"}, Tags: []string{"b"}}
+	backend.moments["moment_3"] = MomentItem{MomentID: "moment_3", Description: "three", CreatedAt: "2026-03-18T00:00:00Z", User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public", Location: &Location{LocationName: "南天门"}, Tags: []string{"c"}}
 	backend.favorites["user_bob"] = map[string]string{
 		"moment_1": "2026-03-23T00:00:00Z",
 		"moment_2": "2026-03-22T00:00:00Z",
@@ -508,7 +503,7 @@ func TestPostgresRepositoryListsFavorites(t *testing.T) {
 	if favorites.NextCursor == "" {
 		t.Fatal("expected favorites next cursor")
 	}
-	if favorites.Items[0].MyState == nil || !favorites.Items[0].MyState.IsFavorited {
+	if !favorites.Items[0].IsFavorited {
 		t.Fatalf("expected favorited state: %#v", favorites.Items[0])
 	}
 	favorites, err = repo.ListFavorites(context.Background(), "user_bob", 2, favorites.NextCursor)
@@ -547,7 +542,7 @@ func TestPostgresRepositorySearchSortByPopularReturnsOlderPopularMoments(t *test
 		MomentID: "moment_new", Description: "new quiet post", CreatedAt: "2026-04-15T00:00:00Z",
 		LikesCount: 0, CommentsCount: 0, SharesCount: 0,
 		User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public",
-		Location: Location{Point: struct {
+		Location: &Location{Point: struct {
 			Latitude  float64 `json:"latitude"`
 			Longitude float64 `json:"longitude"`
 		}{Latitude: 35.0, Longitude: 112.0}},
@@ -557,7 +552,7 @@ func TestPostgresRepositorySearchSortByPopularReturnsOlderPopularMoments(t *test
 		MomentID: "moment_old_popular", Description: "old viral post", CreatedAt: "2026-04-01T00:00:00Z",
 		LikesCount: 100, CommentsCount: 50, SharesCount: 0,
 		User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public",
-		Location: Location{Point: struct {
+		Location: &Location{Point: struct {
 			Latitude  float64 `json:"latitude"`
 			Longitude float64 `json:"longitude"`
 		}{Latitude: 35.0, Longitude: 112.0}},
@@ -593,7 +588,7 @@ func TestPostgresRepositorySearchSortByNewestAppliesLimit(t *testing.T) {
 			MomentID: id, Description: "post", CreatedAt: fmt.Sprintf("2026-04-%02dT00:00:00Z", 10+i),
 			LikesCount: 0, CommentsCount: 0, SharesCount: 0,
 			User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public",
-			Location: Location{Point: struct {
+			Location: &Location{Point: struct {
 				Latitude  float64 `json:"latitude"`
 				Longitude float64 `json:"longitude"`
 			}{Latitude: 35.0, Longitude: 112.0}},

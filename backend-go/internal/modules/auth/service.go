@@ -12,6 +12,7 @@ import (
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
@@ -162,16 +163,20 @@ func NewServiceWithSource(ctx context.Context, auth *platformauth.Service, repo 
 	return &Service{auth: auth, repo: repo, cfg: cfg, appConfig: source, codeSender: defaultVerificationSender(cfg), loginTracker: newInMemoryLoginTracker(ctx)}
 }
 
-func (s *Service) CheckStatus(ctx context.Context) AuthStatus {
+// GetStatus 检查认证状态（spec auth.md → get_status，optional）。
+// 未通过认证时返回 is_valid=false，user_id/expires_at 为 null（恒定 nullable）。
+func (s *Service) GetStatus(ctx context.Context) AuthStatus {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
 	if !ok || principal.UserID == "" {
 		return AuthStatus{IsValid: false}
 	}
+	userID := principal.UserID
 	expiresAt, ok := platformauth.AccessExpiryFromContext(ctx)
 	if !ok {
-		return AuthStatus{IsValid: true, UserID: principal.UserID}
+		return AuthStatus{IsValid: true, UserID: &userID}
 	}
-	return AuthStatus{IsValid: true, UserID: principal.UserID, ExpiresAt: expiresAt.UTC().Format(time.RFC3339)}
+	exp := expiresAt.UTC().Format(time.RFC3339)
+	return AuthStatus{IsValid: true, UserID: &userID, ExpiresAt: &exp}
 }
 
 func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
@@ -372,7 +377,8 @@ func (s *Service) RevokeSession(ctx context.Context, req RevokeSessionRequest) e
 		return platformauth.Unauthorized("Access Token 无效或过期")
 	}
 	if req.SessionID == principal.SessionID {
-		return platformauth.Forbidden("不允许撤销当前会话")
+		// spec auth.md → revoke_session：不能撤销当前会话返回 10400（业务冲突），非 10200。
+		return &httpx.APIError{Code: httpx.CodeConflict, Message: "不允许撤销当前会话"}
 	}
 	if err := s.auth.RevokeSession(ctx, principal.UserID, principal.SessionID, req.SessionID); err != nil {
 		observability.L().Error("service error",

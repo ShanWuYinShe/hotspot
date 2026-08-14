@@ -7,26 +7,29 @@ import (
 
 	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/rbac"
 )
 
+// admin 客户端权限键统一引用 internal/platform/rbac 常量（spec/api_spec_authz.md
+// 「平台权限键」权威清单），避免在 admin 包内重复字符串字面量。
 const (
-	permissionRbacManage         = "admin.rbac.manage"
-	permissionAppConfigRead      = "admin.app_config.read"
-	permissionAppConfigWrite     = "admin.app_config.write"
-	permissionAuditRead          = "admin.audit.read"
-	permissionAuditReadIP        = "admin.audit.read_ip"
-	permissionTagsRead           = "admin.tags.read"
-	permissionTagsWrite          = "admin.tags.write"
-	permissionAnnouncementsRead  = "admin.announcements.read"
-	permissionAnnouncementsWrite = "admin.announcements.write"
-	permissionUsersRead          = "admin.users.read"
-	permissionUsersReadIP        = "admin.users.read_ip"
-	permissionUsersWrite         = "admin.users.write"
-	permissionGroupsRead         = "admin.groups.read"
-	permissionGroupsWrite        = "admin.groups.write"
-	permissionReportsRead        = "admin.reports.read"
-	permissionReportsWrite       = "admin.reports.write"
-	wildcardPermission           = "*"
+	permissionRbacManage         = rbac.PermAdminRbacManage
+	permissionAppConfigRead      = rbac.PermAdminAppConfigRead
+	permissionAppConfigWrite     = rbac.PermAdminAppConfigWrite
+	permissionAuditRead          = rbac.PermAdminAuditRead
+	permissionAuditReadIP        = rbac.PermAdminAuditReadIP
+	permissionTagsRead           = rbac.PermAdminTagsRead
+	permissionTagsWrite          = rbac.PermAdminTagsWrite
+	permissionAnnouncementsRead  = rbac.PermAdminAnnouncementsRead
+	permissionAnnouncementsWrite = rbac.PermAdminAnnouncementsWrite
+	permissionUsersRead          = rbac.PermAdminUsersRead
+	permissionUsersReadIP        = rbac.PermAdminUsersReadIP
+	permissionUsersWrite         = rbac.PermAdminUsersWrite
+	permissionGroupsRead         = rbac.PermAdminGroupsRead
+	permissionGroupsWrite        = rbac.PermAdminGroupsWrite
+	permissionReportsRead        = rbac.PermAdminReportsRead
+	permissionReportsWrite       = rbac.PermAdminReportsWrite
+	wildcardPermission           = rbac.PermAdminSuperadmin
 )
 
 var permissionDictionary = []AdminPermissionItem{

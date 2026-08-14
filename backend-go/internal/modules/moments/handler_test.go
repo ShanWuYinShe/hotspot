@@ -98,10 +98,10 @@ func TestCreateOpenAndListMoment(t *testing.T) {
 	openRR := httptest.NewRecorder()
 	handler.OpenTheDoor(openRR, openReq)
 
-	listReq := httptest.NewRequest(http.MethodPost, "/list_my", strings.NewReader(`{}`))
+	listReq := httptest.NewRequest(http.MethodPost, "/list_created", strings.NewReader(`{}`))
 	listReq = listReq.WithContext(ctx)
 	listRR := httptest.NewRecorder()
-	handler.ListMine(listRR, listReq)
+	handler.ListCreated(listRR, listReq)
 	var listResp struct {
 		Code httpx.Code       `json:"code"`
 		Data PaginatedMoments `json:"data"`
@@ -276,7 +276,7 @@ func TestCreateMomentSendsMentionNotificationsAndRealtime(t *testing.T) {
 	if notificationID == "" {
 		t.Fatalf("expected non-empty notification_id in event payload: %#v", payload)
 	}
-	notificationsPage, err := notificationRepo.List(context.Background(), "user_bob", notify.NotificationListRequest{})
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_bob", notify.NotifyListRequest{})
 	if err != nil {
 		t.Fatalf("list notifications: %v", err)
 	}
@@ -313,7 +313,7 @@ func TestUpdateMomentReplacesMentionNotificationsAndState(t *testing.T) {
 	if len(carolSink.events) != 1 || carolSink.events[0].Type != "MessageMentioned" {
 		t.Fatalf("unexpected carol events: %#v", carolSink.events)
 	}
-	carolNotifications, err := notificationRepo.List(context.Background(), "user_carol", notify.NotificationListRequest{})
+	carolNotifications, err := notificationRepo.List(context.Background(), "user_carol", notify.NotifyListRequest{})
 	if err != nil {
 		t.Fatalf("list carol notifications: %v", err)
 	}
@@ -452,7 +452,7 @@ func TestSearchSortByNewest(t *testing.T) {
 	m1 := MomentItem{
 		MomentID: "moment_a", Description: "alpha test", PrivacyLevel: "public",
 		CreatedAt: "2025-01-01T00:00:00Z",
-		Location: Location{Point: struct {
+		Location: &Location{Point: struct {
 			Latitude  float64 `json:"latitude"`
 			Longitude float64 `json:"longitude"`
 		}{Latitude: 0, Longitude: 0}, LocationName: "Here"},
@@ -461,7 +461,7 @@ func TestSearchSortByNewest(t *testing.T) {
 	m2 := MomentItem{
 		MomentID: "moment_b", Description: "beta test", PrivacyLevel: "public",
 		CreatedAt: "2025-06-01T00:00:00Z",
-		Location: Location{Point: struct {
+		Location: &Location{Point: struct {
 			Latitude  float64 `json:"latitude"`
 			Longitude float64 `json:"longitude"`
 		}{Latitude: 0, Longitude: 0}, LocationName: "Here"},
@@ -470,7 +470,7 @@ func TestSearchSortByNewest(t *testing.T) {
 	m3 := MomentItem{
 		MomentID: "moment_c", Description: "gamma test", PrivacyLevel: "public",
 		CreatedAt: "2025-03-01T00:00:00Z",
-		Location: Location{Point: struct {
+		Location: &Location{Point: struct {
 			Latitude  float64 `json:"latitude"`
 			Longitude float64 `json:"longitude"`
 		}{Latitude: 0, Longitude: 0}, LocationName: "Here"},
@@ -516,7 +516,7 @@ func TestSearchSortByPopular(t *testing.T) {
 	m1 := MomentItem{
 		MomentID: "moment_unpopular", Description: "unpopular", PrivacyLevel: "public",
 		CreatedAt: "2025-06-01T00:00:00Z", LikesCount: 1, CommentsCount: 0,
-		Location: Location{Point: struct {
+		Location: &Location{Point: struct {
 			Latitude  float64 `json:"latitude"`
 			Longitude float64 `json:"longitude"`
 		}{Latitude: 0, Longitude: 0}, LocationName: "Here"},
@@ -525,7 +525,7 @@ func TestSearchSortByPopular(t *testing.T) {
 	m2 := MomentItem{
 		MomentID: "moment_popular", Description: "popular", PrivacyLevel: "public",
 		CreatedAt: "2025-01-01T00:00:00Z", LikesCount: 10, CommentsCount: 5,
-		Location: Location{Point: struct {
+		Location: &Location{Point: struct {
 			Latitude  float64 `json:"latitude"`
 			Longitude float64 `json:"longitude"`
 		}{Latitude: 0, Longitude: 0}, LocationName: "Here"},
@@ -534,7 +534,7 @@ func TestSearchSortByPopular(t *testing.T) {
 	m3 := MomentItem{
 		MomentID: "moment_medium", Description: "medium", PrivacyLevel: "public",
 		CreatedAt: "2025-03-01T00:00:00Z", LikesCount: 3, CommentsCount: 2,
-		Location: Location{Point: struct {
+		Location: &Location{Point: struct {
 			Latitude  float64 `json:"latitude"`
 			Longitude float64 `json:"longitude"`
 		}{Latitude: 0, Longitude: 0}, LocationName: "Here"},

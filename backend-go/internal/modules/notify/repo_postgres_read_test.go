@@ -13,28 +13,28 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
-type notificationNonQueryableDB struct{}
+type notifyNonQueryableDB struct{}
 
-func (notificationNonQueryableDB) Ping(context.Context) error { return nil }
-func (notificationNonQueryableDB) Close() error               { return nil }
+func (notifyNonQueryableDB) Ping(context.Context) error { return nil }
+func (notifyNonQueryableDB) Close() error               { return nil }
 
-type notificationBackendStub struct {
+type notifyBackendStub struct {
 	items     map[string][]NotifyItem
 	execErrs  map[string]error
 	queryErrs map[string]error
 }
 
-func newNotificationBackendStub() *notificationBackendStub {
-	return &notificationBackendStub{items: make(map[string][]NotifyItem), execErrs: make(map[string]error), queryErrs: make(map[string]error)}
+func newNotifyBackendStub() *notifyBackendStub {
+	return &notifyBackendStub{items: make(map[string][]NotifyItem), execErrs: make(map[string]error), queryErrs: make(map[string]error)}
 }
 
-func (b *notificationBackendStub) Exec(_ context.Context, query string, args ...any) error {
+func (b *notifyBackendStub) Exec(_ context.Context, query string, args ...any) error {
 	if err := b.execErrs[query]; err != nil {
 		return err
 	}
 	userID := args[0].(string)
 	switch query {
-	case queryInsertNotification:
+	case queryInsertNotify:
 		item := NotifyItem{
 			NotifyID:  args[0].(string),
 			Type:      args[2].(string),
@@ -45,7 +45,7 @@ func (b *notificationBackendStub) Exec(_ context.Context, query string, args ...
 			_ = json.Unmarshal([]byte(payloadRaw), &item.Payload)
 		}
 		b.items[args[1].(string)] = append(b.items[args[1].(string)], item)
-	case queryMarkNotificationsRead:
+	case queryMarkNotifysRead:
 		ids := args[1].([]string)
 		for i := range b.items[userID] {
 			for _, id := range ids {
@@ -54,7 +54,7 @@ func (b *notificationBackendStub) Exec(_ context.Context, query string, args ...
 				}
 			}
 		}
-	case queryMarkAllNotificationsRead:
+	case queryMarkAllNotifysRead:
 		for i := range b.items[userID] {
 			b.items[userID][i].IsRead = true
 		}
@@ -62,16 +62,16 @@ func (b *notificationBackendStub) Exec(_ context.Context, query string, args ...
 	return nil
 }
 
-func (b *notificationBackendStub) QueryRow(context.Context, string, ...any) persistence.Row {
+func (b *notifyBackendStub) QueryRow(context.Context, string, ...any) persistence.Row {
 	return testdb.RowValues{Err: persistence.ErrNotImplemented}
 }
 
-func (b *notificationBackendStub) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
+func (b *notifyBackendStub) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
 	if err := b.queryErrs[query]; err != nil {
 		return nil, err
 	}
 	switch query {
-	case queryListNotifications:
+	case queryListNotifys:
 		userID := args[0].(string)
 		typeFilter := ""
 		if args[1] != nil {
@@ -114,7 +114,7 @@ func (b *notificationBackendStub) Query(_ context.Context, query string, args ..
 			}
 		}
 		return &testdb.RowsValues{Rows: rows}, nil
-	case queryUnreadNotificationCounts:
+	case queryUnreadNotifyCounts:
 		userID := args[0].(string)
 		counts := map[string]int{}
 		for _, item := range b.items[userID] {
@@ -124,8 +124,8 @@ func (b *notificationBackendStub) Query(_ context.Context, query string, args ..
 			counts[item.Type]++
 		}
 		rows := make([][]any, 0, len(counts))
-		for notificationType, count := range counts {
-			rows = append(rows, []any{notificationType, strconv.Itoa(count)})
+		for notifyType, count := range counts {
+			rows = append(rows, []any{notifyType, strconv.Itoa(count)})
 		}
 		return &testdb.RowsValues{Rows: rows}, nil
 	default:
@@ -136,14 +136,14 @@ func (b *notificationBackendStub) Query(_ context.Context, query string, args ..
 func TestPersistenceRepositoryWithPostgresDSNDoesNotFallbackSilently(t *testing.T) {
 	factory := &persistence.Factory{
 		Config: persistence.Config{PostgresDSN: "postgres://example"},
-		DB:     notificationNonQueryableDB{},
+		DB:     notifyNonQueryableDB{},
 	}
 	repo := NewPostgresRepository(factory)
 
 	if err := repo.Append(context.Background(), "user_alice", NotifyItem{Type: "new_follower"}); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("expected ErrNotImplemented for append, got %v", err)
 	}
-	if _, err := repo.List(context.Background(), "user_alice", NotificationListRequest{}); !errors.Is(err, persistence.ErrNotImplemented) {
+	if _, err := repo.List(context.Background(), "user_alice", NotifyListRequest{}); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("expected ErrNotImplemented instead of in-memory fallback, got %v", err)
 	}
 	if _, err := repo.UnreadCount(context.Background(), "user_alice"); !errors.Is(err, persistence.ErrNotImplemented) {
@@ -158,7 +158,7 @@ func TestPersistenceRepositoryWithPostgresDSNDoesNotFallbackSilently(t *testing.
 }
 
 func TestPostgresRepositoryListSupportsFilterPaginationAndUnreadCount(t *testing.T) {
-	backend := newNotificationBackendStub()
+	backend := newNotifyBackendStub()
 	backend.items["user_alice"] = []NotifyItem{
 		{NotifyID: "notif_3", Type: "system_announcement", IsRead: false, CreatedAt: "2026-03-20T00:00:00Z", Payload: map[string]any{"type": "system_announcement", "announcement_id": "ann_1"}},
 		{NotifyID: "notif_2", Type: "new_follower", IsRead: false, CreatedAt: "2026-03-20T00:00:00Z", Payload: map[string]any{"type": "new_follower"}},
@@ -168,7 +168,7 @@ func TestPostgresRepositoryListSupportsFilterPaginationAndUnreadCount(t *testing
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
 
-	page1, err := repo.List(context.Background(), "user_alice", NotificationListRequest{Pagination: &PaginationParams{Limit: 2}})
+	page1, err := repo.List(context.Background(), "user_alice", NotifyListRequest{Pagination: &PaginationParams{Limit: 2}})
 	if err != nil || len(page1.Items) != 2 || page1.Items[0].NotifyID != "notif_3" || page1.Items[1].NotifyID != "notif_2" || page1.NextCursor == "" {
 		t.Fatalf("unexpected page1: %#v err=%v", page1, err)
 	}
@@ -176,12 +176,12 @@ func TestPostgresRepositoryListSupportsFilterPaginationAndUnreadCount(t *testing
 		t.Fatalf("unexpected payload: %#v", page1.Items[0])
 	}
 
-	page2, err := repo.List(context.Background(), "user_alice", NotificationListRequest{Pagination: &PaginationParams{Limit: 2, Cursor: page1.NextCursor}})
+	page2, err := repo.List(context.Background(), "user_alice", NotifyListRequest{Pagination: &PaginationParams{Limit: 2, Cursor: page1.NextCursor}})
 	if err != nil || len(page2.Items) != 1 || page2.Items[0].NotifyID != "notif_1" || page2.NextCursor != "" {
 		t.Fatalf("unexpected page2: %#v err=%v", page2, err)
 	}
 
-	filtered, err := repo.List(context.Background(), "user_alice", NotificationListRequest{Type: "new_follower", Pagination: &PaginationParams{Limit: 20}})
+	filtered, err := repo.List(context.Background(), "user_alice", NotifyListRequest{Type: "new_follower", Pagination: &PaginationParams{Limit: 20}})
 	if err != nil || len(filtered.Items) != 1 || filtered.Items[0].NotifyID != "notif_2" {
 		t.Fatalf("unexpected filtered list: %#v err=%v", filtered, err)
 	}
@@ -209,14 +209,14 @@ func TestPostgresRepositoryListSupportsFilterPaginationAndUnreadCount(t *testing
 }
 
 func TestPostgresRepositoryAppendWritesAndAffectsUnreadCount(t *testing.T) {
-	backend := newNotificationBackendStub()
+	backend := newNotifyBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
 	if err := repo.Append(context.Background(), "user_alice", NotifyItem{Type: "new_follower", Payload: map[string]any{"actor": map[string]any{"user_id": "user_bob"}}}); err != nil {
 		t.Fatalf("append: %v", err)
 	}
-	list, err := repo.List(context.Background(), "user_alice", NotificationListRequest{})
+	list, err := repo.List(context.Background(), "user_alice", NotifyListRequest{})
 	if err != nil || len(list.Items) != 1 || list.Items[0].Type != "new_follower" {
 		t.Fatalf("unexpected list after append: %#v err=%v", list, err)
 	}
@@ -227,12 +227,12 @@ func TestPostgresRepositoryAppendWritesAndAffectsUnreadCount(t *testing.T) {
 }
 
 func TestPostgresRepositoryReturnsEmptyListWithoutFallback(t *testing.T) {
-	backend := newNotificationBackendStub()
+	backend := newNotifyBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
 
-	list, err := repo.List(context.Background(), "user_alice", NotificationListRequest{})
+	list, err := repo.List(context.Background(), "user_alice", NotifyListRequest{})
 	if err != nil || len(list.Items) != 0 {
 		t.Fatalf("unexpected list: %#v err=%v", list, err)
 	}
@@ -243,8 +243,8 @@ func TestPostgresRepositoryReturnsEmptyListWithoutFallback(t *testing.T) {
 }
 
 func TestPostgresRepositoryMarkAsReadReturnsErrorOnExecFailure(t *testing.T) {
-	backend := newNotificationBackendStub()
-	backend.execErrs[queryMarkNotificationsRead] = errors.New("write failed")
+	backend := newNotifyBackendStub()
+	backend.execErrs[queryMarkNotifysRead] = errors.New("write failed")
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
@@ -255,21 +255,21 @@ func TestPostgresRepositoryMarkAsReadReturnsErrorOnExecFailure(t *testing.T) {
 }
 
 func TestPostgresRepositoryListReturnsErrorOnQueryFailure(t *testing.T) {
-	backend := newNotificationBackendStub()
-	backend.queryErrs[queryListNotifications] = errors.New("query failed")
+	backend := newNotifyBackendStub()
+	backend.queryErrs[queryListNotifys] = errors.New("query failed")
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
 
-	_, err := repo.List(context.Background(), "user_alice", NotificationListRequest{})
+	_, err := repo.List(context.Background(), "user_alice", NotifyListRequest{})
 	if err == nil {
 		t.Fatal("expected list error")
 	}
 }
 
 func TestPostgresRepositoryUnreadCountReturnsErrorOnQueryFailure(t *testing.T) {
-	backend := newNotificationBackendStub()
-	backend.queryErrs[queryUnreadNotificationCounts] = errors.New("query failed")
+	backend := newNotifyBackendStub()
+	backend.queryErrs[queryUnreadNotifyCounts] = errors.New("query failed")
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)

@@ -210,7 +210,7 @@ export interface MappedGroup {
  */
 function mapGroup(item: GroupItem): MappedGroup {
 	const g = item.group;
-	const role = item.my_state?.role;
+	const role = item.viewer_state?.role;
 	return {
 		id: g.group_id,
 		name: g.name,

@@ -158,10 +158,10 @@ func TestSendAndHistoryWorkTogether(t *testing.T) {
 	sendRR := httptest.NewRecorder()
 	messageHandler.Send(sendRR, sendReq)
 
-	historyReq := httptest.NewRequest(http.MethodPost, "/get_history", strings.NewReader(`{"target_user_id":"user_bob"}`))
+	historyReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"target_user_id":"user_bob"}`))
 	historyReq = historyReq.WithContext(ctx)
 	historyRR := httptest.NewRecorder()
-	messageHandler.GetHistory(historyRR, historyReq)
+	messageHandler.List(historyRR, historyReq)
 
 	var historyResp struct {
 		Code httpx.Code                        `json:"code"`
@@ -460,8 +460,8 @@ func TestOpenTheDoorRespectsTargetPrivacy(t *testing.T) {
 	if openResp.Data.Chat.CanMessage {
 		t.Fatalf("expected can_message=false: %#v", openResp.Data.Chat)
 	}
-	if openResp.Data.Chat.BlockReason != "privacy" {
-		t.Fatalf("expected privacy blocked reason: %#v", openResp.Data.Chat)
+	if openResp.Data.Chat.BlockedReason == nil || *openResp.Data.Chat.BlockedReason != "privacy_setting" {
+		t.Fatalf("expected privacy_setting blocked reason: %#v", openResp.Data.Chat)
 	}
 }
 

@@ -65,16 +65,16 @@ func (r *PostgresRepository) ListNearbyUsers(ctx context.Context, query usersQue
 	return paginateUsers(candidates, query.Limit, query.Cursor)
 }
 
-func (r *PostgresRepository) ListTrending(ctx context.Context, viewerUserID string) (TrendingBundle, error) {
+func (r *PostgresRepository) ListTrending(ctx context.Context, viewerUserID string) (TrendingResult, error) {
 	queryable, err := r.queryable()
 	if err != nil {
-		return TrendingBundle{}, err
+		return TrendingResult{}, err
 	}
 	hotMoments, err := loadTrendingMoments(ctx, queryable, viewerUserID)
 	if err != nil {
-		return TrendingBundle{}, err
+		return TrendingResult{}, err
 	}
-	return TrendingBundle{HotMoments: hotMoments}, nil
+	return TrendingResult{HotMoments: hotMoments}, nil
 }
 
 func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
@@ -121,8 +121,8 @@ func loadTrendingMoments(ctx context.Context, queryable persistence.QueryableDB,
 			CommentsCount: commentsCount,
 			SharesCount:   sharesCount,
 			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
-			Location:      RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName},
-			MyState:       &MyMomentState{IsFavorited: isFavorited},
+			Location:      &RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName},
+			IsFavorited:   isFavorited,
 		}
 		reason := RecommendationContext("trending")
 		item.Recommendation = &reason

@@ -52,7 +52,7 @@ func TestListApplicationsHandlerErrorPaths(t *testing.T) {
 func TestInviteMemberHandlerErrorPaths(t *testing.T) {
 	// 参数错误 → httpx.CodeInvalidRequest
 	handler := NewHandler(NewService())
-	req := httptest.NewRequest(http.MethodPost, "/members/invite", strings.NewReader(`{"group_id":"g1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/admin/invites/create", strings.NewReader(`{"group_id":"g1"}`))
 	rr := httptest.NewRecorder()
 	handler.InviteMember(rr, req)
 	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInvalidRequest {
@@ -61,7 +61,7 @@ func TestInviteMemberHandlerErrorPaths(t *testing.T) {
 
 	// 群不存在 → httpx.CodeNotFound
 	handler = NewHandler(NewServiceWithRepo(&groupErrorRepo{getFound: false}))
-	req = httptest.NewRequest(http.MethodPost, "/members/invite", strings.NewReader(`{"group_id":"g1","user_id":"u2"}`))
+	req = httptest.NewRequest(http.MethodPost, "/groups/admin/invites/create", strings.NewReader(`{"group_id":"g1","user_id":"u2"}`))
 	rr = httptest.NewRecorder()
 	handler.InviteMember(rr, req)
 	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeNotFound {
@@ -70,7 +70,7 @@ func TestInviteMemberHandlerErrorPaths(t *testing.T) {
 
 	// 服务错误 → httpx.CodeInternalUnavailable
 	handler = NewHandler(NewServiceWithRepo(&groupErrorRepo{getFound: true, getResult: ownerGroup(), createErr: errors.New("boom")}))
-	req = httptest.NewRequest(http.MethodPost, "/members/invite", strings.NewReader(`{"group_id":"g1","user_id":"u2"}`))
+	req = httptest.NewRequest(http.MethodPost, "/groups/admin/invites/create", strings.NewReader(`{"group_id":"g1","user_id":"u2"}`))
 	rr = httptest.NewRecorder()
 	handler.InviteMember(rr, req)
 	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInternalUnavailable {

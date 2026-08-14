@@ -39,7 +39,7 @@ export const ROUTES = {
   nearbyGroups: "/nearby/groups",
   nearbyMoments: "/nearby/moments",
 	search: "/search",
-	notifications: "/notifications",
+	notify: "/notify",
   user: (userId: string | number) => `/users/${userId}`,
   moment: (momentId: string | number) => `/moments/${momentId}`,
   group: (groupId: string | number) => `/groups/${groupId}`,
@@ -58,7 +58,7 @@ const DETAIL_PREFIXES = ["/users/", "/moments/", "/groups/"] as const;
 export const SUB_PAGE_PATHS = [
   ROUTES.settings,
   ROUTES.map,
-  ROUTES.notifications,
+  ROUTES.notify,
   ROUTES.search,
   ROUTES.nearbyPeople,
   ROUTES.nearbyGroups,

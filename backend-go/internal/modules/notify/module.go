@@ -22,8 +22,8 @@ func NewModuleWithService(service *Service) *Module {
 }
 
 func (m *Module) Mount(r chi.Router) {
-	r.Route("/api/v1/notify", func(notificationRouter chi.Router) {
-		notificationRouter.Group(func(group chi.Router) {
+	r.Route("/api/v1/notify", func(notifyRouter chi.Router) {
+		notifyRouter.Group(func(group chi.Router) {
 			group.Use(platformauth.RequiredAuth)
 			group.Use(ratelimit.Middleware)
 			group.Use(resourceguard.Middleware)

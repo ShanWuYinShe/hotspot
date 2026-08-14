@@ -3,7 +3,7 @@
 import type { Component } from 'svelte';
 import { Heart, UserPlus, MessageCircle, Bell, MapPin } from '@lucide/svelte';
 
-export interface NotificationItem {
+export interface NotifyViewItem {
 	id: string;
 	type: string;
 	read: boolean;
@@ -31,7 +31,7 @@ export const TYPE_CONFIG: Record<string, { icon: Component; color: string; bg: s
  *
  * 通知列表 / 桌面 Rail / 计数 / 过滤都以语义键（reaction/follow/comment/nearby/event）
  * 为口径；后端返回的是 `reaction_added`、`new_follower` 等原始 type，若不归一化，
- * NotificationRow 会全部回退到 reaction 图标、分类计数恒为 0、Rail 分区也永远为空。
+ * NotifyRow 会全部回退到 reaction 图标、分类计数恒为 0、Rail 分区也永远为空。
  */
 const NOTIFY_TYPE_TO_CATEGORY: Record<string, string> = {
 	reaction_added: 'reaction',

@@ -7,7 +7,7 @@ func MountRoutes(r chi.Router, handler *Handler) {
 	r.Post("/login", handler.Login)
 	r.Post("/guest", handler.Guest)
 	r.Post("/refresh_token", handler.RefreshToken)
-	r.Post("/check_status", handler.CheckStatus)
+	r.Post("/get_status", handler.GetStatus)
 	r.Post("/request_password_reset", handler.RequestPasswordReset)
 	r.Post("/reset_password", handler.ResetPassword)
 }

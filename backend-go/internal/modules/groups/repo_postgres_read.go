@@ -34,7 +34,7 @@ func (r *PostgresRepository) Get(ctx context.Context, groupID string) (GroupItem
 	if err != nil {
 		return GroupItem{}, false, err
 	}
-	item.MyState = myState
+	item.ViewerState = myState
 	item.Group.MembersCount, err = countGroupMembers(ctx, queryable, groupID)
 	if err != nil {
 		return GroupItem{}, false, err
@@ -112,7 +112,7 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchGroupsRequest
 		return PaginatedGroups{}, err
 	}
 	for i := range items {
-		items[i].MyState = memberships[items[i].Group.GroupID]
+		items[i].ViewerState = memberships[items[i].Group.GroupID]
 	}
 	sortGroupsForSearch(items, metas, req.SortBy)
 	return paginateSearchGroups(items, metas, req.SortBy, req.Pagination)
@@ -165,7 +165,7 @@ func getGroupBase(ctx context.Context, queryable persistence.QueryableDB, groupI
 // loadGroupMembership 读取单个群的成员状态。注意 UnreadCount 恒为 0、
 // IsPinned 恒为 false：spec 未定义未读数/置顶的存储与来源，属于已知限制，
 // 勿将这两个字段当作真实数据使用。
-func loadGroupMembership(ctx context.Context, queryable persistence.QueryableDB, groupID, userID string) (*MyGroupState, error) {
+func loadGroupMembership(ctx context.Context, queryable persistence.QueryableDB, groupID, userID string) (*GroupViewerState, error) {
 	if userID == "" {
 		return nil, nil
 	}
@@ -179,13 +179,13 @@ func loadGroupMembership(ctx context.Context, queryable persistence.QueryableDB,
 		}
 		return nil, err
 	}
-	return &MyGroupState{Role: GroupRole(role), IsJoined: true, UnreadCount: 0, IsMuted: isMuted, MutedUntil: formatMutedUntil(mutedUntil), IsPinned: false, JoinedAt: joinedAt.UTC().Format(time.RFC3339)}, nil
+	return &GroupViewerState{Role: GroupRole(role), UnreadCount: 0, IsMuted: isMuted, MutedUntil: formatMutedUntil(mutedUntil), IsPinned: false, JoinedAt: joinedAt.UTC().Format(time.RFC3339)}, nil
 }
 
 // loadGroupMemberships 批量读取成员状态（同 loadGroupMembership，未读数/置顶
 // 为已知限制，恒为 0/false）。
-func loadGroupMemberships(ctx context.Context, queryable persistence.QueryableDB, groupIDs []string, userID string) (map[string]*MyGroupState, error) {
-	result := make(map[string]*MyGroupState, len(groupIDs))
+func loadGroupMemberships(ctx context.Context, queryable persistence.QueryableDB, groupIDs []string, userID string) (map[string]*GroupViewerState, error) {
+	result := make(map[string]*GroupViewerState, len(groupIDs))
 	if userID == "" || len(groupIDs) == 0 {
 		return result, nil
 	}
@@ -202,7 +202,7 @@ func loadGroupMemberships(ctx context.Context, queryable persistence.QueryableDB
 		if err := rows.Scan(&groupID, &role, &joinedAt, &isMuted, &mutedUntil); err != nil {
 			return nil, err
 		}
-		result[groupID] = &MyGroupState{Role: GroupRole(role), IsJoined: true, UnreadCount: 0, IsMuted: isMuted, MutedUntil: formatMutedUntil(mutedUntil), IsPinned: false, JoinedAt: joinedAt.UTC().Format(time.RFC3339)}
+		result[groupID] = &GroupViewerState{Role: GroupRole(role), UnreadCount: 0, IsMuted: isMuted, MutedUntil: formatMutedUntil(mutedUntil), IsPinned: false, JoinedAt: joinedAt.UTC().Format(time.RFC3339)}
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -210,11 +210,22 @@ func loadGroupMemberships(ctx context.Context, queryable persistence.QueryableDB
 	return result, nil
 }
 
-func formatMutedUntil(value *time.Time) string {
+func formatMutedUntil(value *time.Time) *string {
 	if value == nil {
-		return ""
+		return nil
 	}
-	return value.UTC().Format(time.RFC3339)
+	formatted := value.UTC().Format(time.RFC3339)
+	return &formatted
+}
+
+// groupMutedUntil converts an in-memory muted_until string storage to a
+// truthy nullable pointer ("" → nil, meaning not muted).
+func groupMutedUntil(value string) *string {
+	if value == "" {
+		return nil
+	}
+	v := value
+	return &v
 }
 
 func countGroupMembers(ctx context.Context, queryable persistence.QueryableDB, groupID string) (int, error) {

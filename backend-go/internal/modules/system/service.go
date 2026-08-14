@@ -74,9 +74,10 @@ func (s *Service) Bootstrap(ctx context.Context, bootstrapResolver BootstrapReso
 	if bootstrapResolver != nil {
 		if profile, ok := bootstrapResolver.ResolveProfile(ctx); ok {
 			bd.Profile = profile
+			// 仅登录态解析未读摘要；匿名时 profile / unread_summary 均为 null（恒定 nullable）
+			summary := bootstrapResolver.ResolveUnreadSummary(ctx)
+			bd.UnreadSummary = &summary
 		}
-		summary := bootstrapResolver.ResolveUnreadSummary(ctx)
-		bd.UnreadSummary = &summary
 	}
 	return bd
 }

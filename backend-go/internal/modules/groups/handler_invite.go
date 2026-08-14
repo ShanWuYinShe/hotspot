@@ -15,6 +15,10 @@ func (h *Handler) ListMyInvites(w http.ResponseWriter, r *http.Request) {
 	}
 	items, nextCursor, err := h.service.ListMyInvites(r.Context(), req)
 	if err != nil {
+		if _, ok := err.(*httpx.APIError); ok {
+			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -71,6 +75,10 @@ func (h *Handler) InviteMember(w http.ResponseWriter, r *http.Request) {
 	}
 	item, err := h.service.InviteMember(r.Context(), req)
 	if err != nil {
+		if _, ok := err.(*httpx.APIError); ok {
+			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return
@@ -97,6 +105,10 @@ func (h *Handler) ListSentInvites(w http.ResponseWriter, r *http.Request) {
 	}
 	items, nextCursor, err := h.service.ListSentInvites(r.Context(), req)
 	if err != nil {
+		if _, ok := err.(*httpx.APIError); ok {
+			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return

@@ -1,218 +1,202 @@
-// API endpoint registry — MUST match spec/api_spec_*.md.
-// 块注释标注 client.ts 已包装的端点；未标注的为「待接线」——有 UI 需求时
-// 补 client 包装（spec 是契约权威，登记表必须完整，不删无消费端点）。
+// API endpoint registry — MUST match spec/api_spec_*.md（v1 重设计后）。
+// 三位置：/api/v1（客户端）、/api/v1/groups/admin（群管理守卫子树）、/admin/v1（平台管理节点）。
 
 const PREFIX = '/api/v1';
+const ADMIN_PREFIX = '/admin/v1';
 
 export const Endpoints = {
-  // Auth — 已包装: Register/Login/Logout/Guest/RefreshToken/CheckStatus/
-  //   RequestPasswordReset/ResetPassword；待接线: ChangePassword/ListSessions/
-  //   RevokeSession/RevokeAllSessions
   Auth: {
-    Register: `${PREFIX}/auth/register`,
-    Login: `${PREFIX}/auth/login`,
-    Logout: `${PREFIX}/auth/logout`,
-    Guest: `${PREFIX}/auth/guest`,
-    RefreshToken: `${PREFIX}/auth/refresh_token`,
-    CheckStatus: `${PREFIX}/auth/check_status`,
-    RequestPasswordReset: `${PREFIX}/auth/request_password_reset`,
-    ResetPassword: `${PREFIX}/auth/reset_password`,
-    ChangePassword: `${PREFIX}/auth/change_password`,
-    ListSessions: `${PREFIX}/auth/list_sessions`,
-    RevokeSession: `${PREFIX}/auth/revoke_session`,
-    RevokeAllSessions: `${PREFIX}/auth/revoke_all_sessions`,
+    Register: PREFIX + '/auth/register',
+    Login: PREFIX + '/auth/login',
+    Logout: PREFIX + '/auth/logout',
+    Guest: PREFIX + '/auth/guest',
+    RefreshToken: PREFIX + '/auth/refresh_token',
+    GetStatus: PREFIX + '/auth/get_status',
+    RequestPasswordReset: PREFIX + '/auth/request_password_reset',
+    ResetPassword: PREFIX + '/auth/reset_password',
+    ChangePassword: PREFIX + '/auth/change_password',
+    ListSessions: PREFIX + '/auth/list_sessions',
+    RevokeSession: PREFIX + '/auth/revoke_session',
+    RevokeAllSessions: PREFIX + '/auth/revoke_all_sessions',
   },
 
-  // Users — 已包装: Search/OpenTheDoor(=GetDetail)/ListFriends/ListFollowing/ListFollowers/
-  //   ListMoments/ListReactedMoments/GetAccount/UpdateAccount/GetSettings/UpdateSettings/
-  //   Follow/Block/DeleteAccount/SetRemark；
-  //   待接线: BatchGet/ListGroups/UpdateLocation/Upgrade/ListBlocked
   Users: {
-    Search: `${PREFIX}/users/search`,
-    GetDetail: `${PREFIX}/users/open_the_door`,
-    BatchGet: `${PREFIX}/users/batch_get`,
-    ListFriends: `${PREFIX}/users/list_friends`,
-    ListFollowing: `${PREFIX}/users/list_following`,
-    ListFollowers: `${PREFIX}/users/list_followers`,
-    ListGroups: `${PREFIX}/users/list_groups`,
-    ListMoments: `${PREFIX}/users/list_moments`,
-    ListReactedMoments: `${PREFIX}/users/list_reacted_moments`,
-    GetAccount: `${PREFIX}/users/get_account`,
-    UpdateAccount: `${PREFIX}/users/update_account`,
-    GetSettings: `${PREFIX}/users/get_settings`,
-    UpdateSettings: `${PREFIX}/users/update_settings`,
-    UpdateLocation: `${PREFIX}/users/update_location`,
-    Upgrade: `${PREFIX}/users/upgrade`,
-    DeleteAccount: `${PREFIX}/users/delete_account`,
-    Follow: `${PREFIX}/users/set_follow`,
-    Block: `${PREFIX}/users/set_block`,
-    ListBlocked: `${PREFIX}/users/list_blocked`,
-    SetRemark: `${PREFIX}/users/set_remark`,
+    Search: PREFIX + '/users/search',
+    GetDetail: PREFIX + '/users/open_the_door',
+    BatchGet: PREFIX + '/users/batch_get',
+    ListFriends: PREFIX + '/users/list_friends',
+    ListFollowing: PREFIX + '/users/list_following',
+    ListFollowers: PREFIX + '/users/list_followers',
+    ListGroups: PREFIX + '/users/list_groups',
+    ListMoments: PREFIX + '/users/list_moments',
+    ListReactedMoments: PREFIX + '/users/list_reacted_moments',
+    GetAccount: PREFIX + '/users/get_account',
+    UpdateAccount: PREFIX + '/users/update_account',
+    GetSettings: PREFIX + '/users/get_settings',
+    UpdateSettings: PREFIX + '/users/update_settings',
+    UpdateLocation: PREFIX + '/users/update_location',
+    Upgrade: PREFIX + '/users/upgrade',
+    DeleteAccount: PREFIX + '/users/delete_account',
+    Follow: PREFIX + '/users/set_follow',
+    Block: PREFIX + '/users/set_block',
+    ListBlocked: PREFIX + '/users/list_blocked',
+    SetRemark: PREFIX + '/users/set_remark',
   },
 
-  // Groups — 已包装: GetDetail/Create/ListMy/Join/Leave/UpdatePreferences/Search/Update/Dismiss/
-  //   TransferOwnership/Members.List/Members.Search/Members.Invite/Members.SetRole/Members.Mute/
-  //   Members.Ban/Members.Unban/Members.ListBanned/Members.Remove/ListApplications/ApproveApplication/
-  //   RejectApplication/ListInvites/AcceptInvite/RejectInvite/ListSentInvites/RevokeSentInvite/
-  //   Announcements.List/Create/Update/Delete
   Groups: {
-    Search: `${PREFIX}/groups/search`,
-    GetDetail: `${PREFIX}/groups/open_the_door`,
-    Create: `${PREFIX}/groups/create`,
-    Update: `${PREFIX}/groups/update`,
-    Dismiss: `${PREFIX}/groups/dismiss`,
-    ListMy: `${PREFIX}/groups/list_my`,
-    Join: `${PREFIX}/groups/join`,
-    Leave: `${PREFIX}/groups/leave`,
-    TransferOwnership: `${PREFIX}/groups/transfer_ownership`,
-    UpdatePreferences: `${PREFIX}/groups/update_preferences`,
-    ListApplications: `${PREFIX}/groups/list_applications`,
-    CancelApplication: `${PREFIX}/groups/cancel_application`,
-    ListInvites: `${PREFIX}/groups/invites/received/list`,
-    AcceptInvite: `${PREFIX}/groups/invites/received/accept`,
-    RejectInvite: `${PREFIX}/groups/invites/received/reject`,
+    // 公开/成员路径
+    Search: PREFIX + '/groups/search',
+    GetDetail: PREFIX + '/groups/open_the_door',
+    Create: PREFIX + '/groups/create',
+    Join: PREFIX + '/groups/join',
+    Leave: PREFIX + '/groups/leave',
+    ListJoined: PREFIX + '/groups/list_joined',
+    UpdatePreferences: PREFIX + '/groups/update_preferences',
+    ListSubmittedApplications: PREFIX + '/groups/applications/list_submitted',
+    CancelApplication: PREFIX + '/groups/applications/cancel',
+    ListReceivedInvites: PREFIX + '/groups/invites/list_received',
+    AcceptInvite: PREFIX + '/groups/invites/accept',
+    RejectInvite: PREFIX + '/groups/invites/reject',
     Members: {
-      List: `${PREFIX}/groups/members/list`,
-      Search: `${PREFIX}/groups/members/search`,
-      Invite: `${PREFIX}/groups/members/invite`,
-      SetRole: `${PREFIX}/groups/members/set_role`,
-      SetMute: `${PREFIX}/groups/members/set_mute`,
-      Ban: `${PREFIX}/groups/members/set_ban`,
-      Unban: `${PREFIX}/groups/members/set_ban`,
-      ListBanned: `${PREFIX}/groups/members/list_banned`,
-      Remove: `${PREFIX}/groups/members/remove`,
-      Invites: {
-        List: `${PREFIX}/groups/invites/sent/list`,
-        Revoke: `${PREFIX}/groups/invites/sent/revoke`,
-      },
-    },
-    Applications: {
-      List: `${PREFIX}/groups/applications/list`,
-      Approve: `${PREFIX}/groups/applications/approve`,
-      Reject: `${PREFIX}/groups/applications/reject`,
+      List: PREFIX + '/groups/members/list',
+      Search: PREFIX + '/groups/members/search',
     },
     Announcements: {
-      Create: `${PREFIX}/groups/announcements/create`,
-      List: `${PREFIX}/groups/announcements/list`,
-      Update: `${PREFIX}/groups/announcements/update`,
-      Delete: `${PREFIX}/groups/announcements/delete`,
+      List: PREFIX + '/groups/announcements/list',
+    },
+    // 群管理守卫子树（/api/v1/groups/admin/*，调用者须为群主/群管理员）
+    Admin: {
+      Update: PREFIX + '/groups/admin/update',
+      GetSettings: PREFIX + '/groups/admin/get_settings',
+      Dismiss: PREFIX + '/groups/admin/dismiss',
+      TransferOwnership: PREFIX + '/groups/admin/transfer_ownership',
+      Invites: {
+        Create: PREFIX + '/groups/admin/invites/create',
+        ListSent: PREFIX + '/groups/admin/invites/list_sent',
+        Revoke: PREFIX + '/groups/admin/invites/revoke',
+      },
+      Members: {
+        List: PREFIX + '/groups/admin/members/list',
+        SetRole: PREFIX + '/groups/admin/members/set_role',
+        SetMute: PREFIX + '/groups/admin/members/set_mute',
+        SetBan: PREFIX + '/groups/admin/members/set_ban',
+        ListBanned: PREFIX + '/groups/admin/members/list_banned',
+        Remove: PREFIX + '/groups/admin/members/remove',
+      },
+      Applications: {
+        List: PREFIX + '/groups/admin/applications/list',
+        Approve: PREFIX + '/groups/admin/applications/approve',
+        Reject: PREFIX + '/groups/admin/applications/reject',
+      },
+      Announcements: {
+        Create: PREFIX + '/groups/admin/announcements/create',
+        Update: PREFIX + '/groups/admin/announcements/update',
+        Delete: PREFIX + '/groups/admin/announcements/delete',
+      },
+      Messages: {
+        Recall: PREFIX + '/groups/admin/messages/recall',
+      },
     },
   },
 
-  // Moments — 已包装: Search/GetDetail/Create/ListMy/Favorite/ListFavorites；
-  //   待接线: Update/Delete
   Moments: {
-    Search: `${PREFIX}/moments/search`,
-    GetDetail: `${PREFIX}/moments/open_the_door`,
-    Create: `${PREFIX}/moments/create`,
-    Update: `${PREFIX}/moments/update`,
-    Delete: `${PREFIX}/moments/delete`,
-    ListMy: `${PREFIX}/moments/list_my`,
-    Favorite: `${PREFIX}/moments/set_favorite`,
-    ListFavorites: `${PREFIX}/moments/list_favorites`,
+    Search: PREFIX + '/moments/search',
+    GetDetail: PREFIX + '/moments/open_the_door',
+    Create: PREFIX + '/moments/create',
+    Update: PREFIX + '/moments/update',
+    Delete: PREFIX + '/moments/delete',
+    ListCreated: PREFIX + '/moments/list_created',
+    Favorite: PREFIX + '/moments/set_favorite',
+    ListFavorites: PREFIX + '/moments/list_favorites',
   },
 
-  // Comments — 已包装: List/Create；待接线: Delete/ListReplies/GetDetail
   Comments: {
-    Create: `${PREFIX}/comments/create`,
-    Delete: `${PREFIX}/comments/delete`,
-    List: `${PREFIX}/comments/list`,
-    ListReplies: `${PREFIX}/comments/list_replies`,
-    GetDetail: `${PREFIX}/comments/open_the_door`,
+    Create: PREFIX + '/comments/create',
+    Delete: PREFIX + '/comments/delete',
+    List: PREFIX + '/comments/list',
+    ListReplies: PREFIX + '/comments/list_replies',
+    GetDetail: PREFIX + '/comments/open_the_door',
   },
 
-  // Reactions — 已包装: Set；待接线: List
   Reactions: {
-    Set: `${PREFIX}/reactions/set`,
-    List: `${PREFIX}/reactions/list`,
+    Set: PREFIX + '/reactions/set',
+    List: PREFIX + '/reactions/list',
   },
 
-  // Media — 已包装: PresignUpload/CompleteUpload/BatchPresignUpload/BatchCompleteUpload
-  //   （上传流程：presign → PUT 直传 → complete，支持单文件与批量，最多 9 个）
   Media: {
-    PresignUpload: `${PREFIX}/media/presign_upload`,
-    CompleteUpload: `${PREFIX}/media/complete_upload`,
-    BatchPresignUpload: `${PREFIX}/media/batch_presign_upload`,
-    BatchCompleteUpload: `${PREFIX}/media/batch_complete_upload`,
+    PresignUpload: PREFIX + '/media/presign_upload',
+    CompleteUpload: PREFIX + '/media/complete_upload',
+    BatchPresignUpload: PREFIX + '/media/batch_presign_upload',
+    BatchCompleteUpload: PREFIX + '/media/batch_complete_upload',
   },
 
-  // Chat — 已包装: PrivateChats.List|UpdatePreferences/PrivateMessages.Send|GetHistory|MarkRead/
-  //   GroupMessages.Send|GetHistory|MarkRead；
-  //   待接线: PrivateChats.GetDetail|Delete、消息 Update|Recall
   PrivateChats: {
-    List: `${PREFIX}/private_chats/list`,
-    GetDetail: `${PREFIX}/private_chats/open_the_door`,
-    UpdatePreferences: `${PREFIX}/private_chats/update_preferences`,
-    Delete: `${PREFIX}/private_chats/delete`,
+    List: PREFIX + '/private_chats/list',
+    GetDetail: PREFIX + '/private_chats/open_the_door',
+    UpdatePreferences: PREFIX + '/private_chats/update_preferences',
+    Delete: PREFIX + '/private_chats/delete',
   },
   PrivateMessages: {
-    Send: `${PREFIX}/private_messages/send`,
-    GetHistory: `${PREFIX}/private_messages/get_history`,
-    Update: `${PREFIX}/private_messages/update`,
-    Recall: `${PREFIX}/private_messages/recall`,
-    MarkRead: `${PREFIX}/private_messages/mark_read`,
+    Send: PREFIX + '/private_messages/send',
+    List: PREFIX + '/private_messages/list',
+    Update: PREFIX + '/private_messages/update',
+    Recall: PREFIX + '/private_messages/recall',
+    MarkRead: PREFIX + '/private_messages/mark_read',
   },
   GroupMessages: {
-    Send: `${PREFIX}/group_messages/send`,
-    GetHistory: `${PREFIX}/group_messages/get_history`,
-    Update: `${PREFIX}/group_messages/update`,
-    Recall: `${PREFIX}/group_messages/recall`,
-    MarkRead: `${PREFIX}/group_messages/mark_read`,
+    Send: PREFIX + '/group_messages/send',
+    List: PREFIX + '/group_messages/list',
+    Update: PREFIX + '/group_messages/update',
+    Recall: PREFIX + '/group_messages/recall',
+    MarkRead: PREFIX + '/group_messages/mark_read',
   },
 
-  // Feed — 已包装: Nearby/NearbyUsers/NearbyGroups/Trending；待接线: Following
   Feed: {
-    Following: `${PREFIX}/feed/following`,
-    Nearby: `${PREFIX}/feed/nearby`,
-    NearbyUsers: `${PREFIX}/feed/nearby_users`,
-    NearbyGroups: `${PREFIX}/feed/nearby_groups`,
-    Trending: `${PREFIX}/feed/trending`,
+    Following: PREFIX + '/feed/following',
+    Nearby: PREFIX + '/feed/nearby',
+    NearbyUsers: PREFIX + '/feed/nearby_users',
+    NearbyGroups: PREFIX + '/feed/nearby_groups',
+    Trending: PREFIX + '/feed/trending',
   },
 
-  // Search
   Search: {
-    Suggest: `${PREFIX}/search/suggest`,
+    Suggest: PREFIX + '/search/suggest',
   },
 
-  // System — 已包装: GetClientConfig/Bootstrap；待接线: GetMeta/Health/ListAnnouncements
   System: {
-    GetMeta: `${PREFIX}/system/get_meta`,
-    Health: `${PREFIX}/system/health`,
-    ListAnnouncements: `${PREFIX}/system/list_announcements`,
-    GetClientConfig: `${PREFIX}/system/get_client_config`,
-    Bootstrap: `${PREFIX}/system/bootstrap`,
+    GetMeta: PREFIX + '/system/get_meta',
+    Health: PREFIX + '/system/health',
+    ListAnnouncements: PREFIX + '/system/announcements/list',
+    GetClientConfig: PREFIX + '/system/get_client_config',
+    Bootstrap: PREFIX + '/system/bootstrap',
   },
 
-  // Map
   Map: {
-    Canvas: `${PREFIX}/map/canvas`,
+    Canvas: PREFIX + '/map/canvas',
   },
 
-  // Notify — 已包装: List/GetUnreadCount/MarkRead
   Notify: {
-    List: `${PREFIX}/notify/list`,
-    GetUnreadCount: `${PREFIX}/notify/get_unread_count`,
-    MarkRead: `${PREFIX}/notify/mark_read`,
+    List: PREFIX + '/notify/list',
+    GetUnreadCount: PREFIX + '/notify/get_unread_count',
+    MarkRead: PREFIX + '/notify/mark_read',
   },
 
-  // Share — 待接线: Create/Get/ListMy/Revoke（分享码模块，登记表保持完整）
   Share: {
-    Create: `${PREFIX}/share/create`,
-    Get: `${PREFIX}/share/get`,
-    ListMy: `${PREFIX}/share/list_my`,
-    Revoke: `${PREFIX}/share/revoke`,
+    Create: PREFIX + '/share/create',
+    Get: PREFIX + '/share/get',
+    List: PREFIX + '/share/list',
+    Revoke: PREFIX + '/share/revoke',
   },
 
-  // Reports — 已包装: Create；待接线: ListMy
   Reports: {
-    Create: `${PREFIX}/reports/create`,
-    ListMy: `${PREFIX}/reports/list_my`,
+    Create: PREFIX + '/reports/create',
+    List: PREFIX + '/reports/list',
   },
 
-  // Admin
+  // 平台管理节点（/admin/v1/*，仅平台管理员）
   Admin: {
     Rbac: {
-      GetMe: `${PREFIX}/admin/rbac/get_me`,
+      GetMe: ADMIN_PREFIX + '/rbac/get_me',
     },
   },
 } as const;

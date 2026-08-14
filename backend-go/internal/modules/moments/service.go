@@ -62,20 +62,20 @@ func NewServiceWithDepsAndImagesAndConfig(repo Repository, notificationWriter mo
 	return &Service{repo: repo, notifications: notificationWriter, users: actorProvider, images: images, appConfig: cfg, runInTx: runInTx}
 }
 
-func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (MomentItem, error) {
+func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (OwnerMomentItem, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	if err := s.validateImageOwnership(ctx, principal.UserID, req.ImageFileIDs); err != nil {
-		return MomentItem{}, err
+		return OwnerMomentItem{}, err
 	}
 	item, err := s.repo.Create(ctx, principal.UserID, req)
 	if err != nil {
 		observability.L().Error("moments.create failed", "error", err)
-		return MomentItem{}, fmt.Errorf("moments.Service.Create: repo: %w", err)
+		return OwnerMomentItem{}, fmt.Errorf("moments.Service.Create: repo: %w", err)
 	}
 	resourceguard.RecordMoment(ctx, item.MomentID)
 	s.notifyMomentMentions(ctx, principal.UserID, item)
 	s.hydrateImages(ctx, &item)
-	return item, nil
+	return toOwnerMoment(item), nil
 }
 
 func (s *Service) OpenTheDoor(ctx context.Context, momentID string) (MomentItem, bool, error) {
@@ -92,11 +92,10 @@ func (s *Service) OpenTheDoor(ctx context.Context, momentID string) (MomentItem,
 	if item.PrivacyLevel == "private" && !isOwner {
 		return MomentItem{}, false, nil
 	}
-	if !isOwner {
-		item.PrivacyLevel = ""
-	}
 	if principal.UserID != "" {
-		item.MyState = s.repo.LoadMyState(ctx, momentID, principal.UserID)
+		if st := s.repo.LoadMyState(ctx, momentID, principal.UserID); st != nil {
+			item.IsFavorited = st.IsFavorited
+		}
 	}
 	s.hydrateImages(ctx, &item)
 	s.fillReactions(ctx, &item, principal.UserID)
@@ -117,7 +116,7 @@ func (s *Service) NotificationContext(ctx context.Context, momentID string) (com
 	}, true, nil
 }
 
-func (s *Service) ListMine(ctx context.Context, req MyMomentsRequest) (PaginatedMoments, error) {
+func (s *Service) ListCreated(ctx context.Context, req ListCreatedMomentsRequest) (PaginatedOwnerMoments, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	limit := 20
 	cursor := ""
@@ -132,11 +131,16 @@ func (s *Service) ListMine(ctx context.Context, req MyMomentsRequest) (Paginated
 	}
 	result, err := s.repo.ListMine(ctx, principal.UserID, limit, cursor)
 	if err != nil {
-		return result, err
+		return PaginatedOwnerMoments{}, err
 	}
-	s.hydrateImagesBatch(ctx, result.Items)
-	s.fillReactionsBatch(ctx, result.Items, principal.UserID)
-	return result, nil
+	items := make([]OwnerMomentItem, 0, len(result.Items))
+	for i := range result.Items {
+		item := result.Items[i]
+		s.hydrateImages(ctx, &item)
+		items = append(items, toOwnerMoment(item))
+	}
+	s.fillReactionsBatchOwnerMoment(ctx, items, principal.UserID)
+	return PaginatedOwnerMoments{Items: items, NextCursor: result.NextCursor}, nil
 }
 
 func (s *Service) Exists(ctx context.Context, momentID string) (bool, error) {
@@ -163,9 +167,12 @@ func (s *Service) CheckCommentable(ctx context.Context, momentID string) (found 
 		return ok, false, err
 	}
 	principal, _ := platformauth.PrincipalFromContext(ctx)
+	// 私有瞬间非拥有者按不存在处理（spec 防枚举：private 内容不暴露存在性 → 10300）。
 	if item.PrivacyLevel == "private" && item.User.UserID != principal.UserID {
-		return true, false, nil
+		return false, false, nil
 	}
+	// 可预留在 moments 侧表达「作者限制评论」（如仅好友可评论）→ canComment=false
+	// 由 comments.create 映射为 10200 + privacy_setting。
 	return true, true, nil
 }
 
@@ -191,20 +198,20 @@ func (s *Service) Search(ctx context.Context, req SearchMomentsRequest) (Paginat
 	return result, nil
 }
 
-func (s *Service) Update(ctx context.Context, req UpdateMomentRequest) (MomentItem, error) {
+func (s *Service) Update(ctx context.Context, req UpdateMomentRequest) (OwnerMomentItem, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	item, ok, err := s.repo.Get(ctx, req.MomentID)
 	if !ok {
 		if err != nil {
-			return MomentItem{}, err
+			return OwnerMomentItem{}, err
 		}
-		return MomentItem{}, ErrMomentNotFound
+		return OwnerMomentItem{}, ErrMomentNotFound
 	}
 	if item.User.UserID != principal.UserID {
-		return MomentItem{}, ErrPermissionDenied
+		return OwnerMomentItem{}, ErrPermissionDenied
 	}
 	if err := s.validateImageOwnership(ctx, principal.UserID, req.ImageFileIDs); err != nil {
-		return MomentItem{}, err
+		return OwnerMomentItem{}, err
 	}
 	updateFn := func(ctx context.Context) error {
 		return s.repo.Update(ctx, principal.UserID, req)
@@ -212,18 +219,18 @@ func (s *Service) Update(ctx context.Context, req UpdateMomentRequest) (MomentIt
 	if s.runInTx != nil {
 		if err := s.runInTx(ctx, updateFn); err != nil {
 			observability.L().Error("moments.update failed", "error", err, "moment_id", req.MomentID)
-			return MomentItem{}, fmt.Errorf("moments.Service.Update: tx: %w", err)
+			return OwnerMomentItem{}, fmt.Errorf("moments.Service.Update: tx: %w", err)
 		}
 	} else {
 		if err := updateFn(ctx); err != nil {
 			observability.L().Error("moments.update failed", "error", err, "moment_id", req.MomentID)
-			return MomentItem{}, fmt.Errorf("moments.Service.Update: repo: %w", err)
+			return OwnerMomentItem{}, fmt.Errorf("moments.Service.Update: repo: %w", err)
 		}
 	}
 	updated, _, err := s.repo.Get(ctx, req.MomentID)
 	if err != nil {
 		observability.L().Error("moments.update reload failed", "error", err, "moment_id", req.MomentID)
-		return MomentItem{}, err
+		return OwnerMomentItem{}, err
 	}
 	s.notifyMomentMentions(ctx, principal.UserID, updated)
 	s.hydrateImages(ctx, &updated)
@@ -232,7 +239,7 @@ func (s *Service) Update(ctx context.Context, req UpdateMomentRequest) (MomentIt
 		"moment_id":  req.MomentID,
 		"updated_at": time.Now().UTC().Format(time.RFC3339),
 	}})
-	return updated, nil
+	return toOwnerMoment(updated), nil
 }
 
 func (s *Service) Delete(ctx context.Context, momentID string) error {
@@ -362,22 +369,31 @@ func (s *Service) SetReactionAggregator(ra ReactionAggregator) { s.reactions = r
 // fillReactions populates MomentItem.reactions[] for a single item via the
 // aggregator. No-op when no aggregator is wired or the moment has no reactions.
 func (s *Service) fillReactions(ctx context.Context, item *MomentItem, viewerID string) {
-	if s.reactions == nil || item == nil {
+	if item == nil {
+		return
+	}
+	if s.reactions == nil {
+		item.Reactions = emptyReactions()
 		return
 	}
 	byID, err := s.reactions.AggregateMoments(ctx, []string{item.MomentID}, viewerID)
 	if err != nil {
 		observability.L().Warn("moments.fillReactions failed", "error", err, "moment_id", item.MomentID)
+		item.Reactions = emptyReactions()
 		return
 	}
-	if recs := byID[item.MomentID]; len(recs) > 0 {
-		item.Reactions = recs
-	}
+	item.Reactions = reactionsFor(byID[item.MomentID])
 }
 
 // fillReactionsBatch populates MomentItem.reactions[] for a list in one query.
 func (s *Service) fillReactionsBatch(ctx context.Context, items []MomentItem, viewerID string) {
-	if s.reactions == nil || len(items) == 0 {
+	if len(items) == 0 {
+		return
+	}
+	if s.reactions == nil {
+		for i := range items {
+			items[i].Reactions = emptyReactions()
+		}
 		return
 	}
 	ids := make([]string, 0, len(items))
@@ -387,13 +403,56 @@ func (s *Service) fillReactionsBatch(ctx context.Context, items []MomentItem, vi
 	byID, err := s.reactions.AggregateMoments(ctx, ids, viewerID)
 	if err != nil {
 		observability.L().Warn("moments.fillReactionsBatch failed", "error", err)
+		for i := range items {
+			items[i].Reactions = emptyReactions()
+		}
 		return
 	}
 	for i := range items {
-		if recs := byID[items[i].MomentID]; len(recs) > 0 {
-			items[i].Reactions = recs
-		}
+		items[i].Reactions = reactionsFor(byID[items[i].MomentID])
 	}
+}
+
+// fillReactionsBatchOwnerMoment populates OwnerMomentItem.reactions[] for a list.
+func (s *Service) fillReactionsBatchOwnerMoment(ctx context.Context, items []OwnerMomentItem, viewerID string) {
+	if len(items) == 0 {
+		return
+	}
+	if s.reactions == nil {
+		for i := range items {
+			items[i].Reactions = emptyReactions()
+		}
+		return
+	}
+	ids := make([]string, 0, len(items))
+	for i := range items {
+		ids = append(ids, items[i].MomentID)
+	}
+	byID, err := s.reactions.AggregateMoments(ctx, ids, viewerID)
+	if err != nil {
+		observability.L().Warn("moments.fillReactionsBatchOwnerMoment failed", "error", err)
+		for i := range items {
+			items[i].Reactions = emptyReactions()
+		}
+		return
+	}
+	for i := range items {
+		items[i].Reactions = reactionsFor(byID[items[i].MomentID])
+	}
+}
+
+// toOwnerMoment 将公开 MomentItem 转为拥有者视角 OwnerMomentItem（含 privacy_level）。
+func toOwnerMoment(item MomentItem) OwnerMomentItem {
+	return OwnerMomentItem{MomentItem: item, PrivacyLevel: item.PrivacyLevel}
+}
+
+func emptyReactions() []Reaction { return []Reaction{} }
+
+func reactionsFor(recs []Reaction) []Reaction {
+	if recs == nil {
+		return emptyReactions()
+	}
+	return recs
 }
 
 // viewerUserID returns the authenticated user id, or "" for anonymous callers.

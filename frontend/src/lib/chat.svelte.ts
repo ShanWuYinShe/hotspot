@@ -11,7 +11,7 @@
 import type { PrivateMessageNewPayload } from '@/lib/ws/types';
 import { wsClient } from '@/lib/ws/client';
 
-// 断线补拉阈值（spec L163-165）：WS 断开超过该时长后，重连时主动 get_history
+// 断线补拉阈值（spec L163-165）：WS 断开超过该时长后，重连时主动拉取历史（private_messages/list / group_messages/list）
 // 首页补拉（HTTP 与 WS 推送重复按主键去重，spec L169）；未超阈值直接依赖
 // WS 推送 / resume 续传。
 const RECONNECT_HISTORY_FETCH_THRESHOLD_MS = 10_000;
@@ -218,7 +218,7 @@ export function useChat(opts: UseChatOptions) {
 	});
 
 	// 断线补拉（spec L163-165）：WS 断开记录时间点，重连后断开时长超阈值（10s）时
-	// 主动 get_history 首页补拉并按 id 去重合并——resume 失效/降级时断线期间消息
+	// 主动拉取历史（private_messages/list / group_messages/list） 首页补拉并按 id 去重合并——resume 失效/降级时断线期间消息
 	// 只能靠 HTTP 补齐；未超阈值直接依赖 WS 推送 / resume 续传。resume 成功时补拉
 	// 结果与续传事件按主键去重（spec L169），冗余无害。
 	let disconnectedAt = 0;

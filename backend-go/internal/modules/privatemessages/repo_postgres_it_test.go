@@ -28,7 +28,7 @@ func TestPostgresIT_SendAndGetHistory(t *testing.T) {
 			t.Fatal("expected non-empty message_id")
 		}
 
-		history, err := repo.History(ctx, alice, GetHistoryRequest{TargetUserID: bob})
+		history, err := repo.History(ctx, alice, ListPrivateMessagesRequest{TargetUserID: bob})
 		if err != nil {
 			t.Fatalf("History: %v", err)
 		}
@@ -69,7 +69,7 @@ func TestPostgresIT_UpdateMessage(t *testing.T) {
 			t.Fatalf("message_id: got %q, want %q", meta.MessageID, sent.MessageID)
 		}
 
-		history, _ := repo.History(ctx, alice, GetHistoryRequest{TargetUserID: bob})
+		history, _ := repo.History(ctx, alice, ListPrivateMessagesRequest{TargetUserID: bob})
 		if len(history.Items) != 1 || history.Items[0].Content != "edited" {
 			t.Fatalf("expected edited content, got %#v", history.Items)
 		}
@@ -98,7 +98,7 @@ func TestPostgresIT_RecallMessage(t *testing.T) {
 			t.Fatalf("Recall: %v", err)
 		}
 
-		history, _ := repo.History(ctx, alice, GetHistoryRequest{TargetUserID: bob})
+		history, _ := repo.History(ctx, alice, ListPrivateMessagesRequest{TargetUserID: bob})
 		if len(history.Items) != 1 {
 			t.Fatalf("expected 1 message after recall, got %d", len(history.Items))
 		}

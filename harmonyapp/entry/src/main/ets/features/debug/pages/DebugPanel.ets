@@ -8,7 +8,7 @@ import { SystemCard } from '../../../components/SystemCard';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { SystemToast } from '../../../components/SystemToast';
-import { MyProfile } from '../../../core/types/api';
+import { AccountInfo } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
@@ -22,7 +22,7 @@ export struct DebugPanel {
   pathStack: NavPathStack = new NavPathStack();
   @State logs: string[] = [];
   @State currentUserId: string | null = null;
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   private webSocketService = WebSocketService.getInstance();

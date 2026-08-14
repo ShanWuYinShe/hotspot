@@ -162,7 +162,7 @@ WebSocket close code 受 RFC 6455 约束（范围 1000-4999），应用层错误
 
 #### 2. 数据补拉（resume 失效时的回退）
 
-当 resume_token 失效时，客户端按端侧策略设置补拉阈值（如 10 秒）：超阈值时通过 HTTP `get_history` 按游标分页补拉，未超阈值时直接等待后续 WebSocket 推送。
+当 resume_token 失效时，客户端按端侧策略设置补拉阈值（如 10 秒）：超阈值时通过 HTTP 消息历史端点（`private_messages/list`、`group_messages/list`）按游标分页补拉，未超阈值时直接等待后续 WebSocket 推送。
 
 #### 3. 去重规则
 
@@ -443,7 +443,7 @@ type UserOfflineEvent = { type: "UserOffline"; payload: UserOfflinePayload; };
 - **PrivateMessageRead**
   - 触发：已读状态发生变化时触发
   - 推送目标：**仅私聊对端**（A 发、B 读 → 推给 A，让发送方得知消息已读）
-  - **不推给任何一方的其他设备**：单设备单会话模型下，跨设备已读同步不在本协议范围（见 `api_spec_chat.md`「跨设备已读同步（已知取舍）」）；B 的其他设备已读状态需等该设备下次拉取 `get_history` 或冷启动 `system/bootstrap` 时刷新
+  - **不推给任何一方的其他设备**：单设备单会话模型下，跨设备已读同步不在本协议范围（见 `api_spec_chat.md`「跨设备已读同步（已知取舍）」）；B 的其他设备已读状态需等该设备下次拉取 `private_messages/list`/`group_messages/list` 或冷启动 `system/bootstrap` 时刷新
   - 该事件用于即时交互反馈，不作为离线补偿依据
 
 **关注关系事件**：
@@ -511,7 +511,7 @@ interface MomentCommentedPayload {
   moment_summary: MomentSummary;
   comment_id: string;
   actor: UserInfo;
-  content: string;              // 评论完整内容（对应 Notification 的 comment_preview 为截断版本）
+  content: string;              // 评论完整内容（对应 notify 通知负载的 comment_preview 为截断版本）
   commented_at: string;
 }
 type MomentCommentedEvent = { type: "MomentCommented"; payload: MomentCommentedPayload; };
@@ -697,7 +697,7 @@ interface GroupInviteReceivedPayload {
 }
 type GroupInviteReceivedEvent = { type: "GroupInviteReceived"; payload: GroupInviteReceivedPayload; };
 
-// 邀请被接受 → 推送给邀请发起方。纯实时事件，不落库通知（邀请状态可在 groups/invites/sent/list 查询）
+// 邀请被接受 → 推送给邀请发起方。纯实时事件，不落库通知（邀请状态可在 groups/admin/invites/list_sent 查询）
 interface GroupInviteResponsePayload {
   invite_id: string;
   group_id: string;
@@ -855,11 +855,11 @@ type GroupMemberRoleChangedEvent = { type: "GroupMemberRoleChanged"; payload: Gr
 
 // 群组信息更新
 // 字段可见性：GroupUpdated 事件推送给所有群订阅者（订阅者恒为已加入成员，见下方「隐私约束」）。
-// 推送范围与 HTTP GroupItem 可见性规则一致（见 api_spec_types.md）：
-//   - 推送：name/avatar_url/description/tags/location/has_password（@member-only，订阅者恒为成员）
+// 推送范围与 HTTP GroupItem 公开类型一致（见 api_spec_types.md）：
+//   - 推送：name/avatar_url/description/tags/location
 //     /join_method/requires_approval/next_activity
-//   - 不推送：is_searchable/max_members（@group-admin-only）——群广播通道无法按订阅者角色过滤，
-//     服务端有意省略；管理员可通过 HTTP groups/open_the_door 获取
+//   - 不推送：has_password/is_searchable/max_members（群管理字段，见 GroupSettings）——群广播通道无法按订阅者角色过滤，
+//     服务端有意省略；群管理员可通过 HTTP groups/admin/get_settings 获取
 //   - online_members_count 为聚合计数，随列表/详情 HTTP 响应返回，不随更新事件推送
 interface GroupUpdatedPayload {
   group_id: string;
@@ -871,7 +871,6 @@ interface GroupUpdatedPayload {
     join_method?: GroupJoinMethod;
     requires_approval?: boolean;
     next_activity?: string;
-    has_password?: boolean;          // @member-only：订阅者恒为群成员，可推送
     location?: Location;
   };
   updated_by: UserInfo;        // 操作者（嵌套 UserInfo，与 types.md「对用户引用」约定一致）
@@ -1092,7 +1091,7 @@ WebSocket 推送分为**自动推送**和**订阅推送**两种模式（详见�
 
 **隐私约束**：
 - `type: 'user'` 的订阅必须校验目标用户的 `presence_visible` 设置。若目标用户将在线状态对外隐藏（`presence_visible=false`），服务端必须拒绝该订阅项，并在 `SubscribeAck` 的 `failed_ids` 中返回 `reason='denied'`，同时不推送任何 UserOnline/UserOffline 事件。
-- `type: 'group'` 的订阅**必须校验成员资格**：仅当前已加入该群组的成员可订阅。非成员订阅返回 `reason='denied'`，不推送任何群消息/成员变动/`GroupUpdated`（含 `has_password` 等可见性受控字段）。这是群组事件可见性的前置门槛，确保 `has_password`（@member-only）与 `is_searchable`/`max_members`（@group-admin-only）不被非成员获取。
+- `type: 'group'` 的订阅**必须校验成员资格**：仅当前已加入该群组的成员可订阅。非成员订阅返回 `reason='denied'`，不推送任何群消息/成员变动/`GroupUpdated`。群管理字段（`has_password`/`is_searchable`/`max_members`，见 `GroupSettings`）只经群管理守卫子树端点 `groups/admin/get_settings` 返回，不经广播通道，天然不被非成员获取。
 
 **类型约束**：
 - 单次订阅请求可混合 `user` 和 `group` 类型（`items` 数组可包含不同类型的 `SubscriptionItem`），客户端按场景组织订阅即可

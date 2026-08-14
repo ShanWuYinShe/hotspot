@@ -34,7 +34,7 @@ func TestInMemoryRepositorySendWithFileID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Send returned error: %v", err)
 	}
-	history, _ := repo.History(context.Background(), "alice", GetHistoryRequest{TargetUserID: "bob"})
+	history, _ := repo.History(context.Background(), "alice", ListPrivateMessagesRequest{TargetUserID: "bob"})
 	if len(history.Items) != 1 || history.Items[0].Media == nil {
 		t.Fatal("expected message with media")
 	}
@@ -61,7 +61,7 @@ func TestInMemoryRepositorySendWithReply(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Send reply returned error: %v", err)
 	}
-	history, _ := repo.History(context.Background(), "alice", GetHistoryRequest{TargetUserID: "bob"})
+	history, _ := repo.History(context.Background(), "alice", ListPrivateMessagesRequest{TargetUserID: "bob"})
 	if len(history.Items) != 2 {
 		t.Fatalf("expected 2 messages, got %d", len(history.Items))
 	}
@@ -80,7 +80,7 @@ func TestInMemoryRepositoryHistoryReturnsMessages(t *testing.T) {
 	_, _ = repo.Send(context.Background(), "alice", "bob", SendPrivateMessageRequest{Type: "text", Content: "msg1"})
 	_, _ = repo.Send(context.Background(), "alice", "bob", SendPrivateMessageRequest{Type: "text", Content: "msg2"})
 
-	history, err := repo.History(context.Background(), "alice", GetHistoryRequest{TargetUserID: "bob"})
+	history, err := repo.History(context.Background(), "alice", ListPrivateMessagesRequest{TargetUserID: "bob"})
 	if err != nil {
 		t.Fatalf("History returned error: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestInMemoryRepositoryHistoryReturnsMessages(t *testing.T) {
 func TestInMemoryRepositoryHistoryEmpty(t *testing.T) {
 	repo := NewInMemoryRepository()
 
-	history, err := repo.History(context.Background(), "alice", GetHistoryRequest{TargetUserID: "bob"})
+	history, err := repo.History(context.Background(), "alice", ListPrivateMessagesRequest{TargetUserID: "bob"})
 	if err != nil {
 		t.Fatalf("History returned error: %v", err)
 	}
@@ -110,8 +110,8 @@ func TestInMemoryRepositoryHistoryOrderIndependent(t *testing.T) {
 	_, _ = repo.Send(context.Background(), "alice", "bob", SendPrivateMessageRequest{Type: "text", Content: "from alice"})
 	_, _ = repo.Send(context.Background(), "bob", "alice", SendPrivateMessageRequest{Type: "text", Content: "from bob"})
 
-	aliceHistory, _ := repo.History(context.Background(), "alice", GetHistoryRequest{TargetUserID: "bob"})
-	bobHistory, _ := repo.History(context.Background(), "bob", GetHistoryRequest{TargetUserID: "alice"})
+	aliceHistory, _ := repo.History(context.Background(), "alice", ListPrivateMessagesRequest{TargetUserID: "bob"})
+	bobHistory, _ := repo.History(context.Background(), "bob", ListPrivateMessagesRequest{TargetUserID: "alice"})
 
 	if len(aliceHistory.Items) != 2 || len(bobHistory.Items) != 2 {
 		t.Fatalf("expected 2 messages both ways, got alice=%d bob=%d", len(aliceHistory.Items), len(bobHistory.Items))
@@ -125,7 +125,7 @@ func TestInMemoryRepositoryHistoryWithPaginationLimit(t *testing.T) {
 		_, _ = repo.Send(context.Background(), "alice", "bob", SendPrivateMessageRequest{Type: "text", Content: "msg"})
 	}
 
-	history, err := repo.History(context.Background(), "alice", GetHistoryRequest{
+	history, err := repo.History(context.Background(), "alice", ListPrivateMessagesRequest{
 		TargetUserID: "bob",
 		Pagination:   &PaginationParams{Limit: 2},
 	})
@@ -145,7 +145,7 @@ func TestInMemoryRepositoryHistoryWithInvalidCursor(t *testing.T) {
 
 	_, _ = repo.Send(context.Background(), "alice", "bob", SendPrivateMessageRequest{Type: "text", Content: "msg"})
 
-	_, err := repo.History(context.Background(), "alice", GetHistoryRequest{
+	_, err := repo.History(context.Background(), "alice", ListPrivateMessagesRequest{
 		TargetUserID: "bob",
 		Pagination:   &PaginationParams{Cursor: "invalid_cursor"},
 	})
@@ -217,7 +217,7 @@ func TestInMemoryRepositoryUpdate(t *testing.T) {
 		t.Fatalf("expected MessageID %q, got %q", sent.MessageID, meta.MessageID)
 	}
 
-	history, _ := repo.History(context.Background(), "alice", GetHistoryRequest{TargetUserID: "bob"})
+	history, _ := repo.History(context.Background(), "alice", ListPrivateMessagesRequest{TargetUserID: "bob"})
 	if history.Items[0].Content != "updated" {
 		t.Fatalf("expected updated content, got %q", history.Items[0].Content)
 	}
@@ -276,7 +276,7 @@ func TestInMemoryRepositoryRecallWithinWindow(t *testing.T) {
 		t.Fatalf("expected MessageID %q, got %q", sent.MessageID, meta.MessageID)
 	}
 
-	history, _ := repo.History(context.Background(), "alice", GetHistoryRequest{TargetUserID: "bob"})
+	history, _ := repo.History(context.Background(), "alice", ListPrivateMessagesRequest{TargetUserID: "bob"})
 	if history.Items[0].RecalledAt == "" {
 		t.Fatal("expected RecalledAt to be set")
 	}
@@ -390,8 +390,8 @@ func TestInMemoryRepositoryHistoryDeduplicatesByConversationKey(t *testing.T) {
 	_, _ = repo.Send(context.Background(), "alice", "bob", SendPrivateMessageRequest{Type: "text", Content: "msg1"})
 	_, _ = repo.Send(context.Background(), "bob", "alice", SendPrivateMessageRequest{Type: "text", Content: "msg2"})
 
-	aliceHistory, _ := repo.History(context.Background(), "alice", GetHistoryRequest{TargetUserID: "bob"})
-	bobHistory, _ := repo.History(context.Background(), "bob", GetHistoryRequest{TargetUserID: "alice"})
+	aliceHistory, _ := repo.History(context.Background(), "alice", ListPrivateMessagesRequest{TargetUserID: "bob"})
+	bobHistory, _ := repo.History(context.Background(), "bob", ListPrivateMessagesRequest{TargetUserID: "alice"})
 
 	if len(aliceHistory.Items) != len(bobHistory.Items) {
 		t.Fatalf("history length should match: alice=%d bob=%d", len(aliceHistory.Items), len(bobHistory.Items))
@@ -410,7 +410,7 @@ func TestInMemoryRepositoryUpdateSetsEditedAt(t *testing.T) {
 
 	_, _ = repo.Update(context.Background(), "alice", UpdatePrivateMessageRequest{MessageID: sent.MessageID, Content: "updated"})
 
-	history, _ := repo.History(context.Background(), "alice", GetHistoryRequest{TargetUserID: "bob"})
+	history, _ := repo.History(context.Background(), "alice", ListPrivateMessagesRequest{TargetUserID: "bob"})
 	if history.Items[0].EditedAt == "" {
 		t.Fatal("expected EditedAt to be set")
 	}
@@ -432,7 +432,7 @@ func TestInMemoryRepositoryUpdateCannotEditAfterRecall(t *testing.T) {
 func TestInMemoryRepositoryRecallTwoMinuteWindow(t *testing.T) {
 	repo := NewInMemoryRepository()
 
-	history, _ := repo.History(context.Background(), "alice", GetHistoryRequest{TargetUserID: "bob"})
+	history, _ := repo.History(context.Background(), "alice", ListPrivateMessagesRequest{TargetUserID: "bob"})
 	msgs := history.Items
 	_ = msgs
 }
@@ -442,7 +442,7 @@ func TestInMemoryRepositoryHistoryNewestFirst(t *testing.T) {
 
 	_, _ = repo.Send(context.Background(), "alice", "bob", SendPrivateMessageRequest{Type: "text", Content: "first"})
 
-	history, _ := repo.History(context.Background(), "alice", GetHistoryRequest{TargetUserID: "bob"})
+	history, _ := repo.History(context.Background(), "alice", ListPrivateMessagesRequest{TargetUserID: "bob"})
 	if len(history.Items) < 1 {
 		t.Fatalf("expected at least 1 message, got %d", len(history.Items))
 	}

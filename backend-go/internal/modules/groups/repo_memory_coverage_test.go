@@ -54,7 +54,7 @@ func TestMemoryAnnouncementAndApplicationLifecycle(t *testing.T) {
 	if err := repo.MuteMember(ctx, "u1", MuteMemberRequest{GroupID: created.Group.GroupID, UserID: "u2", Active: true, DurationMinutes: 60}); err != nil {
 		t.Fatalf("mute: %v", err)
 	}
-	// 退出群：内存 repo 的 MyState 恒为 owner 状态，任何成员退出都返回 ErrAccessRestricted
+	// 退出群：内存 repo 的 ViewerState 恒为 owner 状态，任何成员退出都返回 ErrAccessRestricted
 	if err := repo.LeaveGroup(ctx, "u2", created.Group.GroupID); err != ErrAccessRestricted {
 		t.Fatalf("leave non-owner: expected access restricted, got %v", err)
 	}

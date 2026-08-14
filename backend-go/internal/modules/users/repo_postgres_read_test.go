@@ -63,6 +63,10 @@ func (r *userFallbackRepo) SetRemark(context.Context, string, string, string) er
 	r.markUsed()
 	return nil
 }
+func (r *userFallbackRepo) CheckBlockedTags(context.Context, []string) ([]string, error) {
+	r.markUsed()
+	return nil, nil
+}
 func (r *userFallbackRepo) ListBlocked(context.Context, string, int, string) (PaginatedBlockedUsers, error) {
 	r.markUsed()
 	return PaginatedBlockedUsers{}, nil
@@ -221,7 +225,7 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 	if err != nil || len(liked.Items) != 1 || liked.Items[0].MomentID != "moment_1" {
 		t.Fatalf("unexpected reacted moments: %#v err=%v", liked, err)
 	}
-	if liked.Items[0].MyState == nil || len(liked.Items[0].Tags) != 2 {
+	if !liked.Items[0].IsFavorited || len(liked.Items[0].Tags) != 2 {
 		t.Fatalf("unexpected liked moment state: %#v", liked.Items[0])
 	}
 }

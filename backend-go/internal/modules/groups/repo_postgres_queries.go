@@ -39,6 +39,15 @@ LEFT JOIN users u ON u.user_id = gm.user_id
 WHERE gm.group_id = $1 AND ($2 = '' OR gm.role = $2)
 ORDER BY gm.joined_at ASC, gm.user_id ASC`
 
+	// queryListAdminGroupMembers 是管理视角成员列表（含 muted_until 真值，null=未禁言），
+	// 仅守卫子树 groups/admin/members/list 使用。
+	queryListAdminGroupMembers = `
+SELECT gm.user_id, COALESCE(u.nickname, gm.user_id), gm.role, gm.joined_at, gm.muted_until
+FROM group_members gm
+LEFT JOIN users u ON u.user_id = gm.user_id
+WHERE gm.group_id = $1 AND ($2 = '' OR gm.role = $2)
+ORDER BY gm.joined_at ASC, gm.user_id ASC`
+
 	// queryListMyGroupsBase is the static prefix of the my-groups query. The
 	// keyset cursor predicate, ORDER BY and LIMIT are appended dynamically
 	// inside ListMyGroups so pagination is done at the DB layer (no OFFSET, no
@@ -237,6 +246,9 @@ SELECT gb.user_id, gb.banned_at, gb.reason, gb.banned_by_user_id
 FROM group_bans gb
 WHERE gb.group_id = $1
 ORDER BY gb.banned_at DESC, gb.user_id ASC`
+
+	queryIsGroupBanned = `
+SELECT 1 FROM group_bans WHERE group_id = $1 AND user_id = $2`
 
 	queryUpdateGroupOwner = `
 UPDATE groups

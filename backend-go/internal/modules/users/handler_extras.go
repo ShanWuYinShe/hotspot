@@ -61,7 +61,7 @@ func (h *Handler) BatchGet(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, r, "BatchGet", err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(map[string]any{"users": users}))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(UsersBatchResult{Users: users}))
 }
 
 func (h *Handler) UpdateLocation(w http.ResponseWriter, r *http.Request) {

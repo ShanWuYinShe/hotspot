@@ -64,7 +64,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if tags == nil {
 		tags = []string{}
 	}
-	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, RequiresApproval: requiresApproval, IsSearchable: isSearchable, MembersSearchable: membersSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: userID}
+	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), ViewerState: &GroupViewerState{Role: "owner", UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, RequiresApproval: requiresApproval, IsSearchable: isSearchable, MembersSearchable: membersSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: &userID}
 	s2CellToken := geo.CellTokenAtLevel(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude}, 14)
 	s2CellID := geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})
 	ownerRole := string(GroupRoleOwner)
@@ -259,7 +259,7 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 		s.item.CreatedAt = formatOptionalTime(s.createdAt)
 		s.item.LastActivityAt = formatOptionalTime(s.lastActivityAt)
 		s.item.Group.MembersCount = s.membersCount
-		s.item.MyState = &MyGroupState{Role: GroupRole(s.roleText), IsJoined: true, UnreadCount: s.unreadCount, IsMuted: s.isMuted, MutedUntil: formatMutedUntil(s.mutedUntil), IsPinned: s.isPinned, JoinedAt: s.joinedAt.UTC().Format(time.RFC3339)}
+		s.item.ViewerState = &GroupViewerState{Role: GroupRole(s.roleText), UnreadCount: s.unreadCount, IsMuted: s.isMuted, MutedUntil: formatMutedUntil(s.mutedUntil), IsPinned: s.isPinned, JoinedAt: s.joinedAt.UTC().Format(time.RFC3339)}
 		if s.lastMessageID != nil && s.lastMessageType != nil && s.lastSenderID != nil && s.lastSentAt != nil {
 			s.item.LastMessage = &GroupLastMessage{
 				MessageID: *s.lastMessageID,

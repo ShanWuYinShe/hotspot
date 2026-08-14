@@ -72,7 +72,7 @@ func (s *Service) ValidateShareCode(ctx context.Context, shareCode string) error
 	return err
 }
 
-func (s *Service) List(ctx context.Context, req ShareListRequest) (PaginatedShares, error) {
+func (s *Service) List(ctx context.Context, req ListSharesRequest) (PaginatedShares, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
 	if !ok || principal.UserID == "" {
 		return PaginatedShares{}, ErrInvalidShareRequest
@@ -145,7 +145,7 @@ func newGetShareQuery(req GetShareRequest) (getShareQuery, error) {
 	return getShareQuery{ShareCode: shareCode}, nil
 }
 
-func newListSharesQuery(creatorUserID string, req ShareListRequest) (listSharesQuery, error) {
+func newListSharesQuery(creatorUserID string, req ListSharesRequest) (listSharesQuery, error) {
 	if creatorUserID == "" {
 		return listSharesQuery{}, ErrInvalidShareRequest
 	}

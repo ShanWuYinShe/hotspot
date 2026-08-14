@@ -80,7 +80,7 @@ func (s *Service) DeleteTag(ctx context.Context, name string, hardDelete bool) (
 	return nil, nil
 }
 
-func (s *Service) SearchAnnouncements(ctx context.Context, req AdminAnnouncementSearchRequest) (PaginatedAdminAnnouncements, *httpx.APIError, error) {
+func (s *Service) ListAdminAnnouncements(ctx context.Context, req ListAdminAnnouncementsRequest) (PaginatedAdminAnnouncements, *httpx.APIError, error) {
 	if _, apiErr, err := s.requirePermission(ctx, permissionAnnouncementsRead); apiErr != nil || err != nil {
 		return PaginatedAdminAnnouncements{}, apiErr, err
 	}
@@ -256,11 +256,11 @@ func (s *Service) SearchUsers(ctx context.Context, req AdminUserSearchRequest) (
 		}
 		return PaginatedAdminUsers{}, nil, err
 	}
-	// IP 字段为敏感 PII（spec admin_core.md admin.users.read_ip）：权限不足时字段缺省
+	// IP 字段为敏感 PII（spec api_spec_admin.md admin.users.read_ip）：权限不足时字段为 null
 	if !actor.HasPermission(permissionUsersReadIP) {
 		for i := range page.Items {
-			page.Items[i].RegisterIP = ""
-			page.Items[i].LastLoginIP = ""
+			page.Items[i].RegisterIP = nil
+			page.Items[i].LastLoginIP = nil
 		}
 	}
 	resp := PaginatedAdminUsers{Items: page.Items}
@@ -288,10 +288,10 @@ func (s *Service) OpenAdminUser(ctx context.Context, userID string) (AdminUserIt
 	if !found {
 		return AdminUserItem{}, &httpx.APIError{Code: httpx.CodeNotFound, Message: "用户不存在"}, nil
 	}
-	// IP 字段为敏感 PII（spec admin_core.md admin.users.read_ip）：权限不足时字段缺省
+	// IP 字段为敏感 PII（spec api_spec_admin.md admin.users.read_ip）：权限不足时字段为 null
 	if !actor.HasPermission(permissionUsersReadIP) {
-		item.RegisterIP = ""
-		item.LastLoginIP = ""
+		item.RegisterIP = nil
+		item.LastLoginIP = nil
 	}
 	return item, nil, nil
 }
@@ -325,7 +325,7 @@ func (s *Service) SetUserBan(ctx context.Context, req AdminSetUserBanRequest) (*
 	if _, isAdmin, err := s.repo.GetActor(ctx, req.UserID); err != nil {
 		return nil, err
 	} else if isAdmin && !actor.IsSuperAdmin() {
-		return &httpx.APIError{Code: httpx.CodeForbidden, Message: "系统管理员权限不足: admin.users.write"}, nil
+		return httpx.Forbidden(httpx.ReasonAdminProtectedTarget, "目标为平台管理员，不能解封"), nil
 	}
 	if err := s.repo.SetUserBanState(ctx, req.UserID, UserBanState{Status: UserAccountStatusNormal}); err != nil {
 		if apiErr := asAPIError(err); apiErr != nil {
@@ -461,7 +461,7 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 	// ban_duration_days 时实际执行封禁，须同时具备 admin.users.write，
 	// 防止低权限管理员经举报通道绕过用户封禁权限边界。
 	if req.Action == ReportActionResolve && req.BanDurationDays != nil && !actor.HasPermission(permissionUsersWrite) {
-		return &httpx.APIError{Code: httpx.CodeForbidden, Message: "系统管理员权限不足: " + permissionUsersWrite}, nil
+		return httpx.Forbidden(httpx.ReasonInsufficientAdminPermission, "平台管理员权限不足: "+permissionUsersWrite), nil
 	}
 	if req.Action == ReportActionResolve {
 		switch record.Item.TargetType {
@@ -589,17 +589,12 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 	if !found {
 		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "用户不存在"}, nil
 	}
-	targetActor, isAdmin, err := s.repo.GetActor(ctx, userID)
+	_, isAdmin, err := s.repo.GetActor(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	if isAdmin {
-		if !actor.IsSuperAdmin() {
-			return &httpx.APIError{Code: httpx.CodeForbidden, Message: "系统管理员权限不足: admin.users.write"}, nil
-		}
-		if targetActor.IsSuperAdmin() && !actor.IsSuperAdmin() {
-			return &httpx.APIError{Code: httpx.CodeForbidden, Message: "系统管理员权限不足: admin.users.write"}, nil
-		}
+	if isAdmin && !actor.IsSuperAdmin() {
+		return httpx.Forbidden(httpx.ReasonAdminProtectedTarget, "目标为平台管理员或超管，不能封禁"), nil
 	}
 	duration := 0
 	if durationDays != nil {

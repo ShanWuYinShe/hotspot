@@ -7,6 +7,6 @@ type Repository interface {
 	ListNearbyMoments(context.Context, momentsQuery) (PaginatedMoments, error)
 	ListNearbyGroups(context.Context, groupsQuery) (PaginatedGroups, error)
 	ListNearbyUsers(context.Context, usersQuery) (PaginatedUsers, error)
-	ListTrending(context.Context, string) (TrendingBundle, error)
+	ListTrending(context.Context, string) (TrendingResult, error)
 	FetchMomentImageRows(context.Context, []string) (map[string][]momentImageRow, error)
 }

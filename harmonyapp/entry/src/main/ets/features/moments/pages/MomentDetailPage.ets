@@ -14,7 +14,7 @@ import {
   MomentImage,
   MomentItem,
   MomentSharePayload,
-  MyProfile,
+  AccountInfo,
   CommentItem,
   CommentsRequest,
   CreateCommentRequest,
@@ -73,7 +73,7 @@ export struct MomentDetailPage {
   @State commentSending: boolean = false;
   /** 本地新增评论数（服务端计数刷新前叠加展示，避免手动克隆 MomentItem） */
   @State commentAdditions: number = 0;
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
 
   private isDestroyed: boolean = false;
 

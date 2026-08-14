@@ -62,9 +62,6 @@ func (r *PostgresRepository) ListApplications(ctx context.Context, groupID strin
 			value := handledAt.UTC().Format(time.RFC3339)
 			item.HandledAt = &value
 		}
-		if handledByUserID != nil && *handledByUserID != "" {
-			item.HandledBy = &UserInfo{UserID: *handledByUserID, Nickname: *handledByUserID}
-		}
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -145,9 +142,6 @@ func (r *PostgresRepository) ListMyApplications(ctx context.Context, userID stri
 			value := handledAt.UTC().Format(time.RFC3339)
 			item.HandledAt = &value
 		}
-		if handledByUserID != nil && *handledByUserID != "" {
-			item.HandledBy = &UserInfo{UserID: *handledByUserID, Nickname: *handledByUserID}
-		}
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -190,9 +184,6 @@ func (r *PostgresRepository) loadApplication(ctx context.Context, applicationID 
 	if handledAt != nil {
 		value := handledAt.UTC().Format(time.RFC3339)
 		item.HandledAt = &value
-	}
-	if handledByUserID != nil && *handledByUserID != "" {
-		item.HandledBy = &UserInfo{UserID: *handledByUserID, Nickname: *handledByUserID}
 	}
 	return item, nil
 }

@@ -8,7 +8,7 @@
  * - 注册用户（normal，有 token）：完整功能，含密码修改等
  */
 
-import { MyProfile, ClientConfig, AppLimits } from '../types/api';
+import { AccountInfo, ClientConfig, AppLimits } from '../types/api';
 import type { UserType } from '../types/api';
 import { LocationInfo } from '../location/LocationUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -33,7 +33,7 @@ export interface UnreadCount {
  * 全局状态接口定义（用于类型引用）
  */
 export interface GlobalState {
-  currentUser: MyProfile | null;
+  currentUser: AccountInfo | null;
   isLoggedIn: boolean;
   userType: string;
   networkConnected: boolean;
@@ -56,7 +56,7 @@ export const KEY_CLIENT_CONFIG = 'clientConfig';
 
 // PersistentStorage 不支持 null 默认值，可空类型改用 AppStorage 初始化
 // 需要持久化的扩展状态统一通过 PreferencesUtil 处理
-AppStorage.setOrCreate<MyProfile | null>(KEY_CURRENT_USER, null);
+AppStorage.setOrCreate<AccountInfo | null>(KEY_CURRENT_USER, null);
 PersistentStorage.persistProp<boolean>(KEY_IS_LOGGED_IN, false);
 PersistentStorage.persistProp<string>(KEY_USER_TYPE, '');
 AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, null);
@@ -125,7 +125,7 @@ export class GlobalStateManager {
    * isLoggedIn = (user !== null)，表示有 token（含临时用户和注册用户）
    * userType 仅区分 'temp' | 'normal'（管理员身份由 RBAC 获取）
    */
-  updateUser(user: MyProfile | null): void {
+  updateUser(user: AccountInfo | null): void {
     AppStorage.setOrCreate(KEY_CURRENT_USER, user);
     AppStorage.setOrCreate(KEY_IS_LOGGED_IN, user !== null);
     AppStorage.setOrCreate(KEY_USER_TYPE, user?.user_type || '');
@@ -134,8 +134,8 @@ export class GlobalStateManager {
   /**
    * 获取当前用户 (供非UI组件使用)
    */
-  getCurrentUser(): MyProfile | null | undefined {
-    return AppStorage.get<MyProfile | null>(KEY_CURRENT_USER);
+  getCurrentUser(): AccountInfo | null | undefined {
+    return AppStorage.get<AccountInfo | null>(KEY_CURRENT_USER);
   }
 
   /**

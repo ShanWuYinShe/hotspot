@@ -39,7 +39,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	var req MyReportsRequest
+	var req ListReportsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteInvalidRequest(w, r, "List", "请求体格式错误")
 		return

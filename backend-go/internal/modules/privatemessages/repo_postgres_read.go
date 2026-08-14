@@ -7,7 +7,7 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
-func (r *PostgresRepository) History(ctx context.Context, userID string, req GetHistoryRequest) (PaginatedMessages, error) {
+func (r *PostgresRepository) History(ctx context.Context, userID string, req ListPrivateMessagesRequest) (PaginatedMessages, error) {
 	return r.historySince(ctx, userID, req.TargetUserID, req.Pagination, nil)
 }
 

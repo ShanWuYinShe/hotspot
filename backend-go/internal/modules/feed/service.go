@@ -77,6 +77,7 @@ func (s *Service) Following(ctx context.Context, req GetFeedFollowingRequest) (P
 	}
 	s.hydrateImages(ctx, items.Items)
 	s.fillReactions(ctx, items.Items, principal.UserID)
+	normalizeMomentItems(items.Items)
 	return items, nil
 }
 
@@ -103,10 +104,29 @@ func (s *Service) Nearby(ctx context.Context, req GetFeedNearbyRequest) (Paginat
 	}
 	s.hydrateImages(ctx, items.Items)
 	s.fillReactions(ctx, items.Items, principal.UserID)
+	normalizeMomentItems(items.Items)
 	return items, nil
 }
 
 func (s *Service) SetReactionAggregator(ra ReactionAggregator) { s.reactions = ra }
+
+// normalizeMomentItems 保证恒定数组字段序列化为 []（空数组）而非 null（spec 恒定形状）。
+func normalizeMomentItems(items []MomentItem) {
+	for i := range items {
+		if items[i].Images == nil {
+			items[i].Images = []MomentImage{}
+		}
+		if items[i].Tags == nil {
+			items[i].Tags = []string{}
+		}
+		if items[i].Mentions == nil {
+			items[i].Mentions = []string{}
+		}
+		if items[i].Reactions == nil {
+			items[i].Reactions = []Reaction{}
+		}
+	}
+}
 
 func (s *Service) fillReactions(ctx context.Context, items []MomentItem, viewerID string) {
 	if s.reactions == nil || len(items) == 0 {
@@ -182,7 +202,7 @@ func (s *Service) NearbyUsers(ctx context.Context, req GetFeedNearbyUsersRequest
 	return items, nil
 }
 
-func (s *Service) Trending(ctx context.Context) (TrendingBundle, error) {
+func (s *Service) Trending(ctx context.Context) (TrendingResult, error) {
 	viewerUserID := ""
 	if principal, ok := platformauth.PrincipalFromContext(ctx); ok {
 		viewerUserID = principal.UserID
@@ -190,12 +210,13 @@ func (s *Service) Trending(ctx context.Context) (TrendingBundle, error) {
 	bundle, err := s.repo.ListTrending(ctx, viewerUserID)
 	if err != nil {
 		observability.L().Error("feed.trending failed", "error", err)
-		return TrendingBundle{}, err
+		return TrendingResult{}, err
 	}
 	cfg := s.appConfig.Get(ctx)
 	bundle.HotMoments = slicex.LimitCopy(bundle.HotMoments, cfg.ResponseDefaults.HotMomentsCount)
 	s.hydrateImages(ctx, bundle.HotMoments)
 	s.fillReactions(ctx, bundle.HotMoments, viewerUserID)
+	normalizeMomentItems(bundle.HotMoments)
 	return bundle, nil
 }
 

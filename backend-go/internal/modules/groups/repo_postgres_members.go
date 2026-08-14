@@ -2,10 +2,13 @@ package groups
 
 import (
 	"context"
+	"errors"
 
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+
+	"github.com/jackc/pgx/v5"
 )
 
 func (r *PostgresRepository) ListMembers(ctx context.Context, groupID string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
@@ -35,6 +38,45 @@ func (r *PostgresRepository) ListMembers(ctx context.Context, groupID string, ro
 		}
 		item.Role = GroupRole(roleText)
 		item.JoinedAt = joinedAt.UTC().Format(time.RFC3339)
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, "", err
+	}
+	return items, "", nil
+}
+
+// ListAdminMembers returns the admin-perspective member list (includes the
+// truthy muted_until; null = not muted). groups/admin/members/list only.
+func (r *PostgresRepository) ListAdminMembers(ctx context.Context, groupID string, role *GroupRole, limit int, cursor string) ([]AdminGroupMemberItem, string, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return nil, "", persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return nil, "", persistence.ErrNotImplemented
+	}
+	roleValue := ""
+	if role != nil {
+		roleValue = string(*role)
+	}
+	rows, err := queryable.Query(ctx, queryListAdminGroupMembers, groupID, roleValue)
+	if err != nil {
+		return nil, "", err
+	}
+	defer rows.Close()
+	items := make([]AdminGroupMemberItem, 0)
+	for rows.Next() {
+		var item AdminGroupMemberItem
+		var roleText string
+		var joinedAt time.Time
+		var mutedUntil *time.Time
+		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &roleText, &joinedAt, &mutedUntil); err != nil {
+			return nil, "", err
+		}
+		item.Role = GroupRole(roleText)
+		item.JoinedAt = joinedAt.UTC().Format(time.RFC3339)
+		item.MutedUntil = formatMutedUntil(mutedUntil)
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -182,6 +224,26 @@ func (r *PostgresRepository) ListBannedMembers(ctx context.Context, groupID stri
 		return nil, "", err
 	}
 	return items, "", nil
+}
+
+// IsBanned reports whether the user is banned from the group (join-time check, C.3).
+func (r *PostgresRepository) IsBanned(ctx context.Context, groupID, userID string) (bool, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return false, persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return false, persistence.ErrNotImplemented
+	}
+	var one int
+	err := queryable.QueryRow(ctx, queryIsGroupBanned, groupID, userID).Scan(&one)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 func (r *PostgresRepository) RemoveMember(ctx context.Context, userID string, req RemoveMemberRequest) error {

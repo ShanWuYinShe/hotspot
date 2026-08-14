@@ -22,12 +22,13 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-func (h *Handler) CheckStatus(w http.ResponseWriter, r *http.Request) {
+// GetStatus 检查认证状态（spec auth.md → get_status，optional 档）。
+func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.CheckStatus(r.Context())))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.GetStatus(r.Context())))
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
@@ -245,8 +246,8 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
-	// 自然去重（spec api_spec_auth.md）：首次成功后旧密码立即失效，
-	// 重发同一请求（仍带旧密码）返回 httpx.CodeUnauthorized，不会重复改密。无需 Idempotency-Key。
+	// 自然去重（spec api_spec_auth.md → change_password）：首次成功后旧密码立即失效，
+	// 重发同一请求（仍带旧密码）返回 httpx.CodeInvalidOldCredential（10401 旧密码错误），不会重复改密。无需 Idempotency-Key。
 	if err := h.service.ChangePassword(r.Context(), req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, errorResponse[struct{}](apiErrorFrom(err)))
 		return

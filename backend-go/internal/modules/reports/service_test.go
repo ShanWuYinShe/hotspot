@@ -24,7 +24,7 @@ type stubRepo struct {
 func (r *stubRepo) Create(_ context.Context, _ string, _ CreateReportRequest) (ReportCreated, error) {
 	return r.created, r.createErr
 }
-func (r *stubRepo) List(_ context.Context, _ string, _ MyReportsRequest) (PaginatedReports, error) {
+func (r *stubRepo) List(_ context.Context, _ string, _ ListReportsRequest) (PaginatedReports, error) {
 	return r.listResult, r.listErr
 }
 func (r *stubRepo) FindExistingReport(_ context.Context, _ string, _ ReportTargetType, _ string) (string, bool, error) {
@@ -151,7 +151,7 @@ func TestServiceCreateRejectsDescriptionTooLong(t *testing.T) {
 func TestServiceListPassesUserID(t *testing.T) {
 	repo := &stubRepo{listResult: PaginatedReports{Items: []ReportItem{{ReportID: "r1"}}}}
 	service := NewServiceWithRepo(repo)
-	result, err := service.List(ctxWithUser("u1"), MyReportsRequest{})
+	result, err := service.List(ctxWithUser("u1"), ListReportsRequest{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestServiceListPassesUserID(t *testing.T) {
 
 func TestServiceListPropagatesError(t *testing.T) {
 	service := NewServiceWithRepo(&stubRepo{listErr: errors.New("boom")})
-	_, err := service.List(ctxWithUser("u1"), MyReportsRequest{})
+	_, err := service.List(ctxWithUser("u1"), ListReportsRequest{})
 	if err == nil {
 		t.Fatal("expected error")
 	}

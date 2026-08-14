@@ -34,10 +34,10 @@ func (r *InMemoryRepository) AppendMany(ctx context.Context, userIDs []string, i
 	return nil
 }
 
-func (r *InMemoryRepository) List(_ context.Context, userID string, req NotificationListRequest) (PaginatedNotify, error) {
+func (r *InMemoryRepository) List(_ context.Context, userID string, req NotifyListRequest) (PaginatedNotify, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	query, err := normalizeNotificationListQuery(req)
+	query, err := normalizeNotifyListQuery(req)
 	if err != nil {
 		return PaginatedNotify{}, err
 	}
@@ -69,7 +69,7 @@ func (r *InMemoryRepository) List(_ context.Context, userID string, req Notifica
 	page := PaginatedNotify{}
 	if len(items) > query.Limit {
 		last := items[query.Limit-1]
-		page.NextCursor = encodeNotificationCursor(notificationCursor{CreatedAt: last.CreatedAt, NotifyID: last.NotifyID})
+		page.NextCursor = encodeNotifyCursor(notifyCursor{CreatedAt: last.CreatedAt, NotifyID: last.NotifyID})
 		items = items[:query.Limit]
 	}
 	page.Items = items
@@ -121,8 +121,8 @@ func (r *InMemoryRepository) MarkAllRead(_ context.Context, userID string) error
 	return nil
 }
 
-func bucket(notificationType string) string {
-	switch notificationType {
+func bucket(notifyType string) string {
+	switch notifyType {
 	case "new_follower", "mutual_follow":
 		return "social"
 	case "moment_commented", "comment_reply", "mentioned", "reaction_added":

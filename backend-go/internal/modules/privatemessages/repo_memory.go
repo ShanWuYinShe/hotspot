@@ -48,7 +48,7 @@ func (r *InMemoryRepository) Send(_ context.Context, senderID, targetUserID stri
 	r.messages[key] = append(r.messages[key], msg)
 	return MessageSent{MessageID: msg.MessageID, SentAt: msg.SentAt}, nil
 }
-func (r *InMemoryRepository) History(_ context.Context, userID string, req GetHistoryRequest) (PaginatedMessages, error) {
+func (r *InMemoryRepository) History(_ context.Context, userID string, req ListPrivateMessagesRequest) (PaginatedMessages, error) {
 	targetUserID := req.TargetUserID
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -92,7 +92,7 @@ func (r *InMemoryRepository) History(_ context.Context, userID string, req GetHi
 	return PaginatedMessages{Items: items[:limit], NextCursor: encodeMessageCursor(next.SentAt, next.MessageID)}, nil
 }
 func (r *InMemoryRepository) Recent(ctx context.Context, userID, targetUserID string, limit int, deletedAfter *time.Time) (PaginatedMessages, error) {
-	history, err := r.History(ctx, userID, GetHistoryRequest{TargetUserID: targetUserID})
+	history, err := r.History(ctx, userID, ListPrivateMessagesRequest{TargetUserID: targetUserID})
 	if err != nil {
 		return PaginatedMessages{}, err
 	}

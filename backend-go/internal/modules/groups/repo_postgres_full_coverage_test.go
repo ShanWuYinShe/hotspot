@@ -280,11 +280,11 @@ func TestPostgresListMyGroupsPaginationAndFields(t *testing.T) {
 	if err != nil || len(items) != 2 || next == "" {
 		t.Fatalf("list my groups: %#v next=%q err=%v", items, next, err)
 	}
-	if items[0].LastMessage == nil || items[0].LastMessage.MessageID != "m1" || items[0].MyState == nil || items[0].OnlineMembersCount == nil {
+	if items[0].LastMessage == nil || items[0].LastMessage.MessageID != "m1" || items[0].ViewerState == nil || items[0].OnlineMembersCount == nil {
 		t.Fatalf("my groups fields: %#v", items[0])
 	}
-	if items[0].MyState.IsPinned != true || items[0].MyState.UnreadCount != 5 {
-		t.Fatalf("my groups member state: %#v", items[0].MyState)
+	if items[0].ViewerState.IsPinned != true || items[0].ViewerState.UnreadCount != 5 {
+		t.Fatalf("my groups member state: %#v", items[0].ViewerState)
 	}
 	// 带 pageToken 的 keyset 路径
 	token, err := cursor.Encode(myGroupsCursorNamespace, myGroupsCursor{JoinedAt: gTestTime.Format(time.RFC3339Nano), GroupID: "g1"})
@@ -469,7 +469,7 @@ func TestPostgresApplicationsAndInvitesLists(t *testing.T) {
 	// ListApplications
 	stub := &groupFullStub{queryRows: map[string][][]any{queryListGroupApplications: {appRow("a1"), appRow("a2")}}}
 	items, _, err := newGroupsFullRepo(stub).ListApplications(ctx, "group_1", &status, 20, "")
-	if err != nil || len(items) != 2 || items[0].Message == nil || items[0].HandledAt == nil || items[0].HandledBy == nil {
+	if err != nil || len(items) != 2 || items[0].Message == nil || items[0].HandledAt == nil {
 		t.Fatalf("list applications: %#v err=%v", items, err)
 	}
 	stub = &groupFullStub{queryRowsErr: map[string]error{queryListGroupApplications: errors.New("boom")}}

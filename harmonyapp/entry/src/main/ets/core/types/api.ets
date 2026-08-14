@@ -212,7 +212,7 @@ export interface GroupInfo {
   members_count: number;
 }
 
-export interface MyGroupState {
+export interface GroupViewerState {
   role: GroupRole;
   is_joined: boolean;
   unread_count: number;
@@ -240,14 +240,14 @@ export interface GroupItem {
   location: RelativeLocation;
   last_activity_at?: string;
 
-  // 群列表场景返回（仅 groups/list_my；其他场景省略，见 spec api_spec_types.md）
+  // 群列表场景返回（仅 groups/list_joined；其他场景省略，见 spec api_spec_types.md）
   last_message?: LastMessagePreview;
 
   created_at?: string;
   owner_id?: string;
 
   // @auth-only
-  my_state?: MyGroupState;
+  my_state?: GroupViewerState;
   friends_in_group?: number;
 
   // 加入门槛（@all 可见）
@@ -411,7 +411,7 @@ export interface PrivateChatItem {
   presence_status?: UserPresenceStatus;
   created_at?: string;
   can_message: boolean;
-  message_blocked_reason?: BlockReason;
+  blocked_reason: ForbiddenReason | null;  // 仅 can_message=false 时非 null（spec chat.md → PrivateChatItem）
 }
 
 export interface PrivateChatOpenResult {
@@ -462,7 +462,7 @@ export interface RefreshTokenRequest {
 
 export interface AuthStatus {
   is_valid: boolean;
-  user_id?: string; // is_valid=true 时返回（spec auth.md → check_status）
+  user_id?: string; // is_valid=true 时返回（spec auth.md → get_status）
   expires_at?: string;
 }
 
@@ -510,7 +510,20 @@ export interface ChangePasswordRequest {
 
 export type Gender = 'male' | 'female' | 'other';
 export type ChatPerm = 'everyone' | 'friends' | 'nobody';
-export type BlockReason = 'blocked' | 'privacy' | 'stranger_quota_exceeded';
+// 10200 失败时的权限拒绝原因（spec api_spec_errors.md → ForbiddenReason 权威定义，12 项）
+export type ForbiddenReason =
+  | 'not_admin'
+  | 'insufficient_admin_permission'
+  | 'admin_protected_target'
+  | 'not_group_member'
+  | 'not_group_admin'
+  | 'not_group_owner'
+  | 'not_resource_owner'
+  | 'not_chat_participant'
+  | 'privacy_setting'
+  | 'blocked_by_user'
+  | 'stranger_quota_exceeded'
+  | 'banned_in_group';
 export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'revoked';
 
 export interface SearchUsersRequest {
@@ -547,7 +560,7 @@ export interface UserLikedMomentsRequest {
 
 // My Profile
 
-export interface MyProfile {
+export interface AccountInfo {
   user_id: string;
   nickname: string;
   avatar_url?: string;
@@ -644,7 +657,7 @@ export interface ListFollowersRequest {
   pagination?: PaginationParams;
 }
 
-export interface MyBlockedRequest {
+export interface ListBlockedRequest {
   pagination?: PaginationParams;
 }
 
@@ -716,11 +729,11 @@ export interface UnfavoriteMomentRequest {
   active?: boolean;
 }
 
-export interface MyMomentsRequest {
+export interface ListCreatedMomentsRequest {
   pagination?: PaginationParams;
 }
 
-export interface MyFavoritesRequest {
+export interface ListFavoriteMomentsRequest {
   pagination?: PaginationParams;
 }
 
@@ -785,7 +798,7 @@ export interface ListReactionsRequest {
 
 // ==================== 私聊管理API类型 ====================
 
-export interface MyPrivateChatsRequest {
+export interface ListPrivateChatsRequest {
   pagination?: PaginationParams;
 }
 
@@ -1024,11 +1037,11 @@ export interface TransferOwnershipRequest {
   new_owner_id: string;
 }
 
-export interface MyGroupsRequest {
+export interface ListJoinedGroupsRequest {
   pagination?: PaginationParams;
 }
 
-export interface MyApplicationsRequest {
+export interface ListSubmittedApplicationsRequest {
   status?: 'pending' | 'accepted' | 'rejected' | 'revoked' | 'all';
   pagination?: PaginationParams;
 }
@@ -1061,7 +1074,7 @@ export interface RevokeSentInviteRequest {
   reason?: string;
 }
 
-export interface MyInvitesRequest {
+export interface ListReceivedInvitesRequest {
   status?: 'pending' | 'accepted' | 'rejected' | 'revoked' | 'all';
   pagination?: PaginationParams;
 }
@@ -1251,7 +1264,7 @@ export interface ReportCreated {
   is_duplicate: boolean;
 }
 
-export interface MyReportsRequest {
+export interface ListReportsRequest {
   status?: ReportStatus;
   target_type?: ReportTargetType;
   pagination?: PaginationParams;
@@ -1963,7 +1976,7 @@ export interface GroupAnnouncementListData {
 
 // ==================== 通知中心 API 类型 ====================
 
-export type NotificationType =
+export type NotifyType =
   'new_follower' | 'mutual_follow' | 'moment_commented'
   | 'comment_reply' | 'mentioned' | 'group_mentioned'
   | 'reaction_added'
@@ -1973,13 +1986,13 @@ export type NotificationType =
   | 'system_announcement'
   | 'nearby_new_moment';
 
-// Spec 定义 NotificationPayload 为 discriminated union（按 type 区分），
+// Spec 定义 NotifyPayload 为 discriminated union（按 type 区分），
 // 但 ArkTS 当前不支持基于字面量类型的类型窄化（type narrowing），
 // 无法在 if/switch 中自动推导 payload 的具体字段。
 // 因此使用扁平接口替代，运行时由业务层按 type 字段手动判断。
 // 若未来 ArkTS 支持 discriminated union 窄化，应迁移至联合类型以获得编译期安全。
-export interface NotificationPayload {
-  type: NotificationType;
+export interface NotifyPayload {
+  type: NotifyType;
   actor?: UserInfo;
   applicant?: UserInfo;
   user?: UserInfo;
@@ -2016,12 +2029,12 @@ export interface NotificationPayload {
   distance?: number;
 }
 
-export interface NotificationItem {
+export interface NotifyItem {
   notify_id: string;
-  type: NotificationType;
+  type: NotifyType;
   is_read: boolean;
   created_at: string;
-  payload: NotificationPayload;
+  payload: NotifyPayload;
 }
 
 export interface UnreadCountByType {
@@ -2038,12 +2051,14 @@ export interface UnreadCountResult {
   by_type: UnreadCountByType;
 }
 
-export interface NotificationListRequest {
-  type?: NotificationType;
+export interface NotifyListRequest {
+  type?: NotifyType;
   is_read?: boolean;
   pagination?: PaginationParams;
 }
 
-export interface MarkAsReadRequest {
+// spec api_spec_notify.md → notify/mark_read：scope 必显式（'ids' 需 notify_ids 1-50；'all' 全部已读）。
+export interface NotifyMarkReadRequest {
+  scope: 'ids' | 'all';
   notify_ids?: string[];
 }

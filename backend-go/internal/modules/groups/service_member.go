@@ -18,7 +18,7 @@ func (s *Service) ListApplications(ctx context.Context, req GroupApplicationsReq
 	if !ok {
 		return nil, "", ErrGroupNotFound
 	}
-	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
 		return nil, "", ErrAccessRestricted
 	}
 	limit := types.PaginationLimitWith(req.Pagination, 20, 100)
@@ -69,7 +69,7 @@ func (s *Service) RejectApplication(ctx context.Context, req RejectGroupApplicat
 	if err := s.repo.RejectApplication(ctx, req.ApplicationID, reasonPtr); err != nil {
 		return err
 	}
-	s.notifyGroupApplicationRejected(ctx, group, application, principal.UserID, reasonPtr)
+	s.notifyGroupApplicationRejected(ctx, group, application, reasonPtr)
 	return nil
 }
 
@@ -82,7 +82,7 @@ func (s *Service) SetMemberRole(ctx context.Context, req SetMemberRoleRequest) e
 		}
 		return ErrGroupNotFound
 	}
-	if group.MyState == nil || group.MyState.Role != GroupRoleOwner {
+	if group.ViewerState == nil || group.ViewerState.Role != GroupRoleOwner {
 		return ErrAccessRestricted
 	}
 	if req.Role != GroupRoleAdmin && req.Role != GroupRoleMember {
@@ -124,11 +124,11 @@ func (s *Service) MuteMember(ctx context.Context, req MuteMemberRequest) error {
 		}
 		return ErrGroupNotFound
 	}
-	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
 		return ErrAccessRestricted
 	}
 	// 目标保护（spec group.md → set_mute）：群主不受禁言
-	if group.OwnerID == req.UserID {
+	if isGroupOwner(group.OwnerID, req.UserID) {
 		return ErrBusinessConflict
 	}
 	if req.DurationMinutes < 1 || req.DurationMinutes > MaxMuteDurationMinutes {
@@ -161,7 +161,7 @@ func (s *Service) UnmuteMember(ctx context.Context, req UnmuteMemberRequest) err
 		}
 		return ErrGroupNotFound
 	}
-	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
 		return ErrAccessRestricted
 	}
 	if err := s.repo.UnmuteMember(ctx, principal.UserID, req); err != nil {
@@ -190,14 +190,14 @@ func (s *Service) SetMemberBan(ctx context.Context, req SetMemberBanRequest) err
 		}
 		return ErrGroupNotFound
 	}
-	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
 		return ErrAccessRestricted
 	}
 	if req.Active && req.UserID == principal.UserID {
 		return ErrAccessRestricted
 	}
 	// 目标保护（spec group.md → set_ban）：群主不可被封禁
-	if req.Active && group.OwnerID == req.UserID {
+	if req.Active && isGroupOwner(group.OwnerID, req.UserID) {
 		return ErrBusinessConflict
 	}
 	if req.Active {
@@ -237,7 +237,7 @@ func (s *Service) ListBannedMembers(ctx context.Context, req BannedMembersReques
 		}
 		return nil, "", ErrGroupNotFound
 	}
-	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
 		return nil, "", ErrAccessRestricted
 	}
 	limit := types.PaginationLimitWith(req.Pagination, 20, 100)
@@ -253,14 +253,14 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 		}
 		return ErrGroupNotFound
 	}
-	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
 		return ErrAccessRestricted
 	}
 	if req.UserID == principal.UserID {
 		return ErrAccessRestricted
 	}
 	// 目标保护（spec group.md → members/remove）：群主不可被移除
-	if group.OwnerID == req.UserID {
+	if isGroupOwner(group.OwnerID, req.UserID) {
 		return ErrBusinessConflict
 	}
 	if err := s.repo.RemoveMember(ctx, principal.UserID, req); err != nil {
@@ -298,7 +298,7 @@ func (s *Service) TransferOwnership(ctx context.Context, req TransferOwnershipRe
 		}
 		return ErrGroupNotFound
 	}
-	if group.MyState == nil || group.MyState.Role != GroupRoleOwner {
+	if group.ViewerState == nil || group.ViewerState.Role != GroupRoleOwner {
 		return ErrAccessRestricted
 	}
 	if req.NewOwnerID == principal.UserID {
@@ -343,7 +343,7 @@ func (s *Service) findApplicationForApprover(ctx context.Context, approverUserID
 	if !found {
 		return GroupApplicationItem{}, GroupItem{}, ErrGroupNotFound
 	}
-	// Get loads the approver's MyState (role) from the auth context, so we can
+	// Get loads the approver's ViewerState (role) from the auth context, so we can
 	// authorize without paging member lists.
 	group, groupFound, err := s.repo.Get(ctx, item.GroupID)
 	if err != nil {
@@ -352,7 +352,7 @@ func (s *Service) findApplicationForApprover(ctx context.Context, approverUserID
 	if !groupFound {
 		return GroupApplicationItem{}, GroupItem{}, ErrGroupNotFound
 	}
-	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
 		return GroupApplicationItem{}, GroupItem{}, ErrAccessRestricted
 	}
 	if item.Status != ApplicationStatusPending {

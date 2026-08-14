@@ -34,6 +34,7 @@ type InMemoryRepository struct {
 	reactedMoments map[string][]reactedMomentRecord
 	groupsByUser   map[string][]grouptypes.GroupItem
 	momentsByUser  map[string][]momenttypes.MomentItem
+	blockedTags    map[string]struct{}
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
@@ -44,6 +45,7 @@ func NewInMemoryRepository() *InMemoryRepository {
 		reactedMoments: make(map[string][]reactedMomentRecord),
 		groupsByUser:   make(map[string][]grouptypes.GroupItem),
 		momentsByUser:  make(map[string][]momenttypes.MomentItem),
+		blockedTags:    make(map[string]struct{}),
 	}
 }
 
@@ -207,6 +209,27 @@ func (r *InMemoryRepository) SetRemark(_ context.Context, userID, targetUserID, 
 	r.relations[userID][targetUserID] = relation
 	return nil
 }
+
+// CheckBlockedTags 返回 tags 中命中平台屏蔽标签的标签名（内存实现读取 blockedTags 集合）。
+func (r *InMemoryRepository) CheckBlockedTags(_ context.Context, tags []string) ([]string, error) {
+	if len(tags) == 0 {
+		return nil, nil
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	blocked := make([]string, 0)
+	seen := make(map[string]struct{})
+	for _, tag := range tags {
+		if _, ok := r.blockedTags[tag]; ok {
+			if _, dup := seen[tag]; !dup {
+				blocked = append(blocked, tag)
+				seen[tag] = struct{}{}
+			}
+		}
+	}
+	return blocked, nil
+}
+
 func (r *InMemoryRepository) ListBlocked(_ context.Context, userID string, limit int, cursor string) (PaginatedBlockedUsers, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -266,7 +289,8 @@ func (r *InMemoryRepository) ListFriends(_ context.Context, userID string, limit
 		if relation.Following && reverse.Following {
 			lastOnline := r.profiles[targetUserID].LastOnline
 			presence := r.profiles[targetUserID].PresenceStatus
-			item := FriendItem{User: UserInfo{UserID: targetUserID, Nickname: r.nicknameFor(targetUserID), AvatarURL: r.profiles[targetUserID].AvatarURL}, Remark: relation.Remark, FollowedAt: relation.FollowedAt, FollowedBackAt: maxStringTime(relation.FollowedAt, reverse.FollowedAt)}
+			remark := relation.Remark
+			item := FriendItem{User: UserInfo{UserID: targetUserID, Nickname: r.nicknameFor(targetUserID), AvatarURL: r.profiles[targetUserID].AvatarURL}, Remark: &remark, FollowedAt: relation.FollowedAt, FollowedBackAt: maxStringTime(relation.FollowedAt, reverse.FollowedAt)}
 			if lastOnline != "" {
 				item.LastOnline = &lastOnline
 			}
@@ -489,7 +513,13 @@ func paginateGroups(items []grouptypes.GroupItem, limit int, cursor string) grou
 	if limit <= 0 {
 		limit = 20
 	}
-	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].MyState.JoinedAt, items[i].Group.GroupID }, len(items))
+	start, ok := findUserCursorStart(cursor, func(i int) (string, string) {
+		joinedAt := ""
+		if items[i].ViewerState != nil {
+			joinedAt = items[i].ViewerState.JoinedAt
+		}
+		return joinedAt, items[i].Group.GroupID
+	}, len(items))
 	if !ok {
 		return grouptypes.PaginatedGroups{}
 	}
@@ -499,7 +529,12 @@ func paginateGroups(items []grouptypes.GroupItem, limit int, cursor string) grou
 	}
 	resp := grouptypes.PaginatedGroups{Items: items[start:end]}
 	if end < len(items) && end > start {
-		resp.NextCursor = encodeUserMomentCursor(items[end-1].MyState.JoinedAt, items[end-1].Group.GroupID)
+		joinedAt := ""
+		if items[end-1].ViewerState != nil {
+			joinedAt = items[end-1].ViewerState.JoinedAt
+		}
+		next := encodeUserMomentCursor(joinedAt, items[end-1].Group.GroupID)
+		resp.NextCursor = &next
 	}
 	return resp
 }

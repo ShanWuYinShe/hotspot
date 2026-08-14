@@ -34,12 +34,15 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 	idempotency.ReplayOrStore(w, r, "private_messages/send", func() httpx.ApiResponse[any] {
 		msg, err := h.service.Send(r.Context(), req)
 		if err != nil {
-			var blocked *MessageBlockedError
-			if errors.As(err, &blocked) {
-				// 契约(api_spec_chat.md):发送被拒绝返回 httpx.CodeForbidden,data 携带 { reason: BlockReason }
-				observability.LogBusinessError(r, "Send", int(httpx.CodeForbidden), "发送被拒绝")
-				var data any = map[string]string{"reason": string(blocked.Reason)}
-				return httpx.ApiResponse[any]{Code: httpx.CodeForbidden, Message: "发送被拒绝", Data: &data}
+			var apiErr *httpx.APIError
+			if errors.As(err, &apiErr) {
+				// 契约(api_spec_errors.md):10200 必带 data.forbidden_reason(httpx.Forbidden 自动带出)
+				observability.LogBusinessError(r, "Send", int(apiErr.Code), apiErr.Message)
+				if apiErr.Data != nil {
+					var data any = apiErr.Data
+					return httpx.ApiResponse[any]{Code: apiErr.Code, Message: apiErr.Message, Data: &data}
+				}
+				return httpx.ApiResponse[any]{Code: apiErr.Code, Message: apiErr.Message}
 			}
 			// 契约(api_spec_chat.md → private_messages/send 10400)：share_code 无效等业务冲突
 			if errors.Is(err, ErrInvalidShareCode) {
@@ -54,19 +57,19 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) GetHistory(w http.ResponseWriter, r *http.Request) {
-	var req GetHistoryRequest
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
+	var req ListPrivateMessagesRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteAPIError(w, r, "GetHistory", err)
+		httpx.WriteAPIError(w, r, "List", err)
 		return
 	}
 	if req.TargetUserID == "" || !isValidPagination(req.Pagination) {
-		httpx.WriteInvalidRequest(w, r, "GetHistory", "参数错误")
+		httpx.WriteInvalidRequest(w, r, "List", "参数错误")
 		return
 	}
 	history, err := h.service.History(r.Context(), req)
 	if err != nil {
-		httpx.WriteAPIError(w, r, "GetHistory", err)
+		httpx.WriteAPIError(w, r, "List", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(history))
@@ -84,8 +87,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			observability.LogBusinessError(r, "Update", int(httpx.CodeNotFound), "消息不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "消息不存在"))
 		case errors.Is(err, ErrMessagePermissionDenied):
-			observability.LogBusinessError(r, "Update", int(httpx.CodeForbidden), "无权限编辑消息")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "无权限编辑消息"))
+			// 契约(api_spec_chat.md → private_messages/update)：非作者编辑 → 10200 + not_resource_owner
+			httpx.WriteAPIError(w, r, "Update", httpx.Forbidden(httpx.ReasonNotResourceOwner, "无权限编辑消息"))
 		case errors.Is(err, ErrMessageNotEditable):
 			observability.LogBusinessError(r, "Update", int(httpx.CodeConflict), "消息不可编辑")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "消息不可编辑"))
@@ -110,8 +113,8 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 			observability.LogBusinessError(r, "Recall", int(httpx.CodeNotFound), "消息不存在")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "消息不存在"))
 		case errors.Is(err, ErrMessagePermissionDenied):
-			observability.LogBusinessError(r, "Recall", int(httpx.CodeForbidden), "无权限撤回消息")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "无权限撤回消息"))
+			// 契约(api_spec_chat.md → private_messages/recall)：非作者撤回 → 10200 + not_resource_owner
+			httpx.WriteAPIError(w, r, "Recall", httpx.Forbidden(httpx.ReasonNotResourceOwner, "无权限撤回消息"))
 		case errors.Is(err, ErrMessageNotRecallable):
 			observability.LogBusinessError(r, "Recall", int(httpx.CodeConflict), "消息不可撤回")
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "消息不可撤回"))

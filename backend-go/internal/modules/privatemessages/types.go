@@ -87,7 +87,7 @@ type SendPrivateMessageRequest struct {
 	ReplyToMessageID string `json:"reply_to_message_id,omitempty"`
 }
 
-type GetHistoryRequest struct {
+type ListPrivateMessagesRequest struct {
 	TargetUserID string            `json:"target_user_id"`
 	Pagination   *PaginationParams `json:"pagination,omitempty"`
 }

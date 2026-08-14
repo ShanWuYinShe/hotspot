@@ -1,6 +1,8 @@
 # HotSpot API - 通用类型定义
 
 > 定义 HotSpot API 跨模块复用的基础值对象（Domain Primitives）和业务核心对象（Domain Entities）。
+>
+> **本文件贯彻「恒定 nullable 通则」**（见 `api_spec_base.md`「类型稳定性」）：权限/隐私条件字段**恒定存在**，`null = 隐藏/不适用`，每个 nullable 字段的 null 语义在注释中写明；内容性可选字段（如无图片的 `images?`）保持 `?`。所有 `@auth-only`/`@owner-only`/`@group-admin-only`/`@member-only`/`@participant-only` 注解已废除——视角差异一律由不同端点 + 不同扩展类型承载（`OwnerXxxItem`/`AdminXxxItem`/`XxxViewerState`）。
 
 ## 契约引用
 
@@ -22,8 +24,7 @@ type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'share' | 'sy
 // 用户类型枚举（仅表达账号生命周期，不含权限角色）
 // - 'temp': 临时用户（访客，未注册）
 // - 'normal': 正式用户（已注册）
-// 管理员身份由 RBAC 系统管理（见 api_spec_admin_core.md），不体现在 UserType 中
-// 系统通知通过 MessageType = 'system' 和公告 API 处理，不需要"系统用户"类型
+// 平台管理员身份由 RBAC 系统管理（见 api_spec_admin.md），不体现在 UserType 中
 type UserType = 'temp' | 'normal';
 
 // 隐私级别枚举（跨模块复用：用户设置、瞬间等）
@@ -31,7 +32,7 @@ type UserType = 'temp' | 'normal';
 // - 'private': 仅自己可见
 type PrivacyLevel = 'public' | 'private';
 
-// 角色枚举
+// 群组角色（仅表达群组内角色；与平台管理员是完全不同的两套体系，见 api_spec_authz.md）
 type GroupRole = 'owner' | 'admin' | 'member';
 
 // === 客户端 ===
@@ -40,9 +41,7 @@ type ClientType = 'web' | 'app';
 // === 设备标识（单设备单会话模型的基础原语，详见 api_spec_auth.md「单设备单会话模型」）===
 // 设备身份标识（UUID v4 字符串）。语义：一台逻辑设备 = 一个 device_id。
 // - App：客户端首次启动生成并存入 Keychain（iOS）/ Keystore（Android），卸载重装后视为新设备；一经生成即稳定，禁止轮换
-// - Web：由服务端通过独立 `device_id` Cookie 下发（非 HttpOnly，前端可读以便与 App 内嵌 WebView 共享；见 base.md「Web 端 device_id cookie」），登出不清除以保持设备身份连续；不同浏览器档案 = 不同 device_id
-// 客户端不得自造或预测 device_id（Web 端由服务端下发；App 端本地生成一次后即稳定）
-// 服务端用作会话主键的一部分：同一 user 在同一 device_id 上只允许一个活跃 session（新登录驱逐旧 session，详见 auth.md login）
+// - Web：由服务端通过独立 device_id Cookie 下发（非 HttpOnly，登出不清除；不同浏览器档案 = 不同 device_id）
 type DeviceId = string;
 
 // === Reaction（emoji 表情回应，统一用于 message/moment/comment 三类资源）===
@@ -53,11 +52,10 @@ type ReactTarget = 'message' | 'moment' | 'comment';
 interface Reaction {
   emoji: string;          // 表情符号
   count: number;          // 该表情的反应总数
-  reacted_by_me: boolean; // 当前用户是否已用此表情反应（@auth-only 语义：匿名时为 false）
+  reacted_by_me: boolean; // 查看者是否已用此表情反应（恒定布尔：匿名/未反应时为 false）
 }
 
 // === 状态枚举 ===
-// 用户在线状态（当前仅支持 online/offline，后续可扩展更多状态）
 type UserPresenceStatus = 'online' | 'offline';
 type ReportStatus = 'pending' | 'resolved' | 'dismissed';
 
@@ -65,7 +63,7 @@ type ReportStatus = 'pending' | 'resolved' | 'dismissed';
 type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
 type ReportAction = 'resolve' | 'dismiss';
 
-// 举报原因枚举（用户从中选取；跨 report + admin_moderation 两模块——AdminReportItem extends ReportItem 继承此字段）
+// 举报原因枚举（用户从中选取；跨 report + admin 两模块）
 type ReportReason =
   | 'spam'              // 垃圾信息/广告
   | 'harassment'        // 骚扰/欺凌
@@ -89,11 +87,11 @@ type FollowSource = 'moment' | 'search' | 'recommendation' | 'profile' | 'group'
 // === 推荐理由类型（用于解释推荐来源）===
 type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
 
-// 私聊权限（跨 user + chat + admin 三模块，故保留在通用类型）
+// 私聊权限（跨 user + chat 模块）
 // 注：'friends' 表示"仅好友"，好友 = 双方互相关注的用户
 type ChatPerm = 'everyone' | 'friends' | 'nobody';
 
-// 通知类型（跨 notification + websocket + admin_moderation 三模块：未读计数、推送事件、管理端，故保留在通用类型）
+// 通知类型（跨 notify + websocket + admin 模块）
 type NotifyType =
   | 'new_follower'                // 被关注
   | 'mutual_follow'               // 形成互相关注
@@ -109,7 +107,7 @@ type NotifyType =
   | 'report_resolved'             // 举报被处理
   | 'report_dismissed'            // 举报被驳回
   | 'system_announcement'         // 系统公告
-  | 'nearby_new_moment';          // 附近有人发布新瞬间（用户可配置开关，服务端节流推送）
+  | 'nearby_new_moment';          // 附近有人发布新瞬间
 
 // 通知分类（用于未读计数分组展示，见 api_spec_notify.md get_unread_count 返回的 by_type）
 // 映射为契约级，新增 NotifyType 时必须同步归类：
@@ -126,20 +124,16 @@ type NotifyCategory = 'social' | 'interaction' | 'group' | 'report' | 'nearby' |
 
 **重要概念：用户真实位置 vs 浏览锚点位置**
 
-本系统区分两种位置：
-- **用户真实位置**：通过「更新我的位置」接口更新；属于隐私数据，用于“被其他人发现我/展示我的大致位置”。
-- **浏览锚点位置（reference_point）**：作为请求参数传入；用于“当前在看哪里/距离计算基准”。
+- **用户真实位置**：通过「更新我的位置」接口更新；属于隐私数据，用于"被其他人发现我/展示我的大致位置"。
+- **浏览锚点位置（reference_point）**：作为请求参数传入；用于"当前在看哪里/距离计算基准"。
 
 核心原则：`distance` / `bearing_degrees` 必须由服务端基于 `reference_point` 计算并返回，客户端不得本地计算用于排序。
 
-**隐私与精度策略（契约级）**：
-- 服务端可基于隐私设置、关系与登录态对位置/距离做降精度或匿名化处理
-- 客户端只用于展示，不得将距离/方位作为精确导航或本地排序依据
-- 为防止位置反推，服务端可对短时间内的查询结果做稳定或随机化处理
+**隐私与精度策略（契约级）**：服务端可基于隐私设置、关系与登录态对位置/距离做降精度或匿名化处理；客户端只用于展示，不得将距离/方位作为精确导航或本地排序依据。
 
 **请求位置要求（契约级）**：
 - 创建类 Request 中出现 `Location` 字段时，必须为必填字段（如 `groups/create`、`moments/create`、`users/update_location`）
-- 更新/Patch 类 Request 中 `Location` 可为可选字段（如 `groups/update`、`moments/update`），允许仅更新其他字段而不修改位置；管理员配置中的 `Partial<Location>` 同理
+- 更新/Patch 类 Request 中 `Location` 可为可选字段（如 `groups/admin/update`、`moments/update`）
 - 若用户拒绝定位或无法获取精确位置，客户端必须使用 `ClientConfig.defaults.default_location` 填充 `Location`
 
 **`reference_point` 解析规则（契约级）**：
@@ -150,9 +144,7 @@ type NotifyCategory = 'social' | 'interaction' | 'group' | 'report' | 'nearby' |
 2. 已登录用户最近一次 `users/update_location` 的位置（匿名或未更新过位置时跳过）
 3. `ClientConfig.defaults.default_location.point`
 
-设计目的：让 App 端绝大多数请求无需自行管理定位状态机——服务端自动复用用户已知位置；只有"地图浏览"等需要显式锚点的场景，客户端才传入 `reference_point`。
-
-不适用：`map/canvas` 等 map 模块端点用 `viewport.bounds` 锚定视口，无 `reference_point` 字段，不经此规则。
+不适用：`map/canvas` 用 `viewport.bounds` 锚定视口，无 `reference_point` 字段，不经此规则。
 
 ```typescript
 // 基础坐标点 (经纬度)
@@ -169,34 +161,28 @@ interface Location {
 }
 
 // 相对位置 (用于所有 response 响应数据)
-// 用途：所有 response 中的位置字段统一使用此类型
 // distance 和 bearing_degrees 基于 reference_point 计算，且可能被服务端降精度
 interface RelativeLocation {
   point: GeoPoint;
   location_name: string;       // 位置名称
-  distance?: number;           // 距离浏览锚点的距离 (米)，有参考点时有值，否则为 undefined
-  bearing_degrees?: number;    // 相对浏览锚点的方位角 [0, 360)，有参考点时有值，否则为 undefined
+  distance: number | null;     // 距离浏览锚点的距离 (米)；null = 无参考点/不可见
+  bearing_degrees: number | null;  // 相对浏览锚点的方位角 [0, 360)；null = 无参考点/不可见
 }
-
-// 使用说明：
-// - Request：使用 Location（仅坐标+名称）
-// - Response：经过距离/角度计算时使用 RelativeLocation（搜索/列表/Feed 有 distance/bearing；详情/Admin/当前用户视角通常为 undefined）
-// - 未经距离/角度计算的响应字段仍使用 Location（如 GroupSettings.location、AccountData.location）
 ```
 
 ### 分页与元数据
 
 ```typescript
-// 分页请求参数
+// 分页请求参数（请求侧可选字段保持 ?，语义为「未传使用默认」）
 interface PaginationParams {
   limit?: number;  // default: 20, max: 100
   cursor?: string; // 不透明字符串，客户端只透传
 }
 
-// 通用分页容器
+// 通用分页容器（响应侧恒定 nullable：next_cursor 恒在，null = 没有更多数据）
 interface PaginatedData<T> {
   items: T[];
-  next_cursor?: string;  // 下一页游标；为 undefined 时表示没有更多数据
+  next_cursor: string | null;
 }
 ```
 
@@ -207,17 +193,17 @@ interface PaginatedData<T> {
 // 用途：MomentItem.images、MessageMedia 等媒体字段的共享基础类型
 interface MediaAsset {
   url: string;
-  thumbnail_url?: string;
-  width?: number;
-  height?: number;
-  mime_type?: string;  // MIME 类型字符串，如 "image/jpeg"
+  thumbnail_url: string | null;   // null = 无缩略图
+  width: number | null;           // null = 未知
+  height: number | null;          // null = 未知
+  mime_type: string | null;       // MIME 类型字符串，如 "image/jpeg"；null = 未知
 }
 
 // 消息附件/媒体信息（在 MediaAsset 基础上补充文件元数据）
 interface MessageMedia extends MediaAsset {
-  file_name?: string;
-  file_size?: number;
-  duration?: number;
+  file_name: string | null;
+  file_size: number | null;
+  duration: number | null;        // 音视频时长（秒）；null = 不适用
 }
 ```
 
@@ -225,25 +211,21 @@ interface MessageMedia extends MediaAsset {
 
 ## 领域实体定义 (Domain Entities)
 
-本节定义业务核心对象。遵循 **Info (嵌入用) -> Item (统一数据类型)** 的分层模式。通过 `@auth-only`/`@group-admin-only` 等标注区分不同上下文的字段可见性。
+本节定义业务核心对象。遵循 **Info (嵌入用) -> Item (统一数据类型)** 的分层模式。查看者相关字段一律「恒定存在 + null 表达不适用」，不同视角由不同端点承载（`OwnerXxxItem`/`AdminXxxItem`/`XxxViewerState`）。
 
 ### 用户 (User)
 
-说明：类型定义以显式字段为准；禁止使用类型层级表达字段复用，统一使用组合（字段嵌入）。
-
-**系统管理员可见性规则**：
-- 系统管理员使用普通 API 时与普通用户**无区别**：使用相同端点、获得相同响应形态
-- 其他用户可正常搜索到管理员用户、查看其资料；`UserInfo` 不包含管理员标识，普通用户无法通过任何普通 API 判断对方是否为管理员
-- 管理员身份**不通过 `UserType` 体现**（`UserType` 仅表达账号生命周期）；管理员通过 `admin/rbac/get_me`（见 `api_spec_admin_core.md`）获知自己的管理员身份和权限
-- 管理员专用字段（如 `status`、`login_id`、`register_ip` 等）不在本类型中定义，**仅在 `/admin/*` 路径下通过独立的 Admin 类型返回**
-- 设计专用接口用于用户联系系统管理员（如举报反馈、申诉等），此类接口中管理员身份匿名化，用户仅知道"对方是官方客服/管理员"
+**平台管理员可见性规则**：
+- 平台管理员使用 /api/v1 时与普通用户**无区别**：使用相同端点、获得相同响应形态
+- `UserInfo`/`UserItem` 不包含管理员标识，普通用户无法通过任何普通 API 判断对方是否为平台管理员
+- 平台管理员专用字段仅在 `/admin/v1` 通过独立 Admin 类型返回（见 `api_spec_admin.md`）
 
 **UserInfo**: 用户基础信息（用于嵌套在其他对象中）
 ```typescript
 interface UserInfo {
   user_id: string;
   nickname: string;
-  avatar_url?: string;
+  avatar_url: string | null;  // null = 未设置头像（客户端使用默认头像）
 }
 ```
 
@@ -258,51 +240,45 @@ interface UserStats {
 }
 ```
 
-**UserItem**: 用户统一数据类型（用于列表、搜索、详情、Feed 等所有场景）
+**UserItem**: 用户统一数据类型（用于列表、搜索、详情、Feed 等所有场景；形状恒定，不随查看者变化）
 ```typescript
 interface UserItem {
   user: UserInfo;
-  bio?: string;
-  tags?: string[];
+  bio: string | null;
+  tags: string[];
 
-  // 隐私受控字段（隐私限制时不返回，不暴露原因）
-  presence_status?: UserPresenceStatus;  // 用户状态（online/offline）
-  last_online_at?: string;               // 最后在线时间（offline 时有值），UTC ISO 8601，精度截断到分钟（隐私保护，防止行为模式分析）
+  // === 隐私受控字段（恒定 nullable：null = 对方隐私设置隐藏） ===
+  presence_status: UserPresenceStatus | null;  // null = presence_visible=false 或未知
+  last_online_at: string | null;               // 最后在线时间（UTC ISO 8601，精度截断到分钟）；null = 隐藏
+  location: RelativeLocation | null;           // null = location_visible=false 或未设置
+  stats: UserStats | null;                     // null = stats_visible=false 或端点不返回统计
 
-  // 位置信息（可见性规则见 RelativeLocation 类型定义）
-  location?: RelativeLocation;
+  // === 查看者状态（恒定 nullable：null = 匿名/不适用） ===
+  relation: Relationship | null;               // 当前用户与该用户的关系；匿名时为 null
 
-  // 统计信息：详情页（open_the_door）返回；搜索/列表由服务端
-  // 根据接口语义决定是否返回（客户端不应依赖其在列表中的存在性）
-  stats?: UserStats;
+  // 社交上下文（展示与当前用户的共同点）；详情/Feed 返回，搜索/列表为 null
+  social_context: SocialContext | null;
+}
 
-  // === @auth-only 以下字段仅登录态返回 ===
-  relation?: Relationship;
-
-  // @auth-only
-  // 社交上下文（展示与当前用户的共同点）
-  // 详情页/Feed 返回，搜索/列表不返回
-  social_context?: {
-    mutual_friends_count: number;       // 共同好友数
-    mutual_friends_preview?: UserInfo[];  // 前2-3个共同好友
-    common_groups_count?: number;       // 共同群组数
-    common_tags?: string[];             // 共同兴趣标签
-  };
+// 社交上下文（查看者相关，恒定 nullable）
+interface SocialContext {
+  mutual_friends_count: number;                // 共同好友数
+  mutual_friends_preview: UserInfo[];          // 前2-3个共同好友
+  common_groups_count: number | null;
+  common_tags: string[];
 }
 ```
 
-**Relationship**: 用户关系信息（@auth-only）
+**Relationship**: 用户关系信息（查看者状态，恒定 nullable）
 ```typescript
 interface Relationship {
   is_following: boolean;       // 我是否关注了对方
   is_followed_by: boolean;     // 对方是否关注了我
   is_blocked: boolean;         // 我是否拉黑了对方
-  
+
   // 互相关注可由客户端计算：is_following && is_followed_by
-  
   // 设计说明：不暴露 is_blocked_by（对方是否拉黑了我）——资料/关系字段不透露拉黑状态
-  // 被拉黑后的被动体验由服务端隐式处理：搜索不到对方、看不到动态等
-  // 但主动交互明确告知：私聊发送失败返回 BlockReason='blocked'（见 api_spec_chat.md），不掩饰拉黑状态
+  // 被拉黑后的被动体验由服务端隐式处理；主动交互明确告知：私聊发送失败返回 blocked_by_user
 }
 ```
 
@@ -313,80 +289,63 @@ interface Relationship {
 interface GroupInfo {
   group_id: string;
   name: string;
-  avatar_url?: string;
+  avatar_url: string | null;
   members_count: number;
 }
 ```
 
-**GroupItem**: 群组统一数据类型（用于列表、搜索、详情、Feed 等所有场景）
+**GroupItem**: 群组统一公开类型（用于搜索、详情、Feed 等场景；形状恒定，对所有人一致）
 ```typescript
 interface GroupItem {
   group: GroupInfo;
-  description?: string;
-  tags?: string[];
+  description: string | null;
+  tags: string[];
 
-  // 加入门槛（@all 可见——用户加入前必须知晓加入方式与是否需审核）
-  join_method: GroupJoinMethod;      // 'direct' 直接加入 / 'password' 需密码 / 'invite_only' 仅受邀
-  requires_approval: boolean;        // 是否需管理员审核，审核通过后才算真正加入
+  // 加入门槛（对所有人可见——用户加入前必须知晓加入方式与是否需审核）
+  join_method: GroupJoinMethod;      // 'direct' / 'password' / 'invite_only'
+  requires_approval: boolean;        // 是否需管理员审核
 
-  // === @member-only 以下字段仅群成员视角返回 ===
-  // 设计说明：密码状态不对未加入的匿名/非成员暴露（避免向爬虫/爆破者提供精准线索）。
-  // 成员可见以便了解群组门槛；未加入用户通过 join 流程时才感知密码要求。
-  has_password?: boolean;
+  // 位置信息：恒定 nullable（null = 群组未设置位置）
+  location: RelativeLocation | null;
 
-  // 位置信息：统一使用 RelativeLocation
-  // - 列表/搜索/Feed 场景：distance / bearing_degrees 由服务端基于 reference_point 计算
-  // - 详情场景（open_the_door）：distance / bearing_degrees 为 undefined
-  location: RelativeLocation;
+  last_activity_at: string | null;   // 最近活跃时间；详情/列表返回，其他场景可为 null
+  online_members_count: number | null; // 在线成员数（聚合计数；不暴露具体成员在线状态）
+  next_activity: string | null;      // 下次活动预告（群主设置）；null = 无预告
+  created_at: string | null;         // 详情返回；搜索/列表为 null
+  owner_id: string | null;           // 详情返回；搜索/列表为 null
 
-  // 列表/详情页返回
-  last_activity_at?: string;     // 最近活跃时间（最后消息/公告/成员变动等）
+  // === 查看者状态（恒定 nullable：null = 匿名/非成员/不适用） ===
+  viewer_state: GroupViewerState | null;   // 当前用户在该群的成员状态；匿名或非成员为 null
+  friends_in_group: number | null;         // 好友中有多少在该群组内（Feed 场景返回，其余为 null）
 
-  // 列表/搜索/Feed 场景返回（服务端按接口语义决定是否返回，客户端不应依赖其存在性）
-  online_members_count?: number; // 在线成员数（聚合计数；不暴露具体成员的在线状态，不受 presence_visible 影响）
-  next_activity?: string;        // 下次活动预告（群主通过 update 设置）
-
-  // 群列表场景返回（仅 groups/list_my；其他场景省略）
-  last_message?: LastMessagePreview;
-
-  // 详情页返回，搜索/列表不返回
-  created_at?: string;
-  owner_id?: string;
-
-  // === @auth-only 以下字段仅登录态返回 ===
-  my_state?: MyGroupState;
-
-  // Feed 场景返回（好友中有多少在该群组内）
-  friends_in_group?: number;
-
-  // === @group-admin-only 以下字段仅群组管理员返回 ===
-  is_searchable?: boolean;
-  max_members?: number;
+  // 群管理字段（is_searchable / max_members / has_password）不在本类型——见 GroupSettings（groups/admin/get_settings）
 }
-```
 
-**GroupSettings**: 群组设置（可修改的配置项）
-```typescript
+// 查看者的群内状态（GroupItem.viewer_state 的取值类型；viewer_state 为 null 即非成员）
+interface GroupViewerState {
+  role: GroupRole;                 // 当前用户在群内的角色
+  unread_count: number;            // 群聊未读数
+  is_muted: boolean;
+  muted_until: string | null;      // 禁言截止时间（UTC ISO 8601）；null = 未被禁言（被禁言者本人可见自己的禁言状态）
+  is_pinned: boolean;
+  joined_at: string;
+}
+
+// 群列表成员视角扩展（仅 groups/list_joined 返回；viewer_state 恒有值）
+interface GroupJoinedItem extends GroupItem {
+  viewer_state: GroupViewerState;          // 本端点必非 null
+  last_message: LastMessagePreview | null; // 最近消息预览；null = 无消息
+}
+
+// 群组设置（仅群管理守卫子树：groups/admin/get_settings 响应；create/update 请求同构）
 interface GroupSettings {
   join_method: GroupJoinMethod;   // 默认 'direct'
   requires_approval: boolean;     // 默认 false
+  has_password: boolean;          // 群是否设有密码
   is_searchable: boolean;
-  members_searchable: boolean;    // 默认 true；是否允许非成员检索群成员列表（groups/members/search）
+  members_searchable: boolean;    // 默认 true；是否允许非成员检索群成员列表
   max_members: number;
-  location: Location;  // 直接映射自请求，不经过距离/角度计算
-}
-```
-
-**MyGroupState**: 我在群内的状态（@auth-only）
-```typescript
-interface MyGroupState {
-  role: GroupRole;
-  is_joined: boolean;
-  unread_count: number;
-  is_muted: boolean;
-  muted_until?: string;           // 禁言截止时间（UTC ISO 8601）；is_muted=true 时有值，客户端据此展示剩余时间并预判输入框可用性
-  is_pinned: boolean;
-  joined_at?: string;
+  location: Location;             // 直接映射，不经过距离/角度计算
 }
 ```
 
@@ -410,59 +369,75 @@ interface SystemAnnouncementItem {
   title: string;
   content: string;
   severity: AnnounceLevel;
-  action_url?: string;
+  action_url: string | null;
   created_at: string;
 }
 ```
 
 ### 生活瞬间 (Moment)
 
-**MomentItem**: 瞬间统一数据类型（用于列表、搜索、详情、Feed、用户瞬间历史等所有场景）
+**MomentItem**: 瞬间统一公开类型（用于列表、搜索、详情、Feed 等所有场景；形状恒定）
 ```typescript
 interface MomentItem {
   moment_id: string;
-  description: string;
-  images?: MediaAsset[];
-  tags?: string[];
-  mentions?: string[];
+  description: string;         // 软删除时为空字符串，客户端展示"内容已删除"占位
+  images: MediaAsset[];        // 空数组 = 无图片
+  tags: string[];
+  mentions: string[];
   created_at: string;
   likes_count: number;
   comments_count: number;
   shares_count: number;
-  reactions?: Reaction[];          // 表情反应聚合（无反应时省略）；reaction.reacted_by_me 为 @auth-only 语义
+  reactions: Reaction[];       // 表情反应聚合（空数组 = 无反应）
   user: UserInfo;
-  is_deleted: boolean;             // 软删除标记；true 时 description 为空，客户端展示"内容已删除"占位（见 moment.md 删除语义）
+  is_deleted: boolean;         // 软删除标记
 
-  // 位置信息（可见性规则见 RelativeLocation 类型定义）
-  location: RelativeLocation;
+  // 位置信息（恒定 nullable：null = 隐私隐藏/未设置）
+  location: RelativeLocation | null;
 
-  // === @owner-only 以下字段仅资源拥有者返回 ===
-  privacy_level?: PrivacyLevel;   // 仅拥有者可见，服务端过滤控制可见性
+  // === 查看者布尔（恒定布尔） ===
+  is_favorited: boolean;       // 当前用户是否收藏；匿名/未收藏为 false
 
-  // === @auth-only 以下字段仅登录态返回 ===
-  my_state?: {
-    is_favorited: boolean;         // 收藏状态
-  };
+  // Feed 场景返回（推荐理由）；非 Feed 场景为 null
+  recommendation: RecommendationType | null;
 
-  // Feed 场景返回（推荐理由，让用户了解为什么看到这条内容）
-  recommendation?: RecommendationType;  // 推荐理由（Friend 流/附近/热门等来源解释）
+  // privacy_level 不在本类型——拥有者视角见 OwnerMomentItem（moments/list_created 等拥有者端点）
 }
 ```
 
-注意：`privacy_level` 不对非拥有者暴露，生活瞬间的可见性由服务端过滤控制。仅资源拥有者在详情/我的瞬间列表中可见 `privacy_level`。
-
-**MomentSummary**: 瞬间摘要（用于通知、WebSocket 推送等需要轻量展示瞬间上下文的场景）
+**MomentSummary**: 瞬间摘要（用于通知、WebSocket 推送等轻量展示场景）
 ```typescript
 interface MomentSummary {
   moment_id: string;
   description_preview: string;  // 截断的描述文本（最多 100 字符）
-  cover_url?: string;           // 首张图片缩略图 URL（无图片时省略）
+  cover_url: string | null;     // 首张图片缩略图 URL；null = 无图片
+}
+```
+
+### 评论 (Comment)
+
+**CommentItem**: 评论统一类型（跨 comment + reaction + notify 模块，定义于此）
+```typescript
+interface CommentItem {
+  comment_id: string;
+  user: UserInfo;
+  content: string;             // 软删除时为空，客户端展示"该评论已删除"占位
+  parent_id: string | null;    // 父评论 ID；null = 顶层评论
+  mentions: string[];
+  created_at: string;
+  replies_count: number;       // 子评论数量
+  reactions: Reaction[];       // 表情反应聚合（空数组 = 无反应）
+  is_deleted: boolean;         // 软删除标记
+
+  // 顶层评论列表场景（comments/list）返回前 N 条回复预览；其他端点为空数组
+  // 条数由 AppConfig.response_defaults.comment_top_replies_count 控制（默认 3）
+  top_replies: CommentItem[];
 }
 ```
 
 ### 反应 (Reaction)
 
-**ReactionItem**: 反应者列表项（用于 `reactions/list` 查询某个资源的反应详情）
+**ReactionItem**: 反应者列表项（用于 `reactions/list`）
 ```typescript
 interface ReactionItem {
   user: UserInfo;
@@ -471,33 +446,29 @@ interface ReactionItem {
 }
 ```
 
-> 设计说明：反应列表统一返回带 emoji 的 `ReactionItem`，客户端可按 emoji 分组渲染，也可聚合为 `MomentItem.reactions` 的 count。
-
 ### 消息 (Message)
 
 **MessageReplyTo**: 回复引用快照（用于消息回复时引用被回复消息的上下文）
 ```typescript
 interface MessageReplyTo {
   message_id: string;
-  type: MessageType;       // 被回复消息的类型（决定前端渲染方式：text 显示文字预览，image/video 等显示对应占位，share 显示分享卡片）
-  sender: UserInfo;        // 被回复消息的发送者（嵌套 UserInfo，与 sender/actor 等用户引用保持一致）
-  content?: string;        // 文本预览（仅 text 类型有意义；非文本类型可省略）
-  share_code?: string;     // 若被回复的消息为 share 类型，则包含该 share_code
-  sent_at: string;         // 被回复消息的发送时间
+  type: MessageType;       // 被回复消息的类型（决定前端渲染方式）
+  sender: UserInfo;
+  content: string | null;  // 文本预览（仅 text 类型有意义）
+  share_code: string | null; // 若被回复的消息为 share 类型，则包含该 share_code
+  sent_at: string;
 }
 ```
 
-> 设计说明：`sender` 采用嵌套 `UserInfo` 而非扁平 `user_id`/`nickname`，与 spec 中所有"对用户的引用"（`sender`/`actor`/`creator`/`applicant` 等）保持一致；`type` 字段是渲染回复引用的必需信息（区分文本/图片/分享等），扁平结构无法表达非文本消息的引用。
-
-**LastMessagePreview**: 会话最近消息预览（群列表 `GroupItem.last_message` 与私聊列表 `PrivateChatItem.last_message` 共用）
+**LastMessagePreview**: 会话最近消息预览（`GroupJoinedItem.last_message` 与 `PrivateChatItem.last_message` 共用）
 ```typescript
 interface LastMessagePreview {
   message_id: string;
   type: MessageType;
-  content?: string;       // 文本预览（仅 text 类型有意义；非文本类型可省略）
-  share_code?: string;    // 若最后一条消息为 share 类型，包含 share_code（客户端据此渲染分享卡片预览）
-  sender: UserInfo;       // 最后一条消息的发送者
-  sent_at: string;        // 最后一条消息的发送时间
+  content: string | null;     // 文本预览（仅 text 类型有意义）
+  share_code: string | null;  // 若最后一条消息为 share 类型，包含 share_code
+  sender: UserInfo;
+  sent_at: string;
 }
 ```
 
@@ -513,44 +484,45 @@ type TagTrend = 'rising' | 'stable' | 'falling';
 interface TagItem {
   name: string;
   usage_count: number;
-  trend?: TagTrend;
+  trend: TagTrend | null;
 }
 ```
 
 ### 举报 (Report)
 
 ```typescript
-// 举报项（report + admin_moderation 两模块共用：AdminReportItem extends ReportItem）
+// 举报项（report + admin 两模块共用：AdminReportItem extends ReportItem）
 interface ReportItem {
   report_id: string;
   target_type: ReportTargetType;
   target_id: string;
   reason: ReportReason;
-  description?: string;
+  description: string | null;
   status: ReportStatus;
   created_at: string;
-  handled_at?: string;
-  message_snapshot?: ReportSnapshot;  // 仅 target_type='message'：举报时的消息内容快照，供管理员审核
+  handled_at: string | null;
+  message_snapshot: ReportSnapshot | null;  // 仅 target_type='message'
 
-  // === @owner-only 仅举报人自己可见（reports/list_my 返回，他人不可见）===
-  // 处理结果摘要：让举报人了解处理进展与结论，但不暴露处理管理员身份（隐私）
-  resolution?: {
-    action: ReportAction;   // 最终处理动作
-    resolved_at: string;          // UTC ISO 8601，处理完成时间
-    note?: string;                // 可选的处理说明（脱敏后，不含内部细节）
-  };
+  // 处理结果摘要（恒定 nullable：null = 尚未处理）。reports/list 天生只有举报人本人调用，
+  // 故 resolution 在客户端类型中恒可返回；不暴露处理平台管理员身份（隐私）
+  resolution: ReportResolution | null;
 }
 
-// 消息举报快照（隐私边界设计：管理员基于快照审核，不直接查询私聊消息库）
-// 举报人在 reports/create 时提交，服务端原样存储，审核方据此判断举报是否成立
-// 跨 report + admin_moderation 两模块（随 ReportItem 被 AdminReportItem 继承），故保留于通用类型
+// 处理结果摘要（脱敏，不含处理者身份）
+interface ReportResolution {
+  action: ReportAction;
+  resolved_at: string;
+  note: string | null;   // 可选的处理说明（脱敏后）
+}
+
+// 消息举报快照（隐私边界设计：平台管理员基于快照审核，不直接查询私聊消息库）
 interface ReportSnapshot {
   chat_type: 'private' | 'group';   // 会话类型
   target_chat_id: string;           // private: target_user_id；group: group_id
-  message_type: MessageType;        // 消息类型（text/image 等，决定 snapshot_content 的含义）
-  snapshot_content?: string;        // 文本内容（text 类型）；非文本类型为空
-  snapshot_media?: MessageMedia;    // 媒体引用（图片/视频等）；文本类型为空
-  sent_at: string;                  // 消息发送时间（快照基准）
+  message_type: MessageType;
+  snapshot_content: string | null;  // 文本内容（text 类型）；非文本类型为 null
+  snapshot_media: MessageMedia | null; // 媒体引用（图片/视频等）；文本类型为 null
+  sent_at: string;
 }
 ```
 
@@ -558,31 +530,30 @@ interface ReportSnapshot {
 
 ```typescript
 // 用户设置（user + websocket 两模块共用；ChatPerm 定义于本文件）
-
 interface UserSettings {
   privacy_level: PrivacyLevel;
-  location_visible: boolean;          // false 时，普通用户视角的 UserItem.location 字段不返回
-  presence_visible: boolean;         // 在线状态和最后在线时间的可见性（统一控制），false 时 `presence_status`/`last_online_at` 均不返回
-  social_lists_visible: boolean;     // 好友/关注/粉丝列表是否公开（统一控制）
-  groups_visible: boolean;           // 群组列表是否公开（false 时 users/list_groups 返回 10200，见 base.md「整表隐私拒绝」）
-  reacted_moments_visible: boolean;  // 反应过的瞬间列表是否公开（false 时 users/list_reacted_moments 返回 10200）
-  stats_visible: boolean;            // 统计信息是否公开
+  location_visible: boolean;          // false 时，UserItem.location 恒为 null
+  presence_visible: boolean;          // false 时 presence_status/last_online_at 恒为 null
+  social_lists_visible: boolean;      // 好友/关注/粉丝列表是否公开（false 时列表端点 10200+privacy_setting）
+  groups_visible: boolean;            // 群组列表是否公开
+  reacted_moments_visible: boolean;   // 反应过的瞬间列表是否公开
+  stats_visible: boolean;             // 统计信息是否公开（false 时 UserItem.stats 恒为 null）
   allow_follow: boolean;
   allow_private_chat: ChatPerm;
   searchable: boolean;
   phone_searchable: boolean;
   nickname_searchable: boolean;
   location_searchable: boolean;
-  nearby_moment_notify: boolean;     // 是否接收"附近新瞬间"推送通知；默认 false（避免打扰，用户主动开启）
+  nearby_moment_notify: boolean;      // 是否接收"附近新瞬间"推送通知；默认 false
 }
 ```
 
 ### 应用配置 (AppConfig 相关)
 
-> 以下配置类型由 `system`（客户端可见投影 `ClientConfig`）与 `admin_core`（完整服务端配置 `AppConfig`）共用。
+> 以下配置类型由 `system`（客户端可见投影 `ClientConfig`）与 `admin`（完整服务端配置 `AppConfig`）共用。
 
 ```typescript
-// 功能开关（客户端可见，由管理员配置）
+// 功能开关（客户端可见，由平台管理员配置）
 interface FeatureSwitches {
   enable_public_registration: boolean;
   enable_guest_login: boolean;
@@ -597,13 +568,13 @@ interface AppLimits {
   max_moment_images: number;
   moment_description_max_length: number;
   comment_max_length: number;
-  search_radius_max: number;  // 搜索半径上限（米），用于搜索和 Feed 相关接口
-  max_chat_files: number;     // 单条聊天消息可附带的最大文件数（媒体批量上传的 chat 类上限，见 api_spec_media.md）
-  message_recall_window_seconds: number;  // 消息撤回时间窗（秒），发送者仅可撤回该窗口内的消息；0 表示不允许撤回
-  stranger_message_daily_quota: number;   // 每日可向非互相关注（陌生人）用户发送的私聊消息上限；超过返回 BlockReason='stranger_quota_exceeded'，0 表示禁止任何陌生人消息
-  reaction_emojis: string[];              // 允许的表情反应 emoji 白名单（Unicode 码点字符串数组），客户端据此渲染反应面板
-  group_invite_ttl_hours: number;         // 群邀请有效期（小时），过期后状态置 'revoked'；0 表示永不过期
-  group_application_ttl_hours: number;    // 群申请有效期（小时），过期后状态置 'revoked'；0 表示永不过期
+  search_radius_max: number;
+  max_chat_files: number;
+  message_recall_window_seconds: number;  // 消息撤回时间窗（秒）；0 表示不允许撤回
+  stranger_message_daily_quota: number;   // 每日可向陌生人发送的私聊消息上限；0 表示禁止
+  reaction_emojis: string[];              // 允许的表情反应 emoji 白名单
+  group_invite_ttl_hours: number;         // 群邀请有效期（小时）；0 表示永不过期
+  group_application_ttl_hours: number;    // 群申请有效期（小时）；0 表示永不过期
 }
 
 // 联系/合规信息（客户端可见）

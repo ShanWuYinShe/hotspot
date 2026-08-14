@@ -16,7 +16,7 @@ import { SystemInput } from '../../../components/SystemInput';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemToast } from '../../../components/SystemToast';
 import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
-import { AuthData, MyProfile, LoginRequest, RegisterRequest, GuestRequest } from '../../../core/types/api';
+import { AuthData, AccountInfo, LoginRequest, RegisterRequest, GuestRequest } from '../../../core/types/api';
 import { DeviceIdUtil } from '../../../core/util/DeviceIdUtil';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
@@ -867,7 +867,7 @@ export struct LoginPage {
     await AuthAccountManager.upsertAndActivate(authData);
     await HttpUtil.setToken(authData.access_token);
 
-    const basicUserInfo: MyProfile = {
+    const basicUserInfo: AccountInfo = {
       user_id: authData.user_id,
       nickname: '',
       avatar_url: '',
@@ -891,7 +891,7 @@ export struct LoginPage {
     this.stateManager.updateUser(basicUserInfo);
 
     try {
-      const profileResp = await ApiClient.getMyProfile();
+      const profileResp = await ApiClient.getAccountInfo();
       if (this.isDestroyed) return;
       if (profileResp.code === 0 && profileResp.data) {
         this.stateManager.updateUser(profileResp.data);

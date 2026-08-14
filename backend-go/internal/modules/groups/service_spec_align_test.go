@@ -77,8 +77,8 @@ func (w *notifyWriterStub) AppendGroupApplicationAccepted(context.Context, strin
 	return "notif_written", nil
 }
 
-func (w *notifyWriterStub) AppendGroupApplicationRejected(_ context.Context, targetUserID, groupID, groupName, applicationID string, rejectedBy types.UserInfo, reason *string) (string, error) {
-	w.applicationRejected = append(w.applicationRejected, groupApplicationRejectedCall{targetUserID, groupID, groupName, applicationID, rejectedBy, reason})
+func (w *notifyWriterStub) AppendGroupApplicationRejected(_ context.Context, targetUserID, groupID, groupName, applicationID string, reason *string) (string, error) {
+	w.applicationRejected = append(w.applicationRejected, groupApplicationRejectedCall{targetUserID, groupID, groupName, applicationID, types.UserInfo{}, reason})
 	return "notif_written", nil
 }
 
@@ -325,7 +325,7 @@ func TestInviteExpired(t *testing.T) {
 
 func TestServiceCancelApplicationNotifiesAdmins(t *testing.T) {
 	repo := &captureGroupsRepo{stubGroupsRepo: &stubGroupsRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1", Name: "test"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1", Name: "test"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
 		getFound:  true,
 		apps: []GroupApplicationItem{{
 			ApplicationID: "app1",
@@ -422,8 +422,9 @@ func TestServiceRejectApplicationNotifiesApplicant(t *testing.T) {
 	if call.targetUserID != "u3" || call.groupID != "g1" || call.applicationID != "app1" {
 		t.Fatalf("unexpected rejected call: %#v", call)
 	}
-	if call.rejectedBy.UserID != "u1" {
-		t.Fatalf("expected rejected_by u1, got %#v", call.rejectedBy)
+	// F7：审批者身份对称化——accepted/rejected 均不暴露审批者（spec api_spec_notify.md）。
+	if call.rejectedBy.UserID != "" {
+		t.Fatalf("expected empty rejected_by (F7), got %#v", call.rejectedBy)
 	}
 	if call.reason == nil || *call.reason != reason {
 		t.Fatalf("expected reason %q, got %#v", reason, call.reason)
@@ -442,9 +443,9 @@ func TestServiceRejectApplicationNotifiesApplicant(t *testing.T) {
 	if payload["application_id"] != "app1" || payload["reason"] != reason {
 		t.Fatalf("unexpected event payload: %#v", payload)
 	}
-	rejectedBy, ok := payload["rejected_by"].(types.UserInfo)
-	if !ok || rejectedBy.UserID != "u1" {
-		t.Fatalf("unexpected rejected_by: %#v", payload["rejected_by"])
+	// F7：事件负载不暴露审批者（accepted/rejected 对称）。
+	if _, present := payload["rejected_by"]; present {
+		t.Fatalf("did not expect rejected_by in payload (F7), got %#v", payload["rejected_by"])
 	}
 	group, ok := payload["group"].(map[string]any)
 	if !ok || group["group_id"] != "g1" || group["name"] != "test" {

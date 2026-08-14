@@ -205,17 +205,6 @@ func getAuditEntryByRow(row persistence.Row) (AuditLogEntry, error) {
 	return entry, nil
 }
 
-func (r *PostgresRepository) getAuditEntryByID(ctx context.Context, queryable persistence.QueryableDB, logID string) (AuditLogEntry, bool, error) {
-	entry, err := getAuditEntryByRow(queryable.QueryRow(ctx, queryAuditByID, logID))
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return AuditLogEntry{}, false, nil
-		}
-		return AuditLogEntry{}, false, err
-	}
-	return entry, true, nil
-}
-
 func scanAuditEntry(rows persistence.Rows) (AuditLogEntry, error) {
 	return getAuditEntryByRow(rows)
 }
@@ -342,9 +331,9 @@ func scanAdminUserRow(row persistence.Row) (AdminUserItem, error) {
 		CreatedAt:         record.CreatedAt.UTC().Format(time.RFC3339),
 		LastActiveAt:      record.LastOnline.UTC().Format(time.RFC3339),
 		LoginID:           record.LoginID,
-		RegisterIP:        record.RegisterIP,
+		RegisterIP:        strPtr(record.RegisterIP),
 		RegisterLocation:  record.RegisterLocation,
-		LastLoginIP:       record.LastLoginIP,
+		LastLoginIP:       strPtr(record.LastLoginIP),
 		LastLoginLocation: record.LastLoginLocation,
 		Email:             record.Email,
 		Phone:             record.Phone,

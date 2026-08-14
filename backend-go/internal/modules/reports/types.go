@@ -55,7 +55,7 @@ type ReportSnapshot struct {
 	SentAt          string         `json:"sent_at"`
 }
 
-type MyReportsRequest struct {
+type ListReportsRequest struct {
 	Status     ReportStatus      `json:"status,omitempty"`
 	TargetType ReportTargetType  `json:"target_type,omitempty"`
 	Pagination *PaginationParams `json:"pagination,omitempty"`
@@ -75,7 +75,7 @@ const (
 )
 
 // ReportResolution 是举报处理结果摘要（spec api_spec_types.md
-// ReportItem.resolution，@owner-only）：仅举报人自己可见（reports/list_my
+// ReportItem.resolution，@owner-only）：仅举报人自己可见（reports/list
 // 返回），不暴露处理管理员身份。
 type ReportResolution struct {
 	Action     ReportAction `json:"action"`
@@ -92,11 +92,11 @@ type ReportItem struct {
 	Status      ReportStatus     `json:"status"`
 	CreatedAt   string           `json:"created_at"`
 	HandledAt   string           `json:"handled_at,omitempty"`
-	// MessageSnapshot 仅 target_type='message' 时返回（spec api_spec_types.md
+	// MessageSnapshot 恒定 nullable：null = 非消息举报（spec api_spec_types.md
 	// ReportItem.message_snapshot），供举报人回看与管理员审核。
-	MessageSnapshot *ReportSnapshot `json:"message_snapshot,omitempty"`
-	// Resolution 是处理结果摘要（@owner-only，仅 reports/list_my 返回）。
-	Resolution *ReportResolution `json:"resolution,omitempty"`
+	MessageSnapshot *ReportSnapshot `json:"message_snapshot"`
+	// Resolution 恒定 nullable：null = 尚未处理（spec api_spec_types.md）。
+	Resolution *ReportResolution `json:"resolution"`
 }
 
 type PaginatedReports struct {

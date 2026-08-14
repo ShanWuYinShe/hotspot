@@ -1,6 +1,6 @@
 // msw handlers 集成测试：验证按 id 路由的 handler 行为
 // （moments/open_the_door、groups/open_the_door、users/open_the_door、
-//  private_messages/get_history、group_messages/get_history、comments/create）。
+//  private_messages/list、group_messages/list、comments/create）。
 // 直接调用 handler resolver（msw/node 网络层与 vitest 4 fetch 不兼容）。
 import { describe, it, expect, beforeEach } from 'vitest';
 import { handlers } from './handlers';
@@ -28,7 +28,7 @@ async function run(path: string, body: unknown): Promise<any> {
 }
 
 describe('msw id-routed handlers', () => {
-	// get_history / comments/create 是 auth-required 端点，测试默认以登录态执行
+	// private_messages/list / group_messages/list / comments/create 是 auth-required 端点，测试默认以登录态执行
 	beforeEach(() => {
 		setMockLoggedIn(true);
 	});
@@ -67,23 +67,23 @@ describe('msw id-routed handlers', () => {
 		expect(Array.isArray(withMoments.data.recent_moments.items)).toBe(true);
 	});
 
-	it('private_messages/get_history：命中会话返回种子消息，新会话返回空', async () => {
+	it('private_messages/list：命中会话返回种子消息，新会话返回空', async () => {
 		// mockChats 第一位对端是 mockUsers[1]
-		const hit = await run('/api/v1/private_messages/get_history', { target_user_id: mockUsers[1].user_id });
+		const hit = await run('/api/v1/private_messages/list', { target_user_id: mockUsers[1].user_id });
 		expect(hit.code).toBe(0);
 		expect(hit.data.items.length).toBeGreaterThan(0);
 		expect(hit.data.items[0].content).toBeTruthy();
 
-		const miss = await run('/api/v1/private_messages/get_history', { target_user_id: 'user_unknown' });
+		const miss = await run('/api/v1/private_messages/list', { target_user_id: 'user_unknown' });
 		expect(miss.data.items.length).toBe(0);
 	});
 
-	it('group_messages/get_history：命中群组返回种子消息，未知群返回空', async () => {
-		const hit = await run('/api/v1/group_messages/get_history', { group_id: mockGroups[0].group.group_id });
+	it('group_messages/list：命中群组返回种子消息，未知群返回空', async () => {
+		const hit = await run('/api/v1/group_messages/list', { group_id: mockGroups[0].group.group_id });
 		expect(hit.code).toBe(0);
 		expect(hit.data.items.length).toBeGreaterThan(0);
 
-		const miss = await run('/api/v1/group_messages/get_history', { group_id: 'group_unknown' });
+		const miss = await run('/api/v1/group_messages/list', { group_id: 'group_unknown' });
 		expect(miss.data.items.length).toBe(0);
 	});
 

@@ -8,7 +8,7 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
-func (r *PostgresRepository) List(ctx context.Context, userID string, req MyReportsRequest) (PaginatedReports, error) {
+func (r *PostgresRepository) List(ctx context.Context, userID string, req ListReportsRequest) (PaginatedReports, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return PaginatedReports{}, persistence.ErrNotImplemented
 	}

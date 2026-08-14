@@ -36,9 +36,9 @@ func (s *Store) Create(userID string, req CreateMomentRequest) MomentItem {
 		CommentsCount: 0,
 		SharesCount:   0,
 		User:          UserInfo{UserID: userID, Nickname: userID},
-		Location:      req.Location,
+		Location:      &req.Location,
 		PrivacyLevel:  privacy,
-		MyState:       &MyMomentState{IsFavorited: false},
+		IsFavorited:   false,
 	}
 	s.moments[momentID] = item
 	s.byUser[userID] = append(s.byUser[userID], momentID)

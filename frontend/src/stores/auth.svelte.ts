@@ -2,7 +2,7 @@
 // AuthContext（runes 模块单例；纯客户端 SPA，无服务端实例化问题）。
 //
 // Web 端通过 HttpOnly Cookie 认证（access_token / refresh_token），
-// 本 store 不直接接触 token，只跟踪会话有效性（auth/check_status）与当前账号
+// 本 store 不直接接触 token，只跟踪会话有效性（auth/get_status）与当前账号
 // （users/get_account）。匿名浏览公开端点允许；写操作调用 requireAuth() 打开
 // 登录弹层并在登录成功后重放该操作。
 

@@ -30,7 +30,7 @@ export function mapGroup(item: GroupItem): Group {
 		distance: formatDistance(item.location?.distance),
 		// join_method 在 GroupItem 顶层；invite_only/password 视为私密
 		privacy: item.join_method === 'invite_only' || item.join_method === 'password' ? 'private' : 'public',
-		joined: item.my_state?.is_joined ?? false,
+		joined: item.viewer_state !== null,
 		desc: item.description ?? '',
 		activity: item.next_activity ?? '',
 		avatars: []

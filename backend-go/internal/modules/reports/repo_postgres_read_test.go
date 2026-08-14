@@ -114,7 +114,7 @@ func TestPostgresRepositoryCreateAndList(t *testing.T) {
 	if err != nil || created.ReportID == "" {
 		t.Fatalf("unexpected create result: %#v err=%v", created, err)
 	}
-	list, err := repo.List(context.Background(), "user_alice", MyReportsRequest{})
+	list, err := repo.List(context.Background(), "user_alice", ListReportsRequest{})
 	if err != nil || len(list.Items) != 1 || list.Items[0].ReportID != created.ReportID {
 		t.Fatalf("unexpected list: %#v err=%v", list, err)
 	}
@@ -126,7 +126,7 @@ func TestPostgresRepositoryListReturnsEmptyWithoutFallback(t *testing.T) {
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
 
-	list, err := repo.List(context.Background(), "user_alice", MyReportsRequest{})
+	list, err := repo.List(context.Background(), "user_alice", ListReportsRequest{})
 	if err != nil || len(list.Items) != 0 {
 		t.Fatalf("unexpected list: %#v err=%v", list, err)
 	}
@@ -152,7 +152,7 @@ func TestPostgresRepositoryListReturnsErrorOnQueryFailure(t *testing.T) {
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
 
-	_, err := repo.List(context.Background(), "user_alice", MyReportsRequest{})
+	_, err := repo.List(context.Background(), "user_alice", ListReportsRequest{})
 	if err == nil {
 		t.Fatal("expected list error")
 	}

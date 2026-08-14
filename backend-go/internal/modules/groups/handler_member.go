@@ -15,6 +15,10 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	}
 	items, nextCursor, err := h.service.ListApplications(r.Context(), req)
 	if err != nil {
+		if _, ok := err.(*httpx.APIError); ok {
+			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return
@@ -133,6 +137,10 @@ func (h *Handler) SetMute(w http.ResponseWriter, r *http.Request) {
 		err = h.service.UnmuteMember(r.Context(), UnmuteMemberRequest{GroupID: req.GroupID, UserID: req.UserID})
 	}
 	if err != nil {
+		if _, ok := err.(*httpx.APIError); ok {
+			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return
@@ -176,6 +184,10 @@ func (h *Handler) ListBannedMembers(w http.ResponseWriter, r *http.Request) {
 	}
 	items, nextCursor, err := h.service.ListBannedMembers(r.Context(), req)
 	if err != nil {
+		if _, ok := err.(*httpx.APIError); ok {
+			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
 		if errors.Is(err, ErrGroupNotFound) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return

@@ -15,7 +15,7 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppIcon } from '../../../components/SystemIcon';
 import { KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
-import { MyProfile } from '../../../core/types/api';
+import { AccountInfo } from '../../../core/types/api';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import { AppThemeVisuals, InputBorderResolution } from '../../../core/theme/AppThemeVisuals';
 import { validateField, FieldRule } from '../../../core/util/FormValidator';
@@ -40,7 +40,7 @@ export struct ProfileEditPage {
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
 
   @State nickname: string = '';
   @State bio: string = '';

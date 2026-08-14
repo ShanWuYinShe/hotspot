@@ -31,24 +31,6 @@ func (s *Service) ListAuditLogs(ctx context.Context, req AuditLogListRequest) (P
 	return resp, nil, nil
 }
 
-func (s *Service) GetAuditLog(ctx context.Context, logID string) (AuditLogItem, *httpx.APIError, error) {
-	actor, apiErr, err := s.requirePermission(ctx, permissionAuditRead)
-	if apiErr != nil || err != nil {
-		return AuditLogItem{}, apiErr, err
-	}
-	if strings.TrimSpace(logID) == "" {
-		return AuditLogItem{}, httpx.InvalidRequest("参数错误"), nil
-	}
-	item, found, err := s.repo.GetAuditLog(ctx, logID, actor.HasPermission(permissionAuditReadIP))
-	if err != nil {
-		return AuditLogItem{}, nil, err
-	}
-	if !found {
-		return AuditLogItem{}, &httpx.APIError{Code: httpx.CodeNotFound, Message: "审计日志不存在"}, nil
-	}
-	return item, nil, nil
-}
-
 func (s *Service) GetAppConfig(ctx context.Context) (AdminAppConfig, *httpx.APIError, error) {
 	if _, apiErr, err := s.requirePermission(ctx, permissionAppConfigRead); apiErr != nil || err != nil {
 		return AdminAppConfig{}, apiErr, err

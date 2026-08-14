@@ -96,6 +96,29 @@ func (r *PostgresRepository) Recall(ctx context.Context, req RecallGroupMessageR
 	return MessageEventMeta{GroupID: groupID, MessageID: req.MessageID, SentAt: sentAt}, nil
 }
 
+// RecallAsAdmin recalls a group message regardless of sender, with no
+// recall-window enforcement (admin path, spec api_spec_group.md).
+func (r *PostgresRepository) RecallAsAdmin(ctx context.Context, messageID string) (MessageEventMeta, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return MessageEventMeta{}, persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return MessageEventMeta{}, persistence.ErrNotImplemented
+	}
+	groupID, _, _, isRecalled, sentAt, err := r.lookupMessageMetaFull(ctx, messageID)
+	if err != nil {
+		return MessageEventMeta{}, err
+	}
+	if isRecalled {
+		return MessageEventMeta{}, ErrMessageRecalled
+	}
+	if err := queryable.Exec(ctx, queryRecallGroupMessageAsAdmin, messageID); err != nil {
+		return MessageEventMeta{}, err
+	}
+	return MessageEventMeta{GroupID: groupID, MessageID: messageID, SentAt: sentAt}, nil
+}
+
 func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req MarkGroupMessagesReadRequest) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return persistence.ErrNotImplemented

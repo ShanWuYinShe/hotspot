@@ -27,7 +27,6 @@ type stubGroupMessageRepo struct {
 	recallErr   error
 	markReadFn  func(context.Context, string, MarkGroupMessagesReadRequest) error
 	markAllErr  error
-	isMemberVal bool
 	isMemberErr error
 }
 
@@ -41,6 +40,9 @@ func (r *stubGroupMessageRepo) Update(_ context.Context, _ UpdateGroupMessageReq
 	return r.updateMeta, r.updateErr
 }
 func (r *stubGroupMessageRepo) Recall(_ context.Context, _ RecallGroupMessageRequest) (MessageEventMeta, error) {
+	return r.recallMeta, r.recallErr
+}
+func (r *stubGroupMessageRepo) RecallAsAdmin(_ context.Context, _ string) (MessageEventMeta, error) {
 	return r.recallMeta, r.recallErr
 }
 func (r *stubGroupMessageRepo) MarkAsRead(ctx context.Context, userID string, req MarkGroupMessagesReadRequest) error {
@@ -58,10 +60,10 @@ func (r *stubGroupMessageRepo) GetMessageForReply(_ context.Context, _ string) (
 }
 
 func (r *stubGroupMessageRepo) IsMember(_ context.Context, _ string, _ string) (bool, error) {
-	if !r.isMemberVal && r.isMemberErr == nil {
-		return true, nil
+	if r.isMemberErr != nil {
+		return false, r.isMemberErr
 	}
-	return r.isMemberVal, r.isMemberErr
+	return true, nil // 便捷默认：视为成员；非成员场景用 isMemberErr = ErrNotGroupMember
 }
 func (r *stubGroupMessageRepo) MarkAllRead(_ context.Context, _ string) error {
 	return r.markAllErr
@@ -98,14 +100,15 @@ func gmCtx(userID string) *http.Request {
 
 func gmAssertCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx.Code) {
 	t.Helper()
+	body := rr.Body.String()
 	var resp struct {
 		Code httpx.Code `json:"code"`
 	}
-	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+	if err := json.NewDecoder(strings.NewReader(body)).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
 	if resp.Code != expected {
-		t.Fatalf("expected code %d, got %d (body: %s)", expected, resp.Code, rr.Body.String())
+		t.Fatalf("expected code %d, got %d (body: %s)", expected, resp.Code, body)
 	}
 }
 

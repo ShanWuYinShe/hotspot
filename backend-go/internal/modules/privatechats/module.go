@@ -57,7 +57,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
 			group.Post("/send", m.messageHandler.Send)
-			group.Post("/get_history", m.messageHandler.GetHistory)
+			group.Post("/list", m.messageHandler.List)
 			group.Post("/update", m.messageHandler.Update)
 			group.Post("/recall", m.messageHandler.Recall)
 			group.Post("/mark_read", m.messageHandler.MarkRead)

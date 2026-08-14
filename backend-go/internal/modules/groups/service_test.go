@@ -1,6 +1,7 @@
 package groups
 
 import (
+	"hotspot/backend-go/internal/platform/httpx"
 	"time"
 	"context"
 	"errors"
@@ -14,6 +15,11 @@ import (
 // stubGroupsRepo implements Repository with only the fields needed for each test.
 // Unused methods return zero values.
 type stubGroupsRepo struct {
+	isBanned        map[string]bool
+	isMemberResult  bool
+	adminMembers    []AdminGroupMemberItem
+	adminMembersCur string
+	adminMembersErr error
 	getResult    GroupItem
 	getFound     bool
 	getErr       error
@@ -108,6 +114,9 @@ func (r *stubGroupsRepo) ListMembers(_ context.Context, _ string, _ *GroupRole, 
 	return r.members, r.membersCur, r.membersErr
 }
 func (r *stubGroupsRepo) IsMember(_ context.Context, _ string, userID string) (bool, error) {
+	if r.isMemberResult {
+		return true, nil
+	}
 	for _, m := range r.members {
 		if m.User.UserID == userID {
 			return true, nil
@@ -168,6 +177,17 @@ func (r *stubGroupsRepo) ListMyInvites(_ context.Context, _ string, _ *Applicati
 func (r *stubGroupsRepo) AcceptInvite(_ context.Context, _ string, _ string) error {
 	return r.acceptErr
 }
+
+func (r *stubGroupsRepo) IsBanned(_ context.Context, _ string, userID string) (bool, error) {
+	if r.isBanned == nil {
+		return false, nil
+	}
+	return r.isBanned[userID], nil
+}
+
+func (r *stubGroupsRepo) ListAdminMembers(_ context.Context, _ string, _ *GroupRole, _ int, _ string) ([]AdminGroupMemberItem, string, error) {
+	return r.adminMembers, r.adminMembersCur, r.adminMembersErr
+}
 func (r *stubGroupsRepo) RejectInvite(_ context.Context, _ string) error { return r.rejectInvErr }
 func (r *stubGroupsRepo) InviteMember(_ context.Context, _ string, _ InviteMemberRequest, _ *time.Time) (Invitation, error) {
 	return r.inviteResult, r.inviteErr
@@ -210,21 +230,21 @@ func grpCtx(userID string) context.Context {
 func ownerGroup() GroupItem {
 	return GroupItem{
 		Group:   GroupInfo{GroupID: "g1", Name: "test"},
-		MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true},
+		ViewerState: &GroupViewerState{Role: GroupRoleOwner, },
 	}
 }
 
 func adminGroup() GroupItem {
 	return GroupItem{
 		Group:   GroupInfo{GroupID: "g1", Name: "test"},
-		MyState: &MyGroupState{Role: GroupRoleAdmin, IsJoined: true},
+		ViewerState: &GroupViewerState{Role: GroupRoleAdmin, },
 	}
 }
 
 func memberGroup() GroupItem {
 	return GroupItem{
 		Group:   GroupInfo{GroupID: "g1", Name: "test"},
-		MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true},
+		ViewerState: &GroupViewerState{Role: GroupRoleMember, },
 	}
 }
 
@@ -271,12 +291,23 @@ func TestServiceOpenTheDoorNotFound(t *testing.T) {
 	}
 }
 
-func TestServiceUpdateRequiresOwner(t *testing.T) {
+func TestServiceUpdateDeniesMember(t *testing.T) {
+	// 群管理守卫子树语义（spec api_spec_authz.md）：成员无管理权限 → 10200 + not_group_admin。
 	repo := &stubGroupsRepo{getResult: memberGroup(), getFound: true}
 	svc := NewServiceWithRepo(repo)
 	_, err := svc.Update(grpCtx("u1"), UpdateGroupRequest{GroupID: "g1"})
-	if !errors.Is(err, ErrAccessRestricted) {
-		t.Fatalf("expected access restricted, got %v", err)
+	var apiErr *httpx.APIError
+	if !errors.As(err, &apiErr) || apiErr.Code != httpx.CodeForbidden {
+		t.Fatalf("expected 10200 not_group_admin, got %v", err)
+	}
+}
+
+func TestServiceUpdateAllowsAdmin(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: adminGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	_, err := svc.Update(grpCtx("u1"), UpdateGroupRequest{GroupID: "g1"})
+	if err != nil {
+		t.Fatalf("expected admin update to succeed, got %v", err)
 	}
 }
 
@@ -334,9 +365,9 @@ func TestServiceListMembersRejectsNotFound(t *testing.T) {
 }
 
 func TestServiceListMembersNormalizesLimit(t *testing.T) {
-	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, members: []GroupMemberItem{{User: UserInfo{UserID: "u2"}}}}
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, isMemberResult: true, members: []GroupMemberItem{{User: UserInfo{UserID: "u2"}}}}
 	svc := NewServiceWithRepo(repo)
-	items, _, err := svc.ListMembers(context.Background(), GroupMembersRequest{GroupID: "g1", Pagination: &PaginationParams{Limit: 150}})
+	items, _, err := svc.ListMembers(grpCtx("u1"), GroupMembersRequest{GroupID: "g1", Pagination: &PaginationParams{Limit: 150}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

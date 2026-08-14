@@ -17,6 +17,8 @@ Thumbs.db:encryptable
 *.tmp
 *.log
 *.bak
+.gocache
+.gomodcache
 
 # ============================================
 # Build Outputs

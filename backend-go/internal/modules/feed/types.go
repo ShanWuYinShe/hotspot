@@ -49,35 +49,17 @@ type GroupRole = groupsmodule.GroupRole
 
 type GroupJoinMethod = groupsmodule.GroupJoinMethod
 
-type UserRelation struct {
-	IsFollowing  bool `json:"is_following"`
-	IsFollowedBy bool `json:"is_followed_by"`
-	IsBlocked    bool `json:"is_blocked"`
-}
+// UserItem / UserRelation / UserSocialContext 与 users 模块同构
+// （spec api_spec_types.md：查看者状态与隐私字段恒定 nullable，null = 隐藏/不适用）。
+type UserItem = usersmodule.UserItem
 
-type UserSocialContext struct {
-	MutualFriendsCount int `json:"mutual_friends_count"`
-	CommonGroupsCount  int `json:"common_groups_count,omitempty"`
-}
+type UserRelation = usersmodule.Relationship
 
-// UserItem follows spec api_spec_types.md UserItem: privacy-controlled fields
-// (presence_status/last_online_at) are omitted when the target's
-// presence_visible is off; stats are returned on the detail path.
-type UserItem struct {
-	User           UserInfo            `json:"user"`
-	Bio            string              `json:"bio,omitempty"`
-	Tags           []string            `json:"tags,omitempty"`
-	PresenceStatus *UserPresenceStatus `json:"presence_status,omitempty"`
-	LastOnlineAt   *string             `json:"last_online_at,omitempty"`
-	Location       *RelativeLocation   `json:"location,omitempty"`
-	Stats          *UserStats          `json:"stats,omitempty"`
-	Relation       *UserRelation       `json:"relation,omitempty"`
-	SocialContext  *UserSocialContext  `json:"social_context,omitempty"`
-}
+type UserSocialContext = usersmodule.SocialContext
 
 type PaginatedUsers struct {
 	Items      []UserItem `json:"items"`
-	NextCursor string     `json:"next_cursor,omitempty"`
+	NextCursor *string    `json:"next_cursor"`
 }
 
 type GroupInfo struct {
@@ -87,51 +69,37 @@ type GroupInfo struct {
 	MembersCount int    `json:"members_count"`
 }
 
-// MyGroupState follows spec api_spec_types.md MyGroupState. unread_count is
-// computed from group_message_read_state; is_pinned/muted_until come from the
-// member's group_members row.
-type MyGroupState struct {
-	Role        GroupRole `json:"role"`
-	IsJoined    bool      `json:"is_joined"`
-	UnreadCount int       `json:"unread_count"`
-	IsMuted     bool      `json:"is_muted"`
-	MutedUntil  *string   `json:"muted_until,omitempty"`
-	IsPinned    bool      `json:"is_pinned"`
-	JoinedAt    *string   `json:"joined_at,omitempty"`
-}
+// GroupViewerState 与 groups 模块同构（spec api_spec_types.md）：
+// viewer_state 非 null 即群成员；joined_at 恒为字符串。
+type GroupViewerState = groupsmodule.GroupViewerState
 
+// GroupItem 遵循 spec api_spec_types.md：恒定 nullable 字段恒在（null = 匿名/不适用）；
+// 群管理字段（has_password/is_searchable/max_members）不在本类型——见 groups/admin/get_settings。
 type GroupItem struct {
-	Group              GroupInfo        `json:"group"`
-	Description        string           `json:"description,omitempty"`
-	Tags               []string         `json:"tags,omitempty"`
-	JoinMethod         GroupJoinMethod  `json:"join_method"`
-	RequiresApproval   bool             `json:"requires_approval"`
-	HasPassword        bool             `json:"has_password,omitempty"`
-	Location           RelativeLocation `json:"location"`
-	MyState            *MyGroupState    `json:"my_state,omitempty"`
-	FriendsInGroup     int              `json:"friends_in_group,omitempty"`
-	LastActivityAt     *string          `json:"last_activity_at,omitempty"`
-	OnlineMembersCount *int             `json:"online_members_count,omitempty"`
-	NextActivity       *string          `json:"next_activity,omitempty"`
-	CreatedAt          *string          `json:"created_at,omitempty"`
-	OwnerID            string           `json:"owner_id,omitempty"`
-	IsSearchable       bool             `json:"is_searchable,omitempty"`
-	MaxMembers         int              `json:"max_members,omitempty"`
+	Group              GroupInfo          `json:"group"`
+	Description        *string            `json:"description"`
+	Tags               []string           `json:"tags"`
+	JoinMethod         GroupJoinMethod    `json:"join_method"`
+	RequiresApproval   bool               `json:"requires_approval"`
+	Location           *RelativeLocation  `json:"location"`
+	ViewerState        *GroupViewerState  `json:"viewer_state"`
+	FriendsInGroup     *int               `json:"friends_in_group"`
+	LastActivityAt     *string            `json:"last_activity_at"`
+	OnlineMembersCount *int               `json:"online_members_count"`
+	NextActivity       *string            `json:"next_activity"`
+	CreatedAt          *string            `json:"created_at"`
+	OwnerID            *string            `json:"owner_id"`
 }
 
 type PaginatedGroups struct {
 	Items      []GroupItem `json:"items"`
-	NextCursor string      `json:"next_cursor,omitempty"`
+	NextCursor *string     `json:"next_cursor"`
 }
 
 type Reaction struct {
 	Emoji       string `json:"emoji"`
 	Count       int    `json:"count"`
 	ReactedByMe bool   `json:"reacted_by_me"`
-}
-
-type MyMomentState struct {
-	IsFavorited bool `json:"is_favorited"`
 }
 
 type RecommendationContext = string
@@ -144,29 +112,32 @@ type MomentImage struct {
 	MimeType     string `json:"mime_type,omitempty"`
 }
 
+// MomentItem 遵循 spec api_spec_types.md 公开固定形状：数组字段恒在（空数组 = 无），
+// is_favorited 恒为布尔（匿名/未收藏为 false），location/recommendation 恒定 nullable。
 type MomentItem struct {
 	MomentID       string                 `json:"moment_id"`
 	Description    string                 `json:"description"`
-	Images         []MomentImage          `json:"images,omitempty"`
+	Images         []MomentImage          `json:"images"`
 	Tags           []string               `json:"tags"`
-	Mentions       []string               `json:"mentions,omitempty"`
+	Mentions       []string               `json:"mentions"`
 	CreatedAt      string                 `json:"created_at"`
 	LikesCount     int                    `json:"likes_count"`
 	CommentsCount  int                    `json:"comments_count"`
 	SharesCount    int                    `json:"shares_count"`
 	User           UserInfo               `json:"user"`
-	Location       RelativeLocation       `json:"location"`
-	Reactions      []Reaction             `json:"reactions,omitempty"`
-	MyState        *MyMomentState         `json:"my_state,omitempty"`
-	Recommendation *RecommendationContext `json:"recommendation,omitempty"`
+	IsDeleted      bool                   `json:"is_deleted"`
+	Location       *RelativeLocation      `json:"location"`
+	Reactions      []Reaction             `json:"reactions"`
+	IsFavorited    bool                   `json:"is_favorited"`
+	Recommendation *RecommendationContext `json:"recommendation"`
 }
 
 type PaginatedMoments struct {
 	Items      []MomentItem `json:"items"`
-	NextCursor string       `json:"next_cursor,omitempty"`
+	NextCursor *string      `json:"next_cursor"`
 }
 
-type TrendingBundle struct {
+type TrendingResult struct {
 	HotMoments []MomentItem `json:"hot_moments"`
 }
 
@@ -220,3 +191,11 @@ type groupCandidate struct {
 
 var ErrInvalidFeedRequest = errors.New("feed: invalid request")
 var ErrInvalidCursor = errors.New("feed: invalid cursor")
+
+// nonNilTags 保证 tags 等恒定数组字段序列化为 [] 而非 null（spec 恒定形状）。
+func nonNilTags(tags []string) []string {
+	if tags == nil {
+		return []string{}
+	}
+	return tags
+}

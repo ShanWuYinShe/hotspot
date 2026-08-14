@@ -53,7 +53,7 @@ func (s *Service) Create(ctx context.Context, req CreateReportRequest) (ReportCr
 	return result, nil
 }
 
-func (s *Service) List(ctx context.Context, req MyReportsRequest) (PaginatedReports, error) {
+func (s *Service) List(ctx context.Context, req ListReportsRequest) (PaginatedReports, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	items, err := s.repo.List(ctx, principal.UserID, req)
 	if err != nil {

@@ -111,13 +111,13 @@ func TestAdminModerationRoutesAreMounted(t *testing.T) {
 		path string
 		body string
 	}{
-		{name: "users search", path: "/api/v1/admin/users/search", body: `{"nickname":"bob","pagination":{"limit":10}}`},
-		{name: "users open", path: "/api/v1/admin/users/open_the_door", body: `{"user_id":"user_bob"}`},
-		{name: "groups search", path: "/api/v1/admin/groups/search", body: `{"name":"hot","pagination":{"limit":10}}`},
-		{name: "groups open", path: "/api/v1/admin/groups/open_the_door", body: `{"group_id":"group_hotspot"}`},
-		{name: "reports search", path: "/api/v1/admin/reports/list", body: `{"status":"pending","pagination":{"limit":10}}`},
-		{name: "tags search", path: "/api/v1/admin/tags/search", body: `{"keyword":"hot","pagination":{"limit":10}}`},
-		{name: "announcements search", path: "/api/v1/admin/announcements/search", body: `{"pagination":{"limit":10}}`},
+		{name: "users search", path: "/admin/v1/users/search", body: `{"nickname":"bob","pagination":{"limit":10}}`},
+		{name: "users open", path: "/admin/v1/users/open_the_door", body: `{"user_id":"user_bob"}`},
+		{name: "groups search", path: "/admin/v1/groups/search", body: `{"name":"hot","pagination":{"limit":10}}`},
+		{name: "groups open", path: "/admin/v1/groups/open_the_door", body: `{"group_id":"group_hotspot"}`},
+		{name: "reports search", path: "/admin/v1/reports/list", body: `{"status":"pending","pagination":{"limit":10}}`},
+		{name: "tags search", path: "/admin/v1/tags/search", body: `{"keyword":"hot","pagination":{"limit":10}}`},
+		{name: "announcements list", path: "/admin/v1/announcements/list", body: `{"pagination":{"limit":10}}`},
 	}
 
 	for _, tc := range tests {
@@ -139,7 +139,7 @@ func TestAdminModerationRoutesAreMounted(t *testing.T) {
 
 func TestAdminModerationRoutesRequireAuth(t *testing.T) {
 	router, _ := newMountedAdminRouter(t)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/search", strings.NewReader(`{"nickname":"bob"}`))
+	req := httptest.NewRequest(http.MethodPost, "/admin/v1/users/search", strings.NewReader(`{"nickname":"bob"}`))
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
@@ -155,7 +155,7 @@ func TestAdminModerationRoutesRequireAuth(t *testing.T) {
 
 func TestAdminModerationRoutesRequireAdminPermission(t *testing.T) {
 	router, issueToken := newMountedAdminRouter(t)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/search", strings.NewReader(`{"nickname":"bob"}`))
+	req := httptest.NewRequest(http.MethodPost, "/admin/v1/users/search", strings.NewReader(`{"nickname":"bob"}`))
 	req.Header.Set("Authorization", "Bearer "+issueToken("user_bob"))
 	rr := httptest.NewRecorder()
 
@@ -218,7 +218,7 @@ func TestGetMeReturnsNonAdminMessage(t *testing.T) {
 	handler.GetMe(rr, req)
 
 	resp := decodeResponse[struct{}](t, rr)
-	if resp.Code != httpx.CodeForbidden || resp.Message != "非系统管理员" {
+	if resp.Code != httpx.CodeForbidden || resp.Message != "非平台管理员" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -252,7 +252,7 @@ func TestListPermissionsRequiresRbacPermission(t *testing.T) {
 	handler.ListPermissions(rr, req)
 
 	resp := decodeResponse[struct{}](t, rr)
-	if resp.Code != httpx.CodeForbidden || resp.Message != "系统管理员权限不足: admin.rbac.manage" {
+	if resp.Code != httpx.CodeForbidden || resp.Message != "平台管理员权限不足: admin.rbac.manage" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -374,7 +374,7 @@ func TestGetAppConfigRequiresPermission(t *testing.T) {
 	handler.GetAppConfig(rr, req)
 
 	resp := decodeResponse[AdminAppConfig](t, rr)
-	if resp.Code != httpx.CodeForbidden || resp.Message != "系统管理员权限不足: admin.app_config.read" {
+	if resp.Code != httpx.CodeForbidden || resp.Message != "平台管理员权限不足: admin.app_config.read" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -477,7 +477,7 @@ func TestSearchUsersRequiresPermission(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.SearchUsers(rr, req)
 	resp := decodeResponse[PaginatedAdminUsers](t, rr)
-	if resp.Code != httpx.CodeForbidden || resp.Message != "系统管理员权限不足: admin.users.read" {
+	if resp.Code != httpx.CodeForbidden || resp.Message != "平台管理员权限不足: admin.users.read" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -786,7 +786,7 @@ func TestCreateAnnouncementRequiresIdempotencyKey(t *testing.T) {
 	}
 }
 
-func TestSearchAnnouncementsCreateUpdateAndDelete(t *testing.T) {
+func TestListAdminAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 	handler, store, notificationRepo := newTestHandlerWithPushStore()
 	idempotency.SetStore(idempotency.NewInMemoryStore())
 	hub := realtime.DefaultHub()
@@ -828,11 +828,11 @@ func TestSearchAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 	if adminPayload["notify_id"] == "" || adminPayload["notify_id"] != alicePayload["notify_id"] {
 		t.Fatalf("expected shared non-empty notification_id in broadcast payloads: %#v %#v", adminPayload, alicePayload)
 	}
-	adminNotifications, err := notificationRepo.List(context.Background(), "admin", notify.NotificationListRequest{})
+	adminNotifications, err := notificationRepo.List(context.Background(), "admin", notify.NotifyListRequest{})
 	if err != nil || len(adminNotifications.Items) != 1 || adminNotifications.Items[0].Type != "system_announcement" {
 		t.Fatalf("unexpected admin notifications: %#v err=%v", adminNotifications, err)
 	}
-	aliceNotifications, err := notificationRepo.List(context.Background(), "user_alice", notify.NotificationListRequest{})
+	aliceNotifications, err := notificationRepo.List(context.Background(), "user_alice", notify.NotifyListRequest{})
 	if err != nil || len(aliceNotifications.Items) != 1 || aliceNotifications.Items[0].Type != "system_announcement" {
 		t.Fatalf("unexpected alice notifications: %#v err=%v", aliceNotifications, err)
 	}
@@ -840,9 +840,9 @@ func TestSearchAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 		t.Fatalf("expected stored notification_id to match broadcast payload: broadcast=%v stored admin=%q alice=%q", adminPayload["notify_id"], adminNotifications.Items[0].NotifyID, aliceNotifications.Items[0].NotifyID)
 	}
 
-	searchReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/search", strings.NewReader(`{"severity":"warning","pagination":{"limit":10}}`)), "admin", true)
+	searchReq := adminContext(httptest.NewRequest(http.MethodPost, "/admin/v1/announcements/list", strings.NewReader(`{"severity":"warning","pagination":{"limit":10}}`)), "admin", true)
 	searchRR := httptest.NewRecorder()
-	handler.SearchAnnouncements(searchRR, searchReq)
+	handler.ListAdminAnnouncements(searchRR, searchReq)
 	searchResp := decodeResponse[PaginatedAdminAnnouncements](t, searchRR)
 	if searchResp.Code != 0 || searchResp.Data == nil || len(searchResp.Data.Items) != 1 || searchResp.Data.Items[0].AnnouncementID != createResp.Data.AnnouncementID {
 		t.Fatalf("unexpected search response: %#v", searchResp)
@@ -856,9 +856,9 @@ func TestSearchAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 		t.Fatalf("unexpected update response: %#v", updateResp)
 	}
 
-	searchUpdatedReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/search", strings.NewReader(`{"severity":"info","pagination":{"limit":10}}`)), "admin", true)
+	searchUpdatedReq := adminContext(httptest.NewRequest(http.MethodPost, "/admin/v1/announcements/list", strings.NewReader(`{"severity":"info","pagination":{"limit":10}}`)), "admin", true)
 	searchUpdatedRR := httptest.NewRecorder()
-	handler.SearchAnnouncements(searchUpdatedRR, searchUpdatedReq)
+	handler.ListAdminAnnouncements(searchUpdatedRR, searchUpdatedReq)
 	searchUpdatedResp := decodeResponse[PaginatedAdminAnnouncements](t, searchUpdatedRR)
 	if searchUpdatedResp.Code != 0 || searchUpdatedResp.Data == nil || len(searchUpdatedResp.Data.Items) != 1 {
 		t.Fatalf("unexpected updated search response: %#v", searchUpdatedResp)
@@ -883,9 +883,9 @@ func TestSearchAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 		t.Fatalf("unexpected second delete response: %#v", deleteAgainResp)
 	}
 
-	searchAfterDeleteReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/search", strings.NewReader(`{"pagination":{"limit":10}}`)), "admin", true)
+	searchAfterDeleteReq := adminContext(httptest.NewRequest(http.MethodPost, "/admin/v1/announcements/list", strings.NewReader(`{"pagination":{"limit":10}}`)), "admin", true)
 	searchAfterDeleteRR := httptest.NewRecorder()
-	handler.SearchAnnouncements(searchAfterDeleteRR, searchAfterDeleteReq)
+	handler.ListAdminAnnouncements(searchAfterDeleteRR, searchAfterDeleteReq)
 	searchAfterDeleteResp := decodeResponse[PaginatedAdminAnnouncements](t, searchAfterDeleteRR)
 	if searchAfterDeleteResp.Code != 0 || searchAfterDeleteResp.Data == nil || len(searchAfterDeleteResp.Data.Items) < 1 {
 		t.Fatalf("unexpected search-after-delete response: %#v", searchAfterDeleteResp)
@@ -1289,39 +1289,6 @@ func TestListAuditLogsWithFilter(t *testing.T) {
 	listResp := decodeResponse[PaginatedAuditLogs](t, listRR)
 	if listResp.Code != 0 {
 		t.Fatalf("unexpected list response: %#v", listResp)
-	}
-}
-
-func TestOpenAuditLogReturnsLog(t *testing.T) {
-	handler, _ := newTestHandlerWithStore()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
-
-	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/list", strings.NewReader(`{"pagination":{"limit":10}}`)), "admin", true)
-	listRR := httptest.NewRecorder()
-	handler.ListAuditLogs(listRR, listReq)
-	listResp := decodeResponse[PaginatedAuditLogs](t, listRR)
-	if listResp.Code != 0 || listResp.Data == nil || len(listResp.Data.Items) == 0 {
-		t.Fatalf("expected audit logs, got %#v", listResp)
-	}
-	logID := listResp.Data.Items[0].LogID
-
-	openReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/open_the_door", strings.NewReader(`{"log_id":"`+logID+`"}`)), "admin", true)
-	openRR := httptest.NewRecorder()
-	handler.OpenAuditLog(openRR, openReq)
-	openResp := decodeResponse[AuditLogItem](t, openRR)
-	if openResp.Code != 0 || openResp.Data == nil || openResp.Data.LogID != logID {
-		t.Fatalf("unexpected open response: %#v", openResp)
-	}
-}
-
-func TestOpenAuditLogReturnsNotFoundForMissingLog(t *testing.T) {
-	handler := newTestHandler()
-	openReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/open_the_door", strings.NewReader(`{"log_id":"missing_log_id"}`)), "admin", true)
-	openRR := httptest.NewRecorder()
-	handler.OpenAuditLog(openRR, openReq)
-	openResp := decodeResponse[AuditLogItem](t, openRR)
-	if openResp.Code != httpx.CodeNotFound || openResp.Message != "审计日志不存在" {
-		t.Fatalf("unexpected open response: %#v", openResp)
 	}
 }
 

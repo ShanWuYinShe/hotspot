@@ -58,7 +58,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Post("/create", m.momentsHandler.Create)
 			group.Post("/update", m.momentsHandler.Update)
 			group.Post("/delete", m.momentsHandler.Delete)
-			group.Post("/list_my", m.momentsHandler.ListMine)
+			group.Post("/list_created", m.momentsHandler.ListCreated)
 			group.Post("/set_favorite", m.momentsHandler.Favorite)
 			group.Post("/list_favorites", m.momentsHandler.ListFavorites)
 		})

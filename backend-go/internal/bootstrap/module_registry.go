@@ -94,6 +94,13 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// Owner-dismiss audit entries are written through the admin module (spec
 	// api_spec_group.md: dismiss reason is audit-only).
 	groupsModule.Service.SetGroupDismissAuditWriter(adminModule)
+	// 守卫子树依赖接线（spec api_spec_authz.md）：
+	// - 被屏蔽标签检查（groups/create tags → 10400，admin 实现）
+	// - 管理员撤回任意成员消息（groups/admin/messages/recall，groupmessages 实现）
+	groups.SetBlockedTagChecker(adminModule.BlockedTagChecker())
+	groups.RecallMessageAsAdmin = func(ctx context.Context, groupID, messageID, operatorID string) error {
+		return gmModule.Service.RecallMessageAsAdmin(ctx, operatorID, groupID, messageID)
+	}
 	return []modulekit.Module{
 		adminModule,
 		authModule,

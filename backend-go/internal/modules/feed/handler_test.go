@@ -92,12 +92,12 @@ func TestTrendingRejectsInvalidJSON(t *testing.T) {
 }
 
 func TestTrendingReturnsBundle(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&stubRepository{trendingResult: TrendingBundle{HotMoments: []MomentItem{{MomentID: "m1"}}}}))
+	handler := NewHandler(NewServiceWithRepo(&stubRepository{trendingResult: TrendingResult{HotMoments: []MomentItem{{MomentID: "m1"}}}}))
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/trending", strings.NewReader(`{}`))
 
 	handler.Trending(rr, req)
-	resp := decodeFeedResponse[TrendingBundle](t, rr)
+	resp := decodeFeedResponse[TrendingResult](t, rr)
 	if resp.Code != 0 || len(resp.Data.HotMoments) != 1 {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
@@ -117,7 +117,7 @@ func TestFollowingReturnsPaginatedMoments(t *testing.T) {
 }
 
 func TestFollowingReturnsPaginatedShape(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&stubRepository{momentsResult: PaginatedMoments{Items: []MomentItem{{MomentID: "m1"}}, NextCursor: "cursor1"}}))
+	handler := NewHandler(NewServiceWithRepo(&stubRepository{momentsResult: PaginatedMoments{Items: []MomentItem{{MomentID: "m1"}}, NextCursor: strPtr("cursor1")}}))
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/following", strings.NewReader(`{}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
@@ -139,7 +139,7 @@ func TestFollowingReturnsPaginatedShape(t *testing.T) {
 }
 
 func TestNearbyUsersReturnsPaginatedShape(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&stubRepository{usersResult: PaginatedUsers{Items: []UserItem{{User: UserInfo{UserID: "u2"}}}, NextCursor: "cursor2"}}))
+	handler := NewHandler(NewServiceWithRepo(&stubRepository{usersResult: PaginatedUsers{Items: []UserItem{{User: UserInfo{UserID: "u2"}}}, NextCursor: strPtr("cursor2")}}))
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/nearby_users", strings.NewReader(`{"reference_point":{"latitude":1,"longitude":2}}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
@@ -161,7 +161,7 @@ func TestNearbyUsersReturnsPaginatedShape(t *testing.T) {
 }
 
 func TestNearbyGroupsReturnsPaginatedShape(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&stubRepository{groupsResult: PaginatedGroups{Items: []GroupItem{{Group: GroupInfo{GroupID: "g1"}}}, NextCursor: "cursor3"}}))
+	handler := NewHandler(NewServiceWithRepo(&stubRepository{groupsResult: PaginatedGroups{Items: []GroupItem{{Group: GroupInfo{GroupID: "g1"}}}, NextCursor: strPtr("cursor3")}}))
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/nearby_groups", strings.NewReader(`{"reference_point":{"latitude":1,"longitude":2}}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
@@ -183,7 +183,7 @@ func TestNearbyGroupsReturnsPaginatedShape(t *testing.T) {
 }
 
 func TestTrendingReturnsBundleShape(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&stubRepository{trendingResult: TrendingBundle{
+	handler := NewHandler(NewServiceWithRepo(&stubRepository{trendingResult: TrendingResult{
 		HotMoments: []MomentItem{{MomentID: "m1"}},
 	}}))
 	rr := httptest.NewRecorder()

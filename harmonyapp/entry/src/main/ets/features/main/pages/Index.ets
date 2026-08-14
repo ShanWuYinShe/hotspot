@@ -12,7 +12,7 @@ import { LocationInfo } from '../../../core/location/LocationUtil';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
-import { MyProfile, UpdateLocationRequest, GeoPoint, AuthData } from '../../../core/types/api';
+import { AccountInfo, UpdateLocationRequest, GeoPoint, AuthData } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import type { ServerEvent } from '../../../core/types/WebSocketTypes';
@@ -58,7 +58,7 @@ struct Index {
   /** Navigation 路由栈 */
   @Provide('NavPathStack') navPathStack: NavPathStack = new NavPathStack();
 
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
   @StorageLink(KEY_IS_LOGGED_IN) @Watch('onLoginStateChanged') isLoggedIn: boolean = false;
   @StorageLink(KEY_USER_TYPE) userType: string = '';
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
@@ -376,7 +376,7 @@ struct Index {
         return;
       }
 
-      const profileResp = await ApiClient.getMyProfile();
+      const profileResp = await ApiClient.getAccountInfo();
       if (profileResp.code !== 0 || !profileResp.data) {
         hilog.warn(DOMAIN_NUMBER, TAG, '冷启动：获取 profile 失败，清除登录态');
         this.stateManager.updateUser(null);

@@ -200,6 +200,33 @@ func (s *Service) Recall(ctx context.Context, req RecallGroupMessageRequest) err
 	return nil
 }
 
+// RecallMessageAsAdmin 供 groups/admin/messages/recall 调用（spec api_spec_group.md）：
+// 群管理员/群主撤回群内任意成员发送的消息。与 group_messages/recall（仅作者、受时间窗
+// 约束）角色分离：本函数不做作者校验、不受撤回时间窗约束，但消息必须属于 groupID、
+// 存在且未被撤回。守卫（owner/admin）在 groups 模块完成，此处不重复鉴权。
+// 注意：本函数不注册任何 HTTP 路由；groups 模块的群管理守卫端点直接调用它。
+func (s *Service) RecallMessageAsAdmin(ctx context.Context, operatorID, groupID, messageID string) error {
+	meta, found, err := s.repo.LookupMessageMeta(ctx, messageID)
+	if err != nil {
+		return err
+	}
+	if !found || meta.GroupID != groupID {
+		return ErrMessageNotFound
+	}
+	meta2, err := s.repo.RecallAsAdmin(ctx, messageID)
+	if err != nil {
+		observability.L().Error("groupmessages.recall_as_admin failed", "error", err, "message_id", messageID, "group_id", groupID)
+		return err
+	}
+	realtime.DefaultHub().BroadcastToGroup(groupID, realtime.Event{Type: realtime.EventTypeGroupMessageRecalled, Payload: map[string]any{
+		"group_id":    groupID,
+		"message_id":  messageID,
+		"recalled_by": map[string]any{"user_id": operatorID},
+		"recalled_at": meta2.SentAt,
+	}})
+	return nil
+}
+
 // authorizeMessageMutation enforces the two invariants that Update/Recall
 // require before touching a message:
 //  1. the caller must still be a member of the group the message lives in

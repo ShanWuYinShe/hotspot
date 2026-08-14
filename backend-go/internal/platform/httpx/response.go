@@ -24,6 +24,12 @@ func Error(code Code, message string) ApiResponse[struct{}] {
 	return ApiResponse[struct{}]{Code: code, Message: message}
 }
 
+// ErrorWithData 构造带 data 的错误响应（仅端点显式声明错误时 data 结构的场景，
+// 如 10200 的 ForbiddenErrorData、10400 的 GroupMuteBlock）。
+func ErrorWithData(code Code, message string, data any) ApiResponse[any] {
+	return ApiResponse[any]{Code: code, Message: message, Data: &data}
+}
+
 func WriteJSON[T any](w http.ResponseWriter, status int, payload ApiResponse[T]) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)

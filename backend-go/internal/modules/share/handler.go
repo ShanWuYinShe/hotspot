@@ -65,7 +65,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	var req ShareListRequest
+	var req ListSharesRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteInvalidRequest(w, r, "List", "参数错误")
 		return

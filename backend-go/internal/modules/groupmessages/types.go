@@ -67,7 +67,7 @@ func decodeGroupMessageCursor(value string) (time.Time, string, error) {
 	return parsed.UTC(), decoded.MessageID, nil
 }
 
-type GetGroupMessagesHistoryRequest struct {
+type ListGroupMessagesRequest struct {
 	GroupID    string            `json:"group_id"`
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }

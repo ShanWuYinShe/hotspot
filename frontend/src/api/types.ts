@@ -71,7 +71,20 @@ export type ReportReason =
 	| 'other';
 export type ReportStatus = 'pending' | 'resolved' | 'dismissed';
 export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
-export type BlockReason = 'blocked' | 'privacy' | 'stranger_quota_exceeded';
+// spec: api_spec_errors.md → ForbiddenReason（10200 的 data.forbidden_reason，12 项权威枚举）
+export type ForbiddenReason =
+	| 'not_admin'
+	| 'insufficient_admin_permission'
+	| 'admin_protected_target'
+	| 'not_group_member'
+	| 'not_group_admin'
+	| 'not_group_owner'
+	| 'not_resource_owner'
+	| 'not_chat_participant'
+	| 'privacy_setting'
+	| 'blocked_by_user'
+	| 'stranger_quota_exceeded'
+	| 'banned_in_group';
 export type AnnounceLevel = 'info' | 'warning' | 'error';
 export type NotifyCategory = 'social' | 'interaction' | 'group' | 'report' | 'nearby' | 'system';
 export type NotifyType =
@@ -126,16 +139,16 @@ export interface SocialContext {
 }
 
 export interface UserItem {
-	// spec: types.md → UserItem（list/search/detail/feed）
+	// spec: types.md → UserItem（list/search/detail/feed；恒定 nullable 通则：权限/隐私字段恒在，null=隐藏/不适用）
 	user: UserInfo;
 	bio?: string;
 	tags?: string[];
-	presence_status?: UserPresenceStatus;
-	last_online_at?: string;
-	location?: RelativeLocation;
-	stats?: UserStats;
-	relation?: Relationship;
-	social_context?: SocialContext;
+	presence_status: UserPresenceStatus | null;
+	last_online_at: string | null;
+	location: RelativeLocation | null;
+	stats: UserStats | null;
+	relation: Relationship | null;
+	social_context: SocialContext | null;
 }
 
 export interface GroupInfo {
@@ -146,36 +159,43 @@ export interface GroupInfo {
 	members_count: number;
 }
 
-export interface MyGroupState {
-	// spec: types.md → MyGroupState（@auth-only）
+export interface GroupViewerState {
+	// spec: types.md → GroupViewerState（GroupItem.viewer_state 的取值类型；viewer_state 为 null 即非成员）
 	role: GroupRole;
-	is_joined: boolean;
 	unread_count: number;
 	is_muted: boolean;
-	muted_until?: string;
+	muted_until: string | null;
 	is_pinned: boolean;
 	joined_at?: string;
 }
 
 export interface GroupItem {
-	// spec: types.md → GroupItem（list/search/detail/feed）
+	// spec: types.md → GroupItem（公开固定形状；群管理字段 is_searchable/max_members/has_password 见 GroupSettings）
 	group: GroupInfo;
 	description?: string;
 	tags?: string[];
 	join_method: GroupJoinMethod;
 	requires_approval: boolean;
-	has_password?: boolean;
-	location: RelativeLocation;
+	location: RelativeLocation | null;
 	last_activity_at?: string;
 	online_members_count?: number;
 	next_activity?: string;
-	last_message?: LastMessagePreview; // 群列表场景返回（仅 groups/list_my）；LastMessagePreview 定义见消息节
+	last_message?: LastMessagePreview; // 仅 groups/list_joined 返回
 	created_at?: string;
 	owner_id?: string;
-	my_state?: MyGroupState;
+	viewer_state: GroupViewerState | null;
 	friends_in_group?: number;
-	is_searchable?: boolean;
-	max_members?: number;
+}
+
+export interface GroupSettings {
+	// spec: types.md → GroupSettings（仅群管理守卫子树 groups/admin/get_settings 返回）
+	join_method: GroupJoinMethod;
+	requires_approval: boolean;
+	has_password: boolean;
+	is_searchable: boolean;
+	members_searchable: boolean;
+	max_members: number;
+	location: Location;
 }
 
 export interface GroupAnnouncementItem {
@@ -190,13 +210,20 @@ export interface GroupAnnouncementItem {
 }
 
 export interface GroupMemberItem {
-	// spec: api_spec_group.md → members/list
+	// spec: api_spec_group.md → members/list（公开形状；管理字段见 AdminGroupMemberItem）
 	user: UserInfo;
 	role: GroupRole;
 	joined_at: string;
-	muted_until?: string;
-	presence_status?: UserPresenceStatus;
-	last_online_at?: string;
+	presence_status: UserPresenceStatus | null;
+	last_online_at: string | null;
+}
+
+export interface AdminGroupMemberItem {
+	// spec: api_spec_group.md → groups/admin/members/list（muted_until 真值，null=未禁言）
+	user: UserInfo;
+	role: GroupRole;
+	joined_at: string;
+	muted_until: string | null;
 }
 
 export interface JoinGroupResult {
@@ -324,19 +351,19 @@ export interface SearchGroupMembersRequest {
 	pagination?: PaginationParams;
 }
 
-export interface InviteMemberRequest {
+export interface CreateGroupInviteRequest {
 	group_id: string;
 	user_id: string;
 	message?: string;
 }
 
-export interface GroupSentInvitesRequest {
+export interface ListSentInvitesRequest {
 	group_id: string;
 	status?: ApplicationStatus | 'all';
 	pagination?: PaginationParams;
 }
 
-export interface RevokeSentInviteRequest {
+export interface RevokeGroupInviteRequest {
 	group_id: string;
 	invite_id: string;
 	reason?: string;
@@ -409,7 +436,7 @@ export interface DeleteGroupAnnouncementRequest {
 	announcement_id: string;
 }
 
-export interface MyApplicationsRequest {
+export interface ListSubmittedApplicationsRequest {
 	status?: ApplicationStatus | 'all';
 	pagination?: PaginationParams;
 }
@@ -420,7 +447,7 @@ export interface CancelApplicationRequest {
 	reason?: string;
 }
 
-export interface MyInvitesRequest {
+export interface ListReceivedInvitesRequest {
 	status?: ApplicationStatus | 'all';
 	pagination?: PaginationParams;
 }
@@ -435,7 +462,7 @@ export interface RejectInviteRequest {
 }
 
 export interface MomentItem {
-	// spec: types.md → MomentItem（list/search/detail/feed）
+	// spec: types.md → MomentItem（公开固定形状；拥有者视角见 OwnerMomentItem）
 	moment_id: string;
 	description: string;
 	images?: MediaAsset[];
@@ -447,11 +474,15 @@ export interface MomentItem {
 	shares_count: number;
 	reactions?: Reaction[];
 	user: UserInfo;
-	location: RelativeLocation;
-	privacy_level?: PrivacyLevel;
-	my_state?: { is_favorited: boolean };
+	location: RelativeLocation | null;
+	is_favorited: boolean; // 恒定布尔：匿名/未收藏为 false
 	recommendation?: 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
 	is_deleted: boolean; // 软删除标记；true 时 description 为空，客户端展示"内容已删除"占位
+}
+
+export interface OwnerMomentItem extends MomentItem {
+	// spec: api_spec_moment.md → OwnerMomentItem（moments/list_created、create、update 返回）
+	privacy_level: PrivacyLevel;
 }
 
 // 收藏列表项（spec: moment.md → FavoritedMomentItem，list_favorites 返回）
@@ -638,7 +669,7 @@ export interface PaginationParams {
 // 供仅 import types.ts 的调用方使用，避免与 client 循环依赖。
 export interface PaginatedData<T> {
 	items: T[];
-	next_cursor?: string;
+	next_cursor: string | null; // 恒定 nullable：null = 没有更多数据
 }
 
 // --- Auth（spec: api_spec_auth.md）---
@@ -692,9 +723,9 @@ export interface UserProfileBundle {
 export interface RelatedUserItem {
 	user: UserItem;
 	followed_at: string;
-	followed_back_at?: string; // 对方回关时间（成为好友的时间）；仅 list_friends 返回
+	followed_back_at: string | null; // 对方回关时间（成为好友的时间）；仅 list_friends 返回，其余 null
 	is_mutual: boolean;
-	remark?: string; // @owner-only：仅查询自己时返回
+	remark: string | null; // 仅查询自己（user_id=当前用户）时返回；查他人 null
 }
 
 // --- Feed（spec: api_spec_feed.md）---
@@ -703,7 +734,7 @@ export interface TrendingBundle {
 	hot_moments: MomentItem[];
 }
 
-// --- Notifications（spec: api_spec_notify.md）---
+// --- Notify（spec: api_spec_notify.md）---
 export interface UnreadCountResult {
 	// spec: notify.md → get_unread_count
 	total: number;
@@ -734,8 +765,8 @@ export interface ApiVersionMeta {
 }
 export interface UnreadSummary {
 	// spec: system.md → bootstrap
-	notification_total: number;
-	notification_by_type: Record<NotifyCategory, number>;
+	notify_total: number;
+	notify_by_type: Record<NotifyCategory, number>;
 	private_chat_unread_count: number;
 	group_chat_unread_count: number;
 	total_badge: number;
@@ -758,10 +789,10 @@ export interface PrivateChatItem {
 	is_pinned: boolean;
 	last_activity_at: string;
 	last_message?: LastMessagePreview; // 列表场景返回
-	presence_status?: UserPresenceStatus;
+	presence_status: UserPresenceStatus | null;
 	created_at?: string;
 	can_message: boolean;
-	message_blocked_reason?: BlockReason;
+	blocked_reason: ForbiddenReason | null; // 仅 can_message=false 时返回
 }
 export interface PrivateChatOpenResult {
 	// spec: chat.md → private_chats/open_the_door（纯查询，无创建副作用）
@@ -991,7 +1022,7 @@ export interface SendPrivateMessageRequest {
 	type: string;
 	content: string;
 }
-export interface GetPrivateMessageHistoryRequest {
+export interface ListPrivateMessagesRequest {
 	target_user_id: string;
 	pagination?: PaginationParams;
 }
@@ -1000,7 +1031,7 @@ export interface SendGroupMessageRequest {
 	type: string;
 	content: string;
 }
-export interface GetGroupMessageHistoryRequest {
+export interface ListGroupMessagesRequest {
 	group_id: string;
 	pagination?: PaginationParams;
 }
@@ -1021,6 +1052,21 @@ export interface UpdateGroupPreferencesRequest {
 	group_id: string;
 	is_muted?: boolean;
 	is_pinned?: boolean;
+}
+export interface GetGroupSettingsRequest {
+	// spec: api_spec_group.md → groups/admin/get_settings
+	group_id: string;
+}
+export interface ListAdminGroupMembersRequest {
+	// spec: api_spec_group.md → groups/admin/members/list
+	group_id: string;
+	role?: GroupRole;
+	pagination?: PaginationParams;
+}
+export interface RecallGroupMessageAdminRequest {
+	// spec: api_spec_group.md → groups/admin/messages/recall（管理员撤回任意成员消息，无时间窗）
+	group_id: string;
+	message_id: string;
 }
 
 // Reactions / Comments / Reports / Notify
@@ -1043,6 +1089,8 @@ export interface CreateReportRequest {
 	description?: string;
 }
 export interface MarkNotifyReadRequest {
+	// spec: notify.md → mark_read（参数必显式：scope 必填；scope='ids' 时 notify_ids 1-50 个）
+	scope: 'ids' | 'all';
 	notify_ids?: string[];
 }
 

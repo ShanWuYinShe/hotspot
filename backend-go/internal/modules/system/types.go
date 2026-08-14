@@ -108,15 +108,21 @@ type BootstrapRequest struct {
 
 type BootstrapData struct {
 	BootstrapVersion string         `json:"bootstrap_version"`
-	Meta             *ApiVersionMeta `json:"meta,omitempty"`         // 缓存命中时省略（spec system.md → bootstrap）
-	ClientConfig     *ClientConfig   `json:"client_config,omitempty"` // 缓存命中时省略
-	Profile          any             `json:"profile,omitempty"`
-	UnreadSummary    *UnreadSummary  `json:"unread_summary,omitempty"`
+	Meta             *ApiVersionMeta `json:"meta"`         // 恒定 nullable；缓存命中时整体省略（handler 用精简类型）
+	ClientConfig     *ClientConfig   `json:"client_config"` // 恒定 nullable；缓存命中时整体省略
+	Profile          any             `json:"profile"`       // 恒定 nullable：匿名时为 null
+	UnreadSummary    *UnreadSummary  `json:"unread_summary"` // 恒定 nullable：匿名时为 null
+}
+
+// BootstrapCacheHitData 缓存命中时的精简响应（仅 bootstrap_version，
+// meta/client_config/profile/unread_summary 由客户端用缓存）。
+type BootstrapCacheHitData struct {
+	BootstrapVersion string `json:"bootstrap_version"`
 }
 
 type UnreadSummary struct {
-	NotificationTotal      int            `json:"notification_total"`
-	NotificationByType     map[string]int `json:"notification_by_type"`
+	NotifyTotal            int            `json:"notify_total"`
+	NotifyByType           map[string]int `json:"notify_by_type"`
 	PrivateChatUnreadCount int            `json:"private_chat_unread_count"`
 	GroupChatUnreadCount   int            `json:"group_chat_unread_count"`
 	TotalBadge             int            `json:"total_badge"`

@@ -20,6 +20,9 @@ type Repository interface {
 	Block(context.Context, string, string, string) error
 	Unblock(context.Context, string, string) error
 	SetRemark(context.Context, string, string, string) error
+	// CheckBlockedTags 返回 tags 中命中平台屏蔽标签（admin_blocked_tags）的标签名；
+	// 为空表示无屏蔽标签。用于 update_account 等资料 tag 写入拒绝（10400）。
+	CheckBlockedTags(context.Context, []string) ([]string, error)
 	ListBlocked(context.Context, string, int, string) (PaginatedBlockedUsers, error)
 	ListReactedMoments(context.Context, string, int, string, string) (momenttypes.PaginatedMoments, error)
 	Relationship(context.Context, string, string) (Relationship, error)

@@ -19,6 +19,15 @@ func nullableString(value string) any {
 	return value
 }
 
+// strPtr 返回 string 的指针（用于 AdminUserItem 中常量 nullable 的 PII IP 字段：
+// 空串仍序列化为空指针，由 service 层按 read_ip 权限决定置 null）。
+func strPtr(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
+}
+
 func (r *PostgresRepository) SearchUsers(ctx context.Context, req AdminUserSearchRequest) (adminUserPage, error) {
 	queryable, ok := r.queryable()
 	if !ok {

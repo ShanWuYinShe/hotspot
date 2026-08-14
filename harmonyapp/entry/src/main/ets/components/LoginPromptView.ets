@@ -16,7 +16,7 @@ import { HttpUtil } from '../core/network/HttpUtil';
 import { WebSocketService } from '../core/network/WebSocketService';
 import { GlobalStateManager } from '../core/state/GlobalStateManager';
 import { DeviceIdUtil } from '../core/util/DeviceIdUtil';
-import { AuthData, GuestRequest, MyProfile } from '../core/types/api';
+import { AuthData, GuestRequest, AccountInfo } from '../core/types/api';
 import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { KeyboardDismissManager } from '../core/utils/KeyboardDismissManager';
@@ -234,7 +234,7 @@ export struct LoginPromptView {
     await HttpUtil.setToken(authData.access_token);
 
     const stateManager = GlobalStateManager.getInstance();
-    const basicUserInfo: MyProfile = {
+    const basicUserInfo: AccountInfo = {
       user_id: authData.user_id,
       nickname: '',
       avatar_url: '',
@@ -258,7 +258,7 @@ export struct LoginPromptView {
     stateManager.updateUser(basicUserInfo);
 
     try {
-      const profileResp = await ApiClient.getMyProfile();
+      const profileResp = await ApiClient.getAccountInfo();
       if (profileResp.code === 0 && profileResp.data) {
         stateManager.updateUser(profileResp.data);
       }

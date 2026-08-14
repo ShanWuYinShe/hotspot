@@ -83,6 +83,13 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 		profile.Bio = *req.Bio
 	}
 	if req.Tags != nil {
+		// 契约（spec api_spec_user.md update_account）：tags 含被屏蔽标签 → 10400。
+		if blocked, err := s.repo.CheckBlockedTags(ctx, *req.Tags); err != nil {
+			observability.L().Error("users.update_my_profile blocked-tags check failed", "error", err)
+			return err
+		} else if len(blocked) > 0 {
+			return ErrBlockedTag
+		}
 		profile.Tags = *req.Tags
 	}
 	if req.Gender != nil {
@@ -161,7 +168,7 @@ func (s *Service) Search(ctx context.Context, req SearchUsersRequest) (Paginated
 			item.Location.BearingDegrees = &b64
 		}
 		if relationsByUserID != nil && !isSelf {
-			if relation, ok := relationsByUserID[profile.UserID]; ok {
+			if relation, ok := relationsByUserID[profile.UserID]; ok && (relation.IsFollowing || relation.IsFollowedBy || relation.IsBlocked) {
 				item.Relation = &relation
 			}
 		}
@@ -199,13 +206,12 @@ func (s *Service) OpenTheDoor(ctx context.Context, userID string) (UserItem, boo
 		if err != nil {
 			return UserItem{}, false, err
 		}
-		relation = &rel
+		// 无关系（三态皆假/匿名/本人）→ null（spec api_spec_base.md 恒定 nullable）
+		if rel.IsFollowing || rel.IsFollowedBy || rel.IsBlocked {
+			relation = &rel
+		}
 	}
 	item := userItemFromProfile(profile, relation, isSelf || settings.PresenceVisible, isSelf || settings.LocationVisible, isSelf || settings.StatsVisible)
-	if relation == nil && hasPrincipal && isSelf {
-		selfRelation := Relationship{}
-		item.Relation = &selfRelation
-	}
 	if hasPrincipal && principal.UserID != "" && !isSelf {
 		socialContext, err := s.buildSocialContext(ctx, principal.UserID, profile)
 		if err != nil {
@@ -329,8 +335,9 @@ func (s *Service) DeleteAccount(ctx context.Context, req DeleteAccountRequest) e
 	if err != nil {
 		return err
 	}
+	// 契约（spec api_spec_user.md delete_account）：confirmation 必须精确匹配，否则 10000。
 	if req.Confirmation != "DELETE_MY_ACCOUNT" {
-		return ErrConflict
+		return ErrInvalidRequest
 	}
 	if err := s.repo.DeleteProfile(ctx, principal.UserID); err != nil {
 		observability.L().Error("users.delete_account failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -434,10 +441,16 @@ func defaultSettings() UserSettings {
 }
 
 func userItemFromProfile(profile MyProfile, relation *Relationship, includePresence bool, includeLocation bool, includeStats bool) UserItem {
-	item := UserItem{User: UserInfo{UserID: profile.UserID, Nickname: profile.Nickname, AvatarURL: profile.AvatarURL}, Bio: profile.Bio, Tags: profile.Tags, Relation: relation}
+	item := UserItem{User: UserInfo{UserID: profile.UserID, Nickname: profile.Nickname, AvatarURL: profile.AvatarURL}, Tags: profile.Tags, Relation: relation}
+	if profile.Bio != "" {
+		bio := profile.Bio
+		item.Bio = &bio
+	}
 	if includePresence {
-		item.PresenceStatus = profile.PresenceStatus
-		item.LastOnline = profile.LastOnline
+		ps := profile.PresenceStatus
+		item.PresenceStatus = &ps
+		lastOnline := profile.LastOnline
+		item.LastOnline = &lastOnline
 	}
 	if includeLocation {
 		item.Location = &RelativeLocation{Point: profile.Location.Point, LocationName: profile.Location.LocationName}

@@ -2,7 +2,7 @@ import { GlobalStateManager, KEY_CLIENT_CONFIG, KEY_CURRENT_USER, KEY_IS_LOGGED_
 import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { MyProfile, ApiVersionMeta, ClientConfig, SystemAnnouncementItem } from '../../../core/types/api';
+import { AccountInfo, ApiVersionMeta, ClientConfig, SystemAnnouncementItem } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
 import { MomentCacheService } from '../../../core/database/MomentCacheService';
@@ -30,7 +30,7 @@ const TAG: string = 'SettingsPage';
 @Component
 export struct SettingsPage {
   pathStack: NavPathStack = new NavPathStack();
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_USER_TYPE) userType: string = '';
   @StorageLink(KEY_CLIENT_CONFIG) clientConfig: ClientConfig | null = null;

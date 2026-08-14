@@ -52,6 +52,43 @@ func (r *InMemoryRepository) ListMembers(_ context.Context, groupID string, role
 	return items, "", nil
 }
 
+// ListAdminMembers returns the admin-perspective member list (includes the
+// truthy muted_until; null = not muted). groups/admin/members/list only.
+func (r *InMemoryRepository) ListAdminMembers(_ context.Context, groupID string, role *GroupRole, limit int, cursor string) ([]AdminGroupMemberItem, string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	group, ok := r.groups[groupID]
+	if !ok {
+		return nil, "", ErrGroupNotFound
+	}
+	items := make([]AdminGroupMemberItem, 0)
+	for userID, membership := range r.members[groupID] {
+		if role != nil && membership.Role != *role {
+			continue
+		}
+		items = append(items, AdminGroupMemberItem{
+			User:       UserInfo{UserID: userID, Nickname: userID},
+			Role:       membership.Role,
+			JoinedAt:   membership.JoinedAt,
+			MutedUntil: groupMutedUntil(membership.MutedUntil),
+		})
+	}
+	_ = group
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].JoinedAt == items[j].JoinedAt {
+			return items[i].User.UserID < items[j].User.UserID
+		}
+		return items[i].JoinedAt < items[j].JoinedAt
+	})
+	if limit <= 0 {
+		limit = 20
+	}
+	if len(items) > limit {
+		return items[:limit], items[limit-1].JoinedAt + ":" + items[limit-1].User.UserID, nil
+	}
+	return items, "", nil
+}
+
 // IsMember is a direct membership probe used on hot paths (realtime authz),
 // replacing the prior pattern of paging the whole member list.
 func (r *InMemoryRepository) IsMember(_ context.Context, groupID, userID string) (bool, error) {
@@ -60,6 +97,17 @@ func (r *InMemoryRepository) IsMember(_ context.Context, groupID, userID string)
 	if members, ok := r.members[groupID]; ok {
 		_, isMember := members[userID]
 		return isMember, nil
+	}
+	return false, nil
+}
+
+// IsBanned reports whether the user is banned from the group (join-time check, C.3).
+func (r *InMemoryRepository) IsBanned(_ context.Context, groupID, userID string) (bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if banned, ok := r.banned[groupID]; ok {
+		_, isBanned := banned[userID]
+		return isBanned, nil
 	}
 	return false, nil
 }
@@ -271,7 +319,7 @@ func (r *InMemoryRepository) TransferOwnership(_ context.Context, userID string,
 	}
 	membership.Role = GroupRoleOwner
 	members[req.NewOwnerID] = membership
-	group.OwnerID = req.NewOwnerID
+	group.OwnerID = &req.NewOwnerID
 	r.groups[req.GroupID] = group
 	return nil
 }
@@ -281,10 +329,10 @@ func (r *InMemoryRepository) cloneGroupForUser(group GroupItem, userID string) G
 	if memberships, ok := r.members[group.Group.GroupID]; ok {
 		cloned.Group.MembersCount = len(memberships)
 		if membership, joined := memberships[userID]; joined {
-			state := &MyGroupState{Role: membership.Role, IsJoined: true, UnreadCount: 0, IsMuted: membership.IsMuted, MutedUntil: membership.MutedUntil, IsPinned: membership.IsPinned, JoinedAt: membership.JoinedAt}
-			cloned.MyState = state
+			state := &GroupViewerState{Role: membership.Role, UnreadCount: 0, IsMuted: membership.IsMuted, MutedUntil: groupMutedUntil(membership.MutedUntil), IsPinned: membership.IsPinned, JoinedAt: membership.JoinedAt}
+			cloned.ViewerState = state
 		} else {
-			cloned.MyState = nil
+			cloned.ViewerState = nil
 		}
 	}
 	return cloned

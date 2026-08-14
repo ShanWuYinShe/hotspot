@@ -280,11 +280,12 @@ func TestServiceCheckCommentablePrivateMomentOtherUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !found {
-		t.Fatalf("expected found=true, got found=%v", found)
+	// 私有瞬间非拥有者按不存在处理（spec 防枚举，comments/create → 10300）。
+	if found {
+		t.Fatalf("expected found=false for private moment non-owner, got found=%v", found)
 	}
 	if canComment {
-		t.Fatalf("expected canComment=false for private moment non-owner, got true")
+		t.Fatalf("expected canComment=false, got true")
 	}
 }
 
@@ -378,12 +379,12 @@ func TestServiceDecrementCommentCountDelegates(t *testing.T) {
 
 // ---------- D) ListMine 和 OpenTheDoor 分支 ----------
 
-func TestServiceListMineNormalizesLimit(t *testing.T) {
+func TestServiceListCreatedNormalizesLimit(t *testing.T) {
 	repo := &stubMomentRepo{
-		listMineRes: PaginatedMoments{Items: []MomentItem{{MomentID: "m1"}}},
+		listMineRes: PaginatedMoments{Items: []MomentItem{{MomentID: "m1", PrivacyLevel: "public"}}},
 	}
 	svc := NewServiceWithRepo(repo)
-	result, err := svc.ListMine(momentCtx("u1"), MyMomentsRequest{
+	result, err := svc.ListCreated(momentCtx("u1"), ListCreatedMomentsRequest{
 		Pagination: &PaginationParams{Limit: 150},
 	})
 	if err != nil {
@@ -392,14 +393,17 @@ func TestServiceListMineNormalizesLimit(t *testing.T) {
 	if len(result.Items) != 1 {
 		t.Fatalf("expected 1 item, got %d", len(result.Items))
 	}
+	if result.Items[0].PrivacyLevel != "public" {
+		t.Fatalf("expected owner view to carry privacy_level, got %#v", result.Items[0])
+	}
 }
 
-func TestServiceListMineDefaultLimit(t *testing.T) {
+func TestServiceListCreatedDefaultLimit(t *testing.T) {
 	repo := &stubMomentRepo{
 		listMineRes: PaginatedMoments{Items: []MomentItem{{MomentID: "m1"}}},
 	}
 	svc := NewServiceWithRepo(repo)
-	result, err := svc.ListMine(momentCtx("u1"), MyMomentsRequest{})
+	result, err := svc.ListCreated(momentCtx("u1"), ListCreatedMomentsRequest{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -420,10 +424,7 @@ func TestServiceOpenTheDoorLoadsMyState(t *testing.T) {
 	if !ok {
 		t.Fatal("expected found")
 	}
-	if item.MyState == nil {
-		t.Fatal("expected MyState to be loaded")
-	}
-	if !item.MyState.IsFavorited {
+	if !item.IsFavorited {
 		t.Fatal("expected IsFavorited=true")
 	}
 }

@@ -39,7 +39,7 @@ export function setMockAuthScenario(s: MockAuthScenario) {
 }
 
 // Whether the mock session is currently "logged in". login/logout flip this;
-// check_status reads it so the boot flow reflects the mock state.
+// get_status reads it so the boot flow reflects the mock state.
 const AUTH_LOGGED_IN_KEY = "hotspot:mock-auth-logged-in";
 export function isMockLoggedIn(): boolean {
   try { return localStorage.getItem(AUTH_LOGGED_IN_KEY) === "true"; } catch { return false; }
@@ -180,8 +180,8 @@ export const mockGroups = [
   { group: { group_id: "group_4", name: "黄楼夜读角", avatar_url: avatarB.replace("w=200", "w=400"), members_count: 34 }, description: "读书分享小组", join_method: "direct", requires_approval: true, online_members_count: 3, next_activity: "周六晚 7 点共读《小王子》", location: { point: { latitude: 34.27, longitude: 117.18 }, location_name: "黄楼", distance: "1.4km" }, tags: ["阅读"], my_state: { role: "member", is_joined: false, unread_count: 0, is_muted: false, is_pinned: false } },
 ];
 
-// ── Notifications (spec NotifyItem) ────────────────────────────
-export const mockNotifications = [
+// ── Notify (spec NotifyItem) ────────────────────────────
+export const mockNotifies = [
   { notify_id: "notif_1", type: "new_follower", is_read: false, created_at: "2026-07-26T14:00:00Z", payload: { type: "new_follower", actor: mockUsers[1] } },
   { notify_id: "notif_2", type: "reaction_added", is_read: false, created_at: "2026-07-26T13:30:00Z", payload: { type: "reaction_added", actor: mockUsers[2], target_type: "moment", target_id: mockMoments[0].moment_id, emoji: "❤️" } },
   { notify_id: "notif_3", type: "moment_commented", is_read: true, created_at: "2026-07-26T12:00:00Z", payload: { type: "moment_commented", actor: mockUsers[3], moment_id: mockMoments[1].moment_id, moment_summary: { moment_id: mockMoments[1].moment_id, description_preview: mockMoments[1].description.slice(0, 100) }, comment_id: "c1", comment_preview: "好美！" } },

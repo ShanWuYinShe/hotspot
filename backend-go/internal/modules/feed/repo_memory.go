@@ -24,8 +24,8 @@ func (r *InMemoryRepository) ListNearbyUsers(_ context.Context, _ usersQuery) (P
 	return PaginatedUsers{}, nil
 }
 
-func (r *InMemoryRepository) ListTrending(_ context.Context, _ string) (TrendingBundle, error) {
-	return TrendingBundle{}, nil
+func (r *InMemoryRepository) ListTrending(_ context.Context, _ string) (TrendingResult, error) {
+	return TrendingResult{}, nil
 }
 
 func (r *InMemoryRepository) FetchMomentImageRows(_ context.Context, _ []string) (map[string][]momentImageRow, error) {

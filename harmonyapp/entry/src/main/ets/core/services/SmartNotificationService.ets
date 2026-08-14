@@ -408,7 +408,7 @@ export class SmartNotificationService extends BaseSingleton {
     
     try {
       // 检查功能开关
-      if (!this.isNotificationTypeEnabled(notification.type)) {
+      if (!this.isNotifyTypeEnabled(notification.type)) {
         logger.debug(`通知类型已禁用: ${notification.type}`);
         return null;
       }
@@ -902,7 +902,7 @@ export class SmartNotificationService extends BaseSingleton {
   /**
    * 检查通知类型是否启用
    */
-  private isNotificationTypeEnabled(type: string): boolean {
+  private isNotifyTypeEnabled(type: string): boolean {
     switch (type) {
       case 'performance':
         return this.config.enablePerformanceAlerts;

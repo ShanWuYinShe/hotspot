@@ -3,6 +3,7 @@ package feed
 import (
 	"context"
 	"errors"
+	"sort"
 	"testing"
 	"time"
 
@@ -257,5 +258,39 @@ func TestResolveReferencePointInvalidExplicitReturnsNil(t *testing.T) {
 	ref := service.resolveReferencePoint(feedCtx("u1"), &GeoPoint{Latitude: 999, Longitude: 2})
 	if ref != nil {
 		t.Fatalf("invalid explicit point must yield nil, got %+v", ref)
+	}
+}
+
+// --- nearby_users / nearby_groups tie-breaker:user_id / group_id ASC(与 search 统一) ---
+
+func TestNearbyUsersTieBreakerIsUserIDAscending(t *testing.T) {
+	// 距离相等时按 user_id 升序(与 users/search 统一)。
+	candidates := []userCandidate{
+		{Item: UserItem{User: UserInfo{UserID: "u_b"}}, Distance: 10},
+		{Item: UserItem{User: UserInfo{UserID: "u_a"}}, Distance: 10},
+		{Item: UserItem{User: UserInfo{UserID: "u_b"}}, Distance: 5},
+	}
+	sort.SliceStable(candidates, func(i, j int) bool { return compareUserCandidates(candidates[i], candidates[j]) < 0 })
+	got := make([]string, 0, len(candidates))
+	for _, c := range candidates {
+		got = append(got, c.Item.User.UserID)
+	}
+	// 距离升序优先:u_b(5) 在前;同距离(10)按 user_id 升序:u_a → u_b。
+	want := []string{"u_b", "u_a", "u_b"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("nearby_users order[%d]=%q, want %q (all=%v)", i, got[i], want[i], got)
+		}
+	}
+}
+
+func TestNearbyGroupsTieBreakerIsGroupIDAscending(t *testing.T) {
+	candidates := []groupCandidate{
+		{Item: GroupItem{Group: GroupInfo{GroupID: "g_b"}}, Distance: 10},
+		{Item: GroupItem{Group: GroupInfo{GroupID: "g_a"}}, Distance: 10},
+	}
+	sort.SliceStable(candidates, func(i, j int) bool { return compareGroupCandidates(candidates[i], candidates[j]) < 0 })
+	if candidates[0].Item.Group.GroupID != "g_a" || candidates[1].Item.Group.GroupID != "g_b" {
+		t.Fatalf("nearby_groups must order by group_id ASC on equal distance, got %v %v", candidates[0].Item.Group.GroupID, candidates[1].Item.Group.GroupID)
 	}
 }

@@ -11,9 +11,9 @@
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import Button from '@/components/ui/button.svelte';
-	import NotificationRow from './shared/NotificationRow.svelte';
-	import { TYPE_CONFIG, normalizeNotifType, type NotificationItem } from './shared/notification-data';
-	import { listNotifications, getUnreadCount, markRead, listMyInvites, acceptGroupInvite, rejectGroupInvite } from '@/api';
+	import NotifyRow from './shared/NotifyRow.svelte';
+	import { TYPE_CONFIG, normalizeNotifType, type NotifyViewItem } from './shared/notify-data';
+	import { listNotifies, getUnreadCount, markRead, listMyInvites, acceptGroupInvite, rejectGroupInvite } from '@/api';
 	import { WS_NOTIFY_EVENT } from '@/lib/ws/client';
 	import { formatDateTime } from '@/lib/utils';
 	import { ROUTES, ME_SECTION_PATHS } from '@/lib/routes';
@@ -34,7 +34,7 @@ const FILTER_TABS = [
 	{ id: 'nearby', label: '附近' }
 ];
 
-	let notifications = $state<NotificationItem[]>([]);
+	let notifies = $state<NotifyViewItem[]>([]);
 	/** 我收到的待处理入群邀请（listMyInvites，默认仅 pending） */
 	let invites = $state<GroupInviteItem[]>([]);
 	let filter = $state('all');
@@ -62,7 +62,7 @@ const FILTER_TABS = [
 				loading = true;
 				loadError = null;
 				const [notifRes, unreadRes, invitesRes] = await Promise.all([
-					listNotifications().catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
+					listNotifies().catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
 					getUnreadCount().catch(() => ({ code: -1, message: '网络异常', data: { total: 0 } })),
 					listMyInvites().catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }))
 				]);
@@ -77,7 +77,7 @@ const FILTER_TABS = [
 				if (invitesRes.code === 0) invites = invitesRes.data?.items ?? [];
 
 				if (notifData) {
-					const items: NotificationItem[] = (notifData.items || []).map((n, i) => {
+					const items: NotifyViewItem[] = (notifData.items || []).map((n, i) => {
 						const actor = n.payload?.actor ?? { user_id: '', nickname: '' };
 						const groupName = n.payload?.group_name ?? '群组';
 						let text = '';
@@ -108,7 +108,7 @@ const FILTER_TABS = [
 							inviteId: n.type === 'group_invite_received' ? (n.payload as { invite_id?: string })?.invite_id : undefined
 						};
 					});
-					notifications = items;
+					notifies = items;
 				}
 			} catch {
 				if (!cancelled) loadError = '加载失败，请稍后重试';
@@ -122,11 +122,11 @@ const FILTER_TABS = [
 		};
 	});
 
-	const unread = $derived(notifications.filter((n) => !n.read).length);
+	const unread = $derived(notifies.filter((n) => !n.read).length);
 	let followedBack = $state<Set<string>>(new Set());
 
 	// 桌面 Rail「回关」：直接关注通知中的 actor（spec: users/set_follow）
-	const followBack = async (n: NotificationItem) => {
+	const followBack = async (n: NotifyViewItem) => {
 		if (!n.user.id || followedBack.has(n.user.id)) return;
 		followedBack = new Set([...followedBack, n.user.id]);
 		try {
@@ -139,23 +139,23 @@ const FILTER_TABS = [
 	};
 
 	const markAllRead = () => {
-		// spec: notify.md → mark_read：notify_ids 不传或空数组 = 全部已读。乐观更新本地状态。
-		notifications = notifications.map((n) => ({ ...n, read: true }));
-		void markRead({ notify_ids: [] }).catch(() => {});
+		// spec: notify.md → mark_read（参数必显式）：scope='all' 全部已读。乐观更新本地状态。
+		notifies = notifies.map((n) => ({ ...n, read: true }));
+		void markRead({ scope: 'all' }).catch(() => {});
 	};
 	const markSingleRead = (id: string) => {
-		notifications = notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
-		// spec: notify.md → mark_read：notify_ids 指定 1-50 条。
-		void markRead({ notify_ids: [id] }).catch(() => {});
+		notifies = notifies.map((n) => (n.id === id ? { ...n, read: true } : n));
+		// spec: notify.md → mark_read（参数必显式）：scope='ids' 指定 1-50 条。
+		void markRead({ scope: 'ids', notify_ids: [id] }).catch(() => {});
 	};
 	const remove = (id: string) => {
-		notifications = notifications.filter((n) => n.id !== id);
+		notifies = notifies.filter((n) => n.id !== id);
 	};
 
 	// 入群邀请：接受/拒绝成功后同步移除待办区块与该邀请的通知行
 	const removeInvite = (inviteId: string) => {
 		invites = invites.filter((i) => i.invite_id !== inviteId);
-		notifications = notifications.filter((n) => n.inviteId !== inviteId);
+		notifies = notifies.filter((n) => n.inviteId !== inviteId);
 	};
 	const handleAcceptInvite = async (inviteId: string) => {
 		try {
@@ -177,11 +177,11 @@ const FILTER_TABS = [
 	};
 
 	// 归一化后 n.type 已是语义键（reaction/follow/comment/nearby/event），直接与 tab id 比较。
-	const filtered = $derived(notifications.filter((n) => filter === 'all' || n.type === filter));
+	const filtered = $derived(notifies.filter((n) => filter === 'all' || n.type === filter));
 	const unreadGroup = $derived(filtered.filter((n) => !n.read));
 	const readGroup = $derived(filtered.filter((n) => n.read));
 	const typeStats = $derived(
-		(Object.keys(TYPE_CONFIG) as string[]).map((t) => ({ type: t, count: notifications.filter((n) => n.type === t).length }))
+		(Object.keys(TYPE_CONFIG) as string[]).map((t) => ({ type: t, count: notifies.filter((n) => n.type === t).length }))
 	);
 </script>
 <svelte:head>
@@ -265,7 +265,7 @@ const FILTER_TABS = [
 					</div>
 					<ListContainer bordered>
 						{#each unreadGroup as n (n.id)}
-							<NotificationRow notif={n} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
+							<NotifyRow notif={n} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
 						{/each}
 					</ListContainer>
 				{/if}
@@ -278,7 +278,7 @@ const FILTER_TABS = [
 					</div>
 					<ListContainer bordered>
 						{#each readGroup as n (n.id)}
-							<NotificationRow notif={n} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
+							<NotifyRow notif={n} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
 						{/each}
 					</ListContainer>
 				{/if}
@@ -300,7 +300,7 @@ const FILTER_TABS = [
 			<RailSection title="今日概览">
 				<div class="flex items-baseline gap-1.5 mb-3">
 					<span class="text-text-primary text-3xl font-semibold leading-none">{unread}</span>
-					<span class="text-text-secondary text-xs">条未读 · 共 {notifications.length} 条</span>
+					<span class="text-text-secondary text-xs">条未读 · 共 {notifies.length} 条</span>
 				</div>
 				<div class="flex flex-col gap-2">
 					{#each typeStats as { type, count }}
@@ -323,7 +323,7 @@ const FILTER_TABS = [
 
 			<RailSection title="新关注你的人" action="全部" onAction={() => void goto(`${ME_SECTION_PATHS.relationships}?tab=fans`)}>
 				<div class="flex flex-col gap-3">
-					{#each notifications.filter((n) => n.type === 'follow').slice(0, 3) as n (n.id)}
+					{#each notifies.filter((n) => n.type === 'follow').slice(0, 3) as n (n.id)}
 						<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.time}>
 							{#snippet trailing()}
 								<Button
@@ -344,7 +344,7 @@ const FILTER_TABS = [
 
 			<RailSection title="此刻附近" action="查看" onAction={() => void goto(ROUTES.nearbyPeople)}>
 				<div class="flex flex-col gap-3">
-					{#each notifications.filter((n) => n.type === 'nearby').slice(0, 3) as n (n.id)}
+					{#each notifies.filter((n) => n.type === 'nearby').slice(0, 3) as n (n.id)}
 						<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.text} />
 					{/each}
 				</div>

@@ -18,7 +18,7 @@
 	import { useChat, formatTime, type ChatMessage } from '@/lib/chat.svelte';
 
 	// ChatView — 私聊窗口（spec: 以对端 user_id 寻址）。
-	// 历史来自 private_messages/get_history；发送走 private_messages/send。
+	// 历史来自 private_messages/list；发送走 private_messages/send。
 	// 消息方向由 sender.user_id 与当前用户比较得出。
 	// 共享状态机（加载/分页/滚动/typing/发送/WS 接收）由 useChat 工厂承载。
 
@@ -49,10 +49,10 @@
 	// 无 contact 时从历史中第一条非自己消息的 sender 推导。
 	let derivedContact = $state<ChatContact | null>(null);
 
-	// spec: private_messages/send 返回 10200 时 data 携带 { reason: BlockReason }。
+	// spec: private_messages/send 返回 10200 时 data 携带 { forbidden_reason: ForbiddenReason }。
 	const SEND_BLOCK_REASONS: Record<string, string> = {
-		blocked: '你已被对方拉黑',
-		privacy: '对方隐私设置不允许发送消息',
+		blocked_by_user: '你已被对方拉黑',
+		privacy_setting: '对方隐私设置不允许发送消息',
 		stranger_quota_exceeded: '今日陌生人消息额度已用完'
 	};
 
@@ -93,9 +93,9 @@
 		sendMessage: async (text) => {
 			const res = await sendPrivateMessage({ target_user_id: peerUserId, type: 'text', content: text });
 			if (res.code === 0) return { code: 0, message_id: res.data?.message_id };
-			// spec: 10200 时 data = { reason: BlockReason }。
+			// spec: 10200 时 data = { forbidden_reason: ForbiddenReason }。
 			if (res.code === 10200) {
-				const reason = (res.data as { reason?: string } | undefined)?.reason;
+				const reason = (res.data as { forbidden_reason?: string } | undefined)?.forbidden_reason;
 				return { code: res.code, error: (reason && SEND_BLOCK_REASONS[reason]) || '消息发送失败' };
 			}
 			return { code: res.code, error: '消息发送失败' };

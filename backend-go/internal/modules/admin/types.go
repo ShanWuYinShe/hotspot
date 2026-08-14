@@ -147,9 +147,9 @@ type AdminUserItem struct {
 	CreatedAt         string                         `json:"created_at"`
 	LastActiveAt      string                         `json:"last_active_at,omitempty"`
 	LoginID           string                         `json:"login_id"`
-	RegisterIP        string                         `json:"register_ip,omitempty"`
+	RegisterIP        *string                        `json:"register_ip"`
 	RegisterLocation  string                         `json:"register_location,omitempty"`
-	LastLoginIP       string                         `json:"last_login_ip,omitempty"`
+	LastLoginIP       *string                        `json:"last_login_ip"`
 	LastLoginLocation string                         `json:"last_login_location,omitempty"`
 	Email             string                         `json:"email,omitempty"`
 	Phone             string                         `json:"phone,omitempty"`
@@ -187,7 +187,6 @@ type AdminGroupItem struct {
 	Tags           []string                     `json:"tags,omitempty"`
 	HasPassword    bool                         `json:"has_password"`
 	Location       groupsmodule.Location        `json:"location"`
-	MyState        *groupsmodule.MyGroupState   `json:"my_state,omitempty"`
 	JoinMethod     groupsmodule.GroupJoinMethod `json:"join_method,omitempty"`
 	IsSearchable   bool                         `json:"is_searchable,omitempty"`
 	MaxMembers     int                          `json:"max_members,omitempty"`
@@ -291,7 +290,7 @@ type AuditLogItem struct {
 	TargetName    string          `json:"target_name,omitempty"`
 	Details       AuditDetails    `json:"details,omitempty"`
 	IPLocation    string          `json:"ip_location,omitempty"`
-	IPAddress     *string         `json:"ip_address,omitempty"`
+	IPAddress     *string         `json:"ip_address"`
 	DeviceSummary string          `json:"device_summary,omitempty"`
 	CreatedAt     string          `json:"created_at"`
 }
@@ -309,10 +308,6 @@ type AuditLogListRequest struct {
 	StartTime  string            `json:"start_time,omitempty"`
 	EndTime    string            `json:"end_time,omitempty"`
 	Pagination *PaginationParams `json:"pagination,omitempty"`
-}
-
-type AuditLogOpenTheDoorRequest struct {
-	LogID string `json:"log_id"`
 }
 
 type AdminUploadConfig struct {
@@ -516,7 +511,7 @@ type PaginatedAdminAnnouncements struct {
 	NextCursor string                  `json:"next_cursor,omitempty"`
 }
 
-type AdminAnnouncementSearchRequest struct {
+type ListAdminAnnouncementsRequest struct {
 	Severity   AnnounceLevel     `json:"severity,omitempty"`
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }

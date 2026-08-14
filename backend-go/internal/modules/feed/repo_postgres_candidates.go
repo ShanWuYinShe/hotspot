@@ -46,8 +46,8 @@ func (r *PostgresRepository) loadUserCandidates(ctx context.Context, queryable p
 		b := float64(bearing)
 		item := UserItem{
 			User:           UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
-			Bio:            strings.TrimSpace(bio),
-			Tags:           tags,
+			Bio:            strPtr(strings.TrimSpace(bio)),
+			Tags:           nonNilTags(tags),
 			PresenceStatus: presenceStatusPtr(presenceStatus),
 			Location: &RelativeLocation{
 				Point:          GeoPoint{Latitude: latitude, Longitude: longitude},
@@ -62,12 +62,18 @@ func (r *PostgresRepository) loadUserCandidates(ctx context.Context, queryable p
 				FollowingCount: followingCount,
 				GroupsCount:    groupsCount,
 			},
-			Relation:      &UserRelation{IsFollowing: isFollowing, IsFollowedBy: isFollowedBy, IsBlocked: false},
-			SocialContext: &UserSocialContext{MutualFriendsCount: mutualFriendsCount, CommonGroupsCount: commonGroupsCount},
+		}
+		// 恒定 nullable：无关系边 → relation 为 null（spec api_spec_base.md「无关系」）
+		if isFollowing || isFollowedBy {
+			item.Relation = &UserRelation{IsFollowing: isFollowing, IsFollowedBy: isFollowedBy}
+		}
+		// 无共同点 → social_context 为 null（与 users 模块语义一致）
+		if mutualFriendsCount > 0 || commonGroupsCount > 0 {
+			item.SocialContext = &UserSocialContext{MutualFriendsCount: mutualFriendsCount, CommonGroupsCount: &commonGroupsCount}
 		}
 		if !lastOnline.IsZero() {
 			lastOnlineStr := lastOnline.UTC().Format(time.RFC3339)
-			item.LastOnlineAt = &lastOnlineStr
+			item.LastOnline = &lastOnlineStr
 		}
 		items = append(items, userCandidate{Item: item, Distance: distance})
 	}
@@ -119,42 +125,40 @@ func (r *PostgresRepository) loadGroupCandidates(ctx context.Context, queryable 
 		}
 		d := float64(distance)
 		b := float64(bearing)
+		// has_password/is_searchable/max_members 是群管理字段（spec 移入 GroupSettings），
+		// Feed 公开 GroupItem 不下发；仅占位消费扫描值。
+		_ = hasPassword
+		_ = isSearchable
+		_ = maxMembers
 		item := GroupItem{
 			Group:              GroupInfo{GroupID: groupID, Name: name, AvatarURL: avatarURL, MembersCount: membersCount},
-			Description:        strings.TrimSpace(description),
-			Tags:               tags,
+			Description:        strPtr(strings.TrimSpace(description)),
+			Tags:               nonNilTags(tags),
 			JoinMethod:         GroupJoinMethod(joinMethod),
 			RequiresApproval:   requiresApproval,
-			HasPassword:        hasPassword && isJoined,
-			Location:           RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
-			FriendsInGroup:     friendsInGroup,
-			IsSearchable:       isSearchable,
-			MaxMembers:         maxMembers,
+			Location:           &RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
+			FriendsInGroup:     &friendsInGroup,
 			OnlineMembersCount: &onlineMembersCount,
 			NextActivity:       strPtr(nextActivity),
-			OwnerID:            ownerID,
+			OwnerID:            strPtr(ownerID),
 		}
 		if !createdAt.IsZero() {
 			createdAtStr := createdAt.UTC().Format(time.RFC3339)
 			item.CreatedAt = &createdAtStr
 		}
 		if isJoined {
-			state := &MyGroupState{
+			state := &GroupViewerState{
 				Role:        GroupRole(role),
-				IsJoined:    true,
 				UnreadCount: unreadCount,
 				IsPinned:    isPinned,
-			}
-			if !joinedAt.IsZero() {
-				joinedAtStr := joinedAt.UTC().Format(time.RFC3339)
-				state.JoinedAt = &joinedAtStr
+				JoinedAt:    joinedAt.UTC().Format(time.RFC3339),
 			}
 			if !mutedUntil.IsZero() {
 				mutedUntilStr := mutedUntil.UTC().Format(time.RFC3339)
 				state.MutedUntil = &mutedUntilStr
 				state.IsMuted = true
 			}
-			item.MyState = state
+			item.ViewerState = state
 		}
 		items = append(items, groupCandidate{Item: item, Distance: distance})
 	}
@@ -206,8 +210,8 @@ func (r *PostgresRepository) loadFollowingCandidates(ctx context.Context, querya
 			CommentsCount: commentsCount,
 			SharesCount:   sharesCount,
 			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
-			Location:      RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
-			MyState:       &MyMomentState{IsFavorited: isFavorited},
+			Location:      &RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
+			IsFavorited:   isFavorited,
 		}
 		reason := RecommendationContext("following")
 		item.Recommendation = &reason
@@ -271,8 +275,8 @@ func (r *PostgresRepository) loadNearbyCandidates(ctx context.Context, queryable
 			CommentsCount: commentsCount,
 			SharesCount:   sharesCount,
 			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
-			Location:      RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
-			MyState:       &MyMomentState{IsFavorited: isFavorited},
+			Location:      &RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
+			IsFavorited:   isFavorited,
 		}
 		reason := RecommendationContext("nearby")
 		item.Recommendation = &reason

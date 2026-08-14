@@ -7,13 +7,13 @@ import (
 )
 
 var (
-	ErrLoginIDConflict         = errors.New("auth: login id conflict")
-	ErrInvalidCredentials      = errors.New("auth: invalid credentials")
-	ErrInvalidOldPassword      = errors.New("auth: invalid old password")
-	ErrPasswordResetNotFound   = errors.New("auth: password reset not found")
-	ErrPasswordResetThrottled  = errors.New("auth: password reset throttled")
+	ErrLoginIDConflict                = errors.New("auth: login id conflict")
+	ErrInvalidCredentials             = errors.New("auth: invalid credentials")
+	ErrInvalidOldPassword             = errors.New("auth: invalid old password")
+	ErrPasswordResetNotFound          = errors.New("auth: password reset not found")
+	ErrPasswordResetThrottled         = errors.New("auth: password reset throttled")
 	ErrVerificationServiceUnavailable = errors.New("auth: verification service not available")
-	ErrAccountLocked           = errors.New("auth: account locked due to too many failed attempts")
+	ErrAccountLocked                  = errors.New("auth: account locked due to too many failed attempts")
 )
 
 func apiErrorFrom(err error) *httpx.APIError {

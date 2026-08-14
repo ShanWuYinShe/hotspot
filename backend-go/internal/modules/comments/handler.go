@@ -27,21 +27,33 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteInvalidRequest(w, r, "Create", "参数错误")
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "comments/create", func() httpx.ApiResponse[CommentItem] {
+	idempotency.ReplayOrStore(w, r, "comments/create", func() httpx.ApiResponse[any] {
 		item, err := h.service.Create(r.Context(), req)
 		if err != nil {
 			if errors.Is(err, ErrMomentNotFound) {
 				observability.LogBusinessError(r, "Create", int(httpx.CodeNotFound), "瞬间不存在")
-				return httpx.ApiResponse[CommentItem]{Code: httpx.CodeNotFound, Message: "瞬间不存在"}
+				return httpx.ApiResponse[any]{Code: httpx.CodeNotFound, Message: "瞬间不存在"}
+			}
+			// 契约(api_spec_errors.md)：10200 必带 data.forbidden_reason
+			if errors.Is(err, ErrCommentPrivacyDenied) {
+				observability.LogBusinessError(r, "Create", int(httpx.CodeForbidden), "瞬间作者限制评论")
+				data := any(httpx.ForbiddenErrorData{ForbiddenReason: httpx.ReasonPrivacySetting})
+				return httpx.ApiResponse[any]{Code: httpx.CodeForbidden, Message: "瞬间作者限制评论", Data: &data}
+			}
+			if errors.Is(err, ErrCommentBlockedByUser) {
+				observability.LogBusinessError(r, "Create", int(httpx.CodeForbidden), "你已被该用户拉黑")
+				data := any(httpx.ForbiddenErrorData{ForbiddenReason: httpx.ReasonBlockedByUser})
+				return httpx.ApiResponse[any]{Code: httpx.CodeForbidden, Message: "你已被该用户拉黑", Data: &data}
 			}
 			if errors.Is(err, ErrMomentNoPermission) {
 				observability.LogBusinessError(r, "Create", int(httpx.CodeForbidden), "权限不足")
-				return httpx.ApiResponse[CommentItem]{Code: httpx.CodeForbidden, Message: "权限不足"}
+				return httpx.ApiResponse[any]{Code: httpx.CodeForbidden, Message: "权限不足"}
 			}
 			observability.LogServerError(r, "Create", err)
-			return httpx.ApiResponse[CommentItem]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
+			return httpx.ApiResponse[any]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 		}
-		return httpx.Success(item)
+		var data any = item
+		return httpx.ApiResponse[any]{Code: httpx.CodeOK, Data: &data}
 	})
 }
 
@@ -100,7 +112,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrPermissionDenied) {
-			httpx.WriteBusinessError(w, r, "Delete", httpx.CodeForbidden, "权限不足")
+			httpx.WriteAPIError(w, r, "Delete", httpx.Forbidden(httpx.ReasonNotResourceOwner, "仅评论作者可删除"))
 			return
 		}
 		httpx.WriteAPIError(w, r, "Delete", err)

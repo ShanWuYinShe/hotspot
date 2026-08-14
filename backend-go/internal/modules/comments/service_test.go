@@ -105,7 +105,7 @@ func TestCreateTopLevelCommentSendsRealtimeAndNotificationToMomentAuthor(t *test
 	if notificationID == "" {
 		t.Fatalf("expected non-empty notification_id in event payload: %#v", payload)
 	}
-	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notify.NotificationListRequest{})
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notify.NotifyListRequest{})
 	if err != nil {
 		t.Fatalf("list notifications: %v", err)
 	}
@@ -144,7 +144,7 @@ func TestCreateTopLevelCommentOnOwnMomentSkipsRealtimeAndNotification(t *testing
 	if len(aliceSink.events) != 0 {
 		t.Fatalf("expected no self event, got %#v", aliceSink.events)
 	}
-	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notify.NotificationListRequest{})
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notify.NotifyListRequest{})
 	if err != nil {
 		t.Fatalf("list notifications: %v", err)
 	}
@@ -204,7 +204,7 @@ func TestCreateReplySendsRealtimeAndNotificationToParentAuthor(t *testing.T) {
 	if notificationID == "" {
 		t.Fatalf("expected non-empty notification_id in event payload: %#v", payload)
 	}
-	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notify.NotificationListRequest{})
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notify.NotifyListRequest{})
 	if err != nil {
 		t.Fatalf("list notifications: %v", err)
 	}
@@ -250,7 +250,7 @@ func TestCreateReplyToOwnCommentSkipsRealtimeAndNotification(t *testing.T) {
 	if len(aliceSink.events) != 0 {
 		t.Fatalf("expected no self event, got %#v", aliceSink.events)
 	}
-	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notify.NotificationListRequest{})
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notify.NotifyListRequest{})
 	if err != nil {
 		t.Fatalf("list notifications: %v", err)
 	}
@@ -298,7 +298,7 @@ func TestCreateCommentMentionSendsRealtimeAndNotification(t *testing.T) {
 	if notificationID == "" {
 		t.Fatalf("expected non-empty notification_id in event payload: %#v", payload)
 	}
-	notificationsPage, err := notificationRepo.List(context.Background(), "user_carol", notify.NotificationListRequest{})
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_carol", notify.NotifyListRequest{})
 	if err != nil {
 		t.Fatalf("list notifications: %v", err)
 	}
@@ -343,7 +343,7 @@ func TestCreateReplyMentionDeduplicatesReplyTarget(t *testing.T) {
 	if aliceSink.events[0].Type != "CommentReply" {
 		t.Fatalf("unexpected event type: %#v", aliceSink.events)
 	}
-	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notify.NotificationListRequest{})
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notify.NotifyListRequest{})
 	if err != nil {
 		t.Fatalf("list notifications: %v", err)
 	}
@@ -378,7 +378,7 @@ func TestCreateTopLevelCommentMentionDeduplicatesMomentAuthor(t *testing.T) {
 	if aliceSink.events[0].Type != "MomentCommented" {
 		t.Fatalf("unexpected event type: %#v", aliceSink.events)
 	}
-	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notify.NotificationListRequest{})
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notify.NotifyListRequest{})
 	if err != nil {
 		t.Fatalf("list notifications: %v", err)
 	}
@@ -445,8 +445,8 @@ func TestCreateCommentReturnsNoPermissionWhenMomentExistsButNotCommentable(t *te
 	moments := &momentProviderStub{commentableFound: true, commentable: false}
 	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
 	_, err := service.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "moment_private", Content: "hello"})
-	if !errors.Is(err, ErrMomentNoPermission) {
-		t.Fatalf("expected ErrMomentNoPermission, got %v", err)
+	if !errors.Is(err, ErrCommentPrivacyDenied) {
+		t.Fatalf("expected ErrCommentPrivacyDenied (moment author restricts comment), got %v", err)
 	}
 }
 
@@ -546,7 +546,9 @@ func TestServiceDeleteIdempotentNoOp(t *testing.T) {
 	}
 }
 
-func TestServiceDeleteAllowsAdmin(t *testing.T) {
+// TestServiceDeleteOnlyAuthor：评论删除仅评论作者（spec api_spec_comment.md「删除评论（仅评论作者）」）。
+// 平台管理员即使注入 IsAdmin 也不得删除他人评论（该职责在 /admin/v1/reports/handle，本端点不设平台管理员分支）。
+func TestServiceDeleteOnlyAuthor(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
@@ -556,22 +558,22 @@ func TestServiceDeleteAllowsAdmin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create comment: %v", err)
 	}
-	// Admin deletes alice's comment — allowed（注入真实验证 stub）
+	// 平台管理员（但并非评论作者）删除他人评论 → 拒绝（仅作者）
 	platformauth.SetAdminChecker(adminCheckStub{adminIDs: map[string]bool{"admin_1": true}})
-	adminCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{
-		UserID:    "admin_1",
-		SessionID: "sess_admin",
-	})
-	err = service.Delete(adminCtx, DeleteCommentRequest{CommentID: comment.CommentID})
-	if err != nil {
-		t.Fatalf("admin delete: %v", err)
+	adminCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "admin_1", SessionID: "sess_admin"})
+	if err := service.Delete(adminCtx, DeleteCommentRequest{CommentID: comment.CommentID}); !errors.Is(err, ErrPermissionDenied) {
+		t.Fatalf("expected admin non-owner delete to be denied, got %v", err)
+	}
+	// 评论作者本人 → 成功
+	if err := service.Delete(testCommentContext("user_alice"), DeleteCommentRequest{CommentID: comment.CommentID}); err != nil {
+		t.Fatalf("owner delete: %v", err)
 	}
 	updated, found, _ := repo.Get(context.Background(), comment.CommentID)
 	if !found {
-		t.Fatal("expected comment to exist after soft delete by admin")
+		t.Fatal("expected comment to exist after soft delete")
 	}
 	if !updated.IsDeleted {
-		t.Fatal("expected comment to be marked as deleted after admin delete")
+		t.Fatal("expected comment to be soft-deleted by owner")
 	}
 }
 

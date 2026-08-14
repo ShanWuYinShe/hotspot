@@ -183,7 +183,7 @@
 		</ListContainer>
 	</div>
 
-	<!-- Notifications -->
+	<!-- Notify -->
 	<p class="eyebrow px-1 mt-3 mb-1.5">通知</p>
 	<div class="rounded-lg overflow-hidden surface-flat">
 		<ListContainer>

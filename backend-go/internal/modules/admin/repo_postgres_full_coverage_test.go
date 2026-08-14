@@ -247,18 +247,6 @@ func TestAdminRepoAuditLogs(t *testing.T) {
 	if _, err := newAdminFullRepo(stub).ListAuditLogs(ctx, AuditLogFilter{}, true); err == nil {
 		t.Fatal("list audit tail error must propagate")
 	}
-
-	// GetAuditLog：命中
-	stub = &adminFullStub{queryRow: map[string][]any{queryAuditByID: adminAuditRowVals("audit_1")}}
-	item, found, err := newAdminFullRepo(stub).GetAuditLog(ctx, "audit_1", true)
-	if err != nil || !found || item.LogID != "audit_1" {
-		t.Fatalf("get audit: %#v found=%v err=%v", item, found, err)
-	}
-	// 未命中
-	stub = &adminFullStub{queryRowErr: map[string]error{queryAuditByID: pgx.ErrNoRows}}
-	if _, found, err := newAdminFullRepo(stub).GetAuditLog(ctx, "missing", true); err != nil || found {
-		t.Fatalf("get audit missing: found=%v err=%v", found, err)
-	}
 }
 
 type adminRowsErrValues struct {

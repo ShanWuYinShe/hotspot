@@ -11,7 +11,7 @@ class AuthEndpoints {
   readonly LOGOUT: string = '/api/v1/auth/logout';
   readonly GUEST: string = '/api/v1/auth/guest';
   readonly REFRESH_TOKEN: string = '/api/v1/auth/refresh_token';
-  readonly CHECK_STATUS: string = '/api/v1/auth/check_status';
+  readonly GET_STATUS: string = '/api/v1/auth/get_status';
   readonly REQUEST_PASSWORD_RESET: string = '/api/v1/auth/request_password_reset';
   readonly RESET_PASSWORD: string = '/api/v1/auth/reset_password';
   readonly CHANGE_PASSWORD: string = '/api/v1/auth/change_password';
@@ -52,46 +52,47 @@ class UserEndpoints {
 class GroupMembersEndpoints {
   readonly LIST: string = '/api/v1/groups/members/list';
   readonly SEARCH: string = '/api/v1/groups/members/search';
-  readonly INVITE: string = '/api/v1/groups/members/invite';
-  readonly INVITES_LIST: string = '/api/v1/groups/invites/sent/list';
-  readonly INVITES_REVOKE: string = '/api/v1/groups/invites/sent/revoke';
-  readonly SET_ROLE: string = '/api/v1/groups/members/set_role';
-  readonly SET_MUTE: string = '/api/v1/groups/members/set_mute';
-  readonly BAN: string = '/api/v1/groups/members/set_ban';
-  readonly UNBAN: string = '/api/v1/groups/members/set_ban';
-  readonly LIST_BANNED: string = '/api/v1/groups/members/list_banned';
-  readonly REMOVE: string = '/api/v1/groups/members/remove';
+  readonly INVITE: string = '/api/v1/groups/admin/invites/create';
+  readonly INVITES_LIST: string = '/api/v1/groups/admin/invites/list_sent';
+  readonly INVITES_REVOKE: string = '/api/v1/groups/admin/invites/revoke';
+  readonly SET_ROLE: string = '/api/v1/groups/admin/members/set_role';
+  readonly SET_MUTE: string = '/api/v1/groups/admin/members/set_mute';
+  readonly BAN: string = '/api/v1/groups/admin/members/set_ban';
+  readonly UNBAN: string = '/api/v1/groups/admin/members/set_ban';
+  readonly LIST_BANNED: string = '/api/v1/groups/admin/members/list_banned';
+  readonly REMOVE: string = '/api/v1/groups/admin/members/remove';
 }
 
 class GroupApplicationsEndpoints {
-  readonly LIST: string = '/api/v1/groups/applications/list';
-  readonly APPROVE: string = '/api/v1/groups/applications/approve';
-  readonly REJECT: string = '/api/v1/groups/applications/reject';
+  readonly LIST: string = '/api/v1/groups/admin/applications/list';
+  readonly APPROVE: string = '/api/v1/groups/admin/applications/approve';
+  readonly REJECT: string = '/api/v1/groups/admin/applications/reject';
 }
 
 class GroupAnnouncementsEndpoints {
-  readonly CREATE: string = '/api/v1/groups/announcements/create';
+  readonly CREATE: string = '/api/v1/groups/admin/announcements/create';
   readonly LIST: string = '/api/v1/groups/announcements/list';
-  readonly UPDATE: string = '/api/v1/groups/announcements/update';
-  readonly DELETE: string = '/api/v1/groups/announcements/delete';
+  readonly UPDATE: string = '/api/v1/groups/admin/announcements/update';
+  readonly DELETE: string = '/api/v1/groups/admin/announcements/delete';
 }
 
 class GroupEndpoints {
   readonly SEARCH: string = '/api/v1/groups/search';
   readonly GET_DETAIL: string = '/api/v1/groups/open_the_door';
   readonly CREATE: string = '/api/v1/groups/create';
-  readonly UPDATE: string = '/api/v1/groups/update';
-  readonly DISMISS: string = '/api/v1/groups/dismiss';
-  readonly LIST_MY: string = '/api/v1/groups/list_my';
+  readonly UPDATE: string = '/api/v1/groups/admin/update';
+  readonly DISMISS: string = '/api/v1/groups/admin/dismiss';
+  readonly LIST_JOINED: string = '/api/v1/groups/list_joined';
   readonly JOIN: string = '/api/v1/groups/join';
   readonly LEAVE: string = '/api/v1/groups/leave';
-  readonly TRANSFER_OWNERSHIP: string = '/api/v1/groups/transfer_ownership';
+  readonly TRANSFER_OWNERSHIP: string = '/api/v1/groups/admin/transfer_ownership';
   readonly UPDATE_PREFERENCES: string = '/api/v1/groups/update_preferences';
-  readonly LIST_APPLICATIONS: string = '/api/v1/groups/list_applications';
-  readonly CANCEL_APPLICATION: string = '/api/v1/groups/cancel_application';
-  readonly LIST_INVITES: string = '/api/v1/groups/invites/received/list';
-  readonly ACCEPT_INVITE: string = '/api/v1/groups/invites/received/accept';
-  readonly REJECT_INVITE: string = '/api/v1/groups/invites/received/reject';
+  readonly LIST_SUBMITTED_APPLICATIONS: string = '/api/v1/groups/applications/list_submitted';
+  readonly CANCEL_APPLICATION: string = '/api/v1/groups/applications/cancel';
+  readonly LIST_INVITES: string = '/api/v1/groups/invites/list_received';
+  readonly ACCEPT_INVITE: string = '/api/v1/groups/invites/accept';
+  readonly REJECT_INVITE: string = '/api/v1/groups/invites/reject';
+  readonly ADMIN_RECALL_MESSAGE: string = '/api/v1/groups/admin/messages/recall';
   readonly MEMBERS: GroupMembersEndpoints = new GroupMembersEndpoints();
   readonly APPLICATIONS: GroupApplicationsEndpoints = new GroupApplicationsEndpoints();
   readonly ANNOUNCEMENTS: GroupAnnouncementsEndpoints = new GroupAnnouncementsEndpoints();
@@ -104,7 +105,7 @@ class MomentEndpoints {
   readonly CREATE: string = '/api/v1/moments/create';
   readonly UPDATE: string = '/api/v1/moments/update';
   readonly DELETE: string = '/api/v1/moments/delete';
-  readonly LIST_MY: string = '/api/v1/moments/list_my';
+  readonly LIST_CREATED: string = '/api/v1/moments/list_created';
   readonly FAVORITE: string = '/api/v1/moments/set_favorite';
   readonly LIST_FAVORITES: string = '/api/v1/moments/list_favorites';
 }
@@ -134,7 +135,7 @@ class PrivateChatsEndpoints {
 
 class PrivateMessagesEndpoints {
   readonly SEND: string = '/api/v1/private_messages/send';
-  readonly GET_HISTORY: string = '/api/v1/private_messages/get_history';
+  readonly LIST: string = '/api/v1/private_messages/list';
   readonly UPDATE: string = '/api/v1/private_messages/update';
   readonly RECALL: string = '/api/v1/private_messages/recall';
   readonly MARK_READ: string = '/api/v1/private_messages/mark_read';
@@ -142,7 +143,7 @@ class PrivateMessagesEndpoints {
 
 class GroupMessagesEndpoints {
   readonly SEND: string = '/api/v1/group_messages/send';
-  readonly GET_HISTORY: string = '/api/v1/group_messages/get_history';
+  readonly LIST: string = '/api/v1/group_messages/list';
   readonly UPDATE: string = '/api/v1/group_messages/update';
   readonly RECALL: string = '/api/v1/group_messages/recall';
   readonly MARK_READ: string = '/api/v1/group_messages/mark_read';
@@ -180,7 +181,7 @@ class UploadEndpoints {
 class SystemEndpoints {
   readonly GET_META: string = '/api/v1/system/get_meta';
   readonly HEALTH: string = '/api/v1/system/health';
-  readonly LIST_ANNOUNCEMENTS: string = '/api/v1/system/list_announcements';
+  readonly LIST_ANNOUNCEMENTS: string = '/api/v1/system/announcements/list';
   readonly GET_CLIENT_CONFIG: string = '/api/v1/system/get_client_config';
   readonly BOOTSTRAP: string = '/api/v1/system/bootstrap';
 }
@@ -200,7 +201,7 @@ class NotifyEndpoints {
 // Report
 class ReportEndpoints {
   readonly CREATE: string = '/api/v1/reports/create';
-  readonly LIST_MY: string = '/api/v1/reports/list_my';
+  readonly LIST: string = '/api/v1/reports/list';
 }
 
 // Share
@@ -208,12 +209,12 @@ class ShareEndpoints {
   readonly CREATE: string = '/api/v1/share/create';
   readonly GET: string = '/api/v1/share/get';
   readonly REVOKE: string = '/api/v1/share/revoke';
-  readonly LIST_MY: string = '/api/v1/share/list_my';
+  readonly LIST: string = '/api/v1/share/list';
 }
 
 // Admin
 class AdminRbacEndpoints {
-  readonly GET_ME: string = '/api/v1/admin/rbac/get_me';
+  readonly GET_ME: string = '/admin/v1/rbac/get_me';
 }
 
 class AdminEndpoints {
@@ -241,7 +242,7 @@ export class ApiEndpoints {
 }
 
 export function assertApiEndpointPath(path: string): void {
-  if (!path.startsWith('/api/')) {
-    throw new Error(`ApiEndpoints path must start with "/api/": ${path}`);
+  if (!path.startsWith('/api/') && !path.startsWith('/admin/')) {
+    throw new Error(`ApiEndpoints path must start with "/api/" or "/admin/": ${path}`);
   }
 }

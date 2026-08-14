@@ -5,7 +5,7 @@
 	import MessageBubble from '@/components/messages/MessageBubble.svelte';
 	import ChatDatePill from '@/components/messages/ChatDatePill.svelte';
 	import { auth } from '@/stores/auth.svelte';
-	import { getGroupDetail, getGroupMessages, sendGroupMessage, markGroupRead, recallGroupMessage, updateGroupMessage } from '@/api';
+	import { getGroupDetail, getGroupMessages, sendGroupMessage, markGroupRead, recallGroupMessage, recallGroupMessageAsAdmin, updateGroupMessage } from '@/api';
 	import { WS_GROUP_MESSAGE_EVENT, WS_GROUP_MESSAGE_UPDATE_EVENT, wsClient } from '@/lib/ws/client';
 	import type { UserInfo } from '@/lib/ws/types';
 	import { useChat, formatTime, type ChatMessage } from '@/lib/chat.svelte';
@@ -18,7 +18,7 @@
 	}
 
 	// GroupChatView — 群聊窗口（spec: 以 group_id 寻址）。
-	// 历史来自 group_messages/get_history;发送走 group_messages/send。
+	// 历史来自 group_messages/list;发送走 group_messages/send。
 	// 消息方向由 sender.user_id 与当前用户比较得出;共享状态机由 useChat 工厂承载。
 
 	let {
@@ -51,7 +51,7 @@
 				const d = res.data;
 				groupName = d.group.name;
 				groupAvatar = d.group.avatar_url ?? '';
-				myRole = d.my_state?.role ?? 'member';
+				myRole = d.viewer_state?.role ?? 'member';
 			})
 			.catch(() => {});
 		return () => {
@@ -126,7 +126,14 @@
 			return null;
 		},
 		recallMessage: async (id) => {
-			const res = await recallGroupMessage({ message_id: id });
+			// 视角分离（spec: api_spec_chat.md / api_spec_group.md）：
+			// 撤回自己的消息走 group_messages/recall（仅作者，时间窗内）；
+			// 群主/群管理员撤回他人消息走 groups/admin/messages/recall（守卫子树，无时间窗）。
+			const msg = chat.messages.find((m) => m.id === id);
+			if (!msg) return { code: 1, error: '消息不存在' };
+			const res = msg.sent
+				? await recallGroupMessage({ message_id: id })
+				: await recallGroupMessageAsAdmin({ group_id: groupId, message_id: id });
 			return { code: res.code, error: res.code !== 0 ? '撤回失败' : undefined };
 		},
 		updateMessage: async (id, content) => {
@@ -134,7 +141,7 @@
 			return { code: res.code, error: res.code !== 0 ? '编辑失败' : undefined };
 		}
 	});
-	// 撤回时间窗（spec message_recall_window_seconds，默认 300s；群主/管理员豁免，服务端 10400 兜底）
+	// 撤回时间窗仅作者适用（spec message_recall_window_seconds，默认 300s）；
 	const RECALL_WINDOW_MS = 300_000;
 	const inRecallWindow = (sentAt?: string) => {
 		if (!sentAt) return true;

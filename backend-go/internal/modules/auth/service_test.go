@@ -97,36 +97,46 @@ func defaultMeta() platformauth.SessionMeta {
 	return platformauth.SessionMeta{DeviceID: "test-device", DeviceType: "test", DeviceName: "test", IPAddress: "1.2.3.4", IPLocation: "US"}
 }
 
-// --- CheckStatus ---
+// --- GetStatus ---
 
-func TestServiceCheckStatusNoPrincipal(t *testing.T) {
+func TestServiceGetStatusNoPrincipal(t *testing.T) {
 	svc, _ := newTestService(&stubAuthRepo{})
-	status := svc.CheckStatus(context.Background())
+	status := svc.GetStatus(context.Background())
 	if status.IsValid {
 		t.Fatal("expected invalid for no principal")
 	}
+	// 恒定 nullable：未认证时 user_id/expires_at 为 nil（序列化为 null）
+	if status.UserID != nil || status.ExpiresAt != nil {
+		t.Fatalf("expected nil user_id/expires_at when not authenticated, got %#v", status)
+	}
 }
 
-func TestServiceCheckStatusWithPrincipal(t *testing.T) {
+func TestServiceGetStatusWithPrincipal(t *testing.T) {
 	svc, _ := newTestService(&stubAuthRepo{})
-	status := svc.CheckStatus(authCtx("u1"))
+	status := svc.GetStatus(authCtx("u1"))
 	if !status.IsValid {
 		t.Fatal("expected valid")
 	}
-	if status.ExpiresAt != "" {
+	if status.UserID == nil || *status.UserID != "u1" {
+		t.Fatalf("expected user id %q, got %v", "u1", status.UserID)
+	}
+	if status.ExpiresAt != nil {
 		t.Fatal("expected no expiry info")
 	}
 }
 
-func TestServiceCheckStatusWithExpiry(t *testing.T) {
+func TestServiceGetStatusWithExpiry(t *testing.T) {
 	svc, _ := newTestService(&stubAuthRepo{})
 	expiry := time.Now().Add(15 * time.Minute).UTC()
-	status := svc.CheckStatus(authCtxWithExpiry("u1", expiry))
+	status := svc.GetStatus(authCtxWithExpiry("u1", expiry))
 	if !status.IsValid {
 		t.Fatal("expected valid")
 	}
-	if status.ExpiresAt == "" {
+	if status.ExpiresAt == nil || *status.ExpiresAt == "" {
 		t.Fatal("expected expiry info")
+	}
+	if status.UserID == nil || *status.UserID != "u1" {
+		t.Fatalf("expected user id, got %v", status.UserID)
 	}
 }
 

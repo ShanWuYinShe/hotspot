@@ -11,10 +11,6 @@ import (
 func cloneAdminGroupItem(item AdminGroupItem) AdminGroupItem {
 	cloned := item
 	cloned.Tags = cloneStrings(item.Tags)
-	if item.MyState != nil {
-		state := *item.MyState
-		cloned.MyState = &state
-	}
 	return cloned
 }
 

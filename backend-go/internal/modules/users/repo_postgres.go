@@ -156,6 +156,37 @@ func (r *PostgresRepository) SetRemark(ctx context.Context, userID, targetUserID
 	return queryable.Exec(ctx, queryUpsertUserRelationRemark, userID, targetUserID, remark)
 }
 
+// CheckBlockedTags 返回 tags 中命中平台屏蔽标签（admin_blocked_tags）的标签名；空表示无屏蔽标签。
+func (r *PostgresRepository) CheckBlockedTags(ctx context.Context, tags []string) ([]string, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return nil, persistence.ErrNotImplemented
+	}
+	if len(tags) == 0 {
+		return nil, nil
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return nil, persistence.ErrNotImplemented
+	}
+	rows, err := queryable.Query(ctx, queryListBlockedUserTags, tags)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	blocked := make([]string, 0)
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		blocked = append(blocked, name)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return blocked, nil
+}
+
 func (r *PostgresRepository) ListBlocked(ctx context.Context, userID string, limit int, cursor string) (PaginatedBlockedUsers, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return PaginatedBlockedUsers{}, persistence.ErrNotImplemented

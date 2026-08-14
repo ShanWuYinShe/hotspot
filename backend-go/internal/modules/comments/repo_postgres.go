@@ -64,7 +64,6 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		CreatedAt:    createdAt,
 		LikesCount:   0,
 		RepliesCount: 0,
-		MyState:      &MyCommentState{},
 	}, nil
 }
 
@@ -103,9 +102,8 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string, limit in
 			return PaginatedComments{}, fmt.Errorf("comments.List scan: %w", err)
 		}
 		item.User = UserInfo{UserID: userID, Nickname: nickname}
-		item.ParentID = parentID
+		item.ParentID = strPtr(parentID)
 		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
-		item.MyState = &MyCommentState{}
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -133,9 +131,8 @@ func (r *PostgresRepository) Get(ctx context.Context, commentID string) (Comment
 		return CommentItem{}, false, fmt.Errorf("comments.Get scan: %w", err)
 	}
 	item.User = UserInfo{UserID: userID, Nickname: nickname}
-	item.ParentID = parentID
+	item.ParentID = strPtr(parentID)
 	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
-	item.MyState = &MyCommentState{}
 	return item, true, nil
 }
 
@@ -163,9 +160,8 @@ func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, 
 			return PaginatedComments{}, fmt.Errorf("comments.ListReplies scan: %w", err)
 		}
 		item.User = UserInfo{UserID: userID, Nickname: nickname}
-		item.ParentID = parentID
+		item.ParentID = strPtr(parentID)
 		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
-		item.MyState = &MyCommentState{}
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -202,9 +198,8 @@ func (r *PostgresRepository) ListTopRepliesByParentIDs(ctx context.Context, pare
 			return nil, fmt.Errorf("comments.ListTopRepliesByParentIDs scan: %w", err)
 		}
 		item.User = UserInfo{UserID: userID, Nickname: nickname}
-		item.ParentID = parentID
+		item.ParentID = strPtr(parentID)
 		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
-		item.MyState = &MyCommentState{}
 		result[parentID] = append(result[parentID], item)
 	}
 	if err := rows.Err(); err != nil {

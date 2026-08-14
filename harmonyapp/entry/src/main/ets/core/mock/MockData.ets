@@ -8,15 +8,15 @@
 
 import {
   ApiResponse, PaginatedData,
-  UserInfo, UserItem, UserStats, MyProfile,
-  MomentItem, MomentMyState, CommentItem, GroupItem, GroupInfo, MyGroupState, ReactionItem,
+  UserInfo, UserItem, UserStats, AccountInfo,
+  MomentItem, MomentMyState, CommentItem, GroupItem, GroupInfo, GroupViewerState, ReactionItem,
   PrivateChatItem, PrivateMessageItem, MessageSent,
   AuthData, AuthStatus,
   TrendingBundle, TagItem,
   SearchSuggestResponse,
   ClientConfig, ApiVersionMeta,
   UnreadCountResult,
-  MapCanvasResponse, NotificationItem,
+  MapCanvasResponse, NotifyItem,
   GeoPoint, Location, RelativeLocation, Relationship, UserProfileBundle
 } from '../types/api';
 
@@ -56,7 +56,7 @@ const MK_RELATIVE_LOCATION: RelativeLocation = { point: MK_POINT, location_name:
 
 const MK_RELATION: Relationship = { is_following: true, is_followed_by: false, is_blocked: false };
 
-const MOCK_ACCOUNT: MyProfile = {
+const MOCK_ACCOUNT: AccountInfo = {
   user_id: 'user_lumos', nickname: '鹿鸣', avatar_url: '',
   user_type: 'normal', bio: '', tags: [], email: '', phone: '',
   location: MK_LOCATION,
@@ -90,7 +90,7 @@ const MK_MOMENT: MomentItem = {
 };
 
 const MK_GROUP_INFO: GroupInfo = { group_id: 'g1', name: '附近群组', avatar_url: '', members_count: 42 };
-const MK_GROUP_STATE: MyGroupState = { role: 'member', is_joined: false, unread_count: 0, is_muted: false, is_pinned: false };
+const MK_GROUP_STATE: GroupViewerState = { role: 'member', is_joined: false, unread_count: 0, is_muted: false, is_pinned: false };
 
 const MK_GROUP: GroupItem = {
   group: MK_GROUP_INFO,
@@ -234,7 +234,7 @@ export function getCannedResponse(url: string, loggedIn: boolean, scenario: stri
     return authOk();
   }
   if (url === '/api/v1/auth/refresh_token') return apiOk(MOCK_AUTH);
-  if (url === '/api/v1/auth/check_status')
+  if (url === '/api/v1/auth/get_status')
     return loggedIn ? apiOk(MOCK_AUTH_STATUS) : apiOk(MOCK_AUTH_STATUS_INVALID);
   if (url === '/api/v1/auth/logout') { setLoggedIn(false); return apiOkEmpty(); }
 
@@ -254,7 +254,7 @@ export function getCannedResponse(url: string, loggedIn: boolean, scenario: stri
   // Moments
   if (url === '/api/v1/moments/search') return paginated([MK_MOMENT]);
   if (url === '/api/v1/moments/open_the_door') return apiOk(MK_MOMENT);
-  if (url === '/api/v1/moments/list_my') return guard() ?? paginated([] as MomentItem[]);
+  if (url === '/api/v1/moments/list_created') return guard() ?? paginated([] as MomentItem[]);
 
   // Groups
   if (url === '/api/v1/groups/search') return paginated([MK_GROUP]);
@@ -262,13 +262,13 @@ export function getCannedResponse(url: string, loggedIn: boolean, scenario: stri
 
   // Chat
   if (url === '/api/v1/private_chats/list') return guard() ?? paginated([] as PrivateChatItem[]);
-  if (url === '/api/v1/private_messages/get_history') return guard() ?? paginated([] as PrivateMessageItem[]);
+  if (url === '/api/v1/private_messages/list') return guard() ?? paginated([] as PrivateMessageItem[]);
   if (url === '/api/v1/private_messages/send') return guard() ?? apiOk(MOCK_SENT);
 
   // Feed / Search / Notify / System / Map
   if (url === '/api/v1/feed/trending') return apiOk(MOCK_TRENDING);
   if (url === '/api/v1/search/suggest') return apiOk(MOCK_SUGGEST);
-  if (url === '/api/v1/notify/list') return guard() ?? paginated([] as NotificationItem[]);
+  if (url === '/api/v1/notify/list') return guard() ?? paginated([] as NotifyItem[]);
   if (url === '/api/v1/notify/get_unread_count') return guard() ?? apiOk(MOCK_UNREAD);
   if (url === '/api/v1/system/get_client_config') return apiOk(MOCK_CLIENT_CONFIG);
   if (url === '/api/v1/system/bootstrap') return apiOk(MOCK_BOOTSTRAP);
