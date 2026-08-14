@@ -49,7 +49,7 @@
 | `POST /admin/v1/groups/open_the_door` | 群组详情 | admin.groups.read |
 | `POST /admin/v1/groups/dismiss` | 解散群组 | admin.groups.write |
 | `POST /admin/v1/reports/fetch` | 举报列表（按状态/类型过滤） | admin.reports.read |
-| `POST /admin/v1/reports/handle` | 处理举报 | admin.reports.write |
+| `POST /admin/v1/reports/judge` | 裁决举报（resolve/dismiss） | admin.reports.write |
 | `POST /admin/v1/tags/search` | 搜索标签 | admin.tags.read |
 | `POST /admin/v1/tags/delete` | 删除/屏蔽标签 | admin.tags.write |
 | `POST /admin/v1/announcements/fetch` | 系统公告列表（按 severity 过滤） | admin.announcements.read |
@@ -381,7 +381,7 @@ type AuditAction =
   | 'role.set_permissions' // 设置角色权限
   | 'admin.award'        // 授权平台管理员
   | 'admin.revoke'       // 撤销平台管理员
-  | 'report.handle'      // 处理举报
+  | 'report.judge'       // 裁决举报
   | 'tag.delete'         // 删除/屏蔽标签
   | 'config.update';     // 更新系统配置
 
@@ -406,7 +406,7 @@ type AuditDetails =
   | { type: 'role.set_permissions'; role_name: string; permissions: string[] }
   | { type: 'admin.award'; target_user_id: string; role_ids: string[]; award_all_permissions: boolean | null }
   | { type: 'admin.revoke'; target_user_id: string }
-  | { type: 'report.handle'; report_id: string; action: ReportAction; note: string | null }
+  | { type: 'report.judge'; report_id: string; action: ReportAction; note: string | null }
   | { type: 'tag.delete'; name: string }
   | { type: 'config.update'; config_key: string; old_value: ConfigValue; new_value: ConfigValue };
 
@@ -772,9 +772,9 @@ interface AdminReportItem extends ReportItem {
 
 ---
 
-### POST /admin/v1/reports/handle
+### POST /admin/v1/reports/judge
 
-处理举报（平台管理）。
+裁决举报（平台管理）：`resolve` 确认有效 / `dismiss` 驳回。
 
 - **权限**: `admin.reports.write`
 
@@ -786,9 +786,9 @@ interface AdminReportItem extends ReportItem {
 - `resolve`：确认举报有效，执行处理（如封禁用户、删除内容），状态变更为 `resolved`。处理成功后向举报人推送 `ReportResolved` WebSocket 事件并落库通知（`NotifyType='report_resolved'`）
 - `dismiss`：驳回举报，不执行任何处理，状态变更为 `dismissed`。驳回后向举报人推送 `ReportDismissed` WebSocket 事件并落库通知（`NotifyType='report_dismissed'`）
 
-**Request**: `HandleAdminReportRequest`
+**Request**: `JudgeAdminReportRequest`
 ```typescript
-interface HandleAdminReportRequest {
+interface JudgeAdminReportRequest {
   report_id: string;
   action: ReportAction;           // 'resolve' | 'dismiss'
   note: string | null;            // 处理备注（0-500 字符）
@@ -802,7 +802,7 @@ interface HandleAdminReportRequest {
 
 **权限蕴含（契约级）**：`action='resolve'` 且携带 `ban_duration_days` 时，实际执行封禁操作——调用方除 `admin.reports.write` 外**必须同时具备 `admin.users.write`**（权限不足返回 `10200` + `insufficient_admin_permission`），防止低权限平台管理员经举报通道绕过用户封禁权限边界。仅 `dismiss` 或 resolve 不携带 `ban_duration_days` 时只要求 `admin.reports.write`。
 
-**字段映射说明**：本端点的 `note` 会写入举报详情中的 `handle_note` 字段，并记录到审计日志 `AuditDetails.report.handle.note`。
+**字段映射说明**：本端点的 `note` 会写入举报详情中的 `handle_note` 字段，并记录到审计日志 `AuditDetails.report.judge.note`。
 
 **Response**: `ApiResponse`
 

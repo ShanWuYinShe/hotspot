@@ -89,7 +89,7 @@
 **角色模型**：
 - **superadmin**：`permissions=['*']`，拥有全部权限键；仅 PII 键（`read_ip` ×2）要求显式持有
 - **admin**：绑定 `AdminRole`（roles/* 机制），permissions = 角色集合并集
-- 权限蕴含（契约级）：`/admin/v1/reports/handle` 在 `action='resolve'` 且携带 `ban_duration_days` 时，实际执行封禁——调用方除 `admin.reports.write` 外必须同时具备 `admin.users.write`，权限不足返回 `10200` + `insufficient_admin_permission`
+- 权限蕴含（契约级）：`/admin/v1/reports/judge` 在 `action='resolve'` 且携带 `ban_duration_days` 时，实际执行封禁——调用方除 `admin.reports.write` 外必须同时具备 `admin.users.write`，权限不足返回 `10200` + `insufficient_admin_permission`
 
 ---
 
@@ -312,7 +312,7 @@
 | 161 | `/admin/v1/groups/open_the_door` | admin.groups.read | not_admin/insufficient_admin_permission | 10300 | — |
 | 162 | `/admin/v1/groups/dismiss` | admin.groups.write | not_admin/insufficient_admin_permission | 10300 | — |
 | 163 | `/admin/v1/reports/fetch` | admin.reports.read | not_admin/insufficient_admin_permission | — | — |
-| 164 | `/admin/v1/reports/handle` | admin.reports.write(+蕴含 users.write) | not_admin/insufficient_admin_permission | 10300/10400 | — |
+| 164 | `/admin/v1/reports/judge` | admin.reports.write(+蕴含 users.write) | not_admin/insufficient_admin_permission | 10300/10400 | — |
 | 165 | `/admin/v1/tags/search` | admin.tags.read | not_admin/insufficient_admin_permission | — | — |
 | 166 | `/admin/v1/tags/delete` | admin.tags.write | not_admin/insufficient_admin_permission | 10300 | — |
 | 167 | `/admin/v1/announcements/fetch` | admin.announcements.read | not_admin/insufficient_admin_permission | — | — |

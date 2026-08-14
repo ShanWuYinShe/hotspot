@@ -130,7 +130,7 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 | `enter` / `exit` / `dismiss` / `remove` | 成员进出与生命周期动词 | groups |
 | `transfer_ownership` | 转让所有权 | groups/admin |
 | `award` | 授予身份（revoke 见工作流动词） | admin/rbac |
-| `handle` | 组合处理动作（body 参数判别具体子动作，如 resolve/dismiss） | admin/reports |
+| `judge` | 裁决动作（body 参数判别结论，resolve 确认 / dismiss 驳回） | admin/reports |
 | `suggest` | 前缀联想 | search |
 | `presign_upload` / `complete_upload` | 媒体两段式上传（数组参数 1..N 天然覆盖单/批，无独立批量端点） | media |
 | `accept` / `reject` / `approve` / `cancel` / `revoke` | 工作流动词 | invites / applications / share |
