@@ -66,7 +66,7 @@
 	{#if onTogglePin}
 		<button
 			type="button"
-			class="hover-btn scale-btn tap-88 focus-ring flex shrink-0 items-center justify-center rounded-full p-1 {isSelected || chat.isPinned ? '' : 'opacity-muted hover:opacity-full focus-visible:opacity-full'}"
+			class="hover-btn scale-btn hit-slop focus-ring flex shrink-0 items-center justify-center rounded-full p-1 {isSelected || chat.isPinned ? '' : 'opacity-muted hover:opacity-full focus-visible:opacity-full'}"
 			aria-label={chat.isPinned ? '取消置顶' : '置顶'}
 			title={chat.isPinned ? '取消置顶' : '置顶'}
 			onclick={(e) => {

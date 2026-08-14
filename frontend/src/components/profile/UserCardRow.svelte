@@ -6,7 +6,7 @@
 	// UserCardRow — 用户卡片行（好友/关注/粉丝列表共用）。
 	// 统一：ListItem 外壳 + Avatar（ring + 可选角标）+ 名字 + 可选徽章。
 	// 副信息（handle/desc/时间）、缩略图、动作按钮由调用方 snippet 注入。
-	// tone: 'row'（List bordered 内，avatar 42）/ 'card'（embedded 网格，avatar 48）。
+	// tone: 'row'（List bordered 内，avatar 44）/ 'card'（embedded 网格，avatar 48）。
 
 	let {
 		name,
@@ -43,7 +43,7 @@
 	{ariaLabel}
 	{style}
 >
-	<Avatar ring src={avatar} name={name} size={tone === 'card' ? 48 : 42}>
+	<Avatar ring src={avatar} name={name} size={tone === 'card' ? 48 : 44}>
 		{#snippet badge()}
 			{#if avatarBadge}
 				{@render avatarBadge()}

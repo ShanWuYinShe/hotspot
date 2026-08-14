@@ -44,7 +44,7 @@
 		class="hover-btn flex w-full items-center gap-3 rounded-md border border-border-default bg-surface-primary p-3 text-left focus-ring"
 		onclick={() => void goto(ROUTES.search)}
 	>
-		<SearchIcon class="size-5 shrink-0 text-accent-default" strokeWidth={1.8} />
+		<SearchIcon class="size-5 shrink-0 text-accent-default" strokeWidth={1.75} />
 		<span class="min-w-0 flex-1 py-2 text-md text-text-secondary">搜索用户、群组、动态、地点…</span>
 	</button>
 

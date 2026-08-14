@@ -193,7 +193,7 @@
 			{#if auth.user}
 				<button
 					type="button"
-					class="hover-btn scale-btn relative ml-2 shrink-0 rounded-full focus-ring focus-visible:ring-offset-surface-page size-8"
+					class="hover-btn scale-btn hit-slop relative ml-2 shrink-0 rounded-full focus-ring focus-visible:ring-offset-surface-page size-8"
 					aria-label="打开个人主页"
 					onclick={() => guardNav('打开个人主页', ROUTES.me)}
 				>

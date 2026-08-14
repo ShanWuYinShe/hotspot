@@ -192,7 +192,7 @@
 					{#snippet trailing()}
 						<button
 							type="button"
-							class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring surface-flat size-7.5"
+							class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring surface-flat size-9"
 							onclick={() => {
 								newChatTab = 'chat';
 								showNewChat = true;
@@ -243,9 +243,9 @@
 			<!-- Chat list（List 契约：分栏内连接列表，行无独立边框。
 			     每行外层 px-3 py-1 包裹——对齐 Figma MessagesPage：行间有呼吸间距，
 			     选中态 glow 不与相邻行重叠，分隔线嵌在间距中不显突兀） -->
-			<ListContainer class="flex-1 overflow-y-auto no-scrollbar px-2 py-2">
+			<ListContainer class="flex-1 overflow-y-auto no-scrollbar py-2">
 				{#each filtered as chat (chat.id)}
-					<div class="px-3 py-1">
+					<div class="py-1">
 						<ChatListItem
 							chat={chat}
 							isSelected={selectedId === chat.id}
@@ -326,7 +326,7 @@
 				{/if}
 				<button
 					type="button"
-					class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring surface-flat size-9"
+					class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring surface-flat size-8"
 					onclick={() => {
 						newChatTab = 'chat';
 						showNewChat = true;
@@ -387,9 +387,9 @@
 				{/snippet}
 			</EmptyState>
 		{:else}
-			<ListContainer class="px-2 py-1">
+			<ListContainer class="py-1">
 				{#each filtered as chat (chat.id)}
-					<div class="px-3 py-1">
+					<div class="py-1">
 						<ChatListItem
 							chat={chat}
 							onClick={() => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}

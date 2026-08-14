@@ -51,7 +51,7 @@
 					<p class="truncate text-sm font-medium text-text-primary" >{g.name}</p>
 					<div class="mt-1 flex items-center justify-between">
 						<span class="flex items-center gap-1 text-xxs text-text-secondary"  >
-							<Users class="h-2.5 w-2.5" strokeWidth={1.5} />
+							<Users class="h-2.5 w-2.5" strokeWidth={2} />
 							{g.members} 成员
 						</span>
 						<span class="flex items-center gap-0.5 text-xxs text-accent-default">

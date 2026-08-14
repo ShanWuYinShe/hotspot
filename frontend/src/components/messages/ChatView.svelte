@@ -211,7 +211,7 @@
 		{#if showBackButton}
 			<button
 				type="button"
-				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 shadow-raised-sm focus-ring"
+				class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 shadow-raised-sm focus-ring"
 				onclick={onBack}
 				aria-label="返回"
 			>
@@ -256,7 +256,7 @@
 				{#each [{ icon: Phone, label: '语音通话' }, { icon: Video, label: '视频通话' }] as { icon: Icon, label }}
 					<button
 						type="button"
-						class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary shadow-raised-sm focus-ring disabled:opacity-muted {compact ? 'size-8' : 'size-9'}"
+						class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary shadow-raised-sm focus-ring disabled:opacity-muted {compact ? 'size-8' : 'size-9'}"
 						aria-label={label}
 						disabled
 						title="暂未开放"
@@ -266,7 +266,7 @@
 				{/each}
 				<button
 					type="button"
-					class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary shadow-raised-sm focus-ring disabled:opacity-muted {compact ? 'size-8' : 'size-9'}"
+					class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary shadow-raised-sm focus-ring disabled:opacity-muted {compact ? 'size-8' : 'size-9'}"
 					aria-label="更多操作"
 					disabled
 					title="暂未开放"
@@ -316,7 +316,7 @@
 	<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary border-t border-border-default" >
 		<button
 			type="button"
-			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 shadow-raised-sm focus-ring disabled:opacity-muted"
+			class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 shadow-raised-sm focus-ring disabled:opacity-muted"
 			aria-label="表情"
 			disabled
 			title="暂未开放"
@@ -340,7 +340,7 @@
 
 		<button
 			type="button"
-			class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full focus-ring shrink-0 transition-all duration-standard {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'} size-9"
+			class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring shrink-0 transition-all duration-standard {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'} size-9"
 			style="box-shadow:{chat.inputVal.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:var(--cst-border-width-hairline) solid var(--cst-border-default);"
 			onclick={() => void chat.handleSend()}
 			aria-label="发送"

@@ -82,7 +82,7 @@
 	>
 		<div class="flex items-center justify-between px-1 pb-3">
 			<p class="text-md font-medium text-text-primary">邀请成员入群</p>
-			<button type="button" onclick={onClose} class="flex h-7 w-7 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default" aria-label="关闭"><X size={15} /></button>
+			<button type="button" onclick={onClose} class="hit-slop flex h-7 w-7 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default" aria-label="关闭"><X size={15} /></button>
 		</div>
 
 		<div class="flex items-center gap-2 input-surface rounded-md px-3 py-2.5">

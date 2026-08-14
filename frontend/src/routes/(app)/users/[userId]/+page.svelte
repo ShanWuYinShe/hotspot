@@ -169,7 +169,7 @@
 					<p class="eyebrow">关系与安全</p>
 					<p class="mt-1 text-md text-text-primary">{user.name}</p>
 				</div>
-				<ActionIconButton icon={X} label="关闭" onClick={() => (moreOpen = false)} size={32} />
+				<ActionIconButton icon={X} label="关闭" onClick={() => (moreOpen = false)} />
 			</div>
 				<label class="mt-5 block text-sm text-text-secondary">
 					备注名称
@@ -301,15 +301,15 @@
 				</div>
 
 			{#if blocked}
-				<div class="mt-4 flex items-center gap-2 rounded-sm ring-1 ring-status-danger/30 bg-danger-bg px-3 py-2 text-sm text-status-danger">
+				<div class="mt-5 flex items-center gap-2 rounded-sm ring-1 ring-status-danger/30 bg-danger-bg px-3 py-2 text-sm text-status-danger">
 					<UserX size={14} />
 					你已屏蔽此用户；关注和私信已停用。
 				</div>
 			{/if}
-			<p class="mt-4 max-w-115 text-sm leading-6 text-text-secondary">{user.bio}</p>
+			<p class="mt-5 max-w-115 text-sm leading-6 text-text-secondary">{user.bio}</p>
 
 			<!-- 位置 + 标签 -->
-			<div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+			<div class="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
 				{#if user.location}
 					<span class="flex items-center gap-1.5 text-text-secondary text-sm">
 						<MapPin class="size-3.5 text-accent-default"   strokeWidth={1.75} />
@@ -335,7 +335,7 @@
 			</div>
 
 	<!-- Gallery（spec UserProfileBundle 仅含 recent_moments，无喜欢/收藏流） -->
-	<div class="mt-4 grid grid-cols-3 gap-1.5">
+	<div class="mt-5 grid grid-cols-3 gap-1.5">
 		{#each user.galleryMoments as src, i}
 			<div class="image-hover-frame tap-97 relative cursor-pointer rounded-sm overflow-hidden" style="aspect-ratio:1;">
 				<img src={src} alt={`photo ${i}`} loading="lazy" class="image-hover-frame__image w-full h-full object-cover" />

@@ -119,7 +119,7 @@
 				<button
 					type="button"
 					onclick={() => (menuOpen = !menuOpen)}
-					class="ml-1 flex h-6 w-6 self-center items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default"
+					class="hit-slop ml-1 flex h-6 w-6 self-center items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default"
 					aria-label="消息操作"
 				>
 					<MoreHorizontal size={14} strokeWidth={2} />
