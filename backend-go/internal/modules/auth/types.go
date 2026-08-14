@@ -34,10 +34,10 @@ type RefreshTokenRequest struct {
 	RefreshToken string     `json:"refresh_token,omitempty"`
 }
 
-// AuthStatus 是 get_status 的响应（spec auth.md → get_status）。
+// SessionStatus 是 get_status 的响应（spec auth.md → get_status）。
 // user_id / expires_at 为恒定 nullable：未通过认证（is_valid=false）或未知过期时为 null，
 // 字段恒在（Go 侧 nil 指针序列化为 null），而非缺省。
-type AuthStatus struct {
+type SessionStatus struct {
 	IsValid   bool    `json:"is_valid"`
 	UserID    *string `json:"user_id"`    // 恒定 nullable：is_valid=false 时为 null
 	ExpiresAt *string `json:"expires_at"` // 恒定 nullable：is_valid=false 或过期未知时为 null
@@ -94,6 +94,6 @@ type ChangePasswordRequest struct {
 	NewPassword string `json:"new_password"`
 }
 
-type RevokeAllResult struct {
+type RevokeOtherSessionsResult struct {
 	RevokedCount int `json:"revoked_count"`
 }

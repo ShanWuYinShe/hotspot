@@ -29,20 +29,20 @@ func (s *Service) GetMe(ctx context.Context) (AdminPermissions, *httpx.APIError,
 	return actor.Response(), nil, nil
 }
 
-func (s *Service) ListPermissions(ctx context.Context) (AdminPermissionList, *httpx.APIError, error) {
+func (s *Service) ListPermissions(ctx context.Context) (AdminPermissionDictionary, *httpx.APIError, error) {
 	startedAt := time.Now()
-	observability.L().Info("admin.list_permissions started")
+	observability.L().Info("admin.permissions.fetch started")
 	if _, apiErr, err := s.requirePermission(ctx, permissionRbacManage); apiErr != nil || err != nil {
-		observability.L().Warn("admin.list_permissions permission denied", "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return AdminPermissionList{}, apiErr, err
+		observability.L().Warn("admin.permissions.fetch permission denied", "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return AdminPermissionDictionary{}, apiErr, err
 	}
 	items, err := s.repo.ListPermissions(ctx)
 	if err != nil {
-		observability.L().Error("admin.list_permissions query failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return AdminPermissionList{}, nil, err
+		observability.L().Error("admin.permissions.fetch query failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return AdminPermissionDictionary{}, nil, err
 	}
-	observability.L().Info("admin.list_permissions completed", "count", len(items), "elapsed_ms", time.Since(startedAt).Milliseconds())
-	return AdminPermissionList{Items: items}, nil, nil
+	observability.L().Info("admin.permissions.fetch completed", "count", len(items), "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return AdminPermissionDictionary{Items: items}, nil, nil
 }
 
 func (s *Service) ListRoles(ctx context.Context) (AdminRoleList, *httpx.APIError, error) {
@@ -243,32 +243,32 @@ func (s *Service) GrantAdmin(ctx context.Context, req AdminRbacGrantAdminRequest
 	if req.UserID == "" {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
-	if req.GrantAllPermissions && len(req.RoleIDs) > 0 {
-		return httpx.InvalidRequest("grant_all_permissions 与 role_ids 互斥"), nil
+	if req.AwardAllPermissions && len(req.RoleIDs) > 0 {
+		return httpx.InvalidRequest("award_all_permissions 与 role_ids 互斥"), nil
 	}
-	if req.GrantAllPermissions && !actor.IsSuperAdmin() {
+	if req.AwardAllPermissions && !actor.IsSuperAdmin() {
 		return httpx.Forbidden(httpx.ReasonInsufficientAdminPermission, "平台管理员权限不足: "+permissionRbacManage), nil
 	}
 	roleIDs := sortAndUniqueStrings(req.RoleIDs)
-	if !req.GrantAllPermissions && len(roleIDs) == 0 {
+	if !req.AwardAllPermissions && len(roleIDs) == 0 {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
-	if err := s.repo.GrantAdmin(ctx, AdminGrantUpsert{UserID: req.UserID, GrantAllPermissions: req.GrantAllPermissions, RoleIDs: roleIDs}); err != nil {
+	if err := s.repo.GrantAdmin(ctx, AdminGrantUpsert{UserID: req.UserID, GrantAllPermissions: req.AwardAllPermissions, RoleIDs: roleIDs}); err != nil {
 		if apiErr := asAPIError(err); apiErr != nil {
 			return apiErr, nil
 		}
 		return nil, err
 	}
 	_ = s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
-		Action:     AuditActionAdminGrant,
+		Action:     AuditActionAdminAward,
 		TargetType: AuditTargetTypeAdmin,
 		TargetID:   req.UserID,
 		TargetName: req.UserID,
 		Details: AuditDetails{
-			"type":                  string(AuditActionAdminGrant),
+			"type":                  string(AuditActionAdminAward),
 			"target_user_id":        req.UserID,
 			"role_ids":              roleIDs,
-			"grant_all_permissions": req.GrantAllPermissions,
+			"award_all_permissions": req.AwardAllPermissions,
 		},
 	}))
 	return nil, nil

@@ -422,7 +422,7 @@ export struct SupportConfigCard {
 
       if (this.config) {
         SettingsInfoLine({ label: '公开注册', value: this.config.features.enable_public_registration ? '已开启' : '未开启' })
-        SettingsInfoLine({ label: '访客体验', value: this.config.features.enable_guest_login ? '已开启' : '未开启' })
+        SettingsInfoLine({ label: '访客体验', value: this.config.features.enable_guest_register ? '已开启' : '未开启' })
         SettingsInfoLine({ label: '瞬间功能', value: this.config.features.enable_moments ? '已开启' : '未开启' })
         SettingsInfoLine({ label: '附近的人', value: this.config.features.enable_nearby_people ? '已开启' : '未开启' })
         SettingsInfoLine({ label: '默认位置', value: this.config.defaults.default_location.location_name })

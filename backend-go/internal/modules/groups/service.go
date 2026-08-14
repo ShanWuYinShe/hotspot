@@ -163,7 +163,7 @@ func (s *Service) OpenTheDoor(ctx context.Context, groupID string) (GroupItem, b
 // GroupItem) based on the viewer's membership/role carried in ViewerState.
 // The admin-management fields (has_password/is_searchable/members_searchable/
 // max_members) are no longer serialized on GroupItem (they live in GroupSettings,
-// groups/admin/get_settings), so no JSON-level redaction is required for them
+// groups/admin/settings), so no JSON-level redaction is required for them
 // here; the viewer's member state is carried by a nil-vs-set ViewerState.
 //
 // Call this at every serialization boundary.
@@ -293,8 +293,8 @@ func buildGroupUpdatedFields(before, after GroupItem, req UpdateGroupRequest) ma
 	if after.RequiresApproval != before.RequiresApproval {
 		fields["requires_approval"] = after.RequiresApproval
 	}
-	if !equalStringPtr(after.NextActivity, before.NextActivity) {
-		fields["next_activity"] = derefStringPtr(after.NextActivity)
+	if !equalStringPtr(after.NextActivityAt, before.NextActivityAt) {
+		fields["next_activity_at"] = derefStringPtr(after.NextActivityAt)
 	}
 	if req.Location != nil {
 		fields["location"] = after.Location
@@ -435,46 +435,46 @@ func (s *Service) ListMyGroups(ctx context.Context, req MyGroupsRequest) ([]Grou
 	return items, cursor, nil
 }
 
-func (s *Service) JoinGroup(ctx context.Context, req JoinGroupRequest) (JoinGroupResult, error) {
+func (s *Service) JoinGroup(ctx context.Context, req EnterGroupRequest) (EnterGroupResult, error) {
 	startedAt := time.Now()
 	observability.L().Info("groups.join_group started", "group_id", req.GroupID)
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
 		observability.L().Error("groups.join_group failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return JoinGroupResult{}, err
+		return EnterGroupResult{}, err
 	}
 	if !ok {
 		observability.L().Warn("groups.join_group not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return JoinGroupResult{}, ErrGroupNotFound
+		return EnterGroupResult{}, ErrGroupNotFound
 	}
 	if group.ViewerState != nil {
 		observability.L().Info("groups.join_group already joined", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
+		return EnterGroupResult{Status: EnterGroupStatusJoined}, nil
 	}
 	// C.3：被封禁用户无法加入群，返回 10200+banned_in_group（httpx.Forbidden）
 	if banned, err := s.repo.IsBanned(ctx, req.GroupID, principal.UserID); err != nil {
-		return JoinGroupResult{}, err
+		return EnterGroupResult{}, err
 	} else if banned {
 		observability.L().Warn("groups.join_group banned", "group_id", req.GroupID, "user_id", principal.UserID)
-		return JoinGroupResult{}, httpx.Forbidden(httpx.ReasonBannedInGroup, "已被群封禁，无法加入")
+		return EnterGroupResult{}, httpx.Forbidden(httpx.ReasonBannedInGroup, "已被群封禁，无法加入")
 	}
 	// spec group.md → join 收口：invite_only 群不支持 join（加入唯一入口为
 	// groups/invites/accept），一律返回 10400。
 	if group.JoinMethod == GroupJoinMethodInviteOnly {
 		observability.L().Warn("groups.join_group invite_only not supported", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return JoinGroupResult{}, ErrBusinessConflict
+		return EnterGroupResult{}, ErrBusinessConflict
 	}
 	result, err := s.repo.JoinGroup(ctx, principal.UserID, req.GroupID, req.Password, req.Message)
 	if err != nil {
 		observability.L().Error("groups.join_group failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return JoinGroupResult{}, fmt.Errorf("groups.Service.JoinGroup: repo: %w", err)
+		return EnterGroupResult{}, fmt.Errorf("groups.Service.JoinGroup: repo: %w", err)
 	}
-	if result.Status == JoinGroupStatusPendingApproval && result.IsNewApplication {
+	if result.Status == EnterGroupStatusPendingApproval && result.IsNewApplication {
 		// 仅新创建的申请才通知管理员；命中已有 pending 申请（自然去重）不重复通知
-		s.notifyGroupApplicationReceived(ctx, group, principal.UserID, result.Application, req.Message)
+		s.notifyGroupApplicationReceived(ctx, group, principal.UserID, result.ApplicationID, req.Message)
 	}
-	if result.Status == JoinGroupStatusJoined {
+	if result.Status == EnterGroupStatusJoined {
 		// 直接加入（spec group.md → join 推送）：向群内广播 GroupMemberJoined
 		realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
 			Type: realtime.EventTypeGroupMemberJoined,
@@ -817,10 +817,8 @@ func (s *Service) notifyGroupInviteAccepted(ctx context.Context, invite GroupInv
 	realtime.DefaultHub().BroadcastToUser(invite.Inviter.UserID, realtime.Event{Type: realtime.EventTypeGroupInviteResponse, Payload: map[string]any{"invite_id": invite.InviteID, "group_id": invite.Group.GroupID, "user": user, "responded_at": time.Now().UTC().Format(time.RFC3339)}})
 }
 
-func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group GroupItem, applicantUserID string, application *struct {
-	ApplicationID string `json:"application_id"`
-}, message *string) {
-	if application == nil {
+func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group GroupItem, applicantUserID string, applicationID *string, message *string) {
+	if applicationID == nil {
 		return
 	}
 	applicant := s.resolveUserInfo(ctx, applicantUserID)
@@ -834,14 +832,14 @@ func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group Grou
 		}
 		notificationID := ""
 		if s.notifications != nil {
-			id, err := s.notifications.AppendGroupApplicationReceived(ctx, member.User.UserID, applicant, group.Group.GroupID, group.Group.Name, application.ApplicationID, message)
+			id, err := s.notifications.AppendGroupApplicationReceived(ctx, member.User.UserID, applicant, group.Group.GroupID, group.Group.Name, *applicationID, message)
 			if err != nil {
-				observability.L().Error("groups.notify AppendGroupApplicationReceived failed", "error", err, "application_id", application.ApplicationID)
+				observability.L().Error("groups.notify AppendGroupApplicationReceived failed", "error", err, "application_id", applicationID)
 			} else {
 				notificationID = id
 			}
 		}
-		payload := map[string]any{"notify_id": notificationID, "application_id": application.ApplicationID, "group_id": group.Group.GroupID, "applicant": applicant, "created_at": time.Now().UTC().Format(time.RFC3339)}
+		payload := map[string]any{"notify_id": notificationID, "application_id": applicationID, "group_id": group.Group.GroupID, "applicant": applicant, "created_at": time.Now().UTC().Format(time.RFC3339)}
 		if message != nil && *message != "" {
 			payload["message"] = *message
 		}

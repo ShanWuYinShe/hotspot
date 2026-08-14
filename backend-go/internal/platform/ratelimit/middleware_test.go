@@ -42,10 +42,10 @@ func TestAuthRegisterRateLimitByIP(t *testing.T) {
 	handler := Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "ok", http.StatusOK)
 	}))
-	first := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", nil)
+	first := httptest.NewRequest(http.MethodPost, "/public/v1/auth/register", nil)
 	first.Header.Set("CF-Connecting-IP", "1.1.1.1")
 	handler.ServeHTTP(httptest.NewRecorder(), first)
-	second := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", nil)
+	second := httptest.NewRequest(http.MethodPost, "/public/v1/auth/register", nil)
 	second.Header.Set("CF-Connecting-IP", "1.1.1.1")
 	secondRR := httptest.NewRecorder()
 	handler.ServeHTTP(secondRR, second)

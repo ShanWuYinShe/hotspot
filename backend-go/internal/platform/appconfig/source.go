@@ -183,7 +183,7 @@ func defaultConfig(runtime config.Config) AppConfig {
 	return AppConfig{
 		Features: Features{
 			EnablePublicRegistration: true,
-			EnableGuestLogin:         true,
+			EnableGuestRegister:         true,
 			EnableMoments:            true,
 			EnableNearbyPeople:       true,
 		},
@@ -247,7 +247,7 @@ func defaultConfig(runtime config.Config) AppConfig {
 			GlobalPerHour:            10000,
 			UserPerHour:              1000,
 			AuthRegisterPer10Minutes: 20,
-			AuthLoginPer10Minutes:    60,
+			AuthSigninPer10Minutes:    60,
 			AuthGuestPer10Minutes:    60,
 			AuthRefreshPer10Minutes:  120,
 			AuthResetPer10Minutes:    20,

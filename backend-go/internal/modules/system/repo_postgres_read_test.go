@@ -43,7 +43,7 @@ func (b *announcementBackendStub) Exec(_ context.Context, query string, args ...
 			AnnouncementID: args[0].(string),
 			Title:          args[1].(string),
 			Content:        args[2].(string),
-			Severity:       AnnounceLevel(args[3].(string)),
+			Severity:       AnnounceSeverity(args[3].(string)),
 			SendPush:       args[5].(bool),
 			ViewCount:      args[7].(int),
 			CreatedBy:      AnnouncementActor{UserID: args[8].(string), Nickname: args[8].(string)},
@@ -65,7 +65,7 @@ func (b *announcementBackendStub) Exec(_ context.Context, query string, args ...
 		}
 		item.Title = args[1].(string)
 		item.Content = args[2].(string)
-		item.Severity = AnnounceLevel(args[3].(string))
+		item.Severity = AnnounceSeverity(args[3].(string))
 		if args[4] == nil {
 			item.ActionURL = ""
 		} else {

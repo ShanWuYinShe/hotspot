@@ -3,7 +3,7 @@
  * 严格遵循 api_spec_websocket.md 定义
  */
 
-import { UserInfo, GroupInfo, ClientType, MessageType, MessageMedia, MessageReplyTo, GroupAnnouncementItem, MomentSummary, UserSettings, FollowSource, GroupJoinMethod, Location } from './api';
+import { UserInfo, GroupInfo, ClientType, MessageType, MessageMedia, MessageBrief, GroupAnnouncementItem, MomentSummary, UserSettings, FollowSource, GroupJoinMethod, Location } from './api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const DOMAIN_NUMBER: number = 0xFF38;
@@ -274,7 +274,7 @@ export interface UserOfflineEvent {
 // ----- 关注关系事件 -----
 
 export interface NewFollowerPayload {
-  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
+  notify_id: string   // 与 notify/fetch 的 NotifyItem.notify_id 同主键
   actor: UserInfo
   followed_at: string
   source?: FollowSource
@@ -287,7 +287,7 @@ export interface NewFollowerEvent {
 }
 
 export interface MutualFollowPayload {
-  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
+  notify_id: string   // 与 notify/fetch 的 NotifyItem.notify_id 同主键
   actor: UserInfo
   mutual_at: string
 }
@@ -329,7 +329,7 @@ export interface ReactionRemovedEvent {
 }
 
 export interface MomentCommentedPayload {
-  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
+  notify_id: string   // 与 notify/fetch 的 NotifyItem.notify_id 同主键
   moment_id: string
   moment_summary: MomentSummary
   comment_id: string
@@ -344,7 +344,7 @@ export interface MomentCommentedEvent {
 }
 
 export interface CommentReplyPayload {
-  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
+  notify_id: string   // 与 notify/fetch 的 NotifyItem.notify_id 同主键
   moment_id: string
   moment_summary: MomentSummary
   comment_id: string
@@ -361,7 +361,7 @@ export interface CommentReplyEvent {
 }
 
 export interface MessageMentionedPayload {
-  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
+  notify_id: string   // 与 notify/fetch 的 NotifyItem.notify_id 同主键
   target_type: 'moment' | 'comment'
   moment_id: string
   comment_id?: string
@@ -417,7 +417,7 @@ export interface SystemAnnouncementItemPayload {
 }
 
 export interface SystemAnnouncementPayload {
-  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
+  notify_id: string   // 与 notify/fetch 的 NotifyItem.notify_id 同主键
   announcement: SystemAnnouncementItemPayload
 }
 
@@ -447,7 +447,7 @@ export interface PrivateMessageNewPayload {
   type: MessageType
   content?: string
   share_code?: string
-  reply_to?: MessageReplyTo
+  reply_to?: MessageBrief
   media?: MessageMedia
   sent_at: string
 }
@@ -512,7 +512,7 @@ export interface GroupMessageNewPayload {
   type: MessageType
   content?: string
   share_code?: string
-  reply_to?: MessageReplyTo
+  reply_to?: MessageBrief
   mentions?: string[]
   media?: MessageMedia
   sent_at: string
@@ -713,7 +713,7 @@ export interface NearbyNewMomentEvent {
 }
 
 export interface GroupInviteReceivedPayload {
-  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
+  notify_id: string   // 与 notify/fetch 的 NotifyItem.notify_id 同主键
   invite_id: string
   group: GroupInfo
   actor: UserInfo // 邀请发起人（spec 统一 actor 命名）
@@ -780,7 +780,7 @@ export interface GroupInviteExpiredEvent {
 }
 
 export interface GroupApplicationReceivedPayload {
-  notify_id: string   // 与 notify/list 的 NotifyItem.notify_id 同主键
+  notify_id: string   // 与 notify/fetch 的 NotifyItem.notify_id 同主键
   application_id: string
   group_id: string
   applicant: UserInfo

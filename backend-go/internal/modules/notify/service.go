@@ -42,12 +42,12 @@ func (s *Service) List(ctx context.Context, req NotifyListRequest) (PaginatedNot
 	return items, nil
 }
 
-func (s *Service) UnreadCount(ctx context.Context) (UnreadCountResult, error) {
+func (s *Service) UnreadCount(ctx context.Context) (UnreadSummaryResult, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	result, err := s.repo.UnreadCount(ctx, principal.UserID)
 	if err != nil {
 		observability.L().Error("notifys.unread_count failed", "error", err)
-		return UnreadCountResult{}, err
+		return UnreadSummaryResult{}, err
 	}
 	return result, nil
 }
@@ -298,7 +298,7 @@ func (s *Service) AppendCommentReply(ctx context.Context, targetUserID string, a
 }
 
 // AppendMentioned records a mentioned notify and returns the generated
-// notify_id (embedded as the first field of the pushed MessageMentioned
+// notify_id (embedded as the first field of the pushed ContentMentioned
 // payload, spec api_spec_websocket.md).
 func (s *Service) AppendMentioned(ctx context.Context, targetUserID string, actor types.UserInfo, targetType string, momentID string, momentSummary types.MomentSummary, commentID string, commentPreview string) (string, error) {
 	payload := map[string]any{
@@ -351,7 +351,7 @@ func (s *Service) AppendGroupMentioned(ctx context.Context, targetUserID string,
 // PushSystemAnnouncement broadcasts a system announcement to all online
 // connections. The payload carries the same notify_id that
 // AppendSystemAnnouncement persisted, so clients can deduplicate the realtime
-// event against the HTTP notify/list record (spec api_spec_websocket.md).
+// event against the HTTP notify/fetch record (spec api_spec_websocket.md).
 func (s *Service) PushSystemAnnouncement(item systemmodule.SystemAnnouncementItem, notifyID string) {
 	// 契约(api_spec_websocket.md → SystemAnnouncement)：payload 复用 SystemAnnouncementItem
 	announcement := map[string]any{

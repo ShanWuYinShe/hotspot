@@ -25,7 +25,7 @@ func conversationKey(a, b string) string {
 	}
 	return b + ":" + a
 }
-func (r *InMemoryRepository) Send(_ context.Context, senderID, targetUserID string, req SendPrivateMessageRequest) (MessageSent, error) {
+func (r *InMemoryRepository) Send(_ context.Context, senderID, targetUserID string, req SendPrivateMessageRequest) (MessageSentResult, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	now := time.Now().UTC()
@@ -38,7 +38,7 @@ func (r *InMemoryRepository) Send(_ context.Context, senderID, targetUserID stri
 	if req.ReplyToMessageID != "" {
 		for _, item := range r.messages[conversationKey(senderID, targetUserID)] {
 			if item.MessageID == req.ReplyToMessageID {
-				reply := MessageReplyTo{MessageID: item.MessageID, Type: item.Type, Content: item.Content, ShareCode: item.ShareCode, Sender: item.Sender, SentAt: item.SentAt}
+				reply := MessageBrief{MessageID: item.MessageID, Type: item.Type, Content: item.Content, ShareCode: item.ShareCode, Sender: item.Sender, SentAt: item.SentAt}
 				msg.ReplyTo = &reply
 				break
 			}
@@ -46,7 +46,7 @@ func (r *InMemoryRepository) Send(_ context.Context, senderID, targetUserID stri
 	}
 	key := conversationKey(senderID, targetUserID)
 	r.messages[key] = append(r.messages[key], msg)
-	return MessageSent{MessageID: msg.MessageID, SentAt: msg.SentAt}, nil
+	return MessageSentResult{MessageID: msg.MessageID, SentAt: msg.SentAt}, nil
 }
 func (r *InMemoryRepository) History(_ context.Context, userID string, req ListPrivateMessagesRequest) (PaginatedMessages, error) {
 	targetUserID := req.TargetUserID

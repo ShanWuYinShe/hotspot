@@ -19,7 +19,7 @@ type MessageOwnerMeta struct {
 }
 
 type Repository interface {
-	Send(context.Context, SendGroupMessageRequest) (MessageSent, error)
+	Send(context.Context, SendGroupMessageRequest) (MessageSentResult, error)
 	History(context.Context, string, *PaginationParams) (PaginatedGroupMessages, error)
 
 	Update(context.Context, UpdateGroupMessageRequest) (MessageEventMeta, error)
@@ -33,7 +33,7 @@ type Repository interface {
 	MarkAsRead(context.Context, string, MarkGroupMessagesReadRequest) error
 	MarkAllRead(context.Context, string) error
 	IsMember(context.Context, string, string) (bool, error)
-	GetMessageForReply(context.Context, string) (map[string]any, bool, error)
+	GetMessageForReply(context.Context, string) (*MessageBrief, bool, error)
 	GetMediaForMessage(context.Context, string) (map[string]any, bool, error)
 	MemberMuteStatus(context.Context, string, string) (isMuted bool, mutedUntil string, found bool, err error)
 	MessageExists(ctx context.Context, messageID string) (found bool, senderID string, err error)

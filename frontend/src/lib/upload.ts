@@ -2,21 +2,23 @@
 // 三步：presign_upload 申请预签名 → PUT 直传对象存储 → complete_upload 换业务 file_id。
 // 上传成功后返回 file_id，由业务 API（update_account / groups/create 等）消费。
 
-import { presignUpload, completeUpload, batchPresignUpload, batchCompleteUpload } from '@/api';
+import { presignUpload, completeUpload } from '@/api';
 import type { MediaCategory } from '@/api/types';
 
 export async function uploadMediaFile(file: File, category: MediaCategory): Promise<string> {
 	const presign = await presignUpload({
-		file_name: file.name,
-		file_size: file.size,
-		mime_type: file.type || 'application/octet-stream',
-		category
+		files: [{
+			file_name: file.name,
+			file_size: file.size,
+			mime_type: file.type || 'application/octet-stream',
+			category
+		}]
 	});
 	if (presign.code !== 0 || !presign.data) {
 		throw new Error(presign.message ?? '上传申请失败');
 	}
 
-	const { upload_id, upload_url, headers } = presign.data;
+	const { upload_id, upload_url, headers } = presign.data.uploads[0];
 	const putRes = await fetch(upload_url, {
 		method: 'PUT',
 		headers,
@@ -26,11 +28,11 @@ export async function uploadMediaFile(file: File, category: MediaCategory): Prom
 		throw new Error('上传失败，请重试');
 	}
 
-	const complete = await completeUpload({ upload_id });
+	const complete = await completeUpload({ upload_ids: [upload_id] });
 	if (complete.code !== 0 || !complete.data) {
 		throw new Error(complete.message ?? '上传确认失败');
 	}
-	return complete.data.file_id;
+	return complete.data.uploads[0].file_id;
 }
 
 /**
@@ -39,7 +41,7 @@ export async function uploadMediaFile(file: File, category: MediaCategory): Prom
  */
 export async function uploadMediaFiles(files: File[], category: MediaCategory): Promise<string[]> {
 	if (files.length === 0) return [];
-	const presign = await batchPresignUpload({
+	const presign = await presignUpload({
 		files: files.map((f) => ({
 			file_name: f.name,
 			file_size: f.size,
@@ -61,7 +63,7 @@ export async function uploadMediaFiles(files: File[], category: MediaCategory): 
 		)
 	);
 
-	const complete = await batchCompleteUpload({ upload_ids: uploads.map((u) => u.upload_id) });
+	const complete = await completeUpload({ upload_ids: uploads.map((u) => u.upload_id) });
 	if (complete.code !== 0 || !complete.data) {
 		throw new Error(complete.message ?? '批量上传确认失败');
 	}

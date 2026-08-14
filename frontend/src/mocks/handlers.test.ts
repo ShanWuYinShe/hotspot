@@ -1,6 +1,6 @@
 // msw handlers 集成测试：验证按 id 路由的 handler 行为
 // （moments/open_the_door、groups/open_the_door、users/open_the_door、
-//  private_messages/list、group_messages/list、comments/create）。
+//  private_messages/fetch、group_messages/fetch、comments/create）。
 // 直接调用 handler resolver（msw/node 网络层与 vitest 4 fetch 不兼容）。
 import { describe, it, expect, beforeEach } from 'vitest';
 import { handlers } from './handlers';
@@ -28,7 +28,7 @@ async function run(path: string, body: unknown): Promise<any> {
 }
 
 describe('msw id-routed handlers', () => {
-	// private_messages/list / group_messages/list / comments/create 是 auth-required 端点，测试默认以登录态执行
+	// private_messages/fetch / group_messages/fetch / comments/create 是 auth-required 端点，测试默认以登录态执行
 	beforeEach(() => {
 		setMockLoggedIn(true);
 	});
@@ -48,7 +48,7 @@ describe('msw id-routed handlers', () => {
 		const res = await run('/api/v1/groups/open_the_door', { group_id: target.group.group_id });
 		expect(res.code).toBe(0);
 		expect(res.data.group.group_id).toBe(target.group.group_id);
-		expect(res.data.my_state.is_joined).toBe(true);
+		expect(res.data.viewer_state?.role).toBe('member');
 
 		const fallback = await run('/api/v1/groups/open_the_door', { group_id: 'nope' });
 		expect(fallback.data.group.group_id).toBe(mockGroups[0].group.group_id);
@@ -67,23 +67,23 @@ describe('msw id-routed handlers', () => {
 		expect(Array.isArray(withMoments.data.recent_moments.items)).toBe(true);
 	});
 
-	it('private_messages/list：命中会话返回种子消息，新会话返回空', async () => {
+	it('private_messages/fetch：命中会话返回种子消息，新会话返回空', async () => {
 		// mockChats 第一位对端是 mockUsers[1]
-		const hit = await run('/api/v1/private_messages/list', { target_user_id: mockUsers[1].user_id });
+		const hit = await run('/api/v1/private_messages/fetch', { target_user_id: mockUsers[1].user_id });
 		expect(hit.code).toBe(0);
 		expect(hit.data.items.length).toBeGreaterThan(0);
 		expect(hit.data.items[0].content).toBeTruthy();
 
-		const miss = await run('/api/v1/private_messages/list', { target_user_id: 'user_unknown' });
+		const miss = await run('/api/v1/private_messages/fetch', { target_user_id: 'user_unknown' });
 		expect(miss.data.items.length).toBe(0);
 	});
 
-	it('group_messages/list：命中群组返回种子消息，未知群返回空', async () => {
-		const hit = await run('/api/v1/group_messages/list', { group_id: mockGroups[0].group.group_id });
+	it('group_messages/fetch：命中群组返回种子消息，未知群返回空', async () => {
+		const hit = await run('/api/v1/group_messages/fetch', { group_id: mockGroups[0].group.group_id });
 		expect(hit.code).toBe(0);
 		expect(hit.data.items.length).toBeGreaterThan(0);
 
-		const miss = await run('/api/v1/group_messages/list', { group_id: 'group_unknown' });
+		const miss = await run('/api/v1/group_messages/fetch', { group_id: 'group_unknown' });
 		expect(miss.data.items.length).toBe(0);
 	});
 
@@ -93,9 +93,9 @@ describe('msw id-routed handlers', () => {
 		expect(res.data.content).toBe('拍得真好看！');
 	});
 
-	it('comments/list 按 moment_id 派生不同评论（不固定同批）', async () => {
-		const a = await run('/api/v1/comments/list', { moment_id: mockMoments[0].moment_id });
-		const b = await run('/api/v1/comments/list', { moment_id: mockMoments[3].moment_id });
+	it('comments/fetch 按 moment_id 派生不同评论（不固定同批）', async () => {
+		const a = await run('/api/v1/comments/fetch', { moment_id: mockMoments[0].moment_id });
+		const b = await run('/api/v1/comments/fetch', { moment_id: mockMoments[3].moment_id });
 		expect(a.code).toBe(0);
 		expect(b.code).toBe(0);
 		expect(a.data.items.length).toBeGreaterThan(0);

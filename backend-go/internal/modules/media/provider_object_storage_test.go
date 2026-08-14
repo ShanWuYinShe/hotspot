@@ -25,7 +25,7 @@ func TestObjectStorageProviderPresignBuildsSignedPutURL(t *testing.T) {
 		return time.Date(2026, 3, 30, 8, 0, 0, 0, time.UTC)
 	}
 
-	resp, err := provider.Presign(context.Background(), PresignUploadRequest{FileName: "a.png", MimeType: "image/png", MD5: "d41d8cd98f00b204e9800998ecf8427e"}, "u1")
+	resp, err := provider.Presign(context.Background(), PresignFileInput{FileName: "a.png", MimeType: "image/png", MD5: "d41d8cd98f00b204e9800998ecf8427e"}, "u1")
 	if err != nil {
 		t.Fatalf("Presign returned error: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestObjectStorageProviderHeadRejectsInvalidMetadata(t *testing.T) {
 
 func TestObjectStorageProviderRequiresConfiguration(t *testing.T) {
 	provider := NewObjectStorageProvider(config.Config{})
-	if _, err := provider.Presign(context.Background(), PresignUploadRequest{FileName: "a.png", MimeType: "image/png"}, "u1"); err == nil {
+	if _, err := provider.Presign(context.Background(), PresignFileInput{FileName: "a.png", MimeType: "image/png"}, "u1"); err == nil {
 		t.Fatal("expected presign configuration error")
 	}
 	if _, err := provider.Head(context.Background(), "uploads/u1/upload_1.png"); err == nil {

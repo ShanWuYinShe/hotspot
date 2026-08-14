@@ -28,8 +28,8 @@ type privateMessageErrorRepo struct {
 	markAllErr error
 }
 
-func (r *privateMessageErrorRepo) Send(context.Context, string, string, SendPrivateMessageRequest) (MessageSent, error) {
-	return MessageSent{}, r.sendErr
+func (r *privateMessageErrorRepo) Send(context.Context, string, string, SendPrivateMessageRequest) (MessageSentResult, error) {
+	return MessageSentResult{}, r.sendErr
 }
 func (r *privateMessageErrorRepo) History(context.Context, string, ListPrivateMessagesRequest) (PaginatedMessages, error) {
 	return PaginatedMessages{}, r.historyErr

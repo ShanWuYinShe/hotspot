@@ -65,7 +65,7 @@ func NewServiceWithRepoAndProvider(repo Repository, provider Provider) *Service 
 	return &Service{repo: repo, provider: provider}
 }
 
-func (s *Service) Presign(ctx context.Context, req PresignUploadRequest) (PresignedUpload, error) {
+func (s *Service) Presign(ctx context.Context, req PresignFileInput) (PresignedUpload, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
 	if !ok || principal.UserID == "" {
 		return PresignedUpload{}, ErrInvalidMediaRequest
@@ -96,22 +96,22 @@ func (s *Service) Presign(ctx context.Context, req PresignUploadRequest) (Presig
 	return upload, nil
 }
 
-func (s *Service) BatchPresign(ctx context.Context, req BatchPresignUploadRequest) (BatchPresignedUpload, error) {
+func (s *Service) BatchPresign(ctx context.Context, files []PresignFileInput) (PresignedUploads, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
 	if !ok || principal.UserID == "" {
-		return BatchPresignedUpload{}, ErrInvalidMediaRequest
+		return PresignedUploads{}, ErrInvalidMediaRequest
 	}
-	for _, file := range req.Files {
+	for _, file := range files {
 		if err := validatePresignUploadRequest(file); err != nil {
-			return BatchPresignedUpload{}, err
+			return PresignedUploads{}, err
 		}
 	}
-	uploads := make([]PresignedUpload, 0, len(req.Files))
-	for _, file := range req.Files {
+	uploads := make([]PresignedUpload, 0, len(files))
+	for _, file := range files {
 		upload, err := s.provider.Presign(ctx, file, principal.UserID)
 		if err != nil {
 			observability.L().Error("media.batch_presign provider failed", "error", err)
-			return BatchPresignedUpload{}, err
+			return PresignedUploads{}, err
 		}
 		if err := s.repo.Save(ctx, pendingUpload{
 			UploadID:         upload.UploadID,
@@ -125,12 +125,12 @@ func (s *Service) BatchPresign(ctx context.Context, req BatchPresignUploadReques
 			CreatedAt:        time.Now().UTC().Format(time.RFC3339),
 		}); err != nil {
 			observability.L().Error("media.batch_presign save failed", "error", err, "upload_id", upload.UploadID)
-			return BatchPresignedUpload{}, err
+			return PresignedUploads{}, err
 		}
 		upload.StorageKey = ""
 		uploads = append(uploads, upload)
 	}
-	return BatchPresignedUpload{Uploads: uploads}, nil
+	return PresignedUploads{Uploads: uploads}, nil
 }
 
 func (s *Service) Complete(ctx context.Context, uploadID string) (UploadedMedia, error) {
@@ -207,7 +207,7 @@ func (s *Service) PresignGet(ctx context.Context, storageKey string, ttl time.Du
 	return s.provider.PresignGet(ctx, storageKey, ttl)
 }
 
-func validatePresignUploadRequest(req PresignUploadRequest) error {
+func validatePresignUploadRequest(req PresignFileInput) error {
 	if strings.TrimSpace(req.FileName) == "" || len(req.FileName) > 255 {
 		return ErrInvalidMediaRequest
 	}

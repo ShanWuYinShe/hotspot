@@ -219,7 +219,7 @@ func (s *Service) ListGroups(ctx context.Context, req UserGroupsRequest) (groupt
 func (s *Service) ListMoments(ctx context.Context, req UserMomentsRequest) (momenttypes.PaginatedMoments, error) {
 	// 契约（spec api_spec_user.md）：user_id 必传，认证 optional，缺省不回退当前用户。
 	// 纯公开视角：本端点只返回 privacy_level='public' 的瞬间；拥有者视角（含 private 与软删占位）
-	// 见 moments/list_created。
+	// 见 moments/fetch_created。
 	targetUserID := req.UserID
 	if targetUserID == "" {
 		return momenttypes.PaginatedMoments{}, ErrInvalidRequest

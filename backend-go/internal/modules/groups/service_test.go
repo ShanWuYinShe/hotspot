@@ -42,7 +42,7 @@ type stubGroupsRepo struct {
 	myGroupsCur string
 	myGroupsErr error
 
-	joinResult JoinGroupResult
+	joinResult EnterGroupResult
 	joinErr    error
 
 	announceItems []GroupAnnouncementItem
@@ -89,7 +89,7 @@ type stubGroupsRepo struct {
 	banErr     error
 	unbanErr   error
 
-	bannedMem    []BannedMemberItem
+	bannedMem    []AdminBannedMemberItem
 	bannedMemCur string
 	bannedMemErr error
 
@@ -139,7 +139,7 @@ func (r *stubGroupsRepo) SearchMembers(_ context.Context, _ string, _ string, _ 
 func (r *stubGroupsRepo) ListMyGroups(_ context.Context, _ string, _ int, _ string) ([]GroupItem, string, error) {
 	return r.myGroups, r.myGroupsCur, r.myGroupsErr
 }
-func (r *stubGroupsRepo) JoinGroup(_ context.Context, _ string, _ string, _ *string, _ *string) (JoinGroupResult, error) {
+func (r *stubGroupsRepo) JoinGroup(_ context.Context, _ string, _ string, _ *string, _ *string) (EnterGroupResult, error) {
 	return r.joinResult, r.joinErr
 }
 func (r *stubGroupsRepo) CreateAnnouncement(_ context.Context, _ string, _ CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
@@ -213,7 +213,7 @@ func (r *stubGroupsRepo) BanMember(_ context.Context, _ string, _ BanMemberReque
 func (r *stubGroupsRepo) UnbanMember(_ context.Context, _ string, _ UnbanMemberRequest) error {
 	return r.unbanErr
 }
-func (r *stubGroupsRepo) ListBannedMembers(_ context.Context, _ string, _ int, _ string) ([]BannedMemberItem, string, error) {
+func (r *stubGroupsRepo) ListBannedMembers(_ context.Context, _ string, _ int, _ string) ([]AdminBannedMemberItem, string, error) {
 	return r.bannedMem, r.bannedMemCur, r.bannedMemErr
 }
 func (r *stubGroupsRepo) RemoveMember(_ context.Context, _ string, _ RemoveMemberRequest) error {
@@ -380,7 +380,7 @@ func TestServiceListMembersNormalizesLimit(t *testing.T) {
 
 func TestServiceJoinGroupRejectsNotFound(t *testing.T) {
 	svc := NewServiceWithRepo(&stubGroupsRepo{})
-	_, err := svc.JoinGroup(grpCtx("u1"), JoinGroupRequest{GroupID: "g1"})
+	_, err := svc.JoinGroup(grpCtx("u1"), EnterGroupRequest{GroupID: "g1"})
 	if !errors.Is(err, ErrGroupNotFound) {
 		t.Fatalf("expected not found, got %v", err)
 	}
@@ -389,23 +389,23 @@ func TestServiceJoinGroupRejectsNotFound(t *testing.T) {
 func TestServiceJoinGroupAlreadyJoined(t *testing.T) {
 	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
 	svc := NewServiceWithRepo(repo)
-	result, err := svc.JoinGroup(grpCtx("u1"), JoinGroupRequest{GroupID: "g1"})
+	result, err := svc.JoinGroup(grpCtx("u1"), EnterGroupRequest{GroupID: "g1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if result.Status != JoinGroupStatusJoined {
+	if result.Status != EnterGroupStatusJoined {
 		t.Fatalf("expected joined status, got %s", result.Status)
 	}
 }
 
 func TestServiceJoinGroupHappyPath(t *testing.T) {
-	repo := &stubGroupsRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}}, getFound: true, joinResult: JoinGroupResult{Status: JoinGroupStatusJoined}}
+	repo := &stubGroupsRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}}, getFound: true, joinResult: EnterGroupResult{Status: EnterGroupStatusJoined}}
 	svc := NewServiceWithRepo(repo)
-	result, err := svc.JoinGroup(grpCtx("u1"), JoinGroupRequest{GroupID: "g1"})
+	result, err := svc.JoinGroup(grpCtx("u1"), EnterGroupRequest{GroupID: "g1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if result.Status != JoinGroupStatusJoined {
+	if result.Status != EnterGroupStatusJoined {
 		t.Fatalf("expected joined, got %s", result.Status)
 	}
 }

@@ -2,20 +2,22 @@ package auth
 
 import "github.com/go-chi/chi/v5"
 
-func MountRoutes(r chi.Router, handler *Handler) {
+// MountPublicRoutes mounts the anonymous account-lifecycle endpoints on the
+// /public/v1/auth subtree (spec api_spec_public.md).
+func MountPublicRoutes(r chi.Router, handler *Handler) {
 	r.Post("/register", handler.Register)
-	r.Post("/login", handler.Login)
+	r.Post("/signin", handler.Login)
 	r.Post("/guest", handler.Guest)
 	r.Post("/refresh_token", handler.RefreshToken)
-	r.Post("/get_status", handler.GetStatus)
-	r.Post("/request_password_reset", handler.RequestPasswordReset)
+	r.Post("/forgot_password", handler.RequestPasswordReset)
 	r.Post("/reset_password", handler.ResetPassword)
 }
 
 func MountAuthenticatedRoutes(r chi.Router, handler *Handler) {
-	r.Post("/logout", handler.Logout)
+	r.Post("/session", handler.GetStatus)
+	r.Post("/signout", handler.Logout)
 	r.Post("/change_password", handler.ChangePassword)
-	r.Post("/list_sessions", handler.ListSessions)
+	r.Post("/fetch_sessions", handler.ListSessions)
 	r.Post("/revoke_session", handler.RevokeSession)
-	r.Post("/revoke_all_sessions", handler.RevokeAllSessions)
+	r.Post("/revoke_other_sessions", handler.RevokeAllSessions)
 }

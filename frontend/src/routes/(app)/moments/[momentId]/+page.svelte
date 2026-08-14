@@ -51,7 +51,7 @@
 			relatedMoments = relatedItems.map((m) => ({
 				id: m.moment_id,
 				title: m.description ?? '',
-				meta: `${m.user?.nickname ?? ''} · ${m.likes_count ?? 0} 赞`,
+				meta: `${m.user?.nickname ?? ''} · ${(m.reactions ?? []).reduce((sum, r) => sum + r.count, 0)} 赞`,
 				image: m.images?.[0]?.url ?? ''
 			}));
 		});
@@ -134,7 +134,7 @@
 						image: detailData.images?.[0]?.url ?? '',
 						content: detailData.description ?? '',
 						time: formatDateTime(detailData.created_at),
-						likes: detailData.likes_count ?? 0,
+						likes: (detailData.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
 						tag: detailData.tags?.[0] ?? '',
 						comments: []
 					};
@@ -153,7 +153,7 @@
 						privacy_level: 'public'
 					};
 					// privacy_level 属拥有者数据（OwnerMomentItem），不在公开详情类型 MomentItem 中：
-					// 拥有者编辑前经 moments/list_created 取回实际可见性（视角分离）。
+					// 拥有者编辑前经 moments/fetch_created 取回实际可见性（视角分离）。
 					if (detailData.user?.user_id === auth.user?.user_id) {
 						void (async () => {
 							let cursor: string | null = null;

@@ -4,11 +4,11 @@
 import { describe, it, expect } from 'vitest';
 import { handlers } from './handlers';
 
-const mapHandler = handlers.find((h) => h.info.path === '/api/v1/map/canvas')!;
+const mapHandler = handlers.find((h) => h.info.path === '/public/v1/map/canvas')!;
 
 async function canvas(body: unknown): Promise<any> {
 	const result = await mapHandler.run({
-		request: new Request('http://test.local/api/v1/map/canvas', {
+		request: new Request('http://test.local/public/v1/map/canvas', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(body)

@@ -41,7 +41,7 @@ func (h *Handler) Set(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
 }
 
-// List handles POST /api/v1/reactions/list.
+// List handles POST /api/v1/reactions/fetch.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	var req ListReactionsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.TargetID == "" {

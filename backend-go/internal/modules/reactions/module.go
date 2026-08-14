@@ -29,18 +29,20 @@ func NewModule(factory *persistence.Factory, providers []TargetProvider, notific
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/reactions", func(reactionsRouter chi.Router) {
 		reactionsRouter.Group(func(group chi.Router) {
-			group.Use(platformauth.OptionalAuth)
-			group.Use(ratelimit.Middleware)
-			group.Use(resourceguard.Middleware)
-			group.Use(idempotency.Middleware)
-			group.Post("/list", m.handler.List)
-		})
-		reactionsRouter.Group(func(group chi.Router) {
 			group.Use(platformauth.RequiredAuth)
 			group.Use(ratelimit.Middleware)
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
+			group.Post("/fetch", m.handler.List)
 			group.Post("/set", m.handler.Set)
 		})
+	})
+}
+
+// MountPublic mounts the anonymous reactions/fetch on the /public/v1 node
+// (spec api_spec_public.md; reactions/set requires login and stays /api/v1).
+func (m *Module) MountPublic(r chi.Router) {
+	r.Route("/reactions", func(reactionsRouter chi.Router) {
+		reactionsRouter.Post("/fetch", m.handler.List)
 	})
 }

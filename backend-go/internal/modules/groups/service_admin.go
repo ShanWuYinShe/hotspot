@@ -27,7 +27,7 @@ func (s *Service) RoleOf(ctx context.Context, groupID string) (rbac.GroupRole, b
 	return rbac.GroupRole(item.ViewerState.Role), true, nil
 }
 
-// GetSettings 返回群管理视角设置（groups/admin/get_settings；含 has_password/
+// GetSettings 返回群管理视角设置（groups/admin/settings；含 has_password/
 // is_searchable/members_searchable/max_members 等管理字段，spec api_spec_types.md GroupSettings）。
 func (s *Service) GetSettings(ctx context.Context, groupID string) (GroupSettings, bool, error) {
 	item, ok, err := s.repo.Get(ctx, groupID)

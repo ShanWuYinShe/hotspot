@@ -21,7 +21,7 @@ type Repository interface {
 	// scenarios (avoids N+1). Returns target_id -> reactions.
 	AggregateBatch(ctx context.Context, targetType ReactTarget, targetIDs []string, viewerID string) (map[string][]Reaction, error)
 	// ListReactedTargets lists target_ids the user reacted to, for a given
-	// target kind (backs users/list_reacted_moments). Cursor-paginated by
+	// target kind (backs users/fetch_reacted_moments). Cursor-paginated by
 	// reacted_at DESC, target_id DESC tie-break.
 	ListReactedTargets(ctx context.Context, targetType ReactTarget, userID string, limit int, cursor string) ([]string, string, error)
 }

@@ -43,44 +43,46 @@ func (m *Module) CommentsService() *comments.Service { return m.Comments }
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/moments", func(momentsRouter chi.Router) {
 		momentsRouter.Group(func(group chi.Router) {
-			group.Use(platformauth.OptionalAuth)
+			group.Use(platformauth.RequiredAuth)
 			group.Use(ratelimit.Middleware)
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
 			group.Post("/open_the_door", m.momentsHandler.OpenTheDoor)
 			group.Post("/search", m.momentsHandler.Search)
-		})
-		momentsRouter.Group(func(group chi.Router) {
-			group.Use(platformauth.RequiredAuth)
-			group.Use(ratelimit.Middleware)
-			group.Use(resourceguard.Middleware)
-			group.Use(idempotency.Middleware)
 			group.Post("/create", m.momentsHandler.Create)
 			group.Post("/update", m.momentsHandler.Update)
 			group.Post("/delete", m.momentsHandler.Delete)
-			group.Post("/list_created", m.momentsHandler.ListCreated)
+			group.Post("/fetch_created", m.momentsHandler.ListCreated)
 			group.Post("/set_favorite", m.momentsHandler.Favorite)
-			group.Post("/list_favorites", m.momentsHandler.ListFavorites)
+			group.Post("/fetch_favorites", m.momentsHandler.ListFavorites)
 		})
 	})
 
 	r.Route("/api/v1/comments", func(commentsRouter chi.Router) {
 		commentsRouter.Group(func(group chi.Router) {
-			group.Use(platformauth.OptionalAuth)
-			group.Use(ratelimit.Middleware)
-			group.Use(resourceguard.Middleware)
-			group.Use(idempotency.Middleware)
-			group.Post("/list", m.commentsHandler.List)
-			group.Post("/list_replies", m.commentsHandler.ListReplies)
-			group.Post("/open_the_door", m.commentsHandler.GetDetail)
-		})
-		commentsRouter.Group(func(group chi.Router) {
 			group.Use(platformauth.RequiredAuth)
 			group.Use(ratelimit.Middleware)
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
+			group.Post("/fetch", m.commentsHandler.List)
+			group.Post("/fetch_replies", m.commentsHandler.ListReplies)
+			group.Post("/open_the_door", m.commentsHandler.GetDetail)
 			group.Post("/create", m.commentsHandler.Create)
 			group.Post("/delete", m.commentsHandler.Delete)
 		})
+	})
+}
+
+// MountPublic mounts the anonymous moments/comments endpoints on the
+// /public/v1 node (spec api_spec_public.md).
+func (m *Module) MountPublic(r chi.Router) {
+	r.Route("/moments", func(momentsRouter chi.Router) {
+		momentsRouter.Post("/open_the_door", m.momentsHandler.OpenTheDoor)
+		momentsRouter.Post("/search", m.momentsHandler.Search)
+	})
+	r.Route("/comments", func(commentsRouter chi.Router) {
+		commentsRouter.Post("/fetch", m.commentsHandler.List)
+		commentsRouter.Post("/fetch_replies", m.commentsHandler.ListReplies)
+		commentsRouter.Post("/open_the_door", m.commentsHandler.GetDetail)
 	})
 }

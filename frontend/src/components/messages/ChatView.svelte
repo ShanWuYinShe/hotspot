@@ -18,7 +18,7 @@
 	import { useChat, formatTime, type ChatMessage } from '@/lib/chat.svelte';
 
 	// ChatView — 私聊窗口（spec: 以对端 user_id 寻址）。
-	// 历史来自 private_messages/list；发送走 private_messages/send。
+	// 历史来自 private_messages/fetch；发送走 private_messages/send。
 	// 消息方向由 sender.user_id 与当前用户比较得出。
 	// 共享状态机（加载/分页/滚动/typing/发送/WS 接收）由 useChat 工厂承载。
 

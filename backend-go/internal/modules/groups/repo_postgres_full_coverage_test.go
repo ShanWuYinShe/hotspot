@@ -321,7 +321,7 @@ func TestPostgresJoinGroupBranches(t *testing.T) {
 		queryRowErr: map[string]error{queryGetGroupMembership: pgx.ErrNoRows},
 	}
 	res, err := newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil, nil)
-	if err != nil || res.Status != JoinGroupStatusJoined {
+	if err != nil || res.Status != EnterGroupStatusJoined {
 		t.Fatalf("join direct: %#v err=%v", res, err)
 	}
 	// 已加入 → 直接返回 joined
@@ -329,7 +329,7 @@ func TestPostgresJoinGroupBranches(t *testing.T) {
 		queryRow: map[string][]any{queryGetGroup: directRow, queryGetGroupMembership: {"member", gTestTime, false, nil}},
 	}
 	res, err = newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil, nil)
-	if err != nil || res.Status != JoinGroupStatusJoined {
+	if err != nil || res.Status != EnterGroupStatusJoined {
 		t.Fatalf("join already: %#v err=%v", res, err)
 	}
 	// 群不存在
@@ -377,7 +377,7 @@ func TestPostgresJoinGroupBranches(t *testing.T) {
 		queryRowErr: map[string]error{queryGetGroupMembership: pgx.ErrNoRows},
 	}
 	res, err = newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", &pwd, nil)
-	if err != nil || res.Status != JoinGroupStatusPendingApproval || res.Application == nil || res.Application.ApplicationID != "app_exist" || res.IsNewApplication {
+	if err != nil || res.Status != EnterGroupStatusPendingApproval || res.ApplicationID == nil || *res.ApplicationID != "app_exist" || res.IsNewApplication {
 		t.Fatalf("join approval existing: %#v err=%v", res, err)
 	}
 	// requires_approval：无申请 → 新建
@@ -386,7 +386,7 @@ func TestPostgresJoinGroupBranches(t *testing.T) {
 		queryRowErr: map[string]error{queryGetGroupMembership: pgx.ErrNoRows, queryFindPendingGroupApplication: pgx.ErrNoRows},
 	}
 	res, err = newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil, &pwd)
-	if err != nil || res.Status != JoinGroupStatusPendingApproval || !res.IsNewApplication {
+	if err != nil || res.Status != EnterGroupStatusPendingApproval || !res.IsNewApplication {
 		t.Fatalf("join approval new: %#v err=%v", res, err)
 	}
 	// requires_approval：插入申请失败

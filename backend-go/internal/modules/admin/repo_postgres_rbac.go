@@ -228,7 +228,7 @@ func (r *PostgresRepository) ListAdmins(ctx context.Context, pagination Paginati
 			page.Next = &adminCursor{GrantedAt: record.GrantedAt, UserID: record.User.UserID}
 			break
 		}
-		page.Items = append(page.Items, AdminOperatorItem{User: record.User, Permissions: record.permissionsForResponse(), Roles: record.rolesForResponse()})
+		page.Items = append(page.Items, AdminOperatorItem{User: record.User, GrantedAt: record.GrantedAt.UTC().Format(time.RFC3339), Permissions: record.permissionsForResponse(), Roles: record.rolesForResponse()})
 	}
 	return page, nil
 }

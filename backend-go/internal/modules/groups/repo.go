@@ -18,7 +18,7 @@ type Repository interface {
 	IsBanned(context.Context, string, string) (bool, error)
 	GetApplication(context.Context, string) (GroupApplicationItem, bool, error)
 	ListMyGroups(context.Context, string, int, string) ([]GroupItem, string, error)
-	JoinGroup(context.Context, string, string, *string, *string) (JoinGroupResult, error)
+	JoinGroup(context.Context, string, string, *string, *string) (EnterGroupResult, error)
 	CreateAnnouncement(context.Context, string, CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error)
 	ListAnnouncements(context.Context, string) ([]GroupAnnouncementItem, error)
 	UpdateAnnouncement(context.Context, string, UpdateGroupAnnouncementRequest) error
@@ -41,7 +41,7 @@ type Repository interface {
 	UnmuteMember(context.Context, string, UnmuteMemberRequest) error
 	BanMember(context.Context, string, BanMemberRequest) error
 	UnbanMember(context.Context, string, UnbanMemberRequest) error
-	ListBannedMembers(context.Context, string, int, string) ([]BannedMemberItem, string, error)
+	ListBannedMembers(context.Context, string, int, string) ([]AdminBannedMemberItem, string, error)
 	RemoveMember(context.Context, string, RemoveMemberRequest) error
 	TransferOwnership(context.Context, string, TransferOwnershipRequest) error
 }

@@ -21,7 +21,7 @@ type GroupSettings struct {
 
 type Features struct {
 	EnablePublicRegistration bool `json:"enable_public_registration"`
-	EnableGuestLogin         bool `json:"enable_guest_login"`
+	EnableGuestRegister         bool `json:"enable_guest_register"`
 	EnableMoments            bool `json:"enable_moments"`
 	EnableNearbyPeople       bool `json:"enable_nearby_people"`
 }
@@ -68,7 +68,7 @@ type RateLimitConfig struct {
 	GlobalPerHour            int `json:"global_per_hour"`
 	UserPerHour              int `json:"user_per_hour"`
 	AuthRegisterPer10Minutes int `json:"auth_register_per_10minutes"`
-	AuthLoginPer10Minutes    int `json:"auth_login_per_10minutes"`
+	AuthSigninPer10Minutes    int `json:"auth_signin_per_10minutes"`
 	AuthGuestPer10Minutes    int `json:"auth_guest_per_10minutes"`
 	AuthRefreshPer10Minutes  int `json:"auth_refresh_per_10minutes"`
 	AuthResetPer10Minutes    int `json:"auth_reset_per_10minutes"`

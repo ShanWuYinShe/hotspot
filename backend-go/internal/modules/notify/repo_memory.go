@@ -76,10 +76,10 @@ func (r *InMemoryRepository) List(_ context.Context, userID string, req NotifyLi
 	return page, nil
 }
 
-func (r *InMemoryRepository) UnreadCount(_ context.Context, userID string) (UnreadCountResult, error) {
+func (r *InMemoryRepository) UnreadCount(_ context.Context, userID string) (UnreadSummaryResult, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	result := UnreadCountResult{ByType: UnreadCountByType{}}
+	result := UnreadSummaryResult{ByType: UnreadCountByType{}}
 	for _, item := range r.items[userID] {
 		if item.IsRead {
 			continue

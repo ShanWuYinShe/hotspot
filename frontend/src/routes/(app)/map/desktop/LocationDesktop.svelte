@@ -16,7 +16,7 @@
 
 	// 桌面地图探索：左侧栏（统计/搜索/Tab 列表/确认，由 LocationDesktopPanel 承载）
 	// + 地图面板（OSM iframe + 图钉 + 筛选 + 详情浮层）。
-	// 图钉与统计来自 POST /api/v1/map/canvas（spec: api_spec_map.md）。
+	// 图钉与统计来自 POST /public/v1/map/canvas（spec: api_spec_map.md）。
 
 	let searchQuery = $state('');
 	let selectedPin = $state<Pin | null>(null);

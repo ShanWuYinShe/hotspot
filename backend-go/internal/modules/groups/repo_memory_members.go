@@ -228,16 +228,16 @@ func (r *InMemoryRepository) UnbanMember(_ context.Context, userID string, req U
 	return nil
 }
 
-func (r *InMemoryRepository) ListBannedMembers(_ context.Context, groupID string, limit int, cursor string) ([]BannedMemberItem, string, error) {
+func (r *InMemoryRepository) ListBannedMembers(_ context.Context, groupID string, limit int, cursor string) ([]AdminBannedMemberItem, string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	if _, ok := r.groups[groupID]; !ok {
 		return nil, "", ErrGroupNotFound
 	}
 	_ = cursor
-	items := make([]BannedMemberItem, 0, len(r.banned[groupID]))
+	items := make([]AdminBannedMemberItem, 0, len(r.banned[groupID]))
 	for userID, record := range r.banned[groupID] {
-		item := BannedMemberItem{
+		item := AdminBannedMemberItem{
 			User:     UserInfo{UserID: userID, Nickname: userID},
 			BannedAt: record.BannedAt,
 			Reason:   record.Reason,

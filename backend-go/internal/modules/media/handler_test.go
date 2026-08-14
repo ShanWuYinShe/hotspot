@@ -39,7 +39,7 @@ type mediaStubProvider struct {
 	headErr     error
 }
 
-func (p *mediaStubProvider) Presign(context.Context, PresignUploadRequest, string) (PresignedUpload, error) {
+func (p *mediaStubProvider) Presign(context.Context, PresignFileInput, string) (PresignedUpload, error) {
 	return p.presignResp, p.presignErr
 }
 func (p *mediaStubProvider) PresignGet(context.Context, string, time.Duration) (string, error) {
@@ -56,7 +56,7 @@ func mediaAuthedRequest(method, target, body string) *http.Request {
 }
 
 func mediaAuthedCompleteRequest(uploadID, key string) *http.Request {
-	req := mediaAuthedRequest(http.MethodPost, "/complete_upload", `{"upload_id":"`+uploadID+`"}`)
+	req := mediaAuthedRequest(http.MethodPost, "/complete_upload", `{"upload_ids":["`+uploadID+`"]}`)
 	if key != "" {
 		req.Header.Set("Idempotency-Key", key)
 	}
@@ -68,22 +68,22 @@ func TestMediaHandlerPresignValidationAndSuccess(t *testing.T) {
 		presignResp: PresignedUpload{UploadID: "upload_1", UploadURL: "https://storage.example.com/hotspot/uploads/u1/upload_1.png", Headers: map[string]string{"Content-Type": "image/png"}, ExpiresAt: "2026-03-30T00:00:00Z", StorageKey: "uploads/u1/upload_1.png"},
 	}))
 
-	badReq := mediaAuthedRequest(http.MethodPost, "/presign_upload", `{"file_name":"","file_size":100,"mime_type":"image/png","category":"avatar"}`)
+	badReq := mediaAuthedRequest(http.MethodPost, "/presign_upload", `{"files":[{"file_name":"","file_size":100,"mime_type":"image/png","category":"avatar"}]}`)
 	badRR := httptest.NewRecorder()
 	handler.PresignUpload(badRR, badReq)
 	assertMediaCode(t, badRR, httpx.CodeInvalidRequest)
 
-	okReq := mediaAuthedRequest(http.MethodPost, "/presign_upload", `{"file_name":"a.png","file_size":100,"mime_type":"image/png","category":"avatar"}`)
+	okReq := mediaAuthedRequest(http.MethodPost, "/presign_upload", `{"files":[{"file_name":"a.png","file_size":100,"mime_type":"image/png","category":"avatar"}]}`)
 	okRR := httptest.NewRecorder()
 	handler.PresignUpload(okRR, okReq)
 	var resp struct {
-		Code httpx.Code      `json:"code"`
-		Data PresignedUpload `json:"data"`
+		Code httpx.Code         `json:"code"`
+		Data PresignedUploads `json:"data"`
 	}
 	if err := json.NewDecoder(okRR.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 0 || resp.Data.UploadID != "upload_1" || resp.Data.StorageKey != "" {
+	if resp.Code != 0 || len(resp.Data.Uploads) != 1 || resp.Data.Uploads[0].UploadID != "upload_1" || resp.Data.Uploads[0].StorageKey != "" {
 		t.Fatalf("unexpected success response: %#v", resp)
 	}
 }
@@ -93,22 +93,22 @@ func TestMediaHandlerBatchValidationAndSuccess(t *testing.T) {
 		presignResp: PresignedUpload{UploadID: "upload_batch", UploadURL: "https://storage.example.com/hotspot/uploads/u1/upload_batch.png", Headers: map[string]string{"Content-Type": "image/png"}, ExpiresAt: "2026-03-30T00:00:00Z", StorageKey: "uploads/u1/upload_batch.png"},
 	}))
 
-	emptyReq := mediaAuthedRequest(http.MethodPost, "/batch_presign_upload", `{"files":[]}`)
+	emptyReq := mediaAuthedRequest(http.MethodPost, "/presign_upload", `{"files":[]}`)
 	emptyRR := httptest.NewRecorder()
-	handler.BatchPresignUpload(emptyRR, emptyReq)
+	handler.PresignUpload(emptyRR, emptyReq)
 	assertMediaCode(t, emptyRR, httpx.CodeInvalidRequest)
 
-	invalidItemReq := mediaAuthedRequest(http.MethodPost, "/batch_presign_upload", `{"files":[{"file_name":"a.png","file_size":100,"mime_type":"video/mp4","category":"avatar"}]}`)
+	invalidItemReq := mediaAuthedRequest(http.MethodPost, "/presign_upload", `{"files":[{"file_name":"a.png","file_size":100,"mime_type":"video/mp4","category":"avatar"}]}`)
 	invalidItemRR := httptest.NewRecorder()
-	handler.BatchPresignUpload(invalidItemRR, invalidItemReq)
+	handler.PresignUpload(invalidItemRR, invalidItemReq)
 	assertMediaCode(t, invalidItemRR, httpx.CodeInvalidRequest)
 
-	okReq := mediaAuthedRequest(http.MethodPost, "/batch_presign_upload", `{"files":[{"file_name":"a.png","file_size":100,"mime_type":"image/png","category":"avatar"}]}`)
+	okReq := mediaAuthedRequest(http.MethodPost, "/presign_upload", `{"files":[{"file_name":"a.png","file_size":100,"mime_type":"image/png","category":"avatar"}]}`)
 	okRR := httptest.NewRecorder()
-	handler.BatchPresignUpload(okRR, okReq)
+	handler.PresignUpload(okRR, okReq)
 	var resp struct {
-		Code httpx.Code           `json:"code"`
-		Data BatchPresignedUpload `json:"data"`
+		Code httpx.Code         `json:"code"`
+		Data PresignedUploads `json:"data"`
 	}
 	if err := json.NewDecoder(okRR.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -178,7 +178,7 @@ func TestMediaHandlerReturns10600OnServerErrors(t *testing.T) {
 		&mediaStubProvider{presignResp: PresignedUpload{UploadID: "upload_1", UploadURL: "https://storage.example.com/upload_1", Headers: map[string]string{"Content-Type": "image/png"}, ExpiresAt: "2026-03-30T00:00:00Z"}},
 	))
 
-	presignReq := mediaAuthedRequest(http.MethodPost, "/presign_upload", `{"file_name":"a.png","file_size":100,"mime_type":"image/png","category":"avatar"}`)
+	presignReq := mediaAuthedRequest(http.MethodPost, "/presign_upload", `{"files":[{"file_name":"a.png","file_size":100,"mime_type":"image/png","category":"avatar"}]}`)
 	presignRR := httptest.NewRecorder()
 	handler.PresignUpload(presignRR, presignReq)
 	assertMediaCode(t, presignRR, httpx.CodeInternalUnavailable)
@@ -198,19 +198,19 @@ func TestBatchPresignRejectsMoreThan9Files(t *testing.T) {
 		files[i] = `{"file_name":"a.png","file_size":100,"mime_type":"image/png","category":"avatar"}`
 	}
 	reqBody := `{"files":[` + strings.Join(files, ",") + `]}`
-	req := mediaAuthedRequest(http.MethodPost, "/batch_presign_upload", reqBody)
+	req := mediaAuthedRequest(http.MethodPost, "/presign_upload", reqBody)
 	rr := httptest.NewRecorder()
-	handler.BatchPresignUpload(rr, req)
+	handler.PresignUpload(rr, req)
 	assertMediaCode(t, rr, httpx.CodeInvalidRequest)
 }
 
-func TestBatchPresignReturns10600OnServiceError(t *testing.T) {
+func TestPresignReturns10600OnServiceError(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepoAndProvider(NewInMemoryRepository(), &mediaStubProvider{
 		presignErr: errors.New("internal provider error"),
 	}))
-	req := mediaAuthedRequest(http.MethodPost, "/batch_presign_upload", `{"files":[{"file_name":"a.png","file_size":100,"mime_type":"image/png","category":"avatar"}]}`)
+	req := mediaAuthedRequest(http.MethodPost, "/presign_upload", `{"files":[{"file_name":"a.png","file_size":100,"mime_type":"image/png","category":"avatar"}]}`)
 	rr := httptest.NewRecorder()
-	handler.BatchPresignUpload(rr, req)
+	handler.PresignUpload(rr, req)
 	assertMediaCode(t, rr, httpx.CodeInternalUnavailable)
 }
 

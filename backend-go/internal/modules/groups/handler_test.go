@@ -86,8 +86,8 @@ func (r *groupErrorRepo) SearchMembers(context.Context, string, string, *GroupRo
 func (r *groupErrorRepo) ListMyGroups(context.Context, string, int, string) ([]GroupItem, string, error) {
 	return r.listMyGroupsItems, "", r.listMyGroupsErr
 }
-func (r *groupErrorRepo) JoinGroup(context.Context, string, string, *string, *string) (JoinGroupResult, error) {
-	return JoinGroupResult{}, r.joinGroupErr
+func (r *groupErrorRepo) JoinGroup(context.Context, string, string, *string, *string) (EnterGroupResult, error) {
+	return EnterGroupResult{}, r.joinGroupErr
 }
 func (r *groupErrorRepo) CreateAnnouncement(context.Context, string, CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
 	return GroupAnnouncementItem{}, r.createAnnouncementErr
@@ -155,7 +155,7 @@ func (r *groupErrorRepo) BanMember(context.Context, string, BanMemberRequest) er
 func (r *groupErrorRepo) UnbanMember(context.Context, string, UnbanMemberRequest) error {
 	return nil
 }
-func (r *groupErrorRepo) ListBannedMembers(context.Context, string, int, string) ([]BannedMemberItem, string, error) {
+func (r *groupErrorRepo) ListBannedMembers(context.Context, string, int, string) ([]AdminBannedMemberItem, string, error) {
 	return nil, "", nil
 }
 func (r *groupErrorRepo) RemoveMember(context.Context, string, RemoveMemberRequest) error {
@@ -317,11 +317,11 @@ func TestJoinApprovalSendsApplicationNotification(t *testing.T) {
 	hub.RegisterUser("user_alice", "sess_owner", ownerSink)
 	memberCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_member"})
 	message := "please let me in"
-	result, err := service.JoinGroup(memberCtx, JoinGroupRequest{GroupID: created.Group.GroupID, Message: &message})
+	result, err := service.JoinGroup(memberCtx, EnterGroupRequest{GroupID: created.Group.GroupID, Message: &message})
 	if err != nil {
 		t.Fatalf("join group: %v", err)
 	}
-	if result.Status != JoinGroupStatusPendingApproval || result.Application == nil {
+	if result.Status != EnterGroupStatusPendingApproval || result.ApplicationID == nil {
 		t.Fatalf("unexpected join result: %#v", result)
 	}
 	if len(ownerSink.events) != 1 || ownerSink.events[0].Type != "GroupApplicationReceived" {
@@ -400,13 +400,13 @@ func TestApproveApplicationSendsAcceptedNotification(t *testing.T) {
 		t.Fatalf("create group: %v", err)
 	}
 	memberCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_member"})
-	result, err := service.JoinGroup(memberCtx, JoinGroupRequest{GroupID: created.Group.GroupID})
+	result, err := service.JoinGroup(memberCtx, EnterGroupRequest{GroupID: created.Group.GroupID})
 	if err != nil {
 		t.Fatalf("join group: %v", err)
 	}
 	memberSink := &groupRealtimeSink{}
 	hub.RegisterUser("user_bob", "sess_member", memberSink)
-	if err := service.ApproveApplication(ownerCtx, ApproveGroupApplicationRequest{GroupID: created.Group.GroupID, ApplicationID: result.Application.ApplicationID}); err != nil {
+	if err := service.ApproveApplication(ownerCtx, ApproveGroupApplicationRequest{GroupID: created.Group.GroupID, ApplicationID: *result.ApplicationID}); err != nil {
 		t.Fatalf("approve application: %v", err)
 	}
 	memberNotifications, err := notificationRepo.List(context.Background(), "user_bob", notify.NotifyListRequest{})
@@ -897,7 +897,7 @@ func TestListSentInvitesHandlerReturnsSuccess(t *testing.T) {
 		}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
-	req := httptest.NewRequest(http.MethodPost, "/groups/admin/invites/list_sent", strings.NewReader(`{"group_id":"g1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/admin/invites/fetch_sent", strings.NewReader(`{"group_id":"g1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListSentInvites(rr, req)
@@ -919,7 +919,7 @@ func TestListSentInvitesHandlerMapsAccessRestricted(t *testing.T) {
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
-	req := httptest.NewRequest(http.MethodPost, "/groups/admin/invites/list_sent", strings.NewReader(`{"group_id":"g1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/admin/invites/fetch_sent", strings.NewReader(`{"group_id":"g1"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListSentInvites(rr, req)
@@ -1191,7 +1191,7 @@ func TestListMyGroupsHandlerReturnsSuccess(t *testing.T) {
 		listMyGroupsItems: []GroupItem{{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
-	req := httptest.NewRequest(http.MethodPost, "/groups/list_joined", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/fetch_joined", strings.NewReader(`{}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyGroups(rr, req)
@@ -1209,7 +1209,7 @@ func TestListMyGroupsHandlerReturnsSuccess(t *testing.T) {
 
 func TestListMyGroupsHandlerMapsServiceError(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{listMyGroupsErr: errors.New("boom")}))
-	req := httptest.NewRequest(http.MethodPost, "/groups/list_joined", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/fetch_joined", strings.NewReader(`{}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyGroups(rr, req)
@@ -1233,7 +1233,7 @@ func TestJoinGroupHandlerReturnsSuccess(t *testing.T) {
 
 	var resp struct {
 		Code httpx.Code      `json:"code"`
-		Data JoinGroupResult `json:"data"`
+		Data EnterGroupResult `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -1241,7 +1241,7 @@ func TestJoinGroupHandlerReturnsSuccess(t *testing.T) {
 	if resp.Code != 0 {
 		t.Fatalf("expected code 0, got %d", resp.Code)
 	}
-	if resp.Data.Status != JoinGroupStatusJoined {
+	if resp.Data.Status != EnterGroupStatusJoined {
 		t.Fatalf("expected joined status, got %s", resp.Data.Status)
 	}
 }
@@ -1478,7 +1478,7 @@ func TestHandlerLeaveGroupReturns10300WhenNotFound(t *testing.T) {
 
 func TestHandlerListMyApplicationsReturnsSuccess(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
-	req := httptest.NewRequest(http.MethodPost, "/groups/applications/list_submitted", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/applications/fetch_submitted", strings.NewReader(`{}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyApplications(rr, req)
@@ -1496,7 +1496,7 @@ func TestHandlerListMyApplicationsReturnsSuccess(t *testing.T) {
 
 func TestHandlerListMyApplicationsRejectsInvalidJSON(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
-	req := httptest.NewRequest(http.MethodPost, "/groups/applications/list_submitted", strings.NewReader(`{invalid`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/applications/fetch_submitted", strings.NewReader(`{invalid`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyApplications(rr, req)
@@ -1633,7 +1633,7 @@ func TestHandlerListMyInvitesReturnsSuccess(t *testing.T) {
 			{InviteID: "inv1", Group: GroupInfo{GroupID: "g1"}, Status: ApplicationStatusPending},
 		},
 	}))
-	req := httptest.NewRequest(http.MethodPost, "/groups/invites/list_received", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/invites/fetch_received", strings.NewReader(`{}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyInvites(rr, req)
@@ -1657,7 +1657,7 @@ func TestHandlerListMyInvitesReturnsSuccess(t *testing.T) {
 
 func TestHandlerListMyInvitesRejectsInvalidJSON(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{}))
-	req := httptest.NewRequest(http.MethodPost, "/groups/invites/list_received", strings.NewReader(`{broken`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/invites/fetch_received", strings.NewReader(`{broken`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyInvites(rr, req)
@@ -1666,7 +1666,7 @@ func TestHandlerListMyInvitesRejectsInvalidJSON(t *testing.T) {
 
 func TestHandlerListMyInvitesReturns10600OnError(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{listMyInvitesErr: errors.New("boom")}))
-	req := httptest.NewRequest(http.MethodPost, "/groups/invites/list_received", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/groups/invites/fetch_received", strings.NewReader(`{}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
 	rr := httptest.NewRecorder()
 	handler.ListMyInvites(rr, req)

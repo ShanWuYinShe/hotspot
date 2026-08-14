@@ -26,7 +26,7 @@ func TestHandlerSendNonMemberForbidden(t *testing.T) {
 }
 
 // TestHandlerHistoryNonMemberForbidden verifies spec api_spec_chat.md:
-// group_messages/list 非群成员 → 10200 + data.forbidden_reason=not_group_member。
+// group_messages/fetch 非群成员 → 10200 + data.forbidden_reason=not_group_member。
 func TestHandlerHistoryNonMemberForbidden(t *testing.T) {
 	repo := &stubGroupMessageRepo{isMemberErr: ErrNotGroupMember}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -126,7 +126,7 @@ type specAdminRepo struct {
 	recalledMsgID string
 }
 
-func (r *specAdminRepo) Send(context.Context, SendGroupMessageRequest) (MessageSent, error) { return MessageSent{}, nil }
+func (r *specAdminRepo) Send(context.Context, SendGroupMessageRequest) (MessageSentResult, error) { return MessageSentResult{}, nil }
 func (r *specAdminRepo) History(context.Context, string, *PaginationParams) (PaginatedGroupMessages, error) { return PaginatedGroupMessages{}, nil }
 func (r *specAdminRepo) Update(context.Context, UpdateGroupMessageRequest) (MessageEventMeta, error) { return MessageEventMeta{}, nil }
 func (r *specAdminRepo) Recall(context.Context, RecallGroupMessageRequest) (MessageEventMeta, error) { return MessageEventMeta{}, nil }
@@ -140,7 +140,7 @@ func (r *specAdminRepo) RecallAsAdmin(context.Context, string) (MessageEventMeta
 func (r *specAdminRepo) MarkAsRead(context.Context, string, MarkGroupMessagesReadRequest) error { return nil }
 func (r *specAdminRepo) MarkAllRead(context.Context, string) error { return nil }
 func (r *specAdminRepo) IsMember(context.Context, string, string) (bool, error) { return true, nil }
-func (r *specAdminRepo) GetMessageForReply(context.Context, string) (map[string]any, bool, error) { return nil, false, nil }
+func (r *specAdminRepo) GetMessageForReply(context.Context, string) (*MessageBrief, bool, error) { return nil, false, nil }
 func (r *specAdminRepo) GetMediaForMessage(context.Context, string) (map[string]any, bool, error) { return nil, false, nil }
 func (r *specAdminRepo) MemberMuteStatus(context.Context, string, string) (bool, string, bool, error) { return false, "", false, nil }
 func (r *specAdminRepo) MessageExists(context.Context, string) (bool, string, error) { return false, "", nil }

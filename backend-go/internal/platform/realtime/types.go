@@ -27,7 +27,7 @@ const (
 const (
 	EventTypeMomentCommented  = "MomentCommented"
 	EventTypeCommentReply     = "CommentReply"
-	EventTypeMessageMentioned = "MessageMentioned"
+	EventTypeContentMentioned = "ContentMentioned"
 )
 
 // 瞬间生命周期（编辑/软删除，spec api_spec_websocket.md）

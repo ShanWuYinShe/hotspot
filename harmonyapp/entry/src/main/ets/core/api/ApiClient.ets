@@ -17,11 +17,7 @@ import {
   PresignedUpload,
   CompleteUploadRequest,
   UploadedMedia,
-  BatchCompleteUploadRequest,
-  BatchCompleteUpload,
   MediaCategory,
-  BatchPresignUploadRequest,
-  BatchPresignedUpload,
 
   // 认证相关
   AuthData,
@@ -29,7 +25,7 @@ import {
   LoginRequest,
   GuestRequest,
   RefreshTokenRequest,
-  AuthStatus,
+  SessionStatus,
   RequestPasswordResetRequest,
   ResetPasswordRequest,
   ChangePasswordRequest,
@@ -104,7 +100,7 @@ import {
 
   // 私聊消息
   SendPrivateMessageRequest,
-  MessageSent,
+  MessageSentResult,
   PrivateMessageItem,
   GetPrivateMessagesHistoryRequest,
   UpdatePrivateMessageRequest,
@@ -130,7 +126,7 @@ import {
   BanMemberRequest,
   UnbanMemberRequest,
   BannedMembersRequest,
-  BannedMemberItem,
+  AdminBannedMemberItem,
   RemoveMemberRequest,
   GroupApplicationsRequest,
   GroupApplicationItem,
@@ -216,7 +212,7 @@ import {
   // 通知中心
   NotifyItem,
   NotifyListRequest,
-  UnreadCountResult,
+  UnreadSummaryResult,
   NotifyMarkReadRequest,
 } from '../types/api';
 
@@ -284,20 +280,12 @@ export class ApiClient {
     }
   }
 
-  static async presignUpload(params: PresignUploadRequest): Promise<ApiResponse<PresignedUpload>> {
-    return HttpUtil.post<ApiResponse<PresignedUpload>, PresignUploadRequest>(ApiEndpoints.UPLOAD.PRESIGN_UPLOAD, params);
+  static async presignUpload(params: PresignUploadRequest): Promise<ApiResponse<PresignedUploads>> {
+    return HttpUtil.post<ApiResponse<PresignedUploads>, PresignUploadRequest>(ApiEndpoints.UPLOAD.PRESIGN_UPLOAD, params);
   }
 
-  static async batchPresignUpload(params: BatchPresignUploadRequest): Promise<ApiResponse<BatchPresignedUpload>> {
-    return HttpUtil.post<ApiResponse<BatchPresignedUpload>, BatchPresignUploadRequest>(ApiEndpoints.UPLOAD.BATCH_PRESIGN_UPLOAD, params);
-  }
-
-  static async completeUpload(params: CompleteUploadRequest): Promise<ApiResponse<UploadedMedia>> {
-    return HttpUtil.post<ApiResponse<UploadedMedia>, CompleteUploadRequest>(ApiEndpoints.UPLOAD.COMPLETE_UPLOAD, params);
-  }
-
-  static async batchCompleteUpload(params: BatchCompleteUploadRequest): Promise<ApiResponse<BatchCompleteUpload>> {
-    return HttpUtil.post<ApiResponse<BatchCompleteUpload>, BatchCompleteUploadRequest>(ApiEndpoints.UPLOAD.BATCH_COMPLETE_UPLOAD, params);
+  static async completeUpload(params: CompleteUploadRequest): Promise<ApiResponse<CompletedUploads>> {
+    return HttpUtil.post<ApiResponse<CompletedUploads>, CompleteUploadRequest>(ApiEndpoints.UPLOAD.COMPLETE_UPLOAD, params);
   }
 
   static async uploadFile(
@@ -414,8 +402,8 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<AuthData>, RefreshTokenRequest>(ApiEndpoints.AUTH.REFRESH_TOKEN, params);
   }
 
-  static async checkAuthStatus(): Promise<ApiResponse<AuthStatus>> {
-    return HttpUtil.post<ApiResponse<AuthStatus>, EmptyRequest>(ApiEndpoints.AUTH.GET_STATUS, new EmptyRequest());
+  static async checkAuthStatus(): Promise<ApiResponse<SessionStatus>> {
+    return HttpUtil.post<ApiResponse<SessionStatus>, EmptyRequest>(ApiEndpoints.AUTH.GET_STATUS, new EmptyRequest());
   }
 
   static async logout(): Promise<ApiResponse<void>> {
@@ -658,8 +646,8 @@ export class ApiClient {
 
   // ==================== 私聊消息 API ====================
 
-  static async sendPrivateMessage(params: SendPrivateMessageRequest): Promise<ApiResponse<MessageSent>> {
-    return HttpUtil.post<ApiResponse<MessageSent>, SendPrivateMessageRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.SEND, params);
+  static async sendPrivateMessage(params: SendPrivateMessageRequest): Promise<ApiResponse<MessageSentResult>> {
+    return HttpUtil.post<ApiResponse<MessageSentResult>, SendPrivateMessageRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.SEND, params);
   }
 
   static async getPrivateMessages(params: GetPrivateMessagesHistoryRequest): Promise<ApiResponse<PaginatedData<PrivateMessageItem>>> {
@@ -752,8 +740,8 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<void>, UnbanMemberRequest>(ApiEndpoints.GROUP.MEMBERS.UNBAN, params);
   }
 
-  static async getBannedMembers(params: BannedMembersRequest): Promise<ApiResponse<PaginatedData<BannedMemberItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<BannedMemberItem>>, BannedMembersRequest>(ApiEndpoints.GROUP.MEMBERS.LIST_BANNED, params);
+  static async getBannedMembers(params: BannedMembersRequest): Promise<ApiResponse<PaginatedData<AdminBannedMemberItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<AdminBannedMemberItem>>, BannedMembersRequest>(ApiEndpoints.GROUP.MEMBERS.LIST_BANNED, params);
   }
 
   static async removeMember(params: RemoveMemberRequest): Promise<ApiResponse<void>> {
@@ -826,8 +814,8 @@ export class ApiClient {
 
   // ==================== 群聊消息 API ====================
 
-  static async sendGroupMessage(params: SendGroupMessageRequest): Promise<ApiResponse<MessageSent>> {
-    return HttpUtil.post<ApiResponse<MessageSent>, SendGroupMessageRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.SEND, params);
+  static async sendGroupMessage(params: SendGroupMessageRequest): Promise<ApiResponse<MessageSentResult>> {
+    return HttpUtil.post<ApiResponse<MessageSentResult>, SendGroupMessageRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.SEND, params);
   }
 
   static async getGroupMessages(params: GetGroupMessagesHistoryRequest): Promise<ApiResponse<PaginatedData<GroupMessageItem>>> {
@@ -920,8 +908,8 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<PaginatedData<NotifyItem>>, NotifyListRequest>(ApiEndpoints.NOTIFY.LIST, payload);
   }
 
-  static async getUnreadCount(): Promise<ApiResponse<UnreadCountResult>> {
-    return HttpUtil.post<ApiResponse<UnreadCountResult>, EmptyRequest>(ApiEndpoints.NOTIFY.GET_UNREAD_COUNT, new EmptyRequest());
+  static async getUnreadCount(): Promise<ApiResponse<UnreadSummaryResult>> {
+    return HttpUtil.post<ApiResponse<UnreadSummaryResult>, EmptyRequest>(ApiEndpoints.NOTIFY.GET_UNREAD_COUNT, new EmptyRequest());
   }
 
   static async markNotifiesRead(params: NotifyMarkReadRequest): Promise<ApiResponse<void>> {

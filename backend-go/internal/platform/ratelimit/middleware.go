@@ -233,7 +233,7 @@ func classifyRules(r *http.Request, cfg appconfig.RateLimitConfig) []rule {
 		}
 		return rules
 	}
-	if strings.HasPrefix(path, "/api/v1/search/") {
+	if strings.HasPrefix(path, "/api/v1/search/") || strings.HasPrefix(path, "/public/v1/search/") {
 		key := subjectKey(ip, principal, hasPrincipal)
 		if key != "" && cfg.SearchPerMinute > 0 {
 			rules = append(rules, rule{name: "search_per_minute", strategy: "token_bucket", limit: cfg.SearchPerMinute, window: time.Minute, scope: subjectScope(ip, principal, hasPrincipal), key: key})
@@ -260,7 +260,7 @@ func classifyRules(r *http.Request, cfg appconfig.RateLimitConfig) []rule {
 			if cfg.ReportsCreatePerHour > 0 {
 				rules = append(rules, rule{name: "reports_create_per_hour", strategy: "sliding", limit: cfg.ReportsCreatePerHour, window: time.Hour, scope: "user", key: principal.UserID})
 			}
-		case "/api/v1/media/presign_upload", "/api/v1/media/batch_presign_upload":
+		case "/api/v1/media/presign_upload":
 			if cfg.UploadPresignPerHour > 0 {
 				rules = append(rules, rule{name: "upload_presign_per_hour", strategy: "sliding", limit: cfg.UploadPresignPerHour, window: time.Hour, scope: "user", key: principal.UserID})
 			}
@@ -270,31 +270,31 @@ func classifyRules(r *http.Request, cfg appconfig.RateLimitConfig) []rule {
 }
 
 func appendAuthRules(rules *[]rule, path, ip string, cfg appconfig.RateLimitConfig) bool {
-	if !strings.HasPrefix(path, "/api/v1/auth/") || ip == "" {
+	if !strings.HasPrefix(path, "/public/v1/auth/") || ip == "" {
 		return false
 	}
 	switch path {
-	case "/api/v1/auth/register":
+	case "/public/v1/auth/register":
 		if cfg.AuthRegisterPer10Minutes > 0 {
 			*rules = append(*rules, rule{name: "auth_register_per_10minutes", strategy: "sliding", limit: cfg.AuthRegisterPer10Minutes, window: 10 * time.Minute, scope: "ip", key: ip})
 		}
 		return true
-	case "/api/v1/auth/login":
-		if cfg.AuthLoginPer10Minutes > 0 {
-			*rules = append(*rules, rule{name: "auth_login_per_10minutes", strategy: "sliding", limit: cfg.AuthLoginPer10Minutes, window: 10 * time.Minute, scope: "ip", key: ip})
+	case "/public/v1/auth/signin":
+		if cfg.AuthSigninPer10Minutes > 0 {
+			*rules = append(*rules, rule{name: "auth_signin_per_10minutes", strategy: "sliding", limit: cfg.AuthSigninPer10Minutes, window: 10 * time.Minute, scope: "ip", key: ip})
 		}
 		return true
-	case "/api/v1/auth/guest":
+	case "/public/v1/auth/guest":
 		if cfg.AuthGuestPer10Minutes > 0 {
 			*rules = append(*rules, rule{name: "auth_guest_per_10minutes", strategy: "sliding", limit: cfg.AuthGuestPer10Minutes, window: 10 * time.Minute, scope: "ip", key: ip})
 		}
 		return true
-	case "/api/v1/auth/refresh_token":
+	case "/public/v1/auth/refresh_token":
 		if cfg.AuthRefreshPer10Minutes > 0 {
 			*rules = append(*rules, rule{name: "auth_refresh_per_10minutes", strategy: "sliding", limit: cfg.AuthRefreshPer10Minutes, window: 10 * time.Minute, scope: "ip", key: ip})
 		}
 		return true
-	case "/api/v1/auth/request_password_reset", "/api/v1/auth/reset_password":
+	case "/public/v1/auth/forgot_password", "/public/v1/auth/reset_password":
 		if cfg.AuthResetPer10Minutes > 0 {
 			*rules = append(*rules, rule{name: "auth_reset_per_10minutes", strategy: "sliding", limit: cfg.AuthResetPer10Minutes, window: 10 * time.Minute, scope: "ip", key: ip})
 		}
@@ -306,6 +306,10 @@ func appendAuthRules(rules *[]rule, path, ip string, cfg appconfig.RateLimitConf
 
 func classifyRoute(path string) (routeClass, bool) {
 	switch {
+	case strings.HasPrefix(path, "/public/v1/"):
+		// 匿名节点（spec api_spec_public.md）：认证入口在 appendAuthRules 已按 IP
+		// 处理并提前返回；其余端点全部只读，按 IP 维度限流（无 principal）。
+		return routeClass{readOnly: true}, true
 	case strings.HasPrefix(path, "/admin/v1/"):
 		return routeClass{adminOnly: true, readOnly: isAdminReadPath(path)}, true
 	case strings.HasPrefix(path, "/api/v1/system/"):
@@ -319,25 +323,25 @@ func classifyRoute(path string) (routeClass, bool) {
 	case strings.HasPrefix(path, "/api/v1/media/"):
 		return routeClass{readOnly: false}, true
 	case strings.HasPrefix(path, "/api/v1/reports/"):
-		return routeClass{readOnly: strings.HasSuffix(path, "/list_created") || strings.HasSuffix(path, "/list_joined") || strings.HasSuffix(path, "/list_submitted") || strings.HasSuffix(path, "/list_received") || strings.HasSuffix(path, "/list_sent") || strings.HasSuffix(path, "/list") || strings.HasSuffix(path, "/list_favorites") || strings.HasSuffix(path, "/list_blocked") || strings.HasSuffix(path, "/list_friends") || strings.HasSuffix(path, "/list_following") || strings.HasSuffix(path, "/list_followers") || strings.HasSuffix(path, "/list_groups") || strings.HasSuffix(path, "/list_moments") || strings.HasSuffix(path, "/list_reacted_moments") || strings.HasSuffix(path, "/list_banned")}, true
+		return routeClass{readOnly: strings.HasSuffix(path, "/fetch")}, true
 	case strings.HasPrefix(path, "/api/v1/moments/"):
 		return routeClass{readOnly: !strings.HasSuffix(path, "/create")}, true
 	case strings.HasPrefix(path, "/api/v1/comments/"):
 		return routeClass{readOnly: !strings.HasSuffix(path, "/create")}, true
 	case strings.HasPrefix(path, "/api/v1/groups/"):
-		return routeClass{readOnly: strings.HasSuffix(path, "/search") || strings.HasSuffix(path, "/open_the_door")}, true
+		return routeClass{readOnly: strings.HasSuffix(path, "/search") || strings.HasSuffix(path, "/open_the_door") || strings.HasSuffix(path, "/fetch_joined") || strings.HasSuffix(path, "/fetch_submitted") || strings.HasSuffix(path, "/fetch_received") || strings.HasSuffix(path, "/fetch_sent") || strings.HasSuffix(path, "/fetch_banned")}, true
 	case strings.HasPrefix(path, "/api/v1/users/"):
 		return routeClass{readOnly: isUsersReadPath(path)}, true
 	case strings.HasPrefix(path, "/api/v1/private_chats/"):
 		return routeClass{readOnly: true}, true
 	case strings.HasPrefix(path, "/api/v1/private_messages/"):
-		return routeClass{readOnly: strings.HasSuffix(path, "/list")}, true
+		return routeClass{readOnly: strings.HasSuffix(path, "/fetch")}, true
 	case strings.HasPrefix(path, "/api/v1/group_messages/"):
-		return routeClass{readOnly: strings.HasSuffix(path, "/list")}, true
+		return routeClass{readOnly: strings.HasSuffix(path, "/fetch")}, true
 	case strings.HasPrefix(path, "/api/v1/notify/"):
-		return routeClass{readOnly: strings.HasSuffix(path, "/list") || strings.HasSuffix(path, "/get_unread_count")}, true
+		return routeClass{readOnly: strings.HasSuffix(path, "/fetch") || strings.HasSuffix(path, "/unread_summary")}, true
 	case strings.HasPrefix(path, "/api/v1/share/"):
-		return routeClass{readOnly: strings.HasSuffix(path, "/get") || strings.HasSuffix(path, "/list") || strings.HasSuffix(path, "/list_created")}, true
+		return routeClass{readOnly: strings.HasSuffix(path, "/fetch_created")}, true
 	case strings.HasPrefix(path, "/api/v1/map/"):
 		return routeClass{readOnly: true}, true
 	default:
@@ -347,7 +351,7 @@ func classifyRoute(path string) (routeClass, bool) {
 
 func isAuthReadPath(path string) bool {
 	switch path {
-	case "/api/v1/auth/get_status", "/api/v1/auth/list_sessions":
+	case "/api/v1/auth/session", "/api/v1/auth/fetch_sessions":
 		return true
 	default:
 		return false
@@ -360,7 +364,7 @@ func isAdminReadPath(path string) bool {
 
 func isUsersReadPath(path string) bool {
 	switch path {
-	case "/api/v1/users/search", "/api/v1/users/open_the_door", "/api/v1/users/get_account", "/api/v1/users/get_settings", "/api/v1/users/list_blocked":
+	case "/api/v1/users/search", "/api/v1/users/open_the_door", "/api/v1/users/account", "/api/v1/users/settings", "/api/v1/users/fetch_blocked":
 		return true
 	default:
 		return false

@@ -200,7 +200,7 @@ func (r *InMemoryRepository) ListAdmins(_ context.Context, pagination Pagination
 		}
 		actor, _, _ := r.actorFromRecordLocked(grant)
 		user, _ := r.lookupUserLocked(grant.userID)
-		page.Items = append(page.Items, AdminOperatorItem{User: user, Permissions: cloneStrings(actor.Permissions), Roles: append([]AdminRoleBasic(nil), actor.Roles...)})
+		page.Items = append(page.Items, AdminOperatorItem{User: user, GrantedAt: grant.grantedAt.UTC().Format(time.RFC3339), Permissions: cloneStrings(actor.Permissions), Roles: append([]AdminRoleBasic(nil), actor.Roles...)})
 	}
 	return page, nil
 }

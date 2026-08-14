@@ -229,7 +229,7 @@ func (s *Service) SetMemberBan(ctx context.Context, req SetMemberBanRequest) err
 	})
 }
 
-func (s *Service) ListBannedMembers(ctx context.Context, req BannedMembersRequest) ([]BannedMemberItem, string, error) {
+func (s *Service) ListBannedMembers(ctx context.Context, req BannedMembersRequest) ([]AdminBannedMemberItem, string, error) {
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if !ok {
 		if err != nil {

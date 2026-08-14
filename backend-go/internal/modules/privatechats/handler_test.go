@@ -460,7 +460,7 @@ func TestOpenTheDoorRespectsTargetPrivacy(t *testing.T) {
 	if openResp.Data.Chat.CanMessage {
 		t.Fatalf("expected can_message=false: %#v", openResp.Data.Chat)
 	}
-	if openResp.Data.Chat.BlockedReason == nil || *openResp.Data.Chat.BlockedReason != "privacy_setting" {
+	if openResp.Data.Chat.ForbiddenReason == nil || *openResp.Data.Chat.ForbiddenReason != "privacy_setting" {
 		t.Fatalf("expected privacy_setting blocked reason: %#v", openResp.Data.Chat)
 	}
 }

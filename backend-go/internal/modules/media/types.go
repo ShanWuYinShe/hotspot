@@ -12,12 +12,16 @@ const (
 	CategoryChatFile    MediaCategory = "chat_file"
 )
 
-type PresignUploadRequest struct {
+type PresignFileInput struct {
 	FileName string        `json:"file_name"`
 	FileSize int           `json:"file_size"`
 	MimeType string        `json:"mime_type"`
 	Category MediaCategory `json:"category"`
 	MD5      string        `json:"md5,omitempty"`
+}
+
+type PresignUploadRequest struct {
+	Files []PresignFileInput `json:"files"` // 1..N（spec api_spec_media.md：数组天然覆盖单/批，无独立批量端点）
 }
 
 type PresignedUpload struct {
@@ -28,24 +32,16 @@ type PresignedUpload struct {
 	StorageKey string            `json:"-"`
 }
 
-type BatchPresignUploadRequest struct {
-	Files []PresignUploadRequest `json:"files"`
-}
-
-type BatchPresignedUpload struct {
-	Uploads []PresignedUpload `json:"uploads"`
+type PresignedUploads struct {
+	Uploads []PresignedUpload `json:"uploads"` // 与请求 files 一一对应且顺序一致
 }
 
 type CompleteUploadRequest struct {
-	UploadID string `json:"upload_id"`
+	UploadIDs []string `json:"upload_ids"` // 1..N
 }
 
-type BatchCompleteUploadRequest struct {
-	UploadIDs []string `json:"upload_ids"`
-}
-
-type BatchCompleteUpload struct {
-	Uploads []UploadedMedia `json:"uploads"`
+type CompletedUploads struct {
+	Uploads []UploadedMedia `json:"uploads"` // 与请求 upload_ids 一一对应且顺序一致
 }
 
 type UploadedMedia struct {

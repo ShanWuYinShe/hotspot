@@ -520,7 +520,7 @@ func (s *Service) notifyMomentMentions(ctx context.Context, actorUserID string, 
 		} else {
 			notificationID = id
 		}
-		realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeMessageMentioned, Payload: map[string]any{
+		realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeContentMentioned, Payload: map[string]any{
 			"notify_id":      notificationID,
 			"target_type":    "moment",
 			"moment_id":      item.MomentID,

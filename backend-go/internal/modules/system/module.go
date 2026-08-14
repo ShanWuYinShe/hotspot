@@ -37,17 +37,21 @@ func (m *Module) SetHealthRedisPinger(p func(ctx context.Context) error) {
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/system", func(systemRouter chi.Router) {
 		systemRouter.Group(func(group chi.Router) {
-			group.Use(ratelimit.Middleware)
-			group.Use(resourceguard.Middleware)
-			group.Use(idempotency.Middleware)
-			MountRoutes(group, m.handler)
-		})
-		systemRouter.Group(func(group chi.Router) {
-			group.Use(platformauth.OptionalAuth)
+			group.Use(platformauth.RequiredAuth)
 			group.Use(ratelimit.Middleware)
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
 			group.Post("/bootstrap", m.handler.Bootstrap)
 		})
+	})
+}
+
+// MountPublic mounts the anonymous system endpoints on the /public/v1 node
+// (spec api_spec_public.md): meta/health/announcements/client_config are
+// public-only; bootstrap has an anonymous mirror for cold start.
+func (m *Module) MountPublic(r chi.Router) {
+	r.Route("/system", func(systemRouter chi.Router) {
+		MountPublicRoutes(systemRouter, m.handler)
+		systemRouter.Post("/bootstrap", m.handler.Bootstrap)
 	})
 }

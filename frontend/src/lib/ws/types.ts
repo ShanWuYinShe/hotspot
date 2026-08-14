@@ -287,7 +287,7 @@ export interface SystemAnnouncementPayload {
     announcement_id: string;
     title: string;
     content: string;
-    severity: string; // AnnounceLevel
+    severity: string; // AnnounceSeverity
     action_url?: string;
     created_at: string;
   };

@@ -117,7 +117,7 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 		s2CellID = &id
 	}
 	_ = userID
-	err := queryable.Exec(ctx, queryUpdateGroup, req.GroupID, nilOrString(req.Name), nilOrString(req.AvatarFileID), nilOrString(req.Description), hasPassword, nilOrStringJoinMethod(req.JoinMethod), req.RequiresApproval, req.NextActivity, nilOrBool(req.IsSearchable), nilOrBool(req.MembersSearchable), nilOrInt(req.MaxMembers), locationName, latitude, longitude, nilOrStrings(req.Tags), s2CellToken, s2CellID)
+	err := queryable.Exec(ctx, queryUpdateGroup, req.GroupID, nilOrString(req.Name), nilOrString(req.AvatarFileID), nilOrString(req.Description), hasPassword, nilOrStringJoinMethod(req.JoinMethod), req.RequiresApproval, req.NextActivityAt, nilOrBool(req.IsSearchable), nilOrBool(req.MembersSearchable), nilOrInt(req.MaxMembers), locationName, latitude, longitude, nilOrStrings(req.Tags), s2CellToken, s2CellID)
 	if err != nil {
 		return fmt.Errorf("groups.Update: %w", err)
 	}
@@ -254,7 +254,7 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 		s.item.Tags = s.tags
 		s.item.JoinMethod = GroupJoinMethod(s.joinMethod)
 		s.item.RequiresApproval = s.requiresApproval
-		s.item.NextActivity = s.nextActivity
+		s.item.NextActivityAt = s.nextActivity
 		s.item.OnlineMembersCount = &s.onlineCount
 		s.item.CreatedAt = formatOptionalTime(s.createdAt)
 		s.item.LastActivityAt = formatOptionalTime(s.lastActivityAt)
@@ -278,40 +278,40 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 	return items, nextCursor, nil
 }
 
-func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, groupID string, password *string, message *string) (JoinGroupResult, error) {
+func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, groupID string, password *string, message *string) (EnterGroupResult, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return JoinGroupResult{}, persistence.ErrNotImplemented
+		return EnterGroupResult{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return JoinGroupResult{}, persistence.ErrNotImplemented
+		return EnterGroupResult{}, persistence.ErrNotImplemented
 	}
 	group, err := getGroupBase(ctx, queryable, groupID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return JoinGroupResult{}, ErrGroupNotFound
+			return EnterGroupResult{}, ErrGroupNotFound
 		}
-		return JoinGroupResult{}, err
+		return EnterGroupResult{}, err
 	}
 	membership, err := loadGroupMembership(ctx, queryable, groupID, userID)
 	if err != nil {
-		return JoinGroupResult{}, err
+		return EnterGroupResult{}, err
 	}
 	if membership != nil {
-		return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
+		return EnterGroupResult{Status: EnterGroupStatusJoined}, nil
 	}
 	// invite_only：仅受邀用户可加入（存在 pending 邀请视为受邀）
 	if group.JoinMethod == GroupJoinMethodInviteOnly {
 		var inviteID string
 		var expiresAt time.Time
 		if err := queryable.QueryRow(ctx, queryFindPendingGroupInvite, groupID, userID).Scan(&inviteID, &expiresAt); err != nil {
-			return JoinGroupResult{}, ErrPermissionDenied
+			return EnterGroupResult{}, ErrPermissionDenied
 		}
 	}
 	// password：需提供密码（has_password 为布尔标记，密码内容校验不在本实现范围）
 	if group.JoinMethod == GroupJoinMethodPassword {
 		if password == nil || *password == "" {
-			return JoinGroupResult{}, ErrInvalidPassword
+			return EnterGroupResult{}, ErrInvalidPassword
 		}
 	}
 	// requires_approval：创建加入申请，审核通过后才算真正加入
@@ -320,28 +320,24 @@ func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, group
 		if err := queryable.QueryRow(ctx, queryFindPendingGroupApplication, groupID, userID).Scan(&existingID); err == nil && existingID != "" {
 			// 自然去重（spec api_spec_base.md）：命中已有 pending 申请，返回已有 application_id，
 			// 不重复创建；IsNewApplication=false 使 service 跳过重复通知。
-			return JoinGroupResult{Status: JoinGroupStatusPendingApproval, Application: &struct {
-				ApplicationID string `json:"application_id"`
-			}{ApplicationID: existingID}}, nil
+			return EnterGroupResult{Status: EnterGroupStatusPendingApproval, ApplicationID: &existingID}, nil
 		}
 		now := time.Now().UTC()
 		applicationID, err := idgen.WithPrefix("app_")
 		if err != nil {
-			return JoinGroupResult{}, err
+			return EnterGroupResult{}, err
 		}
 		if err := queryable.Exec(ctx, queryInsertGroupApplication, applicationID, groupID, userID, nullableStringPtr(message), string(ApplicationStatusPending), now); err != nil {
-			return JoinGroupResult{}, err
+			return EnterGroupResult{}, err
 		}
-		return JoinGroupResult{Status: JoinGroupStatusPendingApproval, IsNewApplication: true, Application: &struct {
-			ApplicationID string `json:"application_id"`
-		}{ApplicationID: applicationID}}, nil
+		return EnterGroupResult{Status: EnterGroupStatusPendingApproval, IsNewApplication: true, ApplicationID: &applicationID}, nil
 	}
 	// direct：直接加入
 	now := time.Now().UTC()
 	if err := queryable.Exec(ctx, queryInsertGroupMember, groupID, userID, string(GroupRoleMember), now); err != nil {
-		return JoinGroupResult{}, fmt.Errorf("groups.JoinGroup: insert member: %w", err)
+		return EnterGroupResult{}, fmt.Errorf("groups.JoinGroup: insert member: %w", err)
 	}
-	return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
+	return EnterGroupResult{Status: EnterGroupStatusJoined}, nil
 }
 
 func (r *PostgresRepository) UpdatePreferences(ctx context.Context, userID string, req UpdateGroupPreferencesRequest) error {

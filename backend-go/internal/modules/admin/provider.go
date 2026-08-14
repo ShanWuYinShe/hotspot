@@ -49,7 +49,7 @@ func adminAppConfigFromSource(cfg appconfig.AppConfig) AdminAppConfig {
 	return AdminAppConfig{
 		Features: FeatureSwitches{
 			EnablePublicRegistration: cfg.Features.EnablePublicRegistration,
-			EnableGuestLogin:         cfg.Features.EnableGuestLogin,
+			EnableGuestRegister:         cfg.Features.EnableGuestRegister,
 			EnableMoments:            cfg.Features.EnableMoments,
 			EnableNearbyPeople:       cfg.Features.EnableNearbyPeople,
 		},
@@ -102,7 +102,7 @@ func adminAppConfigFromSource(cfg appconfig.AppConfig) AdminAppConfig {
 			GlobalPerHour:            cfg.RateLimits.GlobalPerHour,
 			UserPerHour:              cfg.RateLimits.UserPerHour,
 			AuthRegisterPer10Minutes: cfg.RateLimits.AuthRegisterPer10Minutes,
-			AuthLoginPer10Minutes:    cfg.RateLimits.AuthLoginPer10Minutes,
+			AuthSigninPer10Minutes:    cfg.RateLimits.AuthSigninPer10Minutes,
 			AuthGuestPer10Minutes:    cfg.RateLimits.AuthGuestPer10Minutes,
 			AuthRefreshPer10Minutes:  cfg.RateLimits.AuthRefreshPer10Minutes,
 			AuthResetPer10Minutes:    cfg.RateLimits.AuthResetPer10Minutes,
@@ -134,7 +134,7 @@ func sourceAppConfigFromAdmin(cfg AdminAppConfig) appconfig.AppConfig {
 	return appconfig.AppConfig{
 		Features: appconfig.Features{
 			EnablePublicRegistration: cfg.Features.EnablePublicRegistration,
-			EnableGuestLogin:         cfg.Features.EnableGuestLogin,
+			EnableGuestRegister:         cfg.Features.EnableGuestRegister,
 			EnableMoments:            cfg.Features.EnableMoments,
 			EnableNearbyPeople:       cfg.Features.EnableNearbyPeople,
 		},
@@ -187,7 +187,7 @@ func sourceAppConfigFromAdmin(cfg AdminAppConfig) appconfig.AppConfig {
 			GlobalPerHour:            cfg.RateLimits.GlobalPerHour,
 			UserPerHour:              cfg.RateLimits.UserPerHour,
 			AuthRegisterPer10Minutes: cfg.RateLimits.AuthRegisterPer10Minutes,
-			AuthLoginPer10Minutes:    cfg.RateLimits.AuthLoginPer10Minutes,
+			AuthSigninPer10Minutes:    cfg.RateLimits.AuthSigninPer10Minutes,
 			AuthGuestPer10Minutes:    cfg.RateLimits.AuthGuestPer10Minutes,
 			AuthRefreshPer10Minutes:  cfg.RateLimits.AuthRefreshPer10Minutes,
 			AuthResetPer10Minutes:    cfg.RateLimits.AuthResetPer10Minutes,

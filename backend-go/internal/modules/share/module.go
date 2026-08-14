@@ -26,20 +26,21 @@ func NewModule(factory *persistence.Factory) *Module {
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/share", func(sr chi.Router) {
 		sr.Group(func(group chi.Router) {
-			group.Use(platformauth.OptionalAuth)
-			group.Use(ratelimit.Middleware)
-			group.Use(resourceguard.Middleware)
-			group.Use(idempotency.Middleware)
-			group.Post("/get", m.handler.Get)
-		})
-		sr.Group(func(group chi.Router) {
 			group.Use(platformauth.RequiredAuth)
 			group.Use(ratelimit.Middleware)
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
 			group.Post("/create", m.handler.Create)
-			group.Post("/list", m.handler.List)
+			group.Post("/fetch_created", m.handler.List)
 			group.Post("/revoke", m.handler.Revoke)
 		})
+	})
+}
+
+// MountPublic mounts the anonymous share-code resolution endpoint on the
+// /public/v1 node (spec api_spec_public.md — public-only, no /api/v1 mirror).
+func (m *Module) MountPublic(r chi.Router) {
+	r.Route("/share", func(sr chi.Router) {
+		sr.Post("/open_the_door", m.handler.Get)
 	})
 }

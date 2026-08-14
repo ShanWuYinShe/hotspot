@@ -64,31 +64,31 @@ func NewServiceWithRepoAndUsers(repo Repository, users userReader) *Service {
 func NewServiceWithDeps(repo Repository, users userReader, mentions groupMentionNotifier, shares shareValidator) *Service {
 	return &Service{repo: repo, users: users, mentions: mentions, shares: shares}
 }
-func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (MessageSent, error) {
+func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (MessageSentResult, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
 	if !ok || principal.UserID == "" {
-		return MessageSent{}, ErrNotGroupMember
+		return MessageSentResult{}, ErrNotGroupMember
 	}
 	userID := principal.UserID
 	if err := s.ensureMember(ctx, req.GroupID, userID); err != nil {
-		return MessageSent{}, err
+		return MessageSentResult{}, err
 	}
 	if isMuted, mutedUntil, found, err := s.repo.MemberMuteStatus(ctx, req.GroupID, userID); err != nil {
 		observability.L().Error("groupmessages.send mute check failed", "error", err, "group_id", req.GroupID)
-		return MessageSent{}, err
+		return MessageSentResult{}, err
 	} else if found && isMuted {
-		return MessageSent{}, &MutedError{MutedUntil: mutedUntil}
+		return MessageSentResult{}, &MutedError{MutedUntil: mutedUntil}
 	}
 	// share 类型：校验 share_code 存在且有效（spec api_spec_chat.md，防发送失效链接）
 	if req.ShareCode != "" && s.shares != nil {
 		if err := s.shares.ValidateShareCode(ctx, req.ShareCode); err != nil {
-			return MessageSent{}, ErrInvalidShareCode
+			return MessageSentResult{}, ErrInvalidShareCode
 		}
 	}
 	msg, err := s.repo.Send(ctx, req)
 	if err != nil {
 		observability.L().Error("groupmessages.send failed", "error", err, "group_id", req.GroupID)
-		return MessageSent{}, err
+		return MessageSentResult{}, err
 	}
 	payload := map[string]any{
 		"message_id": msg.MessageID,
@@ -124,7 +124,7 @@ func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (Messag
 
 // notifyMentions 对被 @ 的成员逐人落库 group_mentioned 通知并推送
 // GroupMessageMentioned 事件（自动推送，无需订阅该群频道）。
-func (s *Service) notifyMentions(ctx context.Context, actorUserID string, req SendGroupMessageRequest, msg MessageSent) {
+func (s *Service) notifyMentions(ctx context.Context, actorUserID string, req SendGroupMessageRequest, msg MessageSentResult) {
 	if s.mentions == nil || len(req.Mentions) == 0 {
 		return
 	}
@@ -295,7 +295,7 @@ func (s *Service) resolveUserInfo(ctx context.Context, userID string) types.User
 	return info
 }
 
-func (s *Service) buildReplyTo(ctx context.Context, messageID string) map[string]any {
+func (s *Service) buildReplyTo(ctx context.Context, messageID string) *MessageBrief {
 	info, ok, err := s.repo.GetMessageForReply(ctx, messageID)
 	if err != nil || !ok {
 		return nil

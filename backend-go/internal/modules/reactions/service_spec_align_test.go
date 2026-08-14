@@ -188,7 +188,7 @@ func TestBuildActorFallsBackWhenProviderFails(t *testing.T) {
 	}
 }
 
-// --- ListReactedTargets(backs users/list_reacted_moments) ---
+// --- ListReactedTargets(backs users/fetch_reacted_moments) ---
 
 func TestListReactedTargetsBasic(t *testing.T) {
 	svc := NewServiceWithDeps(NewInMemoryRepository(), nil, nil, nil)

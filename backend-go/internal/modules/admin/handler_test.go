@@ -115,9 +115,9 @@ func TestAdminModerationRoutesAreMounted(t *testing.T) {
 		{name: "users open", path: "/admin/v1/users/open_the_door", body: `{"user_id":"user_bob"}`},
 		{name: "groups search", path: "/admin/v1/groups/search", body: `{"name":"hot","pagination":{"limit":10}}`},
 		{name: "groups open", path: "/admin/v1/groups/open_the_door", body: `{"group_id":"group_hotspot"}`},
-		{name: "reports search", path: "/admin/v1/reports/list", body: `{"status":"pending","pagination":{"limit":10}}`},
+		{name: "reports search", path: "/admin/v1/reports/fetch", body: `{"status":"pending","pagination":{"limit":10}}`},
 		{name: "tags search", path: "/admin/v1/tags/search", body: `{"keyword":"hot","pagination":{"limit":10}}`},
-		{name: "announcements list", path: "/admin/v1/announcements/list", body: `{"pagination":{"limit":10}}`},
+		{name: "announcements list", path: "/admin/v1/announcements/fetch", body: `{"pagination":{"limit":10}}`},
 	}
 
 	for _, tc := range tests {
@@ -199,7 +199,7 @@ func TestBanUserAuditUsesCloudflareCountry(t *testing.T) {
 
 func TestGetMeReturnsPermissions(t *testing.T) {
 	handler := newTestHandler()
-	req := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/get_me", strings.NewReader(`{}`)), "admin", true)
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/me", strings.NewReader(`{}`)), "admin", true)
 	rr := httptest.NewRecorder()
 
 	handler.GetMe(rr, req)
@@ -212,7 +212,7 @@ func TestGetMeReturnsPermissions(t *testing.T) {
 
 func TestGetMeReturnsNonAdminMessage(t *testing.T) {
 	handler := newTestHandler()
-	req := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/get_me", strings.NewReader(`{}`)), "user_alice", true)
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/me", strings.NewReader(`{}`)), "user_alice", true)
 	rr := httptest.NewRecorder()
 
 	handler.GetMe(rr, req)
@@ -236,7 +236,7 @@ func TestListPermissionsRequiresRbacPermission(t *testing.T) {
 		t.Fatalf("unexpected create role response: %#v", createdRole)
 	}
 
-	grantReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/grant", strings.NewReader(`{"user_id":"user_alice","role_ids":["`+createdRole.Data.RoleID+`"]}`)), "admin", true)
+	grantReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/award", strings.NewReader(`{"user_id":"user_alice","role_ids":["`+createdRole.Data.RoleID+`"]}`)), "admin", true)
 	grantReq.Header.Set("Idempotency-Key", "yyyy1234abcd1234abcd1234abcd1234")
 	grantRR := httptest.NewRecorder()
 	handler.GrantAdmin(grantRR, grantReq)
@@ -246,7 +246,7 @@ func TestListPermissionsRequiresRbacPermission(t *testing.T) {
 	}
 
 	body := bytes.NewBufferString(`{}`)
-	req := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/list_permissions", body), "user_alice", true)
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/permissions/fetch", body), "user_alice", true)
 	rr := httptest.NewRecorder()
 
 	handler.ListPermissions(rr, req)
@@ -299,14 +299,14 @@ func TestCreateRoleNaturalIdempotency(t *testing.T) {
 func TestGrantAdminRejectsMutuallyExclusiveFields(t *testing.T) {
 	handler := newTestHandler()
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	req := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/grant", strings.NewReader(`{"user_id":"user_bob","grant_all_permissions":true,"role_ids":["role_x"]}`)), "admin", true)
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/award", strings.NewReader(`{"user_id":"user_bob","award_all_permissions":true,"role_ids":["role_x"]}`)), "admin", true)
 	req.Header.Set("Idempotency-Key", "bbbb1234abcd1234abcd1234abcd1234")
 	rr := httptest.NewRecorder()
 
 	handler.GrantAdmin(rr, req)
 
 	resp := decodeResponse[struct{}](t, rr)
-	if resp.Code != httpx.CodeInvalidRequest || resp.Message != "grant_all_permissions 与 role_ids 互斥" {
+	if resp.Code != httpx.CodeInvalidRequest || resp.Message != "award_all_permissions 与 role_ids 互斥" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -324,7 +324,7 @@ func TestGrantAdminAndListAdmins(t *testing.T) {
 		t.Fatalf("unexpected create role response: %#v", createdRole)
 	}
 
-	grantReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/grant", strings.NewReader(`{"user_id":"user_bob","role_ids":["`+createdRole.Data.RoleID+`"]}`)), "admin", true)
+	grantReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/award", strings.NewReader(`{"user_id":"user_bob","role_ids":["`+createdRole.Data.RoleID+`"]}`)), "admin", true)
 	grantReq.Header.Set("Idempotency-Key", "dddd1234abcd1234abcd1234abcd1234")
 	grantRR := httptest.NewRecorder()
 	handler.GrantAdmin(grantRR, grantReq)
@@ -333,7 +333,7 @@ func TestGrantAdminAndListAdmins(t *testing.T) {
 		t.Fatalf("unexpected grant response: %#v", grantResp)
 	}
 
-	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/list", strings.NewReader(`{"pagination":{"limit":10}}`)), "admin", true)
+	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/fetch", strings.NewReader(`{"pagination":{"limit":10}}`)), "admin", true)
 	listRR := httptest.NewRecorder()
 	handler.ListAdmins(listRR, listReq)
 	listResp := decodeResponse[PaginatedAdminOperators](t, listRR)
@@ -359,7 +359,7 @@ func TestGetAppConfigRequiresPermission(t *testing.T) {
 		t.Fatalf("unexpected create role response: %#v", createdRole)
 	}
 
-	grantReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/grant", strings.NewReader(`{"user_id":"user_bob","role_ids":["`+createdRole.Data.RoleID+`"]}`)), "admin", true)
+	grantReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/award", strings.NewReader(`{"user_id":"user_bob","role_ids":["`+createdRole.Data.RoleID+`"]}`)), "admin", true)
 	grantReq.Header.Set("Idempotency-Key", "wwww1234abcd1234abcd1234abcd1234")
 	grantRR := httptest.NewRecorder()
 	handler.GrantAdmin(grantRR, grantReq)
@@ -464,7 +464,7 @@ func TestSearchUsersRequiresPermission(t *testing.T) {
 		t.Fatalf("unexpected create role response: %#v", createdRole)
 	}
 
-	grantReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/grant", strings.NewReader(`{"user_id":"user_bob","role_ids":["`+createdRole.Data.RoleID+`"]}`)), "admin", true)
+	grantReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/award", strings.NewReader(`{"user_id":"user_bob","role_ids":["`+createdRole.Data.RoleID+`"]}`)), "admin", true)
 	grantReq.Header.Set("Idempotency-Key", "usread9abc1234def05678ghij9012klmo")
 	grantRR := httptest.NewRecorder()
 	handler.GrantAdmin(grantRR, grantReq)
@@ -602,7 +602,7 @@ func TestSearchReportsAndHandleReport(t *testing.T) {
 		t.Fatalf("unexpected search response: %#v", searchResp)
 	}
 
-	handleReq := adminContext(httptest.NewRequest(http.MethodPost, "/reports/handle", strings.NewReader(`{"report_id":"report_1","action":"resolve","note":"confirmed","ban_duration_days":3}`)), "admin", true)
+	handleReq := adminContext(httptest.NewRequest(http.MethodPost, "/reports/judge", strings.NewReader(`{"report_id":"report_1","action":"resolve","note":"confirmed","ban_duration_days":3}`)), "admin", true)
 	handleReq.Header.Set("Idempotency-Key", "report001abcd1234abcd1234abcd123")
 	handleRR := httptest.NewRecorder()
 	handler.HandleReport(handleRR, handleReq)
@@ -620,7 +620,7 @@ func TestSearchReportsAndHandleReport(t *testing.T) {
 	}
 	foundHandleAudit := false
 	for _, entry := range store.auditLogs {
-		if entry.Action == "report.handle" {
+		if entry.Action == "report.judge" {
 			foundHandleAudit = true
 			break
 		}
@@ -649,7 +649,7 @@ func TestHandleGroupReportDismissesGroup(t *testing.T) {
 		t.Fatal("expected seed group_hotspot")
 	}
 
-	handleReq := adminContext(httptest.NewRequest(http.MethodPost, "/reports/handle", strings.NewReader(`{"report_id":"report_group","action":"resolve","note":"policy"}`)), "admin", true)
+	handleReq := adminContext(httptest.NewRequest(http.MethodPost, "/reports/judge", strings.NewReader(`{"report_id":"report_group","action":"resolve","note":"policy"}`)), "admin", true)
 	handleReq.Header.Set("Idempotency-Key", "reportgroupabcd1234abcd1234abcd12")
 	handleRR := httptest.NewRecorder()
 	handler.HandleReport(handleRR, handleReq)
@@ -686,7 +686,7 @@ func TestHandleMomentCommentAndMessageReportsApplyContentActions(t *testing.T) {
 	}
 
 	for _, reportID := range []string{"report_moment", "report_comment", "report_message"} {
-		handleReq := adminContext(httptest.NewRequest(http.MethodPost, "/reports/handle", strings.NewReader(`{"report_id":"`+reportID+`","action":"resolve","note":"policy","ban_duration_days":1}`)), "admin", true)
+		handleReq := adminContext(httptest.NewRequest(http.MethodPost, "/reports/judge", strings.NewReader(`{"report_id":"`+reportID+`","action":"resolve","note":"policy","ban_duration_days":1}`)), "admin", true)
 		handleReq.Header.Set("Idempotency-Key", reportID+"abcd1234abcd1234abcd1234")
 		handleRR := httptest.NewRecorder()
 		handler.HandleReport(handleRR, handleReq)
@@ -980,7 +980,7 @@ func TestListRolesReturnsRoleList(t *testing.T) {
 		t.Fatalf("unexpected create response: %#v", createResp)
 	}
 
-	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/list", strings.NewReader(`{}`)), "admin", true)
+	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/fetch", strings.NewReader(`{}`)), "admin", true)
 	listRR := httptest.NewRecorder()
 	handler.ListRoles(listRR, listReq)
 	listResp := decodeResponse[AdminRoleList](t, listRR)
@@ -1022,7 +1022,7 @@ func TestUpdateRoleUpdatesNameAndDescription(t *testing.T) {
 		t.Fatalf("unexpected update response: %#v", updateResp)
 	}
 
-	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/list", strings.NewReader(`{}`)), "admin", true)
+	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/fetch", strings.NewReader(`{}`)), "admin", true)
 	listRR := httptest.NewRecorder()
 	handler.ListRoles(listRR, listReq)
 	listResp := decodeResponse[AdminRoleList](t, listRR)
@@ -1096,7 +1096,7 @@ func TestDeleteRoleDeletesExistingRole(t *testing.T) {
 		t.Fatalf("unexpected delete response: %#v", deleteResp)
 	}
 
-	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/list", strings.NewReader(`{}`)), "admin", true)
+	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/fetch", strings.NewReader(`{}`)), "admin", true)
 	listRR := httptest.NewRecorder()
 	handler.ListRoles(listRR, listReq)
 	listResp := decodeResponse[AdminRoleList](t, listRR)
@@ -1154,7 +1154,7 @@ func TestSetRolePermissionsSetsPermissions(t *testing.T) {
 		t.Fatalf("unexpected set response: %#v", setResp)
 	}
 
-	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/list", strings.NewReader(`{}`)), "admin", true)
+	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/fetch", strings.NewReader(`{}`)), "admin", true)
 	listRR := httptest.NewRecorder()
 	handler.ListRoles(listRR, listReq)
 	listResp := decodeResponse[AdminRoleList](t, listRR)
@@ -1222,7 +1222,7 @@ func TestRevokeAdminRevokesExistingAdmin(t *testing.T) {
 		t.Fatalf("unexpected create role response: %#v", createdRole)
 	}
 
-	grantReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/grant", strings.NewReader(`{"user_id":"user_to_revoke","role_ids":["`+createdRole.Data.RoleID+`"]}`)), "admin", true)
+	grantReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/award", strings.NewReader(`{"user_id":"user_to_revoke","role_ids":["`+createdRole.Data.RoleID+`"]}`)), "admin", true)
 	grantReq.Header.Set("Idempotency-Key", "revk002abcd1234abcd1234abcd1234abcdabcd")
 	grantRR := httptest.NewRecorder()
 	handler.GrantAdmin(grantRR, grantReq)

@@ -262,7 +262,7 @@ func TestCreateMomentSendsMentionNotificationsAndRealtime(t *testing.T) {
 	if len(created.Mentions) != 2 || created.Mentions[0] != "user_bob" || created.Mentions[1] != "user_alice" {
 		t.Fatalf("unexpected mentions: %#v", created.Mentions)
 	}
-	if len(bobSink.events) != 1 || bobSink.events[0].Type != "MessageMentioned" {
+	if len(bobSink.events) != 1 || bobSink.events[0].Type != "ContentMentioned" {
 		t.Fatalf("unexpected realtime events: %#v", bobSink.events)
 	}
 	payload, ok := bobSink.events[0].Payload.(map[string]any)
@@ -310,7 +310,7 @@ func TestUpdateMomentReplacesMentionNotificationsAndState(t *testing.T) {
 	if len(updated.Mentions) != 1 || updated.Mentions[0] != "user_carol" {
 		t.Fatalf("unexpected updated mentions: %#v", updated.Mentions)
 	}
-	if len(carolSink.events) != 1 || carolSink.events[0].Type != "MessageMentioned" {
+	if len(carolSink.events) != 1 || carolSink.events[0].Type != "ContentMentioned" {
 		t.Fatalf("unexpected carol events: %#v", carolSink.events)
 	}
 	carolNotifications, err := notificationRepo.List(context.Background(), "user_carol", notify.NotifyListRequest{})

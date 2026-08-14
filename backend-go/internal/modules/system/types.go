@@ -18,12 +18,12 @@ const (
 	SystemHealthUnhealthy SystemHealthStatus = "unhealthy"
 )
 
-type AnnounceLevel string
+type AnnounceSeverity string
 
 const (
-	AnnounceLevelInfo    AnnounceLevel = "info"
-	AnnounceLevelWarning AnnounceLevel = "warning"
-	AnnounceLevelError   AnnounceLevel = "error"
+	AnnounceLevelInfo    AnnounceSeverity = "info"
+	AnnounceLevelWarning AnnounceSeverity = "warning"
+	AnnounceLevelError   AnnounceSeverity = "error"
 )
 
 type GeoPoint = types.GeoPoint
@@ -51,7 +51,7 @@ type SystemAnnouncementItem struct {
 	AnnouncementID string        `json:"announcement_id"`
 	Title          string        `json:"title"`
 	Content        string        `json:"content"`
-	Severity       AnnounceLevel `json:"severity"`
+	Severity       AnnounceSeverity `json:"severity"`
 	ActionURL      string        `json:"action_url,omitempty"`
 	CreatedAt      string        `json:"created_at"`
 }
@@ -62,7 +62,7 @@ type SystemAnnouncementList struct {
 
 type FeatureSwitches struct {
 	EnablePublicRegistration bool `json:"enable_public_registration"`
-	EnableGuestLogin         bool `json:"enable_guest_login"`
+	EnableGuestRegister         bool `json:"enable_guest_register"`
 	EnableMoments            bool `json:"enable_moments"`
 	EnableNearbyPeople       bool `json:"enable_nearby_people"`
 }

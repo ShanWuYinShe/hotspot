@@ -63,7 +63,7 @@ describe('10100 刷新重试', () => {
     const urls = dispatchCalls(fetchMock);
     expect(urls).toHaveLength(3);
     // 第二次调用必须是 refresh_token 端点
-    expect(urls[1]).toContain('/api/v1/auth/refresh_token');
+    expect(urls[1]).toContain('/public/v1/auth/refresh_token');
   });
 
   it('并发 10100 去重：多个请求共享一次刷新', async () => {

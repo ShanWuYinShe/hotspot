@@ -80,12 +80,11 @@ export type ForbiddenReason =
 	| 'not_group_admin'
 	| 'not_group_owner'
 	| 'not_resource_owner'
-	| 'not_chat_participant'
 	| 'privacy_setting'
 	| 'blocked_by_user'
 	| 'stranger_quota_exceeded'
 	| 'banned_in_group';
-export type AnnounceLevel = 'info' | 'warning' | 'error';
+export type AnnounceSeverity = 'info' | 'warning' | 'error';
 export type NotifyCategory = 'social' | 'interaction' | 'group' | 'report' | 'nearby' | 'system';
 export type NotifyType =
 	| 'new_follower'
@@ -179,8 +178,8 @@ export interface GroupItem {
 	location: RelativeLocation | null;
 	last_activity_at?: string;
 	online_members_count?: number;
-	next_activity?: string;
-	last_message?: LastMessagePreview; // 仅 groups/list_joined 返回
+	next_activity_at?: string;
+	last_message?: MessageBrief; // 仅 groups/fetch_joined 返回
 	created_at?: string;
 	owner_id?: string;
 	viewer_state: GroupViewerState | null;
@@ -188,7 +187,7 @@ export interface GroupItem {
 }
 
 export interface GroupSettings {
-	// spec: types.md → GroupSettings（仅群管理守卫子树 groups/admin/get_settings 返回）
+	// spec: types.md → GroupSettings（仅群管理守卫子树 groups/admin/settings 返回）
 	join_method: GroupJoinMethod;
 	requires_approval: boolean;
 	has_password: boolean;
@@ -227,9 +226,9 @@ export interface AdminGroupMemberItem {
 }
 
 export interface JoinGroupResult {
-	// spec: api_spec_group.md → POST /groups/join
+	// spec: api_spec_group.md → POST /groups/enter
 	status: 'joined' | 'pending_approval';
-	application?: { application_id: string }; // 仅 pending_approval 时返回
+	application_id: string | null; // 仅 pending_approval 时非 null
 }
 
 // --- 群组管理（spec: api_spec_group.md）---
@@ -274,11 +273,11 @@ export interface GroupSentInviteItem {
 }
 
 // 封禁成员项（members/list_banned）
-export interface BannedMemberItem {
+export interface AdminBannedMemberItem {
 	user: UserInfo;
 	banned_at: string;
-	reason?: string;
-	banned_by?: UserInfo;
+	reason: string | null;
+	banned_by: UserInfo | null;
 }
 
 // members/invite 返回（spec: group.md → Invitation）
@@ -375,7 +374,7 @@ export interface SetMemberRoleRequest {
 	role: SettableGroupRole;
 }
 
-export interface SetMuteRequest {
+export interface SetMemberMuteRequest {
 	group_id: string;
 	user_id: string;
 	active: boolean;
@@ -469,7 +468,6 @@ export interface MomentItem {
 	tags?: string[];
 	mentions?: string[];
 	created_at: string;
-	likes_count: number;
 	comments_count: number;
 	shares_count: number;
 	reactions?: Reaction[];
@@ -481,7 +479,7 @@ export interface MomentItem {
 }
 
 export interface OwnerMomentItem extends MomentItem {
-	// spec: api_spec_moment.md → OwnerMomentItem（moments/list_created、create、update 返回）
+	// spec: api_spec_moment.md → OwnerMomentItem（moments/fetch_created、create、update 返回）
 	privacy_level: PrivacyLevel;
 }
 
@@ -491,7 +489,7 @@ export interface FavoritedMomentItem extends MomentItem {
 }
 
 export interface CommentItem {
-	// spec: api_spec_moment.md → comments/create & comments/list
+	// spec: api_spec_moment.md → comments/create & comments/fetch
 	comment_id: string;
 	user: UserInfo;
 	content: string;
@@ -504,22 +502,12 @@ export interface CommentItem {
 	top_replies?: CommentItem[];
 }
 
-export interface MessageReplyTo {
-	// spec: types.md → MessageReplyTo
+export interface MessageBrief {
+	// spec: types.md → MessageBrief（reply_to 回复引用与 last_message 会话最近消息预览共用）
 	message_id: string;
 	type: MessageType;
-	sender: UserInfo;
-	content?: string;
-	share_code?: string;
-	sent_at: string;
-}
-
-// 会话最近消息预览（GroupItem.last_message 与 PrivateChatItem.last_message 共用，spec: types.md → LastMessagePreview）
-export interface LastMessagePreview {
-	message_id: string;
-	type: MessageType;
-	content?: string;    // 文本预览（仅 text 类型有意义）
-	share_code?: string; // 最后一条消息为 share 类型时包含，客户端据此渲染分享卡片预览
+	content: string | null;    // 文本预览（仅 text 类型有意义）
+	share_code: string | null; // share 类型消息包含分享码
 	sender: UserInfo;
 	sent_at: string;
 }
@@ -532,7 +520,7 @@ export interface PrivateMessageItem {
 	media?: MessageMedia;
 	share_code?: string;
 	sender: UserInfo;
-	reply_to?: MessageReplyTo;
+	reply_to?: MessageBrief | null;
 	sent_at: string;
 	edited_at?: string;
 	recalled_at?: string;
@@ -548,7 +536,7 @@ export interface GroupMessageItem {
 	media?: MessageMedia;
 	share_code?: string;
 	sender: UserInfo;
-	reply_to?: MessageReplyTo;
+	reply_to?: MessageBrief | null;
 	mentions?: string[];
 	recalled_by?: UserInfo;
 	sent_at: string;
@@ -594,7 +582,7 @@ export interface NotifyPayload {
 	note?: string;
 	announcement_id?: string;
 	title?: string;        // system_announcement：公告标题（直接渲染通知行）
-	severity?: AnnounceLevel;
+	severity?: AnnounceSeverity;
 	distance?: number;
 }
 
@@ -628,7 +616,7 @@ export interface UserSettings {
 export interface FeatureSwitches {
 	// spec: types.md → FeatureSwitches
 	enable_public_registration: boolean;
-	enable_guest_login: boolean;
+	enable_guest_register: boolean;
 	enable_moments: boolean;
 	enable_nearby_people: boolean;
 }
@@ -686,11 +674,10 @@ export interface AuthTokenPairWeb {
 	client_type: 'web';
 }
 export type AuthTokenPair = AuthTokenPairApp | AuthTokenPairWeb;
-export interface AuthStatus {
-	// spec: auth.md → check_status
-	is_valid: boolean;
-	user_id?: string;   // is_valid=true 时返回，客户端可直接获得身份
-	expires_at?: string;
+export interface SessionStatus {
+	// spec: auth.md → session
+	user_id: string;
+	expires_at: string;
 }
 
 // --- Users（spec: api_spec_user.md）---
@@ -735,8 +722,8 @@ export interface TrendingBundle {
 }
 
 // --- Notify（spec: api_spec_notify.md）---
-export interface UnreadCountResult {
-	// spec: notify.md → get_unread_count
+export interface UnreadSummaryResult {
+	// spec: notify.md → unread_summary
 	total: number;
 	by_type: Record<NotifyCategory, number>;
 }
@@ -782,25 +769,25 @@ export interface BootstrapData {
 
 // --- Chat（spec: api_spec_chat.md）---
 export interface PrivateChatItem {
-	// spec: chat.md → private_chats/list
+	// spec: chat.md → private_chats/fetch
 	other_user: UserInfo;
 	unread_count: number;
 	is_muted: boolean;
 	is_pinned: boolean;
 	last_activity_at: string;
-	last_message?: LastMessagePreview; // 列表场景返回
+	last_message?: MessageBrief | null; // 列表场景返回
 	presence_status: UserPresenceStatus | null;
 	created_at?: string;
 	can_message: boolean;
-	blocked_reason: ForbiddenReason | null; // 仅 can_message=false 时返回
+	forbidden_reason: ForbiddenReason | null; // 仅 can_message=false 时非 null
 }
 export interface PrivateChatOpenResult {
 	// spec: chat.md → private_chats/open_the_door（纯查询，无创建副作用）
 	chat: PrivateChatItem; // 会话不存在时返回空态对象（unread_count=0、is_muted/is_pinned=false）
 	recent_messages: PaginatedData<PrivateMessageItem>; // 始终返回，会话不存在时 items 为空数组
 }
-export interface MessageSent {
-	// spec: chat.md → MessageSent（private_messages/send、group_messages/send）
+export interface MessageSentResult {
+	// spec: chat.md → MessageSentResult（private_messages/send、group_messages/send）
 	message_id: string;
 	sent_at: string;
 }
@@ -837,8 +824,8 @@ export interface UploadedMedia {
 	height?: number;
 }
 
-// spec: media.md → 批量上传（瞬间多图等场景，最多 9 个，原子操作）
-export interface PresignUploadRequest {
+// spec: media.md → presign_upload/complete_upload 数组语义（1..N，无独立批量端点）
+export interface PresignFileInput {
 	file_name: string;
 	file_size: number;
 	mime_type: string;
@@ -846,20 +833,20 @@ export interface PresignUploadRequest {
 	md5?: string; // 文件内容 MD5（可选，服务端用于校验完整性）
 }
 
-export interface BatchPresignUploadRequest {
-	files: PresignUploadRequest[];
+export interface PresignUploadRequest {
+	files: PresignFileInput[]; // 1..N；上限按类别配置
 }
 
-export interface BatchPresignedUpload {
-	uploads: PresignedUpload[];     // 与请求 files 一一对应
+export interface PresignedUploads {
+	uploads: PresignedUpload[]; // 与请求 files 一一对应且顺序一致
 }
 
-export interface BatchCompleteUploadRequest {
-	upload_ids: string[];
+export interface CompleteUploadRequest {
+	upload_ids: string[]; // 1..N
 }
 
-export interface BatchCompleteUpload {
-	uploads: UploadedMedia[];       // 与请求 upload_ids 一一对应、顺序一致
+export interface CompletedUploads {
+	uploads: UploadedMedia[]; // 与请求 upload_ids 一一对应、顺序一致
 }
 
 // ── Map Canvas ──────────────────────────────────────────────
@@ -1054,7 +1041,7 @@ export interface UpdateGroupPreferencesRequest {
 	is_pinned?: boolean;
 }
 export interface GetGroupSettingsRequest {
-	// spec: api_spec_group.md → groups/admin/get_settings
+	// spec: api_spec_group.md → groups/admin/settings
 	group_id: string;
 }
 export interface ListAdminGroupMembersRequest {
@@ -1095,9 +1082,6 @@ export interface MarkNotifyReadRequest {
 }
 
 // Media / System
-export interface CompleteUploadRequest {
-	upload_id: string;
-}
 export interface BootstrapRequest {
 	bootstrap_version?: string;
 }

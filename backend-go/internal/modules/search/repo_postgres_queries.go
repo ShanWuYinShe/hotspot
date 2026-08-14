@@ -40,7 +40,7 @@ LIMIT $2`
 
 	querySearchSuggestGroups = `
 SELECT g.group_id, g.name, COALESCE(g.avatar_url, ''), COALESCE(g.description, ''), g.location_name, g.latitude, g.longitude, COUNT(gm.user_id) AS members_count,
-       g.join_method, g.requires_approval, g.tags, g.next_activity, g.is_searchable, g.max_members, g.created_at, g.owner_id,
+       g.join_method, g.requires_approval, g.tags, g.next_activity_at, g.is_searchable, g.max_members, g.created_at, g.owner_id,
        COALESCE((SELECT COUNT(*) FROM group_members om JOIN users ou ON ou.user_id = om.user_id AND ou.presence_status = 'online' WHERE om.group_id = g.group_id), 0)
 FROM groups g
 LEFT JOIN group_members gm ON gm.group_id = g.group_id
@@ -48,7 +48,7 @@ WHERE g.deleted_at IS NULL
   AND g.is_searchable = TRUE
   AND g.name ILIKE '%' || $1 || '%'
 GROUP BY g.group_id, g.name, g.avatar_url, g.description, g.location_name, g.latitude, g.longitude,
-         g.join_method, g.requires_approval, g.tags, g.next_activity, g.is_searchable, g.max_members, g.created_at, g.owner_id
+         g.join_method, g.requires_approval, g.tags, g.next_activity_at, g.is_searchable, g.max_members, g.created_at, g.owner_id
 LIMIT $2`
 
 	querySearchSuggestMoments = `

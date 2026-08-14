@@ -51,26 +51,26 @@ func TestMediaHandlerCompleteBatchErrorPaths(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// 空 upload_ids → httpx.CodeInvalidRequest
-	req := httptest.NewRequest(http.MethodPost, "/batch_complete_upload", strings.NewReader(`{"upload_ids":[]}`))
+	req := httptest.NewRequest(http.MethodPost, "/complete_upload", strings.NewReader(`{"upload_ids":[]}`))
 	rr := httptest.NewRecorder()
-	handler.CompleteUploadBatch(rr, req)
+	handler.CompleteUpload(rr, req)
 	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInvalidRequest {
 		t.Fatalf("empty batch: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 
 	// 超过 9 个 → httpx.CodeInvalidRequest
-	req = httptest.NewRequest(http.MethodPost, "/batch_complete_upload", strings.NewReader(`{"upload_ids":["1","2","3","4","5","6","7","8","9","10"]}`))
+	req = httptest.NewRequest(http.MethodPost, "/complete_upload", strings.NewReader(`{"upload_ids":["1","2","3","4","5","6","7","8","9","10"]}`))
 	rr = httptest.NewRecorder()
-	handler.CompleteUploadBatch(rr, req)
+	handler.CompleteUpload(rr, req)
 	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInvalidRequest {
 		t.Fatalf("oversize batch: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 
 	// 不存在的 upload id 批量完成：不匹配的服务端错误分支走 httpx.CodeInternalUnavailable
 	handler2 := NewHandler(NewServiceWithRepo(&mediaErrRepo{repo: repo, err: errors.New("boom")}))
-	req = httptest.NewRequest(http.MethodPost, "/batch_complete_upload", strings.NewReader(`{"upload_ids":["1"]}`))
+	req = httptest.NewRequest(http.MethodPost, "/complete_upload", strings.NewReader(`{"upload_ids":["1"]}`))
 	rr = httptest.NewRecorder()
-	handler2.CompleteUploadBatch(rr, req)
+	handler2.CompleteUpload(rr, req)
 	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInvalidRequest && code != httpx.CodeInternalUnavailable {
 		t.Fatalf("unexpected code for batch error: %d", code)
 	}

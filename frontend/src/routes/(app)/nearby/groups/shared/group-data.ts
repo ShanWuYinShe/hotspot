@@ -32,7 +32,7 @@ export function mapGroup(item: GroupItem): Group {
 		privacy: item.join_method === 'invite_only' || item.join_method === 'password' ? 'private' : 'public',
 		joined: item.viewer_state !== null,
 		desc: item.description ?? '',
-		activity: item.next_activity ?? '',
+		activity: item.next_activity_at ?? '',
 		avatars: []
 	};
 }

@@ -17,7 +17,7 @@ import (
 // --- stub repo ---
 
 type stubGroupMessageRepo struct {
-	sendResult  MessageSent
+	sendResult  MessageSentResult
 	sendErr     error
 	histResult  PaginatedGroupMessages
 	histErr     error
@@ -30,7 +30,7 @@ type stubGroupMessageRepo struct {
 	isMemberErr error
 }
 
-func (r *stubGroupMessageRepo) Send(_ context.Context, _ SendGroupMessageRequest) (MessageSent, error) {
+func (r *stubGroupMessageRepo) Send(_ context.Context, _ SendGroupMessageRequest) (MessageSentResult, error) {
 	return r.sendResult, r.sendErr
 }
 func (r *stubGroupMessageRepo) History(_ context.Context, _ string, _ *PaginationParams) (PaginatedGroupMessages, error) {
@@ -55,7 +55,7 @@ func (r *stubGroupMessageRepo) GetMediaForMessage(_ context.Context, _ string) (
 	return nil, false, nil
 }
 
-func (r *stubGroupMessageRepo) GetMessageForReply(_ context.Context, _ string) (map[string]any, bool, error) {
+func (r *stubGroupMessageRepo) GetMessageForReply(_ context.Context, _ string) (*MessageBrief, bool, error) {
 	return nil, false, nil
 }
 
@@ -158,7 +158,7 @@ func TestHandlerSendRejectsMissingType(t *testing.T) {
 }
 
 func TestHandlerSendHappyPath(t *testing.T) {
-	repo := &stubGroupMessageRepo{sendResult: MessageSent{MessageID: "m1", SentAt: "2026-01-01T00:00:00Z"}}
+	repo := &stubGroupMessageRepo{sendResult: MessageSentResult{MessageID: "m1", SentAt: "2026-01-01T00:00:00Z"}}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := gmCtx("u1")
 	req.Body = io.NopCloser(strings.NewReader(`{"group_id":"g1","type":"text","content":"hi"}`))

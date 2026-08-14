@@ -38,7 +38,6 @@ const (
 	ReasonNotGroupAdmin                ForbiddenReason = "not_group_admin"
 	ReasonNotGroupOwner                ForbiddenReason = "not_group_owner"
 	ReasonNotResourceOwner             ForbiddenReason = "not_resource_owner"
-	ReasonNotChatParticipant           ForbiddenReason = "not_chat_participant"
 	ReasonPrivacySetting               ForbiddenReason = "privacy_setting"
 	ReasonBlockedByUser                ForbiddenReason = "blocked_by_user"
 	ReasonStrangerQuotaExceeded        ForbiddenReason = "stranger_quota_exceeded"

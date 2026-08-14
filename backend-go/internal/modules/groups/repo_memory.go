@@ -232,8 +232,8 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 	if req.RequiresApproval != nil {
 		item.RequiresApproval = *req.RequiresApproval
 	}
-	if req.NextActivity != nil {
-		item.NextActivity = req.NextActivity
+	if req.NextActivityAt != nil {
+		item.NextActivityAt = req.NextActivityAt
 	}
 	if req.IsSearchable != nil {
 		item.IsSearchable = *req.IsSearchable
@@ -335,15 +335,15 @@ func (r *InMemoryRepository) ListMyGroups(_ context.Context, userID string, limi
 	return items, nextCursor, nil
 }
 
-func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string, password *string, message *string) (JoinGroupResult, error) {
+func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string, password *string, message *string) (EnterGroupResult, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	group, ok := r.groups[groupID]
 	if !ok {
-		return JoinGroupResult{}, ErrGroupNotFound
+		return EnterGroupResult{}, ErrGroupNotFound
 	}
 	if _, joined := r.members[groupID][userID]; joined {
-		return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
+		return EnterGroupResult{Status: EnterGroupStatusJoined}, nil
 	}
 	// invite_only：仅受邀用户可加入（内存实现：存在 pending 邀请视为受邀）
 	if group.JoinMethod == GroupJoinMethodInviteOnly {
@@ -355,13 +355,13 @@ func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string
 			}
 		}
 		if !invited {
-			return JoinGroupResult{}, ErrAccessRestricted
+			return EnterGroupResult{}, ErrAccessRestricted
 		}
 	}
 	// password：需提供密码
 	if group.JoinMethod == GroupJoinMethodPassword {
 		if password == nil || *password == "" {
-			return JoinGroupResult{}, ErrInvalidPassword
+			return EnterGroupResult{}, ErrInvalidPassword
 		}
 	}
 	// requires_approval：创建加入申请，审核通过后才算真正加入
@@ -369,21 +369,17 @@ func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string
 		// 自然去重：命中已有 pending 申请返回已有 application_id（与 postgres 实现一致）
 		for _, record := range r.applications {
 			if record.GroupID == groupID && record.ApplicantID == userID && record.Status == ApplicationStatusPending {
-				return JoinGroupResult{Status: JoinGroupStatusPendingApproval, Application: &struct {
-					ApplicationID string `json:"application_id"`
-				}{ApplicationID: record.ApplicationID}}, nil
+				return EnterGroupResult{Status: EnterGroupStatusPendingApproval, ApplicationID: &record.ApplicationID}, nil
 			}
 		}
 		now := time.Now().UTC()
 		applicationID := "app_" + now.Format("20060102150405.000000000")
 		record := inMemoryApplicationRecord{ApplicationID: applicationID, GroupID: groupID, ApplicantID: userID, Status: ApplicationStatusPending, Message: message, CreatedAt: now.Format(time.RFC3339)}
 		r.applications[applicationID] = record
-		return JoinGroupResult{Status: JoinGroupStatusPendingApproval, IsNewApplication: true, Application: &struct {
-			ApplicationID string `json:"application_id"`
-		}{ApplicationID: applicationID}}, nil
+		return EnterGroupResult{Status: EnterGroupStatusPendingApproval, IsNewApplication: true, ApplicationID: &applicationID}, nil
 	}
 	if group.MaxMembers > 0 && len(r.members[groupID]) >= group.MaxMembers {
-		return JoinGroupResult{}, ErrGroupFull
+		return EnterGroupResult{}, ErrGroupFull
 	}
 	if r.members[groupID] == nil {
 		r.members[groupID] = make(map[string]inMemoryMembership)
@@ -392,7 +388,7 @@ func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string
 	r.members[groupID][userID] = inMemoryMembership{Role: GroupRoleMember, JoinedAt: now}
 	group.Group.MembersCount = len(r.members[groupID])
 	r.groups[groupID] = group
-	return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
+	return EnterGroupResult{Status: EnterGroupStatusJoined}, nil
 }
 
 func (r *InMemoryRepository) UpdatePreferences(_ context.Context, userID string, req UpdateGroupPreferencesRequest) error {

@@ -1,5 +1,5 @@
 import { ApiClient } from '../api/ApiClient';
-import { NotifyItem, NotifyListRequest, NotifyMarkReadRequest, UnreadCountResult } from '../types/api';
+import { NotifyItem, NotifyListRequest, NotifyMarkReadRequest, UnreadSummaryResult } from '../types/api';
 import { DefaultConfig } from '../../constants/AppConstants';
 import { GlobalStateManager, UnreadCount as GlobalUnreadCount } from '../state/GlobalStateManager';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
@@ -201,7 +201,7 @@ export class NotificationSyncService {
     }
   }
 
-  private async updateGlobalUnreadState(result: UnreadCountResult): Promise<void> {
+  private async updateGlobalUnreadState(result: UnreadSummaryResult): Promise<void> {
     const globalCount: GlobalUnreadCount = {
       total_unread_count: result.total
     };

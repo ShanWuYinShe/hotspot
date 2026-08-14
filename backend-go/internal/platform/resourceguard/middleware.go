@@ -25,21 +25,20 @@ type guardRef struct {
 
 var guardRules = []guardRule{
 	{suffix: "/api/v1/users/open_the_door", refs: []guardRef{{field: "user_id", kind: ResourceUser}}},
-	{suffix: "/api/v1/users/list_groups", refs: []guardRef{{field: "user_id", kind: ResourceUser}}},
-	{suffix: "/api/v1/users/list_moments", refs: []guardRef{{field: "user_id", kind: ResourceUser}}},
-	{suffix: "/api/v1/users/list_reacted_moments", refs: []guardRef{{field: "user_id", kind: ResourceUser}}},
+	{suffix: "/api/v1/users/fetch_groups", refs: []guardRef{{field: "user_id", kind: ResourceUser}}},
+	{suffix: "/api/v1/users/fetch_moments", refs: []guardRef{{field: "user_id", kind: ResourceUser}}},
+	{suffix: "/api/v1/users/fetch_reacted_moments", refs: []guardRef{{field: "user_id", kind: ResourceUser}}},
 	{suffix: "/api/v1/groups/open_the_door", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/members/list", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
+	{suffix: "/api/v1/groups/members/fetch", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
 	{suffix: "/api/v1/groups/members/search", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/announcements/list", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
 	{suffix: "/api/v1/groups/update", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
 	{suffix: "/api/v1/groups/dismiss", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/join", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
+	{suffix: "/api/v1/groups/enter", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
 	{suffix: "/api/v1/moments/open_the_door", refs: []guardRef{{field: "moment_id", kind: ResourceMoment}}},
 	{suffix: "/api/v1/moments/update", refs: []guardRef{{field: "moment_id", kind: ResourceMoment}}},
 	{suffix: "/api/v1/moments/delete", refs: []guardRef{{field: "moment_id", kind: ResourceMoment}}},
 	{suffix: "/api/v1/moments/set_favorite", refs: []guardRef{{field: "moment_id", kind: ResourceMoment}}},
-	{suffix: "/api/v1/comments/list", refs: []guardRef{{field: "moment_id", kind: ResourceMoment}}},
+	{suffix: "/api/v1/comments/fetch", refs: []guardRef{{field: "moment_id", kind: ResourceMoment}}},
 	{suffix: "/api/v1/comments/create", refs: []guardRef{{field: "moment_id", kind: ResourceMoment}}},
 }
 

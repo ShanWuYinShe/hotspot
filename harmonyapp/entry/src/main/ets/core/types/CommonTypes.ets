@@ -41,7 +41,7 @@ export function isSystemUser(userType: string): boolean {
 
 /**
  * 便捷函数：判断是否为管理员用户
- * 说明：管理员身份不由 user_type 承载，需通过 admin/rbac/get_me 获取。
+ * 说明：管理员身份不由 user_type 承载，需通过 admin/rbac/me 获取。
  */
 export function isAdminUser(userType: string): boolean {
   void userType;

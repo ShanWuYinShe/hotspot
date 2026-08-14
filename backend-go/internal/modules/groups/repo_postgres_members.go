@@ -190,7 +190,7 @@ func (r *PostgresRepository) UnbanMember(ctx context.Context, userID string, req
 	return queryable.Exec(ctx, queryDeleteGroupBan, req.GroupID, req.UserID)
 }
 
-func (r *PostgresRepository) ListBannedMembers(ctx context.Context, groupID string, limit int, cursor string) ([]BannedMemberItem, string, error) {
+func (r *PostgresRepository) ListBannedMembers(ctx context.Context, groupID string, limit int, cursor string) ([]AdminBannedMemberItem, string, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return nil, "", persistence.ErrNotImplemented
 	}
@@ -203,9 +203,9 @@ func (r *PostgresRepository) ListBannedMembers(ctx context.Context, groupID stri
 		return nil, "", err
 	}
 	defer rows.Close()
-	items := make([]BannedMemberItem, 0)
+	items := make([]AdminBannedMemberItem, 0)
 	for rows.Next() {
-		var item BannedMemberItem
+		var item AdminBannedMemberItem
 		var bannedAt time.Time
 		var reason *string
 		var bannedByUserID *string

@@ -151,7 +151,7 @@ func TestMemoryMySettingsAndCancelApplication(t *testing.T) {
 		t.Fatalf("create2: %v", err)
 	}
 	joinRes, err := repo2.JoinGroup(ctx, "u2", created2.Group.GroupID, nil, nil)
-	if err != nil || joinRes.Status != JoinGroupStatusPendingApproval || joinRes.Application == nil {
+	if err != nil || joinRes.Status != EnterGroupStatusPendingApproval || joinRes.ApplicationID == nil {
 		t.Fatalf("join approval group: %#v err=%v", joinRes, err)
 	}
 	apps, _, err := repo2.ListApplications(ctx, created2.Group.GroupID, nil, 10, "")

@@ -18,11 +18,11 @@ func mediaContextWithUserAndKey(userID, key string) context.Context {
 }
 
 func TestValidatePresignUploadRequest(t *testing.T) {
-	valid := PresignUploadRequest{FileName: "a.png", FileSize: 100, MimeType: "image/png", Category: CategoryAvatar, MD5: "d41d8cd98f00b204e9800998ecf8427e"}
+	valid := PresignFileInput{FileName: "a.png", FileSize: 100, MimeType: "image/png", Category: CategoryAvatar, MD5: "d41d8cd98f00b204e9800998ecf8427e"}
 	if err := validatePresignUploadRequest(valid); err != nil {
 		t.Fatalf("expected valid request, got %v", err)
 	}
-	cases := []PresignUploadRequest{
+	cases := []PresignFileInput{
 		{FileName: "", FileSize: 100, MimeType: "image/png", Category: CategoryAvatar},
 		{FileName: "a.png", FileSize: 0, MimeType: "image/png", Category: CategoryAvatar},
 		{FileName: "a.png", FileSize: 100, MimeType: "video/mp4", Category: CategoryAvatar},
@@ -41,7 +41,7 @@ func TestServicePresignWritesPendingSession(t *testing.T) {
 	provider := &mediaStubProvider{presignResp: PresignedUpload{UploadID: "upload_1", UploadURL: "https://storage.example.com/hotspot/uploads/u1/upload_1.png", Headers: map[string]string{"Content-Type": "image/png"}, ExpiresAt: "2026-03-30T00:00:00Z", StorageKey: "uploads/u1/upload_1.png"}}
 	service := NewServiceWithRepoAndProvider(repo, provider)
 
-	resp, err := service.Presign(mediaContextWithUserAndKey("u1", ""), PresignUploadRequest{FileName: "a.png", FileSize: 100, MimeType: "image/png", Category: CategoryAvatar})
+	resp, err := service.Presign(mediaContextWithUserAndKey("u1", ""), PresignFileInput{FileName: "a.png", FileSize: 100, MimeType: "image/png", Category: CategoryAvatar})
 	if err != nil {
 		t.Fatalf("Presign returned error: %v", err)
 	}
@@ -59,7 +59,7 @@ func TestServicePresignWritesPendingSession(t *testing.T) {
 
 func TestServiceBatchPresignRejectsAnyInvalidItem(t *testing.T) {
 	service := NewServiceWithRepoAndProvider(NewInMemoryRepository(), &mediaStubProvider{})
-	_, err := service.BatchPresign(mediaContextWithUserAndKey("u1", ""), BatchPresignUploadRequest{Files: []PresignUploadRequest{{FileName: "a.png", FileSize: 100, MimeType: "image/png", Category: CategoryAvatar}, {FileName: "b.png", FileSize: 100, MimeType: "video/mp4", Category: CategoryAvatar}}})
+	_, err := service.BatchPresign(mediaContextWithUserAndKey("u1", ""), []PresignFileInput{{FileName: "a.png", FileSize: 100, MimeType: "image/png", Category: CategoryAvatar}, {FileName: "b.png", FileSize: 100, MimeType: "video/mp4", Category: CategoryAvatar}})
 	if !errors.Is(err, ErrInvalidMediaRequest) {
 		t.Fatalf("expected invalid request, got %v", err)
 	}
@@ -136,7 +136,7 @@ func TestServiceCompleteRejectsMetadataMismatch(t *testing.T) {
 
 func TestServicePropagatesProviderAndRepositoryErrors(t *testing.T) {
 	service := NewServiceWithRepoAndProvider(&mediaErrorRepo{saveErr: errors.New("save boom")}, &mediaStubProvider{presignResp: PresignedUpload{UploadID: "upload_1", UploadURL: "https://storage.example.com/upload_1", Headers: map[string]string{"Content-Type": "image/png"}, ExpiresAt: "2026-03-30T00:00:00Z", StorageKey: "uploads/u1/upload_1.png"}})
-	if _, err := service.Presign(mediaContextWithUserAndKey("u1", ""), PresignUploadRequest{FileName: "a.png", FileSize: 100, MimeType: "image/png", Category: CategoryAvatar}); err == nil {
+	if _, err := service.Presign(mediaContextWithUserAndKey("u1", ""), PresignFileInput{FileName: "a.png", FileSize: 100, MimeType: "image/png", Category: CategoryAvatar}); err == nil {
 		t.Fatal("expected save error")
 	}
 

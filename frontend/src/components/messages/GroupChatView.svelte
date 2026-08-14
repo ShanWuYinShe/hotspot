@@ -18,7 +18,7 @@
 	}
 
 	// GroupChatView — 群聊窗口（spec: 以 group_id 寻址）。
-	// 历史来自 group_messages/list;发送走 group_messages/send。
+	// 历史来自 group_messages/fetch;发送走 group_messages/send。
 	// 消息方向由 sender.user_id 与当前用户比较得出;共享状态机由 useChat 工厂承载。
 
 	let {

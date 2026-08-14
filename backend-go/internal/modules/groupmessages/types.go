@@ -7,6 +7,17 @@ import (
 	"hotspot/backend-go/internal/platform/types"
 )
 
+// MessageBrief 是消息摘要快照（reply_to 回复引用；spec api_spec_types.md——
+// 与私聊侧 privatemessages.MessageBrief 同构）。
+type MessageBrief struct {
+	MessageID string         `json:"message_id"`
+	Type      string         `json:"type"`
+	Content   string         `json:"content,omitempty"`
+	ShareCode string         `json:"share_code,omitempty"`
+	Sender    types.UserInfo `json:"sender"`
+	SentAt    string         `json:"sent_at"`
+}
+
 type GroupMessageItem struct {
 	MessageID    string         `json:"message_id"`
 	SenderUserID string         `json:"-"` // 内部存储用；对外通过 Sender map 暴露
@@ -15,7 +26,7 @@ type GroupMessageItem struct {
 	Media        map[string]any `json:"media,omitempty"`
 	ShareCode    string         `json:"share_code,omitempty"`
 	Sender       map[string]any `json:"sender"` // UserInfo
-	ReplyTo      map[string]any `json:"reply_to,omitempty"`
+	ReplyTo      *MessageBrief `json:"reply_to,omitempty"`
 	Mentions     []string       `json:"mentions,omitempty"`
 	RecalledBy   map[string]any `json:"recalled_by,omitempty"`
 	SentAt       string         `json:"sent_at"`
@@ -23,7 +34,7 @@ type GroupMessageItem struct {
 	RecalledAt   string         `json:"recalled_at,omitempty"`
 	ReadCount    int            `json:"read_count,omitempty"`
 }
-type MessageSent struct {
+type MessageSentResult struct {
 	MessageID string `json:"message_id"`
 	SentAt    string `json:"sent_at"`
 }

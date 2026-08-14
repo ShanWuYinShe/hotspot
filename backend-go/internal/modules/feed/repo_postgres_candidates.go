@@ -139,7 +139,7 @@ func (r *PostgresRepository) loadGroupCandidates(ctx context.Context, queryable 
 			Location:           &RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
 			FriendsInGroup:     &friendsInGroup,
 			OnlineMembersCount: &onlineMembersCount,
-			NextActivity:       strPtr(nextActivity),
+			NextActivityAt:       strPtr(nextActivity),
 			OwnerID:            strPtr(ownerID),
 		}
 		if !createdAt.IsZero() {

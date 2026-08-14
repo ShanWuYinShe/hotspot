@@ -32,7 +32,7 @@ type CommentItem struct {
 	IsDeleted    bool `json:"is_deleted"`
 	// reactions 恒为数组（空数组 = 无反应）。
 	Reactions []Reaction `json:"reactions"`
-	// top_replies 恒为数组；仅 comments/list 返回顶层评论的回复预览，其它端点为空数组。
+	// top_replies 恒为数组；仅 comments/fetch 返回顶层评论的回复预览，其它端点为空数组。
 	TopReplies []CommentItem `json:"top_replies"`
 	// MomentID 仅内部使用（评论挂载瞬间），不对外序列化。
 	MomentID string `json:"-"`

@@ -7,8 +7,10 @@ import (
 
 	"hotspot/backend-go/internal/platform/cors"
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/modulekit"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/ratelimit"
 )
 
 func NewHTTPRouter(modules []modulekit.Module) http.Handler {
@@ -35,5 +37,18 @@ func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger) htt
 	for _, module := range modules {
 		module.Mount(r)
 	}
+	// /public/v1 匿名节点（spec api_spec_public.md）：纯匿名、不解析 Token，
+	// 限流按 IP 维度（ratelimit 内部按路径分类），无资源守卫。
+	publicRouter := chi.NewRouter()
+	publicRouter.Use(ratelimit.Middleware)
+	publicRouter.Use(idempotency.Middleware)
+	publicRouter.NotFound(httpx.NotFoundHandler)
+	publicRouter.MethodNotAllowed(httpx.MethodNotAllowedHandler)
+	for _, module := range modules {
+		if pm, ok := module.(modulekit.PublicMounter); ok {
+			pm.MountPublic(publicRouter)
+		}
+	}
+	r.Mount("/public/v1", publicRouter)
 	return r
 }

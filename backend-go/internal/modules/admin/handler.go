@@ -337,7 +337,7 @@ func (h *Handler) SearchReports(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleReport(w http.ResponseWriter, r *http.Request) {
-	var req AdminReportHandleRequest
+	var req JudgeAdminReportRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return

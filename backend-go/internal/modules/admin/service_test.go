@@ -241,7 +241,7 @@ func TestServiceGrantAdminRejectsNoRoles(t *testing.T) {
 func TestServiceGrantAdminHappyPath(t *testing.T) {
 	svc, repo, _, _ := newTestService()
 	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
-	apiErr, err := svc.GrantAdmin(adminCtx("admin1"), AdminRbacGrantAdminRequest{UserID: "u2", GrantAllPermissions: true})
+	apiErr, err := svc.GrantAdmin(adminCtx("admin1"), AdminRbacGrantAdminRequest{UserID: "u2", AwardAllPermissions: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -423,7 +423,7 @@ func TestServiceSearchReportsHappyPath(t *testing.T) {
 func TestServiceHandleReportRejectsInvalidAction(t *testing.T) {
 	svc, repo, _, _ := newTestService()
 	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
-	apiErr, err := svc.HandleReport(adminCtx("admin1"), AdminReportHandleRequest{ReportID: "r1", Action: "invalid"})
+	apiErr, err := svc.HandleReport(adminCtx("admin1"), JudgeAdminReportRequest{ReportID: "r1", Action: "invalid"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -614,7 +614,7 @@ func TestServiceSearchReportsRejectsNoPermission(t *testing.T) {
 func TestServiceHandleReportHappyPath(t *testing.T) {
 	svc, repo, _, _ := newTestService()
 	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
-	apiErr, err := svc.HandleReport(adminCtx("admin1"), AdminReportHandleRequest{
+	apiErr, err := svc.HandleReport(adminCtx("admin1"), JudgeAdminReportRequest{
 		ReportID: "report_1",
 		Action:   ReportActionDismiss,
 		Note:     "false alarm",

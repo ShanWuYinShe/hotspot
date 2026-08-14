@@ -31,7 +31,7 @@ func (h *Handler) Following(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Nearby(w http.ResponseWriter, r *http.Request) {
-	var req GetFeedNearbyRequest
+	var req NearbyMomentsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -19,27 +20,27 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 	return &PostgresRepository{factory: factory}
 }
 
-func (r *PostgresRepository) Send(ctx context.Context, req SendGroupMessageRequest) (MessageSent, error) {
+func (r *PostgresRepository) Send(ctx context.Context, req SendGroupMessageRequest) (MessageSentResult, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return MessageSent{}, persistence.ErrNotImplemented
+		return MessageSentResult{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return MessageSent{}, persistence.ErrNotImplemented
+		return MessageSentResult{}, persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
 	messageID, err := idgen.WithPrefix("gm_")
 	if err != nil {
-		return MessageSent{}, err
+		return MessageSentResult{}, err
 	}
 	var senderID interface{}
 	if req.SenderUserID != "" {
 		senderID = req.SenderUserID
 	}
 	if err := queryable.Exec(ctx, queryInsertGroupMessage, messageID, req.GroupID, senderID, req.Type, req.Content, now.Format(time.RFC3339)); err != nil {
-		return MessageSent{}, err
+		return MessageSentResult{}, err
 	}
-	return MessageSent{MessageID: messageID, SentAt: now.Format(time.RFC3339)}, nil
+	return MessageSentResult{MessageID: messageID, SentAt: now.Format(time.RFC3339)}, nil
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, req UpdateGroupMessageRequest) (MessageEventMeta, error) {
@@ -198,26 +199,24 @@ func (r *PostgresRepository) MemberMuteStatus(ctx context.Context, groupID, user
 	return isMuted, mutedUntil, true, nil
 }
 
-func (r *PostgresRepository) GetMessageForReply(ctx context.Context, messageID string) (map[string]any, bool, error) {
+func (r *PostgresRepository) GetMessageForReply(ctx context.Context, messageID string) (*MessageBrief, bool, error) {
 	queryable, ok := r.getQueryable()
 	if !ok {
 		return nil, false, persistence.ErrNotImplemented
 	}
-	var senderUserID, nickname, content, shareCode string
-	err := queryable.QueryRow(ctx, queryGetGroupMessageForReply, messageID).Scan(&senderUserID, &nickname, &content, &shareCode)
+	var senderUserID, nickname, avatarURL, msgType, content, shareCode, sentAt string
+	err := queryable.QueryRow(ctx, queryGetGroupMessageForReply, messageID).Scan(&senderUserID, &nickname, &avatarURL, &msgType, &content, &shareCode, &sentAt)
 	if err != nil {
 		return nil, false, nil
 	}
-	result := map[string]any{
-		"message_id": messageID,
-		"user_id":    senderUserID,
-		"nickname":   nickname,
-		"content":    content,
-	}
-	if shareCode != "" {
-		result["share_code"] = shareCode
-	}
-	return result, true, nil
+	return &MessageBrief{
+		MessageID: messageID,
+		Type:      msgType,
+		Content:   content,
+		ShareCode: shareCode,
+		Sender:    types.UserInfo{UserID: senderUserID, Nickname: nickname, AvatarURL: avatarURL},
+		SentAt:    sentAt,
+	}, true, nil
 }
 
 func (r *PostgresRepository) MessageExists(ctx context.Context, messageID string) (bool, string, error) {
@@ -226,7 +225,8 @@ func (r *PostgresRepository) MessageExists(ctx context.Context, messageID string
 		return false, "", persistence.ErrNotImplemented
 	}
 	var senderUserID string
-	err := queryable.QueryRow(ctx, queryGetGroupMessageForReply, messageID).Scan(&senderUserID, new(string), new(string), new(string))
+	var ignoreNickname, ignoreAvatar, ignoreType, ignoreContent, ignoreShareCode, ignoreSentAt string
+	err := queryable.QueryRow(ctx, queryGetGroupMessageForReply, messageID).Scan(&senderUserID, &ignoreNickname, &ignoreAvatar, &ignoreType, &ignoreContent, &ignoreShareCode, &ignoreSentAt)
 	if err != nil {
 		return false, "", nil
 	}

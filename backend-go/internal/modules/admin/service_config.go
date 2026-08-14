@@ -191,7 +191,7 @@ func applyRateLimitsPatch(target *AdminRateLimitConfig, patch PartialRateLimitCo
 		{&target.GlobalPerHour, patch.GlobalPerHour},
 		{&target.UserPerHour, patch.UserPerHour},
 		{&target.AuthRegisterPer10Minutes, patch.AuthRegisterPer10Minutes},
-		{&target.AuthLoginPer10Minutes, patch.AuthLoginPer10Minutes},
+		{&target.AuthSigninPer10Minutes, patch.AuthSigninPer10Minutes},
 		{&target.AuthGuestPer10Minutes, patch.AuthGuestPer10Minutes},
 		{&target.AuthRefreshPer10Minutes, patch.AuthRefreshPer10Minutes},
 		{&target.AuthResetPer10Minutes, patch.AuthResetPer10Minutes},
@@ -238,8 +238,8 @@ func applyFeaturesPatch(target *FeatureSwitches, patch PartialFeatureSwitches) {
 	if patch.EnablePublicRegistration != nil {
 		target.EnablePublicRegistration = *patch.EnablePublicRegistration
 	}
-	if patch.EnableGuestLogin != nil {
-		target.EnableGuestLogin = *patch.EnableGuestLogin
+	if patch.EnableGuestRegister != nil {
+		target.EnableGuestRegister = *patch.EnableGuestRegister
 	}
 	if patch.EnableMoments != nil {
 		target.EnableMoments = *patch.EnableMoments

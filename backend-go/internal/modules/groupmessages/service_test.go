@@ -10,7 +10,7 @@ import (
 )
 
 type stubRepo struct {
-	sendResult     MessageSent
+	sendResult     MessageSentResult
 	sendErr        error
 	historyResult  PaginatedGroupMessages
 	historyErr     error
@@ -27,7 +27,7 @@ type stubRepo struct {
 	ownerMeta  MessageOwnerMeta
 	ownerFound bool
 
-	replyToResult map[string]any
+	replyToResult *MessageBrief
 	replyToOk     bool
 	replyToErr    error
 
@@ -36,7 +36,7 @@ type stubRepo struct {
 	mediaErr    error
 }
 
-func (r *stubRepo) Send(_ context.Context, _ SendGroupMessageRequest) (MessageSent, error) {
+func (r *stubRepo) Send(_ context.Context, _ SendGroupMessageRequest) (MessageSentResult, error) {
 	return r.sendResult, r.sendErr
 }
 func (r *stubRepo) History(_ context.Context, _ string, _ *PaginationParams) (PaginatedGroupMessages, error) {
@@ -57,7 +57,7 @@ func (r *stubRepo) MarkAsRead(_ context.Context, _ string, _ MarkGroupMessagesRe
 func (r *stubRepo) MarkAllRead(_ context.Context, _ string) error {
 	return r.markAllReadErr
 }
-func (r *stubRepo) GetMessageForReply(_ context.Context, _ string) (map[string]any, bool, error) {
+func (r *stubRepo) GetMessageForReply(_ context.Context, _ string) (*MessageBrief, bool, error) {
 	return r.replyToResult, r.replyToOk, r.replyToErr
 }
 func (r *stubRepo) MessageGroupID(_ context.Context, _ string) (string, bool, error) {
@@ -96,7 +96,7 @@ func gmAuthCtx(userID string) context.Context {
 }
 
 func TestServiceSendDelegatesToRepo(t *testing.T) {
-	repo := &stubRepo{sendResult: MessageSent{MessageID: "gm1", SentAt: "2025-01-01T00:00:00Z"}}
+	repo := &stubRepo{sendResult: MessageSentResult{MessageID: "gm1", SentAt: "2025-01-01T00:00:00Z"}}
 	service := NewServiceWithRepo(repo)
 	result, err := service.Send(gmAuthCtx("u1"), SendGroupMessageRequest{GroupID: "g1", Type: "text", Content: "hello", SenderUserID: "u1"})
 	if err != nil {
@@ -224,7 +224,7 @@ func TestServiceMarkAllReadPropagatesError(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestBuildReplyToReturnsInfo(t *testing.T) {
-	expected := map[string]any{"message_id": "m1", "content": "hi"}
+	expected := &MessageBrief{MessageID: "m1", Content: "hi"}
 	repo := &stubRepo{replyToResult: expected, replyToOk: true}
 	service := NewServiceWithRepo(repo)
 
@@ -232,8 +232,8 @@ func TestBuildReplyToReturnsInfo(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected non-nil result")
 	}
-	if result["message_id"] != "m1" {
-		t.Fatalf("expected message_id=m1, got %v", result["message_id"])
+	if result.MessageID != "m1" {
+		t.Fatalf("expected message_id=m1, got %v", result.MessageID)
 	}
 }
 
@@ -296,9 +296,9 @@ func TestBuildMediaReturnsNilOnError(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestServiceSendWithReplyToIncludesReplyInfo(t *testing.T) {
-	replyInfo := map[string]any{"message_id": "orig1", "content": "original"}
+	replyInfo := &MessageBrief{MessageID: "orig1", Content: "original"}
 	repo := &stubRepo{
-		sendResult:    MessageSent{MessageID: "gm-new", SentAt: "2025-06-01T00:00:00Z"},
+		sendResult:    MessageSentResult{MessageID: "gm-new", SentAt: "2025-06-01T00:00:00Z"},
 		replyToResult: replyInfo,
 		replyToOk:     true,
 	}
@@ -319,7 +319,7 @@ func TestServiceSendWithReplyToIncludesReplyInfo(t *testing.T) {
 func TestServiceSendWithMediaIncludesMediaInfo(t *testing.T) {
 	mediaInfo := map[string]any{"file_id": "f1", "url": "https://example.com/img.jpg"}
 	repo := &stubRepo{
-		sendResult:  MessageSent{MessageID: "gm-media", SentAt: "2025-06-01T00:00:00Z"},
+		sendResult:  MessageSentResult{MessageID: "gm-media", SentAt: "2025-06-01T00:00:00Z"},
 		mediaResult: mediaInfo,
 		mediaOk:     true,
 	}

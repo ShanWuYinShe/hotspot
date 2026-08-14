@@ -50,7 +50,7 @@ type MessageMedia struct {
 	MimeType     string `json:"mime_type,omitempty"`
 }
 
-type MessageReplyTo struct {
+type MessageBrief struct {
 	MessageID string   `json:"message_id"`
 	Type      string   `json:"type"`
 	Content   string   `json:"content,omitempty"`
@@ -66,7 +66,7 @@ type PrivateMessageItem struct {
 	Media      *MessageMedia   `json:"media,omitempty"`
 	ShareCode  string          `json:"share_code,omitempty"`
 	Sender     UserInfo        `json:"sender"`
-	ReplyTo    *MessageReplyTo `json:"reply_to,omitempty"`
+	ReplyTo    *MessageBrief `json:"reply_to,omitempty"`
 	SentAt     string          `json:"sent_at"`
 	EditedAt   string          `json:"edited_at,omitempty"`
 	RecalledAt string          `json:"recalled_at,omitempty"`
@@ -115,7 +115,7 @@ type MarkPrivateReadRequest struct {
 	UpToMessageID string `json:"up_to_message_id,omitempty"`
 }
 
-type MessageSent struct {
+type MessageSentResult struct {
 	MessageID string `json:"message_id"`
 	SentAt    string `json:"sent_at"`
 }

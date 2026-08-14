@@ -435,7 +435,7 @@ func (s *Service) SearchReports(ctx context.Context, req AdminReportListRequest)
 	return resp, nil, nil
 }
 
-func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest) (*httpx.APIError, error) {
+func (s *Service) HandleReport(ctx context.Context, req JudgeAdminReportRequest) (*httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionReportsWrite)
 	if apiErr != nil || err != nil {
 		return apiErr, err
@@ -457,7 +457,7 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 	if record.Item.Status != ReportStatusPending {
 		return &httpx.APIError{Code: httpx.CodeConflict, Message: "举报已处理"}, nil
 	}
-	// 权限蕴含（spec admin_moderation.md → reports/handle）：resolve 且携带
+	// 权限蕴含（spec admin_moderation.md → reports/judge）：resolve 且携带
 	// ban_duration_days 时实际执行封禁，须同时具备 admin.users.write，
 	// 防止低权限管理员经举报通道绕过用户封禁权限边界。
 	if req.Action == ReportActionResolve && req.BanDurationDays != nil && !actor.HasPermission(permissionUsersWrite) {
@@ -511,7 +511,7 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 	if !ok {
 		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "举报不存在"}, nil
 	}
-	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("report.handle"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetType("report"), TargetID: req.ReportID, TargetName: req.ReportID, Details: map[string]any{"type": "report.handle", "report_id": req.ReportID, "action": string(req.Action), "note": note}}); err != nil {
+	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("report.judge"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetType("report"), TargetID: req.ReportID, TargetName: req.ReportID, Details: map[string]any{"type": "report.judge", "report_id": req.ReportID, "action": string(req.Action), "note": note}}); err != nil {
 		return nil, err
 	}
 	// Notify the reporter about the outcome (resolve/dismiss only; escalate

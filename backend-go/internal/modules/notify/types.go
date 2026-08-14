@@ -25,7 +25,7 @@ const (
 	NotifyCategoryNearby      NotifyCategory = "nearby"
 )
 
-// NotifyItem is the notify/list item. The primary key is exposed as notify_id
+// NotifyItem is the notify/fetch item. The primary key is exposed as notify_id
 // (spec api_spec_notify.md): it is shared with the realtime WS event payload of
 // the same business event, so clients can deduplicate across the two paths.
 type NotifyItem struct {
@@ -50,14 +50,14 @@ type UnreadCountByType struct {
 	System      int `json:"system"`
 }
 
-type UnreadCountResult struct {
+type UnreadSummaryResult struct {
 	Total  int               `json:"total"`
 	ByType UnreadCountByType `json:"by_type"`
 }
 
 type PaginationParams = types.PaginationParams
 
-// ListNotifyRequest 是 notify/list 的请求类型（spec api_spec_notify.md）。
+// ListNotifyRequest 是 notify/fetch 的请求类型（spec api_spec_notify.md）。
 type ListNotifyRequest struct {
 	Type       string            `json:"type,omitempty"`
 	IsRead     *bool             `json:"is_read,omitempty"`

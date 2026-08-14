@@ -116,7 +116,7 @@ func TestServiceNearbyFillsReactions(t *testing.T) {
 	service := NewServiceWithRepo(repo)
 	service.SetReactionAggregator(agg)
 
-	items, err := service.Nearby(feedCtx("u1"), GetFeedNearbyRequest{ReferencePoint: &GeoPoint{Latitude: 1, Longitude: 2}})
+	items, err := service.Nearby(feedCtx("u1"), NearbyMomentsRequest{ReferencePoint: &GeoPoint{Latitude: 1, Longitude: 2}})
 	if err != nil {
 		t.Fatalf("Nearby: %v", err)
 	}

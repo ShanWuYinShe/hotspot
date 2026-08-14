@@ -48,7 +48,7 @@ func TestMain(m *testing.M) {
 
 	maybeMigrate()
 	if shouldWaitForBackend() {
-		if err := waitForBackendWithPost(backendAddr+"/api/v1/system/health", 60*time.Second); err != nil {
+		if err := waitForBackendWithPost(backendAddr+"/public/v1/system/health", 60*time.Second); err != nil {
 			fmt.Fprintf(os.Stderr, "backend not ready, skipping backend tests: %v\n", err)
 		} else {
 			backendReady = true
@@ -264,7 +264,7 @@ func emptyBody(t *testing.T, path string) {
 
 func createTestUser(t *testing.T, nickname string) (userID string) {
 	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/auth/register", map[string]any{
+	apiRespOK(t, "/public/v1/auth/register", map[string]any{
 		"login_id":    "test_" + t.Name() + "_" + nickname + "_" + fmt.Sprint(time.Now().UnixNano()),
 		"nickname":    nickname,
 		"password":    "Test1234",
@@ -282,7 +282,7 @@ func createTestUser(t *testing.T, nickname string) (userID string) {
 
 func createGuestUser(t *testing.T) (userID string, token string) {
 	var resp ApiResponse[map[string]any]
-	apiNoAuth(t, "/api/v1/auth/guest", map[string]any{
+	apiNoAuth(t, "/public/v1/auth/guest", map[string]any{
 		"nickname":    "guest_" + t.Name(),
 		"client_type": "app",
 		"device_id":   uniqueDeviceID(t),
@@ -301,7 +301,7 @@ func createGuestUser(t *testing.T) (userID string, token string) {
 
 func loginUser(t *testing.T, loginID, password string) (userID string, token string) {
 	var resp ApiResponse[map[string]any]
-	apiNoAuth(t, "/api/v1/auth/login", map[string]any{
+	apiNoAuth(t, "/public/v1/auth/signin", map[string]any{
 		"login_id":    loginID,
 		"password":    password,
 		"client_type": "app",
@@ -342,22 +342,22 @@ func withTwoUsers(t *testing.T, fn func(user1Token, user2Token string)) {
 
 func TestSystem_Health(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiOK(t, "/api/v1/system/health", map[string]any{}, &resp)
+	apiOK(t, "/public/v1/system/health", map[string]any{}, &resp)
 }
 
 func TestSystem_GetMeta(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiOK(t, "/api/v1/system/get_meta", map[string]any{}, &resp)
+	apiOK(t, "/public/v1/system/meta", map[string]any{}, &resp)
 }
 
 func TestSystem_GetClientConfig(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiOK(t, "/api/v1/system/get_client_config", map[string]any{}, &resp)
+	apiOK(t, "/public/v1/system/client_config", map[string]any{}, &resp)
 }
 
 func TestSystem_ListAnnouncements(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiOK(t, "/api/v1/system/announcements/list", map[string]any{}, &resp)
+	apiOK(t, "/public/v1/system/announcements/fetch", map[string]any{}, &resp)
 }
 
 // =============================================================================
@@ -374,7 +374,7 @@ func TestAuth_Register(t *testing.T) {
 
 func TestAuth_Login_InvalidCredentials(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiOK(t, "/api/v1/auth/login", map[string]any{
+	apiOK(t, "/public/v1/auth/signin", map[string]any{
 		"login_id":    "nonexistent_user_xyz",
 		"password":    "wrongpass",
 		"client_type": "app",
@@ -387,7 +387,7 @@ func TestAuth_Login_InvalidCredentials(t *testing.T) {
 
 func TestAuth_CheckStatus_Anonymous(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiOK(t, "/api/v1/auth/get_status", map[string]any{}, &resp)
+	apiOK(t, "/api/v1/auth/session", map[string]any{}, &resp)
 	if resp.Data != nil {
 		if valid, ok := (*resp.Data)["is_valid"].(bool); ok && valid {
 			t.Log("anonymous get_status returned is_valid=true — unexpected but acceptable if CSRF or session-based")
@@ -398,7 +398,7 @@ func TestAuth_CheckStatus_Anonymous(t *testing.T) {
 func TestAuth_RefreshToken_NoToken(t *testing.T) {
 	requireBackend(t)
 	var resp ApiResponse[map[string]any]
-	status, _ := post("/api/v1/auth/refresh_token", map[string]any{"client_type": "app"}, &resp)
+	status, _ := post("/public/v1/auth/refresh_token", map[string]any{"client_type": "app"}, &resp)
 	if status != http.StatusOK {
 		t.Fatalf("refresh_token without token: got status %d", status)
 	}
@@ -427,42 +427,42 @@ func TestUsers_OpenTheDoor(t *testing.T) {
 func TestUsers_ListFriends(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/list_friends", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/users/fetch_friends", map[string]any{}, &resp)
 	})
 }
 
 func TestUsers_ListFollowing(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/list_following", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/users/fetch_following", map[string]any{}, &resp)
 	})
 }
 
 func TestUsers_ListFollowers(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/list_followers", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/users/fetch_followers", map[string]any{}, &resp)
 	})
 }
 
 func TestUsers_ListGroups(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/list_groups", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/users/fetch_groups", map[string]any{}, &resp)
 	})
 }
 
 func TestUsers_ListMoments(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/list_moments", map[string]any{"user_id": ""}, &resp)
+		apiRespOK(t, "/api/v1/users/fetch_moments", map[string]any{"user_id": ""}, &resp)
 	})
 }
 
 func TestUsers_ListReactedMoments(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/list_reacted_moments", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/users/fetch_reacted_moments", map[string]any{}, &resp)
 	})
 }
 
@@ -473,7 +473,7 @@ func TestUsers_ListReactedMoments(t *testing.T) {
 func TestUsersMe_GetProfile(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/get_account", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/users/account", map[string]any{}, &resp)
 	})
 }
 
@@ -502,7 +502,7 @@ func TestUsersMe_LocationUpdate(t *testing.T) {
 func TestUsersMe_GetSettings(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/get_settings", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/users/settings", map[string]any{}, &resp)
 	})
 }
 
@@ -549,7 +549,7 @@ func TestUsersMe_Block_Unblock(t *testing.T) {
 func TestUsersMe_ListBlocked(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/list_blocked", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/users/fetch_blocked", map[string]any{}, &resp)
 	})
 }
 
@@ -568,11 +568,32 @@ func whoAmI(token string) (string, string) {
 	accessToken = token
 	defer func() { accessToken = old }()
 	var resp ApiResponse[map[string]any]
-	post("/api/v1/users/get_account", map[string]any{}, &resp)
+	post("/api/v1/users/account", map[string]any{}, &resp)
 	if resp.Data == nil {
 		return "", ""
 	}
 	return getString(resp.Data, "user_id"), token
+}
+
+// firstUploadEntry 取 presign/complete 响应 data.uploads[0]（数组语义，spec api_spec_media.md）。
+func firstUploadEntry(t *testing.T, m *map[string]any) map[string]any {
+	t.Helper()
+	if m == nil {
+		t.Fatal("no data in response")
+	}
+	uploadsVal, ok := (*m)["uploads"]
+	if !ok {
+		t.Fatalf("expected 'uploads' in response data: %+v", *m)
+	}
+	uploads, ok := uploadsVal.([]any)
+	if !ok || len(uploads) == 0 {
+		t.Fatalf("expected non-empty uploads, got %+v", uploadsVal)
+	}
+	upload, ok := uploads[0].(map[string]any)
+	if !ok {
+		t.Fatal("uploads[0] is not a map")
+	}
+	return upload
 }
 
 func getString(m *map[string]any, key string) string {
@@ -608,7 +629,7 @@ func TestMoments_Search(t *testing.T) {
 
 func TestMoments_ListLikes(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/reactions/list", map[string]any{"target_type": "moment", "target_id": "fake_moment"}, &resp)
+	apiRespOK(t, "/api/v1/reactions/fetch", map[string]any{"target_type": "moment", "target_id": "fake_moment"}, &resp)
 }
 
 // =============================================================================
@@ -633,7 +654,7 @@ func TestMoments_CreateList(t *testing.T) {
 			t.Fatalf("create moment failed: code=%d message=%s", createResp.Code, createResp.Message)
 		}
 		var listResp ApiResponse[map[string]any]
-		apiOK(t, "/api/v1/moments/list_created", map[string]any{}, &listResp)
+		apiOK(t, "/api/v1/moments/fetch_created", map[string]any{}, &listResp)
 	})
 }
 
@@ -717,17 +738,17 @@ func TestMoments_FavoriteUnfavorite(t *testing.T) {
 
 func TestComments_List(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/comments/list", map[string]any{}, &resp)
+	apiRespOK(t, "/api/v1/comments/fetch", map[string]any{}, &resp)
 }
 
 func TestComments_ListReplies(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/comments/list_replies", map[string]any{"comment_id": "c_fake"}, &resp)
+	apiRespOK(t, "/api/v1/comments/fetch_replies", map[string]any{"comment_id": "c_fake"}, &resp)
 }
 
 func TestComments_ListLikes(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/reactions/list", map[string]any{"target_type": "comment", "target_id": "c_fake"}, &resp)
+	apiRespOK(t, "/api/v1/reactions/fetch", map[string]any{"target_type": "comment", "target_id": "c_fake"}, &resp)
 }
 
 func TestComments_CreateDelete(t *testing.T) {
@@ -768,7 +789,7 @@ func TestGroups_OpenTheDoor(t *testing.T) {
 
 func TestGroups_ListMembers(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/groups/members/list", map[string]any{"group_id": "fake_group"}, &resp)
+	apiRespOK(t, "/api/v1/groups/members/fetch", map[string]any{"group_id": "fake_group"}, &resp)
 }
 
 func TestGroups_SearchMembers(t *testing.T) {
@@ -781,7 +802,7 @@ func TestGroups_SearchMembers(t *testing.T) {
 
 func TestGroups_AnnouncementsList(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/groups/announcements/list", map[string]any{"group_id": "fake_group"}, &resp)
+	apiRespOK(t, "/public/v1/groups/announcements/fetch", map[string]any{"group_id": "fake_group"}, &resp)
 }
 
 // Group authenticated actions
@@ -819,7 +840,7 @@ func TestGroups_CreateUpdateDismiss(t *testing.T) {
 func TestGroups_MyGroups(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/groups/list_joined", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/groups/fetch_joined", map[string]any{}, &resp)
 	})
 }
 
@@ -837,7 +858,7 @@ func TestFeed_Following(t *testing.T) {
 func TestFeed_Nearby(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/feed/nearby", map[string]any{
+		apiRespOK(t, "/api/v1/feed/nearby_moments_moments", map[string]any{
 			"reference_point": map[string]any{
 				"latitude":  37.7749,
 				"longitude": -122.4194,
@@ -849,14 +870,14 @@ func TestFeed_Nearby(t *testing.T) {
 func TestFeed_NearbyGroups(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/feed/nearby_groups", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/feed/nearby_moments_moments_groups", map[string]any{}, &resp)
 	})
 }
 
 func TestFeed_NearbyUsers(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/feed/nearby_users", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/feed/nearby_moments_moments_users", map[string]any{}, &resp)
 	})
 }
 
@@ -880,7 +901,7 @@ func TestSearch_Suggest(t *testing.T) {
 
 func TestMap_Canvas(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiOK(t, "/api/v1/map/canvas", map[string]any{
+	apiOK(t, "/public/v1/map/canvas", map[string]any{
 		"viewport": map[string]any{
 			"bounds": map[string]any{
 				"north": 37.8,
@@ -907,7 +928,7 @@ func TestShare_CreateGet(t *testing.T) {
 		}, &resp)
 		if resp.Code == 0 && resp.Data != nil {
 			if code := getString(resp.Data, "share_code"); code != "" {
-				apiRespOK(t, "/api/v1/share/get", map[string]any{"share_code": code}, nil)
+				apiRespOK(t, "/public/v1/share/open_the_door", map[string]any{"share_code": code}, nil)
 			}
 		}
 	})
@@ -916,7 +937,7 @@ func TestShare_CreateGet(t *testing.T) {
 func TestShare_MeList(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/share/list", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/share/fetch_created", map[string]any{}, &resp)
 	})
 }
 
@@ -943,7 +964,7 @@ func TestPrivateChats_OpenTheDoor(t *testing.T) {
 func TestPrivateChats_List(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/private_chats/list", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/private_chats/fetch", map[string]any{}, &resp)
 	})
 }
 
@@ -987,7 +1008,7 @@ func TestPrivateMessages_SendGetHistory(t *testing.T) {
 		}, &sendResp)
 		// Get history
 		var histResp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/private_messages/list", map[string]any{
+		apiRespOK(t, "/api/v1/private_messages/fetch", map[string]any{
 			"target_user_id": tok2uid,
 		}, &histResp)
 	})
@@ -1088,14 +1109,14 @@ func TestGroupMessages_MarkAsRead(t *testing.T) {
 func TestNotifications_List(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/notify/list", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/notify/fetch", map[string]any{}, &resp)
 	})
 }
 
 func TestNotifications_UnreadCount(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/notify/get_unread_count", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/notify/unread_summary", map[string]any{}, &resp)
 	})
 }
 
@@ -1132,7 +1153,7 @@ func TestReports_Create(t *testing.T) {
 func TestReports_MeList(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/reports/list", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/reports/fetch", map[string]any{}, &resp)
 	})
 }
 
@@ -1144,15 +1165,14 @@ func TestMedia_PresignUpload(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
 		apiRespOK(t, "/api/v1/media/presign_upload", map[string]any{
-			"file_name": "test.png",
-			"file_size": 1024,
-			"mime_type": "image/png",
-			"category":  "avatar",
+			"files": []map[string]any{
+				{"file_name": "test.png", "file_size": 1024, "mime_type": "image/png", "category": "avatar"},
+			},
 		}, &resp)
 		if resp.Data == nil {
 			t.Fatal("expected data in presign response")
 		}
-		data := *resp.Data
+		data := firstUploadEntry(t, resp.Data)
 		for _, key := range []string{"upload_id", "upload_url", "headers", "expires_at"} {
 			if _, ok := data[key]; !ok {
 				t.Fatalf("expected %q in presign response data", key)
@@ -1170,7 +1190,7 @@ func TestMedia_PresignUpload(t *testing.T) {
 func TestMedia_BatchPresignUpload(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/media/batch_presign_upload", map[string]any{
+		apiRespOK(t, "/api/v1/media/presign_upload", map[string]any{
 			"files": []map[string]any{
 				{"file_name": "a.png", "file_size": 100, "mime_type": "image/png", "category": "avatar"},
 				{"file_name": "b.png", "file_size": 200, "mime_type": "image/png", "category": "moment_image"},
@@ -1186,7 +1206,7 @@ func TestMedia_CompleteUpload_NotFound(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
 		status, err := post("/api/v1/media/complete_upload", map[string]any{
-			"upload_id": "nonexistent_upload_id",
+			"upload_ids": []string{"nonexistent_upload_id"},
 		}, &resp)
 		if err != nil {
 			t.Fatalf("complete request failed: %v", err)
@@ -1208,14 +1228,14 @@ func TestMedia_E2E_PresignUploadComplete(t *testing.T) {
 
 	var presignResp ApiResponse[map[string]any]
 	apiRespOK(t, "/api/v1/media/presign_upload", map[string]any{
-		"file_name": "photo.png",
-		"file_size": 66,
-		"mime_type": "image/png",
-		"category":  "avatar",
+		"files": []map[string]any{
+			{"file_name": "photo.png", "file_size": 66, "mime_type": "image/png", "category": "avatar"},
+		},
 	}, &presignResp)
 
-	uploadID := getString(presignResp.Data, "upload_id")
-	uploadURL := getString(presignResp.Data, "upload_url")
+	presignUpload := firstUploadEntry(t, presignResp.Data)
+	uploadID, _ := presignUpload["upload_id"].(string)
+	uploadURL, _ := presignUpload["upload_url"].(string)
 	if uploadID == "" || uploadURL == "" {
 		t.Fatalf("presign returned empty upload_id or upload_url: %+v", presignResp)
 	}
@@ -1249,7 +1269,7 @@ func TestMedia_E2E_PresignUploadComplete(t *testing.T) {
 
 	var completeResp ApiResponse[map[string]any]
 	apiRespOK(t, "/api/v1/media/complete_upload", map[string]any{
-		"upload_id": uploadID,
+		"upload_ids": []string{uploadID},
 	}, &completeResp)
 	if completeResp.Code != 0 {
 		t.Fatalf("complete_upload failed: code=%d message=%s", completeResp.Code, completeResp.Message)
@@ -1257,8 +1277,8 @@ func TestMedia_E2E_PresignUploadComplete(t *testing.T) {
 	if completeResp.Data == nil {
 		t.Fatal("complete_upload returned no data")
 	}
-	data := *completeResp.Data
-	fileID := getString(completeResp.Data, "file_id")
+	data := firstUploadEntry(t, completeResp.Data)
+	fileID, _ := data["file_id"].(string)
 	if fileID == "" {
 		t.Fatal("expected file_id in complete response")
 	}
@@ -1266,7 +1286,7 @@ func TestMedia_E2E_PresignUploadComplete(t *testing.T) {
 	if int(fileSize) != len(pngBytes) {
 		t.Fatalf("expected file_size=%d, got %d", len(pngBytes), int(fileSize))
 	}
-	mimeType := getString(completeResp.Data, "mime_type")
+	mimeType, _ := data["mime_type"].(string)
 	if mimeType != "image/png" {
 		t.Fatalf("expected mime_type=image/png, got %q", mimeType)
 	}
@@ -1279,7 +1299,7 @@ func TestMedia_E2E_BatchPresignUploadComplete(t *testing.T) {
 	defer func() { accessToken = oldToken }()
 
 	var batchResp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/media/batch_presign_upload", map[string]any{
+	apiRespOK(t, "/api/v1/media/presign_upload", map[string]any{
 		"files": []map[string]any{
 			{"file_name": "a.png", "file_size": 66, "mime_type": "image/png", "category": "avatar"},
 		},
@@ -1331,7 +1351,7 @@ func TestMedia_E2E_BatchPresignUploadComplete(t *testing.T) {
 
 	var completeResp ApiResponse[map[string]any]
 	apiRespOK(t, "/api/v1/media/complete_upload", map[string]any{
-		"upload_id": uploadID,
+		"upload_ids": []string{uploadID},
 	}, &completeResp)
 	if completeResp.Code != 0 {
 		t.Fatalf("batch complete failed: code=%d message=%s", completeResp.Code, completeResp.Message)
@@ -1346,13 +1366,13 @@ func TestMedia_E2E_SizeMismatchRejected(t *testing.T) {
 
 	var presignResp ApiResponse[map[string]any]
 	apiRespOK(t, "/api/v1/media/presign_upload", map[string]any{
-		"file_name": "size_mismatch.png",
-		"file_size": 999,
-		"mime_type": "image/png",
-		"category":  "avatar",
+		"files": []map[string]any{
+			{"file_name": "size_mismatch.png", "file_size": 999, "mime_type": "image/png", "category": "avatar"},
+		},
 	}, &presignResp)
-	uploadID := getString(presignResp.Data, "upload_id")
-	uploadURL := getString(presignResp.Data, "upload_url")
+	mismatchUpload := firstUploadEntry(t, presignResp.Data)
+	uploadID, _ := mismatchUpload["upload_id"].(string)
+	uploadURL, _ := mismatchUpload["upload_url"].(string)
 
 	pngBytes := []byte{
 		0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
@@ -1373,7 +1393,7 @@ func TestMedia_E2E_SizeMismatchRejected(t *testing.T) {
 
 	var completeResp ApiResponse[map[string]any]
 	apiRespOK(t, "/api/v1/media/complete_upload", map[string]any{
-		"upload_id": uploadID,
+		"upload_ids": []string{uploadID},
 	}, &completeResp)
 	if completeResp.Code == 0 {
 		t.Fatal("expected error for size mismatch, got success")
@@ -1388,16 +1408,16 @@ func TestMedia_E2E_CompleteBeforeUpload(t *testing.T) {
 
 	var presignResp ApiResponse[map[string]any]
 	apiRespOK(t, "/api/v1/media/presign_upload", map[string]any{
-		"file_name": "not_uploaded.png",
-		"file_size": 100,
-		"mime_type": "image/png",
-		"category":  "avatar",
+		"files": []map[string]any{
+			{"file_name": "not_uploaded.png", "file_size": 100, "mime_type": "image/png", "category": "avatar"},
+		},
 	}, &presignResp)
-	uploadID := getString(presignResp.Data, "upload_id")
+	notUploaded := firstUploadEntry(t, presignResp.Data)
+	uploadID, _ := notUploaded["upload_id"].(string)
 
 	var completeResp ApiResponse[map[string]any]
 	apiRespOK(t, "/api/v1/media/complete_upload", map[string]any{
-		"upload_id": uploadID,
+		"upload_ids": []string{uploadID},
 	}, &completeResp)
 	if completeResp.Code == 0 {
 		t.Fatal("expected error when completing before upload, got success")
@@ -1414,35 +1434,35 @@ func TestMedia_E2E_CompleteBeforeUpload(t *testing.T) {
 func TestAdmin_RBAC_GetMe(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/rbac/get_me", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/rbac/me", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_RBAC_ListPermissions(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/rbac/list_permissions", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/rbac/permissions/fetch", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_RBAC_RolesList(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/rbac/roles/list", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/rbac/roles/fetch", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_RBAC_AdminsList(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/rbac/admins/list", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/rbac/admins/fetch", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_AppConfigGet(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/app_config/get", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/app_config", map[string]any{}, &resp)
 	})
 }
 
@@ -1463,7 +1483,7 @@ func TestAdmin_GroupsSearch(t *testing.T) {
 func TestAdmin_ReportsSearch(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/reports/list", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/reports/fetch", map[string]any{}, &resp)
 	})
 }
 
@@ -1477,13 +1497,13 @@ func TestAdmin_TagsSearch(t *testing.T) {
 func TestAdmin_Announcements(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/announcements/list", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/announcements/fetch", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_Audit(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/audit/list", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/v1/audit/fetch", map[string]any{}, &resp)
 	})
 }

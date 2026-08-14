@@ -236,7 +236,7 @@ func (h *Handler) ListMyGroups(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
-	var req JoinGroupRequest
+	var req EnterGroupRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return

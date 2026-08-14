@@ -100,21 +100,21 @@ func (r *Runtime) ReadService() ReadService {
 	return r.readService
 }
 
-func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (MessageSent, error) {
+func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (MessageSentResult, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	if err := s.ensureCanSend(ctx, principal.UserID, req.TargetUserID); err != nil {
-		return MessageSent{}, err
+		return MessageSentResult{}, err
 	}
 	// share 类型：校验 share_code 存在且有效（spec api_spec_chat.md，防发送失效链接）
 	if req.ShareCode != "" && s.shares != nil {
 		if err := s.shares.ValidateShareCode(ctx, req.ShareCode); err != nil {
-			return MessageSent{}, ErrInvalidShareCode
+			return MessageSentResult{}, ErrInvalidShareCode
 		}
 	}
 	msg, err := s.repo.Send(ctx, principal.UserID, req.TargetUserID, req)
 	if err != nil {
 		observability.L().Error("privatemessages.send failed", "error", err, "target_user_id", req.TargetUserID)
-		return MessageSent{}, err
+		return MessageSentResult{}, err
 	}
 	payload := map[string]any{
 		"message_id":     msg.MessageID,

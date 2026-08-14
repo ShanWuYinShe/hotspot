@@ -1,6 +1,6 @@
 // Auth store 测试：requireAuth 拦截与 pending-action 重放、事件降级。
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AccountData, AuthStatus } from '@/api/types';
+import type { AccountData } from '@/api/types';
 
 vi.mock('@/api', () => ({
   checkAuthStatus: vi.fn(),
@@ -9,6 +9,7 @@ vi.mock('@/api', () => ({
   login: vi.fn(),
   register: vi.fn(),
   logout: vi.fn(),
+  setAuthenticated: vi.fn(),
 }));
 
 import * as api from '@/api';
@@ -20,8 +21,8 @@ beforeEach(async () => {
   vi.clearAllMocks();
   sessionStorage.clear();
   localStorage.clear();
-  // 默认未认证
-  vi.mocked(api.checkAuthStatus).mockResolvedValue({ code: 0, data: { is_valid: false } as AuthStatus });
+  // 默认未认证：session 端点返回 10100（客户端据此判定匿名态）
+  vi.mocked(api.checkAuthStatus).mockResolvedValue({ code: 10100, message: '未登录', data: null as never });
   vi.mocked(api.getAccount).mockResolvedValue({ code: 0, data: accountMock });
 });
 

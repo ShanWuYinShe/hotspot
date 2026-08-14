@@ -33,7 +33,7 @@ type Reaction struct {
 	ReactedByMe bool   `json:"reacted_by_me"`
 }
 
-// ReactionItem is a single row in reactions/list (spec api_spec_types.md
+// ReactionItem is a single row in reactions/fetch (spec api_spec_types.md
 // ReactionItem).
 type ReactionItem struct {
 	User      UserInfo `json:"user"`
@@ -51,7 +51,7 @@ type SetReactionRequest struct {
 	Active     bool        `json:"active"`
 }
 
-// ListReactionsRequest backs POST /api/v1/reactions/list.
+// ListReactionsRequest backs POST /api/v1/reactions/fetch.
 type ListReactionsRequest struct {
 	TargetType ReactTarget       `json:"target_type"`
 	TargetID   string            `json:"target_id"`
@@ -59,7 +59,7 @@ type ListReactionsRequest struct {
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
-// PaginatedReactions wraps a reactions/list page.
+// PaginatedReactions wraps a reactions/fetch page.
 type PaginatedReactions struct {
 	Items      []ReactionItem `json:"items"`
 	NextCursor string         `json:"next_cursor,omitempty"`

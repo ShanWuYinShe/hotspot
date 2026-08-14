@@ -119,8 +119,11 @@ FROM group_members WHERE group_id = $1 AND user_id = $2`
 	queryGetGroupMessageForReply = `
 		SELECT gm.sender_user_id,
 		       COALESCE(u.nickname, gm.sender_user_id),
+		       COALESCE(u.avatar_url, ''),
+		       gm.type,
 		       COALESCE(gm.content, ''),
-		       COALESCE(gm.share_code, '')
+		       COALESCE(gm.share_code, ''),
+		       TO_CHAR(gm.sent_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
 		FROM group_messages gm
 		LEFT JOIN users u ON u.user_id = gm.sender_user_id
 		WHERE gm.message_id = $1`

@@ -22,7 +22,7 @@ func TestRequestLoggerMiddlewareUsesRequestmetaClientIP(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})))
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/system/health", http.NoBody)
+	req := httptest.NewRequest(http.MethodPost, "/public/v1/system/health", http.NoBody)
 	req.RemoteAddr = "173.245.48.5:443"
 	req.Header.Set("CF-Connecting-IP", "8.8.8.8")
 	req.Header.Set("CF-IPCountry", "US")

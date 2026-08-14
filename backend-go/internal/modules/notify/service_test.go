@@ -44,8 +44,8 @@ func (r *notifyListCaptureRepo) List(_ context.Context, userID string, req Notif
 	return r.list, r.listErr
 }
 
-func (r *notifyListCaptureRepo) UnreadCount(context.Context, string) (UnreadCountResult, error) {
-	return UnreadCountResult{}, nil
+func (r *notifyListCaptureRepo) UnreadCount(context.Context, string) (UnreadSummaryResult, error) {
+	return UnreadSummaryResult{}, nil
 }
 
 func (r *notifyListCaptureRepo) MarkAsRead(context.Context, string, []string) error { return nil }

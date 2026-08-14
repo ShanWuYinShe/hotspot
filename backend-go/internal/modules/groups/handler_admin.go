@@ -7,7 +7,7 @@ import (
 	"hotspot/backend-go/internal/platform/httpx"
 )
 
-// GetSettings handles POST /api/v1/groups/admin/get_settings（守卫子树）。
+// GetSettings handles POST /api/v1/groups/admin/settings（守卫子树）。
 func (h *Handler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	var req GetGroupSettingsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {

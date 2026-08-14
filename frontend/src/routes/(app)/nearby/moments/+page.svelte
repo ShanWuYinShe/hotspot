@@ -65,7 +65,7 @@ referencePoint = loc?.point ?? null;
 							tag: m.tags?.[0] ?? '',
 							content: m.description ?? '',
 							image: m.images?.[0]?.url ?? '',
-							likes: m.likes_count ?? 0,
+							likes: (m.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
 							comments: m.comments_count ?? 0,
 							time: formatDateTime(m.created_at),
 							liked: Boolean(mine),

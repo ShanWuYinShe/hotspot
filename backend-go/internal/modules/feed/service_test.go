@@ -77,7 +77,7 @@ func TestServiceNearbyClampsRadiusAndLimit(t *testing.T) {
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "u1"})
 	radius := 9999
 
-	_, err := service.Nearby(ctx, GetFeedNearbyRequest{Radius: &radius, ReferencePoint: &GeoPoint{Latitude: 1, Longitude: 2}, Pagination: &PaginationParams{Limit: 999}})
+	_, err := service.Nearby(ctx, NearbyMomentsRequest{Radius: &radius, ReferencePoint: &GeoPoint{Latitude: 1, Longitude: 2}, Pagination: &PaginationParams{Limit: 999}})
 	if err != nil {
 		t.Fatalf("Nearby returned error: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestServiceNearbyFallsBackWhenMissingReferencePoint(t *testing.T) {
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "u1"})
 
 	// reference_point 可选:缺失时按回退链解析(用户位置 → default_location),不再报错
-	_, err := service.Nearby(ctx, GetFeedNearbyRequest{Radius: nil, ReferencePoint: nil, Pagination: nil})
+	_, err := service.Nearby(ctx, NearbyMomentsRequest{Radius: nil, ReferencePoint: nil, Pagination: nil})
 	if err != nil {
 		t.Fatalf("missing reference_point should fall back to default, got %v", err)
 	}
@@ -104,7 +104,7 @@ func TestServiceNearbyRejectsInvalidReferencePoint(t *testing.T) {
 	service := NewServiceWithRepo(&stubRepository{})
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "u1"})
 
-	_, err := service.Nearby(ctx, GetFeedNearbyRequest{ReferencePoint: &GeoPoint{Latitude: 999, Longitude: 2}})
+	_, err := service.Nearby(ctx, NearbyMomentsRequest{ReferencePoint: &GeoPoint{Latitude: 999, Longitude: 2}})
 	if !errors.Is(err, ErrInvalidFeedRequest) {
 		t.Fatalf("expected invalid request for invalid reference_point, got %v", err)
 	}

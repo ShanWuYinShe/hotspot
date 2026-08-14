@@ -63,7 +63,7 @@ type PrivateChatItem struct {
 	CanMessage     bool    `json:"can_message"`
 	// blocked_reason 恒定 nullable：can_message=false 时返回 blocked_by_user /
 	// privacy_setting / stranger_quota_exceeded，否则为 null
-	BlockedReason *httpx.ForbiddenReason `json:"blocked_reason"`
+	ForbiddenReason *httpx.ForbiddenReason `json:"forbidden_reason"`
 }
 
 type PaginatedPrivateChats struct {

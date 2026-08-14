@@ -81,7 +81,7 @@ func (s *Service) Following(ctx context.Context, req GetFeedFollowingRequest) (P
 	return items, nil
 }
 
-func (s *Service) Nearby(ctx context.Context, req GetFeedNearbyRequest) (PaginatedMoments, error) {
+func (s *Service) Nearby(ctx context.Context, req NearbyMomentsRequest) (PaginatedMoments, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
 	if !ok || principal.UserID == "" {
 		return PaginatedMoments{}, ErrInvalidFeedRequest

@@ -21,7 +21,7 @@ type FeatureSwitches = systemmodule.FeatureSwitches
 type AppLimits = systemmodule.AppLimits
 
 type ContactInfo = systemmodule.ContactInfo
-type AnnounceLevel = systemmodule.AnnounceLevel
+type AnnounceSeverity = systemmodule.AnnounceSeverity
 
 const (
 	AnnounceLevelInfo    = systemmodule.AnnounceLevelInfo
@@ -46,7 +46,7 @@ type AdminPermissionItem struct {
 	Description string `json:"description"`
 }
 
-type AdminPermissionList struct {
+type AdminPermissionDictionary struct {
 	Items []AdminPermissionItem `json:"items"`
 }
 
@@ -63,6 +63,7 @@ type AdminRoleList struct {
 
 type AdminOperatorItem struct {
 	User        UserInfo         `json:"user"`
+	GrantedAt   string           `json:"granted_at"` // 最近一次授权时间（排序主序，RFC3339）
 	Permissions []string         `json:"permissions"`
 	Roles       []AdminRoleBasic `json:"roles"`
 }
@@ -98,9 +99,9 @@ type AdminRbacAdminsListRequest struct {
 }
 
 type AdminRbacGrantAdminRequest struct {
-	UserID              string   `json:"user_id"`
-	GrantAllPermissions bool     `json:"grant_all_permissions,omitempty"`
-	RoleIDs             []string `json:"role_ids,omitempty"`
+	UserID             string   `json:"user_id"`
+	AwardAllPermissions bool    `json:"award_all_permissions,omitempty"`
+	RoleIDs            []string `json:"role_ids,omitempty"`
 }
 
 type AdminRbacRevokeAdminRequest struct {
@@ -244,7 +245,7 @@ type AdminReportListRequest struct {
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
-type AdminReportHandleRequest struct {
+type JudgeAdminReportRequest struct {
 	ReportID        string       `json:"report_id"`
 	Action          ReportAction `json:"action"`
 	Note            string       `json:"note,omitempty"`
@@ -265,7 +266,7 @@ const (
 	AuditActionRoleUpdate         AuditAction = "role.update"
 	AuditActionRoleDelete         AuditAction = "role.delete"
 	AuditActionRoleSetPermissions AuditAction = "role.set_permissions"
-	AuditActionAdminGrant         AuditAction = "admin.grant"
+	AuditActionAdminAward         AuditAction = "admin.award"
 	AuditActionAdminRevoke        AuditAction = "admin.revoke"
 	AuditActionTagDelete          AuditAction = "tag.delete"
 	AuditActionConfigUpdate       AuditAction = "config.update"
@@ -338,7 +339,7 @@ type AdminRateLimitConfig struct {
 	GlobalPerHour            int `json:"global_per_hour"`
 	UserPerHour              int `json:"user_per_hour"`
 	AuthRegisterPer10Minutes int `json:"auth_register_per_10minutes"`
-	AuthLoginPer10Minutes    int `json:"auth_login_per_10minutes"`
+	AuthSigninPer10Minutes    int `json:"auth_signin_per_10minutes"`
 	AuthGuestPer10Minutes    int `json:"auth_guest_per_10minutes"`
 	AuthRefreshPer10Minutes  int `json:"auth_refresh_per_10minutes"`
 	AuthResetPer10Minutes    int `json:"auth_reset_per_10minutes"`
@@ -394,7 +395,7 @@ type UpdateDefaultsPayload struct {
 
 type PartialFeatureSwitches struct {
 	EnablePublicRegistration *bool `json:"enable_public_registration,omitempty"`
-	EnableGuestLogin         *bool `json:"enable_guest_login,omitempty"`
+	EnableGuestRegister         *bool `json:"enable_guest_login,omitempty"`
 	EnableMoments            *bool `json:"enable_moments,omitempty"`
 	EnableNearbyPeople       *bool `json:"enable_nearby_people,omitempty"`
 }
@@ -431,7 +432,7 @@ type PartialRateLimitConfig struct {
 	GlobalPerHour            *int `json:"global_per_hour,omitempty"`
 	UserPerHour              *int `json:"user_per_hour,omitempty"`
 	AuthRegisterPer10Minutes *int `json:"auth_register_per_10minutes,omitempty"`
-	AuthLoginPer10Minutes    *int `json:"auth_login_per_10minutes,omitempty"`
+	AuthSigninPer10Minutes    *int `json:"auth_signin_per_10minutes,omitempty"`
 	AuthGuestPer10Minutes    *int `json:"auth_guest_per_10minutes,omitempty"`
 	AuthRefreshPer10Minutes  *int `json:"auth_refresh_per_10minutes,omitempty"`
 	AuthResetPer10Minutes    *int `json:"auth_reset_per_10minutes,omitempty"`
@@ -497,7 +498,7 @@ type AdminAnnouncementItem struct {
 	AnnouncementID string        `json:"announcement_id"`
 	Title          string        `json:"title"`
 	Content        string        `json:"content"`
-	Severity       AnnounceLevel `json:"severity"`
+	Severity       AnnounceSeverity `json:"severity"`
 	ActionURL      string        `json:"action_url,omitempty"`
 	CreatedAt      string        `json:"created_at"`
 	CreatedBy      UserInfo      `json:"created_by"`
@@ -512,14 +513,14 @@ type PaginatedAdminAnnouncements struct {
 }
 
 type ListAdminAnnouncementsRequest struct {
-	Severity   AnnounceLevel     `json:"severity,omitempty"`
+	Severity   AnnounceSeverity     `json:"severity,omitempty"`
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
 type CreateAnnouncementRequest struct {
 	Title     string        `json:"title"`
 	Content   string        `json:"content"`
-	Severity  AnnounceLevel `json:"severity"`
+	Severity  AnnounceSeverity `json:"severity"`
 	ActionURL string        `json:"action_url,omitempty"`
 	SendPush  bool          `json:"send_push,omitempty"`
 }
@@ -532,7 +533,7 @@ type UpdateAnnouncementRequest struct {
 	AnnouncementID string         `json:"announcement_id"`
 	Title          *string        `json:"title,omitempty"`
 	Content        *string        `json:"content,omitempty"`
-	Severity       *AnnounceLevel `json:"severity,omitempty"`
+	Severity       *AnnounceSeverity `json:"severity,omitempty"`
 	ActionURL      *string        `json:"action_url,omitempty"`
 }
 

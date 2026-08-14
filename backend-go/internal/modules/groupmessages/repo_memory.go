@@ -6,6 +6,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type InMemoryRepository struct {
@@ -46,7 +48,7 @@ func (r *InMemoryRepository) GetGroupName(_ context.Context, groupID string) (st
 	name, ok := r.groupNames[groupID]
 	return name, ok, nil
 }
-func (r *InMemoryRepository) Send(_ context.Context, req SendGroupMessageRequest) (MessageSent, error) {
+func (r *InMemoryRepository) Send(_ context.Context, req SendGroupMessageRequest) (MessageSentResult, error) {
 	now := time.Now().UTC()
 	r.seq++
 	msg := GroupMessageItem{
@@ -64,7 +66,7 @@ func (r *InMemoryRepository) Send(_ context.Context, req SendGroupMessageRequest
 	}
 	r.members[req.GroupID][req.SenderUserID] = true
 	r.mu.Unlock()
-	return MessageSent{MessageID: msg.MessageID, SentAt: msg.SentAt}, nil
+	return MessageSentResult{MessageID: msg.MessageID, SentAt: msg.SentAt}, nil
 }
 func (r *InMemoryRepository) History(_ context.Context, groupID string, pagination *PaginationParams) (PaginatedGroupMessages, error) {
 	r.mu.RLock()
@@ -288,19 +290,20 @@ func (r *InMemoryRepository) markMessageRead(groupID, messageID string) {
 	r.readCount[groupID][messageID]++
 }
 
-func (r *InMemoryRepository) GetMessageForReply(_ context.Context, messageID string) (map[string]any, bool, error) {
+func (r *InMemoryRepository) GetMessageForReply(_ context.Context, messageID string) (*MessageBrief, bool, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	_, _, msg, found := r.findMessage(messageID)
 	if !found {
 		return nil, false, nil
 	}
-	return map[string]any{
-		"message_id": messageID,
-		"user_id":    msg.SenderUserID,
-		"nickname":   msg.SenderUserID,
-		"content":    msg.Content,
-		"share_code": "",
+	return &MessageBrief{
+		MessageID: messageID,
+		Type:      msg.Type,
+		Content:   msg.Content,
+		ShareCode: msg.ShareCode,
+		Sender:    types.UserInfo{UserID: msg.SenderUserID, Nickname: msg.SenderUserID},
+		SentAt:    msg.SentAt,
 	}, true, nil
 }
 

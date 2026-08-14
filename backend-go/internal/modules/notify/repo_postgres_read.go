@@ -58,28 +58,28 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req Notify
 	return page, nil
 }
 
-func (r *PostgresRepository) UnreadCount(ctx context.Context, userID string) (UnreadCountResult, error) {
+func (r *PostgresRepository) UnreadCount(ctx context.Context, userID string) (UnreadSummaryResult, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return UnreadCountResult{}, persistence.ErrNotImplemented
+		return UnreadSummaryResult{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return UnreadCountResult{}, persistence.ErrNotImplemented
+		return UnreadSummaryResult{}, persistence.ErrNotImplemented
 	}
 	rows, err := queryable.Query(ctx, queryUnreadNotifyCounts, userID)
 	if err != nil {
-		return UnreadCountResult{}, err
+		return UnreadSummaryResult{}, err
 	}
 	defer rows.Close()
-	result := UnreadCountResult{ByType: UnreadCountByType{}}
+	result := UnreadSummaryResult{ByType: UnreadCountByType{}}
 	for rows.Next() {
 		var notifyType, countText string
 		if err := rows.Scan(&notifyType, &countText); err != nil {
-			return UnreadCountResult{}, err
+			return UnreadSummaryResult{}, err
 		}
 		count := 0
 		if _, err := fmt.Sscanf(countText, "%d", &count); err != nil {
-			return UnreadCountResult{}, err
+			return UnreadSummaryResult{}, err
 		}
 		result.Total += count
 		switch bucket(notifyType) {
@@ -98,7 +98,7 @@ func (r *PostgresRepository) UnreadCount(ctx context.Context, userID string) (Un
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return UnreadCountResult{}, err
+		return UnreadSummaryResult{}, err
 	}
 	return result, nil
 }

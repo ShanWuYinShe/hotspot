@@ -129,7 +129,7 @@ func TestMemoryMemberAndReplySemantics(t *testing.T) {
 		t.Fatalf("send2: %v", err)
 	}
 	reply, found, err := repo.GetMessageForReply(ctx, sent.MessageID)
-	if err != nil || !found || reply["content"] != "reply me" {
+	if err != nil || !found || reply.Content != "reply me" {
 		t.Fatalf("reply lookup: %#v found=%v err=%v", reply, found, err)
 	}
 	if _, found, _ := repo.GetMediaForMessage(ctx, "m1"); found {

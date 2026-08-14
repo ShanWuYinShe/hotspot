@@ -188,7 +188,7 @@ func TestHandlerListMissingTargetReturnsNotFound(t *testing.T) {
 	if err := decodeReactionResp(rr, &resp); err != nil {
 		t.Fatal(err)
 	}
-	// 契约（spec reaction.md → reactions/list 目标可见性）：目标不存在/不可见统一 10300
+	// 契约（spec reaction.md → reactions/fetch 目标可见性）：目标不存在/不可见统一 10300
 	if resp.Code != httpx.CodeNotFound {
 		t.Fatalf("expected httpx.CodeNotFound for missing target, got %#v", resp)
 	}

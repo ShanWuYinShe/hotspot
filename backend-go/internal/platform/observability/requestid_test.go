@@ -14,7 +14,7 @@ func TestRequestIDMiddlewareGeneratesHeader(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/system/health", http.NoBody)
+	req := httptest.NewRequest(http.MethodPost, "/public/v1/system/health", http.NoBody)
 	rr := httptest.NewRecorder()
 
 	handler.ServeHTTP(rr, req)
@@ -29,7 +29,7 @@ func TestRequestIDMiddlewarePreservesValidHeader(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/system/health", http.NoBody)
+	req := httptest.NewRequest(http.MethodPost, "/public/v1/system/health", http.NoBody)
 	req.Header.Set("X-Request-Id", "1234567890abcdef")
 	rr := httptest.NewRecorder()
 

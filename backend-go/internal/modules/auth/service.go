@@ -165,18 +165,18 @@ func NewServiceWithSource(ctx context.Context, auth *platformauth.Service, repo 
 
 // GetStatus 检查认证状态（spec auth.md → get_status，optional）。
 // 未通过认证时返回 is_valid=false，user_id/expires_at 为 null（恒定 nullable）。
-func (s *Service) GetStatus(ctx context.Context) AuthStatus {
+func (s *Service) GetStatus(ctx context.Context) SessionStatus {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
 	if !ok || principal.UserID == "" {
-		return AuthStatus{IsValid: false}
+		return SessionStatus{IsValid: false}
 	}
 	userID := principal.UserID
 	expiresAt, ok := platformauth.AccessExpiryFromContext(ctx)
 	if !ok {
-		return AuthStatus{IsValid: true, UserID: &userID}
+		return SessionStatus{IsValid: true, UserID: &userID}
 	}
 	exp := expiresAt.UTC().Format(time.RFC3339)
-	return AuthStatus{IsValid: true, UserID: &userID, ExpiresAt: &exp}
+	return SessionStatus{IsValid: true, UserID: &userID, ExpiresAt: &exp}
 }
 
 func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
@@ -454,13 +454,13 @@ func (s *Service) ChangePassword(ctx context.Context, req ChangePasswordRequest)
 	return nil
 }
 
-func (s *Service) RevokeAll(ctx context.Context) RevokeAllResult {
+func (s *Service) RevokeAll(ctx context.Context) RevokeOtherSessionsResult {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
 	if !ok {
-		return RevokeAllResult{}
+		return RevokeOtherSessionsResult{}
 	}
 	s.closeOtherSessions(ctx, principal.UserID, principal.SessionID, "revoked_by_user")
-	return RevokeAllResult{RevokedCount: s.auth.RevokeOtherSessions(ctx, principal.UserID, principal.SessionID)}
+	return RevokeOtherSessionsResult{RevokedCount: s.auth.RevokeOtherSessions(ctx, principal.UserID, principal.SessionID)}
 }
 
 func (s *Service) profileDefaults(ctx context.Context) ProfileDefaults {

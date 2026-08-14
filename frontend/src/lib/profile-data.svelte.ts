@@ -41,7 +41,7 @@ function mapGalleryMoment(m: MomentItem): GalleryMoment {
 		id: m.moment_id,
 		img: m.images?.[0]?.url ?? '',
 		title: m.description ?? '',
-		likes: m.likes_count ?? 0,
+		likes: (m.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
 		comments: m.comments_count ?? 0
 	};
 }
@@ -205,7 +205,7 @@ export interface MappedGroup {
 }
 
 /**
- * Map a spec GroupItem (`{ group: GroupInfo, description, my_state, ... }`) to the
+ * Map a spec GroupItem (`{ group: GroupInfo, description, viewer_state, ... }`) to the
  * flat shape SectionGroups/MyGroupCard consumes.
  */
 function mapGroup(item: GroupItem): MappedGroup {

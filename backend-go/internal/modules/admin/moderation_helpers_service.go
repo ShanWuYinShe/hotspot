@@ -91,7 +91,7 @@ func toAdminAnnouncementItem(item systemmodule.AnnouncementRecord) AdminAnnounce
 	return resp
 }
 
-func validAnnounceLevel(severity AnnounceLevel) bool {
+func validAnnounceLevel(severity AnnounceSeverity) bool {
 	switch severity {
 	case AnnounceLevelInfo, AnnounceLevelWarning, AnnounceLevelError:
 		return true

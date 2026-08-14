@@ -25,11 +25,19 @@ func NewModule(factory *persistence.Factory, source appconfig.Source) *Module {
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/search", func(searchRouter chi.Router) {
 		searchRouter.Group(func(group chi.Router) {
-			group.Use(platformauth.OptionalAuth)
+			group.Use(platformauth.RequiredAuth)
 			group.Use(ratelimit.Middleware)
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
 			group.Post("/suggest", m.handler.Suggest)
 		})
+	})
+}
+
+// MountPublic mounts the anonymous search/suggest on the /public/v1 node
+// (spec api_spec_public.md), rate limited per IP.
+func (m *Module) MountPublic(r chi.Router) {
+	r.Route("/search", func(searchRouter chi.Router) {
+		searchRouter.Post("/suggest", m.handler.Suggest)
 	})
 }

@@ -48,7 +48,7 @@ services:
     # 覆盖 base healthcheck：air 首次全量编译较慢，放宽启动窗口
     # 契约要求空 Request 也必须传 JSON 对象；unhealthy 时 HTTP 仍为 200（code=10600），必须校验响应内容
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf -X POST -H 'Content-Type: application/json' -d '{}' http://localhost:8081/api/v1/system/health | grep -q '\"code\":0' || exit 1"]
+      test: ["CMD-SHELL", "curl -sf -X POST -H 'Content-Type: application/json' -d '{}' http://localhost:8081/public/v1/system/health | grep -q '\"code\":0' || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 60
@@ -104,7 +104,7 @@ services:
       - "127.0.0.1:8082:8081"
     healthcheck:
       # 契约要求空 Request 也必须传 JSON 对象；unhealthy 时 HTTP 仍为 200（code=10600），必须校验响应内容
-      test: ["CMD-SHELL", "curl -sf -X POST -H 'Content-Type: application/json' -d '{}' http://localhost:8081/api/v1/system/health | grep -q '\"code\":0' || exit 1"]
+      test: ["CMD-SHELL", "curl -sf -X POST -H 'Content-Type: application/json' -d '{}' http://localhost:8081/public/v1/system/health | grep -q '\"code\":0' || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 30

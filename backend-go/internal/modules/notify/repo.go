@@ -10,7 +10,7 @@ type Repository interface {
 	Append(context.Context, string, NotifyItem) error
 	AppendMany(context.Context, []string, NotifyItem) error
 	List(context.Context, string, NotifyListRequest) (PaginatedNotify, error)
-	UnreadCount(context.Context, string) (UnreadCountResult, error)
+	UnreadCount(context.Context, string) (UnreadSummaryResult, error)
 	MarkAsRead(context.Context, string, []string) error
 	MarkAllRead(context.Context, string) error
 }

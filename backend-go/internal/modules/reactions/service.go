@@ -156,7 +156,7 @@ func (s *Service) List(ctx context.Context, req ListReactionsRequest) (Paginated
 	if !ValidReactTarget(req.TargetType) {
 		return PaginatedReactions{}, ErrReactionTargetNotFound
 	}
-	// 目标可见性（spec reaction.md → reactions/list）：存在但调用方不可见按不存在处理
+	// 目标可见性（spec reaction.md → reactions/fetch）：存在但调用方不可见按不存在处理
 	if _, targetExists, err := s.resolveTarget(ctx, req.TargetType, req.TargetID); err != nil {
 		return PaginatedReactions{}, err
 	} else if !targetExists {
@@ -203,7 +203,7 @@ func viewerUserID(ctx context.Context) string {
 }
 
 // ListReactedTargets returns the target_ids a user reacted to, for one kind.
-// Backs users/list_reacted_moments (target_type='moment').
+// Backs users/fetch_reacted_moments (target_type='moment').
 func (s *Service) ListReactedTargets(ctx context.Context, targetType ReactTarget, limit int, cursor string) ([]string, string, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	return s.repo.ListReactedTargets(ctx, targetType, principal.UserID, limit, cursor)

@@ -5,7 +5,7 @@
  * - temp: 临时用户
  * - normal: 注册用户
  *
- * 管理员身份不通过 user_type 体现，需通过 admin/rbac/get_me 获取。
+ * 管理员身份不通过 user_type 体现，需通过 admin/rbac/me 获取。
  */
 
 /**

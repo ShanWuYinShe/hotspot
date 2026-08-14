@@ -8,7 +8,7 @@
 import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement, listSentGroupInvites, revokeSentGroupInvite, listBannedGroupMembers, unbanGroupMember, updateGroup, listGroupApplications, approveGroupApplication, rejectGroupApplication, transferGroupOwnership, dismissGroup as dismissGroupApi } from '@/api';
 import { wsClient } from '@/lib/ws/client';
 import { formatDistance, formatDateTime } from '@/lib/utils';
-import type { GroupRole, GroupSentInviteItem, BannedMemberItem, GroupItem, UpdateGroupRequest, GroupApplicationItem } from '@/api/types';
+import type { GroupRole, GroupSentInviteItem, AdminBannedMemberItem, GroupItem, UpdateGroupRequest, GroupApplicationItem } from '@/api/types';
 
 export interface GroupDetail {
 	name: string;
@@ -57,7 +57,7 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 	/** 已发邀请（owner/admin；API 原始项，页面直读字段） */
 	let sentInvites = $state<GroupSentInviteItem[]>([]);
 	/** 封禁名单（owner/admin；API 原始项） */
-	let bannedMembers = $state<BannedMemberItem[]>([]);
+	let bannedMembers = $state<AdminBannedMemberItem[]>([]);
 	/** 入群申请（owner/admin 工作台；默认仅 pending） */
 	let applications = $state<GroupApplicationItem[]>([]);
 	let joined = $state(false);
@@ -188,7 +188,7 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		loading = false;
 	}
 
-	// 加入/退出：乐观更新 + 失败回滚（spec: groups/join、groups/leave）。
+	// 加入/退出：乐观更新 + 失败回滚（spec: groups/enter、groups/exit）。
 	// join 对需审核群组返回 pending_approval——UI 仍标记 joined 简化（真实后端
 	// 以 my_state.is_joined 为准，审核通过前详情不会把它标为已加入）。
 	function toggleJoin() {

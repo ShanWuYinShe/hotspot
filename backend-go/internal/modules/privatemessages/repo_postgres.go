@@ -34,17 +34,17 @@ func (r *PostgresRepository) txQueryable(ctx context.Context) (persistence.Query
 	return q, ok
 }
 
-func (r *PostgresRepository) Send(ctx context.Context, senderID, targetUserID string, req SendPrivateMessageRequest) (MessageSent, error) {
+func (r *PostgresRepository) Send(ctx context.Context, senderID, targetUserID string, req SendPrivateMessageRequest) (MessageSentResult, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return MessageSent{}, persistence.ErrNotImplemented
+		return MessageSentResult{}, persistence.ErrNotImplemented
 	}
 	if _, ok := r.factory.DB.(persistence.QueryableDB); !ok {
-		return MessageSent{}, persistence.ErrNotImplemented
+		return MessageSentResult{}, persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
 	messageID, err := idgen.WithPrefix("pm_")
 	if err != nil {
-		return MessageSent{}, err
+		return MessageSentResult{}, err
 	}
 	chatKey := conversationKey(senderID, targetUserID)
 	userAID, userBID := orderedUsers(senderID, targetUserID)
@@ -52,7 +52,7 @@ func (r *PostgresRepository) Send(ctx context.Context, senderID, targetUserID st
 	// failure of the second statement cannot leave an empty conversation row
 	// behind. The reply-to validation read runs inside the tx too (it sees the
 	// freshly upserted chat and is consistent with it).
-	return MessageSent{MessageID: messageID, SentAt: now.Format(time.RFC3339Nano)}, persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+	return MessageSentResult{MessageID: messageID, SentAt: now.Format(time.RFC3339Nano)}, persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
 		queryable, ok := r.txQueryable(txCtx)
 		if !ok {
 			return persistence.ErrNotImplemented

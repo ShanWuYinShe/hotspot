@@ -52,7 +52,7 @@ const WS_PATH = '/ws/v1';
 /** 服务端主动断开且不应自动重连的 close code（契约级）。 */
 const NO_RECONNECT_CODES = new Set([1000, 1008, 4001]);
 
-/** 通知类事件 → ws:notify（payload 携带 notify_id，与 notify/list 同主键）。 */
+/** 通知类事件 → ws:notify（payload 携带 notify_id，与 notify/fetch 同主键）。 */
 const NOTIFY_EVENT_TYPES = new Set<ServerEventType>([
   'NewFollower',
   'MutualFollow',

@@ -48,7 +48,9 @@ type MomentItem struct {
 	Tags          []string      `json:"tags,omitempty"`
 	Mentions      []string      `json:"mentions,omitempty"`
 	CreatedAt     string        `json:"created_at"`
-	LikesCount    int           `json:"likes_count"`
+	// LikesCount 兼容保留（reactions 聚合之前的历史计数，契约已删 likes_count），
+	// 仅供内部/测试使用，不对外序列化。
+	LikesCount    int           `json:"-"`
 	CommentsCount int           `json:"comments_count"`
 	SharesCount   int           `json:"shares_count"`
 	User          UserInfo      `json:"user"`
@@ -67,7 +69,7 @@ type MomentItem struct {
 
 // OwnerMomentItem 拥有者视角扩展（spec moment.md → OwnerMomentItem）：
 // = MomentItem + privacy_level 必填。仅拥有者端点返回
-// （moments/list_created、moments/create、moments/update）。
+// （moments/fetch_created、moments/create、moments/update）。
 type OwnerMomentItem struct {
 	MomentItem
 	PrivacyLevel string `json:"privacy_level"`
@@ -92,7 +94,7 @@ type PaginatedMoments struct {
 	NextCursor string       `json:"next_cursor"`
 }
 
-// PaginatedOwnerMoments 拥有者瞬间分页容器（spec moment.md → moments/list_created）。
+// PaginatedOwnerMoments 拥有者瞬间分页容器（spec moment.md → moments/fetch_created）。
 type PaginatedOwnerMoments struct {
 	Items      []OwnerMomentItem `json:"items"`
 	NextCursor string            `json:"next_cursor"`

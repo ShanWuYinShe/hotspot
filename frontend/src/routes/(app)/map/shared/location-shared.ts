@@ -157,7 +157,7 @@ function normalizeCanvas(res: { code: number; data?: unknown }): MapCanvasResult
 }
 
 /**
- * 拉取当前视口地图数据（spec: POST /api/v1/map/canvas）。
+ * 拉取当前视口地图数据（spec: POST /public/v1/map/canvas）。
  * - 三种类型全选：data_type 省略（服务端按 all 处理），单次请求
  * - 部分选择：spec 的 data_type 为单值，按选中类型分别请求后合并
  */

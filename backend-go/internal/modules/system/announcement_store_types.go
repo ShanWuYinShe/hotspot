@@ -12,7 +12,7 @@ type AnnouncementRecord struct {
 	AnnouncementID string
 	Title          string
 	Content        string
-	Severity       AnnounceLevel
+	Severity       AnnounceSeverity
 	ActionURL      string
 	CreatedAt      time.Time
 	CreatedBy      AnnouncementActor
@@ -46,7 +46,7 @@ type AnnouncementCursor struct {
 }
 
 type AnnouncementSearchFilter struct {
-	Severity AnnounceLevel
+	Severity AnnounceSeverity
 	Limit    int
 	Cursor   *AnnouncementCursor
 }
@@ -64,7 +64,7 @@ type AnnouncementCreateInput struct {
 	Actor     AnnouncementActor
 	Title     string
 	Content   string
-	Severity  AnnounceLevel
+	Severity  AnnounceSeverity
 	ActionURL string
 	SendPush  bool
 }
@@ -73,6 +73,6 @@ type AnnouncementUpdateInput struct {
 	AnnouncementID string
 	Title          *string
 	Content        *string
-	Severity       *AnnounceLevel
+	Severity       *AnnounceSeverity
 	ActionURL      *string
 }

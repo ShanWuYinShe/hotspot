@@ -35,7 +35,7 @@ func NewObjectStorageProvider(cfg config.Config) *ObjectStorageProvider {
 	}
 }
 
-func (p *ObjectStorageProvider) Presign(ctx context.Context, req PresignUploadRequest, ownerUserID string) (PresignedUpload, error) {
+func (p *ObjectStorageProvider) Presign(ctx context.Context, req PresignFileInput, ownerUserID string) (PresignedUpload, error) {
 	uploadID := fmt.Sprintf("upload_%d", p.now().UTC().UnixNano())
 	storageKey := storageKeyFor(ownerUserID, uploadID, req.FileName)
 	uploadURL, headers, expiresAt, err := p.presignPutObjectURL(ctx, storageKey, req.MimeType, req.MD5)

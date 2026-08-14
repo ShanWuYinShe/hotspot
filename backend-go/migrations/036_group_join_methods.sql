@@ -2,9 +2,9 @@
 -- join_method 从 'open' | 'approval' | 'invite_only' 拆为：
 --   准入方式 join_method：'direct' | 'password' | 'invite_only'
 --   + 审核开关 requires_approval（审核通过后才算真正加入）
--- 另新增 next_activity（下次活动预告，群主通过 update 设置）
+-- 另新增 next_activity_at（下次活动预告，群主通过 update 设置；契约改名对齐列名）
 ALTER TABLE groups ADD COLUMN IF NOT EXISTS requires_approval BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE groups ADD COLUMN IF NOT EXISTS next_activity TEXT;
+ALTER TABLE groups ADD COLUMN IF NOT EXISTS next_activity_at TEXT;
 
 -- 存量迁移：
 --   'open' + has_password=true  → 'password'（需密码才能加入）

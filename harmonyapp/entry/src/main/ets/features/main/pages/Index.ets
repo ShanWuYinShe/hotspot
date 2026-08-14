@@ -369,7 +369,7 @@ struct Index {
     try {
       hilog.info(DOMAIN_NUMBER, TAG, '🔑 冷启动：验证 token 有效性');
       const statusResp = await ApiClient.checkAuthStatus();
-      if (statusResp.code !== 0 || !statusResp.data?.is_valid) {
+      if (statusResp.code !== 0) {
         hilog.warn(DOMAIN_NUMBER, TAG, '冷启动：token 无效，清除登录态');
         this.stateManager.updateUser(null);
         await AuthAccountManager.clearAllAccounts();

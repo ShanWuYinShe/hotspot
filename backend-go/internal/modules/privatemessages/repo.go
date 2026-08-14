@@ -24,7 +24,7 @@ type MessageEventMeta struct {
 }
 
 type Repository interface {
-	Send(context.Context, string, string, SendPrivateMessageRequest) (MessageSent, error)
+	Send(context.Context, string, string, SendPrivateMessageRequest) (MessageSentResult, error)
 	History(context.Context, string, ListPrivateMessagesRequest) (PaginatedMessages, error)
 	Recent(context.Context, string, string, int, *time.Time) (PaginatedMessages, error)
 	Last(context.Context, string, string, *time.Time) (*PrivateMessageItem, error)

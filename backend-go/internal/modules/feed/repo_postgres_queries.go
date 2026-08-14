@@ -68,7 +68,7 @@ SELECT g.group_id,
        g.join_method,
        g.requires_approval,
        g.tags,
-       g.next_activity,
+       g.next_activity_at,
        g.is_searchable,
        g.max_members,
        g.created_at,
@@ -97,7 +97,7 @@ WHERE g.deleted_at IS NULL
   AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
               WHERE g.s2_cell_id BETWEEN t.lo AND t.hi)
 GROUP BY g.group_id, g.name, g.avatar_url, g.description, g.has_password, g.location_name, g.latitude, g.longitude,
-         g.join_method, g.requires_approval, g.tags, g.next_activity, g.is_searchable, g.max_members, g.created_at, g.owner_id,
+         g.join_method, g.requires_approval, g.tags, g.next_activity_at, g.is_searchable, g.max_members, g.created_at, g.owner_id,
          viewer_gm2.role, viewer_gm2.joined_at, viewer_gm2.muted_until, viewer_gm2.is_pinned, grs.last_read_sent_at`
 
 	queryFeedMomentsFollowing = `

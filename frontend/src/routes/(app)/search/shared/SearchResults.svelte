@@ -25,7 +25,7 @@
 		images?: { url?: string }[];
 		user?: SearchResultUser;
 		tag?: string;
-		likes_count?: number;
+		reactions?: { count: number }[];
 	}
 
 	export interface SearchResultsData {
@@ -138,7 +138,7 @@
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm text-text-primary">{moment.description ?? '无标题'}</span>
 									<span class="mt-0.5 block text-xs text-text-secondary">
-										{moment.user?.nickname ?? '匿名'}{#if moment.likes_count} · {moment.likes_count} 赞{/if}
+										{moment.user?.nickname ?? '匿名'}{#if (moment.reactions ?? []).reduce((sum, r) => sum + r.count, 0)} · {(moment.reactions ?? []).reduce((sum, r) => sum + r.count, 0)} 赞{/if}
 									</span>
 								</span>
 								<ArrowUpRight class="size-4 text-text-secondary" />

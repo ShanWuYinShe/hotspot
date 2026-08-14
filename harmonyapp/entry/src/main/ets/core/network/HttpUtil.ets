@@ -36,7 +36,7 @@ import { MockInterceptor } from '../mock/MockInterceptor';
  * Spec MUST 幂等端点列表
  * 这些端点的每次请求必须携带 Idempotency-Key，缺少则会被后端拒绝
  * 对齐 spec/api_spec_base.md「需要实现幂等的接口」（自然去重接口无需 key，
- * 如 reports/create、groups/join、groups/admin/invites/create、reset/change_password、
+ * 如 reports/create、groups/enter、groups/admin/invites/create、reset/change_password、
  * media complete_upload 等均不在列表内）。
  */
 const MUST_IDEMPOTENT_ENDPOINTS: string[] = [

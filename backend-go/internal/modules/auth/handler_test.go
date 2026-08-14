@@ -192,7 +192,7 @@ func TestGetStatusReturnsFalseWithoutPrincipal(t *testing.T) {
 
 	var resp struct {
 		Code httpx.Code `json:"code"`
-		Data AuthStatus `json:"data"`
+		Data SessionStatus `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -218,7 +218,7 @@ func TestGetStatusReturnsTrueWithPrincipal(t *testing.T) {
 
 	var resp struct {
 		Code httpx.Code `json:"code"`
-		Data AuthStatus `json:"data"`
+		Data SessionStatus `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -743,7 +743,7 @@ func TestRegisterWebResponseHasNoTokenInBody(t *testing.T) {
 	}
 }
 
-// Task 6: auth/login — error code httpx.CodeUnauthorized for wrong password and nonexistent user
+// Task 6: auth/signin — error code httpx.CodeUnauthorized for wrong password and nonexistent user
 
 func TestLoginReturns10100OnWrongPassword(t *testing.T) {
 	handler := newTestHandler()
@@ -772,7 +772,7 @@ func TestLoginReturns10100OnNonexistentUser(t *testing.T) {
 	}
 }
 
-// Task 7: auth/logout — Cookie Max-Age=0
+// Task 7: auth/signout — Cookie Max-Age=0
 
 func TestLogoutClearsCookiesWithMaxAgeZero(t *testing.T) {
 	handler := newTestHandler()
@@ -876,7 +876,7 @@ func TestHandlerRevokeAllSessionsReturnsSuccess(t *testing.T) {
 
 	var resp struct {
 		Code httpx.Code      `json:"code"`
-		Data RevokeAllResult `json:"data"`
+		Data RevokeOtherSessionsResult `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -892,7 +892,7 @@ func TestHandlerRevokeAllSessionsReturnsSuccess(t *testing.T) {
 func TestHandlerRevokeAllSessionsReturns10600OnError(t *testing.T) {
 	handler := newTestHandler()
 	// RevokeAllSessions without a principal context returns an empty result (no httpx.CodeInternalUnavailable path).
-	// The handler delegates to service.RevokeAll which returns RevokeAllResult{} when no principal.
+	// The handler delegates to service.RevokeAll which returns RevokeOtherSessionsResult{} when no principal.
 	// Verify that calling without principal returns success with zero revoked_count.
 	req := httptest.NewRequest(http.MethodPost, "/revoke_session_all", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
@@ -900,7 +900,7 @@ func TestHandlerRevokeAllSessionsReturns10600OnError(t *testing.T) {
 
 	var resp struct {
 		Code httpx.Code      `json:"code"`
-		Data RevokeAllResult `json:"data"`
+		Data RevokeOtherSessionsResult `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)

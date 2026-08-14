@@ -33,8 +33,8 @@ func (r *notifyErrorRepo) AppendMany(context.Context, []string, NotifyItem) erro
 func (r *notifyErrorRepo) List(context.Context, string, NotifyListRequest) (PaginatedNotify, error) {
 	return PaginatedNotify{}, r.listErr
 }
-func (r *notifyErrorRepo) UnreadCount(context.Context, string) (UnreadCountResult, error) {
-	return UnreadCountResult{}, r.unreadErr
+func (r *notifyErrorRepo) UnreadCount(context.Context, string) (UnreadSummaryResult, error) {
+	return UnreadSummaryResult{}, r.unreadErr
 }
 func (r *notifyErrorRepo) MarkAsRead(context.Context, string, []string) error {
 	return r.markReadErr
@@ -50,13 +50,13 @@ func withPrincipal(req *http.Request) *http.Request {
 
 func TestUnreadCountAndMarkRead(t *testing.T) {
 	handler := NewHandler(NewService())
-	unreadReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/get_unread_count", strings.NewReader(`{}`)))
+	unreadReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/unread_summary", strings.NewReader(`{}`)))
 	unreadRR := httptest.NewRecorder()
 	handler.UnreadCount(unreadRR, unreadReq)
 
 	var unreadResp struct {
 		Code httpx.Code        `json:"code"`
-		Data UnreadCountResult `json:"data"`
+		Data UnreadSummaryResult `json:"data"`
 	}
 	if err := json.NewDecoder(unreadRR.Body).Decode(&unreadResp); err != nil {
 		t.Fatalf("decode unread response: %v", err)
@@ -98,7 +98,7 @@ func TestNotifyHandlerReturns10600OnServiceError(t *testing.T) {
 	handler.List(listRR, listReq)
 	assertNotifyCode(t, listRR, httpx.CodeInternalUnavailable)
 
-	unreadReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/get_unread_count", strings.NewReader(`{}`)))
+	unreadReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/unread_summary", strings.NewReader(`{}`)))
 	unreadRR := httptest.NewRecorder()
 	handler.UnreadCount(unreadRR, unreadReq)
 	assertNotifyCode(t, unreadRR, httpx.CodeInternalUnavailable)
@@ -139,13 +139,13 @@ func TestUnreadCountReturnsByTypeBreakdown(t *testing.T) {
 	_, _ = svc.AppendGroupInviteReceived(context.Background(), "user_alice", types.UserInfo{UserID: "bob", Nickname: "Bob"}, "grp1", "Group One", "inv1", nil)
 	_, _ = svc.AppendSystemAnnouncement(context.Background(), []string{"user_alice"}, systemmodule.SystemAnnouncementItem{AnnouncementID: "ann1", Title: "Test", Content: "Test content", Severity: systemmodule.AnnounceLevelInfo})
 
-	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/get_unread_count", strings.NewReader(`{}`)))
+	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/unread_summary", strings.NewReader(`{}`)))
 	rr := httptest.NewRecorder()
 	handler.UnreadCount(rr, req)
 
 	var resp struct {
 		Code httpx.Code        `json:"code"`
-		Data UnreadCountResult `json:"data"`
+		Data UnreadSummaryResult `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)

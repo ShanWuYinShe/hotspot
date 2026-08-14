@@ -13,7 +13,7 @@ import (
 )
 
 type stubMsgRepo struct {
-	sendResult MessageSent
+	sendResult MessageSentResult
 	sendErr    error
 	histResult PaginatedMessages
 	histErr    error
@@ -34,7 +34,7 @@ type stubMsgRepo struct {
 	countErr   error
 }
 
-func (r *stubMsgRepo) Send(_ context.Context, _, _ string, _ SendPrivateMessageRequest) (MessageSent, error) {
+func (r *stubMsgRepo) Send(_ context.Context, _, _ string, _ SendPrivateMessageRequest) (MessageSentResult, error) {
 	return r.sendResult, r.sendErr
 }
 func (r *stubMsgRepo) History(_ context.Context, _ string, _ ListPrivateMessagesRequest) (PaginatedMessages, error) {
@@ -114,7 +114,7 @@ func msgCtx(userID string) context.Context {
 }
 
 func TestServiceSendDelegatesToRepo(t *testing.T) {
-	repo := &stubMsgRepo{sendResult: MessageSent{MessageID: "pm1", SentAt: "2025-01-01T00:00:00Z"}}
+	repo := &stubMsgRepo{sendResult: MessageSentResult{MessageID: "pm1", SentAt: "2025-01-01T00:00:00Z"}}
 	svc := NewServiceWithDeps(repo, &stubUserReader{found: true, settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone}})
 	result, err := svc.Send(msgCtx("u1"), SendPrivateMessageRequest{TargetUserID: "u2", Type: "text", Content: "hi"})
 	if err != nil {
@@ -157,7 +157,7 @@ func TestServiceSendRejectsNobodySetting(t *testing.T) {
 }
 
 func TestServiceSendAllowsSelfMessage(t *testing.T) {
-	repo := &stubMsgRepo{sendResult: MessageSent{MessageID: "pm1"}}
+	repo := &stubMsgRepo{sendResult: MessageSentResult{MessageID: "pm1"}}
 	svc := NewServiceWithDeps(repo, &stubUserReader{found: true, settings: users.UserSettings{AllowPrivateChat: users.ChatPermNobody}})
 	_, err := svc.Send(msgCtx("u1"), SendPrivateMessageRequest{TargetUserID: "u1", Type: "text"})
 	if err != nil {
@@ -341,7 +341,7 @@ func TestServiceSendStrangerQuotaAggregatesAcrossTargets(t *testing.T) {
 func TestServiceSendStrangerQuotaAllowsUnderTotal(t *testing.T) {
 	// 两个陌生人合计 4 < quota=5,允许发送。
 	repo := &stubMsgRepo{
-		sendResult: MessageSent{MessageID: "pm1"},
+		sendResult: MessageSentResult{MessageID: "pm1"},
 		counts:     map[string]int{"u2": 2, "u3": 2},
 	}
 	svc := NewServiceWithDeps(repo, &stubUserReader{
@@ -362,7 +362,7 @@ func TestServiceSendStrangerQuotaAllowsUnderTotal(t *testing.T) {
 func TestServiceSendStrangerQuotaIgnoresMutualFollows(t *testing.T) {
 	// 互关用户 u3 已发 100 条不计入陌生人总量;陌生人 u2 4 条 < quota=5,允许。
 	repo := &stubMsgRepo{
-		sendResult: MessageSent{MessageID: "pm1"},
+		sendResult: MessageSentResult{MessageID: "pm1"},
 		counts:     map[string]int{"u2": 4, "u3": 100},
 	}
 	svc := NewServiceWithDeps(repo, &stubUserReader{

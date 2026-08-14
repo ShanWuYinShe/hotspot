@@ -86,7 +86,7 @@ func TestHandleReportResolvePushesAndNotifiesReporter(t *testing.T) {
 	reporterSink := &adminSinkStub{}
 	hub.RegisterUser("user_reporter", "sess_r", reporterSink)
 
-	apiErr, err := svc.HandleReport(adminCtx("admin1"), AdminReportHandleRequest{
+	apiErr, err := svc.HandleReport(adminCtx("admin1"), JudgeAdminReportRequest{
 		ReportID: "report_1",
 		Action:   ReportActionResolve,
 		Note:     "confirmed violation",
@@ -137,7 +137,7 @@ func TestHandleReportDismissPushesAndNotifiesReporter(t *testing.T) {
 	reporterSink := &adminSinkStub{}
 	hub.RegisterUser("user_reporter", "sess_r", reporterSink)
 
-	apiErr, err := svc.HandleReport(adminCtx("admin1"), AdminReportHandleRequest{
+	apiErr, err := svc.HandleReport(adminCtx("admin1"), JudgeAdminReportRequest{
 		ReportID: "report_2",
 		Action:   ReportActionDismiss,
 	})
@@ -177,11 +177,11 @@ func TestHandleReportAlreadyTerminalDoesNotNotify(t *testing.T) {
 	svc, repo, push := newHandleReportService(t)
 	seedPendingReport(t, repo, "report_3", "user_reporter", "comment", "comment_1")
 	// 先处理一次进入终态
-	if apiErr, err := svc.HandleReport(adminCtx("admin1"), AdminReportHandleRequest{ReportID: "report_3", Action: ReportActionDismiss}); err != nil || apiErr != nil {
+	if apiErr, err := svc.HandleReport(adminCtx("admin1"), JudgeAdminReportRequest{ReportID: "report_3", Action: ReportActionDismiss}); err != nil || apiErr != nil {
 		t.Fatalf("first handle: apiErr=%v err=%v", apiErr, err)
 	}
 	// 重复处理:httpx.CodeConflict 且不再产生通知/推送
-	apiErr, err := svc.HandleReport(adminCtx("admin1"), AdminReportHandleRequest{ReportID: "report_3", Action: ReportActionDismiss})
+	apiErr, err := svc.HandleReport(adminCtx("admin1"), JudgeAdminReportRequest{ReportID: "report_3", Action: ReportActionDismiss})
 	if err != nil {
 		t.Fatalf("second handle error: %v", err)
 	}

@@ -2,17 +2,17 @@ package groups
 
 const (
 	queryInsertGroup = `
-	INSERT INTO groups (group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, requires_approval, next_activity, is_searchable, members_searchable, max_members, owner_id, created_at, last_activity_at, tags, s2_cell_token, s2_cell_id)
+	INSERT INTO groups (group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, requires_approval, next_activity_at, is_searchable, members_searchable, max_members, owner_id, created_at, last_activity_at, tags, s2_cell_token, s2_cell_id)
 	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`
 
 	queryGetGroup = `
-	SELECT group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, requires_approval, next_activity, is_searchable, members_searchable, max_members, owner_id, created_at, last_activity_at, COALESCE(tags, '{}'),
+	SELECT group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, requires_approval, next_activity_at, is_searchable, members_searchable, max_members, owner_id, created_at, last_activity_at, COALESCE(tags, '{}'),
 	       (SELECT COUNT(*)::int FROM group_members gm JOIN users u ON u.user_id = gm.user_id WHERE gm.group_id = groups.group_id AND u.presence_status = 'online') AS online_members_count
 	FROM groups
 	WHERE group_id = $1 AND deleted_at IS NULL`
 
 	querySearchGroups = `
-	SELECT g.group_id, g.name, g.avatar_url, g.description, g.has_password, g.location_name, g.latitude, g.longitude, g.join_method, g.requires_approval, g.next_activity, g.is_searchable, g.members_searchable, g.max_members, g.owner_id, g.created_at, g.last_activity_at, COALESCE(g.tags, '{}'),
+	SELECT g.group_id, g.name, g.avatar_url, g.description, g.has_password, g.location_name, g.latitude, g.longitude, g.join_method, g.requires_approval, g.next_activity_at, g.is_searchable, g.members_searchable, g.max_members, g.owner_id, g.created_at, g.last_activity_at, COALESCE(g.tags, '{}'),
 	       (SELECT COUNT(*)::int FROM group_members gm JOIN users u ON u.user_id = gm.user_id WHERE gm.group_id = g.group_id AND u.presence_status = 'online') AS online_members_count
 	FROM groups g
 	WHERE g.deleted_at IS NULL`
@@ -54,7 +54,7 @@ ORDER BY gm.joined_at ASC, gm.user_id ASC`
 	// Go-side full scan). members_count is computed via a single aggregated
 	// LEFT JOIN instead of a per-row COUNT(*) (which was an N+1).
 	queryListMyGroupsBase = `
-		SELECT g.group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, g.requires_approval, g.next_activity, is_searchable, members_searchable, max_members, g.owner_id, g.created_at, g.last_activity_at, COALESCE(g.tags, '{}'),
+		SELECT g.group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, g.requires_approval, g.next_activity_at, is_searchable, members_searchable, max_members, g.owner_id, g.created_at, g.last_activity_at, COALESCE(g.tags, '{}'),
 		       COALESCE(mem.members_count, 0),
 		       (SELECT COUNT(*)::int FROM group_members gm JOIN users u ON u.user_id = gm.user_id WHERE gm.group_id = g.group_id AND u.presence_status = 'online') AS online_members_count,
 		       gm.role, gm.joined_at, gm.is_muted, gm.muted_until, gm.is_pinned,
@@ -168,7 +168,7 @@ WHERE invite_id = $1`
 	    has_password = COALESCE($5, has_password),
 	    join_method = COALESCE($6, join_method),
 	    requires_approval = COALESCE($7, requires_approval),
-	    next_activity = COALESCE($8, next_activity),
+	    next_activity_at = COALESCE($8, next_activity_at),
 	    is_searchable = COALESCE($9, is_searchable),
 	    members_searchable = COALESCE($10, members_searchable),
 	    max_members = COALESCE($11, max_members),

@@ -1,90 +1,89 @@
-// API endpoint registry — MUST match spec/api_spec_*.md（v1 重设计后）。
-// 三位置：/api/v1（客户端）、/api/v1/groups/admin（群管理守卫子树）、/admin/v1（平台管理节点）。
+// API endpoint registry — MUST match spec/api_spec_*.md.
+// 节点：/public/v1（纯匿名）、/api/v1（注册用户）、/api/v1/groups/admin（群管理守卫子树）、/admin/v1（平台管理节点）。
 
+const PUBLIC_PREFIX = '/public/v1';
 const PREFIX = '/api/v1';
 const ADMIN_PREFIX = '/admin/v1';
 
 export const Endpoints = {
   Auth: {
-    Register: PREFIX + '/auth/register',
-    Login: PREFIX + '/auth/login',
-    Logout: PREFIX + '/auth/logout',
-    Guest: PREFIX + '/auth/guest',
-    RefreshToken: PREFIX + '/auth/refresh_token',
-    GetStatus: PREFIX + '/auth/get_status',
-    RequestPasswordReset: PREFIX + '/auth/request_password_reset',
-    ResetPassword: PREFIX + '/auth/reset_password',
+    Register: PUBLIC_PREFIX + '/auth/register',
+    Login: PUBLIC_PREFIX + '/auth/signin',
+    Guest: PUBLIC_PREFIX + '/auth/guest',
+    RefreshToken: PUBLIC_PREFIX + '/auth/refresh_token',
+    RequestPasswordReset: PUBLIC_PREFIX + '/auth/forgot_password',
+    ResetPassword: PUBLIC_PREFIX + '/auth/reset_password',
+    Session: PREFIX + '/auth/session',
+    Signout: PREFIX + '/auth/signout',
     ChangePassword: PREFIX + '/auth/change_password',
-    ListSessions: PREFIX + '/auth/list_sessions',
+    FetchSessions: PREFIX + '/auth/fetch_sessions',
     RevokeSession: PREFIX + '/auth/revoke_session',
-    RevokeAllSessions: PREFIX + '/auth/revoke_all_sessions',
+    RevokeOtherSessions: PREFIX + '/auth/revoke_other_sessions',
   },
 
   Users: {
     Search: PREFIX + '/users/search',
     GetDetail: PREFIX + '/users/open_the_door',
-    BatchGet: PREFIX + '/users/batch_get',
-    ListFriends: PREFIX + '/users/list_friends',
-    ListFollowing: PREFIX + '/users/list_following',
-    ListFollowers: PREFIX + '/users/list_followers',
-    ListGroups: PREFIX + '/users/list_groups',
-    ListMoments: PREFIX + '/users/list_moments',
-    ListReactedMoments: PREFIX + '/users/list_reacted_moments',
-    GetAccount: PREFIX + '/users/get_account',
+    BatchFetch: PREFIX + '/users/batch_fetch',
+    ListFriends: PREFIX + '/users/fetch_friends',
+    ListFollowing: PREFIX + '/users/fetch_following',
+    ListFollowers: PREFIX + '/users/fetch_followers',
+    ListGroups: PREFIX + '/users/fetch_groups',
+    ListMoments: PREFIX + '/users/fetch_moments',
+    ListReactedMoments: PREFIX + '/users/fetch_reacted_moments',
+    GetAccount: PREFIX + '/users/account',
     UpdateAccount: PREFIX + '/users/update_account',
-    GetSettings: PREFIX + '/users/get_settings',
+    GetSettings: PREFIX + '/users/settings',
     UpdateSettings: PREFIX + '/users/update_settings',
     UpdateLocation: PREFIX + '/users/update_location',
     Upgrade: PREFIX + '/users/upgrade',
     DeleteAccount: PREFIX + '/users/delete_account',
     Follow: PREFIX + '/users/set_follow',
     Block: PREFIX + '/users/set_block',
-    ListBlocked: PREFIX + '/users/list_blocked',
+    ListBlocked: PREFIX + '/users/fetch_blocked',
     SetRemark: PREFIX + '/users/set_remark',
   },
 
   Groups: {
-    // 公开/成员路径
     Search: PREFIX + '/groups/search',
     GetDetail: PREFIX + '/groups/open_the_door',
     Create: PREFIX + '/groups/create',
-    Join: PREFIX + '/groups/join',
-    Leave: PREFIX + '/groups/leave',
-    ListJoined: PREFIX + '/groups/list_joined',
+    Join: PREFIX + '/groups/enter',
+    Leave: PREFIX + '/groups/exit',
+    ListJoined: PREFIX + '/groups/fetch_joined',
     UpdatePreferences: PREFIX + '/groups/update_preferences',
-    ListSubmittedApplications: PREFIX + '/groups/applications/list_submitted',
+    ListSubmittedApplications: PREFIX + '/groups/applications/fetch_submitted',
     CancelApplication: PREFIX + '/groups/applications/cancel',
-    ListReceivedInvites: PREFIX + '/groups/invites/list_received',
+    ListReceivedInvites: PREFIX + '/groups/invites/fetch_received',
     AcceptInvite: PREFIX + '/groups/invites/accept',
     RejectInvite: PREFIX + '/groups/invites/reject',
     Members: {
-      List: PREFIX + '/groups/members/list',
+      List: PREFIX + '/groups/members/fetch',
       Search: PREFIX + '/groups/members/search',
     },
     Announcements: {
-      List: PREFIX + '/groups/announcements/list',
+      List: PUBLIC_PREFIX + '/groups/announcements/fetch',
     },
-    // 群管理守卫子树（/api/v1/groups/admin/*，调用者须为群主/群管理员）
     Admin: {
       Update: PREFIX + '/groups/admin/update',
-      GetSettings: PREFIX + '/groups/admin/get_settings',
+      GetSettings: PREFIX + '/groups/admin/settings',
       Dismiss: PREFIX + '/groups/admin/dismiss',
       TransferOwnership: PREFIX + '/groups/admin/transfer_ownership',
       Invites: {
         Create: PREFIX + '/groups/admin/invites/create',
-        ListSent: PREFIX + '/groups/admin/invites/list_sent',
+        ListSent: PREFIX + '/groups/admin/invites/fetch_sent',
         Revoke: PREFIX + '/groups/admin/invites/revoke',
       },
       Members: {
-        List: PREFIX + '/groups/admin/members/list',
+        List: PREFIX + '/groups/admin/members/fetch',
         SetRole: PREFIX + '/groups/admin/members/set_role',
         SetMute: PREFIX + '/groups/admin/members/set_mute',
         SetBan: PREFIX + '/groups/admin/members/set_ban',
-        ListBanned: PREFIX + '/groups/admin/members/list_banned',
+        ListBanned: PREFIX + '/groups/admin/members/fetch_banned',
         Remove: PREFIX + '/groups/admin/members/remove',
       },
       Applications: {
-        List: PREFIX + '/groups/admin/applications/list',
+        List: PREFIX + '/groups/admin/applications/fetch',
         Approve: PREFIX + '/groups/admin/applications/approve',
         Reject: PREFIX + '/groups/admin/applications/reject',
       },
@@ -105,47 +104,45 @@ export const Endpoints = {
     Create: PREFIX + '/moments/create',
     Update: PREFIX + '/moments/update',
     Delete: PREFIX + '/moments/delete',
-    ListCreated: PREFIX + '/moments/list_created',
+    ListCreated: PREFIX + '/moments/fetch_created',
     Favorite: PREFIX + '/moments/set_favorite',
-    ListFavorites: PREFIX + '/moments/list_favorites',
+    ListFavorites: PREFIX + '/moments/fetch_favorites',
   },
 
   Comments: {
     Create: PREFIX + '/comments/create',
     Delete: PREFIX + '/comments/delete',
-    List: PREFIX + '/comments/list',
-    ListReplies: PREFIX + '/comments/list_replies',
+    List: PREFIX + '/comments/fetch',
+    ListReplies: PREFIX + '/comments/fetch_replies',
     GetDetail: PREFIX + '/comments/open_the_door',
   },
 
   Reactions: {
     Set: PREFIX + '/reactions/set',
-    List: PREFIX + '/reactions/list',
+    List: PREFIX + '/reactions/fetch',
   },
 
   Media: {
     PresignUpload: PREFIX + '/media/presign_upload',
     CompleteUpload: PREFIX + '/media/complete_upload',
-    BatchPresignUpload: PREFIX + '/media/batch_presign_upload',
-    BatchCompleteUpload: PREFIX + '/media/batch_complete_upload',
   },
 
   PrivateChats: {
-    List: PREFIX + '/private_chats/list',
+    List: PREFIX + '/private_chats/fetch',
     GetDetail: PREFIX + '/private_chats/open_the_door',
     UpdatePreferences: PREFIX + '/private_chats/update_preferences',
     Delete: PREFIX + '/private_chats/delete',
   },
   PrivateMessages: {
     Send: PREFIX + '/private_messages/send',
-    List: PREFIX + '/private_messages/list',
+    List: PREFIX + '/private_messages/fetch',
     Update: PREFIX + '/private_messages/update',
     Recall: PREFIX + '/private_messages/recall',
     MarkRead: PREFIX + '/private_messages/mark_read',
   },
   GroupMessages: {
     Send: PREFIX + '/group_messages/send',
-    List: PREFIX + '/group_messages/list',
+    List: PREFIX + '/group_messages/fetch',
     Update: PREFIX + '/group_messages/update',
     Recall: PREFIX + '/group_messages/recall',
     MarkRead: PREFIX + '/group_messages/mark_read',
@@ -153,7 +150,7 @@ export const Endpoints = {
 
   Feed: {
     Following: PREFIX + '/feed/following',
-    Nearby: PREFIX + '/feed/nearby',
+    Nearby: PREFIX + '/feed/nearby_moments',
     NearbyUsers: PREFIX + '/feed/nearby_users',
     NearbyGroups: PREFIX + '/feed/nearby_groups',
     Trending: PREFIX + '/feed/trending',
@@ -164,39 +161,107 @@ export const Endpoints = {
   },
 
   System: {
-    GetMeta: PREFIX + '/system/get_meta',
-    Health: PREFIX + '/system/health',
-    ListAnnouncements: PREFIX + '/system/announcements/list',
-    GetClientConfig: PREFIX + '/system/get_client_config',
+    GetMeta: PUBLIC_PREFIX + '/system/meta',
+    Health: PUBLIC_PREFIX + '/system/health',
+    ListAnnouncements: PUBLIC_PREFIX + '/system/announcements/fetch',
+    GetClientConfig: PUBLIC_PREFIX + '/system/client_config',
     Bootstrap: PREFIX + '/system/bootstrap',
   },
 
   Map: {
-    Canvas: PREFIX + '/map/canvas',
+    Canvas: PUBLIC_PREFIX + '/map/canvas',
   },
 
   Notify: {
-    List: PREFIX + '/notify/list',
-    GetUnreadCount: PREFIX + '/notify/get_unread_count',
+    List: PREFIX + '/notify/fetch',
+    GetUnreadCount: PREFIX + '/notify/unread_summary',
     MarkRead: PREFIX + '/notify/mark_read',
   },
 
   Share: {
     Create: PREFIX + '/share/create',
-    Get: PREFIX + '/share/get',
-    List: PREFIX + '/share/list',
+    Get: PUBLIC_PREFIX + '/share/open_the_door',
+    List: PREFIX + '/share/fetch_created',
     Revoke: PREFIX + '/share/revoke',
   },
 
   Reports: {
     Create: PREFIX + '/reports/create',
-    List: PREFIX + '/reports/list',
+    List: PREFIX + '/reports/fetch',
   },
 
   // 平台管理节点（/admin/v1/*，仅平台管理员）
   Admin: {
     Rbac: {
-      GetMe: ADMIN_PREFIX + '/rbac/get_me',
+      GetMe: ADMIN_PREFIX + '/rbac/me',
+      PermissionsFetch: ADMIN_PREFIX + '/rbac/permissions/fetch',
+      RolesFetch: ADMIN_PREFIX + '/rbac/roles/fetch',
+      AdminsFetch: ADMIN_PREFIX + '/rbac/admins/fetch',
+      AdminsAward: ADMIN_PREFIX + '/rbac/admins/award',
+      AdminsRevoke: ADMIN_PREFIX + '/rbac/admins/revoke',
+    },
+    Reports: {
+      Fetch: ADMIN_PREFIX + '/reports/fetch',
+      Judge: ADMIN_PREFIX + '/reports/judge',
+    },
+  },
+
+  // 匿名双版本端点：未登录时走 /public/v1，登录后走 /api/v1（由 client 层切换）
+  Public: {
+    Users: {
+      Search: PUBLIC_PREFIX + '/users/search',
+      GetDetail: PUBLIC_PREFIX + '/users/open_the_door',
+      BatchFetch: PUBLIC_PREFIX + '/users/batch_fetch',
+      ListFriends: PUBLIC_PREFIX + '/users/fetch_friends',
+      ListFollowing: PUBLIC_PREFIX + '/users/fetch_following',
+      ListFollowers: PUBLIC_PREFIX + '/users/fetch_followers',
+      ListGroups: PUBLIC_PREFIX + '/users/fetch_groups',
+      ListMoments: PUBLIC_PREFIX + '/users/fetch_moments',
+      ListReactedMoments: PUBLIC_PREFIX + '/users/fetch_reacted_moments',
+    },
+    Groups: {
+      Search: PUBLIC_PREFIX + '/groups/search',
+      GetDetail: PUBLIC_PREFIX + '/groups/open_the_door',
+      Members: {
+        List: PUBLIC_PREFIX + '/groups/members/fetch',
+        Search: PUBLIC_PREFIX + '/groups/members/search',
+      },
+      Announcements: {
+        List: PUBLIC_PREFIX + '/groups/announcements/fetch',
+      },
+    },
+    Moments: {
+      Search: PUBLIC_PREFIX + '/moments/search',
+      GetDetail: PUBLIC_PREFIX + '/moments/open_the_door',
+    },
+    Comments: {
+      List: PUBLIC_PREFIX + '/comments/fetch',
+      ListReplies: PUBLIC_PREFIX + '/comments/fetch_replies',
+      GetDetail: PUBLIC_PREFIX + '/comments/open_the_door',
+    },
+    Reactions: {
+      List: PUBLIC_PREFIX + '/reactions/fetch',
+    },
+    Feed: {
+      NearbyUsers: PUBLIC_PREFIX + '/feed/nearby_users',
+      NearbyGroups: PUBLIC_PREFIX + '/feed/nearby_groups',
+      Trending: PUBLIC_PREFIX + '/feed/trending',
+    },
+    Search: {
+      Suggest: PUBLIC_PREFIX + '/search/suggest',
+    },
+    System: {
+      GetMeta: PUBLIC_PREFIX + '/system/meta',
+      Health: PUBLIC_PREFIX + '/system/health',
+      ListAnnouncements: PUBLIC_PREFIX + '/system/announcements/fetch',
+      GetClientConfig: PUBLIC_PREFIX + '/system/client_config',
+      Bootstrap: PUBLIC_PREFIX + '/system/bootstrap',
+    },
+    Map: {
+      Canvas: PUBLIC_PREFIX + '/map/canvas',
+    },
+    Share: {
+      Get: PUBLIC_PREFIX + '/share/open_the_door',
     },
   },
 } as const;

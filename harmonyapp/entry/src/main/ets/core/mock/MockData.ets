@@ -10,12 +10,12 @@ import {
   ApiResponse, PaginatedData,
   UserInfo, UserItem, UserStats, AccountInfo,
   MomentItem, MomentMyState, CommentItem, GroupItem, GroupInfo, GroupViewerState, ReactionItem,
-  PrivateChatItem, PrivateMessageItem, MessageSent,
-  AuthData, AuthStatus,
+  PrivateChatItem, PrivateMessageItem, MessageSentResult,
+  AuthData, SessionStatus,
   TrendingBundle, TagItem,
   SearchSuggestResponse,
   ClientConfig, ApiVersionMeta,
-  UnreadCountResult,
+  UnreadSummaryResult,
   MapCanvasResponse, NotifyItem,
   GeoPoint, Location, RelativeLocation, Relationship, UserProfileBundle
 } from '../types/api';
@@ -108,12 +108,12 @@ const MOCK_AUTH: AuthData = {
   refresh_token_expires_at: '2099-01-01T00:00:00.000Z'
 };
 
-const MOCK_AUTH_STATUS: AuthStatus = {
-  is_valid: true,
+const MOCK_AUTH_STATUS: SessionStatus = {
+  user_id: 'user_lumos',
   expires_at: '2099-01-01T00:00:00.000Z'
 };
 
-const MOCK_AUTH_STATUS_INVALID: AuthStatus = { is_valid: false };
+const MOCK_AUTH_STATUS_INVALID: SessionStatus = { user_id: '', expires_at: '' };
 
 const MOCK_PROFILE_BUNDLE: UserProfileBundle = {
   user: MK_USER_ITEM,
@@ -131,7 +131,7 @@ const MOCK_COMMENT: CommentItem = {
   reactions: []
 };
 
-const MOCK_SENT: MessageSent = {
+const MOCK_SENT: MessageSentResult = {
   message_id: 'm1',
   sent_at: '2099-01-01T00:00:00.000Z'
 };
@@ -140,7 +140,7 @@ const MOCK_REACTIONS: ReactionItem[] = [
   { user: MK_USER_2, emoji: '❤️', reacted_at: '' }
 ];
 
-const MOCK_UNREAD: UnreadCountResult = {
+const MOCK_UNREAD: UnreadSummaryResult = {
   total: 0,
   by_type: { social: 0, interaction: 0, group: 0, report: 0, nearby: 0, system: 0 }
 };
@@ -148,7 +148,7 @@ const MOCK_UNREAD: UnreadCountResult = {
 const MOCK_CLIENT_CONFIG: ClientConfig = {
   features: {
     enable_public_registration: true,
-    enable_guest_login: true,
+    enable_guest_register: true,
     enable_moments: true,
     enable_nearby_people: true
   },
@@ -219,7 +219,7 @@ export function getCannedResponse(url: string, loggedIn: boolean, scenario: stri
   };
 
   // Auth
-  if (url === '/api/v1/auth/login') {
+  if (url === '/public/v1/auth/signin') {
     switch (scenario) {
       case 'invalid-creds': return apiError(10100, '账号或密码错误');
       case 'banned': return apiError(10201, '账号已被封禁');
@@ -228,20 +228,20 @@ export function getCannedResponse(url: string, loggedIn: boolean, scenario: stri
       default: return authOk();
     }
   }
-  if (url === '/api/v1/auth/register' || url === '/api/v1/auth/guest') {
+  if (url === '/public/v1/auth/register' || url === '/public/v1/auth/guest') {
     if (scenario === 'param-error') return apiError(10000, '');
     if (scenario === 'rate-limit') return apiError(10500, '');
     return authOk();
   }
-  if (url === '/api/v1/auth/refresh_token') return apiOk(MOCK_AUTH);
-  if (url === '/api/v1/auth/get_status')
+  if (url === '/public/v1/auth/refresh_token') return apiOk(MOCK_AUTH);
+  if (url === '/api/v1/auth/session')
     return loggedIn ? apiOk(MOCK_AUTH_STATUS) : apiOk(MOCK_AUTH_STATUS_INVALID);
-  if (url === '/api/v1/auth/logout') { setLoggedIn(false); return apiOkEmpty(); }
+  if (url === '/api/v1/auth/signout') { setLoggedIn(false); return apiOkEmpty(); }
 
   const guard = () => loggedIn ? null : apiError(10100, 'Access Token 无效或过期');
 
   // Users
-  if (url === '/api/v1/users/get_account') return guard() ?? apiOk(MOCK_ACCOUNT);
+  if (url === '/api/v1/users/account') return guard() ?? apiOk(MOCK_ACCOUNT);
   if (url === '/api/v1/users/open_the_door') {
     // spec user.md → open_the_door：UserProfileBundle（user 嵌套 UserItem）
     const profile: UserProfileBundle = { user: MK_USER_ITEM };
@@ -249,33 +249,33 @@ export function getCannedResponse(url: string, loggedIn: boolean, scenario: stri
     return apiOk(profile);
   }
   if (url === '/api/v1/users/search') return paginated([MK_USER_ITEM]);
-  if (url.startsWith('/api/v1/users/list_')) return guard() ?? paginated([] as UserItem[]);
+  if (url.startsWith('/api/v1/users/fetch_')) return guard() ?? paginated([] as UserItem[]);
 
   // Moments
   if (url === '/api/v1/moments/search') return paginated([MK_MOMENT]);
   if (url === '/api/v1/moments/open_the_door') return apiOk(MK_MOMENT);
-  if (url === '/api/v1/moments/list_created') return guard() ?? paginated([] as MomentItem[]);
+  if (url === '/api/v1/moments/fetch_created') return guard() ?? paginated([] as MomentItem[]);
 
   // Groups
   if (url === '/api/v1/groups/search') return paginated([MK_GROUP]);
   if (url === '/api/v1/groups/open_the_door') return apiOk(MK_GROUP);
 
   // Chat
-  if (url === '/api/v1/private_chats/list') return guard() ?? paginated([] as PrivateChatItem[]);
-  if (url === '/api/v1/private_messages/list') return guard() ?? paginated([] as PrivateMessageItem[]);
+  if (url === '/api/v1/private_chats/fetch') return guard() ?? paginated([] as PrivateChatItem[]);
+  if (url === '/api/v1/private_messages/fetch') return guard() ?? paginated([] as PrivateMessageItem[]);
   if (url === '/api/v1/private_messages/send') return guard() ?? apiOk(MOCK_SENT);
 
   // Feed / Search / Notify / System / Map
   if (url === '/api/v1/feed/trending') return apiOk(MOCK_TRENDING);
   if (url === '/api/v1/search/suggest') return apiOk(MOCK_SUGGEST);
-  if (url === '/api/v1/notify/list') return guard() ?? paginated([] as NotifyItem[]);
-  if (url === '/api/v1/notify/get_unread_count') return guard() ?? apiOk(MOCK_UNREAD);
-  if (url === '/api/v1/system/get_client_config') return apiOk(MOCK_CLIENT_CONFIG);
+  if (url === '/api/v1/notify/fetch') return guard() ?? paginated([] as NotifyItem[]);
+  if (url === '/api/v1/notify/unread_summary') return guard() ?? apiOk(MOCK_UNREAD);
+  if (url === '/public/v1/system/client_config') return apiOk(MOCK_CLIENT_CONFIG);
   if (url === '/api/v1/system/bootstrap') return apiOk(MOCK_BOOTSTRAP);
-  if (url === '/api/v1/map/canvas') return apiOk(MOCK_MAP_CANVAS);
+  if (url === '/public/v1/map/canvas') return apiOk(MOCK_MAP_CANVAS);
   if (url === '/api/v1/reactions/set') return guard() ?? apiOkEmpty();
-  if (url === '/api/v1/reactions/list') return paginated(MOCK_REACTIONS);
-  if (url === '/api/v1/comments/list') return paginated([] as CommentItem[]);
+  if (url === '/api/v1/reactions/fetch') return paginated(MOCK_REACTIONS);
+  if (url === '/api/v1/comments/fetch') return paginated([] as CommentItem[]);
   if (url === '/api/v1/comments/create') return guard() ?? apiOk(MOCK_COMMENT);
 
   // Generic group write ops

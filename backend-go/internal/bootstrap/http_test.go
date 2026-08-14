@@ -22,7 +22,7 @@ func TestNewHTTPRouterMountsSystemRoutes(t *testing.T) {
 		S3ForcePathStyle: true,
 	}
 	router := NewHTTPRouter(BuildModules(cfg, persistence.NewFactory(cfg)))
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/system/get_meta", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/public/v1/system/meta", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)

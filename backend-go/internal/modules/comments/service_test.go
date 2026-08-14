@@ -284,7 +284,7 @@ func TestCreateCommentMentionSendsRealtimeAndNotification(t *testing.T) {
 		t.Fatalf("expected one mention event, got %#v", carolSink.events)
 	}
 	event := carolSink.events[0]
-	if event.Type != "MessageMentioned" {
+	if event.Type != "ContentMentioned" {
 		t.Fatalf("unexpected event type: %#v", event)
 	}
 	payload, ok := event.Payload.(map[string]any)
@@ -547,7 +547,7 @@ func TestServiceDeleteIdempotentNoOp(t *testing.T) {
 }
 
 // TestServiceDeleteOnlyAuthor：评论删除仅评论作者（spec api_spec_comment.md「删除评论（仅评论作者）」）。
-// 平台管理员即使注入 IsAdmin 也不得删除他人评论（该职责在 /admin/v1/reports/handle，本端点不设平台管理员分支）。
+// 平台管理员即使注入 IsAdmin 也不得删除他人评论（该职责在 /admin/v1/reports/judge，本端点不设平台管理员分支）。
 func TestServiceDeleteOnlyAuthor(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)

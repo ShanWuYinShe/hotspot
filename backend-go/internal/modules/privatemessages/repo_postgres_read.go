@@ -106,7 +106,7 @@ func (r *PostgresRepository) historySince(ctx context.Context, userID, targetUse
 			item.Media = &MessageMedia{URL: fileID}
 		}
 		if replyMessageID != "" {
-			item.ReplyTo = &MessageReplyTo{MessageID: replyMessageID, Type: replyType, Content: replyContent, ShareCode: replyShareCode, Sender: UserInfo{UserID: replySenderUserID, Nickname: replySenderNickname, AvatarURL: replySenderAvatar}, SentAt: replySentAt}
+			item.ReplyTo = &MessageBrief{MessageID: replyMessageID, Type: replyType, Content: replyContent, ShareCode: replyShareCode, Sender: UserInfo{UserID: replySenderUserID, Nickname: replySenderNickname, AvatarURL: replySenderAvatar}, SentAt: replySentAt}
 		}
 		items = append(items, item)
 	}

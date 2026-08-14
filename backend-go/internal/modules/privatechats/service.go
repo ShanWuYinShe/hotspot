@@ -189,7 +189,7 @@ func (s *Service) buildChat(ctx context.Context, userID string, state ChatState)
 	blockReason := func(reason httpx.ForbiddenReason) {
 		r := reason
 		item.CanMessage = false
-		item.BlockedReason = &r
+		item.ForbiddenReason = &r
 	}
 	if userItem.Relation != nil && userItem.Relation.IsBlocked {
 		blockReason(httpx.ReasonBlockedByUser)
@@ -207,7 +207,7 @@ func (s *Service) buildChat(ctx context.Context, userID string, state ChatState)
 	}
 	if userID == state.TargetID {
 		item.CanMessage = true
-		item.BlockedReason = nil
+		item.ForbiddenReason = nil
 	}
 	if last != nil {
 		item.LastActivityAt = last.SentAt

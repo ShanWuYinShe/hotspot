@@ -518,7 +518,7 @@ export default class EntryAbility extends UIAbility {
   private async refreshTokenAndReconnectWs(): Promise<void> {
     // 调用 get_status 验证 token（HttpUtil 拦截器会自动 refresh 过期 token）
     const statusResp = await ApiClient.checkAuthStatus();
-    if (statusResp.code !== 0 || !statusResp.data?.is_valid) {
+    if (statusResp.code !== 0) {
       hilog.warn(DOMAIN_NUMBER, TAG, '前台恢复：token 已失效');
       return;
     }

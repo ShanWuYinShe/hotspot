@@ -48,7 +48,7 @@ export type ReportStatus = 'pending' | 'resolved' | 'dismissed';
 export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
 
 // 举报处理操作
-export type ReportHandleAction = 'resolve' | 'dismiss' | 'escalate';
+export type ReportAction = 'resolve' | 'dismiss';
 
 export type ReportReason =
   | 'spam'
@@ -64,8 +64,8 @@ export type ReportReason =
 // 群组准入方式（叠加 requires_approval 决定是否需审核）
 export type GroupJoinMethod = 'direct' | 'password' | 'invite_only';
 
-// 公告严重程度 (spec: AnnounceLevel)
-export type AnnounceLevel = 'info' | 'warning' | 'error';
+// 公告严重程度 (spec: AnnounceSeverity)
+export type AnnounceSeverity = 'info' | 'warning' | 'error';
 
 // spec Reaction: reactions 聚合 (MomentItem/CommentItem/MessageItem 共用)
 export interface Reaction {
@@ -74,7 +74,7 @@ export interface Reaction {
   reacted_by_me: boolean;
 }
 
-// spec ReactionItem: reactions/list 返回的反应者列表项
+// spec ReactionItem: reactions/fetch 返回的反应者列表项
 export interface ReactionItem {
   user: UserInfo;
   emoji: string;
@@ -222,8 +222,8 @@ export interface GroupViewerState {
   joined_at?: string;
 }
 
-// 会话最近消息预览（spec types.md → LastMessagePreview，GroupItem 与 PrivateChatItem 共用）
-export interface LastMessagePreview {
+// 消息摘要快照（spec types.md → MessageBrief，reply_to 与 last_message 共用）
+export interface MessageBrief {
   message_id: string;
   type: MessageType;
   content?: string;
@@ -240,8 +240,8 @@ export interface GroupItem {
   location: RelativeLocation;
   last_activity_at?: string;
 
-  // 群列表场景返回（仅 groups/list_joined；其他场景省略，见 spec api_spec_types.md）
-  last_message?: LastMessagePreview;
+  // 群列表场景返回（仅 groups/fetch_joined；其他场景省略，见 spec api_spec_types.md）
+  last_message?: MessageBrief | null;
 
   created_at?: string;
   owner_id?: string;
@@ -254,7 +254,7 @@ export interface GroupItem {
   join_method?: GroupJoinMethod;
   requires_approval?: boolean;
   online_members_count?: number;
-  next_activity?: string;
+  next_activity_at?: string | null;
 
   // @group-admin-only
   is_searchable?: boolean;
@@ -284,7 +284,7 @@ export interface SystemAnnouncementItem {
   announcement_id: string;
   title: string;
   content: string;
-  severity: AnnounceLevel;
+  severity: AnnounceSeverity;
   action_url?: string;
   created_at: string;
 }
@@ -327,16 +327,7 @@ export interface MomentItem {
 
 // 4. 消息 (Message)
 
-export interface MessageReplyTo {
-  message_id: string;
-  type: MessageType;
-  sender: UserInfo;
-  content?: string;
-  share_code?: string;
-  sent_at: string;
-}
-
-export interface MessageSent {
+export interface MessageSentResult {
   message_id: string;
   sent_at: string;
 }
@@ -348,7 +339,7 @@ export interface PrivateMessageItem {
   media?: MessageMedia;
   share_code?: string;
   sender: UserInfo;
-  reply_to?: MessageReplyTo;
+  reply_to?: MessageBrief | null;
   sent_at: string;
   edited_at?: string;
   recalled_at?: string;
@@ -363,7 +354,7 @@ export interface GroupMessageItem {
   media?: MessageMedia;
   share_code?: string;
   sender: UserInfo;
-  reply_to?: MessageReplyTo;
+  reply_to?: MessageBrief | null;
   mentions?: string[];
   recalled_by?: UserInfo;
   sent_at: string;
@@ -385,7 +376,7 @@ export interface CommentItem {
   replies_count: number;
   is_deleted: boolean;
   reactions?: Reaction[];
-  // 顶层评论列表场景(comments/list)返回前 N 条回复预览
+  // 顶层评论列表场景(comments/fetch)返回前 N 条回复预览
   top_replies?: CommentItem[];
 }
 
@@ -407,11 +398,11 @@ export interface PrivateChatItem {
   is_muted: boolean;
   is_pinned: boolean;
   last_activity_at: string;
-  last_message?: LastMessagePreview;
+  last_message?: MessageBrief | null;
   presence_status?: UserPresenceStatus;
   created_at?: string;
   can_message: boolean;
-  blocked_reason: ForbiddenReason | null;  // 仅 can_message=false 时非 null（spec chat.md → PrivateChatItem）
+  forbidden_reason: ForbiddenReason | null;  // 仅 can_message=false 时非 null（spec chat.md → PrivateChatItem）
 }
 
 export interface PrivateChatOpenResult {
@@ -460,10 +451,9 @@ export interface RefreshTokenRequest {
   refresh_token?: string;
 }
 
-export interface AuthStatus {
-  is_valid: boolean;
-  user_id?: string; // is_valid=true 时返回（spec auth.md → get_status）
-  expires_at?: string;
+export interface SessionStatus {
+  user_id: string;
+  expires_at: string;
 }
 
 export interface SessionItem {
@@ -519,7 +509,6 @@ export type ForbiddenReason =
   | 'not_group_admin'
   | 'not_group_owner'
   | 'not_resource_owner'
-  | 'not_chat_participant'
   | 'privacy_setting'
   | 'blocked_by_user'
   | 'stranger_quota_exceeded'
@@ -886,7 +875,7 @@ export interface UpdateGroupRequest {
   clear_password?: boolean;
   join_method?: GroupJoinMethod;
   requires_approval?: boolean;
-  next_activity?: string;
+  next_activity_at?: string | null;
   is_searchable?: boolean;
   members_searchable?: boolean;
   max_members?: number;
@@ -991,7 +980,7 @@ export interface BannedMembersRequest {
   pagination?: PaginationParams;
 }
 
-export interface BannedMemberItem {
+export interface AdminBannedMemberItem {
   user: UserInfo;
   reason?: string;
   banned_at: string;
@@ -1400,7 +1389,7 @@ export interface SearchSuggestResponse {
 
 export interface FeatureSwitches {
   enable_public_registration: boolean;
-  enable_guest_login: boolean;
+  enable_guest_register: boolean;
   enable_moments: boolean;
   enable_nearby_people: boolean;
 }
@@ -1464,14 +1453,6 @@ export interface AnnouncementListRequest {}
 
 export type MediaCategory = 'avatar' | 'group_avatar' | 'moment_image' | 'chat_image' | 'chat_video' | 'chat_audio' | 'chat_file';
 
-export interface PresignUploadRequest {
-  file_name: string;
-  file_size: number;
-  mime_type: string;
-  category: MediaCategory;
-  md5?: string;
-}
-
 export interface PresignedUpload {
   upload_id: string;
   upload_url: string;
@@ -1479,23 +1460,27 @@ export interface PresignedUpload {
   expires_at: string;
 }
 
-export interface BatchPresignUploadRequest {
-  files: PresignUploadRequest[];
+export interface PresignFileInput {
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+  category: MediaCategory;
+  md5?: string;
 }
 
-export interface BatchPresignedUpload {
+export interface PresignUploadRequest {
+  files: PresignFileInput[];
+}
+
+export interface PresignedUploads {
   uploads: PresignedUpload[];
 }
 
 export interface CompleteUploadRequest {
-  upload_id: string;
-}
-
-export interface BatchCompleteUploadRequest {
   upload_ids: string[];
 }
 
-export interface BatchCompleteUpload {
+export interface CompletedUploads {
   uploads: UploadedMedia[];
 }
 
@@ -1711,9 +1696,9 @@ export interface AdminRbacRoleSetPermissionsRequest {
   permission_keys: string[];
 }
 
-export interface AdminRbacGrantAdminRequest {
+export interface AdminRbacAwardAdminRequest {
   user_id: string;
-  grant_all_permissions?: boolean;
+  award_all_permissions?: boolean;
   role_ids: string[];
 }
 
@@ -1896,7 +1881,7 @@ export interface AuditLogExportStatusRequest {
 export interface CreateAnnouncementRequest {
   title: string;
   content: string;
-  severity: AnnounceLevel;
+  severity: AnnounceSeverity;
   action_url?: string;
   send_push?: boolean;
 }
@@ -1912,9 +1897,9 @@ export interface AdminReportSearchRequest {
   pagination?: PaginationParams;
 }
 
-export interface AdminReportHandleRequest {
+export interface JudgeAdminReportRequest {
   report_id: string;
-  action: ReportHandleAction;
+  action: ReportAction;
   note?: string;
   ban_duration_days?: number;
 }
@@ -2017,7 +2002,7 @@ export interface NotifyPayload {
   application_id?: string;
   announcement_id?: string;
   title?: string; // system_announcement：公告标题（spec notify.md）
-  severity?: AnnounceLevel;
+  severity?: AnnounceSeverity;
   revoked_by?: UserInfo;
   rejected_by?: UserInfo;
   reason?: string;
@@ -2046,7 +2031,7 @@ export interface UnreadCountByType {
   system: number;
 }
 
-export interface UnreadCountResult {
+export interface UnreadSummaryResult {
   total: number;
   by_type: UnreadCountByType;
 }

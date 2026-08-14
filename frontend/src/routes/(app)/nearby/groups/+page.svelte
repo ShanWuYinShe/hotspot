@@ -78,7 +78,7 @@
 	const rest = $derived(filtered.slice(1));
 	const totalOnline = $derived(filtered.reduce((sum, group) => sum + group.online, 0));
 
-	// 加入/退出：乐观更新 + 失败回滚（spec: groups/join、groups/leave）。
+	// 加入/退出：乐观更新 + 失败回滚（spec: groups/enter、groups/exit）。
 	// join 对需审核群组返回 pending_approval——UI 仍标记 joined 简化（真实后端
 	// 以 is_joined 为准，审核通过前列表不会把它标为已加入）。
 	const toggleJoin = (id: string) => {

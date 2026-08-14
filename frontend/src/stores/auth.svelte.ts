@@ -2,13 +2,14 @@
 // AuthContext（runes 模块单例；纯客户端 SPA，无服务端实例化问题）。
 //
 // Web 端通过 HttpOnly Cookie 认证（access_token / refresh_token），
-// 本 store 不直接接触 token，只跟踪会话有效性（auth/get_status）与当前账号
-// （users/get_account）。匿名浏览公开端点允许；写操作调用 requireAuth() 打开
+// 本 store 不直接接触 token，只跟踪会话有效性（auth/session）与当前账号
+// （users/account）。匿名浏览公开端点允许；写操作调用 requireAuth() 打开
 // 登录弹层并在登录成功后重放该操作。
 
 import {
   checkAuthStatus, getAccount, guest as apiGuest, login as apiLogin,
-  logout as apiLogout, register as apiRegister, type ApiResponse,
+  logout as apiLogout, register as apiRegister, setAuthenticated,
+  type ApiResponse,
 } from '@/api';
 
 export type AuthStatus = 'loading' | 'anonymous' | 'authenticated';
@@ -78,6 +79,7 @@ async function refreshUser(): Promise<void> {
       user_type: d.user_type,
     };
     status = 'authenticated';
+    setAuthenticated(true);
   } else {
     // Account fetch failed (e.g. session revoked mid-flight) — drop to anonymous.
     user = null;
@@ -90,11 +92,12 @@ export function initAuth(): () => void {
   void (async () => {
     const res = await checkAuthStatus().catch(() => null);
     const data = res && res.code === 0 ? res.data : null;
-    if (data?.is_valid) {
+    if (data) {
       await refreshUser();
     } else {
       status = 'anonymous';
       user = null;
+      setAuthenticated(false);
     }
   })();
 
@@ -103,6 +106,7 @@ export function initAuth(): () => void {
     status = 'anonymous';
     user = null;
     bannedMessage = null;
+    setAuthenticated(false);
   };
   const onBanned = (e: Event) => {
     const detail = (e as CustomEvent<AuthEvent>).detail;
@@ -192,6 +196,7 @@ export async function logout(): Promise<void> {
   status = 'anonymous';
   user = null;
   bannedMessage = null;
+  setAuthenticated(false);
 }
 
 // Expose reactive state via getters（组件内直接读取即响应式）

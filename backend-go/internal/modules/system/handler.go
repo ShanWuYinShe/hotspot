@@ -3,6 +3,7 @@ package system
 import (
 	"net/http"
 
+	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 )
@@ -59,6 +60,10 @@ func (h *Handler) GetClientConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Bootstrap(w http.ResponseWriter, r *http.Request) {
+	// Web 端设备标识下发（spec api_spec_base.md「Web 端 Cookie 契约」）：
+	// bootstrap 是冷启动第一端点，未携带 device_id Cookie 时在此生成下发，
+	// 保证后续 auth/register、auth/guest 从 Cookie 读取时已存在；已携带则沿用。
+	platformauth.EnsureDeviceIDCookie(w, r)
 	var req BootstrapRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))

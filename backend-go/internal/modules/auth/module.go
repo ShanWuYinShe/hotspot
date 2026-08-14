@@ -32,19 +32,19 @@ func NewModule(ctx context.Context, cfg config.Config, factory *persistence.Fact
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/auth", func(authRouter chi.Router) {
 		authRouter.Group(func(group chi.Router) {
-			group.Use(platformauth.OptionalAuth)
-			group.Use(ratelimit.Middleware)
-			group.Use(resourceguard.Middleware)
-			group.Use(idempotency.Middleware)
-			MountRoutes(group, m.handler)
-		})
-
-		authRouter.Group(func(group chi.Router) {
 			group.Use(platformauth.RequiredAuth)
 			group.Use(ratelimit.Middleware)
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
 			MountAuthenticatedRoutes(group, m.handler)
 		})
+	})
+}
+
+// MountPublic mounts the anonymous auth endpoints on the /public/v1 node
+// (spec api_spec_public.md): no auth middleware, rate limited per IP.
+func (m *Module) MountPublic(r chi.Router) {
+	r.Route("/auth", func(authRouter chi.Router) {
+		MountPublicRoutes(authRouter, m.handler)
 	})
 }

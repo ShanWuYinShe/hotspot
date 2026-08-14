@@ -242,7 +242,7 @@ func queryGroupSuggestions(ctx context.Context, queryable persistence.QueryableD
 			payload["tags"] = tags
 		}
 		if nextActivity != "" {
-			payload["next_activity"] = nextActivity
+			payload["next_activity_at"] = nextActivity
 		}
 		if isSearchable {
 			payload["is_searchable"] = isSearchable

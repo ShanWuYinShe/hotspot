@@ -90,8 +90,8 @@ func TestPostgresIT_JoinGroupAndListMembers(t *testing.T) {
 		if err != nil {
 			t.Fatalf("JoinGroup: %v", err)
 		}
-		if result.Status != JoinGroupStatusJoined {
-			t.Fatalf("status: got %q, want %q", result.Status, JoinGroupStatusJoined)
+		if result.Status != EnterGroupStatusJoined {
+			t.Fatalf("status: got %q, want %q", result.Status, EnterGroupStatusJoined)
 		}
 
 		members, _, err := repo.ListMembers(ctx, group.Group.GroupID, nil, 10, "")
@@ -393,13 +393,13 @@ func TestPostgresIT_ApplicationApproveReject(t *testing.T) {
 		if err != nil {
 			t.Fatalf("JoinGroup (approval): %v", err)
 		}
-		if result.Status != JoinGroupStatusPendingApproval {
-			t.Fatalf("status: got %q, want %q", result.Status, JoinGroupStatusPendingApproval)
+		if result.Status != EnterGroupStatusPendingApproval {
+			t.Fatalf("status: got %q, want %q", result.Status, EnterGroupStatusPendingApproval)
 		}
-		if result.Application == nil || result.Application.ApplicationID == "" {
+		if result.ApplicationID == nil || *result.ApplicationID == "" {
 			t.Fatal("expected non-empty application id")
 		}
-		applicationID := result.Application.ApplicationID
+		applicationID := result.ApplicationID
 
 		pending := ApplicationStatusPending
 		apps, _, err := repo.ListApplications(ctx, groupID, &pending, 10, "")
@@ -410,7 +410,7 @@ func TestPostgresIT_ApplicationApproveReject(t *testing.T) {
 			t.Fatalf("expected 1 pending application, got %d", len(apps))
 		}
 
-		if err := repo.ApproveApplication(ctx, ownerID, applicationID); err != nil {
+		if err := repo.ApproveApplication(ctx, ownerID, *applicationID); err != nil {
 			t.Fatalf("ApproveApplication: %v", err)
 		}
 		members, _, err := repo.ListMembers(ctx, groupID, nil, 10, "")
@@ -433,10 +433,10 @@ func TestPostgresIT_ApplicationApproveReject(t *testing.T) {
 		if err != nil {
 			t.Fatalf("JoinGroup (2): %v", err)
 		}
-		if result2.Application == nil {
+		if result2.ApplicationID == nil {
 			t.Fatal("expected application to be created for 2nd applicant")
 		}
-		if err := repo.RejectApplication(ctx, result2.Application.ApplicationID, nil); err != nil {
+		if err := repo.RejectApplication(ctx, *result2.ApplicationID, nil); err != nil {
 			t.Fatalf("RejectApplication: %v", err)
 		}
 		apps, _, err = repo.ListApplications(ctx, groupID, nil, 10, "")
@@ -504,7 +504,7 @@ func TestPostgresIT_ListMyApplicationsAndCancel(t *testing.T) {
 		if err != nil {
 			t.Fatalf("JoinGroup: %v", err)
 		}
-		if result.Application == nil {
+		if result.ApplicationID == nil {
 			t.Fatal("expected application to be created")
 		}
 
@@ -517,7 +517,7 @@ func TestPostgresIT_ListMyApplicationsAndCancel(t *testing.T) {
 			t.Fatalf("expected 1 application, got %d", len(apps))
 		}
 
-		if err := repo.CancelApplication(ctx, result.Application.ApplicationID); err != nil {
+		if err := repo.CancelApplication(ctx, *result.ApplicationID); err != nil {
 			t.Fatalf("CancelApplication: %v", err)
 		}
 		apps, _, err = repo.ListMyApplications(ctx, applicantID, nil, 10, "")

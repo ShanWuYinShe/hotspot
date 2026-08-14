@@ -14,7 +14,7 @@ export interface LocationResult {
   emoji?: string; desc?: string; users?: number;
 }
 
-// 地图图钉与统计来自 POST /api/v1/map/canvas（见 location-shared.ts 的 fetchMapCanvas）。
+// 地图图钉与统计来自 POST /public/v1/map/canvas（见 location-shared.ts 的 fetchMapCanvas）。
 // 热门/最近地点与地标搜索：服务端暂无对应端点，此处用与页面同域的静态演示数据
 // （mock 阶段保证 Tab 与搜索 UI 可用；后端就绪后替换为端点数据）。
 export const RECENT_LOCATIONS: LocationResult[] = [

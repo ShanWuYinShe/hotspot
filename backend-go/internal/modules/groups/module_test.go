@@ -18,9 +18,9 @@ func TestGroupsModuleMountsSpecListBannedRoute(t *testing.T) {
 			return nil
 		}
 		switch route {
-		case "/api/v1/groups/admin/members/list_banned":
+		case "/api/v1/groups/admin/members/fetch_banned":
 			hasSpecRoute = true
-		case "/api/v1/groups/members/banned/list":
+		case "/api/v1/groups/admin/members/legacy_list_banned":
 			hasLegacyRoute = true
 		}
 		return nil

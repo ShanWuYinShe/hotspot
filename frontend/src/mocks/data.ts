@@ -150,7 +150,6 @@ export const mockSettings = {
 
 // ── Moments (spec MomentItem) ──────────────────────────────────
 // user is a nested UserInfo; reactions carry the Reaction aggregate shape;
-// likes_count coexists with reactions per spec.
 const momentPic = "https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=600";
 
 export const mockMoments = Array.from({ length: 24 }, (_, i) => {
@@ -162,22 +161,21 @@ export const mockMoments = Array.from({ length: 24 }, (_, i) => {
     images: [{ url: momentPic }],
     tags: [["自然", "城市", "生活", "活动", "音乐", "人文"][i % 6]],
     created_at: new Date(Date.now() - i * 3600000).toISOString(),
-    likes_count: Math.floor(Math.random() * 300) + 20,
     comments_count: Math.floor(Math.random() * 30) + 1,
     shares_count: 0,
     privacy_level: "public" as "public" | "private",
     reactions: [{ emoji: "👍", count: Math.floor(Math.random() * 200) + 10, reacted_by_me: i % 3 === 0 }],
     location: { point: { latitude: 34.26 + i * 0.002, longitude: 117.18 + i * 0.003 }, location_name: ["植物园", "市中心", "老街手冲馆", "云龙湖", "彭城广场", "汉文化景区"][i % 6], distance: `${(0.3 + i * 0.2).toFixed(1)}km` },
-    my_state: { is_favorited: i % 4 === 0 },
+    is_favorited: i % 4 === 0,
   };
 });
 
 // ── Groups (spec GroupItem: nested { group: GroupInfo }) ───────
 export const mockGroups = [
-  { group: { group_id: "group_1", name: "回龙窝胶片会", avatar_url: avatarA.replace("w=200", "w=400"), members_count: 143 }, description: "胶片摄影爱好者交流", join_method: "direct", requires_approval: false, online_members_count: 12, location: { point: { latitude: 34.25, longitude: 117.19 }, location_name: "回龙窝", distance: "0.4km" }, tags: ["摄影"], my_state: { role: "member", is_joined: true, unread_count: 0, is_muted: false, is_pinned: false } },
-  { group: { group_id: "group_2", name: "云龙湖晨跑团", avatar_url: avatarB.replace("w=200", "w=400"), members_count: 89 }, description: "每天清晨6点环湖跑", join_method: "password", requires_approval: false, online_members_count: 8, location: { point: { latitude: 34.24, longitude: 117.20 }, location_name: "云龙湖", distance: "0.8km" }, tags: ["户外"], my_state: { role: "member", is_joined: false, unread_count: 0, is_muted: false, is_pinned: false } },
-  { group: { group_id: "group_3", name: "户部山弹唱角", avatar_url: avatarA.replace("w=200", "w=400"), members_count: 62 }, description: "周末弹唱交流", join_method: "invite_only", requires_approval: true, online_members_count: 5, location: { point: { latitude: 34.26, longitude: 117.18 }, location_name: "户部山", distance: "1.1km" }, tags: ["音乐"], my_state: { role: "member", is_joined: false, unread_count: 0, is_muted: false, is_pinned: false } },
-  { group: { group_id: "group_4", name: "黄楼夜读角", avatar_url: avatarB.replace("w=200", "w=400"), members_count: 34 }, description: "读书分享小组", join_method: "direct", requires_approval: true, online_members_count: 3, next_activity: "周六晚 7 点共读《小王子》", location: { point: { latitude: 34.27, longitude: 117.18 }, location_name: "黄楼", distance: "1.4km" }, tags: ["阅读"], my_state: { role: "member", is_joined: false, unread_count: 0, is_muted: false, is_pinned: false } },
+  { group: { group_id: "group_1", name: "回龙窝胶片会", avatar_url: avatarA.replace("w=200", "w=400"), members_count: 143 }, description: "胶片摄影爱好者交流", join_method: "direct", requires_approval: false, online_members_count: 12, location: { point: { latitude: 34.25, longitude: 117.19 }, location_name: "回龙窝", distance: "0.4km" }, tags: ["摄影"], viewer_state: { role: "member", unread_count: 0, is_muted: false, is_pinned: false, joined_at: "2026-07-01T00:00:00Z" } },
+  { group: { group_id: "group_2", name: "云龙湖晨跑团", avatar_url: avatarB.replace("w=200", "w=400"), members_count: 89 }, description: "每天清晨6点环湖跑", join_method: "password", requires_approval: false, online_members_count: 8, location: { point: { latitude: 34.24, longitude: 117.20 }, location_name: "云龙湖", distance: "0.8km" }, tags: ["户外"], viewer_state: null },
+  { group: { group_id: "group_3", name: "户部山弹唱角", avatar_url: avatarA.replace("w=200", "w=400"), members_count: 62 }, description: "周末弹唱交流", join_method: "invite_only", requires_approval: true, online_members_count: 5, location: { point: { latitude: 34.26, longitude: 117.18 }, location_name: "户部山", distance: "1.1km" }, tags: ["音乐"], viewer_state: null },
+  { group: { group_id: "group_4", name: "黄楼夜读角", avatar_url: avatarB.replace("w=200", "w=400"), members_count: 34 }, description: "读书分享小组", join_method: "direct", requires_approval: true, online_members_count: 3, next_activity_at: "周六晚 7 点共读《小王子》", location: { point: { latitude: 34.27, longitude: 117.18 }, location_name: "黄楼", distance: "1.4km" }, tags: ["阅读"], viewer_state: null },
 ];
 
 // ── Notify (spec NotifyItem) ────────────────────────────
