@@ -217,7 +217,7 @@ const FILTER_TABS = [
 				</div>
 			{/snippet}
 			{#snippet below()}
-				<!-- 分类过滤统一走 TabBar（下划线） -->
+				<!-- 分类过滤统一走 TabBar（胶囊） -->
 				<div class="mt-3">
 					<TabBar items={FILTER_TABS.map((t) => ({ id: t.id, label: t.label }))} value={filter} onChange={(id) => (filter = id)} />
 				</div>

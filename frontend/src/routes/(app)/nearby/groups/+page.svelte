@@ -129,7 +129,7 @@
 				<div class="mt-3">
 					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" class="px-4 py-2.5 rounded-md" />
 				</div>
-				<!-- 分类过滤统一走 TabBar（下划线） -->
+				<!-- 分类过滤统一走 TabBar（胶囊） -->
 				<div class="mt-3">
 					<TabBar items={CATEGORIES.map((c) => ({ id: c, label: c }))} value={activeCategory} onChange={(id) => (activeCategory = id)} />
 				</div>

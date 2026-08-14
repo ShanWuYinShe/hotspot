@@ -56,7 +56,7 @@
 </script>
 
 <section class="mt-5" aria-label="搜索结果">
-	<!-- 分类 Tab 统一走 TabBar（下划线） -->
+	<!-- 分类 Tab 统一走 TabBar（胶囊） -->
 	<TabBar
 		items={tabs.map((t) => {
 			const m = t.label.match(/^(.*?)(?:\s+(\d+))?$/);

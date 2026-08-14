@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, Crosshair, Check, Heart } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
@@ -77,7 +78,7 @@ locationName = loc?.location_name ?? '';
 			class="flex-1 bg-transparent text-text-primary text-sm"
 		/>
 		{#if searchQuery}
-			<button type="button" class="hover-btn focus-ring" onclick={() => (searchQuery = '')}>
+			<button type="button" class="hover-btn focus-ring hit-slop" onclick={() => (searchQuery = '')}>
 				<X class="size-3.5 text-text-secondary"   strokeWidth={2} />
 			</button>
 		{/if}
@@ -105,22 +106,17 @@ locationName = loc?.location_name ?? '';
 
 <!-- Tabs -->
 <div class="shrink-0 flex gap-1.5 px-4 pb-3">
-	{#each [
-		{ id: 'nearby', label: '附近', icon: TrendingUp },
-		{ id: 'hot', label: '热门', icon: Star },
-		{ id: 'recent', label: '最近', icon: Clock }
-	] as tab}
-		<button
-			type="button"
-			class="hover-btn flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm focus-ring {activeTab === tab.id
-				? 'bg-accent-default text-text-on-accent shadow-glow-sm'
-				: 'border border-border-default bg-surface-primary text-text-secondary'}"
-			onclick={() => (activeTab = tab.id as 'nearby' | 'hot' | 'recent')}
-		>
-			<tab.icon class="size-3"  strokeWidth={activeTab === tab.id ? 2.5 : 1.5} />
-			{tab.label}
-		</button>
-	{/each}
+	<!-- Tab row：统一 TabBar（胶囊），对齐 LocationSheetList 与全站分类 Tab 契约 -->
+	<TabBar
+		items={[
+			{ id: 'nearby', label: '附近', icon: TrendingUp },
+			{ id: 'hot', label: '热门', icon: Star },
+			{ id: 'recent', label: '最近', icon: Clock }
+		]}
+		value={activeTab}
+		onChange={(id) => (activeTab = id as 'nearby' | 'hot' | 'recent')}
+		class="flex-1 px-1"
+	/>
 </div>
 
 <!-- List -->
@@ -288,7 +284,7 @@ locationName = loc?.location_name ?? '';
 	{/if}
 	<button
 		type="button"
-		class="hover-btn w-full flex items-center justify-center gap-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-md h-12"
+		class="hover-btn w-full flex items-center justify-center gap-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-md h-11"
 		style="box-shadow:var(--shadow-glow-lg);"
 		onclick={onConfirm}
 	>

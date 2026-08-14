@@ -82,7 +82,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 			</div>
 		{/if}
 
-		<!-- Tab row：统一 TabBar（下划线） -->
+		<!-- Tab row：统一 TabBar（胶囊） -->
 		<div class="flex items-center gap-2 px-4 pb-2">
 			<TabBar
 				items={[

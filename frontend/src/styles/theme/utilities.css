@@ -442,10 +442,11 @@
   }
 }
 
-/*── TabBar 导航项 subtle hover（无 layer 规则，优先级高于 @layer utilities 内
+/*── TabBar 胶囊导航项 subtle hover（无 layer 规则，优先级高于 @layer utilities 内
    的 Tailwind utility，确保 hover 背景生效）──────────────────────────────
-   不触发全局 button 实色按压填充（全局规则已用 :not([data-tab-bar] *) 排除）。 */
-.tab-item { border-radius: var(--cst-shape-sm); }
+   不触发全局 button 实色按压填充（全局规则已用 :not([data-tab-bar] *) 排除）。
+   胶囊圆角：激活项 accent 实底（组件内 bg-accent-default），未激活 hover 轻背景。 */
+.tab-item { border-radius: 9999px; }
 @media (hover: hover) and (pointer: fine) {
   .tab-item:not([aria-pressed="true"]):hover {
     background-color: var(--cst-interactive-hover-fill);

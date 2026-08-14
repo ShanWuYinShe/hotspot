@@ -170,7 +170,7 @@ referencePoint = loc?.point ?? null;
 	</PageHeader>
 {/snippet}
 
-<!-- ═══ 分类 Tab 栏（下划线样式，随 header 吸顶）═══ -->
+<!-- ═══ 分类 Tab 栏（胶囊样式，随 header 吸顶）═══ -->
 {#snippet tabBar()}
 	<TabBar
 		items={TABS.map((t) => ({ id: t, label: t }))}

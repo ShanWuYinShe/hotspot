@@ -77,7 +77,7 @@
 					</div>
 				</div>
 
-				<!-- 分类 Tab 统一走 TabBar（下划线） -->
+				<!-- 分类 Tab 统一走 TabBar（胶囊） -->
 				<div class="mt-6 flex flex-wrap items-center justify-between gap-3">
 					<div class="min-w-0 flex-1" aria-label="瞬间分类">
 						<TabBar items={tabItems.map((t) => ({ id: t.id, label: t.label, count: t.count }))} value={activeTab} onChange={(id) => (activeTab = id as Tab)} />

@@ -13,7 +13,7 @@
 
 	// 关系聚合页（/me/relationships，桌面导航「关系」与通知页深链的落地页）：
 	// 好友 / 关注 / 粉丝 三 tab。对齐全站样板（nearby/moments）：StandardPageLayout
-	// + sticky PageHeader + below 下划线 Tab 栏（随 header 吸顶）；tab 状态存 URL
+	// + sticky PageHeader + below 胶囊 Tab 栏（随 header 吸顶）；tab 状态存 URL
 	// query（?tab=friends|following|fans，默认 friends），可刷新/分享/直达；
 	// 三个分区组件以 embedded 模式内嵌（隐藏各自 header，卡片网格布局）。
 
@@ -43,7 +43,7 @@
 	const device = $derived(platform.platform);
 </script>
 
-<!-- ═══ 样板 header：sticky PageHeader + below 下划线 Tab 栏（对齐 nearby/moments）═══ -->
+<!-- ═══ 样板 header：sticky PageHeader + below 胶囊 Tab 栏（对齐 nearby/moments）═══ -->
 {#snippet relHeader()}
 	<PageHeader
 		title="关系"
