@@ -11,4 +11,4 @@
 - 实现规范、构建命令、功能边界不在本目录——在各子项目根的 `AGENTS.md`(`backend-go/`、`frontend/`、`harmonyapp/`)。
 - 本目录默认只读。发现实现与契约冲突时,默认改实现;只有用户明确要求时才改契约。
 - 引用契约用文件名或小节标题,不用数字章节号。
-- 内部冲突优先级:`api_spec_base.md` > `api_spec_types.md` > `api_spec_errors.md` > 各模块 `api_spec_*.md`。
+- 内部冲突优先级:`api_spec_base.md` > `api_spec_authz.md` > `api_spec_types.md` > `api_spec_errors.md` > 各模块 `api_spec_*.md`。

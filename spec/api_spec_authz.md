@@ -1,11 +1,12 @@
 # HotSpot API - 守卫与权限模型
 
-> 定义 HotSpot 的统一守卫模型：节点划分、认证档位、资源约束、守卫子树规则、平台权限键与失败语义。
+> 定义 HotSpot 的统一守卫模型：节点划分、节点身份语义、资源约束、守卫子树规则、平台权限键与失败语义。
 > 本文档是权限判定的唯一权威来源；各模块端点文档的「守卫/认证」字段只引用本文档，不重复定义规则。
 
 ## 契约引用
 
-- 基础规范与约束：`api_spec_base.md`（节点与路径架构、命名规范、类型稳定性）
+- 基础规范与约束：`api_spec_base.md`（节点与路径架构、节点身份语义、命名规范、类型稳定性）
+- public 节点端点清单：`api_spec_public.md`
 - 错误码与 ForbiddenReason：`api_spec_errors.md`
 
 ---
@@ -14,39 +15,29 @@
 
 | 位置 | 调用者 | 守卫 | 判定时机 |
 |------|--------|------|----------|
-| `/api/v1/` | 普通用户（含群成员） | 认证档位（public/optional/required/credential）+ 资源约束 | 认证在平台层中间件；资源约束在引擎 |
+| `/public/v1/` | 未注册用户（纯匿名） | 节点级：**完全不解析 Token**；仅可见性过滤，无身份类约束 | 资源约束在引擎 |
+| `/api/v1/` | 注册用户（正式 + 临时同权） | 节点级：必须有效 Token（`10100`）+ 资源约束 | 认证在平台层中间件；资源约束在引擎 |
 | `/api/v1/groups/admin/` | 群管理员 | 守卫子树：调用者必须是**请求目标群**的 owner/admin | 子树级统一中间件（惰性解析 group_id → 角色） |
-| `/admin/v1/` | 平台管理员 | required + `admin.*` 权限键 | 节点级统一中间件 |
+| `/admin/v1/` | 平台管理员 | 节点级：必须 Token + 平台管理员 + `admin.*` 权限键 | 节点级统一中间件 |
 
-**判定顺序（契约级）**：认证 → 可见性（10300 防枚举）→ 守卫/授权（10200 + forbidden_reason）。可见性失败必须先于授权失败返回，不可见资源连「无权限」都不暴露。
+**节点即档位（契约级）**：身份要求由节点前缀唯一表达——`/public/v1` = 纯匿名（不解析 Token）、`/api/v1` = 注册用户、`/admin/v1` = 平台管理员。原「认证档位」（public/optional/required/credential）作为端点属性已废除；唯一特例是 `/public/v1/auth/refresh_token` 以请求体中的 refresh_token 为凭证（credential 语义）。详见 `api_spec_base.md`「节点身份语义」。
+
+**判定顺序（契约级）**：认证（仅 /api/v1、/admin/v1）→ 可见性（10300 防枚举）→ 守卫/授权（10200 + forbidden_reason）。可见性失败必须先于授权失败返回，不可见资源连「无权限」都不暴露。
 
 **端点单角色原则（契约级）**：每个端点只有一种调用者角色与一种检查规则；双角色语义（「作者或管理员」）一律拆分为两个端点。角色层级（owner ⊃ admin ⊃ member）由守卫层级表达，不是端点内条件分支。
 
 ---
 
-## 认证档位（仅四种，权威定义）
+## 资源约束（由判定引擎按端点声明解析）
 
-| 档位 | 语义 | 缺少/无效 Token 行为 |
-|------|------|---------------------|
-| `public` | 不涉及鉴权 | 无（仅账号生命周期端点可用） |
-| `optional` | 匿名与登录态均可访问 | 视为匿名，忽略 Token，仅返回公开数据 |
-| `required` | 必须登录 | 返回 `10100` |
-| `credential` | 仅 `auth/refresh_token`：以 refresh_token 为凭证 | 返回 `10100`，不适用 optional 的匿名降级 |
-
-- 「条件必须」档位与「目标缺省=当前用户」语义已废除：目标 ID 一律必传
-- optional 端点：只要携带 Token 就必须验证（含黑名单检查）；验证失败按匿名处理
-- 黑名单规则：access/refresh token 失效通过黑名单实现；条目有效期不得短于 Token 过期时间
-
----
-
-## 资源约束（/api/v1 专用，由判定引擎按端点声明解析）
+身份类资源约束仅存在于 `/api/v1`（含 groups/admin 子树）；`/public/v1` 仅适用可见性过滤（无身份类约束）。
 
 | 约束 | 语义 | 典型端点 |
 |------|------|----------|
 | `resource.owner` | 调用者是目标资源的作者/本人 | moments/update、comments/delete、private_messages/update、share/revoke、media/complete_upload |
 | `chat.participant` | 调用者是私聊会话的双方之一 | private_chats/*、private_messages/* |
-| `group.member` | 调用者是目标群的成员 | group_messages/send、list、mark_read、groups/update_preferences、groups/leave |
-| `self` | 操作对象即当前用户本人 | users/get_account 系列、auth/list_sessions 系列、notify/*、各天生私有列表 |
+| `group.member` | 调用者是目标群的成员 | group_messages/send、list、mark_read、groups/update_preferences、groups/exit |
+| `self` | 操作对象即当前用户本人 | users/account 系列、auth/fetch_sessions 系列、notify/*、各天生私有列表 |
 
 资源约束判定所需的角色/关系数据由引擎惰性解析；业务 service 不再自行判断角色。
 
@@ -102,23 +93,24 @@
 
 ## 交叉规则（契约级）
 
-1. **平台管理员在 /api/v1 上与普通用户完全同权**：平台权限不外溢到客户端 API
-2. **群角色与 /admin/v1 无关**：群主/群管理员的动作全部在客户端 API（含守卫子树）执行并落审计；平台节点只做平台级动作
-3. **/admin/v1 响应使用独立 `AdminXxxItem` 类型**：客户端类型的可见性注解与视角规则不适用于该节点；其字段可见性由 `admin.*` 权限键 + PII 键控制
-4. **同一用户多角色分别判定、互不传递**：用户可同时是平台管理员与某群群主，两套判定按节点与上下文独立进行
-5. **术语纪律**：文档禁止裸称「管理员」；一律写「平台管理员」或「群主/群管理员」
+1. **登录用户调 /public/v1 得到与匿名完全相同的响应**：public 节点不解析 Token，无任何隐式身份增强；需要登录视角（viewer_state / relation 等）必须调 `/api/v1` 对应端点
+2. **平台管理员在 /api/v1 上与普通用户完全同权**：平台权限不外溢到客户端 API
+3. **群角色与 /admin/v1 无关**：群主/群管理员的动作全部在客户端 API（含守卫子树）执行并落审计；平台节点只做平台级动作
+4. **/admin/v1 响应使用独立 `AdminXxxItem` 类型**：客户端类型的可见性注解与视角规则不适用于该节点；其字段可见性由 `admin.*` 权限键 + PII 键控制
+5. **同一用户多角色分别判定、互不传递**：用户可同时是平台管理员与某群群主，两套判定按节点与上下文独立进行
+6. **术语纪律**：文档禁止裸称「管理员」；一律写「平台管理员」或「群主/群管理员」
 
 ---
 
 ## 失败语义（契约级）
 
-| 失败 | 码 | data |
-|------|-----|------|
-| 未认证（required/credential） | 10100 | 无 |
-| 不存在/不可见（含隐私隐藏，防枚举） | 10300 | 无 |
-| 权限不足 | 10200 | `{ forbidden_reason: ForbiddenReason }`（**必填**） |
-| 业务冲突/前置不满足 | 10400 | 端点可显式声明结构化 data（如 `data.mute`） |
-| 账号封禁（强制登出） | 10201 | 无（中间件级） |
+| 失败 | 码 | data | 适用节点 |
+|------|-----|------|----------|
+| 未认证（/api/v1、/admin/v1 及 credential 特例） | 10100 | 无 | 非 public |
+| 不存在/不可见（含隐私隐藏，防枚举） | 10300 | 无 | 全部 |
+| 权限不足 | 10200 | `{ forbidden_reason: ForbiddenReason }`（**必填**） | 全部（public 节点为隐私类 reason：privacy_setting / not_group_member） |
+| 业务冲突/前置不满足 | 10400 | 端点可显式声明结构化 data（如 `data.mute`） | 全部 |
+| 账号封禁（强制登出） | 10201 | 无（中间件级） | /api/v1、/admin/v1 |
 
 `ForbiddenReason` 枚举（12 项）的权威定义在 `api_spec_errors.md`；`BlockReason` 已并入。
 
@@ -126,164 +118,204 @@
 
 ---
 
-## 权限矩阵（契约附件，148 行）
+## 权限矩阵（契约附件，170 行）
 
 > 列说明：
-> - 认证 = 档位（public/optional/required/credential）
-> - 守卫 = 守卫子树（groups/admin）或平台权限键（admin.*）
-> - 约束 = 资源约束（owner=resource.owner、part=chat.participant、gmember=group.member、self）
+> - **节点即档位**：块标题即节点，节点身份语义见上（/public/v1 纯匿名、/api/v1 注册用户、groups/admin 守卫子树、/admin/v1 平台管理员）；认证档位列已废除
+> - 守卫/约束 = 守卫子树（groups/admin）、平台权限键（admin.*）或资源约束（owner=resource.owner、part=chat.participant、gmember=group.member、self、可见性过滤）
 > - reason = 10200 时的 forbidden_reason
 > - 幂等 = 幂等键/自然去重/no-op 语义
+> - 「登录视角」= 原 optional 端点收紧为 required 后的登录版；其匿名镜像版在 `/public/v1`（类型独立，见 `api_spec_public.md`）
+> - **镜像判定原则**：仅当登录版存在真实增量（查看者状态字段，或可见性判定依赖身份——如 `reactions/fetch` 的私聊消息）才拆双版本；无任何增量的端点仅保留 `/public/v1` 版（如 `map/canvas`、`share/fetch`、`groups/announcements/fetch`、system 4 端点），不设登录镜像
 
-| # | 位置 | 端点 | 认证/守卫 | 资源约束 | 10200 reason | 特有失败 | 幂等/no-op |
-|---|------|------|-----------|----------|--------------|----------|------------|
-| 1 | /api/v1 | `/api/v1/auth/register` | public | — | — | 10400 login_id 占用 | 幂等 |
-| 2 | /api/v1 | `/api/v1/auth/login` | public | — | — | 10100（防枚举） | — |
-| 3 | /api/v1 | `/api/v1/auth/logout` | required | self.session | — | — | no-op |
-| 4 | /api/v1 | `/api/v1/auth/guest` | public | — | — | — | 幂等 |
-| 5 | /api/v1 | `/api/v1/auth/refresh_token` | credential | refresh 归属+黑名单 | — | 10100 | — |
-| 6 | /api/v1 | `/api/v1/auth/get_status` | optional | — | — | — | — |
-| 7 | /api/v1 | `/api/v1/auth/request_password_reset` | public | — | — | 限流 | — |
-| 8 | /api/v1 | `/api/v1/auth/reset_password` | public | 一次性验证码 | — | 10300 | 自然去重 |
-| 9 | /api/v1 | `/api/v1/auth/change_password` | required | self+旧密码 | — | 10401 | 自然去重 |
-| 10 | /api/v1 | `/api/v1/auth/list_sessions` | required | self | — | — | — |
-| 11 | /api/v1 | `/api/v1/auth/revoke_session` | required | self.session | — | 10300/10400(当前会话) | — |
-| 12 | /api/v1 | `/api/v1/auth/revoke_all_sessions` | required | self.session | — | — | — |
-| 13 | /api/v1 | `/api/v1/users/search` | optional | searchable 系列过滤 | — | — | — |
-| 14 | /api/v1 | `/api/v1/users/open_the_door` | optional | 隐私过滤 | — | 10300 | — |
-| 15 | /api/v1 | `/api/v1/users/list_friends` | optional | social_lists_visible | privacy_setting | 10200/10300 | — |
-| 16 | /api/v1 | `/api/v1/users/list_following` | optional | social_lists_visible | privacy_setting | 10200/10300 | — |
-| 17 | /api/v1 | `/api/v1/users/list_followers` | optional | social_lists_visible | privacy_setting | 10200/10300 | — |
-| 18 | /api/v1 | `/api/v1/users/list_groups` | optional | groups_visible | privacy_setting | 10200/10300 | — |
-| 19 | /api/v1 | `/api/v1/users/list_moments` | optional | 公开瞬间过滤 | — | 10300 | — |
-| 20 | /api/v1 | `/api/v1/users/list_reacted_moments` | optional | reacted_moments_visible | privacy_setting | 10200/10300 | — |
-| 21 | /api/v1 | `/api/v1/users/batch_get` | optional | 可见性过滤 | — | — | — |
-| 22 | /api/v1 | `/api/v1/users/get_account` | required | self | — | — | — |
-| 23 | /api/v1 | `/api/v1/users/update_account` | required | self | — | 10300(avatar)/10400(屏蔽标签) | — |
-| 24 | /api/v1 | `/api/v1/users/update_location` | required | self | — | — | — |
-| 25 | /api/v1 | `/api/v1/users/upgrade` | required | self(temp) | — | 10400 | — |
-| 26 | /api/v1 | `/api/v1/users/get_settings` | required | self | — | — | — |
-| 27 | /api/v1 | `/api/v1/users/update_settings` | required | self | — | — | — |
-| 28 | /api/v1 | `/api/v1/users/delete_account` | required | self | — | 10000(确认串) | — |
-| 29 | /api/v1 | `/api/v1/users/set_follow` | required | 对方 allow_follow | privacy_setting | 10300/10400(自己) | no-op |
-| 30 | /api/v1 | `/api/v1/users/set_block` | required | — | — | 10300/10400(自己) | no-op |
-| 31 | /api/v1 | `/api/v1/users/list_blocked` | required | self | — | — | — |
-| 32 | /api/v1 | `/api/v1/users/set_remark` | required | 已关注条件 | — | 10300/10400(未关注) | no-op |
-| 33 | /api/v1 | `/api/v1/moments/search` | optional | 可见性过滤 | — | — | — |
-| 34 | /api/v1 | `/api/v1/moments/open_the_door` | optional | 可见性过滤 | — | 10300 | — |
-| 35 | /api/v1 | `/api/v1/moments/create` | required | — | — | 10300/10400(屏蔽标签) | 幂等 |
-| 36 | /api/v1 | `/api/v1/moments/update` | required | owner | not_resource_owner | 10200/10300 | — |
-| 37 | /api/v1 | `/api/v1/moments/delete` | required | owner | not_resource_owner | 10200/10300 | — |
-| 38 | /api/v1 | `/api/v1/moments/set_favorite` | required | 可见性过滤 | — | 10300 | no-op |
-| 39 | /api/v1 | `/api/v1/moments/list_created` | required | self(owner) | — | — | — |
-| 40 | /api/v1 | `/api/v1/moments/list_favorites` | required | self | — | — | — |
-| 41 | /api/v1 | `/api/v1/comments/create` | required | 评论限制+黑名单 | privacy_setting/blocked_by_user | 10300 | 幂等 |
-| 42 | /api/v1 | `/api/v1/comments/delete` | required | owner | not_resource_owner | 10200/10300 | — |
-| 43 | /api/v1 | `/api/v1/comments/list` | optional | 可见性过滤 | — | 10300 | — |
-| 44 | /api/v1 | `/api/v1/comments/list_replies` | optional | 可见性过滤 | — | 10300 | — |
-| 45 | /api/v1 | `/api/v1/comments/open_the_door` | optional | 可见性过滤 | — | 10300 | — |
-| 46 | /api/v1 | `/api/v1/reactions/set` | required | 目标可见性 | — | 10300 | no-op 语义 |
-| 47 | /api/v1 | `/api/v1/reactions/list` | optional | 目标可见性 | — | 10300 | — |
-| 48 | /api/v1 | `/api/v1/private_chats/list` | required | self | — | — | — |
-| 49 | /api/v1 | `/api/v1/private_chats/open_the_door` | required | 对方 ChatPerm | privacy_setting | 10300 | — |
-| 50 | /api/v1 | `/api/v1/private_chats/update_preferences` | required | part | — | 10300 | no-op |
-| 51 | /api/v1 | `/api/v1/private_chats/delete` | required | self | — | 10300 | — |
-| 52 | /api/v1 | `/api/v1/private_messages/send` | required | part+ChatPerm/黑名单/配额 | blocked_by_user/privacy_setting/stranger_quota_exceeded | 10300/10400 | 幂等 |
-| 53 | /api/v1 | `/api/v1/private_messages/list` | required | part | — | 10300 | — |
-| 54 | /api/v1 | `/api/v1/private_messages/update` | required | owner | not_resource_owner | 10300/10400(非文本/已撤回) | — |
-| 55 | /api/v1 | `/api/v1/private_messages/recall` | required | owner | not_resource_owner | 10300/10400(超时) | — |
-| 56 | /api/v1 | `/api/v1/private_messages/mark_read` | required | part | — | 10300 | — |
-| 57 | /api/v1 | `/api/v1/group_messages/send` | required | gmember+禁言 | not_group_member | 10300/10400(禁言+data.mute) | 幂等 |
-| 58 | /api/v1 | `/api/v1/group_messages/list` | required | gmember | not_group_member | 10300/10400 | — |
-| 59 | /api/v1 | `/api/v1/group_messages/update` | required | owner | not_resource_owner | 10300/10400 | — |
-| 60 | /api/v1 | `/api/v1/group_messages/recall` | required | owner | not_resource_owner | 10300/10400(超时) | — |
-| 61 | /api/v1 | `/api/v1/group_messages/mark_read` | required | gmember | not_group_member | 10300/10400 | — |
-| 62 | /api/v1 | `/api/v1/groups/search` | optional | is_searchable 过滤 | — | — | — |
-| 63 | /api/v1 | `/api/v1/groups/open_the_door` | optional | 可见性过滤 | — | 10300 | — |
-| 64 | /api/v1 | `/api/v1/groups/create` | required | — | — | 10300/10400(屏蔽标签) | 幂等 |
-| 65 | /api/v1 | `/api/v1/groups/join` | required | join_method+封禁 | banned_in_group | 10300/10400 | 自然去重 |
-| 66 | /api/v1 | `/api/v1/groups/leave` | required | gmember | not_group_member | 10300/10400(群主) | — |
-| 67 | /api/v1 | `/api/v1/groups/list_joined` | required | self | — | — | — |
-| 68 | /api/v1 | `/api/v1/groups/update_preferences` | required | gmember | not_group_member | 10300/10400 | no-op |
-| 69 | /api/v1 | `/api/v1/groups/announcements/list` | optional | 可见性过滤 | — | 10300 | — |
-| 70 | /api/v1 | `/api/v1/groups/members/list` | optional | members_searchable 条件 | not_group_member | 10300 | — |
-| 71 | /api/v1 | `/api/v1/groups/members/search` | optional | members_searchable 条件 | not_group_member | 10300 | — |
-| 72 | /api/v1 | `/api/v1/groups/applications/list_submitted` | required | self(申请人) | — | — | — |
-| 73 | /api/v1 | `/api/v1/groups/applications/cancel` | required | self(申请人) | not_resource_owner | 10300/10400 | — |
-| 74 | /api/v1 | `/api/v1/groups/invites/list_received` | required | self | — | — | — |
-| 75 | /api/v1 | `/api/v1/groups/invites/accept` | required | self(受邀人) | — | 10300/10400 | — |
-| 76 | /api/v1 | `/api/v1/groups/invites/reject` | required | self(受邀人) | — | 10300/10400 | — |
-| 77 | /api/v1 | `/api/v1/feed/following` | required | — | — | — | — |
-| 78 | /api/v1 | `/api/v1/feed/nearby` | required | — | — | — | — |
-| 79 | /api/v1 | `/api/v1/feed/nearby_users` | optional | searchable 系列过滤 | — | — | — |
-| 80 | /api/v1 | `/api/v1/feed/nearby_groups` | optional | is_searchable 过滤 | — | — | — |
-| 81 | /api/v1 | `/api/v1/feed/trending` | optional | — | — | — | — |
-| 82 | /api/v1 | `/api/v1/search/suggest` | optional | 可见性过滤 | — | — | — |
-| 83 | /api/v1 | `/api/v1/map/canvas` | optional | 公开对象过滤 | — | — | — |
-| 84 | /api/v1 | `/api/v1/media/presign_upload` | required | — | — | 限流 | — |
-| 85 | /api/v1 | `/api/v1/media/batch_presign_upload` | required | — | — | — | — |
-| 86 | /api/v1 | `/api/v1/media/complete_upload` | required | owner(upload_id) | not_resource_owner | 10300/10400 | 自然去重 |
-| 87 | /api/v1 | `/api/v1/media/batch_complete_upload` | required | owner(upload_id) | not_resource_owner | 10300/10400 | 自然去重 |
-| 88 | /api/v1 | `/api/v1/share/create` | required | 目标可见 | — | 10300 | 幂等 |
-| 89 | /api/v1 | `/api/v1/share/get` | optional | 撤销/过期 | — | 10300 | 反滥用限流 |
-| 90 | /api/v1 | `/api/v1/share/list` | required | self | — | — | — |
-| 91 | /api/v1 | `/api/v1/share/revoke` | required | owner | — | 10300(隐私一致性) | no-op |
-| 92 | /api/v1 | `/api/v1/reports/create` | required | 目标存在+非自举报 | — | 10300/10400 | 自然去重 |
-| 93 | /api/v1 | `/api/v1/reports/list` | required | self | — | — | — |
-| 94 | /api/v1 | `/api/v1/notify/list` | required | self | — | — | — |
-| 95 | /api/v1 | `/api/v1/notify/get_unread_count` | required | self | — | — | — |
-| 96 | /api/v1 | `/api/v1/notify/mark_read` | required | self(scope 显式) | — | — | — |
-| 97 | /api/v1 | `/api/v1/system/get_meta` | optional | — | — | — | — |
-| 98 | /api/v1 | `/api/v1/system/health` | optional | — | — | 10600 | — |
-| 99 | /api/v1 | `/api/v1/system/announcements/list` | optional | — | — | — | — |
-| 100 | /api/v1 | `/api/v1/system/get_client_config` | optional | — | — | — | — |
-| 101 | /api/v1 | `/api/v1/system/bootstrap` | optional | self(登录态附加) | — | — | If-None-Match |
-| 102 | /api/v1/groups/admin | `/api/v1/groups/admin/update` | 守卫(owner/admin) | gmember | not_group_admin | 10200/10300 | — |
-| 103 | /api/v1/groups/admin | `/api/v1/groups/admin/get_settings` | 守卫(owner/admin) | gmember | not_group_admin | 10300 | — |
-| 104 | /api/v1/groups/admin | `/api/v1/groups/admin/dismiss` | owner 专属 | gmember | not_group_owner | 10200/10300 | — |
-| 105 | /api/v1/groups/admin | `/api/v1/groups/admin/invites/create` | 守卫(owner/admin) | gmember | not_group_admin | 10300/10400 | 自然去重 |
-| 106 | /api/v1/groups/admin | `/api/v1/groups/admin/invites/list_sent` | 守卫(owner/admin) | gmember | not_group_admin | 10300/10400 | — |
-| 107 | /api/v1/groups/admin | `/api/v1/groups/admin/invites/revoke` | 守卫(owner/admin) | gmember | not_group_admin | 10300/10400 | — |
-| 108 | /api/v1/groups/admin | `/api/v1/groups/admin/members/list` | 守卫(owner/admin) | gmember | not_group_admin | 10300 | — |
-| 109 | /api/v1/groups/admin | `/api/v1/groups/admin/members/set_role` | 守卫(owner/admin) | gmember | not_group_admin | 10300/10400 | no-op 同角色 |
-| 110 | /api/v1/groups/admin | `/api/v1/groups/admin/members/set_mute` | 守卫(owner/admin) | gmember | not_group_admin | 10300/10400(群主保护) | no-op |
-| 111 | /api/v1/groups/admin | `/api/v1/groups/admin/members/set_ban` | 守卫(owner/admin) | gmember | not_group_admin | 10300/10400(群主保护) | no-op 解封 |
-| 112 | /api/v1/groups/admin | `/api/v1/groups/admin/members/list_banned` | 守卫(owner/admin) | gmember | not_group_admin | 10300 | — |
-| 113 | /api/v1/groups/admin | `/api/v1/groups/admin/members/remove` | 守卫(owner/admin) | gmember | not_group_admin | 10300/10400(群主保护) | — |
-| 114 | /api/v1/groups/admin | `/api/v1/groups/admin/applications/list` | 守卫(owner/admin) | gmember | not_group_admin | 10300 | — |
-| 115 | /api/v1/groups/admin | `/api/v1/groups/admin/applications/approve` | 守卫(owner/admin) | gmember | not_group_admin | 10300/10400 | no-op 已接受 |
-| 116 | /api/v1/groups/admin | `/api/v1/groups/admin/applications/reject` | 守卫(owner/admin) | gmember | not_group_admin | 10300/10400 | — |
-| 117 | /api/v1/groups/admin | `/api/v1/groups/admin/announcements/create` | 守卫(owner/admin) | gmember | not_group_admin | 10300/10400 | 幂等 |
-| 118 | /api/v1/groups/admin | `/api/v1/groups/admin/announcements/update` | 守卫(owner/admin) | gmember | not_group_admin | 10200/10300 | — |
-| 119 | /api/v1/groups/admin | `/api/v1/groups/admin/announcements/delete` | 守卫(owner/admin) | gmember | not_group_admin | 10200/10300 | — |
-| 120 | /api/v1/groups/admin | `/api/v1/groups/admin/transfer_ownership` | owner 专属 | gmember | not_group_owner | 10300/10400(目标非成员) | 自然去重 |
-| 121 | /api/v1/groups/admin | `/api/v1/groups/admin/messages/recall` | 守卫(owner/admin) | gmember | not_group_admin | 10300/10400 | — |
-| 122 | /admin/v1 | `/admin/v1/rbac/get_me` | required+平台管理员 | — | not_admin | — | — |
-| 123 | /admin/v1 | `/admin/v1/rbac/list_permissions` | admin.rbac.manage | — | not_admin/insufficient_admin_permission | — | — |
-| 124 | /admin/v1 | `/admin/v1/rbac/roles/list` | admin.rbac.manage | — | not_admin/insufficient_admin_permission | — | — |
-| 125 | /admin/v1 | `/admin/v1/rbac/roles/create` | admin.rbac.manage | — | not_admin/insufficient_admin_permission | 10400 重名 | — |
-| 126 | /admin/v1 | `/admin/v1/rbac/roles/update` | admin.rbac.manage | — | not_admin/insufficient_admin_permission | 10300/10400 | — |
-| 127 | /admin/v1 | `/admin/v1/rbac/roles/delete` | admin.rbac.manage | — | not_admin/insufficient_admin_permission | 10300/10400 | — |
-| 128 | /admin/v1 | `/admin/v1/rbac/roles/set_permissions` | admin.rbac.manage | — | not_admin/insufficient_admin_permission | 10300；* 仅超管 | — |
-| 129 | /admin/v1 | `/admin/v1/rbac/admins/list` | admin.rbac.manage | — | not_admin/insufficient_admin_permission | — | — |
-| 130 | /admin/v1 | `/admin/v1/rbac/admins/grant` | admin.rbac.manage | — | not_admin/insufficient_admin_permission | 10300；grant_all 仅超管 | — |
-| 131 | /admin/v1 | `/admin/v1/rbac/admins/revoke` | admin.rbac.manage | — | not_admin/insufficient_admin_permission | 10300；撤超管仅超管 | — |
-| 132 | /admin/v1 | `/admin/v1/audit/list` | admin.audit.read | — | not_admin/insufficient_admin_permission | — | — |
-| 133 | /admin/v1 | `/admin/v1/app_config/get` | admin.app_config.read | — | not_admin/insufficient_admin_permission | — | — |
-| 134 | /admin/v1 | `/admin/v1/app_config/update` | admin.app_config.write | — | not_admin/insufficient_admin_permission | — | — |
-| 135 | /admin/v1 | `/admin/v1/users/search` | admin.users.read | — | not_admin/insufficient_admin_permission | — | — |
-| 136 | /admin/v1 | `/admin/v1/users/open_the_door` | admin.users.read | — | not_admin/insufficient_admin_permission | 10300 | — |
-| 137 | /admin/v1 | `/admin/v1/users/set_ban` | admin.users.write | — | not_admin/insufficient_admin_permission/admin_protected_target | 10300/10400 | no-op 解封 |
-| 138 | /admin/v1 | `/admin/v1/groups/search` | admin.groups.read | — | not_admin/insufficient_admin_permission | — | — |
-| 139 | /admin/v1 | `/admin/v1/groups/open_the_door` | admin.groups.read | — | not_admin/insufficient_admin_permission | 10300 | — |
-| 140 | /admin/v1 | `/admin/v1/groups/dismiss` | admin.groups.write | — | not_admin/insufficient_admin_permission | 10300 | — |
-| 141 | /admin/v1 | `/admin/v1/reports/list` | admin.reports.read | — | not_admin/insufficient_admin_permission | — | — |
-| 142 | /admin/v1 | `/admin/v1/reports/handle` | admin.reports.write(+蕴含 users.write) | — | not_admin/insufficient_admin_permission | 10300/10400 | — |
-| 143 | /admin/v1 | `/admin/v1/tags/search` | admin.tags.read | — | not_admin/insufficient_admin_permission | — | — |
-| 144 | /admin/v1 | `/admin/v1/tags/delete` | admin.tags.write | — | not_admin/insufficient_admin_permission | 10300 | — |
-| 145 | /admin/v1 | `/admin/v1/announcements/list` | admin.announcements.read | — | not_admin/insufficient_admin_permission | — | — |
-| 146 | /admin/v1 | `/admin/v1/announcements/create` | admin.announcements.write | — | not_admin/insufficient_admin_permission | — | 幂等 |
-| 147 | /admin/v1 | `/admin/v1/announcements/update` | admin.announcements.write | — | not_admin/insufficient_admin_permission | 10300 | — |
-| 148 | /admin/v1 | `/admin/v1/announcements/delete` | admin.announcements.write | — | not_admin/insufficient_admin_permission | 10300 | — |
+### /public/v1（未注册用户节点，纯匿名，37 行）
 
-（共 148 行，与端点总数一致。）
+| # | 端点 | 守卫/约束 | 10200 reason | 特有失败 | 幂等/no-op |
+|---|------|-----------|--------------|----------|------------|
+| 1 | `/public/v1/auth/register` | —（login_id 唯一） | — | 10400 login_id 占用 | 幂等 |
+| 2 | `/public/v1/auth/signin` | — | — | 10100（防枚举） | — |
+| 3 | `/public/v1/auth/guest` | — | — | — | 幂等 |
+| 4 | `/public/v1/auth/refresh_token` | credential 特例（refresh 归属+黑名单） | — | 10100 | — |
+| 5 | `/public/v1/auth/forgot_password` | — | — | 限流 | — |
+| 6 | `/public/v1/auth/reset_password` | 一次性验证码 | — | 10300 | 自然去重 |
+| 7 | `/public/v1/users/search` | searchable 系列过滤 | — | — | — |
+| 8 | `/public/v1/users/open_the_door` | 隐私过滤 | — | 10300 | — |
+| 9 | `/public/v1/users/fetch_friends` | social_lists_visible | privacy_setting | 10200/10300 | — |
+| 10 | `/public/v1/users/fetch_following` | social_lists_visible | privacy_setting | 10200/10300 | — |
+| 11 | `/public/v1/users/fetch_followers` | social_lists_visible | privacy_setting | 10200/10300 | — |
+| 12 | `/public/v1/users/fetch_groups` | groups_visible | privacy_setting | 10200/10300 | — |
+| 13 | `/public/v1/users/fetch_moments` | 公开瞬间过滤 | — | 10300 | — |
+| 14 | `/public/v1/users/fetch_reacted_moments` | reacted_moments_visible | privacy_setting | 10200/10300 | — |
+| 15 | `/public/v1/users/batch_fetch` | 可见性过滤 | — | — | — |
+| 16 | `/public/v1/moments/search` | 可见性过滤 | — | — | — |
+| 17 | `/public/v1/moments/open_the_door` | 可见性过滤 | — | 10300 | — |
+| 18 | `/public/v1/comments/fetch` | 可见性过滤 | — | 10300 | — |
+| 19 | `/public/v1/comments/fetch_replies` | 可见性过滤 | — | 10300 | — |
+| 20 | `/public/v1/comments/open_the_door` | 可见性过滤 | — | 10300 | — |
+| 21 | `/public/v1/groups/search` | is_searchable 过滤 | — | — | — |
+| 22 | `/public/v1/groups/open_the_door` | 可见性过滤 | — | 10300 | — |
+| 23 | `/public/v1/groups/announcements/fetch` | 可见性过滤 | — | 10300 | — |
+| 24 | `/public/v1/groups/members/fetch` | members_searchable 条件 | not_group_member | 10300 | — |
+| 25 | `/public/v1/groups/members/search` | members_searchable 条件 | not_group_member | 10300 | — |
+| 26 | `/public/v1/feed/nearby_users` | searchable 系列过滤 | — | — | — |
+| 27 | `/public/v1/feed/nearby_groups` | is_searchable 过滤 | — | — | — |
+| 28 | `/public/v1/feed/trending` | — | — | — | — |
+| 29 | `/public/v1/search/suggest` | 可见性过滤 | — | — | — |
+| 30 | `/public/v1/map/canvas` | 公开对象过滤 | — | — | — |
+| 31 | `/public/v1/share/fetch` | 撤销/过期 | — | 10300 | 反滥用限流 |
+| 32 | `/public/v1/reactions/fetch` | 目标可见性 | — | 10300 | — |
+| 33 | `/public/v1/system/meta` | — | — | — | — |
+| 34 | `/public/v1/system/health` | — | — | 10600 | — |
+| 35 | `/public/v1/system/announcements/fetch` | — | — | — | — |
+| 36 | `/public/v1/system/client_config` | — | — | — | — |
+| 37 | `/public/v1/system/bootstrap` | — | — | — | If-None-Match |
+
+### /api/v1（注册用户节点，必须有效 Token，86 行）
+
+| # | 端点 | 守卫/约束 | 10200 reason | 特有失败 | 幂等/no-op |
+|---|------|-----------|--------------|----------|------------|
+| 38 | `/api/v1/auth/signout` | self.session | — | — | no-op |
+| 39 | `/api/v1/auth/session` | self（原 optional 收紧） | — | — | — |
+| 40 | `/api/v1/auth/change_password` | self+旧密码 | — | 10401 | 自然去重 |
+| 41 | `/api/v1/auth/fetch_sessions` | self | — | — | — |
+| 42 | `/api/v1/auth/revoke_session` | self.session | — | 10300/10400(当前会话) | — |
+| 43 | `/api/v1/auth/revoke_other_sessions` | self.session | — | — | — |
+| 44 | `/api/v1/users/search` | searchable 系列过滤（登录视角） | — | — | — |
+| 45 | `/api/v1/users/open_the_door` | 隐私过滤（登录视角） | — | 10300 | — |
+| 46 | `/api/v1/users/fetch_friends` | social_lists_visible（登录视角） | privacy_setting | 10200/10300 | — |
+| 47 | `/api/v1/users/fetch_following` | social_lists_visible（登录视角） | privacy_setting | 10200/10300 | — |
+| 48 | `/api/v1/users/fetch_followers` | social_lists_visible（登录视角） | privacy_setting | 10200/10300 | — |
+| 49 | `/api/v1/users/fetch_groups` | groups_visible（登录视角） | privacy_setting | 10200/10300 | — |
+| 50 | `/api/v1/users/fetch_moments` | 公开瞬间过滤（登录视角） | — | 10300 | — |
+| 51 | `/api/v1/users/fetch_reacted_moments` | reacted_moments_visible（登录视角） | privacy_setting | 10200/10300 | — |
+| 52 | `/api/v1/users/batch_fetch` | 可见性过滤（登录视角） | — | — | — |
+| 53 | `/api/v1/users/account` | self | — | — | — |
+| 54 | `/api/v1/users/update_account` | self | — | 10300(avatar)/10400(屏蔽标签) | — |
+| 55 | `/api/v1/users/update_location` | self | — | — | — |
+| 56 | `/api/v1/users/upgrade` | self(temp) | — | 10400 | — |
+| 57 | `/api/v1/users/settings` | self | — | — | — |
+| 58 | `/api/v1/users/update_settings` | self | — | — | — |
+| 59 | `/api/v1/users/delete_account` | self | — | 10000(确认串) | — |
+| 60 | `/api/v1/users/set_follow` | 对方 allow_follow | privacy_setting | 10300/10400(自己) | no-op |
+| 61 | `/api/v1/users/set_block` | — | — | 10300/10400(自己) | no-op |
+| 62 | `/api/v1/users/fetch_blocked` | self | — | — | — |
+| 63 | `/api/v1/users/set_remark` | 已关注条件 | — | 10300/10400(未关注) | no-op |
+| 64 | `/api/v1/moments/search` | 可见性过滤（登录视角） | — | — | — |
+| 65 | `/api/v1/moments/open_the_door` | 可见性过滤（登录视角） | — | 10300 | — |
+| 66 | `/api/v1/moments/create` | — | — | 10300/10400(屏蔽标签) | 幂等 |
+| 67 | `/api/v1/moments/update` | owner | not_resource_owner | 10200/10300 | — |
+| 68 | `/api/v1/moments/delete` | owner | not_resource_owner | 10200/10300 | — |
+| 69 | `/api/v1/moments/set_favorite` | 可见性过滤 | — | 10300 | no-op |
+| 70 | `/api/v1/moments/fetch_created` | self(owner) | — | — | — |
+| 71 | `/api/v1/moments/fetch_favorites` | self | — | — | — |
+| 72 | `/api/v1/comments/create` | 评论限制+黑名单 | privacy_setting/blocked_by_user | 10300 | 幂等 |
+| 73 | `/api/v1/comments/delete` | owner | not_resource_owner | 10200/10300 | — |
+| 74 | `/api/v1/comments/fetch` | 可见性过滤（登录视角） | — | 10300 | — |
+| 75 | `/api/v1/comments/fetch_replies` | 可见性过滤（登录视角） | — | 10300 | — |
+| 76 | `/api/v1/comments/open_the_door` | 可见性过滤（登录视角） | — | 10300 | — |
+| 77 | `/api/v1/reactions/set` | 目标可见性 | — | 10300 | no-op 语义 |
+| 78 | `/api/v1/reactions/fetch` | 目标可见性（登录视角） | — | 10300 | — |
+| 79 | `/api/v1/private_chats/fetch` | self | — | — | — |
+| 80 | `/api/v1/private_chats/open_the_door` | 对方 ChatPerm | privacy_setting | 10300 | — |
+| 81 | `/api/v1/private_chats/update_preferences` | part | — | 10300 | no-op |
+| 82 | `/api/v1/private_chats/delete` | self | — | 10300 | — |
+| 83 | `/api/v1/private_messages/send` | part+ChatPerm/黑名单/配额 | blocked_by_user/privacy_setting/stranger_quota_exceeded | 10300/10400 | 幂等 |
+| 84 | `/api/v1/private_messages/fetch` | part | — | 10300 | — |
+| 85 | `/api/v1/private_messages/update` | owner | not_resource_owner | 10300/10400(非文本/已撤回) | — |
+| 86 | `/api/v1/private_messages/recall` | owner | not_resource_owner | 10300/10400(超时) | — |
+| 87 | `/api/v1/private_messages/mark_read` | part | — | 10300 | — |
+| 88 | `/api/v1/group_messages/send` | gmember+禁言 | not_group_member | 10300/10400(禁言+data.mute) | 幂等 |
+| 89 | `/api/v1/group_messages/fetch` | gmember | not_group_member | 10300/10400 | — |
+| 90 | `/api/v1/group_messages/update` | owner | not_resource_owner | 10300/10400 | — |
+| 91 | `/api/v1/group_messages/recall` | owner | not_resource_owner | 10300/10400(超时) | — |
+| 92 | `/api/v1/group_messages/mark_read` | gmember | not_group_member | 10300/10400 | — |
+| 93 | `/api/v1/groups/search` | is_searchable 过滤（登录视角） | — | — | — |
+| 94 | `/api/v1/groups/open_the_door` | 可见性过滤（登录视角） | — | 10300 | — |
+| 95 | `/api/v1/groups/create` | — | — | 10300/10400(屏蔽标签) | 幂等 |
+| 96 | `/api/v1/groups/enter` | join_method+封禁 | banned_in_group | 10300/10400 | 自然去重 |
+| 97 | `/api/v1/groups/exit` | gmember | not_group_member | 10300/10400(群主) | — |
+| 98 | `/api/v1/groups/fetch_joined` | self | — | — | — |
+| 99 | `/api/v1/groups/update_preferences` | gmember | not_group_member | 10300/10400 | no-op |
+| 100 | `/api/v1/groups/members/fetch` | members_searchable 条件（登录视角） | not_group_member | 10300 | — |
+| 101 | `/api/v1/groups/members/search` | members_searchable 条件（登录视角） | not_group_member | 10300 | — |
+| 102 | `/api/v1/groups/applications/fetch_submitted` | self(申请人) | — | — | — |
+| 103 | `/api/v1/groups/applications/cancel` | self(申请人) | not_resource_owner | 10300/10400 | — |
+| 104 | `/api/v1/groups/invites/fetch_received` | self | — | — | — |
+| 105 | `/api/v1/groups/invites/accept` | self(受邀人) | — | 10300/10400 | — |
+| 106 | `/api/v1/groups/invites/reject` | self(受邀人) | — | 10300/10400 | — |
+| 107 | `/api/v1/feed/following` | — | — | — | — |
+| 108 | `/api/v1/feed/nearby_moments` | — | — | — | — |
+| 109 | `/api/v1/feed/nearby_users` | searchable 系列过滤（登录视角） | — | — | — |
+| 110 | `/api/v1/feed/nearby_groups` | is_searchable 过滤（登录视角） | — | — | — |
+| 111 | `/api/v1/feed/trending` | —（登录视角） | — | — | — |
+| 112 | `/api/v1/search/suggest` | 可见性过滤（登录视角） | — | — | — |
+| 113 | `/api/v1/media/presign_upload` | — | — | 限流 | — |
+| 114 | `/api/v1/media/complete_upload` | owner(upload_id) | not_resource_owner | 10300/10400 | 自然去重 |
+| 115 | `/api/v1/share/create` | 目标可见 | — | 10300 | 幂等 |
+| 116 | `/api/v1/share/fetch` | self | — | — | — |
+| 117 | `/api/v1/share/revoke` | owner | — | 10300(隐私一致性) | no-op |
+| 118 | `/api/v1/reports/create` | 目标存在+非自举报 | — | 10300/10400 | 自然去重 |
+| 119 | `/api/v1/reports/fetch` | self | — | — | — |
+| 120 | `/api/v1/notify/fetch` | self | — | — | — |
+| 121 | `/api/v1/notify/unread_count` | self | — | — | — |
+| 122 | `/api/v1/notify/mark_read` | self(scope 显式) | — | — | — |
+| 123 | `/api/v1/system/bootstrap` | self（登录态聚合） | — | — | If-None-Match |
+
+### /api/v1/groups/admin（群管理守卫子树，20 行）
+
+| # | 端点 | 守卫 | 10200 reason | 特有失败 | 幂等/no-op |
+|---|------|------|--------------|----------|------------|
+| 124 | `/api/v1/groups/admin/update` | 守卫(owner/admin) | not_group_admin | 10200/10300 | — |
+| 125 | `/api/v1/groups/admin/settings` | 守卫(owner/admin) | not_group_admin | 10300 | — |
+| 126 | `/api/v1/groups/admin/dismiss` | owner 专属 | not_group_owner | 10200/10300 | — |
+| 127 | `/api/v1/groups/admin/invites/create` | 守卫(owner/admin) | not_group_admin | 10300/10400 | 自然去重 |
+| 128 | `/api/v1/groups/admin/invites/fetch_sent` | 守卫(owner/admin) | not_group_admin | 10300/10400 | — |
+| 129 | `/api/v1/groups/admin/invites/revoke` | 守卫(owner/admin) | not_group_admin | 10300/10400 | — |
+| 130 | `/api/v1/groups/admin/members/fetch` | 守卫(owner/admin) | not_group_admin | 10300 | — |
+| 131 | `/api/v1/groups/admin/members/set_role` | 守卫(owner/admin) | not_group_admin | 10300/10400 | no-op 同角色 |
+| 132 | `/api/v1/groups/admin/members/set_mute` | 守卫(owner/admin) | not_group_admin | 10300/10400(群主保护) | no-op |
+| 133 | `/api/v1/groups/admin/members/set_ban` | 守卫(owner/admin) | not_group_admin | 10300/10400(群主保护) | no-op 解封 |
+| 134 | `/api/v1/groups/admin/members/fetch_banned` | 守卫(owner/admin) | not_group_admin | 10300 | — |
+| 135 | `/api/v1/groups/admin/members/remove` | 守卫(owner/admin) | not_group_admin | 10300/10400(群主保护) | — |
+| 136 | `/api/v1/groups/admin/applications/fetch` | 守卫(owner/admin) | not_group_admin | 10300 | — |
+| 137 | `/api/v1/groups/admin/applications/approve` | 守卫(owner/admin) | not_group_admin | 10300/10400 | no-op 已接受 |
+| 138 | `/api/v1/groups/admin/applications/reject` | 守卫(owner/admin) | not_group_admin | 10300/10400 | — |
+| 139 | `/api/v1/groups/admin/announcements/create` | 守卫(owner/admin) | not_group_admin | 10300/10400 | 幂等 |
+| 140 | `/api/v1/groups/admin/announcements/update` | 守卫(owner/admin) | not_group_admin | 10200/10300 | — |
+| 141 | `/api/v1/groups/admin/announcements/delete` | 守卫(owner/admin) | not_group_admin | 10200/10300 | — |
+| 142 | `/api/v1/groups/admin/transfer_ownership` | owner 专属 | not_group_owner | 10300/10400(目标非成员) | 自然去重 |
+| 143 | `/api/v1/groups/admin/messages/recall` | 守卫(owner/admin) | not_group_admin | 10300/10400 | — |
+
+### /admin/v1（平台管理员节点，27 行）
+
+| # | 端点 | 守卫 | 10200 reason | 特有失败 | 幂等/no-op |
+|---|------|------|--------------|----------|------------|
+| 144 | `/admin/v1/rbac/me` | 平台管理员 | not_admin | — | — |
+| 145 | `/admin/v1/rbac/fetch_permissions` | admin.rbac.manage | not_admin/insufficient_admin_permission | — | — |
+| 146 | `/admin/v1/rbac/roles/fetch` | admin.rbac.manage | not_admin/insufficient_admin_permission | — | — |
+| 147 | `/admin/v1/rbac/roles/create` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10400 重名 | — |
+| 148 | `/admin/v1/rbac/roles/update` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300/10400 | — |
+| 149 | `/admin/v1/rbac/roles/delete` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300/10400 | — |
+| 150 | `/admin/v1/rbac/roles/set_permissions` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300；* 仅超管 | — |
+| 151 | `/admin/v1/rbac/admins/fetch` | admin.rbac.manage | not_admin/insufficient_admin_permission | — | — |
+| 152 | `/admin/v1/rbac/admins/award` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300；grant_all 仅超管 | — |
+| 153 | `/admin/v1/rbac/admins/revoke` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300；撤超管仅超管 | — |
+| 154 | `/admin/v1/audit/fetch` | admin.audit.read | not_admin/insufficient_admin_permission | — | — |
+| 155 | `/admin/v1/app_config` | admin.app_config.read | not_admin/insufficient_admin_permission | — | — |
+| 156 | `/admin/v1/app_config/update` | admin.app_config.write | not_admin/insufficient_admin_permission | — | — |
+| 157 | `/admin/v1/users/search` | admin.users.read | not_admin/insufficient_admin_permission | — | — |
+| 158 | `/admin/v1/users/open_the_door` | admin.users.read | not_admin/insufficient_admin_permission | 10300 | — |
+| 159 | `/admin/v1/users/set_ban` | admin.users.write | not_admin/insufficient_admin_permission/admin_protected_target | 10300/10400 | no-op 解封 |
+| 160 | `/admin/v1/groups/search` | admin.groups.read | not_admin/insufficient_admin_permission | — | — |
+| 161 | `/admin/v1/groups/open_the_door` | admin.groups.read | not_admin/insufficient_admin_permission | 10300 | — |
+| 162 | `/admin/v1/groups/dismiss` | admin.groups.write | not_admin/insufficient_admin_permission | 10300 | — |
+| 163 | `/admin/v1/reports/fetch` | admin.reports.read | not_admin/insufficient_admin_permission | — | — |
+| 164 | `/admin/v1/reports/handle` | admin.reports.write(+蕴含 users.write) | not_admin/insufficient_admin_permission | 10300/10400 | — |
+| 165 | `/admin/v1/tags/search` | admin.tags.read | not_admin/insufficient_admin_permission | — | — |
+| 166 | `/admin/v1/tags/delete` | admin.tags.write | not_admin/insufficient_admin_permission | 10300 | — |
+| 167 | `/admin/v1/announcements/fetch` | admin.announcements.read | not_admin/insufficient_admin_permission | — | — |
+| 168 | `/admin/v1/announcements/create` | admin.announcements.write | not_admin/insufficient_admin_permission | — | 幂等 |
+| 169 | `/admin/v1/announcements/update` | admin.announcements.write | not_admin/insufficient_admin_permission | 10300 | — |
+| 170 | `/admin/v1/announcements/delete` | admin.announcements.write | not_admin/insufficient_admin_permission | 10300 | — |
+
+（共 170 行：public 37 + api 86 + groups/admin 20 + admin 27，与端点总数一致。）

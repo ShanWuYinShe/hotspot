@@ -13,46 +13,47 @@
   - 守卫与权限：`api_spec_authz.md`
   - 错误码：`api_spec_errors.md`
   - WebSocket：`api_spec_websocket.md`
+  - 匿名镜像版（/public/v1 同名端点）：`api_spec_public.md`
 
 ## 端点总览
 
 ### 公开/成员路径（`/api/v1/groups/`）
 
-| 端点 | 说明 | 认证 |
+| 端点 | 说明 | 节点 |
 |-----|------|------|
-| `POST /api/v1/groups/search` | 搜索群组（支持关键字/标签/位置组合） | optional |
-| `POST /api/v1/groups/open_the_door` | 群组详情 | optional |
-| `POST /api/v1/groups/create` | 创建群组 | required |
-| `POST /api/v1/groups/join` | 加入群组（根据 join_method 自动处理） | required |
-| `POST /api/v1/groups/leave` | 退出群组 | required |
-| `POST /api/v1/groups/list_joined` | 我加入的群组（成员视角） | required |
-| `POST /api/v1/groups/update_preferences` | 更新我的群组偏好 | required |
-| `POST /api/v1/groups/announcements/list` | 公告列表 | optional |
-| `POST /api/v1/groups/members/list` | 成员列表 | optional |
-| `POST /api/v1/groups/members/search` | 搜索成员 | optional |
-| `POST /api/v1/groups/applications/list_submitted` | 我提交的申请列表 | required |
-| `POST /api/v1/groups/applications/cancel` | 取消申请 | required |
-| `POST /api/v1/groups/invites/list_received` | 我收到的邀请列表 | required |
-| `POST /api/v1/groups/invites/accept` | 接受邀请 | required |
-| `POST /api/v1/groups/invites/reject` | 拒绝邀请 | required |
+| `POST /api/v1/groups/search` | 搜索群组（支持关键字/标签/位置组合；双版本，匿名版在 /public/v1） | /api/v1 |
+| `POST /api/v1/groups/open_the_door` | 群组详情（双版本） | /api/v1 |
+| `POST /public/v1/groups/announcements/fetch` | 群公告列表（仅 public 版，见 `api_spec_public.md`） | /public/v1 |
+| `POST /api/v1/groups/create` | 创建群组 | /api/v1 |
+| `POST /api/v1/groups/enter` | 加入群组（根据 join_method 自动处理） | /api/v1 |
+| `POST /api/v1/groups/exit` | 退出群组 | /api/v1 |
+| `POST /api/v1/groups/fetch_joined` | 我加入的群组（成员视角） | /api/v1 |
+| `POST /api/v1/groups/update_preferences` | 更新我的群组偏好 | /api/v1 |
+| `POST /api/v1/groups/members/fetch` | 成员列表（双版本） | /api/v1 |
+| `POST /api/v1/groups/members/search` | 搜索成员（双版本） | /api/v1 |
+| `POST /api/v1/groups/applications/fetch_submitted` | 我提交的申请列表 | /api/v1 |
+| `POST /api/v1/groups/applications/cancel` | 取消申请 | /api/v1 |
+| `POST /api/v1/groups/invites/fetch_received` | 我收到的邀请列表 | /api/v1 |
+| `POST /api/v1/groups/invites/accept` | 接受邀请 | /api/v1 |
+| `POST /api/v1/groups/invites/reject` | 拒绝邀请 | /api/v1 |
 
 ### 群管理守卫子树（`/api/v1/groups/admin/`，调用者必须是目标群 owner/admin）
 
 | 端点 | 说明 | 守卫 |
 |-----|------|------|
 | `POST /api/v1/groups/admin/update` | 更新群组 | 守卫(owner/admin) |
-| `POST /api/v1/groups/admin/get_settings` | 群组设置 | 守卫(owner/admin) |
+| `POST /api/v1/groups/admin/settings` | 群组设置 | 守卫(owner/admin) |
 | `POST /api/v1/groups/admin/dismiss` | 解散群组 | owner 专属 |
 | `POST /api/v1/groups/admin/invites/create` | 邀请成员 | 守卫(owner/admin) |
-| `POST /api/v1/groups/admin/invites/list_sent` | 我发出的邀请列表 | 守卫(owner/admin) |
+| `POST /api/v1/groups/admin/invites/fetch_sent` | 我发出的邀请列表 | 守卫(owner/admin) |
 | `POST /api/v1/groups/admin/invites/revoke` | 撤销已发邀请 | 守卫(owner/admin) |
-| `POST /api/v1/groups/admin/members/list` | 成员列表（管理视角） | 守卫(owner/admin) |
+| `POST /api/v1/groups/admin/members/fetch` | 成员列表（管理视角） | 守卫(owner/admin) |
 | `POST /api/v1/groups/admin/members/set_role` | 设置角色 | 守卫(owner/admin) |
 | `POST /api/v1/groups/admin/members/set_mute` | 设置禁言状态（两态统一） | 守卫(owner/admin) |
 | `POST /api/v1/groups/admin/members/set_ban` | 设置封禁状态（两态统一） | 守卫(owner/admin) |
-| `POST /api/v1/groups/admin/members/list_banned` | 封禁列表 | 守卫(owner/admin) |
+| `POST /api/v1/groups/admin/members/fetch_banned` | 封禁列表 | 守卫(owner/admin) |
 | `POST /api/v1/groups/admin/members/remove` | 移除成员 | 守卫(owner/admin) |
-| `POST /api/v1/groups/admin/applications/list` | 申请列表（群收件箱） | 守卫(owner/admin) |
+| `POST /api/v1/groups/admin/applications/fetch` | 申请列表（群收件箱） | 守卫(owner/admin) |
 | `POST /api/v1/groups/admin/applications/approve` | 同意申请 | 守卫(owner/admin) |
 | `POST /api/v1/groups/admin/applications/reject` | 拒绝申请 | 守卫(owner/admin) |
 | `POST /api/v1/groups/admin/announcements/create` | 发布公告 | 守卫(owner/admin) |
@@ -89,7 +90,7 @@ type SettableGroupRole = 'admin' | 'member';
 // 'revoked': 邀请/申请发起者主动撤销，或过期自动撤销（群已不存在/被 ban/超时）
 type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'revoked';
 
-// 公开成员列表项（members/list 与 members/search 共用，形状恒定）
+// 公开成员列表项（members/fetch 与 members/search 共用，形状恒定）
 // role/joined_at 对所有可见（用于展示成员规模与角色构成）
 // presence 字段为隐私受控恒定 nullable（null = 成员 presence_visible=false 或未登录）
 interface GroupMemberItem {
@@ -100,7 +101,7 @@ interface GroupMemberItem {
   last_online_at: string | null;
 }
 
-// 管理视角成员列表项（仅 groups/admin/members/list 返回；muted_until 为真值，null=未禁言）
+// 管理视角成员列表项（仅 groups/admin/members/fetch 返回；muted_until 为真值，null=未禁言）
 interface AdminGroupMemberItem {
   user: UserInfo;
   role: GroupRole;
@@ -131,7 +132,7 @@ interface GroupSentInviteItem {
 // 群组申请列表项（群管理员视角与申请人视角共用此类型）
 interface GroupApplicationItem {
   application_id: string;
-  group: GroupInfo;              // 目标群组（申请人视角的 list_submitted 跨群，需群上下文）
+  group: GroupInfo;              // 目标群组（申请人视角的 fetch_submitted 跨群，需群上下文）
   applicant: UserInfo;
   message: string | null;
   status: ApplicationStatus;
@@ -152,7 +153,7 @@ interface GroupInviteItem {
   responded_at: string | null;
 }
 
-// 封禁成员列表项（仅守卫子树 list_banned 返回）
+// 封禁成员列表项（仅守卫子树 fetch_banned 返回）
 interface BannedMemberItem {
   user: UserInfo;
   banned_at: string;
@@ -166,7 +167,7 @@ interface Application {
 }
 
 // 加入群组响应
-interface JoinGroupResult {
+interface EnterGroupResult {
   status: 'joined' | 'pending_approval';
   application: Application | null;  // 仅 pending_approval 时返回
 }
@@ -190,7 +191,7 @@ interface GroupAnnouncementList {
 
 **radius 语义（契约级）**：`radius` 仅**显式提供时**按半径过滤结果；缺省时不做半径过滤。`sort_by='distance'` 的距离计算依赖 `reference_point`（按 `api_spec_types.md`「reference_point 解析规则」回退链解析）。
 
-- **认证**: optional
+- **节点**: /api/v1（双版本端点：匿名版 `/public/v1/groups/search` 见 `api_spec_public.md`）
 - **排序**: 
   - 默认 `sort_by='relevance'`：按相关性优先排序
   - `sort_by='distance'`：按距离由近到远排序
@@ -218,9 +219,9 @@ interface SearchGroupsRequest {
 
 ### POST /api/v1/groups/open_the_door
 
-获取群组详情（公开固定类型 `GroupItem`；查看者状态 `viewer_state` 匿名/非成员为 null）。
+获取群组详情（登录视角 `GroupItem`，含查看者状态 `viewer_state`/`friends_in_group`；匿名版返回 `PublicGroupItem`）。
 
-- **认证**: optional
+- **节点**: /api/v1（双版本端点：匿名版 `/public/v1/groups/open_the_door` 见 `api_spec_public.md`）
 
 **Request**: `OpenGroupDoorRequest`
 ```typescript
@@ -239,7 +240,7 @@ interface OpenGroupDoorRequest {
 
 创建群组。
 
-- **认证**: required
+- **节点**: /api/v1
 - **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `CreateGroupRequest`
@@ -265,7 +266,7 @@ interface CreateGroupRequest {
 
 ---
 
-### POST /api/v1/groups/join
+### POST /api/v1/groups/enter
 
 加入群组（智能路由）。根据群组 `join_method`（准入方式）与 `requires_approval`（是否需审核）自动处理：
 - `direct` + 无需审核：直接加入，返回 `status: 'joined'`
@@ -273,15 +274,15 @@ interface CreateGroupRequest {
 - `password`：需提供 `password`，验证通过后按 `requires_approval` 直接加入或创建申请
 - `invite_only`：**本端点不支持**——仅受邀用户可加入，加入唯一入口为 `groups/invites/accept`（对 invite_only 群调用 join 返回 `10400`（该群组仅限邀请加入）；受邀后按 `requires_approval` 直接加入或创建申请）
 
-- **认证**: required
+- **节点**: /api/v1
 
 **自然去重**（无需 `Idempotency-Key`）：
 - approval 路径：若同一用户对该群已有 `pending` 申请，返回已有 `application_id`（不重复创建、不重复通知管理员）
 - direct 路径：成员关系 `(group_id, user_id)` 唯一，已加入视为 no-op 成功（返回 `status: 'joined'`）
 
-**Request**: `JoinGroupRequest`
+**Request**: `EnterGroupRequest`
 ```typescript
-interface JoinGroupRequest {
+interface EnterGroupRequest {
   group_id: string;
   password: string | null;   // password 群组需要
   message: string | null;    // approval 群组可选附言
@@ -292,13 +293,13 @@ interface JoinGroupRequest {
 - 直接加入（`status='joined'`）时向群内推送 `GroupMemberJoined` 事件（见 `api_spec_websocket.md`）
 - 创建申请（`status='pending_approval'`）时向群管理员推送 `GroupApplicationReceived` 事件并落库通知（见 `api_spec_notify.md`）
 
-**Response**: `ApiResponse<JoinGroupResult>`
+**Response**: `ApiResponse<EnterGroupResult>`
 
 **错误码**: `10200`（banned_in_group 被封禁无法加入） `10300` `10400`
 
 ---
 
-### POST /api/v1/groups/leave
+### POST /api/v1/groups/exit
 
 退出群组。
 
@@ -308,11 +309,11 @@ interface JoinGroupRequest {
 
 **推送**：退群成功后向群内推送 `GroupMemberLeft` 事件。
 
-- **认证**: required
+- **节点**: /api/v1
 
-**Request**: `LeaveGroupRequest`
+**Request**: `ExitGroupRequest`
 ```typescript
-interface LeaveGroupRequest {
+interface ExitGroupRequest {
   group_id: string;
 }
 ```
@@ -323,18 +324,18 @@ interface LeaveGroupRequest {
 
 ---
 
-### POST /api/v1/groups/list_joined
+### POST /api/v1/groups/fetch_joined
 
 获取我加入的群组（成员视角：含私密群、viewer_state、last_message）。
 
 **说明**：返回 `GroupJoinedItem`，`viewer_state` 必非 null。本端点无 `reference_point` 参数，返回的 `GroupItem.location` 中 distance/bearing 为 null。
 
-- **认证**: required
+- **节点**: /api/v1
 - **排序**: 默认按 `is_pinned DESC, last_activity_at DESC` 排序（置顶优先，最近活跃在前），`group_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListJoinedGroupsRequest`
+**Request**: `FetchJoinedGroupsRequest`
 ```typescript
-interface ListJoinedGroupsRequest {
+interface FetchJoinedGroupsRequest {
   pagination: PaginationParams | null;
 }
 ```
@@ -347,7 +348,7 @@ interface ListJoinedGroupsRequest {
 
 更新我的群组偏好（静音/置顶，区别于守卫子树的 `groups/admin/update` 群信息更新）。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `UpdateGroupPreferencesRequest`
 ```typescript
@@ -364,37 +365,17 @@ interface UpdateGroupPreferencesRequest {
 
 ---
 
-### POST /api/v1/groups/announcements/list
+### POST /api/v1/groups/members/fetch
 
-获取群公告列表（公开读；管理操作在守卫子树）。
+获取成员列表（公开成员信息；管理字段见守卫子树 `groups/admin/members/fetch`）。
 
-- **认证**: optional
-- **排序**: 按 `is_pinned DESC, created_at DESC` 排序，`announcement_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
-
-**Request**: `ListGroupAnnouncementsRequest`
-```typescript
-interface ListGroupAnnouncementsRequest {
-  group_id: string;
-}
-// 返回条数由 AppConfig.response_defaults.group_announcements_count 控制
-```
-
-**Response**: `ApiResponse<GroupAnnouncementList>`
-
-**错误码**: `10300`
-
----
-
-### POST /api/v1/groups/members/list
-
-获取成员列表（公开成员信息；管理字段见守卫子树 `groups/admin/members/list`）。
-
-- **认证**: optional（`members_searchable=false` 时非成员调用返回 `10200` + `not_group_member`）
+- **节点**: /api/v1（双版本端点：匿名版 `/public/v1/groups/members/fetch` 见 `api_spec_public.md`）
+- **可见性**: `members_searchable=false` 时非成员调用返回 `10200` + `not_group_member`
 - **排序**: 按 `joined_at` 时间正序（最早加入在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListGroupMembersRequest`
+**Request**: `FetchGroupMembersRequest`
 ```typescript
-interface ListGroupMembersRequest {
+interface FetchGroupMembersRequest {
   group_id: string;
   role: GroupRole | null;
   pagination: PaginationParams | null;
@@ -411,7 +392,8 @@ interface ListGroupMembersRequest {
 
 搜索群组成员。用于大群场景中快速定位特定成员。
 
-- **认证**: optional（`members_searchable=false` 时非成员调用返回 `10200` + `not_group_member`）
+- **节点**: /api/v1（双版本端点：匿名版 `/public/v1/groups/members/search` 见 `api_spec_public.md`）
+- **可见性**: `members_searchable=false` 时非成员调用返回 `10200` + `not_group_member`
 - **排序**: 按匹配度优先，同匹配度按 `joined_at` 正序，`user_id ASC` 作为稳定 tie-breaker；一致性级别为弱一致
 
 **Request**: `SearchGroupMembersRequest`
@@ -430,16 +412,16 @@ interface SearchGroupMembersRequest {
 
 ---
 
-### POST /api/v1/groups/applications/list_submitted
+### POST /api/v1/groups/applications/fetch_submitted
 
 获取我提交的群组申请列表（申请人视角，跨群）。
 
-- **认证**: required
+- **节点**: /api/v1
 - **排序**: 按 `created_at` 时间倒序（最新申请在前），`application_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListSubmittedApplicationsRequest`
+**Request**: `FetchSubmittedApplicationsRequest`
 ```typescript
-interface ListSubmittedApplicationsRequest {
+interface FetchSubmittedApplicationsRequest {
   status: ApplicationStatus | 'all' | null;  // 默认 'pending'；查历史需显式传 'all'
   pagination: PaginationParams | null;
 }
@@ -453,7 +435,7 @@ interface ListSubmittedApplicationsRequest {
 
 取消群组申请。取消后向群管理员推送 `GroupApplicationCancelled` 事件（纯实时，不落库通知）。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `CancelApplicationRequest`
 ```typescript
@@ -470,16 +452,16 @@ interface CancelApplicationRequest {
 
 ---
 
-### POST /api/v1/groups/invites/list_received
+### POST /api/v1/groups/invites/fetch_received
 
 获取我收到的群组邀请列表。
 
-- **认证**: required
+- **节点**: /api/v1
 - **排序**: 按 `created_at` 时间倒序（最新邀请在前），`invite_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListReceivedInvitesRequest`
+**Request**: `FetchReceivedInvitesRequest`
 ```typescript
-interface ListReceivedInvitesRequest {
+interface FetchReceivedInvitesRequest {
   status: ApplicationStatus | 'all' | null;  // 默认 'pending'；查历史需显式传 'all'
   pagination: PaginationParams | null;
 }
@@ -493,7 +475,7 @@ interface ListReceivedInvitesRequest {
 
 接受群组邀请。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `AcceptInviteRequest`
 ```typescript
@@ -518,7 +500,7 @@ interface AcceptInviteRequest {
 
 **推送**：拒绝成功后向邀请发起方推送 `GroupInviteRejected` 事件（纯实时，不落库通知，含 `reason`）。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `RejectInviteRequest`
 ```typescript
@@ -570,15 +552,15 @@ interface UpdateGroupRequest {
 
 ---
 
-### POST /api/v1/groups/admin/get_settings
+### POST /api/v1/groups/admin/settings
 
 获取群组设置（管理视角）。
 
 - **守卫**: 守卫(owner/admin)
 
-**Request**: `GetGroupSettingsRequest`
+**Request**: `GroupSettingsRequest`
 ```typescript
-interface GetGroupSettingsRequest {
+interface GroupSettingsRequest {
   group_id: string;
 }
 ```
@@ -640,16 +622,16 @@ interface CreateGroupInviteRequest {
 
 ---
 
-### POST /api/v1/groups/admin/invites/list_sent
+### POST /api/v1/groups/admin/invites/fetch_sent
 
 我发出的邀请列表。
 
 - **守卫**: 守卫(owner/admin)
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `invite_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListSentInvitesRequest`
+**Request**: `FetchSentInvitesRequest`
 ```typescript
-interface ListSentInvitesRequest {
+interface FetchSentInvitesRequest {
   group_id: string;
   status: ApplicationStatus | 'all' | null;  // 默认 'pending'；查历史需显式传 'all'
   pagination: PaginationParams | null;
@@ -689,16 +671,16 @@ interface RevokeSentInviteRequest {
 
 ---
 
-### POST /api/v1/groups/admin/members/list
+### POST /api/v1/groups/admin/members/fetch
 
 获取成员列表（管理视角：含 `muted_until` 真值）。
 
 - **守卫**: 守卫(owner/admin)
 - **排序**: 按 `joined_at` 时间正序，`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListAdminGroupMembersRequest`
+**Request**: `FetchAdminGroupMembersRequest`
 ```typescript
-interface ListAdminGroupMembersRequest {
+interface FetchAdminGroupMembersRequest {
   group_id: string;
   role: GroupRole | null;
   pagination: PaginationParams | null;
@@ -794,16 +776,16 @@ interface SetMemberBanRequest {
 
 ---
 
-### POST /api/v1/groups/admin/members/list_banned
+### POST /api/v1/groups/admin/members/fetch_banned
 
 获取封禁列表。封禁名单属群管理信息，仅守卫子树可见（普通成员返回 `10200`）。
 
 - **守卫**: 守卫(owner/admin)
 - **排序**: 按 `banned_at` 时间倒序（最近封禁在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListBannedMembersRequest`
+**Request**: `FetchBannedMembersRequest`
 ```typescript
-interface ListBannedMembersRequest {
+interface FetchBannedMembersRequest {
   group_id: string;
   pagination: PaginationParams | null;
 }
@@ -839,16 +821,16 @@ interface RemoveMemberRequest {
 
 ---
 
-### POST /api/v1/groups/admin/applications/list
+### POST /api/v1/groups/admin/applications/fetch
 
 获取群组申请列表（群收件箱，管理员工作台）。
 
 - **守卫**: 守卫(owner/admin)
 - **排序**: 按 `created_at` 时间倒序（最新申请在前），`application_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListGroupApplicationsRequest`
+**Request**: `FetchGroupApplicationsRequest`
 ```typescript
-interface ListGroupApplicationsRequest {
+interface FetchGroupApplicationsRequest {
   group_id: string;
   status: ApplicationStatus | 'all' | null;  // 默认 'pending'；查历史需显式传 'all'
   pagination: PaginationParams | null;

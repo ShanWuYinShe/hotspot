@@ -14,10 +14,10 @@
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 |
+| 端点 | 说明 | 节点 |
 |-----|------|------|
-| `POST /api/v1/reports/create` | 创建举报 | required |
-| `POST /api/v1/reports/list` | 我的举报记录（命名空间天生私有，直接 list） | required |
+| `POST /api/v1/reports/create` | 创建举报 | /api/v1 |
+| `POST /api/v1/reports/fetch` | 我的举报记录（命名空间天生私有，直接 list） | /api/v1 |
 
 ## 举报审核流程说明
 
@@ -51,7 +51,7 @@
 
 创建举报。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **字段说明**：
 - `reason`：举报原因，从 `ReportReason` 枚举中选取
@@ -89,16 +89,16 @@ interface ReportCreated {
 
 ---
 
-### POST /api/v1/reports/list
+### POST /api/v1/reports/fetch
 
 我的举报记录。
 
-- **认证**: required
+- **节点**: /api/v1
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `report_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
 
-**Request**: `ListReportsRequest`
+**Request**: `FetchReportsRequest`
 ```typescript
-interface ListReportsRequest {
+interface FetchReportsRequest {
   status: ReportStatus | null;
   target_type: ReportTargetType | null;
   pagination: PaginationParams | null;
@@ -107,4 +107,4 @@ interface ListReportsRequest {
 
 **Response**: `ApiResponse<PaginatedData<ReportItem>>`
 
-**可见性说明（契约级）**：举报人在 `reports/list` 可见自己举报的完整状态机（`pending`/终态）及 `ReportItem.resolution`（null = 尚未处理）。**不可见**处理平台管理员的身份（隐私保护）——`resolution` 不含 `handled_by`，仅含 `action`/`resolved_at`/`note`(脱敏)。
+**可见性说明（契约级）**：举报人在 `reports/fetch` 可见自己举报的完整状态机（`pending`/终态）及 `ReportItem.resolution`（null = 尚未处理）。**不可见**处理平台管理员的身份（隐私保护）——`resolution` 不含 `handled_by`，仅含 `action`/`resolved_at`/`note`(脱敏)。

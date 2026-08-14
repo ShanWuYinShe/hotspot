@@ -14,12 +14,10 @@
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 |
+| 端点 | 说明 | 节点 |
 |-----|------|------|
-| `POST /api/v1/media/presign_upload` | 申请上传预签名 | required |
-| `POST /api/v1/media/batch_presign_upload` | 批量申请上传预签名 | required |
-| `POST /api/v1/media/complete_upload` | 完成上传 | required |
-| `POST /api/v1/media/batch_complete_upload` | 批量完成上传 | required |
+| `POST /api/v1/media/presign_upload` | 申请上传预签名（files 数组，1..N） | /api/v1 |
+| `POST /api/v1/media/complete_upload` | 完成上传（upload_ids 数组，1..N） | /api/v1 |
 
 ## 设计理念
 
@@ -72,24 +70,28 @@
 
 ### POST /api/v1/media/presign_upload
 
-申请上传预签名。
+申请上传预签名。`files` 数组接收 1..N 个文件（单文件传长度 1 的数组即可，无独立批量端点）。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `PresignUploadRequest`
 ```typescript
 type MediaCategory = 'avatar' | 'group_avatar' | 'moment_image' | 'chat_image' | 'chat_video' | 'chat_audio' | 'chat_file';
 
-interface PresignUploadRequest {
+interface PresignFileInput {
   file_name: string;
   file_size: number;
   mime_type: string;
   category: MediaCategory;
   md5: string | null;   // 文件内容 MD5（可选，服务端用于校验完整性）
 }
+
+interface PresignUploadRequest {
+  files: PresignFileInput[];  // 1..N；上限 = 批次内各类别上限的最大值（moment_image → max_moment_images；chat_* → max_chat_files；默认均为 9）
+}
 ```
 
-**Response**: `ApiResponse<PresignedUpload>`
+**Response**: `ApiResponse<PresignedUploads>`
 ```typescript
 interface PresignedUpload {
   upload_id: string;
@@ -97,9 +99,15 @@ interface PresignedUpload {
   headers: Record<string, string>;
   expires_at: string;
 }
+
+interface PresignedUploads {
+  uploads: PresignedUpload[];     // 与请求 files 一一对应且顺序一致
+}
 ```
 
-**参数校验**（不合法返回 10000）：category 非法、mime_type 与 category 不匹配、file_size 超限、file_name 为空或超长、md5 格式非法。
+**参数校验**（不合法返回 10000）：category 非法、mime_type 与 category 不匹配、file_size 超限、file_name 为空或超长、md5 格式非法、files 为空数组。
+
+**原子语义**：任一文件校验失败则整批失败（不部分预签名）；每个文件独立获得 `upload_url`，客户端可并发直传。
 
 ### [客户端操作] 执行上传
 
@@ -108,44 +116,20 @@ interface PresignedUpload {
 - Headers: `headers` from response
 - Body: File Binary Data
 
-### POST /api/v1/media/batch_presign_upload
-
-批量申请上传预签名。适用于瞬间发布（多图）、聊天批量发文件等场景。
-
-- **认证**: required
-
-**说明**：
-- 批量预签名是原子操作：任一文件校验失败则整批失败
-- 每个文件独立获得 `upload_url`，客户端可并发上传
-- 上传完成后可逐个调用 `complete_upload` 或一次调用 `batch_complete_upload` 确认
-
-**Request**: `BatchPresignUploadRequest`
-```typescript
-interface BatchPresignUploadRequest {
-  files: PresignUploadRequest[];  // 批量上限 = 批次内各类别上限的最大值（moment_image → max_moment_images；chat_* → max_chat_files；默认均为 9）
-}
-
-interface BatchPresignedUpload {
-  uploads: PresignedUpload[];     // 与请求 files 一一对应
-}
-```
-
-**Response**: `ApiResponse<BatchPresignedUpload>`
-
 ### POST /api/v1/media/complete_upload
 
-完成上传。
+完成上传。`upload_ids` 数组接收 1..N 个待确认上传（单文件传长度 1 的数组）。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `CompleteUploadRequest`
 ```typescript
 interface CompleteUploadRequest {
-  upload_id: string;
+  upload_ids: string[];  // 1..N；上限与 presign_upload 一致
 }
 ```
 
-**Response**: `ApiResponse<UploadedMedia>`
+**Response**: `ApiResponse<CompletedUploads>`
 ```typescript
 interface UploadedMedia {
   file_id: string;
@@ -156,35 +140,14 @@ interface UploadedMedia {
   width: number | null;
   height: number | null;
 }
+
+interface CompletedUploads {
+  uploads: UploadedMedia[];     // 与请求 upload_ids 一一对应且顺序一致
+}
 ```
 
 **错误码**: `10300`（`upload_id` 不存在或不属于当前用户） `10400`（文件直传尚未完成，客户端应完成直传后重试）
 
-**幂等语义（自然去重键）**：`upload_id` 与 `file_id` 的映射在首次 complete 成功后持久化。同一 `upload_id` **重复调用**返回相同的 `file_id` 与元数据（等价成功），不报错。
+**原子语义**：任一 `upload_id` 校验失败则整批失败，不部分完成。
 
-### POST /api/v1/media/batch_complete_upload
-
-批量完成上传。与 `batch_presign_upload` 配对，消除发图场景下逐个调用 `complete_upload` 的 N 次请求。
-
-- **认证**: required
-
-**说明**：
-- 与 `batch_presign_upload` 对称的原子操作：任一 `upload_id` 校验失败则整批失败，不部分完成
-- 响应的 `uploads` 与请求 `upload_ids` **一一对应且顺序一致**
-
-**Request**: `BatchCompleteUploadRequest`
-```typescript
-interface BatchCompleteUploadRequest {
-  upload_ids: string[];  // 上限与 batch_presign_upload 一致
-}
-
-interface BatchCompleteUpload {
-  uploads: UploadedMedia[];     // 与请求 upload_ids 一一对应、顺序一致
-}
-```
-
-**Response**: `ApiResponse<BatchCompleteUpload>`
-
-**错误码**: `10300` `10400`（沿用 complete_upload 的原子失败语义）
-
-**幂等语义**：与 `complete_upload` 一致——重复传入已完成的 `upload_ids` 返回相同的 `file_id` 映射（等价成功）。
+**幂等语义（自然去重键）**：`upload_id` 与 `file_id` 的映射在首次 complete 成功后持久化。重复传入已完成的 `upload_ids` 返回相同的 `file_id` 与元数据（等价成功），不报错。

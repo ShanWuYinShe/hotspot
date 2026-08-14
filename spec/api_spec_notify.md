@@ -12,14 +12,15 @@
   - 通用类型：`api_spec_types.md`
   - 守卫与权限：`api_spec_authz.md`
   - 错误码：`api_spec_errors.md`
+  - WebSocket 事件：`api_spec_websocket.md`（通知与事件的关系见下文映射表）
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 |
+| 端点 | 说明 | 节点 |
 |-----|------|------|
-| `POST /api/v1/notify/list` | 通知列表 | required |
-| `POST /api/v1/notify/get_unread_count` | 未读通知数 | required |
-| `POST /api/v1/notify/mark_read` | 标记已读 | required |
+| `POST /api/v1/notify/fetch` | 通知列表 | /api/v1 |
+| `POST /api/v1/notify/unread_count` | 未读通知数 | /api/v1 |
+| `POST /api/v1/notify/mark_read` | 标记已读 | /api/v1 |
 
 ## 类型定义
 
@@ -29,20 +30,20 @@
 
 **原则**：事件走 WS（实时），通知走 HTTP（冷启动/补拉）。
 
-- **WS 事件**：实时事件流。payload 携带 `notify_id` 的事件 = 该业务事件同时落库了一条通知记录（`notify_id` 与 `notify/list` 返回的 `NotifyItem.notify_id` 为同一主键）；**不携带 `notify_id` 的事件为纯实时事件**（消息、群成员变动、群公告等），与通知中心无关
-- **通知记录**：`notify/list` 是通知的唯一权威来源，客户端冷启动/补拉时调用一次即可拉取全部通知（含未读）
+- **WS 事件**：实时事件流。payload 携带 `notify_id` 的事件 = 该业务事件同时落库了一条通知记录（`notify_id` 与 `notify/fetch` 返回的 `NotifyItem.notify_id` 为同一主键）；**不携带 `notify_id` 的事件为纯实时事件**（消息、群成员变动、群公告等），与通知中心无关
+- **通知记录**：`notify/fetch` 是通知的唯一权威来源，客户端冷启动/补拉时调用一次即可拉取全部通知（含未读）
 - **已读同步**：客户端收到带 `notify_id` 的 WS 事件并即时展示后，若用户已在对应界面阅读该内容，调用 `notify/mark_read`（`scope='ids'`，`notify_ids: [notify_id]`）标记已读，避免下次冷启动时重复显示未读
-- **去重**：WS 事件与 `notify/list` 记录共用 `notify_id` 主键，客户端按 `notify_id` 去重即可
+- **去重**：WS 事件与 `notify/fetch` 记录共用 `notify_id` 主键，客户端按 `notify_id` 去重即可
 
-| `NotifyType` | 对应 WebSocket 事件（均携带 `notify_id`） | 触发场景 |
+| `NotifyType` | 对应 WebSocket 事件 | 触发场景 |
 |-------------------|--------------------|---------|
 | `new_follower` | `NewFollower` | 被关注 |
 | `mutual_follow` | `MutualFollow` | 形成互相关注 |
 | `moment_commented` | `MomentCommented` | 瞬间被评论 |
 | `comment_reply` | `CommentReply` | 评论被回复 |
-| `mentioned` | `MessageMentioned` | 瞬间/评论中被 @ |
+| `mentioned` | `ContentMentioned` | 瞬间/评论中被 @ |
 | `group_mentioned` | `GroupMessageMentioned` | 群聊消息中被 @（对被 @ 的每个用户分别落库推送） |
-| `reaction_added` | `ReactionAdded` | 内容被添加表情反应（自反应不落库，此时事件不携带 `notify_id`） |
+| `reaction_added` | `ReactionAdded` | 内容被添加表情反应（携带 `notify_id`；唯一例外：自反应不落库，此时事件不携带 `notify_id`） |
 | `group_invite_received` | `GroupInviteReceived` | 收到入群邀请 |
 | `group_application_received` | `GroupApplicationReceived` | 群主/管理员收到入群申请 |
 | `group_application_accepted` | `GroupApplicationResponse` | 申请被接受（申请方收到） |
@@ -54,7 +55,7 @@
 
 **客户端处理约定**：
 - **实时路径**：在线时收到 WS 事件 → 直接更新本地通知列表/未读角标（无需立即拉 HTTP）
-- **补拉路径**：冷启动或 WS 断线超阈值时，调用 `notify/list` + `notify/get_unread_count` 校准
+- **补拉路径**：冷启动或 WS 断线超阈值时，调用 `notify/fetch` + `notify/unread_count` 校准
 - **WS 负载 ≠ 通知负载**：WS 事件字段以 `api_spec_websocket.md` 为准（含完整 content 等）；通知 `payload` 字段以本文件为准（含截断 preview）。两者结构不同，客户端不应混用
 
 ### 通知负载（按 type 区分的联合类型）
@@ -95,16 +96,16 @@ interface NotifyItem {
 
 ## 端点详情
 
-### POST /api/v1/notify/list
+### POST /api/v1/notify/fetch
 
 获取当前用户的通知列表。
 
-- **认证**: required
+- **节点**: /api/v1
 - **排序**: 按 `created_at DESC` 排序（最新在前），`notify_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListNotifyRequest`
+**Request**: `FetchNotifyRequest`
 ```typescript
-interface ListNotifyRequest {
+interface FetchNotifyRequest {
   type: NotifyType | null;          // 按通知类型筛选（不传则返回所有类型）
   is_read: boolean | null;          // 按已读状态筛选（不传则返回全部）
   pagination: PaginationParams | null;
@@ -115,15 +116,15 @@ interface ListNotifyRequest {
 
 ---
 
-### POST /api/v1/notify/get_unread_count
+### POST /api/v1/notify/unread_count
 
 获取当前用户的未读通知数。冷启动/重连时调用，用于显示 badge 角标。
 
-- **认证**: required
+- **节点**: /api/v1
 
-**Request**: `GetUnreadCountRequest`
+**Request**: `UnreadCountRequest`
 ```typescript
-interface GetUnreadCountRequest {}
+interface UnreadCountRequest {}
 ```
 
 **Response**: `ApiResponse<UnreadCountResult>`
@@ -144,7 +145,7 @@ interface UnreadCountResult {
 - `scope='ids'`：精确标记指定通知，`notify_ids` 必填（1-50 个；超限返回参数错误）
 - `scope='all'`：全部标记为已读（"全部已读"按钮）
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `MarkReadRequest`
 ```typescript

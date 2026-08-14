@@ -38,7 +38,7 @@ type GroupRole = 'owner' | 'admin' | 'member';
 // === 客户端 ===
 type ClientType = 'web' | 'app';
 
-// === 设备标识（单设备单会话模型的基础原语，详见 api_spec_auth.md「单设备单会话模型」）===
+// === 设备标识（单设备单会话模型的基础原语，详见 api_spec_public.md「单设备单会话模型」）===
 // 设备身份标识（UUID v4 字符串）。语义：一台逻辑设备 = 一个 device_id。
 // - App：客户端首次启动生成并存入 Keychain（iOS）/ Keystore（Android），卸载重装后视为新设备；一经生成即稳定，禁止轮换
 // - Web：由服务端通过独立 device_id Cookie 下发（非 HttpOnly，登出不清除；不同浏览器档案 = 不同 device_id）
@@ -46,13 +46,13 @@ type DeviceId = string;
 
 // === Reaction（emoji 表情回应，统一用于 message/moment/comment 三类资源）===
 // emoji 为 Unicode 码点字符串（如 "👍"），服务端按 AppConfig.limits.reaction_emojis 白名单校验
-// 可用 emoji 集合对客户端透明，通过 system/get_client_config 下发
+// 可用 emoji 集合对客户端透明，通过 system/client_config 下发
 type ReactTarget = 'message' | 'moment' | 'comment';
 
 interface Reaction {
   emoji: string;          // 表情符号
   count: number;          // 该表情的反应总数
-  reacted_by_me: boolean; // 查看者是否已用此表情反应（恒定布尔：匿名/未反应时为 false）
+  reacted_by_me: boolean; // 查看者是否已用此表情反应（恒定布尔：未反应时为 false）
 }
 
 // === 状态枚举 ===
@@ -109,7 +109,7 @@ type NotifyType =
   | 'system_announcement'         // 系统公告
   | 'nearby_new_moment';          // 附近有人发布新瞬间
 
-// 通知分类（用于未读计数分组展示，见 api_spec_notify.md get_unread_count 返回的 by_type）
+// 通知分类（用于未读计数分组展示，见 api_spec_notify.md unread_count 返回的 by_type）
 // 映射为契约级，新增 NotifyType 时必须同步归类：
 // - social:        new_follower, mutual_follow
 // - interaction:   moment_commented, comment_reply, mentioned, group_mentioned, reaction_added
@@ -129,7 +129,7 @@ type NotifyCategory = 'social' | 'interaction' | 'group' | 'report' | 'nearby' |
 
 核心原则：`distance` / `bearing_degrees` 必须由服务端基于 `reference_point` 计算并返回，客户端不得本地计算用于排序。
 
-**隐私与精度策略（契约级）**：服务端可基于隐私设置、关系与登录态对位置/距离做降精度或匿名化处理；客户端只用于展示，不得将距离/方位作为精确导航或本地排序依据。
+**隐私与精度策略（契约级）**：服务端可基于隐私设置与关系对位置/距离做降精度或匿名化处理；客户端只用于展示，不得将距离/方位作为精确导航或本地排序依据。
 
 **请求位置要求（契约级）**：
 - 创建类 Request 中出现 `Location` 字段时，必须为必填字段（如 `groups/create`、`moments/create`、`users/update_location`）
@@ -141,7 +141,7 @@ type NotifyCategory = 'social' | 'interaction' | 'group' | 'report' | 'nearby' |
 发现类与搜索类接口（所有 `feed/*`、`search/*` 及各资源 `search` 端点）的 `reference_point` 字段统一为**可选**（`reference_point?: GeoPoint`）。当客户端不传时，服务端按以下回退链解析浏览锚点位置：
 
 1. 请求显式传入的 `reference_point`（如地图浏览场景传地图中心点）
-2. 已登录用户最近一次 `users/update_location` 的位置（匿名或未更新过位置时跳过）
+2. 已登录用户最近一次 `users/update_location` 的位置（`/public/v1` 请求无登录身份，跳过本环；登录用户未更新过位置时同样跳过）
 3. `ClientConfig.defaults.default_location.point`
 
 不适用：`map/canvas` 用 `viewport.bounds` 锚定视口，无 `reference_point` 字段，不经此规则。
@@ -253,8 +253,8 @@ interface UserItem {
   location: RelativeLocation | null;           // null = location_visible=false 或未设置
   stats: UserStats | null;                     // null = stats_visible=false 或端点不返回统计
 
-  // === 查看者状态（恒定 nullable：null = 匿名/不适用） ===
-  relation: Relationship | null;               // 当前用户与该用户的关系；匿名时为 null
+  // === 查看者状态（恒定 nullable：null = 无关系/不适用；仅存在于登录视角类型，public 版无此字段） ===
+  relation: Relationship | null;               // 当前用户与该用户的关系；无关系时为 null
 
   // 社交上下文（展示与当前用户的共同点）；详情/Feed 返回，搜索/列表为 null
   social_context: SocialContext | null;
@@ -314,11 +314,11 @@ interface GroupItem {
   created_at: string | null;         // 详情返回；搜索/列表为 null
   owner_id: string | null;           // 详情返回；搜索/列表为 null
 
-  // === 查看者状态（恒定 nullable：null = 匿名/非成员/不适用） ===
-  viewer_state: GroupViewerState | null;   // 当前用户在该群的成员状态；匿名或非成员为 null
+  // === 查看者状态（恒定 nullable：null = 非成员；仅存在于登录视角类型，public 版无此字段） ===
+  viewer_state: GroupViewerState | null;   // 当前用户在该群的成员状态；非成员为 null
   friends_in_group: number | null;         // 好友中有多少在该群组内（Feed 场景返回，其余为 null）
 
-  // 群管理字段（is_searchable / max_members / has_password）不在本类型——见 GroupSettings（groups/admin/get_settings）
+  // 群管理字段（is_searchable / max_members / has_password）不在本类型——见 GroupSettings（groups/admin/settings）
 }
 
 // 查看者的群内状态（GroupItem.viewer_state 的取值类型；viewer_state 为 null 即非成员）
@@ -331,13 +331,13 @@ interface GroupViewerState {
   joined_at: string;
 }
 
-// 群列表成员视角扩展（仅 groups/list_joined 返回；viewer_state 恒有值）
+// 群列表成员视角扩展（仅 groups/fetch_joined 返回；viewer_state 恒有值）
 interface GroupJoinedItem extends GroupItem {
   viewer_state: GroupViewerState;          // 本端点必非 null
   last_message: LastMessagePreview | null; // 最近消息预览；null = 无消息
 }
 
-// 群组设置（仅群管理守卫子树：groups/admin/get_settings 响应；create/update 请求同构）
+// 群组设置（仅群管理守卫子树：groups/admin/settings 响应；create/update 请求同构）
 interface GroupSettings {
   join_method: GroupJoinMethod;   // 默认 'direct'
   requires_approval: boolean;     // 默认 false
@@ -396,12 +396,12 @@ interface MomentItem {
   location: RelativeLocation | null;
 
   // === 查看者布尔（恒定布尔） ===
-  is_favorited: boolean;       // 当前用户是否收藏；匿名/未收藏为 false
+  is_favorited: boolean;       // 当前用户是否收藏；未收藏为 false
 
   // Feed 场景返回（推荐理由）；非 Feed 场景为 null
   recommendation: RecommendationType | null;
 
-  // privacy_level 不在本类型——拥有者视角见 OwnerMomentItem（moments/list_created 等拥有者端点）
+  // privacy_level 不在本类型——拥有者视角见 OwnerMomentItem（moments/fetch_created 等拥有者端点）
 }
 ```
 
@@ -429,7 +429,7 @@ interface CommentItem {
   reactions: Reaction[];       // 表情反应聚合（空数组 = 无反应）
   is_deleted: boolean;         // 软删除标记
 
-  // 顶层评论列表场景（comments/list）返回前 N 条回复预览；其他端点为空数组
+  // 顶层评论列表场景（comments/fetch）返回前 N 条回复预览；其他端点为空数组
   // 条数由 AppConfig.response_defaults.comment_top_replies_count 控制（默认 3）
   top_replies: CommentItem[];
 }
@@ -437,7 +437,7 @@ interface CommentItem {
 
 ### 反应 (Reaction)
 
-**ReactionItem**: 反应者列表项（用于 `reactions/list`）
+**ReactionItem**: 反应者列表项（用于 `reactions/fetch`）
 ```typescript
 interface ReactionItem {
   user: UserInfo;
@@ -503,7 +503,7 @@ interface ReportItem {
   handled_at: string | null;
   message_snapshot: ReportSnapshot | null;  // 仅 target_type='message'
 
-  // 处理结果摘要（恒定 nullable：null = 尚未处理）。reports/list 天生只有举报人本人调用，
+  // 处理结果摘要（恒定 nullable：null = 尚未处理）。reports/fetch 天生只有举报人本人调用，
   // 故 resolution 在客户端类型中恒可返回；不暴露处理平台管理员身份（隐私）
   resolution: ReportResolution | null;
 }
@@ -583,5 +583,178 @@ interface ContactInfo {
   privacy_policy_url: string;
   terms_of_service_url: string;
   official_website_url: string;
+}
+```
+
+### 客户端配置与版本元信息（system 域，跨节点共享）
+
+> 以下类型无查看者字段，被 `/public/v1/system/*` 与 `/api/v1/system/bootstrap` 共同引用，故定义于共享层。
+
+```typescript
+// API 版本状态
+type ApiVersionStatus =
+  | 'active'      // 正常使用中
+  | 'deprecated'  // 已废弃，但仍可用
+  | 'sunset';     // 即将下线或已停止
+
+// API 版本元信息
+interface ApiVersionMeta {
+  version: string;                    // 当前 API 版本号，如 "v1"
+  status: ApiVersionStatus;
+  deprecated_at: string | null;       // 进入废弃状态时间（UTC ISO 8601）
+  sunset_at: string | null;           // 计划下线时间（UTC ISO 8601）
+  message: string | null;             // 面向客户端的提示信息
+  recommended_version: string | null; // 推荐升级的版本号（如 "v2"）
+}
+
+// 系统健康状态
+type SystemHealthStatus = 'healthy' | 'degraded' | 'unhealthy';
+
+interface HealthStatus {
+  status: SystemHealthStatus;
+  timestamp: string;
+}
+
+// 客户端公开配置（AppConfig 的可见投影；客户端启动时获取并缓存）
+interface ClientConfig {
+  features: FeatureSwitches;
+  limits: AppLimits;
+  contact: ContactInfo;
+  defaults: ClientDefaults;
+}
+
+// 客户端可见的默认值（由平台管理员在后台配置，见 api_spec_admin.md 中 ContentDefaults）
+interface ClientDefaults {
+  default_location: Location;        // 默认位置（必须满足 Location 约束）
+  default_user_avatar_url: string;   // 默认用户头像 URL
+  default_group_avatar_url: string;  // 默认群组头像 URL
+}
+```
+
+### 分享载荷与摘要（share 域，跨节点共享）
+
+> 以下类型无查看者字段，被 `/public/v1/share/fetch` 与 `/api/v1/share/*` 共同引用，故定义于共享层。`ShareCreated`/`ShareListItem` 仅登录端点使用，定义于 `api_spec_share.md`。
+
+```typescript
+// 分享目标类型
+type ShareType = 'user' | 'group' | 'moment' | 'location';
+
+interface UserSharePayload {
+  shared_user_id: string;
+}
+
+interface GroupSharePayload {
+  shared_group_id: string;
+}
+
+interface MomentSharePayload {
+  shared_moment_id: string;
+}
+
+interface LocationSharePayload {
+  shared_location: Location;
+}
+
+type SharePayload =
+  | UserSharePayload
+  | GroupSharePayload
+  | MomentSharePayload
+  | LocationSharePayload;
+
+interface ShareBase {
+  share_id: string;
+  share_code: string;
+  share_type: ShareType;
+  creator: UserInfo;
+  created_at: string;
+  expires_at: string | null;
+}
+
+// 展示用摘要：分享存在但目标资源不可访问时（如目标被删除/隐私变更）不返回 preview
+interface SharePreview {
+  title: string;
+  subtitle: string | null;
+  cover_url: string | null;
+}
+```
+
+### 搜索建议与地图渲染（discovery 域，跨节点共享）
+
+> 以下类型无查看者字段。search 为双版本端点（双方主体类型 `SearchSuggestResponse`/`PublicSearchSuggestResponse` 分别定义于 `api_spec_discovery.md`/`api_spec_public.md`）；`map/canvas` 仅 public 版，其主体类型 `MapCanvasRequest`/`MapCanvasResponse` 定义于 `api_spec_public.md`。
+
+```typescript
+// === 搜索建议 ===
+
+// 搜索建议类型（支持按类型过滤）
+type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
+
+// 瞬间建议项（基于 MomentSummary 的轻量扩展，仅用于建议场景）
+interface MomentSuggestItem extends MomentSummary {
+  author: UserInfo;
+  location: RelativeLocation | null;
+}
+
+// === 地图渲染（S2 网格）===
+
+// 过滤器：限定参与统计/热点的类别（'all' 或未传：用户/群组/动态都参与）
+type MapDataType = 'user' | 'group' | 'moment' | 'all';
+
+interface Bounds {
+  north: number;  // [-90, 90]
+  south: number;  // [-90, 90]
+  east: number;   // [-180, 180]
+  west: number;   // [-180, 180]
+}
+// 约束：north >= south；east >= west（允许退化视口）。
+// 暂不支持跨国际日期变更线视口（需由客户端拆分请求）。
+
+// 地图视口：仅由经纬度边界决定，不需要客户端提供 zoom
+interface MapViewport {
+  bounds: Bounds;
+}
+
+interface TimeRangeParams {
+  start_time: string | null;  // UTC ISO 8601
+  end_time: string | null;    // UTC ISO 8601；若同时提供，必须满足 start_time <= end_time
+}
+
+interface MapHeatBreakdown {
+  user: number | null;   // 该网格内用户数量
+  group: number | null;  // 该网格内群组数量
+  moment: number | null; // 该网格内动态数量
+}
+
+// S2 网格的标识。为避免 JS 精度问题，对外暴露的是 S2 cell 的字符串 token。
+type S2CellToken = string;
+
+interface MapHeatBucket {
+  cell_token: S2CellToken;  // S2 单元格的字符串 token，可用于前端作为 key 或调试
+  level: number;            // 该单元格所在的 S2 level
+  location: GeoPoint;       // 聚合单元的代表坐标（例如 S2 单元格的中心点）
+  total_count: number;      // 当前过滤条件下，该网格内参与统计实体的总数
+  breakdown: MapHeatBreakdown | null;  // 按类型拆分；当 data_type = 'all' 时返回完整三分类拆分
+}
+
+interface MapHeatCanvas {
+  items: MapHeatBucket[];
+}
+
+type HotspotObjectType = 'user' | 'group' | 'moment';
+
+interface MapHotspotItem {
+  object_type: HotspotObjectType; // 对象类型
+  object_id: string;              // 业务 ID（user_id / group_id / moment_id）
+  title: string;                  // 昵称 / 群名 / 动态标题
+  subtitle: string | null;        // 简短描述 / 地点名等
+  cover_url: string | null;       // 头像 / 群头像 / 动态封面
+  // 位置统一使用 RelativeLocation（含 distance/bearing），与 feed/search 对齐
+  // distance/bearing 相对于视口几何中心计算，由服务端计算
+  location: RelativeLocation;
+  created_at: string | null;      // 对于动态等有时间语义的对象可返回创建时间
+}
+
+interface MapCanvasFilter {
+  data_type: MapDataType | null;
+  time_range: TimeRangeParams | null;
 }
 ```

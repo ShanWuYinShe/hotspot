@@ -11,6 +11,7 @@
   - 通用类型：`api_spec_types.md`
   - 守卫与权限：`api_spec_authz.md`
   - 错误码：`api_spec_errors.md`
+  - 分享落地端点（仅 public 版）：`api_spec_public.md`
 
 ## 设计理念
 
@@ -20,23 +21,16 @@
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 |
+| 端点 | 说明 | 节点 |
 |-----|------|------|
-| `POST /api/v1/share/create` | 创建分享 | required |
-| `POST /api/v1/share/get` | 获取分享详情 | optional |
-| `POST /api/v1/share/list` | 我的分享列表（命名空间天生私有，直接 list） | required |
-| `POST /api/v1/share/revoke` | 撤销分享 | required |
+| `POST /api/v1/share/create` | 创建分享 | /api/v1 |
+| `POST /api/v1/share/fetch` | 我的分享列表（命名空间天生私有，直接 list） | /api/v1 |
+| `POST /public/v1/share/fetch` | 获取分享详情（仅 public 版，见 `api_spec_public.md`） | /public/v1 |
+| `POST /api/v1/share/revoke` | 撤销分享 | /api/v1 |
 
 ## 类型定义
 
-以下类型定义于 `api_spec_types.md`：`UserInfo`、`Location`、`PaginationParams`。
-
-### 本模块类型
-
-```typescript
-// 分享目标类型
-type ShareType = 'user' | 'group' | 'moment' | 'location';
-```
+以下类型定义于 `api_spec_types.md`：`UserInfo`、`Location`、`PaginationParams`、`ShareType`、`SharePayload`（含 User/Group/Moment/Location 四个载荷）、`ShareBase`、`SharePreview`（share 域跨节点共享类型；落地响应 `ShareDetail` 定义于 `api_spec_public.md`——share/fetch 仅 public 版）。
 
 **说明**：`preview` 为展示用摘要。分享存在但目标资源不可访问时（如目标被删除/隐私变更），不返回 `preview`，仅返回 `share` 与 `payload`（让客户端知道分享类型与目标 ID，可提示"内容已不可访问"）；分享本身已撤销/过期时整体返回 `10300`。
 
@@ -49,7 +43,7 @@ type ShareType = 'user' | 'group' | 'moment' | 'location';
 - **校验**：必须完全匹配字符集与长度，禁止空格、连字符、前后缀
 
 **反滥用要求（契约级）**：
-- `share/get` 为公开端点，必须启用多维度限流（IP 维度 + 用户维度），超限时返回限流类错误并携带 `Retry-After` 响应头
+- `share/fetch`（位于 `/public/v1`）为公开端点，必须启用 IP 维度限流，超限时返回限流类错误并携带 `Retry-After` 响应头
 - 对连续失败（share_code 无效/过期）的访问需有递进式惩罚策略（如临时封禁或要求验证码）
 - 失败请求应记录日志，用于离线分析潜在暴力破解行为
 
@@ -64,33 +58,12 @@ type ShareType = 'user' | 'group' | 'moment' | 'location';
 
 创建分享。
 
-- **认证**: required
+- **节点**: /api/v1
 - **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `CreateShareRequest`
 ```typescript
-interface UserSharePayload {
-  shared_user_id: string;
-}
-
-interface GroupSharePayload {
-  shared_group_id: string;
-}
-
-interface MomentSharePayload {
-  shared_moment_id: string;
-}
-
-interface LocationSharePayload {
-  shared_location: Location;
-}
-
-type SharePayload =
-  | UserSharePayload
-  | GroupSharePayload
-  | MomentSharePayload
-  | LocationSharePayload;
-
+// SharePayload / ShareType 定义于 api_spec_types.md
 interface CreateShareRequest {
   share_type: ShareType;
   payload: SharePayload;
@@ -118,57 +91,16 @@ interface ShareCreated {
 
 ---
 
-### POST /api/v1/share/get
-
-获取分享详情（公开访问）。
-
-- **认证**: optional
-
-**Request**: `GetShareRequest`
-```typescript
-interface GetShareRequest {
-  share_code: string;         // 不区分大小写，服务端统一转换为大写
-}
-```
-
-**Response**: `ApiResponse<ShareDetail>`
-```typescript
-interface ShareBase {
-  share_id: string;
-  share_code: string;
-  share_type: ShareType;
-  creator: UserInfo;
-  created_at: string;
-  expires_at: string | null;
-}
-
-interface SharePreview {
-  title: string;
-  subtitle: string | null;
-  cover_url: string | null;
-}
-
-interface ShareDetail {
-  share: ShareBase;
-  payload: SharePayload;
-  preview: SharePreview | null;   // 目标资源不可访问时为 null；分享撤销/过期整体 10300
-}
-```
-
-**错误码**: `10300`
-
----
-
-### POST /api/v1/share/list
+### POST /api/v1/share/fetch
 
 获取当前用户创建的分享列表。
 
-- **认证**: required
+- **节点**: /api/v1
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `share_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
 
-**Request**: `ListSharesRequest`
+**Request**: `FetchSharesRequest`
 ```typescript
-interface ListSharesRequest {
+interface FetchSharesRequest {
   share_type: ShareType | null;   // 按类型筛选
   pagination: PaginationParams | null;
 }
@@ -193,12 +125,12 @@ interface ShareListItem {
 
 撤销分享。撤销后分享码不可再用于 `get`。
 
-- **认证**: required（仅分享创建者可撤销）
+- **节点**: /api/v1（仅分享创建者可撤销）
 
 **Request**: `RevokeShareRequest`
 ```typescript
 interface RevokeShareRequest {
-  share_id: string | null;    // 分享 ID（来自 share/create 或 share/list）
+  share_id: string | null;    // 分享 ID（来自 share/create 或 share/fetch）
   share_code: string | null;  // 或分享码（创建者可能仅保留了复制出的链接码）
 }
 // 二选一：必须且只能传 share_id 或 share_code 其中之一；同时传或都不传请求失败（10000）

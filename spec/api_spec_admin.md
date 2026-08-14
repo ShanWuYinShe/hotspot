@@ -12,7 +12,7 @@
   - 通用类型：`api_spec_types.md`
   - 守卫与权限：`api_spec_authz.md`（平台权限键权威清单）
   - 错误码：`api_spec_errors.md`
-  - 客户端配置投影：`api_spec_system.md`（`ClientConfig` 为 `AppConfig` 的客户端可见投影）
+  - 客户端配置投影：`api_spec_types.md`（`ClientConfig` 为 `AppConfig` 的客户端可见投影）
 
 ## 统一访问控制
 
@@ -29,18 +29,18 @@
 
 | 端点 | 说明 | 权限键 |
 |-----|------|------|
-| `POST /admin/v1/rbac/get_me` | 我的平台管理员权限 | 是平台管理员即可 |
-| `POST /admin/v1/rbac/list_permissions` | 权限字典 | admin.rbac.manage |
-| `POST /admin/v1/rbac/roles/list` | 角色列表 | admin.rbac.manage |
+| `POST /admin/v1/rbac/me` | 我的平台管理员权限 | 是平台管理员即可 |
+| `POST /admin/v1/rbac/fetch_permissions` | 权限字典 | admin.rbac.manage |
+| `POST /admin/v1/rbac/roles/fetch` | 角色列表 | admin.rbac.manage |
 | `POST /admin/v1/rbac/roles/create` | 创建角色 | admin.rbac.manage |
 | `POST /admin/v1/rbac/roles/update` | 更新角色 | admin.rbac.manage |
 | `POST /admin/v1/rbac/roles/delete` | 删除角色 | admin.rbac.manage |
 | `POST /admin/v1/rbac/roles/set_permissions` | 设置角色权限 | admin.rbac.manage |
-| `POST /admin/v1/rbac/admins/list` | 平台管理员列表 | admin.rbac.manage |
-| `POST /admin/v1/rbac/admins/grant` | 授权/更新平台管理员 | admin.rbac.manage |
+| `POST /admin/v1/rbac/admins/fetch` | 平台管理员列表 | admin.rbac.manage |
+| `POST /admin/v1/rbac/admins/award` | 授权/更新平台管理员 | admin.rbac.manage |
 | `POST /admin/v1/rbac/admins/revoke` | 撤销平台管理员 | admin.rbac.manage |
-| `POST /admin/v1/audit/list` | 审计日志列表 | admin.audit.read |
-| `POST /admin/v1/app_config/get` | 获取完整应用配置 | admin.app_config.read |
+| `POST /admin/v1/audit/fetch` | 审计日志列表 | admin.audit.read |
+| `POST /admin/v1/app_config` | 获取完整应用配置 | admin.app_config.read |
 | `POST /admin/v1/app_config/update` | 更新应用配置（按 section 部分更新） | admin.app_config.write |
 | `POST /admin/v1/users/search` | 搜索用户 | admin.users.read |
 | `POST /admin/v1/users/open_the_door` | 用户详情 | admin.users.read |
@@ -48,11 +48,11 @@
 | `POST /admin/v1/groups/search` | 搜索群组 | admin.groups.read |
 | `POST /admin/v1/groups/open_the_door` | 群组详情 | admin.groups.read |
 | `POST /admin/v1/groups/dismiss` | 解散群组 | admin.groups.write |
-| `POST /admin/v1/reports/list` | 举报列表（按状态/类型过滤） | admin.reports.read |
+| `POST /admin/v1/reports/fetch` | 举报列表（按状态/类型过滤） | admin.reports.read |
 | `POST /admin/v1/reports/handle` | 处理举报 | admin.reports.write |
 | `POST /admin/v1/tags/search` | 搜索标签 | admin.tags.read |
 | `POST /admin/v1/tags/delete` | 删除/屏蔽标签 | admin.tags.write |
-| `POST /admin/v1/announcements/list` | 搜索系统公告 | admin.announcements.read |
+| `POST /admin/v1/announcements/fetch` | 搜索系统公告 | admin.announcements.read |
 | `POST /admin/v1/announcements/create` | 发布系统公告 | admin.announcements.write |
 | `POST /admin/v1/announcements/update` | 更新系统公告 | admin.announcements.write |
 | `POST /admin/v1/announcements/delete` | 删除系统公告 | admin.announcements.write |
@@ -77,15 +77,15 @@ type UserAccountStatus = 'normal' | 'banned';
 - **superadmin**：`permissions` 包含 `'*'`，表示拥有全部平台权限（除 PII 键 read_ip ×2 需显式持有）
 - **普通平台管理员**：通过角色/权限表获得细粒度权限，字段可见性由具体权限决定
 
-### POST /admin/v1/rbac/get_me
+### POST /admin/v1/rbac/me
 
 获取我的平台管理员权限信息。
 
 - **权限**: 是平台管理员即可（不要求 `admin.rbac.manage`）
 
-**Request**: `GetAdminPermissionsRequest`
+**Request**: `FetchAdminPermissionsRequest`
 ```typescript
-interface GetAdminPermissionsRequest {}
+interface FetchAdminPermissionsRequest {}
 ```
 
 **Response**: `ApiResponse<AdminPermissions>`
@@ -106,16 +106,16 @@ interface AdminPermissions {
 
 ---
 
-### POST /admin/v1/rbac/list_permissions
+### POST /admin/v1/rbac/fetch_permissions
 
 获取权限字典。
 
 - **权限**: `admin.rbac.manage`
 - **排序**: 按 `key ASC` 作为确定性顺序（权限字典为有界数据，无分页）
 
-**Request**: `ListAdminPermissionsRequest`
+**Request**: `FetchAdminPermissionsRequest`
 ```typescript
-interface ListAdminPermissionsRequest {}
+interface FetchAdminPermissionsRequest {}
 ```
 
 **Response**: `ApiResponse<AdminPermissionList>`
@@ -135,16 +135,16 @@ interface AdminPermissionItem {
 
 ---
 
-### POST /admin/v1/rbac/roles/list
+### POST /admin/v1/rbac/roles/fetch
 
 获取角色列表。
 
 - **权限**: `admin.rbac.manage`
 - **排序**: 按 `name ASC` 作为确定性顺序（角色为有界数据，无分页）
 
-**Request**: `ListAdminRolesRequest`
+**Request**: `FetchAdminRolesRequest`
 ```typescript
-interface ListAdminRolesRequest {} // 直接返回全部角色，无需分页
+interface FetchAdminRolesRequest {} // 直接返回全部角色，无需分页
 ```
 
 **Response**: `ApiResponse<AdminRoleList>`
@@ -162,7 +162,7 @@ interface AdminRoleItem {
 }
 ```
 
-**说明**：RBAC 角色为系统配置数据，数量有限，无需分页；与 `list_permissions` 返回格式保持一致。
+**说明**：RBAC 角色为系统配置数据，数量有限，无需分页；与 `fetch_permissions` 返回格式保持一致。
 
 **错误码**: `10200`（not_admin / insufficient_admin_permission）
 
@@ -244,7 +244,7 @@ interface SetAdminRolePermissionsRequest {
 ```
 
 **说明**：
-- `permission_keys` 必须来自权限字典（`POST /admin/v1/rbac/list_permissions` 返回值）
+- `permission_keys` 必须来自权限字典（`POST /admin/v1/rbac/fetch_permissions` 返回值）
 - 仅 superadmin 可以设置 `'*'`（全量权限）；普通平台管理员设置 `'*'` 时返回 `10200`
 
 **Response**: `ApiResponse`
@@ -253,16 +253,16 @@ interface SetAdminRolePermissionsRequest {
 
 ---
 
-### POST /admin/v1/rbac/admins/list
+### POST /admin/v1/rbac/admins/fetch
 
 获取平台管理员列表。
 
 - **权限**: `admin.rbac.manage`
 - **排序**: 按 `granted_at DESC` 排序（最近授权在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListAdminsRequest`
+**Request**: `FetchAdminsRequest`
 ```typescript
-interface ListAdminsRequest {
+interface FetchAdminsRequest {
   pagination: PaginationParams | null;
 }
 ```
@@ -281,7 +281,7 @@ interface AdminOperatorItem {
 
 ---
 
-### POST /admin/v1/rbac/admins/grant
+### POST /admin/v1/rbac/admins/award
 
 授予/更新平台管理员。
 
@@ -289,9 +289,9 @@ interface AdminOperatorItem {
 
 **额外约束**：仅 superadmin 可将 `grant_all_permissions=true`
 
-**Request**: `GrantAdminRequest`
+**Request**: `AwardAdminRequest`
 ```typescript
-interface GrantAdminRequest {
+interface AwardAdminRequest {
   user_id: string;
   grant_all_permissions: boolean | null;
   role_ids: string[];
@@ -340,16 +340,16 @@ interface RevokeAdminRequest {
 | `ip_address` | `admin.audit.read_ip` | 敏感 PII；权限不足时为 null |
 | `device_summary` | `admin.audit.read` | User-Agent 脱敏后的设备摘要 |
 
-### POST /admin/v1/audit/list
+### POST /admin/v1/audit/fetch
 
 查询审计日志列表。
 
 - **权限**: `admin.audit.read`
 - **排序**: 按 `created_at DESC` 排序（最新在前），`log_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListAuditLogsRequest`
+**Request**: `FetchAuditLogsRequest`
 ```typescript
-interface ListAuditLogsRequest {
+interface FetchAuditLogsRequest {
   action: AuditAction | null;
   operator_id: string | null;
   target_type: AuditTargetType | null;
@@ -433,22 +433,22 @@ interface AuditLogItem {
 
 **设计说明**：`AppConfig` 是完整的应用配置，由平台管理员统一管理。其中 `features`/`limits`/`contact` 部分构成 `ClientConfig`（投影给客户端），其余为仅服务端使用的运行参数。
 
-### POST /admin/v1/app_config/get
+### POST /admin/v1/app_config
 
 获取完整应用配置（AppConfig）。
 
 - **权限**: `admin.app_config.read`
 
-**Request**: `GetAppConfigRequest`
+**Request**: `AppConfigRequest`
 ```typescript
-interface GetAppConfigRequest {}
+interface AppConfigRequest {}
 ```
 
 **Response**: `ApiResponse<AppConfig>`
 
 ```typescript
 // AppConfig: 完整的应用配置，由平台管理员统一管理
-// ClientConfig（见 api_spec_system.md）是 AppConfig 中客户端可见部分的投影
+// ClientConfig（见 api_spec_types.md）是 AppConfig 中客户端可见部分的投影
 interface AppConfig {
   // === 客户端可见配置（构成 ClientConfig） ===
   features: FeatureSwitches;       // 定义于 api_spec_types.md
@@ -485,7 +485,7 @@ interface UpdateAppConfigRequest {
   defaults: AppConfigDefaultsPatch | null;           // 内容默认值（可单独更新子字段）
   rate_limits: Partial<RateLimitConfig> | null;      // 频率限制（动态生效，无需重启；所有值须为正整数）
   response_defaults: Partial<ResponseDefaults> | null;  // 响应默认值（所有值须为正整数）
-  // === 客户端可见（构成 ClientConfig，通过 system/get_client_config 暴露）===
+  // === 客户端可见（构成 ClientConfig，通过 /public/v1/system/client_config 暴露）===
   features: Partial<FeatureSwitches> | null;         // 功能开关
   limits: Partial<AppLimits> | null;                 // 应用限制
   contact: Partial<ContactInfo> | null;              // 联系/合规信息
@@ -743,16 +743,16 @@ interface DismissAdminGroupRequest {
 
 ---
 
-### POST /admin/v1/reports/list
+### POST /admin/v1/reports/fetch
 
 举报列表（平台管理）。按状态/目标类型过滤（无关键字搜索语义，故命名为 list）。
 
 - **权限**: `admin.reports.read`
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `report_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
 
-**Request**: `ListAdminReportsRequest`
+**Request**: `FetchAdminReportsRequest`
 ```typescript
-interface ListAdminReportsRequest {
+interface FetchAdminReportsRequest {
   status: ReportStatus | null;
   target_type: ReportTargetType | null;
   pagination: PaginationParams | null;
@@ -865,7 +865,7 @@ interface DeleteAdminTagRequest {
 
 ---
 
-### POST /admin/v1/announcements/list
+### POST /admin/v1/announcements/fetch
 
 系统公告列表（平台管理视角），返回包含平台管理字段的公告列表。
 
@@ -873,12 +873,12 @@ interface DeleteAdminTagRequest {
 - **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `announcement_id DESC` 作为稳定 tie-breaker；一致性级别为弱一致。
 
 **说明**：
-- 普通用户通过 `POST /api/v1/system/announcements/list`（定义于 `api_spec_system.md`）获取公开公告
+- 普通用户通过 `POST /public/v1/system/announcements/fetch`（定义于 `api_spec_public.md`）获取公开公告
 - 本端点返回 `AdminAnnouncementItem`（含 `created_by`、`view_count` 等平台管理字段）
 
-**Request**: `ListAdminAnnouncementsRequest`
+**Request**: `FetchAdminAnnouncementsRequest`
 ```typescript
-interface ListAdminAnnouncementsRequest {
+interface FetchAdminAnnouncementsRequest {
   severity: AnnounceLevel | null;
   pagination: PaginationParams | null;
 }

@@ -9,12 +9,14 @@
 
 ## 术语约定（契约级）
 
+- **未注册用户**：指没有任何有效会话身份的调用方（匿名）。只能调用 `/public/v1` 节点
+- **注册用户**：指持有有效会话身份的调用方，包含**正式注册**（`user_type='normal'`）与**临时注册**（`user_type='temp'`，访客）两类；两者在权限上完全同权，差异仅在账号生命周期（`upgrade` 转正）。调用 `/api/v1` 节点
 - **当前用户**：指已鉴权的调用方用户。个人视角操作由 Token 隐含标识，无独立 `/me/` 路径段
 - **自身**：指"对自己执行操作"的语义，用于错误码与规则描述
 - **群成员**：指已加入群组的用户
 - **会话参与者**：指私聊会话的双方用户
-- **平台管理员**：指通过 `/admin/v1` 节点执行平台级管理操作的用户（superadmin 或绑定 AdminRole 的 admin）。在 `/api/v1` 上与普通用户完全同权
-- **群主 / 群管理员 / 群成员**：指群组内的三种角色（`GroupRole`：owner / admin / member）。与平台管理员是完全不同的两套体系，按节点与上下文分别判定、互不传递
+- **平台管理员**：指通过 `/admin/v1` 节点执行平台级管理操作的用户（superadmin 或绑定 AdminRole 的 admin）。平台管理员属于注册用户，在 `/api/v1` 上与普通用户完全同权
+- **群主 / 群管理员 / 群成员**：指群组内的三种角色（`GroupRole`：owner / admin / member）。群管理员属于普通用户范畴，其群管理操作走 `/api/v1/groups/admin/` 守卫子树；与平台管理员是完全不同的两套体系，按节点与上下文分别判定、互不传递
 - **术语纪律（必须）**：文档禁止裸称「管理员」；一律写「平台管理员」或「群主/群管理员」。禁止以任何方式暗示两套体系之间存在权限传递
 
 重要契约约定（必须）：
@@ -26,25 +28,41 @@
 
 ## 节点与路径架构（契约级）
 
-HotSpot 的 API 按**调用者角色**划分为两个全局节点 + 一个守卫子树。契约只定义干净的划分与守卫；**该调用哪个端点由客户端按自身角色决定**，契约不做客户端的事。
+HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫子树。**节点即档位**：URL 前缀直接表达身份要求，无需查权限矩阵。契约只定义干净的划分与守卫；**该调用哪个端点由客户端按自身身份决定**，契约不做客户端的事。
 
 | 位置 | 调用者 | 守卫 | 说明 |
 |------|--------|------|------|
-| `/api/v1/` | 普通用户（含群成员） | 认证档位（public/optional/required/credential）+ 资源约束 | 客户端 API |
+| `/public/v1/` | 未注册用户（纯匿名） | **完全不解析 Token**；无任何隐式身份增强 | 匿名浏览发现 + 账号生命周期入口 + 系统信息 |
+| `/api/v1/` | 注册用户（正式 + 临时同权） | 必须携带有效 Token，否则 `10100`，**无一例外** | 客户端 API |
 | `/api/v1/groups/admin/` | 群管理员（守卫子树） | 统一守卫：调用者必须是**请求目标群**的 owner/admin | 群管理 API，附属于 groups 资源 |
-| `/admin/v1/` | 平台管理员（独立节点） | required + `admin.*` 权限键 | 平台管理 API |
+| `/admin/v1/` | 平台管理员（独立节点） | 必须 Token + 平台管理员身份 + `admin.*` 权限键 | 平台管理 API |
 
 规则：
-- 只有**全局身份**才配顶级节点（`/admin/v1`）；群管理是群组资源的附属视角，挂在 `groups/admin` 守卫子树之下
+- 每个顶级节点对应**一种且仅一种**调用者身份；禁止在同一节点内混用多种身份要求（这正是节点划分的目的：看 URL 前缀即知身份要求）
+- 只有**全局身份**才配顶级节点（`/public/v1`、`/admin/v1`）；群管理是群组资源的附属视角，挂在 `groups/admin` 守卫子树之下（群管理员属于普通用户范畴，故子树位于 `/api/v1` 内）
 - 每个端点**单一角色、单一检查**：禁止「作者或管理员」「成员或管理员」等双角色端点；双角色语义一律拆分为两个端点（如消息撤回拆为 `group_messages/recall` 与 `groups/admin/messages/recall`）
+- 同一功能面向匿名与登录两类身份时，**拆分为两个端点**（匿名版在 `/public/v1`，登录版在 `/api/v1`），且 Request/Response 类型**各自独立、禁止共用**（见「强类型要求」）
 - 三处共用同一 token 体系、同一 envelope 与同一错误码空间；仅 `/admin/v1` 需要独立反向代理与独立限流
-- WebSocket 端点为 `/ws/v1`，独立于 HTTP 节点，仅服务于客户端实时事件（见 `api_spec_websocket.md`）
+- WebSocket 端点为 `/ws/v1`，独立于 HTTP 节点，仅服务于注册用户的实时事件（连接后必须通过 `Auth` 事件完成鉴权，见 `api_spec_websocket.md`）
 
 ### 统一路径结构
 
 ```
-/api/v1/
-├── auth/              # 认证（注册/登录/刷新 token/会话）
+/public/v1/            # 未注册用户节点（纯匿名，不解析 Token）
+├── auth/              # 账号生命周期入口（注册/登录/游客/刷新/密码重置）
+├── users/             # 用户公开资料（搜索/详情/公开列表）
+├── moments/           # 瞬间公开浏览（搜索/详情）
+├── comments/          # 评论公开浏览（列表/详情）
+├── groups/            # 群组公开浏览（搜索/详情/成员/公告）
+├── feed/              # 公开信息流（附近用户/附近群组/热门）
+├── search/            # 搜索建议
+├── map/               # 地图渲染
+├── share/             # 分享码落地
+├── reactions/         # 反应公开列表
+└── system/            # 系统（健康/版本/配置/公告/匿名冷启动聚合）
+
+/api/v1/               # 注册用户节点（必须有效 Token）
+├── auth/              # 会话自助管理（登出/改密/会话列表/撤销）
 ├── users/             # 用户相关（搜索/资料/关系/账户）
 ├── moments/           # 瞬间相关（搜索/CRUD/收藏）
 ├── comments/          # 评论相关
@@ -61,7 +79,7 @@ HotSpot 的 API 按**调用者角色**划分为两个全局节点 + 一个守卫
 ├── notify/            # 通知中心
 ├── media/             # 媒体上传
 ├── share/             # 分享系统
-├── system/            # 系统（健康/版本/配置/公告）
+├── system/            # 系统（登录态冷启动聚合）
 └── ...
 /admin/v1/             # 平台管理员节点（RBAC/审计/配置/审核）
 ├── rbac/
@@ -80,26 +98,52 @@ HotSpot 的 API 按**调用者角色**划分为两个全局节点 + 一个守卫
 
 ### 端点形态
 
-- 端点形态统一为 `/{node}/{version}/{resource}/{action}`；守卫子树为 `/{node}/{version}/{resource}/admin/{action}`
+- 端点形态统一为 `/{node}/{version}/{resource}/{action}`（node ∈ public / api / admin）；守卫子树为 `/{node}/{version}/{resource}/admin/{action}`
+- **资源域单复数规则**：可数实体资源域用复数（users / moments / comments / reactions / groups / private_chats / private_messages / group_messages / reports / sessions）；服务域、动作域与不可数概念域用单数（auth / feed / search / map / share / media / notify / system）。禁止混用（如 `shares/`、`moment/`）
 - 全小写 snake_case；ID 字段显式 `xxx_id` 命名（禁止裸 `id`）；所有 `xxx_id` 字段在 API 层统一为 `string`
 - 两态参数统一 `active: boolean`（true=执行/开启，false=撤销/关闭）
 - 所有 `*_url` 字段的值必须为**完整的绝对 URL**（含协议和域名），客户端无需拼接 base URL
 
 ### 权威动词表
 
+通用资源动词：
+
 | 动词 | 语义 |
 |------|------|
 | `create` | 创建资源 |
 | `open_the_door` | 获取单资源详情（刻意保留的玩梗命名，见下方保护条款） |
-| `list` / `list_<state>` | 列表（游标分页）；状态限定词见下 |
+| `fetch` / `fetch_<state>` | 列表（游标分页）；状态限定词见下 |
 | `update` | 更新资源（Patch 语义） |
 | `delete` | 删除/软删除资源 |
 | `search` | 关键字/条件搜索 |
 | `set_<state>` | 设置两态状态（set_follow / set_block / set_favorite / set_remark / set_role / set_mute / set_ban） |
-| `batch_get` | 批量按 ID 获取 |
-| `send` / `recall` / `mark_read` | 消息域动词 |
-| `revoke` / `accept` / `reject` / `approve` / `cancel` | 工作流动词 |
-| `get_<subresource>` | 获取当前用户的非资源性数据（get_account / get_settings / get_status / get_meta / get_client_config / get_unread_count） |
+| `batch_fetch` | 批量按 ID 获取 |
+| `get_<subresource>` | 获取当前用户的非资源性数据（account / settings / session / meta / client_config / unread_count） |
+
+域专属动词：
+
+| 动词 | 语义 | 专属域 |
+|------|------|--------|
+| `send` / `recall` / `mark_read` | 消息域动词 | private_messages / group_messages |
+| `register` / `signin` / `signout` / `guest` | 账号生命周期（guest = 访客注册，与 register 对仗） | auth |
+| `refresh_token` / `change_password` / `forgot_password` / `reset_password` | 凭证类动宾动词（忘记→重置两步对仗） | auth |
+| `revoke_session` / `revoke_other_sessions` | 会话撤销（other_sessions 明确「除当前外」，含当前是 logout） | auth |
+| `upgrade` | 访客转正（账号状态转移） | users |
+| `enter` / `exit` / `dismiss` / `remove` | 成员进出与生命周期动词 | groups |
+| `transfer_ownership` | 转让所有权 | groups/admin |
+| `award` | 授予身份（revoke 见工作流动词） | admin/rbac |
+| `handle` | 组合处理动作（body 参数判别具体子动作，如 resolve/dismiss） | admin/reports |
+| `suggest` | 前缀联想 | search |
+| `presign_upload` / `complete_upload` | 媒体两段式上传（数组参数 1..N 天然覆盖单/批，无独立批量端点） | media |
+| `accept` / `reject` / `approve` / `cancel` / `revoke` | 工作流动词 | invites / applications / share |
+
+**无动词端点**（名词直接做端点，两类规则）：
+- **读取类名词化**（读单值/配置/当前对象，直接以名词命名）：`users/account`、`users/settings`、`auth/session`、`system/meta`、`system/client_config`、`notify/unread_count`、`rbac/me`、`groups/admin/settings`、`app_config`（裸域读取）
+- **惯例例外**：`system/health`（健康检查行业惯例）、`system/bootstrap`（冷启动聚合，协议级入口）、`map/canvas`（地图画布资源）、`feed/` 流槽位名（`following` / `trending` / `nearby_moments` / `nearby_users` / `nearby_groups`，业界通用命名，非动作）
+
+**动词审美规则（契约级，主观个案评估）**：动作词的观感以**整体字形与组合的协调感**为准，**不做机械的字母形状排除**——下伸部/上伸部字母本身不构成禁用理由（`presign` 即为无问题的反例，经评估保留原名）。已确认丑并废除的仅两类：`get_*` 前缀（全量名词化）与 `list_*` 前缀（全量更名 `fetch_*`）。个案更名记录：`login`/`logout` → `signin`/`signout`、`join`/`leave` → `enter`/`exit`、`grant` → `award`、`request_password_reset` → `forgot_password`。新增动作词时按整体观感个案评估，存疑时向维护者确认（玩梗保护条款优先级更高）
+
+**范围语义的表达约定（契约级）**：动作作用范围用 `scope` 参数表达（`notify/mark_read` 的 `'ids'|'all'`、`group_messages/mark_read` 的 `'group'|'all'`）；**仅当「全部」实际不含当前对象且行为链不同时**才拆独立端点并以名写实（`auth/revoke_other_sessions`——撤销除当前会话外的全部，含当前是 `signout` 的职责），禁止名实不符的 `*_all_*` 命名。
 
 ### 状态限定词（列表场景区分视角的唯一手段）
 
@@ -107,8 +151,8 @@ HotSpot 的 API 按**调用者角色**划分为两个全局节点 + 一个守卫
 
 `created / joined / submitted / sent / received / favorites / blocked / banned / reacted`
 
-- **`_my` 后缀与 `My` 类型前缀全量禁止**：命名空间天生私有（每人只见自己的数据）的列表直接 `list`（如 `reports/list`、`share/list`、`notify/list`）；不存在「非 my 版本」需要区分时不得加任何视角后缀
-- 例：`groups/list_joined`（我加入的群）、`groups/applications/list_submitted`（我提交的申请）、`moments/list_created`（我创建的瞬间）、`groups/invites/list_sent`（我发出的邀请）
+- **`_my` 后缀与 `My` 类型前缀全量禁止**：命名空间天生私有（每人只见自己的数据）的列表直接 `list`（如 `reports/fetch`、`share/fetch`、`notify/fetch`）；不存在「非 my 版本」需要区分时不得加任何视角后缀
+- 例：`groups/fetch_joined`（我加入的群）、`groups/applications/fetch_submitted`（我提交的申请）、`moments/fetch_created`（我创建的瞬间）、`groups/invites/fetch_sent`（我发出的邀请）
 
 ### 参数必显式（契约级）
 
@@ -152,7 +196,7 @@ interface ApiResponse<T = void> {
 - `X-Request-Id`：请求链路追踪 ID。客户端**可选**传入（用于跨端追踪关联）；服务端**始终**在响应头返回该字段——若请求携带则原样回显，未携带则由服务端生成。服务端是 `X-Request-Id` 的权威来源
 - 服务端**不应**对客户端传入的 `X-Request-Id` 施加格式或熵值约束
 - `Idempotency-Key`：仅用于需要幂等性的写操作，具体要求见"幂等性（契约级）"
-- `If-None-Match`：条件请求，**仅 `system/bootstrap` 使用**（携带上次响应的 `bootstrap_version` 做缓存校验）
+- `If-None-Match`：条件请求，**仅 `system/bootstrap` 使用**（public 版与登录版均支持；携带上次响应的 `bootstrap_version` 做缓存校验）
 
 说明：`X-Request-Id` 与 `Idempotency-Key` 相互独立；同一 `Idempotency-Key` 的多次请求可返回不同的 `X-Request-Id`。
 
@@ -174,7 +218,7 @@ interface ApiResponse<T = void> {
 
 ---
 
-## Token 语义与认证档位（契约级）
+## Token 语义与节点身份（契约级）
 
 ### Web 端 Cookie 契约
 
@@ -183,15 +227,15 @@ Web 端使用以下**固定名称**的 HttpOnly Cookie 携带认证信息（**�
 | Cookie 名称 | 用途 | Path | 属性 | Max-Age |
 |---|---|---|---|---|
 | `access_token` | API 访问令牌 | `/` | `HttpOnly; Secure; SameSite=Strict` | 服务端动态设置（与 token 过期时间一致） |
-| `refresh_token` | Token 刷新令牌 | `/api/v1/auth/refresh_token` | `HttpOnly; Secure; SameSite=Strict` | 服务端动态设置（与 token 过期时间一致） |
+| `refresh_token` | Token 刷新令牌 | `/public/v1/auth/refresh_token` | `HttpOnly; Secure; SameSite=Strict` | 服务端动态设置（与 token 过期时间一致） |
 | `device_id` | 设备标识（非鉴权凭证） | `/` | `Secure; SameSite=Lax` | 10 年（长期，独立于登录态） |
 
 **规则**：
-- `access_token` 使用 `Path=/` 统一覆盖 HTTP API（`/api/v1/`、`/admin/v1/`）和 WebSocket（`/ws/v1`）端点
-- `refresh_token` 使用精确 Path 确保仅在刷新端点自动携带
+- `access_token` 使用 `Path=/` 统一覆盖需要鉴权的 HTTP API（`/api/v1/`、`/admin/v1/`）和 WebSocket（`/ws/v1`）端点；`/public/v1/` 节点**不解析**该 Cookie（浏览器可能自动携带，服务端直接忽略，不影响响应）
+- `refresh_token` 使用精确 Path 确保仅在刷新端点（`/public/v1/auth/refresh_token`）自动携带
 - 鉴权 Cookie 由服务端通过 `Set-Cookie` 响应头设置和清除，前端 JavaScript 不可读取也不应手动操作
 - 登出时服务端通过 `Max-Age=0` 清除两个鉴权 Cookie
-- `device_id` 不带 `HttpOnly`（前端可读取以便在 App 内嵌 WebView 等场景与 App 共享）、`SameSite=Lax`；客户端首次访问（无 `device_id` Cookie）时由服务端生成 UUID v4 下发；登出不清除
+- `device_id` 不带 `HttpOnly`（前端可读取以便在 App 内嵌 WebView 等场景与 App 共享）、`SameSite=Lax`；**下发时机（契约级）**：Web 端冷启动首个请求 `POST /public/v1/system/bootstrap` 时，若请求未携带 `device_id` Cookie，服务端生成 UUID v4 并随响应 `Set-Cookie` 下发（bootstrap 是冷启动第一端点，天然保证后续 `auth/register`/`auth/guest` 等从 Cookie 读取时已存在）；已携带则沿用。登出不清除
 
 ### CSRF 防护（Web 端）
 
@@ -202,23 +246,22 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 - `Authorization: Bearer <access_token>`
 - Token 从响应体获取并存储在 Keychain（iOS）/ Keystore（Android）
 
-### 认证档位（契约级，仅四种）
+### 节点身份语义（契约级）
 
-| 档位 | 语义 | 适用 |
-|------|------|------|
-| `public` | 不涉及鉴权，无 Token 语义 | 仅账号生命周期端点（auth/register、auth/login、auth/guest、auth/request_password_reset、auth/reset_password） |
-| `optional` | 匿名与登录态均可访问；登录态按可见性返回额外字段 | 公开只读端点 |
-| `required` | 缺少或无效 Token 返回 `10100` | 写操作、互动操作、个人数据 |
-| `credential` | 仅 `auth/refresh_token`：以 refresh_token 为凭证；无效/过期/被撤销返回 `10100`，不适用 optional 的匿名降级规则 | 仅 refresh_token |
+认证档位作为**端点属性**已废除——身份要求由节点前缀直接表达，全规范无例外：
+
+| 节点 | Token 处理 | 语义 |
+|------|-----------|------|
+| `/public/v1/*` | **完全不解析**（Cookie/Header 中的 Token 一律忽略） | 纯匿名视角：仅返回公开数据，响应形状与调用者是否恰好持有 Token 无关 |
+| `/api/v1/*` | 必须携带有效 access_token | 缺少/无效/黑名单 → `10100`；封禁 → `10201` |
+| `/admin/v1/*` | 必须携带有效 access_token + 平台管理员身份 | 未认证 → `10100`；非平台管理员 → `10200` + `not_admin`；细粒度权限见 `api_spec_authz.md` |
+| `auth/refresh_token`（credential 特例） | 以请求体中的 refresh_token 为凭证 | 无效/过期/被撤销 → `10100`。该端点位于 `/public/v1`，但凭证语义独立于节点匿名语义 |
 
 说明：
+- **原 `optional` 档位已废除**：匿名与登录两种视角一律拆分为 `/public/v1` 匿名版 + `/api/v1` 登录版两个端点；不存在「同一端点按登录态返回不同数据」的隐式行为
+- `/public/v1` 不解析 Token 意味着：即便请求携带了有效 Token，也**不会**返回 viewer_state / relation 等登录视角增强字段；需要增强视角时客户端必须调用 `/api/v1` 的对应端点
 - 已废除「条件必须」档位与「目标缺省=当前用户」语义：目标 ID 一律必传；拉取自己的数据时客户端显式传入自己的 ID
-- Web 端通过 Cookie 自动携带，无需前端代码手动处理；App 端在每个请求的 Header 中手动添加 `Authorization` 字段
-
-**optional 端点的验证规则**：
-- 任何时候，只要请求携带了 Token，服务端都**必须验证** Token 的有效性（黑名单检查）
-- Token 验证失败（过期、被撤销、格式错误等）时，视为未登录状态，忽略该 Token 并按匿名权限继续处理，仅返回公开数据
-- 客户端若想显式以匿名身份访问，可不携带 Token；即便浏览器误带过期 Cookie，也不会阻塞公开接口
+- Web 端通过 Cookie 自动携带，无需前端代码手动处理；App 端在每个请求的 Header 中手动添加 `Authorization` 字段（`/public/v1` 请求可不携带）
 
 **黑名单规则（契约级）**：
 - access_token/refresh_token 的失效通过黑名单机制实现（登出/撤销即写入黑名单）
@@ -232,7 +275,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 **隐私等级判定**（`public` / `private`）：
 - `public`：所有人可见（包括未登录用户）
 - `private`：仅自己可见
-- 未登录时：仅能访问 `privacy_level='public'` 的资源
+- `/public/v1` 节点（纯匿名）：仅能访问 `privacy_level='public'` 的资源；`/api/v1` 节点按资源隐私等级 + 调用者关系判定
 
 **隐私拒绝策略（统一三类）**：
 - 资源**不存在**：返回 `10300`（资源不存在）
@@ -271,8 +314,10 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 - 所有 request/response 必须强类型
 - **每个端点必须有命名的 Request 类型**：空请求体也须 `interface XxxRequest {}`，禁止裸 `{}` 与匿名结构
 - **禁止匿名响应容器**：响应必须引用命名类型（列表容器统一 `PaginatedData<T>` 或命名 `XxxList`）
+- **public 节点类型完全隔离**：`/public/v1` 双版本端点的 Request/Response 主体类型使用专属 `Public` 前缀（`PublicXxxRequest` / `PublicXxxItem` 等，定义在 `api_spec_public.md`），**禁止**与 `/api/v1`、`/admin/v1` 的对偶类型互相引用。匿名视角类型**不含** viewer_state / relation / reacted_by_me / remark 等查看者状态字段——这些字段只存在于登录视角类型中；嵌套结构里含查看者字段的类型同样必须拆出 Public 版（如 `PublicReaction`）。**例外**：无视角的 Domain Primitives 与纯配置类型（`GeoPoint`、`PaginationParams`、`UserInfo`、`MediaAsset`、`ApiVersionMeta` 等，定义于 `api_spec_types.md`）跨节点共享，不复制；仅存在于 public 节点、无登录版对偶的类型（如 `RegisterRequest`、`AuthTokenPair`）保持常规命名
 - 类型命名遵循：
   - 统一数据类型: `XxxItem`（公开固定形状）
+  - 匿名视角类型: `PublicXxxItem`（/public/v1 专用，定义在 `api_spec_public.md`）
   - 管理员扩展类型: `AdminXxxItem`（/admin/v1 专用）
   - 拥有者扩展类型: `OwnerXxxItem`（拥有者视角端点专用）
   - 基础信息: `XxxInfo`（嵌入用）
@@ -299,26 +344,28 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 
 **原则：一个端点 = 一种角色 + 一个固定响应形状；不同视角 = 不同端点；字段只做数据选择与隐私过滤，不做视角翻转。**
 
-- 视角分离：拥有者视角、群管理视角、平台管理视角分别由专属端点承载（如 `moments/list_created` 返回 `OwnerMomentItem`；`groups/admin/members/list` 返回 `AdminGroupMemberItem`；`/admin/v1` 返回 `AdminXxxItem`）
+- 视角分离：拥有者视角、群管理视角、平台管理视角分别由专属端点承载（如 `moments/fetch_created` 返回 `OwnerMomentItem`；`groups/admin/members/fetch` 返回 `AdminGroupMemberItem`；`/admin/v1` 返回 `AdminXxxItem`）
 - **恒定 nullable 通则**：权限/隐私条件字段**恒定存在**，`null = 隐藏/不适用`。已废除「字段不存在即不可见」策略——字段缺失只在内容性可选字段（`images?` 等）上出现
   - 隐私受控字段（presence_status / last_online_at / location / stats 等）：恒在，null 表达隐藏/不适用；null 不泄露「隐藏 vs 不存在」差异
-  - 查看者状态字段（relation / viewer_state / remark 等）：恒在，null 表达不适用（匿名/非成员/无关系）
-  - 查看者布尔字段：恒为布尔（如 `reacted_by_me` 恒返回，匿名/未反应时为 false）
+  - 查看者状态字段（relation / viewer_state / remark 等）：恒在，null 表达不适用（无关系/非成员）；查看者字段仅存在于登录视角类型（`/api/v1`、`/admin/v1`），public 节点类型不含这些字段
+  - 查看者布尔字段：恒为布尔（如 `reacted_by_me` 恒返回，未反应时为 false）
 - `next_cursor`：恒在，`next_cursor: string | null`（null 表示没有更多数据）
 - 每个 nullable 字段的 null 语义必须在类型注释中写明
 - `@auth-only`/`@owner-only`/`@group-admin-only`/`@member-only`/`@participant-only` 注解**全量废除**
 
 ### 客户端使用分层（契约级建议）
 
-#### 未登录/冷启动（Guest Browsing）
+#### 未登录（Guest Browsing）→ 一律调用 `/public/v1`
 
-**可以做**：浏览公开内容（瞬间/群组/用户资料公共字段）、搜索发现、地图浏览、系统配置、热门标签。
+**可以做**：浏览公开内容（瞬间/群组/用户资料公共字段）、搜索发现、地图浏览、系统配置、热门标签、分享码落地；完成注册/登录/游客创建/密码重置。
 
-**响应差异**：详情/列表返回公开类型（`relation`/`viewer_state` 等查看者状态字段为 null）；只能访问 `public` 可见性资源。
+**响应形状**：`PublicXxxItem` 等匿名视角类型——不含任何查看者状态字段；只能访问 `public` 可见性资源。
 
-#### 已登录（Personalized Usage）
+#### 已登录（Personalized Usage）→ 一律调用 `/api/v1`
 
-**额外能力**：查看者状态字段有值、个性化信息流、私聊/群聊/通知、所有写操作和互动操作；按角色访问 `groups/admin` 守卫子树或 `/admin/v1`。
+**额外能力**：查看者状态字段有值、个性化信息流、私聊/群聊/通知、所有写操作和互动操作；按角色访问 `groups/admin` 守卫子树；平台管理员身份另走 `/admin/v1`。
+
+**登录态切换**：客户端在登录/登出时切换调用节点（同一浏览功能的两个版本端点路径仅节点前缀不同，如 `/public/v1/moments/open_the_door` ↔ `/api/v1/moments/open_the_door`，但类型独立）。**无需随登录态切换的端点**（仅 public 版，登录用户与匿名用户调用同一 URL）：`map/canvas`、`share/fetch`、`groups/announcements/fetch`、system 的 `meta`/`health`/`announcements/fetch`/`client_config`、auth 生命周期 6 端点（`/public/v1/auth/*`）——客户端此类模块无需感知登录态。
 
 ---
 
@@ -438,10 +485,10 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 | 接口类型 | 限流维度 | 策略 | 默认限制值 | `RateLimitConfig` 对应字段 |
 |---------|---------|------|--------|--------------------------|
 | 登录/注册/游客/重置 | IP | 滑动窗口 | 10次/10分钟 | `auth_login_per_10minutes` 等 |
-| 搜索类 | 用户 | 令牌桶 | 60次/分钟 | `search_per_minute` |
+| 搜索类 | 用户（`/api/v1`）；IP（`/public/v1` 匿名版） | 令牌桶 | 60次/分钟 | `search_per_minute` |
 | 通用写操作 | 用户 | 滑动窗口 | 30次/分钟 | `write_per_minute` |
 | 业务写操作（动态/评论/举报） | 用户 | 滑动窗口 | 各不同 | `moments_create_per_minute` 等 |
-| 文件上传 presign | 用户 | 滑动窗口 | 100次/小时 | `upload_presign_per_hour` |
+| 文件上传 presign | 用户（按 files 内文件数计） | 滑动窗口 | 100次/小时 | `upload_presign_per_hour` |
 | WebSocket 订阅 | 连接 | 固定窗口 | 10次/秒 | `ws_subscribe_per_second` |
 | 平台管理查询（/admin/v1 读） | 用户 | 令牌桶 | 100次/分钟 | `admin_read_per_minute` |
 | 平台管理写（/admin/v1 写） | 用户 | 滑动窗口 | 30次/分钟 | `admin_write_per_minute` |
@@ -450,7 +497,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 
 > 各字段的完整定义和取值范围见 `api_spec_admin.md` 的 `RateLimitConfig`。
 
-**匿名请求限流**：未登录（无有效 Token）请求一律按 **IP 维度**限流，防止爬虫批量拉取公开数据。登录请求按用户维度限流；两种维度独立计费、分别触发。
+**匿名请求限流**：`/public/v1` 节点请求（节点本身不解析 Token，一律按匿名处理）一律按 **IP 维度**限流，防止爬虫批量拉取公开数据。登录请求（`/api/v1`、`/admin/v1`）按用户维度限流；两种维度独立计费、分别触发。
 
 **客户端真实 IP 解析**（IP 维度限流的前提）：
 
@@ -489,9 +536,9 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 
 - 内容创建（无自然去重键，重发=重复内容）：`moments/create`、`comments/create`、`groups/create`、`groups/admin/announcements/create`、`/admin/v1/announcements/create`、`share/create`
 - 消息发送（无自然去重键，重发=重复消息骚扰）：`private_messages/send`、`group_messages/send`
-- 账号创建：`auth/guest`（每次调用创建独立访客账号）、`auth/register`（唯一约束特例，见下方）
+- 账号创建：`/public/v1/auth/guest`（每次调用创建独立访客账号）、`/public/v1/auth/register`（唯一约束特例，见下方）
 
-> **唯一约束特例（`auth/register`）**：`login_id` 有唯一约束，重复注册返回 `10400`（login_id 已存在），表面看似自然去重。但这里的 `10400` 有**歧义**——是「我刚提交被自己重试占了」还是「该 login_id 早被别人占用」？客户端无法直接判断本次注册是否已成功，必须额外发起一次 `login` 才能恢复。为消除这一歧义、让重试能回放首次的 `AuthTokenPair`，`register` 作为全规范唯一特例保留 `Idempotency-Key`。
+> **唯一约束特例（`/public/v1/auth/register`）**：`login_id` 有唯一约束，重复注册返回 `10400`（login_id 已存在），表面看似自然去重。但这里的 `10400` 有**歧义**——是「我刚提交被自己重试占了」还是「该 login_id 早被别人占用」？客户端无法直接判断本次注册是否已成功，必须额外发起一次 `signin` 才能恢复。为消除这一歧义、让重试能回放首次的 `AuthTokenPair`，`register` 作为全规范唯一特例保留 `Idempotency-Key`。
 
 #### 用自然去重键替代 Idempotency-Key 的接口（无需 key）
 
@@ -499,9 +546,9 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 |------|----------|---------|
 | `reports/create` | `(reporter_id, target_type, target_id, pending_status)` | 返回成功 + 已有 `report_id`（`is_duplicate: true`），不创建新举报单 |
 | `groups/admin/invites/create` | `(group_id, invitee_id, pending)` | 返回已有邀请，不重复创建、不重复通知 |
-| `groups/join`（approval 路径） | `(group_id, applicant_id, pending)` | 返回已有 `application_id`，不重复创建；direct 路径成员关系唯一，天然幂等 |
-| `media/complete_upload` / `media/batch_complete_upload` | `upload_id` 一次性凭证 | 首次成功后凭证失效，重发返回相同 `file_id` |
-| `auth/reset_password` | 一次性验证码 | 首次成功后验证码失效，重发 → `10300` |
+| `groups/enter`（approval 路径） | `(group_id, applicant_id, pending)` | 返回已有 `application_id`，不重复创建；direct 路径成员关系唯一，天然幂等 |
+| `media/complete_upload` | `upload_id` 一次性凭证 | 首次成功后凭证失效，重发返回相同 `file_id` |
+| `/public/v1/auth/reset_password` | 一次性验证码 | 首次成功后验证码失效，重发 → `10300` |
 | `auth/change_password` | 旧密码凭证 | 首次成功后旧密码失效，重发 → `10401` |
 | `groups/admin/transfer_ownership` | 群主身份（调用方权限） | 首次后调用方失群主权限，重发 → `10200` |
 

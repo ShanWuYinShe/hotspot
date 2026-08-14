@@ -11,31 +11,32 @@
   - 通用类型：`api_spec_types.md`
   - 守卫与权限：`api_spec_authz.md`
   - 错误码：`api_spec_errors.md`
+  - 匿名镜像版（/public/v1 同名端点）：`api_spec_public.md`
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 |
+| 端点 | 说明 | 节点 |
 |-----|------|------|
-| `POST /api/v1/users/search` | 搜索用户（支持关键字/标签/位置组合） | optional |
-| `POST /api/v1/users/open_the_door` | 用户资料详情（可选主页首屏聚合） | optional |
-| `POST /api/v1/users/list_friends` | 好友列表（user_id 必传） | optional |
-| `POST /api/v1/users/list_following` | 关注列表（user_id 必传） | optional |
-| `POST /api/v1/users/list_followers` | 粉丝列表（user_id 必传） | optional |
-| `POST /api/v1/users/list_groups` | 用户群组列表（user_id 必传，公开视角） | optional |
-| `POST /api/v1/users/list_moments` | 用户瞬间历史（user_id 必传，公开视角） | optional |
-| `POST /api/v1/users/list_reacted_moments` | 用户反应过的瞬间列表（user_id 必传） | optional |
-| `POST /api/v1/users/batch_get` | 批量获取用户信息 | optional |
-| `POST /api/v1/users/get_account` | 我的账户数据 | required |
-| `POST /api/v1/users/update_account` | 更新我的账户 | required |
-| `POST /api/v1/users/update_location` | 更新我的位置 | required |
-| `POST /api/v1/users/upgrade` | 访客升级 | required |
-| `POST /api/v1/users/get_settings` | 我的设置 | required |
-| `POST /api/v1/users/update_settings` | 更新我的设置 | required |
-| `POST /api/v1/users/delete_account` | 删除账户 | required |
-| `POST /api/v1/users/set_follow` | 设置关注状态（两态统一） | required |
-| `POST /api/v1/users/set_block` | 设置拉黑状态（两态统一） | required |
-| `POST /api/v1/users/list_blocked` | 我的拉黑列表 | required |
-| `POST /api/v1/users/set_remark` | 设置备注 | required |
+| `POST /api/v1/users/search` | 搜索用户（支持关键字/标签/位置组合；双版本，匿名版在 /public/v1） | /api/v1 |
+| `POST /api/v1/users/open_the_door` | 用户资料详情（可选主页首屏聚合；双版本） | /api/v1 |
+| `POST /api/v1/users/fetch_friends` | 好友列表（user_id 必传；双版本） | /api/v1 |
+| `POST /api/v1/users/fetch_following` | 关注列表（user_id 必传；双版本） | /api/v1 |
+| `POST /api/v1/users/fetch_followers` | 粉丝列表（user_id 必传；双版本） | /api/v1 |
+| `POST /api/v1/users/fetch_groups` | 用户群组列表（user_id 必传，公开视角；双版本） | /api/v1 |
+| `POST /api/v1/users/fetch_moments` | 用户瞬间历史（user_id 必传，公开视角；双版本） | /api/v1 |
+| `POST /api/v1/users/fetch_reacted_moments` | 用户反应过的瞬间列表（user_id 必传；双版本） | /api/v1 |
+| `POST /api/v1/users/batch_fetch` | 批量获取用户信息（双版本） | /api/v1 |
+| `POST /api/v1/users/account` | 我的账户数据 | /api/v1 |
+| `POST /api/v1/users/update_account` | 更新我的账户 | /api/v1 |
+| `POST /api/v1/users/update_location` | 更新我的位置 | /api/v1 |
+| `POST /api/v1/users/upgrade` | 访客升级 | /api/v1 |
+| `POST /api/v1/users/settings` | 我的设置 | /api/v1 |
+| `POST /api/v1/users/update_settings` | 更新我的设置 | /api/v1 |
+| `POST /api/v1/users/delete_account` | 删除账户 | /api/v1 |
+| `POST /api/v1/users/set_follow` | 设置关注状态（两态统一） | /api/v1 |
+| `POST /api/v1/users/set_block` | 设置拉黑状态（两态统一） | /api/v1 |
+| `POST /api/v1/users/fetch_blocked` | 我的拉黑列表 | /api/v1 |
+| `POST /api/v1/users/set_remark` | 设置备注 | /api/v1 |
 
 > 表情反应（reaction）是跨 message/moment/comment 三类资源的统一动作，独立命名空间 `reactions/`（见 `api_spec_reaction.md`）。
 
@@ -64,15 +65,15 @@
 // 'other' 为包容性取值，覆盖非二元/不愿透露等场景
 type Gender = 'male' | 'female' | 'other';
 
-// 用户关系列表项（list_friends / list_following / list_followers 共用，形状恒定）
-// - followed_back_at：仅 list_friends 返回；其余端点恒为 null
+// 用户关系列表项（fetch_friends / fetch_following / fetch_followers 共用，形状恒定）
+// - followed_back_at：仅 fetch_friends 返回；其余端点恒为 null
 // - remark：查看者状态字段（恒定 nullable：查他人列表时为 null）
 // - presence_status / last_online_at：随 user: UserItem 返回，受对方 presence_visible 隐私控制（null = 隐藏）
 interface RelatedUserItem {
   user: UserItem;              // 完整用户信息（隐私受控字段为恒定 nullable）
-  followed_at: string;         // 关注时间（list_followers 为"对方关注我的时间"，即成为粉丝的时间）
-  followed_back_at: string | null;   // 对方回关时间（成为好友的时间）；仅 list_friends 返回
-  is_mutual: boolean;          // 是否互相关注（list_followers 语义：该粉丝是否也关注了我）
+  followed_at: string;         // 关注时间（fetch_followers 为"对方关注我的时间"，即成为粉丝的时间）
+  followed_back_at: string | null;   // 对方回关时间（成为好友的时间）；仅 fetch_friends 返回
+  is_mutual: boolean;          // 是否互相关注（fetch_followers 语义：该粉丝是否也关注了我）
   remark: string | null;       // 备注；仅查询自己（user_id=当前用户）时返回，查他人恒为 null
 }
 ```
@@ -93,7 +94,7 @@ interface RelatedUserItem {
 - `phone_searchable=false`：手机号精确搜索不命中该用户
 - `location_searchable=false`：位置/半径维度搜索与附近发现不返回该用户
 
-- **认证**: optional
+- **节点**: /api/v1（双版本端点：匿名版 `/public/v1/users/search` 见 `api_spec_public.md`）
 - **排序**: 
   - 默认 `sort_by='relevance'`：按相关性优先排序，同分时以最近活跃时间做稳定 tie-breaker
   - `sort_by='distance'`：按距离由近到远排序（依赖 reference_point 回退链），距离相近时体现关键词相关性
@@ -121,19 +122,19 @@ interface SearchUsersRequest {
 
 ### POST /api/v1/users/open_the_door
 
-获取用户资料详情。认证 optional，返回恒定公开类型 `UserItem`（查看者状态字段 `relation`/`social_context` 匿名时为 null）。
+获取用户资料详情（登录视角，返回 `UserItem`：查看者状态字段 `relation`/`social_context` 恒定 nullable，null = 无关系/不适用）。
 
 **隐私说明**：用户存在但对其资料设置了完全隐藏（或调用方被对方拉黑等隐私限制）时，返回 `10300`（按不存在处理，不暴露存在性）；用户不存在时返回 `10300`。
 
 **主页聚合能力**：`include_recent_moments=true` 时附加主页首屏数据（资料 + 近期瞬间），客户端一次请求拿到主页骨架。
 
-- **认证**: optional
+- **节点**: /api/v1（双版本端点：匿名版 `/public/v1/users/open_the_door` 见 `api_spec_public.md`）
 - **排序**: `recent_moments` 内部按 `created_at DESC`（最新在前），`moment_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **设计要点**：
 - `user.stats` 详情场景返回（含 moments_count/friends_count/followers_count/following_count/groups_count），客户端据此渲染主页各 tab 的数量角标
-- 好友/关注/粉丝/群组的**明细列表**用 `users/list_friends`、`users/list_following` 等按需懒加载
-- `recent_moments` 条数受 `AppConfig.response_defaults.user_profile_moments_count` 控制（默认 6）；翻页加载更多时切换到 `users/list_moments`
+- 好友/关注/粉丝/群组的**明细列表**用 `users/fetch_friends`、`users/fetch_following` 等按需懒加载
+- `recent_moments` 条数受 `AppConfig.response_defaults.user_profile_moments_count` 控制（默认 6）；翻页加载更多时切换到 `users/fetch_moments`
 
 **Request**: `OpenUserDoorRequest`
 ```typescript
@@ -155,16 +156,17 @@ interface UserProfileResult {
 
 ---
 
-### POST /api/v1/users/list_friends
+### POST /api/v1/users/fetch_friends
 
 获取指定用户的好友列表（好友 = 双方互相关注的用户）。
 
-- **认证**: optional（`user_id` **必传**；拉自己的列表时显式传自己的 user_id。查他人受 `social_lists_visible` 隐私设置控制）
+- **节点**: /api/v1（双版本端点：匿名版 `/public/v1/users/fetch_friends` 见 `api_spec_public.md`）
+- **约束**: `user_id` **必传**（拉自己的列表时显式传自己的 user_id）；查他人受 `social_lists_visible` 隐私设置控制
 - **排序**: 默认按 `followed_back_at` **时间倒序**（最近成为好友在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListFriendsRequest`
+**Request**: `FetchFriendsRequest`
 ```typescript
-interface ListFriendsRequest {
+interface FetchFriendsRequest {
   user_id: string;   // 必传：要查询的目标用户
   pagination: PaginationParams | null;
 }
@@ -178,16 +180,17 @@ interface ListFriendsRequest {
 
 ---
 
-### POST /api/v1/users/list_following
+### POST /api/v1/users/fetch_following
 
 获取指定用户的关注列表。
 
-- **认证**: optional（`user_id` 必传；查他人受 `social_lists_visible` 控制）
+- **节点**: /api/v1（双版本端点：匿名版 `/public/v1/users/fetch_following` 见 `api_spec_public.md`）
+- **约束**: `user_id` 必传；查他人受 `social_lists_visible` 控制
 - **排序**: 默认按 `followed_at` **时间倒序**（最近关注在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListFollowingRequest`
+**Request**: `FetchFollowingRequest`
 ```typescript
-interface ListFollowingRequest {
+interface FetchFollowingRequest {
   user_id: string;   // 必传：要查询的目标用户
   pagination: PaginationParams | null;
 }
@@ -199,16 +202,17 @@ interface ListFollowingRequest {
 
 ---
 
-### POST /api/v1/users/list_followers
+### POST /api/v1/users/fetch_followers
 
 获取指定用户的粉丝列表。
 
-- **认证**: optional（`user_id` 必传；查他人受 `social_lists_visible` 控制）
+- **节点**: /api/v1（双版本端点：匿名版 `/public/v1/users/fetch_followers` 见 `api_spec_public.md`）
+- **约束**: `user_id` 必传；查他人受 `social_lists_visible` 控制
 - **排序**: 默认按 `followed_at` **时间倒序**（最近关注在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListFollowersRequest`
+**Request**: `FetchFollowersRequest`
 ```typescript
-interface ListFollowersRequest {
+interface FetchFollowersRequest {
   user_id: string;   // 必传：要查询的目标用户
   pagination: PaginationParams | null;
 }
@@ -220,18 +224,19 @@ interface ListFollowersRequest {
 
 ---
 
-### POST /api/v1/users/list_groups
+### POST /api/v1/users/fetch_groups
 
 获取指定用户加入的公开群组（公开主页视角：仅 `is_searchable=true` 的群组）。
 
 **隐私控制**：受 `groups_visible` 设置控制。本端点无 `reference_point` 参数，返回的 `GroupItem.location` 中 distance/bearing 为 null。
 
-- **认证**: optional（`user_id` 必传）
+- **节点**: /api/v1（双版本端点：匿名版 `/public/v1/users/fetch_groups` 见 `api_spec_public.md`）
+- **约束**: `user_id` 必传
 - **排序**: 默认按 `joined_at` **时间倒序**（最近加入在前），`group_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListUserGroupsRequest`
+**Request**: `FetchUserGroupsRequest`
 ```typescript
-interface ListUserGroupsRequest {
+interface FetchUserGroupsRequest {
   user_id: string;   // 必传
   pagination: PaginationParams | null;
 }
@@ -243,18 +248,19 @@ interface ListUserGroupsRequest {
 
 ---
 
-### POST /api/v1/users/list_moments
+### POST /api/v1/users/fetch_moments
 
 获取指定用户发布的公开瞬间（公开视角，恒定类型）。
 
-**说明**：本端点只返回 `privacy_level='public'` 的瞬间（未登录也可访问）。拥有者视角（含 private 与软删占位）请使用 `moments/list_created`（见 `api_spec_moment.md`）。
+**说明**：本端点只返回 `privacy_level='public'` 的瞬间（匿名版同样仅返回公开瞬间）。拥有者视角（含 private 与软删占位）请使用 `moments/fetch_created`（见 `api_spec_moment.md`）。
 
-- **认证**: optional（`user_id` 必传）
+- **节点**: /api/v1（双版本端点：匿名版 `/public/v1/users/fetch_moments` 见 `api_spec_public.md`）
+- **约束**: `user_id` 必传
 - **排序**: 默认按 `created_at` **时间倒序**（最新瞬间在前），`moment_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListUserMomentsRequest`
+**Request**: `FetchUserMomentsRequest`
 ```typescript
-interface ListUserMomentsRequest {
+interface FetchUserMomentsRequest {
   user_id: string;   // 必传
   pagination: PaginationParams | null;
 }
@@ -266,18 +272,19 @@ interface ListUserMomentsRequest {
 
 ---
 
-### POST /api/v1/users/list_reacted_moments
+### POST /api/v1/users/fetch_reacted_moments
 
 获取指定用户反应过的瞬间（去重，一个瞬间无论被该用户用过几个 emoji 只出现一次）。
 
 **隐私控制**：受 `reacted_moments_visible` 设置控制。
 
-- **认证**: optional（`user_id` 必传）
+- **节点**: /api/v1（双版本端点：匿名版 `/public/v1/users/fetch_reacted_moments` 见 `api_spec_public.md`）
+- **约束**: `user_id` 必传
 - **排序**: 默认按 `last_reacted_at` **时间倒序**（最近反应在前），`moment_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListUserReactedMomentsRequest`
+**Request**: `FetchUserReactedMomentsRequest`
 ```typescript
-interface ListUserReactedMomentsRequest {
+interface FetchUserReactedMomentsRequest {
   user_id: string;   // 必传
   pagination: PaginationParams | null;
 }
@@ -289,15 +296,15 @@ interface ListUserReactedMomentsRequest {
 
 ---
 
-### POST /api/v1/users/batch_get
+### POST /api/v1/users/batch_fetch
 
 批量获取用户信息。用于列表/Feed/通知等场景中高效解析 `UserInfo`，消除逐个调用 `open_the_door` 的 N+1 问题。
 
-- **认证**: optional
+- **节点**: /api/v1（双版本端点：匿名版 `/public/v1/users/batch_fetch` 见 `api_spec_public.md`）
 
-**Request**: `BatchGetUsersRequest`
+**Request**: `BatchFetchUsersRequest`
 ```typescript
-interface BatchGetUsersRequest {
+interface BatchFetchUsersRequest {
   user_ids: string[];  // 必填，最多 100 个
 }
 ```
@@ -311,15 +318,15 @@ interface UsersBatchResult {
 
 ---
 
-### POST /api/v1/users/get_account
+### POST /api/v1/users/account
 
 获取当前用户账户数据（含 `email`/`phone`/`user_type` 等仅自己可见的字段）。
 
-- **认证**: required
+- **节点**: /api/v1
 
-**Request**: `GetAccountRequest`
+**Request**: `AccountRequest`
 ```typescript
-interface GetAccountRequest {}
+interface AccountRequest {}
 ```
 
 **Response**: `ApiResponse<AccountData>`
@@ -328,7 +335,7 @@ interface AccountData {
   user_id: string;
   nickname: string;
   avatar_url: string | null;
-  user_type: UserType;          // 账号类型（temp/normal），仅表达账号生命周期；平台管理员身份通过 /admin/v1/rbac/get_me 获取
+  user_type: UserType;          // 账号类型（temp/normal），仅表达账号生命周期；平台管理员身份通过 /admin/v1/rbac/me 获取
   bio: string | null;
   tags: string[];
   gender: Gender | null;        // Gender 定义于本模块「类型定义」小节
@@ -348,7 +355,7 @@ interface AccountData {
 
 更新用户账户资料。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `UpdateAccountRequest`
 ```typescript
@@ -373,7 +380,7 @@ interface UpdateAccountRequest {
 
 更新用户位置。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `UpdateLocationRequest`
 ```typescript
@@ -394,7 +401,7 @@ interface UpdateLocationRequest {
 
 **login_id 所有权验证**：`login_id` 为手机号/邮箱时，服务端须验证该凭证归属调用方（验证码流程）；验证码服务接入前，手机号/邮箱型 `login_id` 暂不支持升级，仅允许用户名型。防止访客抢占他人手机号/邮箱。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `UpgradeAccountRequest`
 ```typescript
@@ -406,7 +413,9 @@ interface UpgradeAccountRequest {
 
 **Response**: `ApiResponse<AccountData>`
 
-升级成功后返回完整账户数据，客户端无需额外调 `get_account` 即可获取新的 `user_type`。
+升级成功后返回完整账户数据，客户端无需额外调 `account` 即可获取新的 `user_type`。
+
+**凭证写入语义（契约级）**：升级成功后，服务端将 `login_id` 与 `password` 写入登录凭证（此后该凭证可用于 `/public/v1/auth/signin`）——仅改 `user_type` 而不落凭证会导致升级用户无法重新登录，属于实现缺陷。
 
 **Token/Session 语义**：升级**不吊销当前 session、不重发 token**——服务端将当前 session 的 `user_type` 更新为 `normal`，现有 token 继续有效。访客期资料随账户保留。
 
@@ -414,15 +423,15 @@ interface UpgradeAccountRequest {
 
 ---
 
-### POST /api/v1/users/get_settings
+### POST /api/v1/users/settings
 
 获取用户设置。
 
-- **认证**: required
+- **节点**: /api/v1
 
-**Request**: `GetSettingsRequest`
+**Request**: `SettingsRequest`
 ```typescript
-interface GetSettingsRequest {}
+interface SettingsRequest {}
 ```
 
 **Response**: `ApiResponse<UserSettings>`
@@ -435,7 +444,7 @@ interface GetSettingsRequest {}
 
 更新用户设置。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `UpdateSettingsRequest`
 ```typescript
@@ -454,7 +463,7 @@ interface UpdateSettingsRequest {
 
 **数据保留策略（契约级）**：账户删除**不级联删除已发布内容**——该用户已发布的瞬间、评论、群聊消息等公开内容保留（维护其他用户视角的社交上下文与对话完整性），但发布者身份**匿名化**：昵称/头像等个人信息替换为"已注销用户"占位，`user_id` 保留用于数据关联但不再可被搜索/访问。个人数据（登录凭证、私聊记录、设置、收藏、关注关系等）随账户删除。删除不可逆。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `DeleteAccountRequest`
 ```typescript
@@ -477,7 +486,7 @@ interface DeleteAccountRequest {
 
 `active=false` 时：若原本是好友，则好友关系自动解除。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `FollowRequest`
 ```typescript
@@ -503,7 +512,7 @@ interface FollowRequest {
 
 **级联语义**：拉黑时**自动解除双方关注关系**（`is_following`/好友关系清零）——被拉黑方无法再通过关注关系触达；解除拉黑**不自动恢复**关注关系（需重新关注）。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `BlockRequest`
 ```typescript
@@ -520,16 +529,16 @@ interface BlockRequest {
 
 ---
 
-### POST /api/v1/users/list_blocked
+### POST /api/v1/users/fetch_blocked
 
 获取拉黑列表（命名空间天生私有，仅自己的数据）。
 
-- **认证**: required
+- **节点**: /api/v1
 - **排序**: 默认按 `blocked_at` **时间倒序**（最近拉黑在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListBlockedRequest`
+**Request**: `FetchBlockedRequest`
 ```typescript
-interface ListBlockedRequest {
+interface FetchBlockedRequest {
   pagination: PaginationParams | null;
 }
 ```
@@ -551,7 +560,7 @@ interface BlockedUserItem {
 
 **权限要求**：必须已关注该用户。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `SetRemarkRequest`
 ```typescript

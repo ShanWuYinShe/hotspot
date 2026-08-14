@@ -18,32 +18,32 @@
 
 ### 私聊管理（`private_chats`）
 
-| 端点 | 说明 | 认证 |
+| 端点 | 说明 | 节点 |
 |-----|------|------|
-| `POST /api/v1/private_chats/list` | 私聊列表 | required |
-| `POST /api/v1/private_chats/open_the_door` | 私聊详情 | required |
-| `POST /api/v1/private_chats/update_preferences` | 更新会话偏好 | required |
-| `POST /api/v1/private_chats/delete` | 删除私聊会话 | required |
+| `POST /api/v1/private_chats/fetch` | 私聊列表 | /api/v1 |
+| `POST /api/v1/private_chats/open_the_door` | 私聊详情 | /api/v1 |
+| `POST /api/v1/private_chats/update_preferences` | 更新会话偏好 | /api/v1 |
+| `POST /api/v1/private_chats/delete` | 删除私聊会话 | /api/v1 |
 
 ### 私聊消息（`private_messages`）
 
-| 端点 | 说明 | 认证 |
+| 端点 | 说明 | 节点 |
 |-----|------|------|
-| `POST /api/v1/private_messages/send` | 发送私聊消息 | required |
-| `POST /api/v1/private_messages/list` | 私聊消息历史 | required |
-| `POST /api/v1/private_messages/update` | 编辑私聊消息 | required |
-| `POST /api/v1/private_messages/recall` | 撤回私聊消息 | required |
-| `POST /api/v1/private_messages/mark_read` | 标记私聊消息已读（scope 控制范围） | required |
+| `POST /api/v1/private_messages/send` | 发送私聊消息 | /api/v1 |
+| `POST /api/v1/private_messages/fetch` | 私聊消息历史 | /api/v1 |
+| `POST /api/v1/private_messages/update` | 编辑私聊消息 | /api/v1 |
+| `POST /api/v1/private_messages/recall` | 撤回私聊消息 | /api/v1 |
+| `POST /api/v1/private_messages/mark_read` | 标记私聊消息已读（scope 控制范围） | /api/v1 |
 
 ### 群聊消息（`group_messages`）
 
-| 端点 | 说明 | 认证 |
+| 端点 | 说明 | 节点 |
 |-----|------|------|
-| `POST /api/v1/group_messages/send` | 发送群聊消息 | required |
-| `POST /api/v1/group_messages/list` | 群聊消息历史 | required |
-| `POST /api/v1/group_messages/update` | 编辑群聊消息 | required |
-| `POST /api/v1/group_messages/recall` | 撤回自己发送的群聊消息 | required |
-| `POST /api/v1/group_messages/mark_read` | 标记群聊消息已读（scope 控制范围） | required |
+| `POST /api/v1/group_messages/send` | 发送群聊消息 | /api/v1 |
+| `POST /api/v1/group_messages/fetch` | 群聊消息历史 | /api/v1 |
+| `POST /api/v1/group_messages/update` | 编辑群聊消息 | /api/v1 |
+| `POST /api/v1/group_messages/recall` | 撤回自己发送的群聊消息 | /api/v1 |
+| `POST /api/v1/group_messages/mark_read` | 标记群聊消息已读（scope 控制范围） | /api/v1 |
 
 > **群管理员撤回任意成员消息**走群管理守卫子树：`POST /api/v1/groups/admin/messages/recall`（见 `api_spec_group.md`）。两个端点各司其职，无混用。
 
@@ -56,7 +56,7 @@
 
 `mark_read` 接口统一采用 up_to 语义：标记截至某条消息的所有消息为已读。
 
-**跨设备已读同步（已知取舍）**：本协议**不提供专门的 self-sync 事件**（即不推送"你在另一端读了消息"给自己其他设备）。单设备单会话模型下，同一设备的已读状态实时准确；但**跨设备**场景（用户在手机+Web 同时登录），在一端标记已读后，另一端的 `is_read`/`read_count` 不会实时更新——需等该端下次拉取 `list` 或冷启动 `system/bootstrap` 时刷新。客户端应在切前台/切会话时主动拉取一次历史以收敛已读状态。
+**跨设备已读同步（已知取舍）**：本协议**不提供专门的 self-sync 事件**（即不推送"你在另一端读了消息"给自己其他设备）。单设备单会话模型下，同一设备的已读状态实时准确；但**跨设备**场景（用户在手机+Web 同时登录），在一端标记已读后，另一端的 `is_read`/`read_count` 不会实时更新——需等该端下次拉取 `list` 或冷启动 `/api/v1/system/bootstrap` 时刷新。客户端应在切前台/切会话时主动拉取一次历史以收敛已读状态。
 
 > **多端推送 vs self-sync 的边界**：用户多设备各自独立鉴权、各自订阅 WebSocket，因此**消息内容类事件**（`PrivateMessageNew`/`Edited`/`Recalled` 等"推送给发送者其他设备"的事件）天然到达所有在线设备——这属于推送目标设计，**不是** self-sync。self-sync 特指已读状态等具体状态的跨设备实时同步，当前通过冷启动 + HTTP 补拉收敛。
 
@@ -93,7 +93,7 @@ interface MessageSent {
 
 ### PrivateMessageItem
 
-私聊消息项，用于 `private_messages/list` 响应。
+私聊消息项，用于 `private_messages/fetch` 响应。
 
 ```typescript
 interface PrivateMessageItem {
@@ -118,7 +118,7 @@ interface PrivateMessageItem {
 
 ### GroupMessageItem
 
-群聊消息项，用于 `group_messages/list` 响应；与私聊统一使用 `sender: UserInfo`。
+群聊消息项，用于 `group_messages/fetch` 响应；与私聊统一使用 `sender: UserInfo`。
 
 ```typescript
 interface GroupMessageItem {
@@ -161,16 +161,16 @@ interface GroupMessageItem {
 
 私聊权限由用户设置 `allow_private_chat`（`ChatPerm`）控制。
 
-### POST /api/v1/private_chats/list
+### POST /api/v1/private_chats/fetch
 
 获取私聊列表。
 
-- **认证**: required
+- **节点**: /api/v1
 - **排序**: 按 `is_pinned DESC, last_activity_at DESC` 排序（置顶优先，最新会话在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListPrivateChatsRequest`
+**Request**: `FetchPrivateChatsRequest`
 ```typescript
-interface ListPrivateChatsRequest {
+interface FetchPrivateChatsRequest {
   pagination: PaginationParams | null;
 }
 ```
@@ -219,7 +219,7 @@ interface PrivateChatItem {
 
 响应始终包含最近消息列表（`PaginatedData<PrivateMessageItem>`，会话不存在时为空），条数由 `AppConfig.response_defaults.chat_recent_messages_count` 控制。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `OpenPrivateChatDoorRequest`
 ```typescript
@@ -245,7 +245,7 @@ interface PrivateChatOpenResult {
 
 更新私聊偏好（静音/置顶）。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `UpdatePrivateChatPreferencesRequest`
 ```typescript
@@ -272,7 +272,7 @@ interface UpdatePrivateChatPreferencesRequest {
 - 不影响对方视角与对方历史数据
 - 若再次发起私聊，将创建一个新的空白会话
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `DeletePrivateChatRequest`
 ```typescript
@@ -306,7 +306,7 @@ interface DeletePrivateChatRequest {
 - `stranger_quota_exceeded`：陌生人消息限额已用完
 其余错误（`10300`）不返回 data。
 
-- **认证**: required
+- **节点**: /api/v1
 - **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `SendPrivateMessageRequest`
@@ -327,16 +327,16 @@ interface SendPrivateMessageRequest {
 
 ---
 
-### POST /api/v1/private_messages/list
+### POST /api/v1/private_messages/fetch
 
 获取私聊消息历史。
 
-- **认证**: required
+- **节点**: /api/v1
 - **排序**: 按 `sent_at` 时间倒序（最新在前），`message_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListPrivateMessagesRequest`
+**Request**: `FetchPrivateMessagesRequest`
 ```typescript
-interface ListPrivateMessagesRequest {
+interface FetchPrivateMessagesRequest {
   target_user_id: string;
   pagination: PaginationParams | null;
 }
@@ -358,7 +358,7 @@ interface ListPrivateMessagesRequest {
 - 仅 `type='text'` 的消息支持编辑，其他类型（image/video/audio/file/share/system）返回 `10400`
 - 已撤回的消息不可编辑，返回 `10400`
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `UpdatePrivateMessageRequest`
 ```typescript
@@ -378,7 +378,7 @@ interface UpdatePrivateMessageRequest {
 
 撤回私聊消息（仅作者）。发送者只能撤回撤回时间窗内的消息，窗口由 `AppConfig.limits.message_recall_window_seconds` 控制，超时返回 `10400`。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `RecallPrivateMessageRequest`
 ```typescript
@@ -399,7 +399,7 @@ interface RecallPrivateMessageRequest {
 
 **up_to 语义**：标记截至某条消息（含）及之前的所有消息为已读。`up_to_message_id` 不属于目标会话时返回 `10300`。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `MarkPrivateReadRequest`
 ```typescript
@@ -425,7 +425,7 @@ interface MarkPrivateReadRequest {
 
 发送群聊消息（群成员）。
 
-- **认证**: required
+- **节点**: /api/v1
 - **幂等**: 是（客户端必须携带 `Idempotency-Key`）
 
 **禁言处理**：被禁言成员发消息返回 `10400`。客户端可据 `GroupViewerState.is_muted` + `muted_until`（见 `api_spec_types.md`）预判，禁用群聊输入框并展示剩余时间，避免必失败的请求。
@@ -451,16 +451,16 @@ interface SendGroupMessageRequest {
 
 ---
 
-### POST /api/v1/group_messages/list
+### POST /api/v1/group_messages/fetch
 
 获取群聊消息历史（群成员）。
 
-- **认证**: required
+- **节点**: /api/v1
 - **排序**: 按 `sent_at` 时间倒序（最新在前），`message_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListGroupMessagesRequest`
+**Request**: `FetchGroupMessagesRequest`
 ```typescript
-interface ListGroupMessagesRequest {
+interface FetchGroupMessagesRequest {
   group_id: string;
   pagination: PaginationParams | null;
 }
@@ -481,7 +481,7 @@ interface ListGroupMessagesRequest {
 - 仅 `type='text'` 的消息支持编辑，其他类型返回 `10400`
 - 已撤回的消息不可编辑，返回 `10400`
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `UpdateGroupMessageRequest`
 ```typescript
@@ -503,7 +503,7 @@ interface UpdateGroupMessageRequest {
 
 > 群管理员撤回任意成员消息使用群管理守卫子树端点 `groups/admin/messages/recall`（见 `api_spec_group.md`）。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `RecallGroupMessageRequest`
 ```typescript
@@ -524,7 +524,7 @@ interface RecallGroupMessageRequest {
 
 **up_to 语义**：标记截至某条消息（含）及之前的所有消息为已读。`up_to_message_id` 不属于目标群组时返回 `10300`。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `MarkGroupReadRequest`
 ```typescript

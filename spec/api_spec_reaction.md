@@ -12,13 +12,14 @@
   - 守卫与权限：`api_spec_authz.md`
   - 错误码：`api_spec_errors.md`
   - WebSocket：`api_spec_websocket.md`（`ReactionAdded` / `ReactionRemoved` 事件）
+  - 匿名镜像版（/public/v1 同名端点）：`api_spec_public.md`
 
 ## 端点总览
 
-| 端点 | 说明 | 认证 |
+| 端点 | 说明 | 节点 |
 |-----|------|------|
-| `POST /api/v1/reactions/set` | 设置表情反应（两态统一） | required |
-| `POST /api/v1/reactions/list` | 反应列表（统一三类目标） | optional |
+| `POST /api/v1/reactions/set` | 设置表情反应（两态统一） | /api/v1 |
+| `POST /api/v1/reactions/fetch` | 反应列表（统一三类目标；双版本，匿名版在 /public/v1） | /api/v1 |
 
 ## 类型定义
 
@@ -30,7 +31,7 @@
 
 设置表情反应（两态统一端点）。覆盖消息、瞬间、评论三类目标。
 
-- **认证**: required
+- **节点**: /api/v1
 
 **Request**: `SetReactionRequest`
 ```typescript
@@ -59,16 +60,16 @@ interface SetReactionRequest {
 
 ---
 
-### POST /api/v1/reactions/list
+### POST /api/v1/reactions/fetch
 
 获取表情反应列表（统一 moment / comment / message 三类目标）。按反应时间倒序，支持按 emoji 过滤。
 
-- **认证**: optional
+- **节点**: /api/v1（双版本端点：匿名版 `/public/v1/reactions/fetch` 见 `api_spec_public.md`）
 - **排序**: 默认按 `reacted_at` **时间倒序**（最近反应在前），`user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致
 
-**Request**: `ListReactionsRequest`
+**Request**: `FetchReactionsRequest`
 ```typescript
-interface ListReactionsRequest {
+interface FetchReactionsRequest {
   target_type: ReactTarget;  // 'message' | 'moment' | 'comment'
   target_id: string;
   emoji: string | null;      // 可选：按特定 emoji 过滤；不传则返回所有 emoji 的反应者

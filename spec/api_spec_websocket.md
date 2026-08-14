@@ -24,6 +24,7 @@
 | | `Error` | 推送给当前连接的错误通知（severity 指导是否需要重连） |
 | | `SubscribeAck` | 推送给当前连接的订阅操作响应 |
 | | `SessionRevoked` | 当前连接的会话被驱逐/撤销，客户端须立即清本地态并断开 |
+| | `SubscriptionsSnapshot` | 推送给当前连接的订阅快照（GetSubscriptions 响应；SetSubscriptions 处理完成后亦推送） |
 | **私聊消息** | `PrivateMessageNew` | 推送给消息接收者 + 发送者的其他在线设备 |
 | | `PrivateMessageEdited` | 推送给私聊对端 + 发送者的其他在线设备 |
 | | `PrivateMessageRecalled` | 推送给私聊对端 + 发送者的其他在线设备 |
@@ -32,7 +33,7 @@
 | | `MutualFollow` | 推送给刚形成互相关注关系的用户本身 |
 | **瞬间互动** | `MomentCommented` | 推送给瞬间作者，附评论内容摘要 |
 | | `CommentReply` | 推送给被回复的评论作者 |
-| | `MessageMentioned` | 推送给被 @ 的用户（瞬间或评论中被提及） |
+| | `ContentMentioned` | 推送给被 @ 的用户（瞬间或评论内容中被提及；群聊 @ 走 GroupMessageMentioned） |
 | | `ReactionAdded` | 推送给被反应资源的作者，告知谁添加了表情反应 |
 | | `ReactionRemoved` | 推送给被反应资源的作者，告知谁移除了表情反应 |
 | **瞬间生命周期** | `MomentUpdated` | 推送给瞬间作者的其他在线设备（瞬间被编辑） |
@@ -82,7 +83,7 @@
 | | `GroupUpdated` | 群组信息更新（名称/头像/描述等所有可修改字段） |
 | | `GroupDismissed` | 群组解散 |
 
-> **多端同步（self-sync）**：本协议不提供**专门的 self-sync 事件**（即不推送"本端状态变更"给自己其他设备的独立协议事件）。需注意与"多端推送"区分：用户多设备各自独立鉴权订阅 WebSocket，消息内容类事件（`PrivateMessageNew`/`Edited`/`Recalled` 等标注"推送给发送者其他设备"的事件）天然到达所有在线设备——这属于推送目标设计，不是 self-sync。self-sync 特指已读状态、UI 选中态等具体状态的跨设备实时同步，当前通过冷启动 `system/bootstrap` + 各域 HTTP API 补拉收敛。未来如需通用的多端状态实时同步，将作为独立协议版本重新设计（不在此版本预留具体事件形状，避免预留形状与未来需求不匹配）。
+> **多端同步（self-sync）**：本协议不提供**专门的 self-sync 事件**（即不推送"本端状态变更"给自己其他设备的独立协议事件）。需注意与"多端推送"区分：用户多设备各自独立鉴权订阅 WebSocket，消息内容类事件（`PrivateMessageNew`/`Edited`/`Recalled` 等标注"推送给发送者其他设备"的事件）天然到达所有在线设备——这属于推送目标设计，不是 self-sync。self-sync 特指已读状态、UI 选中态等具体状态的跨设备实时同步，当前通过冷启动 `/api/v1/system/bootstrap` + 各域 HTTP API 补拉收敛。未来如需通用的多端状态实时同步，将作为独立协议版本重新设计（不在此版本预留具体事件形状，避免预留形状与未来需求不匹配）。
 
 ### 客户端能发送什么？
 
@@ -90,7 +91,8 @@
 |-----|------|
 | `Auth` | 鉴权（连接后 5 秒内必须发送） |
 | `Ping` | 心跳 |
-| `SetSubscriptions` | 设置订阅（覆盖式） |
+| `SetSubscriptions` | 设置订阅（subscribe/unsubscribe/set 三种操作） |
+| `GetSubscriptions` | 查询当前订阅快照（幂等只读；响应为 `SubscriptionsSnapshot`） |
 | `SendPrivateTyping` | 发送私聊输入状态（服务端推送版用 `PrivateTyping`，收发 type 显式区分） |
 | `SendGroupTyping` | 发送群聊输入状态（服务端推送版用 `GroupTyping`，收发 type 显式区分） |
 
@@ -106,6 +108,7 @@
 
 - WebSocket 端点独立于 HTTP API 路径（不在 `/api/v1/` 前缀下），但使用相同的版本号策略
 - 版本号与 HTTP API 版本对齐：`/api/v1/` 对应 `/ws/v1`，未来 API v2 对应 `/ws/v2`
+- **仅注册用户**：连接必须通过 `Auth` 事件完成鉴权（有效 access_token），无匿名 WebSocket；未注册用户的浏览场景走 `/public/v1` HTTP 端点
 - Web 端：浏览器通过同源策略自动携带 Cookie 完成鉴权
 - App 端：连接建立后通过 Auth 事件携带 access_token
 
@@ -162,14 +165,14 @@ WebSocket close code 受 RFC 6455 约束（范围 1000-4999），应用层错误
 
 #### 2. 数据补拉（resume 失效时的回退）
 
-当 resume_token 失效时，客户端按端侧策略设置补拉阈值（如 10 秒）：超阈值时通过 HTTP 消息历史端点（`private_messages/list`、`group_messages/list`）按游标分页补拉，未超阈值时直接等待后续 WebSocket 推送。
+当 resume_token 失效时，客户端按端侧策略设置补拉阈值（如 10 秒）：超阈值时通过 HTTP 消息历史端点（`private_messages/fetch`、`group_messages/fetch`）按游标分页补拉，未超阈值时直接等待后续 WebSocket 推送。
 
 #### 3. 去重规则
 
 HTTP API 返回的数据可能与 WebSocket 推送的事件重复（resume 续传或补拉都可能产生）。去重方式按资源主键执行（参见 `api_spec_base.md`）：
 
 - **持久化事件**：去重规则分两类：
-  - **携带 `notify_id` 的事件**（关注/瞬间互动/群邀请申请/群聊 @/系统公告/reaction）：客户端按 `notify_id` 去重——它与 HTTP `notify/list` 返回的 `NotifyItem.notify_id` 为同一主键（见 api_spec_notify.md）。
+  - **携带 `notify_id` 的事件**（关注/瞬间互动/群邀请申请/群聊 @/系统公告/reaction）：客户端按 `notify_id` 去重——它与 HTTP `notify/fetch` 返回的 `NotifyItem.notify_id` 为同一主键（见 api_spec_notify.md）。
   - **其它持久化事件**（消息等）：按业务主键或稳定组合键去重（如 `message_id`、`comment_id`）。resume 续传的事件携带单调递增的 `server_seq`，客户端也可按 seq 去重。
 - **状态快照事件**：直接覆盖（保留最新状态），无需去重。
 
@@ -280,7 +283,7 @@ type ServerEventType =
   | "NewFollower" | "MutualFollow"
   // 互动（含表情反应）
   | "ReactionAdded" | "ReactionRemoved"   // 表情反应增减（覆盖 message/moment/comment 三类目标）
-  | "MomentCommented" | "CommentReply" | "MessageMentioned"
+  | "MomentCommented" | "CommentReply" | "ContentMentioned"
   // 瞬间生命周期（编辑/软删除）
   | "MomentUpdated" | "MomentDeleted"
   // 聊天消息 - 私聊
@@ -443,7 +446,7 @@ type UserOfflineEvent = { type: "UserOffline"; payload: UserOfflinePayload; };
 - **PrivateMessageRead**
   - 触发：已读状态发生变化时触发
   - 推送目标：**仅私聊对端**（A 发、B 读 → 推给 A，让发送方得知消息已读）
-  - **不推给任何一方的其他设备**：单设备单会话模型下，跨设备已读同步不在本协议范围（见 `api_spec_chat.md`「跨设备已读同步（已知取舍）」）；B 的其他设备已读状态需等该设备下次拉取 `private_messages/list`/`group_messages/list` 或冷启动 `system/bootstrap` 时刷新
+  - **不推给任何一方的其他设备**：单设备单会话模型下，跨设备已读同步不在本协议范围（见 `api_spec_chat.md`「跨设备已读同步（已知取舍）」）；B 的其他设备已读状态需等该设备下次拉取 `private_messages/fetch`/`group_messages/fetch` 或冷启动 `/api/v1/system/bootstrap` 时刷新
   - 该事件用于即时交互反馈，不作为离线补偿依据
 
 **关注关系事件**：
@@ -456,7 +459,7 @@ type UserOfflineEvent = { type: "UserOffline"; payload: UserOfflinePayload; };
 //
 // notify_id 字段约定：
 // - 携带 notify_id 的事件 = 该业务事件同时落库了一条通知记录（见 api_spec_notify.md「通知与 WebSocket 事件的关系」）
-// - notify_id 与 HTTP notify/list 返回的 NotifyItem.notify_id 为同一主键，客户端据此在实时路径与补拉路径间去重
+// - notify_id 与 HTTP notify/fetch 返回的 NotifyItem.notify_id 为同一主键，客户端据此在实时路径与补拉路径间去重
 // - 不携带 notify_id 的事件为纯实时事件（消息、群成员变动、群公告等），与通知中心无关
 
 interface NewFollowerPayload {
@@ -486,7 +489,7 @@ type MutualFollowEvent = { type: "MutualFollow"; payload: MutualFollowPayload; }
 // ReactTarget / Reaction 定义于 api_spec_types.md
 // 事件统一推送（服务端不做自反应判断）；自反应（actor 为资源作者）不落库通知，此时事件不携带 notify_id，客户端自行过滤展示
 interface ReactionAddedPayload {
-  notify_id?: string;        // 有通知落盘时携带（与 notify/list 同主键）；自反应时无此字段
+  notify_id?: string;        // 有通知落盘时携带（与 notify/fetch 同主键）；自反应时无此字段
   target_type: ReactTarget;  // 'message' | 'moment' | 'comment'
   target_id: string;         // message_id / moment_id / comment_id
   emoji: string;
@@ -529,7 +532,8 @@ interface CommentReplyPayload {
 }
 type CommentReplyEvent = { type: "CommentReply"; payload: CommentReplyPayload; };
 
-interface MessageMentionedPayload {
+// 瞬间/评论内容中被 @（曾名 MessageMentioned——message 为聊天消息领域词，为避免与群聊 @ 事件混淆而更名）
+interface ContentMentionedPayload {
   notify_id: string;
   target_type: 'moment' | 'comment';
   moment_id: string;
@@ -539,7 +543,7 @@ interface MessageMentionedPayload {
   actor: UserInfo;
   mentioned_at: string;
 }
-type MessageMentionedEvent = { type: "MessageMentioned"; payload: MessageMentionedPayload; };
+type ContentMentionedEvent = { type: "ContentMentioned"; payload: ContentMentionedPayload; };
 
 // 瞬间被编辑（仅推送给作者的其他在线设备，用于多端同步；他人视角通过 HTTP 拉取最新内容）
 interface MomentUpdatedPayload {
@@ -653,7 +657,7 @@ type GroupMessageReadCountUpdatedEvent = { type: "GroupMessageReadCountUpdated";
 // 注：客户端不应将此事件用于精确计数，仅用于 UI 的"已有 N 人已读"展示刷新
 
 // 群聊消息中被 @（对 mentions 中的每个被 @ 用户分别推送 + 落库通知）
-// 与私聊/瞬间 @ 的 MessageMentioned 对应，群聊 @ 走独立事件（target 是群消息）
+// 与瞬间/评论内容 @ 的 ContentMentioned 对应，群聊 @ 走独立事件（target 是群消息）
 // 自动推送（无需订阅该群频道）——基于 @ 关系推送，与私聊消息同机制；被 @ 者即使
 // 未订阅该群也能收到此事件（@ 是主动提及，不属于群频道被动内容）
 interface GroupMessageMentionedPayload {
@@ -697,7 +701,7 @@ interface GroupInviteReceivedPayload {
 }
 type GroupInviteReceivedEvent = { type: "GroupInviteReceived"; payload: GroupInviteReceivedPayload; };
 
-// 邀请被接受 → 推送给邀请发起方。纯实时事件，不落库通知（邀请状态可在 groups/admin/invites/list_sent 查询）
+// 邀请被接受 → 推送给邀请发起方。纯实时事件，不落库通知（邀请状态可在 groups/admin/invites/fetch_sent 查询）
 interface GroupInviteResponsePayload {
   invite_id: string;
   group_id: string;
@@ -772,11 +776,12 @@ interface GroupApplicationExpiredPayload {
 type GroupApplicationExpiredEvent = { type: "GroupApplicationExpired"; payload: GroupApplicationExpiredPayload; };
 
 // 申请被群管理员拒绝 → 推送给申请人（含 reason）
+// 不暴露审批者身份（与 accepted、notify 负载的隐私策略统一：审批是群行为而非个人行为，
+// 申请人无需也无权知道具体是哪位管理员处理；处理记录仅入审计日志）
 interface GroupApplicationRejectedPayload {
   notify_id: string;
   application_id: string;
   group: GroupInfo;
-  rejected_by: UserInfo;   // 处理管理员（申请人可见管理员身份——群申请是双向契约）
   rejected_at: string;
   reason?: string;
 }
@@ -859,7 +864,7 @@ type GroupMemberRoleChangedEvent = { type: "GroupMemberRoleChanged"; payload: Gr
 //   - 推送：name/avatar_url/description/tags/location
 //     /join_method/requires_approval/next_activity
 //   - 不推送：has_password/is_searchable/max_members（群管理字段，见 GroupSettings）——群广播通道无法按订阅者角色过滤，
-//     服务端有意省略；群管理员可通过 HTTP groups/admin/get_settings 获取
+//     服务端有意省略；群管理员可通过 HTTP groups/admin/settings 获取
 //   - online_members_count 为聚合计数，随列表/详情 HTTP 响应返回，不随更新事件推送
 interface GroupUpdatedPayload {
   group_id: string;
@@ -1010,14 +1015,14 @@ interface PrivateTypingSendPayload {
   target_user_id: string;
   is_typing: boolean;
 }
-type PrivateTypingSendEvent = { type: "SendPrivateTyping"; payload: PrivateTypingSendPayload; };
+type SendPrivateTypingEvent = { type: "SendPrivateTyping"; payload: PrivateTypingSendPayload; };
 
 // 客户端发送版（type 与服务端推送版显式区分：发送用 "SendGroupTyping"，推送用 "GroupTyping"）
 interface GroupTypingSendPayload {
   group_id: string;
   is_typing: boolean;
 }
-type GroupTypingSendEvent = { type: "SendGroupTyping"; payload: GroupTypingSendPayload; };
+type SendGroupTypingEvent = { type: "SendGroupTyping"; payload: GroupTypingSendPayload; };
 ```
 
 **订阅管理**：
@@ -1091,7 +1096,7 @@ WebSocket 推送分为**自动推送**和**订阅推送**两种模式（详见�
 
 **隐私约束**：
 - `type: 'user'` 的订阅必须校验目标用户的 `presence_visible` 设置。若目标用户将在线状态对外隐藏（`presence_visible=false`），服务端必须拒绝该订阅项，并在 `SubscribeAck` 的 `failed_ids` 中返回 `reason='denied'`，同时不推送任何 UserOnline/UserOffline 事件。
-- `type: 'group'` 的订阅**必须校验成员资格**：仅当前已加入该群组的成员可订阅。非成员订阅返回 `reason='denied'`，不推送任何群消息/成员变动/`GroupUpdated`。群管理字段（`has_password`/`is_searchable`/`max_members`，见 `GroupSettings`）只经群管理守卫子树端点 `groups/admin/get_settings` 返回，不经广播通道，天然不被非成员获取。
+- `type: 'group'` 的订阅**必须校验成员资格**：仅当前已加入该群组的成员可订阅。非成员订阅返回 `reason='denied'`，不推送任何群消息/成员变动/`GroupUpdated`。群管理字段（`has_password`/`is_searchable`/`max_members`，见 `GroupSettings`）只经群管理守卫子树端点 `groups/admin/settings` 返回，不经广播通道，天然不被非成员获取。
 
 **类型约束**：
 - 单次订阅请求可混合 `user` 和 `group` 类型（`items` 数组可包含不同类型的 `SubscriptionItem`），客户端按场景组织订阅即可
