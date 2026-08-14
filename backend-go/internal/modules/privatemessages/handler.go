@@ -130,8 +130,8 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 // MarkRead is the unified mark_read endpoint for private messages. It replaces
 // the legacy /me/mark_as_read and /me/mark_all_read endpoints. scope selects
 // the operation: "all" clears every unread private message for the caller;
-// "session" (the default) marks messages from target_user_id as read (up to
-// the optional up_to_message_id).
+// "session" marks messages from target_user_id as read (up to the optional
+// up_to_message_id). scope is required (spec 参数必显式).
 func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	var req MarkPrivateReadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
@@ -139,8 +139,10 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	scope := req.Scope
+	// 参数必显式（spec api_spec_base.md）：scope 影响行为范围，缺省不得静默翻转语义
 	if scope == "" {
-		scope = "session"
+		httpx.WriteInvalidRequest(w, r, "MarkRead", "scope 必传")
+		return
 	}
 	// 参数互斥（spec chat.md → mark_read）：scope='all' 时不得传 up_to_message_id
 	if scope == "all" && req.UpToMessageID != "" {

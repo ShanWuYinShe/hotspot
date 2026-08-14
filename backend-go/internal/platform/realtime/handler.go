@@ -164,6 +164,13 @@ func decodePayload(payload any, out any) error {
 	return json.Unmarshal(blob, out)
 }
 
+// sendCloseFrame writes a standard WS close frame (spec「Close Code 规范」).
+// The server then closes the connection; clients apply the code-specific
+// reconnect semantics (4001 auth failure/session revoked → refresh & retry).
+func sendCloseFrame(conn *websocket.Conn, code int, reason string) {
+	_ = conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, reason), time.Now().Add(5*time.Second))
+}
+
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -180,12 +187,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := conn.ReadJSON(&authEvent); err != nil || authEvent.Type != "Auth" {
 		observability.L().Warn("ws: auth failed, invalid auth message", "error", err)
 		_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "鉴权失败", Severity: "fatal", Retryable: false}})
+		sendCloseFrame(conn, 4001, "auth failed")
 		return
 	}
 	var authPayload AuthPayload
 	if err := decodePayload(authEvent.Payload, &authPayload); err != nil {
 		observability.L().Warn("ws: auth failed, invalid payload", "error", err)
 		_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "鉴权失败", Severity: "fatal", Retryable: false}})
+		sendCloseFrame(conn, 4001, "auth failed")
 		return
 	}
 	ctx := platformauth.WithPlatform(r.Context(), detectPlatform(r, authPayload.ClientType))
@@ -198,6 +207,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		observability.L().Warn("ws: auth failed, token invalid")
 		_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "鉴权失败", Severity: "fatal", Retryable: false}})
+		sendCloseFrame(conn, 4001, "auth failed")
 		return
 	}
 	principalCtx := platformauth.WithPrincipal(ctx, principal)

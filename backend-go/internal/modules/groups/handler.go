@@ -198,7 +198,8 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrNotMember) {
-			// spec api_spec_group.md members/search 10400：不具备成员搜索资格
+			// spec api_spec_group.md members/search：非成员且 members_searchable=false 时
+			// 返回 10200 + not_group_member（原 10400 已迁移，见 handler_test.go 说明）
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "不具备群组成员搜索资格"))
 			return
 		}

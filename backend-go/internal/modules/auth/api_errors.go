@@ -38,7 +38,8 @@ func apiErrorFrom(err error) *httpx.APIError {
 	case errors.Is(err, ErrPasswordResetThrottled):
 		return &httpx.APIError{Code: httpx.CodeRateLimited, Message: "请求过于频繁"}
 	case errors.Is(err, ErrVerificationServiceUnavailable):
-		return &httpx.APIError{Code: httpx.CodeRateLimited, Message: "验证码服务暂不可用"}
+		// 验证码服务不可用属服务端错误（spec 10600），非客户端限流（10500）
+		return &httpx.APIError{Code: httpx.CodeInternalUnavailable, Message: "验证码服务暂不可用"}
 	default:
 		return &httpx.APIError{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 	}

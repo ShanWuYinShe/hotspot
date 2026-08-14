@@ -89,6 +89,14 @@ func (h *Hub) closeSessionLocal(sessionID string, event Event) {
 	h.mu.RUnlock()
 	for _, sink := range sinks {
 		_ = sink.Send(event)
+		// SessionRevoked（登出/改密/撤销会话）按 spec 以 close code 4001 断开，
+		// 客户端据此刷新 token 或重新登录后重连（api_spec_websocket.md「Close Code 规范」）。
+		if ws, ok := sink.(interface {
+			closeWithCode(code int, reason string) error
+		}); ok {
+			_ = ws.closeWithCode(4001, "session revoked")
+			continue
+		}
 		_ = sink.Close()
 	}
 }
