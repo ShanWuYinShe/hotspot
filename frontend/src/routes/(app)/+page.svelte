@@ -153,7 +153,21 @@
 		</PageHeader>
 	{/snippet}
 
-	{#if platform.platform !== 'mobile'}
+	{#if loading}
+		<!-- 加载中：与移动端一致的统一 spinner（桌面/平板不再静默空渲染） -->
+		<div class="flex flex-col items-center gap-3 py-20">
+			<div class="spinner size-7"></div>
+			<p class="text-text-secondary text-sm">加载首页数据…</p>
+		</div>
+	{:else if error}
+		<LoadError message={error} onRetry={() => reloadKey++} />
+	{:else if moments.length === 0 && nearbyUsers.length === 0 && nearbyGroups.length === 0}
+		<EmptyState title="附近还没有内容" description="去发布第一条动态，或到附近的人认识新朋友。">
+			{#snippet icon()}
+				<Radar class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
+			{/snippet}
+		</EmptyState>
+	{:else if platform.platform !== 'mobile'}
 		<!-- Desktop/Tablet：左摘要栏 + 右用户列表（正文多列 grid，随页面统一滚动） -->
 		<div class="grid grid-cols-[85_minmax(0,1fr)] gap-6">
 			<!-- Left: hero + activity + groups (340px) -->

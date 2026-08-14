@@ -3,6 +3,8 @@
 	import { MoreHorizontal, Link2, Send, PencilLine, Trash2 } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
 	import { auth } from '@/stores/auth.svelte';
@@ -80,6 +82,8 @@
 	let moment = $state<MomentData>(emptyMoment());
 	let apiComments = $state<MomentComment[]>([]);
 	let loading = $state(true);
+	let loadError = $state<string | null>(null);
+	let reloadKey = $state(0);
 	let input = $state('');
 	let moreOpen = $state(false);
 	let shareStatus = $state<'idle' | 'copied' | 'failed'>('idle');
@@ -95,10 +99,12 @@
 	let deleting = $state(false);
 
 	$effect(() => {
+		void reloadKey;
 		let cancelled = false;
 		async function fetchMoment() {
 			try {
 				loading = true;
+				loadError = null;
 				// 路由参数切换（SPA 内 momentId 变化）时清空旧数据，避免新数据到达前残留展示
 				moment = emptyMoment();
 				apiComments = [];
@@ -110,6 +116,13 @@
 
 				const detailData = detailRes.code === 0 ? detailRes.data : null;
 				const commentsData = commentsRes.code === 0 ? commentsRes.data : null;
+
+				// 动态不存在或加载失败：与 notify/users 分栏页一致，展示 LoadError + 重试
+				if (!detailData) {
+					loadError = detailRes.code === 0 ? '动态不存在或已被删除' : (detailRes.message || '加载失败');
+				} else {
+					loadError = null;
+				}
 
 				if (detailData) {
 					moment = {
@@ -305,17 +318,32 @@
 	{/snippet}
 
 	<!-- 内容（gutter 由 SplitPageLayout 提供；全幅封面在 MomentPostBody 内负 margin 抵消） -->
-	<MomentPostBody
-		{moment}
-		comments={apiComments}
-		{commentCount}
-		{liked}
-		{saved}
-		{shareStatus}
-		onToggleLike={() => void toggleLike()}
-		onToggleSave={() => void toggleSave()}
-		onShare={() => void copyMomentLink()}
-	/>
+	{#if loading}
+		<div class="flex flex-col items-center gap-3 py-20">
+			<div class="spinner size-7"></div>
+			<p class="text-text-secondary text-sm">加载动态…</p>
+		</div>
+	{:else if loadError}
+		<LoadError message={loadError} onRetry={() => reloadKey++} />
+	{:else if !moment.id}
+		<EmptyState title="动态不存在" description="这条动态可能已被删除或没有权限查看。">
+			{#snippet icon()}
+				<MoreHorizontal class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
+			{/snippet}
+		</EmptyState>
+	{:else}
+		<MomentPostBody
+			{moment}
+			comments={apiComments}
+			{commentCount}
+			{liked}
+			{saved}
+			{shareStatus}
+			onToggleLike={() => void toggleLike()}
+			onToggleSave={() => void toggleSave()}
+			onShare={() => void copyMomentLink()}
+		/>
+	{/if}
 
 	{#snippet footer()}
 		<!-- 评论输入栏固定在主区底部，不随正文滚动 -->
