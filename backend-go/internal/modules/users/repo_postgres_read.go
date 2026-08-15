@@ -109,7 +109,7 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 	if radiusFilter {
 		bounds = geo.BoundsAround(refPt, radius)
 	}
-	sql, args := buildSearchUsersQuery(bounds, req.Keyword, radiusFilter)
+	sql, args := buildSearchUsersQuery(bounds, req.Keyword, strings.ToLower(strings.TrimSpace(req.Tag)), radiusFilter)
 	if sql == "" {
 		return PaginatedProfiles{}, nil
 	}
@@ -150,6 +150,7 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 	}
 	for _, profile := range scanned {
 		profile.Tags = tagsByUserID[profile.UserID]
+		// SQL 已下推 tag EXISTS；此处的 Go 层比对保留为双保险（大小写归一）。
 		if tag != "" && !containsFold(profile.Tags, tag) {
 			continue
 		}
@@ -163,7 +164,12 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 	return paginateSearchCandidates(candidates, req.Pagination), nil
 }
 
-func buildSearchUsersQuery(bounds geo.Bounds, keyword string, radiusFilter bool) (string, []any) {
+// searchCandidateCap 限制单次搜索加载的候选行数：此前「只传 tag」时 SQL 仅剩
+// searchable+public 谓词，等于全表扫描 users⋈user_settings 全量物化，用户量
+// 上来后单请求即可打爆内存。
+const searchCandidateCap = 500
+
+func buildSearchUsersQuery(bounds geo.Bounds, keyword, tag string, radiusFilter bool) (string, []any) {
 	args := make([]any, 0, 4)
 	var builder strings.Builder
 	builder.WriteString(`SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), u.user_type, COALESCE(u.bio, ''), COALESCE(u.gender, ''), COALESCE(u.email, ''), COALESCE(u.phone, ''), u.location_name, u.latitude, u.longitude, u.presence_status, u.last_online, u.created_at, u.is_deleted FROM users u JOIN user_settings us ON us.user_id = u.user_id WHERE us.searchable = TRUE AND u.is_deleted = FALSE AND us.privacy_level = 'public'`)
@@ -180,6 +186,14 @@ func buildSearchUsersQuery(bounds geo.Bounds, keyword string, radiusFilter bool)
 		args = append(args, keyword)
 		builder.WriteString(fmt.Sprintf(" AND ($%d = '' OR (us.nickname_searchable = TRUE AND u.nickname ILIKE '%%' || $%d || '%%') OR u.bio ILIKE '%%' || $%d || '%%')", len(args), len(args), len(args)))
 	}
+	// tag 过滤下推 SQL（EXISTS user_profile_tags）：此前在 Go 层对全量候选逐个
+	// 比对，tag-only 搜索退化为全表加载。
+	if tag != "" {
+		args = append(args, tag)
+		builder.WriteString(fmt.Sprintf(` AND EXISTS (SELECT 1 FROM user_profile_tags upt WHERE upt.user_id = u.user_id AND lower(upt.tag_name) = lower($%d))`, len(args)))
+	}
+	args = append(args, searchCandidateCap)
+	builder.WriteString(fmt.Sprintf(` ORDER BY u.created_at DESC, u.user_id DESC LIMIT $%d`, len(args)))
 	return builder.String(), args
 }
 

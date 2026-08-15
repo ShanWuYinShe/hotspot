@@ -97,8 +97,13 @@ func (r *PostgresRepository) FetchMomentImageRows(ctx context.Context, momentIDs
 	return FetchMomentImageRows(ctx, queryable, momentIDs)
 }
 
+// trendingCandidateCap 是 trending 候选集上限：SQL 已按 30 天时间窗 + 互动
+// 评分排序取 top-N（此前无 LIMIT 全表加载、Go 内排序，公开端点可被匿名
+// 打成 O(全表) 内存/CPU 攻击）。
+const trendingCandidateCap = 200
+
 func loadTrendingMoments(ctx context.Context, queryable persistence.QueryableDB, viewerUserID string) ([]MomentItem, error) {
-	rows, err := queryable.Query(ctx, queryFeedTrendingHotMoments, viewerUserID)
+	rows, err := queryable.Query(ctx, queryFeedTrendingHotMoments, viewerUserID, trendingCandidateCap)
 	if err != nil {
 		return nil, err
 	}

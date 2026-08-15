@@ -119,7 +119,10 @@ FROM moments m
 JOIN users u ON u.user_id = m.user_id
 JOIN user_relations ur ON ur.target_user_id = m.user_id AND ur.user_id = $1 AND ur.is_following = TRUE
 WHERE m.privacy_level = 'public'
-  AND m.is_deleted = FALSE`
+  AND m.is_deleted = FALSE
+  AND ($2::timestamptz IS NULL OR m.created_at < $2::timestamptz OR (m.created_at = $2::timestamptz AND m.moment_id < $3))
+ORDER BY m.created_at DESC, m.moment_id DESC
+LIMIT $4`
 
 	queryFeedMomentsNearby = `
 SELECT m.moment_id,
@@ -174,5 +177,8 @@ SELECT m.moment_id,
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
 WHERE m.privacy_level = 'public'
-  AND m.is_deleted = FALSE`
+  AND m.is_deleted = FALSE
+  AND m.created_at >= NOW() - INTERVAL '30 days'
+ORDER BY (m.likes_count + m.comments_count + m.shares_count) DESC, m.created_at DESC, m.moment_id DESC
+LIMIT $2`
 )

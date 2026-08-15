@@ -25,7 +25,7 @@ func (b *feedBackendStub) Exec(_ context.Context, _ string, _ ...any) error {
 func (b *feedBackendStub) QueryRow(_ context.Context, query string, _ ...any) persistence.Row {
 	return testdb.RowValues{Err: persistence.ErrNotImplemented}
 }
-func (b *feedBackendStub) Query(_ context.Context, query string, _ ...any) (persistence.Rows, error) {
+func (b *feedBackendStub) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
 	for key, err := range b.queryErrs {
 		if strings.Contains(query, key) {
 			return nil, err
@@ -33,10 +33,47 @@ func (b *feedBackendStub) Query(_ context.Context, query string, _ ...any) (pers
 	}
 	for key, rows := range b.queryRowsByKey {
 		if strings.Contains(query, key) {
+			// 模拟 following keyset 下推：行按 created_at DESC 预排（索引
+			// createdAt 在每行第 6 列），按 cursor 谓词过滤 + LIMIT 截断。
+			if strings.Contains(query, "user_relations ur") && strings.Contains(query, "m.created_at <") && len(args) >= 4 {
+				filtered := applyFollowingKeyset(rows, args)
+				return &testdb.RowsValues{Rows: filtered}, nil
+			}
 			return &testdb.RowsValues{Rows: rows}, nil
 		}
 	}
 	return &persistence.InMemoryRows{}, nil
+}
+
+// applyFollowingKeyset 按下推的 keyset 参数（cursorAt/cursorID/limit）过滤
+// stub 行集：行布局对齐 queryFeedMomentsFollowing（created_at 为第 6 列）。
+func applyFollowingKeyset(rows [][]any, args []any) [][]any {
+	cursorAtAny := args[1]
+	cursorID, _ := args[2].(string)
+	limit, _ := args[3].(int)
+	cursorAt, hasCursorAt := cursorAtAny.(time.Time)
+	if limit <= 0 {
+		return rows
+	}
+	out := make([][]any, 0, limit)
+	for _, row := range rows {
+		if hasCursorAt || cursorID != "" {
+			createdAt, _ := row[5].(time.Time)
+			if createdAt.After(cursorAt) || (createdAt.Equal(cursorAt) && anyStr(row[0]) >= cursorID) {
+				continue // 不满足严格 (created_at, id) < (cursor)，cursor 行自身也被排除
+			}
+		}
+		out = append(out, row)
+		if len(out) >= limit {
+			break
+		}
+	}
+	return out
+}
+
+func anyStr(v any) string {
+	s, _ := v.(string)
+	return s
 }
 
 func newFeedFactory(backend persistence.PostgresQueryBackend) *persistence.Factory {

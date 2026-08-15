@@ -135,7 +135,10 @@ func SearchCovering(bounds Bounds) [][2]int64 {
 	coverCacheMu.RLock()
 	if cached, ok := coverCache[key]; ok {
 		coverCacheMu.RUnlock()
-		return cached
+		// 返回副本：调用方原地修改会污染缓存（coverings 是范围对切片）。
+		out := make([][2]int64, len(cached))
+		copy(out, cached)
+		return out
 	}
 	coverCacheMu.RUnlock()
 
@@ -143,7 +146,7 @@ func SearchCovering(bounds Bounds) [][2]int64 {
 
 	coverCacheMu.Lock()
 	if coverCache == nil {
-		coverCache = make(map[uint64][][2]int64, coverCacheMaxEntries)
+		coverCache = make(map[coverCacheKey][][2]int64, coverCacheMaxEntries)
 	}
 	// Bounded eviction: drop a random-ish entry once we hit the cap. Using
 	// the map iteration order is fine here because correctness does not
@@ -156,7 +159,9 @@ func SearchCovering(bounds Bounds) [][2]int64 {
 	}
 	coverCache[key] = ranges
 	coverCacheMu.Unlock()
-	return ranges
+	out := make([][2]int64, len(ranges))
+	copy(out, ranges)
+	return out
 }
 
 // coverCacheMaxEntries bounds the memoisation table. Each entry is a few
@@ -165,25 +170,33 @@ const coverCacheMaxEntries = 4096
 
 var (
 	coverCacheMu sync.RWMutex
-	coverCache   = make(map[uint64][][2]int64, coverCacheMaxEntries)
+	coverCache   = make(map[coverCacheKey][][2]int64, coverCacheMaxEntries)
 )
 
+// coverCacheKey 是缓存的精确键（4 个量化分量直接作结构体键）：
+// 此前把 ~100 bit 输入折叠成单个 uint64 非加密哈希当精确键用，碰撞时
+// SearchCovering 会返回完全不同视口的覆盖区间（地理查询静默查错区域），
+// 且 South/North 负浮点转 uint32 是未定义行为（南半球视口键不可预测）。
+type coverCacheKey struct {
+	South uint32
+	North uint32
+	West  uint32
+	East  uint32
+}
+
 // quantizeBounds rounds bounds to ~5 decimal places (~1m at the equator)
-// and packs them into a single uint64 cache key. Identical client viewports
+// and packs them into the cache key. Identical client viewports
 // (which the map endpoint sees repeatedly while panning) collapse to the
 // same key, giving a high cache hit rate.
-func quantizeBounds(b Bounds) uint64 {
+func quantizeBounds(b Bounds) coverCacheKey {
 	// Multiply by 1e5 and round to integer; 5 decimals ≈ 1.1m at equator.
-	south := uint32(math.Round(b.South * 1e5))
-	north := uint32(math.Round(b.North * 1e5))
-	west := uint32(math.Round(b.West*1e5)+1e5*360) & 0xFFFFFFFF
-	east := uint32(math.Round(b.East*1e5)+1e5*360) & 0xFFFFFFFF
-	// Mix the four quantized components into a single 64-bit key. Use simple
-	// xor-mul folding; this is a hash, not cryptographic.
-	return uint64(south)*2654435761 ^
-		uint64(north)*40503 ^
-		uint64(west)*65599 ^
-		uint64(east)
+	// 全部偏移到非负区间再转 uint32（Go 规范中负浮点转无符号是
+	// implementation-dependent）。
+	south := uint32(int64(math.Round(b.South*1e5)) + 90*1e5)
+	north := uint32(int64(math.Round(b.North*1e5)) + 90*1e5)
+	west := uint32(int64(math.Round(b.West*1e5)) + 180*1e5)
+	east := uint32(int64(math.Round(b.East*1e5)) + 180*1e5)
+	return coverCacheKey{South: south, North: north, West: west, East: east}
 }
 
 func computeSearchCovering(bounds Bounds) [][2]int64 {

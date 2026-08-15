@@ -178,7 +178,28 @@ func strPtr(s string) *string {
 }
 
 func (r *PostgresRepository) loadFollowingCandidates(ctx context.Context, queryable persistence.QueryableDB, query momentsQuery) ([]momentCandidate, error) {
-	rows, err := queryable.Query(ctx, queryFeedMomentsFollowing, query.ViewerUserID)
+	// keyset 谓词与 LIMIT 下推 SQL：此前拉取关注者全部历史 moments 进内存再
+	// 排序分页（关注 500 人 × 全部历史）。
+	decoded, err := decodeFeedCursor(query.Cursor)
+	if err != nil {
+		return nil, err
+	}
+	fetchLimit := query.Limit
+	if fetchLimit <= 0 {
+		fetchLimit = 20
+	}
+	fetchLimit++ // limit+1 探测下一页
+	var cursorAt any
+	var cursorID string
+	if decoded != nil {
+		cursorID = decoded.ID
+		if decoded.CreatedAt != "" {
+			if parsed, parseErr := time.Parse(time.RFC3339, decoded.CreatedAt); parseErr == nil {
+				cursorAt = parsed.UTC()
+			}
+		}
+	}
+	rows, err := queryable.Query(ctx, queryFeedMomentsFollowing, query.ViewerUserID, cursorAt, cursorID, fetchLimit)
 	if err != nil {
 		return nil, err
 	}

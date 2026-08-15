@@ -233,9 +233,11 @@ func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit 
 	kwArg := 0
 	tagArg := 0
 	if keyword != nil && *keyword != "" {
-		args = append(args, *keyword)
+		// 转义 LIKE 通配符：用户输入的 %/_ 被当通配符会改变匹配语义
+		//（与内存实现的精确子串语义不一致）。
+		args = append(args, escapeLikePattern(*keyword))
 		kwArg = len(args)
-		builder.WriteString(fmt.Sprintf(" AND m.description ILIKE '%%' || $%d || '%%'", len(args)))
+		builder.WriteString(fmt.Sprintf(" AND m.description ILIKE '%%' || $%d || '%%' ESCAPE '\\'", len(args)))
 	}
 	if tag != nil && *tag != "" {
 		args = append(args, *tag)
@@ -504,4 +506,10 @@ func queryable(ctx context.Context, factory *persistence.Factory) (persistence.Q
 	}
 	q, ok := factory.DB.(persistence.QueryableDB)
 	return q, ok
+}
+
+// escapeLikePattern 转义 LIKE/ILIKE 的 \、%、_ 通配符（配 ESCAPE '\'）。
+func escapeLikePattern(input string) string {
+	replacer := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	return replacer.Replace(input)
 }

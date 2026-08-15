@@ -2,6 +2,7 @@ package search
 
 import (
 	"context"
+	"hotspot/backend-go/internal/platform/textutil"
 	"sort"
 	"strings"
 	"time"
@@ -378,11 +379,8 @@ func distanceFrom(reference GeoPoint, latitude, longitude float64) int {
 }
 
 func truncatePreview(description string) string {
-	description = strings.TrimSpace(description)
-	if len(description) <= 60 {
-		return description
-	}
-	return description[:60]
+	// 按 rune 截断：字节切片会把多字节字符（中文）拦腰截断产生非法 UTF-8。
+	return textutil.TruncateRunes(description, 60)
 }
 
 func dedupeSuggestItems(items []scoredSuggestItem) []scoredSuggestItem {

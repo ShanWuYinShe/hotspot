@@ -41,17 +41,20 @@ func paginateGroups(items []groupCandidate, limit int, cursor string) (Paginated
 }
 
 func paginateFollowingMoments(items []momentCandidate, limit int, cursor string) (PaginatedMoments, error) {
-	decoded, err := decodeFeedCursor(cursor)
-	if err != nil {
+	if _, err := decodeFeedCursor(cursor); err != nil {
 		return PaginatedMoments{}, err
 	}
-	start := findFollowingCursorStart(items, decoded)
-	end := min(len(items), start+limit)
-	resp := PaginatedMoments{Items: make([]MomentItem, 0, max(0, end-start))}
-	for _, item := range items[start:end] {
+	// keyset 已下推 SQL：items 从 cursor 起且 ≤ limit+1（+1 用于探测下一页），
+	// 此前的内存游标定位（findFollowingCursorStart）不再需要。
+	if limit <= 0 {
+		limit = 20
+	}
+	end := min(len(items), limit)
+	resp := PaginatedMoments{Items: make([]MomentItem, 0, end)}
+	for _, item := range items[:end] {
 		resp.Items = append(resp.Items, item.Item)
 	}
-	if end < len(items) && end > start {
+	if len(items) > limit && end > 0 {
 		last := items[end-1]
 		resp.NextCursor = strPtr(encodeFeedCursor(itemCursor{CreatedAt: last.CreatedAt.UTC().Format(time.RFC3339), ID: last.Item.MomentID}))
 	}
