@@ -98,7 +98,6 @@ export struct ProfilePage {
   @State isUpgrading: boolean = false;
   @State hasAdminPrivileges: boolean = false;
   @State pressedMenuItemKey: string = '';
-  @State pressedFeatureKey: string = '';
   @State pressedThumbKey: string = '';
   @State viewedUserId: string = '';
   @State viewedUserProfile: UserItem | null = null;
@@ -1026,64 +1025,6 @@ export struct ProfilePage {
     AppStorage.setOrCreate('triggerCreateAction', Date.now());
   }
 
-  @Builder
-  private buildFeatureCard(icon: Resource, title: string, subtitle: string, onTap?: () => void) {
-    Column({ space: DesignConstants.SPACING.SM }) {
-      Row() {
-        Text() {
-          SymbolSpan(icon)
-            .fontSize(this.getProfileVisualStyle().quickAction.iconSize)
-            .fontColor([this.getAccentBackground()])
-        }
-      }
-      .width(this.getProfileVisualStyle().quickAction.iconWrapperSize)
-      .height(this.getProfileVisualStyle().quickAction.iconWrapperSize)
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(this.getSurfaceSubtle())
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-      .shadow(this.getProfileVisualStyle().quickAction.shadow)
-      .justifyContent(FlexAlign.Center)
-
-      Text(title)
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-        .fontColor(this.getPrimaryTextColor())
-      Text(subtitle)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.SM)
-        .fontColor(this.getSecondaryTextColor())
-        .textAlign(TextAlign.Center)
-    }
-    .width('100%')
-    .height('100%')
-    .alignItems(HorizontalAlign.Center)
-    .justifyContent(FlexAlign.Center)
-    .padding(this.getProfileVisualStyle().quickAction.padding)
-    .backgroundColor(this.getProfileVisualStyle().quickAction.backgroundColor)
-    .borderRadius(this.getProfileVisualStyle().quickAction.borderRadius)
-    .border({ width: this.getProfileVisualStyle().quickAction.borderWidth, color: this.getProfileVisualStyle().quickAction.borderColor })
-    .shadow(this.getProfileVisualStyle().quickAction.shadow)
-    // 入口卡按压反馈（对齐 tap-97 语义）
-    .scale(this.pressedFeatureKey === title ?
-      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
-      { x: 1, y: 1 })
-    .animation({ curve: curves.springMotion(
-      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-    ) })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.pressedFeatureKey = title;
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.pressedFeatureKey = '';
-      }
-    })
-    .onClick(() => {
-      if (onTap) {
-        onTap();
-      }
-    })
-  }
 
   // ==================== 临时用户界面 ====================
   @Builder
