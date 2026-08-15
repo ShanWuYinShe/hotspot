@@ -14,10 +14,13 @@ WHERE creator_user_id = $1
   AND ($3 = '' OR target_type = $3)
 ORDER BY created_at DESC, report_id DESC`
 
+	// 去重必须限定举报人（creator_user_id）：此前只按 target 匹配，任何人对
+	// 目标有一条 pending 举报就会把其他所有人的举报判为 duplicate，并把
+	// 别人的 report_id 泄漏给举报人。
 	queryFindExistingReport = `
 SELECT report_id
 FROM reports
-WHERE target_type = $1 AND target_id = $2 AND status = 'pending'
+WHERE creator_user_id = $3 AND target_type = $1 AND target_id = $2 AND status = 'pending'
 LIMIT 1`
 
 	queryReportTargetOwnerUser = `

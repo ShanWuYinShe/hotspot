@@ -146,23 +146,8 @@ func (b *authBackendStub) Exec(_ context.Context, query string, args ...any) err
 		}
 		b.refresh[session.RefreshToken] = session
 	case queryRotateRefreshToken:
-		oldToken := args[0].(string)
-		nextToken := args[1].(string)
-		graceUntil := args[2].(time.Time)
-		next := RefreshSession{
-			RefreshToken: nextToken,
-			UserID:       args[3].(string),
-			SessionID:    args[4].(string),
-			ExpiresAt:    args[5].(time.Time),
-		}
-		current, ok := b.refresh[oldToken]
-		if !ok {
-			return pgx.ErrNoRows
-		}
-		current.RotatedTo = nextToken
-		current.GraceUntil = graceUntil
-		b.refresh[oldToken] = current
-		b.refresh[next.RefreshToken] = next
+		// 轮换经 QueryRow（见 QueryRow 的同分支）；Exec 不再触达。
+		return nil
 	}
 	return nil
 }
@@ -201,6 +186,26 @@ func (b *authBackendStub) QueryRow(_ context.Context, query string, args ...any)
 			return authRow{values: []any{session.UserID, session.SessionID, session.RefreshToken, rotatedTo, graceUntil, session.ExpiresAt}}
 		}
 		return authRow{err: pgx.ErrNoRows}
+	case queryRotateRefreshToken:
+		// 模拟 SQL 的 rotated_to IS NULL 守卫 + RETURNING：旧 token 不存在或
+		// 已被轮换时 0 行（ErrNoRows），否则执行轮换并返回一行。
+		oldToken := args[0].(string)
+		nextToken := args[1].(string)
+		graceUntil := args[2].(time.Time)
+		current, ok := b.refresh[oldToken]
+		if !ok || current.RotatedTo != "" {
+			return authRow{err: pgx.ErrNoRows}
+		}
+		current.RotatedTo = nextToken
+		current.GraceUntil = graceUntil
+		b.refresh[oldToken] = current
+		b.refresh[nextToken] = RefreshSession{
+			RefreshToken: nextToken,
+			UserID:       args[3].(string),
+			SessionID:    args[4].(string),
+			ExpiresAt:    args[5].(time.Time),
+		}
+		return authRow{values: []any{nextToken}}
 	default:
 		return authRow{err: persistence.ErrNotImplemented}
 	}

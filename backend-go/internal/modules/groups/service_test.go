@@ -743,11 +743,10 @@ func TestServiceAcceptInviteRejectsExpired(t *testing.T) {
 	}
 	svc := NewServiceWithRepo(repo)
 	err := svc.AcceptInvite(grpCtx("u1"), AcceptInviteRequest{InviteID: "inv1"})
-	// AcceptInvite only checks if the invite was found (via findInviteForUser);
-	// it does NOT check invite.Status before calling AcceptInvite.
-	// So it should succeed when acceptErr is nil.
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	// 非 pending 邀请（已拒绝/撤销/过期）不得被接受——此前缺失该检查，
+	// 被撤销的邀请仍可凭旧 invite_id 入群。
+	if err != ErrInviteExpired {
+		t.Fatalf("expected ErrInviteExpired, got %v", err)
 	}
 }
 

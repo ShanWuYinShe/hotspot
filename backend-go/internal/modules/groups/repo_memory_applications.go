@@ -135,6 +135,11 @@ func (r *InMemoryRepository) CancelApplication(_ context.Context, applicationID 
 	if !ok {
 		return ErrGroupNotFound
 	}
+	// 与 PG 版（pending 守卫）对齐：仅 pending 申请可撤销，防止已 accepted
+	// 的申请被申请人改回 revoked 产生「已是成员但申请被撤销」的矛盾数据。
+	if record.Status != ApplicationStatusPending {
+		return ErrAlreadyProcessed
+	}
 	record.Status = ApplicationStatusRevoked
 	r.applications[applicationID] = record
 	return nil

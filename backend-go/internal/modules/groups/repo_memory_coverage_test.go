@@ -114,9 +114,9 @@ func TestMemoryInviteLifecycle(t *testing.T) {
 	if err := repo.RevokeInvite(ctx, created.Group.GroupID, *invite3.InviteID); err != nil {
 		t.Fatalf("revoke invite: %v", err)
 	}
-	// 不存在的邀请撤销为 no-op（幂等）
-	if err := repo.RevokeInvite(ctx, created.Group.GroupID, "missing"); err != nil {
-		t.Fatalf("revoke missing invite: %v", err)
+	// 不存在的邀请撤销返回冲突（与 PG 版归属双键 + pending 守卫语义一致）
+	if err := repo.RevokeInvite(ctx, created.Group.GroupID, "missing"); err != ErrInviteExpired {
+		t.Fatalf("revoke missing invite: expected conflict, got %v", err)
 	}
 	if err := repo.RevokeInvite(ctx, "missing", "x"); err != ErrGroupNotFound {
 		t.Fatalf("revoke missing group: expected not found, got %v", err)
@@ -158,12 +158,12 @@ func TestMemoryMySettingsAndCancelApplication(t *testing.T) {
 	if err != nil || len(apps) != 1 {
 		t.Fatalf("list applications: %#v err=%v", apps, err)
 	}
-	// 取消申请（CancelApplication 幂等，重复取消仍为 nil）
+	// 取消申请（仅 pending 可撤销；重复取消返回已处理冲突，与 PG 版守卫一致）
 	if err := repo2.CancelApplication(ctx, apps[0].ApplicationID); err != nil {
 		t.Fatalf("cancel application: %v", err)
 	}
-	if err := repo2.CancelApplication(ctx, apps[0].ApplicationID); err != nil {
-		t.Fatalf("double cancel: %v", err)
+	if err := repo2.CancelApplication(ctx, apps[0].ApplicationID); err != ErrAlreadyProcessed {
+		t.Fatalf("double cancel: expected already processed, got %v", err)
 	}
 	if err := repo2.CancelApplication(ctx, "missing"); err != ErrGroupNotFound {
 		t.Fatalf("cancel missing: expected not found, got %v", err)

@@ -59,6 +59,9 @@ type stubMomentProvider struct {
 	notifCtx         MomentNotificationContext
 	notifOk          bool
 	notifErr         error
+	visibleFound     bool
+	visible          bool
+	visibleErr       error
 }
 
 func (p *stubMomentProvider) Exists(_ context.Context, _ string) (bool, error) {
@@ -66,6 +69,9 @@ func (p *stubMomentProvider) Exists(_ context.Context, _ string) (bool, error) {
 }
 func (p *stubMomentProvider) CheckCommentable(_ context.Context, _ string) (bool, bool, error) {
 	return p.commentableFound, p.commentable, p.commentableErr
+}
+func (p *stubMomentProvider) IsReactionTargetVisible(_ context.Context, _ string) (bool, bool, error) {
+	return p.visibleFound, p.visible, p.visibleErr
 }
 func (p *stubMomentProvider) IncrementCommentCount(_ context.Context, _ string) error {
 	return p.incrErr
@@ -130,7 +136,7 @@ func assertCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx.Code
 }
 
 func defaultMoments() *stubMomentProvider {
-	return &stubMomentProvider{exists: true, commentableFound: true, commentable: true, notifCtx: MomentNotificationContext{UserID: "author1", Summary: types.MomentSummary{MomentID: "m1"}}, notifOk: true}
+	return &stubMomentProvider{exists: true, commentableFound: true, commentable: true, visibleFound: true, visible: true, notifCtx: MomentNotificationContext{UserID: "author1", Summary: types.MomentSummary{MomentID: "m1"}}, notifOk: true}
 }
 
 // --- Create tests ---

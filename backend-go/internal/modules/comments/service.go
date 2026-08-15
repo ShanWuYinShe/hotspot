@@ -66,6 +66,12 @@ func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (Comment
 	if err != nil {
 		return CommentItem{}, err
 	}
+	// 回复必须指向同一瞬间下的评论：跨瞬间组合（moment A 请求体 + moment B
+	// 的 comment_id）会污染 replies_count 并给被回复者发错误上下文的通知。
+	// 归属不符按 ErrCommentNotFound 处理（不泄漏 B 瞬间评论的存在性）。
+	if hasReplyTarget && replyTarget.MomentID != req.MomentID {
+		return CommentItem{}, ErrCommentNotFound
+	}
 	if hasReplyTarget && replyTarget.ParentID != nil {
 		normalizedReq.ParentID = *replyTarget.ParentID
 	}
@@ -124,7 +130,9 @@ func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (Comment
 }
 
 func (s *Service) List(ctx context.Context, req ListCommentsRequest) (PaginatedComments, error) {
-	if err := s.ensureMomentExists(ctx, req.MomentID); err != nil {
+	// 可见性校验（软删/private 瞬间按不存在处理）：此前仅查存在性，知道
+	// moment_id 的任意登录用户可读 private 瞬间的全部评论内容。
+	if err := s.ensureMomentVisible(ctx, req.MomentID); err != nil {
 		return PaginatedComments{}, err
 	}
 	limit := 20
@@ -191,8 +199,26 @@ func (s *Service) GetForDetail(ctx context.Context, commentID string) (CommentIt
 	if err != nil || !found {
 		return CommentItem{}, found, err
 	}
+	// 评论详情同样受瞬间可见性约束：private 瞬间的评论对非拥有者不可见
+	//（按不存在处理，不泄漏存在性）。
+	if err := s.ensureMomentVisible(ctx, item.MomentID); err != nil {
+		return CommentItem{}, false, nil
+	}
 	s.fillReactionsBatch(ctx, []CommentItem{item}, viewerUserID(ctx))
 	return item, true, nil
+}
+
+// ensureMomentVisible 校验瞬间对当前 viewer 可见；不可见/不存在统一返回
+// ErrMomentNotFound（存在性不泄漏）。
+func (s *Service) ensureMomentVisible(ctx context.Context, momentID string) error {
+	found, visible, err := s.moments.IsReactionTargetVisible(ctx, momentID)
+	if err != nil {
+		return err
+	}
+	if !found || !visible {
+		return ErrMomentNotFound
+	}
+	return nil
 }
 
 func (s *Service) Delete(ctx context.Context, req DeleteCommentRequest) error {

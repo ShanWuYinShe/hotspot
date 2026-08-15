@@ -25,6 +25,18 @@ func (s *Service) AcceptInvite(ctx context.Context, req AcceptInviteRequest) err
 	if !ok {
 		return ErrGroupNotFound
 	}
+	// 与 RejectInvite 对称的两道检查：仅 pending 邀请可接受；已过期则惰性
+	// 置 revoked 并拒绝（此前缺失——被撤销/已拒绝/已过期的邀请仍能入群）。
+	if invite.Status != ApplicationStatusPending {
+		return ErrInviteExpired
+	}
+	if inviteExpired(invite) {
+		if err := s.repo.RevokeInvite(ctx, invite.Group.GroupID, req.InviteID); err != nil {
+			return err
+		}
+		s.notifyGroupInviteExpired(ctx, principal.UserID, invite)
+		return ErrInviteExpired
+	}
 	if err := s.repo.AcceptInvite(ctx, principal.UserID, req.InviteID); err != nil {
 		return err
 	}

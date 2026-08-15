@@ -142,10 +142,14 @@ JOIN groups g ON g.group_id = ga.group_id
 WHERE ga.applicant_user_id = $1 AND ($2 = '' OR ga.status = $2)
 ORDER BY ga.created_at DESC, ga.application_id DESC`
 
+	// RETURNING + pending 守卫：状态流转仅对 pending 生效；并发/重复处理时
+	// 0 行命中返回 ErrNoRows，repo 据此返回 ErrAlreadyProcessed（防
+	// approve/cancel 竞态双写与已处理申请被改回）。
 	queryUpdateGroupApplication = `
 UPDATE group_applications
 SET status = $2, handled_at = $3, handled_by_user_id = $4
-WHERE application_id = $1`
+WHERE application_id = $1 AND status = 'pending'
+RETURNING application_id`
 
 	queryInsertGroupInvite = `
 INSERT INTO group_invites (invite_id, group_id, inviter_user_id, invitee_user_id, message, status, created_at, expires_at)
@@ -182,10 +186,20 @@ JOIN groups g ON g.group_id = gi.group_id
 WHERE gi.invitee_user_id = $1 AND ($2 = '' OR gi.status = $2)
 ORDER BY gi.created_at DESC, gi.invite_id DESC`
 
+	// Accept/Reject 共用：仅 pending 可流转（RETURNING 让 0 行命中可检测）。
 	queryUpdateGroupInvite = `
 UPDATE group_invites
 SET status = $2, responded_at = $3
-WHERE invite_id = $1`
+WHERE invite_id = $1 AND status = 'pending'
+RETURNING invite_id`
+
+	// Revoke 专用：归属双键（invite_id + group_id）+ pending 守卫。缺少
+	// group_id 条件时任意群管理员可传自己的 group_id 撤销其它群的邀请（IDOR）。
+	queryRevokeGroupInvite = `
+UPDATE group_invites
+SET status = $2, responded_at = $3
+WHERE invite_id = $1 AND group_id = $4 AND status = 'pending'
+RETURNING invite_id`
 
 	queryUpdateGroup = `
 	UPDATE groups
@@ -222,18 +236,20 @@ FROM group_announcements
 WHERE group_id = $1 AND deleted_at IS NULL
 ORDER BY is_pinned DESC, created_at DESC, announcement_id DESC`
 
+	// 公告更新/删除带归属双键：groupID 是授权锚点，仅按全局唯一
+	// announcement_id 定位会让 A 群管理员操作 B 群公告（IDOR）。
 	queryUpdateGroupAnnouncement = `
 UPDATE group_announcements
 SET title = COALESCE($2, title),
     content = COALESCE($3, content),
     is_pinned = COALESCE($4, is_pinned),
     updated_at = $5
-WHERE announcement_id = $1 AND deleted_at IS NULL`
+WHERE announcement_id = $1 AND group_id = $6 AND deleted_at IS NULL`
 
 	queryDeleteGroupAnnouncement = `
 UPDATE group_announcements
 SET deleted_at = $2
-WHERE announcement_id = $1 AND deleted_at IS NULL`
+WHERE announcement_id = $1 AND group_id = $3 AND deleted_at IS NULL`
 
 	queryUpdateGroupMemberSettings = `
 UPDATE group_members

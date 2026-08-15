@@ -50,8 +50,13 @@ func (s *InMemoryRefreshStore) Get(_ context.Context, token string) (RefreshSess
 func (s *InMemoryRefreshStore) Rotate(_ context.Context, oldToken string, current RefreshSession, next RefreshSession) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// 与 PG 版守卫语义一致：旧 token 已被轮换时返回冲突，不得覆盖
+	// RotatedTo 或插入第二个 next（会把单链轮换分叉成两棵并行链）。
+	if existing, ok := s.items[oldToken]; ok && existing.RotatedTo != "" {
+		return ErrRefreshRotationConflict
+	}
 	current.RotatedTo = next.RefreshToken
-	current.GraceUntil = time.Now().UTC().Add(30 * time.Second)
+	current.GraceUntil = time.Now().UTC().Add(RefreshRotationGrace)
 	s.items[oldToken] = current
 	s.items[next.RefreshToken] = next
 	return nil

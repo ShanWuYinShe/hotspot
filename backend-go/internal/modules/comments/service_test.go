@@ -20,11 +20,16 @@ type momentProviderStub struct {
 	notificationContext MomentNotificationContext
 	notificationOK      bool
 	notificationErr     error
+	visibleFound        bool
+	visible             bool
 }
 
 func (m *momentProviderStub) Exists(context.Context, string) (bool, error) { return m.exists, nil }
 func (m *momentProviderStub) CheckCommentable(context.Context, string) (bool, bool, error) {
 	return m.commentableFound, m.commentable, m.commentableErr
+}
+func (m *momentProviderStub) IsReactionTargetVisible(context.Context, string) (bool, bool, error) {
+	return m.visibleFound, m.visible, nil
 }
 func (m *momentProviderStub) IncrementCommentCount(context.Context, string) error {
 	m.increment++

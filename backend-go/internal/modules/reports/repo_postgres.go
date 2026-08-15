@@ -3,11 +3,14 @@ package reports
 import (
 	"context"
 	"encoding/json"
-	"hotspot/backend-go/internal/platform/idgen"
+	"errors"
 	"strings"
 	"time"
 
+	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/persistence"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type PostgresRepository struct {
@@ -52,8 +55,11 @@ func (r *PostgresRepository) FindExistingReport(ctx context.Context, userID stri
 		return "", false, persistence.ErrNotImplemented
 	}
 	var reportID string
-	if err := queryable.QueryRow(ctx, queryFindExistingReport, string(targetType), targetID).Scan(&reportID); err != nil {
-		return "", false, nil
+	if err := queryable.QueryRow(ctx, queryFindExistingReport, string(targetType), targetID, userID).Scan(&reportID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", false, nil
+		}
+		return "", false, err
 	}
 	return reportID, true, nil
 }
@@ -80,7 +86,10 @@ func (r *PostgresRepository) TargetOwner(ctx context.Context, targetType ReportT
 	}
 	var ownerUserID string
 	if err := queryable.QueryRow(ctx, query, targetID).Scan(&ownerUserID); err != nil {
-		return "", false, nil
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", false, nil
+		}
+		return "", false, err
 	}
 	ownerUserID = strings.TrimSpace(ownerUserID)
 	return ownerUserID, ownerUserID != "", nil

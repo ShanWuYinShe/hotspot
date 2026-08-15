@@ -112,10 +112,19 @@ func headerIP(raw string) string {
 	return ip
 }
 
+// forwardedIP 从 X-Forwarded-For 解析客户端 IP。XFF 最左侧是客户端自报
+// 内容（可伪造：攻击者直发 XFF: 1.2.3.4，代理追加真实 IP 后变
+// "1.2.3.4, real"），因此必须**从右往左**遍历：跳过可信代理网段，取第一
+// 个不可信地址。此前取最左侧非私网 IP，伪造的左端可绕过 IP 限流并污染
+// 会话审计。
 func forwardedIP(raw string) string {
-	for _, part := range strings.Split(strings.TrimSpace(raw), ",") {
-		ip, parsed := normalizedIP(part)
+	parts := strings.Split(strings.TrimSpace(raw), ",")
+	for i := len(parts) - 1; i >= 0; i-- {
+		ip, parsed := normalizedIP(parts[i])
 		if ip == "" || isPrivateIP(parsed) {
+			continue
+		}
+		if isTrustedProxyRemote(parsed) {
 			continue
 		}
 		return ip

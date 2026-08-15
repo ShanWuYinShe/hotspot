@@ -37,6 +37,17 @@ func (c *failingMomentCounter) CheckCommentable(ctx context.Context, momentID st
 	return true, true, nil
 }
 
+func (c *failingMomentCounter) IsReactionTargetVisible(ctx context.Context, momentID string) (bool, bool, error) {
+	item, ok, err := c.repo.Get(ctx, momentID)
+	if err != nil || !ok {
+		return ok, false, err
+	}
+	if item.IsDeleted {
+		return false, false, nil
+	}
+	return true, item.PrivacyLevel != "private", nil
+}
+
 func (c *failingMomentCounter) IncrementCommentCount(ctx context.Context, momentID string) error {
 	if c.failErr != nil {
 		return c.failErr

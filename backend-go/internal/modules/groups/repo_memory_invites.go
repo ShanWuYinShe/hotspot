@@ -137,8 +137,13 @@ func (r *InMemoryRepository) RevokeInvite(_ context.Context, groupID string, inv
 		return ErrGroupNotFound
 	}
 	record, ok := r.invites[inviteID]
-	if !ok {
-		return nil
+	if !ok || record.GroupID != groupID {
+		// 与 PG 版（queryRevokeGroupInvite 归属双键 + pending 守卫）对齐：
+		// 非本群邀请或已流转的邀请不可撤销。
+		return ErrInviteExpired
+	}
+	if record.Status != ApplicationStatusPending {
+		return ErrInviteExpired
 	}
 	record.Status = ApplicationStatusRevoked
 	now := time.Now().UTC().Format(time.RFC3339)

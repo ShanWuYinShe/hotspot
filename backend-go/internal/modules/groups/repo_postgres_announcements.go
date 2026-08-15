@@ -82,7 +82,8 @@ func (r *PostgresRepository) UpdateAnnouncement(ctx context.Context, groupID str
 		return persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
-	return queryable.Exec(ctx, queryUpdateGroupAnnouncement, req.AnnouncementID, nilOrString(derefStringPtr(req.Title)), nilOrString(derefStringPtr(req.Content)), req.IsPinned, now)
+	// group_id 双键匹配（IDOR 防护，见 queryUpdateGroupAnnouncement 注释）。
+	return queryable.Exec(ctx, queryUpdateGroupAnnouncement, req.AnnouncementID, nilOrString(derefStringPtr(req.Title)), nilOrString(derefStringPtr(req.Content)), req.IsPinned, now, groupID)
 }
 
 func (r *PostgresRepository) DeleteAnnouncement(ctx context.Context, groupID string, announcementID string) error {
@@ -93,5 +94,5 @@ func (r *PostgresRepository) DeleteAnnouncement(ctx context.Context, groupID str
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, queryDeleteGroupAnnouncement, announcementID, time.Now().UTC())
+	return queryable.Exec(ctx, queryDeleteGroupAnnouncement, announcementID, time.Now().UTC(), groupID)
 }

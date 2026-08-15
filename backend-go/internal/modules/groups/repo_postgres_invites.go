@@ -2,12 +2,14 @@ package groups
 
 import (
 	"context"
-
+	"errors"
 	"time"
 
 	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/types"
+
+	"github.com/jackc/pgx/v5"
 )
 
 func (r *PostgresRepository) ListMyInvites(ctx context.Context, userID string, status *ApplicationStatus, limit int, cursor string) ([]GroupInviteItem, string, error) {
@@ -71,6 +73,8 @@ func (r *PostgresRepository) AcceptInvite(ctx context.Context, userID string, in
 	now := time.Now().UTC()
 	// Wrap the invite-status update and the member insert in a single tx so a
 	// failure of the second statement rolls back the invite acceptance.
+	// pending 守卫 + RETURNING：已被撤销/拒绝/过期或并发接受的邀请更新 0 行，
+	// 返回冲突而非重复入群。
 	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
 		queryable, ok := persistence.QueryableForTx(txCtx, r.factory)
 		if !ok {
@@ -79,7 +83,11 @@ func (r *PostgresRepository) AcceptInvite(ctx context.Context, userID string, in
 		if err := enforceGroupCapacity(txCtx, queryable, invite.Group.GroupID); err != nil {
 			return err
 		}
-		if err := queryable.Exec(txCtx, queryUpdateGroupInvite, inviteID, string(ApplicationStatusAccepted), now); err != nil {
+		var updated string
+		if err := queryable.QueryRow(txCtx, queryUpdateGroupInvite, inviteID, string(ApplicationStatusAccepted), now).Scan(&updated); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrInviteExpired
+			}
 			return err
 		}
 		return queryable.Exec(txCtx, queryInsertGroupMember, invite.Group.GroupID, userID, string(GroupRoleMember), now)
@@ -94,7 +102,14 @@ func (r *PostgresRepository) RejectInvite(ctx context.Context, inviteID string) 
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, queryUpdateGroupInvite, inviteID, string(ApplicationStatusRejected), time.Now().UTC())
+	var updated string
+	if err := queryable.QueryRow(ctx, queryUpdateGroupInvite, inviteID, string(ApplicationStatusRejected), time.Now().UTC()).Scan(&updated); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrInviteExpired
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *PostgresRepository) InviteMember(ctx context.Context, userID string, req InviteMemberRequest, expiresAt *time.Time) (Invitation, error) {
@@ -191,7 +206,15 @@ func (r *PostgresRepository) RevokeInvite(ctx context.Context, groupID string, i
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, queryUpdateGroupInvite, inviteID, string(ApplicationStatusRevoked), time.Now().UTC())
+	// 归属双键 + pending 守卫：仅本群的 pending 邀请可撤销。
+	var updated string
+	if err := queryable.QueryRow(ctx, queryRevokeGroupInvite, inviteID, string(ApplicationStatusRevoked), time.Now().UTC(), groupID).Scan(&updated); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrInviteExpired
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *PostgresRepository) loadInvite(ctx context.Context, inviteID string) (GroupInviteItem, error) {

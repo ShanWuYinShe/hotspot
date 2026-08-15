@@ -9,11 +9,16 @@ const maxMapScanRows = 500
 const (
 	// 确定性排序（主键 + 时间 tie-breaker）：LIMIT 截断的候选子集必须稳定，
 	// 否则热力图聚合结果抖动、hotspots 跨页出现重复/丢失。
+	// 隐私过滤与 feed 的 queryFeedUsers 对齐（038 迁移：注销用户不再可被
+	// 搜索/访问；不公开位置/非 public 用户不得出现在匿名地图上）。
 	queryMapCanvasUsers = `
 SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), COALESCE(u.location_name, ''), u.latitude, u.longitude, u.created_at
 FROM users u
 JOIN user_settings us ON us.user_id = u.user_id
 WHERE us.searchable = TRUE
+  AND u.is_deleted = FALSE
+  AND us.location_visible = TRUE
+  AND us.privacy_level = 'public'
   AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
               WHERE u.s2_cell_id BETWEEN t.lo AND t.hi)
 ORDER BY u.user_id ASC

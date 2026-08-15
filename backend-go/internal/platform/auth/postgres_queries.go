@@ -51,11 +51,15 @@ SET user_id = EXCLUDED.user_id,
     grace_until = EXCLUDED.grace_until,
     expires_at = EXCLUDED.expires_at`
 
+	// 轮换原子性：UPDATE 带 rotated_to IS NULL 守卫——并发携带同一旧 token 的
+	// 两个请求只有一个能命中 rotated CTE（另一个 0 行 → INSERT 不执行 →
+	// RETURNING 无行），repo 据此返回轮换冲突，防止分叉出两个互不可见的
+	// 有效 token（绕过被盗会话的复用检测）。
 	queryRotateRefreshToken = `
 WITH rotated AS (
     UPDATE auth_refresh_tokens
     SET rotated_to = $2, grace_until = $3
-    WHERE refresh_token = $1
+    WHERE refresh_token = $1 AND rotated_to IS NULL
     RETURNING 1
 )
 INSERT INTO auth_refresh_tokens (refresh_token, user_id, session_id, rotated_to, grace_until, expires_at)
@@ -66,7 +70,8 @@ SET user_id = EXCLUDED.user_id,
     session_id = EXCLUDED.session_id,
     rotated_to = EXCLUDED.rotated_to,
     grace_until = EXCLUDED.grace_until,
-    expires_at = EXCLUDED.expires_at`
+    expires_at = EXCLUDED.expires_at
+RETURNING refresh_token`
 
 	queryGetRefreshToken = `
 SELECT user_id, session_id, refresh_token, rotated_to, grace_until, expires_at

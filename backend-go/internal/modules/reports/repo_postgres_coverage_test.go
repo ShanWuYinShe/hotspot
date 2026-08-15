@@ -2,10 +2,13 @@ package reports
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // reportQueryRowStub 提供 QueryRow 结果供 FindExistingReport/TargetOwner 使用。
@@ -56,8 +59,14 @@ func TestPostgresFindExistingReport(t *testing.T) {
 }
 
 func TestPostgresFindExistingReportMissing(t *testing.T) {
+	// 无行 = not-found；DB 故障（如 deadline）必须原样上抛而非吞成 not-found。
 	repo := NewPostgresRepository(newReportFactory(&reportQueryRowStub{err: context.DeadlineExceeded}))
 	id, found, err := repo.FindExistingReport(context.Background(), "u1", ReportTargetTypeMoment, "m1")
+	if !errors.Is(err, context.DeadlineExceeded) || found || id != "" {
+		t.Fatalf("db error must propagate: id=%q found=%v err=%v", id, found, err)
+	}
+	repo = NewPostgresRepository(newReportFactory(&reportQueryRowStub{err: pgx.ErrNoRows}))
+	id, found, err = repo.FindExistingReport(context.Background(), "u1", ReportTargetTypeMoment, "m1")
 	if err != nil || found || id != "" {
 		t.Fatalf("missing report should be not-found: id=%q found=%v err=%v", id, found, err)
 	}

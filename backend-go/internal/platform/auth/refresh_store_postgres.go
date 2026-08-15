@@ -35,8 +35,17 @@ func (s *PostgresRefreshStore) Rotate(ctx context.Context, oldToken string, curr
 	if !ok {
 		return s.fallback.Rotate(ctx, oldToken, current, next)
 	}
-	graceUntil := time.Now().UTC().Add(30 * time.Second)
-	return queryable.Exec(ctx, queryRotateRefreshToken, oldToken, next.RefreshToken, graceUntil, next.UserID, next.SessionID, next.ExpiresAt)
+	graceUntil := time.Now().UTC().Add(RefreshRotationGrace)
+	var rotated string
+	if err := queryable.QueryRow(ctx, queryRotateRefreshToken, oldToken, next.RefreshToken, graceUntil, next.UserID, next.SessionID, next.ExpiresAt).Scan(&rotated); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// UPDATE 带 rotated_to IS NULL 守卫后 0 行命中：旧 token 已被并发
+			// 请求轮换，本次未获得轮换权。
+			return ErrRefreshRotationConflict
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *PostgresRefreshStore) Get(ctx context.Context, token string) (RefreshSession, bool, error) {

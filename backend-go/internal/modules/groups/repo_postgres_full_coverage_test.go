@@ -162,8 +162,14 @@ func TestPostgresUpdateDismissAndExecWrappers(t *testing.T) {
 		{"revoke invite", func(r *PostgresRepository) error { return r.RevokeInvite(ctx, "g", "i1") }},
 		{"delete ann", func(r *PostgresRepository) error { return r.DeleteAnnouncement(ctx, "g", "a1") }},
 	}
+	// 状态流转类 UPDATE 现带 RETURNING（pending 守卫），QueryRow 需返回一行。
+	returningStub := &groupFullStub{queryRow: map[string][]any{
+		queryUpdateGroupApplication: {"a1"},
+		queryUpdateGroupInvite:      {"i1"},
+		queryRevokeGroupInvite:      {"i1"},
+	}}
 	for _, tc := range execCases {
-		if err := tc.call(newGroupsFullRepo(&groupFullStub{})); err != nil {
+		if err := tc.call(newGroupsFullRepo(returningStub)); err != nil {
 			t.Fatalf("%s: %v", tc.name, err)
 		}
 		if err := tc.call(&PostgresRepository{}); !errors.Is(err, persistence.ErrNotImplemented) {
@@ -534,7 +540,7 @@ func TestPostgresApproveAcceptTxAndInviteMember(t *testing.T) {
 
 	// ApproveApplication：loadApplication + tx 内两个 Exec
 	stub := &groupFullStub{
-		queryRow: map[string][]any{queryGetGroupApplication: appRow, queryGetGroup: groupBaseRow(false), queryLockGroupCapacity: {200, 0}},
+		queryRow: map[string][]any{queryGetGroupApplication: appRow, queryGetGroup: groupBaseRow(false), queryLockGroupCapacity: {200, 0}, queryUpdateGroupApplication: {"a1"}},
 	}
 	if err := newGroupsFullRepo(stub).ApproveApplication(ctx, "u1", "a1"); err != nil {
 		t.Fatalf("approve: %v", err)
@@ -548,7 +554,7 @@ func TestPostgresApproveAcceptTxAndInviteMember(t *testing.T) {
 	// AcceptInvite：loadInvite + tx 内两个 Exec
 	stub = &groupFullStub{
 		queryRow: map[string][]any{
-			queryGetGroupInvite: inviteRow, queryGetGroup: groupBaseRow(false), queryCountGroupMembers: {3}, queryLockGroupCapacity: {200, 0},
+			queryGetGroupInvite: inviteRow, queryGetGroup: groupBaseRow(false), queryCountGroupMembers: {3}, queryLockGroupCapacity: {200, 0}, queryUpdateGroupInvite: {"i1"},
 		},
 	}
 	if err := newGroupsFullRepo(stub).AcceptInvite(ctx, "u2", "i1"); err != nil {

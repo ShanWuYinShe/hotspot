@@ -3,7 +3,6 @@ package groups
 import (
 	"context"
 	"errors"
-
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
@@ -94,7 +93,10 @@ func (r *PostgresRepository) ApproveApplication(ctx context.Context, approverID 
 		if err := enforceGroupCapacity(txCtx, queryable, record.GroupID); err != nil {
 			return err
 		}
-		if err := queryable.Exec(txCtx, queryUpdateGroupApplication, applicationID, string(ApplicationStatusAccepted), now, approverID); err != nil {
+		if err := queryable.QueryRow(txCtx, queryUpdateGroupApplication, applicationID, string(ApplicationStatusAccepted), now, approverID).Scan(&applicationID); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrAlreadyProcessed
+			}
 			return err
 		}
 		return queryable.Exec(txCtx, queryInsertGroupMember, record.GroupID, record.Applicant.UserID, string(GroupRoleMember), now)
@@ -109,7 +111,14 @@ func (r *PostgresRepository) RejectApplication(ctx context.Context, applicationI
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, queryUpdateGroupApplication, applicationID, string(ApplicationStatusRejected), time.Now().UTC(), nil)
+	var updated string
+	if err := queryable.QueryRow(ctx, queryUpdateGroupApplication, applicationID, string(ApplicationStatusRejected), time.Now().UTC(), nil).Scan(&updated); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrAlreadyProcessed
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *PostgresRepository) ListMyApplications(ctx context.Context, userID string, status *ApplicationStatus, limit int, cursor string) ([]GroupApplicationItem, string, error) {
@@ -168,7 +177,14 @@ func (r *PostgresRepository) CancelApplication(ctx context.Context, applicationI
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, queryUpdateGroupApplication, applicationID, string(ApplicationStatusRevoked), time.Now().UTC(), nil)
+	var updated string
+	if err := queryable.QueryRow(ctx, queryUpdateGroupApplication, applicationID, string(ApplicationStatusRevoked), time.Now().UTC(), nil).Scan(&updated); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrAlreadyProcessed
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *PostgresRepository) loadApplication(ctx context.Context, applicationID string) (GroupApplicationItem, error) {

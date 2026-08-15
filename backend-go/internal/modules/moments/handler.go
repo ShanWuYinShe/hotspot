@@ -36,6 +36,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteInvalidRequest(w, r, "Create", "内容超过长度限制")
 		return
 	}
+	// privacy_level 限定枚举：任意字符串落库会让 private 过滤（可见性控制）失效。
+	if !isValidPrivacyLevel(req.PrivacyLevel) {
+		httpx.WriteInvalidRequest(w, r, "Create", "参数错误: privacy_level 仅允许 public/private")
+		return
+	}
 	// Reject out-of-range coordinates before they corrupt the S2 index.
 	if !geo.IsValidPoint(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude}) {
 		httpx.WriteInvalidRequest(w, r, "Create", "参数错误: 经纬度超出有效范围")
@@ -126,6 +131,16 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteInvalidRequest(w, r, "Update", "参数错误")
 		return
 	}
+	// 与 Create 相同的入参防御：非法坐标会把 S2 cell 算成 0 并原样落库，
+	// 该瞬间从所有地理查询/地图中消失且污染数据；privacy_level 限定枚举。
+	if req.Location != nil && !geo.IsValidPoint(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude}) {
+		httpx.WriteInvalidRequest(w, r, "Update", "参数错误: 经纬度超出有效范围")
+		return
+	}
+	if req.PrivacyLevel != nil && !isValidPrivacyLevel(*req.PrivacyLevel) {
+		httpx.WriteInvalidRequest(w, r, "Update", "参数错误: privacy_level 仅允许 public/private")
+		return
+	}
 	item, err := h.service.Update(r.Context(), req)
 	if err != nil {
 		if errors.Is(err, ErrMomentNotFound) {
@@ -213,4 +228,9 @@ func (h *Handler) ListFavorites(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))
+}
+
+// isValidPrivacyLevel 校验 privacy_level 枚举；空串合法（缺省按 public 处理）。
+func isValidPrivacyLevel(level string) bool {
+	return level == "" || level == "public" || level == "private"
 }

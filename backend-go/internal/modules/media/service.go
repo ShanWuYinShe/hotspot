@@ -256,6 +256,19 @@ func isMimeAllowed(category MediaCategory, mime string) bool {
 	case CategoryChatAudio:
 		return mime == "audio/mpeg" || mime == "audio/aac" || mime == "audio/ogg"
 	case CategoryChatFile:
+		// chat_file 是开放类别，但必须黑名单 active content：预签名 GET 按对象
+		// Content-Type 原样回给浏览器，text/html、SVG 等在存储域名上可直接
+		// 执行，构成存储型 XSS。
+		return !isActiveContentMime(mime)
+	default:
+		return false
+	}
+}
+
+// isActiveContentMime 报告浏览器会执行脚本的 MIME（HTML/SVG/XML 系）。
+func isActiveContentMime(mime string) bool {
+	switch strings.ToLower(strings.TrimSpace(mime)) {
+	case "text/html", "image/svg+xml", "application/xhtml+xml", "application/xml", "text/xml", "application/rss+xml":
 		return true
 	default:
 		return false
