@@ -690,10 +690,11 @@ export struct DesktopLayout {
     }
     .width('90%')
     .height(DesignConstants.LAYOUT.FAB_SIZE)
-    .padding({ left: DesignConstants.SPACING.LG })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
     .borderRadius(DesignConstants.SHAPE.INPUT)
     .backgroundColor(this.getPalette().surfaceSubtle)
     .alignItems(VerticalAlign.Center)
+    .justifyContent(FlexAlign.Center)
     .margin({ bottom: DesignConstants.SPACING.SM })
     // 按压反馈（对齐侧栏导航行 tap-97 语义）
     .scale(this.pressedCreateItem === label ?
