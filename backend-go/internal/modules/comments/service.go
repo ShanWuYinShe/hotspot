@@ -13,6 +13,7 @@ import (
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/textutil"
 	"hotspot/backend-go/internal/platform/types"
 )
 
@@ -483,10 +484,8 @@ func summarizeCommentText(primary string, fallback string) string {
 	if value == "" {
 		value = strings.TrimSpace(fallback)
 	}
-	if len(value) > 80 {
-		return value[:80]
-	}
-	return value
+	// 按 rune 截断：字节切片会把中文等多字节字符拦腰截断产生非法 UTF-8。
+	return textutil.TruncateRunes(value, 80)
 }
 
 func (s *Service) ensureMomentCommentable(ctx context.Context, momentID string) error {

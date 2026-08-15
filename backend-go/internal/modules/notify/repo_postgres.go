@@ -48,10 +48,11 @@ func (r *PostgresRepository) Append(ctx context.Context, userID string, item Not
 
 func (r *PostgresRepository) AppendMany(ctx context.Context, userIDs []string, item NotifyItem) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil
+		// 与单条 Append 的降级语义一致：显式报告未实现，而非静默丢弃公告。
+		return persistence.ErrNotImplemented
 	}
 	if _, ok := r.factory.DB.(persistence.QueryableDB); !ok {
-		return nil
+		return persistence.ErrNotImplemented
 	}
 	// Filter empty ids up front so the batch insert doesn't waste a row.
 	targets := make([]string, 0, len(userIDs))

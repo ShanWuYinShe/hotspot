@@ -87,7 +87,12 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 	if meta.Type != "text" || meta.IsRecalled {
 		return MessageEventMeta{}, ErrMessageNotEditable
 	}
-	if err := queryable.Exec(ctx, queryUpdatePrivateMessage, req.MessageID, req.Content); err != nil {
+	var updated string
+	if err := queryable.QueryRow(ctx, queryUpdatePrivateMessage, req.MessageID, req.Content).Scan(&updated); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// lookup 与 UPDATE 之间被并发撤回：不得广播假编辑事件，按不可编辑返回。
+			return MessageEventMeta{}, ErrMessageNotEditable
+		}
 		return MessageEventMeta{}, err
 	}
 	return MessageEventMeta{TargetUserID: otherUserID(meta.ChatKey, userID), MessageID: req.MessageID, SentAt: meta.SentAt, Content: req.Content}, nil
@@ -111,10 +116,19 @@ func (r *PostgresRepository) Recall(ctx context.Context, userID string, req Reca
 		return MessageEventMeta{}, ErrMessageNotRecallable
 	}
 	sentAt, parseErr := time.Parse(time.RFC3339Nano, meta.SentAt)
-	if parseErr == nil && time.Since(sentAt) > 2*time.Minute {
+	if parseErr != nil {
+		// fail-closed：解析异常的时间窗不得静默放行超时撤回（安全/产品约束）。
 		return MessageEventMeta{}, ErrMessageNotRecallable
 	}
-	if err := queryable.Exec(ctx, queryRecallPrivateMessage, req.MessageID); err != nil {
+	if time.Since(sentAt) > 2*time.Minute {
+		return MessageEventMeta{}, ErrMessageNotRecallable
+	}
+	var updated string
+	if err := queryable.QueryRow(ctx, queryRecallPrivateMessage, req.MessageID).Scan(&updated); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// 双并发 Recall：后者不得再次广播撤回事件。
+			return MessageEventMeta{}, ErrMessageNotRecallable
+		}
 		return MessageEventMeta{}, err
 	}
 	return MessageEventMeta{TargetUserID: otherUserID(meta.ChatKey, userID), MessageID: req.MessageID, SentAt: meta.SentAt}, nil

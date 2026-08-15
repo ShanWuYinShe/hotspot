@@ -2,8 +2,9 @@ package notify
 
 import (
 	"context"
-	"fmt"
 	"time"
+
+	"hotspot/backend-go/internal/platform/idgen"
 )
 
 type Repository interface {
@@ -34,5 +35,7 @@ func normalizeNotifyItem(item NotifyItem) NotifyItem {
 // the id for realtime event payloads (e.g. ReactionAdded.notify_id) generate
 // it up front and pass it into the NotifyItem.
 func newNotifyID() string {
-	return fmt.Sprintf("notif_%d", time.Now().UTC().UnixNano())
+	// idgen 随机后缀：notif_<UnixNano> 在多 goroutine/多实例同纳秒生成会
+	// 主键冲突，通知插入失败且只被记日志（静默丢失）。
+	return idgen.MustWithPrefix("notif_")
 }

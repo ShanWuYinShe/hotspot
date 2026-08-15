@@ -309,6 +309,11 @@ func (s *Service) authorizeMessageMutation(ctx context.Context, messageID, userI
 
 func (s *Service) MarkAsRead(ctx context.Context, req MarkGroupMessagesReadRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
+	// 成员校验对齐 Send/History：非成员此前依赖 SQL 的 JOIN group_members 隐式
+	// 拦截并返回 10404，而契约要求 10200 + forbidden_reason=not_group_member。
+	if err := s.ensureMember(ctx, req.GroupID, principal.UserID); err != nil {
+		return err
+	}
 	if err := s.repo.MarkAsRead(ctx, principal.UserID, req); err != nil {
 		observability.L().Error("groupmessages.mark_as_read failed", "error", err, "group_id", req.GroupID, "up_to_message_id", req.UpToMessageID, "user_id", principal.UserID)
 		return err

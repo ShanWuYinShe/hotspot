@@ -25,6 +25,14 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
+	// 游标预校验（对齐 groupmessages/privatemessages/reactions 的 handler 模式）：
+	// 坏游标此前穿透为非 APIError → WriteAPIError 映射 10500。
+	if req.Pagination != nil && req.Pagination.Cursor != "" {
+		if _, _, err := decodeChatCursor(req.Pagination.Cursor); err != nil {
+			httpx.WriteInvalidRequest(w, r, "List", "参数错误")
+			return
+		}
+	}
 	list, err := h.service.List(r.Context(), req)
 	if err != nil {
 		httpx.WriteAPIError(w, r, "List", err)

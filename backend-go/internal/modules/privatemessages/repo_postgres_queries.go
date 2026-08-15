@@ -17,7 +17,7 @@ const (
 		       COALESCE(pm.file_id, ''),
 		       COALESCE(pm.share_code, ''),
 		       pm.sender_user_id,
-		       sender.nickname,
+		       COALESCE(sender.nickname, ''),
 		       COALESCE(sender.avatar_url, ''),
 		       COALESCE(reply.message_id, ''),
 		       COALESCE(reply.type, ''),
@@ -39,7 +39,9 @@ const (
 		         ELSE pm.message_id = prs.last_read_message_id
 		       END AS is_read
 		FROM private_messages pm
-		JOIN users sender ON sender.user_id = pm.sender_user_id
+		-- LEFT JOIN：sender 行被物理删除时（FK CASCADE）会话历史不应整段消失，
+		-- 与群聊侧一致（nickname/avatar 由 COALESCE 兜底为空）。
+		LEFT JOIN users sender ON sender.user_id = pm.sender_user_id
 		LEFT JOIN private_messages reply ON reply.message_id = pm.reply_to_message_id
 		LEFT JOIN users reply_sender ON reply_sender.user_id = reply.sender_user_id
 		LEFT JOIN private_chat_read_state prs
@@ -109,15 +111,19 @@ const (
 		   OR (EXCLUDED.last_read_sent_at = private_chat_read_state.last_read_sent_at
 		       AND EXCLUDED.last_read_message_id > private_chat_read_state.last_read_message_id)`
 
+	// RETURNING：0 行命中（lookup 与 UPDATE 之间被并发撤回/编辑）可检测，
+	// repo 据此返回冲突，防止「DB 未变但广播已编辑/已撤回事件」。
 	queryUpdatePrivateMessage = `
 		UPDATE private_messages
 		SET content = $2, content_prev = content, edited_at = NOW()
-		WHERE message_id = $1 AND is_recalled = FALSE`
+		WHERE message_id = $1 AND is_recalled = FALSE
+		RETURNING message_id`
 
 	queryRecallPrivateMessage = `
 		UPDATE private_messages
 		SET is_recalled = TRUE, recalled_at = NOW()
-		WHERE message_id = $1 AND is_recalled = FALSE`
+		WHERE message_id = $1 AND is_recalled = FALSE
+		RETURNING message_id`
 
 	queryGetPrivateMessageMeta = `
 		SELECT chat_key,
@@ -158,6 +164,20 @@ SELECT pm.sender_user_id,
 FROM private_messages pm
 JOIN private_chats pc ON pc.chat_key = pm.chat_key
 WHERE pm.message_id = $1`
+
+	// 未读数独立 COUNT（口径与 History 的 is_read CASE 一致：对方发来的、
+	// sent_at 晚于已读游标的消息）。
+	queryUnreadPrivateMessageCount = `
+SELECT COUNT(*)
+FROM private_messages pm
+LEFT JOIN private_chat_read_state prs
+  ON prs.chat_key = pm.chat_key AND prs.user_id = $2
+WHERE pm.chat_key = $1
+  AND pm.sender_user_id <> $2
+  AND pm.is_recalled = FALSE
+  AND ($3::timestamptz IS NULL OR pm.sent_at > $3::timestamptz)
+  AND (prs.last_read_sent_at IS NULL OR pm.sent_at > prs.last_read_sent_at
+       OR (pm.sent_at = prs.last_read_sent_at AND prs.last_read_message_id IS NOT NULL AND pm.message_id <> prs.last_read_message_id))`
 
 	queryCountPrivateMessagesByTarget = `
 		SELECT CASE

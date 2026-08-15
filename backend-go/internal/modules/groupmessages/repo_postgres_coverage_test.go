@@ -86,7 +86,8 @@ func TestPostgresSendAndUpdateAndRecall(t *testing.T) {
 	if err != nil || recalled.MessageID != sent.MessageID {
 		t.Fatalf("recall: %#v err=%v", recalled, err)
 	}
-	if backend.execs < 3 {
+	// Update/Recall 已改走 QueryRow（RETURNING 行数检测），Exec 仅剩 Send。
+	if backend.execs < 1 {
 		t.Fatalf("expected execs, got %d", backend.execs)
 	}
 }

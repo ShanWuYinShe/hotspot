@@ -44,22 +44,27 @@ const (
 		ORDER BY gm.sent_at DESC, gm.message_id DESC
 		LIMIT $4`
 
+	// RETURNING：0 行命中（lookup 与 UPDATE 之间被并发撤回/编辑）可检测，
+	// repo 据此返回冲突，防止「DB 未变但广播已编辑/已撤回事件」。
 	queryUpdateGroupMessage = `
 	UPDATE group_messages
 	SET content = $3, content_prev = content, edited_at = NOW()
-	WHERE message_id = $1 AND sender_user_id = $2 AND is_recalled = FALSE`
+	WHERE message_id = $1 AND sender_user_id = $2 AND is_recalled = FALSE
+	RETURNING message_id`
 
 	queryRecallGroupMessage = `
 	UPDATE group_messages
 	SET is_recalled = TRUE, recalled_at = NOW()
-	WHERE message_id = $1 AND sender_user_id = $2`
+	WHERE message_id = $1 AND sender_user_id = $2 AND is_recalled = FALSE
+	RETURNING message_id`
 
 	// queryRecallGroupMessageAsAdmin recalls a message regardless of who sent
 	// it, with no recall-window enforcement（groups/admin/messages/recall）。
-	queryRecallGroupMessageAsAdmin = `
+	queryRecallGroupMessageAsAdminReturning = `
 	UPDATE group_messages
 	SET is_recalled = TRUE, recalled_at = NOW()
-	WHERE message_id = $1`
+	WHERE message_id = $1 AND is_recalled = FALSE
+	RETURNING message_id`
 
 	// queryLookupMessageOwner fetches only what the authorization layer needs:
 	// the group a message belongs to and who sent it. NULL sender becomes ""

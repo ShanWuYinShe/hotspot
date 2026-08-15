@@ -78,7 +78,11 @@ func (r *PostgresRepository) Update(ctx context.Context, req UpdateGroupMessageR
 	// Owner check lives in the service layer via LookupMessageMeta; the SQL
 	// `sender_user_id = $2` guard is defense-in-depth (only the sender row can
 	// be touched even if the service check is bypassed).
-	if err := queryable.Exec(ctx, queryUpdateGroupMessage, req.MessageID, req.UserID, req.Content); err != nil {
+	var updated string
+	if err := queryable.QueryRow(ctx, queryUpdateGroupMessage, req.MessageID, req.UserID, req.Content).Scan(&updated); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return MessageEventMeta{}, ErrMessageRecalled
+		}
 		return MessageEventMeta{}, err
 	}
 	return MessageEventMeta{GroupID: groupID, MessageID: req.MessageID, SentAt: sentAt, Content: req.Content}, nil
@@ -100,12 +104,20 @@ func (r *PostgresRepository) Recall(ctx context.Context, req RecallGroupMessageR
 		return MessageEventMeta{}, ErrMessageRecalled
 	}
 	sentTime, parseErr := time.Parse(time.RFC3339Nano, sentAt)
-	if parseErr == nil && time.Since(sentTime) > 2*time.Minute {
+	if parseErr != nil {
+		// fail-closed：解析异常的时间窗不得静默放行超时撤回（安全/产品约束）。
+		return MessageEventMeta{}, ErrMessageRecallWindow
+	}
+	if time.Since(sentTime) > 2*time.Minute {
 		return MessageEventMeta{}, ErrMessageRecallWindow
 	}
 	// Owner check lives in the service layer via LookupMessageMeta; the SQL
 	// `sender_user_id = $2` guard is defense-in-depth.
-	if err := queryable.Exec(ctx, queryRecallGroupMessage, req.MessageID, req.UserID); err != nil {
+	var updated string
+	if err := queryable.QueryRow(ctx, queryRecallGroupMessage, req.MessageID, req.UserID).Scan(&updated); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return MessageEventMeta{}, ErrMessageRecalled
+		}
 		return MessageEventMeta{}, err
 	}
 	return MessageEventMeta{GroupID: groupID, MessageID: req.MessageID, SentAt: sentAt}, nil
@@ -128,7 +140,11 @@ func (r *PostgresRepository) RecallAsAdmin(ctx context.Context, messageID string
 	if isRecalled {
 		return MessageEventMeta{}, ErrMessageRecalled
 	}
-	if err := queryable.Exec(ctx, queryRecallGroupMessageAsAdmin, messageID); err != nil {
+	var updated string
+	if err := queryable.QueryRow(ctx, queryRecallGroupMessageAsAdminReturning, messageID).Scan(&updated); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return MessageEventMeta{}, ErrMessageRecalled
+		}
 		return MessageEventMeta{}, err
 	}
 	return MessageEventMeta{GroupID: groupID, MessageID: messageID, SentAt: sentAt}, nil

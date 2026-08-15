@@ -41,7 +41,7 @@ func (s *reactionRowStub) Query(_ context.Context, query string, args ...any) (p
 			for _, row := range rows {
 				reactedAt := row[3].(time.Time)
 				userID := row[0].(string)
-				if reactedAt.Before(at) || (reactedAt.Equal(at) && userID > cursorUser) {
+				if reactedAt.Before(at) || (reactedAt.Equal(at) && userID < cursorUser) {
 					filtered = append(filtered, row)
 				}
 			}

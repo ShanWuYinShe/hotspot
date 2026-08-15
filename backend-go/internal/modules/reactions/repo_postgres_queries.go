@@ -36,8 +36,8 @@ WITH del AS (
 SELECT EXISTS (SELECT 1 FROM del) AS deleted`
 
 	// queryListReactions lists reaction rows for one target. reacted_at DESC is
-	// the primary order, user_id ASC the stable tie-breaker (matches the
-	// idx_reactions_target_reacted_at index). An optional emoji filter is
+	// the primary order, user_id DESC the stable tie-breaker so the row-wise
+	// (<) cursor predicate matches the ordering. An optional emoji filter is
 	// applied via $3::text NULL.
 	queryListReactions = `
 SELECT r.user_id, COALESCE(u.nickname, r.user_id), r.emoji, r.reacted_at
@@ -47,7 +47,7 @@ WHERE r.target_type = $1
   AND r.target_id = $2
   AND ($3::text IS NULL OR r.emoji = $3::text)
   AND ($4::timestamptz IS NULL OR (r.reacted_at, r.user_id) < ($4::timestamptz, $5))
-ORDER BY r.reacted_at DESC, r.user_id ASC
+ORDER BY r.reacted_at DESC, r.user_id DESC
 LIMIT $6`
 
 	// queryAggregateReactions computes per-emoji counts + reacted_by_me for a

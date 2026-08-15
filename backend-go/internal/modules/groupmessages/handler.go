@@ -199,6 +199,9 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 			case errors.Is(err, ErrMessageNotFound):
 				observability.LogBusinessError(r, "MarkRead", int(httpx.CodeNotFound), "消息不存在")
 				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "消息不存在"))
+			case errors.Is(err, ErrNotGroupMember):
+				// 契约(api_spec_errors.md)：不是群成员 → 10200 + forbidden_reason=not_group_member
+				httpx.WriteAPIError(w, r, "MarkRead", httpx.Forbidden(httpx.ReasonNotGroupMember, "不是群组成员"))
 			default:
 				observability.LogServerError(r, "MarkRead", err)
 				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))

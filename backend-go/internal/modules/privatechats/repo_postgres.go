@@ -96,29 +96,38 @@ func (r *PostgresRepository) UpdateSettings(ctx context.Context, userID, targetU
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return persistence.ErrNotImplemented
 	}
-	state, err := r.getStateImpl(ctx, userID, targetUserID)
-	if err != nil {
-		return err
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
 	}
+	// 单条条件 UPDATE：并发 mute + pin 互不覆盖（此前 read-modify-write 整行
+	// 覆盖，后到者用旧快照抹掉前者）。
+	chatKey := key(userID, targetUserID)
+	var isMuted, isPinned any
 	if update.IsMuted != nil {
-		state.IsMuted = *update.IsMuted
+		isMuted = *update.IsMuted
 	}
 	if update.IsPinned != nil {
-		state.IsPinned = *update.IsPinned
+		isPinned = *update.IsPinned
 	}
-	return r.upsertStateImpl(ctx, userID, state)
+	return queryable.Exec(ctx, queryUpdatePrivateChatUserSettings, chatKey, userID, isMuted, isPinned)
 }
 
 func (r *PostgresRepository) DeleteForUser(ctx context.Context, userID, targetUserID string, deletedAt *time.Time) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return persistence.ErrNotImplemented
 	}
-	state, err := r.getStateImpl(ctx, userID, targetUserID)
-	if err != nil {
-		return err
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
 	}
-	state.DeletedAt = deletedAt
-	return r.upsertStateImpl(ctx, userID, state)
+	// 仅更新删除相关列：不回读整行再整行覆盖（delete 与 mute/pin 并发互不干扰）。
+	chatKey := key(userID, targetUserID)
+	var deletedAtValue any
+	if deletedAt != nil {
+		deletedAtValue = deletedAt.UTC()
+	}
+	return queryable.Exec(ctx, queryMarkPrivateChatDeleted, chatKey, userID, deletedAtValue)
 }
 
 func (r *PostgresRepository) upsertStateImpl(ctx context.Context, userID string, state ChatState) error {

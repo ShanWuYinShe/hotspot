@@ -10,6 +10,8 @@ import (
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type privateMessageNonQueryableDB struct{}
@@ -196,6 +198,58 @@ func (b *privateMessageBackendStub) QueryRow(_ context.Context, query string, ar
 				}
 			}
 		}
+	case queryUpdatePrivateMessage:
+		// 模拟 is_recalled = FALSE 守卫 + RETURNING：未撤回的消息更新并返回
+		// 一行，已撤回的 0 行（ErrNoRows）。
+		messageID := args[0].(string)
+		content := args[1].(string)
+		for _, items := range b.items {
+			for i := range items {
+				if items[i].MessageID == messageID && items[i].RecalledAt == "" {
+					items[i].Content = content
+					items[i].EditedAt = time.Now().UTC().Format(time.RFC3339Nano)
+					return testdb.RowValues{Values: []any{messageID}}
+				}
+			}
+		}
+		return testdb.RowValues{Err: pgx.ErrNoRows}
+	case queryRecallPrivateMessage:
+		messageID := args[0].(string)
+		for _, items := range b.items {
+			for i := range items {
+				if items[i].MessageID == messageID && items[i].RecalledAt == "" {
+					items[i].RecalledAt = time.Now().UTC().Format(time.RFC3339Nano)
+					return testdb.RowValues{Values: []any{messageID}}
+				}
+			}
+		}
+		return testdb.RowValues{Err: pgx.ErrNoRows}
+	case queryUnreadPrivateMessageCount:
+		// 口径与 SQL 一致：对方发来、晚于已读游标、未撤回；deletedAfter 是
+		// 可见性下界（仅统计严格晚于它的消息）。
+		chatKey := args[0].(string)
+		viewerID := args[1].(string)
+		var deletedAfter time.Time
+		if v, ok := args[2].(time.Time); ok {
+			deletedAfter = v
+		}
+		state := privateMessageReadState{}
+		if b.readStates != nil && b.readStates[chatKey] != nil {
+			state = b.readStates[chatKey][viewerID]
+		}
+		count := 0
+		for _, record := range b.items[chatKey] {
+			if record.SenderID == viewerID || record.RecalledAt != "" {
+				continue
+			}
+			if (!deletedAfter.IsZero()) && record.SentAt <= deletedAfter.Format(time.RFC3339Nano) {
+				continue
+			}
+			if state.SentAt == "" || record.SentAt > state.SentAt {
+				count++
+			}
+		}
+		return testdb.RowValues{Values: []any{count}}
 	}
 	return testdb.RowValues{Err: persistence.ErrNotImplemented}
 }

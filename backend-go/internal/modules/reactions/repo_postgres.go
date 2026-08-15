@@ -74,7 +74,8 @@ func (r *PostgresRepository) ListReactions(ctx context.Context, targetType React
 		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &item.Emoji, &reactedAt); err != nil {
 			return nil, "", fmt.Errorf("reactions.ListReactions scan: %w", err)
 		}
-		item.ReactedAt = reactedAt.UTC().Format(time.RFC3339)
+		// 纳秒精度：秒级截断会让同秒内更晚的行在下一页被谓词排除（分页丢行）。
+		item.ReactedAt = reactedAt.UTC().Format(time.RFC3339Nano)
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -241,7 +242,7 @@ func decodeListCursor(cursorValue string) (any, string, error) {
 	if err := cursor.Decode(reactionsListCursorNamespace, cursorValue, &c); err != nil || c.At == "" || c.ID == "" {
 		return nil, "", ErrInvalidCursor
 	}
-	at, err := time.Parse(time.RFC3339, c.At)
+	at, err := time.Parse(time.RFC3339Nano, c.At)
 	if err != nil {
 		return nil, "", ErrInvalidCursor
 	}
@@ -249,7 +250,7 @@ func decodeListCursor(cursorValue string) (any, string, error) {
 }
 
 func encodeTargetCursor(at time.Time, id string) string {
-	value, err := cursor.Encode(reactionsTargetCursorNamespace, listCursor{At: at.UTC().Format(time.RFC3339), ID: id})
+	value, err := cursor.Encode(reactionsTargetCursorNamespace, listCursor{At: at.UTC().Format(time.RFC3339Nano), ID: id})
 	if err != nil {
 		return ""
 	}
@@ -264,7 +265,7 @@ func decodeTargetCursor(cursorValue string) (any, string, error) {
 	if err := cursor.Decode(reactionsTargetCursorNamespace, cursorValue, &c); err != nil || c.At == "" || c.ID == "" {
 		return nil, "", ErrInvalidCursor
 	}
-	at, err := time.Parse(time.RFC3339, c.At)
+	at, err := time.Parse(time.RFC3339Nano, c.At)
 	if err != nil {
 		return nil, "", ErrInvalidCursor
 	}

@@ -248,7 +248,7 @@ func (r *InMemoryRepository) ListReactedTargets(_ context.Context, targetType Re
 }
 
 // entriesSorted returns all reaction entries for a target, sorted newest-first
-// with userID ASC tie-break (matching the postgres ordering).
+// with userID DESC tie-break (matching the postgres ordering).
 func (r *InMemoryRepository) entriesSorted(targetType ReactTarget, targetID string) []reactEntry {
 	src := r.reactions[targetKey{targetType, targetID}]
 	out := make([]reactEntry, 0, len(src))
@@ -257,7 +257,7 @@ func (r *InMemoryRepository) entriesSorted(targetType ReactTarget, targetID stri
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].reactedAt == out[j].reactedAt {
-			return out[i].userID < out[j].userID
+			return out[i].userID > out[j].userID
 		}
 		return out[i].reactedAt > out[j].reactedAt
 	})

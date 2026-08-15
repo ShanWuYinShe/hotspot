@@ -35,15 +35,23 @@ func (r *PostgresRepository) Last(ctx context.Context, userID, targetUserID stri
 }
 
 func (r *PostgresRepository) UnreadCount(ctx context.Context, userID, targetUserID string, deletedAfter *time.Time) (int, error) {
-	history, err := r.historySince(ctx, targetUserID, userID, nil, deletedAfter)
-	if err != nil {
-		return 0, err
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return 0, persistence.ErrNotImplemented
 	}
-	count := 0
-	for _, item := range history.Items {
-		if item.Sender.UserID != userID && !item.IsRead {
-			count++
-		}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return 0, persistence.ErrNotImplemented
+	}
+	// 独立 COUNT：此前复用 historySince（limit=20 的窗口内数未读），几天没
+	// 上线、会话超过 20 条时未读数被系统性截断为最多 20。
+	chatKey := conversationKey(userID, targetUserID)
+	var deletedAfterValue any
+	if deletedAfter != nil {
+		deletedAfterValue = deletedAfter.UTC()
+	}
+	var count int
+	if err := queryable.QueryRow(ctx, queryUnreadPrivateMessageCount, chatKey, userID, deletedAfterValue).Scan(&count); err != nil {
+		return 0, err
 	}
 	return count, nil
 }
