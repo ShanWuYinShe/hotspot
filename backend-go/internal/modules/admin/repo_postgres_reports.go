@@ -12,6 +12,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// errReportAlreadyHandled 表示举报已被并发裁决处理（repo 层 sentinel，
+// service 层据此返回业务冲突而非重复执行副作用）。
+var errReportAlreadyHandled = errors.New("admin: report already handled")
+
 func (r *PostgresRepository) SearchReports(ctx context.Context, req AdminReportListRequest) (adminReportPage, error) {
 	queryable, ok := r.queryable()
 	if !ok {
@@ -99,7 +103,13 @@ func (r *PostgresRepository) HandleReport(ctx context.Context, reportID string, 
 	if handledBy != nil {
 		handledByID = handledBy.UserID
 	}
-	if err := queryable.Exec(ctx, queryAdminHandleReport, reportID, string(status), now, handledByID, nullableString(strings.TrimSpace(note))); err != nil {
+	// pending 守卫（见 queryAdminHandleReport）：并发裁决只有一方命中；0 行
+	// 返回「已处理」，防止双重执行解散/封禁等副作用。
+	var updated string
+	if err := queryable.QueryRow(ctx, queryAdminHandleReport, reportID, string(status), now, handledByID, nullableString(strings.TrimSpace(note))).Scan(&updated); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return AdminReportItem{}, false, errReportAlreadyHandled
+		}
 		return AdminReportItem{}, false, err
 	}
 	record.Item.Status = status

@@ -57,28 +57,23 @@ func (s *PostgresSessionStore) Revoke(ctx context.Context, sessionID string) (bo
 }
 
 func (s *PostgresSessionStore) RevokeOthers(ctx context.Context, userID, currentSessionID string) (int, error) {
-	items, err := s.ListActiveByUser(ctx, userID)
-	if err != nil {
-		return 0, err
-	}
-	count := 0
-	for _, item := range items {
-		if item.SessionID == currentSessionID {
-			continue
-		}
-		count++
-	}
-	if count == 0 {
-		return 0, nil
-	}
 	queryable, ok := s.queryable()
 	if !ok {
 		return s.fallback.RevokeOthers(ctx, userID, currentSessionID)
 	}
-	if err := queryable.Exec(ctx, queryRevokeOtherSessions, userID, currentSessionID); err != nil {
+	// 用 SQL 实际撤销数（RETURNING 行数）作为返回值：两步 List+UPDATE 之间的
+	// 新登录/撤销会让预计算的 count 与实际不符（审计口径失真）。
+	var revoked int
+	if err := queryable.QueryRow(ctx, `
+WITH revoked AS (
+  UPDATE auth_sessions SET revoked_at = NOW()
+  WHERE user_id = $1 AND session_id <> $2 AND revoked_at IS NULL
+  RETURNING 1
+)
+SELECT COUNT(*) FROM revoked`, userID, currentSessionID).Scan(&revoked); err != nil {
 		return 0, err
 	}
-	return count, nil
+	return revoked, nil
 }
 
 func (s *PostgresSessionStore) Get(ctx context.Context, sessionID string) (SessionRecord, bool, error) {

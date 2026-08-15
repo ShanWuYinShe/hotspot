@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,6 +35,8 @@ func (r authRow) Scan(dest ...any) error {
 				v := r.values[i].(string)
 				*d = &v
 			}
+		case *int:
+			*d = r.values[i].(int)
 		case *time.Time:
 			if v, ok := r.values[i].(*time.Time); ok {
 				*d = *v
@@ -167,6 +170,20 @@ func (b *authBackendStub) Query(_ context.Context, query string, args ...any) (p
 }
 
 func (b *authBackendStub) QueryRow(_ context.Context, query string, args ...any) persistence.Row {
+	if strings.HasPrefix(strings.TrimSpace(query), "WITH revoked AS (") {
+		// RevokeOthers 的 RETURNING COUNT 版本：按 stub 内会话状态计算撤销数。
+		userID := args[0].(string)
+		current := args[1].(string)
+		count := 0
+		for _, record := range b.sessions {
+			if record.UserID == userID && record.SessionID != current && record.RevokedAt == nil {
+				record.RevokedAt = &time.Time{}
+				b.sessions[record.SessionID] = record
+				count++
+			}
+		}
+		return authRow{values: []any{count}}
+	}
 	switch query {
 	case queryGetSession:
 		if record, ok := b.sessions[args[0].(string)]; ok {

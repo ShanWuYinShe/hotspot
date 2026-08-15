@@ -1,10 +1,13 @@
 package admin
 
 import (
+	"context"
+
 	groupsmodule "hotspot/backend-go/internal/modules/groups"
 	usersmodule "hotspot/backend-go/internal/modules/users"
 
 	"hotspot/backend-go/internal/platform/types"
+	"sort"
 	"sync"
 	"time"
 )
@@ -195,4 +198,28 @@ func NewInMemoryRepository() *InMemoryRepository {
 	}
 	repo.seedAuditLogs()
 	return repo
+}
+
+func (r *InMemoryRepository) ListUserIDsAfter(_ context.Context, afterUserID string, limit int) ([]string, error) {
+	if limit <= 0 {
+		limit = 500
+	}
+	r.mu.RLock()
+	ids := make([]string, 0, len(r.users))
+	for id := range r.users {
+		ids = append(ids, id)
+	}
+	r.mu.RUnlock()
+	sort.Strings(ids)
+	out := make([]string, 0, limit)
+	for _, id := range ids {
+		if afterUserID != "" && id <= afterUserID {
+			continue
+		}
+		out = append(out, id)
+		if len(out) >= limit {
+			break
+		}
+	}
+	return out, nil
 }

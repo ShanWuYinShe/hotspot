@@ -503,7 +503,7 @@ func TestAdminRepoReports(t *testing.T) {
 	// HandleReport：resolve / dismiss / 带 handledBy / exec 错误
 	handledBy := &UserInfo{UserID: "admin1", Nickname: "管理员"}
 	for _, action := range []ReportAction{ReportActionResolve, ReportActionDismiss} {
-		stub = &adminFullStub{queryRow: map[string][]any{queryAdminGetReportHandleRecord: reportRow19}}
+		stub = &adminFullStub{queryRow: map[string][]any{queryAdminGetReportHandleRecord: reportRow19, queryAdminHandleReport: {"r1"}}}
 		item, found, err := newAdminFullRepo(stub).HandleReport(ctx, "r1", action, "处理完毕", handledBy)
 		if err != nil || !found || item.HandledAt == nil || item.HandledBy == nil || item.HandleNote == nil {
 			t.Fatalf("handle report %s: %#v found=%v err=%v", action, item, found, err)

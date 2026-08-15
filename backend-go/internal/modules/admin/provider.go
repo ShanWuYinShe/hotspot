@@ -38,8 +38,12 @@ func (p *AppConfigProvider) UpdateAppConfig(ctx context.Context, updatedByUserID
 		updatedAt := time.Now().UTC().Format(time.RFC3339)
 		next.UpdatedAt = &updatedAt
 	}
-	updated, err := p.source.Update(ctx, func(appconfig.AppConfig) appconfig.AppConfig {
-		return sourceAppConfigFromAdmin(next)
+	updated, err := p.source.Update(ctx, func(cur appconfig.AppConfig) appconfig.AppConfig {
+		merged := sourceAppConfigFromAdmin(next)
+		// admin DTO 不含 MaxChatFiles：保留持久化当前值，任何一次后台配置
+		// 更新都不得把它清零（同类丢字段 bug 曾把 4 个 TTL/配额字段清零）。
+		merged.Limits.MaxChatFiles = cur.Limits.MaxChatFiles
+		return merged
 	})
 	if err != nil {
 		return AdminAppConfig{}, nil, err
@@ -62,6 +66,11 @@ func adminAppConfigFromSource(cfg appconfig.AppConfig) AdminAppConfig {
 			MomentDescriptionMaxLength: cfg.Limits.MomentDescriptionMaxLength,
 			CommentMaxLength:           cfg.Limits.CommentMaxLength,
 			SearchRadiusMax:            cfg.Limits.SearchRadiusMax,
+			MessageRecallWindowSeconds: cfg.Limits.MessageRecallWindowSeconds,
+			StrangerMessageDailyQuota:  cfg.Limits.StrangerMessageDailyQuota,
+			ReactionEmojis:             append([]string(nil), cfg.Limits.ReactionEmojis...),
+			GroupInviteTTLHours:        cfg.Limits.GroupInviteTTLHours,
+			GroupApplicationTTLHours:   cfg.Limits.GroupApplicationTTLHours,
 		},
 		Contact: ContactInfo{
 			SupportEmail:      cfg.Contact.SupportEmail,
@@ -147,6 +156,11 @@ func sourceAppConfigFromAdmin(cfg AdminAppConfig) appconfig.AppConfig {
 			MomentDescriptionMaxLength: cfg.Limits.MomentDescriptionMaxLength,
 			CommentMaxLength:           cfg.Limits.CommentMaxLength,
 			SearchRadiusMax:            cfg.Limits.SearchRadiusMax,
+			MessageRecallWindowSeconds: cfg.Limits.MessageRecallWindowSeconds,
+			StrangerMessageDailyQuota:  cfg.Limits.StrangerMessageDailyQuota,
+			ReactionEmojis:             append([]string(nil), cfg.Limits.ReactionEmojis...),
+			GroupInviteTTLHours:        cfg.Limits.GroupInviteTTLHours,
+			GroupApplicationTTLHours:   cfg.Limits.GroupApplicationTTLHours,
 		},
 		Contact: appconfig.Contact{
 			SupportEmail:      cfg.Contact.SupportEmail,

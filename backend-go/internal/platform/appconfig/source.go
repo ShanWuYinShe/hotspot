@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 
 	"github.com/jackc/pgx/v5"
@@ -33,13 +34,22 @@ type StaticSource struct {
 }
 
 type PersistenceSource struct {
-	cfg       config.Config
-	factory   *persistence.Factory
-	fallback  *memoryStore
-	loadOnce  sync.Once
-	loadErr   error
-	loadedCfg AppConfig
+	cfg      config.Config
+	factory  *persistence.Factory
+	fallback *memoryStore
+	// loadMu 保护 loadAttempted/loadErr/loadedCfg：替代此前的 sync.Once——
+	// Once 使启动瞬间的 DB 抖动把失败永久固化，进程余生只用默认配置且永不
+	// 重试（限流阈值、功能开关、上传限制全部失真）。
+	loadMu          sync.Mutex
+	loadAttempted   bool
+	loadErr         error
+	lastLoadFailure time.Time
+	loadedCfg       AppConfig
 }
+
+// loadRetryBackoff 控制失败后的重试节奏：首次失败后按此间隔退避重试，避免
+// 每次请求都打 DB。
+const loadRetryBackoff = 30 * time.Second
 
 type memoryStore struct {
 	mu  sync.RWMutex
@@ -112,24 +122,37 @@ func (s *PersistenceSource) Update(ctx context.Context, apply func(AppConfig) Ap
 }
 
 func (s *PersistenceSource) ensureLoaded(ctx context.Context) {
-	s.loadOnce.Do(func() {
-		if db, ok := s.queryable(); ok {
-			cfg, ok, err := loadFromDB(ctx, db)
-			if err != nil {
-				s.loadErr = err
-				return
-			}
-			if ok {
-				s.loadedCfg = cfg
-				s.fallback.Set(cfg)
-				return
-			}
-		}
-		s.fallback.Set(s.loadedCfg)
-	})
-	if s.loadErr != nil {
-		s.fallback.Set(s.loadedCfg)
+	s.loadMu.Lock()
+	defer s.loadMu.Unlock()
+	if !s.loadAttempted {
+		s.loadAttempted = true
+		s.tryLoad(ctx)
+		return
 	}
+	// 加载失败按退避重试（此前 Once 语义下失败永不重试）。
+	if s.loadErr != nil && time.Since(s.lastLoadFailure) >= loadRetryBackoff {
+		s.tryLoad(ctx)
+	}
+}
+
+// tryLoad 尝试从 DB 加载配置；调用方必须持有 loadMu。
+func (s *PersistenceSource) tryLoad(ctx context.Context) {
+	if db, ok := s.queryable(); ok {
+		cfg, ok, err := loadFromDB(ctx, db)
+		if err != nil {
+			s.loadErr = err
+			s.lastLoadFailure = time.Now()
+			observability.L().Error("appconfig: load from db failed, using defaults; will retry", "error", err)
+			return
+		}
+		s.loadErr = nil
+		if ok {
+			s.loadedCfg = cfg
+			s.fallback.Set(cfg)
+			return
+		}
+	}
+	s.fallback.Set(s.loadedCfg)
 }
 
 func (s *PersistenceSource) queryable() (queryable, bool) {

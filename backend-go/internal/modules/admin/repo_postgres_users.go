@@ -190,3 +190,38 @@ func (r *PostgresRepository) IsBanned(ctx context.Context, userID string) (bool,
 	}
 	return state.Status == UserAccountStatusBanned, nil
 }
+
+// ListUserIDsAfter 按 user_id 升序 keyset 取一批未注销用户 id（公告 fanout
+// 全量遍历用，limit 由调用方控制不受 NormalizeLimit 约束）。
+func (r *PostgresRepository) ListUserIDsAfter(ctx context.Context, afterUserID string, limit int) ([]string, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return nil, persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return nil, persistence.ErrNotImplemented
+	}
+	if limit <= 0 {
+		limit = 500
+	}
+	rows, err := queryable.Query(ctx, `
+SELECT u.user_id
+FROM users u
+WHERE u.is_deleted = FALSE
+  AND ($1 = '' OR u.user_id > $1)
+ORDER BY u.user_id ASC
+LIMIT $2`, afterUserID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	ids := make([]string, 0, limit)
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}

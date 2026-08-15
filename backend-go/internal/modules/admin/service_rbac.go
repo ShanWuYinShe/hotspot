@@ -81,7 +81,7 @@ func (s *Service) CreateRole(ctx context.Context, req AdminRbacRoleCreateRequest
 		observability.L().Error("admin.create_role failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return AdminRoleItem{}, nil, err
 	}
-	_ = s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
+	if err := s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
 		Action:     AuditActionRoleCreate,
 		TargetType: AuditTargetTypeRole,
 		TargetID:   item.RoleID,
@@ -91,7 +91,10 @@ func (s *Service) CreateRole(ctx context.Context, req AdminRbacRoleCreateRequest
 			"role_name":   item.Name,
 			"permissions": item.Permissions,
 		},
-	}))
+	})); err != nil {
+		// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
+		observability.L().Error("admin: rbac audit log append failed", "error", err)
+	}
 	return item, nil, nil
 }
 
@@ -121,7 +124,7 @@ func (s *Service) UpdateRole(ctx context.Context, req AdminRbacRoleUpdateRequest
 	}
 	after, _, err := s.findRole(ctx, req.RoleID)
 	if err == nil {
-		_ = s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
+		if err := s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
 			Action:     AuditActionRoleUpdate,
 			TargetType: AuditTargetTypeRole,
 			TargetID:   after.RoleID,
@@ -132,7 +135,10 @@ func (s *Service) UpdateRole(ctx context.Context, req AdminRbacRoleUpdateRequest
 				"added_permissions":   diffStrings(after.Permissions, before.Permissions),
 				"removed_permissions": diffStrings(before.Permissions, after.Permissions),
 			},
-		}))
+		})); err != nil {
+			// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
+			observability.L().Error("admin: rbac audit log append failed", "error", err)
+		}
 	}
 	return nil, nil
 }
@@ -158,7 +164,7 @@ func (s *Service) DeleteRole(ctx context.Context, roleID string) (*httpx.APIErro
 		}
 		return nil, err
 	}
-	_ = s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
+	if err := s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
 		Action:     AuditActionRoleDelete,
 		TargetType: AuditTargetTypeRole,
 		TargetID:   before.RoleID,
@@ -167,7 +173,10 @@ func (s *Service) DeleteRole(ctx context.Context, roleID string) (*httpx.APIErro
 			"type":      string(AuditActionRoleDelete),
 			"role_name": before.Name,
 		},
-	}))
+	})); err != nil {
+		// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
+		observability.L().Error("admin: rbac audit log append failed", "error", err)
+	}
 	return nil, nil
 }
 
@@ -199,7 +208,7 @@ func (s *Service) SetRolePermissions(ctx context.Context, req AdminRbacRoleSetPe
 		}
 		return nil, err
 	}
-	_ = s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
+	if err := s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
 		Action:     AuditActionRoleSetPermissions,
 		TargetType: AuditTargetTypeRole,
 		TargetID:   before.RoleID,
@@ -209,7 +218,10 @@ func (s *Service) SetRolePermissions(ctx context.Context, req AdminRbacRoleSetPe
 			"role_name":   before.Name,
 			"permissions": permissionKeys,
 		},
-	}))
+	})); err != nil {
+		// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
+		observability.L().Error("admin: rbac audit log append failed", "error", err)
+	}
 	return nil, nil
 }
 
@@ -260,7 +272,7 @@ func (s *Service) GrantAdmin(ctx context.Context, req AdminRbacGrantAdminRequest
 		}
 		return nil, err
 	}
-	_ = s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
+	if err := s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
 		Action:     AuditActionAdminAward,
 		TargetType: AuditTargetTypeAdmin,
 		TargetID:   req.UserID,
@@ -271,7 +283,10 @@ func (s *Service) GrantAdmin(ctx context.Context, req AdminRbacGrantAdminRequest
 			"role_ids":              roleIDs,
 			"award_all_permissions": req.AwardAllPermissions,
 		},
-	}))
+	})); err != nil {
+		// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
+		observability.L().Error("admin: rbac audit log append failed", "error", err)
+	}
 	return nil, nil
 }
 
@@ -293,13 +308,18 @@ func (s *Service) RevokeAdmin(ctx context.Context, userID string) (*httpx.APIErr
 	if target.IsSuperAdmin() && !actor.IsSuperAdmin() {
 		return httpx.Forbidden(httpx.ReasonAdminProtectedTarget, "目标为平台管理员或超管，不能撤销"), nil
 	}
+	// 自我保护（与 SetUserBan 的防御一致）：超管撤销自己后若无其他超管，
+	// 后台永久失联，只能靠 DB 手工修数据。
+	if actor.UserID == userID {
+		return httpx.Forbidden(httpx.ReasonAdminProtectedTarget, "不能撤销自己的管理员权限"), nil
+	}
 	if err := s.repo.RevokeAdmin(ctx, userID); err != nil {
 		if apiErr := asAPIError(err); apiErr != nil {
 			return apiErr, nil
 		}
 		return nil, err
 	}
-	_ = s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
+	if err := s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
 		Action:     AuditActionAdminRevoke,
 		TargetType: AuditTargetTypeAdmin,
 		TargetID:   userID,
@@ -308,7 +328,10 @@ func (s *Service) RevokeAdmin(ctx context.Context, userID string) (*httpx.APIErr
 			"type":           string(AuditActionAdminRevoke),
 			"target_user_id": userID,
 		},
-	}))
+	})); err != nil {
+		// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
+		observability.L().Error("admin: rbac audit log append failed", "error", err)
+	}
 	return nil, nil
 }
 

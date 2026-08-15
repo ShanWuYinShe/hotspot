@@ -132,23 +132,34 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 		return AnnouncementCreated{}, nil, err
 	}
 	if s.pushService != nil {
-		usersPage, searchErr := s.repo.SearchUsers(ctx, AdminUserSearchRequest{Pagination: &PaginationParams{Limit: 1000}})
-		if searchErr != nil {
-			return AnnouncementCreated{}, nil, searchErr
-		}
-		userIDs := make([]string, 0, len(usersPage.Items))
-		for _, user := range usersPage.Items {
-			if user.User.UserID == "" {
-				continue
+		// 全量 fanout 按 user_id 升序 keyset 分批：此前复用 SearchUsers
+		// （limit 被 NormalizeLimit 钳到 100），公告只落库给前 100 个用户。
+		const fanoutBatch = 500
+		afterUserID := ""
+		var lastNotificationID string
+		for {
+			batch, listErr := s.repo.ListUserIDsAfter(ctx, afterUserID, fanoutBatch)
+			if listErr != nil {
+				return AnnouncementCreated{}, nil, listErr
 			}
-			userIDs = append(userIDs, user.User.UserID)
+			if len(batch) == 0 {
+				break
+			}
+			notificationID, err := s.pushService.AppendSystemAnnouncement(ctx, batch, item.PublicItem())
+			if err != nil {
+				return AnnouncementCreated{}, nil, err
+			}
+			lastNotificationID = notificationID
+			if len(batch) < fanoutBatch {
+				break
+			}
+			afterUserID = batch[len(batch)-1]
 		}
-		notificationID, err := s.pushService.AppendSystemAnnouncement(ctx, userIDs, item.PublicItem())
-		if err != nil {
-			return AnnouncementCreated{}, nil, err
-		}
-		if req.SendPush {
-			s.pushService.PushSystemAnnouncement(item.PublicItem(), notificationID)
+		// BroadcastToAll 是一次全体在线广播，必须移出批次循环（否则广播 N 次）。
+		// 跨批次落库 notify_id 不同（批内 row_number 后缀），客户端去重以
+		// payload 里的 announcement_id 为准，notify_id 仅作展示。
+		if req.SendPush && lastNotificationID != "" {
+			s.pushService.PushSystemAnnouncement(item.PublicItem(), lastNotificationID)
 		}
 	}
 	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementCreate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeAnnouncement, TargetID: item.AnnouncementID, TargetName: title, Details: AuditDetails{"type": string(AuditActionAnnouncementCreate), "title": title}}); err != nil {
@@ -509,6 +520,11 @@ func (s *Service) HandleReport(ctx context.Context, req JudgeAdminReportRequest)
 	}
 	_, ok, err := s.repo.HandleReport(ctx, req.ReportID, req.Action, note, &UserInfo{UserID: actor.UserID, Nickname: actor.UserID})
 	if err != nil {
+		if errors.Is(err, errReportAlreadyHandled) {
+			// 并发裁决败者：副作用（解散/封禁/删内容）可能已由获胜方执行，
+			// 直接返回已处理冲突，不再重复执行也不覆盖裁决结果。
+			return &httpx.APIError{Code: httpx.CodeConflict, Message: "举报已处理"}, nil
+		}
 		if apiErr := asAPIError(err); apiErr != nil {
 			return apiErr, nil
 		}

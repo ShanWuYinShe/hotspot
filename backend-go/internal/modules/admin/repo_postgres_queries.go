@@ -338,11 +338,14 @@ LEFT JOIN users target_user ON target_user.user_id = (
     END
 )
 WHERE r.report_id = $1`
+	// pending 守卫 + RETURNING：两管理员并发处理同一举报时只有一个能命中，
+	// 防止双重解散/封禁等副作用；0 行返回由 repo 映射为「已处理」冲突。
 	queryAdminHandleReport = `
 UPDATE reports
 SET status = $2,
     handled_at = $3,
     handled_by_user_id = $4,
     handle_note = $5
-WHERE report_id = $1`
+WHERE report_id = $1 AND status = 'pending'
+RETURNING report_id`
 )

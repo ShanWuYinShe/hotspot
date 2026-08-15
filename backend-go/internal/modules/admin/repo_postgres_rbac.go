@@ -122,6 +122,9 @@ func (r *PostgresRepository) UpdateRole(ctx context.Context, req AdminRbacRoleUp
 		description = *item.item.Description
 	}
 	if req.ClearDescription {
+		// 与内存实现对齐：此前 PG 版空分支静默不清除描述（clear_description=true
+		// 返回成功但数据未变）。
+		description = ""
 	} else if req.Description != nil {
 		description = strings.TrimSpace(*req.Description)
 	}
