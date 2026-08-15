@@ -18,6 +18,12 @@ type FanoutSink interface {
 // so the O(n) iteration is acceptable.
 const maxConnectionsPerBroadcast = 1000
 
+// maxConnectionsPerUser caps concurrent WS connections per user (all
+// sessions/devices). Beyond the cap the oldest connection is evicted — a
+// single authenticated user must not be able to hold unbounded connections
+// (memory + broadcast fan-out amplification).
+const maxConnectionsPerUser = 20
+
 type Hub struct {
 	mu             sync.RWMutex
 	byUser         map[string][]FanoutSink
@@ -50,32 +56,70 @@ func (h *Hub) SetResumeStore(store ResumeStore) {
 func (h *Hub) RegisterUser(userID, sessionID string, sink FanoutSink) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if len(h.byUser[userID]) >= maxConnectionsPerUser {
+		// 踢最旧连接：新连接几乎总是活跃方；被踢连接由其读循环的 Close 报错退出。
+		oldest := h.byUser[userID][0]
+		h.removeSinkLocked(h.bySession, sessionIDOf(h.bySession, oldest), oldest)
+		h.removeSinkLocked(h.byUser, userID, oldest)
+		_ = oldest.Close()
+	}
 	first := len(h.byUser[userID]) == 0
 	h.byUser[userID] = append(h.byUser[userID], sink)
 	h.bySession[sessionID] = append(h.bySession[sessionID], sink)
 	return first
 }
 
+// sessionIDOf 反查 sink 所属的 session key（仅踢旧路径使用，O(n) 可接受）。
+func sessionIDOf(m map[string][]FanoutSink, sink FanoutSink) string {
+	for key, sinks := range m {
+		for _, s := range sinks {
+			if s == sink {
+				return key
+			}
+		}
+	}
+	return ""
+}
+
 func (h *Hub) UnregisterUser(userID, sessionID string, sink FanoutSink) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	remove := func(m map[string][]FanoutSink, key string) bool {
-		sinks := m[key]
-		out := sinks[:0]
-		for _, s := range sinks {
-			if s != sink {
-				out = append(out, s)
-			}
-		}
-		if len(out) == 0 {
-			delete(m, key)
-			return true
-		}
-		m[key] = out
-		return false
+	h.removeSinkLocked(h.bySession, sessionID, sink)
+	// 订阅表必须同步清理：sink 只在 applyAuthorizedSubscriptions 注册，此前
+	// 断连不清 byUserWatchers/byGroup，sink 永久残留（内存单调泄漏 + 之后每次
+	// 群播向死连接白付一次写系统调用）。
+	h.removeSinkLocked(h.byUserWatchers, "", sink)
+	h.removeSinkLocked(h.byGroup, "", sink)
+	return h.removeSinkLocked(h.byUser, userID, sink)
+}
+
+// removeSinkLocked 从 m[key]（key 为 "" 时扫全表）移除 sink；返回该 key 下
+// 是否因此变空（保留「最后一个连接」语义）。调用方必须持有 h.mu。
+func (h *Hub) removeSinkLocked(m map[string][]FanoutSink, key string, sink FanoutSink) bool {
+	if key != "" {
+		return removeSinkFromSlice(m, key, sink)
 	}
-	remove(h.bySession, sessionID)
-	return remove(h.byUser, userID)
+	for k := range m {
+		removeSinkFromSlice(m, k, sink)
+	}
+	return false
+}
+
+// removeSinkFromSlice 原地过滤 m[key] 中的 sink，清空时删除 key。
+func removeSinkFromSlice(m map[string][]FanoutSink, key string, sink FanoutSink) bool {
+	sinks := m[key]
+	out := sinks[:0]
+	for _, s := range sinks {
+		if s != sink {
+			out = append(out, s)
+		}
+	}
+	if len(out) == 0 {
+		delete(m, key)
+		return true
+	}
+	m[key] = out
+	return false
 }
 
 func (h *Hub) CloseSession(sessionID string, event Event) {
@@ -159,6 +203,14 @@ func (h *Hub) BroadcastToUser(userID string, event Event) {
 	h.publish("user:"+userID, event)
 }
 
+// BroadcastToUserNoRecord 投递给该用户的全部本地/跨实例连接但不写 resume 流，
+// 用于 typing 等瞬态事件（断线期间无重放价值，写入只会稀释 seq 空间并膨胀
+// Stream，重连回放陈旧 typing 也是错误 UX——见 BroadcastToUserSubscribers 注释）。
+func (h *Hub) BroadcastToUserNoRecord(userID string, event Event) {
+	h.deliverUserLocal(userID, event)
+	h.publish("user:"+userID, event)
+}
+
 func (h *Hub) deliverUserLocal(userID string, event Event) {
 	h.mu.RLock()
 	sinks := append([]FanoutSink(nil), h.byUser[userID]...)
@@ -196,6 +248,13 @@ func (h *Hub) BroadcastToGroup(groupID string, event Event) {
 			event.ServerSeq = seq
 		}
 	}
+	h.deliverGroupLocal(groupID, event)
+	h.publish("group:"+groupID, event)
+}
+
+// BroadcastToGroupNoRecord 投递给群订阅者但不写 resume 流（typing 等瞬态事件，
+// 语义同 BroadcastToUserNoRecord）。
+func (h *Hub) BroadcastToGroupNoRecord(groupID string, event Event) {
 	h.deliverGroupLocal(groupID, event)
 	h.publish("group:"+groupID, event)
 }

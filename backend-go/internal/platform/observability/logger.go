@@ -3,6 +3,7 @@ package observability
 import (
 	"fmt"
 	"strings"
+	"sync/atomic"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -60,20 +61,24 @@ func (l *Logger) Sync() error {
 	return l.base.Sync()
 }
 
-var defaultLogger *Logger
+// defaultLogger 用 atomic.Pointer 而非裸全局变量：L() 在各请求 goroutine 并发
+// 读、SetDefault/懒初始化写入，裸变量是数据竞争（同仓库其它单例同样处理）。
+var defaultLogger atomic.Pointer[Logger]
 
 func SetDefault(l *Logger) {
-	defaultLogger = l
+	if l != nil {
+		defaultLogger.Store(l)
+	}
 }
 
 func L() *Logger {
-	if defaultLogger != nil {
-		return defaultLogger
+	if l := defaultLogger.Load(); l != nil {
+		return l
 	}
 	l, err := NewLogger("production", "info")
 	if err != nil {
 		panic("observability: cannot create default logger: " + err.Error())
 	}
-	defaultLogger = l
-	return l
+	defaultLogger.CompareAndSwap(nil, l)
+	return defaultLogger.Load()
 }

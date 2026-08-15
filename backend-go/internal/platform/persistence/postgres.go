@@ -22,9 +22,9 @@ func (db *PostgresDB) ensurePool(ctx context.Context) (*pgxpool.Pool, error) {
 	if db.Backend != nil {
 		return nil, nil
 	}
-	if db.Pool != nil {
-		return db.Pool, nil
-	}
+	// 全程持锁检查：此前的无锁快速路径构成不合法的双重检查锁定（无锁读与
+	// 持锁写并发是数据竞争）。NewFactory 构造时即预热 Pool，这里只兜底直构
+	// PostgresDB 的路径，锁开销可忽略。
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	if db.Pool != nil {
@@ -36,6 +36,12 @@ func (db *PostgresDB) ensurePool(ctx context.Context) (*pgxpool.Pool, error) {
 	}
 	db.Pool = pool
 	return db.Pool, nil
+}
+
+// EnsurePool 是 ensurePool 的公共入口，供需要直接持有 pool 的调用方使用
+// （如迁移 advisory lock 的专用连接获取）。
+func (db *PostgresDB) EnsurePool(ctx context.Context) (*pgxpool.Pool, error) {
+	return db.ensurePool(ctx)
 }
 
 func (db *PostgresDB) Ping(ctx context.Context) error {

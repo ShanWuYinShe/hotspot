@@ -64,7 +64,17 @@ func ReplayOrStore[T any](w http.ResponseWriter, r *http.Request, scope string, 
 		return true
 	}
 
+	// producer panic 时（由外层 Recoverer 接住）删除 processing 标记再重抛：
+	// 否则该 Idempotency-Key 停留在 processing，24h 内重试全部得到
+	// CodeIdempotencyInFlight（key 被毒化）。
+	panicked := true
+	defer func() {
+		if panicked {
+			store.Delete(scope, scopedKey)
+		}
+	}()
 	payload := producer()
+	panicked = false
 	blob, _ := json.Marshal(payload)
 	store.Save(Record{Key: scopedKey, Scope: scope, Status: StatusCompleted, Response: append(blob, '\n'), ExpiresAt: expiresAt})
 	httpx.WriteJSON(w, http.StatusOK, payload)

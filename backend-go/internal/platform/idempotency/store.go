@@ -37,6 +37,9 @@ type Store interface {
 	// (and without unsafe type assertions on the concrete store type).
 	Reserve(scope, key string, expiresAt time.Time) (Record, bool)
 	Save(record Record)
+	// Delete removes a record outright — used to roll back the processing
+	// marker when the producer panics, so the key isn't poisoned for its TTL.
+	Delete(scope, key string)
 }
 
 type InMemoryStore struct {
@@ -81,6 +84,14 @@ func (s *InMemoryStore) Save(record Record) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.records[composite(record.Scope, record.Key)] = record
+}
+
+// Delete removes the record immediately (no lazy expiry), so a retried
+// Reserve can claim the key again.
+func (s *InMemoryStore) Delete(scope, key string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.records, composite(scope, key))
 }
 
 // Sweep physically removes records whose ExpiresAt is in the past. Intended

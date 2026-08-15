@@ -13,6 +13,7 @@ import (
 
 	"hotspot/backend-go/internal/platform/actor"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/ratelimit"
 	"hotspot/backend-go/internal/platform/worker"
@@ -213,7 +214,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	principalCtx := platformauth.WithPrincipal(ctx, principal)
 	_ = conn.SetReadDeadline(time.Now().Add(90 * time.Second))
 
-	connectionID := fmt.Sprintf("conn_%d", time.Now().UTC().UnixNano())
+	// idgen 随机后缀：UnixNano 在同纳秒并发/多实例下可重复，而 connectionID
+	// 进入日志与 WS 订阅限流 key，重复会互相干扰。
+	connectionID := "conn_" + idgen.MustWithPrefix("")
 	resumeToken := generateResumeToken()
 	observability.L().Info("ws: connected", "user_id", principal.UserID, "session_id", principal.SessionID, "connection_id", connectionID)
 
@@ -225,6 +228,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOnline, Payload: UserOnlinePayload{UserID: principal.UserID, OnlineAt: time.Now().UTC().Format(time.RFC3339)}})
 	}
 	defer func() {
+		// resume 基线必须在 UnregisterUser **之前**捕获：注销后并发 Broadcast 对
+		// 该用户 Record 的事件已无 sink 可投递，若注销后才取全局 LastSeq 写入快照，
+		// 这些「已记录未送达」的事件会被高基线永久跳过（既没实时送达也不被补回）。
+		// 先定格基线的代价是可能重放已送达事件——客户端按 ServerSeq 去重，可接受。
+		var baselineSeq int64
+		if h.resumeStore != nil {
+			baselineSeq = h.resumeStore.LastSeq()
+		}
 		if DefaultHub().UnregisterUser(principal.UserID, principal.SessionID, sink) {
 			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOffline, Payload: UserOfflinePayload{UserID: principal.UserID, OfflineAt: time.Now().UTC().Format(time.RFC3339)}})
 		}
@@ -232,7 +243,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// resume：连接断开时保存 state（LastSeq + 订阅快照），作为重连续传起点与
 		// 服务端订阅恢复依据（spec L156）。多端登录共享全局 seq 流，LastSeq 取全局。
 		if h.resumeStore != nil {
-			h.resumeStore.SaveState(resumeToken, ResumeState{UserID: principal.UserID, LastSeq: h.resumeStore.LastSeq(), Subs: subs.snapshot()})
+			h.resumeStore.SaveState(resumeToken, ResumeState{UserID: principal.UserID, LastSeq: baselineSeq, Subs: subs.snapshot()})
 		}
 	}()
 
@@ -354,7 +365,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			h.typingThrottle.Store(typingKey, time.Now())
 			actorInfo := h.resolveTypingActor(principalCtx, principal.UserID)
-			DefaultHub().BroadcastToUser(payload.TargetUserID, Event{Type: EventTypePrivateTyping, Payload: PrivateTypingPayload{TargetUserID: payload.TargetUserID, Actor: actorInfo, IsTyping: payload.IsTyping}})
+			// typing 是瞬态事件：不写 resume 流（写流会稀释 seq 空间、膨胀
+			// Stream，且重连回放陈旧 typing 指示是错误 UX）。
+			DefaultHub().BroadcastToUserNoRecord(payload.TargetUserID, Event{Type: EventTypePrivateTyping, Payload: PrivateTypingPayload{TargetUserID: payload.TargetUserID, Actor: actorInfo, IsTyping: payload.IsTyping}})
 			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypePrivateTyping, Payload: PrivateTypingPayload{TargetUserID: payload.TargetUserID, Actor: actorInfo, IsTyping: payload.IsTyping}})
 		case "SendGroupTyping":
 			var payload GroupTypingSendPayload
@@ -373,7 +386,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			h.typingThrottle.Store(typingKey, time.Now())
-			DefaultHub().BroadcastToGroup(payload.GroupID, Event{Type: EventTypeGroupTyping, Payload: GroupTypingPayload{GroupID: payload.GroupID, Actor: h.resolveTypingActor(principalCtx, principal.UserID), IsTyping: payload.IsTyping}})
+			DefaultHub().BroadcastToGroupNoRecord(payload.GroupID, Event{Type: EventTypeGroupTyping, Payload: GroupTypingPayload{GroupID: payload.GroupID, Actor: h.resolveTypingActor(principalCtx, principal.UserID), IsTyping: payload.IsTyping}})
 		case "Auth":
 			_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "重复鉴权", Severity: "warning", Retryable: false}})
 		default:
@@ -514,6 +527,10 @@ func readCookie(r *http.Request, name string) string {
 // 保证不可猜测，避免攻击者伪造他人 token 续传他人事件流。
 func generateResumeToken() string {
 	b := make([]byte, 16)
-	_, _ = rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		// 失败时返回空 token：空值不进 LoadState 匹配（恒 miss → 客户端全量
+		// 重放），比可预测的全零 token（可被猜测伪造）安全。
+		return ""
+	}
 	return hex.EncodeToString(b)
 }
