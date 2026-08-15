@@ -37,10 +37,12 @@ func (s *Service) SearchTags(ctx context.Context, req AdminTagSearchRequest) (Pa
 	}
 	resp := PaginatedAdminTags{Items: make([]AdminTagItem, 0, len(page.Items))}
 	for _, item := range page.Items {
-		resp.Items = append(resp.Items, AdminTagItem{TagID: "tag_" + item.Name, Name: item.Name, UsageCount: item.UsageCount, Trend: defaultTagTrend, CreatedAt: item.CreatedAt.UTC().Format(time.RFC3339)})
+		trend := defaultTagTrend
+		resp.Items = append(resp.Items, AdminTagItem{TagID: "tag_" + item.Name, Name: item.Name, UsageCount: item.UsageCount, Trend: &trend, CreatedAt: item.CreatedAt.UTC().Format(time.RFC3339)})
 	}
 	if page.Next != nil {
-		resp.NextCursor = encodeTagCursor(*page.Next)
+		c := encodeTagCursor(*page.Next)
+		resp.NextCursor = &c
 	}
 	return resp, nil, nil
 }
@@ -105,7 +107,8 @@ func (s *Service) ListAdminAnnouncements(ctx context.Context, req ListAdminAnnou
 		resp.Items = append(resp.Items, toAdminAnnouncementItem(item))
 	}
 	if page.Next != nil {
-		resp.NextCursor = encodeAnnouncementCursor(announcementCursor{CreatedAt: page.Next.CreatedAt, AnnouncementID: page.Next.AnnouncementID})
+		c := encodeAnnouncementCursor(announcementCursor{CreatedAt: page.Next.CreatedAt, AnnouncementID: page.Next.AnnouncementID})
+		resp.NextCursor = &c
 	}
 	return resp, nil, nil
 }
@@ -265,7 +268,8 @@ func (s *Service) SearchUsers(ctx context.Context, req AdminUserSearchRequest) (
 	}
 	resp := PaginatedAdminUsers{Items: page.Items}
 	if page.Next != nil {
-		resp.NextCursor = encodeAdminUserCursor(*page.Next)
+		c := encodeAdminUserCursor(*page.Next)
+		resp.NextCursor = &c
 	}
 	return resp, nil, nil
 }
@@ -357,7 +361,8 @@ func (s *Service) SearchGroups(ctx context.Context, req AdminGroupSearchRequest)
 	}
 	resp := PaginatedAdminGroups{Items: page.Items}
 	if page.Next != nil {
-		resp.NextCursor = encodeAdminGroupCursor(*page.Next)
+		c := encodeAdminGroupCursor(*page.Next)
+		resp.NextCursor = &c
 	}
 	return resp, nil, nil
 }
@@ -430,7 +435,8 @@ func (s *Service) SearchReports(ctx context.Context, req AdminReportListRequest)
 	}
 	resp := PaginatedAdminReports{Items: page.Items}
 	if page.Next != nil {
-		resp.NextCursor = encodeAdminReportCursor(*page.Next)
+		c := encodeAdminReportCursor(*page.Next)
+		resp.NextCursor = &c
 	}
 	return resp, nil, nil
 }

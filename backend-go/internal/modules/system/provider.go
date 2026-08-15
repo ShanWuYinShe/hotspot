@@ -29,7 +29,7 @@ func (p *AppConfigProvider) GetClientConfig(ctx context.Context) ClientConfig {
 	return ClientConfig{
 		Features: FeatureSwitches{
 			EnablePublicRegistration: cfg.Features.EnablePublicRegistration,
-			EnableGuestRegister:         cfg.Features.EnableGuestRegister,
+			EnableGuestRegister:      cfg.Features.EnableGuestRegister,
 			EnableMoments:            cfg.Features.EnableMoments,
 			EnableNearbyPeople:       cfg.Features.EnableNearbyPeople,
 		},

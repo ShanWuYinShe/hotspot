@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -45,13 +46,16 @@ func (r *PostgresRepository) ListApplications(ctx context.Context, groupID strin
 	items := make([]GroupApplicationItem, 0)
 	for rows.Next() {
 		var item GroupApplicationItem
-		var message, statusText, applicantUserID string
+		var groupID, groupName, groupAvatar, message, statusText, applicantUserID string
+		var membersCount int
 		var createdAt time.Time
 		var handledAt *time.Time
 		var handledByUserID *string
-		if err := rows.Scan(&item.ApplicationID, &applicantUserID, &message, &statusText, &createdAt, &handledAt, &handledByUserID); err != nil {
+		if err := rows.Scan(&item.ApplicationID, &groupID, &groupName, &groupAvatar, &membersCount, &applicantUserID, &message, &statusText, &createdAt, &handledAt, &handledByUserID); err != nil {
 			return nil, "", err
 		}
+		item.GroupID = groupID
+		item.Group = GroupInfo{GroupID: groupID, Name: groupName, AvatarURL: types.StrPtr(groupAvatar), MembersCount: membersCount}
 		item.Applicant = UserInfo{UserID: applicantUserID, Nickname: applicantUserID}
 		if message != "" {
 			item.Message = &message
@@ -86,6 +90,9 @@ func (r *PostgresRepository) ApproveApplication(ctx context.Context, approverID 
 		queryable, ok := persistence.QueryableForTx(txCtx, r.factory)
 		if !ok {
 			return persistence.ErrNotImplemented
+		}
+		if err := enforceGroupCapacity(txCtx, queryable, record.GroupID); err != nil {
+			return err
 		}
 		if err := queryable.Exec(txCtx, queryUpdateGroupApplication, applicationID, string(ApplicationStatusAccepted), now, approverID); err != nil {
 			return err
@@ -125,13 +132,16 @@ func (r *PostgresRepository) ListMyApplications(ctx context.Context, userID stri
 	items := make([]GroupApplicationItem, 0)
 	for rows.Next() {
 		var item GroupApplicationItem
-		var message, statusText, groupID string
+		var groupID, groupName, groupAvatar, message, statusText string
+		var membersCount int
 		var createdAt time.Time
 		var handledAt *time.Time
 		var handledByUserID *string
-		if err := rows.Scan(&item.ApplicationID, &groupID, &message, &statusText, &createdAt, &handledAt, &handledByUserID); err != nil {
+		if err := rows.Scan(&item.ApplicationID, &groupID, &groupName, &groupAvatar, &membersCount, &message, &statusText, &createdAt, &handledAt, &handledByUserID); err != nil {
 			return nil, "", err
 		}
+		item.GroupID = groupID
+		item.Group = GroupInfo{GroupID: groupID, Name: groupName, AvatarURL: types.StrPtr(groupAvatar), MembersCount: membersCount}
 		item.Applicant = UserInfo{UserID: userID, Nickname: userID}
 		if message != "" {
 			item.Message = &message
@@ -167,14 +177,16 @@ func (r *PostgresRepository) loadApplication(ctx context.Context, applicationID 
 		return GroupApplicationItem{}, persistence.ErrNotImplemented
 	}
 	var item GroupApplicationItem
-	var groupID, applicantUserID, message, statusText string
+	var groupID, groupName, groupAvatar, applicantUserID, message, statusText string
+	var membersCount int
 	var createdAt time.Time
 	var handledAt *time.Time
 	var handledByUserID *string
-	if err := queryable.QueryRow(ctx, queryGetGroupApplication, applicationID).Scan(&item.ApplicationID, &groupID, &applicantUserID, &message, &statusText, &createdAt, &handledAt, &handledByUserID); err != nil {
+	if err := queryable.QueryRow(ctx, queryGetGroupApplication, applicationID).Scan(&item.ApplicationID, &groupID, &groupName, &groupAvatar, &membersCount, &applicantUserID, &message, &statusText, &createdAt, &handledAt, &handledByUserID); err != nil {
 		return GroupApplicationItem{}, err
 	}
 	item.GroupID = groupID
+	item.Group = GroupInfo{GroupID: groupID, Name: groupName, AvatarURL: types.StrPtr(groupAvatar), MembersCount: membersCount}
 	item.Applicant = UserInfo{UserID: applicantUserID, Nickname: applicantUserID}
 	if message != "" {
 		item.Message = &message

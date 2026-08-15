@@ -183,7 +183,7 @@ func TestLoginCollapsesUnknownUserAndWrongPassword(t *testing.T) {
 	}
 }
 
-func TestGetStatusReturnsFalseWithoutPrincipal(t *testing.T) {
+func TestGetStatusWithoutPrincipalReturnsUnauthorized(t *testing.T) {
 	handler := newTestHandler()
 	req := httptest.NewRequest(http.MethodPost, "/get_status", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
@@ -192,21 +192,16 @@ func TestGetStatusReturnsFalseWithoutPrincipal(t *testing.T) {
 
 	var resp struct {
 		Code httpx.Code `json:"code"`
-		Data SessionStatus `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 0 || resp.Data.IsValid {
-		t.Fatalf("unexpected response: %#v", resp)
-	}
-	// 恒定 nullable：未认证时 user_id/expires_at 为 null（nil 指针不带 omitempty）
-	if resp.Data.UserID != nil || resp.Data.ExpiresAt != nil {
-		t.Fatalf("expected null user_id/expires_at when not authenticated, got %#v", resp.Data)
+	if resp.Code != httpx.CodeUnauthorized {
+		t.Fatalf("expected 10100, got %#v", resp)
 	}
 }
 
-func TestGetStatusReturnsTrueWithPrincipal(t *testing.T) {
+func TestGetStatusReturnsSessionWithPrincipal(t *testing.T) {
 	handler := newTestHandler()
 	req := httptest.NewRequest(http.MethodPost, "/get_status", strings.NewReader(`{}`))
 	ctx := platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice"})
@@ -217,19 +212,19 @@ func TestGetStatusReturnsTrueWithPrincipal(t *testing.T) {
 	handler.GetStatus(rr, req)
 
 	var resp struct {
-		Code httpx.Code `json:"code"`
+		Code httpx.Code    `json:"code"`
 		Data SessionStatus `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 0 || !resp.Data.IsValid {
+	if resp.Code != 0 {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
-	if resp.Data.UserID == nil || *resp.Data.UserID != "user_alice" {
+	if resp.Data.UserID != "user_alice" {
 		t.Fatalf("expected user_id user_alice, got %v", resp.Data.UserID)
 	}
-	if resp.Data.ExpiresAt == nil || *resp.Data.ExpiresAt == "" {
+	if resp.Data.ExpiresAt == "" {
 		t.Fatalf("expected expires_at, got %v", resp.Data.ExpiresAt)
 	}
 }
@@ -362,7 +357,7 @@ func TestListSessionsIncludesSessionMetadata(t *testing.T) {
 		t.Fatalf("unexpected list response: %#v", listResp)
 	}
 	item := listResp.Data.Items[0]
-	if item.DeviceType != "app" || item.DeviceName != "HotSpot iOS/1.2.3" || item.IPAddress != "203.0.xxx.xxx" || item.IPLocation != "US" {
+	if *item.DeviceType != "app" || *item.DeviceName != "HotSpot iOS/1.2.3" || *item.IPAddress != "203.0.xxx.xxx" || *item.IPLocation != "US" {
 		t.Fatalf("unexpected session item: %#v", item)
 	}
 }
@@ -875,7 +870,7 @@ func TestHandlerRevokeAllSessionsReturnsSuccess(t *testing.T) {
 	handler.RevokeAllSessions(rr, req)
 
 	var resp struct {
-		Code httpx.Code      `json:"code"`
+		Code httpx.Code                `json:"code"`
 		Data RevokeOtherSessionsResult `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -899,7 +894,7 @@ func TestHandlerRevokeAllSessionsReturns10600OnError(t *testing.T) {
 	handler.RevokeAllSessions(rr, req)
 
 	var resp struct {
-		Code httpx.Code      `json:"code"`
+		Code httpx.Code                `json:"code"`
 		Data RevokeOtherSessionsResult `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {

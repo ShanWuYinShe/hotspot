@@ -99,20 +99,27 @@ func hydrateMomentImages(ctx context.Context, resolver ImageResolver, rowsByMome
 				observability.L().Error("feed.hydrate_images presign failed", "error", err, "storage_key", r.StorageKey)
 				continue
 			}
-			img := MomentImage{
-				URL:      url,
-				Width:    r.Width,
-				Height:   r.Height,
-				MimeType: r.MimeType,
+			img := MomentImage{URL: url}
+			if r.Width != 0 {
+				width := r.Width
+				img.Width = &width
+			}
+			if r.Height != 0 {
+				height := r.Height
+				img.Height = &height
+			}
+			if r.MimeType != "" {
+				mimeType := r.MimeType
+				img.MimeType = &mimeType
 			}
 			if r.ThumbnailURL != "" {
 				if thumb, err := resolver.PresignGet(ctx, r.ThumbnailURL, momentReadTTL); err == nil {
-					img.ThumbnailURL = thumb
+					img.ThumbnailURL = &thumb
 				} else {
-					img.ThumbnailURL = url
+					img.ThumbnailURL = &url
 				}
 			} else {
-				img.ThumbnailURL = url
+				img.ThumbnailURL = &url
 			}
 			images = append(images, img)
 		}

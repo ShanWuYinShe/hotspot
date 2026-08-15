@@ -356,8 +356,8 @@ func TestFollowBlockRemarkAndOpenTheDoor(t *testing.T) {
 	if len(openResp.Data.User.SocialContext.MutualFriendsPreview) != 1 || openResp.Data.User.SocialContext.MutualFriendsPreview[0].UserID != "user_charlie" {
 		t.Fatalf("unexpected mutual friends preview: %#v", openResp.Data.User.SocialContext)
 	}
-	if openResp.Data.RecentMoments.Items != nil {
-		t.Fatalf("recent_moments should be omitted when include_recent_moments=false: %#v", openResp.Data.RecentMoments)
+	if openResp.Data.RecentMoments != nil {
+		t.Fatalf("recent_moments should be null when include_recent_moments=false: %#v", openResp.Data.RecentMoments)
 	}
 	if openResp.Data.User.SocialContext.CommonGroupsCount == nil || *openResp.Data.User.SocialContext.CommonGroupsCount != 1 {
 		t.Fatalf("unexpected common groups count: %#v", openResp.Data.User.SocialContext)
@@ -615,17 +615,17 @@ func TestInMemoryListFollowingCursorAdvancesPage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list following first page: %v", err)
 	}
-	if len(first.Items) != 1 || first.NextCursor == "" {
+	if len(first.Items) != 1 || first.NextCursor == nil {
 		t.Fatalf("unexpected first page: %#v", first)
 	}
-	second, err := repo.ListFollowing(ctx, "user_a", 1, first.NextCursor)
+	second, err := repo.ListFollowing(ctx, "user_a", 1, *first.NextCursor)
 	if err != nil {
 		t.Fatalf("list following second page: %v", err)
 	}
 	if len(second.Items) != 1 {
 		t.Fatalf("unexpected second page: %#v", second)
 	}
-	if first.Items[0].User.UserID == second.Items[0].User.UserID {
+	if first.Items[0].User.User.UserID == second.Items[0].User.User.UserID {
 		t.Fatalf("cursor did not advance page: first=%#v second=%#v", first, second)
 	}
 }
@@ -672,10 +672,10 @@ func TestInMemoryReactedMomentsCursorUsesReactedAt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list reacted first page: %v", err)
 	}
-	if len(first.Items) != 1 || first.Items[0].MomentID != "moment_newer" || first.NextCursor == "" {
+	if len(first.Items) != 1 || first.Items[0].MomentID != "moment_newer" || first.NextCursor == nil {
 		t.Fatalf("unexpected first page: %#v", first)
 	}
-	second, err := repo.ListReactedMoments(context.Background(), "user_alice", 1, first.NextCursor, "viewer")
+	second, err := repo.ListReactedMoments(context.Background(), "user_alice", 1, *first.NextCursor, "viewer")
 	if err != nil {
 		t.Fatalf("list reacted second page: %v", err)
 	}
@@ -904,7 +904,7 @@ func TestListFriendsHappyPath(t *testing.T) {
 	if resp.Code != 0 {
 		t.Fatalf("expected code 0, got %d", resp.Code)
 	}
-	if len(resp.Data.Items) != 1 || resp.Data.Items[0].User.UserID != "user_bob" {
+	if len(resp.Data.Items) != 1 || resp.Data.Items[0].User.User.UserID != "user_bob" {
 		t.Fatalf("unexpected friends: %#v", resp.Data)
 	}
 }
@@ -999,7 +999,7 @@ func TestListFollowingHappyPath(t *testing.T) {
 	if resp.Code != 0 {
 		t.Fatalf("expected code 0, got %d", resp.Code)
 	}
-	if len(resp.Data.Items) != 1 || resp.Data.Items[0].User.UserID != "user_bob" {
+	if len(resp.Data.Items) != 1 || resp.Data.Items[0].User.User.UserID != "user_bob" {
 		t.Fatalf("unexpected following: %#v", resp.Data)
 	}
 }
@@ -1094,7 +1094,7 @@ func TestListFollowersHappyPath(t *testing.T) {
 	if resp.Code != 0 {
 		t.Fatalf("expected code 0, got %d", resp.Code)
 	}
-	if len(resp.Data.Items) != 1 || resp.Data.Items[0].User.UserID != "user_bob" {
+	if len(resp.Data.Items) != 1 || resp.Data.Items[0].User.User.UserID != "user_bob" {
 		t.Fatalf("unexpected followers: %#v", resp.Data)
 	}
 }

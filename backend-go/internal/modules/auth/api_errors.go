@@ -7,6 +7,7 @@ import (
 )
 
 var (
+	ErrUnauthenticated                = errors.New("auth: unauthenticated")
 	ErrLoginIDConflict                = errors.New("auth: login id conflict")
 	ErrInvalidCredentials             = errors.New("auth: invalid credentials")
 	ErrInvalidOldPassword             = errors.New("auth: invalid old password")
@@ -25,6 +26,8 @@ func apiErrorFrom(err error) *httpx.APIError {
 		return apiErr
 	}
 	switch {
+	case errors.Is(err, ErrUnauthenticated):
+		return &httpx.APIError{Code: httpx.CodeUnauthorized, Message: "Access Token 无效或过期"}
 	case errors.Is(err, ErrLoginIDConflict):
 		return &httpx.APIError{Code: httpx.CodeConflict, Message: "账号已存在"}
 	case errors.Is(err, ErrInvalidCredentials):

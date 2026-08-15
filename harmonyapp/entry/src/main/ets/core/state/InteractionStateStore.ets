@@ -1,5 +1,5 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { MomentItem, UserItem, GroupItem, MomentMyState, Relationship, Reaction } from '../types/api';
+import { MomentItem, UserItem, GroupItem, Relationship, Reaction } from '../types/api';
 
 const DOMAIN_NUMBER: number = 0xFF32;
 const TAG: string = 'InteractionStateStore';
@@ -13,13 +13,24 @@ export interface MomentSocialState {
   likes_count: number;
   comments_count: number;
   shares_count: number;
-  my_state?: MomentMyState;
+  is_favorited: boolean;
   // 表情反应聚合（契约：点赞态由 reactions[].reacted_by_me 表达，不再依赖 is_liked 本地字段）
   reactions?: Reaction[];
 }
 
 export interface MomentMyStatePartial {
   is_favorited?: boolean;
+}
+
+export function sumReactionCounts(reactions?: Reaction[]): number {
+  if (!reactions) {
+    return 0;
+  }
+  let total = 0;
+  for (const reaction of reactions) {
+    total += reaction.count;
+  }
+  return total;
 }
 
 // 从 reactions 聚合推导“当前用户是否已点赞”（响应数据驱动）
@@ -131,10 +142,10 @@ export class InteractionStateStore {
   patchMomentFromItem(moment: MomentItem): void {
     const state: MomentSocialState = {
       moment_id: moment.moment_id,
-      likes_count: moment.likes_count,
+      likes_count: sumReactionCounts(moment.reactions),
       comments_count: moment.comments_count,
       shares_count: moment.shares_count ?? 0,
-      my_state: moment.my_state,
+      is_favorited: moment.is_favorited,
       reactions: moment.reactions
     };
     this.setMomentState(moment.moment_id, state);
@@ -146,7 +157,7 @@ export class InteractionStateStore {
     }
     const state: UserRelationState = {
       user_id: user.user.user_id,
-      relation: user.relation
+      relation: user.relation ?? undefined
     };
     this.setUserState(user.user.user_id, state);
   }
@@ -155,10 +166,15 @@ export class InteractionStateStore {
     if (!group.group?.group_id) {
       return;
     }
+    const viewer = group.viewer_state;
     const state: GroupMembershipState = {
       group_id: group.group.group_id,
-      my_state: group.my_state
-        ? { is_member: group.my_state.is_joined, is_admin: false, unread_count: group.my_state.unread_count }
+      my_state: viewer
+        ? {
+            is_member: true,
+            is_admin: viewer.role === 'admin' || viewer.role === 'owner',
+            unread_count: viewer.unread_count
+          }
         : undefined
     };
     this.setGroupState(group.group.group_id, state);
@@ -187,7 +203,7 @@ export class InteractionStateStore {
       likes_count: nextLikes,
       comments_count: current.comments_count,
       shares_count: current.shares_count,
-      my_state: current.my_state,
+      is_favorited: current.is_favorited,
       reactions: current.reactions
     };
     this.setMomentState(momentId, nextState);
@@ -203,10 +219,10 @@ export class InteractionStateStore {
     }
     const nextState: MomentSocialState = {
       moment_id: current.moment_id,
-      likes_count: current.likes_count,
+      likes_count: sumReactionCounts(reactions),
       comments_count: current.comments_count,
       shares_count: current.shares_count,
-      my_state: current.my_state,
+      is_favorited: current.is_favorited,
       reactions: reactions
     };
     this.setMomentState(momentId, nextState);
@@ -217,15 +233,12 @@ export class InteractionStateStore {
     if (!current) {
       return;
     }
-    const merged: MomentMyState = {
-      is_favorited: myState?.is_favorited ?? current.my_state?.is_favorited ?? false
-    };
     const nextState: MomentSocialState = {
       moment_id: current.moment_id,
       likes_count: current.likes_count,
       comments_count: current.comments_count,
       shares_count: current.shares_count,
-      my_state: merged,
+      is_favorited: myState?.is_favorited ?? current.is_favorited,
       reactions: current.reactions
     };
     this.setMomentState(momentId, nextState);
@@ -241,9 +254,7 @@ export class InteractionStateStore {
       likes_count: state.likes_count,
       comments_count: state.comments_count,
       shares_count: state.shares_count,
-      my_state: state.my_state
-        ? { is_favorited: state.my_state.is_favorited }
-        : undefined,
+      is_favorited: state.is_favorited,
       reactions: state.reactions ? [...state.reactions] : undefined
     };
     return cloned;

@@ -182,13 +182,13 @@ func TestServiceHydrateImagesFillsItems(t *testing.T) {
 		t.Fatalf("expected 1 image for m1, got %+v", items.Items[0].Images)
 	}
 	img := items.Items[0].Images[0]
-	if img.URL != "https://cdn.example/sk/1" || img.ThumbnailURL != "https://cdn.example/thumb/1" || img.Width != 100 || img.Height != 200 || img.MimeType != "image/jpeg" {
+	if img.URL != "https://cdn.example/sk/1" || *img.ThumbnailURL != "https://cdn.example/thumb/1" || *img.Width != 100 || *img.Height != 200 || *img.MimeType != "image/jpeg" {
 		t.Fatalf("unexpected hydrated image: %+v", img)
 	}
 	if len(items.Items[1].Images) != 1 {
 		t.Fatalf("expected 1 image for m2 (thumbnail falls back to URL), got %+v", items.Items[1].Images)
 	}
-	if items.Items[1].Images[0].ThumbnailURL != "https://cdn.example/sk/2" {
+	if *items.Items[1].Images[0].ThumbnailURL != "https://cdn.example/sk/2" {
 		t.Fatalf("thumbnail must fall back to full URL, got %+v", items.Items[1].Images[0])
 	}
 }

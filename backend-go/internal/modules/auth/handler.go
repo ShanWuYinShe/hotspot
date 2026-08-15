@@ -22,13 +22,18 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-// GetStatus 检查认证状态（spec auth.md → get_status，optional 档）。
+// GetStatus 查询当前会话状态（spec auth.md → auth/session，必须认证节点）。
 func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.GetStatus(r.Context())))
+	status, err := h.service.GetStatus(r.Context())
+	if err != nil {
+		httpx.WriteAPIError(w, r, "GetStatus", apiErrorFrom(err))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(status))
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {

@@ -53,6 +53,53 @@ type MyProfile struct {
 	IsDeleted bool `json:"-"`
 }
 
+// AccountData 是 users/account 与 users/upgrade 的响应形状（spec api_spec_user.md →
+// AccountData）。与内部存储模型 MyProfile 分离，保证对外恒定 nullable。
+type AccountData struct {
+	UserID         string             `json:"user_id"`
+	Nickname       string             `json:"nickname"`
+	AvatarURL      *string            `json:"avatar_url"`
+	UserType       UserType           `json:"user_type"`
+	Bio            *string            `json:"bio"`
+	Tags           []string           `json:"tags"`
+	Gender         *Gender            `json:"gender"`
+	Email          *string            `json:"email"`
+	Phone          *string            `json:"phone"`
+	Location       Location           `json:"location"`
+	PresenceStatus UserPresenceStatus `json:"presence_status"`
+	LastOnline     string             `json:"last_online_at"`
+	CreatedAt      string             `json:"created_at"`
+	Stats          UserStats          `json:"stats"`
+}
+
+func toAccountData(profile MyProfile) AccountData {
+	tags := profile.Tags
+	if tags == nil {
+		tags = []string{}
+	}
+	var gender *Gender
+	if profile.Gender != "" {
+		g := profile.Gender
+		gender = &g
+	}
+	return AccountData{
+		UserID:         profile.UserID,
+		Nickname:       profile.Nickname,
+		AvatarURL:      types.StrPtr(profile.AvatarURL),
+		UserType:       profile.UserType,
+		Bio:            types.StrPtr(profile.Bio),
+		Tags:           tags,
+		Gender:         gender,
+		Email:          types.StrPtr(profile.Email),
+		Phone:          types.StrPtr(profile.Phone),
+		Location:       profile.Location,
+		PresenceStatus: profile.PresenceStatus,
+		LastOnline:     profile.LastOnline,
+		CreatedAt:      profile.CreatedAt,
+		Stats:          profile.Stats,
+	}
+}
+
 type ChatPerm string
 
 const (

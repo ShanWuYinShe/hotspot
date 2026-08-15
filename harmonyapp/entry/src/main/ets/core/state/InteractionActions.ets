@@ -3,7 +3,7 @@ import { GlobalStateManager } from './GlobalStateManager';
 import { InteractionStateStore, MomentSocialState, isMomentLikedByReactions } from './InteractionStateStore';
 import { AppRouter, LoginRouteParam } from '../router/AppRouter';
 import { PageNames } from '../../constants/AppConstants';
-import { FollowRequest, UnfollowRequest, FavoriteMomentRequest, UnfavoriteMomentRequest, JoinGroupRequest, LeaveGroupRequest, Reaction } from '../types/api';
+import { FollowRequest, FavoriteMomentRequest, EnterGroupRequest, ExitGroupRequest, Reaction } from '../types/api';
 
 const ACTION_LOGIN_REASON = 'action_required';
 
@@ -39,7 +39,7 @@ export class InteractionActions {
       likes_count: 0,
       comments_count: 0,
       shares_count: 0,
-      my_state: { is_favorited: false }
+      is_favorited: false
     };
     this.store.setMomentState(momentId, emptyState);
     return emptyState;
@@ -95,14 +95,14 @@ export class InteractionActions {
     }
     const snapshot = this.store.cloneMomentState(momentId);
     const current = snapshot ?? this.ensureMomentState(momentId);
-    const isFavorited = current?.my_state?.is_favorited ?? false;
+    const isFavorited = current?.is_favorited ?? false;
     const nextFavorited = !isFavorited;
     this.store.updateMomentMyState(momentId, { is_favorited: nextFavorited });
     try {
-      const request: FavoriteMomentRequest | UnfavoriteMomentRequest = { moment_id: momentId };
+      const request: FavoriteMomentRequest = { moment_id: momentId };
       const response = nextFavorited
         ? await ApiClient.favoriteMoment(request as FavoriteMomentRequest)
-        : await ApiClient.unfavoriteMoment(request as UnfavoriteMomentRequest);
+        : await ApiClient.unfavoriteMoment(request);
       if (response.code !== 0) {
         throw new Error(response.message || 'favorite failed');
       }
@@ -122,10 +122,10 @@ export class InteractionActions {
     const snapshot = this.store.getUserState(userId);
     this.store.updateUserRelation(userId, { is_following: shouldFollow });
     try {
-      const request: FollowRequest | UnfollowRequest = { user_id: userId };
+      const request: FollowRequest = { user_id: userId };
       const response = shouldFollow
         ? await ApiClient.followUser(request as FollowRequest)
-        : await ApiClient.unfollowUser(request as UnfollowRequest);
+        : await ApiClient.unfollowUser(request);
       if (response.code !== 0) {
         throw new Error(response.message || 'follow failed');
       }
@@ -149,7 +149,7 @@ export class InteractionActions {
     const snapshot = this.store.getGroupState(groupId);
     this.store.updateGroupMembership(groupId, { is_member: true });
     try {
-      const response = await ApiClient.joinGroup({ group_id: groupId } as JoinGroupRequest);
+      const response = await ApiClient.joinGroup({ group_id: groupId } as EnterGroupRequest);
       if (response.code !== 0) {
         throw new Error(response.message || 'join failed');
       }
@@ -171,7 +171,7 @@ export class InteractionActions {
     const snapshot = this.store.getGroupState(groupId);
     this.store.updateGroupMembership(groupId, { is_member: false });
     try {
-      const response = await ApiClient.leaveGroup({ group_id: groupId } as LeaveGroupRequest);
+      const response = await ApiClient.leaveGroup({ group_id: groupId } as ExitGroupRequest);
       if (response.code !== 0) {
         throw new Error(response.message || 'leave failed');
       }

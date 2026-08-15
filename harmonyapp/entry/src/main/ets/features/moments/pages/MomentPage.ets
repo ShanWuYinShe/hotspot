@@ -10,7 +10,7 @@ import { InteractionStateStore } from '../../../core/state/InteractionStateStore
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
-import { MomentItem, GetFeedNearbyRequest } from '../../../core/types/api';
+import { MomentItem, NearbyMomentsRequest } from '../../../core/types/api';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemPageHeader, PageHeaderAction } from '../../../components/SystemPageHeader';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
@@ -99,7 +99,7 @@ export struct MomentPage {
 
     try {
       // spec moment.md → moments/search 收口：附近瞬间走 feed/nearby
-      const request: GetFeedNearbyRequest = {
+      const request: NearbyMomentsRequest = {
         reference_point: {
           latitude: refLoc.latitude,
           longitude: refLoc.longitude
@@ -142,7 +142,7 @@ export struct MomentPage {
     this.isLoadingMore = true;
     try {
       // spec moment.md → moments/search 收口：附近瞬间走 feed/nearby
-      const request: GetFeedNearbyRequest = {
+      const request: NearbyMomentsRequest = {
         reference_point: {
           latitude: refLoc.latitude,
           longitude: refLoc.longitude

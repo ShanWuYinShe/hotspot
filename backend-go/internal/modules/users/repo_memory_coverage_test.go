@@ -46,9 +46,9 @@ func TestMemoryRelationshipsAndBlocking(t *testing.T) {
 	if err != nil || len(page1.Items) != 1 {
 		t.Fatalf("blocked page1: %d items err=%v", len(page1.Items), err)
 	}
-	page2, err := repo.ListBlocked(ctx, "u1", 1, page1.NextCursor)
-	if err != nil || len(page2.Items) != 1 || page2.NextCursor != "" {
-		t.Fatalf("blocked page2: %d items next=%q err=%v", len(page2.Items), page2.NextCursor, err)
+	page2, err := repo.ListBlocked(ctx, "u1", 1, *page1.NextCursor)
+	if err != nil || len(page2.Items) != 1 || page2.NextCursor != nil {
+		t.Fatalf("blocked page2: %d items next=%v err=%v", len(page2.Items), page2.NextCursor, err)
 	}
 
 	// Unblock/Unfollow

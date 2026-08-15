@@ -35,8 +35,8 @@ func TestPostgresIT_SendAndGetHistory(t *testing.T) {
 		if len(history.Items) != 1 {
 			t.Fatalf("expected 1 message, got %d", len(history.Items))
 		}
-		if history.Items[0].Content != "hello bob" {
-			t.Fatalf("content: got %q", history.Items[0].Content)
+		if *history.Items[0].Content != "hello bob" {
+			t.Fatalf("content: got %q", *history.Items[0].Content)
 		}
 	})
 }
@@ -70,7 +70,7 @@ func TestPostgresIT_UpdateMessage(t *testing.T) {
 		}
 
 		history, _ := repo.History(ctx, alice, ListPrivateMessagesRequest{TargetUserID: bob})
-		if len(history.Items) != 1 || history.Items[0].Content != "edited" {
+		if len(history.Items) != 1 || *history.Items[0].Content != "edited" {
 			t.Fatalf("expected edited content, got %#v", history.Items)
 		}
 	})
@@ -102,7 +102,7 @@ func TestPostgresIT_RecallMessage(t *testing.T) {
 		if len(history.Items) != 1 {
 			t.Fatalf("expected 1 message after recall, got %d", len(history.Items))
 		}
-		if history.Items[0].RecalledAt == "" {
+		if history.Items[0].RecalledAt == nil {
 			t.Fatal("expected recalled_at to be set")
 		}
 	})

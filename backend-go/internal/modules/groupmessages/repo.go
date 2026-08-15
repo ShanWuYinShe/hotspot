@@ -31,8 +31,17 @@ type Repository interface {
 	// conflicts are returned.
 	RecallAsAdmin(ctx context.Context, messageID string) (MessageEventMeta, error)
 	MarkAsRead(context.Context, string, MarkGroupMessagesReadRequest) error
-	MarkAllRead(context.Context, string) error
+	// MarkAllRead 标记用户全部群消息已读，返回受影响的 group_ids（驱动
+	// GroupMessageReadCountUpdated 的节流推送）。
+	MarkAllRead(context.Context, string) ([]string, error)
+	// GetReadCount 返回群消息当前已读成员数（read_count 事件负载）。
+	GetReadCount(ctx context.Context, groupID string, messageID string) (int, error)
+	// LatestMessageID 返回群内最新消息 ID（mark_read 无 up_to 时的事件目标）。
+	LatestMessageID(ctx context.Context, groupID string) (string, error)
 	IsMember(context.Context, string, string) (bool, error)
+	// FilterMemberIDs 批量过滤出属于该群成员的 user_ids（mentions 通知只对
+	// 真实成员落库/推送，防内容泄漏与通知轰炸）。
+	FilterMemberIDs(ctx context.Context, groupID string, userIDs []string) ([]string, error)
 	GetMessageForReply(context.Context, string) (*MessageBrief, bool, error)
 	GetMediaForMessage(context.Context, string) (map[string]any, bool, error)
 	MemberMuteStatus(context.Context, string, string) (isMuted bool, mutedUntil string, found bool, err error)

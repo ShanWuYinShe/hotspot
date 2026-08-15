@@ -73,7 +73,7 @@ func TestHandlerSendMutedConflict(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.Send(rr, req)
 	var resp struct {
-		Code httpx.Code `json:"code"` 
+		Code httpx.Code `json:"code"`
 		Data struct {
 			Mute struct {
 				MutedUntil string `json:"muted_until"`
@@ -121,15 +121,23 @@ func TestServiceRecallMessageAsAdmin(t *testing.T) {
 // specAdminRepo 兼容之前 handler 测试所用 Repository 接口的桩实现，
 // 仅服务于 RecallMessageAsAdmin 单测。
 type specAdminRepo struct {
-	owner        MessageOwnerMeta
-	recalled     bool
+	owner         MessageOwnerMeta
+	recalled      bool
 	recalledMsgID string
 }
 
-func (r *specAdminRepo) Send(context.Context, SendGroupMessageRequest) (MessageSentResult, error) { return MessageSentResult{}, nil }
-func (r *specAdminRepo) History(context.Context, string, *PaginationParams) (PaginatedGroupMessages, error) { return PaginatedGroupMessages{}, nil }
-func (r *specAdminRepo) Update(context.Context, UpdateGroupMessageRequest) (MessageEventMeta, error) { return MessageEventMeta{}, nil }
-func (r *specAdminRepo) Recall(context.Context, RecallGroupMessageRequest) (MessageEventMeta, error) { return MessageEventMeta{}, nil }
+func (r *specAdminRepo) Send(context.Context, SendGroupMessageRequest) (MessageSentResult, error) {
+	return MessageSentResult{}, nil
+}
+func (r *specAdminRepo) History(context.Context, string, *PaginationParams) (PaginatedGroupMessages, error) {
+	return PaginatedGroupMessages{}, nil
+}
+func (r *specAdminRepo) Update(context.Context, UpdateGroupMessageRequest) (MessageEventMeta, error) {
+	return MessageEventMeta{}, nil
+}
+func (r *specAdminRepo) Recall(context.Context, RecallGroupMessageRequest) (MessageEventMeta, error) {
+	return MessageEventMeta{}, nil
+}
 func (r *specAdminRepo) RecallAsAdmin(context.Context, string) (MessageEventMeta, error) {
 	if r.recalled {
 		return MessageEventMeta{}, ErrMessageRecalled
@@ -137,15 +145,39 @@ func (r *specAdminRepo) RecallAsAdmin(context.Context, string) (MessageEventMeta
 	r.recalledMsgID = "m1"
 	return MessageEventMeta{GroupID: "g1", MessageID: "m1", SentAt: "2026-01-01T00:00:00Z"}, nil
 }
-func (r *specAdminRepo) MarkAsRead(context.Context, string, MarkGroupMessagesReadRequest) error { return nil }
-func (r *specAdminRepo) MarkAllRead(context.Context, string) error { return nil }
+func (r *specAdminRepo) MarkAsRead(context.Context, string, MarkGroupMessagesReadRequest) error {
+	return nil
+}
+func (r *specAdminRepo) MarkAllRead(context.Context, string) ([]string, error) { return nil, nil }
+func (r *specAdminRepo) GetReadCount(context.Context, string, string) (int, error) {
+	return 0, nil
+}
+func (r *specAdminRepo) LatestMessageID(context.Context, string) (string, error) {
+	return "", nil
+}
+func (r *specAdminRepo) FilterMemberIDs(_ context.Context, _ string, userIDs []string) ([]string, error) {
+	return userIDs, nil
+}
+
 func (r *specAdminRepo) IsMember(context.Context, string, string) (bool, error) { return true, nil }
-func (r *specAdminRepo) GetMessageForReply(context.Context, string) (*MessageBrief, bool, error) { return nil, false, nil }
-func (r *specAdminRepo) GetMediaForMessage(context.Context, string) (map[string]any, bool, error) { return nil, false, nil }
-func (r *specAdminRepo) MemberMuteStatus(context.Context, string, string) (bool, string, bool, error) { return false, "", false, nil }
-func (r *specAdminRepo) MessageExists(context.Context, string) (bool, string, error) { return false, "", nil }
-func (r *specAdminRepo) MessageGroupID(context.Context, string) (string, bool, error) { return "", false, nil }
-func (r *specAdminRepo) GetGroupName(context.Context, string) (string, bool, error) { return "", false, nil }
+func (r *specAdminRepo) GetMessageForReply(context.Context, string) (*MessageBrief, bool, error) {
+	return nil, false, nil
+}
+func (r *specAdminRepo) GetMediaForMessage(context.Context, string) (map[string]any, bool, error) {
+	return nil, false, nil
+}
+func (r *specAdminRepo) MemberMuteStatus(context.Context, string, string) (bool, string, bool, error) {
+	return false, "", false, nil
+}
+func (r *specAdminRepo) MessageExists(context.Context, string) (bool, string, error) {
+	return false, "", nil
+}
+func (r *specAdminRepo) MessageGroupID(context.Context, string) (string, bool, error) {
+	return "", false, nil
+}
+func (r *specAdminRepo) GetGroupName(context.Context, string) (string, bool, error) {
+	return "", false, nil
+}
 func (r *specAdminRepo) LookupMessageMeta(context.Context, string) (MessageOwnerMeta, bool, error) {
 	return r.owner, true, nil
 }
@@ -154,7 +186,7 @@ func assertGMForbidden(t *testing.T, rr *httptest.ResponseRecorder, reason strin
 	t.Helper()
 	body := rr.Body.String()
 	var resp struct {
-		Code httpx.Code `json:"code"` 
+		Code httpx.Code `json:"code"`
 		Data struct {
 			ForbiddenReason string `json:"forbidden_reason"`
 		} `json:"data"`

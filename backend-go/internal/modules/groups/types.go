@@ -38,10 +38,10 @@ const (
 )
 
 type GroupInfo struct {
-	GroupID      string `json:"group_id"`
-	Name         string `json:"name"`
-	AvatarURL    string `json:"avatar_url,omitempty"`
-	MembersCount int    `json:"members_count"`
+	GroupID      string  `json:"group_id"`
+	Name         string  `json:"name"`
+	AvatarURL    *string `json:"avatar_url"`
+	MembersCount int     `json:"members_count"`
 }
 
 type Location struct {
@@ -50,8 +50,8 @@ type Location struct {
 		Longitude float64 `json:"longitude"`
 	} `json:"point"`
 	LocationName   string   `json:"location_name"`
-	Distance       *float64 `json:"distance,omitempty"`
-	BearingDegrees *float64 `json:"bearing_degrees,omitempty"`
+	Distance       *float64 `json:"distance"`
+	BearingDegrees *float64 `json:"bearing_degrees"`
 }
 
 type RelativeLocation = Location
@@ -89,42 +89,42 @@ type GroupSettings struct {
 // HasPassword/IsSearchable/MembersSearchable/MaxMembers 仍是服务内部用于准入/
 // 搜索/设置的存储字段，但不对外序列化（json:"-"），避免泄露群管理信息。
 type GroupItem struct {
-	Group            GroupInfo         `json:"group"`
-	Description      string            `json:"description,omitempty"`
-	Tags             []string          `json:"tags,omitempty"`
-	JoinMethod       GroupJoinMethod   `json:"join_method,omitempty"`
-	RequiresApproval bool              `json:"requires_approval"`
+	Group            GroupInfo       `json:"group"`
+	Description      *string         `json:"description"`
+	Tags             []string        `json:"tags"`
+	JoinMethod       GroupJoinMethod `json:"join_method"`
+	RequiresApproval bool            `json:"requires_approval"`
 	// 群管理字段（内部存储/准入逻辑使用，不对外序列化）
-	HasPassword       bool   `json:"-"`
-	IsSearchable      bool   `json:"-"`
-	MembersSearchable bool   `json:"-"`
-	MaxMembers        int    `json:"-"`
-	Location          RelativeLocation  `json:"location"`
-	ViewerState       *GroupViewerState `json:"viewer_state"`
-	FriendsInGroup    *int              `json:"friends_in_group"`
+	HasPassword        bool              `json:"-"`
+	IsSearchable       bool              `json:"-"`
+	MembersSearchable  bool              `json:"-"`
+	MaxMembers         int               `json:"-"`
+	Location           *RelativeLocation `json:"location"`
+	ViewerState        *GroupViewerState `json:"viewer_state"`
+	FriendsInGroup     *int              `json:"friends_in_group"`
 	OnlineMembersCount *int              `json:"online_members_count"`
-	NextActivityAt      *string           `json:"next_activity_at"`
-	LastActivityAt    *string           `json:"last_activity_at"`
-	CreatedAt         *string           `json:"created_at"`
-	OwnerID           *string           `json:"owner_id"`
-	LastMessage       *GroupLastMessage `json:"last_message"`
+	NextActivityAt     *string           `json:"next_activity_at"`
+	LastActivityAt     *string           `json:"last_activity_at"`
+	CreatedAt          *string           `json:"created_at"`
+	OwnerID            *string           `json:"owner_id"`
+	LastMessage        *GroupLastMessage `json:"last_message"`
 }
 
 // GroupLastMessage 群列表最后一条消息预览（仅 groups/fetch_joined 返回，见 api_spec_types.md GroupJoinedItem）。
 type GroupLastMessage struct {
 	MessageID string   `json:"message_id"`
 	Type      string   `json:"type"`
-	Content   string   `json:"content,omitempty"`
+	Content   *string  `json:"content"`
 	Sender    UserInfo `json:"sender"`
 	SentAt    string   `json:"sent_at"`
 }
 
 type CreateGroupRequest struct {
-	Name             string          `json:"name"`
-	Description      string          `json:"description,omitempty"`
-	AvatarFileID     string          `json:"avatar_file_id,omitempty"`
-	Tags             []string        `json:"tags,omitempty"`
-	Password         string          `json:"password,omitempty"`
+	Name              string          `json:"name"`
+	Description       string          `json:"description,omitempty"`
+	AvatarFileID      string          `json:"avatar_file_id,omitempty"`
+	Tags              []string        `json:"tags,omitempty"`
+	Password          string          `json:"password,omitempty"`
 	JoinMethod        GroupJoinMethod `json:"join_method,omitempty"`
 	RequiresApproval  *bool           `json:"requires_approval,omitempty"`
 	IsSearchable      *bool           `json:"is_searchable,omitempty"`
@@ -149,16 +149,16 @@ type SearchGroupsRequest struct {
 type GeoPoint = types.GeoPoint
 
 type UpdateGroupRequest struct {
-	GroupID          string           `json:"group_id"`
-	Name             string           `json:"name,omitempty"`
-	Description      string           `json:"description,omitempty"`
-	AvatarFileID     string           `json:"avatar_file_id,omitempty"`
-	Tags             []string         `json:"tags,omitempty"`
-	Password         *string          `json:"password,omitempty"`
-	ClearPassword    *bool            `json:"clear_password,omitempty"`
+	GroupID           string           `json:"group_id"`
+	Name              string           `json:"name,omitempty"`
+	Description       string           `json:"description,omitempty"`
+	AvatarFileID      string           `json:"avatar_file_id,omitempty"`
+	Tags              []string         `json:"tags,omitempty"`
+	Password          *string          `json:"password,omitempty"`
+	ClearPassword     *bool            `json:"clear_password,omitempty"`
 	JoinMethod        *GroupJoinMethod `json:"join_method,omitempty"`
 	RequiresApproval  *bool            `json:"requires_approval,omitempty"`
-	NextActivityAt      *string          `json:"next_activity_at,omitempty"`
+	NextActivityAt    *string          `json:"next_activity_at,omitempty"`
 	IsSearchable      *bool            `json:"is_searchable,omitempty"`
 	MembersSearchable *bool            `json:"members_searchable,omitempty"`
 	MaxMembers        *int             `json:"max_members,omitempty"`
@@ -243,8 +243,8 @@ type InviteMemberRequest = CreateGroupInviteRequest
 // Invitation：邀请响应（spec group.md → members/invite）
 // invite_id/expires_at 可选：被邀请者已是成员（no-op 成功）时省略；TTL=0（永不过期）时 expires_at 省略
 type Invitation struct {
-	InviteID  string `json:"invite_id,omitempty"`
-	ExpiresAt string `json:"expires_at,omitempty"`
+	InviteID  *string `json:"invite_id"`
+	ExpiresAt *string `json:"expires_at"`
 }
 
 // ListSentInvitesRequest 是守卫子树 groups/admin/invites/fetch_sent 的请求类型。
@@ -259,12 +259,13 @@ type GroupSentInvitesRequest = ListSentInvitesRequest
 
 type GroupSentInviteItem struct {
 	InviteID    string            `json:"invite_id"`
+	Inviter     UserInfo          `json:"inviter"`
 	Invitee     UserInfo          `json:"invitee"`
 	Status      ApplicationStatus `json:"status"`
-	Message     *string           `json:"message,omitempty"`
+	Message     *string           `json:"message"`
 	CreatedAt   string            `json:"created_at"`
-	ExpiresAt   *string           `json:"expires_at,omitempty"`
-	RespondedAt *string           `json:"responded_at,omitempty"`
+	ExpiresAt   *string           `json:"expires_at"`
+	RespondedAt *string           `json:"responded_at"`
 }
 
 // RevokeGroupInviteRequest 是守卫子树 groups/admin/invites/revoke 的请求类型。
@@ -335,8 +336,8 @@ type BannedMembersRequest struct {
 type AdminBannedMemberItem struct {
 	User     UserInfo  `json:"user"`
 	BannedAt string    `json:"banned_at"`
-	Reason   *string   `json:"reason,omitempty"`
-	BannedBy *UserInfo `json:"banned_by,omitempty"`
+	Reason   *string   `json:"reason"`
+	BannedBy *UserInfo `json:"banned_by"`
 }
 
 type RemoveMemberRequest struct {
@@ -355,11 +356,12 @@ type GroupApplicationsRequest struct {
 type GroupApplicationItem struct {
 	ApplicationID string            `json:"application_id"`
 	GroupID       string            `json:"-"`
+	Group         GroupInfo         `json:"group"`
 	Applicant     UserInfo          `json:"applicant"`
-	Message       *string           `json:"message,omitempty"`
+	Message       *string           `json:"message"`
 	Status        ApplicationStatus `json:"status"`
 	CreatedAt     string            `json:"created_at"`
-	HandledAt     *string           `json:"handled_at,omitempty"`
+	HandledAt     *string           `json:"handled_at"`
 }
 
 // ApproveGroupApplicationRequest approves a group application. GroupID is the
@@ -484,11 +486,11 @@ type GroupInviteItem struct {
 	InviteID    string            `json:"invite_id"`
 	Group       GroupInfo         `json:"group"`
 	Inviter     UserInfo          `json:"inviter"`
-	Message     *string           `json:"message,omitempty"`
+	Message     *string           `json:"message"`
 	Status      ApplicationStatus `json:"status"`
 	CreatedAt   string            `json:"created_at"`
-	ExpiresAt   *string           `json:"expires_at,omitempty"`
-	RespondedAt *string           `json:"responded_at,omitempty"`
+	ExpiresAt   *string           `json:"expires_at"`
+	RespondedAt *string           `json:"responded_at"`
 }
 
 type AcceptInviteRequest struct {
@@ -527,7 +529,7 @@ type PaginatedSentInvites struct {
 
 type PaginatedBannedMembers struct {
 	Items      []AdminBannedMemberItem `json:"items"`
-	NextCursor *string            `json:"next_cursor"`
+	NextCursor *string                 `json:"next_cursor"`
 }
 
 type PaginatedApplications struct {

@@ -10,6 +10,6 @@ package types
 type RelativeLocation struct {
 	Point          GeoPoint `json:"point"`
 	LocationName   string   `json:"location_name"`
-	Distance       *float64 `json:"distance,omitempty"`
-	BearingDegrees *float64 `json:"bearing_degrees,omitempty"`
+	Distance       *float64 `json:"distance"`
+	BearingDegrees *float64 `json:"bearing_degrees"`
 }

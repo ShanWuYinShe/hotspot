@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
@@ -30,11 +31,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
-	resp := map[string]any{
-		"items":       items,
-		"next_cursor": nextCursor,
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PaginatedApplications{Items: items, NextCursor: types.StrPtr(nextCursor)}))
 }
 
 func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
@@ -199,11 +196,7 @@ func (h *Handler) ListBannedMembers(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
-	resp := map[string]any{
-		"items":       items,
-		"next_cursor": nextCursor,
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PaginatedBannedMembers{Items: items, NextCursor: types.StrPtr(nextCursor)}))
 }
 
 func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {

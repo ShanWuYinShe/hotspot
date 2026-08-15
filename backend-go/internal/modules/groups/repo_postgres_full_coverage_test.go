@@ -241,7 +241,7 @@ func TestPostgresIsMemberAndGetApplication(t *testing.T) {
 	}
 
 	// GetApplication：存在（loadApplication 需要 queryGetGroupApplication + queryGetGroup）
-	appRow := []any{"a1", "group_1", "u2", "备注", "pending", gTestTime, nil, nil}
+	appRow := []any{"a1", "group_1", "群", "", 3, "u2", "备注", "pending", gTestTime, nil, nil}
 	stub = &groupFullStub{
 		queryRow: map[string][]any{queryGetGroupApplication: appRow, queryGetGroup: groupBaseRow(false)},
 	}
@@ -317,7 +317,7 @@ func TestPostgresJoinGroupBranches(t *testing.T) {
 
 	// direct：非成员 → 插入成员
 	stub := &groupFullStub{
-		queryRow:    map[string][]any{queryGetGroup: directRow},
+		queryRow:    map[string][]any{queryGetGroup: directRow, queryLockGroupCapacity: {200, 0}},
 		queryRowErr: map[string]error{queryGetGroupMembership: pgx.ErrNoRows},
 	}
 	res, err := newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil, nil)
@@ -400,7 +400,7 @@ func TestPostgresJoinGroupBranches(t *testing.T) {
 	}
 	// direct：插入成员失败
 	stub = &groupFullStub{
-		queryRow:    map[string][]any{queryGetGroup: directRow},
+		queryRow:    map[string][]any{queryGetGroup: directRow, queryLockGroupCapacity: {200, 0}},
 		queryRowErr: map[string]error{queryGetGroupMembership: pgx.ErrNoRows},
 		execErrs:    map[string]error{queryInsertGroupMember: errors.New("boom")},
 	}
@@ -453,16 +453,16 @@ func TestPostgresAnnouncementLifecycle(t *testing.T) {
 func TestPostgresApplicationsAndInvitesLists(t *testing.T) {
 	ctx := context.Background()
 	appRow := func(id string) []any {
-		return []any{id, "u2", "备注", "pending", gTestTime, gTestTime, "u1"}
+		return []any{id, "group_1", "群名", "", 3, "u2", "备注", "pending", gTestTime, gTestTime, "u1"}
 	}
 	myAppRow := func(id string) []any {
-		return []any{id, "group_1", "备注", "pending", gTestTime, nil, nil}
+		return []any{id, "group_1", "群名", "", 3, "u2", "备注", "pending", gTestTime, nil, nil}
 	}
 	inviteRow := func(id string) []any {
 		return []any{id, "group_1", "群名", "", 3, "u1", "消息", "pending", gTestTime, gTestTime, nil}
 	}
 	sentRow := func(id string) []any {
-		return []any{id, "u2", "消息", "pending", gTestTime, gTestTime, gTestTime}
+		return []any{id, "u1", "邀请人", "u2", "被邀请人", "消息", "pending", gTestTime, gTestTime, gTestTime}
 	}
 
 	status := ApplicationStatusPending
@@ -529,12 +529,12 @@ func strPtr(s string) *string { return &s }
 
 func TestPostgresApproveAcceptTxAndInviteMember(t *testing.T) {
 	ctx := context.Background()
-	appRow := []any{"a1", "group_1", "u2", "", "pending", gTestTime, nil, nil}
+	appRow := []any{"a1", "group_1", "群名", "", 3, "u2", "", "pending", gTestTime, nil, nil}
 	inviteRow := []any{"i1", "group_1", "u1", "u2", "", "pending", gTestTime, gTestTime, nil}
 
 	// ApproveApplication：loadApplication + tx 内两个 Exec
 	stub := &groupFullStub{
-		queryRow: map[string][]any{queryGetGroupApplication: appRow, queryGetGroup: groupBaseRow(false)},
+		queryRow: map[string][]any{queryGetGroupApplication: appRow, queryGetGroup: groupBaseRow(false), queryLockGroupCapacity: {200, 0}},
 	}
 	if err := newGroupsFullRepo(stub).ApproveApplication(ctx, "u1", "a1"); err != nil {
 		t.Fatalf("approve: %v", err)
@@ -548,7 +548,7 @@ func TestPostgresApproveAcceptTxAndInviteMember(t *testing.T) {
 	// AcceptInvite：loadInvite + tx 内两个 Exec
 	stub = &groupFullStub{
 		queryRow: map[string][]any{
-			queryGetGroupInvite: inviteRow, queryGetGroup: groupBaseRow(false), queryCountGroupMembers: {3},
+			queryGetGroupInvite: inviteRow, queryGetGroup: groupBaseRow(false), queryCountGroupMembers: {3}, queryLockGroupCapacity: {200, 0},
 		},
 	}
 	if err := newGroupsFullRepo(stub).AcceptInvite(ctx, "u2", "i1"); err != nil {
@@ -571,20 +571,20 @@ func TestPostgresApproveAcceptTxAndInviteMember(t *testing.T) {
 	// InviteMember：已有 pending → 返回现有
 	stub = &groupFullStub{queryRow: map[string][]any{queryFindPendingGroupInvite: {"i_exist", gTestTime}}}
 	inv, err := newGroupsFullRepo(stub).InviteMember(ctx, "u1", InviteMemberRequest{GroupID: "group_1", UserID: "u2"}, nil)
-	if err != nil || inv.InviteID != "i_exist" {
+	if err != nil || *inv.InviteID != "i_exist" {
 		t.Fatalf("invite existing: %#v err=%v", inv, err)
 	}
 	// 新建（TTL=0 永不过期 → expires_at 省略）
 	stub = &groupFullStub{queryRowErr: map[string]error{queryFindPendingGroupInvite: pgx.ErrNoRows}}
 	inv, err = newGroupsFullRepo(stub).InviteMember(ctx, "u1", InviteMemberRequest{GroupID: "group_1", UserID: "u2", Message: strPtr("来")}, nil)
-	if err != nil || inv.InviteID == "" || inv.ExpiresAt != "" {
+	if err != nil || inv.InviteID == nil || *inv.InviteID == "" || inv.ExpiresAt != nil {
 		t.Fatalf("invite new (nil ttl): %#v err=%v", inv, err)
 	}
 	// 新建（有 TTL → expires_at 返回）
 	exp := time.Now().UTC().Add(72 * time.Hour)
 	stub = &groupFullStub{queryRowErr: map[string]error{queryFindPendingGroupInvite: pgx.ErrNoRows}}
 	inv, err = newGroupsFullRepo(stub).InviteMember(ctx, "u1", InviteMemberRequest{GroupID: "group_1", UserID: "u2"}, &exp)
-	if err != nil || inv.InviteID == "" || inv.ExpiresAt == "" {
+	if err != nil || inv.InviteID == nil || *inv.InviteID == "" || inv.ExpiresAt == nil {
 		t.Fatalf("invite new (with ttl): %#v err=%v", inv, err)
 	}
 	// 插入失败
@@ -679,16 +679,16 @@ func TestPostgresRowsErrPaths(t *testing.T) {
 	}{
 		{queryListGroupAnnouncements, []any{"a1", "g", "t", "c", "u1", false, gTestTime},
 			func(r *PostgresRepository) error { _, err := r.ListAnnouncements(ctx, "g"); return err }},
-		{queryListGroupApplications, []any{"a1", "u2", "", "pending", gTestTime, nil, nil},
+		{queryListGroupApplications, []any{"a1", "g", "群", "", 3, "u2", "", "pending", gTestTime, nil, nil},
 			func(r *PostgresRepository) error { _, _, err := r.ListApplications(ctx, "g", nil, 20, ""); return err }},
-		{queryListMyGroupApplications, []any{"a1", "g", "", "pending", gTestTime, nil, nil},
+		{queryListMyGroupApplications, []any{"a1", "g", "群", "", 3, "u2", "", "pending", gTestTime, nil, nil},
 			func(r *PostgresRepository) error {
 				_, _, err := r.ListMyApplications(ctx, "u2", nil, 20, "")
 				return err
 			}},
 		{queryListMyInvites, []any{"i1", "g", "群", "", 3, "u1", "", "pending", gTestTime, nil, nil},
 			func(r *PostgresRepository) error { _, _, err := r.ListMyInvites(ctx, "u2", nil, 20, ""); return err }},
-		{queryListSentInvites, []any{"i1", "u2", "", "pending", gTestTime, nil, nil},
+		{queryListSentInvites, []any{"i1", "u1", "邀请人", "u2", "被邀请人", "", "pending", gTestTime, nil, nil},
 			func(r *PostgresRepository) error { _, _, err := r.ListSentInvites(ctx, "g", nil, 20, ""); return err }},
 		{queryListGroupBans, []any{"u2", gTestTime, nil, nil},
 			func(r *PostgresRepository) error { _, _, err := r.ListBannedMembers(ctx, "g", 20, ""); return err }},

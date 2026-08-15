@@ -1,12 +1,12 @@
 package groups
 
 import (
-	"hotspot/backend-go/internal/platform/httpx"
-	"time"
 	"context"
 	"errors"
+	"hotspot/backend-go/internal/platform/httpx"
 	"strings"
 	"testing"
+	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -20,15 +20,15 @@ type stubGroupsRepo struct {
 	adminMembers    []AdminGroupMemberItem
 	adminMembersCur string
 	adminMembersErr error
-	getResult    GroupItem
-	getFound     bool
-	getErr       error
-	createResult GroupItem
-	createErr    error
-	searchResult PaginatedGroups
-	searchErr    error
-	updateErr    error
-	dismissErr   error
+	getResult       GroupItem
+	getFound        bool
+	getErr          error
+	createResult    GroupItem
+	createErr       error
+	searchResult    PaginatedGroups
+	searchErr       error
+	updateErr       error
+	dismissErr      error
 
 	members    []GroupMemberItem
 	membersCur string
@@ -229,22 +229,22 @@ func grpCtx(userID string) context.Context {
 
 func ownerGroup() GroupItem {
 	return GroupItem{
-		Group:   GroupInfo{GroupID: "g1", Name: "test"},
-		ViewerState: &GroupViewerState{Role: GroupRoleOwner, },
+		Group:       GroupInfo{GroupID: "g1", Name: "test"},
+		ViewerState: &GroupViewerState{Role: GroupRoleOwner},
 	}
 }
 
 func adminGroup() GroupItem {
 	return GroupItem{
-		Group:   GroupInfo{GroupID: "g1", Name: "test"},
-		ViewerState: &GroupViewerState{Role: GroupRoleAdmin, },
+		Group:       GroupInfo{GroupID: "g1", Name: "test"},
+		ViewerState: &GroupViewerState{Role: GroupRoleAdmin},
 	}
 }
 
 func memberGroup() GroupItem {
 	return GroupItem{
-		Group:   GroupInfo{GroupID: "g1", Name: "test"},
-		ViewerState: &GroupViewerState{Role: GroupRoleMember, },
+		Group:       GroupInfo{GroupID: "g1", Name: "test"},
+		ViewerState: &GroupViewerState{Role: GroupRoleMember},
 	}
 }
 
@@ -602,14 +602,14 @@ func TestServiceInviteMemberRejectsNotFound(t *testing.T) {
 }
 
 func TestServiceInviteMemberHappyPath(t *testing.T) {
-	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, inviteResult: Invitation{InviteID: "inv1"}}
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, inviteResult: Invitation{InviteID: strPtr("inv1")}}
 	svc := NewServiceWithRepo(repo)
 	inv, err := svc.InviteMember(grpCtx("u1"), InviteMemberRequest{GroupID: "g1", UserID: "u2"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if inv.InviteID != "inv1" {
-		t.Fatalf("expected inv1, got %s", inv.InviteID)
+	if *inv.InviteID != "inv1" {
+		t.Fatalf("expected inv1, got %s", *inv.InviteID)
 	}
 }
 

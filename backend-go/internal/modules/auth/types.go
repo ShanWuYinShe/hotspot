@@ -34,13 +34,12 @@ type RefreshTokenRequest struct {
 	RefreshToken string     `json:"refresh_token,omitempty"`
 }
 
-// SessionStatus 是 get_status 的响应（spec auth.md → get_status）。
-// user_id / expires_at 为恒定 nullable：未通过认证（is_valid=false）或未知过期时为 null，
-// 字段恒在（Go 侧 nil 指针序列化为 null），而非缺省。
+// SessionStatus 是 auth/session 的响应（spec auth.md → auth/session）。
+// 该端点挂在 /api/v1 必须认证节点下，中间件已保证请求持有有效 Token；
+// 因此响应只有两个必填字段，不再包含历史遗留的 is_valid。
 type SessionStatus struct {
-	IsValid   bool    `json:"is_valid"`
-	UserID    *string `json:"user_id"`    // 恒定 nullable：is_valid=false 时为 null
-	ExpiresAt *string `json:"expires_at"` // 恒定 nullable：is_valid=false 或过期未知时为 null
+	UserID    string `json:"user_id"`
+	ExpiresAt string `json:"expires_at"`
 }
 
 type AuthTokenPairWeb struct {
@@ -57,15 +56,15 @@ type AuthTokenPairApp struct {
 }
 
 type SessionItem struct {
-	SessionID    string `json:"session_id"`
-	DeviceID     string `json:"device_id"`
-	DeviceType   string `json:"device_type,omitempty"`
-	DeviceName   string `json:"device_name,omitempty"`
-	IPAddress    string `json:"ip_address,omitempty"`
-	IPLocation   string `json:"ip_location,omitempty"`
-	CreatedAt    string `json:"created_at"`
-	LastActiveAt string `json:"last_active_at"`
-	IsCurrent    bool   `json:"is_current"`
+	SessionID    string  `json:"session_id"`
+	DeviceID     string  `json:"device_id"`
+	DeviceType   *string `json:"device_type"`
+	DeviceName   *string `json:"device_name"`
+	IPAddress    *string `json:"ip_address"`
+	IPLocation   *string `json:"ip_location"`
+	CreatedAt    string  `json:"created_at"`
+	LastActiveAt string  `json:"last_active_at"`
+	IsCurrent    bool    `json:"is_current"`
 }
 
 type SessionList struct {

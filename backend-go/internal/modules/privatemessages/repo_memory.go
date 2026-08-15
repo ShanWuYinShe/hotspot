@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type InMemoryRepository struct {
@@ -31,7 +33,7 @@ func (r *InMemoryRepository) Send(_ context.Context, senderID, targetUserID stri
 	now := time.Now().UTC()
 	r.seq++
 	sentAt := now.Format("2006-01-02T15:04:05.000000000Z")
-	msg := PrivateMessageItem{MessageID: fmt.Sprintf("pm_%d_%s", r.seq, now.Format("20060102150405.000000000")), Type: req.Type, Content: req.Content, ShareCode: req.ShareCode, Sender: UserInfo{UserID: senderID, Nickname: senderID}, SentAt: sentAt, IsRead: false}
+	msg := PrivateMessageItem{MessageID: fmt.Sprintf("pm_%d_%s", r.seq, now.Format("20060102150405.000000000")), Type: req.Type, Content: types.StrPtr(req.Content), ShareCode: types.StrPtr(req.ShareCode), Sender: UserInfo{UserID: senderID, Nickname: senderID}, SentAt: sentAt, IsRead: false}
 	if req.FileID != "" {
 		msg.Media = &MessageMedia{URL: req.FileID}
 	}
@@ -89,7 +91,8 @@ func (r *InMemoryRepository) History(_ context.Context, userID string, req ListP
 		return PaginatedMessages{Items: items}, nil
 	}
 	next := items[limit-1]
-	return PaginatedMessages{Items: items[:limit], NextCursor: encodeMessageCursor(next.SentAt, next.MessageID)}, nil
+	c := encodeMessageCursor(next.SentAt, next.MessageID)
+	return PaginatedMessages{Items: items[:limit], NextCursor: &c}, nil
 }
 func (r *InMemoryRepository) Recent(ctx context.Context, userID, targetUserID string, limit int, deletedAfter *time.Time) (PaginatedMessages, error) {
 	history, err := r.History(ctx, userID, ListPrivateMessagesRequest{TargetUserID: targetUserID})
@@ -175,11 +178,12 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 			if msgs[i].Sender.UserID != userID {
 				return MessageEventMeta{}, ErrMessagePermissionDenied
 			}
-			if msgs[i].Type != "text" || msgs[i].RecalledAt != "" {
+			if msgs[i].Type != "text" || msgs[i].RecalledAt != nil {
 				return MessageEventMeta{}, ErrMessageNotEditable
 			}
-			msgs[i].Content = req.Content
-			msgs[i].EditedAt = time.Now().UTC().Format("2006-01-02T15:04:05.000000000Z")
+			msgs[i].Content = types.StrPtr(req.Content)
+			editedAt := time.Now().UTC().Format("2006-01-02T15:04:05.000000000Z")
+			msgs[i].EditedAt = &editedAt
 			r.messages[key] = msgs
 			return MessageEventMeta{TargetUserID: otherUserID(key, userID), MessageID: req.MessageID, SentAt: msgs[i].SentAt, Content: req.Content}, nil
 		}
@@ -198,14 +202,15 @@ func (r *InMemoryRepository) Recall(_ context.Context, userID string, req Recall
 			if msgs[i].Sender.UserID != userID {
 				return MessageEventMeta{}, ErrMessagePermissionDenied
 			}
-			if msgs[i].RecalledAt != "" {
+			if msgs[i].RecalledAt != nil {
 				return MessageEventMeta{}, ErrMessageNotRecallable
 			}
 			sentAt, err := time.Parse("2006-01-02T15:04:05.000000000Z", msgs[i].SentAt)
 			if err == nil && time.Since(sentAt) > 2*time.Minute {
 				return MessageEventMeta{}, ErrMessageNotRecallable
 			}
-			msgs[i].RecalledAt = time.Now().UTC().Format("2006-01-02T15:04:05.000000000Z")
+			recalledAt := time.Now().UTC().Format("2006-01-02T15:04:05.000000000Z")
+			msgs[i].RecalledAt = &recalledAt
 			r.messages[key] = msgs
 			return MessageEventMeta{TargetUserID: otherUserID(key, userID), MessageID: req.MessageID, SentAt: msgs[i].SentAt}, nil
 		}

@@ -95,9 +95,9 @@ func (s *Service) SetMemberRole(ctx context.Context, req SetMemberRoleRequest) e
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberRoleChanged,
 		Payload: map[string]any{
-			"group_id": req.GroupID,
-			"user":     s.resolveUserInfo(ctx, req.UserID),
-			"role":     string(req.Role),
+			"group_id":   req.GroupID,
+			"user":       s.resolveUserInfo(ctx, req.UserID),
+			"role":       string(req.Role),
 			"changed_by": s.resolveUserInfo(ctx, principal.UserID),
 			"changed_at": time.Now().UTC().Format(time.RFC3339),
 		},
@@ -105,9 +105,9 @@ func (s *Service) SetMemberRole(ctx context.Context, req SetMemberRoleRequest) e
 	realtime.DefaultHub().BroadcastToUser(req.UserID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberRoleChanged,
 		Payload: map[string]any{
-			"group_id": req.GroupID,
-			"user":     s.resolveUserInfo(ctx, req.UserID),
-			"role":     string(req.Role),
+			"group_id":   req.GroupID,
+			"user":       s.resolveUserInfo(ctx, req.UserID),
+			"role":       string(req.Role),
 			"changed_by": s.resolveUserInfo(ctx, principal.UserID),
 			"changed_at": time.Now().UTC().Format(time.RFC3339),
 		},

@@ -127,7 +127,8 @@ func (s *Service) List(ctx context.Context, req MyPrivateChatsRequest) (Paginate
 		return PaginatedPrivateChats{Items: items}, nil
 	}
 	next := items[limit-1]
-	return PaginatedPrivateChats{Items: items[:limit], NextCursor: encodeChatCursor(next.LastActivityAt, next.OtherUser.UserID)}, nil
+	c := encodeChatCursor(next.LastActivityAt, next.OtherUser.UserID)
+	return PaginatedPrivateChats{Items: items[:limit], NextCursor: &c}, nil
 }
 
 func (s *Service) UpdateSettings(ctx context.Context, req UpdatePrivateChatSettingsRequest) error {
@@ -171,13 +172,14 @@ func (s *Service) buildChat(ctx context.Context, userID string, state ChatState)
 	if err != nil {
 		return PrivateChatItem{}, err
 	}
+	createdAt := state.CreatedAt.UTC().Format(time.RFC3339Nano)
 	item := PrivateChatItem{
 		OtherUser:      UserInfo{UserID: userItem.User.UserID, Nickname: userItem.User.Nickname, AvatarURL: userItem.User.AvatarURL},
 		UnreadCount:    unreadCount,
 		IsMuted:        state.IsMuted,
 		IsPinned:       state.IsPinned,
 		LastActivityAt: state.CreatedAt.UTC().Format(time.RFC3339Nano),
-		CreatedAt:      state.CreatedAt.UTC().Format(time.RFC3339Nano),
+		CreatedAt:      &createdAt,
 		CanMessage:     true,
 	}
 	if userItem.PresenceStatus != nil {

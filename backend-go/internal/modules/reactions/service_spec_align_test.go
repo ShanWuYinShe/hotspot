@@ -79,7 +79,7 @@ func TestSetReactMessageTargetNotifiesAndBroadcasts(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected actor struct, got %T", payload["actor"])
 	}
-	if actorInfo.UserID != "u_bob" || actorInfo.Nickname != "Bob" || actorInfo.AvatarURL != "https://avatar.example/bob.png" {
+	if actorInfo.UserID != "u_bob" || actorInfo.Nickname != "Bob" || actorInfo.AvatarURL == nil || *actorInfo.AvatarURL != "https://avatar.example/bob.png" {
 		t.Fatalf("unexpected actor: %+v", actorInfo)
 	}
 }

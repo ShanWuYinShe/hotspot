@@ -3,7 +3,6 @@ package groups
 import (
 	"context"
 	"fmt"
-	"hotspot/backend-go/internal/platform/types"
 	"sort"
 	"strings"
 	"sync"
@@ -12,6 +11,9 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/geo"
+	"hotspot/backend-go/internal/platform/types"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type inMemoryInviteRecord struct {
@@ -52,13 +54,15 @@ type inMemoryBanRecord struct {
 }
 
 type InMemoryRepository struct {
-	mu            sync.RWMutex
-	groups        map[string]GroupItem
-	members       map[string]map[string]inMemoryMembership
-	banned        map[string]map[string]inMemoryBanRecord
-	invites       map[string]inMemoryInviteRecord
-	applications  map[string]inMemoryApplicationRecord
-	announcements map[string]GroupAnnouncementItem
+	mu           sync.RWMutex
+	groups       map[string]GroupItem
+	members      map[string]map[string]inMemoryMembership
+	banned       map[string]map[string]inMemoryBanRecord
+	invites      map[string]inMemoryInviteRecord
+	applications map[string]inMemoryApplicationRecord
+	// passwordHashes 与 PG 的 groups.password_hash 对齐：密码群的 bcrypt 哈希
+	passwordHashes map[string]string
+	announcements  map[string]GroupAnnouncementItem
 	// seq disambiguates group ids generated within the same nanosecond so the
 	// in-memory map never overwrites an entry on rapid successive Create calls.
 	seq uint64
@@ -66,12 +70,13 @@ type InMemoryRepository struct {
 
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
-		groups:        make(map[string]GroupItem),
-		members:       make(map[string]map[string]inMemoryMembership),
-		announcements: make(map[string]GroupAnnouncementItem),
-		banned:        make(map[string]map[string]inMemoryBanRecord),
-		invites:       make(map[string]inMemoryInviteRecord),
-		applications:  make(map[string]inMemoryApplicationRecord),
+		groups:         make(map[string]GroupItem),
+		members:        make(map[string]map[string]inMemoryMembership),
+		announcements:  make(map[string]GroupAnnouncementItem),
+		banned:         make(map[string]map[string]inMemoryBanRecord),
+		invites:        make(map[string]inMemoryInviteRecord),
+		applications:   make(map[string]inMemoryApplicationRecord),
+		passwordHashes: make(map[string]string),
 	}
 }
 
@@ -102,9 +107,16 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	if req.RequiresApproval != nil {
 		requiresApproval = *req.RequiresApproval
 	}
-	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: req.Tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), ViewerState: &GroupViewerState{Role: "owner", UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, RequiresApproval: requiresApproval, IsSearchable: isSearchable, MembersSearchable: membersSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: &userID}
+	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: types.StrPtr(req.AvatarFileID), MembersCount: 1}, Description: types.StrPtr(req.Description), Tags: req.Tags, HasPassword: req.Password != "", Location: newRelativeLocationPtr(req.Location), ViewerState: &GroupViewerState{Role: "owner", UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, RequiresApproval: requiresApproval, IsSearchable: isSearchable, MembersSearchable: membersSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: &userID}
 	r.groups[groupID] = item
 	r.members[groupID] = map[string]inMemoryMembership{userID: {Role: GroupRoleOwner, JoinedAt: nowRFC3339}}
+	if req.Password != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return GroupItem{}, fmt.Errorf("groups.Create: hash password: %w", err)
+		}
+		r.passwordHashes[groupID] = string(hash)
+	}
 	return item, nil
 }
 func (r *InMemoryRepository) Get(ctx context.Context, groupID string) (GroupItem, bool, error) {
@@ -138,7 +150,11 @@ func (r *InMemoryRepository) Search(ctx context.Context, req SearchGroupsRequest
 		}
 		if req.Keyword != "" {
 			keyword := strings.ToLower(req.Keyword)
-			if !strings.Contains(strings.ToLower(item.Group.Name), keyword) && !strings.Contains(strings.ToLower(item.Description), keyword) {
+			description := ""
+			if item.Description != nil {
+				description = *item.Description
+			}
+			if !strings.Contains(strings.ToLower(item.Group.Name), keyword) && !strings.Contains(strings.ToLower(description), keyword) {
 				continue
 			}
 		}
@@ -156,7 +172,7 @@ func (r *InMemoryRepository) Search(ctx context.Context, req SearchGroupsRequest
 		}
 		meta := groupSearchMeta{CreatedAt: groupCreatedAt(item), NameMatch: searchNameMatchScore(item, req.Keyword)}
 		if hasPlan {
-			distance, bearing, ok := plan.Match(groupLocationPoint(item.Location))
+			distance, bearing, ok := plan.Match(groupLocationPoint(*item.Location))
 			if !ok {
 				continue
 			}
@@ -213,20 +229,28 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 		item.Group.Name = req.Name
 	}
 	if req.Description != "" {
-		item.Description = req.Description
+		item.Description = types.StrPtr(req.Description)
 	}
 	if req.AvatarFileID != "" {
-		item.Group.AvatarURL = req.AvatarFileID
+		item.Group.AvatarURL = types.StrPtr(req.AvatarFileID)
 	}
 	if req.Tags != nil {
 		item.Tags = req.Tags
 	}
 	if req.ClearPassword != nil && *req.ClearPassword {
 		item.HasPassword = false
-	} else if req.Password != nil {
-		item.HasPassword = *req.Password != ""
-	}
-	if req.JoinMethod != nil {
+		delete(r.passwordHashes, req.GroupID)
+		// 清除密码即解除 password 门槛（与 PG 实现同步联动）
+		item.JoinMethod = GroupJoinMethodDirect
+	} else if req.Password != nil && *req.Password != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("groups.Update: hash password: %w", err)
+		}
+		r.passwordHashes[req.GroupID] = string(hash)
+		item.HasPassword = true
+		item.JoinMethod = GroupJoinMethodPassword
+	} else if req.JoinMethod != nil {
 		item.JoinMethod = *req.JoinMethod
 	}
 	if req.RequiresApproval != nil {
@@ -245,7 +269,8 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 		item.MaxMembers = *req.MaxMembers
 	}
 	if req.Location != nil {
-		item.Location = newRelativeLocation(*req.Location)
+		location := newRelativeLocation(*req.Location)
+		item.Location = &location
 	}
 	r.groups[req.GroupID] = item
 	return nil
@@ -358,9 +383,10 @@ func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string
 			return EnterGroupResult{}, ErrAccessRestricted
 		}
 	}
-	// password：需提供密码
+	// password：bcrypt 比对（与 PG 实现同语义）
 	if group.JoinMethod == GroupJoinMethodPassword {
-		if password == nil || *password == "" {
+		storedHash, hasHash := r.passwordHashes[groupID]
+		if password == nil || *password == "" || !hasHash || bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(*password)) != nil {
 			return EnterGroupResult{}, ErrInvalidPassword
 		}
 	}

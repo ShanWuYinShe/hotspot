@@ -12,11 +12,21 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func nullableString(value string) any {
-	if strings.TrimSpace(value) == "" {
+func nullableString(value any) any {
+	switch v := value.(type) {
+	case *string:
+		if v == nil || strings.TrimSpace(*v) == "" {
+			return nil
+		}
+		return *v
+	case string:
+		if strings.TrimSpace(v) == "" {
+			return nil
+		}
+		return v
+	default:
 		return nil
 	}
-	return value
 }
 
 // strPtr 返回 string 的指针（用于 AdminUserItem 中常量 nullable 的 PII IP 字段：

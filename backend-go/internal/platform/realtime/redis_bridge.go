@@ -53,7 +53,8 @@ func NewRedisBridge(rdb *redis.Client, instanceID string, hub *Hub) (*RedisBridg
 		cancel:   cancel,
 	}
 
-	sub := rdb.Subscribe(ctx, redisChannelPrefix+"*")
+	// PSubscribe：模式订阅（SUBSCRIBE 不做 glob 匹配，字面订阅 "hotspot:*" 会静默丢失全部跨实例事件）
+	sub := rdb.PSubscribe(ctx, redisChannelPrefix+"*")
 	b.sub = sub
 	b.subCh = sub.Channel()
 
@@ -81,7 +82,8 @@ func (b *RedisBridge) Close() error {
 	b.cancel()
 	_ = b.sub.Close()
 	b.done.Wait()
-	return b.rdb.Close()
+	// 不关闭共享的 *redis.Client：同一 client 还被 resumeStore 与健康探针使用，生命周期归 bootstrap 统一管理。
+	return nil
 }
 
 func (b *RedisBridge) receiveLoop() {

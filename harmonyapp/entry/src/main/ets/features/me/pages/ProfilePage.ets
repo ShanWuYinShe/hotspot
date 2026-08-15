@@ -23,7 +23,7 @@ import { SystemToast } from '../../../components/SystemToast';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { LoginPromptView } from '../../../components/LoginPromptView';
-import { AccountInfo, UpdateLocationRequest, UpgradeAccountRequest, GuestRequest, UserItem, UserOpenTheDoorRequest, UserSharePayload, MomentItem, UserMomentsRequest } from '../../../core/types/api';
+import { AccountInfo, UpdateLocationRequest, UpgradeAccountRequest, GuestRequest, UserItem, OpenUserDoorRequest, UserSharePayload, MomentItem, FetchUserMomentsRequest } from '../../../core/types/api';
 import { DeviceIdUtil } from '../../../core/util/DeviceIdUtil';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -170,7 +170,7 @@ export struct ProfilePage {
     this.viewedUserMoments = [];
     try {
       const response = await LoadingUtil.withMinimumTime(() =>
-        ApiClient.getUserProfileBundle({ user_id: this.viewedUserId, include_recent_moments: true } as UserOpenTheDoorRequest),
+        ApiClient.getUserProfile({ user_id: this.viewedUserId, include_recent_moments: true } as OpenUserDoorRequest),
       DesignConstants.ANIMATION.DURATION_CONTENT_SWITCH);
       if (this.isDestroyed) return;
       if (response.code === 0 && response.data?.user?.user?.user_id) {

@@ -15,6 +15,7 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
+	"hotspot/backend-go/internal/platform/textutil"
 	"hotspot/backend-go/internal/platform/types"
 )
 
@@ -148,11 +149,15 @@ func (s *Service) Exists(ctx context.Context, momentID string) (bool, error) {
 }
 
 // IsReactionTargetVisible 判定瞬间对当前调用方可见（spec reaction.md 目标可见性）：
-// private 瞬间仅拥有者可见；不可见按不存在处理（found=false → 10300）。
+// 软删瞬间与 private 瞬间（非拥有者）统一按不存在处理（found=false → 10300，
+// 不因报错路径差异泄漏存在性）。
 func (s *Service) IsReactionTargetVisible(ctx context.Context, momentID string) (found bool, visible bool, err error) {
 	item, ok, err := s.repo.Get(ctx, momentID)
 	if err != nil || !ok {
 		return ok, false, err
+	}
+	if item.IsDeleted {
+		return false, false, nil
 	}
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	if item.PrivacyLevel == "private" && item.User.UserID != principal.UserID {
@@ -274,28 +279,37 @@ func (s *Service) Delete(ctx context.Context, momentID string) error {
 	return nil
 }
 
-func (s *Service) Favorite(ctx context.Context, momentID string) error {
-	principal, _ := platformauth.PrincipalFromContext(ctx)
-	exists, err := s.repo.Exists(ctx, momentID)
+// ensureInteractable 校验瞬间对当前用户可交互：必须存在、未软删且可见
+// （public 或拥有者）。不可见统一 ErrMomentNotFound（10300 防枚举）。
+func (s *Service) ensureInteractable(ctx context.Context, momentID string) error {
+	item, ok, err := s.repo.Get(ctx, momentID)
 	if err != nil {
-		observability.L().Error("moments.favorite failed", "error", err, "moment_id", momentID)
 		return err
 	}
-	if !exists {
+	if !ok || item.IsDeleted {
 		return ErrMomentNotFound
+	}
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	if item.PrivacyLevel == "private" && item.User.UserID != principal.UserID {
+		return ErrMomentNotFound
+	}
+	return nil
+}
+
+func (s *Service) Favorite(ctx context.Context, momentID string) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	if err := s.ensureInteractable(ctx, momentID); err != nil {
+		observability.L().Warn("moments.favorite target not interactable", "moment_id", momentID)
+		return err
 	}
 	return s.repo.Favorite(ctx, principal.UserID, momentID)
 }
 
 func (s *Service) Unfavorite(ctx context.Context, momentID string) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	exists, err := s.repo.Exists(ctx, momentID)
-	if err != nil {
-		observability.L().Error("moments.unfavorite failed", "error", err, "moment_id", momentID)
+	if err := s.ensureInteractable(ctx, momentID); err != nil {
+		observability.L().Warn("moments.unfavorite target not interactable", "moment_id", momentID)
 		return err
-	}
-	if !exists {
-		return ErrMomentNotFound
 	}
 	return s.repo.Unfavorite(ctx, principal.UserID, momentID)
 }
@@ -448,6 +462,22 @@ func toOwnerMoment(item MomentItem) OwnerMomentItem {
 
 func emptyReactions() []Reaction { return []Reaction{} }
 
+func ensureMomentArrays(item *MomentItem) {
+	if item.Images == nil {
+		item.Images = []MomentImage{}
+	}
+	if item.Tags == nil {
+		item.Tags = []string{}
+	}
+	if item.Mentions == nil {
+		item.Mentions = []string{}
+	}
+}
+
+func ensureOwnerMomentArrays(item *OwnerMomentItem) {
+	ensureMomentArrays(&item.MomentItem)
+}
+
 func reactionsFor(recs []Reaction) []Reaction {
 	if recs == nil {
 		return emptyReactions()
@@ -481,7 +511,7 @@ func fallbackActor(userID string) types.UserInfo {
 }
 
 func actorFromInfo(info actor.Info) types.UserInfo {
-	return types.UserInfo{UserID: info.UserID, Nickname: info.Nickname, AvatarURL: info.AvatarURL}
+	return types.UserInfo{UserID: info.UserID, Nickname: info.Nickname, AvatarURL: types.StrPtr(info.AvatarURL)}
 }
 
 func momentSummaryForItem(item MomentItem) types.MomentSummary {
@@ -492,11 +522,7 @@ func momentSummaryForItem(item MomentItem) types.MomentSummary {
 }
 
 func summarizeMomentDescription(description string) string {
-	value := strings.TrimSpace(description)
-	if len(value) > 80 {
-		return value[:80]
-	}
-	return value
+	return textutil.TruncateRunes(description, 80)
 }
 
 func (s *Service) notifyMomentMentions(ctx context.Context, actorUserID string, item MomentItem) {

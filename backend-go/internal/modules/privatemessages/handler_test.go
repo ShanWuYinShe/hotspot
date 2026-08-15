@@ -339,7 +339,7 @@ func TestSendAndHistoryPrivateMessages(t *testing.T) {
 	if err := json.NewDecoder(historyRR.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 0 || len(resp.Data.Items) != 1 || resp.Data.Items[0].Content != "hello" {
+	if resp.Code != 0 || len(resp.Data.Items) != 1 || *resp.Data.Items[0].Content != "hello" {
 		t.Fatalf("unexpected history response: %#v", resp)
 	}
 }

@@ -9,7 +9,7 @@ import { common } from '@kit.AbilityKit';
 import { ApiClient } from '../api/ApiClient';
 import { GlobalStateManager } from '../state/GlobalStateManager';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
-import { AccountInfo, UserMomentsRequest, ListJoinedGroupsRequest } from '../types/api';
+import { AccountInfo, FetchUserMomentsRequest, FetchJoinedGroupsRequest } from '../types/api';
 import { AuthAccountManager } from '../state/AuthAccountManager';
 
 export interface SyncData {
@@ -345,7 +345,7 @@ export class DistributedSyncService {
    */
   private async fetchUserMoments(userId: string): Promise<Object[]> {
     try {
-      const params: UserMomentsRequest = {
+      const params: FetchUserMomentsRequest = {
         user_id: userId
       };
       const response = await ApiClient.getUserMoments(params);
@@ -365,7 +365,7 @@ export class DistributedSyncService {
    */
   private async fetchUserGroups(userId: string): Promise<Object[]> {
     try {
-      const params: ListJoinedGroupsRequest = {
+      const params: FetchJoinedGroupsRequest = {
         pagination: { limit: 50 }
       };
       const response = await ApiClient.getJoinedGroups(params);

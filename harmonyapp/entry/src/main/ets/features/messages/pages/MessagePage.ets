@@ -16,8 +16,8 @@ import {
   PrivateChatItem,
   GroupItem,
   AccountInfo,
-  ListJoinedGroupsRequest,
-  LeaveGroupRequest,
+  FetchJoinedGroupsRequest,
+  ExitGroupRequest,
   DeletePrivateChatRequest
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -298,7 +298,7 @@ export struct MessagePage {
 
   private async loadGroupChats(cursor?: string): Promise<ChatItem[]> {
     try {
-      const request: ListJoinedGroupsRequest = { pagination: { limit: 50, cursor: cursor } };
+      const request: FetchJoinedGroupsRequest = { pagination: { limit: 50, cursor: cursor } };
       const response = await ApiClient.getJoinedGroups(request);
       if (response.code === 0) {
         const items = response.data?.items ?? [];
@@ -315,8 +315,8 @@ export struct MessagePage {
               lastMessage: this.formatLastMessage(item.last_message),
               lastTime: item.last_message?.sent_at ?? item.last_activity_at ?? item.created_at ?? '',
               lastTimestamp: this.parseTimestamp(item.last_message?.sent_at ?? item.last_activity_at ?? item.created_at ?? ''),
-              isPinned: item.my_state?.is_pinned ?? false,
-              unreadCount: item.my_state?.unread_count || 0,
+              isPinned: item.viewer_state?.is_pinned ?? false,
+              unreadCount: item.viewer_state?.unread_count || 0,
               data: item
             };
             return chatItem;
@@ -384,7 +384,7 @@ export struct MessagePage {
       return privateData.is_pinned ?? false;
     }
     const groupData = data as GroupItem;
-    return groupData.my_state?.is_pinned ?? false;
+    return groupData.viewer_state?.is_pinned ?? false;
   }
 
   private parseTimestamp(value: string): number {
@@ -541,7 +541,7 @@ export struct MessagePage {
       } else {
         const groupData = item.data as GroupItem;
         const groupId = groupData.group?.group_id ?? item.id;
-        const request: LeaveGroupRequest = { group_id: groupId };
+        const request: ExitGroupRequest = { group_id: groupId };
         await ApiClient.leaveGroup(request);
         InteractionStateStore.getInstance().updateGroupMembership(groupId, { is_member: false });
       }

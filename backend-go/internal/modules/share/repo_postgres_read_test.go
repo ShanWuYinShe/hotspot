@@ -196,7 +196,7 @@ func TestPostgresRepositoryCreateGetListAndRevoke(t *testing.T) {
 	expiresAt := time.Now().UTC().Add(time.Minute)
 
 	created, err := repo.Create(context.Background(), createShareCommand{CreatorUserID: "user_alice", ShareType: ShareTypeUser, Payload: map[string]any{"shared_user_id": "user_bob"}, ExpiresAt: &expiresAt})
-	if err != nil || created.ShareID == "" || created.ShareCode == "" || created.ExpiresAt == "" || !validShareCode(created.ShareCode) {
+	if err != nil || created.ShareID == "" || created.ShareCode == "" || created.ExpiresAt == nil || !validShareCode(created.ShareCode) {
 		t.Fatalf("unexpected created share: %#v err=%v", created, err)
 	}
 

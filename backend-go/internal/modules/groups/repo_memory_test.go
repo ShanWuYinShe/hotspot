@@ -30,7 +30,7 @@ func TestInMemoryCreate_AddsOwnerAsMember(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
-	if (item.OwnerID == nil || *item.OwnerID != "user_1") {
+	if item.OwnerID == nil || *item.OwnerID != "user_1" {
 		t.Fatalf("expected owner user_1, got %s", *item.OwnerID)
 	}
 	if item.ViewerState == nil || item.ViewerState.Role != GroupRoleOwner {

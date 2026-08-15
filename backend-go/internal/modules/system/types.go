@@ -36,10 +36,10 @@ type Location struct {
 type ApiVersionMeta struct {
 	Version            string           `json:"version"`
 	Status             ApiVersionStatus `json:"status"`
-	DeprecatedAt       string           `json:"deprecated_at,omitempty"`
-	SunsetAt           string           `json:"sunset_at,omitempty"`
-	Message            string           `json:"message,omitempty"`
-	RecommendedVersion string           `json:"recommended_version,omitempty"`
+	DeprecatedAt       *string          `json:"deprecated_at"`
+	SunsetAt           *string          `json:"sunset_at"`
+	Message            *string          `json:"message"`
+	RecommendedVersion *string          `json:"recommended_version"`
 }
 
 type HealthStatus struct {
@@ -48,12 +48,12 @@ type HealthStatus struct {
 }
 
 type SystemAnnouncementItem struct {
-	AnnouncementID string        `json:"announcement_id"`
-	Title          string        `json:"title"`
-	Content        string        `json:"content"`
+	AnnouncementID string           `json:"announcement_id"`
+	Title          string           `json:"title"`
+	Content        string           `json:"content"`
 	Severity       AnnounceSeverity `json:"severity"`
-	ActionURL      string        `json:"action_url,omitempty"`
-	CreatedAt      string        `json:"created_at"`
+	ActionURL      *string          `json:"action_url"`
+	CreatedAt      string           `json:"created_at"`
 }
 
 type SystemAnnouncementList struct {
@@ -62,7 +62,7 @@ type SystemAnnouncementList struct {
 
 type FeatureSwitches struct {
 	EnablePublicRegistration bool `json:"enable_public_registration"`
-	EnableGuestRegister         bool `json:"enable_guest_register"`
+	EnableGuestRegister      bool `json:"enable_guest_register"`
 	EnableMoments            bool `json:"enable_moments"`
 	EnableNearbyPeople       bool `json:"enable_nearby_people"`
 }
@@ -107,10 +107,10 @@ type BootstrapRequest struct {
 }
 
 type BootstrapData struct {
-	BootstrapVersion string         `json:"bootstrap_version"`
-	Meta             *ApiVersionMeta `json:"meta"`         // 恒定 nullable；缓存命中时整体省略（handler 用精简类型）
-	ClientConfig     *ClientConfig   `json:"client_config"` // 恒定 nullable；缓存命中时整体省略
-	Profile          any             `json:"profile"`       // 恒定 nullable：匿名时为 null
+	BootstrapVersion string          `json:"bootstrap_version"`
+	Meta             *ApiVersionMeta `json:"meta"`           // 恒定 nullable；缓存命中时整体省略（handler 用精简类型）
+	ClientConfig     *ClientConfig   `json:"client_config"`  // 恒定 nullable；缓存命中时整体省略
+	Profile          any             `json:"profile"`        // 恒定 nullable：匿名时为 null
 	UnreadSummary    *UnreadSummary  `json:"unread_summary"` // 恒定 nullable：匿名时为 null
 }
 

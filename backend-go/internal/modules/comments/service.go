@@ -416,7 +416,11 @@ func buildCommentActor(item CommentItem, fallbackUserID string) types.UserInfo {
 	if nickname == "" {
 		nickname = userID
 	}
-	return types.UserInfo{UserID: userID, Nickname: nickname, AvatarURL: strings.TrimSpace(item.User.AvatarURL)}
+	avatarURL := ""
+	if item.User.AvatarURL != nil {
+		avatarURL = strings.TrimSpace(*item.User.AvatarURL)
+	}
+	return types.UserInfo{UserID: userID, Nickname: nickname, AvatarURL: types.StrPtr(avatarURL)}
 }
 
 func notificationMomentSummary(momentContext MomentNotificationContext, momentID string) types.MomentSummary {

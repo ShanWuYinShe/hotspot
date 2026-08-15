@@ -110,7 +110,8 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string, limit in
 		return PaginatedComments{}, fmt.Errorf("comments.List rows: %w", err)
 	}
 	if len(items) > limit {
-		return PaginatedComments{Items: items[:limit], NextCursor: encodeCommentCursor(items[limit-1].CreatedAt, items[limit-1].CommentID)}, nil
+		c := encodeCommentCursor(items[limit-1].CreatedAt, items[limit-1].CommentID)
+		return PaginatedComments{Items: items[:limit], NextCursor: &c}, nil
 	}
 	return PaginatedComments{Items: items}, nil
 }
@@ -168,7 +169,8 @@ func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, 
 		return PaginatedComments{}, fmt.Errorf("comments.ListReplies rows: %w", err)
 	}
 	if len(items) > limit {
-		return PaginatedComments{Items: items[:limit], NextCursor: encodeCommentCursor(items[limit-1].CreatedAt, items[limit-1].CommentID)}, nil
+		c := encodeCommentCursor(items[limit-1].CreatedAt, items[limit-1].CommentID)
+		return PaginatedComments{Items: items[:limit], NextCursor: &c}, nil
 	}
 	return PaginatedComments{Items: items}, nil
 }

@@ -49,7 +49,7 @@ func TestPostgresIT_CreateAndGetGroup(t *testing.T) {
 		if group.Group.Name != "Test Group" {
 			t.Fatalf("name: got %q", group.Group.Name)
 		}
-		if (group.OwnerID == nil || *group.OwnerID != ownerID) {
+		if group.OwnerID == nil || *group.OwnerID != ownerID {
 			t.Fatalf("owner_id: got %s, want %q", *group.OwnerID, ownerID)
 		}
 
@@ -552,7 +552,7 @@ func TestPostgresIT_InviteFlow(t *testing.T) {
 		if err != nil {
 			t.Fatalf("InviteMember: %v", err)
 		}
-		if inv.InviteID == "" {
+		if inv.InviteID == nil || *inv.InviteID == "" {
 			t.Fatal("expected non-empty invite id")
 		}
 
@@ -576,8 +576,8 @@ func TestPostgresIT_InviteFlow(t *testing.T) {
 		if err != nil {
 			t.Fatalf("InviteMember (duplicate): %v", err)
 		}
-		if inv2.InviteID != inv.InviteID {
-			t.Fatalf("expected deduped invite id, got %q vs %q", inv2.InviteID, inv.InviteID)
+		if *inv2.InviteID != *inv.InviteID {
+			t.Fatalf("expected deduped invite id, got %q vs %q", *inv2.InviteID, *inv.InviteID)
 		}
 
 		// Invitee sees the invite
@@ -593,7 +593,7 @@ func TestPostgresIT_InviteFlow(t *testing.T) {
 		}
 
 		// Accept the invite
-		if err := repo.AcceptInvite(ctx, inviteeID, inv.InviteID); err != nil {
+		if err := repo.AcceptInvite(ctx, inviteeID, *inv.InviteID); err != nil {
 			t.Fatalf("AcceptInvite: %v", err)
 		}
 		members, _, err := repo.ListMembers(ctx, groupID, nil, 10, "")
@@ -620,7 +620,7 @@ func TestPostgresIT_InviteFlow(t *testing.T) {
 		if err != nil {
 			t.Fatalf("InviteMember (2): %v", err)
 		}
-		if err := repo.RejectInvite(ctx, inv3.InviteID); err != nil {
+		if err := repo.RejectInvite(ctx, *inv3.InviteID); err != nil {
 			t.Fatalf("RejectInvite: %v", err)
 		}
 		myInvites, _, err = repo.ListMyInvites(ctx, invitee2ID, nil, 10, "")
@@ -653,7 +653,7 @@ func TestPostgresIT_RevokeInvite(t *testing.T) {
 			t.Fatalf("InviteMember: %v", err)
 		}
 
-		if err := repo.RevokeInvite(ctx, groupID, inv.InviteID); err != nil {
+		if err := repo.RevokeInvite(ctx, groupID, *inv.InviteID); err != nil {
 			t.Fatalf("RevokeInvite: %v", err)
 		}
 		pending := ApplicationStatusPending

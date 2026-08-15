@@ -9,7 +9,7 @@
 import {
   ApiResponse, PaginatedData,
   UserInfo, UserItem, UserStats, AccountInfo,
-  MomentItem, MomentMyState, CommentItem, GroupItem, GroupInfo, GroupViewerState, ReactionItem,
+  MomentItem, CommentItem, GroupItem, GroupInfo, GroupViewerState, ReactionItem, Reaction,
   PrivateChatItem, PrivateMessageItem, MessageSentResult,
   AuthData, SessionStatus,
   TrendingBundle, TagItem,
@@ -70,33 +70,51 @@ const MK_USER_ITEM: UserItem = {
   tags: [],
   presence_status: 'online',
   last_online_at: '',
+  location: MK_RELATIVE_LOCATION,
   stats: MK_STATS,
-  relation: MK_RELATION
+  relation: MK_RELATION,
+  social_context: null
 };
 
-const MK_MOMENT_STATE: MomentMyState = { is_favorited: false };
+const MK_REACTION: Reaction = { emoji: '👍', count: 0, reacted_by_me: false };
 
 const MK_MOMENT: MomentItem = {
   moment_id: 'm1',
   description: '示例动态',
+  images: [],
   tags: [],
+  mentions: [],
   created_at: '',
-  likes_count: 0,
   comments_count: 0,
   shares_count: 0,
+  reactions: [MK_REACTION],
   user: MK_USER_1,
+  is_deleted: false,
   location: MK_RELATIVE_LOCATION,
-  my_state: MK_MOMENT_STATE
+  is_favorited: false,
+  recommendation: null
 };
 
 const MK_GROUP_INFO: GroupInfo = { group_id: 'g1', name: '附近群组', avatar_url: '', members_count: 42 };
-const MK_GROUP_STATE: GroupViewerState = { role: 'member', is_joined: false, unread_count: 0, is_muted: false, is_pinned: false };
+const MK_GROUP_STATE: GroupViewerState = {
+  role: 'member', unread_count: 0, is_muted: false, muted_until: null, is_pinned: false, joined_at: ''
+};
 
 const MK_GROUP: GroupItem = {
   group: MK_GROUP_INFO,
   description: '示例群组',
+  tags: [],
+  join_method: 'direct',
+  requires_approval: false,
   location: MK_RELATIVE_LOCATION,
-  my_state: MK_GROUP_STATE
+  last_activity_at: null,
+  online_members_count: null,
+  next_activity_at: null,
+  created_at: null,
+  owner_id: null,
+  viewer_state: MK_GROUP_STATE,
+  friends_in_group: null,
+  last_message: null
 };
 
 const MOCK_AUTH: AuthData = {
@@ -124,11 +142,13 @@ const MOCK_COMMENT: CommentItem = {
   comment_id: 'c1',
   user: MK_USER_1,
   content: '示例评论',
+  parent_id: null,
   mentions: [],
   created_at: '',
   replies_count: 0,
   is_deleted: false,
-  reactions: []
+  reactions: [],
+  top_replies: []
 };
 
 const MOCK_SENT: MessageSentResult = {

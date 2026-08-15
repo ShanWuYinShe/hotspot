@@ -7,6 +7,7 @@ import (
 
 	"hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type stubRepo struct {
@@ -54,8 +55,14 @@ func (r *stubRepo) RecallAsAdmin(_ context.Context, _ string) (MessageEventMeta,
 func (r *stubRepo) MarkAsRead(_ context.Context, _ string, _ MarkGroupMessagesReadRequest) error {
 	return r.markReadErr
 }
-func (r *stubRepo) MarkAllRead(_ context.Context, _ string) error {
-	return r.markAllReadErr
+func (r *stubRepo) MarkAllRead(_ context.Context, _ string) ([]string, error) {
+	return nil, r.markAllReadErr
+}
+func (r *stubRepo) GetReadCount(_ context.Context, _ string, _ string) (int, error) {
+	return 0, nil
+}
+func (r *stubRepo) LatestMessageID(_ context.Context, _ string) (string, error) {
+	return "", nil
 }
 func (r *stubRepo) GetMessageForReply(_ context.Context, _ string) (*MessageBrief, bool, error) {
 	return r.replyToResult, r.replyToOk, r.replyToErr
@@ -81,6 +88,10 @@ func (r *stubRepo) LookupMessageMeta(_ context.Context, _ string) (MessageOwnerM
 
 func (r *stubRepo) GetMediaForMessage(_ context.Context, _ string) (map[string]any, bool, error) {
 	return r.mediaResult, r.mediaOk, r.mediaErr
+}
+
+func (r *stubRepo) FilterMemberIDs(_ context.Context, _ string, userIDs []string) ([]string, error) {
+	return userIDs, nil
 }
 
 func (r *stubRepo) IsMember(_ context.Context, _ string, _ string) (bool, error) {
@@ -224,7 +235,7 @@ func TestServiceMarkAllReadPropagatesError(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestBuildReplyToReturnsInfo(t *testing.T) {
-	expected := &MessageBrief{MessageID: "m1", Content: "hi"}
+	expected := &MessageBrief{MessageID: "m1", Content: types.StrPtr("hi")}
 	repo := &stubRepo{replyToResult: expected, replyToOk: true}
 	service := NewServiceWithRepo(repo)
 
@@ -296,7 +307,7 @@ func TestBuildMediaReturnsNilOnError(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestServiceSendWithReplyToIncludesReplyInfo(t *testing.T) {
-	replyInfo := &MessageBrief{MessageID: "orig1", Content: "original"}
+	replyInfo := &MessageBrief{MessageID: "orig1", Content: types.StrPtr("original")}
 	repo := &stubRepo{
 		sendResult:    MessageSentResult{MessageID: "gm-new", SentAt: "2025-06-01T00:00:00Z"},
 		replyToResult: replyInfo,

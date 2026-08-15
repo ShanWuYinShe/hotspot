@@ -65,8 +65,20 @@ func (r *stubGroupMessageRepo) IsMember(_ context.Context, _ string, _ string) (
 	}
 	return true, nil // 便捷默认：视为成员；非成员场景用 isMemberErr = ErrNotGroupMember
 }
-func (r *stubGroupMessageRepo) MarkAllRead(_ context.Context, _ string) error {
-	return r.markAllErr
+func (r *stubGroupMessageRepo) FilterMemberIDs(_ context.Context, _ string, userIDs []string) ([]string, error) {
+	// 便捷默认：全部视为成员（与 IsMember 的默认语义一致）
+	return userIDs, nil
+}
+func (r *stubGroupMessageRepo) MarkAllRead(_ context.Context, _ string) ([]string, error) {
+	return nil, r.markAllErr
+}
+
+func (r *stubGroupMessageRepo) GetReadCount(_ context.Context, _ string, _ string) (int, error) {
+	return 0, nil
+}
+
+func (r *stubGroupMessageRepo) LatestMessageID(_ context.Context, _ string) (string, error) {
+	return "", nil
 }
 
 func (r *stubGroupMessageRepo) MemberMuteStatus(_ context.Context, _ string, _ string) (bool, string, bool, error) {

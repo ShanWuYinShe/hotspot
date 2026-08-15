@@ -42,7 +42,9 @@ type CommentItem struct {
 
 // strPtr 构造 string 指针（用于 CommentItem.ParentID 恒定 nullable）。
 func strPtr(s string) *string {
-	if s == "" { return nil }
+	if s == "" {
+		return nil
+	}
 	return &s
 }
 
@@ -53,7 +55,6 @@ func parentIDStr(p *string) any {
 	}
 	return *p
 }
-
 
 type CreateCommentRequest struct {
 	MomentID string   `json:"moment_id"`
@@ -69,7 +70,7 @@ type ListCommentsRequest struct {
 
 type PaginatedComments struct {
 	Items      []CommentItem `json:"items"`
-	NextCursor string        `json:"next_cursor,omitempty"`
+	NextCursor *string       `json:"next_cursor"`
 }
 
 type DeleteCommentRequest struct {

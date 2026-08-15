@@ -88,7 +88,10 @@ func searchNameMatchScore(item GroupItem, keyword string) int {
 		return 0
 	}
 	name := strings.ToLower(item.Group.Name)
-	description := strings.ToLower(item.Description)
+	description := ""
+	if item.Description != nil {
+		description = strings.ToLower(*item.Description)
+	}
 	switch {
 	case name == keyword:
 		return 3

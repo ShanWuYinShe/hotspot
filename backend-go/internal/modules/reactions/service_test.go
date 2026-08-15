@@ -196,8 +196,8 @@ func TestListPaginatesAndFiltersByEmoji(t *testing.T) {
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
-	if len(page.Items) != 2 || page.NextCursor == "" {
-		t.Fatalf("expected 2 items + cursor, got %d items, cursor=%q", len(page.Items), page.NextCursor)
+	if len(page.Items) != 2 || page.NextCursor == nil {
+		t.Fatalf("expected 2 items + cursor, got %d items, cursor=%v", len(page.Items), page.NextCursor)
 	}
 	// Emoji filter excludes the ❤️ reaction.
 	for _, it := range page.Items {

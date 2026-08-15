@@ -26,7 +26,7 @@ func TestMemoryListRepliesAndTopReplies(t *testing.T) {
 	if err != nil || len(replyPage.Items) != 2 {
 		t.Fatalf("list replies: %d items err=%v", len(replyPage.Items), err)
 	}
-	replyPage2, err := repo.ListReplies(ctx, parent.CommentID, 2, replyPage.NextCursor)
+	replyPage2, err := repo.ListReplies(ctx, parent.CommentID, 2, *replyPage.NextCursor)
 	if err != nil || len(replyPage2.Items) != 1 {
 		t.Fatalf("replies page2: %d items err=%v", len(replyPage2.Items), err)
 	}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -52,7 +53,7 @@ func (r *PostgresRepository) Create(ctx context.Context, cmd createShareCommand)
 		}
 		err = queryable.Exec(ctx, queryInsertShare, shareID, shareCode, cmd.CreatorUserID, cmd.ShareType, string(payloadJSON), createdAt, expiresAtValue, false)
 		if err == nil {
-			return ShareCreated{ShareID: shareID, ShareCode: shareCode, ExpiresAt: expiresAt}, nil
+			return ShareCreated{ShareID: shareID, ShareCode: shareCode, ExpiresAt: types.StrPtr(expiresAt)}, nil
 		}
 		if persistence.IsUniqueViolation(err) {
 			continue

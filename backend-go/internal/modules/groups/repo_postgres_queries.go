@@ -2,8 +2,22 @@ package groups
 
 const (
 	queryInsertGroup = `
-	INSERT INTO groups (group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, requires_approval, next_activity_at, is_searchable, members_searchable, max_members, owner_id, created_at, last_activity_at, tags, s2_cell_token, s2_cell_id)
-	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`
+	INSERT INTO groups (group_id, name, avatar_url, description, has_password, password_hash, location_name, latitude, longitude, join_method, requires_approval, next_activity_at, is_searchable, members_searchable, max_members, owner_id, created_at, last_activity_at, tags, s2_cell_token, s2_cell_id)
+	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`
+
+	// 入群容量检查：FOR UPDATE 锁群行，使并发入群/审批/受邀加入在同一个
+	// max_members 快照下串行判定，杜绝竞态超员。
+	queryLockGroupCapacity = `
+	SELECT g.max_members,
+	       (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = g.group_id)
+	FROM groups g
+	WHERE g.group_id = $1
+	FOR UPDATE`
+
+	queryGetGroupPasswordHash = `
+	SELECT password_hash
+	FROM groups
+	WHERE group_id = $1`
 
 	queryGetGroup = `
 	SELECT group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, requires_approval, next_activity_at, is_searchable, members_searchable, max_members, owner_id, created_at, last_activity_at, COALESCE(tags, '{}'),
@@ -103,21 +117,30 @@ ORDER BY created_at DESC, application_id DESC
 LIMIT 1`
 
 	queryGetGroupApplication = `
-SELECT application_id, group_id, applicant_user_id, COALESCE(message, ''), status, created_at, handled_at, handled_by_user_id
-FROM group_applications
-WHERE application_id = $1`
+SELECT ga.application_id, ga.group_id, g.name, COALESCE(g.avatar_url, ''),
+       (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = ga.group_id) AS members_count,
+       ga.applicant_user_id, COALESCE(ga.message, ''), ga.status, ga.created_at, ga.handled_at, ga.handled_by_user_id
+FROM group_applications ga
+JOIN groups g ON g.group_id = ga.group_id
+WHERE ga.application_id = $1`
 
 	queryListGroupApplications = `
-SELECT application_id, applicant_user_id, COALESCE(message, ''), status, created_at, handled_at, handled_by_user_id
-FROM group_applications
-WHERE group_id = $1 AND ($2 = '' OR status = $2)
-ORDER BY created_at DESC, application_id DESC`
+SELECT ga.application_id, ga.group_id, g.name, COALESCE(g.avatar_url, ''),
+       (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = ga.group_id) AS members_count,
+       ga.applicant_user_id, COALESCE(ga.message, ''), ga.status, ga.created_at, ga.handled_at, ga.handled_by_user_id
+FROM group_applications ga
+JOIN groups g ON g.group_id = ga.group_id
+WHERE ga.group_id = $1 AND ($2 = '' OR ga.status = $2)
+ORDER BY ga.created_at DESC, ga.application_id DESC`
 
 	queryListMyGroupApplications = `
-SELECT application_id, group_id, COALESCE(message, ''), status, created_at, handled_at, handled_by_user_id
-FROM group_applications
-WHERE applicant_user_id = $1 AND ($2 = '' OR status = $2)
-ORDER BY created_at DESC, application_id DESC`
+SELECT ga.application_id, ga.group_id, g.name, COALESCE(g.avatar_url, ''),
+       (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = ga.group_id) AS members_count,
+       ga.applicant_user_id, COALESCE(ga.message, ''), ga.status, ga.created_at, ga.handled_at, ga.handled_by_user_id
+FROM group_applications ga
+JOIN groups g ON g.group_id = ga.group_id
+WHERE ga.applicant_user_id = $1 AND ($2 = '' OR ga.status = $2)
+ORDER BY ga.created_at DESC, ga.application_id DESC`
 
 	queryUpdateGroupApplication = `
 UPDATE group_applications
@@ -141,10 +164,14 @@ ORDER BY created_at DESC, invite_id DESC
 LIMIT 1`
 
 	queryListSentInvites = `
-SELECT invite_id, invitee_user_id, COALESCE(message, ''), status, created_at, expires_at, responded_at
-FROM group_invites
-WHERE group_id = $1 AND ($2 = '' OR status = $2)
-ORDER BY created_at DESC, invite_id DESC`
+SELECT gi.invite_id, gi.inviter_user_id, COALESCE(ui.nickname, ''),
+       gi.invitee_user_id, COALESCE(ue.nickname, ''),
+       COALESCE(gi.message, ''), gi.status, gi.created_at, gi.expires_at, gi.responded_at
+FROM group_invites gi
+LEFT JOIN users ui ON ui.user_id = gi.inviter_user_id
+LEFT JOIN users ue ON ue.user_id = gi.invitee_user_id
+WHERE gi.group_id = $1 AND ($2 = '' OR gi.status = $2)
+ORDER BY gi.created_at DESC, gi.invite_id DESC`
 
 	queryListMyInvites = `
 SELECT gi.invite_id, gi.group_id, g.name, COALESCE(g.avatar_url, ''),
@@ -166,18 +193,19 @@ WHERE invite_id = $1`
 	    avatar_url = COALESCE($3, avatar_url),
 	    description = COALESCE($4, description),
 	    has_password = COALESCE($5, has_password),
-	    join_method = COALESCE($6, join_method),
-	    requires_approval = COALESCE($7, requires_approval),
-	    next_activity_at = COALESCE($8, next_activity_at),
-	    is_searchable = COALESCE($9, is_searchable),
-	    members_searchable = COALESCE($10, members_searchable),
-	    max_members = COALESCE($11, max_members),
-	    location_name = COALESCE($12, location_name),
-	    latitude = COALESCE($13, latitude),
-	    longitude = COALESCE($14, longitude),
-	    tags = COALESCE($15, tags),
-	    s2_cell_token = COALESCE($16, s2_cell_token),
-	    s2_cell_id = COALESCE($17, s2_cell_id)
+	    password_hash = COALESCE($6, password_hash),
+	    join_method = COALESCE($7, join_method),
+	    requires_approval = COALESCE($8, requires_approval),
+	    next_activity_at = COALESCE($9, next_activity_at),
+	    is_searchable = COALESCE($10, is_searchable),
+	    members_searchable = COALESCE($11, members_searchable),
+	    max_members = COALESCE($12, max_members),
+	    location_name = COALESCE($13, location_name),
+	    latitude = COALESCE($14, latitude),
+	    longitude = COALESCE($15, longitude),
+	    tags = COALESCE($16, tags),
+	    s2_cell_token = COALESCE($17, s2_cell_token),
+	    s2_cell_id = COALESCE($18, s2_cell_id)
 	WHERE group_id = $1`
 
 	queryDeleteGroup = `

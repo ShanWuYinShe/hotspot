@@ -12,8 +12,8 @@ import (
 type MessageBrief struct {
 	MessageID string         `json:"message_id"`
 	Type      string         `json:"type"`
-	Content   string         `json:"content,omitempty"`
-	ShareCode string         `json:"share_code,omitempty"`
+	Content   *string        `json:"content"`
+	ShareCode *string        `json:"share_code"`
 	Sender    types.UserInfo `json:"sender"`
 	SentAt    string         `json:"sent_at"`
 }
@@ -22,17 +22,17 @@ type GroupMessageItem struct {
 	MessageID    string         `json:"message_id"`
 	SenderUserID string         `json:"-"` // 内部存储用；对外通过 Sender map 暴露
 	Type         string         `json:"type"`
-	Content      string         `json:"content,omitempty"`
-	Media        map[string]any `json:"media,omitempty"`
-	ShareCode    string         `json:"share_code,omitempty"`
+	Content      *string        `json:"content"`
+	Media        map[string]any `json:"media"`
+	ShareCode    *string        `json:"share_code"`
 	Sender       map[string]any `json:"sender"` // UserInfo
-	ReplyTo      *MessageBrief `json:"reply_to,omitempty"`
-	Mentions     []string       `json:"mentions,omitempty"`
-	RecalledBy   map[string]any `json:"recalled_by,omitempty"`
+	ReplyTo      *MessageBrief  `json:"reply_to"`
+	Mentions     []string       `json:"mentions"`
+	RecalledBy   map[string]any `json:"recalled_by"`
 	SentAt       string         `json:"sent_at"`
-	EditedAt     string         `json:"edited_at,omitempty"`
-	RecalledAt   string         `json:"recalled_at,omitempty"`
-	ReadCount    int            `json:"read_count,omitempty"`
+	EditedAt     *string        `json:"edited_at"`
+	RecalledAt   *string        `json:"recalled_at"`
+	ReadCount    *int           `json:"read_count"`
 }
 type MessageSentResult struct {
 	MessageID string `json:"message_id"`
@@ -84,7 +84,7 @@ type ListGroupMessagesRequest struct {
 }
 type PaginatedGroupMessages struct {
 	Items      []GroupMessageItem `json:"items"`
-	NextCursor string             `json:"next_cursor,omitempty"`
+	NextCursor *string            `json:"next_cursor"`
 }
 
 // 新增请求类型

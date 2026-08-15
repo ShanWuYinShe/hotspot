@@ -53,7 +53,7 @@ type AdminPermissionDictionary struct {
 type AdminRoleItem struct {
 	RoleID      string   `json:"role_id"`
 	Name        string   `json:"name"`
-	Description string   `json:"description,omitempty"`
+	Description *string  `json:"description"`
 	Permissions []string `json:"permissions"`
 }
 
@@ -70,7 +70,7 @@ type AdminOperatorItem struct {
 
 type PaginatedAdminOperators struct {
 	Items      []AdminOperatorItem `json:"items"`
-	NextCursor string              `json:"next_cursor,omitempty"`
+	NextCursor *string             `json:"next_cursor"`
 }
 
 type AdminRbacRoleCreateRequest struct {
@@ -99,9 +99,9 @@ type AdminRbacAdminsListRequest struct {
 }
 
 type AdminRbacGrantAdminRequest struct {
-	UserID             string   `json:"user_id"`
-	AwardAllPermissions bool    `json:"award_all_permissions,omitempty"`
-	RoleIDs            []string `json:"role_ids,omitempty"`
+	UserID              string   `json:"user_id"`
+	AwardAllPermissions bool     `json:"award_all_permissions,omitempty"`
+	RoleIDs             []string `json:"role_ids,omitempty"`
 }
 
 type AdminRbacRevokeAdminRequest struct {
@@ -136,29 +136,29 @@ const (
 )
 
 type AdminUserItem struct {
-	User              usersmodule.UserInfo           `json:"user"`
-	Bio               string                         `json:"bio,omitempty"`
-	Tags              []string                       `json:"tags,omitempty"`
-	PresenceStatus    usersmodule.UserPresenceStatus `json:"presence_status,omitempty"`
-	LastOnline        string                         `json:"last_online_at,omitempty"`
-	Location          *usersmodule.RelativeLocation  `json:"location,omitempty"`
-	Stats             *usersmodule.UserStats         `json:"stats,omitempty"`
-	Relation          usersmodule.Relationship       `json:"relation,omitempty"`
-	Status            UserAccountStatus              `json:"status"`
-	CreatedAt         string                         `json:"created_at"`
-	LastActiveAt      string                         `json:"last_active_at,omitempty"`
-	LoginID           string                         `json:"login_id"`
-	RegisterIP        *string                        `json:"register_ip"`
-	RegisterLocation  string                         `json:"register_location,omitempty"`
-	LastLoginIP       *string                        `json:"last_login_ip"`
-	LastLoginLocation string                         `json:"last_login_location,omitempty"`
-	Email             string                         `json:"email,omitempty"`
-	Phone             string                         `json:"phone,omitempty"`
+	User              usersmodule.UserInfo            `json:"user"`
+	Bio               *string                         `json:"bio"`
+	Tags              []string                        `json:"tags"`
+	PresenceStatus    *usersmodule.UserPresenceStatus `json:"presence_status"`
+	LastOnline        *string                         `json:"last_online_at"`
+	Location          *usersmodule.RelativeLocation   `json:"location"`
+	Stats             *usersmodule.UserStats          `json:"stats"`
+	Relation          *usersmodule.Relationship       `json:"relation"`
+	Status            UserAccountStatus               `json:"status"`
+	CreatedAt         string                          `json:"created_at"`
+	LastActiveAt      *string                         `json:"last_active_at"`
+	LoginID           string                          `json:"login_id"`
+	RegisterIP        *string                         `json:"register_ip"`
+	RegisterLocation  *string                         `json:"register_location"`
+	LastLoginIP       *string                         `json:"last_login_ip"`
+	LastLoginLocation *string                         `json:"last_login_location"`
+	Email             *string                         `json:"email"`
+	Phone             *string                         `json:"phone"`
 }
 
 type PaginatedAdminUsers struct {
 	Items      []AdminUserItem `json:"items"`
-	NextCursor string          `json:"next_cursor,omitempty"`
+	NextCursor *string         `json:"next_cursor"`
 }
 
 type AdminUserSearchRequest struct {
@@ -184,21 +184,21 @@ type AdminSetUserBanRequest struct {
 
 type AdminGroupItem struct {
 	Group          groupsmodule.GroupInfo       `json:"group"`
-	Description    string                       `json:"description,omitempty"`
-	Tags           []string                     `json:"tags,omitempty"`
+	Description    *string                      `json:"description"`
+	Tags           []string                     `json:"tags"`
 	HasPassword    bool                         `json:"has_password"`
 	Location       groupsmodule.Location        `json:"location"`
-	JoinMethod     groupsmodule.GroupJoinMethod `json:"join_method,omitempty"`
-	IsSearchable   bool                         `json:"is_searchable,omitempty"`
-	MaxMembers     int                          `json:"max_members,omitempty"`
+	JoinMethod     groupsmodule.GroupJoinMethod `json:"join_method"`
+	IsSearchable   bool                         `json:"is_searchable"`
+	MaxMembers     int                          `json:"max_members"`
 	CreatedAt      string                       `json:"created_at"`
 	Owner          usersmodule.UserInfo         `json:"owner"`
-	LastActivityAt string                       `json:"last_activity_at,omitempty"`
+	LastActivityAt *string                      `json:"last_activity_at"`
 }
 
 type PaginatedAdminGroups struct {
 	Items      []AdminGroupItem `json:"items"`
-	NextCursor string           `json:"next_cursor,omitempty"`
+	NextCursor *string          `json:"next_cursor"`
 }
 
 type AdminGroupSearchRequest struct {
@@ -222,21 +222,21 @@ type AdminReportItem struct {
 	TargetType  ReportTargetType      `json:"target_type"`
 	TargetID    string                `json:"target_id"`
 	Reason      string                `json:"reason"`
-	Description string                `json:"description,omitempty"`
+	Description *string               `json:"description"`
 	Status      ReportStatus          `json:"status"`
 	CreatedAt   string                `json:"created_at"`
-	HandledAt   string                `json:"handled_at,omitempty"`
+	HandledAt   *string               `json:"handled_at"`
 	Reporter    usersmodule.UserInfo  `json:"reporter"`
-	HandledBy   *usersmodule.UserInfo `json:"handled_by,omitempty"`
-	HandleNote  string                `json:"handle_note,omitempty"`
+	HandledBy   *usersmodule.UserInfo `json:"handled_by"`
+	HandleNote  *string               `json:"handle_note"`
 	// MessageSnapshot 仅 target_type='message' 时返回：管理员基于快照审核，
 	// 不直接查询私聊/群聊消息库（spec api_spec_types.md ReportItem）。
-	MessageSnapshot *reportsmodule.ReportSnapshot `json:"message_snapshot,omitempty"`
+	MessageSnapshot *reportsmodule.ReportSnapshot `json:"message_snapshot"`
 }
 
 type PaginatedAdminReports struct {
 	Items      []AdminReportItem `json:"items"`
-	NextCursor string            `json:"next_cursor,omitempty"`
+	NextCursor *string           `json:"next_cursor"`
 }
 
 type AdminReportListRequest struct {
@@ -288,17 +288,17 @@ type AuditLogItem struct {
 	Operator      UserInfo        `json:"operator"`
 	TargetType    AuditTargetType `json:"target_type"`
 	TargetID      string          `json:"target_id"`
-	TargetName    string          `json:"target_name,omitempty"`
-	Details       AuditDetails    `json:"details,omitempty"`
-	IPLocation    string          `json:"ip_location,omitempty"`
+	TargetName    *string         `json:"target_name"`
+	Details       AuditDetails    `json:"details"`
+	IPLocation    *string         `json:"ip_location"`
 	IPAddress     *string         `json:"ip_address"`
-	DeviceSummary string          `json:"device_summary,omitempty"`
+	DeviceSummary *string         `json:"device_summary"`
 	CreatedAt     string          `json:"created_at"`
 }
 
 type PaginatedAuditLogs struct {
 	Items      []AuditLogItem `json:"items"`
-	NextCursor string         `json:"next_cursor,omitempty"`
+	NextCursor *string        `json:"next_cursor"`
 }
 
 type AuditLogListRequest struct {
@@ -339,7 +339,7 @@ type AdminRateLimitConfig struct {
 	GlobalPerHour            int `json:"global_per_hour"`
 	UserPerHour              int `json:"user_per_hour"`
 	AuthRegisterPer10Minutes int `json:"auth_register_per_10minutes"`
-	AuthSigninPer10Minutes    int `json:"auth_signin_per_10minutes"`
+	AuthSigninPer10Minutes   int `json:"auth_signin_per_10minutes"`
 	AuthGuestPer10Minutes    int `json:"auth_guest_per_10minutes"`
 	AuthRefreshPer10Minutes  int `json:"auth_refresh_per_10minutes"`
 	AuthResetPer10Minutes    int `json:"auth_reset_per_10minutes"`
@@ -372,8 +372,8 @@ type AdminAppConfig struct {
 	Defaults         ContentDefaults       `json:"defaults"`
 	RateLimits       AdminRateLimitConfig  `json:"rate_limits"`
 	ResponseDefaults AdminResponseDefaults `json:"response_defaults"`
-	UpdatedAt        string                `json:"updated_at,omitempty"`
-	UpdatedByUserID  string                `json:"updated_by_user_id,omitempty"`
+	UpdatedAt        *string               `json:"updated_at"`
+	UpdatedByUserID  *string               `json:"updated_by_user_id"`
 }
 
 type UpdateAppConfigRequest struct {
@@ -395,7 +395,7 @@ type UpdateDefaultsPayload struct {
 
 type PartialFeatureSwitches struct {
 	EnablePublicRegistration *bool `json:"enable_public_registration,omitempty"`
-	EnableGuestRegister         *bool `json:"enable_guest_login,omitempty"`
+	EnableGuestRegister      *bool `json:"enable_guest_login,omitempty"`
 	EnableMoments            *bool `json:"enable_moments,omitempty"`
 	EnableNearbyPeople       *bool `json:"enable_nearby_people,omitempty"`
 }
@@ -432,7 +432,7 @@ type PartialRateLimitConfig struct {
 	GlobalPerHour            *int `json:"global_per_hour,omitempty"`
 	UserPerHour              *int `json:"user_per_hour,omitempty"`
 	AuthRegisterPer10Minutes *int `json:"auth_register_per_10minutes,omitempty"`
-	AuthSigninPer10Minutes    *int `json:"auth_signin_per_10minutes,omitempty"`
+	AuthSigninPer10Minutes   *int `json:"auth_signin_per_10minutes,omitempty"`
 	AuthGuestPer10Minutes    *int `json:"auth_guest_per_10minutes,omitempty"`
 	AuthRefreshPer10Minutes  *int `json:"auth_refresh_per_10minutes,omitempty"`
 	AuthResetPer10Minutes    *int `json:"auth_reset_per_10minutes,omitempty"`
@@ -472,16 +472,16 @@ type PartialAppLimits struct {
 }
 
 type AdminTagItem struct {
-	TagID      string `json:"tag_id"`
-	Name       string `json:"name"`
-	UsageCount int    `json:"usage_count"`
-	Trend      string `json:"trend,omitempty"`
-	CreatedAt  string `json:"created_at"`
+	TagID      string  `json:"tag_id"`
+	Name       string  `json:"name"`
+	UsageCount int     `json:"usage_count"`
+	Trend      *string `json:"trend"`
+	CreatedAt  string  `json:"created_at"`
 }
 
 type PaginatedAdminTags struct {
 	Items      []AdminTagItem `json:"items"`
-	NextCursor string         `json:"next_cursor,omitempty"`
+	NextCursor *string        `json:"next_cursor"`
 }
 
 type AdminTagSearchRequest struct {
@@ -495,34 +495,34 @@ type AdminDeleteTagRequest struct {
 }
 
 type AdminAnnouncementItem struct {
-	AnnouncementID string        `json:"announcement_id"`
-	Title          string        `json:"title"`
-	Content        string        `json:"content"`
+	AnnouncementID string           `json:"announcement_id"`
+	Title          string           `json:"title"`
+	Content        string           `json:"content"`
 	Severity       AnnounceSeverity `json:"severity"`
-	ActionURL      string        `json:"action_url,omitempty"`
-	CreatedAt      string        `json:"created_at"`
-	CreatedBy      UserInfo      `json:"created_by"`
-	SendPush       bool          `json:"send_push"`
-	PushSentAt     string        `json:"push_sent_at,omitempty"`
-	ViewCount      int           `json:"view_count"`
+	ActionURL      *string          `json:"action_url"`
+	CreatedAt      string           `json:"created_at"`
+	CreatedBy      UserInfo         `json:"created_by"`
+	SendPush       bool             `json:"send_push"`
+	PushSentAt     *string          `json:"push_sent_at"`
+	ViewCount      int              `json:"view_count"`
 }
 
 type PaginatedAdminAnnouncements struct {
 	Items      []AdminAnnouncementItem `json:"items"`
-	NextCursor string                  `json:"next_cursor,omitempty"`
+	NextCursor *string                 `json:"next_cursor"`
 }
 
 type ListAdminAnnouncementsRequest struct {
-	Severity   AnnounceSeverity     `json:"severity,omitempty"`
+	Severity   AnnounceSeverity  `json:"severity,omitempty"`
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
 type CreateAnnouncementRequest struct {
-	Title     string        `json:"title"`
-	Content   string        `json:"content"`
+	Title     string           `json:"title"`
+	Content   string           `json:"content"`
 	Severity  AnnounceSeverity `json:"severity"`
-	ActionURL string        `json:"action_url,omitempty"`
-	SendPush  bool          `json:"send_push,omitempty"`
+	ActionURL string           `json:"action_url,omitempty"`
+	SendPush  bool             `json:"send_push,omitempty"`
 }
 
 type AnnouncementCreated struct {
@@ -530,11 +530,11 @@ type AnnouncementCreated struct {
 }
 
 type UpdateAnnouncementRequest struct {
-	AnnouncementID string         `json:"announcement_id"`
-	Title          *string        `json:"title,omitempty"`
-	Content        *string        `json:"content,omitempty"`
+	AnnouncementID string            `json:"announcement_id"`
+	Title          *string           `json:"title,omitempty"`
+	Content        *string           `json:"content,omitempty"`
 	Severity       *AnnounceSeverity `json:"severity,omitempty"`
-	ActionURL      *string        `json:"action_url,omitempty"`
+	ActionURL      *string           `json:"action_url,omitempty"`
 }
 
 type DeleteAnnouncementRequest struct {
@@ -658,7 +658,7 @@ func reportItemFromModule(item reportsmodule.ReportItem, reporter usersmodule.Us
 		CreatedAt:       item.CreatedAt,
 		Reporter:        reporter,
 		HandledBy:       handledBy,
-		HandleNote:      handleNote,
+		HandleNote:      types.StrPtr(handleNote),
 		MessageSnapshot: item.MessageSnapshot,
 	}
 }

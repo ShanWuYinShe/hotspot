@@ -63,10 +63,10 @@ type PaginatedUsers struct {
 }
 
 type GroupInfo struct {
-	GroupID      string `json:"group_id"`
-	Name         string `json:"name"`
-	AvatarURL    string `json:"avatar_url,omitempty"`
-	MembersCount int    `json:"members_count"`
+	GroupID      string  `json:"group_id"`
+	Name         string  `json:"name"`
+	AvatarURL    *string `json:"avatar_url"`
+	MembersCount int     `json:"members_count"`
 }
 
 // GroupViewerState 与 groups 模块同构（spec api_spec_types.md）：
@@ -76,19 +76,19 @@ type GroupViewerState = groupsmodule.GroupViewerState
 // GroupItem 遵循 spec api_spec_types.md：恒定 nullable 字段恒在（null = 匿名/不适用）；
 // 群管理字段（has_password/is_searchable/max_members）不在本类型——见 groups/admin/settings。
 type GroupItem struct {
-	Group              GroupInfo          `json:"group"`
-	Description        *string            `json:"description"`
-	Tags               []string           `json:"tags"`
-	JoinMethod         GroupJoinMethod    `json:"join_method"`
-	RequiresApproval   bool               `json:"requires_approval"`
-	Location           *RelativeLocation  `json:"location"`
-	ViewerState        *GroupViewerState  `json:"viewer_state"`
-	FriendsInGroup     *int               `json:"friends_in_group"`
-	LastActivityAt     *string            `json:"last_activity_at"`
-	OnlineMembersCount *int               `json:"online_members_count"`
-	NextActivityAt       *string            `json:"next_activity_at"`
-	CreatedAt          *string            `json:"created_at"`
-	OwnerID            *string            `json:"owner_id"`
+	Group              GroupInfo         `json:"group"`
+	Description        *string           `json:"description"`
+	Tags               []string          `json:"tags"`
+	JoinMethod         GroupJoinMethod   `json:"join_method"`
+	RequiresApproval   bool              `json:"requires_approval"`
+	Location           *RelativeLocation `json:"location"`
+	ViewerState        *GroupViewerState `json:"viewer_state"`
+	FriendsInGroup     *int              `json:"friends_in_group"`
+	LastActivityAt     *string           `json:"last_activity_at"`
+	OnlineMembersCount *int              `json:"online_members_count"`
+	NextActivityAt     *string           `json:"next_activity_at"`
+	CreatedAt          *string           `json:"created_at"`
+	OwnerID            *string           `json:"owner_id"`
 }
 
 type PaginatedGroups struct {
@@ -105,22 +105,22 @@ type Reaction struct {
 type RecommendationContext = string
 
 type MomentImage struct {
-	URL          string `json:"url"`
-	ThumbnailURL string `json:"thumbnail_url,omitempty"`
-	Width        int    `json:"width,omitempty"`
-	Height       int    `json:"height,omitempty"`
-	MimeType     string `json:"mime_type,omitempty"`
+	URL          string  `json:"url"`
+	ThumbnailURL *string `json:"thumbnail_url"`
+	Width        *int    `json:"width"`
+	Height       *int    `json:"height"`
+	MimeType     *string `json:"mime_type"`
 }
 
 // MomentItem 遵循 spec api_spec_types.md 公开固定形状：数组字段恒在（空数组 = 无），
 // is_favorited 恒为布尔（匿名/未收藏为 false），location/recommendation 恒定 nullable。
 type MomentItem struct {
-	MomentID       string                 `json:"moment_id"`
-	Description    string                 `json:"description"`
-	Images         []MomentImage          `json:"images"`
-	Tags           []string               `json:"tags"`
-	Mentions       []string               `json:"mentions"`
-	CreatedAt      string                 `json:"created_at"`
+	MomentID    string        `json:"moment_id"`
+	Description string        `json:"description"`
+	Images      []MomentImage `json:"images"`
+	Tags        []string      `json:"tags"`
+	Mentions    []string      `json:"mentions"`
+	CreatedAt   string        `json:"created_at"`
 	// LikesCount 兼容保留（契约已删 likes_count），不对外序列化。
 	LikesCount     int                    `json:"-"`
 	CommentsCount  int                    `json:"comments_count"`

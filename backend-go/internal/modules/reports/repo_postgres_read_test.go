@@ -9,6 +9,7 @@ import (
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type reportRowValues struct {
@@ -72,7 +73,7 @@ func (b *reportBackendStub) Exec(_ context.Context, query string, args ...any) e
 	}
 	if query == queryInsertReport {
 		userID := args[1].(string)
-		item := ReportItem{ReportID: args[0].(string), TargetType: ReportTargetType(args[2].(string)), TargetID: args[3].(string), Reason: ReportReason(args[4].(string)), Description: args[5].(string), Status: ReportStatus(args[6].(string)), CreatedAt: args[7].(string)}
+		item := ReportItem{ReportID: args[0].(string), TargetType: ReportTargetType(args[2].(string)), TargetID: args[3].(string), Reason: ReportReason(args[4].(string)), Description: types.StrPtr(args[5].(string)), Status: ReportStatus(args[6].(string)), CreatedAt: args[7].(string)}
 		b.reports[userID] = append(b.reports[userID], item)
 	}
 	return nil
@@ -110,7 +111,7 @@ func TestPostgresRepositoryCreateAndList(t *testing.T) {
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
 
-	created, err := repo.Create(context.Background(), "user_alice", CreateReportRequest{TargetType: "moment", TargetID: "moment_1", Reason: "spam", Description: "bad"})
+	created, err := repo.Create(context.Background(), "user_alice", CreateReportRequest{TargetType: "moment", TargetID: "moment_1", Reason: "spam", Description: types.StrPtr("bad")})
 	if err != nil || created.ReportID == "" {
 		t.Fatalf("unexpected create result: %#v err=%v", created, err)
 	}

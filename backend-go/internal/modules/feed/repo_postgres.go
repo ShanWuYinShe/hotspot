@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type PostgresRepository struct {
@@ -120,7 +121,7 @@ func loadTrendingMoments(ctx context.Context, queryable persistence.QueryableDB,
 			LikesCount:    likesCount,
 			CommentsCount: commentsCount,
 			SharesCount:   sharesCount,
-			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
+			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: types.StrPtr(avatarURL)},
 			Location:      &RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName},
 			IsFavorited:   isFavorited,
 		}

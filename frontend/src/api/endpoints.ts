@@ -196,13 +196,44 @@ export const Endpoints = {
       GetMe: ADMIN_PREFIX + '/rbac/me',
       PermissionsFetch: ADMIN_PREFIX + '/rbac/permissions/fetch',
       RolesFetch: ADMIN_PREFIX + '/rbac/roles/fetch',
+      RolesCreate: ADMIN_PREFIX + '/rbac/roles/create',
+      RolesUpdate: ADMIN_PREFIX + '/rbac/roles/update',
+      RolesDelete: ADMIN_PREFIX + '/rbac/roles/delete',
+      RolesSetPermissions: ADMIN_PREFIX + '/rbac/roles/set_permissions',
       AdminsFetch: ADMIN_PREFIX + '/rbac/admins/fetch',
       AdminsAward: ADMIN_PREFIX + '/rbac/admins/award',
       AdminsRevoke: ADMIN_PREFIX + '/rbac/admins/revoke',
     },
+    Audit: {
+      Fetch: ADMIN_PREFIX + '/audit/fetch',
+    },
+    AppConfig: {
+      Get: ADMIN_PREFIX + '/app_config',
+      Update: ADMIN_PREFIX + '/app_config/update',
+    },
+    Users: {
+      Search: ADMIN_PREFIX + '/users/search',
+      OpenTheDoor: ADMIN_PREFIX + '/users/open_the_door',
+      SetBan: ADMIN_PREFIX + '/users/set_ban',
+    },
+    Groups: {
+      Search: ADMIN_PREFIX + '/groups/search',
+      OpenTheDoor: ADMIN_PREFIX + '/groups/open_the_door',
+      Dismiss: ADMIN_PREFIX + '/groups/dismiss',
+    },
     Reports: {
       Fetch: ADMIN_PREFIX + '/reports/fetch',
       Judge: ADMIN_PREFIX + '/reports/judge',
+    },
+    Tags: {
+      Search: ADMIN_PREFIX + '/tags/search',
+      Delete: ADMIN_PREFIX + '/tags/delete',
+    },
+    Announcements: {
+      Fetch: ADMIN_PREFIX + '/announcements/fetch',
+      Create: ADMIN_PREFIX + '/announcements/create',
+      Update: ADMIN_PREFIX + '/announcements/update',
+      Delete: ADMIN_PREFIX + '/announcements/delete',
     },
   },
 

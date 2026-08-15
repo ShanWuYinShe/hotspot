@@ -7,7 +7,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { interactionActions } from '../../../core/state/InteractionActions';
-import { InteractionStateStore, MomentSocialState, isMomentLikedByReactions } from '../../../core/state/InteractionStateStore';
+import { InteractionStateStore, MomentSocialState, isMomentLikedByReactions, sumReactionCounts } from '../../../core/state/InteractionStateStore';
 import { AppRouter, EditMomentRouteParam, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import {
@@ -16,7 +16,7 @@ import {
   MomentSharePayload,
   AccountInfo,
   CommentItem,
-  CommentsRequest,
+  FetchCommentsRequest,
   CreateCommentRequest,
   UserInfo,
 } from '../../../core/types/api';
@@ -152,7 +152,7 @@ export struct MomentDetailPage {
     if (this.isDestroyed || !this.momentId) return;
     this.commentsLoading = true;
     try {
-      const request: CommentsRequest = { moment_id: this.momentId, pagination: { limit: 50 } };
+      const request: FetchCommentsRequest = { moment_id: this.momentId, pagination: { limit: 50 } };
       const response = await ApiClient.getComments(request);
       if (this.isDestroyed) return;
       if (response.code === 0 && response.data) {
@@ -183,9 +183,13 @@ export struct MomentDetailPage {
       comment_id: tempId,
       user: user,
       content: content,
+      parent_id: null,
+      mentions: [],
       created_at: new Date().toISOString(),
       replies_count: 0,
-      is_deleted: false
+      is_deleted: false,
+      reactions: [],
+      top_replies: []
     };
     this.comments = [...this.comments, tempComment];
     this.commentText = '';
@@ -272,7 +276,7 @@ export struct MomentDetailPage {
     param.description = this.moment.description;
     param.tags = [...this.moment.tags];
     param.existingImageUrls = this.moment.images?.map(img => img.url) ?? [];
-    param.privacy_level = this.moment.privacy_level ?? 'public';
+    param.privacy_level = 'public';
     param.location_name = this.moment.location?.location_name ?? '';
     param.latitude = this.moment.location?.point.latitude ?? 0;
     param.longitude = this.moment.location?.point.longitude ?? 0;
@@ -297,14 +301,14 @@ export struct MomentDetailPage {
   private isMomentFavorited(moment: MomentItem): boolean {
     const state = this.momentStateMap[moment.moment_id];
     if (state) {
-      return state.my_state?.is_favorited ?? false;
+      return state.is_favorited;
     }
-    return moment.my_state?.is_favorited ?? false;
+    return moment.is_favorited;
   }
 
   private getMomentLikesCount(moment: MomentItem): number {
     const state = this.momentStateMap[moment.moment_id];
-    return state ? state.likes_count : moment.likes_count;
+    return state ? state.likes_count : sumReactionCounts(moment.reactions);
   }
 
   build() {

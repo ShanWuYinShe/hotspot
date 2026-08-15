@@ -95,8 +95,8 @@ func (r *InMemoryRepository) HandleReport(_ context.Context, reportID string, ac
 	case ReportActionDismiss:
 		record.Item.Status = ReportStatusDismissed
 	}
-	record.Item.HandledAt = now
-	record.Item.HandleNote = note
+	record.Item.HandledAt = &now
+	record.Item.HandleNote = &note
 	if handledBy != nil {
 		h := *handledBy
 		record.Item.HandledBy = &h

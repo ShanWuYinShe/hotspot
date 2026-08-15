@@ -9,7 +9,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { formatDateLabel } from '../../../core/utils/FormatUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MessageSyncManager } from '../../../core/state/MessageSyncManager';
-import { AccountInfo, MessageType, PrivateMessageItem, GroupMessageItem, SendPrivateMessageRequest, SendGroupMessageRequest, GetPrivateMessagesHistoryRequest, GetGroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest, UserOpenTheDoorRequest, CreateReportRequest, MediaCategory } from '../../../core/types/api';
+import { AccountInfo, MessageType, PrivateMessageItem, GroupMessageItem, SendPrivateMessageRequest, SendGroupMessageRequest, FetchPrivateMessagesRequest, FetchGroupMessagesRequest, MarkPrivateReadRequest, MarkGroupReadRequest, OpenUserDoorRequest, CreateReportRequest, MediaCategory } from '../../../core/types/api';
 import type {
   ServerEvent,
   PrivateMessageNewEvent,
@@ -502,19 +502,19 @@ export struct ChatPage {
             nextCursor = response.data.recent_messages?.next_cursor;
           }
         } else {
-          const request: GetGroupMessagesHistoryRequest = { group_id: this.chatId, pagination: { limit: 20 } };
+          const request: FetchGroupMessagesRequest = { group_id: this.chatId, pagination: { limit: 20 } };
           const response = await ApiClient.getGroupMessages(request);
           if (response.code === 0) {
             items = response.data?.items ?? [];
             nextCursor = response.data?.next_cursor;
           }
 
-          // 获取群组详情中的 my_state，填充服务端禁言状态
+          // 获取群组详情中的 viewer_state，填充服务端禁言状态
           try {
             const groupResp = await ApiClient.getGroupDetail({ group_id: this.chatId });
-            if (groupResp.code === 0 && groupResp.data?.my_state) {
-              this.isGroupServerMuted = groupResp.data.my_state.is_muted;
-              this.groupMutedUntil = groupResp.data.my_state.muted_until ?? '';
+            if (groupResp.code === 0 && groupResp.data?.viewer_state) {
+              this.isGroupServerMuted = groupResp.data.viewer_state.is_muted;
+              this.groupMutedUntil = groupResp.data.viewer_state.muted_until ?? '';
             }
           } catch (e) {
             hilog.warn(DOMAIN_NUMBER, TAG, `加载群组禁言状态失败: ${JSON.stringify(e)}`);
@@ -551,7 +551,7 @@ export struct ChatPage {
       if (this.chatType === 'private_chat') {
         const targetUserId = this.targetId;
         if (!targetUserId) return;
-        const request: GetPrivateMessagesHistoryRequest = {
+        const request: FetchPrivateMessagesRequest = {
           target_user_id: targetUserId,
           pagination: { limit: 20, cursor: this.historyNextCursor }
         };
@@ -561,7 +561,7 @@ export struct ChatPage {
           nextCursor = response.data?.next_cursor;
         }
       } else {
-        const request: GetGroupMessagesHistoryRequest = {
+        const request: FetchGroupMessagesRequest = {
           group_id: this.chatId,
           pagination: { limit: 20, cursor: this.historyNextCursor }
         };
@@ -1013,10 +1013,10 @@ export struct ChatPage {
         if (this.chatType === 'private_chat') {
           const targetUserId = this.targetId;
           if (!targetUserId) return;
-          const request: MarkPrivateMessagesReadRequest = { scope: "session", target_user_id: targetUserId, up_to_message_id: upToMessageId };
+          const request: MarkPrivateReadRequest = { scope: "session", target_user_id: targetUserId, up_to_message_id: upToMessageId };
           await ApiClient.markPrivateMessagesRead(request);
         } else {
-          const request: MarkGroupMessagesReadRequest = { scope: "group", group_id: this.chatId, up_to_message_id: upToMessageId };
+          const request: MarkGroupReadRequest = { scope: "group", group_id: this.chatId, up_to_message_id: upToMessageId };
           await ApiClient.markGroupMessagesRead(request);
         }
         GlobalStateManager.getInstance().notifyMessageSync();
@@ -1059,7 +1059,7 @@ export struct ChatPage {
   private async loadTargetProfile(): Promise<void> {
     if (!this.targetId) return;
     try {
-      const resp = await ApiClient.getUserProfile({ user_id: this.targetId } as UserOpenTheDoorRequest);
+      const resp = await ApiClient.getUserProfile({ user_id: this.targetId } as OpenUserDoorRequest);
       if (resp.code === 0 && resp.data) {
         this.targetAvatar = resp.data.user.user.avatar_url ?? '';
       }

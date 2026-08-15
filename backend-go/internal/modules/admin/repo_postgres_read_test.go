@@ -10,6 +10,7 @@ import (
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -412,7 +413,7 @@ func stringValue(v any) string {
 
 func TestPostgresRepositoryRoleAndAdminFlows(t *testing.T) {
 	backend := newAdminBackendStub()
-	backend.users["user_bob"] = UserInfo{UserID: "user_bob", Nickname: "Bob", AvatarURL: "avatar"}
+	backend.users["user_bob"] = UserInfo{UserID: "user_bob", Nickname: "Bob", AvatarURL: types.StrPtr("avatar")}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)

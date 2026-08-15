@@ -10,6 +10,7 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -82,7 +83,7 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchGroupsRequest
 		}
 		meta := groupSearchMeta{CreatedAt: groupCreatedAt(item), NameMatch: searchNameMatchScore(item, req.Keyword)}
 		if hasPlan {
-			distance, bearing, within := plan.Match(groupLocationPoint(item.Location))
+			distance, bearing, within := plan.Match(groupLocationPoint(*item.Location))
 			if !within {
 				continue
 			}
@@ -93,7 +94,7 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchGroupsRequest
 			value = float64(bearing)
 			item.Location.BearingDegrees = &value
 		} else if req.SortBy == searchSortDistance {
-			meta.Distance = geo.DistanceMeters(reference, groupLocationPoint(item.Location))
+			meta.Distance = geo.DistanceMeters(reference, groupLocationPoint(*item.Location))
 			value := float64(meta.Distance)
 			item.Location.Distance = &value
 		}
@@ -120,17 +121,19 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchGroupsRequest
 
 func scanGroupBase(scanner interface{ Scan(...any) error }) (GroupItem, error) {
 	var item GroupItem
-	var locationName, joinMethod string
+	var locationName, joinMethod, description string
 	var latitude, longitude float64
 	var createdAt, lastActivityAt *time.Time
 	var tags []string
-	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.RequiresApproval, &item.NextActivityAt, &item.IsSearchable, &item.MembersSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &tags, &item.OnlineMembersCount); err != nil {
+	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.RequiresApproval, &item.NextActivityAt, &item.IsSearchable, &item.MembersSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &tags, &item.OnlineMembersCount); err != nil {
 		return GroupItem{}, err
 	}
-	item.Location = RelativeLocation{Point: struct {
+	location := RelativeLocation{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
+	item.Description = types.StrPtr(description)
+	item.Location = &location
 	item.JoinMethod = GroupJoinMethod(joinMethod)
 	item.CreatedAt = formatOptionalTime(createdAt)
 	item.LastActivityAt = formatOptionalTime(lastActivityAt)
@@ -140,17 +143,19 @@ func scanGroupBase(scanner interface{ Scan(...any) error }) (GroupItem, error) {
 
 func scanSearchGroupRow(scanner interface{ Scan(...any) error }) (GroupItem, error) {
 	var item GroupItem
-	var locationName, joinMethod string
+	var locationName, joinMethod, description string
 	var latitude, longitude float64
 	var createdAt, lastActivityAt *time.Time
 	var tags []string
-	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.RequiresApproval, &item.NextActivityAt, &item.IsSearchable, &item.MembersSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &tags, &item.Group.MembersCount, &item.OnlineMembersCount); err != nil {
+	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.RequiresApproval, &item.NextActivityAt, &item.IsSearchable, &item.MembersSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &tags, &item.Group.MembersCount, &item.OnlineMembersCount); err != nil {
 		return GroupItem{}, err
 	}
-	item.Location = RelativeLocation{Point: struct {
+	location := RelativeLocation{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
+	item.Description = types.StrPtr(description)
+	item.Location = &location
 	item.JoinMethod = GroupJoinMethod(joinMethod)
 	item.CreatedAt = formatOptionalTime(createdAt)
 	item.LastActivityAt = formatOptionalTime(lastActivityAt)
@@ -234,6 +239,11 @@ func countGroupMembers(ctx context.Context, queryable persistence.QueryableDB, g
 		return 0, err
 	}
 	return count, nil
+}
+
+func newRelativeLocationPtr(location Location) *RelativeLocation {
+	value := newRelativeLocation(location)
+	return &value
 }
 
 func newRelativeLocation(location Location) RelativeLocation {

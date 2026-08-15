@@ -16,6 +16,7 @@ import (
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
+	"hotspot/backend-go/internal/platform/types"
 	"hotspot/backend-go/internal/platform/worker"
 )
 
@@ -163,20 +164,21 @@ func NewServiceWithSource(ctx context.Context, auth *platformauth.Service, repo 
 	return &Service{auth: auth, repo: repo, cfg: cfg, appConfig: source, codeSender: defaultVerificationSender(cfg), loginTracker: newInMemoryLoginTracker(ctx)}
 }
 
-// GetStatus 检查认证状态（spec auth.md → get_status，optional）。
-// 未通过认证时返回 is_valid=false，user_id/expires_at 为 null（恒定 nullable）。
-func (s *Service) GetStatus(ctx context.Context) SessionStatus {
+// GetStatus 返回当前会话状态（spec auth.md → auth/session）。
+// 该端点挂在必须认证节点下；无 principal 属编程/测试错误，按 10100 处理。
+func (s *Service) GetStatus(ctx context.Context) (SessionStatus, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
 	if !ok || principal.UserID == "" {
-		return SessionStatus{IsValid: false}
+		return SessionStatus{}, ErrUnauthenticated
 	}
-	userID := principal.UserID
 	expiresAt, ok := platformauth.AccessExpiryFromContext(ctx)
 	if !ok {
-		return SessionStatus{IsValid: true, UserID: &userID}
+		return SessionStatus{}, ErrUnauthenticated
 	}
-	exp := expiresAt.UTC().Format(time.RFC3339)
-	return SessionStatus{IsValid: true, UserID: &userID, ExpiresAt: &exp}
+	return SessionStatus{
+		UserID:    principal.UserID,
+		ExpiresAt: expiresAt.UTC().Format(time.RFC3339),
+	}, nil
 }
 
 func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
@@ -359,10 +361,10 @@ func (s *Service) ListSessions(ctx context.Context) SessionList {
 		items = append(items, SessionItem{
 			SessionID:    session.SessionID,
 			DeviceID:     session.DeviceID,
-			DeviceType:   session.DeviceType,
-			DeviceName:   session.DeviceName,
-			IPAddress:    maskIPAddress(session.IPAddress),
-			IPLocation:   session.IPLocation,
+			DeviceType:   types.StrPtr(session.DeviceType),
+			DeviceName:   types.StrPtr(session.DeviceName),
+			IPAddress:    types.StrPtr(maskIPAddress(session.IPAddress)),
+			IPLocation:   types.StrPtr(session.IPLocation),
 			CreatedAt:    session.CreatedAt.UTC().Format(time.RFC3339),
 			LastActiveAt: session.LastActiveAt.UTC().Format(time.RFC3339),
 			IsCurrent:    session.SessionID == principal.SessionID,

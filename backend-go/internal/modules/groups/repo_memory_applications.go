@@ -15,9 +15,11 @@ func (r *InMemoryRepository) GetApplication(_ context.Context, applicationID str
 	if !ok {
 		return GroupApplicationItem{}, false, nil
 	}
+	group := r.groups[record.GroupID]
 	return GroupApplicationItem{
 		ApplicationID: record.ApplicationID,
 		GroupID:       record.GroupID,
+		Group:         group.Group,
 		Applicant:     UserInfo{UserID: record.ApplicantID, Nickname: record.ApplicantID},
 		Message:       record.Message,
 		Status:        record.Status,
@@ -40,8 +42,10 @@ func (r *InMemoryRepository) ListApplications(_ context.Context, groupID string,
 		if status != nil && *status != record.Status {
 			continue
 		}
+		group := r.groups[record.GroupID]
 		items = append(items, GroupApplicationItem{
 			ApplicationID: record.ApplicationID,
+			Group:         group.Group,
 			Applicant:     UserInfo{UserID: record.ApplicantID, Nickname: record.ApplicantID},
 			Message:       record.Message,
 			Status:        record.Status,
@@ -67,6 +71,9 @@ func (r *InMemoryRepository) ApproveApplication(_ context.Context, approverID, a
 	record.HandledAt = &now
 	record.HandledBy = &UserInfo{UserID: approverID, Nickname: approverID}
 	r.applications[applicationID] = record
+	if group, ok := r.groups[record.GroupID]; ok && group.MaxMembers > 0 && len(r.members[record.GroupID]) >= group.MaxMembers {
+		return ErrGroupFull
+	}
 	if r.members[record.GroupID] == nil {
 		r.members[record.GroupID] = make(map[string]inMemoryMembership)
 	}
@@ -109,7 +116,8 @@ func (r *InMemoryRepository) ListMyApplications(_ context.Context, userID string
 		if status != nil && *status != record.Status {
 			continue
 		}
-		items = append(items, GroupApplicationItem{ApplicationID: record.ApplicationID, Applicant: UserInfo{UserID: record.ApplicantID, Nickname: record.ApplicantID}, Message: record.Message, Status: record.Status, CreatedAt: record.CreatedAt, HandledAt: record.HandledAt})
+		group := r.groups[record.GroupID]
+		items = append(items, GroupApplicationItem{ApplicationID: record.ApplicationID, Group: group.Group, Applicant: UserInfo{UserID: record.ApplicantID, Nickname: record.ApplicantID}, Message: record.Message, Status: record.Status, CreatedAt: record.CreatedAt, HandledAt: record.HandledAt})
 	}
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].CreatedAt == items[j].CreatedAt {

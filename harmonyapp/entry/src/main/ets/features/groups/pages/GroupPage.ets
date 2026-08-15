@@ -11,7 +11,7 @@ import {
   GroupApplicationItem,
   GroupInviteItem,
   GroupItem,
-  ListJoinedGroupsRequest
+  FetchJoinedGroupsRequest
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 
@@ -205,7 +205,7 @@ export struct GroupPage {
     this.errorMessage = '';
 
     try {
-      const request: ListJoinedGroupsRequest = {
+      const request: FetchJoinedGroupsRequest = {
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE }
       };
       const response = await LoadingUtil.withMinimumTime(() => ApiClient.getJoinedGroups(request));
@@ -233,7 +233,7 @@ export struct GroupPage {
     if (this.isLoadingMore || !this.hasMore) return;
     this.isLoadingMore = true;
     try {
-      const request: ListJoinedGroupsRequest = {
+      const request: FetchJoinedGroupsRequest = {
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.nextCursor }
       };
       const response = await ApiClient.getJoinedGroups(request);
@@ -414,7 +414,7 @@ export struct GroupPage {
       return;
     }
 
-    if (group.has_password) {
+    if (group.join_method === 'password') {
       SystemToast.show('此群组需要密码，请进入详情页加入', this.getUIContext());
       const detailParams = new GroupDetailRouteParam();
       detailParams.groupId = groupId;

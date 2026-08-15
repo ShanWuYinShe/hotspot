@@ -177,7 +177,11 @@ func (s *Service) List(ctx context.Context, req ListReactionsRequest) (Paginated
 	if err != nil {
 		return PaginatedReactions{}, err
 	}
-	return PaginatedReactions{Items: items, NextCursor: nextCursor}, nil
+	var next *string
+	if nextCursor != "" {
+		next = &nextCursor
+	}
+	return PaginatedReactions{Items: items, NextCursor: next}, nil
 }
 
 // Aggregate returns the per-emoji Reaction[] for one target (backs
@@ -274,7 +278,7 @@ func (s *Service) buildActor(ctx context.Context, userID string) types.UserInfo 
 	if s.users != nil {
 		info, err := s.users.GetActorInfo(ctx, userID)
 		if err == nil {
-			return types.UserInfo{UserID: info.UserID, Nickname: info.Nickname, AvatarURL: info.AvatarURL}
+			return types.UserInfo{UserID: info.UserID, Nickname: info.Nickname, AvatarURL: types.StrPtr(info.AvatarURL)}
 		}
 		observability.L().Error("reactions.build actor failed", "error", err, "user_id", userID)
 	}

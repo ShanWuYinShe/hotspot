@@ -176,7 +176,6 @@ func redactGroupFields(item *GroupItem) {
 	// serialized on GroupItem (json:"-").
 }
 
-
 func (s *Service) Search(ctx context.Context, req SearchGroupsRequest) (PaginatedGroups, error) {
 	startedAt := time.Now()
 	observability.L().Info("groups.search started", "keyword", req.Keyword, "tag", req.Tag, "sort_by", req.SortBy)
@@ -190,7 +189,7 @@ func (s *Service) Search(ctx context.Context, req SearchGroupsRequest) (Paginate
 	}
 	reference := searchGeoPoint(req.ReferencePoint)
 	for i := range result.Items {
-		candidate := groupLocationPoint(result.Items[i].Location)
+		candidate := groupLocationPoint(*result.Items[i].Location)
 		distance := float64(geo.DistanceMeters(reference, candidate))
 		bearing := float64(geo.BearingDegrees(reference, candidate))
 		result.Items[i].Location.Distance = &distance
@@ -282,7 +281,11 @@ func buildGroupUpdatedFields(before, after GroupItem, req UpdateGroupRequest) ma
 		fields["avatar_url"] = after.Group.AvatarURL
 	}
 	if after.Description != before.Description {
-		fields["description"] = after.Description
+		description := ""
+		if after.Description != nil {
+			description = *after.Description
+		}
+		fields["description"] = description
 	}
 	if !slices.Equal(after.Tags, before.Tags) {
 		fields["tags"] = after.Tags
@@ -765,8 +768,8 @@ func (s *Service) applicationExpired(ctx context.Context, item GroupApplicationI
 
 func groupUserInfo(user UserInfo) map[string]any {
 	payload := map[string]any{"user_id": user.UserID, "nickname": user.Nickname}
-	if user.AvatarURL != "" {
-		payload["avatar_url"] = user.AvatarURL
+	if user.AvatarURL != nil && *user.AvatarURL != "" {
+		payload["avatar_url"] = *user.AvatarURL
 	}
 	return payload
 }
@@ -775,7 +778,7 @@ func (s *Service) resolveUserInfo(ctx context.Context, userID string) types.User
 	if s.users != nil {
 		info, err := s.users.GetActorInfo(ctx, userID)
 		if err == nil {
-			return types.UserInfo{UserID: info.UserID, Nickname: info.Nickname, AvatarURL: info.AvatarURL}
+			return types.UserInfo{UserID: info.UserID, Nickname: info.Nickname, AvatarURL: types.StrPtr(info.AvatarURL)}
 		}
 	}
 	return types.UserInfo{UserID: userID, Nickname: userID}
@@ -783,18 +786,22 @@ func (s *Service) resolveUserInfo(ctx context.Context, userID string) types.User
 
 func (s *Service) notifyGroupInviteReceived(ctx context.Context, group GroupItem, inviterUserID string, req InviteMemberRequest, invitation Invitation) {
 	actor := s.resolveUserInfo(ctx, inviterUserID)
+	inviteID := ""
+	if invitation.InviteID != nil {
+		inviteID = *invitation.InviteID
+	}
 	notificationID := ""
 	if s.notifications != nil {
-		id, err := s.notifications.AppendGroupInviteReceived(ctx, req.UserID, actor, group.Group.GroupID, group.Group.Name, invitation.InviteID, req.Message)
+		id, err := s.notifications.AppendGroupInviteReceived(ctx, req.UserID, actor, group.Group.GroupID, group.Group.Name, inviteID, req.Message)
 		if err != nil {
-			observability.L().Error("groups.notify AppendGroupInviteReceived failed", "error", err, "invite_id", invitation.InviteID)
+			observability.L().Error("groups.notify AppendGroupInviteReceived failed", "error", err, "invite_id", inviteID)
 		} else {
 			notificationID = id
 		}
 	}
 	payload := map[string]any{
 		"notify_id": notificationID,
-		"invite_id": invitation.InviteID,
+		"invite_id": inviteID,
 		"group": map[string]any{
 			"group_id":      group.Group.GroupID,
 			"name":          group.Group.Name,

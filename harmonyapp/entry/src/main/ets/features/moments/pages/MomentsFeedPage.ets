@@ -16,7 +16,7 @@ import { InteractionStateStore, UserRelationState } from '../../../core/state/In
 import {
   UserItem, GroupItem, MomentItem,
   SearchUsersRequest, SearchGroupsRequest, CreateReportRequest, Relationship, GeoPoint, PaginationParams,
-  GetFeedFollowingRequest, GetFeedNearbyRequest
+  FollowingRequest, NearbyMomentsRequest
 } from '../../../core/types/api';
 import { curves } from '@kit.ArkUI';
 import { LocationUtil } from '../../../core/location/LocationUtil';
@@ -122,7 +122,7 @@ export struct MomentsFeedPage {
     const pagination: PaginationParams = { limit: 20 };
 
     if (source === 'following') {
-      const request: GetFeedFollowingRequest = {
+      const request: FollowingRequest = {
         reference_point: refPoint,
         pagination: pagination
       };
@@ -139,7 +139,7 @@ export struct MomentsFeedPage {
         this.errorMessage = response.message ?? '加载失败';
       }
     } else {
-      const request: GetFeedNearbyRequest = {
+      const request: NearbyMomentsRequest = {
         reference_point: refPoint,
         radius: DefaultConfig.NEARBY_RADIUS,
         pagination: pagination

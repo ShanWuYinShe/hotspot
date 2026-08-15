@@ -275,7 +275,7 @@ func TestAdminRepoUsers(t *testing.T) {
 	if err != nil || len(page.Items) != 2 {
 		t.Fatalf("search users: %#v err=%v", page, err)
 	}
-	if page.Items[0].Location == nil || page.Items[0].Email == "" || page.Items[0].CreatedAt == "" {
+	if page.Items[0].Location == nil || page.Items[0].Email == nil || page.Items[0].CreatedAt == "" {
 		t.Fatalf("user item fields: %#v", page.Items[0])
 	}
 	// 无 cursor + 分页触发 Next
@@ -505,7 +505,7 @@ func TestAdminRepoReports(t *testing.T) {
 	for _, action := range []ReportAction{ReportActionResolve, ReportActionDismiss} {
 		stub = &adminFullStub{queryRow: map[string][]any{queryAdminGetReportHandleRecord: reportRow19}}
 		item, found, err := newAdminFullRepo(stub).HandleReport(ctx, "r1", action, "处理完毕", handledBy)
-		if err != nil || !found || item.HandledAt == "" || item.HandledBy == nil || item.HandleNote == "" {
+		if err != nil || !found || item.HandledAt == nil || item.HandledBy == nil || item.HandleNote == nil {
 			t.Fatalf("handle report %s: %#v found=%v err=%v", action, item, found, err)
 		}
 	}

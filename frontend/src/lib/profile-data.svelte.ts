@@ -331,12 +331,23 @@ export function useRelationships() {
 	let loading = $state(true);
 
 	$effect(() => {
-		Promise.all([
-			listFriends({ pagination: { limit: 50 } }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
-			listFollowing({ pagination: { limit: 50 } }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
-			listFollowers({ pagination: { limit: 50 } }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }))
-		])
-			.then(([f, fo, fr]) => {
+		// spec: users/fetch_friends|following|followers 的 user_id 必传（拉自己的列表也要显式传自己的 user_id）。
+		getAccount()
+			.then((accountRes) => {
+				if (accountRes.code !== 0 || !accountRes.data) {
+					loading = false;
+					return;
+				}
+				const userId = accountRes.data.user_id;
+				return Promise.all([
+					listFriends({ user_id: userId, pagination: { limit: 50 } }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
+					listFollowing({ user_id: userId, pagination: { limit: 50 } }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
+					listFollowers({ user_id: userId, pagination: { limit: 50 } }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }))
+				]);
+			})
+			.then((results) => {
+				if (!results) return;
+				const [f, fo, fr] = results;
 				friends = f.code === 0 ? (f.data.items ?? []).map(mapFriend) : [];
 				following = fo.code === 0 ? (fo.data.items ?? []).map(mapFollowing) : [];
 				followers = fr.code === 0 ? (fr.data.items ?? []).map(mapFollower) : [];

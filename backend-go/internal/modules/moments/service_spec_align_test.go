@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 	"time"
-
 )
 
 // momentsReactionAggregator records AggregateMoments calls and returns canned
@@ -139,4 +138,3 @@ func TestServiceFillReactionsNilAggregatorIsNoop(t *testing.T) {
 		t.Fatalf("nil aggregator must be a no-op")
 	}
 }
-

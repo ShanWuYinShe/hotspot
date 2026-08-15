@@ -10,6 +10,7 @@ import (
 	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/platform/geo"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type memoryRelation struct {
@@ -236,7 +237,7 @@ func (r *InMemoryRepository) ListBlocked(_ context.Context, userID string, limit
 	items := make([]BlockedUserItem, 0)
 	for targetUserID, relation := range r.relations[userID] {
 		if relation.Blocked {
-			items = append(items, BlockedUserItem{User: UserInfo{UserID: targetUserID, Nickname: r.nicknameFor(targetUserID)}, BlockedAt: relation.BlockedAt, Reason: relation.BlockReason})
+			items = append(items, BlockedUserItem{User: UserInfo{UserID: targetUserID, Nickname: r.nicknameFor(targetUserID)}, BlockedAt: relation.BlockedAt, Reason: types.StrPtr(relation.BlockReason)})
 		}
 	}
 	sort.Slice(items, func(i, j int) bool {
@@ -283,48 +284,55 @@ func (r *InMemoryRepository) RelationshipBatch(_ context.Context, userID string,
 func (r *InMemoryRepository) ListFriends(_ context.Context, userID string, limit int, cursor string) (PaginatedFriends, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	items := make([]FriendItem, 0)
+	items := make([]RelatedUserItem, 0)
 	for targetUserID, relation := range r.relations[userID] {
 		reverse := r.relations[targetUserID][userID]
 		if relation.Following && reverse.Following {
 			lastOnline := r.profiles[targetUserID].LastOnline
 			presence := r.profiles[targetUserID].PresenceStatus
 			remark := relation.Remark
-			item := FriendItem{User: UserInfo{UserID: targetUserID, Nickname: r.nicknameFor(targetUserID), AvatarURL: r.profiles[targetUserID].AvatarURL}, Remark: &remark, FollowedAt: relation.FollowedAt, FollowedBackAt: maxStringTime(relation.FollowedAt, reverse.FollowedAt)}
-			if lastOnline != "" {
-				item.LastOnline = &lastOnline
+			followedBackAt := maxStringTime(relation.FollowedAt, reverse.FollowedAt)
+			item := RelatedUserItem{
+				User:       UserItem{User: UserInfo{UserID: targetUserID, Nickname: r.nicknameFor(targetUserID), AvatarURL: types.StrPtr(r.profiles[targetUserID].AvatarURL)}},
+				FollowedAt: relation.FollowedAt, FollowedBackAt: &followedBackAt, Remark: &remark,
 			}
-			item.PresenceStatus = &presence
+			if lastOnline != "" {
+				item.User.LastOnline = &lastOnline
+			}
+			item.User.PresenceStatus = &presence
 			items = append(items, item)
 		}
 	}
 	sort.Slice(items, func(i, j int) bool {
-		if items[i].FollowedBackAt == items[j].FollowedBackAt {
-			return items[i].User.UserID < items[j].User.UserID
+		if *items[i].FollowedBackAt == *items[j].FollowedBackAt {
+			return items[i].User.User.UserID < items[j].User.User.UserID
 		}
-		return items[i].FollowedBackAt > items[j].FollowedBackAt
+		return *items[i].FollowedBackAt > *items[j].FollowedBackAt
 	})
 	return paginateFriends(items, limit, cursor), nil
 }
 func (r *InMemoryRepository) ListFollowing(_ context.Context, userID string, limit int, cursor string) (PaginatedFollowing, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	items := make([]FollowingItem, 0)
+	items := make([]RelatedUserItem, 0)
 	for targetUserID, relation := range r.relations[userID] {
 		if relation.Following {
 			lastOnline := r.profiles[targetUserID].LastOnline
 			presence := r.profiles[targetUserID].PresenceStatus
-			item := FollowingItem{User: UserInfo{UserID: targetUserID, Nickname: r.nicknameFor(targetUserID), AvatarURL: r.profiles[targetUserID].AvatarURL}, FollowedAt: relation.FollowedAt, IsMutual: r.relations[targetUserID][userID].Following}
-			if lastOnline != "" {
-				item.LastOnline = &lastOnline
+			item := RelatedUserItem{
+				User:       UserItem{User: UserInfo{UserID: targetUserID, Nickname: r.nicknameFor(targetUserID), AvatarURL: types.StrPtr(r.profiles[targetUserID].AvatarURL)}},
+				FollowedAt: relation.FollowedAt, IsMutual: r.relations[targetUserID][userID].Following,
 			}
-			item.PresenceStatus = &presence
+			if lastOnline != "" {
+				item.User.LastOnline = &lastOnline
+			}
+			item.User.PresenceStatus = &presence
 			items = append(items, item)
 		}
 	}
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].FollowedAt == items[j].FollowedAt {
-			return items[i].User.UserID < items[j].User.UserID
+			return items[i].User.User.UserID < items[j].User.User.UserID
 		}
 		return items[i].FollowedAt > items[j].FollowedAt
 	})
@@ -333,23 +341,26 @@ func (r *InMemoryRepository) ListFollowing(_ context.Context, userID string, lim
 func (r *InMemoryRepository) ListFollowers(_ context.Context, userID string, limit int, cursor string) (PaginatedFollowers, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	items := make([]FollowerItem, 0)
+	items := make([]RelatedUserItem, 0)
 	for sourceUserID, relationMap := range r.relations {
 		relation := relationMap[userID]
 		if relation.Following {
 			lastOnline := r.profiles[sourceUserID].LastOnline
 			presence := r.profiles[sourceUserID].PresenceStatus
-			item := FollowerItem{User: UserInfo{UserID: sourceUserID, Nickname: r.nicknameFor(sourceUserID), AvatarURL: r.profiles[sourceUserID].AvatarURL}, FollowedAt: relation.FollowedAt, IsMutual: r.relations[userID][sourceUserID].Following}
-			if lastOnline != "" {
-				item.LastOnline = &lastOnline
+			item := RelatedUserItem{
+				User:       UserItem{User: UserInfo{UserID: sourceUserID, Nickname: r.nicknameFor(sourceUserID), AvatarURL: types.StrPtr(r.profiles[sourceUserID].AvatarURL)}},
+				FollowedAt: relation.FollowedAt, IsMutual: r.relations[userID][sourceUserID].Following,
 			}
-			item.PresenceStatus = &presence
+			if lastOnline != "" {
+				item.User.LastOnline = &lastOnline
+			}
+			item.User.PresenceStatus = &presence
 			items = append(items, item)
 		}
 	}
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].FollowedAt == items[j].FollowedAt {
-			return items[i].User.UserID < items[j].User.UserID
+			return items[i].User.User.UserID < items[j].User.User.UserID
 		}
 		return items[i].FollowedAt > items[j].FollowedAt
 	})
@@ -451,15 +462,22 @@ func paginateBlocked(items []BlockedUserItem, limit int, cursor string) Paginate
 	}
 	resp := PaginatedBlockedUsers{Items: items[start:end]}
 	if end < len(items) && end > start {
-		resp.NextCursor = encodeUserMomentCursor(items[end-1].BlockedAt, items[end-1].User.UserID)
+		c := encodeUserMomentCursor(items[end-1].BlockedAt, items[end-1].User.UserID)
+		resp.NextCursor = &c
 	}
 	return resp
 }
-func paginateFriends(items []FriendItem, limit int, cursor string) PaginatedFriends {
+func paginateFriends(items []RelatedUserItem, limit int, cursor string) PaginatedFriends {
 	if limit <= 0 {
 		limit = 20
 	}
-	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].FollowedBackAt, items[i].User.UserID }, len(items))
+	start, ok := findUserCursorStart(cursor, func(i int) (string, string) {
+		at := ""
+		if items[i].FollowedBackAt != nil {
+			at = *items[i].FollowedBackAt
+		}
+		return at, items[i].User.User.UserID
+	}, len(items))
 	if !ok {
 		return PaginatedFriends{}
 	}
@@ -469,15 +487,16 @@ func paginateFriends(items []FriendItem, limit int, cursor string) PaginatedFrie
 	}
 	resp := PaginatedFriends{Items: items[start:end]}
 	if end < len(items) && end > start {
-		resp.NextCursor = encodeUserMomentCursor(items[end-1].FollowedBackAt, items[end-1].User.UserID)
+		c := encodeUserMomentCursor(*items[end-1].FollowedBackAt, items[end-1].User.User.UserID)
+		resp.NextCursor = &c
 	}
 	return resp
 }
-func paginateFollowing(items []FollowingItem, limit int, cursor string) PaginatedFollowing {
+func paginateFollowing(items []RelatedUserItem, limit int, cursor string) PaginatedFollowing {
 	if limit <= 0 {
 		limit = 20
 	}
-	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].FollowedAt, items[i].User.UserID }, len(items))
+	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].FollowedAt, items[i].User.User.UserID }, len(items))
 	if !ok {
 		return PaginatedFollowing{}
 	}
@@ -487,15 +506,16 @@ func paginateFollowing(items []FollowingItem, limit int, cursor string) Paginate
 	}
 	resp := PaginatedFollowing{Items: items[start:end]}
 	if end < len(items) && end > start {
-		resp.NextCursor = encodeUserMomentCursor(items[end-1].FollowedAt, items[end-1].User.UserID)
+		c := encodeUserMomentCursor(items[end-1].FollowedAt, items[end-1].User.User.UserID)
+		resp.NextCursor = &c
 	}
 	return resp
 }
-func paginateFollowers(items []FollowerItem, limit int, cursor string) PaginatedFollowers {
+func paginateFollowers(items []RelatedUserItem, limit int, cursor string) PaginatedFollowers {
 	if limit <= 0 {
 		limit = 20
 	}
-	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].FollowedAt, items[i].User.UserID }, len(items))
+	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].FollowedAt, items[i].User.User.UserID }, len(items))
 	if !ok {
 		return PaginatedFollowers{}
 	}
@@ -505,7 +525,8 @@ func paginateFollowers(items []FollowerItem, limit int, cursor string) Paginated
 	}
 	resp := PaginatedFollowers{Items: items[start:end]}
 	if end < len(items) && end > start {
-		resp.NextCursor = encodeUserMomentCursor(items[end-1].FollowedAt, items[end-1].User.UserID)
+		c := encodeUserMomentCursor(items[end-1].FollowedAt, items[end-1].User.User.UserID)
+		resp.NextCursor = &c
 	}
 	return resp
 }
@@ -552,7 +573,8 @@ func paginateMoments(items []momenttypes.MomentItem, limit int, cursor string) m
 	}
 	resp := momenttypes.PaginatedMoments{Items: items[start:end]}
 	if end < len(items) && end > start {
-		resp.NextCursor = encodeUserMomentCursor(items[end-1].CreatedAt, items[end-1].MomentID)
+		c := encodeUserMomentCursor(items[end-1].CreatedAt, items[end-1].MomentID)
+		resp.NextCursor = &c
 	}
 	return resp
 }
@@ -574,7 +596,8 @@ func paginateReactedMoments(items []reactedMomentRecord, limit int, cursor strin
 		resp.Items = append(resp.Items, item.Moment)
 	}
 	if end < len(items) && end > start {
-		resp.NextCursor = encodeUserMomentCursor(items[end-1].ReactedAt, items[end-1].Moment.MomentID)
+		c := encodeUserMomentCursor(items[end-1].ReactedAt, items[end-1].Moment.MomentID)
+		resp.NextCursor = &c
 	}
 	return resp
 }

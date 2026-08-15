@@ -3,13 +3,14 @@ package groupmessages
 import (
 	"context"
 	"errors"
-	"strings"
+	"sync"
 	"time"
 
 	"hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/textutil"
 	"hotspot/backend-go/internal/platform/types"
 )
 
@@ -54,15 +55,64 @@ type Service struct {
 	users    userReader
 	mentions groupMentionNotifier // optional; nil => 群聊 @ 不落库通知（测试/降级模式）
 	shares   shareValidator       // optional; nil => 不校验 share_code（测试/降级模式）
+	// readFlusher 节流聚合 GroupMessageReadCountUpdated 推送（spec chat.md：
+	// 3-5 秒窗口最终一致，替代逐人广播）
+	readFlusher *readCountFlusher
 }
 
-func NewService() *Service                        { return NewServiceWithRepo(NewInMemoryRepository()) }
-func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo, users: nil} }
+// readCountFlusher 按群聚合待推送的已读计数更新，4 秒窗口批量 flush。
+type readCountFlusher struct {
+	mu      sync.Mutex
+	pending map[string]map[string]struct{} // groupID -> messageID set
+	timers  map[string]*time.Timer
+}
+
+func newReadCountFlusher() *readCountFlusher {
+	return &readCountFlusher{pending: map[string]map[string]struct{}{}, timers: map[string]*time.Timer{}}
+}
+
+const readCountFlushDelay = 4 * time.Second
+
+// schedule 合并待推送目标；每群至多一个未触发的 timer，窗口内多次 mark_read
+// 聚合为一次广播（最终一致：窗口尾必发最新值）。
+func (f *readCountFlusher) schedule(groupID string, messageIDs []string, flush func(string, []string)) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	set, ok := f.pending[groupID]
+	if !ok {
+		set = map[string]struct{}{}
+		f.pending[groupID] = set
+	}
+	for _, id := range messageIDs {
+		set[id] = struct{}{}
+	}
+	if _, hasTimer := f.timers[groupID]; hasTimer {
+		return
+	}
+	f.timers[groupID] = time.AfterFunc(readCountFlushDelay, func() {
+		f.mu.Lock()
+		ids := make([]string, 0, len(f.pending[groupID]))
+		for id := range f.pending[groupID] {
+			ids = append(ids, id)
+		}
+		delete(f.pending, groupID)
+		delete(f.timers, groupID)
+		f.mu.Unlock()
+		if len(ids) > 0 {
+			flush(groupID, ids)
+		}
+	})
+}
+
+func NewService() *Service { return NewServiceWithRepo(NewInMemoryRepository()) }
+func NewServiceWithRepo(repo Repository) *Service {
+	return &Service{repo: repo, users: nil, readFlusher: newReadCountFlusher()}
+}
 func NewServiceWithRepoAndUsers(repo Repository, users userReader) *Service {
-	return &Service{repo: repo, users: users}
+	return &Service{repo: repo, users: users, readFlusher: newReadCountFlusher()}
 }
 func NewServiceWithDeps(repo Repository, users userReader, mentions groupMentionNotifier, shares shareValidator) *Service {
-	return &Service{repo: repo, users: users, mentions: mentions, shares: shares}
+	return &Service{repo: repo, users: users, mentions: mentions, shares: shares, readFlusher: newReadCountFlusher()}
 }
 func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (MessageSentResult, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
@@ -128,13 +178,20 @@ func (s *Service) notifyMentions(ctx context.Context, actorUserID string, req Se
 	if s.mentions == nil || len(req.Mentions) == 0 {
 		return
 	}
+	// 只对真实群成员落库/推送 @ 通知：非成员收到 content_preview 会泄漏其
+	// 无权查看的群消息内容，也构成通知轰炸向量（spec：Mentions 为成员列表）。
+	mentionedMembers, err := s.repo.FilterMemberIDs(ctx, req.GroupID, req.Mentions)
+	if err != nil {
+		observability.L().Error("groupmessages.mentions filter members failed", "error", err, "group_id", req.GroupID)
+		return
+	}
+	if len(mentionedMembers) == 0 {
+		return
+	}
 	actor := s.resolveUserInfo(ctx, actorUserID)
 	groupName := s.resolveGroupName(ctx, req.GroupID)
-	contentPreview := strings.TrimSpace(req.Content)
-	if len(contentPreview) > 80 {
-		contentPreview = contentPreview[:80]
-	}
-	for _, mentionedUserID := range req.Mentions {
+	contentPreview := textutil.TruncateRunes(req.Content, 80)
+	for _, mentionedUserID := range mentionedMembers {
 		if mentionedUserID == actorUserID {
 			continue
 		}
@@ -256,17 +313,64 @@ func (s *Service) MarkAsRead(ctx context.Context, req MarkGroupMessagesReadReque
 		observability.L().Error("groupmessages.mark_as_read failed", "error", err, "group_id", req.GroupID, "up_to_message_id", req.UpToMessageID, "user_id", principal.UserID)
 		return err
 	}
+	// 已读计数变化经节流聚合推送（spec chat.md GroupMessageReadCountUpdated）；
 	// 不推送 self-sync 事件（已读状态不做跨设备实时同步，见 api_spec_index.md 预留）
+	target := req.UpToMessageID
+	if target == "" {
+		latest, err := s.repo.LatestMessageID(ctx, req.GroupID)
+		if err != nil {
+			return nil // 计数推送为尽力而为：拿不到目标消息（空群）不阻塞已读标记
+		}
+		target = latest
+	}
+	s.scheduleReadCountUpdate(req.GroupID, []string{target})
 	return nil
+}
+
+// scheduleReadCountUpdate 进入节流窗口，窗口尾广播该消息的最新 read_count。
+func (s *Service) scheduleReadCountUpdate(groupID string, messageIDs []string) {
+	if s.readFlusher == nil {
+		return
+	}
+	s.readFlusher.schedule(groupID, messageIDs, s.flushReadCounts)
+}
+
+func (s *Service) flushReadCounts(groupID string, messageIDs []string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	for _, messageID := range messageIDs {
+		count, err := s.repo.GetReadCount(ctx, groupID, messageID)
+		if err != nil {
+			observability.L().Warn("groupmessages.read_count lookup failed", "error", err, "group_id", groupID, "message_id", messageID)
+			continue
+		}
+		realtime.DefaultHub().BroadcastToGroup(groupID, realtime.Event{
+			Type: realtime.EventTypeGroupMessageReadCountUpdated,
+			Payload: map[string]any{
+				"group_id":   groupID,
+				"message_id": messageID,
+				"read_count": count,
+				"updated_at": time.Now().UTC().Format(time.RFC3339),
+			},
+		})
+	}
 }
 
 func (s *Service) MarkAllRead(ctx context.Context) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	if err := s.repo.MarkAllRead(ctx, principal.UserID); err != nil {
+	groupIDs, err := s.repo.MarkAllRead(ctx, principal.UserID)
+	if err != nil {
 		observability.L().Error("groupmessages.mark_all_read failed", "error", err, "user_id", principal.UserID)
 		return err
 	}
-	// 不推送 self-sync 事件（已读状态不做跨设备实时同步，见 api_spec_index.md 预留）
+	// 每个受影响群以最新消息为计数目标进入节流窗口
+	for _, groupID := range groupIDs {
+		latest, err := s.repo.LatestMessageID(ctx, groupID)
+		if err != nil {
+			continue
+		}
+		s.scheduleReadCountUpdate(groupID, []string{latest})
+	}
 	return nil
 }
 

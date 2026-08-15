@@ -283,15 +283,15 @@ func TestPostgresRepositoryListRepliesUsesCursor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("first page: %v", err)
 	}
-	if len(first.Items) != 2 || first.Items[0].CommentID != "reply_1" || first.Items[1].CommentID != "reply_2" || first.NextCursor == "" {
+	if len(first.Items) != 2 || first.Items[0].CommentID != "reply_1" || first.Items[1].CommentID != "reply_2" || first.NextCursor == nil {
 		t.Fatalf("unexpected first page: %#v", first)
 	}
 
-	second, err := repo.ListReplies(context.Background(), "comment_0", 2, first.NextCursor)
+	second, err := repo.ListReplies(context.Background(), "comment_0", 2, *first.NextCursor)
 	if err != nil {
 		t.Fatalf("second page: %v", err)
 	}
-	if len(second.Items) != 1 || second.Items[0].CommentID != "reply_3" || second.NextCursor != "" {
+	if len(second.Items) != 1 || second.Items[0].CommentID != "reply_3" || second.NextCursor != nil {
 		t.Fatalf("unexpected second page: %#v", second)
 	}
 }

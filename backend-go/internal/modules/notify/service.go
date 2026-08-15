@@ -361,8 +361,8 @@ func (s *Service) PushSystemAnnouncement(item systemmodule.SystemAnnouncementIte
 		"severity":        item.Severity,
 		"created_at":      item.CreatedAt,
 	}
-	if item.ActionURL != "" {
-		announcement["action_url"] = item.ActionURL
+	if item.ActionURL != nil && *item.ActionURL != "" {
+		announcement["action_url"] = *item.ActionURL
 	}
 	realtime.DefaultHub().BroadcastToAll(realtime.Event{Type: realtime.EventTypeSystemAnnouncement, Payload: map[string]any{"notify_id": notifyID, "announcement": announcement}})
 }

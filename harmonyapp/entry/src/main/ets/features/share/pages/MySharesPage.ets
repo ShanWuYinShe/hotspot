@@ -1,7 +1,7 @@
 import { KEY_IS_LOGGED_IN } from '../../../core/state/GlobalStateManager';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { ShareListItem, ShareListRequest, ShareType } from '../../../core/types/api';
+import { ShareListItem, FetchCreatedSharesRequest, ShareType } from '../../../core/types/api';
 import { DefaultConfig, PageNames } from '../../../constants/AppConstants';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemToast } from '../../../components/SystemToast';
@@ -103,7 +103,7 @@ export struct MySharesPage {
     this.errorMessage = '';
 
     try {
-      const request: ShareListRequest = {
+      const request: FetchCreatedSharesRequest = {
         pagination: {
           limit: this.pageLimit
         }
@@ -151,7 +151,7 @@ export struct MySharesPage {
 
     this.isLoadingMore = true;
     try {
-      const request: ShareListRequest = {
+      const request: FetchCreatedSharesRequest = {
         pagination: {
           limit: this.pageLimit,
           cursor: this.nextCursor

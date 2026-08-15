@@ -1046,8 +1046,8 @@ func TestPrivateMessages_MarkAsReadAll(t *testing.T) {
 		tok2uid, _ := whoAmI(tok2)
 		apiRespOK(t, "/api/v1/private_chats/open_the_door", map[string]any{"target_user_id": tok2uid}, nil)
 		apiRespOK(t, "/api/v1/private_messages/mark_read", map[string]any{
-			"scope":            "session",
-			"target_user_id":   tok2uid,
+			"scope":          "session",
+			"target_user_id": tok2uid,
 		}, nil)
 		apiRespOK(t, "/api/v1/private_messages/mark_read", map[string]any{"scope": "all"}, nil)
 	})

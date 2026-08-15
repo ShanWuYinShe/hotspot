@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 func (r *PostgresRepository) List(ctx context.Context, userID string, req ListReportsRequest) (PaginatedReports, error) {
@@ -47,7 +48,7 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req ListRe
 			item.Resolution = &ReportResolution{
 				Action:     action,
 				ResolvedAt: handledAt.UTC().Format(time.RFC3339),
-				Note:       handleNote,
+				Note:       types.StrPtr(handleNote),
 			}
 		}
 		items = append(items, item)

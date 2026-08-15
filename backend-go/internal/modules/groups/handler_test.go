@@ -1,7 +1,6 @@
 package groups
 
 import (
-	"time"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"hotspot/backend-go/internal/modules/notify"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -19,7 +19,7 @@ import (
 )
 
 type groupErrorRepo struct {
-	Repository // 嵌入接口：未显式 stub 的方法走 nil 接口（不应被覆盖测试调用）
+	Repository            // 嵌入接口：未显式 stub 的方法走 nil 接口（不应被覆盖测试调用）
 	getResult             GroupItem
 	getFound              bool
 	createErr             error
@@ -356,7 +356,7 @@ func TestInviteAndAcceptFlowSendsNotifications(t *testing.T) {
 	if err != nil {
 		t.Fatalf("invite member: %v", err)
 	}
-	if invitation.InviteID == "" {
+	if invitation.InviteID == nil || *invitation.InviteID == "" {
 		t.Fatalf("expected invite id, got %#v", invitation)
 	}
 	inviteNotifications, err := notificationRepo.List(context.Background(), "user_bob", notify.NotifyListRequest{})
@@ -370,7 +370,7 @@ func TestInviteAndAcceptFlowSendsNotifications(t *testing.T) {
 		t.Fatalf("unexpected invite notifications: %#v", inviteNotifications)
 	}
 	inviteeCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_bob"})
-	if err := service.AcceptInvite(inviteeCtx, AcceptInviteRequest{InviteID: invitation.InviteID}); err != nil {
+	if err := service.AcceptInvite(inviteeCtx, AcceptInviteRequest{InviteID: *invitation.InviteID}); err != nil {
 		t.Fatalf("accept invite: %v", err)
 	}
 	ownerNotifications, err := notificationRepo.List(context.Background(), "user_alice", notify.NotifyListRequest{})
@@ -434,12 +434,12 @@ func TestApproveApplicationHandlerMapsSpecificErrors(t *testing.T) {
 		},
 		{
 			name:     "access restricted",
-			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusPending}}},
+			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember}}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusPending}}},
 			expected: httpx.CodeForbidden,
 		},
 		{
 			name:     "already processed",
-			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusAccepted}}},
+			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusAccepted}}},
 			expected: httpx.CodeConflict,
 		},
 	}
@@ -470,12 +470,12 @@ func TestRejectApplicationHandlerMapsSpecificErrors(t *testing.T) {
 		},
 		{
 			name:     "access restricted",
-			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusPending}}},
+			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember}}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusPending}}},
 			expected: httpx.CodeForbidden,
 		},
 		{
 			name:     "already processed",
-			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusRejected}}},
+			repo:     &groupErrorRepo{getResult: GroupItem{Group: GroupInfo{GroupID: "group_1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}}, getFound: true, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", GroupID: "group_1", Status: ApplicationStatusRejected}}},
 			expected: httpx.CodeConflict,
 		},
 	}
@@ -633,7 +633,7 @@ func TestListMembersHandlerValidation(t *testing.T) {
 
 func TestSearchMembersHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:       true,
 		isMemberResult: true,
 		announceItems: []GroupAnnouncementItem{{
@@ -719,7 +719,7 @@ func TestSearchMembersHandlerValidation(t *testing.T) {
 
 func TestSetMuteUnmuteMapsAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember}},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -751,7 +751,7 @@ func TestSetMuteHandlerValidation(t *testing.T) {
 
 func TestBanMemberHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -779,7 +779,7 @@ func TestBanMemberHandlerReturnsSuccess(t *testing.T) {
 
 func TestBanMemberHandlerMapsAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember}},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -793,7 +793,7 @@ func TestBanMemberHandlerMapsAccessRestricted(t *testing.T) {
 
 func TestBanMemberHandlerCannotBanSelf(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -812,7 +812,7 @@ func TestBanMemberHandlerCannotBanSelf(t *testing.T) {
 
 func TestUnbanMemberHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -848,7 +848,7 @@ func TestUnbanMemberHandlerMapsGroupNotFound(t *testing.T) {
 
 func TestListBannedMembersHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -875,7 +875,7 @@ func TestListBannedMembersHandlerReturnsSuccess(t *testing.T) {
 
 func TestListBannedMembersHandlerMapsAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember}},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -888,7 +888,7 @@ func TestListBannedMembersHandlerMapsAccessRestricted(t *testing.T) {
 
 func TestListSentInvitesHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -915,7 +915,7 @@ func TestListSentInvitesHandlerReturnsSuccess(t *testing.T) {
 
 func TestListSentInvitesHandlerMapsAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember}},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -928,7 +928,7 @@ func TestListSentInvitesHandlerMapsAccessRestricted(t *testing.T) {
 
 func TestRevokeInviteHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -966,7 +966,7 @@ func TestRevokeInviteHandlerMapsGroupNotFound(t *testing.T) {
 
 func TestCreateAnnouncementHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -994,7 +994,7 @@ func TestCreateAnnouncementHandlerReturnsSuccess(t *testing.T) {
 
 func TestCreateAnnouncementHandlerMapsAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember}},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -1072,7 +1072,7 @@ func TestListAnnouncementsHandlerValidation(t *testing.T) {
 
 func TestUpdateAnnouncementHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -1099,7 +1099,7 @@ func TestUpdateAnnouncementHandlerReturnsSuccess(t *testing.T) {
 
 func TestUpdateAnnouncementHandlerMapsAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember}},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -1131,7 +1131,7 @@ func TestUpdateAnnouncementHandlerValidation(t *testing.T) {
 
 func TestDeleteAnnouncementHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -1188,7 +1188,7 @@ func TestDeleteAnnouncementHandlerValidation(t *testing.T) {
 
 func TestListMyGroupsHandlerReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		listMyGroupsItems: []GroupItem{{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }}},
+		listMyGroupsItems: []GroupItem{{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}}},
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/groups/fetch_joined", strings.NewReader(`{}`))
@@ -1232,7 +1232,7 @@ func TestJoinGroupHandlerReturnsSuccess(t *testing.T) {
 	handler.JoinGroup(rr, req)
 
 	var resp struct {
-		Code httpx.Code      `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data EnterGroupResult `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -1279,7 +1279,7 @@ func TestJoinGroupHandlerValidation(t *testing.T) {
 
 func TestHandlerUpdateReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -1326,7 +1326,7 @@ func TestHandlerUpdateReturns10300WhenNotFound(t *testing.T) {
 
 func TestHandlerUpdateReturns10200WhenAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember}},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -1340,7 +1340,7 @@ func TestHandlerUpdateReturns10200WhenAccessRestricted(t *testing.T) {
 
 func TestHandlerDismissReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -1397,7 +1397,7 @@ func TestHandlerDismissReturns10300WhenNotFound(t *testing.T) {
 
 func TestHandlerUpdatePreferencesReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember}},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -1436,7 +1436,7 @@ func TestHandlerUpdatePreferencesReturns10300WhenNotFound(t *testing.T) {
 
 func TestHandlerLeaveGroupReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember}},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -1537,7 +1537,7 @@ func TestHandlerCancelApplicationRejectsMissingApplicationID(t *testing.T) {
 
 func TestHandlerTransferOwnershipReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:       true,
 		isMemberResult: true,
 	}
@@ -1585,7 +1585,7 @@ func TestHandlerTransferOwnershipReturns10300WhenNotFound(t *testing.T) {
 
 func TestHandlerTransferOwnershipReturns10200WhenAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember}},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -1598,7 +1598,7 @@ func TestHandlerTransferOwnershipReturns10200WhenAccessRestricted(t *testing.T) 
 
 func TestHandlerTransferOwnershipReturns10400WhenTargetNotMember(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:       true,
 		isMemberResult: false,
 	}
@@ -1612,7 +1612,7 @@ func TestHandlerTransferOwnershipReturns10400WhenTargetNotMember(t *testing.T) {
 
 func TestHandlerTransferOwnershipReturns10600OnUnknownError(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult:            GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult:            GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:             true,
 		isMemberResult:       true,
 		transferOwnershipErr: errors.New("boom"),
@@ -1721,7 +1721,7 @@ func TestHandlerAcceptInviteReturns10300WhenNotFound(t *testing.T) {
 
 func TestHandlerRemoveMemberReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:  true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
@@ -1773,7 +1773,7 @@ func TestHandlerRemoveMemberReturns10300WhenNotFound(t *testing.T) {
 
 func TestHandlerRemoveMemberReturns10200WhenAccessRestricted(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleMember}},
 		getFound:  true,
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))
@@ -1786,7 +1786,7 @@ func TestHandlerRemoveMemberReturns10200WhenAccessRestricted(t *testing.T) {
 
 func TestHandlerRemoveMemberReturns10600OnUnknownError(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult:       GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult:       GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:        true,
 		removeMemberErr: errors.New("boom"),
 	}

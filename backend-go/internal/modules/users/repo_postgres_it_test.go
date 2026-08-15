@@ -216,8 +216,8 @@ func TestPostgresIT_ListFriendsReturnsMutualFollows(t *testing.T) {
 		if len(friends.Items) != 1 {
 			t.Fatalf("expected 1 friend (mutual only), got %d", len(friends.Items))
 		}
-		if friends.Items[0].User.UserID != bob {
-			t.Fatalf("expected friend bob, got %q", friends.Items[0].User.UserID)
+		if friends.Items[0].User.User.UserID != bob {
+			t.Fatalf("expected friend bob, got %q", friends.Items[0].User.User.UserID)
 		}
 		if friends.Items[0].Remark == nil || *friends.Items[0].Remark != "" {
 			t.Fatalf("expected empty remark, got %q", *friends.Items[0].Remark)
@@ -244,8 +244,8 @@ func TestPostgresIT_ListFollowingAndFollowers(t *testing.T) {
 		if len(following.Items) != 1 {
 			t.Fatalf("expected 1 following, got %d", len(following.Items))
 		}
-		if following.Items[0].User.UserID != bob {
-			t.Fatalf("expected following bob, got %q", following.Items[0].User.UserID)
+		if following.Items[0].User.User.UserID != bob {
+			t.Fatalf("expected following bob, got %q", following.Items[0].User.User.UserID)
 		}
 		if following.Items[0].IsMutual {
 			t.Fatal("expected is_mutual=false (bob does not follow back)")
@@ -258,8 +258,8 @@ func TestPostgresIT_ListFollowingAndFollowers(t *testing.T) {
 		if len(followers.Items) != 1 {
 			t.Fatalf("expected 1 follower, got %d", len(followers.Items))
 		}
-		if followers.Items[0].User.UserID != alice {
-			t.Fatalf("expected follower alice, got %q", followers.Items[0].User.UserID)
+		if followers.Items[0].User.User.UserID != alice {
+			t.Fatalf("expected follower alice, got %q", followers.Items[0].User.User.UserID)
 		}
 		if followers.Items[0].IsMutual {
 			t.Fatal("expected is_mutual=false")
@@ -317,8 +317,8 @@ func TestPostgresIT_ListBlockedUsers(t *testing.T) {
 		if blocked.Items[0].User.UserID != bob {
 			t.Fatalf("expected blocked user bob, got %q", blocked.Items[0].User.UserID)
 		}
-		if blocked.Items[0].Reason != "harassment" {
-			t.Fatalf("expected reason 'harassment', got %q", blocked.Items[0].Reason)
+		if blocked.Items[0].Reason == nil || *blocked.Items[0].Reason != "harassment" {
+			t.Fatalf("expected reason 'harassment', got %v", blocked.Items[0].Reason)
 		}
 	})
 }
@@ -386,20 +386,20 @@ func TestPostgresIT_ListFollowingPagination(t *testing.T) {
 		if len(page1.Items) != 2 {
 			t.Fatalf("page1: expected 2 items, got %d", len(page1.Items))
 		}
-		if page1.NextCursor == "" {
+		if page1.NextCursor == nil {
 			t.Fatal("page1: expected non-empty next_cursor")
 		}
 
 		// Page 2: should have 1 item
-		page2, err := repo.ListFollowing(ctx, alice, 2, page1.NextCursor)
+		page2, err := repo.ListFollowing(ctx, alice, 2, *page1.NextCursor)
 		if err != nil {
 			t.Fatalf("ListFollowing page2: %v", err)
 		}
 		if len(page2.Items) != 1 {
 			t.Fatalf("page2: expected 1 item, got %d", len(page2.Items))
 		}
-		if page2.NextCursor != "" {
-			t.Fatalf("page2: expected empty next_cursor (last page), got %q", page2.NextCursor)
+		if page2.NextCursor != nil {
+			t.Fatalf("page2: expected empty next_cursor (last page), got %q", *page2.NextCursor)
 		}
 	})
 }

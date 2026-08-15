@@ -688,7 +688,7 @@ export struct RelationshipListSection {
 
       if (this.friends.length > 0) {
         ForEach(this.friends, (item: RelatedUserItem) => {
-          this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `成为好友于 ${formatDateTime(item.followed_back_at)}`)
+          this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `成为好友于 ${formatDateTime(item.followed_back_at ?? undefined)}`)
         }, (item: RelatedUserItem) => item.user.user.user_id)
       }
 

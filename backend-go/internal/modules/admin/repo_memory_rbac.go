@@ -80,7 +80,7 @@ func (r *InMemoryRepository) CreateRole(_ context.Context, req AdminRbacRoleCrea
 	item := AdminRoleItem{
 		RoleID:      fmt.Sprintf("role_%d_%d", now.UnixNano(), r.seq),
 		Name:        name,
-		Description: strings.TrimSpace(req.Description),
+		Description: types.StrPtr(strings.TrimSpace(req.Description)),
 		Permissions: []string{},
 	}
 	r.roles[item.RoleID] = roleRecord{item: item, updatedAt: now}
@@ -108,9 +108,9 @@ func (r *InMemoryRepository) UpdateRole(_ context.Context, req AdminRbacRoleUpda
 		record.item.Name = name
 	}
 	if req.ClearDescription {
-		record.item.Description = ""
+		record.item.Description = nil
 	} else if req.Description != nil {
-		record.item.Description = strings.TrimSpace(*req.Description)
+		record.item.Description = types.StrPtr(strings.TrimSpace(*req.Description))
 	}
 	record.updatedAt = time.Now().UTC()
 	r.roles[req.RoleID] = record

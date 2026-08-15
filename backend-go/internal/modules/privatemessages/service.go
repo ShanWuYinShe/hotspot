@@ -321,8 +321,8 @@ func (s *Service) resolveUserInfo(ctx context.Context, userID string) map[string
 	if s.users != nil {
 		if item, ok, err := s.users.OpenTheDoor(ctx, userID); err == nil && ok {
 			info["nickname"] = item.User.Nickname
-			if item.User.AvatarURL != "" {
-				info["avatar_url"] = item.User.AvatarURL
+			if item.User.AvatarURL != nil && *item.User.AvatarURL != "" {
+				info["avatar_url"] = *item.User.AvatarURL
 			}
 		}
 	}

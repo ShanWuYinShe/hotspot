@@ -110,13 +110,13 @@ func TestValidateRejectsDefaultSecretInProduction(t *testing.T) {
 // individual tests can introduce exactly one weak value at a time.
 func prodBootable() Config {
 	return Config{
-		AppEnv:             "production",
-		AuthTokenSecret:    stringOfLen(48),
-		PostgresDSN:        "postgres://postgres:realpw@db:5432/hotspot",
-		RedisURL:           "redis://redis:6379/0",
-		S3AccessKey:        "real-access-key",
-		S3SecretKey:        "real-secret-key",
-		BcryptCost:         defaultBcryptCost,
+		AppEnv:          "production",
+		AuthTokenSecret: stringOfLen(48),
+		PostgresDSN:     "postgres://postgres:realpw@db:5432/hotspot",
+		RedisURL:        "redis://redis:6379/0",
+		S3AccessKey:     "real-access-key",
+		S3SecretKey:     "real-secret-key",
+		BcryptCost:      defaultBcryptCost,
 	}
 }
 
@@ -181,10 +181,10 @@ func TestCheckInsecureDefaultsAllowsDevModeBoot(t *testing.T) {
 	// Dev mode: defaults are present but checkInsecureDefaults still returns
 	// the list (so main can warn). Validate() itself is lenient in dev.
 	cfg := Config{
-		AppEnv:             "development",
-		AuthTokenSecret:    devDefaultAuthTokenSecret,
-		S3AccessKey:        "minioadmin",
-		S3SecretKey:        "minioadmin",
+		AppEnv:          "development",
+		AuthTokenSecret: devDefaultAuthTokenSecret,
+		S3AccessKey:     "minioadmin",
+		S3SecretKey:     "minioadmin",
 	}
 	findings := cfg.checkInsecureDefaults()
 	if len(findings) == 0 {
@@ -214,9 +214,9 @@ func TestValidateRejectsEmptyRedisURLInProduction(t *testing.T) {
 
 func TestValidateRejectsAnyCriticalDefaultInProduction(t *testing.T) {
 	cases := map[string]func(Config) Config{
-		"dev auth secret":      func(c Config) Config { c.AuthTokenSecret = devDefaultAuthTokenSecret; return c },
-		"both s3 default":      func(c Config) Config { c.S3AccessKey = "minioadmin"; c.S3SecretKey = "minioadmin"; return c },
-		"legacy jwt default":   func(c Config) Config { c.AuthTokenSecret = "dev-secret-key-change-in-production"; return c },
+		"dev auth secret":    func(c Config) Config { c.AuthTokenSecret = devDefaultAuthTokenSecret; return c },
+		"both s3 default":    func(c Config) Config { c.S3AccessKey = "minioadmin"; c.S3SecretKey = "minioadmin"; return c },
+		"legacy jwt default": func(c Config) Config { c.AuthTokenSecret = "dev-secret-key-change-in-production"; return c },
 	}
 	for name, mutate := range cases {
 		t.Run(name, func(t *testing.T) {

@@ -134,14 +134,14 @@ export interface SocialContext {
 	mutual_friends_count: number;
 	mutual_friends_preview?: UserInfo[];
 	common_groups_count?: number;
-	common_tags?: string[];
+	common_tags: string[];
 }
 
 export interface UserItem {
 	// spec: types.md → UserItem（list/search/detail/feed；恒定 nullable 通则：权限/隐私字段恒在，null=隐藏/不适用）
 	user: UserInfo;
 	bio?: string;
-	tags?: string[];
+	tags: string[];
 	presence_status: UserPresenceStatus | null;
 	last_online_at: string | null;
 	location: RelativeLocation | null;
@@ -171,19 +171,19 @@ export interface GroupViewerState {
 export interface GroupItem {
 	// spec: types.md → GroupItem（公开固定形状；群管理字段 is_searchable/max_members/has_password 见 GroupSettings）
 	group: GroupInfo;
-	description?: string;
-	tags?: string[];
+	description: string | null;
+	tags: string[];
 	join_method: GroupJoinMethod;
 	requires_approval: boolean;
 	location: RelativeLocation | null;
-	last_activity_at?: string;
-	online_members_count?: number;
-	next_activity_at?: string;
-	last_message?: MessageBrief; // 仅 groups/fetch_joined 返回
-	created_at?: string;
-	owner_id?: string;
+	last_activity_at: string | null;
+	online_members_count: number | null;
+	next_activity_at: string | null;
+	last_message: MessageBrief | null; // 仅 groups/fetch_joined 返回
+	created_at: string | null;
+	owner_id: string | null;
 	viewer_state: GroupViewerState | null;
-	friends_in_group?: number;
+	friends_in_group: number | null;
 }
 
 export interface GroupSettings {
@@ -305,7 +305,7 @@ export interface SearchGroupsRequest {
 export interface UpdateGroupRequest {
 	group_id: string;
 	name?: string;
-	description?: string;
+	description?: string | null;
 	avatar_file_id?: string;
 	tags?: string[];
 	password?: string;
@@ -321,7 +321,7 @@ export interface UpdateGroupRequest {
 // spec: group.md → groups/create
 export interface CreateGroupRequest {
 	name: string;
-	description?: string;
+	description?: string | null;
 	avatar_file_id?: string;
 	tags?: string[];
 	password?: string;
@@ -464,13 +464,13 @@ export interface MomentItem {
 	// spec: types.md → MomentItem（公开固定形状；拥有者视角见 OwnerMomentItem）
 	moment_id: string;
 	description: string;
-	images?: MediaAsset[];
-	tags?: string[];
-	mentions?: string[];
+	images: MediaAsset[];
+	tags: string[];
+	mentions: string[];
 	created_at: string;
 	comments_count: number;
 	shares_count: number;
-	reactions?: Reaction[];
+	reactions: Reaction[];
 	user: UserInfo;
 	location: RelativeLocation | null;
 	is_favorited: boolean; // 恒定布尔：匿名/未收藏为 false
@@ -494,10 +494,10 @@ export interface CommentItem {
 	user: UserInfo;
 	content: string;
 	parent_id?: string;
-	mentions?: string[];
+	mentions: string[];
 	created_at: string;
 	replies_count: number;
-	reactions?: Reaction[];
+	reactions: Reaction[];
 	is_deleted: boolean;
 	top_replies?: CommentItem[];
 }
@@ -525,7 +525,7 @@ export interface PrivateMessageItem {
 	edited_at?: string;
 	recalled_at?: string;
 	is_read: boolean;
-	reactions?: Reaction[];
+	reactions: Reaction[];
 }
 
 export interface GroupMessageItem {
@@ -537,13 +537,13 @@ export interface GroupMessageItem {
 	share_code?: string;
 	sender: UserInfo;
 	reply_to?: MessageBrief | null;
-	mentions?: string[];
+	mentions: string[];
 	recalled_by?: UserInfo;
 	sent_at: string;
 	edited_at?: string;
 	recalled_at?: string;
 	read_count?: number;
-	reactions?: Reaction[];
+	reactions: Reaction[];
 }
 
 export interface NotifyPayload {
@@ -688,7 +688,7 @@ export interface AccountData {
 	avatar_url?: string;
 	user_type: UserType;
 	bio?: string;
-	tags?: string[];
+	tags: string[];
 	gender?: Gender;
 	email?: string;
 	phone?: string;
@@ -777,7 +777,7 @@ export interface PrivateChatItem {
 	last_activity_at: string;
 	last_message?: MessageBrief | null; // 列表场景返回
 	presence_status: UserPresenceStatus | null;
-	created_at?: string;
+	created_at: string | null;
 	can_message: boolean;
 	forbidden_reason: ForbiddenReason | null; // 仅 can_message=false 时非 null
 }
@@ -874,7 +874,7 @@ export interface MapHotspotItem {
 	subtitle?: string;
 	cover_url?: string;
 	location: GeoPoint;
-	created_at?: string;
+	created_at: string | null;
 	distance_meters?: number;
 }
 
@@ -985,7 +985,7 @@ export interface CreateMomentRequest {
 }
 export interface UpdateMomentRequest {
 	moment_id: string;
-	description?: string;
+	description?: string | null;
 	location?: Location;
 	privacy_level?: string;
 	tags?: string[];
@@ -1004,10 +1004,14 @@ export interface FavoriteMomentRequest {
 }
 
 // Messages
+export type SendMessageType = Exclude<MessageType, 'system'>;
 export interface SendPrivateMessageRequest {
 	target_user_id: string;
-	type: string;
-	content: string;
+	type: SendMessageType;
+	content?: string | null;
+	file_id?: string | null;
+	share_code?: string | null;
+	reply_to_message_id?: string | null;
 }
 export interface ListPrivateMessagesRequest {
 	target_user_id: string;
@@ -1015,20 +1019,26 @@ export interface ListPrivateMessagesRequest {
 }
 export interface SendGroupMessageRequest {
 	group_id: string;
-	type: string;
-	content: string;
+	type: SendMessageType;
+	content?: string | null;
+	file_id?: string | null;
+	share_code?: string | null;
+	reply_to_message_id?: string | null;
+	mentions?: string[];
 }
 export interface ListGroupMessagesRequest {
 	group_id: string;
 	pagination?: PaginationParams;
 }
 export interface MarkPrivateReadRequest {
-	scope: string;
-	target_user_id?: string;
+	scope: 'session' | 'all';
+	target_user_id?: string | null;
+	up_to_message_id?: string | null;
 }
 export interface MarkGroupReadRequest {
-	scope: string;
-	group_id?: string;
+	scope: 'group' | 'all';
+	group_id?: string | null;
+	up_to_message_id?: string | null;
 }
 export interface UpdatePrivateChatPreferencesRequest {
 	target_user_id: string;
@@ -1058,7 +1068,7 @@ export interface RecallGroupMessageAdminRequest {
 
 // Reactions / Comments / Reports / Notify
 export interface SetReactionRequest {
-	target_type: string;
+	target_type: ReactTarget;
 	target_id: string;
 	emoji: string;
 	active: boolean;
@@ -1069,11 +1079,20 @@ export interface CreateCommentRequest {
 	parent_id?: string;
 	mentions?: string[];
 }
+export interface ReportSnapshot {
+	chat_type: 'private' | 'group';
+	target_chat_id: string;
+	message_type: MessageType;
+	snapshot_content?: string | null;
+	snapshot_media?: MessageMedia | null;
+	sent_at: string;
+}
 export interface CreateReportRequest {
-	target_type: string;
+	target_type: ReportTargetType;
 	target_id: string;
-	reason: string;
-	description?: string;
+	reason: ReportReason;
+	description?: string | null;
+	message_snapshot?: ReportSnapshot | null;
 }
 export interface MarkNotifyReadRequest {
 	// spec: notify.md → mark_read（参数必显式：scope 必填；scope='ids' 时 notify_ids 1-50 个）
@@ -1083,5 +1102,6 @@ export interface MarkNotifyReadRequest {
 
 // Media / System
 export interface BootstrapRequest {
-	bootstrap_version?: string;
+	client_type: 'web';
+	device_id: string | null;
 }

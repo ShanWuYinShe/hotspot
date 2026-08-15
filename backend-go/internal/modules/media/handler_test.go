@@ -77,7 +77,7 @@ func TestMediaHandlerPresignValidationAndSuccess(t *testing.T) {
 	okRR := httptest.NewRecorder()
 	handler.PresignUpload(okRR, okReq)
 	var resp struct {
-		Code httpx.Code         `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data PresignedUploads `json:"data"`
 	}
 	if err := json.NewDecoder(okRR.Body).Decode(&resp); err != nil {
@@ -107,7 +107,7 @@ func TestMediaHandlerBatchValidationAndSuccess(t *testing.T) {
 	okRR := httptest.NewRecorder()
 	handler.PresignUpload(okRR, okReq)
 	var resp struct {
-		Code httpx.Code         `json:"code"`
+		Code httpx.Code       `json:"code"`
 		Data PresignedUploads `json:"data"`
 	}
 	if err := json.NewDecoder(okRR.Body).Decode(&resp); err != nil {

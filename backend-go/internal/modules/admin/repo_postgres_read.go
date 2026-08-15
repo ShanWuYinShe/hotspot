@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -58,7 +59,7 @@ func (r *PostgresRepository) getRoleByID(ctx context.Context, queryable persiste
 		}
 		return postgresRoleRecord{}, false, err
 	}
-	record.item.Description = description
+	record.item.Description = types.StrPtr(description)
 	permissions, err := r.getRolePermissions(ctx, queryable, roleID)
 	if err != nil {
 		return postgresRoleRecord{}, false, err
@@ -76,7 +77,7 @@ func (r *PostgresRepository) getRoleByName(ctx context.Context, queryable persis
 		}
 		return postgresRoleRecord{}, false, err
 	}
-	record.item.Description = description
+	record.item.Description = types.StrPtr(description)
 	permissions, err := r.getRolePermissions(ctx, queryable, record.item.RoleID)
 	if err != nil {
 		return postgresRoleRecord{}, false, err
@@ -320,23 +321,32 @@ func scanAdminUserRow(row persistence.Row) (AdminUserItem, error) {
 	); err != nil {
 		return AdminUserItem{}, err
 	}
+	presenceStatus := usersmodule.UserPresenceStatus(record.PresenceStatus)
+	var presenceStatusPtr *usersmodule.UserPresenceStatus
+	if presenceStatus != "" {
+		presenceStatusPtr = &presenceStatus
+	}
+	lastOnline := record.LastOnline.UTC().Format(time.RFC3339)
+	lastActiveAt := record.LastOnline.UTC().Format(time.RFC3339)
 	return AdminUserItem{
-		User:              usersmodule.UserInfo{UserID: record.UserID, Nickname: record.Nickname, AvatarURL: record.AvatarURL},
-		Bio:               record.Bio,
-		PresenceStatus:    usersmodule.UserPresenceStatus(record.PresenceStatus),
-		LastOnline:        record.LastOnline.UTC().Format(time.RFC3339),
+		User:              usersmodule.UserInfo{UserID: record.UserID, Nickname: record.Nickname, AvatarURL: types.StrPtr(record.AvatarURL)},
+		Bio:               types.StrPtr(record.Bio),
+		Tags:              []string{},
+		PresenceStatus:    presenceStatusPtr,
+		LastOnline:        types.StrPtr(lastOnline),
 		Location:          &usersmodule.RelativeLocation{Point: usersmodule.GeoPoint{Latitude: record.Latitude, Longitude: record.Longitude}, LocationName: record.LocationName},
-		Relation:          usersmodule.RelationshipNone,
+		Stats:             nil,
+		Relation:          nil,
 		Status:            UserAccountStatus(record.Status),
 		CreatedAt:         record.CreatedAt.UTC().Format(time.RFC3339),
-		LastActiveAt:      record.LastOnline.UTC().Format(time.RFC3339),
+		LastActiveAt:      types.StrPtr(lastActiveAt),
 		LoginID:           record.LoginID,
 		RegisterIP:        strPtr(record.RegisterIP),
-		RegisterLocation:  record.RegisterLocation,
+		RegisterLocation:  types.StrPtr(record.RegisterLocation),
 		LastLoginIP:       strPtr(record.LastLoginIP),
-		LastLoginLocation: record.LastLoginLocation,
-		Email:             record.Email,
-		Phone:             record.Phone,
+		LastLoginLocation: types.StrPtr(record.LastLoginLocation),
+		Email:             types.StrPtr(record.Email),
+		Phone:             types.StrPtr(record.Phone),
 	}, nil
 }
 
@@ -364,8 +374,8 @@ func scanAdminGroupRow(row persistence.Row) (AdminGroupItem, error) {
 		return AdminGroupItem{}, err
 	}
 	return AdminGroupItem{
-		Group:       groupsmodule.GroupInfo{GroupID: record.GroupID, Name: record.Name, AvatarURL: record.AvatarURL, MembersCount: record.MembersCount},
-		Description: record.Description,
+		Group:       groupsmodule.GroupInfo{GroupID: record.GroupID, Name: record.Name, AvatarURL: types.StrPtr(record.AvatarURL), MembersCount: record.MembersCount},
+		Description: types.StrPtr(record.Description),
 		HasPassword: record.HasPassword,
 		Location: groupsmodule.Location{Point: struct {
 			Latitude  float64 `json:"latitude"`
@@ -375,8 +385,8 @@ func scanAdminGroupRow(row persistence.Row) (AdminGroupItem, error) {
 		IsSearchable:   record.IsSearchable,
 		MaxMembers:     record.MaxMembers,
 		CreatedAt:      record.CreatedAt.UTC().Format(time.RFC3339),
-		Owner:          usersmodule.UserInfo{UserID: record.OwnerID, Nickname: record.OwnerNickname, AvatarURL: record.OwnerAvatarURL},
-		LastActivityAt: record.LastActivityAt.UTC().Format(time.RFC3339),
+		Owner:          usersmodule.UserInfo{UserID: record.OwnerID, Nickname: record.OwnerNickname, AvatarURL: types.StrPtr(record.OwnerAvatarURL)},
+		LastActivityAt: types.StrPtr(record.LastActivityAt.UTC().Format(time.RFC3339)),
 	}, nil
 }
 
@@ -433,11 +443,11 @@ func scanAdminReportRow(row persistence.Row, withTargetUser bool) (reportHandleR
 		TargetType:  ReportTargetType(record.TargetType),
 		TargetID:    record.TargetID,
 		Reason:      record.Reason,
-		Description: record.Description,
+		Description: types.StrPtr(record.Description),
 		Status:      ReportStatus(record.Status),
 		CreatedAt:   record.CreatedAt.UTC().Format(time.RFC3339),
-		Reporter:    usersmodule.UserInfo{UserID: record.ReporterUserID, Nickname: record.ReporterNickname, AvatarURL: record.ReporterAvatarURL},
-		HandleNote:  record.HandleNote,
+		Reporter:    usersmodule.UserInfo{UserID: record.ReporterUserID, Nickname: record.ReporterNickname, AvatarURL: types.StrPtr(record.ReporterAvatarURL)},
+		HandleNote:  types.StrPtr(record.HandleNote),
 	}
 	if record.MessageSnapshot != nil && *record.MessageSnapshot != "" {
 		var snapshot reportsmodule.ReportSnapshot
@@ -447,15 +457,16 @@ func scanAdminReportRow(row persistence.Row, withTargetUser bool) (reportHandleR
 		item.MessageSnapshot = &snapshot
 	}
 	if record.HandledAt != nil {
-		item.HandledAt = record.HandledAt.UTC().Format(time.RFC3339)
+		handledAt := record.HandledAt.UTC().Format(time.RFC3339)
+		item.HandledAt = &handledAt
 	}
 	if record.HandledByUserID != "" {
-		handledBy := usersmodule.UserInfo{UserID: record.HandledByUserID, Nickname: record.HandledByNickname, AvatarURL: record.HandledByAvatar}
+		handledBy := usersmodule.UserInfo{UserID: record.HandledByUserID, Nickname: record.HandledByNickname, AvatarURL: types.StrPtr(record.HandledByAvatar)}
 		item.HandledBy = &handledBy
 	}
 	result := reportHandleRecord{Item: item}
 	if withTargetUser && record.TargetUserID != "" {
-		result.TargetUser = usersmodule.UserInfo{UserID: record.TargetUserID, Nickname: record.TargetUserNickname, AvatarURL: record.TargetUserAvatar}
+		result.TargetUser = usersmodule.UserInfo{UserID: record.TargetUserID, Nickname: record.TargetUserNickname, AvatarURL: types.StrPtr(record.TargetUserAvatar)}
 	}
 	return result, nil
 }

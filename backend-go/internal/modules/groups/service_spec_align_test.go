@@ -325,7 +325,7 @@ func TestInviteExpired(t *testing.T) {
 
 func TestServiceCancelApplicationNotifiesAdmins(t *testing.T) {
 	repo := &captureGroupsRepo{stubGroupsRepo: &stubGroupsRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1", Name: "test"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner, }},
+		getResult: GroupItem{Group: GroupInfo{GroupID: "g1", Name: "test"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:  true,
 		apps: []GroupApplicationItem{{
 			ApplicationID: "app1",
@@ -580,7 +580,7 @@ func TestResolveUserInfoUsesActorProvider(t *testing.T) {
 	if got.UserID != "u42" || got.Nickname != "Nick" {
 		t.Fatalf("unexpected user info: %#v", got)
 	}
-	if got.AvatarURL != "https://example.com/avatar.png" {
+	if got.AvatarURL == nil || *got.AvatarURL != "https://example.com/avatar.png" {
 		t.Fatalf("expected avatar_url, got %#v", got)
 	}
 }
@@ -591,7 +591,7 @@ func TestResolveUserInfoFallsBackToUserID(t *testing.T) {
 	if got.UserID != "u42" || got.Nickname != "u42" {
 		t.Fatalf("expected fallback user_id/nickname, got %#v", got)
 	}
-	if got.AvatarURL != "" {
+	if got.AvatarURL != nil {
 		t.Fatalf("expected no avatar_url in fallback, got %#v", got)
 	}
 }

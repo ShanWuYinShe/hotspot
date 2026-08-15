@@ -325,7 +325,7 @@ func TestPostgresRepositorySendHistoryRecentAndLast(t *testing.T) {
 	if err != nil {
 		t.Fatalf("history: %v", err)
 	}
-	if len(history.Items) != 1 || history.Items[0].MessageID != sent.MessageID || history.Items[0].Content != "hello" {
+	if len(history.Items) != 1 || history.Items[0].MessageID != sent.MessageID || *history.Items[0].Content != "hello" {
 		t.Fatalf("unexpected history: %#v", history)
 	}
 	recent, err := repo.Recent(context.Background(), "user_alice", "user_bob", 1, nil)
@@ -366,7 +366,7 @@ func TestPostgresRepositoryHistorySupportsMediaReplyAndPagination(t *testing.T) 
 	if err != nil {
 		t.Fatalf("history: %v", err)
 	}
-	if len(history.Items) != 2 || history.NextCursor == "" {
+	if len(history.Items) != 2 || history.NextCursor == nil {
 		t.Fatalf("unexpected paginated history: %#v", history)
 	}
 	if history.Items[1].Media == nil || history.Items[1].Media.URL != "file_1" {
@@ -376,7 +376,7 @@ func TestPostgresRepositoryHistorySupportsMediaReplyAndPagination(t *testing.T) 
 		t.Fatalf("expected reply_to payload, got %#v", history.Items[1])
 	}
 
-	next, err := repo.History(context.Background(), "user_alice", ListPrivateMessagesRequest{TargetUserID: "user_bob", Pagination: &PaginationParams{Cursor: history.NextCursor, Limit: 2}})
+	next, err := repo.History(context.Background(), "user_alice", ListPrivateMessagesRequest{TargetUserID: "user_bob", Pagination: &PaginationParams{Cursor: *history.NextCursor, Limit: 2}})
 	if err != nil {
 		t.Fatalf("history next page: %v", err)
 	}

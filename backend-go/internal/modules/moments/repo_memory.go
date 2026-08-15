@@ -100,7 +100,8 @@ func (r *InMemoryRepository) ListMine(_ context.Context, userID string, limit in
 	}
 	result := PaginatedMoments{Items: items}
 	if endIdx < len(ids) && len(items) > 0 {
-		result.NextCursor = items[len(items)-1].MomentID
+		c := items[len(items)-1].MomentID
+		result.NextCursor = &c
 	}
 	return result, nil
 }
@@ -108,8 +109,8 @@ func (r *InMemoryRepository) ListMine(_ context.Context, userID string, limit in
 func (r *InMemoryRepository) Exists(_ context.Context, momentID string) (bool, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	_, ok := r.moments[momentID]
-	return ok, nil
+	item, ok := r.moments[momentID]
+	return ok && !item.IsDeleted, nil
 }
 
 func (r *InMemoryRepository) IncrementCommentCount(_ context.Context, momentID string) error {
@@ -156,7 +157,7 @@ func (r *InMemoryRepository) Search(_ context.Context, req SearchMomentsRequest)
 	defer r.mu.RUnlock()
 	var items []MomentItem
 	for _, m := range r.moments {
-		if m.PrivacyLevel == "private" {
+		if m.PrivacyLevel == "private" || m.IsDeleted {
 			continue
 		}
 		if req.Keyword != nil && *req.Keyword != "" {
@@ -171,10 +172,14 @@ func (r *InMemoryRepository) Search(_ context.Context, req SearchMomentsRequest)
 		}
 		items = append(items, m)
 	}
-	sortBy := req.SortBy
-	if sortBy == "" {
-		sortBy = "relevance"
+	limit := 20
+	if req.Pagination != nil && req.Pagination.Limit > 0 {
+		limit = req.Pagination.Limit
 	}
+	if limit > types.MaxPageSize {
+		limit = types.MaxPageSize
+	}
+	sortBy := normalizeMomentSearchSort(req.SortBy)
 	keyword := ""
 	if req.Keyword != nil {
 		keyword = *req.Keyword
@@ -183,11 +188,48 @@ func (r *InMemoryRepository) Search(_ context.Context, req SearchMomentsRequest)
 	if req.Tag != nil {
 		tag = *req.Tag
 	}
+	// 最终排序与 Postgres keyset 语义一致：(score, created_at, moment_id) DESC。
 	sortMoments(items, sortBy, keyword, tag)
-	if len(items) == 0 {
-		items = []MomentItem{}
+	start := 0
+	if req.Pagination != nil && req.Pagination.Cursor != "" {
+		searchCursor, err := decodeMomentSearchCursor(req.Pagination.Cursor)
+		if err != nil {
+			return PaginatedMoments{}, err
+		}
+		if searchCursor.Sort != sortBy {
+			return PaginatedMoments{}, ErrInvalidCursor
+		}
+		start = -1
+		for i := range items {
+			if items[i].MomentID == searchCursor.ID &&
+				items[i].CreatedAt == searchCursor.At &&
+				momentSearchScore(items[i], sortBy, keyword, tag) == searchCursor.Score {
+				start = i + 1
+				break
+			}
+		}
+		if start < 0 {
+			// 弱一致快照下边界项已消失：返回空页，不让客户端倒回或跳过。
+			return PaginatedMoments{Items: []MomentItem{}}, nil
+		}
 	}
-	return PaginatedMoments{Items: items}, nil
+	if start > len(items) {
+		start = len(items)
+	}
+	end := start + limit
+	var nextCursor *string
+	if end < len(items) {
+		c := encodeMomentSearchCursor(sortBy, items[end], keyword, tag)
+		nextCursor = &c
+	}
+	if end > len(items) {
+		end = len(items)
+	}
+	page := items[start:end]
+	if len(page) == 0 {
+		page = []MomentItem{}
+	}
+	return PaginatedMoments{Items: page, NextCursor: nextCursor}, nil
 }
 
 func (r *InMemoryRepository) Update(_ context.Context, userID string, req UpdateMomentRequest) error {
@@ -322,7 +364,8 @@ func (r *InMemoryRepository) ListFavorites(_ context.Context, userID string, lim
 	}
 	items = items[start:]
 	if len(items) > limit {
-		return PaginatedMoments{Items: items[:limit], NextCursor: items[limit].MomentID}, nil
+		c := items[limit].MomentID
+		return PaginatedMoments{Items: items[:limit], NextCursor: &c}, nil
 	}
 	if len(items) == 0 {
 		items = []MomentItem{}
@@ -342,55 +385,21 @@ func (r *InMemoryRepository) ListFavoriteUserIDs(_ context.Context, momentID str
 	return userIDs, nil
 }
 
-// sortMoments sorts a slice of MomentItem in place according to the given mode.
-// refPt is used for distance calculation; keyword and tag are used for relevance scoring.
+// sortMoments sorts a slice of MomentItem in place by the shared keyset tuple
+// (score, created_at, moment_id) in descending order. SQL 与内存实现共用
+// momentSearchScore，避免翻页语义漂移。
 func sortMoments(items []MomentItem, sortBy string, keyword, tag string) {
-	switch sortBy {
-	case "newest":
-		sort.SliceStable(items, func(i, j int) bool {
-			if items[i].CreatedAt != items[j].CreatedAt {
-				return items[i].CreatedAt > items[j].CreatedAt
-			}
-			return items[i].MomentID < items[j].MomentID
-		})
-	case "popular":
-		sort.SliceStable(items, func(i, j int) bool {
-			si := items[i].LikesCount + items[i].CommentsCount
-			sj := items[j].LikesCount + items[j].CommentsCount
-			if si != sj {
-				return si > sj
-			}
-			if items[i].CreatedAt != items[j].CreatedAt {
-				return items[i].CreatedAt > items[j].CreatedAt
-			}
-			return items[i].MomentID < items[j].MomentID
-		})
-	default: // "relevance"
-		sort.SliceStable(items, func(i, j int) bool {
-			ri := relevanceScore(items[i], keyword, tag)
-			rj := relevanceScore(items[j], keyword, tag)
-			if ri != rj {
-				return ri > rj
-			}
-			if items[i].CreatedAt != items[j].CreatedAt {
-				return items[i].CreatedAt > items[j].CreatedAt
-			}
-			return items[i].MomentID < items[j].MomentID
-		})
-	}
-}
-
-// relevanceScore returns a simple integer score: items matching both keyword
-// and tag score 2, matching either one score 1, otherwise 0.
-func relevanceScore(m MomentItem, keyword, tag string) int {
-	score := 0
-	if keyword != "" && strings.Contains(m.Description, keyword) {
-		score++
-	}
-	if tag != "" && containsTag(m.Tags, tag) {
-		score++
-	}
-	return score
+	sort.SliceStable(items, func(i, j int) bool {
+		si := momentSearchScore(items[i], sortBy, keyword, tag)
+		sj := momentSearchScore(items[j], sortBy, keyword, tag)
+		if si != sj {
+			return si > sj
+		}
+		if items[i].CreatedAt != items[j].CreatedAt {
+			return items[i].CreatedAt > items[j].CreatedAt
+		}
+		return items[i].MomentID > items[j].MomentID
+	})
 }
 
 // FetchMomentImageRows returns no rows for the in-memory repo, which does not

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type stubRepo struct {
@@ -103,7 +104,7 @@ func TestServiceCreateRejectsOwnerSelfReport(t *testing.T) {
 func TestServiceCreateHappyPath(t *testing.T) {
 	repo := &stubRepo{ownerID: "u2", ownerFound: true, created: ReportCreated{ReportID: "r1"}}
 	service := NewServiceWithRepo(repo)
-	result, err := service.Create(ctxWithUser("u1"), CreateReportRequest{TargetType: ReportTargetTypeUser, TargetID: "u2", Reason: ReportReasonSpam, Description: "spammy"})
+	result, err := service.Create(ctxWithUser("u1"), CreateReportRequest{TargetType: ReportTargetTypeUser, TargetID: "u2", Reason: ReportReasonSpam, Description: types.StrPtr("spammy")})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -142,7 +143,7 @@ func TestServiceCreateRejectsDescriptionTooLong(t *testing.T) {
 	for i := range longDesc {
 		longDesc[i] = 'a'
 	}
-	_, err := service.Create(ctxWithUser("u1"), CreateReportRequest{TargetType: ReportTargetTypeUser, TargetID: "u2", Reason: ReportReasonSpam, Description: string(longDesc)})
+	_, err := service.Create(ctxWithUser("u1"), CreateReportRequest{TargetType: ReportTargetTypeUser, TargetID: "u2", Reason: ReportReasonSpam, Description: types.StrPtr(string(longDesc))})
 	if err == nil {
 		t.Fatal("expected error for too long description")
 	}

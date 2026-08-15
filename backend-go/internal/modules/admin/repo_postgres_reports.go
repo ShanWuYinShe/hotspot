@@ -103,8 +103,9 @@ func (r *PostgresRepository) HandleReport(ctx context.Context, reportID string, 
 		return AdminReportItem{}, false, err
 	}
 	record.Item.Status = status
-	record.Item.HandledAt = now.Format(time.RFC3339)
-	record.Item.HandleNote = strings.TrimSpace(note)
+	handledAt := now.Format(time.RFC3339)
+	record.Item.HandledAt = &handledAt
+	record.Item.HandleNote = types.StrPtr(strings.TrimSpace(note))
 	if handledBy != nil {
 		hb := *handledBy
 		record.Item.HandledBy = &hb

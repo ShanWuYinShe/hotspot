@@ -136,14 +136,15 @@ export function setApiBaseUrl(url: string) {
 
 /**
  * 生成幂等键（spec: api_spec_base.md「幂等性（契约级）」）。
- * 仅用于 spec 明确要求 Idempotency-Key 的写操作（auth/register、auth/guest、
- * groups/create）；优先 crypto.randomUUID，非安全上下文回退时间戳+随机数。
+ * 格式：{client_id}-{timestamp_ms}-{random}，长度 32-64，字符集 [a-zA-Z0-9-_]。
+ * Web 端没有独立 device_id 可读时使用固定 client_id，至少保证同页面重试稳定。
  */
 export function newIdempotencyKey(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+  const clientId = 'hotspot-web';
+  const timestampMs = Date.now().toString();
+  const random = Math.random().toString(36).slice(2, 14).replace(/[^a-zA-Z0-9_-]/g, '');
+  const key = `${clientId}-${timestampMs}-${random}`;
+  return key.length >= 32 ? key : `${key}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 /** 生成请求链路追踪 ID（spec: api_spec_base.md「请求与响应头」，可选、无格式约束）。 */
@@ -246,9 +247,9 @@ export async function openTheDoor(userId: string, includeRecentMoments = false) 
 }
 // spec: api_spec_user.md → users/set_remark（需已关注对方；remark 传空串清除备注）
 export async function setRemark(params: { user_id: string; remark: string }) { return request<void>(Endpoints.Users.SetRemark, params); }
-export async function listFriends(params?: { pagination?: PaginationParams })        { return request<PaginatedData<RelatedUserItem>>(pick(Endpoints.Users.ListFriends, Endpoints.Public.Users.ListFriends), params ?? {}); }
-export async function listFollowing(params?: { pagination?: PaginationParams })      { return request<PaginatedData<RelatedUserItem>>(pick(Endpoints.Users.ListFollowing, Endpoints.Public.Users.ListFollowing), params ?? {}); }
-export async function listFollowers(params?: { pagination?: PaginationParams })      { return request<PaginatedData<RelatedUserItem>>(pick(Endpoints.Users.ListFollowers, Endpoints.Public.Users.ListFollowers), params ?? {}); }
+export async function listFriends(params: { user_id: string; pagination?: PaginationParams })        { return request<PaginatedData<RelatedUserItem>>(pick(Endpoints.Users.ListFriends, Endpoints.Public.Users.ListFriends), params); }
+export async function listFollowing(params: { user_id: string; pagination?: PaginationParams })      { return request<PaginatedData<RelatedUserItem>>(pick(Endpoints.Users.ListFollowing, Endpoints.Public.Users.ListFollowing), params); }
+export async function listFollowers(params: { user_id: string; pagination?: PaginationParams })      { return request<PaginatedData<RelatedUserItem>>(pick(Endpoints.Users.ListFollowers, Endpoints.Public.Users.ListFollowers), params); }
 
 // Feed
 export async function getFeedNearby(params?: NearbyFeedRequest)      { return request<PaginatedData<MomentItem>>(Endpoints.Feed.Nearby, params ?? {}); }
@@ -306,9 +307,9 @@ export async function createReport(params: CreateReportRequest)        { return 
 export async function getPrivateChats(params?: { pagination?: PaginationParams })    { return request<PaginatedData<PrivateChatItem>>(Endpoints.PrivateChats.List, params ?? {}); }
 export async function getPrivateChatDetail(params: { target_user_id: string }) { return request<PrivateChatOpenResult>(Endpoints.PrivateChats.GetDetail, params); }
 export async function getPrivateMessages(params: ListPrivateMessagesRequest)  { return request<PaginatedData<PrivateMessageItem>>(Endpoints.PrivateMessages.List, params); }
-export async function sendPrivateMessage(params: SendPrivateMessageRequest)  { return request<MessageSentResult>(Endpoints.PrivateMessages.Send, params); }
+export async function sendPrivateMessage(params: SendPrivateMessageRequest)  { return request<MessageSentResult>(Endpoints.PrivateMessages.Send, params, { 'Idempotency-Key': newIdempotencyKey() }); }
 export async function getGroupMessages(params: ListGroupMessagesRequest)    { return request<PaginatedData<GroupMessageItem>>(Endpoints.GroupMessages.List, params); }
-export async function sendGroupMessage(params: SendGroupMessageRequest)    { return request<MessageSentResult>(Endpoints.GroupMessages.Send, params); }
+export async function sendGroupMessage(params: SendGroupMessageRequest)    { return request<MessageSentResult>(Endpoints.GroupMessages.Send, params, { 'Idempotency-Key': newIdempotencyKey() }); }
 // spec: api_spec_chat.md → 消息撤回/编辑（recall 受窗口限制/群管理员豁免，update 仅 type=text）
 export async function recallPrivateMessage(params: { message_id: string }) { return request<void>(Endpoints.PrivateMessages.Recall, params); }
 export async function updatePrivateMessage(params: { message_id: string; content: string }) { return request<PrivateMessageItem>(Endpoints.PrivateMessages.Update, params); }
@@ -325,7 +326,7 @@ export async function updateGroupPreferences(params: UpdateGroupPreferencesReque
 export async function setReaction(params: SetReactionRequest)         { return request<void>(Endpoints.Reactions.Set, params); }
 
 // Comments
-export async function createComment(params: CreateCommentRequest)       { return request<CommentItem>(Endpoints.Comments.Create, params); }
+export async function createComment(params: CreateCommentRequest)       { return request<CommentItem>(Endpoints.Comments.Create, params, { 'Idempotency-Key': newIdempotencyKey() }); }
 
 // Moments — favorite (two-state via active per spec)
 export async function favoriteMoment(params: FavoriteMomentRequest)      { return request<void>(Endpoints.Moments.Favorite, params); }

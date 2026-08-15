@@ -8,6 +8,7 @@ import (
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type Handler struct {
@@ -174,11 +175,7 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
-	resp := map[string]any{
-		"items":       items,
-		"next_cursor": nextCursor,
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PaginatedGroupMembers{Items: items, NextCursor: types.StrPtr(nextCursor)}))
 }
 
 func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
@@ -206,11 +203,7 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
-	resp := map[string]any{
-		"items":       items,
-		"next_cursor": nextCursor,
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PaginatedGroupMembers{Items: items, NextCursor: types.StrPtr(nextCursor)}))
 }
 
 func (h *Handler) ListMyGroups(w http.ResponseWriter, r *http.Request) {
@@ -228,11 +221,7 @@ func (h *Handler) ListMyGroups(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
-	resp := map[string]any{
-		"items":       items,
-		"next_cursor": nextCursor,
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PaginatedGroups{Items: items, NextCursor: types.StrPtr(nextCursor)}))
 }
 
 func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
@@ -449,11 +438,7 @@ func (h *Handler) ListMyApplications(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
-	resp := map[string]any{
-		"items":       items,
-		"next_cursor": nextCursor,
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PaginatedApplications{Items: items, NextCursor: types.StrPtr(nextCursor)}))
 }
 
 func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {

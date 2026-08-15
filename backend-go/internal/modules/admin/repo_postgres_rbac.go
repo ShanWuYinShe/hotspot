@@ -82,7 +82,7 @@ func (r *PostgresRepository) CreateRole(ctx context.Context, req AdminRbacRoleCr
 	item := AdminRoleItem{
 		RoleID:      idgen.MustWithPrefix("role_"),
 		Name:        name,
-		Description: strings.TrimSpace(req.Description),
+		Description: types.StrPtr(strings.TrimSpace(req.Description)),
 		Permissions: []string{},
 	}
 	if err := queryable.Exec(ctx, queryRoleInsert, item.RoleID, item.Name, nullableString(item.Description), now, now); err != nil {
@@ -117,9 +117,11 @@ func (r *PostgresRepository) UpdateRole(ctx context.Context, req AdminRbacRoleUp
 			return &httpx.APIError{Code: httpx.CodeConflict, Message: "角色已存在"}
 		}
 	}
-	description := item.item.Description
+	description := ""
+	if item.item.Description != nil {
+		description = *item.item.Description
+	}
 	if req.ClearDescription {
-		description = ""
 	} else if req.Description != nil {
 		description = strings.TrimSpace(*req.Description)
 	}

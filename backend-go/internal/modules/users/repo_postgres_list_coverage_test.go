@@ -83,17 +83,17 @@ func TestListFriendsPostgresPaginationAndErrors(t *testing.T) {
 		friendRow("f1", now), friendRow("f2", now.Add(-time.Hour)), friendRow("f3", now.Add(-2*time.Hour)),
 	}}}}
 	page, err := newUserListRepo(stub).ListFriends(ctx, "u1", 2, "")
-	if err != nil || len(page.Items) != 2 || page.NextCursor == "" {
+	if err != nil || len(page.Items) != 2 || page.NextCursor == nil {
 		t.Fatalf("list friends page: %#v err=%v", page, err)
 	}
-	if page.Items[0].PresenceStatus == nil || page.Items[0].LastOnline == nil || page.Items[0].FollowedBackAt == "" {
+	if page.Items[0].User.PresenceStatus == nil || page.Items[0].User.LastOnline == nil || page.Items[0].FollowedBackAt == nil {
 		t.Fatalf("friend item fields: %#v", page.Items[0])
 	}
 
 	// 无分页（1 行）
 	stub = &userListStub{rowsSeq: []persistence.Rows{&listRowsValues{rows: [][]any{friendRow("f1", now)}}}}
 	page, err = newUserListRepo(stub).ListFriends(ctx, "u1", 2, "")
-	if err != nil || len(page.Items) != 1 || page.NextCursor != "" {
+	if err != nil || len(page.Items) != 1 || page.NextCursor != nil {
 		t.Fatalf("list friends one: %#v err=%v", page, err)
 	}
 
@@ -131,7 +131,7 @@ func TestListFollowingFollowersGroupsPostgres(t *testing.T) {
 		followingRow("t1", now, true), followingRow("t2", now.Add(-time.Hour), false), followingRow("t3", now.Add(-2*time.Hour), true),
 	}}}}
 	page, err := newUserListRepo(stub).ListFollowing(ctx, "u1", 2, "")
-	if err != nil || len(page.Items) != 2 || page.NextCursor == "" {
+	if err != nil || len(page.Items) != 2 || page.NextCursor == nil {
 		t.Fatalf("list following: %#v err=%v", page, err)
 	}
 	stub = &userListStub{rowsSeq: []persistence.Rows{&listRowsValues{rows: [][]any{followingRow("t1", now, true)}, scanErr: errors.New("scan")}}}

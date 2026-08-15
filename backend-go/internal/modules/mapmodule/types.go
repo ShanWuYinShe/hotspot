@@ -34,9 +34,9 @@ type MapCanvasRequest struct {
 type GeoPoint = types.GeoPoint
 
 type MapHeatBreakdown struct {
-	User   int `json:"user,omitempty"`
-	Group  int `json:"group,omitempty"`
-	Moment int `json:"moment,omitempty"`
+	User   *int `json:"user"`
+	Group  *int `json:"group"`
+	Moment *int `json:"moment"`
 }
 
 type MapHeatBucket struct {
@@ -44,7 +44,7 @@ type MapHeatBucket struct {
 	Level      int               `json:"level"`
 	Location   GeoPoint          `json:"location"`
 	TotalCount int               `json:"total_count"`
-	Breakdown  *MapHeatBreakdown `json:"breakdown,omitempty"`
+	Breakdown  *MapHeatBreakdown `json:"breakdown"`
 }
 
 type MapHeatCanvas struct {
@@ -52,19 +52,18 @@ type MapHeatCanvas struct {
 }
 
 type MapHotspotItem struct {
-	ObjectType     string   `json:"object_type"`
-	ObjectID       string   `json:"object_id"`
-	Title          string   `json:"title"`
-	Subtitle       string   `json:"subtitle,omitempty"`
-	CoverURL       string   `json:"cover_url,omitempty"`
-	Location       GeoPoint `json:"location"`
-	CreatedAt      string   `json:"created_at,omitempty"`
-	DistanceMeters int      `json:"distance_meters,omitempty"`
+	ObjectType string                 `json:"object_type"`
+	ObjectID   string                 `json:"object_id"`
+	Title      string                 `json:"title"`
+	Subtitle   *string                `json:"subtitle"`
+	CoverURL   *string                `json:"cover_url"`
+	Location   types.RelativeLocation `json:"location"`
+	CreatedAt  *string                `json:"created_at"`
 }
 
 type MapHotspotsCanvas struct {
 	Items      []MapHotspotItem `json:"items"`
-	NextCursor string           `json:"next_cursor,omitempty"`
+	NextCursor *string          `json:"next_cursor"`
 }
 
 type MapCanvasResponse struct {

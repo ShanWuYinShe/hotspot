@@ -62,5 +62,5 @@ type ListReactionsRequest struct {
 // PaginatedReactions wraps a reactions/fetch page.
 type PaginatedReactions struct {
 	Items      []ReactionItem `json:"items"`
-	NextCursor string         `json:"next_cursor,omitempty"`
+	NextCursor *string        `json:"next_cursor"`
 }

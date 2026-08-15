@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -58,7 +59,7 @@ func (r *PostgresRepository) Get(ctx context.Context, query getShareQuery) (Shar
 			ShareType: record.ShareType,
 			Creator:   creator,
 			CreatedAt: record.CreatedAt,
-			ExpiresAt: record.ExpiresAt,
+			ExpiresAt: types.StrPtr(record.ExpiresAt),
 		},
 		Payload: record.Payload,
 		Preview: preview,
@@ -108,7 +109,7 @@ func (r *PostgresRepository) List(ctx context.Context, query listSharesQuery) (P
 				return PaginatedShares{}, err
 			}
 		}
-		if item.ExpiresAt != "" && isExpired(item.ExpiresAt) {
+		if item.ExpiresAt != nil && *item.ExpiresAt != "" && isExpired(*item.ExpiresAt) {
 			item.IsRevoked = true
 		}
 		if item.IsRevoked {
@@ -122,7 +123,8 @@ func (r *PostgresRepository) List(ctx context.Context, query listSharesQuery) (P
 	page := PaginatedShares{}
 	if len(items) > query.Limit {
 		last := items[query.Limit-1]
-		page.NextCursor = encodeShareCursor(shareCursor{CreatedAt: last.CreatedAt, ShareID: last.ShareID})
+		c := encodeShareCursor(shareCursor{CreatedAt: last.CreatedAt, ShareID: last.ShareID})
+		page.NextCursor = &c
 		items = items[:query.Limit]
 	}
 	page.Items = items
@@ -136,13 +138,13 @@ func resolveSharePreview(ctx context.Context, queryable persistence.QueryableDB,
 		if err != nil {
 			return nil, err
 		}
-		return &SharePreview{Title: nickname, Subtitle: "用户", CoverURL: avatarURL}, nil
+		return &SharePreview{Title: nickname, Subtitle: types.StrPtr("用户"), CoverURL: types.StrPtr(avatarURL)}, nil
 	case ShareTypeGroup:
 		_, name, description, avatarURL, err := loadSharedGroup(ctx, queryable, getPayloadID(payload, "shared_group_id"))
 		if err != nil {
 			return nil, err
 		}
-		return &SharePreview{Title: name, Subtitle: description, CoverURL: avatarURL}, nil
+		return &SharePreview{Title: name, Subtitle: types.StrPtr(description), CoverURL: types.StrPtr(avatarURL)}, nil
 	case ShareTypeMoment:
 		_, description, locationName, authorNickname, authorAvatarURL, err := loadSharedMoment(ctx, queryable, getPayloadID(payload, "shared_moment_id"))
 		if err != nil {
@@ -152,11 +154,11 @@ func resolveSharePreview(ctx context.Context, queryable persistence.QueryableDB,
 		if title == "" {
 			title = locationName
 		}
-		return &SharePreview{Title: title, Subtitle: authorNickname, CoverURL: authorAvatarURL}, nil
+		return &SharePreview{Title: title, Subtitle: types.StrPtr(authorNickname), CoverURL: types.StrPtr(authorAvatarURL)}, nil
 	case ShareTypeLocation:
 		sharedLocation, _ := payload["shared_location"].(map[string]any)
 		locationName, _ := sharedLocation["location_name"].(string)
-		return &SharePreview{Title: locationName, Subtitle: "位置"}, nil
+		return &SharePreview{Title: locationName, Subtitle: types.StrPtr("位置")}, nil
 	default:
 		return nil, ErrInvalidShareRequest
 	}

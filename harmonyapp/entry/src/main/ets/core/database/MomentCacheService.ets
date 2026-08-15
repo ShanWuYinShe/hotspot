@@ -11,6 +11,16 @@ import { MediaUrlUtil } from '../utils/MediaUrlUtil';
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG = 'MomentCacheService';
 
+function momentReactionTotal(moment: MomentItem): number {
+  let total = 0;
+  if (moment.reactions) {
+    for (const reaction of moment.reactions) {
+      total += reaction.count;
+    }
+  }
+  return total;
+}
+
 export class MomentCacheService {
   private static instance: MomentCacheService;
   private rdbManager = RdbManager.getInstance();
@@ -51,7 +61,7 @@ export class MomentCacheService {
           longitude: moment.location?.point?.longitude ?? 0,
           location_name: moment.location?.location_name ?? '',
           distance: moment.location?.distance ?? 0,
-          likes_count: moment.likes_count,
+          likes_count: momentReactionTotal(moment),
           comments_count: moment.comments_count,
           created_at: moment.created_at,
           json_data: JSON.stringify(moment)

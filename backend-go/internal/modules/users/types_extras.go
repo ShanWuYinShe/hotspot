@@ -24,9 +24,9 @@ type UserInfo = types.UserInfo
 
 type SocialContext struct {
 	MutualFriendsCount   int        `json:"mutual_friends_count"`
-	MutualFriendsPreview []UserInfo `json:"mutual_friends_preview,omitempty"`
-	CommonGroupsCount    *int       `json:"common_groups_count,omitempty"`
-	CommonTags           []string   `json:"common_tags,omitempty"`
+	MutualFriendsPreview []UserInfo `json:"mutual_friends_preview"`
+	CommonGroupsCount    *int       `json:"common_groups_count"`
+	CommonTags           []string   `json:"common_tags"`
 }
 
 type UserItem struct {
@@ -79,7 +79,7 @@ type SearchUsersRequest struct {
 
 type PaginatedUsers struct {
 	Items      []UserItem `json:"items"`
-	NextCursor string     `json:"next_cursor,omitempty"`
+	NextCursor *string    `json:"next_cursor"`
 }
 
 type PaginatedProfiles struct {
@@ -120,60 +120,44 @@ type SetRemarkRequest struct {
 }
 
 type ListFriendsRequest struct {
-	UserID     string            `json:"user_id,omitempty"`
+	UserID     string            `json:"user_id"`
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
-type FriendItem struct {
-	User           UserInfo            `json:"user"`
-	PresenceStatus *UserPresenceStatus `json:"presence_status"`
-	LastOnline     *string             `json:"last_online_at"`
-	Remark         *string             `json:"remark"`
-	FollowedAt     string              `json:"followed_at"`
-	FollowedBackAt string              `json:"followed_back_at"`
+// RelatedUserItem 是 fetch_friends / fetch_following / fetch_followers 的统一
+// 响应项（spec api_spec_user.md → RelatedUserItem）。user 为完整 UserItem，
+// 隐私字段（presence_status / last_online_at）随 user 返回；remark 仅查自己时返回。
+type RelatedUserItem struct {
+	User           UserItem `json:"user"`
+	FollowedAt     string   `json:"followed_at"`
+	FollowedBackAt *string  `json:"followed_back_at"`
+	IsMutual       bool     `json:"is_mutual"`
+	Remark         *string  `json:"remark"`
 }
 
 type PaginatedFriends struct {
-	Items      []FriendItem `json:"items"`
-	NextCursor string       `json:"next_cursor,omitempty"`
+	Items      []RelatedUserItem `json:"items"`
+	NextCursor *string           `json:"next_cursor"`
 }
 
 type ListFollowingRequest struct {
-	UserID     string            `json:"user_id,omitempty"`
+	UserID     string            `json:"user_id"`
 	Pagination *PaginationParams `json:"pagination,omitempty"`
-}
-
-type FollowingItem struct {
-	User           UserInfo            `json:"user"`
-	FollowedAt     string              `json:"followed_at"`
-	IsMutual       bool                `json:"is_mutual"`
-	PresenceStatus *UserPresenceStatus `json:"presence_status"`
-	LastOnline     *string             `json:"last_online_at"`
-	Remark         *string             `json:"remark"`
 }
 
 type PaginatedFollowing struct {
-	Items      []FollowingItem `json:"items"`
-	NextCursor string          `json:"next_cursor,omitempty"`
+	Items      []RelatedUserItem `json:"items"`
+	NextCursor *string           `json:"next_cursor"`
 }
 
 type ListFollowersRequest struct {
-	UserID     string            `json:"user_id,omitempty"`
+	UserID     string            `json:"user_id"`
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
-type FollowerItem struct {
-	User           UserInfo            `json:"user"`
-	FollowedAt     string              `json:"followed_at"`
-	IsMutual       bool                `json:"is_mutual"`
-	PresenceStatus *UserPresenceStatus `json:"presence_status"`
-	LastOnline     *string             `json:"last_online_at"`
-	Remark         *string             `json:"remark"`
-}
-
 type PaginatedFollowers struct {
-	Items      []FollowerItem `json:"items"`
-	NextCursor string         `json:"next_cursor,omitempty"`
+	Items      []RelatedUserItem `json:"items"`
+	NextCursor *string           `json:"next_cursor"`
 }
 
 type UserGroupsRequest struct {
@@ -187,8 +171,8 @@ type UserMomentsRequest struct {
 }
 
 type UserProfileBundle struct {
-	User          UserItem                     `json:"user"`
-	RecentMoments momenttypes.PaginatedMoments `json:"recent_moments,omitempty"` // 仅 include_recent_moments=true 时返回
+	User          UserItem                      `json:"user"`
+	RecentMoments *momenttypes.PaginatedMoments `json:"recent_moments"` // 仅 include_recent_moments=true 时返回
 }
 
 type MyBlockedRequest struct {
@@ -198,12 +182,12 @@ type MyBlockedRequest struct {
 type BlockedUserItem struct {
 	User      UserInfo `json:"user"`
 	BlockedAt string   `json:"blocked_at"`
-	Reason    string   `json:"reason,omitempty"`
+	Reason    *string  `json:"reason"`
 }
 
 type PaginatedBlockedUsers struct {
 	Items      []BlockedUserItem `json:"items"`
-	NextCursor string            `json:"next_cursor,omitempty"`
+	NextCursor *string           `json:"next_cursor"`
 }
 
 type UserListGroupsResponse = grouptypes.PaginatedGroups

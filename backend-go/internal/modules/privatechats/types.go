@@ -43,9 +43,9 @@ type UserInfo = types.UserInfo
 
 type LastMessage struct {
 	MessageID string   `json:"message_id"`
-	Content   string   `json:"content,omitempty"`
+	Content   *string  `json:"content"`
 	Type      string   `json:"type"`
-	ShareCode string   `json:"share_code,omitempty"`
+	ShareCode *string  `json:"share_code"`
 	Sender    UserInfo `json:"sender"`
 	SentAt    string   `json:"sent_at"`
 }
@@ -56,10 +56,10 @@ type PrivateChatItem struct {
 	IsMuted        bool         `json:"is_muted"`
 	IsPinned       bool         `json:"is_pinned"`
 	LastActivityAt string       `json:"last_activity_at"`
-	LastMessage    *LastMessage `json:"last_message,omitempty"`
+	LastMessage    *LastMessage `json:"last_message"`
 	// presence_status 恒定 nullable（null = 对方 presence_visible=false 隐藏）
 	PresenceStatus *string `json:"presence_status"`
-	CreatedAt      string  `json:"created_at,omitempty"`
+	CreatedAt      *string `json:"created_at"`
 	CanMessage     bool    `json:"can_message"`
 	// blocked_reason 恒定 nullable：can_message=false 时返回 blocked_by_user /
 	// privacy_setting / stranger_quota_exceeded，否则为 null
@@ -68,7 +68,7 @@ type PrivateChatItem struct {
 
 type PaginatedPrivateChats struct {
 	Items      []PrivateChatItem `json:"items"`
-	NextCursor string            `json:"next_cursor,omitempty"`
+	NextCursor *string           `json:"next_cursor"`
 }
 
 type MyPrivateChatsRequest struct {

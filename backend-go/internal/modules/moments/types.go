@@ -31,30 +31,30 @@ type MyMomentState struct {
 }
 
 type MomentImage struct {
-	URL          string `json:"url"`
-	ThumbnailURL string `json:"thumbnail_url,omitempty"`
-	Width        int    `json:"width,omitempty"`
-	Height       int    `json:"height,omitempty"`
-	MimeType     string `json:"mime_type,omitempty"`
+	URL          string  `json:"url"`
+	ThumbnailURL *string `json:"thumbnail_url"`
+	Width        *int    `json:"width"`
+	Height       *int    `json:"height"`
+	MimeType     *string `json:"mime_type"`
 }
 
 // MomentItem 是瞬间的公开固定形状（spec api_spec_types.md MomentItem）。
 // 拥有者专属字段 privacy_level 不在此类型（见 OwnerMomentItem）；
 // privacy_level 仅作 repo 内部存储/过滤载体，json:"-" 保证不对外输出。
 type MomentItem struct {
-	MomentID      string        `json:"moment_id"`
-	Description   string        `json:"description"`
-	Images        []MomentImage `json:"images,omitempty"`
-	Tags          []string      `json:"tags,omitempty"`
-	Mentions      []string      `json:"mentions,omitempty"`
-	CreatedAt     string        `json:"created_at"`
+	MomentID    string        `json:"moment_id"`
+	Description string        `json:"description"`
+	Images      []MomentImage `json:"images"`
+	Tags        []string      `json:"tags"`
+	Mentions    []string      `json:"mentions"`
+	CreatedAt   string        `json:"created_at"`
 	// LikesCount 兼容保留（reactions 聚合之前的历史计数，契约已删 likes_count），
 	// 仅供内部/测试使用，不对外序列化。
-	LikesCount    int           `json:"-"`
-	CommentsCount int           `json:"comments_count"`
-	SharesCount   int           `json:"shares_count"`
-	User          UserInfo      `json:"user"`
-	IsDeleted     bool          `json:"is_deleted"`
+	LikesCount    int      `json:"-"`
+	CommentsCount int      `json:"comments_count"`
+	SharesCount   int      `json:"shares_count"`
+	User          UserInfo `json:"user"`
+	IsDeleted     bool     `json:"is_deleted"`
 	// location 恒定 nullable（spec MomentItem）：nil = 隐私隐藏/未设置，恒输出 null。
 	Location *Location `json:"location"`
 	// is_favorited 恒定布尔（spec MomentItem）：匿名/未收藏为 false，恒输出。
@@ -91,13 +91,13 @@ type MomentOpenTheDoorRequest struct {
 // PaginatedMoments 公开瞬间分页容器（spec moment.md → moments/search）。
 type PaginatedMoments struct {
 	Items      []MomentItem `json:"items"`
-	NextCursor string       `json:"next_cursor"`
+	NextCursor *string      `json:"next_cursor"`
 }
 
 // PaginatedOwnerMoments 拥有者瞬间分页容器（spec moment.md → moments/fetch_created）。
 type PaginatedOwnerMoments struct {
 	Items      []OwnerMomentItem `json:"items"`
-	NextCursor string            `json:"next_cursor"`
+	NextCursor *string           `json:"next_cursor"`
 }
 
 // SearchMomentsRequest：全球 keyword/tag 搜索（spec moment.md → moments/search 收口——

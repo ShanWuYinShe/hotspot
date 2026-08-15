@@ -38,7 +38,7 @@ type NotifyItem struct {
 
 type PaginatedNotify struct {
 	Items      []NotifyItem `json:"items"`
-	NextCursor string       `json:"next_cursor,omitempty"`
+	NextCursor *string      `json:"next_cursor"`
 }
 
 type UnreadCountByType struct {

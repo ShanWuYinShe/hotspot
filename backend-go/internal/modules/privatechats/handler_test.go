@@ -170,7 +170,7 @@ func TestSendAndHistoryWorkTogether(t *testing.T) {
 	if err := json.NewDecoder(historyRR.Body).Decode(&historyResp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if historyResp.Code != 0 || len(historyResp.Data.Items) != 1 || historyResp.Data.Items[0].Content != "hello" {
+	if historyResp.Code != 0 || len(historyResp.Data.Items) != 1 || *historyResp.Data.Items[0].Content != "hello" {
 		t.Fatalf("unexpected history: %#v", historyResp)
 	}
 
@@ -185,7 +185,7 @@ func TestSendAndHistoryWorkTogether(t *testing.T) {
 	if err := json.NewDecoder(openRR.Body).Decode(&openResp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if openResp.Data.Chat.LastMessage == nil || openResp.Data.Chat.LastMessage.Content != "hello" {
+	if openResp.Data.Chat.LastMessage == nil || *openResp.Data.Chat.LastMessage.Content != "hello" {
 		t.Fatalf("unexpected chat open response: %#v", openResp)
 	}
 }
@@ -383,7 +383,7 @@ func TestDeleteOnlyAffectsCurrentUserView(t *testing.T) {
 	if bobResp.Code != 0 || len(bobResp.Data.Items) != 1 {
 		t.Fatalf("expected bob still sees chat: %#v", bobResp)
 	}
-	if bobResp.Data.Items[0].LastMessage == nil || bobResp.Data.Items[0].LastMessage.Content != "hello" {
+	if bobResp.Data.Items[0].LastMessage == nil || *bobResp.Data.Items[0].LastMessage.Content != "hello" {
 		t.Fatalf("expected bob still sees original message: %#v", bobResp.Data.Items[0])
 	}
 }
@@ -427,10 +427,10 @@ func TestDeleteThenNewMessageReappearsAsBlankConversation(t *testing.T) {
 	if openResp.Code != 0 {
 		t.Fatalf("unexpected open response: %#v", openResp)
 	}
-	if openResp.Data.Chat.LastMessage == nil || openResp.Data.Chat.LastMessage.Content != "new" {
+	if openResp.Data.Chat.LastMessage == nil || *openResp.Data.Chat.LastMessage.Content != "new" {
 		t.Fatalf("expected only new last message visible: %#v", openResp.Data.Chat)
 	}
-	if len(openResp.Data.RecentMessages.Items) != 1 || openResp.Data.RecentMessages.Items[0].Content != "new" {
+	if len(openResp.Data.RecentMessages.Items) != 1 || *openResp.Data.RecentMessages.Items[0].Content != "new" {
 		t.Fatalf("expected only new recent message visible: %#v", openResp.Data.RecentMessages)
 	}
 }
@@ -503,7 +503,7 @@ func TestDeleteThenOpenTheDoorCreatesBlankConversation(t *testing.T) {
 	if len(openResp.Data.RecentMessages.Items) != 0 {
 		t.Fatalf("expected no historical messages after reopen: %#v", openResp.Data.RecentMessages)
 	}
-	if openResp.Data.Chat.CreatedAt == "" {
+	if openResp.Data.Chat.CreatedAt == nil {
 		t.Fatalf("expected created_at on reopened blank conversation: %#v", openResp.Data.Chat)
 	}
 	listReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"pagination":{"limit":20}}`))
@@ -551,11 +551,11 @@ func TestListSupportsPaginationCursor(t *testing.T) {
 	if firstResp.Code != 0 || len(firstResp.Data.Items) != 1 {
 		t.Fatalf("unexpected first list response: %#v", firstResp)
 	}
-	if firstResp.Data.NextCursor == "" {
+	if firstResp.Data.NextCursor == nil {
 		t.Fatalf("expected next_cursor on first page: %#v", firstResp)
 	}
 
-	secondReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"pagination":{"limit":1,"cursor":"`+firstResp.Data.NextCursor+`"}}`))
+	secondReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"pagination":{"limit":1,"cursor":"`+*firstResp.Data.NextCursor+`"}}`))
 	secondReq = secondReq.WithContext(ctx)
 	secondRR := httptest.NewRecorder()
 	chatHandler.List(secondRR, secondReq)

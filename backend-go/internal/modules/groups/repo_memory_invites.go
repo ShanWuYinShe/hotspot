@@ -45,6 +45,9 @@ func (r *InMemoryRepository) AcceptInvite(_ context.Context, userID string, invi
 	now := time.Now().UTC().Format(time.RFC3339)
 	record.RespondedAt = &now
 	r.invites[inviteID] = record
+	if group, ok := r.groups[record.GroupID]; ok && group.MaxMembers > 0 && len(r.members[record.GroupID]) >= group.MaxMembers {
+		return ErrGroupFull
+	}
 	if r.members[record.GroupID] == nil {
 		r.members[record.GroupID] = make(map[string]inMemoryMembership)
 	}
@@ -85,7 +88,7 @@ func (r *InMemoryRepository) InviteMember(_ context.Context, userID string, req 
 	}
 	for _, record := range r.invites {
 		if record.GroupID == req.GroupID && record.InviteeID == req.UserID && record.Status == ApplicationStatusPending {
-			return Invitation{InviteID: record.InviteID, ExpiresAt: derefString(record.ExpiresAt)}, nil
+			return Invitation{InviteID: &record.InviteID, ExpiresAt: record.ExpiresAt}, nil
 		}
 	}
 	now := time.Now().UTC()
@@ -99,7 +102,7 @@ func (r *InMemoryRepository) InviteMember(_ context.Context, userID string, req 
 	r.invites[inviteID] = record
 	group.Group.MembersCount = len(r.members[req.GroupID])
 	r.groups[req.GroupID] = group
-	return Invitation{InviteID: inviteID, ExpiresAt: derefString(expiresAtStr)}, nil
+	return Invitation{InviteID: &inviteID, ExpiresAt: expiresAtStr}, nil
 }
 
 func (r *InMemoryRepository) ListSentInvites(_ context.Context, groupID string, status *ApplicationStatus, limit int, cursor string) ([]GroupSentInviteItem, string, error) {
@@ -116,7 +119,7 @@ func (r *InMemoryRepository) ListSentInvites(_ context.Context, groupID string, 
 		if status != nil && *status != record.Status {
 			continue
 		}
-		items = append(items, GroupSentInviteItem{InviteID: record.InviteID, Invitee: UserInfo{UserID: record.InviteeID, Nickname: record.InviteeID}, Status: record.Status, Message: record.Message, CreatedAt: record.CreatedAt, ExpiresAt: record.ExpiresAt, RespondedAt: record.RespondedAt})
+		items = append(items, GroupSentInviteItem{InviteID: record.InviteID, Inviter: UserInfo{UserID: record.InviterID, Nickname: record.InviterID}, Invitee: UserInfo{UserID: record.InviteeID, Nickname: record.InviteeID}, Status: record.Status, Message: record.Message, CreatedAt: record.CreatedAt, ExpiresAt: record.ExpiresAt, RespondedAt: record.RespondedAt})
 	}
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].CreatedAt == items[j].CreatedAt {

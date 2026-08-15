@@ -169,15 +169,15 @@ func TestPostgresRepositoryListSupportsFilterPaginationAndUnreadCount(t *testing
 	repo := NewPostgresRepository(factory)
 
 	page1, err := repo.List(context.Background(), "user_alice", NotifyListRequest{Pagination: &PaginationParams{Limit: 2}})
-	if err != nil || len(page1.Items) != 2 || page1.Items[0].NotifyID != "notif_3" || page1.Items[1].NotifyID != "notif_2" || page1.NextCursor == "" {
+	if err != nil || len(page1.Items) != 2 || page1.Items[0].NotifyID != "notif_3" || page1.Items[1].NotifyID != "notif_2" || page1.NextCursor == nil {
 		t.Fatalf("unexpected page1: %#v err=%v", page1, err)
 	}
 	if page1.Items[0].Payload["announcement_id"] != "ann_1" {
 		t.Fatalf("unexpected payload: %#v", page1.Items[0])
 	}
 
-	page2, err := repo.List(context.Background(), "user_alice", NotifyListRequest{Pagination: &PaginationParams{Limit: 2, Cursor: page1.NextCursor}})
-	if err != nil || len(page2.Items) != 1 || page2.Items[0].NotifyID != "notif_1" || page2.NextCursor != "" {
+	page2, err := repo.List(context.Background(), "user_alice", NotifyListRequest{Pagination: &PaginationParams{Limit: 2, Cursor: *page1.NextCursor}})
+	if err != nil || len(page2.Items) != 1 || page2.Items[0].NotifyID != "notif_1" || page2.NextCursor != nil {
 		t.Fatalf("unexpected page2: %#v err=%v", page2, err)
 	}
 

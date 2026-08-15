@@ -28,6 +28,10 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if err != nil {
 		return ReportCreated{}, err
 	}
+	var description any
+	if req.Description != nil {
+		description = *req.Description
+	}
 	var snapshotJSON any
 	if req.MessageSnapshot != nil {
 		raw, err := json.Marshal(req.MessageSnapshot)
@@ -36,7 +40,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		}
 		snapshotJSON = string(raw)
 	}
-	if err := queryable.Exec(ctx, queryInsertReport, reportID, userID, string(req.TargetType), req.TargetID, string(req.Reason), req.Description, string(ReportStatusPending), now.Format(time.RFC3339), snapshotJSON); err != nil {
+	if err := queryable.Exec(ctx, queryInsertReport, reportID, userID, string(req.TargetType), req.TargetID, string(req.Reason), description, string(ReportStatusPending), now.Format(time.RFC3339), snapshotJSON); err != nil {
 		return ReportCreated{}, err
 	}
 	return ReportCreated{ReportID: reportID}, nil

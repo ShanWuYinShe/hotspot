@@ -263,7 +263,7 @@ func (s *Service) GetProfileBundle(ctx context.Context, userID string, includeRe
 	if err != nil {
 		return UserProfileBundle{}, false, err
 	}
-	bundle.RecentMoments = moments
+	bundle.RecentMoments = &moments
 	return bundle, true, nil
 }
 

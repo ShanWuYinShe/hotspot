@@ -230,7 +230,8 @@ func (s *Service) ListAdmins(ctx context.Context, req AdminRbacAdminsListRequest
 	}
 	resp := PaginatedAdminOperators{Items: page.Items}
 	if page.Next != nil {
-		resp.NextCursor = encodeAdminCursor(*page.Next)
+		c := encodeAdminCursor(*page.Next)
+		resp.NextCursor = &c
 	}
 	return resp, nil, nil
 }

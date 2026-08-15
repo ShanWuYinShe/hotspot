@@ -172,7 +172,7 @@ export struct GroupDetailPage {
 
         if (response.code === 0 && response.data) {
           this.groupInfo = response.data;
-          this.isMember = this.groupInfo.my_state?.is_joined ?? false;
+          this.isMember = this.groupInfo.viewer_state != null;
           await this.syncGroupData();
           await this.accessibilityManager.announceText(`已加载群组：${this.groupInfo.group?.name ?? ''}`);
         } else {
@@ -393,7 +393,7 @@ export struct GroupDetailPage {
     if (!this.groupInfo) return;
     if (!this.ensureLoggedIn('加入群组')) return;
 
-    if (this.groupInfo.has_password && !this.joinPassword.trim()) {
+    if (this.groupInfo.join_method === 'password' && !this.joinPassword.trim()) {
       SystemToast.showWarning('请输入群组密码', this.getUIContext());
       return;
     }
@@ -404,7 +404,7 @@ export struct GroupDetailPage {
       await LoadingUtil.withMinimumTime(async () => {
         const response = await ApiClient.joinGroup({
           group_id: this.groupId,
-          password: groupInfoRef.has_password ? this.joinPassword.trim() : undefined
+          password: groupInfoRef.join_method === 'password' ? this.joinPassword.trim() : undefined
         });
 
         if (response.code === 0 && response.data) {
@@ -646,7 +646,7 @@ export struct GroupDetailPage {
   }
 
   private currentGroupRole(): string {
-    return this.groupInfo?.my_state?.role ?? 'member';
+    return this.groupInfo?.viewer_state?.role ?? 'member';
   }
 
   private isOwnerRole(): boolean {
@@ -1191,7 +1191,7 @@ export struct GroupDetailPage {
                   })
                     .opacity(this.isLeaving ? DesignConstants.OPACITY.LOADING : 1)
                 } else {
-                  if (this.groupInfo?.has_password) {
+                  if (this.groupInfo?.join_method === 'password') {
                     SystemInput({
                       value: this.joinPassword,
                       placeholder: '请输入群组密码',
@@ -1207,7 +1207,7 @@ export struct GroupDetailPage {
                   }
 
                     SystemButton({
-                      label: this.groupInfo?.has_password ? '加入群组（需要密码）' : '加入群组',
+                      label: this.groupInfo?.join_method === 'password' ? '加入群组（需要密码）' : '加入群组',
                       variant: 'primary',
                       buttonSize: 'default',
                       pill: true,

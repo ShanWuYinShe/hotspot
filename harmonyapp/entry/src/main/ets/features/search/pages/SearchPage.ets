@@ -7,13 +7,13 @@ import { PageNames } from '../../../constants/AppConstants';
 import { AppRouter, ChatRouteParam, GroupDetailRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam, SearchRouteParam } from '../../../core/router/AppRouter';
 import {
   UserItem, GroupItem, MomentItem, GeoPoint,
-  JoinGroupRequest, CreateReportRequest, Relationship,
+  EnterGroupRequest, CreateReportRequest, Relationship,
   SearchSuggestItem, SearchSuggestRequest, ClientConfig,
   SearchSuggestItemTag, SearchSuggestItemUser, SearchSuggestItemGroup, SearchSuggestItemMoment,
   SearchUsersRequest, SearchGroupsRequest, SearchMomentsRequest
 } from '../../../core/types/api';
 import { interactionActions } from '../../../core/state/InteractionActions';
-import { UserRelationState } from '../../../core/state/InteractionStateStore';
+import { UserRelationState, sumReactionCounts } from '../../../core/state/InteractionStateStore';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { Pressable } from '../../../components/Pressable';
 import { EmptyState } from '../../../components/EmptyState';
@@ -943,7 +943,7 @@ export struct SearchPage {
           }
         }, (item: GroupItem) => {
           const gid = item.group?.group_id ?? '';
-          return gid + '_j' + (item.my_state?.is_joined ?? false) + '_p' + (this.groupActionPendingIds.indexOf(gid) >= 0);
+          return gid + '_j' + (item.viewer_state != null) + '_p' + (this.groupActionPendingIds.indexOf(gid) >= 0);
         })
       }
       .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder() })
@@ -1003,7 +1003,7 @@ export struct SearchPage {
   }
 
   private isGroupJoined(group: GroupItem): boolean {
-    return group.my_state?.is_joined ?? false;
+    return group.viewer_state != null;
   }
 
   @Builder
@@ -1247,7 +1247,7 @@ export struct SearchPage {
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor([this.getCurrentThemePalette().textTertiary])
           }
-          Text(formatCount(item.likes_count))
+          Text(formatCount(sumReactionCounts(item.reactions)))
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getCurrentThemePalette().textTertiary)
         }
@@ -1354,14 +1354,14 @@ export struct SearchPage {
     }
     const groupId = group.group?.group_id;
     if (!groupId) return;
-    if (group.my_state?.is_joined) {
+    if (group.viewer_state != null) {
       this.enterGroupChat(group);
       return;
     }
     if (this.isGroupActionPending(groupId)) return;
     this.setGroupActionPending(groupId, true);
     try {
-      const response = await ApiClient.joinGroup({ group_id: groupId } as JoinGroupRequest);
+      const response = await ApiClient.joinGroup({ group_id: groupId } as EnterGroupRequest);
       if (response.code === 0 && response.data) {
         if (response.data.status === 'joined') {
           SystemToast.showSuccess('加入成功', this.getUIContext());

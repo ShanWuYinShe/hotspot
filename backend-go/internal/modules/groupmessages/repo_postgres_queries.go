@@ -90,8 +90,27 @@ const (
 	WHERE group_message_read_state.last_read_sent_at IS NULL
 	   OR group_message_read_state.last_read_sent_at <= EXCLUDED.last_read_sent_at`
 
+	queryGroupMessageReadCount = `
+	SELECT COUNT(*)::int
+	FROM group_message_read_state grs
+	WHERE grs.group_id = $1
+	  AND grs.last_read_sent_at >= (SELECT gm.sent_at FROM group_messages gm WHERE gm.group_id = $1 AND gm.message_id = $2)`
+
+	queryLatestGroupMessageID = `
+	SELECT gm.message_id
+	FROM group_messages gm
+	WHERE gm.group_id = $1
+	ORDER BY gm.sent_at DESC, gm.message_id DESC
+	LIMIT 1`
+
+	queryUserGroupIDs = `
+	SELECT DISTINCT group_id FROM group_members WHERE user_id = $1`
+
 	queryCheckGroupMembership = `
 SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2`
+
+	queryFilterGroupMemberIDs = `
+SELECT user_id FROM group_members WHERE group_id = $1 AND user_id = ANY($2)`
 
 	queryMemberMuteStatus = `
 SELECT is_muted, COALESCE(TO_CHAR(muted_until AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), '')

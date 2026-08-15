@@ -24,12 +24,10 @@ func MountRoutes(r chi.Router, handler *Handler) {
 	r.Route("/audit", func(audit chi.Router) {
 		audit.Post("/fetch", handler.ListAuditLogs)
 	})
-	// /admin/v1/app_config 是名词化端点（无动词段），直接注册完整路径，
-	// 避免 chi 子路由 "/" 模式的尾斜杠歧义。
+	// /admin/v1/app_config 是名词化端点（无动词段）。不要用同前缀子路由，
+	// 否则 chi 会用子路由覆盖裸路径；这里注册两个独立叶子路由即可。
 	r.Post("/app_config", handler.GetAppConfig)
-	r.Route("/app_config", func(appConfig chi.Router) {
-		appConfig.Post("/update", handler.UpdateAppConfig)
-	})
+	r.Post("/app_config/update", handler.UpdateAppConfig)
 	r.Route("/users", func(users chi.Router) {
 		users.Post("/search", handler.SearchUsers)
 		users.Post("/open_the_door", handler.OpenAdminUser)

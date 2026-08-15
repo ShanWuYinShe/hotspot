@@ -7,6 +7,7 @@ import (
 
 	systemmodule "hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 const (
@@ -77,16 +78,15 @@ func toAdminAnnouncementItem(item systemmodule.AnnouncementRecord) AdminAnnounce
 		CreatedBy: UserInfo{
 			UserID:    item.CreatedBy.UserID,
 			Nickname:  item.CreatedBy.Nickname,
-			AvatarURL: item.CreatedBy.AvatarURL,
+			AvatarURL: types.StrPtr(item.CreatedBy.AvatarURL),
 		},
 		SendPush:  item.SendPush,
 		ViewCount: item.ViewCount,
 	}
-	if item.ActionURL != "" {
-		resp.ActionURL = item.ActionURL
-	}
+	resp.ActionURL = types.StrPtr(item.ActionURL)
 	if item.PushSentAt != nil {
-		resp.PushSentAt = item.PushSentAt.UTC().Format(time.RFC3339)
+		pushSentAt := item.PushSentAt.UTC().Format(time.RFC3339)
+		resp.PushSentAt = &pushSentAt
 	}
 	return resp
 }

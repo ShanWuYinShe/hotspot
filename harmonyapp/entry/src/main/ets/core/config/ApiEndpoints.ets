@@ -42,10 +42,6 @@ class UserEndpoints {
   readonly BLOCK: string = '/api/v1/users/set_block';
   readonly LIST_BLOCKED: string = '/api/v1/users/fetch_blocked';
   readonly SET_REMARK: string = '/api/v1/users/set_remark';
-  readonly EMAIL_REQUEST_CHANGE: string = '/api/v1/users/email/request_change';
-  readonly EMAIL_CONFIRM_CHANGE: string = '/api/v1/users/email/confirm_change';
-  readonly PHONE_REQUEST_CHANGE: string = '/api/v1/users/phone/request_change';
-  readonly PHONE_CONFIRM_CHANGE: string = '/api/v1/users/phone/confirm_change';
 }
 
 // Group
@@ -163,9 +159,9 @@ class SearchEndpoints {
 // Feed
 class FeedEndpoints {
   readonly FOLLOWING: string = '/api/v1/feed/following';
-  readonly NEARBY: string = '/api/v1/feed/nearby_moments_moments';
-  readonly NEARBY_USERS: string = '/api/v1/feed/nearby_moments_users';
-  readonly NEARBY_GROUPS: string = '/api/v1/feed/nearby_moments_groups';
+  readonly NEARBY: string = '/api/v1/feed/nearby_moments';
+  readonly NEARBY_USERS: string = '/api/v1/feed/nearby_users';
+  readonly NEARBY_GROUPS: string = '/api/v1/feed/nearby_groups';
   readonly TRENDING: string = '/api/v1/feed/trending';
 }
 
@@ -201,7 +197,7 @@ class NotifyEndpoints {
 // Report
 class ReportEndpoints {
   readonly CREATE: string = '/api/v1/reports/create';
-  readonly LIST: string = '/api/v1/reports/list';
+  readonly LIST: string = '/api/v1/reports/fetch';
 }
 
 // Share

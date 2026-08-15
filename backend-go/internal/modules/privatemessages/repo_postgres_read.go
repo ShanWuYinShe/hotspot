@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 func (r *PostgresRepository) History(ctx context.Context, userID string, req ListPrivateMessagesRequest) (PaginatedMessages, error) {
@@ -101,12 +102,12 @@ func (r *PostgresRepository) historySince(ctx context.Context, userID, targetUse
 			}
 		}
 		item.Sender.Nickname = senderNickname
-		item.Sender.AvatarURL = senderAvatar
+		item.Sender.AvatarURL = types.StrPtr(senderAvatar)
 		if fileID != "" {
 			item.Media = &MessageMedia{URL: fileID}
 		}
 		if replyMessageID != "" {
-			item.ReplyTo = &MessageBrief{MessageID: replyMessageID, Type: replyType, Content: replyContent, ShareCode: replyShareCode, Sender: UserInfo{UserID: replySenderUserID, Nickname: replySenderNickname, AvatarURL: replySenderAvatar}, SentAt: replySentAt}
+			item.ReplyTo = &MessageBrief{MessageID: replyMessageID, Type: replyType, Content: types.StrPtr(replyContent), ShareCode: types.StrPtr(replyShareCode), Sender: UserInfo{UserID: replySenderUserID, Nickname: replySenderNickname, AvatarURL: types.StrPtr(replySenderAvatar)}, SentAt: replySentAt}
 		}
 		items = append(items, item)
 	}
@@ -117,5 +118,6 @@ func (r *PostgresRepository) historySince(ctx context.Context, userID, targetUse
 		return PaginatedMessages{Items: items}, nil
 	}
 	next := items[limit-1]
-	return PaginatedMessages{Items: items[:limit], NextCursor: encodeMessageCursor(next.SentAt, next.MessageID)}, nil
+	c := encodeMessageCursor(next.SentAt, next.MessageID)
+	return PaginatedMessages{Items: items[:limit], NextCursor: &c}, nil
 }

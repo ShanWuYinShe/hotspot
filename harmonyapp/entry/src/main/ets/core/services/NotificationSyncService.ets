@@ -1,5 +1,5 @@
 import { ApiClient } from '../api/ApiClient';
-import { NotifyItem, NotifyListRequest, NotifyMarkReadRequest, UnreadSummaryResult } from '../types/api';
+import { NotifyItem, FetchNotifyRequest, NotifyMarkReadRequest, UnreadSummaryResult } from '../types/api';
 import { DefaultConfig } from '../../constants/AppConstants';
 import { GlobalStateManager, UnreadCount as GlobalUnreadCount } from '../state/GlobalStateManager';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
@@ -83,7 +83,7 @@ export class NotificationSyncService {
     try {
       const response = await ApiClient.listNotifies({
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE }
-      } as NotifyListRequest);
+      } as FetchNotifyRequest);
 
       if (response.code !== 0 || !response.data) {
         throw new Error(response.message || '加载通知失败');
@@ -118,7 +118,7 @@ export class NotificationSyncService {
           limit: DefaultConfig.PAGE_SIZE_LARGE,
           cursor: this.nextCursor
         }
-      } as NotifyListRequest);
+      } as FetchNotifyRequest);
 
       if (response.code !== 0 || !response.data) {
         throw new Error(response.message || '加载通知失败');

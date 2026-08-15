@@ -9,6 +9,7 @@ import (
 	usersmodule "hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 func (r *PostgresRepository) loadUserCandidates(ctx context.Context, queryable persistence.QueryableDB, query usersQuery) ([]userCandidate, error) {
@@ -45,7 +46,7 @@ func (r *PostgresRepository) loadUserCandidates(ctx context.Context, queryable p
 		d := float64(distance)
 		b := float64(bearing)
 		item := UserItem{
-			User:           UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
+			User:           UserInfo{UserID: userID, Nickname: nickname, AvatarURL: types.StrPtr(avatarURL)},
 			Bio:            strPtr(strings.TrimSpace(bio)),
 			Tags:           nonNilTags(tags),
 			PresenceStatus: presenceStatusPtr(presenceStatus),
@@ -131,7 +132,7 @@ func (r *PostgresRepository) loadGroupCandidates(ctx context.Context, queryable 
 		_ = isSearchable
 		_ = maxMembers
 		item := GroupItem{
-			Group:              GroupInfo{GroupID: groupID, Name: name, AvatarURL: avatarURL, MembersCount: membersCount},
+			Group:              GroupInfo{GroupID: groupID, Name: name, AvatarURL: types.StrPtr(avatarURL), MembersCount: membersCount},
 			Description:        strPtr(strings.TrimSpace(description)),
 			Tags:               nonNilTags(tags),
 			JoinMethod:         GroupJoinMethod(joinMethod),
@@ -139,7 +140,7 @@ func (r *PostgresRepository) loadGroupCandidates(ctx context.Context, queryable 
 			Location:           &RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
 			FriendsInGroup:     &friendsInGroup,
 			OnlineMembersCount: &onlineMembersCount,
-			NextActivityAt:       strPtr(nextActivity),
+			NextActivityAt:     strPtr(nextActivity),
 			OwnerID:            strPtr(ownerID),
 		}
 		if !createdAt.IsZero() {
@@ -209,7 +210,7 @@ func (r *PostgresRepository) loadFollowingCandidates(ctx context.Context, querya
 			LikesCount:    likesCount,
 			CommentsCount: commentsCount,
 			SharesCount:   sharesCount,
-			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
+			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: types.StrPtr(avatarURL)},
 			Location:      &RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
 			IsFavorited:   isFavorited,
 		}
@@ -274,7 +275,7 @@ func (r *PostgresRepository) loadNearbyCandidates(ctx context.Context, queryable
 			LikesCount:    likesCount,
 			CommentsCount: commentsCount,
 			SharesCount:   sharesCount,
-			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
+			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: types.StrPtr(avatarURL)},
 			Location:      &RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: &d, BearingDegrees: &b},
 			IsFavorited:   isFavorited,
 		}

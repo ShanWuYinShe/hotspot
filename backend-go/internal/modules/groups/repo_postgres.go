@@ -13,6 +13,7 @@ import (
 	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type PostgresRepository struct {
@@ -64,7 +65,16 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if tags == nil {
 		tags = []string{}
 	}
-	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), ViewerState: &GroupViewerState{Role: "owner", UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, RequiresApproval: requiresApproval, IsSearchable: isSearchable, MembersSearchable: membersSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: &userID}
+	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: types.StrPtr(req.AvatarFileID), MembersCount: 1}, Description: types.StrPtr(req.Description), Tags: tags, HasPassword: req.Password != "", Location: newRelativeLocationPtr(req.Location), ViewerState: &GroupViewerState{Role: "owner", UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, RequiresApproval: requiresApproval, IsSearchable: isSearchable, MembersSearchable: membersSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: &userID}
+	var passwordHash *string
+	if req.Password != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return GroupItem{}, fmt.Errorf("groups.CreateGroup: hash password: %w", err)
+		}
+		hashStr := string(hash)
+		passwordHash = &hashStr
+	}
 	s2CellToken := geo.CellTokenAtLevel(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude}, 14)
 	s2CellID := geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})
 	ownerRole := string(GroupRoleOwner)
@@ -73,7 +83,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
-		if err := queryable.Exec(txCtx, queryInsertGroup, groupID, req.Name, req.AvatarFileID, req.Description, req.Password != "", req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, joinMethod, requiresApproval, nil, isSearchable, membersSearchable, maxMembers, userID, now, now, tags, s2CellToken, s2CellID); err != nil {
+		if err := queryable.Exec(txCtx, queryInsertGroup, groupID, req.Name, req.AvatarFileID, req.Description, req.Password != "", passwordHash, req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, joinMethod, requiresApproval, nil, isSearchable, membersSearchable, maxMembers, userID, now, now, tags, s2CellToken, s2CellID); err != nil {
 			return fmt.Errorf("groups.CreateGroup: insert group: %w", err)
 		}
 		if err := queryable.Exec(txCtx, queryInsertGroupMember, groupID, userID, ownerRole, now); err != nil {
@@ -95,12 +105,27 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 		return persistence.ErrNotImplemented
 	}
 	var hasPassword *bool
+	var passwordHash *string
+	var joinMethodOverride *string
 	if req.ClearPassword != nil && *req.ClearPassword {
 		cleared := false
 		hasPassword = &cleared
-	} else if req.Password != nil {
-		hasPwd := *req.Password != ""
+		// 清除密码即解除 password 门槛：join_method 联动退化为 direct，不留「password 群无密码」的矛盾态
+		direct := string(GroupJoinMethodDirect)
+		joinMethodOverride = &direct
+		emptyHash := ""
+		passwordHash = &emptyHash
+	} else if req.Password != nil && *req.Password != "" {
+		hasPwd := true
 		hasPassword = &hasPwd
+		hash, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("groups.Update: hash password: %w", err)
+		}
+		hashStr := string(hash)
+		passwordHash = &hashStr
+		pw := string(GroupJoinMethodPassword)
+		joinMethodOverride = &pw
 	}
 	var locationName *string
 	var latitude *float64
@@ -117,7 +142,11 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 		s2CellID = &id
 	}
 	_ = userID
-	err := queryable.Exec(ctx, queryUpdateGroup, req.GroupID, nilOrString(req.Name), nilOrString(req.AvatarFileID), nilOrString(req.Description), hasPassword, nilOrStringJoinMethod(req.JoinMethod), req.RequiresApproval, req.NextActivityAt, nilOrBool(req.IsSearchable), nilOrBool(req.MembersSearchable), nilOrInt(req.MaxMembers), locationName, latitude, longitude, nilOrStrings(req.Tags), s2CellToken, s2CellID)
+	joinMethod := joinMethodOverride
+	if joinMethod == nil {
+		joinMethod = nilOrStringJoinMethod(req.JoinMethod)
+	}
+	err := queryable.Exec(ctx, queryUpdateGroup, req.GroupID, nilOrString(req.Name), nilOrString(req.AvatarFileID), nilOrString(req.Description), hasPassword, passwordHash, joinMethod, req.RequiresApproval, req.NextActivityAt, nilOrBool(req.IsSearchable), nilOrBool(req.MembersSearchable), nilOrInt(req.MaxMembers), locationName, latitude, longitude, nilOrStrings(req.Tags), s2CellToken, s2CellID)
 	if err != nil {
 		return fmt.Errorf("groups.Update: %w", err)
 	}
@@ -247,10 +276,11 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 	}
 	items := make([]GroupItem, 0, len(scanned))
 	for _, s := range scanned {
-		s.item.Location = RelativeLocation{Point: struct {
+		location := RelativeLocation{Point: struct {
 			Latitude  float64 `json:"latitude"`
 			Longitude float64 `json:"longitude"`
 		}{Latitude: s.latitude, Longitude: s.longitude}, LocationName: s.locationName}
+		s.item.Location = &location
 		s.item.Tags = s.tags
 		s.item.JoinMethod = GroupJoinMethod(s.joinMethod)
 		s.item.RequiresApproval = s.requiresApproval
@@ -264,11 +294,11 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 			s.item.LastMessage = &GroupLastMessage{
 				MessageID: *s.lastMessageID,
 				Type:      *s.lastMessageType,
-				Content:   stringValue(s.lastContent),
+				Content:   types.StrPtr(stringValue(s.lastContent)),
 				Sender: UserInfo{
 					UserID:    *s.lastSenderID,
 					Nickname:  stringValue(s.lastSenderName),
-					AvatarURL: stringValue(s.lastSenderAvatar),
+					AvatarURL: types.StrPtr(stringValue(s.lastSenderAvatar)),
 				},
 				SentAt: s.lastSentAt.UTC().Format(time.RFC3339),
 			}
@@ -308,9 +338,21 @@ func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, group
 			return EnterGroupResult{}, ErrPermissionDenied
 		}
 	}
-	// password：需提供密码（has_password 为布尔标记，密码内容校验不在本实现范围）
+	// password：bcrypt 比对（密码群的真实门槛）
 	if group.JoinMethod == GroupJoinMethodPassword {
 		if password == nil || *password == "" {
+			return EnterGroupResult{}, ErrInvalidPassword
+		}
+		var storedHash *string
+		if err := queryable.QueryRow(ctx, queryGetGroupPasswordHash, groupID).Scan(&storedHash); err != nil {
+			return EnterGroupResult{}, err
+		}
+		if storedHash == nil || *storedHash == "" {
+			// 迁移语义：password 群没有已设置的密码（历史数据已统一迁移为 direct，
+			// 这里只剩管理员未重设密码的异常态）——拒绝加入而非放行
+			return EnterGroupResult{}, ErrInvalidPassword
+		}
+		if bcrypt.CompareHashAndPassword([]byte(*storedHash), []byte(*password)) != nil {
 			return EnterGroupResult{}, ErrInvalidPassword
 		}
 	}
@@ -332,12 +374,40 @@ func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, group
 		}
 		return EnterGroupResult{Status: EnterGroupStatusPendingApproval, IsNewApplication: true, ApplicationID: &applicationID}, nil
 	}
-	// direct：直接加入
-	now := time.Now().UTC()
-	if err := queryable.Exec(ctx, queryInsertGroupMember, groupID, userID, string(GroupRoleMember), now); err != nil {
-		return EnterGroupResult{}, fmt.Errorf("groups.JoinGroup: insert member: %w", err)
+	// direct：直接加入。容量检查与插入放同一事务并对群行 FOR UPDATE，
+	// 并发入群在相同 max_members 快照下串行判定，杜绝竞态超员。
+	if err := persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		tx, ok := persistence.QueryableForTx(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		if err := enforceGroupCapacity(txCtx, tx, groupID); err != nil {
+			return err
+		}
+		now := time.Now().UTC()
+		if err := tx.Exec(txCtx, queryInsertGroupMember, groupID, userID, string(GroupRoleMember), now); err != nil {
+			return fmt.Errorf("groups.JoinGroup: insert member: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return EnterGroupResult{}, err
 	}
 	return EnterGroupResult{Status: EnterGroupStatusJoined}, nil
+}
+
+// enforceGroupCapacity 在事务内（调用方已对群行 FOR UPDATE）校验成员数未达 max_members。
+func enforceGroupCapacity(ctx context.Context, tx persistence.Queryable, groupID string) error {
+	var maxMembers, memberCount int
+	if err := tx.QueryRow(ctx, queryLockGroupCapacity, groupID).Scan(&maxMembers, &memberCount); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrGroupNotFound
+		}
+		return err
+	}
+	if maxMembers > 0 && memberCount >= maxMembers {
+		return ErrGroupFull
+	}
+	return nil
 }
 
 func (r *PostgresRepository) UpdatePreferences(ctx context.Context, userID string, req UpdateGroupPreferencesRequest) error {

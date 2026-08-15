@@ -14,9 +14,9 @@ import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { Pressable } from '../../../components/Pressable';
 import {
   MomentItem, UserItem, GroupItem, GeoPoint,
-  GetFeedNearbyRequest, SearchUsersRequest, SearchGroupsRequest,
-  JoinGroupRequest,
-  BlockRequest, UnblockRequest, CreateReportRequest, Relationship
+  NearbyMomentsRequest, SearchUsersRequest, SearchGroupsRequest,
+  EnterGroupRequest,
+  BlockRequest, CreateReportRequest, Relationship
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { MomentFeedCard } from '../../../components/MomentFeedCard';
@@ -132,7 +132,7 @@ export struct HomePage {
     this.momentsError = '';
     try {
       // spec moment.md → moments/search 收口：附近瞬间走 feed/nearby
-      const request: GetFeedNearbyRequest = {
+      const request: NearbyMomentsRequest = {
         reference_point: ref, radius: DefaultConfig.NEARBY_RADIUS,
         pagination: { limit: 10 }
       };
@@ -270,12 +270,12 @@ export struct HomePage {
       return;
     }
     const groupId = group.group?.group_id ?? '';
-    if (!groupId || group.my_state?.is_joined) {
-      if (group.my_state?.is_joined) this.enterGroupChat(group);
+    if (!groupId || group.viewer_state != null) {
+      if (group.viewer_state != null) this.enterGroupChat(group);
       return;
     }
     try {
-      const joinReq: JoinGroupRequest = { group_id: groupId };
+      const joinReq: EnterGroupRequest = { group_id: groupId };
       const response = await ApiClient.joinGroup(joinReq);
       if (response.code === 0 && response.data) {
         if (response.data.status === 'joined') {

@@ -7,6 +7,7 @@ import (
 	groupsmodule "hotspot/backend-go/internal/modules/groups"
 	"hotspot/backend-go/internal/platform/appconfig"
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type Provider interface {
@@ -32,9 +33,10 @@ func (p *AppConfigProvider) UpdateAppConfig(ctx context.Context, updatedByUserID
 	if apiErr != nil {
 		return AdminAppConfig{}, apiErr, nil
 	}
-	next.UpdatedByUserID = updatedByUserID
-	if next.UpdatedAt == "" {
-		next.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	next.UpdatedByUserID = &updatedByUserID
+	if next.UpdatedAt == nil || *next.UpdatedAt == "" {
+		updatedAt := time.Now().UTC().Format(time.RFC3339)
+		next.UpdatedAt = &updatedAt
 	}
 	updated, err := p.source.Update(ctx, func(appconfig.AppConfig) appconfig.AppConfig {
 		return sourceAppConfigFromAdmin(next)
@@ -49,7 +51,7 @@ func adminAppConfigFromSource(cfg appconfig.AppConfig) AdminAppConfig {
 	return AdminAppConfig{
 		Features: FeatureSwitches{
 			EnablePublicRegistration: cfg.Features.EnablePublicRegistration,
-			EnableGuestRegister:         cfg.Features.EnableGuestRegister,
+			EnableGuestRegister:      cfg.Features.EnableGuestRegister,
 			EnableMoments:            cfg.Features.EnableMoments,
 			EnableNearbyPeople:       cfg.Features.EnableNearbyPeople,
 		},
@@ -102,7 +104,7 @@ func adminAppConfigFromSource(cfg appconfig.AppConfig) AdminAppConfig {
 			GlobalPerHour:            cfg.RateLimits.GlobalPerHour,
 			UserPerHour:              cfg.RateLimits.UserPerHour,
 			AuthRegisterPer10Minutes: cfg.RateLimits.AuthRegisterPer10Minutes,
-			AuthSigninPer10Minutes:    cfg.RateLimits.AuthSigninPer10Minutes,
+			AuthSigninPer10Minutes:   cfg.RateLimits.AuthSigninPer10Minutes,
 			AuthGuestPer10Minutes:    cfg.RateLimits.AuthGuestPer10Minutes,
 			AuthRefreshPer10Minutes:  cfg.RateLimits.AuthRefreshPer10Minutes,
 			AuthResetPer10Minutes:    cfg.RateLimits.AuthResetPer10Minutes,
@@ -125,8 +127,8 @@ func adminAppConfigFromSource(cfg appconfig.AppConfig) AdminAppConfig {
 			CommentTopRepliesCount:   cfg.ResponseDefaults.CommentTopRepliesCount,
 			UserProfileMomentsCount:  cfg.ResponseDefaults.UserProfileMomentsCount,
 		},
-		UpdatedAt:       cfg.UpdatedAt,
-		UpdatedByUserID: cfg.UpdatedByUserID,
+		UpdatedAt:       types.StrPtr(cfg.UpdatedAt),
+		UpdatedByUserID: types.StrPtr(cfg.UpdatedByUserID),
 	}
 }
 
@@ -134,7 +136,7 @@ func sourceAppConfigFromAdmin(cfg AdminAppConfig) appconfig.AppConfig {
 	return appconfig.AppConfig{
 		Features: appconfig.Features{
 			EnablePublicRegistration: cfg.Features.EnablePublicRegistration,
-			EnableGuestRegister:         cfg.Features.EnableGuestRegister,
+			EnableGuestRegister:      cfg.Features.EnableGuestRegister,
 			EnableMoments:            cfg.Features.EnableMoments,
 			EnableNearbyPeople:       cfg.Features.EnableNearbyPeople,
 		},
@@ -187,7 +189,7 @@ func sourceAppConfigFromAdmin(cfg AdminAppConfig) appconfig.AppConfig {
 			GlobalPerHour:            cfg.RateLimits.GlobalPerHour,
 			UserPerHour:              cfg.RateLimits.UserPerHour,
 			AuthRegisterPer10Minutes: cfg.RateLimits.AuthRegisterPer10Minutes,
-			AuthSigninPer10Minutes:    cfg.RateLimits.AuthSigninPer10Minutes,
+			AuthSigninPer10Minutes:   cfg.RateLimits.AuthSigninPer10Minutes,
 			AuthGuestPer10Minutes:    cfg.RateLimits.AuthGuestPer10Minutes,
 			AuthRefreshPer10Minutes:  cfg.RateLimits.AuthRefreshPer10Minutes,
 			AuthResetPer10Minutes:    cfg.RateLimits.AuthResetPer10Minutes,
@@ -210,7 +212,14 @@ func sourceAppConfigFromAdmin(cfg AdminAppConfig) appconfig.AppConfig {
 			CommentTopRepliesCount:   cfg.ResponseDefaults.CommentTopRepliesCount,
 			UserProfileMomentsCount:  cfg.ResponseDefaults.UserProfileMomentsCount,
 		},
-		UpdatedAt:       cfg.UpdatedAt,
-		UpdatedByUserID: cfg.UpdatedByUserID,
+		UpdatedAt:       strDeref(cfg.UpdatedAt),
+		UpdatedByUserID: strDeref(cfg.UpdatedByUserID),
 	}
+}
+
+func strDeref(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
 }

@@ -55,7 +55,7 @@ func TestUnreadCountAndMarkRead(t *testing.T) {
 	handler.UnreadCount(unreadRR, unreadReq)
 
 	var unreadResp struct {
-		Code httpx.Code        `json:"code"`
+		Code httpx.Code          `json:"code"`
 		Data UnreadSummaryResult `json:"data"`
 	}
 	if err := json.NewDecoder(unreadRR.Body).Decode(&unreadResp); err != nil {
@@ -144,7 +144,7 @@ func TestUnreadCountReturnsByTypeBreakdown(t *testing.T) {
 	handler.UnreadCount(rr, req)
 
 	var resp struct {
-		Code httpx.Code        `json:"code"`
+		Code httpx.Code          `json:"code"`
 		Data UnreadSummaryResult `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {

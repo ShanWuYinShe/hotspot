@@ -75,7 +75,7 @@ func TestMemoryInviteLifecycle(t *testing.T) {
 	}
 
 	invite, err := repo.InviteMember(ctx, "u1", InviteMemberRequest{GroupID: created.Group.GroupID, UserID: "u2", Message: nil}, nil)
-	if err != nil || invite.InviteID == "" {
+	if err != nil || invite.InviteID == nil || *invite.InviteID == "" {
 		t.Fatalf("invite: %#v err=%v", invite, err)
 	}
 
@@ -84,10 +84,10 @@ func TestMemoryInviteLifecycle(t *testing.T) {
 		t.Fatalf("list sent invites: %#v err=%v", sent, err)
 	}
 
-	if err := repo.AcceptInvite(ctx, "u2", invite.InviteID); err != nil {
+	if err := repo.AcceptInvite(ctx, "u2", *invite.InviteID); err != nil {
 		t.Fatalf("accept invite: %v", err)
 	}
-	if err := repo.AcceptInvite(ctx, "u2", invite.InviteID); err == nil {
+	if err := repo.AcceptInvite(ctx, "u2", *invite.InviteID); err == nil {
 		t.Fatal("double accept must fail")
 	}
 	if err := repo.AcceptInvite(ctx, "u2", "missing"); err == nil {
@@ -99,10 +99,10 @@ func TestMemoryInviteLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("invite2: %v", err)
 	}
-	if err := repo.RejectInvite(ctx, invite2.InviteID); err != nil {
+	if err := repo.RejectInvite(ctx, *invite2.InviteID); err != nil {
 		t.Fatalf("reject invite: %v", err)
 	}
-	if err := repo.RejectInvite(ctx, invite2.InviteID); err == nil {
+	if err := repo.RejectInvite(ctx, *invite2.InviteID); err == nil {
 		t.Fatal("double reject must fail")
 	}
 
@@ -111,7 +111,7 @@ func TestMemoryInviteLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("invite3: %v", err)
 	}
-	if err := repo.RevokeInvite(ctx, created.Group.GroupID, invite3.InviteID); err != nil {
+	if err := repo.RevokeInvite(ctx, created.Group.GroupID, *invite3.InviteID); err != nil {
 		t.Fatalf("revoke invite: %v", err)
 	}
 	// 不存在的邀请撤销为 no-op（幂等）

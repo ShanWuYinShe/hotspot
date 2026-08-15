@@ -8,6 +8,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type inMemoryShare struct {
@@ -63,7 +65,7 @@ func (r *InMemoryRepository) Create(_ context.Context, cmd createShareCommand) (
 		r.byCode[shareCode] = shareID
 		r.byUser[cmd.CreatorUserID] = append(r.byUser[cmd.CreatorUserID], shareID)
 		r.mu.Unlock()
-		return ShareCreated{ShareID: shareID, ShareCode: shareCode, ExpiresAt: record.ExpiresAt}, nil
+		return ShareCreated{ShareID: shareID, ShareCode: shareCode, ExpiresAt: types.StrPtr(record.ExpiresAt)}, nil
 	}
 }
 
@@ -92,7 +94,7 @@ func (r *InMemoryRepository) Get(_ context.Context, query getShareQuery) (ShareD
 			ShareType: record.ShareType,
 			Creator:   record.Creator,
 			CreatedAt: record.CreatedAt,
-			ExpiresAt: record.ExpiresAt,
+			ExpiresAt: types.StrPtr(record.ExpiresAt),
 		},
 		Payload: record.Payload,
 		Preview: preview,
@@ -133,7 +135,7 @@ func (r *InMemoryRepository) List(_ context.Context, query listSharesQuery) (Pag
 		if err != nil && !errors.Is(err, ErrShareNotFound) {
 			return PaginatedShares{}, err
 		}
-		item := ShareListItem{ShareID: record.ShareID, ShareCode: record.ShareCode, ShareType: record.ShareType, CreatedAt: record.CreatedAt, ExpiresAt: record.ExpiresAt, IsRevoked: record.IsRevoked || isExpired(record.ExpiresAt), Preview: preview}
+		item := ShareListItem{ShareID: record.ShareID, ShareCode: record.ShareCode, ShareType: record.ShareType, CreatedAt: record.CreatedAt, ExpiresAt: types.StrPtr(record.ExpiresAt), IsRevoked: record.IsRevoked || isExpired(record.ExpiresAt), Preview: preview}
 		if item.IsRevoked {
 			item.Preview = nil
 		}
@@ -145,7 +147,8 @@ func (r *InMemoryRepository) List(_ context.Context, query listSharesQuery) (Pag
 	page := PaginatedShares{}
 	if len(items) > query.Limit {
 		last := items[query.Limit-1]
-		page.NextCursor = encodeShareCursor(shareCursor{CreatedAt: last.CreatedAt, ShareID: last.ShareID})
+		c := encodeShareCursor(shareCursor{CreatedAt: last.CreatedAt, ShareID: last.ShareID})
+		page.NextCursor = &c
 		items = items[:query.Limit]
 	}
 	page.Items = items
@@ -199,26 +202,30 @@ func buildMemorySharePreview(shareType string, payload map[string]any) (*SharePr
 		if id == "" {
 			return nil, ErrShareNotFound
 		}
-		return &SharePreview{Title: id, Subtitle: "用户"}, nil
+		subtitle := "用户"
+		return &SharePreview{Title: id, Subtitle: &subtitle}, nil
 	case ShareTypeGroup:
 		id := getPayloadID(payload, "shared_group_id")
 		if id == "" {
 			return nil, ErrShareNotFound
 		}
-		return &SharePreview{Title: id, Subtitle: "群组"}, nil
+		subtitle := "群组"
+		return &SharePreview{Title: id, Subtitle: &subtitle}, nil
 	case ShareTypeMoment:
 		id := getPayloadID(payload, "shared_moment_id")
 		if id == "" {
 			return nil, ErrShareNotFound
 		}
-		return &SharePreview{Title: id, Subtitle: "瞬间"}, nil
+		subtitle := "瞬间"
+		return &SharePreview{Title: id, Subtitle: &subtitle}, nil
 	case ShareTypeLocation:
 		sharedLocation, _ := payload["shared_location"].(map[string]any)
 		locationName, _ := sharedLocation["location_name"].(string)
 		if locationName == "" {
 			return nil, ErrShareNotFound
 		}
-		return &SharePreview{Title: locationName, Subtitle: "位置"}, nil
+		subtitle := "位置"
+		return &SharePreview{Title: locationName, Subtitle: &subtitle}, nil
 	default:
 		return nil, ErrInvalidShareRequest
 	}

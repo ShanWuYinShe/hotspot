@@ -97,10 +97,10 @@ func auditLogItemFromEntry(entry AuditLogEntry, includeIPAddress bool) AuditLogI
 		Operator:      entry.Operator,
 		TargetType:    entry.TargetType,
 		TargetID:      entry.TargetID,
-		TargetName:    entry.TargetName,
+		TargetName:    types.StrPtr(entry.TargetName),
 		Details:       cloneAuditDetails(entry.Details),
-		IPLocation:    entry.IPLocation,
-		DeviceSummary: entry.DeviceSummary,
+		IPLocation:    types.StrPtr(entry.IPLocation),
+		DeviceSummary: types.StrPtr(entry.DeviceSummary),
 		CreatedAt:     entry.CreatedAt.UTC().Format(time.RFC3339),
 	}
 	if includeIPAddress && entry.IPAddress != "" {

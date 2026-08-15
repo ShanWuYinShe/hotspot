@@ -2,11 +2,11 @@ package media
 
 import (
 	"context"
-	"hotspot/backend-go/internal/platform/appconfig"
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"hotspot/backend-go/internal/platform/appconfig"
 	"mime"
 	"path/filepath"
 	"strings"
@@ -28,8 +28,8 @@ var (
 
 type Service struct {
 	appConfig appconfig.Source
-	repo     Repository
-	provider Provider
+	repo      Repository
+	provider  Provider
 }
 
 func NewService() *Service {
@@ -38,6 +38,7 @@ func NewService() *Service {
 func NewServiceWithRepo(repo Repository) *Service {
 	return NewServiceWithRepoAndProvider(repo, NewObjectStorageProvider(config.Load()))
 }
+
 // SetAppConfig wires the dynamic app config source (batch limits, spec types.md AppLimits).
 func (s *Service) SetAppConfig(src appconfig.Source) { s.appConfig = src }
 

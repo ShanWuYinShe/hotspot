@@ -227,7 +227,7 @@ func (s *Service) buildSocialContext(ctx context.Context, viewerUserID string, t
 	if len(mutualFriends) > 0 {
 		preview := make([]UserInfo, 0, minInt(len(mutualFriends), 3))
 		for _, friend := range mutualFriends {
-			preview = append(preview, friend.User)
+			preview = append(preview, friend.User.User)
 			if len(preview) == 3 {
 				break
 			}
@@ -260,7 +260,7 @@ func (s *Service) buildSocialContext(ctx context.Context, viewerUserID string, t
 	return context, nil
 }
 
-func collectMutualFriends(ctx context.Context, repo Repository, viewerUserID, targetUserID string) ([]FriendItem, error) {
+func collectMutualFriends(ctx context.Context, repo Repository, viewerUserID, targetUserID string) ([]RelatedUserItem, error) {
 	// TODO(perf): this still paginates each user's entire friend list in memory and
 	// intersects them in Go. It should be replaced by a single SQL-based mutual-friends
 	// query (self-join on user_relations) that returns the intersection directly. Until
@@ -276,11 +276,11 @@ func collectMutualFriends(ctx context.Context, repo Repository, viewerUserID, ta
 	}
 	targetSet := make(map[string]struct{}, len(targetFriends))
 	for _, item := range targetFriends {
-		targetSet[item.User.UserID] = struct{}{}
+		targetSet[item.User.User.UserID] = struct{}{}
 	}
-	mutual := make([]FriendItem, 0)
+	mutual := make([]RelatedUserItem, 0)
 	for _, item := range viewerFriends {
-		if _, ok := targetSet[item.User.UserID]; ok {
+		if _, ok := targetSet[item.User.User.UserID]; ok {
 			mutual = append(mutual, item)
 		}
 	}
@@ -291,8 +291,8 @@ func collectMutualFriends(ctx context.Context, repo Repository, viewerUserID, ta
 // scanned per user when computing mutual friends. See collectMutualFriends.
 const mutualFriendsScanCap = 500
 
-func collectFriendsByUser(ctx context.Context, repo Repository, userID string) ([]FriendItem, error) {
-	items := make([]FriendItem, 0)
+func collectFriendsByUser(ctx context.Context, repo Repository, userID string) ([]RelatedUserItem, error) {
+	items := make([]RelatedUserItem, 0)
 	cursor := ""
 	pageSize := 100
 	for {
@@ -302,13 +302,13 @@ func collectFriendsByUser(ctx context.Context, repo Repository, userID string) (
 		}
 		items = append(items, page.Items...)
 		// Stop once we've scanned the cap or there are no more pages.
-		if page.NextCursor == "" || len(items) >= mutualFriendsScanCap {
+		if page.NextCursor == nil || len(items) >= mutualFriendsScanCap {
 			if len(items) > mutualFriendsScanCap {
 				items = items[:mutualFriendsScanCap]
 			}
 			break
 		}
-		cursor = page.NextCursor
+		cursor = *page.NextCursor
 	}
 	return items, nil
 }
@@ -348,32 +348,32 @@ func minInt(a, b int) int {
 	return b
 }
 
-func applyPresenceVisibilityToFriends(ctx context.Context, repo Repository, items []FriendItem) {
-	hidden := hiddenPresenceUserIDs(ctx, repo, len(items), func(i int) string { return items[i].User.UserID })
+func applyPresenceVisibilityToFriends(ctx context.Context, repo Repository, items []RelatedUserItem) {
+	hidden := hiddenPresenceUserIDs(ctx, repo, len(items), func(i int) string { return items[i].User.User.UserID })
 	for i := range items {
-		if hidden[items[i].User.UserID] {
-			items[i].PresenceStatus = nil
-			items[i].LastOnline = nil
+		if hidden[items[i].User.User.UserID] {
+			items[i].User.PresenceStatus = nil
+			items[i].User.LastOnline = nil
 		}
 	}
 }
 
-func applyPresenceVisibilityToFollowing(ctx context.Context, repo Repository, items []FollowingItem) {
-	hidden := hiddenPresenceUserIDs(ctx, repo, len(items), func(i int) string { return items[i].User.UserID })
+func applyPresenceVisibilityToFollowing(ctx context.Context, repo Repository, items []RelatedUserItem) {
+	hidden := hiddenPresenceUserIDs(ctx, repo, len(items), func(i int) string { return items[i].User.User.UserID })
 	for i := range items {
-		if hidden[items[i].User.UserID] {
-			items[i].PresenceStatus = nil
-			items[i].LastOnline = nil
+		if hidden[items[i].User.User.UserID] {
+			items[i].User.PresenceStatus = nil
+			items[i].User.LastOnline = nil
 		}
 	}
 }
 
-func applyPresenceVisibilityToFollowers(ctx context.Context, repo Repository, items []FollowerItem) {
-	hidden := hiddenPresenceUserIDs(ctx, repo, len(items), func(i int) string { return items[i].User.UserID })
+func applyPresenceVisibilityToFollowers(ctx context.Context, repo Repository, items []RelatedUserItem) {
+	hidden := hiddenPresenceUserIDs(ctx, repo, len(items), func(i int) string { return items[i].User.User.UserID })
 	for i := range items {
-		if hidden[items[i].User.UserID] {
-			items[i].PresenceStatus = nil
-			items[i].LastOnline = nil
+		if hidden[items[i].User.User.UserID] {
+			items[i].User.PresenceStatus = nil
+			items[i].User.LastOnline = nil
 		}
 	}
 }
@@ -429,5 +429,5 @@ func (s *Service) buildFollowActor(ctx context.Context, userID string) types.Use
 	if err != nil || !ok {
 		return types.UserInfo{UserID: userID, Nickname: userID}
 	}
-	return types.UserInfo{UserID: profile.UserID, Nickname: profile.Nickname, AvatarURL: profile.AvatarURL}
+	return types.UserInfo{UserID: profile.UserID, Nickname: profile.Nickname, AvatarURL: types.StrPtr(profile.AvatarURL)}
 }

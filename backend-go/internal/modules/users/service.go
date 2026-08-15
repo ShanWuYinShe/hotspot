@@ -35,27 +35,27 @@ func NewServiceWithDeps(repo Repository, notificationWriter userNotificationWrit
 	return &Service{repo: repo, notifications: notificationWriter, appConfig: appConfig}
 }
 
-func (s *Service) GetMyProfile(ctx context.Context) (MyProfile, error) {
+func (s *Service) GetMyProfile(ctx context.Context) (AccountData, error) {
 	startedAt := time.Now()
 	observability.L().Info("users.get_my_profile started")
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
-		return MyProfile{}, err
+		return AccountData{}, err
 	}
 	if profile, ok, err := s.repo.GetProfile(ctx, principal.UserID); err != nil {
 		observability.L().Error("users.get_my_profile failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return MyProfile{}, err
+		return AccountData{}, err
 	} else if ok {
 		observability.L().Info("users.get_my_profile completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return profile, nil
+		return toAccountData(profile), nil
 	}
 	profile := s.defaultProfile(ctx, principal.UserID)
 	if err := s.repo.PutProfile(ctx, profile); err != nil {
 		observability.L().Error("users.get_my_profile failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return MyProfile{}, err
+		return AccountData{}, err
 	}
 	observability.L().Info("users.get_my_profile completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
-	return profile, nil
+	return toAccountData(profile), nil
 }
 
 func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest) error {
@@ -175,7 +175,11 @@ func (s *Service) Search(ctx context.Context, req SearchUsersRequest) (Paginated
 		items = append(items, item)
 	}
 	observability.L().Info("users.search completed", "count", len(items), "elapsed_ms", time.Since(startedAt).Milliseconds())
-	return PaginatedUsers{Items: items, NextCursor: profiles.NextCursor}, nil
+	var next *string
+	if profiles.NextCursor != "" {
+		next = &profiles.NextCursor
+	}
+	return PaginatedUsers{Items: items, NextCursor: next}, nil
 }
 
 func (s *Service) OpenTheDoor(ctx context.Context, userID string) (UserItem, bool, error) {
@@ -278,23 +282,23 @@ func (s *Service) UpdateLocation(ctx context.Context, req UpdateLocationRequest)
 	return nil
 }
 
-func (s *Service) Upgrade(ctx context.Context, req UpgradeAccountRequest) (MyProfile, error) {
+func (s *Service) Upgrade(ctx context.Context, req UpgradeAccountRequest) (AccountData, error) {
 	startedAt := time.Now()
 	observability.L().Info("users.upgrade started")
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
-		return MyProfile{}, err
+		return AccountData{}, err
 	}
 	profile, ok, err := s.repo.GetProfile(ctx, principal.UserID)
 	if err != nil {
 		observability.L().Error("users.upgrade failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return MyProfile{}, err
+		return AccountData{}, err
 	}
 	if !ok {
 		profile = s.defaultProfile(ctx, principal.UserID)
 	}
 	if profile.UserType == UserTypeNormal {
-		return MyProfile{}, ErrConflict
+		return AccountData{}, ErrConflict
 	}
 	profile.UserType = UserTypeNormal
 	// 推断规则（spec api_spec_user.md AccountData.email/phone）：
@@ -307,12 +311,12 @@ func (s *Service) Upgrade(ctx context.Context, req UpgradeAccountRequest) (MyPro
 	}
 	if err := s.repo.PutProfile(ctx, profile); err != nil {
 		observability.L().Error("users.upgrade failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return MyProfile{}, err
+		return AccountData{}, err
 	}
 	// Token/Session 语义（spec api_spec_user.md）：升级不吊销当前 session、不重发
 	// token——user_type 更新后现有 token 继续有效，客户端无需重新登录。
 	observability.L().Info("users.upgrade completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
-	return profile, nil
+	return toAccountData(profile), nil
 }
 
 // isNumericLoginID 判断 login_id 是否为纯数字（手机号）。
@@ -441,7 +445,7 @@ func defaultSettings() UserSettings {
 }
 
 func userItemFromProfile(profile MyProfile, relation *Relationship, includePresence bool, includeLocation bool, includeStats bool) UserItem {
-	item := UserItem{User: UserInfo{UserID: profile.UserID, Nickname: profile.Nickname, AvatarURL: profile.AvatarURL}, Tags: profile.Tags, Relation: relation}
+	item := UserItem{User: UserInfo{UserID: profile.UserID, Nickname: profile.Nickname, AvatarURL: types.StrPtr(profile.AvatarURL)}, Tags: profile.Tags, Relation: relation}
 	if profile.Bio != "" {
 		bio := profile.Bio
 		item.Bio = &bio

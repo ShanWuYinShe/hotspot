@@ -118,6 +118,8 @@ func TestAdminModerationRoutesAreMounted(t *testing.T) {
 		{name: "reports search", path: "/admin/v1/reports/fetch", body: `{"status":"pending","pagination":{"limit":10}}`},
 		{name: "tags search", path: "/admin/v1/tags/search", body: `{"keyword":"hot","pagination":{"limit":10}}`},
 		{name: "announcements list", path: "/admin/v1/announcements/fetch", body: `{"pagination":{"limit":10}}`},
+		{name: "app_config get", path: "/admin/v1/app_config", body: `{}`},
+		{name: "app_config update", path: "/admin/v1/app_config/update", body: `{"limits":{"max_group_members":300}}`},
 	}
 
 	for _, tc := range tests {
@@ -611,7 +613,7 @@ func TestSearchReportsAndHandleReport(t *testing.T) {
 		t.Fatalf("unexpected handle response: %#v", handleResp)
 	}
 	record, found, err := store.GetReportHandleRecord(handleReq.Context(), "report_1")
-	if err != nil || !found || record.Item.Status != ReportStatusResolved || record.Item.HandleNote != "confirmed" {
+	if err != nil || !found || record.Item.Status != ReportStatusResolved || record.Item.HandleNote == nil || *record.Item.HandleNote != "confirmed" {
 		t.Fatalf("unexpected report record: %#v found=%v err=%v", record, found, err)
 	}
 	state, ok, err := store.GetUserBanState(handleReq.Context(), "user_bob")
@@ -864,7 +866,7 @@ func TestListAdminAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 		t.Fatalf("unexpected updated search response: %#v", searchUpdatedResp)
 	}
 	updated := searchUpdatedResp.Data.Items[0]
-	if updated.Title != "维护结束" || updated.Content != "服务恢复" || updated.ActionURL != "" {
+	if updated.Title != "维护结束" || updated.Content != "服务恢复" || updated.ActionURL != nil {
 		t.Fatalf("unexpected updated item: %#v", updated)
 	}
 
@@ -1033,7 +1035,7 @@ func TestUpdateRoleUpdatesNameAndDescription(t *testing.T) {
 			break
 		}
 	}
-	if updated.Name != "NewName" || updated.Description != "new desc" {
+	if updated.Name != "NewName" || updated.Description == nil || *updated.Description != "new desc" {
 		t.Fatalf("unexpected updated role: %#v", updated)
 	}
 

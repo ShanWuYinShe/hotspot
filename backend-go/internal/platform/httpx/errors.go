@@ -11,15 +11,15 @@ const (
 	CodeOK Code = 0
 
 	// HTTP API 业务错误码（10000-19999，spec/api_spec_errors.md）
-	CodeInvalidRequest      Code = 10000 // 参数错误/请求体非法
-	CodeUnauthorized        Code = 10100 // 认证失败（token 无效/过期、密码错误）
-	CodeForbidden           Code = 10200 // 权限不足/访问受限
-	CodeAccountBanned       Code = 10201 // 账号被封禁（强制登出 + 封禁页）
-	CodeNotFound            Code = 10300 // 资源不存在
-	CodeConflict            Code = 10400 // 业务冲突（已存在/满员/已撤回）
+	CodeInvalidRequest       Code = 10000 // 参数错误/请求体非法
+	CodeUnauthorized         Code = 10100 // 认证失败（token 无效/过期、密码错误）
+	CodeForbidden            Code = 10200 // 权限不足/访问受限
+	CodeAccountBanned        Code = 10201 // 账号被封禁（强制登出 + 封禁页）
+	CodeNotFound             Code = 10300 // 资源不存在
+	CodeConflict             Code = 10400 // 业务冲突（已存在/满员/已撤回）
 	CodeInvalidOldCredential Code = 10401 // 旧凭证验证失败（旧密码错误/验证码错误；不触发 token 刷新流程）
-	CodeRateLimited         Code = 10500 // 请求过于频繁（按 Retry-After 重试）
-	CodeInternalUnavailable Code = 10600 // 服务器错误/系统不可用
+	CodeRateLimited          Code = 10500 // 请求过于频繁（按 Retry-After 重试）
+	CodeInternalUnavailable  Code = 10600 // 服务器错误/系统不可用
 
 	// 幂等性错误码（22000-22099，spec/api_spec_errors.md）
 	CodeIdempotencyConflict Code = 22000 // 幂等键冲突（换键重试）
@@ -31,17 +31,17 @@ const (
 type ForbiddenReason string
 
 const (
-	ReasonNotAdmin                     ForbiddenReason = "not_admin"
-	ReasonInsufficientAdminPermission  ForbiddenReason = "insufficient_admin_permission"
-	ReasonAdminProtectedTarget         ForbiddenReason = "admin_protected_target"
-	ReasonNotGroupMember               ForbiddenReason = "not_group_member"
-	ReasonNotGroupAdmin                ForbiddenReason = "not_group_admin"
-	ReasonNotGroupOwner                ForbiddenReason = "not_group_owner"
-	ReasonNotResourceOwner             ForbiddenReason = "not_resource_owner"
-	ReasonPrivacySetting               ForbiddenReason = "privacy_setting"
-	ReasonBlockedByUser                ForbiddenReason = "blocked_by_user"
-	ReasonStrangerQuotaExceeded        ForbiddenReason = "stranger_quota_exceeded"
-	ReasonBannedInGroup                ForbiddenReason = "banned_in_group"
+	ReasonNotAdmin                    ForbiddenReason = "not_admin"
+	ReasonInsufficientAdminPermission ForbiddenReason = "insufficient_admin_permission"
+	ReasonAdminProtectedTarget        ForbiddenReason = "admin_protected_target"
+	ReasonNotGroupMember              ForbiddenReason = "not_group_member"
+	ReasonNotGroupAdmin               ForbiddenReason = "not_group_admin"
+	ReasonNotGroupOwner               ForbiddenReason = "not_group_owner"
+	ReasonNotResourceOwner            ForbiddenReason = "not_resource_owner"
+	ReasonPrivacySetting              ForbiddenReason = "privacy_setting"
+	ReasonBlockedByUser               ForbiddenReason = "blocked_by_user"
+	ReasonStrangerQuotaExceeded       ForbiddenReason = "stranger_quota_exceeded"
+	ReasonBannedInGroup               ForbiddenReason = "banned_in_group"
 )
 
 // ForbiddenErrorData 是 10200 失败响应的 data 结构（契约级）。

@@ -4,6 +4,7 @@ import (
 	groupsmodule "hotspot/backend-go/internal/modules/groups"
 	usersmodule "hotspot/backend-go/internal/modules/users"
 
+	"hotspot/backend-go/internal/platform/types"
 	"sync"
 	"time"
 )
@@ -78,58 +79,61 @@ func NewInMemoryRepository() *InMemoryRepository {
 	cindyCreatedAt := now.Add(-24 * time.Hour).Format(time.RFC3339)
 	adminCreatedAt := now.Add(-96 * time.Hour).Format(time.RFC3339)
 
+	onlineStatus := usersmodule.UserPresenceOnline
+	offlineStatus := usersmodule.UserPresenceOffline
+
 	adminUsers := map[string]AdminUserItem{
 		"admin": {
 			User:              UserInfo{UserID: "admin", Nickname: "admin"},
 			Status:            UserAccountStatusNormal,
 			CreatedAt:         adminCreatedAt,
-			LastActiveAt:      now.Add(-time.Hour).Format(time.RFC3339),
+			LastActiveAt:      types.StrPtr(now.Add(-time.Hour).Format(time.RFC3339)),
 			LoginID:           "admin",
-			PresenceStatus:    usersmodule.UserPresenceOnline,
-			LastOnline:        now.Add(-time.Hour).Format(time.RFC3339),
+			PresenceStatus:    &onlineStatus,
+			LastOnline:        types.StrPtr(now.Add(-time.Hour).Format(time.RFC3339)),
 			RegisterIP:        strPtr("127.0.0.1"),
-			RegisterLocation:  "Local",
+			RegisterLocation:  types.StrPtr("Local"),
 			LastLoginIP:       strPtr("127.0.0.1"),
-			LastLoginLocation: "Local",
+			LastLoginLocation: types.StrPtr("Local"),
 		},
 		"user_alice": {
 			User:              UserInfo{UserID: "user_alice", Nickname: "Alice"},
 			Status:            UserAccountStatusNormal,
 			CreatedAt:         aliceCreatedAt,
-			LastActiveAt:      now.Add(-2 * time.Hour).Format(time.RFC3339),
+			LastActiveAt:      types.StrPtr(now.Add(-2 * time.Hour).Format(time.RFC3339)),
 			LoginID:           "alice",
-			PresenceStatus:    usersmodule.UserPresenceOnline,
-			LastOnline:        now.Add(-2 * time.Hour).Format(time.RFC3339),
+			PresenceStatus:    &onlineStatus,
+			LastOnline:        types.StrPtr(now.Add(-2 * time.Hour).Format(time.RFC3339)),
 			RegisterIP:        strPtr("10.0.0.2"),
-			RegisterLocation:  "Shanghai",
+			RegisterLocation:  types.StrPtr("Shanghai"),
 			LastLoginIP:       strPtr("10.0.0.3"),
-			LastLoginLocation: "Shanghai",
+			LastLoginLocation: types.StrPtr("Shanghai"),
 		},
 		"user_bob": {
 			User:              UserInfo{UserID: "user_bob", Nickname: "Bob"},
 			Status:            UserAccountStatusNormal,
 			CreatedAt:         bobCreatedAt,
-			LastActiveAt:      now.Add(-3 * time.Hour).Format(time.RFC3339),
+			LastActiveAt:      types.StrPtr(now.Add(-3 * time.Hour).Format(time.RFC3339)),
 			LoginID:           "bob",
-			PresenceStatus:    usersmodule.UserPresenceOffline,
-			LastOnline:        now.Add(-3 * time.Hour).Format(time.RFC3339),
+			PresenceStatus:    &offlineStatus,
+			LastOnline:        types.StrPtr(now.Add(-3 * time.Hour).Format(time.RFC3339)),
 			RegisterIP:        strPtr("10.0.0.4"),
-			RegisterLocation:  "Hangzhou",
+			RegisterLocation:  types.StrPtr("Hangzhou"),
 			LastLoginIP:       strPtr("10.0.0.4"),
-			LastLoginLocation: "Hangzhou",
+			LastLoginLocation: types.StrPtr("Hangzhou"),
 		},
 		"user_cindy": {
 			User:              UserInfo{UserID: "user_cindy", Nickname: "Cindy"},
 			Status:            UserAccountStatusNormal,
 			CreatedAt:         cindyCreatedAt,
-			LastActiveAt:      now.Add(-4 * time.Hour).Format(time.RFC3339),
+			LastActiveAt:      types.StrPtr(now.Add(-4 * time.Hour).Format(time.RFC3339)),
 			LoginID:           "cindy",
-			PresenceStatus:    usersmodule.UserPresenceOffline,
-			LastOnline:        now.Add(-4 * time.Hour).Format(time.RFC3339),
+			PresenceStatus:    &offlineStatus,
+			LastOnline:        types.StrPtr(now.Add(-4 * time.Hour).Format(time.RFC3339)),
 			RegisterIP:        strPtr("10.0.0.5"),
-			RegisterLocation:  "Beijing",
+			RegisterLocation:  types.StrPtr("Beijing"),
 			LastLoginIP:       strPtr("10.0.0.5"),
-			LastLoginLocation: "Beijing",
+			LastLoginLocation: types.StrPtr("Beijing"),
 		},
 	}
 
@@ -140,12 +144,14 @@ func NewInMemoryRepository() *InMemoryRepository {
 				Latitude  float64 `json:"latitude"`
 				Longitude float64 `json:"longitude"`
 			}{Latitude: 31.2304, Longitude: 121.4737}, LocationName: "Shanghai"},
+			Description:    types.StrPtr("HotSpot 官方群"),
+			Tags:           []string{"hotspot"},
 			CreatedAt:      now.Add(-36 * time.Hour).Format(time.RFC3339),
 			Owner:          UserInfo{UserID: "user_alice", Nickname: "Alice"},
 			JoinMethod:     groupsmodule.GroupJoinMethod("direct"),
 			IsSearchable:   true,
 			MaxMembers:     200,
-			LastActivityAt: now.Add(-30 * time.Minute).Format(time.RFC3339),
+			LastActivityAt: types.StrPtr(now.Add(-30 * time.Minute).Format(time.RFC3339)),
 		},
 	}
 

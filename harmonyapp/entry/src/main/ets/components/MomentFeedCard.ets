@@ -1,6 +1,6 @@
 import { MomentItem, MomentImage, UserInfo } from '../core/types/api';
 import { interactionActions } from '../core/state/InteractionActions';
-import { MomentSocialState, isMomentLikedByReactions } from '../core/state/InteractionStateStore';
+import { MomentSocialState, isMomentLikedByReactions, sumReactionCounts } from '../core/state/InteractionStateStore';
 import { SystemAvatar } from './SystemAvatar';
 import { AppIcon, IconButton, IconSize } from './SystemIcon';
 import { DesignConstants } from '../constants/DesignConstants';
@@ -261,7 +261,7 @@ export struct MomentFeedCard {
                 }
               })
               .onClick(() => this.onLikeClick(this.moment))
-              Text(this.formatCount(this.getMomentState()?.likes_count ?? this.moment.likes_count))
+              Text(this.formatCount(this.getMomentState()?.likes_count ?? sumReactionCounts(this.moment.reactions)))
                 .fontSize(DesignConstants.FONT.SIZE.XS)
                 .fontColor(this.getPalette().textSecondary)
             }
@@ -298,7 +298,7 @@ export struct MomentFeedCard {
             Text() {
               SymbolSpan($r(AppIcon.STAR_FILL))
                 .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor([this.getMomentState()?.my_state?.is_favorited
+                .fontColor([this.getMomentState()?.is_favorited ?? this.moment.is_favorited
                   ? this.getPalette().accentBackground
                   : this.getPalette().textSecondary])
             }
@@ -600,7 +600,7 @@ export struct MomentFeedCard {
               : this.getPalette().textSecondary,
             onButtonClick: () => this.onLikeClick(this.moment)
           })
-          Text(this.formatCount(this.getMomentState()?.likes_count ?? this.moment.likes_count))
+          Text(this.formatCount(this.getMomentState()?.likes_count ?? sumReactionCounts(this.moment.reactions)))
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getPalette().textSecondary)
         }
@@ -622,9 +622,9 @@ export struct MomentFeedCard {
 
       Row({ space: DesignConstants.SPACING.MD }) {
         IconButton({
-          icon: this.getMomentState()?.my_state?.is_favorited ? AppIcon.STAR_FILL : AppIcon.STAR,
+          icon: this.getMomentState()?.is_favorited ?? this.moment.is_favorited ? AppIcon.STAR_FILL : AppIcon.STAR,
           iconSize: IconSize.MEDIUM,
-          iconColor: this.getMomentState()?.my_state?.is_favorited
+          iconColor: this.getMomentState()?.is_favorited ?? this.moment.is_favorited
             ? this.getPalette().accentBackground
             : this.getPalette().textSecondary,
           onButtonClick: () => this.onFavoriteClick(this.moment)

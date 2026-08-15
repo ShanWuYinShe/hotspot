@@ -37,7 +37,7 @@ type CreateReportRequest struct {
 	TargetType  ReportTargetType `json:"target_type"`
 	TargetID    string           `json:"target_id"`
 	Reason      ReportReason     `json:"reason"`
-	Description string           `json:"description,omitempty"`
+	Description *string          `json:"description"`
 	// MessageSnapshot 为消息举报的内容快照（spec api_spec_types.md
 	// ReportSnapshot）：target_type='message' 时必填，服务端原样存储，
 	// 管理员基于快照审核，不直接查询私聊/群聊消息库（隐私边界）。
@@ -50,8 +50,8 @@ type ReportSnapshot struct {
 	ChatType        string         `json:"chat_type"`
 	TargetChatID    string         `json:"target_chat_id"`
 	MessageType     string         `json:"message_type"`
-	SnapshotContent string         `json:"snapshot_content,omitempty"`
-	SnapshotMedia   map[string]any `json:"snapshot_media,omitempty"`
+	SnapshotContent *string        `json:"snapshot_content"`
+	SnapshotMedia   map[string]any `json:"snapshot_media"`
 	SentAt          string         `json:"sent_at"`
 }
 
@@ -80,7 +80,7 @@ const (
 type ReportResolution struct {
 	Action     ReportAction `json:"action"`
 	ResolvedAt string       `json:"resolved_at"`
-	Note       string       `json:"note,omitempty"`
+	Note       *string      `json:"note"`
 }
 
 type ReportItem struct {
@@ -88,10 +88,10 @@ type ReportItem struct {
 	TargetType  ReportTargetType `json:"target_type"`
 	TargetID    string           `json:"target_id"`
 	Reason      ReportReason     `json:"reason"`
-	Description string           `json:"description,omitempty"`
+	Description *string          `json:"description"`
 	Status      ReportStatus     `json:"status"`
 	CreatedAt   string           `json:"created_at"`
-	HandledAt   string           `json:"handled_at,omitempty"`
+	HandledAt   *string          `json:"handled_at"`
 	// MessageSnapshot 恒定 nullable：null = 非消息举报（spec api_spec_types.md
 	// ReportItem.message_snapshot），供举报人回看与管理员审核。
 	MessageSnapshot *ReportSnapshot `json:"message_snapshot"`
@@ -101,5 +101,5 @@ type ReportItem struct {
 
 type PaginatedReports struct {
 	Items      []ReportItem `json:"items"`
-	NextCursor string       `json:"next_cursor,omitempty"`
+	NextCursor *string      `json:"next_cursor"`
 }

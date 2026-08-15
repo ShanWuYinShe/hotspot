@@ -324,10 +324,10 @@ func TestListUserMomentsPostgresReturnsNextCursorWithoutDupingNextPage(t *testin
 	if page1.Items[0].MomentID != "moment_3" || page1.Items[1].MomentID != "moment_2" {
 		t.Fatalf("unexpected first page ids: %#v", page1.Items)
 	}
-	if page1.NextCursor == "" {
+	if page1.NextCursor == nil {
 		t.Fatal("expected next cursor")
 	}
-	parsedAt, parsedID, err := decodeUserMomentCursor(page1.NextCursor)
+	parsedAt, parsedID, err := decodeUserMomentCursor(*page1.NextCursor)
 	if err != nil {
 		t.Fatalf("decode next cursor: %v", err)
 	}
@@ -339,15 +339,15 @@ func TestListUserMomentsPostgresReturnsNextCursorWithoutDupingNextPage(t *testin
 		t.Fatalf("unexpected next cursor anchor: %v %s", cursorAt, parsedID)
 	}
 
-	page2, err := listUserMomentsPostgres(context.Background(), factory, "user_alice", 2, page1.NextCursor, true)
+	page2, err := listUserMomentsPostgres(context.Background(), factory, "user_alice", 2, *page1.NextCursor, true)
 	if err != nil {
 		t.Fatalf("list second user moments page: %v", err)
 	}
 	if len(page2.Items) != 1 || page2.Items[0].MomentID != "moment_1" {
 		t.Fatalf("unexpected second page items: %#v", page2.Items)
 	}
-	if page2.NextCursor != "" {
-		t.Fatalf("expected empty next cursor on second page, got %q", page2.NextCursor)
+	if page2.NextCursor != nil {
+		t.Fatalf("expected empty next cursor on second page, got %v", page2.NextCursor)
 	}
 	for _, item := range page2.Items {
 		if item.MomentID == "moment_2" || item.MomentID == "moment_3" {

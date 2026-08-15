@@ -305,10 +305,11 @@ func listBlockedUsersPostgres(ctx context.Context, factory *persistence.Factory,
 		if err := rows.Scan(&targetUserID, &blockedAt, &reason); err != nil {
 			return PaginatedBlockedUsers{}, err
 		}
-		items = append(items, BlockedUserItem{User: UserInfo{UserID: targetUserID, Nickname: targetUserID}, BlockedAt: blockedAt.UTC().Format(time.RFC3339), Reason: reason})
+		items = append(items, BlockedUserItem{User: UserInfo{UserID: targetUserID, Nickname: targetUserID}, BlockedAt: blockedAt.UTC().Format(time.RFC3339), Reason: types.StrPtr(reason)})
 		cursors = append(cursors, encodeUserCursor(blockedAt, targetUserID))
 		if len(items) == limit+1 {
-			return PaginatedBlockedUsers{Items: items[:limit], NextCursor: cursors[limit-1]}, nil
+			c := cursors[limit-1]
+			return PaginatedBlockedUsers{Items: items[:limit], NextCursor: &c}, nil
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -332,7 +333,7 @@ func listFriendsPostgres(ctx context.Context, factory *persistence.Factory, user
 		return PaginatedFriends{}, err
 	}
 	defer rows.Close()
-	items := make([]FriendItem, 0, limit+1)
+	items := make([]RelatedUserItem, 0, limit+1)
 	cursors := make([]string, 0, limit+1)
 	for rows.Next() {
 		item, sortAt, err := scanFriendRow(rows)
@@ -340,9 +341,10 @@ func listFriendsPostgres(ctx context.Context, factory *persistence.Factory, user
 			return PaginatedFriends{}, err
 		}
 		items = append(items, item)
-		cursors = append(cursors, encodeUserCursor(sortAt, item.User.UserID))
+		cursors = append(cursors, encodeUserCursor(sortAt, item.User.User.UserID))
 		if len(items) == limit+1 {
-			return PaginatedFriends{Items: items[:limit], NextCursor: cursors[limit-1]}, nil
+			next := cursors[limit-1]
+			return PaginatedFriends{Items: items[:limit], NextCursor: &next}, nil
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -366,7 +368,7 @@ func listFollowingPostgres(ctx context.Context, factory *persistence.Factory, us
 		return PaginatedFollowing{}, err
 	}
 	defer rows.Close()
-	items := make([]FollowingItem, 0, limit+1)
+	items := make([]RelatedUserItem, 0, limit+1)
 	cursors := make([]string, 0, limit+1)
 	for rows.Next() {
 		item, sortAt, err := scanFollowingRow(rows)
@@ -374,9 +376,10 @@ func listFollowingPostgres(ctx context.Context, factory *persistence.Factory, us
 			return PaginatedFollowing{}, err
 		}
 		items = append(items, item)
-		cursors = append(cursors, encodeUserCursor(sortAt, item.User.UserID))
+		cursors = append(cursors, encodeUserCursor(sortAt, item.User.User.UserID))
 		if len(items) == limit+1 {
-			return PaginatedFollowing{Items: items[:limit], NextCursor: cursors[limit-1]}, nil
+			next := cursors[limit-1]
+			return PaginatedFollowing{Items: items[:limit], NextCursor: &next}, nil
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -400,7 +403,7 @@ func listFollowersPostgres(ctx context.Context, factory *persistence.Factory, us
 		return PaginatedFollowers{}, err
 	}
 	defer rows.Close()
-	items := make([]FollowerItem, 0, limit+1)
+	items := make([]RelatedUserItem, 0, limit+1)
 	cursors := make([]string, 0, limit+1)
 	for rows.Next() {
 		item, sortAt, err := scanFollowerRow(rows)
@@ -408,9 +411,10 @@ func listFollowersPostgres(ctx context.Context, factory *persistence.Factory, us
 			return PaginatedFollowers{}, err
 		}
 		items = append(items, item)
-		cursors = append(cursors, encodeUserCursor(sortAt, item.User.UserID))
+		cursors = append(cursors, encodeUserCursor(sortAt, item.User.User.UserID))
 		if len(items) == limit+1 {
-			return PaginatedFollowers{Items: items[:limit], NextCursor: cursors[limit-1]}, nil
+			next := cursors[limit-1]
+			return PaginatedFollowers{Items: items[:limit], NextCursor: &next}, nil
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -489,7 +493,8 @@ func listUserMomentsPostgres(ctx context.Context, factory *persistence.Factory, 
 			for i := 0; i < limit; i++ {
 				items[i].Tags = tagsByMomentID[items[i].MomentID]
 			}
-			return momenttypes.PaginatedMoments{Items: items[:limit], NextCursor: cursors[limit-1]}, nil
+			c := cursors[limit-1]
+			return momenttypes.PaginatedMoments{Items: items[:limit], NextCursor: &c}, nil
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -545,7 +550,8 @@ func listReactedMomentsPostgres(ctx context.Context, factory *persistence.Factor
 			for i := 0; i < limit; i++ {
 				items[i].Tags = tagsByMomentID[items[i].MomentID]
 			}
-			return momenttypes.PaginatedMoments{Items: items[:limit], NextCursor: cursors[limit-1]}, nil
+			c := cursors[limit-1]
+			return momenttypes.PaginatedMoments{Items: items[:limit], NextCursor: &c}, nil
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -592,78 +598,81 @@ func countUserStats(ctx context.Context, queryable persistence.QueryableDB, user
 	return stats, nil
 }
 
-func scanFriendRow(scanner interface{ Scan(...any) error }) (FriendItem, time.Time, error) {
-	var item FriendItem
+func scanFriendRow(scanner interface{ Scan(...any) error }) (RelatedUserItem, time.Time, error) {
+	var item RelatedUserItem
 	var avatarURL string
 	var presenceStatus string
 	var lastOnline time.Time
 	var sortableLastOnline time.Time
 	var followedAt, followedBackAt time.Time
 	var remark string
-	if err := scanner.Scan(&item.User.UserID, &item.User.Nickname, &avatarURL, &presenceStatus, &lastOnline, &sortableLastOnline, &remark, &followedAt, &followedBackAt); err != nil {
-		return FriendItem{}, time.Time{}, err
+	if err := scanner.Scan(&item.User.User.UserID, &item.User.User.Nickname, &avatarURL, &presenceStatus, &lastOnline, &sortableLastOnline, &remark, &followedAt, &followedBackAt); err != nil {
+		return RelatedUserItem{}, time.Time{}, err
 	}
-	item.User.AvatarURL = avatarURL
+	item.User.User.AvatarURL = types.StrPtr(avatarURL)
 	ps := UserPresenceStatus(presenceStatus)
-	item.PresenceStatus = &ps
+	item.User.PresenceStatus = &ps
 	item.Remark = &remark
 	lastOnlineStr := lastOnline.UTC().Format(time.RFC3339)
-	item.LastOnline = &lastOnlineStr
+	item.User.LastOnline = &lastOnlineStr
 	item.FollowedAt = followedAt.UTC().Format(time.RFC3339)
-	item.FollowedBackAt = followedBackAt.UTC().Format(time.RFC3339)
+	followedBackAtStr := followedBackAt.UTC().Format(time.RFC3339)
+	item.FollowedBackAt = &followedBackAtStr
 	return item, followedBackAt.UTC(), nil
 }
 
-func scanFollowingRow(scanner interface{ Scan(...any) error }) (FollowingItem, time.Time, error) {
-	var item FollowingItem
+func scanFollowingRow(scanner interface{ Scan(...any) error }) (RelatedUserItem, time.Time, error) {
+	var item RelatedUserItem
 	var avatarURL string
 	var followedAt time.Time
 	var presenceStatus string
 	var lastOnline time.Time
 	var sortableLastOnline time.Time
-	if err := scanner.Scan(&item.User.UserID, &item.User.Nickname, &avatarURL, &followedAt, &item.IsMutual, &presenceStatus, &lastOnline, &sortableLastOnline); err != nil {
-		return FollowingItem{}, time.Time{}, err
+	if err := scanner.Scan(&item.User.User.UserID, &item.User.User.Nickname, &avatarURL, &followedAt, &item.IsMutual, &presenceStatus, &lastOnline, &sortableLastOnline); err != nil {
+		return RelatedUserItem{}, time.Time{}, err
 	}
-	item.User.AvatarURL = avatarURL
+	item.User.User.AvatarURL = types.StrPtr(avatarURL)
 	item.FollowedAt = followedAt.UTC().Format(time.RFC3339)
 	ps := UserPresenceStatus(presenceStatus)
-	item.PresenceStatus = &ps
+	item.User.PresenceStatus = &ps
 	lastOnlineStr := lastOnline.UTC().Format(time.RFC3339)
-	item.LastOnline = &lastOnlineStr
+	item.User.LastOnline = &lastOnlineStr
 	return item, followedAt.UTC(), nil
 }
 
-func scanFollowerRow(scanner interface{ Scan(...any) error }) (FollowerItem, time.Time, error) {
-	var item FollowerItem
+func scanFollowerRow(scanner interface{ Scan(...any) error }) (RelatedUserItem, time.Time, error) {
+	var item RelatedUserItem
 	var avatarURL string
 	var followedAt time.Time
 	var presenceStatus string
 	var lastOnline time.Time
 	var sortableLastOnline time.Time
-	if err := scanner.Scan(&item.User.UserID, &item.User.Nickname, &avatarURL, &followedAt, &item.IsMutual, &presenceStatus, &lastOnline, &sortableLastOnline); err != nil {
-		return FollowerItem{}, time.Time{}, err
+	if err := scanner.Scan(&item.User.User.UserID, &item.User.User.Nickname, &avatarURL, &followedAt, &item.IsMutual, &presenceStatus, &lastOnline, &sortableLastOnline); err != nil {
+		return RelatedUserItem{}, time.Time{}, err
 	}
-	item.User.AvatarURL = avatarURL
+	item.User.User.AvatarURL = types.StrPtr(avatarURL)
 	item.FollowedAt = followedAt.UTC().Format(time.RFC3339)
 	ps := UserPresenceStatus(presenceStatus)
-	item.PresenceStatus = &ps
+	item.User.PresenceStatus = &ps
 	lastOnlineStr := lastOnline.UTC().Format(time.RFC3339)
-	item.LastOnline = &lastOnlineStr
+	item.User.LastOnline = &lastOnlineStr
 	return item, followedAt.UTC(), nil
 }
 
 func scanUserGroupRow(scanner interface{ Scan(...any) error }) (grouptypes.GroupItem, time.Time, error) {
 	var item grouptypes.GroupItem
-	var locationName, joinMethod string
+	var locationName, joinMethod, description string
 	var latitude, longitude float64
 	var joinedAt time.Time
-	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.IsSearchable, &item.MaxMembers, &joinedAt); err != nil {
+	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.IsSearchable, &item.MaxMembers, &joinedAt); err != nil {
 		return grouptypes.GroupItem{}, time.Time{}, err
 	}
-	item.Location = grouptypes.Location{Point: struct {
+	location := grouptypes.Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
+	item.Description = types.StrPtr(description)
+	item.Location = &location
 	item.JoinMethod = grouptypes.GroupJoinMethod(joinMethod)
 	item.Group.MembersCount = 1
 	return item, joinedAt.UTC(), nil

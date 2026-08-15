@@ -158,7 +158,11 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 	if sortBy == "" {
 		sortBy = "relevance"
 	}
-	sql, args := buildSearchMomentsQuery(req.Keyword, req.Tag, sortBy, limit+1)
+	searchCursor, err := decodeMomentSearchCursor(paginationCursor(req.Pagination))
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	sql, args := buildSearchMomentsQuery(req.Keyword, req.Tag, sortBy, limit+1, searchCursor)
 	if sql == "" {
 		return PaginatedMoments{}, nil
 	}
@@ -188,49 +192,95 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 		items[i].Tags = tagsByMomentID[items[i].MomentID]
 		items[i].IsFavorited = false
 	}
-	sortKeyword := ""
-	if req.Keyword != nil {
-		sortKeyword = *req.Keyword
-	}
-	sortTag := ""
-	if req.Tag != nil {
-		sortTag = *req.Tag
-	}
-	sortMoments(items, sortBy, sortKeyword, sortTag)
+	// SQL 已按最终排序返回 keyset 页；只把多取的边界项转成下一页游标。
+	var nextCursor *string
 	if len(items) > limit {
-		return PaginatedMoments{Items: items[:limit], NextCursor: items[limit].MomentID}, nil
+		keyword := ""
+		if req.Keyword != nil {
+			keyword = *req.Keyword
+		}
+		tag := ""
+		if req.Tag != nil {
+			tag = *req.Tag
+		}
+		c := encodeMomentSearchCursor(sortBy, items[limit], keyword, tag)
+		nextCursor = &c
+		items = items[:limit]
 	}
-	return PaginatedMoments{Items: items}, nil
+	return PaginatedMoments{Items: items, NextCursor: nextCursor}, nil
+}
+
+func paginationCursor(p *PaginationParams) string {
+	if p == nil {
+		return ""
+	}
+	return p.Cursor
 }
 
 // buildSearchMomentsQuery：全球 keyword/tag 搜索（spec moment.md → moments/search 收口，
-// 无半径过滤；附近发现走 feed/nearby）
-func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit int) (string, []any) {
-	args := make([]any, 0, 6)
+// 无半径过滤；附近发现走 feed/nearby）。
+//
+// 三种排序共用同一 keyset 元组 (score, created_at, moment_id)：
+//   - newest:  score 恒为 0，元组退化为时间倒序
+//   - popular: score = likes_count + comments_count
+//   - relevance: score = keyword 命中 + tag 命中
+//
+// SQL 直接输出最终序，游标按最终序继续，翻页不重不漏。
+func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit int, after *momentSearchCursor) (string, []any) {
+	args := make([]any, 0, 8)
 	var builder strings.Builder
 	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted FROM moments m LEFT JOIN users u ON u.user_id = m.user_id WHERE m.privacy_level = 'public' AND m.is_deleted = FALSE`)
+	kwArg := 0
+	tagArg := 0
 	if keyword != nil && *keyword != "" {
 		args = append(args, *keyword)
-		builder.WriteString(fmt.Sprintf(" AND description ILIKE '%%' || $%d || '%%'", len(args)))
+		kwArg = len(args)
+		builder.WriteString(fmt.Sprintf(" AND m.description ILIKE '%%' || $%d || '%%'", len(args)))
 	}
 	if tag != nil && *tag != "" {
 		args = append(args, *tag)
-		builder.WriteString(fmt.Sprintf(" AND moment_id IN (SELECT moment_id FROM moment_tags WHERE tag_name = $%d)", len(args)))
+		tagArg = len(args)
+		builder.WriteString(fmt.Sprintf(" AND m.moment_id IN (SELECT moment_id FROM moment_tags WHERE tag_name = $%d)", len(args)))
 	}
-	if sortBy == "newest" {
-		builder.WriteString(" ORDER BY created_at DESC, moment_id DESC")
-		args = append(args, limit)
-		builder.WriteString(fmt.Sprintf(" LIMIT $%d", len(args)))
-	} else {
-		// Non-newest sorts rank in Go after the geo radius prefilter, so we
-		// cannot push the page LIMIT to the DB. Cap the scan with a hard
-		// ceiling so a dense viewport can never pull the whole table into
-		// memory. The ceiling comfortably covers a page plus headroom for the
-		// radius filter to discard candidates.
-		args = append(args, maxSearchScanRows)
-		builder.WriteString(fmt.Sprintf(" LIMIT $%d", len(args)))
+
+	scoreExpr := searchScoreSQL(sortBy, kwArg, tagArg)
+	if after != nil {
+		args = append(args, after.Score, after.At, after.ID)
+		n := len(args)
+		builder.WriteString(fmt.Sprintf(
+			" AND (%s, m.created_at, m.moment_id) < ($%d::bigint, $%d::timestamptz, $%d)",
+			scoreExpr, n-2, n-1, n,
+		))
 	}
+	builder.WriteString(fmt.Sprintf(" ORDER BY (%s) DESC, m.created_at DESC, m.moment_id DESC", scoreExpr))
+	args = append(args, limit)
+	builder.WriteString(fmt.Sprintf(" LIMIT $%d", len(args)))
 	return builder.String(), args
+}
+
+// searchScoreSQL returns the SQL expression for the selected sort score. It
+// intentionally mirrors momentSearchScore so memory and Postgres paginate with
+// the same tuple semantics.
+func searchScoreSQL(sortBy string, kwArg, tagArg int) string {
+	switch normalizeMomentSearchSort(sortBy) {
+	case "popular":
+		return "(m.likes_count + m.comments_count)"
+	case "newest":
+		return "0"
+	default:
+		parts := make([]string, 0, 2)
+		if kwArg > 0 {
+			parts = append(parts, fmt.Sprintf("CASE WHEN m.description ILIKE '%%' || $%d || '%%' THEN 1 ELSE 0 END", kwArg))
+		}
+		if tagArg > 0 {
+			// tag 已由 IN 子查询过滤，命中即计 1 分。
+			parts = append(parts, "1")
+		}
+		if len(parts) == 0 {
+			return "0"
+		}
+		return strings.Join(parts, " + ")
+	}
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, userID string, req UpdateMomentRequest) error {
@@ -356,7 +406,8 @@ func (r *PostgresRepository) ListFavorites(ctx context.Context, userID string, l
 			for i := 0; i < limit; i++ {
 				items[i].Tags = tagsByMomentID[items[i].MomentID]
 			}
-			return PaginatedMoments{Items: items[:limit], NextCursor: cursors[limit-1]}, nil
+			c := cursors[limit-1]
+			return PaginatedMoments{Items: items[:limit], NextCursor: &c}, nil
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -414,13 +465,6 @@ func normalizeMomentInteractionLimit(limit int) int {
 		return limit
 	}
 }
-
-// maxSearchScanRows bounds the worst-case number of rows a geo/ranking search
-// loads into memory before the Go-side radius prefilter and sort. It is a
-// safety ceiling against unbounded scans in dense viewports, not the page size
-// (which is applied after sorting). 500 comfortably exceeds any single result
-// page while keeping memory predictable.
-const maxSearchScanRows = 500
 
 // momentFavoriteCursorNamespace 是收藏列表分页游标的加密命名空间。
 const momentFavoriteCursorNamespace = "moments.favorites"

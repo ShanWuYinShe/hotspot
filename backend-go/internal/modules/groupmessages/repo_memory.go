@@ -55,7 +55,7 @@ func (r *InMemoryRepository) Send(_ context.Context, req SendGroupMessageRequest
 		MessageID:    fmt.Sprintf("gm_%d_%d", now.UnixNano(), r.seq),
 		SenderUserID: req.SenderUserID,
 		Type:         req.Type,
-		Content:      req.Content,
+		Content:      types.StrPtr(req.Content),
 		SentAt:       now.Format(time.RFC3339),
 		Mentions:     req.Mentions,
 	}
@@ -106,14 +106,15 @@ func (r *InMemoryRepository) History(_ context.Context, groupID string, paginati
 
 	for i := range items {
 		if count, ok := r.readCount[groupID][items[i].MessageID]; ok {
-			items[i].ReadCount = count
+			items[i].ReadCount = &count
 		}
 	}
 	if len(items) <= limit {
 		return PaginatedGroupMessages{Items: items}, nil
 	}
 	next := items[limit-1]
-	return PaginatedGroupMessages{Items: items[:limit], NextCursor: encodeGroupMessageCursor(next.SentAt, next.MessageID)}, nil
+	c := encodeGroupMessageCursor(next.SentAt, next.MessageID)
+	return PaginatedGroupMessages{Items: items[:limit], NextCursor: &c}, nil
 }
 
 // findMessage 查找消息并返回其索引和所属群组ID
@@ -137,7 +138,7 @@ func (r *InMemoryRepository) Update(_ context.Context, req UpdateGroupMessageReq
 	if !found {
 		return MessageEventMeta{}, ErrMessageNotFound
 	}
-	if msg.RecalledAt != "" {
+	if msg.RecalledAt != nil {
 		return MessageEventMeta{}, ErrMessageRecalled
 	}
 	if msg.Type != "text" {
@@ -149,8 +150,9 @@ func (r *InMemoryRepository) Update(_ context.Context, req UpdateGroupMessageReq
 		return MessageEventMeta{}, ErrPermissionDenied
 	}
 
-	msg.Content = req.Content
-	msg.EditedAt = time.Now().UTC().Format(time.RFC3339Nano)
+	msg.Content = types.StrPtr(req.Content)
+	editedAt := time.Now().UTC().Format(time.RFC3339Nano)
+	msg.EditedAt = &editedAt
 	r.items[groupID][index] = *msg
 	return MessageEventMeta{GroupID: groupID, MessageID: req.MessageID, SentAt: msg.SentAt, Content: req.Content}, nil
 }
@@ -163,7 +165,7 @@ func (r *InMemoryRepository) Recall(_ context.Context, req RecallGroupMessageReq
 	if !found {
 		return MessageEventMeta{}, ErrMessageNotFound
 	}
-	if msg.RecalledAt != "" {
+	if msg.RecalledAt != nil {
 		return MessageEventMeta{}, ErrMessageRecalled
 	}
 	// Strict ownership: only the sender may recall. Messages with an empty
@@ -180,7 +182,8 @@ func (r *InMemoryRepository) Recall(_ context.Context, req RecallGroupMessageReq
 		}
 	}
 
-	msg.RecalledAt = time.Now().UTC().Format(time.RFC3339Nano)
+	recalledAt := time.Now().UTC().Format(time.RFC3339Nano)
+	msg.RecalledAt = &recalledAt
 	r.items[groupID][index] = *msg
 	return MessageEventMeta{GroupID: groupID, MessageID: req.MessageID, SentAt: msg.SentAt}, nil
 }
@@ -196,10 +199,11 @@ func (r *InMemoryRepository) RecallAsAdmin(_ context.Context, messageID string) 
 	if !found {
 		return MessageEventMeta{}, ErrMessageNotFound
 	}
-	if msg.RecalledAt != "" {
+	if msg.RecalledAt != nil {
 		return MessageEventMeta{}, ErrMessageRecalled
 	}
-	msg.RecalledAt = time.Now().UTC().Format(time.RFC3339Nano)
+	recalledAt := time.Now().UTC().Format(time.RFC3339Nano)
+	msg.RecalledAt = &recalledAt
 	r.items[groupID][index] = *msg
 	return MessageEventMeta{GroupID: groupID, MessageID: messageID, SentAt: msg.SentAt}, nil
 }
@@ -241,16 +245,61 @@ func (r *InMemoryRepository) MarkAsRead(_ context.Context, _ string, req MarkGro
 	return nil
 }
 
-func (r *InMemoryRepository) MarkAllRead(_ context.Context, _ string) error {
+func (r *InMemoryRepository) MarkAllRead(_ context.Context, _ string) ([]string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	groupIDs := make([]string, 0, len(r.items))
 	for groupID, messages := range r.items {
+		groupIDs = append(groupIDs, groupID)
 		for _, msg := range messages {
 			r.markMessageRead(groupID, msg.MessageID)
 		}
 	}
-	return nil
+	return groupIDs, nil
+}
+
+func (r *InMemoryRepository) GetReadCount(_ context.Context, groupID string, messageID string) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if _, ok := r.items[groupID]; !ok {
+		return 0, ErrMessageNotFound
+	}
+	for _, msg := range r.items[groupID] {
+		if msg.MessageID == messageID {
+			return r.readCount[groupID][messageID], nil
+		}
+	}
+	return 0, ErrMessageNotFound
+}
+
+func (r *InMemoryRepository) LatestMessageID(_ context.Context, groupID string) (string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	messages := r.items[groupID]
+	if len(messages) == 0 {
+		return "", ErrMessageNotFound
+	}
+	latest := messages[0]
+	for _, msg := range messages[1:] {
+		if msg.SentAt > latest.SentAt || (msg.SentAt == latest.SentAt && msg.MessageID > latest.MessageID) {
+			latest = msg
+		}
+	}
+	return latest.MessageID, nil
+}
+
+func (r *InMemoryRepository) FilterMemberIDs(_ context.Context, groupID string, userIDs []string) ([]string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	memberSet := r.members[groupID]
+	out := make([]string, 0, len(userIDs))
+	for _, id := range userIDs {
+		if memberSet[id] {
+			out = append(out, id)
+		}
+	}
+	return out, nil
 }
 
 func (r *InMemoryRepository) IsMember(_ context.Context, groupID, userID string) (bool, error) {

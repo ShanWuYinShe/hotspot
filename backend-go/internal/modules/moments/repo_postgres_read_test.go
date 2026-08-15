@@ -217,7 +217,15 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 			items = append(items, item)
 		}
 		if limit >= 0 {
+			popular := strings.Contains(query, "m.likes_count + m.comments_count")
 			sort.Slice(items, func(i, j int) bool {
+				if popular {
+					si := items[i].LikesCount + items[i].CommentsCount
+					sj := items[j].LikesCount + items[j].CommentsCount
+					if si != sj {
+						return si > sj
+					}
+				}
 				if items[i].CreatedAt == items[j].CreatedAt {
 					return items[i].MomentID > items[j].MomentID
 				}
@@ -500,17 +508,17 @@ func TestPostgresRepositoryListsFavorites(t *testing.T) {
 	if len(favorites.Items) != 2 || favorites.Items[0].MomentID != "moment_1" || favorites.Items[1].MomentID != "moment_3" {
 		t.Fatalf("unexpected favorites: %#v", favorites)
 	}
-	if favorites.NextCursor == "" {
+	if favorites.NextCursor == nil {
 		t.Fatal("expected favorites next cursor")
 	}
 	if !favorites.Items[0].IsFavorited {
 		t.Fatalf("expected favorited state: %#v", favorites.Items[0])
 	}
-	favorites, err = repo.ListFavorites(context.Background(), "user_bob", 2, favorites.NextCursor)
+	favorites, err = repo.ListFavorites(context.Background(), "user_bob", 2, *favorites.NextCursor)
 	if err != nil {
 		t.Fatalf("list favorites second page: %v", err)
 	}
-	if len(favorites.Items) != 1 || favorites.Items[0].MomentID != "moment_2" || favorites.NextCursor != "" {
+	if len(favorites.Items) != 1 || favorites.Items[0].MomentID != "moment_2" || favorites.NextCursor != nil {
 		t.Fatalf("unexpected second page favorites: %#v", favorites)
 	}
 }
@@ -611,7 +619,7 @@ func TestPostgresRepositorySearchSortByNewestAppliesLimit(t *testing.T) {
 	if result.Items[0].MomentID != "moment_4" {
 		t.Fatalf("expected newest moment (moment_4), got %s", result.Items[0].MomentID)
 	}
-	if result.NextCursor == "" {
+	if result.NextCursor == nil {
 		t.Fatal("expected next cursor for newest with more results")
 	}
 }

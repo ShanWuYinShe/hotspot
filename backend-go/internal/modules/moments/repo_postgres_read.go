@@ -81,7 +81,8 @@ func (r *PostgresRepository) ListMine(ctx context.Context, userID string, limit 
 				items[i].Tags = tagsByMomentID[items[i].MomentID]
 				items[i].Mentions = mentionsByMomentID[items[i].MomentID]
 			}
-			return PaginatedMoments{Items: items[:limit], NextCursor: cursors[limit-1]}, nil
+			c := cursors[limit-1]
+			return PaginatedMoments{Items: items[:limit], NextCursor: &c}, nil
 		}
 	}
 	if err := rows.Err(); err != nil {

@@ -1,6 +1,10 @@
 package system
 
-import "time"
+import (
+	"time"
+
+	"hotspot/backend-go/internal/platform/types"
+)
 
 type AnnouncementActor struct {
 	UserID    string
@@ -30,9 +34,7 @@ func (r AnnouncementRecord) PublicItem() SystemAnnouncementItem {
 		Severity:       r.Severity,
 		CreatedAt:      r.CreatedAt.UTC().Format(time.RFC3339),
 	}
-	if r.ActionURL != "" {
-		item.ActionURL = r.ActionURL
-	}
+	item.ActionURL = types.StrPtr(r.ActionURL)
 	return item
 }
 

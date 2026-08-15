@@ -139,15 +139,64 @@ func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req 
 	return queryable.Exec(ctx, queryUpsertGroupMessageReadState, req.GroupID, userID, messageID, sentAt)
 }
 
-func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) error {
+func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) ([]string, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
+		return nil, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return persistence.ErrNotImplemented
+		return nil, persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, queryMarkAllGroupMessagesRead, userID)
+	if err := queryable.Exec(ctx, queryMarkAllGroupMessagesRead, userID); err != nil {
+		return nil, err
+	}
+	rows, err := queryable.Query(ctx, queryUserGroupIDs, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	groupIDs := make([]string, 0, 4)
+	for rows.Next() {
+		var groupID string
+		if err := rows.Scan(&groupID); err != nil {
+			return nil, err
+		}
+		groupIDs = append(groupIDs, groupID)
+	}
+	return groupIDs, rows.Err()
+}
+
+func (r *PostgresRepository) GetReadCount(ctx context.Context, groupID string, messageID string) (int, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return 0, persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return 0, persistence.ErrNotImplemented
+	}
+	var count int
+	if err := queryable.QueryRow(ctx, queryGroupMessageReadCount, groupID, messageID).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (r *PostgresRepository) LatestMessageID(ctx context.Context, groupID string) (string, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return "", persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return "", persistence.ErrNotImplemented
+	}
+	var messageID string
+	if err := queryable.QueryRow(ctx, queryLatestGroupMessageID, groupID).Scan(&messageID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", ErrMessageNotFound
+		}
+		return "", err
+	}
+	return messageID, nil
 }
 
 func (r *PostgresRepository) lookupMessageMetaFull(ctx context.Context, messageID string) (groupID, senderUserID, msgType string, isRecalled bool, sentAt string, err error) {
@@ -165,6 +214,33 @@ func (r *PostgresRepository) lookupMessageMetaFull(ctx context.Context, messageI
 		senderUserID = *rawSenderID
 	}
 	return groupID, senderUserID, msgType, recalled, sentAt, nil
+}
+
+func (r *PostgresRepository) FilterMemberIDs(ctx context.Context, groupID string, userIDs []string) ([]string, error) {
+	if len(userIDs) == 0 {
+		return nil, nil
+	}
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return nil, persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return nil, persistence.ErrNotImplemented
+	}
+	rows, err := queryable.Query(ctx, queryFilterGroupMemberIDs, groupID, userIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	memberIDs := make([]string, 0, len(userIDs))
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		memberIDs = append(memberIDs, id)
+	}
+	return memberIDs, rows.Err()
 }
 
 func (r *PostgresRepository) IsMember(ctx context.Context, groupID, userID string) (bool, error) {
@@ -212,9 +288,9 @@ func (r *PostgresRepository) GetMessageForReply(ctx context.Context, messageID s
 	return &MessageBrief{
 		MessageID: messageID,
 		Type:      msgType,
-		Content:   content,
-		ShareCode: shareCode,
-		Sender:    types.UserInfo{UserID: senderUserID, Nickname: nickname, AvatarURL: avatarURL},
+		Content:   types.StrPtr(content),
+		ShareCode: types.StrPtr(shareCode),
+		Sender:    types.UserInfo{UserID: senderUserID, Nickname: nickname, AvatarURL: types.StrPtr(avatarURL)},
 		SentAt:    sentAt,
 	}, true, nil
 }

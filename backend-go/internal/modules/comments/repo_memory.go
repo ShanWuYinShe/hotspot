@@ -164,7 +164,8 @@ func (r *InMemoryRepository) List(_ context.Context, momentID string, limit int,
 		limit = types.MaxPageSize
 	}
 	if len(items) > limit {
-		return PaginatedComments{Items: items[:limit], NextCursor: items[limit-1].CommentID}, nil
+		c := items[limit-1].CommentID
+		return PaginatedComments{Items: items[:limit], NextCursor: &c}, nil
 	}
 	return PaginatedComments{Items: items}, nil
 }
@@ -209,9 +210,10 @@ func (r *InMemoryRepository) ListReplies(_ context.Context, commentID string, li
 		end = start + limit
 	}
 	page := items[start:end]
-	var nextCursor string
+	var nextCursor *string
 	if end < len(items) {
-		nextCursor = page[len(page)-1].CommentID
+		c := page[len(page)-1].CommentID
+		nextCursor = &c
 	}
 	return PaginatedComments{Items: page, NextCursor: nextCursor}, nil
 }

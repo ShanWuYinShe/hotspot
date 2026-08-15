@@ -15,7 +15,7 @@ func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo} 
 
 func (s *Service) Create(ctx context.Context, req CreateReportRequest) (ReportCreated, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	if !isValidReportTargetType(req.TargetType) || !isValidReportReason(req.Reason) || req.TargetID == "" || len(req.Description) > 1000 {
+	if !isValidReportTargetType(req.TargetType) || !isValidReportReason(req.Reason) || req.TargetID == "" || (req.Description != nil && len(*req.Description) > 1000) {
 		return ReportCreated{}, errors.New("reports: invalid request")
 	}
 	if req.TargetType == ReportTargetTypeMessage && !isValidReportSnapshot(req.MessageSnapshot) {

@@ -58,7 +58,7 @@ func TestInMemoryRepositoryHeatmapHasBreakdown(t *testing.T) {
 	if result.Items[0].Breakdown == nil {
 		t.Fatal("expected non-nil Breakdown")
 	}
-	if result.Items[0].Breakdown.User == 0 && result.Items[0].Breakdown.Group == 0 && result.Items[0].Breakdown.Moment == 0 {
+	if *result.Items[0].Breakdown.User == 0 && *result.Items[0].Breakdown.Group == 0 && *result.Items[0].Breakdown.Moment == 0 {
 		t.Fatal("expected Breakdown with at least one count > 0")
 	}
 }
@@ -104,7 +104,7 @@ func TestInMemoryRepositoryHotspotsHasLocation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Hotspots returned error: %v", err)
 	}
-	if result.Items[0].Location.Latitude == 0 {
+	if result.Items[0].Location.Point.Latitude == 0 {
 		t.Fatal("expected Location.Latitude to be set from query.Center")
 	}
 }
@@ -116,8 +116,8 @@ func TestInMemoryRepositoryHotspotsHasDistanceMeters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Hotspots returned error: %v", err)
 	}
-	if result.Items[0].DistanceMeters != 0 {
-		t.Fatalf("expected DistanceMeters=0 (point to itself), got %d", result.Items[0].DistanceMeters)
+	if result.Items[0].Location.Distance == nil || *result.Items[0].Location.Distance != 0 {
+		t.Fatalf("expected Distance=0 (point to itself), got %v", result.Items[0].Location.Distance)
 	}
 }
 
@@ -128,7 +128,7 @@ func TestInMemoryRepositoryHotspotsHasCreatedAt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Hotspots returned error: %v", err)
 	}
-	if result.Items[0].CreatedAt == "" {
+	if *result.Items[0].CreatedAt == "" {
 		t.Fatal("expected non-empty CreatedAt")
 	}
 }

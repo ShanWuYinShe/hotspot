@@ -51,7 +51,8 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req Notify
 	page := PaginatedNotify{}
 	if len(items) > query.Limit {
 		last := items[query.Limit-1]
-		page.NextCursor = encodeNotifyCursor(notifyCursor{CreatedAt: last.CreatedAt, NotifyID: last.NotifyID})
+		c := encodeNotifyCursor(notifyCursor{CreatedAt: last.CreatedAt, NotifyID: last.NotifyID})
+		page.NextCursor = &c
 		items = items[:query.Limit]
 	}
 	page.Items = items

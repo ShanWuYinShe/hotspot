@@ -39,10 +39,18 @@ func TestSpecListCreatedReturnsOwnerView(t *testing.T) {
 	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decode: %v body=%s", err, rr.Body.String())
 	}
-	if resp.Code != 0 { t.Fatalf("expected success, got %d", resp.Code) }
-	if len(resp.Data.Items) != 1 { t.Fatalf("unexpected items: %#v", resp.Data.Items) }
-	if resp.Data.Items[0].PrivacyLevel != "private" { t.Fatalf("expected owner privacy_level=private, got %#v", resp.Data.Items[0]) }
-	if resp.Data.NextCursor != "" { t.Fatalf("expected null next_cursor, got %q", resp.Data.NextCursor) }
+	if resp.Code != 0 {
+		t.Fatalf("expected success, got %d", resp.Code)
+	}
+	if len(resp.Data.Items) != 1 {
+		t.Fatalf("unexpected items: %#v", resp.Data.Items)
+	}
+	if resp.Data.Items[0].PrivacyLevel != "private" {
+		t.Fatalf("expected owner privacy_level=private, got %#v", resp.Data.Items[0])
+	}
+	if resp.Data.NextCursor != "" {
+		t.Fatalf("expected null next_cursor, got %q", resp.Data.NextCursor)
+	}
 }
 
 func TestSpecCreateReturnsOwnerView(t *testing.T) {
@@ -59,23 +67,45 @@ func TestSpecCreateReturnsOwnerView(t *testing.T) {
 		Code httpx.Code      `json:"code"`
 		Data OwnerMomentItem `json:"data"`
 	}
-	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil { t.Fatalf("decode: %v body=%s", err, rr.Body.String()) }
-	if resp.Code != 0 { t.Fatalf("expected success, got %d %s", resp.Code, rr.Body.String()) }
-	if resp.Data.PrivacyLevel != "private" { t.Fatalf("expected create owner privacy_level, got %#v", resp.Data) }
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v body=%s", err, rr.Body.String())
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected success, got %d %s", resp.Code, rr.Body.String())
+	}
+	if resp.Data.PrivacyLevel != "private" {
+		t.Fatalf("expected create owner privacy_level, got %#v", resp.Data)
+	}
 }
 
 func TestSpecPublicMomentSerialization(t *testing.T) {
 	raw, err := json.Marshal(MomentItem{MomentID: "m1", Description: "hi", PrivacyLevel: "private"})
-	if err != nil { t.Fatalf("marshal: %v", err) }
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	var m map[string]any
-	if err := json.Unmarshal(raw, &m); err != nil { t.Fatalf("unmarshal: %v", err) }
-	if _, ok := m["is_favorited"]; !ok { t.Fatalf("is_favorited must always be present: %s", raw) }
-	if m["is_favorited"] != false { t.Fatalf("expected is_favorited=false, got %v", m["is_favorited"]) }
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if _, ok := m["is_favorited"]; !ok {
+		t.Fatalf("is_favorited must always be present: %s", raw)
+	}
+	if m["is_favorited"] != false {
+		t.Fatalf("expected is_favorited=false, got %v", m["is_favorited"])
+	}
 	loc, ok := m["location"]
-	if !ok { t.Fatalf("location must always be present: %s", raw) }
-	if loc != nil { t.Fatalf("expected location=null for nil pointer, got %v", loc) }
-	if _, ok := m["privacy_level"]; ok { t.Fatalf("privacy_level must NOT be serialized on public MomentItem: %s", raw) }
-	if _, ok := m["reactions"]; !ok { t.Fatalf("reactions must always be present: %s", raw) }
+	if !ok {
+		t.Fatalf("location must always be present: %s", raw)
+	}
+	if loc != nil {
+		t.Fatalf("expected location=null for nil pointer, got %v", loc)
+	}
+	if _, ok := m["privacy_level"]; ok {
+		t.Fatalf("privacy_level must NOT be serialized on public MomentItem: %s", raw)
+	}
+	if _, ok := m["reactions"]; !ok {
+		t.Fatalf("reactions must always be present: %s", raw)
+	}
 }
 
 func TestSpecDeleteNonOwnerForbiddenReason(t *testing.T) {
@@ -83,7 +113,9 @@ func TestSpecDeleteNonOwnerForbiddenReason(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctxOther := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "u2"})
 	created, err := repo.Create(context.Background(), "u1", CreateMomentRequest{Description: "hi", Location: Location{LocationName: "Here"}})
-	if err != nil { t.Fatalf("create: %v", err) }
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
 	req := httptest.NewRequest(http.MethodPost, "/delete", mustReader(`{"moment_id":"`+created.MomentID+`"}`))
 	req = req.WithContext(ctxOther)
 	rr := httptest.NewRecorder()
@@ -94,9 +126,15 @@ func TestSpecDeleteNonOwnerForbiddenReason(t *testing.T) {
 			ForbiddenReason string `json:"forbidden_reason"`
 		} `json:"data"`
 	}
-	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil { t.Fatalf("decode: %v", err) }
-	if resp.Code != httpx.CodeForbidden { t.Fatalf("expected 10200, got %d", resp.Code) }
-	if resp.Data.ForbiddenReason != string(httpx.ReasonNotResourceOwner) { t.Fatalf("expected forbidden_reason=not_resource_owner, got %q", resp.Data.ForbiddenReason) }
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Code != httpx.CodeForbidden {
+		t.Fatalf("expected 10200, got %d", resp.Code)
+	}
+	if resp.Data.ForbiddenReason != string(httpx.ReasonNotResourceOwner) {
+		t.Fatalf("expected forbidden_reason=not_resource_owner, got %q", resp.Data.ForbiddenReason)
+	}
 }
 
 func TestSpecCreateBlockedTagReturns10400(t *testing.T) {
@@ -114,6 +152,10 @@ func TestSpecCreateBlockedTagReturns10400(t *testing.T) {
 	var resp struct {
 		Code httpx.Code `json:"code"`
 	}
-	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil { t.Fatalf("decode: %v", err) }
-	if resp.Code != httpx.CodeConflict { t.Fatalf("expected 10400, got %d body=%s", resp.Code, rr.Body.String()) }
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Code != httpx.CodeConflict {
+		t.Fatalf("expected 10400, got %d body=%s", resp.Code, rr.Body.String())
+	}
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 // GetSettings handles POST /api/v1/groups/admin/settings（守卫子树）。
@@ -50,11 +51,7 @@ func (h *Handler) ListAdminMembers(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
-	resp := map[string]any{
-		"items":       items,
-		"next_cursor": nextCursor,
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PaginatedAdminGroupMembers{Items: items, NextCursor: types.StrPtr(nextCursor)}))
 }
 
 // RecallGroupMessageAsAdmin handles POST /api/v1/groups/admin/messages/recall（守卫子树）。

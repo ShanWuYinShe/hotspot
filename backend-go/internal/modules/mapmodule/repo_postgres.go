@@ -10,6 +10,8 @@ import (
 	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/textutil"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type PostgresRepository struct {
@@ -17,14 +19,16 @@ type PostgresRepository struct {
 }
 
 type mapCandidate struct {
-	ObjectType string
-	ObjectID   string
-	Title      string
-	Subtitle   string
-	CoverURL   string
-	Location   GeoPoint
-	CreatedAt  string
-	Distance   int
+	ObjectType   string
+	ObjectID     string
+	Title        string
+	Subtitle     string
+	CoverURL     string
+	Location     GeoPoint
+	LocationName string
+	CreatedAt    string
+	Distance     int
+	Bearing      int
 }
 
 type mapCursor struct {
@@ -153,7 +157,16 @@ func queryMapGroups(ctx context.Context, queryable persistence.QueryableDB, quer
 }
 
 func queryMapMoments(ctx context.Context, queryable persistence.QueryableDB, query canvasQuery, mins, maxs []int64) ([]mapCandidate, error) {
-	rows, err := queryable.Query(ctx, queryMapCanvasMoments, mins, maxs, maxMapScanRows)
+	var startTime, endTime *time.Time
+	if !query.StartTime.IsZero() {
+		t := query.StartTime.UTC()
+		startTime = &t
+	}
+	if !query.EndTime.IsZero() {
+		t := query.EndTime.UTC()
+		endTime = &t
+	}
+	rows, err := queryable.Query(ctx, queryMapCanvasMoments, mins, maxs, maxMapScanRows, startTime, endTime)
 	if err != nil {
 		return nil, err
 	}
@@ -165,12 +178,6 @@ func queryMapMoments(ctx context.Context, queryable persistence.QueryableDB, que
 		var createdAt time.Time
 		if err := rows.Scan(&id, &title, &subtitle, &lat, &lng, &createdAt); err != nil {
 			return nil, err
-		}
-		if !query.StartTime.IsZero() && createdAt.UTC().Before(query.StartTime) {
-			continue
-		}
-		if !query.EndTime.IsZero() && createdAt.UTC().After(query.EndTime) {
-			continue
 		}
 		items = append(items, newMapCandidate("moment", id, truncateMapTitle(title), subtitle, "", lat, lng, createdAt.UTC().Format(time.RFC3339), query.Center))
 	}
@@ -206,11 +213,23 @@ func aggregateHeatBuckets(items []mapCandidate, level int) []MapHeatBucket {
 		bucket.TotalCount++
 		switch item.ObjectType {
 		case "user":
-			bucket.Breakdown.User++
+			if bucket.Breakdown.User == nil {
+				zero := 0
+				bucket.Breakdown.User = &zero
+			}
+			*bucket.Breakdown.User++
 		case "group":
-			bucket.Breakdown.Group++
+			if bucket.Breakdown.Group == nil {
+				zero := 0
+				bucket.Breakdown.Group = &zero
+			}
+			*bucket.Breakdown.Group++
 		case "moment":
-			bucket.Breakdown.Moment++
+			if bucket.Breakdown.Moment == nil {
+				zero := 0
+				bucket.Breakdown.Moment = &zero
+			}
+			*bucket.Breakdown.Moment++
 		}
 	}
 	out := make([]MapHeatBucket, 0, len(byToken))
@@ -244,19 +263,26 @@ func paginateHotspots(items []mapCandidate, limit int, cursor string) (MapHotspo
 	}
 	resp := MapHotspotsCanvas{Items: make([]MapHotspotItem, 0, max(0, end-start))}
 	for _, item := range items[start:end] {
+		distance := float64(item.Distance)
+		bearing := float64(item.Bearing)
 		resp.Items = append(resp.Items, MapHotspotItem{
-			ObjectType:     item.ObjectType,
-			ObjectID:       item.ObjectID,
-			Title:          item.Title,
-			Subtitle:       item.Subtitle,
-			CoverURL:       item.CoverURL,
-			Location:       item.Location,
-			CreatedAt:      item.CreatedAt,
-			DistanceMeters: item.Distance,
+			ObjectType: item.ObjectType,
+			ObjectID:   item.ObjectID,
+			Title:      item.Title,
+			Subtitle:   types.StrPtr(item.Subtitle),
+			CoverURL:   types.StrPtr(item.CoverURL),
+			Location: types.RelativeLocation{
+				Point:          types.GeoPoint{Latitude: item.Location.Latitude, Longitude: item.Location.Longitude},
+				LocationName:   item.LocationName,
+				Distance:       &distance,
+				BearingDegrees: &bearing,
+			},
+			CreatedAt: types.StrPtr(item.CreatedAt),
 		})
 	}
 	if end < len(items) && end > start {
-		resp.NextCursor = encodeMapCursor(items[end-1])
+		c := encodeMapCursor(items[end-1])
+		resp.NextCursor = &c
 	}
 	return resp, nil
 }
@@ -310,12 +336,7 @@ func normalizeMapLimit(limit int) int {
 }
 
 func truncateMapTitle(title string) string {
-	title = strings.TrimSpace(title)
-	runes := []rune(title)
-	if len(runes) <= 60 {
-		return title
-	}
-	return string(runes[:60])
+	return textutil.TruncateRunes(title, 60)
 }
 
 // mapCursorCodec is a process-wide cached AES-GCM codec for map cursors,

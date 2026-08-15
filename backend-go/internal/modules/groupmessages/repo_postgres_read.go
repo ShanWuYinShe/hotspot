@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 func (r *PostgresRepository) History(ctx context.Context, groupID string, pagination *PaginationParams) (PaginatedGroupMessages, error) {
@@ -44,11 +45,15 @@ func (r *PostgresRepository) History(ctx context.Context, groupID string, pagina
 		var senderUserID string
 		var senderNickname string
 		var senderAvatar string
-		if err := rows.Scan(&item.MessageID, &item.Type, &item.Content, &item.SentAt, &editedAt, &recalledAt, &senderUserID, &senderNickname, &senderAvatar, &item.ReadCount); err != nil {
+		var content string
+		var readCount int
+		if err := rows.Scan(&item.MessageID, &item.Type, &content, &item.SentAt, &editedAt, &recalledAt, &senderUserID, &senderNickname, &senderAvatar, &readCount); err != nil {
 			return PaginatedGroupMessages{}, err
 		}
-		item.EditedAt = editedAt
-		item.RecalledAt = recalledAt
+		item.Content = types.StrPtr(content)
+		item.EditedAt = types.StrPtr(editedAt)
+		item.RecalledAt = types.StrPtr(recalledAt)
+		item.ReadCount = &readCount
 		item.Sender = map[string]any{"user_id": senderUserID, "nickname": senderNickname, "avatar_url": senderAvatar}
 		items = append(items, item)
 	}
@@ -59,5 +64,6 @@ func (r *PostgresRepository) History(ctx context.Context, groupID string, pagina
 		return PaginatedGroupMessages{Items: items}, nil
 	}
 	next := items[limit-1]
-	return PaginatedGroupMessages{Items: items[:limit], NextCursor: encodeGroupMessageCursor(next.SentAt, next.MessageID)}, nil
+	c := encodeGroupMessageCursor(next.SentAt, next.MessageID)
+	return PaginatedGroupMessages{Items: items[:limit], NextCursor: &c}, nil
 }

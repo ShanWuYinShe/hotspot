@@ -26,7 +26,7 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import {
-  GetFeedNearbyRequest,
+  NearbyMomentsRequest,
   SearchUsersRequest,
   SearchGroupsRequest,
   UserItem,

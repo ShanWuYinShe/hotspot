@@ -53,10 +53,10 @@ func TestHydrateMomentImages(t *testing.T) {
 	if len(items[0].Images) != 2 {
 		t.Fatalf("expected 2 images, got %#v", items[0].Images)
 	}
-	if items[0].Images[0].URL != "https://cdn.example.com/key1" || items[0].Images[0].ThumbnailURL != "https://cdn.example.com/thumb1" {
+	if items[0].Images[0].URL != "https://cdn.example.com/key1" || *items[0].Images[0].ThumbnailURL != "https://cdn.example.com/thumb1" {
 		t.Fatalf("unexpected image[0]: %#v", items[0].Images[0])
 	}
-	if items[0].Images[1].ThumbnailURL != "https://cdn.example.com/key2" {
+	if *items[0].Images[1].ThumbnailURL != "https://cdn.example.com/key2" {
 		t.Fatalf("missing thumbnail should fall back to url: %#v", items[0].Images[1])
 	}
 	if len(items[1].Images) != 0 {

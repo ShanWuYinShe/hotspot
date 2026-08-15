@@ -199,7 +199,7 @@ func TestServiceFavoriteRejectsNotFound(t *testing.T) {
 }
 
 func TestServiceFavoriteHappyPath(t *testing.T) {
-	repo := &stubMomentRepo{exists: true}
+	repo := &stubMomentRepo{getResult: ownedMoment(), getFound: true}
 	svc := NewServiceWithRepo(repo)
 	err := svc.Favorite(momentCtx("u1"), "m1")
 	if err != nil {
@@ -208,7 +208,7 @@ func TestServiceFavoriteHappyPath(t *testing.T) {
 }
 
 func TestServiceUnfavoriteDelegates(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{exists: true})
+	svc := NewServiceWithRepo(&stubMomentRepo{getResult: ownedMoment(), getFound: true})
 	err := svc.Unfavorite(momentCtx("u1"), "m1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -300,7 +300,7 @@ func TestServiceCheckCommentableMomentNotFound(t *testing.T) {
 // ---------- A) Favorite/Unfavorite 错误路径 ----------
 
 func TestServiceFavoritePropagatesRepoError(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{exists: true, favRepoErr: errors.New("boom")})
+	svc := NewServiceWithRepo(&stubMomentRepo{getResult: ownedMoment(), getFound: true, favRepoErr: errors.New("boom")})
 	err := svc.Favorite(momentCtx("u1"), "m1")
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -319,7 +319,7 @@ func TestServiceUnfavoriteRejectsNotFound(t *testing.T) {
 }
 
 func TestServiceUnfavoritePropagatesRepoError(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{exists: true, unfavErr: errors.New("boom")})
+	svc := NewServiceWithRepo(&stubMomentRepo{getResult: ownedMoment(), getFound: true, unfavErr: errors.New("boom")})
 	err := svc.Unfavorite(momentCtx("u1"), "m1")
 	if err == nil {
 		t.Fatal("expected error, got nil")

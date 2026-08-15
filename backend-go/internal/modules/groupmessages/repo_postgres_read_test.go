@@ -126,6 +126,13 @@ func (b *groupMessageBackendStub) Query(_ context.Context, query string, args ..
 	if err := b.queryErrs[query]; err != nil {
 		return nil, err
 	}
+	if query == queryUserGroupIDs {
+		rows := make([][]any, 0, len(b.items))
+		for groupID := range b.items {
+			rows = append(rows, []any{groupID})
+		}
+		return &testdb.RowsValues{Rows: rows}, nil
+	}
 	if query == queryGroupMessagesHistory {
 		groupID := args[0].(string)
 		records := append([]groupMessageStubRecord(nil), b.items[groupID]...)
@@ -239,7 +246,7 @@ func TestPostgresRepositoryMarkReadSupportMatchesCurrentPhase(t *testing.T) {
 		t.Fatalf("expected ErrMessageNotFound, got %v", err)
 	}
 
-	if err := repo.MarkAllRead(context.Background(), "user_alice"); err != nil {
+	if _, err := repo.MarkAllRead(context.Background(), "user_alice"); err != nil {
 		t.Fatalf("expected mark_all_read postgres behavior, got %v", err)
 	}
 	state = backend.readStates[groupMessageReadStateKey("group_1", "user_alice")]

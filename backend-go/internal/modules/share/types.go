@@ -36,9 +36,9 @@ type CreateShareRequest struct {
 }
 
 type ShareCreated struct {
-	ShareID   string `json:"share_id"`
-	ShareCode string `json:"share_code"`
-	ExpiresAt string `json:"expires_at,omitempty"`
+	ShareID   string  `json:"share_id"`
+	ShareCode string  `json:"share_code"`
+	ExpiresAt *string `json:"expires_at"`
 }
 
 type GetShareRequest struct {
@@ -46,15 +46,15 @@ type GetShareRequest struct {
 }
 
 type ShareUserInfo struct {
-	UserID    string `json:"user_id"`
-	Nickname  string `json:"nickname"`
-	AvatarURL string `json:"avatar_url,omitempty"`
+	UserID    string  `json:"user_id"`
+	Nickname  string  `json:"nickname"`
+	AvatarURL *string `json:"avatar_url"`
 }
 
 type SharePreview struct {
-	Title    string `json:"title"`
-	Subtitle string `json:"subtitle,omitempty"`
-	CoverURL string `json:"cover_url,omitempty"`
+	Title    string  `json:"title"`
+	Subtitle *string `json:"subtitle"`
+	CoverURL *string `json:"cover_url"`
 }
 
 type ShareBase struct {
@@ -63,13 +63,13 @@ type ShareBase struct {
 	ShareType string        `json:"share_type"`
 	Creator   ShareUserInfo `json:"creator"`
 	CreatedAt string        `json:"created_at"`
-	ExpiresAt string        `json:"expires_at,omitempty"`
+	ExpiresAt *string       `json:"expires_at"`
 }
 
 type ShareDetail struct {
 	Share   ShareBase      `json:"share"`
 	Payload map[string]any `json:"payload"`
-	Preview *SharePreview  `json:"preview,omitempty"`
+	Preview *SharePreview  `json:"preview"`
 }
 
 type PaginationParams = types.PaginationParams
@@ -84,14 +84,14 @@ type ShareListItem struct {
 	ShareCode string        `json:"share_code"`
 	ShareType string        `json:"share_type"`
 	CreatedAt string        `json:"created_at"`
-	ExpiresAt string        `json:"expires_at,omitempty"`
+	ExpiresAt *string       `json:"expires_at"`
 	IsRevoked bool          `json:"is_revoked"`
-	Preview   *SharePreview `json:"preview,omitempty"`
+	Preview   *SharePreview `json:"preview"`
 }
 
 type PaginatedShares struct {
 	Items      []ShareListItem `json:"items"`
-	NextCursor string          `json:"next_cursor,omitempty"`
+	NextCursor *string         `json:"next_cursor"`
 }
 
 // RevokeShareRequest revokes a share (spec api_spec_share.md): exactly one of

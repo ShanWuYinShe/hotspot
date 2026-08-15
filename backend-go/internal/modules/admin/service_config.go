@@ -26,7 +26,8 @@ func (s *Service) ListAuditLogs(ctx context.Context, req AuditLogListRequest) (P
 	}
 	resp := PaginatedAuditLogs{Items: page.Items}
 	if page.Next != nil {
-		resp.NextCursor = encodeAuditCursor(*page.Next)
+		c := encodeAuditCursor(*page.Next)
+		resp.NextCursor = &c
 	}
 	return resp, nil, nil
 }

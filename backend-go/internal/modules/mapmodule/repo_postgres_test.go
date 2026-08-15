@@ -25,14 +25,33 @@ func (b *mapBackendStub) Exec(context.Context, string, ...any) error {
 func (b *mapBackendStub) QueryRow(context.Context, string, ...any) persistence.Row {
 	return testdb.RowValues{Err: persistence.ErrNotImplemented}
 }
-func (b *mapBackendStub) Query(_ context.Context, query string, _ ...any) (persistence.Rows, error) {
+func (b *mapBackendStub) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
 	if err := b.queryErrs[query]; err != nil {
 		return nil, err
 	}
-	if rows, ok := b.queryRowsByQuery[query]; ok {
-		return &testdb.RowsValues{Rows: rows}, nil
+	rows, ok := b.queryRowsByQuery[query]
+	if !ok {
+		return &persistence.InMemoryRows{}, nil
 	}
-	return &persistence.InMemoryRows{}, nil
+	// 真实过滤语义在 SQL（$4=startTime / $5=endTime）；stub 按传入参数等价过滤，
+	// 验证 repo 确实把时间窗下推到了查询层。
+	if query == queryMapCanvasMoments && len(args) >= 5 {
+		start, _ := args[3].(*time.Time)
+		end, _ := args[4].(*time.Time)
+		filtered := make([][]any, 0, len(rows))
+		for _, row := range rows {
+			createdAt, _ := row[5].(time.Time)
+			if start != nil && createdAt.Before(*start) {
+				continue
+			}
+			if end != nil && createdAt.After(*end) {
+				continue
+			}
+			filtered = append(filtered, row)
+		}
+		rows = filtered
+	}
+	return &testdb.RowsValues{Rows: rows}, nil
 }
 
 func newMapFactory(backend persistence.PostgresQueryBackend) *persistence.Factory {
@@ -146,7 +165,7 @@ func TestPostgresRepositoryHeatmapAppliesDataTypeFilter(t *testing.T) {
 	if len(resp.Items) != 1 || resp.Items[0].TotalCount != 2 {
 		t.Fatalf("unexpected heatmap: %#v", resp.Items)
 	}
-	if resp.Items[0].Breakdown == nil || resp.Items[0].Breakdown.User != 2 {
+	if resp.Items[0].Breakdown == nil || *resp.Items[0].Breakdown.User != 2 {
 		t.Fatalf("unexpected breakdown: %#v", resp.Items[0])
 	}
 }
@@ -159,7 +178,7 @@ func TestPostgresRepositoryReturnsEmptyWhenCursorPastEnd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("paginateHotspots returned error: %v", err)
 	}
-	if len(resp.Items) != 0 || resp.NextCursor != "" {
+	if len(resp.Items) != 0 || resp.NextCursor != nil {
 		t.Fatalf("expected empty page after cursor, got %#v", resp)
 	}
 }
@@ -188,7 +207,7 @@ func TestPostgresRepositoryAggregatesHeatmapBreakdownAndSortsByTotalCount(t *tes
 	if len(resp.Items) < 2 {
 		t.Fatalf("expected multiple buckets, got %#v", resp.Items)
 	}
-	if resp.Items[0].TotalCount != 4 || resp.Items[0].Breakdown.User != 2 || resp.Items[0].Breakdown.Group != 1 || resp.Items[0].Breakdown.Moment != 1 {
+	if resp.Items[0].TotalCount != 4 || *resp.Items[0].Breakdown.User != 2 || *resp.Items[0].Breakdown.Group != 1 || *resp.Items[0].Breakdown.Moment != 1 {
 		t.Fatalf("unexpected top bucket: %#v", resp.Items[0])
 	}
 	if resp.Items[0].TotalCount < resp.Items[1].TotalCount {
@@ -241,10 +260,10 @@ func TestPostgresRepositoryPaginatesHotspotsWithOpaqueCursor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Hotspots returned error: %v", err)
 	}
-	if len(first.Items) != 2 || first.NextCursor == "" {
+	if len(first.Items) != 2 || first.NextCursor == nil {
 		t.Fatalf("expected first page with next cursor, got %#v", first)
 	}
-	second, err := repo.Hotspots(context.Background(), canvasQuery{Bounds: testMapBounds(), Center: testMapCenter(), Limit: 2, DataType: "user", Cursor: first.NextCursor})
+	second, err := repo.Hotspots(context.Background(), canvasQuery{Bounds: testMapBounds(), Center: testMapCenter(), Limit: 2, DataType: "user", Cursor: *first.NextCursor})
 	if err != nil {
 		t.Fatalf("Hotspots second page returned error: %v", err)
 	}

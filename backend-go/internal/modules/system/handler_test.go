@@ -217,7 +217,7 @@ func TestListAnnouncementsReturnsRepoData(t *testing.T) {
 	if resp.Code != 0 || len(resp.Data.Items) != 1 {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
-	if resp.Data.Items[0].AnnouncementID != "ann_1" || resp.Data.Items[0].ActionURL != "https://example.com/maintenance" {
+	if resp.Data.Items[0].AnnouncementID != "ann_1" || *resp.Data.Items[0].ActionURL != "https://example.com/maintenance" {
 		t.Fatalf("unexpected announcement item: %#v", resp.Data.Items[0])
 	}
 }

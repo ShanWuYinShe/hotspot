@@ -33,7 +33,7 @@ func TestMemoryGroupMessageLifecycle(t *testing.T) {
 	if err != nil || len(page1.Items) != 1 || page1.Items[0].MessageID != sent2.MessageID {
 		t.Fatalf("history page1: %#v err=%v", page1, err)
 	}
-	page2, err := repo.History(ctx, "g1", &PaginationParams{Limit: 1, Cursor: page1.NextCursor})
+	page2, err := repo.History(ctx, "g1", &PaginationParams{Limit: 1, Cursor: *page1.NextCursor})
 	if err != nil || len(page2.Items) != 1 || page2.Items[0].MessageID != sent.MessageID {
 		t.Fatalf("history page2: %#v err=%v", page2, err)
 	}
@@ -80,7 +80,7 @@ func TestMemoryMarkReadAndUnreadCounts(t *testing.T) {
 	if err := repo.MarkAsRead(ctx, "u2", MarkGroupMessagesReadRequest{GroupID: "g1", UpToMessageID: sent2.MessageID}); err != nil {
 		t.Fatalf("mark as read: %v", err)
 	}
-	if err := repo.MarkAllRead(ctx, "u2"); err != nil {
+	if _, err := repo.MarkAllRead(ctx, "u2"); err != nil {
 		t.Fatalf("mark all read: %v", err)
 	}
 	// 未读计数为 0（已全部已读）
@@ -129,7 +129,7 @@ func TestMemoryMemberAndReplySemantics(t *testing.T) {
 		t.Fatalf("send2: %v", err)
 	}
 	reply, found, err := repo.GetMessageForReply(ctx, sent.MessageID)
-	if err != nil || !found || reply.Content != "reply me" {
+	if err != nil || !found || *reply.Content != "reply me" {
 		t.Fatalf("reply lookup: %#v found=%v err=%v", reply, found, err)
 	}
 	if _, found, _ := repo.GetMediaForMessage(ctx, "m1"); found {

@@ -7,6 +7,7 @@ import (
 
 	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 func (r *PostgresRepository) ListMyInvites(ctx context.Context, userID string, status *ApplicationStatus, limit int, cursor string) ([]GroupInviteItem, string, error) {
@@ -36,7 +37,7 @@ func (r *PostgresRepository) ListMyInvites(ctx context.Context, userID string, s
 		if err := rows.Scan(&item.InviteID, &groupID, &groupName, &groupAvatar, &membersCount, &inviterUserID, &message, &statusText, &createdAt, &expiresAt, &respondedAt); err != nil {
 			return nil, "", err
 		}
-		item.Group = GroupInfo{GroupID: groupID, Name: groupName, AvatarURL: groupAvatar, MembersCount: membersCount}
+		item.Group = GroupInfo{GroupID: groupID, Name: groupName, AvatarURL: types.StrPtr(groupAvatar), MembersCount: membersCount}
 		item.Inviter = UserInfo{UserID: inviterUserID, Nickname: inviterUserID}
 		if message != "" {
 			item.Message = &message
@@ -75,6 +76,9 @@ func (r *PostgresRepository) AcceptInvite(ctx context.Context, userID string, in
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
+		if err := enforceGroupCapacity(txCtx, queryable, invite.Group.GroupID); err != nil {
+			return err
+		}
 		if err := queryable.Exec(txCtx, queryUpdateGroupInvite, inviteID, string(ApplicationStatusAccepted), now); err != nil {
 			return err
 		}
@@ -104,7 +108,12 @@ func (r *PostgresRepository) InviteMember(ctx context.Context, userID string, re
 	var existingID string
 	var existingExpiresAt *time.Time
 	if err := queryable.QueryRow(ctx, queryFindPendingGroupInvite, req.GroupID, req.UserID).Scan(&existingID, &existingExpiresAt); err == nil && existingID != "" {
-		return Invitation{InviteID: existingID, ExpiresAt: derefTime(existingExpiresAt)}, nil
+		expiresAtStr := derefTime(existingExpiresAt)
+		var expiresAtPtr *string
+		if expiresAtStr != "" {
+			expiresAtPtr = &expiresAtStr
+		}
+		return Invitation{InviteID: &existingID, ExpiresAt: expiresAtPtr}, nil
 	}
 	inviteID, err := idgen.WithPrefix("invite_")
 	if err != nil {
@@ -119,9 +128,10 @@ func (r *PostgresRepository) InviteMember(ctx context.Context, userID string, re
 		return Invitation{}, err
 	}
 	if expiresAtDB == nil {
-		return Invitation{InviteID: inviteID}, nil
+		return Invitation{InviteID: &inviteID}, nil
 	}
-	return Invitation{InviteID: inviteID, ExpiresAt: expiresAtDB.UTC().Format(time.RFC3339)}, nil
+	expiresAtValue := expiresAtDB.UTC().Format(time.RFC3339)
+	return Invitation{InviteID: &inviteID, ExpiresAt: &expiresAtValue}, nil
 }
 
 func (r *PostgresRepository) ListSentInvites(ctx context.Context, groupID string, status *ApplicationStatus, limit int, cursor string) ([]GroupSentInviteItem, string, error) {
@@ -144,13 +154,14 @@ func (r *PostgresRepository) ListSentInvites(ctx context.Context, groupID string
 	items := make([]GroupSentInviteItem, 0)
 	for rows.Next() {
 		var item GroupSentInviteItem
-		var inviteeUserID, message, statusText string
+		var inviterUserID, inviterNickname, inviteeUserID, inviteeNickname, message, statusText string
 		var createdAt time.Time
 		var expiresAt, respondedAt *time.Time
-		if err := rows.Scan(&item.InviteID, &inviteeUserID, &message, &statusText, &createdAt, &expiresAt, &respondedAt); err != nil {
+		if err := rows.Scan(&item.InviteID, &inviterUserID, &inviterNickname, &inviteeUserID, &inviteeNickname, &message, &statusText, &createdAt, &expiresAt, &respondedAt); err != nil {
 			return nil, "", err
 		}
-		item.Invitee = UserInfo{UserID: inviteeUserID, Nickname: inviteeUserID}
+		item.Inviter = UserInfo{UserID: inviterUserID, Nickname: inviterNickname}
+		item.Invitee = UserInfo{UserID: inviteeUserID, Nickname: inviteeNickname}
 		if message != "" {
 			item.Message = &message
 		}
