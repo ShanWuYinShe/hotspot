@@ -46,11 +46,27 @@ func (r *PostgresRepository) History(ctx context.Context, groupID string, pagina
 		var senderNickname string
 		var senderAvatar string
 		var content string
+		var fileID, shareCode string
+		var replyMessageID, replyType, replyContent, replyShareCode string
+		var replySenderID, replyNickname, replyAvatar, replySentAt string
 		var readCount int
-		if err := rows.Scan(&item.MessageID, &item.Type, &content, &item.SentAt, &editedAt, &recalledAt, &senderUserID, &senderNickname, &senderAvatar, &readCount); err != nil {
+		if err := rows.Scan(&item.MessageID, &item.Type, &content, &item.SentAt, &editedAt, &recalledAt, &fileID, &shareCode, &replyMessageID, &replyType, &replyContent, &replyShareCode, &replySenderID, &replyNickname, &replyAvatar, &replySentAt, &senderUserID, &senderNickname, &senderAvatar, &readCount); err != nil {
 			return PaginatedGroupMessages{}, err
 		}
 		item.Content = types.StrPtr(content)
+		if shareCode != "" {
+			item.ShareCode = types.StrPtr(shareCode)
+		}
+		if replyMessageID != "" {
+			item.ReplyTo = &MessageBrief{
+				MessageID: replyMessageID,
+				Type:      replyType,
+				Content:   types.StrPtr(replyContent),
+				ShareCode: types.StrPtr(replyShareCode),
+				Sender:    types.UserInfo{UserID: replySenderID, Nickname: replyNickname, AvatarURL: types.StrPtr(replyAvatar)},
+				SentAt:    replySentAt,
+			}
+		}
 		item.EditedAt = types.StrPtr(editedAt)
 		item.RecalledAt = types.StrPtr(recalledAt)
 		item.ReadCount = &readCount

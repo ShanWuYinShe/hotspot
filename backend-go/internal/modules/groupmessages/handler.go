@@ -23,7 +23,7 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteInvalidRequest(w, r, "Send", "请求体格式错误")
 		return
 	}
-	if req.GroupID == "" || req.Type == "" {
+	if req.GroupID == "" || !isValidSendRequest(req) {
 		httpx.WriteInvalidRequest(w, r, "Send", "参数错误")
 		return
 	}
@@ -225,4 +225,23 @@ func isValidPagination(p *PaginationParams) bool {
 	}
 	_, _, err := decodeGroupMessageCursor(p.Cursor)
 	return err == nil
+}
+
+// isValidSendRequest 按消息类型校验必填字段（与私聊侧 isValidSendRequest
+// 一致）：text 需要 content；image/video/audio/file 需要 file_id；share
+// 需要 share_code。此前不校验，text 空 content、share 空 share_code 都能发出。
+func isValidSendRequest(req SendGroupMessageRequest) bool {
+	if req.Type == "" {
+		return false
+	}
+	switch req.Type {
+	case "text":
+		return req.Content != ""
+	case "image", "video", "audio", "file":
+		return req.FileID != ""
+	case "share":
+		return req.ShareCode != ""
+	default:
+		return false
+	}
 }

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
 )
@@ -43,7 +44,14 @@ func (b *groupMessageBackendStub) Exec(_ context.Context, query string, args ...
 		return err
 	}
 	if query == queryInsertGroupMessage {
-		record := groupMessageStubRecord{MessageID: args[0].(string), GroupID: args[1].(string), Type: args[3].(string), Content: args[4].(string), SentAt: args[5].(string)}
+		// 参数布局：(message_id, group_id, sender_user_id, type, content, share_code, file_id, reply_to_message_id, sent_at)
+		sentAt := func() string {
+			if t, ok := args[8].(time.Time); ok {
+				return t.Format(time.RFC3339Nano)
+			}
+			return args[8].(string)
+		}()
+		record := groupMessageStubRecord{MessageID: args[0].(string), GroupID: args[1].(string), Type: args[3].(string), Content: args[4].(string), SentAt: sentAt}
 		b.items[record.GroupID] = append(b.items[record.GroupID], record)
 		return nil
 	}
@@ -118,7 +126,8 @@ func (b *groupMessageBackendStub) QueryRow(_ context.Context, query string, args
 				return testdb.RowValues{Values: []any{record.SentAt, record.MessageID}}
 			}
 		}
-		return testdb.RowValues{Err: persistence.ErrNotImplemented}
+		// 对齐真实 pgx：无行返回 pgx.ErrNoRows（repo 据此区分 not-found 与故障）。
+		return testdb.RowValues{Err: pgx.ErrNoRows}
 	}
 	return testdb.RowValues{Err: persistence.ErrNotImplemented}
 }
@@ -144,7 +153,11 @@ func (b *groupMessageBackendStub) Query(_ context.Context, query string, args ..
 		})
 		rows := make([][]any, 0, len(records))
 		for _, record := range records {
-			rows = append(rows, []any{record.MessageID, record.Type, record.Content, record.SentAt, "", "", "", "", "", 0})
+			// 列布局对齐 queryGroupMessagesHistory：
+			// message_id, type, content, sent_at, edited_at, recalled_at,
+			// file_id, share_code, reply(message_id/type/content/share_code/sender/nickname/avatar/sent_at),
+			// sender_user_id, sender_nickname, sender_avatar, read_count
+			rows = append(rows, []any{record.MessageID, record.Type, record.Content, record.SentAt, "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 0})
 		}
 		return &testdb.RowsValues{Rows: rows}, nil
 	}

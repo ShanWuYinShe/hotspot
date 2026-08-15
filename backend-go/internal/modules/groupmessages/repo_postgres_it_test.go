@@ -475,7 +475,7 @@ func TestPostgresIT_GetMediaForMessage_NotImplementedStub(t *testing.T) {
 			GroupID: groupID, SenderUserID: owner, Type: "image", Content: "img",
 		})
 
-		data, found, err := repo.GetMediaForMessage(ctx, sent.MessageID)
+		data, found, err := repo.GetMediaForMessage(ctx, sent.MessageID, "u1")
 		if err != nil {
 			t.Fatalf("GetMediaForMessage: %v", err)
 		}
@@ -487,7 +487,7 @@ func TestPostgresIT_GetMediaForMessage_NotImplementedStub(t *testing.T) {
 		}
 
 		// 不存在的 fileID 同样应返回 (nil, false, nil)
-		data, found, err = repo.GetMediaForMessage(ctx, "file_does_not_exist")
+		data, found, err = repo.GetMediaForMessage(ctx, "file_does_not_exist", "u1")
 		if err != nil {
 			t.Fatalf("GetMediaForMessage missing: %v", err)
 		}

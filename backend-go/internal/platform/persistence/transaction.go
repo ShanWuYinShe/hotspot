@@ -48,7 +48,14 @@ func QueryableFromContext(ctx context.Context) (Queryable, bool) {
 // backed by a pgxpool, otherwise (in-memory or nil factory) it invokes fn
 // directly — in-memory tests that need rollback wire NewMemoryTxRunner in at
 // the service layer instead.
+//
+// 嵌套调用时（service 层与 repo 层各自包裹，如 moments.Update）复用 ctx 中
+// 已有的事务直接执行 fn：否则外层事务占住连接 A、内层再从池里抢连接 B，
+// 池大小 N 时 N 个并发请求互相等待第二个连接，造成连接池自死锁。
 func RunInTransaction(ctx context.Context, factory *Factory, fn func(ctx context.Context) error) (err error) {
+	if _, ok := QueryableFromContext(ctx); ok {
+		return fn(ctx)
+	}
 	if factory == nil || factory.DB == nil {
 		return fn(ctx)
 	}

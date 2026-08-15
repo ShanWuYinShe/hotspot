@@ -153,9 +153,11 @@ const (
 		WHERE message_id = $1`
 
 	queryPrivateMessageParticipants = `
-		SELECT sender_user_id, receiver_user_id
-		FROM private_messages
-		WHERE message_id = $1`
+SELECT pm.sender_user_id,
+       CASE WHEN pc.user_a_id = pm.sender_user_id THEN pc.user_b_id ELSE pc.user_a_id END
+FROM private_messages pm
+JOIN private_chats pc ON pc.chat_key = pm.chat_key
+WHERE pm.message_id = $1`
 
 	queryCountPrivateMessagesByTarget = `
 		SELECT CASE

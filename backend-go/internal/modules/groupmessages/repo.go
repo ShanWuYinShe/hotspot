@@ -43,7 +43,8 @@ type Repository interface {
 	// 真实成员落库/推送，防内容泄漏与通知轰炸）。
 	FilterMemberIDs(ctx context.Context, groupID string, userIDs []string) ([]string, error)
 	GetMessageForReply(context.Context, string) (*MessageBrief, bool, error)
-	GetMediaForMessage(context.Context, string) (map[string]any, bool, error)
+	// GetMediaForMessage 取聊天媒体元数据（owner 过滤：只能引用自己上传的文件）。
+	GetMediaForMessage(context.Context, string, string) (map[string]any, bool, error)
 	MemberMuteStatus(context.Context, string, string) (isMuted bool, mutedUntil string, found bool, err error)
 	MessageExists(ctx context.Context, messageID string) (found bool, senderID string, err error)
 	MessageGroupID(ctx context.Context, messageID string) (groupID string, found bool, err error)

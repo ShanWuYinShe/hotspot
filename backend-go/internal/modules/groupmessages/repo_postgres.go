@@ -37,10 +37,24 @@ func (r *PostgresRepository) Send(ctx context.Context, req SendGroupMessageReque
 	if req.SenderUserID != "" {
 		senderID = req.SenderUserID
 	}
-	if err := queryable.Exec(ctx, queryInsertGroupMessage, messageID, req.GroupID, senderID, req.Type, req.Content, now.Format(time.RFC3339)); err != nil {
+	// 载荷列可空：空串按 NULL 落库，History 侧 COALESCE 还原。
+	var shareCode, fileID, replyTo interface{}
+	if req.ShareCode != "" {
+		shareCode = req.ShareCode
+	}
+	if req.FileID != "" {
+		fileID = req.FileID
+	}
+	if req.ReplyToMessageID != "" {
+		replyTo = req.ReplyToMessageID
+	}
+	// sent_at 纳秒精度：秒级截断会让同秒消息的排序退化为随机 message_id 兜底，
+	// 破坏 History 顺序与已读游标语义（私聊侧同为 RFC3339Nano）。
+	sentAt := now.Format(time.RFC3339Nano)
+	if err := queryable.Exec(ctx, queryInsertGroupMessage, messageID, req.GroupID, senderID, req.Type, req.Content, shareCode, fileID, replyTo, sentAt); err != nil {
 		return MessageSentResult{}, err
 	}
-	return MessageSentResult{MessageID: messageID, SentAt: now.Format(time.RFC3339)}, nil
+	return MessageSentResult{MessageID: messageID, SentAt: sentAt}, nil
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, req UpdateGroupMessageRequest) (MessageEventMeta, error) {
@@ -134,7 +148,10 @@ func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req 
 	var sentAt time.Time
 	var messageID string
 	if err := queryable.QueryRow(ctx, queryGroupMessageReadStateByMessage, userID, req.GroupID, req.UpToMessageID).Scan(&sentAt, &messageID); err != nil {
-		return ErrMessageNotFound
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrMessageNotFound
+		}
+		return err
 	}
 	return queryable.Exec(ctx, queryUpsertGroupMessageReadState, req.GroupID, userID, messageID, sentAt)
 }
@@ -207,7 +224,10 @@ func (r *PostgresRepository) lookupMessageMetaFull(ctx context.Context, messageI
 	var recalled bool
 	var rawSenderID *string
 	if err := queryable.QueryRow(ctx, "SELECT group_id, COALESCE(sender_user_id, ''), type, is_recalled, TO_CHAR(sent_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') FROM group_messages WHERE message_id = $1", messageID).Scan(&groupID, &rawSenderID, &msgType, &recalled, &sentAt); err != nil {
-		return "", "", "", false, "", ErrMessageNotFound
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", "", "", false, "", ErrMessageNotFound
+		}
+		return "", "", "", false, "", err
 	}
 	senderUserID = ""
 	if rawSenderID != nil {
@@ -283,7 +303,12 @@ func (r *PostgresRepository) GetMessageForReply(ctx context.Context, messageID s
 	var senderUserID, nickname, avatarURL, msgType, content, shareCode, sentAt string
 	err := queryable.QueryRow(ctx, queryGetGroupMessageForReply, messageID).Scan(&senderUserID, &nickname, &avatarURL, &msgType, &content, &shareCode, &sentAt)
 	if err != nil {
-		return nil, false, nil
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, false, nil
+		}
+		// 其余错误（连接故障、schema 不匹配）原样上抛：此前统一吞成 not-found，
+		// 掩蔽了 share_code 列缺失这类真实故障。
+		return nil, false, err
 	}
 	return &MessageBrief{
 		MessageID: messageID,
@@ -304,7 +329,10 @@ func (r *PostgresRepository) MessageExists(ctx context.Context, messageID string
 	var ignoreNickname, ignoreAvatar, ignoreType, ignoreContent, ignoreShareCode, ignoreSentAt string
 	err := queryable.QueryRow(ctx, queryGetGroupMessageForReply, messageID).Scan(&senderUserID, &ignoreNickname, &ignoreAvatar, &ignoreType, &ignoreContent, &ignoreShareCode, &ignoreSentAt)
 	if err != nil {
-		return false, "", nil
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, "", nil
+		}
+		return false, "", err
 	}
 	return true, senderUserID, nil
 }
@@ -317,7 +345,10 @@ func (r *PostgresRepository) MessageGroupID(ctx context.Context, messageID strin
 	var groupID string
 	err := queryable.QueryRow(ctx, queryGetGroupMessageGroupID, messageID).Scan(&groupID)
 	if err != nil {
-		return "", false, nil
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", false, nil
+		}
+		return "", false, err
 	}
 	return groupID, true, nil
 }
@@ -330,7 +361,10 @@ func (r *PostgresRepository) GetGroupName(ctx context.Context, groupID string) (
 	var name string
 	err := queryable.QueryRow(ctx, queryGetGroupName, groupID).Scan(&name)
 	if err != nil {
-		return "", false, nil
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", false, nil
+		}
+		return "", false, err
 	}
 	return name, true, nil
 }
@@ -348,7 +382,10 @@ func (r *PostgresRepository) LookupMessageMeta(ctx context.Context, messageID st
 	var rawSenderID *string
 	err := queryable.QueryRow(ctx, queryLookupMessageOwner, messageID).Scan(&groupID, &rawSenderID)
 	if err != nil {
-		return MessageOwnerMeta{}, false, nil
+		if errors.Is(err, pgx.ErrNoRows) {
+			return MessageOwnerMeta{}, false, nil
+		}
+		return MessageOwnerMeta{}, false, err
 	}
 	senderUserID := ""
 	if rawSenderID != nil {
@@ -365,6 +402,26 @@ func (r *PostgresRepository) getQueryable() (persistence.QueryableDB, bool) {
 	return queryable, ok
 }
 
-func (r *PostgresRepository) GetMediaForMessage(ctx context.Context, fileID string) (map[string]any, bool, error) {
-	return nil, false, nil
+// GetMediaForMessage 取聊天媒体元数据（WS media 负载）。owner 过滤确保只能
+// 引用自己上传的 completed 文件（与私聊侧语义一致）。
+func (r *PostgresRepository) GetMediaForMessage(ctx context.Context, fileID, ownerUserID string) (map[string]any, bool, error) {
+	queryable, ok := r.getQueryable()
+	if !ok {
+		return nil, false, persistence.ErrNotImplemented
+	}
+	var fileIDFound, storageKey, fileName, mimeType string
+	var fileSize int
+	err := queryable.QueryRow(ctx, queryGetGroupMediaFileForMessage, fileID, ownerUserID).Scan(&fileIDFound, &storageKey, &fileName, &fileSize, &mimeType)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+	return map[string]any{
+		"url":       storageKey,
+		"file_name": fileName,
+		"file_size": fileSize,
+		"mime_type": mimeType,
+	}, true, nil
 }

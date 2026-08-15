@@ -50,16 +50,22 @@ func (r *InMemoryRepository) GetGroupName(_ context.Context, groupID string) (st
 }
 func (r *InMemoryRepository) Send(_ context.Context, req SendGroupMessageRequest) (MessageSentResult, error) {
 	now := time.Now().UTC()
+	r.mu.Lock()
+	// seq 自增必须在锁内：锁外并发 Send 对同一字段竞态写（-race 必报）。
 	r.seq++
+	// 固定 9 位纳秒（不用 RFC3339Nano：尾零截断会让等值时间输出不同长度的
+	// 字符串，History 的字符串排序与游标比较随之失序）。
 	msg := GroupMessageItem{
 		MessageID:    fmt.Sprintf("gm_%d_%d", now.UnixNano(), r.seq),
 		SenderUserID: req.SenderUserID,
 		Type:         req.Type,
 		Content:      types.StrPtr(req.Content),
-		SentAt:       now.Format(time.RFC3339),
+		SentAt:       now.Format("2006-01-02T15:04:05.000000000Z"),
 		Mentions:     req.Mentions,
 	}
-	r.mu.Lock()
+	if req.ShareCode != "" {
+		msg.ShareCode = types.StrPtr(req.ShareCode)
+	}
 	r.items[req.GroupID] = append(r.items[req.GroupID], msg)
 	if r.members[req.GroupID] == nil {
 		r.members[req.GroupID] = make(map[string]bool)
@@ -386,6 +392,6 @@ func (r *InMemoryRepository) LookupMessageMeta(_ context.Context, messageID stri
 	return MessageOwnerMeta{GroupID: groupID, SenderUserID: msg.SenderUserID}, true, nil
 }
 
-func (r *InMemoryRepository) GetMediaForMessage(_ context.Context, _ string) (map[string]any, bool, error) {
+func (r *InMemoryRepository) GetMediaForMessage(_ context.Context, _ string, _ string) (map[string]any, bool, error) {
 	return nil, false, nil
 }

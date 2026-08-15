@@ -86,7 +86,7 @@ func (r *stubRepo) LookupMessageMeta(_ context.Context, _ string) (MessageOwnerM
 	return r.ownerMeta, true, nil
 }
 
-func (r *stubRepo) GetMediaForMessage(_ context.Context, _ string) (map[string]any, bool, error) {
+func (r *stubRepo) GetMediaForMessage(_ context.Context, _ string, _ string) (map[string]any, bool, error) {
 	return r.mediaResult, r.mediaOk, r.mediaErr
 }
 
@@ -273,7 +273,7 @@ func TestBuildMediaReturnsInfo(t *testing.T) {
 	repo := &stubRepo{mediaResult: expected, mediaOk: true}
 	service := NewServiceWithRepo(repo)
 
-	result := service.buildMedia(context.Background(), "f1")
+	result := service.buildMedia(context.Background(), "f1", "u1")
 	if result == nil {
 		t.Fatal("expected non-nil result")
 	}
@@ -286,7 +286,7 @@ func TestBuildMediaReturnsNilWhenNotFound(t *testing.T) {
 	repo := &stubRepo{mediaResult: nil, mediaOk: false}
 	service := NewServiceWithRepo(repo)
 
-	result := service.buildMedia(context.Background(), "missing")
+	result := service.buildMedia(context.Background(), "missing", "u1")
 	if result != nil {
 		t.Fatalf("expected nil, got %v", result)
 	}
@@ -296,7 +296,7 @@ func TestBuildMediaReturnsNilOnError(t *testing.T) {
 	repo := &stubRepo{mediaResult: nil, mediaOk: true, mediaErr: errors.New("db error")}
 	service := NewServiceWithRepo(repo)
 
-	result := service.buildMedia(context.Background(), "f1")
+	result := service.buildMedia(context.Background(), "f1", "u1")
 	if result != nil {
 		t.Fatalf("expected nil on error, got %v", result)
 	}

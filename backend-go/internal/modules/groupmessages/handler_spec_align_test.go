@@ -163,7 +163,7 @@ func (r *specAdminRepo) IsMember(context.Context, string, string) (bool, error) 
 func (r *specAdminRepo) GetMessageForReply(context.Context, string) (*MessageBrief, bool, error) {
 	return nil, false, nil
 }
-func (r *specAdminRepo) GetMediaForMessage(context.Context, string) (map[string]any, bool, error) {
+func (r *specAdminRepo) GetMediaForMessage(context.Context, string, string) (map[string]any, bool, error) {
 	return nil, false, nil
 }
 func (r *specAdminRepo) MemberMuteStatus(context.Context, string, string) (bool, string, bool, error) {

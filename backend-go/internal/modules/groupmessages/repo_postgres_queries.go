@@ -7,30 +7,42 @@ const (
 	WHERE group_id = $1`
 
 	queryInsertGroupMessage = `
-	INSERT INTO group_messages (message_id, group_id, sender_user_id, type, content, sent_at)
-	VALUES ($1,$2,$3,$4,$5,$6)`
+	INSERT INTO group_messages (message_id, group_id, sender_user_id, type, content, share_code, file_id, reply_to_message_id, sent_at)
+	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`
 
 	queryGroupMessagesHistory = `
-	SELECT gm.message_id,
-	       gm.type,
-	       COALESCE(gm.content, ''),
-	       TO_CHAR(gm.sent_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
-	       COALESCE(TO_CHAR(gm.edited_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), ''),
-	       COALESCE(TO_CHAR(gm.recalled_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), ''),
-	       COALESCE(gm.sender_user_id, ''),
-	       COALESCE(sender.nickname, ''),
-	       COALESCE(sender.avatar_url, ''),
-	       COALESCE((
-	         SELECT COUNT(*)::int
-	         FROM group_message_read_state grs
-	         WHERE grs.group_id = gm.group_id AND grs.last_read_sent_at >= gm.sent_at
-	       ), 0) AS read_count
-	FROM group_messages gm
-	LEFT JOIN users sender ON sender.user_id = gm.sender_user_id
-	WHERE gm.group_id = $1
-	  AND ($2::timestamptz IS NULL OR gm.sent_at < $2::timestamptz OR (gm.sent_at = $2::timestamptz AND gm.message_id < $3))
-	ORDER BY gm.sent_at DESC, gm.message_id DESC
-	LIMIT $4`
+		SELECT gm.message_id,
+		       gm.type,
+		       COALESCE(gm.content, ''),
+		       TO_CHAR(gm.sent_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
+		       COALESCE(TO_CHAR(gm.edited_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), ''),
+		       COALESCE(TO_CHAR(gm.recalled_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), ''),
+		       COALESCE(gm.file_id, ''),
+		       COALESCE(gm.share_code, ''),
+		       COALESCE(reply.message_id, ''),
+		       COALESCE(reply.type, ''),
+		       COALESCE(reply.content, ''),
+		       COALESCE(reply.share_code, ''),
+		       COALESCE(reply.sender_user_id, ''),
+		       COALESCE(reply_sender.nickname, ''),
+		       COALESCE(reply_sender.avatar_url, ''),
+		       COALESCE(TO_CHAR(reply.sent_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), ''),
+		       COALESCE(gm.sender_user_id, ''),
+		       COALESCE(sender.nickname, ''),
+		       COALESCE(sender.avatar_url, ''),
+		       COALESCE((
+		         SELECT COUNT(*)::int
+		         FROM group_message_read_state grs
+		         WHERE grs.group_id = gm.group_id AND grs.last_read_sent_at >= gm.sent_at
+		       ), 0) AS read_count
+		FROM group_messages gm
+		LEFT JOIN users sender ON sender.user_id = gm.sender_user_id
+		LEFT JOIN group_messages reply ON reply.message_id = gm.reply_to_message_id
+		LEFT JOIN users reply_sender ON reply_sender.user_id = reply.sender_user_id
+		WHERE gm.group_id = $1
+		  AND ($2::timestamptz IS NULL OR gm.sent_at < $2::timestamptz OR (gm.sent_at = $2::timestamptz AND gm.message_id < $3))
+		ORDER BY gm.sent_at DESC, gm.message_id DESC
+		LIMIT $4`
 
 	queryUpdateGroupMessage = `
 	UPDATE group_messages
@@ -151,4 +163,15 @@ FROM group_members WHERE group_id = $1 AND user_id = $2`
 		SELECT group_id
 		FROM group_messages
 		WHERE message_id = $1`
+
+	// queryGetGroupMediaFileForMessage 取聊天媒体元数据（WS media 负载）。owner
+	// 过滤与私聊侧 queryGetMediaFileForMessage 一致：只能引用自己上传的文件。
+	queryGetGroupMediaFileForMessage = `
+		SELECT file_id,
+		       storage_key,
+		       COALESCE(file_name, ''),
+		       declared_file_size,
+		       declared_mime_type
+		FROM media_upload_sessions
+		WHERE file_id = $1 AND status = 'completed' AND user_id = $2`
 )

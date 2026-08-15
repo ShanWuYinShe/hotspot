@@ -132,7 +132,7 @@ func TestMemoryMemberAndReplySemantics(t *testing.T) {
 	if err != nil || !found || *reply.Content != "reply me" {
 		t.Fatalf("reply lookup: %#v found=%v err=%v", reply, found, err)
 	}
-	if _, found, _ := repo.GetMediaForMessage(ctx, "m1"); found {
+	if _, found, _ := repo.GetMediaForMessage(ctx, "m1", "u1"); found {
 		t.Fatal("media stub must not find")
 	}
 }

@@ -51,7 +51,7 @@ func (r *stubGroupMessageRepo) MarkAsRead(ctx context.Context, userID string, re
 	}
 	return nil
 }
-func (r *stubGroupMessageRepo) GetMediaForMessage(_ context.Context, _ string) (map[string]any, bool, error) {
+func (r *stubGroupMessageRepo) GetMediaForMessage(_ context.Context, _ string, _ string) (map[string]any, bool, error) {
 	return nil, false, nil
 }
 

@@ -162,7 +162,7 @@ func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (Messag
 		}
 	}
 	if req.FileID != "" {
-		if media := s.buildMedia(ctx, req.FileID); media != nil {
+		if media := s.buildMedia(ctx, req.FileID, userID); media != nil {
 			payload["media"] = media
 		}
 	}
@@ -407,8 +407,8 @@ func (s *Service) buildReplyTo(ctx context.Context, messageID string) *MessageBr
 	return info
 }
 
-func (s *Service) buildMedia(ctx context.Context, fileID string) map[string]any {
-	info, ok, err := s.repo.GetMediaForMessage(ctx, fileID)
+func (s *Service) buildMedia(ctx context.Context, fileID, ownerUserID string) map[string]any {
+	info, ok, err := s.repo.GetMediaForMessage(ctx, fileID, ownerUserID)
 	if err != nil || !ok {
 		return nil
 	}
