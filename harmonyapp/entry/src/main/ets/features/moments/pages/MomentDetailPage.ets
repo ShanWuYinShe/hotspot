@@ -391,7 +391,7 @@ export struct MomentDetailPage {
             Text(this.formatTime(moment.created_at))
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor(this.getCurrentThemePalette().textSecondary)
-            if (moment.location?.distance !== undefined) {
+            if (moment.location?.distance !== undefined && moment.location?.distance !== null) {
               Text(LocationUtil.formatDistance(moment.location.distance))
                 .fontSize(DesignConstants.FONT.SIZE.SM)
                 .fontColor(this.getCurrentThemePalette().textSecondary)

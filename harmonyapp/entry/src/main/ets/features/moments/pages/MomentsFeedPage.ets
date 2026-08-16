@@ -749,7 +749,7 @@ export struct MomentsFeedPage {
           Text(`${group.group?.members_count ?? 0} 人`)
             .fontSize(DesignConstants.FONT.SIZE.XS2)
             .fontColor(this.getCurrentThemePalette().textSecondary)
-          if (group.location?.distance !== undefined) {
+          if (group.location?.distance !== undefined && group.location?.distance !== null) {
             Text(LocationUtil.formatDistance(group.location.distance))
               .fontSize(DesignConstants.FONT.SIZE.XS2)
               .fontColor(this.getCurrentThemePalette().accentBackground)

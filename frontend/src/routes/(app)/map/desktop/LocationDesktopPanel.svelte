@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, Crosshair, Check, Heart } from '@lucide/svelte';
+	import { Search, MapPin, Navigation, X, Users, ChevronRight, Clock, Star, TrendingUp, Check, Heart } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
@@ -25,7 +25,6 @@ import PinMedia from '../shared/PinMedia.svelte';
 		mapCounts = $bindable<Record<PinType, number>>({ user: 0, group: 0, moment: 0 }),
 		onSelectPin,
 		onSelectLoc,
-		onReset,
 		onConfirm
 	}: {
 		searchQuery?: string;
@@ -38,7 +37,6 @@ import PinMedia from '../shared/PinMedia.svelte';
 		/** 选中附近图钉：由父组件同步设置 selectedPin 并移动地图中心。 */
 		onSelectPin: (pin: Pin) => void;
 		onSelectLoc: (loc: LocationResult) => void;
-		onReset: () => void;
 		onConfirm: () => void;
 	} = $props();
 
@@ -50,18 +48,7 @@ locationName = loc?.location_name ?? '';
 
 <!-- Header -->
 <div class="shrink-0">
-	<PageHeader title="位置选择" onBack={() => history.back()} subtitle={locationName || '位置选择'} sticky contentClassName="px-4 pt-4 pb-0">
-		{#snippet trailing()}
-			<button
-				type="button"
-				class="hover-btn hit-slop flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 circle-hover shadow-raised-sm focus-ring"
-				aria-label="重置位置"
-				onclick={onReset}
-			>
-				<Crosshair class="size-4 text-accent-default"   strokeWidth={1.75} />
-			</button>
-		{/snippet}
-	</PageHeader>
+	<PageHeader title="位置选择" onBack={() => history.back()} subtitle={locationName || '位置选择'} sticky contentClassName="px-4 pt-4 pb-0" />
 </div>
 
 <!-- Search -->

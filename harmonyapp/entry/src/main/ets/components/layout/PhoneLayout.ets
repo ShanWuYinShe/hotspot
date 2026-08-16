@@ -468,7 +468,7 @@ export struct PhoneLayout {
     .width('90%')
     .height(DesignConstants.LAYOUT.FAB_SIZE)
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-    .borderRadius(DesignConstants.SHAPE.INPUT) // 18
+    .borderRadius(DesignConstants.SHAPE.INPUT) // 16
     .backgroundColor(this.getPalette().surfaceSubtle)
     .alignItems(VerticalAlign.Center)
     .justifyContent(FlexAlign.Center)

@@ -463,7 +463,7 @@ export struct HomePage {
 
           Column() {
             Text('实时附近')
-              .fontSize(DesignConstants.FONT.SIZE.SM) // 13 对齐前端 text-body
+              .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-body
               .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getPalette().textPrimary)
             Text('持续更新')
@@ -815,7 +815,7 @@ export struct HomePage {
           Text(`${formatCount(group.group?.members_count ?? 0)} 人`)
             .fontSize(DesignConstants.FONT.SIZE.XS2)
             .fontColor(this.getPalette().textTertiary)
-          if (group.location?.distance !== undefined) {
+          if (group.location?.distance !== undefined && group.location?.distance !== null) {
             Text(LocationUtil.formatDistance(group.location.distance))
               .fontSize(DesignConstants.FONT.SIZE.XS2)
               .fontColor(this.getPalette().accentText)

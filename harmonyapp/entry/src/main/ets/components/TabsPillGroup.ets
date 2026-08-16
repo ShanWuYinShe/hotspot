@@ -58,7 +58,7 @@ export struct TabsPillGroup {
         }
 
         Text(tab.label)
-          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(isActiveTab ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
           .fontColor(isActiveTab ? this.getPalette().accentText : this.getPalette().tabBarInactive)
       }

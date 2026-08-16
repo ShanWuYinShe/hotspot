@@ -36,7 +36,7 @@ export struct LoadMoreButton {
             .color(this.getPalette().textSecondary)
             .margin({ right: DesignConstants.SPACING.XS })
           Text(this.loadingText)
-            .fontSize(DesignConstants.FONT.SIZE.SM) // 13
+            .fontSize(DesignConstants.FONT.SIZE.SM) // 12
             .fontColor(this.getPalette().textSecondary)
         } else {
           Text() {

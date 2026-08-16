@@ -4,7 +4,7 @@ import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 /**
  * 通用多行输入框（对齐前端 textarea）
- * inputBackgroundColor 底 + 18 圆角，自适应高度。
+ * inputBackgroundColor 底 + 16 圆角，自适应高度。
  * 受控组件：父组件维护 value，通过 onChange 回写。
  */
 @Reusable
@@ -13,7 +13,7 @@ export struct SystemTextArea {
   @Prop value: string = '';
   @Prop placeholder: string = '';
   @Prop minHeight: number = 96;
-  @Prop fontSize: number = DesignConstants.FONT.SIZE.SM; // 13
+  @Prop fontSize: number = DesignConstants.FONT.SIZE.SM; // 12
   /** 最大行数（约束高度），0 表示不限 */
   @Prop maxLines: number = 0;
   @Prop hasError: boolean = false;
@@ -34,7 +34,7 @@ export struct SystemTextArea {
       .constraintSize({ minHeight: this.minHeight })
       .padding(DesignConstants.SPACING.MD)
       .backgroundColor(this.getPalette().inputBackgroundColor)
-      .borderRadius(DesignConstants.SHAPE.INPUT) // 18
+      .borderRadius(DesignConstants.SHAPE.INPUT) // 16
       .border({
         width: DesignConstants.BORDER_WIDTH.HAIRLINE,
         color: this.hasError ? this.getPalette().error : this.getPalette().borderColor

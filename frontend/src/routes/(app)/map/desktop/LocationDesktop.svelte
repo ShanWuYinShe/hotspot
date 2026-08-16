@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { X, ChevronRight, SlidersHorizontal, Heart, Check } from '@lucide/svelte';
+	import { X, ChevronRight, SlidersHorizontal, Heart, Check, Crosshair } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation } from '@/lib/start-default-location';
@@ -11,7 +11,6 @@
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
 	import MapHeatDot from '../shared/MapHeatDot.svelte';
 	import PinMedia from '../shared/PinMedia.svelte';
-	import TagPill from '@/components/forms/TagPill.svelte';
 	import LocationDesktopPanel from './LocationDesktopPanel.svelte';
 
 	// 桌面地图探索：左侧栏（统计/搜索/Tab 列表/确认，由 LocationDesktopPanel 承载）
@@ -119,11 +118,6 @@
 			{mapCounts}
 			onSelectPin={handleSelectPin}
 			onSelectLoc={handleSelectLoc}
-			onReset={() => {
-				mapCenter = defaultCenter;
-				selectedLoc = null;
-				searchQuery = '';
-			}}
 			onConfirm={handleConfirm}
 		/>
 	</div>
@@ -203,16 +197,25 @@
 				{/if}
 			</button>
 			{#if showFilter}
-				<div class="mt-2 overflow-hidden rounded-md w-50 shadow-raised-lg border border-border-default bg-surface-primary">
-					<div class="flex flex-wrap gap-1.5 p-2">
+				<div class="mt-2 overflow-hidden rounded-md w-56 shadow-raised-lg border border-border-default bg-surface-primary">
+					<div class="py-1 divide-y divide-border-default">
 						{#each [{ type: 'user', label: '用户', count: userCount }, { type: 'group', label: '群组', count: groupCount }, { type: 'moment', label: '瞬间', count: momentCount }] as item}
 							{@const active = activeFilters.has(item.type as PinType)}
-							<TagPill active={active} onClick={() => toggleFilter(item.type as PinType)}>
-								{#snippet iconSnippet()}
-									<span class="inline-flex shrink-0">{@html markerSvg(item.type as PinType, 1, { w: 14, h: 19 })}</span>
-								{/snippet}
-								{item.label}{item.count ? ` ${item.count}` : ''}
-							</TagPill>
+							<button
+								type="button"
+								class="hover-btn flex w-full items-center gap-2.5 px-3 py-2 text-left focus-ring"
+								class:bg-accent-soft={active}
+								onclick={() => toggleFilter(item.type as PinType)}
+							>
+								<span class="inline-flex shrink-0">{@html markerSvg(item.type as PinType, 1, { w: 14, h: 19 })}</span>
+								<span class="flex-1 text-sm text-text-primary">{item.label}</span>
+								{#if item.count}
+									<span class="text-xs text-text-secondary">{item.count}</span>
+								{/if}
+								{#if active}
+									<Check class="size-3.5 text-accent-default" strokeWidth={2.5} />
+								{/if}
+							</button>
 						{/each}
 					</div>
 					<div class="h-0.25 bg-border-default"></div>
@@ -223,6 +226,24 @@
 				</div>
 			{/if}
 		</div>
+
+		<!-- 定位到当前：地图区域右上角，独立于标题栏 -->
+		<button
+			type="button"
+			data-map-filter
+			class="hover-btn scale-btn absolute z-20 flex items-center justify-center rounded-full focus-ring size-10"
+			style="top:14px;right:14px;background:var(--cst-surface-primary);color:var(--cst-text-primary);border:var(--cst-border-width-hairline) solid var(--cst-border-default);box-shadow:var(--cst-elevation-fab);"
+			aria-label="定位到当前位置"
+			title="定位到当前位置"
+			onclick={(e) => {
+				e.stopPropagation();
+				mapCenter = defaultCenter;
+				selectedLoc = null;
+				searchQuery = '';
+			}}
+		>
+			<Crosshair class="size-4 text-accent-default" strokeWidth={1.75} />
+		</button>
 
 
 		<!-- Selected pin popup -->

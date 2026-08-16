@@ -9,6 +9,7 @@ import { DesignConstants } from '../constants/DesignConstants';
 import { PageNames } from '../constants/AppConstants';
 import { AppRouter, LoginRouteParam } from '../core/router/AppRouter';
 import { AppIcon } from './SystemIcon';
+import { SystemButton } from './SystemButton';
 import { SystemToast } from './SystemToast';
 import { ApiClient } from '../core/api/ApiClient';
 import { AuthAccountManager } from '../core/state/AuthAccountManager';
@@ -80,28 +81,25 @@ export struct LoginPromptView {
 
       // 按钮区（胶囊化加阴影）
       Column({ space: DesignConstants.SPACING.MD }) {
-        Button('快速体验（无需注册）')
-          .type(ButtonType.Capsule)
-          .backgroundColor(this.getPalette().accentBackground)
-          .fontColor(this.getPalette().accentText)
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .width('100%')
-          .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
-          .onClick(() => {
+        SystemButton({
+          label: '快速体验（无需注册）',
+          variant: 'primary',
+          buttonSize: 'large',
+          fullWidth: true,
+          onPress: () => {
             this.showQuickStart = true;
-          })
+          }
+        })
 
-        Button('登录 / 注册')
-          .type(ButtonType.Capsule)
-          .backgroundColor(this.getPalette().buttonSecondaryBackground)
-          .fontColor(this.getPalette().buttonSecondaryText)
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
-          .width('100%')
-          .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
-          .onClick(() => {
+        SystemButton({
+          label: '登录 / 注册',
+          variant: 'secondary',
+          buttonSize: 'large',
+          fullWidth: true,
+          onPress: () => {
             this.navigateToLogin();
-          })
+          }
+        })
       }
       .width('80%')
       .margin({ top: DesignConstants.SPACING.SM })
@@ -159,19 +157,18 @@ export struct LoginPromptView {
             KeyboardDismissManager.getInstance().dismiss();
           })
 
-        Button(this.isQuickStarting ? '正在创建...' : '开始体验')
-          .type(ButtonType.Capsule)
-          .backgroundColor(this.getPalette().accentBackground)
-          .fontColor(this.getPalette().accentText)
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .width('100%')
-          .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
-          .enabled(!this.isQuickStarting)
-          .opacity(this.isQuickStarting ? DesignConstants.OPACITY.LOADING : 1)
-          .onClick(() => {
+        SystemButton({
+          label: '开始体验',
+          variant: 'primary',
+          buttonSize: 'large',
+          fullWidth: true,
+          loading: this.isQuickStarting,
+          disabled: this.isQuickStarting,
+          onPress: () => {
             this.dismissQuickStartKeyboard();
             this.startQuickExperience();
-          })
+          }
+        })
 
         Text('临时用户可使用大部分功能，随时可升级为完整账号')
           .fontSize(DesignConstants.FONT.SIZE.SM)

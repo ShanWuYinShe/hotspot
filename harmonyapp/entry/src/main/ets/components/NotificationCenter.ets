@@ -5,6 +5,7 @@ import { NotificationSyncService } from '../core/services/NotificationSyncServic
 import { ApiClient } from '../core/api/ApiClient';
 import { NotifyItem, NotifyPayload, NotifyType } from '../core/types/api';
 import { SystemIcon, AppIcon } from './SystemIcon';
+import { SystemButton } from './SystemButton';
 import { AppRouter, AnnouncementsRouteParam, GroupDetailRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../core/router/AppRouter';
 import { PageNames } from '../constants/AppConstants';
 import { SystemToast } from './SystemToast';
@@ -666,52 +667,42 @@ export struct NotificationCenter {
         // 群组操作按钮
         if (this.canHandleGroupInvite(notification)) {
           Row({ space: DesignConstants.SPACING.SM }) {
-            Button(this.isActionLoading(notification.notify_id) ? '处理中...' : '接受')
-              .type(ButtonType.Normal)
-              .backgroundColor(this.getPalette().accentBackground)
-              .fontColor(this.getPalette().accentText)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
-              .borderRadius(DesignConstants.RADIUS.FULL)
-              .enabled(!this.isActionLoading(notification.notify_id))
-              .onClick(() => this.handleGroupInviteAction(notification, 'accept'))
+            SystemButton({
+              label: '接受',
+              variant: 'primary',
+              buttonSize: 'compact',
+              loading: this.isActionLoading(notification.notify_id),
+              disabled: this.isActionLoading(notification.notify_id),
+              onPress: () => this.handleGroupInviteAction(notification, 'accept')
+            })
 
-            Button('拒绝')
-              .type(ButtonType.Normal)
-              .backgroundColor(this.getPalette().surfaceSubtle)
-              .fontColor(this.getPalette().textPrimary)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
-              .borderRadius(DesignConstants.RADIUS.FULL)
-              .borderWidth(DesignConstants.BORDER_WIDTH.HAIRLINE)
-              .borderColor(this.getPalette().borderColor)
-              .enabled(!this.isActionLoading(notification.notify_id))
-              .onClick(() => this.handleGroupInviteAction(notification, 'reject'))
+            SystemButton({
+              label: '拒绝',
+              variant: 'surface',
+              buttonSize: 'compact',
+              disabled: this.isActionLoading(notification.notify_id),
+              onPress: () => this.handleGroupInviteAction(notification, 'reject')
+            })
           }
           .margin({ top: DesignConstants.SPACING.SM2 })
         } else if (this.canHandleGroupApplication(notification)) {
           Row({ space: DesignConstants.SPACING.SM }) {
-            Button(this.isActionLoading(notification.notify_id) ? '处理中...' : '批准')
-              .type(ButtonType.Normal)
-              .backgroundColor(this.getPalette().accentBackground)
-              .fontColor(this.getPalette().accentText)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
-              .borderRadius(DesignConstants.RADIUS.FULL)
-              .enabled(!this.isActionLoading(notification.notify_id))
-              .onClick(() => this.handleGroupApplicationAction(notification, 'approve'))
+            SystemButton({
+              label: '批准',
+              variant: 'primary',
+              buttonSize: 'compact',
+              loading: this.isActionLoading(notification.notify_id),
+              disabled: this.isActionLoading(notification.notify_id),
+              onPress: () => this.handleGroupApplicationAction(notification, 'approve')
+            })
 
-            Button('拒绝')
-              .type(ButtonType.Normal)
-              .backgroundColor(this.getPalette().surfaceSubtle)
-              .fontColor(this.getPalette().textPrimary)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
-              .borderRadius(DesignConstants.RADIUS.FULL)
-              .borderWidth(DesignConstants.BORDER_WIDTH.HAIRLINE)
-              .borderColor(this.getPalette().borderColor)
-              .enabled(!this.isActionLoading(notification.notify_id))
-              .onClick(() => this.handleGroupApplicationAction(notification, 'reject'))
+            SystemButton({
+              label: '拒绝',
+              variant: 'surface',
+              buttonSize: 'compact',
+              disabled: this.isActionLoading(notification.notify_id),
+              onPress: () => this.handleGroupApplicationAction(notification, 'reject')
+            })
           }
           .margin({ top: DesignConstants.SPACING.SM2 })
         }

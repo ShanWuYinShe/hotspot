@@ -6,7 +6,7 @@ import { AppIcon } from './SystemIcon';
 
 /**
  * 通用单行输入框（对齐前端 input-surface）
- * inputBackgroundColor 底 + 18 圆角（SHAPE.INPUT）+ 可选前置图标。
+ * inputBackgroundColor 底 + 16 圆角（SHAPE.INPUT）+ 可选前置图标。
  * 受控组件：父组件维护 value，通过 onChange 回写。
  */
 @Reusable
@@ -23,7 +23,7 @@ export struct SystemInput {
   @Prop disabled: boolean = false;
   /** 输入框高度（不可命名为 height——与 CustomComponent 基类方法冲突，同 SystemButton.buttonSize） */
   @Prop inputHeight: number = DesignConstants.COMPONENT.INPUT_HEIGHT; // 42
-  @Prop fontSize: number = DesignConstants.FONT.SIZE.SM; // 13
+  @Prop fontSize: number = DesignConstants.FONT.SIZE.SM; // 12
   /** 错误态：边框变 error 色 */
   @Prop hasError: boolean = false;
   /** 右侧清除按钮（value 非空时显示，对齐前端 moments 搜索栏的 X） */
@@ -113,7 +113,7 @@ export struct SystemInput {
     .height(this.inputHeight)
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
     .backgroundColor(this.getPalette().inputBackgroundColor)
-    .borderRadius(DesignConstants.SHAPE.INPUT) // 18
+    .borderRadius(DesignConstants.SHAPE.INPUT) // 16
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getBorderResolution().borderColor })
     .shadow(this.getBorderResolution().shadow)
   }

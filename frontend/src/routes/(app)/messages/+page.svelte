@@ -245,7 +245,7 @@
 			     选中态 glow 不与相邻行重叠，分隔线嵌在间距中不显突兀） -->
 			<ListContainer class="flex-1 overflow-y-auto no-scrollbar py-2">
 				{#each filtered as chat (chat.id)}
-					<div class="py-1">
+					<div class="px-2 py-1">
 						<ChatListItem
 							chat={chat}
 							isSelected={selectedId === chat.id}
@@ -389,7 +389,7 @@
 		{:else}
 			<ListContainer class="py-1">
 				{#each filtered as chat (chat.id)}
-					<div class="py-1">
+					<div class="px-2 py-1">
 						<ChatListItem
 							chat={chat}
 							onClick={() => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}

@@ -52,7 +52,7 @@ const MK_STATS: UserStats = {
 const MK_POINT: GeoPoint = { latitude: 34.26, longitude: 117.18 };
 const MK_LOCATION: Location = { point: MK_POINT, location_name: '云龙湖' };
 // 响应类位置（含 distance/bearing_degrees，spec: RelativeLocation）
-const MK_RELATIVE_LOCATION: RelativeLocation = { point: MK_POINT, location_name: '云龙湖', distance: 120 };
+const MK_RELATIVE_LOCATION: RelativeLocation = { point: MK_POINT, location_name: '云龙湖', distance: 120, bearing_degrees: 0 };
 
 const MK_RELATION: Relationship = { is_following: true, is_followed_by: false, is_blocked: false };
 
@@ -201,7 +201,11 @@ const MOCK_CLIENT_CONFIG: ClientConfig = {
 
 const MOCK_META: ApiVersionMeta = {
   version: 'v1',
-  status: 'active'
+  status: 'active',
+  deprecated_at: null,
+  sunset_at: null,
+  message: null,
+  recommended_version: null
 };
 
 // spec BootstrapData 的未登录投影（@auth-only 的 profile/unread_summary 登录态才返回）
@@ -264,8 +268,7 @@ export function getCannedResponse(url: string, loggedIn: boolean, scenario: stri
   if (url === '/api/v1/users/account') return guard() ?? apiOk(MOCK_ACCOUNT);
   if (url === '/api/v1/users/open_the_door') {
     // spec user.md → open_the_door：UserProfileBundle（user 嵌套 UserItem）
-    const profile: UserProfileBundle = { user: MK_USER_ITEM };
-    profile.recent_moments = { items: [MK_MOMENT], next_cursor: undefined };
+    const profile: UserProfileBundle = { user: MK_USER_ITEM, recent_moments: { items: [MK_MOMENT], next_cursor: undefined } };
     return apiOk(profile);
   }
   if (url === '/api/v1/users/search') return paginated([MK_USER_ITEM]);

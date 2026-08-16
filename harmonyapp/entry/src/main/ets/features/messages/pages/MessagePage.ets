@@ -959,7 +959,7 @@ export struct MessagePage {
       Column({ space: DesignConstants.SPACING.HALF }) {
         Row() {
           Text(item.name)
-            .fontSize(DesignConstants.FONT.SIZE.SM) // 13 对齐前端 text-body
+            .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-body
             .fontWeight(item.unreadCount > 0 ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .layoutWeight(1)

@@ -89,7 +89,7 @@ export struct AnchorEntry {
           .letterSpacing(DesignConstants.FONT.LETTER_SPACING.ICON_LABEL)
         Row() {
           Text(this.getDisplayName())
-            .fontSize(DesignConstants.FONT.SIZE.SM) // 13
+            .fontSize(DesignConstants.FONT.SIZE.SM) // 12
             .fontColor(this.getPalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -120,7 +120,7 @@ export struct AnchorEntry {
     // 对齐前端 LocationCard 语义：card 变体融入侧栏（透明底、无常驻边框/阴影），
     // 入口语义由 accent 图标圆表达；hover 淡填充 + 按压缩放（桌面），pill 变体保留 chip 边框（移动端头部 chip 语义）
     .backgroundColor(this.isHovered ? this.getPalette().tabBarActiveBackground : DesignConstants.COLOR.TRANSPARENT)
-    .borderRadius(DesignConstants.SHAPE.INPUT) // 18
+    .borderRadius(DesignConstants.SHAPE.INPUT) // 16
     .alignItems(VerticalAlign.Center)
     .scale(this.isPressed ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW } : { x: 1, y: 1 }) // 对齐前端输入行按压强度
     .animation({ curve: curves.springMotion(DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS, DesignConstants.INTERACTION.SPRING_DAMPING_PRESS) })

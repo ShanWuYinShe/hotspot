@@ -218,7 +218,7 @@ struct AdminOverviewPage {
 
       Column({ space: DesignConstants.SPACING.HALF }) {
         Text(m.title)
-          .fontSize(DesignConstants.FONT.SIZE.SM) // 13
+          .fontSize(DesignConstants.FONT.SIZE.SM) // 12
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         Text(m.desc)

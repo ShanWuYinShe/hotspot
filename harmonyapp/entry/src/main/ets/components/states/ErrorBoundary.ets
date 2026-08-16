@@ -22,6 +22,7 @@
  */
 
 import { DesignConstants } from '../../constants/DesignConstants';
+import { SystemButton } from '../SystemButton';
 import { AppIcon } from '../SystemIcon';
 import { AppThemeManager } from '../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../core/theme/AppThemeTypes';
@@ -62,16 +63,14 @@ export struct ErrorBoundary {
           .textAlign(TextAlign.Center)
           .constraintSize({ maxWidth: 280 })
 
-        Button('重试')
-          .type(ButtonType.Normal)
-          .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
-          .backgroundColor(this.getPalette().accentBackground)
-          .fontColor(this.getPalette().accentText)
-          .borderRadius(DesignConstants.RADIUS.MD)
-          .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL })
-          .onClick(() => {
+        SystemButton({
+          label: '重试',
+          variant: 'primary',
+          buttonSize: 'small',
+          onPress: () => {
             this.onRetry();
-          })
+          }
+        })
       }
       .width('100%')
       .height('100%')

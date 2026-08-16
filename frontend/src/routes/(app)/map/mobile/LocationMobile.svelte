@@ -8,7 +8,6 @@
 	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, markerSvg, floatBtnStyle, buildMapData, fetchMapCanvas, type MapHeatBucket, type SnapState } from '../shared/location-shared';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
 	import MapHeatDot from '../shared/MapHeatDot.svelte';
-	import TagPill from '@/components/forms/TagPill.svelte';
 	import LocationSheetList from './LocationSheetList.svelte';
 
 	// 移动端地图探索：全屏 OSM + 可拖拽吸附底部 Sheet（148/318/540 三档）。
@@ -254,21 +253,27 @@
 						side="bottom"
 						align="end"
 						sideOffset={8}
-						class="w-56 overflow-hidden rounded-md p-2"
+						class="w-56 overflow-hidden rounded-md p-0"
 					>
-						<div class="flex flex-wrap gap-1.5">
+						<div class="py-1 divide-y divide-border-default">
 							{#each [
 								['user', '用户'],
 								['group', '群组'],
 								['moment', '瞬间']
 							] as [type, label]}
 								{@const active = activeFilters.has(type as PinType)}
-								<TagPill active={active} onClick={() => toggleFilter(type as PinType)}>
-									{#snippet iconSnippet()}
-										<span class="inline-flex shrink-0">{@html markerSvg(type as PinType, 1, { w: 14, h: 19 })}</span>
-									{/snippet}
-									{label}
-								</TagPill>
+								<button
+									type="button"
+									class="hover-btn flex w-full items-center gap-2.5 px-3 py-2 text-left focus-ring"
+									class:bg-accent-soft={active}
+									onclick={() => toggleFilter(type as PinType)}
+								>
+									<span class="inline-flex shrink-0">{@html markerSvg(type as PinType, 1, { w: 14, h: 19 })}</span>
+									<span class="flex-1 text-sm text-text-primary">{label}</span>
+									{#if active}
+										<Check class="size-3.5 text-accent-default" strokeWidth={2.5} />
+									{/if}
+								</button>
 							{/each}
 						</div>
 					</Popover.Content>

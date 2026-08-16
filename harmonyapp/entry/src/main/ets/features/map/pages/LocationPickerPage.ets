@@ -1365,9 +1365,9 @@ export struct LocationPickerPage {
               entity: {
                 payload_id: item.object_id,
                 title: item.title,
-                subtitle: item.subtitle,
+                subtitle: item.subtitle ?? undefined,
                 type: item.object_type,
-                distance_meters: item.location.distance
+                distance_meters: item.location.distance ?? 0
               }
 						};
 						nextItems.push(renderItem);

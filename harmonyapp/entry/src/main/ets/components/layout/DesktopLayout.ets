@@ -106,7 +106,7 @@ export struct DesktopLayout {
           Column() {
             this.Sidebar()
           }
-          .width(DesignConstants.LAYOUT.DESKTOP_SIDEBAR_WIDTH) // 192
+          .width(DesignConstants.LAYOUT.DESKTOP_SIDEBAR_WIDTH) // 224
           .height('100%')
 
           Column() {
@@ -436,7 +436,7 @@ export struct DesktopLayout {
             .fontColor([this.getPalette().textSecondary])
         }
         Text('管理后台')
-          .fontSize(DesignConstants.FONT.SIZE.SM) // 13
+          .fontSize(DesignConstants.FONT.SIZE.SM) // 12
           .fontColor(this.getPalette().textPrimary)
           .margin({ left: DesignConstants.SPACING.SM })
         Blank().layoutWeight(1)
@@ -493,7 +493,7 @@ export struct DesktopLayout {
           .fontColor([this.isItemActive(item) ? this.getPalette().accentBackground : this.getPalette().textSecondary])
       }
       Text(item.label)
-        .fontSize(DesignConstants.FONT.SIZE.SM) // 13
+        .fontSize(DesignConstants.FONT.SIZE.SM) // 12
         .fontColor(this.isItemActive(item) ? this.getPalette().textPrimary : this.getPalette().textSecondary)
         .fontWeight(this.isItemActive(item) ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
         .margin({ left: DesignConstants.SPACING.SM })
@@ -506,7 +506,7 @@ export struct DesktopLayout {
     .width('100%')
     .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
     .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-    .borderRadius(DesignConstants.SHAPE.INPUT) // 18
+    .borderRadius(DesignConstants.SHAPE.INPUT) // 16
     // 激活/hover 底色：激活项常驻淡底，非激活项仅 hover 时淡填充（对齐前端侧栏导航 hover 反馈）
     .backgroundColor(this.isItemActive(item) || this.hoveredNavLabel === item.label
       ? this.getPalette().tabBarActiveBackground

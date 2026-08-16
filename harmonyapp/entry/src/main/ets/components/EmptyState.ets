@@ -6,6 +6,7 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppIcon } from './SystemIcon';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { SystemButton } from './SystemButton';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 @Reusable
@@ -80,19 +81,14 @@ export struct EmptyState {
         }
 
         if ((this.actionLabel ?? '').length > 0 && this.onAction) {
-          Button(this.actionLabel ?? '')
-            .type(ButtonType.Normal)
-            .stateEffect(true)
-            .backgroundColor(this.getPalette().accentBackground)
-            .fontColor(this.getPalette().accentText as ResourceColor)
-            .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
-            .borderRadius(DesignConstants.SHAPE.BUTTON)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().primaryButtonBorderColor })
-            .shadow(this.getPalette().accentShadow)
-            .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL })
-            .onClick(() => {
+          SystemButton({
+            label: this.actionLabel ?? '',
+            variant: 'primary',
+            buttonSize: 'default',
+            onPress: () => {
               this.onAction?.();
-            })
+            }
+          })
         }
       }
       .width('100%')

@@ -57,7 +57,7 @@ export struct SystemDialog {
           }
           if (this.description.length > 0) {
             Text(this.description)
-              .fontSize(DesignConstants.FONT.SIZE.SM) // 13
+              .fontSize(DesignConstants.FONT.SIZE.SM) // 12
               .fontColor(this.getPalette().textSecondary)
               .textAlign(TextAlign.Center)
               .width('100%')
@@ -97,7 +97,7 @@ export struct SystemDialog {
         .width('80%')
         .padding(DesignConstants.SPACING.XL)
         .backgroundColor(this.getPalette().surfaceBackground)
-        .borderRadius(DesignConstants.SHAPE.CARD) // 22
+        .borderRadius(DesignConstants.SHAPE.CARD) // 20
         .alignItems(HorizontalAlign.Center)
       }
       .width('100%')
