@@ -35,6 +35,8 @@ type stubRepo struct {
 	mediaResult map[string]any
 	mediaOk     bool
 	mediaErr    error
+
+	messageGroupIDErr error
 }
 
 func (r *stubRepo) Send(_ context.Context, _ SendGroupMessageRequest) (MessageSentResult, error) {
@@ -68,7 +70,7 @@ func (r *stubRepo) GetMessageForReply(_ context.Context, _ string) (*MessageBrie
 	return r.replyToResult, r.replyToOk, r.replyToErr
 }
 func (r *stubRepo) MessageGroupID(_ context.Context, _ string) (string, bool, error) {
-	return "", false, nil
+	return "", false, r.messageGroupIDErr
 }
 
 func (r *stubRepo) MessageExists(_ context.Context, _ string) (bool, string, error) {
