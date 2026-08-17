@@ -436,7 +436,16 @@ func TestFollowMutualFollowAddsNotificationsAndRealtime(t *testing.T) {
 	if len(aliceNotifications.Items) != 1 || aliceNotifications.Items[0].Type != "mutual_follow" {
 		t.Fatalf("unexpected alice notifications: %#v", aliceNotifications)
 	}
-	if len(bobNotifications.Items) != 2 || bobNotifications.Items[0].Type != "mutual_follow" || bobNotifications.Items[1].Type != "new_follower" {
+	// bob 的两条通知在同一秒内落库（内存 repo 按秒级 CreatedAt + 随机
+	// NotifyID 排序），顺序不可断言，只断言集合内容。
+	if len(bobNotifications.Items) != 2 {
+		t.Fatalf("unexpected bob notifications: %#v", bobNotifications)
+	}
+	bobByType := make(map[string]notify.NotifyItem, len(bobNotifications.Items))
+	for _, item := range bobNotifications.Items {
+		bobByType[item.Type] = item
+	}
+	if bobByType["mutual_follow"].NotifyID == "" || bobByType["new_follower"].NotifyID == "" {
 		t.Fatalf("unexpected bob notifications: %#v", bobNotifications)
 	}
 	if len(aliceSink.events) != 1 || aliceSink.events[0].Type != "MutualFollow" {
@@ -452,12 +461,12 @@ func TestFollowMutualFollowAddsNotificationsAndRealtime(t *testing.T) {
 		t.Fatalf("unexpected alice mutual payload: %#v stored=%q", aliceSink.events[0].Payload, aliceNotifications.Items[0].NotifyID)
 	}
 	bobFollowerPayload, ok := bobSink.events[0].Payload.(map[string]any)
-	if !ok || bobFollowerPayload["notify_id"] != bobNotifications.Items[1].NotifyID {
-		t.Fatalf("unexpected bob follower payload: %#v stored=%q", bobSink.events[0].Payload, bobNotifications.Items[1].NotifyID)
+	if !ok || bobFollowerPayload["notify_id"] != bobByType["new_follower"].NotifyID {
+		t.Fatalf("unexpected bob follower payload: %#v stored=%q", bobSink.events[0].Payload, bobByType["new_follower"].NotifyID)
 	}
 	bobMutualPayload, ok := bobSink.events[1].Payload.(map[string]any)
-	if !ok || bobMutualPayload["notify_id"] != bobNotifications.Items[0].NotifyID {
-		t.Fatalf("unexpected bob mutual payload: %#v stored=%q", bobSink.events[1].Payload, bobNotifications.Items[0].NotifyID)
+	if !ok || bobMutualPayload["notify_id"] != bobByType["mutual_follow"].NotifyID {
+		t.Fatalf("unexpected bob mutual payload: %#v stored=%q", bobSink.events[1].Payload, bobByType["mutual_follow"].NotifyID)
 	}
 }
 

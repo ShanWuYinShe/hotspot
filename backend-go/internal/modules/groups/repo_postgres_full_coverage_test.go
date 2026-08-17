@@ -270,7 +270,7 @@ func TestPostgresIsMemberAndGetApplication(t *testing.T) {
 func TestPostgresListMyGroupsPaginationAndFields(t *testing.T) {
 	ctx := context.Background()
 	myGroupRow := func(gid string, hasLastMessage bool, isPinned bool, unreadCount int) []any {
-		row := []any{gid, "群" + gid, "", "描述", false, "位置", 1.5, 2.5, "direct", false, nil, true, 200, "owner", gTestTime, gTestTime, []string{}, 3, 1, "member", gTestTime, false, nil, isPinned, unreadCount}
+		row := []any{gid, "群" + gid, "", "描述", false, "位置", 1.5, 2.5, "direct", false, nil, true, false, 200, "owner", gTestTime, gTestTime, []string{}, 3, 1, "member", gTestTime, false, nil, isPinned, unreadCount}
 		if hasLastMessage {
 			row = append(row, "m1", "text", "内容", "u9", "发件人", "", gTestNow)
 		} else {
@@ -668,8 +668,8 @@ var jm2String = "invite_only"
 
 func TestPostgresRowsErrPaths(t *testing.T) {
 	ctx := context.Background()
-	// 32 列 my-groups 行（含 is_pinned、unread_count）
-	myRow := []any{"g1", "群", "", "d", false, "", 0.0, 0.0, "direct", false, nil, true, 10, "o", nil, nil, []string{}, 1, 0, "member", gTestTime, false, nil, false, 0, nil, nil, nil, nil, nil, nil, nil}
+	// 33 列 my-groups 行（含 is_pinned、unread_count）
+	myRow := []any{"g1", "群", "", "d", false, "", 0.0, 0.0, "direct", false, nil, true, false, 10, "o", nil, nil, []string{}, 1, 0, "member", gTestTime, false, nil, false, 0, nil, nil, nil, nil, nil, nil, nil}
 	tailStub := &groupFullStub{queryCustomRows: map[string]persistence.Rows{
 		queryListMyGroupsBase: &groupRowsErrValues{rows: [][]any{myRow}, err: errors.New("tail")},
 	}}

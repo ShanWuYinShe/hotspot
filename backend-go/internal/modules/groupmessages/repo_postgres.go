@@ -65,7 +65,7 @@ func (r *PostgresRepository) Update(ctx context.Context, req UpdateGroupMessageR
 	if !ok {
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
-	groupID, _, msgType, isRecalled, sentAt, err := r.lookupMessageMetaFull(ctx, req.MessageID)
+	groupID, senderUserID, msgType, isRecalled, sentAt, err := r.lookupMessageMetaFull(ctx, req.MessageID)
 	if err != nil {
 		return MessageEventMeta{}, err
 	}
@@ -77,10 +77,16 @@ func (r *PostgresRepository) Update(ctx context.Context, req UpdateGroupMessageR
 	}
 	// Owner check lives in the service layer via LookupMessageMeta; the SQL
 	// `sender_user_id = $2` guard is defense-in-depth (only the sender row can
-	// be touched even if the service check is bypassed).
+	// be touched even if the service check is bypassed). 0-row hit on the
+	// guarded UPDATE means either a concurrent recall (ErrMessageRecalled) or
+	// a non-sender caller (ErrPermissionDenied) — distinguish by the sender
+	// we already looked up.
 	var updated string
 	if err := queryable.QueryRow(ctx, queryUpdateGroupMessage, req.MessageID, req.UserID, req.Content).Scan(&updated); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			if senderUserID != "" && senderUserID != req.UserID {
+				return MessageEventMeta{}, ErrPermissionDenied
+			}
 			return MessageEventMeta{}, ErrMessageRecalled
 		}
 		return MessageEventMeta{}, err
@@ -96,7 +102,7 @@ func (r *PostgresRepository) Recall(ctx context.Context, req RecallGroupMessageR
 	if !ok {
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
-	groupID, _, _, isRecalled, sentAt, err := r.lookupMessageMetaFull(ctx, req.MessageID)
+	groupID, senderUserID, _, isRecalled, sentAt, err := r.lookupMessageMetaFull(ctx, req.MessageID)
 	if err != nil {
 		return MessageEventMeta{}, err
 	}
@@ -112,10 +118,16 @@ func (r *PostgresRepository) Recall(ctx context.Context, req RecallGroupMessageR
 		return MessageEventMeta{}, ErrMessageRecallWindow
 	}
 	// Owner check lives in the service layer via LookupMessageMeta; the SQL
-	// `sender_user_id = $2` guard is defense-in-depth.
+	// `sender_user_id = $2` guard is defense-in-depth. 0-row hit on the
+	// guarded UPDATE means either a concurrent recall (ErrMessageRecalled) or
+	// a non-sender caller (ErrPermissionDenied) — distinguish by the sender
+	// we already looked up.
 	var updated string
 	if err := queryable.QueryRow(ctx, queryRecallGroupMessage, req.MessageID, req.UserID).Scan(&updated); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			if senderUserID != "" && senderUserID != req.UserID {
+				return MessageEventMeta{}, ErrPermissionDenied
+			}
 			return MessageEventMeta{}, ErrMessageRecalled
 		}
 		return MessageEventMeta{}, err

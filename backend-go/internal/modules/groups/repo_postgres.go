@@ -256,7 +256,7 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 	scanned := make([]scannedItem, 0)
 	for rows.Next() {
 		var s scannedItem
-		if err := rows.Scan(&s.item.Group.GroupID, &s.item.Group.Name, &s.item.Group.AvatarURL, &s.item.Description, &s.item.HasPassword, &s.locationName, &s.latitude, &s.longitude, &s.joinMethod, &s.requiresApproval, &s.nextActivity, &s.item.IsSearchable, &s.item.MaxMembers, &s.item.OwnerID, &s.createdAt, &s.lastActivityAt, &s.tags, &s.membersCount, &s.onlineCount, &s.roleText, &s.joinedAt, &s.isMuted, &s.mutedUntil, &s.isPinned, &s.unreadCount, &s.lastMessageID, &s.lastMessageType, &s.lastContent, &s.lastSenderID, &s.lastSenderName, &s.lastSenderAvatar, &s.lastSentAt); err != nil {
+		if err := rows.Scan(&s.item.Group.GroupID, &s.item.Group.Name, &s.item.Group.AvatarURL, &s.item.Description, &s.item.HasPassword, &s.locationName, &s.latitude, &s.longitude, &s.joinMethod, &s.requiresApproval, &s.nextActivity, &s.item.IsSearchable, &s.item.MembersSearchable, &s.item.MaxMembers, &s.item.OwnerID, &s.createdAt, &s.lastActivityAt, &s.tags, &s.membersCount, &s.onlineCount, &s.roleText, &s.joinedAt, &s.isMuted, &s.mutedUntil, &s.isPinned, &s.unreadCount, &s.lastMessageID, &s.lastMessageType, &s.lastContent, &s.lastSenderID, &s.lastSenderName, &s.lastSenderAvatar, &s.lastSentAt); err != nil {
 			rows.Close()
 			return nil, "", err
 		}

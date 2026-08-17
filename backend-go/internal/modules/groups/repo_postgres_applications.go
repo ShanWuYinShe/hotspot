@@ -141,17 +141,17 @@ func (r *PostgresRepository) ListMyApplications(ctx context.Context, userID stri
 	items := make([]GroupApplicationItem, 0)
 	for rows.Next() {
 		var item GroupApplicationItem
-		var groupID, groupName, groupAvatar, message, statusText string
+		var groupID, groupName, groupAvatar, applicantUserID, message, statusText string
 		var membersCount int
 		var createdAt time.Time
 		var handledAt *time.Time
 		var handledByUserID *string
-		if err := rows.Scan(&item.ApplicationID, &groupID, &groupName, &groupAvatar, &membersCount, &message, &statusText, &createdAt, &handledAt, &handledByUserID); err != nil {
+		if err := rows.Scan(&item.ApplicationID, &groupID, &groupName, &groupAvatar, &membersCount, &applicantUserID, &message, &statusText, &createdAt, &handledAt, &handledByUserID); err != nil {
 			return nil, "", err
 		}
 		item.GroupID = groupID
 		item.Group = GroupInfo{GroupID: groupID, Name: groupName, AvatarURL: types.StrPtr(groupAvatar), MembersCount: membersCount}
-		item.Applicant = UserInfo{UserID: userID, Nickname: userID}
+		item.Applicant = UserInfo{UserID: applicantUserID, Nickname: applicantUserID}
 		if message != "" {
 			item.Message = &message
 		}
