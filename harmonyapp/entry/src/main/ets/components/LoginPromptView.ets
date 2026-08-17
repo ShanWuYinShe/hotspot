@@ -10,6 +10,7 @@ import { PageNames } from '../constants/AppConstants';
 import { AppRouter, LoginRouteParam } from '../core/router/AppRouter';
 import { AppIcon } from './SystemIcon';
 import { SystemButton } from './SystemButton';
+import { SystemInput } from './SystemInput';
 import { SystemToast } from './SystemToast';
 import { ApiClient } from '../core/api/ApiClient';
 import { AuthAccountManager } from '../core/state/AuthAccountManager';
@@ -141,21 +142,19 @@ export struct LoginPromptView {
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor(this.getPalette().textSecondary)
 
-        TextInput({ placeholder: '请输入你的昵称' })
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .padding(DesignConstants.SPACING.LG)
-          .backgroundColor(this.getPalette().surfaceSubtle)
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .shadow(this.getPalette().controlShadow)
-          .enabled(!this.isQuickStarting)
-          .onChange((value: string) => { this.quickNickname = value; })
-          .onFocus(() => {
-            this.isQuickInputFocused = true;
-          })
-          .onBlur(() => {
-            this.isQuickInputFocused = false;
-            KeyboardDismissManager.getInstance().dismiss();
-          })
+        SystemInput({
+          value: this.quickNickname,
+          placeholder: '请输入你的昵称',
+          fontSize: DesignConstants.FONT.SIZE.LG,
+          disabled: this.isQuickStarting,
+          onChange: (value: string) => { this.quickNickname = value; },
+          onFocusChange: (focused: boolean) => {
+            this.isQuickInputFocused = focused;
+            if (!focused) {
+              KeyboardDismissManager.getInstance().dismiss();
+            }
+          }
+        })
 
         SystemButton({
           label: '开始体验',

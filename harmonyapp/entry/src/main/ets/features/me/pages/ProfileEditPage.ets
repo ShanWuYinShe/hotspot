@@ -4,11 +4,13 @@
  */
 
 import { AppRouter } from '../../../core/router/AppRouter';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
+import { SystemButton } from '../../../components/SystemButton';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader, PageHeaderAction } from '../../../components/SystemPageHeader';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
@@ -36,6 +38,7 @@ const BIO_RULES: FieldRule[] = [
 @Preview
 @Component
 export struct ProfileEditPage {
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
@@ -156,7 +159,7 @@ export struct ProfileEditPage {
 
   build() {
     NavDestination() {
-    ResponsiveContainer() {
+    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
       Column() {
         SystemPageHeader({
           title: '编辑资料',
@@ -176,8 +179,8 @@ export struct ProfileEditPage {
                 .linearGradient({
                   direction: GradientDirection.Bottom,
                   colors: [
-                    [this.getCurrentThemePalette().accentBackground + '60', 0.0],
-                    [this.getCurrentThemePalette().accentBackground + '20', 1.0]
+                    [AppThemeVisuals.withAlpha(this.getCurrentThemePalette().accentBackground, 0.38), 0.0],
+                    [AppThemeVisuals.withAlpha(this.getCurrentThemePalette().accentBackground, 0.12), 1.0]
                   ]
                 })
 
@@ -280,22 +283,17 @@ export struct ProfileEditPage {
 
               Flex({ wrap: FlexWrap.Wrap }) {
                 ForEach(TAG_OPTIONS, (tag: string) => {
-                  Button() {
-                    Text('#' + tag)
-                      .fontSize(DesignConstants.FONT.SIZE.SM)
-                      .fontColor(this.isTagSelected(tag) ? this.getCurrentThemePalette().accentText : (this.isTagDisabled(tag) ? this.getCurrentThemePalette().textTertiary : this.getCurrentThemePalette().textSecondary))
-                  }
-                  .type(ButtonType.Normal)
-                  .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
-                  .borderRadius(DesignConstants.SHAPE.BUTTON)
-                  .backgroundColor(this.isTagSelected(tag) ? this.getCurrentThemePalette().accentBackground : this.getSurfaceBackground())
-                  .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.isTagSelected(tag) ? DesignConstants.COLOR.TRANSPARENT : this.getSurfaceBorder() })
-                  .opacity(this.isTagDisabled(tag) ? 0.4 : 1.0)
-                  .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-                  .enabled(!this.isTagDisabled(tag))
-                  .onClick(() => {
-                    this.toggleTag(tag);
+                  SystemButton({
+                    label: '#' + tag,
+                    variant: this.isTagSelected(tag) ? 'primary' : 'secondary',
+                    buttonSize: 'small',
+                    pill: true,
+                    disabled: this.isTagDisabled(tag),
+                    onPress: () => {
+                      this.toggleTag(tag);
+                    }
                   })
+                    .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
                 }, (tag: string) => tag)
               }
               .width('100%')
@@ -303,33 +301,16 @@ export struct ProfileEditPage {
             .width('100%')
 
             // 底部保存按钮
-            Button() {
-              Row({ space: DesignConstants.SPACING.SM }) {
-                if (this.isSaved) {
-                  Text() {
-                    SymbolSpan($r(AppIcon.CHECK))
-                      .fontSize(DesignConstants.FONT.SIZE.LG)
-                      .fontColor([this.getCurrentThemePalette().accentText])
-                  }
-                  Text('已保存')
-                    .fontSize(DesignConstants.FONT.SIZE.LG)
-                    .fontColor(this.getCurrentThemePalette().accentText)
-                } else {
-                  Text(this.isSaving ? '保存中...' : '保存')
-                    .fontSize(DesignConstants.FONT.SIZE.LG)
-                    .fontColor(this.getCurrentThemePalette().accentText)
-                    .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                }
-              }
-            }
-            .type(ButtonType.Normal)
-            .width('100%')
-            .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .backgroundColor(this.isSaved ? this.getCurrentThemePalette().success : this.getCurrentThemePalette().accentBackground)
-            .shadow(this.getCurrentThemePalette().accentShadow)
-            .enabled(!this.isSaving && !this.isSaved)
-            .onClick(() => this.handleSave())
+            SystemButton({
+              label: this.isSaved ? '已保存' : (this.isSaving ? '保存中...' : '保存'),
+              variant: this.isSaved ? 'secondary' : 'primary',
+              buttonSize: 'large',
+              fullWidth: true,
+              pill: true,
+              loading: this.isSaving,
+              disabled: this.isSaving || this.isSaved,
+              onPress: () => this.handleSave()
+            })
           }
           .width('100%')
           .padding({

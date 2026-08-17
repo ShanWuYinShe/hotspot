@@ -1,5 +1,6 @@
 import { AppRouter, AnnouncementsRouteParam } from '../../../core/router/AppRouter';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -17,6 +18,7 @@ import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 @Preview
 @Component
 export struct AnnouncementsPage {
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State announcements: SystemAnnouncementItem[] = [];
@@ -73,7 +75,7 @@ export struct AnnouncementsPage {
 
   build() {
     NavDestination() {
-    ResponsiveContainer() {
+    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
       Column() {
         SystemPageHeader({
           title: '系统公告',

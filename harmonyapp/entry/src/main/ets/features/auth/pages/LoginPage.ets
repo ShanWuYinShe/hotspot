@@ -5,7 +5,8 @@
  */
 
 import { GlobalStateManager } from '../../../core/state/GlobalStateManager';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
@@ -14,6 +15,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemButton } from '../../../components/SystemButton';
+import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { SystemToast } from '../../../components/SystemToast';
 import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
 import { AuthData, AccountInfo, LoginRequest, RegisterRequest, GuestRequest } from '../../../core/types/api';
@@ -50,6 +52,7 @@ const PASSWORD_POLICY_HINT: string = '密码需为8-128位且同时包含字母�
 @Preview
 @Component
 export struct LoginPage {
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink('isLoggedIn') isLoggedIn: boolean = false;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
@@ -219,7 +222,7 @@ export struct LoginPage {
 
   build() {
     NavDestination() {
-    ResponsiveContainer() {
+    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
       Column() {
       if (this.isLoading) {
         SystemLoadingView({
@@ -298,17 +301,36 @@ export struct LoginPage {
           .padding({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL,
             bottom: DesignConstants.SPACING.LG })
 
-          // 模式切换标签（固定）
-          Row({ space: DesignConstants.SPACING.SM }) {
-            this.ModeTab('登录', 'login')
-            this.ModeTab('注册', 'register')
-            this.ModeTab('访客', 'guest')
-          }
-          .backgroundColor(this.getSurfaceSubtle())
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-          .padding(DesignConstants.SPACING.THREE)
-          .margin({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL })
+          // 模式切换标签（统一 TabsPillGroup）
+          TabsPillGroup({
+            tabs: [{ label: '登录' }, { label: '注册' }, { label: '访客' }],
+            activeIndex: Math.max(0, ['login', 'register', 'guest'].indexOf(this.loginMode)),
+            actions: {
+              onChange: (index: number) => {
+                const mode = ['login', 'register', 'guest'][index] || 'login';
+                if (mode === 'login') {
+                  this.loginMode = 'login';
+                  this.registerNickname = '';
+                  this.registerLoginId = '';
+                  this.registerPassword = '';
+                  this.registerPasswordConfirm = '';
+                } else if (mode === 'register') {
+                  this.loginMode = 'register';
+                  this.loginId = '';
+                  this.password = '';
+                } else {
+                  this.loginMode = 'guest';
+                  this.loginId = '';
+                  this.password = '';
+                  this.registerNickname = '';
+                  this.registerLoginId = '';
+                  this.registerPassword = '';
+                  this.registerPasswordConfirm = '';
+                }
+              }
+            }
+          })
+            .margin({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL })
 
           // 表单区域（可滚动，凸起卡片包裹）
           Scroll() {
@@ -379,47 +401,6 @@ export struct LoginPage {
         }
       }
     })
-  }
-
-  @Builder
-  private ModeTab(label: string, mode: string) {
-    Text(label)
-      .fontSize(DesignConstants.FONT.SIZE.MD)
-      .fontWeight(this.loginMode === mode ? DesignConstants.FONT.WEIGHT.BOLD : DesignConstants.FONT.WEIGHT.MEDIUM)
-      .fontColor(this.loginMode === mode ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().buttonSecondaryText)
-      .backgroundColor(this.loginMode === mode ? this.getCurrentThemePalette().accentBackground : DesignConstants.COLOR.TRANSPARENT)
-      .borderRadius(DesignConstants.RADIUS.XL)
-      .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-      .layoutWeight(1)
-      .textAlign(TextAlign.Center)
-      .shadow(this.loginMode === mode ? this.getCurrentThemePalette().controlShadow : { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 })
-      .animation({
-        curve: curves.springMotion(
-          DesignConstants.INTERACTION.SPRING_RESPONSE_TAB,
-          DesignConstants.INTERACTION.SPRING_DAMPING_TAB
-        )
-      })
-      .onClick(() => {
-        if (mode === 'login') {
-          this.loginMode = 'login';
-          this.registerNickname = '';
-          this.registerLoginId = '';
-          this.registerPassword = '';
-          this.registerPasswordConfirm = '';
-        } else if (mode === 'register') {
-          this.loginMode = 'register';
-          this.loginId = '';
-          this.password = '';
-        } else {
-          this.loginMode = 'guest';
-          this.loginId = '';
-          this.password = '';
-          this.registerNickname = '';
-          this.registerLoginId = '';
-          this.registerPassword = '';
-          this.registerPasswordConfirm = '';
-        }
-      })
   }
 
   @Builder

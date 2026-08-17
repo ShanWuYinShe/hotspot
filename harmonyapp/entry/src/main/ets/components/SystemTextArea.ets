@@ -16,8 +16,10 @@ export struct SystemTextArea {
   @Prop fontSize: number = DesignConstants.FONT.SIZE.SM; // 12
   /** 最大行数（约束高度），0 表示不限 */
   @Prop maxLines: number = 0;
+  @Prop maxLength: number = 1000;
   @Prop hasError: boolean = false;
   onChange?: (value: string) => void;
+  onFocusChange?: (focused: boolean) => void;
 
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
@@ -45,8 +47,15 @@ export struct SystemTextArea {
       .placeholderFont({ size: this.fontSize })
       .caretColor(this.getPalette().accentBackground)
       .maxLines(this.maxLines > 0 ? this.maxLines : Number.MAX_SAFE_INTEGER)
+      .maxLength(this.maxLength)
       .onChange((v: string) => {
         this.onChange?.(v);
+      })
+      .onFocus(() => {
+        this.onFocusChange?.(true);
+      })
+      .onBlur(() => {
+        this.onFocusChange?.(false);
       })
   }
 }

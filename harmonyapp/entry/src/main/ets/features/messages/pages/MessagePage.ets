@@ -5,7 +5,8 @@
  */
 
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_LAST_MESSAGE_SYNC_TIME } from '../../../core/state/GlobalStateManager';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, ChatRouteParam } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
@@ -28,7 +29,6 @@ import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { SystemInput } from '../../../components/SystemInput';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { useMasterDetail } from '../../../core/responsive/Breakpoint';
-import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -613,7 +613,7 @@ export struct MessagePage {
   }
 
   build() {
-  ResponsiveContainer() {
+  PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
     Column() {
       // 粘性头部 —— 统一走 SystemPageHeader（标题 + 未读副标题 + ADD/SEARCH trailing）
       SystemPageHeader({

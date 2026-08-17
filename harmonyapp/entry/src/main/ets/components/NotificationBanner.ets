@@ -1,6 +1,7 @@
 import { SmartNotification, NotificationAction } from '../core/services/notification/NotificationDataManager';
 import { DesignConstants } from '../constants/DesignConstants';
 import { SystemIcon, AppIcon } from './SystemIcon';
+import { SystemButton } from './SystemButton';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { curves } from '@kit.ArkUI';
@@ -70,18 +71,16 @@ export struct NotificationBanner {
       if (this.notification.actions && this.notification.actions.length > 0) {
         Row({ space: DesignConstants.SPACING.MD }) {
           ForEach(this.notification.actions, (action: NotificationAction) => {
-            Button(action.label)
-              .type(ButtonType.Normal)
-              .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .backgroundColor(action.type === 'primary' ? this.getPalette().accentBackground : this.getPalette().buttonSecondaryBackground)
-              .fontColor(action.type === 'primary' ? this.getPalette().accentText : this.getPalette().buttonSecondaryText)
-              .borderRadius(DesignConstants.RADIUS.XL)
-              .onClick(() => {
+            SystemButton({
+              label: action.label,
+              variant: action.type === 'primary' ? 'primary' : 'secondary',
+              buttonSize: 'compact',
+              onPress: () => {
                 if (this.onAction) {
                   this.onAction(action);
                 }
-              })
+              }
+            })
           }, (action: NotificationAction) => action.label)
         }
         .width('100%')

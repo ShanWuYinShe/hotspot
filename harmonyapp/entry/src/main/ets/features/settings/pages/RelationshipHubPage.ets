@@ -1,20 +1,22 @@
 import { AppRouter } from '../../../core/router/AppRouter';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { SystemToast } from '../../../components/SystemToast';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { BlockedUserItem, RelatedUserItem } from '../../../core/types/api';
 import { RelationshipListSection } from './SettingsSupport';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
-import { curves } from '@kit.ArkUI';
 
 @Preview
 @Component
 export struct RelationshipHubPage {
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State friends: RelatedUserItem[] = [];
@@ -73,30 +75,9 @@ export struct RelationshipHubPage {
     }
   }
 
-  @Builder
-  private RelTab(index: number, label: string, count: number) {
-    Text(count > 0 ? `${label} (${count})` : label)
-      .fontColor(this.activeRelTab === index ? this.getPalette().accentText : this.getPalette().textSecondary)
-      .fontSize(DesignConstants.FONT.SIZE.SM)
-      .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-      .padding({ left: DesignConstants.SPACING.MD3, right: DesignConstants.SPACING.MD3, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(this.activeRelTab === index ? this.getPalette().accentBackground : this.getPalette().surfaceBackground)
-      .border(this.activeRelTab === index
-        ? { width: 0 }
-        : { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
-      .animation({
-        curve: curves.springMotion(
-          DesignConstants.INTERACTION.SPRING_RESPONSE_TAB,
-          DesignConstants.INTERACTION.SPRING_DAMPING_TAB
-        )
-      })
-      .onClick(() => { this.activeRelTab = index; })
-  }
-
   build() {
     NavDestination() {
-    ResponsiveContainer() {
+    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
       Column() {
         SystemPageHeader({
           title: '关系',
@@ -104,19 +85,21 @@ export struct RelationshipHubPage {
           onBack: () => { AppRouter.pop(); }
         })
 
-        Scroll() {
-          Row({ space: DesignConstants.SPACING.SM }) {
-            this.RelTab(0, '好友', this.friends.length)
-            this.RelTab(1, '关注', this.following.length)
-            this.RelTab(2, '粉丝', this.followers.length)
-            this.RelTab(3, '黑名单', this.blocked.length)
+        TabsPillGroup({
+          tabs: [
+            { label: `好友 (${this.friends.length})` },
+            { label: `关注 (${this.following.length})` },
+            { label: `粉丝 (${this.followers.length})` },
+            { label: `黑名单 (${this.blocked.length})` }
+          ],
+          activeIndex: this.activeRelTab,
+          actions: {
+            onChange: (index: number) => {
+              this.activeRelTab = index;
+            }
           }
-        }
-        .scrollable(ScrollDirection.Horizontal)
-        .scrollBar(BarState.Off)
-        .width('100%')
-        .align(Alignment.Start)
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.MD })
+        })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.MD })
 
         Scroll() {
           Column() {

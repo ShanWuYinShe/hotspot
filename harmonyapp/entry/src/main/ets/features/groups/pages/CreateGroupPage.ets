@@ -14,6 +14,7 @@ import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemInput } from '../../../components/SystemInput';
+import { SystemTextArea } from '../../../components/SystemTextArea';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SoftDivider } from '../../../components/SoftDivider';
@@ -405,20 +406,24 @@ export struct CreateGroupPage {
                   .width('100%')
                   .margin({ bottom: DesignConstants.SPACING.XS })
 
-                TextArea({ placeholder: '请输入群组描述（可选）', text: this.groupDescription })
-                  .placeholderColor(this.getCurrentThemePalette().textTertiary)
-                  .onChange((value: string) => {
+                SystemTextArea({
+                  value: this.groupDescription,
+                  placeholder: '请输入群组描述（可选）',
+                  minHeight: DesignConstants.COMPONENT.AVATAR_SIZE.LARGE,
+                  maxLength: GROUP_DESCRIPTION_MAX,
+                  fontSize: DesignConstants.FONT.SIZE.MD,
+                  hasError: this.getGroupDescriptionError() !== undefined,
+                  onChange: (value: string) => {
                     this.groupDescription = value;
-                  })
-                  .maxLength(GROUP_DESCRIPTION_MAX)
-                  .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
-                  .backgroundColor(this.getSurfaceSubtle())
-                  .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.fieldBorder(this.groupDescriptionFocused, this.getGroupDescriptionError() !== undefined).borderColor })
-                  .shadow(this.fieldBorder(this.groupDescriptionFocused, this.getGroupDescriptionError() !== undefined).shadow)
-                  .borderRadius(DesignConstants.RADIUS.XL)
-                  .padding(DesignConstants.SPACING.MD)
-                  .onFocus(() => { this.groupDescriptionFocused = true; })
-                  .onBlur(() => { this.groupDescriptionFocused = false; this.groupDescriptionTouched = true; KeyboardDismissManager.getInstance().dismiss(); })
+                  },
+                  onFocusChange: (focused: boolean) => {
+                    this.groupDescriptionFocused = focused;
+                    if (!focused) {
+                      this.groupDescriptionTouched = true;
+                      KeyboardDismissManager.getInstance().dismiss();
+                    }
+                  }
+                })
 
                 if (this.getGroupDescriptionError()) {
                   Text(this.getGroupDescriptionError())

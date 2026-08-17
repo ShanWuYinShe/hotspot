@@ -4,9 +4,9 @@
  */
 
 import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN } from '../../../core/state/GlobalStateManager';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
-import { useMasterDetail } from '../../../core/responsive/Breakpoint';
+import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
+import { useMasterDetail } from '../../../core/responsive/Breakpoint';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, ChatRouteParam, GroupDetailRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
@@ -25,6 +25,7 @@ import { SystemCard, CardVariant } from '../../../components/SystemCard';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { MomentFeedCard } from '../../../components/MomentFeedCard';
@@ -246,7 +247,7 @@ export struct MomentsFeedPage {
   }
 
   build() {
-  ResponsiveContainer() {
+  PageShellContainer({ variant: 'feed-medium', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
     Column() {
       // 粘性头部：标题(走 SystemPageHeader) + 搜索栏 + 标签栏（对齐前端 nearby/moments 页 headerContent）
       Column() {
@@ -288,8 +289,20 @@ export struct MomentsFeedPage {
         .onClick(() => { AppRouter.push(PageNames.SEARCH); })
         .margin({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.XS })
 
-        // 下划线式标签栏（热门/附近/活动/关注，对齐前端 TABS）
-        this.buildTabBar()
+        // 统一 TabsPillGroup 分段胶囊（对齐前端 TabBar）
+        TabsPillGroup({
+          tabs: this.TABS.map((tab: string) => ({ label: tab } as TabItem)),
+          activeIndex: Math.max(0, this.TABS.indexOf(this.activeTab)),
+          actions: {
+            onChange: (index: number) => {
+              const tab = this.TABS[index];
+              if (tab && tab !== this.activeTab) {
+                this.activeTab = tab;
+                this.loadData(true);
+              }
+            }
+          }
+        })
       }
       .width('100%')
       .padding({
@@ -505,36 +518,6 @@ export struct MomentsFeedPage {
     }
     .width('100%')
     .height('100%')
-  }
-
-  // ==================== 标签栏（下划线式，对齐前端 underline tabs）====================
-  @Builder
-  buildTabBar() {
-    Row() {
-      ForEach(this.TABS, (tab: string) => {
-        Text(tab)
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(this.activeTab === tab ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
-          .fontColor(this.activeTab === tab
-            ? this.getCurrentThemePalette().accentBackground
-            : this.getCurrentThemePalette().textSecondary)
-          .padding({ top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.MD })
-          .margin({ right: DesignConstants.SPACING.XL })
-          .border({
-            width: { bottom: 2 },
-            color: this.activeTab === tab
-              ? this.getCurrentThemePalette().accentBackground
-              : DesignConstants.COLOR.TRANSPARENT
-          })
-          .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_IN_OUT })
-          .onClick(() => {
-            this.activeTab = tab;
-            this.loadData(true);
-          })
-      }, (tab: string) => tab)
-    }
-    .width('100%')
-    .justifyContent(FlexAlign.Start)
   }
 
   // ==================== 标签药片条 ====================

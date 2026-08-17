@@ -197,31 +197,43 @@
 				{/if}
 			</button>
 			{#if showFilter}
-				<div class="mt-2 overflow-hidden rounded-md w-56 shadow-raised-lg border border-border-default bg-surface-primary">
-					<div class="py-1 divide-y divide-border-default">
+				<div class="mt-2 w-64 overflow-hidden rounded-xl border border-border-default bg-surface-primary shadow-raised-lg">
+					<div class="flex items-center justify-between border-b border-border-default px-3.5 py-2.5">
+						<span class="text-sm font-medium text-text-primary">显示类型</span>
+						<span class="text-xxs text-text-secondary">{activeFilters.size}/3 已选</span>
+					</div>
+					<div class="p-1.5">
 						{#each [{ type: 'user', label: '用户', count: userCount }, { type: 'group', label: '群组', count: groupCount }, { type: 'moment', label: '瞬间', count: momentCount }] as item}
 							{@const active = activeFilters.has(item.type as PinType)}
 							<button
 								type="button"
-								class="hover-btn flex w-full items-center gap-2.5 px-3 py-2 text-left focus-ring"
-								class:bg-accent-soft={active}
+								class="group flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left focus-ring transition-colors {active ? 'bg-accent-soft' : 'hover:bg-interactive-hover'}"
 								onclick={() => toggleFilter(item.type as PinType)}
 							>
-								<span class="inline-flex shrink-0">{@html markerSvg(item.type as PinType, 1, { w: 14, h: 19 })}</span>
-								<span class="flex-1 text-sm text-text-primary">{item.label}</span>
+								<span
+									class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg"
+									style="background:{active ? PIN_TONES[item.type as PinType].bg : 'var(--cst-surface-subtle)'};border:var(--cst-border-width-hairline) solid {active ? PIN_TONES[item.type as PinType].border : 'transparent'};"
+								>
+									{@html markerSvg(item.type as PinType, 1, { w: 14, h: 19 })}
+								</span>
+								<span class="min-w-0 flex-1">
+									<span class="block text-sm text-text-primary">{item.label}</span>
+									<span class="mt-0.5 block text-xxs text-text-secondary">{active ? '正在显示' : '已隐藏'}</span>
+								</span>
 								{#if item.count}
-									<span class="text-xs text-text-secondary">{item.count}</span>
+									<span class="shrink-0 text-xs text-text-secondary">{item.count}</span>
 								{/if}
-								{#if active}
-									<Check class="size-3.5 text-accent-default" strokeWidth={2.5} />
-								{/if}
+								<span
+									class="flex size-5 shrink-0 items-center justify-center rounded-full transition-colors {active ? 'bg-accent-default text-text-on-accent' : 'bg-border-default text-transparent'}"
+								>
+									<Check class="size-3" strokeWidth={3} />
+								</span>
 							</button>
 						{/each}
 					</div>
-					<div class="h-0.25 bg-border-default"></div>
-					<div class="flex items-center gap-2 px-3 py-2">
-						<span class="size-3.25 rounded-full" style="background:{PIN_COLORS.user};border:var(--cst-border-width-strong) solid var(--cst-surface-primary);box-shadow:var(--cst-marker-halo) {PIN_TONES.user.glow};"></span>
-						<span class="text-text-secondary text-xs" >我的位置</span>
+					<div class="flex items-center gap-2 border-t border-border-default px-3.5 py-2.5">
+						<span class="size-3 rounded-full" style="background:{PIN_COLORS.user};border:var(--cst-border-width-strong) solid var(--cst-surface-primary);box-shadow:var(--cst-marker-halo) {PIN_TONES.user.glow};"></span>
+						<span class="text-xs text-text-secondary">我的位置</span>
 					</div>
 				</div>
 			{/if}

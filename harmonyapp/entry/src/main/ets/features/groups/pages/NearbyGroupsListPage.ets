@@ -6,7 +6,8 @@
 
 import { GlobalStateManager, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
 import { curves } from '@kit.ArkUI';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, GroupDetailRouteParam } from '../../../core/router/AppRouter';
@@ -20,6 +21,7 @@ import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { EmptyState, RefreshIndicator, LoadingMoreIndicator } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { formatCount } from '../../../core/utils/FormatUtil';
@@ -27,6 +29,7 @@ import { formatCount } from '../../../core/utils/FormatUtil';
 @Preview
 @Component
 export struct NearbyGroupsListPage {
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
@@ -225,7 +228,7 @@ export struct NearbyGroupsListPage {
 
   build() {
     NavDestination() {
-    ResponsiveContainer() {
+    PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
       Column() {
         // 头部 —— 统一走 SystemPageHeader（返回 + 标题）
         SystemPageHeader({
@@ -249,26 +252,21 @@ export struct NearbyGroupsListPage {
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
 
-        // 分类 chips（对齐前端 filter categories）
-        Row({ space: DesignConstants.SPACING.SM }) {
-          ForEach(this.TAGS, (tag: string) => {
-            Text(tag)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(tag === this.activeTag ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().textSecondary)
-              .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
-              .borderRadius(DesignConstants.SHAPE.CHIP)
-              .backgroundColor(tag === this.activeTag ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().surfaceSubtle)
-              // 选中底色/字色切换过渡（对齐 DesktopLayout 导航项，避免硬跳）
-              .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
-              .onClick(() => {
-                if (tag !== this.activeTag) {
-                  this.activeTag = tag;
-                  this.loadGroups(true);
-                }
-              })
-          }, (tag: string) => tag)
-        }
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+        // 分类 TabsPillGroup（对齐前端 TabBar）
+        TabsPillGroup({
+          tabs: this.TAGS.map((tag: string) => ({ label: tag } as TabItem)),
+          activeIndex: Math.max(0, this.TAGS.indexOf(this.activeTag)),
+          actions: {
+            onChange: (index: number) => {
+              const tag = this.TAGS[index];
+              if (tag && tag !== this.activeTag) {
+                this.activeTag = tag;
+                this.loadGroups(true);
+              }
+            }
+          }
+        })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
 
         // Hero 统计卡（对齐前端「附近概览」）
         if (this.hasAnyData()) {

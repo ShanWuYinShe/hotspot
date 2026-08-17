@@ -1,5 +1,4 @@
 import { KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN, KEY_CLIENT_CONFIG } from '../../../core/state/GlobalStateManager';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { LocationInfo } from '../../../core/location/LocationUtil';
@@ -21,6 +20,7 @@ import { SearchPageHeader } from '../../../components/SearchPageHeader';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemButton } from '../../../components/SystemButton';
+import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppThemeVisuals, InputBorderResolution } from '../../../core/theme/AppThemeVisuals';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
@@ -39,7 +39,6 @@ import pasteboard from '@ohos.pasteboard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { TimerManager } from '../../../core/utils/TimerManager';
-import { curves } from '@kit.ArkUI';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'SearchPage';
@@ -79,7 +78,6 @@ export struct SearchPage {
   @State hasSearched: boolean = false;
   @State suggestItems: SearchSuggestItem[] = [];
   private suggestTimerId: number = 0;
-  private controller: TabsController = new TabsController();
   @State userActionPendingIds: string[] = [];
   @State groupActionPendingIds: string[] = [];
   @State isBackPressed: boolean = false;
@@ -447,39 +445,39 @@ export struct SearchPage {
           .width('100%')
           .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
         } else {
-          Tabs({ barPosition: BarPosition.Start, controller: this.controller, index: this.currentIndex }) {
-            TabContent() {
+          Column() {
+            TabsPillGroup({
+              tabs: [
+                { label: '全部' } as TabItem,
+                { label: this.tabLabel('用户', this.userResults.length) } as TabItem,
+                { label: this.tabLabel('动态', this.momentResults.length) } as TabItem,
+                { label: this.tabLabel('话题', this.topicResults.length) } as TabItem,
+                { label: this.tabLabel('群组', this.groupResults.length) } as TabItem
+              ],
+              activeIndex: this.currentIndex,
+              actions: {
+                onChange: (index: number) => {
+                  this.currentIndex = index;
+                }
+              }
+            })
+              .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD })
+
+            if (this.currentIndex === 0) {
               this.AllResultList()
-            }.tabBar(this.TabBuilder(0, '全部'))
-
-            TabContent() {
+            } else if (this.currentIndex === 1) {
               this.UserResultList()
-            }.tabBar(this.TabBuilder(1, this.tabLabel('用户', this.userResults.length)))
-
-            TabContent() {
+            } else if (this.currentIndex === 2) {
               this.MomentResultList()
-            }.tabBar(this.TabBuilder(2, this.tabLabel('动态', this.momentResults.length)))
-
-            TabContent() {
+            } else if (this.currentIndex === 3) {
               this.TopicResultList()
-            }.tabBar(this.TabBuilder(3, this.tabLabel('话题', this.topicResults.length)))
-
-            TabContent() {
+            } else {
               this.GroupResultList()
-            }.tabBar(this.TabBuilder(4, this.tabLabel('群组', this.groupResults.length)))
+            }
           }
-          .vertical(false)
-          .barMode(BarMode.Scrollable)
-          .barWidth('100%')
-          .barHeight(44)
-          .animationDuration(220)
-          .onChange((index: number) => {
-            this.currentIndex = index;
-          })
           .width('100%')
           .layoutWeight(1)
           .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-          .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD, bottom: 0 })
         }
       }
       .width('100%')
@@ -555,34 +553,6 @@ export struct SearchPage {
 
   private tabLabel(base: string, count: number): string {
     return (this.hasSearched && count > 0) ? `${base} (${count})` : base;
-  }
-
-  @Builder TabBuilder(index: number, name: string) {
-    Text(name)
-      .fontColor(this.currentIndex === index ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().textSecondary)
-      .fontSize(DesignConstants.FONT.SIZE.SM)
-      .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-      .padding({ left: DesignConstants.SPACING.MD3, right: DesignConstants.SPACING.MD3, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(this.currentIndex === index ? this.getCurrentThemePalette().accentBackground : this.getSurfaceBackground())
-      .shadow(this.currentIndex === index
-        ? this.getCurrentThemePalette().accentShadow
-        : this.getCurrentThemePalette().surfaceShadow)
-      .border(this.currentIndex === index
-        ? { width: 0 }
-        : { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-      .animation({
-        curve: curves.springMotion(
-          DesignConstants.INTERACTION.SPRING_RESPONSE_TAB,
-          DesignConstants.INTERACTION.SPRING_DAMPING_TAB
-        )
-      })
-      .onClick(() => {
-        if (this.currentIndex !== index) {
-          this.currentIndex = index;
-          this.controller.changeIndex(index);
-        }
-      })
   }
 
   @Builder

@@ -6,7 +6,8 @@
 
 import { GlobalStateManager, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
 import { curves } from '@kit.ArkUI';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, ProfileRouteParam } from '../../../core/router/AppRouter';
@@ -21,12 +22,14 @@ import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { EmptyState, RefreshIndicator, LoadingMoreIndicator } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 @Preview
 @Component
 export struct NearbyUsersListPage {
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
@@ -255,7 +258,7 @@ export struct NearbyUsersListPage {
 
   build() {
     NavDestination() {
-    ResponsiveContainer() {
+    PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
       Column() {
         // 头部 —— 统一走 SystemPageHeader（返回 + 标题）
         SystemPageHeader({
@@ -279,28 +282,22 @@ export struct NearbyUsersListPage {
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
-        // 排序 chips（对齐前端 sort chips：距离/在线/共同好友）
-        Row({ space: DesignConstants.SPACING.SM }) {
-          ForEach(['距离', '在线', '共同好友'], (chip: string) => {
-            Text(chip)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(chip === this.getSortLabel() ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().textSecondary)
-              .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
-              .borderRadius(DesignConstants.SHAPE.CHIP)
-              .backgroundColor(chip === this.getSortLabel() ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().surfaceSubtle)
-              // 选中底色/字色切换过渡（对齐 DesktopLayout 导航项，避免硬跳）
-              .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
-              .onClick(() => {
-                const sortMap: Record<string, string> = { '距离': 'distance', '在线': 'distance', '共同好友': 'relevance' };
-                const newSort = sortMap[chip] || 'distance';
-                if (newSort !== this.activeSort) {
-                  this.activeSort = newSort;
-                  this.loadUsers(true);
-                }
-              })
-          }, (chip: string) => chip)
-        }
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+        // 排序 TabsPillGroup（对齐前端 TabBar）
+        TabsPillGroup({
+          tabs: [{ label: '距离' }, { label: '在线' }, { label: '共同好友' }],
+          activeIndex: Math.max(0, ['距离', '在线', '共同好友'].indexOf(this.getSortLabel())),
+          actions: {
+            onChange: (index: number) => {
+              const sortMap: string[] = ['distance', 'distance', 'relevance'];
+              const newSort = sortMap[index] || 'distance';
+              if (newSort !== this.activeSort) {
+                this.activeSort = newSort;
+                this.loadUsers(true);
+              }
+            }
+          }
+        })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
 
         // Hero 统计卡（对齐前端「附近概览」）
         if (this.hasAnyData()) {

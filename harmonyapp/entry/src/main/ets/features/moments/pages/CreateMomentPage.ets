@@ -21,6 +21,7 @@ import { ApiResponse, CreateMomentRequest, MomentItem, GeoPoint, PrivacyLevel } 
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemButton } from '../../../components/SystemButton';
+import { SystemTextArea } from '../../../components/SystemTextArea';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
@@ -377,15 +378,16 @@ export struct CreateMomentPage {
         ListItem() {
           SystemCard({ cardPadding: DesignConstants.SPACING.LG }) {
             Column() {
-              TextArea({ placeholder: '写下你想分享的内容...', text: this.description })
-                .onChange((value: string) => {
+              SystemTextArea({
+                value: this.description,
+                placeholder: '写下你想分享的内容...',
+                minHeight: DesignConstants.COMPONENT.PLACEHOLDER_AREA_HEIGHT,
+                maxLength: 500,
+                fontSize: DesignConstants.FONT.SIZE.MD,
+                onChange: (value: string) => {
                   this.description = value;
-                })
-                .maxLength(500)
-                .height(DesignConstants.COMPONENT.PLACEHOLDER_AREA_HEIGHT)
-                .backgroundColor(this.getSurfaceSubtle())
-                .borderRadius(DesignConstants.RADIUS.XL)
-                .padding(DesignConstants.SPACING.SM)
+                }
+              })
             }
           }
         }

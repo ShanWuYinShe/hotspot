@@ -3,7 +3,8 @@
  * 接收 share_code → 调 API 获取详情 → 根据类型路由跳转
  */
 import { ApiClient } from '../../../core/api/ApiClient';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { ShareDetail, LocationSharePayload, UserSharePayload, GroupSharePayload, MomentSharePayload } from '../../../core/types/api';
 import { AppRouter, ProfileRouteParam, GroupDetailRouteParam, MomentDetailRouteParam, ShareResolutionRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
@@ -26,6 +27,7 @@ const TAG: string = 'ShareResolutionPage';
 @Preview
 @Component
 export struct ShareResolutionPage {
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   pathStack: NavPathStack = new NavPathStack();
   @State isLoading: boolean = true;
   @State errorMessage: string = '';
@@ -112,7 +114,7 @@ export struct ShareResolutionPage {
 
   build() {
     NavDestination() {
-    ResponsiveContainer() {
+    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
       Column() {
         if (this.isLoading) {
           SystemLoadingView({ message: '正在加载分享内容...' })

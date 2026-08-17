@@ -21,6 +21,7 @@ import { useMasterDetail } from '../../../core/responsive/Breakpoint';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemInput } from '../../../components/SystemInput';
+import { SystemTextArea } from '../../../components/SystemTextArea';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { LoginPromptView } from '../../../components/LoginPromptView';
 import { AccountInfo, UpdateLocationRequest, UpgradeAccountRequest, GuestRequest, UserItem, OpenUserDoorRequest, UserSharePayload, MomentItem, FetchUserMomentsRequest } from '../../../core/types/api';
@@ -32,6 +33,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { EmptyState } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
 import { NfcShareService } from '../../../core/services/NfcShareService';
@@ -1209,8 +1211,17 @@ export struct ProfilePage {
             // 统计行 (3列: posts/followers/friends)
             this.buildFigmaStatsRow()
 
-            // 标签栏 (posts/liked/saved)
-            this.buildFigmaTabBar()
+            // 标签栏 (posts/liked/saved) —— 统一 TabsPillGroup
+            TabsPillGroup({
+              tabs: [{ label: '帖子' }, { label: '喜欢' }, { label: '收藏' }],
+              activeIndex: this.selectedTab,
+              actions: {
+                onChange: (index: number) => {
+                  this.selectedTab = index;
+                }
+              }
+            })
+              .margin({ bottom: DesignConstants.SPACING.MD })
 
             // 画廊 (根据选中的 tab 展示不同内容)
             this.buildFigmaGallery()
@@ -1321,36 +1332,6 @@ export struct ProfilePage {
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     .margin({ bottom: DesignConstants.SPACING.LG2 })
-  }
-
-  @Builder
-  private buildFigmaTabBar() {
-    Row() {
-      ForEach(['帖子', '喜欢', '收藏'], (tab: string, index: number) => {
-        if (index > 0) {
-          Column()
-            .width(DesignConstants.SPACING.HALF)
-            .height(DesignConstants.COMPONENT.ICON_SIZE_XS)
-            .backgroundColor(this.getSurfaceBorder())
-            .margin({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
-        }
-        Text(tab)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(index === this.selectedTab ? this.getAccentBackground() : this.getSecondaryTextColor())
-          .fontWeight(index === this.selectedTab ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-          // 选中字色/字重切换过渡（对齐 DesktopLayout 导航项，避免硬跳）
-          .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
-          .onClick(() => {
-            this.selectedTab = index;
-          })
-      })
-    }
-    .width('100%')
-    .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-    .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
-    .margin({ bottom: DesignConstants.SPACING.MD })
   }
 
   @Builder
@@ -1655,14 +1636,15 @@ export struct ProfilePage {
           }
         })
 
-      TextArea({ placeholder: '请输入个人简介', text: this.editBio })
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .backgroundColor(this.getSurfaceSubtle())
-        .borderRadius(DesignConstants.SHAPE.CHIP)
-        .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
-        .onChange((value: string) => {
+      SystemTextArea({
+        value: this.editBio,
+        placeholder: '请输入个人简介',
+        minHeight: DesignConstants.COMPONENT.AVATAR_SIZE.LARGE,
+        fontSize: DesignConstants.FONT.SIZE.MD,
+        onChange: (value: string) => {
           this.editBio = value;
-        })
+        }
+      })
 
       Row({ space: DesignConstants.SPACING.MD }) {
         Button('取消')

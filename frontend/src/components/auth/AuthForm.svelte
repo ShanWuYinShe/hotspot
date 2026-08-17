@@ -3,6 +3,7 @@
 	import { login, register, guest } from '@/stores/auth.svelte';
 	import { requestPasswordReset, resetPassword } from '@/api';
 	import Button from '@/components/ui/button.svelte';
+	import TagPill from '@/components/forms/TagPill.svelte';
 
 	// 全页 Auth 路由与 LoginPromptSheet 共用的认证表单。
 	// 五模式：login / register / guest + 忘记密码子流程
@@ -209,18 +210,10 @@
 
 	{#if mode === 'login' || mode === 'register'}
 		{#if mode === 'login'}
-			<!-- 登录方式双 tab（对齐 Figma Make LoginPage：容器 accent 淡底，active 用 surface-primary） -->
-			<div class="grid grid-cols-2 border border-border-default rounded-md p-1 bg-accent-bg" >
+			<!-- 登录方式选择：表单内标签统一走 TagPill（对齐 AGENTS 表单 chips 契约） -->
+			<div class="flex flex-wrap gap-2">
 				{#each ([['code', '验证码登录'], ['password', '密码登录']] as ['code' | 'password', string][]) as [id, label]}
-					<button
-						type="button"
-						aria-pressed={method === id}
-						onclick={() => (method = id)}
-						class="rounded-sm px-3 py-2 text-xs focus-ring transition-colors {method === id ? '' : 'hover:bg-interactive-hover'}"
-						style="{method === id ? 'background:var(--cst-surface-primary);color:var(--cst-text-primary)' : 'color:var(--cst-text-secondary)'}"
-					>
-						{label}
-					</button>
+					<TagPill active={method === id} onClick={() => (method = id)}>{label}</TagPill>
 				{/each}
 			</div>
 		{/if}

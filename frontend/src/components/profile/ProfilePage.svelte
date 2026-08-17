@@ -78,22 +78,25 @@
 	     总览页是长内容呼吸型布局，顶/底 padding 略大于标准列表页（pt-6 pb-8），
 	     属于样板 pt-4 pb-6 的可登记变体。 -->
 	<StandardPageLayout contentClassName="animate-fade-in pt-6 pb-8">
-		<!-- 页眉 -->
-		<header class="flex items-start justify-between gap-6 border-b border-border-default pb-5">
-			<div>
-				<p class="eyebrow font-medium text-accent-default">个人中心</p>
-				<h1 class="mt-2 text-2xl font-medium tracking-title text-text-primary">个人总览</h1>
-				<p class="mt-1.5 text-sm text-text-secondary">你的公开资料、内容与关系的入口。</p>
-			</div>
-			<button
-				type="button"
-				onclick={() => void goto(ROUTES.meEdit)}
-				class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-md bg-surface-primary px-3.5 py-2.5 text-sm font-medium text-text-primary focus-ring transition-colors hover:bg-accent-soft"
+		{#snippet header()}
+			<PageHeader
+				title="个人总览"
+				subtitle="你的公开资料、内容与关系的入口。"
+				titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}
+				contentClassName="pt-4 pb-0"
 			>
-				<Pencil class="size-4"  strokeWidth={1.75} />
-				编辑资料
-			</button>
-		</header>
+				{#snippet trailing()}
+					<button
+						type="button"
+						onclick={() => void goto(ROUTES.meEdit)}
+						class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-md bg-surface-primary px-3.5 py-2.5 text-sm font-medium text-text-primary focus-ring transition-colors hover:bg-accent-soft"
+					>
+						<Pencil class="size-4"  strokeWidth={1.75} />
+						编辑资料
+					</button>
+				{/snippet}
+			</PageHeader>
+		{/snippet}
 
 		{#if loading}
 			<div class="flex flex-col items-center gap-3 py-20">

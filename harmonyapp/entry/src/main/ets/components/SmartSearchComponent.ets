@@ -22,6 +22,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
+import { TabsPillGroup } from './TabsPillGroup';
 
 const DOMAIN_NUMBER: number = 0xFF13;
 const TAG: string = 'SmartSearchComponent';
@@ -267,29 +268,6 @@ export struct SmartSearchComponent {
     }
   }
 
-  @Builder
-  private FilterChip(label: string, filter: string) {
-    Text(label)
-      .fontSize(DesignConstants.FONT.SIZE.SM)
-      .fontWeight(this.currentFilter === filter ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
-      .fontColor(this.currentFilter === filter
-        ? this.getPalette().accentText
-        : this.getPalette().textSecondary)
-      .height(DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT)
-      .layoutWeight(1)
-      .textAlign(TextAlign.Center)
-      .backgroundColor(this.currentFilter === filter
-        ? this.getPalette().accentBackground
-        : DesignConstants.COLOR.TRANSPARENT)
-      .borderRadius(DesignConstants.RADIUS.XL)
-      .padding({ left: DesignConstants.SPACING.HALF, right: DesignConstants.SPACING.HALF })
-      // 选中底色/字色切换过渡（对齐 DesktopLayout 导航项，避免硬跳）
-      .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
-      .onClick(() => {
-        this.switchFilter(filter as 'all' | 'users' | 'groups' | 'moments');
-      })
-  }
-
   private switchFilter(filter: 'all' | 'users' | 'groups' | 'moments') {
     if (this.currentFilter === filter) {
       return;
@@ -317,16 +295,18 @@ export struct SmartSearchComponent {
         .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
 
       if (this.showResults) {
-        Row({ space: 0 }) {
-          this.FilterChip('全部', 'all')
-          this.FilterChip('用户', 'users')
-          this.FilterChip('群组', 'groups')
-          this.FilterChip('瞬间', 'moments')
-        }
-        .padding(DesignConstants.SPACING.THREE)
-        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
-          bottom: DesignConstants.SPACING.SM })
-        .backgroundColor(this.getPalette().surfaceSubtle)
+        TabsPillGroup({
+          tabs: [{ label: '全部' }, { label: '用户' }, { label: '群组' }, { label: '瞬间' }],
+          activeIndex: Math.max(0, ['all', 'users', 'groups', 'moments'].indexOf(this.currentFilter)),
+          actions: {
+            onChange: (index: number) => {
+              const filter = (['all', 'users', 'groups', 'moments'][index] || 'all') as 'all' | 'users' | 'groups' | 'moments';
+              this.switchFilter(filter);
+            }
+          }
+        })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+            bottom: DesignConstants.SPACING.SM })
         .borderRadius(DesignConstants.RADIUS.XL)
         .transition(TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_250, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
       }

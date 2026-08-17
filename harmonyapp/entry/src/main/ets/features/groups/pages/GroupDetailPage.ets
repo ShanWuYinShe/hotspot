@@ -16,6 +16,7 @@ import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemInput } from '../../../components/SystemInput';
+import { SystemTextArea } from '../../../components/SystemTextArea';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
 import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
 import { SystemShareService } from '../../../core/services/SystemShareService';
@@ -1389,15 +1390,14 @@ export struct GroupDetailPage {
               .fontColor(this.getCurrentThemePalette().textSecondary)
               .width('100%')
 
-            TextArea({ placeholder: '请输入群组描述', text: this.editGroupDescription })
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .maxLength(GROUP_DESCRIPTION_MAX)
-              .onChange((value: string) => { this.editGroupDescription = value; })
-              .height(DesignConstants.COMPONENT.PLACEHOLDER_AREA_HEIGHT)
-               .backgroundColor(this.getSurfaceSubtle())
-              .shadow(this.getCurrentThemePalette().controlShadow)
-              .borderRadius(DesignConstants.RADIUS.MD)
-              .padding(DesignConstants.SPACING.MD)
+            SystemTextArea({
+              value: this.editGroupDescription,
+              placeholder: '请输入群组描述',
+              minHeight: DesignConstants.COMPONENT.PLACEHOLDER_AREA_HEIGHT,
+              maxLength: GROUP_DESCRIPTION_MAX,
+              fontSize: DesignConstants.FONT.SIZE.MD,
+              onChange: (value: string) => { this.editGroupDescription = value; }
+            })
 
             Text(`${this.editGroupDescription.trim().length}/${GROUP_DESCRIPTION_MAX}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)

@@ -20,7 +20,8 @@ import { WebSocketService } from '../../../core/network/WebSocketService';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { AnnouncementSummaryCard, SettingsEntryItem, SettingsEntryRow, SettingsMetaCard, SettingsSectionCard, SupportConfigCard } from './SettingsSupport';
 import { AppIcon } from '../../../components/SystemIcon';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const DOMAIN_NUMBER: number = 0xFF27;
@@ -29,6 +30,7 @@ const TAG: string = 'SettingsPage';
 @Preview
 @Component
 export struct SettingsPage {
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
@@ -298,7 +300,7 @@ export struct SettingsPage {
 
         Refresh({ refreshing: $$this.metaRefreshing, builder: RefreshIndicator }) {
           Scroll() {
-            ResponsiveContainer() {
+            PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
               // === Section 1: 外观与主题 ===
               Column() {
                 SettingsSectionCard({ title: '外观与主题' }) {

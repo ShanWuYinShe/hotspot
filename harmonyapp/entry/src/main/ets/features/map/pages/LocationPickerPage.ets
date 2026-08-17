@@ -203,6 +203,19 @@ interface FilterPanelProps {
 @Builder
 function FilterDropdownPanel(props: FilterPanelProps) {
   Column({ space: DesignConstants.SPACING.XS }) {
+    Row() {
+      Text('显示类型')
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
+      Blank()
+      Text(`${(props.showUsers ? 1 : 0) + (props.showGroups ? 1 : 0) + (props.showMoments ? 1 : 0)}/3`)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
+    }
+    .width('100%')
+    .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+
     FilterMenuItem({
       markerSvg: 'marker_user.svg',
       label: '用户',

@@ -253,9 +253,13 @@
 						side="bottom"
 						align="end"
 						sideOffset={8}
-						class="w-56 overflow-hidden rounded-md p-0"
+						class="w-64 overflow-hidden rounded-xl p-0"
 					>
-						<div class="py-1 divide-y divide-border-default">
+						<div class="flex items-center justify-between border-b border-border-default px-3.5 py-2.5">
+							<span class="text-sm font-medium text-text-primary">显示类型</span>
+							<span class="text-xxs text-text-secondary">{activeFilters.size}/3 已选</span>
+						</div>
+						<div class="p-1.5">
 							{#each [
 								['user', '用户'],
 								['group', '群组'],
@@ -264,15 +268,24 @@
 								{@const active = activeFilters.has(type as PinType)}
 								<button
 									type="button"
-									class="hover-btn flex w-full items-center gap-2.5 px-3 py-2 text-left focus-ring"
-									class:bg-accent-soft={active}
+									class="group flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left focus-ring transition-colors {active ? 'bg-accent-soft' : 'hover:bg-interactive-hover'}"
 									onclick={() => toggleFilter(type as PinType)}
 								>
-									<span class="inline-flex shrink-0">{@html markerSvg(type as PinType, 1, { w: 14, h: 19 })}</span>
-									<span class="flex-1 text-sm text-text-primary">{label}</span>
-									{#if active}
-										<Check class="size-3.5 text-accent-default" strokeWidth={2.5} />
-									{/if}
+									<span
+										class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg"
+										style="background:{active ? PIN_TONES[type as PinType].bg : 'var(--cst-surface-subtle)'};border:var(--cst-border-width-hairline) solid {active ? PIN_TONES[type as PinType].border : 'transparent'};"
+									>
+										{@html markerSvg(type as PinType, 1, { w: 14, h: 19 })}
+									</span>
+									<span class="min-w-0 flex-1">
+										<span class="block text-sm text-text-primary">{label}</span>
+										<span class="mt-0.5 block text-xxs text-text-secondary">{active ? '正在显示' : '已隐藏'}</span>
+									</span>
+									<span
+										class="flex size-5 shrink-0 items-center justify-center rounded-full transition-colors {active ? 'bg-accent-default text-text-on-accent' : 'bg-border-default text-transparent'}"
+									>
+										<Check class="size-3" strokeWidth={3} />
+									</span>
 								</button>
 							{/each}
 						</div>

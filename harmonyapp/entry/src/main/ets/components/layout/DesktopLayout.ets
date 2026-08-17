@@ -618,14 +618,14 @@ export struct DesktopLayout {
         .layoutWeight(1)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-      Button('去注册')
-        .type(ButtonType.Normal)
-        .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .backgroundColor(this.getPalette().accentBackground)
-        .fontColor(this.getPalette().accentText)
-        .borderRadius(DesignConstants.RADIUS.SM)
-        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+      SystemButton({
+        label: '去注册',
+        variant: 'primary',
+        buttonSize: 'small',
+        onPress: () => {
+          AppRouter.push(PageNames.LOGIN, new LoginRouteParam());
+        }
+      })
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })

@@ -4,7 +4,8 @@
  */
 
 import { ApiClient } from '../../../core/api/ApiClient';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { InteractionStateStore, MomentSocialState, isMomentLikedByReactions, sumReactionCounts } from '../../../core/state/InteractionStateStore';
@@ -24,6 +25,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { SystemButton } from '../../../components/SystemButton';
 import { SystemInput } from '../../../components/SystemInput';
 import { EmptyState } from '../../../components/EmptyState';
 import { Pressable } from '../../../components/Pressable';
@@ -53,6 +55,7 @@ interface MomentDetailParams {
 @Preview
 @Component
 export struct MomentDetailPage {
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
@@ -313,7 +316,7 @@ export struct MomentDetailPage {
 
   build() {
     NavDestination() {
-    ResponsiveContainer() {
+    PageShellContainer({ variant: 'narrow', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
       Column() {
         this.buildTopBar()
         if (this.isLoading) {
@@ -599,75 +602,45 @@ export struct MomentDetailPage {
   @Builder
   private buildActionBar(moment: MomentItem) {
     Row({ space: DesignConstants.SPACING.LG }) {
-      Button() {
-        Row({ space: DesignConstants.SPACING.SM2 }) {
-          Text() {
-            SymbolSpan($r(this.isMomentLiked(moment) ? AppIcon.HEART_FILL : AppIcon.HEART))
-              .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-              .fontColor([this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary])
-          }
-          Text(this.likePending ? '处理中...' : (this.isMomentLiked(moment) ? '已点赞' : '点赞'))
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor(this.getCurrentThemePalette().textPrimary)
+      SystemButton({
+        label: this.likePending ? '处理中...' : (this.isMomentLiked(moment) ? '已点赞' : '点赞'),
+        icon: this.isMomentLiked(moment) ? AppIcon.HEART_FILL : AppIcon.HEART,
+        showIcon: true,
+        variant: this.isMomentLiked(moment) ? 'surface-accent' : 'surface',
+        buttonSize: 'small',
+        loading: this.likePending,
+        disabled: this.likePending,
+        onPress: () => {
+          this.toggleLike();
         }
-      }
-      .type(ButtonType.Capsule)
-      .layoutWeight(1)
-      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
-      .shadow(this.getCurrentThemePalette().controlShadow)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-      .enabled(!this.likePending)
-      .opacity(this.likePending ? DesignConstants.OPACITY.LOADING : 1)
-      .backgroundColor(this.getSurfaceSubtle())
-      .onClick(() => {
-        this.toggleLike();
       })
+        .layoutWeight(1)
 
-      Button() {
-        Row({ space: DesignConstants.SPACING.SM2 }) {
-          Text() {
-            SymbolSpan($r(this.isMomentFavorited(moment) ? AppIcon.STAR_FILL : AppIcon.STAR))
-              .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-              .fontColor([this.isMomentFavorited(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary])
-          }
-          Text(this.favoritePending ? '处理中...' : (this.isMomentFavorited(moment) ? '已收藏' : '收藏'))
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor(this.getCurrentThemePalette().textPrimary)
+      SystemButton({
+        label: this.favoritePending ? '处理中...' : (this.isMomentFavorited(moment) ? '已收藏' : '收藏'),
+        icon: this.isMomentFavorited(moment) ? AppIcon.STAR_FILL : AppIcon.STAR,
+        showIcon: true,
+        variant: this.isMomentFavorited(moment) ? 'surface-accent' : 'surface',
+        buttonSize: 'small',
+        loading: this.favoritePending,
+        disabled: this.favoritePending,
+        onPress: () => {
+          this.toggleFavorite();
         }
-      }
-      .type(ButtonType.Capsule)
-      .layoutWeight(1)
-      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
-      .shadow(this.getCurrentThemePalette().controlShadow)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-      .enabled(!this.favoritePending)
-      .opacity(this.favoritePending ? DesignConstants.OPACITY.LOADING : 1)
-      .backgroundColor(this.getSurfaceSubtle())
-      .onClick(() => {
-        this.toggleFavorite();
       })
+        .layoutWeight(1)
 
-      Button() {
-        Row({ space: DesignConstants.SPACING.SM2 }) {
-          Text() {
-            SymbolSpan($r(AppIcon.SHARE))
-              .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-              .fontColor([this.getCurrentThemePalette().textSecondary])
-          }
-          Text('分享')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor(this.getCurrentThemePalette().textPrimary)
+      SystemButton({
+        label: '分享',
+        icon: AppIcon.SHARE,
+        showIcon: true,
+        variant: 'surface',
+        buttonSize: 'small',
+        onPress: () => {
+          this.shareMoment();
         }
-      }
-      .type(ButtonType.Capsule)
-      .layoutWeight(1)
-      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
-      .shadow(this.getCurrentThemePalette().controlShadow)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-      .backgroundColor(this.getSurfaceSubtle())
-      .onClick(() => {
-        this.shareMoment();
       })
+        .layoutWeight(1)
     }
     .width('100%')
     .padding({

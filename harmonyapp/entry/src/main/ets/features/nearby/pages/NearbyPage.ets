@@ -10,7 +10,8 @@
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { curves } from '@kit.ArkUI';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState } from '../../../components/EmptyState';
@@ -41,6 +42,7 @@ const TAG: string = 'NearbyPage';
 @Preview
 @Component
 export struct NearbyPage {
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
@@ -184,7 +186,7 @@ export struct NearbyPage {
   }
 
   build() {
-    ResponsiveContainer() {
+    PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
       Column() {
         SystemPageHeader({
           title: '附近',

@@ -6,6 +6,7 @@ import { ApiClient } from '../core/api/ApiClient';
 import { NotifyItem, NotifyPayload, NotifyType } from '../core/types/api';
 import { SystemIcon, AppIcon } from './SystemIcon';
 import { SystemButton } from './SystemButton';
+import { TabsPillGroup, TabItem } from './TabsPillGroup';
 import { AppRouter, AnnouncementsRouteParam, GroupDetailRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../core/router/AppRouter';
 import { PageNames } from '../constants/AppConstants';
 import { SystemToast } from './SystemToast';
@@ -442,53 +443,31 @@ export struct NotificationCenter {
         .layoutWeight(1)
 
         if (this.getUnreadCount() > 0) {
-          Button('全部已读')
-            .type(ButtonType.Normal)
-            .backgroundColor(this.getPalette().surfaceBackground)
-            .fontColor(this.getPalette().accentBackground)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
-            .shadow(this.getPalette().controlShadow)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
-            .onClick(() => this.onMarkAllRead())
+          SystemButton({
+            label: '全部已读',
+            variant: 'surface',
+            buttonSize: 'small',
+            onPress: () => this.onMarkAllRead()
+          })
         }
       }
       .width('100%')
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
       // 过滤器标签
-      Scroll() {
-        Row({ space: DesignConstants.SPACING.SM }) {
-          ForEach(this.filterOptions, (filter: NotificationFilterOption) => {
-            Text(filter.label)
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor(this.selectedFilter === filter.key
-                ? this.getPalette().accentText
-                : this.getPalette().textSecondary)
-              .backgroundColor(this.selectedFilter === filter.key
-                ? this.getPalette().accentBackground
-                : this.getPalette().surfaceBackground)
-              .borderRadius(DesignConstants.RADIUS.FULL)
-              .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
-              .shadow(this.selectedFilter === filter.key
-                ? this.getPalette().accentShadow
-                : this.getPalette().controlShadow)
-              .border({
-                width: DesignConstants.BORDER_WIDTH.HAIRLINE,
-                color: this.selectedFilter === filter.key
-                  ? DesignConstants.COLOR.TRANSPARENT
-                  : this.getPalette().borderColor
-              })
-              // 选中底色/字色/阴影切换过渡（对齐 DesktopLayout 导航项，避免硬跳）
-              .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
-              .onClick(() => this.onFilterSelected(filter.key as NotificationFilterKey))
-          }, (filter: NotificationFilterOption) => filter.key + '_' + (this.selectedFilter === filter.key))
+      TabsPillGroup({
+        tabs: this.filterOptions.map((filter: NotificationFilterOption) => ({ label: filter.label } as TabItem)),
+        activeIndex: this.filterOptions.findIndex((filter: NotificationFilterOption) => filter.key === this.selectedFilter),
+        actions: {
+          onChange: (index: number) => {
+            const option = this.filterOptions[index];
+            if (option) {
+              this.onFilterSelected(option.key as NotificationFilterKey);
+            }
+          }
         }
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-      }
-      .scrollable(ScrollDirection.Horizontal)
-      .scrollBar(BarState.Off)
+      })
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
 
       // 内容区域
       if (this.isLoading) {
@@ -515,13 +494,12 @@ export struct NotificationCenter {
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontColor(this.getPalette().textSecondary)
             .textAlign(TextAlign.Center)
-          Button('重试')
-            .type(ButtonType.Normal)
-            .backgroundColor(this.getPalette().accentBackground)
-            .fontColor(this.getPalette().accentText)
-            .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
-            .borderRadius(DesignConstants.RADIUS.XL)
-            .onClick(() => this.refreshNotifications())
+          SystemButton({
+            label: '重试',
+            variant: 'primary',
+            buttonSize: 'small',
+            onPress: () => this.refreshNotifications()
+          })
         }
         .width('100%')
         .layoutWeight(1)
@@ -621,7 +599,7 @@ export struct NotificationCenter {
           .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .justifyContent(FlexAlign.Center)
-          .backgroundColor(this.getTypeColor(notification.type) + '18')
+          .backgroundColor(this.getSoftStatusColor(notification.type))
         }
 
         // 类型图标徽章：贴头像右下角（用 alignContent 取代硬编码坐标）
@@ -720,11 +698,11 @@ export struct NotificationCenter {
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-    .backgroundColor(notification.is_read ? DesignConstants.COLOR.TRANSPARENT : this.getTypeColor(notification.type) + '07')
+    .backgroundColor(notification.is_read ? DesignConstants.COLOR.TRANSPARENT : this.getSoftStatusColor(notification.type))
     .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
     .border({
       width: DesignConstants.BORDER_WIDTH.HAIRLINE,
-      color: notification.is_read ? DesignConstants.COLOR.TRANSPARENT : this.getTypeColor(notification.type) + '18'
+      color: notification.is_read ? DesignConstants.COLOR.TRANSPARENT : this.getSoftStatusColor(notification.type)
     })
     // 整行按压反馈（对齐 DesktopLayout 导航项 tap-97 语义）
     .scale(this.pressedNotificationId === notification.notify_id ?
@@ -789,6 +767,19 @@ export struct NotificationCenter {
         return this.getPalette().warning;
       default:
         return this.getPalette().accentBackground;
+    }
+  }
+
+  private getSoftStatusColor(type: string): string {
+    switch (this.mapTypeToCategory(type as NotifyType)) {
+      case 'interaction':
+        return AppThemeManager.getSoftStatusBackground('danger');
+      case 'group':
+        return AppThemeManager.getSoftStatusBackground('success');
+      case 'system':
+        return AppThemeManager.getSoftStatusBackground('warning');
+      default:
+        return AppThemeManager.getSoftStatusBackground('info');
     }
   }
 

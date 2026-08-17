@@ -1,5 +1,6 @@
 import { KEY_IS_LOGGED_IN } from '../../../core/state/GlobalStateManager';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { ShareListItem, FetchCreatedSharesRequest, ShareType } from '../../../core/types/api';
 import { DefaultConfig, PageNames } from '../../../constants/AppConstants';
@@ -22,6 +23,7 @@ import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 @Preview
 @Component
 export struct MySharesPage {
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_IS_LOGGED_IN) @Watch('onLoginStateChanged') isLoggedIn: boolean = false;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
@@ -205,7 +207,7 @@ export struct MySharesPage {
 
   build() {
     NavDestination() {
-  ResponsiveContainer() {
+  PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
     Column() {
       // 头部 —— 统一走 SystemPageHeader（居中标题 + 返回）
       SystemPageHeader({

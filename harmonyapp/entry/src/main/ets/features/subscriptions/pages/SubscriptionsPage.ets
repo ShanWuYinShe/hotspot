@@ -5,7 +5,8 @@
  * When backend spec defines subscription APIs, migrate to API calls.
  */
 import { StorageKeys, PageNames } from '../../../constants/AppConstants';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
@@ -45,6 +46,7 @@ interface SubscriptionItem {
 @Preview
 @Component
 export struct SubscriptionsPage {
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   pathStack: NavPathStack = new NavPathStack();
   @State private loading: boolean = true;
   @State private savingKey: string = '';
@@ -177,7 +179,7 @@ export struct SubscriptionsPage {
 
   build() {
     NavDestination() {
-  ResponsiveContainer() {
+  PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
     Column() {
       // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回）
       SystemPageHeader({
