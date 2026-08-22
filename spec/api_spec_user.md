@@ -93,7 +93,7 @@ interface RelatedUserItem {
 **隐私过滤（契约级，searchable 系列开关）**：
 - `searchable=false`：该用户不出现在任何搜索结果（本端点与 `feed/nearby_users`）
 - `nickname_searchable=false`：昵称关键字搜索不命中该用户
-- `phone_searchable=false`：手机号精确搜索不命中该用户
+- `phone_searchable=false`：手机号精确搜索不命中该用户（`keyword` 为手机号格式时按手机号精确匹配，受本开关控制；见下方 Request 的 `keyword` 说明）
 - `location_searchable=false`：位置/半径维度搜索与附近发现不返回该用户
 
 - **节点**: /api/v1（双版本端点：匿名版 `/public/v1/users/search` 见 `api_spec_public.md`）
@@ -107,7 +107,7 @@ interface RelatedUserItem {
 **Request**: `SearchUsersRequest`
 ```typescript
 interface SearchUsersRequest {
-  keyword: string | null;    // 关键字搜索（匹配昵称、bio 等）
+  keyword: string | null;    // 关键字搜索（匹配昵称、bio 等；为手机号格式时同时按手机号精确匹配，受 phone_searchable 控制）
   tag: string | null;        // 标签筛选
   radius: number | null;     // 搜索半径（米）；显式提供时按半径过滤，缺省不过滤
   sort_by: 'relevance' | 'distance' | 'newest' | null;  // 默认: relevance（有意不提供 popular：用户无明确的公开热度指标）
@@ -341,8 +341,8 @@ interface AccountData {
   bio: string | null;
   tags: string[];
   gender: Gender | null;        // Gender 定义于本模块「类型定义」小节
-  email: string | null;         // 注册时 login_id 含 '@' 视为邮箱；否则为 null
-  phone: string | null;         // 注册时 login_id 为纯数字视为手机号；否则为 null
+  email: string | null;         // login_id 为邮箱型时回填，否则为 null（类型判定规则见 api_spec_base.md「通用字段约束」login_id）
+  phone: string | null;         // login_id 为手机号型时回填，否则为 null（类型判定规则见 api_spec_base.md「通用字段约束」login_id）
   location: Location;           // 存储的原始位置，不含 distance/bearing（与 RelativeLocation 不同）
   presence_status: UserPresenceStatus;
   last_online_at: string;       // UTC ISO 8601，最后在线时间

@@ -153,7 +153,7 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 ### 参数必显式（契约级）
 
 - 语义敏感的参数一律**必传**，禁止用缺省值翻转语义：目标 ID（`user_id`/`user_ids`/`group_id`/`moment_id` 等）必传；影响行为范围的参数必须显式声明（如通知已读范围用 `scope: 'ids' | 'all'`）
-- 仅允许「无歧义固定缺省」：分页 `limit`（默认 20）、`radius`（默认 5000）、`privacy_level`（默认 'public'）等单一固定值
+- 仅允许「无歧义固定缺省」：分页 `limit`（默认 20）、`privacy_level`（默认 'public'）等单一固定值；`radius` 的缺省语义按端点分两类固定口径（条件搜索类缺省不过滤、位置发现类默认 5000，见「搜索与地理约束」），不得引入第三种
 - 禁止「缺省 = 当前用户」这类按调用者身份翻转的缺省语义
 
 ### 禁用词表
@@ -379,7 +379,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 |-----|------|------|
 | `nickname` | 1-30 字符 | 用户昵称 |
 | `password` | 8-128 字符，至少含字母和数字 | 密码复杂度 |
-| `login_id` | 3-64 字符 | 登录标识（手机号/邮箱/用户名） |
+| `login_id` | 3-64 字符；类型由格式判定：手机号型=纯数字、邮箱型=含 '@' 且为有效 Email 格式、用户名型=不含 '@' 且非纯数字 | 登录标识（手机号/邮箱/用户名）；`users/account` 的 `email`/`phone` 按此规则回填，用户名型不得与手机号/邮箱型格式重叠 |
 | `bio` | 0-500 字符 | 个人简介 |
 | `tags` | 每个标签 1-30 字符，默认最多 10 个 | 用户/群组/瞬间标签 |
 | `description`（moment） | 1-2000 字符 | 瞬间描述 |
@@ -416,7 +416,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 |-----|------|------|
 | `keyword` | 1-100 字符 | 搜索关键字 |
 | `prefix` | 1-50 字符 | 搜索建议前缀 |
-| `radius` | 100-50000 米（默认 `5000`） | 搜索半径 |
+| `radius` | 100-50000 米 | 搜索半径。缺省语义分两类固定口径：条件搜索类（`users/search`、`groups/search`）缺省不做半径过滤（显式提供才过滤）；位置发现类（`feed/nearby_*`、`search/suggest`）缺省默认 5000 并受 `search_radius_max` 裁剪。以各端点文档为准，禁止第三种口径 |
 | `bounds`（map） | north/south ∈ [-90,90]；east/west ∈ [-180,180]；north>=south、east>=west | 地图视口 |
 
 ### 平台管理字段约束
@@ -551,7 +551,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 #### Idempotency-Key 格式
 
 - **Header 名称**：`Idempotency-Key`
-- **格式**：`{client_id}-{timestamp_ms}-{random}`
+- **格式**：`{client_id}-{timestamp_ms}-{random}`，其中 `client_id` 为设备标识（即 `DeviceId`，UUID v4 含连字符）、`timestamp_ms` 为 13 位毫秒时间戳、`random` 为 6-12 位随机串（`client_id` 为 36 字符 UUID 时整体 57-63 字符）
 - **长度**：32-64 字符；**字符集**：`[a-zA-Z0-9-_]`
 - **要求**：同一用户对同一接口的同一次重试必须复用同一个 `Idempotency-Key`
 

@@ -70,7 +70,7 @@ interface FollowingRequest {
 **Request**: `NearbyMomentsRequest`
 ```typescript
 interface NearbyMomentsRequest {
-  radius: number | null;  // 搜索半径（米）
+  radius: number | null;  // 搜索半径（米）；不传默认 5000 并受 search_radius_max 裁剪（位置发现类缺省口径，见 api_spec_base.md「搜索与地理约束」）
   reference_point: GeoPoint | null;
   pagination: PaginationParams | null;
 }
@@ -95,7 +95,7 @@ interface NearbyMomentsRequest {
 **Request**: `NearbyUsersRequest`
 ```typescript
 interface NearbyUsersRequest {
-  radius: number | null;
+  radius: number | null;  // 搜索半径（米）；不传默认 5000 并受 search_radius_max 裁剪（位置发现类缺省口径，见 api_spec_base.md「搜索与地理约束」）
   reference_point: GeoPoint | null;
   pagination: PaginationParams | null;
 }
@@ -118,7 +118,7 @@ interface NearbyUsersRequest {
 **Request**: `NearbyGroupsRequest`
 ```typescript
 interface NearbyGroupsRequest {
-  radius: number | null;
+  radius: number | null;  // 搜索半径（米）；不传默认 5000 并受 search_radius_max 裁剪（位置发现类缺省口径，见 api_spec_base.md「搜索与地理约束」）
   reference_point: GeoPoint | null;
   pagination: PaginationParams | null;
 }

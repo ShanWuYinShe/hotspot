@@ -192,7 +192,7 @@ interface PublicMomentItem {
   shares_count: number;
   reactions: PublicReaction[];
   user: UserInfo;
-  is_deleted: boolean;
+  is_deleted: boolean;         // 公开视角恒 false（软删瞬间在匿名端点不可达，字段保留以与登录版同构）
   location: RelativeLocation | null;
 }
 
@@ -305,11 +305,11 @@ interface PublicBootstrapData {
 **Request**: `RegisterRequest`
 ```typescript
 interface RegisterRequest {
-  login_id: string;             // 手机号/邮箱/用户名（注册后作为登录凭证）
+  login_id: string;             // 手机号/邮箱/用户名（注册后作为登录凭证；格式判定规则见 api_spec_base.md「通用字段约束」login_id）
   nickname: string;
   password: string;
   client_type: ClientType;
-  device_id: DeviceId;          // App 端必填；Web 端服务端从 device_id Cookie 读取
+  device_id: DeviceId | null;   // App 端必填非 null；Web 端为 null（服务端从 device_id Cookie 读取）
 }
 ```
 
@@ -331,7 +331,7 @@ interface SigninRequest {
   login_id: string;            // 手机号/邮箱/用户名
   password: string;            // 密码
   client_type: ClientType;
-  device_id: DeviceId;         // App 端必填；Web 端服务端从 device_id Cookie 读取
+  device_id: DeviceId | null;  // App 端必填非 null；Web 端为 null（服务端从 device_id Cookie 读取）
 }
 ```
 
@@ -357,7 +357,7 @@ interface SigninRequest {
 interface GuestRequest {
   nickname: string;
   client_type: ClientType;
-  device_id: DeviceId;   // App 端必填；Web 端服务端从 device_id Cookie 读取
+  device_id: DeviceId | null;  // App 端必填非 null；Web 端为 null（服务端从 device_id Cookie 读取）
 }
 ```
 
@@ -392,7 +392,7 @@ interface GuestRequest {
 ```typescript
 interface RefreshTokenRequest {
   client_type: ClientType;
-  device_id: DeviceId;     // 用于校验 refresh_token 归属当前设备，防止跨设备 token 挪用（Web 端服务端从 device_id Cookie 读取）
+  device_id: DeviceId | null;  // 用于校验 refresh_token 归属当前设备，防止跨设备 token 挪用。App 端必填非 null；Web 端为 null（服务端从 device_id Cookie 读取）
   refresh_token: string | null;  // App 端必填；Web 端为 null（使用 Cookie）
 }
 ```
@@ -436,7 +436,7 @@ interface ForgotPasswordRequest {
 **安全说明**：
 - 重置密码成功后，服务端自动吊销该账号所有现有会话（与 `change_password` 一致）
 - 所有被吊销会话的 token 写入黑名单
-- 被吊销设备的 WebSocket 连接会被服务端主动断开
+- 被吊销设备的 WebSocket 连接会收到 `SessionRevoked`（`reason='password_changed'`，与 `change_password` 一致，见 `api_spec_websocket.md`）后被服务端主动断开
 - 重置成功后自动登录：按 `(user_id, device_id)` 建立新会话；若该设备已有活跃会话则立即驱逐（与 `signin` 的驱逐规则一致）
 
 **Request**: `ResetPasswordRequest`
@@ -446,7 +446,7 @@ interface ResetPasswordRequest {
   verification_code: string;
   new_password: string;
   client_type: ClientType;
-  device_id: DeviceId;       // App 端必填；Web 端服务端从 device_id Cookie 读取
+  device_id: DeviceId | null; // App 端必填非 null；Web 端为 null（服务端从 device_id Cookie 读取）
 }
 ```
 
@@ -483,7 +483,7 @@ interface ResetPasswordRequest {
 **Request**: `PublicSearchUsersRequest`
 ```typescript
 interface PublicSearchUsersRequest {
-  keyword: string | null;    // 关键字搜索（匹配昵称、bio 等）
+  keyword: string | null;    // 关键字搜索（匹配昵称、bio 等；为手机号格式时同时按手机号精确匹配，受 phone_searchable 控制，与登录版一致）
   tag: string | null;        // 标签筛选
   radius: number | null;     // 搜索半径（米）；显式提供时按半径过滤，缺省不过滤
   sort_by: 'relevance' | 'distance' | 'newest' | null;  // 默认: relevance
@@ -911,7 +911,7 @@ interface PublicSearchGroupMembersRequest {
 **Request**: `PublicNearbyUsersRequest`
 ```typescript
 interface PublicNearbyUsersRequest {
-  radius: number | null;
+  radius: number | null;  // 搜索半径（米）；不传默认 5000 并受 search_radius_max 裁剪（位置发现类缺省口径，见 api_spec_base.md「搜索与地理约束」）
   reference_point: GeoPoint | null;
   pagination: PaginationParams | null;
 }
@@ -935,7 +935,7 @@ interface PublicNearbyUsersRequest {
 **Request**: `PublicNearbyGroupsRequest`
 ```typescript
 interface PublicNearbyGroupsRequest {
-  radius: number | null;
+  radius: number | null;  // 搜索半径（米）；不传默认 5000 并受 search_radius_max 裁剪（位置发现类缺省口径，见 api_spec_base.md「搜索与地理约束」）
   reference_point: GeoPoint | null;
   pagination: PaginationParams | null;
 }

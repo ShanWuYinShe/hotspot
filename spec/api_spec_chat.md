@@ -139,7 +139,7 @@ interface GroupMessageItem {
   edited_at: string | null;
   recalled_at: string | null;  // 非 null 即表示已撤回
 
-  read_count: number | null;
+  read_count: number | null;  // 已读人数（最终一致）；null = 不适用（system 消息/已撤回消息）
   reactions: Reaction[];  // 表情反应聚合（空数组 = 无反应）
 }
 ```
@@ -236,6 +236,8 @@ interface PrivateChatOpenResult {
   recent_messages: PaginatedData<PrivateMessageItem>;  // 始终返回，会话不存在时 items 为空数组
 }
 ```
+
+**10200 边界**：仅当对方 `allow_private_chat='nobody'`（硬禁止）时本端点返回 `10200`；软限制（对方为 `'friends'` 但双方未互相关注、陌生人配额耗尽）不拦截本端点，通过 `chat.can_message=false` + `chat.forbidden_reason` 表达。发送时的最终判定以 `private_messages/send` 为准。
 
 **错误码**: `10200`（privacy_setting 对方不允许私聊） `10300`
 

@@ -24,7 +24,7 @@
 
 ## 类型定义
 
-以下类型定义于 `api_spec_types.md`：`UserInfo`、`MomentSummary`、`FollowSource`、`AnnounceSeverity`、`NotifyType`、`NotifyCategory`、`PaginationParams`、`PaginatedData`。
+以下类型定义于 `api_spec_types.md`：`UserInfo`、`MomentSummary`、`FollowSource`、`AnnounceSeverity`、`NotifyType`、`NotifyCategory`、`ReportTargetType`、`PaginationParams`、`PaginatedData`。
 
 ### 通知与 WebSocket 事件的关系（契约级）
 

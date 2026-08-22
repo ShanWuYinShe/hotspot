@@ -29,7 +29,7 @@
 
 - **节点**: /api/v1（双版本端点：匿名版 `/public/v1/system/bootstrap` 见 `api_spec_public.md`；必须有效 Token）
 
-**缓存契约（防惊群）**：响应携带 `bootstrap_version`（服务端在 config/version 变更时递增）。客户端可缓存响应并在后续冷启动时通过 `If-None-Match: <bootstrap_version>` 请求头询问；服务端无变化时返回精简响应（`code=0` + `data.bootstrap_version` 不变 + 其余字段省略，由客户端使用缓存）。`bootstrap_version` 的失效由服务端在平台管理员修改 `AppConfig` 或发布新版本/公告时主动递增。
+**缓存契约（防惊群）**：响应携带 `bootstrap_version`（服务端在 config/version 变更时递增）。客户端可缓存响应并在后续冷启动时通过 `If-None-Match: <bootstrap_version>` 请求头询问；服务端无变化时返回精简响应（`code=0` + `data.bootstrap_version` 不变 + **仅 `meta`/`client_config` 省略**，由客户端使用缓存；`profile`/`unread_summary` 为用户私有数据、无缓存语义，命中时仍恒返回最新值——`bootstrap_version` 不因用户资料/未读数变化而递增）。`bootstrap_version` 的失效由服务端在平台管理员修改 `AppConfig` 或发布新版本/公告时主动递增。
 
 > **防惊群**：`bootstrap_version` 变更会让所有客户端同时 miss 缓存并全量重拉，客户端应加随机 jitter 延迟后刷新，避免集中请求。`meta`/`client_config` 为公共数据可做 CDN 缓存；`profile`/`unread_summary` 为用户私有数据，不可缓存。
 

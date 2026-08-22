@@ -368,7 +368,7 @@ interface FetchAuditLogsRequest {
 type AuditAction = 
   | 'user.ban'           // 封禁用户
   | 'user.unban'         // 解封用户
-  | 'group.dismiss'      // 解散群组（平台侧）
+  | 'group.dismiss'      // 解散群组（群主经 groups/admin/dismiss，或平台侧经 /admin/v1/groups/dismiss）
   | 'group.member_mute'  // 禁言群成员（由群管理员通过 groups/admin/members/set_mute 触发）
   | 'group.member_ban'   // 封禁群成员（由群管理员通过 groups/admin/members/set_ban active=true 触发）
   | 'group.member_remove'// 移除群成员（由群管理员通过 groups/admin/members/remove 触发）
@@ -516,8 +516,10 @@ interface AppConfigDefaultsPatch {
 
 ```typescript
 interface UploadConfig {
-  // 注：本配置为 image/video/audio/file 四档的全局默认限制；各分类（avatar/moment_image/chat_video 等）的
-  // 具体 MIME 白名单与大小上限以 api_spec_media.md「分类限制」表为硬编码默认，平台配置仅覆盖四档全局值
+  // 注：本配置为 image/video/audio/file 四档的全局限制；各分类（avatar/moment_image/chat_video 等）的
+  // 具体 MIME 白名单与大小上限以 api_spec_media.md「分类限制」表为契约权威。
+  // 优先级（契约级）：实际生效大小上限 = min(本配置对应四档全局值, media.md 该分类上限)——平台配置只能收紧、不能放宽；
+  // MIME 白名单以 media.md 分类表为准，不因本配置放宽
   image_max_size: number;
   video_max_size: number;
   audio_max_size: number;
@@ -596,7 +598,8 @@ interface SearchAdminUsersRequest {
 
 **Response**: `ApiResponse<PaginatedData<AdminUserItem>>`
 ```typescript
-// AdminUserItem 继承 UserItem；继承的查看者字段（relation/social_context 等）在平台管理视角为 null（无业务意义）
+// AdminUserItem 继承 UserItem；继承的查看者字段（relation/social_context 等）在平台管理视角为 null（无业务意义）；
+// 隐私受控字段（stats/location/presence_status 等）在平台管理视角豁免客户端隐私过滤、恒返回真值（见 api_spec_authz.md「交叉规则」第 4 条）
 interface AdminUserItem extends UserItem {
   status: UserAccountStatus;
   banned_until: string | null;   // 封禁到期时间；null = 未封禁/永久封禁
@@ -935,7 +938,7 @@ interface UpdateAnnouncementRequest {
   title: string | null;
   content: string | null;
   severity: AnnounceSeverity | null;
-  action_url: string | null;
+  action_url: string | null;  // 传空字符串 "" 表示清除链接（与 avatar_file_id 清空约定一致）；null = 不变
 }
 ```
 

@@ -154,7 +154,8 @@ interface GeoPoint {
 }
 
 // 位置信息 (包含坐标和位置名称)
-// 用途：仅用于 request 请求参数
+// 原始位置：不含 distance/bearing（距离/方位仅存在于 RelativeLocation）
+// 用途：请求参数（如 groups/create、users/update_location）与配置/存储回显（GroupSettings、ClientDefaults、AccountData）
 interface Location {
   point: GeoPoint;
   location_name: string; // 必填，0-100字符，无名称时使用 ClientConfig.defaults.default_location.location_name

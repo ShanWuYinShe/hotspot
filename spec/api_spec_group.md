@@ -480,7 +480,7 @@ interface AcceptInviteRequest {
 
 **推送**：
 - 向群内推送 `GroupMemberJoined` 事件
-- 向邀请发起方推送 `GroupInviteResponse` 事件并落库通知（见 `api_spec_notify.md`）
+- 向邀请发起方推送 `GroupInviteResponse` 事件（纯实时，不落库通知；邀请状态可经 `groups/admin/invites/fetch_sent` 查询，见 `api_spec_websocket.md`）
 
 **错误码**: `10300` `10400`
 
@@ -682,7 +682,7 @@ interface FetchAdminGroupMembersRequest {
 
 设置成员角色。设置为目标角色与当前一致时视为 no-op，返回成功。
 
-**降级与 pending 邀请**：邀请是群行为（非个人），inviter 降级为普通成员后，其历史发出的 pending 邀请由其他管理员/owner 继续可见与管理（不自动失效）。**owner 降级**（转交所有权）前若有 pending 邀请，需先 `invites/revoke` 或在 `transfer_ownership` 中一并转交管理权，否则返回 `10400`。
+**降级与 pending 邀请**：邀请是群行为（非个人），inviter 降级为普通成员后，其历史发出的 pending 邀请由其他管理员/owner 继续可见与管理（不自动失效）。owner 经 `transfer_ownership` 转让群主后，其历史发出的 pending 邀请同样保留，由新 owner 与其他管理员继续管理（`transfer_ownership` 对此不设前置检查）。
 
 **推送**：成功后向群内推送 `GroupMemberRoleChanged` 事件（含 `transfer_ownership` 触发的 owner 变更）。
 

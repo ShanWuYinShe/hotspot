@@ -10,8 +10,8 @@
 
 | 订阅类型 | 订阅参数 | 数量限制 | 说明 |
 |---------|---------|---------|------|
-| **用户状态** | `{type: 'user', ids: [user_id...]}` | 最多 500 个 | 按场景订阅用户上线/离线/输入状态，离开场景立即取消 |
-| **群聊消息** | `{type: 'group', ids: [group_id...]}` | 最多 100 个 | 按场景订阅群消息/成员变动/群管理事件，离开场景立即取消 |
+| **用户状态** | `{type: 'user', ids: [user_id...]}` | 最多 500 个（默认值，实际以 `ConnectionEstablished.config.max_subscriptions` 下发为准） | 按场景订阅用户上线/离线/输入状态，离开场景立即取消 |
+| **群聊消息** | `{type: 'group', ids: [group_id...]}` | 最多 100 个（默认值，实际以 `ConnectionEstablished.config.max_subscriptions` 下发为准） | 按场景订阅群消息/成员变动/群管理事件，离开场景立即取消 |
 
 ### 服务端会推送什么？
 
@@ -145,7 +145,7 @@ WebSocket close code 受 RFC 6455 约束（范围 1000-4999），应用层错误
 |------------|------|-----------|
 | `1000` | 正常关闭（服务端主动优雅关闭） | 不自动重连 |
 | `1008` | Policy Violation（协议违规，如发送未鉴权事件） | 记录日志，不自动重连 |
-| `4001` | 认证失败/Token 失效/会话被驱逐（`SessionRevoked`） | 刷新 token 或重新登录后重连 |
+| `4001` | 认证失败/Token 失效/会话被驱逐（`SessionRevoked`）/账号封禁（推送 `AccountBanned` 后断开） | 刷新 token 或重新登录后重连（封禁场景登录将得到 `10201`） |
 | `4002` | 限流（连接级或订阅级超限） | 按 `Retry-After` 等待后重连 |
 | `1011` | 服务端内部错误 | 指数退避重连 |
 
@@ -293,7 +293,7 @@ type ServerEventType =
   | "GroupTyping"                 // 群聊输入状态（服务端推送版）
   // 群组管理
   | "GroupMemberJoined" | "GroupMemberLeft" | "GroupMemberRemoved"
-  | "GroupMemberRoleChanged"      // 成员角色变更（升/降级 admin）
+  | "GroupMemberRoleChanged"      // 成员角色变更（升/降级 admin；含 transfer_ownership 触发的 owner 变更）
   | "GroupMemberMuted" | "GroupMemberUnmuted"
   | "GroupInviteReceived" | "GroupInviteRevoked" | "GroupInviteExpired" | "GroupInviteRejected" | "GroupInviteResponse"
   | "GroupApplicationReceived" | "GroupApplicationCancelled" | "GroupApplicationExpired" | "GroupApplicationRejected" | "GroupApplicationResponse"
@@ -344,7 +344,8 @@ type ConnectionEstablishedEvent = { type: "ConnectionEstablished"; payload: Conn
 // PongPayload 定义见上文「心跳机制」
 type PongEvent = { type: "Pong"; payload: PongPayload; };
 
-// 会话被驱逐/撤销（单设备单会话模型下，同设备重新登录驱逐 device_evicted；或用户自助撤销会话 revoke_session/revoke_other_sessions 触发 revoked_by_user）
+// 会话被驱逐/撤销（单设备单会话模型下，同设备重新登录驱逐 device_evicted；用户自助撤销会话 revoke_session/revoke_other_sessions 触发 revoked_by_user；
+// 密码类变更 change_password / reset_password 吊销会话时触发 password_changed）
 // 客户端收到后必须：清本地用户态 + 断开连接 + 不自动重连（提示"账号在其他设备登录"或"会话已失效"）
 interface SessionRevokedPayload {
   reason: 'device_evicted' | 'revoked_by_user' | 'password_changed';
@@ -829,7 +830,7 @@ interface GroupMemberRemovedPayload {
 }
 type GroupMemberRemovedEvent = { type: "GroupMemberRemoved"; payload: GroupMemberRemovedPayload; };
 
-// 成员角色变更（升/降级 admin）
+// 成员角色变更（升/降级 admin；含 transfer_ownership 触发的 owner 变更）
 // GroupRole 定义于 api_spec_types.md（'owner' | 'admin' | 'member'）
 interface GroupMemberRoleChangedPayload {
   group_id: string;
