@@ -26,6 +26,8 @@
 | `POST /api/v1/moments/set_favorite` | 设置收藏状态（两态统一） | /api/v1 |
 | `POST /api/v1/moments/fetch_created` | 我创建的瞬间（拥有者视角） | /api/v1 |
 | `POST /api/v1/moments/fetch_favorites` | 我的收藏 | /api/v1 |
+| `POST /api/v1/moments/fetch_following` | 关注动态（我关注的人发布的瞬间） | /api/v1 |
+| `POST /api/v1/moments/fetch_nearby` | 附近瞬间（基于位置的发现流；双版本） | /api/v1 |
 
 > 表情反应（reaction）统一由 `POST /api/v1/reactions/set` 处理，反应列表统一由 `POST /api/v1/reactions/fetch` 查询（见 `api_spec_reaction.md`）。
 
@@ -59,13 +61,13 @@ interface FavoritedMomentItem extends MomentItem {
 
 ### POST /api/v1/moments/search
 
-统一搜索生活瞬间（关键字/标签）。**不承担附近发现职责**——按位置发现瞬间的唯一入口为 `feed/nearby_moments`（见 `api_spec_discovery.md`）。
+统一搜索生活瞬间（关键字/标签）。**不承担附近发现职责**——按位置发现瞬间的入口为 `moments/fetch_nearby`（见下方）；无输入的热门发现（发现页首屏）由本端点的热门模式承担。
 
 - **节点**: /api/v1（双版本端点：匿名版 `/public/v1/moments/search` 见 `api_spec_public.md`）
 - **排序**: 
   - `sort_by='relevance'`（默认）：按相关性优先；同分时按 `created_at` 倒序，再以 `moment_id DESC` 作为稳定 tie-breaker
   - `sort_by='newest'`：按发布时间倒序
-  - `sort_by='popular'`：按互动热度排序（含时间衰减因子；具体衰减算法为服务端实现细节）
+  - `sort_by='popular'`：按互动热度排序（含时间衰减因子；具体衰减算法为服务端实现细节），`moment_id DESC` 作为稳定 tie-breaker
   - 一致性级别为弱一致
 
 **Request**: `SearchMomentsRequest`
@@ -76,8 +78,11 @@ interface SearchMomentsRequest {
   sort_by: 'relevance' | 'newest' | 'popular' | null;  // 默认: relevance
   pagination: PaginationParams | null;
 }
-// 至少提供 keyword、tag 中的一个；不满足时请求失败（10000）
-// 搜索为全局匹配（不受位置过滤）；附近发现请使用 feed/nearby_moments
+// 至少提供 keyword、tag、sort_by='popular' 中的一个，不满足时请求失败（10000）：
+// - keyword/tag 均缺省且显式传 sort_by='popular' 时进入「热门模式」（无输入条件的热门瞬间，
+//   承接发现页首屏，原 feed/trending 的能力归宿）
+// - 热门模式下 keyword/tag 必须缺省（与输入条件互斥，同传视为参数冲突 10000）
+// 搜索为全局匹配（不受位置过滤）；附近发现请使用 moments/fetch_nearby
 ```
 
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
@@ -237,3 +242,42 @@ interface FetchFavoritesRequest {
 ```
 
 **Response**: `ApiResponse<PaginatedData<FavoritedMomentItem>>`
+
+---
+
+### POST /api/v1/moments/fetch_following
+
+关注动态：我关注的人发布的公开瞬间（含好友与单向关注，仅 `privacy_level='public'`）。无匿名版（依赖查看者关注关系）。
+
+- **节点**: /api/v1
+- **排序**: 按 `created_at DESC` 排序（最新在前），`moment_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
+
+**Request**: `FetchFollowingMomentsRequest`
+```typescript
+interface FetchFollowingMomentsRequest {
+  reference_point: GeoPoint | null;  // 用于 MomentItem.location 的距离/方位计算；不传时服务端按回退链解析
+  pagination: PaginationParams | null;
+}
+```
+
+**Response**: `ApiResponse<PaginatedData<MomentItem>>`
+
+---
+
+### POST /api/v1/moments/fetch_nearby
+
+附近瞬间（基于位置的发现流，登录用户的主要发现入口；原 `feed/nearby_moments` 迁移而来）。
+
+- **节点**: /api/v1（双版本端点：匿名版 `/public/v1/moments/fetch_nearby` 见 `api_spec_public.md`——附近公开瞬间的可见性不依赖身份，匿名版为拉新路径，仅 `privacy_level='public'` 且未被过滤的瞬间）
+- **排序**: 主序为服务端计算的 `distance` 升序（相对 `reference_point`）；仅当距离差在服务端定义的近似阈值内时，热度/活跃度作为次级信号参与排序；`moment_id DESC` 作为稳定 tie-breaker；一致性级别为弱一致
+
+**Request**: `FetchNearbyMomentsRequest`
+```typescript
+interface FetchNearbyMomentsRequest {
+  radius: number | null;  // 搜索半径（米）；不传默认 5000 并受 search_radius_max 裁剪（位置发现类缺省口径，见 api_spec_base.md「搜索与地理约束」）
+  reference_point: GeoPoint | null;
+  pagination: PaginationParams | null;
+}
+```
+
+**Response**: `ApiResponse<PaginatedData<MomentItem>>`

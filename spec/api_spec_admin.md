@@ -51,7 +51,7 @@
 | `POST /admin/v1/reports/fetch` | 举报列表（按状态/类型过滤） | admin.reports.read |
 | `POST /admin/v1/reports/judge` | 裁决举报（resolve/dismiss） | admin.reports.write |
 | `POST /admin/v1/tags/search` | 搜索标签 | admin.tags.read |
-| `POST /admin/v1/tags/delete` | 删除/屏蔽标签 | admin.tags.write |
+| `POST /admin/v1/tags/set_ban` | 设置标签屏蔽状态（两态统一：屏蔽/解屏蔽，可选物理删除） | admin.tags.write |
 | `POST /admin/v1/announcements/fetch` | 系统公告列表（按 severity 过滤） | admin.announcements.read |
 | `POST /admin/v1/announcements/create` | 发布系统公告 | admin.announcements.write |
 | `POST /admin/v1/announcements/update` | 更新系统公告 | admin.announcements.write |
@@ -59,7 +59,7 @@
 
 ## 类型定义
 
-以下类型定义于 `api_spec_types.md`：`UserInfo`、`Location`、`GroupSettings`、`FeatureSwitches`、`AppLimits`、`ContactInfo`、`PaginationParams`、`PaginatedData`、`UserItem`、`GroupItem`、`SystemAnnouncementItem`、`UserType`、`PrivacyLevel`、`ReportStatus`、`ReportTargetType`、`ReportAction`、`TagItem`、`TagTrend`、`AnnounceSeverity`、`ReportItem`。
+以下类型定义于 `api_spec_types.md`：`UserInfo`、`Location`、`GroupSettings`、`FeatureSwitches`、`AppLimits`、`ContactInfo`、`PaginationParams`、`PaginatedData`、`UserItem`、`GroupItem`、`SystemAnnouncementItem`、`UserType`、`PrivacyLevel`、`ReportStatus`、`ReportTargetType`、`ReportAction`、`TagItem`、`AnnounceSeverity`、`ReportItem`。
 
 以下 Admin 扩展类型在通用类型基础上扩展平台管理视角字段（`AdminXxxItem` 仅存在于本节点）。
 
@@ -382,7 +382,7 @@ type AuditAction =
   | 'admin.award'        // 授权平台管理员
   | 'admin.revoke'       // 撤销平台管理员
   | 'report.judge'       // 裁决举报
-  | 'tag.delete'         // 删除/屏蔽标签
+  | 'tag.set_ban'        // 设置标签屏蔽状态（屏蔽/解屏蔽）
   | 'config.update';     // 更新系统配置
 
 type AuditTargetType = 'user' | 'group' | 'announcement' | 'role' | 'admin' | 'report' | 'tag' | 'config';
@@ -407,7 +407,7 @@ type AuditDetails =
   | { type: 'admin.award'; target_user_id: string; role_ids: string[]; award_all_permissions: boolean | null }
   | { type: 'admin.revoke'; target_user_id: string }
   | { type: 'report.judge'; report_id: string; action: ReportAction; note: string | null }
-  | { type: 'tag.delete'; name: string }
+  | { type: 'tag.set_ban'; name: string; active: boolean }
   | { type: 'config.update'; config_key: string; old_value: ConfigValue; new_value: ConfigValue };
 
 interface AuditLogItem {
@@ -564,7 +564,6 @@ interface RateLimitConfig {
 
 interface ResponseDefaults {
   search_suggest_count: number;       // 搜索建议返回条数，默认 5
-  hot_moments_count: number;          // feed/trending 热门瞬间返回条数，默认 20
   chat_recent_messages_count: number; // open_the_door 返回的最近消息条数，默认 20
   group_announcements_count: number;  // 群公告列表返回条数，默认 10
   system_announcements_count: number; // 系统公告列表返回条数，默认 10
@@ -841,24 +840,25 @@ interface AdminTagItem extends TagItem {
 
 ---
 
-### POST /admin/v1/tags/delete
+### POST /admin/v1/tags/set_ban
 
-屏蔽标签（平台管理）。
+设置标签屏蔽状态（两态统一端点，平台管理）。`active=false` 解屏蔽消除误操作不可逆问题。
 
-**删除语义（软屏蔽，保护历史数据完整性）**：
-- 默认**软屏蔽**：标签不再可被新建/搜索命中，但**已引用该标签的历史瞬间/群组/用户数据保留不变**（不回写改写历史记录）
-- 物理删除（从所有历史引用中移除）为**高危操作**，需在 Request 中显式传 `hard_delete: true` 确认；物理删除不可逆
-- 屏蔽后同名标签不可再次创建（当前不提供取消屏蔽端点；误屏蔽需服务端维护处理）
+**屏蔽语义（软屏蔽，保护历史数据完整性）**：
+- `active=true`（默认语义显式传参）：**软屏蔽**——标签不再可被新建/搜索命中，但**已引用该标签的历史瞬间/群组/用户数据保留不变**（不回写改写历史记录）
+- `active=false`：解除屏蔽，同名标签恢复可创建/可命中（no-op 成功——对未屏蔽标签解屏蔽返回成功）
+- 物理删除（从所有历史引用中移除）为**高危操作**，仅在 `active=true` 时可显式传 `hard_delete: true` 确认；物理删除不可逆，且物理删除后同名标签视为新标签可重新创建
 - **新内容约束**：被屏蔽标签出现在新建内容（瞬间/群组/用户资料的 `tags`）中时，该请求失败（`10400`，message 指明被屏蔽的标签名）——对应端点（moments/create、groups/create、users/update_account）的错误码清单已同步列出 `10400`
-- **寻址说明**：标签的业务唯一键为 `name`；`AdminTagItem.tag_id` 为内部存储标识，不参与删除寻址
+- **寻址说明**：标签的业务唯一键为 `name`；`AdminTagItem.tag_id` 为内部存储标识，不参与寻址
 
 - **权限**: `admin.tags.write`
 
-**Request**: `DeleteAdminTagRequest`
+**Request**: `SetAdminTagBanRequest`
 ```typescript
-interface DeleteAdminTagRequest {
-  name: string;            // 要屏蔽/删除的标签名
-  hard_delete: boolean | null;   // 默认 false（软屏蔽）；true 时物理删除（不可逆，慎用）
+interface SetAdminTagBanRequest {
+  name: string;                  // 目标标签名
+  active: boolean;               // true=屏蔽，false=解屏蔽
+  hard_delete: boolean | null;   // 仅 active=true 时有效：默认 false（软屏蔽）；true 时物理删除（不可逆，慎用）
 }
 ```
 

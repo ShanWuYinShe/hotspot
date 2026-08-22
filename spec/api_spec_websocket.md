@@ -49,7 +49,7 @@
 | | `GroupApplicationExpired` | 推送给群管理员：申请过期自动失效 |
 | | `GroupApplicationRejected` | 推送给申请人：申请被拒绝 |
 | | `GroupApplicationResponse` | 推送给申请加入群的用户，告知申请被接受 |
-| **用户** | `UserProfileUpdated` | 推送给正在与其私聊的对端以及其当前所在群聊的订阅者 |
+| **用户** | `UserProfileUpdated` | 推送给与其存在活跃私聊会话的用户以及其当前所在群聊的订阅者 |
 | **举报** | `ReportResolved` | 推送给举报人，告知举报已被处理 |
 | | `ReportDismissed` | 推送给举报人，告知举报已被驳回 |
 | **附近发现** | `NearbyNewMoment` | 推送给配置开启"附近新瞬间通知"的用户，告知附近有人发布了新瞬间 |
@@ -903,7 +903,8 @@ type GroupMemberUnmutedEvent = { type: "GroupMemberUnmuted"; payload: GroupMembe
 
 **用户事件**：
 ```typescript
-// 用户资料变更（推送给：正在与其私聊的用户 + 其当前所在群聊的其他订阅者）
+// 用户资料变更（推送给：与其存在活跃私聊会话的用户 + 其当前所在群聊的其他订阅者——
+// 以「活跃会话存在」这一可判定条件为准，而非不可判定的"正在聊天"）
 // 属于自动推送（无需订阅），推送范围天然受限于活跃会话，维护成本低
 interface UserProfileUpdatedPayload {
   user: UserInfo;               // 更新后的用户基础信息

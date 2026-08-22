@@ -31,7 +31,7 @@
 
 | 文件 | 说明 |
 |-----|------|
-| [api_spec_discovery.md](api_spec_discovery.md) | 发现与聚合 API（feed 信息流、search 建议、map 地图渲染） |
+| [api_spec_discovery.md](api_spec_discovery.md) | 搜索建议 API（search 建议；条件搜索在 users/groups/moments 各域、附近瞬间流在 moments/fetch_nearby、map 地图渲染在 api_spec_public.md） |
 | [api_spec_share.md](api_spec_share.md) | 通用分享系统 API（位置、动态、群组等） |
 
 ### 辅助功能 API
@@ -79,6 +79,7 @@ v1 重设计对端点集做过一次完整存废审查，后续端点增删沿�
 - `moments/fetch_created`（拥有者视角：private + 软删占位）与 `users/fetch_moments`（纯公开视角，user_id 必传）不合并——两视角是不同数据，按「视角分离」各自独立
 - `admin/audit/open_the_door` 不设——审计列表项已含全量 `details`，纯冗余
 - `media` 单/批上传端点不拆——两段式（`presign_upload` + `complete_upload`）数组参数 1..N 天然覆盖单/批
+- **feed 域全量废除（第二轮审查）**：`feed/nearby_users`/`nearby_groups` 与 `users/search`/`groups/search`（radius + sort_by='distance'）返回同一份数据，按存废标准合并；`feed/trending` 与 `moments/search` 的 `sort_by='popular'` 同理（search 放宽为允许仅显式 `sort_by='popular'` 的热门模式）；`feed/following` 迁移为 `moments/fetch_following`、`feed/nearby_moments` 迁移为 `moments/fetch_nearby`（并补匿名版）——瞬间列表收敛为 `fetch_created`/`fetch_favorites`/`fetch_following`/`fetch_nearby` 四族，发现架构三分：`*/search` 条件查询、`moments/fetch_*` 流、`map/canvas` 空间聚合
 
 **争议保留（记录理由）**：
 - `users/fetch_friends`/`fetch_following`/`fetch_followers` 三个不合并：排序键不同、UI 独立分页，合并成判别参数反而增加心智负担
@@ -104,7 +105,6 @@ v1 重设计对端点集做过一次完整存废审查，后续端点增删沿�
 | /public/v1/moments/ | api_spec_public.md |
 | /public/v1/comments/ | api_spec_public.md |
 | /public/v1/groups/ | api_spec_public.md |
-| /public/v1/feed/ | api_spec_public.md |
 | /public/v1/search/ | api_spec_public.md |
 | /public/v1/map/ | api_spec_public.md |
 | /public/v1/share/ | api_spec_public.md |
@@ -120,7 +120,6 @@ v1 重设计对端点集做过一次完整存废审查，后续端点增删沿�
 | /api/v1/group_messages/ | api_spec_chat.md |
 | /api/v1/groups/ | api_spec_group.md |
 | /api/v1/groups/admin/ | api_spec_group.md（守卫子树）+ api_spec_authz.md |
-| /api/v1/feed/ | api_spec_discovery.md |
 | /api/v1/search/ | api_spec_discovery.md |
 | /api/v1/share/ | api_spec_share.md |
 | /api/v1/media/ | api_spec_media.md |

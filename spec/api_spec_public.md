@@ -108,7 +108,8 @@ Cookie 的 Path 覆盖与自动携带规则（`/public/v1` 忽略、refresh 精�
 
 | 端点 | 说明 |
 |------|------|
-| `POST /public/v1/auth/register` | 用户注册 |
+| `POST /public/v1/auth/register` | 用户注册（手机号/邮箱型需验证码） |
+| `POST /public/v1/auth/send_register_code` | 发送注册验证码（手机号/邮箱所有权验证） |
 | `POST /public/v1/auth/signin` | 用户登录 |
 | `POST /public/v1/auth/guest` | 创建访客用户（临时注册） |
 | `POST /public/v1/auth/refresh_token` | 刷新 Token（凭证特例） |
@@ -123,8 +124,9 @@ Cookie 的 Path 覆盖与自动携带规则（`/public/v1` 忽略、refresh 精�
 | `POST /public/v1/users/fetch_moments` | 用户瞬间历史（user_id 必传，公开视角） |
 | `POST /public/v1/users/fetch_reacted_moments` | 用户反应过的瞬间列表（user_id 必传） |
 | `POST /public/v1/users/batch_fetch` | 批量获取用户公开信息 |
-| `POST /public/v1/moments/search` | 搜索瞬间（关键字/标签） |
+| `POST /public/v1/moments/search` | 搜索瞬间（关键字/标签；热门模式承接发现页首屏） |
 | `POST /public/v1/moments/open_the_door` | 瞬间详情 |
+| `POST /public/v1/moments/fetch_nearby` | 附近公开瞬间（位置发现流，拉新路径） |
 | `POST /public/v1/comments/fetch` | 顶层评论列表 |
 | `POST /public/v1/comments/fetch_replies` | 子评论列表 |
 | `POST /public/v1/comments/open_the_door` | 评论详情 |
@@ -133,9 +135,6 @@ Cookie 的 Path 覆盖与自动携带规则（`/public/v1` 忽略、refresh 精�
 | `POST /public/v1/groups/announcements/fetch` | 群公告列表（仅 public 版，无登录镜像） |
 | `POST /public/v1/groups/members/fetch` | 成员列表 |
 | `POST /public/v1/groups/members/search` | 搜索成员 |
-| `POST /public/v1/feed/nearby_users` | 附近的人推荐 |
-| `POST /public/v1/feed/nearby_groups` | 附近的群组推荐 |
-| `POST /public/v1/feed/trending` | 热门瞬间（发现页默认） |
 | `POST /public/v1/search/suggest` | 综合搜索建议 |
 | `POST /public/v1/map/canvas` | 地图视口渲染（热力/热点；仅 public 版，无登录镜像） |
 | `POST /public/v1/share/open_the_door` | 分享码落地（公开访问；仅 public 版，无登录镜像） |
@@ -170,14 +169,13 @@ interface PublicUserItem {
   stats: UserStats | null;
 }
 
-// 关系列表项（RelatedUserItem 去 remark——备注是查看者字段）
+// 关系列表项（RelatedUserItem 去 remark / is_mutual——两者均为查看者字段；
+// 互关可由登录版 user.relation 计算，匿名视角无需表达）
 // - followed_back_at：仅 fetch_friends 返回；其余端点恒为 null
-// - is_mutual：描述列表主人与条目用户的关系（非查看者关系），匿名视角保留
 interface PublicRelatedUserItem {
   user: PublicUserItem;
   followed_at: string;
   followed_back_at: string | null;
-  is_mutual: boolean;
 }
 
 // 瞬间公开类型（MomentItem 去 is_favorited / recommendation；reactions 用 PublicReaction）
@@ -248,15 +246,8 @@ interface PublicUserProfileResult {
   recent_moments: PaginatedData<PublicMomentItem> | null;  // 仅 include_recent_moments=true 时返回；否则 null
 }
 
-// 批量获取用户响应
-interface PublicUsersBatchResult {
-  users: Record<string, PublicUserItem>;  // user_id → PublicUserItem；不存在的 user_id 不出现在 map 中
-}
-
-// 热门瞬间结果
-interface PublicTrendingResult {
-  hot_moments: PublicMomentItem[];
-}
+// 批量获取用户响应：与登录版共用 UsersBatchResult（Record<string, UserInfo>，无查看者字段的共享类型，
+// 定义于 api_spec_types.md）
 
 // 搜索建议响应（user/group/moment 分支使用 Public 载荷；tag 无视角共享 TagItem）
 interface PublicSearchSuggestResponse {
@@ -295,6 +286,29 @@ interface PublicBootstrapData {
 
 ## 认证（auth）
 
+### POST /public/v1/auth/send_register_code
+
+发送注册验证码（手机号/邮箱所有权验证）。与 `register` 对仗：先验证所有权，再凭码注册。
+
+- **节点**: /public/v1（纯匿名）
+
+**安全说明**：
+- 无论 `login_id` 是否已被注册，均返回成功响应，不暴露账号存在性（与 `forgot_password` 防枚举策略一致）；已占用的 `login_id` 对应验证码无效，注册最终仍以 `10400` 拒绝
+- 仅手机号/邮箱型 `login_id` 支持本端点；用户名型（不含 '@' 且非纯数字）请求失败（10000）
+- 发送频率由 `AppConfig.rate_limits.auth_register_per_10minutes` 控制（与注册共用限流桶）；验证码有效期由服务端内部配置决定（不对外暴露）
+
+**Request**: `SendRegisterCodeRequest`
+```typescript
+interface SendRegisterCodeRequest {
+  login_id: string;       // 注册时使用的手机号/邮箱
+  client_type: ClientType;
+}
+```
+
+**Response**: `ApiResponse`
+
+---
+
 ### POST /public/v1/auth/register
 
 用户注册。
@@ -302,20 +316,26 @@ interface PublicBootstrapData {
 - **节点**: /public/v1（纯匿名）
 - **幂等**: 是（客户端必须携带 `Idempotency-Key`）；`auth/register` 是全规范唯一保留幂等键的「有唯一约束」接口，理由见 `api_spec_base.md`「唯一约束特例」
 
+**所有权验证（契约级）**：
+- `login_id` 为手机号/邮箱型时，必须携带有效 `verification_code`（经 `auth/send_register_code` 发送到该手机号/邮箱），防止抢占他人联系方式注册；验证码错误或过期返回 `10401`（旧凭证校验失败，不触发登录态流程）
+- `login_id` 为用户名型时 `verification_code` 必须为 null（同传视为参数冲突 10000）
+- **过渡约束**：验证码服务接入前，手机号/邮箱型注册暂不可用（返回 10000），仅支持用户名型——与 `users/upgrade` 的同款过渡声明；接入后本约束解除
+
 **Request**: `RegisterRequest`
 ```typescript
 interface RegisterRequest {
-  login_id: string;             // 手机号/邮箱/用户名（注册后作为登录凭证；格式判定规则见 api_spec_base.md「通用字段约束」login_id）
+  login_id: string;              // 手机号/邮箱/用户名（注册后作为登录凭证；格式判定规则见 api_spec_base.md「通用字段约束」login_id）
+  verification_code: string | null;  // 手机号/邮箱型必填（所有权验证）；用户名型为 null
   nickname: string;
   password: string;
   client_type: ClientType;
-  device_id: DeviceId | null;   // App 端必填非 null；Web 端为 null（服务端从 device_id Cookie 读取）
+  device_id: DeviceId | null;    // App 端必填非 null；Web 端为 null（服务端从 device_id Cookie 读取）
 }
 ```
 
 **Response**: `ApiResponse<AuthTokenPair>`
 
-**错误码**: `10400`（login_id 已被占用）
+**错误码**: `10400`（login_id 已被占用） `10401`（验证码错误/过期）
 
 ---
 
@@ -355,7 +375,7 @@ interface SigninRequest {
 **Request**: `GuestRequest`
 ```typescript
 interface GuestRequest {
-  nickname: string;
+  nickname: string | null;  // 可选；null 时服务端自动生成默认昵称（如「游客·8k2f」），进入后引导修改，降低访客模式进入摩擦
   client_type: ClientType;
   device_id: DeviceId | null;  // App 端必填非 null；Web 端为 null（服务端从 device_id Cookie 读取）
 }
@@ -652,7 +672,7 @@ interface PublicFetchUserReactedMomentsRequest {
 
 ### POST /public/v1/users/batch_fetch
 
-批量获取用户公开信息。用于列表/Feed 等场景中高效解析 `UserInfo`，消除逐个调用 `open_the_door` 的 N+1 问题。
+批量获取用户公开信息。用于列表等场景中高效解析 `UserInfo`（昵称/头像），消除逐个调用 `open_the_door` 的 N+1 问题。与登录版共用无查看者字段的共享类型 `UsersBatchResult`（定义于 `api_spec_types.md`）。
 
 **Request**: `PublicBatchFetchUsersRequest`
 ```typescript
@@ -661,7 +681,7 @@ interface PublicBatchFetchUsersRequest {
 }
 ```
 
-**Response**: `ApiResponse<PublicUsersBatchResult>`
+**Response**: `ApiResponse<UsersBatchResult>`
 
 ---
 
@@ -671,12 +691,12 @@ interface PublicBatchFetchUsersRequest {
 
 ### POST /public/v1/moments/search
 
-统一搜索生活瞬间（关键字/标签）。**不承担附近发现职责**——按位置发现瞬间（`feed/nearby_moments`）仅登录用户可用（见 `api_spec_discovery.md`），匿名节点不提供附近瞬间发现。
+统一搜索生活瞬间（关键字/标签）。**不承担附近发现职责**——按位置发现瞬间使用 `moments/fetch_nearby`（见下方，匿名可用）；无输入的热门发现由本端点的热门模式承担。
 
 - **排序**:
   - `sort_by='relevance'`（默认）：按相关性优先；同分时按 `created_at` 倒序，再以 `moment_id DESC` 作为稳定 tie-breaker
   - `sort_by='newest'`：按发布时间倒序
-  - `sort_by='popular'`：按互动热度排序（含时间衰减因子；具体衰减算法为服务端实现细节）
+  - `sort_by='popular'`：按互动热度排序（含时间衰减因子；具体衰减算法为服务端实现细节），`moment_id DESC` 作为稳定 tie-breaker
   - 一致性级别为弱一致
 
 **Request**: `PublicSearchMomentsRequest`
@@ -687,7 +707,10 @@ interface PublicSearchMomentsRequest {
   sort_by: 'relevance' | 'newest' | 'popular' | null;  // 默认: relevance
   pagination: PaginationParams | null;
 }
-// 至少提供 keyword、tag 中的一个；不满足时请求失败（10000）
+// 至少提供 keyword、tag、sort_by='popular' 中的一个，不满足时请求失败（10000）：
+// - keyword/tag 均缺省且显式传 sort_by='popular' 时进入「热门模式」（无输入条件的热门公开瞬间，
+//   承接匿名发现页首屏，与登录版口径一致）
+// - 热门模式下 keyword/tag 必须缺省（与输入条件互斥，同传视为参数冲突 10000）
 ```
 
 **Response**: `ApiResponse<PaginatedData<PublicMomentItem>>`
@@ -710,6 +733,27 @@ interface PublicOpenMomentDoorRequest {
 **Response**: `ApiResponse<PublicMomentItem>`
 
 **错误码**: `10300`
+
+---
+
+### POST /public/v1/moments/fetch_nearby
+
+附近公开瞬间（基于位置的发现流，匿名拉新路径；原 `feed/nearby_moments` 迁移并开放匿名版）。
+
+> 双版本关系：登录镜像 `/api/v1/moments/fetch_nearby`（登录视角见 `api_spec_moment.md`）。附近公开瞬间的可见性不依赖身份（仅 `privacy_level='public'` 且未被过滤），故提供匿名版。
+
+- **排序**: 主序为服务端计算的 `distance` 升序（相对 `reference_point`）；仅当距离差在服务端定义的近似阈值内时，热度/活跃度作为次级信号参与排序；`moment_id DESC` 作为稳定 tie-breaker；一致性级别为弱一致
+
+**Request**: `PublicFetchNearbyMomentsRequest`
+```typescript
+interface PublicFetchNearbyMomentsRequest {
+  radius: number | null;  // 搜索半径（米）；不传默认 5000 并受 search_radius_max 裁剪（位置发现类缺省口径，见 api_spec_base.md「搜索与地理约束」）
+  reference_point: GeoPoint | null;
+  pagination: PaginationParams | null;
+}
+```
+
+**Response**: `ApiResponse<PaginatedData<PublicMomentItem>>`
 
 ---
 
@@ -891,82 +935,6 @@ interface PublicSearchGroupMembersRequest {
 
 ---
 
-## 公开信息流（feed）
-
-> 个性化信息流（关注动态 `following`、附近瞬间 `nearby_moments`）依赖登录身份，位于 `/api/v1/feed/`（见 `api_spec_discovery.md`）。
-
-### POST /public/v1/feed/nearby_users
-
-获取附近的用户推荐。匿名发现（拉新关键路径）。
-
-> 双版本关系：登录镜像 `/api/v1/feed/nearby_users`（登录视角见 `api_spec_discovery.md`）。
-
-**隐私过滤（契约级）**：`location_searchable=false` 的用户不出现（位置发现被关闭）；`searchable=false` 的用户不出现（整体不被发现）。其余用户按各自 `presence_visible` 等隐私设置返回对应字段（null = 隐藏）。
-
-- **排序**:
-  - 主序：服务端计算的 `distance` 升序（相对 `reference_point`）
-  - 次序：仅当距离差在服务端定义的近似阈值内时，允许综合活跃度提升前排质量
-  - tie-breaker：`user_id ASC`（与 users/search 统一）；一致性级别为弱一致
-
-**Request**: `PublicNearbyUsersRequest`
-```typescript
-interface PublicNearbyUsersRequest {
-  radius: number | null;  // 搜索半径（米）；不传默认 5000 并受 search_radius_max 裁剪（位置发现类缺省口径，见 api_spec_base.md「搜索与地理约束」）
-  reference_point: GeoPoint | null;
-  pagination: PaginationParams | null;
-}
-```
-
-**Response**: `ApiResponse<PaginatedData<PublicUserItem>>`
-
----
-
-### POST /public/v1/feed/nearby_groups
-
-获取附近可加入的群组推荐。
-
-> 双版本关系：登录镜像 `/api/v1/feed/nearby_groups`（登录视角见 `api_spec_discovery.md`）。
-
-- **排序**:
-  - 主序：服务端计算的 `distance` 升序（相对 `reference_point`）
-  - 次序：仅当距离差在服务端定义的近似阈值内时，允许体现热度/活跃度
-  - tie-breaker：`group_id ASC`（与 groups/search 统一）；一致性级别为弱一致
-
-**Request**: `PublicNearbyGroupsRequest`
-```typescript
-interface PublicNearbyGroupsRequest {
-  radius: number | null;  // 搜索半径（米）；不传默认 5000 并受 search_radius_max 裁剪（位置发现类缺省口径，见 api_spec_base.md「搜索与地理约束」）
-  reference_point: GeoPoint | null;
-  pagination: PaginationParams | null;
-}
-```
-
-**Response**: `ApiResponse<PaginatedData<PublicGroupItem>>`
-
----
-
-### POST /public/v1/feed/trending
-
-获取热门瞬间（发现页默认内容，无输入场景）。
-
-> 双版本关系：登录镜像 `/api/v1/feed/trending`（登录视角见 `api_spec_discovery.md`）。
-
-**与 search/suggest 的边界（契约级）**：
-- `feed/trending`：**无输入**的"发现页默认内容"——用户刚进入 App/发现页时，平台主动推荐的热门瞬间。全局热门，不依赖用户输入或位置。
-- `search/suggest`：**有输入前缀**的"搜索框联想"。
-
-- **排序**: 按热度降序（含时间衰减因子；具体衰减算法为服务端实现细节），`moment_id DESC` 作为稳定 tie-breaker；一致性级别为弱一致
-
-**Request**: `PublicTrendingRequest`
-```typescript
-interface PublicTrendingRequest {}
-// 返回条数由 AppConfig.response_defaults.hot_moments_count 控制
-```
-
-**Response**: `ApiResponse<PublicTrendingResult>`
-
----
-
 ## 搜索建议（search）
 
 ### POST /public/v1/search/suggest
@@ -1068,7 +1036,7 @@ interface MapHotspotItem {
   title: string;                  // 昵称 / 群名 / 动态标题
   subtitle: string | null;        // 简短描述 / 地点名等
   cover_url: string | null;       // 头像 / 群头像 / 动态封面
-  // 位置统一使用 RelativeLocation（含 distance/bearing），与 feed/search 对齐
+  // 位置统一使用 RelativeLocation（含 distance/bearing），与 search 各端点对齐
   // distance/bearing 相对于视口几何中心计算，由服务端计算
   location: RelativeLocation;
   created_at: string | null;      // 对于动态等有时间语义的对象可返回创建时间

@@ -64,7 +64,7 @@
 - 当 `target_type='group'` 且调用方为该群群主时，返回 `10400`（群主举报自己的群无审核意义）
 - 重复举报：同一 `target_type + target_id` 已存在 `pending` 记录时，**返回成功**（`code=0`），`data` 中包含已有举报的 `report_id` 及 `is_duplicate: true`，不创建新举报单。这本质是天然幂等——`(reporter_id, target_type, target_id, pending_status)` 构成自然去重键
 - 若该目标历史举报均已进入终态（`resolved` / `dismissed`），允许再次举报（视为新举报单）
-- **消息举报快照（隐私边界）**：当 `target_type='message'` 时，`message_snapshot` 为**必填**——举报人必须提交举报时的消息内容快照。服务端原样存储，平台管理员审核**基于快照**判断，不直接查询私聊消息库。缺少 `message_snapshot` 或快照不完整时请求失败。
+- **消息举报快照（隐私边界 + 证据链）**：当 `target_type='message'` 时，快照由**服务端在举报受理时基于消息真值生成并冻结**——举报人只提交 `target_id`（message_id），不提交快照内容（客户端提交可伪造/篡改，不能作为审核证据）。平台管理员审核**基于快照**判断，不直接查询私聊消息库。
 
 **Request**: `CreateReportRequest`
 ```typescript
@@ -73,7 +73,6 @@ interface CreateReportRequest {
   target_id: string;            // 统一 string；语义随 target_type 为对应资源 ID
   reason: ReportReason;         // 举报原因（从枚举中选取）
   description: string | null;   // 举报详细说明（0-1000 字符）
-  message_snapshot: ReportSnapshot | null;  // target_type='message' 时必填：消息内容快照（见 ReportSnapshot，定义于 api_spec_types.md）
 }
 ```
 

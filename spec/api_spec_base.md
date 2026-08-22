@@ -54,7 +54,6 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 ├── moments/           # 瞬间公开浏览（搜索/详情）
 ├── comments/          # 评论公开浏览（列表/详情）
 ├── groups/            # 群组公开浏览（搜索/详情/成员/公告）
-├── feed/              # 公开信息流（附近用户/附近群组/热门）
 ├── search/            # 搜索建议
 ├── map/               # 地图渲染
 ├── share/             # 分享码落地
@@ -64,7 +63,7 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 /api/v1/               # 注册用户节点（必须有效 Token）
 ├── auth/              # 会话自助管理（登出/改密/会话列表/撤销）
 ├── users/             # 用户相关（搜索/资料/关系/账户）
-├── moments/           # 瞬间相关（搜索/CRUD/收藏）
+├── moments/           # 瞬间相关（搜索/CRUD/收藏/关注流/附近发现）
 ├── comments/          # 评论相关
 ├── reactions/         # 表情反应（跨 message/moment/comment）
 ├── private_chats/     # 私聊管理
@@ -72,7 +71,6 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 ├── groups/            # 群组相关（搜索/详情/加入/成员/邀请/申请/公告）
 │   └── admin/         # 群管理守卫子树（owner/admin 专属）
 ├── group_messages/    # 群聊消息
-├── feed/              # 信息流（关注/附近/热门）
 ├── search/            # 搜索建议
 ├── reports/           # 举报
 ├── notify/            # 通知中心
@@ -98,7 +96,7 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 ### 端点形态
 
 - 端点形态统一为 `/{node}/{version}/{resource}/{action}`（node ∈ public / api / admin），`{resource}` 可含多级子资源路径（如 `groups/applications/fetch_submitted`、`rbac/roles/set_permissions`）；守卫子树为 `/{node}/{version}/{resource}/admin/{action}`（如 `groups/admin/members/set_mute`）
-- **资源域单复数规则**：可数实体资源域用复数（users / moments / comments / reactions / groups / private_chats / private_messages / group_messages / reports）；服务域、动作域与不可数概念域用单数（auth / feed / search / map / share / media / notify / system）。禁止混用（如 `shares/`、`moment/`）
+- **资源域单复数规则**：可数实体资源域用复数（users / moments / comments / reactions / groups / private_chats / private_messages / group_messages / reports）；服务域、动作域与不可数概念域用单数（auth / search / map / share / media / notify / system）。禁止混用（如 `shares/`、`moment/`）
 - 全小写 snake_case；ID 字段显式 `xxx_id` 命名（禁止裸 `id`）；所有 `xxx_id` 字段在 API 层统一为 `string`
 - 两态参数统一 `active: boolean`（true=执行/开启，false=撤销/关闭）
 - 所有 `*_url` 字段的值必须为**完整的绝对 URL**（含协议和域名），客户端无需拼接 base URL
@@ -137,7 +135,7 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 
 **无动词端点**（名词直接做端点，两类规则）：
 - **读取类名词化**（读单值/配置/当前对象，直接以名词命名）：`users/account`、`users/settings`、`auth/session`、`system/meta`、`system/client_config`、`notify/unread_summary`、`rbac/me`、`groups/admin/settings`、`app_config`（裸域读取）
-- **惯例例外**：`system/health`（健康检查行业惯例）、`system/bootstrap`（冷启动聚合，协议级入口）、`map/canvas`（地图画布资源）、`feed/` 流槽位名（`following` / `trending` / `nearby_moments` / `nearby_users` / `nearby_groups`，业界通用命名，非动作）
+- **惯例例外**：`system/health`（健康检查行业惯例）、`system/bootstrap`（冷启动聚合，协议级入口）、`map/canvas`（地图画布资源）
 
 **动词审美规则（契约级，主观个案评估）**：动作词的观感以**整体字形与组合的协调感**为准，**不做机械的字母形状排除**——下伸部/上伸部字母本身不构成禁用理由（`presign` 即为无问题的反例，经评估保留原名）。已确认丑并废除的仅两类：`get_*` 前缀（全量名词化，改用「无动词端点」清单的名词化命名）与 `list_*` 前缀（全量更名 `fetch_*`）。新增动作词时按整体观感个案评估，存疑时向维护者确认（玩梗保护条款优先级更高）
 
@@ -334,7 +332,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 |----|------|------|
 | L0 平台横切 | 认证/会话、守卫与权限判定、幂等、限流、存在性防护、地理计算 | 对 L1/L2 透明（中间件级保证，端点文档不重复声明） |
 | L1 领域资源 | auth / users / moments / comments / reactions / chat / groups / media / share / reports / notify | 领域间禁止直接调用；协作仅经事件通道（WS + notify）或显式声明的类型/查询依赖 |
-| L2 聚合发现 | feed / search / map / system.bootstrap / /admin/v1 | 只读聚合 L1（/admin/v1 例外：可读写，须经权限键 + 审计）；不得绕过 L1 的可见性规则 |
+| L2 聚合发现 | search / map / system.bootstrap / /admin/v1 | 只读聚合 L1（/admin/v1 例外：可读写，须经权限键 + 审计）；不得绕过 L1 的可见性规则 |
 
 ### 类型稳定性（契约级）
 
@@ -359,9 +357,9 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 
 #### 已登录（Personalized Usage）→ 一律调用 `/api/v1`
 
-**额外能力**：查看者状态字段有值、个性化信息流、私聊/群聊/通知、所有写操作和互动操作；按角色访问 `groups/admin` 守卫子树；平台管理员身份另走 `/admin/v1`。
+**额外能力**：查看者状态字段有值、关注流/附近发现、私聊/群聊/通知、所有写操作和互动操作；按角色访问 `groups/admin` 守卫子树；平台管理员身份另走 `/admin/v1`。
 
-**登录态切换**：客户端在登录/登出时切换调用节点（同一浏览功能的两个版本端点路径仅节点前缀不同，如 `/public/v1/moments/open_the_door` ↔ `/api/v1/moments/open_the_door`，但类型独立）。**无需随登录态切换的端点**（仅 public 版，登录用户与匿名用户调用同一 URL）：`map/canvas`、`groups/announcements/fetch`、system 的 `meta`/`health`/`announcements/fetch`/`client_config`、auth 生命周期 6 端点（`/public/v1/auth/*`）、分享码解析（`share/open_the_door`）——客户端此类模块无需感知登录态。
+**登录态切换**：客户端在登录/登出时切换调用节点（同一浏览功能的两个版本端点路径仅节点前缀不同，如 `/public/v1/moments/open_the_door` ↔ `/api/v1/moments/open_the_door`，但类型独立）。**无需随登录态切换的端点**（仅 public 版，登录用户与匿名用户调用同一 URL）：`map/canvas`、`groups/announcements/fetch`、system 的 `meta`/`health`/`announcements/fetch`/`client_config`、auth 生命周期 7 端点（`/public/v1/auth/*`）、分享码解析（`share/open_the_door`）——客户端此类模块无需感知登录态。
 
 ---
 
@@ -416,7 +414,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 |-----|------|------|
 | `keyword` | 1-100 字符 | 搜索关键字 |
 | `prefix` | 1-50 字符 | 搜索建议前缀 |
-| `radius` | 100-50000 米 | 搜索半径。缺省语义分两类固定口径：条件搜索类（`users/search`、`groups/search`）缺省不做半径过滤（显式提供才过滤）；位置发现类（`feed/nearby_*`、`search/suggest`）缺省默认 5000 并受 `search_radius_max` 裁剪。以各端点文档为准，禁止第三种口径 |
+| `radius` | 100-50000 米 | 搜索半径。缺省语义分两类固定口径：条件搜索类（`users/search`、`groups/search`）缺省不做半径过滤（显式提供才过滤）；位置发现类（`moments/fetch_nearby`、`search/suggest`）缺省默认 5000 并受 `search_radius_max` 裁剪。以各端点文档为准，禁止第三种口径 |
 | `bounds`（map） | north/south ∈ [-90,90]；east/west ∈ [-180,180]；north>=south、east>=west | 地图视口 |
 
 ### 平台管理字段约束

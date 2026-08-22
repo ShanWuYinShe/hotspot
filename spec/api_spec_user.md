@@ -71,11 +71,11 @@ type Gender = 'male' | 'female' | 'other';
 // - followed_back_at：仅 fetch_friends 返回；其余端点恒为 null
 // - remark：查看者状态字段（恒定 nullable：查他人列表时为 null）
 // - presence_status / last_online_at：随 user: UserItem 返回，受对方 presence_visible 隐私控制（null = 隐藏）
+// - 互相关注可由 user.relation 计算（is_following && is_followed_by），不设冗余字段
 interface RelatedUserItem {
   user: UserItem;              // 完整用户信息（隐私受控字段为恒定 nullable）
   followed_at: string;         // 关注时间（fetch_followers 为"对方关注我的时间"，即成为粉丝的时间）
   followed_back_at: string | null;   // 对方回关时间（成为好友的时间）；仅 fetch_friends 返回
-  is_mutual: boolean;          // 是否互相关注（fetch_followers 语义：该粉丝是否也关注了我）
   remark: string | null;       // 备注；仅查询自己（user_id=当前用户）时返回，查他人恒为 null
 }
 ```
@@ -91,7 +91,7 @@ interface RelatedUserItem {
 - `sort_by='distance'` 的距离计算依赖 `reference_point`（按 `api_spec_types.md`「reference_point 解析规则」回退链解析）；`relevance`/`newest` 排序不依赖位置
 
 **隐私过滤（契约级，searchable 系列开关）**：
-- `searchable=false`：该用户不出现在任何搜索结果（本端点与 `feed/nearby_users`）
+- `searchable=false`：该用户不出现在任何搜索结果（本端点，含按距离排序的附近发现场景）
 - `nickname_searchable=false`：昵称关键字搜索不命中该用户
 - `phone_searchable=false`：手机号精确搜索不命中该用户（`keyword` 为手机号格式时按手机号精确匹配，受本开关控制；见下方 Request 的 `keyword` 说明）
 - `location_searchable=false`：位置/半径维度搜索与附近发现不返回该用户
@@ -300,9 +300,9 @@ interface FetchUserReactedMomentsRequest {
 
 ### POST /api/v1/users/batch_fetch
 
-批量获取用户信息。用于列表/Feed/通知等场景中高效解析 `UserInfo`，消除逐个调用 `open_the_door` 的 N+1 问题。
+批量获取用户信息。用于列表/通知等场景中高效解析 `UserInfo`（昵称/头像），消除逐个调用 `open_the_door` 的 N+1 问题。返回无查看者字段的共享类型（精确原则：仅为补全基础信息，不携带 relation/stats 等视角字段）。
 
-- **节点**: /api/v1（双版本端点：匿名版 `/public/v1/users/batch_fetch` 见 `api_spec_public.md`）
+- **节点**: /api/v1（双版本端点：匿名版 `/public/v1/users/batch_fetch` 见 `api_spec_public.md`；两版共用响应类型）
 
 **Request**: `BatchFetchUsersRequest`
 ```typescript
@@ -311,12 +311,7 @@ interface BatchFetchUsersRequest {
 }
 ```
 
-**Response**: `ApiResponse<UsersBatchResult>`
-```typescript
-interface UsersBatchResult {
-  users: Record<string, UserItem>;  // user_id → UserItem 的映射；不存在的 user_id 不出现在 map 中
-}
-```
+**Response**: `ApiResponse<UsersBatchResult>`（定义于 `api_spec_types.md`；`users: Record<string, UserInfo>`，不存在的 user_id 不出现在 map 中）
 
 ---
 

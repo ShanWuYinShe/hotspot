@@ -138,7 +138,7 @@ type NotifyCategory = 'social' | 'interaction' | 'group' | 'report' | 'nearby' |
 
 **`reference_point` 解析规则（契约级）**：
 
-发现类与搜索类接口（所有 `feed/*`、`search/*` 及各资源 `search` 端点）的 `reference_point` 字段统一为**可选**（`reference_point?: GeoPoint`）。当客户端不传时，服务端按以下回退链解析浏览锚点位置：
+发现类与搜索类接口（`moments/fetch_nearby`、`search/*` 及各资源 `search` 端点）的 `reference_point` 字段统一为**可选**（`reference_point?: GeoPoint`）。当客户端不传时，服务端按以下回退链解析浏览锚点位置：
 
 1. 请求显式传入的 `reference_point`（如地图浏览场景传地图中心点）
 2. 最近一次 `users/update_location` 的位置（仅 `/api/v1` 登录请求可命中本环；未更新过位置时跳过，`/public/v1` 请求无登录身份恒跳过）
@@ -448,6 +448,12 @@ interface ReactionItem {
 }
 ```
 
+// 批量用户解析结果（users/batch_fetch 响应；跨节点共享——无查看者字段的纯 UserInfo 映射，
+// api 版与 public 版共用，见 api_spec_user.md / api_spec_public.md）
+interface UsersBatchResult {
+  users: Record<string, UserInfo>;  // user_id → UserInfo；不存在的 user_id 不出现在 map 中
+}
+
 ### 消息 (Message)
 
 **MessageBrief**: 消息摘要快照（`reply_to` 回复引用与 `last_message` 会话最近消息预览共用；完整消息项见 `api_spec_chat.md`）
@@ -467,14 +473,10 @@ interface MessageBrief {
 ### 标签 (Tag)
 
 ```typescript
-// 标签趋势（搜索、Feed 等模块共用）
-type TagTrend = 'rising' | 'stable' | 'falling';
-
-// 标签项（搜索、Feed 等模块共用）
+// 标签项（搜索建议等模块共用；usage_count 足以支撑热度排序，不设趋势字段）
 interface TagItem {
   name: string;
   usage_count: number;
-  trend: TagTrend | null;
 }
 ```
 
@@ -506,6 +508,8 @@ interface ReportResolution {
 }
 
 // 消息举报快照（隐私边界设计：平台管理员基于快照审核，不直接查询私聊消息库）
+// 生成方（契约级）：由服务端在举报受理时基于消息真值生成并冻结——客户端不提交快照（防伪造/篡改证据链），
+// 审核方信任的是服务端快照而非举报人自述
 interface ReportSnapshot {
   chat_type: 'private' | 'group';   // 会话类型
   target_chat_id: string;           // 会话目标 ID：private 会话 = 对方 user_id，group 会话 = group_id
