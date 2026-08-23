@@ -34,9 +34,39 @@ export struct MomentFeedCard {
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State private isPressed: boolean = false;
   @State private pressedActionKey: string = '';
+  // 加载失败的图片 URL 集合（onError 后切换 surfaceSubtle 占位，对齐 SystemAvatar 兜底模式）
+  @State private failedImageUrls: string[] = [];
+
+  // location pill 地名截断宽度（布局几何，非主题风格）
+  private static readonly LOCATION_MAX_WIDTH: number = 120;
+
+  private isImageFailed(url: string): boolean {
+    return this.failedImageUrls.indexOf(url) >= 0;
+  }
+
+  private markImageFailed(url: string): void {
+    if (!url || this.isImageFailed(url)) return;
+    const next: string[] = this.failedImageUrls.slice();
+    next.push(url);
+    this.failedImageUrls = next;
+  }
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  @Builder
+  private imageFallback() {
+    Column() {
+      Text() {
+        SymbolSpan($r(AppIcon.PHOTO))
+          .fontSize(DesignConstants.FONT.SIZE.LG)
+          .fontColor([this.getPalette().textSecondary])
+          .opacity(DesignConstants.OPACITY.MUTED)
+      }
+    }
+    .backgroundColor(this.getPalette().surfaceSubtle)
+    .justifyContent(FlexAlign.Center)
   }
 
   private formatCount(count?: number): string {
@@ -145,10 +175,22 @@ export struct MomentFeedCard {
     Column() {
       Stack() {
         if (this.moment.images && this.moment.images.length > 0) {
-          Image(MediaUrlUtil.normalize(this.moment.images[0].url))
+          if (this.isImageFailed(this.moment.images[0].url)) {
+            Column() {
+              this.imageFallback()
+            }
             .width('100%')
             .aspectRatio(16 / 9)
-            .objectFit(ImageFit.Cover)
+            .clip(true)
+          } else {
+            Image(MediaUrlUtil.normalize(this.moment.images[0].url))
+              .width('100%')
+              .aspectRatio(16 / 9)
+              .objectFit(ImageFit.Cover)
+              .backgroundColor(this.getPalette().surfaceSubtle)
+              .alt($r('app.media.foreground'))
+              .onError(() => this.markImageFailed(this.moment.images[0].url))
+          }
         } else {
           Column()
             .width('100%')
@@ -445,7 +487,7 @@ export struct MomentFeedCard {
             .fontColor(this.getPalette().accentBackground)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .constraintSize({ maxWidth: 120 })
+            .constraintSize({ maxWidth: MomentFeedCard.LOCATION_MAX_WIDTH })
         }
         .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
         .borderRadius(DesignConstants.RADIUS.FULL)
@@ -488,22 +530,35 @@ export struct MomentFeedCard {
     Scroll() {
       Row({ space: DesignConstants.SPACING.SM }) {
         ForEach((this.moment.images ?? []).slice(0, 4), (img: MomentImage, imgIndex: number) => {
-          Image(MediaUrlUtil.normalize(img.url))
+          if (this.isImageFailed(img.url)) {
+            Column() {
+              this.imageFallback()
+            }
             .width(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
             .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
-            .objectFit(ImageFit.Cover)
             .borderRadius(DesignConstants.RADIUS.MD)
-            .backgroundColor(this.getPalette().surfaceSubtle)
+            .clip(true)
             .accessibilityText(`图片 ${imgIndex + 1}，共 ${(this.moment.images ?? []).length} 张`)
-            .geometryTransition('moment_img_' + this.moment.moment_id + '_' + imgIndex)
-            .onClick(() => {
-              if (this.onImagePreview) {
-                const urls = (this.moment.images ?? []).map((m: MomentImage) => m.url);
-                this.onImagePreview!(this.moment.moment_id, urls, imgIndex);
-              } else {
-                this.openMomentDetail(this.moment);
-              }
-            })
+          } else {
+            Image(MediaUrlUtil.normalize(img.url))
+              .width(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
+              .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
+              .objectFit(ImageFit.Cover)
+              .borderRadius(DesignConstants.RADIUS.MD)
+              .backgroundColor(this.getPalette().surfaceSubtle)
+              .alt($r('app.media.foreground'))
+              .onError(() => this.markImageFailed(img.url))
+              .accessibilityText(`图片 ${imgIndex + 1}，共 ${(this.moment.images ?? []).length} 张`)
+              .geometryTransition('moment_img_' + this.moment.moment_id + '_' + imgIndex)
+              .onClick(() => {
+                if (this.onImagePreview) {
+                  const urls = (this.moment.images ?? []).map((m: MomentImage) => m.url);
+                  this.onImagePreview!(this.moment.moment_id, urls, imgIndex);
+                } else {
+                  this.openMomentDetail(this.moment);
+                }
+              })
+          }
         }, (img: MomentImage) => img.url)
 
         if ((this.moment.images ?? []).length > 4) {
@@ -528,13 +583,26 @@ export struct MomentFeedCard {
   private imagePreview(): void {
     if (this.moment.images && this.moment.images.length > 0) {
       Stack({ alignContent: Alignment.BottomEnd }) {
-        Image(MediaUrlUtil.normalize(this.moment.images[0].url))
+        if (this.isImageFailed(this.moment.images[0].url)) {
+          Column() {
+            this.imageFallback()
+          }
           .width('100%')
           .aspectRatio(1.6)
-          .objectFit(ImageFit.Cover)
           .borderRadius(DesignConstants.SHAPE.CARD)
-          .backgroundColor(this.getPalette().surfaceSubtle)
+          .clip(true)
           .accessibilityText('动态图片')
+        } else {
+          Image(MediaUrlUtil.normalize(this.moment.images[0].url))
+            .width('100%')
+            .aspectRatio(1.6)
+            .objectFit(ImageFit.Cover)
+            .borderRadius(DesignConstants.SHAPE.CARD)
+            .backgroundColor(this.getPalette().surfaceSubtle)
+            .alt($r('app.media.foreground'))
+            .onError(() => this.markImageFailed(this.moment.images[0].url))
+            .accessibilityText('动态图片')
+        }
 
         if (this.moment.images.length > 1) {
           Text(`+${this.moment.images.length - 1}`)

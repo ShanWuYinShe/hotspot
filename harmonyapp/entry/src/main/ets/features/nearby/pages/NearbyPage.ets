@@ -1,10 +1,9 @@
 /**
- * NearbyPage — 附近聚合页（对齐前端 /nearby 顶级导航 tab）
+ * NearbyPage — 附近门户页（对齐前端 /nearby 顶级导航 tab）
  *
- * 结构：搜索入口 + 附近的人 / 附近群组 / 附近动态三个预览区块，
- * 各区块「查看全部」跳对应专区（NEARBY_USERS / NEARBY_GROUPS）。
- * 数据复用首页同一组接口（searchUsers / searchGroups / searchMoments），
- * 与前端 fetchHomeFeed 信息架构一致。
+ * 结构：搜索入口 + 三分区入口卡（附近的人 / 附近群组 / 附近动态）。
+ * 内容流由各专区页承担（首页为大纲页），本页不拉取数据，
+ * 避免与首页重复展示同一组附近的人/群组/动态（对齐前端信息架构）。
  */
 
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
@@ -12,51 +11,33 @@ import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { curves } from '@kit.ArkUI';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
-import { SystemAvatar } from '../../../components/SystemAvatar';
-import { SystemLoadingView } from '../../../components/SystemLoadingView';
-import { EmptyState } from '../../../components/EmptyState';
-import { Pressable } from '../../../components/Pressable';
+import { AppRouter } from '../../../core/router/AppRouter';
+import { PageNames } from '../../../constants/AppConstants';
 import { AppIcon } from '../../../components/SystemIcon';
-import { ApiClient } from '../../../core/api/ApiClient';
-import { AppRouter, ProfileRouteParam, GroupDetailRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
-import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
-import { KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
-import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
-import { LoadingUtil } from '../../../core/utils/LoadingUtil';
-import {
-  FetchNearbyMomentsRequest,
-  SearchUsersRequest,
-  SearchGroupsRequest,
-  UserItem,
-  GroupItem,
-  MomentItem,
-  GeoPoint
-} from '../../../core/types/api';
 
-const DOMAIN_NUMBER: number = 0xFF2A;
-const TAG: string = 'NearbyPage';
+interface NearbySectionEntry {
+  key: string;
+  icon: AppIcon;
+  title: string;
+  description: string;
+}
 
 @Preview
 @Component
 export struct NearbyPage {
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
-  @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
-  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
-
-  @State users: UserItem[] = [];
-  @State groups: GroupItem[] = [];
-  @State moments: MomentItem[] = [];
-  @State isLoading: boolean = true;
-  @State errorMessage: string = '';
-  @State private pressedSeeAllKey: string = '';
   @State private searchEntryPressed: boolean = false;
+  @State private pressedSectionKey: string = '';
 
-  private isDestroyed: boolean = false;
-  private loadVersion: number = 0;
+  private static readonly SECTION_ENTRIES: NearbySectionEntry[] = [
+    { key: 'people', icon: AppIcon.PERSON, title: '附近的人', description: '认识 5km 内的新朋友' },
+    { key: 'groups', icon: AppIcon.GROUP, title: '附近群组', description: '加入身边的兴趣小组' },
+    { key: 'moments', icon: AppIcon.RECOMMEND, title: '附近动态', description: '看看周边正在发生什么' }
+  ];
 
   private getCurrentThemePalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -66,123 +47,10 @@ export struct NearbyPage {
     return this.getCurrentThemePalette().borderColor;
   }
 
-  private getReferencePoint(): GeoPoint | null {
-    const loc: LocationInfo | null = this.currentLocation;
-    if (!loc) return null;
-    return { latitude: loc.latitude, longitude: loc.longitude };
-  }
-
-  aboutToAppear() {
-    this.loadData();
-  }
-
-  aboutToDisappear() {
-    this.isDestroyed = true;
-  }
-
-  private async loadData(): Promise<void> {
-    const capturedVersion = ++this.loadVersion;
-    this.isLoading = true;
-    this.errorMessage = '';
-    try {
-      const ref = this.getReferencePoint();
-      if (!ref) {
-        if (!this.isDestroyed && capturedVersion === this.loadVersion) {
-          this.isLoading = false;
-          this.errorMessage = '正在获取位置…';
-        }
-        return;
-      }
-      const results = await LoadingUtil.withMinimumTime(() =>
-        Promise.allSettled([
-          ApiClient.searchUsers({ reference_point: ref, radius: DefaultConfig.NEARBY_RADIUS, sort_by: 'distance', pagination: { limit: 4 } } as SearchUsersRequest),
-          ApiClient.searchGroups({ reference_point: ref, radius: DefaultConfig.NEARBY_RADIUS, sort_by: 'distance', pagination: { limit: 4 } } as SearchGroupsRequest),
-          // spec moment.md → 附近瞬间走 moments/fetch_nearby（原 feed/nearby 迁移）
-          ApiClient.fetchNearbyMoments({ reference_point: ref, radius: DefaultConfig.NEARBY_RADIUS, pagination: { limit: 3 } } as FetchNearbyMomentsRequest)
-        ])
-      );
-      if (this.isDestroyed || capturedVersion !== this.loadVersion) return;
-
-      const usersResult = results[0];
-      const groupsResult = results[1];
-      const momentsResult = results[2];
-
-      if (usersResult.status === 'fulfilled' && usersResult.value.code === 0) {
-        this.users = (usersResult.value.data?.items ?? []).filter((u: UserItem) => u.user?.user_id);
-      }
-      if (groupsResult.status === 'fulfilled' && groupsResult.value.code === 0) {
-        this.groups = (groupsResult.value.data?.items ?? []).filter((g: GroupItem) => g.group?.group_id);
-      }
-      if (momentsResult.status === 'fulfilled' && momentsResult.value.code === 0) {
-        this.moments = (momentsResult.value.data?.items ?? []).filter((m: MomentItem) => m.moment_id);
-      }
-      if (this.users.length === 0 && this.groups.length === 0 && this.moments.length === 0) {
-        this.errorMessage = '附近暂时没有内容';
-      }
-    } catch {
-      if (!this.isDestroyed && capturedVersion === this.loadVersion) {
-        this.errorMessage = '加载附近内容失败';
-      }
-    } finally {
-      if (!this.isDestroyed && capturedVersion === this.loadVersion) {
-        this.isLoading = false;
-      }
-    }
-  }
-
-  private openProfile(userId: string): void {
-    const params = new ProfileRouteParam();
-    params.userId = userId;
-    AppRouter.push(PageNames.PROFILE, params);
-  }
-
-  private openGroup(groupId: string): void {
-    const params = new GroupDetailRouteParam();
-    params.groupId = groupId;
-    AppRouter.push(PageNames.GROUP_DETAIL, params);
-  }
-
-  private openMoment(momentId: string): void {
-    const params = new MomentDetailRouteParam();
-    params.momentId = momentId;
-    AppRouter.push(PageNames.MOMENT_DETAIL, params);
-  }
-
-  @Builder
-  private buildSectionHeader(title: string, actionLabel: string, onAction: () => void) {
-    Row() {
-      Text(title)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-        .fontColor(this.getCurrentThemePalette().textPrimary)
-        .layoutWeight(1)
-      Text(actionLabel)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor(this.getCurrentThemePalette().accentBackground)
-        // 行内文字动作按压反馈（对齐前端 link-btn 弱缩放语义，不出背景块）
-        .scale(this.pressedSeeAllKey === title ?
-          { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW } :
-          { x: 1, y: 1 })
-        .animation({ curve: curves.springMotion(
-          DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-          DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-        ) })
-        .onTouch((event: TouchEvent) => {
-          if (event.type === TouchType.Down) {
-            this.pressedSeeAllKey = title;
-          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-            this.pressedSeeAllKey = '';
-          }
-        })
-        .onClick(onAction)
-    }
-    .width('100%')
-    .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.LG2,
-      bottom: DesignConstants.SPACING.MD
-    })
+  private routeForSection(key: string): string {
+    if (key === 'people') return PageNames.NEARBY_USERS;
+    if (key === 'groups') return PageNames.NEARBY_GROUPS;
+    return PageNames.NEARBY_MOMENTS;
   }
 
   build() {
@@ -190,12 +58,12 @@ export struct NearbyPage {
       Column() {
         SystemPageHeader({
           title: '附近',
-          subtitle: `${this.users.length} 人 · ${this.groups.length} 群`,
+          subtitle: '发现周边有趣的人和事',
           titleSize: DesignConstants.FONT.SIZE.XL,
           titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           backgroundVariant: 'transparent'
         }) {
-          // trailing: 地图入口（移动/平板补齐地图入口，对齐前端 PageHeader trailing）
+          // trailing: 地图入口（对齐前端 PageHeader trailing）
           SurfaceIconButton({
             icon: AppIcon.MAP,
             kind: 'neutral',
@@ -203,87 +71,69 @@ export struct NearbyPage {
           })
         }
 
-        // 搜索入口（对齐前端 /nearby 搜索卡片）
-        Row({ space: DesignConstants.SPACING.MD2 }) {
-          Text() {
-            SymbolSpan($r(AppIcon.SEARCH))
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontColor([this.getCurrentThemePalette().textSecondary])
-          }
-          Text('搜索用户、群组、动态、地点…')
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-            .layoutWeight(1)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-        .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
-        .borderRadius(DesignConstants.SHAPE.INPUT)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-        // 按压反馈（对齐 tap-97 语义）
-        .scale(this.searchEntryPressed ?
-          { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
-          { x: 1, y: 1 })
-        .animation({ curve: curves.springMotion(
-          DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-          DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-        ) })
-        .onTouch((event: TouchEvent) => {
-          if (event.type === TouchType.Down) {
-            this.searchEntryPressed = true;
-          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-            this.searchEntryPressed = false;
-          }
-        })
-        .onClick(() => { AppRouter.push(PageNames.SEARCH); })
+        Scroll() {
+          Column() {
+            // 搜索入口（门户第一入口，对齐前端 shadow-raised-md 搜索卡片）
+            Row({ space: DesignConstants.SPACING.MD2 }) {
+              Text() {
+                SymbolSpan($r(AppIcon.SEARCH))
+                  .fontSize(DesignConstants.FONT.SIZE.LG)
+                  .fontColor([this.getCurrentThemePalette().accentBackground])
+              }
+              Text('搜索用户、群组、动态、地点…')
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .fontColor(this.getCurrentThemePalette().textSecondary)
+                .layoutWeight(1)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+            }
+            .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
+            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+            .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+            .borderRadius(DesignConstants.SHAPE.INPUT)
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+            .shadow(this.getCurrentThemePalette().surfaceShadow)
+            // 按压反馈（对齐 tap-97 语义）
+            .scale(this.searchEntryPressed ?
+              { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+              { x: 1, y: 1 })
+            .animation({ curve: curves.springMotion(
+              DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+              DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+            ) })
+            .onTouch((event: TouchEvent) => {
+              if (event.type === TouchType.Down) {
+                this.searchEntryPressed = true;
+              } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                this.searchEntryPressed = false;
+              }
+            })
+            .onClick(() => { AppRouter.push(PageNames.SEARCH); })
 
-        if (this.isLoading) {
-          SystemLoadingView({ message: '正在加载附近内容…' })
-            .layoutWeight(1)
-        } else if (this.errorMessage && this.users.length === 0 && this.groups.length === 0 && this.moments.length === 0) {
-          EmptyState({
-            icon: AppIcon.WARNING,
-            message: this.errorMessage,
-            actionLabel: '重试',
-            onAction: () => { this.loadData(); }
-          })
-          .layoutWeight(1)
-        } else {
-          Scroll() {
-            Column() {
-              // 附近的人
-              this.buildSectionHeader('附近的人', '查看全部', () => { AppRouter.push(PageNames.NEARBY_USERS); })
-              ForEach(this.users, (user: UserItem) => {
-                this.buildUserRow(user)
-              }, (user: UserItem) => user.user?.user_id ?? '')
-
-              // 附近群组
-              this.buildSectionHeader('附近群组', '查看全部', () => { AppRouter.push(PageNames.NEARBY_GROUPS); })
-              ForEach(this.groups, (group: GroupItem) => {
-                this.buildGroupRow(group)
-              }, (group: GroupItem) => group.group?.group_id ?? '')
-
-              // 附近动态
-              this.buildSectionHeader('附近动态', '查看全部', () => { AppRouter.push(PageNames.NEARBY_MOMENTS); })
-              ForEach(this.moments, (moment: MomentItem) => {
-                this.buildMomentRow(moment)
-              }, (moment: MomentItem) => moment.moment_id)
-
-              Row()
-                .height(DesignConstants.SPACING.XXL)
+            // 三分区入口卡（内容在各专区页，这里只做导航门户）
+            Column({ space: DesignConstants.SPACING.MD }) {
+              ForEach(NearbyPage.SECTION_ENTRIES, (entry: NearbySectionEntry) => {
+                this.buildSectionCard(entry)
+              }, (entry: NearbySectionEntry) => entry.key)
             }
             .width('100%')
-            .padding({ bottom: DesignConstants.SPACING.LG })
+            .padding({
+              left: DesignConstants.SPACING.LG,
+              right: DesignConstants.SPACING.LG,
+              top: DesignConstants.SPACING.XL
+            })
+
+            Row()
+              .height(DesignConstants.SPACING.XXL)
           }
           .width('100%')
-          .layoutWeight(1)
-          .scrollBar(BarState.Auto)
-          .edgeEffect(EdgeEffect.Spring)
-          .align(Alignment.Top)
         }
+        .width('100%')
+        .layoutWeight(1)
+        .scrollBar(BarState.Auto)
+        .edgeEffect(EdgeEffect.Spring)
+        .align(Alignment.Top)
       }
       .width('100%')
       .height('100%')
@@ -292,107 +142,66 @@ export struct NearbyPage {
   }
 
   @Builder
-  private buildUserRow(user: UserItem) {
-    Pressable({ onPress: () => {
-      const userId = user.user?.user_id ?? '';
-      if (userId) this.openProfile(userId);
-    } }) {
-      Row({ space: DesignConstants.SPACING.MD }) {
-        SystemAvatar({
-          avatarUrl: user.user?.avatar_url ?? '',
-          name: user.user?.nickname ?? '',
-          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
-          shape: 'circle'
-        })
-        Column({ space: DesignConstants.SPACING.HALF }) {
-          Text(user.user?.nickname ?? '')
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getCurrentThemePalette().textPrimary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text(`${user.tags?.[0] ?? '附近'} · ${LocationUtil.formatDistance(user.location?.distance ?? 0)}`)
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
+  private buildSectionCard(entry: NearbySectionEntry) {
+    Row({ space: DesignConstants.SPACING.MD2 }) {
+      // 图标徽章圆 tile（对齐前端 icon-badge size-9 圆）
+      Column() {
+        Text() {
+          SymbolSpan($r(entry.icon))
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontColor([this.getCurrentThemePalette().accentBackground])
         }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start)
       }
-      .width('100%')
-      .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
-        top: DesignConstants.SPACING.SM2,
-        bottom: DesignConstants.SPACING.SM2
-      })
-    }
-  }
+      .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+      .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(AppThemeManager.getSoftStatusBackground('info'))
+      .justifyContent(FlexAlign.Center)
 
-  @Builder
-  private buildGroupRow(group: GroupItem) {
-    Pressable({ onPress: () => {
-      const groupId = group.group?.group_id ?? '';
-      if (groupId) this.openGroup(groupId);
-    } }) {
-      Row({ space: DesignConstants.SPACING.MD }) {
-        SystemAvatar({
-          avatarUrl: group.group?.avatar_url ?? '',
-          name: group.group?.name ?? '',
-          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
-          shape: 'squircle'
-        })
-        Column({ space: DesignConstants.SPACING.HALF }) {
-          Text(group.group?.name ?? '')
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getCurrentThemePalette().textPrimary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text(`${group.group?.members_count ?? 0} 位成员 · ${LocationUtil.formatDistance(group.location?.distance ?? 0)}`)
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start)
-      }
-      .width('100%')
-      .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
-        top: DesignConstants.SPACING.SM2,
-        bottom: DesignConstants.SPACING.SM2
-      })
-    }
-  }
-
-  @Builder
-  private buildMomentRow(moment: MomentItem) {
-    Pressable({ onPress: () => {
-      this.openMoment(moment.moment_id);
-    } }) {
-      Column({ space: DesignConstants.SPACING.XS }) {
-        Text(moment.description)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
+      Column({ space: DesignConstants.SPACING.HALF }) {
+        Text(entry.title)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getCurrentThemePalette().textPrimary)
-          .maxLines(2)
+          .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
-        Text(moment.location?.location_name ?? '附近')
+        Text(entry.description)
           .fontSize(DesignConstants.FONT.SIZE.XS)
           .fontColor(this.getCurrentThemePalette().textSecondary)
-          .width('100%')
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
-      .width('100%')
       .alignItems(HorizontalAlign.Start)
-      .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
-        top: DesignConstants.SPACING.SM2,
-        bottom: DesignConstants.SPACING.SM2
-      })
+      .layoutWeight(1)
+
+      Text() {
+        SymbolSpan($r(AppIcon.ARROW_RIGHT))
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontColor([this.getCurrentThemePalette().textSecondary])
+      }
     }
+    .width('100%')
+    .padding(DesignConstants.SPACING.LG)
+    .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+    .borderRadius(DesignConstants.SHAPE.CARD)
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+    .shadow(this.getCurrentThemePalette().surfaceShadow)
+    // 整卡按压反馈（对齐 tap-97 语义）
+    .scale(this.pressedSectionKey === entry.key ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+      { x: 1, y: 1 })
+    .animation({ curve: curves.springMotion(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ) })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedSectionKey = entry.key;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedSectionKey = '';
+      }
+    })
+    .onClick(() => { AppRouter.push(this.routeForSection(entry.key)); })
   }
 }
 

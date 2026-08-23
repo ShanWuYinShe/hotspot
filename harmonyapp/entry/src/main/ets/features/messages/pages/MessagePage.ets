@@ -615,15 +615,16 @@ export struct MessagePage {
   build() {
   PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
     Column() {
-      // 粘性头部 —— 统一走 SystemPageHeader（标题 + 未读副标题 + ADD/SEARCH trailing）
+      // 粘性头部 —— 统一走 SystemPageHeader（标题 + 未读副标题 + ADD trailing）
       SystemPageHeader({
         title: '消息',
         subtitle: this.getTotalUnread() > 0 ? `${this.getTotalUnread()} 条未读` : '全部已读',
+        subtitleColor: this.getTotalUnread() > 0 ? '' : this.getCurrentThemePalette().success,
         titleSize: DesignConstants.FONT.SIZE.XL,
         titleWeight: DesignConstants.FONT.WEIGHT.REGULAR,
         backgroundVariant: 'transparent'
       }) {
-        // trailing: 添加(菜单) + 搜索
+        // trailing: 添加(菜单)（对齐前端移动端 trailing 仅 Plus；搜索走下方本地过滤框）
         Row({ space: DesignConstants.SPACING.MD }) {
           Row() {
             Text() {
@@ -681,23 +682,6 @@ export struct MessagePage {
               }
             }
           ])
-
-          Row() {
-            Text() {
-              SymbolSpan($r(AppIcon.SEARCH))
-                .fontSize(DesignConstants.FONT.SIZE.LG)
-                .fontColor([this.getCurrentThemePalette().textSecondary])
-            }
-          }
-          .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-          .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-          .justifyContent(FlexAlign.Center)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-          .onClick(() => {
-            AppRouter.push(PageNames.SEARCH);
-          })
         }
       }
 
@@ -715,15 +699,16 @@ export struct MessagePage {
       })
       .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
 
-      // 已读/未读过滤（对齐前端 messages 页 TabBar：全部 / 未读 / 已读）
+      // 已读/未读过滤（对齐前端 messages 页 TabBar：全部 / 未读 / 已读，未读带实时计数）
       TabsPillGroup({
         tabs: [
           { label: '全部' },
-          { label: '未读' },
+          { label: '未读', count: this.getTotalUnread() },
           { label: '已读' }
         ],
         activeIndex: this.chatFilterIndex,
         gap: DesignConstants.SPACING.XS,
+        freeWidth: true,
         actions: {
           onChange: (index: number) => {
             this.chatFilterIndex = index;
@@ -897,7 +882,7 @@ export struct MessagePage {
                   })
                   .border({ width: DesignConstants.BORDER_WIDTH.REGULAR, color: this.getCurrentThemePalette().accentBackground })
                   .borderRadius(DesignConstants.RADIUS.FULL)
-                  .padding(2.5)
+                  .padding(DesignConstants.SPACING.HALF)
                   .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
                   .shadow(this.getCurrentThemePalette().controlShadow)
 
@@ -919,7 +904,7 @@ export struct MessagePage {
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  .constraintSize({ maxWidth: 56 })
+                  .constraintSize({ maxWidth: DesignConstants.LAYOUT.NICKNAME_MAX_WIDTH })
               }
               .alignItems(HorizontalAlign.Center)
             }
@@ -934,19 +919,17 @@ export struct MessagePage {
     .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
   }
 
+  // 私聊对端在线（群聊无 presence 语义，恒 false；对齐前端 ChatListItem online 点）
+  private isChatOnline(item: ChatItem): boolean {
+    if (item.type !== 'private') return false;
+    return (item.data as PrivateChatItem).presence_status === 'online';
+  }
+
   @Builder
   buildChatItem(item: ChatItem) {
     Row({ space: DesignConstants.SPACING.MD }) {
-      Badge({
-        count: item.unreadCount,
-        maxCount: 99,
-        position: BadgePosition.RightTop,
-        style: {
-          badgeSize: 20,
-          badgeColor: this.getCurrentThemePalette().accentBackground,
-          fontSize: DesignConstants.FONT.SIZE.XS_MINUS
-        }
-      }) {
+      // 头像 + 在线角标（未读徽章移至行尾，对齐前端 ChatListItem 契约）
+      Stack({ alignContent: Alignment.BottomEnd }) {
         SystemAvatar({
           avatarUrl: item.avatarUrl,
           name: item.name,
@@ -954,13 +937,23 @@ export struct MessagePage {
           shape: item.type === 'group' ? 'squircle' : 'circle',
           inset: true
         })
+        if (this.isChatOnline(item)) {
+          Row()
+            .width(DesignConstants.SPACING.MD)
+            .height(DesignConstants.SPACING.MD)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .backgroundColor(this.getCurrentThemePalette().success)
+            .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getCurrentThemePalette().surfaceBackground })
+        }
       }
+      .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+      .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
 
       Column({ space: DesignConstants.SPACING.HALF }) {
         Row() {
           Text(item.name)
             .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-body
-            .fontWeight(item.unreadCount > 0 ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
+            .fontWeight(DesignConstants.FONT.WEIGHT.REGULAR)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .layoutWeight(1)
             .maxLines(1)
@@ -980,6 +973,24 @@ export struct MessagePage {
           .width('100%')
       }
       .layoutWeight(1)
+
+      // 行尾未读徽章：accent 圆形 chip + 光晕（对齐前端行尾 size-5 徽章；
+      // 已读时保留占位避免文本区宽度跳变）
+      Stack({ alignContent: Alignment.Center }) {
+        if (item.unreadCount > 0) {
+          Text(item.unreadCount > 99 ? '99+' : `${item.unreadCount}`)
+            .fontSize(DesignConstants.FONT.SIZE.XS_MINUS)
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            .fontColor(this.getCurrentThemePalette().accentText)
+            .minFontScale(0.5)
+            .maxLines(1)
+        }
+      }
+      .width(DesignConstants.LAYOUT.UNREAD_BADGE_SIZE)
+      .height(DesignConstants.LAYOUT.UNREAD_BADGE_SIZE)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(item.unreadCount > 0 ? this.getCurrentThemePalette().accentBackground : DesignConstants.COLOR.TRANSPARENT)
+      .shadow(item.unreadCount > 0 ? this.getCurrentThemePalette().accentShadow : { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 })
     }
     .width('100%')
     // 对齐前端 chat-list padding（10px 16px）+ radius-md

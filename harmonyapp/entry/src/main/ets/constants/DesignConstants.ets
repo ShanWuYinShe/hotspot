@@ -352,6 +352,10 @@ export interface LayoutSystem {
   ICON_BUTTON_SIZE: number;
   /** 统计标签列宽（60，对齐前端明细标签列） */
   LABEL_WIDTH: number;
+  /** 会话列表行尾未读徽章直径（对齐前端 size-5=20px） */
+  UNREAD_BADGE_SIZE: number;
+  /** 头像条昵称截断宽度（布局几何，非主题风格） */
+  NICKNAME_MAX_WIDTH: number;
   /** 首页桌面双栏左区宽度（420） */
   HOME_COLUMN_WIDTH: number;
   /** 地图筛选面板宽度（180） */
@@ -640,6 +644,10 @@ const LAYOUT: LayoutSystem = {
   FAB_SIZE: 52,
   ICON_BUTTON_SIZE: 36,
   LABEL_WIDTH: 60,
+  /** 会话列表行尾未读徽章直径（对齐前端 size-5=20px） */
+  UNREAD_BADGE_SIZE: 20,
+  /** 头像条昵称截断宽度（布局几何，非主题风格） */
+  NICKNAME_MAX_WIDTH: 56,
   HOME_COLUMN_WIDTH: 420,
   FILTER_PANEL_WIDTH: 180,
   GLOW_BLOB_LARGE: 180,

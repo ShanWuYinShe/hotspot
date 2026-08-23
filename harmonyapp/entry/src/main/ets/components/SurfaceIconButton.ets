@@ -10,8 +10,8 @@ export type SurfaceIconButtonKind = 'primary' | 'neutral';
 export struct SurfaceIconButton {
   @Prop icon: AppIcon = AppIcon.BACK;
   @Prop kind: SurfaceIconButtonKind = 'primary';
-  @Prop buttonSize: number = 36;
-  @Prop glyphSize: number = 17;
+  @Prop buttonSize: number = DesignConstants.LAYOUT.ICON_BUTTON_SIZE; // 36
+  @Prop glyphSize: number = DesignConstants.COMPONENT.ICON_SIZE_XS; // 16
   @Prop disabled: boolean = false;
   onPress?: () => void;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';

@@ -170,7 +170,8 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 按模糊强度对应前端 `--cst-blur-*` 三档：
 - `BlurStyle.Thin` ↔ 前端 `--cst-blur-sm`（8px，轻徽章/浮层）
 - `BlurStyle.Regular` ↔ 前端 `--cst-blur-md`（16px，sticky header/overlay）
-- `BlurStyle.Medium`/`Thick` ↔ 前端 `--cst-blur-lg`（24px，底部导航/tablet dock）
+- `BlurStyle.Thick` ↔ 前端 `--cst-blur-lg`（24px，底部导航/tablet dock；
+  当前 SDK 的 BlurStyle 枚举无 `Medium` 档，强档一律用 `Thick`）
 
 双端共享组件映射（新增/修改组件时先查此表，避免两端各自发明同类组件）：
 
@@ -182,7 +183,7 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 | `EmptyState` | `EmptyState` | 空态（同名同契约） |
 | `shared/Avatar` | `SystemAvatar` | 头像（尺寸/形状/状态点） |
 | `forms/SearchInput` | `SearchPageHeader` / `SmartSearchComponent` | 搜索输入 |
-| `navigation/TabBar` / `NavTab` / `RailIcon` | `TabsPillGroup` / `PhoneLayout` 底部导航 | 分类/导航 Tab |
+| `navigation/TabBar` / `NavTab` / `RailIcon` | `TabsPillGroup`（默认等宽分段；`freeWidth` 形态对齐前端胶囊行，`TabItem.count` 对齐角标） / `PhoneLayout` 底部导航 | 分类/导航 Tab |
 | `list/ListItem` / `ListContainer` | `SystemCard`（listItem 变体）/ `SettingsEntryRow` | 列表行（行级卡片禁止规则同前端） |
 | `overlays/SheetShell` / `ui/dialog` | `SystemDialog` / `bindSheet` | 弹层/抽屉 |
 | `forms/TagPill` | `TabsPillGroup` chip / `FILTER_CHIP_HEIGHT` | 标签/筛选胶囊 |
@@ -191,7 +192,7 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 | `routes/moments/shared/MomentCard` | `MomentFeedCard` | 动态卡片 |
 | `auth/LoginPromptSheet` | `LoginPromptView` | 未登录引导 |
 | `messages/ChatView` 等 | `ChatPage` / `ChatPageHeader` | 聊天界面 |
-| `routes/(app)/nearby/+page.svelte`（附近聚合） | `features/nearby/pages/NearbyPage` | 附近聚合页（搜索 + 人/群组/动态三区块），手机/平板底栏「附近」tab |
+| `routes/(app)/nearby/+page.svelte`（附近聚合） | `features/nearby/pages/NearbyPage` | 附近门户页（纯导航门户：搜索入口 + 人/群组/动态三张分区入口卡，不拉取数据，内容流在各专区页），手机/平板底栏「附近」tab |
 
 ### 页面路由对齐（web → harmony）
 

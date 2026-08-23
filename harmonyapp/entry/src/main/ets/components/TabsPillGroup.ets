@@ -1,9 +1,9 @@
 /**
- * TabsPillGroup - 分段控制式子标签组件
- * 参照 Soul / 陌陌等主流社交 App 的子标签切换设计：
- * - 等宽分段布局
- * - 选中项：品牌色背景 + 白字 + 微阴影（浮起感）
- * - 未选中项：透明背景 + 次要色文字
+ * TabsPillGroup - 分类/筛选胶囊组（对齐前端 navigation/TabBar）
+ * 两种形态：
+ * - 默认（segmented）：等宽分段 + surfaceSubtle 灰底槽（系统分段控件视觉）
+ * - freeWidth：透明容器 + 自适应内容宽左对齐（对齐前端 TabBar 胶囊行，
+ *   激活项 accent 实底胶囊 + glow，未激活项透明 + 次要色文字）
  */
 
 import { DesignConstants } from '../constants/DesignConstants';
@@ -15,6 +15,8 @@ import { curves } from '@kit.ArkUI';
 export interface TabItem {
   label: string;
   icon?: AppIcon;
+  /** 角标计数（如「未读 3」；对齐前端 TabBar { id, label, count? } 契约） */
+  count?: number;
 }
 
 export interface TabsPillGroupActions {
@@ -27,6 +29,8 @@ export struct TabsPillGroup {
   @Prop tabs: TabItem[] = [];
   @Prop activeIndex: number = 0;
   @Prop gap: number = DesignConstants.SPACING.XS;
+  /** 自由宽度模式：透明容器 + 自适应内容宽（对齐前端 TabBar；缺省等宽分段） */
+  @Prop freeWidth: boolean = false;
   actions?: TabsPillGroupActions;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
@@ -61,11 +65,18 @@ export struct TabsPillGroup {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(isActiveTab ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
           .fontColor(isActiveTab ? this.getPalette().accentText : this.getPalette().tabBarInactive)
+
+        if (tab.count !== undefined && tab.count > 0) {
+          Text(`${tab.count}`)
+            .fontSize(DesignConstants.FONT.SIZE.XS_MINUS)
+            .fontColor(isActiveTab ? this.getPalette().accentText : this.getPalette().tabBarInactive)
+            .opacity(isActiveTab ? DesignConstants.OPACITY.SUBTLE : DesignConstants.OPACITY.EMPHASIZED)
+        }
       }
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
       .width('100%')
-      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
+      .height(this.freeWidth ? DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT : DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(isActiveTab ? this.getPalette().accentBackground : DesignConstants.COLOR.TRANSPARENT)
       .shadow(isActiveTab ? this.getPalette().accentShadow : {
@@ -81,8 +92,14 @@ export struct TabsPillGroup {
         )
       })
     }
-    .layoutWeight(1)
-    .scale(this.isTabPressed ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON } : { x: 1, y: 1 })
+    // 自由宽度模式：水平 padding 由外层承载，使胶囊收缩到内容宽
+    .padding({
+      left: this.freeWidth ? DesignConstants.SPACING.LG : 0,
+      right: this.freeWidth ? DesignConstants.SPACING.LG : 0
+    })
+    // 等宽分段用 layoutWeight(1)；自由宽度收缩到内容宽
+    .layoutWeight(this.freeWidth ? 0 : 1)
+    .scale(this.isTabPressed ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL } : { x: 1, y: 1 })
     .animation({
       curve: curves.springMotion(
         DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
@@ -110,9 +127,10 @@ export struct TabsPillGroup {
       }, (tab: TabItem, index: number) => `${tab.label}-${index}-${this.activeIndex}`)
     }
     .width('100%')
-    .padding(DesignConstants.SPACING.THREE)
-    .borderRadius(DesignConstants.RADIUS.LG)
-    .backgroundColor(this.getPalette().surfaceSubtle)
+    // 自由宽度模式：透明容器、无灰底槽、无内边距（对齐前端 TabBar 容器）
+    .padding(this.freeWidth ? 0 : DesignConstants.SPACING.THREE)
+    .borderRadius(this.freeWidth ? 0 : DesignConstants.RADIUS.LG)
+    .backgroundColor(this.freeWidth ? DesignConstants.COLOR.TRANSPARENT : this.getPalette().surfaceSubtle)
     .alignItems(VerticalAlign.Center)
   }
 }

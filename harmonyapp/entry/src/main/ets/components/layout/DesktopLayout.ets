@@ -224,13 +224,11 @@ export struct DesktopLayout {
 
       Blank().layoutWeight(1)
 
-      // 右侧动作
+      // 右侧动作（统一 36 圆钮 + 16 glyph，对齐前端桌面顶栏）
       Row({ space: DesignConstants.SPACING.XS }) {
         SurfaceIconButton({
           icon: AppIcon.SEARCH,
           kind: 'neutral',
-          buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE, // 36
-          glyphSize: 17,
           onPress: () => AppRouter.push(PageNames.SEARCH)
         })
 
@@ -238,24 +236,18 @@ export struct DesktopLayout {
         SurfaceIconButton({
           icon: AppIcon.ADD,
           kind: 'primary',
-          buttonSize: 32,
-          glyphSize: 15,
           onPress: () => this.openCreate()
         })
 
         SurfaceIconButton({
           icon: AppIcon.PALETTE,
           kind: 'neutral',
-          buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
-          glyphSize: 17,
           onPress: () => { this.showThemeSheet = true; }
         })
 
         SurfaceIconButton({
           icon: AppIcon.SETTINGS,
           kind: 'neutral',
-          buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
-          glyphSize: 17,
           onPress: () => AppRouter.push(PageNames.SETTINGS)
         })
 

@@ -137,7 +137,8 @@ export struct PhoneLayout {
           this.currentTabIndex = index;
         })
         .barBackgroundColor(DesignConstants.COLOR.TRANSPARENT)
-        .backgroundBlurStyle(BlurStyle.Thin)
+        // 底部导航毛玻璃：Medium 档（对齐前端 --cst-blur-lg 底部导航档，见 AGENTS 映射表）
+        .backgroundBlurStyle(BlurStyle.Thick)
         .backgroundColor(this.getPalette().pageBackground)
         .layoutWeight(1)
         .padding({ bottom: this.safeAreaBottom })
@@ -283,7 +284,8 @@ export struct PhoneLayout {
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.getPalette().tabBarBackground)
-      .backgroundBlurStyle(BlurStyle.Thin)
+      // 平板浮动药丸：Medium 档毛玻璃（对齐前端 tablet dock --cst-blur-lg）
+      .backgroundBlurStyle(BlurStyle.Thick)
       .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
       .shadow(this.getPalette().elevatedShadow)
     }

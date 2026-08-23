@@ -42,6 +42,8 @@ export type HeaderBackgroundVariant = 'bar' | 'transparent' | 'card';
 export struct SystemPageHeader {
   @Prop title: string = '';
   @Prop subtitle: string = '';
+  /** 副文本颜色（缺省 textSecondary；如消息页「全部已读」用 success 色，对齐前端） */
+  @Prop subtitleColor: string = '';
   action: PageHeaderAction | null = null;
   @Prop showBackButton: boolean = false;
   onBack: (() => void) | null = null;
@@ -187,7 +189,7 @@ export struct SystemPageHeader {
           if (this.subtitle.length > 0) {
             Text(this.subtitle)
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor(this.getPalette().textSecondary)
+              .fontColor(this.subtitleColor.length > 0 ? this.subtitleColor : this.getPalette().textSecondary)
               .margin({ top: DesignConstants.SPACING.XS })
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -227,7 +229,7 @@ export struct SystemPageHeader {
       top: this.getHeaderTopPadding()
     })
     .backgroundColor(this.getBackgroundColor())
-    .border({ width: { bottom: 1 }, color: this.getHeaderBorderColor() })
+    .border({ width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getHeaderBorderColor() })
     .borderRadius(this.getRadius())
     .shadow(this.getHeaderShadow())
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
