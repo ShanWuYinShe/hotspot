@@ -10,6 +10,7 @@
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import { createMoment } from '@/api';
 	import { uploadMediaFiles } from '@/lib/upload';
+	import { showToast } from '@/stores/toast.svelte';
 
 	// 三端共用的发布器（手机 Sheet / 平板 Sheet / 桌面对话框）。
 	// 对齐 Figma Make：header 提供「创建群组」surface 切换。
@@ -92,8 +93,15 @@
 				image_file_ids
 			});
 			if (res.code === 0) {
+				showToast('发布成功', 'success');
 				onClose();
+			} else {
+				// 业务失败（非抛错路径）：透出服务端信息
+				showToast(res.message ?? '发布失败，请稍后重试', 'danger');
 			}
+		} catch {
+			// 网络/传输失败（client 层非 200 会 throw）
+			showToast('发布失败，请检查网络后重试', 'danger');
 		} finally {
 			submitting = false;
 		}

@@ -87,7 +87,7 @@
 
 		<div class="flex items-center gap-2 input-surface rounded-md px-3 py-2.5">
 			<Search size={14} class="text-text-secondary" strokeWidth={1.75} />
-			<input bind:value={keyword} oninput={onInput} placeholder="搜索用户昵称…" class="flex-1 bg-transparent text-sm text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-accent-default" />
+			<input bind:value={keyword} oninput={onInput} placeholder="搜索用户昵称…" class="flex-1 bg-transparent text-sm text-text-primary" />
 		</div>
 
 		<div class="mt-3 max-h-72 overflow-y-auto no-scrollbar pb-3">

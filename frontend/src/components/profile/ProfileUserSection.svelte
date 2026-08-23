@@ -81,8 +81,8 @@
 	{/if}
 
 	{#if search}
-		<!-- Search -->
-		<div class="pt-4 pb-2">
+		<!-- Search — 限宽（max-w-md 对齐弹层搜索框宽度档，避免桌面全宽拉伸） -->
+		<div class="max-w-md pt-4 pb-2">
 			<SearchInput value={search.value} onChange={search.onChange} placeholder={search.placeholder} class="px-3 py-2" />
 		</div>
 	{/if}

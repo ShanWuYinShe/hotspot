@@ -63,5 +63,5 @@
 	{#if loading}
 		<span class="spinner size-4" aria-hidden="true"></span>
 	{/if}
-	<span class={loading ? 'opacity-emphasis' : undefined}>{@render children()}</span>
+	<span class="inline-flex items-center gap-1.5 {loading ? 'opacity-emphasis' : ''}">{@render children()}</span>
 </button>

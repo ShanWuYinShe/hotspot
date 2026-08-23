@@ -194,7 +194,7 @@
 			<div class="flex items-center gap-2.5 mt-1.5 px-4 rounded-md input-surface h-11.5">
 				<input
 					id="group-settings-name"
-					class="flex-1 bg-transparent text-text-primary text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
+					class="flex-1 bg-transparent text-text-primary text-sm"
 					placeholder="给你的群组起个名字…"
 					bind:value={name}
 					maxlength={30}
@@ -209,7 +209,7 @@
 			<div class="mt-1.5 px-4 py-3 rounded-md input-surface">
 				<textarea
 					id="group-settings-desc"
-					class="w-full bg-transparent resize-none text-text-primary text-sm min-h-18 outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
+					class="w-full bg-transparent resize-none text-text-primary text-sm min-h-18"
 					placeholder="描述一下这个群组的主题…"
 					bind:value={desc}
 					maxlength={150}

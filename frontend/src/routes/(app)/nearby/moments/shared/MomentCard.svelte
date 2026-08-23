@@ -21,11 +21,14 @@
 		onSave: () => void;
 		onClick?: () => void;
 	} = $props();
+
+	// 卡片可访问名（role=button 的 aria-label 来源）：tag 可为空，回退正文/作者并截断。
+	const cardLabel = $derived((item.tag || item.content || item.user).slice(0, 30));
 </script>
 
 <NearbyImageCard
 	imageSrc={item.image ?? item.avatar}
-	imageAlt={item.tag}
+	imageAlt={cardLabel}
 	{onClick}
 	class="aspect-[4/3] rounded-md"
 >

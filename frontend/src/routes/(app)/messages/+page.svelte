@@ -248,6 +248,12 @@
 			<!-- Chat list（List 契约：分栏内连接列表，行无独立边框。
 			     每行外层 px-3 py-1 包裹——对齐 Figma MessagesPage：行间有呼吸间距，
 			     选中态 glow 不与相邻行重叠，分隔线嵌在间距中不显突兀） -->
+			{#if loading}
+				<div class="flex flex-1 flex-col items-center justify-center gap-3 py-20">
+					<div class="spinner size-7"></div>
+					<p class="text-text-secondary text-sm">加载会话…</p>
+				</div>
+			{:else}
 			<ListContainer class="flex-1 overflow-y-auto no-scrollbar py-2">
 				{#each filtered as chat (chat.id)}
 					<div class="px-2 py-1">
@@ -261,6 +267,12 @@
 					</div>
 				{/each}
 			</ListContainer>
+			{#if filtered.length === 0}
+				<div class="flex flex-1 items-center justify-center py-16">
+					<p class="text-text-secondary text-sm">暂无会话，点右上角 + 发起新会话</p>
+				</div>
+			{/if}
+			{/if}
 		</div>
 
 		<!-- Right: chat view or empty state（对齐 Figma：无卡片包裹，直接平铺） -->
@@ -389,6 +401,11 @@
 		<!-- 列表：无外层容器，List 直接裸排（对齐 Figma）；每行 px-3 py-1 包裹 -->
 		{#if loadError}
 			<LoadError message={loadError} onRetry={() => reloadKey++} />
+		{:else if loading}
+			<div class="flex flex-col items-center gap-3 py-20">
+				<div class="spinner size-7"></div>
+				<p class="text-text-secondary text-sm">加载会话…</p>
+			</div>
 		{:else if filtered.length === 0}
 			<EmptyState bare class="py-12!" title="没有找到会话">
 				{#snippet icon()}

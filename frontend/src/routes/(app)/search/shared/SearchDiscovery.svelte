@@ -56,14 +56,14 @@
 				{/each}
 			</ListContainer>
 		{:else}
-			<EmptyState bare title="还没有搜索记录。" />
+			<EmptyState bare title="还没有搜索记录" />
 		{/if}
 	</section>
 
-	<!-- 正在关注（热门搜索） -->
+	<!-- 正在关注 -->
 	<section
 		class="rounded-lg border border-border-default bg-surface-primary p-5"
-		aria-label="热门搜索"
+		aria-label="正在关注"
 	>
 		<div class="flex items-center gap-2">
 			<TrendingUp class="size-4 text-accent-default" strokeWidth={1.75} />

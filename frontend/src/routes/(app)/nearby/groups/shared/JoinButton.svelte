@@ -10,7 +10,7 @@
 
 <button
 	type="button"
-	class="hover-btn scale-btn rounded-full focus-ring text-xs px-3.25 py-1.5 shrink-0 {group.joined ? '' : 'font-semibold'}"
+	class="hover-btn scale-btn hit-slop rounded-full focus-ring text-xs px-3.25 py-1.5 shrink-0 {group.joined ? '' : 'font-semibold'}"
 	style={group.joined
 		? 'border:var(--cst-border-width-hairline) solid var(--cst-border-strong);color:var(--cst-text-secondary);'
 		: 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);box-shadow:var(--shadow-glow-sm);'}

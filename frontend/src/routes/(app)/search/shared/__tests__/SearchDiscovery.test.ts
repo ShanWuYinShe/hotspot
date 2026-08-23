@@ -18,7 +18,7 @@ describe('SearchDiscovery', () => {
 		render(SearchDiscovery, {
 			props: { recent: [], hot: [], topics: [], onChoose: () => {}, onClear: () => {} }
 		});
-		expect(screen.getByText('还没有搜索记录。')).toBeTruthy();
+		expect(screen.getByText('还没有搜索记录')).toBeTruthy();
 	});
 
 	it('点击最近搜索项触发 onChoose、清除触发 onClear', async () => {

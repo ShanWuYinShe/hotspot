@@ -10,6 +10,7 @@
 	import SettingRow from '@/components/forms/SettingRow.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import { logout } from '@/stores/auth.svelte';
+	import { showToast } from '@/stores/toast.svelte';
 	import { theme, setTheme, toggleDark, THEME_OPTIONS } from '@/stores/theme.svelte';
 	import { getAccount, getSettings, updateSettings } from '@/api';
 	import { ROUTES } from '@/lib/routes';
@@ -47,20 +48,31 @@
 	let accountAvatar = $state('');
 	let loading = $state(true);
 
-	// 服务端设置开关：乐观更新 + 失败回滚（spec: users/update_settings）
+	// 服务端设置开关：乐观更新 + 失败回滚并提示（spec: users/update_settings；
+	// 业务失败 code!==0 与网络抛错统一走 catch 回滚 + toast）
 	const toggleLocationSharing = () => {
 		const next = !locationSharing;
 		locationSharing = next;
-		void updateSettings({ settings: { location_visible: next } }).then((res) => {
-			if (res.code !== 0) locationSharing = !next;
-		});
+		void updateSettings({ settings: { location_visible: next } })
+			.then((res) => {
+				if (res.code !== 0) throw new Error(res.message ?? '设置失败');
+			})
+			.catch(() => {
+				locationSharing = !next;
+				showToast('设置失败，请稍后重试', 'danger');
+			});
 	};
 	const togglePrivateProfile = () => {
 		const next = !privateProfile;
 		privateProfile = next;
-		void updateSettings({ settings: { privacy_level: next ? 'private' : 'public' } }).then((res) => {
-			if (res.code !== 0) privateProfile = !next;
-		});
+		void updateSettings({ settings: { privacy_level: next ? 'private' : 'public' } })
+			.then((res) => {
+				if (res.code !== 0) throw new Error(res.message ?? '设置失败');
+			})
+			.catch(() => {
+				privateProfile = !next;
+				showToast('设置失败，请稍后重试', 'danger');
+			});
 	};
 	const toggleNotif = () => {
 		notif = !notif;

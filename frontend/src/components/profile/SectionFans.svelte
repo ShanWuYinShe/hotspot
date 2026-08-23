@@ -55,6 +55,7 @@
 		{ label: '待回关', value: pendingCount, tone: 'warning' }
 	]}
 	filters={FILTERS}
+	filterValue={fanFilter}
 	onFilter={(id) => (fanFilter = id as 'all' | 'mutual' | 'pending')}
 	emptyTitle="还没有粉丝"
 	emptyDescription="分享你的瞬间，让更多人发现你。"

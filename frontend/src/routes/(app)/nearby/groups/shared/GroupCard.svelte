@@ -90,7 +90,9 @@
 						{#if group.avatars.length > 0}
 							<div class="flex -space-x-2 shrink-0">
 								{#each group.avatars as avatar, index (index)}
-								<Avatar src={avatar} name="" size={20} class="border border-border-card-menu" style="z-index:{3 - index};" />
+									{#if avatar}
+										<Avatar src={avatar} name="" size={20} class="border border-border-card-menu" style="z-index:{3 - index};" />
+									{/if}
 								{/each}
 							</div>
 						{/if}

@@ -154,7 +154,7 @@
 		<div class="absolute inset-0 bg-surface-primary"></div>
 		<button
 			type="button"
-			class="hover-btn absolute top-3 right-3 flex items-center gap-1.5 rounded-full focus-ring bg-surface-overlay-strong text-content-inverse text-sm px-3 py-1.5"
+			class="hover-btn absolute top-3 right-3 flex items-center gap-1.5 rounded-full focus-ring bg-surface-overlay-strong text-content-inverse text-sm px-3 py-1.5 disabled:opacity-muted"
 			style="backdrop-filter:blur(var(--cst-blur-md));border:var(--cst-border-width-hairline) solid var(--cst-border-inverse);"
 			disabled
 			title="暂未开放"

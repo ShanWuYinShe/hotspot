@@ -79,7 +79,7 @@
 			aria-label={`查看${moment.user}的个人主页`}
 			onclick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}
 		>
-			<Avatar src={moment.avatar} name={moment.user} size={44} style="border:none;" />
+			<Avatar src={moment.avatar} name={moment.user} size={44} />
 		</button>
 		<div class="flex-1">
 			<p class="text-text-primary text-sm">{moment.user}</p>

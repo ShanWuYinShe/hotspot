@@ -140,10 +140,12 @@
 		<PageHeader title="首页" titleSize={device === 'desktop' ? 20 : 24} subtitle="发现周边有趣的人和事" sticky>
 			{#snippet trailing()}
 				<div class="flex items-center gap-2">
-					<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full surface-flat">
-						<span class="rounded-full size-1.5 bg-status-online"></span>
-						<span class="text-xs text-text-secondary">{onlineCount} 在线</span>
-					</div>
+					{#if onlineCount > 0}
+						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full surface-flat">
+							<span class="rounded-full size-1.5 bg-status-online"></span>
+							<span class="text-xs text-text-secondary">{onlineCount} 在线</span>
+						</div>
+					{/if}
 					{#if platform.platform !== 'desktop'}
 						<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} />
 					{/if}
