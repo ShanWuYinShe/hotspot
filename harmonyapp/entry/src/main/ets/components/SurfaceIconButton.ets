@@ -13,6 +13,8 @@ export struct SurfaceIconButton {
   @Prop buttonSize: number = DesignConstants.LAYOUT.ICON_BUTTON_SIZE; // 36
   @Prop glyphSize: number = DesignConstants.COMPONENT.ICON_SIZE_XS; // 16
   @Prop disabled: boolean = false;
+  /** 无障碍语义描述（图标钮无文字，读屏依赖此标签，如全局返回钮「返回」） */
+  @Prop accessibilityLabel: string = '';
   onPress?: () => void;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
@@ -64,7 +66,8 @@ export struct SurfaceIconButton {
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getBorderColor() })
     .shadow(this.getShadowColor())
     .enabled(!this.disabled)
-    .opacity(this.disabled ? DesignConstants.OPACITY.LOADING : 1)
+    .opacity(this.disabled ? DesignConstants.OPACITY.DISABLED : 1)
+    .accessibilityText(this.accessibilityLabel)
     .scale(this.isPressed ?
       { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
       { x: 1, y: 1 })

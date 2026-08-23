@@ -33,7 +33,7 @@ import { curves } from '@kit.ArkUI';
 import { SystemBadge } from '../SystemBadge';
 import { SystemButton } from '../SystemButton';
 import { AppIcon } from '../SystemIcon';
-import { AppRouter } from '../../core/router/AppRouter';
+import { AppRouter, LoginRouteParam } from '../../core/router/AppRouter';
 import { PageNames } from '../../constants/AppConstants';
 
 interface TabItem {
@@ -504,7 +504,8 @@ export struct PhoneLayout {
       SystemButton({
         label: '去注册',
         variant: 'primary',
-        buttonSize: 'small'
+        buttonSize: 'small',
+        onPress: () => AppRouter.push(PageNames.LOGIN, new LoginRouteParam())
       })
     }
     .width('100%')

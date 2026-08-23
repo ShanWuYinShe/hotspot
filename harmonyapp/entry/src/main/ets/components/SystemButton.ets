@@ -127,7 +127,7 @@ export struct SystemButton {
     if (this.variant === 'surface' || this.variant === 'surface-accent' || this.variant === 'surface-danger') {
       return DesignConstants.BORDER_WIDTH.HAIRLINE;
     }
-    return this.variant === 'outline' ? 1.5 : 0;
+    return this.variant === 'outline' ? DesignConstants.BORDER_WIDTH.REGULAR : 0;
   }
 
   private getBorderColor(): ResourceColor {

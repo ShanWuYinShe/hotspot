@@ -58,7 +58,7 @@ export struct PageShellContainer {
       case 'sm':
         return DesignConstants.SPACING.LG; // 16
       case 'md':
-        return 20;
+        return DesignConstants.SPACING.LG2;
       case 'lg':
         return DesignConstants.SPACING.XL; // 24
       default:

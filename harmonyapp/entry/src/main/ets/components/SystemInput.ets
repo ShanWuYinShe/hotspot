@@ -99,12 +99,18 @@ export struct SystemInput {
         })
 
       if (this.showClearButton && this.value.length > 0) {
-        Text() {
-          SymbolSpan($r(AppIcon.CLOSE))
-            .fontSize(this.clearIconSize)
-            .fontColor([this.getPalette().textSecondary])
+        // 清除钮用 ICON_BUTTON_SIZE(36) 命中区包裹小图标：触控达标 ≥36vp，视觉尺寸不变
+        Row() {
+          Text() {
+            SymbolSpan($r(AppIcon.CLOSE))
+              .fontSize(this.clearIconSize)
+              .fontColor([this.getPalette().textSecondary])
+          }
         }
-        .margin({ left: DesignConstants.SPACING.SM })
+        .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+        .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
         .onClick(() => {
           this.onChange?.('');
         })

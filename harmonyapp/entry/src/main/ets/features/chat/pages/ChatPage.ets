@@ -22,6 +22,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { ChatPageHeader } from '../../../components/ChatPageHeader';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { EmptyState } from '../../../components/EmptyState';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemButton } from '../../../components/SystemButton';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -39,6 +40,7 @@ import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManag
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { common } from '@kit.AbilityKit';
+import { curves } from '@kit.ArkUI';
 import { KeyboardAvoidMode as UIContextKeyboardAvoidMode } from '@ohos.arkui.UIContext';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
@@ -94,6 +96,8 @@ export struct ChatPage {
   @State isLoading: boolean = true;
   @State errorMessage: string = '';
   @State isSending: boolean = false;
+  @State isAddPressed: boolean = false;
+  @State isSendPressed: boolean = false;
   @State isInputFocused: boolean = false;
   @State isOtherUserTyping: boolean = false;
   @State groupTypingUserIds: string[] = [];
@@ -103,7 +107,6 @@ export struct ChatPage {
   @State isLoadingMoreHistory: boolean = false;
   @State showConversationActionsSheet: boolean = false;
   @State targetAvatar: string = '';
-  @State isMuted: boolean = false;
   @State isGroupServerMuted: boolean = false;
   @State groupMutedUntil: string = '';
 
@@ -113,6 +116,7 @@ export struct ChatPage {
   private webSocketService = WebSocketService.getInstance();
   private messageCacheService = MessageCacheService.getInstance();
   private scroller: Scroller = new Scroller();
+  private firstVisibleIndex: number = 0;
   private typingStopTimer: number = -1;
   private lastTypingSentAt: number = 0;
   private typingStateReported: boolean = false;
@@ -543,6 +547,9 @@ export struct ChatPage {
 
   private async loadMoreHistory(): Promise<void> {
     if (this.isLoadingMoreHistory || !this.hasMoreHistory) return;
+    // 加载前记录锚点：首条可见 index（此时顶部无指示项，List index 与消息 index 一致）与当前条数
+    const anchorIndex = this.firstVisibleIndex;
+    const previousCount = this.messages.length;
     this.isLoadingMoreHistory = true;
     try {
       let items: (PrivateMessageItem | GroupMessageItem)[] = [];
@@ -574,11 +581,14 @@ export struct ChatPage {
 
       const olderMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
       const mergedMessages = this.dedupeMessages(olderMessages.concat(this.messages));
+      const addedCount = mergedMessages.length - previousCount;
       this.messages = mergedMessages;
       this.messagesDataSource.setData(mergedMessages);
       // spec：next_cursor 为 null 表示没有更多数据
       this.hasMoreHistory = !!(nextCursor);
       this.historyNextCursor = nextCursor ?? '';
+      // setData 走 notifyDataReload 全量重建，按「旧首条可见 index + 新增条数」恢复视口锚点，避免跳变
+      this.restoreHistoryAnchor(anchorIndex, addedCount);
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载更早消息失败: ${error}`);
     } finally {
@@ -739,6 +749,16 @@ export struct ChatPage {
     }, 100);
   }
 
+  /** 加载更早历史后恢复视口锚点：等 reload 布局与顶部指示项移除完成后，定位到「旧 index + 新增条数」 */
+  private restoreHistoryAnchor(anchorIndex: number, addedCount: number): void {
+    if (addedCount <= 0) return;
+    if (this.scrollTimer !== -1) clearTimeout(this.scrollTimer);
+    this.scrollTimer = setTimeout(() => {
+      this.scrollTimer = -1;
+      this.scroller.scrollToIndex(anchorIndex + addedCount, false);
+    }, 100);
+  }
+
   private async pickAttachment(): Promise<void> {
     try {
       const context = AppStorage.get<common.UIAbilityContext>('context');
@@ -798,6 +818,11 @@ export struct ChatPage {
     }
 
     this.showConversationActionsSheet = true;
+  }
+
+  /** 发送钮可交互条件（背景/字色/透明度/缩放/enabled 统一入口） */
+  private isSendInteractive(): boolean {
+    return !this.isSending && this.inputText.trim().length > 0 && !this.isGroupServerMuted;
   }
 
   private async sendMessage() {
@@ -1095,57 +1120,36 @@ export struct ChatPage {
               .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
           )
       } else if (this.messages.length === 0 && this.errorMessage) {
-        Column({ space: DesignConstants.SPACING.LG }) {
-          Text() {
-            SymbolSpan($r(AppIcon.WARNING))
-              .fontSize(DesignConstants.FONT.SIZE.HERO)
-              .fontColor([this.getCurrentThemePalette().textSecondary])
-          }
-          Text(this.errorMessage)
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-            .textAlign(TextAlign.Center)
-          SystemButton({
-            label: '重试',
-            variant: 'primary',
-            buttonSize: 'default',
-            onPress: () => { this.loadHistory(); }
+        EmptyState({
+          icon: AppIcon.WARNING,
+          message: this.errorMessage,
+          actionLabel: '重试',
+          fillMode: true,
+          onAction: () => { this.loadHistory(); }
+        })
+          .layoutWeight(1)
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.dismissKeyboardOnOutsideTap();
+            }
           })
-        }
-        .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-        .onTouch((event: TouchEvent) => {
-          if (event.type === TouchType.Down) {
-            this.dismissKeyboardOnOutsideTap();
-          }
-        })
-        .transition(
-          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
-        )
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
+          )
       } else if (this.messages.length === 0) {
-        Column({ space: DesignConstants.SPACING.LG }) {
-          Text() {
-            SymbolSpan($r(AppIcon.MESSAGE))
-              .fontSize(DesignConstants.FONT.SIZE.HERO)
-              .fontColor([this.getCurrentThemePalette().textTertiary])
-          }
-          Text('暂无消息')
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-          Text('发送一条消息开始聊天吧')
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getCurrentThemePalette().textTertiary)
-        }
-        .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-        .onTouch((event: TouchEvent) => {
-          if (event.type === TouchType.Down) {
-            this.dismissKeyboardOnOutsideTap();
-          }
+        EmptyState({
+          icon: AppIcon.MESSAGE,
+          title: '暂无消息',
+          message: '发送一条消息开始聊天吧',
+          fillMode: true
         })
+          .layoutWeight(1)
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.dismissKeyboardOnOutsideTap();
+            }
+          })
       } else {
       List({ scroller: this.scroller, initialIndex: this.messages.length - 1 }) {
         // 顶部加载更多历史指示器
@@ -1173,6 +1177,18 @@ export struct ChatPage {
             .width('100%')
           }
         }, (msg: ChatMessage) => msg.id)
+
+        // 列表收尾：没有更早历史时展示
+        if (!this.hasMoreHistory) {
+          ListItem() {
+            Text('没有更多了')
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getCurrentThemePalette().textTertiary)
+              .width('100%')
+              .textAlign(TextAlign.Center)
+              .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+          }
+        }
       }
       .width('100%')
       .layoutWeight(1)
@@ -1186,6 +1202,7 @@ export struct ChatPage {
       .backgroundColor(this.getChatTheme().listBackground)
       .borderRadius(this.getChatVisualStyle().listRadius)
       .onScrollIndex((start: number) => {
+        this.firstVisibleIndex = start;
         // 当滚动到列表顶部附近时加载更早的消息
         if (start <= 1 && this.hasMoreHistory && !this.isLoadingMoreHistory) {
           this.loadMoreHistory();
@@ -1257,6 +1274,7 @@ export struct ChatPage {
           }
         }
         .type(ButtonType.Circle)
+        .stateEffect(false)
         .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
         .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
         .backgroundColor(this.getChatTheme().inputFieldBg)
@@ -1264,6 +1282,23 @@ export struct ChatPage {
         .shadow(this.getChatVisualStyle().input.shadow)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getChatTheme().inputBorder })
         .margin({ right: DesignConstants.SPACING.SM })
+        .accessibilityText('添加图片')
+        .scale(this.isAddPressed ?
+          { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+          { x: 1, y: 1 })
+        .animation({
+          curve: curves.springMotion(
+            DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+            DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+          )
+        })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.isAddPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.isAddPressed = false;
+          }
+        })
         .onClick(() => this.pickAttachment())
 
         TextInput({ text: this.inputText, placeholder: '发送消息...' })
@@ -1294,24 +1329,36 @@ export struct ChatPage {
 
         Button(this.isSending ? '发送中...' : '发送')
           .type(ButtonType.Normal)
-          .backgroundColor(
-            this.isSending || this.inputText.trim().length === 0 || this.isGroupServerMuted
-              ? this.getChatTheme().sendButtonDisabled
-              : this.getChatTheme().sendButtonActive
-          )
-          .fontColor(
-            this.isSending || this.inputText.trim().length === 0 || this.isGroupServerMuted
-              ? this.getCurrentThemePalette().textSecondary
-              : this.getChatTheme().sendButtonActiveText
-          )
+          .stateEffect(false)
+          .backgroundColor(this.isSendInteractive() ? this.getChatTheme().sendButtonActive : this.getChatTheme().sendButtonDisabled)
+          .fontColor(this.isSendInteractive() ? this.getChatTheme().sendButtonActiveText : this.getCurrentThemePalette().textSecondary)
           .height(this.getChatVisualStyle().sendButton.height)
           .borderRadius(this.getChatVisualStyle().sendButton.borderRadius)
           .shadow(this.getChatVisualStyle().sendButton.shadow)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getChatTheme().inputBorder })
           .padding({ left: this.getChatVisualStyle().sendButton.horizontalPadding, right: this.getChatVisualStyle().sendButton.horizontalPadding })
           .margin({ left: DesignConstants.SPACING.MD })
-          .opacity(this.isSending || this.inputText.trim().length === 0 || this.isGroupServerMuted ? DesignConstants.OPACITY.PRESSED : 1)
-          .enabled(!this.isSending && this.inputText.trim().length > 0 && !this.isGroupServerMuted)
+          .opacity(this.isSendInteractive() ? 1 : DesignConstants.OPACITY.DISABLED)
+          .scale(this.isSendPressed && this.isSendInteractive() ?
+            { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON } :
+            { x: 1, y: 1 })
+          .animation({
+            curve: curves.springMotion(
+              DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+              DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+            )
+          })
+          .enabled(this.isSendInteractive())
+          .onTouch((event: TouchEvent) => {
+            if (!this.isSendInteractive()) {
+              return;
+            }
+            if (event.type === TouchType.Down) {
+              this.isSendPressed = true;
+            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+              this.isSendPressed = false;
+            }
+          })
           .onClick(() => this.sendMessage())
       }
       .width('100%')
@@ -1396,17 +1443,6 @@ export struct ChatPage {
       }
 
       SystemButton({
-        label: this.isMuted ? '取消静音' : '静音通知',
-        variant: 'surface',
-        buttonSize: 'sheet',
-        fullWidth: true,
-        onPress: () => {
-          this.isMuted = !this.isMuted;
-          SystemToast.show(this.isMuted ? '已静音' : '已取消静音', this.getUIContext());
-        }
-      })
-
-      SystemButton({
         label: '回到最新消息',
         variant: 'surface',
         buttonSize: 'sheet',
@@ -1469,7 +1505,7 @@ export struct ChatPage {
       bottom: DesignConstants.SPACING.XXL
     })
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.LG)
+    .borderRadius(DesignConstants.SHAPE.SHEET_TOP_RADIUS)
   }
 
   private getBubbleRadius(isSelf: boolean): BorderRadiuses {

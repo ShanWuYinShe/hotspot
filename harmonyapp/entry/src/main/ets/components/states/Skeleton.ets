@@ -27,7 +27,7 @@ export struct Skeleton {
     Column() {}
       .width(this.width)
       .height(this.block ? this.width : this.height)
-      .borderRadius(typeof this.borderRadius === 'string' ? 0 : this.borderRadius as Length)
+      .borderRadius(this.borderRadius)
       .backgroundColor(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceSubtle)
   }
 }

@@ -25,7 +25,8 @@ export interface TabsPillGroupActions {
 
 @Component
 export struct TabsPillGroup {
-  @State isTabPressed: boolean = false;
+  /** 当前按下胶囊的索引（-1 表示无）：按 index 记录，仅缩放被按的那颗，不再整组齐缩 */
+  @State pressedIndex: number = -1;
   @Prop tabs: TabItem[] = [];
   @Prop activeIndex: number = 0;
   @Prop gap: number = DesignConstants.SPACING.XS;
@@ -99,7 +100,7 @@ export struct TabsPillGroup {
     })
     // 等宽分段用 layoutWeight(1)；自由宽度收缩到内容宽
     .layoutWeight(this.freeWidth ? 0 : 1)
-    .scale(this.isTabPressed ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL } : { x: 1, y: 1 })
+    .scale(this.pressedIndex === index ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL } : { x: 1, y: 1 })
     .animation({
       curve: curves.springMotion(
         DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
@@ -108,9 +109,9 @@ export struct TabsPillGroup {
     })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
-        this.isTabPressed = true;
+        this.pressedIndex = index;
       } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.isTabPressed = false;
+        this.pressedIndex = -1;
       }
     })
     .onClick(() => {

@@ -35,7 +35,7 @@ export struct SystemAvatar {
       return undefined;
     }
     const borderOptions: BorderOptions = {
-      width: this.inset ? 3 : 2,
+      width: this.inset ? DesignConstants.BORDER_WIDTH.HEAVY : DesignConstants.BORDER_WIDTH.STRONG,
       color: this.getPalette().surfaceBackground
     };
     return borderOptions;

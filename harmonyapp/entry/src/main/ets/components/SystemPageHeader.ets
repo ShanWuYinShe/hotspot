@@ -17,6 +17,7 @@ import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { AppThemeShadow, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { SurfaceIconButton } from './SurfaceIconButton';
+import { SystemButton } from './SystemButton';
 import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
 
 export interface PageHeaderAction {
@@ -33,6 +34,8 @@ export interface IconAction {
   disabled?: boolean;
   size?: number;
   iconSize?: number;
+  /** 无障碍语义描述，透传给 SurfaceIconButton（图标钮读屏必需） */
+  accessibilityLabel?: string;
 }
 
 /** 背景变体：bar=全宽底栏(默认)，transparent=透明(继承页面背景)，card=浮动圆角卡 */
@@ -129,25 +132,26 @@ export struct SystemPageHeader {
       buttonSize: action.size ?? 40,
       glyphSize: action.iconSize ?? 20,
       disabled: action.disabled ?? false,
+      accessibilityLabel: action.accessibilityLabel ?? '',
       onPress: action.onClick
     })
   }
 
   @Builder
   private buildActionTextButton(a: PageHeaderAction) {
-    Button(a.label)
-      .type(ButtonType.Normal)
-      .backgroundColor(this.getPalette().accentBackground)
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-      .fontColor(this.getPalette().accentText)
-      .fontSize(DesignConstants.FONT.SIZE.SM)
-      .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-      .enabled(!a.disabled)
-      .onClick(() => {
-        a?.onClick();
-      })
+    // 原语强制：文本操作按钮统一走 SystemButton。
+    // primary+pill 复刻原手写样式（accent 实底胶囊 42vp + SM 字号 + FULL 圆角），保持视觉不变；
+    // disabled 由 SystemButton 内聚 enabled(false) + OPACITY.DISABLED。ghost 为透明底文本钮，
+    // 会丢掉 accent 实底视觉，故不采用。
+    SystemButton({
+      label: a.label,
+      variant: 'primary',
+      pill: true,
+      disabled: a.disabled ?? false,
+      onPress: () => {
+        a.onClick();
+      }
+    })
   }
 
   build() {
