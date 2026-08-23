@@ -78,7 +78,8 @@ export function useAccountData() {
 					handle = d.nickname ? `@${d.nickname.replace(/\s/g, '_')}` : '';
 					stats = d.stats ?? stats;
 				} else {
-					error = res.message ?? '加载失败';
+					// 10100（未登录/会话失效）对用户是技术黑话，转成可操作的指引
+					error = res.code === 10100 ? '请先登录后查看个人资料' : (res.message ?? '加载失败');
 				}
 			})
 			.catch(() => (error = '网络异常，请稍后重试'))
@@ -119,15 +120,23 @@ export function useAccountData() {
 export function useGalleryMoments(type: 'my' | 'user' = 'my', userId?: string) {
 	let posts = $state<GalleryMoment[]>([]);
 	let loading = $state(true);
+	let error = $state<string | null>(null);
+	let reloadKey = $state(0);
 
 	$effect(() => {
+		void reloadKey;
+		loading = true;
+		error = null;
 		const fetcher = type === 'my' ? listMyMoments : () => listUserMoments(userId!);
 		fetcher({ pagination: { limit: 20 } })
 			.then((res) => {
 				if (res.code === 0 && res.data) {
 					posts = res.data.items?.map(mapGalleryMoment) ?? [];
+				} else {
+					error = res.code === 10100 ? '请先登录后查看' : (res.message ?? '加载失败');
 				}
 			})
+			.catch(() => (error = '网络异常，请稍后重试'))
 			.finally(() => (loading = false));
 	});
 
@@ -137,6 +146,12 @@ export function useGalleryMoments(type: 'my' | 'user' = 'my', userId?: string) {
 		},
 		get loading() {
 			return loading;
+		},
+		get error() {
+			return error;
+		},
+		retry() {
+			reloadKey++;
 		}
 	};
 }
@@ -144,14 +159,22 @@ export function useGalleryMoments(type: 'my' | 'user' = 'my', userId?: string) {
 export function useReactedMoments(userId?: string) {
 	let posts = $state<GalleryMoment[]>([]);
 	let loading = $state(true);
+	let error = $state<string | null>(null);
+	let reloadKey = $state(0);
 
 	$effect(() => {
+		void reloadKey;
+		loading = true;
+		error = null;
 		listUserReactedMoments(userId ?? '', { pagination: { limit: 20 } })
 			.then((res) => {
 				if (res.code === 0 && res.data) {
 					posts = res.data.items?.map(mapGalleryMoment) ?? [];
+				} else {
+					error = res.code === 10100 ? '请先登录后查看' : (res.message ?? '加载失败');
 				}
 			})
+			.catch(() => (error = '网络异常，请稍后重试'))
 			.finally(() => (loading = false));
 	});
 
@@ -161,6 +184,12 @@ export function useReactedMoments(userId?: string) {
 		},
 		get loading() {
 			return loading;
+		},
+		get error() {
+			return error;
+		},
+		retry() {
+			reloadKey++;
 		}
 	};
 }
@@ -168,14 +197,22 @@ export function useReactedMoments(userId?: string) {
 export function useFavoriteMoments() {
 	let posts = $state<GalleryMoment[]>([]);
 	let loading = $state(true);
+	let error = $state<string | null>(null);
+	let reloadKey = $state(0);
 
 	$effect(() => {
+		void reloadKey;
+		loading = true;
+		error = null;
 		getFavoriteMoments({ pagination: { limit: 20 } })
 			.then((res) => {
 				if (res.code === 0 && res.data) {
 					posts = res.data.items?.map(mapGalleryMoment) ?? [];
+				} else {
+					error = res.code === 10100 ? '请先登录后查看' : (res.message ?? '加载失败');
 				}
 			})
+			.catch(() => (error = '网络异常，请稍后重试'))
 			.finally(() => (loading = false));
 	});
 
@@ -185,6 +222,12 @@ export function useFavoriteMoments() {
 		},
 		get loading() {
 			return loading;
+		},
+		get error() {
+			return error;
+		},
+		retry() {
+			reloadKey++;
 		}
 	};
 }
@@ -312,11 +355,19 @@ export function useMyGroups() {
 	let groups = $state<MappedGroup[]>([]);
 	let loading = $state(true);
 
+	let error = $state<string | null>(null);
+	let reloadKey = $state(0);
+
 	$effect(() => {
+		void reloadKey;
+		loading = true;
+		error = null;
 		listMyGroups({ pagination: { limit: 20 } })
 			.then((res) => {
 				if (res.code === 0) groups = (res.data.items ?? []).map(mapGroup);
+				else error = res.code === 10100 ? '请先登录后查看' : (res.message ?? '加载失败');
 			})
+			.catch(() => (error = '网络异常，请稍后重试'))
 			.finally(() => (loading = false));
 	});
 
@@ -326,6 +377,12 @@ export function useMyGroups() {
 		},
 		get loading() {
 			return loading;
+		},
+		get error() {
+			return error;
+		},
+		retry() {
+			reloadKey++;
 		}
 	};
 }
@@ -336,12 +393,18 @@ export function useRelationships() {
 	let following = $state<MappedFollowing[]>([]);
 	let followers = $state<MappedFollower[]>([]);
 	let loading = $state(true);
+	let error = $state<string | null>(null);
+	let reloadKey = $state(0);
 
 	$effect(() => {
+		void reloadKey;
+		loading = true;
+		error = null;
 		// spec: users/fetch_friends|following|followers 的 user_id 必传（拉自己的列表也要显式传自己的 user_id）。
 		getAccount()
 			.then((accountRes) => {
 				if (accountRes.code !== 0 || !accountRes.data) {
+					error = accountRes.code === 10100 ? '请先登录后查看' : (accountRes.message ?? '加载失败');
 					loading = false;
 					return;
 				}
@@ -359,6 +422,7 @@ export function useRelationships() {
 				following = fo.code === 0 ? (fo.data.items ?? []).map(mapFollowing) : [];
 				followers = fr.code === 0 ? (fr.data.items ?? []).map(mapFollower) : [];
 			})
+			.catch(() => (error = '网络异常，请稍后重试'))
 			.finally(() => (loading = false));
 	});
 
@@ -374,6 +438,12 @@ export function useRelationships() {
 		},
 		get loading() {
 			return loading;
+		},
+		get error() {
+			return error;
+		},
+		retry() {
+			reloadKey++;
 		}
 	};
 }

@@ -16,7 +16,10 @@
 	let searchQ = $state('');
 	let activeFilter = $state<'all' | 'online' | 'offline'>('all');
 
-	const { friends, loading } = useRelationships();
+	// getter 对象解构会拿到非响应式快照，$derived 桥接
+	const rel = useRelationships();
+	const friends = $derived(rel.friends);
+	const loading = $derived(rel.loading);
 
 	const filtered = $derived(
 		friends
@@ -46,6 +49,8 @@
 	emptyDescription="去附近的人里认识新朋友。"
 	emptyIcon={Users}
 	loading={loading}
+	error={rel.error}
+	onRetry={rel.retry}
 	items={filtered}
 >
 	{#snippet children(f: MappedFriend)}

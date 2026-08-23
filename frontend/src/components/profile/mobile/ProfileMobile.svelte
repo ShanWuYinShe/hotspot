@@ -14,21 +14,31 @@
 	// 移动个人主页：资料页眉 + 身份卡（68px 头像 + 编辑按钮 + stats 横条居中）
 	// + 个人数据 5 行链接（无 Tab/画廊）。仅 mobile 使用；tablet 归 ProfilePage。
 
-	const { avatar, nickname, stats, bio, handle, locationName, loading, error, retry } = useAccountData();
+	// getter 对象禁止解构（快照不响应，UI 永不更新），$derived 桥接给模板
+	const account = useAccountData();
+	const avatar = $derived(account.avatar);
+	const nickname = $derived(account.nickname);
+	const stats = $derived(account.stats);
+	const bio = $derived(account.bio);
+	const handle = $derived(account.handle);
+	const locationName = $derived(account.locationName);
+	const loading = $derived(account.loading);
+	const error = $derived(account.error);
+	const retry = account.retry;
 
-	const DATA_ITEMS: { section: ProfileSection; label: string; detail: string; icon: typeof ImageIcon }[] = [
+	const DATA_ITEMS = $derived<{ section: ProfileSection; label: string; detail: string; icon: typeof ImageIcon }[]>([
 		{ section: 'moments', label: '我的瞬间', detail: '查看已发布的记录', icon: ImageIcon },
 		{ section: 'groups', label: '我的群组', detail: `${stats.groups_count} 个正在参与`, icon: Users },
 		{ section: 'friends', label: '好友', detail: `${stats.friends_count} 位好友`, icon: Heart },
 		{ section: 'following', label: '关注', detail: `${stats.following_count} 人`, icon: UserPlus },
 		{ section: 'fans', label: '粉丝', detail: `${stats.followers_count} 人`, icon: UserCheck }
-	];
+	]);
 
-	const statsList: { label: string; value: number }[] = [
+	const statsList = $derived<{ label: string; value: number }[]>([
 		{ label: '瞬间', value: stats.moments_count },
 		{ label: '关注者', value: stats.followers_count },
 		{ label: '群组', value: stats.groups_count }
-	];
+	]);
 </script>
 
 <StandardPageLayout contentClassName="pt-4 pb-6">

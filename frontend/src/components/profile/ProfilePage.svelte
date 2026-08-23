@@ -25,7 +25,18 @@
 
 	let { section }: { section: string | null } = $props();
 
-	const { avatar, nickname, stats, bio, handle, locationName, loading, error, retry } = useAccountData();
+	// useAccountData 返回 getter 对象：解构会拿到非响应式快照（UI 永不更新），
+	// 必须保留对象本体，用 $derived 逐字段桥接给模板。
+	const account = useAccountData();
+	const avatar = $derived(account.avatar);
+	const nickname = $derived(account.nickname);
+	const stats = $derived(account.stats);
+	const bio = $derived(account.bio);
+	const handle = $derived(account.handle);
+	const locationName = $derived(account.locationName);
+	const loading = $derived(account.loading);
+	const error = $derived(account.error);
+	const retry = account.retry;
 
 	const SECTION_META: Record<string, { title: string }> = {
 		moments: { title: '我的瞬间' },
@@ -43,11 +54,11 @@
 		{ label: '群组', value: stats.groups_count }
 	]);
 
-	const ENTRY_ITEMS: { section: ProfileSection; title: string; description: string; icon: typeof Users }[] = [
+	const ENTRY_ITEMS = $derived<{ section: ProfileSection; title: string; description: string; icon: typeof Users }[]>([
 		{ section: 'moments', title: '我的瞬间', description: '查看已发布的记录', icon: Sparkles },
 		{ section: 'groups', title: '我的群组', description: `${stats.groups_count} 个正在参与`, icon: UsersRound },
 		{ section: 'relationships', title: '关系', description: `好友 ${stats.friends_count} · 关注 ${stats.following_count} · 粉丝 ${stats.followers_count}`, icon: Users }
-	];
+	]);
 
 	const filledCount = $derived(
 		[nickname, avatar, bio, locationName, stats.groups_count > 0].filter(Boolean).length

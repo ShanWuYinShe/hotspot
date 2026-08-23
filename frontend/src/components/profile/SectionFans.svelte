@@ -4,7 +4,9 @@
 	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
-	import { useRelationships } from '@/lib/profile-data.svelte';
+	import { useRelationships, type MappedFollower } from '@/lib/profile-data.svelte';
+	import { follow } from '@/api';
+	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 粉丝分区：ProfileUserSection 骨架 + UserCardRow 行（含统计行与待回关徽章）。
@@ -13,24 +15,46 @@
 
 	let fanFilter = $state<'all' | 'mutual' | 'pending'>('all');
 
-	const { followers, loading } = useRelationships();
-	let followedBack = $state<Set<string>>(new Set(followers.filter((f) => f.isMutual).map((f) => f.id)));
+	// getter 对象解构会拿到非响应式快照，$derived 桥接
+	const rel = useRelationships();
+	const followers = $derived(rel.followers);
+	const loading = $derived(rel.loading);
 
-	const toggleFollow = (id: string) => {
-		const next = new Set(followedBack);
-		next.has(id) ? next.delete(id) : next.add(id);
-		followedBack = next;
+	// 回关状态以服务端 isMutual 为基准，本地 overrides 承载乐观切换（API 失败回滚）
+	let followOverrides = $state<Record<string, boolean>>({});
+	let pendingIds = $state<Set<string>>(new Set());
+
+	const isMutualWith = (f: MappedFollower) => followOverrides[f.id] ?? f.isMutual;
+
+	const toggleFollow = async (f: MappedFollower) => {
+		const prev = isMutualWith(f);
+		const next = !prev;
+		followOverrides = { ...followOverrides, [f.id]: next };
+		pendingIds = new Set([...pendingIds, f.id]);
+		try {
+			// spec: users/set_follow——回关 active:true，取消回关 active:false
+			const res = await follow({ user_id: f.id, active: next });
+			if (res.code !== 0) throw new Error(res.message ?? '操作失败');
+			if (next) showToast(`已关注 ${f.name}`, 'success');
+		} catch {
+			followOverrides = { ...followOverrides, [f.id]: prev };
+			showToast('操作失败，请重试', 'danger');
+		} finally {
+			const rest = new Set(pendingIds);
+			rest.delete(f.id);
+			pendingIds = rest;
+		}
 	};
 
 	const filtered = $derived(
 		followers.filter((f) => {
-			const isMutual = followedBack.has(f.id);
+			const isMutual = isMutualWith(f);
 			if (fanFilter === 'mutual') return isMutual;
 			if (fanFilter === 'pending') return !isMutual;
 			return true;
 		})
 	);
-	const mutualCount = $derived([...followedBack].length);
+	const mutualCount = $derived(followers.filter((f) => isMutualWith(f)).length);
 	const pendingCount = $derived(followers.length - mutualCount);
 
 	const fanLabel = (joinedDays: number) =>
@@ -61,6 +85,8 @@
 	emptyDescription="分享你的瞬间，让更多人发现你。"
 	emptyIcon={UserPlus}
 	loading={loading}
+	error={rel.error}
+	onRetry={rel.retry}
 	items={filtered}
 >
 	{#snippet headerExtra()}
@@ -71,7 +97,7 @@
 		{/if}
 	{/snippet}
 	{#snippet children(f)}
-		{@const isMutual = followedBack.has(f.id)}
+		{@const isMutual = isMutualWith(f)}
 		<UserCardRow
 			name={f.name}
 			avatar={f.avatar}
@@ -95,11 +121,12 @@
 			{#snippet actions()}
 				<button
 					type="button"
-					class="hover-btn tap-92 flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs focus-ring {isMutual ? 'bg-transparent text-text-secondary' : 'bg-accent-default text-text-on-accent'}"
+					disabled={pendingIds.has(f.id)}
+					class="hover-btn tap-92 flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs focus-ring disabled:opacity-muted {isMutual ? 'bg-transparent text-text-secondary' : 'bg-accent-default text-text-on-accent'}"
 					style={isMutual ? 'border:var(--cst-border-width-hairline) solid var(--cst-border-strong);' : 'border:var(--cst-border-width-hairline) solid transparent;'}
 					onclick={(e) => {
 						e.stopPropagation();
-						toggleFollow(f.id);
+						void toggleFollow(f);
 					}}
 				>
 					{#if isMutual}

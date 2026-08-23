@@ -14,7 +14,10 @@
 	let followingFilter = $state<'all' | 'mutual'>('all');
 	let unfollowedIds = $state<Set<string>>(new Set());
 
-	const { following, loading } = useRelationships();
+	// getter 对象解构会拿到非响应式快照，$derived 桥接
+	const rel = useRelationships();
+	const following = $derived(rel.following);
+	const loading = $derived(rel.loading);
 
 	const toggleUnfollow = (id: string) => {
 		const next = new Set(unfollowedIds);
@@ -44,6 +47,8 @@
 	emptyDescription="去发现附近的人，找到有趣的创作者。"
 	emptyIcon={Heart}
 	loading={loading}
+	error={rel.error}
+	onRetry={rel.retry}
 	items={filtered}
 >
 	{#snippet children(f)}

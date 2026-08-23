@@ -1,6 +1,7 @@
 <script lang="ts" generics="T extends { id: string }">
 	import type { Component, Snippet } from 'svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import MetricRow, { type MetricItem } from '@/components/data-display/MetricRow.svelte';
@@ -30,6 +31,8 @@
 		headerExtra,
 		embedded = false,
 		loading = false,
+		error = null,
+		onRetry,
 		items,
 		children
 	}: {
@@ -50,6 +53,9 @@
 		embedded?: boolean;
 		/** 数据加载中：列表区显示统一 spinner（加载完成前不渲染空态，避免误报） */
 		loading?: boolean;
+		/** 加载失败信息：非空时列表区渲染 LoadError（重试走 onRetry），不落空态 */
+		error?: string | null;
+		onRetry?: () => void;
 		items: T[];
 		children: Snippet<[T]>;
 	} = $props();
@@ -118,6 +124,10 @@
 					<div class="spinner size-7"></div>
 					<p class="text-text-secondary text-sm">加载中…</p>
 				</div>
+			{:else if error}
+				<div class="col-span-full">
+					<LoadError message={error} onRetry={onRetry} />
+				</div>
 			{:else if items.length === 0}
 				<div class="col-span-full">
 					<EmptyState title={emptyTitle} description={emptyDescription}>
@@ -140,6 +150,8 @@
 					<div class="spinner size-7"></div>
 					<p class="text-text-secondary text-sm">加载中…</p>
 				</div>
+			{:else if error}
+				<LoadError message={error} onRetry={onRetry} />
 			{:else if items.length === 0}
 				<EmptyState title={emptyTitle} description={emptyDescription}>
 					{#snippet icon()}

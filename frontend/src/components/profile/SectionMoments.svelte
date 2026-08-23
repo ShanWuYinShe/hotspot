@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { Heart, MessageCircle, CalendarDays, ArrowUpRight, Grid3X3 } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import { openComposer } from '@/stores/composer.svelte';
 	import { useGalleryMoments, useReactedMoments, useFavoriteMoments, type GalleryMoment } from '@/lib/profile-data.svelte';
@@ -22,6 +23,12 @@
 	const postsMap = $derived({ posts: myPosts.posts, liked: reacted.posts, saved: savedP.posts } as Record<Tab, GalleryMoment[]>);
 	const archive = $derived(postsMap[activeTab]);
 	const loading = $derived(activeTab === 'posts' ? myPosts.loading : activeTab === 'liked' ? reacted.loading : savedP.loading);
+	const error = $derived(activeTab === 'posts' ? myPosts.error : activeTab === 'liked' ? reacted.error : savedP.error);
+	const retryActive = () => {
+		if (activeTab === 'posts') myPosts.retry();
+		else if (activeTab === 'liked') reacted.retry();
+		else savedP.retry();
+	};
 	const featured = $derived(archive[0]);
 	const remaining = $derived(archive.slice(1));
 
@@ -46,6 +53,8 @@
 				<div class="spinner size-7"></div>
 				<p class="text-text-secondary text-sm">加载我的瞬间…</p>
 			</div>
+		{:else if error}
+			<LoadError message={error} onRetry={retryActive} />
 		{:else if archive.length === 0}
 			<!-- 空态 -->
 			<EmptyState title="这里还没有瞬间" description="从一次路过、一次相遇开始记录。">

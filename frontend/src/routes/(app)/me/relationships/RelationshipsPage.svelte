@@ -24,7 +24,11 @@
 		{ id: 'fans', label: '粉丝' }
 	];
 
-	const { friends, following, followers } = useRelationships();
+	// getter 对象解构会拿到非响应式快照，$derived 桥接
+	const rel = useRelationships();
+	const friends = $derived(rel.friends);
+	const following = $derived(rel.following);
+	const followers = $derived(rel.followers);
 
 	const activeTab = $derived<RelTab>(
 		TABS.some((t) => t.id === page.url.searchParams.get('tab'))

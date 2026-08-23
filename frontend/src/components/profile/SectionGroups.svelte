@@ -3,6 +3,7 @@
 	import { Users, ChevronRight, Clock, Shield } from '@lucide/svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
 	import { useMyGroups } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
@@ -12,7 +13,12 @@
 
 	let searchQ = $state('');
 
-	const { groups, loading } = useMyGroups();
+	// getter 对象解构会拿到非响应式快照，$derived 桥接
+	const myGroups = useMyGroups();
+	const groups = $derived(myGroups.groups);
+	const loading = $derived(myGroups.loading);
+	const error = $derived(myGroups.error);
+	const retry = myGroups.retry;
 	const filtered = $derived(groups.filter((g) => searchQ === '' || g.name.toLowerCase().includes(searchQ.toLowerCase())));
 	const totalOnline = $derived(groups.reduce((sum, g) => sum + (g.online ?? 0), 0));
 </script>
@@ -36,6 +42,8 @@
 		<div class="spinner size-7"></div>
 		<p class="text-text-secondary text-sm">加载我的群组…</p>
 	</div>
+{:else if error}
+	<LoadError message={error} onRetry={retry} />
 {:else if filtered.length > 0}
 	<div class="grid grid-cols-1 gap-3 pb-6 sm:grid-cols-2">
 		{#each filtered as g (g.id)}
