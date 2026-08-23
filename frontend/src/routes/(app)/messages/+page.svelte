@@ -6,6 +6,7 @@
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import ChatView from '@/components/messages/ChatView.svelte';
@@ -228,9 +229,13 @@
 								onclick={() => selectChat(c)}
 							>
 								<div class="relative">
-									<div class="avatar-entry__avatar rounded-full overflow-hidden size-9" style="border:{selectedId === c.id ? 'var(--cst-border-width-strong) solid var(--cst-accent-default)' : 'var(--cst-border-width-regular) solid var(--cst-border-default)'};">
-										<img src={c.avatar} alt={c.name} loading="lazy" class="w-full h-full object-cover" />
-									</div>
+									<Avatar
+										src={c.avatar}
+										name={c.name}
+										size={36}
+										class="border"
+										style="border-color:{selectedId === c.id ? 'var(--cst-accent-default)' : 'var(--cst-border-default)'};border-width:{selectedId === c.id ? 'var(--cst-border-width-strong)' : 'var(--cst-border-width-regular)'};"
+									/>
 									<OnlineDot size="sm" />
 								</div>
 								<span class="text-text-secondary text-xxs">{c.name}</span>
@@ -363,9 +368,13 @@
 							onclick={() => void goto(ROUTES.message(chat.peerUserId || chat.id))}
 						>
 							<div class="relative">
-								<div class="avatar-entry__avatar rounded-full overflow-hidden bg-surface-primary size-13"  style="padding:2px;border:var(--cst-border-width-strong) solid var(--cst-accent-default)">
-									<img src={chat.avatar} alt={chat.name} class="w-full h-full object-cover rounded-full" />
-								</div>
+								<Avatar
+									src={chat.avatar}
+									name={chat.name}
+									size={52}
+									class="border"
+									style="padding:2px;border-color:var(--cst-accent-default);border-width:var(--cst-border-width-strong);"
+								/>
 								<OnlineDot size="lg" />
 							</div>
 							<span class="text-text-secondary text-xs">{chat.name}</span>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Avatar from '@/components/shared/Avatar.svelte';
 	import type { Pin } from './location-data';
 	import { PIN_TONES, markerSvg } from './location-shared';
 
@@ -24,7 +25,7 @@
 
 {#if pin.type === 'user' && pin.avatar}
 	<div class="relative shrink-0">
-		<img src={pin.avatar} alt={pin.name || pin.title || ''} class="rounded-full object-cover" style="width:{size}px;height:{size}px;" />
+		<Avatar src={pin.avatar} name={pin.name || pin.title || ''} size={size} />
 		{#if pin.online}
 			<span class="absolute bottom-0 right-0 rounded-full bg-status-online" style="width:10px;height:10px;border:var(--cst-border-width-strong) solid var(--cst-surface-primary);"></span>
 		{/if}

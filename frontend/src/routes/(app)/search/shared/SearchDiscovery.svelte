@@ -70,18 +70,22 @@
 			<h2 class="text-sm font-medium text-text-primary">正在关注</h2>
 		</div>
 		<div class="mt-4">
-			<ListContainer>
-				{#each hot as item, index (item)}
-					<ListItem
-						onClick={() => onChoose(item)}
-						ariaLabel={`搜索 ${item}`}
-						class="flex items-center gap-3 py-2"
-					>
-						<span class="w-4 text-xs text-accent-default">{index + 1}</span>
-						<span class="flex-1 text-sm text-text-primary">{item}</span>
-					</ListItem>
-				{/each}
-			</ListContainer>
+			{#if hot.length > 0}
+				<ListContainer>
+					{#each hot as item, index (item)}
+						<ListItem
+							onClick={() => onChoose(item)}
+							ariaLabel={`搜索 ${item}`}
+							class="flex items-center gap-3 py-2"
+						>
+							<span class="w-4 text-xs text-accent-default">{index + 1}</span>
+							<span class="flex-1 text-sm text-text-primary">{item}</span>
+						</ListItem>
+					{/each}
+				</ListContainer>
+			{:else}
+				<EmptyState bare title="暂无热门搜索" />
+			{/if}
 		</div>
 	</section>
 
@@ -95,15 +99,19 @@
 			<h2 class="text-sm font-medium text-text-primary">推荐话题</h2>
 		</div>
 		<div class="mt-4 flex flex-wrap gap-2">
-			{#each topics as topic (topic)}
-				<button
-					type="button"
-					onclick={() => onChoose(topic)}
-					class="hover-btn border border-border-default bg-surface-primary px-3 py-2 text-xs text-text-primary transition-colors hover:bg-accent-soft"
-				>
-					#{topic}
-				</button>
-			{/each}
+			{#if topics.length > 0}
+				{#each topics as topic (topic)}
+					<button
+						type="button"
+						onclick={() => onChoose(topic)}
+						class="hover-btn border border-border-default bg-surface-primary px-3 py-2 text-xs text-text-primary transition-colors hover:bg-accent-soft"
+					>
+						#{topic}
+					</button>
+				{/each}
+			{:else}
+				<EmptyState bare title="暂无推荐话题" />
+			{/if}
 		</div>
 	</section>
 </div>

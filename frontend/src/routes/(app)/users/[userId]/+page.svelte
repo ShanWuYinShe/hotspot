@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { MapPin, MessageCircle, UserPlus, UserCheck, Share2, MoreHorizontal, Flag, PencilLine, UserX, X, Check, ArrowLeft } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import RailSection from '@/components/rail/RailSection.svelte';
@@ -258,9 +259,7 @@
 				<div class="flex items-end justify-between gap-4">
 					<div class="flex min-w-0 items-center gap-4">
 						<div class="relative shrink-0">
-							<div class="overflow-hidden rounded-full size-20 shadow-raised-lg"   style="border:var(--cst-border-width-heavy) solid var(--cst-surface-primary)">
-								<img src={user.avatar} alt={user.name} class="w-full h-full object-cover" />
-							</div>
+							<Avatar src={user.avatar} name={user.name} size={80} class="shadow-raised-lg" style="border:var(--cst-border-width-heavy) solid var(--cst-surface-primary);" />
 							<span class="absolute bottom-1 right-1 rounded-full bg-status-online size-3.5 border-2 border-surface-primary"  ></span>
 						</div>
 						<div class="min-w-0 pt-1">

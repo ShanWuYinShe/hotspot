@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Pin } from '@lucide/svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import type { ChatItem } from '@/lib/chat-list';
 
@@ -38,12 +39,13 @@
 	class="flex items-center gap-3.5 {compact ? 'px-4 py-2.5' : 'px-4 py-3'}"
 >
 	<span class="relative shrink-0">
-		<span
-			class="block overflow-hidden rounded-full {compact ? 'size-10' : 'size-11'}"
-			style="border:{isSelected ? 'var(--cst-border-width-regular) solid var(--cst-border-inverse)' : 'var(--cst-border-width-regular) solid var(--cst-border-default)'};"
-		>
-			<img src={chat.avatar} alt="" loading="lazy" class="h-full w-full object-cover" />
-		</span>
+		<Avatar
+			src={chat.avatar}
+			name={chat.name}
+			size={compact ? 40 : 44}
+			class="border"
+			style="border-color:{isSelected ? 'var(--cst-border-inverse)' : 'var(--cst-border-default)'};border-width:var(--cst-border-width-regular);"
+		/>
 		{#if chat.online}
 			<OnlineDot size="md" />
 		{/if}

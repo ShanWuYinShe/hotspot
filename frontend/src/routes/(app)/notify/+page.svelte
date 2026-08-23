@@ -9,6 +9,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import NotifyRow from './shared/NotifyRow.svelte';
@@ -236,7 +237,7 @@ const FILTER_TABS = [
 					<ListContainer bordered class="mb-5">
 						{#each invites as inv (inv.invite_id)}
 							<div class="flex items-center gap-3.5 px-3 py-3.5">
-								<img src={inv.group.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
+								<Avatar src={inv.group.avatar_url} name={inv.group.name} size={40} shape="rounded" />
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm text-text-primary">{inv.group.name}</span>
 									<span class="text-xs text-text-secondary">{inv.inviter.nickname} 邀请你 · {formatDateTime(inv.created_at)}</span>

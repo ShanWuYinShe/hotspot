@@ -5,6 +5,7 @@
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
@@ -185,7 +186,11 @@
 <StandardPageLayout contentClassName="animate-fade-in pb-6">
 	<!-- 全幅封面（负 margin 抵消 ContentColumn gutter） -->
 	<div class="relative h-[var(--cst-cover-height)] overflow-hidden -mx-[var(--cst-page-gutter)]">
-		<img src={gd.detail.banner} alt={`${gd.detail.name} 的群组封面`} class="h-full w-full object-cover" />
+		{#if gd.detail.banner}
+			<img src={gd.detail.banner} alt={`${gd.detail.name} 的群组封面`} class="h-full w-full object-cover" />
+		{:else}
+			<div class="h-full w-full bg-accent-bg"></div>
+		{/if}
 		<!-- gradient scrim 走 inline background（gradient 不能作 background-color 值，
 		     与 NearbyImageCard 的 --cst-surface-media-scrim-card 用法一致） -->
 		<div class="absolute inset-0" style="background:var(--cst-surface-cover-scrim);"></div>
@@ -268,7 +273,7 @@
 								class="flex list-row-standard items-center gap-3 px-3.5 py-3"
 							>
 								<div class="relative">
-									<img src={member.avatar} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
+									<Avatar src={member.avatar} name={member.name} size={40} />
 									{#if gd.onlineMemberIds.has(member.userId)}
 										<span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-surface-primary bg-status-online"></span>
 									{/if}
@@ -296,7 +301,7 @@
 						<ListContainer bordered class="mt-4">
 							{#each gd.applications as app (app.application_id)}
 								<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${app.applicant.nickname} 的入群申请`}>
-									<img src={app.applicant.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
+									<Avatar src={app.applicant.avatar_url ?? undefined} name={app.applicant.nickname} size={40} />
 									<span class="min-w-0 flex-1">
 										<span class="block truncate text-sm text-text-primary">{app.applicant.nickname}</span>
 										<span class="text-xs text-text-secondary">{formatDateTime(app.created_at)}{app.message ? ` · ${app.message}` : ''}</span>
@@ -313,7 +318,7 @@
 					<ListContainer bordered class="mt-4">
 						{#each gd.sentInvites as inv (inv.invite_id)}
 							<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${inv.invitee.nickname} 的入群邀请`}>
-								<img src={inv.invitee.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
+								<Avatar src={inv.invitee.avatar_url ?? undefined} name={inv.invitee.nickname} size={40} />
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm text-text-primary">{inv.invitee.nickname}</span>
 									<span class="text-xs text-text-secondary">{inviteStatusText(inv.status)} · {formatDateTime(inv.created_at)}</span>
@@ -331,7 +336,7 @@
 					<ListContainer bordered class="mt-4">
 						{#each gd.bannedMembers as item (item.user.user_id)}
 							<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${item.user.nickname} 的封禁记录`}>
-								<img src={item.user.avatar_url} alt="" loading="lazy" class="h-10 w-10 rounded-full object-cover" />
+								<Avatar src={item.user.avatar_url ?? undefined} name={item.user.nickname} size={40} />
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm text-text-primary">{item.user.nickname}</span>
 									<span class="text-xs text-text-secondary">{formatDateTime(item.banned_at)}{item.reason ? ` · ${item.reason}` : ''}</span>

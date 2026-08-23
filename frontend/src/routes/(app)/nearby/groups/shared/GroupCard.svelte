@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { CalendarDays, Globe, Lock, MapPin, Sparkles, Users } from '@lucide/svelte';
 	import NearbyImageCard from '@/components/data-display/NearbyImageCard.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
 	import JoinButton from './JoinButton.svelte';
 	import type { Group } from './group-data';
 
@@ -89,7 +90,7 @@
 						{#if group.avatars.length > 0}
 							<div class="flex -space-x-2 shrink-0">
 								{#each group.avatars as avatar, index (index)}
-								<img src={avatar} alt="群成员" loading="lazy" class="w-5 h-5 rounded-full border border-border-card-menu object-cover" style="z-index:{3 - index};" />
+								<Avatar src={avatar} name="" size={20} class="border border-border-card-menu" style="z-index:{3 - index};" />
 								{/each}
 							</div>
 						{/if}

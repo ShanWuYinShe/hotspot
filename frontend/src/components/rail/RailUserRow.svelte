@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
 
 	// 详情栏复用的「小头像 + 名称 + 副标 + 操作」行。
 
@@ -24,9 +25,7 @@
 		class="tap-97 flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-sm focus-ring"
 		onclick={onClick}
 	>
-		<div class="rounded-full overflow-hidden shrink-0 size-8.5 border border-border-default"  >
-		<img src={avatar} alt={name} loading="lazy" class="w-full h-full object-cover" />
-		</div>
+		<Avatar src={avatar} name={name} size={34} class="border border-border-default" />
 		<div class="flex-1 min-w-0">
 			<p   class="truncate text-sm text-text-primary">{name}</p>
 			{#if sub}

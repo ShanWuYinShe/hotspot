@@ -5,6 +5,7 @@
 	import { logout } from '@/stores/auth.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -166,9 +167,7 @@
 	<!-- Avatar edit -->
 	<div class="flex items-center gap-4 -mt-8">
 		<div class="relative shrink-0">
-			<div class="rounded-xl overflow-hidden size-18"  style="border:var(--cst-border-width-heavy) solid var(--cst-surface-primary);box-shadow:var(--cst-elevation-profile-avatar)">
-				<img src={avatar} alt="avatar" class="w-full h-full object-cover" />
-			</div>
+			<Avatar src={avatar} name={nickname} size={72} shape="rounded" class="border-4 border-surface-primary" style="box-shadow:var(--cst-elevation-profile-avatar);" />
 			<button
 				type="button"
 				class="hover-btn hit-slop absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-6"

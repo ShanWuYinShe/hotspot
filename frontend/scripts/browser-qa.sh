@@ -93,12 +93,26 @@ run_pages() {
 
 guest_login
 
+# 详情页样例 ID 运行时从匿名端点提取（DB 种子数据会变，不写死）；取不到则跳过该页。
+api_first() { # $1=path $2=payload $3=json 键
+	curl -s -X POST "$BASE$1" -H 'Content-Type: application/json' -d "$2" \
+		| grep -o "\"$3\":\"[^\"]*\"" | head -1 | cut -d'"' -f4
+}
+moment_id="$(api_first /public/v1/moments/search '{"keyword":"a"}' moment_id)"
+user_id="$(api_first /public/v1/feed/nearby_users '{}' user_id)"
+group_id="$(api_first /public/v1/groups/search '{"keyword":"a"}' group_id)"
+if [ -z "$group_id" ] && [ -n "${HOTSPOT_COMPOSE:-}" ]; then
+	group_id="$(docker compose -f "$HOTSPOT_COMPOSE" exec -T postgres psql -U postgres -d hotspot -t -A -c "SELECT group_id FROM groups LIMIT 1;" 2>/dev/null)"
+fi
+
 DESKTOP_PAGES=(
-	"/" "/nearby/people" "/nearby/groups" "/nearby/moments" "/notifications"
+	"/" "/nearby/people" "/nearby/groups" "/nearby/moments" "/notify"
 	"/messages" "/me" "/me/edit" "/settings" "/map" "/search" "/me/relationships"
 	"/me/moments" "/me/groups" "/me/friends" "/me/following" "/me/fans"
-	"/moments/moment_4" "/users/user_lumos" "/groups/group_2"
 )
+[ -n "$moment_id" ] && DESKTOP_PAGES+=("/moments/$moment_id")
+[ -n "$user_id" ] && DESKTOP_PAGES+=("/users/$user_id")
+[ -n "$group_id" ] && DESKTOP_PAGES+=("/groups/$group_id")
 run_pages "desktop" "${DESKTOP_PAGES[@]}"
 
 if [ "$MOBILE" = "1" ]; then

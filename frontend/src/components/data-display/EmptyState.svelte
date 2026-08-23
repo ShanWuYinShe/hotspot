@@ -29,6 +29,12 @@
 			{@render icon()}
 		{/if}
 		<p class="text-sm text-text-secondary" >{title}</p>
+		{#if description}
+			<p class="text-text-secondary text-center max-w-xs text-sm leading-relaxed">{description}</p>
+		{/if}
+		{#if action}
+			{@render action()}
+		{/if}
 	</div>
 {:else}
 	<div class={cn('flex flex-col items-center justify-center py-20 gap-3', className)}>

@@ -4,6 +4,7 @@
 	import SheetShell from '@/components/overlays/SheetShell.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
 
 	// 新会话底部 Sheet：添加好友 / 开始私聊 / 创建群聊入口。
 
@@ -90,7 +91,7 @@ function toggleAdd(id: number) {
 						ariaLabel={addedIds.has(u.id) ? `取消添加 ${u.name}` : `添加 ${u.name}`}
 						class="flex items-center gap-3.5 p-3"
 					>
-						<img src={u.avatar} alt={u.name} loading="lazy" class="rounded-full object-cover shrink-0 size-11"  style="border:var(--cst-border-width-regular) solid var(--cst-border-default)" />
+						<Avatar src={u.avatar} name={u.name} size={44} class="shrink-0 border" style="border-color:var(--cst-border-default);border-width:var(--cst-border-width-regular);" />
 						<div class="flex-1 min-w-0">
 							<p class="text-text-primary text-sm" >{u.name}</p>
 							<p class="text-text-secondary text-xs" >{u.subtitle}</p>
@@ -152,7 +153,7 @@ function toggleAdd(id: number) {
 						class="flex items-center gap-3.5 p-3"
 					>
 						<div class="relative shrink-0">
-							<img src={c.avatar} alt={c.name} loading="lazy" class="rounded-full object-cover size-11"  style="border:var(--cst-border-width-regular) solid var(--cst-border-default)" />
+							<Avatar src={c.avatar} name={c.name} size={44} class="border" style="border-color:var(--cst-border-default);border-width:var(--cst-border-width-regular);" />
 							{#if c.online}
 								<OnlineDot size="md" />
 							{/if}
