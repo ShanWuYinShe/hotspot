@@ -6,19 +6,15 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * 距离展示格式化。spec RelativeLocation.distance 为 number（米），后端统一返回米；
- * 距离可能为数字或字符串（如 "0.4km"），统一处理避免 "0.4kmm" 类拼接错误。
+ * 距离展示格式化。spec RelativeLocation.distance 恒为 number | null（米），
+ * null/undefined 表示无参考点或不可见，返回空串。
  * 数字统一四舍五入到 1 位小数，消除浮点伪影（如 0.4 * 3 → 1.2000000000000002）；
  * spec 整数米数取整后原样输出。
  */
-export function formatDistance(d?: number | string | null): string {
+export function formatDistance(d?: number | null): string {
   if (d == null) return '';
-  // number 为米：≥1km 转 km（1 位小数），否则原样米；字符串（如 '0.4km'）直接返回
-  if (typeof d === 'number') {
-    if (d >= 1000) return `${(d / 1000).toFixed(1)}km`;
-    return `${Math.round(d)}m`;
-  }
-  return d;
+  if (d >= 1000) return `${(d / 1000).toFixed(1)}km`;
+  return `${Math.round(d)}m`;
 }
 
 /**

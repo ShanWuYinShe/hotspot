@@ -262,7 +262,8 @@ export interface MappedFollower {
 
 /**
  * Map the three spec relationship items to the flat shapes the Section components
- * expect. The spec nests UserInfo under `user:` and uses presence_status / is_mutual.
+ * expect. The spec nests UserInfo under `user:` and uses presence_status;
+ * mutual follows are computed from `user.relation` (is_following && is_followed_by).
  */
 // spec 三列表统一为 RelatedUserItem（user: UserItem 承载 presence 隐私字段；
 // remark 仅查询自己时返回，followers 列表在互关场景同样返回）。
@@ -278,6 +279,12 @@ function mapFriend(item: RelatedUserItem): MappedFriend {
 	};
 }
 
+// spec: RelatedUserItem 无 is_mutual 冗余字段——互关由 user.relation 计算
+function isMutualRelation(item: RelatedUserItem): boolean {
+	const relation = item.user.relation;
+	return relation ? relation.is_following && relation.is_followed_by : false;
+}
+
 function mapFollowing(item: RelatedUserItem): MappedFollowing {
 	const u = item.user;
 	return {
@@ -285,7 +292,7 @@ function mapFollowing(item: RelatedUserItem): MappedFollowing {
 		name: u.user.nickname,
 		avatar: u.user.avatar_url ?? '',
 		desc: item.remark ?? '',
-		isMutual: Boolean(item.is_mutual)
+		isMutual: isMutualRelation(item)
 	};
 }
 
@@ -297,7 +304,7 @@ function mapFollower(item: RelatedUserItem): MappedFollower {
 		avatar: u.user.avatar_url ?? '',
 		handle: item.remark ? `@${item.remark}` : `@${u.user.user_id}`,
 		joinedDays: daysSince(item.followed_at),
-		isMutual: Boolean(item.is_mutual)
+		isMutual: isMutualRelation(item)
 	};
 }
 

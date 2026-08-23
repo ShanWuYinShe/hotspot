@@ -1,7 +1,9 @@
-// map/canvas 响应解析与合并逻辑测试。
+// map/canvas 响应解析与合并逻辑测试（spec api_spec_public.md：mode 判别联合
+// + RelativeLocation）。
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fetchMapCanvas } from './location-shared';
 import { getMapCanvas } from '@/api';
+import type { MapCanvasResponse } from '@/api/types';
 
 vi.mock('@/api', async (importOriginal) => {
 	const actual = await importOriginal<typeof import('@/api')>();
@@ -11,7 +13,7 @@ vi.mock('@/api', async (importOriginal) => {
 const CENTER = { lat: 34.2604, lng: 117.1855 };
 const ZOOM = 0.045;
 
-function canvasOnce(data: object, code = 0) {
+function canvasOnce(data: MapCanvasResponse, code = 0) {
 	return { code, data };
 }
 
@@ -23,6 +25,7 @@ describe('fetchMapCanvas', () => {
 	it('hotspots 响应映射为图钉（moment→moment、距离格式化）', async () => {
 		vi.mocked(getMapCanvas).mockResolvedValueOnce(
 			canvasOnce({
+				mode: 'hotspots',
 				hotspots: {
 					items: [
 						{
@@ -31,17 +34,30 @@ describe('fetchMapCanvas', () => {
 							title: '云龙湖日落',
 							subtitle: '云龙湖',
 							cover_url: 'https://example.com/a.jpg',
-							location: { latitude: 34.26, longitude: 117.19 },
-							distance_meters: 850
+							location: {
+								point: { latitude: 34.26, longitude: 117.19 },
+								location_name: '云龙湖',
+								distance: 850,
+								bearing_degrees: 45
+							},
+							created_at: null
 						},
 						{
 							object_type: 'user',
 							object_id: '7',
 							title: '鹿鸣',
-							location: { latitude: 34.27, longitude: 117.18 }
+							subtitle: null,
+							cover_url: null,
+							location: {
+								point: { latitude: 34.27, longitude: 117.18 },
+								location_name: '',
+								distance: null,
+								bearing_degrees: null
+							},
+							created_at: null
 						}
 					],
-					next_cursor: 'abc'
+					next_cursor: null
 				}
 			})
 		);
@@ -62,6 +78,7 @@ describe('fetchMapCanvas', () => {
 	it('heatmap 响应按 breakdown 聚合统计', async () => {
 		vi.mocked(getMapCanvas).mockResolvedValueOnce(
 			canvasOnce({
+				mode: 'heatmap',
 				heatmap: {
 					items: [
 						{
@@ -91,7 +108,7 @@ describe('fetchMapCanvas', () => {
 	});
 
 	it('空响应返回 empty 结果', async () => {
-		vi.mocked(getMapCanvas).mockResolvedValueOnce(canvasOnce({}));
+		vi.mocked(getMapCanvas).mockResolvedValueOnce(canvasOnce({ mode: 'empty' }));
 
 		const result = await fetchMapCanvas(CENTER, ZOOM, ['user', 'group', 'moment']);
 		expect(result.mode).toBe('empty');
@@ -104,19 +121,39 @@ describe('fetchMapCanvas', () => {
 		vi.mocked(getMapCanvas)
 			.mockResolvedValueOnce(
 				canvasOnce({
+					mode: 'hotspots',
 					hotspots: {
 						items: [
-							{ object_type: 'user', object_id: '1', title: 'A', location: { latitude: 34.26, longitude: 117.19 } }
-						]
+							{
+								object_type: 'user',
+								object_id: '1',
+								title: 'A',
+								subtitle: null,
+								cover_url: null,
+								location: { point: { latitude: 34.26, longitude: 117.19 }, location_name: '', distance: null, bearing_degrees: null },
+								created_at: null
+							}
+						],
+						next_cursor: null
 					}
 				})
 			)
 			.mockResolvedValueOnce(
 				canvasOnce({
+					mode: 'hotspots',
 					hotspots: {
 						items: [
-							{ object_type: 'group', object_id: '2', title: 'B', location: { latitude: 34.27, longitude: 117.18 } }
-						]
+							{
+								object_type: 'group',
+								object_id: '2',
+								title: 'B',
+								subtitle: null,
+								cover_url: null,
+								location: { point: { latitude: 34.27, longitude: 117.18 }, location_name: '', distance: null, bearing_degrees: null },
+								created_at: null
+							}
+						],
+						next_cursor: null
 					}
 				})
 			);
@@ -126,24 +163,26 @@ describe('fetchMapCanvas', () => {
 		expect(result.pins).toHaveLength(2);
 		expect(result.counts).toEqual({ user: 1, group: 1, moment: 0 });
 		expect(getMapCanvas).toHaveBeenCalledTimes(2);
-		// data_type 为单值：user/group 各自请求
+		// data_type 为单值：user/group 各自请求（spec：filter 必填可空）
 		expect(vi.mocked(getMapCanvas).mock.calls[0][0]).toMatchObject({ filter: { data_type: 'user' } });
 		expect(vi.mocked(getMapCanvas).mock.calls[1][0]).toMatchObject({ filter: { data_type: 'group' } });
 	});
 
-	it('全选时单次请求且不传 filter', async () => {
-		vi.mocked(getMapCanvas).mockResolvedValueOnce(canvasOnce({}));
+	it('全选时单次请求且 filter 为 null', async () => {
+		vi.mocked(getMapCanvas).mockResolvedValueOnce(canvasOnce({ mode: 'empty' }));
 
 		await fetchMapCanvas(CENTER, ZOOM, ['user', 'group', 'moment']);
 		expect(getMapCanvas).toHaveBeenCalledTimes(1);
-		const params = vi.mocked(getMapCanvas).mock.calls[0][0] as any;
+		const params = vi.mocked(getMapCanvas).mock.calls[0][0];
 		expect(params.viewport.bounds).toEqual({
 			north: CENTER.lat + ZOOM,
 			south: CENTER.lat - ZOOM,
 			east: CENTER.lng + ZOOM,
 			west: CENTER.lng - ZOOM
 		});
-		expect(params.filter).toBeUndefined();
+		// spec MapCanvasRequest：filter/pagination 必填可空，全选时 filter=null
+		expect(params.filter).toBeNull();
+		expect(params.pagination).toEqual({ limit: 100 });
 	});
 
 	it('全部类型关闭时不发请求', async () => {
@@ -153,7 +192,7 @@ describe('fetchMapCanvas', () => {
 	});
 
 	it('code!=0 或请求失败时返回 empty', async () => {
-		vi.mocked(getMapCanvas).mockResolvedValueOnce({ code: 10600, data: {}, message: '服务暂时不可用' });
+		vi.mocked(getMapCanvas).mockResolvedValueOnce(canvasOnce({ mode: 'empty' }, 10600));
 		const errRes = await fetchMapCanvas(CENTER, ZOOM, ['user']);
 		expect(errRes.mode).toBe('empty');
 		expect(errRes.counts).toEqual({ user: 0, group: 0, moment: 0 });

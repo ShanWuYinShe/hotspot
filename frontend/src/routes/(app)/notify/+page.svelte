@@ -78,7 +78,7 @@ const FILTER_TABS = [
 
 				if (notifData) {
 					const items: NotifyViewItem[] = (notifData.items || []).map((n, i) => {
-						const actor = n.payload?.actor ?? { user_id: '', nickname: '' };
+						const actor = n.payload?.actor ?? { user_id: '', nickname: '', avatar_url: null };
 						const groupName = n.payload?.group_name ?? '群组';
 						let text = '';
 						if (n.type === 'moment_commented') text = n.payload?.comment_preview ?? `${actor.nickname ?? ''} 评论了你的动态`;

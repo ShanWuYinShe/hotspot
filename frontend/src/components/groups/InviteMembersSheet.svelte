@@ -99,7 +99,7 @@
 				{#each results as u (u.user.user_id)}
 					<button type="button" onclick={() => toggle(u.user.user_id)} class="hover-btn flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default">
 						<div class="relative">
-							<Avatar src={u.user.avatar_url} name={u.user.nickname} size={36} />
+							<Avatar src={u.user.avatar_url ?? undefined} name={u.user.nickname} size={36} />
 							{#if selected.has(u.user.user_id)}
 								<span class="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent-default text-text-on-accent"><Check size={10} strokeWidth={3} /></span>
 							{/if}

@@ -8,6 +8,7 @@ const ADMIN_PREFIX = '/admin/v1';
 export const Endpoints = {
   Auth: {
     Register: PUBLIC_PREFIX + '/auth/register',
+    SendRegisterCode: PUBLIC_PREFIX + '/auth/send_register_code',
     Login: PUBLIC_PREFIX + '/auth/signin',
     Guest: PUBLIC_PREFIX + '/auth/guest',
     RefreshToken: PUBLIC_PREFIX + '/auth/refresh_token',
@@ -105,6 +106,8 @@ export const Endpoints = {
     Update: PREFIX + '/moments/update',
     Delete: PREFIX + '/moments/delete',
     ListCreated: PREFIX + '/moments/fetch_created',
+    FetchFollowing: PREFIX + '/moments/fetch_following',
+    FetchNearby: PREFIX + '/moments/fetch_nearby',
     Favorite: PREFIX + '/moments/set_favorite',
     ListFavorites: PREFIX + '/moments/fetch_favorites',
   },
@@ -146,14 +149,6 @@ export const Endpoints = {
     Update: PREFIX + '/group_messages/update',
     Recall: PREFIX + '/group_messages/recall',
     MarkRead: PREFIX + '/group_messages/mark_read',
-  },
-
-  Feed: {
-    Following: PREFIX + '/feed/following',
-    Nearby: PREFIX + '/feed/nearby_moments',
-    NearbyUsers: PREFIX + '/feed/nearby_users',
-    NearbyGroups: PREFIX + '/feed/nearby_groups',
-    Trending: PREFIX + '/feed/trending',
   },
 
   Search: {
@@ -227,7 +222,7 @@ export const Endpoints = {
     },
     Tags: {
       Search: ADMIN_PREFIX + '/tags/search',
-      Delete: ADMIN_PREFIX + '/tags/delete',
+      SetBan: ADMIN_PREFIX + '/tags/set_ban',
     },
     Announcements: {
       Fetch: ADMIN_PREFIX + '/announcements/fetch',
@@ -264,6 +259,7 @@ export const Endpoints = {
     Moments: {
       Search: PUBLIC_PREFIX + '/moments/search',
       GetDetail: PUBLIC_PREFIX + '/moments/open_the_door',
+      FetchNearby: PUBLIC_PREFIX + '/moments/fetch_nearby',
     },
     Comments: {
       List: PUBLIC_PREFIX + '/comments/fetch',
@@ -272,11 +268,6 @@ export const Endpoints = {
     },
     Reactions: {
       List: PUBLIC_PREFIX + '/reactions/fetch',
-    },
-    Feed: {
-      NearbyUsers: PUBLIC_PREFIX + '/feed/nearby_users',
-      NearbyGroups: PUBLIC_PREFIX + '/feed/nearby_groups',
-      Trending: PUBLIC_PREFIX + '/feed/trending',
     },
     Search: {
       Suggest: PUBLIC_PREFIX + '/search/suggest',

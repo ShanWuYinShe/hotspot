@@ -1,14 +1,19 @@
 <script lang="ts">
 	import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, MessageCircle } from '@lucide/svelte';
 	import { login, register, guest } from '@/stores/auth.svelte';
-	import { requestPasswordReset, resetPassword } from '@/api';
+	import { requestPasswordReset, resetPassword, sendRegisterCode } from '@/api';
 	import Button from '@/components/ui/button.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 
 	// 全页 Auth 路由与 LoginPromptSheet 共用的认证表单。
 	// 五模式：login / register / guest + 忘记密码子流程
 	// （request_password_reset → reset_password）。校验规则对齐 harmonyapp：
-	//   login_id 3–64，password 8–128 含字母+数字，nickname 1–30。
+	//   login_id 3–64，password 8–128 含字母+数字，nickname 1–30（访客可空，
+	//   留空由服务端自动生成默认昵称）。
+	//
+	// 注册验证码（spec: auth/send_register_code）：login_id 为手机号（纯数字）或
+	// 邮箱（含 '@'）时需先发送验证码验证所有权，提交时 verification_code 必填；
+	// 用户名型不显示验证码输入、提交 null。
 	//
 	// 无障碍契约：每个字段独立校验，错误就近展示（role="alert" + aria-describedby），
 	// 失败后自动聚焦首个错误字段；密码框提供显隐切换。
@@ -42,8 +47,8 @@
 		if (!/[a-zA-Z]/.test(v) || !/\d/.test(v)) return '密码需包含字母和数字';
 		return null;
 	}
-	function validateNickname(v: string): string | null {
-		if (!v) return '请输入昵称';
+	function validateNickname(v: string, opts: { optional?: boolean } = {}): string | null {
+		if (!v) return opts.optional ? null : '请输入昵称';
 		if (v.length < 1 || v.length > 30) return '昵称长度需 1–30';
 		return null;
 	}
@@ -63,6 +68,54 @@
 	let submitting = $state(false);
 	let error = $state<string | null>(null);
 	let fieldErrors = $state<FieldErrors>({});
+
+	// 注册验证码：手机号（纯数字）或邮箱（含 '@'）型 login_id 需先验证所有权
+	const needsRegisterCode = $derived(
+		mode === 'register' && (/^\d+$/.test(loginId.trim()) || loginId.includes('@'))
+	);
+	let codeCountdown = $state(0);
+	let sendingCode = $state(false);
+	let countdownTimer: ReturnType<typeof setInterval> | undefined;
+
+	$effect(() => {
+		// 组件卸载时清理倒计时定时器
+		return () => {
+			if (countdownTimer) clearInterval(countdownTimer);
+		};
+	});
+
+	const sendRegisterCodeAndCountdown = async () => {
+		if (codeCountdown > 0 || sendingCode) return;
+		const idErr = validateLoginId(loginId);
+		if (idErr) {
+			fieldErrors = { ...fieldErrors, loginId: idErr };
+			error = idErr;
+			document.getElementById('auth-field-loginId')?.focus();
+			return;
+		}
+		sendingCode = true;
+		try {
+			const res = await sendRegisterCode({ login_id: loginId, client_type: 'web' });
+			if (res.code === 0) {
+				// spec: 防枚举——无论 login_id 是否已注册均成功；60s 内禁止重发
+				codeCountdown = 60;
+				countdownTimer = setInterval(() => {
+					codeCountdown -= 1;
+					if (codeCountdown <= 0) {
+						codeCountdown = 0;
+						clearInterval(countdownTimer);
+						countdownTimer = undefined;
+					}
+				}, 1000);
+			} else {
+				error = res.message ?? '验证码发送失败，请重试';
+			}
+		} catch {
+			error = '网络错误，请稍后重试';
+		} finally {
+			sendingCode = false;
+		}
+	};
 
 	const reset = () => {
 		error = null;
@@ -85,8 +138,11 @@
 			errs.loginId = validateLoginId(loginId) ?? undefined;
 			errs.nickname = validateNickname(nickname) ?? undefined;
 			errs.password = validatePassword(password) ?? undefined;
+			// 手机号/邮箱型 login_id 必须携带验证码（所有权验证）；用户名型不校验
+			if (needsRegisterCode) errs.code = code.trim() ? undefined : '请输入验证码';
 		} else if (mode === 'guest') {
-			errs.nickname = validateNickname(nickname) ?? undefined;
+			// 访客昵称可选：留空由服务端自动生成默认昵称
+			errs.nickname = validateNickname(nickname, { optional: true }) ?? undefined;
 		} else if (mode === 'forgot') {
 			errs.resetLoginId = validateLoginId(resetLoginId) ?? undefined;
 		} else if (mode === 'reset') {
@@ -134,8 +190,8 @@
 				}
 				res = await login({ login_id: loginId, password });
 			}
-			else if (mode === 'register') res = await register({ login_id: loginId, nickname, password });
-			else if (mode === 'guest') res = await guest({ nickname });
+			else if (mode === 'register') res = await register({ login_id: loginId, nickname, password, code: needsRegisterCode ? code.trim() : null });
+			else if (mode === 'guest') res = await guest({ nickname: nickname.trim() || null });
 			else if (mode === 'forgot') {
 				res = await requestPasswordReset({ login_id: resetLoginId, client_type: 'web' });
 				if (res.code === 0) {
@@ -149,7 +205,9 @@
 					login_id: resetLoginId,
 					verification_code: code,
 					new_password: newPassword,
-					client_type: 'web'
+					client_type: 'web',
+					// spec ResetPasswordRequest：Web 端 device_id 为 null（服务端从 Cookie 读取）
+					device_id: null
 				});
 			}
 			if (res && res.code === 0) {
@@ -192,7 +250,7 @@
 					id="auth-field-nickname"
 					type="text"
 					bind:value={nickname}
-					placeholder={mode === 'guest' ? '给自己起个名字' : '1–30 个字符'}
+					placeholder={mode === 'guest' ? '昵称（可选，留空自动生成）' : '1–30 个字符'}
 					disabled={submitting}
 					autocomplete="nickname"
 					aria-invalid={fieldErrors.nickname ? 'true' : undefined}
@@ -239,39 +297,49 @@
 				<p id="auth-field-loginId-error" class="text-xs text-status-danger"  role="alert">{fieldErrors.loginId}</p>
 			{/if}
 		</label>
-		{#if mode === 'login' && method === 'code'}
-			<!-- 验证码登录：验证码输入 + 获取验证码 -->
-			<label class="flex flex-col gap-1.5" for="auth-field-code">
-				<span class="text-xs tracking-field text-text-secondary" >验证码</span>
-				<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
-					<input
-						id="auth-field-code"
-						type="text"
-						bind:value={code}
-						placeholder="输入收到的验证码"
-						disabled={submitting}
-						autocomplete="one-time-code"
-						aria-invalid={fieldErrors.code ? 'true' : undefined}
-						aria-describedby={fieldErrors.code ? 'auth-field-code-error' : undefined}
-						oninput={() => clearFieldError('code')}
-						class="min-w-0 flex-1 bg-transparent text-sm focus-ring placeholder:text-text-secondary text-text-primary"
-						
-					/>
-				</span>
-				{#if fieldErrors.code}
-					<p id="auth-field-code-error" class="text-xs text-status-danger"  role="alert">{fieldErrors.code}</p>
-				{/if}
-			</label>
-			<Button
-				type="button"
-				variant="secondary"
-				size="lg"
-				class="w-full bg-accent-bg"
-				onclick={() => (error = '验证码发送功能即将开放，请使用密码登录')}
-			>
-				获取验证码
-			</Button>
-		{:else if mode === 'login' || mode === 'register'}
+			{#if (mode === 'login' && method === 'code') || needsRegisterCode}
+				<!-- 验证码：登录验证码模式（发送接口暂未开放）或注册手机号/邮箱型（所有权验证）；
+				     注册型与密码共存（注册始终需要密码），登录验证码模式替代密码 -->
+				<label class="flex flex-col gap-1.5" for="auth-field-code">
+					<span class="text-xs tracking-field text-text-secondary" >验证码</span>
+					<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
+						<input
+							id="auth-field-code"
+							type="text"
+							bind:value={code}
+							placeholder="输入收到的验证码"
+							disabled={submitting}
+							autocomplete="one-time-code"
+							aria-invalid={fieldErrors.code ? 'true' : undefined}
+							aria-describedby={fieldErrors.code ? 'auth-field-code-error' : undefined}
+							oninput={() => clearFieldError('code')}
+							class="min-w-0 flex-1 bg-transparent text-sm focus-ring placeholder:text-text-secondary text-text-primary"
+
+						/>
+					</span>
+					{#if fieldErrors.code}
+						<p id="auth-field-code-error" class="text-xs text-status-danger" role="alert">{fieldErrors.code}</p>
+					{/if}
+				</label>
+				<Button
+					type="button"
+					variant="secondary"
+					size="lg"
+					class="w-full bg-accent-bg"
+					disabled={needsRegisterCode && (codeCountdown > 0 || sendingCode)}
+					onclick={() => {
+						if (needsRegisterCode) void sendRegisterCodeAndCountdown();
+						else error = '验证码发送功能即将开放，请使用密码登录';
+					}}
+				>
+					{#if needsRegisterCode}
+						{sendingCode ? '发送中…' : codeCountdown > 0 ? `${codeCountdown}s 后重发` : '发送验证码'}
+					{:else}
+						获取验证码
+					{/if}
+				</Button>
+			{/if}
+			{#if (mode === 'login' && method === 'password') || mode === 'register'}
 			<label class="flex flex-col gap-1.5" for="auth-field-password">
 				<span class="text-xs font-medium text-text-secondary"  >密码</span>
 				<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >

@@ -12,7 +12,7 @@
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import GroupCard from './shared/GroupCard.svelte';
 	import { mapGroup, type Group } from './shared/group-data';
-	import { getNearbyGroups, joinGroup, leaveGroup } from '@/api';
+	import { searchGroups, joinGroup, leaveGroup } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 
@@ -36,16 +36,20 @@
 }));
 
 	$effect(() => {
-		// spec: feed/nearby_groups — reference_point 可选,服务端按回退链解析
-		// (显式传参 → 最近 update_location → ClientConfig.defaults.default_location)。
+		// spec: groups/search radius 仅显式提供时按半径过滤（此处显式传 5km 承接
+		// 附近群组语义）；sort_by='distance' 距离计算依赖 reference_point，可选 —
+		// 未传时服务端按回退链解析（显式传参 → 最近 update_location → ClientConfig 默认）。
 		void reloadKey;
 		let cancelled = false;
 		async function fetchGroups() {
 			loading = true;
 			loadError = null;
-			const res = await getNearbyGroups(
-				referencePoint ? { reference_point: referencePoint, pagination: { limit: 24 } } : { pagination: { limit: 24 } }
-			).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
+			const res = await searchGroups({
+				radius: 5000,
+				sort_by: 'distance',
+				...(referencePoint ? { reference_point: referencePoint } : {}),
+				pagination: { limit: 24 }
+			}).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
 			if (cancelled) return;
 			const items = res.code === 0 && res.data ? res.data.items : [];
 			if (res.code !== 0) {

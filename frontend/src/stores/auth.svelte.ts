@@ -33,33 +33,6 @@ export interface PendingAction {
   run: () => void | Promise<void>;
 }
 
-const DEVICE_ID_KEY = 'hotspot:device-id';
-
-/** spec: DeviceId is UUID v4, persisted, not cleared on logout (10y cookie equivalent). */
-export function getDeviceId(): string {
-  try {
-    const existing = localStorage.getItem(DEVICE_ID_KEY);
-    if (existing) return existing;
-    const id = uuidv4();
-    localStorage.setItem(DEVICE_ID_KEY, id);
-    return id;
-  } catch {
-    return uuidv4();
-  }
-}
-
-function uuidv4(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  // RFC4122 v4 fallback for older browsers.
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
 let status = $state<AuthStatus>('loading');
 let user = $state<AuthUser | null>(null);
 /** Authentication failure reason surfaced to the UI (e.g. ban message). */
@@ -170,21 +143,23 @@ async function onAuthSuccess(): Promise<void> {
   }
 }
 
-// Auth mutations — inject device_id (spec-required) and update state.
+// Auth mutations — device_id 传 null（spec: Web 端由 bootstrap 经 Set-Cookie 下发
+// device_id Cookie，服务端自行读取；App 端才需显式携带）。
 export async function login(params: { login_id: string; password: string }): Promise<ApiResponse<unknown>> {
-  const res = await apiLogin({ ...params, client_type: 'web', device_id: getDeviceId() });
+  const res = await apiLogin({ ...params, client_type: 'web', device_id: null });
   if (res.code === 0) await onAuthSuccess();
   return res;
 }
 
-export async function register(params: { login_id: string; nickname: string; password: string }): Promise<ApiResponse<unknown>> {
-  const res = await apiRegister({ ...params, client_type: 'web', device_id: getDeviceId() });
+export async function register(params: { login_id: string; nickname: string; password: string; code?: string | null }): Promise<ApiResponse<unknown>> {
+  const { code, ...rest } = params;
+  const res = await apiRegister({ ...rest, verification_code: code ?? null, client_type: 'web', device_id: null });
   if (res.code === 0) await onAuthSuccess();
   return res;
 }
 
-export async function guest(params: { nickname: string }): Promise<ApiResponse<unknown>> {
-  const res = await apiGuest({ ...params, client_type: 'web', device_id: getDeviceId() });
+export async function guest(params: { nickname?: string | null } = {}): Promise<ApiResponse<unknown>> {
+  const res = await apiGuest({ nickname: params.nickname ?? null, client_type: 'web', device_id: null });
   if (res.code === 0) await onAuthSuccess();
   return res;
 }

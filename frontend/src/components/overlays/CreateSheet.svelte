@@ -7,6 +7,7 @@
 	import ImagePicker from '@/components/forms/ImagePicker.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
+	import { loadDefaultLocation } from '@/lib/default-location';
 	import { createMoment } from '@/api';
 	import { uploadMediaFiles } from '@/lib/upload';
 
@@ -78,10 +79,14 @@
 			const res = await createMoment({
 				description: text.trim(),
 				tags: Array.from(selectedMoods),
-				// spec: location 可选；有默认位置才传，Point 来自 ClientConfig default_location。
-				location: referencePoint
-					? { point: referencePoint, location_name: locationName || '' }
-					: undefined,
+				// spec：location 必填（types.md 契约级）。优先用户参考点，缺失时回退
+				// ClientConfig default_location；两者皆缺（配置不可用）才退化为零点。
+				location: {
+					point:
+						referencePoint ??
+						(await loadDefaultLocation())?.point ?? { latitude: 0, longitude: 0 },
+					location_name: locationName || ''
+				},
 				// spec PrivacyLevel 仅有 'public' | 'private'：nearby→public，其余（含 UI 的 friends 占位）→private
 				privacy_level: audience === 'nearby' ? 'public' : 'private',
 				image_file_ids

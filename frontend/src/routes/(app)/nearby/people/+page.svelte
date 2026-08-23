@@ -11,10 +11,9 @@
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import UserCard, { type NearbyUser } from './UserCard.svelte';
-	import { getNearbyUsers } from '@/api';
+	import { searchUsers, follow } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance } from '@/lib/utils';
-	import { follow } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 
 	// 附近的人：排序/标签过滤 + BSP 卡片墙（桌面）/ 网格（移动/平板）。
@@ -40,14 +39,21 @@
 }));
 
 	$effect(() => {
-		// reference_point 可选:有显式锚点就传,否则由服务端回退链解析。
+		// spec: users/search radius 仅显式提供时按半径过滤（此处显式传 5km 承接
+		// 附近的人语义）；sort_by='distance' 距离计算依赖 reference_point，
+		// 可选 — 未传时服务端按回退链解析。
 		void reloadKey;
 		let cancelled = false;
 		async function fetchUsers() {
 			try {
 				loading = true;
 				loadError = null;
-				const res = await getNearbyUsers(referencePoint ? { reference_point: referencePoint } : {}).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
+				const req = {
+					radius: 5000,
+					sort_by: 'distance' as const,
+					...(referencePoint ? { reference_point: referencePoint } : {})
+				};
+				const res = await searchUsers(req).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
 				if (cancelled) return;
 				const data = res.code === 0 ? res.data : null;
 				if (res.code !== 0) {
@@ -56,7 +62,7 @@
 				}
 				if (data) {
 					const items: NearbyUser[] = (data.items || []).map((u) => ({
-						// spec: feed/nearby_users → UserItem（user 嵌套 + presence_status + location）
+						// spec: users/search → UserItem（user 嵌套 + presence_status + location）
 						id: u.user?.user_id ?? '',
 						name: u.user?.nickname ?? '',
 						distance: formatDistance(u.location?.distance),

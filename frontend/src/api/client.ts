@@ -63,7 +63,6 @@ import type {
 	PrivateChatOpenResult,
 	PrivateMessageItem,
 	ReportCreated,
-	TrendingBundle,
 	UnreadSummaryResult,
 	UserItem,
 	UserProfileBundle,
@@ -76,18 +75,19 @@ import type {
 	RegisterRequest,
 	LoginRequest,
 	GuestRequest,
+	SendRegisterCodeRequest,
 	RequestPasswordResetRequest,
 	ResetPasswordRequest,
 	UpdateAccountRequest,
 	SetFollowRequest,
 	SetBlockRequest,
 	SearchUsersRequest,
-	NearbyFeedRequest,
-	TrendingRequest,
 	CreateMomentRequest,
 	UpdateMomentRequest,
 	SearchMomentsRequest,
 	FavoriteMomentRequest,
+	FetchFollowingMomentsRequest,
+	FetchNearbyMomentsRequest,
 	SendPrivateMessageRequest,
 	ListPrivateMessagesRequest,
 	SendGroupMessageRequest,
@@ -229,6 +229,8 @@ export async function checkAuthStatus()                   { return request<Sessi
 export async function logout()                            { return request<void>(Endpoints.Auth.Signout); }
 export async function requestPasswordReset(params: RequestPasswordResetRequest) { return request<void>(Endpoints.Auth.RequestPasswordReset, params); }
 export async function resetPassword(params: ResetPasswordRequest)      { return request<AuthTokenPair>(Endpoints.Auth.ResetPassword, params); }
+// spec: api_spec_public.md → auth/send_register_code（手机号/邮箱型 login_id 的所有权验证，防枚举恒成功）
+export async function sendRegisterCode(params: SendRegisterCodeRequest) { return request<void>(Endpoints.Auth.SendRegisterCode, params); }
 
 // Users
 export async function getAccount()                        { return request<AccountData>(Endpoints.Users.GetAccount); }
@@ -251,12 +253,6 @@ export async function listFriends(params: { user_id: string; pagination?: Pagina
 export async function listFollowing(params: { user_id: string; pagination?: PaginationParams })      { return request<PaginatedData<RelatedUserItem>>(pick(Endpoints.Users.ListFollowing, Endpoints.Public.Users.ListFollowing), params); }
 export async function listFollowers(params: { user_id: string; pagination?: PaginationParams })      { return request<PaginatedData<RelatedUserItem>>(pick(Endpoints.Users.ListFollowers, Endpoints.Public.Users.ListFollowers), params); }
 
-// Feed
-export async function getFeedNearby(params?: NearbyFeedRequest)      { return request<PaginatedData<MomentItem>>(Endpoints.Feed.Nearby, params ?? {}); }
-export async function getNearbyUsers(params?: NearbyFeedRequest)     { return request<PaginatedData<UserItem>>(pick(Endpoints.Feed.NearbyUsers, Endpoints.Public.Feed.NearbyUsers), params ?? {}); }
-export async function getNearbyGroups(params?: NearbyFeedRequest)    { return request<PaginatedData<GroupItem>>(pick(Endpoints.Feed.NearbyGroups, Endpoints.Public.Feed.NearbyGroups), params ?? {}); }
-export async function getTrending(params?: TrendingRequest)        { return request<TrendingBundle>(pick(Endpoints.Feed.Trending, Endpoints.Public.Feed.Trending), params ?? {}); }
-
 // Media（spec: api_spec_media.md）—— presign → PUT 直传 → complete 三步流程的 API 包装
 // presign_upload/complete_upload 均为数组语义，天然覆盖单/批，无独立批量端点。
 export async function presignUpload(params: PresignUploadRequest) {
@@ -275,6 +271,10 @@ export async function deleteMoment(params: { moment_id: string }) { return reque
 // spec: api_spec_moment.md → moments/fetch_created（拥有者视角，含 private 与软删占位）
 export async function listMyMoments(params?: { pagination?: PaginationParams })      { return request<PaginatedData<OwnerMomentItem>>(Endpoints.Moments.ListCreated, params ?? {}); }
 export async function getFavoriteMoments(params?: { pagination?: PaginationParams })   { return request<PaginatedData<FavoritedMomentItem>>(Endpoints.Moments.ListFavorites, params ?? {}); }
+// spec: api_spec_moment.md → moments/fetch_following（关注动态；依赖查看者关注关系，无匿名版）
+export async function fetchFollowingMoments(params?: FetchFollowingMomentsRequest)  { return request<PaginatedData<MomentItem>>(Endpoints.Moments.FetchFollowing, params ?? {}); }
+// spec: api_spec_moment.md → moments/fetch_nearby（附近瞬间，原 feed/nearby_moments 迁移；双版本）
+export async function fetchNearbyMoments(params?: FetchNearbyMomentsRequest)        { return request<PaginatedData<MomentItem>>(pick(Endpoints.Moments.FetchNearby, Endpoints.Public.Moments.FetchNearby), params ?? {}); }
 
 // Groups
 export async function getGroupDetail(groupId: string)     { return request<GroupItem>(pick(Endpoints.Groups.GetDetail, Endpoints.Public.Groups.GetDetail), { group_id: groupId }); }
@@ -398,6 +398,7 @@ export async function listComments(momentId: string, pagination?: object) {
 export async function getMapCanvas(params: MapCanvasRequest) { return request<MapCanvasResponse>(Endpoints.Map.Canvas, params); }
 
 // Search
-export async function searchSuggest(params?: SearchSuggestRequest) { return request<SearchSuggestResponse>(pick(Endpoints.Search.Suggest, Endpoints.Public.Search.Suggest), params ?? {}); }
+// spec api_spec_discovery.md：prefix 必填，reference_point/types/radius 必填可空
+export async function searchSuggest(params: SearchSuggestRequest) { return request<SearchSuggestResponse>(pick(Endpoints.Search.Suggest, Endpoints.Public.Search.Suggest), params); }
 
 export { Endpoints };

@@ -13,7 +13,7 @@
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import MomentCard from './shared/MomentCard.svelte';
 	import { createFeedInteractions, type FeedItem } from './shared/feed-interactions.svelte';
-	import { getFeedNearby } from '@/api';
+	import { fetchNearbyMoments } from '@/api';
 	import { formatDateTime } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
 
@@ -36,8 +36,8 @@ referencePoint = loc?.point ?? null;
 }));
 
 	$effect(() => {
-		// spec: feed/nearby reference_point is optional — server resolves via fallback
-		// chain (explicit point → last known location → ClientConfig default).
+		// spec: moments/fetch_nearby reference_point 可选 — 服务端按回退链解析
+		// （显式 point → 最近 update_location → ClientConfig 默认）。
 		// 有 point 就传、没有就不传照常请求。
 		void reloadKey;
 		let cancelled = false;
@@ -45,7 +45,7 @@ referencePoint = loc?.point ?? null;
 			try {
 				loading = true;
 				loadError = null;
-				const feedRes = await getFeedNearby(referencePoint ? { reference_point: referencePoint } : {}).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
+				const feedRes = await fetchNearbyMoments(referencePoint ? { reference_point: referencePoint } : {}).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
 				if (cancelled) return;
 
 				const feedData = feedRes.code === 0 ? feedRes.data : null;

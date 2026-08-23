@@ -15,8 +15,9 @@ export function apiError(code: number, message: string) {
   return { code, message };
 }
 
+// spec PaginatedData：next_cursor 恒在（string | null），null = 没有更多数据
 export function paginated<T>(items: T[], nextCursor?: string) {
-  return apiOk({ items, next_cursor: nextCursor ?? undefined });
+  return apiOk({ items, next_cursor: nextCursor ?? null });
 }
 
 // ── Auth scenario switch ──────────────────────────────────────
@@ -80,44 +81,61 @@ const wrapUser = (u: (typeof mockUsers)[number], i: number) => ({
   last_online_at: isoDaysAgo(i + 1),
 });
 
+// spec RelatedUserItem 无 is_mutual 冗余字段——互关由 user.relation 计算
+// （is_following && is_followed_by），mock 以 relation 承载该信息。
+const relation = (is_following: boolean, is_followed_by: boolean) => ({
+  is_following,
+  is_followed_by,
+  is_blocked: false,
+});
+
 export const mockFriends = mockUsers.slice(0, 6).map((u, i) => ({
-  user: wrapUser(u, i),
+  user: { ...wrapUser(u, i), relation: relation(true, true) },
   remark: i % 3 === 0 ? `${u.nickname}备注` : undefined,
   followed_at: isoDaysAgo(30 + i),
   followed_back_at: isoDaysAgo(20 + i),
-  is_mutual: true,
 }));
 
-// feed/nearby_users 返回 spec UserItem（user 嵌套 + presence_status + location）。
-const NEARBY_TAGS = ["摄影", "户外", "音乐", "阅读", "徒步"] as const;
-export const mockNearbyUsers = mockUsers.slice(0, 5).map((u, i) => ({
-  user: u,
-  presence_status: PRESENCES[i],
-  last_online_at: isoDaysAgo(i + 1),
-  location: { point: { latitude: 34.25, longitude: 117.19 }, location_name: "云龙湖", distance: `${(0.4 + i * 0.4).toFixed(1)}km` },
-  tags: [NEARBY_TAGS[i]],
-}));
+// feed/nearby_users 废除后附近用户由 users/search（radius + sort_by='distance'）承担，
+// mock 见 handlers.ts 的 users/search（mockUsers 包装为 UserItem）。
 
 export const mockFollowing = mockUsers.slice(1, 6).map((u, i) => ({
-  user: wrapUser(u, i + 1),
+  user: { ...wrapUser(u, i + 1), relation: relation(true, i % 2 === 0) },
   followed_at: isoDaysAgo(15 + i),
-  is_mutual: i % 2 === 0,
   remark: i === 0 ? `${u.nickname}备注` : undefined,
 }));
 
 export const mockFollowers = mockUsers.slice(2, 7).map((u, i) => ({
-  user: u,
+  user: { ...wrapUser(u, i + 2), relation: relation(i % 2 === 1, true) },
   followed_at: isoDaysAgo(i + 2),
-  is_mutual: i % 2 === 1,
-  presence_status: PRESENCES[i + 2],
-  last_online_at: isoDaysAgo(i + 1),
 }));
 
-const mockLocation = (location_name: string, distance?: string) => ({
-  point: { latitude: 34.26, longitude: 117.18 },
-  location_name,
-  distance,
-});
+// spec UserItem：隐私受控字段与查看者状态恒在（null = 隐藏/不适用；搜索/列表场景
+// stats/social_context 为 null）。供 users/search 等把扁平 UserInfo 包装成 UserItem。
+export function mockUserItem(u: MockUser) {
+  return {
+    user: { user_id: u.user_id, nickname: u.nickname, avatar_url: u.avatar_url },
+    bio: null,
+    tags: [] as string[],
+    presence_status: "offline" as const,
+    last_online_at: null,
+    location: null,
+    stats: null,
+    relation: null,
+    social_context: null,
+  };
+}
+
+// spec RelativeLocation：distance（米）/ bearing_degrees 由服务端基于参考点计算，
+// 恒为 number | null（禁止 "0.4km" 之类格式化字符串）。
+export function relativeLocation(
+  point: { latitude: number; longitude: number },
+  location_name: string,
+  distance: number | null,
+  bearing_degrees: number | null,
+) {
+  return { point, location_name, distance, bearing_degrees };
+}
 
 // ── Account (spec AccountData) ─────────────────────────────────
 export const mockAccount = {
@@ -150,6 +168,8 @@ export const mockSettings = {
 
 // ── Moments (spec MomentItem) ──────────────────────────────────
 // user is a nested UserInfo; reactions carry the Reaction aggregate shape;
+// privacy_level 不在 MomentItem——拥有者视角（OwnerMomentItem）由 handlers.ts
+// 的 fetch_created/create/update 响应显式补充。
 const momentPic = "https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=600";
 
 export const mockMoments = Array.from({ length: 24 }, (_, i) => {
@@ -160,22 +180,26 @@ export const mockMoments = Array.from({ length: 24 }, (_, i) => {
     description: ["清晨在绿意中找到了一片宁静", "城市里那些安静的角落", "周末午后最适合窝在这里看书", "湖畔的周末市集开始了", "户部山周末弹唱现场", "徐州的历史比想象的还要厚重"][i % 6],
     images: [{ url: momentPic }],
     tags: [["自然", "城市", "生活", "活动", "音乐", "人文"][i % 6]],
+    mentions: [] as string[],
     created_at: new Date(Date.now() - i * 3600000).toISOString(),
     comments_count: Math.floor(Math.random() * 30) + 1,
     shares_count: 0,
-    privacy_level: "public" as "public" | "private",
     reactions: [{ emoji: "👍", count: Math.floor(Math.random() * 200) + 10, reacted_by_me: i % 3 === 0 }],
-    location: { point: { latitude: 34.26 + i * 0.002, longitude: 117.18 + i * 0.003 }, location_name: ["植物园", "市中心", "老街手冲馆", "云龙湖", "彭城广场", "汉文化景区"][i % 6], distance: `${(0.3 + i * 0.2).toFixed(1)}km` },
+    location: { point: { latitude: 34.26 + i * 0.002, longitude: 117.18 + i * 0.003 }, location_name: ["植物园", "市中心", "老街手冲馆", "云龙湖", "彭城广场", "汉文化景区"][i % 6], distance: 300 + i * 200, bearing_degrees: (i * 47) % 360 },
     is_favorited: i % 4 === 0,
+    is_deleted: false,
+    // spec：recommendation 为 RecommendationType | null（Feed 场景之外为 null）
+    recommendation: (["nearby", null, null] as const)[i % 3],
   };
 });
 
 // ── Groups (spec GroupItem: nested { group: GroupInfo }) ───────
+// location 为 RelativeLocation：distance（米）/bearing_degrees 数值恒在。
 export const mockGroups = [
-  { group: { group_id: "group_1", name: "回龙窝胶片会", avatar_url: avatarA.replace("w=200", "w=400"), members_count: 143 }, description: "胶片摄影爱好者交流", join_method: "direct", requires_approval: false, online_members_count: 12, location: { point: { latitude: 34.25, longitude: 117.19 }, location_name: "回龙窝", distance: "0.4km" }, tags: ["摄影"], viewer_state: { role: "member", unread_count: 0, is_muted: false, is_pinned: false, joined_at: "2026-07-01T00:00:00Z" } },
-  { group: { group_id: "group_2", name: "云龙湖晨跑团", avatar_url: avatarB.replace("w=200", "w=400"), members_count: 89 }, description: "每天清晨6点环湖跑", join_method: "password", requires_approval: false, online_members_count: 8, location: { point: { latitude: 34.24, longitude: 117.20 }, location_name: "云龙湖", distance: "0.8km" }, tags: ["户外"], viewer_state: null },
-  { group: { group_id: "group_3", name: "户部山弹唱角", avatar_url: avatarA.replace("w=200", "w=400"), members_count: 62 }, description: "周末弹唱交流", join_method: "invite_only", requires_approval: true, online_members_count: 5, location: { point: { latitude: 34.26, longitude: 117.18 }, location_name: "户部山", distance: "1.1km" }, tags: ["音乐"], viewer_state: null },
-  { group: { group_id: "group_4", name: "黄楼夜读角", avatar_url: avatarB.replace("w=200", "w=400"), members_count: 34 }, description: "读书分享小组", join_method: "direct", requires_approval: true, online_members_count: 3, next_activity_at: "周六晚 7 点共读《小王子》", location: { point: { latitude: 34.27, longitude: 117.18 }, location_name: "黄楼", distance: "1.4km" }, tags: ["阅读"], viewer_state: null },
+  { group: { group_id: "group_1", name: "回龙窝胶片会", avatar_url: avatarA.replace("w=200", "w=400"), members_count: 143 }, description: "胶片摄影爱好者交流", join_method: "direct", requires_approval: false, online_members_count: 12, location: { point: { latitude: 34.25, longitude: 117.19 }, location_name: "回龙窝", distance: 400, bearing_degrees: 210 }, tags: ["摄影"], viewer_state: { role: "member", unread_count: 0, is_muted: false, is_pinned: false, joined_at: "2026-07-01T00:00:00Z" } },
+  { group: { group_id: "group_2", name: "云龙湖晨跑团", avatar_url: avatarB.replace("w=200", "w=400"), members_count: 89 }, description: "每天清晨6点环湖跑", join_method: "password", requires_approval: false, online_members_count: 8, location: { point: { latitude: 34.24, longitude: 117.20 }, location_name: "云龙湖", distance: 800, bearing_degrees: 160 }, tags: ["户外"], viewer_state: null },
+  { group: { group_id: "group_3", name: "户部山弹唱角", avatar_url: avatarA.replace("w=200", "w=400"), members_count: 62 }, description: "周末弹唱交流", join_method: "invite_only", requires_approval: true, online_members_count: 5, location: { point: { latitude: 34.26, longitude: 117.18 }, location_name: "户部山", distance: 1100, bearing_degrees: 45 }, tags: ["音乐"], viewer_state: null },
+  { group: { group_id: "group_4", name: "黄楼夜读角", avatar_url: avatarB.replace("w=200", "w=400"), members_count: 34 }, description: "读书分享小组", join_method: "direct", requires_approval: true, online_members_count: 3, next_activity_at: "周六晚 7 点共读《小王子》", location: { point: { latitude: 34.27, longitude: 117.18 }, location_name: "黄楼", distance: 1400, bearing_degrees: 330 }, tags: ["阅读"], viewer_state: null },
 ];
 
 // ── Notify (spec NotifyItem) ────────────────────────────
@@ -196,9 +220,4 @@ export const mockChats = [
   { other_user: mockUsers[2], presence_status: "offline", unread_count: 0, is_muted: false, is_pinned: false, last_activity_at: "2026-07-26T13:00:00Z", can_message: true, last_message: { message_id: "m2", content: "今晚的弹唱你会来吗", type: "text", sender: mockUsers[2], sent_at: "2026-07-26T13:00:00Z" } },
   { other_user: mockUsers[3], presence_status: "online", unread_count: 1, is_muted: false, is_pinned: false, last_activity_at: "2026-07-25T18:00:00Z", can_message: true, last_message: { message_id: "m3", content: "推荐了一家新开的咖啡馆", type: "text", sender: mockUsers[3], sent_at: "2026-07-25T18:00:00Z" } },
 ];
-
-// ── Trending (spec TrendingBundle: { hot_moments }) ────────────
-export const mockTrending = {
-  hot_moments: mockMoments.slice(0, 6),
-};
 

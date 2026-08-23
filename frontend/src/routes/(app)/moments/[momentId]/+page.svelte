@@ -17,7 +17,7 @@
 	import MomentEditDialog from '@/components/overlays/MomentEditDialog.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import { showToast } from '@/stores/toast.svelte';
-	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment, getFeedNearby, searchMoments, deleteMoment, listMyMoments } from '@/api';
+	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment, fetchNearbyMoments, searchMoments, deleteMoment, listMyMoments } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance, formatDateTime } from '@/lib/utils';
 
@@ -29,15 +29,15 @@
 	type MomentComment = import('./MomentPostBody.svelte').MomentComment;
 	type MomentData = import('./MomentPostBody.svelte').MomentData;
 
-	// 桌面 rail 数据：此刻附近来自 feed/nearby，更多动态来自 moments/search（均走 MSW mock）。
+	// 桌面 rail 数据：此刻附近来自 moments/fetch_nearby，更多动态来自 moments/search 热门模式（均走 MSW mock）。
 	let nearbyNow = $state<{ id: string; name: string; sub: string; avatar: string }[]>([]);
 	let relatedMoments = $state<{ id: string; title: string; meta: string; image: string }[]>([]);
 
 	$effect(() => {
 		let cancelled = false;
 		void Promise.all([
-			getFeedNearby({ pagination: { limit: 3 } }).catch(() => ({ code: -1, message: '网络异常', data: null })),
-			searchMoments({ keyword: '', pagination: { limit: 3 } }).catch(() => ({ code: -1, message: '网络异常', data: null }))
+			fetchNearbyMoments({ pagination: { limit: 3 } }).catch(() => ({ code: -1, message: '网络异常', data: null })),
+			searchMoments({ sort_by: 'popular', pagination: { limit: 3 } }).catch(() => ({ code: -1, message: '网络异常', data: null }))
 		]).then(([nearbyRes, relatedRes]) => {
 			if (cancelled) return;
 			const nearbyItems = nearbyRes.code === 0 ? nearbyRes.data?.items ?? [] : [];
@@ -391,7 +391,7 @@
 		<RailLocationMini name={moment.location} />
 	</RailSection>
 
-	<!-- 此刻附近（feed/nearby） -->
+	<!-- 此刻附近（moments/fetch_nearby） -->
 	<RailSection title="此刻附近" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)}>
 		<div class="flex flex-col gap-3">
 			{#each nearbyNow as u (u.id)}

@@ -1,9 +1,10 @@
-// AuthForm 契约测试：字段级校验、错误展示、密码显隐、登录成功调用。
+// AuthForm 契约测试：字段级校验、错误展示、密码显隐、登录成功调用、
+// 注册验证码（手机号/邮箱型）、访客昵称可选。
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import AuthForm from '../AuthForm.svelte';
 import { login, register, guest } from '@/stores/auth.svelte';
-import { requestPasswordReset, resetPassword } from '@/api';
+import { requestPasswordReset, resetPassword, sendRegisterCode } from '@/api';
 
 vi.mock('@/stores/auth.svelte', () => ({
 	login: vi.fn(),
@@ -12,7 +13,8 @@ vi.mock('@/stores/auth.svelte', () => ({
 }));
 vi.mock('@/api', () => ({
 	requestPasswordReset: vi.fn(),
-	resetPassword: vi.fn()
+	resetPassword: vi.fn(),
+	sendRegisterCode: vi.fn()
 }));
 
 describe('AuthForm', () => {
@@ -22,7 +24,11 @@ describe('AuthForm', () => {
 		vi.mocked(guest).mockReset();
 		vi.mocked(requestPasswordReset).mockReset();
 		vi.mocked(resetPassword).mockReset();
+		vi.mocked(sendRegisterCode).mockReset();
 		vi.mocked(login).mockResolvedValue({ code: 0, data: {} });
+		vi.mocked(register).mockResolvedValue({ code: 0, data: {} });
+		vi.mocked(guest).mockResolvedValue({ code: 0, data: {} });
+		vi.mocked(sendRegisterCode).mockResolvedValue({ code: 0, data: undefined });
 	});
 
 	it('空提交显示逐字段错误', async () => {
@@ -41,6 +47,49 @@ describe('AuthForm', () => {
 		expect(screen.getAllByText('请输入账号').length).toBeGreaterThan(0);
 		expect(screen.getAllByText('请输入密码').length).toBeGreaterThan(0);
 		expect(register).not.toHaveBeenCalled();
+	});
+
+	it('手机号型注册显示验证码输入，空验证码提交报错', async () => {
+		render(AuthForm, { props: {} });
+		await fireEvent.click(screen.getByRole('button', { name: '注册新账号' }));
+		await fireEvent.input(screen.getByLabelText('手机号、邮箱或账号'), { target: { value: '13800138000' } });
+		await fireEvent.input(screen.getByLabelText('昵称'), { target: { value: '小鹿' } });
+		await fireEvent.input(screen.getByLabelText('密码'), { target: { value: 'pass1234' } });
+		// 手机号（纯数字）型 login_id → 显示验证码输入与发送按钮
+		expect(screen.getByLabelText('验证码')).toBeTruthy();
+		await fireEvent.click(screen.getByRole('button', { name: '注册并登录' }));
+		expect((await screen.findAllByText('请输入验证码')).length).toBeGreaterThan(0);
+		expect(register).not.toHaveBeenCalled();
+	});
+
+	it('用户名型注册不显示验证码输入，code 传 null', async () => {
+		render(AuthForm, { props: {} });
+		await fireEvent.click(screen.getByRole('button', { name: '注册新账号' }));
+		await fireEvent.input(screen.getByLabelText('手机号、邮箱或账号'), { target: { value: 'lumos' } });
+		await fireEvent.input(screen.getByLabelText('昵称'), { target: { value: '小鹿' } });
+		await fireEvent.input(screen.getByLabelText('密码'), { target: { value: 'pass1234' } });
+		expect(screen.queryByLabelText('验证码')).toBeNull();
+		await fireEvent.click(screen.getByRole('button', { name: '注册并登录' }));
+		await waitFor(() =>
+			expect(register).toHaveBeenCalledWith({ login_id: 'lumos', nickname: '小鹿', password: 'pass1234', code: null })
+		);
+	});
+
+	it('手机号型注册点发送验证码调用 sendRegisterCode', async () => {
+		render(AuthForm, { props: {} });
+		await fireEvent.click(screen.getByRole('button', { name: '注册新账号' }));
+		await fireEvent.input(screen.getByLabelText('手机号、邮箱或账号'), { target: { value: 'lumos@example.com' } });
+		await fireEvent.click(screen.getByRole('button', { name: '发送验证码' }));
+		await waitFor(() =>
+			expect(sendRegisterCode).toHaveBeenCalledWith({ login_id: 'lumos@example.com', client_type: 'web' })
+		);
+	});
+
+	it('访客空昵称可提交（nickname 传 null）', async () => {
+		render(AuthForm, { props: { initialMode: 'guest' } });
+		expect(screen.queryByText('请输入昵称')).toBeNull();
+		await fireEvent.click(screen.getByRole('button', { name: '以访客身份继续' }));
+		await waitFor(() => expect(guest).toHaveBeenCalledWith({ nickname: null }));
 	});
 
 	it('登录成功调用 login（client_type 由 store 补充）', async () => {

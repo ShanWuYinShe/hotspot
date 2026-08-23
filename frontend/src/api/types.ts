@@ -21,20 +21,20 @@ export interface Location {
 }
 
 export interface RelativeLocation {
-	// spec: types.md → RelativeLocation（响应侧：坐标 + 名称 + 可选距离/方位）
+	// spec: types.md → RelativeLocation（响应侧：坐标 + 名称 + 距离/方位，恒定 nullable）
 	point: GeoPoint;
 	location_name: string;
-	distance?: number; // 距参考点的米数
-	bearing_degrees?: number;
+	distance: number | null; // 距浏览锚点的距离（米）；null = 无参考点/不可见
+	bearing_degrees: number | null; // 相对浏览锚点的方位角 [0, 360)；null = 无参考点/不可见
 }
 
 export interface MediaAsset {
-	// spec: types.md → MediaAsset
+	// spec: types.md → MediaAsset（元数据字段恒定 nullable）
 	url: string;
-	thumbnail_url?: string;
-	width?: number;
-	height?: number;
-	mime_type?: string;
+	thumbnail_url: string | null; // null = 无缩略图
+	width: number | null; // null = 未知
+	height: number | null; // null = 未知
+	mime_type: string | null; // MIME 类型字符串，如 "image/jpeg"；null = 未知
 }
 
 export interface MessageMedia extends MediaAsset {
@@ -103,6 +103,8 @@ export type NotifyType =
 	| 'system_announcement'
 	| 'nearby_new_moment';
 export type Gender = 'male' | 'female' | 'other';
+// spec: types.md → RecommendationType（Feed 推荐理由）
+export type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
 
 // ─────────────────────────── 领域实体 ───────────────────────────
 
@@ -110,7 +112,7 @@ export interface UserInfo {
 	// spec: types.md → UserInfo
 	user_id: string;
 	nickname: string;
-	avatar_url?: string;
+	avatar_url: string | null; // null = 未设置头像（客户端使用默认头像）
 }
 
 export interface UserStats {
@@ -130,10 +132,10 @@ export interface Relationship {
 }
 
 export interface SocialContext {
-	// spec: types.md → UserItem.social_context
+	// spec: types.md → SocialContext（查看者相关，恒定 nullable）
 	mutual_friends_count: number;
-	mutual_friends_preview?: UserInfo[];
-	common_groups_count?: number;
+	mutual_friends_preview: UserInfo[]; // 前2-3个共同好友
+	common_groups_count: number | null;
 	common_tags: string[];
 }
 
@@ -165,7 +167,7 @@ export interface GroupViewerState {
 	is_muted: boolean;
 	muted_until: string | null;
 	is_pinned: boolean;
-	joined_at?: string;
+	joined_at: string; // spec: 必填非空（成员必有入群时间）
 }
 
 export interface GroupItem {
@@ -474,7 +476,7 @@ export interface MomentItem {
 	user: UserInfo;
 	location: RelativeLocation | null;
 	is_favorited: boolean; // 恒定布尔：匿名/未收藏为 false
-	recommendation?: 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
+	recommendation: RecommendationType | null; // Feed 场景返回（推荐理由）；非 Feed 场景为 null
 	is_deleted: boolean; // 软删除标记；true 时 description 为空，客户端展示"内容已删除"占位
 }
 
@@ -493,13 +495,13 @@ export interface CommentItem {
 	comment_id: string;
 	user: UserInfo;
 	content: string;
-	parent_id?: string;
+	parent_id: string | null; // 父评论 ID；null = 顶层评论
 	mentions: string[];
 	created_at: string;
 	replies_count: number;
 	reactions: Reaction[];
 	is_deleted: boolean;
-	top_replies?: CommentItem[];
+	top_replies: CommentItem[]; // 仅 comments/fetch 顶层列表返回前 N 条回复预览；其他端点为空数组
 }
 
 export interface MessageBrief {
@@ -707,18 +709,18 @@ export interface UserProfileBundle {
 
 // 用户关系列表项（list_friends / list_following / list_followers 共用，spec: user.md → RelatedUserItem）
 // 字段可见性按端点语义返回：followed_back_at 仅 list_friends；remark 仅查询自己时返回
+// 互相关注由 user.relation 计算（is_following && is_followed_by），无冗余字段
 export interface RelatedUserItem {
 	user: UserItem;
 	followed_at: string;
 	followed_back_at: string | null; // 对方回关时间（成为好友的时间）；仅 list_friends 返回，其余 null
-	is_mutual: boolean;
 	remark: string | null; // 仅查询自己（user_id=当前用户）时返回；查他人 null
 }
 
-// --- Feed（spec: api_spec_feed.md）---
-export interface TrendingBundle {
-	// spec: feed.md → trending
-	hot_moments: MomentItem[];
+// 批量用户解析结果（users/batch_fetch 响应，spec: types.md → UsersBatchResult；
+// api 版与 public 版共用，无查看者字段的纯 UserInfo 映射）
+export interface UsersBatchResult {
+	users: Record<string, UserInfo>; // user_id → UserInfo；不存在的 user_id 不出现在 map 中
 }
 
 // --- Notify（spec: api_spec_notify.md）---
@@ -745,10 +747,10 @@ export interface ApiVersionMeta {
 	// spec: system.md → get_meta
 	version: string;
 	status: 'active' | 'deprecated' | 'sunset';
-	deprecated_at?: string;
-	sunset_at?: string;
-	message?: string;
-	recommended_version?: string;
+	deprecated_at: string | null; // 进入废弃状态时间；未废弃为 null
+	sunset_at: string | null; // 计划下线时间；无下线计划为 null
+	message: string | null; // 面向客户端的提示信息
+	recommended_version: string | null; // 推荐升级的版本号
 }
 export interface UnreadSummary {
 	// spec: system.md → bootstrap
@@ -850,52 +852,126 @@ export interface CompletedUploads {
 }
 
 // ── Map Canvas ──────────────────────────────────────────────
+// spec: api_spec_public.md → 地图渲染（map）（仅 public 版，无登录镜像）
 
+// spec: api_spec_public.md → MapDataType（过滤器类别；'all' 或 null：用户/群组/动态都参与）
+export type MapDataType = 'user' | 'group' | 'moment' | 'all';
+
+// spec: api_spec_public.md → Bounds（约束 north >= south；east >= west，允许退化视口）
+export interface Bounds {
+	north: number; // [-90, 90]
+	south: number; // [-90, 90]
+	east: number; // [-180, 180]
+	west: number; // [-180, 180]
+}
+
+// spec: api_spec_public.md → MapViewport（仅由经纬度边界决定，不需要客户端提供 zoom）
+export interface MapViewport {
+	bounds: Bounds;
+}
+
+// spec: api_spec_public.md → TimeRangeParams（UTC ISO 8601；同时提供时 start_time <= end_time）
+export interface TimeRangeParams {
+	start_time: string | null;
+	end_time: string | null;
+}
+
+// spec: api_spec_public.md → MapCanvasFilter
+export interface MapCanvasFilter {
+	data_type: MapDataType | null;
+	time_range: TimeRangeParams | null;
+}
+
+// spec: api_spec_public.md → POST /public/v1/map/canvas 请求
+// 注：无 reference_point 字段。distance/bearing 的计算锚点 = viewport 几何中心。
 export interface MapCanvasRequest {
-	viewport: {
-		bounds: { north: number; south: number; east: number; west: number };
-	};
-	filter?: { data_type?: string; time_range?: { start_time?: string; end_time?: string } };
-	pagination?: { limit?: number; cursor?: string };
+	viewport: MapViewport;
+	filter: MapCanvasFilter | null;
+	// 仅在返回 hotspots 时使用；limit 覆盖全局默认为 default=50、max=200
+	pagination: PaginationParams | null;
+}
+
+// spec: api_spec_public.md → MapHeatBreakdown（按类型拆分；data_type='all' 时返回完整三分类）
+export interface MapHeatBreakdown {
+	user: number | null; // 该网格内用户数量
+	group: number | null; // 该网格内群组数量
+	moment: number | null; // 该网格内动态数量
 }
 
 export interface MapHeatBucket {
-	cell_token: string;
-	level: number;
-	location: GeoPoint;
-	total_count: number;
-	breakdown?: { user?: number; group?: number; moment?: number };
+	cell_token: string; // S2 单元格字符串 token（规避 JS 精度问题），可作 key 或调试
+	level: number; // 该单元格所在的 S2 level
+	location: GeoPoint; // 聚合单元的代表坐标（如 S2 单元格中心点）
+	total_count: number; // 当前过滤条件下该网格内参与统计实体的总数
+	breakdown: MapHeatBreakdown | null;
 }
+
+export interface MapHeatCanvas {
+	items: MapHeatBucket[];
+}
+
+// spec: api_spec_public.md → HotspotObjectType
+export type HotspotObjectType = 'user' | 'group' | 'moment';
 
 export interface MapHotspotItem {
-	object_type: string;
-	object_id: string;
-	title: string;
-	subtitle?: string;
-	cover_url?: string;
-	location: GeoPoint;
-	created_at: string | null;
-	distance_meters?: number;
+	object_type: HotspotObjectType; // 对象类型
+	object_id: string; // 业务 ID（user_id / group_id / moment_id）
+	title: string; // 昵称 / 群名 / 动态标题
+	subtitle: string | null; // 简短描述 / 地点名等
+	cover_url: string | null; // 头像 / 群头像 / 动态封面
+	// 位置统一使用 RelativeLocation（含 distance/bearing），与 search 各端点对齐；
+	// distance/bearing 相对于视口几何中心计算，由服务端计算
+	location: RelativeLocation;
+	created_at: string | null; // 对于动态等有时间语义的对象可返回创建时间
 }
 
-export interface MapCanvasResponse {
-	heatmap?: { items: MapHeatBucket[] };
-	hotspots?: { items: MapHotspotItem[]; next_cursor?: string };
-}
+// 响应为 tagged union：模式由服务端按视口尺度与数据密度决定（大尺度→heatmap，小尺度→hotspots）；
+// 视口内无任何已知对象时返回 { mode: 'empty' }
+export type MapCanvasResponse =
+	| { mode: 'heatmap'; heatmap: MapHeatCanvas }
+	| { mode: 'hotspots'; hotspots: PaginatedData<MapHotspotItem> }
+	| { mode: 'empty' };
 
 // ── Search Suggest ──────────────────────────────────────────
 
-export interface SearchSuggestRequest {
-	prefix: string;
-	reference_point: GeoPoint;
-	types?: string[];
-	radius?: number;
+// spec: api_spec_types.md → 搜索建议类型（支持按类型过滤）
+export type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
+
+// spec: api_spec_types.md → TagItem（标签项，搜索建议等模块共用）
+export interface TagItem {
+	name: string;
+	usage_count: number;
 }
 
-export interface SearchSuggestItem {
-	type: string;
-	payload: Record<string, unknown>;
+// spec: api_spec_types.md → MomentSummary（瞬间摘要：通知、WebSocket 推送等轻量展示场景）
+export interface MomentSummary {
+	moment_id: string;
+	description_preview: string; // 截断的描述文本（最多 100 字符）
+	cover_url: string | null; // 首张图片缩略图 URL；null = 无图片
 }
+
+// spec: api_spec_types.md → MomentSuggestItem（基于 MomentSummary 的轻量扩展，仅用于建议场景）
+export interface MomentSuggestItem extends MomentSummary {
+	author: UserInfo;
+	location: RelativeLocation | null;
+}
+
+// spec: api_spec_discovery.md → POST /api/v1/search/suggest
+// reference_point/radius 恒定 nullable：null 时服务端按「reference_point 解析规则」回退链解析
+export interface SearchSuggestRequest {
+	prefix: string;
+	reference_point: GeoPoint | null;
+	types: SearchSuggestType[]; // 空数组表示返回所有类型
+	radius: number | null;
+}
+
+// 登录视角建议项判别联合：user/group 分支为 UserItem/GroupItem（含查看者状态）；
+// 匿名版 PublicSearchSuggestResponse 见 api_spec_public.md
+export type SearchSuggestItem =
+	| { type: 'tag'; payload: TagItem }
+	| { type: 'user'; payload: UserItem }
+	| { type: 'group'; payload: GroupItem }
+	| { type: 'moment'; payload: MomentSuggestItem };
 
 export interface SearchSuggestResponse {
 	items: SearchSuggestItem[];
@@ -906,21 +982,27 @@ export interface SearchSuggestResponse {
 // Auth
 export interface RegisterRequest {
 	login_id: string;
+	verification_code: string | null; // 手机号/邮箱型必填（所有权验证）；用户名型为 null
 	nickname: string;
 	password: string;
 	client_type: string;
-	device_id: string;
+	device_id: string | null; // App 端必填非 null；Web 端为 null（服务端从 device_id Cookie 读取）
 }
 export interface LoginRequest {
 	login_id: string;
 	password: string;
 	client_type: string;
-	device_id: string;
+	device_id: string | null; // App 端必填非 null；Web 端为 null（服务端从 device_id Cookie 读取）
 }
 export interface GuestRequest {
-	nickname?: string;
+	nickname: string | null; // 可选；null 时服务端自动生成默认昵称
 	client_type: string;
-	device_id: string;
+	device_id: string | null; // App 端必填非 null；Web 端为 null（服务端从 device_id Cookie 读取）
+}
+// spec: api_spec_public.md → auth/send_register_code（手机号/邮箱型 login_id 的所有权验证）
+export interface SendRegisterCodeRequest {
+	login_id: string;
+	client_type: string;
 }
 export interface RequestPasswordResetRequest {
 	login_id: string;
@@ -931,7 +1013,7 @@ export interface ResetPasswordRequest {
 	verification_code: string;
 	new_password: string;
 	client_type: string;
-	device_id?: string;
+	device_id: string | null; // App 端必填非 null；Web 端为 null（服务端从 device_id Cookie 读取）
 }
 
 // Users
@@ -962,14 +1044,13 @@ export interface UpdateSettingsRequest {
 	settings: Record<string, unknown>;
 }
 
-// Feed
-export interface NearbyFeedRequest {
-	reference_point?: GeoPoint;
-	radius?: number;
+// Moments 流（spec: api_spec_moment.md → moments/fetch_following、fetch_nearby）
+export interface FetchFollowingMomentsRequest {
+	reference_point?: GeoPoint; // 用于距离/方位计算；不传时服务端按回退链解析
 	pagination?: PaginationParams;
 }
-export interface TrendingRequest {
-	radius?: number;
+export interface FetchNearbyMomentsRequest {
+	radius?: number; // 搜索半径（米）；不传默认 5000 并受 search_radius_max 裁剪
 	reference_point?: GeoPoint;
 	pagination?: PaginationParams;
 }
@@ -977,7 +1058,7 @@ export interface TrendingRequest {
 // Moments
 export interface CreateMomentRequest {
 	description: string;
-	location?: Location;
+	location: Location; // spec: 必填（无定位时不允许发布，取默认位置兜底由调用方负责）
 	privacy_level?: string;
 	tags?: string[];
 	image_file_ids?: string[];
@@ -995,7 +1076,7 @@ export interface UpdateMomentRequest {
 export interface SearchMomentsRequest {
 	keyword?: string;
 	tag?: string;
-	sort_by?: string;
+	sort_by?: 'relevance' | 'newest' | 'popular' | null; // 至少提供 keyword/tag/sort_by='popular' 之一；'popular' 即热门模式
 	pagination?: PaginationParams;
 }
 export interface FavoriteMomentRequest {
@@ -1079,20 +1160,12 @@ export interface CreateCommentRequest {
 	parent_id?: string;
 	mentions?: string[];
 }
-export interface ReportSnapshot {
-	chat_type: 'private' | 'group';
-	target_chat_id: string;
-	message_type: MessageType;
-	snapshot_content?: string | null;
-	snapshot_media?: MessageMedia | null;
-	sent_at: string;
-}
 export interface CreateReportRequest {
 	target_type: ReportTargetType;
 	target_id: string;
 	reason: ReportReason;
 	description?: string | null;
-	message_snapshot?: ReportSnapshot | null;
+	// 消息举报快照由服务端受理时基于消息真值生成并冻结，客户端不提交快照内容
 }
 export interface MarkNotifyReadRequest {
 	// spec: notify.md → mark_read（参数必显式：scope 必填；scope='ids' 时 notify_ids 1-50 个）

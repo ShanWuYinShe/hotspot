@@ -2,6 +2,17 @@
 
 import { getMapCanvas } from '@/api';
 import { formatDistance } from '@/lib/utils';
+import type {
+	MapCanvasFilter,
+	MapCanvasRequest,
+	MapCanvasResponse,
+	MapHeatBucket,
+	MapHotspotItem
+} from '@/api/types';
+
+// 既有消费方（desktop/mobile/MapHeatDot）从本模块导入这些类型——
+// 统一 re-export，避免散落直接依赖 '@/api/types'。
+export type { MapCanvasFilter, MapCanvasRequest, MapCanvasResponse, MapHeatBucket, MapHotspotItem };
 import type { Pin, PinType } from './location-data';
 import markerUserRaw from '@/assets/markers/marker_user.svg?raw';
 import markerGroupRaw from '@/assets/markers/marker_group.svg?raw';
@@ -62,35 +73,9 @@ export function buildMapData(center: { lat: number; lng: number }, zoom: number)
 	};
 }
 
-/* ── map/canvas API 接入（spec: api_spec_map.md）────────────────────── */
-
-export interface MapHeatBucket {
-	cell_token: string;
-	level: number;
-	location: { latitude: number; longitude: number };
-	total_count: number;
-	breakdown?: { user?: number; group?: number; moment?: number };
-}
-
-export interface MapHotspotItem {
-	object_type: 'user' | 'group' | 'moment';
-	object_id: string;
-	title: string;
-	subtitle?: string;
-	cover_url?: string;
-	location: { latitude: number; longitude: number };
-	distance_meters?: number;
-	created_at?: string;
-}
-
-// 注意：spec（api_spec_map.md）为带 mode 字段的 tagged union，且 location 为
-// RelativeLocation；当前后端实现（backend-go/internal/modules/map）返回
-// `{ heatmap? | hotspots? }`（均缺省 = empty），location 为 GeoPoint +
-// distance_meters。前端按实际实现解析，两处偏差待后端对齐 spec 后简化。
-type MapCanvasResponse = {
-	heatmap?: { items: MapHeatBucket[] };
-	hotspots?: { items: MapHotspotItem[]; next_cursor?: string };
-};
+/* ── map/canvas API 接入（spec: api_spec_public.md → map/canvas）──────────
+   类型统一从 '@/api/types' 引入（mode 判别联合 + RelativeLocation），
+   不再维护本地副本。 */
 
 export interface MapCanvasResult {
 	mode: 'heatmap' | 'hotspots' | 'empty';
@@ -121,20 +106,20 @@ function hotspotToPin(item: MapHotspotItem): Pin {
 	return {
 		id: item.object_id,
 		type,
-		lat: item.location.latitude,
-		lng: item.location.longitude,
+		lat: item.location.point.latitude,
+		lng: item.location.point.longitude,
 		name: item.title,
 		title: item.title,
-		tag: item.subtitle,
-		image: item.cover_url,
-		distance: item.distance_meters != null ? formatDistance(item.distance_meters) : undefined
+		tag: item.subtitle ?? undefined,
+		image: item.cover_url ?? undefined,
+		distance: item.location.distance != null ? formatDistance(item.location.distance) : undefined
 	};
 }
 
 function normalizeCanvas(res: { code: number; data?: unknown }): MapCanvasResult {
 	if (res.code !== 0 || !res.data) return emptyResult();
 	const data = res.data as MapCanvasResponse;
-	if (data.heatmap?.items?.length) {
+	if (data.mode === 'heatmap' && data.heatmap.items.length) {
 		const items = data.heatmap.items;
 		const counts: Record<PinType, number> = { user: 0, group: 0, moment: 0 };
 		for (const b of items) {
@@ -144,7 +129,7 @@ function normalizeCanvas(res: { code: number; data?: unknown }): MapCanvasResult
 		}
 		return { mode: 'heatmap', pins: [], heatBuckets: items, counts };
 	}
-	if (data.hotspots?.items?.length) {
+	if (data.mode === 'hotspots' && data.hotspots.items.length) {
 		const items = data.hotspots.items;
 		// next_cursor：密集视口时分页取下一页。当前固定 zoom 下单页足够，
 		// 图钉与统计同页口径一致；后续接入视口交互时再做游标翻页。
@@ -169,12 +154,12 @@ export async function fetchMapCanvas(
 	const viewport = { bounds: buildViewportBounds(center, zoom) };
 	if (activeTypes.length === 0) return emptyResult();
 
-	const buildParams = (t?: PinType) => ({
+	const buildParams = (t?: PinType): MapCanvasRequest => ({
 		viewport,
-		pagination: { limit: 100 },
-		...(t ? { filter: { data_type: t } } : {})
+		// spec：filter/pagination 必填可空——未选单类型时 filter 传 null（服务端按 all 处理）
+		filter: (t ? { data_type: t, time_range: null } : null) satisfies MapCanvasFilter | null,
+		pagination: { limit: 100 }
 	});
-
 	if (activeTypes.length === 3) {
 		try {
 			return normalizeCanvas(await getMapCanvas(buildParams()));

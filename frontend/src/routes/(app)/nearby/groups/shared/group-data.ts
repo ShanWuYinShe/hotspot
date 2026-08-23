@@ -17,7 +17,7 @@ export interface Group {
 	avatars: string[];
 }
 
-/** Map a spec GroupItem (feed/nearby_groups) result to the card shape. */
+/** 将 groups/search（radius + sort_by='distance'）返回的 GroupItem 映射为卡片数据（feed 域已废除，附近群组发现由 search 承担）。 */
 export function mapGroup(item: GroupItem): Group {
 	const g = item.group;
 	return {

@@ -16,7 +16,8 @@
 	export interface SearchResultUser {
 		user_id: string;
 		nickname: string;
-		avatar_url?: string;
+		// spec UserInfo.avatar_url：恒定 nullable
+		avatar_url: string | null;
 		tags?: string[];
 	}
 	export interface SearchResultMoment {

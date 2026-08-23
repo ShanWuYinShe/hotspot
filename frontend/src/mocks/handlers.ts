@@ -2,8 +2,9 @@ import { http, HttpResponse, type JsonBodyType } from "msw";
 import {
   apiOk, apiError, paginated,
   mockUsers, mockAccount, mockSettings,
-  mockMoments, mockGroups, mockNotifies, mockChats, mockTrending,
-  mockFriends, mockFollowing, mockFollowers, mockNearbyUsers,
+  mockMoments, mockGroups, mockNotifies, mockChats,
+  mockFriends, mockFollowing, mockFollowers,
+  mockUserItem, relativeLocation,
   getMockAuthScenario, setMockLoggedIn, isMockLoggedIn,
 } from "@/mocks/data";
 
@@ -14,38 +15,40 @@ function json(data: JsonBodyType) {
   return HttpResponse.json(data);
 }
 
-/* ── Map hotspots mock 数据（对齐后端 map/canvas 响应结构）────────────── */
-const parseKm = (d: string | undefined) => {
-  if (!d) return undefined;
-  const n = parseFloat(d);
-  return Number.isNaN(n) ? undefined : Math.round(n * 1000);
-};
+/* ── Map hotspots mock 数据（spec api_spec_public.md → map/canvas）────────── */
+// MapHotspotItem.location 为 RelativeLocation（point 嵌套 + 米数 distance /
+// bearing_degrees，相对视口几何中心）；响应为带 mode 的 tagged union，mock 数据量
+// 小，恒返回 hotspots 明细模式。
 const mockUserHotspots = mockUsers.map((u, i) => ({
   object_type: "user" as const,
   object_id: u.user_id,
   title: u.nickname,
   subtitle: "附近用户",
   cover_url: u.avatar_url,
-  location: { latitude: 34.2604 + (i - 3) * 0.006, longitude: 117.1855 + (i % 2 === 0 ? 0.008 : -0.006) },
-  distance_meters: 300 + i * 150,
+  location: relativeLocation(
+    { latitude: 34.2604 + (i - 3) * 0.006, longitude: 117.1855 + (i % 2 === 0 ? 0.008 : -0.006) },
+    "徐州",
+    300 + i * 150,
+    (i * 53) % 360,
+  ),
+  created_at: null,
 }));
 const mockGroupHotspots = mockGroups.map((g) => ({
   object_type: "group" as const,
   object_id: g.group.group_id,
   title: g.group.name,
-  subtitle: g.description,
+  subtitle: g.description ?? null,
   cover_url: g.group.avatar_url,
-  location: { latitude: g.location.point.latitude, longitude: g.location.point.longitude },
-  distance_meters: parseKm(g.location.distance),
+  location: g.location,
+  created_at: null,
 }));
 const mockMomentHotspots = mockMoments.slice(0, 6).map((m) => ({
   object_type: "moment" as const,
   object_id: m.moment_id,
   title: m.description.slice(0, 30),
   subtitle: m.location.location_name,
-  cover_url: m.images?.[0]?.url,
-  location: { latitude: m.location.point.latitude, longitude: m.location.point.longitude },
-  distance_meters: parseKm(m.location.distance),
+  cover_url: m.images?.[0]?.url ?? null,
+  location: m.location,
   created_at: m.created_at,
 }));
 
@@ -55,8 +58,8 @@ const mockMomentHotspots = mockMoments.slice(0, 6).map((m) => ({
  * real auth-failure handling instead of silently succeeding. Returns null when
  * the session is valid, so handlers can early-return the guard's result.
  *
- * Optional-auth endpoints (moments/search, groups/search, search/*, map,
- * system/*, users/open_the_door, feed/trending) are NOT guarded — anonymous
+ * Optional-auth endpoints (moments/search, moments/fetch_nearby, groups/search,
+ * search/*, map, system/*, users/open_the_door) are NOT guarded — anonymous
  * users see public data per spec.
  */
 function requireMockAuth(): ReturnType<typeof json> | null {
@@ -117,11 +120,12 @@ export const handlers = [
   http.post(`${PUBLIC_API}/auth/register`, () => authFormScenarioError() ?? authOkResponse()),
   http.post(`${PUBLIC_API}/auth/guest`, () => authFormScenarioError() ?? authOkResponse()),
   http.post(`${API}/auth/session`, () => {
-    // Reflect the mock login state so AuthContext's boot flow works correctly.
+    // spec auth.md → session：有效 Token 返回 SessionStatus {user_id, expires_at}；
+    // 未登录/无效 Token 返回 10100 错误信封（客户端据此直接判定匿名态）。
     if (isMockLoggedIn()) {
-      return json(apiOk({ is_valid: true, expires_at: new Date(Date.now() + 3600000).toISOString() }));
+      return json(apiOk({ user_id: mockAccount.user_id, expires_at: new Date(Date.now() + 3600000).toISOString() }));
     }
-    return json(apiOk({ is_valid: false }));
+    return json(apiError(10100, "Access Token 无效或过期"));
   }),
   http.post(`${API}/auth/signout`, () => {
     setMockLoggedIn(false);
@@ -135,9 +139,14 @@ export const handlers = [
       },
     });
   }),
-  http.post(`${PUBLIC_API}/auth/refresh_token`, () => authOkResponse()),
+  // 刷新与 mock 登录态一致：未登录（无有效 refresh cookie）按 spec 返回 10100，
+  // 避免 client 的自动刷新把登出状态“复活”成登录态。
+  http.post(`${PUBLIC_API}/auth/refresh_token`, () =>
+    isMockLoggedIn() ? authOkResponse() : json(apiError(10100, "Refresh Token 无效或过期"))),
   http.post(`${PUBLIC_API}/auth/forgot_password`, () => json(apiOk(null))),
   http.post(`${PUBLIC_API}/auth/reset_password`, () => authFormScenarioError() ?? authOkResponse()),
+  // 发送注册验证码（防枚举：无论 login_id 是否已注册均成功）
+  http.post(`${PUBLIC_API}/auth/send_register_code`, () => authFormScenarioError() ?? json(apiOk(null))),
 
   // ── Users ──────────────────────────────────────
   // get_account / get_settings are auth-required → guarded. open_the_door is
@@ -168,20 +177,20 @@ export const handlers = [
         bio: `这是 ${u.nickname} 的简介`,
         tags: ['摄影', '户外'],
         presence_status: 'online',
-        location: { point: { latitude: 34.26, longitude: 117.18 }, location_name: '徐州', distance: '0.3km' },
+        location: relativeLocation({ latitude: 34.26, longitude: 117.18 }, '徐州', 300, 45),
         stats: { moments_count: userMoments.length || 24, friends_count: 18, followers_count: 89, following_count: 42, groups_count: 5 },
-        relation: { is_following: idx !== 0, is_followed_by: false, is_blocked: false }
+        relation: { is_following: idx !== 0, is_followed_by: false, is_blocked: false },
+        social_context: null,
       }
     };
     if (body.include_recent_moments) {
-      profile.recent_moments = { items: userMoments.length ? userMoments : mockMoments.slice(idx * 2, idx * 2 + 4) };
+      profile.recent_moments = { items: userMoments.length ? userMoments : mockMoments.slice(idx * 2, idx * 2 + 4), next_cursor: null };
     }
     return json(apiOk(profile));
   }),
-  // spec: users/search 返回 UserItem（user 嵌套 UserInfo）；mockUsers 是扁平结构，需包装
-  http.post(`${API}/users/search`, () =>
-    json(paginated(mockUsers.map((u) => ({ user: u, tags: [], presence_status: "offline" }))))
-  ),
+  // spec: users/search 返回 UserItem（隐私受控字段/查看者状态恒在 nullable）；
+  // mockUsers 是扁平 UserInfo，统一经 mockUserItem 包装
+  http.post(`${API}/users/search`, () => json(paginated(mockUsers.map(mockUserItem)))),
   // list_* default to the current user → auth-required when no user_id given.
   http.post(`${API}/users/fetch_friends`, () => requireMockAuth() ?? json(paginated(mockFriends))),
   http.post(`${API}/users/fetch_following`, () => requireMockAuth() ?? json(paginated(mockFollowing))),
@@ -201,10 +210,16 @@ export const handlers = [
     const found = mockMoments.find((m) => m.moment_id === id);
     return json(apiOk(found ?? mockMoments[0]));
   }),
-  http.post(`${API}/moments/fetch_created`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 9)))),
+  // 拥有者视角端点返回 OwnerMomentItem（MomentItem + privacy_level，spec moment.md）
+  http.post(`${API}/moments/fetch_created`, () =>
+    requireMockAuth() ?? json(paginated(mockMoments.slice(0, 9).map((m) => ({ ...m, privacy_level: "public" as const }))))),
+  // fetch_following 依赖查看者关注关系（无匿名版）→ 需登录；
+  // fetch_nearby 可见性不依赖身份（原 feed/nearby_moments 迁移，双版本）。
+  http.post(`${API}/moments/fetch_following`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 8)))),
+  http.post(`${API}/moments/fetch_nearby`, () => json(paginated(mockMoments.slice(0, 12)))),
   http.post(`${API}/moments/fetch_favorites`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 6).map((m) => ({ ...m, favorited_at: '2026-08-01T08:00:00.000Z' }))))),
   http.post(`${API}/moments/set_favorite`, () => requireMockAuth() ?? json(apiOk(null))),
-  http.post(`${API}/moments/create`, () => requireMockAuth() ?? json(apiOk(mockMoments[0]))),
+  http.post(`${API}/moments/create`, () => requireMockAuth() ?? json(apiOk({ ...mockMoments[0], privacy_level: "public" as const }))),
   http.post(`${API}/moments/update`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as { moment_id?: string; description?: string; tags?: string[]; privacy_level?: string };
     const base = mockMoments.find((m) => m.moment_id === body?.moment_id) ?? mockMoments[0];
@@ -212,7 +227,8 @@ export const handlers = [
       ...base,
       description: body.description ?? base.description,
       tags: body.tags ?? base.tags,
-      privacy_level: body.privacy_level ?? base.privacy_level,
+      // OwnerMomentItem.privacy_level：MomentItem 无此字段，未指定时按默认 public 回显
+      privacy_level: body.privacy_level ?? "public",
     }));
   }),
   http.post(`${API}/moments/delete`, () => requireMockAuth() ?? json(apiOk(null))),
@@ -322,7 +338,8 @@ export const handlers = [
   // create 是写操作 → 需要登录。
   http.post(`${API}/groups/create`, () => requireMockAuth() ?? json(apiOk(mockGroups[0]))),
   // join/leave 是写操作 → 需要登录。join 按 join_method 路由：
-  // direct 直接加入（返回 joined）；需审核/邀请类返回 pending_approval（带 application_id）。
+  // direct 直接加入（返回 joined）；需审核/邀请类返回 pending_approval。
+  // EnterGroupResult 为扁平结构：application_id 恒在（joined 时为 null，见 spec group.md）。
   // 为让页面可重复演练，join 总是"可成功"：joined 状态以请求为准（服务端幂等，见 spec 自然去重）。
   http.post(`${API}/groups/enter`, async ({ request }) => {
     const auth = requireMockAuth();
@@ -332,8 +349,8 @@ export const handlers = [
     const needsApproval = group.requires_approval || group.join_method === "invite_only";
     return json(apiOk(
       needsApproval
-        ? { status: "pending_approval", application: { application_id: `app_${body?.group_id ?? "group_1"}` } }
-        : { status: "joined" }
+        ? { status: "pending_approval", application_id: `app_${body?.group_id ?? "group_1"}` }
+        : { status: "joined", application_id: null }
     ));
   }),
   http.post(`${API}/groups/exit`, () => requireMockAuth() ?? json(apiOk(null))),
@@ -434,13 +451,6 @@ export const handlers = [
     return requireMockAuth() ?? json(apiOk({ message_id: body?.message_id ?? 'm1', content: body?.content ?? '', edited_at: new Date().toISOString() }));
   }),
 
-  // ── Feed ───────────────────────────────────────
-  // nearby 需要登录；nearby_users/nearby_groups/trending 可选（匿名可见公开数据）。
-  http.post(`${API}/feed/nearby_moments`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 12)))),
-  http.post(`${API}/feed/nearby_groups`, () => json(paginated(mockGroups))),
-  http.post(`${API}/feed/nearby_users`, () => json(paginated(mockNearbyUsers))),
-  http.post(`${API}/feed/trending`, () => json(apiOk(mockTrending))),
-
   // ── Search ─────────────────────────────────────
   http.post(`${API}/search/suggest`, () => json(apiOk({
     items: [
@@ -467,20 +477,20 @@ export const handlers = [
       defaults: { default_location: { point: { latitude: 34.2604, longitude: 117.1855 }, location_name: "徐州" }, default_user_avatar_url: "", default_group_avatar_url: "" },
     },
     profile: mockAccount,
-    unread_summary: { notify_total: 3, notify_by_type: { social: 1, interaction: 1, group: 1, report: 0, system: 0 }, private_chat_unread_count: 2, group_chat_unread_count: 1, total_badge: 6 },
+    unread_summary: { notify_total: 3, notify_by_type: { social: 1, interaction: 1, group: 1, report: 0, nearby: 0, system: 0 }, private_chat_unread_count: 2, group_chat_unread_count: 1, total_badge: 6 },
   }))),
 
   // ── Notify ─────────────────────────────────────
   // All notify endpoints are auth-required.
   http.post(`${API}/notify/fetch`, () => requireMockAuth() ?? json(paginated(mockNotifies))),
-  http.post(`${API}/notify/unread_summary`, () => requireMockAuth() ?? json(apiOk({ total: 3, by_type: { social: 1, interaction: 1, group: 1, report: 0, system: 0 } }))),
+  http.post(`${API}/notify/unread_summary`, () => requireMockAuth() ?? json(apiOk({ total: 3, by_type: { social: 1, interaction: 1, group: 1, report: 0, nearby: 0, system: 0 } }))),
   http.post(`${API}/notify/mark_read`, () => requireMockAuth() ?? json(apiOk(null))),
 
   // ── Map ────────────────────────────────────────
-  // map/canvas is auth-optional (anonymous sees public hotspots).
-  // 响应结构对齐当前后端实现（backend-go/internal/modules/map）：
-  // `{ hotspots?: { items } }` 无 mode 字段；location 为 GeoPoint + distance_meters。
-  // data_type 单值筛选：'user' | 'group' | 'moment'；缺省/'all' 返回全部混合。
+  // map/canvas 仅 public 版（spec api_spec_public.md）：响应为 tagged union
+  // `{ mode: 'heatmap' | 'hotspots' | 'empty', ... }`，hotspots 模式携带
+  // PaginatedData（next_cursor 恒在）。mock 数据量小，恒返回 hotspots 明细模式。
+  // data_type 单值筛选：'user' | 'group' | 'moment'；缺省返回全部混合。
   http.post(`${PUBLIC_API}/map/canvas`, async ({ request }) => {
     let dataType: string | undefined;
     try {
@@ -496,16 +506,17 @@ export const handlers = [
           : dataType === "moment"
             ? mockMomentHotspots
             : [...mockUserHotspots, ...mockGroupHotspots, ...mockMomentHotspots];
-    return json(apiOk({ hotspots: { items: pool } }));
+    return json(apiOk({ mode: "hotspots", hotspots: { items: pool, next_cursor: null } }));
   }),
 
   // ── Reports ────────────────────────────────────
-  http.post(`${API}/reports/create`, () => requireMockAuth() ?? json(apiOk({ report_id: "report_1" }))),
+  // spec ReportCreated：is_duplicate 恒在（true = 幂等回放已有举报单）
+  http.post(`${API}/reports/create`, () => requireMockAuth() ?? json(apiOk({ report_id: "report_1", is_duplicate: false }))),
   // ── Public 双版本端点（/public/v1）────────────────
   // 匿名浏览时 client 会切到 public 前缀；这里为常用只读端点提供 mock。
-  http.post(`${PUBLIC_API}/users/search`, () =>
-    json(paginated(mockUsers.map((u) => ({ user: u, tags: [], presence_status: "offline" }))))
-  ),
+  // spec: public users/search 返回 PublicUserItem（同 UserItem 去 relation/social_context，
+  // 隐私受控字段恒在 nullable）；mockUsers 是扁平 UserInfo，统一经 mockUserItem 包装
+  http.post(`${PUBLIC_API}/users/search`, () => json(paginated(mockUsers.map(mockUserItem)))),
   http.post(`${PUBLIC_API}/users/open_the_door`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as { user_id?: string; include_recent_moments?: boolean };
     const idx = Math.max(0, mockUsers.findIndex((u) => u.user_id === body?.user_id));
@@ -517,14 +528,14 @@ export const handlers = [
         bio: `这是 ${u.nickname} 的简介`,
         tags: ['摄影', '户外'],
         presence_status: 'online',
-        location: { point: { latitude: 34.26, longitude: 117.18 }, location_name: '徐州', distance: '0.3km' },
+        location: relativeLocation({ latitude: 34.26, longitude: 117.18 }, '徐州', 300, 45),
         stats: { moments_count: userMoments.length || 24, friends_count: 18, followers_count: 89, following_count: 42, groups_count: 5 },
         relation: null,
         social_context: null,
       }
     };
     if (body.include_recent_moments) {
-      profile.recent_moments = { items: userMoments.length ? userMoments : mockMoments.slice(idx * 2, idx * 2 + 4) };
+      profile.recent_moments = { items: userMoments.length ? userMoments : mockMoments.slice(idx * 2, idx * 2 + 4), next_cursor: null };
     }
     return json(apiOk(profile));
   }),
@@ -534,6 +545,7 @@ export const handlers = [
   http.post(`${PUBLIC_API}/users/fetch_moments`, () => json(paginated(mockMoments.slice(0, 12)))),
   http.post(`${PUBLIC_API}/users/fetch_reacted_moments`, () => json(paginated(mockMoments.slice(6, 18)))),
   http.post(`${PUBLIC_API}/moments/search`, () => json(paginated(mockMoments.slice(0, 12)))),
+  http.post(`${PUBLIC_API}/moments/fetch_nearby`, () => json(paginated(mockMoments.slice(0, 12)))),
   http.post(`${PUBLIC_API}/moments/open_the_door`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as { moment_id?: string };
     const found = mockMoments.find((m) => m.moment_id === body?.moment_id);
@@ -554,23 +566,28 @@ export const handlers = [
     return json(apiOk({ ...(found ?? mockGroups[0]), viewer_state: null }));
   }),
   http.post(`${PUBLIC_API}/groups/members/fetch`, () => json(paginated(mockUsers.slice(0, 4).map(u => ({ user: u, role: "member", joined_at: "2026-01-01T00:00:00Z" }))))),
-  http.post(`${PUBLIC_API}/feed/nearby_groups`, () => json(paginated(mockGroups))),
-  http.post(`${PUBLIC_API}/feed/nearby_users`, () => json(paginated(mockNearbyUsers))),
-  http.post(`${PUBLIC_API}/feed/trending`, () => json(apiOk(mockTrending))),
-  http.post(`${PUBLIC_API}/search/suggest`, () => json(apiOk({
-    items: [
-      { type: "user", payload: mockUsers[0] },
-      { type: "group", payload: mockGroups[0].group },
-    ],
-  }))),
+  http.post(`${PUBLIC_API}/search/suggest`, () => {
+    // spec api_spec_public.md → PublicSearchSuggestItem：payload 为匿名对偶类型——
+    // user → PublicUserItem（user 嵌套）；group → PublicGroupItem（group 嵌套，
+    // 无 viewer_state/friends_in_group 查看者字段）；tag → TagItem。
+    const { viewer_state: _viewerState, ...publicGroup } = mockGroups[0];
+    return json(apiOk({
+      items: [
+        { type: "tag", payload: { name: "植物园", usage_count: 42 } },
+        { type: "user", payload: mockUserItem(mockUsers[0]) },
+        { type: "group", payload: publicGroup },
+      ],
+    }));
+  }),
   http.post(`${PUBLIC_API}/system/bootstrap`, () => json(apiOk({
     bootstrap_version: "mock-v1",
     meta: { version: "v1", status: "active", deprecated_at: null, sunset_at: null, message: null, recommended_version: null },
+    // ClientConfig 四个子对象恒在（spec api_spec_system.md）：limits/contact/defaults 必填
     client_config: {
       features: { enable_public_registration: true, enable_guest_register: true, enable_moments: true, enable_nearby_people: true },
-      limits: {},
-      contact: {},
-      defaults: {},
+      limits: { max_group_members: 200, max_moment_tags: 5, max_moment_images: 9, moment_description_max_length: 500, comment_max_length: 200, search_radius_max: 50000, max_chat_files: 9, message_recall_window_seconds: 300, stranger_message_daily_quota: 10, reaction_emojis: ["👍", "❤️", "🔥", "😂", "😮", "😢", "🙏"], group_invite_ttl_hours: 72, group_application_ttl_hours: 72 },
+      contact: { support_email: "support@hotspot.app", privacy_policy_url: "", terms_of_service_url: "", official_website_url: "" },
+      defaults: { default_location: { point: { latitude: 34.2604, longitude: 117.1855 }, location_name: "徐州" }, default_user_avatar_url: "", default_group_avatar_url: "" },
     },
     unread_summary: { notify_total: 0, notify_by_type: { social: 0, interaction: 0, group: 0, report: 0, nearby: 0, system: 0 }, private_chat_unread_count: 0, group_chat_unread_count: 0, total_badge: 0 },
   }))),
