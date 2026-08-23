@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Users } from '@lucide/svelte';
+	import { MapPin, Users } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
@@ -132,6 +132,9 @@
 			contentClassName="pt-4 pb-0"
 			onBack={() => history.back()}
 		>
+			{#snippet subtitleIcon()}
+				<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />
+			{/snippet}
 			{#snippet trailing()}
 				<!-- 计数统一在标题右侧（对齐附近群组样板） -->
 				<span class="text-text-secondary text-xs">{list.length} 人</span>

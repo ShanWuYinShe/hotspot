@@ -137,7 +137,7 @@
 	>
 	{#snippet header()}
 		<!-- ═══ 首页 — 统一 PageHeader（三端同标题；附近内容拆分到 /nearby 聚合页）═══ -->
-		<PageHeader title="首页" titleSize={device === 'desktop' ? 20 : 24} subtitle="发现周边有趣的人和事" sticky>
+		<PageHeader title="首页" titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22} subtitle="发现周边有趣的人和事" sticky>
 			{#snippet trailing()}
 				<div class="flex items-center gap-2">
 					{#if onlineCount > 0}

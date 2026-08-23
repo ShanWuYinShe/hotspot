@@ -259,7 +259,7 @@
 							<span class="text-sm font-medium text-text-primary">显示类型</span>
 							<span class="text-xxs text-text-secondary">{activeFilters.size}/3 已选</span>
 						</div>
-						<div class="p-1.5">
+						<div class="flex flex-col gap-1 p-1.5">
 							{#each [
 								['user', '用户'],
 								['group', '群组'],

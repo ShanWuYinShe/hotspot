@@ -202,7 +202,7 @@
 						<span class="text-sm font-medium text-text-primary">显示类型</span>
 						<span class="text-xxs text-text-secondary">{activeFilters.size}/3 已选</span>
 					</div>
-					<div class="p-1.5">
+					<div class="flex flex-col gap-1 p-1.5">
 						{#each [{ type: 'user', label: '用户', count: userCount }, { type: 'group', label: '群组', count: groupCount }, { type: 'moment', label: '瞬间', count: momentCount }] as item}
 							{@const active = activeFilters.has(item.type as PinType)}
 							<button

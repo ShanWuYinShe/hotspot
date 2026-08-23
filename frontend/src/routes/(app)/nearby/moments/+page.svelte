@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Sparkles } from '@lucide/svelte';
+	import { MapPin, Sparkles } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { platform } from '@/stores/platform.svelte';
@@ -28,11 +28,13 @@
 	let tags = $state<string[]>([]);
 	let loading = $state(true);
 	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
+	let locationName = $state('');
 	let loadError = $state<string | null>(null);
 	let reloadKey = $state(0);
 
 	$effect(() => startDefaultLocation((loc) => {
 referencePoint = loc?.point ?? null;
+locationName = loc?.location_name ?? '';
 }));
 
 	$effect(() => {
@@ -146,11 +148,15 @@ referencePoint = loc?.point ?? null;
 {#snippet feedHeader()}
 	<PageHeader
 		title="附近动态"
+		subtitle={locationName ? `${locationName} · 5km 内` : '5km 内'}
 		sticky
 		titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}
 		contentClassName="pt-4 pb-0"
 		onBack={() => history.back()}
 	>
+		{#snippet subtitleIcon()}
+			<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />
+		{/snippet}
 		{#snippet trailing()}
 			{#if device === 'tablet'}
 				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-default shadow-glow-sm" >
