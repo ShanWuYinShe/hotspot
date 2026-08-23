@@ -489,8 +489,8 @@ export struct ChatPage {
     try {
       await LoadingUtil.withMinimumTime(async () => {
         let items: (PrivateMessageItem | GroupMessageItem)[] = [];
-        let nextCursor: string | undefined;
-        
+        let nextCursor: string | null = null;
+
         if (this.chatType === 'private_chat') {
           const targetUserId = this.targetId;
           if (!targetUserId) {
@@ -499,14 +499,14 @@ export struct ChatPage {
           const response = await ApiClient.privateChatOpenTheDoor({ target_user_id: targetUserId });
           if (response.code === 0 && response.data) {
             items = response.data.recent_messages?.items ?? [];
-            nextCursor = response.data.recent_messages?.next_cursor;
+            nextCursor = response.data.recent_messages?.next_cursor ?? null;
           }
         } else {
           const request: FetchGroupMessagesRequest = { group_id: this.chatId, pagination: { limit: 20 } };
           const response = await ApiClient.getGroupMessages(request);
           if (response.code === 0) {
             items = response.data?.items ?? [];
-            nextCursor = response.data?.next_cursor;
+            nextCursor = response.data?.next_cursor ?? null;
           }
 
           // 获取群组详情中的 viewer_state，填充服务端禁言状态
@@ -546,7 +546,7 @@ export struct ChatPage {
     this.isLoadingMoreHistory = true;
     try {
       let items: (PrivateMessageItem | GroupMessageItem)[] = [];
-      let nextCursor: string | undefined;
+      let nextCursor: string | null = null;
 
       if (this.chatType === 'private_chat') {
         const targetUserId = this.targetId;
@@ -558,7 +558,7 @@ export struct ChatPage {
         const response = await ApiClient.getPrivateMessages(request);
         if (response.code === 0) {
           items = response.data?.items ?? [];
-          nextCursor = response.data?.next_cursor;
+          nextCursor = response.data?.next_cursor ?? null;
         }
       } else {
         const request: FetchGroupMessagesRequest = {
@@ -568,7 +568,7 @@ export struct ChatPage {
         const response = await ApiClient.getGroupMessages(request);
         if (response.code === 0) {
           items = response.data?.items ?? [];
-          nextCursor = response.data?.next_cursor;
+          nextCursor = response.data?.next_cursor ?? null;
         }
       }
 
@@ -576,7 +576,8 @@ export struct ChatPage {
       const mergedMessages = this.dedupeMessages(olderMessages.concat(this.messages));
       this.messages = mergedMessages;
       this.messagesDataSource.setData(mergedMessages);
-      this.hasMoreHistory = nextCursor !== undefined && nextCursor !== '';
+      // spec：next_cursor 为 null 表示没有更多数据
+      this.hasMoreHistory = !!(nextCursor);
       this.historyNextCursor = nextCursor ?? '';
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载更早消息失败: ${error}`);

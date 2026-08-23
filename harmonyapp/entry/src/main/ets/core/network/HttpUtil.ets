@@ -77,11 +77,12 @@ const TOKEN_OPTIONAL_ENDPOINTS: string[] = [
   ApiEndpoints.GROUP.ANNOUNCEMENTS.LIST,
   ApiEndpoints.MOMENT.SEARCH,
   ApiEndpoints.MOMENT.GET_DETAIL,
+  // 双版本端点：匿名版 /public/v1/moments/fetch_nearby 为拉新路径（spec moment.md/public.md）
+  ApiEndpoints.MOMENT.FETCH_NEARBY,
   ApiEndpoints.REACTIONS.LIST,
   ApiEndpoints.COMMENT.LIST,
   ApiEndpoints.COMMENT.LIST_REPLIES,
   ApiEndpoints.SHARE.GET,
-  ApiEndpoints.FEED.TRENDING,
   ApiEndpoints.MAP.CANVAS,
 ];
 

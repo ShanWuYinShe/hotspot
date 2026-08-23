@@ -138,13 +138,13 @@ export struct LoginPromptView {
           .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
           .fontColor(this.getPalette().textPrimary)
 
-        Text('无需注册，输入昵称即可快速体验')
+        Text('无需注册，输入昵称即可快速体验；留空将自动生成昵称')
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor(this.getPalette().textSecondary)
 
         SystemInput({
           value: this.quickNickname,
-          placeholder: '请输入你的昵称',
+          placeholder: '昵称（可选）',
           fontSize: DesignConstants.FONT.SIZE.LG,
           disabled: this.isQuickStarting,
           onChange: (value: string) => { this.quickNickname = value; },
@@ -199,15 +199,20 @@ export struct LoginPromptView {
   }
 
   private async startQuickExperience(): Promise<void> {
+    // 昵称可选：留空提交 null，服务端自动生成默认昵称（spec auth.md → guest）
     const nickname = this.quickNickname.trim();
-    if (!nickname) {
-      SystemToast.showWarning('请输入昵称', this.getUIContext());
+    if (nickname.length > 30) {
+      SystemToast.showWarning('昵称最多 30 个字符', this.getUIContext());
       return;
     }
 
     this.isQuickStarting = true;
     try {
-      const request: GuestRequest = { nickname, client_type: 'app', device_id: DeviceIdUtil.getDeviceId() };
+      const request: GuestRequest = {
+        nickname: nickname.length > 0 ? nickname : null,
+        client_type: 'app',
+        device_id: DeviceIdUtil.getDeviceId()
+      };
       const response = await ApiClient.createTempUser(request);
 
       if (response.code === 0 && response.data) {

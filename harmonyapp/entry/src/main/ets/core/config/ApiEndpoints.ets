@@ -8,6 +8,7 @@
 class AuthEndpoints {
   readonly LOGIN: string = '/public/v1/auth/signin';
   readonly REGISTER: string = '/public/v1/auth/register';
+  readonly SEND_REGISTER_CODE: string = '/public/v1/auth/send_register_code';
   readonly LOGOUT: string = '/api/v1/auth/signout';
   readonly GUEST: string = '/public/v1/auth/guest';
   readonly REFRESH_TOKEN: string = '/public/v1/auth/refresh_token';
@@ -24,7 +25,6 @@ class AuthEndpoints {
 class UserEndpoints {
   readonly SEARCH: string = '/api/v1/users/search';
   readonly GET_DETAIL: string = '/api/v1/users/open_the_door';
-  readonly BATCH_GET: string = '/api/v1/users/batch_fetch';
   readonly LIST_FRIENDS: string = '/api/v1/users/fetch_friends';
   readonly LIST_FOLLOWING: string = '/api/v1/users/fetch_following';
   readonly LIST_FOLLOWERS: string = '/api/v1/users/fetch_followers';
@@ -102,6 +102,8 @@ class MomentEndpoints {
   readonly UPDATE: string = '/api/v1/moments/update';
   readonly DELETE: string = '/api/v1/moments/delete';
   readonly LIST_CREATED: string = '/api/v1/moments/fetch_created';
+  readonly FETCH_FOLLOWING: string = '/api/v1/moments/fetch_following';
+  readonly FETCH_NEARBY: string = '/api/v1/moments/fetch_nearby';
   readonly FAVORITE: string = '/api/v1/moments/set_favorite';
   readonly LIST_FAVORITES: string = '/api/v1/moments/fetch_favorites';
 }
@@ -154,15 +156,6 @@ class ChatEndpoints {
 // Search
 class SearchEndpoints {
   readonly SUGGEST: string = '/api/v1/search/suggest';
-}
-
-// Feed
-class FeedEndpoints {
-  readonly FOLLOWING: string = '/api/v1/feed/following';
-  readonly NEARBY: string = '/api/v1/feed/nearby_moments';
-  readonly NEARBY_USERS: string = '/api/v1/feed/nearby_users';
-  readonly NEARBY_GROUPS: string = '/api/v1/feed/nearby_groups';
-  readonly TRENDING: string = '/api/v1/feed/trending';
 }
 
 // Upload
@@ -227,7 +220,6 @@ export class ApiEndpoints {
   static readonly REACTIONS: ReactionsEndpoints = new ReactionsEndpoints();
   static readonly CHAT: ChatEndpoints = new ChatEndpoints();
   static readonly SEARCH: SearchEndpoints = new SearchEndpoints();
-  static readonly FEED: FeedEndpoints = new FeedEndpoints();
   static readonly UPLOAD: UploadEndpoints = new UploadEndpoints();
   static readonly SYSTEM: SystemEndpoints = new SystemEndpoints();
   static readonly MAP: MapEndpoints = new MapEndpoints();

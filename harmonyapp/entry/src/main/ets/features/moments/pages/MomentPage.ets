@@ -10,7 +10,7 @@ import { InteractionStateStore } from '../../../core/state/InteractionStateStore
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
-import { MomentItem, NearbyMomentsRequest } from '../../../core/types/api';
+import { MomentItem, FetchNearbyMomentsRequest } from '../../../core/types/api';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemPageHeader, PageHeaderAction } from '../../../components/SystemPageHeader';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
@@ -98,8 +98,8 @@ export struct MomentPage {
     this.errorMessage = '';
 
     try {
-      // spec moment.md → moments/search 收口：附近瞬间走 feed/nearby
-      const request: NearbyMomentsRequest = {
+      // spec moment.md → 附近瞬间走 moments/fetch_nearby（原 feed/nearby 迁移）
+      const request: FetchNearbyMomentsRequest = {
         reference_point: {
           latitude: refLoc.latitude,
           longitude: refLoc.longitude
@@ -107,7 +107,7 @@ export struct MomentPage {
         radius: DefaultConfig.MOMENT_RADIUS,
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE }
       };
-      const response = await LoadingUtil.withMinimumTime(() => ApiClient.getFeedNearby(request));
+      const response = await LoadingUtil.withMinimumTime(() => ApiClient.fetchNearbyMoments(request));
       if (this.isDestroyed) return;
 
       if (response.code === 0) {
@@ -141,8 +141,8 @@ export struct MomentPage {
     if (this.isLoadingMore || !this.hasMore || !refLoc) return;
     this.isLoadingMore = true;
     try {
-      // spec moment.md → moments/search 收口：附近瞬间走 feed/nearby
-      const request: NearbyMomentsRequest = {
+      // spec moment.md → 附近瞬间走 moments/fetch_nearby（原 feed/nearby 迁移）
+      const request: FetchNearbyMomentsRequest = {
         reference_point: {
           latitude: refLoc.latitude,
           longitude: refLoc.longitude
@@ -150,7 +150,7 @@ export struct MomentPage {
         radius: DefaultConfig.MOMENT_RADIUS,
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.nextCursor }
       };
-      const response = await ApiClient.getFeedNearby(request);
+      const response = await ApiClient.fetchNearbyMoments(request);
       if (this.isDestroyed) return;
       if (response.code === 0) {
         const items = response.data?.items ?? [];

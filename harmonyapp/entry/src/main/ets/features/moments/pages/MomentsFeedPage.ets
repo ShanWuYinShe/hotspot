@@ -16,7 +16,7 @@ import { InteractionStateStore, UserRelationState } from '../../../core/state/In
 import {
   UserItem, GroupItem, MomentItem,
   SearchUsersRequest, SearchGroupsRequest, CreateReportRequest, Relationship, GeoPoint, PaginationParams,
-  FollowingRequest, NearbyMomentsRequest
+  SearchMomentsRequest, FetchFollowingMomentsRequest, FetchNearbyMomentsRequest
 } from '../../../core/types/api';
 import { curves } from '@kit.ArkUI';
 import { LocationUtil } from '../../../core/location/LocationUtil';
@@ -123,11 +123,11 @@ export struct MomentsFeedPage {
     const pagination: PaginationParams = { limit: 20 };
 
     if (source === 'following') {
-      const request: FollowingRequest = {
+      const request: FetchFollowingMomentsRequest = {
         reference_point: refPoint,
         pagination: pagination
       };
-      const response = await LoadingUtil.withMinimumTime(() => ApiClient.getFeedFollowing(request));
+      const response = await LoadingUtil.withMinimumTime(() => ApiClient.fetchFollowingMoments(request));
       if (this.isDestroyed) return;
       if (response.code === 0) {
         this.hotMoments = response.data?.items ?? [];
@@ -140,12 +140,12 @@ export struct MomentsFeedPage {
         this.errorMessage = response.message ?? '加载失败';
       }
     } else {
-      const request: NearbyMomentsRequest = {
+      const request: FetchNearbyMomentsRequest = {
         reference_point: refPoint,
         radius: DefaultConfig.NEARBY_RADIUS,
         pagination: pagination
       };
-      const response = await LoadingUtil.withMinimumTime(() => ApiClient.getFeedNearby(request));
+      const response = await LoadingUtil.withMinimumTime(() => ApiClient.fetchNearbyMoments(request));
       if (this.isDestroyed) return;
       if (response.code === 0) {
         this.hotMoments = response.data?.items ?? [];
@@ -180,7 +180,9 @@ export struct MomentsFeedPage {
       }
       // 热门内容不依赖位置，推荐用户需要位置
       const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
-      const trendingPromise = ApiClient.getFeedTrending({});
+      // spec：热门模式走 moments/search 的 sort_by='popular'（原 feed/trending 收口）
+      const trendingRequest: SearchMomentsRequest = { sort_by: 'popular', pagination: { limit: 20 } };
+      const trendingPromise = ApiClient.searchMoments(trendingRequest);
 
       if (refLoc) {
         const usersRequest: SearchUsersRequest = {
@@ -215,8 +217,7 @@ export struct MomentsFeedPage {
         }
         const trendingResponse = results[0];
         if (trendingResponse.code === 0) {
-          const bundle = trendingResponse.data;
-          this.hotMoments = bundle?.hot_moments ?? [];
+          this.hotMoments = trendingResponse.data?.items ?? [];
           this.hotMomentsDataSource.setData(this.hotMoments);
           this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         }
@@ -227,8 +228,7 @@ export struct MomentsFeedPage {
         const trendingResponse = await LoadingUtil.withMinimumTime(() => trendingPromise);
         if (this.isDestroyed) return;
         if (trendingResponse.code === 0) {
-          const bundle = trendingResponse.data;
-          this.hotMoments = bundle?.hot_moments ?? [];
+          this.hotMoments = trendingResponse.data?.items ?? [];
           this.hotMomentsDataSource.setData(this.hotMoments);
           this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         } else if (!this.hasAnyData()) {

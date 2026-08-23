@@ -18,7 +18,7 @@ import { SystemButton } from '../../../components/SystemButton';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { SystemToast } from '../../../components/SystemToast';
 import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
-import { AuthData, AccountInfo, LoginRequest, RegisterRequest, GuestRequest } from '../../../core/types/api';
+import { AuthData, AccountInfo, LoginRequest, RegisterRequest, SendRegisterCodeRequest, GuestRequest } from '../../../core/types/api';
 import { DeviceIdUtil } from '../../../core/util/DeviceIdUtil';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
@@ -44,6 +44,10 @@ const NICKNAME_RULES: FieldRule[] = [
   { required: true, requiredMessage: '请输入昵称' },
   { maxLength: 30, maxLengthMessage: '昵称最多 30 个字符' }
 ];
+// 访客昵称可选（null 时服务端自动生成），仅限长度校验
+const GUEST_NICKNAME_RULES: FieldRule[] = [
+  { maxLength: 30, maxLengthMessage: '昵称最多 30 个字符' }
+];
 
 const DOMAIN_NUMBER: number = 0xFF02;
 const TAG: string = 'LoginPage';
@@ -65,11 +69,14 @@ export struct LoginPage {
   @State registerLoginId: string = '';
   @State registerPassword: string = '';
   @State registerPasswordConfirm: string = '';
+  @State registerVerificationCode: string = '';
   @State guestNickname: string = '';
   @State isLoading: boolean = false;
   @State loadingStage: string = '';
   @State loadingProgress: number = 0;
   @State loginMode: 'login' | 'register' | 'guest' = 'login';
+  @State isSendingRegisterCode: boolean = false;
+  @State registerCodeCountdown: number = 0;
   @State redirectUrl: string = '';
   @State redirectAction: string = '';
   @State restoreAction: string = '';
@@ -85,6 +92,7 @@ export struct LoginPage {
   @State registerLoginIdFocused: boolean = false;
   @State registerPasswordFocused: boolean = false;
   @State registerPasswordConfirmFocused: boolean = false;
+  @State registerVerificationCodeFocused: boolean = false;
   @State guestNicknameFocused: boolean = false;
   @State loginIdTouched: boolean = false;
   @State passwordTouched: boolean = false;
@@ -92,11 +100,13 @@ export struct LoginPage {
   @State registerLoginIdTouched: boolean = false;
   @State registerPasswordTouched: boolean = false;
   @State registerPasswordConfirmTouched: boolean = false;
+  @State registerVerificationCodeTouched: boolean = false;
   @State guestNicknameTouched: boolean = false;
 
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
   private isDestroyed: boolean = false;
+  private registerCodeTimerId: number = -1;
 
   private isValidLoginId(loginId: string): boolean {
     const trimmed = loginId.trim();
@@ -106,6 +116,24 @@ export struct LoginPage {
   private isValidNickname(nickname: string): boolean {
     const trimmed = nickname.trim();
     return trimmed.length >= 1 && trimmed.length <= 30;
+  }
+
+  /** 访客昵称可选：留空合法（提交 null，服务端自动生成），非空时限 30 字符 */
+  private isValidOptionalNickname(nickname: string): boolean {
+    const trimmed = nickname.trim();
+    return trimmed.length === 0 || trimmed.length <= 30;
+  }
+
+  /**
+   * 手机号（纯数字）或邮箱（含 '@'）型 login_id 需验证码（spec public.md →
+   * auth/register 所有权验证；用户名型 verification_code 必须不传）
+   */
+  private isPhoneOrEmailLoginId(loginId: string): boolean {
+    const trimmed = loginId.trim();
+    if (trimmed.includes('@')) {
+      return true;
+    }
+    return trimmed.length > 0 && /^[0-9]+$/.test(trimmed);
   }
 
   private hasLetterAndDigit(value: string): boolean {
@@ -140,6 +168,7 @@ export struct LoginPage {
 
   aboutToDisappear(): void {
     this.isDestroyed = true;
+    this.stopRegisterCodeCountdown();
   }
 
   private getCurrentThemePalette() {
@@ -216,8 +245,23 @@ export struct LoginPage {
     ]);
   }
 
+  private needsRegisterVerificationCode(): boolean {
+    return this.isPhoneOrEmailLoginId(this.registerLoginId);
+  }
+
+  private getRegisterVerificationCodeError(): string | undefined {
+    if (!this.needsRegisterVerificationCode()) {
+      return undefined;
+    }
+    return this.registerVerificationCodeTouched
+      ? validateField(this.registerVerificationCode, [
+          { required: true, requiredMessage: '请输入验证码' }
+        ])
+      : undefined;
+  }
+
   private getGuestNicknameError(): string | undefined {
-    return this.guestNicknameTouched ? validateField(this.guestNickname, NICKNAME_RULES) : undefined;
+    return this.guestNicknameTouched ? validateField(this.guestNickname, GUEST_NICKNAME_RULES) : undefined;
   }
 
   build() {
@@ -314,6 +358,7 @@ export struct LoginPage {
                   this.registerLoginId = '';
                   this.registerPassword = '';
                   this.registerPasswordConfirm = '';
+                  this.resetRegisterCodeState();
                 } else if (mode === 'register') {
                   this.loginMode = 'register';
                   this.loginId = '';
@@ -326,6 +371,7 @@ export struct LoginPage {
                   this.registerLoginId = '';
                   this.registerPassword = '';
                   this.registerPasswordConfirm = '';
+                  this.resetRegisterCodeState();
                 }
               }
             }
@@ -540,6 +586,48 @@ export struct LoginPage {
           .padding({ left: DesignConstants.SPACING.MD })
       }
 
+      // 手机号/邮箱型 login_id 需验证码（所有权验证）；用户名型不显示
+      if (this.needsRegisterVerificationCode()) {
+        Row({ space: DesignConstants.SPACING.SM }) {
+          SystemInput({
+            value: this.registerVerificationCode,
+            placeholder: '验证码',
+            inputType: 'number',
+            maxLength: 6,
+            fontSize: DesignConstants.FONT.SIZE.MD,
+            hasError: this.getRegisterVerificationCodeError() !== undefined,
+            onChange: (value: string) => { this.registerVerificationCode = value; },
+            onFocusChange: (focused: boolean) => {
+              this.registerVerificationCodeFocused = focused;
+              if (!focused) {
+                this.registerVerificationCodeTouched = true;
+                KeyboardDismissManager.getInstance().dismiss();
+              }
+            }
+          })
+            .layoutWeight(1)
+
+          SystemButton({
+            label: this.registerCodeCountdown > 0 ? `${this.registerCodeCountdown}s 后重发` : '发送验证码',
+            variant: 'secondary',
+            buttonSize: 'small',
+            loading: this.isSendingRegisterCode,
+            disabled: this.isSendingRegisterCode || this.registerCodeCountdown > 0,
+            onPress: () => { this.sendRegisterVerificationCode(); }
+          })
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+
+        if (this.getRegisterVerificationCodeError()) {
+          Text(this.getRegisterVerificationCodeError())
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(this.getCurrentThemePalette().error)
+            .width('100%')
+            .padding({ left: DesignConstants.SPACING.MD })
+        }
+      }
+
       SystemInput({
         value: this.registerPassword,
         placeholder: '密码（8-128位，含字母+数字）',
@@ -596,7 +684,8 @@ export struct LoginPage {
         disabled: !(this.isValidNickname(this.registerNickname)
           && this.isValidLoginId(this.registerLoginId)
           && this.isValidPassword(this.registerPassword)
-          && this.registerPasswordConfirm === this.registerPassword),
+          && this.registerPasswordConfirm === this.registerPassword
+          && (!this.needsRegisterVerificationCode() || this.registerVerificationCode.trim().length > 0)),
         onPress: () => { this.userRegister(); }
       })
 
@@ -617,7 +706,7 @@ export struct LoginPage {
   @Builder
   private buildGuestForm() {
     Column({ space: DesignConstants.SPACING.LG }) {
-      Text('访客模式可快速体验，部分功能受限。')
+      Text('访客模式可快速体验，部分功能受限。昵称可留空，系统将自动生成。')
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontColor(this.getCurrentThemePalette().textSecondary)
         .width('100%')
@@ -628,7 +717,7 @@ export struct LoginPage {
 
       SystemInput({
         value: this.guestNickname,
-        placeholder: '给自己起个名字',
+        placeholder: '昵称（可选）',
         fontSize: DesignConstants.FONT.SIZE.MD,
         hasError: this.getGuestNicknameError() !== undefined,
         onChange: (value: string) => { this.guestNickname = value; },
@@ -654,7 +743,7 @@ export struct LoginPage {
         variant: 'primary',
         buttonSize: 'large',
         fullWidth: true,
-        disabled: !this.isValidNickname(this.guestNickname),
+        disabled: !this.isValidOptionalNickname(this.guestNickname),
         onPress: () => { this.userGuestLogin(); }
       })
 
@@ -671,9 +760,10 @@ export struct LoginPage {
   }
 
   private async userGuestLogin() {
+    // 昵称可选：留空提交 null，服务端自动生成默认昵称（spec auth.md → guest）
     const nickname = this.guestNickname.trim();
-    if (!this.isValidNickname(nickname)) {
-      SystemToast.showWarning('请输入有效昵称', this.getUIContext());
+    if (!this.isValidOptionalNickname(nickname)) {
+      SystemToast.showWarning('昵称最多 30 个字符', this.getUIContext());
       return;
     }
 
@@ -685,7 +775,11 @@ export struct LoginPage {
         this.loadingStage = '正在创建访客身份...';
         this.loadingProgress = 40;
 
-        const request: GuestRequest = { nickname, client_type: 'app', device_id: DeviceIdUtil.getDeviceId() };
+        const request: GuestRequest = {
+          nickname: nickname.length > 0 ? nickname : null,
+          client_type: 'app',
+          device_id: DeviceIdUtil.getDeviceId()
+        };
         const response = await ApiClient.createTempUser(request);
         if (response.code === 0 && response.data) {
           this.loadingStage = '创建成功，正在初始化...';
@@ -756,6 +850,60 @@ export struct LoginPage {
     }
   }
 
+  // ==================== 注册验证码 ====================
+
+  private resetRegisterCodeState(): void {
+    this.registerVerificationCode = '';
+    this.registerVerificationCodeTouched = false;
+    this.stopRegisterCodeCountdown();
+  }
+
+  private stopRegisterCodeCountdown(): void {
+    if (this.registerCodeTimerId >= 0) {
+      clearInterval(this.registerCodeTimerId);
+      this.registerCodeTimerId = -1;
+    }
+    this.registerCodeCountdown = 0;
+  }
+
+  private startRegisterCodeCountdown(): void {
+    this.stopRegisterCodeCountdown();
+    this.registerCodeCountdown = 60;
+    this.registerCodeTimerId = setInterval(() => {
+      if (this.registerCodeCountdown <= 1) {
+        this.stopRegisterCodeCountdown();
+        return;
+      }
+      this.registerCodeCountdown -= 1;
+    }, 1000);
+  }
+
+  private async sendRegisterVerificationCode(): Promise<void> {
+    const trimmedLoginId = this.registerLoginId.trim();
+    if (!this.isValidLoginId(trimmedLoginId)) {
+      SystemToast.showWarning('请输入有效的手机号或邮箱', this.getUIContext());
+      return;
+    }
+    if (this.isSendingRegisterCode || this.registerCodeCountdown > 0) {
+      return;
+    }
+    this.isSendingRegisterCode = true;
+    try {
+      const request: SendRegisterCodeRequest = { login_id: trimmedLoginId, client_type: 'app' };
+      const response = await ApiClient.sendRegisterCode(request);
+      if (response.code === 0) {
+        SystemToast.showSuccess('验证码已发送', this.getUIContext());
+        this.startRegisterCodeCountdown();
+      } else {
+        SystemToast.showError(getErrorMessage(response, '验证码发送失败'), this.getUIContext());
+      }
+    } catch (error) {
+      SystemToast.showError(error instanceof Error ? error.message : '验证码发送失败', this.getUIContext());
+    } finally {
+      this.isSendingRegisterCode = false;
+    }
+  }
+
   private async userRegister() {
     const trimmedNickname = this.registerNickname.trim();
     const trimmedLoginId = this.registerLoginId.trim();
@@ -783,6 +931,14 @@ export struct LoginPage {
       SystemToast.showWarning('两次输入的密码不一致', this.getUIContext());
       return;
     }
+    // 手机号/邮箱型 login_id 必须携带验证码（所有权验证）；用户名型不传
+    const needsCode = this.isPhoneOrEmailLoginId(trimmedLoginId);
+    const trimmedCode = this.registerVerificationCode.trim();
+    if (needsCode && !trimmedCode) {
+      this.registerVerificationCodeTouched = true;
+      SystemToast.showWarning('请输入验证码', this.getUIContext());
+      return;
+    }
 
     this.isLoading = true;
     this.loadingProgress = 0;
@@ -795,6 +951,7 @@ export struct LoginPage {
         const registerRequest: RegisterRequest = {
           nickname: trimmedNickname,
           login_id: trimmedLoginId,
+          verification_code: needsCode ? trimmedCode : null,
           password: this.registerPassword,
           client_type: 'app',
           device_id: DeviceIdUtil.getDeviceId()

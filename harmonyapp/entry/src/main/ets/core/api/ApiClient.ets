@@ -24,6 +24,7 @@ import {
   // 认证相关
   AuthData,
   RegisterRequest,
+  SendRegisterCodeRequest,
   LoginRequest,
   GuestRequest,
   RefreshTokenRequest,
@@ -72,6 +73,8 @@ import {
   FavoriteMomentRequest,
   ReactionItem,
   FetchCreatedMomentsRequest,
+  FetchFollowingMomentsRequest,
+  FetchNearbyMomentsRequest,
   FetchFavoritesRequest,
 
   // 评论
@@ -159,14 +162,6 @@ import {
   ReportCreated,
   ReportItem,
   FetchReportsRequest,
-
-  // 信息流
-  FollowingRequest,
-  NearbyMomentsRequest,
-  NearbyGroupsRequest,
-  NearbyUsersRequest,
-  TrendingRequest,
-  TrendingBundle,
 
   TagItem,
 
@@ -389,6 +384,11 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<AuthData>, RegisterRequest>(ApiEndpoints.AUTH.REGISTER, params);
   }
 
+  // 注册验证码（手机号/邮箱所有权验证，spec public.md → auth/send_register_code）
+  static async sendRegisterCode(params: SendRegisterCodeRequest): Promise<ApiResponse<void>> {
+    return HttpUtil.post<ApiResponse<void>, SendRegisterCodeRequest>(ApiEndpoints.AUTH.SEND_REGISTER_CODE, params);
+  }
+
   static async login(params: LoginRequest): Promise<ApiResponse<AuthData>> {
     return HttpUtil.post<ApiResponse<AuthData>, LoginRequest>(ApiEndpoints.AUTH.LOGIN, params);
   }
@@ -574,6 +574,16 @@ export class ApiClient {
 
   static async getMyMoments(params: FetchCreatedMomentsRequest): Promise<ApiResponse<PaginatedData<MomentItem>>> {
     return HttpUtil.post<ApiResponse<PaginatedData<MomentItem>>, FetchCreatedMomentsRequest>(ApiEndpoints.MOMENT.LIST_CREATED, params);
+  }
+
+  // 关注动态（原 feed/following 迁移，spec moment.md → moments/fetch_following）
+  static async fetchFollowingMoments(params: FetchFollowingMomentsRequest): Promise<ApiResponse<PaginatedData<MomentItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<MomentItem>>, FetchFollowingMomentsRequest>(ApiEndpoints.MOMENT.FETCH_FOLLOWING, params);
+  }
+
+  // 附近瞬间发现流（原 feed/nearby_moments 迁移，spec moment.md → moments/fetch_nearby）
+  static async fetchNearbyMoments(params: FetchNearbyMomentsRequest): Promise<ApiResponse<PaginatedData<MomentItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<MomentItem>>, FetchNearbyMomentsRequest>(ApiEndpoints.MOMENT.FETCH_NEARBY, params);
   }
 
   static async getMyFavorites(params: FetchFavoritesRequest): Promise<ApiResponse<PaginatedData<MomentItem>>> {
@@ -823,28 +833,6 @@ export class ApiClient {
 
   static async getMyReports(params: FetchReportsRequest): Promise<ApiResponse<PaginatedData<ReportItem>>> {
     return HttpUtil.post<ApiResponse<PaginatedData<ReportItem>>, FetchReportsRequest>(ApiEndpoints.REPORT.LIST, params);
-  }
-
-  // ==================== 信息流 API ====================
-
-  static async getFeedFollowing(params: FollowingRequest): Promise<ApiResponse<PaginatedData<MomentItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<MomentItem>>, FollowingRequest>(ApiEndpoints.FEED.FOLLOWING, params);
-  }
-
-  static async getFeedNearby(params: NearbyMomentsRequest): Promise<ApiResponse<PaginatedData<MomentItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<MomentItem>>, NearbyMomentsRequest>(ApiEndpoints.FEED.NEARBY, params);
-  }
-
-  static async getFeedNearbyGroups(params: NearbyGroupsRequest): Promise<ApiResponse<PaginatedData<GroupItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<GroupItem>>, NearbyGroupsRequest>(ApiEndpoints.FEED.NEARBY_GROUPS, params);
-  }
-
-  static async getFeedNearbyUsers(params: NearbyUsersRequest): Promise<ApiResponse<PaginatedData<UserItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<UserItem>>, NearbyUsersRequest>(ApiEndpoints.FEED.NEARBY_USERS, params);
-  }
-
-  static async getFeedTrending(params: TrendingRequest): Promise<ApiResponse<TrendingBundle>> {
-    return HttpUtil.post<ApiResponse<TrendingBundle>, TrendingRequest>(ApiEndpoints.FEED.TRENDING, params);
   }
 
   // ==================== 搜索 API ====================

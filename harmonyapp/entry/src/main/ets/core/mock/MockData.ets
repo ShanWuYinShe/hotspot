@@ -12,7 +12,7 @@ import {
   MomentItem, CommentItem, GroupItem, GroupInfo, GroupViewerState, ReactionItem, Reaction,
   PrivateChatItem, PrivateMessageItem, MessageSentResult,
   AuthData, SessionStatus,
-  TrendingBundle, TagItem,
+  TagItem,
   SearchSuggestResponse,
   ClientConfig, ApiVersionMeta,
   UnreadSummaryResult,
@@ -34,7 +34,8 @@ function apiError(code: number, message: string): ApiResponse<Object> {
   return { code: code, message: message };
 }
 
-function paginated<T extends Object>(items: T[], nextCursor?: string): ApiResponse<Object> {
+function paginated<T extends Object>(items: T[], nextCursor: string | null = null): ApiResponse<Object> {
+  // spec types.md：next_cursor 恒在，null = 没有更多数据
   const data: PaginatedData<T> = { items: items, next_cursor: nextCursor };
   return apiOk(data);
 }
@@ -131,11 +132,11 @@ const MOCK_AUTH_STATUS: SessionStatus = {
   expires_at: '2099-01-01T00:00:00.000Z'
 };
 
-const MOCK_AUTH_STATUS_INVALID: SessionStatus = { user_id: '', expires_at: '' };
-
+// spec auth.md：未登录/无效 Token 时 auth/session 返回 10100 错误信封，
+// 不存在「code=0 的空会话」形态——匿名态判定依据错误码而非空字段
 const MOCK_PROFILE_BUNDLE: UserProfileBundle = {
   user: MK_USER_ITEM,
-  recent_moments: { items: [] as MomentItem[], next_cursor: undefined }
+  recent_moments: { items: [] as MomentItem[], next_cursor: null }
 };
 
 const MOCK_COMMENT: CommentItem = {
@@ -221,7 +222,6 @@ const MOCK_BOOTSTRAP: MockBootstrapData = {
   client_config: MOCK_CLIENT_CONFIG
 };
 
-const MOCK_TRENDING: TrendingBundle = { hot_moments: [] as MomentItem[] };
 const MOCK_SUGGEST: SearchSuggestResponse = { items: [] };
 const MOCK_MAP_CANVAS: MapCanvasResponse = { mode: 'empty' };
 const MOCK_TAGS: TagItem[] = [{ name: '云龙湖', usage_count: 12 }];
@@ -257,9 +257,16 @@ export function getCannedResponse(url: string, loggedIn: boolean, scenario: stri
     if (scenario === 'rate-limit') return apiError(10500, '');
     return authOk();
   }
+  // 注册验证码（防枚举：无论 login_id 是否存在均成功，spec public.md）
+  if (url === '/public/v1/auth/send_register_code') {
+    if (scenario === 'param-error') return apiError(10000, '');
+    if (scenario === 'rate-limit') return apiError(10500, '');
+    return apiOkEmpty();
+  }
   if (url === '/public/v1/auth/refresh_token') return apiOk(MOCK_AUTH);
   if (url === '/api/v1/auth/session')
-    return loggedIn ? apiOk(MOCK_AUTH_STATUS) : apiOk(MOCK_AUTH_STATUS_INVALID);
+    // spec auth.md：session 必须有效 Token；未登录/无效 Token 返回 10100（客户端据此判定匿名态）
+    return loggedIn ? apiOk(MOCK_AUTH_STATUS) : apiError(10100, 'Access Token 无效或过期');
   if (url === '/api/v1/auth/signout') { setLoggedIn(false); return apiOkEmpty(); }
 
   const guard = () => loggedIn ? null : apiError(10100, 'Access Token 无效或过期');
@@ -268,7 +275,7 @@ export function getCannedResponse(url: string, loggedIn: boolean, scenario: stri
   if (url === '/api/v1/users/account') return guard() ?? apiOk(MOCK_ACCOUNT);
   if (url === '/api/v1/users/open_the_door') {
     // spec user.md → open_the_door：UserProfileBundle（user 嵌套 UserItem）
-    const profile: UserProfileBundle = { user: MK_USER_ITEM, recent_moments: { items: [MK_MOMENT], next_cursor: undefined } };
+    const profile: UserProfileBundle = { user: MK_USER_ITEM, recent_moments: { items: [MK_MOMENT], next_cursor: null } };
     return apiOk(profile);
   }
   if (url === '/api/v1/users/search') return paginated([MK_USER_ITEM]);
@@ -278,6 +285,10 @@ export function getCannedResponse(url: string, loggedIn: boolean, scenario: stri
   if (url === '/api/v1/moments/search') return paginated([MK_MOMENT]);
   if (url === '/api/v1/moments/open_the_door') return apiOk(MK_MOMENT);
   if (url === '/api/v1/moments/fetch_created') return guard() ?? paginated([] as MomentItem[]);
+  // 附近瞬间流（原 feed/nearby_moments 迁移；匿名可用，返回示例瞬间）
+  if (url === '/api/v1/moments/fetch_nearby') return paginated([MK_MOMENT]);
+  // 关注动态（原 feed/following 迁移；依赖登录态）
+  if (url === '/api/v1/moments/fetch_following') return guard() ?? paginated([] as MomentItem[]);
 
   // Groups
   if (url === '/api/v1/groups/search') return paginated([MK_GROUP]);
@@ -288,8 +299,7 @@ export function getCannedResponse(url: string, loggedIn: boolean, scenario: stri
   if (url === '/api/v1/private_messages/fetch') return guard() ?? paginated([] as PrivateMessageItem[]);
   if (url === '/api/v1/private_messages/send') return guard() ?? apiOk(MOCK_SENT);
 
-  // Feed / Search / Notify / System / Map
-  if (url === '/api/v1/feed/trending') return apiOk(MOCK_TRENDING);
+  // Search / Notify / System / Map
   if (url === '/api/v1/search/suggest') return apiOk(MOCK_SUGGEST);
   if (url === '/api/v1/notify/fetch') return guard() ?? paginated([] as NotifyItem[]);
   if (url === '/api/v1/notify/unread_summary') return guard() ?? apiOk(MOCK_UNREAD);
