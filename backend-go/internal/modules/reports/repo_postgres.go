@@ -21,7 +21,7 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 	return &PostgresRepository{factory: factory}
 }
 
-func (r *PostgresRepository) Create(ctx context.Context, userID string, req CreateReportRequest) (ReportCreated, error) {
+func (r *PostgresRepository) Create(ctx context.Context, userID string, req CreateReportRequest, messageSnapshot *ReportSnapshot) (ReportCreated, error) {
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
 		return ReportCreated{}, persistence.ErrNotImplemented
@@ -36,8 +36,8 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		description = *req.Description
 	}
 	var snapshotJSON any
-	if req.MessageSnapshot != nil {
-		raw, err := json.Marshal(req.MessageSnapshot)
+	if messageSnapshot != nil {
+		raw, err := json.Marshal(messageSnapshot)
 		if err != nil {
 			return ReportCreated{}, err
 		}

@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 
+	reportsmodule "hotspot/backend-go/internal/modules/reports"
 	"hotspot/backend-go/internal/platform/types"
 	"sort"
 
@@ -14,6 +15,10 @@ func cloneAdminReportItem(item AdminReportItem) AdminReportItem {
 	if item.HandledBy != nil {
 		handledBy := *item.HandledBy
 		cloned.HandledBy = &handledBy
+	}
+	if item.Resolution != nil {
+		resolution := *item.Resolution
+		cloned.Resolution = &resolution
 	}
 	return cloned
 }
@@ -97,6 +102,14 @@ func (r *InMemoryRepository) HandleReport(_ context.Context, reportID string, ac
 	}
 	record.Item.HandledAt = &now
 	record.Item.HandleNote = &note
+	// 裁决后同步刷新 resolution（spec api_spec_types.md ReportItem.resolution）。
+	if record.Item.Status == ReportStatusResolved || record.Item.Status == ReportStatusDismissed {
+		reportAction := reportsmodule.ReportActionDismiss
+		if record.Item.Status == ReportStatusResolved {
+			reportAction = reportsmodule.ReportActionResolve
+		}
+		record.Item.Resolution = &reportsmodule.ReportResolution{Action: reportAction, ResolvedAt: now, Note: types.StrPtr(note)}
+	}
 	if handledBy != nil {
 		h := *handledBy
 		record.Item.HandledBy = &h
@@ -129,17 +142,29 @@ func (r *InMemoryRepository) RecallPrivateMessage(_ context.Context, messageID s
 	return nil
 }
 
+// DeleteMoment 裁决内容删除（内存对齐 postgres 软删除，spec api_spec_moment.md
+// 「删除语义」：is_deleted=true、description 清空，评论/反应数据保留）。
 func (r *InMemoryRepository) DeleteMoment(_ context.Context, momentID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	delete(r.moments, momentID)
+	if record, ok := r.moments[momentID]; ok {
+		record.Deleted = true
+		record.Content = ""
+		r.moments[momentID] = record
+	}
 	return nil
 }
 
+// DeleteComment 内存软删除（spec api_spec_comment.md：is_deleted=true、content
+// 清空），与 comments 模块自身删除路径一致。
 func (r *InMemoryRepository) DeleteComment(_ context.Context, commentID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	delete(r.comments, commentID)
+	if record, ok := r.comments[commentID]; ok {
+		record.Deleted = true
+		record.Content = ""
+		r.comments[commentID] = record
+	}
 	return nil
 }
 
@@ -177,18 +202,21 @@ func (r *InMemoryRepository) SendGroupMessage(_ context.Context, id, content, se
 	}
 }
 
+// HasMoment 内容是否仍对外可见（软删除后视为不可见，spec api_spec_moment.md
+// 「删除语义」：is_deleted=true 即下架）。
 func (r *InMemoryRepository) HasMoment(id string) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	_, ok := r.moments[id]
-	return ok
+	record, ok := r.moments[id]
+	return ok && !record.Deleted
 }
 
+// HasComment 内容是否仍对外可见（软删除后视为不可见，spec api_spec_comment.md）。
 func (r *InMemoryRepository) HasComment(id string) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	_, ok := r.comments[id]
-	return ok
+	record, ok := r.comments[id]
+	return ok && !record.Deleted
 }
 
 func (r *InMemoryRepository) IsGroupMessageRecalled(id string) bool {

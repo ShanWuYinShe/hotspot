@@ -32,9 +32,9 @@ func (s *Service) Canvas(ctx context.Context, req MapCanvasRequest) (MapCanvasRe
 			return MapCanvasResponse{}, err
 		}
 		if len(heatmap.Items) == 0 {
-			return MapCanvasResponse{}, nil
+			return MapCanvasResponse{Mode: MapCanvasModeEmpty}, nil
 		}
-		return MapCanvasResponse{Heatmap: &heatmap}, nil
+		return MapCanvasResponse{Mode: MapCanvasModeHeatmap, Heatmap: &heatmap}, nil
 	}
 
 	hotspots, err := s.repo.Hotspots(ctx, query)
@@ -43,9 +43,9 @@ func (s *Service) Canvas(ctx context.Context, req MapCanvasRequest) (MapCanvasRe
 		return MapCanvasResponse{}, err
 	}
 	if len(hotspots.Items) == 0 {
-		return MapCanvasResponse{}, nil
+		return MapCanvasResponse{Mode: MapCanvasModeEmpty}, nil
 	}
-	return MapCanvasResponse{Hotspots: &hotspots}, nil
+	return MapCanvasResponse{Mode: MapCanvasModeHotspots, Hotspots: &hotspots}, nil
 }
 
 func newCanvasQuery(req MapCanvasRequest) (canvasQuery, error) {

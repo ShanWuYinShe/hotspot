@@ -93,6 +93,15 @@ func TestSpecPublicMomentSerialization(t *testing.T) {
 	if m["is_favorited"] != false {
 		t.Fatalf("expected is_favorited=false, got %v", m["is_favorited"])
 	}
+	// recommendation 恒定存在（spec api_spec_types.md MomentItem：Feed 场景返回推荐
+	// 理由，非 Feed 场景为 null；Feed 域已废除，当前恒 null）。
+	rec, ok := m["recommendation"]
+	if !ok {
+		t.Fatalf("recommendation must always be present: %s", raw)
+	}
+	if rec != nil {
+		t.Fatalf("expected recommendation=null outside feed scenarios, got %v", rec)
+	}
 	loc, ok := m["location"]
 	if !ok {
 		t.Fatalf("location must always be present: %s", raw)
@@ -105,6 +114,32 @@ func TestSpecPublicMomentSerialization(t *testing.T) {
 	}
 	if _, ok := m["reactions"]; !ok {
 		t.Fatalf("reactions must always be present: %s", raw)
+	}
+}
+
+// TestSpecLocationSerializesRelativeFields：location 非空时 RelativeLocation 形状
+// 恒定（spec api_spec_types.md RelativeLocation）——distance / bearing_degrees 恒在，
+// 无参考点场景为 null（服务端计算，客户端不得本地计算）。
+func TestSpecLocationSerializesRelativeFields(t *testing.T) {
+	item := MomentItem{MomentID: "m1"}
+	item.Location = &Location{}
+	item.Location.Point.Latitude = 35.0
+	item.Location.Point.Longitude = 112.0
+	raw, err := json.Marshal(item)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var m struct {
+		Location struct {
+			Distance       *float64 `json:"distance"`
+			BearingDegrees *float64 `json:"bearing_degrees"`
+		} `json:"location"`
+	}
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatalf("unmarshal: %v body=%s", err, raw)
+	}
+	if m.Location.Distance != nil || m.Location.BearingDegrees != nil {
+		t.Fatalf("expected distance/bearing_degrees=null without resolved reference point: %s", raw)
 	}
 }
 

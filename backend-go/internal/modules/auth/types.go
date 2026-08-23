@@ -8,11 +8,15 @@ const (
 )
 
 type RegisterRequest struct {
-	LoginID    string     `json:"login_id"`
-	Nickname   string     `json:"nickname"`
-	Password   string     `json:"password"`
-	ClientType ClientType `json:"client_type"`
-	DeviceID   string     `json:"device_id"` // App 端必填；Web 端由服务端从 device_id Cookie 读取（spec auth.md → register）
+	LoginID string `json:"login_id"`
+	// VerificationCode 注册验证码（spec api_spec_public.md → register）：
+	// login_id 为手机号/邮箱型时必填（所有权验证，经 send_register_code 发送），
+	// 用户名型必须为 null（同传视为参数冲突）。
+	VerificationCode *string    `json:"verification_code,omitempty"`
+	Nickname         string     `json:"nickname"`
+	Password         string     `json:"password"`
+	ClientType       ClientType `json:"client_type"`
+	DeviceID         string     `json:"device_id"` // App 端必填；Web 端由服务端从 device_id Cookie 读取（spec auth.md → register）
 }
 
 type LoginRequest struct {
@@ -22,10 +26,19 @@ type LoginRequest struct {
 	DeviceID   string     `json:"device_id"` // App 端必填；Web 端由服务端从 device_id Cookie 读取（spec auth.md → login）
 }
 
+// GuestRequest：Nickname 可选（spec api_spec_public.md → guest），null 时服务端
+// 生成默认昵称「游客·xxxx」（进入后引导修改，降低访客模式进入摩擦）。
 type GuestRequest struct {
-	Nickname   string     `json:"nickname"`
+	Nickname   *string    `json:"nickname"`
 	ClientType ClientType `json:"client_type"`
 	DeviceID   string     `json:"device_id"` // App 端必填；Web 端由服务端从 device_id Cookie 读取（spec auth.md → guest）
+}
+
+// SendRegisterCodeRequest 发送注册验证码（spec api_spec_public.md →
+// auth/send_register_code）：仅手机号/邮箱型 login_id 支持。
+type SendRegisterCodeRequest struct {
+	LoginID    string     `json:"login_id"`
+	ClientType ClientType `json:"client_type"`
 }
 
 type RefreshTokenRequest struct {

@@ -71,7 +71,9 @@ func newAdminFullStore(stub *adminFullStub) *PersistenceModerationStore {
 var aTestTime = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 func adminUserRowVals(uid string) []any {
-	return []any{uid, "昵称" + uid, "av", "bio", "online", aTestTime, "位置", 1.5, 2.5, "normal", aTestTime, "normal", "login_" + uid, "ip1", "loc1", "ip2", "loc2", "e@x.com", "13800000000"}
+	// 末两位为 banned_until(*time.Time, nil=未封禁) 与 privacy_level
+	//（spec api_spec_admin.md AdminUserItem）。
+	return []any{uid, "昵称" + uid, "av", "bio", "online", aTestTime, "位置", 1.5, 2.5, "normal", aTestTime, "normal", "login_" + uid, "ip1", "loc1", "ip2", "loc2", "e@x.com", "13800000000", nil, "public"}
 }
 
 func adminGroupRowVals17(gid string) []any {
@@ -533,8 +535,9 @@ func TestAdminRepoRecallDeleteContent(t *testing.T) {
 	}{
 		{"recall group", func(r *PostgresRepository) error { return r.RecallGroupMessage(ctx, "m1") }, "UPDATE group_messages SET is_recalled = TRUE, recalled_at = NOW() WHERE message_id = $1 AND is_recalled = FALSE"},
 		{"recall private", func(r *PostgresRepository) error { return r.RecallPrivateMessage(ctx, "m1") }, "UPDATE private_messages SET is_recalled = TRUE, recalled_at = NOW() WHERE message_id = $1 AND is_recalled = FALSE"},
-		{"delete moment", func(r *PostgresRepository) error { return r.DeleteMoment(ctx, "m1") }, "DELETE FROM moments WHERE moment_id = $1"},
-		{"delete comment", func(r *PostgresRepository) error { return r.DeleteComment(ctx, "c1") }, "DELETE FROM comments WHERE comment_id = $1"},
+		// 裁决删除为软删除（spec api_spec_moment.md「删除语义」/api_spec_comment.md）
+		{"delete moment", func(r *PostgresRepository) error { return r.DeleteMoment(ctx, "m1") }, queryAdminSoftDeleteMoment},
+		{"delete comment", func(r *PostgresRepository) error { return r.DeleteComment(ctx, "c1") }, queryAdminSoftDeleteComment},
 	}
 	for _, tc := range cases {
 		if err := tc.call(newAdminFullRepo(&adminFullStub{})); err != nil {
@@ -583,27 +586,32 @@ func TestAdminModerationStorePersistence(t *testing.T) {
 		t.Fatalf("search tags fallback: %#v err=%v", page, err)
 	}
 
-	// DeleteTag 分支：无引用 → not found；已屏蔽 → 幂等；硬删 + 屏蔽
+	// SetTagBan 分支：无引用 → not found；已屏蔽 → 幂等；硬删 + 屏蔽；解屏蔽
 	store = newAdminFullStore(&adminFullStub{queryRow: map[string][]any{queryTagDeleteState: {false, false}}})
-	if err := store.DeleteTag(ctx, "tag1", false); !errors.Is(err, errTagNotFound) {
-		t.Fatalf("delete tag not found: %v", err)
+	if err := store.SetTagBan(ctx, "tag1", true, false); !errors.Is(err, errTagNotFound) {
+		t.Fatalf("ban tag not found: %v", err)
 	}
 	store = newAdminFullStore(&adminFullStub{queryRow: map[string][]any{queryTagDeleteState: {true, false}}})
-	if err := store.DeleteTag(ctx, "tag1", false); err != nil {
-		t.Fatalf("delete tag blocked: %v", err)
+	if err := store.SetTagBan(ctx, "tag1", true, false); err != nil {
+		t.Fatalf("ban blocked tag: %v", err)
 	}
 	store = newAdminFullStore(&adminFullStub{queryRow: map[string][]any{queryTagDeleteState: {false, true}}})
-	if err := store.DeleteTag(ctx, "tag1", true); err != nil {
-		t.Fatalf("delete tag hard: %v", err)
+	if err := store.SetTagBan(ctx, "tag1", true, true); err != nil {
+		t.Fatalf("ban tag hard delete: %v", err)
 	}
 	store = newAdminFullStore(&adminFullStub{queryRow: map[string][]any{queryTagDeleteState: {false, true}}})
-	if err := store.DeleteTag(ctx, "tag1", false); err != nil {
-		t.Fatalf("delete tag soft: %v", err)
+	if err := store.SetTagBan(ctx, "tag1", true, false); err != nil {
+		t.Fatalf("ban tag soft: %v", err)
+	}
+	// 解屏蔽（DELETE 未命中行 no-op 成功）
+	store = newAdminFullStore(&adminFullStub{})
+	if err := store.SetTagBan(ctx, "tag1", false, false); err != nil {
+		t.Fatalf("unban tag: %v", err)
 	}
 	// GetTagDeleteState 查询错误
 	store = newAdminFullStore(&adminFullStub{queryRowErr: map[string]error{queryTagDeleteState: errors.New("boom")}})
-	if err := store.DeleteTag(ctx, "tag1", false); err == nil {
-		t.Fatal("delete tag query error must propagate")
+	if err := store.SetTagBan(ctx, "tag1", true, false); err == nil {
+		t.Fatal("ban tag query error must propagate")
 	}
 
 	// 公告方法走 system adapter（NewPersistenceModerationStore 第二个参数 nil 时自动创建）

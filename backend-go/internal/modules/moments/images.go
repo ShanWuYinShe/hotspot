@@ -40,8 +40,7 @@ type ImageResolver interface {
 var ErrImagesNotOwned = errors.New("moments: image file_ids not owned or not ready")
 
 // MomentImageFetcher is the narrow repo capability needed by the hydration
-// helper. Both the moments and feed postgres repos satisfy it via
-// loadMomentImageRows.
+// helper. Both the moments postgres and in-memory repos satisfy it.
 type MomentImageFetcher interface {
 	FetchMomentImageRows(ctx context.Context, momentIDs []string) (map[string][]momentImageRow, error)
 }

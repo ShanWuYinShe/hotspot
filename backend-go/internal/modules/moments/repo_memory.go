@@ -8,14 +8,20 @@ import (
 	"sync"
 	"time"
 
+	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/types"
 )
 
 type InMemoryRepository struct {
-	mu        sync.RWMutex
-	moments   map[string]MomentItem
-	byUser    map[string][]string
-	favorites map[string]map[string]bool // userID -> momentID -> favorited
+	mu      sync.RWMutex
+	moments map[string]MomentItem
+	byUser  map[string][]string
+	// favorites 记录收藏时刻（userID -> momentID -> favorited_at），驱动
+	// fetch_favorites 的 favorited_at 倒序排序（spec api_spec_moment.md 排序）。
+	favorites map[string]map[string]time.Time
+	// followGraph 记录关注边（viewer -> target -> true），驱动内存版
+	// fetch_following（生产实现走 user_relations 表）。
+	followGraph map[string]map[string]bool
 	// blockedTags 记录被屏蔽的标签（spec moment create：含被屏蔽标签 → 10400）。
 	blockedTags map[string]struct{}
 	// seq 保证同纳秒内连续创建的 ID 不碰撞（UnixNano 时间戳在快速循环下会重复）。
@@ -36,10 +42,21 @@ func (r *InMemoryRepository) SetBlockedTags(tags ...string) {
 
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
-		moments:   make(map[string]MomentItem),
-		byUser:    make(map[string][]string),
-		favorites: make(map[string]map[string]bool),
+		moments:     make(map[string]MomentItem),
+		byUser:      make(map[string][]string),
+		favorites:   make(map[string]map[string]time.Time),
+		followGraph: make(map[string]map[string]bool),
 	}
+}
+
+// SetFollow 注入内存版关注边（viewer 关注 target），驱动 fetch_following 测试。
+func (r *InMemoryRepository) SetFollow(viewerID, targetID string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.followGraph[viewerID] == nil {
+		r.followGraph[viewerID] = make(map[string]bool)
+	}
+	r.followGraph[viewerID][targetID] = true
 }
 
 func (r *InMemoryRepository) Create(_ context.Context, userID string, req CreateMomentRequest) (MomentItem, error) {
@@ -152,7 +169,7 @@ func (r *InMemoryRepository) IncrementSharesCount(_ context.Context, momentID st
 	return nil
 }
 
-func (r *InMemoryRepository) Search(_ context.Context, req SearchMomentsRequest) (PaginatedMoments, error) {
+func (r *InMemoryRepository) Search(_ context.Context, req SearchMomentsRequest, viewerID string) (PaginatedMoments, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	var items []MomentItem
@@ -168,6 +185,16 @@ func (r *InMemoryRepository) Search(_ context.Context, req SearchMomentsRequest)
 		if req.Tag != nil && *req.Tag != "" {
 			if !containsTag(m.Tags, *req.Tag) {
 				continue
+			}
+		}
+		// 查看者收藏态（spec api_spec_types.md MomentItem is_favorited 恒定布尔）：
+		// 仅登录查看者按收藏记录填充，匿名恒为 false（与 Postgres EXISTS 子查询一致）。
+		if viewerID != "" {
+			m.IsFavorited = false
+			if userFavs, ok := r.favorites[viewerID]; ok {
+				if _, fav := userFavs[m.MomentID]; fav {
+					m.IsFavorited = true
+				}
 			}
 		}
 		items = append(items, m)
@@ -188,8 +215,10 @@ func (r *InMemoryRepository) Search(_ context.Context, req SearchMomentsRequest)
 	if req.Tag != nil {
 		tag = *req.Tag
 	}
+	// 单次查询内取同一 now：popular 时间衰减分值页内自洽（与 SQL now() 语句级稳定对应）。
+	now := time.Now().UTC()
 	// 最终排序与 Postgres keyset 语义一致：(score, created_at, moment_id) DESC。
-	sortMoments(items, sortBy, keyword, tag)
+	sortMoments(items, sortBy, keyword, tag, now)
 	start := 0
 	if req.Pagination != nil && req.Pagination.Cursor != "" {
 		searchCursor, err := decodeMomentSearchCursor(req.Pagination.Cursor)
@@ -199,18 +228,15 @@ func (r *InMemoryRepository) Search(_ context.Context, req SearchMomentsRequest)
 		if searchCursor.Sort != sortBy {
 			return PaginatedMoments{}, ErrInvalidCursor
 		}
-		start = -1
+		// keyset 谓词定位（与 SQL `(score, created_at, moment_id) < 游标元组` 同语义）：
+		// 不要求边界项仍存在；弱一致快照下的衰减漂移只影响游标相邻项。
+		start = len(items)
 		for i := range items {
-			if items[i].MomentID == searchCursor.ID &&
-				items[i].CreatedAt == searchCursor.At &&
-				momentSearchScore(items[i], sortBy, keyword, tag) == searchCursor.Score {
-				start = i + 1
+			score := momentSearchScore(items[i], sortBy, keyword, tag, now)
+			if compareSearchTuple(score, items[i].CreatedAt, items[i].MomentID, *searchCursor) < 0 {
+				start = i
 				break
 			}
-		}
-		if start < 0 {
-			// 弱一致快照下边界项已消失：返回空页，不让客户端倒回或跳过。
-			return PaginatedMoments{Items: []MomentItem{}}, nil
 		}
 	}
 	if start > len(items) {
@@ -219,7 +245,7 @@ func (r *InMemoryRepository) Search(_ context.Context, req SearchMomentsRequest)
 	end := start + limit
 	var nextCursor *string
 	if end < len(items) {
-		c := encodeMomentSearchCursor(sortBy, items[end], keyword, tag)
+		c := encodeMomentSearchCursor(sortBy, items[end], keyword, tag, now)
 		nextCursor = &c
 	}
 	if end > len(items) {
@@ -269,6 +295,10 @@ func (r *InMemoryRepository) NotificationContext(_ context.Context, momentID str
 	return item, ok, nil
 }
 
+// Delete 软删除（spec api_spec_moment.md「删除语义」：瞬间不物理删除，标记
+// is_deleted=true 并清空 description）：作者 fetch_created、收藏者 fetch_favorites
+// 继续返回占位项；search/fetch_following/fetch_nearby/Exists 按不存在过滤。幂等：
+// 重复删除返回成功（与 Postgres UPDATE 语义一致）。
 func (r *InMemoryRepository) Delete(_ context.Context, momentID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -276,14 +306,9 @@ func (r *InMemoryRepository) Delete(_ context.Context, momentID string) error {
 	if !ok {
 		return ErrMomentNotFound
 	}
-	delete(r.moments, momentID)
-	userIDs := r.byUser[item.User.UserID]
-	for i, id := range userIDs {
-		if id == momentID {
-			r.byUser[item.User.UserID] = append(userIDs[:i], userIDs[i+1:]...)
-			break
-		}
-	}
+	item.IsDeleted = true
+	item.Description = ""
+	r.moments[momentID] = item
 	return nil
 }
 
@@ -303,9 +328,12 @@ func (r *InMemoryRepository) Favorite(_ context.Context, userID string, momentID
 		return ErrMomentNotFound
 	}
 	if r.favorites[userID] == nil {
-		r.favorites[userID] = make(map[string]bool)
+		r.favorites[userID] = make(map[string]time.Time)
 	}
-	r.favorites[userID][momentID] = true
+	// 与 Postgres ON CONFLICT DO NOTHING 一致：重复收藏保留首次 favorited_at。
+	if _, exists := r.favorites[userID][momentID]; !exists {
+		r.favorites[userID][momentID] = time.Now().UTC()
+	}
 	return nil
 }
 
@@ -326,51 +354,72 @@ func (r *InMemoryRepository) LoadMyState(_ context.Context, momentID, userID str
 	defer r.mu.RUnlock()
 	isFavorited := false
 	if userFavs, ok := r.favorites[userID]; ok {
-		isFavorited = userFavs[momentID]
+		_, isFavorited = userFavs[momentID]
 	}
 	return &MyMomentState{IsFavorited: isFavorited}
 }
 
-func (r *InMemoryRepository) ListFavorites(_ context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {
+// ListFavorites 我的收藏（spec api_spec_moment.md → moments/fetch_favorites）：
+// favorited_at 时间倒序 + moment_id DESC 稳定 tie-break，keyset 游标与 Postgres
+// 实现同编码（加密不透明）；含被收藏后软删的瞬间占位项（spec「删除语义」）。
+func (r *InMemoryRepository) ListFavorites(_ context.Context, userID string, limit int, cursorValue string) (PaginatedMoments, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	if limit <= 0 {
-		limit = 20
-	}
-	if limit > types.MaxPageSize {
-		limit = types.MaxPageSize
+	limit = normalizeMomentInteractionLimit(limit)
+	cursorAt, cursorMomentID, err := decodeMomentFavoriteCursor(cursorValue)
+	if err != nil {
+		return PaginatedMoments{}, err
 	}
 	favMap := r.favorites[userID]
-	if favMap == nil {
+	if len(favMap) == 0 {
 		return PaginatedMoments{Items: []MomentItem{}}, nil
 	}
-	var items []MomentItem
-	for mid := range favMap {
-		if m, ok := r.moments[mid]; ok {
-			items = append(items, m)
-		}
+	type favoriteEntry struct {
+		item        MomentItem
+		favoritedAt time.Time
 	}
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].CreatedAt > items[j].CreatedAt
+	entries := make([]favoriteEntry, 0, len(favMap))
+	for mid, favoritedAt := range favMap {
+		m, ok := r.moments[mid]
+		if !ok {
+			continue
+		}
+		entries = append(entries, favoriteEntry{item: m, favoritedAt: favoritedAt})
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		if !entries[i].favoritedAt.Equal(entries[j].favoritedAt) {
+			return entries[i].favoritedAt.After(entries[j].favoritedAt)
+		}
+		return entries[i].item.MomentID > entries[j].item.MomentID
 	})
 	start := 0
-	if cursor != "" {
-		for i, item := range items {
-			if item.MomentID == cursor {
-				start = i + 1
+	if parsedAt, ok := cursorAt.(time.Time); ok {
+		start = len(entries)
+		for i, e := range entries {
+			if e.favoritedAt.Before(parsedAt) || (e.favoritedAt.Equal(parsedAt) && e.item.MomentID < cursorMomentID) {
+				start = i
 				break
 			}
 		}
 	}
-	items = items[start:]
-	if len(items) > limit {
-		c := items[limit].MomentID
-		return PaginatedMoments{Items: items[:limit], NextCursor: &c}, nil
+	page := entries[start:]
+	var nextCursor *string
+	if len(page) > limit {
+		boundary := page[limit-1]
+		c := encodeMomentFavoriteCursor(boundary.favoritedAt.UTC().Format(time.RFC3339), boundary.item.MomentID)
+		nextCursor = &c
+		page = page[:limit]
+	}
+	items := make([]MomentItem, 0, len(page))
+	for _, e := range page {
+		e.item.IsFavorited = true
+		e.item.FavoritedAt = e.favoritedAt.UTC().Format(time.RFC3339)
+		items = append(items, e.item)
 	}
 	if len(items) == 0 {
 		items = []MomentItem{}
 	}
-	return PaginatedMoments{Items: items}, nil
+	return PaginatedMoments{Items: items, NextCursor: nextCursor}, nil
 }
 
 func (r *InMemoryRepository) ListFavoriteUserIDs(_ context.Context, momentID string) ([]string, error) {
@@ -378,7 +427,7 @@ func (r *InMemoryRepository) ListFavoriteUserIDs(_ context.Context, momentID str
 	defer r.mu.RUnlock()
 	var userIDs []string
 	for userID, favs := range r.favorites {
-		if favs[momentID] {
+		if _, fav := favs[momentID]; fav {
 			userIDs = append(userIDs, userID)
 		}
 	}
@@ -387,11 +436,12 @@ func (r *InMemoryRepository) ListFavoriteUserIDs(_ context.Context, momentID str
 
 // sortMoments sorts a slice of MomentItem in place by the shared keyset tuple
 // (score, created_at, moment_id) in descending order. SQL 与内存实现共用
-// momentSearchScore，避免翻页语义漂移。
-func sortMoments(items []MomentItem, sortBy string, keyword, tag string) {
+// momentSearchScore，避免翻页语义漂移；now 为本次查询的统一时钟
+// （popular 时间衰减分值的计算基准，与 SQL now() 语句级稳定对应）。
+func sortMoments(items []MomentItem, sortBy string, keyword, tag string, now time.Time) {
 	sort.SliceStable(items, func(i, j int) bool {
-		si := momentSearchScore(items[i], sortBy, keyword, tag)
-		sj := momentSearchScore(items[j], sortBy, keyword, tag)
+		si := momentSearchScore(items[i], sortBy, keyword, tag, now)
+		sj := momentSearchScore(items[j], sortBy, keyword, tag, now)
 		if si != sj {
 			return si > sj
 		}
@@ -406,4 +456,98 @@ func sortMoments(items []MomentItem, sortBy string, keyword, tag string) {
 // persist image associations. Image hydration is a no-op in memory-backed tests.
 func (r *InMemoryRepository) FetchMomentImageRows(_ context.Context, _ []string) (map[string][]momentImageRow, error) {
 	return map[string][]momentImageRow{}, nil
+}
+
+// ListFollowingMoments 内存版关注动态：viewer 关注的人发布的公开瞬间，
+// created_at DESC, moment_id DESC keyset 分页（与 Postgres 实现语义一致）；
+// 参考点已解析时填充 location 的 distance/bearing_degrees
+// （spec api_spec_types.md RelativeLocation）。
+func (r *InMemoryRepository) ListFollowingMoments(_ context.Context, query momentsQuery) (PaginatedMoments, error) {
+	decoded, err := decodeFetchCursor(query.Cursor)
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	r.mu.RLock()
+	followed := r.followGraph[query.ViewerUserID]
+	candidates := make([]momentCandidate, 0)
+	ref := geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}
+	for _, m := range r.moments {
+		if !followed[m.User.UserID] || m.PrivacyLevel != "public" || m.IsDeleted {
+			continue
+		}
+		createdAt, parseErr := time.Parse(time.RFC3339, m.CreatedAt)
+		if parseErr != nil {
+			continue
+		}
+		if userFavs, ok := r.favorites[query.ViewerUserID]; ok {
+			if _, fav := userFavs[m.MomentID]; fav {
+				m.IsFavorited = true
+			}
+		}
+		if query.HasReferencePoint && m.Location != nil {
+			target := geo.Point{Latitude: m.Location.Point.Latitude, Longitude: m.Location.Point.Longitude}
+			fillRelativeLocation(m.Location, geo.DistanceMeters(ref, target), geo.BearingDegrees(ref, target))
+		}
+		candidates = append(candidates, momentCandidate{Item: m, CreatedAt: createdAt.UTC()})
+	}
+	r.mu.RUnlock()
+	sort.SliceStable(candidates, func(i, j int) bool { return compareFollowingCandidates(candidates[i], candidates[j]) < 0 })
+	// keyset 定位：跳过游标项及之前的所有项。
+	if decoded != nil {
+		parsedAt, _ := time.Parse(time.RFC3339, decoded.CreatedAt)
+		start := 0
+		for idx, item := range candidates {
+			cmp := compareFollowingCandidates(item, momentCandidate{Item: MomentItem{MomentID: decoded.ID}, CreatedAt: parsedAt.UTC()})
+			if cmp > 0 {
+				start = idx
+				break
+			}
+			start = idx + 1
+		}
+		candidates = candidates[start:]
+	}
+	return paginateFollowingMoments(candidates, query.Limit, "")
+}
+
+// ListNearbyMoments 内存版附近瞬间：radius 内距离主序（距离 → 热度 → 时间 → ID）。
+func (r *InMemoryRepository) ListNearbyMoments(_ context.Context, query momentsQuery) (PaginatedMoments, error) {
+	decoded, err := decodeFetchCursor(query.Cursor)
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	ref := geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}
+	r.mu.RLock()
+	candidates := make([]momentCandidate, 0)
+	for _, m := range r.moments {
+		if m.PrivacyLevel != "public" || m.IsDeleted || m.Location == nil {
+			continue
+		}
+		target := geo.Point{Latitude: m.Location.Point.Latitude, Longitude: m.Location.Point.Longitude}
+		distance := geo.DistanceMeters(ref, target)
+		if distance > query.Radius {
+			continue
+		}
+		createdAt, parseErr := time.Parse(time.RFC3339, m.CreatedAt)
+		if parseErr != nil {
+			continue
+		}
+		score := m.LikesCount + m.CommentsCount + m.SharesCount
+		if query.ViewerUserID != "" && r.followGraph[query.ViewerUserID][m.User.UserID] {
+			score += 1000
+		}
+		m.IsFavorited = false
+		if userFavs, ok := r.favorites[query.ViewerUserID]; ok {
+			if _, fav := userFavs[m.MomentID]; fav {
+				m.IsFavorited = true
+			}
+		}
+		// 相对位置字段恒填充（附近流参考点恒已解析，spec api_spec_types.md RelativeLocation）。
+		fillRelativeLocation(m.Location, distance, geo.BearingDegrees(ref, target))
+		candidates = append(candidates, momentCandidate{Item: m, Score: score, Distance: distance, CreatedAt: createdAt.UTC()})
+	}
+	r.mu.RUnlock()
+	sort.SliceStable(candidates, func(i, j int) bool { return compareNearbyCandidates(candidates[i], candidates[j]) < 0 })
+	start := findNearbyCursorStart(candidates, decoded)
+	candidates = candidates[start:]
+	return paginateNearbyMoments(candidates, query.Limit, "")
 }

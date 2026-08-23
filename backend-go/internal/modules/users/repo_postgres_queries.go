@@ -208,7 +208,7 @@ ORDER BY GREATEST(me.followed_at, rev.followed_at) DESC, u.user_id ASC
 LIMIT $4`
 
 	queryListFollowing = `
-SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), me.followed_at, EXISTS(SELECT 1 FROM user_relations rev WHERE rev.user_id = me.target_user_id AND rev.target_user_id = me.user_id AND rev.is_following = TRUE), u.presence_status, u.last_online, COALESCE(u.last_online, NOW())
+SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), me.followed_at, u.presence_status, u.last_online, COALESCE(u.last_online, NOW())
 FROM user_relations me
 JOIN users u ON u.user_id = me.target_user_id
 WHERE me.user_id = $1 AND me.is_following = TRUE
@@ -221,7 +221,7 @@ ORDER BY me.followed_at DESC, u.user_id ASC
 LIMIT $4`
 
 	queryListFollowers = `
-SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), me.followed_at, EXISTS(SELECT 1 FROM user_relations mine WHERE mine.user_id = $1 AND mine.target_user_id = me.user_id AND mine.is_following = TRUE), u.presence_status, u.last_online, COALESCE(u.last_online, NOW())
+SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), me.followed_at, u.presence_status, u.last_online, COALESCE(u.last_online, NOW())
 FROM user_relations me
 JOIN users u ON u.user_id = me.user_id
 WHERE me.target_user_id = $1 AND me.is_following = TRUE

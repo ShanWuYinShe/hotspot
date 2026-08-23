@@ -62,6 +62,52 @@ func TestReplayOrStoreEmptyKeyExecutesProducer(t *testing.T) {
 	}
 }
 
+// spec api_spec_base.md「幂等性」：仅缓存成功响应（code == 0）。
+// 失败响应不得缓存——同一 key 的重试必须真正再次执行 producer。
+func TestReplayOrStoreDoesNotCacheFailure(t *testing.T) {
+	store := NewInMemoryStore()
+	SetStore(store)
+	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
+	req = req.WithContext(WithKey(req.Context(), "fail0123fail0123fail0123fail0123"))
+	rr1 := httptest.NewRecorder()
+	calls := 0
+	ReplayOrStore(rr1, req, "failure_scope", func() httpx.ApiResponse[dummyResult] {
+		calls++
+		return httpx.ApiResponse[dummyResult]{Code: httpx.CodeInvalidOldCredential, Message: "验证码错误或已过期"}
+	})
+	if calls != 1 {
+		t.Fatalf("expected first producer call, got %d", calls)
+	}
+	var first map[string]any
+	_ = json.Unmarshal(rr1.Body.Bytes(), &first)
+	if first["code"].(float64) != float64(httpx.CodeInvalidOldCredential) {
+		t.Fatalf("expected failure envelope on first call, got %v", first)
+	}
+	// 重试：producer 必须再次执行（失败未被缓存），且本次成功可被缓存。
+	rr2 := httptest.NewRecorder()
+	ReplayOrStore(rr2, req, "failure_scope", func() httpx.ApiResponse[dummyResult] {
+		calls++
+		return httpx.Success(dummyResult{Value: "recovered"})
+	})
+	if calls != 2 {
+		t.Fatalf("expected producer to re-execute after cached-failure, got %d calls", calls)
+	}
+	// 第三次：命中第二次的成功缓存。
+	rr3 := httptest.NewRecorder()
+	ReplayOrStore(rr3, req, "failure_scope", func() httpx.ApiResponse[dummyResult] {
+		calls++
+		return httpx.Success(dummyResult{Value: "should-not-run"})
+	})
+	if calls != 2 {
+		t.Fatalf("expected success replay on third call, got %d calls", calls)
+	}
+	var third map[string]any
+	_ = json.Unmarshal(rr3.Body.Bytes(), &third)
+	if third["data"].(map[string]any)["Value"] != "recovered" {
+		t.Fatalf("expected replayed success payload, got %v", third)
+	}
+}
+
 func TestReplayOrStoreConcurrentRaceCondition(t *testing.T) {
 	store := NewInMemoryStore()
 	SetStore(store)

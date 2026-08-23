@@ -27,6 +27,7 @@ type Service struct {
 	appConfig     appconfig.Source
 	runInTx       persistence.TxRunner
 	reactions     ReactionAggregator // optional; nil => reactions[] not filled
+	locations     LocationProvider   // optional; nil => reference_point 回退链跳过用户最近位置一级
 }
 
 // ReactionAggregator computes per-emoji reaction aggregates for moments.
@@ -65,6 +66,11 @@ func NewServiceWithDepsAndImagesAndConfig(repo Repository, notificationWriter mo
 
 func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (OwnerMomentItem, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
+	// distance/bearing_degrees 是响应侧相对位置字段，由服务端基于 reference_point
+	// 计算（spec api_spec_types.md「位置与地理信息」）；请求侧 location 仅承载
+	// point/location_name，剥离客户端可能传入的相对字段避免原样回显。
+	req.Location.Distance = nil
+	req.Location.BearingDegrees = nil
 	if err := s.validateImageOwnership(ctx, principal.UserID, req.ImageFileIDs); err != nil {
 		return OwnerMomentItem{}, err
 	}
@@ -194,7 +200,7 @@ func (s *Service) IncrementSharesCount(ctx context.Context, momentID string) err
 }
 
 func (s *Service) Search(ctx context.Context, req SearchMomentsRequest) (PaginatedMoments, error) {
-	result, err := s.repo.Search(ctx, req)
+	result, err := s.repo.Search(ctx, req, viewerUserID(ctx))
 	if err != nil {
 		return result, err
 	}
@@ -214,6 +220,11 @@ func (s *Service) Update(ctx context.Context, req UpdateMomentRequest) (OwnerMom
 	}
 	if item.User.UserID != principal.UserID {
 		return OwnerMomentItem{}, ErrPermissionDenied
+	}
+	// 同 Create：请求侧 location 剥离服务端计算的相对位置字段（spec api_spec_types.md）。
+	if req.Location != nil {
+		req.Location.Distance = nil
+		req.Location.BearingDegrees = nil
 	}
 	if err := s.validateImageOwnership(ctx, principal.UserID, req.ImageFileIDs); err != nil {
 		return OwnerMomentItem{}, err

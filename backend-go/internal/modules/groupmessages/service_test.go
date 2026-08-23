@@ -88,6 +88,10 @@ func (r *stubRepo) LookupMessageMeta(_ context.Context, _ string) (MessageOwnerM
 	return r.ownerMeta, true, nil
 }
 
+func (r *stubRepo) GetMessageReportSnapshot(_ context.Context, _ string) (MessageReportSnapshot, bool, error) {
+	return MessageReportSnapshot{}, false, nil
+}
+
 func (r *stubRepo) GetMediaForMessage(_ context.Context, _ string, _ string) (map[string]any, bool, error) {
 	return r.mediaResult, r.mediaOk, r.mediaErr
 }

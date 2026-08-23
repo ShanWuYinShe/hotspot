@@ -111,7 +111,7 @@ func TestPostgresRepositoryCreateAndList(t *testing.T) {
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
 
-	created, err := repo.Create(context.Background(), "user_alice", CreateReportRequest{TargetType: "moment", TargetID: "moment_1", Reason: "spam", Description: types.StrPtr("bad")})
+	created, err := repo.Create(context.Background(), "user_alice", CreateReportRequest{TargetType: "moment", TargetID: "moment_1", Reason: "spam", Description: types.StrPtr("bad")}, nil)
 	if err != nil || created.ReportID == "" {
 		t.Fatalf("unexpected create result: %#v err=%v", created, err)
 	}
@@ -140,7 +140,7 @@ func TestPostgresRepositoryCreateReturnsErrorOnExecFailure(t *testing.T) {
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
 
-	_, err := repo.Create(context.Background(), "user_alice", CreateReportRequest{TargetType: "moment", TargetID: "moment_1", Reason: "spam"})
+	_, err := repo.Create(context.Background(), "user_alice", CreateReportRequest{TargetType: "moment", TargetID: "moment_1", Reason: "spam"}, nil)
 	if err == nil {
 		t.Fatal("expected create error")
 	}

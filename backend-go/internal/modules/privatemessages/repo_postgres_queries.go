@@ -165,6 +165,19 @@ FROM private_messages pm
 JOIN private_chats pc ON pc.chat_key = pm.chat_key
 WHERE pm.message_id = $1`
 
+	// queryGetPrivateMessageSnapshot 取私聊消息真值（举报快照生成依据，spec
+	// api_spec_types.md ReportSnapshot：服务端受理举报时生成并冻结）。
+	// target_chat_id = 相对发送者的会话对方 user_id。
+	queryGetPrivateMessageSnapshot = `
+SELECT CASE WHEN pc.user_a_id = pm.sender_user_id THEN pc.user_b_id ELSE pc.user_a_id END,
+       pm.type,
+       COALESCE(pm.content, ''),
+       COALESCE(pm.file_id, ''),
+       TO_CHAR(pm.sent_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+FROM private_messages pm
+JOIN private_chats pc ON pc.chat_key = pm.chat_key
+WHERE pm.message_id = $1`
+
 	// 未读数独立 COUNT（口径与 History 的 is_read CASE 一致：对方发来的、
 	// sent_at 晚于已读游标的消息）。
 	queryUnreadPrivateMessageCount = `

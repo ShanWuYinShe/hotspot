@@ -1,6 +1,7 @@
 package moments
 
 import (
+	"math"
 	"strings"
 	"time"
 
@@ -9,11 +10,14 @@ import (
 
 const momentSearchCursorNamespace = "moments.search"
 
+// momentSearchCursor 是 moments/search 的 keyset 游标载荷（经 cursor.Encode 加密，
+// 对客户端不透明）。Score 为排序分值：relevance/newest 为整数语义，popular 含
+// 时间衰减为浮点（spec api_spec_moment.md moments/search 排序）。
 type momentSearchCursor struct {
-	Sort  string `json:"sort"`
-	Score int64  `json:"score"`
-	At    string `json:"at"`
-	ID    string `json:"id"`
+	Sort  string  `json:"sort"`
+	Score float64 `json:"score"`
+	At    string  `json:"at"`
+	ID    string  `json:"id"`
 }
 
 func normalizeMomentSearchSort(sortBy string) string {
@@ -26,17 +30,31 @@ func normalizeMomentSearchSort(sortBy string) string {
 }
 
 // momentSearchScore is the keyset score used by all three moment search sort
-// modes. relevance counts keyword/tag matches; popular counts interactions;
-// newest keeps a constant score so the keyset degenerates to
-// (created_at, moment_id).
-func momentSearchScore(item MomentItem, sortBy, keyword, tag string) int64 {
+// modes. relevance counts keyword/tag matches; newest keeps a constant score so
+// the keyset degenerates to (created_at, moment_id); popular applies a time
+// decay factor（spec api_spec_moment.md：热度排序含时间衰减因子，算法为实现细节）：
+//
+//	score = (likes_count + comments_count) / POWER(发布小时龄 + 2, 1.5)
+//
+// 与 searchScoreSQL 的 Postgres 表达式逐项对应；now 由调用方在单次查询内取同一
+// 值，保证页内排序自洽。
+func momentSearchScore(item MomentItem, sortBy, keyword, tag string, now time.Time) float64 {
 	switch normalizeMomentSearchSort(sortBy) {
 	case "popular":
-		return int64(item.LikesCount + item.CommentsCount)
+		raw := float64(item.LikesCount + item.CommentsCount)
+		hours := 0.0
+		if createdAt, err := time.Parse(time.RFC3339, item.CreatedAt); err == nil {
+			hours = now.Sub(createdAt).Hours()
+			if hours < 0 {
+				// 未来时间戳（时钟偏移）钳制为 0，与 SQL 的 GREATEST(..., 0.0) 对齐。
+				hours = 0
+			}
+		}
+		return raw / math.Pow(hours+2, 1.5)
 	case "newest":
 		return 0
 	default:
-		score := int64(0)
+		score := float64(0)
 		if keyword != "" && strings.Contains(item.Description, keyword) {
 			score++
 		}
@@ -47,10 +65,32 @@ func momentSearchScore(item MomentItem, sortBy, keyword, tag string) int64 {
 	}
 }
 
-func encodeMomentSearchCursor(sortBy string, item MomentItem, keyword, tag string) string {
+// compareSearchTuple 比较 keyset 元组 (score, created_at, moment_id) 与解码游标
+// （全 DESC 排序语义）：返回 <0 表示该元素严格排在游标之后，即满足 SQL 谓词
+// `(score, created_at, moment_id) < (cursor.Score, cursor.At, cursor.ID)`。
+// 内存实现据此定位下一页起点，不依赖边界项仍存在（与 Postgres keyset 同语义）。
+func compareSearchTuple(score float64, at, id string, cur momentSearchCursor) int {
+	if score != cur.Score {
+		if score < cur.Score {
+			return -1
+		}
+		return 1
+	}
+	if at != cur.At {
+		if at < cur.At {
+			return -1
+		}
+		return 1
+	}
+	return strings.Compare(id, cur.ID)
+}
+
+// encodeMomentSearchCursor 编码 keyset 游标。now 为本次查询的统一时钟，保证
+// 边界项分值与排序时使用的衰减分值一致（popular 模式）。
+func encodeMomentSearchCursor(sortBy string, item MomentItem, keyword, tag string, now time.Time) string {
 	value, err := cursor.Encode(momentSearchCursorNamespace, momentSearchCursor{
 		Sort:  normalizeMomentSearchSort(sortBy),
-		Score: momentSearchScore(item, sortBy, keyword, tag),
+		Score: momentSearchScore(item, sortBy, keyword, tag, now),
 		At:    item.CreatedAt,
 		ID:    item.MomentID,
 	})

@@ -18,7 +18,7 @@ type reportErrorRepo struct {
 	listErr   error
 }
 
-func (r *reportErrorRepo) Create(context.Context, string, CreateReportRequest) (ReportCreated, error) {
+func (r *reportErrorRepo) Create(context.Context, string, CreateReportRequest, *ReportSnapshot) (ReportCreated, error) {
 	return ReportCreated{}, r.createErr
 }
 func (r *reportErrorRepo) List(context.Context, string, ListReportsRequest) (PaginatedReports, error) {

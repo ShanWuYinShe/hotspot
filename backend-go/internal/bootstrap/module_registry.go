@@ -5,7 +5,6 @@ import (
 
 	"hotspot/backend-go/internal/modules/admin"
 	"hotspot/backend-go/internal/modules/auth"
-	"hotspot/backend-go/internal/modules/feed"
 	"hotspot/backend-go/internal/modules/groupmessages"
 	"hotspot/backend-go/internal/modules/groups"
 	"hotspot/backend-go/internal/modules/mapmodule"
@@ -45,7 +44,6 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	mediaModule := media.NewModule(cfg, factory)
 	mediaModule.Service.SetAppConfig(sharedAppConfig)
 	imageResolver := NewMomentImageResolver(mediaModule.Service)
-	feedImageResolver := NewFeedImageResolver(mediaModule.Service)
 	momentsModule := moments.NewModule(factory, usersModule.Service, sharedAppConfig, imageResolver)
 	systemModule := system.NewModule(factory, sharedAppConfig)
 	systemModule.SetHealthRedisPinger(redisPinger)
@@ -74,10 +72,9 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// modules exist to break the import cycle.
 	momentsModule.Service.SetReactionAggregator(momentReactionAggregator{reactions: reactionsModule.Service})
 	momentsModule.CommentsService().SetReactionAggregator(commentReactionAggregator{reactions: reactionsModule.Service})
-	feedModule := feed.NewModule(factory, sharedAppConfig, feedImageResolver)
-	feedModule.Service.SetReactionAggregator(feedReactionAggregator{reactions: reactionsModule.Service})
-	// reference_point 回退链第 2 级:已登录用户最近位置(users 模块实现,经 Service 接口注入)
-	feedModule.Service.SetLocationProvider(usersModule.Service)
+	// reference_point 回退链第 2 级：已登录用户最近位置（users 模块实现，
+	// 经 Service 接口注入 moments fetch_nearby/fetch_following 与各 search 端点）。
+	momentsModule.Service.SetLocationProvider(usersModule.Service)
 	groupsModule.Service.SetLocationProvider(usersModule.Service)
 	groupsModule.Service.SetAppConfig(sharedAppConfig)
 	searchModule := search.NewModule(factory, sharedAppConfig)
@@ -87,6 +84,11 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// enforcing httpx.CodeAccountBanned for banned accounts on RequiredAuth endpoints.
 	authModule := auth.NewModule(ctx, cfg, factory, sharedAppConfig)
 	adminModule := admin.NewModule(factory, sharedAppConfig)
+	// 举报快照源接线（spec api_spec_types.md ReportSnapshot：服务端生成）：
+	// 群聊 + 私聊两个消息源在各自模块构造完成后注入 reports；mediaFiles 经
+	// factory 解析媒体元数据，使 snapshot_media 为完整 MessageMedia。
+	reportsModule := reports.NewModule(factory)
+	reportsModule.Service.SetMessageSnapshotSource(newReportMessageSnapshotSource(factory, gmModule.Service, pcModule.MessageService()))
 	if svc := platformauth.DefaultService(); svc != nil {
 		svc.SetBanChecker(adminModule.Repo)
 	}
@@ -104,7 +106,6 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	return []modulekit.Module{
 		adminModule,
 		authModule,
-		feedModule,
 		gmModule,
 		groupsModule,
 		mapmodule.NewModule(factory),
@@ -113,7 +114,7 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 		notify.NewModuleWithService(notificationService),
 		pcModule,
 		reactionsModule,
-		reports.NewModule(factory),
+		reportsModule,
 		searchModule,
 		shareModule,
 		systemModule,

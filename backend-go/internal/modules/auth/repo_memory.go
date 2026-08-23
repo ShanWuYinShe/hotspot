@@ -24,11 +24,23 @@ type passwordResetRecord struct {
 	UsedAt           *time.Time
 }
 
+// registerCodeRecord 注册验证码记录（与 passwordResetRecord 同构，独立存放：
+// 注册码属于「未来账号」，不关联既有账号）。
+type registerCodeRecord struct {
+	RequestID        string
+	LoginID          string
+	VerificationCode string
+	ExpiresAt        time.Time
+	CreatedAt        time.Time
+	ConsumedAt       *time.Time
+}
+
 type InMemoryRepository struct {
 	mu              sync.RWMutex
 	accountsByLogin map[string]accountRecord
 	accountsByUser  map[string]accountRecord
 	resetsByLogin   map[string][]passwordResetRecord
+	registerCodes   map[string][]registerCodeRecord
 }
 
 const passwordResetThrottleWindow = 10 * time.Minute
@@ -38,6 +50,7 @@ func NewInMemoryRepository() *InMemoryRepository {
 		accountsByLogin: make(map[string]accountRecord),
 		accountsByUser:  make(map[string]accountRecord),
 		resetsByLogin:   make(map[string][]passwordResetRecord),
+		registerCodes:   make(map[string][]registerCodeRecord),
 	}
 }
 
@@ -198,6 +211,74 @@ func (r *InMemoryRepository) LastResetCode(loginID string) string {
 	items := r.resetsByLogin[loginID]
 	for i := len(items) - 1; i >= 0; i-- {
 		if items[i].UsedAt == nil {
+			return items[i].VerificationCode
+		}
+	}
+	return ""
+}
+
+// CreateRegisterCode 生成并落库注册验证码（不校验账号存在性，防枚举）。
+func (r *InMemoryRepository) CreateRegisterCode(_ context.Context, loginID string, expiresAt time.Time) (string, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	requestID, err := generateUserID()
+	if err != nil {
+		return "", err
+	}
+	code, err := generateVerificationCode()
+	if err != nil {
+		return "", err
+	}
+	r.registerCodes[loginID] = append(r.registerCodes[loginID], registerCodeRecord{
+		RequestID:        requestID,
+		LoginID:          loginID,
+		VerificationCode: code,
+		ExpiresAt:        expiresAt,
+		CreatedAt:        time.Now().UTC(),
+	})
+	return code, nil
+}
+
+// VerifyRegisterCode 校验注册验证码有效（存在、未消费、未过期），不消费。
+func (r *InMemoryRepository) VerifyRegisterCode(_ context.Context, loginID, verificationCode string) error {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	now := time.Now().UTC()
+	items := r.registerCodes[loginID]
+	for i := len(items) - 1; i >= 0; i-- {
+		item := items[i]
+		if item.ConsumedAt == nil && !now.After(item.ExpiresAt) && item.VerificationCode == verificationCode {
+			return nil
+		}
+	}
+	return ErrInvalidRegisterCode
+}
+
+// ConsumeRegisterCode 将验证码标记为已消费（一次性，幂等）。
+func (r *InMemoryRepository) ConsumeRegisterCode(_ context.Context, loginID, verificationCode string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	now := time.Now().UTC()
+	items := r.registerCodes[loginID]
+	for i := len(items) - 1; i >= 0; i-- {
+		if items[i].ConsumedAt == nil && items[i].VerificationCode == verificationCode {
+			record := items[i]
+			consumedAt := now
+			record.ConsumedAt = &consumedAt
+			items[i] = record
+			return nil
+		}
+	}
+	return nil
+}
+
+// LastRegisterCode 测试辅助：返回 login_id 最新的未消费注册验证码。
+func (r *InMemoryRepository) LastRegisterCode(loginID string) string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	items := r.registerCodes[loginID]
+	for i := len(items) - 1; i >= 0; i-- {
+		if items[i].ConsumedAt == nil {
 			return items[i].VerificationCode
 		}
 	}

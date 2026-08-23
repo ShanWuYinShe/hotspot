@@ -712,7 +712,7 @@ func TestHandleMomentCommentAndMessageReportsApplyContentActions(t *testing.T) {
 	}
 }
 
-func TestSearchTagsAndDeleteTag(t *testing.T) {
+func TestSearchTagsAndSetTagBan(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
 
 	searchReq := adminContext(httptest.NewRequest(http.MethodPost, "/tags/search", strings.NewReader(`{"keyword":"hot","pagination":{"limit":10}}`)), "admin", true)
@@ -723,12 +723,13 @@ func TestSearchTagsAndDeleteTag(t *testing.T) {
 		t.Fatalf("unexpected search response: %#v", searchResp)
 	}
 
-	deleteReq := adminContext(httptest.NewRequest(http.MethodPost, "/tags/delete", strings.NewReader(`{"name":"hotspot"}`)), "admin", true)
-	deleteRR := httptest.NewRecorder()
-	handler.DeleteTag(deleteRR, deleteReq)
-	deleteResp := decodeResponse[struct{}](t, deleteRR)
-	if deleteResp.Code != 0 {
-		t.Fatalf("unexpected delete response: %#v", deleteResp)
+	// active=true 屏蔽：搜索不再命中
+	banReq := adminContext(httptest.NewRequest(http.MethodPost, "/tags/set_ban", strings.NewReader(`{"name":"hotspot","active":true}`)), "admin", true)
+	banRR := httptest.NewRecorder()
+	handler.SetTagBan(banRR, banReq)
+	banResp := decodeResponse[struct{}](t, banRR)
+	if banResp.Code != 0 {
+		t.Fatalf("unexpected ban response: %#v", banResp)
 	}
 
 	searchAfterReq := adminContext(httptest.NewRequest(http.MethodPost, "/tags/search", strings.NewReader(`{"keyword":"hot","pagination":{"limit":10}}`)), "admin", true)
@@ -736,42 +737,94 @@ func TestSearchTagsAndDeleteTag(t *testing.T) {
 	handler.SearchTags(searchAfterRR, searchAfterReq)
 	searchAfterResp := decodeResponse[PaginatedAdminTags](t, searchAfterRR)
 	if searchAfterResp.Code != 0 || searchAfterResp.Data == nil || len(searchAfterResp.Data.Items) != 0 {
-		t.Fatalf("unexpected search-after-delete response: %#v", searchAfterResp)
+		t.Fatalf("unexpected search-after-ban response: %#v", searchAfterResp)
 	}
 
-	deleteAgainReq := adminContext(httptest.NewRequest(http.MethodPost, "/tags/delete", strings.NewReader(`{"name":"hotspot"}`)), "admin", true)
-	deleteAgainRR := httptest.NewRecorder()
-	handler.DeleteTag(deleteAgainRR, deleteAgainReq)
-	deleteAgainResp := decodeResponse[struct{}](t, deleteAgainRR)
-	if deleteAgainResp.Code != 0 {
-		t.Fatalf("unexpected second delete response: %#v", deleteAgainResp)
+	// 重复屏蔽：幂等成功
+	banAgainReq := adminContext(httptest.NewRequest(http.MethodPost, "/tags/set_ban", strings.NewReader(`{"name":"hotspot","active":true}`)), "admin", true)
+	banAgainRR := httptest.NewRecorder()
+	handler.SetTagBan(banAgainRR, banAgainReq)
+	banAgainResp := decodeResponse[struct{}](t, banAgainRR)
+	if banAgainResp.Code != 0 {
+		t.Fatalf("unexpected second ban response: %#v", banAgainResp)
 	}
-	missingReq := adminContext(httptest.NewRequest(http.MethodPost, "/tags/delete", strings.NewReader(`{"name":"missing"}`)), "admin", true)
+
+	// 解屏蔽：同名标签恢复可命中
+	unbanReq := adminContext(httptest.NewRequest(http.MethodPost, "/tags/set_ban", strings.NewReader(`{"name":"hotspot","active":false}`)), "admin", true)
+	unbanRR := httptest.NewRecorder()
+	handler.SetTagBan(unbanRR, unbanReq)
+	unbanResp := decodeResponse[struct{}](t, unbanRR)
+	if unbanResp.Code != 0 {
+		t.Fatalf("unexpected unban response: %#v", unbanResp)
+	}
+	searchUnbanReq := adminContext(httptest.NewRequest(http.MethodPost, "/tags/search", strings.NewReader(`{"keyword":"hot","pagination":{"limit":10}}`)), "admin", true)
+	searchUnbanRR := httptest.NewRecorder()
+	handler.SearchTags(searchUnbanRR, searchUnbanReq)
+	searchUnbanResp := decodeResponse[PaginatedAdminTags](t, searchUnbanRR)
+	if searchUnbanResp.Code != 0 || searchUnbanResp.Data == nil || len(searchUnbanResp.Data.Items) != 1 {
+		t.Fatalf("unexpected search-after-unban response: %#v", searchUnbanResp)
+	}
+
+	// 屏蔽不存在的标签 → 10300
+	missingReq := adminContext(httptest.NewRequest(http.MethodPost, "/tags/set_ban", strings.NewReader(`{"name":"missing","active":true}`)), "admin", true)
 	missingRR := httptest.NewRecorder()
-	handler.DeleteTag(missingRR, missingReq)
+	handler.SetTagBan(missingRR, missingReq)
 	missingResp := decodeResponse[struct{}](t, missingRR)
 	if missingResp.Code != httpx.CodeNotFound || missingResp.Message != "标签不存在" {
-		t.Fatalf("unexpected missing delete response: %#v", missingResp)
+		t.Fatalf("unexpected missing ban response: %#v", missingResp)
 	}
-	foundTagDeleteAudit := false
-	tagDeleteAuditCount := 0
+
+	// 审计：屏蔽/解屏蔽均落审计（含重复屏蔽），action=tag.set_ban，details 带 name+active
+	tagAuditCount := 0
 	for _, entry := range store.auditLogs {
-		if entry.Action == AuditActionTagDelete {
-			tagDeleteAuditCount++
-			foundTagDeleteAudit = true
+		if entry.Action == AuditActionTagSetBan {
+			tagAuditCount++
 			if entry.TargetType != AuditTargetTypeTag || entry.TargetID != "hotspot" {
-				t.Fatalf("unexpected tag delete audit target: %#v", entry)
+				t.Fatalf("unexpected tag set_ban audit target: %#v", entry)
 			}
-			if entry.Details["type"] != string(AuditActionTagDelete) || entry.Details["name"] != "hotspot" {
-				t.Fatalf("unexpected tag delete audit details: %#v", entry.Details)
+			if entry.Details["type"] != string(AuditActionTagSetBan) || entry.Details["name"] != "hotspot" {
+				t.Fatalf("unexpected tag set_ban audit details: %#v", entry.Details)
 			}
 		}
 	}
-	if !foundTagDeleteAudit {
-		t.Fatalf("expected tag delete audit log, got %#v", store.auditLogs)
+	// ban + ban-again + unban = 3 条
+	if tagAuditCount != 3 {
+		t.Fatalf("expected 3 tag set_ban audit logs (ban/ban-again/unban), got %d %#v", tagAuditCount, store.auditLogs)
 	}
-	if tagDeleteAuditCount != 1 {
-		t.Fatalf("expected exactly one tag delete audit log, got %d %#v", tagDeleteAuditCount, store.auditLogs)
+}
+
+// TestSetTagBanRejectsUnbanWithHardDelete：active=false 且 hard_delete=true
+// 视为参数冲突（10000）——解屏蔽与不可逆物理删除语义冲突。
+func TestSetTagBanRejectsUnbanWithHardDelete(t *testing.T) {
+	handler, _ := newTestHandlerWithStore()
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/tags/set_ban", strings.NewReader(`{"name":"hotspot","active":false,"hard_delete":true}`)), "admin", true)
+	rr := httptest.NewRecorder()
+	handler.SetTagBan(rr, req)
+	resp := decodeResponse[struct{}](t, rr)
+	if resp.Code != httpx.CodeInvalidRequest {
+		t.Fatalf("expected invalid request for unban+hard_delete, got %#v", resp)
+	}
+}
+
+// TestSetTagBanUnbanUnknownTagIsNoOp：对未屏蔽（从未存在）标签解屏蔽为 no-op
+// 成功并落审计（与 users/set_ban 的 no-op 语义对齐：设状态操作重复达同状态成功）。
+func TestSetTagBanUnbanUnknownTagIsNoOp(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/tags/set_ban", strings.NewReader(`{"name":"never_seen","active":false}`)), "admin", true)
+	rr := httptest.NewRecorder()
+	handler.SetTagBan(rr, req)
+	resp := decodeResponse[struct{}](t, rr)
+	if resp.Code != 0 {
+		t.Fatalf("expected no-op success for unban of unknown tag, got %#v", resp)
+	}
+	found := false
+	for _, entry := range store.auditLogs {
+		if entry.Action == AuditActionTagSetBan && entry.TargetID == "never_seen" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected audit log for no-op unban, got %#v", store.auditLogs)
 	}
 }
 
@@ -782,7 +835,7 @@ func TestCreateAnnouncementRequiresIdempotencyKey(t *testing.T) {
 
 	handler.CreateAnnouncement(rr, req)
 
-	resp := decodeResponse[AnnouncementCreated](t, rr)
+	resp := decodeResponse[AdminAnnouncementItem](t, rr)
 	if resp.Code != httpx.CodeInvalidRequest {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
@@ -801,7 +854,7 @@ func TestListAdminAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 	createReq.Header.Set("Idempotency-Key", "announce001abcd1234abcd1234abcd12")
 	createRR := httptest.NewRecorder()
 	handler.CreateAnnouncement(createRR, createReq)
-	createResp := decodeResponse[AnnouncementCreated](t, createRR)
+	createResp := decodeResponse[AdminAnnouncementItem](t, createRR)
 	if createResp.Code != 0 || createResp.Data == nil || createResp.Data.AnnouncementID == "" {
 		t.Fatalf("unexpected create response: %#v", createResp)
 	}

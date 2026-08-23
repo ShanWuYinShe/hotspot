@@ -37,6 +37,10 @@ type Repository interface {
 	GetMediaForMessage(context.Context, string, string) (map[string]any, bool, error)
 	MessageExists(ctx context.Context, messageID string) (found bool, senderID string, err error)
 	MessageParticipants(ctx context.Context, messageID string) (senderID, receiverID string, found bool, err error)
+	// GetMessageReportSnapshot 按 message_id 读取消息真值生成举报快照投影视图
+	//（spec api_spec_types.md ReportSnapshot 的 private 会话形态，由 bootstrap
+	// 适配为 reports.ReportSnapshot；举报快照由服务端生成，客户端不提交）。
+	GetMessageReportSnapshot(ctx context.Context, messageID string) (snapshot MessageReportSnapshot, found bool, err error)
 	// CountMessagesByTarget counts messages sent by senderID since the given
 	// time, grouped by the receiving user (used for the stranger daily quota
 	// check which is total-volume based across all non-mutual targets).

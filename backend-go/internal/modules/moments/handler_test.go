@@ -17,6 +17,7 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
+	"hotspot/backend-go/internal/platform/testdb"
 	"hotspot/backend-go/internal/platform/types"
 )
 
@@ -431,7 +432,9 @@ func TestSearchRejectsInvalidSortBy(t *testing.T) {
 func TestSearchAcceptsValidSortBy(t *testing.T) {
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
-	for _, valid := range []string{"relevance", "newest", "popular", ""} {
+	// popular 为热门模式：必须无输入条件（keyword/tag 缺省），与 keyword 同传
+	// 视为参数冲突（spec moment.md → moments/search 热门模式互斥约束）。
+	for _, valid := range []string{"relevance", "newest", ""} {
 		t.Run("sort_by="+valid, func(t *testing.T) {
 			sortField := ""
 			if valid != "" {
@@ -451,6 +454,39 @@ func TestSearchAcceptsValidSortBy(t *testing.T) {
 				t.Fatalf("expected code 0 for sort_by=%q, got %d", valid, resp.Code)
 			}
 		})
+	}
+	// 热门模式：仅显式 sort_by=popular、keyword/tag 均缺省
+	t.Run("popular_mode_no_input", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(`{"sort_by":"popular"}`))
+		rr := httptest.NewRecorder()
+		handler.Search(rr, req)
+		var resp struct {
+			Code httpx.Code `json:"code"`
+		}
+		if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if resp.Code != 0 {
+			t.Fatalf("expected code 0 for popular mode, got %d", resp.Code)
+		}
+	})
+	// 热门模式与输入条件互斥
+	for _, body := range []string{
+		`{"sort_by":"popular","keyword":"test"}`,
+		`{"sort_by":"popular","tag":"travel"}`,
+	} {
+		req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(body))
+		rr := httptest.NewRecorder()
+		handler.Search(rr, req)
+		var resp struct {
+			Code httpx.Code `json:"code"`
+		}
+		if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if resp.Code != httpx.CodeInvalidRequest {
+			t.Fatalf("expected httpx.CodeInvalidRequest for %s, got %d", body, resp.Code)
+		}
 	}
 }
 
@@ -737,9 +773,14 @@ func TestMomentHandlerDeleteReturnsSuccess(t *testing.T) {
 		t.Fatalf("expected code 0, got %d", resp.Code)
 	}
 
-	_, ok, _ := repo.Get(ctx, created.MomentID)
-	if ok {
-		t.Fatal("moment should be deleted")
+	// 软删除（spec api_spec_moment.md「删除语义」）：记录保留，标记 is_deleted=true
+	// 且 description 清空；对作者 fetch_created 仍返回占位项。
+	item, ok, _ := repo.Get(ctx, created.MomentID)
+	if !ok {
+		t.Fatal("soft-deleted moment record must be retained")
+	}
+	if !item.IsDeleted || item.Description != "" {
+		t.Fatalf("expected soft-delete placeholder (is_deleted=true, empty description), got %#v", item)
 	}
 }
 
@@ -937,7 +978,7 @@ func (r *errorRepo) Create(context.Context, string, CreateMomentRequest) (Moment
 func (r *errorRepo) Get(context.Context, string) (MomentItem, bool, error) {
 	return MomentItem{}, false, errors.New("db error")
 }
-func (r *errorRepo) Search(context.Context, SearchMomentsRequest) (PaginatedMoments, error) {
+func (r *errorRepo) Search(context.Context, SearchMomentsRequest, string) (PaginatedMoments, error) {
 	return PaginatedMoments{}, nil
 }
 func (r *errorRepo) Update(context.Context, string, UpdateMomentRequest) error {
@@ -963,6 +1004,53 @@ func (r *errorRepo) LoadMyState(context.Context, string, string) *MyMomentState 
 func (r *errorRepo) FetchMomentImageRows(context.Context, []string) (map[string][]momentImageRow, error) {
 	return map[string][]momentImageRow{}, nil
 }
+func (r *errorRepo) ListFollowingMoments(context.Context, momentsQuery) (PaginatedMoments, error) {
+	return PaginatedMoments{}, nil
+}
+func (r *errorRepo) ListNearbyMoments(context.Context, momentsQuery) (PaginatedMoments, error) {
+	return PaginatedMoments{}, nil
+}
 func (r *errorRepo) NotificationContext(context.Context, string) (MomentItem, bool, error) {
 	return MomentItem{}, false, nil
+}
+
+// --- image_file_ids 不存在或不属于当前用户 → 10300（spec api_spec_moment.md
+// moments/create、moments/update 错误码；此前误映射 10000）---
+
+func TestCreateMomentUnownedImagesReturns10300(t *testing.T) {
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	repo := NewInMemoryRepository()
+	resolverErr := errors.New("file not owned")
+	handler := NewHandler(NewServiceWithDepsAndImages(repo, nil, nil, &momentsImageResolver{err: resolverErr}))
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+
+	body := `{"description":"hello","location":{"point":{"latitude":35.0,"longitude":112.0}},"image_file_ids":["file_foreign"]}`
+	req := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(body))
+	req.Header.Set("Idempotency-Key", "imgown1234imgown1234imgown123400")
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.Create(rr, req)
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeNotFound {
+		t.Fatalf("unowned image_file_ids on create: expected httpx.CodeNotFound(10300), got %d body=%s", code, rr.Body.String())
+	}
+}
+
+func TestUpdateMomentUnownedImagesReturns10300(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Here"}})
+	if err != nil {
+		t.Fatalf("create moment: %v", err)
+	}
+
+	resolverErr := errors.New("file not owned")
+	handler := NewHandler(NewServiceWithDepsAndImages(repo, nil, nil, &momentsImageResolver{err: resolverErr}))
+	body := `{"moment_id":"` + created.MomentID + `","image_file_ids":["file_foreign"]}`
+	req := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(body))
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.Update(rr, req)
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeNotFound {
+		t.Fatalf("unowned image_file_ids on update: expected httpx.CodeNotFound(10300), got %d body=%s", code, rr.Body.String())
+	}
 }

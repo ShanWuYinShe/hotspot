@@ -3,12 +3,14 @@ package integration
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -40,10 +42,16 @@ type ApiResponse[T any] struct {
 	Data    *T     `json:"data,omitempty"`
 }
 
+// responseCode 使 *ApiResponse[T] 满足 codeGetter（值接收者 → 指针方法集）。
+func (r ApiResponse[T]) responseCode() int { return r.Code }
+
 func TestMain(m *testing.M) {
+	// 必须显式指定 BACKEND_URL 才会执行集成测试：默认地址可能指向共享的
+	// 主实例后端（8081），裸跑 go test ./... 会污染其数据库。
 	backendAddr = os.Getenv("BACKEND_URL")
 	if backendAddr == "" {
-		backendAddr = "http://localhost:8081"
+		fmt.Fprintf(os.Stderr, "BACKEND_URL not set; skipping integration tests\n")
+		os.Exit(m.Run())
 	}
 
 	maybeMigrate()
@@ -189,6 +197,58 @@ func requireBackend(t *testing.T) {
 	}
 }
 
+// codeGetter 统一提取任意 ApiResponse[T] 的业务码——避免对具体泛型类型做
+// type assertion（*ApiResponse[map[string]any] 无法断言为 *ApiResponse[any]，
+// 曾导致 apiRespOK 的 code==0 校验对所有调用静默失效）。
+type codeGetter interface {
+	responseCode() int
+}
+
+func responseCodeOf(result any) (int, bool) {
+	if result == nil {
+		return 0, false
+	}
+	switch r := result.(type) {
+	case codeGetter:
+		return r.responseCode(), true
+	case *ApiResponse[any]:
+		return int(r.Code), true
+	case *ApiResponse[map[string]any]:
+		return int(r.Code), true
+	}
+	// 兜底：反射读取 Code 字段（覆盖其余元素类型的 ApiResponse[T]）。
+	v := reflect.ValueOf(result)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	if v.Kind() == reflect.Struct && v.Type().Name() == "ApiResponse" {
+		if f := v.FieldByName("Code"); f.IsValid() && f.CanInt() {
+			return int(f.Int()), true
+		}
+	}
+	return 0, false
+}
+
+// responseMessageOf 提取业务错误信息用于失败诊断（与 responseCodeOf 同样的兜底策略）。
+func responseMessageOf(result any) string {
+	switch r := result.(type) {
+	case *ApiResponse[any]:
+		return r.Message
+	case *ApiResponse[map[string]any]:
+		return r.Message
+	}
+	v := reflect.ValueOf(result)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	if v.Kind() == reflect.Struct && v.Type().Name() == "ApiResponse" {
+		if f := v.FieldByName("Message"); f.IsValid() && f.Kind() == reflect.String {
+			return f.String()
+		}
+	}
+	return ""
+}
+
 func apiRespOK(t *testing.T, path string, body, result any) {
 	requireBackend(t)
 	status, err := post(path, body, result)
@@ -198,10 +258,8 @@ func apiRespOK(t *testing.T, path string, body, result any) {
 	if status != http.StatusOK {
 		t.Fatalf("POST %s: got status %d, want 200", path, status)
 	}
-	if r, ok := result.(*ApiResponse[any]); ok {
-		if r.Code != 0 {
-			t.Fatalf("POST %s: code=%d message=%s", path, r.Code, r.Message)
-		}
+	if code, ok := responseCodeOf(result); ok && code != 0 {
+		t.Fatalf("POST %s: code=%d message=%s", path, code, responseMessageOf(result))
 	}
 }
 
@@ -214,10 +272,8 @@ func apiRespOKWithCode(t *testing.T, path string, body, result any, expectCode i
 	if status != http.StatusOK {
 		t.Fatalf("POST %s: got status %d, want %d", path, status, http.StatusOK)
 	}
-	if r, ok := result.(*ApiResponse[any]); ok {
-		if r.Code != expectCode {
-			t.Fatalf("POST %s: code=%d, want %d", path, r.Code, expectCode)
-		}
+	if code, ok := responseCodeOf(result); ok && code != expectCode {
+		t.Fatalf("POST %s: code=%d, want %d", path, code, expectCode)
 	}
 }
 
@@ -262,10 +318,21 @@ func emptyBody(t *testing.T, path string) {
 // Module-level test helpers
 // =============================================================================
 
+// createTestUser 的 login_id 必须符合 spec api_spec_base.md「通用字段约束」
+// （3-64 字符）；"test_"+t.Name() 拼接可能超长（如 TestGroupMessages_SendGetHistory），
+// 故对测试名取短哈希保证唯一且合规。
 func createTestUser(t *testing.T, nickname string) (userID string) {
+	uid, _ := createTestUserWithToken(t, nickname)
+	return uid
+}
+
+// createTestUserWithToken 注册测试用户并同时返回 user_id 与 access_token，
+// 供需要「以该用户身份」发请求的用例切换 accessToken 使用。
+func createTestUserWithToken(t *testing.T, nickname string) (userID, token string) {
 	var resp ApiResponse[map[string]any]
+	nameSum := sha256.Sum256([]byte(t.Name()))
 	apiRespOK(t, "/public/v1/auth/register", map[string]any{
-		"login_id":    "test_" + t.Name() + "_" + nickname + "_" + fmt.Sprint(time.Now().UnixNano()),
+		"login_id":    fmt.Sprintf("t_%x_%s_%d", nameSum[:5], nickname, time.Now().UnixNano()),
 		"nickname":    nickname,
 		"password":    "Test1234",
 		"client_type": "app",
@@ -277,16 +344,73 @@ func createTestUser(t *testing.T, nickname string) (userID string) {
 	if uid, ok := (*resp.Data)["user_id"].(string); ok {
 		userID = uid
 	}
-	return userID
+	if tok, ok := (*resp.Data)["access_token"].(string); ok {
+		token = tok
+	}
+	return userID, token
+}
+
+// withAdminAuth 以「系统管理员」身份执行 fn：注册普通用户后向 admin_users
+// 表播种 grant_all_permissions 记录（spec api_spec_admin.md 管理员判定来源），
+// 结束后清理。无 POSTGRES_DSN 时跳过（无法播种）。
+func withAdminAuth(t *testing.T, fn func(token string)) {
+	dsn := os.Getenv("POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("POSTGRES_DSN not set: cannot seed admin user")
+	}
+	userID, token := createGuestUser(t)
+	db := persistence.NewPostgresDB(dsn)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	if err := db.Exec(ctx,
+		`INSERT INTO admin_users (user_id, grant_all_permissions) VALUES ($1, TRUE)
+		 ON CONFLICT (user_id) DO UPDATE SET revoked_at = NULL, grant_all_permissions = TRUE`,
+		userID); err != nil {
+		t.Fatalf("seed admin user: %v", err)
+	}
+	defer func() {
+		delCtx, delCancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer delCancel()
+		_ = db.Exec(delCtx, `DELETE FROM admin_users WHERE user_id = $1`, userID)
+	}()
+	oldTok := accessToken
+	accessToken = token
+	defer func() { accessToken = oldTok }()
+	fn(token)
+}
+
+// createMomentAsCurrentUser 以当前 accessToken 创建一条瞬间并返回 moment_id。
+func createMomentAsCurrentUser(t *testing.T) string {
+	var createResp ApiResponse[map[string]any]
+	apiRespOK(t, "/api/v1/moments/create", map[string]any{
+		"description": "integration test moment",
+		"location": map[string]any{
+			"point":         map[string]any{"latitude": 37.7749, "longitude": -122.4194},
+			"location_name": "Test City",
+		},
+	}, &createResp)
+	if createResp.Data == nil {
+		t.Fatalf("create moment: no data")
+	}
+	mid, _ := (*createResp.Data)["moment_id"].(string)
+	if mid == "" {
+		t.Fatalf("create moment: missing moment_id")
+	}
+	return mid
 }
 
 func createGuestUser(t *testing.T) (userID string, token string) {
 	var resp ApiResponse[map[string]any]
+	// 昵称上限 30 字符（spec api_spec_auth.md）：t.Name() 可能超长，用短哈希代替
+	nameSum := sha256.Sum256([]byte(t.Name()))
 	apiNoAuth(t, "/public/v1/auth/guest", map[string]any{
-		"nickname":    "guest_" + t.Name(),
+		"nickname":    fmt.Sprintf("gst_%x", nameSum[:5]),
 		"client_type": "app",
 		"device_id":   uniqueDeviceID(t),
 	}, &resp)
+	if resp.Code != 0 {
+		t.Fatalf("guest register failed: code=%d message=%s", resp.Code, resp.Message)
+	}
 	if resp.Data == nil {
 		t.Fatalf("no data in guest response")
 	}
@@ -412,8 +536,11 @@ func TestAuth_RefreshToken_NoToken(t *testing.T) {
 // =============================================================================
 
 func TestUsers_Search(t *testing.T) {
-	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/users/search", map[string]any{"keyword": "test"}, &resp)
+	// users/search 需登录（spec api_spec_discovery.md 认证档位）
+	withAuth(t, func(token string) {
+		var resp ApiResponse[map[string]any]
+		apiRespOK(t, "/api/v1/users/search", map[string]any{"keyword": "test"}, &resp)
+	})
 }
 
 func TestUsers_OpenTheDoor(t *testing.T) {
@@ -425,44 +552,51 @@ func TestUsers_OpenTheDoor(t *testing.T) {
 }
 
 func TestUsers_ListFriends(t *testing.T) {
+	// spec FetchFriendsRequest：user_id 必传
 	withAuth(t, func(token string) {
+		uid, _ := createGuestUser(t)
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/fetch_friends", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/users/fetch_friends", map[string]any{"user_id": uid}, &resp)
 	})
 }
 
 func TestUsers_ListFollowing(t *testing.T) {
 	withAuth(t, func(token string) {
+		uid, _ := createGuestUser(t)
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/fetch_following", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/users/fetch_following", map[string]any{"user_id": uid}, &resp)
 	})
 }
 
 func TestUsers_ListFollowers(t *testing.T) {
 	withAuth(t, func(token string) {
+		uid, _ := createGuestUser(t)
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/fetch_followers", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/users/fetch_followers", map[string]any{"user_id": uid}, &resp)
 	})
 }
 
 func TestUsers_ListGroups(t *testing.T) {
 	withAuth(t, func(token string) {
+		uid, _ := createGuestUser(t)
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/fetch_groups", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/users/fetch_groups", map[string]any{"user_id": uid}, &resp)
 	})
 }
 
 func TestUsers_ListMoments(t *testing.T) {
 	withAuth(t, func(token string) {
+		uid := createTestUser(t, "moments_owner")
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/fetch_moments", map[string]any{"user_id": ""}, &resp)
+		apiRespOK(t, "/api/v1/users/fetch_moments", map[string]any{"user_id": uid}, &resp)
 	})
 }
 
 func TestUsers_ListReactedMoments(t *testing.T) {
 	withAuth(t, func(token string) {
+		uid, _ := createGuestUser(t)
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/users/fetch_reacted_moments", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/users/fetch_reacted_moments", map[string]any{"user_id": uid}, &resp)
 	})
 }
 
@@ -530,9 +664,9 @@ func TestUsersMe_Unfollow(t *testing.T) {
 	// Follow first then unfollow
 	_, tok2 := createGuestUser(t)
 	tok2uid, _ := whoAmI(tok2)
-	tok1uid := createTestUser(t, "unfollow_target")
+	_, tok1 := createTestUserWithToken(t, "unfollow_target")
 	oldToken := accessToken
-	accessToken = tok1uid
+	accessToken = tok1
 	apiRespOK(t, "/api/v1/users/set_follow", map[string]any{"user_id": tok2uid, "active": true}, nil)
 	apiRespOK(t, "/api/v1/users/set_follow", map[string]any{"user_id": tok2uid, "active": false}, nil)
 	accessToken = oldToken
@@ -612,24 +746,26 @@ func getString(m *map[string]any, key string) string {
 
 func TestMoments_OpenTheDoor(t *testing.T) {
 	withAuth(t, func(token string) {
-		_ = createTestUser(t, "moment_owner")
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/moments/open_the_door", map[string]any{"moment_id": "nonexistent"}, &resp)
-		// Should return code != 0 but status 200 (business error)
-		if resp.Code == 0 {
-			t.Log("open_the_door returned success for nonexistent moment — acceptable if design choice")
-		}
+		// 不存在的瞬间 → 10300 瞬间不存在（spec api_spec_moment.md 错误码）
+		apiRespOKWithCode(t, "/api/v1/moments/open_the_door", map[string]any{"moment_id": "nonexistent"}, &resp, 10300)
 	})
 }
 
 func TestMoments_Search(t *testing.T) {
-	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/moments/search", map[string]any{}, &resp)
+	withAuth(t, func(token string) {
+		// spec SearchMomentsRequest：keyword/tag 至少其一（全局搜索）
+		var resp ApiResponse[map[string]any]
+		apiRespOK(t, "/api/v1/moments/search", map[string]any{"keyword": "integration"}, &resp)
+	})
 }
 
 func TestMoments_ListLikes(t *testing.T) {
-	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/reactions/fetch", map[string]any{"target_type": "moment", "target_id": "fake_moment"}, &resp)
+	withAuth(t, func(token string) {
+		mid := createMomentAsCurrentUser(t)
+		var resp ApiResponse[map[string]any]
+		apiRespOK(t, "/api/v1/reactions/fetch", map[string]any{"target_type": "moment", "target_id": mid}, &resp)
+	})
 }
 
 // =============================================================================
@@ -681,9 +817,10 @@ func TestMoments_Update(t *testing.T) {
 
 func TestMoments_LikeUnlike(t *testing.T) {
 	withTwoUsers(t, func(tok1, tok2 string) {
-		tok1uid := createTestUser(t, "moment_author")
+		// 作者身份需用其真实 access_token（此前误把 user_id 塞进 Authorization）
+		_, authorTok := createTestUserWithToken(t, "moment_author")
 		oldTok := accessToken
-		accessToken = tok1uid
+		accessToken = authorTok
 		var createResp ApiResponse[map[string]any]
 		apiRespOK(t, "/api/v1/moments/create", map[string]any{
 			"description": "likeable moment",
@@ -708,9 +845,9 @@ func TestMoments_LikeUnlike(t *testing.T) {
 
 func TestMoments_FavoriteUnfavorite(t *testing.T) {
 	withAuth(t, func(token string) {
-		uid := createTestUser(t, "fav_author")
+		_, authorTok := createTestUserWithToken(t, "fav_author")
 		oldTok := accessToken
-		accessToken = uid
+		accessToken = authorTok
 		var createResp ApiResponse[map[string]any]
 		apiRespOK(t, "/api/v1/moments/create", map[string]any{
 			"description": "fav moment",
@@ -737,39 +874,79 @@ func TestMoments_FavoriteUnfavorite(t *testing.T) {
 // =============================================================================
 
 func TestComments_List(t *testing.T) {
-	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/comments/fetch", map[string]any{}, &resp)
+	withAuth(t, func(token string) {
+		mid := createMomentAsCurrentUser(t)
+		// spec ListCommentsRequest：moment_id 必传
+		var resp ApiResponse[map[string]any]
+		apiRespOK(t, "/api/v1/comments/fetch", map[string]any{"moment_id": mid}, &resp)
+	})
 }
 
 func TestComments_ListReplies(t *testing.T) {
-	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/comments/fetch_replies", map[string]any{"comment_id": "c_fake"}, &resp)
+	withAuth(t, func(token string) {
+		mid := createMomentAsCurrentUser(t)
+		var createResp ApiResponse[map[string]any]
+		apiRespOK(t, "/api/v1/comments/create", map[string]any{
+			"moment_id": mid,
+			"content":   "root comment for replies",
+		}, &createResp)
+		if createResp.Data == nil {
+			t.Fatalf("create comment: no data")
+		}
+		cid, _ := (*createResp.Data)["comment_id"].(string)
+		var resp ApiResponse[map[string]any]
+		apiRespOK(t, "/api/v1/comments/fetch_replies", map[string]any{"comment_id": cid}, &resp)
+	})
 }
 
 func TestComments_ListLikes(t *testing.T) {
-	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/reactions/fetch", map[string]any{"target_type": "comment", "target_id": "c_fake"}, &resp)
+	withAuth(t, func(token string) {
+		mid := createMomentAsCurrentUser(t)
+		var createResp ApiResponse[map[string]any]
+		apiRespOK(t, "/api/v1/comments/create", map[string]any{
+			"moment_id": mid,
+			"content":   "comment to be liked",
+		}, &createResp)
+		if createResp.Data == nil {
+			t.Fatalf("create comment: no data")
+		}
+		cid, _ := (*createResp.Data)["comment_id"].(string)
+		var resp ApiResponse[map[string]any]
+		apiRespOK(t, "/api/v1/reactions/fetch", map[string]any{"target_type": "comment", "target_id": cid}, &resp)
+	})
 }
 
 func TestComments_CreateDelete(t *testing.T) {
 	withAuth(t, func(token string) {
+		mid := createMomentAsCurrentUser(t)
 		var resp ApiResponse[map[string]any]
 		apiRespOK(t, "/api/v1/comments/create", map[string]any{
-			"moment_id": "moment_fake",
+			"moment_id": mid,
 			"content":   "test comment",
 		}, &resp)
-		if resp.Code == 0 && resp.Data != nil {
-			if cid, ok := (*resp.Data)["comment_id"].(string); ok {
-				apiRespOK(t, "/api/v1/comments/delete", map[string]any{"comment_id": cid}, nil)
-			}
+		if resp.Data == nil {
+			t.Fatalf("create comment: no data")
+		}
+		if cid, ok := (*resp.Data)["comment_id"].(string); ok {
+			apiRespOK(t, "/api/v1/comments/delete", map[string]any{"comment_id": cid}, nil)
 		}
 	})
 }
 
 func TestComments_LikeUnlike(t *testing.T) {
 	withAuth(t, func(token string) {
-		apiRespOK(t, "/api/v1/reactions/set", map[string]any{"target_type": "comment", "target_id": "c_fake", "emoji": "👍", "active": true}, nil)
-		apiRespOK(t, "/api/v1/reactions/set", map[string]any{"target_type": "comment", "target_id": "c_fake", "emoji": "👍", "active": false}, nil)
+		mid := createMomentAsCurrentUser(t)
+		var createResp ApiResponse[map[string]any]
+		apiRespOK(t, "/api/v1/comments/create", map[string]any{
+			"moment_id": mid,
+			"content":   "comment to like",
+		}, &createResp)
+		if createResp.Data == nil {
+			t.Fatalf("create comment: no data")
+		}
+		cid, _ := (*createResp.Data)["comment_id"].(string)
+		apiRespOK(t, "/api/v1/reactions/set", map[string]any{"target_type": "comment", "target_id": cid, "emoji": "👍", "active": true}, nil)
+		apiRespOK(t, "/api/v1/reactions/set", map[string]any{"target_type": "comment", "target_id": cid, "emoji": "👍", "active": false}, nil)
 	})
 }
 
@@ -778,26 +955,28 @@ func TestComments_LikeUnlike(t *testing.T) {
 // =============================================================================
 
 func TestGroups_Search(t *testing.T) {
+	// spec GroupsSearchRequest：keyword/tag/radius 至少其一
 	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/groups/search", map[string]any{}, &resp)
+	apiRespOK(t, "/api/v1/groups/search", map[string]any{"keyword": "test"}, &resp)
 }
 
 func TestGroups_OpenTheDoor(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/groups/open_the_door", map[string]any{"group_id": "fake_group"}, &resp)
+	// 不存在的群组 → 10300 群组不存在（spec api_spec_group.md 错误码）
+	apiRespOKWithCode(t, "/api/v1/groups/open_the_door", map[string]any{"group_id": "fake_group"}, &resp, 10300)
 }
 
 func TestGroups_ListMembers(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/groups/members/fetch", map[string]any{"group_id": "fake_group"}, &resp)
+	apiRespOKWithCode(t, "/api/v1/groups/members/fetch", map[string]any{"group_id": "fake_group"}, &resp, 10300)
 }
 
 func TestGroups_SearchMembers(t *testing.T) {
 	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/groups/members/search", map[string]any{
+	apiRespOKWithCode(t, "/api/v1/groups/members/search", map[string]any{
 		"group_id": "fake_group",
 		"keyword":  "test",
-	}, &resp)
+	}, &resp, 10300)
 }
 
 func TestGroups_AnnouncementsList(t *testing.T) {
@@ -845,20 +1024,14 @@ func TestGroups_MyGroups(t *testing.T) {
 }
 
 // =============================================================================
-// Feed
+// Moments 发现流（feed 域废除后迁移至 moments/fetch_following、moments/fetch_nearby，
+// spec api_spec_moment.md / api_spec_discovery.md）
 // =============================================================================
 
-func TestFeed_Following(t *testing.T) {
+func TestMoments_DiscoveryFetchFollowing(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/feed/following", map[string]any{}, &resp)
-	})
-}
-
-func TestFeed_Nearby(t *testing.T) {
-	withAuth(t, func(token string) {
-		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/feed/nearby_moments_moments", map[string]any{
+		apiRespOK(t, "/api/v1/moments/fetch_following", map[string]any{
 			"reference_point": map[string]any{
 				"latitude":  37.7749,
 				"longitude": -122.4194,
@@ -867,23 +1040,27 @@ func TestFeed_Nearby(t *testing.T) {
 	})
 }
 
-func TestFeed_NearbyGroups(t *testing.T) {
+func TestMoments_DiscoveryFetchNearby(t *testing.T) {
 	withAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/feed/nearby_moments_moments_groups", map[string]any{}, &resp)
+		apiRespOK(t, "/api/v1/moments/fetch_nearby", map[string]any{
+			"reference_point": map[string]any{
+				"latitude":  37.7749,
+				"longitude": -122.4194,
+			},
+		}, &resp)
 	})
 }
 
-func TestFeed_NearbyUsers(t *testing.T) {
-	withAuth(t, func(token string) {
-		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/api/v1/feed/nearby_moments_moments_users", map[string]any{}, &resp)
-	})
-}
-
-func TestFeed_Trending(t *testing.T) {
+func TestPublic_MomentsFetchNearbyAnonymous(t *testing.T) {
+	// 匿名版拉新路径（spec api_spec_public.md）：仅 public 瞬间，无查看者字段。
 	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/feed/trending", map[string]any{}, &resp)
+	apiRespOK(t, "/public/v1/moments/fetch_nearby", map[string]any{
+		"reference_point": map[string]any{
+			"latitude":  37.7749,
+			"longitude": -122.4194,
+		},
+	}, &resp)
 }
 
 // =============================================================================
@@ -891,8 +1068,11 @@ func TestFeed_Trending(t *testing.T) {
 // =============================================================================
 
 func TestSearch_Suggest(t *testing.T) {
-	var resp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/search/suggest", map[string]any{"prefix": "test"}, &resp)
+	// search/suggest 需登录（spec api_spec_discovery.md 认证档位）
+	withAuth(t, func(token string) {
+		var resp ApiResponse[map[string]any]
+		apiRespOK(t, "/api/v1/search/suggest", map[string]any{"prefix": "test"}, &resp)
+	})
 }
 
 // =============================================================================
@@ -919,17 +1099,20 @@ func TestMap_Canvas(t *testing.T) {
 
 func TestShare_CreateGet(t *testing.T) {
 	withAuth(t, func(token string) {
+		// 分享目标必须真实存在（spec：资源不存在 → 10300）
+		mid := createMomentAsCurrentUser(t)
 		var resp ApiResponse[map[string]any]
 		apiRespOK(t, "/api/v1/share/create", map[string]any{
 			"share_type": "moment",
 			"payload": map[string]any{
-				"shared_moment_id": "fake_moment",
+				"shared_moment_id": mid,
 			},
 		}, &resp)
-		if resp.Code == 0 && resp.Data != nil {
-			if code := getString(resp.Data, "share_code"); code != "" {
-				apiRespOK(t, "/public/v1/share/open_the_door", map[string]any{"share_code": code}, nil)
-			}
+		if resp.Data == nil {
+			t.Fatalf("share create: no data")
+		}
+		if code := getString(resp.Data, "share_code"); code != "" {
+			apiRespOK(t, "/public/v1/share/open_the_door", map[string]any{"share_code": code}, nil)
 		}
 	})
 }
@@ -1059,9 +1242,6 @@ func TestPrivateMessages_MarkAsReadAll(t *testing.T) {
 
 func TestGroupMessages_SendGetHistory(t *testing.T) {
 	withAuth(t, func(token string) {
-		uid := createTestUser(t, "gm_sender")
-		oldTok := accessToken
-		accessToken = uid
 		// Send to fake group (group doesn't exist — expect business error code != 0)
 		var resp ApiResponse[map[string]any]
 		status, _ := post("/api/v1/group_messages/send", map[string]any{
@@ -1072,23 +1252,27 @@ func TestGroupMessages_SendGetHistory(t *testing.T) {
 		if status == http.StatusOK {
 			t.Logf("group message send: code=%d message=%s", resp.Code, resp.Message)
 		}
-		accessToken = oldTok
 	})
 }
 
 func TestGroupMessages_UpdateRecall(t *testing.T) {
 	withAuth(t, func(token string) {
-		uid := createTestUser(t, "gm_author")
-		oldTok := accessToken
-		accessToken = uid
-		apiRespOK(t, "/api/v1/group_messages/recall", map[string]any{
+		// 不存在的消息 → 业务错误（10300/10400），HTTP 仍 200；此处仅验证可达
+		var recallResp ApiResponse[map[string]any]
+		status, _ := post("/api/v1/group_messages/recall", map[string]any{
 			"message_id": "fake_message",
-		}, nil)
-		apiRespOK(t, "/api/v1/group_messages/update", map[string]any{
+		}, &recallResp)
+		if status != http.StatusOK || recallResp.Code == 0 {
+			t.Fatalf("recall fake message: status=%d code=%d", status, recallResp.Code)
+		}
+		var updateResp ApiResponse[map[string]any]
+		status, _ = post("/api/v1/group_messages/update", map[string]any{
 			"message_id": "fake_message",
 			"content":    "updated",
-		}, nil)
-		accessToken = oldTok
+		}, &updateResp)
+		if status != http.StatusOK || updateResp.Code == 0 {
+			t.Fatalf("update fake message: status=%d code=%d", status, updateResp.Code)
+		}
 	})
 }
 
@@ -1140,10 +1324,17 @@ func TestNotifications_MarkReadAll(t *testing.T) {
 
 func TestReports_Create(t *testing.T) {
 	withAuth(t, func(token string) {
+		// 目标必须真实存在（10300）且不能举报自己（10400）→ 以另一作者身份创建瞬间
+		_, authorTok := createTestUserWithToken(t, "reported_author")
+		oldTok := accessToken
+		accessToken = authorTok
+		mid := createMomentAsCurrentUser(t)
+		accessToken = oldTok
+
 		var resp ApiResponse[map[string]any]
 		apiRespOK(t, "/api/v1/reports/create", map[string]any{
 			"target_type": "moment",
-			"target_id":   "fake_moment",
+			"target_id":   mid,
 			"reason":      "spam",
 			"description": "test report from integration test",
 		}, &resp)
@@ -1392,7 +1583,7 @@ func TestMedia_E2E_SizeMismatchRejected(t *testing.T) {
 	putResp.Body.Close()
 
 	var completeResp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/media/complete_upload", map[string]any{
+	apiOK(t, "/api/v1/media/complete_upload", map[string]any{
 		"upload_ids": []string{uploadID},
 	}, &completeResp)
 	if completeResp.Code == 0 {
@@ -1416,7 +1607,7 @@ func TestMedia_E2E_CompleteBeforeUpload(t *testing.T) {
 	uploadID, _ := notUploaded["upload_id"].(string)
 
 	var completeResp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/media/complete_upload", map[string]any{
+	apiOK(t, "/api/v1/media/complete_upload", map[string]any{
 		"upload_ids": []string{uploadID},
 	}, &completeResp)
 	if completeResp.Code == 0 {
@@ -1432,77 +1623,77 @@ func TestMedia_E2E_CompleteBeforeUpload(t *testing.T) {
 // =============================================================================
 
 func TestAdmin_RBAC_GetMe(t *testing.T) {
-	withAuth(t, func(token string) {
+	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
 		apiRespOK(t, "/admin/v1/rbac/me", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_RBAC_ListPermissions(t *testing.T) {
-	withAuth(t, func(token string) {
+	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
 		apiRespOK(t, "/admin/v1/rbac/permissions/fetch", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_RBAC_RolesList(t *testing.T) {
-	withAuth(t, func(token string) {
+	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
 		apiRespOK(t, "/admin/v1/rbac/roles/fetch", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_RBAC_AdminsList(t *testing.T) {
-	withAuth(t, func(token string) {
+	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
 		apiRespOK(t, "/admin/v1/rbac/admins/fetch", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_AppConfigGet(t *testing.T) {
-	withAuth(t, func(token string) {
+	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
 		apiRespOK(t, "/admin/v1/app_config", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_UsersSearch(t *testing.T) {
-	withAuth(t, func(token string) {
+	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
 		apiRespOK(t, "/admin/v1/users/search", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_GroupsSearch(t *testing.T) {
-	withAuth(t, func(token string) {
+	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
 		apiRespOK(t, "/admin/v1/groups/search", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_ReportsSearch(t *testing.T) {
-	withAuth(t, func(token string) {
+	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
 		apiRespOK(t, "/admin/v1/reports/fetch", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_TagsSearch(t *testing.T) {
-	withAuth(t, func(token string) {
+	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
 		apiRespOK(t, "/admin/v1/tags/search", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_Announcements(t *testing.T) {
-	withAuth(t, func(token string) {
+	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
 		apiRespOK(t, "/admin/v1/announcements/fetch", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_Audit(t *testing.T) {
-	withAuth(t, func(token string) {
+	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
 		apiRespOK(t, "/admin/v1/audit/fetch", map[string]any{}, &resp)
 	})

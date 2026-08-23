@@ -15,6 +15,12 @@ var (
 	ErrPasswordResetThrottled         = errors.New("auth: password reset throttled")
 	ErrVerificationServiceUnavailable = errors.New("auth: verification service not available")
 	ErrAccountLocked                  = errors.New("auth: account locked due to too many failed attempts")
+	// ErrInvalidRegisterCode 注册验证码错误/已过期（spec api_spec_public.md →
+	// register：10401 旧凭证校验失败）。
+	ErrInvalidRegisterCode = errors.New("auth: invalid register verification code")
+	// ErrMissingRegisterCode 手机号/邮箱型注册缺验证码（参数缺失 → 10000，
+	// 与「验证码错误」的 10401 区分）。
+	ErrMissingRegisterCode = errors.New("auth: missing register verification code")
 )
 
 func apiErrorFrom(err error) *httpx.APIError {
@@ -33,16 +39,25 @@ func apiErrorFrom(err error) *httpx.APIError {
 	case errors.Is(err, ErrInvalidCredentials):
 		return &httpx.APIError{Code: httpx.CodeUnauthorized, Message: "账号或密码错误"}
 	case errors.Is(err, ErrAccountLocked):
-		return &httpx.APIError{Code: httpx.CodeRateLimited, Message: "登录失败次数过多，请15分钟后重试"}
+		// 10500 须携带 Retry-After（spec api_spec_errors.md → 10500）；
+		// 锁定窗口为服务端固定值，取完整窗口时长作为保守重试等待。
+		return &httpx.APIError{Code: httpx.CodeRateLimited, Message: "登录失败次数过多，请15分钟后重试", RetryAfterSeconds: int(defaultLockDuration.Seconds())}
 	case errors.Is(err, ErrInvalidOldPassword):
 		return &httpx.APIError{Code: httpx.CodeInvalidOldCredential, Message: "旧密码错误"}
 	case errors.Is(err, ErrPasswordResetNotFound):
 		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "重置请求不存在或已过期"}
 	case errors.Is(err, ErrPasswordResetThrottled):
-		return &httpx.APIError{Code: httpx.CodeRateLimited, Message: "请求过于频繁"}
+		// 同上：窗口自最近一次请求起算，取完整窗口作为保守等待。
+		return &httpx.APIError{Code: httpx.CodeRateLimited, Message: "请求过于频繁", RetryAfterSeconds: int(passwordResetThrottleWindow.Seconds())}
 	case errors.Is(err, ErrVerificationServiceUnavailable):
 		// 验证码服务不可用属服务端错误（spec 10600），非客户端限流（10500）
 		return &httpx.APIError{Code: httpx.CodeInternalUnavailable, Message: "验证码服务暂不可用"}
+	case errors.Is(err, ErrInvalidRegisterCode):
+		// 验证码错误/过期：10401 旧凭证校验失败（spec api_spec_public.md → register）
+		return &httpx.APIError{Code: httpx.CodeInvalidOldCredential, Message: "验证码错误或已过期"}
+	case errors.Is(err, ErrMissingRegisterCode):
+		// 手机号/邮箱型注册缺验证码属参数缺失（10000）
+		return &httpx.APIError{Code: httpx.CodeInvalidRequest, Message: "参数错误"}
 	default:
 		return &httpx.APIError{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 	}

@@ -142,7 +142,12 @@ func (r *InMemoryRepository) SearchProfiles(_ context.Context, req SearchUsersRe
 		if keyword != "" {
 			nickname := strings.ToLower(profile.Nickname)
 			bio := strings.ToLower(profile.Bio)
-			if !(settings.NicknameSearchable && strings.Contains(nickname, keyword)) && !strings.Contains(bio, keyword) {
+			// keyword 为手机号格式时同时按登录手机号精确匹配（受
+			// phone_searchable 控制，spec user.md → users/search；与
+			// Postgres 实现的 auth_accounts 子查询语义一致，内存版以
+			// profile.Phone 承载 login_id 回填值）。
+			phoneHit := isPhoneFormatKeyword(keyword) && settings.PhoneSearchable && profile.Phone == keyword
+			if !phoneHit && !(settings.NicknameSearchable && strings.Contains(nickname, keyword)) && !strings.Contains(bio, keyword) {
 				continue
 			}
 		}
@@ -321,7 +326,7 @@ func (r *InMemoryRepository) ListFollowing(_ context.Context, userID string, lim
 			presence := r.profiles[targetUserID].PresenceStatus
 			item := RelatedUserItem{
 				User:       UserItem{User: UserInfo{UserID: targetUserID, Nickname: r.nicknameFor(targetUserID), AvatarURL: types.StrPtr(r.profiles[targetUserID].AvatarURL)}},
-				FollowedAt: relation.FollowedAt, IsMutual: r.relations[targetUserID][userID].Following,
+				FollowedAt: relation.FollowedAt,
 			}
 			if lastOnline != "" {
 				item.User.LastOnline = &lastOnline
@@ -349,7 +354,7 @@ func (r *InMemoryRepository) ListFollowers(_ context.Context, userID string, lim
 			presence := r.profiles[sourceUserID].PresenceStatus
 			item := RelatedUserItem{
 				User:       UserItem{User: UserInfo{UserID: sourceUserID, Nickname: r.nicknameFor(sourceUserID), AvatarURL: types.StrPtr(r.profiles[sourceUserID].AvatarURL)}},
-				FollowedAt: relation.FollowedAt, IsMutual: r.relations[userID][sourceUserID].Following,
+				FollowedAt: relation.FollowedAt,
 			}
 			if lastOnline != "" {
 				item.User.LastOnline = &lastOnline

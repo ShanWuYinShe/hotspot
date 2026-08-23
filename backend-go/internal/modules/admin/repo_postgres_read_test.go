@@ -289,6 +289,8 @@ func (b *adminBackendStub) Exec(_ context.Context, query string, args ...any) er
 		b.admins[grant.UserID] = grant
 	case queryBlockTag:
 		b.blockedTags[args[0].(string)] = struct{}{}
+	case queryUnblockTag:
+		delete(b.blockedTags, args[0].(string))
 	case queryDeleteMomentTagAssignments:
 		delete(b.momentTags, args[0].(string))
 	}
@@ -462,15 +464,15 @@ func TestPostgresRepositoryReturnsErrorOnQueryFailure(t *testing.T) {
 	}
 }
 
-func TestPersistenceModerationStoreDeleteTagSoftBlockKeepsAssignments(t *testing.T) {
+func TestPersistenceModerationStoreSetTagBanSoftBlockKeepsAssignments(t *testing.T) {
 	backend := newAdminBackendStub()
 	backend.momentTags["hotspot"] = struct{}{}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	store := NewPersistenceModerationStore(factory, nil)
 
-	if err := store.DeleteTag(context.Background(), "hotspot", false); err != nil {
-		t.Fatalf("delete tag: %v", err)
+	if err := store.SetTagBan(context.Background(), "hotspot", true, false); err != nil {
+		t.Fatalf("ban tag: %v", err)
 	}
 	if _, ok := backend.blockedTags["hotspot"]; !ok {
 		t.Fatalf("expected blocked tag marker, got %#v", backend.blockedTags)
@@ -480,14 +482,14 @@ func TestPersistenceModerationStoreDeleteTagSoftBlockKeepsAssignments(t *testing
 	}
 }
 
-func TestPersistenceModerationStoreDeleteTagHardDeleteRemovesMomentAssignments(t *testing.T) {
+func TestPersistenceModerationStoreSetTagBanHardDeleteRemovesMomentAssignments(t *testing.T) {
 	backend := newAdminBackendStub()
 	backend.momentTags["hotspot"] = struct{}{}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	store := NewPersistenceModerationStore(factory, nil)
 
-	if err := store.DeleteTag(context.Background(), "hotspot", true); err != nil {
+	if err := store.SetTagBan(context.Background(), "hotspot", true, true); err != nil {
 		t.Fatalf("hard delete tag: %v", err)
 	}
 	if _, ok := backend.momentTags["hotspot"]; ok {
@@ -495,13 +497,37 @@ func TestPersistenceModerationStoreDeleteTagHardDeleteRemovesMomentAssignments(t
 	}
 }
 
-func TestPersistenceModerationStoreDeleteTagReturnsNotFound(t *testing.T) {
+func TestPersistenceModerationStoreSetTagBanReturnsNotFound(t *testing.T) {
 	backend := newAdminBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	store := NewPersistenceModerationStore(factory, nil)
 
-	if err := store.DeleteTag(context.Background(), "missing", false); !errors.Is(err, errTagNotFound) {
+	if err := store.SetTagBan(context.Background(), "missing", true, false); !errors.Is(err, errTagNotFound) {
 		t.Fatalf("expected tag not found, got %v", err)
+	}
+}
+
+// TestPersistenceModerationStoreUnbanRemovesBlockMarker：解屏蔽移除屏蔽标记，
+// 未屏蔽标签解屏蔽 no-op 成功。
+func TestPersistenceModerationStoreUnbanRemovesBlockMarker(t *testing.T) {
+	backend := newAdminBackendStub()
+	backend.momentTags["hotspot"] = struct{}{}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	store := NewPersistenceModerationStore(factory, nil)
+
+	if err := store.SetTagBan(context.Background(), "hotspot", true, false); err != nil {
+		t.Fatalf("ban tag: %v", err)
+	}
+	if err := store.SetTagBan(context.Background(), "hotspot", false, false); err != nil {
+		t.Fatalf("unban tag: %v", err)
+	}
+	if _, ok := backend.blockedTags["hotspot"]; ok {
+		t.Fatalf("expected blocked marker removed, got %#v", backend.blockedTags)
+	}
+	// 对未屏蔽标签解屏蔽 no-op 成功
+	if err := store.SetTagBan(context.Background(), "hotspot", false, false); err != nil {
+		t.Fatalf("no-op unban: %v", err)
 	}
 }

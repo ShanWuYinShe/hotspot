@@ -139,7 +139,7 @@ func (r *PostgresRepository) IncrementSharesCount(ctx context.Context, momentID 
 	return queryable.Exec(ctx, queryIncrementMomentShareCount, momentID)
 }
 
-func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsRequest) (PaginatedMoments, error) {
+func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsRequest, viewerID string) (PaginatedMoments, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return PaginatedMoments{}, persistence.ErrNotImplemented
 	}
@@ -162,7 +162,7 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 	if err != nil {
 		return PaginatedMoments{}, err
 	}
-	sql, args := buildSearchMomentsQuery(req.Keyword, req.Tag, sortBy, limit+1, searchCursor)
+	sql, args := buildSearchMomentsQuery(req.Keyword, req.Tag, sortBy, limit+1, searchCursor, viewerID)
 	if sql == "" {
 		return PaginatedMoments{}, nil
 	}
@@ -174,7 +174,14 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 	items := make([]MomentItem, 0)
 	momentIDs := make([]string, 0)
 	for rows.Next() {
-		item, err := scanMomentRow(rows)
+		var item MomentItem
+		if viewerID != "" {
+			// 登录查看者：SQL 尾列 EXISTS(moment_favorites) → is_favorited
+			//（spec api_spec_types.md MomentItem 查看者布尔恒定）。
+			item, err = scanSearchMomentRow(rows)
+		} else {
+			item, err = scanMomentRow(rows)
+		}
 		if err != nil {
 			return PaginatedMoments{}, err
 		}
@@ -190,7 +197,6 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 	}
 	for i := range items {
 		items[i].Tags = tagsByMomentID[items[i].MomentID]
-		items[i].IsFavorited = false
 	}
 	// SQL 已按最终排序返回 keyset 页；只把多取的边界项转成下一页游标。
 	var nextCursor *string
@@ -203,7 +209,9 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 		if req.Tag != nil {
 			tag = *req.Tag
 		}
-		c := encodeMomentSearchCursor(sortBy, items[limit], keyword, tag)
+		// popular 模式：游标分值按 Go 侧同公式衰减计算（与 searchScoreSQL 逐项对应）；
+		// 跨请求时钟推进导致的微小漂移属搜索契约声明的弱一致范畴。
+		c := encodeMomentSearchCursor(sortBy, items[limit], keyword, tag, time.Now().UTC())
 		nextCursor = &c
 		items = items[:limit]
 	}
@@ -217,19 +225,29 @@ func paginationCursor(p *PaginationParams) string {
 	return p.Cursor
 }
 
-// buildSearchMomentsQuery：全球 keyword/tag 搜索（spec moment.md → moments/search 收口，
-// 无半径过滤；附近发现走 feed/nearby）。
+// buildSearchMomentsQuery：全球 keyword/tag 搜索（spec api_spec_moment.md moments/search：
+// 搜索为全局匹配、不承担附近发现职责，无半径/位置条件；附近发现入口为
+// moments/fetch_nearby）。
 //
 // 三种排序共用同一 keyset 元组 (score, created_at, moment_id)：
 //   - newest:  score 恒为 0，元组退化为时间倒序
-//   - popular: score = likes_count + comments_count
+//   - popular: score = 互动热度 / 时间衰减因子（见 searchScoreSQL）
 //   - relevance: score = keyword 命中 + tag 命中
 //
+// viewerID 非空时 SELECT 追加 EXISTS(moment_favorites) 尾列承载查看者 is_favorited
+// （spec api_spec_types.md MomentItem；与 fetch_nearby/fetch_following 同模式）。
+//
 // SQL 直接输出最终序，游标按最终序继续，翻页不重不漏。
-func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit int, after *momentSearchCursor) (string, []any) {
+func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit int, after *momentSearchCursor, viewerID string) (string, []any) {
 	args := make([]any, 0, 8)
 	var builder strings.Builder
-	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted FROM moments m LEFT JOIN users u ON u.user_id = m.user_id WHERE m.privacy_level = 'public' AND m.is_deleted = FALSE`)
+	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted`)
+	if viewerID != "" {
+		// 查看者收藏态：参数化 EXISTS 子查询（$N 占位符），匿名时不追加该列。
+		args = append(args, viewerID)
+		builder.WriteString(fmt.Sprintf(", EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $%d)", len(args)))
+	}
+	builder.WriteString(` FROM moments m LEFT JOIN users u ON u.user_id = m.user_id WHERE m.privacy_level = 'public' AND m.is_deleted = FALSE`)
 	kwArg := 0
 	tagArg := 0
 	if keyword != nil && *keyword != "" {
@@ -250,7 +268,7 @@ func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit 
 		args = append(args, after.Score, after.At, after.ID)
 		n := len(args)
 		builder.WriteString(fmt.Sprintf(
-			" AND (%s, m.created_at, m.moment_id) < ($%d::bigint, $%d::timestamptz, $%d)",
+			" AND (%s, m.created_at, m.moment_id) < ($%d::float8, $%d::timestamptz, $%d)",
 			scoreExpr, n-2, n-1, n,
 		))
 	}
@@ -266,7 +284,12 @@ func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit 
 func searchScoreSQL(sortBy string, kwArg, tagArg int) string {
 	switch normalizeMomentSearchSort(sortBy) {
 	case "popular":
-		return "(m.likes_count + m.comments_count)"
+		// 热度排序含时间衰减因子（spec api_spec_moment.md moments/search 排序：
+		// 「按互动热度排序（含时间衰减因子；具体衰减算法为服务端实现细节）」）。
+		// 实现：score = (likes_count + comments_count) / POWER(发布小时龄 + 2, 1.5)，
+		// 小时龄钳制非负（防未来时间戳导致负底数幂报错）。now() 单语句内恒定，
+		// 页内排序自洽；跨请求衰减值漂移属契约声明的弱一致范畴。
+		return "((m.likes_count + m.comments_count)::float8 / POWER(GREATEST(EXTRACT(EPOCH FROM (now() - m.created_at)) / 3600.0, 0.0) + 2.0, 1.5))"
 	case "newest":
 		return "0"
 	default:

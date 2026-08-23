@@ -150,12 +150,37 @@ func (r *PostgresRepository) Exists(ctx context.Context, momentID string) (bool,
 }
 
 func scanMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, error) {
+	item, _, err := scanMomentRowParts(scanner, false)
+	return item, err
+}
+
+// scanSearchMomentRow 扫描 moments/search 查询行：基础列 + 尾部 is_favorited。
+// 登录查看者时 buildSearchMomentsQuery 在 SELECT 尾部追加
+// EXISTS(moment_favorites) 列（spec api_spec_types.md MomentItem 查看者布尔恒定），
+// 匿名查询不产生该列、不走本函数。
+func scanSearchMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, error) {
+	item, isFavorited, err := scanMomentRowParts(scanner, true)
+	if err != nil {
+		return MomentItem{}, err
+	}
+	item.IsFavorited = isFavorited
+	return item, nil
+}
+
+// scanMomentRowParts 扫描 moment 基础列；withViewerState 时额外扫描尾部
+// is_favorited 布尔并原样返回（不写入 item，由调用方决定用途）。
+func scanMomentRowParts(scanner interface{ Scan(...any) error }, withViewerState bool) (MomentItem, bool, error) {
 	var item MomentItem
 	var userID, nickname, locationName, privacyLevel string
 	var createdAt time.Time
 	var latitude, longitude float64
-	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &item.IsDeleted); err != nil {
-		return MomentItem{}, fmt.Errorf("moments.scanMomentRow scan: %w", err)
+	var isFavorited bool
+	dest := []any{&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &item.IsDeleted}
+	if withViewerState {
+		dest = append(dest, &isFavorited)
+	}
+	if err := scanner.Scan(dest...); err != nil {
+		return MomentItem{}, false, fmt.Errorf("moments.scanMomentRow scan: %w", err)
 	}
 	// nickname 已通过 SQL 的 COALESCE(u.nickname, '') 兜底
 	// 若 SQL 未提供 nickname（兼容性回退），降级为 userID
@@ -169,7 +194,7 @@ func scanMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, error) 
 		Longitude float64 `json:"longitude"`
 	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
 	item.PrivacyLevel = privacyLevel
-	return item, nil
+	return item, isFavorited, nil
 }
 
 func loadMomentTags(ctx context.Context, queryable persistence.QueryableDB, momentIDs []string) (map[string][]string, error) {

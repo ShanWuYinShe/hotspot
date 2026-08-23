@@ -10,11 +10,15 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type Module struct{ handler *Handler }
+type Module struct {
+	handler *Handler
+	Service *Service
+}
 
 func NewModule(factory *persistence.Factory) *Module {
 	repo := NewPostgresRepository(factory)
-	return &Module{handler: NewHandler(NewServiceWithRepo(repo))}
+	service := NewServiceWithRepo(repo)
+	return &Module{handler: NewHandler(service), Service: service}
 }
 
 func (m *Module) Mount(r chi.Router) {

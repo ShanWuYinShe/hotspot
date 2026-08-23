@@ -78,6 +78,18 @@ type PaginatedMessages struct {
 	NextCursor *string              `json:"next_cursor"`
 }
 
+// MessageReportSnapshot 是私聊消息的举报快照投影视图（spec api_spec_types.md
+// ReportSnapshot 的 private 会话形态）：服务端受理举报时基于消息真值生成，
+// 由 bootstrap 适配为 reports.ReportSnapshot（privatemessages 不依赖 reports 包）。
+// TargetUserID 为会话对方（相对发送者的另一方，spec：private 会话 = 对方 user_id）。
+type MessageReportSnapshot struct {
+	TargetUserID string
+	Type         string
+	Content      string // 原始文本内容（type='text' 时作为 snapshot_content）
+	FileID       string // 媒体文件引用（非空时作为 snapshot_media.file_id）
+	SentAt       string
+}
+
 type SendPrivateMessageRequest struct {
 	TargetUserID     string `json:"target_user_id"`
 	Type             string `json:"type"`

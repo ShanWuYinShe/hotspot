@@ -38,21 +38,35 @@ type CreateReportRequest struct {
 	TargetID    string           `json:"target_id"`
 	Reason      ReportReason     `json:"reason"`
 	Description *string          `json:"description"`
-	// MessageSnapshot 为消息举报的内容快照（spec api_spec_types.md
-	// ReportSnapshot）：target_type='message' 时必填，服务端原样存储，
-	// 管理员基于快照审核，不直接查询私聊/群聊消息库（隐私边界）。
-	MessageSnapshot *ReportSnapshot `json:"message_snapshot,omitempty"`
 }
 
-// ReportSnapshot 是消息举报时的消息内容快照（spec api_spec_types.md
-// ReportSnapshot）：举报人提交，服务端原样存储，管理员审核基于快照判断。
+// MessageMedia 是消息附件/媒体信息（spec api_spec_types.md MessageMedia =
+// MediaAsset 基础上补充文件元数据）。恒定 nullable 语义：thumbnail_url null =
+// 无缩略图，width/height/mime_type null = 未知，file_name/file_size/duration
+// null = 不适用（duration 仅音视频非 null）。
+type MessageMedia struct {
+	URL          string  `json:"url"`
+	ThumbnailURL *string `json:"thumbnail_url"`
+	Width        *int    `json:"width"`
+	Height       *int    `json:"height"`
+	MimeType     *string `json:"mime_type"`
+	FileName     *string `json:"file_name"`
+	FileSize     *int    `json:"file_size"`
+	Duration     *int    `json:"duration"`
+}
+
+// ReportSnapshot 是消息举报的服务端快照（spec api_spec_types.md
+// ReportSnapshot）：受理时基于消息真值生成并冻结（客户端不提交快照，
+// 防伪造/篡改证据链），管理员审核基于快照判断。snapshot_media 为完整
+// MessageMedia（spec api_spec_types.md ReportSnapshot.snapshot_media），
+// 文本类型为 null。
 type ReportSnapshot struct {
-	ChatType        string         `json:"chat_type"`
-	TargetChatID    string         `json:"target_chat_id"`
-	MessageType     string         `json:"message_type"`
-	SnapshotContent *string        `json:"snapshot_content"`
-	SnapshotMedia   map[string]any `json:"snapshot_media"`
-	SentAt          string         `json:"sent_at"`
+	ChatType        string        `json:"chat_type"`
+	TargetChatID    string        `json:"target_chat_id"`
+	MessageType     string        `json:"message_type"`
+	SnapshotContent *string       `json:"snapshot_content"`
+	SnapshotMedia   *MessageMedia `json:"snapshot_media"`
+	SentAt          string        `json:"sent_at"`
 }
 
 type ListReportsRequest struct {

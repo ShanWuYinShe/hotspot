@@ -145,6 +145,8 @@ type AdminUserItem struct {
 	Stats             *usersmodule.UserStats          `json:"stats"`
 	Relation          *usersmodule.Relationship       `json:"relation"`
 	Status            UserAccountStatus               `json:"status"`
+	BannedUntil       *string                         `json:"banned_until"`
+	PrivacyLevel      string                          `json:"privacy_level"`
 	CreatedAt         string                          `json:"created_at"`
 	LastActiveAt      *string                         `json:"last_active_at"`
 	LoginID           string                          `json:"login_id"`
@@ -232,6 +234,10 @@ type AdminReportItem struct {
 	// MessageSnapshot 仅 target_type='message' 时返回：管理员基于快照审核，
 	// 不直接查询私聊/群聊消息库（spec api_spec_types.md ReportItem）。
 	MessageSnapshot *reportsmodule.ReportSnapshot `json:"message_snapshot"`
+	// Resolution 处理结果摘要（恒定存在，null = 尚未处理）：AdminReportItem
+	// extends ReportItem（spec api_spec_admin.md），ReportResolution 脱敏不含
+	// 处理者身份（spec api_spec_types.md）。
+	Resolution *reportsmodule.ReportResolution `json:"resolution"`
 }
 
 type PaginatedAdminReports struct {
@@ -268,7 +274,7 @@ const (
 	AuditActionRoleSetPermissions AuditAction = "role.set_permissions"
 	AuditActionAdminAward         AuditAction = "admin.award"
 	AuditActionAdminRevoke        AuditAction = "admin.revoke"
-	AuditActionTagDelete          AuditAction = "tag.delete"
+	AuditActionTagSetBan          AuditAction = "tag.set_ban"
 	AuditActionConfigUpdate       AuditAction = "config.update"
 	AuditActionGroupDismiss       AuditAction = "group.dismiss"
 )
@@ -395,9 +401,10 @@ type UpdateDefaultsPayload struct {
 
 type PartialFeatureSwitches struct {
 	EnablePublicRegistration *bool `json:"enable_public_registration,omitempty"`
-	EnableGuestRegister      *bool `json:"enable_guest_login,omitempty"`
-	EnableMoments            *bool `json:"enable_moments,omitempty"`
-	EnableNearbyPeople       *bool `json:"enable_nearby_people,omitempty"`
+	// spec api_spec_types.md FeatureSwitches：键为 enable_guest_register
+	EnableGuestRegister *bool `json:"enable_guest_register,omitempty"`
+	EnableMoments       *bool `json:"enable_moments,omitempty"`
+	EnableNearbyPeople  *bool `json:"enable_nearby_people,omitempty"`
 }
 
 type PartialContactInfo struct {
@@ -472,11 +479,10 @@ type PartialAppLimits struct {
 }
 
 type AdminTagItem struct {
-	TagID      string  `json:"tag_id"`
-	Name       string  `json:"name"`
-	UsageCount int     `json:"usage_count"`
-	Trend      *string `json:"trend"`
-	CreatedAt  string  `json:"created_at"`
+	TagID      string `json:"tag_id"`
+	Name       string `json:"name"`
+	UsageCount int    `json:"usage_count"`
+	CreatedAt  string `json:"created_at"`
 }
 
 type PaginatedAdminTags struct {
@@ -489,8 +495,12 @@ type AdminTagSearchRequest struct {
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
-type AdminDeleteTagRequest struct {
+// AdminSetTagBanRequest 是两态统一端点 admin/tags/set_ban 的请求类型（spec
+// api_spec_admin.md）：active=true 屏蔽 / false 解屏蔽；hard_delete 仅
+// active=true 时有效（物理删除历史引用，不可逆）。
+type AdminSetTagBanRequest struct {
 	Name       string `json:"name"`
+	Active     bool   `json:"active"`
 	HardDelete bool   `json:"hard_delete,omitempty"`
 }
 
@@ -523,10 +533,6 @@ type CreateAnnouncementRequest struct {
 	Severity  AnnounceSeverity `json:"severity"`
 	ActionURL string           `json:"action_url,omitempty"`
 	SendPush  bool             `json:"send_push,omitempty"`
-}
-
-type AnnouncementCreated struct {
-	AnnouncementID string `json:"announcement_id"`
 }
 
 type UpdateAnnouncementRequest struct {
@@ -660,5 +666,6 @@ func reportItemFromModule(item reportsmodule.ReportItem, reporter usersmodule.Us
 		HandledBy:       handledBy,
 		HandleNote:      types.StrPtr(handleNote),
 		MessageSnapshot: item.MessageSnapshot,
+		Resolution:      item.Resolution,
 	}
 }

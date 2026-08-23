@@ -101,7 +101,7 @@ func TestCanvasReturnsHeatmapOnlyForLargeViewport(t *testing.T) {
 
 	handler.Canvas(rr, req)
 	resp := decodeMapResponse(t, rr)
-	if resp.Code != 0 || resp.Data == nil || resp.Data.Heatmap == nil || resp.Data.Hotspots != nil {
+	if resp.Code != 0 || resp.Data == nil || resp.Data.Mode != MapCanvasModeHeatmap || resp.Data.Heatmap == nil || resp.Data.Hotspots != nil {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -113,7 +113,7 @@ func TestCanvasReturnsHotspotsOnlyForSmallViewport(t *testing.T) {
 
 	handler.Canvas(rr, req)
 	resp := decodeMapResponse(t, rr)
-	if resp.Code != 0 || resp.Data == nil || resp.Data.Hotspots == nil || resp.Data.Heatmap != nil {
+	if resp.Code != 0 || resp.Data == nil || resp.Data.Mode != MapCanvasModeHotspots || resp.Data.Hotspots == nil || resp.Data.Heatmap != nil {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -125,7 +125,7 @@ func TestCanvasReturnsSuccessWithoutDataWhenRepositoryReturnsEmpty(t *testing.T)
 
 	handler.Canvas(rr, req)
 	resp := decodeMapResponse(t, rr)
-	if resp.Code != 0 || resp.Data == nil || resp.Data.Heatmap != nil || resp.Data.Hotspots != nil {
+	if resp.Code != 0 || resp.Data == nil || resp.Data.Mode != MapCanvasModeEmpty || resp.Data.Heatmap != nil || resp.Data.Hotspots != nil {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }

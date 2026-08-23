@@ -229,6 +229,59 @@ func (r *PostgresRepository) ChangePassword(ctx context.Context, userID, oldPass
 	return nil
 }
 
+// CreateRegisterCode 生成并落库注册验证码。与密码重置不同：注册码不校验账号
+// 是否存在（login_id 可能尚未注册，不 FK 账号表），防枚举由「无论是否存在均
+// 落库 + 发送」实现；频率控制依赖 ratelimit 的 auth_register_per_10minutes 桶。
+func (r *PostgresRepository) CreateRegisterCode(ctx context.Context, loginID string, expiresAt time.Time) (string, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return "", persistence.ErrNotImplemented
+	}
+	requestID, err := generateUserID()
+	if err != nil {
+		return "", err
+	}
+	code, err := generateVerificationCode()
+	if err != nil {
+		return "", err
+	}
+	now := time.Now().UTC()
+	if err := queryable.Exec(ctx, queryInsertRegisterCode, requestID, loginID, code, expiresAt.UTC(), now); err != nil {
+		return "", fmt.Errorf("auth.CreateRegisterCode: insert: %w", err)
+	}
+	return code, nil
+}
+
+// VerifyRegisterCode 校验注册验证码有效（存在、未消费、未过期），不消费——
+// 消费发生在注册成功后（ConsumeRegisterCode），失败路径不烧码。
+func (r *PostgresRepository) VerifyRegisterCode(ctx context.Context, loginID, verificationCode string) error {
+	queryable, ok := r.queryable()
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	var requestID string
+	if err := queryable.QueryRow(ctx, queryValidRegisterCode, loginID, verificationCode, time.Now().UTC()).Scan(&requestID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrInvalidRegisterCode
+		}
+		return fmt.Errorf("auth.VerifyRegisterCode: lookup: %w", err)
+	}
+	return nil
+}
+
+// ConsumeRegisterCode 将验证码标记为已消费（一次性）。UPDATE 天然幂等：
+// 已消费的码再消费为 no-op。
+func (r *PostgresRepository) ConsumeRegisterCode(ctx context.Context, loginID, verificationCode string) error {
+	queryable, ok := r.queryable()
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	if err := queryable.Exec(ctx, queryConsumeRegisterCode, loginID, verificationCode, time.Now().UTC()); err != nil {
+		return fmt.Errorf("auth.ConsumeRegisterCode: update: %w", err)
+	}
+	return nil
+}
+
 func (r *PostgresRepository) accountByLoginID(ctx context.Context, queryable persistence.QueryableDB, loginID string) (accountRecord, bool, error) {
 	var record accountRecord
 	if err := queryable.QueryRow(ctx, queryGetAccountByLoginID, loginID).Scan(&record.LoginID, &record.UserID, &record.PasswordHash); err != nil {

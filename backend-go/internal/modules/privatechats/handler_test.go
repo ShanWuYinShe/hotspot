@@ -84,6 +84,10 @@ func (r *privateChatMessageReader) LookupMessage(_ context.Context, _ string) (b
 	return false, "", nil
 }
 
+func (r *privateChatMessageReader) GetMessageReportSnapshot(_ context.Context, _ string) (privatemessages.MessageReportSnapshot, bool, error) {
+	return privatemessages.MessageReportSnapshot{}, false, nil
+}
+
 type privateChatUserReader struct {
 	item     users.UserItem
 	ok       bool

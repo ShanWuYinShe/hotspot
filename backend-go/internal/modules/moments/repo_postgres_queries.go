@@ -137,4 +137,55 @@ WHERE mf.user_id = $1
   )
 ORDER BY mf.favorited_at DESC, m.moment_id DESC
 LIMIT $4`
+
+	// queryFollowingMoments 关注动态（spec moment.md → moments/fetch_following，
+	// 原 feed/following 迁移）：keyset 谓词与 LIMIT 直接下推 SQL。
+	queryFollowingMoments = `
+SELECT m.moment_id,
+       m.user_id,
+       COALESCE(u.nickname, ''),
+       COALESCE(u.avatar_url, ''),
+       m.description,
+       m.created_at,
+       m.likes_count,
+       m.comments_count,
+       m.shares_count,
+       m.location_name,
+       m.latitude,
+       m.longitude,
+       EXISTS(SELECT 1 FROM reactions r WHERE r.target_type = 'moment' AND r.target_id = m.moment_id AND r.user_id = $1),
+       EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $1)
+FROM moments m
+JOIN users u ON u.user_id = m.user_id
+JOIN user_relations ur ON ur.target_user_id = m.user_id AND ur.user_id = $1 AND ur.is_following = TRUE
+WHERE m.privacy_level = 'public'
+  AND m.is_deleted = FALSE
+  AND ($2::timestamptz IS NULL OR m.created_at < $2::timestamptz OR (m.created_at = $2::timestamptz AND m.moment_id < $3))
+ORDER BY m.created_at DESC, m.moment_id DESC
+LIMIT $4`
+
+	// queryNearbyMoments 附近瞬间（spec moment.md → moments/fetch_nearby，
+	// 原 feed/nearby_moments 迁移）：S2 覆盖区间粗筛，精筛在 Go 层（geo.SearchPlan）。
+	queryNearbyMoments = `
+SELECT m.moment_id,
+       m.user_id,
+       COALESCE(u.nickname, ''),
+       COALESCE(u.avatar_url, ''),
+       m.description,
+       m.created_at,
+       m.likes_count,
+       m.comments_count,
+       m.shares_count,
+       m.location_name,
+       m.latitude,
+       m.longitude,
+       EXISTS(SELECT 1 FROM reactions r WHERE r.target_type = 'moment' AND r.target_id = m.moment_id AND r.user_id = $3),
+       EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $3),
+       EXISTS(SELECT 1 FROM user_relations ur WHERE ur.target_user_id = m.user_id AND ur.user_id = $3 AND ur.is_following = TRUE)
+FROM moments m
+JOIN users u ON u.user_id = m.user_id
+WHERE m.privacy_level = 'public'
+  AND m.is_deleted = FALSE
+  AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
+              WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)`
 )

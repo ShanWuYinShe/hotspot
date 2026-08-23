@@ -424,6 +424,12 @@ func (s *Service) LookupMessage(ctx context.Context, messageID string) (found bo
 	return s.repo.MessageExists(ctx, messageID)
 }
 
+// GetMessageReportSnapshot 暴露群消息快照给 bootstrap 接线举报模块
+// （reports 模块经 MessageSnapshotSource 接口消费，不直接依赖本包）。
+func (s *Service) GetMessageReportSnapshot(ctx context.Context, messageID string) (MessageReportSnapshot, bool, error) {
+	return s.repo.GetMessageReportSnapshot(ctx, messageID)
+}
+
 // IsReactionTargetVisible 判定群消息对当前调用方可反应（spec reaction.md 目标可见性）：
 // 仅群成员可见（被移除/退群用户对历史消息不可见）；不可见按不存在处理。
 func (s *Service) IsReactionTargetVisible(ctx context.Context, messageID string) (found bool, visible bool, err error) {

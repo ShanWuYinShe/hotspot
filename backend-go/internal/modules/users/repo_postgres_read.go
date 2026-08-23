@@ -184,7 +184,21 @@ func buildSearchUsersQuery(bounds geo.Bounds, keyword, tag string, radiusFilter 
 	}
 	if keyword != "" {
 		args = append(args, keyword)
-		builder.WriteString(fmt.Sprintf(" AND ($%d = '' OR (us.nickname_searchable = TRUE AND u.nickname ILIKE '%%' || $%d || '%%') OR u.bio ILIKE '%%' || $%d || '%%')", len(args), len(args), len(args)))
+		kwArg := len(args)
+		// keyword 为手机号格式（纯数字）时，对 phone_searchable=true 的用户做
+		// 登录手机号精确匹配（spec user.md → users/search keyword 说明）。手机号
+		// 真值在 auth 侧 auth_accounts.login_id（users.phone 由 account 回填但
+		// 以 login_id 为权威），经子查询跨表精确比对，与现有可见性过滤一致。
+		phoneArg := 0
+		if isPhoneFormatKeyword(keyword) {
+			args = append(args, keyword)
+			phoneArg = len(args)
+		}
+		builder.WriteString(fmt.Sprintf(" AND ($%d = '' OR (us.nickname_searchable = TRUE AND u.nickname ILIKE '%%' || $%d || '%%') OR u.bio ILIKE '%%' || $%d || '%%'", kwArg, kwArg, kwArg))
+		if phoneArg > 0 {
+			builder.WriteString(fmt.Sprintf(" OR (us.phone_searchable = TRUE AND EXISTS (SELECT 1 FROM auth_accounts aa WHERE aa.user_id = u.user_id AND aa.login_id = $%d))", phoneArg))
+		}
+		builder.WriteString(")")
 	}
 	// tag 过滤下推 SQL（EXISTS user_profile_tags）：此前在 Go 层对全量候选逐个
 	// 比对，tag-only 搜索退化为全表加载。
@@ -195,6 +209,20 @@ func buildSearchUsersQuery(bounds geo.Bounds, keyword, tag string, radiusFilter 
 	args = append(args, searchCandidateCap)
 	builder.WriteString(fmt.Sprintf(` ORDER BY u.created_at DESC, u.user_id DESC LIMIT $%d`, len(args)))
 	return builder.String(), args
+}
+
+// isPhoneFormatKeyword 判定搜索关键字是否手机号格式（纯数字，spec
+// api_spec_base.md login_id：手机号型=纯数字）。空串由调用方排除。
+func isPhoneFormatKeyword(keyword string) bool {
+	if keyword == "" {
+		return false
+	}
+	for _, c := range keyword {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func (r *PostgresRepository) Relationship(ctx context.Context, userID, targetUserID string) (Relationship, error) {
@@ -642,7 +670,7 @@ func scanFollowingRow(scanner interface{ Scan(...any) error }) (RelatedUserItem,
 	var presenceStatus string
 	var lastOnline time.Time
 	var sortableLastOnline time.Time
-	if err := scanner.Scan(&item.User.User.UserID, &item.User.User.Nickname, &avatarURL, &followedAt, &item.IsMutual, &presenceStatus, &lastOnline, &sortableLastOnline); err != nil {
+	if err := scanner.Scan(&item.User.User.UserID, &item.User.User.Nickname, &avatarURL, &followedAt, &presenceStatus, &lastOnline, &sortableLastOnline); err != nil {
 		return RelatedUserItem{}, time.Time{}, err
 	}
 	item.User.User.AvatarURL = types.StrPtr(avatarURL)
@@ -661,7 +689,7 @@ func scanFollowerRow(scanner interface{ Scan(...any) error }) (RelatedUserItem, 
 	var presenceStatus string
 	var lastOnline time.Time
 	var sortableLastOnline time.Time
-	if err := scanner.Scan(&item.User.User.UserID, &item.User.User.Nickname, &avatarURL, &followedAt, &item.IsMutual, &presenceStatus, &lastOnline, &sortableLastOnline); err != nil {
+	if err := scanner.Scan(&item.User.User.UserID, &item.User.User.Nickname, &avatarURL, &followedAt, &presenceStatus, &lastOnline, &sortableLastOnline); err != nil {
 		return RelatedUserItem{}, time.Time{}, err
 	}
 	item.User.User.AvatarURL = types.StrPtr(avatarURL)

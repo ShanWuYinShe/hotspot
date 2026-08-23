@@ -79,25 +79,26 @@ func (s *InMemoryModerationStore) GetTagDeleteState(_ context.Context, name stri
 	return isBlocked, hasRefs, nil
 }
 
-func (s *InMemoryModerationStore) DeleteTag(_ context.Context, name string, hardDelete bool) error {
+// SetTagBan 内存版两态屏蔽：active=true 屏蔽（hardDelete 一并删 tag 记录）；
+// active=false 解屏蔽（未屏蔽时 no-op 成功）。屏蔽不存在的标签返回 errTagNotFound。
+func (s *InMemoryModerationStore) SetTagBan(_ context.Context, name string, active bool, hardDelete bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	tagName := normalizeTagName(name)
-	if tagName == "" {
-		return errTagNotFound
-	}
 	_, hasRefs := s.tags[tagName]
 	_, isBlocked := s.blockedTags[tagName]
-	if !hasRefs && !isBlocked {
-		return errTagNotFound
-	}
-	if isBlocked && !hasRefs {
+	if active {
+		if !hasRefs && !isBlocked {
+			return errTagNotFound
+		}
+		if hardDelete {
+			delete(s.tags, tagName)
+		}
+		s.blockedTags[tagName] = struct{}{}
 		return nil
 	}
-	if hardDelete {
-		delete(s.tags, tagName)
-	}
-	s.blockedTags[tagName] = struct{}{}
+	// 解屏蔽：未屏蔽标签 no-op 成功；解屏蔽后同名标签恢复可创建/命中。
+	delete(s.blockedTags, tagName)
 	return nil
 }
 

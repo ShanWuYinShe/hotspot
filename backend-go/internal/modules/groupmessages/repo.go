@@ -55,4 +55,8 @@ type Repository interface {
 	// senderID is "" when the message has a NULL sender (legacy/anonymous).
 	// found is false when no message matches messageID.
 	LookupMessageMeta(ctx context.Context, messageID string) (meta MessageOwnerMeta, found bool, err error)
+	// GetMessageReportSnapshot 按 message_id 读取消息真值生成举报快照投影视图
+	//（spec api_spec_types.md ReportSnapshot 的 group 会话形态，由 bootstrap
+	// 适配为 reports.ReportSnapshot；举报快照由服务端生成，客户端不提交）。
+	GetMessageReportSnapshot(ctx context.Context, messageID string) (snapshot MessageReportSnapshot, found bool, err error)
 }

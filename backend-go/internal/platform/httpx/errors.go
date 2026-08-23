@@ -53,6 +53,10 @@ type APIError struct {
 	Code    Code
 	Message string
 	Data    any // 可选：错误响应的 data（仅端点显式声明时设置，如 ForbiddenErrorData）
+	// RetryAfterSeconds > 0 时随 10500（CodeRateLimited）响应设置 Retry-After
+	// 响应头（spec api_spec_errors.md → 10500「按 Retry-After 响应头等待后重试」；
+	// 限流中间件自身触发时由中间件设置，此字段供 service 层限流/锁定类错误使用）。
+	RetryAfterSeconds int
 }
 
 // Forbidden 构造带 forbidden_reason 的 10200 权限错误（所有 10200 的统一出口）。

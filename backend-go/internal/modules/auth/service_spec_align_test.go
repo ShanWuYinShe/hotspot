@@ -7,6 +7,7 @@ import (
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 // sessionEventSink records delivered events and close state for hub-based
@@ -57,7 +58,7 @@ func TestGuestEvictsOldSessionOnSameDevice(t *testing.T) {
 	repo := &stubAuthRepo{guestAccount: Account{UserID: "g1"}}
 	svc, _ := newTestService(repo)
 
-	first, err := svc.Guest(context.Background(), GuestRequest{Nickname: "g"}, defaultMeta())
+	first, err := svc.Guest(context.Background(), GuestRequest{Nickname: types.StrPtr("g")}, defaultMeta())
 	if err != nil {
 		t.Fatalf("first guest: %v", err)
 	}
@@ -65,7 +66,7 @@ func TestGuestEvictsOldSessionOnSameDevice(t *testing.T) {
 	hub.RegisterUser("g1", first.Principal.SessionID, firstSink)
 
 	// 同一 (user_id, device_id) 再次 Guest → 旧会话被驱逐并推送 SessionRevoked。
-	if _, err := svc.Guest(context.Background(), GuestRequest{Nickname: "g2"}, defaultMeta()); err != nil {
+	if _, err := svc.Guest(context.Background(), GuestRequest{Nickname: types.StrPtr("g2")}, defaultMeta()); err != nil {
 		t.Fatalf("second guest: %v", err)
 	}
 	assertSessionRevoked(t, firstSink, "device_evicted")
@@ -131,7 +132,7 @@ func TestChangePasswordRevokesOtherSessionsWithEvent(t *testing.T) {
 	repo := &stubAuthRepo{registerAccount: Account{UserID: "u1"}}
 	svc, authSvc := newTestService(repo)
 
-	current, err := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com"}, defaultMeta())
+	current, err := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com", VerificationCode: types.StrPtr("123456")}, defaultMeta())
 	if err != nil {
 		t.Fatalf("register: %v", err)
 	}
@@ -154,7 +155,7 @@ func TestRevokeSessionPushesRevokedByUserEvent(t *testing.T) {
 	repo := &stubAuthRepo{}
 	svc, authSvc := newTestService(repo)
 
-	current, _ := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com"}, defaultMeta())
+	current, _ := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com", VerificationCode: types.StrPtr("123456")}, defaultMeta())
 	other, _ := authSvc.IssueSession(context.Background(), current.Principal.UserID)
 	sink := &sessionEventSink{}
 	hub.RegisterUser(current.Principal.UserID, other.Principal.SessionID, sink)

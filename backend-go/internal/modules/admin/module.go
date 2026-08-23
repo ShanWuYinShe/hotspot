@@ -53,15 +53,15 @@ func (m *Module) Mount(r chi.Router) {
 }
 
 // tagBlockChecker 实现 groups 注入接口（IsBlocked）：新内容 tags 含被屏蔽标签 → 10400
-// （spec api_spec_admin.md tags/delete「新内容约束」）。软屏蔽（deleted=true）即拦截。
+// （spec api_spec_admin.md tags/set_ban「新内容约束」）。屏蔽（admin_blocked_tags 有行）即拦截。
 type tagBlockChecker struct{ m *Module }
 
 func (c tagBlockChecker) IsBlocked(tag string) bool {
 	if c.m == nil || c.m.handler == nil || c.m.handler.service == nil {
 		return false
 	}
-	deleted, _, err := c.m.handler.service.moderationStore.GetTagDeleteState(context.Background(), tag)
-	return err == nil && deleted
+	blocked, _, err := c.m.handler.service.moderationStore.GetTagDeleteState(context.Background(), tag)
+	return err == nil && blocked
 }
 
 // BlockedTagChecker 供 groups 模块注入（bootstrap 接线）。

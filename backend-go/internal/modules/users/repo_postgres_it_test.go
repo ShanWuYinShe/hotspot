@@ -247,9 +247,6 @@ func TestPostgresIT_ListFollowingAndFollowers(t *testing.T) {
 		if following.Items[0].User.User.UserID != bob {
 			t.Fatalf("expected following bob, got %q", following.Items[0].User.User.UserID)
 		}
-		if following.Items[0].IsMutual {
-			t.Fatal("expected is_mutual=false (bob does not follow back)")
-		}
 
 		followers, err := repo.ListFollowers(ctx, bob, 10, "")
 		if err != nil {
@@ -260,9 +257,6 @@ func TestPostgresIT_ListFollowingAndFollowers(t *testing.T) {
 		}
 		if followers.Items[0].User.User.UserID != alice {
 			t.Fatalf("expected follower alice, got %q", followers.Items[0].User.User.UserID)
-		}
-		if followers.Items[0].IsMutual {
-			t.Fatal("expected is_mutual=false")
 		}
 	})
 }
@@ -282,15 +276,13 @@ func TestPostgresIT_ListFollowingMutualFlag(t *testing.T) {
 			t.Fatalf("Follow bob->alice: %v", err)
 		}
 
+		// RelatedUserItem 已删除 is_mutual（契约变更）：互相关注场景仍应正常返回列表
 		following, err := repo.ListFollowing(ctx, alice, 10, "")
 		if err != nil {
 			t.Fatalf("ListFollowing: %v", err)
 		}
 		if len(following.Items) != 1 {
 			t.Fatalf("expected 1 following, got %d", len(following.Items))
-		}
-		if !following.Items[0].IsMutual {
-			t.Fatal("expected is_mutual=true when both follow each other")
 		}
 	})
 }

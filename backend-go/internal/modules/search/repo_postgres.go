@@ -211,7 +211,10 @@ func queryGroupSuggestions(ctx context.Context, queryable persistence.QueryableD
 	defer rows.Close()
 	items := make([]scoredSuggestItem, 0)
 	for rows.Next() {
-		var groupID, name, avatarURL, description, locationName, joinMethod, nextActivity, ownerID string
+		var groupID, name, locationName, joinMethod, ownerID string
+		// avatar_url/description/next_activity_at 均为可空列（migrations/004），
+		// 必须扫进 *string，否则 NULL 行触发 scan 错误（曾致 suggest 10600）。
+		var avatarURL, description, nextActivity *string
 		var latitude, longitude float64
 		var requiresApproval, isSearchable bool
 		var membersCount, onlineMembersCount, maxMembers int
@@ -226,8 +229,8 @@ func queryGroupSuggestions(ctx context.Context, queryable persistence.QueryableD
 		}
 		// payload 复用通用 GroupItem 结构（spec api_spec_types.md）
 		group := map[string]any{"group_id": groupID, "name": name, "members_count": membersCount}
-		if avatarURL != "" {
-			group["avatar_url"] = avatarURL
+		if avatarURL != nil && *avatarURL != "" {
+			group["avatar_url"] = *avatarURL
 		}
 		payload := map[string]any{
 			"group":                group,
@@ -236,14 +239,14 @@ func queryGroupSuggestions(ctx context.Context, queryable persistence.QueryableD
 			"location":             relativeLocationPayload(reference, locationName, latitude, longitude),
 			"online_members_count": onlineMembersCount,
 		}
-		if description != "" {
-			payload["description"] = description
+		if description != nil && *description != "" {
+			payload["description"] = *description
 		}
 		if len(tags) > 0 {
 			payload["tags"] = tags
 		}
-		if nextActivity != "" {
-			payload["next_activity_at"] = nextActivity
+		if nextActivity != nil && *nextActivity != "" {
+			payload["next_activity_at"] = *nextActivity
 		}
 		if isSearchable {
 			payload["is_searchable"] = isSearchable
@@ -260,7 +263,7 @@ func queryGroupSuggestions(ctx context.Context, queryable persistence.QueryableD
 		items = append(items, scoredSuggestItem{
 			Item:       SearchSuggestItem{Type: "group", Payload: payload},
 			TypeOrder:  2,
-			MatchRank:  minInt(classifyPrefixMatch(prefix, name), classifyPrefixMatch(prefix, description)),
+			MatchRank:  minInt(classifyPrefixMatch(prefix, name), classifyPrefixMatch(prefix, derefString(description))),
 			Distance:   distance,
 			Popularity: membersCount,
 			TieBreaker: groupID,
@@ -402,6 +405,14 @@ func minInt(left, right int) int {
 		return left
 	}
 	return right
+}
+
+// derefString nil 安全解引用（可空列 → 参与字符串比较时按空串处理）。
+func derefString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 var _ Repository = (*PostgresRepository)(nil)

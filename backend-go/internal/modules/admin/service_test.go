@@ -432,12 +432,12 @@ func TestServiceHandleReportRejectsInvalidAction(t *testing.T) {
 	}
 }
 
-// --- DeleteTag ---
+// --- SetTagBan ---
 
-func TestServiceDeleteTagRejectsEmptyName(t *testing.T) {
+func TestServiceSetTagBanRejectsEmptyName(t *testing.T) {
 	svc, repo, _, _ := newTestService()
 	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
-	apiErr, err := svc.DeleteTag(adminCtx("admin1"), "", false)
+	apiErr, err := svc.SetTagBan(adminCtx("admin1"), AdminSetTagBanRequest{Name: "", Active: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -446,15 +446,41 @@ func TestServiceDeleteTagRejectsEmptyName(t *testing.T) {
 	}
 }
 
-func TestServiceDeleteTagRejectsNotFound(t *testing.T) {
+func TestServiceSetTagBanRejectsNotFound(t *testing.T) {
 	svc, repo, _, _ := newTestService()
 	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
-	apiErr, err := svc.DeleteTag(adminCtx("admin1"), "nonexistent", false)
+	apiErr, err := svc.SetTagBan(adminCtx("admin1"), AdminSetTagBanRequest{Name: "nonexistent", Active: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if apiErr == nil || apiErr.Code != httpx.CodeNotFound {
 		t.Fatalf("expected httpx.CodeNotFound, got %v", apiErr)
+	}
+}
+
+// TestServiceSetTagBanRejectsUnbanWithHardDelete：解屏蔽与物理删除语义冲突。
+func TestServiceSetTagBanRejectsUnbanWithHardDelete(t *testing.T) {
+	svc, repo, _, _ := newTestService()
+	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
+	apiErr, err := svc.SetTagBan(adminCtx("admin1"), AdminSetTagBanRequest{Name: "hotspot", Active: false, HardDelete: true})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if apiErr == nil || apiErr.Code != httpx.CodeInvalidRequest {
+		t.Fatalf("expected httpx.CodeInvalidRequest, got %v", apiErr)
+	}
+}
+
+// TestServiceSetTagBanUnbanNoOp：对未屏蔽标签解屏蔽 no-op 成功。
+func TestServiceSetTagBanUnbanNoOp(t *testing.T) {
+	svc, repo, _, _ := newTestService()
+	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
+	apiErr, err := svc.SetTagBan(adminCtx("admin1"), AdminSetTagBanRequest{Name: "never_blocked", Active: false})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if apiErr != nil {
+		t.Fatalf("expected no-op success, got %v", apiErr)
 	}
 }
 

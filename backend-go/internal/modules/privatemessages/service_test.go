@@ -77,6 +77,9 @@ func (r *stubMsgRepo) MessageExists(_ context.Context, _ string) (bool, string, 
 func (r *stubMsgRepo) CountMessagesByTarget(_ context.Context, _ string, _ time.Time) (map[string]int, error) {
 	return r.counts, r.countErr
 }
+func (r *stubMsgRepo) GetMessageReportSnapshot(_ context.Context, _ string) (MessageReportSnapshot, bool, error) {
+	return MessageReportSnapshot{}, false, nil
+}
 
 type stubUserReader struct {
 	item        users.UserItem

@@ -422,6 +422,24 @@ func (r *PostgresRepository) LookupMessageMeta(ctx context.Context, messageID st
 	return MessageOwnerMeta{GroupID: groupID, SenderUserID: senderUserID}, true, nil
 }
 
+// GetMessageReportSnapshot 按 message_id 读取群消息真值（举报快照的生成依据，
+// spec api_spec_types.md ReportSnapshot：服务端生成，管理员审核基于快照）。
+func (r *PostgresRepository) GetMessageReportSnapshot(ctx context.Context, messageID string) (MessageReportSnapshot, bool, error) {
+	queryable, ok := r.getQueryable()
+	if !ok {
+		return MessageReportSnapshot{}, false, persistence.ErrNotImplemented
+	}
+	var snapshot MessageReportSnapshot
+	err := queryable.QueryRow(ctx, queryGetGroupMessageSnapshot, messageID).Scan(&snapshot.GroupID, &snapshot.Type, &snapshot.Content, &snapshot.FileID, &snapshot.SentAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return MessageReportSnapshot{}, false, nil
+		}
+		return MessageReportSnapshot{}, false, err
+	}
+	return snapshot, true, nil
+}
+
 func (r *PostgresRepository) getQueryable() (persistence.QueryableDB, bool) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return nil, false

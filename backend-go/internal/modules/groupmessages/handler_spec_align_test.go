@@ -182,6 +182,10 @@ func (r *specAdminRepo) LookupMessageMeta(context.Context, string) (MessageOwner
 	return r.owner, true, nil
 }
 
+func (r *specAdminRepo) GetMessageReportSnapshot(context.Context, string) (MessageReportSnapshot, bool, error) {
+	return MessageReportSnapshot{}, false, nil
+}
+
 func assertGMForbidden(t *testing.T, rr *httptest.ResponseRecorder, reason string) {
 	t.Helper()
 	body := rr.Body.String()

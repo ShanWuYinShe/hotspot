@@ -1306,7 +1306,9 @@ func TestBatchGetReturnsOnlyExistingUsers(t *testing.T) {
 	var resp struct {
 		Code httpx.Code `json:"code"`
 		Data struct {
-			Users map[string]json.RawMessage `json:"users"`
+			// 契约变更：users 为 user_id -> UserInfo（共享类型：仅基础信息，
+			// 不携带 relation/stats 等查看者字段）
+			Users map[string]UserInfo `json:"users"`
 		} `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -1323,6 +1325,9 @@ func TestBatchGetReturnsOnlyExistingUsers(t *testing.T) {
 	}
 	if _, ok := resp.Data.Users["user_missing"]; ok {
 		t.Error("user_missing should be omitted (does not exist)")
+	}
+	if alice := resp.Data.Users["user_alice"]; alice.UserID != "user_alice" || alice.Nickname == "" {
+		t.Fatalf("expected UserInfo shape for alice, got %#v", alice)
 	}
 }
 

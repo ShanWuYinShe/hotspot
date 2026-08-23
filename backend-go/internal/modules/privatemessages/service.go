@@ -20,6 +20,9 @@ type ReadService interface {
 	LookupMessage(ctx context.Context, messageID string) (found bool, senderID string, err error)
 	// IsReactionTargetVisible 判定消息对当前调用方可反应（spec reaction.md 目标可见性）
 	IsReactionTargetVisible(ctx context.Context, messageID string) (found bool, visible bool, err error)
+	// GetMessageReportSnapshot 暴露私聊消息快照给 bootstrap 接线举报模块
+	//（reports 模块经 MessageSnapshotSource 接口消费，不直接依赖本包）。
+	GetMessageReportSnapshot(ctx context.Context, messageID string) (MessageReportSnapshot, bool, error)
 }
 
 type Runtime struct {
@@ -347,6 +350,12 @@ func (s *Service) buildMedia(ctx context.Context, fileID, ownerUserID string) ma
 
 func (s *Service) LookupMessage(ctx context.Context, messageID string) (found bool, senderID string, err error) {
 	return s.repo.MessageExists(ctx, messageID)
+}
+
+// GetMessageReportSnapshot 暴露私聊消息快照给 bootstrap 接线举报模块
+// （reports 模块经 MessageSnapshotSource 接口消费，不直接依赖本包）。
+func (s *Service) GetMessageReportSnapshot(ctx context.Context, messageID string) (MessageReportSnapshot, bool, error) {
+	return s.repo.GetMessageReportSnapshot(ctx, messageID)
 }
 
 // IsReactionTargetVisible 判定私聊消息对当前调用方可反应（spec reaction.md 目标可见性）：

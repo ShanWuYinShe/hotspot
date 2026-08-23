@@ -14,7 +14,6 @@ const (
 	announcementTitleMaxLength   = 100
 	announcementContentMaxLength = 5000
 	keywordMaxLength             = 100
-	defaultTagTrend              = "stable"
 )
 
 func trimOptional(value *string) *string {

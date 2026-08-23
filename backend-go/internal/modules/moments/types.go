@@ -4,13 +4,45 @@ import "hotspot/backend-go/internal/platform/types"
 
 type UserInfo = types.UserInfo
 
+// Location 位置信息。请求侧对应 spec api_spec_types.md 的 Location（point +
+// location_name）；响应侧作为 MomentItem.location 承载 RelativeLocation 形状：
+// distance / bearing_degrees 必须由服务端基于 reference_point 计算并返回
+// （spec api_spec_types.md「位置与地理信息」），客户端不得本地计算。
 type Location struct {
 	Point struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	} `json:"point"`
 	LocationName string `json:"location_name"`
+	// Distance / BearingDegrees 相对参考点字段（spec api_spec_types.md RelativeLocation）：
+	// 距离（米）与方位角 [0,360)；nil = 无参考点/不可见，恒输出 null。仅响应侧由
+	// repo 在解析出参考点时填充，请求侧传入值在 Service 层剥离。
+	Distance       *float64 `json:"distance"`
+	BearingDegrees *float64 `json:"bearing_degrees"`
 }
+
+// fillRelativeLocation 填充响应侧相对位置的 distance / bearing_degrees
+// （spec api_spec_types.md RelativeLocation：两字段均基于 reference_point 由服务端
+// 计算；仅在请求解析出参考点的路径调用，其余路径保持 nil → 序列化为 null）。
+func fillRelativeLocation(loc *Location, distanceMeters, bearingDegrees int) {
+	if loc == nil {
+		return
+	}
+	distance, bearing := float64(distanceMeters), float64(bearingDegrees)
+	loc.Distance = &distance
+	loc.BearingDegrees = &bearing
+}
+
+// RecommendationType 推荐理由枚举（spec api_spec_types.md RecommendationType）。
+type RecommendationType string
+
+const (
+	RecommendationFriendLiked RecommendationType = "friend_liked"
+	RecommendationNearby      RecommendationType = "nearby"
+	RecommendationTrending    RecommendationType = "trending"
+	RecommendationFollowing   RecommendationType = "following"
+	RecommendationTagMatch    RecommendationType = "tag_match"
+)
 
 // Reaction mirrors spec api_spec_types.md Reaction (per-emoji aggregate with
 // reacted_by_me). Defined here rather than imported from the reactions module
@@ -61,6 +93,11 @@ type MomentItem struct {
 	IsFavorited bool `json:"is_favorited"`
 	// Reactions 表情反应聚合（spec MomentItem reactions: 空数组 = 无反应）。
 	Reactions []Reaction `json:"reactions"`
+	// recommendation 恒定存在（spec api_spec_types.md MomentItem：Feed 场景返回推荐
+	// 理由，非 Feed 场景为 null）。Feed 域已废除（能力收口至 moments/search 热门模式
+	// 与 fetch_nearby/fetch_following，spec api_spec_moment.md），当前所有端点均为
+	// 非 Feed 场景，恒序列化 null（指针留空）。
+	Recommendation *RecommendationType `json:"recommendation"`
 	// PrivacyLevel 仅 repo 内部使用（过滤/收藏/拥有者端点），不对外序列化。
 	PrivacyLevel string `json:"-"`
 	// FavoritedAt 仅 list_favorites 返回（spec moment.md → FavoritedMomentItem）。
@@ -100,8 +137,9 @@ type PaginatedOwnerMoments struct {
 	NextCursor *string           `json:"next_cursor"`
 }
 
-// SearchMomentsRequest：全球 keyword/tag 搜索（spec moment.md → moments/search 收口——
-// 已删除 radius/sort_by='distance'/reference_point，附近发现唯一入口为 feed/nearby）
+// SearchMomentsRequest：全球 keyword/tag 搜索（spec api_spec_moment.md moments/search——
+// 已删除 radius/sort_by='distance'/reference_point；搜索为全局匹配，附近发现唯一
+// 入口为 moments/fetch_nearby）
 type SearchMomentsRequest struct {
 	Keyword    *string           `json:"keyword,omitempty"`
 	Tag        *string           `json:"tag,omitempty"`
@@ -144,4 +182,19 @@ type ListCreatedMomentsRequest struct {
 
 type MyFavoritesRequest struct {
 	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+// FetchFollowingMomentsRequest 关注动态请求（spec moment.md → moments/fetch_following，
+// 原 feed/following 迁移而来）。无匿名版（依赖查看者关注关系）。
+type FetchFollowingMomentsRequest struct {
+	ReferencePoint *GeoPoint         `json:"reference_point,omitempty"`
+	Pagination     *PaginationParams `json:"pagination,omitempty"`
+}
+
+// FetchNearbyMomentsRequest 附近瞬间请求（spec moment.md → moments/fetch_nearby，
+// 原 feed/nearby_moments 迁移而来；双版本端点，匿名版见 api_spec_public.md）。
+type FetchNearbyMomentsRequest struct {
+	Radius         *int              `json:"radius,omitempty"`
+	ReferencePoint *GeoPoint         `json:"reference_point"`
+	Pagination     *PaginationParams `json:"pagination,omitempty"`
 }

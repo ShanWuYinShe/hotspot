@@ -227,23 +227,24 @@ func (s *Service) OpenTheDoor(ctx context.Context, userID string) (UserItem, boo
 	return item, true, nil
 }
 
-// BatchGet resolves multiple users at once (spec api_spec_user.md users/batch_get).
-// Returns a user_id -> UserItem map; ids that do not exist (or fail privacy
-// checks) are simply absent from the map. Each user is resolved through the
-// same OpenTheDoor privacy path so visibility rules stay consistent with the
-// single-user endpoint.
-func (s *Service) BatchGet(ctx context.Context, userIDs []string) (map[string]UserItem, error) {
-	result := make(map[string]UserItem, len(userIDs))
+// BatchGet resolves multiple users at once (spec api_spec_user.md
+// users/batch_fetch). Returns a user_id -> UserInfo map（共享类型，仅为补全
+// 昵称/头像等基础信息，不携带 relation/stats 等查看者字段）；ids that do
+// not exist (or fail privacy checks) are simply absent from the map. Each
+// user is resolved through the same OpenTheDoor privacy path so visibility
+// rules stay consistent with the single-user endpoint.
+func (s *Service) BatchGet(ctx context.Context, userIDs []string) (map[string]UserInfo, error) {
+	result := make(map[string]UserInfo, len(userIDs))
 	for _, userID := range userIDs {
 		item, ok, err := s.OpenTheDoor(ctx, userID)
 		if err != nil {
-			observability.L().Error("users.batch_get single lookup failed", "error", err, "user_id", userID)
+			observability.L().Error("users.batch_fetch single lookup failed", "error", err, "user_id", userID)
 			continue
 		}
 		if !ok {
 			continue
 		}
-		result[userID] = item
+		result[userID] = item.User
 	}
 	return result, nil
 }

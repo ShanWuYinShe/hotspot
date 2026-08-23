@@ -71,6 +71,9 @@ func (r *privateMessageErrorRepo) CountMessagesByTarget(_ context.Context, _ str
 func (r *privateMessageErrorRepo) GetMediaForMessage(context.Context, string, string) (map[string]any, bool, error) {
 	return nil, false, nil
 }
+func (r *privateMessageErrorRepo) GetMessageReportSnapshot(context.Context, string) (MessageReportSnapshot, bool, error) {
+	return MessageReportSnapshot{}, false, nil
+}
 
 type privateMessageUserStub struct {
 	item     users.UserItem

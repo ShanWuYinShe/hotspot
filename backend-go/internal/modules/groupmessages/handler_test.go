@@ -103,6 +103,10 @@ func (r *stubGroupMessageRepo) LookupMessageMeta(_ context.Context, _ string) (M
 	return MessageOwnerMeta{GroupID: "g1", SenderUserID: "u1"}, true, nil
 }
 
+func (r *stubGroupMessageRepo) GetMessageReportSnapshot(context.Context, string) (MessageReportSnapshot, bool, error) {
+	return MessageReportSnapshot{}, false, nil
+}
+
 // --- helpers ---
 
 func gmCtx(userID string) *http.Request {

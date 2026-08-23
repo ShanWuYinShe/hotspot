@@ -52,4 +52,17 @@ WHERE user_id = $1`
 SET last_login_ip = $2,
     last_login_location = $3
 WHERE user_id = $1`
+
+	queryInsertRegisterCode = `INSERT INTO auth_register_verification_codes (request_id, login_id, verification_code, expires_at, created_at, consumed_at)
+VALUES ($1, $2, $3, $4, $5, NULL)`
+
+	queryValidRegisterCode = `SELECT request_id
+FROM auth_register_verification_codes
+WHERE login_id = $1 AND verification_code = $2 AND consumed_at IS NULL AND expires_at > $3
+ORDER BY created_at DESC
+LIMIT 1`
+
+	queryConsumeRegisterCode = `UPDATE auth_register_verification_codes
+SET consumed_at = $3
+WHERE login_id = $1 AND verification_code = $2 AND consumed_at IS NULL`
 )

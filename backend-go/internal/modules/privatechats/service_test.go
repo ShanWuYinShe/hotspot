@@ -72,6 +72,10 @@ func (m *stubMsgReadService) LookupMessage(_ context.Context, _ string) (bool, s
 	return false, "", nil
 }
 
+func (m *stubMsgReadService) GetMessageReportSnapshot(_ context.Context, _ string) (privatemessages.MessageReportSnapshot, bool, error) {
+	return privatemessages.MessageReportSnapshot{}, false, nil
+}
+
 type stubChatUserReader struct {
 	item        users.UserItem
 	found       bool

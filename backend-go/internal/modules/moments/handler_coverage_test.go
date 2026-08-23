@@ -30,8 +30,8 @@ func (r *momentErrRepo) Get(ctx context.Context, momentID string) (MomentItem, b
 	}
 	return item, ok, err
 }
-func (r *momentErrRepo) Search(ctx context.Context, req SearchMomentsRequest) (PaginatedMoments, error) {
-	return r.repo.Search(ctx, req)
+func (r *momentErrRepo) Search(ctx context.Context, req SearchMomentsRequest, viewerID string) (PaginatedMoments, error) {
+	return r.repo.Search(ctx, req, viewerID)
 }
 func (r *momentErrRepo) Update(ctx context.Context, userID string, req UpdateMomentRequest) error {
 	return r.repo.Update(ctx, userID, req)
@@ -74,6 +74,18 @@ func (r *momentErrRepo) LoadMyState(ctx context.Context, momentID, userID string
 }
 func (r *momentErrRepo) FetchMomentImageRows(ctx context.Context, momentIDs []string) (map[string][]momentImageRow, error) {
 	return r.repo.FetchMomentImageRows(ctx, momentIDs)
+}
+func (r *momentErrRepo) ListFollowingMoments(ctx context.Context, query momentsQuery) (PaginatedMoments, error) {
+	if r.err != nil {
+		return PaginatedMoments{}, r.err
+	}
+	return r.repo.ListFollowingMoments(ctx, query)
+}
+func (r *momentErrRepo) ListNearbyMoments(ctx context.Context, query momentsQuery) (PaginatedMoments, error) {
+	if r.err != nil {
+		return PaginatedMoments{}, r.err
+	}
+	return r.repo.ListNearbyMoments(ctx, query)
 }
 
 func TestMomentHandlerErrorPaths(t *testing.T) {

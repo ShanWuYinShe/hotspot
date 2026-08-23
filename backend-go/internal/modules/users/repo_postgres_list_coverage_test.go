@@ -58,12 +58,13 @@ func friendRow(uid string, at time.Time) []any {
 	return []any{uid, "昵称" + uid, "", "online", at, at, "", at.Add(-time.Hour), at.Add(-time.Minute)}
 }
 
-func followingRow(uid string, at time.Time, mutual bool) []any {
-	return []any{uid, "昵称" + uid, "", at, mutual, "offline", at, at}
+// followingRow/followerRow：is_mutual 列已随 RelatedUserItem 契约变更删除。
+func followingRow(uid string, at time.Time) []any {
+	return []any{uid, "昵称" + uid, "", at, "offline", at, at}
 }
 
-func followerRow(uid string, at time.Time, mutual bool) []any {
-	return []any{uid, "昵称" + uid, "", at, mutual, "offline", at, at}
+func followerRow(uid string, at time.Time) []any {
+	return []any{uid, "昵称" + uid, "", at, "offline", at, at}
 }
 
 func groupRow(gid string, at time.Time) []any {
@@ -128,13 +129,13 @@ func TestListFollowingFollowersGroupsPostgres(t *testing.T) {
 
 	// following：3 行分页 + scan 错误
 	stub := &userListStub{rowsSeq: []persistence.Rows{&listRowsValues{rows: [][]any{
-		followingRow("t1", now, true), followingRow("t2", now.Add(-time.Hour), false), followingRow("t3", now.Add(-2*time.Hour), true),
+		followingRow("t1", now), followingRow("t2", now.Add(-time.Hour)), followingRow("t3", now.Add(-2*time.Hour)),
 	}}}}
 	page, err := newUserListRepo(stub).ListFollowing(ctx, "u1", 2, "")
 	if err != nil || len(page.Items) != 2 || page.NextCursor == nil {
 		t.Fatalf("list following: %#v err=%v", page, err)
 	}
-	stub = &userListStub{rowsSeq: []persistence.Rows{&listRowsValues{rows: [][]any{followingRow("t1", now, true)}, scanErr: errors.New("scan")}}}
+	stub = &userListStub{rowsSeq: []persistence.Rows{&listRowsValues{rows: [][]any{followingRow("t1", now)}, scanErr: errors.New("scan")}}}
 	if _, err := newUserListRepo(stub).ListFollowing(ctx, "u1", 2, ""); err == nil {
 		t.Fatal("following scan error must propagate")
 	}
@@ -143,7 +144,7 @@ func TestListFollowingFollowersGroupsPostgres(t *testing.T) {
 	}
 
 	// followers：单行 + Query 错误
-	stub = &userListStub{rowsSeq: []persistence.Rows{&listRowsValues{rows: [][]any{followerRow("t1", now, false)}}}}
+	stub = &userListStub{rowsSeq: []persistence.Rows{&listRowsValues{rows: [][]any{followerRow("t1", now)}}}}
 	fpage, err := newUserListRepo(stub).ListFollowers(ctx, "u1", 2, "")
 	if err != nil || len(fpage.Items) != 1 {
 		t.Fatalf("list followers: %#v err=%v", fpage, err)

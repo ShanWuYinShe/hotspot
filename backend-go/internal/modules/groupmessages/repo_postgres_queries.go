@@ -169,6 +169,17 @@ FROM group_members WHERE group_id = $1 AND user_id = $2`
 		FROM group_messages
 		WHERE message_id = $1`
 
+	// queryGetGroupMessageSnapshot 取群消息真值（举报快照生成依据，spec
+	// api_spec_types.md ReportSnapshot：服务端受理举报时生成并冻结）。
+	queryGetGroupMessageSnapshot = `
+		SELECT gm.group_id,
+		       gm.type,
+		       COALESCE(gm.content, ''),
+		       COALESCE(gm.file_id, ''),
+		       TO_CHAR(gm.sent_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+		FROM group_messages gm
+		WHERE gm.message_id = $1`
+
 	// queryGetGroupMediaFileForMessage 取聊天媒体元数据（WS media 负载）。owner
 	// 过滤与私聊侧 queryGetMediaFileForMessage 一致：只能引用自己上传的文件。
 	queryGetGroupMediaFileForMessage = `

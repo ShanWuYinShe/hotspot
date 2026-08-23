@@ -574,7 +574,7 @@ func TestPostgresRepositorySearchSortByPopularReturnsOlderPopularMoments(t *test
 		Keyword:    &keyword,
 		SortBy:     "popular",
 		Pagination: &PaginationParams{Limit: 1},
-	})
+	}, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -609,7 +609,7 @@ func TestPostgresRepositorySearchSortByNewestAppliesLimit(t *testing.T) {
 	result, err := repo.Search(context.Background(), SearchMomentsRequest{
 		SortBy:     "newest",
 		Pagination: &PaginationParams{Limit: 3},
-	})
+	}, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

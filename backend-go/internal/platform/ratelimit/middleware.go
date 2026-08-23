@@ -274,7 +274,9 @@ func appendAuthRules(rules *[]rule, path, ip string, cfg appconfig.RateLimitConf
 		return false
 	}
 	switch path {
-	case "/public/v1/auth/register":
+	case "/public/v1/auth/register", "/public/v1/auth/send_register_code":
+		// send_register_code 与 register 共用注册限流桶（spec api_spec_public.md：
+		// 发送频率由 auth_register_per_10minutes 控制）。
 		if cfg.AuthRegisterPer10Minutes > 0 {
 			*rules = append(*rules, rule{name: "auth_register_per_10minutes", strategy: "sliding", limit: cfg.AuthRegisterPer10Minutes, window: 10 * time.Minute, scope: "ip", key: ip})
 		}
@@ -313,8 +315,6 @@ func classifyRoute(path string) (routeClass, bool) {
 	case strings.HasPrefix(path, "/admin/v1/"):
 		return routeClass{adminOnly: true, readOnly: isAdminReadPath(path)}, true
 	case strings.HasPrefix(path, "/api/v1/system/"):
-		return routeClass{readOnly: true}, true
-	case strings.HasPrefix(path, "/api/v1/feed/"):
 		return routeClass{readOnly: true}, true
 	case strings.HasPrefix(path, "/api/v1/search/"):
 		return routeClass{readOnly: true}, true

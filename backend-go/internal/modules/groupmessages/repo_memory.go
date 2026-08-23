@@ -136,6 +136,28 @@ func (r *InMemoryRepository) findMessage(messageID string) (groupID string, inde
 	return "", -1, nil, false
 }
 
+// GetMessageReportSnapshot 内存版群消息快照（file_id 内存 Send 不落 Media，
+// 媒体引用缺省为空）。
+func (r *InMemoryRepository) GetMessageReportSnapshot(_ context.Context, messageID string) (MessageReportSnapshot, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	groupID, _, msg, found := r.findMessage(messageID)
+	if !found {
+		return MessageReportSnapshot{}, false, nil
+	}
+	content := ""
+	if msg.Content != nil {
+		content = *msg.Content
+	}
+	fileID := ""
+	if msg.Media != nil {
+		if id, ok := msg.Media["file_id"].(string); ok {
+			fileID = id
+		}
+	}
+	return MessageReportSnapshot{GroupID: groupID, Type: msg.Type, Content: content, FileID: fileID, SentAt: msg.SentAt}, true, nil
+}
+
 func (r *InMemoryRepository) Update(_ context.Context, req UpdateGroupMessageRequest) (MessageEventMeta, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

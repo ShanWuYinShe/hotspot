@@ -3,11 +3,12 @@ package admin
 import (
 	"context"
 	"errors"
-	"hotspot/backend-go/internal/platform/types"
 	"strings"
 	"time"
 
+	reportsmodule "hotspot/backend-go/internal/modules/reports"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -116,6 +117,15 @@ func (r *PostgresRepository) HandleReport(ctx context.Context, reportID string, 
 	handledAt := now.Format(time.RFC3339)
 	record.Item.HandledAt = &handledAt
 	record.Item.HandleNote = types.StrPtr(strings.TrimSpace(note))
+	// 裁决后同步刷新 resolution（spec api_spec_types.md ReportItem.resolution）。
+	if status == ReportStatusResolved || status == ReportStatusDismissed {
+		action := reportsmodule.ReportActionDismiss
+		if status == ReportStatusResolved {
+			action = reportsmodule.ReportActionResolve
+		}
+		note := strings.TrimSpace(note)
+		record.Item.Resolution = &reportsmodule.ReportResolution{Action: action, ResolvedAt: handledAt, Note: types.StrPtr(note)}
+	}
 	if handledBy != nil {
 		hb := *handledBy
 		record.Item.HandledBy = &hb
@@ -145,12 +155,30 @@ func (r *PostgresRepository) RecallPrivateMessage(ctx context.Context, messageID
 	return nil
 }
 
+// DeleteMoment 裁决执行的内容删除：与 moments 模块自身删除路径一致（spec
+// api_spec_moment.md「删除语义」：软删除——标记 is_deleted=true、description
+// 清空，评论/反应数据保留，不物理删除）。
+const queryAdminSoftDeleteMoment = `
+UPDATE moments
+SET is_deleted = TRUE, description = ''
+WHERE moment_id = $1`
+
+// DeleteComment 与 comments 模块自身删除路径一致（spec api_spec_comment.md：
+// 软删除——is_deleted=true、content 清空；回复删除同时递减父评论 replies_count）。
+const queryAdminSoftDeleteComment = `
+WITH deleted AS (
+	UPDATE comments SET is_deleted = TRUE, content = '' WHERE comment_id = $1
+	RETURNING parent_id
+)
+UPDATE comments SET replies_count = GREATEST(replies_count - 1, 0)
+WHERE comment_id IN (SELECT parent_id FROM deleted WHERE parent_id IS NOT NULL AND parent_id != '')`
+
 func (r *PostgresRepository) DeleteMoment(ctx context.Context, momentID string) error {
 	queryable, ok := r.queryable()
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, "DELETE FROM moments WHERE moment_id = $1", momentID)
+	return queryable.Exec(ctx, queryAdminSoftDeleteMoment, momentID)
 }
 
 func (r *PostgresRepository) DeleteComment(ctx context.Context, commentID string) error {
@@ -158,5 +186,5 @@ func (r *PostgresRepository) DeleteComment(ctx context.Context, commentID string
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, "DELETE FROM comments WHERE comment_id = $1", commentID)
+	return queryable.Exec(ctx, queryAdminSoftDeleteComment, commentID)
 }

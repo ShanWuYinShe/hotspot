@@ -38,7 +38,7 @@ func (r *stubMomentRepo) Create(_ context.Context, _ string, _ CreateMomentReque
 func (r *stubMomentRepo) Get(_ context.Context, _ string) (MomentItem, bool, error) {
 	return r.getResult, r.getFound, r.getErr
 }
-func (r *stubMomentRepo) Search(_ context.Context, _ SearchMomentsRequest) (PaginatedMoments, error) {
+func (r *stubMomentRepo) Search(_ context.Context, _ SearchMomentsRequest, _ string) (PaginatedMoments, error) {
 	return r.searchRes, r.searchErr
 }
 func (r *stubMomentRepo) Update(_ context.Context, _ string, _ UpdateMomentRequest) error {
@@ -80,6 +80,14 @@ func (r *stubMomentRepo) LoadMyState(ctx context.Context, a, b string) *MyMoment
 
 func (r *stubMomentRepo) FetchMomentImageRows(_ context.Context, _ []string) (map[string][]momentImageRow, error) {
 	return map[string][]momentImageRow{}, nil
+}
+
+func (r *stubMomentRepo) ListFollowingMoments(_ context.Context, _ momentsQuery) (PaginatedMoments, error) {
+	return PaginatedMoments{}, nil
+}
+
+func (r *stubMomentRepo) ListNearbyMoments(_ context.Context, _ momentsQuery) (PaginatedMoments, error) {
+	return PaginatedMoments{}, nil
 }
 
 func momentCtx(userID string) context.Context {

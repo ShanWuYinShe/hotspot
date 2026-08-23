@@ -89,11 +89,24 @@ func (s *PersistenceModerationStore) GetTagDeleteState(ctx context.Context, name
 	return isBlocked, hasMomentRefs, nil
 }
 
-func (s *PersistenceModerationStore) DeleteTag(ctx context.Context, name string, hardDelete bool) error {
+// SetTagBan Postgres 版两态屏蔽：active=true 屏蔽（hardDelete 的删关联 +
+// 屏蔽两步包进同一事务）；active=false 解屏蔽（DELETE 未命中行 no-op 成功，
+// 解屏蔽后同名标签恢复可创建/命中）。
+func (s *PersistenceModerationStore) SetTagBan(ctx context.Context, name string, active bool, hardDelete bool) error {
 	if _, ok := s.queryable(); !ok {
-		return s.memory.DeleteTag(ctx, name, hardDelete)
+		return s.memory.SetTagBan(ctx, name, active, hardDelete)
 	}
 	tagName := normalizeTagName(name)
+	if !active {
+		queryable, ok := s.queryable()
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		if err := queryable.Exec(ctx, queryUnblockTag, tagName); err != nil {
+			return err
+		}
+		return nil
+	}
 	isBlocked, hasMomentRefs, err := s.GetTagDeleteState(ctx, tagName)
 	if err != nil {
 		return err
@@ -101,10 +114,6 @@ func (s *PersistenceModerationStore) DeleteTag(ctx context.Context, name string,
 	if !isBlocked && !hasMomentRefs {
 		return errTagNotFound
 	}
-	if isBlocked && !hasMomentRefs {
-		return nil
-	}
-	// hardDelete 的删关联 + 封禁标签两步包进同一事务。
 	return persistence.RunInTransaction(ctx, s.factory, func(txCtx context.Context) error {
 		txQueryable, ok := persistence.QueryableForTx(txCtx, s.factory)
 		if !ok {

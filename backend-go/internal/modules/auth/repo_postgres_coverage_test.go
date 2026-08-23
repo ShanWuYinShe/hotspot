@@ -123,19 +123,19 @@ func TestPostgresCreateAndResetPassword(t *testing.T) {
 		t.Fatalf("expected throttled, got %v", err)
 	}
 
-	account, err := repo.ResetPassword(context.Background(), "alice", "123456", "newpass123")
+	account, err := repo.ResetPassword(context.Background(), "alice", "123456", "newpassword123")
 	if err != nil || account.UserID != "user_1" {
 		t.Fatalf("reset password: %#v err=%v", account, err)
 	}
 	// 错误验证码 → not found
 	backend.rowValues[queryGetPasswordReset] = nil
-	if _, err := repo.ResetPassword(context.Background(), "alice", "000000", "newpass123"); !errors.Is(err, ErrPasswordResetNotFound) {
+	if _, err := repo.ResetPassword(context.Background(), "alice", "000000", "newpassword123"); !errors.Is(err, ErrPasswordResetNotFound) {
 		t.Fatalf("bad code must be not found, got %v", err)
 	}
 }
 
 func TestPostgresChangePassword(t *testing.T) {
-	hash, _ := hashPassword("oldpass123")
+	hash, _ := hashPassword("oldpassword123")
 	backend := &authRowStub{
 		rowValues: map[string][]any{
 			queryGetAccountByUserID: {"alice", "user_1", hash},
@@ -143,14 +143,14 @@ func TestPostgresChangePassword(t *testing.T) {
 	}
 	repo := NewPostgresRepository(newAuthFactory(backend))
 
-	if err := repo.ChangePassword(context.Background(), "user_1", "oldpass123", "newpass123"); err != nil {
+	if err := repo.ChangePassword(context.Background(), "user_1", "oldpassword123", "newpassword123"); err != nil {
 		t.Fatalf("change password: %v", err)
 	}
-	if err := repo.ChangePassword(context.Background(), "user_1", "wrong", "newpass123"); !errors.Is(err, ErrInvalidOldPassword) {
+	if err := repo.ChangePassword(context.Background(), "user_1", "wrong", "newpassword123"); !errors.Is(err, ErrInvalidOldPassword) {
 		t.Fatalf("wrong old password must be rejected, got %v", err)
 	}
 	backend.rowValues[queryGetAccountByUserID] = nil
-	if err := repo.ChangePassword(context.Background(), "missing", "oldpass123", "newpass123"); !errors.Is(err, ErrInvalidOldPassword) {
+	if err := repo.ChangePassword(context.Background(), "missing", "oldpassword123", "newpassword123"); !errors.Is(err, ErrInvalidOldPassword) {
 		t.Fatalf("missing user must be rejected, got %v", err)
 	}
 }

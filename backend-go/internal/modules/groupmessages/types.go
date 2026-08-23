@@ -112,3 +112,14 @@ type MarkGroupReadRequest struct {
 	GroupID       string `json:"group_id,omitempty"`
 	UpToMessageID string `json:"up_to_message_id,omitempty"`
 }
+
+// MessageReportSnapshot 是群消息的举报快照投影视图（spec api_spec_types.md
+// ReportSnapshot 的 group 会话形态）：服务端受理举报时基于消息真值生成，
+// 由 bootstrap 适配为 reports.ReportSnapshot（groupmessages 不依赖 reports 包）。
+type MessageReportSnapshot struct {
+	GroupID string // target_chat_id（group 会话 = group_id）
+	Type    string // message_type
+	Content string // 原始文本内容（type='text' 时作为 snapshot_content）
+	FileID  string // 媒体文件引用（非空时作为 snapshot_media.file_id）
+	SentAt  string
+}

@@ -8,6 +8,7 @@ func MountPublicRoutes(r chi.Router, handler *Handler) {
 	r.Post("/register", handler.Register)
 	r.Post("/signin", handler.Login)
 	r.Post("/guest", handler.Guest)
+	r.Post("/send_register_code", handler.SendRegisterCode)
 	r.Post("/refresh_token", handler.RefreshToken)
 	r.Post("/forgot_password", handler.RequestPasswordReset)
 	r.Post("/reset_password", handler.ResetPassword)

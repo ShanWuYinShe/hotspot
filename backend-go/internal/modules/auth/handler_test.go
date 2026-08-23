@@ -18,6 +18,7 @@ import (
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/resourceguard"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 func newTestHandler() *Handler {
@@ -50,7 +51,7 @@ func registerAppUser(t *testing.T, handler *Handler, loginID, nickname, password
 
 func TestRegisterRequiresIdempotencyKey(t *testing.T) {
 	handler := newTestHandler()
-	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"alice","nickname":"Alice","password":"secret","client_type":"app","device_id":"test-device"}`))
+	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"alice","nickname":"Alice","password":"secret12","client_type":"app","device_id":"test-device"}`))
 	rr := httptest.NewRecorder()
 
 	handler.Register(rr, req)
@@ -66,10 +67,10 @@ func TestRegisterRequiresIdempotencyKey(t *testing.T) {
 
 func TestRegisterDuplicateLoginIDReturnsConflict(t *testing.T) {
 	handler := newTestHandler()
-	registerAppUser(t, handler, "alice", "Alice", "secret")
+	registerAppUser(t, handler, "alice", "Alice", "secret12")
 
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"alice","nickname":"Alice 2","password":"secret-2","client_type":"app","device_id":"test-device"}`))
+	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"alice","nickname":"Alice 2","password":"secret22","client_type":"app","device_id":"test-device"}`))
 	req.Header.Set("Idempotency-Key", "bbbb1234abcd1234abcd1234abcd1234")
 	rr := httptest.NewRecorder()
 	handler.Register(rr, req)
@@ -85,9 +86,9 @@ func TestRegisterDuplicateLoginIDReturnsConflict(t *testing.T) {
 
 func TestLoginAppReturnsTokenPair(t *testing.T) {
 	handler := newTestHandler()
-	registerAppUser(t, handler, "alice", "Alice", "secret")
+	registerAppUser(t, handler, "alice", "Alice", "secret12")
 
-	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app","device_id":"test-device"}`))
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret12","client_type":"app","device_id":"test-device"}`))
 	req.RemoteAddr = "173.245.48.5:443"
 	req.Header.Set("CF-Connecting-IP", "8.8.4.4")
 	req.Header.Set("CF-IPCountry", "SG")
@@ -144,7 +145,7 @@ func TestLoginWebReturnsEmptyDataAndCookiesOnly(t *testing.T) {
 
 func TestLoginRejectsUnknownFields(t *testing.T) {
 	handler := newTestHandler()
-	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app","unexpected":true,"device_id":"test-device"}`))
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret12","client_type":"app","unexpected":true,"device_id":"test-device"}`))
 	rr := httptest.NewRecorder()
 
 	handler.Login(rr, req)
@@ -163,11 +164,11 @@ func TestLoginRejectsUnknownFields(t *testing.T) {
 
 func TestLoginCollapsesUnknownUserAndWrongPassword(t *testing.T) {
 	handler := newTestHandler()
-	registerAppUser(t, handler, "alice", "Alice", "secret")
+	registerAppUser(t, handler, "alice", "Alice", "secret12")
 
 	cases := []string{
 		`{"login_id":"alice","password":"wrong","client_type":"app","device_id":"test-device"}`,
-		`{"login_id":"missing","password":"secret","client_type":"app","device_id":"test-device"}`,
+		`{"login_id":"missing","password":"secret12","client_type":"app","device_id":"test-device"}`,
 	}
 	for _, body := range cases {
 		req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(body))
@@ -260,9 +261,9 @@ func TestGuestWithIdempotencyKeyReturnsTokenPair(t *testing.T) {
 
 func TestRefreshTokenAppReturnsNewTokenPair(t *testing.T) {
 	handler := newTestHandler()
-	registerAppUser(t, handler, "alice", "Alice", "secret")
+	registerAppUser(t, handler, "alice", "Alice", "secret12")
 
-	loginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app","device_id":"test-device"}`))
+	loginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret12","client_type":"app","device_id":"test-device"}`))
 	loginRR := httptest.NewRecorder()
 	handler.Login(loginRR, loginReq)
 	var loginResp struct {
@@ -291,7 +292,7 @@ func TestRefreshTokenAppReturnsNewTokenPair(t *testing.T) {
 
 func TestListSessionsReturnsCurrentSession(t *testing.T) {
 	handler := newTestHandler()
-	register := registerAppUser(t, handler, "alice", "Alice", "secret")
+	register := registerAppUser(t, handler, "alice", "Alice", "secret12")
 	sessionID := handler.service.auth.UnsafeFirstSessionIDForUser(context.Background(), register.UserID)
 	if sessionID == "" {
 		t.Fatal("expected session id")
@@ -318,7 +319,7 @@ func TestListSessionsReturnsCurrentSession(t *testing.T) {
 func TestListSessionsIncludesSessionMetadata(t *testing.T) {
 	handler := newTestHandler()
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	registerReq := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"alice-meta","nickname":"Alice","password":"secret","client_type":"app","device_id":"test-device"}`))
+	registerReq := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"alice-meta","nickname":"Alice","password":"secret12","client_type":"app","device_id":"test-device"}`))
 	registerReq.Header.Set("Idempotency-Key", "meta1234abcd1234abcd1234abcd1234")
 	registerReq.RemoteAddr = "173.245.48.5:443"
 	registerReq.Header.Set("CF-Connecting-IP", "203.0.113.9")
@@ -393,7 +394,7 @@ func TestRequestPasswordResetDoesNotExposeUnknownLoginID(t *testing.T) {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 
-	registerAppUser(t, handler, "alice", "Alice", "secret")
+	registerAppUser(t, handler, "alice", "Alice", "secret12")
 	idempotency.SetStore(idempotency.NewInMemoryStore())
 	req1 := httptest.NewRequest(http.MethodPost, "/request_password_reset", strings.NewReader(`{"login_id":"alice","client_type":"app"}`))
 	req1.Header.Set("Idempotency-Key", "cccc2234abcd1234abcd1234abcd1234")
@@ -415,13 +416,13 @@ func TestRequestPasswordResetDoesNotExposeUnknownLoginID(t *testing.T) {
 
 func TestResetPasswordRevokesExistingSessionsAndAllowsLoginWithNewPassword(t *testing.T) {
 	handler := newTestHandler()
-	register := registerAppUser(t, handler, "alice", "Alice", "secret")
+	register := registerAppUser(t, handler, "alice", "Alice", "secret12")
 	firstSessionID := handler.service.auth.UnsafeFirstSessionIDForUser(context.Background(), register.UserID)
 	if firstSessionID == "" {
 		t.Fatal("expected first session id")
 	}
 
-	loginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app","device_id":"test-device"}`))
+	loginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret12","client_type":"app","device_id":"test-device"}`))
 	loginRR := httptest.NewRecorder()
 	handler.Login(loginRR, loginReq)
 
@@ -437,7 +438,7 @@ func TestResetPasswordRevokesExistingSessionsAndAllowsLoginWithNewPassword(t *te
 	}
 
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	confirmReq := httptest.NewRequest(http.MethodPost, "/reset_password", strings.NewReader(`{"login_id":"alice","verification_code":"`+code+`","new_password":"new-secret","client_type":"app"}`))
+	confirmReq := httptest.NewRequest(http.MethodPost, "/reset_password", strings.NewReader(`{"login_id":"alice","verification_code":"`+code+`","new_password":"newsecret2","client_type":"app","device_id":"test-device"}`))
 	confirmReq.Header.Set("Idempotency-Key", "eeee1234abcd1234abcd1234abcd1234")
 	confirmRR := httptest.NewRecorder()
 	handler.ResetPassword(confirmRR, confirmReq)
@@ -456,7 +457,7 @@ func TestResetPasswordRevokesExistingSessionsAndAllowsLoginWithNewPassword(t *te
 		t.Fatal("expected old session token to be revoked after reset")
 	}
 
-	newLoginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"new-secret","client_type":"app","device_id":"test-device"}`))
+	newLoginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"newsecret2","client_type":"app","device_id":"test-device"}`))
 	newLoginRR := httptest.NewRecorder()
 	handler.Login(newLoginRR, newLoginReq)
 	var newLoginResp map[string]any
@@ -470,9 +471,9 @@ func TestResetPasswordRevokesExistingSessionsAndAllowsLoginWithNewPassword(t *te
 
 func TestResetPasswordUnknownOrInvalidRequestReturnsNotFound(t *testing.T) {
 	handler := newTestHandler()
-	registerAppUser(t, handler, "alice", "Alice", "secret")
+	registerAppUser(t, handler, "alice", "Alice", "secret12")
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	req := httptest.NewRequest(http.MethodPost, "/reset_password", strings.NewReader(`{"login_id":"alice","verification_code":"000000","new_password":"new-secret","client_type":"app"}`))
+	req := httptest.NewRequest(http.MethodPost, "/reset_password", strings.NewReader(`{"login_id":"alice","verification_code":"000000","new_password":"newsecret2","client_type":"app","device_id":"test-device"}`))
 	req.Header.Set("Idempotency-Key", "ffff1234abcd1234abcd1234abcd1234")
 	rr := httptest.NewRecorder()
 	handler.ResetPassword(rr, req)
@@ -491,7 +492,7 @@ func TestResetPasswordUnknownOrInvalidRequestReturnsNotFound(t *testing.T) {
 // 旧密码错误返回 httpx.CodeUnauthorized 而非参数错误。
 func TestChangePasswordWithoutIdempotencyKey(t *testing.T) {
 	handler := newTestHandler()
-	req := httptest.NewRequest(http.MethodPost, "/change_password", strings.NewReader(`{"old_password":"wrong-old","new_password":"new-pass"}`))
+	req := httptest.NewRequest(http.MethodPost, "/change_password", strings.NewReader(`{"old_password":"wrong-old","new_password":"newpass12"}`))
 	ctx := platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
@@ -509,7 +510,7 @@ func TestChangePasswordWithoutIdempotencyKey(t *testing.T) {
 
 func TestRevokeSessionRejectsCurrentSession(t *testing.T) {
 	handler := newTestHandler()
-	register := registerAppUser(t, handler, "alice", "Alice", "secret")
+	register := registerAppUser(t, handler, "alice", "Alice", "secret12")
 	currentSessionID := handler.service.auth.UnsafeFirstSessionIDForUser(context.Background(), register.UserID)
 	req := httptest.NewRequest(http.MethodPost, "/revoke_session", strings.NewReader(`{"session_id":"`+currentSessionID+`"}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: register.UserID, SessionID: currentSessionID}))
@@ -526,12 +527,12 @@ func TestRevokeSessionRejectsCurrentSession(t *testing.T) {
 
 func TestChangePasswordValidatesOldPasswordAndRevokesOtherSessions(t *testing.T) {
 	handler := newTestHandler()
-	register := registerAppUser(t, handler, "alice", "Alice", "secret")
+	register := registerAppUser(t, handler, "alice", "Alice", "secret12")
 	currentSessionID := handler.service.auth.UnsafeFirstSessionIDForUser(context.Background(), register.UserID)
 	if currentSessionID == "" {
 		t.Fatal("expected current session id")
 	}
-	loginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app","device_id":"test-device-2"}`))
+	loginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret12","client_type":"app","device_id":"test-device-2"}`))
 	loginRR := httptest.NewRecorder()
 	handler.Login(loginRR, loginReq)
 	otherSessionID := ""
@@ -546,7 +547,7 @@ func TestChangePasswordValidatesOldPasswordAndRevokesOtherSessions(t *testing.T)
 	}
 
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	badReq := httptest.NewRequest(http.MethodPost, "/change_password", strings.NewReader(`{"old_password":"wrong","new_password":"new-secret"}`))
+	badReq := httptest.NewRequest(http.MethodPost, "/change_password", strings.NewReader(`{"old_password":"wrong","new_password":"newsecret2"}`))
 	badReq.Header.Set("Idempotency-Key", "11111234abcd1234abcd1234abcd1234")
 	badReq = badReq.WithContext(platformauth.WithPrincipal(badReq.Context(), platformauth.Principal{UserID: register.UserID, SessionID: currentSessionID}))
 	badRR := httptest.NewRecorder()
@@ -560,7 +561,7 @@ func TestChangePasswordValidatesOldPasswordAndRevokesOtherSessions(t *testing.T)
 	}
 
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	goodReq := httptest.NewRequest(http.MethodPost, "/change_password", strings.NewReader(`{"old_password":"secret","new_password":"new-secret"}`))
+	goodReq := httptest.NewRequest(http.MethodPost, "/change_password", strings.NewReader(`{"old_password":"secret12","new_password":"newsecret2"}`))
 	goodReq.Header.Set("Idempotency-Key", "22221234abcd1234abcd1234abcd1234")
 	goodReq = goodReq.WithContext(platformauth.WithPrincipal(goodReq.Context(), platformauth.Principal{UserID: register.UserID, SessionID: currentSessionID}))
 	goodRR := httptest.NewRecorder()
@@ -573,7 +574,7 @@ func TestChangePasswordValidatesOldPasswordAndRevokesOtherSessions(t *testing.T)
 		t.Fatalf("unexpected response: %#v", goodResp)
 	}
 
-	oldLoginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app","device_id":"test-device"}`))
+	oldLoginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret12","client_type":"app","device_id":"test-device"}`))
 	oldLoginRR := httptest.NewRecorder()
 	handler.Login(oldLoginRR, oldLoginReq)
 	var oldLoginResp map[string]any
@@ -643,7 +644,7 @@ func TestGuestRecordsUserForResourceGuard(t *testing.T) {
 
 	repo := &recordingAuthRepo{guestAccount: Account{UserID: "guest_new", Nickname: "Guest"}}
 	service := NewServiceWithSource(context.Background(), platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"}), repo, config.Config{AuthTokenSecret: "test-secret"}, appconfig.NewStaticSource(config.Config{AuthTokenSecret: "test-secret"}))
-	if _, err := service.Guest(context.Background(), GuestRequest{Nickname: "Guest"}, platformauth.SessionMeta{}); err != nil {
+	if _, err := service.Guest(context.Background(), GuestRequest{Nickname: types.StrPtr("Guest")}, platformauth.SessionMeta{}); err != nil {
 		t.Fatalf("guest: %v", err)
 	}
 	if len(checker.recorded) != 1 || checker.recorded[0] != "user:guest_new" {
@@ -688,6 +689,18 @@ func (r *recordingAuthRepo) ChangePassword(context.Context, string, string, stri
 	return nil
 }
 
+func (r *recordingAuthRepo) CreateRegisterCode(context.Context, string, time.Time) (string, error) {
+	return "123456", nil
+}
+
+func (r *recordingAuthRepo) VerifyRegisterCode(context.Context, string, string) error {
+	return nil
+}
+
+func (r *recordingAuthRepo) ConsumeRegisterCode(context.Context, string, string) error {
+	return nil
+}
+
 func (c *recordingChecker) Ready(context.Context) bool {
 	return true
 }
@@ -707,7 +720,7 @@ func TestRegisterWebResponseHasNoTokenInBody(t *testing.T) {
 	handler := newTestHandler()
 	rr := httptest.NewRecorder()
 	key := fmt.Sprintf("%032x", time.Now().UnixNano())
-	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"webuser","nickname":"WebUser","password":"pass123","client_type":"web","device_id":"test-device-web"}`))
+	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"webuser","nickname":"WebUser","password":"password123","client_type":"web","device_id":"test-device-web"}`))
 	req.Header.Set("Idempotency-Key", key)
 	handler.Register(rr, req)
 	if rr.Code != http.StatusOK {
@@ -742,7 +755,7 @@ func TestRegisterWebResponseHasNoTokenInBody(t *testing.T) {
 
 func TestLoginReturns10100OnWrongPassword(t *testing.T) {
 	handler := newTestHandler()
-	_ = registerAppUser(t, handler, "loginerr", "RightPass", "pass123")
+	_ = registerAppUser(t, handler, "loginerr", "RightPass", "password123")
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"loginerr","password":"wrongpass","client_type":"app","device_id":"test-device"}`))
 	handler.Login(rr, req)
@@ -771,7 +784,7 @@ func TestLoginReturns10100OnNonexistentUser(t *testing.T) {
 
 func TestLogoutClearsCookiesWithMaxAgeZero(t *testing.T) {
 	handler := newTestHandler()
-	reg := registerAppUser(t, handler, "logout_test", "Pass123", "pass123")
+	reg := registerAppUser(t, handler, "logout_test", "Pass123", "password123")
 	sessionID := handler.service.auth.UnsafeFirstSessionIDForUser(context.Background(), reg.UserID)
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: reg.UserID, SessionID: sessionID})
 	rr := httptest.NewRecorder()
@@ -856,7 +869,7 @@ func TestHandlerRevokeAllSessionsIgnoresUnknownFields(t *testing.T) {
 
 func TestHandlerRevokeAllSessionsReturnsSuccess(t *testing.T) {
 	handler := newTestHandler()
-	reg := registerAppUser(t, handler, "revoke_all_user", "RevokeAll", "pass123")
+	reg := registerAppUser(t, handler, "revoke_all_user", "RevokeAll", "password123")
 	sessionID := handler.service.auth.UnsafeFirstSessionIDForUser(context.Background(), reg.UserID)
 	if sessionID == "" {
 		t.Fatal("expected session id")
@@ -968,5 +981,31 @@ func TestHandlerGuestReturns10600OnError(t *testing.T) {
 	}
 	if httpx.Code(int(resp["code"].(float64))) != httpx.CodeInvalidRequest {
 		t.Fatalf("expected code httpx.CodeInvalidRequest for missing nickname, got %#v", resp)
+	}
+}
+
+// TestLoginLockoutSetsRetryAfterHeader：signin 锁定返回 10500 时必须携带
+// Retry-After 响应头（spec api_spec_errors.md → 10500「按 Retry-After 响应头
+// 等待后重试」），取值锁定窗口时长（defaultLockDuration = 900s）。
+func TestLoginLockoutSetsRetryAfterHeader(t *testing.T) {
+	handler := newTestHandler()
+	registerAppUser(t, handler, "lockhdr", "Alice", "secret12")
+	for i := 0; i < defaultMaxFailures; i++ {
+		req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"lockhdr","password":"wrongpass9","client_type":"app","device_id":"test-device"}`))
+		rr := httptest.NewRecorder()
+		handler.Login(rr, req)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"lockhdr","password":"wrongpass9","client_type":"app","device_id":"test-device"}`))
+	rr := httptest.NewRecorder()
+	handler.Login(rr, req)
+	var resp map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if httpx.Code(int(resp["code"].(float64))) != httpx.CodeRateLimited {
+		t.Fatalf("expected 10500 after lockout, got %v", resp)
+	}
+	if ra := rr.Header().Get("Retry-After"); ra != "900" {
+		t.Fatalf("expected Retry-After 900, got %q", ra)
 	}
 }

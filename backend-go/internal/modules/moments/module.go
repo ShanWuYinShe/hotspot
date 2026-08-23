@@ -53,6 +53,8 @@ func (m *Module) Mount(r chi.Router) {
 			group.Post("/update", m.momentsHandler.Update)
 			group.Post("/delete", m.momentsHandler.Delete)
 			group.Post("/fetch_created", m.momentsHandler.ListCreated)
+			group.Post("/fetch_following", m.momentsHandler.FetchFollowing)
+			group.Post("/fetch_nearby", m.momentsHandler.FetchNearby)
 			group.Post("/set_favorite", m.momentsHandler.Favorite)
 			group.Post("/fetch_favorites", m.momentsHandler.ListFavorites)
 		})
@@ -79,6 +81,9 @@ func (m *Module) MountPublic(r chi.Router) {
 	r.Route("/moments", func(momentsRouter chi.Router) {
 		momentsRouter.Post("/open_the_door", m.momentsHandler.OpenTheDoor)
 		momentsRouter.Post("/search", m.momentsHandler.Search)
+		// 附近公开瞬间的可见性不依赖身份（仅 privacy_level='public'），
+		// 匿名版为拉新路径（spec api_spec_public.md）。
+		momentsRouter.Post("/fetch_nearby", m.momentsHandler.FetchNearby)
 	})
 	r.Route("/comments", func(commentsRouter chi.Router) {
 		commentsRouter.Post("/fetch", m.commentsHandler.List)

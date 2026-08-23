@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"time"
 
 	usersmodule "hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/types"
@@ -116,6 +117,18 @@ func (r *InMemoryRepository) SetUserBanState(_ context.Context, userID string, s
 	}
 	if state.Status != UserAccountStatusBanned {
 		state = UserBanState{Status: UserAccountStatusNormal}
+	}
+	// banned_until（spec api_spec_admin.md AdminUserItem）：封禁到期时间，
+	// null = 未封禁/永久封禁（duration 0）。
+	if state.Status == UserAccountStatusBanned && state.DurationDays > 0 {
+		bannedAt := state.BannedAt
+		if bannedAt.IsZero() {
+			bannedAt = time.Now().UTC()
+		}
+		until := bannedAt.Add(time.Duration(state.DurationDays) * 24 * time.Hour).UTC().Format(time.RFC3339)
+		item.BannedUntil = &until
+	} else {
+		item.BannedUntil = nil
 	}
 	r.banStates[userID] = state
 	item.Status = state.Status

@@ -20,6 +20,11 @@ VALUES ($1, $2)
 ON CONFLICT (name) DO UPDATE
 SET blocked_at = EXCLUDED.blocked_at`
 
+	// queryUnblockTag 解屏蔽：DELETE 未命中行（未屏蔽标签）为 no-op 成功。
+	queryUnblockTag = `
+DELETE FROM admin_blocked_tags
+WHERE name = $1`
+
 	queryDeleteMomentTagAssignments = `
 DELETE FROM moment_tags
 WHERE tag_name = $1`

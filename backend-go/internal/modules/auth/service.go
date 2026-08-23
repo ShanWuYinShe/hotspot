@@ -183,6 +183,17 @@ func (s *Service) GetStatus(ctx context.Context) (SessionStatus, error) {
 
 func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
 	startedAt := time.Now()
+	// 手机号/邮箱型 login_id 必须先验证所有权（spec api_spec_public.md →
+	// register）：验证码错误/过期 → 10401；已占用的 login_id 由 repo 的唯一
+	// 约束拒绝（10400）。
+	if isPhoneOrEmailLoginID(req.LoginID) {
+		if req.VerificationCode == nil {
+			return platformauth.AuthResult{}, ErrMissingRegisterCode
+		}
+		if err := s.repo.VerifyRegisterCode(ctx, req.LoginID, *req.VerificationCode); err != nil {
+			return platformauth.AuthResult{}, err
+		}
+	}
 	account, err := s.repo.Register(ctx, RegisterParams{
 		LoginID:          req.LoginID,
 		Nickname:         req.Nickname,
@@ -199,6 +210,17 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platfo
 		)
 		return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Register: repo: %w", err)
 	}
+	// 验证码一次性：注册成功后消费（失败不烧码）。login_id 唯一约束保证
+	// 同一验证码最多促成一次成功注册；消费失败仅告警（注册已成功，不能回滚）。
+	if isPhoneOrEmailLoginID(req.LoginID) && req.VerificationCode != nil {
+		if err := s.repo.ConsumeRegisterCode(ctx, req.LoginID, *req.VerificationCode); err != nil {
+			observability.L().Warn("register code consume failed",
+				"method", "Register",
+				"login_id", observability.Redact(req.LoginID),
+				"error", err,
+			)
+		}
+	}
 	result, err := s.auth.IssueSessionWithMeta(ctx, account.UserID, meta)
 	if err != nil {
 		observability.L().Error("service error",
@@ -210,6 +232,28 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platfo
 	}
 	resourceguard.RecordUser(ctx, account.UserID)
 	return result, nil
+}
+
+// SendRegisterCode 发送注册验证码（spec api_spec_public.md →
+// auth/send_register_code）。防枚举：无论 login_id 是否已被注册均返回成功；
+// 已占用的 login_id 对应验证码不生效（注册时先撞唯一约束 10400）。
+func (s *Service) SendRegisterCode(ctx context.Context, req SendRegisterCodeRequest) error {
+	code, err := s.repo.CreateRegisterCode(ctx, req.LoginID, time.Now().UTC().Add(10*time.Minute))
+	if err != nil {
+		observability.L().Error("service error",
+			"method", "SendRegisterCode",
+			"error", err,
+		)
+		return fmt.Errorf("auth.Service.SendRegisterCode: repo: %w", err)
+	}
+	if sendErr := s.codeSender.SendVerification(ctx, req.LoginID, detectChannel(req.LoginID), code); sendErr != nil {
+		observability.L().Warn("verification code delivery failed for register",
+			"method", "SendRegisterCode",
+			"login_id", observability.Redact(req.LoginID),
+			"error", sendErr,
+		)
+	}
+	return nil
 }
 
 func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
@@ -275,7 +319,20 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth
 
 func (s *Service) Guest(ctx context.Context, req GuestRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
 	startedAt := time.Now()
-	account, err := s.repo.CreateGuest(ctx, GuestParams{Nickname: req.Nickname, Defaults: s.profileDefaults(ctx), RegisterIP: meta.IPAddress, RegisterLocation: meta.IPLocation})
+	// Nickname 可选（spec api_spec_public.md → guest）：null/空时服务端生成
+	// 默认昵称「游客·xxxx」（4 位小写字母数字随机），进入后引导修改。
+	nickname := ""
+	if req.Nickname != nil {
+		nickname = strings.TrimSpace(*req.Nickname)
+	}
+	if nickname == "" {
+		generated, err := generateGuestNickname()
+		if err != nil {
+			return platformauth.AuthResult{}, err
+		}
+		nickname = generated
+	}
+	account, err := s.repo.CreateGuest(ctx, GuestParams{Nickname: nickname, Defaults: s.profileDefaults(ctx), RegisterIP: meta.IPAddress, RegisterLocation: meta.IPLocation})
 	if err != nil {
 		observability.L().Error("service error",
 			"method", "Guest",

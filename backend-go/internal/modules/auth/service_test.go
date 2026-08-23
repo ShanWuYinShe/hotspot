@@ -10,6 +10,7 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/types"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -38,6 +39,11 @@ type stubAuthRepo struct {
 	resetAccount    Account
 	resetErr        error
 	changePwdErr    error
+	// 注册验证码路径注入桩
+	registerCode     string
+	registerCodeErr  error
+	verifyCodeErr    error
+	consumedCodeArgs []string
 }
 
 func (r *stubAuthRepo) Register(_ context.Context, _ RegisterParams) (Account, error) {
@@ -60,6 +66,16 @@ func (r *stubAuthRepo) ResetPassword(_ context.Context, _, _, _ string) (Account
 }
 func (r *stubAuthRepo) ChangePassword(_ context.Context, _, _, _ string) error {
 	return r.changePwdErr
+}
+func (r *stubAuthRepo) CreateRegisterCode(_ context.Context, _ string, _ time.Time) (string, error) {
+	return r.registerCode, r.registerCodeErr
+}
+func (r *stubAuthRepo) VerifyRegisterCode(_ context.Context, _ string, code string) error {
+	return r.verifyCodeErr
+}
+func (r *stubAuthRepo) ConsumeRegisterCode(_ context.Context, loginID string, code string) error {
+	r.consumedCodeArgs = []string{loginID, code}
+	return nil
 }
 
 // --- helpers ---
@@ -135,12 +151,16 @@ func TestServiceGetStatusWithExpiry(t *testing.T) {
 func TestServiceRegisterHappyPath(t *testing.T) {
 	repo := &stubAuthRepo{registerAccount: Account{UserID: "u1", LoginID: "a@b.com"}}
 	svc, _ := newTestService(repo)
-	result, err := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com", Password: "pass"}, defaultMeta())
+	result, err := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com", Password: "pass", VerificationCode: types.StrPtr("123456")}, defaultMeta())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if result.Principal.UserID != "u1" {
 		t.Fatalf("expected u1, got %s", result.Principal.UserID)
+	}
+	// 验证码一次性：注册成功后消费
+	if len(repo.consumedCodeArgs) != 2 || repo.consumedCodeArgs[0] != "a@b.com" || repo.consumedCodeArgs[1] != "123456" {
+		t.Fatalf("expected register code to be consumed, got %#v", repo.consumedCodeArgs)
 	}
 }
 
@@ -273,7 +293,7 @@ func TestServiceLoginClearOnSuccessResetsLockout(t *testing.T) {
 func TestServiceGuestHappyPath(t *testing.T) {
 	repo := &stubAuthRepo{guestAccount: Account{UserID: "g1"}}
 	svc, _ := newTestService(repo)
-	result, err := svc.Guest(context.Background(), GuestRequest{Nickname: "guest"}, defaultMeta())
+	result, err := svc.Guest(context.Background(), GuestRequest{Nickname: types.StrPtr("guest")}, defaultMeta())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -285,7 +305,7 @@ func TestServiceGuestHappyPath(t *testing.T) {
 func TestServiceGuestPropagatesError(t *testing.T) {
 	repo := &stubAuthRepo{guestErr: errors.New("boom")}
 	svc, _ := newTestService(repo)
-	_, err := svc.Guest(context.Background(), GuestRequest{Nickname: "guest"}, defaultMeta())
+	_, err := svc.Guest(context.Background(), GuestRequest{Nickname: types.StrPtr("guest")}, defaultMeta())
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -297,7 +317,7 @@ func TestServiceRefreshUsesCookieForWeb(t *testing.T) {
 	// First register+login to get a valid refresh token
 	repo := &stubAuthRepo{registerAccount: Account{UserID: "u1"}}
 	svc, _ := newTestService(repo)
-	result, err := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com"}, defaultMeta())
+	result, err := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com", VerificationCode: types.StrPtr("123456")}, defaultMeta())
 	if err != nil {
 		t.Fatalf("setup: %v", err)
 	}
@@ -326,7 +346,7 @@ func TestServiceListSessionsMasksIP(t *testing.T) {
 	svc, _ := newTestService(repo)
 	// Register to create a session
 	meta := platformauth.SessionMeta{DeviceType: "ios", IPAddress: "192.168.1.100", IPLocation: "US"}
-	result, _ := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com"}, meta)
+	result, _ := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com", VerificationCode: types.StrPtr("123456")}, meta)
 	ctx := platformauth.WithPrincipal(context.Background(), result.Principal)
 	list := svc.ListSessions(ctx)
 	if len(list.Items) == 0 {
@@ -373,7 +393,7 @@ func TestServiceRevokeSessionHappyPath(t *testing.T) {
 	// Create two sessions for the user
 	meta1 := platformauth.SessionMeta{DeviceType: "ios", IPAddress: "1.1.1.1"}
 	meta2 := platformauth.SessionMeta{DeviceType: "web", IPAddress: "2.2.2.2"}
-	result1, _ := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com"}, meta1)
+	result1, _ := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com", VerificationCode: types.StrPtr("123456")}, meta1)
 	result2, _ := svc.Login(context.Background(), LoginRequest{LoginID: "a@b.com"}, meta2)
 	_ = result2
 
@@ -482,7 +502,7 @@ func TestServiceRevokeAllHappyPath(t *testing.T) {
 	// Create two sessions
 	meta1 := platformauth.SessionMeta{DeviceType: "ios", IPAddress: "1.1.1.1"}
 	meta2 := platformauth.SessionMeta{DeviceType: "web", IPAddress: "2.2.2.2"}
-	result1, _ := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com"}, meta1)
+	result1, _ := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com", VerificationCode: types.StrPtr("123456")}, meta1)
 	svc.Login(context.Background(), LoginRequest{LoginID: "a@b.com"}, meta2)
 
 	ctx := platformauth.WithPrincipal(context.Background(), result1.Principal)
@@ -519,7 +539,7 @@ func TestMaskEmpty(t *testing.T) {
 
 func TestRevokeSessionClosesRealtimeConnection(t *testing.T) {
 	svc, authSvc := newTestService(&stubAuthRepo{})
-	reg, _ := svc.Register(context.Background(), RegisterRequest{LoginID: "ws_revoke", Nickname: "test", Password: "pass123"}, defaultMeta())
+	reg, _ := svc.Register(context.Background(), RegisterRequest{LoginID: "ws_revoke", Nickname: "test", Password: "password123"}, defaultMeta())
 	sessionID := reg.Principal.SessionID
 	userID := reg.Principal.UserID
 	otherResult, _ := authSvc.IssueSession(context.Background(), userID)

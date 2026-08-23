@@ -75,6 +75,14 @@ func ReplayOrStore[T any](w http.ResponseWriter, r *http.Request, scope string, 
 	}()
 	payload := producer()
 	panicked = false
+	// spec api_spec_base.md「幂等性」：仅缓存成功响应（code == 0）。
+	// 失败响应不缓存——删除 processing 预留，让客户端修正后以同一 key 重试
+	// 能真正再次执行，而不是在 24h 内反复拿到缓存的失败响应。
+	if payload.Code != httpx.CodeOK {
+		store.Delete(scope, scopedKey)
+		httpx.WriteJSON(w, http.StatusOK, payload)
+		return true
+	}
 	blob, _ := json.Marshal(payload)
 	store.Save(Record{Key: scopedKey, Scope: scope, Status: StatusCompleted, Response: append(blob, '\n'), ExpiresAt: expiresAt})
 	httpx.WriteJSON(w, http.StatusOK, payload)

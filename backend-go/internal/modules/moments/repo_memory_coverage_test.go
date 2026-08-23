@@ -3,6 +3,7 @@ package moments
 import (
 	"context"
 	"testing"
+	"time"
 )
 
 func TestMemoryMomentCountersAndFavorites(t *testing.T) {
@@ -77,10 +78,116 @@ func TestMemoryMomentDeleteAndExists(t *testing.T) {
 	if err := repo.Delete(ctx, created.MomentID); err != nil {
 		t.Fatalf("delete: %v", err)
 	}
-	if err := repo.Delete(ctx, created.MomentID); err != ErrMomentNotFound {
-		t.Fatalf("double delete: expected not found, got %v", err)
+	// 软删除幂等：重复删除返回成功（与 Postgres UPDATE 语义一致）。
+	if err := repo.Delete(ctx, created.MomentID); err != nil {
+		t.Fatalf("double delete: expected idempotent success, got %v", err)
 	}
 	if ok, _ := repo.Exists(ctx, created.MomentID); ok {
 		t.Fatal("deleted moment must not exist")
+	}
+	// 软删除语义（spec api_spec_moment.md「删除语义」）：记录保留为占位项。
+	item, ok, _ := repo.Get(ctx, created.MomentID)
+	if !ok || !item.IsDeleted || item.Description != "" {
+		t.Fatalf("expected retained soft-delete placeholder, got ok=%v item=%#v", ok, item)
+	}
+}
+
+// TestMemoryDeleteKeepsSoftDeletedPlaceholders：软删后作者 fetch_created 与收藏者
+// fetch_favorites 均返回占位项（is_deleted=true、description 为空），其余场景过滤
+// （spec api_spec_moment.md「删除语义」可见性）。
+func TestMemoryDeleteKeepsSoftDeletedPlaceholders(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := context.Background()
+	created, err := repo.Create(ctx, "author", CreateMomentRequest{Description: "hi"})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := repo.Favorite(ctx, "collector", created.MomentID); err != nil {
+		t.Fatalf("favorite: %v", err)
+	}
+	if err := repo.Delete(ctx, created.MomentID); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+
+	mine, err := repo.ListMine(ctx, "author", 20, "")
+	if err != nil {
+		t.Fatalf("list mine: %v", err)
+	}
+	if len(mine.Items) != 1 || !mine.Items[0].IsDeleted || mine.Items[0].Description != "" {
+		t.Fatalf("fetch_created must surface soft-delete placeholder, got %#v", mine.Items)
+	}
+
+	favs, err := repo.ListFavorites(ctx, "collector", 20, "")
+	if err != nil {
+		t.Fatalf("list favorites: %v", err)
+	}
+	if len(favs.Items) != 1 || !favs.Items[0].IsDeleted || favs.Items[0].Description != "" {
+		t.Fatalf("fetch_favorites must surface soft-delete placeholder, got %#v", favs.Items)
+	}
+	if !favs.Items[0].IsFavorited {
+		t.Fatalf("favorited placeholder must keep is_favorited=true, got %#v", favs.Items[0])
+	}
+
+	// 其余场景按不存在处理：搜索与存在性检查过滤软删项。
+	result, err := repo.Search(ctx, SearchMomentsRequest{SortBy: "popular"}, "")
+	if err != nil {
+		t.Fatalf("search: %v", err)
+	}
+	for _, it := range result.Items {
+		if it.MomentID == created.MomentID {
+			t.Fatal("soft-deleted moment must be filtered from search")
+		}
+	}
+	if ok, _ := repo.Exists(ctx, created.MomentID); ok {
+		t.Fatal("soft-deleted moment must not exist for interactions")
+	}
+}
+
+// TestMemoryListFavoritesOrdersByFavoritedAt：排序为 favorited_at 时间倒序 +
+// moment_id DESC 稳定 tie-break，keyset 游标不重不漏
+// （spec api_spec_moment.md moments/fetch_favorites 排序）。
+func TestMemoryListFavoritesOrdersByFavoritedAt(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := context.Background()
+	ids := make([]string, 0, 3)
+	for _, label := range []string{"moment_a", "moment_b", "moment_c"} {
+		m, err := repo.Create(ctx, "author", CreateMomentRequest{Description: label})
+		if err != nil {
+			t.Fatalf("create %s: %v", label, err)
+		}
+		ids = append(ids, m.MomentID)
+	}
+	aID, bID, cID := ids[0], ids[1], ids[2]
+	// Create 生成的 ID 单调递增（UnixNano+seq）→ c > a，同刻 tie-break 时 c 在前。
+	// 直接注入收藏时刻以构造确定顺序与同刻 tie-break：
+	// favorited_at: b(03-22) < a=c(03-23 同刻，moment_id DESC → c 前)。
+	repo.favorites["viewer"] = map[string]time.Time{
+		aID: time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
+		bID: time.Date(2026, 3, 22, 0, 0, 0, 0, time.UTC),
+		cID: time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
+	}
+
+	favs, err := repo.ListFavorites(ctx, "viewer", 2, "")
+	if err != nil {
+		t.Fatalf("page1: %v", err)
+	}
+	if len(favs.Items) != 2 || favs.NextCursor == nil {
+		t.Fatalf("expected page of 2 with cursor, got %#v", favs)
+	}
+	if favs.Items[0].MomentID != cID || favs.Items[1].MomentID != aID {
+		t.Fatalf("expected favorited_at DESC with moment_id DESC tie-break [c a], got [%s %s]",
+			favs.Items[0].MomentID, favs.Items[1].MomentID)
+	}
+	// FavoritedMomentItem.favorited_at 随响应返回（spec api_spec_moment.md 本模块类型）。
+	if favs.Items[0].FavoritedAt == "" || favs.Items[0].FavoritedAt != "2026-03-23T00:00:00Z" {
+		t.Fatalf("expected favorited_at echoed on items, got %#v", favs.Items[0])
+	}
+
+	page2, err := repo.ListFavorites(ctx, "viewer", 2, *favs.NextCursor)
+	if err != nil {
+		t.Fatalf("page2: %v", err)
+	}
+	if len(page2.Items) != 1 || page2.Items[0].MomentID != bID || page2.NextCursor != nil {
+		t.Fatalf("unexpected second page: %#v", page2)
 	}
 }

@@ -37,8 +37,7 @@ func (s *Service) SearchTags(ctx context.Context, req AdminTagSearchRequest) (Pa
 	}
 	resp := PaginatedAdminTags{Items: make([]AdminTagItem, 0, len(page.Items))}
 	for _, item := range page.Items {
-		trend := defaultTagTrend
-		resp.Items = append(resp.Items, AdminTagItem{TagID: "tag_" + item.Name, Name: item.Name, UsageCount: item.UsageCount, Trend: &trend, CreatedAt: item.CreatedAt.UTC().Format(time.RFC3339)})
+		resp.Items = append(resp.Items, AdminTagItem{TagID: "tag_" + item.Name, Name: item.Name, UsageCount: item.UsageCount, CreatedAt: item.CreatedAt.UTC().Format(time.RFC3339)})
 	}
 	if page.Next != nil {
 		c := encodeTagCursor(*page.Next)
@@ -47,37 +46,37 @@ func (s *Service) SearchTags(ctx context.Context, req AdminTagSearchRequest) (Pa
 	return resp, nil, nil
 }
 
-func (s *Service) DeleteTag(ctx context.Context, name string, hardDelete bool) (*httpx.APIError, error) {
+// SetTagBan 设置标签屏蔽状态（两态统一端点，spec api_spec_admin.md
+// admin/tags/set_ban）。active=true 软屏蔽（可选 hard_delete 物理删除历史
+// 引用）；active=false 解屏蔽（对未屏蔽标签 no-op 成功，恢复同名标签可
+// 创建/命中）。屏蔽/解屏蔽均落审计（no-op 解屏蔽也落，与 users/set_ban
+// 的审计写法对齐）。
+func (s *Service) SetTagBan(ctx context.Context, req AdminSetTagBanRequest) (*httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionTagsWrite)
 	if apiErr != nil || err != nil {
 		return apiErr, err
 	}
-	tagName := normalizeTagName(name)
+	tagName := normalizeTagName(req.Name)
 	if tagName == "" {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
-	wasBlocked, hadRefs, err := s.moderationStore.GetTagDeleteState(ctx, tagName)
-	if err != nil {
-		return nil, err
+	// hard_delete 仅 active=true 有效：解屏蔽属恢复操作，与不可逆物理删除
+	// 语义冲突，同传视为参数冲突 10000。
+	if !req.Active && req.HardDelete {
+		return httpx.InvalidRequest("参数错误"), nil
 	}
-	if err := s.moderationStore.DeleteTag(ctx, tagName, hardDelete); err != nil {
+	if err := s.moderationStore.SetTagBan(ctx, tagName, req.Active, req.HardDelete); err != nil {
 		if errors.Is(err, errTagNotFound) {
 			return &httpx.APIError{Code: httpx.CodeNotFound, Message: "标签不存在"}, nil
 		}
 		return nil, err
 	}
-	if !wasBlocked {
-		deleteType := "soft_block"
-		if hardDelete {
-			deleteType = "hard_delete"
-		}
-		details := AuditDetails{"type": string(AuditActionTagDelete), "name": tagName, "method": deleteType}
-		if hardDelete && hadRefs {
-			details["warning"] = "该操作会从所有历史引用中移除标签，不可恢复"
-		}
-		if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionTagDelete, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeTag, TargetID: tagName, TargetName: tagName, Details: details}); err != nil {
-			return nil, err
-		}
+	details := AuditDetails{"type": string(AuditActionTagSetBan), "name": tagName, "active": req.Active}
+	if req.HardDelete {
+		details["hard_delete"] = true
+	}
+	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionTagSetBan, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeTag, TargetID: tagName, TargetName: tagName, Details: details}); err != nil {
+		return nil, err
 	}
 	return nil, nil
 }
@@ -113,13 +112,16 @@ func (s *Service) ListAdminAnnouncements(ctx context.Context, req ListAdminAnnou
 	return resp, nil, nil
 }
 
-func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncementRequest) (AnnouncementCreated, *httpx.APIError, error) {
+// CreateAnnouncement 发布公告（spec api_spec_admin.md announcements/create：
+// Response 为 ApiResponse<AdminAnnouncementItem>，返回完整公告对象供客户端
+// 直接渲染）。
+func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncementRequest) (AdminAnnouncementItem, *httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionAnnouncementsWrite)
 	if apiErr != nil || err != nil {
-		return AnnouncementCreated{}, apiErr, err
+		return AdminAnnouncementItem{}, apiErr, err
 	}
 	if apiErr := validateAnnouncementCreate(req); apiErr != nil {
-		return AnnouncementCreated{}, apiErr, nil
+		return AdminAnnouncementItem{}, apiErr, nil
 	}
 	title := strings.TrimSpace(req.Title)
 	input := systemmodule.AnnouncementCreateInput{
@@ -129,7 +131,7 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 	}
 	item, err := s.moderationStore.CreateAnnouncement(ctx, input)
 	if err != nil {
-		return AnnouncementCreated{}, nil, err
+		return AdminAnnouncementItem{}, nil, err
 	}
 	if s.pushService != nil {
 		// 全量 fanout 按 user_id 升序 keyset 分批：此前复用 SearchUsers
@@ -140,14 +142,14 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 		for {
 			batch, listErr := s.repo.ListUserIDsAfter(ctx, afterUserID, fanoutBatch)
 			if listErr != nil {
-				return AnnouncementCreated{}, nil, listErr
+				return AdminAnnouncementItem{}, nil, listErr
 			}
 			if len(batch) == 0 {
 				break
 			}
 			notificationID, err := s.pushService.AppendSystemAnnouncement(ctx, batch, item.PublicItem())
 			if err != nil {
-				return AnnouncementCreated{}, nil, err
+				return AdminAnnouncementItem{}, nil, err
 			}
 			lastNotificationID = notificationID
 			if len(batch) < fanoutBatch {
@@ -163,25 +165,27 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 		}
 	}
 	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementCreate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeAnnouncement, TargetID: item.AnnouncementID, TargetName: title, Details: AuditDetails{"type": string(AuditActionAnnouncementCreate), "title": title}}); err != nil {
-		return AnnouncementCreated{}, nil, err
+		return AdminAnnouncementItem{}, nil, err
 	}
-	return AnnouncementCreated{AnnouncementID: item.AnnouncementID}, nil, nil
+	return toAdminAnnouncementItem(item), nil, nil
 }
 
-func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateAnnouncementRequest) (*httpx.APIError, error) {
+// UpdateAnnouncement 更新公告（spec api_spec_admin.md announcements/update：
+// 内容类更新返回更新后完整对象 ApiResponse<AdminAnnouncementItem>）。
+func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateAnnouncementRequest) (AdminAnnouncementItem, *httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionAnnouncementsWrite)
 	if apiErr != nil || err != nil {
-		return apiErr, err
+		return AdminAnnouncementItem{}, apiErr, err
 	}
 	if apiErr := validateAnnouncementUpdate(req); apiErr != nil {
-		return apiErr, nil
+		return AdminAnnouncementItem{}, apiErr, nil
 	}
 	current, found, err := s.moderationStore.GetAnnouncement(ctx, req.AnnouncementID)
 	if err != nil {
-		return nil, err
+		return AdminAnnouncementItem{}, nil, err
 	}
 	if !found || current.IsDeleted() {
-		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "公告不存在"}, nil
+		return AdminAnnouncementItem{}, &httpx.APIError{Code: httpx.CodeNotFound, Message: "公告不存在"}, nil
 	}
 	changedFields := make([]string, 0, 4)
 	if req.Title != nil && strings.TrimSpace(*req.Title) != current.Title {
@@ -201,7 +205,7 @@ func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateAnnouncement
 	if req.Title != nil {
 		updatedTitle = strings.TrimSpace(*req.Title)
 	}
-	_, err = s.moderationStore.UpdateAnnouncement(ctx, systemmodule.AnnouncementUpdateInput{
+	updated, err := s.moderationStore.UpdateAnnouncement(ctx, systemmodule.AnnouncementUpdateInput{
 		AnnouncementID: req.AnnouncementID,
 		Title:          trimOptional(req.Title),
 		Content:        trimOptional(req.Content),
@@ -210,18 +214,18 @@ func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateAnnouncement
 	})
 	if err != nil {
 		if errors.Is(err, systemmodule.ErrAnnouncementNotFound()) {
-			return &httpx.APIError{Code: httpx.CodeNotFound, Message: "公告不存在"}, nil
+			return AdminAnnouncementItem{}, &httpx.APIError{Code: httpx.CodeNotFound, Message: "公告不存在"}, nil
 		}
-		return nil, err
+		return AdminAnnouncementItem{}, nil, err
 	}
 	details := AuditDetails{"type": string(AuditActionAnnouncementUpdate), "title": updatedTitle}
 	if len(changedFields) > 0 {
 		details["changed_fields"] = changedFields
 	}
 	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementUpdate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeAnnouncement, TargetID: req.AnnouncementID, TargetName: updatedTitle, Details: details}); err != nil {
-		return nil, err
+		return AdminAnnouncementItem{}, nil, err
 	}
-	return nil, nil
+	return toAdminAnnouncementItem(updated), nil, nil
 }
 
 func (s *Service) DeleteAnnouncement(ctx context.Context, announcementID string) (*httpx.APIError, error) {
@@ -333,8 +337,13 @@ func (s *Service) SetUserBan(ctx context.Context, req AdminSetUserBanRequest) (*
 	if err != nil {
 		return nil, err
 	}
-	// 解封未封禁用户视为 no-op 成功（契约：设状态操作重复达同状态返回成功，见 api_spec_errors.md）
+	// 解封未封禁用户视为 no-op 成功（契约：设状态操作重复达同状态返回成功，
+	// 见 api_spec_errors.md）；spec api_spec_admin.md users/set_ban 安全约束：
+	// 封禁/解封操作均记录审计日志（含 no-op 解封尝试，便于审计追溯）。
 	if !ok || state.Status != UserAccountStatusBanned {
+		if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("user.unban"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetType("user"), TargetID: req.UserID, TargetName: item.User.Nickname, Details: map[string]any{"type": "user.unban", "reason": strings.TrimSpace(req.Reason), "no_op": true}}); err != nil {
+			return nil, err
+		}
 		return nil, nil
 	}
 	if _, isAdmin, err := s.repo.GetActor(ctx, req.UserID); err != nil {
@@ -598,7 +607,9 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 	if strings.TrimSpace(userID) == "" || len(reason) > 500 {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
-	if durationDays != nil && (*durationDays < 0 || *durationDays > 365) {
+	// duration_days 仅拒绝负数（spec api_spec_admin.md users/set_ban：不提供或
+	// 0 = 永久封禁；正数无上限约束，不引入规范外的额外上限）。
+	if durationDays != nil && *durationDays < 0 {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
 	if actor.UserID == userID {

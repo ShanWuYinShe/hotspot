@@ -325,6 +325,36 @@ func (r *InMemoryRepository) MessageExists(_ context.Context, messageID string) 
 	return false, "", nil
 }
 
+// GetMessageReportSnapshot 内存版私聊消息快照：target_chat_id 为相对发送者
+// 的会话对方；file_id 取自 Media（内存 Send 以 URL 字段承载 file_id）。
+func (r *InMemoryRepository) GetMessageReportSnapshot(_ context.Context, messageID string) (MessageReportSnapshot, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for key, items := range r.messages {
+		for _, item := range items {
+			if item.MessageID != messageID {
+				continue
+			}
+			content := ""
+			if item.Content != nil {
+				content = *item.Content
+			}
+			fileID := ""
+			if item.Media != nil {
+				fileID = item.Media.URL
+			}
+			return MessageReportSnapshot{
+				TargetUserID: otherUserID(key, item.Sender.UserID),
+				Type:         item.Type,
+				Content:      content,
+				FileID:       fileID,
+				SentAt:       item.SentAt,
+			}, true, nil
+		}
+	}
+	return MessageReportSnapshot{}, false, nil
+}
+
 func (r *InMemoryRepository) CountMessagesByTarget(_ context.Context, senderID string, since time.Time) (map[string]int, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

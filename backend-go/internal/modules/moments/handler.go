@@ -54,8 +54,10 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 				observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "图片数量超过上限")
 				return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeInvalidRequest, Message: "图片数量超过上限"}
 			case errors.Is(err, ErrImagesNotOwned):
-				observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "图片校验失败")
-				return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeInvalidRequest, Message: "图片校验失败"}
+				// image_file_ids 中媒体资源不存在或不属于当前用户 → 10300
+				//（spec api_spec_moment.md moments/create 错误码）。
+				observability.LogBusinessError(r, "Create", int(httpx.CodeNotFound), "媒体资源不存在或不属于当前用户")
+				return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeNotFound, Message: "图片不存在或不属于当前用户"}
 			case errors.Is(err, ErrBlockedTag):
 				observability.LogBusinessError(r, "Create", int(httpx.CodeConflict), "标签包含被屏蔽的内容")
 				return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeConflict, Message: "标签包含被屏蔽的内容"}
@@ -105,10 +107,6 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteInvalidRequest(w, r, "Search", "参数错误")
 		return
 	}
-	if req.Keyword == nil && req.Tag == nil {
-		httpx.WriteInvalidRequest(w, r, "Search", "参数错误")
-		return
-	}
 	if req.SortBy != "" {
 		switch req.SortBy {
 		case "relevance", "newest", "popular":
@@ -116,6 +114,19 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteInvalidRequest(w, r, "Search", "参数错误")
 			return
 		}
+	}
+	// 热门模式（spec moment.md → moments/search）：keyword/tag 均缺省且显式传
+	// sort_by='popular' 时进入（承接原 feed/trending 的发现页首屏能力）；
+	// 热门模式与输入条件互斥（同传 10000），三者全缺省仍 10000。
+	keywordProvided := req.Keyword != nil && *req.Keyword != ""
+	tagProvided := req.Tag != nil && *req.Tag != ""
+	if req.SortBy == "popular" && (keywordProvided || tagProvided) {
+		httpx.WriteInvalidRequest(w, r, "Search", "参数错误")
+		return
+	}
+	if !keywordProvided && !tagProvided && req.SortBy != "popular" {
+		httpx.WriteInvalidRequest(w, r, "Search", "参数错误")
+		return
 	}
 	result, err := h.service.Search(r.Context(), req)
 	if err != nil {
@@ -156,7 +167,9 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrImagesNotOwned) {
-			httpx.WriteInvalidRequest(w, r, "Update", "图片校验失败")
+			// image_file_ids 中媒体资源不存在或不属于当前用户 → 10300
+			//（spec api_spec_moment.md moments/update 错误码）。
+			httpx.WriteBusinessError(w, r, "Update", httpx.CodeNotFound, "图片不存在或不属于当前用户")
 			return
 		}
 		httpx.WriteAPIError(w, r, "Update", err)
@@ -228,6 +241,47 @@ func (h *Handler) ListFavorites(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))
+}
+
+// FetchFollowing 关注动态（spec moment.md → moments/fetch_following，
+// 原 feed/following 迁移）：我关注的人发布的公开瞬间，keyset 强一致分页。
+func (h *Handler) FetchFollowing(w http.ResponseWriter, r *http.Request) {
+	var req FetchFollowingMomentsRequest
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		httpx.WriteInvalidRequest(w, r, "FetchFollowing", "参数错误")
+		return
+	}
+	result, err := h.service.FetchFollowing(r.Context(), req)
+	if err != nil {
+		h.writeFetchError(w, r, "FetchFollowing", err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))
+}
+
+// FetchNearby 附近瞬间（spec moment.md → moments/fetch_nearby，
+// 原 feed/nearby_moments 迁移）：distance 主序；双版本（匿名版无查看者字段）。
+func (h *Handler) FetchNearby(w http.ResponseWriter, r *http.Request) {
+	var req FetchNearbyMomentsRequest
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		httpx.WriteInvalidRequest(w, r, "FetchNearby", "参数错误")
+		return
+	}
+	result, err := h.service.FetchNearby(r.Context(), req)
+	if err != nil {
+		h.writeFetchError(w, r, "FetchNearby", err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))
+}
+
+// writeFetchError 统一映射发现流错误：非法请求/游标 → 10000，其余按服务端错误。
+func (h *Handler) writeFetchError(w http.ResponseWriter, r *http.Request, method string, err error) {
+	if errors.Is(err, ErrInvalidFetchRequest) || errors.Is(err, ErrInvalidCursor) {
+		httpx.WriteInvalidRequest(w, r, method, "参数错误")
+		return
+	}
+	httpx.WriteAPIError(w, r, method, err)
 }
 
 // isValidPrivacyLevel 校验 privacy_level 枚举；空串合法（缺省按 public 处理）。

@@ -407,13 +407,16 @@ func (h *Handler) SearchTags(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
 }
 
-func (h *Handler) DeleteTag(w http.ResponseWriter, r *http.Request) {
-	var req AdminDeleteTagRequest
+// SetTagBan 设置标签屏蔽状态（两态统一端点，spec api_spec_admin.md
+// admin/tags/set_ban）：active=true 屏蔽 / false 解屏蔽；hard_delete 仅
+// active=true 时有效。
+func (h *Handler) SetTagBan(w http.ResponseWriter, r *http.Request) {
+	var req AdminSetTagBanRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	apiErr, err := h.service.DeleteTag(withRequest(r.Context(), r), req.Name, req.HardDelete)
+	apiErr, err := h.service.SetTagBan(withRequest(r.Context(), r), req)
 	if err != nil {
 		h.writeUnavailable(w, r)
 		return
@@ -454,15 +457,17 @@ func (h *Handler) CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := withRequest(r.Context(), r)
-	idempotency.ReplayOrStore(w, r, "admin/announcements/create", func() httpx.ApiResponse[AnnouncementCreated] {
+	// spec api_spec_admin.md announcements/create：Response 为
+	// ApiResponse<AdminAnnouncementItem>（返回完整公告对象，客户端直接渲染）。
+	idempotency.ReplayOrStore(w, r, "admin/announcements/create", func() httpx.ApiResponse[AdminAnnouncementItem] {
 		payload, apiErr, err := h.service.CreateAnnouncement(ctx, req)
 		if err != nil {
 			observability.L().Error("handler error", "method", "CreateAnnouncement", "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
-			return httpx.ApiResponse[AnnouncementCreated]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
+			return httpx.ApiResponse[AdminAnnouncementItem]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 		}
 		if apiErr != nil {
 			observability.L().Warn("handler business error", "method", "CreateAnnouncement", "code", apiErr.Code, "message", apiErr.Message, "request_id", observability.RequestIDFromContext(r.Context()))
-			return httpx.ApiResponse[AnnouncementCreated]{Code: apiErr.Code, Message: apiErr.Message}
+			return httpx.ApiResponse[AdminAnnouncementItem]{Code: apiErr.Code, Message: apiErr.Message}
 		}
 		return httpx.Success(payload)
 	})
@@ -474,7 +479,7 @@ func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	apiErr, err := h.service.UpdateAnnouncement(withRequest(r.Context(), r), req)
+	payload, apiErr, err := h.service.UpdateAnnouncement(withRequest(r.Context(), r), req)
 	if err != nil {
 		h.writeUnavailable(w, r)
 		return
@@ -483,7 +488,8 @@ func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 		h.writeAPIError(w, r, apiErr)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+	// spec api_spec_admin.md announcements/update：内容类更新返回更新后完整对象。
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
 }
 
 func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {

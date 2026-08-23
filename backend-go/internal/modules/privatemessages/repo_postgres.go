@@ -288,6 +288,25 @@ func (r *PostgresRepository) MessageExists(ctx context.Context, messageID string
 	return true, senderUserID, nil
 }
 
+// GetMessageReportSnapshot 按 message_id 读取私聊消息真值（举报快照的生成
+// 依据，spec api_spec_types.md ReportSnapshot：服务端生成，管理员审核基于
+// 快照，不直接查询私聊消息库）。target_chat_id 为相对发送者的会话对方。
+func (r *PostgresRepository) GetMessageReportSnapshot(ctx context.Context, messageID string) (MessageReportSnapshot, bool, error) {
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return MessageReportSnapshot{}, false, persistence.ErrNotImplemented
+	}
+	var snapshot MessageReportSnapshot
+	err := queryable.QueryRow(ctx, queryGetPrivateMessageSnapshot, messageID).Scan(&snapshot.TargetUserID, &snapshot.Type, &snapshot.Content, &snapshot.FileID, &snapshot.SentAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return MessageReportSnapshot{}, false, nil
+		}
+		return MessageReportSnapshot{}, false, err
+	}
+	return snapshot, true, nil
+}
+
 func (r *PostgresRepository) CountMessagesByTarget(ctx context.Context, senderID string, since time.Time) (map[string]int, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return nil, persistence.ErrNotImplemented

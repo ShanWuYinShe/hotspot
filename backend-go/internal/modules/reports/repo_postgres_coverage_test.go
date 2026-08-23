@@ -3,10 +3,12 @@ package reports
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -97,17 +99,46 @@ func TestPostgresTargetOwnerBranches(t *testing.T) {
 	}
 }
 
-func TestReportSnapshotValidation(t *testing.T) {
-	if isValidReportSnapshot(nil) {
-		t.Fatal("nil snapshot must be invalid")
+// TestPostgresCreatePersistsServerSnapshot：服务端生成的消息快照随举报一并
+// 落库（spec api_spec_types.md ReportSnapshot：客户端不提交快照）。
+func TestPostgresCreatePersistsServerSnapshot(t *testing.T) {
+	execStub := &reportExecCaptureStub{}
+	repo := NewPostgresRepository(newReportFactory(execStub))
+	snapshot := &ReportSnapshot{ChatType: "group", TargetChatID: "g1", MessageType: "text", SnapshotContent: types.StrPtr("hi"), SentAt: "2026-01-01T00:00:00Z"}
+	if _, err := repo.Create(context.Background(), "u1", CreateReportRequest{TargetType: ReportTargetTypeMessage, TargetID: "m1", Reason: ReportReasonSpam}, snapshot); err != nil {
+		t.Fatalf("create: %v", err)
 	}
-	if isValidReportSnapshot(&ReportSnapshot{ChatType: "bogus", TargetChatID: "x", MessageType: "text", SentAt: "now"}) {
-		t.Fatal("bogus chat_type must be invalid")
+	if execStub.lastArgs == nil || len(execStub.lastArgs) < 9 {
+		t.Fatalf("expected 9 insert args, got %#v", execStub.lastArgs)
 	}
-	if isValidReportSnapshot(&ReportSnapshot{ChatType: "private", TargetChatID: "", MessageType: "text", SentAt: "now"}) {
-		t.Fatal("empty target_chat_id must be invalid")
+	snapshotJSON, _ := execStub.lastArgs[8].(string)
+	if !strings.Contains(snapshotJSON, `"chat_type":"group"`) || !strings.Contains(snapshotJSON, `"target_chat_id":"g1"`) {
+		t.Fatalf("expected serialized snapshot in insert args, got %q", snapshotJSON)
 	}
-	if !isValidReportSnapshot(&ReportSnapshot{ChatType: "group", TargetChatID: "g1", MessageType: "text", SentAt: "now"}) {
-		t.Fatal("valid snapshot must pass")
+}
+
+// TestPostgresCreateWithoutSnapshot：非消息举报快照参数为 nil，落库 NULL。
+func TestPostgresCreateWithoutSnapshot(t *testing.T) {
+	execStub := &reportExecCaptureStub{}
+	repo := NewPostgresRepository(newReportFactory(execStub))
+	if _, err := repo.Create(context.Background(), "u1", CreateReportRequest{TargetType: ReportTargetTypeMoment, TargetID: "m1", Reason: ReportReasonSpam}, nil); err != nil {
+		t.Fatalf("create: %v", err)
 	}
+	if execStub.lastArgs == nil || len(execStub.lastArgs) < 9 {
+		t.Fatalf("expected 9 insert args, got %#v", execStub.lastArgs)
+	}
+	if execStub.lastArgs[8] != nil {
+		t.Fatalf("expected nil snapshot arg, got %#v", execStub.lastArgs[8])
+	}
+}
+
+// reportExecCaptureStub 捕获 Exec 参数供落库断言。
+type reportExecCaptureStub struct {
+	reportQueryRowStub
+	lastArgs []any
+}
+
+func (s *reportExecCaptureStub) Exec(_ context.Context, _ string, args ...any) error {
+	s.lastArgs = args
+	return nil
 }

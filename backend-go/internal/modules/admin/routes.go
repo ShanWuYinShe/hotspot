@@ -44,7 +44,7 @@ func MountRoutes(r chi.Router, handler *Handler) {
 	})
 	r.Route("/tags", func(tags chi.Router) {
 		tags.Post("/search", handler.SearchTags)
-		tags.Post("/delete", handler.DeleteTag)
+		tags.Post("/set_ban", handler.SetTagBan)
 	})
 	r.Route("/announcements", func(announcements chi.Router) {
 		announcements.Post("/fetch", handler.ListAdminAnnouncements)

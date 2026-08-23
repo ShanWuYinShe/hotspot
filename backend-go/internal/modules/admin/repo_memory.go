@@ -89,6 +89,7 @@ func NewInMemoryRepository() *InMemoryRepository {
 		"admin": {
 			User:              UserInfo{UserID: "admin", Nickname: "admin"},
 			Status:            UserAccountStatusNormal,
+			PrivacyLevel:      "public",
 			CreatedAt:         adminCreatedAt,
 			LastActiveAt:      types.StrPtr(now.Add(-time.Hour).Format(time.RFC3339)),
 			LoginID:           "admin",
@@ -102,6 +103,7 @@ func NewInMemoryRepository() *InMemoryRepository {
 		"user_alice": {
 			User:              UserInfo{UserID: "user_alice", Nickname: "Alice"},
 			Status:            UserAccountStatusNormal,
+			PrivacyLevel:      "public",
 			CreatedAt:         aliceCreatedAt,
 			LastActiveAt:      types.StrPtr(now.Add(-2 * time.Hour).Format(time.RFC3339)),
 			LoginID:           "alice",
@@ -115,6 +117,7 @@ func NewInMemoryRepository() *InMemoryRepository {
 		"user_bob": {
 			User:              UserInfo{UserID: "user_bob", Nickname: "Bob"},
 			Status:            UserAccountStatusNormal,
+			PrivacyLevel:      "public",
 			CreatedAt:         bobCreatedAt,
 			LastActiveAt:      types.StrPtr(now.Add(-3 * time.Hour).Format(time.RFC3339)),
 			LoginID:           "bob",
@@ -128,6 +131,7 @@ func NewInMemoryRepository() *InMemoryRepository {
 		"user_cindy": {
 			User:              UserInfo{UserID: "user_cindy", Nickname: "Cindy"},
 			Status:            UserAccountStatusNormal,
+			PrivacyLevel:      "public",
 			CreatedAt:         cindyCreatedAt,
 			LastActiveAt:      types.StrPtr(now.Add(-4 * time.Hour).Format(time.RFC3339)),
 			LoginID:           "cindy",

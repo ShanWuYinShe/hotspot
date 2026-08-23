@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"hotspot/backend-go/internal/modules/comments"
-	"hotspot/backend-go/internal/modules/feed"
 	"hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/modules/reactions"
 )
@@ -45,26 +44,6 @@ func (a commentReactionAggregator) AggregateComments(ctx context.Context, commen
 		conv := make([]comments.Reaction, len(recs))
 		for i, r := range recs {
 			conv[i] = comments.Reaction{Emoji: r.Emoji, Count: r.Count, ReactedByMe: r.ReactedByMe}
-		}
-		out[id] = conv
-	}
-	return out, nil
-}
-
-// feedReactionAggregator adapts reactions.Service to the feed.ReactionAggregator
-// interface (feed has its own MomentItem/Reaction types).
-type feedReactionAggregator struct{ reactions *reactions.Service }
-
-func (a feedReactionAggregator) AggregateMoments(ctx context.Context, momentIDs []string, viewerID string) (map[string][]feed.Reaction, error) {
-	src, err := a.reactions.AggregateBatch(ctx, reactions.ReactTargetMoment, momentIDs)
-	if err != nil {
-		return nil, err
-	}
-	out := make(map[string][]feed.Reaction, len(src))
-	for id, recs := range src {
-		conv := make([]feed.Reaction, len(recs))
-		for i, r := range recs {
-			conv[i] = feed.Reaction{Emoji: r.Emoji, Count: r.Count, ReactedByMe: r.ReactedByMe}
 		}
 		out[id] = conv
 	}

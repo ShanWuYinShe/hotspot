@@ -20,9 +20,15 @@ type stubRepo struct {
 	ownerID          string
 	ownerFound       bool
 	ownerErr         error
+	// snapshot 服务端快照生成路径（target_type='message'）的注入桩。
+	snapshot     *ReportSnapshot
+	snapshotOK   bool
+	snapshotErr  error
+	lastSnapshot *ReportSnapshot
 }
 
-func (r *stubRepo) Create(_ context.Context, _ string, _ CreateReportRequest) (ReportCreated, error) {
+func (r *stubRepo) Create(_ context.Context, _ string, _ CreateReportRequest, snapshot *ReportSnapshot) (ReportCreated, error) {
+	r.lastSnapshot = snapshot
 	return r.created, r.createErr
 }
 func (r *stubRepo) List(_ context.Context, _ string, _ ListReportsRequest) (PaginatedReports, error) {
@@ -166,5 +172,79 @@ func TestServiceListPropagatesError(t *testing.T) {
 	_, err := service.List(ctxWithUser("u1"), ListReportsRequest{})
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+// stubSnapshotSource 实现 MessageSnapshotSource（服务端快照生成源）。
+type stubSnapshotSource struct {
+	snapshot *ReportSnapshot
+	found    bool
+	err      error
+}
+
+func (s stubSnapshotSource) GetMessageSnapshot(_ context.Context, _ string) (*ReportSnapshot, bool, error) {
+	return s.snapshot, s.found, s.err
+}
+
+// TestServiceCreateGeneratesMessageSnapshotServerSide：target_type='message' 时
+// 服务端基于消息真值生成快照并随举报落库（spec api_spec_types.md：客户端
+// 不提交快照，防伪造证据链）。
+func TestServiceCreateGeneratesMessageSnapshotServerSide(t *testing.T) {
+	repo := &stubRepo{ownerID: "u2", ownerFound: true, created: ReportCreated{ReportID: "r1"}}
+	service := NewServiceWithRepo(repo)
+	snapshot := &ReportSnapshot{ChatType: "group", TargetChatID: "g1", MessageType: "text", SnapshotContent: types.StrPtr("hi"), SentAt: "2026-01-01T00:00:00Z"}
+	service.SetMessageSnapshotSource(stubSnapshotSource{snapshot: snapshot, found: true})
+	_, err := service.Create(ctxWithUser("u1"), CreateReportRequest{TargetType: ReportTargetTypeMessage, TargetID: "m1", Reason: ReportReasonSpam})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.lastSnapshot != snapshot {
+		t.Fatalf("expected server-generated snapshot to be stored, got %#v", repo.lastSnapshot)
+	}
+}
+
+// TestServiceCreateMessageReportWithoutSnapshotSource：未接线快照源时消息举报
+// 按目标不存在处理（不产生无证据的举报）。
+func TestServiceCreateMessageReportWithoutSnapshotSource(t *testing.T) {
+	service := NewServiceWithRepo(&stubRepo{ownerID: "u2", ownerFound: true})
+	_, err := service.Create(ctxWithUser("u1"), CreateReportRequest{TargetType: ReportTargetTypeMessage, TargetID: "m1", Reason: ReportReasonSpam})
+	if err == nil || err.Error() != "reports: target not found" {
+		t.Fatalf("expected target-not-found error, got %v", err)
+	}
+}
+
+// TestServiceCreateMessageReportSnapshotNotFound：消息不存在（快照源 found=false）
+// 时受理返回 10300（reports: target not found）。
+func TestServiceCreateMessageReportSnapshotNotFound(t *testing.T) {
+	service := NewServiceWithRepo(&stubRepo{ownerID: "u2", ownerFound: true})
+	service.SetMessageSnapshotSource(stubSnapshotSource{found: false})
+	_, err := service.Create(ctxWithUser("u1"), CreateReportRequest{TargetType: ReportTargetTypeMessage, TargetID: "missing", Reason: ReportReasonSpam})
+	if err == nil || err.Error() != "reports: target not found" {
+		t.Fatalf("expected target-not-found error, got %v", err)
+	}
+}
+
+// TestServiceCreateMessageReportSnapshotError：快照源故障按服务端错误上抛。
+func TestServiceCreateMessageReportSnapshotError(t *testing.T) {
+	service := NewServiceWithRepo(&stubRepo{ownerID: "u2", ownerFound: true})
+	service.SetMessageSnapshotSource(stubSnapshotSource{err: errors.New("boom")})
+	_, err := service.Create(ctxWithUser("u1"), CreateReportRequest{TargetType: ReportTargetTypeMessage, TargetID: "m1", Reason: ReportReasonSpam})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+// TestServiceCreateNonMessageReportSkipsSnapshot：非消息举报不查快照源、
+// 落库快照为 nil。
+func TestServiceCreateNonMessageReportSkipsSnapshot(t *testing.T) {
+	repo := &stubRepo{ownerID: "u2", ownerFound: true, created: ReportCreated{ReportID: "r1"}}
+	service := NewServiceWithRepo(repo)
+	// 未接线快照源：非消息举报不应受影响
+	_, err := service.Create(ctxWithUser("u1"), CreateReportRequest{TargetType: ReportTargetTypeMoment, TargetID: "m1", Reason: ReportReasonSpam})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.lastSnapshot != nil {
+		t.Fatalf("expected nil snapshot for non-message report, got %#v", repo.lastSnapshot)
 	}
 }

@@ -66,7 +66,17 @@ type MapHotspotsCanvas struct {
 	NextCursor *string          `json:"next_cursor"`
 }
 
+// MapCanvasResponse 为 tagged union（spec api_spec_public.md → map/canvas）：
+// mode 由服务端按视口尺度与数据密度决定（大尺度→heatmap，小尺度→hotspots，
+// 视口内无足够数据→empty）；heatmap 与 hotspots 互斥，最多出现一个。
 type MapCanvasResponse struct {
+	Mode     string             `json:"mode"`
 	Heatmap  *MapHeatCanvas     `json:"heatmap,omitempty"`
 	Hotspots *MapHotspotsCanvas `json:"hotspots,omitempty"`
 }
+
+const (
+	MapCanvasModeHeatmap  = "heatmap"
+	MapCanvasModeHotspots = "hotspots"
+	MapCanvasModeEmpty    = "empty"
+)

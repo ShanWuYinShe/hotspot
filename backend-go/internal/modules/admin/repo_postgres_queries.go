@@ -130,6 +130,9 @@ SELECT log_id, action, operator_id, operator_name, COALESCE(operator_avatar_url,
 FROM admin_audit_logs
 ORDER BY created_at DESC, log_id DESC`
 
+	// AdminUserItem 读取（spec api_spec_admin.md）：banned_until = 封禁到期时间
+	// （banned_at + duration；null = 未封禁/永久封禁），privacy_level 来自
+	// user_settings（平台管理视角豁免隐私过滤、恒返回真值）。
 	queryAdminSearchUsers = `
 SELECT u.user_id,
        u.nickname,
@@ -149,9 +152,16 @@ SELECT u.user_id,
        COALESCE(u.last_login_ip, ''),
        COALESCE(u.last_login_location, ''),
        COALESCE(u.email, ''),
-       COALESCE(u.phone, '')
+       COALESCE(u.phone, ''),
+       CASE WHEN COALESCE(u.status, 'normal') = 'banned'
+                 AND u.banned_at IS NOT NULL
+                 AND COALESCE(u.banned_duration_days, 0) > 0
+            THEN u.banned_at + make_interval(days => COALESCE(u.banned_duration_days, 0))
+            ELSE NULL END AS banned_until,
+       COALESCE(us.privacy_level, 'public')
 FROM users u
 LEFT JOIN auth_accounts a ON a.user_id = u.user_id
+LEFT JOIN user_settings us ON us.user_id = u.user_id
 WHERE ($1 = '' OR u.user_id = $1)
   AND ($2 = '' OR lower(u.nickname) LIKE '%' || lower($2) || '%')
   AND ($3 = '' OR lower(COALESCE(a.login_id, '')) LIKE '%' || lower($3) || '%')
@@ -177,9 +187,16 @@ SELECT u.user_id,
        COALESCE(u.last_login_ip, ''),
        COALESCE(u.last_login_location, ''),
        COALESCE(u.email, ''),
-       COALESCE(u.phone, '')
+       COALESCE(u.phone, ''),
+       CASE WHEN COALESCE(u.status, 'normal') = 'banned'
+                 AND u.banned_at IS NOT NULL
+                 AND COALESCE(u.banned_duration_days, 0) > 0
+            THEN u.banned_at + make_interval(days => COALESCE(u.banned_duration_days, 0))
+            ELSE NULL END AS banned_until,
+       COALESCE(us.privacy_level, 'public')
 FROM users u
 LEFT JOIN auth_accounts a ON a.user_id = u.user_id
+LEFT JOIN user_settings us ON us.user_id = u.user_id
 WHERE u.user_id = $1`
 	queryAdminGetUserBanState = `
 SELECT COALESCE(status, 'normal'), COALESCE(banned_reason, ''), COALESCE(banned_duration_days, 0), banned_at

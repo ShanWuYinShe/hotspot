@@ -252,6 +252,8 @@ type adminUserRow struct {
 	LastLoginLocation string
 	Email             string
 	Phone             string
+	BannedUntil       *time.Time
+	PrivacyLevel      string
 }
 
 type adminGroupRow struct {
@@ -318,6 +320,8 @@ func scanAdminUserRow(row persistence.Row) (AdminUserItem, error) {
 		&record.LastLoginLocation,
 		&record.Email,
 		&record.Phone,
+		&record.BannedUntil,
+		&record.PrivacyLevel,
 	); err != nil {
 		return AdminUserItem{}, err
 	}
@@ -328,6 +332,17 @@ func scanAdminUserRow(row persistence.Row) (AdminUserItem, error) {
 	}
 	lastOnline := record.LastOnline.UTC().Format(time.RFC3339)
 	lastActiveAt := record.LastOnline.UTC().Format(time.RFC3339)
+	// banned_until/privacy_level（spec api_spec_admin.md AdminUserItem）：
+	// banned_until null = 未封禁/永久封禁；privacy_level 缺省 public。
+	privacyLevel := record.PrivacyLevel
+	if privacyLevel == "" {
+		privacyLevel = "public"
+	}
+	var bannedUntil *string
+	if record.BannedUntil != nil {
+		formatted := record.BannedUntil.UTC().Format(time.RFC3339)
+		bannedUntil = &formatted
+	}
 	return AdminUserItem{
 		User:              usersmodule.UserInfo{UserID: record.UserID, Nickname: record.Nickname, AvatarURL: types.StrPtr(record.AvatarURL)},
 		Bio:               types.StrPtr(record.Bio),
@@ -338,6 +353,8 @@ func scanAdminUserRow(row persistence.Row) (AdminUserItem, error) {
 		Stats:             nil,
 		Relation:          nil,
 		Status:            UserAccountStatus(record.Status),
+		BannedUntil:       bannedUntil,
+		PrivacyLevel:      privacyLevel,
 		CreatedAt:         record.CreatedAt.UTC().Format(time.RFC3339),
 		LastActiveAt:      types.StrPtr(lastActiveAt),
 		LoginID:           record.LoginID,
@@ -459,6 +476,20 @@ func scanAdminReportRow(row persistence.Row, withTargetUser bool) (reportHandleR
 	if record.HandledAt != nil {
 		handledAt := record.HandledAt.UTC().Format(time.RFC3339)
 		item.HandledAt = &handledAt
+	}
+	// resolution 处理结果摘要（spec api_spec_admin.md：AdminReportItem extends
+	// ReportItem；api_spec_types.md：恒定存在，null = 尚未处理，脱敏不含处理者
+	// 身份）。action 从终态 status 推断。
+	if record.HandledAt != nil && (item.Status == ReportStatusResolved || item.Status == ReportStatusDismissed) {
+		action := reportsmodule.ReportActionDismiss
+		if item.Status == ReportStatusResolved {
+			action = reportsmodule.ReportActionResolve
+		}
+		item.Resolution = &reportsmodule.ReportResolution{
+			Action:     action,
+			ResolvedAt: record.HandledAt.UTC().Format(time.RFC3339),
+			Note:       types.StrPtr(record.HandleNote),
+		}
 	}
 	if record.HandledByUserID != "" {
 		handledBy := usersmodule.UserInfo{UserID: record.HandledByUserID, Nickname: record.HandledByNickname, AvatarURL: types.StrPtr(record.HandledByAvatar)}

@@ -46,16 +46,17 @@ type UserOpenTheDoorRequest struct {
 	IncludeRecentMoments bool   `json:"include_recent_moments,omitempty"` // true 时返回主页首屏 recent_moments（spec user.md → open_the_door）
 }
 
-// BatchGetUsersRequest backs POST /api/v1/users/batch_get
+// BatchGetUsersRequest backs POST /api/v1/users/batch_fetch
 // (spec api_spec_user.md). At most 100 user ids per call.
 type BatchGetUsersRequest struct {
 	UserIDs []string `json:"user_ids"`
 }
 
-// UsersBatchResult is the users/batch_get response (spec api_spec_user.md).
-// users: user_id -> UserItem map; ids that do not exist are absent.
+// UsersBatchResult is the users/batch_fetch response (spec api_spec_user.md
+// → UsersBatchResult）：users: user_id -> UserInfo map（无查看者字段的共享
+// 类型，仅为补全昵称/头像等基础信息）；ids that do not exist are absent.
 type UsersBatchResult struct {
-	Users map[string]UserItem `json:"users"`
+	Users map[string]UserInfo `json:"users"`
 }
 
 type FollowSource string
@@ -131,7 +132,6 @@ type RelatedUserItem struct {
 	User           UserItem `json:"user"`
 	FollowedAt     string   `json:"followed_at"`
 	FollowedBackAt *string  `json:"followed_back_at"`
-	IsMutual       bool     `json:"is_mutual"`
 	Remark         *string  `json:"remark"`
 }
 
