@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AccountData } from '@/api/types';
 
 vi.mock('@/api', () => ({
+  bootstrap: vi.fn(),
   checkAuthStatus: vi.fn(),
   getAccount: vi.fn(),
   guest: vi.fn(),
@@ -22,6 +23,7 @@ beforeEach(async () => {
   sessionStorage.clear();
   localStorage.clear();
   // 默认未认证：session 端点返回 10100（客户端据此判定匿名态）
+  vi.mocked(api.bootstrap).mockResolvedValue({ code: 0, data: null as never });
   vi.mocked(api.checkAuthStatus).mockResolvedValue({ code: 10100, message: '未登录', data: null as never });
   vi.mocked(api.getAccount).mockResolvedValue({ code: 0, data: accountMock });
 });

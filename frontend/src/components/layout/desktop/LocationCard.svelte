@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { Navigation2, ChevronRight } from '@lucide/svelte';
+	import { MapPin, ChevronRight } from '@lucide/svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 
-	// 侧栏底部「位置选择」锚点入口。
-	// 与 SidebarNavItem 同一交互语义：默认透明融入侧栏（无常驻边框/阴影/卡片底），
-	// hover 淡填充；折叠时文字随侧栏宽度同步收起，图标列固定 40px 居中不位移。
+	// 侧栏底部「位置选择」锚点入口（地图门户）。
+	// 独立小卡片形态（surface-subtle 底 + hairline 边框），与上方导航行明确区隔：
+	// hover 沿 card-hover 契约抬升投影；折叠时文字随侧栏宽度同步收起，图标磁贴居中不位移。
 
 	let {
 		onClick,
@@ -14,7 +14,6 @@
 		collapsed?: boolean;
 	} = $props();
 
-	let hovered = $state(false);
 	let locationName = $state('');
 
 	$effect(() => startDefaultLocation((loc) => {
@@ -24,29 +23,25 @@
 
 <button
 	type="button"
-	class="relative flex h-10 w-full items-center rounded-sm focus-ring text-left {collapsed ? 'justify-center' : ''}"
-	style="background:{hovered ? 'var(--cst-surface-navigation-hover)' : 'transparent'};transition:background var(--cst-motion-rapid) var(--cst-ease-standard);"
+	class="card-hover relative flex w-full items-center rounded-md p-1.5 text-left focus-ring {collapsed ? 'justify-center' : ''}"
+	style="background:var(--cst-surface-subtle);border:var(--cst-border-width-hairline) solid var(--cst-border-default);"
 	title={collapsed ? '位置选择' : undefined}
 	aria-label="位置选择"
 	onclick={onClick}
-	onmouseenter={() => (hovered = true)}
-	onmouseleave={() => (hovered = false)}
 >
-	<span class="flex size-10 shrink-0 items-center justify-center">
-		<span class="flex size-8.5 items-center justify-center rounded-full bg-accent-default">
-			<Navigation2 class="size-4.5 text-text-on-accent" strokeWidth={2} />
-		</span>
+	<span
+		class="flex size-8 shrink-0 items-center justify-center rounded-sm transition-colors duration-standard ease-standard"
+		style="background:var(--cst-accent-soft);"
+	>
+		<MapPin class="size-4 text-accent-default" strokeWidth={1.75} />
 	</span>
 
 	<span
-		class="flex min-w-0 flex-1 items-center overflow-hidden whitespace-nowrap transition-[max-width,opacity,margin] duration-standard ease-standard {collapsed ? 'ml-0 max-w-0 opacity-none' : 'ml-1.5 max-w-full opacity-full'}"
+		class="flex min-w-0 flex-1 items-center overflow-hidden whitespace-nowrap transition-[max-width,opacity,margin] duration-standard ease-standard {collapsed ? 'ml-0 max-w-0 opacity-none' : 'ml-2.5 max-w-full opacity-full'}"
 	>
 		<span class="min-w-0 flex-1">
 			<span class="block text-xs font-medium text-text-primary">位置选择</span>
-			<span class="flex items-center gap-1">
-				<span class="inline-block rounded-full size-1.25 bg-status-online"></span>
-				<span class="text-xxs leading-card text-text-secondary">{locationName || '自动定位'}</span>
-			</span>
+			<span class="block truncate text-xxs leading-card text-text-secondary">{locationName || '自动定位'}</span>
 		</span>
 		<ChevronRight class="ml-0.5 size-3.5 shrink-0 text-text-secondary" strokeWidth={1.5} />
 	</span>

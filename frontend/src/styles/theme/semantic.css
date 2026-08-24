@@ -16,6 +16,7 @@
   /* Surface */
   --cst-surface-primary: var(--cst-palette-bg);
   --cst-surface-page: var(--cst-palette-page-bg);
+  --cst-surface-workspace: var(--cst-palette-workspace-bg);
   --cst-surface-overlay-soft: var(--cst-palette-overlay-soft);
   --cst-surface-overlay-strong: var(--cst-palette-overlay-strong);
 

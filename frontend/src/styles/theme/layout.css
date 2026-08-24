@@ -45,6 +45,8 @@
   :root {
     --cst-context-rail-inset: 1rem;
     --cst-workspace-gap: clamp(0.875rem, 1.5vw, 1.25rem);
+    /* 浮动卡片工作区：卡片距舞台边缘的内缩 */
+    --cst-workspace-inset: 0.75rem;
     --cst-context-rail-width: clamp(18rem, 20vw, 21rem);
     --cst-context-rail-gap: clamp(1rem, 1.75vw, 1.5rem);
     /* 桌面常驻侧边栏宽度（展开/折叠两态）——消除组件内 224/72px 魔法数 */
@@ -64,7 +66,9 @@
 
   .desktop-workspace {
     gap: var(--cst-workspace-gap);
-    padding: 0;
+    padding: var(--cst-workspace-inset);
+    /* 舞台底色：比卡片（surface-page）深一档，浮动卡片的边界感来源 */
+    background: var(--cst-surface-workspace);
   }
 
   .desktop-main-panel {

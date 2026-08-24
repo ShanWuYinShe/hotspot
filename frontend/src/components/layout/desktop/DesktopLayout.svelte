@@ -219,11 +219,11 @@
 		</div>
 	</header>
 
-	<!-- BODY — sidebar + main content -->
-	<div class="desktop-workspace relative z-0 flex flex-1 overflow-hidden gap-0" >
+	<!-- BODY — sidebar + main content（浮动双卡片：侧栏卡 + 内容卡浮于 workspace 舞台底色上） -->
+	<div class="desktop-workspace relative z-0 flex flex-1 overflow-hidden" >
 		<!-- Sidebar (224px expanded / 72px collapsed, fixed width) -->
 		<aside
-			class="relative flex flex-col shrink-0 overflow-hidden box-border transition-[width] duration-standard ease-standard"
+			class="relative flex flex-col shrink-0 overflow-hidden box-border rounded-lg border border-border-default bg-surface-page shadow-raised-sm transition-[width,box-shadow] duration-standard ease-standard"
 			style="width:{isSidebarCollapsed ? 'var(--cst-desktop-sidebar-collapsed)' : 'var(--cst-desktop-sidebar-width)'};padding:0.75rem;"
 		>
 			<!-- Scrollable nav region — takes all available space -->
@@ -261,7 +261,7 @@
 
 		<!-- Main Content Card — RoutedContentViewport 是唯一滚动 owner（desktopPane 激活 sticky-header surface-page 强制规则）。
 		     全画布页（消息分栏 / 地图探索）禁用滚动，画布固定视口高度。 -->
-		<div class="desktop-main-panel flex-1 min-w-0 overflow-hidden border-l border-border-default transition-colors duration-gentle">
+		<div class="desktop-main-panel flex-1 min-w-0 overflow-hidden rounded-lg border border-border-default transition-colors duration-gentle">
 			<RoutedContentViewport
 				desktopPane
 				class="desktop-main-scroll"

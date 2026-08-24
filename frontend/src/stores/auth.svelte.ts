@@ -7,6 +7,7 @@
 // 登录弹层并在登录成功后重放该操作。
 
 import {
+  bootstrap as apiBootstrap,
   checkAuthStatus, getAccount, guest as apiGuest, login as apiLogin,
   logout as apiLogout, register as apiRegister, setAuthenticated,
   type ApiResponse,
@@ -63,6 +64,11 @@ async function refreshUser(): Promise<void> {
 /** Boot: check session validity, then load account if authenticated. 由根布局调用一次。 */
 export function initAuth(): () => void {
   void (async () => {
+    // spec api_spec_base.md「Web 端 Cookie 契约」：bootstrap 是冷启动第一端点，
+    // 服务端在此下发 device_id Cookie；auth/register、auth/guest、auth/signin 等
+    // Web 端认证变更都从该 Cookie 读取设备标识，缺失即 10000 参数错误。
+    // 失败不阻塞启动（匿名浏览公开端点不受影响）。
+    await apiBootstrap().catch(() => null);
     const res = await checkAuthStatus().catch(() => null);
     const data = res && res.code === 0 ? res.data : null;
     if (data) {

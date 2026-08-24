@@ -15,6 +15,19 @@ function json(data: JsonBodyType) {
   return HttpResponse.json(data);
 }
 
+/**
+ * bootstrap 响应：契约对齐真实后端（spec api_spec_base.md「Web 端 Cookie 契约」）——
+ * 请求未携带 device_id Cookie 时随响应 Set-Cookie 下发（非 HttpOnly、SameSite=Lax、
+ * Path=/，登出不清除），保证后续 auth/guest、auth/register 可从 Cookie 读取设备标识。
+ */
+function bootstrapJson(data: JsonBodyType, request: Request) {
+  const headers: Record<string, string> = {};
+  if (!request.headers.get("cookie")?.includes("device_id=")) {
+    headers["Set-Cookie"] = `device_id=mock-${crypto.randomUUID()}; Path=/; Max-Age=15552000; SameSite=Lax`;
+  }
+  return HttpResponse.json(data, { headers });
+}
+
 /* ── Map hotspots mock 数据（spec api_spec_public.md → map/canvas）────────── */
 // MapHotspotItem.location 为 RelativeLocation（point 嵌套 + 米数 distance /
 // bearing_degrees，相对视口几何中心）；响应为带 mode 的 tagged union，mock 数据量
@@ -467,7 +480,7 @@ export const handlers = [
     contact: { support_email: "support@hotspot.app", privacy_policy_url: "", terms_of_service_url: "", official_website_url: "" },
     defaults: { default_location: { point: { latitude: 34.2604, longitude: 117.1855 }, location_name: "徐州" }, default_user_avatar_url: "", default_group_avatar_url: "" },
   }))),
-  http.post(`${API}/system/bootstrap`, () => json(apiOk({
+  http.post(`${API}/system/bootstrap`, ({ request }) => bootstrapJson(apiOk({
     bootstrap_version: "v1",
     meta: { version: "v1", status: "active" },
     client_config: {
@@ -478,7 +491,7 @@ export const handlers = [
     },
     profile: mockAccount,
     unread_summary: { notify_total: 3, notify_by_type: { social: 1, interaction: 1, group: 1, report: 0, nearby: 0, system: 0 }, private_chat_unread_count: 2, group_chat_unread_count: 1, total_badge: 6 },
-  }))),
+  }), request)),
 
   // ── Notify ─────────────────────────────────────
   // All notify endpoints are auth-required.
@@ -579,7 +592,7 @@ export const handlers = [
       ],
     }));
   }),
-  http.post(`${PUBLIC_API}/system/bootstrap`, () => json(apiOk({
+  http.post(`${PUBLIC_API}/system/bootstrap`, ({ request }) => bootstrapJson(apiOk({
     bootstrap_version: "mock-v1",
     meta: { version: "v1", status: "active", deprecated_at: null, sunset_at: null, message: null, recommended_version: null },
     // ClientConfig 四个子对象恒在（spec api_spec_system.md）：limits/contact/defaults 必填
@@ -590,6 +603,6 @@ export const handlers = [
       defaults: { default_location: { point: { latitude: 34.2604, longitude: 117.1855 }, location_name: "徐州" }, default_user_avatar_url: "", default_group_avatar_url: "" },
     },
     unread_summary: { notify_total: 0, notify_by_type: { social: 0, interaction: 0, group: 0, report: 0, nearby: 0, system: 0 }, private_chat_unread_count: 0, group_chat_unread_count: 0, total_badge: 0 },
-  }))),
+  }), request)),
 
 ];
