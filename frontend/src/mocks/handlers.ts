@@ -16,6 +16,59 @@ function json(data: JsonBodyType) {
 }
 
 /**
+ * spec 分页：mock 数据量小、恒单页返回，这里仅支持 pagination.limit 截断
+ * （cursor 翻页不模拟）。页面按契约传 limit 时必须生效，否则 rail/列表会
+ * 渲染超出请求数量的条目。
+ */
+async function withPaginationLimit<T>(
+  request: Request,
+  items: T[],
+): Promise<T[]> {
+  const body = (await request
+    .json()
+    .catch(() => ({}))) as { pagination?: { limit?: number } } | null;
+  const limit = body?.pagination?.limit;
+  return typeof limit === "number" && limit > 0 ? items.slice(0, limit) : items;
+}
+
+/**
+ * groups/search 的 mock 过滤/排序：keyword 模糊匹配名称/简介/标签，tag 精确匹配，
+ * radius 显式传入时按距离过滤（与前端约定一致：显式半径才过滤），
+ * sort_by=distance 距离升序、popular 成员数降序。
+ */
+function searchMockGroups(raw: unknown): typeof mockGroups {
+  const body = (raw ?? {}) as {
+    keyword?: string;
+    tag?: string;
+    radius?: number;
+    sort_by?: string;
+    pagination?: { limit?: number };
+  };
+  let items = [...mockGroups];
+  const keyword = body?.keyword?.trim().toLowerCase();
+  if (keyword) {
+    items = items.filter((g) =>
+      `${g.group.name}${g.description}${g.tags.join("")}`
+        .toLowerCase()
+        .includes(keyword),
+    );
+  }
+  if (body?.tag) {
+    items = items.filter((g) => g.tags.includes(body.tag!));
+  }
+  if (typeof body?.radius === "number" && body.radius > 0) {
+    items = items.filter((g) => (g.location.distance ?? 0) <= body.radius!);
+  }
+  if (body?.sort_by === "distance") {
+    items.sort((a, b) => (a.location.distance ?? 0) - (b.location.distance ?? 0));
+  } else if (body?.sort_by === "popular") {
+    items.sort((a, b) => b.group.members_count - a.group.members_count);
+  }
+  const limit = body?.pagination?.limit;
+  return typeof limit === "number" && limit > 0 ? items.slice(0, limit) : items;
+}
+
+/**
  * bootstrap 响应：契约对齐真实后端（spec api_spec_base.md「Web 端 Cookie 契约」）——
  * 请求未携带 device_id Cookie 时随响应 Set-Cookie 下发（非 HttpOnly、SameSite=Lax、
  * Path=/，登出不清除），保证后续 auth/guest、auth/register 可从 Cookie 读取设备标识。
@@ -215,7 +268,8 @@ export const handlers = [
 
   // ── Moments ────────────────────────────────────
   // search/open_the_door 是 auth-optional（匿名可见公开 moments）。
-  http.post(`${API}/moments/search`, () => json(paginated(mockMoments.slice(0, 12)))),
+  http.post(`${API}/moments/search`, async ({ request }) =>
+    json(paginated(await withPaginationLimit(request, mockMoments.slice(0, 12))))),
   // open_the_door 按 moment_id 路由（缺失/未知 id 回退第一条，避免 404 打断浏览）
   http.post(`${API}/moments/open_the_door`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as { moment_id?: string };
@@ -229,7 +283,14 @@ export const handlers = [
   // fetch_following 依赖查看者关注关系（无匿名版）→ 需登录；
   // fetch_nearby 可见性不依赖身份（原 feed/nearby_moments 迁移，双版本）。
   http.post(`${API}/moments/fetch_following`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 8)))),
-  http.post(`${API}/moments/fetch_nearby`, () => json(paginated(mockMoments.slice(0, 12)))),
+  http.post(`${API}/moments/fetch_nearby`, async ({ request }) =>
+    json(paginated(await withPaginationLimit(request, mockMoments.slice(0, 12))))),
+  // groups/search：附近群组/首页群组轮播共用（radius 显式时按距离过滤，
+  // sort_by=distance 按距离升序、popular 按成员数降序）。
+  http.post(`${API}/groups/search`, async ({ request }) =>
+    json(paginated(searchMockGroups(await request.json().catch(() => ({})))))),
+  http.post(`${PUBLIC_API}/groups/search`, async ({ request }) =>
+    json(paginated(searchMockGroups(await request.json().catch(() => ({})))))),
   http.post(`${API}/moments/fetch_favorites`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 6).map((m) => ({ ...m, favorited_at: '2026-08-01T08:00:00.000Z' }))))),
   http.post(`${API}/moments/set_favorite`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/moments/create`, () => requireMockAuth() ?? json(apiOk({ ...mockMoments[0], privacy_level: "public" as const }))),
@@ -312,7 +373,7 @@ export const handlers = [
     return json(apiOk({ ...(found ?? mockGroups[0]), viewer_state: { role: "member" as const, unread_count: 0, is_muted: false, is_pinned: false, joined_at: "2026-07-01T00:00:00Z" } }));
   }),
   http.post(`${API}/groups/fetch_joined`, () => requireMockAuth() ?? json(paginated(mockGroups.slice(0, 2)))),
-  http.post(`${API}/groups/members/fetch`, () => json(paginated(mockUsers.slice(0, 4).map(u => ({ user: u, role: "member", joined_at: "2026-01-01T00:00:00Z" }))))),
+  http.post(`${API}/groups/members/fetch`, () => json(paginated(mockUsers.slice(0, 4).map((u, i) => ({ user: u, role: "member", joined_at: "2026-01-01T00:00:00Z", presence_status: i % 2 === 0 ? "online" : "offline", last_online_at: null }))))),
   // 成员管理写操作（owner/admin）
   http.post(`${API}/groups/admin/members/set_role`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/groups/admin/members/set_ban`, () => requireMockAuth() ?? json(apiOk(null))),
@@ -416,9 +477,12 @@ export const handlers = [
     const body = (await request.json().catch(() => ({}))) as { target_user_id?: string };
     const chat = mockChats.find((c) => c.other_user.user_id === body?.target_user_id);
     if (!chat) return requireMockAuth() ?? json(paginated([]));
+    // 双向对话种子：包含自己（mockUsers[0]）的消息，让左右气泡样式都能被演练。
     return requireMockAuth() ?? json(paginated([
+      { message_id: `${chat.last_message.message_id}-seed1`, type: "text", content: "嗨，最近怎么样？", sender: chat.other_user, sent_at: "2026-07-25T10:00:00Z" },
+      { message_id: `${chat.last_message.message_id}-seed2`, type: "text", content: "还不错，刚从老街扫街回来", sender: mockUsers[0], sent_at: "2026-07-25T10:05:00Z" },
+      { message_id: `${chat.last_message.message_id}-seed3`, type: "text", content: "下次组队去拍云龙湖日出？", sender: mockUsers[0], sent_at: "2026-07-25T10:06:00Z" },
       chat.last_message,
-      { message_id: `${chat.last_message.message_id}-seed`, type: "text", content: "嗨，最近怎么样？", sender: chat.other_user, sent_at: "2026-07-25T10:00:00Z" },
     ]));
   }),
   // send: echo back a spec PrivateMessageItem so ChatView's optimistic append
@@ -439,9 +503,11 @@ export const handlers = [
     const group = mockGroups.find((g) => g.group.group_id === body?.group_id);
     if (!group) return requireMockAuth() ?? json(paginated([]));
     const sender = mockUsers[mockGroups.indexOf(group) % mockUsers.length];
+    // 三条消息三个发送者（含自己），展示群聊昵称/头像与左右气泡。
     return requireMockAuth() ?? json(paginated([
       { message_id: `gm-${group.group.group_id}-1`, type: "text", content: `欢迎来到「${group.group.name}」！`, sender, sent_at: "2026-07-26T09:00:00Z" },
       { message_id: `gm-${group.group.group_id}-2`, type: "text", content: "本周活动安排见公告，记得准时参加～", sender: mockUsers[(mockGroups.indexOf(group) + 1) % mockUsers.length], sent_at: "2026-07-26T09:30:00Z" },
+      { message_id: `gm-${group.group.group_id}-3`, type: "text", content: "周末主题拍摄有人组队吗？", sender: mockUsers[0], sent_at: "2026-07-26T09:45:00Z" },
     ]));
   }),
   http.post(`${API}/group_messages/send`, async ({ request }) => {
@@ -557,8 +623,10 @@ export const handlers = [
   http.post(`${PUBLIC_API}/users/fetch_followers`, () => json(paginated(mockFollowers))),
   http.post(`${PUBLIC_API}/users/fetch_moments`, () => json(paginated(mockMoments.slice(0, 12)))),
   http.post(`${PUBLIC_API}/users/fetch_reacted_moments`, () => json(paginated(mockMoments.slice(6, 18)))),
-  http.post(`${PUBLIC_API}/moments/search`, () => json(paginated(mockMoments.slice(0, 12)))),
-  http.post(`${PUBLIC_API}/moments/fetch_nearby`, () => json(paginated(mockMoments.slice(0, 12)))),
+  http.post(`${PUBLIC_API}/moments/search`, async ({ request }) =>
+    json(paginated(await withPaginationLimit(request, mockMoments.slice(0, 12))))),
+  http.post(`${PUBLIC_API}/moments/fetch_nearby`, async ({ request }) =>
+    json(paginated(await withPaginationLimit(request, mockMoments.slice(0, 12))))),
   http.post(`${PUBLIC_API}/moments/open_the_door`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as { moment_id?: string };
     const found = mockMoments.find((m) => m.moment_id === body?.moment_id);
@@ -578,7 +646,7 @@ export const handlers = [
     const found = mockGroups.find((g) => g.group.group_id === body?.group_id);
     return json(apiOk({ ...(found ?? mockGroups[0]), viewer_state: null }));
   }),
-  http.post(`${PUBLIC_API}/groups/members/fetch`, () => json(paginated(mockUsers.slice(0, 4).map(u => ({ user: u, role: "member", joined_at: "2026-01-01T00:00:00Z" }))))),
+  http.post(`${PUBLIC_API}/groups/members/fetch`, () => json(paginated(mockUsers.slice(0, 4).map((u, i) => ({ user: u, role: "member", joined_at: "2026-01-01T00:00:00Z", presence_status: i % 2 === 0 ? "online" : "offline", last_online_at: null }))))),
   http.post(`${PUBLIC_API}/search/suggest`, () => {
     // spec api_spec_public.md → PublicSearchSuggestItem：payload 为匿名对偶类型——
     // user → PublicUserItem（user 嵌套）；group → PublicGroupItem（group 嵌套，

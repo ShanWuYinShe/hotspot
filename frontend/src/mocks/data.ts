@@ -112,14 +112,25 @@ export const mockFollowers = mockUsers.slice(2, 7).map((u, i) => ({
 
 // spec UserItem：隐私受控字段与查看者状态恒在（null = 隐藏/不适用；搜索/列表场景
 // stats/social_context 为 null）。供 users/search 等把扁平 UserInfo 包装成 UserItem。
+// presence/location/tags 按用户索引稳定派生，让「附近的人」卡片能展示
+// 距离/在线角标/兴趣 tag（此前恒 offline + location:null，卡片信息缺失）。
+const USER_PRESENCES = ["online", "offline", "online", "offline", "online", "offline", "online"] as const;
+const USER_TAGS = ["摄影", "户外", "音乐", "美食", "阅读", "旅行", "健身"] as const;
+
 export function mockUserItem(u: MockUser) {
+  const i = Math.max(0, mockUsers.indexOf(u));
   return {
     user: { user_id: u.user_id, nickname: u.nickname, avatar_url: u.avatar_url },
     bio: null,
-    tags: [] as string[],
-    presence_status: "offline" as const,
+    tags: [USER_TAGS[i % USER_TAGS.length]],
+    presence_status: USER_PRESENCES[i % USER_PRESENCES.length],
     last_online_at: null,
-    location: null,
+    location: relativeLocation(
+      { latitude: 34.25 + i * 0.002, longitude: 117.18 + i * 0.002 },
+      "徐州",
+      300 + i * 150,
+      (i * 47) % 360
+    ),
     stats: null,
     relation: null,
     social_context: null,
@@ -171,14 +182,29 @@ export const mockSettings = {
 // privacy_level 不在 MomentItem——拥有者视角（OwnerMomentItem）由 handlers.ts
 // 的 fetch_created/create/update 响应显式补充。
 const momentPic = "https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=600";
+// 图片池：随索引轮换，避免信息流/详情/档案页全部同图（mock 观感）。
+const momentPics = [
+  "https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?w=600",
+  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600",
+  "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600",
+  "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=600",
+  "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600",
+  "https://images.unsplash.com/photo-1500673922987-e212871fec22?w=600",
+];
 
 export const mockMoments = Array.from({ length: 24 }, (_, i) => {
   const u = mockUsers[i % mockUsers.length];
   return {
     moment_id: `moment_${i + 1}`,
     user: { user_id: u.user_id, nickname: u.nickname, avatar_url: u.avatar_url },
-    description: ["清晨在绿意中找到了一片宁静", "城市里那些安静的角落", "周末午后最适合窝在这里看书", "湖畔的周末市集开始了", "户部山周末弹唱现场", "徐州的历史比想象的还要厚重"][i % 6],
-    images: [{ url: momentPic }],
+    // 12 条描述轮换：默认一页 12 条内不出现重复文案。
+    description: [
+      "清晨在绿意中找到了一片宁静", "城市里那些安静的角落", "周末午后最适合窝在这里看书",
+      "湖畔的周末市集开始了", "户部山周末弹唱现场", "徐州的历史比想象的还要厚重",
+      "晚风把一整天的疲惫都吹散了", "巷口的面馆还是记忆里的味道", "骑行二十公里只为这场日落",
+      "书店角落里淘到一本绝版画册", "雨后的云龙湖像加了滤镜", "老街的灯笼亮起来了",
+    ][i % 12],
+    images: [{ url: momentPics[i % momentPics.length] }],
     tags: [["自然", "城市", "生活", "活动", "音乐", "人文"][i % 6]],
     mentions: [] as string[],
     created_at: new Date(Date.now() - i * 3600000).toISOString(),
@@ -196,10 +222,10 @@ export const mockMoments = Array.from({ length: 24 }, (_, i) => {
 // ── Groups (spec GroupItem: nested { group: GroupInfo }) ───────
 // location 为 RelativeLocation：distance（米）/bearing_degrees 数值恒在。
 export const mockGroups = [
-  { group: { group_id: "group_1", name: "回龙窝胶片会", avatar_url: avatarA.replace("w=200", "w=400"), members_count: 143 }, description: "胶片摄影爱好者交流", join_method: "direct", requires_approval: false, online_members_count: 12, location: { point: { latitude: 34.25, longitude: 117.19 }, location_name: "回龙窝", distance: 400, bearing_degrees: 210 }, tags: ["摄影"], viewer_state: { role: "member", unread_count: 0, is_muted: false, is_pinned: false, joined_at: "2026-07-01T00:00:00Z" } },
-  { group: { group_id: "group_2", name: "云龙湖晨跑团", avatar_url: avatarB.replace("w=200", "w=400"), members_count: 89 }, description: "每天清晨6点环湖跑", join_method: "password", requires_approval: false, online_members_count: 8, location: { point: { latitude: 34.24, longitude: 117.20 }, location_name: "云龙湖", distance: 800, bearing_degrees: 160 }, tags: ["户外"], viewer_state: null },
-  { group: { group_id: "group_3", name: "户部山弹唱角", avatar_url: avatarA.replace("w=200", "w=400"), members_count: 62 }, description: "周末弹唱交流", join_method: "invite_only", requires_approval: true, online_members_count: 5, location: { point: { latitude: 34.26, longitude: 117.18 }, location_name: "户部山", distance: 1100, bearing_degrees: 45 }, tags: ["音乐"], viewer_state: null },
-  { group: { group_id: "group_4", name: "黄楼夜读角", avatar_url: avatarB.replace("w=200", "w=400"), members_count: 34 }, description: "读书分享小组", join_method: "direct", requires_approval: true, online_members_count: 3, next_activity_at: "周六晚 7 点共读《小王子》", location: { point: { latitude: 34.27, longitude: 117.18 }, location_name: "黄楼", distance: 1400, bearing_degrees: 330 }, tags: ["阅读"], viewer_state: null },
+  { group: { group_id: "group_1", name: "回龙窝胶片会", avatar_url: "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=400", members_count: 143 }, description: "胶片摄影爱好者交流", join_method: "direct", requires_approval: false, online_members_count: 12, location: { point: { latitude: 34.25, longitude: 117.19 }, location_name: "回龙窝", distance: 400, bearing_degrees: 210 }, tags: ["摄影"], viewer_state: { role: "member", unread_count: 0, is_muted: false, is_pinned: false, joined_at: "2026-07-01T00:00:00Z" } },
+  { group: { group_id: "group_2", name: "云龙湖晨跑团", avatar_url: "https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=400", members_count: 89 }, description: "每天清晨6点环湖跑", join_method: "password", requires_approval: false, online_members_count: 8, location: { point: { latitude: 34.24, longitude: 117.20 }, location_name: "云龙湖", distance: 800, bearing_degrees: 160 }, tags: ["户外"], viewer_state: null },
+  { group: { group_id: "group_3", name: "户部山弹唱角", avatar_url: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400", members_count: 62 }, description: "周末弹唱交流", join_method: "invite_only", requires_approval: true, online_members_count: 5, location: { point: { latitude: 34.26, longitude: 117.18 }, location_name: "户部山", distance: 1100, bearing_degrees: 45 }, tags: ["音乐"], viewer_state: null },
+  { group: { group_id: "group_4", name: "黄楼夜读角", avatar_url: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400", members_count: 34 }, description: "读书分享小组", join_method: "direct", requires_approval: true, online_members_count: 3, next_activity_at: "周六晚 7 点共读《小王子》", location: { point: { latitude: 34.27, longitude: 117.18 }, location_name: "黄楼", distance: 1400, bearing_degrees: 330 }, tags: ["阅读"], viewer_state: null },
 ];
 
 // ── Notify (spec NotifyItem) ────────────────────────────
