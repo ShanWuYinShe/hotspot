@@ -107,8 +107,9 @@ export function getDesktopNavId(pathname: string, search = ""): DesktopNavId | n
     const section = pathname.slice(`${ROUTES.me}/`.length);
     if (section === "moments") return "moments";
     if (section === "groups") return "my-groups";
-    // friends/following/fans 及任何 /me/ 尾段都归属「关系」导航项。
-    return "relationships";
+    // 好友/关注/粉丝列表分区归属「关系」；其余尾段（如 edit）不亮。
+    if (["friends", "following", "fans", "relationships"].includes(section)) return "relationships";
+    return null;
   }
 
   if (pathname.startsWith(`${ROUTES.moment("")}`) && source === "me") return "moments";

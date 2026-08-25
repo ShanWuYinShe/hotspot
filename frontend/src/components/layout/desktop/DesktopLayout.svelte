@@ -45,46 +45,20 @@
 		{ id: 'relationships', icon: Heart, label: '关系', path: ME_SECTION_PATHS.relationships }
 	];
 
-	const LAST_DESKTOP_NAV_KEY = 'hotspot:last-desktop-nav';
-	const DESKTOP_NAV_IDS: DesktopNavId[] = [
-		'home', 'nearby-people', 'nearby-groups', 'nearby-moments',
-		'messages', 'moments', 'my-groups', 'relationships'
-	];
-
-	function readLastDesktopNav(): DesktopNavId | null {
-		try {
-			const value = window.sessionStorage.getItem(LAST_DESKTOP_NAV_KEY);
-			return DESKTOP_NAV_IDS.includes(value as DesktopNavId) ? (value as DesktopNavId) : null;
-		} catch {
-			return null;
-		}
-	}
-
-	function persistLastDesktopNav(id: DesktopNavId) {
-		try {
-			window.sessionStorage.setItem(LAST_DESKTOP_NAV_KEY, id);
-		} catch {
-			// Storage can be unavailable in private or embedded browser contexts.
-		}
-	}
-
 	const pathname = $derived(page.url.pathname);
 	const searchString = $derived(page.url.search.slice(1));
 	const showCreate = $derived(composer.composerOpen);
 	// 全画布页面（消息分栏 / 地图探索）：主区域不滚动，画布固定为视口高度
 	const isFullCanvas = $derived(([ROUTES.messages, ROUTES.map] as string[]).includes(pathname));
 
-	/* Keep the last meaningful rail context while viewing utility/detail routes. */
-	let activeNavId = $state<DesktopNavId>(getDesktopNavId(page.url.pathname, page.url.search.slice(1)) ?? readLastDesktopNav() ?? 'home');
+	/* rail 高亮只反映「当前路由真实归属的 rail 项」：utility/detail 路由
+	   （/search、/settings、/notify、无 from 的详情页等）解析为 null 时
+	   清除高亮——宁可不亮，不错亮（此前持久化上一 rail 上下文会误导）。 */
+	let activeNavId = $state<DesktopNavId | null>(getDesktopNavId(page.url.pathname, page.url.search.slice(1)));
 	let isSidebarCollapsed = $state(false);
 
-	// 仅显式 rail 路由替换当前 rail 上下文
 	$effect(() => {
-		const resolvedNav = getDesktopNavId(pathname, searchString);
-		if (resolvedNav) {
-			activeNavId = resolvedNav;
-			persistLastDesktopNav(resolvedNav);
-		}
+		activeNavId = getDesktopNavId(pathname, searchString);
 	});
 
 	/** Navigate only when authenticated; otherwise prompt login (anonymous browsing strategy). */
@@ -105,14 +79,12 @@
 				action: item.label,
 				run: () => {
 					activeNavId = item.id;
-					persistLastDesktopNav(item.id);
 					void goto(item.path);
 				}
 			});
 			return;
 		}
 		activeNavId = item.id;
-		persistLastDesktopNav(item.id);
 		void goto(item.path);
 	};
 </script>
