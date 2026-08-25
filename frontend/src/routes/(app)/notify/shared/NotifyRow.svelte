@@ -25,7 +25,7 @@
 
 <ListItem
 	onClick={() => onRead(notif.id)}
-	ariaLabel={`通知：${notif.text}`}
+	ariaLabel={`通知：${notif.user.name}${notif.text}`}
 	class="flex items-center gap-3.5 px-3 py-3.5"
 >
 	<!-- Avatar + icon badge -->
