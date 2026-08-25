@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import '../styles/index.css';
 	import { setApiBaseUrl } from '@/api';
-	import { initAuth } from '@/stores/auth.svelte';
+	import { auth, initAuth } from '@/stores/auth.svelte';
 	import { initWs } from '@/stores/ws.svelte';
 	import { initPresence } from '@/stores/presence.svelte';
 	import { initTheme } from '@/stores/theme.svelte';
@@ -23,8 +23,30 @@
 	initWs();
 	// 在线状态实时化：UserOnline/UserOffline → onlineUsers（供消息列表/私聊/群成员消费）。
 	initPresence();
+
+	/* Boot 门控：auth 首次解析（session 检查）完成前不挂载路由页面。
+	   否则页面会以「匿名」变体抢先请求双版本端点（pick()），viewer 态字段
+	   （viewer_state/is_favorited/reacted_by_me…）拿到错误数据且不会重取。
+	   3s 兜底：会话检查异常挂起时不至于白屏（退化为旧行为）。 */
+	let bootEscaped = $state(false);
+	$effect(() => {
+		const t = setTimeout(() => (bootEscaped = true), 3000);
+		return () => clearTimeout(t);
+	});
+	const showApp = $derived(auth.status !== 'loading' || bootEscaped);
 </script>
 
-{@render children()}
+{#if showApp}
+	{@render children()}
+{:else}
+	<!-- 启动占位：token 化 spinner，避免未解析 auth 时页面闪错数据 -->
+	<div class="fixed inset-0 grid place-items-center" style="background:var(--cst-surface-page);">
+		<div
+			class="size-7 rounded-full border-2 border-border-default border-t-accent-default animate-spin"
+			role="status"
+			aria-label="加载中"
+		></div>
+	</div>
+{/if}
 <AuthGate />
 <ToastViewport />
