@@ -14,12 +14,13 @@
 	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
 	import RailMomentThumb from '@/components/rail/RailMomentThumb.svelte';
 	import MomentPostBody from './MomentPostBody.svelte';
+	import { toNearbyRailRows } from './nearby-rail';
 	import MomentEditDialog from '@/components/overlays/MomentEditDialog.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import { showToast } from '@/stores/toast.svelte';
 	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment, fetchNearbyMoments, searchMoments, deleteMoment, listMyMoments } from '@/api';
 	import { ROUTES } from '@/lib/routes';
-	import { formatDistance, formatDateTime } from '@/lib/utils';
+	import { formatDateTime } from '@/lib/utils';
 
 	// 动态详情：点赞/收藏/评论/复制链接/更多菜单 + 桌面右 Rail。
 
@@ -42,12 +43,7 @@
 			if (cancelled) return;
 			const nearbyItems = nearbyRes.code === 0 ? nearbyRes.data?.items ?? [] : [];
 			const relatedItems = relatedRes.code === 0 ? relatedRes.data?.items ?? [] : [];
-			nearbyNow = nearbyItems.map((m) => ({
-				id: m.user?.user_id ?? m.moment_id,
-				name: m.user?.nickname ?? '',
-				sub: [formatDistance(m.location?.distance), m.tags?.[0]].filter(Boolean).join(' · '),
-				avatar: m.user?.avatar_url ?? ''
-			}));
+			nearbyNow = toNearbyRailRows(nearbyItems);
 			relatedMoments = relatedItems.map((m) => ({
 				id: m.moment_id,
 				title: m.description ?? '',
