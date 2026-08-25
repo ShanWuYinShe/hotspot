@@ -60,19 +60,6 @@ export function markerSvg(type: PinType, count: number, size?: { w: number; h: n
 	return `<span style="display:inline-block;color:${PIN_COLORS[type]};">${svg}</span>`;
 }
 
-export function buildMapData(center: { lat: number; lng: number }, zoom: number) {
-	const bounds: MapBounds = {
-		minLat: center.lat - zoom,
-		maxLat: center.lat + zoom,
-		minLng: center.lng - zoom,
-		maxLng: center.lng + zoom
-	};
-	return {
-		url: `https://www.openstreetmap.org/export/embed.html?bbox=${bounds.minLng},${bounds.minLat},${bounds.maxLng},${bounds.maxLat}&layer=mapnik`,
-		bounds
-	};
-}
-
 /* ── map/canvas API 接入（spec: api_spec_public.md → map/canvas）──────────
    类型统一从 '@/api/types' 引入（mode 判别联合 + RelativeLocation），
    不再维护本地副本。 */

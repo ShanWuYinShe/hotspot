@@ -25,3 +25,14 @@ location /s3/ {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
 }
+
+# ── 高德瓦片同源代理（地图底图）──────────────────────────
+# 前端请求 /amap-tiles/{z}/{x}/{y}.png → 高德 appmaptile 栅格瓦片（GCJ-02）。
+# 栅格瓦片不需要 key/jscode；同源转发避免客户端直连外网（跨域/不可达环境），
+# 也为后续加 proxy_cache 缓存留好位置。
+location /amap-tiles/ {
+    rewrite ^/amap-tiles/(\d+)/(\d+)/(\d+)\.png$ /appmaptile?lang=zh_cn&size=1&scale=1&style=7&x=$2&y=$3&z=$1 break;
+    proxy_pass https://webrd04.is.autonavi.com;
+    proxy_ssl_server_name on;
+    proxy_set_header Host webrd04.is.autonavi.com;
+}

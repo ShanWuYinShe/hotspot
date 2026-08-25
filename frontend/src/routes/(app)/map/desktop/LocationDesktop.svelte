@@ -1,13 +1,14 @@
 <script lang="ts">
-	import { X, ChevronRight, SlidersHorizontal, Heart, Check, Crosshair } from '@lucide/svelte';
+	import { X, ChevronRight, SlidersHorizontal, Heart, Check, Crosshair, Plus, Minus } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import {
-		PIN_COLORS, PIN_LABELS, PIN_TONES, markerSvg, buildMapData, fetchMapCanvas,
-		type MapHeatBucket
+		PIN_COLORS, PIN_LABELS, PIN_TONES, markerSvg, fetchMapCanvas,
+		type MapBounds, type MapHeatBucket
 	} from '../shared/location-shared';
+	import MapCanvas from '../shared/MapCanvas.svelte';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
 	import MapHeatDot from '../shared/MapHeatDot.svelte';
 	import PinMedia from '../shared/PinMedia.svelte';
@@ -22,9 +23,11 @@
 	let selectedLoc = $state<LocationResult | null>(null);
 	let activeFilters = $state<Set<PinType>>(new Set(['user', 'group', 'moment']));
 	let activeTab = $state<'nearby' | 'hot' | 'recent'>('nearby');
-	let showFilter = $state(true);
-	const zoom = 0.045;
+	let showFilter = $state(false); // 筛选面板默认收起（与移动端一致），由用户主动展开
+	// 瓦片缩放级别（13≈全市 / 16≈街区）；数据请求半径仍由 fetchMapCanvas 内部约定
+	let mapZoom = $state(14);
 	let mapCenter = $state<{ lat: number; lng: number } | null>(null);
+	let mapBounds = $state<MapBounds>({ minLat: 0, maxLat: 0, minLng: 0, maxLng: 0 });
 	let defaultCenter = $state<{ lat: number; lng: number } | null>(null);
 
 	// 初始/复位中心来自 ClientConfig default_location（MSW mock），不写死坐标。
@@ -47,7 +50,7 @@
 		if (!center) return;
 		let cancelled = false;
 		mapLoading = true;
-		void fetchMapCanvas(center, zoom, types).then((r) => {
+		void fetchMapCanvas(center, 0.045, types).then((r) => {
 			if (cancelled) return;
 			mapPins = r.pins;
 			heatBuckets = r.heatBuckets;
@@ -77,7 +80,7 @@
 	);
 	const nearbyPins = $derived(mapPins.filter((p) => (p.count ?? 1) === 1));
 
-	const mapData = $derived(mapCenter ? buildMapData(mapCenter, zoom) : null);
+	// 底图视口地理边界由 MapCanvas 墨卡托换算后双向绑定（图钉/热力定位用）
 
 	const userCount = $derived(mapCounts.user);
 	const groupCount = $derived(mapCounts.group);
@@ -143,8 +146,8 @@
 			}
 		}}
 	>
-		{#if mapData}
-		<iframe src={mapData.url} class="w-full h-full border-0" title="地图" style="pointer-events:none;"></iframe>
+		{#if mapCenter}
+		<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} />
 
 		<!-- Current location dot -->
 		<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:5;">
@@ -155,14 +158,14 @@
 
 		<!-- Heatmap buckets（大视口 / 高密度时服务端返回热力统计） -->
 		{#each heatBuckets as bucket (bucket.cell_token)}
-			<MapHeatDot {bucket} bounds={mapData.bounds} />
+			<MapHeatDot {bucket} bounds={mapBounds} />
 		{/each}
 
 		<!-- Pin markers -->
 		{#each mapPins as pin (pin.id)}
 			<MapPinMarker
 				pin={pin}
-				bounds={mapData.bounds}
+				bounds={mapBounds}
 				isSelected={selectedPin?.id === pin.id}
 				onSelect={(e) => {
 					e.stopPropagation();
@@ -179,6 +182,29 @@
 				加载地图数据…
 			</div>
 		{/if}
+
+		<!-- 缩放控制（右下角；画布拖拽/滚轮亦可缩放） -->
+		<div class="absolute z-20 flex flex-col overflow-hidden rounded-lg border border-border-default bg-surface-primary" style="right:14px;bottom:20px;box-shadow:var(--cst-elevation-fab);">
+			<button
+				type="button"
+				class="hover-btn flex items-center justify-center size-9 focus-ring text-text-primary"
+				style="border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);"
+				aria-label="放大"
+				disabled={mapZoom >= 16}
+				onclick={() => (mapZoom = Math.min(16, mapZoom + 1))}
+			>
+				<Plus class="size-4" strokeWidth={1.75} />
+			</button>
+			<button
+				type="button"
+				class="hover-btn flex items-center justify-center size-9 focus-ring text-text-primary"
+				aria-label="缩小"
+				disabled={mapZoom <= 13}
+				onclick={() => (mapZoom = Math.max(13, mapZoom - 1))}
+			>
+				<Minus class="size-4" strokeWidth={1.75} />
+			</button>
+		</div>
 
 		<!-- 左上筛选浮动按钮 + 下拉（对齐 Figma Make LocationDesktop 筛选面板） -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -318,10 +344,5 @@
 				</div>
 			</div>
 		{/if}
-
-		<!-- Attribution -->
-		<div class="text-text-secondary text-xxs opacity-subtle"  style="position:absolute;bottom:4px;left:8px;pointer-events:none;z-index:1">
-			© OpenStreetMap contributors
-		</div>
 	</div>
 </div>

@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { Search, MapPin, X, SlidersHorizontal, Crosshair, Check, ArrowLeft } from '@lucide/svelte';
+	import { Search, MapPin, X, SlidersHorizontal, Crosshair, Check, ArrowLeft, Plus, Minus } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import * as Popover from '@/components/ui/popover';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
-	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, markerSvg, floatBtnStyle, buildMapData, fetchMapCanvas, type MapHeatBucket, type SnapState } from '../shared/location-shared';
+	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, markerSvg, floatBtnStyle, fetchMapCanvas, type MapBounds, type MapHeatBucket, type SnapState } from '../shared/location-shared';
+	import MapCanvas from '../shared/MapCanvas.svelte';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
 	import MapHeatDot from '../shared/MapHeatDot.svelte';
 	import LocationSheetList from './LocationSheetList.svelte';
@@ -81,7 +82,9 @@
 	let searchQuery = $state('');
 	let selectedPin = $state<Pin | null>(null);
 	let selectedLoc = $state<LocationResult | null>(null);
-	const zoom = 0.045;
+	// 瓦片缩放级别；数据请求半径由 fetchMapCanvas 内部约定
+	let mapZoom = $state(14);
+	let mapBounds = $state<MapBounds>({ minLat: 0, maxLat: 0, minLng: 0, maxLng: 0 });
 	let mapCenter = $state<{ lat: number; lng: number } | null>(null);
 	let defaultCenter = $state<{ lat: number; lng: number } | null>(null);
 	let recentItems = $state(RECENT_LOCATIONS);
@@ -106,7 +109,7 @@
 		if (!center) return;
 		let cancelled = false;
 		mapLoading = true;
-		void fetchMapCanvas(center, zoom, types).then((r) => {
+		void fetchMapCanvas(center, 0.045, types).then((r) => {
 			if (cancelled) return;
 			mapPins = r.pins;
 			heatBuckets = r.heatBuckets;
@@ -117,7 +120,7 @@
 		};
 	});
 
-	const mapData = $derived(mapCenter ? buildMapData(mapCenter, zoom) : null);
+	// 底图视口地理边界由 MapCanvas 墨卡托换算后双向绑定（图钉/热力定位用）
 	const searchResults = $derived(searchQuery.trim() ? SEARCH_DB.filter((s) => s.displayName.includes(searchQuery)).slice(0, 5) : []);
 
 	function handleMapTap() {
@@ -178,8 +181,8 @@
 			}
 		}}
 	>
-		{#if mapData}
-		<iframe src={mapData.url} title="地图" style="width:100%;height:100%;border:0;pointer-events:none;"></iframe>
+		{#if mapCenter}
+		<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} />
 
 		<!-- Current location pulsing dot（对齐 Figma Make：halo scale 1→1.8 / opacity 0.55→0 循环） -->
 		<div style="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:5;pointer-events:none;">
@@ -190,14 +193,14 @@
 
 		<!-- Heatmap buckets（大视口 / 高密度时服务端返回热力统计） -->
 		{#each heatBuckets as bucket (bucket.cell_token)}
-			<MapHeatDot {bucket} bounds={mapData.bounds} />
+			<MapHeatDot {bucket} bounds={mapBounds} />
 		{/each}
 
 		<!-- Marker pins -->
 		{#each mapPins as pin (pin.id)}
 			<MapPinMarker
 				pin={pin}
-				bounds={mapData.bounds}
+				bounds={mapBounds}
 				isSelected={selectedPin?.id === pin.id}
 				onSelect={(e) => {
 					e.stopPropagation();
@@ -213,11 +216,6 @@
 				加载地图数据…
 			</div>
 		{/if}
-
-		<!-- Attribution -->
-		<div class="text-text-secondary text-xxs opacity-subtle"  style="position:absolute;bottom:4px;left:6px;pointer-events:none;z-index:1">
-			© OpenStreetMap contributors
-		</div>
 	</div>
 
 	<!-- ══ TOP BAR (fixed, floating over map — 对齐 Figma Make：无标题，仅返回 + 筛选) ══ -->
@@ -296,6 +294,29 @@
 
 	<!-- ══ RIGHT CONTROLS — bottom tracks sheet ══ -->
 	<div style="position:absolute;right:12px;bottom:{rightCtrlBottom}px;z-index:35;display:flex;flex-direction:column;gap:8px;align-items:center;transition:bottom var(--cst-motion-spring) var(--cst-ease-bounce);">
+		<!-- Zoom in/out（画布拖拽/双指外滚轮亦可缩放） -->
+		<div class="flex flex-col overflow-hidden rounded-lg" style="border:var(--cst-border-width-hairline) solid var(--cst-border-default);{floatBtnStyle}">
+			<button
+				type="button"
+				class="hover-btn flex items-center justify-center size-9 focus-ring text-text-primary"
+				style="border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);"
+				aria-label="放大"
+				disabled={mapZoom >= 16}
+				onclick={() => (mapZoom = Math.min(16, mapZoom + 1))}
+			>
+				<Plus class="size-4" strokeWidth={1.75} />
+			</button>
+			<button
+				type="button"
+				class="hover-btn flex items-center justify-center size-9 focus-ring text-text-primary"
+				aria-label="缩小"
+				disabled={mapZoom <= 13}
+				onclick={() => (mapZoom = Math.max(13, mapZoom - 1))}
+			>
+				<Minus class="size-4" strokeWidth={1.75} />
+			</button>
+		</div>
+
 		<!-- GPS re-center -->
 		<button
 			type="button"
