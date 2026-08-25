@@ -15,7 +15,7 @@
 	import { ROUTES } from '@/lib/routes';
 	import { useGroupDetail } from '@/lib/group-data.svelte';
 	import { formatDateTime } from '@/lib/utils';
-	import { presence, watchPresence } from '@/stores/presence.svelte';
+	import { onlineUsers, presence, watchPresence } from '@/stores/presence.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { setGroupMemberRole, setGroupMemberMute, banGroupMember, removeGroupMember } from '@/api';
 	import MemberActionSheet from '@/components/groups/MemberActionSheet.svelte';
@@ -45,7 +45,11 @@
 			void goto(ROUTES.nearbyGroups);
 		},
 		watchPresence,
-		isOnline: (id) => presence.isOnline(id)
+		isOnline: (id) => presence.isOnline(id),
+		// 成员快照在线状态播种（HTTP 快照 → WS 实时升级路径）
+		seedPresence: (ids) => {
+			for (const id of ids) onlineUsers.add(id);
+		}
 	});
 
 	// 公告管理 UI 状态（owner/admin 门控）

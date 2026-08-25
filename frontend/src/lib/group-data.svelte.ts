@@ -26,6 +26,7 @@ export interface GroupMember {
 	name: string;
 	role: string;
 	avatar: string;
+	presence: 'online' | 'offline' | null;
 	mutedUntil?: string;
 }
 
@@ -46,6 +47,8 @@ export interface UseGroupDetailOptions {
 	watchPresence?: (ids: string[]) => () => void;
 	/** 在线判定（页面注入 presence.isOnline）。 */
 	isOnline?: (userId: string) => boolean;
+	/** 成员快照在线状态播种（页面注入 onlineUsers.add：HTTP 快照 → WS 实时的既定升级路径）。 */
+	seedPresence?: (ids: string[]) => void;
 }
 
 export function useGroupDetail(opts: UseGroupDetailOptions) {
@@ -114,11 +117,15 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 					userId: m.user?.user_id ?? '',
 					name: m.user?.nickname ?? '',
 					role: m.role ?? '成员',
-					avatar: m.user?.avatar_url ?? ''
+					avatar: m.user?.avatar_url ?? '',
+					presence: m.presence_status ?? null
 					// 禁言截止时间在群管理视角（groups/admin/members/list，AdminGroupMemberItem）；
 					// 公开 members/list 已不含 muted_until（视角分离）。
 				}));
 				members = items;
+				// 成员快照的在线状态播种进 presence store（后续 WS 事件继续覆盖）。
+				const snapshotOnline = items.filter((m) => m.presence === 'online' && m.userId).map((m) => m.userId);
+				if (snapshotOnline.length > 0) opts.seedPresence?.(snapshotOnline);
 				// 成员在线状态实时化：订阅全部成员（先释放旧订阅再建新订阅）
 				unwatchMembers?.();
 				if (opts.watchPresence) {
@@ -345,11 +352,13 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		};
 	});
 
-	// 成员在线实时派生：绿点与"X 人在线"计数均以 presence 为准（HTTP 快照仅初始兜底）。
+	// 成员在线实时派生：绿点以 presence 为准（含快照播种）。
+	// 「X 人在线」计数口径：服务端快照（detail.online，全群真值——成员列表分页
+	// 加载不全，实时 presence 只能覆盖已加载成员）优先；快照缺失回退实时计数。
 	const onlineMemberIds = $derived(
 		new Set(members.filter((m) => opts.isOnline?.(m.userId) ?? false).map((m) => m.userId))
 	);
-	const onlineMemberCount = $derived(onlineMemberIds.size);
+	const onlineMemberCount = $derived(detail.online > 0 ? detail.online : onlineMemberIds.size);
 
 	return {
 		get detail() { return detail; },
