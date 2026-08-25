@@ -332,7 +332,9 @@ theme/
   档位 token——每个语义色族在 themes/{vibrant,forest}.css 定义三档：
   `-bg`（淡底）、`-border`（淡边框）、`-glow`（光晕），如
   `--cst-status-warning-bg/-border/-glow`、`--cst-marker-user-bg/-border/-glow`。
-  color-mix 只允许出现在 themes/*.css 的 token 值内部（值即最终定义）
+  color-mix 只允许出现在 `styles/theme/` 定义体系内部（themes/*.css 的 token 值、
+  semantic.css 的语义派生档位、utilities.css/base.css 的既有工具类——值即最终定义）；
+  页面/组件/数据层仍然禁止，需要新档位时先在定义体系补 token
 - 新增组件时若缺语义 token，先在 themes/{vibrant,forest}.css 补 `--cst-*`
   定义（light + dark），不得在组件里写死色值绕过
 - **新增 token 必须同步注册 Tailwind 类**：需要以 `bg-*/text-*/border-*` 类名
