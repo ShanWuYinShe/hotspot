@@ -291,7 +291,7 @@
 
 		{#if isOwner}
 			<!-- 危险区（仅群主；转让后原群主降级，解散不可逆） -->
-			<section aria-labelledby="danger-zone-label" class="mt-2 rounded-md border border-status-danger-border bg-status-danger-bg p-4">
+			<section aria-labelledby="danger-zone-label" class="mt-2 rounded-md border border-status-danger-border bg-danger-bg p-4">
 				<p id="danger-zone-label" class="flex items-center gap-1.5 text-sm font-medium text-status-danger">
 					<ShieldAlert class="size-4" strokeWidth={1.75} />
 					危险区
