@@ -1,9 +1,56 @@
 // Web Mercator 投影与 XYZ 瓦片网格计算（256px 瓦片，EPSG:3857 像素空间）。
-// 底图为高德瓦片（GCJ-02 坐标系，经 nginx /amap-tiles/ 同源代理）：mock/展示
-// 场景直接以传入经纬度近似对齐；接入真实 WGS-84 数据时需在此层统一做
-// WGS-84 → GCJ-02 纠偏，勿散落到组件。
+// 底图为高德瓦片（GCJ-02 坐标系，经 nginx /amap-tiles/ 同源代理）。
+// 应用数据口径为 WGS-84（GPS/spec）：瓦片像素空间统一先做 WGS-84 → GCJ-02
+// 纠偏（本模块 wgs84ToGcj02），组件层只接触 WGS-84，勿散落换算。
 
 export const TILE_SIZE = 256;
+
+/* ── WGS-84 → GCJ-02 纠偏（国测局标准公开算法，中国境外直通） ── */
+
+const GCJ_A = 6378245; // 克拉索夫斯基椭球长半轴
+const GCJ_EE = 0.00669342162296594326; // 第一偏心率平方
+
+function transformLat(x: number, y: number): number {
+	let ret = -100 + 2 * x + 3 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x));
+	ret += ((20 * Math.sin(6 * x * Math.PI) + 20 * Math.sin(2 * x * Math.PI)) * 2) / 3;
+	ret += ((20 * Math.sin(y * Math.PI) + 40 * Math.sin((y / 3) * Math.PI)) * 2) / 3;
+	ret += ((160 * Math.sin((y / 12) * Math.PI) + 320 * Math.sin((y * Math.PI) / 30)) * 2) / 3;
+	return ret;
+}
+
+function transformLng(x: number, y: number): number {
+	let ret = 300 + x + 2 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x));
+	ret += ((20 * Math.sin(6 * x * Math.PI) + 20 * Math.sin(2 * x * Math.PI)) * 2) / 3;
+	ret += ((20 * Math.sin(x * Math.PI) + 40 * Math.sin((x / 3) * Math.PI)) * 2) / 3;
+	ret += ((150 * Math.sin((x / 12) * Math.PI) + 300 * Math.sin((x / 30) * Math.PI)) * 2) / 3;
+	return ret;
+}
+
+/** 是否在中国坐标系偏移范围外（境外 GCJ-02 与 WGS-84 一致，直通）。 */
+export function outOfChina(lat: number, lng: number): boolean {
+	return lng < 72.004 || lng > 137.8347 || lat < 0.8293 || lat > 55.8271;
+}
+
+/** WGS-84 → GCJ-02（火星坐标）。 */
+export function wgs84ToGcj02(lat: number, lng: number): { lat: number; lng: number } {
+	if (outOfChina(lat, lng)) return { lat, lng };
+	let dLat = transformLat(lng - 105, lat - 35);
+	let dLng = transformLng(lng - 105, lat - 35);
+	const radLat = (lat / 180) * Math.PI;
+	let magic = Math.sin(radLat);
+	magic = 1 - GCJ_EE * magic * magic;
+	const sqrtMagic = Math.sqrt(magic);
+	dLat = (dLat * 180) / (((GCJ_A * (1 - GCJ_EE)) / (magic * sqrtMagic)) * Math.PI);
+	dLng = (dLng * 180) / ((GCJ_A / sqrtMagic) * Math.cos(radLat) * Math.PI);
+	return { lat: lat + dLat, lng: lng + dLng };
+}
+
+/** GCJ-02 → WGS-84（一次反演，误差 ~1m，远小于渲染像素粒度）。 */
+export function gcj02ToWgs84(lat: number, lng: number): { lat: number; lng: number } {
+	if (outOfChina(lat, lng)) return { lat, lng };
+	const gcj = wgs84ToGcj02(lat, lng);
+	return { lat: lat - (gcj.lat - lat), lng: lng - (gcj.lng - lng) };
+}
 
 /** 经度 → 世界像素 x（zoom 级像素坐标）。 */
 export function lngToWorldX(lng: number, zoom: number): number {
