@@ -29,11 +29,16 @@
 				{/if}
 			{/snippet}
 			{#snippet subtitle()}
-				<p class="mt-1 flex items-center gap-1.5 text-xxs">
-					<span  class="text-accent-default">#{u.tag}</span>
-					<span class="opacity-muted text-text-secondary" >·</span>
-					<span  class="text-text-secondary">{u.distance}</span>
-				</p>
+				<!-- tag/距离缺省时不渲染对应分段与分隔点，避免出现悬空的「#」或「·」 -->
+				{@const hasTag = Boolean(u.tag)}
+				{@const hasDistance = Boolean(u.distance)}
+				{#if hasTag || hasDistance}
+					<p class="mt-1 flex items-center gap-1.5 text-xxs">
+						{#if hasTag}<span class="text-accent-default">#{u.tag}</span>{/if}
+						{#if hasTag && hasDistance}<span class="opacity-muted text-text-secondary">·</span>{/if}
+						{#if hasDistance}<span class="text-text-secondary">{u.distance}</span>{/if}
+					</p>
+				{/if}
 			{/snippet}
 			{#snippet actions()}
 				<Button

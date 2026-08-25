@@ -54,7 +54,7 @@
 			</div>
 			<div class="flex flex-col items-center justify-center py-2.5 bg-surface-primary">
 				<span class="text-xl font-semibold leading-none text-status-warning" >{stats.active}</span>
-				<span class="text-xxs mt-1 text-text-secondary"  >活动中</span>
+				<span class="text-xxs mt-1 text-text-secondary"  >动态</span>
 			</div>
 			<div class="flex flex-col items-center justify-center py-2.5 bg-surface-primary">
 				<span class="text-xl font-semibold leading-none text-status-online" >{stats.online}</span>
