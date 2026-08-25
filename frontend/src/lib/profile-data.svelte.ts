@@ -25,6 +25,7 @@ export interface GalleryMoment {
 	title: string;
 	likes: number;
 	comments: number;
+	created_at: string;
 }
 
 export interface ProfileStats {
@@ -42,7 +43,8 @@ function mapGalleryMoment(m: MomentItem): GalleryMoment {
 		img: m.images?.[0]?.url ?? '',
 		title: m.description ?? '',
 		likes: (m.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
-		comments: m.comments_count ?? 0
+		comments: m.comments_count ?? 0,
+		created_at: m.created_at ?? ''
 	};
 }
 

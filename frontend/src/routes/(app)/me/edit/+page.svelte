@@ -151,7 +151,8 @@
 	<div class="animate-fade-in flex flex-col gap-5">
 	<!-- Avatar section -->
 	<div class="relative rounded-xl overflow-hidden" style="height:var(--cst-cover-height-sm);">
-		<div class="absolute inset-0 bg-surface-primary"></div>
+		<!-- 无封面数据时的占位底：accent 淡底渐变，避免整块空白显得未完成 -->
+		<div class="absolute inset-0" style="background:linear-gradient(135deg, var(--cst-accent-soft-bg), var(--cst-surface-primary) 70%);"></div>
 		<button
 			type="button"
 			class="hover-btn absolute top-3 right-3 flex items-center gap-1.5 rounded-full focus-ring bg-surface-overlay-strong text-content-inverse text-sm px-3 py-1.5 disabled:opacity-muted"

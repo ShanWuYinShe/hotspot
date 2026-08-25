@@ -31,6 +31,10 @@
 	};
 	const featured = $derived(archive[0]);
 	const remaining = $derived(archive.slice(1));
+	// 年份取档案内最新一条的创建年份，避免硬编码过期
+	const archiveYear = $derived(
+		featured?.created_at ? new Date(featured.created_at).getFullYear() : new Date().getFullYear()
+	);
 
 	const activeMeta: Record<Tab, { label: string; description: string; note: string }> = {
 		posts: { label: '已发布', description: '把正在发生的事，留成可回看的片段。', note: '已发布记录' },
@@ -74,7 +78,8 @@
 			<header class="border-b border-border-default pb-6">
 				<div class="flex flex-wrap items-end justify-between gap-5">
 					<div>
-						<p class="eyebrow font-semibold text-accent-default font-mono">Personal archive / 2024</p>
+						<!-- 年份取档案内最新一条的创建年份，避免硬编码过期 -->
+						<p class="eyebrow font-semibold text-accent-default font-mono">Personal archive / {archiveYear}</p>
 						<h2 class="mt-2 text-3xl font-medium leading-none tracking-title text-text-primary">个人影像档案</h2>
 						<p class="mt-3 max-w-115 text-sm leading-6 text-text-secondary">{activeMeta[activeTab].description}</p>
 					</div>

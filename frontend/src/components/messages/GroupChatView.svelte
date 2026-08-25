@@ -36,6 +36,7 @@
 
 	let groupName = $state('');
 	let groupAvatar = $state('');
+	let membersCount = $state<number | null>(null);
 
 	const meId = $derived(auth.user?.user_id ?? '__me__');
 	let myRole = $state<'owner' | 'admin' | 'member'>('member');
@@ -51,6 +52,7 @@
 				const d = res.data;
 				groupName = d.group.name;
 				groupAvatar = d.group.avatar_url ?? '';
+				membersCount = d.group.members_count ?? null;
 				myRole = d.viewer_state?.role ?? 'member';
 			})
 			.catch(() => {});
@@ -228,6 +230,8 @@
 			<p class="{groupTyping ? 'text-accent-default' : 'text-text-secondary'} text-xs" >
 				{#if groupTyping}
 					{typingName || '有人'}正在输入…
+				{:else if membersCount != null}
+					{membersCount} 位成员
 				{:else}
 					群聊
 				{/if}
