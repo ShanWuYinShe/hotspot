@@ -127,9 +127,11 @@
 </svelte:head>
 
 
-<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-10">
+<!-- contentMaxWidth 560：设置页是表单/列表型页面，走 .page-shell--form 同档窄栏；
+	默认全宽会让每行设置项在桌面端拉满视口、Toggle 远离标题 -->
+<StandardPageLayout contentMaxWidth={560} contentClassName="animate-fade-in pt-4 pb-10">
 	{#snippet header()}
-		<PageHeader title="设置" onBack={() => history.back()} showBackOnDesktop titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22} />
+		<PageHeader title="设置" onBack={() => history.back()} showBackOnDesktop maxWidth={560} titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22} />
 	{/snippet}
 
 		<!-- User card — hero with ambient glow（loading 期间显示占位骨架） -->
@@ -163,13 +165,17 @@
 					{#snippet extension()}
 						<div class="grid grid-cols-2 gap-2">
 							{#each THEME_OPTIONS as t}
-								<!-- surface-ghost 自带四态反馈（hover 填充 + aria-pressed 选中），与
-								     AppearanceMenu 主题按钮同一原语，避免自写第三套交互 -->
+								{@const selected = theme.theme === t.id}
+								<!-- 分段选择器显式两态（与 AppearanceMenu 主题按钮同一套 token 组合）：
+									未选中带边框常显可点区域，不用 surface-ghost（其未选中边框透明，
+									在 surface-flat 大底上第二个选项完全隐形） -->
 								<button
 									type="button"
-									aria-pressed={theme.theme === t.id}
+									aria-pressed={selected}
 									onclick={() => setTheme(t.id)}
-									class="surface-ghost flex items-center gap-2 rounded-sm px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
+									class="flex items-center gap-2 rounded-sm border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {selected
+										? 'border-accent-border bg-accent-soft text-accent-default'
+										: 'border-border-default text-text-secondary hover:bg-interactive-hover'}"
 								>
 									{#if t.id === 'forest'}
 										<Trees class="size-4"   strokeWidth={1.75} />

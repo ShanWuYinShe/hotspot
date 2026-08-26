@@ -25,12 +25,20 @@
 		maxWidth?: number | string;
 		class?: string;
 	} = $props();
+
+	// 数字 maxWidth 自动补 px：裸数字生成 max-width:560 会被 CSSOM 当非法值
+	// 整条丢弃（style 静默变空），字符串值（'560px'/'50%'）原样透传。
+	const columnStyle = $derived(
+		maxWidth == null
+			? 'max-width:var(--cst-page-content-max);'
+			: `max-width:${typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth};`
+	);
 </script>
 
 <div
 	data-page-content
 	class={cn('mx-auto w-full px-[var(--cst-page-gutter)]', className)}
-	style={maxWidth ? `max-width:${maxWidth};` : 'max-width:var(--cst-page-content-max);'}
+	style={columnStyle}
 >
 	{@render children()}
 </div>

@@ -109,9 +109,9 @@
 							type="button"
 							onclick={() => setTheme(item.id)}
 							aria-pressed={selected}
-							class="rounded-sm p-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {selected
-								? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
-								: 'surface-ghost text-text-secondary'}"
+							class="rounded-sm border p-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {selected
+								? 'border-accent-border bg-accent-soft text-accent-default hover:bg-interactive-active'
+								: 'border-border-default text-text-secondary hover:bg-interactive-hover'}"
 						>
 							<span
 								class="mb-2 block h-5 w-5 rounded-full ring-3"

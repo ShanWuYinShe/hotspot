@@ -41,7 +41,10 @@
 		center:
 			'inset-x-4 inset-y-4 m-auto rounded-xl shadow-[var(--cst-elevation-modal)] data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
 		bottom:
-			'bottom-0 left-0 right-0 rounded-t-sheet shadow-[var(--cst-elevation-sheet)] data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
+			// sm 起居中限宽：手机保持全宽 bottom sheet 手势形态；桌面/平板全宽 sheet
+			// 会把表单输入框/按钮拉满视口（设置类弹层尤其难看）。需要更宽容器的
+			// 页面型 sheet（发布编辑器/聊天容器）由调用方传 sm:max-w-* 覆盖（cn 走 twMerge）。
+			'bottom-0 left-0 right-0 sm:max-w-xl sm:mx-auto rounded-t-sheet shadow-[var(--cst-elevation-sheet)] data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
 		right:
 			'top-0 bottom-0 right-0 w-3/4 border-l border-border-default shadow-[var(--cst-elevation-side-sheet)] data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right sm:max-w-sm',
 		left:
