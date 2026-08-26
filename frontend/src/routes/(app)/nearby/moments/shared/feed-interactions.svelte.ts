@@ -2,6 +2,7 @@
 // 持有每条 FeedItem 的 liked/saved 交互状态，乐观更新 + API 失败回滚。
 
 import { setReaction, favoriteMoment } from '@/api';
+import { requireAuth } from '@/stores/auth.svelte';
 
 export interface FeedItem {
 	id: string;
@@ -34,7 +35,10 @@ export function createFeedInteractions(getInitial: () => FeedItem[]): FeedIntera
 		items = getInitial();
 	});
 
+	// 写操作先过登录闸（requireAuth 弹登录提示并在登录后重放动作）；
+	// 匿名直接发请求只会 10100 失败回滚，用户侧看不到任何反馈。
 	const toggleLike = async (id: FeedItem['id']) => {
+		if (!requireAuth({ action: '点赞', targetId: id, run: () => void toggleLike(id) })) return;
 		items = items.map((it) => (it.id === id ? { ...it, liked: !it.liked } : it));
 		const target = items.find((it) => it.id === id);
 		if (target) {
@@ -47,6 +51,7 @@ export function createFeedInteractions(getInitial: () => FeedItem[]): FeedIntera
 	};
 
 	const toggleSave = async (id: FeedItem['id']) => {
+		if (!requireAuth({ action: '收藏', targetId: id, run: () => void toggleSave(id) })) return;
 		items = items.map((it) => (it.id === id ? { ...it, saved: !it.saved } : it));
 		const target = items.find((it) => it.id === id);
 		if (target) {

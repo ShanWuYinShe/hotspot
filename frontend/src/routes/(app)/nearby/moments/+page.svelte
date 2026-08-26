@@ -243,16 +243,17 @@ locationName = loc?.location_name ?? '';
 			hasMore={visibleCount < filtered.length}
 			onLoadMore={() => (visibleCount = Math.min(visibleCount + 8, filtered.length))}
 		>
-			{#snippet renderItem(item: FeedItem, index: number)}
-				<MomentCard
-					item={item}
-					liked={item.liked}
-					saved={item.saved}
-					onLike={() => void interactions.toggleLike(item.id)}
-					onSave={() => void interactions.toggleSave(item.id)}
-					onClick={() => void goto(ROUTES.moment(item.id))}
-				/>
-			{/snippet}
+		{#snippet renderItem(item: FeedItem, index: number)}
+			<MomentCard
+				item={item}
+				liked={item.liked}
+				saved={item.saved}
+				onLike={() => void interactions.toggleLike(item.id)}
+				onSave={() => void interactions.toggleSave(item.id)}
+				onClick={() => void goto(ROUTES.moment(item.id))}
+				onCommentClick={() => void goto(`${ROUTES.moment(item.id)}?focus=comments`)}
+			/>
+		{/snippet}
 		</BspCardCanvas>
 	{/if}
 </StandardPageLayout>

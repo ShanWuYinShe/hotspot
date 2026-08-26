@@ -53,6 +53,12 @@
 	// 对齐 Figma useHoverConfig tap）。
 	let pressed = $state(false);
 	const cardTransform = $derived(pressed ? 'scale(var(--cst-card-tap-scale, 0.94))' : 'scale(1)');
+
+	// 行内子按钮（点赞/收藏/评论等）的按压由按钮自身的 hover-action/tap 承载，
+	// 不带动整卡缩放——否则点按钮时整卡一起缩，看起来像误触了卡片。
+	function pressedFromEvent(e: PointerEvent): boolean {
+		return !(e.target as HTMLElement).closest('button');
+	}
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
@@ -65,7 +71,9 @@
 	role={onClick ? 'button' : undefined}
 	aria-label={onClick ? imageAlt || undefined : undefined}
 	tabindex={onClick ? 0 : undefined}
-	onpointerdown={() => (pressed = true)}
+	onpointerdown={(e) => {
+		if (pressedFromEvent(e)) pressed = true;
+	}}
 	onpointerup={() => (pressed = false)}
 	onpointerleave={() => (pressed = false)}
 	onclick={onClick}

@@ -12,7 +12,8 @@
 		saved,
 		onLike,
 		onSave,
-		onClick
+		onClick,
+		onCommentClick
 	}: {
 		item: FeedItem;
 		liked: boolean;
@@ -20,6 +21,8 @@
 		onLike: () => void;
 		onSave: () => void;
 		onClick?: () => void;
+		/** 评论计数点击（直达详情页评论区）；缺省回退 onClick */
+		onCommentClick?: () => void;
 	} = $props();
 
 	// 卡片可访问名（role=button 的 aria-label 来源）：tag 可为空，回退正文/作者并截断。
@@ -86,7 +89,7 @@
 						aria-label="查看评论"
 						onclick={(e) => {
 							e.stopPropagation();
-							onClick?.();
+							(onCommentClick ?? onClick)?.();
 						}}
 					>
 						<MessageCircle class="size-4"  strokeWidth={1.5} />

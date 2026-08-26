@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { MoreHorizontal, Link2, Send, PencilLine, Trash2 } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
@@ -7,7 +8,7 @@
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
-	import { auth } from '@/stores/auth.svelte';
+	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import RailSection from '@/components/rail/RailSection.svelte';
 	import RailUserRow from '@/components/rail/RailUserRow.svelte';
@@ -185,7 +186,14 @@
 			} catch {
 				// empty data is normal
 			} finally {
-				if (!cancelled) loading = false;
+				if (!cancelled) {
+					loading = false;
+					// 卡片评论按钮深链（?focus=comments）：直达评论区并聚焦输入栏。
+					// rAF 等 loading=false 的 DOM 渲染完成后再定位。
+					if (page.url.searchParams.get('focus') === 'comments') {
+						requestAnimationFrame(() => focusComments());
+					}
+				}
 			}
 		}
 		void fetchMoment();
@@ -200,6 +208,8 @@
 	const handleComment = async () => {
 		const text = input.trim();
 		if (!text) return;
+		// 写操作先过登录闸：匿名提交只会失败回滚，用户侧无任何反馈
+		if (!requireAuth({ action: '评论', targetId: momentId, run: () => void handleComment() })) return;
 		input = '';
 		// Optimistic append; createComment confirms server-side.
 		const optimistic: MomentComment = {
@@ -220,10 +230,11 @@
 		}
 	};
 
-	// 评论点赞：乐观翻转 + reactions/set(target_type='comment')，失败回滚
+	// 评论点赞：登录闸 + 乐观翻转 + reactions/set(target_type='comment')，失败回滚
 	const toggleCommentLike = async (commentId: string) => {
 		const target = apiComments.find((c) => c.id === commentId);
 		if (!target) return;
+		if (!requireAuth({ action: '点赞', targetId: commentId, run: () => void toggleCommentLike(commentId) })) return;
 		const prev = target.liked;
 		apiComments = apiComments.map((c) => (c.id === commentId ? { ...c, liked: !prev } : c));
 		try {
@@ -246,6 +257,7 @@
 	};
 
 	const toggleLike = async () => {
+		if (!requireAuth({ action: '点赞', targetId: momentId, run: () => void toggleLike() })) return;
 		const next = !liked;
 		liked = next;
 		try {
@@ -256,6 +268,7 @@
 	};
 
 	const toggleSave = async () => {
+		if (!requireAuth({ action: '收藏', targetId: momentId, run: () => void toggleSave() })) return;
 		const next = !saved;
 		saved = next;
 		try {
