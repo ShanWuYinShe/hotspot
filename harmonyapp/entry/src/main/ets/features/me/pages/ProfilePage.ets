@@ -35,6 +35,7 @@ import { EmptyState } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
+import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
 import { NfcShareService } from '../../../core/services/NfcShareService';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
@@ -357,7 +358,9 @@ export struct ProfilePage {
     const imgs = moment.images;
     if (imgs !== undefined && imgs !== null && imgs.length > 0) {
       const first = imgs[0];
-      return first.thumbnail_url || first.url;
+      // normalize：相对 /s3/ 路径与本地 host 绝对地址统一改写（与其余页面一致，
+      // 兜底 RDB 缓存/历史数据未经 HttpUtil 网络层改写的场景）
+      return MediaUrlUtil.normalize(first.thumbnail_url || first.url);
     }
     return '';
   }
@@ -942,7 +945,7 @@ export struct ProfilePage {
   private buildViewedMomentThumb(moment: MomentItem) {
     Stack() {
       if (moment.images && moment.images.length > 0) {
-        Image(moment.images[0].url)
+        Image(MediaUrlUtil.normalize(moment.images[0].url))
           .width('100%')
           .height('100%')
           .objectFit(ImageFit.Cover)

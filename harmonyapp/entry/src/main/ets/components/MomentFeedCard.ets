@@ -617,7 +617,15 @@ export struct MomentFeedCard {
         }
       }
       .width('100%')
-      .onClick(() => this.openMomentDetail(this.moment))
+      .onClick(() => {
+        // 宿主页提供预览回调时直达全屏预览（与 grid 模式一致），否则进详情
+        if (this.onImagePreview) {
+          const urls = this.moment.images!.map((m: MomentImage) => m.url);
+          this.onImagePreview!(this.moment.moment_id, urls, 0);
+        } else {
+          this.openMomentDetail(this.moment);
+        }
+      })
     }
   }
 

@@ -9,7 +9,7 @@ import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { useMasterDetail } from '../../../core/responsive/Breakpoint';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { AppRouter, ChatRouteParam, GroupDetailRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, ChatRouteParam, GroupDetailRouteParam, LoginRouteParam, MomentDetailRouteParam, PhotoPreviewRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
@@ -412,7 +412,10 @@ export struct MomentsFeedPage {
             moment: this.hotMoments[0],
             variant: 'postCard',
             showFavorite: false,
-            onOpenDetail: (item: MomentItem) => this.openMomentDetail(item)
+            onOpenDetail: (item: MomentItem) => this.openMomentDetail(item),
+            onImagePreview: (momentId: string, images: string[], index: number) => {
+              this.previewImage(momentId, images, index);
+            }
           })
         }
         .width('100%')
@@ -430,7 +433,10 @@ export struct MomentsFeedPage {
             moment: moment,
             variant: 'default',
             showFavorite: false,
-            onOpenDetail: (item: MomentItem) => this.openMomentDetail(item)
+            onOpenDetail: (item: MomentItem) => this.openMomentDetail(item),
+            onImagePreview: (momentId: string, images: string[], index: number) => {
+              this.previewImage(momentId, images, index);
+            }
           })
           .padding({
             left: DesignConstants.SPACING.LG,
@@ -823,6 +829,15 @@ export struct MomentsFeedPage {
     const params = new MomentDetailRouteParam();
     params.momentId = moment.moment_id;
     AppRouter.push(PageNames.MOMENT_DETAIL, params);
+  }
+
+  // 卡片图片点击直达全屏大图预览（与"我的瞬间"/详情页入口一致）
+  private previewImage(momentId: string, images: string[], index: number): void {
+    const previewParams = new PhotoPreviewRouteParam();
+    previewParams.momentId = momentId;
+    previewParams.images = images;
+    previewParams.index = index;
+    AppRouter.push(PageNames.PHOTO_PREVIEW, previewParams);
   }
 
   private openUserProfile(user: UserItem): void {
