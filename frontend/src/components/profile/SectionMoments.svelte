@@ -5,7 +5,6 @@
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import MediaPlaceholder from '@/components/data-display/MediaPlaceholder.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
-	import ImageViewer from '@/components/overlays/ImageViewer.svelte';
 	import { openComposer } from '@/stores/composer.svelte';
 	import { useGalleryMoments, useReactedMoments, useFavoriteMoments, type GalleryMoment } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -33,19 +32,6 @@
 	};
 	const featured = $derived(archive[0]);
 	const remaining = $derived(archive.slice(1));
-
-	// 大图查看器状态
-	let viewerOpen = $state(false);
-	let viewerIndex = $state(0);
-	let viewerImages = $state<{ url: string; alt?: string }[]>([]);
-
-	/** 打开某条瞬间的大图查看器（无图动态忽略） */
-	function openViewer(m: GalleryMoment, startAt = 0) {
-		if (m.images.length === 0) return;
-		viewerImages = m.images.map((url) => ({ url, alt: m.title || '瞬间图片' }));
-		viewerIndex = Math.min(startAt, viewerImages.length - 1);
-		viewerOpen = true;
-	}
 	// 年份取档案内最新一条的创建年份，避免硬编码过期
 	const archiveYear = $derived(
 		featured?.created_at ? new Date(featured.created_at).getFullYear() : new Date().getFullYear()
@@ -123,38 +109,17 @@
 				     hover 反馈（外边缘 accent 边框）绑定整卡按钮而非图片容器：
 				     鼠标在卡片任意位置（含文本区）反馈持续。 -->
 				{#if featured}
-					<!-- role=button 容器（非原生 button）：图片区可嵌独立点击（大图查看），
-					     与 NearbyImageCard 的行内动作模式一致。 -->
-					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<div
-						role="button"
-						tabindex="0"
+					<!-- 整卡跳转动态详情（大图查看在详情页内），原生 button 承载键盘/焦点语义 -->
+					<button
+						type="button"
 						onclick={() => void goto(`${ROUTES.moment(featured.id)}?from=me`)}
-						onkeydown={(e) => {
-							if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
-								e.preventDefault();
-								void goto(`${ROUTES.moment(featured.id)}?from=me`);
-							}
-						}}
-						class="relative block w-full cursor-pointer overflow-hidden rounded-lg border border-border-default bg-surface-primary shadow-raised-md text-left transition-colors hover:border-accent-default focus-ring"
+						class="relative block w-full overflow-hidden rounded-lg border border-border-default bg-surface-primary shadow-raised-md text-left transition-colors hover:border-accent-default focus-ring"
 						aria-label="查看精选瞬间"
 					>
 						<div class="lg:grid lg:grid-cols-[minmax(0,1.38fr)_minmax(280px,0.62fr)]">
 							<div class="tap-97 relative aspect-[16/10] overflow-hidden lg:aspect-auto lg:min-h-97.5 bg-surface-page" >
 								{#if featured.img}
-									<!-- svelte-ignore a11y_click_events_have_key_events -->
-									<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-									<img
-										src={featured.img}
-										alt="本期精选瞬间"
-										loading="lazy"
-										class="h-full w-full cursor-zoom-in object-cover"
-										onclick={(e) => {
-											e.stopPropagation();
-											openViewer(featured);
-										}}
-									/>
+									<img src={featured.img} alt="本期精选瞬间" loading="lazy" class="h-full w-full object-cover" />
 								{:else}
 									<!-- 无图瞬间占位（禁止 <img src=""> 破图） -->
 									<MediaPlaceholder iconSize={28} label="无图瞬间" />
@@ -178,7 +143,7 @@
 									</div>
 								</div>
 							</div>
-						</div>
+						</button>
 					{/if}
 
 				<!-- 近期条目（对齐 Figma Recent entries：4-col grid，item0 span 2） -->
@@ -193,53 +158,32 @@
 
 					<div class="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
 				{#each remaining as moment, index (moment.id)}
-					<!-- 同 featured：role=button 容器以支持图片区独立点击（大图查看） -->
-					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<div
-						role="button"
-						tabindex="0"
+					<!-- 同 featured：整卡跳转动态详情 -->
+					<button
+						type="button"
 						onclick={() => void goto(`${ROUTES.moment(moment.id)}?from=me`)}
-						onkeydown={(e) => {
-							if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
-								e.preventDefault();
-								void goto(`${ROUTES.moment(moment.id)}?from=me`);
-							}
-						}}
-						class="relative cursor-pointer overflow-hidden rounded-md border border-border-default bg-surface-primary shadow-raised-md text-left transition-colors hover:border-accent-default focus-ring {index === 0 ? 'col-span-2' : ''}"
+						class="relative overflow-hidden rounded-md border border-border-default bg-surface-primary shadow-raised-md text-left transition-colors hover:border-accent-default focus-ring {index === 0 ? 'col-span-2' : ''}"
 						aria-label="查看瞬间详情"
 					>
-							<div class="tap-97 relative overflow-hidden {index === 0 ? 'aspect-[16/8]' : 'aspect-square'} bg-surface-page" >
-									{#if moment.img}
-										<!-- svelte-ignore a11y_click_events_have_key_events -->
-										<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-										<img
-											src={moment.img}
-											alt={moment.title || '瞬间图片'}
-											loading="lazy"
-											class="h-full w-full cursor-zoom-in object-cover"
-											onclick={(e) => {
-												e.stopPropagation();
-												openViewer(moment);
-											}}
-										/>
-									{:else}
-										<MediaPlaceholder iconSize={18} />
-									{/if}
-								</div>
-							<div class="flex items-center justify-between gap-2 px-3 py-2.5">
-								<p class="truncate text-xs text-text-primary">{moment.title || '瞬间'}</p>
-								<div class="flex shrink-0 items-center gap-2 text-xxs text-text-secondary">
-									<span class="flex items-center gap-0.5"><Heart class="size-3" strokeWidth={1.75} />{moment.likes}</span>
-									<span class="flex items-center gap-0.5"><MessageCircle class="size-3" strokeWidth={1.75} />{moment.comments}</span>
-								</div>
+						<div class="tap-97 relative overflow-hidden {index === 0 ? 'aspect-[16/8]' : 'aspect-square'} bg-surface-page" >
+							{#if moment.img}
+								<img src={moment.img} alt={moment.title || '瞬间图片'} loading="lazy" class="h-full w-full object-cover" />
+							{:else}
+								<MediaPlaceholder iconSize={18} />
+							{/if}
+						</div>
+						<div class="flex items-center justify-between gap-2 px-3 py-2.5">
+							<p class="truncate text-xs text-text-primary">{moment.title || '瞬间'}</p>
+							<div class="flex shrink-0 items-center gap-2 text-xxs text-text-secondary">
+								<span class="flex items-center gap-0.5"><Heart class="size-3" strokeWidth={1.75} />{moment.likes}</span>
+								<span class="flex items-center gap-0.5"><MessageCircle class="size-3" strokeWidth={1.75} />{moment.comments}</span>
 							</div>
 						</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		{/if}
+					</button>
+					{/each}
+				</div>
+			{/if}
+		</div>
+	{/if}
 </div>
 
-<ImageViewer bind:open={viewerOpen} images={viewerImages} bind:index={viewerIndex} />

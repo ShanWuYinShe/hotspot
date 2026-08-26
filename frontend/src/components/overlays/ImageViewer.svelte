@@ -3,8 +3,9 @@
 	import { ChevronLeft, ChevronRight, X } from '@lucide/svelte';
 
 	// ImageViewer — 全屏大图查看器（对齐 harmonyapp PhotoPreviewPage 的交互集合的 Web 版）。
-	// 能力：多图轮播（按钮/键盘/未放大时横向滑动）、双击与滚轮缩放（1x~4x）、
-	// 放大后拖拽平移、缩略图条与页码、Esc/点击背景关闭。
+	// 能力：多图轮播（按钮/键盘/未放大时横向滑动）、单击图片切换放大（以点击位置为锚，
+	// 对齐 Google Photos 网页版习惯）、滚轮连续缩放（1x~4x）、放大后拖拽平移、
+	// 缩略图条与页码、Esc/点击背景关闭。
 	// 底座用 bits-ui Dialog：Escape、外部点击、焦点圈、滚动锁由其统一提供，
 	// 入出场动画沿用项目弹层契约（fade + zoom）。
 	export interface ViewerImage {
@@ -24,13 +25,18 @@
 		onClose?: () => void;
 	} = $props();
 
-	// 缩放/平移状态（切换图片时重置）
+	// 缩放/平移状态（切换图片时重置）。originX/Y 是缩放锚点（图片内百分比），
+	// 单击/滚轮缩放都锚定在指针位置，复位回中心。
 	let scale = $state(1);
+	let originX = $state(50);
+	let originY = $state(50);
 	let panX = $state(0);
 	let panY = $state(0);
 	let dragging = $state(false);
 	// 指针拖拽起点（缩放态平移 / 常规态横向滑动切图共用）
 	let dragStart = { x: 0, y: 0, panX: 0, panY: 0, moved: false };
+	// 拖拽/滑动结束后的 click 不再触发缩放（click 在 pointerup 后补发）
+	let suppressClick = false;
 
 	const MAX_SCALE = 4;
 	const count = $derived(images.length);
@@ -40,6 +46,8 @@
 		// 图片切换时重置缩放视口
 		index;
 		scale = 1;
+		originX = 50;
+		originY = 50;
 		panX = 0;
 		panY = 0;
 	});
@@ -49,19 +57,43 @@
 		index = (index + delta + count) % count;
 	}
 
-	function toggleZoom() {
-		scale = scale > 1 ? 1 : 2;
-		panX = 0;
-		panY = 0;
+	/** 指针事件位置 → 图片内锚点百分比 */
+	function originAt(e: MouseEvent, el: HTMLElement) {
+		const rect = el.getBoundingClientRect();
+		if (rect.width === 0 || rect.height === 0) return;
+		originX = ((e.clientX - rect.left) / rect.width) * 100;
+		originY = ((e.clientY - rect.top) / rect.height) * 100;
+	}
+
+	/** 单击图片：1x ↔ 2x 切换放大，锚定点击位置 */
+	function onImageClick(e: MouseEvent) {
+		if (suppressClick) {
+			suppressClick = false;
+			return;
+		}
+		const el = e.currentTarget as HTMLElement;
+		if (scale > 1) {
+			scale = 1;
+			panX = 0;
+			panY = 0;
+			originX = 50;
+			originY = 50;
+		} else {
+			originAt(e, el);
+			scale = 2;
+		}
 	}
 
 	function onWheel(e: WheelEvent) {
 		e.preventDefault();
+		originAt(e, e.currentTarget as HTMLElement);
 		const next = Math.min(MAX_SCALE, Math.max(1, scale - e.deltaY * 0.0025));
 		scale = next;
 		if (next === 1) {
 			panX = 0;
 			panY = 0;
+			originX = 50;
+			originY = 50;
 		}
 	}
 
@@ -86,10 +118,14 @@
 	function onPointerUp(e: PointerEvent) {
 		if (!dragging) return;
 		dragging = false;
-		if (scale === 1 && dragStart.moved && count > 1) {
-			// 未放大时的横向滑动 = 切图（纵向滑动忽略，避免误切）
-			const dx = e.clientX - dragStart.x;
-			if (Math.abs(dx) > 48) step(dx < 0 ? 1 : -1);
+		if (dragStart.moved) {
+			// 拖拽平移 / 滑动切图结束，紧随的 click 不触发缩放
+			suppressClick = true;
+			if (scale === 1 && count > 1) {
+				// 未放大时的横向滑动 = 切图（纵向滑动忽略，避免误切）
+				const dx = e.clientX - dragStart.x;
+				if (Math.abs(dx) > 48) step(dx < 0 ? 1 : -1);
+			}
 		}
 	}
 
@@ -146,18 +182,17 @@
 						src={current.url}
 						alt={current.alt ?? ''}
 						draggable="false"
-						class="max-h-full max-w-full object-contain transition-transform duration-instant ease-standard"
-						style="transform:translate({panX}px, {panY}px) scale({scale});cursor:{dragging ? 'grabbing' : scale > 1 ? 'grab' : 'zoom-in'};"
+						class="max-h-full max-w-full object-contain"
+						style="transform:translate({panX}px, {panY}px) scale({scale});transform-origin:{originX}% {originY}%;cursor:{dragging ? 'grabbing' : scale > 1 ? 'grab' : 'zoom-in'};transition:{dragging ? 'none' : 'transform var(--cst-motion-instant) var(--cst-ease-standard)'};"
 						onwheel={onWheel}
-						ondblclick={(e) => {
-							e.stopPropagation();
-							toggleZoom();
-						}}
 						onpointerdown={onPointerDown}
 						onpointermove={onPointerMove}
 						onpointerup={onPointerUp}
 						onpointercancel={onPointerUp}
-						onclick={(e) => e.stopPropagation()}
+						onclick={(e) => {
+							e.stopPropagation();
+							onImageClick(e);
+						}}
 					/>
 				{/if}
 

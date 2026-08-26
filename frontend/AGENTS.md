@@ -528,9 +528,10 @@ theme/
 - **计数变化反馈**：点赞/评论等瞬时数值变化用 `count-pop` 类 + `{#key 值}` 重建元素
   触发弹跳（utilities.css cst-count-pop，snappy + bounce，自动遵循 reduced-motion）。
 - **大图查看统一入口**：任何"点击查看大图"交互一律复用 `components/overlays/ImageViewer`
-  （bits-ui Dialog 底座：Esc/外点关闭、左右键/滑动切图、双击与滚轮缩放、缩略图条），
-  禁止各页自建 lightbox。已接入：附近动态卡片、动态详情（含多图网格）、我的瞬间画廊、
-  他人主页画廊。
+  （bits-ui Dialog 底座：Esc/外点关闭、左右键/滑动切图、单击图片切换放大（以点击
+  位置为锚）与滚轮连续缩放、放大后拖拽平移、缩略图条），禁止各页自建 lightbox。
+  **入口仅限动态详情页**（单图封面/多图网格）；列表卡片与画廊一律整卡跳详情，
+  不在卡片上直接开大图。
 - **地图筛选菜单统一**：`map/shared/MapFilterMenu.svelte` 是桌面/移动唯一筛选实现
   （Popover 外点/Escape 关闭、徽章、至少一项约束、「全部显示」重置）；地图空白点击
   一律经 `MapCanvas onMapTap`（内部区分拖拽，拖动不误触），禁止父级用原生 onclick 判定。

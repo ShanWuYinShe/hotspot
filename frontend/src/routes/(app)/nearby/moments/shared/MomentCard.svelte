@@ -12,8 +12,7 @@
 		saved,
 		onLike,
 		onSave,
-		onClick,
-		onImageClick
+		onClick
 	}: {
 		item: FeedItem;
 		liked: boolean;
@@ -21,8 +20,6 @@
 		onLike: () => void;
 		onSave: () => void;
 		onClick?: () => void;
-		/** 图片区域独立点击（打开大图查看器）；缺省时整卡点击均为 onClick */
-		onImageClick?: () => void;
 	} = $props();
 
 	// 卡片可访问名（role=button 的 aria-label 来源）：tag 可为空，回退正文/作者并截断。
@@ -33,7 +30,6 @@
 	imageSrc={item.image ?? item.avatar}
 	imageAlt={cardLabel}
 	{onClick}
-	{onImageClick}
 	class="aspect-[4/3] rounded-md"
 >
 	{#snippet placeholder()}
