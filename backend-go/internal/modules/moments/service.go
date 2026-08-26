@@ -141,10 +141,16 @@ func (s *Service) ListCreated(ctx context.Context, req ListCreatedMomentsRequest
 		return PaginatedOwnerMoments{}, err
 	}
 	items := make([]OwnerMomentItem, 0, len(result.Items))
+	// 图片批量 hydrate（单次查询，与 feed 路径一致），再转拥有者视角。
+	s.hydrateImagesBatch(ctx, result.Items)
 	for i := range result.Items {
 		item := result.Items[i]
-		s.hydrateImages(ctx, &item)
-		items = append(items, toOwnerMoment(item))
+		ownerItem := toOwnerMoment(item)
+		// 恒定数组形状：images/tags/mentions 为空时序列化 [] 而非 null（spec 恒定形状，
+		// 与 feed 的 ensureMomentArraysBatch 对齐；OwnerMomentItem 此前缺失该步骤，
+		// 无图动态下发 images:null 会被客户端渲染成空 src 图片）。
+		ensureOwnerMomentArrays(&ownerItem)
+		items = append(items, ownerItem)
 	}
 	s.fillReactionsBatchOwnerMoment(ctx, items, principal.UserID)
 	return PaginatedOwnerMoments{Items: items, NextCursor: result.NextCursor}, nil
@@ -373,10 +379,15 @@ func (s *Service) validateImageOwnership(ctx context.Context, userID string, fil
 
 // hydrateImages fills a single moment's images in place via the shared helper.
 func (s *Service) hydrateImages(ctx context.Context, item *MomentItem) {
-	if s.images == nil || item == nil {
+	if item == nil {
 		return
 	}
-	HydrateSingleMoment(ctx, s.repo, s.images, item)
+	if s.images != nil {
+		HydrateSingleMoment(ctx, s.repo, s.images, item)
+	}
+	// 单条出口（detail/create/update）统一保证恒定数组形状：images/tags/mentions
+	// 为空时序列化 [] 而非 null（spec 恒定形状，与 feed 的 ensureMomentArraysBatch 对齐）。
+	ensureMomentArrays(item)
 }
 
 // hydrateImagesBatch fills a slice of moments' images in place via one query.

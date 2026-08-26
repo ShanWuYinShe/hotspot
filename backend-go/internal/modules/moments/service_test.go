@@ -420,6 +420,27 @@ func TestServiceListCreatedDefaultLimit(t *testing.T) {
 	}
 }
 
+// TestServiceListCreatedEnsuresArrayShape：无图动态的 images/tags/mentions 必须
+// 序列化为 [] 而非 null（spec 恒定形状；此前 ListCreated 缺失该步骤，客户端把
+// null 渲染成空 src 图片 → 我的瞬间页破图）。
+func TestServiceListCreatedEnsuresArrayShape(t *testing.T) {
+	repo := &stubMomentRepo{
+		listMineRes: PaginatedMoments{Items: []MomentItem{{MomentID: "m1"}}},
+	}
+	svc := NewServiceWithRepo(repo)
+	result, err := svc.ListCreated(momentCtx("u1"), ListCreatedMomentsRequest{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	item := result.Items[0]
+	if item.Images == nil || len(item.Images) != 0 {
+		t.Fatalf("expected images to be empty slice, got %#v", item.Images)
+	}
+	if item.Tags == nil || item.Mentions == nil {
+		t.Fatalf("expected tags/mentions to be empty slices, got tags=%#v mentions=%#v", item.Tags, item.Mentions)
+	}
+}
+
 func TestServiceOpenTheDoorLoadsMyState(t *testing.T) {
 	expected := ownedMoment()
 	myState := &MyMomentState{IsFavorited: true}
