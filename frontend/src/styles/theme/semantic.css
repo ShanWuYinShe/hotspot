@@ -17,7 +17,6 @@
   --cst-surface-primary: var(--cst-palette-bg);
   --cst-surface-page: var(--cst-palette-page-bg);
   --cst-surface-workspace: var(--cst-palette-workspace-bg);
-  --cst-surface-overlay-soft: var(--cst-palette-overlay-soft);
   --cst-surface-overlay-strong: var(--cst-palette-overlay-strong);
 
   /* Accent / Interactive */
@@ -77,10 +76,8 @@
   --cst-navigation-content-active: var(--cst-accent-default);
   --cst-navigation-active-indicator: var(--cst-accent-default);
   --cst-surface-navigation-hover: var(--cst-surface-hover);
-  --cst-elevation-navigation-active: 0 2px 10px var(--cst-glow-accent);
   --cst-elevation-side-sheet: -8px 0 40px rgba(0, 0, 0, 0.22);
   --cst-border-subtle: var(--cst-border-default);
   --cst-interactive-hover-fill: var(--cst-interactive-hover);
-  --cst-interactive-hover-overlay: var(--cst-interactive-hover);
   --cst-interactive-active-fill: var(--cst-interactive-active);
 }

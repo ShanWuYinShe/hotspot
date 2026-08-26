@@ -81,7 +81,6 @@
   --color-navigation-active-indicator: var(--cst-navigation-active-indicator);
   --color-surface-overlay: var(--cst-surface-overlay);
   --color-surface-overlay-strong: var(--cst-surface-overlay-strong);
-  --color-surface-overlay-soft: var(--cst-surface-overlay-soft);
   /* 卡片菜单表面/描边（UserCard 在线点 ring-2 ring-surface-card-menu 等类消费） */
   --color-surface-card-menu: var(--cst-surface-card-menu);
   --color-border-card-menu: var(--cst-border-card-menu);
