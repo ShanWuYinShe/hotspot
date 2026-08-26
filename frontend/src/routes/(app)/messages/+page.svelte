@@ -248,30 +248,33 @@
 			<!-- Chat list（List 契约：分栏内连接列表，行无独立边框。
 			     每行外层 px-3 py-1 包裹——对齐 Figma MessagesPage：行间有呼吸间距，
 			     选中态 glow 不与相邻行重叠，分隔线嵌在间距中不显突兀） -->
-			{#if loading}
+			{#if loadError}
+				<div class="flex flex-1 flex-col items-center justify-center px-4 py-10">
+					<LoadError message={loadError} onRetry={() => reloadKey++} />
+				</div>
+			{:else if loading}
 				<div class="flex flex-1 flex-col items-center justify-center gap-3 py-20">
 					<div class="spinner size-7"></div>
 					<p class="text-text-secondary text-sm">加载会话…</p>
 				</div>
-			{:else}
-			<ListContainer class="flex-1 overflow-y-auto no-scrollbar py-2">
-				{#each filtered as chat (chat.id)}
-					<div class="px-2 py-1">
-						<ChatListItem
-							chat={chat}
-							isSelected={selectedId === chat.id}
-							onClick={() => selectChat(chat)}
-							onTogglePin={() => togglePin(chat)}
-							compact
-						/>
-					</div>
-				{/each}
-			</ListContainer>
-			{#if filtered.length === 0}
+			{:else if filtered.length === 0}
 				<div class="flex flex-1 items-center justify-center py-16">
 					<p class="text-text-secondary text-sm">暂无会话，点右上角 + 发起新会话</p>
 				</div>
-			{/if}
+			{:else}
+				<ListContainer class="flex-1 overflow-y-auto no-scrollbar py-2">
+					{#each filtered as chat (chat.id)}
+						<div class="px-2 py-1">
+							<ChatListItem
+								chat={chat}
+								isSelected={selectedId === chat.id}
+								onClick={() => selectChat(chat)}
+								onTogglePin={() => togglePin(chat)}
+								compact
+							/>
+						</div>
+					{/each}
+				</ListContainer>
 			{/if}
 		</div>
 

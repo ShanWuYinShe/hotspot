@@ -302,14 +302,14 @@ func validateAuditFilter(req AuditLogListRequest) (AuditLogFilter, *httpx.APIErr
 		filter.Pagination = *req.Pagination
 	}
 	if strings.TrimSpace(req.StartTime) != "" {
-		parsed, err := time.Parse(time.RFC3339, strings.TrimSpace(req.StartTime))
+		parsed, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(req.StartTime))
 		if err != nil {
 			return AuditLogFilter{}, httpx.InvalidRequest("参数错误")
 		}
 		filter.StartTime = &parsed
 	}
 	if strings.TrimSpace(req.EndTime) != "" {
-		parsed, err := time.Parse(time.RFC3339, strings.TrimSpace(req.EndTime))
+		parsed, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(req.EndTime))
 		if err != nil {
 			return AuditLogFilter{}, httpx.InvalidRequest("参数错误")
 		}

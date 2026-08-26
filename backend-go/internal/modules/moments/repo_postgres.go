@@ -510,7 +510,7 @@ func decodeMomentFavoriteCursor(cursorValue string) (any, string, error) {
 	if err := cursor.Decode(momentFavoriteCursorNamespace, cursorValue, &decoded); err != nil || decoded.At == "" || decoded.ID == "" {
 		return nil, "", ErrInvalidCursor
 	}
-	favoritedAt, err := time.Parse(time.RFC3339, decoded.At)
+	favoritedAt, err := time.Parse(time.RFC3339Nano, decoded.At)
 	if err != nil {
 		return nil, "", ErrInvalidCursor
 	}

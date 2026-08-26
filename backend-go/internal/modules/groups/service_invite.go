@@ -78,7 +78,7 @@ func inviteExpired(invite GroupInviteItem) bool {
 	if invite.ExpiresAt == nil || *invite.ExpiresAt == "" {
 		return false
 	}
-	expiresAt, err := time.Parse(time.RFC3339, *invite.ExpiresAt)
+	expiresAt, err := time.Parse(time.RFC3339Nano, *invite.ExpiresAt)
 	if err != nil {
 		return false
 	}

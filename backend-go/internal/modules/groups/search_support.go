@@ -108,7 +108,7 @@ func groupCreatedAt(item GroupItem) time.Time {
 	if item.CreatedAt == nil || *item.CreatedAt == "" {
 		return time.Time{}
 	}
-	parsed, err := time.Parse(time.RFC3339, *item.CreatedAt)
+	parsed, err := time.Parse(time.RFC3339Nano, *item.CreatedAt)
 	if err != nil {
 		return time.Time{}
 	}
@@ -123,7 +123,7 @@ func matchesSearchCursor(meta groupSearchMeta, item GroupItem, cursor groupSearc
 		}
 		return item.Group.GroupID > cursor.GroupID
 	case searchSortNewest:
-		cursorTime, _ := time.Parse(time.RFC3339, cursor.CreatedAt)
+		cursorTime, _ := time.Parse(time.RFC3339Nano, cursor.CreatedAt)
 		if !meta.CreatedAt.Equal(cursorTime) {
 			return meta.CreatedAt.Before(cursorTime)
 		}

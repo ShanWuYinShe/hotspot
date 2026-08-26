@@ -91,7 +91,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "Search", httpx.Forbidden(httpx.ReasonPrivacySetting, "权限不足"))
 			return
 		}
 		httpx.WriteAPIError(w, r, "Search", err)
@@ -121,7 +121,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "Update", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -147,7 +147,7 @@ func (h *Handler) Dismiss(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "Dismiss", httpx.Forbidden(httpx.ReasonNotGroupOwner, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -259,7 +259,7 @@ func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "JoinGroup", httpx.Forbidden(httpx.ReasonPrivacySetting, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -338,7 +338,7 @@ func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "UpdateAnnouncement", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
 			return
 		}
 		if errors.Is(err, ErrAnnouncementNotFound) {
@@ -364,7 +364,7 @@ func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "DeleteAnnouncement", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -385,11 +385,11 @@ func (h *Handler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrNotMember) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "不是群成员"))
+			httpx.WriteAPIError(w, r, "UpdatePreferences", httpx.Forbidden(httpx.ReasonNotGroupMember, "不是群成员"))
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "UpdatePreferences", httpx.Forbidden(httpx.ReasonNotGroupMember, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))

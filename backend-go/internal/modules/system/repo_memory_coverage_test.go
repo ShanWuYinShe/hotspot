@@ -95,7 +95,7 @@ func TestInMemoryRepositoryGetMetaAndHealth(t *testing.T) {
 	if code != 0 || message != "" || status == nil || status.Status != SystemHealthHealthy {
 		t.Fatalf("unexpected health: %d %q %#v", code, message, status)
 	}
-	if _, err := time.Parse(time.RFC3339, status.Timestamp); err != nil {
+	if _, err := time.Parse(time.RFC3339Nano, status.Timestamp); err != nil {
 		t.Fatalf("health timestamp not RFC3339: %q", status.Timestamp)
 	}
 }

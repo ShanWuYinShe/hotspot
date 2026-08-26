@@ -41,19 +41,23 @@
 		localStorage.setItem('search_recent', JSON.stringify(recent));
 	});
 
-	// 发现态的热门搜索/推荐话题来自 search/suggest（spec SearchSuggestRequest 必填
-	// prefix——传当前输入词，空串表示未输入时的默认建议；无定位上下文时
-	// reference_point 传 null，由服务端按回退链解析；types=[] 表示全部类型）。
-	// 与结果搜索同为 300ms 防抖。
+	// 发现态的热门搜索/推荐话题来自 search/suggest（spec SearchSuggestRequest prefix 1-50 必填），
+	// 空查询不调 suggest（spec 空串会 10000），沿用本地 recent/空面板；有输入时仅取 tag 类型联想，
+	// 避免混合类型下 `payload.name` 对 user/moment 字段丢失（user→nickname、moment→description_preview）。
 	$effect(() => {
 		const prefix = keyword;
+		if (!prefix) {
+			discoveryHot = [];
+			discoveryTopics = [];
+			return;
+		}
 		let cancelled = false;
 		const timer = setTimeout(() => {
-			void searchSuggest({ prefix, reference_point: null, types: [], radius: null }).then((res) => {
+			void searchSuggest({ prefix, reference_point: null, types: ['tag'], radius: null }).then((res) => {
 				if (cancelled) return;
-				const suggest = res as { code: number; data?: { items?: Array<{ payload?: { name?: string } }> } | null };
+				const suggest = res as unknown as { code: number; data?: { items?: Array<{ payload?: { name?: string } }> } | null };
 				const items = suggest.code === 0 ? suggest.data?.items ?? [] : [];
-				const names = items.map((i) => i.payload?.name ?? '').filter(Boolean);
+				const names = items.map((i) => i.payload?.name ?? '').filter(Boolean) as string[];
 				discoveryHot = names;
 				discoveryTopics = names;
 			});

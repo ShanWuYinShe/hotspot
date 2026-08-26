@@ -43,7 +43,7 @@ func (r *PostgresRepository) ListFollowingMoments(ctx context.Context, query mom
 	if decoded != nil {
 		cursorID = decoded.ID
 		if decoded.CreatedAt != "" {
-			if parsed, parseErr := time.Parse(time.RFC3339, decoded.CreatedAt); parseErr == nil {
+			if parsed, parseErr := time.Parse(time.RFC3339Nano, decoded.CreatedAt); parseErr == nil {
 				cursorAt = parsed.UTC()
 			}
 		}

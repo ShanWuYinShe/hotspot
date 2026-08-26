@@ -475,7 +475,7 @@ func (r *InMemoryRepository) ListFollowingMoments(_ context.Context, query momen
 		if !followed[m.User.UserID] || m.PrivacyLevel != "public" || m.IsDeleted {
 			continue
 		}
-		createdAt, parseErr := time.Parse(time.RFC3339, m.CreatedAt)
+		createdAt, parseErr := time.Parse(time.RFC3339Nano, m.CreatedAt)
 		if parseErr != nil {
 			continue
 		}
@@ -494,7 +494,7 @@ func (r *InMemoryRepository) ListFollowingMoments(_ context.Context, query momen
 	sort.SliceStable(candidates, func(i, j int) bool { return compareFollowingCandidates(candidates[i], candidates[j]) < 0 })
 	// keyset 定位：跳过游标项及之前的所有项。
 	if decoded != nil {
-		parsedAt, _ := time.Parse(time.RFC3339, decoded.CreatedAt)
+		parsedAt, _ := time.Parse(time.RFC3339Nano, decoded.CreatedAt)
 		start := 0
 		for idx, item := range candidates {
 			cmp := compareFollowingCandidates(item, momentCandidate{Item: MomentItem{MomentID: decoded.ID}, CreatedAt: parsedAt.UTC()})
@@ -527,7 +527,7 @@ func (r *InMemoryRepository) ListNearbyMoments(_ context.Context, query momentsQ
 		if distance > query.Radius {
 			continue
 		}
-		createdAt, parseErr := time.Parse(time.RFC3339, m.CreatedAt)
+		createdAt, parseErr := time.Parse(time.RFC3339Nano, m.CreatedAt)
 		if parseErr != nil {
 			continue
 		}

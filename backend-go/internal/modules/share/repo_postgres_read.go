@@ -175,7 +175,7 @@ func isExpired(expiresAt string) bool {
 	if expiresAt == "" {
 		return false
 	}
-	t, err := time.Parse(time.RFC3339, expiresAt)
+	t, err := time.Parse(time.RFC3339Nano, expiresAt)
 	if err != nil {
 		return false
 	}

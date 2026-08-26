@@ -67,6 +67,8 @@ export enum ServerEventType {
   MOMENT_COMMENTED = 'MomentCommented',
   COMMENT_REPLY = 'CommentReply',
   MESSAGE_MENTIONED = 'MessageMentioned',
+  CONTENT_MENTIONED = 'ContentMentioned',
+  GROUP_MESSAGE_MENTIONED = 'GroupMessageMentioned',
 
   // 私聊
   PRIVATE_MESSAGE_NEW = 'PrivateMessageNew',
@@ -951,6 +953,7 @@ export type ServerEvent =
   | MomentCommentedEvent
   | CommentReplyEvent
   | MessageMentionedEvent
+  | GroupMessageMentionedEvent
   | UserProfileUpdatedEvent
   | SystemAnnouncementEvent
   | AccountBannedEvent

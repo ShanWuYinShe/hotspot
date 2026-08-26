@@ -55,7 +55,7 @@ func (errReader) Read([]byte) (int, error) { return 0, io.ErrUnexpectedEOF }
 
 func mustParseTime(t *testing.T, s string) time.Time {
 	t.Helper()
-	parsed, err := time.Parse(time.RFC3339, s)
+	parsed, err := time.Parse(time.RFC3339Nano, s)
 	if err != nil {
 		t.Fatalf("parse time %q: %v", s, err)
 	}

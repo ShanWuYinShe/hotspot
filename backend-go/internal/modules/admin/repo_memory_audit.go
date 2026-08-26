@@ -127,7 +127,7 @@ func cloneAuditDetails(details AuditDetails) AuditDetails {
 }
 
 func timeFromRFC3339(value string) time.Time {
-	parsed, err := time.Parse(time.RFC3339, value)
+	parsed, err := time.Parse(time.RFC3339Nano, value)
 	if err != nil {
 		return time.Time{}
 	}

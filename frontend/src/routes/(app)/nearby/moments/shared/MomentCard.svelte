@@ -80,7 +80,9 @@
 						}}
 					>
 						<Heart class="size-4"  strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
-						<span class="text-xs">{item.likes + (liked ? 1 : 0)}</span>
+						{#key item.likes + (liked ? 1 : 0)}
+							<span class="count-pop text-xs">{item.likes + (liked ? 1 : 0)}</span>
+						{/key}
 					</button>
 					<!-- 评论计数：可点进入动态详情（评论区在详情页内） -->
 					<button

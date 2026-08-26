@@ -9,7 +9,8 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
@@ -52,6 +53,7 @@ const LOCATION_NAME_MAX: number = 100;
 @Component
 export struct CreateGroupPage {
   pathStack: NavPathStack = new NavPathStack();
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_LOCATION_PICK_RESULT) pickResult: LocationInfo | null = null;
@@ -132,7 +134,7 @@ export struct CreateGroupPage {
     return AppThemeVisuals.resolveInputBorder({
       backgroundColor: this.getSurfaceSubtle(),
       borderColor: this.getSurfaceBorder(),
-      borderWidth: 1,
+      borderWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
       borderRadius: DesignConstants.SHAPE.INPUT,
       shadow: { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 },
       height: DesignConstants.COMPONENT.INPUT_HEIGHT,
@@ -341,7 +343,7 @@ export struct CreateGroupPage {
 
   build() {
     NavDestination() {
-    ResponsiveContainer({ fill: true }) {
+    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint }) {
     Stack() {
       Column() {
         // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回）

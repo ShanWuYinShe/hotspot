@@ -16,11 +16,13 @@ import { SystemPageHeader, PageHeaderAction } from '../../../components/SystemPa
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppIcon } from '../../../components/SystemIcon';
-import { KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
+import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { AccountInfo } from '../../../core/types/api';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import { AppThemeVisuals, InputBorderResolution } from '../../../core/theme/AppThemeVisuals';
 import { validateField, FieldRule } from '../../../core/util/FormValidator';
+import { ApiClient } from '../../../core/api/ApiClient';
+import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 
 const TAG_OPTIONS: string[] = ['摄影', '旅行', '音乐', '美食', '运动', '阅读', '艺术', '科技', '游戏', '户外', '时尚', '电影'];
 const MAX_TAGS: number = 5;
@@ -127,18 +129,44 @@ export struct ProfileEditPage {
     return !this.isTagSelected(tag) && !this.canSelectMoreTags();
   }
 
-  private handleSave(): void {
+  private async handleSave(): Promise<void> {
     this.nicknameTouched = true;
     this.bioTouched = true;
     const trimmedNickname = this.nickname.trim();
+    const trimmedBio = this.bio.trim();
     if (!trimmedNickname) {
       SystemToast.showWarning('昵称不能为空', this.getUIContext());
       return;
     }
-
+    const nicknameError = validateField(trimmedNickname, NICKNAME_RULES);
+    if (nicknameError) {
+      SystemToast.showWarning(nicknameError, this.getUIContext());
+      return;
+    }
+    const bioError = validateField(trimmedBio, BIO_RULES);
+    if (bioError) {
+      SystemToast.showWarning(bioError, this.getUIContext());
+      return;
+    }
+    if (this.isSaving || this.isSaved) {
+      return;
+    }
     this.isSaving = true;
-    // 模拟保存动画
-    this.saveAnimTimer = setTimeout(() => {
+    try {
+      await LoadingUtil.withMinimumTime(async () => {
+        const updateResponse = await ApiClient.updateProfile({
+          nickname: trimmedNickname,
+          bio: trimmedBio,
+          tags: this.tags
+        });
+        if (updateResponse.code !== 0) {
+          throw new Error(updateResponse.message || '资料更新失败');
+        }
+        const accountResponse = await ApiClient.getAccountInfo();
+        if (accountResponse.code === 0 && accountResponse.data) {
+          GlobalStateManager.getInstance().updateUser(accountResponse.data);
+        }
+      }, LoadingUtil.DEFAULT_ACTION_MS);
       this.isSaving = false;
       this.isSaved = true;
       SystemToast.showSuccess('资料已保存', this.getUIContext());
@@ -146,7 +174,11 @@ export struct ProfileEditPage {
         this.isSaved = false;
         AppRouter.pop();
       }, 600);
-    }, 400);
+    } catch (error) {
+      this.isSaving = false;
+      const message = error instanceof Error ? error.message : '更新失败';
+      SystemToast.showError(message, this.getUIContext());
+    }
   }
 
   private getHeaderAction(): PageHeaderAction | null {
@@ -348,7 +380,7 @@ export struct ProfileEditPage {
     return AppThemeVisuals.resolveInputBorder({
       backgroundColor: this.getSurfaceSubtle(),
       borderColor: this.getSurfaceBorder(),
-      borderWidth: 1,
+      borderWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
       borderRadius: DesignConstants.SHAPE.INPUT,
       shadow: { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 },
       height: DesignConstants.COMPONENT.INPUT_HEIGHT,

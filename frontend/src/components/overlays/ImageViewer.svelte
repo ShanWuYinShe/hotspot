@@ -137,19 +137,19 @@
 
 <Dialog.Root bind:open onOpenChange={handleOpenChange}>
 	<Dialog.Portal>
-		<Dialog.Overlay class="fixed inset-0 z-[var(--cst-z-overlay)] bg-black/80 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0" />
+		<Dialog.Overlay class="fixed inset-0 z-[var(--cst-z-overlay)] bg-surface-scrim backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0" />
 		<Dialog.Content
 			class="fixed inset-0 z-[var(--cst-z-modal)] flex touch-none select-none flex-col focus-ring data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
 			aria-label="图片查看器"
 		>
 			<!-- 顶栏：页码 + 关闭 -->
-			<div class="flex items-center justify-between px-4 pt-3 pb-1 text-text-primary">
-				<span class="rounded-full bg-black/40 px-2.5 py-0.5 text-xs tabular-nums">
+			<div class="flex items-center justify-between px-4 pt-3 pb-1">
+				<span class="rounded-full bg-surface-media-scrim-strong px-2.5 py-0.5 text-xs tabular-nums text-content-inverse">
 					{count > 0 ? index + 1 : 0} / {count}
 				</span>
 				<button
 					type="button"
-					class="hover-btn scale-btn hit-slop flex size-9 items-center justify-center rounded-full bg-black/40 text-text-primary focus-ring"
+					class="hover-btn scale-btn hit-slop flex size-9 items-center justify-center rounded-full bg-surface-media-scrim-strong text-content-inverse focus-ring"
 					aria-label="关闭查看器"
 					onclick={() => handleOpenChange(false)}
 				>
@@ -164,7 +164,7 @@
 				{#if count > 1}
 					<button
 						type="button"
-						class="hover-btn scale-btn hit-slop absolute left-2 z-10 flex size-10 items-center justify-center rounded-full bg-black/40 text-text-primary focus-ring sm:left-4"
+						class="hover-btn scale-btn hit-slop absolute left-2 z-10 flex size-10 items-center justify-center rounded-full bg-surface-media-scrim-strong text-content-inverse focus-ring sm:left-4"
 						aria-label="上一张"
 						onclick={(e) => {
 							e.stopPropagation();
@@ -199,7 +199,7 @@
 				{#if count > 1}
 					<button
 						type="button"
-						class="hover-btn scale-btn hit-slop absolute right-2 z-10 flex size-10 items-center justify-center rounded-full bg-black/40 text-text-primary focus-ring sm:right-4"
+						class="hover-btn scale-btn hit-slop absolute right-2 z-10 flex size-10 items-center justify-center rounded-full bg-surface-media-scrim-strong text-content-inverse focus-ring sm:right-4"
 						aria-label="下一张"
 						onclick={(e) => {
 							e.stopPropagation();

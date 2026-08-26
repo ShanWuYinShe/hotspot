@@ -133,7 +133,7 @@ func applyReportResolution(item *ReportItem, handledAt *time.Time, handleNote st
 // timeFromRFC3339 容错解析 RFC3339 时间串（解析失败返回零值；仅用于游标键，
 // DB 写入与读取侧均为 UTC RFC3339）。
 func timeFromRFC3339(value string) time.Time {
-	parsed, err := time.Parse(time.RFC3339, value)
+	parsed, err := time.Parse(time.RFC3339Nano, value)
 	if err != nil {
 		return time.Time{}
 	}

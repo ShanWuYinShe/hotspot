@@ -332,7 +332,7 @@ export async function createComment(params: CreateCommentRequest)       { return
 export async function favoriteMoment(params: FavoriteMomentRequest)      { return request<void>(Endpoints.Moments.Favorite, params); }
 
 // Groups extended
-export async function getGroupMembers(groupId: string, pagination?: object) {
+export async function getGroupMembers(groupId: string, pagination?: PaginationParams) {
   return request<PaginatedData<GroupMemberItem>>(pick(Endpoints.Groups.Members.List, Endpoints.Public.Groups.Members.List), { group_id: groupId, pagination });
 }
 export async function getGroupAnnouncements(groupId: string) {
@@ -382,15 +382,15 @@ export async function recallGroupMessageAsAdmin(params: RecallGroupMessageAdminR
 }
 
 // Users extended
-export async function listUserMoments(userId: string, pagination?: object) {
+export async function listUserMoments(userId: string, pagination?: PaginationParams) {
   return request<PaginatedData<MomentItem>>(pick(Endpoints.Users.ListMoments, Endpoints.Public.Users.ListMoments), { user_id: userId, pagination });
 }
-export async function listUserReactedMoments(userId: string, pagination?: object) {
+export async function listUserReactedMoments(userId: string, pagination?: PaginationParams) {
   return request<PaginatedData<MomentItem>>(pick(Endpoints.Users.ListReactedMoments, Endpoints.Public.Users.ListReactedMoments), { user_id: userId, pagination });
 }
 
 // Comments
-export async function listComments(momentId: string, pagination?: object) {
+export async function listComments(momentId: string, pagination?: PaginationParams) {
   return request<PaginatedData<CommentItem>>(pick(Endpoints.Comments.List, Endpoints.Public.Comments.List), { moment_id: momentId, pagination });
 }
 

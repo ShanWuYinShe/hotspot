@@ -261,7 +261,7 @@ func decodeCommentCursor(cursorValue string) (any, string, error) {
 	if err := cursor.Decode(commentCursorNamespace, cursorValue, &decoded); err != nil || decoded.At == "" || decoded.ID == "" {
 		return nil, "", ErrInvalidCursor
 	}
-	at, err := time.Parse(time.RFC3339, decoded.At)
+	at, err := time.Parse(time.RFC3339Nano, decoded.At)
 	if err != nil {
 		return nil, "", ErrInvalidCursor
 	}

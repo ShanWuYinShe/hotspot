@@ -31,7 +31,7 @@ func (r rowValues) Scan(dest ...any) error {
 		case *time.Time:
 			switch v := r.values[i].(type) {
 			case string:
-				parsed, _ := time.Parse(time.RFC3339, v)
+				parsed, _ := time.Parse(time.RFC3339Nano, v)
 				*d = parsed
 			case time.Time:
 				*d = v

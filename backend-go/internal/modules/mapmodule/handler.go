@@ -45,14 +45,14 @@ func (h *Handler) Canvas(w http.ResponseWriter, r *http.Request) {
 			var start, end time.Time
 			var err error
 			if req.Filter.TimeRange.StartTime != "" {
-				start, err = time.Parse(time.RFC3339, req.Filter.TimeRange.StartTime)
+				start, err = time.Parse(time.RFC3339Nano, req.Filter.TimeRange.StartTime)
 				if err != nil {
 					httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 					return
 				}
 			}
 			if req.Filter.TimeRange.EndTime != "" {
-				end, err = time.Parse(time.RFC3339, req.Filter.TimeRange.EndTime)
+				end, err = time.Parse(time.RFC3339Nano, req.Filter.TimeRange.EndTime)
 				if err != nil {
 					httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 					return

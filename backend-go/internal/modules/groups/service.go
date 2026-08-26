@@ -759,7 +759,7 @@ func (s *Service) applicationExpired(ctx context.Context, item GroupApplicationI
 			ttl = time.Duration(ttlHours) * time.Hour
 		}
 	}
-	createdAt, err := time.Parse(time.RFC3339, item.CreatedAt)
+	createdAt, err := time.Parse(time.RFC3339Nano, item.CreatedAt)
 	if err != nil {
 		return false
 	}

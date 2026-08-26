@@ -170,7 +170,7 @@ func decodeFetchCursor(cursor string) (*itemCursor, error) {
 		return nil, ErrInvalidCursor
 	}
 	if decoded.CreatedAt != "" {
-		if _, err := time.Parse(time.RFC3339, decoded.CreatedAt); err != nil {
+		if _, err := time.Parse(time.RFC3339Nano, decoded.CreatedAt); err != nil {
 			return nil, ErrInvalidCursor
 		}
 	}
@@ -224,7 +224,7 @@ func findNearbyCursorStart(items []momentCandidate, cursor *itemCursor) int {
 	if cursor == nil {
 		return 0
 	}
-	parsedAt, _ := time.Parse(time.RFC3339, cursor.CreatedAt)
+	parsedAt, _ := time.Parse(time.RFC3339Nano, cursor.CreatedAt)
 	for idx, item := range items {
 		cmp := compareNearbyCandidates(item, momentCandidate{Item: MomentItem{MomentID: cursor.ID}, Score: cursor.Score, Distance: cursor.Distance, CreatedAt: parsedAt.UTC()})
 		if cmp > 0 {

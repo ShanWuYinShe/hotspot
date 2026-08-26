@@ -75,12 +75,15 @@ export interface MapCanvasResult {
 }
 
 /** 视口 bounds（spec Bounds 结构：north/south/east/west） */
-export function buildViewportBounds(center: { lat: number; lng: number }, zoom: number) {
+export const MAP_DELTA_DEG = 0.045;
+export function buildViewportBounds(center: { lat: number; lng: number }, deltaDeg: number = MAP_DELTA_DEG) {
+	const clampLat = (v: number) => Math.max(-90, Math.min(90, v));
+	const clampLng = (v: number) => Math.max(-180, Math.min(180, v));
 	return {
-		north: center.lat + zoom,
-		south: center.lat - zoom,
-		east: center.lng + zoom,
-		west: center.lng - zoom
+		north: clampLat(center.lat + deltaDeg),
+		south: clampLat(center.lat - deltaDeg),
+		east: clampLng(center.lng + deltaDeg),
+		west: clampLng(center.lng - deltaDeg)
 	};
 }
 
@@ -135,10 +138,10 @@ function normalizeCanvas(res: { code: number; data?: unknown }): MapCanvasResult
  */
 export async function fetchMapCanvas(
 	center: { lat: number; lng: number },
-	zoom: number,
+	deltaDeg: number = MAP_DELTA_DEG,
 	activeTypes: PinType[]
 ): Promise<MapCanvasResult> {
-	const viewport = { bounds: buildViewportBounds(center, zoom) };
+	const viewport = { bounds: buildViewportBounds(center, deltaDeg) };
 	if (activeTypes.length === 0) return emptyResult();
 
 	const buildParams = (t?: PinType): MapCanvasRequest => ({

@@ -44,7 +44,7 @@ func (r rowValues) Scan(dest ...any) error {
 			case time.Time:
 				*d = v
 			case string:
-				parsed, err := time.Parse(time.RFC3339, v)
+				parsed, err := time.Parse(time.RFC3339Nano, v)
 				if err != nil {
 					return err
 				}

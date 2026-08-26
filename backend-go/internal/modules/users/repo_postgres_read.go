@@ -525,7 +525,7 @@ func listUserMomentsPostgres(ctx context.Context, factory *persistence.Factory, 
 		}
 		items = append(items, item)
 		momentIDs = append(momentIDs, item.MomentID)
-		parsed, _ := time.Parse(time.RFC3339, item.CreatedAt)
+		parsed, _ := time.Parse(time.RFC3339Nano, item.CreatedAt)
 		cursors = append(cursors, encodeUserMomentCursor(parsed.UTC().Format(time.RFC3339), item.MomentID))
 		if len(items) == limit+1 {
 			tagsByMomentID, err := loadUserMomentTags(ctx, queryable, momentIDs[:limit])
@@ -802,7 +802,7 @@ func decodeUserMomentCursor(raw string) (any, string, error) {
 	if decoded.At == "" || decoded.ID == "" {
 		return nil, "", ErrInvalidCursor
 	}
-	parsed, err := time.Parse(time.RFC3339, decoded.At)
+	parsed, err := time.Parse(time.RFC3339Nano, decoded.At)
 	if err != nil {
 		return nil, "", ErrInvalidCursor
 	}

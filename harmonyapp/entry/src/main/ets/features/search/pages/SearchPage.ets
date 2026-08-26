@@ -119,7 +119,7 @@ export struct SearchPage {
     return AppThemeVisuals.resolveInputBorder({
       backgroundColor: this.getSurfaceBackground(),
       borderColor: this.getSurfaceBorder(),
-      borderWidth: 1,
+      borderWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
       borderRadius: DesignConstants.SHAPE.INPUT,
       shadow: { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 },
       height: 38,
@@ -220,26 +220,12 @@ export struct SearchPage {
     this.persistRecentSearches();
   }
 
-  /** 空查询发现态：热门搜索/推荐话题来自 search/suggest（对齐前端 SearchDiscovery） */
+  /** 空查询发现态：对齐前端 SearchDiscovery（空查询不调 suggest，前端以 prefix.length>=1 为阈值） */
   private async loadDiscovery(): Promise<void> {
-    try {
-      const request: SearchSuggestRequest = { prefix: '' };
-      const response = await ApiClient.searchSuggest(request);
-      if (this.isDestroyed) return;
-      if (response.code === 0 && response.data) {
-        const names: string[] = [];
-        (response.data.items ?? []).forEach((item: SearchSuggestItem) => {
-          const name = this.getSuggestTitle(item);
-          if (name.trim().length > 0) {
-            names.push(name.trim());
-          }
-        });
-        this.discoveryHot = names;
-        this.discoveryTopics = names;
-      }
-    } catch (_) {
-      // 发现态失败静默，保留空面板
-    }
+    // 空 prefix 调 search/suggest 会 10000（spec prefix 1-50），故空查询发现态基于本地 recentSearches 静态展示，
+    // 热门/话题由后续标签热门接口补充，当前保留空面板避免误调
+    this.discoveryHot = [];
+    this.discoveryTopics = [];
   }
 
   private async doSearch(): Promise<void> {

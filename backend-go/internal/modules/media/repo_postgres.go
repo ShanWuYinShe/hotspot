@@ -188,7 +188,7 @@ func nullableTime(value string) any {
 	if value == "" {
 		return nil
 	}
-	parsed, err := time.Parse(time.RFC3339, value)
+	parsed, err := time.Parse(time.RFC3339Nano, value)
 	if err != nil {
 		return nil
 	}
@@ -196,7 +196,7 @@ func nullableTime(value string) any {
 }
 
 func parseRFC3339OrNow(value string) time.Time {
-	if parsed, err := time.Parse(time.RFC3339, value); err == nil {
+	if parsed, err := time.Parse(time.RFC3339Nano, value); err == nil {
 		return parsed.UTC()
 	}
 	return time.Now().UTC()

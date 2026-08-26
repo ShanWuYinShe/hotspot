@@ -121,7 +121,7 @@ func decodeMomentMineCursor(cursorValue string) (any, string, error) {
 	if err := cursor.Decode(momentMineCursorNamespace, cursorValue, &decoded); err != nil || decoded.At == "" || decoded.ID == "" {
 		return nil, "", ErrInvalidCursor
 	}
-	parsedAt, err := time.Parse(time.RFC3339, decoded.At)
+	parsedAt, err := time.Parse(time.RFC3339Nano, decoded.At)
 	if err != nil {
 		return nil, "", ErrInvalidCursor
 	}

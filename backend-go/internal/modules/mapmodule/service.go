@@ -63,14 +63,14 @@ func newCanvasQuery(req MapCanvasRequest) (canvasQuery, error) {
 		query.DataType = normalizeMapDataType(req.Filter.DataType)
 		if req.Filter.TimeRange != nil {
 			if req.Filter.TimeRange.StartTime != "" {
-				parsed, err := time.Parse(time.RFC3339, req.Filter.TimeRange.StartTime)
+				parsed, err := time.Parse(time.RFC3339Nano, req.Filter.TimeRange.StartTime)
 				if err != nil {
 					return canvasQuery{}, err
 				}
 				query.StartTime = parsed.UTC()
 			}
 			if req.Filter.TimeRange.EndTime != "" {
-				parsed, err := time.Parse(time.RFC3339, req.Filter.TimeRange.EndTime)
+				parsed, err := time.Parse(time.RFC3339Nano, req.Filter.TimeRange.EndTime)
 				if err != nil {
 					return canvasQuery{}, err
 				}

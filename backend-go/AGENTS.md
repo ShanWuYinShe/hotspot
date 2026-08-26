@@ -109,7 +109,7 @@ Handler -> Service -> Repository
 
 幂等契约以 `spec/api_spec_base.md` 为权威来源，本节仅列出实现侧约束：
 
-- 需要实现幂等的端点以 spec 的清单为准（当前 13 个）；不需要的端点不得强制要求 `Idempotency-Key`
+- 需要实现幂等的端点以 spec 的清单为准（当前 10 个：moments/create、comments/create、groups/create、groups/admin/announcements/create、/admin/v1/announcements/create、share/create、private_messages/send、group_messages/send、auth/register、auth/guest）；不需要的端点不得强制要求 `Idempotency-Key`
 - 服务端按 `(user_id + endpoint + key)` 去重，仅缓存成功响应（`code == 0`）
 
 ## 分页
@@ -117,7 +117,7 @@ Handler -> Service -> Repository
 - 禁止 OFFSET，必须使用 cursor/keyset 分页
 - cursor 不透明，客户端只透传；编码/解码仅在 Repository 层
 - limit 默认 20、上限 100，由 Service 层兜底裁剪
-- 无更多数据时省略 `next_cursor` 字段
+- 无更多数据时 `next_cursor` 为 `null`（恒定 nullable，见 `spec/api_spec_types.md`），禁止省略字段
 
 ## 数据格式
 

@@ -129,7 +129,9 @@ export function useGalleryMoments(type: 'my' | 'user' = 'my', userId?: string) {
 		void reloadKey;
 		loading = true;
 		error = null;
-		const fetcher = type === 'my' ? listMyMoments : () => listUserMoments(userId!);
+		const fetcher =
+			type === 'my' ? listMyMoments : (params: { pagination?: { limit?: number; cursor?: string } }) =>
+					listUserMoments(userId!, params.pagination);
 		fetcher({ pagination: { limit: 20 } })
 			.then((res) => {
 				if (res.code === 0 && res.data) {
@@ -168,7 +170,7 @@ export function useReactedMoments(userId?: string) {
 		void reloadKey;
 		loading = true;
 		error = null;
-		listUserReactedMoments(userId ?? '', { pagination: { limit: 20 } })
+		listUserReactedMoments(userId ?? '', { limit: 20 })
 			.then((res) => {
 				if (res.code === 0 && res.data) {
 					posts = res.data.items?.map(mapGalleryMoment) ?? [];

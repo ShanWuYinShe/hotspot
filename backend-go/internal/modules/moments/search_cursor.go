@@ -43,7 +43,7 @@ func momentSearchScore(item MomentItem, sortBy, keyword, tag string, now time.Ti
 	case "popular":
 		raw := float64(item.LikesCount + item.CommentsCount)
 		hours := 0.0
-		if createdAt, err := time.Parse(time.RFC3339, item.CreatedAt); err == nil {
+		if createdAt, err := time.Parse(time.RFC3339Nano, item.CreatedAt); err == nil {
 			hours = now.Sub(createdAt).Hours()
 			if hours < 0 {
 				// 未来时间戳（时钟偏移）钳制为 0，与 SQL 的 GREATEST(..., 0.0) 对齐。
@@ -111,7 +111,7 @@ func decodeMomentSearchCursor(value string) (*momentSearchCursor, error) {
 	if decoded.Sort == "" || decoded.At == "" || decoded.ID == "" {
 		return nil, ErrInvalidCursor
 	}
-	if _, err := time.Parse(time.RFC3339, decoded.At); err != nil {
+	if _, err := time.Parse(time.RFC3339Nano, decoded.At); err != nil {
 		return nil, ErrInvalidCursor
 	}
 	return &decoded, nil
