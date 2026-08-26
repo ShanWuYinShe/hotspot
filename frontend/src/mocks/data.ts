@@ -50,8 +50,14 @@ export function setMockLoggedIn(v: boolean) {
 }
 
 // ── Users (spec UserInfo: { user_id, nickname, avatar_url? }) ────
+// 头像一人一张（URL 均已验证 200），避免列表页大量重复头像的假感
 const avatarA = "https://images.unsplash.com/photo-1619961311005-3cf76b2bcabc?w=200";
 const avatarB = "https://images.unsplash.com/photo-1614339804578-8e82dd7f3174?w=200";
+const avatarC = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200";
+const avatarD = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200";
+const avatarE = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200";
+const avatarF = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200";
+const avatarG = "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200";
 
 export interface MockUser {
   user_id: string;
@@ -62,11 +68,11 @@ export interface MockUser {
 export const mockUsers: MockUser[] = [
   { user_id: "user_lumos",   nickname: "鹿鸣", avatar_url: avatarA },
   { user_id: "user_sophia",  nickname: "阿禾", avatar_url: avatarB },
-  { user_id: "user_marco",   nickname: "野原", avatar_url: avatarA },
-  { user_id: "user_mika",    nickname: "Mika", avatar_url: avatarB },
-  { user_id: "user_chen",    nickname: "青砚", avatar_url: avatarA },
-  { user_id: "user_lin",     nickname: "林一", avatar_url: avatarB },
-  { user_id: "user_xiaoman", nickname: "小满", avatar_url: avatarA },
+  { user_id: "user_marco",   nickname: "野原", avatar_url: avatarC },
+  { user_id: "user_mika",    nickname: "Mika", avatar_url: avatarD },
+  { user_id: "user_chen",    nickname: "青砚", avatar_url: avatarE },
+  { user_id: "user_lin",     nickname: "林一", avatar_url: avatarF },
+  { user_id: "user_xiaoman", nickname: "小满", avatar_url: avatarG },
 ];
 
 // ── Relationship lists (spec RelatedUserItem: list_friends/list_following/list_followers 共用) ──
