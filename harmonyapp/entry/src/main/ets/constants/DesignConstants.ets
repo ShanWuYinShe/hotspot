@@ -43,7 +43,6 @@ export interface FontSizes {
   XS_MINUS: number;
   XS2: number;
   LG_PLUS: number;
-  XXXL_PLUS: number;
   HERO: number;
   HERO_LARGE: number;
 }
@@ -71,7 +70,6 @@ export interface FontWeights {
 }
 
 export interface FontSystem {
-  FAMILY_PRIMARY: string;
   SIZE: FontSizes;
   WEIGHT: FontWeights;
   LINE_HEIGHT: FontLineHeights;
@@ -132,8 +130,6 @@ export interface AnimationSystem {
   DURATION_280: number;
   /** 轻量反馈/入场（150ms） */
   DURATION_FAST: number;
-  /** 即时反馈（100ms） */
-  DURATION_INSTANT: number;
   /** 脉冲/shimmer 循环周期（1500ms） */
   DURATION_SLOW: number;
   /** 列表入场 stagger 延迟 */
@@ -158,8 +154,6 @@ export interface InteractionSystem {
   SCALE_PRESSED_INPUT_ROW: number;
   /** 胶囊/标签按压缩放 */
   SCALE_PRESSED_PILL: number;
-  /** 返回按钮按压缩放 */
-  SCALE_PRESSED_BACK: number;
   /** 卡片 hover 抬升幅度（radius ×2 / offsetY +elevation） */
   HOVER_ELEVATION: number;
   /** 卡片 hover 静止态抬升 */
@@ -184,8 +178,6 @@ export interface OpacitySystem {
   LOADING: number;
   /** 轻微淡化 */
   SUBTLE: number;
-  /** 空态图标淡化（对齐前端 opacity-40 标准档） */
-  FADED: number;
   /** 次级内容淡化（对齐前端 opacity-50） */
   MUTED: number;
   /** 强调内容淡化（对齐前端 opacity-80） */
@@ -228,8 +220,6 @@ export interface ComponentConstants {
   SHEET_ACTION_HEIGHT: number;
   /** 主按钮大号（48，登录/提交主操作） */
   BUTTON_HEIGHT_LG: number;
-  /** 行内按钮（38，邀请操作等） */
-  INLINE_BUTTON_HEIGHT: number;
   /** 筛选 chip 高度（30） */
   FILTER_CHIP_HEIGHT: number;
   /** 状态图标尺寸（28，定位/通知 banner） */
@@ -256,8 +246,6 @@ export interface ComponentConstants {
   ICON_SIZE_MD: number;
   /** 骨架屏卡片高度（100） */
   SKELETON_CARD_HEIGHT: number;
-  /** 骨架屏头像尺寸（66） */
-  SKELETON_AVATAR_SIZE: number;
   /** 内容占位区高度（120，加载/空态占位） */
   PLACEHOLDER_AREA_HEIGHT: number;
   /** 大图占位高度（110，创建页图片区） */
@@ -330,8 +318,6 @@ export interface MaterialEffectSystem {
   GLOW_BLUR_LARGE: number;
   /** 中号 glow 模糊（64，头部光晕） */
   GLOW_BLUR_MEDIUM: number;
-  /** 小号 glow 模糊（22，头像内光晕） */
-  GLOW_BLUR_SMALL: number;
 }
 
 // ==================== 页面布局系统接口（对齐前端 navigation chrome）====================
@@ -420,7 +406,6 @@ const COLOR: ColorPalette = {
 
 // ==================== 字体系统 ====================
 const FONT: FontSystem = {
-  FAMILY_PRIMARY: 'sans-serif',
   SIZE: {
     XS: 11,
     SM: 12,
@@ -434,7 +419,6 @@ const FONT: FontSystem = {
     // 近邻档（13/15/22/28）已按前端口径归并：13→12、15→14、22→20、28→24，
     // 消除 1-2px 近邻档位（前端 theme-registry 同原则）
     LG_PLUS: 18,
-    XXXL_PLUS: 36,
     HERO: 48,
     HERO_LARGE: 56,
   },
@@ -539,7 +523,6 @@ const ANIMATION: AnimationSystem = {
   DURATION_250: 250,
   DURATION_280: 280,
   DURATION_FAST: 150,
-  DURATION_INSTANT: 100,
   DURATION_SLOW: 1500,
   DURATION_STAGGER_DELAY: 150,
   CURVE_EASE_IN_OUT: Curve.EaseInOut,
@@ -556,7 +539,6 @@ const INTERACTION: InteractionSystem = {
   SCALE_PRESSED_ICON: 0.90,
   SCALE_PRESSED_INPUT_ROW: 0.98,
   SCALE_PRESSED_PILL: 0.94,
-  SCALE_PRESSED_BACK: 0.88,
   HOVER_ELEVATION: 4,
   HOVER_ELEVATION_REST: 1,
   SPRING_RESPONSE_PRESS: 0.3,
@@ -570,7 +552,6 @@ const EFFECT: MaterialEffectSystem = {
   TEXTURE_SOFT: 0.12,
   GLOW_BLUR_LARGE: 80,
   GLOW_BLUR_MEDIUM: 64,
-  GLOW_BLUR_SMALL: 22,
 };
 
 const COMPONENT: ComponentConstants = {
@@ -589,7 +570,6 @@ const COMPONENT: ComponentConstants = {
   ACTION_BUTTON_HEIGHT_LG: 34,
   SHEET_ACTION_HEIGHT: 44,
   BUTTON_HEIGHT_LG: 48,
-  INLINE_BUTTON_HEIGHT: 38,
   FILTER_CHIP_HEIGHT: 30,
   STATUS_ICON_SIZE: 28,
   LOADING_ICON_SIZE: 20,
@@ -604,7 +584,6 @@ const COMPONENT: ComponentConstants = {
   ICON_SIZE_SM: 20,
   ICON_SIZE_MD: 24,
   SKELETON_CARD_HEIGHT: 100,
-  SKELETON_AVATAR_SIZE: 66,
   PLACEHOLDER_AREA_HEIGHT: 120,
   IMAGE_PLACEHOLDER_HEIGHT: 110,
   SHARE_CARD_HEIGHT: 130,
@@ -672,7 +651,6 @@ const OPACITY: OpacitySystem = {
   PRESSED: 0.72,
   LOADING: 0.58,
   SUBTLE: 0.85,
-  FADED: 0.4,
   MUTED: 0.5,
   EMPHASIZED: 0.8,
 };

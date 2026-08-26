@@ -1303,7 +1303,7 @@ export struct ProfilePage {
         Row() {
           if (index > 0) {
             Column()
-              .width(1)
+              .width(DesignConstants.BORDER_WIDTH.HAIRLINE)
               .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
               .backgroundColor(this.getSurfaceBorder())
               .margin({ left: 0, right: 0 })

@@ -141,12 +141,14 @@ export class ThemeConstants {
     online: '#3D7A55',
     warning: '#8A6A2F',
     success: '#059669',
-    error: '#8E6F35',
+    // danger 独立于 warning（对齐前端 forest light hot #B4543E）：原 error 误用暖棕与 warning 混淆
+    error: '#B4543E',
     info: '#3D7A55',
     mapUser: '#3D7A55',
     mapGroup: '#4A703F',
     mapMoment: '#8A6426',
-    dangerSoft: '#ECE9E0',
+    // 淡底对齐前端 forest light danger 12% 预混（#B4543E × 12% over #F6F7F3）
+    dangerSoft: '#EEE3DD',
     warningSoft: '#E9E6DB',
   };
 
@@ -182,12 +184,14 @@ export class ThemeConstants {
     online: '#52B878',
     warning: '#C4A75A',
     success: '#34D399',
-    error: '#C4A75A',
+    // danger 独立于 warning（对齐前端 forest dark hot #D97C5A）：原 error 与 warning 完全同色
+    error: '#D97C5A',
     info: '#52B878',
     mapUser: '#52B878',
     mapGroup: '#88B85A',
     mapMoment: '#C4A75A',
-    dangerSoft: '#2E2E20',
+    // 淡底对齐前端 forest dark danger 14% 预混（#D97C5A × 14% over #161A16）
+    dangerSoft: '#31271F',
     warningSoft: '#2E2E20',
   };
 

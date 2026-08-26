@@ -1607,7 +1607,7 @@ export struct ChatPage {
                   bottom: DesignConstants.CHAT.BUBBLE_PADDING_V
                 })
                 .borderRadius(this.getBubbleRadius(msg.isSelf))
-                .constraintSize({ maxWidth: this.chatType === 'group_chat' ? '70%' : '76%' })
+                .constraintSize({ maxWidth: DesignConstants.CHAT.BUBBLE_MAX_WIDTH })
                 .shadow(msg.isSelf ? this.getCurrentThemePalette().accentShadow : this.getCurrentThemePalette().controlShadow)
             }
           }

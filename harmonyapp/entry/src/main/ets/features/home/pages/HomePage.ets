@@ -428,7 +428,7 @@ export struct HomePage {
 
         // 分割线
         Column()
-          .width(1)
+          .width(DesignConstants.BORDER_WIDTH.HAIRLINE)
           .height('100%')
           .backgroundColor(this.getPalette().borderColor)
 
@@ -577,7 +577,7 @@ export struct HomePage {
 
         // 分割竖线
         Column()
-          .width(1)
+          .width(DesignConstants.BORDER_WIDTH.HAIRLINE)
           .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
           .backgroundColor(this.getPalette().borderColor)
 
@@ -596,7 +596,7 @@ export struct HomePage {
 
         // 分割竖线
         Column()
-          .width(1)
+          .width(DesignConstants.BORDER_WIDTH.HAIRLINE)
           .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
           .backgroundColor(this.getPalette().borderColor)
 

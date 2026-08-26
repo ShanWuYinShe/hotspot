@@ -315,7 +315,7 @@ export struct NearbyUsersListPage {
             .layoutWeight(1)
 
             Column()
-              .width(1).height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
+              .width(DesignConstants.BORDER_WIDTH.HAIRLINE).height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
               .backgroundColor(this.getCurrentThemePalette().borderColor)
 
             Column({ space: DesignConstants.SPACING.HALF }) {
@@ -331,7 +331,7 @@ export struct NearbyUsersListPage {
             .layoutWeight(1)
 
             Column()
-              .width(1).height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
+              .width(DesignConstants.BORDER_WIDTH.HAIRLINE).height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
               .backgroundColor(this.getCurrentThemePalette().borderColor)
 
             Column({ space: DesignConstants.SPACING.HALF }) {
