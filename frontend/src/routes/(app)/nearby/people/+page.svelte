@@ -15,6 +15,7 @@
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance } from '@/lib/utils';
 	import { showToast } from '@/stores/toast.svelte';
+	import { requireAuth } from '@/stores/auth.svelte';
 
 	// 附近的人：排序/标签过滤 + BSP 卡片墙（桌面）/ 网格（移动/平板）。
 
@@ -103,18 +104,29 @@
 	const device = $derived(platform.platform);
 	const gridColumns = $derived(platform.platform === 'mobile' ? 2 : isDesktop ? 3 : 2);
 
-	const toggleFollow = (id: string) => {
+	// in-flight 去重（防连点双翻转）；业务失败（code≠0）显式判 code 回滚
+	const followPending = new Set<string>();
+
+	const toggleFollow = async (id: string) => {
+		if (followPending.has(id)) return;
+		if (!requireAuth({ action: '关注', targetId: id, run: () => void toggleFollow(id) })) return;
 		const next = new Set(followedIds);
 		const willFollow = !next.has(id);
 		willFollow ? next.add(id) : next.delete(id);
 		followedIds = next;
-		// spec: users/set_follow 两态统一；乐观更新 + 失败回滚
-		follow({ user_id: id, active: willFollow }).catch(() => {
+		followPending.add(id);
+		try {
+			// spec: users/set_follow 两态统一；乐观更新 + 失败回滚
+			const res = await follow({ user_id: id, active: willFollow });
+			if (res.code !== 0) throw new Error(res.message || '操作失败');
+		} catch (err) {
 			const r = new Set(followedIds);
 			willFollow ? r.delete(id) : r.add(id);
 			followedIds = r;
-			showToast('操作失败，请重试', 'danger');
-		});
+			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
+		} finally {
+			followPending.delete(id);
+		}
 	};
 </script>
 <svelte:head>

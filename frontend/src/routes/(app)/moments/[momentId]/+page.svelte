@@ -205,9 +205,15 @@
 	const commentCount = $derived(apiComments.length);
 	const isAuthor = $derived(Boolean(auth.user?.user_id) && auth.user?.user_id === moment.authorId);
 
+	// in-flight 去重：写请求未完成时忽略重复触发，避免连点双翻转 + 并发乱序
+	let likePending = $state(false);
+	let savePending = $state(false);
+	let commentPending = $state(false);
+	const commentLikePending = new Set<string>();
+
 	const handleComment = async () => {
 		const text = input.trim();
-		if (!text) return;
+		if (!text || commentPending) return;
 		// 写操作先过登录闸：匿名提交只会失败回滚，用户侧无任何反馈
 		if (!requireAuth({ action: '评论', targetId: momentId, run: () => void handleComment() })) return;
 		input = '';
@@ -223,24 +229,35 @@
 			liked: false
 		};
 		apiComments = [...apiComments, optimistic];
+		commentPending = true;
 		try {
-			await createComment({ moment_id: momentId, content: text });
-		} catch {
+			// 业务失败（HTTP 200 + code≠0）api client 不抛错，必须显式判 code
+			const res = await createComment({ moment_id: momentId, content: text });
+			if (res.code !== 0) throw new Error(res.message || '评论发布失败');
+		} catch (err) {
 			apiComments = apiComments.filter((c) => c.id !== optimistic.id);
+			showToast(err instanceof Error && err.message ? err.message : '评论发布失败，请重试', 'danger');
+		} finally {
+			commentPending = false;
 		}
 	};
 
 	// 评论点赞：登录闸 + 乐观翻转 + reactions/set(target_type='comment')，失败回滚
 	const toggleCommentLike = async (commentId: string) => {
 		const target = apiComments.find((c) => c.id === commentId);
-		if (!target) return;
+		if (!target || commentLikePending.has(commentId)) return;
 		if (!requireAuth({ action: '点赞', targetId: commentId, run: () => void toggleCommentLike(commentId) })) return;
 		const prev = target.liked;
 		apiComments = apiComments.map((c) => (c.id === commentId ? { ...c, liked: !prev } : c));
+		commentLikePending.add(commentId);
 		try {
-			await setReaction({ target_type: 'comment', target_id: commentId, emoji: '👍', active: !prev });
-		} catch {
+			const res = await setReaction({ target_type: 'comment', target_id: commentId, emoji: '👍', active: !prev });
+			if (res.code !== 0) throw new Error(res.message || '操作失败');
+		} catch (err) {
 			apiComments = apiComments.map((c) => (c.id === commentId ? { ...c, liked: prev } : c));
+			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
+		} finally {
+			commentLikePending.delete(commentId);
 		}
 	};
 
@@ -257,24 +274,36 @@
 	};
 
 	const toggleLike = async () => {
+		if (likePending) return;
 		if (!requireAuth({ action: '点赞', targetId: momentId, run: () => void toggleLike() })) return;
 		const next = !liked;
 		liked = next;
+		likePending = true;
 		try {
-			await setReaction({ target_type: 'moment', target_id: momentId, emoji: likeEmoji, active: next });
-		} catch {
+			const res = await setReaction({ target_type: 'moment', target_id: momentId, emoji: likeEmoji, active: next });
+			if (res.code !== 0) throw new Error(res.message || '操作失败');
+		} catch (err) {
 			liked = !next;
+			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
+		} finally {
+			likePending = false;
 		}
 	};
 
 	const toggleSave = async () => {
+		if (savePending) return;
 		if (!requireAuth({ action: '收藏', targetId: momentId, run: () => void toggleSave() })) return;
 		const next = !saved;
 		saved = next;
+		savePending = true;
 		try {
-			await favoriteMoment({ moment_id: momentId, active: next });
-		} catch {
+			const res = await favoriteMoment({ moment_id: momentId, active: next });
+			if (res.code !== 0) throw new Error(res.message || '操作失败');
+		} catch (err) {
 			saved = !next;
+			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
+		} finally {
+			savePending = false;
 		}
 	};
 

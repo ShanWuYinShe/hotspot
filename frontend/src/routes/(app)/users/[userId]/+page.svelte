@@ -13,6 +13,7 @@
 	import { ROUTES } from '@/lib/routes';
 	import * as Dialog from '@/components/ui/dialog';
 	import { showToast } from '@/stores/toast.svelte';
+	import { requireAuth } from '@/stores/auth.svelte';
 
 	// 用户详情：关注/私信/屏蔽/举报/备注 + 瞬间画廊 + 桌面 Rail。
 
@@ -119,34 +120,60 @@
 
 	const fmtNum = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
 
-	const toggleFollow = () => {
-		if (blocked) return;
+	// in-flight 去重（防连点双翻转）；业务失败（code≠0）显式判 code 回滚
+	let followPending = false;
+	let blockPending = false;
+
+	const toggleFollow = async () => {
+		if (blocked || followPending) return;
+		if (!requireAuth({ action: '关注', targetId: uid, run: () => void toggleFollow() })) return;
 		const next = !followed;
+		const prevFollowed = followed;
 		followed = next;
-		// spec: follow/unfollow uses user_id + active boolean.
-		follow({ user_id: uid, active: next }).catch(() => {
-			followed = !next;
-			showToast('操作失败，请重试', 'danger');
-		});
+		followPending = true;
+		try {
+			// spec: follow/unfollow uses user_id + active boolean.
+			const res = await follow({ user_id: uid, active: next });
+			if (res.code !== 0) throw new Error(res.message || '操作失败');
+		} catch (err) {
+			followed = prevFollowed;
+			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
+		} finally {
+			followPending = false;
+		}
 	};
 
-	const toggleBlock = () => {
+	const toggleBlock = async () => {
+		if (blockPending) return;
+		if (!requireAuth({ action: '屏蔽', targetId: uid, run: () => void toggleBlock() })) return;
 		const next = !blocked;
+		const prevBlocked = blocked;
+		const prevFollowed = followed;
 		blocked = next;
 		followed = false;
 		moreOpen = false;
-		// spec: block/unblock uses user_id + active boolean.
-		block({ user_id: uid, active: next }).catch(() => {
-			blocked = !next;
-			followed = next;
-			showToast('操作失败，请重试', 'danger');
-		});
+		blockPending = true;
+		try {
+			// spec: block/unblock uses user_id + active boolean.
+			const res = await block({ user_id: uid, active: next });
+			if (res.code !== 0) throw new Error(res.message || '操作失败');
+		} catch (err) {
+			blocked = prevBlocked;
+			followed = prevFollowed;
+			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
+		} finally {
+			blockPending = false;
+		}
 	};
 
 	const submitReport = () => {
+		if (!requireAuth({ action: '举报', targetId: uid, run: submitReport })) return;
 		createReport({ target_type: 'user', target_id: uid, reason: 'other' })
-			.then(() => (reportSent = true))
-			.catch(() => {});
+			.then((res) => {
+				if (res.code === 0) reportSent = true;
+				else showToast(res.message || '举报失败', 'danger');
+			})
+			.catch(() => showToast('举报失败，请重试', 'danger'));
 		moreOpen = false;
 	};
 
