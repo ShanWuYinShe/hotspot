@@ -294,11 +294,13 @@
 
 	<!-- ══ RIGHT CONTROLS — bottom tracks sheet ══ -->
 	<div style="position:absolute;right:12px;bottom:{rightCtrlBottom}px;z-index:35;display:flex;flex-direction:column;gap:8px;align-items:center;transition:bottom var(--cst-motion-spring) var(--cst-ease-bounce);">
-		<!-- Zoom in/out（画布拖拽/双指外滚轮亦可缩放） -->
-		<div class="flex flex-col overflow-hidden rounded-lg" style="border:var(--cst-border-width-hairline) solid var(--cst-border-default);{floatBtnStyle}">
+		<!-- Zoom in/out（画布拖拽/双指外滚轮亦可缩放）。分段圆角由按钮自身承担，
+			不用 overflow-hidden 裁剪（会连带裁掉键盘焦点环）。按钮不用 hover-btn：
+			分段组合控件中点击 0.94 缩放会让高亮块与整卡脱开 -->
+		<div class="flex flex-col rounded-lg" style="border:var(--cst-border-width-hairline) solid var(--cst-border-default);{floatBtnStyle}">
 			<button
 				type="button"
-				class="hover-btn flex items-center justify-center size-9 focus-ring text-text-primary"
+				class="flex items-center justify-center size-9 rounded-t-lg focus-ring text-text-primary"
 				style="border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);"
 				aria-label="放大"
 				disabled={mapZoom >= 16}
@@ -308,7 +310,7 @@
 			</button>
 			<button
 				type="button"
-				class="hover-btn flex items-center justify-center size-9 focus-ring text-text-primary"
+				class="flex items-center justify-center size-9 rounded-b-lg focus-ring text-text-primary"
 				aria-label="缩小"
 				disabled={mapZoom <= 13}
 				onclick={() => (mapZoom = Math.max(13, mapZoom - 1))}

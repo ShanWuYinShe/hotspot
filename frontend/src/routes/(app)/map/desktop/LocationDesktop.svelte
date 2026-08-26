@@ -183,11 +183,14 @@
 			</div>
 		{/if}
 
-		<!-- 缩放控制（右下角；画布拖拽/滚轮亦可缩放） -->
-		<div class="absolute z-20 flex flex-col overflow-hidden rounded-lg border border-border-default bg-surface-primary" style="right:14px;bottom:20px;box-shadow:var(--cst-elevation-fab);">
+		<!-- 缩放控制（右下角；画布拖拽/滚轮亦可缩放）。分段圆角由按钮自身承担，
+			不用 overflow-hidden 裁剪（会连带裁掉键盘焦点环），hover 填充与分隔线齐平。
+			按钮不用 hover-btn：分段组合控件中点击 0.94 缩放会让高亮块与整卡脱开，
+			hover/active 填充由全局 button 规则承载 -->
+		<div class="absolute z-30 flex flex-col rounded-lg border border-border-default bg-surface-primary" style="right:14px;bottom:20px;box-shadow:var(--cst-elevation-fab);">
 			<button
 				type="button"
-				class="hover-btn flex items-center justify-center size-9 focus-ring text-text-primary"
+				class="flex items-center justify-center size-9 rounded-t-lg focus-ring text-text-primary"
 				style="border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);"
 				aria-label="放大"
 				disabled={mapZoom >= 16}
@@ -197,7 +200,7 @@
 			</button>
 			<button
 				type="button"
-				class="hover-btn flex items-center justify-center size-9 focus-ring text-text-primary"
+				class="flex items-center justify-center size-9 rounded-b-lg focus-ring text-text-primary"
 				aria-label="缩小"
 				disabled={mapZoom <= 13}
 				onclick={() => (mapZoom = Math.max(13, mapZoom - 1))}
