@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronRight } from '@lucide/svelte';
+	import { ChevronRight, MapPin } from '@lucide/svelte';
 
 	// 详情栏小尺寸帖子缩略。
 
@@ -17,8 +17,15 @@
 </script>
 
 <button type="button" class="hover-bg tap-97 flex items-center gap-2.5 w-full text-left rounded-sm {onClick ? 'cursor-pointer' : ''}" onclick={onClick}>
-	<div class="rounded-sm overflow-hidden shrink-0 size-11.5" >
-		<img src={image} alt={title} loading="lazy" class="w-full h-full object-cover" />
+	<div class="rounded-sm overflow-hidden shrink-0 size-11.5 bg-accent-soft" >
+		{#if image}
+			<img src={image} alt={title} loading="lazy" class="w-full h-full object-cover" />
+		{:else}
+			<!-- 无图动态占位（禁止 <img src=""> 破图） -->
+			<div class="flex h-full w-full items-center justify-center">
+				<MapPin class="size-4 text-accent-default" strokeWidth={1.5} />
+			</div>
+		{/if}
 	</div>
 	<div class="flex-1 min-w-0">
 		<p   class="truncate text-xs text-text-primary">{title}</p>

@@ -22,6 +22,8 @@ import type {
 export interface GalleryMoment {
 	id: string;
 	img: string;
+	/** 全部图片 URL（大图查看器用；无图动态为空数组） */
+	images: string[];
 	title: string;
 	likes: number;
 	comments: number;
@@ -41,6 +43,7 @@ function mapGalleryMoment(m: MomentItem): GalleryMoment {
 	return {
 		id: m.moment_id,
 		img: m.images?.[0]?.url ?? '',
+		images: (m.images ?? []).map((im) => im.url).filter(Boolean),
 		title: m.description ?? '',
 		likes: (m.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
 		comments: m.comments_count ?? 0,

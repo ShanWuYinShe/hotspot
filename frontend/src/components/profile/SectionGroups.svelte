@@ -53,9 +53,13 @@
 				aria-label={`进入群组：${g.name}`}
 				onclick={() => void goto(`${ROUTES.group(g.id)}?from=me`)}
 			>
-				<!-- 左侧 banner（固定宽 96-112px） -->
+				<!-- 左侧 banner（固定宽 96-112px；无头像群组用 accent 渐变兜底，不渲染空 src img） -->
 				<div class="relative w-24 shrink-0 overflow-hidden sm:w-28">
-				<img src={g.banner} alt="" loading="lazy" class="h-full w-full object-cover" />
+				{#if g.banner}
+					<img src={g.banner} alt="" loading="lazy" class="h-full w-full object-cover" />
+				{:else}
+					<div class="surface-accent-gradient h-full w-full"></div>
+				{/if}
 					<div class="absolute inset-0" style="background:var(--cst-surface-gallery-scrim);"></div>
 					<div
 						class="absolute left-2 top-2 badge"
@@ -73,15 +77,21 @@
 				</div>
 
 				<!-- 右侧详情列 -->
-				<div class="flex min-w-0 flex-1 flex-col p-3">
-					<div class="flex min-w-0 items-center gap-2">
-						<img
-							src={g.avatar}
-							alt=""
-							loading="lazy"
-							class="h-8 w-8 shrink-0 rounded-sm border border-border-default object-cover"
-						/>
-						<p class="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">{g.name}</p>
+					<div class="flex min-w-0 flex-1 flex-col p-3">
+						<div class="flex min-w-0 items-center gap-2">
+							{#if g.avatar}
+								<img
+									src={g.avatar}
+									alt=""
+									loading="lazy"
+									class="h-8 w-8 shrink-0 rounded-sm border border-border-default object-cover"
+								/>
+							{:else}
+								<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border border-border-default bg-accent-soft">
+									<Users class="size-3.5 text-accent-default" strokeWidth={1.75} />
+								</div>
+							{/if}
+							<p class="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">{g.name}</p>
 						<ChevronRight class="shrink-0 text-text-secondary size-4"  strokeWidth={1.75} />
 					</div>
 

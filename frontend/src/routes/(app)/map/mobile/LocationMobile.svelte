@@ -1,18 +1,19 @@
 <script lang="ts">
-	import { Search, MapPin, X, SlidersHorizontal, Crosshair, Check, ArrowLeft, Plus, Minus } from '@lucide/svelte';
+	import { Search, MapPin, X, Crosshair, Check, ArrowLeft, Plus, Minus } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
-	import * as Popover from '@/components/ui/popover';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
-	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, markerSvg, floatBtnStyle, fetchMapCanvas, type MapBounds, type MapHeatBucket, type SnapState } from '../shared/location-shared';
+	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, floatBtnStyle, fetchMapCanvas, type MapBounds, type MapHeatBucket, type SnapState } from '../shared/location-shared';
 	import MapCanvas from '../shared/MapCanvas.svelte';
+	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
 	import MapHeatDot from '../shared/MapHeatDot.svelte';
 	import LocationSheetList from './LocationSheetList.svelte';
 
 	// 移动端地图探索：全屏 OSM + 可拖拽吸附底部 Sheet（148/318/540 三档）。
 	// motion spring 吸附改 CSS transition。
+	// 筛选菜单由 map/shared/MapFilterMenu 统一承载（桌面/移动一致）。
 
 	/* ── Sheet drag ── */
 	let sheetH = $state(SNAP_MID);
@@ -76,8 +77,6 @@
 	}
 
 	/* ── Content state ── */
-	let showFilter = $state(false);
-	let filterAnchorEl = $state<HTMLElement | null>(null);
 	let activeFilters = $state<Set<PinType>>(new Set(['user', 'group', 'moment']));
 	let searchQuery = $state('');
 	let selectedPin = $state<Pin | null>(null);
@@ -123,9 +122,9 @@
 	// 底图视口地理边界由 MapCanvas 墨卡托换算后双向绑定（图钉/热力定位用）
 	const searchResults = $derived(searchQuery.trim() ? SEARCH_DB.filter((s) => s.displayName.includes(searchQuery)).slice(0, 5) : []);
 
+	// 地图原地点击（MapCanvas 内部区分拖拽，拖动不再误触收起）：清选中并收起 sheet
 	function handleMapTap() {
 		selectedPin = null;
-		showFilter = false;
 		snapTo('min');
 	}
 
@@ -145,12 +144,6 @@
 		history.back();
 	}
 
-	function toggleFilter(type: PinType) {
-		const next = new Set(activeFilters);
-		next.has(type) ? next.delete(type) : next.add(type);
-		activeFilters = next;
-	}
-
 	// 图钉详情跳转：user/group/moment 分别路由到对应详情页
 	function openPinDetail(pin: Pin) {
 		if (pin.type === 'user') void goto(ROUTES.user(pin.id));
@@ -167,22 +160,10 @@
 <div class="bg-surface-primary" style="position:relative;width:100%;height:100%;overflow:hidden;">
 	<h1 class="sr-only">地图</h1>
 	<!-- ══ MAP (full screen, tappable) ══ -->
-	<div
-		style="position:absolute;inset:0;z-index:0;"
-		role="button"
-		tabindex="0"
-		aria-label="地图（点击空白处收起面板）"
-		onclick={handleMapTap}
-		onkeydown={(e) => {
-			if (e.target !== e.currentTarget) return;
-			if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
-				e.preventDefault();
-				handleMapTap();
-			}
-		}}
-	>
+	<!-- 原地点击空白由 MapCanvas onMapTap 承担（拖拽不触发）；键盘 Escape 等价收起见 svelte:window -->
+	<div style="position:absolute;inset:0;z-index:0;">
 		{#if mapCenter}
-		<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} />
+		<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} onMapTap={handleMapTap} />
 
 		<!-- Current location pulsing dot（对齐 Figma Make：halo scale 1→1.8 / opacity 0.55→0 循环） -->
 		<div style="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:5;pointer-events:none;">
@@ -231,66 +212,10 @@
 					<ArrowLeft class="size-4.5 text-text-primary"   strokeWidth={2} />
 				</button>
 
-			<!-- Filter toggle -->
-			<Popover.Root bind:open={showFilter}>
-				<div bind:this={filterAnchorEl}>
-					<button
-						type="button"
-						class="hover-btn flex items-center gap-2 rounded-full focus-ring text-md {showFilter ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-primary'}"
-						style="padding:9px 16px;border:{showFilter ? 'var(--cst-border-width-hairline) solid transparent' : 'var(--cst-border-width-hairline) solid var(--cst-border-default)'};box-shadow:{showFilter ? 'var(--shadow-glow-md)' : 'var(--cst-elevation-fab)'};"
-						onclick={() => (showFilter = !showFilter)}
-					>
-						<SlidersHorizontal class="size-3.5"  strokeWidth={showFilter ? 2.5 : 1.75} />
-						筛选
-					</button>
-				</div>
-
-					<!-- Filter legend panel -->
-					<Popover.Content
-						customAnchor={filterAnchorEl}
-						side="bottom"
-						align="end"
-						sideOffset={8}
-						class="w-64 overflow-hidden rounded-xl p-0"
-					>
-						<div class="flex items-center justify-between border-b border-border-default px-3.5 py-2.5">
-							<span class="text-sm font-medium text-text-primary">显示类型</span>
-							<span class="text-xxs text-text-secondary">{activeFilters.size}/3 已选</span>
-						</div>
-						<div class="flex flex-col gap-1 p-1.5">
-							{#each [
-								['user', '用户'],
-								['group', '群组'],
-								['moment', '瞬间']
-							] as [type, label]}
-								{@const active = activeFilters.has(type as PinType)}
-								<button
-									type="button"
-									class="group flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left focus-ring transition-colors {active ? 'bg-accent-soft' : 'hover:bg-interactive-hover'}"
-									onclick={() => toggleFilter(type as PinType)}
-								>
-									<span
-										class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg"
-										style="background:{active ? PIN_TONES[type as PinType].bg : 'var(--cst-surface-subtle)'};border:var(--cst-border-width-hairline) solid {active ? PIN_TONES[type as PinType].border : 'transparent'};"
-									>
-										{@html markerSvg(type as PinType, 1, { w: 14, h: 19 })}
-									</span>
-									<span class="min-w-0 flex-1">
-										<span class="block text-sm text-text-primary">{label}</span>
-										<span class="mt-0.5 block text-xxs text-text-secondary">{active ? '正在显示' : '已隐藏'}</span>
-									</span>
-									<span
-										class="flex size-5 shrink-0 items-center justify-center rounded-full transition-colors {active ? 'bg-accent-default text-text-on-accent' : 'bg-border-default text-transparent'}"
-									>
-										<Check class="size-3" strokeWidth={3} />
-									</span>
-								</button>
-							{/each}
-						</div>
-					</Popover.Content>
-				</Popover.Root>
+				<!-- Filter menu（桌面/移动共用组件：徽章/重置/至少一项/外点关闭统一） -->
+				<MapFilterMenu bind:activeFilters align="end" />
+			</div>
 		</div>
-	</div>
 
 	<!-- ══ RIGHT CONTROLS — bottom tracks sheet ══ -->
 	<div style="position:absolute;right:12px;bottom:{rightCtrlBottom}px;z-index:35;display:flex;flex-direction:column;gap:8px;align-items:center;transition:bottom var(--cst-motion-spring) var(--cst-ease-bounce);">
@@ -435,3 +360,5 @@
 		</div>
 	</div>
 </div>
+
+<svelte:window onkeydown={(e) => { if (e.key === 'Escape') handleMapTap(); }} />

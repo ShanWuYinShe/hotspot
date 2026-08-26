@@ -12,7 +12,8 @@
 		saved,
 		onLike,
 		onSave,
-		onClick
+		onClick,
+		onImageClick
 	}: {
 		item: FeedItem;
 		liked: boolean;
@@ -20,6 +21,8 @@
 		onLike: () => void;
 		onSave: () => void;
 		onClick?: () => void;
+		/** 图片区域独立点击（打开大图查看器）；缺省时整卡点击均为 onClick */
+		onImageClick?: () => void;
 	} = $props();
 
 	// 卡片可访问名（role=button 的 aria-label 来源）：tag 可为空，回退正文/作者并截断。
@@ -30,6 +33,7 @@
 	imageSrc={item.image ?? item.avatar}
 	imageAlt={cardLabel}
 	{onClick}
+	{onImageClick}
 	class="aspect-[4/3] rounded-md"
 >
 	{#snippet placeholder()}
@@ -79,10 +83,19 @@
 						<Heart class="size-4"  strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
 						<span class="text-xs">{item.likes + (liked ? 1 : 0)}</span>
 					</button>
-					<span class="flex items-center gap-1.5 text-xs text-text-secondary">
+					<!-- 评论计数：可点进入动态详情（评论区在详情页内） -->
+					<button
+						type="button"
+						class="hover-action hit-slop flex items-center gap-1.5 focus-ring text-text-secondary"
+						aria-label="查看评论"
+						onclick={(e) => {
+							e.stopPropagation();
+							onClick?.();
+						}}
+					>
 						<MessageCircle class="size-4"  strokeWidth={1.5} />
-						{item.comments}
-					</span>
+						<span class="text-xs">{item.comments}</span>
+					</button>
 				</div>
 				<div class="flex gap-3">
 					<button

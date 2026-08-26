@@ -27,6 +27,7 @@
 		imageSrc,
 		imageAlt = '',
 		onClick,
+		onImageClick,
 		onImageError,
 		placeholder,
 		footer,
@@ -36,6 +37,8 @@
 		imageSrc: string;
 		imageAlt?: string;
 		onClick?: () => void;
+		/** 图片区域独立点击（如打开大图查看器）；缺省时整卡点击均为 onClick */
+		onImageClick?: () => void;
 		onImageError?: () => void;
 		/** 无图时的占位内容（渲染在 accent 渐变层上；缺省为空白渐变层） */
 		placeholder?: Snippet;
@@ -78,12 +81,20 @@
 	}}
 >
 	{#if imageSrc}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<img
 			src={imageSrc}
 			alt={imageAlt}
 			loading="lazy"
-			class="image-hover-frame__image absolute inset-0 h-full w-full object-cover will-change-transform"
+			class="image-hover-frame__image absolute inset-0 h-full w-full object-cover will-change-transform {onImageClick ? 'cursor-zoom-in' : ''}"
 			onerror={onImageError}
+			onclick={onImageClick
+				? (e) => {
+						e.stopPropagation();
+						onImageClick();
+					}
+				: undefined}
 		/>
 	{:else if placeholder}
 		<!-- 装饰占位层：pointer-events-none 防止拦截 footer 行内按钮（关注等）的点击/悬停 -->

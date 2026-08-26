@@ -1,14 +1,15 @@
 <script lang="ts">
-	import { X, ChevronRight, SlidersHorizontal, Heart, Check, Crosshair, Plus, Minus } from '@lucide/svelte';
+	import { X, ChevronRight, Heart, Crosshair, Plus, Minus } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import {
-		PIN_COLORS, PIN_LABELS, PIN_TONES, markerSvg, fetchMapCanvas,
+		PIN_COLORS, PIN_LABELS, PIN_TONES, fetchMapCanvas,
 		type MapBounds, type MapHeatBucket
 	} from '../shared/location-shared';
 	import MapCanvas from '../shared/MapCanvas.svelte';
+	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
 	import MapHeatDot from '../shared/MapHeatDot.svelte';
 	import PinMedia from '../shared/PinMedia.svelte';
@@ -17,13 +18,13 @@
 	// 桌面地图探索：左侧栏（统计/搜索/Tab 列表/确认，由 LocationDesktopPanel 承载）
 	// + 地图面板（OSM iframe + 图钉 + 筛选 + 详情浮层）。
 	// 图钉与统计来自 POST /public/v1/map/canvas（spec: api_spec_map.md）。
+	// 筛选菜单由 map/shared/MapFilterMenu 统一承载（关闭行为/动画/重置/至少一项）。
 
 	let searchQuery = $state('');
 	let selectedPin = $state<Pin | null>(null);
 	let selectedLoc = $state<LocationResult | null>(null);
 	let activeFilters = $state<Set<PinType>>(new Set(['user', 'group', 'moment']));
 	let activeTab = $state<'nearby' | 'hot' | 'recent'>('nearby');
-	let showFilter = $state(false); // 筛选面板默认收起（与移动端一致），由用户主动展开
 	// 瓦片缩放级别（13≈全市 / 16≈街区）；数据请求半径仍由 fetchMapCanvas 内部约定
 	let mapZoom = $state(14);
 	let mapCenter = $state<{ lat: number; lng: number } | null>(null);
@@ -69,22 +70,12 @@
 		else void goto(ROUTES.moment(pin.id));
 	}
 
-	function toggleFilter(type: PinType) {
-		const next = new Set(activeFilters);
-		next.has(type) ? next.delete(type) : next.add(type);
-		activeFilters = next;
-	}
-
 	const searchResults = $derived(
 		searchQuery.trim() ? SEARCH_DB.filter((s) => s.displayName.includes(searchQuery)).slice(0, 6) : []
 	);
 	const nearbyPins = $derived(mapPins.filter((p) => (p.count ?? 1) === 1));
 
 	// 底图视口地理边界由 MapCanvas 墨卡托换算后双向绑定（图钉/热力定位用）
-
-	const userCount = $derived(mapCounts.user);
-	const groupCount = $derived(mapCounts.group);
-	const momentCount = $derived(mapCounts.moment);
 
 	function handleSelectLoc(loc: LocationResult) {
 		selectedLoc = loc;
@@ -126,28 +117,11 @@
 	</div>
 
 	<!-- ══ MAP PANEL ══ -->
-	<div
-		class="flex-1 relative overflow-hidden"
-		role="button"
-		tabindex="0"
-		aria-label="地图（点击空白处取消选中）"
-		onclick={(e) => {
-			// 详情浮层与筛选下拉内的点击不视为地图空白点击
-			if ((e.target as HTMLElement).closest('[data-map-popup]')) return;
-			if ((e.target as HTMLElement).closest('[data-map-filter]')) return;
-			selectedPin = null;
-			showFilter = false;
-		}}
-		onkeydown={(e) => {
-			if (e.target !== e.currentTarget) return;
-			if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
-				e.preventDefault();
-				selectedPin = null;
-			}
-		}}
-	>
+	<!-- 地图空白点击由 MapCanvas onMapTap 承担（内部区分拖拽/原地点击，拖拽后不再误清选中）；
+	     筛选面板关闭由 MapFilterMenu 的 Popover 外点机制承担；Escape 清选中见 svelte:window -->
+	<div class="flex-1 relative overflow-hidden">
 		{#if mapCenter}
-		<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} />
+		<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} onMapTap={() => (selectedPin = null)} />
 
 		<!-- Current location dot -->
 		<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:5;">
@@ -209,69 +183,14 @@
 			</button>
 		</div>
 
-		<!-- 左上筛选浮动按钮 + 下拉（对齐 Figma Make LocationDesktop 筛选面板） -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<div data-map-filter class="absolute z-20" style="top:14px;left:14px;" onclick={(e) => e.stopPropagation()}>
-			<button
-				type="button"
-				class="hover-btn scale-btn flex items-center gap-2 rounded-full focus-ring text-sm"
-				style="padding:9px 16px;background:{showFilter ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-text-primary)'};border:var(--cst-border-width-hairline) solid {showFilter ? 'transparent' : 'var(--cst-border-default)'};box-shadow:{showFilter ? 'var(--shadow-glow-md)' : 'var(--cst-elevation-fab)'};"
-				onclick={() => (showFilter = !showFilter)}
-			>
-				<SlidersHorizontal class="size-3.5"  strokeWidth={showFilter ? 2.5 : 1.75} />
-				筛选
-				{#if activeFilters.size < 3}
-					<span class="text-xxs font-medium rounded-full" style="margin-left:2px;padding:1px 6px;background:{showFilter ? 'var(--cst-surface-map-control-active)' : 'var(--cst-accent-soft)'};color:{showFilter ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};">{activeFilters.size}</span>
-				{/if}
-			</button>
-			{#if showFilter}
-				<div class="mt-2 w-64 overflow-hidden rounded-xl border border-border-default bg-surface-primary shadow-raised-lg">
-					<div class="flex items-center justify-between border-b border-border-default px-3.5 py-2.5">
-						<span class="text-sm font-medium text-text-primary">显示类型</span>
-						<span class="text-xxs text-text-secondary">{activeFilters.size}/3 已选</span>
-					</div>
-					<div class="flex flex-col gap-1 p-1.5">
-						{#each [{ type: 'user', label: '用户', count: userCount }, { type: 'group', label: '群组', count: groupCount }, { type: 'moment', label: '瞬间', count: momentCount }] as item}
-							{@const active = activeFilters.has(item.type as PinType)}
-							<button
-								type="button"
-								class="group flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left focus-ring transition-colors {active ? 'bg-accent-soft' : 'hover:bg-interactive-hover'}"
-								onclick={() => toggleFilter(item.type as PinType)}
-							>
-								<span
-									class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg"
-									style="background:{active ? PIN_TONES[item.type as PinType].bg : 'var(--cst-surface-subtle)'};border:var(--cst-border-width-hairline) solid {active ? PIN_TONES[item.type as PinType].border : 'transparent'};"
-								>
-									{@html markerSvg(item.type as PinType, 1, { w: 14, h: 19 })}
-								</span>
-								<span class="min-w-0 flex-1">
-									<span class="block text-sm text-text-primary">{item.label}</span>
-									<span class="mt-0.5 block text-xxs text-text-secondary">{active ? '正在显示' : '已隐藏'}</span>
-								</span>
-								{#if item.count}
-									<span class="shrink-0 text-xs text-text-secondary">{item.count}</span>
-								{/if}
-								<span
-									class="flex size-5 shrink-0 items-center justify-center rounded-full transition-colors {active ? 'bg-accent-default text-text-on-accent' : 'bg-border-default text-transparent'}"
-								>
-									<Check class="size-3" strokeWidth={3} />
-								</span>
-							</button>
-						{/each}
-					</div>
-					<div class="flex items-center gap-2 border-t border-border-default px-3.5 py-2.5">
-						<span class="size-3 rounded-full" style="background:{PIN_COLORS.user};border:var(--cst-border-width-strong) solid var(--cst-surface-primary);box-shadow:var(--cst-marker-halo) {PIN_TONES.user.glow};"></span>
-						<span class="text-xs text-text-secondary">我的位置</span>
-					</div>
-				</div>
-			{/if}
+		<!-- 左上筛选菜单（桌面/移动共用组件；含计数徽章、至少一项约束与全部显示重置） -->
+		<div class="absolute z-20" style="top:14px;left:14px;">
+			<MapFilterMenu bind:activeFilters counts={mapCounts} showLegend align="start" />
 		</div>
 
 		<!-- 定位到当前：地图区域右上角，独立于标题栏 -->
 		<button
 			type="button"
-			data-map-filter
 			class="hover-btn scale-btn absolute z-20 flex items-center justify-center rounded-full focus-ring size-10"
 			style="top:14px;right:14px;background:var(--cst-surface-primary);color:var(--cst-text-primary);border:var(--cst-border-width-hairline) solid var(--cst-border-default);box-shadow:var(--cst-elevation-fab);"
 			aria-label="定位到当前位置"
@@ -349,3 +268,5 @@
 		{/if}
 	</div>
 </div>
+
+<svelte:window onkeydown={(e) => { if (e.key === 'Escape') selectedPin = null; }} />

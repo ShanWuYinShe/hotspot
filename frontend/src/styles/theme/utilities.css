@@ -326,6 +326,18 @@
   }
   @keyframes spinner-rotate { to { transform: rotate(360deg); } }
 
+  /* 计数变化弹跳（点赞/评论数瞬时数值反馈）。数字元素用 {#key 值} 重建触发：
+     <span class="count-pop">{n}</span>；数字不变（初始渲染）时无感知。 */
+  @keyframes cst-count-pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+  .count-pop {
+    display: inline-block;
+    animation: cst-count-pop var(--cst-motion-snappy) var(--cst-ease-bounce);
+  }
+
   /* 尊重系统减弱动效偏好：无限/装饰性动画一律降级为瞬时，缩放反馈保留无感时长。
      地图脉冲这类纯装饰动画直接停用；加载 spinner 属于状态反馈，保留但加快周期。 */
   @media (prefers-reduced-motion: reduce) {

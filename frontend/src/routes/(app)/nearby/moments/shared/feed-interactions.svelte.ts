@@ -11,6 +11,8 @@ export interface FeedItem {
 	tag: string;
 	content: string;
 	image: string;
+	/** 全部图片 URL（大图查看器用；无图动态为空数组） */
+	images: string[];
 	likes: number;
 	comments: number;
 	time: string;

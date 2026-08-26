@@ -67,7 +67,7 @@
 			user: '',
 			avatar: '',
 			location: '',
-			image: '',
+			images: [],
 			content: '',
 			time: '',
 			likes: 0,
@@ -127,7 +127,7 @@
 						user: detailData.user?.nickname ?? '',
 							avatar: detailData.user?.avatar_url ?? '',
 						location: detailData.location?.location_name ?? '',
-						image: detailData.images?.[0]?.url ?? '',
+						images: (detailData.images ?? []).map((im) => im.url).filter(Boolean),
 						content: detailData.description ?? '',
 						time: formatDateTime(detailData.created_at),
 						likes: (detailData.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
@@ -169,13 +169,16 @@
 				}
 
 				if (commentsData) {
-					const items: MomentComment[] = (commentsData.items || []).map((c, i) => ({
-						id: i + 1,
+					const items: MomentComment[] = (commentsData.items || []).map((c) => ({
+						// 真实 comment_id（评论点赞 reactions/set target_id 用）
+						id: c.comment_id,
+						userId: c.user?.user_id ?? '',
 						user: c.user?.nickname ?? '',
 						avatar: c.user?.avatar_url ?? '',
 						text: c.content ?? '',
 						time: formatDateTime(c.created_at),
-						likes: (c.reactions || []).reduce((s, r) => s + (r.count ?? 0), 0)
+						likes: (c.reactions || []).reduce((s, r) => s + (r.count ?? 0), 0),
+						liked: (c.reactions || []).some((r) => r.reacted_by_me)
 					}));
 					apiComments = items;
 				}
@@ -200,12 +203,14 @@
 		input = '';
 		// Optimistic append; createComment confirms server-side.
 		const optimistic: MomentComment = {
-			id: Date.now(),
+			id: `optimistic-${Date.now()}`,
+			userId: auth.user?.user_id ?? '',
 			user: auth.user?.nickname ?? '',
 			avatar: auth.user?.avatar_url ?? '',
 			text,
 			time: '刚刚',
-			likes: 0
+			likes: 0,
+			liked: false
 		};
 		apiComments = [...apiComments, optimistic];
 		try {
@@ -213,6 +218,31 @@
 		} catch {
 			apiComments = apiComments.filter((c) => c.id !== optimistic.id);
 		}
+	};
+
+	// 评论点赞：乐观翻转 + reactions/set(target_type='comment')，失败回滚
+	const toggleCommentLike = async (commentId: string) => {
+		const target = apiComments.find((c) => c.id === commentId);
+		if (!target) return;
+		const prev = target.liked;
+		apiComments = apiComments.map((c) => (c.id === commentId ? { ...c, liked: !prev } : c));
+		try {
+			await setReaction({ target_type: 'comment', target_id: commentId, emoji: '👍', active: !prev });
+		} catch {
+			apiComments = apiComments.map((c) => (c.id === commentId ? { ...c, liked: prev } : c));
+		}
+	};
+
+	// 操作条评论计数点击：滚动到评论区并聚焦输入栏
+	const focusComments = () => {
+		document.getElementById('moment-comments')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		commentInputEl?.focus();
+	};
+
+	// 评论区"回复"：聚焦输入栏并 @ 对方
+	const replyTo = (user: string) => {
+		input = `@${user} `;
+		commentInputEl?.focus();
 	};
 
 	const toggleLike = async () => {
@@ -271,6 +301,8 @@
 	};
 
 	let moreMenuEl = $state<HTMLElement | null>(null);
+	// 评论输入框元素（focusComments/replyTo 聚焦用）
+	let commentInputEl = $state<HTMLInputElement | null>(null);
 </script>
 <svelte:head>
 	<title>动态详情 · HotSpot</title>
@@ -300,9 +332,6 @@
 								删除动态
 							</DropdownMenu.Item>
 						{/if}
-						<DropdownMenu.Item class="text-text-secondary">
-							取消
-						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			{/snippet}
@@ -338,6 +367,9 @@
 			onToggleLike={() => void toggleLike()}
 			onToggleSave={() => void toggleSave()}
 			onShare={() => void copyMomentLink()}
+			onCommentClick={focusComments}
+			onReply={replyTo}
+			onToggleCommentLike={(id) => void toggleCommentLike(id)}
 		/>
 	{/if}
 
@@ -347,6 +379,7 @@
 			<Avatar class="border border-border-default" src={auth.user?.avatar_url} name={auth.user?.nickname} size={30}  />
 			<div class="flex-1 flex items-center px-4 rounded-md input-surface h-9.5" >
 				<input
+					bind:this={commentInputEl}
 					bind:value={input}
 					onkeydown={(e) => {
 						if (e.key === 'Enter') void handleComment();

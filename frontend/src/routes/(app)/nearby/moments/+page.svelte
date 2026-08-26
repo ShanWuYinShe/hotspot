@@ -13,6 +13,7 @@
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import MomentCard from './shared/MomentCard.svelte';
 	import { createFeedInteractions, type FeedItem } from './shared/feed-interactions.svelte';
+	import ImageViewer from '@/components/overlays/ImageViewer.svelte';
 	import { fetchNearbyMoments } from '@/api';
 	import { formatDateTime } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
@@ -31,6 +32,17 @@
 	let locationName = $state('');
 	let loadError = $state<string | null>(null);
 	let reloadKey = $state(0);
+	// 大图查看器状态：当前查看的图片列表与起始索引
+	let viewerImages = $state<{ url: string; alt?: string }[]>([]);
+	let viewerIndex = $state(0);
+	let viewerOpen = $state(false);
+
+	function openViewer(item: FeedItem) {
+		if (item.images.length === 0) return;
+		viewerImages = item.images.map((url) => ({ url, alt: item.content }));
+		viewerIndex = Math.max(0, item.images.indexOf(item.image));
+		viewerOpen = true;
+	}
 
 	$effect(() => startDefaultLocation((loc) => {
 referencePoint = loc?.point ?? null;
@@ -65,8 +77,9 @@ locationName = loc?.location_name ?? '';
 							avatar: m.user?.avatar_url ?? '',
 							location: m.location?.location_name ?? '',
 							tag: m.tags?.[0] ?? '',
-							content: m.description ?? '',
-							image: m.images?.[0]?.url ?? '',
+						content: m.description ?? '',
+						image: m.images?.[0]?.url ?? '',
+						images: (m.images ?? []).map((im) => im.url).filter(Boolean),
 							likes: (m.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
 							comments: m.comments_count ?? 0,
 							time: formatDateTime(m.created_at),
@@ -251,8 +264,11 @@ locationName = loc?.location_name ?? '';
 					onLike={() => void interactions.toggleLike(item.id)}
 					onSave={() => void interactions.toggleSave(item.id)}
 					onClick={() => void goto(ROUTES.moment(item.id))}
+					onImageClick={() => openViewer(item)}
 				/>
 			{/snippet}
 		</BspCardCanvas>
 	{/if}
 </StandardPageLayout>
+
+<ImageViewer bind:open={viewerOpen} images={viewerImages} bind:index={viewerIndex} />

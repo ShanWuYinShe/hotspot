@@ -2,19 +2,23 @@
 	import { goto } from '$app/navigation';
 	import { MapPin, Heart, MessageCircle, Share2, Bookmark, Check } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import ImageViewer from '@/components/overlays/ImageViewer.svelte';
 	import { ROUTES } from '@/lib/routes';
 
-	// 动态详情内容体：作者/正文/操作条/评论区 + 底部评论输入栏。
+	// 动态详情内容体：作者/正文/图片（单图全幅封面、多图网格）/操作条/评论区。
 	// 评论输入栏由页面经 SplitPageLayout footer 渲染，本组件只负责内容体。
 	// 页面私有组件（colocate），由 moments/[momentId]/+page.svelte 渲染。
 
 	export interface MomentComment {
-		id: number;
+		/** 真实 comment_id（reactions/set target_id 用） */
+		id: string;
+		userId: string;
 		user: string;
 		avatar: string;
 		text: string;
 		time: string;
 		likes: number;
+		liked: boolean;
 	}
 
 	export interface MomentData {
@@ -24,7 +28,8 @@
 		user: string;
 		avatar: string;
 		location: string;
-		image: string;
+		/** 全部图片 URL（无图为空数组；首图兼作单图封面） */
+		images: string[];
 		content: string;
 		time: string;
 		likes: number;
@@ -41,7 +46,10 @@
 		shareStatus,
 		onToggleLike,
 		onToggleSave,
-		onShare
+		onShare,
+		onCommentClick,
+		onReply,
+		onToggleCommentLike
 	}: {
 		moment: MomentData;
 		comments: MomentComment[];
@@ -52,23 +60,80 @@
 		onToggleLike: () => void;
 		onToggleSave: () => void;
 		onShare: () => void;
+		/** 操作条评论计数点击：滚动到评论区并聚焦输入栏 */
+		onCommentClick: () => void;
+		/** 评论区"回复"点击：聚焦输入栏并 @ 对方 */
+		onReply: (user: string) => void;
+		/** 评论点赞切换（reactions/set target_type='comment'） */
+		onToggleCommentLike: (commentId: string) => void;
 	} = $props();
+
+	// 大图查看器状态
+	let viewerOpen = $state(false);
+	let viewerIndex = $state(0);
+
+	const cover = $derived(moment.images[0] ?? '');
+	const likeCount = $derived(moment.likes + (liked ? 1 : 0));
 </script>
 
-<!-- Post image（全幅封面：负 margin 抵消外层 SplitPageLayout 的 gutter，与 users 详情一致） -->
-<div class="relative overflow-hidden -mx-[var(--cst-page-gutter)]" style="height:var(--cst-cover-height-lg);">
-	{#if moment.image}
-		<img src={moment.image} alt="moment" class="w-full h-full object-cover" />
-	{:else}
-		<div class="flex h-full w-full flex-col items-center justify-center gap-2 bg-accent-bg">
-			<MapPin size={28} class="text-accent-default" strokeWidth={1.5} />
-			<span class="text-text-secondary text-xs">来自 {moment.location || '附近'} 的动态</span>
+<!-- Post images（全幅封面：负 margin 抵消外层 SplitPageLayout 的 gutter，与 users 详情一致）。
+     单图保持全幅封面；多图改为网格（首图全幅 + 其余 3 列网格，点击任一张打开大图查看器）。 -->
+{#if cover}
+	<div class="relative overflow-hidden -mx-[var(--cst-page-gutter)]" style="height:var(--cst-cover-height-lg);">
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+		<img
+			src={cover}
+			alt="动态图片"
+			class="w-full h-full object-cover cursor-zoom-in"
+			onclick={() => {
+				viewerIndex = 0;
+				viewerOpen = true;
+			}}
+		/>
+		{#if moment.images.length > 1}
+			<button
+				type="button"
+				class="hover-btn absolute right-3 bottom-3 rounded-full bg-black/45 px-2.5 py-1 text-xxs text-text-primary focus-ring"
+				aria-label={`查看全部 ${moment.images.length} 张图片`}
+				onclick={() => {
+					viewerIndex = 0;
+					viewerOpen = true;
+				}}
+			>
+				共 {moment.images.length} 张
+			</button>
+		{/if}
+	</div>
+	{#if moment.images.length > 1}
+		<div class="mt-0.5 grid grid-cols-3 gap-0.5">
+			{#each moment.images.slice(1) as img, i (img + i)}
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+				<img
+					src={img}
+					alt={`动态图片 ${i + 2}`}
+					loading="lazy"
+					class="aspect-square w-full object-cover cursor-zoom-in"
+					onclick={() => {
+						viewerIndex = i + 1;
+						viewerOpen = true;
+					}}
+				/>
+			{/each}
 		</div>
 	{/if}
-	<div class="absolute top-3 left-3 px-2.5 py-0.5 rounded-full bg-accent-default shadow-glow-sm" >
+{:else}
+	<div class="relative flex flex-col items-center justify-center gap-2 overflow-hidden -mx-[var(--cst-page-gutter)] bg-accent-bg" style="height:var(--cst-cover-height-lg);">
+		<MapPin size={28} class="text-accent-default" strokeWidth={1.5} />
+		<span class="text-text-secondary text-xs">来自 {moment.location || '附近'} 的动态</span>
+	</div>
+{/if}
+{#if moment.tag}
+	<div class="mt-3 inline-flex px-2.5 py-0.5 rounded-full bg-accent-default shadow-glow-sm" >
 		<span class="text-text-on-accent text-xxs">#{moment.tag}</span>
 	</div>
-</div>
+{/if}
 
 <div class="pt-4 pb-3">
 	<!-- Author -->
@@ -94,27 +159,37 @@
 	<!-- Content -->
 	<p class="text-text-primary text-sm leading-copy">{moment.content}</p>
 
-	<!-- Actions -->
+	<!-- Actions（对齐交互契约：行内小图标动作用 hover-action——hover 1.20/按下 0.94） -->
 	<div class="flex items-center justify-between py-3 border-t border-border-default border-b border-border-default" >
 		<div class="flex gap-4">
 			<button
 				type="button"
-				class="tap-84 flex items-center gap-1.5 focus-ring hover:text-accent-default {liked ? 'text-accent-default' : 'text-text-secondary'}"
+				class="hover-action hit-slop flex items-center gap-1.5 focus-ring {liked ? 'text-accent-default' : 'text-text-secondary'}"
+				aria-label={liked ? '取消点赞' : '点赞'}
+				aria-pressed={liked}
 				onclick={onToggleLike}
 			>
 				<Heart class="size-5"  strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
-				<span class="text-sm">{moment.likes + (liked ? 1 : 0)}</span>
+				{#key likeCount}
+					<span class="count-pop text-sm">{likeCount}</span>
+				{/key}
 			</button>
-			<div class="flex items-center gap-1.5 text-text-secondary">
+			<button
+				type="button"
+				class="hover-action hit-slop flex items-center gap-1.5 focus-ring text-text-secondary"
+				aria-label="查看评论"
+				onclick={onCommentClick}
+			>
 				<MessageCircle class="size-5"  strokeWidth={1.5} />
 				<span class="text-sm">{commentCount}</span>
-			</div>
+			</button>
 		</div>
 		<div class="flex gap-3">
 			<button
 				type="button"
-				class="tap-84 hit-slop focus-ring hover:text-accent-default {saved ? 'text-accent-default' : 'text-text-secondary'}"
+				class="hover-action hit-slop flex items-center gap-1.5 focus-ring {saved ? 'text-accent-default' : 'text-text-secondary'}"
 				aria-label={saved ? '取消收藏' : '收藏'}
+				aria-pressed={saved}
 				onclick={onToggleSave}
 			>
 				<Bookmark class="size-5"  strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />
@@ -123,7 +198,7 @@
 				type="button"
 				onclick={onShare}
 				aria-label={shareStatus === 'failed' ? '复制动态链接失败' : '复制动态链接'}
-				class="tap-84 rounded-full focus-ring hover:text-accent-default {shareStatus === 'copied' ? 'text-accent-default' : 'text-text-secondary'}"
+				class="hover-action hit-slop flex items-center focus-ring {shareStatus === 'copied' ? 'text-accent-default' : 'text-text-secondary'}"
 			>
 				{#if shareStatus === 'copied'}
 					<Check class="size-5"  strokeWidth={1.75} />
@@ -135,28 +210,53 @@
 	</div>
 
 	<!-- Comments -->
-	<p class="eyebrow mt-4 mb-3">
+	<p class="eyebrow mt-4 mb-3" id="moment-comments">
 		评论 · {commentCount}
 	</p>
 	<div class="flex flex-col gap-4">
 		{#each comments as c (c.id)}
 			<div class="flex gap-3">
-				<Avatar src={c.avatar} name={c.user} size={34} />
+				<button
+					type="button"
+					class="hover-btn shrink-0 rounded-full focus-ring"
+					aria-label={`查看${c.user}的个人主页`}
+					onclick={() => { if (c.userId) void goto(ROUTES.user(c.userId)); }}
+				>
+					<Avatar src={c.avatar} name={c.user} size={34} />
+				</button>
 				<div class="flex-1">
 					<div class="flex items-baseline gap-2">
-						<span class="text-text-primary text-sm">{c.user}</span>
+						<button
+							type="button"
+							class="link-btn text-text-primary text-sm focus-ring rounded-sm"
+							onclick={() => { if (c.userId) void goto(ROUTES.user(c.userId)); }}
+						>{c.user}</button>
 						<span class="text-text-secondary text-xs">{c.time}</span>
 					</div>
 					<p class="text-text-secondary text-sm mt-0.5 leading-relaxed">{c.text}</p>
-					<div class="flex items-center gap-1 mt-1.5">
-						<span class="flex items-center gap-1 text-text-secondary">
-							<Heart class="size-3"  strokeWidth={1.5} />
-							<span class="text-xs">{c.likes}</span>
-						</span>
-						<span class="text-text-secondary text-xs ml-2">回复</span>
+					<div class="flex items-center gap-3 mt-1.5">
+						<button
+							type="button"
+							class="hover-action hit-slop flex items-center gap-1 focus-ring {c.liked ? 'text-accent-default' : 'text-text-secondary'}"
+							aria-label={c.liked ? '取消点赞评论' : '点赞评论'}
+							aria-pressed={c.liked}
+							onclick={() => onToggleCommentLike(c.id)}
+						>
+							<Heart class="size-3"  strokeWidth={1.5} fill={c.liked ? 'currentColor' : 'none'} />
+							{#key c.likes + (c.liked ? 1 : 0)}
+								<span class="count-pop text-xs">{c.likes + (c.liked ? 1 : 0)}</span>
+							{/key}
+						</button>
+						<button
+							type="button"
+							class="hover-action hit-slop focus-ring text-text-secondary text-xs"
+							onclick={() => onReply(c.user)}
+						>回复</button>
 					</div>
 				</div>
 			</div>
 		{/each}
 	</div>
 </div>
+
+<ImageViewer bind:open={viewerOpen} images={moment.images.map((url) => ({ url, alt: '动态图片' }))} bind:index={viewerIndex} />

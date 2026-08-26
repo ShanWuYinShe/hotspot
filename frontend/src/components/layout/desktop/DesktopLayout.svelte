@@ -12,6 +12,7 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import AppearanceMenu from '@/components/overlays/AppearanceMenu.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
 	import SidebarNavItem from '@/components/layout/desktop/SidebarNavItem.svelte';
@@ -169,10 +170,11 @@
 					aria-label="打开个人主页"
 					onclick={() => guardNav('打开个人主页', ROUTES.me)}
 				>
-					<img
-						src={auth.user.avatar_url || ''}
-						alt={auth.user.nickname || '用户'}
-						class="w-full h-full rounded-full object-cover"
+					<!-- Avatar 组件：空头像/加载失败回退首字母色块（不渲染空 src img） -->
+					<Avatar
+						src={auth.user.avatar_url || undefined}
+						name={auth.user.nickname || '用户'}
+						size={32}
 						style="border:var(--cst-border-width-regular) solid var(--cst-border-default);"
 					/>
 				</button>

@@ -520,4 +520,17 @@ theme/
   底色保持中性，不引入 accent 色，避免与错误态等 accent 元素抢视觉。
 - 禁止双重边框：card-hover 只抬投影不画外环；带边框的卡片 hover 用
   `hover:border-accent-default`；surface-flat 的 hover 描边仅对可交互元素生效。
-- 图片缩放必须由外层 `overflow-hidden` + 圆角裁剪，图片任何像素不得溢出卡片。
+- 图片缩放必须由外层 `overflow:hidden` + 圆角裁剪，图片任何像素不得溢出卡片。
+- **禁止渲染空 src 图片**：`<img src="">` 会被浏览器解析为当前页面 URL 而显示破图
+  （"我的瞬间"页曾因此对无图动态整体破图）。无图/空 URL 一律走占位：
+  大图区用 `MediaPlaceholder`（data-display，ImageOff 图标 + accent-soft 底），
+  头像用 `Avatar`（首字母兜底），列表小缩略图内联 `{#if url}` 分支。
+- **计数变化反馈**：点赞/评论等瞬时数值变化用 `count-pop` 类 + `{#key 值}` 重建元素
+  触发弹跳（utilities.css cst-count-pop，snappy + bounce，自动遵循 reduced-motion）。
+- **大图查看统一入口**：任何"点击查看大图"交互一律复用 `components/overlays/ImageViewer`
+  （bits-ui Dialog 底座：Esc/外点关闭、左右键/滑动切图、双击与滚轮缩放、缩略图条），
+  禁止各页自建 lightbox。已接入：附近动态卡片、动态详情（含多图网格）、我的瞬间画廊、
+  他人主页画廊。
+- **地图筛选菜单统一**：`map/shared/MapFilterMenu.svelte` 是桌面/移动唯一筛选实现
+  （Popover 外点/Escape 关闭、徽章、至少一项约束、「全部显示」重置）；地图空白点击
+  一律经 `MapCanvas onMapTap`（内部区分拖拽，拖动不误触），禁止父级用原生 onclick 判定。

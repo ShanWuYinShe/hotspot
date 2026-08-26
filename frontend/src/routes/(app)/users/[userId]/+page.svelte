@@ -9,6 +9,7 @@
 	import RailUserRow from '@/components/rail/RailUserRow.svelte';
 	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
+	import ImageViewer from '@/components/overlays/ImageViewer.svelte';
 	import { openTheDoor, follow, block, createReport, setRemark } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import * as Dialog from '@/components/ui/dialog';
@@ -48,6 +49,9 @@
 	let reloadKey = $state(0);
 	let mutualFriends = $state<{ id: string; name: string; sub: string; avatar: string }[]>([]);
 	let followed = $state(false);
+	// 画廊大图查看器
+	let galleryOpen = $state(false);
+	let galleryIndex = $state(0);
 	let moreOpen = $state(false);
 	let blocked = $state(false);
 	let remark = $state('');
@@ -86,7 +90,8 @@
 						following: s?.following_count ?? 0,
 						moments: s?.moments_count ?? 0,
 						galleryMoments:
-	data.recent_moments?.items?.map((m) => m.images?.[0]?.url ?? '') ?? [],
+	// 只展示带图瞬间（无图动态渲染 <img src=""> 会破图）
+	data.recent_moments?.items?.map((m) => m.images?.[0]?.url ?? '').filter(Boolean) ?? [],
 						tags: u.tags ?? []
 					};
 					if (r?.is_following !== undefined) followed = r.is_following;
@@ -336,9 +341,18 @@
 	<!-- Gallery（spec UserProfileBundle 仅含 recent_moments，无喜欢/收藏流） -->
 	<div class="mt-5 grid grid-cols-3 gap-1.5">
 		{#each user.galleryMoments as src, i}
-			<div class="image-hover-frame tap-97 relative cursor-pointer rounded-sm overflow-hidden" style="aspect-ratio:1;">
+			<button
+				type="button"
+				class="image-hover-frame tap-97 relative cursor-pointer rounded-sm overflow-hidden focus-ring"
+				style="aspect-ratio:1;"
+				aria-label={`查看第 ${i + 1} 张图片`}
+				onclick={() => {
+					galleryIndex = i;
+					galleryOpen = true;
+				}}
+			>
 				<img src={src} alt={`photo ${i}`} loading="lazy" class="image-hover-frame__image w-full h-full object-cover" />
-			</div>
+			</button>
 		{/each}
 	</div>
 </div>
@@ -370,3 +384,5 @@
 	{/snippet}
 </SplitPageLayout>
 {/if}
+
+<ImageViewer bind:open={galleryOpen} images={user.galleryMoments.map((url) => ({ url, alt: '瞬间图片' }))} bind:index={galleryIndex} />
