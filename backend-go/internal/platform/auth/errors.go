@@ -7,5 +7,5 @@ func Unauthorized(message string) *httpx.APIError {
 }
 
 func Forbidden(message string) *httpx.APIError {
-	return &httpx.APIError{Code: httpx.CodeForbidden, Message: message}
+	return httpx.Forbidden(httpx.ReasonNotResourceOwner, message)
 }

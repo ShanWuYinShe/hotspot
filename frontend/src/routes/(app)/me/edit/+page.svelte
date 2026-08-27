@@ -69,22 +69,22 @@
 		saving = true;
 		try {
 			// spec: updateAccount { nickname?, avatar_file_id?, bio?, tags?, gender? }
-			await updateAccount({
+			const res = await updateAccount({
 				nickname: nickname || undefined,
 				bio: bio || undefined,
 				tags: tags.size > 0 ? Array.from(tags) : undefined
 			});
+			if (res.code !== 0) throw new Error(res.message || '保存失败');
+			saved = true;
+			setTimeout(() => {
+				saved = false;
+				history.back();
+			}, 800);
 		} catch {
-			saving = false;
 			showToast('保存失败，请重试', 'danger');
-			return;
+		} finally {
+			saving = false;
 		}
-		saving = false;
-		saved = true;
-		setTimeout(() => {
-			saved = false;
-			history.back();
-		}, 800);
 	};
 
 	const handleAvatarChange = async (e: Event) => {

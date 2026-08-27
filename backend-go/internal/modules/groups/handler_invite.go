@@ -81,7 +81,7 @@ func (h *Handler) InviteMember(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
 			return
 		}
 		if errors.Is(err, ErrAlreadyMember) {
@@ -111,7 +111,7 @@ func (h *Handler) ListSentInvites(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -132,7 +132,7 @@ func (h *Handler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))

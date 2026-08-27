@@ -3,6 +3,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import TagPill from '@/components/forms/TagPill.svelte';
 
 	// 搜索页「无查询发现态」：最近搜索 + 热门搜索 + 推荐话题。
 	// 页面私有组件（colocate），由 search/+page.svelte 渲染。
@@ -101,13 +102,7 @@
 		<div class="mt-4 flex flex-wrap gap-2">
 			{#if topics.length > 0}
 				{#each topics as topic (topic)}
-					<button
-						type="button"
-						onclick={() => onChoose(topic)}
-						class="hover-btn border border-border-default bg-surface-primary px-3 py-2 text-xs text-text-primary transition-colors hover:bg-accent-soft"
-					>
-						#{topic}
-					</button>
+					<TagPill onClick={() => onChoose(topic)}>#{topic}</TagPill>
 				{/each}
 			{:else}
 				<EmptyState bare title="暂无推荐话题" />

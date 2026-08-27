@@ -124,7 +124,7 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
   - 创建页「移除」等 48vp 大 chip、群组详情「恢复原头像」ghost 小按钮；
   - SettingsPage「退出登录」（50vp 透明底定制）、DebugPanel 调试按钮；
   - ChatPage 隐藏键盘失焦占位 `Button('')`、LocationPicker 搜索栏内置 searchButton；
-  - ProfileEditPage 多行简介输入辅助、ChatPage 输入栏、CreateGroupPage 人数步进输入。
+  - ProfileEditPage 多行简介输入辅助、ChatPage 输入栏（含发送钮 `Button('发送')` 属已登记例外 — 需 ChatTheme/getChatVisualStyle 定制动效与 isSendInteractive 动态态，见 ChatPage.ets 顶部“聊天发送钮属已登记例外”注释）、CreateGroupPage 人数步进输入。
 
 ## UI/UX 设计规范
 

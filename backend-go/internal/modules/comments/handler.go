@@ -47,7 +47,8 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			}
 			if errors.Is(err, ErrMomentNoPermission) {
 				observability.LogBusinessError(r, "Create", int(httpx.CodeForbidden), "权限不足")
-				return httpx.ApiResponse[any]{Code: httpx.CodeForbidden, Message: "权限不足"}
+				data := any(httpx.ForbiddenErrorData{ForbiddenReason: httpx.ReasonPrivacySetting})
+				return httpx.ApiResponse[any]{Code: httpx.CodeForbidden, Message: "权限不足", Data: &data}
 			}
 			observability.LogServerError(r, "Create", err)
 			return httpx.ApiResponse[any]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}

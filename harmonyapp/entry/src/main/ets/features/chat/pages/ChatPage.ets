@@ -3,6 +3,7 @@
  * 重构：使用 List 组件优化消息列表，支持自动滚动
  * 优化：集成消息历史缓存 (RDB)
  */
+// 聊天发送钮属已登记例外 — 已在 harmonyapp/AGENTS.md 组件原语例外清单登记，手写 Button('发送') 保留因 ChatTheme/getChatVisualStyle 定制样式与 isSendInteractive 动态交互（需主题派生背景/禁用态/按压缩放），未收敛为 SystemButton({variant:'primary', pill:true})
 
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';

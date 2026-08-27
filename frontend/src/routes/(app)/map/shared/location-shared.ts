@@ -3,11 +3,13 @@
 import { getMapCanvas } from '@/api';
 import { formatDistance } from '@/lib/utils';
 import type {
+	Bounds,
 	MapCanvasFilter,
 	MapCanvasRequest,
 	MapCanvasResponse,
 	MapHeatBucket,
-	MapHotspotItem
+	MapHotspotItem,
+	MapViewport
 } from '@/api/types';
 
 // 既有消费方（desktop/mobile/MapHeatDot）从本模块导入这些类型——
@@ -121,8 +123,9 @@ function normalizeCanvas(res: { code: number; data?: unknown }): MapCanvasResult
 	}
 	if (data.mode === 'hotspots' && data.hotspots.items.length) {
 		const items = data.hotspots.items;
-		// next_cursor：密集视口时分页取下一页。当前固定 zoom 下单页足够，
-		// 图钉与统计同页口径一致；后续接入视口交互时再做游标翻页。
+		// TODO(next_cursor 翻页): 当 hotspots.next_cursor !== null 时表示还有下一页，
+		// 应以 pagination: { cursor: next_cursor, limit: 100 } 循环拉取并合并 pins/counts。
+		// 当前首屏固定视口下单页足够（limit 100），与统计同页口径一致；后续接入视口交互/密集区域时补全游标翻页。
 		const counts: Record<PinType, number> = { user: 0, group: 0, moment: 0 };
 		const pins = items.map(hotspotToPin);
 		for (const p of pins) counts[p.type] += 1;
@@ -132,16 +135,13 @@ function normalizeCanvas(res: { code: number; data?: unknown }): MapCanvasResult
 }
 
 /**
- * 拉取当前视口地图数据（spec: POST /public/v1/map/canvas）。
- * - 三种类型全选：data_type 省略（服务端按 all 处理），单次请求
- * - 部分选择：spec 的 data_type 为单值，按选中类型分别请求后合并
+ * 直接以视口 bounds 拉取地图数据（spec: POST /public/v1/map/canvas），不经过固定 delta 换算。
+ * 供已持有真实视口 bounds（如 MapCanvas 计算的 mapBounds）的调用方使用，随 zoom/拖拽自动变化。
  */
-export async function fetchMapCanvas(
-	center: { lat: number; lng: number },
-	deltaDeg: number = MAP_DELTA_DEG,
+export async function fetchMapCanvasByViewport(
+	viewport: MapViewport,
 	activeTypes: PinType[]
 ): Promise<MapCanvasResult> {
-	const viewport = { bounds: buildViewportBounds(center, deltaDeg) };
 	if (activeTypes.length === 0) return emptyResult();
 
 	const buildParams = (t?: PinType): MapCanvasRequest => ({
@@ -182,4 +182,31 @@ export async function fetchMapCanvas(
 	} catch {
 		return emptyResult();
 	}
+}
+
+/** 将 MapBounds（minLat/maxLat/minLng/maxLng）转换为 spec Bounds（north/south/east/west）。 */
+export function mapBoundsToViewport(bounds: MapBounds): MapViewport {
+	return {
+		bounds: {
+			north: bounds.maxLat,
+			south: bounds.minLat,
+			east: bounds.maxLng,
+			west: bounds.minLng
+		} satisfies Bounds
+	};
+}
+
+/**
+ * 拉取当前视口地图数据（spec: POST /public/v1/map/canvas）。
+ * - 三种类型全选：data_type 省略（服务端按 all 处理），单次请求
+ * - 部分选择：spec 的 data_type 为单值，按选中类型分别请求后合并
+ * @deprecated 固定 delta 不随 zoom 变化，仅用于首屏兜底；已有真实视口 bounds 时请用 fetchMapCanvasByViewport。
+ */
+export async function fetchMapCanvas(
+	center: { lat: number; lng: number },
+	deltaDeg: number = MAP_DELTA_DEG,
+	activeTypes: PinType[]
+): Promise<MapCanvasResult> {
+	const viewport = { bounds: buildViewportBounds(center, deltaDeg) };
+	return fetchMapCanvasByViewport(viewport, activeTypes);
 }

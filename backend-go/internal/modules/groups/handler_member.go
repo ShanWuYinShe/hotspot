@@ -25,7 +25,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupMember, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -50,7 +50,7 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupMember, "权限不足"))
 			return
 		}
 		if errors.Is(err, ErrAlreadyProcessed) {
@@ -83,7 +83,7 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupMember, "权限不足"))
 			return
 		}
 		if errors.Is(err, ErrAlreadyProcessed) {
@@ -108,7 +108,7 @@ func (h *Handler) SetMemberRole(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -143,7 +143,7 @@ func (h *Handler) SetMute(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -164,7 +164,7 @@ func (h *Handler) SetMemberBan(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -190,7 +190,7 @@ func (h *Handler) ListBannedMembers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -211,7 +211,7 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -232,7 +232,7 @@ func (h *Handler) TransferOwnership(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "权限不足"))
+			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupOwner, "权限不足"))
 			return
 		}
 		if errors.Is(err, ErrTargetNotMember) {

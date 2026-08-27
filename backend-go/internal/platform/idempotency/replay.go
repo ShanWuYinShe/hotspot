@@ -52,8 +52,14 @@ func ReplayOrStore[T any](w http.ResponseWriter, r *http.Request, scope string, 
 
 	// Reserve atomically: returns (record, true) when we claimed it (now
 	// processing), or (existing, false) when a record already exists.
+	// Expired hits return StatusExpired so we can emit 22001 instead of
+	// silently reusing the key as a brand-new request.
 	existing, claimed := store.Reserve(scope, scopedKey, expiresAt)
 	if !claimed {
+		if existing.Status == StatusExpired {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeIdempotencyExpired, "幂等缓存已过期，请使用新的幂等键重试"))
+			return true
+		}
 		if existing.Status == StatusCompleted {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusOK)

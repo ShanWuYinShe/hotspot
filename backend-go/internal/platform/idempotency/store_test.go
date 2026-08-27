@@ -28,27 +28,41 @@ func TestInMemoryStoreRoundTrip(t *testing.T) {
 	}
 }
 
-// TestInMemoryStoreLazyExpiry verifies that Get treats records past their
-// ExpiresAt as missing, even before the sweeper has physically removed them.
-// This is the property that makes the sweeper non-critical for correctness.
+// TestInMemoryStoreLazyExpiry verifies that Get distinguishes expired records
+// from missing ones (StatusExpired vs not found), even before the sweeper has
+// physically removed them. The replay layer maps StatusExpired to 22001.
 func TestInMemoryStoreLazyExpiry(t *testing.T) {
 	store := NewInMemoryStore()
 	past := time.Now().Add(-time.Minute)
 	store.Save(Record{Key: "expired", Scope: "s", Status: StatusCompleted, ExpiresAt: past})
-	if _, ok := store.Get("s", "expired"); ok {
-		t.Fatal("expected expired record to be lazily evicted by Get")
+	record, ok := store.Get("s", "expired")
+	if !ok {
+		t.Fatal("expected expired record to be returned as StatusExpired (distinguishable from missing)")
+	}
+	if record.Status != StatusExpired {
+		t.Fatalf("expected StatusExpired for expired record, got %q", record.Status)
+	}
+	// Never-existed key must still be reported as missing.
+	if _, ok := store.Get("s", "never_existed"); ok {
+		t.Fatal("expected missing key to be not found")
 	}
 }
 
-// TestInMemoryStoreReserveHonorsExpiry verifies Reserve overwrites an expired
-// record (so a retried request after TTL doesn't see a stale "processing").
+// TestInMemoryStoreReserveHonorsExpiry verifies Reserve returns StatusExpired
+// for an expired record instead of silently overwriting it (so the replay
+// layer can emit CodeIdempotencyExpired 22001 and let the client distinguish
+// "曾存在但已过期" vs "从未存在").
 func TestInMemoryStoreReserveHonorsExpiry(t *testing.T) {
 	store := NewInMemoryStore()
 	past := time.Now().Add(-time.Minute)
 	store.Save(Record{Key: "k", Scope: "s", Status: StatusProcessing, ExpiresAt: past})
 	future := time.Now().Add(time.Hour)
-	if _, ok := store.Reserve("s", "k", future); !ok {
-		t.Fatal("expected Reserve to overwrite expired record and report success")
+	record, ok := store.Reserve("s", "k", future)
+	if ok {
+		t.Fatal("expected Reserve to report not claimed for expired record (StatusExpired), not success")
+	}
+	if record.Status != StatusExpired {
+		t.Fatalf("expected StatusExpired for expired Reserve, got %q", record.Status)
 	}
 }
 

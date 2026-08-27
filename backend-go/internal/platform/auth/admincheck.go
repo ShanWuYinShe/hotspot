@@ -49,7 +49,7 @@ func AdminAccess(next http.Handler) http.Handler {
 				"method", r.Method,
 				"uri", r.URL.RequestURI(),
 			)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "非系统管理员"))
+			httpx.WriteJSON(w, http.StatusOK, httpx.ErrorWithData(httpx.CodeForbidden, "非系统管理员", httpx.Forbidden(httpx.ReasonNotAdmin, "非系统管理员").Data))
 			return
 		}
 		if !IsAdminUser(r.Context(), principal.UserID) {
@@ -58,7 +58,7 @@ func AdminAccess(next http.Handler) http.Handler {
 				"uri", r.URL.RequestURI(),
 				"user_id", principal.UserID,
 			)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeForbidden, "非系统管理员"))
+			httpx.WriteJSON(w, http.StatusOK, httpx.ErrorWithData(httpx.CodeForbidden, "非系统管理员", httpx.Forbidden(httpx.ReasonNotAdmin, "非系统管理员").Data))
 			return
 		}
 		next.ServeHTTP(w, r)

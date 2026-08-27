@@ -4,7 +4,7 @@
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
-	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, floatBtnStyle, fetchMapCanvas, type MapBounds, type MapHeatBucket, type SnapState } from '../shared/location-shared';
+	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, floatBtnStyle, fetchMapCanvas, fetchMapCanvasByViewport, type MapBounds, type MapHeatBucket, type SnapState } from '../shared/location-shared';
 	import MapCanvas from '../shared/MapCanvas.svelte';
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
@@ -101,14 +101,20 @@
 	let heatBuckets = $state<MapHeatBucket[]>([]);
 	let mapLoading = $state(true);
 
-	// 视口中心或筛选变化时重新拉取
+	// 视口中心/边界或筛选变化时重新拉取（优先使用真实视口 bounds，随 zoom/拖拽变化）
 	$effect(() => {
 		const center = mapCenter;
 		const types = [...activeFilters];
+		const bounds = mapBounds;
 		if (!center) return;
 		let cancelled = false;
 		mapLoading = true;
-		void fetchMapCanvas(center, 0.045, types).then((r) => {
+		// TODO: 固定 delta 仅用于首屏，后续应接入视口 bounds（当前兜底：mapBounds 尚未就绪时用固定 0.045，hasViewport 为真时已用真实视口）
+		const hasViewport = bounds.maxLat !== bounds.minLat || bounds.maxLng !== bounds.minLng;
+		const request = hasViewport
+			? fetchMapCanvasByViewport({ bounds: { north: bounds.maxLat, south: bounds.minLat, east: bounds.maxLng, west: bounds.minLng } }, types)
+			: fetchMapCanvas(center, 0.045, types);
+		void request.then((r) => {
 			if (cancelled) return;
 			mapPins = r.pins;
 			heatBuckets = r.heatBuckets;

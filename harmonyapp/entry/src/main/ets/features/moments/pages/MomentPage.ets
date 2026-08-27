@@ -194,7 +194,7 @@ export struct MomentPage {
 
   build() {
     NavDestination() {
-      PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
+      PageShellContainer({ variant: 'narrow', currentBreakpoint: this.currentBreakpoint }) {
         Column() {
           // 标题栏 —— 统一走 SystemPageHeader（透明背景 + 发布 action）
           SystemPageHeader({

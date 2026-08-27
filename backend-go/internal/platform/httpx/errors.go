@@ -23,6 +23,7 @@ const (
 
 	// 幂等性错误码（22000-22099，spec/api_spec_errors.md）
 	CodeIdempotencyConflict Code = 22000 // 幂等键冲突（换键重试）
+	CodeIdempotencyExpired  Code = 22001 // 幂等缓存已过期（换键重试）
 	CodeIdempotencyInFlight Code = 22002 // 幂等操作进行中（稍后重试）
 )
 

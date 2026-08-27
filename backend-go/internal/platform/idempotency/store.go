@@ -13,11 +13,12 @@ type Status string
 const (
 	StatusProcessing Status = "processing"
 	StatusCompleted  Status = "completed"
+	StatusExpired    Status = "expired"
 )
 
 // sweepCadence is how often the background sweeper physically removes
-// expired records from the in-memory store. Get already applies lazy
-// expiry (callers see expired records as missing), but without sweeping
+// expired records from the in-memory store. Get/Reserve already apply lazy
+// expiry (callers see expired as StatusExpired → 22001), but without sweeping
 // the map grows unboundedly in long-lived processes.
 const sweepCadence = 5 * time.Minute
 
@@ -52,7 +53,9 @@ func NewInMemoryStore() *InMemoryStore { return &InMemoryStore{records: make(map
 func composite(scope, key string) string { return scope + "::" + key }
 
 // Get applies lazy expiry: records past their ExpiresAt are reported as
-// missing even before the sweeper physically removes them.
+// expired (StatusExpired) even before the sweeper physically removes them.
+// Callers can distinguish "曾存在但已过期" vs "从未存在" by checking
+// record.Status == StatusExpired, which the replay layer maps to 22001.
 func (s *InMemoryStore) Get(scope, key string) (Record, bool) {
 	now := time.Now()
 	s.mu.RLock()
@@ -62,7 +65,13 @@ func (s *InMemoryStore) Get(scope, key string) (Record, bool) {
 		return Record{}, false
 	}
 	if now.After(record.ExpiresAt) {
-		return Record{}, false
+		return Record{
+			Key:       record.Key,
+			Scope:     scope,
+			Status:    StatusExpired,
+			Response:  record.Response,
+			ExpiresAt: record.ExpiresAt,
+		}, true
 	}
 	return record, true
 }
@@ -72,7 +81,19 @@ func (s *InMemoryStore) Reserve(scope, key string, expiresAt time.Time) (Record,
 	now := time.Now()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if existing, ok := s.records[k]; ok && now.Before(existing.ExpiresAt) {
+	if existing, ok := s.records[k]; ok {
+		if now.After(existing.ExpiresAt) {
+			// 已存在但已过期：返回 StatusExpired 让上层映射为 CodeIdempotencyExpired (22001)，
+			// 而非直接视为可重新占用。保留原记录直到 sweeper 清理，期间同一过期 key 的
+			// 重试持续返回 22001，满足"曾存在但已过期" vs "从未存在"的区分。
+			return Record{
+				Key:       existing.Key,
+				Scope:     scope,
+				Status:    StatusExpired,
+				Response:  existing.Response,
+				ExpiresAt: existing.ExpiresAt,
+			}, false
+		}
 		return existing, false
 	}
 	rec := Record{Key: key, Scope: scope, Status: StatusProcessing, ExpiresAt: expiresAt}
@@ -120,8 +141,8 @@ var (
 // from bootstrap; calling it again while a sweeper is already running is a
 // no-op. The goroutine exits when ctx is cancelled.
 //
-// Get already applies lazy expiry so correctness does not depend on the
-// sweeper; it just keeps the map from growing forever.
+// Get/Reserve already apply lazy expiry (StatusExpired → 22001) so correctness
+// does not depend on the sweeper; it just keeps the map from growing forever.
 func StartSweeper(ctx context.Context) {
 	sweeperMu.Lock()
 	defer sweeperMu.Unlock()
