@@ -9,7 +9,8 @@ import { AccountInfo } from '../../../core/types/api';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
@@ -74,6 +75,7 @@ interface MemberActionMenuItem {
 @Preview
 @Component
 export struct GroupDetailPage {
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
@@ -913,7 +915,7 @@ export struct GroupDetailPage {
 
   build() {
     NavDestination() {
-    ResponsiveContainer({ fill: true }) {
+    PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
     Column() {
       // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回 + 分享）
       SystemPageHeader({

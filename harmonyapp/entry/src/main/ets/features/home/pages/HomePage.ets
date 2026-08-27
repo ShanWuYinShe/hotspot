@@ -617,7 +617,7 @@ export struct HomePage {
       .margin({ top: DesignConstants.SPACING.LG })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
     .borderRadius(DesignConstants.SHAPE.HERO_CARD)
     .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })

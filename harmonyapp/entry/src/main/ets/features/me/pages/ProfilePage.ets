@@ -19,6 +19,7 @@ import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { useMasterDetail } from '../../../core/responsive/Breakpoint';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
+import { PageShellContainer } from '../../../components/PageShellContainer';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemTextArea } from '../../../components/SystemTextArea';
@@ -654,7 +655,8 @@ export struct ProfilePage {
 
   build() {
     NavDestination() {
-      Stack({ alignContent: Alignment.Top }) {
+      PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
+        Stack({ alignContent: Alignment.Top }) {
         Column() {}
           .width('50%')
           .height(DesignConstants.LAYOUT.GLOW_BLOB_LARGE)
@@ -745,6 +747,7 @@ export struct ProfilePage {
       .width('100%')
       .height('100%')
       .backgroundColor(this.getCurrentThemePalette().pageBackground)
+      }
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

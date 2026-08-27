@@ -16,7 +16,8 @@ import {
 import { SystemAvatar } from '../../../components/SystemAvatar';
 
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
@@ -37,6 +38,7 @@ import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 @Preview
 @Component
 export struct GroupPage {
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
@@ -464,90 +466,95 @@ export struct GroupPage {
   }
 
   build() {
-    Column() {
-      // 标题栏 —— 统一走 SystemPageHeader（标题 + 邀请/申请/创建 trailing）
-      SystemPageHeader({
-        title: '我的群组',
-        backgroundVariant: 'transparent'
-      }) {
-        // trailing: 三按钮簇（邀请/申请 次要 + 创建 主操作）
-        Row({ space: DesignConstants.SPACING.SM }) {
-          SystemButton({
-            label: '邀请',
-            variant: 'surface',
-            buttonSize: 'default',
-            shadowed: true,
-            onPress: () => { this.loadMyInvites(); }
-          })
+    NavDestination() {
+      PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
+        Column() {
+          // 标题栏 —— 统一走 SystemPageHeader（标题 + 邀请/申请/创建 trailing）
+          SystemPageHeader({
+            title: '我的群组',
+            backgroundVariant: 'transparent'
+          }) {
+            // trailing: 三按钮簇（邀请/申请 次要 + 创建 主操作）
+            Row({ space: DesignConstants.SPACING.SM }) {
+              SystemButton({
+                label: '邀请',
+                variant: 'surface',
+                buttonSize: 'default',
+                shadowed: true,
+                onPress: () => { this.loadMyInvites(); }
+              })
 
-          SystemButton({
-            label: '申请',
-            variant: 'surface',
-            buttonSize: 'default',
-            shadowed: true,
-            onPress: () => { this.loadMyApplications(); }
-          })
+              SystemButton({
+                label: '申请',
+                variant: 'surface',
+                buttonSize: 'default',
+                shadowed: true,
+                onPress: () => { this.loadMyApplications(); }
+              })
 
-          SystemButton({
-            label: '创建',
-            variant: 'primary',
-            buttonSize: 'default',
-            pill: true,
-            onPress: () => { this.createGroup(); }
-          })
-        }
-      }
+              SystemButton({
+                label: '创建',
+                variant: 'primary',
+                buttonSize: 'default',
+                pill: true,
+                onPress: () => { this.createGroup(); }
+              })
+            }
+          }
 
-      // 内容区域
-      if (this.isLoading) {
-        SystemLoadingView({ message: '正在加载我的群组...' })
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
-          )
-      } else if (this.errorMessage && this.groups.length === 0) {
-        EmptyState({ icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试', onAction: () => { this.loadMyGroups(); } })
-          .layoutWeight(1)
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
-          )
-      } else if (this.groups.length === 0) {
-        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          EmptyState({ icon: AppIcon.GROUP, message: '附近暂无群组\n快来创建第一个吧！' })
+          // 内容区域
+          if (this.isLoading) {
+            SystemLoadingView({ message: '正在加载我的群组...' })
+              .transition(
+                TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
+              )
+          } else if (this.errorMessage && this.groups.length === 0) {
+            EmptyState({ icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试', onAction: () => { this.loadMyGroups(); } })
+              .layoutWeight(1)
+              .transition(
+                TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
+              )
+          } else if (this.groups.length === 0) {
+            Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
+              EmptyState({ icon: AppIcon.GROUP, message: '附近暂无群组\n快来创建第一个吧！' })
+            }
+            .onRefreshing(() => { this.loadMyGroups(true); })
+            .transition(
+              TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+                .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
+            )
+          } else {
+            Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
+              this.buildGroupList()
+            }
+            .layoutWeight(1)
+            .onRefreshing(() => { this.loadMyGroups(true); })
+            .transition(
+              TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+                .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
+            )
+          }
         }
-        .onRefreshing(() => { this.loadMyGroups(true); })
-        .transition(
-          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
-        )
-      } else {
-        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          this.buildGroupList()
-        }
-        .layoutWeight(1)
-        .onRefreshing(() => { this.loadMyGroups(true); })
-        .transition(
-          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
-        )
+        .width('100%')
+        .height('100%')
+        .backgroundColor(this.getCurrentThemePalette().pageBackground)
+        .bindSheet($$this.showMyInvitesSheet, this.buildMyInvitesSheet(), {
+          height: '68%',
+          showClose: false,
+          dragBar: true,
+          backgroundColor: this.getCurrentThemePalette().sheetBackground
+        })
+        .bindSheet($$this.showMyApplicationsSheet, this.buildMyApplicationsSheet(), {
+          height: '68%',
+          showClose: false,
+          dragBar: true,
+          backgroundColor: this.getCurrentThemePalette().sheetBackground
+        })
       }
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(this.getCurrentThemePalette().pageBackground)
-    .bindSheet($$this.showMyInvitesSheet, this.buildMyInvitesSheet(), {
-      height: '68%',
-      showClose: false,
-      dragBar: true,
-      backgroundColor: this.getCurrentThemePalette().sheetBackground
-    })
-    .bindSheet($$this.showMyApplicationsSheet, this.buildMyApplicationsSheet(), {
-      height: '68%',
-      showClose: false,
-      dragBar: true,
-      backgroundColor: this.getCurrentThemePalette().sheetBackground
-    })
+    .hideTitleBar(true)
   }
 
   @Builder
@@ -885,10 +892,5 @@ export struct GroupPage {
 
 @Builder
 export function GroupPageBuilder() {
-  NavDestination() {
-    ResponsiveContainer({ fill: true }) {
-      GroupPage()
-    }
-  }
-  .hideTitleBar(true)
+  GroupPage()
 }

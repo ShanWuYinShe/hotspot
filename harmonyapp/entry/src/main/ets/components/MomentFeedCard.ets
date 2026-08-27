@@ -27,7 +27,7 @@ export struct MomentFeedCard {
   @Prop showTime: boolean = false;
   @Prop showFavorite: boolean = true;
   @Prop textMaxLines: number = 3;
-  @Prop textFontSize: number = DesignConstants.FONT.SIZE.MD;
+  @Prop textFontSize: number = DesignConstants.FONT.SIZE.SM;
   onOpenDetail?: (moment: MomentItem) => void;
   onImagePreview?: (momentId: string, images: string[], index: number) => void;
   @StorageLink('interaction_moment_state') private momentStateMap: Record<string, MomentSocialState> = {};
@@ -504,11 +504,12 @@ export struct MomentFeedCard {
       Text(this.moment.description)
         .fontSize(this.textFontSize)
         .fontColor(this.getPalette().textPrimary)
-        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.LG)
+        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.XS)
     } else {
       Text(this.moment.description)
         .fontSize(this.textFontSize)
         .fontColor(this.getPalette().textPrimary)
+        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.XS)
         .maxLines(this.textMaxLines)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }

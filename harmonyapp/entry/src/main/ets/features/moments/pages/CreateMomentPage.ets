@@ -22,7 +22,8 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemTextArea } from '../../../components/SystemTextArea';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { AppRouter, LocationPickerRouteParam, EditMomentRouteParam } from '../../../core/router/AppRouter';
@@ -41,6 +42,7 @@ const TAG: string = 'CreateMomentPage';
 @Component
 export struct CreateMomentPage {
   pathStack: NavPathStack = new NavPathStack();
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_LOCATION_PICK_RESULT) pickResult: LocationInfo | null = null;
@@ -356,7 +358,7 @@ export struct CreateMomentPage {
 
   build() {
     NavDestination() {
-    ResponsiveContainer({ fill: true }) {
+    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint }) {
     Stack() {
       Column() {
       // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回 + 保存/发布 action）

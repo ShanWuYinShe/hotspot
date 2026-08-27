@@ -16,7 +16,8 @@ import { SystemPageHeader, PageHeaderAction } from '../../../components/SystemPa
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
+import { PageShellContainer } from '../../../components/PageShellContainer';
+import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { AppIcon } from '../../../components/SystemIcon';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { SystemToast } from '../../../components/SystemToast';
@@ -35,6 +36,7 @@ const TAG: string = 'MomentPage';
 @Preview
 @Component
 export struct MomentPage {
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
@@ -191,69 +193,74 @@ export struct MomentPage {
   }
 
   build() {
-    Column() {
-      // 标题栏 —— 统一走 SystemPageHeader（透明背景 + 发布 action）
-      SystemPageHeader({
-        title: '我的瞬间',
-        backgroundVariant: 'transparent',
-        action: {
-          label: '发布',
-          onClick: async () => {
-            const currentUser = this.stateManager.getCurrentUser();
-            if (!currentUser) {
-              SystemToast.showWarning('请先登录后再发布', this.getUIContext());
-              const lp = new LoginRouteParam();
-              lp.reason = 'action_required';
-              lp.action = '发布瞬间';
-              lp.redirectUrl = PageNames.CREATE_MOMENT;
-              AppRouter.push(PageNames.LOGIN, lp);
-              return;
-            }
-            AppRouter.push(PageNames.CREATE_MOMENT);
-          }
-        } as PageHeaderAction
-      })
+    NavDestination() {
+      PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
+        Column() {
+          // 标题栏 —— 统一走 SystemPageHeader（透明背景 + 发布 action）
+          SystemPageHeader({
+            title: '我的瞬间',
+            backgroundVariant: 'transparent',
+            action: {
+              label: '发布',
+              onClick: async () => {
+                const currentUser = this.stateManager.getCurrentUser();
+                if (!currentUser) {
+                  SystemToast.showWarning('请先登录后再发布', this.getUIContext());
+                  const lp = new LoginRouteParam();
+                  lp.reason = 'action_required';
+                  lp.action = '发布瞬间';
+                  lp.redirectUrl = PageNames.CREATE_MOMENT;
+                  AppRouter.push(PageNames.LOGIN, lp);
+                  return;
+                }
+                AppRouter.push(PageNames.CREATE_MOMENT);
+              }
+            } as PageHeaderAction
+          })
 
-      // 内容区域
-      if (this.isLoading) {
-        SystemLoadingView({ message: '正在加载我的瞬间...' })
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
-          )
-      } else if (!this.hasData && this.errorMessage) {
-        EmptyState({
-          icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试',
-          onAction: () => { this.isLoading = true; this.loadNearbyMoments(true); }
-        })
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
-          )
-      } else if (!this.hasData) {
-        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          EmptyState({ icon: AppIcon.CAMERA, message: '还没有发布过瞬间\n快来分享第一个吧！' })
+          // 内容区域
+          if (this.isLoading) {
+            SystemLoadingView({ message: '正在加载我的瞬间...' })
+              .transition(
+                TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
+              )
+          } else if (!this.hasData && this.errorMessage) {
+            EmptyState({
+              icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试',
+              onAction: () => { this.isLoading = true; this.loadNearbyMoments(true); }
+            })
+              .transition(
+                TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
+              )
+          } else if (!this.hasData) {
+            Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
+              EmptyState({ icon: AppIcon.CAMERA, message: '还没有发布过瞬间\n快来分享第一个吧！' })
+            }
+            .onRefreshing(() => { this.loadNearbyMoments(true); })
+            .transition(
+              TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+                .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
+            )
+          } else {
+            Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
+              this.buildMomentList()
+            }
+            .layoutWeight(1)
+            .onRefreshing(() => { this.loadNearbyMoments(true); })
+            .transition(
+              TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+                .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
+            )
+          }
         }
-        .onRefreshing(() => { this.loadNearbyMoments(true); })
-        .transition(
-          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
-        )
-      } else {
-        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          this.buildMomentList()
-        }
-        .layoutWeight(1)
-        .onRefreshing(() => { this.loadNearbyMoments(true); })
-        .transition(
-          TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
-        )
+        .width('100%')
+        .height('100%')
+        .backgroundColor(this.getCurrentThemePalette().pageBackground)
       }
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    .hideTitleBar(true)
   }
 
   @Builder
@@ -294,10 +301,5 @@ export struct MomentPage {
 
 @Builder
 export function MomentPageBuilder() {
-  NavDestination() {
-    ResponsiveContainer({ fill: true }) {
-      MomentPage()
-    }
-  }
-  .hideTitleBar(true)
+  MomentPage()
 }
