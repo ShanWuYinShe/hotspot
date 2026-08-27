@@ -34,6 +34,10 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 				observability.LogBusinessError(r, "Create", int(httpx.CodeNotFound), "瞬间不存在")
 				return httpx.ApiResponse[any]{Code: httpx.CodeNotFound, Message: "瞬间不存在"}
 			}
+			if errors.Is(err, ErrCommentTooLong) {
+				observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "评论内容超过长度限制")
+				return httpx.ApiResponse[any]{Code: httpx.CodeInvalidRequest, Message: "评论内容超过长度限制"}
+			}
 			// 契约(api_spec_errors.md)：10200 必带 data.forbidden_reason
 			if errors.Is(err, ErrCommentPrivacyDenied) {
 				observability.LogBusinessError(r, "Create", int(httpx.CodeForbidden), "瞬间作者限制评论")

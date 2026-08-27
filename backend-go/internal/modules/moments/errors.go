@@ -7,6 +7,8 @@ var (
 	ErrPermissionDenied = errors.New("权限不足")
 	ErrInvalidCursor    = errors.New("moments: invalid cursor")
 	ErrTooManyImages    = errors.New("图片数量超过上限")
+	// ErrDescriptionTooLong：动态正文超过 ClientConfig moment_description_max_length（spec 10400）。
+	ErrDescriptionTooLong = errors.New("moments: description exceeds max length")
 	ErrBlockedTag       = errors.New("moments: tags contain a blocked tag")
 	// ErrInvalidFetchRequest 发现流（fetch_following/fetch_nearby）请求非法：
 	// 未登录访问 fetch_following、reference_point 坐标非法等。

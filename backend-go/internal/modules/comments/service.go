@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"hotspot/backend-go/internal/modules/notify"
 	"hotspot/backend-go/internal/platform/actor"
@@ -57,7 +58,29 @@ func NewServiceWithDeps(repo Repository, moments MomentProvider, notificationWri
 	return &Service{repo: repo, moments: moments, notifications: notificationWriter, users: actorProvider, appConfig: appConfig, runInTx: runInTx}
 }
 
+// defaultCommentMaxRunes 与 ClientConfig.comment_max_length 默认值一致；
+// 仅当 AppConfig 不可用或未配置时作为兜底。
+const defaultCommentMaxRunes = 500
+
+// ensureContentLength 按 ClientConfig.comment_max_length（rune 数）校验评论内容。
+// 此前 Create 无任何长度校验，可写入接近 body 上限（1MB）的评论。
+func (s *Service) ensureContentLength(ctx context.Context, content string) error {
+	max := defaultCommentMaxRunes
+	if s.appConfig != nil {
+		if n := s.appConfig.Get(ctx).Limits.CommentMaxLength; n > 0 {
+			max = n
+		}
+	}
+	if utf8.RuneCountInString(content) > max {
+		return ErrCommentTooLong
+	}
+	return nil
+}
+
 func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (CommentItem, error) {
+	if err := s.ensureContentLength(ctx, req.Content); err != nil {
+		return CommentItem{}, err
+	}
 	if err := s.ensureMomentCommentable(ctx, req.MomentID); err != nil {
 		return CommentItem{}, err
 	}
@@ -251,12 +274,20 @@ func (s *Service) Delete(ctx context.Context, req DeleteCommentRequest) error {
 }
 
 func (s *Service) ListReplies(ctx context.Context, req CommentRepliesRequest) (PaginatedComments, error) {
-	_, found, err := s.repo.Get(ctx, req.CommentID)
+	comment, found, err := s.repo.Get(ctx, req.CommentID)
 	if err != nil {
 		return PaginatedComments{}, err
 	}
 	if !found {
 		return PaginatedComments{}, ErrCommentNotFound
+	}
+	// 回复列表与评论详情同受瞬间可见性约束：private/软删瞬间的回复对
+	// 非拥有者按评论不存在处理（存在性不泄漏），与 List/GetForDetail 一致。
+	if err := s.ensureMomentVisible(ctx, comment.MomentID); err != nil {
+		if errors.Is(err, ErrMomentNotFound) {
+			return PaginatedComments{}, ErrCommentNotFound
+		}
+		return PaginatedComments{}, err
 	}
 	limit := 20
 	cursor := ""

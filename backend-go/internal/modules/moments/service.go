@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"hotspot/backend-go/internal/modules/comments"
 	"hotspot/backend-go/internal/modules/notify"
@@ -64,6 +65,25 @@ func NewServiceWithDepsAndImagesAndConfig(repo Repository, notificationWriter mo
 	return &Service{repo: repo, notifications: notificationWriter, users: actorProvider, images: images, appConfig: cfg, runInTx: runInTx}
 }
 
+// defaultMomentDescriptionMaxRunes 与 ClientConfig.moment_description_max_length
+// 默认值一致；仅当 AppConfig 不可用或未配置时作为兜底。
+const defaultMomentDescriptionMaxRunes = 2000
+
+// ensureDescriptionLength 按 ClientConfig.moment_description_max_length（rune 数）
+// 校验动态正文；Create 与 Update 共用，保证两端点执行口径一致。
+func (s *Service) ensureDescriptionLength(ctx context.Context, description string) error {
+	max := defaultMomentDescriptionMaxRunes
+	if s.appConfig != nil {
+		if n := s.appConfig.Get(ctx).Limits.MomentDescriptionMaxLength; n > 0 {
+			max = n
+		}
+	}
+	if utf8.RuneCountInString(description) > max {
+		return ErrDescriptionTooLong
+	}
+	return nil
+}
+
 func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (OwnerMomentItem, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	// distance/bearing_degrees 是响应侧相对位置字段，由服务端基于 reference_point
@@ -71,6 +91,9 @@ func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (OwnerMom
 	// point/location_name，剥离客户端可能传入的相对字段避免原样回显。
 	req.Location.Distance = nil
 	req.Location.BearingDegrees = nil
+	if err := s.ensureDescriptionLength(ctx, req.Description); err != nil {
+		return OwnerMomentItem{}, err
+	}
 	if err := s.validateImageOwnership(ctx, principal.UserID, req.ImageFileIDs); err != nil {
 		return OwnerMomentItem{}, err
 	}
@@ -231,6 +254,11 @@ func (s *Service) Update(ctx context.Context, req UpdateMomentRequest) (OwnerMom
 	if req.Location != nil {
 		req.Location.Distance = nil
 		req.Location.BearingDegrees = nil
+	}
+	if req.Description != nil {
+		if err := s.ensureDescriptionLength(ctx, *req.Description); err != nil {
+			return OwnerMomentItem{}, err
+		}
 	}
 	if err := s.validateImageOwnership(ctx, principal.UserID, req.ImageFileIDs); err != nil {
 		return OwnerMomentItem{}, err

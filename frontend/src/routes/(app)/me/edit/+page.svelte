@@ -168,7 +168,7 @@
 	<!-- Avatar edit -->
 	<div class="flex items-center gap-4 -mt-8">
 		<div class="relative shrink-0">
-			<Avatar src={avatar} name={nickname} size={72} shape="rounded" class="border-4 border-surface-primary" style="box-shadow:var(--cst-elevation-profile-avatar);" />
+			<Avatar src={avatar} name={nickname} size={72} shape="rounded" class="border-3 border-surface-primary" style="box-shadow:var(--cst-elevation-profile-avatar);" />
 			<button
 				type="button"
 				class="hover-btn hit-slop absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-6"

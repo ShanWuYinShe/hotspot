@@ -3,7 +3,6 @@ package moments
 import (
 	"errors"
 	"net/http"
-	"unicode/utf8"
 
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/httpx"
@@ -11,8 +10,9 @@ import (
 	"hotspot/backend-go/internal/platform/observability"
 )
 
-// momentDescriptionMaxRunes 限制动态正文长度（与 ClientConfig.moment_description_max_length 一致）。
-const momentDescriptionMaxRunes = 2000
+// momentDescriptionMaxRunes 已下沉到 Service.ensureDescriptionLength：
+// 长度上限随 ClientConfig.moment_description_max_length 配置走，
+// handler 层不再持有硬编码副本（避免配置调整后两端口径分裂）。
 
 type Handler struct {
 	service *Service
@@ -32,10 +32,6 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteInvalidRequest(w, r, "Create", "参数错误")
 		return
 	}
-	if utf8.RuneCountInString(req.Description) > momentDescriptionMaxRunes {
-		httpx.WriteInvalidRequest(w, r, "Create", "内容超过长度限制")
-		return
-	}
 	// privacy_level 限定枚举：任意字符串落库会让 private 过滤（可见性控制）失效。
 	if !isValidPrivacyLevel(req.PrivacyLevel) {
 		httpx.WriteInvalidRequest(w, r, "Create", "参数错误: privacy_level 仅允许 public/private")
@@ -50,6 +46,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		item, err := h.service.Create(r.Context(), req)
 		if err != nil {
 			switch {
+			case errors.Is(err, ErrDescriptionTooLong):
+				observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "内容超过长度限制")
+				return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeInvalidRequest, Message: "内容超过长度限制"}
 			case errors.Is(err, ErrTooManyImages):
 				observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "图片数量超过上限")
 				return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeInvalidRequest, Message: "图片数量超过上限"}
@@ -156,6 +155,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, ErrMomentNotFound) {
 			httpx.WriteBusinessError(w, r, "Update", httpx.CodeNotFound, "瞬间不存在")
+			return
+		}
+		if errors.Is(err, ErrDescriptionTooLong) {
+			httpx.WriteInvalidRequest(w, r, "Update", "内容超过长度限制")
 			return
 		}
 		if errors.Is(err, ErrPermissionDenied) {

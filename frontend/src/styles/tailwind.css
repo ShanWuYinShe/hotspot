@@ -3,3 +3,20 @@
 
 @import 'tw-animate-css';
 
+/*
+ * 断点重定义：与 stores/platform.svelte.ts 的 JS 平台探测阈值咬合，
+ * 消除「CSS 断点与平台分派错位」（如 1024-1279 窗口 JS 判定 tablet 外壳、
+ * 组件 lg: 却按 desktop 分栏）。
+ *   sm 600  = tablet 下限（platform.detect 的 minDim≥600）
+ *   md 960  = 宽平板（isWideTablet 的 w≥960）
+ *   lg 1280 = desktop（platform.detect 的 w≥1280）
+ *   xl 1536 / 2xl 1792 = desktop 内部细分，保持刻度递增
+ * 改阈值时必须同步 platform.svelte.ts，两处是同一套契约。
+ */
+@theme {
+	--breakpoint-sm: 600px;
+	--breakpoint-md: 960px;
+	--breakpoint-lg: 1280px;
+	--breakpoint-xl: 1536px;
+	--breakpoint-2xl: 1792px;
+}

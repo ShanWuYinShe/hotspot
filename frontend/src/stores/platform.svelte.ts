@@ -2,6 +2,8 @@
 // PlatformContext（runes 模块单例）。
 // isWideTablet：≥960px 的平板为宽平板（可提升分栏 workspace / 浮动 Dock），
 // 对齐 Figma Make PlatformContext 契约。
+// 阈值 600/960/1280 同时是 styles/tailwind.css 的 CSS 断点刻度（sm/md/lg），
+// 两处是同一套契约，改动必须同步。
 
 export type Platform = 'mobile' | 'tablet' | 'desktop';
 export type Orientation = 'portrait' | 'landscape';

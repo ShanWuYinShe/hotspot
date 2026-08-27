@@ -143,7 +143,7 @@ func TestCreateMomentRejectsOverlongDescription(t *testing.T) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
-	long := strings.Repeat("啊", momentDescriptionMaxRunes+1)
+	long := strings.Repeat("啊", defaultMomentDescriptionMaxRunes+1)
 	req := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"description":"`+long+`"}`))
 	req.Header.Set("Idempotency-Key", "overlong1234overlong1234over1234")
 	rr := httptest.NewRecorder()
@@ -250,5 +250,25 @@ func TestMomentDeletePermissionDenied(t *testing.T) {
 	handler.Delete(rr, req)
 	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeForbidden {
 		t.Fatalf("foreign delete: expected httpx.CodeForbidden, got %d", code)
+	}
+}
+
+func TestMomentUpdateRejectsOverlongDescription(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := context.Background()
+	created, err := repo.Create(ctx, "u1", CreateMomentRequest{Description: "hi"})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	// Update 与 Create 共用 ensureDescriptionLength：修复前 Update 无长度校验，
+	// 可经编辑写入超长正文。
+	long := strings.Repeat("长", defaultMomentDescriptionMaxRunes+1)
+	req := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"moment_id":"`+created.MomentID+`","description":"`+long+`"}`))
+	req = req.WithContext(principalMoments("u1"))
+	rr := httptest.NewRecorder()
+	handler.Update(rr, req)
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInvalidRequest {
+		t.Fatalf("update overlong: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 }

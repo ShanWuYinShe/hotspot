@@ -3,6 +3,7 @@ package comments
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"hotspot/backend-go/internal/modules/notify"
@@ -592,4 +593,44 @@ type adminCheckStub struct{ adminIDs map[string]bool }
 
 func (s adminCheckStub) IsAdmin(_ context.Context, userID string) (bool, error) {
 	return s.adminIDs[userID], nil
+}
+
+// ListReplies 可见性回归测试：private/软删瞬间的回复对非拥有者不可见。
+// 修复前 ListReplies 只校验评论存在性，知道 comment_id 即可读取 private
+// 瞬间下的全部回复（IDOR）。
+
+func TestListRepliesRejectsWhenMomentInvisible(t *testing.T) {
+	repo := NewInMemoryRepository()
+	// 可见桩：让 Create 顺利落库一条父评论（带一条回复）。
+	visibleMoments := &momentProviderStub{exists: true, commentableFound: true, commentable: true, visibleFound: true, visible: true}
+	service := NewServiceWithDeps(repo, visibleMoments, notify.NewService(), nil, nil, nil)
+	ctx := testCommentContext("user_alice")
+	parent, err := service.Create(ctx, CreateCommentRequest{MomentID: "moment_private", Content: "parent"})
+	if err != nil {
+		t.Fatalf("create parent: %v", err)
+	}
+	if _, err := service.Create(ctx, CreateCommentRequest{MomentID: "moment_private", ParentID: parent.CommentID, Content: "reply"}); err != nil {
+		t.Fatalf("create reply: %v", err)
+	}
+	// 不可见桩：同一瞬间对其他 viewer 变为 private/软删。
+	invisibleMoments := &momentProviderStub{exists: true, commentableFound: true, commentable: true, visibleFound: true, visible: false}
+	invisibleService := NewServiceWithDeps(repo, invisibleMoments, notify.NewService(), nil, nil, nil)
+	_, err = invisibleService.ListReplies(testCommentContext("user_mallory"), CommentRepliesRequest{CommentID: parent.CommentID})
+	if !errors.Is(err, ErrCommentNotFound) {
+		t.Fatalf("expected ErrCommentNotFound for invisible moment replies, got %v", err)
+	}
+}
+
+func TestCreateCommentRejectsOverlongContent(t *testing.T) {
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true, visibleFound: true, visible: true}
+	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	long := strings.Repeat("评", defaultCommentMaxRunes+1)
+	if _, err := service.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "moment_1", Content: long}); !errors.Is(err, ErrCommentTooLong) {
+		t.Fatalf("expected ErrCommentTooLong, got %v", err)
+	}
+	// 边界值：恰好等于上限应放行（长度校验不应误伤合法内容）。
+	if _, err := service.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "moment_1", Content: strings.Repeat("评", defaultCommentMaxRunes)}); err != nil {
+		t.Fatalf("expected boundary-length comment to pass, got %v", err)
+	}
 }

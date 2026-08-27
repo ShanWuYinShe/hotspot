@@ -103,7 +103,9 @@
     column-gap: var(--cst-context-rail-gap);
   }
 
-  @media (min-width: 768px) and (max-width: 1279px) {
+  /* tablet 限宽起点对齐 platform.svelte.ts 的 tablet 下限 600（原 768 会漏掉
+     600-767 的窄平板窗口）；1280 上限为 desktop 阈值。 */
+  @media (min-width: 600px) and (max-width: 1279px) {
     .tablet-page-canvas {
       max-width: 74rem;
     }
