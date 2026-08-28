@@ -430,6 +430,12 @@ func (s *Service) GetMessageReportSnapshot(ctx context.Context, messageID string
 	return s.repo.GetMessageReportSnapshot(ctx, messageID)
 }
 
+// IsGroupMember 判定用户是否为群成员（举报受理用它校验举报人是会话
+// 参与方；非成员按目标不存在处理，不通过快照泄漏群聊内容）。
+func (s *Service) IsGroupMember(ctx context.Context, groupID, userID string) (bool, error) {
+	return s.repo.IsMember(ctx, groupID, userID)
+}
+
 // IsReactionTargetVisible 判定群消息对当前调用方可反应（spec reaction.md 目标可见性）：
 // 仅群成员可见（被移除/退群用户对历史消息不可见）；不可见按不存在处理。
 func (s *Service) IsReactionTargetVisible(ctx context.Context, messageID string) (found bool, visible bool, err error) {

@@ -297,7 +297,7 @@ func (r *PostgresRepository) GetMessageReportSnapshot(ctx context.Context, messa
 		return MessageReportSnapshot{}, false, persistence.ErrNotImplemented
 	}
 	var snapshot MessageReportSnapshot
-	err := queryable.QueryRow(ctx, queryGetPrivateMessageSnapshot, messageID).Scan(&snapshot.TargetUserID, &snapshot.Type, &snapshot.Content, &snapshot.FileID, &snapshot.SentAt)
+	err := queryable.QueryRow(ctx, queryGetPrivateMessageSnapshot, messageID).Scan(&snapshot.SenderUserID, &snapshot.TargetUserID, &snapshot.Type, &snapshot.Content, &snapshot.FileID, &snapshot.SentAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return MessageReportSnapshot{}, false, nil

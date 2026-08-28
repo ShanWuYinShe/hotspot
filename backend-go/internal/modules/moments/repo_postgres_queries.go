@@ -166,6 +166,9 @@ LIMIT $4`
 
 	// queryNearbyMoments 附近瞬间（spec moment.md → moments/fetch_nearby，
 	// 原 feed/nearby_moments 迁移）：S2 覆盖区间粗筛，精筛在 Go 层（geo.SearchPlan）。
+	// 终序由 Go 层 compareNearbyCandidates（全序，momentID 兜底）确定，SQL 行序
+	// 不影响排序结果；ORDER BY + LIMIT 仅作为确定性防御截断——区间行数无界时
+	// 避免 DoS/内存无界（截断表现为"没有更多"，分页不错乱；正常规模不触达）。
 	queryNearbyMoments = `
 SELECT m.moment_id,
        m.user_id,
@@ -187,5 +190,7 @@ JOIN users u ON u.user_id = m.user_id
 WHERE m.privacy_level = 'public'
   AND m.is_deleted = FALSE
   AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
-              WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)`
+              WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)
+ORDER BY m.created_at DESC
+LIMIT 2000`
 )

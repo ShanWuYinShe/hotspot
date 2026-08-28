@@ -32,6 +32,31 @@
 	let loadError = $state<string | null>(null);
 	let reloadKey = $state(0);
 
+	// 真分页：服务端 cursor（moments/fetch_nearby 返回 next_cursor）翻页追加；
+	// cursor 耗尽后由 visibleCount 在已加载集合内切片渲染。
+	const PAGE_LIMIT = 20;
+	let nextCursor = $state('');
+	let loadingMore = $state(false);
+
+	function mapMoment(m: import('@/api/types').MomentItem, i: number): FeedItem {
+		const mine = (m.reactions || []).find((r) => r.reacted_by_me);
+		return {
+			id: m.moment_id ?? String(i + 1),
+			user: m.user?.nickname ?? '',
+			avatar: m.user?.avatar_url ?? '',
+			location: m.location?.location_name ?? '',
+			tag: m.tags?.[0] ?? '',
+			content: m.description ?? '',
+			image: m.images?.[0]?.url ?? '',
+			likes: (m.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
+			comments: m.comments_count ?? 0,
+			time: formatDateTime(m.created_at),
+			liked: Boolean(mine),
+			saved: Boolean(m.is_favorited),
+			likeEmoji: mine?.emoji ?? '👍'
+		};
+	}
+
 	$effect(() => startDefaultLocation((loc) => {
 referencePoint = loc?.point ?? null;
 locationName = loc?.location_name ?? '';
@@ -47,7 +72,12 @@ locationName = loc?.location_name ?? '';
 			try {
 				loading = true;
 				loadError = null;
-				const feedRes = await fetchNearbyMoments(referencePoint ? { reference_point: referencePoint } : {}).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
+				nextCursor = '';
+				visibleCount = INITIAL_VISIBLE;
+				const feedRes = await fetchNearbyMoments({
+					...(referencePoint ? { reference_point: referencePoint } : {}),
+					pagination: { limit: PAGE_LIMIT }
+				}).catch(() => ({ code: -1, message: '网络异常', data: { items: [] as import('@/api/types').MomentItem[], next_cursor: null } }));
 				if (cancelled) return;
 
 				const feedData = feedRes.code === 0 ? feedRes.data : null;
@@ -57,26 +87,8 @@ locationName = loc?.location_name ?? '';
 				}
 
 				if (feedData) {
-					const items: FeedItem[] = (feedData.items || []).map((m, i) => {
-						const mine = (m.reactions || []).find((r) => r.reacted_by_me);
-						return {
-							id: m.moment_id ?? String(i + 1),
-							user: m.user?.nickname ?? '',
-							avatar: m.user?.avatar_url ?? '',
-							location: m.location?.location_name ?? '',
-							tag: m.tags?.[0] ?? '',
-						content: m.description ?? '',
-						image: m.images?.[0]?.url ?? '',
-							likes: (m.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
-							comments: m.comments_count ?? 0,
-							time: formatDateTime(m.created_at),
-							liked: Boolean(mine),
-							saved: Boolean(m.is_favorited),
-							likeEmoji: mine?.emoji ?? '👍'
-						};
-					});
-					apiFeedItems = items;
-
+					apiFeedItems = (feedData.items || []).map(mapMoment);
+					nextCursor = feedData.next_cursor ?? '';
 					// Hot tags are aggregated from the feed itself — search/suggest is a
 					// search-box autocomplete (needs a prefix) and must not be used to
 					// browse tags. Dedupe tags across the returned moments, keep order.
@@ -109,7 +121,37 @@ locationName = loc?.location_name ?? '';
 	// tab 支持深链：?tab= 初始化（刷新/分享保留分类），切换写回 URL
 	let activeTab = $state(initTabFromUrl());
 	let activeTag = $state<string | null>(null);
-	let visibleCount = $state(12);
+	// 已加载集合内的渲染切片（cursor 耗尽后 loadMore 推进此值）
+	const INITIAL_VISIBLE = 12;
+	let visibleCount = $state(INITIAL_VISIBLE);
+
+	// 哨兵触发：优先服务端 cursor 翻页追加（去重），cursor 耗尽后前端切片。
+	// 失败不推进（loadingMore 复位后下次触发自然重试），避免静默丢页。
+	async function handleLoadMore() {
+		if (loadingMore) return;
+		if (nextCursor) {
+			loadingMore = true;
+			try {
+				const res = await fetchNearbyMoments({
+					...(referencePoint ? { reference_point: referencePoint } : {}),
+					pagination: { limit: PAGE_LIMIT, cursor: nextCursor }
+				});
+				if (res.code === 0 && res.data) {
+					const known = new Set(apiFeedItems.map((i) => i.id));
+					const fresh = (res.data.items || []).map(mapMoment).filter((i) => !known.has(i.id));
+					apiFeedItems = [...apiFeedItems, ...fresh];
+					nextCursor = res.data.next_cursor ?? '';
+					visibleCount = Math.min(visibleCount + 8, apiFeedItems.length);
+				}
+			} catch {
+				// 忽略：下次哨兵触发重试
+			} finally {
+				loadingMore = false;
+			}
+			return;
+		}
+		visibleCount = Math.min(visibleCount + 8, apiFeedItems.length);
+	}
 
 	function initTabFromUrl(): string {
 		const t = page.url.searchParams.get('tab') ?? '';
@@ -240,8 +282,8 @@ locationName = loc?.location_name ?? '';
 			minCardHeight={minCardHeight}
 			minCanvasHeight={minCanvasHeight}
 			ariaLabel="附近动态的不规则满铺布局"
-			hasMore={visibleCount < filtered.length}
-			onLoadMore={() => (visibleCount = Math.min(visibleCount + 8, filtered.length))}
+			hasMore={loadingMore || visibleCount < filtered.length || Boolean(nextCursor)}
+			onLoadMore={() => void handleLoadMore()}
 		>
 		{#snippet renderItem(item: FeedItem, index: number)}
 			<MomentCard

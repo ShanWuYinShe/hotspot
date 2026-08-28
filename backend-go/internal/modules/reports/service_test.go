@@ -182,7 +182,7 @@ type stubSnapshotSource struct {
 	err      error
 }
 
-func (s stubSnapshotSource) GetMessageSnapshot(_ context.Context, _ string) (*ReportSnapshot, bool, error) {
+func (s stubSnapshotSource) GetMessageSnapshot(_ context.Context, _ string, _ string) (*ReportSnapshot, bool, error) {
 	return s.snapshot, s.found, s.err
 }
 
@@ -247,4 +247,30 @@ func TestServiceCreateNonMessageReportSkipsSnapshot(t *testing.T) {
 	if repo.lastSnapshot != nil {
 		t.Fatalf("expected nil snapshot for non-message report, got %#v", repo.lastSnapshot)
 	}
+}
+
+// TestServiceCreatePassesReporterToSnapshotSource：service 必须把举报人身份
+// 透传给快照源（参与者校验在快照源实现内做：群聊成员/私聊双方）。
+func TestServiceCreatePassesReporterToSnapshotSource(t *testing.T) {
+	repo := &stubRepo{ownerID: "u2", ownerFound: true, created: ReportCreated{ReportID: "r9"}}
+	service := NewServiceWithRepo(repo)
+	source := &recordingSnapshotSource{snapshot: &ReportSnapshot{ChatType: "private", TargetChatID: "u2", MessageType: "text"}, found: true}
+	service.SetMessageSnapshotSource(source)
+	if _, err := service.Create(ctxWithUser("u_reporter"), CreateReportRequest{TargetType: ReportTargetTypeMessage, TargetID: "m1", Reason: ReportReasonSpam}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if source.lastReporter != "u_reporter" {
+		t.Fatalf("expected reporter id to be passed to snapshot source, got %q", source.lastReporter)
+	}
+}
+
+type recordingSnapshotSource struct {
+	snapshot     *ReportSnapshot
+	found        bool
+	lastReporter string
+}
+
+func (s *recordingSnapshotSource) GetMessageSnapshot(_ context.Context, _ string, reporterUserID string) (*ReportSnapshot, bool, error) {
+	s.lastReporter = reporterUserID
+	return s.snapshot, s.found, nil
 }

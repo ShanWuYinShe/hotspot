@@ -81,8 +81,10 @@ type PaginatedMessages struct {
 // MessageReportSnapshot 是私聊消息的举报快照投影视图（spec api_spec_types.md
 // ReportSnapshot 的 private 会话形态）：服务端受理举报时基于消息真值生成，
 // 由 bootstrap 适配为 reports.ReportSnapshot（privatemessages 不依赖 reports 包）。
-// TargetUserID 为会话对方（相对发送者的另一方，spec：private 会话 = 对方 user_id）。
+// TargetUserID 为会话对方（相对发送者的另一方，spec：private 会话 = 对方 user_id）；
+// SenderUserID 为消息作者——举报受理用它校验举报人是会话参与方（作者+对方）。
 type MessageReportSnapshot struct {
+	SenderUserID string
 	TargetUserID string
 	Type         string
 	Content      string // 原始文本内容（type='text' 时作为 snapshot_content）

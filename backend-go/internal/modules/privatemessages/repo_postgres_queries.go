@@ -169,7 +169,8 @@ WHERE pm.message_id = $1`
 	// api_spec_types.md ReportSnapshot：服务端受理举报时生成并冻结）。
 	// target_chat_id = 相对发送者的会话对方 user_id。
 	queryGetPrivateMessageSnapshot = `
-SELECT CASE WHEN pc.user_a_id = pm.sender_user_id THEN pc.user_b_id ELSE pc.user_a_id END,
+SELECT pm.sender_user_id,
+       CASE WHEN pc.user_a_id = pm.sender_user_id THEN pc.user_b_id ELSE pc.user_a_id END,
        pm.type,
        COALESCE(pm.content, ''),
        COALESCE(pm.file_id, ''),

@@ -22,8 +22,10 @@ func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo} 
 // 私聊/群聊两个消息源实现；reports 模块不直接依赖聊天模块。
 type MessageSnapshotSource interface {
 	// GetMessageSnapshot 按 message_id 读取消息真值并生成快照；
+	// reporterUserID 用于校验举报人是会话参与方（非参与者 found=false，
+	// 按目标不存在处理——不向会话外用户泄漏消息内容快照）；
 	// found=false 表示消息不存在（举报受理返回 10300）。
-	GetMessageSnapshot(ctx context.Context, messageID string) (snapshot *ReportSnapshot, found bool, err error)
+	GetMessageSnapshot(ctx context.Context, messageID, reporterUserID string) (snapshot *ReportSnapshot, found bool, err error)
 }
 
 // SetMessageSnapshotSource 接入消息快照源（bootstrap 在两个聊天模块
@@ -57,7 +59,7 @@ func (s *Service) Create(ctx context.Context, req CreateReportRequest) (ReportCr
 			observability.L().Error("reports.create message snapshot source unavailable", "target_id", req.TargetID)
 			return ReportCreated{}, errors.New("reports: target not found")
 		}
-		snapshot, found, err = s.messageSnapshots.GetMessageSnapshot(ctx, req.TargetID)
+		snapshot, found, err = s.messageSnapshots.GetMessageSnapshot(ctx, req.TargetID, principal.UserID)
 		if err != nil {
 			observability.L().Error("reports.create message snapshot failed", "error", err, "target_id", req.TargetID)
 			return ReportCreated{}, err

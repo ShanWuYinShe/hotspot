@@ -344,6 +344,7 @@ func (r *InMemoryRepository) GetMessageReportSnapshot(_ context.Context, message
 				fileID = item.Media.URL
 			}
 			return MessageReportSnapshot{
+				SenderUserID: item.Sender.UserID,
 				TargetUserID: otherUserID(key, item.Sender.UserID),
 				Type:         item.Type,
 				Content:      content,

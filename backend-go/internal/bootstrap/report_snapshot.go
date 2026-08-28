@@ -40,16 +40,25 @@ func newReportMessageSnapshotSource(factory *persistence.Factory, groupMessages 
 	}
 }
 
-// GetMessageSnapshot 先探群聊、再探私聊，命中即生成快照。
+// GetMessageSnapshot 先探群聊、再探私聊，命中后先校验举报人是会话参与方
+// （群聊 = 在群成员；私聊 = 消息作者或会话对方），非参与者按目标不存在处理
+// （修复前持有任意 message_id 即可"举报后自读"冻结的私聊内容快照）。
 // snapshot_content 仅 text 类型非 null；snapshot_media 仅媒体消息非 null
 // （完整 MessageMedia）；target_chat_id：group = group_id，private = 相对发送者的对方 user_id。
-func (s reportMessageSnapshotSource) GetMessageSnapshot(ctx context.Context, messageID string) (*reports.ReportSnapshot, bool, error) {
+func (s reportMessageSnapshotSource) GetMessageSnapshot(ctx context.Context, messageID, reporterUserID string) (*reports.ReportSnapshot, bool, error) {
 	if s.groupMessages != nil {
 		snap, found, err := s.groupMessages.GetMessageReportSnapshot(ctx, messageID)
 		if err != nil {
 			return nil, false, err
 		}
 		if found {
+			isMember, err := s.groupMessages.IsGroupMember(ctx, snap.GroupID, reporterUserID)
+			if err != nil {
+				return nil, false, err
+			}
+			if !isMember {
+				return nil, false, nil
+			}
 			return s.buildReportSnapshot(ctx, "group", snap.GroupID, snap.Type, snap.Content, snap.FileID, snap.SentAt)
 		}
 	}
@@ -59,6 +68,9 @@ func (s reportMessageSnapshotSource) GetMessageSnapshot(ctx context.Context, mes
 			return nil, false, err
 		}
 		if found {
+			if reporterUserID != snap.SenderUserID && reporterUserID != snap.TargetUserID {
+				return nil, false, nil
+			}
 			return s.buildReportSnapshot(ctx, "private", snap.TargetUserID, snap.Type, snap.Content, snap.FileID, snap.SentAt)
 		}
 	}
