@@ -66,13 +66,20 @@
 
 	const handleSave = async () => {
 		if (saving) return;
+		const trimmedNickname = nickname.trim();
+		if (!trimmedNickname) {
+			showToast('昵称不能为空', 'danger');
+			return;
+		}
 		saving = true;
 		try {
 			// spec: updateAccount { nickname?, avatar_file_id?, bio?, tags?, gender? }
+			// Patch 清空语义（api_spec_user.md）：tags: [] = 清空标签、bio 传空串 = 清空简介；
+			// 传 undefined 才表示"保持不变"——删光标签后必须能清空而不是保留旧值。
 			const res = await updateAccount({
-				nickname: nickname || undefined,
-				bio: bio || undefined,
-				tags: tags.size > 0 ? Array.from(tags) : undefined
+				nickname: trimmedNickname,
+				bio: bio.trim(),
+				tags: Array.from(tags)
 			});
 			if (res.code !== 0) throw new Error(res.message || '保存失败');
 			saved = true;
@@ -80,8 +87,8 @@
 				saved = false;
 				history.back();
 			}, 800);
-		} catch {
-			showToast('保存失败，请重试', 'danger');
+		} catch (err) {
+			showToast(err instanceof Error && err.message ? err.message : '保存失败，请重试', 'danger');
 		} finally {
 			saving = false;
 		}

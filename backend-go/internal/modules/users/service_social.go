@@ -147,6 +147,14 @@ func (s *Service) Block(ctx context.Context, targetUserID, reason string) error 
 	return nil
 }
 
+// BlockStateBetween 返回 a、b 之间的双向拉黑状态：callerBlocked = a 拉黑了 b，
+// targetBlocked = b 拉黑了 a。供私聊发送/typing 等场景做双向黑名单拦截——
+// Relationship 的 IsBlocked 只覆盖正向（第一参数拉黑第二参数），直接用会把
+// "被对方拉黑"误判成"我拉黑了对方"（spec api_spec_chat.md：send 必须校验黑名单）。
+func (s *Service) BlockStateBetween(ctx context.Context, aUserID, bUserID string) (callerBlocked, targetBlocked bool, err error) {
+	return s.repo.BlockedEitherWay(ctx, aUserID, bUserID)
+}
+
 func (s *Service) Unblock(ctx context.Context, targetUserID string) error {
 	startedAt := time.Now()
 	observability.L().Info("users.unblock started", "target_user_id", targetUserID)

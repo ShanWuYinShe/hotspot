@@ -33,6 +33,7 @@ type Runtime struct {
 type userReader interface {
 	OpenTheDoor(context.Context, string) (users.UserItem, bool, error)
 	GetMySettings(context.Context) (users.UserSettings, error)
+	BlockStateBetween(context.Context, string, string) (callerBlocked, targetBlocked bool, err error)
 }
 
 // shareValidator 校验 share_code 有效性（由 share 模块实现，见 module.go 装配）。
@@ -249,9 +250,18 @@ func (s *Service) ensureCanSend(ctx context.Context, userID, targetUserID string
 	if userID == targetUserID {
 		return nil
 	}
-	// 拉黑明确返回 blocked_by_user（产品决策：拉黑就显示拉黑，见 api_spec_errors.md ForbiddenReason）
-	if item.Relation != nil && item.Relation.IsBlocked {
+	// 拉黑明确返回 blocked_by_user（产品决策：拉黑就显示拉黑，见 api_spec_errors.md ForbiddenReason）。
+	// 必须查双向黑名单：被对方拉黑的发送者才是拦截目标；OpenTheDoor 的 Relation.IsBlocked
+	// 是发送者视角（发送者拉黑了对方），单独用它会让被拉黑者照样发出消息。
+	callerBlocked, targetBlocked, blockErr := s.users.BlockStateBetween(ctx, userID, targetUserID)
+	if blockErr != nil {
+		return blockErr
+	}
+	if targetBlocked {
 		return httpx.Forbidden(httpx.ReasonBlockedByUser, "已被对方拉黑")
+	}
+	if callerBlocked {
+		return httpx.Forbidden(httpx.ReasonBlockedByUser, "你已拉黑对方，无法发送")
 	}
 	settings, settingsErr := s.users.GetMySettings(platformauth.WithPrincipal(ctx, platformauth.Principal{UserID: targetUserID, SessionID: "private-message-probe"}))
 	if settingsErr != nil {

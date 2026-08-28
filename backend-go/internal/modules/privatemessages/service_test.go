@@ -82,12 +82,14 @@ func (r *stubMsgRepo) GetMessageReportSnapshot(_ context.Context, _ string) (Mes
 }
 
 type stubUserReader struct {
-	item        users.UserItem
-	found       bool
-	userErr     error
-	settings    users.UserSettings
-	settingsErr error
-	byTarget    map[string]users.UserItem // per-target item lookup (stranger quota relation checks)
+	item          users.UserItem
+	found         bool
+	userErr       error
+	settings      users.UserSettings
+	settingsErr   error
+	byTarget      map[string]users.UserItem // per-target item lookup (stranger quota relation checks)
+	callerBlocked bool                      // BlockStateBetween：发送者拉黑了对方
+	targetBlocked bool                      // BlockStateBetween：对方拉黑了发送者
 }
 
 func (u *stubUserReader) OpenTheDoor(_ context.Context, userID string) (users.UserItem, bool, error) {
@@ -103,6 +105,10 @@ func (u *stubUserReader) OpenTheDoor(_ context.Context, userID string) (users.Us
 }
 func (u *stubUserReader) GetMySettings(_ context.Context) (users.UserSettings, error) {
 	return u.settings, u.settingsErr
+}
+
+func (u *stubUserReader) BlockStateBetween(_ context.Context, _ string, _ string) (callerBlocked, targetBlocked bool, err error) {
+	return u.callerBlocked, u.targetBlocked, nil
 }
 
 // quotaSource is a static appconfig.Source for the stranger quota tests.
@@ -136,15 +142,29 @@ func TestServiceSendRejectsTargetNotFound(t *testing.T) {
 	}
 }
 
-func TestServiceSendRejectsBlockedUser(t *testing.T) {
+func TestServiceSendRejectsBlockedByTarget(t *testing.T) {
+	// 被对方拉黑：核心拦截场景（spec api_spec_chat.md：send 必须校验黑名单）
 	svc := NewServiceWithDeps(&stubMsgRepo{}, &stubUserReader{
-		found:    true,
-		item:     users.UserItem{Relation: &users.Relationship{IsBlocked: true}},
-		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
+		found:         true,
+		targetBlocked: true,
+		settings:      users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
 	})
 	_, err := svc.Send(msgCtx("u1"), SendPrivateMessageRequest{TargetUserID: "u2", Type: "text"})
 	if err == nil {
-		t.Fatal("expected error for blocked user")
+		t.Fatal("expected error for blocked-by-target user")
+	}
+}
+
+func TestServiceSendRejectsCallerBlockedTarget(t *testing.T) {
+	// 发送者拉黑了对方：同样禁止发送（双向黑名单口径）
+	svc := NewServiceWithDeps(&stubMsgRepo{}, &stubUserReader{
+		found:         true,
+		callerBlocked: true,
+		settings:      users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
+	})
+	_, err := svc.Send(msgCtx("u1"), SendPrivateMessageRequest{TargetUserID: "u2", Type: "text"})
+	if err == nil {
+		t.Fatal("expected error for caller-blocked user")
 	}
 }
 

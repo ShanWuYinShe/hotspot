@@ -67,6 +67,47 @@ func TestMemoryRelationshipsAndBlocking(t *testing.T) {
 	}
 }
 
+func TestMemoryBlockedEitherWay(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := context.Background()
+	if err := repo.Block(ctx, "u1", "u2", "spam"); err != nil {
+		t.Fatalf("block: %v", err)
+	}
+	if err := repo.Block(ctx, "u3", "u1", "harassment"); err != nil {
+		t.Fatalf("block reverse: %v", err)
+	}
+
+	// u1 拉黑 u2：caller 侧为真，target 侧为假
+	callerBlocked, targetBlocked, err := repo.BlockedEitherWay(ctx, "u1", "u2")
+	if err != nil || !callerBlocked || targetBlocked {
+		t.Fatalf("u1->u2: caller=%v target=%v err=%v", callerBlocked, targetBlocked, err)
+	}
+	// u3 拉黑 u1：反向为真
+	callerBlocked, targetBlocked, err = repo.BlockedEitherWay(ctx, "u1", "u3")
+	if err != nil || callerBlocked || !targetBlocked {
+		t.Fatalf("u1->u3: caller=%v target=%v err=%v", callerBlocked, targetBlocked, err)
+	}
+	// 双向拉黑
+	if err := repo.Block(ctx, "u1", "u3", "again"); err != nil {
+		t.Fatalf("block both ways: %v", err)
+	}
+	callerBlocked, targetBlocked, err = repo.BlockedEitherWay(ctx, "u1", "u3")
+	if err != nil || !callerBlocked || !targetBlocked {
+		t.Fatalf("u1<->u3: caller=%v target=%v err=%v", callerBlocked, targetBlocked, err)
+	}
+	// 无任何关系的用户对返回全假
+	callerBlocked, targetBlocked, err = repo.BlockedEitherWay(ctx, "u9", "u8")
+	if err != nil || callerBlocked || targetBlocked {
+		t.Fatalf("no relation: caller=%v target=%v err=%v", callerBlocked, targetBlocked, err)
+	}
+
+	// Service 层透传
+	svc := NewServiceWithRepo(repo)
+	if _, _, err := svc.BlockStateBetween(ctx, "u1", "u2"); err != nil {
+		t.Fatalf("service BlockStateBetween: %v", err)
+	}
+}
+
 func TestMemoryDeleteProfileClearsRelationships(t *testing.T) {
 	repo := NewInMemoryRepository()
 	ctx := context.Background()

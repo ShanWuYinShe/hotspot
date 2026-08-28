@@ -84,6 +84,18 @@ func (s *Service) ensureDescriptionLength(ctx context.Context, description strin
 	return nil
 }
 
+// mentionsMaxCount 契约级上限（api_spec_base.md 字段校验约束：mentions 最多 20 个）。
+// 不限制会放大通知写入：每个 mention 触发一次通知落库 + 一次 WS/Redis 推送。
+const mentionsMaxCount = 20
+
+// ensureMentionsLimit 校验 mentions 数量上限；Create 与 Update 共用。
+func ensureMentionsLimit(mentions []string) error {
+	if len(mentions) > mentionsMaxCount {
+		return ErrTooManyMentions
+	}
+	return nil
+}
+
 func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (OwnerMomentItem, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	// distance/bearing_degrees 是响应侧相对位置字段，由服务端基于 reference_point
@@ -92,6 +104,9 @@ func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (OwnerMom
 	req.Location.Distance = nil
 	req.Location.BearingDegrees = nil
 	if err := s.ensureDescriptionLength(ctx, req.Description); err != nil {
+		return OwnerMomentItem{}, err
+	}
+	if err := ensureMentionsLimit(req.Mentions); err != nil {
 		return OwnerMomentItem{}, err
 	}
 	if err := s.validateImageOwnership(ctx, principal.UserID, req.ImageFileIDs); err != nil {
@@ -260,6 +275,12 @@ func (s *Service) Update(ctx context.Context, req UpdateMomentRequest) (OwnerMom
 			return OwnerMomentItem{}, err
 		}
 	}
+	// mentions 是 patch 语义：nil=未传保持不变；显式传数组（含空数组=清空）才校验上限。
+	if req.Mentions != nil {
+		if err := ensureMentionsLimit(req.Mentions); err != nil {
+			return OwnerMomentItem{}, err
+		}
+	}
 	if err := s.validateImageOwnership(ctx, principal.UserID, req.ImageFileIDs); err != nil {
 		return OwnerMomentItem{}, err
 	}
@@ -282,7 +303,18 @@ func (s *Service) Update(ctx context.Context, req UpdateMomentRequest) (OwnerMom
 		observability.L().Error("moments.update reload failed", "error", err, "moment_id", req.MomentID)
 		return OwnerMomentItem{}, err
 	}
-	s.notifyMomentMentions(ctx, principal.UserID, updated)
+	// 仅对本次编辑新增的 mention 通知：编辑前已存在的 mention 不重复推送。
+	previousMentions := make(map[string]struct{}, len(item.Mentions))
+	for _, mentionedID := range normalizeMomentMentions(item.Mentions) {
+		previousMentions[mentionedID] = struct{}{}
+	}
+	newlyMentioned := make([]string, 0)
+	for _, mentionedID := range normalizeMomentMentions(updated.Mentions) {
+		if _, seen := previousMentions[mentionedID]; !seen {
+			newlyMentioned = append(newlyMentioned, mentionedID)
+		}
+	}
+	s.notifyMentionUserIDs(ctx, principal.UserID, updated, newlyMentioned)
 	s.hydrateImages(ctx, &updated)
 	// 瞬间被编辑 → 推送给作者的其他在线设备（多端同步，spec api_spec_websocket.md）
 	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMomentUpdated, Payload: map[string]any{
@@ -576,6 +608,13 @@ func summarizeMomentDescription(description string) string {
 }
 
 func (s *Service) notifyMomentMentions(ctx context.Context, actorUserID string, item MomentItem) {
+	s.notifyMentionUserIDs(ctx, actorUserID, item, normalizeMomentMentions(item.Mentions))
+}
+
+// notifyMentionUserIDs 对明确列出的提及用户逐个落通知 + 推送。
+// notifyMomentMentions（Create）通知全部 mentions；Update 只传新旧差集，
+// 避免每次编辑都给已通知过的用户重复推送（每用户 = 1 次通知落库 + 1 次 WS 广播）。
+func (s *Service) notifyMentionUserIDs(ctx context.Context, actorUserID string, item MomentItem, mentionedUserIDs []string) {
 	if s.notifications == nil {
 		return
 	}
@@ -585,7 +624,7 @@ func (s *Service) notifyMomentMentions(ctx context.Context, actorUserID string, 
 		observability.L().Error("moments.mentions build actor failed", "error", err, "user_id", actorUserID)
 		actor = fallbackActor(actorUserID)
 	}
-	for _, mentionedUserID := range normalizeMomentMentions(item.Mentions) {
+	for _, mentionedUserID := range mentionedUserIDs {
 		if mentionedUserID == actorUserID {
 			continue
 		}

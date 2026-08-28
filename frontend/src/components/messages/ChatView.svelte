@@ -278,7 +278,22 @@
 
 	<!-- Messages -->
 	<div bind:this={chat.scrollEl} onscroll={chat.handleScroll} class="flex-1 overflow-y-auto no-scrollbar" style="overscroll-behavior:contain;">
-		{#if !chat.loading && chat.messages.length === 0}
+		{#if chat.loading}
+			<div class="flex h-full items-center justify-center" role="status" aria-label="加载中">
+				<div class="size-6 animate-spin rounded-full border-2 border-border-default border-t-accent-default"></div>
+			</div>
+		{:else if chat.loadError}
+			<div class="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+				<p class="text-sm text-text-secondary">消息加载失败，请检查网络后重试</p>
+				<button
+					type="button"
+					class="hover-btn rounded-full border border-border-default bg-surface-primary px-4 py-1.5 text-sm text-text-primary focus-ring"
+					onclick={() => void chat.reload()}
+				>
+					重新加载
+				</button>
+			</div>
+		{:else if chat.messages.length === 0}
 			<!-- 空会话：统一 EmptyState 空态（对齐 GroupChatView/全局空态契约） -->
 			<EmptyState iconSize={56} class="h-full" title="还没有消息" description="打个招呼，开始这段对话吧">
 				{#snippet icon()}
@@ -331,7 +346,8 @@
 				bind:value={chat.inputVal}
 				oninput={(e) => chat.handleInputChange(e)}
 				onkeydown={(e) => {
-					if (e.key === 'Enter') void chat.handleSend();
+					// IME 组合中的回车是选词确认，不能当发送（中文输入法致命）
+					if (e.key === 'Enter' && !e.isComposing) void chat.handleSend();
 				}}
 				placeholder="发消息…"
 				class="flex-1 bg-transparent text-text-primary text-sm"

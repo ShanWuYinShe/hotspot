@@ -18,7 +18,7 @@ import { SystemButton } from '../../../components/SystemButton';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { SystemToast } from '../../../components/SystemToast';
 import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
-import { AuthData, AccountInfo, LoginRequest, RegisterRequest, SendRegisterCodeRequest, GuestRequest } from '../../../core/types/api';
+import { AuthData, AccountInfo, LoginRequest, RegisterRequest, SendRegisterCodeRequest, GuestRequest, UserType } from '../../../core/types/api';
 import { DeviceIdUtil } from '../../../core/util/DeviceIdUtil';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
@@ -784,7 +784,7 @@ export struct LoginPage {
         if (response.code === 0 && response.data) {
           this.loadingStage = '创建成功，正在初始化...';
           this.loadingProgress = 70;
-          await this.handleAuthSuccess(response.data);
+          await this.handleAuthSuccess(response.data, 'temp');
           this.loadingProgress = 100;
         } else {
           SystemToast.showError(getErrorMessage(response, '创建失败'), this.getUIContext());
@@ -835,7 +835,7 @@ export struct LoginPage {
           this.loadingProgress = 70;
 
           PasswordSecurityUtil.clearSensitiveString(this.password);
-          await this.handleAuthSuccess(response.data);
+          await this.handleAuthSuccess(response.data, 'normal');
           this.loadingProgress = 100;
         } else {
           SystemToast.showError(getErrorMessage(response, '登录失败'), this.getUIContext());
@@ -964,7 +964,7 @@ export struct LoginPage {
 
           PasswordSecurityUtil.clearSensitiveString(this.registerPassword);
           PasswordSecurityUtil.clearSensitiveString(this.registerPasswordConfirm);
-          await this.handleAuthSuccess(response.data);
+          await this.handleAuthSuccess(response.data, 'normal');
           this.loadingProgress = 100;
         } else {
           SystemToast.showError(getErrorMessage(response, '注册失败'), this.getUIContext());
@@ -1001,7 +1001,9 @@ export struct LoginPage {
     AppRouter.pop();
   }
 
-  private async handleAuthSuccess(authData: AuthData) {
+  /** userType 为登录来源的账号类型（createTempUser='temp'，login/register='normal'），
+   *  用作获取完整资料前的占位值；user_type 是服务端权威字段，不得硬编码伪造。 */
+  private async handleAuthSuccess(authData: AuthData, userType: UserType) {
     await AuthAccountManager.upsertAndActivate(authData);
     await HttpUtil.setToken(authData.access_token);
 
@@ -1009,7 +1011,7 @@ export struct LoginPage {
       user_id: authData.user_id,
       nickname: '',
       avatar_url: '',
-      user_type: 'temp',
+      user_type: userType,
       bio: '',
       tags: [],
       email: '',

@@ -15,6 +15,7 @@ import (
 type userReader interface {
 	OpenTheDoor(context.Context, string) (users.UserItem, bool, error)
 	GetMySettings(context.Context) (users.UserSettings, error)
+	BlockStateBetween(context.Context, string, string) (callerBlocked, targetBlocked bool, err error)
 }
 
 type Service struct {
@@ -193,7 +194,13 @@ func (s *Service) buildChat(ctx context.Context, userID string, state ChatState)
 		item.CanMessage = false
 		item.ForbiddenReason = &r
 	}
-	if userItem.Relation != nil && userItem.Relation.IsBlocked {
+	// 双向黑名单都要置 can_message=false：OpenTheDoor 的 Relation.IsBlocked 是
+	// 查看者视角（查看者拉黑了对方），对方拉黑查看者需走 BlockStateBetween 补判。
+	callerBlocked, targetBlocked, blockErr := s.users.BlockStateBetween(ctx, userID, state.TargetID)
+	if blockErr != nil {
+		return item, blockErr
+	}
+	if callerBlocked || targetBlocked {
 		blockReason(httpx.ReasonBlockedByUser)
 	}
 	settings, settingsErr := s.users.GetMySettings(platformauth.WithPrincipal(ctx, platformauth.Principal{UserID: state.TargetID, SessionID: "private-chat-probe"}))

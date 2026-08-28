@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -500,4 +502,44 @@ func TestHandlerMarkReadRejectsBadScope(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.MarkRead(rr, req)
 	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
+}
+
+// --- content/mentions 契约校验（api_spec_base.md：content(message) 1-5000 字符、mentions ≤20） ---
+
+func TestHandlerSendRejectsOverlongContentAndMentions(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+
+	overlongBody := fmt.Sprintf(`{"group_id":"g1","type":"text","content":"%s"}`, strings.Repeat("好", 5001))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(overlongBody))
+	req.Header.Set("Idempotency-Key", "cccc1234cccc1234cccc1234cccc1234")
+	rr := httptest.NewRecorder()
+	handler.Send(rr, req)
+	gmAssertCode(t, rr, httpx.CodeInvalidRequest)
+
+	manyMentions := `{"group_id":"g1","type":"text","content":"hi","mentions":[` +
+		strings.Join(repeatMentions(21), `,`) + `]}`
+	req2 := gmCtx("u1")
+	req2.Body = io.NopCloser(strings.NewReader(manyMentions))
+	req2.Header.Set("Idempotency-Key", "dddd1234dddd1234dddd1234dddd1234")
+	rr2 := httptest.NewRecorder()
+	handler.Send(rr2, req2)
+	gmAssertCode(t, rr2, httpx.CodeInvalidRequest)
+
+	okBody := `{"group_id":"g1","type":"text","content":"hi","mentions":[` +
+		strings.Join(repeatMentions(20), `,`) + `]}`
+	req3 := gmCtx("u1")
+	req3.Body = io.NopCloser(strings.NewReader(okBody))
+	req3.Header.Set("Idempotency-Key", "eeee1234eeee1234eeee1234eeee1234")
+	rr3 := httptest.NewRecorder()
+	handler.Send(rr3, req3)
+	gmAssertCode(t, rr3, 0)
+}
+
+func repeatMentions(n int) []string {
+	out := make([]string, n)
+	for i := range out {
+		out[i] = `"u` + strconv.Itoa(i) + `"`
+	}
+	return out
 }

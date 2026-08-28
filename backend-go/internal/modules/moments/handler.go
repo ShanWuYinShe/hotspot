@@ -49,6 +49,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			case errors.Is(err, ErrDescriptionTooLong):
 				observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "内容超过长度限制")
 				return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeInvalidRequest, Message: "内容超过长度限制"}
+			case errors.Is(err, ErrTooManyMentions):
+				observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "mentions 数量超过上限")
+				return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeInvalidRequest, Message: "mentions 数量超过上限"}
 			case errors.Is(err, ErrTooManyImages):
 				observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "图片数量超过上限")
 				return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeInvalidRequest, Message: "图片数量超过上限"}
@@ -159,6 +162,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, ErrDescriptionTooLong) {
 			httpx.WriteInvalidRequest(w, r, "Update", "内容超过长度限制")
+			return
+		}
+		if errors.Is(err, ErrTooManyMentions) {
+			httpx.WriteInvalidRequest(w, r, "Update", "mentions 数量超过上限")
 			return
 		}
 		if errors.Is(err, ErrPermissionDenied) {

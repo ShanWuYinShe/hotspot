@@ -174,6 +174,7 @@ func TestCanSendPrivateTypingRejectsOnRepoErrors(t *testing.T) {
 type errUserRepo struct {
 	settingsErr error
 	relErr      error
+	blockErr    error
 }
 
 func (r errUserRepo) GetSettings(context.Context, string) (bool, string, bool, error) {
@@ -182,6 +183,10 @@ func (r errUserRepo) GetSettings(context.Context, string) (bool, string, bool, e
 
 func (r errUserRepo) Relationship(context.Context, string, string) (bool, bool, bool, error) {
 	return false, false, false, r.relErr
+}
+
+func (r errUserRepo) BlockedEitherWay(context.Context, string, string) (callerBlocked, targetBlocked bool, err error) {
+	return false, false, r.blockErr
 }
 
 // --- PrivateTyping 事件推送 payload 结构(target_user_id + actor) ---

@@ -37,6 +37,7 @@ type typingActorProvider interface {
 type userRelationAuthorizer interface {
 	GetSettings(context.Context, string) (bool, string, bool, error)
 	Relationship(context.Context, string, string) (bool, bool, bool, error)
+	BlockedEitherWay(context.Context, string, string) (callerBlocked, targetBlocked bool, err error)
 }
 
 type groupMembershipAuthorizer interface {
@@ -471,11 +472,14 @@ func (h *Handler) canSendPrivateTyping(ctx context.Context, viewerUserID, target
 	if !ok {
 		allowPrivateChat = "everyone"
 	}
-	isFollowing, isFollowedBy, isBlocked, err := h.userRepo.Relationship(ctx, viewerUserID, targetUserID)
-	if err != nil {
+	// 双向黑名单拦截：Relationship 的 isBlocked 只是 viewer 拉黑了对方，
+	// 被对方拉黑的发送者同样不允许 typing（与 send 的 ensureCanSend 口径一致）。
+	callerBlocked, targetBlocked, blockErr := h.userRepo.BlockedEitherWay(ctx, viewerUserID, targetUserID)
+	if blockErr != nil || callerBlocked || targetBlocked {
 		return false
 	}
-	if isBlocked {
+	isFollowing, isFollowedBy, _, err := h.userRepo.Relationship(ctx, viewerUserID, targetUserID)
+	if err != nil {
 		return false
 	}
 	switch allowPrivateChat {

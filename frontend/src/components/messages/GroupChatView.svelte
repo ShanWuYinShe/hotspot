@@ -245,6 +245,17 @@
 			<div class="flex h-full items-center justify-center">
 				<p class="text-text-secondary text-xs" >加载中…</p>
 			</div>
+		{:else if chat.loadError}
+			<div class="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+				<p class="text-sm text-text-secondary">消息加载失败，请检查网络后重试</p>
+				<button
+					type="button"
+					class="hover-btn rounded-full border border-border-default bg-surface-primary px-4 py-1.5 text-sm text-text-primary focus-ring"
+					onclick={() => void chat.reload()}
+				>
+					重新加载
+				</button>
+			</div>
 		{:else if chat.messages.length === 0}
 			<!-- 空会话：与 ChatView 同形态的 EmptyState（消除纯文本空态） -->
 			<EmptyState iconSize={56} class="h-full" title="还没有消息" description="来打个招呼吧">
@@ -288,7 +299,8 @@
 				bind:value={chat.inputVal}
 				oninput={(e) => chat.handleInputChange(e)}
 				onkeydown={(e) => {
-					if (e.key === 'Enter') void chat.handleSend();
+					// IME 组合中的回车是选词确认，不能当发送（中文输入法致命）
+					if (e.key === 'Enter' && !e.isComposing) void chat.handleSend();
 				}}
 				placeholder="发消息…"
 				class="flex-1 bg-transparent text-text-primary text-sm"

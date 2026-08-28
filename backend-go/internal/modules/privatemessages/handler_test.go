@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -89,6 +90,10 @@ func (s *privateMessageUserStub) OpenTheDoor(context.Context, string) (users.Use
 
 func (s *privateMessageUserStub) GetMySettings(context.Context) (users.UserSettings, error) {
 	return s.settings, s.setErr
+}
+
+func (s *privateMessageUserStub) BlockStateBetween(context.Context, string, string) (callerBlocked, targetBlocked bool, err error) {
+	return false, false, nil
 }
 
 func withPrivateMessagePrincipal(req *http.Request) *http.Request {
@@ -495,4 +500,16 @@ func assertPrivateMessageCode(t *testing.T, rr *httptest.ResponseRecorder, expec
 	if resp.Code != expected {
 		t.Fatalf("expected code %d, got %#v", expected, resp)
 	}
+}
+
+// --- content 长度契约校验（api_spec_base.md：content(message) 1-5000 字符） ---
+
+func TestPrivateMessagesSendRejectsOverlongContent(t *testing.T) {
+	handler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), &privateMessageUserStub{}))
+	overlongBody := fmt.Sprintf(`{"target_user_id":"user_bob","type":"text","content":"%s"}`, strings.Repeat("好", 5001))
+	req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/send", strings.NewReader(overlongBody)))
+	req.Header.Set("Idempotency-Key", "cccc1234cccc1234cccc1234cccc1234")
+	rr := httptest.NewRecorder()
+	handler.Send(rr, req)
+	assertPrivateMessageCode(t, rr, httpx.CodeInvalidRequest)
 }

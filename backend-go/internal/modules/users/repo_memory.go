@@ -274,6 +274,12 @@ func (r *InMemoryRepository) Relationship(_ context.Context, userID, targetUserI
 	return Relationship{IsFollowing: forward.Following, IsFollowedBy: reverse.Following, IsBlocked: forward.Blocked}, nil
 }
 
+func (r *InMemoryRepository) BlockedEitherWay(_ context.Context, aUserID, bUserID string) (callerBlocked, targetBlocked bool, err error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.relations[aUserID][bUserID].Blocked, r.relations[bUserID][aUserID].Blocked, nil
+}
+
 func (r *InMemoryRepository) RelationshipBatch(_ context.Context, userID string, targetUserIDs []string) (map[string]Relationship, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

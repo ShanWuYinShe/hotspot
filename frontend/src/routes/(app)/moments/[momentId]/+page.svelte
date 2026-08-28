@@ -135,6 +135,9 @@
 						tag: detailData.tags?.[0] ?? '',
 						comments: []
 					};
+					// 评论计数基数 = 服务端权威值；本页内新增走 commentDelta
+					commentCountBase = detailData.comments_count ?? 0;
+					commentDelta = 0;
 					// Derive liked from reactions[].reacted_by_me (spec); saved from my_state.
 					const mine = (detailData.reactions || []).find((r) => r.reacted_by_me);
 					if (mine) {
@@ -202,7 +205,11 @@
 		};
 	});
 
-	const commentCount = $derived(apiComments.length);
+	// 评论计数基数取服务端权威 comments_count（评论列表只取第一页，
+	// 本地列表长度会少算第 2 页起的评论）；commentDelta 承载本页内的增减。
+	let commentCountBase = $state(0);
+	let commentDelta = $state(0);
+	const commentCount = $derived(commentCountBase + commentDelta);
 	const isAuthor = $derived(Boolean(auth.user?.user_id) && auth.user?.user_id === moment.authorId);
 
 	// in-flight 去重：写请求未完成时忽略重复触发，避免连点双翻转 + 并发乱序
@@ -229,32 +236,50 @@
 			liked: false
 		};
 		apiComments = [...apiComments, optimistic];
+		commentDelta += 1;
 		commentPending = true;
 		try {
 			// 业务失败（HTTP 200 + code≠0）api client 不抛错，必须显式判 code
 			const res = await createComment({ moment_id: momentId, content: text });
-			if (res.code !== 0) throw new Error(res.message || '评论发布失败');
+			if (res.code !== 0 || !res.data) throw new Error(res.message || '评论发布失败');
+			// 用服务端真实 CommentItem 回填乐观条目：后续点赞走
+			// reactions/set(target_id=comment_id)，乐观占位 id 必然失败。
+			const c = res.data;
+			const confirmed: MomentComment = {
+				id: c.comment_id,
+				userId: c.user?.user_id ?? optimistic.userId,
+				user: c.user?.nickname ?? optimistic.user,
+				avatar: c.user?.avatar_url ?? optimistic.avatar,
+				text: c.content ?? text,
+				time: formatDateTime(c.created_at),
+				likes: (c.reactions || []).reduce((s, r) => s + (r.count ?? 0), 0),
+				liked: (c.reactions || []).some((r) => r.reacted_by_me)
+			};
+			apiComments = apiComments.map((item) => (item.id === optimistic.id ? confirmed : item));
 		} catch (err) {
 			apiComments = apiComments.filter((c) => c.id !== optimistic.id);
+			commentDelta -= 1;
 			showToast(err instanceof Error && err.message ? err.message : '评论发布失败，请重试', 'danger');
 		} finally {
 			commentPending = false;
 		}
 	};
 
-	// 评论点赞：登录闸 + 乐观翻转 + reactions/set(target_type='comment')，失败回滚
+	// 评论点赞：登录闸 + 乐观翻转（likes 同步 ±1，服务端计数已含本人，刷新后口径一致）
+	// + reactions/set(target_type='comment')，失败回滚
 	const toggleCommentLike = async (commentId: string) => {
 		const target = apiComments.find((c) => c.id === commentId);
 		if (!target || commentLikePending.has(commentId)) return;
 		if (!requireAuth({ action: '点赞', targetId: commentId, run: () => void toggleCommentLike(commentId) })) return;
 		const prev = target.liked;
-		apiComments = apiComments.map((c) => (c.id === commentId ? { ...c, liked: !prev } : c));
+		const prevLikes = target.likes;
+		apiComments = apiComments.map((c) => (c.id === commentId ? { ...c, liked: !prev, likes: prevLikes + (prev ? -1 : 1) } : c));
 		commentLikePending.add(commentId);
 		try {
 			const res = await setReaction({ target_type: 'comment', target_id: commentId, emoji: '👍', active: !prev });
 			if (res.code !== 0) throw new Error(res.message || '操作失败');
 		} catch (err) {
-			apiComments = apiComments.map((c) => (c.id === commentId ? { ...c, liked: prev } : c));
+			apiComments = apiComments.map((c) => (c.id === commentId ? { ...c, liked: prev, likes: prevLikes } : c));
 			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
 		} finally {
 			commentLikePending.delete(commentId);
@@ -277,13 +302,18 @@
 		if (likePending) return;
 		if (!requireAuth({ action: '点赞', targetId: momentId, run: () => void toggleLike() })) return;
 		const next = !liked;
+		const prevLikes = moment.likes;
 		liked = next;
+		// 点赞数乐观 ±1：moment.likes 是服务端快照（reactions[].count 已含本人），
+		// 本页只承载快照后的增量；刷新重拉后口径自然对齐。
+		moment = { ...moment, likes: prevLikes + (next ? 1 : -1) };
 		likePending = true;
 		try {
 			const res = await setReaction({ target_type: 'moment', target_id: momentId, emoji: likeEmoji, active: next });
 			if (res.code !== 0) throw new Error(res.message || '操作失败');
 		} catch (err) {
 			liked = !next;
+			moment = { ...moment, likes: prevLikes };
 			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
 		} finally {
 			likePending = false;
@@ -424,7 +454,8 @@
 					bind:this={commentInputEl}
 					bind:value={input}
 					onkeydown={(e) => {
-						if (e.key === 'Enter') void handleComment();
+						// IME 组合中的回车是选词确认，不能当发送（中文输入法致命）
+						if (e.key === 'Enter' && !e.isComposing) void handleComment();
 					}}
 					placeholder="写下你的评论…"
 					class="flex-1 bg-transparent text-text-primary text-sm"

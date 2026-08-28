@@ -157,6 +157,15 @@ SELECT is_following, is_blocked, COALESCE(remark, ''), followed_at, blocked_at, 
 FROM user_relations
 WHERE user_id = $1 AND target_user_id = $2`
 
+	// queryGetBlockedEitherWay 一次往返解析 a、b 间的双向拉黑状态。
+	// 无关系行时聚合返回单行 NULL，经 COALESCE 归一为 false。
+	queryGetBlockedEitherWay = `
+SELECT
+  COALESCE(bool_or(is_blocked) FILTER (WHERE user_id = $1), false),
+  COALESCE(bool_or(is_blocked) FILTER (WHERE user_id = $2), false)
+FROM user_relations
+WHERE (user_id = $1 AND target_user_id = $2) OR (user_id = $2 AND target_user_id = $1)`
+
 	// queryListUserRelationsForward fetches the forward-edge rows
 	// (user_id = $1 → target_user_id = ANY($2)) for a batched
 	// relationship lookup. Used by RelationshipBatch to avoid an N+1.

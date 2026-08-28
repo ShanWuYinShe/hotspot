@@ -276,9 +276,11 @@ interface ShareDetail {
 // 匿名冷启动聚合响应（仅公共数据；登录态字段在 /api/v1/system/bootstrap）
 interface PublicBootstrapData {
   bootstrap_version: string;
-  // === 缓存命中时以下字段省略（客户端使用缓存）；未命中/无缓存时必填 ===
-  meta: ApiVersionMeta | null;
-  client_config: ClientConfig | null;
+  // === 缓存命中时以下键整体省略（客户端使用缓存）；未命中/无缓存时必填 ===
+  // 命中判定：键不存在（而非 === null）。本接口是 base「类型稳定性」
+  // 「字段缺失仅限内容性可选字段」通则的显式例外。
+  meta?: ApiVersionMeta;
+  client_config?: ClientConfig;
 }
 ```
 
@@ -404,8 +406,8 @@ interface GuestRequest {
 
 **驱逐优先于宽限（契约级）**：宽限期仅容忍"并发刷新竞态"。若旧 session 是被「单设备单会话驱逐」显式写入黑名单的（如同设备重新登录），则黑名单立即生效，**30 秒宽限不覆盖显式驱逐**——旧 session 的任何请求（含宽限期内 refresh）立即失败为 `10100`。
 
-**client_type 约束**：
-- `client_type='web'`：请求体不得包含 `refresh_token` 字段（若包含则请求失败）
+**client_type 约束**（服务端按 `refresh_token` 值是否非空判定）：
+- `client_type='web'`：`refresh_token` 值必须为空——推荐缺省该键，显式传 `null` 亦可接受；传非空字符串则请求失败（`10000`）
 - `client_type='app'`：请求体必须包含非空 `refresh_token`（缺少或为空则请求失败）
 
 **Request**: `RefreshTokenRequest`
@@ -413,7 +415,7 @@ interface GuestRequest {
 interface RefreshTokenRequest {
   client_type: ClientType;
   device_id: DeviceId | null;  // 用于校验 refresh_token 归属当前设备，防止跨设备 token 挪用。App 端必填非 null；Web 端为 null（服务端从 device_id Cookie 读取）
-  refresh_token: string | null;  // App 端必填；Web 端为 null（使用 Cookie）
+  refresh_token: string | null;  // App 端必填非空；Web 端必须为空值（推荐缺省，null 亦可；使用 Cookie）
 }
 ```
 

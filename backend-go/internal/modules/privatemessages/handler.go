@@ -3,6 +3,7 @@ package privatemessages
 import (
 	"errors"
 	"net/http"
+	"unicode/utf8"
 
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
@@ -181,13 +182,16 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// messageContentMaxRunes 契约级上限（api_spec_base.md 字段校验约束：content(message) 1-5000 字符）。
+const messageContentMaxRunes = 5000
+
 func isValidSendRequest(req SendPrivateMessageRequest) bool {
 	if req.TargetUserID == "" || req.Type == "" {
 		return false
 	}
 	switch req.Type {
 	case "text":
-		return req.Content != ""
+		return req.Content != "" && utf8.RuneCountInString(req.Content) <= messageContentMaxRunes
 	case "image", "video", "audio", "file":
 		return req.FileID != ""
 	case "share":

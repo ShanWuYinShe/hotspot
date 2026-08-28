@@ -240,6 +240,23 @@ func (r *PostgresRepository) Relationship(ctx context.Context, userID, targetUse
 	return Relationship{IsFollowing: following, IsFollowedBy: followedBy, IsBlocked: blocked}, nil
 }
 
+// BlockedEitherWay 一次往返解析 a、b 双向拉黑状态（callerBlocked = a 拉黑 b）。
+// 发送/typing 等热路径用它替代两次 Relationship 调用（4 条 SQL → 1 条）。
+func (r *PostgresRepository) BlockedEitherWay(ctx context.Context, aUserID, bUserID string) (callerBlocked, targetBlocked bool, err error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return false, false, persistence.ErrNotImplemented
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return false, false, persistence.ErrNotImplemented
+	}
+	err = queryable.QueryRow(ctx, queryGetBlockedEitherWay, aUserID, bUserID).Scan(&callerBlocked, &targetBlocked)
+	if err != nil {
+		return false, false, err
+	}
+	return callerBlocked, targetBlocked, nil
+}
+
 // RelationshipBatch resolves the relationship between fromUserID and every
 // entry in toUserIDs in two queries (one for the forward edge, one for the
 // reverse edge), rather than one query per target. It replaces the N+1 that

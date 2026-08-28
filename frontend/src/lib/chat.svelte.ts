@@ -125,6 +125,9 @@ export function useChat(opts: UseChatOptions) {
 	let messages = $state<ChatMessage[]>([]);
 	let inputVal = $state('');
 	let loading = $state(true);
+	// 历史加载失败（网络/服务端错误）。加载失败时必须显式呈现错误态，
+	// 不能把失败渲染成"空会话"误导用户（尤其桌面分栏切换会话后）。
+	let loadError = $state(false);
 	let sending = $state(false);
 	let sendError = $state('');
 	let scrollEl = $state<HTMLDivElement | null>(null);
@@ -136,42 +139,53 @@ export function useChat(opts: UseChatOptions) {
 	let lastTypingSentAt = 0;
 	let typingStopTimer: ReturnType<typeof setTimeout> | null = null;
 
+	// 初始加载 + 会话切换重载。以「发起时的会话 id」做竞态保护：响应晚到时
+	// 若已切走则丢弃，避免旧会话内容渲染进新会话。
+	async function loadInitial() {
+		const target = opts.targetId();
+		loading = true;
+		loadError = false;
+		// 切换会话时清空旧消息：分栏复用实例时不清理会残留上一个会话的内容
+		messages = [];
+		nextCursor = null;
+		const res = await opts.loadHistory();
+		if (opts.targetId() !== target) return;
+		if (res) {
+			// 契约：服务端历史按 sent_at 倒序（新→旧）返回；渲染需要旧→新，
+			// 首屏翻转为正序，保证越新的消息在下方。
+			messages = res.messages.slice().reverse();
+			nextCursor = res.next_cursor ?? null;
+		} else {
+			loadError = true;
+		}
+		loadingMore = false;
+		loading = false;
+		// 标记已读；幂等语义，失败静默不打扰会话浏览。
+		opts.markRead();
+	}
+
 	// 初始加载 + 会话切换重载（依赖 targetId 变化）。
 	$effect(() => {
 		const id = opts.targetId();
 		if (!id) {
 			messages = [];
 			loading = false;
+			loadError = false;
 			return;
 		}
-		let cancelled = false;
-		async function load() {
-			loading = true;
-			const res = await opts.loadHistory();
-			if (cancelled) return;
-			if (res) {
-				// 契约：服务端历史按 sent_at 倒序（新→旧）返回；渲染需要旧→新，
-				// 首屏翻转为正序，保证越新的消息在下方。
-				messages = res.messages.slice().reverse();
-				nextCursor = res.next_cursor ?? null;
-			}
-			loadingMore = false;
-			loading = false;
-			// 标记已读；幂等语义，失败静默不打扰会话浏览。
-			opts.markRead();
-		}
-		void load();
-		return () => {
-			cancelled = true;
-		};
+		void loadInitial();
 	});
 
-	// 滚动到底部：初始/会话切换立即定位；消息追加（messages 变化）时平滑滚动
+	// 滚动到底部：仅在「尾部消息 id 变化」（初始加载/新消息 append/会话切换）时触发；
+	// loadMore 往顶部插入旧消息不改变尾部 id，避免与顶部位置还原互相打架。
+	let prevLastId = '';
 	$effect(() => {
 		const el = scrollEl;
-		const len = messages.length;
 		if (!el) return;
-		if (len > 0) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+		const lastId = messages.length ? messages[messages.length - 1].id : '';
+		if (lastId === prevLastId) return;
+		prevLastId = lastId;
+		if (lastId) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
 		else el.scrollTop = el.scrollHeight;
 	});
 
@@ -402,6 +416,10 @@ export function useChat(opts: UseChatOptions) {
 		get loading() {
 			return loading;
 		},
+		get loadError() {
+			return loadError;
+		},
+		reload: loadInitial,
 		get sending() {
 			return sending;
 		},

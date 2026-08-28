@@ -297,7 +297,10 @@ export struct CreateMomentPage {
               location_name: localLoc.locationName || "未知位置"
             },
             tags: this.tags.length > 0 ? this.tags : undefined,
-            image_file_ids: imageFileIds.length > 0 ? imageFileIds : undefined,
+            // 编辑模式不修改图片（undefined = 保持不变）：MediaAsset 契约不含
+            // file_id，客户端无法把已有图片并入替换列表，上传新图会触发服务端
+            // 全量替换、静默丢弃旧图——图片调整暂不支持，UI 已在编辑态隐藏入口。
+            image_file_ids: undefined,
             privacy_level: this.privacyLevel as PrivacyLevel
           });
         } else {
@@ -384,7 +387,8 @@ export struct CreateMomentPage {
                 value: this.description,
                 placeholder: '写下你想分享的内容...',
                 minHeight: DesignConstants.COMPONENT.PLACEHOLDER_AREA_HEIGHT,
-                maxLength: 500,
+                // spec api_spec_base.md 字段校验约束：description(moment) 1-2000 字符
+                maxLength: 2000,
                 fontSize: DesignConstants.FONT.SIZE.MD,
                 onChange: (value: string) => {
                   this.description = value;
@@ -434,8 +438,13 @@ export struct CreateMomentPage {
                 .columnsTemplate('1fr 1fr 1fr')
                 .rowsGap(DesignConstants.SPACING.SM)
                 .columnsGap(DesignConstants.SPACING.SM)
-                .margin({ bottom: DesignConstants.SPACING.MD })
+                .margin({ bottom: DesignConstants.SPACING.SM })
               }
+
+              Text('编辑暂不支持修改图片；如需调整，请删除该瞬间后重新发布')
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontColor(this.getCurrentThemePalette().textSecondary)
+                .margin({ bottom: DesignConstants.SPACING.MD })
 
               Grid() {
                 // 已选图片
@@ -445,8 +454,8 @@ export struct CreateMomentPage {
                   }
                 }, (imageUrl: string, index: number) => `${index}_${imageUrl}`)
 
-                // 添加按钮
-                if (this.imageUrls.length < 9) {
+                // 添加按钮（编辑模式禁用：见下方"已有图片"说明）
+                if (!this.isEditMode && this.imageUrls.length < 9) {
                   GridItem() {
                     Button() {
                       Column() {
@@ -470,8 +479,8 @@ export struct CreateMomentPage {
                   }
                 }
 
-                // 拍照按钮
-                if (this.imageUrls.length < 9) {
+                // 拍照按钮（编辑模式禁用）
+                if (!this.isEditMode && this.imageUrls.length < 9) {
                   GridItem() {
                     Button() {
                       Column() {

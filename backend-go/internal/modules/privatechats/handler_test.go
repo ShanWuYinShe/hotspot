@@ -103,6 +103,10 @@ func (r *privateChatUserReader) GetMySettings(context.Context) (users.UserSettin
 	return r.settings, nil
 }
 
+func (r *privateChatUserReader) BlockStateBetween(context.Context, string, string) (callerBlocked, targetBlocked bool, err error) {
+	return false, false, nil
+}
+
 func newHandlers() (*Handler, *privatemessages.Handler) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
 	userRepo := users.NewInMemoryRepository()

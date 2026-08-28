@@ -85,6 +85,9 @@ func (invalidCursorRepo) Relationship(context.Context, string, string) (Relation
 func (invalidCursorRepo) RelationshipBatch(context.Context, string, []string) (map[string]Relationship, error) {
 	return map[string]Relationship{}, nil
 }
+func (invalidCursorRepo) BlockedEitherWay(context.Context, string, string) (callerBlocked, targetBlocked bool, err error) {
+	return false, false, nil
+}
 func (invalidCursorRepo) ListFriends(context.Context, string, int, string) (PaginatedFriends, error) {
 	return PaginatedFriends{}, nil
 }
@@ -145,6 +148,9 @@ func (r *userErrorRepo) Relationship(context.Context, string, string) (Relations
 }
 func (r *userErrorRepo) RelationshipBatch(context.Context, string, []string) (map[string]Relationship, error) {
 	return nil, r.relErr
+}
+func (r *userErrorRepo) BlockedEitherWay(context.Context, string, string) (callerBlocked, targetBlocked bool, err error) {
+	return false, false, r.relErr
 }
 func (r *userErrorRepo) ListFriends(context.Context, string, int, string) (PaginatedFriends, error) {
 	return PaginatedFriends{}, r.listBlockedErr

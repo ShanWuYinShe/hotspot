@@ -16,6 +16,7 @@
 		center = $bindable(null),
 		zoom = $bindable(14),
 		bounds = $bindable({ minLat: 0, maxLat: 0, minLng: 0, maxLng: 0 }),
+		stableBounds = $bindable({ minLat: 0, maxLat: 0, minLng: 0, maxLng: 0 }),
 		minZoom = 13,
 		maxZoom = 16,
 		onMapTap
@@ -23,6 +24,7 @@
 		center: { lat: number; lng: number } | null;
 		zoom?: number;
 		bounds?: MapBounds;
+		stableBounds?: MapBounds;
 		minZoom?: number;
 		maxZoom?: number;
 		onMapTap?: () => void;
@@ -58,6 +60,18 @@
 		const sw = gcj02ToWgs84(b.minLat, b.minLng);
 		const ne = gcj02ToWgs84(b.maxLat, b.maxLng);
 		bounds = { minLat: sw.lat, minLng: sw.lng, maxLat: ne.lat, maxLng: ne.lng };
+	});
+
+	// 稳定视口边界（数据请求用）：仅依赖对外 center（手势结束才回写）与 zoom，
+	// 拖拽中 renderCenter 的逐帧变化不会触发，父级数据拉取不会被逐帧放大；
+	// 图钉/热力逐帧跟随继续消费每帧回写的 bounds。
+	$effect(() => {
+		if (!center || width < 2 || height < 2) return;
+		const g = wgs84ToGcj02(center.lat, center.lng);
+		const b = viewportToBounds(g, zoom, { width, height });
+		const sw = gcj02ToWgs84(b.minLat, b.minLng);
+		const ne = gcj02ToWgs84(b.maxLat, b.maxLng);
+		stableBounds = { minLat: sw.lat, minLng: sw.lng, maxLat: ne.lat, maxLng: ne.lng };
 	});
 
 	function commitCenter(next: { lat: number; lng: number }) {
@@ -120,6 +134,17 @@
 		wheelAcc = 0;
 		zoom = Math.max(minZoom, Math.min(maxZoom, zoom + delta));
 	}
+
+	// Svelte 5 的 onwheel 事件属性注册为 passive 监听，preventDefault 不生效
+	//（页面会跟着滚）——滚轮缩放必须阻止默认滚动，改用非被动原生监听。
+	function wheelAction(node: HTMLElement) {
+		node.addEventListener('wheel', onWheel, { passive: false });
+		return {
+			destroy() {
+				node.removeEventListener('wheel', onWheel);
+			}
+		};
+	}
 </script>
 
 <svelte:window onpointerup={() => dragStart && onPointerUp()} />
@@ -129,10 +154,10 @@
 	style="touch-action:none;cursor:{dragging ? 'grabbing' : 'grab'};background:var(--cst-surface-page);"
 	bind:clientWidth={width}
 	bind:clientHeight={height}
+	use:wheelAction
 	onpointerdown={onPointerDown}
 	onpointermove={onPointerMove}
 	onpointerup={onPointerUp}
-	onwheel={onWheel}
 	role="application"
 	aria-label="地图画布"
 >

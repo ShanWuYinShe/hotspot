@@ -123,6 +123,9 @@ func (r *stubUserRepo) RelationshipBatch(_ context.Context, _ string, targetUser
 	}
 	return result, r.relationErr
 }
+func (r *stubUserRepo) BlockedEitherWay(_ context.Context, _, _ string) (callerBlocked, targetBlocked bool, err error) {
+	return r.relation.IsBlocked, false, r.relationErr
+}
 func (r *stubUserRepo) ListFriends(_ context.Context, _ string, _ int, _ string) (PaginatedFriends, error) {
 	return r.friends, r.friendsErr
 }

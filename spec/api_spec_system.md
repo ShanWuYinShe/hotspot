@@ -45,13 +45,15 @@ interface BootstrapRequest {
 ```typescript
 interface BootstrapData {
   bootstrap_version: string;        // 缓存版本号，客户端下次冷启动透传给 If-None-Match
-  // === 缓存命中时以下字段省略（客户端使用缓存）；未命中/无缓存时必填 ===
-  meta: ApiVersionMeta | null;             // 同 /public/v1/system/meta 响应
-  client_config: ClientConfig | null;      // 同 /public/v1/system/client_config 响应
+  // === 缓存命中时以下键整体省略（客户端使用缓存）；未命中/无缓存时必填 ===
+  // 命中判定：键不存在（而非 === null）。本接口是 base「类型稳定性」
+  // 「字段缺失仅限内容性可选字段」通则的显式例外。
+  meta?: ApiVersionMeta;                   // 同 /public/v1/system/meta 响应
+  client_config?: ClientConfig;            // 同 /public/v1/system/client_config 响应
 
-  // === 登录态字段（本端点必须有效 Token，故恒非 null） ===
-  profile: AccountData;                    // 同 users/account（AccountData 定义于 api_spec_user.md）
-  unread_summary: UnreadSummary;           // 未读摘要（聚合私聊/群聊/通知）
+  // === 登录态字段（未命中时必填且恒非 null；命中时同样省略） ===
+  profile?: AccountData;                   // 同 users/account（AccountData 定义于 api_spec_user.md）
+  unread_summary?: UnreadSummary;          // 未读摘要（聚合私聊/群聊/通知）
 }
 
 // 未读摘要（聚合各域未读，冷启动时一次性渲染角标）

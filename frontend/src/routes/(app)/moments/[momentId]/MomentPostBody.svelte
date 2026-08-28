@@ -73,7 +73,9 @@
 	let viewerIndex = $state(0);
 
 	const cover = $derived(moment.images[0] ?? '');
-	const likeCount = $derived(moment.likes + (liked ? 1 : 0));
+	// moment.likes 由父页维护（服务端快照 + 本页乐观增量，已含本人状态），
+	// 这里不能再按 liked 叠加——否则刷新后计数双倍。
+	const likeCount = $derived(moment.likes);
 </script>
 
 <!-- Post images（全幅封面：负 margin 抵消外层 SplitPageLayout 的 gutter，与 users 详情一致）。
@@ -243,8 +245,8 @@
 							onclick={() => onToggleCommentLike(c.id)}
 						>
 							<Heart class="size-3"  strokeWidth={1.5} fill={c.liked ? 'currentColor' : 'none'} />
-							{#key c.likes + (c.liked ? 1 : 0)}
-								<span class="count-pop text-xs">{c.likes + (c.liked ? 1 : 0)}</span>
+							{#key c.likes}
+								<span class="count-pop text-xs">{c.likes}</span>
 							{/key}
 						</button>
 						<button

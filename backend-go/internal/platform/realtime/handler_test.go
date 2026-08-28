@@ -53,6 +53,13 @@ func (s stubUserRepo) Relationship(_ context.Context, userID, targetUserID strin
 	return item.isFollowing, item.isFollowedBy, item.isBlocked, nil
 }
 
+func (s stubUserRepo) BlockedEitherWay(_ context.Context, aUserID, bUserID string) (callerBlocked, targetBlocked bool, err error) {
+	if s.relations[aUserID] == nil {
+		return false, false, nil
+	}
+	return s.relations[aUserID][bUserID].isBlocked, false, nil
+}
+
 type stubGroupRepo struct {
 	members map[string][]string
 }

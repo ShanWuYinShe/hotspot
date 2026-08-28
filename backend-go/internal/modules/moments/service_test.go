@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type stubMomentRepo struct {
@@ -14,6 +15,8 @@ type stubMomentRepo struct {
 	getResult   MomentItem
 	getFound    bool
 	getErr      error
+	getCalls    int         // Get 调用计数
+	getSecond   *MomentItem // 第 2 次起 Get 返回该值（模拟 Update 后 reload 出新版本）
 	updateErr   error
 	deleteErr   error
 	exists      bool
@@ -36,6 +39,10 @@ func (r *stubMomentRepo) Create(_ context.Context, _ string, _ CreateMomentReque
 	return r.created, r.createErr
 }
 func (r *stubMomentRepo) Get(_ context.Context, _ string) (MomentItem, bool, error) {
+	r.getCalls++
+	if r.getSecond != nil && r.getCalls >= 2 {
+		return *r.getSecond, true, r.getErr
+	}
 	return r.getResult, r.getFound, r.getErr
 }
 func (r *stubMomentRepo) Search(_ context.Context, _ SearchMomentsRequest, _ string) (PaginatedMoments, error) {
@@ -455,5 +462,85 @@ func TestServiceOpenTheDoorLoadsMyState(t *testing.T) {
 	}
 	if !item.IsFavorited {
 		t.Fatal("expected IsFavorited=true")
+	}
+}
+
+// --- mentions 上限与增量通知（S4/M9 修复配套） ---
+
+// stubNotifyWriter 记录 AppendMentioned 的目标与调用次数。
+type stubNotifyWriter struct {
+	appended map[string]int
+}
+
+func (w *stubNotifyWriter) AppendMentioned(_ context.Context, targetUserID string, _ types.UserInfo, _ string, _ string, _ types.MomentSummary, _ string, _ string) (string, error) {
+	if w.appended == nil {
+		w.appended = make(map[string]int)
+	}
+	w.appended[targetUserID]++
+	return "n1", nil
+}
+
+func TestEnsureMentionsLimitBoundary(t *testing.T) {
+	if err := ensureMentionsLimit(make([]string, 20)); err != nil {
+		t.Fatalf("20 个 mention 应放行, got %v", err)
+	}
+	if err := ensureMentionsLimit(make([]string, 21)); !errors.Is(err, ErrTooManyMentions) {
+		t.Fatalf("21 个 mention 应拒绝, got %v", err)
+	}
+	if err := ensureMentionsLimit(nil); err != nil {
+		t.Fatalf("nil mentions 应放行, got %v", err)
+	}
+}
+
+func TestServiceCreateRejectsTooManyMentions(t *testing.T) {
+	svc := NewServiceWithDeps(&stubMomentRepo{}, nil, nil)
+	req := CreateMomentRequest{Description: "hello", Mentions: make([]string, 21)}
+	if _, err := svc.Create(momentCtx("u1"), req); !errors.Is(err, ErrTooManyMentions) {
+		t.Fatalf("expected ErrTooManyMentions, got %v", err)
+	}
+}
+
+func TestServiceUpdateRejectsTooManyMentions(t *testing.T) {
+	repo := &stubMomentRepo{getResult: ownedMoment(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	req := UpdateMomentRequest{MomentID: "m1", Mentions: make([]string, 21)}
+	if _, err := svc.Update(momentCtx("u1"), req); !errors.Is(err, ErrTooManyMentions) {
+		t.Fatalf("expected ErrTooManyMentions, got %v", err)
+	}
+}
+
+func TestServiceUpdateNotifiesOnlyNewMentions(t *testing.T) {
+	oldItem := ownedMoment()
+	oldItem.Mentions = []string{"u2"}
+	updatedItem := oldItem
+	updatedItem.Mentions = []string{"u2", "u3"}
+	notif := &stubNotifyWriter{}
+	repo := &stubMomentRepo{getResult: oldItem, getFound: true, getSecond: &updatedItem}
+	svc := NewServiceWithDeps(repo, notif, nil)
+	if _, err := svc.Update(momentCtx("u1"), UpdateMomentRequest{MomentID: "m1", Mentions: []string{"u2", "u3"}}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if notif.appended["u2"] != 0 {
+		t.Fatalf("编辑前已存在的 u2 不应被重复通知, got %d", notif.appended["u2"])
+	}
+	if notif.appended["u3"] != 1 {
+		t.Fatalf("新增的 u3 应恰好通知一次, got %d", notif.appended["u3"])
+	}
+}
+
+func TestServiceCreateNotifiesAllMentions(t *testing.T) {
+	created := ownedMoment()
+	created.Mentions = []string{"u2", "u3"}
+	notif := &stubNotifyWriter{}
+	repo := &stubMomentRepo{created: created}
+	svc := NewServiceWithDeps(repo, notif, nil)
+	if _, err := svc.Create(momentCtx("u1"), CreateMomentRequest{Description: "hello", Mentions: []string{"u2", "u3", "u1"}}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if notif.appended["u2"] != 1 || notif.appended["u3"] != 1 {
+		t.Fatalf("create 应通知全部新增 mention, got %#v", notif.appended)
+	}
+	if notif.appended["u1"] != 0 {
+		t.Fatalf("作者本人不应被通知, got %d", notif.appended["u1"])
 	}
 }

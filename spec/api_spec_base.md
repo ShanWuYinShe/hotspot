@@ -343,6 +343,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
   - 隐私受控字段（presence_status / last_online_at / location / stats 等）：恒在，null 表达隐藏/不适用；null 不泄露「隐藏 vs 不存在」差异
   - 查看者状态字段（relation / viewer_state / remark 等）：恒在，null 表达不适用（无关系/非成员）；查看者字段仅存在于登录视角类型（`/api/v1`、`/admin/v1`），public 节点类型不含这些字段
   - 查看者布尔字段：恒为布尔（如 `reacted_by_me` 恒返回，未反应时为 false）
+  - **显式例外 — bootstrap 缓存命中**：`system/bootstrap` 与 `public/v1/system/bootstrap` 在 `If-None-Match` 命中时返回仅含 `bootstrap_version` 的精简响应，其余键整体省略（服务端以独立精简类型实现）；命中判定为「键不存在」而非 `=== null`
 - `next_cursor`：恒在，`next_cursor: string | null`（null 表示没有更多数据）
 - 每个 nullable 字段的 null 语义必须在类型注释中写明
 - `@auth-only`/`@owner-only`/`@group-admin-only`/`@member-only`/`@participant-only` 注解**全量废除**
@@ -454,7 +455,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 - 每个列表接口必须声明默认排序主序、稳定 tie-breaker、以及一致性级别（强一致/弱一致）
 - 时间类列表必须提供稳定 tie-breaker（使用资源主键）
 - 地理相关列表必须以服务端计算的 `distance` 作为主序，客户端不得本地计算或重排
-- **tie-breaker 方向统一 ASC**（资源主键升序），保证跨端点一致
+- **tie-breaker 方向与主序方向一致**（时间倒序列表用资源主键 `DESC`，正序列表用 `ASC`），保证倒序翻页（最新在前）时游标语义自然、跨端点一致
 
 #### 去重（契约级）
 

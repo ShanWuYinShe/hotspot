@@ -90,6 +90,9 @@ func (u *stubChatUserReader) OpenTheDoor(_ context.Context, _ string) (users.Use
 func (u *stubChatUserReader) GetMySettings(_ context.Context) (users.UserSettings, error) {
 	return u.settings, u.settingsErr
 }
+func (u *stubChatUserReader) BlockStateBetween(_ context.Context, _ string, _ string) (callerBlocked, targetBlocked bool, err error) {
+	return false, false, nil
+}
 
 func chatCtx(userID string) context.Context {
 	return platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: userID})

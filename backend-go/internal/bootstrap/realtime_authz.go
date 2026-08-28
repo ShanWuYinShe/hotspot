@@ -36,6 +36,10 @@ func (a realtimeUserRepo) Relationship(ctx context.Context, userID, targetUserID
 	return relation.IsFollowing, relation.IsFollowedBy, relation.IsBlocked, err
 }
 
+func (a realtimeUserRepo) BlockedEitherWay(ctx context.Context, aUserID, bUserID string) (callerBlocked, targetBlocked bool, err error) {
+	return a.repo.BlockedEitherWay(ctx, aUserID, bUserID)
+}
+
 func (a realtimeGroupRepo) ListMembers(ctx context.Context, groupID string, limit int, cursor string) ([]string, string, error) {
 	items, nextCursor, err := a.repo.ListMembers(ctx, groupID, nil, limit, cursor)
 	if err != nil {

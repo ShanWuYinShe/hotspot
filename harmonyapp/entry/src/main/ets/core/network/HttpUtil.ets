@@ -130,6 +130,38 @@ function isTokenOptionalEndpoint(url: string): boolean {
   return TOKEN_OPTIONAL_ENDPOINTS.includes(url);
 }
 
+/**
+ * /api/v1 → /public/v1 对偶端点映射（仅收录 spec public.md 中存在公开镜像的端点）。
+ * spec api_spec_base.md 节点身份语义：/api/v1 必须携带有效 token，无一例外；
+ * 匿名/未登录对公开内容的访问必须走 /public/v1。已天然是 public 路径的端点
+ * （MAP.CANVAS、SHARE.GET、GROUP.ANNOUNCEMENTS.LIST）不在此表。
+ */
+function buildPublicAliases(): Map<string, string> {
+  const m = new Map<string, string>();
+  m.set(ApiEndpoints.USER.SEARCH, '/public/v1/users/search');
+  m.set(ApiEndpoints.USER.GET_DETAIL, '/public/v1/users/open_the_door');
+  m.set(ApiEndpoints.USER.LIST_FRIENDS, '/public/v1/users/fetch_friends');
+  m.set(ApiEndpoints.USER.LIST_FOLLOWING, '/public/v1/users/fetch_following');
+  m.set(ApiEndpoints.USER.LIST_FOLLOWERS, '/public/v1/users/fetch_followers');
+  m.set(ApiEndpoints.USER.LIST_GROUPS, '/public/v1/users/fetch_groups');
+  m.set(ApiEndpoints.USER.LIST_MOMENTS, '/public/v1/users/fetch_moments');
+  m.set(ApiEndpoints.USER.LIST_REACTED_MOMENTS, '/public/v1/users/fetch_reacted_moments');
+  m.set(ApiEndpoints.GROUP.SEARCH, '/public/v1/groups/search');
+  m.set(ApiEndpoints.GROUP.GET_DETAIL, '/public/v1/groups/open_the_door');
+  m.set(ApiEndpoints.GROUP.MEMBERS.LIST, '/public/v1/groups/members/fetch');
+  m.set(ApiEndpoints.GROUP.MEMBERS.SEARCH, '/public/v1/groups/members/search');
+  m.set(ApiEndpoints.MOMENT.SEARCH, '/public/v1/moments/search');
+  m.set(ApiEndpoints.MOMENT.GET_DETAIL, '/public/v1/moments/open_the_door');
+  m.set(ApiEndpoints.MOMENT.FETCH_NEARBY, '/public/v1/moments/fetch_nearby');
+  m.set(ApiEndpoints.COMMENT.LIST, '/public/v1/comments/fetch');
+  m.set(ApiEndpoints.COMMENT.LIST_REPLIES, '/public/v1/comments/fetch_replies');
+  m.set(ApiEndpoints.COMMENT.GET_DETAIL, '/public/v1/comments/open_the_door');
+  m.set(ApiEndpoints.SEARCH.SUGGEST, '/public/v1/search/suggest');
+  return m;
+}
+
+const PUBLIC_ENDPOINT_ALIASES: Map<string, string> = buildPublicAliases();
+
 
 export class HttpUtil {
   /**
@@ -304,8 +336,11 @@ export class HttpUtil {
         await HttpUtil.clearAuthData();
         return false;
       } catch (error) {
-        hilog.warn(DOMAIN_NUMBER, TAG, `refresh_token failed: ${JSON.stringify(error)}`);
-        await HttpUtil.clearAuthData();
+        // 网络层异常（超时/断网/连接失败）≠ 凭证失效：spec 只要求 refresh_token
+        // 无效（10100）时清除会话。弱网下走到这里的刷新请求会抛异常，若此时
+        // clearAuthData 会把用户误踢回登录页——保留本地会话，仅返回刷新失败，
+        // 后续网络恢复后可重试刷新。
+        hilog.warn(DOMAIN_NUMBER, TAG, `refresh_token failed (network): ${JSON.stringify(error)}`);
         return false;
       } finally {
         HttpUtil.refreshPromise = null;
@@ -391,8 +426,20 @@ export class HttpUtil {
       }
     }
 
+    // 匿名请求路由（spec api_spec_base.md 节点身份语义）：/api/v1 必须携带有效
+    // token，未登录时对「公开可浏览」端点直接改走 /public/v1 对偶端点，而不是
+    // 打 /api/v1 稳定吃 10100。此前未登录状态下首页/搜索/附近的请求全部失败。
+    let effectiveUrl = url;
+    if (!omitAuthHeader && !(await HttpUtil.getToken())) {
+      const alias = PUBLIC_ENDPOINT_ALIASES.get(url);
+      if (alias) {
+        effectiveUrl = alias;
+        hilog.info(DOMAIN_NUMBER, TAG, `未登录，匿名端点改走 public 节点: ${url} -> ${alias}`);
+      }
+    }
+
     const baseUrl = await HttpUtil.getBaseUrl();
-    const fullUrl = `${baseUrl}${url}`;
+    const fullUrl = `${baseUrl}${effectiveUrl}`;
     const httpRequest = http.createHttp();
     const startTime = Date.now();
 
@@ -491,7 +538,19 @@ export class HttpUtil {
         AppRouter.push('LoginPage', param);
       }
 
-      // token_optional 端点：若认证失败且本次携带了 Authorization，则匿名降级重试一次
+      // 认证失败且本次携带了 Authorization 的公开端点：匿名降级重试必须换到
+      // /public/v1 对偶节点——重打 /api/v1（仅去掉 Authorization）仍会 10100，
+      // 属于无效重试。无对偶的 token_optional 端点保留原同节点匿名重试。
+      if (isAuthErrorCode(resultCode) && hasAuthHeader && !omitAuthHeader) {
+        const alias = PUBLIC_ENDPOINT_ALIASES.get(url);
+        if (alias) {
+          hilog.info(DOMAIN_NUMBER, TAG, `认证失败，公开端点降级为匿名 public 节点重试: ${url} -> ${alias}`);
+          return await HttpUtil.request<TResponse, TRequest>(
+            alias, method, data, true, currentIdempotencyKey,
+            idempotencyRetryCount, true, rateLimitRetryCount
+          );
+        }
+      }
       if (isAuthErrorCode(resultCode) && hasAuthHeader && isTokenOptionalEndpoint(url) && !omitAuthHeader) {
         hilog.info(DOMAIN_NUMBER, TAG, `token_optional 端点认证失败，匿名降级重试: ${url}`);
         return await HttpUtil.request<TResponse, TRequest>(

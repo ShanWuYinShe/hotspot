@@ -84,6 +84,8 @@
 	// 瓦片缩放级别；数据请求半径由 fetchMapCanvas 内部约定
 	let mapZoom = $state(14);
 	let mapBounds = $state<MapBounds>({ minLat: 0, maxLat: 0, minLng: 0, maxLng: 0 });
+	// 数据请求用稳定边界（手势/缩放结束才回写）；图钉/热力跟随用每帧 mapBounds
+	let mapStableBounds = $state<MapBounds>({ minLat: 0, maxLat: 0, minLng: 0, maxLng: 0 });
 	let mapCenter = $state<{ lat: number; lng: number } | null>(null);
 	let defaultCenter = $state<{ lat: number; lng: number } | null>(null);
 	let recentItems = $state(RECENT_LOCATIONS);
@@ -101,11 +103,12 @@
 	let heatBuckets = $state<MapHeatBucket[]>([]);
 	let mapLoading = $state(true);
 
-	// 视口中心/边界或筛选变化时重新拉取（优先使用真实视口 bounds，随 zoom/拖拽变化）
+	// 视口中心/边界或筛选变化时重新拉取。依赖 stableBounds（手势/缩放结束才回写），
+	// 拖拽中的逐帧 bounds 变化只驱动图钉定位，不触发请求。
 	$effect(() => {
 		const center = mapCenter;
 		const types = [...activeFilters];
-		const bounds = mapBounds;
+		const bounds = mapStableBounds;
 		if (!center) return;
 		let cancelled = false;
 		mapLoading = true;
@@ -169,7 +172,7 @@
 	<!-- 原地点击空白由 MapCanvas onMapTap 承担（拖拽不触发）；键盘 Escape 等价收起见 svelte:window -->
 	<div style="position:absolute;inset:0;z-index:0;">
 		{#if mapCenter}
-		<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} onMapTap={handleMapTap} />
+		<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} bind:stableBounds={mapStableBounds} onMapTap={handleMapTap} />
 
 		<!-- Current location pulsing dot（对齐 Figma Make：halo scale 1→1.8 / opacity 0.55→0 循环） -->
 		<div style="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:5;pointer-events:none;">

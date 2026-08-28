@@ -27,6 +27,9 @@ type Repository interface {
 	ListReactedMoments(context.Context, string, int, string, string) (momenttypes.PaginatedMoments, error)
 	Relationship(context.Context, string, string) (Relationship, error)
 	RelationshipBatch(context.Context, string, []string) (map[string]Relationship, error)
+	// BlockedEitherWay 一次查询返回 a、b 之间的双向拉黑状态：
+	// callerBlocked = a 拉黑了 b，targetBlocked = b 拉黑了 a。
+	BlockedEitherWay(context.Context, string, string) (callerBlocked, targetBlocked bool, err error)
 	ListFriends(context.Context, string, int, string) (PaginatedFriends, error)
 	ListFollowing(context.Context, string, int, string) (PaginatedFollowing, error)
 	ListFollowers(context.Context, string, int, string) (PaginatedFollowers, error)

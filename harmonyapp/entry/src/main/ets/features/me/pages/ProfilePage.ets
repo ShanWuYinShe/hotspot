@@ -10,7 +10,6 @@ import { GlobalStateManager, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE, 
 import { curves } from '@kit.ArkUI';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { AppRouter, ChatRouteParam, LoginRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
@@ -583,9 +582,10 @@ export struct ProfilePage {
       // 2. 断开 WebSocket
       this.webSocketService.disconnect();
 
-      // 3. 清理本地持久化数据（Preferences + token）
-      await PreferencesUtil.clear();
-      await HttpUtil.clearToken();
+      // 3. 清理本地认证数据：只清 token/会话账号，不动 device_id、服务器地址、
+      //    主题等用户配置（spec：device_id 登出不清除；PreferencesUtil.clear()
+      //    全量清空会连带抹掉它们，导致幂等 client_id 漂移、自定义服务器丢失）
+      await HttpUtil.clearAuthData();
 
       // 4. 重置 AppStorage（PersistentStorage 会自动同步到磁盘）
       this.stateManager.clear();
@@ -598,7 +598,7 @@ export struct ProfilePage {
       // 即使出现异常，也强制清理状态，避免用户卡在"已登录但无法操作"的死胡同
       try {
         this.stateManager.clear();
-        await HttpUtil.clearToken();
+        await HttpUtil.clearAuthData();
       } catch (_) {
         // ignore
       }

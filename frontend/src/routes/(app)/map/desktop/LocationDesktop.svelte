@@ -29,6 +29,8 @@
 	let mapZoom = $state(14);
 	let mapCenter = $state<{ lat: number; lng: number } | null>(null);
 	let mapBounds = $state<MapBounds>({ minLat: 0, maxLat: 0, minLng: 0, maxLng: 0 });
+	// 数据请求用稳定边界（手势/缩放结束才回写）；图钉/热力跟随用每帧 mapBounds
+	let mapStableBounds = $state<MapBounds>({ minLat: 0, maxLat: 0, minLng: 0, maxLng: 0 });
 	let defaultCenter = $state<{ lat: number; lng: number } | null>(null);
 
 	// 初始/复位中心来自 ClientConfig default_location（MSW mock），不写死坐标。
@@ -44,11 +46,12 @@
 	let mapCounts = $state<Record<PinType, number>>({ user: 0, group: 0, moment: 0 });
 	let mapLoading = $state(true);
 
-	// 视口中心/边界或筛选变化时重新拉取（优先使用真实视口 bounds，随 zoom/拖拽变化）
+	// 视口中心/边界或筛选变化时重新拉取。依赖 stableBounds（手势/缩放结束才回写），
+	// 拖拽中的逐帧 bounds 变化只驱动图钉定位，不触发请求。
 	$effect(() => {
 		const center = mapCenter;
 		const types = [...activeFilters];
-		const bounds = mapBounds;
+		const bounds = mapStableBounds;
 		if (!center) return;
 		let cancelled = false;
 		mapLoading = true;
@@ -127,7 +130,7 @@
 	     筛选面板关闭由 MapFilterMenu 的 Popover 外点机制承担；Escape 清选中见 svelte:window -->
 	<div class="flex-1 relative overflow-hidden">
 		{#if mapCenter}
-		<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} onMapTap={() => (selectedPin = null)} />
+		<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} bind:stableBounds={mapStableBounds} onMapTap={() => (selectedPin = null)} />
 
 		<!-- Current location dot -->
 		<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:5;">

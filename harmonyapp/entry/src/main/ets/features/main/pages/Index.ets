@@ -267,10 +267,13 @@ struct Index {
         hilog.warn(DOMAIN_NUMBER, TAG, '位置初始化失败');
       }
 
-      // 定时同步位置到服务端（5分钟一次），所有用户（包括临时用户）均需上报
+      // 定时同步位置到服务端（5分钟一次）。仅登录用户（含临时账号）上报：
+      // update_location 是 /api/v1 认证端点，匿名用户上报必得 10100，
+      // 每 5 分钟一次只会空转定位 + 触发认证失败链
       if (this.locationSyncTimerId === 0) {
         this.locationSyncTimerId = TimerManager.setInterval(async () => {
           if (!this.currentLocation) return;
+          if (!this.isLoggedIn) return;
           this.syncLocationToServer(this.currentLocation);
         }, 5 * 60 * 1000, '定时同步用户位置');
       }

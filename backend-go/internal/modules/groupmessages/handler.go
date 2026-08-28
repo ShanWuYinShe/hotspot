@@ -2,11 +2,13 @@ package groupmessages
 
 import (
 	"errors"
+	"net/http"
+	"unicode/utf8"
+
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/observability"
-	"net/http"
 )
 
 type Handler struct{ service *Service }
@@ -232,14 +234,23 @@ func isValidPagination(p *PaginationParams) bool {
 
 // isValidSendRequest 按消息类型校验必填字段（与私聊侧 isValidSendRequest
 // 一致）：text 需要 content；image/video/audio/file 需要 file_id；share
+// messageContentMaxRunes 契约级上限（api_spec_base.md 字段校验约束：content(message) 1-5000 字符）。
+const messageContentMaxRunes = 5000
+
+// mentionsMaxCount 契约级上限（api_spec_base.md 字段校验约束：mentions 最多 20 个）。
+const mentionsMaxCount = 20
+
 // 需要 share_code。此前不校验，text 空 content、share 空 share_code 都能发出。
 func isValidSendRequest(req SendGroupMessageRequest) bool {
 	if req.Type == "" {
 		return false
 	}
+	if len(req.Mentions) > mentionsMaxCount {
+		return false
+	}
 	switch req.Type {
 	case "text":
-		return req.Content != ""
+		return req.Content != "" && utf8.RuneCountInString(req.Content) <= messageContentMaxRunes
 	case "image", "video", "audio", "file":
 		return req.FileID != ""
 	case "share":
