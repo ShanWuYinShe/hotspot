@@ -60,6 +60,7 @@ __pycache__/
 .opencode/
 .sisyphus
 .worktrees/
+.workbuddy-ai/
 .claude/settings.local.json
 browser-data/
 docs/superpowers/
