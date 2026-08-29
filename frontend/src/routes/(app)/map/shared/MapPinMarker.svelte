@@ -30,8 +30,9 @@
 	onclick={onSelect}
 >
 	{#if (pin.count ?? 1) > 1}
+		<!-- 聚合计数徽章：字重与全站数字强调一致（semibold），10px 下与 bold 无视觉差异 -->
 		<div
-			class="absolute -top-1 -right-1 flex items-center justify-center rounded-full z-10 text-xxs font-bold"
+			class="absolute -top-1 -right-1 flex items-center justify-center rounded-full z-10 text-xxs font-semibold"
 			style="width:16px;height:16px;background:{PIN_COLORS[pin.type]};border:var(--cst-border-width-regular) solid var(--cst-content-on-marker);color:var(--cst-content-on-marker);"
 		>
 			{pin.count}

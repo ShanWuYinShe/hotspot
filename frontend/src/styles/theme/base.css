@@ -47,6 +47,15 @@
     line-height: 1.5;
   }
 
+  /* 段落基线：base.css 已给 h1-h4/label/button/input 定档，但 p 长期缺失——
+     裸 <p>（无 text-* 类）会回落到浏览器默认 16px，落在被砍的 text-base 档上，
+     比全站正文 text-sm(12px) 大 4px。给 p 兜底到正文档，显式 text-* 类照旧覆盖。 */
+  p {
+    font-size: var(--text-sm);
+    font-weight: var(--cst-font-weight-normal);
+    line-height: 1.5;
+  }
+
   button {
     font-size: var(--text-sm);
     font-weight: var(--cst-font-weight-medium);

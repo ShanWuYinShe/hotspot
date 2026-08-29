@@ -175,8 +175,20 @@
 
 		<div class={isTablet ? 'grid gap-6' : ''}>
 			<div class="min-w-0">
-				{#if list.length}
-				{#if isDesktop || isTablet}
+				{#if loadError}
+					<LoadError message={loadError} onRetry={() => reloadKey++} />
+				{:else if loading}
+					<div class="flex flex-col items-center gap-3 py-20">
+						<div class="spinner size-7"></div>
+						<p class="text-text-secondary text-sm">加载附近用户…</p>
+					</div>
+				{:else if !list.length}
+					<EmptyState bare title="没有找到匹配的附近用户">
+						{#snippet icon()}
+							<Users size={40} color="var(--cst-text-secondary)" class="opacity-subtle" />
+						{/snippet}
+					</EmptyState>
+				{:else if isDesktop || isTablet}
 					<BspCardCanvas
 						items={list.slice(0, visibleCount)}
 						gap={14}
@@ -210,15 +222,6 @@
 						{/each}
 					</div>
 				{/if}
-			{:else if loadError}
-				<LoadError message={loadError} onRetry={() => reloadKey++} />
-			{:else}
-				<EmptyState bare title="没有找到匹配的附近用户">
-					{#snippet icon()}
-						<Users size={40} color="var(--cst-text-secondary)" class="opacity-subtle" />
-					{/snippet}
-				</EmptyState>
-			{/if}
 		</div>
 	</div>
 </StandardPageLayout>

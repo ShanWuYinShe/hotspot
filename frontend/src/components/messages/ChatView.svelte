@@ -3,6 +3,7 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
 	import MessageBubble from '@/components/messages/MessageBubble.svelte';
 	import ChatDatePill from '@/components/messages/ChatDatePill.svelte';
 	import { auth } from '@/stores/auth.svelte';
@@ -280,19 +281,11 @@
 	<div bind:this={chat.scrollEl} onscroll={chat.handleScroll} class="flex-1 overflow-y-auto no-scrollbar" style="overscroll-behavior:contain;">
 		{#if chat.loading}
 			<div class="flex h-full items-center justify-center" role="status" aria-label="加载中">
-				<div class="size-6 animate-spin rounded-full border-2 border-border-default border-t-accent-default"></div>
+				<div class="spinner size-7"></div>
 			</div>
 		{:else if chat.loadError}
-			<div class="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-				<p class="text-sm text-text-secondary">消息加载失败，请检查网络后重试</p>
-				<button
-					type="button"
-					class="hover-btn rounded-full border border-border-default bg-surface-primary px-4 py-1.5 text-sm text-text-primary focus-ring"
-					onclick={() => void chat.reload()}
-				>
-					重新加载
-				</button>
-			</div>
+			<!-- 错误态统一 LoadError（与全站一致），不再各页手搓文案 + 按钮 -->
+			<LoadError message="消息加载失败，请检查网络后重试" onRetry={() => void chat.reload()} class="h-full" />
 		{:else if chat.messages.length === 0}
 			<!-- 空会话：统一 EmptyState 空态（对齐 GroupChatView/全局空态契约） -->
 			<EmptyState iconSize={56} class="h-full" title="还没有消息" description="打个招呼，开始这段对话吧">

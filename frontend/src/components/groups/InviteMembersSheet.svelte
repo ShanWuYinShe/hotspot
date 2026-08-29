@@ -5,6 +5,7 @@
 	import { searchUsers, inviteGroupMember } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
 	import type { UserItem } from '@/api/types';
 
 	let {
@@ -22,19 +23,37 @@
 	let keyword = $state('');
 	let results = $state<UserItem[]>([]);
 	let loading = $state(false);
+	let searchError = $state<string | null>(null);
 	let selected = $state<Set<string>>(new Set());
 	let inviting = $state(false);
 	let searchTimer: ReturnType<typeof setTimeout> | null = null;
+	// 竞态序号：防抖挡不住「慢的先发、快的后发」的乱序响应，
+	// 只有最新一次搜索的结果允许落地，否则会覆盖成旧关键词的结果。
+	let searchSeq = 0;
 
 	const doSearch = async () => {
 		const q = keyword.trim();
-		if (!q) { results = []; return; }
+		if (!q) { results = []; searchError = null; return; }
+		const seq = ++searchSeq;
 		loading = true;
+		searchError = null;
 		try {
 			const res = await searchUsers({ keyword: q, pagination: { limit: 20 } });
+			if (seq !== searchSeq) return;
 			if (res.code === 0) results = res.data?.items ?? [];
-		} catch { /* ignore */ }
-		loading = false;
+			else {
+				results = [];
+				searchError = res.message ?? '搜索失败';
+			}
+		} catch {
+			if (seq !== searchSeq) return;
+			// 失败必须清空结果：否则列表留着上一次关键词的命中项，
+			// 用户会以为这是当前搜索的结果并误邀请
+			results = [];
+			searchError = '网络异常，请稍后重试';
+		} finally {
+			if (seq === searchSeq) loading = false;
+		}
 	};
 
 	// 防抖输入
@@ -45,7 +64,8 @@
 
 	// 打开时重置
 	$effect(() => {
-		if (open) { keyword = ''; results = []; selected = new Set(); inviting = false; }
+		// searchSeq++ 让仍在飞行的上一次搜索作废，避免关闭后回填结果
+		if (open) { keyword = ''; results = []; searchError = null; searchSeq++; selected = new Set(); inviting = false; }
 	});
 
 	const toggle = (uid: string) => {
@@ -93,6 +113,10 @@
 		<div class="mt-3 max-h-72 overflow-y-auto no-scrollbar pb-3">
 			{#if loading}
 				<p class="py-6 text-center text-sm text-text-secondary">搜索中…</p>
+			{:else if searchError}
+				<!-- 搜索失败必须与「无匹配用户」区分开：否则用户以为真的没人而放弃邀请。
+				     py-8 收紧（LoadError 默认 py-20，会撑爆 max-h-72 的 sheet 列表） -->
+				<LoadError message={searchError} onRetry={() => void doSearch()} class="py-8" />
 			{:else if results.length === 0}
 				<p class="py-6 text-center text-sm text-text-secondary">{keyword.trim() ? '无匹配用户' : '输入昵称搜索用户'}</p>
 			{:else}

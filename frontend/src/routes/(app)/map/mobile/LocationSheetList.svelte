@@ -2,6 +2,7 @@
 	import { MapPin, X, Users, ChevronRight, Clock, Star, Check } from '@lucide/svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import { HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { PIN_COLORS, PIN_LABELS, PIN_TONES } from '../shared/location-shared';
 import PinMedia from '../shared/PinMedia.svelte';
@@ -55,10 +56,12 @@ import PinMedia from '../shared/PinMedia.svelte';
 		{/each}
 	</ListContainer>
 {:else if searchQuery && searchResults.length === 0}
-	<div class="flex flex-col items-center py-6">
-		<MapPin class="size-6.5 opacity-faint text-text-secondary"   strokeWidth={1.5} />
-		<p class="text-text-secondary text-sm mt-2" >未找到匹配地点</p>
-	</div>
+	<!-- 空态统一 EmptyState（bare + 紧凑 py-8：地图 sheet 不是整页，不套 py-20） -->
+	<EmptyState bare title="未找到匹配地点" class="py-8">
+		{#snippet icon()}
+			<MapPin size={24} class="opacity-faint text-text-secondary"   strokeWidth={1.5} />
+		{/snippet}
+	</EmptyState>
 {:else}
 	<div class="animate-fade-in">
 		<!-- Selected pin mini-card -->
@@ -128,7 +131,11 @@ import PinMedia from '../shared/PinMedia.svelte';
 					{/each}
 				</ListContainer>
 			{:else}
-				<p class="text-text-secondary text-sm px-4 py-3">暂无最近记录</p>
+				<EmptyState bare title="暂无最近记录" class="py-8">
+					{#snippet icon()}
+						<Clock size={24} class="opacity-faint text-text-secondary"   strokeWidth={1.5} />
+					{/snippet}
+				</EmptyState>
 			{/if}
 		{:else}
 			{#if HOT_LOCATIONS.length}
@@ -156,10 +163,11 @@ import PinMedia from '../shared/PinMedia.svelte';
 					{/each}
 				</ListContainer>
 			{:else}
-				<div class="flex flex-col items-center gap-2 py-8">
-					<Star class="size-5 opacity-faint text-text-secondary"  strokeWidth={1.5} />
-					<p class="text-text-secondary text-xs">暂无热门地点</p>
-				</div>
+				<EmptyState bare title="暂无热门地点" class="py-8">
+					{#snippet icon()}
+						<Star size={24} class="opacity-faint text-text-secondary"  strokeWidth={1.5} />
+					{/snippet}
+				</EmptyState>
 			{/if}
 		{/if}
 	</div>

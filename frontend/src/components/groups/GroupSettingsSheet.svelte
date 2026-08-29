@@ -172,7 +172,7 @@
 				{#if previewUrl || avatar}
 					<img src={previewUrl || avatar} alt="群组封面" class="size-16 rounded-xl object-cover ring-1 ring-border-default" />
 				{:else}
-					<div class="flex items-center justify-center size-16 rounded-xl ring-1 ring-border-default bg-surface-subtle" aria-hidden="true">
+					<div class="flex items-center justify-center size-16 rounded-xl ring-1 ring-border-default bg-accent-soft" aria-hidden="true">
 						<Camera class="size-5 text-text-secondary" strokeWidth={1.5} />
 					</div>
 				{/if}

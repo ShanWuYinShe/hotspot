@@ -5,7 +5,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import MetricRow, { type MetricItem } from '@/components/data-display/MetricRow.svelte';
-	import TagPill from '@/components/forms/TagPill.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
 
 	// ProfileUserSection — 个人主页用户列表分区骨架（好友/关注/粉丝三 Section 共用）。
@@ -101,24 +101,21 @@
 	{/if}
 
 	{#if filters}
-		<!-- Filter pills — ghost chips -->
-		<div class="flex gap-1.5 pt-3 pb-3">
-			{#each filters as pill}
-				{@const active = filterValue === pill.id}
-				<TagPill
-					active={active}
-					icon={pill.icon}
-					onClick={() => onFilter?.(pill.id)}
-				>
-					{pill.label}
-				</TagPill>
-			{/each}
+		<!-- Filter tabs — 分类/筛选一律 TabBar（与 nearby/people|groups、search 一致），
+		     TagPill 只用于表单内标签与多选 chips -->
+		<div class="pt-3 pb-3">
+			<TabBar
+				items={filters.map((f) => ({ id: f.id, label: f.label, icon: f.icon }))}
+				value={filterValue ?? ''}
+				onChange={(id) => onFilter?.(id)}
+			/>
 		</div>
 	{/if}
 
 	{#if embedded}
-		<!-- Card grid（relationships 聚合页 embedded 模式） -->
-		<div class="grid w-full grid-cols-1 gap-4 pb-8 md:grid-cols-2 xl:grid-cols-3">
+		<!-- Card grid（relationships 聚合页 embedded 模式）
+		     尾部留白由页面 contentClassName 统一承担，分区内不叠 pb -->
+		<div class="grid w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
 			{#if loading}
 				<div class="col-span-full flex flex-col items-center gap-3 py-16">
 					<div class="spinner size-7"></div>
@@ -143,8 +140,9 @@
 			{/if}
 		</div>
 	{:else}
-		<!-- Bordered list（独立分区页） -->
-		<div class="pb-6">
+		<!-- Bordered list（独立分区页）
+		     尾部留白由页面 contentClassName 统一承担，分区内不叠 pb -->
+		<div>
 			{#if loading}
 				<div class="flex flex-col items-center gap-3 py-16">
 					<div class="spinner size-7"></div>

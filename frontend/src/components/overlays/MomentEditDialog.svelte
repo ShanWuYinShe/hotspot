@@ -125,7 +125,7 @@
 					onclick={() => (privacy = 'public')}
 					class="flex min-w-0 flex-col items-center gap-1 rounded-sm px-1 py-2 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {privacy === 'public'
 						? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
-						: 'text-text-secondary hover:bg-accent-soft/50'}"
+						: 'text-text-secondary hover:bg-interactive-hover'}"
 				>
 					<MapPin size={14} strokeWidth={privacy === 'public' ? 2 : 1.5} />
 					<span class="truncate text-xxs font-medium">公开可见</span>
@@ -136,7 +136,7 @@
 					onclick={() => (privacy = 'private')}
 					class="flex min-w-0 flex-col items-center gap-1 rounded-sm px-1 py-2 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {privacy === 'private'
 						? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
-						: 'text-text-secondary hover:bg-accent-soft/50'}"
+						: 'text-text-secondary hover:bg-interactive-hover'}"
 				>
 					<Lock size={14} strokeWidth={privacy === 'private' ? 2 : 1.5} />
 					<span class="truncate text-xxs font-medium">仅自己</span>

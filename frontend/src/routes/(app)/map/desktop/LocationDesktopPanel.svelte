@@ -271,7 +271,7 @@ locationName = loc?.location_name ?? '';
 	{/if}
 	<button
 		type="button"
-		class="hover-btn w-full flex items-center justify-center gap-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-md h-11"
+		class="hover-btn w-full flex items-center justify-center gap-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm h-11"
 		style="box-shadow:var(--shadow-glow-lg);"
 		onclick={onConfirm}
 	>

@@ -220,7 +220,9 @@
 			<!-- 在线 strip -->
 			{#if onlineChats.length > 0}
 				<div class="shrink-0 px-4 py-2.5 border-b border-border-default" >
-					<p class="uppercase mb-2 text-text-secondary text-xxs tracking-label">在线</p>
+					<!-- 分组小标统一 eyebrow（tracking-eyebrow 0.14em），与移动端及全站一致；
+					     tracking-label(0.12em) 仅 DesktopLayout 侧栏分组使用 -->
+					<p class="eyebrow mb-2">在线</p>
 					<div class="flex gap-3 overflow-x-auto no-scrollbar pr-1">
 						{#each onlineChats as c (c.id)}
 							<button
@@ -257,11 +259,18 @@
 					<div class="spinner size-7"></div>
 					<p class="text-text-secondary text-sm">加载会话…</p>
 				</div>
-			{:else if filtered.length === 0}
-				<div class="flex flex-1 items-center justify-center py-16">
-					<p class="text-text-secondary text-sm">暂无会话，点右上角 + 发起新会话</p>
+		{:else if filtered.length === 0}
+			<!-- 空态与同页移动端同形态（EmptyState bare）——原先这里是裸 p 文本，
+			     与移动端 EmptyState 两种观感；文案统一为「没有找到会话」，
+			     因为本分支也覆盖搜索无结果，原「暂无会话」在搜索场景下是错的 -->
+				<div class="flex flex-1 items-center justify-center">
+					<EmptyState bare title="没有找到会话">
+						{#snippet icon()}
+							<MessageSquareDashed class="size-9 opacity-muted text-text-secondary"  strokeWidth={1.5} />
+						{/snippet}
+					</EmptyState>
 				</div>
-			{:else}
+		{:else}
 				<ListContainer class="flex-1 overflow-y-auto no-scrollbar py-2">
 					{#each filtered as chat (chat.id)}
 						<div class="px-2 py-1">

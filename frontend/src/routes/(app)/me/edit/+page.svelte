@@ -10,6 +10,7 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
 	import { getAccount, updateAccount, deleteAccount } from '@/api';
 	import { uploadMediaFile } from '@/lib/upload';
 	import { ROUTES } from '@/lib/routes';
@@ -30,12 +31,18 @@
 	let avatar = $state('');
 	let userId = $state('');
 	let avatarInput = $state<HTMLInputElement | null>(null);
+	let loading = $state(true);
+	let loadError = $state<string | null>(null);
+	let reloadKey = $state(0);
 
 	const device = $derived(platform.platform);
 
 	$effect(() => {
+		void reloadKey;
 		let cancelled = false;
 		async function fetchAccount() {
+			loading = true;
+			loadError = null;
 			try {
 				const res = await getAccount().catch(() => ({ code: -1, message: '网络异常', data: null }));
 				if (cancelled) return;
@@ -47,9 +54,14 @@
 					avatar = data.avatar_url ?? '';
 					userId = data.user_id;
 					if (data.tags) tags = new Set(data.tags);
+				} else {
+					// 加载失败必须显式暴露：否则空表单 + 可保存 = 用户一键清空自己的资料
+					loadError = res.message ?? '加载资料失败';
 				}
+			} catch (err) {
+				if (!cancelled) loadError = err instanceof Error ? err.message : '加载资料失败';
 			} finally {
-				// ignore fetch error
+				if (!cancelled) loading = false;
 			}
 		}
 		void fetchAccount();
@@ -143,7 +155,7 @@
 			size="md"
 			class="rounded-full px-4 py-2"
 			loading={saving}
-			disabled={saved || saving}
+			disabled={saved || saving || !userId}
 			onclick={() => void handleSave()}
 		>
 			{#if saved}
@@ -155,6 +167,14 @@
 	</PageHeader>
 {/snippet}
 
+	{#if loading}
+	<div class="flex flex-col items-center gap-3 py-20">
+		<div class="spinner size-7"></div>
+		<p class="text-text-secondary text-sm">加载资料…</p>
+	</div>
+	{:else if loadError}
+	<LoadError message={loadError} onRetry={() => reloadKey++} />
+	{:else}
 	<div class="animate-fade-in flex flex-col gap-5">
 	<!-- Avatar section -->
 	<div class="relative rounded-xl overflow-hidden" style="height:var(--cst-cover-height-sm);">
@@ -303,4 +323,5 @@
 		{/if}
 	</div>
 	</div>
+	{/if}
 </StandardPageLayout>

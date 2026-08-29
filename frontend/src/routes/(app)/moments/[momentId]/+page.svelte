@@ -381,7 +381,7 @@
 </svelte:head>
 
 
-<SplitPageLayout contentClassName="animate-fade-in pb-6">
+<SplitPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader title="动态详情" titleSize={16} onBack={() => history.back()}>
 			{#snippet trailing()}

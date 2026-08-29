@@ -286,7 +286,12 @@ const FILTER_TABS = [
 					</ListContainer>
 				{/if}
 
-				{#if loadError}
+				{#if loading}
+					<div class="flex flex-col items-center gap-3 py-20">
+						<div class="spinner size-7"></div>
+						<p class="text-text-secondary text-sm">加载通知…</p>
+					</div>
+				{:else if loadError}
 					<LoadError message={loadError} onRetry={() => reloadKey++} />
 				{:else if filtered.length === 0}
 					<EmptyState title="暂无通知">
@@ -310,7 +315,8 @@ const FILTER_TABS = [
 						{@const cfg = TYPE_CONFIG[type] ?? TYPE_CONFIG.reaction}
 						<button
 							type="button"
-							class="hover-btn flex items-center gap-2.5 rounded-sm px-2 py-1.5 focus-ring text-left {filter === type ? '' : 'hover:bg-interactive-hover'}"
+							aria-pressed={filter === type}
+							class="hover-btn flex items-center gap-2.5 rounded-sm px-2 py-1.5 focus-ring text-left {filter === type ? 'hover:bg-interactive-active' : 'hover:bg-interactive-hover'}"
 							style="{filter === type ? `background:${cfg.bg};border:var(--cst-border-width-hairline) solid ${cfg.border};` : ''}transition:background var(--cst-motion-rapid) var(--cst-ease-standard);"
 							onclick={() => (filter = type)}
 						>

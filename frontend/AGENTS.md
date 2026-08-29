@@ -514,6 +514,26 @@ theme/
 | 可交互 surface-flat | 描边加深（border-strong） | — |
 | 弹层 / 下拉菜单 | 无描边环，层级靠 elevation-menu 投影 | — |
 
+#### 按钮 hover 底色：两档，按「控件是否有可见轮廓/底色」选
+
+utilities.css 的全局规则会给**无 `bg-*` 且无 `hover:*` 类**的 `<button>` 自动填
+`--cst-interactive-hover-fill`（仅 fine pointer）。因此有底色/描边的按钮被该规则
+排除，必须**显式**给 hover；两档按控件是否"有可见轮廓"选择，不要混用：
+
+| 控件形态 | hover 底色 | 例 |
+|----------|-----------|-----|
+| 透明底图标按钮 / 行式按钮 / 未选中 pill | `hover:bg-interactive-hover`（中性灰） | 图标按钮、ListItem、`CreateSheet` 心情/话题按钮 |
+| 有可见轮廓或底色（border / ring / `bg-surface-primary`） | `hover:bg-accent-soft`（accent 淡底，更强信号） | `ProfilePage` 描边白底按钮、`AppearanceMenu` ring-1 控件、下拉菜单项 |
+
+- **禁止透明度越档**：`hover:bg-accent-soft/50` 之类 `/N` 变体一律用整档
+  `hover:bg-interactive-hover`（accent-soft 本身就是 10~14% 淡底，再砍半档等于
+  用 opacity 造新档位，违反第 17 条）。
+- 已选中态（`aria-pressed=true` / `bg-accent-soft` 打底）的 hover 走
+  `hover:bg-interactive-active`，不用 interactive-hover。
+- 导航 Tab 不参与本表：`.tab-item` 规则统一提供 `--cst-interactive-hover-fill`
+  （无 layer，优先级高于 `@layer utilities`），**不要在 TabBar 上再写 `hover:bg-*`**
+  （写了也不生效，是死类名）。
+
 硬性规则：
 - 输入框聚焦态由整框承载：内层 input/textarea 不画自身焦点框
   （utilities.css `.input-surface:focus-visible` 统一压制，与第 18 条焦点可见性配合）；

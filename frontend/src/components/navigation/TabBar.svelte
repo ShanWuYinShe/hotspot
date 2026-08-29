@@ -7,6 +7,8 @@
 	// 正文场景由调用方外层 border-b 承担），避免与 header 形成双线。
 	// 用 data-tab-bar 标记，全局 button:hover 规则据此排除（导航 Tab 不应触发实色按压填充），
 	// 改用极轻背景 + 胶囊圆角的 subtle hover（见 utilities.css 的 .tab-item 规则）。
+	// 注意：未激活项的 hover 背景由 .tab-item 规则（无 layer，优先级高于 @layer utilities）
+	// 统一提供 = --cst-interactive-hover-fill；此处不要再写 hover:bg-*，写了也不生效（死类名）。
 
 	export type TabItem = { id: string; label: string; count?: number; icon?: Component };
 
@@ -30,9 +32,9 @@
 			type="button"
 			onclick={() => onChange(tab.id)}
 			aria-pressed={isActive}
-			class="tab-item flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm focus-ring transition-colors duration-standard {isActive
-				? 'font-medium bg-accent-default text-text-on-accent shadow-glow-sm'
-				: 'font-normal text-text-secondary hover:bg-accent-soft hover:text-text-primary'}"
+		class="tab-item flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm focus-ring transition-colors duration-standard {isActive
+			? 'font-medium bg-accent-default text-text-on-accent shadow-glow-sm'
+			: 'font-normal text-text-secondary hover:text-text-primary'}"
 		>
 			{#if tab.icon}
 				<tab.icon class="size-3.5"  strokeWidth={isActive ? 2 : 1.5} />

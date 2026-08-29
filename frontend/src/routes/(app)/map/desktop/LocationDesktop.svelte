@@ -45,28 +45,39 @@
 	let heatBuckets = $state<MapHeatBucket[]>([]);
 	let mapCounts = $state<Record<PinType, number>>({ user: 0, group: 0, moment: 0 });
 	let mapLoading = $state(true);
+	let mapError = $state<string | null>(null);
+	let mapReloadKey = $state(0);
 
 	// 视口中心/边界或筛选变化时重新拉取。依赖 stableBounds（手势/缩放结束才回写），
 	// 拖拽中的逐帧 bounds 变化只驱动图钉定位，不触发请求。
 	$effect(() => {
+		void mapReloadKey;
 		const center = mapCenter;
 		const types = [...activeFilters];
 		const bounds = mapStableBounds;
 		if (!center) return;
 		let cancelled = false;
 		mapLoading = true;
+		mapError = null;
 		// TODO: 固定 delta 仅用于首屏，后续应接入视口 bounds（当前兜底：mapBounds 尚未就绪时用固定 0.045，hasViewport 为真时已用真实视口）
 		const hasViewport = bounds.maxLat !== bounds.minLat || bounds.maxLng !== bounds.minLng;
 		const request = hasViewport
 			? fetchMapCanvasByViewport({ bounds: { north: bounds.maxLat, south: bounds.minLat, east: bounds.maxLng, west: bounds.minLng } }, types)
 			: fetchMapCanvas(center, 0.045, types);
-		void request.then((r) => {
-			if (cancelled) return;
-			mapPins = r.pins;
-			heatBuckets = r.heatBuckets;
-			mapCounts = r.counts;
-			mapLoading = false;
-		});
+		void request
+			.then((r) => {
+				if (cancelled) return;
+				mapPins = r.pins;
+				heatBuckets = r.heatBuckets;
+				mapCounts = r.counts;
+				mapLoading = false;
+			})
+			.catch((err: unknown) => {
+				if (cancelled) return;
+				// 无 catch 时请求失败会让 mapLoading 永久卡在 true、地图一片空白
+				mapError = err instanceof Error ? err.message : '地图数据加载失败';
+				mapLoading = false;
+			});
 		return () => {
 			cancelled = true;
 		};
@@ -163,6 +174,12 @@
 			<!-- 加载中的轻量指示 -->
 			<div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary shadow-raised-sm border border-border-default" >
 				加载地图数据…
+			</div>
+		{:else if mapError}
+			<!-- 加载失败：给出原因与重试，避免空白地图被误认为「附近什么都没有」 -->
+			<div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full bg-surface-primary px-3 py-1.5 text-xs text-status-danger shadow-raised-sm border border-border-default" >
+				<span>{mapError}</span>
+				<button type="button" class="link-btn focus-ring rounded-sm text-accent-default" onclick={() => mapReloadKey++}>重试</button>
 			</div>
 		{/if}
 

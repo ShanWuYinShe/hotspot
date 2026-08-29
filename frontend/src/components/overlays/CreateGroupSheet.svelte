@@ -83,7 +83,8 @@
 				<Check class="size-8 text-text-on-accent"   strokeWidth={2.5} />
 			</div>
 			<div>
-				<p class="text-xl font-semibold text-text-primary">群组已创建！</p>
+				<!-- 成功态大标题：仍是「标题」语义，字重跟 h1-h4 基线（font-medium） -->
+				<p class="text-xl font-medium text-text-primary">群组已创建！</p>
 				<p class="text-sm mt-1.5 text-text-secondary">「{name}」已成功创建，现在可以邀请好友加入了</p>
 			</div>
 			<button

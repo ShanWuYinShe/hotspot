@@ -52,10 +52,12 @@
 	<!-- 底部信息托盘（surface-card-menu，由 NearbyImageCard footer 槽渲染） -->
 	{#snippet footer()}
 		<div class="px-3 pb-2.5 pt-2.5">
-			<!-- 作者行：头像 + 昵称 + 位置 -->
+			<!-- 作者行：头像 + 昵称 + 位置
+			     昵称与同网格的 UserCard/GroupCard 主标题对齐（text-sm font-semibold）：
+			     原先 text-xs 与卡片正文同级、既无层级也比另两张卡小一档 -->
 			<div class="flex min-w-0 items-center gap-2">
 				<Avatar src={item.avatar} name={item.user} size={22} style="border:var(--cst-border-width-regular) solid var(--cst-border-card-menu);" />
-				<span class="truncate text-xs text-text-primary font-medium">{item.user}</span>
+				<span class="truncate text-sm text-text-primary font-semibold">{item.user}</span>
 				<span class="ml-auto flex min-w-0 items-center gap-0.5 truncate text-xxs text-text-secondary" >
 					<MapPin class="size-2.5 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 					{item.location}

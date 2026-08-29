@@ -30,7 +30,8 @@
 		</div>
 		<div class="mb-4 flex items-start justify-between">
 			<div>
-				<Dialog.Title class="text-lg font-semibold tracking-tight text-text-primary" >
+				<!-- 弹层标题字重对齐 h1-h4 基线（font-medium），不跟随数字/激活态的 semibold -->
+				<Dialog.Title class="text-lg font-medium tracking-tight text-text-primary" >
 					登录后继续
 				</Dialog.Title>
 				{#if actionLabel}

@@ -39,13 +39,10 @@
 {#if showApp}
 	{@render children()}
 {:else}
-	<!-- 启动占位：token 化 spinner，避免未解析 auth 时页面闪错数据 -->
+	<!-- 启动占位：token 化 spinner（.spinner 自带 reduced-motion 降级），
+	     避免未解析 auth 时页面闪错数据 -->
 	<div class="fixed inset-0 grid place-items-center" style="background:var(--cst-surface-page);">
-		<div
-			class="size-7 rounded-full border-2 border-border-default border-t-accent-default animate-spin"
-			role="status"
-			aria-label="加载中"
-		></div>
+		<div class="spinner size-7" role="status" aria-label="加载中"></div>
 	</div>
 {/if}
 <AuthGate />

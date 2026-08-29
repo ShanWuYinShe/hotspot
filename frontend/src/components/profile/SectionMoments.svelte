@@ -51,8 +51,9 @@
 
 <!-- 我的瞬间分区（对齐 Figma Make ProfileSections SectionMoments）。
      纯内容组件：滚动与 gutter 由外层 StandardPageLayout/ContentColumn 承担，不自建容器。
-     顶部间距由外层 pt-4 承担（不自建 pt 避免双重叠加）；pb-10 是分区页尾部大留白。 -->
-<div class="pb-10">
+     顶部/底部间距均由外层 contentClassName（pt-4 pb-6）承担——分区内不叠 pb，
+     否则各分区尾部留白随自身 pb 各异（曾出现 48/56/64px 三种值）。 -->
+<div>
 		{#if loading}
 			<div class="flex flex-col items-center gap-3 py-20">
 				<div class="spinner size-7"></div>

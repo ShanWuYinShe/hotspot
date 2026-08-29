@@ -2,6 +2,7 @@
 	import { ArrowLeft, Send, MessageCircle } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
 	import MessageBubble from '@/components/messages/MessageBubble.svelte';
 	import ChatDatePill from '@/components/messages/ChatDatePill.svelte';
 	import { auth } from '@/stores/auth.svelte';
@@ -246,16 +247,8 @@
 				<p class="text-text-secondary text-xs" >加载中…</p>
 			</div>
 		{:else if chat.loadError}
-			<div class="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-				<p class="text-sm text-text-secondary">消息加载失败，请检查网络后重试</p>
-				<button
-					type="button"
-					class="hover-btn rounded-full border border-border-default bg-surface-primary px-4 py-1.5 text-sm text-text-primary focus-ring"
-					onclick={() => void chat.reload()}
-				>
-					重新加载
-				</button>
-			</div>
+			<!-- 错误态统一 LoadError（与 ChatView / 全站一致），不再手搓文案 + 按钮 -->
+			<LoadError message="消息加载失败，请检查网络后重试" onRetry={() => void chat.reload()} class="h-full" />
 		{:else if chat.messages.length === 0}
 			<!-- 空会话：与 ChatView 同形态的 EmptyState（消除纯文本空态） -->
 			<EmptyState iconSize={56} class="h-full" title="还没有消息" description="来打个招呼吧">

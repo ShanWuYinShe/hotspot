@@ -172,21 +172,21 @@
 							type="button"
 							onclick={() => appendText('✨')}
 							aria-label="添加心情"
-							class="flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default text-text-secondary hover:bg-accent-soft hover:text-accent-default"
-						>
-							<Smile size={16} strokeWidth={1.5} />
-						</button>
-						<button
-							type="button"
-							onclick={toggleTopic}
-							aria-label="添加话题"
-							aria-pressed={topicActive}
-							class="flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {topicActive
-								? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
-								: 'text-text-secondary hover:bg-accent-soft hover:text-accent-default'}"
-						>
-							<Hash size={16} strokeWidth={topicActive ? 2 : 1.5} />
-						</button>
+							class="flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default text-text-secondary hover:bg-interactive-hover"
+					>
+						<Smile size={16} strokeWidth={1.5} />
+					</button>
+					<button
+						type="button"
+						onclick={toggleTopic}
+						aria-label="添加话题"
+						aria-pressed={topicActive}
+						class="flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {topicActive
+							? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
+							: 'text-text-secondary hover:bg-interactive-hover'}"
+					>
+						<Hash size={16} strokeWidth={topicActive ? 2 : 1.5} />
+					</button>
 					</div>
 					<span class="text-xs tabular-nums {text.length >= 260 ? 'text-destructive' : 'text-text-secondary'}">
 						{text.length}/280
@@ -233,7 +233,7 @@
 							aria-pressed={active}
 							class="flex min-w-0 flex-col items-center gap-1 rounded-sm px-1 py-2 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {active
 								? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
-								: 'text-text-secondary hover:bg-accent-soft/50'}"
+								: 'text-text-secondary hover:bg-interactive-hover'}"
 						>
 							<AudienceIcon size={14} strokeWidth={active ? 2 : 1.5} />
 							<span class="truncate text-xxs font-medium">{label}</span>

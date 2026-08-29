@@ -9,6 +9,7 @@
 	import Toggle from '@/components/forms/Toggle.svelte';
 	import SettingRow from '@/components/forms/SettingRow.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
+	import LoadError from '@/components/data-display/LoadError.svelte';
 	import { logout } from '@/stores/auth.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { theme, setTheme, toggleDark, THEME_OPTIONS } from '@/stores/theme.svelte';
@@ -47,6 +48,8 @@
 	let accountEmail = $state('');
 	let accountAvatar = $state('');
 	let loading = $state(true);
+	let loadError = $state<string | null>(null);
+	let reloadKey = $state(0);
 
 	// 服务端设置开关：乐观更新 + 失败回滚并提示（spec: users/update_settings；
 	// 业务失败 code!==0 与网络抛错统一走 catch 回滚 + toast）
@@ -80,10 +83,12 @@
 	};
 
 	$effect(() => {
+		void reloadKey;
 		let cancelled = false;
 		async function fetchData() {
 			try {
 				loading = true;
+				loadError = null;
 				const [accountRes, settingsRes] = await Promise.all([
 					getAccount().catch(() => ({ code: -1, message: '网络异常', data: null })),
 					getSettings().catch(() => ({ code: -1, message: '网络异常', data: null }))
@@ -103,8 +108,13 @@
 					if (settingsData.location_visible !== undefined) locationSharing = settingsData.location_visible;
 					if (settingsData.privacy_level !== undefined) privateProfile = settingsData.privacy_level === 'private';
 				}
+
+				// 两个请求都失败才整页报错：任一成功则页面主体（开关）仍可用，避免误报
+				if (accountRes.code !== 0 && settingsRes.code !== 0) {
+					loadError = accountRes.message ?? '加载失败，请稍后重试';
+				}
 			} catch {
-				// empty data is normal
+				if (!cancelled) loadError = '加载失败，请稍后重试';
 			} finally {
 				if (!cancelled) loading = false;
 			}
@@ -134,7 +144,10 @@
 		<PageHeader title="设置" onBack={() => history.back()} showBackOnDesktop maxWidth={560} titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22} />
 	{/snippet}
 
-		<!-- User card — hero with ambient glow（loading 期间显示占位骨架） -->
+		{#if loadError}
+		<LoadError message={loadError} onRetry={() => reloadKey++} />
+		{:else}
+	<!-- User card — hero with ambient glow（loading 期间显示占位骨架） -->
 		<div class="ambient-glow mb-3">
 			<button
 				type="button"
@@ -258,4 +271,5 @@
 			<span class="text-sm">退出登录</span>
 		</button>
 	</div>
+		{/if}
 </StandardPageLayout>
