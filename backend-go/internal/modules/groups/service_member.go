@@ -10,6 +10,9 @@ import (
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
+// MaxMuteDurationMinutes is the maximum duration for muting a group member (30 days)
+const MaxMuteDurationMinutes = 43200
+
 func (s *Service) ListApplications(ctx context.Context, req GroupApplicationsRequest) ([]GroupApplicationItem, string, error) {
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
