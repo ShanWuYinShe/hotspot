@@ -1579,7 +1579,10 @@ func TestMedia_E2E_SizeMismatchRejected(t *testing.T) {
 
 	putReq, _ := http.NewRequest(http.MethodPut, uploadURL, bytes.NewReader(pngBytes))
 	putReq.Header.Set("Content-Type", "image/png")
-	putResp, _ := testClient.Do(putReq)
+	putResp, err := testClient.Do(putReq)
+	if err != nil {
+		t.Fatalf("PUT to storage: %v", err)
+	}
 	putResp.Body.Close()
 
 	var completeResp ApiResponse[map[string]any]
