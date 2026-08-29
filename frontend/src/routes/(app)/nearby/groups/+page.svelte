@@ -102,7 +102,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		if (next) {
 			void joinGroup(id).then(done).catch(() => done(netError(undefined)));
 		} else {
-			void leaveGroup(id).then(done).catch(() => done({ code: -1 }));
+			void leaveGroup(id).then(done).catch(() => done(netError(undefined)));
 		}
 	};
 </script>
