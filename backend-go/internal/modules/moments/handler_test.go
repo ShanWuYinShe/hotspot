@@ -176,7 +176,7 @@ func TestCreateCommentDoesNotIncrementMomentCountWhenCounterFails(t *testing.T) 
 	momentHandler := NewHandler(momentService)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
-	createdMoment, err := momentRepo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}})
+	createdMoment, err := momentRepo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: &Location{LocationName: "Somewhere"}})
 	if err != nil {
 		t.Fatalf("create moment: %v", err)
 	}
@@ -250,7 +250,7 @@ func TestCreateMomentRecordsResourceGuard(t *testing.T) {
 
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	service := NewServiceWithRepo(NewInMemoryRepository())
-	if _, err := service.Create(ctx, CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}}); err != nil {
+	if _, err := service.Create(ctx, CreateMomentRequest{Description: "hello", Location: &Location{LocationName: "Somewhere"}}); err != nil {
 		t.Fatalf("create moment: %v", err)
 	}
 	if len(checker.recorded) != 1 || !strings.HasPrefix(checker.recorded[0], "moment:") {
@@ -267,7 +267,7 @@ func TestCreateMomentSendsMentionNotificationsAndRealtime(t *testing.T) {
 	bobSink := &sinkCapture{}
 	hub.RegisterUser("user_bob", "sess_bob", bobSink)
 
-	created, err := service.Create(ctxAlice, CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}, Mentions: []string{"user_bob", "user_bob", "user_alice"}})
+	created, err := service.Create(ctxAlice, CreateMomentRequest{Description: "hello", Location: &Location{LocationName: "Somewhere"}, Mentions: []string{"user_bob", "user_bob", "user_alice"}})
 	if err != nil {
 		t.Fatalf("create moment: %v", err)
 	}
@@ -311,7 +311,7 @@ func TestUpdateMomentReplacesMentionNotificationsAndState(t *testing.T) {
 	hub.RegisterUser("user_bob", "sess_bob", bobSink)
 	hub.RegisterUser("user_carol", "sess_carol", carolSink)
 
-	created, err := service.Create(ctxAlice, CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}, Mentions: []string{"user_bob"}})
+	created, err := service.Create(ctxAlice, CreateMomentRequest{Description: "hello", Location: &Location{LocationName: "Somewhere"}, Mentions: []string{"user_bob"}})
 	if err != nil {
 		t.Fatalf("create moment: %v", err)
 	}
@@ -342,7 +342,7 @@ func TestCreateMomentWithoutMentionsDoesNotBroadcastMentionEvent(t *testing.T) {
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	service := NewServiceWithRepo(NewInMemoryRepository())
 
-	if _, err := service.Create(ctx, CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}}); err != nil {
+	if _, err := service.Create(ctx, CreateMomentRequest{Description: "hello", Location: &Location{LocationName: "Somewhere"}}); err != nil {
 		t.Fatalf("create moment: %v", err)
 	}
 	if len(sink.events) != 0 {
@@ -356,7 +356,7 @@ func TestDeleteMomentReturns10200WhenPermissionDenied(t *testing.T) {
 	_ = platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	ctxOther := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_2"})
 
-	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}})
+	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: &Location{LocationName: "Somewhere"}})
 	if err != nil {
 		t.Fatalf("create moment: %v", err)
 	}
@@ -653,7 +653,9 @@ func TestCreateMomentRejectsZeroLocation(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
-	createReq := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"description":"hello","location":{"point":{"latitude":0,"longitude":0}}}`))
+	// location 字段缺失（JSON null / 不传）→ 指针为 nil → 拒绝；
+	// (0,0) 本身是合法坐标（赤道×本初子午线），不再被哨兵误拒。
+	createReq := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"description":"hello"}`))
 	createReq.Header.Set("Idempotency-Key", "yyyy1234yyyy1234yyyy1234yyyy1234")
 	createReq = createReq.WithContext(ctx)
 	createRR := httptest.NewRecorder()
@@ -666,7 +668,31 @@ func TestCreateMomentRejectsZeroLocation(t *testing.T) {
 		t.Fatalf("decode response: %v", err)
 	}
 	if resp.Code != httpx.CodeInvalidRequest {
-		t.Fatalf("expected code httpx.CodeInvalidRequest for zero coordinates, got %d", resp.Code)
+		t.Fatalf("expected code httpx.CodeInvalidRequest for missing location, got %d", resp.Code)
+	}
+}
+
+// TestCreateMomentAcceptsZeroZeroCoordinates 验证 (0,0) 合法坐标不再被
+// 旧的 (0,0)+空名哨兵误拒（修复回归测试）。
+func TestCreateMomentAcceptsZeroZeroCoordinates(t *testing.T) {
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+
+	createReq := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"description":"hello","location":{"point":{"latitude":0,"longitude":0},"location_name":"几内亚湾"}}`))
+	createReq.Header.Set("Idempotency-Key", "zzro1234zzro1234zzro1234zzro1234")
+	createReq = createReq.WithContext(ctx)
+	createRR := httptest.NewRecorder()
+	handler.Create(createRR, createReq)
+
+	var resp struct {
+		Code httpx.Code `json:"code"`
+	}
+	if err := json.NewDecoder(createRR.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected success for (0,0) coordinates, got %d", resp.Code)
 	}
 }
 
@@ -695,7 +721,7 @@ func TestMomentHandlerUpdateReturnsSuccess(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
-	created, err := repo.Create(ctx, "user_alice", CreateMomentRequest{Description: "original", Location: Location{LocationName: "Here", Point: struct {
+	created, err := repo.Create(ctx, "user_alice", CreateMomentRequest{Description: "original", Location: &Location{LocationName: "Here", Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: 1, Longitude: 2}}})
@@ -752,7 +778,7 @@ func TestMomentHandlerDeleteReturnsSuccess(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
-	created, err := repo.Create(ctx, "user_alice", CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Here"}})
+	created, err := repo.Create(ctx, "user_alice", CreateMomentRequest{Description: "hello", Location: &Location{LocationName: "Here"}})
 	if err != nil {
 		t.Fatalf("create moment: %v", err)
 	}
@@ -799,7 +825,7 @@ func TestMomentHandlerFavoriteReturnsSuccess(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_2"})
 
-	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Here"}})
+	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: &Location{LocationName: "Here"}})
 	if err != nil {
 		t.Fatalf("create moment: %v", err)
 	}
@@ -833,7 +859,7 @@ func TestMomentHandlerUnfavoriteReturnsSuccess(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_2"})
 
-	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Here"}})
+	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: &Location{LocationName: "Here"}})
 	if err != nil {
 		t.Fatalf("create moment: %v", err)
 	}
@@ -868,7 +894,7 @@ func TestMomentHandlerListFavoritesReturnsSuccess(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
-	created, err := repo.Create(ctxAlice, "user_alice", CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Here"}})
+	created, err := repo.Create(ctxAlice, "user_alice", CreateMomentRequest{Description: "hello", Location: &Location{LocationName: "Here"}})
 	if err != nil {
 		t.Fatalf("create moment: %v", err)
 	}
@@ -926,7 +952,7 @@ func TestMomentHandlerSearchReturnsSuccess(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
-	_, err := repo.Create(ctx, "user_alice", CreateMomentRequest{Description: "findme moment", Location: Location{LocationName: "Here", Point: struct {
+	_, err := repo.Create(ctx, "user_alice", CreateMomentRequest{Description: "findme moment", Location: &Location{LocationName: "Here", Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: 1, Longitude: 2}}})
@@ -1038,7 +1064,7 @@ func TestCreateMomentUnownedImagesReturns10300(t *testing.T) {
 func TestUpdateMomentUnownedImagesReturns10300(t *testing.T) {
 	repo := NewInMemoryRepository()
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Here"}})
+	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: &Location{LocationName: "Here"}})
 	if err != nil {
 		t.Fatalf("create moment: %v", err)
 	}

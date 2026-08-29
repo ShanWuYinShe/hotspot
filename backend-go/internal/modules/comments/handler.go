@@ -31,28 +31,20 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		item, err := h.service.Create(r.Context(), req)
 		if err != nil {
 			if errors.Is(err, ErrMomentNotFound) {
-				observability.LogBusinessError(r, "Create", int(httpx.CodeNotFound), "瞬间不存在")
-				return httpx.ApiResponse[any]{Code: httpx.CodeNotFound, Message: "瞬间不存在"}
+				return httpx.Business[any](r, "Create", httpx.CodeNotFound, "瞬间不存在")
 			}
 			if errors.Is(err, ErrCommentTooLong) {
-				observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "评论内容超过长度限制")
-				return httpx.ApiResponse[any]{Code: httpx.CodeInvalidRequest, Message: "评论内容超过长度限制"}
+				return httpx.Business[any](r, "Create", httpx.CodeInvalidRequest, "评论内容超过长度限制")
 			}
 			// 契约(api_spec_errors.md)：10200 必带 data.forbidden_reason
 			if errors.Is(err, ErrCommentPrivacyDenied) {
-				observability.LogBusinessError(r, "Create", int(httpx.CodeForbidden), "瞬间作者限制评论")
-				data := any(httpx.ForbiddenErrorData{ForbiddenReason: httpx.ReasonPrivacySetting})
-				return httpx.ApiResponse[any]{Code: httpx.CodeForbidden, Message: "瞬间作者限制评论", Data: &data}
+				return httpx.BusinessForbidden(r, "Create", httpx.ReasonPrivacySetting, "瞬间作者限制评论")
 			}
 			if errors.Is(err, ErrCommentBlockedByUser) {
-				observability.LogBusinessError(r, "Create", int(httpx.CodeForbidden), "你已被该用户拉黑")
-				data := any(httpx.ForbiddenErrorData{ForbiddenReason: httpx.ReasonBlockedByUser})
-				return httpx.ApiResponse[any]{Code: httpx.CodeForbidden, Message: "你已被该用户拉黑", Data: &data}
+				return httpx.BusinessForbidden(r, "Create", httpx.ReasonBlockedByUser, "你已被该用户拉黑")
 			}
 			if errors.Is(err, ErrMomentNoPermission) {
-				observability.LogBusinessError(r, "Create", int(httpx.CodeForbidden), "权限不足")
-				data := any(httpx.ForbiddenErrorData{ForbiddenReason: httpx.ReasonPrivacySetting})
-				return httpx.ApiResponse[any]{Code: httpx.CodeForbidden, Message: "权限不足", Data: &data}
+				return httpx.BusinessForbidden(r, "Create", httpx.ReasonPrivacySetting, "权限不足")
 			}
 			observability.LogServerError(r, "Create", err)
 			return httpx.ApiResponse[any]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}

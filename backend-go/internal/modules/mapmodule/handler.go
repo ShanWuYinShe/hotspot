@@ -32,6 +32,8 @@ func (h *Handler) Canvas(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
 		return
 	}
+	// 跨日期变更线视口（East < West）在此拒绝——spec api_spec_public.md 约定
+	// 由客户端拆分请求，服务端暂不支持（见 geo.ValidateBounds 注释）。
 	if err := geo.ValidateBounds(geo.Bounds{North: req.Viewport.Bounds.North, South: req.Viewport.Bounds.South, East: req.Viewport.Bounds.East, West: req.Viewport.Bounds.West}); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return

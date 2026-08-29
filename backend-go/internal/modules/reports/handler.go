@@ -21,14 +21,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch err.Error() {
 		case "reports: invalid request":
-			observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "参数错误")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteBusinessError(w, r, "Create", httpx.CodeInvalidRequest, "参数错误")
 		case "reports: target not found":
-			observability.LogBusinessError(r, "Create", int(httpx.CodeNotFound), "举报目标不存在")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "举报目标不存在"))
+			httpx.WriteBusinessError(w, r, "Create", httpx.CodeNotFound, "举报目标不存在")
 		case "reports: self report":
-			observability.LogBusinessError(r, "Create", int(httpx.CodeConflict), "举报被拒绝")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "举报被拒绝"))
+			httpx.WriteBusinessError(w, r, "Create", httpx.CodeConflict, "举报被拒绝")
 		default:
 			observability.LogServerError(r, "Create", err)
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))

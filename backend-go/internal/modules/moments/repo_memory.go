@@ -74,7 +74,7 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 			return MomentItem{}, ErrBlockedTag
 		}
 	}
-	item := MomentItem{MomentID: momentID, Description: req.Description, Tags: normalizeMomentTags(req.Tags), Mentions: normalizeMomentMentions(req.Mentions), CreatedAt: now.Format(time.RFC3339), LikesCount: 0, CommentsCount: 0, SharesCount: 0, User: UserInfo{UserID: userID, Nickname: userID}, Location: &req.Location, PrivacyLevel: privacy, IsFavorited: false}
+	item := MomentItem{MomentID: momentID, Description: req.Description, Tags: normalizeMomentTags(req.Tags), Mentions: normalizeMomentMentions(req.Mentions), CreatedAt: now.Format(time.RFC3339), LikesCount: 0, CommentsCount: 0, SharesCount: 0, User: UserInfo{UserID: userID, Nickname: userID}, Location: req.Location, PrivacyLevel: privacy, IsFavorited: false}
 	r.moments[momentID] = item
 	r.byUser[userID] = append(r.byUser[userID], momentID)
 	return item, nil

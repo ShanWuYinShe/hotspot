@@ -20,7 +20,7 @@ func seedFollowedMoment(t *testing.T, repo *InMemoryRepository, author, descript
 	t.Helper()
 	item, err := repo.Create(context.Background(), author, CreateMomentRequest{
 		Description: description,
-		Location: Location{Point: struct {
+		Location: &Location{Point: struct {
 			Latitude  float64 `json:"latitude"`
 			Longitude float64 `json:"longitude"`
 		}{Latitude: lat, Longitude: lng}, LocationName: "某地"},
@@ -34,7 +34,7 @@ func seedFollowedMoment(t *testing.T, repo *InMemoryRepository, author, descript
 func TestServiceFetchFollowingReturnsFollowedPublicMoments(t *testing.T) {
 	repo := NewInMemoryRepository()
 	seedFollowedMoment(t, repo, "author_a", "first", 31.0, 121.0)
-	private, err := repo.Create(context.Background(), "author_a", CreateMomentRequest{Description: "private", Location: Location{LocationName: "x"}, PrivacyLevel: "private"})
+	private, err := repo.Create(context.Background(), "author_a", CreateMomentRequest{Description: "private", Location: &Location{LocationName: "x"}, PrivacyLevel: "private"})
 	if err != nil {
 		t.Fatalf("create private moment: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestServiceFetchNearbySortsByDistance(t *testing.T) {
 	repo := NewInMemoryRepository()
 	seedFollowedMoment(t, repo, "far", "far", 31.5, 121.5)
 	seedFollowedMoment(t, repo, "near", "near", 31.001, 121.001)
-	private, err := repo.Create(context.Background(), "near", CreateMomentRequest{Description: "private", Location: Location{Point: struct {
+	private, err := repo.Create(context.Background(), "near", CreateMomentRequest{Description: "private", Location: &Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: 31.0, Longitude: 121.0}, LocationName: "x"}, PrivacyLevel: "private"})

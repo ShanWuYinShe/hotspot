@@ -386,7 +386,7 @@ func TestPostgresRepositoryWritesQueryableDB(t *testing.T) {
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
-	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Tags: []string{" travel ", "hotspot", "travel"}, Mentions: []string{"user_bob", "user_bob", "user_charlie"}, Location: Location{Point: struct {
+	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Tags: []string{" travel ", "hotspot", "travel"}, Mentions: []string{"user_bob", "user_bob", "user_charlie"}, Location: &Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: 35.0, Longitude: 112.0}, LocationName: "南天门"}})
@@ -445,7 +445,7 @@ func TestPostgresRepositoryCreateReturnsErrorOnExecFailure(t *testing.T) {
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
-	_, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: Location{LocationName: "南天门"}})
+	_, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: &Location{LocationName: "南天门"}})
 	if err == nil {
 		t.Fatal("expected create error")
 	}
@@ -473,12 +473,12 @@ func TestPostgresRepositoryCreateRejectsBlockedTags(t *testing.T) {
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
 	// 含被屏蔽标签 → ErrBlockedTag（handler 映射为 10400，spec moment.md create 错误码）
-	_, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Tags: []string{"travel", "blocked", "hotspot"}, Location: Location{LocationName: "南天门"}})
+	_, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Tags: []string{"travel", "blocked", "hotspot"}, Location: &Location{LocationName: "南天门"}})
 	if !errors.Is(err, ErrBlockedTag) {
 		t.Fatalf("expected ErrBlockedTag, got %v", err)
 	}
 	// 全部标签允许 → 成功
-	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Tags: []string{"travel", "hotspot"}, Location: Location{LocationName: "南天门"}})
+	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Tags: []string{"travel", "hotspot"}, Location: &Location{LocationName: "南天门"}})
 	if err != nil {
 		t.Fatalf("unexpected create error: %v", err)
 	}

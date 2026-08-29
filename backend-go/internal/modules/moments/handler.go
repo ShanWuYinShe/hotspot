@@ -28,7 +28,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req CreateMomentRequest
-	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.Description == "" || (req.Location.Point.Latitude == 0 && req.Location.Point.Longitude == 0 && req.Location.LocationName == "") {
+	// location 必填（spec moment.md create）；指针判空替代旧的
+	// (0,0)+空名哨兵——赤道/本初子午线交点是合法坐标，哨兵会误拒。
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.Description == "" || req.Location == nil {
 		httpx.WriteInvalidRequest(w, r, "Create", "参数错误")
 		return
 	}
@@ -47,22 +49,17 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			switch {
 			case errors.Is(err, ErrDescriptionTooLong):
-				observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "内容超过长度限制")
-				return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeInvalidRequest, Message: "内容超过长度限制"}
+				return httpx.Business[OwnerMomentItem](r, "Create", httpx.CodeInvalidRequest, "内容超过长度限制")
 			case errors.Is(err, ErrTooManyMentions):
-				observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "mentions 数量超过上限")
-				return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeInvalidRequest, Message: "mentions 数量超过上限"}
+				return httpx.Business[OwnerMomentItem](r, "Create", httpx.CodeInvalidRequest, "mentions 数量超过上限")
 			case errors.Is(err, ErrTooManyImages):
-				observability.LogBusinessError(r, "Create", int(httpx.CodeInvalidRequest), "图片数量超过上限")
-				return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeInvalidRequest, Message: "图片数量超过上限"}
+				return httpx.Business[OwnerMomentItem](r, "Create", httpx.CodeInvalidRequest, "图片数量超过上限")
 			case errors.Is(err, ErrImagesNotOwned):
 				// image_file_ids 中媒体资源不存在或不属于当前用户 → 10300
 				//（spec api_spec_moment.md moments/create 错误码）。
-				observability.LogBusinessError(r, "Create", int(httpx.CodeNotFound), "媒体资源不存在或不属于当前用户")
-				return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeNotFound, Message: "图片不存在或不属于当前用户"}
+				return httpx.Business[OwnerMomentItem](r, "Create", httpx.CodeNotFound, "图片不存在或不属于当前用户")
 			case errors.Is(err, ErrBlockedTag):
-				observability.LogBusinessError(r, "Create", int(httpx.CodeConflict), "标签包含被屏蔽的内容")
-				return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeConflict, Message: "标签包含被屏蔽的内容"}
+				return httpx.Business[OwnerMomentItem](r, "Create", httpx.CodeConflict, "标签包含被屏蔽的内容")
 			}
 			observability.LogServerError(r, "Create", err)
 			return httpx.ApiResponse[OwnerMomentItem]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
@@ -229,8 +226,7 @@ func (h *Handler) Favorite(w http.ResponseWriter, r *http.Request) {
 			if !req.Active {
 				method = "Unfavorite"
 			}
-			observability.LogBusinessError(r, method, int(httpx.CodeNotFound), "瞬间不存在")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "瞬间不存在"))
+			httpx.WriteBusinessError(w, r, method, httpx.CodeNotFound, "瞬间不存在")
 			return
 		}
 		httpx.WriteAPIError(w, r, "Favorite", err)

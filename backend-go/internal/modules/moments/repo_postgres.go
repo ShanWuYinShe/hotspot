@@ -94,7 +94,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		CommentsCount: 0,
 		SharesCount:   0,
 		User:          UserInfo{UserID: userID, Nickname: nickname},
-		Location:      &req.Location,
+		Location:      req.Location,
 		PrivacyLevel:  privacy,
 		IsFavorited:   false,
 	}, nil

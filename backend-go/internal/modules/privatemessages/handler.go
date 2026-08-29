@@ -47,8 +47,7 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 			}
 			// 契约(api_spec_chat.md → private_messages/send 10400)：share_code 无效等业务冲突
 			if errors.Is(err, ErrInvalidShareCode) {
-				observability.LogBusinessError(r, "Send", int(httpx.CodeConflict), "share_code 无效")
-				return httpx.ApiResponse[any]{Code: httpx.CodeConflict, Message: "分享链接无效或已过期"}
+				return httpx.Business[any](r, "Send", httpx.CodeConflict, "分享链接无效或已过期")
 			}
 			observability.LogServerError(r, "Send", err)
 			return httpx.ApiResponse[any]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
@@ -85,14 +84,12 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	if err := h.service.Update(r.Context(), req); err != nil {
 		switch {
 		case errors.Is(err, ErrMessageNotFound):
-			observability.LogBusinessError(r, "Update", int(httpx.CodeNotFound), "消息不存在")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "消息不存在"))
+			httpx.WriteBusinessError(w, r, "Update", httpx.CodeNotFound, "消息不存在")
 		case errors.Is(err, ErrMessagePermissionDenied):
 			// 契约(api_spec_chat.md → private_messages/update)：非作者编辑 → 10200 + not_resource_owner
 			httpx.WriteAPIError(w, r, "Update", httpx.Forbidden(httpx.ReasonNotResourceOwner, "无权限编辑消息"))
 		case errors.Is(err, ErrMessageNotEditable):
-			observability.LogBusinessError(r, "Update", int(httpx.CodeConflict), "消息不可编辑")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "消息不可编辑"))
+			httpx.WriteBusinessError(w, r, "Update", httpx.CodeConflict, "消息不可编辑")
 		default:
 			observability.LogServerError(r, "Update", err)
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -111,14 +108,12 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 	if err := h.service.Recall(r.Context(), req); err != nil {
 		switch {
 		case errors.Is(err, ErrMessageNotFound):
-			observability.LogBusinessError(r, "Recall", int(httpx.CodeNotFound), "消息不存在")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "消息不存在"))
+			httpx.WriteBusinessError(w, r, "Recall", httpx.CodeNotFound, "消息不存在")
 		case errors.Is(err, ErrMessagePermissionDenied):
 			// 契约(api_spec_chat.md → private_messages/recall)：非作者撤回 → 10200 + not_resource_owner
 			httpx.WriteAPIError(w, r, "Recall", httpx.Forbidden(httpx.ReasonNotResourceOwner, "无权限撤回消息"))
 		case errors.Is(err, ErrMessageNotRecallable):
-			observability.LogBusinessError(r, "Recall", int(httpx.CodeConflict), "消息不可撤回")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "消息不可撤回"))
+			httpx.WriteBusinessError(w, r, "Recall", httpx.CodeConflict, "消息不可撤回")
 		default:
 			observability.LogServerError(r, "Recall", err)
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -177,8 +172,7 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 		return
 	default:
-		observability.LogBusinessError(r, "MarkRead", int(httpx.CodeInvalidRequest), "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteBusinessError(w, r, "MarkRead", httpx.CodeInvalidRequest, "参数错误")
 	}
 }
 

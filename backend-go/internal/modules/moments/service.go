@@ -101,8 +101,10 @@ func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (OwnerMom
 	// distance/bearing_degrees 是响应侧相对位置字段，由服务端基于 reference_point
 	// 计算（spec api_spec_types.md「位置与地理信息」）；请求侧 location 仅承载
 	// point/location_name，剥离客户端可能传入的相对字段避免原样回显。
-	req.Location.Distance = nil
-	req.Location.BearingDegrees = nil
+	if req.Location != nil {
+		req.Location.Distance = nil
+		req.Location.BearingDegrees = nil
+	}
 	if err := s.ensureDescriptionLength(ctx, req.Description); err != nil {
 		return OwnerMomentItem{}, err
 	}

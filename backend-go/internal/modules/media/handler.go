@@ -52,14 +52,11 @@ func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			switch {
 			case errors.Is(err, ErrUploadNotFound):
-				observability.LogBusinessError(r, "CompleteUpload", int(httpx.CodeNotFound), "upload_id 不存在")
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "upload_id 不存在"))
+				httpx.WriteBusinessError(w, r, "CompleteUpload", httpx.CodeNotFound, "upload_id 不存在")
 			case errors.Is(err, ErrUploadNotReady), errors.Is(err, ErrUploadConflict):
-				observability.LogBusinessError(r, "CompleteUpload", int(httpx.CodeConflict), "上传状态冲突")
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "上传状态冲突"))
+				httpx.WriteBusinessError(w, r, "CompleteUpload", httpx.CodeConflict, "上传状态冲突")
 			case errors.Is(err, ErrInvalidMediaRequest):
-				observability.LogBusinessError(r, "CompleteUpload", int(httpx.CodeInvalidRequest), "参数错误")
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+				httpx.WriteBusinessError(w, r, "CompleteUpload", httpx.CodeInvalidRequest, "参数错误")
 			default:
 				observability.LogServerError(r, "CompleteUpload", err)
 				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))

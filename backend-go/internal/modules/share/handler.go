@@ -50,11 +50,9 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidShareRequest):
-			observability.LogBusinessError(r, "Get", int(httpx.CodeInvalidRequest), "参数错误")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteBusinessError(w, r, "Get", httpx.CodeInvalidRequest, "参数错误")
 		case errors.Is(err, ErrShareNotFound):
-			observability.LogBusinessError(r, "Get", int(httpx.CodeNotFound), "资源不存在")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "资源不存在"))
+			httpx.WriteBusinessError(w, r, "Get", httpx.CodeNotFound, "资源不存在")
 		default:
 			observability.LogServerError(r, "Get", err)
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -74,8 +72,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidShareRequest):
-			observability.LogBusinessError(r, "List", int(httpx.CodeInvalidRequest), "参数错误")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteBusinessError(w, r, "List", httpx.CodeInvalidRequest, "参数错误")
 		default:
 			observability.LogServerError(r, "List", err)
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -94,16 +91,13 @@ func (h *Handler) Revoke(w http.ResponseWriter, r *http.Request) {
 	if err := h.service.Revoke(r.Context(), req); err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidShareRequest):
-			observability.LogBusinessError(r, "Revoke", int(httpx.CodeInvalidRequest), "参数错误")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteBusinessError(w, r, "Revoke", httpx.CodeInvalidRequest, "参数错误")
 		case errors.Is(err, ErrSharePermission):
 			// 隐私一致性（spec api_spec_share.md）：share 存在但无权限时统一
 			// 返回 httpx.CodeNotFound，不通过 httpx.CodeForbidden 泄露 share 的存在性。
-			observability.LogBusinessError(r, "Revoke", int(httpx.CodeNotFound), "资源不存在")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "资源不存在"))
+			httpx.WriteBusinessError(w, r, "Revoke", httpx.CodeNotFound, "资源不存在")
 		case errors.Is(err, ErrShareNotFound):
-			observability.LogBusinessError(r, "Revoke", int(httpx.CodeNotFound), "资源不存在")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "资源不存在"))
+			httpx.WriteBusinessError(w, r, "Revoke", httpx.CodeNotFound, "资源不存在")
 		default:
 			observability.LogServerError(r, "Revoke", err)
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))

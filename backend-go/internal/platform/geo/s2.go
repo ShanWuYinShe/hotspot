@@ -38,6 +38,10 @@ func IsValidPoint(p Point) bool {
 	return p.Latitude >= -90 && p.Latitude <= 90 && p.Longitude >= -180 && p.Longitude <= 180
 }
 
+// ValidateBounds 校验视口边界。East < West 一律拒绝：spec api_spec_public.md
+// map/canvas 明确「暂不支持跨国际日期变更线视口（需由客户端拆分请求）」，
+// 因此下方 computeSearchCovering 的 antimeridian 拆分分支当前从 HTTP 入口
+// 不可达——它们是 spec 放开该限制时的预留实现，勿删。
 func ValidateBounds(b Bounds) error {
 	if b.North < b.South || b.East < b.West {
 		return fmt.Errorf("invalid bounds")

@@ -113,12 +113,12 @@ type OwnerMomentItem struct {
 }
 
 type CreateMomentRequest struct {
-	Description  string   `json:"description"`
-	Location     Location `json:"location"`
-	PrivacyLevel string   `json:"privacy_level,omitempty"`
-	Tags         []string `json:"tags,omitempty"`
-	ImageFileIDs []string `json:"image_file_ids,omitempty"`
-	Mentions     []string `json:"mentions,omitempty"`
+	Description  string    `json:"description"`
+	Location     *Location `json:"location"`
+	PrivacyLevel string    `json:"privacy_level,omitempty"`
+	Tags         []string  `json:"tags,omitempty"`
+	ImageFileIDs []string  `json:"image_file_ids,omitempty"`
+	Mentions     []string  `json:"mentions,omitempty"`
 }
 
 type MomentOpenTheDoorRequest struct {

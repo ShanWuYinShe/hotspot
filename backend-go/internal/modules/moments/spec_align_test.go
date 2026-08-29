@@ -22,7 +22,7 @@ func TestSpecListCreatedReturnsOwnerView(t *testing.T) {
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "u1"})
-	if _, err := repo.Create(context.Background(), "u1", CreateMomentRequest{Description: "hi", PrivacyLevel: "private", Location: Location{LocationName: "Here"}}); err != nil {
+	if _, err := repo.Create(context.Background(), "u1", CreateMomentRequest{Description: "hi", PrivacyLevel: "private", Location: &Location{LocationName: "Here"}}); err != nil {
 		t.Fatalf("create: %v", err)
 	}
 	req := httptest.NewRequest(http.MethodPost, "/list_created", mustReader("{}"))
@@ -147,7 +147,7 @@ func TestSpecDeleteNonOwnerForbiddenReason(t *testing.T) {
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctxOther := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "u2"})
-	created, err := repo.Create(context.Background(), "u1", CreateMomentRequest{Description: "hi", Location: Location{LocationName: "Here"}})
+	created, err := repo.Create(context.Background(), "u1", CreateMomentRequest{Description: "hi", Location: &Location{LocationName: "Here"}})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}

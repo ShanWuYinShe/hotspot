@@ -84,8 +84,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleServiceError(w http.ResponseWriter, r *http.Request, method string, err error) {
 	if errors.Is(err, users.ErrUserNotFound) {
-		observability.LogBusinessError(r, method, int(httpx.CodeNotFound), "用户不存在")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "用户不存在"))
+		httpx.WriteBusinessError(w, r, method, httpx.CodeNotFound, "用户不存在")
 		return
 	}
 	observability.LogServerError(r, method, err)
