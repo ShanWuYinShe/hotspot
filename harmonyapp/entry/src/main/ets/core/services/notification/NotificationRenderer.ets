@@ -4,10 +4,11 @@
  */
 
 import { BaseSingleton } from '../../base/Singleton';
+import { DesignConstants } from '../../../constants/DesignConstants';
 import { createLogger } from '../../utils/LogManager';
 import { ErrorHandler, ErrorType, ErrorLevel } from '../../utils/ErrorHandler';
 import { ConfigMerger } from '../../utils/ConfigMerger';
-import { UI_CONSTANTS } from '../../../constants/SystemConstants';
+import { } from '../../../constants/SystemConstants';
 import { SmartNotification, NotificationAction } from './NotificationDataManager';
 import { AppThemeManager } from '../../theme/AppThemeManager';
 
@@ -551,9 +552,9 @@ export class NotificationRenderer extends BaseSingleton {
       borderColor,
       iconColor,
       shadowColor,
-      borderRadius: UI_CONSTANTS.SPACING.SM,
-      padding: UI_CONSTANTS.SPACING.MD,
-      margin: UI_CONSTANTS.SPACING.SM
+      borderRadius: DesignConstants.SPACING.SM,
+      padding: DesignConstants.SPACING.LG,
+      margin: DesignConstants.SPACING.SM
     };
   }
   

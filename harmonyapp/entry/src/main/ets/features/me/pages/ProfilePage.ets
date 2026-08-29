@@ -45,6 +45,7 @@ import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { formatCount } from '../../../core/utils/FormatUtil';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
+import { CompactStatItem, ProfileQuickAction, ProfileIntentCard, ProfileMenuItem } from '../components/ProfileContentAtoms';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
@@ -102,7 +103,6 @@ export struct ProfilePage {
   @State upgradePasswordConfirm: string = '';
   @State isUpgrading: boolean = false;
   @State hasAdminPrivileges: boolean = false;
-  @State pressedMenuItemKey: string = '';
   @State pressedThumbKey: string = '';
   @State viewedUserId: string = '';
   @State viewedUserProfile: UserItem | null = null;
@@ -1063,26 +1063,26 @@ export struct ProfilePage {
 
       ListItemGroup() {
         ListItem() {
-          this.MenuItemContent('更新位置', AppIcon.LOCATION, () => this.updateLocation())
+          ProfileMenuItem({ title: '更新位置', icon: AppIcon.LOCATION, onTap: () => this.updateLocation(), resolvedThemeId: this.resolvedThemeId })
         }
         .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
 
         ListItem() {
-          this.MenuItemContent('设置', AppIcon.SETTINGS, () => {
+          ProfileMenuItem({ title: '设置', icon: AppIcon.SETTINGS, onTap: () => {
             AppRouter.push(PageNames.SETTINGS);
-          })
+          }, resolvedThemeId: this.resolvedThemeId })
         }
         .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
 
         if (this.isAdminUser()) {
           ListItem() {
-            this.MenuItemContent('管理员工具台', AppIcon.SHIELD, () => this.openAdminPanel())
+            ProfileMenuItem({ title: '管理员工具台', icon: AppIcon.SHIELD, onTap: () => this.openAdminPanel(), resolvedThemeId: this.resolvedThemeId })
           }
           .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
         }
 
         ListItem() {
-          this.MenuItemContent('退出登录', AppIcon.CLOSE, () => this.logout())
+          ProfileMenuItem({ title: '退出登录', icon: AppIcon.CLOSE, onTap: () => this.logout(), resolvedThemeId: this.resolvedThemeId })
         }
         .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
       }
@@ -1185,12 +1185,12 @@ export struct ProfilePage {
 
             // 菜单项
             Column({ space: 0 }) {
-              this.MenuItemContent('更新位置', AppIcon.LOCATION, () => this.updateLocation())
-              this.MenuItemContent('设置', AppIcon.SETTINGS, () => { AppRouter.push(PageNames.SETTINGS); })
+              ProfileMenuItem({ title: '更新位置', icon: AppIcon.LOCATION, onTap: () => this.updateLocation(), resolvedThemeId: this.resolvedThemeId })
+              ProfileMenuItem({ title: '设置', icon: AppIcon.SETTINGS, onTap: () => { AppRouter.push(PageNames.SETTINGS); }, resolvedThemeId: this.resolvedThemeId })
               if (this.isAdminUser()) {
-                this.MenuItemContent('管理员工具台', AppIcon.SHIELD, () => this.openAdminPanel())
+                ProfileMenuItem({ title: '管理员工具台', icon: AppIcon.SHIELD, onTap: () => this.openAdminPanel(), resolvedThemeId: this.resolvedThemeId })
               }
-              this.MenuItemContent('退出登录', AppIcon.CLOSE, () => this.logout())
+              ProfileMenuItem({ title: '退出登录', icon: AppIcon.CLOSE, onTap: () => this.logout(), resolvedThemeId: this.resolvedThemeId })
             }
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.SHAPE.CARD)
@@ -1537,15 +1537,15 @@ export struct ProfilePage {
         .onClick(() => this.startEdit())
 
       Row({ space: DesignConstants.SPACING.MD }) {
-        this.ProfileQuickAction(AppIcon.HEART, '关系', () => this.openRelationshipHub())
-        this.ProfileQuickAction(AppIcon.SHARE, '分享', () => this.openMyShares())
-        this.ProfileQuickAction(AppIcon.SETTINGS, '设置', () => this.openSettingsCenter())
+        ProfileQuickAction({ icon: AppIcon.HEART, label: '关系', onTap: () => this.openRelationshipHub(), resolvedThemeId: this.resolvedThemeId })
+        ProfileQuickAction({ icon: AppIcon.SHARE, label: '分享', onTap: () => this.openMyShares(), resolvedThemeId: this.resolvedThemeId })
+        ProfileQuickAction({ icon: AppIcon.SETTINGS, label: '设置', onTap: () => this.openSettingsCenter(), resolvedThemeId: this.resolvedThemeId })
       }
       .width('100%')
 
       Row({ space: DesignConstants.SPACING.MD }) {
-        this.ProfileIntentCard('隐私偏好', '控制资料可见范围与互动设置', AppIcon.SHIELD, () => this.openPrivacySettings())
-        this.ProfileIntentCard('安全设置', '管理密码、登录设备与账号安全', AppIcon.LOCK, () => this.openSafetySettings())
+        ProfileIntentCard({ title: '隐私偏好', description: '控制资料可见范围与互动设置', icon: AppIcon.SHIELD, onTap: () => this.openPrivacySettings(), resolvedThemeId: this.resolvedThemeId })
+        ProfileIntentCard({ title: '安全设置', description: '管理密码、登录设备与账号安全', icon: AppIcon.LOCK, onTap: () => this.openSafetySettings(), resolvedThemeId: this.resolvedThemeId })
       }
       .width('100%')
     }
@@ -1634,175 +1634,14 @@ export struct ProfilePage {
   private StatsContent(): void {
     Column({ space: DesignConstants.SPACING.MD }) {
       Row({ space: DesignConstants.SPACING.SM }) {
-        this.CompactStatItem(AppIcon.CAMERA, formatCount(this.myMomentsCount), '瞬间', () => this.openMyMoments())
-        this.CompactStatItem(AppIcon.GROUP, formatCount(this.myGroupsCount), '群组', () => this.openMyGroups())
-        this.CompactStatItem(AppIcon.PERSON, formatCount(this.myFollowingCount), '关注', () => this.openRelationshipHub())
-        this.CompactStatItem(AppIcon.HEART, formatCount(this.myFollowersCount), '粉丝', () => this.openRelationshipHub())
+        CompactStatItem({ icon: AppIcon.CAMERA, value: formatCount(this.myMomentsCount), label: '瞬间', onTap: () => this.openMyMoments(), resolvedThemeId: this.resolvedThemeId })
+        CompactStatItem({ icon: AppIcon.GROUP, value: formatCount(this.myGroupsCount), label: '群组', onTap: () => this.openMyGroups(), resolvedThemeId: this.resolvedThemeId })
+        CompactStatItem({ icon: AppIcon.PERSON, value: formatCount(this.myFollowingCount), label: '关注', onTap: () => this.openRelationshipHub(), resolvedThemeId: this.resolvedThemeId })
+        CompactStatItem({ icon: AppIcon.HEART, value: formatCount(this.myFollowersCount), label: '粉丝', onTap: () => this.openRelationshipHub(), resolvedThemeId: this.resolvedThemeId })
       }
       .width('100%')
     }
     .width('100%')
-  }
-
-  @Builder
-  private CompactStatItem(icon: AppIcon, value: string, label: string, onTap: () => void): void {
-    Button() {
-      Column({ space: DesignConstants.SPACING.XS }) {
-        Text() {
-          SymbolSpan($r(icon))
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([this.getAccentBackground()])
-        }
-        Text(value)
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(this.getPrimaryTextColor())
-        Text(label)
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(this.getSecondaryTextColor())
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Center)
-      .justifyContent(FlexAlign.Center)
-    }
-    .type(ButtonType.Normal)
-    .backgroundColor(this.getSurfaceBackground())
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-    .shadow(this.getProfileVisualStyle().card.shadow)
-    .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-    .layoutWeight(1)
-    .stateEffect(true)
-    .onClick(onTap)
-  }
-
-  @Builder
-  private ProfileQuickAction(icon: AppIcon, label: string, onTap: () => void): void {
-    Button() {
-      Column({ space: DesignConstants.SPACING.SM }) {
-        Row() {
-          Text() {
-            SymbolSpan($r(icon))
-              .fontSize(this.getProfileVisualStyle().quickAction.iconSize)
-              .fontColor([this.getAccentBackground()])
-          }
-        }
-        .width(this.getProfileVisualStyle().quickAction.iconWrapperSize)
-        .height(this.getProfileVisualStyle().quickAction.iconWrapperSize)
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .backgroundColor(this.getSurfaceSubtle())
-        .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
-
-        Text(label)
-          .fontSize(this.getProfileVisualStyle().quickAction.labelFontSize)
-          .fontColor(this.getSecondaryTextColor())
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Center)
-    }
-    .type(ButtonType.Normal)
-    .backgroundColor(this.getProfileVisualStyle().quickAction.backgroundColor)
-    .borderRadius(this.getProfileVisualStyle().quickAction.borderRadius)
-    .border({ width: this.getProfileVisualStyle().quickAction.borderWidth, color: this.getProfileVisualStyle().quickAction.borderColor })
-    .shadow(this.getProfileVisualStyle().quickAction.shadow)
-    .padding(this.getProfileVisualStyle().quickAction.padding)
-    .layoutWeight(1)
-    .onClick(onTap)
-  }
-
-  @Builder
-  private ProfileIntentCard(title: string, description: string, icon: AppIcon, onTap: () => void): void {
-    Button() {
-      Column({ space: DesignConstants.SPACING.MD }) {
-        Row() {
-          Text() {
-            SymbolSpan($r(icon))
-              .fontSize(DesignConstants.FONT.SIZE.XL)
-              .fontColor([this.getAccentBackground()])
-          }
-        }
-        .width(this.getProfileVisualStyle().intentCard.iconWrapperSize)
-        .height(this.getProfileVisualStyle().intentCard.iconWrapperSize)
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .backgroundColor(this.getSurfaceSubtle())
-        .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
-
-        Text(title)
-          .fontSize(this.getProfileVisualStyle().intentCard.titleFontSize)
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(this.getPrimaryTextColor())
-          .width('100%')
-          .textAlign(TextAlign.Start)
-
-        Text(description)
-          .fontSize(this.getProfileVisualStyle().intentCard.descriptionFontSize)
-          .lineHeight(DesignConstants.FONT.LINE_HEIGHT.LG)
-          .fontColor(this.getSecondaryTextColor())
-          .width('100%')
-          .textAlign(TextAlign.Start)
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
-    }
-    .type(ButtonType.Normal)
-    .layoutWeight(1)
-    .backgroundColor(this.getProfileVisualStyle().intentCard.backgroundColor)
-    .borderRadius(this.getProfileVisualStyle().intentCard.borderRadius)
-    .shadow(this.getProfileVisualStyle().intentCard.shadow)
-    .border({ width: this.getProfileVisualStyle().intentCard.borderWidth, color: this.getProfileVisualStyle().intentCard.borderColor })
-    .padding(this.getProfileVisualStyle().intentCard.padding)
-    .height(this.getProfileVisualStyle().intentCard.minHeight)
-    .onClick(onTap)
-  }
-
-  @Builder
-  private MenuItemContent(title: string, icon: AppIcon, onTap: () => void): void {
-    Row({ space: DesignConstants.SPACING.MD }) {
-      Row() {
-        Text() {
-          SymbolSpan($r(icon))
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([this.getAccentBackground()])
-        }
-      }
-      .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-      .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(this.getSurfaceSubtle())
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
-
-      Text(title)
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontColor(this.getPrimaryTextColor())
-        .layoutWeight(1)
-
-      Text() {
-        SymbolSpan($r(AppIcon.FORWARD))
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor([this.getSecondaryTextColor()])
-      }
-    }
-    .width('100%')
-    .padding({
-      left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD
-    })
-    .scale(this.pressedMenuItemKey === title ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
-    .animation({ curve: curves.springMotion(
-      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-    ) })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.pressedMenuItemKey = title;
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.pressedMenuItemKey = '';
-      }
-    })
-    .onClick(onTap)
   }
 
 // ==================== 快速体验弹窗 ====================

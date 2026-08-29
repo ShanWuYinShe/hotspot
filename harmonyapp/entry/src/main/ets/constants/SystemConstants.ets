@@ -234,11 +234,6 @@ interface SpacingConfig {
 /**
  * UI常量接口
  */
-interface UIConstants {
-  ANIMATION: AnimationConfig;
-  SIZES: SizeConfig;
-  SPACING: SpacingConfig;
-}
 
 /**
  * 图片配置接口
@@ -354,7 +349,6 @@ interface SystemConstantsInterface {
   STORAGE: StorageConstants;
   LOG: LogConstants;
   NOTIFICATION: NotificationConstants;
-  UI: UIConstants;
   MEDIA: MediaConstants;
   SECURITY: SecurityConstants;
   LOCATION: LocationConstants;
@@ -516,34 +510,6 @@ export const NOTIFICATION_CONSTANTS: NotificationConstants = {
 /**
  * UI相关常量
  */
-export const UI_CONSTANTS: UIConstants = {
-  // 动画配置
-  ANIMATION: {
-    DURATION_FAST: 200,                // 快速动画时长 (ms)
-    DURATION_NORMAL: 300,              // 普通动画时长 (ms)
-    DURATION_SLOW: 500,                // 慢速动画时长 (ms)
-    EASING: 'cubic-bezier(0.4, 0.0, 0.2, 1)', // 缓动函数
-  },
-  
-  // 尺寸配置
-  SIZES: {
-    ICON_SMALL: 16,                    // 小图标尺寸
-    ICON_MEDIUM: 24,                   // 中等图标尺寸
-    ICON_LARGE: 32,                    // 大图标尺寸
-    AVATAR_SMALL: 32,                  // 小头像尺寸
-    AVATAR_MEDIUM: 48,                 // 中等头像尺寸
-    AVATAR_LARGE: 64,                  // 大头像尺寸
-  },
-  
-  // 间距配置
-  SPACING: {
-    XS: 4,                             // 极小间距
-    SM: 8,                             // 小间距
-    MD: 16,                            // 中等间距
-    LG: 24,                            // 大间距
-    XL: 32,                            // 极大间距
-  }
-};
 
 /**
  * 媒体相关常量
@@ -631,7 +597,6 @@ export const SYSTEM_CONSTANTS: SystemConstantsInterface = {
   STORAGE: STORAGE_CONSTANTS,
   LOG: LOG_CONSTANTS,
   NOTIFICATION: NOTIFICATION_CONSTANTS,
-  UI: UI_CONSTANTS,
   MEDIA: MEDIA_CONSTANTS,
   SECURITY: SECURITY_CONSTANTS,
   LOCATION: LOCATION_CONSTANTS,
