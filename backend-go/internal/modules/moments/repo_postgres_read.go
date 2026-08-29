@@ -12,10 +12,7 @@ import (
 )
 
 func (r *PostgresRepository) Get(ctx context.Context, momentID string) (MomentItem, bool, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return MomentItem{}, false, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return MomentItem{}, false, persistence.ErrNotImplemented
 	}
@@ -40,10 +37,7 @@ func (r *PostgresRepository) Get(ctx context.Context, momentID string) (MomentIt
 }
 
 func (r *PostgresRepository) ListMine(ctx context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return PaginatedMoments{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return PaginatedMoments{}, persistence.ErrNotImplemented
 	}
@@ -129,10 +123,10 @@ func decodeMomentMineCursor(cursorValue string) (any, string, error) {
 }
 
 func (r *PostgresRepository) LoadMyState(ctx context.Context, momentID, userID string) *MyMomentState {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" || userID == "" {
+	if userID == "" {
 		return nil
 	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil
 	}
@@ -197,7 +191,7 @@ func scanMomentRowParts(scanner interface{ Scan(...any) error }, withViewerState
 	return item, isFavorited, nil
 }
 
-func loadMomentTags(ctx context.Context, queryable persistence.QueryableDB, momentIDs []string) (map[string][]string, error) {
+func loadMomentTags(ctx context.Context, queryable persistence.Queryable, momentIDs []string) (map[string][]string, error) {
 	if len(momentIDs) == 0 {
 		return map[string][]string{}, nil
 	}
@@ -220,7 +214,7 @@ func loadMomentTags(ctx context.Context, queryable persistence.QueryableDB, mome
 	return tagsByMomentID, nil
 }
 
-func loadMomentMentions(ctx context.Context, queryable persistence.QueryableDB, momentIDs []string) (map[string][]string, error) {
+func loadMomentMentions(ctx context.Context, queryable persistence.Queryable, momentIDs []string) (map[string][]string, error) {
 	if len(momentIDs) == 0 {
 		return map[string][]string{}, nil
 	}

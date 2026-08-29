@@ -14,12 +14,8 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 	return &PostgresRepository{factory: factory}
 }
 
-func (r *PostgresRepository) queryable() (persistence.QueryableDB, bool) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, false
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	return queryable, ok
+func (r *PostgresRepository) queryable(ctx context.Context) (persistence.Queryable, bool) {
+	return persistence.RepoQueryable(ctx, r.factory)
 }
 
 // txQueryable returns the transaction-bound Queryable when one is in effect
@@ -31,5 +27,5 @@ func (r *PostgresRepository) txQueryable(ctx context.Context) (persistence.Query
 	if q, ok := persistence.QueryableFromContext(ctx); ok {
 		return q, true
 	}
-	return r.queryable()
+	return r.queryable(ctx)
 }

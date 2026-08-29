@@ -45,10 +45,7 @@ func decodeReportListCursor(raw string) (time.Time, string, *httpx.APIError) {
 }
 
 func (r *PostgresRepository) List(ctx context.Context, userID string, req ListReportsRequest) (PaginatedReports, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return PaginatedReports{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return PaginatedReports{}, persistence.ErrNotImplemented
 	}

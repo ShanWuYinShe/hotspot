@@ -21,10 +21,7 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 }
 
 func (r *PostgresRepository) Send(ctx context.Context, req SendGroupMessageRequest) (MessageSentResult, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return MessageSentResult{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return MessageSentResult{}, persistence.ErrNotImplemented
 	}
@@ -58,10 +55,7 @@ func (r *PostgresRepository) Send(ctx context.Context, req SendGroupMessageReque
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, req UpdateGroupMessageRequest) (MessageEventMeta, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return MessageEventMeta{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
@@ -95,10 +89,7 @@ func (r *PostgresRepository) Update(ctx context.Context, req UpdateGroupMessageR
 }
 
 func (r *PostgresRepository) Recall(ctx context.Context, req RecallGroupMessageRequest) (MessageEventMeta, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return MessageEventMeta{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
@@ -138,10 +129,7 @@ func (r *PostgresRepository) Recall(ctx context.Context, req RecallGroupMessageR
 // RecallAsAdmin recalls a group message regardless of sender, with no
 // recall-window enforcement (admin path, spec api_spec_group.md).
 func (r *PostgresRepository) RecallAsAdmin(ctx context.Context, messageID string) (MessageEventMeta, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return MessageEventMeta{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
@@ -163,10 +151,7 @@ func (r *PostgresRepository) RecallAsAdmin(ctx context.Context, messageID string
 }
 
 func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req MarkGroupMessagesReadRequest) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -185,10 +170,7 @@ func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req 
 }
 
 func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) ([]string, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, persistence.ErrNotImplemented
 	}
@@ -212,10 +194,7 @@ func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) ([]
 }
 
 func (r *PostgresRepository) GetReadCount(ctx context.Context, groupID string, messageID string) (int, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return 0, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return 0, persistence.ErrNotImplemented
 	}
@@ -227,10 +206,7 @@ func (r *PostgresRepository) GetReadCount(ctx context.Context, groupID string, m
 }
 
 func (r *PostgresRepository) LatestMessageID(ctx context.Context, groupID string) (string, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return "", persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return "", persistence.ErrNotImplemented
 	}
@@ -268,10 +244,7 @@ func (r *PostgresRepository) FilterMemberIDs(ctx context.Context, groupID string
 	if len(userIDs) == 0 {
 		return nil, nil
 	}
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, persistence.ErrNotImplemented
 	}
@@ -292,10 +265,7 @@ func (r *PostgresRepository) FilterMemberIDs(ctx context.Context, groupID string
 }
 
 func (r *PostgresRepository) IsMember(ctx context.Context, groupID, userID string) (bool, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return false, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return false, persistence.ErrNotImplemented
 	}
@@ -310,7 +280,7 @@ func (r *PostgresRepository) IsMember(ctx context.Context, groupID, userID strin
 }
 
 func (r *PostgresRepository) MemberMuteStatus(ctx context.Context, groupID, userID string) (isMuted bool, mutedUntil string, found bool, err error) {
-	queryable, ok := r.getQueryable()
+	queryable, ok := r.getQueryable(ctx)
 	if !ok {
 		return false, "", false, persistence.ErrNotImplemented
 	}
@@ -324,7 +294,7 @@ func (r *PostgresRepository) MemberMuteStatus(ctx context.Context, groupID, user
 }
 
 func (r *PostgresRepository) GetMessageForReply(ctx context.Context, messageID string) (*MessageBrief, bool, error) {
-	queryable, ok := r.getQueryable()
+	queryable, ok := r.getQueryable(ctx)
 	if !ok {
 		return nil, false, persistence.ErrNotImplemented
 	}
@@ -349,7 +319,7 @@ func (r *PostgresRepository) GetMessageForReply(ctx context.Context, messageID s
 }
 
 func (r *PostgresRepository) MessageExists(ctx context.Context, messageID string) (bool, string, error) {
-	queryable, ok := r.getQueryable()
+	queryable, ok := r.getQueryable(ctx)
 	if !ok {
 		return false, "", persistence.ErrNotImplemented
 	}
@@ -366,7 +336,7 @@ func (r *PostgresRepository) MessageExists(ctx context.Context, messageID string
 }
 
 func (r *PostgresRepository) MessageGroupID(ctx context.Context, messageID string) (string, bool, error) {
-	queryable, ok := r.getQueryable()
+	queryable, ok := r.getQueryable(ctx)
 	if !ok {
 		return "", false, persistence.ErrNotImplemented
 	}
@@ -382,7 +352,7 @@ func (r *PostgresRepository) MessageGroupID(ctx context.Context, messageID strin
 }
 
 func (r *PostgresRepository) GetGroupName(ctx context.Context, groupID string) (string, bool, error) {
-	queryable, ok := r.getQueryable()
+	queryable, ok := r.getQueryable(ctx)
 	if !ok {
 		return "", false, persistence.ErrNotImplemented
 	}
@@ -402,7 +372,7 @@ func (r *PostgresRepository) GetGroupName(ctx context.Context, groupID string) (
 // sender_user_id is returned as "" — the service refuses to mutate such
 // messages.
 func (r *PostgresRepository) LookupMessageMeta(ctx context.Context, messageID string) (MessageOwnerMeta, bool, error) {
-	queryable, ok := r.getQueryable()
+	queryable, ok := r.getQueryable(ctx)
 	if !ok {
 		return MessageOwnerMeta{}, false, persistence.ErrNotImplemented
 	}
@@ -425,7 +395,7 @@ func (r *PostgresRepository) LookupMessageMeta(ctx context.Context, messageID st
 // GetMessageReportSnapshot 按 message_id 读取群消息真值（举报快照的生成依据，
 // spec api_spec_types.md ReportSnapshot：服务端生成，管理员审核基于快照）。
 func (r *PostgresRepository) GetMessageReportSnapshot(ctx context.Context, messageID string) (MessageReportSnapshot, bool, error) {
-	queryable, ok := r.getQueryable()
+	queryable, ok := r.getQueryable(ctx)
 	if !ok {
 		return MessageReportSnapshot{}, false, persistence.ErrNotImplemented
 	}
@@ -440,18 +410,14 @@ func (r *PostgresRepository) GetMessageReportSnapshot(ctx context.Context, messa
 	return snapshot, true, nil
 }
 
-func (r *PostgresRepository) getQueryable() (persistence.QueryableDB, bool) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, false
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	return queryable, ok
+func (r *PostgresRepository) getQueryable(ctx context.Context) (persistence.Queryable, bool) {
+	return persistence.RepoQueryable(ctx, r.factory)
 }
 
 // GetMediaForMessage 取聊天媒体元数据（WS media 负载）。owner 过滤确保只能
 // 引用自己上传的 completed 文件（与私聊侧语义一致）。
 func (r *PostgresRepository) GetMediaForMessage(ctx context.Context, fileID, ownerUserID string) (map[string]any, bool, error) {
-	queryable, ok := r.getQueryable()
+	queryable, ok := r.getQueryable(ctx)
 	if !ok {
 		return nil, false, persistence.ErrNotImplemented
 	}

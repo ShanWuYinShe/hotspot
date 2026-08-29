@@ -18,10 +18,7 @@ import (
 )
 
 func (r *PostgresRepository) GetProfile(ctx context.Context, userID string) (MyProfile, bool, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return MyProfile{}, false, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return MyProfile{}, false, persistence.ErrNotImplemented
 	}
@@ -41,10 +38,7 @@ func (r *PostgresRepository) GetProfile(ctx context.Context, userID string) (MyP
 }
 
 func (r *PostgresRepository) GetSettings(ctx context.Context, userID string) (UserSettings, bool, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return UserSettings{}, false, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return UserSettings{}, false, persistence.ErrNotImplemented
 	}
@@ -61,10 +55,7 @@ func (r *PostgresRepository) GetSettings(ctx context.Context, userID string) (Us
 }
 
 func (r *PostgresRepository) GetSettingsBatch(ctx context.Context, userIDs []string) (map[string]UserSettings, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, persistence.ErrNotImplemented
 	}
@@ -94,10 +85,7 @@ func (r *PostgresRepository) GetSettingsBatch(ctx context.Context, userIDs []str
 }
 
 func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsersRequest) (PaginatedProfiles, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return PaginatedProfiles{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return PaginatedProfiles{}, persistence.ErrNotImplemented
 	}
@@ -226,7 +214,7 @@ func isPhoneFormatKeyword(keyword string) bool {
 }
 
 func (r *PostgresRepository) Relationship(ctx context.Context, userID, targetUserID string) (Relationship, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return Relationship{}, persistence.ErrNotImplemented
 	}
 	following, blocked, _, _, _, _, err := r.getRelationFields(ctx, userID, targetUserID)
@@ -243,10 +231,7 @@ func (r *PostgresRepository) Relationship(ctx context.Context, userID, targetUse
 // BlockedEitherWay 一次往返解析 a、b 双向拉黑状态（callerBlocked = a 拉黑 b）。
 // 发送/typing 等热路径用它替代两次 Relationship 调用（4 条 SQL → 1 条）。
 func (r *PostgresRepository) BlockedEitherWay(ctx context.Context, aUserID, bUserID string) (callerBlocked, targetBlocked bool, err error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return false, false, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return false, false, persistence.ErrNotImplemented
 	}
@@ -263,7 +248,7 @@ func (r *PostgresRepository) BlockedEitherWay(ctx context.Context, aUserID, bUse
 // Search previously triggered by calling Relationship once per profile.
 func (r *PostgresRepository) RelationshipBatch(ctx context.Context, fromUserID string, toUserIDs []string) (map[string]Relationship, error) {
 	result := make(map[string]Relationship, len(toUserIDs))
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return result, persistence.ErrNotImplemented
 	}
 	if len(toUserIDs) == 0 {
@@ -570,10 +555,7 @@ func listUserMomentsPostgres(ctx context.Context, factory *persistence.Factory, 
 }
 
 func listReactedMomentsPostgres(ctx context.Context, factory *persistence.Factory, userID string, limit int, cursor string, viewerUserID string) (momenttypes.PaginatedMoments, error) {
-	if factory == nil || factory.DB == nil || factory.Config.PostgresDSN == "" {
-		return momenttypes.PaginatedMoments{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, factory)
 	if !ok {
 		return momenttypes.PaginatedMoments{}, persistence.ErrNotImplemented
 	}
@@ -649,7 +631,7 @@ func scanUserProfileRow(scanner interface{ Scan(...any) error }) (MyProfile, err
 	return profile, nil
 }
 
-func countUserStats(ctx context.Context, queryable persistence.QueryableDB, userID string) (UserStats, error) {
+func countUserStats(ctx context.Context, queryable persistence.Queryable, userID string) (UserStats, error) {
 	var stats UserStats
 	if err := queryable.QueryRow(ctx, queryCountUserStats, userID).Scan(&stats.MomentsCount, &stats.FriendsCount, &stats.FollowersCount, &stats.FollowingCount, &stats.GroupsCount); err != nil {
 		return UserStats{}, err
@@ -834,7 +816,7 @@ func decodeUserCursor(cursor string) (any, string, error) {
 	return decodeUserMomentCursor(cursor)
 }
 
-func loadUserMomentTags(ctx context.Context, queryable persistence.QueryableDB, momentIDs []string) (map[string][]string, error) {
+func loadUserMomentTags(ctx context.Context, queryable persistence.Queryable, momentIDs []string) (map[string][]string, error) {
 	if len(momentIDs) == 0 {
 		return map[string][]string{}, nil
 	}
@@ -864,7 +846,7 @@ func timePtrToAny(value *time.Time) any {
 	return value.UTC().Format(time.RFC3339)
 }
 
-func loadUserProfileTags(ctx context.Context, queryable persistence.QueryableDB, userID string) ([]string, error) {
+func loadUserProfileTags(ctx context.Context, queryable persistence.Queryable, userID string) ([]string, error) {
 	rows, err := queryable.Query(ctx, queryListUserProfileTags, userID)
 	if err != nil {
 		return nil, err
@@ -887,7 +869,7 @@ func loadUserProfileTags(ctx context.Context, queryable persistence.QueryableDB,
 // loadUserProfileTagsBatch fetches profile tags for many user IDs in one
 // query. It returns a userID -> []tags map; user IDs with no tags are absent
 // from the map (callers should treat absence as an empty slice).
-func loadUserProfileTagsBatch(ctx context.Context, queryable persistence.QueryableDB, userIDs []string) (map[string][]string, error) {
+func loadUserProfileTagsBatch(ctx context.Context, queryable persistence.Queryable, userIDs []string) (map[string][]string, error) {
 	result := make(map[string][]string, len(userIDs))
 	if len(userIDs) == 0 {
 		return result, nil

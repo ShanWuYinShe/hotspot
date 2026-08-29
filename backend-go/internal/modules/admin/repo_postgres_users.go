@@ -39,7 +39,7 @@ func strPtr(value string) *string {
 }
 
 func (r *PostgresRepository) SearchUsers(ctx context.Context, req AdminUserSearchRequest) (adminUserPage, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return adminUserPage{}, persistence.ErrNotImplemented
 	}
@@ -90,7 +90,7 @@ func (r *PostgresRepository) SearchUsers(ctx context.Context, req AdminUserSearc
 }
 
 func (r *PostgresRepository) GetUser(ctx context.Context, userID string) (AdminUserItem, bool, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return AdminUserItem{}, false, persistence.ErrNotImplemented
 	}
@@ -105,7 +105,7 @@ func (r *PostgresRepository) GetUser(ctx context.Context, userID string) (AdminU
 }
 
 func (r *PostgresRepository) GetUserBanState(ctx context.Context, userID string) (UserBanState, bool, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return UserBanState{}, false, persistence.ErrNotImplemented
 	}
@@ -124,7 +124,7 @@ func (r *PostgresRepository) GetUserBanState(ctx context.Context, userID string)
 }
 
 func (r *PostgresRepository) SetUserBanState(ctx context.Context, userID string, state UserBanState) error {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -152,7 +152,7 @@ func (r *PostgresRepository) SetUserBanState(ctx context.Context, userID string,
 }
 
 func (r *PostgresRepository) ListUserSessions(ctx context.Context, userID string) ([]string, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return nil, persistence.ErrNotImplemented
 	}
@@ -176,7 +176,7 @@ func (r *PostgresRepository) ListUserSessions(ctx context.Context, userID string
 }
 
 func (r *PostgresRepository) RevokeSession(ctx context.Context, sessionID string) error {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -194,10 +194,7 @@ func (r *PostgresRepository) IsBanned(ctx context.Context, userID string) (bool,
 // ListUserIDsAfter 按 user_id 升序 keyset 取一批未注销用户 id（公告 fanout
 // 全量遍历用，limit 由调用方控制不受 NormalizeLimit 约束）。
 func (r *PostgresRepository) ListUserIDsAfter(ctx context.Context, afterUserID string, limit int) ([]string, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, persistence.ErrNotImplemented
 	}

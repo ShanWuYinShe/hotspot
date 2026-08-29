@@ -25,7 +25,7 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 }
 
 func (r *PostgresRepository) Create(ctx context.Context, userID string, req CreateMomentRequest) (MomentItem, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return MomentItem{}, persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
@@ -129,10 +129,7 @@ func (r *PostgresRepository) DecrementCommentCount(ctx context.Context, momentID
 }
 
 func (r *PostgresRepository) IncrementSharesCount(ctx context.Context, momentID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -140,10 +137,7 @@ func (r *PostgresRepository) IncrementSharesCount(ctx context.Context, momentID 
 }
 
 func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsRequest, viewerID string) (PaginatedMoments, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return PaginatedMoments{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return PaginatedMoments{}, persistence.ErrNotImplemented
 	}
@@ -353,10 +347,7 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 }
 
 func (r *PostgresRepository) Delete(ctx context.Context, momentID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -367,10 +358,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, momentID string) error 
 }
 
 func (r *PostgresRepository) Favorite(ctx context.Context, userID string, momentID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -378,10 +366,7 @@ func (r *PostgresRepository) Favorite(ctx context.Context, userID string, moment
 }
 
 func (r *PostgresRepository) Unfavorite(ctx context.Context, userID string, momentID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -393,10 +378,7 @@ func (r *PostgresRepository) NotificationContext(ctx context.Context, momentID s
 }
 
 func (r *PostgresRepository) ListFavorites(ctx context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return PaginatedMoments{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return PaginatedMoments{}, persistence.ErrNotImplemented
 	}
@@ -449,10 +431,7 @@ func (r *PostgresRepository) ListFavorites(ctx context.Context, userID string, l
 }
 
 func (r *PostgresRepository) ListFavoriteUserIDs(ctx context.Context, momentID string) ([]string, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, persistence.ErrNotImplemented
 	}
@@ -521,14 +500,7 @@ func decodeMomentFavoriteCursor(cursorValue string) (any, string, error) {
 // transaction bound to ctx when present, otherwise the shared pool. Returns
 // ok=false when persistence is not configured (in-memory mode).
 func queryable(ctx context.Context, factory *persistence.Factory) (persistence.Queryable, bool) {
-	if q, ok := persistence.QueryableFromContext(ctx); ok {
-		return q, true
-	}
-	if factory == nil || factory.DB == nil || factory.Config.PostgresDSN == "" {
-		return nil, false
-	}
-	q, ok := factory.DB.(persistence.QueryableDB)
-	return q, ok
+	return persistence.RepoQueryable(ctx, factory)
 }
 
 // escapeLikePattern 转义 LIKE/ILIKE 的 \、%、_ 通配符（配 ESCAPE '\'）。

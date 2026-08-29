@@ -16,10 +16,7 @@ import (
 )
 
 func (r *PostgresRepository) Get(ctx context.Context, groupID string) (GroupItem, bool, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return GroupItem{}, false, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return GroupItem{}, false, persistence.ErrNotImplemented
 	}
@@ -50,10 +47,7 @@ func (r *PostgresRepository) Get(ctx context.Context, groupID string) (GroupItem
 // cursors — that logic lives in the Go search pipeline shared with the
 // in-memory repository.
 func (r *PostgresRepository) Search(ctx context.Context, req SearchGroupsRequest) (PaginatedGroups, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return PaginatedGroups{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return PaginatedGroups{}, persistence.ErrNotImplemented
 	}
@@ -163,14 +157,14 @@ func scanSearchGroupRow(scanner interface{ Scan(...any) error }) (GroupItem, err
 	return item, nil
 }
 
-func getGroupBase(ctx context.Context, queryable persistence.QueryableDB, groupID string) (GroupItem, error) {
+func getGroupBase(ctx context.Context, queryable persistence.Queryable, groupID string) (GroupItem, error) {
 	return scanGroupBase(queryable.QueryRow(ctx, queryGetGroup, groupID))
 }
 
 // loadGroupMembership 读取单个群的成员状态。注意 UnreadCount 恒为 0、
 // IsPinned 恒为 false：spec 未定义未读数/置顶的存储与来源，属于已知限制，
 // 勿将这两个字段当作真实数据使用。
-func loadGroupMembership(ctx context.Context, queryable persistence.QueryableDB, groupID, userID string) (*GroupViewerState, error) {
+func loadGroupMembership(ctx context.Context, queryable persistence.Queryable, groupID, userID string) (*GroupViewerState, error) {
 	if userID == "" {
 		return nil, nil
 	}
@@ -189,7 +183,7 @@ func loadGroupMembership(ctx context.Context, queryable persistence.QueryableDB,
 
 // loadGroupMemberships 批量读取成员状态（同 loadGroupMembership，未读数/置顶
 // 为已知限制，恒为 0/false）。
-func loadGroupMemberships(ctx context.Context, queryable persistence.QueryableDB, groupIDs []string, userID string) (map[string]*GroupViewerState, error) {
+func loadGroupMemberships(ctx context.Context, queryable persistence.Queryable, groupIDs []string, userID string) (map[string]*GroupViewerState, error) {
 	result := make(map[string]*GroupViewerState, len(groupIDs))
 	if userID == "" || len(groupIDs) == 0 {
 		return result, nil
@@ -233,7 +227,7 @@ func groupMutedUntil(value string) *string {
 	return &v
 }
 
-func countGroupMembers(ctx context.Context, queryable persistence.QueryableDB, groupID string) (int, error) {
+func countGroupMembers(ctx context.Context, queryable persistence.Queryable, groupID string) (int, error) {
 	var count int
 	if err := queryable.QueryRow(ctx, queryCountGroupMembers, groupID).Scan(&count); err != nil {
 		return 0, err

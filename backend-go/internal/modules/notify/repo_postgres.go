@@ -20,21 +20,11 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 // The fallback matters for tests, where RunInTransaction detects a stub backend
 // and runs fn without injecting a tx.
 func (r *PostgresRepository) txQueryable(ctx context.Context) (persistence.Queryable, bool) {
-	if q, ok := persistence.QueryableFromContext(ctx); ok {
-		return q, true
-	}
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, false
-	}
-	q, ok := r.factory.DB.(persistence.QueryableDB)
-	return q, ok
+	return persistence.RepoQueryable(ctx, r.factory)
 }
 
 func (r *PostgresRepository) Append(ctx context.Context, userID string, item NotifyItem) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -47,11 +37,8 @@ func (r *PostgresRepository) Append(ctx context.Context, userID string, item Not
 }
 
 func (r *PostgresRepository) AppendMany(ctx context.Context, userIDs []string, item NotifyItem) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		// 与单条 Append 的降级语义一致：显式报告未实现，而非静默丢弃公告。
-		return persistence.ErrNotImplemented
-	}
-	if _, ok := r.factory.DB.(persistence.QueryableDB); !ok {
+	// 与单条 Append 的降级语义一致：显式报告未实现，而非静默丢弃公告。
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return persistence.ErrNotImplemented
 	}
 	// Filter empty ids up front so the batch insert doesn't waste a row.
@@ -84,10 +71,7 @@ func (r *PostgresRepository) AppendMany(ctx context.Context, userIDs []string, i
 }
 
 func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, ids []string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -95,10 +79,7 @@ func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, ids 
 }
 
 func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}

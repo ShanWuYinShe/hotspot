@@ -13,10 +13,7 @@ import (
 )
 
 func (r *PostgresRepository) ListMyInvites(ctx context.Context, userID string, status *ApplicationStatus, limit int, cursor string) ([]GroupInviteItem, string, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, "", persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, "", persistence.ErrNotImplemented
 	}
@@ -63,7 +60,7 @@ func (r *PostgresRepository) ListMyInvites(ctx context.Context, userID string, s
 }
 
 func (r *PostgresRepository) AcceptInvite(ctx context.Context, userID string, inviteID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return persistence.ErrNotImplemented
 	}
 	invite, err := r.loadInvite(ctx, inviteID)
@@ -95,10 +92,7 @@ func (r *PostgresRepository) AcceptInvite(ctx context.Context, userID string, in
 }
 
 func (r *PostgresRepository) RejectInvite(ctx context.Context, inviteID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -113,10 +107,7 @@ func (r *PostgresRepository) RejectInvite(ctx context.Context, inviteID string) 
 }
 
 func (r *PostgresRepository) InviteMember(ctx context.Context, userID string, req InviteMemberRequest, expiresAt *time.Time) (Invitation, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return Invitation{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return Invitation{}, persistence.ErrNotImplemented
 	}
@@ -150,10 +141,7 @@ func (r *PostgresRepository) InviteMember(ctx context.Context, userID string, re
 }
 
 func (r *PostgresRepository) ListSentInvites(ctx context.Context, groupID string, status *ApplicationStatus, limit int, cursor string) ([]GroupSentInviteItem, string, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, "", persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, "", persistence.ErrNotImplemented
 	}
@@ -199,10 +187,7 @@ func (r *PostgresRepository) ListSentInvites(ctx context.Context, groupID string
 }
 
 func (r *PostgresRepository) RevokeInvite(ctx context.Context, groupID string, inviteID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}

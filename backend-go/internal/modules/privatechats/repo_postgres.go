@@ -16,10 +16,7 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 }
 
 func (r *PostgresRepository) GetOrCreate(ctx context.Context, userID, targetUserID string) (time.Time, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return time.Time{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return time.Time{}, persistence.ErrNotImplemented
 	}
@@ -37,10 +34,7 @@ func (r *PostgresRepository) GetOrCreate(ctx context.Context, userID, targetUser
 }
 
 func (r *PostgresRepository) List(ctx context.Context, userID string, opts ListOptions) ([]ChatState, string, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, "", persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, "", persistence.ErrNotImplemented
 	}
@@ -64,10 +58,7 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, opts ListO
 }
 
 func (r *PostgresRepository) GetState(ctx context.Context, userID, targetUserID string) (ChatState, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return ChatState{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return ChatState{}, persistence.ErrNotImplemented
 	}
@@ -79,7 +70,7 @@ func (r *PostgresRepository) GetState(ctx context.Context, userID, targetUserID 
 }
 
 func (r *PostgresRepository) RestoreForUser(ctx context.Context, userID, targetUserID string, visibleSince time.Time) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return persistence.ErrNotImplemented
 	}
 	state, err := r.getStateImpl(ctx, userID, targetUserID)
@@ -93,10 +84,7 @@ func (r *PostgresRepository) RestoreForUser(ctx context.Context, userID, targetU
 }
 
 func (r *PostgresRepository) UpdateSettings(ctx context.Context, userID, targetUserID string, update UpdateChatSettings) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -114,10 +102,7 @@ func (r *PostgresRepository) UpdateSettings(ctx context.Context, userID, targetU
 }
 
 func (r *PostgresRepository) DeleteForUser(ctx context.Context, userID, targetUserID string, deletedAt *time.Time) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}

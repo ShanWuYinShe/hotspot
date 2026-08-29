@@ -20,10 +20,7 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 }
 
 func (r *PostgresRepository) PutProfile(ctx context.Context, profile MyProfile) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	if _, ok := r.factory.DB.(persistence.QueryableDB); !ok {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return persistence.ErrNotImplemented
 	}
 	// Wrap the profile upsert, the tag delete and the tag (re)insert in a single
@@ -57,7 +54,7 @@ func (r *PostgresRepository) PutProfile(ctx context.Context, profile MyProfile) 
 // 昵称/头像等个人信息替换为"已注销用户"占位并标记 is_deleted；
 // 个人数据（登录凭证/会话/设置/关系/收藏/通知/私聊记录/上传会话）同一事务清理。
 func (r *PostgresRepository) DeleteProfile(ctx context.Context, userID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return persistence.ErrNotImplemented
 	}
 	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
@@ -95,40 +92,28 @@ func (r *PostgresRepository) execInTx(ctx context.Context, sql string, arg any) 
 	return queryable.Exec(ctx, sql, arg)
 }
 func (r *PostgresRepository) PutSettings(ctx context.Context, userID string, settings UserSettings) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
 	return queryable.Exec(ctx, queryUpsertUserSettings, userID, settings.PrivacyLevel, settings.LocationVisible, settings.PresenceVisible, settings.SocialListsVisible, settings.GroupsVisible, settings.ReactedMomentsVisible, settings.StatsVisible, settings.AllowFollow, settings.AllowPrivateChat, settings.Searchable, settings.PhoneSearchable, settings.NicknameSearchable, settings.LocationSearchable, settings.NearbyMomentNotify)
 }
 func (r *PostgresRepository) Follow(ctx context.Context, userID, targetUserID string, source FollowSource, sourceMomentID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
 	return queryable.Exec(ctx, queryUpsertUserRelationFollow, userID, targetUserID, nowRFC3339())
 }
 func (r *PostgresRepository) Unfollow(ctx context.Context, userID, targetUserID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
 	return queryable.Exec(ctx, queryUpsertUserRelationUnfollow, userID, targetUserID)
 }
 func (r *PostgresRepository) Block(ctx context.Context, userID, targetUserID, reason string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -136,10 +121,7 @@ func (r *PostgresRepository) Block(ctx context.Context, userID, targetUserID, re
 	return queryable.Exec(ctx, queryUpsertUserRelationBlock, userID, targetUserID, blockedAt, reason)
 }
 func (r *PostgresRepository) BlockCascade(ctx context.Context, userID, targetUserID, reason string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	if _, ok := r.factory.DB.(persistence.QueryableDB); !ok {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return persistence.ErrNotImplemented
 	}
 	blockedAt := nowRFC3339()
@@ -159,20 +141,14 @@ func (r *PostgresRepository) BlockCascade(ctx context.Context, userID, targetUse
 	})
 }
 func (r *PostgresRepository) Unblock(ctx context.Context, userID, targetUserID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
 	return queryable.Exec(ctx, queryUpsertUserRelationUnblock, userID, targetUserID)
 }
 func (r *PostgresRepository) SetRemark(ctx context.Context, userID, targetUserID, remark string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -181,7 +157,7 @@ func (r *PostgresRepository) SetRemark(ctx context.Context, userID, targetUserID
 
 // CheckBlockedTags 返回 tags 中命中平台屏蔽标签（admin_blocked_tags）的标签名；空表示无屏蔽标签。
 func (r *PostgresRepository) CheckBlockedTags(ctx context.Context, tags []string) ([]string, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return nil, persistence.ErrNotImplemented
 	}
 	if len(tags) == 0 {
@@ -211,59 +187,56 @@ func (r *PostgresRepository) CheckBlockedTags(ctx context.Context, tags []string
 }
 
 func (r *PostgresRepository) ListBlocked(ctx context.Context, userID string, limit int, cursor string) (PaginatedBlockedUsers, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return PaginatedBlockedUsers{}, persistence.ErrNotImplemented
 	}
 	return listBlockedUsersPostgres(ctx, r.factory, userID, limit, cursor)
 }
 
 func (r *PostgresRepository) ListReactedMoments(ctx context.Context, userID string, limit int, cursor, viewerUserID string) (momenttypes.PaginatedMoments, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return momenttypes.PaginatedMoments{}, persistence.ErrNotImplemented
 	}
 	return listReactedMomentsPostgres(ctx, r.factory, userID, limit, cursor, viewerUserID)
 }
 
 func (r *PostgresRepository) ListFriends(ctx context.Context, userID string, limit int, cursor string) (PaginatedFriends, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return PaginatedFriends{}, persistence.ErrNotImplemented
 	}
 	return listFriendsPostgres(ctx, r.factory, userID, limit, cursor)
 }
 
 func (r *PostgresRepository) ListFollowing(ctx context.Context, userID string, limit int, cursor string) (PaginatedFollowing, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return PaginatedFollowing{}, persistence.ErrNotImplemented
 	}
 	return listFollowingPostgres(ctx, r.factory, userID, limit, cursor)
 }
 
 func (r *PostgresRepository) ListFollowers(ctx context.Context, userID string, limit int, cursor string) (PaginatedFollowers, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return PaginatedFollowers{}, persistence.ErrNotImplemented
 	}
 	return listFollowersPostgres(ctx, r.factory, userID, limit, cursor)
 }
 
 func (r *PostgresRepository) ListGroups(ctx context.Context, userID string, limit int, cursor string) (grouptypes.PaginatedGroups, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return grouptypes.PaginatedGroups{}, persistence.ErrNotImplemented
 	}
 	return listUserGroupsPostgres(ctx, r.factory, userID, limit, cursor)
 }
 
 func (r *PostgresRepository) ListMoments(ctx context.Context, userID string, limit int, cursor string, includePrivate bool) (momenttypes.PaginatedMoments, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return momenttypes.PaginatedMoments{}, persistence.ErrNotImplemented
 	}
 	return listUserMomentsPostgres(ctx, r.factory, userID, limit, cursor, includePrivate)
 }
 
 func (r *PostgresRepository) CommonGroupCount(ctx context.Context, viewerUserID, targetUserID string) (int, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return 0, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return 0, persistence.ErrNotImplemented
 	}
@@ -275,10 +248,7 @@ func (r *PostgresRepository) CommonGroupCount(ctx context.Context, viewerUserID,
 }
 
 func (r *PostgresRepository) UserExists(ctx context.Context, userID string) (bool, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return false, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return false, persistence.ErrNotImplemented
 	}

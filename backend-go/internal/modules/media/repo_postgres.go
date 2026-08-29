@@ -19,7 +19,7 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 }
 
 func (r *PostgresRepository) Save(ctx context.Context, upload pendingUpload) error {
-	queryable, err := r.queryable()
+	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func (r *PostgresRepository) Save(ctx context.Context, upload pendingUpload) err
 }
 
 func (r *PostgresRepository) Get(ctx context.Context, uploadID string) (pendingUpload, bool, error) {
-	queryable, err := r.queryable()
+	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return pendingUpload{}, false, err
 	}
@@ -102,7 +102,7 @@ func (r *PostgresRepository) Get(ctx context.Context, uploadID string) (pendingU
 }
 
 func (r *PostgresRepository) Complete(ctx context.Context, uploadID string, file UploadedMedia, idempotencyKey string) (pendingUpload, bool, error) {
-	queryable, err := r.queryable()
+	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return pendingUpload{}, false, err
 	}
@@ -126,7 +126,7 @@ func (r *PostgresRepository) Complete(ctx context.Context, uploadID string, file
 }
 
 func (r *PostgresRepository) ResolveByFileIDs(ctx context.Context, fileIDs []string, userID string, category MediaCategory) (map[string]MediaAsset, error) {
-	queryable, err := r.queryable()
+	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -152,11 +152,8 @@ func (r *PostgresRepository) ResolveByFileIDs(ctx context.Context, fileIDs []str
 	return assets, nil
 }
 
-func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+func (r *PostgresRepository) queryable(ctx context.Context) (persistence.Queryable, error) {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, persistence.ErrNotImplemented
 	}

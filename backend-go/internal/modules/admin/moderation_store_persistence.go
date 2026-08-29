@@ -26,16 +26,12 @@ func NewPersistenceModerationStore(factory *persistence.Factory, systemRepo syst
 	}
 }
 
-func (s *PersistenceModerationStore) queryable() (persistence.QueryableDB, bool) {
-	if s.factory == nil || s.factory.DB == nil || s.factory.Config.PostgresDSN == "" {
-		return nil, false
-	}
-	queryable, ok := s.factory.DB.(persistence.QueryableDB)
-	return queryable, ok
+func (s *PersistenceModerationStore) queryable(ctx context.Context) (persistence.Queryable, bool) {
+	return persistence.RepoQueryable(ctx, s.factory)
 }
 
 func (s *PersistenceModerationStore) SearchTags(ctx context.Context, filter TagSearchFilter) (TagPage, error) {
-	queryable, ok := s.queryable()
+	queryable, ok := s.queryable(ctx)
 	if !ok {
 		return s.memory.SearchTags(ctx, filter)
 	}
@@ -76,7 +72,7 @@ func (s *PersistenceModerationStore) SearchTags(ctx context.Context, filter TagS
 }
 
 func (s *PersistenceModerationStore) GetTagDeleteState(ctx context.Context, name string) (bool, bool, error) {
-	queryable, ok := s.queryable()
+	queryable, ok := s.queryable(ctx)
 	if !ok {
 		return s.memory.GetTagDeleteState(ctx, name)
 	}
@@ -93,12 +89,12 @@ func (s *PersistenceModerationStore) GetTagDeleteState(ctx context.Context, name
 // 屏蔽两步包进同一事务）；active=false 解屏蔽（DELETE 未命中行 no-op 成功，
 // 解屏蔽后同名标签恢复可创建/命中）。
 func (s *PersistenceModerationStore) SetTagBan(ctx context.Context, name string, active bool, hardDelete bool) error {
-	if _, ok := s.queryable(); !ok {
+	if _, ok := s.queryable(ctx); !ok {
 		return s.memory.SetTagBan(ctx, name, active, hardDelete)
 	}
 	tagName := normalizeTagName(name)
 	if !active {
-		queryable, ok := s.queryable()
+		queryable, ok := s.queryable(ctx)
 		if !ok {
 			return persistence.ErrNotImplemented
 		}

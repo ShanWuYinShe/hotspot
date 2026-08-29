@@ -50,7 +50,7 @@ func (r adminListRecord) permissionsForResponse() []string {
 	return cloneStrings(r.Permissions)
 }
 
-func (r *PostgresRepository) getRoleByID(ctx context.Context, queryable persistence.QueryableDB, roleID string) (postgresRoleRecord, bool, error) {
+func (r *PostgresRepository) getRoleByID(ctx context.Context, queryable persistence.Queryable, roleID string) (postgresRoleRecord, bool, error) {
 	var record postgresRoleRecord
 	var description string
 	if err := queryable.QueryRow(ctx, queryRoleByID, roleID).Scan(&record.item.RoleID, &record.item.Name, &description, &record.createdAt, &record.updatedAt, &record.deleted); err != nil {
@@ -68,7 +68,7 @@ func (r *PostgresRepository) getRoleByID(ctx context.Context, queryable persiste
 	return record, true, nil
 }
 
-func (r *PostgresRepository) getRoleByName(ctx context.Context, queryable persistence.QueryableDB, name string) (postgresRoleRecord, bool, error) {
+func (r *PostgresRepository) getRoleByName(ctx context.Context, queryable persistence.Queryable, name string) (postgresRoleRecord, bool, error) {
 	var record postgresRoleRecord
 	var description string
 	if err := queryable.QueryRow(ctx, queryRoleByName, name).Scan(&record.item.RoleID, &record.item.Name, &description, &record.createdAt, &record.updatedAt, &record.deleted); err != nil {
@@ -86,7 +86,7 @@ func (r *PostgresRepository) getRoleByName(ctx context.Context, queryable persis
 	return record, true, nil
 }
 
-func (r *PostgresRepository) getRolePermissions(ctx context.Context, queryable persistence.QueryableDB, roleID string) ([]string, error) {
+func (r *PostgresRepository) getRolePermissions(ctx context.Context, queryable persistence.Queryable, roleID string) ([]string, error) {
 	rows, err := queryable.Query(ctx, queryRolePermissions, roleID)
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (r *PostgresRepository) getRolePermissions(ctx context.Context, queryable p
 	return sortAndUniqueStrings(permissions), nil
 }
 
-func (r *PostgresRepository) lookupUser(ctx context.Context, queryable persistence.QueryableDB, userID string) (UserInfo, bool, error) {
+func (r *PostgresRepository) lookupUser(ctx context.Context, queryable persistence.Queryable, userID string) (UserInfo, bool, error) {
 	var user UserInfo
 	if err := queryable.QueryRow(ctx, queryUserExists, userID).Scan(&user.UserID, &user.Nickname, &user.AvatarURL); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -117,7 +117,7 @@ func (r *PostgresRepository) lookupUser(ctx context.Context, queryable persisten
 	return user, true, nil
 }
 
-func (r *PostgresRepository) getActorFromDB(ctx context.Context, queryable persistence.QueryableDB, userID string) (AdminActor, bool, error) {
+func (r *PostgresRepository) getActorFromDB(ctx context.Context, queryable persistence.Queryable, userID string) (AdminActor, bool, error) {
 	record, found, err := r.getAdminRecordByUserID(ctx, queryable, userID)
 	if err != nil || !found {
 		return AdminActor{}, found, err
@@ -130,7 +130,7 @@ func (r *PostgresRepository) getActorFromDB(ctx context.Context, queryable persi
 	}, true, nil
 }
 
-func (r *PostgresRepository) getAdminRecordByUserID(ctx context.Context, queryable persistence.QueryableDB, userID string) (adminListRecord, bool, error) {
+func (r *PostgresRepository) getAdminRecordByUserID(ctx context.Context, queryable persistence.Queryable, userID string) (adminListRecord, bool, error) {
 	records, err := r.listAdminRecords(ctx, queryable, queryAdminActorDetail, userID)
 	if err != nil {
 		return adminListRecord{}, false, err
@@ -141,11 +141,11 @@ func (r *PostgresRepository) getAdminRecordByUserID(ctx context.Context, queryab
 	return records[0], true, nil
 }
 
-func (r *PostgresRepository) listAdminsFromDB(ctx context.Context, queryable persistence.QueryableDB) ([]adminListRecord, error) {
+func (r *PostgresRepository) listAdminsFromDB(ctx context.Context, queryable persistence.Queryable) ([]adminListRecord, error) {
 	return r.listAdminRecords(ctx, queryable, queryAdminList)
 }
 
-func (r *PostgresRepository) listAdminRecords(ctx context.Context, queryable persistence.QueryableDB, query string, args ...any) ([]adminListRecord, error) {
+func (r *PostgresRepository) listAdminRecords(ctx context.Context, queryable persistence.Queryable, query string, args ...any) ([]adminListRecord, error) {
 	rows, err := queryable.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err

@@ -46,6 +46,21 @@ func QueryableForTx(ctx context.Context, factory *Factory) (Queryable, bool) {
 	return qdb, ok
 }
 
+// RepoQueryable 是各模块 Postgres repo 的统一取连接入口：优先复用 ctx 内
+// 事务（RunInTransaction 注入），否则回退 factory 共享池；factory 未接 PG
+// （nil / DB nil / PostgresDSN 为空）时 ok=false，调用方返回 ErrNotImplemented
+// 交由模块回落内存实现。收敛各 repo 方法开头重复的 4-6 行前置检查。
+func RepoQueryable(ctx context.Context, factory *Factory) (Queryable, bool) {
+	if q, ok := QueryableFromContext(ctx); ok {
+		return q, true
+	}
+	if factory == nil || factory.DB == nil || factory.Config.PostgresDSN == "" {
+		return nil, false
+	}
+	qdb, ok := factory.DB.(QueryableDB)
+	return qdb, ok
+}
+
 // IsUniqueViolation 判断错误是否为 PostgreSQL 唯一约束冲突（SQLSTATE 23505）。
 // 用 SQLState 接口而非 pgconn.PgError 具体类型，兼容包装错误与测试替身。
 func IsUniqueViolation(err error) bool {

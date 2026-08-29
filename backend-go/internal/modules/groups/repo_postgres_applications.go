@@ -12,7 +12,7 @@ import (
 )
 
 func (r *PostgresRepository) GetApplication(ctx context.Context, applicationID string) (GroupApplicationItem, bool, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return GroupApplicationItem{}, false, persistence.ErrNotImplemented
 	}
 	item, err := r.loadApplication(ctx, applicationID)
@@ -26,10 +26,7 @@ func (r *PostgresRepository) GetApplication(ctx context.Context, applicationID s
 }
 
 func (r *PostgresRepository) ListApplications(ctx context.Context, groupID string, status *ApplicationStatus, limit int, cursor string) ([]GroupApplicationItem, string, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, "", persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, "", persistence.ErrNotImplemented
 	}
@@ -74,7 +71,7 @@ func (r *PostgresRepository) ListApplications(ctx context.Context, groupID strin
 }
 
 func (r *PostgresRepository) ApproveApplication(ctx context.Context, approverID string, applicationID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return persistence.ErrNotImplemented
 	}
 	record, err := r.loadApplication(ctx, applicationID)
@@ -104,10 +101,7 @@ func (r *PostgresRepository) ApproveApplication(ctx context.Context, approverID 
 }
 
 func (r *PostgresRepository) RejectApplication(ctx context.Context, applicationID string, reason *string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -122,10 +116,7 @@ func (r *PostgresRepository) RejectApplication(ctx context.Context, applicationI
 }
 
 func (r *PostgresRepository) ListMyApplications(ctx context.Context, userID string, status *ApplicationStatus, limit int, cursor string) ([]GroupApplicationItem, string, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, "", persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, "", persistence.ErrNotImplemented
 	}
@@ -170,10 +161,7 @@ func (r *PostgresRepository) ListMyApplications(ctx context.Context, userID stri
 }
 
 func (r *PostgresRepository) CancelApplication(ctx context.Context, applicationID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}

@@ -29,10 +29,7 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 // group with no members (which would be unreachable and impossible to
 // dissolve through normal flows). Mirrors ApproveApplication/AcceptInvite.
 func (r *PostgresRepository) Create(ctx context.Context, userID string, req CreateGroupRequest) (GroupItem, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return GroupItem{}, persistence.ErrNotImplemented
-	}
-	if _, ok := r.factory.DB.(persistence.QueryableDB); !ok {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return GroupItem{}, persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
@@ -97,10 +94,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, userID string, req UpdateGroupRequest) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -154,10 +148,7 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 }
 
 func (r *PostgresRepository) Dismiss(ctx context.Context, groupID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -169,10 +160,7 @@ func (r *PostgresRepository) Dismiss(ctx context.Context, groupID string) error 
 }
 
 func (r *PostgresRepository) IsMember(ctx context.Context, groupID, userID string) (bool, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return false, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return false, persistence.ErrNotImplemented
 	}
@@ -190,10 +178,7 @@ func (r *PostgresRepository) IsMember(ctx context.Context, groupID, userID strin
 // × applications) scan in findApplicationForApprover with a single lookup
 // followed by an admin-rights check.
 func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, limit int, pageToken string) ([]GroupItem, string, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, "", persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, "", persistence.ErrNotImplemented
 	}
@@ -309,10 +294,7 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 }
 
 func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, groupID string, password *string, message *string) (EnterGroupResult, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return EnterGroupResult{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return EnterGroupResult{}, persistence.ErrNotImplemented
 	}
@@ -411,10 +393,7 @@ func enforceGroupCapacity(ctx context.Context, tx persistence.Queryable, groupID
 }
 
 func (r *PostgresRepository) UpdatePreferences(ctx context.Context, userID string, req UpdateGroupPreferencesRequest) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -422,10 +401,7 @@ func (r *PostgresRepository) UpdatePreferences(ctx context.Context, userID strin
 }
 
 func (r *PostgresRepository) LeaveGroup(ctx context.Context, userID string, groupID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}

@@ -184,14 +184,7 @@ func (r *PostgresRepository) ListReactedTargets(ctx context.Context, targetType 
 // transaction bound to ctx when present, otherwise the shared pool. Returns
 // ok=false when persistence is not configured (in-memory mode).
 func queryable(ctx context.Context, factory *persistence.Factory) (persistence.Queryable, bool) {
-	if q, ok := persistence.QueryableFromContext(ctx); ok {
-		return q, true
-	}
-	if factory == nil || factory.DB == nil || factory.Config.PostgresDSN == "" {
-		return nil, false
-	}
-	q, ok := factory.DB.(persistence.QueryableDB)
-	return q, ok
+	return persistence.RepoQueryable(ctx, factory)
 }
 
 func normalizeReactionLimit(limit int) int {

@@ -12,7 +12,7 @@ import (
 )
 
 func (r *PostgresRepository) GetActor(ctx context.Context, userID string) (AdminActor, bool, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return AdminActor{}, false, persistence.ErrNotImplemented
 	}
@@ -22,7 +22,7 @@ func (r *PostgresRepository) GetActor(ctx context.Context, userID string) (Admin
 // IsAdmin 真实验证 userID 是否为管理员（查 admin_users 表）。
 // 供平台 AdminAccess 中间件与业务侧管理员判断使用。
 func (r *PostgresRepository) IsAdmin(ctx context.Context, userID string) (bool, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return false, persistence.ErrNotImplemented
 	}
@@ -31,7 +31,7 @@ func (r *PostgresRepository) IsAdmin(ctx context.Context, userID string) (bool, 
 }
 
 func (r *PostgresRepository) ListPermissions(ctx context.Context) ([]AdminPermissionItem, error) {
-	if _, ok := r.queryable(); !ok {
+	if _, ok := r.queryable(ctx); !ok {
 		return nil, persistence.ErrNotImplemented
 	}
 	items := make([]AdminPermissionItem, len(permissionDictionary))
@@ -40,7 +40,7 @@ func (r *PostgresRepository) ListPermissions(ctx context.Context) ([]AdminPermis
 }
 
 func (r *PostgresRepository) ListRoles(ctx context.Context) ([]AdminRoleItem, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return nil, persistence.ErrNotImplemented
 	}
@@ -66,7 +66,7 @@ func (r *PostgresRepository) ListRoles(ctx context.Context) ([]AdminRoleItem, er
 }
 
 func (r *PostgresRepository) CreateRole(ctx context.Context, req AdminRbacRoleCreateRequest) (AdminRoleItem, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return AdminRoleItem{}, persistence.ErrNotImplemented
 	}
@@ -95,7 +95,7 @@ func (r *PostgresRepository) CreateRole(ctx context.Context, req AdminRbacRoleCr
 }
 
 func (r *PostgresRepository) UpdateRole(ctx context.Context, req AdminRbacRoleUpdateRequest) error {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -138,7 +138,7 @@ func (r *PostgresRepository) UpdateRole(ctx context.Context, req AdminRbacRoleUp
 }
 
 func (r *PostgresRepository) DeleteRole(ctx context.Context, roleID string) error {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -168,7 +168,7 @@ func (r *PostgresRepository) DeleteRole(ctx context.Context, roleID string) erro
 }
 
 func (r *PostgresRepository) SetRolePermissions(ctx context.Context, roleID string, permissionKeys []string) error {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -202,7 +202,7 @@ func (r *PostgresRepository) SetRolePermissions(ctx context.Context, roleID stri
 }
 
 func (r *PostgresRepository) ListAdmins(ctx context.Context, pagination PaginationParams) (adminListPage, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return adminListPage{}, persistence.ErrNotImplemented
 	}
@@ -239,7 +239,7 @@ func (r *PostgresRepository) ListAdmins(ctx context.Context, pagination Paginati
 }
 
 func (r *PostgresRepository) GrantAdmin(ctx context.Context, grant AdminGrantUpsert) error {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -284,7 +284,7 @@ func (r *PostgresRepository) GrantAdmin(ctx context.Context, grant AdminGrantUps
 }
 
 func (r *PostgresRepository) RevokeAdmin(ctx context.Context, userID string) error {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}

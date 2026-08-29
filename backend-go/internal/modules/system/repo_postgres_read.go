@@ -8,7 +8,7 @@ import (
 )
 
 func (r *PostgresRepository) ListAnnouncements(ctx context.Context, limit int) ([]AnnouncementRecord, error) {
-	queryable, err := r.queryable()
+	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func (r *PostgresRepository) ListAnnouncements(ctx context.Context, limit int) (
 }
 
 func (r *PostgresRepository) SearchAnnouncements(ctx context.Context, filter AnnouncementSearchFilter) (AnnouncementPage, error) {
-	queryable, err := r.queryable()
+	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return AnnouncementPage{}, err
 	}

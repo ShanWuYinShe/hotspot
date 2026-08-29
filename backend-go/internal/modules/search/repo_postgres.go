@@ -20,10 +20,7 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 }
 
 func (r *PostgresRepository) Suggest(ctx context.Context, req SearchSuggestRequest) (SearchSuggestResponse, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return SearchSuggestResponse{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return SearchSuggestResponse{}, persistence.ErrNotImplemented
 	}
@@ -104,7 +101,7 @@ func normalizeSuggestTypes(types []string) map[string]bool {
 	return allowed
 }
 
-func queryTagSuggestions(ctx context.Context, queryable persistence.QueryableDB, prefix string) ([]scoredSuggestItem, error) {
+func queryTagSuggestions(ctx context.Context, queryable persistence.Queryable, prefix string) ([]scoredSuggestItem, error) {
 	rows, err := queryable.Query(ctx, querySearchSuggestTags, prefix, maxSuggestRows)
 	if err != nil {
 		return nil, err
@@ -131,7 +128,7 @@ func queryTagSuggestions(ctx context.Context, queryable persistence.QueryableDB,
 	return items, nil
 }
 
-func queryUserSuggestions(ctx context.Context, queryable persistence.QueryableDB, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
+func queryUserSuggestions(ctx context.Context, queryable persistence.Queryable, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
 	rows, err := queryable.Query(ctx, querySearchSuggestUsers, prefix, maxSuggestRows)
 	if err != nil {
 		return nil, err
@@ -203,7 +200,7 @@ func presenceStatusPtr(raw string) string {
 	}
 }
 
-func queryGroupSuggestions(ctx context.Context, queryable persistence.QueryableDB, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
+func queryGroupSuggestions(ctx context.Context, queryable persistence.Queryable, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
 	rows, err := queryable.Query(ctx, querySearchSuggestGroups, prefix, maxSuggestRows)
 	if err != nil {
 		return nil, err
@@ -275,7 +272,7 @@ func queryGroupSuggestions(ctx context.Context, queryable persistence.QueryableD
 	return items, nil
 }
 
-func queryMomentSuggestions(ctx context.Context, queryable persistence.QueryableDB, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
+func queryMomentSuggestions(ctx context.Context, queryable persistence.Queryable, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
 	rows, err := queryable.Query(ctx, querySearchSuggestMoments, prefix, maxSuggestRows)
 	if err != nil {
 		return nil, err

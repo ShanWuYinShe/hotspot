@@ -60,7 +60,7 @@ func (r *PostgresRepository) Hotspots(ctx context.Context, query canvasQuery) (M
 }
 
 func (r *PostgresRepository) loadCandidates(ctx context.Context, query canvasQuery) ([]mapCandidate, error) {
-	queryable, err := r.queryable()
+	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -102,18 +102,15 @@ func (r *PostgresRepository) loadCandidates(ctx context.Context, query canvasQue
 	return items, nil
 }
 
-func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+func (r *PostgresRepository) queryable(ctx context.Context) (persistence.Queryable, error) {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, persistence.ErrNotImplemented
 	}
 	return queryable, nil
 }
 
-func queryMapUsers(ctx context.Context, queryable persistence.QueryableDB, query canvasQuery, mins, maxs []int64) ([]mapCandidate, error) {
+func queryMapUsers(ctx context.Context, queryable persistence.Queryable, query canvasQuery, mins, maxs []int64) ([]mapCandidate, error) {
 	rows, err := queryable.Query(ctx, queryMapCanvasUsers, mins, maxs, maxMapScanRows)
 	if err != nil {
 		return nil, err
@@ -135,7 +132,7 @@ func queryMapUsers(ctx context.Context, queryable persistence.QueryableDB, query
 	return items, nil
 }
 
-func queryMapGroups(ctx context.Context, queryable persistence.QueryableDB, query canvasQuery, mins, maxs []int64) ([]mapCandidate, error) {
+func queryMapGroups(ctx context.Context, queryable persistence.Queryable, query canvasQuery, mins, maxs []int64) ([]mapCandidate, error) {
 	rows, err := queryable.Query(ctx, queryMapCanvasGroups, mins, maxs, maxMapScanRows)
 	if err != nil {
 		return nil, err
@@ -156,7 +153,7 @@ func queryMapGroups(ctx context.Context, queryable persistence.QueryableDB, quer
 	return items, nil
 }
 
-func queryMapMoments(ctx context.Context, queryable persistence.QueryableDB, query canvasQuery, mins, maxs []int64) ([]mapCandidate, error) {
+func queryMapMoments(ctx context.Context, queryable persistence.Queryable, query canvasQuery, mins, maxs []int64) ([]mapCandidate, error) {
 	var startTime, endTime *time.Time
 	if !query.StartTime.IsZero() {
 		t := query.StartTime.UTC()

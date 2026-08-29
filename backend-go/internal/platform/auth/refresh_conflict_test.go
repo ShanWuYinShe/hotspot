@@ -33,21 +33,21 @@ func newConflictService(graceUntil time.Time) (*Service, *conflictRefreshStore) 
 	sessions := NewInMemorySessionStore()
 	now := time.Now().UTC()
 	if err := sessions.Save(context.Background(), SessionRecord{
-		SessionID:   "sess_conflict",
-		UserID:      "user_1",
-		CreatedAt:   now,
+		SessionID:    "sess_conflict",
+		UserID:       "user_1",
+		CreatedAt:    now,
 		LastActiveAt: now,
 	}); err != nil {
 		panic(err)
 	}
 	refreshes := &conflictRefreshStore{records: map[string]RefreshSession{
 		"old_token": {
-			UserID:      "user_1",
-			SessionID:   "sess_conflict",
+			UserID:       "user_1",
+			SessionID:    "sess_conflict",
 			RefreshToken: "old_token",
-			ExpiresAt:   now.Add(time.Hour),
-			RotatedTo:   "winner_token",
-			GraceUntil:  graceUntil,
+			ExpiresAt:    now.Add(time.Hour),
+			RotatedTo:    "winner_token",
+			GraceUntil:   graceUntil,
 		},
 		"winner_token": {
 			UserID:       "user_1",

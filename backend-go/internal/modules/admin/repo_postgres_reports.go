@@ -18,7 +18,7 @@ import (
 var errReportAlreadyHandled = errors.New("admin: report already handled")
 
 func (r *PostgresRepository) SearchReports(ctx context.Context, req AdminReportListRequest) (adminReportPage, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return adminReportPage{}, persistence.ErrNotImplemented
 	}
@@ -69,7 +69,7 @@ func (r *PostgresRepository) SearchReports(ctx context.Context, req AdminReportL
 }
 
 func (r *PostgresRepository) GetReportHandleRecord(ctx context.Context, reportID string) (reportHandleRecord, bool, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return reportHandleRecord{}, false, persistence.ErrNotImplemented
 	}
@@ -84,7 +84,7 @@ func (r *PostgresRepository) GetReportHandleRecord(ctx context.Context, reportID
 }
 
 func (r *PostgresRepository) HandleReport(ctx context.Context, reportID string, action ReportAction, note string, handledBy *UserInfo) (AdminReportItem, bool, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return AdminReportItem{}, false, persistence.ErrNotImplemented
 	}
@@ -134,7 +134,7 @@ func (r *PostgresRepository) HandleReport(ctx context.Context, reportID string, 
 }
 
 func (r *PostgresRepository) RecallGroupMessage(ctx context.Context, messageID string) error {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -145,7 +145,7 @@ func (r *PostgresRepository) RecallGroupMessage(ctx context.Context, messageID s
 }
 
 func (r *PostgresRepository) RecallPrivateMessage(ctx context.Context, messageID string) error {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -174,7 +174,7 @@ UPDATE comments SET replies_count = GREATEST(replies_count - 1, 0)
 WHERE comment_id IN (SELECT parent_id FROM deleted WHERE parent_id IS NOT NULL AND parent_id != '')`
 
 func (r *PostgresRepository) DeleteMoment(ctx context.Context, momentID string) error {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -182,7 +182,7 @@ func (r *PostgresRepository) DeleteMoment(ctx context.Context, momentID string) 
 }
 
 func (r *PostgresRepository) DeleteComment(ctx context.Context, commentID string) error {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}

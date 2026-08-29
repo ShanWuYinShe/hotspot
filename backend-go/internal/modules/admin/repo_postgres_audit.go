@@ -11,7 +11,7 @@ import (
 )
 
 func (r *PostgresRepository) ListAuditLogs(ctx context.Context, filter AuditLogFilter, includeIPAddress bool) (auditLogPage, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return auditLogPage{}, persistence.ErrNotImplemented
 	}
@@ -57,7 +57,7 @@ func (r *PostgresRepository) ListAuditLogs(ctx context.Context, filter AuditLogF
 }
 
 func (r *PostgresRepository) AppendAuditLog(ctx context.Context, entry AuditLogEntry) error {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}

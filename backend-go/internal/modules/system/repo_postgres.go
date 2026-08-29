@@ -42,11 +42,8 @@ func (r *PostgresRepository) SetRedisPinger(p func(ctx context.Context) error) {
 	r.redisPinger = p
 }
 
-func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+func (r *PostgresRepository) queryable(ctx context.Context) (persistence.Queryable, error) {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, persistence.ErrNotImplemented
 	}
@@ -90,7 +87,7 @@ func (r *PostgresRepository) Health(ctx context.Context) (int, string, *HealthSt
 }
 
 func (r *PostgresRepository) GetAnnouncement(ctx context.Context, announcementID string) (AnnouncementRecord, bool, error) {
-	queryable, err := r.queryable()
+	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return AnnouncementRecord{}, false, err
 	}
@@ -98,7 +95,7 @@ func (r *PostgresRepository) GetAnnouncement(ctx context.Context, announcementID
 }
 
 func (r *PostgresRepository) CreateAnnouncement(ctx context.Context, input AnnouncementCreateInput) (AnnouncementRecord, error) {
-	queryable, err := r.queryable()
+	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return AnnouncementRecord{}, err
 	}
@@ -137,7 +134,7 @@ func (r *PostgresRepository) CreateAnnouncement(ctx context.Context, input Annou
 }
 
 func (r *PostgresRepository) UpdateAnnouncement(ctx context.Context, input AnnouncementUpdateInput) (AnnouncementRecord, error) {
-	queryable, err := r.queryable()
+	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return AnnouncementRecord{}, err
 	}
@@ -174,7 +171,7 @@ func (r *PostgresRepository) UpdateAnnouncement(ctx context.Context, input Annou
 }
 
 func (r *PostgresRepository) DeleteAnnouncement(ctx context.Context, announcementID string) error {
-	queryable, err := r.queryable()
+	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return err
 	}
@@ -249,7 +246,7 @@ func scanAnnouncement(scanner interface{ Scan(...any) error }, includeDeleted bo
 	return item, nil
 }
 
-func (r *PostgresRepository) getAnnouncementByID(ctx context.Context, queryable persistence.QueryableDB, announcementID string) (AnnouncementRecord, bool, error) {
+func (r *PostgresRepository) getAnnouncementByID(ctx context.Context, queryable persistence.Queryable, announcementID string) (AnnouncementRecord, bool, error) {
 	item, err := scanAnnouncement(queryable.QueryRow(ctx, queryAnnouncementByID, announcementID), true)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

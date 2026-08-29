@@ -11,7 +11,7 @@ import (
 )
 
 func (r *PostgresRepository) SearchGroups(ctx context.Context, req AdminGroupSearchRequest) (adminGroupPage, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return adminGroupPage{}, persistence.ErrNotImplemented
 	}
@@ -62,7 +62,7 @@ func (r *PostgresRepository) SearchGroups(ctx context.Context, req AdminGroupSea
 }
 
 func (r *PostgresRepository) GetGroup(ctx context.Context, groupID string) (AdminGroupItem, bool, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return AdminGroupItem{}, false, persistence.ErrNotImplemented
 	}
@@ -77,7 +77,7 @@ func (r *PostgresRepository) GetGroup(ctx context.Context, groupID string) (Admi
 }
 
 func (r *PostgresRepository) DismissGroup(ctx context.Context, groupID string) (AdminGroupItem, bool, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return AdminGroupItem{}, false, persistence.ErrNotImplemented
 	}
@@ -92,7 +92,7 @@ func (r *PostgresRepository) DismissGroup(ctx context.Context, groupID string) (
 }
 
 func (r *PostgresRepository) ListGroupMemberIDs(ctx context.Context, groupID string) ([]string, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return nil, persistence.ErrNotImplemented
 	}

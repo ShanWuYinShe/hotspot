@@ -23,7 +23,7 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 }
 
 func (r *PostgresRepository) Create(ctx context.Context, cmd createShareCommand) (ShareCreated, error) {
-	queryable, err := r.queryable()
+	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return ShareCreated{}, err
 	}
@@ -64,7 +64,7 @@ func (r *PostgresRepository) Create(ctx context.Context, cmd createShareCommand)
 }
 
 func (r *PostgresRepository) Revoke(ctx context.Context, cmd revokeShareCommand) error {
-	queryable, err := r.queryable()
+	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return err
 	}
@@ -87,11 +87,8 @@ func (r *PostgresRepository) Revoke(ctx context.Context, cmd revokeShareCommand)
 	return nil
 }
 
-func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+func (r *PostgresRepository) queryable(ctx context.Context) (persistence.Queryable, error) {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, persistence.ErrNotImplemented
 	}
@@ -103,7 +100,7 @@ func getPayloadID(payload map[string]any, key string) string {
 	return value
 }
 
-func ensureShareTargetExists(ctx context.Context, queryable persistence.QueryableDB, shareType string, payload map[string]any) error {
+func ensureShareTargetExists(ctx context.Context, queryable persistence.Queryable, shareType string, payload map[string]any) error {
 	switch shareType {
 	case ShareTypeUser:
 		if _, _, _, err := loadSharedUser(ctx, queryable, getPayloadID(payload, "shared_user_id")); err != nil {
@@ -127,7 +124,7 @@ func ensureShareTargetExists(ctx context.Context, queryable persistence.Queryabl
 	}
 }
 
-func loadSharedUser(ctx context.Context, queryable persistence.QueryableDB, userID string) (string, string, string, error) {
+func loadSharedUser(ctx context.Context, queryable persistence.Queryable, userID string) (string, string, string, error) {
 	var id, nickname, avatarURL string
 	if err := queryable.QueryRow(ctx, queryShareUserExists, userID).Scan(&id, &nickname, &avatarURL); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -138,7 +135,7 @@ func loadSharedUser(ctx context.Context, queryable persistence.QueryableDB, user
 	return id, nickname, avatarURL, nil
 }
 
-func loadSharedGroup(ctx context.Context, queryable persistence.QueryableDB, groupID string) (string, string, string, string, error) {
+func loadSharedGroup(ctx context.Context, queryable persistence.Queryable, groupID string) (string, string, string, string, error) {
 	var id, name, description, avatarURL string
 	if err := queryable.QueryRow(ctx, queryShareGroupExists, groupID).Scan(&id, &name, &description, &avatarURL); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -149,7 +146,7 @@ func loadSharedGroup(ctx context.Context, queryable persistence.QueryableDB, gro
 	return id, name, description, avatarURL, nil
 }
 
-func loadSharedMoment(ctx context.Context, queryable persistence.QueryableDB, momentID string) (string, string, string, string, string, error) {
+func loadSharedMoment(ctx context.Context, queryable persistence.Queryable, momentID string) (string, string, string, string, string, error) {
 	var id, description, locationName, authorNickname, authorAvatarURL string
 	if err := queryable.QueryRow(ctx, queryShareMomentExists, momentID).Scan(&id, &description, &locationName, &authorNickname, &authorAvatarURL); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -160,7 +157,7 @@ func loadSharedMoment(ctx context.Context, queryable persistence.QueryableDB, mo
 	return id, description, locationName, authorNickname, authorAvatarURL, nil
 }
 
-func (r *PostgresRepository) getShareOwnership(ctx context.Context, queryable persistence.QueryableDB, shareID string) (string, bool, error) {
+func (r *PostgresRepository) getShareOwnership(ctx context.Context, queryable persistence.Queryable, shareID string) (string, bool, error) {
 	var ownerUserID string
 	var isRevoked bool
 	if err := queryable.QueryRow(ctx, queryGetShareByID, shareID).Scan(&shareID, &ownerUserID, &isRevoked); err != nil {

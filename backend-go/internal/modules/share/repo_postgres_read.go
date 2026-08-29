@@ -14,7 +14,7 @@ import (
 )
 
 func (r *PostgresRepository) Get(ctx context.Context, query getShareQuery) (ShareDetail, error) {
-	queryable, err := r.queryable()
+	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return ShareDetail{}, err
 	}
@@ -67,7 +67,7 @@ func (r *PostgresRepository) Get(ctx context.Context, query getShareQuery) (Shar
 }
 
 func (r *PostgresRepository) List(ctx context.Context, query listSharesQuery) (PaginatedShares, error) {
-	queryable, err := r.queryable()
+	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return PaginatedShares{}, err
 	}
@@ -131,7 +131,7 @@ func (r *PostgresRepository) List(ctx context.Context, query listSharesQuery) (P
 	return page, nil
 }
 
-func resolveSharePreview(ctx context.Context, queryable persistence.QueryableDB, shareType string, payload map[string]any) (*SharePreview, error) {
+func resolveSharePreview(ctx context.Context, queryable persistence.Queryable, shareType string, payload map[string]any) (*SharePreview, error) {
 	switch shareType {
 	case ShareTypeUser:
 		_, nickname, avatarURL, err := loadSharedUser(ctx, queryable, getPayloadID(payload, "shared_user_id"))

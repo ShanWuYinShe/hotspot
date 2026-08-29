@@ -21,7 +21,7 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 }
 
 func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams) (Account, error) {
-	if _, ok := r.queryable(); !ok {
+	if _, ok := r.queryable(ctx); !ok {
 		return Account{}, persistence.ErrNotImplemented
 	}
 	userID, err := generateUserID()
@@ -108,7 +108,7 @@ func (r *PostgresRepository) CreateGuest(ctx context.Context, params GuestParams
 }
 
 func (r *PostgresRepository) Authenticate(ctx context.Context, loginID, password string) (Account, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return Account{}, persistence.ErrNotImplemented
 	}
@@ -123,7 +123,7 @@ func (r *PostgresRepository) Authenticate(ctx context.Context, loginID, password
 }
 
 func (r *PostgresRepository) UpdateLoginMeta(ctx context.Context, userID, ip, location string) error {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -134,7 +134,7 @@ func (r *PostgresRepository) UpdateLoginMeta(ctx context.Context, userID, ip, lo
 }
 
 func (r *PostgresRepository) CreatePasswordReset(ctx context.Context, loginID string, expiresAt time.Time) (string, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return "", persistence.ErrNotImplemented
 	}
@@ -164,7 +164,7 @@ func (r *PostgresRepository) CreatePasswordReset(ctx context.Context, loginID st
 }
 
 func (r *PostgresRepository) ResetPassword(ctx context.Context, loginID, verificationCode, newPassword string) (Account, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return Account{}, persistence.ErrNotImplemented
 	}
@@ -208,7 +208,7 @@ func (r *PostgresRepository) ResetPassword(ctx context.Context, loginID, verific
 }
 
 func (r *PostgresRepository) ChangePassword(ctx context.Context, userID, oldPassword, newPassword string) error {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -233,7 +233,7 @@ func (r *PostgresRepository) ChangePassword(ctx context.Context, userID, oldPass
 // 是否存在（login_id 可能尚未注册，不 FK 账号表），防枚举由「无论是否存在均
 // 落库 + 发送」实现；频率控制依赖 ratelimit 的 auth_register_per_10minutes 桶。
 func (r *PostgresRepository) CreateRegisterCode(ctx context.Context, loginID string, expiresAt time.Time) (string, error) {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return "", persistence.ErrNotImplemented
 	}
@@ -255,7 +255,7 @@ func (r *PostgresRepository) CreateRegisterCode(ctx context.Context, loginID str
 // VerifyRegisterCode 校验注册验证码有效（存在、未消费、未过期），不消费——
 // 消费发生在注册成功后（ConsumeRegisterCode），失败路径不烧码。
 func (r *PostgresRepository) VerifyRegisterCode(ctx context.Context, loginID, verificationCode string) error {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -272,7 +272,7 @@ func (r *PostgresRepository) VerifyRegisterCode(ctx context.Context, loginID, ve
 // ConsumeRegisterCode 将验证码标记为已消费（一次性）。UPDATE 天然幂等：
 // 已消费的码再消费为 no-op。
 func (r *PostgresRepository) ConsumeRegisterCode(ctx context.Context, loginID, verificationCode string) error {
-	queryable, ok := r.queryable()
+	queryable, ok := r.queryable(ctx)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -282,7 +282,7 @@ func (r *PostgresRepository) ConsumeRegisterCode(ctx context.Context, loginID, v
 	return nil
 }
 
-func (r *PostgresRepository) accountByLoginID(ctx context.Context, queryable persistence.QueryableDB, loginID string) (accountRecord, bool, error) {
+func (r *PostgresRepository) accountByLoginID(ctx context.Context, queryable persistence.Queryable, loginID string) (accountRecord, bool, error) {
 	var record accountRecord
 	if err := queryable.QueryRow(ctx, queryGetAccountByLoginID, loginID).Scan(&record.LoginID, &record.UserID, &record.PasswordHash); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -293,7 +293,7 @@ func (r *PostgresRepository) accountByLoginID(ctx context.Context, queryable per
 	return record.withDerivedFields(), true, nil
 }
 
-func (r *PostgresRepository) accountByUserID(ctx context.Context, queryable persistence.QueryableDB, userID string) (accountRecord, bool, error) {
+func (r *PostgresRepository) accountByUserID(ctx context.Context, queryable persistence.Queryable, userID string) (accountRecord, bool, error) {
 	var record accountRecord
 	if err := queryable.QueryRow(ctx, queryGetAccountByUserID, userID).Scan(&record.LoginID, &record.UserID, &record.PasswordHash); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -304,7 +304,7 @@ func (r *PostgresRepository) accountByUserID(ctx context.Context, queryable pers
 	return record.withDerivedFields(), true, nil
 }
 
-func (r *PostgresRepository) passwordResetByCode(ctx context.Context, queryable persistence.QueryableDB, loginID, verificationCode string) (passwordResetRecord, bool, error) {
+func (r *PostgresRepository) passwordResetByCode(ctx context.Context, queryable persistence.Queryable, loginID, verificationCode string) (passwordResetRecord, bool, error) {
 	var record passwordResetRecord
 	if err := queryable.QueryRow(ctx, queryGetPasswordReset, loginID, verificationCode).Scan(&record.RequestID, &record.LoginID, &record.VerificationCode, &record.ExpiresAt, &record.CreatedAt, &record.UsedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -315,7 +315,7 @@ func (r *PostgresRepository) passwordResetByCode(ctx context.Context, queryable 
 	return record, true, nil
 }
 
-func (r *PostgresRepository) latestPasswordResetByLoginID(ctx context.Context, queryable persistence.QueryableDB, loginID string) (passwordResetRecord, bool, error) {
+func (r *PostgresRepository) latestPasswordResetByLoginID(ctx context.Context, queryable persistence.Queryable, loginID string) (passwordResetRecord, bool, error) {
 	var record passwordResetRecord
 	if err := queryable.QueryRow(ctx, queryLatestPasswordResetByLoginID, loginID).Scan(&record.RequestID, &record.LoginID, &record.VerificationCode, &record.ExpiresAt, &record.CreatedAt, &record.UsedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -326,12 +326,8 @@ func (r *PostgresRepository) latestPasswordResetByLoginID(ctx context.Context, q
 	return record, true, nil
 }
 
-func (r *PostgresRepository) queryable() (persistence.QueryableDB, bool) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, false
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	return queryable, ok
+func (r *PostgresRepository) queryable(ctx context.Context) (persistence.Queryable, bool) {
+	return persistence.RepoQueryable(ctx, r.factory)
 }
 
 func (r accountRecord) withDerivedFields() accountRecord {

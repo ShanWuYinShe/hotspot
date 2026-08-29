@@ -24,21 +24,11 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 // The fallback matters for tests, where RunInTransaction detects a stub backend
 // and runs fn without injecting a tx.
 func (r *PostgresRepository) txQueryable(ctx context.Context) (persistence.Queryable, bool) {
-	if q, ok := persistence.QueryableFromContext(ctx); ok {
-		return q, true
-	}
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, false
-	}
-	q, ok := r.factory.DB.(persistence.QueryableDB)
-	return q, ok
+	return persistence.RepoQueryable(ctx, r.factory)
 }
 
 func (r *PostgresRepository) Send(ctx context.Context, senderID, targetUserID string, req SendPrivateMessageRequest) (MessageSentResult, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return MessageSentResult{}, persistence.ErrNotImplemented
-	}
-	if _, ok := r.factory.DB.(persistence.QueryableDB); !ok {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return MessageSentResult{}, persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
@@ -70,10 +60,7 @@ func (r *PostgresRepository) Send(ctx context.Context, senderID, targetUserID st
 	})
 }
 func (r *PostgresRepository) Update(ctx context.Context, userID string, req UpdatePrivateMessageRequest) (MessageEventMeta, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return MessageEventMeta{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
@@ -98,10 +85,7 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 	return MessageEventMeta{TargetUserID: otherUserID(meta.ChatKey, userID), MessageID: req.MessageID, SentAt: meta.SentAt, Content: req.Content}, nil
 }
 func (r *PostgresRepository) Recall(ctx context.Context, userID string, req RecallPrivateMessageRequest) (MessageEventMeta, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return MessageEventMeta{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
@@ -134,10 +118,7 @@ func (r *PostgresRepository) Recall(ctx context.Context, userID string, req Reca
 	return MessageEventMeta{TargetUserID: otherUserID(meta.ChatKey, userID), MessageID: req.MessageID, SentAt: meta.SentAt}, nil
 }
 func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req MarkPrivateMessagesReadRequest) (MessageEventMeta, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return MessageEventMeta{}, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
@@ -159,10 +140,7 @@ func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req 
 	return MessageEventMeta{TargetUserID: req.TargetUserID, MessageID: messageID, SentAt: sentAt.Format(time.RFC3339Nano)}, nil
 }
 func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -308,10 +286,7 @@ func (r *PostgresRepository) GetMessageReportSnapshot(ctx context.Context, messa
 }
 
 func (r *PostgresRepository) CountMessagesByTarget(ctx context.Context, senderID string, since time.Time) (map[string]int, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, persistence.ErrNotImplemented
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, persistence.ErrNotImplemented
 	}

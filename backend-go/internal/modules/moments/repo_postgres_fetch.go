@@ -12,12 +12,8 @@ import (
 
 // queryableDB 解析当前请求可用的 QueryableDB；persistence 未配置（内存模式）
 // 时返回 false。
-func (r *PostgresRepository) fetchQueryable() (persistence.QueryableDB, bool) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, false
-	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	return queryable, ok
+func (r *PostgresRepository) fetchQueryable(ctx context.Context) (persistence.Queryable, bool) {
+	return persistence.RepoQueryable(ctx, r.factory)
 }
 
 // ListFollowingMoments 关注动态（spec api_spec_moment.md → moments/fetch_following）：
@@ -25,7 +21,7 @@ func (r *PostgresRepository) fetchQueryable() (persistence.QueryableDB, bool) {
 // 解析出参考点时同步填充 location.distance / bearing_degrees
 // （spec api_spec_types.md RelativeLocation：两字段由服务端基于 reference_point 计算）。
 func (r *PostgresRepository) ListFollowingMoments(ctx context.Context, query momentsQuery) (PaginatedMoments, error) {
-	queryable, ok := r.fetchQueryable()
+	queryable, ok := r.fetchQueryable(ctx)
 	if !ok {
 		return PaginatedMoments{}, persistence.ErrNotImplemented
 	}
@@ -100,7 +96,7 @@ func (r *PostgresRepository) ListFollowingMoments(ctx context.Context, query mom
 // ListNearbyMoments 附近瞬间（spec moment.md → moments/fetch_nearby）：
 // S2 覆盖区间粗筛 + geo.SearchPlan 精筛（radius 内）+ 距离主序排序。
 func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query momentsQuery) (PaginatedMoments, error) {
-	queryable, ok := r.fetchQueryable()
+	queryable, ok := r.fetchQueryable(ctx)
 	if !ok {
 		return PaginatedMoments{}, persistence.ErrNotImplemented
 	}
