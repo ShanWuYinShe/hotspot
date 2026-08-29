@@ -16,9 +16,11 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
 	import RailMomentThumb from '@/components/rail/RailMomentThumb.svelte';
 	import MomentPostBody from './MomentPostBody.svelte';
+	import MomentDetailRail from './shared/MomentDetailRail.svelte';
+	import DeleteMomentDialog from './shared/DeleteMomentDialog.svelte';
+	import CommentInputBar from './shared/CommentInputBar.svelte';
 	import { toNearbyRailRows } from './nearby-rail';
 	import MomentEditDialog from '@/components/overlays/MomentEditDialog.svelte';
-	import * as Dialog from '@/components/ui/dialog';
 	import { showToast } from '@/stores/toast.svelte';
 	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment, fetchNearbyMoments, searchMoments, deleteMoment, listMyMoments } from '@/api';
 	import { ROUTES } from '@/lib/routes';
@@ -445,99 +447,15 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 	{#snippet footer()}
 		<!-- 评论输入栏固定在主区底部，不随正文滚动 -->
-		<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary border-t border-border-default" >
-			<Avatar class="border border-border-default" src={auth.user?.avatar_url} name={auth.user?.nickname} size={30}  />
-			<div class="flex-1 flex items-center px-4 rounded-md input-surface h-9.5" >
-				<input
-					bind:this={commentInputEl}
-					bind:value={input}
-					onkeydown={(e) => {
-						// IME 组合中的回车是选词确认，不能当发送（中文输入法致命）
-						if (e.key === 'Enter' && !e.isComposing) void handleComment();
-					}}
-					placeholder="写下你的评论…"
-					class="flex-1 bg-transparent text-text-primary text-sm"
-				/>
-			</div>
-			<button
-				type="button"
-				class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full focus-ring shrink-0 size-9" style="background:{input.trim() ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};box-shadow:{input.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:var(--cst-border-width-hairline) solid var(--cst-border-default);transition:all var(--cst-motion-standard) var(--cst-ease-standard);"
-				onclick={() => void handleComment()}
-			>
-				<Send class="size-3.5" style="color:{input.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
-			</button>
-		</div>
+		<CommentInputBar bind:input bind:inputEl={commentInputEl} onSend={() => void handleComment()} />
 	{/snippet}
 
 	{#snippet rail()}
-	<RailSection title="作者">
-		<RailUserRow avatar={moment.avatar} name={moment.user} sub={moment.location} onClick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}>
-			{#snippet trailing()}
-				<button
-					type="button"
-					class="hover-btn shrink-0 rounded-full border border-accent-border bg-accent-soft px-2.5 py-1 text-xs text-accent-default focus-ring"
-					onclick={(e) => {
-						e.stopPropagation();
-						if (moment.authorId) void goto(ROUTES.message(moment.authorId));
-					}}
-				>
-					私信
-				</button>
-			{/snippet}
-		</RailUserRow>
-	</RailSection>
-
-	<RailSection title="相关位置">
-		<RailLocationMini name={moment.location} />
-	</RailSection>
-
-	<!-- 此刻附近（moments/fetch_nearby） -->
-	<RailSection title="此刻附近" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)}>
-		<div class="flex flex-col gap-3">
-			{#each nearbyNow as u (u.id)}
-				<RailUserRow avatar={u.avatar} name={u.name} sub={u.sub} onClick={() => { if (u.id) void goto(ROUTES.user(u.id)); }} />
-			{/each}
-		</div>
-	</RailSection>
-
-	<!-- 更多动态（moments/search） -->
-	<RailSection title="更多动态" action="发现" onAction={() => void goto(ROUTES.nearbyMoments)}>
-		<div class="flex flex-col gap-3">
-			{#each relatedMoments as p (p.id)}
-				<RailMomentThumb image={p.image} title={p.title} meta={p.meta} onClick={() => void goto(ROUTES.moment(p.id))} />
-			{/each}
-		</div>
-	</RailSection>
+		<MomentDetailRail {moment} {nearbyNow} {relatedMoments} />
 	{/snippet}
 </SplitPageLayout>
 
-<Dialog.Root open={deleteOpen} onOpenChange={(next) => (next ? undefined : (deleteOpen = false))}>
-	<Dialog.Content
-		side="center"
-		class="max-w-sm p-5"
-		aria-label="确认删除动态"
-	>
-		<p class="text-md text-text-primary">删除这条动态？</p>
-		<p class="mt-1 text-sm text-text-secondary">删除后无法恢复，相关评论也将一并移除。</p>
-		<div class="mt-4 flex items-center justify-end gap-3">
-			<button
-				type="button"
-				onclick={() => (deleteOpen = false)}
-				class="hover-btn rounded-full px-4 py-2 text-sm text-text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
-			>
-				取消
-			</button>
-			<button
-				type="button"
-				disabled={deleting}
-				onclick={handleDelete}
-				class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-status-danger enabled:bg-status-danger disabled:opacity-muted"
-			>
-				{deleting ? '删除中…' : '确认删除'}
-			</button>
-		</div>
-	</Dialog.Content>
-</Dialog.Root>
+<DeleteMomentDialog open={deleteOpen} {deleting} onCancel={() => (deleteOpen = false)} onConfirm={handleDelete} />
 
 <MomentEditDialog
 	open={editOpen}

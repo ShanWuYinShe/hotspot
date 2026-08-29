@@ -11,6 +11,11 @@
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import GroupAnnouncementDialog from '@/components/groups/GroupAnnouncementDialog.svelte';
+	import MembersList from './shared/MembersList.svelte';
+	import ApplicationsList from './shared/ApplicationsList.svelte';
+	import InvitesList from './shared/InvitesList.svelte';
+	import BannedList from './shared/BannedList.svelte';
+	import AnnouncementsList from './shared/AnnouncementsList.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { useGroupDetail } from '@/lib/group-data.svelte';
@@ -258,137 +263,43 @@
 						</div>
 					{/if}
 				{#if !canManageMembers || memberTab === 'members'}
-					{#if canManageMembers}
-						<div class="mt-6 flex justify-end">
-							<button type="button" onclick={() => (inviteOpen = true)} class="hover-btn flex items-center gap-1 rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring">
-								<UserPlus size={12} strokeWidth={1.75} />
-								添加成员
-							</button>
-						</div>
-					{/if}
-					<!-- 空旷内容区 → List bordered（有边框列表契约）；列表行不设独立边框 -->
-					<ListContainer bordered class="mt-4">
-						{#each gd.members as member (member.id)}
-							<ListItem
-								onClick={() => {
-									if (member.userId) void goto(ROUTES.user(member.userId));
-								}}
-								ariaLabel={`查看 ${member.name} 的资料`}
-								class="flex list-row-standard items-center gap-3 px-3.5 py-3"
-							>
-								<div class="relative">
-									<Avatar src={member.avatar} name={member.name} size={40} />
-									{#if gd.onlineMemberIds.has(member.userId)}
-										<span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-surface-primary bg-status-online"></span>
-									{/if}
-								</div>
-								<span class="min-w-0 flex-1">
-									<span class="block text-sm text-text-primary">{member.name}</span>
-									<span class="text-xs text-text-secondary">{member.role}</span>
-								</span>
-								<span class="text-xs text-text-secondary">查看资料</span>
-								{#if canManageMember(member)}
-									<button
-										type="button"
-										onclick={(e) => { e.stopPropagation(); actionMember = member; }}
-										class="hit-slop flex h-7 w-7 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default"
-										aria-label={`管理 ${member.name}`}
-									>
-										<MoreHorizontal size={15} strokeWidth={2} />
-									</button>
-								{/if}
-							</ListItem>
-						{/each}
-					</ListContainer>
+					<MembersList
+						members={gd.members}
+						onlineMemberIds={gd.onlineMemberIds}
+						canManageMembers={canManageMembers}
+						canManageMember={canManageMember}
+						onInvite={() => (inviteOpen = true)}
+						onManage={(m) => (actionMember = m)}
+					/>
 					{:else if memberTab === 'applications'}
-						<!-- 申请审批（owner/admin；默认仅 pending，管理员工作台语义） -->
-						<ListContainer bordered class="mt-4">
-							{#each gd.applications as app (app.application_id)}
-								<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${app.applicant.nickname} 的入群申请`}>
-									<Avatar src={app.applicant.avatar_url ?? undefined} name={app.applicant.nickname} size={40} />
-									<span class="min-w-0 flex-1">
-										<span class="block truncate text-sm text-text-primary">{app.applicant.nickname}</span>
-										<span class="text-xs text-text-secondary">{formatDateTime(app.created_at)}{app.message ? ` · ${app.message}` : ''}</span>
-									</span>
-									<button type="button" onclick={() => void handleApproveApplication(app.application_id)} class="hover-btn rounded-full bg-accent-default px-3.5 py-1.5 text-sm font-medium text-text-on-accent focus-ring">同意</button>
-									<button type="button" onclick={() => void handleRejectApplication(app.application_id)} class="hover-btn rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring">拒绝</button>
-								</ListItem>
-							{:else}
-								<EmptyState bare title="暂无待处理的申请" />
-							{/each}
-						</ListContainer>
+						<ApplicationsList
+							applications={gd.applications}
+						{formatDateTime}
+						onApprove={(id) => void handleApproveApplication(id)}
+						onReject={(id) => void handleRejectApplication(id)}
+					/>
 					{:else if memberTab === 'invites'}
-					<!-- 已发邀请（owner/admin；默认仅 pending，revoked 含过期自动撤销） -->
-					<ListContainer bordered class="mt-4">
-						{#each gd.sentInvites as inv (inv.invite_id)}
-							<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${inv.invitee.nickname} 的入群邀请`}>
-								<Avatar src={inv.invitee.avatar_url ?? undefined} name={inv.invitee.nickname} size={40} />
-								<span class="min-w-0 flex-1">
-									<span class="block truncate text-sm text-text-primary">{inv.invitee.nickname}</span>
-									<span class="text-xs text-text-secondary">{inviteStatusText(inv.status)} · {formatDateTime(inv.created_at)}</span>
-								</span>
-								{#if inv.status === 'pending'}
-									<button type="button" onclick={() => void handleRevokeInvite(inv.invite_id)} class="hover-btn rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring">撤销</button>
-								{/if}
-							</ListItem>
-						{:else}
-							<EmptyState bare title="暂无待处理的邀请" />
-						{/each}
-					</ListContainer>
+					<InvitesList
+						invites={gd.sentInvites}
+						{inviteStatusText}
+						{formatDateTime}
+						onRevoke={(id) => void handleRevokeInvite(id)}
+					/>
 				{:else}
-					<!-- 封禁名单（owner/admin） -->
-					<ListContainer bordered class="mt-4">
-						{#each gd.bannedMembers as item (item.user.user_id)}
-							<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${item.user.nickname} 的封禁记录`}>
-								<Avatar src={item.user.avatar_url ?? undefined} name={item.user.nickname} size={40} />
-								<span class="min-w-0 flex-1">
-									<span class="block truncate text-sm text-text-primary">{item.user.nickname}</span>
-									<span class="text-xs text-text-secondary">{formatDateTime(item.banned_at)}{item.reason ? ` · ${item.reason}` : ''}</span>
-								</span>
-								<button type="button" onclick={() => void handleUnban(item.user.user_id)} class="hover-btn rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring">解封</button>
-							</ListItem>
-						{:else}
-							<EmptyState bare title="暂无封禁成员" />
-						{/each}
-					</ListContainer>
+					<BannedList
+						banned={gd.bannedMembers}
+						{formatDateTime}
+						onUnban={(id) => void handleUnban(id)}
+					/>
 				{/if}
 			{:else}
-				<div class="mt-6 flex items-center justify-between">
-					<p class="text-sm text-text-secondary">群公告</p>
-					{#if canManageAnnouncements}
-						<button type="button" onclick={openCreateAnnouncement} class="hover-btn flex items-center gap-1 rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring">
-							<Megaphone size={12} strokeWidth={1.75} />
-							发公告
-						</button>
-					{/if}
-				</div>
-				<!-- 空旷内容区 → List bordered（有边框列表契约） -->
-				<ListContainer bordered class="mt-4">
-					{#each gd.announcements as item (item.id)}
-						<ListItem class="flex flex-col items-start px-4 py-4" ariaLabel={item.title}>
-							<div class="flex items-center gap-1.5 pr-16">
-								{#if item.isPinned}
-									<Pin size={12} class="shrink-0 text-accent-default" strokeWidth={1.75} />
-								{/if}
-								<p class="text-sm font-medium text-text-primary">{item.title}</p>
-							</div>
-							<p class="mt-1 text-sm leading-5 text-text-secondary">{item.body}</p>
-							<p class="mt-2 text-xs text-text-secondary">{item.time}</p>
-							{#if canManageAnnouncements}
-								<div class="absolute right-3 top-3 flex gap-1">
-									<button type="button" onclick={() => openEditAnnouncement(item)} class="hit-slop flex h-6 w-6 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default" aria-label="编辑公告">
-										<PencilLine size={12} strokeWidth={1.75} />
-									</button>
-									<button type="button" onclick={() => (deleteAnnounceId = item.id)} class="hit-slop flex h-6 w-6 items-center justify-center rounded-full text-status-danger outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-status-danger" aria-label="删除公告">
-										<Trash2 size={12} strokeWidth={1.75} />
-									</button>
-								</div>
-							{/if}
-						</ListItem>
-					{:else}
-						<EmptyState bare title="暂无公告" />
-					{/each}
-				</ListContainer>
+				<AnnouncementsList
+					announcements={gd.announcements}
+					canManage={canManageAnnouncements}
+					onCreate={openCreateAnnouncement}
+					onEdit={openEditAnnouncement}
+					onDelete={(id) => (deleteAnnounceId = id)}
+				/>
 			{/if}
 		</main>
 

@@ -4,6 +4,13 @@
 	import { requestPasswordReset, resetPassword, sendRegisterCode } from '@/api';
 	import Button from '@/components/ui/button.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
+	import {
+		validateAuthFields,
+		validateLoginId,
+		type AuthFieldErrors,
+		type AuthFieldName,
+		type AuthMode
+	} from '@/lib/auth-validation';
 
 	// 全页 Auth 路由与 LoginPromptSheet 共用的认证表单。
 	// 五模式：login / register / guest + 忘记密码子流程
@@ -18,10 +25,8 @@
 	// 无障碍契约：每个字段独立校验，错误就近展示（role="alert" + aria-describedby），
 	// 失败后自动聚焦首个错误字段；密码框提供显隐切换。
 
-	export type AuthMode = 'login' | 'register' | 'guest' | 'forgot' | 'reset';
-
-	type FieldName = 'loginId' | 'password' | 'nickname' | 'code' | 'newPassword' | 'resetLoginId';
-	type FieldErrors = Partial<Record<FieldName, string>>;
+	type FieldName = AuthFieldName;
+	type FieldErrors = AuthFieldErrors;
 
 	let {
 		compact = false,
@@ -35,23 +40,6 @@
 		/** Initial mode. */
 		initialMode?: AuthMode;
 	} = $props();
-
-	function validateLoginId(v: string): string | null {
-		if (!v) return '请输入账号';
-		if (v.length < 3 || v.length > 64) return '账号长度需 3–64';
-		return null;
-	}
-	function validatePassword(v: string): string | null {
-		if (!v) return '请输入密码';
-		if (v.length < 8 || v.length > 128) return '密码长度需 8–128';
-		if (!/[a-zA-Z]/.test(v) || !/\d/.test(v)) return '密码需包含字母和数字';
-		return null;
-	}
-	function validateNickname(v: string, opts: { optional?: boolean } = {}): string | null {
-		if (!v) return opts.optional ? null : '请输入昵称';
-		if (v.length < 1 || v.length > 30) return '昵称长度需 1–30';
-		return null;
-	}
 
 	// initialMode 仅在挂载时生效（此后模式切换走 switchMode）：闭包读取一次初始值
 	const getInitialMode = () => initialMode;
@@ -129,28 +117,17 @@
 	};
 
 	function validate(): FieldErrors {
-		const errs: FieldErrors = {};
-		if (mode === 'login') {
-			errs.loginId = validateLoginId(loginId) ?? undefined;
-			if (method === 'code') errs.code = code.trim() ? undefined : '请输入验证码';
-			else errs.password = validatePassword(password) ?? undefined;
-		} else if (mode === 'register') {
-			errs.loginId = validateLoginId(loginId) ?? undefined;
-			errs.nickname = validateNickname(nickname) ?? undefined;
-			errs.password = validatePassword(password) ?? undefined;
-			// 手机号/邮箱型 login_id 必须携带验证码（所有权验证）；用户名型不校验
-			if (needsRegisterCode) errs.code = code.trim() ? undefined : '请输入验证码';
-		} else if (mode === 'guest') {
-			// 访客昵称可选：留空由服务端自动生成默认昵称
-			errs.nickname = validateNickname(nickname, { optional: true }) ?? undefined;
-		} else if (mode === 'forgot') {
-			errs.resetLoginId = validateLoginId(resetLoginId) ?? undefined;
-		} else if (mode === 'reset') {
-			errs.resetLoginId = validateLoginId(resetLoginId) ?? undefined;
-			errs.code = code.trim() ? undefined : '请输入验证码';
-			errs.newPassword = validatePassword(newPassword) ?? undefined;
-		}
-		return Object.fromEntries(Object.entries(errs).filter(([, v]) => v)) as FieldErrors;
+		return validateAuthFields({
+			mode,
+			method,
+			loginId,
+			password,
+			nickname,
+			code,
+			newPassword,
+			resetLoginId,
+			needsRegisterCode
+		});
 	}
 
 	function focusFirstInvalid(errs: FieldErrors): void {

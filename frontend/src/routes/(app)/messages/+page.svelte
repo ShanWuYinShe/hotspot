@@ -5,16 +5,12 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
-	import EmptyState from '@/components/data-display/EmptyState.svelte';
-import InlineLoading from '@/components/data-display/InlineLoading.svelte';
-	import Avatar from '@/components/shared/Avatar.svelte';
-	import LoadError from '@/components/data-display/LoadError.svelte';
-	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import ChatView from '@/components/messages/ChatView.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import OnlineStrip from './shared/OnlineStrip.svelte';
+	import ChatListBody from './shared/ChatListBody.svelte';
 	import GroupChatView from '@/components/messages/GroupChatView.svelte';
-	import ChatListItem from '@/components/messages/ChatListItem.svelte';
 	import NewConversationSheet from '@/components/overlays/NewConversationSheet.svelte';
-	import ListContainer from '@/components/list/ListContainer.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
@@ -220,69 +216,20 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 			<!-- 在线 strip -->
 			{#if onlineChats.length > 0}
-				<div class="shrink-0 px-4 py-2.5 border-b border-border-default" >
-					<!-- 分组小标统一 eyebrow（tracking-eyebrow 0.14em），与移动端及全站一致；
-					     tracking-label(0.12em) 仅 DesktopLayout 侧栏分组使用 -->
-					<p class="eyebrow mb-2">在线</p>
-					<div class="flex gap-3 overflow-x-auto no-scrollbar pr-1">
-						{#each onlineChats as c (c.id)}
-							<button
-								type="button"
-								class="avatar-entry tap-92 flex flex-col items-center gap-1 shrink-0 cursor-pointer"
-								onclick={() => selectChat(c)}
-							>
-								<div class="relative">
-									<Avatar
-										src={c.avatar}
-										name={c.name}
-										size={36}
-										class="border"
-										style="border-color:{selectedId === c.id ? 'var(--cst-accent-default)' : 'var(--cst-border-default)'};border-width:{selectedId === c.id ? 'var(--cst-border-width-strong)' : 'var(--cst-border-width-regular)'};"
-									/>
-									<OnlineDot size="sm" />
-								</div>
-								<span class="text-text-secondary text-xxs">{c.name}</span>
-							</button>
-						{/each}
-					</div>
-				</div>
+				<OnlineStrip chats={onlineChats} variant="sm" {selectedId} onSelect={selectChat} />
 			{/if}
 
-			<!-- Chat list（List 契约：分栏内连接列表，行无独立边框。
-			     每行外层 px-3 py-1 包裹——对齐 Figma MessagesPage：行间有呼吸间距，
-			     选中态 glow 不与相邻行重叠，分隔线嵌在间距中不显突兀） -->
-			{#if loadError}
-				<div class="flex flex-1 flex-col items-center justify-center px-4 py-10">
-					<LoadError message={loadError} onRetry={() => reloadKey++} />
-				</div>
-			{:else if loading}
-				<InlineLoading class="flex-1 justify-center" label="加载会话…" />
-		{:else if filtered.length === 0}
-			<!-- 空态与同页移动端同形态（EmptyState bare）——原先这里是裸 p 文本，
-			     与移动端 EmptyState 两种观感；文案统一为「没有找到会话」，
-			     因为本分支也覆盖搜索无结果，原「暂无会话」在搜索场景下是错的 -->
-				<div class="flex flex-1 items-center justify-center">
-					<EmptyState bare title="没有找到会话">
-						{#snippet icon()}
-							<MessageSquareDashed class="size-9 opacity-muted text-text-secondary"  strokeWidth={1.5} />
-						{/snippet}
-					</EmptyState>
-				</div>
-		{:else}
-				<ListContainer class="flex-1 overflow-y-auto no-scrollbar py-2">
-					{#each filtered as chat (chat.id)}
-						<div class="px-2 py-1">
-							<ChatListItem
-								chat={chat}
-								isSelected={selectedId === chat.id}
-								onClick={() => selectChat(chat)}
-								onTogglePin={() => togglePin(chat)}
-								compact
-							/>
-						</div>
-					{/each}
-				</ListContainer>
-			{/if}
+			<ChatListBody
+				chats={filtered}
+				loadError={loadError}
+				loading={loading}
+				onRetry={() => reloadKey++}
+				onSelect={selectChat}
+				onTogglePin={togglePin}
+				{selectedId}
+				compact
+				fill
+			/>
 		</div>
 
 		<!-- Right: chat view or empty state（对齐 Figma：无卡片包裹，直接平铺） -->
@@ -380,58 +327,19 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 	<ContentColumn class="animate-fade-in flex flex-col min-h-full pt-4 pb-6">
 		{#if onlineChats.length > 0}
-			<div class="mb-4">
-				<p class="eyebrow mb-2.5">在线</p>
-				<div class="flex gap-4 overflow-x-auto no-scrollbar pb-1 pr-1">
-					{#each onlineChats as chat (chat.id)}
-						<button
-							type="button"
-							class="avatar-entry tap-92 flex flex-col items-center gap-1.5 shrink-0 cursor-pointer"
-							onclick={() => void goto(ROUTES.message(chat.peerUserId || chat.id))}
-						>
-							<div class="relative">
-								<Avatar
-									src={chat.avatar}
-									name={chat.name}
-									size={52}
-									class="border"
-									style="padding:2px;border-color:var(--cst-accent-default);border-width:var(--cst-border-width-strong);"
-								/>
-								<OnlineDot size="lg" />
-							</div>
-							<span class="text-text-secondary text-xs">{chat.name}</span>
-						</button>
-					{/each}
-				</div>
-			</div>
+			<OnlineStrip chats={onlineChats} onSelect={(c) => void goto(ROUTES.message(c.peerUserId || c.id))} />
 		{/if}
 
 		<p class="eyebrow mb-2.5">最近</p>
 
-		<!-- 列表：无外层容器，List 直接裸排（对齐 Figma）；每行 px-3 py-1 包裹 -->
-		{#if loadError}
-			<LoadError message={loadError} onRetry={() => reloadKey++} />
-		{:else if loading}
-			<InlineLoading label="加载会话…" />
-		{:else if filtered.length === 0}
-			<EmptyState bare class="py-12!" title="没有找到会话">
-				{#snippet icon()}
-					<MessageSquareDashed class="size-9 opacity-muted text-text-secondary"  strokeWidth={1.5} />
-				{/snippet}
-			</EmptyState>
-		{:else}
-			<ListContainer class="py-1">
-				{#each filtered as chat (chat.id)}
-					<div class="px-2 py-1">
-						<ChatListItem
-							chat={chat}
-							onClick={() => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}
-							onTogglePin={() => togglePin(chat)}
-						/>
-					</div>
-				{/each}
-			</ListContainer>
-		{/if}
+		<ChatListBody
+			chats={filtered}
+			loadError={loadError}
+			loading={loading}
+			onRetry={() => reloadKey++}
+			onSelect={(chat) => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}
+			onTogglePin={togglePin}
+		/>
 	</ContentColumn>
 
 	<Dialog.Root open={showNewChat} onOpenChange={(next) => (next ? undefined : (showNewChat = false))}>
