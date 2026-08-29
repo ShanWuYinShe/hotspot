@@ -6,6 +6,7 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
@@ -383,7 +384,7 @@
 
 <SplitPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
-		<PageHeader title="动态详情" titleSize={16} onBack={() => history.back()}>
+		<PageHeader title="动态详情" titleSize="base" onBack={() => history.back()}>
 			{#snippet trailing()}
 				<DropdownMenu.Root bind:open={moreOpen}>
 					<div bind:this={moreMenuEl} class="relative">
@@ -416,10 +417,7 @@
 
 	<!-- 内容（gutter 由 SplitPageLayout 提供；全幅封面在 MomentPostBody 内负 margin 抵消） -->
 	{#if loading}
-		<div class="flex flex-col items-center gap-3 py-20">
-			<div class="spinner size-7"></div>
-			<p class="text-text-secondary text-sm">加载动态…</p>
-		</div>
+		<InlineLoading label="加载动态…" />
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else if !moment.id}

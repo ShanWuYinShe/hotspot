@@ -141,7 +141,7 @@
 	默认全宽会让每行设置项在桌面端拉满视口、Toggle 远离标题 -->
 <StandardPageLayout contentMaxWidth={560} contentClassName="animate-fade-in pt-4 pb-10">
 	{#snippet header()}
-		<PageHeader title="设置" onBack={() => history.back()} showBackOnDesktop maxWidth={560} titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22} />
+		<PageHeader title="设置" onBack={() => history.back()} showBackOnDesktop maxWidth={560} titleSize={device === 'desktop' ? 'xl' : '2xl'} />
 	{/snippet}
 
 		{#if loadError}

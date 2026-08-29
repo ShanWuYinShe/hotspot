@@ -6,6 +6,7 @@
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -192,7 +193,7 @@ locationName = loc?.location_name ?? '';
 		title="附近动态"
 		subtitle={locationName ? `${locationName} · 5km 内` : '5km 内'}
 		sticky
-		titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}
+		titleSize={device === 'desktop' ? 'xl' : '2xl'}
 		contentClassName="pt-4 pb-0"
 		onBack={() => history.back()}
 	>
@@ -244,10 +245,7 @@ locationName = loc?.location_name ?? '';
 <!-- ═══ 加载中 / 空列表状态（与附近的人、附近群组一致）═══ -->
 {#snippet feedState()}
 	{#if loading}
-		<div class="flex flex-col items-center gap-3 py-20">
-			<div class="spinner size-7" ></div>
-			<p class="text-text-secondary text-sm">加载附近动态…</p>
-		</div>
+		<InlineLoading label="加载附近动态…" />
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else}

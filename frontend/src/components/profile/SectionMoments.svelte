@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { Heart, MessageCircle, CalendarDays, ArrowUpRight, Grid3X3 } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import MediaPlaceholder from '@/components/data-display/MediaPlaceholder.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
@@ -55,10 +56,7 @@
      否则各分区尾部留白随自身 pb 各异（曾出现 48/56/64px 三种值）。 -->
 <div>
 		{#if loading}
-			<div class="flex flex-col items-center gap-3 py-20">
-				<div class="spinner size-7"></div>
-				<p class="text-text-secondary text-sm">加载我的瞬间…</p>
-			</div>
+			<InlineLoading label="加载我的瞬间…" />
 		{:else if error}
 			<LoadError message={error} onRetry={retryActive} />
 		{:else if archive.length === 0}

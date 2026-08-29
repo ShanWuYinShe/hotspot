@@ -6,6 +6,7 @@
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
@@ -189,7 +190,7 @@
 		<div class="flex flex-col shrink-0 overflow-hidden w-75 border-r border-border-default"  >
 			<!-- List header（对齐 Figma：px-4 pt-4 pb-3，标题 18 + Plus 30 + 搜索框） -->
 			<div class="shrink-0">
-				<PageHeader title="消息" titleSize={18} contentClassName="px-4 pt-4 pb-0">
+				<PageHeader title="消息"  contentClassName="px-4 pt-4 pb-0">
 					{#snippet trailing()}
 						<button
 							type="button"
@@ -255,10 +256,7 @@
 					<LoadError message={loadError} onRetry={() => reloadKey++} />
 				</div>
 			{:else if loading}
-				<div class="flex flex-1 flex-col items-center justify-center gap-3 py-20">
-					<div class="spinner size-7"></div>
-					<p class="text-text-secondary text-sm">加载会话…</p>
-				</div>
+				<InlineLoading class="flex-1 justify-center" label="加载会话…" />
 		{:else if filtered.length === 0}
 			<!-- 空态与同页移动端同形态（EmptyState bare）——原先这里是裸 p 文本，
 			     与移动端 EmptyState 两种观感；文案统一为「没有找到会话」，
@@ -344,7 +342,7 @@
 	</div>
 {:else}
 	<!-- ═══ Mobile Messages ═══ -->
-	<PageHeader title="消息" sticky titleSize={22} subtitleSize={12} contentClassName="pt-4 pb-0">
+	<PageHeader title="消息" sticky titleSize="2xl" subtitleSize="sm" contentClassName="pt-4 pb-0">
 		{#snippet trailing()}
 			<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「新会话」同排 -->
 			<div class="flex items-center gap-2">
@@ -414,10 +412,7 @@
 		{#if loadError}
 			<LoadError message={loadError} onRetry={() => reloadKey++} />
 		{:else if loading}
-			<div class="flex flex-col items-center gap-3 py-20">
-				<div class="spinner size-7"></div>
-				<p class="text-text-secondary text-sm">加载会话…</p>
-			</div>
+			<InlineLoading label="加载会话…" />
 		{:else if filtered.length === 0}
 			<EmptyState bare class="py-12!" title="没有找到会话">
 				{#snippet icon()}

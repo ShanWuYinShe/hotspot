@@ -979,7 +979,7 @@ export struct MessagePage {
       Stack({ alignContent: Alignment.Center }) {
         if (item.unreadCount > 0) {
           Text(item.unreadCount > 99 ? '99+' : `${item.unreadCount}`)
-            .fontSize(DesignConstants.FONT.SIZE.XS_MINUS)
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(this.getCurrentThemePalette().accentText)
             .minFontScale(0.5)

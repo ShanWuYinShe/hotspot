@@ -52,7 +52,7 @@
 	<PageHeader
 		title="关系"
 		sticky
-		titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}
+		titleSize={device === 'desktop' ? 'xl' : '2xl'}
 		contentClassName="pt-4 pb-0"
 		onBack={() => void goto(ROUTES.me)}
 	>

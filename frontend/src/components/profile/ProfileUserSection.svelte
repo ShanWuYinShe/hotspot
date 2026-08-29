@@ -2,6 +2,7 @@
 	import type { Component, Snippet } from 'svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import MetricRow, { type MetricItem } from '@/components/data-display/MetricRow.svelte';
@@ -117,10 +118,7 @@
 		     尾部留白由页面 contentClassName 统一承担，分区内不叠 pb -->
 		<div class="grid w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
 			{#if loading}
-				<div class="col-span-full flex flex-col items-center gap-3 py-16">
-					<div class="spinner size-7"></div>
-					<p class="text-text-secondary text-sm">加载中…</p>
-				</div>
+				<div class="col-span-full"><InlineLoading class="py-16" label="加载中…" /></div>
 			{:else if error}
 				<div class="col-span-full">
 					<LoadError message={error} onRetry={onRetry} />
@@ -144,10 +142,7 @@
 		     尾部留白由页面 contentClassName 统一承担，分区内不叠 pb -->
 		<div>
 			{#if loading}
-				<div class="flex flex-col items-center gap-3 py-16">
-					<div class="spinner size-7"></div>
-					<p class="text-text-secondary text-sm">加载中…</p>
-				</div>
+				<InlineLoading class="py-16" label="加载中…" />
 			{:else if error}
 				<LoadError message={error} onRetry={onRetry} />
 			{:else if items.length === 0}

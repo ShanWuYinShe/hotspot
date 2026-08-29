@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';	import { goto } from '$app/navigation';
 	import { Camera, ChevronRight, Heart, ImageIcon, MapPin, Pencil, Settings, UserCheck, UserPlus, Users } from '@lucide/svelte';
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -53,10 +53,7 @@
 	{/snippet}
 
 	{#if loading}
-		<div class="flex flex-col items-center gap-3 py-20">
-			<div class="spinner size-7"></div>
-			<p class="text-text-secondary text-sm">加载个人资料…</p>
-		</div>
+		<InlineLoading label="加载个人资料…" />
 	{:else if error}
 		<LoadError message={error} onRetry={retry} />
 	{:else}

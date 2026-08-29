@@ -9,6 +9,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import Button from '@/components/ui/button.svelte';
@@ -197,7 +198,7 @@ const FILTER_TABS = [
 		<PageHeader
 			title="通知"
 			sticky
-			titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}
+			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			contentClassName="pt-4 pb-0"
 			onBack={() => history.back()}
 		>
@@ -287,10 +288,7 @@ const FILTER_TABS = [
 				{/if}
 
 				{#if loading}
-					<div class="flex flex-col items-center gap-3 py-20">
-						<div class="spinner size-7"></div>
-						<p class="text-text-secondary text-sm">加载通知…</p>
-					</div>
+					<InlineLoading label="加载通知…" />
 				{:else if loadError}
 					<LoadError message={loadError} onRetry={() => reloadKey++} />
 				{:else if filtered.length === 0}

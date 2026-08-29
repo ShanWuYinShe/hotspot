@@ -17,6 +17,7 @@
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import { follow } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
@@ -103,10 +104,7 @@
 	<!-- 三端共用的业务组件（只写一次）。首页为大纲页：列表限长 + 「更多」链接导航到专区 -->
 	{#if loading}
 		<!-- 加载中：统一 spinner（对齐样板 feedState） -->
-		<div class="flex flex-col items-center gap-3 py-20">
-			<div class="spinner size-7" ></div>
-			<p class="text-text-secondary text-sm">加载首页数据…</p>
-		</div>
+		<InlineLoading label="加载首页数据…" />
 	{:else if error}
 		<!-- 加载失败：统一错误态（LoadError） -->
 		<LoadError message={error} onRetry={() => reloadKey++} />
@@ -137,7 +135,7 @@
 	>
 	{#snippet header()}
 		<!-- ═══ 首页 — 统一 PageHeader（三端同标题；附近内容拆分到 /nearby 聚合页）═══ -->
-		<PageHeader title="首页" titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22} subtitle="发现周边有趣的人和事" sticky>
+		<PageHeader title="首页" titleSize={device === 'desktop' ? 'xl' : '2xl'} subtitle="发现周边有趣的人和事" sticky>
 			{#snippet trailing()}
 				<div class="flex items-center gap-2">
 					{#if onlineCount > 0}
@@ -157,10 +155,7 @@
 
 	{#if loading}
 		<!-- 加载中：与移动端一致的统一 spinner（桌面/平板不再静默空渲染） -->
-		<div class="flex flex-col items-center gap-3 py-20">
-			<div class="spinner size-7"></div>
-			<p class="text-text-secondary text-sm">加载首页数据…</p>
-		</div>
+		<InlineLoading label="加载首页数据…" />
 	{:else if error}
 		<LoadError message={error} onRetry={() => reloadKey++} />
 	{:else if moments.length === 0 && nearbyUsers.length === 0 && nearbyGroups.length === 0}

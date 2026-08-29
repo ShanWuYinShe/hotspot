@@ -69,7 +69,7 @@ export struct TabsPillGroup {
 
         if (tab.count !== undefined && tab.count > 0) {
           Text(`${tab.count}`)
-            .fontSize(DesignConstants.FONT.SIZE.XS_MINUS)
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
             .fontColor(isActiveTab ? this.getPalette().accentText : this.getPalette().tabBarInactive)
             .opacity(isActiveTab ? DesignConstants.OPACITY.SUBTLE : DesignConstants.OPACITY.EMPHASIZED)
         }

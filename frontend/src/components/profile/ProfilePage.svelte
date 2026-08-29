@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';	import { goto } from '$app/navigation';
 	import { MapPin, Pencil, ShieldCheck, Sparkles, UsersRound, Users, ChevronRight } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
@@ -70,7 +70,7 @@
 	     Section 组件为纯内容（不自建滚动/gutter），gutter 由 ContentColumn 统一提供 -->
 	<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 		{#snippet header()}
-			<PageHeader title={meta.title} sticky titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22} onBack={() => void goto(ROUTES.me)} />
+			<PageHeader title={meta.title} sticky titleSize={device === 'desktop' ? 'xl' : '2xl'} onBack={() => void goto(ROUTES.me)} />
 		{/snippet}
 		{#if section === 'moments'}
 			<SectionMoments />
@@ -93,7 +93,7 @@
 			<PageHeader
 				title="个人总览"
 				subtitle="你的公开资料、内容与关系的入口。"
-				titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}
+				titleSize={device === 'desktop' ? 'xl' : '2xl'}
 				contentClassName="pt-4 pb-0"
 			>
 				{#snippet trailing()}
@@ -110,10 +110,7 @@
 		{/snippet}
 
 		{#if loading}
-			<div class="flex flex-col items-center gap-3 py-20">
-				<div class="spinner size-7" ></div>
-				<p class="text-text-secondary text-sm">加载个人资料…</p>
-			</div>
+			<InlineLoading label="加载个人资料…" />
 		{:else if error}
 			<LoadError message={error} onRetry={retry} />
 		{:else}

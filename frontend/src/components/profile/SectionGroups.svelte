@@ -4,6 +4,7 @@
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { useMyGroups } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
@@ -38,10 +39,7 @@
 
 <!-- 横向媒体卡网格（对齐 Figma：1/2 列，min-h 148px，左 banner + 右详情） -->
 {#if loading}
-	<div class="flex flex-col items-center gap-3 py-16">
-		<div class="spinner size-7"></div>
-		<p class="text-text-secondary text-sm">加载我的群组…</p>
-	</div>
+	<InlineLoading class="py-16" label="加载我的群组…" />
 {:else if error}
 	<LoadError message={error} onRetry={retry} />
 {:else if filtered.length > 0}

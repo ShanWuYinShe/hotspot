@@ -9,6 +9,7 @@
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import GroupCard from './shared/GroupCard.svelte';
 	import { mapGroup, type Group } from './shared/group-data';
@@ -117,7 +118,7 @@
 				title="附近群组"
 				subtitle={locationName ? `${locationName} · 5km 内` : '5km 内'}
 				sticky
-				titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}
+				titleSize={device === 'desktop' ? 'xl' : '2xl'}
 				contentClassName="pt-4 pb-0"
 				onBack={() => history.back()}
 			>
@@ -143,10 +144,7 @@
 
 	<div class="min-w-0">
 		{#if loading}
-			<div class="flex flex-col items-center gap-3 py-20">
-				<div class="spinner size-7" ></div>
-				<p class="text-text-secondary text-sm">加载附近群组…</p>
-			</div>
+			<InlineLoading label="加载附近群组…" />
 		{:else if loadError}
 			<LoadError message={loadError} onRetry={() => reloadKey++} />
 		{:else if filtered.length}

@@ -30,7 +30,7 @@
 			title="附近"
 			subtitle="发现周边有趣的人和事"
 			sticky
-			titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}
+			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 		>
 			{#snippet trailing()}
 				<ActionIconButton icon={Map} label="地图" onClick={() => void goto(ROUTES.map)} variant="ghost" size={36} />

@@ -238,7 +238,7 @@ export struct MomentFeedCard {
             if (this.moment.location?.location_name) {
               Text() {
                 SymbolSpan($r(AppIcon.LOCATION))
-                  .fontSize(DesignConstants.FONT.SIZE.XS_MINUS)
+                  .fontSize(DesignConstants.FONT.SIZE.XS2)
                   .fontColor([DesignConstants.COLOR.WHITE])
               }
               Text(this.moment.location.location_name)

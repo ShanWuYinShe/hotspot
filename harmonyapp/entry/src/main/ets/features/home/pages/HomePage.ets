@@ -805,16 +805,16 @@ export struct HomePage {
         Row({ space: DesignConstants.SPACING.SM2 }) {
           if (user.tags && user.tags.length > 0) {
             Text(`#${user.tags[0]}`)
-              .fontSize(DesignConstants.FONT.SIZE.XS_MINUS)
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
               .fontColor(this.getPalette().accentBackground)
             Text('·')
-              .fontSize(DesignConstants.FONT.SIZE.XS_MINUS)
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
               .opacity(DesignConstants.OPACITY.MUTED)
               .fontColor(this.getPalette().textSecondary)
           }
           if (user.location?.distance !== undefined && user.location?.distance !== null) {
             Text(LocationUtil.formatDistance(user.location.distance))
-              .fontSize(DesignConstants.FONT.SIZE.XS_MINUS)
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
               .fontColor(this.getPalette().textSecondary)
           }
         }

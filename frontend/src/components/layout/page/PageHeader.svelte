@@ -31,10 +31,10 @@
 		sticky = true,
 		showBackOnDesktop = false,
 		maxWidth,
-		/** 标题字号（对齐 Figma Make 各页手写 header：消息 22 / 附近动态 22-24 / 详情 16 等）。 */
-		titleSize = 18,
-		/** 副标题字号（对齐 Figma Make：多数页 12，PageHeader 默认 11）。 */
-		subtitleSize = 11,
+		/** 标题字号档位（--text-* 刻度，替代内联 px：18→lg、20→xl、22/24→2xl、16→base）。 */
+		titleSize = 'lg',
+		/** 副标题字号档位（默认 11 = xs）。 */
+		subtitleSize = 'xs',
 		/** glass：半透明毛玻璃背景（对齐 Figma nearby 页 sticky header）。 */
 		glass = false,
 		class: className = '',
@@ -51,13 +51,28 @@
 		sticky?: boolean;
 		showBackOnDesktop?: boolean;
 		maxWidth?: number | string;
-		titleSize?: number;
-		subtitleSize?: number;
+		titleSize?: 'md' | 'base' | 'lg' | 'xl' | '2xl';
+		subtitleSize?: 'xxs' | 'xs' | 'sm' | 'md';
 		glass?: boolean;
 		class?: string;
 		/** 内部 ContentColumn 的 className（默认 pt-4 pb-0，对齐样板 nearby/moments；传其他值可覆盖） */
 		contentClassName?: string;
 	} = $props();
+
+	// 显式映射表：完整类名字面量可被 Tailwind 扫描器检测（动态拼接 text-{x} 不会）。
+	const TITLE_SIZE_CLASS: Record<'md' | 'base' | 'lg' | 'xl' | '2xl', string> = {
+		md: 'text-md',
+		base: 'text-base',
+		lg: 'text-lg',
+		xl: 'text-xl',
+		'2xl': 'text-2xl'
+	};
+	const SUBTITLE_SIZE_CLASS: Record<'xxs' | 'xs' | 'sm' | 'md', string> = {
+		xxs: 'text-xxs',
+		xs: 'text-xs',
+		sm: 'text-sm',
+		md: 'text-md'
+	};
 
 	const showBack = $derived(Boolean(onBack) && (platform.platform !== 'desktop' || showBackOnDesktop));
 	// header 底部统一预留呼吸：纯标题时标题与下边框之间留 pb-3，
@@ -78,9 +93,9 @@
 				<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={36} />
 			{/if}
 			<div class={cn('min-w-0', trailing ? '' : 'flex-1')}>
-				<h1 class="text-text-primary font-medium leading-none" style="font-size:{titleSize}px;">{title}</h1>
+				<h1 class="text-text-primary font-medium leading-none {TITLE_SIZE_CLASS[titleSize]}">{title}</h1>
 				{#if subtitle}
-					<p class="mt-1 flex items-center gap-1 text-text-secondary" style="font-size:{subtitleSize}px;">
+					<p class="mt-1 flex items-center gap-1 text-text-secondary {SUBTITLE_SIZE_CLASS[subtitleSize]}">
 						{#if subtitleIcon}
 							{@render subtitleIcon()}
 						{/if}

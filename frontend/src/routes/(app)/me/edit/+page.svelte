@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Camera, User, FileText, Check } from '@lucide/svelte';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';	import { Camera, User, FileText, Check } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
 	import { logout } from '@/stores/auth.svelte';
@@ -147,7 +147,7 @@
 
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-10">
 	{#snippet header()}
-		<PageHeader title="编辑资料" onBack={() => history.back()} titleSize={device === 'desktop' ? 20 : device === 'tablet' ? 24 : 22}>
+		<PageHeader title="编辑资料" onBack={() => history.back()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
 	{#snippet trailing()}
 		<Button
 			type="button"
@@ -168,10 +168,7 @@
 {/snippet}
 
 	{#if loading}
-	<div class="flex flex-col items-center gap-3 py-20">
-		<div class="spinner size-7"></div>
-		<p class="text-text-secondary text-sm">加载资料…</p>
-	</div>
+	<InlineLoading label="加载资料…" />
 	{:else if loadError}
 	<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else}

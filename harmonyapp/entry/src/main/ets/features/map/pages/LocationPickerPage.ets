@@ -4,6 +4,8 @@ import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AnchorHistoryItem, AnchorHistoryUtil } from '../../../core/utils/AnchorHistoryUtil';
 import { NativeMapComponent, NativeMapActions, MapRegion, MapCoordinate, MapMarker, MapCameraPosition, MapVisibleRegion } from '../../../components/NativeMapComponent';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { EmptyState } from '../../../components/EmptyState';
 import { Pressable } from '../../../components/Pressable';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -379,20 +381,8 @@ struct SearchPanel {
       Scroll() {
         Column() {
           if (this.isSearching) {
-            // 加载中状态
-            Row() {
-              LoadingProgress()
-                .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
-                .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
-                .color(resolveLocationPickerPalette(this.resolvedThemeId).accentBackground)
-              Text('正在搜索...')
-                .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textSecondary)
-                .margin({ left: DesignConstants.SPACING.SM })
-            }
-            .width('100%')
-            .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
-            .justifyContent(FlexAlign.Center)
+            // 加载态统一 SystemLoadingView（与其余页面一致）
+            SystemLoadingView({ message: '正在搜索...' })
           } else if (this.searchResults.length > 0) {
             // 搜索结果列表
             List({ space: DesignConstants.SPACING.SM }) {
@@ -450,20 +440,8 @@ struct SearchPanel {
             .width('100%')
             .divider({ strokeWidth: 0, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
           } else if (this.searchText.trim().length > 0) {
-            // 无搜索结果
-            Column() {
-              Text('未找到该地点')
-                .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textPrimary)
-              Text('请换个关键词试试')
-                .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textSecondary)
-                .margin({ top: DesignConstants.SPACING.XS })
-            }
-            .width('100%')
-            .height(DesignConstants.COMPONENT.PLACEHOLDER_AREA_HEIGHT)
-            .justifyContent(FlexAlign.Center)
-            .alignItems(HorizontalAlign.Center)
+            // 空态统一 EmptyState（bare 形态，适配面板内嵌场景）
+            EmptyState({ title: '未找到该地点', message: '请换个关键词试试', bare: true })
           } else if (this.anchorHistory.length > 0) {
             // 历史锚点列表（搜索未输入时展示）
             Column({ space: DesignConstants.SPACING.SM }) {
@@ -550,16 +528,8 @@ struct SearchPanel {
             }
             .width('100%')
           } else {
-            // 空状态
-            Column() {
-              Text('暂无搜索历史')
-                .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textSecondary)
-            }
-            .width('100%')
-            .height(DesignConstants.COMPONENT.SKELETON_CARD_HEIGHT)
-            .justifyContent(FlexAlign.Center)
-            .alignItems(HorizontalAlign.Center)
+            // 空状态统一 EmptyState
+            EmptyState({ title: '暂无搜索历史', bare: true })
           }
         }
         .width('100%')
@@ -781,19 +751,7 @@ struct MainPanel {
               .width('100%')
               .divider({ strokeWidth: 0, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
             } else {
-              Column() {
-                Text() {
-                  SymbolSpan($r(AppIcon.TIME))
-                    .fontSize(DesignConstants.FONT.SIZE.LG)
-                    .fontColor([resolveLocationPickerPalette(this.resolvedThemeId).textTertiary])
-                }
-                Text('暂无最近使用的地点')
-                  .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textTertiary)
-                  .margin({ top: DesignConstants.SPACING.XS })
-              }
-              .width('100%')
-              .padding({ top: DesignConstants.SPACING.LG })
+              EmptyState({ icon: AppIcon.TIME, title: '暂无最近使用的地点', bare: true })
             }
           }
           .width('100%')

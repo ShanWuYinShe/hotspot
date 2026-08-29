@@ -32,7 +32,7 @@ export struct SystemBadge {
   build() {
     if (this.count > 0) {
       Text(this.getDisplayText())
-        .fontSize(DesignConstants.FONT.SIZE.XS_MINUS) // 9
+        .fontSize(DesignConstants.FONT.SIZE.XS2)
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getPalette().accentText)
         .backgroundColor(this.getPalette().accentBackground)

@@ -633,7 +633,7 @@ export struct MomentsFeedPage {
           Stack({ alignContent: Alignment.BottomStart }) {
             Row() {
               Text(LocationUtil.formatDistance(user.location.distance))
-                .fontSize(DesignConstants.FONT.SIZE.XS_MINUS)
+                .fontSize(DesignConstants.FONT.SIZE.XS2)
                 .fontColor(this.getCurrentThemePalette().accentText)
             }
             .padding({ left: DesignConstants.SPACING.SM2, right: DesignConstants.SPACING.SM2, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
