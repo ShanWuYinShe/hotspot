@@ -9,7 +9,7 @@
 	import RailUserRow from '@/components/rail/RailUserRow.svelte';
 	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
-	import { openTheDoor, follow, block, createReport, setRemark } from '@/api';
+	import { openTheDoor, follow, block, createReport, setRemark , netError } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import * as Dialog from '@/components/ui/dialog';
 	import { showToast } from '@/stores/toast.svelte';
@@ -66,7 +66,7 @@
 			try {
 				loading = true;
 				loadError = null;
-				const res = await openTheDoor(uid, true).catch(() => ({ code: -1, message: '网络异常', data: null }));
+				const res = await openTheDoor(uid, true).catch(() => netError(null));
 				if (cancelled) return;
 				const data = res.code === 0 ? res.data : null;
 				if (res.code !== 0) {

@@ -1,4 +1,4 @@
-import { searchMoments, searchUsers, searchGroups } from '@/api';
+import { searchMoments, searchUsers, searchGroups , netError } from '@/api';
 import { formatDistance } from '@/lib/utils';
 import type { MomentItem } from '@/api/types';
 import type { NearbyUser } from './nearby-users';
@@ -24,9 +24,9 @@ export async function fetchHomeFeed(
 	const point = referencePoint ? { reference_point: referencePoint } : {};
 
 	const [hotRes, nearbyUsersRes, nearbyGroupsRes] = await Promise.all([
-		searchMoments({ sort_by: 'popular', pagination: { limit: 12 } }).catch(() => ({ code: -1, message: '网络异常', data: null })),
-		searchUsers({ radius: 5000, sort_by: 'distance', ...point, pagination: { limit: 12 } }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
-		searchGroups({ radius: 5000, sort_by: 'distance', ...point, pagination: { limit: 12 } }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }))
+		searchMoments({ sort_by: 'popular', pagination: { limit: 12 } }).catch(() => netError(null)),
+		searchUsers({ radius: 5000, sort_by: 'distance', ...point, pagination: { limit: 12 } }).catch(() => netError({ items: [] })),
+		searchGroups({ radius: 5000, sort_by: 'distance', ...point, pagination: { limit: 12 } }).catch(() => netError({ items: [] }))
 	]);
 
 	const hotData = hotRes.code === 0 ? hotRes.data : null;

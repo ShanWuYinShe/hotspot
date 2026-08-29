@@ -2,7 +2,7 @@
 	// 邀请成员入群：搜索用户（users/search）+ 多选 + 批量邀请（members/invite）。
 	import * as Dialog from '@/components/ui/dialog';
 	import { X, Search, UserPlus, Check } from '@lucide/svelte';
-	import { searchUsers, inviteGroupMember } from '@/api';
+	import { searchUsers, inviteGroupMember, netError } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -79,7 +79,7 @@
 		inviting = true;
 		const ids = Array.from(selected);
 		try {
-			const settled = await Promise.all(ids.map((uid) => inviteGroupMember({ group_id: groupId, user_id: uid }).catch(() => ({ code: -1 }))));
+			const settled = await Promise.all(ids.map((uid) => inviteGroupMember({ group_id: groupId, user_id: uid }).catch(() => netError(undefined))));
 			const okCount = settled.filter((r) => r.code === 0).length;
 			if (okCount === ids.length) showToast(`已邀请 ${okCount} 人`, 'success');
 			else if (okCount > 0) showToast(`已邀请 ${okCount}/${ids.length} 人`, 'success');

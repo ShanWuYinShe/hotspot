@@ -11,7 +11,7 @@ import {
 	listFriends,
 	listFollowing,
 	listFollowers
-} from '@/api';
+, netError } from '@/api';
 import type {
 	AccountData,
 	RelatedUserItem,
@@ -414,9 +414,9 @@ export function useRelationships() {
 				}
 				const userId = accountRes.data.user_id;
 				return Promise.all([
-					listFriends({ user_id: userId, pagination: { limit: 50 } }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
-					listFollowing({ user_id: userId, pagination: { limit: 50 } }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
-					listFollowers({ user_id: userId, pagination: { limit: 50 } }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }))
+					listFriends({ user_id: userId, pagination: { limit: 50 } }).catch(() => netError({ items: [] })),
+					listFollowing({ user_id: userId, pagination: { limit: 50 } }).catch(() => netError({ items: [] })),
+					listFollowers({ user_id: userId, pagination: { limit: 50 } }).catch(() => netError({ items: [] }))
 				]);
 			})
 			.then((results) => {

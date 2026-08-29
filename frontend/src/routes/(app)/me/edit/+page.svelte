@@ -11,7 +11,7 @@
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
-	import { getAccount, updateAccount, deleteAccount } from '@/api';
+	import { getAccount, updateAccount, deleteAccount , netError } from '@/api';
 	import { uploadMediaFile } from '@/lib/upload';
 	import { ROUTES } from '@/lib/routes';
 
@@ -44,7 +44,7 @@
 			loading = true;
 			loadError = null;
 			try {
-				const res = await getAccount().catch(() => ({ code: -1, message: '网络异常', data: null }));
+				const res = await getAccount().catch(() => netError(null));
 				if (cancelled) return;
 				const data = res.code === 0 ? res.data : null;
 				if (data) {

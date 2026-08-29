@@ -13,7 +13,7 @@
 	import { logout } from '@/stores/auth.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { theme, setTheme, toggleDark, THEME_OPTIONS } from '@/stores/theme.svelte';
-	import { getAccount, getSettings, updateSettings } from '@/api';
+	import { getAccount, getSettings, updateSettings , netError } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import pkg from '../../../../package.json';
 
@@ -90,8 +90,8 @@
 				loading = true;
 				loadError = null;
 				const [accountRes, settingsRes] = await Promise.all([
-					getAccount().catch(() => ({ code: -1, message: '网络异常', data: null })),
-					getSettings().catch(() => ({ code: -1, message: '网络异常', data: null }))
+					getAccount().catch(() => netError(null)),
+					getSettings().catch(() => netError(null))
 				]);
 				if (cancelled) return;
 

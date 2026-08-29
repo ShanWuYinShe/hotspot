@@ -402,3 +402,10 @@ export async function getMapCanvas(params: MapCanvasRequest) { return request<Ma
 export async function searchSuggest(params: SearchSuggestRequest) { return request<SearchSuggestResponse>(pick(Endpoints.Search.Suggest, Endpoints.Public.Search.Suggest), params); }
 
 export { Endpoints };
+
+// netError —— 网络层失败（fetch 抛错/超时）时的统一兜底响应：
+// code=-1 与业务错误码空间区分，data 传调用方的空态回退（null / { items: [] }）。
+// 收敛散落各页的 `.catch(() => netError(…))` 样板。
+export function netError<T>(fallback: T): ApiResponse<T> {
+	return { code: -1, message: '网络异常', data: fallback };
+}

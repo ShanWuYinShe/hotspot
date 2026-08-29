@@ -22,7 +22,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { toNearbyRailRows } from './nearby-rail';
 	import MomentEditDialog from '@/components/overlays/MomentEditDialog.svelte';
 	import { showToast } from '@/stores/toast.svelte';
-	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment, fetchNearbyMoments, searchMoments, deleteMoment, listMyMoments } from '@/api';
+	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment, fetchNearbyMoments, searchMoments, deleteMoment, listMyMoments , netError } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDateTime } from '@/lib/utils';
 
@@ -41,8 +41,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	$effect(() => {
 		let cancelled = false;
 		void Promise.all([
-			fetchNearbyMoments({ pagination: { limit: 3 } }).catch(() => ({ code: -1, message: '网络异常', data: null })),
-			searchMoments({ sort_by: 'popular', pagination: { limit: 3 } }).catch(() => ({ code: -1, message: '网络异常', data: null }))
+			fetchNearbyMoments({ pagination: { limit: 3 } }).catch(() => netError(null)),
+			searchMoments({ sort_by: 'popular', pagination: { limit: 3 } }).catch(() => netError(null))
 		]).then(([nearbyRes, relatedRes]) => {
 			if (cancelled) return;
 			const nearbyItems = nearbyRes.code === 0 ? nearbyRes.data?.items ?? [] : [];
@@ -109,8 +109,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				moment = emptyMoment();
 				apiComments = [];
 				const [detailRes, commentsRes] = await Promise.all([
-					getMomentDetail(momentId).catch(() => ({ code: -1, message: '网络异常', data: null })),
-					listComments(momentId).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }))
+					getMomentDetail(momentId).catch(() => netError(null)),
+					listComments(momentId).catch(() => netError({ items: [] }))
 				]);
 				if (cancelled) return;
 

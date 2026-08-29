@@ -14,7 +14,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import MomentCard from './shared/MomentCard.svelte';
 	import { createFeedInteractions, type FeedItem } from './shared/feed-interactions.svelte';
-	import { fetchNearbyMoments } from '@/api';
+	import { fetchNearbyMoments , netError } from '@/api';
 	import { formatDateTime } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
 
@@ -78,7 +78,7 @@ locationName = loc?.location_name ?? '';
 				const feedRes = await fetchNearbyMoments({
 					...(referencePoint ? { reference_point: referencePoint } : {}),
 					pagination: { limit: PAGE_LIMIT }
-				}).catch(() => ({ code: -1, message: '网络异常', data: { items: [] as import('@/api/types').MomentItem[], next_cursor: null } }));
+				}).catch(() => netError({ items: [] as import('@/api/types').MomentItem[], next_cursor: null }));
 				if (cancelled) return;
 
 				const feedData = feedRes.code === 0 ? feedRes.data : null;

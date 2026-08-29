@@ -13,7 +13,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import GroupCard from './shared/GroupCard.svelte';
 	import { mapGroup, type Group } from './shared/group-data';
-	import { searchGroups, joinGroup, leaveGroup } from '@/api';
+	import { searchGroups, joinGroup, leaveGroup , netError } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 
@@ -50,7 +50,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				sort_by: 'distance',
 				...(referencePoint ? { reference_point: referencePoint } : {}),
 				pagination: { limit: 24 }
-			}).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
+			}).catch(() => netError({ items: [] }));
 			if (cancelled) return;
 			const items = res.code === 0 && res.data ? res.data.items : [];
 			if (res.code !== 0) {
@@ -100,7 +100,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			}
 		};
 		if (next) {
-			void joinGroup(id).then(done).catch(() => done({ code: -1 }));
+			void joinGroup(id).then(done).catch(() => done(netError(undefined)));
 		} else {
 			void leaveGroup(id).then(done).catch(() => done({ code: -1 }));
 		}

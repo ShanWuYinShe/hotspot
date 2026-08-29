@@ -5,7 +5,7 @@
 // 调用方式：组件 <script> 顶层 const gd = useGroupDetail({...})；工厂内的
 // $state/$effect 生命周期绑定组件实例，卸载自动清理（WS 订阅 + presence 订阅）。
 
-import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement, listSentGroupInvites, revokeSentGroupInvite, listBannedGroupMembers, unbanGroupMember, updateGroup, listGroupApplications, approveGroupApplication, rejectGroupApplication, transferGroupOwnership, dismissGroup as dismissGroupApi } from '@/api';
+import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement, listSentGroupInvites, revokeSentGroupInvite, listBannedGroupMembers, unbanGroupMember, updateGroup, listGroupApplications, approveGroupApplication, rejectGroupApplication, transferGroupOwnership, dismissGroup as dismissGroupApi , netError } from '@/api';
 import { wsClient } from '@/lib/ws/client';
 import { formatDistance, formatDateTime } from '@/lib/utils';
 import type { GroupRole, GroupSentInviteItem, AdminBannedMemberItem, GroupItem, UpdateGroupRequest, GroupApplicationItem } from '@/api/types';
@@ -80,7 +80,7 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 
 	async function loadDetail(gid: string) {
 		try {
-			const detailRes = await getGroupDetail(gid).catch(() => ({ code: -1, message: '网络异常', data: null }));
+			const detailRes = await getGroupDetail(gid).catch(() => netError(null));
 			// 竞态防护：页面已切到别的群组则丢弃本次结果
 			if (currentGid() !== gid) return;
 			const detailData = detailRes.code === 0 ? detailRes.data : null;
@@ -108,7 +108,7 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 
 	async function loadMembers(gid: string) {
 		try {
-			const membersRes = await getGroupMembers(gid).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
+			const membersRes = await getGroupMembers(gid).catch(() => netError({ items: [] }));
 			if (currentGid() !== gid) return;
 			const membersData = membersRes.code === 0 ? membersRes.data : null;
 			if (membersData) {
@@ -139,7 +139,7 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 
 	async function loadAnnouncements(gid: string) {
 		try {
-			const announcementsRes = await getGroupAnnouncements(gid).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
+			const announcementsRes = await getGroupAnnouncements(gid).catch(() => netError({ items: [] }));
 			if (currentGid() !== gid) return;
 			const announcementsData = announcementsRes.code === 0 ? announcementsRes.data : null;
 			if (announcementsData) {
@@ -158,7 +158,7 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 
 	async function loadSentInvites(gid: string) {
 		try {
-			const res = await listSentGroupInvites({ group_id: gid }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
+			const res = await listSentGroupInvites({ group_id: gid }).catch(() => netError({ items: [] }));
 			if (currentGid() !== gid) return;
 			if (res.code === 0) sentInvites = res.data?.items ?? [];
 		} catch {
@@ -168,7 +168,7 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 
 	async function loadBannedMembers(gid: string) {
 		try {
-			const res = await listBannedGroupMembers({ group_id: gid }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
+			const res = await listBannedGroupMembers({ group_id: gid }).catch(() => netError({ items: [] }));
 			if (currentGid() !== gid) return;
 			if (res.code === 0) bannedMembers = res.data?.items ?? [];
 		} catch {
@@ -178,7 +178,7 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 
 	async function loadApplications(gid: string) {
 		try {
-			const res = await listGroupApplications({ group_id: gid }).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
+			const res = await listGroupApplications({ group_id: gid }).catch(() => netError({ items: [] }));
 			if (currentGid() !== gid) return;
 			if (res.code === 0) applications = res.data?.items ?? [];
 		} catch {
@@ -214,9 +214,9 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		};
 		const gid = currentGid();
 		if (next) {
-			void joinGroup(gid).then(done).catch(() => done({ code: -1 }));
+			void joinGroup(gid).then(done).catch(() => done(netError(undefined)));
 		} else {
-			void leaveGroup(gid).then(done).catch(() => done({ code: -1 }));
+			void leaveGroup(gid).then(done).catch(() => done(netError(undefined)));
 		}
 	}
 

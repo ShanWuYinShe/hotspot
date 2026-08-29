@@ -12,7 +12,7 @@
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import UserCard, { type NearbyUser } from './UserCard.svelte';
-	import { searchUsers, follow } from '@/api';
+	import { searchUsers, follow , netError } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance } from '@/lib/utils';
 	import { showToast } from '@/stores/toast.svelte';
@@ -55,7 +55,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					sort_by: 'distance' as const,
 					...(referencePoint ? { reference_point: referencePoint } : {})
 				};
-				const res = await searchUsers(req).catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }));
+				const res = await searchUsers(req).catch(() => netError({ items: [] }));
 				if (cancelled) return;
 				const data = res.code === 0 ? res.data : null;
 				if (res.code !== 0) {

@@ -14,7 +14,7 @@
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
-	import { getPrivateChats, listMyGroups, markPrivateRead, markGroupRead, updatePrivateChatPreferences, updateGroupPreferences } from '@/api';
+	import { getPrivateChats, listMyGroups, markPrivateRead, markGroupRead, updatePrivateChatPreferences, updateGroupPreferences , netError } from '@/api';
 	import { formatTime } from '@/lib/chat.svelte';
 	import { compareChatItems, type ChatItem } from '@/lib/chat-list';
 	import { ROUTES } from '@/lib/routes';
@@ -38,8 +38,8 @@
 				loadError = null;
 				// 并行加载私聊与我的群组，合并为统一会话列表（按时间倒序）。
 				const [privRes, groupRes] = await Promise.all([
-					getPrivateChats().catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
-					listMyGroups().catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }))
+					getPrivateChats().catch(() => netError({ items: [] })),
+					listMyGroups().catch(() => netError({ items: [] }))
 				]);
 				if (cancelled) return;
 				const privData = privRes.code === 0 && privRes.data ? privRes.data.items : [];

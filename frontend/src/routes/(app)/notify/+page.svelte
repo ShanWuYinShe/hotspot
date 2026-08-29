@@ -15,7 +15,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import NotifyRow from './shared/NotifyRow.svelte';
 	import { TYPE_CONFIG, normalizeNotifType, type NotifyViewItem } from './shared/notify-data';
-	import { listNotifies, getUnreadCount, markRead, listMyInvites, acceptGroupInvite, rejectGroupInvite } from '@/api';
+	import { listNotifies, getUnreadCount, markRead, listMyInvites, acceptGroupInvite, rejectGroupInvite , netError } from '@/api';
 	import { WS_NOTIFY_EVENT } from '@/lib/ws/client';
 	import { formatDateTime } from '@/lib/utils';
 	import { ROUTES, ME_SECTION_PATHS } from '@/lib/routes';
@@ -64,9 +64,9 @@ const FILTER_TABS = [
 				loading = true;
 				loadError = null;
 				const [notifRes, unreadRes, invitesRes] = await Promise.all([
-					listNotifies().catch(() => ({ code: -1, message: '网络异常', data: { items: [] } })),
-					getUnreadCount().catch(() => ({ code: -1, message: '网络异常', data: { total: 0 } })),
-					listMyInvites().catch(() => ({ code: -1, message: '网络异常', data: { items: [] } }))
+					listNotifies().catch(() => netError({ items: [] })),
+					getUnreadCount().catch(() => netError({ total: 0 })),
+					listMyInvites().catch(() => netError({ items: [] }))
 				]);
 				if (cancelled) return;
 

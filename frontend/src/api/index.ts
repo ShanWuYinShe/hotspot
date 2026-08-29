@@ -39,3 +39,4 @@ export {
 } from '@/api/client';
 
 export type { ApiResponse, PaginatedData } from '@/api/client';
+export { netError } from '@/api/client';
