@@ -369,8 +369,10 @@ export struct NearbyUsersListPage {
             .layoutWeight(1)
         } else if (!this.hasAnyData()) {
           EmptyState({
-            icon: AppIcon.RECOMMEND,
-            message: '附近暂无其他用户，可稍后再来或调整浏览位置'
+            icon: AppIcon.COMPASS,
+            title: '附近暂无其他用户',
+            message: '可稍后再来，或发布一条动态让附近的人发现你',
+            fillMode: true
           })
             .layoutWeight(1)
         } else {

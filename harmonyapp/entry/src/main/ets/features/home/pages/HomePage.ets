@@ -372,7 +372,10 @@ export struct HomePage {
         EmptyState({
           icon: AppIcon.NEARBY,
           title: '附近还没有内容',
-          message: '去发布第一条动态，或到附近的人认识新朋友。'
+          message: '去发布第一条动态，或到附近的人认识新朋友。',
+          fillMode: true,
+          actionLabel: '去附近看看',
+          onAction: () => AppRouter.push(PageNames.NEARBY)
         })
       } else {
         this.buildHomeBody()
@@ -479,21 +482,24 @@ export struct HomePage {
       // trailing: 在线计数 chip + 搜索/地图入口（对齐前端 PageHeader trailing；
       // 定位语义由 HeroStats 副标题承载）
       Row({ space: DesignConstants.SPACING.SM }) {
-        Row({ space: DesignConstants.SPACING.XS }) {
-          Row()
-            .width(DesignConstants.SPACING.SM2)
-            .height(DesignConstants.SPACING.SM2)
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .backgroundColor(this.getPalette().success)
+        // 0 人在线时隐藏计数 chip：空数据不广告（对齐前端隐藏空态的原则）
+        if (this.getOnlineCount() > 0) {
+          Row({ space: DesignConstants.SPACING.XS }) {
+            Row()
+              .width(DesignConstants.SPACING.SM2)
+              .height(DesignConstants.SPACING.SM2)
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .backgroundColor(this.getPalette().success)
 
-          Text(`${this.getOnlineCount()} 在线`)
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getPalette().textSecondary)
+            Text(`${this.getOnlineCount()} 在线`)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getPalette().textSecondary)
+          }
+          .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+          .backgroundColor(this.getPalette().surfaceBackground)
         }
-        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
-        .backgroundColor(this.getPalette().surfaceBackground)
 
         SurfaceIconButton({
           icon: AppIcon.SEARCH,

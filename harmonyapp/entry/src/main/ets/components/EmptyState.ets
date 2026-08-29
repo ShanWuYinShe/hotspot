@@ -43,18 +43,19 @@ export struct EmptyState {
           }
         } else {
           Stack() {
+            // 图标底改 accent 淡底、glyph 用主题色（对齐前端空态的柔和 accent 图标，
+            // 消除此前灰底灰字 + muted 叠加导致的「禁止符号」观感）
             Column()
               .width(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
               .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
               .borderRadius(DesignConstants.RADIUS.FULL)
-              .backgroundColor(this.getPalette().surfaceBackground)
-              .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
+              .backgroundColor(this.getPalette().accentMuted)
 
             Text() {
               SymbolSpan($r(this.icon))
                 .fontSize(DesignConstants.FONT.SIZE.XXL)
-                .fontColor([this.getPalette().textSecondary])
-                .opacity(DesignConstants.OPACITY.MUTED)
+                .fontColor([this.getPalette().accentBackground])
+                .opacity(DesignConstants.OPACITY.EMPHASIZED)
             }
           }
           .width(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)

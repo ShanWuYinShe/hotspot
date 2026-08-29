@@ -760,7 +760,7 @@ export struct MessagePage {
         )
       } else if (!this.hasData) {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          EmptyState({ icon: AppIcon.MESSAGE, message: '暂无消息' })
+          EmptyState({ icon: AppIcon.MESSAGE, title: '还没有消息', message: '登录后即可查看和发起会话' })
         }
         .layoutWeight(1)
         .onRefreshing(() => { this.loadData(true, true); })
@@ -774,7 +774,7 @@ export struct MessagePage {
             Column() {
               // 过滤结果为空（对齐前端：无匹配会话空态）
               if (this.filteredChatItems.length === 0) {
-                EmptyState({ icon: AppIcon.SEARCH, message: '没有找到会话' })
+                EmptyState({ icon: AppIcon.SEARCH, message: '没有找到会话', bare: true })
                   .margin({ top: DesignConstants.SPACING.XXL })
               }
 
