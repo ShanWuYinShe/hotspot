@@ -25,9 +25,7 @@ import { SystemInput } from '../../../components/SystemInput';
 import { SystemTextArea } from '../../../components/SystemTextArea';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { LoginPromptView } from '../../../components/LoginPromptView';
-import { AccountInfo, UpdateLocationRequest, UpgradeAccountRequest, GuestRequest, UserItem, OpenUserDoorRequest, UserSharePayload, MomentItem, FetchUserMomentsRequest } from '../../../core/types/api';
-import { DeviceIdUtil } from '../../../core/util/DeviceIdUtil';
-import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
+import { AccountInfo, UpdateLocationRequest, UpgradeAccountRequest, UserItem, OpenUserDoorRequest, UserSharePayload, MomentItem, FetchUserMomentsRequest } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { common } from '@kit.AbilityKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -46,6 +44,7 @@ import { formatCount } from '../../../core/utils/FormatUtil';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { CompactStatItem, ProfileQuickAction, ProfileIntentCard, ProfileMenuItem } from '../components/ProfileContentAtoms';
+import { ProfileMomentGallery } from '../components/ProfileMomentGallery';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
@@ -92,10 +91,6 @@ export struct ProfilePage {
   @State myFollowingCount: number = 0;
   @State selectedTab: number = 0;
   // 快速体验弹窗
-  @State showQuickStart: boolean = false;
-  @State quickNickname: string = '';
-  @State isQuickStarting: boolean = false;
-  @State isQuickInputFocused: boolean = false;
   // 升级表单
   @State showUpgradeForm: boolean = false;
   @State upgradeLoginId: string = '';
@@ -356,16 +351,6 @@ export struct ProfilePage {
     }
   }
 
-  private momentThumb(moment: MomentItem): string {
-    const imgs = moment.images;
-    if (imgs !== undefined && imgs !== null && imgs.length > 0) {
-      const first = imgs[0];
-      // normalize：相对 /s3/ 路径与本地 host 绝对地址统一改写（与其余页面一致，
-      // 兜底 RDB 缓存/历史数据未经 HttpUtil 网络层改写的场景）
-      return MediaUrlUtil.normalize(first.thumbnail_url || first.url);
-    }
-    return '';
-  }
 
   private openMyMoments(): void {
     AppRouter.push(PageNames.MOMENT);
@@ -1181,7 +1166,12 @@ export struct ProfilePage {
               .margin({ bottom: DesignConstants.SPACING.MD })
 
             // 画廊 (根据选中的 tab 展示不同内容)
-            this.buildFigmaGallery()
+            ProfileMomentGallery({
+              selectedTab: this.selectedTab,
+              moments: this.myMoments,
+              columns: this.getMomentColumns(),
+              resolvedThemeId: this.resolvedThemeId
+            })
 
             // 菜单项
             Column({ space: 0 }) {
@@ -1291,95 +1281,14 @@ export struct ProfilePage {
     .margin({ bottom: DesignConstants.SPACING.LG2 })
   }
 
-  @Builder
-  private buildFigmaGallery() {
-    if (this.selectedTab === 0) {
-      // 帖子 tab
-      if (this.myMoments.length === 0) {
-        Column({ space: DesignConstants.SPACING.MD }) {
-          Text() {
-            SymbolSpan($r(AppIcon.EMPTY))
-              .fontSize(DesignConstants.FONT.SIZE.XL)
-              .fontColor([this.getSecondaryTextColor()])
-          }
-          .opacity(DesignConstants.OPACITY.MUTED)
-
-          Text('还没有发布帖子')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor(this.getSecondaryTextColor())
-        }
-        .width('100%')
-        .height(DesignConstants.LAYOUT.GLOW_BLOB_MEDIUM)
-        .justifyContent(FlexAlign.Center)
-      } else {
-        Column({ space: DesignConstants.SPACING.SM }) {
-          ForEach(this.getMomentRows(), (row: MomentItem[], rowIndex: number) => {
-            this.buildMomentsRow(row, rowIndex)
-          }, (row: MomentItem[], rowIndex: number) => `${rowIndex}`)
-        }
-        .width('100%')
-      }
-    } else {
-      // 喜欢 / 收藏 tab
-      Column({ space: DesignConstants.SPACING.MD }) {
-        Text() {
-          SymbolSpan($r(this.selectedTab === 1 ? AppIcon.HEART : AppIcon.STAR))
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontColor([this.getSecondaryTextColor()])
-        }
-        .opacity(DesignConstants.OPACITY.MUTED)
-
-        Text(this.selectedTab === 1 ? '喜欢的帖子将在这里展示' : '收藏的帖子将在这里展示')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor(this.getSecondaryTextColor())
-      }
-      .width('100%')
-      .height(DesignConstants.LAYOUT.GLOW_BLOB_MEDIUM)
-      .justifyContent(FlexAlign.Center)
-    }
-  }
-
   // 我的瞬间九宫格：按列数分行（避开 ArkUI 不支持的 calc，用 Row + layoutWeight 等宽）。
   // 列数随断点变化：宽屏(master-detail) 3 列，窄屏 2 列（对齐前端 grid-cols-2 md:grid-cols-3）。
   private getMomentColumns(): number {
     return useMasterDetail(this.currentBreakpoint) ? 3 : 2;
   }
 
-  private getMomentRows(): MomentItem[][] {
-    const cols: number = this.getMomentColumns();
-    const items: MomentItem[] = this.myMoments.slice(0, cols * 3); // 最多 3 行
-    const rows: MomentItem[][] = [];
-    for (let i = 0; i < items.length; i += cols) {
-      rows.push(items.slice(i, i + cols));
-    }
-    return rows;
-  }
 
-  @Builder
-  private buildMomentTile(moment: MomentItem) {
-    Column() {
-      Image(this.momentThumb(moment))
-        .width('100%')
-        .aspectRatio(1)
-        .borderRadius(DesignConstants.RADIUS.LG)
-        .objectFit(ImageFit.Cover)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    }
-    .layoutWeight(1)
-  }
 
-  @Builder
-  private buildMomentsRow(row: MomentItem[], rowIndex: number) {
-    Row({ space: DesignConstants.SPACING.SM }) {
-      ForEach(row, (m: MomentItem) => {
-        this.buildMomentTile(m)
-      }, (m: MomentItem) => m.moment_id)
-      ForEach(Array.from({ length: this.getMomentColumns() - row.length }, (_: Object, padIndex: number) => padIndex), (_: number) => {
-        Column().layoutWeight(1)
-      }, (_: number, padIndex: number) => `pad_${rowIndex}_${padIndex}`)
-    }
-    .width('100%')
-  }
 
   // ==================== 升级表单界面 ====================
   @Builder
@@ -1644,120 +1553,6 @@ export struct ProfilePage {
     .width('100%')
   }
 
-// ==================== 快速体验弹窗 ====================
-
-  @Builder
-  private buildQuickStartSheet() {
-    Scroll() {
-      Column({ space: DesignConstants.SPACING.LG }) {
-        Text('快速体验')
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-          .fontColor(this.getPrimaryTextColor())
-
-        Text('无需注册，输入昵称即可快速体验；留空将自动生成昵称')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor(this.getSecondaryTextColor())
-
-        SystemInput({
-          value: this.quickNickname,
-          placeholder: '昵称（可选）',
-          fontSize: DesignConstants.FONT.SIZE.LG,
-          disabled: this.isQuickStarting,
-          onChange: (value: string) => { this.quickNickname = value; },
-          onFocusChange: (focused: boolean) => {
-            this.isQuickInputFocused = focused;
-            if (!focused) KeyboardDismissManager.getInstance().dismiss();
-          }
-        })
-
-        Button(this.isQuickStarting ? '正在创建...' : '开始体验')
-          .type(ButtonType.Normal)
-          .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
-          .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .width('100%')
-          .height(this.getProfileVisualStyle().primaryButton.height)
-          .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
-          .shadow(this.getProfileVisualStyle().primaryButton.shadow)
-          .enabled(!this.isQuickStarting)
-          .opacity(this.isQuickStarting ? DesignConstants.OPACITY.LOADING : 1.0)
-          .onClick(() => this.startQuickExperience())
-
-        Text('临时用户可使用大部分功能，随时可升级为完整账号')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getSecondaryTextColor())
-          .textAlign(TextAlign.Center)
-      }
-      .width('100%')
-      .padding({
-        left: DesignConstants.SPACING.XXL,
-        right: DesignConstants.SPACING.XXL,
-        top: DesignConstants.SPACING.LG,
-        bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG)
-      })
-    }
-    .width('100%')
-    .scrollBar(BarState.Off)
-  }
-
-  private async startQuickExperience(): Promise<void> {
-    // 昵称可选：留空提交 null，服务端自动生成默认昵称（spec auth.md → guest）
-    const nickname = this.quickNickname.trim();
-    if (nickname && !this.isValidNickname(nickname)) {
-      SystemToast.showWarning('昵称长度需在1-30字符之间', this.getUIContext());
-      return;
-    }
-
-    this.isQuickStarting = true;
-    try {
-      const request: GuestRequest = {
-        nickname: nickname.length > 0 ? nickname : null,
-        client_type: 'app',
-        device_id: DeviceIdUtil.getDeviceId()
-      };
-      const response = await ApiClient.createTempUser(request);
-
-      if (response.code === 0 && response.data) {
-        const authData = response.data;
-        await AuthAccountManager.upsertAndActivate(authData);
-        await HttpUtil.setToken(authData.access_token);
-
-        const basicUserInfo: AccountInfo = {
-          user_id: authData.user_id, nickname: '', avatar_url: '', user_type: 'temp',
-          bio: '', tags: [], email: '', phone: '',
-          location: { point: { latitude: 0, longitude: 0 }, location_name: '' },
-          presence_status: 'online', last_online_at: '', created_at: new Date().toISOString(),
-          stats: { moments_count: 0, friends_count: 0, followers_count: 0, following_count: 0, groups_count: 0 }
-        };
-        this.stateManager.updateUser(basicUserInfo);
-
-        try {
-          const profileResp = await ApiClient.getAccountInfo();
-          if (profileResp.code === 0 && profileResp.data) {
-            this.stateManager.updateUser(profileResp.data);
-          }
-        } catch (error) {
-          hilog.warn(DOMAIN_NUMBER, TAG, `获取用户资料失败: ${JSON.stringify(error)}`);
-        }
-
-        try {
-          await this.webSocketService.connect(authData.access_token);
-        } catch (error) {
-          hilog.warn(DOMAIN_NUMBER, TAG, `WebSocket连接失败: ${JSON.stringify(error)}`);
-        }
-
-        this.showQuickStart = false;
-        SystemToast.showSuccess('欢迎！', this.getUIContext());
-      } else {
-        SystemToast.showError(getErrorMessage(response, '创建失败'), this.getUIContext());
-      }
-    } catch (error) {
-      SystemToast.showError(error instanceof Error ? error.message : '创建失败', this.getUIContext());
-    } finally {
-      this.isQuickStarting = false;
-    }
-  }
 }
 
 @Builder

@@ -22,6 +22,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { ChatPageHeader } from '../../../components/ChatPageHeader';
 import { ChatMessageItem } from '../components/ChatMessageItem';
+import { ChatActionsSheet } from '../components/ChatActionsSheet';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState } from '../../../components/EmptyState';
@@ -1397,7 +1398,7 @@ export struct ChatPage {
     .width('100%')
     .height('100%')
     .backgroundColor(this.getCurrentThemePalette().chatBackground)
-    .bindSheet($$this.showConversationActionsSheet, this.buildConversationActionsSheet(), {
+    .bindSheet($$this.showConversationActionsSheet, this.conversationActionsSheetBuilder(), {
       height: SheetSize.FIT_CONTENT,
       showClose: true,
       dragBar: true,
@@ -1445,99 +1446,45 @@ export struct ChatPage {
   }
 
   @Builder
-  private buildConversationActionsSheet() {
-    Column({ space: DesignConstants.SPACING.MD }) {
-      Text('会话设置')
-        .fontSize(DesignConstants.FONT.SIZE.XL)
-        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-        .fontColor(this.getCurrentThemePalette().textPrimary)
-
-      Text(this.chatType === 'group_chat' ? '群聊会话' : '私聊会话')
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor(this.getCurrentThemePalette().textSecondary)
-
-      SoftDivider({ color: this.getSurfaceBorder() })
-
-      if (this.chatType === 'private_chat' && this.targetId) {
-        SystemButton({
-          label: '查看个人主页',
-          variant: 'surface',
-          buttonSize: 'sheet',
-          fullWidth: true,
-          onPress: () => {
-            this.showConversationActionsSheet = false;
-            const profileParam = new ProfileRouteParam();
-            profileParam.userId = this.targetId ?? '';
-            AppRouter.push(PageNames.PROFILE, profileParam);
-          }
-        })
-      }
-
-      SystemButton({
-        label: '回到最新消息',
-        variant: 'surface',
-        buttonSize: 'sheet',
-        fullWidth: true,
-        onPress: () => {
-          this.scrollToBottom();
-          this.showConversationActionsSheet = false;
-        }
-      })
-
-      SystemButton({
-        label: '清空输入框',
-        variant: 'surface',
-        buttonSize: 'sheet',
-        fullWidth: true,
-        onPress: () => {
-          this.inputText = '';
-          this.showConversationActionsSheet = false;
-        }
-      })
-
-      SoftDivider({ color: this.getSurfaceBorder() })
-
-      SystemButton({
-        label: '举报',
-        variant: 'surface-danger',
-        buttonSize: 'sheet',
-        fullWidth: true,
-        onPress: () => {
-          this.showConversationActionsSheet = false;
-          const reportReq: CreateReportRequest = {
-            target_type: 'user',
-            target_id: this.targetId ?? this.chatId,
-            reason: 'harassment',
-            description: '来自聊天页面的举报'
-          };
-          ApiClient.createReport(reportReq).then(() => {
-            SystemToast.show('举报已提交', this.getUIContext());
-          }).catch(() => {
-            SystemToast.showError('举报提交失败', this.getUIContext());
-          });
-        }
-      })
-
-      SystemButton({
-        label: '关闭',
-        variant: 'surface-accent',
-        buttonSize: 'sheet',
-        fullWidth: true,
-        onPress: () => {
-          this.showConversationActionsSheet = false;
-        }
-      })
-    }
-    .width('100%')
-    .padding({
-      left: DesignConstants.SPACING.XXL,
-      right: DesignConstants.SPACING.XXL,
-      top: DesignConstants.SPACING.LG,
-      bottom: DesignConstants.SPACING.XXL
+  private conversationActionsSheetBuilder() {
+    ChatActionsSheet({
+      isGroupChat: this.chatType === 'group_chat',
+      targetId: this.targetId ?? '',
+      palette: this.getCurrentThemePalette(),
+      surfaceBackground: this.getSurfaceBackground(),
+      surfaceBorder: this.getSurfaceBorder(),
+      onOpenProfile: () => {
+        this.showConversationActionsSheet = false;
+        const profileParam = new ProfileRouteParam();
+        profileParam.userId = this.targetId ?? '';
+        AppRouter.push(PageNames.PROFILE, profileParam);
+      },
+      onScrollToBottom: () => {
+        this.scrollToBottom();
+        this.showConversationActionsSheet = false;
+      },
+      onClearInput: () => {
+        this.inputText = '';
+        this.showConversationActionsSheet = false;
+      },
+      onReport: () => {
+        this.showConversationActionsSheet = false;
+        const reportReq: CreateReportRequest = {
+          target_type: 'user',
+          target_id: this.targetId ?? this.chatId,
+          reason: 'harassment',
+          description: '来自聊天页面的举报'
+        };
+        ApiClient.createReport(reportReq).then(() => {
+          SystemToast.show('举报已提交', this.getUIContext());
+        }).catch(() => {
+          SystemToast.showError('举报提交失败', this.getUIContext());
+        });
+      },
+      onClose: () => { this.showConversationActionsSheet = false; }
     })
-    .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.SHAPE.SHEET_TOP_RADIUS)
   }
+
 
 }
 
