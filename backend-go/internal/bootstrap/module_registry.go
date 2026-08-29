@@ -74,13 +74,14 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	momentsModule.Service.SetReactionAggregator(momentReactionAggregator{reactions: reactionsModule.Service})
 	momentsModule.CommentsService().SetReactionAggregator(commentReactionAggregator{reactions: reactionsModule.Service})
 	// 评论拉黑拦截（spec api_spec_authz.md comments/create：黑名单 → 10200 + blocked_by_user）。
-	// fn 签名无 ctx，此处用独立超时上下文单查双向拉黑表；查询出错放行（fail-open，
-	// 与 resourceguard 口径一致），authorID 拉黑了 callerID 时返回 true。
-	momentsModule.CommentsService().SetBlockChecker(func(callerID, authorID string) bool {
+	// fn 签名无 ctx，此处用独立超时上下文单查双向拉黑表；查询出错向上返回错误
+	// （fail-closed，由 comments service 映射统一 10600），authorID 拉黑了 callerID
+	// 时返回 blocked=true。
+	momentsModule.CommentsService().SetBlockChecker(func(callerID, authorID string) (bool, error) {
 		checkCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		authorBlockedCaller, _, err := usersModule.Service.BlockStateBetween(checkCtx, authorID, callerID)
-		return err == nil && authorBlockedCaller
+		return authorBlockedCaller, err
 	})
 	// reference_point 回退链第 2 级：已登录用户最近位置（users 模块实现，
 	// 经 Service 接口注入 moments fetch_nearby/fetch_following 与各 search 端点）。

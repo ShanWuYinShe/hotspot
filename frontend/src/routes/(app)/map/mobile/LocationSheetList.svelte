@@ -76,7 +76,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 						{selectedPin.tag ? ` · #${selectedPin.tag}` : ''}
 					</p>
 				</div>
-				<button type="button" class="hover-btn scale-btn px-2.5 py-1.5 rounded-full focus-ring shrink-0 text-xs" style="background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);" onclick={() => onOpenPinDetail(selectedPin)}>
+				<button type="button" class="hover-btn scale-btn px-2.5 py-1.5 rounded-full focus-ring shrink-0 text-sm" style="background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);" onclick={() => onOpenPinDetail(selectedPin)}>
 					查看
 				</button>
 				<button type="button" class="hover-btn hit-slop focus-ring shrink-0 ml-0.5" aria-label="清除选中地点" onclick={onClearPin}>

@@ -130,15 +130,8 @@ func (s *Service) Block(ctx context.Context, targetUserID, reason string) error 
 	}
 	// 级联语义（spec api_spec_user.md block）：拉黑自动解除双方关注/好友关系，
 	// 解除拉黑不自动恢复（需重新关注）。与微博/Instagram 等主流产品一致。
-	if err := s.repo.Unfollow(ctx, principal.UserID, targetUserID); err != nil {
-		observability.L().Error("users.block unfollow self failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return err
-	}
-	if err := s.repo.Unfollow(ctx, targetUserID, principal.UserID); err != nil {
-		observability.L().Error("users.block unfollow reverse failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return err
-	}
-	if err := s.repo.Block(ctx, principal.UserID, targetUserID, reason); err != nil {
+	// BlockCascade 在同一事务内完成三步写，避免中间状态。
+	if err := s.repo.BlockCascade(ctx, principal.UserID, targetUserID, reason); err != nil {
 		observability.L().Error("users.block failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}

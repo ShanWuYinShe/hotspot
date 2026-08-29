@@ -330,7 +330,7 @@
 									<button
 										type="button"
 										onclick={() => (transferTarget = { userId: m.userId, name: m.name })}
-										class="hover-btn rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring"
+										class="hover-btn rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring"
 									>转让</button>
 								</div>
 							{:else}

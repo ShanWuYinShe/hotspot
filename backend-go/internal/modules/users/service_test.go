@@ -98,9 +98,10 @@ func (r *stubUserRepo) SearchProfiles(_ context.Context, _ SearchUsersRequest) (
 func (r *stubUserRepo) Follow(_ context.Context, _ string, _ string, _ FollowSource, _ string) error {
 	return r.followErr
 }
-func (r *stubUserRepo) Unfollow(_ context.Context, _, _ string) error { return r.unfollowErr }
-func (r *stubUserRepo) Block(_ context.Context, _, _, _ string) error { return r.blockErr }
-func (r *stubUserRepo) Unblock(_ context.Context, _, _ string) error  { return r.unblockErr }
+func (r *stubUserRepo) Unfollow(_ context.Context, _, _ string) error        { return r.unfollowErr }
+func (r *stubUserRepo) Block(_ context.Context, _, _, _ string) error        { return r.blockErr }
+func (r *stubUserRepo) BlockCascade(_ context.Context, _, _, _ string) error { return r.blockErr }
+func (r *stubUserRepo) Unblock(_ context.Context, _, _ string) error         { return r.unblockErr }
 func (r *stubUserRepo) SetRemark(_ context.Context, _, _, _ string) error {
 	return r.setRemarkErr
 }

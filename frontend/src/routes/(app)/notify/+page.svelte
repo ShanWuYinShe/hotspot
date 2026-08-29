@@ -247,12 +247,12 @@ const FILTER_TABS = [
 								<button
 									type="button"
 									onclick={() => void handleAcceptInvite(inv.invite_id)}
-									class="hover-btn rounded-full bg-accent-default px-3 py-1.5 text-xs font-medium text-text-on-accent focus-ring"
+									class="hover-btn rounded-full bg-accent-default px-3.5 py-1.5 text-sm font-medium text-text-on-accent focus-ring"
 								>接受</button>
 								<button
 									type="button"
 									onclick={() => void handleRejectInvite(inv.invite_id)}
-									class="hover-btn rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring"
+									class="hover-btn rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring"
 								>拒绝</button>
 							</div>
 						{/each}

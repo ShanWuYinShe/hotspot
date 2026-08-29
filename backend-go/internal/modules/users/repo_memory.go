@@ -197,6 +197,23 @@ func (r *InMemoryRepository) Block(_ context.Context, userID, targetUserID, reas
 	r.relations[userID][targetUserID] = relation
 	return nil
 }
+func (r *InMemoryRepository) BlockCascade(_ context.Context, userID, targetUserID, reason string) error {
+	// 与 Postgres 版语义一致：单锁内完成解除双向关注 + 拉黑，保证原子可见。
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, pair := range [][2]string{{userID, targetUserID}, {targetUserID, userID}} {
+		relation := r.ensureRelation(pair[0], pair[1])
+		relation.Following = false
+		relation.FollowedAt = ""
+		r.relations[pair[0]][pair[1]] = relation
+	}
+	relation := r.ensureRelation(userID, targetUserID)
+	relation.Blocked = true
+	relation.BlockedAt = nowMemoryRFC3339()
+	relation.BlockReason = reason
+	r.relations[userID][targetUserID] = relation
+	return nil
+}
 func (r *InMemoryRepository) Unblock(_ context.Context, userID, targetUserID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

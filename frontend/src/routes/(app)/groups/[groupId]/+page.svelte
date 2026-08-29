@@ -260,7 +260,7 @@
 				{#if !canManageMembers || memberTab === 'members'}
 					{#if canManageMembers}
 						<div class="mt-6 flex justify-end">
-							<button type="button" onclick={() => (inviteOpen = true)} class="hover-btn flex items-center gap-1 rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring">
+							<button type="button" onclick={() => (inviteOpen = true)} class="hover-btn flex items-center gap-1 rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring">
 								<UserPlus size={12} strokeWidth={1.75} />
 								添加成员
 							</button>
@@ -310,8 +310,8 @@
 										<span class="block truncate text-sm text-text-primary">{app.applicant.nickname}</span>
 										<span class="text-xs text-text-secondary">{formatDateTime(app.created_at)}{app.message ? ` · ${app.message}` : ''}</span>
 									</span>
-									<button type="button" onclick={() => void handleApproveApplication(app.application_id)} class="hover-btn rounded-full bg-accent-default px-3 py-1.5 text-xs font-medium text-text-on-accent focus-ring">同意</button>
-									<button type="button" onclick={() => void handleRejectApplication(app.application_id)} class="hover-btn rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring">拒绝</button>
+									<button type="button" onclick={() => void handleApproveApplication(app.application_id)} class="hover-btn rounded-full bg-accent-default px-3.5 py-1.5 text-sm font-medium text-text-on-accent focus-ring">同意</button>
+									<button type="button" onclick={() => void handleRejectApplication(app.application_id)} class="hover-btn rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring">拒绝</button>
 								</ListItem>
 							{:else}
 								<EmptyState bare title="暂无待处理的申请" />
@@ -328,7 +328,7 @@
 									<span class="text-xs text-text-secondary">{inviteStatusText(inv.status)} · {formatDateTime(inv.created_at)}</span>
 								</span>
 								{#if inv.status === 'pending'}
-									<button type="button" onclick={() => void handleRevokeInvite(inv.invite_id)} class="hover-btn rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring">撤销</button>
+									<button type="button" onclick={() => void handleRevokeInvite(inv.invite_id)} class="hover-btn rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring">撤销</button>
 								{/if}
 							</ListItem>
 						{:else}
@@ -345,7 +345,7 @@
 									<span class="block truncate text-sm text-text-primary">{item.user.nickname}</span>
 									<span class="text-xs text-text-secondary">{formatDateTime(item.banned_at)}{item.reason ? ` · ${item.reason}` : ''}</span>
 								</span>
-								<button type="button" onclick={() => void handleUnban(item.user.user_id)} class="hover-btn rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring">解封</button>
+								<button type="button" onclick={() => void handleUnban(item.user.user_id)} class="hover-btn rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring">解封</button>
 							</ListItem>
 						{:else}
 							<EmptyState bare title="暂无封禁成员" />
@@ -356,7 +356,7 @@
 				<div class="mt-6 flex items-center justify-between">
 					<p class="text-sm text-text-secondary">群公告</p>
 					{#if canManageAnnouncements}
-						<button type="button" onclick={openCreateAnnouncement} class="hover-btn flex items-center gap-1 rounded-full border border-border-default px-3 py-1.5 text-xs text-text-primary focus-ring">
+						<button type="button" onclick={openCreateAnnouncement} class="hover-btn flex items-center gap-1 rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring">
 							<Megaphone size={12} strokeWidth={1.75} />
 							发公告
 						</button>

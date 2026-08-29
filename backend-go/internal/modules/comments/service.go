@@ -31,11 +31,13 @@ type Service struct {
 	// blockChecks 可选注入：判定 caller 是否被目标瞬间作者拉黑（spec comment create →
 	// 被拉黑 → 10200 + blocked_by_user）。生产由 users 侧实现注入；nil 表示不启用
 	//（不产生误判，仅暴露 privacy_setting 路径）。返回 true 表示被拉黑。
-	blockChecks func(callerID, authorID string) bool
+	blockChecks func(callerID, authorID string) (bool, error)
 }
 
 // SetBlockChecker 注入拉黑判定（依赖倒置：comments 不直接 import users）。
-func (s *Service) SetBlockChecker(fn func(callerID, authorID string) bool) { s.blockChecks = fn }
+func (s *Service) SetBlockChecker(fn func(callerID, authorID string) (bool, error)) {
+	s.blockChecks = fn
+}
 
 // ReactionAggregator computes per-emoji reaction aggregates for comments.
 // Implemented by the reactions module (dependency inversion). viewerID drives
@@ -542,9 +544,18 @@ func (s *Service) ensureMomentCommentable(ctx context.Context, momentID string) 
 		if mc, ok, err := s.moments.NotificationContext(ctx, momentID); err == nil && ok {
 			author = mc.UserID
 		}
-		if author != "" && caller != "" && s.blockChecks(caller, author) {
-			// 被瞬间作者拉黑（spec comment create → 10200 + blocked_by_user）
-			return ErrCommentBlockedByUser
+		if author != "" && caller != "" {
+			blocked, err := s.blockChecks(caller, author)
+			if err != nil {
+				// 黑名单查询失败时 fail-closed：返回错误（统一 10600）而非放行，
+				// 避免 DB 抖动期间被拉黑用户可继续评论。
+				observability.L().Error("comments.block_check failed", "error", err, "author_id", author)
+				return err
+			}
+			if blocked {
+				// 被瞬间作者拉黑（spec comment create → 10200 + blocked_by_user）
+				return ErrCommentBlockedByUser
+			}
 		}
 	}
 	return nil

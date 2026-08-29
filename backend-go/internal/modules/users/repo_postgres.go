@@ -135,6 +135,29 @@ func (r *PostgresRepository) Block(ctx context.Context, userID, targetUserID, re
 	blockedAt := nowRFC3339()
 	return queryable.Exec(ctx, queryUpsertUserRelationBlock, userID, targetUserID, blockedAt, reason)
 }
+func (r *PostgresRepository) BlockCascade(ctx context.Context, userID, targetUserID, reason string) error {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return persistence.ErrNotImplemented
+	}
+	if _, ok := r.factory.DB.(persistence.QueryableDB); !ok {
+		return persistence.ErrNotImplemented
+	}
+	blockedAt := nowRFC3339()
+	// 解除双向关注 + 拉黑三步包进同一事务：避免「关注已解除但未拉黑」的中间状态。
+	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		q, ok := persistence.QueryableForTx(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		if err := q.Exec(txCtx, queryUpsertUserRelationUnfollow, userID, targetUserID); err != nil {
+			return err
+		}
+		if err := q.Exec(txCtx, queryUpsertUserRelationUnfollow, targetUserID, userID); err != nil {
+			return err
+		}
+		return q.Exec(txCtx, queryUpsertUserRelationBlock, userID, targetUserID, blockedAt, reason)
+	})
+}
 func (r *PostgresRepository) Unblock(ctx context.Context, userID, targetUserID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return persistence.ErrNotImplemented

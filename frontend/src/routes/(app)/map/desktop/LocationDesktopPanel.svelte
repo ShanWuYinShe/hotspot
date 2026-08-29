@@ -138,7 +138,7 @@ locationName = loc?.location_name ?? '';
 							<div class="flex items-center gap-2 mt-0.5 flex-wrap">
 								<!-- 类型徽章：选中行背景为 accent 实色，type 色与 accent 同色（user），
 								     反色适配为 on-accent 底 + accent 字（对齐 ChatListItem 未读徽章模式） -->
-								<span class="text-xxs" style="padding:1px 6px;border-radius:var(--cst-shape-sm);background:{isSelected ? 'var(--cst-text-on-accent)' : PIN_TONES[pin.type].bg};color:{isSelected ? 'var(--cst-accent-default)' : PIN_COLORS[pin.type]};">
+								<span class="text-xs" style="padding:1px 6px;border-radius:var(--cst-shape-sm);background:{isSelected ? 'var(--cst-text-on-accent)' : PIN_TONES[pin.type].bg};color:{isSelected ? 'var(--cst-accent-default)' : PIN_COLORS[pin.type]};">
 									{PIN_LABELS[pin.type]}
 								</span>
 								{#if pin.tag}

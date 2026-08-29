@@ -18,6 +18,9 @@ type Repository interface {
 	Follow(context.Context, string, string, FollowSource, string) error
 	Unfollow(context.Context, string, string) error
 	Block(context.Context, string, string, string) error
+	// BlockCascade 原子完成「拉黑 + 解除双方关注」级联（spec api_spec_user.md block），
+	// 避免分步执行时第三次写失败留下"已解除关注但未拉黑"的中间状态。
+	BlockCascade(context.Context, string, string, string) error
 	Unblock(context.Context, string, string) error
 	SetRemark(context.Context, string, string, string) error
 	// CheckBlockedTags 返回 tags 中命中平台屏蔽标签（admin_blocked_tags）的标签名；

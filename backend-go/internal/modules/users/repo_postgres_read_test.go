@@ -55,6 +55,10 @@ func (r *userFallbackRepo) Block(context.Context, string, string, string) error 
 	r.markUsed()
 	return nil
 }
+func (r *userFallbackRepo) BlockCascade(context.Context, string, string, string) error {
+	r.markUsed()
+	return nil
+}
 func (r *userFallbackRepo) Unblock(context.Context, string, string) error {
 	r.markUsed()
 	return nil

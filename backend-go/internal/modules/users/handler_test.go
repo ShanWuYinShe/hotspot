@@ -66,10 +66,11 @@ func (invalidCursorRepo) SearchProfiles(context.Context, SearchUsersRequest) (Pa
 func (invalidCursorRepo) Follow(context.Context, string, string, FollowSource, string) error {
 	return nil
 }
-func (invalidCursorRepo) Unfollow(context.Context, string, string) error          { return nil }
-func (invalidCursorRepo) Block(context.Context, string, string, string) error     { return nil }
-func (invalidCursorRepo) Unblock(context.Context, string, string) error           { return nil }
-func (invalidCursorRepo) SetRemark(context.Context, string, string, string) error { return nil }
+func (invalidCursorRepo) Unfollow(context.Context, string, string) error             { return nil }
+func (invalidCursorRepo) Block(context.Context, string, string, string) error        { return nil }
+func (invalidCursorRepo) BlockCascade(context.Context, string, string, string) error { return nil }
+func (invalidCursorRepo) Unblock(context.Context, string, string) error              { return nil }
+func (invalidCursorRepo) SetRemark(context.Context, string, string, string) error    { return nil }
 func (invalidCursorRepo) CheckBlockedTags(context.Context, []string) ([]string, error) {
 	return nil, nil
 }
@@ -130,7 +131,10 @@ func (r *userErrorRepo) Follow(context.Context, string, string, FollowSource, st
 }
 func (r *userErrorRepo) Unfollow(context.Context, string, string) error      { return r.unfollowErr }
 func (r *userErrorRepo) Block(context.Context, string, string, string) error { return r.blockErr }
-func (r *userErrorRepo) Unblock(context.Context, string, string) error       { return r.unblockErr }
+func (r *userErrorRepo) BlockCascade(context.Context, string, string, string) error {
+	return r.blockErr
+}
+func (r *userErrorRepo) Unblock(context.Context, string, string) error { return r.unblockErr }
 func (r *userErrorRepo) SetRemark(context.Context, string, string, string) error {
 	return r.remarkErr
 }

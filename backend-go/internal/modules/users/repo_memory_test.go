@@ -62,3 +62,34 @@ func TestInMemoryPutProfile_ReplacesTagsWholesale(t *testing.T) {
 		}
 	}
 }
+
+// TestInMemoryBlockCascade_ClearsBothFollows verifies BlockCascade atomically
+// blocks and clears follows in both directions (spec api_spec_user.md block），
+// guarding the tx-wrapped postgres mirror.
+func TestInMemoryBlockCascade_ClearsBothFollows(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := context.Background()
+	if err := repo.Follow(ctx, "user_a", "user_b", FollowSourceProfile, ""); err != nil {
+		t.Fatalf("follow a->b: %v", err)
+	}
+	if err := repo.Follow(ctx, "user_b", "user_a", FollowSourceProfile, ""); err != nil {
+		t.Fatalf("follow b->a: %v", err)
+	}
+	if err := repo.BlockCascade(ctx, "user_a", "user_b", "spam"); err != nil {
+		t.Fatalf("block cascade: %v", err)
+	}
+	relAB, err := repo.Relationship(ctx, "user_a", "user_b")
+	if err != nil {
+		t.Fatalf("relationship a->b: %v", err)
+	}
+	if !relAB.IsBlocked || relAB.IsFollowing {
+		t.Fatalf("expected blocked and unfollowed a->b: %#v", relAB)
+	}
+	relBA, err := repo.Relationship(ctx, "user_b", "user_a")
+	if err != nil {
+		t.Fatalf("relationship b->a: %v", err)
+	}
+	if relBA.IsBlocked || relBA.IsFollowing {
+		t.Fatalf("expected b->a not blocked but unfollowed: %#v", relBA)
+	}
+}

@@ -245,7 +245,7 @@
 						<div class="flex items-center gap-2">
 							<p class="text-text-primary text-sm">{selectedPin.name || selectedPin.title}</p>
 							{#if (selectedPin.count ?? 1) > 1}
-								<span class="text-xxs" style="padding:1px 6px;border-radius:var(--cst-shape-sm);background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);">
+								<span class="text-xs" style="padding:1px 6px;border-radius:var(--cst-shape-sm);background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);">
 									{selectedPin.count}个
 								</span>
 							{/if}

@@ -25,7 +25,7 @@
 	};
 
 	const SIZES: Record<ButtonSize, string> = {
-		sm: 'h-8 px-3 text-xs rounded-md',
+		sm: 'h-8 px-3 text-sm rounded-md',
 		md: 'h-10 px-4 text-sm rounded-md',
 		lg: 'h-11 px-5 text-sm rounded-md'
 	};
