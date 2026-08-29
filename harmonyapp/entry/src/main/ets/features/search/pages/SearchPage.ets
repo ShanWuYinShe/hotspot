@@ -15,6 +15,7 @@ import { interactionActions } from '../../../core/state/InteractionActions';
 import { UserRelationState, sumReactionCounts } from '../../../core/state/InteractionStateStore';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { Pressable } from '../../../components/Pressable';
+import { SearchSuggestRow, SearchMomentRow } from '../components/SearchRows';
 import { EmptyState } from '../../../components/EmptyState';
 import { SearchPageHeader } from '../../../components/SearchPageHeader';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -423,7 +424,16 @@ export struct SearchPage {
           List({ space: DesignConstants.SPACING.SM }) {
             ForEach(this.suggestItems, (item: SearchSuggestItem) => {
               ListItem() {
-                this.buildSuggestRow(item)
+                SearchSuggestRow({
+                  itemType: item.type,
+                  title: this.getSuggestTitle(item),
+                  subtitle: this.getSuggestSubtitle(item),
+                  palette: this.getCurrentThemePalette(),
+                  surfaceBackground: this.getSurfaceBackground(),
+                  surfaceSubtle: this.getSurfaceSubtle(),
+                  surfaceBorder: this.getSurfaceBorder(),
+                  onPress: () => this.handleSuggestItemTap(item)
+                })
               }
             }, (item: SearchSuggestItem, index?: number) => this.getSuggestKey(item, index ?? 0))
           }
@@ -487,56 +497,6 @@ export struct SearchPage {
     })
   }
 
-  @Builder
-  private buildSuggestRow(item: SearchSuggestItem) {
-    Pressable({ onPress: () => this.handleSuggestItemTap(item) }) {
-      Row({ space: DesignConstants.SPACING.MD }) {
-        Row() {
-          Text() {
-            SymbolSpan($r(
-              item.type === 'tag' ? AppIcon.CHART : item.type === 'user' ? AppIcon.PERSON : item.type === 'group' ? AppIcon.GROUP : AppIcon.CAMERA
-            ))
-              .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-              .fontColor([this.getCurrentThemePalette().accentBackground])
-          }
-        }
-        .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
-        .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .backgroundColor(this.getSurfaceSubtle())
-        .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
-
-        Column({ space: DesignConstants.SPACING.XS }) {
-          Text(this.getSuggestTitle(item))
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-            .fontColor(this.getCurrentThemePalette().textPrimary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text(this.getSuggestSubtitle(item))
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start)
-
-        Text() {
-          SymbolSpan($r(AppIcon.ARROW_RIGHT))
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([this.getCurrentThemePalette().textSecondary])
-        }
-      }
-      .width('100%')
-      .padding(DesignConstants.SPACING.MD)
-      .backgroundColor(this.getSurfaceBackground())
-      .borderRadius(DesignConstants.SHAPE.CARD)
-      .shadow(this.getCurrentThemePalette().surfaceShadow)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    }
-  }
 
   private tabLabel(base: string, count: number): string {
     return (this.hasSearched && count > 0) ? `${base} (${count})` : base;
@@ -583,7 +543,15 @@ export struct SearchPage {
         if (this.momentResults.length > 0) {
           ListItem() { this.buildAllSectionLabel('动态') }
           ForEach(this.momentResults.slice(0, 3), (moment: MomentItem) => {
-            ListItem() { this.buildAllMomentRow(moment) }
+            ListItem() {
+              SearchMomentRow({
+                moment: moment,
+                palette: this.getCurrentThemePalette(),
+                surfaceBackground: this.getSurfaceBackground(),
+                surfaceBorder: this.getSurfaceBorder(),
+                onPress: () => this.openMomentDetail(moment)
+              })
+            }
           }, (moment: MomentItem) => `all-moment-${moment.moment_id}`)
         }
 
@@ -598,40 +566,6 @@ export struct SearchPage {
       .width('100%').height('100%')
       .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
       .scrollBar(BarState.Auto)
-    }
-  }
-
-  @Builder
-  private buildAllMomentRow(moment: MomentItem) {
-    Pressable({ onPress: () => this.openMomentDetail(moment) }) {
-      Row() {
-        Column({ space: DesignConstants.SPACING.XS }) {
-          Text(moment.description)
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor(this.getCurrentThemePalette().textPrimary)
-            .maxLines(2)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .width('100%')
-          Text(moment.location?.location_name ?? '')
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-            .width('100%')
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-
-        Text() {
-          SymbolSpan($r(AppIcon.ARROW_RIGHT))
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([this.getCurrentThemePalette().textSecondary])
-        }
-      }
-      .width('100%')
-      .padding(DesignConstants.SPACING.MD)
-      .backgroundColor(this.getSurfaceBackground())
-      .borderRadius(DesignConstants.SHAPE.CARD)
-      .shadow(this.getCurrentThemePalette().surfaceShadow)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     }
   }
 

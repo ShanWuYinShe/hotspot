@@ -15,6 +15,7 @@ import { WebSocketService } from '../../../core/network/WebSocketService';
 import { AppRouter, ChatRouteParam, LoginRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
+import { ViewedMomentThumb } from '../components/ViewedMomentThumb';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { useMasterDetail } from '../../../core/responsive/Breakpoint';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
@@ -916,7 +917,10 @@ export struct ProfilePage {
               Grid() {
                 ForEach(this.viewedUserMoments, (moment: MomentItem) => {
                   GridItem() {
-                    this.buildViewedMomentThumb(moment)
+                    ViewedMomentThumb({
+                      moment: moment,
+                      palette: this.getCurrentThemePalette()
+                    })
                   }
                 }, (moment: MomentItem) => moment.moment_id)
               }
@@ -943,60 +947,6 @@ export struct ProfilePage {
       .align(Alignment.TopStart)
       .scrollBar(BarState.Auto)
     }
-  }
-
-  @Builder
-  private buildViewedMomentThumb(moment: MomentItem) {
-    Stack() {
-      if (moment.images && moment.images.length > 0) {
-        Image(MediaUrlUtil.normalize(moment.images[0].url))
-          .width('100%')
-          .height('100%')
-          .objectFit(ImageFit.Cover)
-          .borderRadius(DesignConstants.RADIUS.LG)
-      } else {
-        Column() {
-          Text(moment.description)
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getSecondaryTextColor())
-            .maxLines(2)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .textAlign(TextAlign.Center)
-        }
-        .width('100%')
-        .height('100%')
-        .padding(DesignConstants.SPACING.XS)
-        .justifyContent(FlexAlign.Center)
-        .backgroundColor(this.getSurfaceSubtle())
-        .borderRadius(DesignConstants.RADIUS.LG)
-      }
-    }
-    .aspectRatio(1)
-    .width('100%')
-    .borderRadius(DesignConstants.RADIUS.LG)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    // 缩略图按压反馈（对齐 tap-97 语义）
-    .scale(this.pressedThumbKey === (moment.moment_id ?? '') ?
-      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
-      { x: 1, y: 1 })
-    .animation({ curve: curves.springMotion(
-      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-    ) })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.pressedThumbKey = moment.moment_id ?? '';
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.pressedThumbKey = '';
-      }
-    })
-    .onClick(() => {
-      if (moment.moment_id) {
-        const params = new MomentDetailRouteParam();
-        params.momentId = moment.moment_id;
-        AppRouter.push(PageNames.MOMENT_DETAIL, params);
-      }
-    })
   }
 
   // ==================== 匿名用户 - 游客界面 ====================

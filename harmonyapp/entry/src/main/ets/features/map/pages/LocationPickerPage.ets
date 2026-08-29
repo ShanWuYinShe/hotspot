@@ -6,6 +6,7 @@ import { NativeMapComponent, NativeMapActions, MapRegion, MapCoordinate, MapMark
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState } from '../../../components/EmptyState';
+import { LocationResultRow } from '../components/LocationResultRow';
 import { Pressable } from '../../../components/Pressable';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -388,52 +389,11 @@ struct SearchPanel {
             List({ space: DesignConstants.SPACING.SM }) {
               ForEach(this.searchResults, (item: LocationInfo, index: number) => {
                 ListItem() {
-                  Row({ space: DesignConstants.SPACING.MD }) {
-                    Column() {
-                      Text() {
-                        SymbolSpan($r(AppIcon.LOCATION))
-                          .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-                          .fontColor([resolveLocationPickerPalette(this.resolvedThemeId).accentBackground])
-                      }
-                    }
-                    .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
-                    .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
-                    .justifyContent(FlexAlign.Center)
-                    .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceSubtle)
-                    .borderRadius(DesignConstants.RADIUS.MD)
-
-                    Text(item.locationName || '未知地点')
-                      .fontSize(DesignConstants.FONT.SIZE.MD)
-                      .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textPrimary)
-                      .layoutWeight(1)
-                      .maxLines(2)
-                      .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  }
-                  .width('100%')
-                  .padding({
-                    left: DesignConstants.SPACING.MD,
-                    right: DesignConstants.SPACING.MD,
-                    top: DesignConstants.SPACING.MD,
-                    bottom: DesignConstants.SPACING.MD
+                  LocationResultRow({
+                    item: item,
+                    resolvedThemeId: this.resolvedThemeId,
+                    onSelect: (result) => { this.onSelectResult(result); }
                   })
-                  // 面板内行去三件套（surface 叠 surface + 边框 + 阴影），改 tint 行 + 按压反馈
-                  .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceSubtle)
-                  .borderRadius(DesignConstants.RADIUS.LG)
-                  .scale(this.pressedRowKey === `search_${item.latitude}_${item.longitude}` ?
-                    { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
-                    { x: 1, y: 1 })
-                  .animation({ curve: curves.springMotion(
-                    DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-                    DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-                  ) })
-                  .onTouch((event: TouchEvent) => {
-                    if (event.type === TouchType.Down) {
-                      this.pressedRowKey = `search_${item.latitude}_${item.longitude}`;
-                    } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-                      this.pressedRowKey = '';
-                    }
-                  })
-                  .onClick(() => { this.onSelectResult(item); })
                 }
               }, (item: LocationInfo) => `search_${item.latitude}_${item.longitude}`)
             }

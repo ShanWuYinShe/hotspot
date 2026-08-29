@@ -9,6 +9,8 @@ import { AccountInfo } from '../../../core/types/api';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
+import { GroupMemberRow } from '../components/GroupMemberRow';
+import { GroupApplicationRow } from '../components/GroupApplicationRow';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -1463,7 +1465,15 @@ export struct GroupDetailPage {
         List() {
           LazyForEach(this.membersDataSource, (member: GroupMemberItem) => {
             ListItem() {
-              this.buildMemberItem(member)
+              GroupMemberRow({
+                member: member,
+                roleText: this.getRoleDisplayText(member.role),
+                roleColor: this.getRoleColor(member.role),
+                showMenu: this.buildMemberActionMenus(member).length > 0,
+                palette: this.getCurrentThemePalette(),
+                surfaceBackground: this.getSurfaceBackground(),
+                menuItems: this.buildMemberActionMenus(member)
+              })
             }
           }, (member: GroupMemberItem) => member.user?.user_id ?? member.joined_at ?? '')
           if (this.membersLoadingMore) {
@@ -1532,7 +1542,14 @@ export struct GroupDetailPage {
         List() {
           LazyForEach(this.applicationsDataSource, (application: GroupApplicationItem) => {
             ListItem() {
-              this.buildApplicationItem(application)
+              GroupApplicationRow({
+                application: application,
+                handling: this.isApplicationHandling(application.application_id),
+                palette: this.getCurrentThemePalette(),
+                surfaceBackground: this.getSurfaceBackground(),
+                onApprove: () => { this.approveApplication(application); },
+                onReject: () => { this.rejectApplication(application); }
+              })
             }
           }, (application: GroupApplicationItem) => application.application_id)
 
@@ -1569,130 +1586,6 @@ export struct GroupDetailPage {
     .width('100%')
     .height('100%')
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
-  }
-
-  @Builder
-  buildApplicationItem(application: GroupApplicationItem) {
-    Column({ space: DesignConstants.SPACING.SM }) {
-      Row() {
-        SystemAvatar({
-          src: application.applicant?.avatar_url ?? '',
-          name: application.applicant?.nickname ?? '',
-          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
-          userInfo: application.applicant
-        })
-
-        Column() {
-          Text(application.applicant?.nickname ?? '未知用户')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-            .fontColor(this.getCurrentThemePalette().textPrimary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-          Text(`申请于 ${new Date(application.created_at).toLocaleString()}`)
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-            .margin({ top: DesignConstants.SPACING.XS })
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-        .margin({ left: DesignConstants.SPACING.MD })
-      }
-      .width('100%')
-
-      if (application.message) {
-        Text(application.message)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-          .width('100%')
-      }
-
-      Row({ space: DesignConstants.SPACING.SM }) {
-        SystemButton({
-          label: this.isApplicationHandling(application.application_id) ? '处理中...' : '批准',
-          variant: 'primary',
-          buttonSize: 'large',
-          disabled: this.isApplicationHandling(application.application_id),
-          onPress: () => { this.approveApplication(application); }
-        })
-          .layoutWeight(1)
-
-        SystemButton({
-          label: '拒绝',
-          variant: 'surface',
-          buttonSize: 'large',
-          disabled: this.isApplicationHandling(application.application_id),
-          onPress: () => { this.rejectApplication(application); }
-        })
-          .layoutWeight(1)
-      }
-      .width('100%')
-    }
-    .width('100%')
-    .padding(DesignConstants.SPACING.MD)
-    .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XL)
-    .shadow(this.getCurrentThemePalette().controlShadow)
-    .margin({ bottom: DesignConstants.SPACING.SM })
-  }
-
-  @Builder
-  buildMemberItem(member: GroupMemberItem) {
-    Row() {
-      SystemAvatar({
-        src: member.user?.avatar_url ?? '',
-        name: member.user?.nickname ?? '',
-        avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
-        userInfo: member.user
-      })
-
-      Column() {
-        Text(member.user?.nickname ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        Row() {
-          Text(this.getRoleDisplayText(member.role))
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getRoleColor(member.role))
-            .backgroundColor(this.getSurfaceSubtle())
-            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
-            .borderRadius(DesignConstants.SHAPE.CHIP)
-
-          if (member.joined_at) {
-            Text(`加入于 ${new Date(member.joined_at).toLocaleDateString()}`)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-              .margin({ left: DesignConstants.SPACING.SM })
-          }
-        }
-        .margin({ top: DesignConstants.SPACING.XS })
-      }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
-      .margin({ left: DesignConstants.SPACING.MD })
-
-      if (this.buildMemberActionMenus(member).length > 0) {
-        Text() {
-          SymbolSpan($r(AppIcon.MORE))
-            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-            .fontColor([this.getCurrentThemePalette().textSecondary])
-        }
-        .padding(DesignConstants.SPACING.SM)
-        .borderRadius(DesignConstants.RADIUS.SM)
-        .bindMenu(this.buildMemberActionMenus(member))
-      }
-    }
-    .width('100%')
-    .padding(DesignConstants.SPACING.MD)
-    .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XL)
-    .shadow(this.getCurrentThemePalette().controlShadow)
-    .margin({ bottom: DesignConstants.SPACING.SM })
   }
 }
 

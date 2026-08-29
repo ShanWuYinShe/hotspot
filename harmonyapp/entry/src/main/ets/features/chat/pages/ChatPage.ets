@@ -21,6 +21,7 @@ import type {
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { ChatPageHeader } from '../../../components/ChatPageHeader';
+import { ChatMessageItem } from '../components/ChatMessageItem';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState } from '../../../components/EmptyState';
@@ -1173,7 +1174,14 @@ export struct ChatPage {
               if (this.shouldShowDatePill(index)) {
                 this.buildDatePill(formatDateLabel(msg.sentAt))
               }
-              this.buildMessageItem(msg)
+              ChatMessageItem({
+                msg: msg,
+                isGroupChat: this.chatType === 'group_chat',
+                isLastSent: msg.isSelf && msg.id === this.getLastSentMessageId(),
+                timeText: this.formatMessageTime(msg.sentAt),
+                palette: this.getCurrentThemePalette(),
+                chatTheme: this.getChatTheme()
+              })
             }
             .width('100%')
           }
@@ -1414,6 +1422,28 @@ export struct ChatPage {
     })
   }
 
+
+  @Builder
+  buildDatePill(label: string) {
+    Row() {
+      Text(label)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontColor(this.getCurrentThemePalette().textSecondary)
+        .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
+        .padding({
+          left: DesignConstants.SPACING.MD,
+          right: DesignConstants.SPACING.MD,
+          top: DesignConstants.SPACING.XS,
+          bottom: DesignConstants.SPACING.XS
+        })
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+    }
+    .width('100%')
+    .justifyContent(FlexAlign.Center)
+    .margin({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+  }
+
   @Builder
   private buildConversationActionsSheet() {
     Column({ space: DesignConstants.SPACING.MD }) {
@@ -1509,146 +1539,6 @@ export struct ChatPage {
     .borderRadius(DesignConstants.SHAPE.SHEET_TOP_RADIUS)
   }
 
-  private getBubbleRadius(isSelf: boolean): BorderRadiuses {
-    const big: number = DesignConstants.CHAT.BUBBLE_RADIUS;
-    const notch: number = DesignConstants.SPACING.XS;
-    if (this.chatType === 'group_chat') {
-      // 群聊：缺角在底部
-      return isSelf
-        ? { topLeft: big, topRight: big, bottomLeft: big, bottomRight: notch }
-        : { topLeft: big, topRight: big, bottomLeft: notch, bottomRight: big };
-    }
-    // 私聊：缺角在顶部
-    return isSelf
-      ? { topLeft: big, topRight: notch, bottomLeft: big, bottomRight: big }
-      : { topLeft: notch, topRight: big, bottomLeft: big, bottomRight: big };
-  }
-
-  @Builder
-  buildDatePill(label: string) {
-    Row() {
-      Text(label)
-        .fontSize(DesignConstants.FONT.SIZE.XS)
-        .fontColor(this.getCurrentThemePalette().textSecondary)
-        .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
-        .padding({
-          left: DesignConstants.SPACING.MD,
-          right: DesignConstants.SPACING.MD,
-          top: DesignConstants.SPACING.XS,
-          bottom: DesignConstants.SPACING.XS
-        })
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    }
-    .width('100%')
-    .justifyContent(FlexAlign.Center)
-    .margin({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-  }
-
-  @Builder
-  buildMessageItem(msg: ChatMessage) {
-    if (msg.isSystem) {
-      Row() {
-        Text(msg.content)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-          .backgroundColor(this.getChatTheme().bubbleSystem)
-          .padding({
-            left: DesignConstants.CHAT.IMAGE_BUBBLE_PADDING_H,
-            right: DesignConstants.CHAT.IMAGE_BUBBLE_PADDING_H,
-            top: DesignConstants.CHAT.IMAGE_BUBBLE_PADDING_V,
-            bottom: DesignConstants.CHAT.IMAGE_BUBBLE_PADDING_V
-          })
-          .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
-          .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getChatTheme().divider })
-      }
-      .width('100%')
-      .justifyContent(FlexAlign.Center)
-      .margin({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-    } else {
-      Row() {
-        if (!msg.isSelf) {
-          SystemAvatar({
-            avatarUrl: msg.senderAvatar,
-            name: msg.senderName,
-            avatarSize: DesignConstants.CHAT.AVATAR_SIZE
-          })
-          .margin({ right: DesignConstants.SPACING.SM })
-        }
-
-        Column() {
-          if (!msg.isSelf && this.chatType === 'group_chat') {
-            Text(msg.senderName)
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-              .margin({ bottom: DesignConstants.SPACING.XS, left: DesignConstants.SPACING.XS })
-          }
-
-            Row() {
-            if (msg.type === 'image') {
-              Image(MediaUrlUtil.normalize(msg.content))
-                .width(DesignConstants.CHAT.IMAGE_MAX_WIDTH)
-                .objectFit(ImageFit.Cover)
-                .backgroundColor(this.getChatTheme().listBackground)
-                .borderRadius(this.getBubbleRadius(msg.isSelf))
-                .shadow(this.getCurrentThemePalette().controlShadow)
-                .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getChatTheme().divider })
-                .margin(DesignConstants.SPACING.XS)
-                .accessibilityText('[图片消息]')
-            } else {
-              Text(msg.content)
-                .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
-                .fontColor(msg.isSelf ? this.getChatTheme().sendButtonActiveText : this.getCurrentThemePalette().textPrimary)
-                .backgroundColor(msg.isSelf ? this.getChatTheme().bubbleSelf : this.getChatTheme().bubblePeer)
-                .padding({
-                  left: DesignConstants.CHAT.BUBBLE_PADDING_H,
-                  right: DesignConstants.CHAT.BUBBLE_PADDING_H,
-                  top: DesignConstants.CHAT.BUBBLE_PADDING_V,
-                  bottom: DesignConstants.CHAT.BUBBLE_PADDING_V
-                })
-                .borderRadius(this.getBubbleRadius(msg.isSelf))
-                .constraintSize({ maxWidth: DesignConstants.CHAT.BUBBLE_MAX_WIDTH })
-                .shadow(msg.isSelf ? this.getCurrentThemePalette().accentShadow : this.getCurrentThemePalette().controlShadow)
-            }
-          }
-          .justifyContent(msg.isSelf ? FlexAlign.End : FlexAlign.Start)
-
-          Row({ space: DesignConstants.SPACING.XS }) {
-            Text(this.formatMessageTime(msg.sentAt))
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(msg.isSelf ? this.getChatTheme().sendButtonActiveText : this.getCurrentThemePalette().textSecondary)
-              .opacity(DesignConstants.OPACITY.SUBTLE)
-            if (msg.isSelf && msg.id === this.getLastSentMessageId()) {
-              Text() {
-                SymbolSpan($r(AppIcon.CHECK_ALL))
-                  .fontSize(DesignConstants.FONT.SIZE.XS)
-                  .fontColor([this.getChatTheme().sendButtonActiveText])
-              }
-            }
-          }
-          .width('100%')
-          .justifyContent(msg.isSelf ? FlexAlign.End : FlexAlign.Start)
-          .margin({ top: DesignConstants.SPACING.XS })
-        }
-        .alignItems(msg.isSelf ? HorizontalAlign.End : HorizontalAlign.Start)
-        .layoutWeight(1)
-
-        if (msg.isSelf) {
-          SystemAvatar({
-            avatarUrl: msg.senderAvatar,
-            name: msg.senderName,
-            avatarSize: DesignConstants.CHAT.AVATAR_SIZE
-          })
-          .margin({ left: DesignConstants.SPACING.SM })
-        }
-      }
-      .width('100%')
-      .justifyContent(msg.isSelf ? FlexAlign.End : FlexAlign.Start)
-      .alignItems(VerticalAlign.Top)
-      .margin({ bottom: DesignConstants.CHAT.MESSAGE_GAP })
-    }
-  }
 }
 
 @Builder
