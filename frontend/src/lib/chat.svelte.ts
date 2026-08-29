@@ -443,3 +443,59 @@ export function useChat(opts: UseChatOptions) {
 		cancelTyping
 	};
 }
+
+// 撤回时间窗（spec message_recall_window_seconds，默认 300s；服务端 10400
+// 兜底，ClientConfig 接入留后续）。私聊/群聊共用。
+export const RECALL_WINDOW_MS = 300_000;
+
+export function inRecallWindow(sentAt?: string): boolean {
+	if (!sentAt) return true;
+	return Date.now() - new Date(sentAt).getTime() < RECALL_WINDOW_MS;
+}
+
+// createTypingIndicator —— 私聊/群聊共用的「正在输入」状态机：
+// notify(true) 激活并启动 3 秒超时自动重置；notify(false) 立即重置；
+// 群聊场景携带 actor 昵称展示「某某正在输入…」。
+export function createTypingIndicator() {
+	let active = $state(false);
+	let actorName = $state('');
+	let timer: ReturnType<typeof setTimeout> | null = null;
+
+	function reset() {
+		if (timer) {
+			clearTimeout(timer);
+			timer = null;
+		}
+		active = false;
+		actorName = '';
+	}
+
+	function notify(isTyping: boolean, name = '') {
+		if (isTyping) {
+			active = true;
+			actorName = name;
+			if (timer) clearTimeout(timer);
+			timer = setTimeout(() => {
+				timer = null;
+				active = false;
+				actorName = '';
+			}, 3000);
+		} else {
+			reset();
+		}
+	}
+
+	return {
+		notify,
+		reset,
+		get active() {
+			return active;
+		},
+		get actorName() {
+			return actorName;
+		}
+	};
+}
+
+// ChatController —— useChat 返回值的类型出口，供共享子组件标注 props。
+export type ChatController = ReturnType<typeof useChat>;

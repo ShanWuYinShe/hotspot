@@ -1,15 +1,13 @@
 <script lang="ts">
-	import { ArrowLeft, Send, MessageCircle } from '@lucide/svelte';
+	import { ArrowLeft } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
-	import EmptyState from '@/components/data-display/EmptyState.svelte';
-	import LoadError from '@/components/data-display/LoadError.svelte';
-	import MessageBubble from '@/components/messages/MessageBubble.svelte';
-	import ChatDatePill from '@/components/messages/ChatDatePill.svelte';
+	import ChatMessageList from '@/components/messages/ChatMessageList.svelte';
+	import ChatInputBar from '@/components/messages/ChatInputBar.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { getGroupDetail, getGroupMessages, sendGroupMessage, markGroupRead, recallGroupMessage, recallGroupMessageAsAdmin, updateGroupMessage } from '@/api';
 	import { WS_GROUP_MESSAGE_EVENT, WS_GROUP_MESSAGE_UPDATE_EVENT, wsClient } from '@/lib/ws/client';
 	import type { UserInfo } from '@/lib/ws/types';
-	import { useChat, formatTime, type ChatMessage } from '@/lib/chat.svelte';
+	import { useChat, formatTime, createTypingIndicator, inRecallWindow, type ChatMessage } from '@/lib/chat.svelte';
 
 	// 服务端推送版输入状态（spec GroupTypingPayload，types.ts 未单独导出）。
 	interface GroupTypingPayload {
@@ -20,7 +18,8 @@
 
 	// GroupChatView — 群聊窗口（spec: 以 group_id 寻址）。
 	// 历史来自 group_messages/fetch;发送走 group_messages/send。
-	// 消息方向由 sender.user_id 与当前用户比较得出;共享状态机由 useChat 工厂承载。
+	// 消息方向由 sender.user_id 与当前用户比较得出;共享状态机由 useChat 工厂承载;
+	// 消息区与输入栏由 ChatMessageList/ChatInputBar 共享组件渲染。
 
 	let {
 		groupId,
@@ -145,21 +144,15 @@
 		}
 	});
 	// 撤回时间窗仅作者适用（spec message_recall_window_seconds，默认 300s）；
-	const RECALL_WINDOW_MS = 300_000;
-	const inRecallWindow = (sentAt?: string) => {
-		if (!sentAt) return true;
-		return Date.now() - new Date(sentAt).getTime() < RECALL_WINDOW_MS;
-	};
+	// 群主/群管理员无时间窗。
 	const canRecallMessage = (msg: ChatMessage) =>
 		(msg.sent && inRecallWindow(msg.sentAt)) || myRole === 'admin' || myRole === 'owner';
 
 	// 最后一条非本人消息，供屏幕阅读器 aria-live 播报（只播文本，避免整表重读）
 	const lastIncoming = $derived([...chat.messages].reverse().find((m) => !m.sent));
 
-	// --- typing 接收：仅处理本群（payload.group_id === gid）推送；true 时 3 秒超时自动重置。 ---
-	let groupTyping = $state(false);
-	let typingName = $state('');
-	let groupTypingTimer: ReturnType<typeof setTimeout> | null = null;
+	// --- typing 接收：仅处理本群（payload.group_id === gid）推送。 ---
+	const typing = createTypingIndicator();
 
 	$effect(() => {
 		const gid = groupId;
@@ -169,32 +162,11 @@
 			// ws/types 中 GroupTyping 为宽松 Record，按 spec 形状收窄读取。
 			const p = payload as unknown as GroupTypingPayload;
 			if (!p || p.group_id !== gid) return;
-			if (p.is_typing) {
-				groupTyping = true;
-				typingName = p.actor?.nickname ?? '';
-				if (groupTypingTimer) clearTimeout(groupTypingTimer);
-				groupTypingTimer = setTimeout(() => {
-					groupTypingTimer = null;
-					groupTyping = false;
-					typingName = '';
-				}, 3000);
-			} else {
-				groupTyping = false;
-				typingName = '';
-				if (groupTypingTimer) {
-					clearTimeout(groupTypingTimer);
-					groupTypingTimer = null;
-				}
-			}
+			typing.notify(p.is_typing, p.is_typing ? (p.actor?.nickname ?? '') : '');
 		});
 		return () => {
 			off();
-			if (groupTypingTimer) {
-				clearTimeout(groupTypingTimer);
-				groupTypingTimer = null;
-			}
-			groupTyping = false;
-			typingName = '';
+			typing.reset();
 		};
 	});
 </script>
@@ -228,9 +200,9 @@
 			<p class="truncate text-text-primary {compact ? 'text-sm' : 'text-md'}">
 				{groupName || '群聊'}
 			</p>
-			<p class="{groupTyping ? 'text-accent-default' : 'text-text-secondary'} text-xs" >
-				{#if groupTyping}
-					{typingName || '有人'}正在输入…
+			<p class="{typing.active ? 'text-accent-default' : 'text-text-secondary'} text-xs" >
+				{#if typing.active}
+					{typing.actorName || '有人'}正在输入…
 				{:else if membersCount != null}
 					{membersCount} 位成员
 				{:else}
@@ -241,73 +213,8 @@
 	</div>
 
 	<!-- Messages -->
-	<div bind:this={chat.scrollEl} onscroll={chat.handleScroll} class="flex-1 overflow-y-auto no-scrollbar" style="overscroll-behavior:contain;">
-		{#if chat.loading}
-			<div class="flex h-full items-center justify-center">
-				<p class="text-text-secondary text-xs" >加载中…</p>
-			</div>
-		{:else if chat.loadError}
-			<!-- 错误态统一 LoadError（与 ChatView / 全站一致），不再手搓文案 + 按钮 -->
-			<LoadError message="消息加载失败，请检查网络后重试" onRetry={() => void chat.reload()} class="h-full" />
-		{:else if chat.messages.length === 0}
-			<!-- 空会话：与 ChatView 同形态的 EmptyState（消除纯文本空态） -->
-			<EmptyState iconSize={56} class="h-full" title="还没有消息" description="来打个招呼吧">
-				{#snippet icon()}
-					<MessageCircle class="size-5.5 text-text-secondary" strokeWidth={1.5} />
-				{/snippet}
-			</EmptyState>
-		{:else}
-			<div class="animate-fade-in flex flex-col gap-2 px-4 pt-4 pb-3">
-				{#each chat.dateGroups as group (group.label)}
-					<ChatDatePill label={group.label} />
-					{#each group.messages as msg (msg.id)}
-						<MessageBubble
-							text={msg.text}
-							sent={msg.sent}
-							time={msg.time}
-							showCheck={msg.id === chat.lastSentId}
-							messageId={msg.id}
-							recalled={msg.recalled}
-							editedAt={msg.editedAt}
-							canRecall={canRecallMessage(msg)}
-							canEdit={msg.sent}
-							onRecall={(id) => void chat.handleRecall(id)}
-							onEdit={(id, content) => void chat.handleEdit(id, content)}
-						/>
-					{/each}
-				{/each}
-			</div>
-		{/if}
-	</div>
+	<ChatMessageList {chat} canRecall={canRecallMessage} />
 
 	<!-- Input bar -->
-	{#if chat.sendError}
-		<p class="px-4 pb-1.5 text-status-warning text-xs" >{chat.sendError}</p>
-	{/if}
-	<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary border-t border-border-default" >
-		<div class="flex-1 flex items-center px-4 rounded-md input-surface h-9.5" >
-			<input
-				type="text"
-				aria-label="消息输入框"
-				bind:value={chat.inputVal}
-				oninput={(e) => chat.handleInputChange(e)}
-				onkeydown={(e) => {
-					// IME 组合中的回车是选词确认，不能当发送（中文输入法致命）
-					if (e.key === 'Enter' && !e.isComposing) void chat.handleSend();
-				}}
-				placeholder="发消息…"
-				class="flex-1 bg-transparent text-text-primary text-sm"
-			/>
-		</div>
-
-		<button
-			type="button"
-			class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring shrink-0 transition-all duration-standard {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'} size-9"
-			style="box-shadow:{chat.inputVal.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:var(--cst-border-width-hairline) solid var(--cst-border-default);"
-			onclick={() => void chat.handleSend()}
-			aria-label="发送"
-		>
-			<Send class="size-3.5" style="color:{chat.inputVal.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
-		</button>
-	</div>
+	<ChatInputBar {chat} />
 </div>

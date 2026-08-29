@@ -1,11 +1,9 @@
 <script lang="ts">
-	import { ArrowLeft, Phone, Video, Send, Smile, MoreHorizontal, MessageCircle } from '@lucide/svelte';
+	import { ArrowLeft, Phone, Video, MoreHorizontal } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
-	import EmptyState from '@/components/data-display/EmptyState.svelte';
-	import LoadError from '@/components/data-display/LoadError.svelte';
-	import MessageBubble from '@/components/messages/MessageBubble.svelte';
-	import ChatDatePill from '@/components/messages/ChatDatePill.svelte';
+	import ChatMessageList from '@/components/messages/ChatMessageList.svelte';
+	import ChatInputBar from '@/components/messages/ChatInputBar.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { getPrivateMessages, sendPrivateMessage, markPrivateRead, recallPrivateMessage, updatePrivateMessage } from '@/api';
 	import {
@@ -16,12 +14,13 @@
 	} from '@/lib/ws/client';
 	import type { PrivateMessageNewPayload, PrivateTypingPayload } from '@/lib/ws/types';
 	import { presence, watchPresence } from '@/stores/presence.svelte';
-	import { useChat, formatTime, type ChatMessage } from '@/lib/chat.svelte';
+	import { useChat, formatTime, createTypingIndicator, inRecallWindow, type ChatMessage } from '@/lib/chat.svelte';
 
 	// ChatView — 私聊窗口（spec: 以对端 user_id 寻址）。
 	// 历史来自 private_messages/fetch；发送走 private_messages/send。
 	// 消息方向由 sender.user_id 与当前用户比较得出。
-	// 共享状态机（加载/分页/滚动/typing/发送/WS 接收）由 useChat 工厂承载。
+	// 共享状态机（加载/分页/滚动/typing/发送/WS 接收）由 useChat 工厂承载；
+	// 消息区与输入栏由 ChatMessageList/ChatInputBar 共享组件渲染。
 
 	interface ChatContact {
 		name: string;
@@ -139,13 +138,6 @@
 		}
 	});
 
-	// 撤回时间窗（spec message_recall_window_seconds，默认 300s；服务端 10400 兜底，ClientConfig 接入留后续）
-	const RECALL_WINDOW_MS = 300_000;
-	const inRecallWindow = (sentAt?: string) => {
-		if (!sentAt) return true;
-		return Date.now() - new Date(sentAt).getTime() < RECALL_WINDOW_MS;
-	};
-
 	// 展示用联系人：调用方传入优先，否则用历史推导值。
 	const contact = $derived(contactProp ?? derivedContact);
 
@@ -155,9 +147,8 @@
 	// 最后一条非本人消息，供屏幕阅读器 aria-live 播报（只播文本，避免整表重读）
 	const lastIncoming = $derived([...chat.messages].reverse().find((m) => !m.sent));
 
-	// --- typing 接收：仅处理对端（payload.actor.user_id === peer）推送；true 时 3 秒超时自动重置。 ---
-	let peerTyping = $state(false);
-	let peerTypingTimer: ReturnType<typeof setTimeout> | null = null;
+	// --- typing 接收：仅处理对端（payload.actor.user_id === peer）推送。 ---
+	const typing = createTypingIndicator();
 
 	$effect(() => {
 		const peer = peerUserId;
@@ -167,30 +158,13 @@
 			const payload = (e as CustomEvent<PrivateTypingPayload>).detail;
 			if (!payload || payload.target_user_id !== peer) return;
 			if (payload.actor?.user_id !== peer) return;
-			if (payload.is_typing) {
-				peerTyping = true;
-				if (peerTypingTimer) clearTimeout(peerTypingTimer);
-				peerTypingTimer = setTimeout(() => {
-					peerTypingTimer = null;
-					peerTyping = false;
-				}, 3000);
-			} else {
-				peerTyping = false;
-				if (peerTypingTimer) {
-					clearTimeout(peerTypingTimer);
-					peerTypingTimer = null;
-				}
-			}
+			typing.notify(payload.is_typing);
 		};
 
 		window.addEventListener(WS_PRIVATE_TYPING_EVENT, onTyping as EventListener);
 		return () => {
 			window.removeEventListener(WS_PRIVATE_TYPING_EVENT, onTyping as EventListener);
-			if (peerTypingTimer) {
-				clearTimeout(peerTypingTimer);
-				peerTypingTimer = null;
-			}
-			peerTyping = false;
+			typing.reset();
 		};
 	});
 
@@ -239,8 +213,8 @@
 			<p class="truncate text-text-primary {compact ? 'text-sm' : 'text-md'}">
 				{peerName || '会话'}
 			</p>
-			<p class="{peerTyping ? 'text-accent-default' : onlineNow ? 'text-status-online' : 'text-text-secondary'} text-xs" >
-				{#if peerTyping}
+			<p class="{typing.active ? 'text-accent-default' : onlineNow ? 'text-status-online' : 'text-text-secondary'} text-xs" >
+				{#if typing.active}
 					正在输入…
 				{:else if onlineNow}
 					在线
@@ -278,83 +252,8 @@
 	</div>
 
 	<!-- Messages -->
-	<div bind:this={chat.scrollEl} onscroll={chat.handleScroll} class="flex-1 overflow-y-auto no-scrollbar" style="overscroll-behavior:contain;">
-		{#if chat.loading}
-			<div class="flex h-full items-center justify-center" role="status" aria-label="加载中">
-				<div class="spinner size-7"></div>
-			</div>
-		{:else if chat.loadError}
-			<!-- 错误态统一 LoadError（与全站一致），不再各页手搓文案 + 按钮 -->
-			<LoadError message="消息加载失败，请检查网络后重试" onRetry={() => void chat.reload()} class="h-full" />
-		{:else if chat.messages.length === 0}
-			<!-- 空会话：统一 EmptyState 空态（对齐 GroupChatView/全局空态契约） -->
-			<EmptyState iconSize={56} class="h-full" title="还没有消息" description="打个招呼，开始这段对话吧">
-				{#snippet icon()}
-					<MessageCircle class="size-5.5 text-text-secondary" strokeWidth={1.5} />
-				{/snippet}
-			</EmptyState>
-		{:else}
-		<div class="animate-fade-in flex flex-col gap-2 px-4 pt-4 pb-3">
-			{#each chat.dateGroups as group (group.label)}
-				<ChatDatePill label={group.label} />
-				{#each group.messages as msg (msg.id)}
-					<MessageBubble
-						text={msg.text}
-						sent={msg.sent}
-						time={msg.time}
-						showCheck={msg.id === chat.lastSentId}
-						messageId={msg.id}
-						recalled={msg.recalled}
-						editedAt={msg.editedAt}
-						canRecall={msg.sent && inRecallWindow(msg.sentAt)}
-						canEdit={msg.sent}
-						onRecall={(id) => void chat.handleRecall(id)}
-						onEdit={(id, content) => void chat.handleEdit(id, content)}
-					/>
-				{/each}
-			{/each}
-		</div>
-		{/if}
-	</div>
+	<ChatMessageList {chat} canRecall={(msg) => msg.sent && inRecallWindow(msg.sentAt)} />
 
 	<!-- Input bar -->
-	{#if chat.sendError}
-		<p class="px-4 pb-1.5 text-status-warning text-xs" >{chat.sendError}</p>
-	{/if}
-	<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary border-t border-border-default" >
-		<button
-			type="button"
-			class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 shadow-raised-sm focus-ring disabled:opacity-muted"
-			aria-label="表情"
-			disabled
-			title="暂未开放"
-		>
-			<Smile class="size-4 text-text-secondary"   strokeWidth={1.5} />
-		</button>
-
-		<div class="flex-1 flex items-center px-4 rounded-md input-surface h-9.5" >
-			<input
-				type="text"
-				aria-label="消息输入框"
-				bind:value={chat.inputVal}
-				oninput={(e) => chat.handleInputChange(e)}
-				onkeydown={(e) => {
-					// IME 组合中的回车是选词确认，不能当发送（中文输入法致命）
-					if (e.key === 'Enter' && !e.isComposing) void chat.handleSend();
-				}}
-				placeholder="发消息…"
-				class="flex-1 bg-transparent text-text-primary text-sm"
-			/>
-		</div>
-
-		<button
-			type="button"
-			class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring shrink-0 transition-all duration-standard {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'} size-9"
-			style="box-shadow:{chat.inputVal.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:var(--cst-border-width-hairline) solid var(--cst-border-default);"
-			onclick={() => void chat.handleSend()}
-			aria-label="发送"
-		>
-			<Send class="size-3.5" style="color:{chat.inputVal.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
-		</button>
-	</div>
+	<ChatInputBar {chat} showEmojiButton />
 </div>
