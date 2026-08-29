@@ -39,7 +39,7 @@ describe('validateNickname', () => {
 
 describe('validateAuthFields', () => {
 	const base = {
-		method: 'password' as const,
+		method: 'password' as 'code' | 'password',
 		loginId: 'alice',
 		password: 'abcd1234',
 		nickname: 'alice',
