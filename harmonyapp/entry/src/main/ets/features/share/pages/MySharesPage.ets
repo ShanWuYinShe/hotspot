@@ -19,6 +19,7 @@ import { LoginPromptView } from '../../../components/LoginPromptView';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 @Preview
 @Component
@@ -119,7 +120,7 @@ export struct MySharesPage {
         this.hasMore = !!response.data?.next_cursor;
         this.nextCursor = response.data?.next_cursor ?? '';
       } else {
-        this.handleLoadError(response.message || '加载我的分享失败');
+        this.handleLoadError(getErrorMessage(response, '加载我的分享失败'));
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : '加载我的分享失败';
@@ -170,7 +171,7 @@ export struct MySharesPage {
         this.hasMore = !!response.data?.next_cursor;
         this.nextCursor = response.data?.next_cursor ?? '';
       } else {
-        SystemToast.showError(response.message || '加载更多分享失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '加载更多分享失败'), this.getUIContext());
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : '加载更多分享失败';
@@ -195,7 +196,7 @@ export struct MySharesPage {
         this.sharesDataSource.setData(this.shares);
         SystemToast.showSuccess('分享已撤销', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '撤销分享失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '撤销分享失败'), this.getUIContext());
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : '撤销分享失败';

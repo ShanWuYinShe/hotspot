@@ -19,6 +19,7 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const DOMAIN_NUMBER: number = 0xFF31;
@@ -64,7 +65,7 @@ export struct ShareResolutionPage {
       if (response.code === 0 && response.data) {
         this.routeByType(response.data);
       } else {
-        this.errorMessage = response.message || '分享不存在或已过期';
+        this.errorMessage = getErrorMessage(response, '分享不存在或已过期');
         this.isLoading = false;
       }
     } catch (error) {

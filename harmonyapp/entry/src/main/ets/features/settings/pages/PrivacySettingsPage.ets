@@ -11,6 +11,7 @@ import { UserSettings } from '../../../core/types/api';
 import { SettingsSectionCard, ToggleSettingRow, SettingToggleItem } from './SettingsSupport';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 const PRIVACY_ITEMS: SettingToggleItem[] = [
   { key: 'location_visible', title: '位置可见', subtitle: '允许他人看到你的位置标签。' },
@@ -58,7 +59,7 @@ export struct PrivacySettingsPage {
       if (response.code === 0 && response.data) {
         this.settings = response.data;
       } else {
-        SystemToast.showError(response.message || '获取隐私设置失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '获取隐私设置失败'), this.getUIContext());
       }
     } catch (_) {
       SystemToast.showError('获取隐私设置失败', this.getUIContext());
@@ -127,7 +128,7 @@ export struct PrivacySettingsPage {
       const response = await ApiClient.updateSettings({ settings: next });
       if (this.isDestroyed) return;
       if (response.code !== 0) {
-        throw new Error(response.message || '保存失败');
+        throw new Error(getErrorMessage(response, '保存失败'));
       }
       SystemToast.showSuccess('设置已更新', this.getUIContext());
     } catch (_) {

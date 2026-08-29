@@ -34,6 +34,7 @@ import { formatCount } from '../../../core/utils/FormatUtil';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 @Preview
 @Component
@@ -219,7 +220,7 @@ export struct GroupPage {
         this.hasMore = !!(response.data?.next_cursor);
         this.nextCursor = response.data?.next_cursor ?? '';
       } else {
-        this.errorMessage = response.message || '加载群组失败';
+        this.errorMessage = getErrorMessage(response, '加载群组失败');
         this.groups = [];
         this.groupsDataSource.clear();
       }
@@ -272,7 +273,7 @@ export struct GroupPage {
         this.invitesHasMore = !!(response.data?.next_cursor);
         this.invitesNextCursor = response.data?.next_cursor ?? '';
       } else if (this.myInvites.length === 0) {
-        this.invitesError = response.message || '加载邀请失败';
+        this.invitesError = getErrorMessage(response, '加载邀请失败');
       }
     } catch (error) {
       this.invitesError = error instanceof Error ? error.message : '加载邀请失败';
@@ -320,7 +321,7 @@ export struct GroupPage {
           await this.loadMyGroups();
         }
       } else {
-        SystemToast.showError(response.message || '处理邀请失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '处理邀请失败'), this.getUIContext());
       }
     } catch {
       SystemToast.showError('处理邀请失败', this.getUIContext());
@@ -347,7 +348,7 @@ export struct GroupPage {
         this.applicationsHasMore = !!(response.data?.next_cursor);
         this.applicationsNextCursor = response.data?.next_cursor ?? '';
       } else if (this.myApplications.length === 0) {
-        this.applicationsError = response.message || '加载申请失败';
+        this.applicationsError = getErrorMessage(response, '加载申请失败');
       }
     } catch (error) {
       this.applicationsError = error instanceof Error ? error.message : '加载申请失败';
@@ -392,7 +393,7 @@ export struct GroupPage {
         this.applicationsDataSource.setData(this.myApplications);
         SystemToast.showSuccess('已取消申请', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '取消申请失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '取消申请失败'), this.getUIContext());
       }
     } catch {
       SystemToast.showError('取消申请失败', this.getUIContext());
@@ -437,10 +438,10 @@ export struct GroupPage {
           await this.loadMyGroups();
         }
       } else if (response.code === 10400) {
-        SystemToast.show(response.message || '加入群组失败', this.getUIContext());
+        SystemToast.show(getErrorMessage(response, '加入群组失败'), this.getUIContext());
         await this.loadMyGroups();
       } else {
-        SystemToast.showError(response.message || '加入群组失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '加入群组失败'), this.getUIContext());
       }
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : '加入群组失败';

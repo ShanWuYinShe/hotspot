@@ -43,6 +43,7 @@ import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 const DOMAIN_NUMBER: number = 0xFF1A;
 const TAG: string = 'MomentDetailPage';
@@ -141,7 +142,7 @@ export struct MomentDetailPage {
         InteractionStateStore.getInstance().patchMomentFromItem(response.data);
         this.loadComments();
       } else {
-        this.errorMessage = response.message || '加载动态详情失败';
+        this.errorMessage = getErrorMessage(response, '加载动态详情失败');
       }
     } catch (error) {
       this.errorMessage = '加载动态详情失败';
@@ -207,7 +208,7 @@ export struct MomentDetailPage {
         this.commentAdditions += 1;
       } else {
         this.comments = this.comments.filter((c: CommentItem) => c.comment_id !== tempId);
-        SystemToast.showError(response.message || '评论失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '评论失败'), this.getUIContext());
       }
     } catch (_) {
       this.comments = this.comments.filter((c: CommentItem) => c.comment_id !== tempId);

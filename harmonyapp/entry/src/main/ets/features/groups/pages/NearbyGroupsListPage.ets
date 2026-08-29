@@ -25,6 +25,7 @@ import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { formatCount } from '../../../core/utils/FormatUtil';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 @Preview
 @Component
@@ -102,7 +103,7 @@ export struct NearbyGroupsListPage {
         this.hasMore = !!(response.data?.next_cursor);
         this.nextCursor = response.data?.next_cursor ?? '';
       } else {
-        this.errorMessage = response.message || '加载失败';
+        this.errorMessage = getErrorMessage(response, '加载失败');
         this.groups = [];
         this.groupsDataSource.clear();
       }

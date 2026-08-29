@@ -39,6 +39,7 @@ import pasteboard from '@ohos.pasteboard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { TimerManager } from '../../../core/utils/TimerManager';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'SearchPage';
@@ -1326,9 +1327,9 @@ export struct SearchPage {
           SystemToast.show('已提交申请，等待审批', this.getUIContext());
         }
       } else if (response.code === 10400) {
-        SystemToast.show(response.message || '加入失败', this.getUIContext());
+        SystemToast.show(getErrorMessage(response, '加入失败'), this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '加入失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '加入失败'), this.getUIContext());
       }
     } catch {
       SystemToast.showError('加入失败', this.getUIContext());
@@ -1420,7 +1421,7 @@ export struct SearchPage {
       if (response.code === 0) {
         SystemToast.showSuccess('举报已提交', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '举报失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '举报失败'), this.getUIContext());
       }
     } catch {
       SystemToast.showError('举报失败', this.getUIContext());
@@ -1448,7 +1449,7 @@ export struct SearchPage {
       if (response.code === 0) {
         SystemToast.showSuccess('举报已提交', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '举报失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '举报失败'), this.getUIContext());
       }
     } catch {
       SystemToast.showError('举报失败', this.getUIContext());

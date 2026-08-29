@@ -18,6 +18,7 @@ import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
 import { KEY_RESOLVED_THEME_ID, KEY_THEME_MODE, ThemeOptionItem, ThemeMode } from '../../../core/theme/AppThemeTypes';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { HttpUtil } from '../../../core/network/HttpUtil';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { AnnouncementSummaryCard, SettingsEntryItem, SettingsEntryRow, SettingsMetaCard, SettingsSectionCard, SupportConfigCard } from './SettingsSupport';
 import { AppIcon } from '../../../components/SystemIcon';
 import { PageShellContainer } from '../../../components/PageShellContainer';
@@ -127,7 +128,7 @@ export struct SettingsPage {
         this.systemMeta = response.data;
         this.systemMetaLastChecked = new Date().toISOString();
       } else {
-        this.systemMetaError = response.message || '获取系统信息失败';
+        this.systemMetaError = getErrorMessage(response, '获取系统信息失败');
       }
     } catch (error) {
       this.systemMetaError = error instanceof Error ? error.message : '获取系统信息失败';

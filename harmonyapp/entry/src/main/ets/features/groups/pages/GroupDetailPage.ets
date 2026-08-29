@@ -50,6 +50,7 @@ import { LocationUtil } from '../../../core/location/LocationUtil';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 interface GroupSyncData {
   groupId: string;
@@ -179,7 +180,7 @@ export struct GroupDetailPage {
           await this.syncGroupData();
           await this.accessibilityManager.announceText(`已加载群组：${this.groupInfo.group?.name ?? ''}`);
         } else {
-          this.errorMessage = response.message || '加载群组详情失败';
+          this.errorMessage = getErrorMessage(response, '加载群组详情失败');
         }
       });
     } catch {
@@ -210,7 +211,7 @@ export struct GroupDetailPage {
           this.membersNextCursor = response.data?.next_cursor ?? '';
         } else {
           if (this.members.length === 0) {
-            this.membersErrorMessage = response.message || '加载成员列表失败';
+            this.membersErrorMessage = getErrorMessage(response, '加载成员列表失败');
           }
         }
       });
@@ -294,7 +295,7 @@ export struct GroupDetailPage {
         this.applicationsHasMore = !!(response.data?.next_cursor);
         this.applicationsNextCursor = response.data?.next_cursor ?? '';
       } else if (this.applications.length === 0) {
-        this.applicationsErrorMessage = response.message || '加载入群申请失败';
+        this.applicationsErrorMessage = getErrorMessage(response, '加载入群申请失败');
       }
     } catch {
       if (this.applications.length === 0) {
@@ -356,7 +357,7 @@ export struct GroupDetailPage {
         }
         SystemToast.showSuccess('已批准入群申请', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '批准申请失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '批准申请失败'), this.getUIContext());
       }
     } catch {
       SystemToast.showError('批准申请失败', this.getUIContext());
@@ -383,7 +384,7 @@ export struct GroupDetailPage {
         this.removeApplicationById(applicationId);
         SystemToast.showSuccess('已拒绝入群申请', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '拒绝申请失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '拒绝申请失败'), this.getUIContext());
       }
     } catch {
       SystemToast.showError('拒绝申请失败', this.getUIContext());
@@ -420,12 +421,12 @@ export struct GroupDetailPage {
             SystemToast.showSuccess('已提交申请，等待管理员审批', this.getUIContext());
           }
         } else if (response.code === 10400) {
-          SystemToast.show(response.message || '加入群组失败', this.getUIContext());
+          SystemToast.show(getErrorMessage(response, '加入群组失败'), this.getUIContext());
           this.isMember = true;
           InteractionStateStore.getInstance().updateGroupMembership(this.groupId, { is_member: true });
           await this.enterChat();
         } else {
-          SystemToast.showError(response.message || '加入群组失败', this.getUIContext());
+          SystemToast.showError(getErrorMessage(response, '加入群组失败'), this.getUIContext());
         }
       }, LoadingUtil.DEFAULT_ACTION_MS);
     } catch {
@@ -452,7 +453,7 @@ export struct GroupDetailPage {
           InteractionStateStore.getInstance().updateGroupMembership(this.groupId, { is_member: false });
           AppRouter.pop();
         } else {
-          SystemToast.showError(response.message || '离开群组失败', this.getUIContext());
+          SystemToast.showError(getErrorMessage(response, '离开群组失败'), this.getUIContext());
         }
       }, LoadingUtil.DEFAULT_ACTION_MS);
     } catch {
@@ -613,7 +614,7 @@ export struct GroupDetailPage {
         await this.loadGroupDetail();
         SystemToast.showSuccess('群组信息已更新', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '更新群组信息失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '更新群组信息失败'), this.getUIContext());
       }
     } catch {
       SystemToast.showError('更新群组信息失败', this.getUIContext());
@@ -739,7 +740,7 @@ export struct GroupDetailPage {
         this.upsertMember(this.withMemberRole(member, role));
         SystemToast.showSuccess('成员角色已更新', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '成员角色更新失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '成员角色更新失败'), this.getUIContext());
       }
     } catch {
       SystemToast.showError('成员角色更新失败', this.getUIContext());
@@ -766,7 +767,7 @@ export struct GroupDetailPage {
         this.upsertMember(this.withMemberMutedUntil(member, mutedUntil));
         SystemToast.showSuccess('已设置禁言', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '禁言失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '禁言失败'), this.getUIContext());
       }
     } catch {
       SystemToast.showError('禁言失败', this.getUIContext());
@@ -791,7 +792,7 @@ export struct GroupDetailPage {
         this.upsertMember(this.withMemberMutedUntil(member, undefined));
         SystemToast.showSuccess('已解除禁言', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '解除禁言失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '解除禁言失败'), this.getUIContext());
       }
     } catch {
       SystemToast.showError('解除禁言失败', this.getUIContext());
@@ -820,7 +821,7 @@ export struct GroupDetailPage {
         }
         SystemToast.showSuccess('已移除成员', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '移除成员失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '移除成员失败'), this.getUIContext());
       }
     } catch {
       SystemToast.showError('移除成员失败', this.getUIContext());

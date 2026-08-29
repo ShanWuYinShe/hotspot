@@ -9,6 +9,7 @@ import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { useMasterDetail } from '../../../core/responsive/Breakpoint';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { AppRouter, ChatRouteParam, GroupDetailRouteParam, LoginRouteParam, MomentDetailRouteParam, PhotoPreviewRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { interactionActions } from '../../../core/state/InteractionActions';
@@ -137,7 +138,7 @@ export struct MomentsFeedPage {
         this.recommendedGroups = [];
         this.recommendedUsersDataSource.setData([]);
       } else if (!this.hasAnyData()) {
-        this.errorMessage = response.message ?? '加载失败';
+        this.errorMessage = getErrorMessage(response, '加载失败');
       }
     } else {
       const request: FetchNearbyMomentsRequest = {
@@ -155,7 +156,7 @@ export struct MomentsFeedPage {
         this.recommendedGroups = [];
         this.recommendedUsersDataSource.setData([]);
       } else if (!this.hasAnyData()) {
-        this.errorMessage = response.message ?? '加载失败';
+        this.errorMessage = getErrorMessage(response, '加载失败');
       }
     }
   }
@@ -222,7 +223,7 @@ export struct MomentsFeedPage {
           this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         }
         if (usersResponse.code !== 0 && trendingResponse.code !== 0 && !this.hasAnyData()) {
-          this.errorMessage = trendingResponse.message ?? usersResponse.message ?? '加载附近动态失败';
+          this.errorMessage = getErrorMessage(trendingResponse, getErrorMessage(usersResponse, '加载附近动态失败'));
         }
       } else {
         const trendingResponse = await LoadingUtil.withMinimumTime(() => trendingPromise);
@@ -232,7 +233,7 @@ export struct MomentsFeedPage {
           this.hotMomentsDataSource.setData(this.hotMoments);
           this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         } else if (!this.hasAnyData()) {
-          this.errorMessage = trendingResponse.message ?? '加载附近动态失败';
+          this.errorMessage = getErrorMessage(trendingResponse, '加载附近动态失败');
         }
       }
     } catch {
@@ -898,7 +899,7 @@ export struct MomentsFeedPage {
       if (response.code === 0) {
         SystemToast.showSuccess('举报已提交', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '举报失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '举报失败'), this.getUIContext());
       }
     } catch {
       SystemToast.showError('举报失败', this.getUIContext());

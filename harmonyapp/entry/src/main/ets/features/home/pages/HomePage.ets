@@ -37,6 +37,7 @@ import { formatCount } from '../../../core/utils/FormatUtil';
 import pasteboard from '@ohos.pasteboard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { curves } from '@kit.ArkUI';
 
 const DOMAIN_NUMBER: number = 0xFF10;
@@ -151,7 +152,7 @@ export struct HomePage {
         this.moments = items.filter((m: MomentItem) => m.moment_id && m.user);
         this.moments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
       } else {
-        this.momentsError = response.message || '加载失败';
+        this.momentsError = getErrorMessage(response, '加载失败');
       }
     } catch {
       this.momentsError = '加载附近动态失败';
@@ -182,7 +183,7 @@ export struct HomePage {
           : valid;
         this.users.forEach((u: UserItem) => this.interactionStore.patchUserFromItem(u));
       } else {
-        this.usersError = response.message || '加载失败';
+        this.usersError = getErrorMessage(response, '加载失败');
       }
     } catch {
       this.usersError = '加载附近用户失败';
@@ -207,7 +208,7 @@ export struct HomePage {
         const items = response.data?.items ?? [];
         this.groups = items.filter((g: GroupItem) => g.group?.group_id);
       } else {
-        this.groupsError = response.message || '加载失败';
+        this.groupsError = getErrorMessage(response, '加载失败');
       }
     } catch {
       this.groupsError = '加载附近群组失败';
@@ -294,7 +295,7 @@ export struct HomePage {
           SystemToast.show('已提交申请，等待审批', this.getUIContext());
         }
       } else {
-        SystemToast.showError(response.message || '加入失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '加入失败'), this.getUIContext());
       }
     } catch {
       SystemToast.showError('加入群组失败', this.getUIContext());

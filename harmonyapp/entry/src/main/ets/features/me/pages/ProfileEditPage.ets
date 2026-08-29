@@ -23,6 +23,7 @@ import { AppThemeVisuals, InputBorderResolution } from '../../../core/theme/AppT
 import { validateField, FieldRule } from '../../../core/util/FormValidator';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 const TAG_OPTIONS: string[] = ['摄影', '旅行', '音乐', '美食', '运动', '阅读', '艺术', '科技', '游戏', '户外', '时尚', '电影'];
 const MAX_TAGS: number = 5;
@@ -160,7 +161,7 @@ export struct ProfileEditPage {
           tags: this.tags
         });
         if (updateResponse.code !== 0) {
-          throw new Error(updateResponse.message || '资料更新失败');
+          throw new Error(getErrorMessage(updateResponse, '资料更新失败'));
         }
         const accountResponse = await ApiClient.getAccountInfo();
         if (accountResponse.code === 0 && accountResponse.data) {

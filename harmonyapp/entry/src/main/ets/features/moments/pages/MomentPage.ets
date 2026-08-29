@@ -29,6 +29,7 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { MomentFeedCard } from '../../../components/MomentFeedCard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 const DOMAIN_NUMBER: number = 0xFF05;
 const TAG: string = 'MomentPage';
@@ -123,7 +124,7 @@ export struct MomentPage {
         this.updateCache(items);
       } else {
         if (this.momentsDataSource.totalCount() === 0) {
-          this.errorMessage = response.message || '加载瞬间失败';
+          this.errorMessage = getErrorMessage(response, '加载瞬间失败');
           this.hasData = false;
         }
       }

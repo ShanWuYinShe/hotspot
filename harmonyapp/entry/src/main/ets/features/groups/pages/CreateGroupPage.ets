@@ -32,6 +32,7 @@ import { common } from '@kit.AbilityKit';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 const GROUP_NAME_MAX: number = 50;
 const GROUP_DESCRIPTION_MAX: number = 500;
@@ -254,7 +255,7 @@ export struct CreateGroupPage {
           detailParams.groupId = response.data.group.group_id;
           AppRouter.replacePath(PageNames.GROUP_DETAIL, detailParams);
         } else {
-          SystemToast.showError(response.message || '创建群组失败', this.getUIContext());
+          SystemToast.showError(getErrorMessage(response, '创建群组失败'), this.getUIContext());
         }
       }, LoadingUtil.DEFAULT_ACTION_MS);
     } catch (error) {

@@ -12,6 +12,7 @@ import { BlockedUserItem, RelatedUserItem } from '../../../core/types/api';
 import { RelationshipListSection } from './SettingsSupport';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 @Preview
 @Component
@@ -68,7 +69,7 @@ export struct RelationshipHubPage {
         SystemToast.showSuccess('已解除拉黑', this.getUIContext());
         this.loadAll();
       } else {
-        SystemToast.showError(response.message || '解除失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '解除失败'), this.getUIContext());
       }
     } catch (_) {
       SystemToast.showError('解除失败', this.getUIContext());

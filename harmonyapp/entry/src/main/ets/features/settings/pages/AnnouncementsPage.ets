@@ -14,6 +14,7 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { RefreshIndicator, EmptyState } from '../../../components/EmptyState';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 @Preview
 @Component
@@ -63,7 +64,7 @@ export struct AnnouncementsPage {
       if (response.code === 0 && response.data) {
         this.announcements = this.applyAnnouncementFocus(response.data.items ?? []);
       } else {
-        SystemToast.showError(response.message || '获取系统公告失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '获取系统公告失败'), this.getUIContext());
       }
     } catch (_) {
       SystemToast.showError('获取系统公告失败', this.getUIContext());

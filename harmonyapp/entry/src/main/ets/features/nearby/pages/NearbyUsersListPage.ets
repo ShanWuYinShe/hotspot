@@ -25,6 +25,7 @@ import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 @Preview
 @Component
@@ -120,7 +121,7 @@ export struct NearbyUsersListPage {
         this.nextCursor = response.data?.next_cursor ?? '';
         this.onlineCount = this.users.filter((u: UserItem) => u.presence_status === 'online').length;
       } else {
-        this.errorMessage = response.message || '加载失败';
+        this.errorMessage = getErrorMessage(response, '加载失败');
         this.users = [];
         this.usersDataSource.clear();
       }

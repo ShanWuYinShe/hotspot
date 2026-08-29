@@ -45,6 +45,7 @@ import { formatCount } from '../../../core/utils/FormatUtil';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 const DOMAIN_NUMBER: number = 0xFF03;
 const TAG: string = 'ProfilePage';
@@ -180,7 +181,7 @@ export struct ProfilePage {
         this.viewedUserProfile = response.data.user;
         this.viewedUserMoments = response.data.recent_moments?.items ?? [];
       } else {
-        this.viewedUserError = response.message || '无法获取该用户资料';
+        this.viewedUserError = getErrorMessage(response, '无法获取该用户资料');
       }
     } catch {
       this.viewedUserError = '加载用户资料失败';
@@ -525,7 +526,7 @@ export struct ProfilePage {
             avatar_file_id: avatarFileId
           });
           if (updateProfileResponse.code !== 0) {
-            throw new Error(updateProfileResponse.message || '资料更新失败');
+            throw new Error(getErrorMessage(updateProfileResponse, '资料更新失败'));
           }
 
           const response = await ApiClient.getAccountInfo();
@@ -644,7 +645,7 @@ export struct ProfilePage {
         this.upgradePasswordConfirm = '';
         SystemToast.showSuccess('账号升级成功！', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '升级失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '升级失败'), this.getUIContext());
       }
     } catch (error) {
       SystemToast.showError(error instanceof Error ? error.message : '升级失败', this.getUIContext());
@@ -1960,7 +1961,7 @@ export struct ProfilePage {
         this.showQuickStart = false;
         SystemToast.showSuccess('欢迎！', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '创建失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '创建失败'), this.getUIContext());
       }
     } catch (error) {
       SystemToast.showError(error instanceof Error ? error.message : '创建失败', this.getUIContext());

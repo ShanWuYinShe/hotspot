@@ -8,6 +8,7 @@
  */
 
 import { ApiClient } from '../../../core/api/ApiClient';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { curves } from '@kit.ArkUI';
 import { AdminPermissions } from '../../../core/types/api';
 import { PageShellContainer } from '../../../components/PageShellContainer';
@@ -81,7 +82,7 @@ struct AdminOverviewPage {
         this.permissions = data.permissions ?? [];
         this.isSuperAdmin = this.permissions.some((p: string) => p === '*' || p.endsWith('.*'));
       } else {
-        this.errorMessage = resp.message ?? '无管理员权限';
+        this.errorMessage = getErrorMessage(resp, '无管理员权限');
       }
     } catch (e) {
       hilog.warn(DOMAIN, TAG, `加载权限失败: ${e}`);
