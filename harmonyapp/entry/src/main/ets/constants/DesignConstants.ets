@@ -8,7 +8,8 @@
 // ==================== 颜色系统接口（仅主题无关固定色）====================
 export interface ColorPalette {
   /** 图片全屏预览固定反色文字（暗底上的浅色文字） */
-  TEXT_PRIMARY_DARK: string;
+  /** 媒体浏览器黑底上的铬层文字（关闭钮/页码），固定色非主题色 */
+  MEDIA_CHROME_TEXT: string;
   /** 图片遮罩/全屏预览固定遮罩色 */
   OVERLAY_LIGHT: string;
   OVERLAY_STRONG: string;
@@ -389,7 +390,7 @@ export interface DesignConstantsType {
 
 // ==================== 颜色系统（仅主题无关固定色）====================
 const COLOR: ColorPalette = {
-  TEXT_PRIMARY_DARK: '#E8F1E9',
+  MEDIA_CHROME_TEXT: '#F2F6F3',
   OVERLAY_LIGHT: '#59FFFFFF',
   OVERLAY_STRONG: '#80000000',
   IMAGE_OVERLAY_START: 'rgba(0, 0, 0, 0.04)',

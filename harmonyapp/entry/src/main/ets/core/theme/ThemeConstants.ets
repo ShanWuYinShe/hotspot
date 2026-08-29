@@ -140,7 +140,7 @@ export class ThemeConstants {
     isDarkTheme: false,
     online: '#3D7A55',
     warning: '#8A6A2F',
-    success: '#059669',
+    success: '#3D7A55',
     // danger 独立于 warning（对齐前端 forest light hot #B4543E）：原 error 误用暖棕与 warning 混淆
     error: '#B4543E',
     info: '#3D7A55',
@@ -183,7 +183,7 @@ export class ThemeConstants {
     isDarkTheme: true,
     online: '#52B878',
     warning: '#C4A75A',
-    success: '#34D399',
+    success: '#52B878',
     // danger 独立于 warning（对齐前端 forest dark hot #D97C5A）：原 error 与 warning 完全同色
     error: '#D97C5A',
     info: '#52B878',

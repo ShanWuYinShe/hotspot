@@ -114,6 +114,12 @@ bun run --cwd frontend build   # adapter-static 产物输出到 build/
    `transition:... 0.2s ...`）。改主题/节奏只需改 token 文件，全站一致生效。
    登记例外：布局几何（width/height/position/gap 的 px）与 StatusBar 模拟系统
    chrome 的微圆角属于非主题风格，不受此条约束。
+5. **跨端色彩对齐**：harmonyapp `ThemeConstants.ets` 的 ColorConfig 与本项目
+   `themes/*.css` 的 `--cst-palette-*` 是同一套色板的两端表达，改色必须两侧
+   同步。`bun run check:theme` 已串联
+   `scripts/check-cross-platform-colors.mjs`（映射表内嵌于脚本：前端 forest ≡
+   harmonyapp default_clean、success/error/info 随主题族色源），CI 会在漂移时
+   拦截；主题选择器 swatch 也已纳入同一校验。
 
 > 具体状态契约见「样式自查清单 → 交互状态契约」。
 

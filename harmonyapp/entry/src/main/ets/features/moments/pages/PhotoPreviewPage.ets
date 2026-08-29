@@ -166,7 +166,7 @@ export struct PhotoPreviewPage {
         IconButton({
           icon: AppIcon.CLOSE,
           iconSize: IconSize.LARGE,
-          iconColor: DesignConstants.COLOR.TEXT_PRIMARY_DARK,
+          iconColor: DesignConstants.COLOR.MEDIA_CHROME_TEXT,
           bgColor: DesignConstants.COLOR.TRANSPARENT,
           onButtonClick: () => {
             AppRouter.pop();
@@ -182,7 +182,7 @@ export struct PhotoPreviewPage {
       // 底部页码指示器（凸起胶囊化）
       Row() {
         Text(`${this.currentIndex + 1} / ${this.images.length}`)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_DARK)
+          .fontColor(DesignConstants.COLOR.MEDIA_CHROME_TEXT)
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .backgroundColor(DesignConstants.COLOR.OVERLAY_STRONG)
