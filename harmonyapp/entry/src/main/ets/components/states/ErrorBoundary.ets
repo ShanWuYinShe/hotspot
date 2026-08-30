@@ -49,7 +49,7 @@ export struct ErrorBoundary {
       Column({ space: DesignConstants.SPACING.LG }) {
         LucideIcon({
             icon: AppIcon.WARNING,
-            size: DesignConstants.FONT.SIZE.HERO,
+            iconSize: DesignConstants.FONT.SIZE.HERO,
             color: this.getPalette().error
           })
 

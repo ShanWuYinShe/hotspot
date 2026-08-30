@@ -141,7 +141,7 @@ export struct GroupCard {
     if (this.isPrivate()) {
       LucideIcon({
           icon: AppIcon.LOCK,
-          size: DesignConstants.FONT.SIZE.XS2,
+          iconSize: DesignConstants.FONT.SIZE.XS2,
           color: this.getPalette().textSecondary
         })
       .margin({ left: DesignConstants.SPACING.HALF })
@@ -166,7 +166,7 @@ export struct GroupCard {
       Row({ space: DesignConstants.SPACING.SM }) {
         LucideIcon({
             icon: AppIcon.GROUP,
-            size: DesignConstants.FONT.SIZE.XS2,
+            iconSize: DesignConstants.FONT.SIZE.XS2,
             color: this.getPalette().textSecondary
           })
         Text(`${this.formatMembers()} 人`)
@@ -179,7 +179,7 @@ export struct GroupCard {
           Row({ space: DesignConstants.SPACING.HALF }) {
             LucideIcon({
                 icon: AppIcon.LOCATION,
-                size: DesignConstants.FONT.SIZE.XS2,
+                iconSize: DesignConstants.FONT.SIZE.XS2,
                 color: this.getPalette().accentText
               })
             Text(this.getDistanceText())
@@ -197,7 +197,7 @@ export struct GroupCard {
           Row({ space: DesignConstants.SPACING.HALF }) {
             LucideIcon({
                 icon: AppIcon.TIME,
-                size: DesignConstants.FONT.SIZE.XS2,
+                iconSize: DesignConstants.FONT.SIZE.XS2,
                 color: this.getPalette().online
               })
             Text(this.getActivityText())
@@ -251,7 +251,7 @@ export struct GroupCard {
         Row({ space: DesignConstants.SPACING.HALF }) {
           LucideIcon({
               icon: AppIcon.GROUP,
-              size: DesignConstants.FONT.SIZE.XS,
+              iconSize: DesignConstants.FONT.SIZE.XS,
               color: this.getPalette().textSecondary
             })
           Text(`${this.formatMembers()} 人`)
@@ -287,7 +287,7 @@ export struct GroupCard {
           Row({ space: DesignConstants.SPACING.HALF }) {
             LucideIcon({
                 icon: AppIcon.TIME,
-                size: DesignConstants.FONT.SIZE.XS2,
+                iconSize: DesignConstants.FONT.SIZE.XS2,
                 color: this.getPalette().accentText
               })
             Text(this.getActivityText())

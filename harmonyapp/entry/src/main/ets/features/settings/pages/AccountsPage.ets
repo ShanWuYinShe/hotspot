@@ -246,7 +246,7 @@ export struct AccountsPage {
                 Row() {
                   LucideIcon({
                       icon: AppIcon.PERSON,
-                      size: DesignConstants.FONT.SIZE.LG_PLUS,
+                      iconSize: DesignConstants.FONT.SIZE.LG_PLUS,
                       color: this.getCurrentThemePalette().accentBackground
                     })
                 }

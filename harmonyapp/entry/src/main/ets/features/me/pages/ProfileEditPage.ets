@@ -275,7 +275,7 @@ export struct ProfileEditPage {
                 Button() {
                   LucideIcon({
                       icon: AppIcon.CAMERA,
-                      size: DesignConstants.FONT.SIZE.SM,
+                      iconSize: DesignConstants.FONT.SIZE.SM,
                       color: this.getCurrentThemePalette().accentText
                     })
                 }
@@ -410,7 +410,7 @@ export struct ProfileEditPage {
       Row({ space: DesignConstants.SPACING.XS }) {
         LucideIcon({
             icon: AppIcon.EDIT,
-            size: DesignConstants.FONT.SIZE.SM,
+            iconSize: DesignConstants.FONT.SIZE.SM,
             color: this.getCurrentThemePalette().accentBackground
           })
         Text(label)

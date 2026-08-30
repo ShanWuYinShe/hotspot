@@ -77,7 +77,7 @@ export struct UserCard {
     Row() {
       LucideIcon({
         icon: this.isFollowing() ? AppIcon.CHECK : AppIcon.ADD,
-        size: DesignConstants.FONT.SIZE.SM,
+        iconSize: DesignConstants.FONT.SIZE.SM,
         color: this.isFollowing() ? this.getPalette().accentText : DesignConstants.COLOR.WHITE
       })
     }

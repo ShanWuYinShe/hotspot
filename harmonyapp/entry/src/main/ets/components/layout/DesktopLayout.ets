@@ -196,7 +196,7 @@ export struct DesktopLayout {
       Row({ space: DesignConstants.SPACING.SM }) {
         LucideIcon({
             icon: AppIcon.NEARBY,
-            size: DesignConstants.FONT.SIZE.XL,
+            iconSize: DesignConstants.FONT.SIZE.XL,
             color: this.getPalette().accentBackground
           })
         Text('HotSpot')
@@ -427,7 +427,7 @@ export struct DesktopLayout {
       Row() {
         LucideIcon({
             icon: AppIcon.SHIELD,
-            size: DesignConstants.FONT.SIZE.LG_PLUS,
+            iconSize: DesignConstants.FONT.SIZE.LG_PLUS,
             color: this.getPalette().textSecondary
           })
         Text('管理后台')
@@ -484,7 +484,7 @@ export struct DesktopLayout {
     Row() {
       LucideIcon({
           icon: item.icon,
-          size: DesignConstants.FONT.SIZE.LG_PLUS,
+          iconSize: DesignConstants.FONT.SIZE.LG_PLUS,
           color: this.isItemActive(item) ? this.getPalette().accentBackground : this.getPalette().textSecondary
         })
       Text(item.label)
@@ -675,7 +675,7 @@ export struct DesktopLayout {
     Row() {
       LucideIcon({
           icon: icon,
-          size: DesignConstants.FONT.SIZE.XL,
+          iconSize: DesignConstants.FONT.SIZE.XL,
           color: this.getPalette().accentBackground
         })
       Text(label)

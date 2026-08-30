@@ -1060,7 +1060,7 @@ export struct ProfilePage {
           Row({ space: DesignConstants.SPACING.SM }) {
             LucideIcon({
               icon: AppIcon.INFO,
-              size: DesignConstants.FONT.SIZE.LG,
+              iconSize: DesignConstants.FONT.SIZE.LG,
               color: this.getWarningTextColor()
             })
             Text('临时身份')
@@ -1173,7 +1173,7 @@ export struct ProfilePage {
                 Row({ space: DesignConstants.SPACING.XS }) {
                   LucideIcon({
                     icon: AppIcon.LOCATION,
-                    size: DesignConstants.FONT.SIZE.XS,
+                    iconSize: DesignConstants.FONT.SIZE.XS,
                     color: this.getAccentBackground()
                   })
                   Text(this.currentUser.location.location_name)
@@ -1187,7 +1187,7 @@ export struct ProfilePage {
                 Row({ space: DesignConstants.SPACING.SM2 }) {
                   LucideIcon({
                     icon: AppIcon.EDIT,
-                    size: DesignConstants.FONT.SIZE.SM,
+                    iconSize: DesignConstants.FONT.SIZE.SM,
                     color: this.getSecondaryTextColor()
                   })
                   Text('编辑资料')
@@ -1277,7 +1277,7 @@ export struct ProfilePage {
           Button() {
             LucideIcon({
               icon: AppIcon.CAMERA,
-              size: DesignConstants.FONT.SIZE.XS2,
+              iconSize: DesignConstants.FONT.SIZE.XS2,
               paletteRole: 'accentText'
             })
           }
@@ -1310,7 +1310,7 @@ export struct ProfilePage {
             Row({ space: DesignConstants.SPACING.HALF }) {
               LucideIcon({
                 icon: AppIcon.LOCATION,
-                size: DesignConstants.FONT.SIZE.XS,
+                iconSize: DesignConstants.FONT.SIZE.XS,
                 color: this.getAccentBackground()
               })
               Text(this.currentUser.location.location_name)
@@ -1449,7 +1449,7 @@ export struct ProfilePage {
       Row() {
         LucideIcon({
           icon: icon,
-          size: DesignConstants.FONT.SIZE.MD,
+          iconSize: DesignConstants.FONT.SIZE.MD,
           color: this.getAccentBackground()
         })
       }
@@ -1470,7 +1470,7 @@ export struct ProfilePage {
 
       LucideIcon({
         icon: AppIcon.ARROW_RIGHT,
-        size: DesignConstants.FONT.SIZE.SM,
+        iconSize: DesignConstants.FONT.SIZE.SM,
         color: this.getSecondaryTextColor()
       })
     }
@@ -1503,7 +1503,7 @@ export struct ProfilePage {
         Button() {
           LucideIcon({
             icon: AppIcon.CAMERA,
-            size: DesignConstants.FONT.SIZE.XS2,
+            iconSize: DesignConstants.FONT.SIZE.XS2,
             paletteRole: 'accentText'
           })
         }

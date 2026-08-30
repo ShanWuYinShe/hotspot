@@ -26,7 +26,7 @@ export struct CompactStatItem {
       Column({ space: DesignConstants.SPACING.XS }) {
         LucideIcon({
           icon: this.icon,
-          size: DesignConstants.FONT.SIZE.LG,
+          iconSize: DesignConstants.FONT.SIZE.LG,
           color: AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground,
           overrideThemeId: this.resolvedThemeId
         })
@@ -67,7 +67,7 @@ export struct ProfileQuickAction {
         Row() {
           LucideIcon({
             icon: this.icon,
-            size: AppThemeVisuals.getProfileVisualStyle(this.resolvedThemeId).quickAction.iconSize,
+            iconSize: AppThemeVisuals.getProfileVisualStyle(this.resolvedThemeId).quickAction.iconSize,
             color: AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground,
             overrideThemeId: this.resolvedThemeId
           })
@@ -111,7 +111,7 @@ export struct ProfileIntentCard {
         Row() {
           LucideIcon({
             icon: this.icon,
-            size: DesignConstants.FONT.SIZE.XL,
+            iconSize: DesignConstants.FONT.SIZE.XL,
             color: AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground,
             overrideThemeId: this.resolvedThemeId
           })
@@ -165,7 +165,7 @@ export struct ProfileMenuItem {
       Row() {
         LucideIcon({
           icon: this.icon,
-          size: DesignConstants.FONT.SIZE.LG,
+          iconSize: DesignConstants.FONT.SIZE.LG,
           color: AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground,
           overrideThemeId: this.resolvedThemeId
         })
@@ -184,7 +184,7 @@ export struct ProfileMenuItem {
 
       LucideIcon({
         icon: AppIcon.FORWARD,
-        size: DesignConstants.FONT.SIZE.LG,
+        iconSize: DesignConstants.FONT.SIZE.LG,
         color: AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary,
         overrideThemeId: this.resolvedThemeId
       })

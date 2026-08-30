@@ -138,7 +138,7 @@ export struct AdvancedSettingsPage {
       Row() {
         LucideIcon({
             icon: icon,
-            size: DesignConstants.FONT.SIZE.LG_PLUS,
+            iconSize: DesignConstants.FONT.SIZE.LG_PLUS,
             color: this.getCurrentThemePalette().accentBackground
           })
       }
@@ -166,7 +166,7 @@ export struct AdvancedSettingsPage {
       Row() {
         LucideIcon({
             icon: AppIcon.ARROW_RIGHT,
-            size: DesignConstants.FONT.SIZE.MD,
+            iconSize: DesignConstants.FONT.SIZE.MD,
             color: this.getCurrentThemePalette().textSecondary
           })
       }

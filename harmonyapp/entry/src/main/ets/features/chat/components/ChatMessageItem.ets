@@ -129,7 +129,7 @@ export struct ChatMessageItem {
             if (this.msg.isSelf && this.isLastSent) {
               LucideIcon({
                   icon: AppIcon.CHECK_ALL,
-                  size: DesignConstants.FONT.SIZE.XS,
+                  iconSize: DesignConstants.FONT.SIZE.XS,
                   color: this.palette.online
                 })
             }

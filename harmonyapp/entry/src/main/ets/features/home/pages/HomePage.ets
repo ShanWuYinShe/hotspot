@@ -541,7 +541,7 @@ export struct HomePage {
           Row() {
             LucideIcon({
               icon: AppIcon.NEARBY,
-              size: DesignConstants.FONT.SIZE.MD,
+              iconSize: DesignConstants.FONT.SIZE.MD,
               paletteRole: 'accentText'
             })
           }
@@ -574,7 +574,7 @@ export struct HomePage {
         Text() {
           LucideIcon({
             icon: AppIcon.ARROW_RIGHT,
-            size: DesignConstants.FONT.SIZE.MD,
+            iconSize: DesignConstants.FONT.SIZE.MD,
             paletteRole: 'textSecondary'
           })
         }
@@ -685,7 +685,7 @@ export struct HomePage {
           .fontColor(this.getPalette().accentBackground)
         LucideIcon({
           icon: AppIcon.ARROW_RIGHT,
-          size: DesignConstants.FONT.SIZE.SM,
+          iconSize: DesignConstants.FONT.SIZE.SM,
           color: this.getPalette().accentBackground
         })
       }
@@ -1109,7 +1109,7 @@ export struct HomePage {
       Column() {
         LucideIcon({
           icon: this.activityIcon(index),
-          size: DesignConstants.FONT.SIZE.MD,
+          iconSize: DesignConstants.FONT.SIZE.MD,
           color: this.activityAccent(index)
         })
       }
@@ -1137,7 +1137,7 @@ export struct HomePage {
 
       LucideIcon({
         icon: AppIcon.ARROW_RIGHT,
-        size: DesignConstants.FONT.SIZE.SM,
+        iconSize: DesignConstants.FONT.SIZE.SM,
         paletteRole: 'textSecondary'
       })
     }

@@ -572,7 +572,7 @@ export struct CreateGroupPage {
                   Button() {
                     LucideIcon({
                         icon: AppIcon.REMOVE,
-                        size: DesignConstants.FONT.SIZE.LG,
+                        iconSize: DesignConstants.FONT.SIZE.LG,
                         color: this.maxMembers > GROUP_MEMBERS_MIN ? this.getCurrentThemePalette().textPrimary : this.getCurrentThemePalette().textTertiary
                       })
                   }
@@ -613,7 +613,7 @@ export struct CreateGroupPage {
                   Button() {
                     LucideIcon({
                         icon: AppIcon.ADD,
-                        size: DesignConstants.FONT.SIZE.LG,
+                        iconSize: DesignConstants.FONT.SIZE.LG,
                         color: this.maxMembers < GROUP_MEMBERS_MAX ? this.getCurrentThemePalette().textPrimary : this.getCurrentThemePalette().textTertiary
                       })
                   }

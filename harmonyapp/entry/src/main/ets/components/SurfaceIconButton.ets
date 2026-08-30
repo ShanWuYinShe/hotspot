@@ -54,7 +54,7 @@ export struct SurfaceIconButton {
     Button() {
       LucideIcon({
         icon: this.icon,
-        size: this.glyphSize,
+        iconSize: this.glyphSize,
         color: this.getIconColor()
       })
     }

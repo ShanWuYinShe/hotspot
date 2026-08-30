@@ -330,7 +330,7 @@ export struct SmartSearchComponent {
                 Row() {
                   LucideIcon({
                         icon: AppIcon.TIME,
-                        size: DesignConstants.FONT.SIZE.LG,
+                        iconSize: DesignConstants.FONT.SIZE.LG,
                         color: this.getPalette().textSecondary
                       })
                     .margin({ right: DesignConstants.SPACING.MD })
@@ -367,7 +367,7 @@ export struct SmartSearchComponent {
                 Row() {
                   LucideIcon({
                     icon: this.getResultIcon(result.type),
-                    size: DesignConstants.FONT.SIZE.XL,
+                    iconSize: DesignConstants.FONT.SIZE.XL,
                     color: this.getPalette().textSecondary
                   })
                   .margin({ right: DesignConstants.SPACING.MD })
@@ -400,7 +400,7 @@ export struct SmartSearchComponent {
               Column() {
                 LucideIcon({
                       icon: AppIcon.EMPTY,
-                      size: DesignConstants.FONT.SIZE.XXXL,
+                      iconSize: DesignConstants.FONT.SIZE.XXXL,
                       color: this.getPalette().textTertiary
                     })
                   .margin({ bottom: DesignConstants.SPACING.SM })

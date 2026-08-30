@@ -184,7 +184,7 @@ export struct SystemButton {
         } else if (this.showIcon) {
           LucideIcon({
             icon: this.icon,
-            size: this.getIconSize(),
+            iconSize: this.getIconSize(),
             color: this.getTextColor()
           })
           .margin({ right: this.label.length === 0 ? 0 : DesignConstants.SPACING.XS })

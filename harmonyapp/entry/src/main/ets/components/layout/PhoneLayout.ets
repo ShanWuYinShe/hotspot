@@ -213,7 +213,7 @@ export struct PhoneLayout {
         Stack({ alignContent: Alignment.TopEnd }) {
           LucideIcon({
             icon: TAB_ITEMS[index].icon,
-            size: DesignConstants.FONT.SIZE.XXL,
+            iconSize: DesignConstants.FONT.SIZE.XXL,
             paletteRole: this.currentTabIndex === index ? 'tabActive' : 'tabInactive'
           })
           // 消息 tab（index 3）未读角标，对齐前端 inbox badge
@@ -301,7 +301,7 @@ export struct PhoneLayout {
       Stack({ alignContent: Alignment.TopEnd }) {
         LucideIcon({
           icon: TAB_ITEMS[index].icon,
-          size: DesignConstants.FONT.SIZE.XL,
+          iconSize: DesignConstants.FONT.SIZE.XL,
           paletteRole: this.currentTabIndex === index ? 'tabActive' : 'tabInactive'
         })
         // 消息 tab 未读角标，与手机端 TabBarBuilder 一致
@@ -357,7 +357,7 @@ export struct PhoneLayout {
     Row() {
       LucideIcon({
         icon: AppIcon.ADD,
-        size: DesignConstants.FONT.SIZE.XL,
+        iconSize: DesignConstants.FONT.SIZE.XL,
         paletteRole: 'accentText'
       })
     }
@@ -394,7 +394,7 @@ export struct PhoneLayout {
       Row() {
         LucideIcon({
           icon: AppIcon.ADD,
-          size: DesignConstants.FONT.SIZE.XL,
+          iconSize: DesignConstants.FONT.SIZE.XL,
           paletteRole: 'accentText'
         })
       }

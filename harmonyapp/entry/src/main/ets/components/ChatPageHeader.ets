@@ -46,7 +46,7 @@ export struct ChatPageHeader {
         Button() {
           LucideIcon({
               icon: AppIcon.BACK,
-              size: DesignConstants.FONT.SIZE.XL,
+              iconSize: DesignConstants.FONT.SIZE.XL,
               color: this.getPalette().textPrimary
             })
         }
@@ -83,7 +83,7 @@ export struct ChatPageHeader {
       Button() {
         LucideIcon({
             icon: AppIcon.INFO,
-            size: DesignConstants.FONT.SIZE.XL,
+            iconSize: DesignConstants.FONT.SIZE.XL,
             color: this.getPalette().textSecondary
           })
       }

@@ -438,7 +438,7 @@ export struct SettingsPage {
 
         LucideIcon({
             icon: AppIcon.ARROW_RIGHT,
-            size: DesignConstants.FONT.SIZE.MD,
+            iconSize: DesignConstants.FONT.SIZE.MD,
             color: this.getCurrentThemePalette().textSecondary
           })
       }

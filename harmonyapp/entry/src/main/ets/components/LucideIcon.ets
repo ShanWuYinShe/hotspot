@@ -9,9 +9,13 @@
  * - 关键位置（TabBar / PageHeader / Hero 卡 / 按钮图标）优先用 LucideIcon
  * - 长尾位置可继续用 SystemIcon，避免一次性迁移所有调用点
  *
- * 资源：resources/base/media/icons/<name>.svg（来自 lucide-static v0.460）
- * 渲染：Image + ColorFilter.tint（line-icon 整图染为目标色）
+ * 资源：resources/rawfile/icons/<name>.svg（来自 lucide-static v0.460）
+ * 渲染：Image + ColorFilter 4x5 颜色矩阵 tint（line-icon 整图染为目标色，
+ *       alpha 保留、RGB 替换为 palette 色）
  * Fallback：未支持的 AppIcon 走 SymbolSpan，调用点不报错
+ *
+ * 注意：prop 名用 iconSize（避免与 CustomComponent 基类 size 冲突）；
+ *      if-else 链用 string 局部变量比较（避免 ArkTS enum 类型收窄误报）
  */
 
 import { AppIcon } from './SystemIcon';
@@ -25,21 +29,22 @@ const DEFAULT_ICON_COLOR_SENTINEL: string = '__lucide_icon_default_color__';
 /**
  * LucideIcon 组件参数：
  *   - icon: 复用现有 AppIcon 枚举（保持调用点类型一致）
- *   - size: 图标边长 px（默认 24）
- *   - color: 直接色值（与 paletteRole 互斥）
- *   - paletteRole: 调色板语义角色
+ *   - iconSize: 图标边长 px（默认 24）
+ *   - color: 直接色值（hex string，与 paletteRole 互斥）
+ *   - paletteRole: 调色板语义角色（accent / accentText / textPrimary /
+ *     textSecondary / success / warning / error / tabActive / tabInactive）
+ *   - overrideThemeId: 子组件显式传主题 ID（为空走 @StorageProp 全局）
  *
  * 用法：
- *   LucideIcon({ icon: AppIcon.HOME, size: 24, paletteRole: 'accent' })
- *   LucideIcon({ icon: AppIcon.SEARCH, size: 20, color: '#16233A' })
+ *   LucideIcon({ icon: AppIcon.HOME, iconSize: 24, paletteRole: 'accent' })
+ *   LucideIcon({ icon: AppIcon.SEARCH, iconSize: 20, color: '#16233A' })
  */
 @Component
 export struct LucideIcon {
   @Prop icon: AppIcon;
-  @Prop size: number = DEFAULT_ICON_SIZE;
-  @Prop color: string | ResourceColor = DEFAULT_ICON_COLOR_SENTINEL;
+  @Prop iconSize: number = DEFAULT_ICON_SIZE;
+  @Prop color: ResourceColor = DEFAULT_ICON_COLOR_SENTINEL;
   @Prop paletteRole: string = '';
-  /** 子组件（如 ProfileContentAtoms）显式传入主题 ID；为空时走 @StorageProp 全局 */
   @Prop overrideThemeId: string = '';
 
   @StorageProp(KEY_RESOLVED_THEME_ID) storageThemeId: string = 'vibrant_light';
@@ -52,278 +57,392 @@ export struct LucideIcon {
     return AppThemeManager.getPaletteById(this.getEffectiveThemeId());
   }
 
-  private resolveColor(): ResourceColor {
+  /** 解析最终 hex 色（palette 为 hex string；color 支持 string/number(Color)/Resource） */
+  private resolveColorHex(): string {
     if (this.color !== DEFAULT_ICON_COLOR_SENTINEL) {
-      return this.color as ResourceColor;
+      if (typeof this.color === 'string') {
+        return this.color as string;
+      }
+      if (typeof this.color === 'number') {
+        // Color 枚举为 0xAARRGGBB
+        const hex: string = (this.color as number).toString(16).padStart(8, '0');
+        return '#' + hex.substring(2);
+      }
+      // Resource 无法解析为 hex：退中性灰
+      return '#8A94A6';
     }
     if (this.paletteRole !== '') {
       const pal = this.getPalette();
       switch (this.paletteRole) {
-        case 'accent': return pal.accentBackground as ResourceColor;
-        case 'accentText': return pal.accentText as ResourceColor;
-        case 'textPrimary': return pal.textPrimary as ResourceColor;
-        case 'textSecondary': return pal.textSecondary as ResourceColor;
-        case 'success': return pal.success as ResourceColor;
-        case 'warning': return pal.warning as ResourceColor;
-        case 'error': return pal.error as ResourceColor;
-        case 'tabActive': return pal.accentBackground as ResourceColor;
-        case 'tabInactive': return pal.tabBarInactive as ResourceColor;
-        default: return pal.textSecondary as ResourceColor;
+        case 'accent': return pal.accentBackground;
+        case 'accentText': return pal.accentText;
+        case 'textPrimary': return pal.textPrimary;
+        case 'textSecondary': return pal.textSecondary;
+        case 'success': return pal.success;
+        case 'warning': return pal.warning;
+        case 'error': return pal.error;
+        case 'tabActive': return pal.accentBackground;
+        case 'tabInactive': return pal.tabBarInactive;
+        default: return pal.textSecondary;
       }
     }
-    return this.getPalette().textSecondary as ResourceColor;
+    return this.getPalette().textSecondary;
+  }
+
+  /**
+   * 生成 4x5 颜色矩阵（行优先）：RGB 替换为目标色、alpha 保留。
+   * [0,0,0,0,R,  0,0,0,0,G,  0,0,0,0,B,  0,0,0,1,0]
+   * 透明像素 outA=0 保持透明；stroke 像素 outA=1 染成目标色。
+   */
+  private tintColorFilter(): ColorFilter {
+    const hex = this.resolveColorHex();
+    const r = parseInt(hex.substring(1, 3), 16);
+    const g = parseInt(hex.substring(3, 5), 16);
+    const b = parseInt(hex.substring(5, 7), 16);
+    const matrix: number[] = [
+      0, 0, 0, 0, r,
+      0, 0, 0, 0, g,
+      0, 0, 0, 0, b,
+      0, 0, 0, 1, 0
+    ];
+    return new ColorFilter(matrix);
+  }
+
+  /** 渲染 lucide SVG；不支持的图标走 SymbolSpan fallback */
+  @Builder
+  private renderLucide(iconName: string) {
+    if (iconName === 'house') {
+      Image($rawfile('icons/house.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'map-pin') {
+      Image($rawfile('icons/map-pin.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'message-circle') {
+      Image($rawfile('icons/message-circle.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'circle-user') {
+      Image($rawfile('icons/circle-user.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'users') {
+      Image($rawfile('icons/users.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'map') {
+      Image($rawfile('icons/map.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'bell') {
+      Image($rawfile('icons/bell.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'settings') {
+      Image($rawfile('icons/settings.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'plus') {
+      Image($rawfile('icons/plus.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'x') {
+      Image($rawfile('icons/x.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'chevron-left') {
+      Image($rawfile('icons/chevron-left.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'chevron-right') {
+      Image($rawfile('icons/chevron-right.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'chevron-down') {
+      Image($rawfile('icons/chevron-down.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'chevron-up') {
+      Image($rawfile('icons/chevron-up.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'ellipsis') {
+      Image($rawfile('icons/ellipsis.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'check') {
+      Image($rawfile('icons/check.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'circle-check') {
+      Image($rawfile('icons/circle-check.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'search') {
+      Image($rawfile('icons/search.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'send') {
+      Image($rawfile('icons/send.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'share-2') {
+      Image($rawfile('icons/share-2.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'pencil') {
+      Image($rawfile('icons/pencil.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'trash-2') {
+      Image($rawfile('icons/trash-2.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'camera') {
+      Image($rawfile('icons/camera.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'image') {
+      Image($rawfile('icons/image.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'heart') {
+      Image($rawfile('icons/heart.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'star') {
+      Image($rawfile('icons/star.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'lock') {
+      Image($rawfile('icons/lock.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'info') {
+      Image($rawfile('icons/info.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'shield-alert') {
+      Image($rawfile('icons/shield-alert.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'circle-x') {
+      Image($rawfile('icons/circle-x.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'inbox') {
+      Image($rawfile('icons/inbox.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'clock') {
+      Image($rawfile('icons/clock.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'minus') {
+      Image($rawfile('icons/minus.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'check-check') {
+      Image($rawfile('icons/check-check.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'filter') {
+      Image($rawfile('icons/filter.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'rotate-cw') {
+      Image($rawfile('icons/rotate-cw.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'circle-help') {
+      Image($rawfile('icons/circle-help.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'shield') {
+      Image($rawfile('icons/shield.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'chart-column') {
+      Image($rawfile('icons/chart-column.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'code') {
+      Image($rawfile('icons/code.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'palette') {
+      Image($rawfile('icons/palette.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'sparkles') {
+      Image($rawfile('icons/sparkles.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'moon') {
+      Image($rawfile('icons/moon.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'menu') {
+      Image($rawfile('icons/menu.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'eye') {
+      Image($rawfile('icons/eye.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'eye-off') {
+      Image($rawfile('icons/eye-off.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'user-plus') {
+      Image($rawfile('icons/user-plus.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'user-check') {
+      Image($rawfile('icons/user-check.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'sliders-horizontal') {
+      Image($rawfile('icons/sliders-horizontal.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    }
+  }
+
+  /** AppIcon → lucide 资源名；未映射返回空串（走 SymbolSpan fallback） */
+  private lucideName(icon: AppIcon): string {
+    switch (icon) {
+      case AppIcon.HOME: return 'house';
+      case AppIcon.COMPASS: return 'map-pin';
+      case AppIcon.MESSAGE: return 'message-circle';
+      case AppIcon.PERSON: return 'circle-user';
+      case AppIcon.GROUP: return 'users';
+      case AppIcon.NEARBY: return 'map-pin';
+      case AppIcon.LOCATION: return 'map-pin';
+      case AppIcon.MAP: return 'map';
+      case AppIcon.NOTIFICATION: return 'bell';
+      case AppIcon.NOTIFICATION_FILL: return 'bell';
+      case AppIcon.SETTINGS: return 'settings';
+      case AppIcon.ADD: return 'plus';
+      case AppIcon.CLOSE: return 'x';
+      case AppIcon.CANCEL: return 'x';
+      case AppIcon.BACK: return 'chevron-left';
+      case AppIcon.ARROW_LEFT: return 'chevron-left';
+      case AppIcon.FORWARD: return 'chevron-right';
+      case AppIcon.ARROW_RIGHT: return 'chevron-right';
+      case AppIcon.DOWN: return 'chevron-down';
+      case AppIcon.ARROW_DOWN: return 'chevron-down';
+      case AppIcon.UP: return 'chevron-up';
+      case AppIcon.ARROW_UP: return 'chevron-up';
+      case AppIcon.MORE: return 'ellipsis';
+      case AppIcon.CHECK: return 'check';
+      case AppIcon.SAVE: return 'check';
+      case AppIcon.CONFIRM: return 'circle-check';
+      case AppIcon.SEARCH: return 'search';
+      case AppIcon.SEND: return 'send';
+      case AppIcon.SHARE: return 'share-2';
+      case AppIcon.EDIT: return 'pencil';
+      case AppIcon.DELETE: return 'trash-2';
+      case AppIcon.CLEAN: return 'trash-2';
+      case AppIcon.CLEAR: return 'trash-2';
+      case AppIcon.CAMERA: return 'camera';
+      case AppIcon.PHOTO: return 'image';
+      case AppIcon.LIKE: return 'heart';
+      case AppIcon.HEART: return 'heart';
+      case AppIcon.HEART_FILL: return 'heart';
+      case AppIcon.STAR: return 'star';
+      case AppIcon.STAR_FILL: return 'star';
+      case AppIcon.LOCK: return 'lock';
+      case AppIcon.INFO: return 'info';
+      case AppIcon.WARNING: return 'shield-alert';
+      case AppIcon.ERROR: return 'circle-x';
+      case AppIcon.EMPTY: return 'inbox';
+      case AppIcon.TIME: return 'clock';
+      case AppIcon.REMOVE: return 'minus';
+      case AppIcon.CHECK_ALL: return 'check-check';
+      case AppIcon.FILTER: return 'filter';
+      case AppIcon.REFRESH: return 'rotate-cw';
+      case AppIcon.QUESTION: return 'circle-help';
+      case AppIcon.SHIELD: return 'shield';
+      case AppIcon.CHART: return 'chart-column';
+      case AppIcon.CODE: return 'code';
+      case AppIcon.PALETTE: return 'palette';
+      case AppIcon.RECOMMEND: return 'sparkles';
+      case AppIcon.MOON: return 'moon';
+      default: return '';
+    }
+  }
+
+  @Builder
+  private renderForIcon(icon: AppIcon) {
+    if (this.lucideName(icon).length > 0) {
+      this.renderLucide(this.lucideName(icon))
+    } else {
+      // Fallback：未列入映射时降级到 SymbolSpan
+      Text() {
+        SymbolSpan($r(icon))
+          .fontSize(this.iconSize)
+          .fontColor([this.resolveColorHex()])
+      }
+    }
   }
 
   build() {
     Stack({ alignContent: Alignment.Center }) {
-      // TabBar / 导航
-      if (this.icon === AppIcon.HOME) {
-        Image($r('app.media.icons.house'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.COMPASS) {
-        Image($r('app.media.icons.map-pin'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.MESSAGE) {
-        Image($r('app.media.icons.message-circle'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.PERSON) {
-        Image($r('app.media.icons.circle-user'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.GROUP) {
-        Image($r('app.media.icons.users'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.NEARBY) {
-        Image($r('app.media.icons.map-pin'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.LOCATION) {
-        Image($r('app.media.icons.map-pin'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.MAP) {
-        Image($r('app.media.icons.map'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.NOTIFICATION) {
-        Image($r('app.media.icons.bell'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.SETTINGS) {
-        Image($r('app.media.icons.settings'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      // 通用操作
-      } else if (this.icon === AppIcon.ADD) {
-        Image($r('app.media.icons.plus'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.CLOSE || this.icon === AppIcon.CANCEL) {
-        Image($r('app.media.icons.x'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.BACK || this.icon === AppIcon.ARROW_LEFT) {
-        Image($r('app.media.icons.chevron-left'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.FORWARD || this.icon === AppIcon.ARROW_RIGHT) {
-        Image($r('app.media.icons.chevron-right'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.DOWN || this.icon === AppIcon.ARROW_DOWN) {
-        Image($r('app.media.icons.chevron-down'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.UP || this.icon === AppIcon.ARROW_UP) {
-        Image($r('app.media.icons.chevron-up'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.MORE) {
-        Image($r('app.media.icons.ellipsis'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.CHECK || this.icon === AppIcon.SAVE) {
-        Image($r('app.media.icons.check'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.CONFIRM) {
-        Image($r('app.media.icons.circle-check'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.SEARCH) {
-        Image($r('app.media.icons.search'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.SEND) {
-        Image($r('app.media.icons.send'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.SHARE) {
-        Image($r('app.media.icons.share-2'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.EDIT) {
-        Image($r('app.media.icons.pencil'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.DELETE || this.icon === AppIcon.CLEAN || this.icon === AppIcon.CLEAR) {
-        Image($r('app.media.icons.trash-2'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.CAMERA) {
-        Image($r('app.media.icons.camera'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.PHOTO) {
-        Image($r('app.media.icons.image'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.LIKE || this.icon === AppIcon.HEART || this.icon === AppIcon.HEART_FILL) {
-        Image($r('app.media.icons.heart'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.STAR || this.icon === AppIcon.STAR_FILL) {
-        Image($r('app.media.icons.star'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.LOCK) {
-        Image($r('app.media.icons.lock'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.INFO) {
-        Image($r('app.media.icons.info'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.WARNING) {
-        Image($r('app.media.icons.shield-alert'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.ERROR) {
-        Image($r('app.media.icons.circle-x'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.EMPTY) {
-        Image($r('app.media.icons.inbox'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.TIME) {
-        Image($r('app.media.icons.clock'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.REMOVE) {
-        Image($r('app.media.icons.minus'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.CHECK_ALL) {
-        Image($r('app.media.icons.check-check'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.FILTER) {
-        Image($r('app.media.icons.filter'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.REFRESH) {
-        Image($r('app.media.icons.rotate-cw'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.QUESTION) {
-        Image($r('app.media.icons.circle-help'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.SHIELD) {
-        Image($r('app.media.icons.shield'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.CHART) {
-        Image($r('app.media.icons.chart-column'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.CODE) {
-        Image($r('app.media.icons.code'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.PALETTE) {
-        Image($r('app.media.icons.palette'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.NOTIFICATION_FILL) {
-        Image($r('app.media.icons.bell'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.RECOMMEND) {
-        Image($r('app.media.icons.sparkles'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.MOON) {
-        Image($r('app.media.icons.moon'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.SUN) {
-        Image($r('app.media.icons.sun'))
-          .width(this.size).height(this.size)
-          .colorFilter(ColorFilter.tint(this.resolveColor()))
-          .interpolation(ImageInterpolation.High)
-      } else {
-        // Fallback：未列入映射时降级到 SymbolSpan
-        Text() {
-          SymbolSpan($r(this.icon))
-            .fontSize(this.size)
-            .fontColor([this.resolveColor()])
-        }
-      }
+      this.renderForIcon(this.icon)
     }
-    .width(this.size)
-    .height(this.size)
+    .width(this.iconSize)
+    .height(this.iconSize)
   }
 }
 

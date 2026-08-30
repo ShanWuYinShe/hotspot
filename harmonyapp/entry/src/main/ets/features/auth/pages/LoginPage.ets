@@ -287,7 +287,7 @@ export struct LoginPage {
             // 返回钮：统一 lucide chevron-left + 按压缩放
             LucideIcon({
               icon: AppIcon.BACK,
-              size: DesignConstants.FONT.SIZE.XXL,
+              iconSize: DesignConstants.FONT.SIZE.XXL,
               paletteRole: 'textPrimary'
             })
             .onClick(() => {
@@ -295,7 +295,6 @@ export struct LoginPage {
             })
             .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
             .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
-            .justifyContent(FlexAlign.Center)
             .scale(this.isBackPressed ?
               { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
               { x: 1, y: 1 })

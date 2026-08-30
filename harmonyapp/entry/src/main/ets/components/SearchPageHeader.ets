@@ -52,7 +52,7 @@ export struct SearchPageHeader {
       Button() {
         LucideIcon({
             icon: AppIcon.BACK,
-            size: DesignConstants.FONT.SIZE.MD,
+            iconSize: DesignConstants.FONT.SIZE.MD,
             color: this.getPalette().textSecondary
           })
       }
@@ -86,7 +86,7 @@ export struct SearchPageHeader {
       Row({ space: DesignConstants.SPACING.SM }) {
         LucideIcon({
             icon: AppIcon.SEARCH,
-            size: DesignConstants.FONT.SIZE.MD,
+            iconSize: DesignConstants.FONT.SIZE.MD,
             color: this.getPalette().textSecondary
           })
 

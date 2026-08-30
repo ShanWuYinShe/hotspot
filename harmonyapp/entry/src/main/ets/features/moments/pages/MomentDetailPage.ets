@@ -472,7 +472,7 @@ export struct MomentDetailPage {
           Row({ space: DesignConstants.SPACING.XS }) {
             LucideIcon({
                 icon: AppIcon.LOCATION,
-                size: DesignConstants.FONT.SIZE.SM,
+                iconSize: DesignConstants.FONT.SIZE.SM,
                 color: this.getCurrentThemePalette().textSecondary
               })
             Text(moment.location.location_name)

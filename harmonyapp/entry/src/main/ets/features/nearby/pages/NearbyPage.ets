@@ -78,7 +78,7 @@ export struct NearbyPage {
             Row({ space: DesignConstants.SPACING.MD2 }) {
               LucideIcon({
                 icon: AppIcon.SEARCH,
-                size: DesignConstants.FONT.SIZE.LG,
+                iconSize: DesignConstants.FONT.SIZE.LG,
                 paletteRole: 'accent'
               })
               Text('搜索用户、群组、动态、地点…')
@@ -148,7 +148,7 @@ export struct NearbyPage {
       Column() {
         LucideIcon({
           icon: entry.icon,
-          size: DesignConstants.FONT.SIZE.LG,
+          iconSize: DesignConstants.FONT.SIZE.LG,
           paletteRole: 'accent'
         })
       }
@@ -177,7 +177,7 @@ export struct NearbyPage {
 
       LucideIcon({
         icon: AppIcon.ARROW_RIGHT,
-        size: DesignConstants.FONT.SIZE.MD,
+        iconSize: DesignConstants.FONT.SIZE.MD,
         paletteRole: 'textSecondary'
       })
     }

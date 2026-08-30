@@ -91,7 +91,7 @@ export struct NearbyImageCard {
       Row() {
         LucideIcon({
             icon: this.badgeIcon,
-            size: DesignConstants.FONT.SIZE.XS,
+            iconSize: DesignConstants.FONT.SIZE.XS,
             color: DesignConstants.COLOR.WHITE
           })
       }
@@ -107,7 +107,7 @@ export struct NearbyImageCard {
         if (this.badgeVariant === 'glass') {
           LucideIcon({
               icon: this.badgeIcon,
-              size: DesignConstants.FONT.SIZE.XS2,
+              iconSize: DesignConstants.FONT.SIZE.XS2,
               color: DesignConstants.COLOR.WHITE
             })
         }

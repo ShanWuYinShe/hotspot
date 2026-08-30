@@ -234,7 +234,7 @@ export struct CreateMomentSheet {
         Row({ space: DesignConstants.SPACING.HALF }) {
           LucideIcon({
               icon: AppIcon.LOCATION,
-              size: DesignConstants.FONT.SIZE.XS2,
+              iconSize: DesignConstants.FONT.SIZE.XS2,
               color: this.getPalette().textSecondary
             })
           Text(this.localLocation?.locationName || '当前浏览位置')
@@ -321,7 +321,7 @@ export struct CreateMomentSheet {
               Row() {
                 LucideIcon({
                     icon: AppIcon.CLOSE,
-                    size: DesignConstants.FONT.SIZE.XS,
+                    iconSize: DesignConstants.FONT.SIZE.XS,
                     color: DesignConstants.COLOR.WHITE
                   })
               }
@@ -339,7 +339,7 @@ export struct CreateMomentSheet {
             Column({ space: DesignConstants.SPACING.THREE }) {
               LucideIcon({
                   icon: AppIcon.ADD,
-                  size: DesignConstants.FONT.SIZE.LG,
+                  iconSize: DesignConstants.FONT.SIZE.LG,
                   color: this.getPalette().textSecondary
                 })
               Text('添加')
@@ -446,7 +446,7 @@ export struct CreateMomentSheet {
     Column({ space: DesignConstants.SPACING.THREE }) {
       LucideIcon({
           icon: icon,
-          size: DesignConstants.FONT.SIZE.LG,
+          iconSize: DesignConstants.FONT.SIZE.LG,
           color: this.privacyLevel === level ? this.getPalette().accentText : this.getPalette().textSecondary
         })
       Text(title)

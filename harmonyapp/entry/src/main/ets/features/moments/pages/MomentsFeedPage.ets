@@ -284,7 +284,7 @@ export struct MomentsFeedPage {
         Row({ space: DesignConstants.SPACING.MD2 }) {
           LucideIcon({
               icon: AppIcon.SEARCH,
-              size: DesignConstants.FONT.SIZE.MD,
+              iconSize: DesignConstants.FONT.SIZE.MD,
               color: this.getCurrentThemePalette().textSecondary
             })
           Text('搜索用户、动态、地点或话题')
@@ -718,7 +718,7 @@ export struct MomentsFeedPage {
       Row() {
         LucideIcon({
             icon: AppIcon.GROUP,
-            size: DesignConstants.FONT.SIZE.XXL,
+            iconSize: DesignConstants.FONT.SIZE.XXL,
             color: this.getCurrentThemePalette().accentBackground
           })
       }

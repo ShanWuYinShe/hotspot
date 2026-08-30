@@ -42,7 +42,7 @@ export struct LoadMoreButton {
         } else {
           LucideIcon({
               icon: AppIcon.ARROW_DOWN,
-              size: DesignConstants.FONT.SIZE.XL,
+              iconSize: DesignConstants.FONT.SIZE.XL,
               color: this.getPalette().textSecondary
             })
           .margin({ right: DesignConstants.SPACING.XS })

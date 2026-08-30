@@ -1030,7 +1030,7 @@ export struct GroupDetailPage {
                 Row() {
                   LucideIcon({
                       icon: AppIcon.LOCATION,
-                      size: DesignConstants.FONT.SIZE.LG_PLUS,
+                      iconSize: DesignConstants.FONT.SIZE.LG_PLUS,
                       color: this.getCurrentThemePalette().accentBackground
                     })
                   Text('位置信息')
@@ -1083,7 +1083,7 @@ export struct GroupDetailPage {
 
               LucideIcon({
                   icon: AppIcon.FORWARD,
-                  size: DesignConstants.FONT.SIZE.LG,
+                  iconSize: DesignConstants.FONT.SIZE.LG,
                   color: this.getCurrentThemePalette().textSecondary
                 })
             }
@@ -1132,7 +1132,7 @@ export struct GroupDetailPage {
 
                 LucideIcon({
                     icon: AppIcon.FORWARD,
-                    size: DesignConstants.FONT.SIZE.LG,
+                    iconSize: DesignConstants.FONT.SIZE.LG,
                     color: this.getCurrentThemePalette().textSecondary
                   })
               }

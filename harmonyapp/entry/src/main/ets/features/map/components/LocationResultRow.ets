@@ -27,7 +27,7 @@ export struct LocationResultRow {
       Column() {
         LucideIcon({
             icon: AppIcon.LOCATION,
-            size: DesignConstants.FONT.SIZE.LG_PLUS,
+            iconSize: DesignConstants.FONT.SIZE.LG_PLUS,
             color: this.palette().accentBackground
           })
       }

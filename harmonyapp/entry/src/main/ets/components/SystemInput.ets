@@ -66,7 +66,7 @@ export struct SystemInput {
       if (this.showPrefixIcon) {
         LucideIcon({
             icon: this.prefixIcon,
-            size: this.fontSize + 2,
+            iconSize: this.fontSize + 2,
             color: this.getPalette().textSecondary
           })
         .margin({ right: DesignConstants.SPACING.SM })
@@ -104,7 +104,7 @@ export struct SystemInput {
         Row() {
           LucideIcon({
               icon: AppIcon.CLOSE,
-              size: this.clearIconSize,
+              iconSize: this.clearIconSize,
               color: this.getPalette().textSecondary
             })
         }

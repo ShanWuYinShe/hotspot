@@ -588,7 +588,7 @@ export struct SearchPage {
                 Row() {
                   LucideIcon({
                       icon: AppIcon.CHART,
-                      size: DesignConstants.FONT.SIZE.LG_PLUS,
+                      iconSize: DesignConstants.FONT.SIZE.LG_PLUS,
                       color: this.getCurrentThemePalette().accentBackground
                     })
                 }
@@ -608,7 +608,7 @@ export struct SearchPage {
 
                 LucideIcon({
                     icon: AppIcon.ARROW_RIGHT,
-                    size: DesignConstants.FONT.SIZE.LG,
+                    iconSize: DesignConstants.FONT.SIZE.LG,
                     color: this.getCurrentThemePalette().textSecondary
                   })
               }
@@ -674,7 +674,7 @@ export struct SearchPage {
                 Row({ space: DesignConstants.SPACING.MD }) {
                   LucideIcon({
                       icon: AppIcon.TIME,
-                      size: DesignConstants.FONT.SIZE.MD,
+                      iconSize: DesignConstants.FONT.SIZE.MD,
                       color: this.getCurrentThemePalette().textSecondary
                     })
                   Text(item)
@@ -685,7 +685,7 @@ export struct SearchPage {
                     .layoutWeight(1)
                   LucideIcon({
                       icon: AppIcon.ARROW_RIGHT,
-                      size: DesignConstants.FONT.SIZE.MD,
+                      iconSize: DesignConstants.FONT.SIZE.MD,
                       color: this.getCurrentThemePalette().textSecondary
                     })
                 }
@@ -934,7 +934,7 @@ export struct SearchPage {
         Row() {
           LucideIcon({
               icon: AppIcon.MORE,
-              size: DesignConstants.FONT.SIZE.LG,
+              iconSize: DesignConstants.FONT.SIZE.LG,
               color: this.getCurrentThemePalette().textSecondary
             })
         }
@@ -1037,7 +1037,7 @@ export struct SearchPage {
         Row() {
           LucideIcon({
               icon: AppIcon.MORE,
-              size: DesignConstants.FONT.SIZE.LG,
+              iconSize: DesignConstants.FONT.SIZE.LG,
               color: this.getCurrentThemePalette().textSecondary
             })
         }
@@ -1135,7 +1135,7 @@ export struct SearchPage {
         Row({ space: DesignConstants.SPACING.HALF }) {
           LucideIcon({
               icon: AppIcon.HEART,
-              size: DesignConstants.FONT.SIZE.XS,
+              iconSize: DesignConstants.FONT.SIZE.XS,
               color: this.getCurrentThemePalette().textTertiary
             })
           Text(formatCount(sumReactionCounts(item.reactions)))

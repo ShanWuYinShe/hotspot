@@ -72,7 +72,7 @@ export struct LoginPromptView {
 
         LucideIcon({
           icon: this.icon,
-          size: DesignConstants.FONT.SIZE.XXXL,
+          iconSize: DesignConstants.FONT.SIZE.XXXL,
           color: this.getPalette().accentBackground
         })
         .opacity(DesignConstants.OPACITY.EMPHASIZED)

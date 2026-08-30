@@ -147,7 +147,7 @@ export struct SettingsEntryRow {
       Row() {
         LucideIcon({
             icon: this.item.icon,
-            size: DesignConstants.FONT.SIZE.LG,
+            iconSize: DesignConstants.FONT.SIZE.LG,
             color: this.getPalette().accentText
           })
       }
@@ -261,7 +261,7 @@ export struct SettingsToggleRow {
       Row() {
         LucideIcon({
             icon: this.icon,
-            size: DesignConstants.FONT.SIZE.LG,
+            iconSize: DesignConstants.FONT.SIZE.LG,
             color: this.getPalette().accentText
           })
       }

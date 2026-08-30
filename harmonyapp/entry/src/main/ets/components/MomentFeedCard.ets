@@ -61,7 +61,7 @@ export struct MomentFeedCard {
     Column() {
       LucideIcon({
         icon: AppIcon.PHOTO,
-        size: DesignConstants.FONT.SIZE.LG,
+        iconSize: DesignConstants.FONT.SIZE.LG,
         color: this.getPalette().textSecondary
       })
       .opacity(DesignConstants.OPACITY.MUTED)
@@ -239,7 +239,7 @@ export struct MomentFeedCard {
             if (this.moment.location?.location_name) {
               LucideIcon({
                   icon: AppIcon.LOCATION,
-                  size: DesignConstants.FONT.SIZE.XS2,
+                  iconSize: DesignConstants.FONT.SIZE.XS2,
                   color: DesignConstants.COLOR.WHITE
                 })
               Text(this.moment.location.location_name)
@@ -278,7 +278,7 @@ export struct MomentFeedCard {
             Row({ space: DesignConstants.SPACING.XS }) {
               LucideIcon({
                   icon: AppIcon.HEART,
-                  size: DesignConstants.FONT.SIZE.MD,
+                  iconSize: DesignConstants.FONT.SIZE.MD,
                   color: this.isLikedByMe() ? this.getPalette().accentBackground : this.getPalette().textSecondary
                 })
               .padding(DesignConstants.SPACING.MD3)
@@ -310,7 +310,7 @@ export struct MomentFeedCard {
             Row({ space: DesignConstants.SPACING.XS }) {
               LucideIcon({
                   icon: AppIcon.MESSAGE,
-                  size: DesignConstants.FONT.SIZE.MD,
+                  iconSize: DesignConstants.FONT.SIZE.MD,
                   color: this.getPalette().textSecondary
                 })
               .padding(DesignConstants.SPACING.MD3)
@@ -338,7 +338,7 @@ export struct MomentFeedCard {
           Row({ space: DesignConstants.SPACING.MD }) {
             LucideIcon({
                 icon: AppIcon.STAR_FILL,
-                size: DesignConstants.FONT.SIZE.MD,
+                iconSize: DesignConstants.FONT.SIZE.MD,
                 color: this.getMomentState()?.is_favorited ?? this.moment.is_favorited ? this.getPalette().accentBackground : this.getPalette().textSecondary
               })
             .padding(DesignConstants.SPACING.MD3)
@@ -365,7 +365,7 @@ export struct MomentFeedCard {
 
             LucideIcon({
                 icon: AppIcon.SHARE,
-                size: DesignConstants.FONT.SIZE.MD,
+                iconSize: DesignConstants.FONT.SIZE.MD,
                 color: this.getPalette().textSecondary
               })
             .padding(DesignConstants.SPACING.MD3)
@@ -475,7 +475,7 @@ export struct MomentFeedCard {
         Row({ space: DesignConstants.SPACING.THREE }) {
           LucideIcon({
               icon: AppIcon.LOCATION,
-              size: DesignConstants.FONT.SIZE.XS,
+              iconSize: DesignConstants.FONT.SIZE.XS,
               color: this.getPalette().accentBackground
             })
           Text(this.moment.location.location_name)

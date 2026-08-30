@@ -464,7 +464,7 @@ export struct CreateMomentPage {
                       Column() {
                         LucideIcon({
                             icon: AppIcon.ADD,
-                            size: DesignConstants.FONT.SIZE.XXL,
+                            iconSize: DesignConstants.FONT.SIZE.XXL,
                             color: this.getCurrentThemePalette().textSecondary
                           })
                         Text('相册')
@@ -489,7 +489,7 @@ export struct CreateMomentPage {
                       Column() {
                         LucideIcon({
                             icon: AppIcon.CAMERA,
-                            size: DesignConstants.FONT.SIZE.XXL,
+                            iconSize: DesignConstants.FONT.SIZE.XXL,
                             color: this.getCurrentThemePalette().textSecondary
                           })
                         Text('拍照')
@@ -600,7 +600,7 @@ export struct CreateMomentPage {
                 Row() {
                   LucideIcon({
                       icon: AppIcon.LOCATION,
-                      size: DesignConstants.FONT.SIZE.XL,
+                      iconSize: DesignConstants.FONT.SIZE.XL,
                       color: this.getCurrentThemePalette().accentBackground
                     })
 
@@ -721,7 +721,7 @@ export struct CreateMomentPage {
       Button() {
         LucideIcon({
             icon: AppIcon.CANCEL,
-            size: DesignConstants.FONT.SIZE.MD,
+            iconSize: DesignConstants.FONT.SIZE.MD,
             color: this.getCurrentThemePalette().accentText
           })
       }

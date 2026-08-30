@@ -31,7 +31,7 @@ export struct SearchSuggestRow {
         Row() {
           LucideIcon({
               icon: this.itemType === 'tag' ? AppIcon.CHART : this.itemType === 'user' ? AppIcon.PERSON : this.itemType === 'group' ? AppIcon.GROUP : AppIcon.CAMERA,
-              size: DesignConstants.FONT.SIZE.LG_PLUS,
+              iconSize: DesignConstants.FONT.SIZE.LG_PLUS,
               color: this.palette?.accentBackground
             })
         }
@@ -60,7 +60,7 @@ export struct SearchSuggestRow {
 
         LucideIcon({
             icon: AppIcon.ARROW_RIGHT,
-            size: DesignConstants.FONT.SIZE.LG,
+            iconSize: DesignConstants.FONT.SIZE.LG,
             color: this.palette?.textSecondary
           })
       }
@@ -102,7 +102,7 @@ export struct SearchMomentRow {
 
         LucideIcon({
             icon: AppIcon.ARROW_RIGHT,
-            size: DesignConstants.FONT.SIZE.LG,
+            iconSize: DesignConstants.FONT.SIZE.LG,
             color: this.palette?.textSecondary
           })
       }
