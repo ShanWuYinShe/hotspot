@@ -12,6 +12,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, ChatRouteParam, GroupDetailRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam, SearchRouteParam } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { Pressable } from '../../../components/Pressable';
+import { NearbyImageCard } from '../../../components/NearbyImageCard';
 import {
   MomentItem, UserItem, GroupItem, GeoPoint,
   FetchNearbyMomentsRequest, SearchUsersRequest, SearchGroupsRequest,
@@ -27,6 +28,7 @@ import { InteractionStateStore, UserRelationState } from '../../../core/state/In
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
+import { LucideIcon } from '../../../components/LucideIcon';
 import { EmptyState } from '../../../components/EmptyState';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
@@ -383,7 +385,6 @@ export struct HomePage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(this.getPalette().pageBackground)
   }
   }
 
@@ -520,24 +521,36 @@ export struct HomePage {
 
   @Builder
   private buildHeroStats() {
-    // 实时附近统计卡（对齐前端 HeroStats：radar 图标 + 标题/范围 + 三段统计）
-    Column() {
+    // 实时附近统计卡（对齐前端 HeroStats：ambient-glow 光晕 + radar 图标 + 标题/范围 + 三段统计）
+    Stack() {
+      // ambient 光晕层（对齐前端 ambient-glow：heroGlow 大圆模糊，随明暗调透明度）
+      Column()
+        .width(DesignConstants.LAYOUT.GLOW_BLOB_LARGE)
+        .height(DesignConstants.LAYOUT.GLOW_BLOB_LARGE)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(this.getPalette().heroGlow)
+        .blur(DesignConstants.EFFECT.GLOW_BLUR_MEDIUM)
+        .opacity(this.getPalette().isDarkTheme ? 0.4 : 0.7)
+        .position({ x: '55%', y: -DesignConstants.SPACING.LG2 })
+
+      Column() {
       // Header row：图标 + 标题/范围 + 右箭头
       Row() {
         Row({ space: DesignConstants.SPACING.SM }) {
           // brand 圆形图标（对齐前端 38px brand 圆 + shadow-brand-btn）
           Row() {
-            Text() {
-              SymbolSpan($r(AppIcon.NEARBY))
-                .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor([this.getPalette().accentText])
-            }
+            LucideIcon({
+              icon: AppIcon.NEARBY,
+              size: DesignConstants.FONT.SIZE.MD,
+              paletteRole: 'accentText'
+            })
           }
           .width(DesignConstants.COMPONENT.BRAND_ICON_SIZE)
           .height(DesignConstants.COMPONENT.BRAND_ICON_SIZE)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getPalette().accentBackground)
           .justifyContent(FlexAlign.Center)
+          .shadow(this.getPalette().accentShadow)
 
           Column() {
             Text('实时附近')
@@ -559,9 +572,11 @@ export struct HomePage {
         Blank()
 
         Text() {
-          SymbolSpan($r(AppIcon.ARROW_RIGHT))
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor([this.getPalette().textSecondary])
+          LucideIcon({
+            icon: AppIcon.ARROW_RIGHT,
+            size: DesignConstants.FONT.SIZE.MD,
+            paletteRole: 'textSecondary'
+          })
         }
       }
       .width('100%')
@@ -645,6 +660,9 @@ export struct HomePage {
       }
     })
     .onClick(() => AppRouter.push(PageNames.NEARBY_USERS))
+    }
+    .width('100%')
+    .alignContent(Alignment.Center)
   }
 
   // ==================== 区块标题 (eyebrow) ====================
@@ -665,11 +683,11 @@ export struct HomePage {
         Text(linkText)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getPalette().accentBackground)
-        Text() {
-          SymbolSpan($r(AppIcon.ARROW_RIGHT))
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor([this.getPalette().accentBackground])
-        }
+        LucideIcon({
+          icon: AppIcon.ARROW_RIGHT,
+          size: DesignConstants.FONT.SIZE.SM,
+          color: this.getPalette().accentBackground
+        })
       }
       .scale(this.viewAllPressedIndex === pressedIndex
         ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL }
@@ -927,6 +945,7 @@ export struct HomePage {
 
   @Builder
   private buildGroupCarouselCard(group: GroupItem) {
+    // 140×140 banner 图方卡 + 隐私圆徽章 + 图上 card-menu 托盘（对齐前端 GroupCarousel）
     Pressable({ onPress: () => {
       const groupId = group.group?.group_id;
       if (groupId) {
@@ -935,42 +954,51 @@ export struct HomePage {
         AppRouter.push(PageNames.GROUP_DETAIL, params);
       }
     } }) {
-      Column({ space: DesignConstants.SPACING.XS }) {
-        Column() {
-          Text() {
-            SymbolSpan($r(AppIcon.GROUP))
-              .fontSize(DesignConstants.FONT.SIZE.XXL)
-              .fontColor([this.getPalette().accentBackground])
-          }
-        }
-        .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
-        .height(DesignConstants.COMPONENT.SKELETON_CARD_HEIGHT)
-        .justifyContent(FlexAlign.Center)
-        .borderRadius(DesignConstants.SHAPE.CARD)
-        .backgroundColor(this.getPalette().accentMuted)
-        .clip(true)
+      Column() {
+        NearbyImageCard({
+          imageUrl: group.group?.avatar_url ?? '',
+          imageAlt: group.group?.name ?? '',
+          cardAspectRatio: 1,
+          placeholderText: group.group?.name ?? '',
+          // 私有群（密码/邀请加入）显示锁圆徽；公开群 pill 空文本即不渲染
+          badgeText: '',
+          badgeIcon: AppIcon.LOCK,
+          badgeShape: group.join_method !== 'direct' ? 'circle' : 'pill',
+          badgeVariant: 'glass',
+          badgeAlign: 'topRight'
+        }) {
+          Column({ space: DesignConstants.SPACING.THREE }) {
+            Text(group.group?.name ?? '')
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+              .fontColor(this.getPalette().textPrimary)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .width('100%')
 
-        Text(group.group?.name ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(this.getPalette().textPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
-
-        Row({ space: DesignConstants.SPACING.XS }) {
-          Text(`${formatCount(group.group?.members_count ?? 0)} 人`)
-            .fontSize(DesignConstants.FONT.SIZE.XS2)
-            .fontColor(this.getPalette().textTertiary)
-          if (group.location?.distance !== undefined && group.location?.distance !== null) {
-            Text(LocationUtil.formatDistance(group.location.distance))
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor(this.getPalette().accentText)
+            Row({ space: DesignConstants.SPACING.SM }) {
+              Text(`${formatCount(group.group?.members_count ?? 0)} 人`)
+                .fontSize(DesignConstants.FONT.SIZE.XS2)
+                .fontColor(this.getPalette().textSecondary)
+              if (group.location?.distance !== undefined && group.location?.distance !== null) {
+                Text(LocationUtil.formatDistance(group.location.distance))
+                  .fontSize(DesignConstants.FONT.SIZE.XS2)
+                  .fontColor(this.getPalette().accentText)
+              }
+            }
+            .width('100%')
           }
+          .width('100%')
+          .alignItems(HorizontalAlign.Start)
+          .padding({
+            left: DesignConstants.SPACING.MD,
+            right: DesignConstants.SPACING.MD,
+            top: DesignConstants.SPACING.SM2,
+            bottom: DesignConstants.SPACING.SM2
+          })
         }
-        .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
       }
-      .alignItems(HorizontalAlign.Start)
-      .borderRadius(DesignConstants.SHAPE.CARD)
+      .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
     }
   }
 
@@ -1079,11 +1107,11 @@ export struct HomePage {
   private buildActivityRow(moment: MomentItem, index: number) {
     Row({ space: DesignConstants.SPACING.MD }) {
       Column() {
-        Text() {
-          SymbolSpan($r(this.activityIcon(index)))
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor([this.activityAccent(index)])
-        }
+        LucideIcon({
+          icon: this.activityIcon(index),
+          size: DesignConstants.FONT.SIZE.MD,
+          color: this.activityAccent(index)
+        })
       }
       .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
       .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
@@ -1107,11 +1135,11 @@ export struct HomePage {
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
 
-      Text() {
-        SymbolSpan($r(AppIcon.ARROW_RIGHT))
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor([this.getPalette().textSecondary])
-      }
+      LucideIcon({
+        icon: AppIcon.ARROW_RIGHT,
+        size: DesignConstants.FONT.SIZE.SM,
+        paletteRole: 'textSecondary'
+      })
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })

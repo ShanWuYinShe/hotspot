@@ -347,7 +347,6 @@ export struct MomentDetailPage {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor(this.getCurrentThemePalette().pageBackground)
       }
     }
     .hideTitleBar(true)

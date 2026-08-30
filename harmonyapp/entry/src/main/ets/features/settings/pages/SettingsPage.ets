@@ -2,7 +2,7 @@ import { GlobalStateManager, KEY_CLIENT_CONFIG, KEY_CURRENT_USER, KEY_IS_LOGGED_
 import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { AccountInfo, ApiVersionMeta, ClientConfig, SystemAnnouncementItem } from '../../../core/types/api';
+import { AccountInfo, ApiVersionMeta, ClientConfig, SystemAnnouncementItem, UserSettings } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
 import { MomentCacheService } from '../../../core/database/MomentCacheService';
@@ -11,18 +11,34 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { SystemAvatar } from '../../../components/SystemAvatar';
+import { SystemButton } from '../../../components/SystemButton';
+import { SystemDialog } from '../../../components/SystemDialog';
 import { RefreshIndicator } from '../../../components/EmptyState';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
+import { ThemeConstants } from '../../../core/theme/ThemeConstants';
 import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
 import { KEY_RESOLVED_THEME_ID, KEY_THEME_MODE, ThemeOptionItem, ThemeMode } from '../../../core/theme/AppThemeTypes';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
-import { AnnouncementSummaryCard, SettingsEntryItem, SettingsEntryRow, SettingsMetaCard, SettingsSectionCard, SupportConfigCard } from './SettingsSupport';
+import {
+  AnnouncementSummaryCard,
+  SettingsEntryItem,
+  SettingsEntryRow,
+  SettingsGroupLabel,
+  SettingsMetaCard,
+  SettingsSectionCard,
+  SettingsToggleRow,
+  SupportConfigCard
+} from './SettingsSupport';
 import { AppIcon } from '../../../components/SystemIcon';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
+import { common } from '@kit.AbilityKit';
+import { ConfigurationConstant } from '@kit.AbilityKit';
+import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const DOMAIN_NUMBER: number = 0xFF27;
@@ -48,6 +64,16 @@ export struct SettingsPage {
   @State announcementsLoading: boolean = false;
   @State metaRefreshing: boolean = false;
   @State showThemeSheet: boolean = false;
+  @State showLogoutConfirm: boolean = false;
+  // 用户偏好开关（对齐前端 settings：私密账号 / 位置共享 / 推送通知 / 深色）
+  @State privacyPrivate: boolean = false;
+  @State locationVisible: boolean = true;
+  @State pushNotifyEnabled: boolean = true;
+  @State privacyPending: boolean = false;
+  @State locationPending: boolean = false;
+  @State isDarkForced: boolean = false;
+  private static readonly KEY_PUSH_NOTIFY: string = 'settings_push_notify_enabled';
+  private static readonly KEY_DARK_FORCED: string = 'settings_dark_forced';
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
   private isDestroyed: boolean = false;
@@ -55,6 +81,8 @@ export struct SettingsPage {
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
     this.refreshAll(false);
+    this.loadLocalPreferences();
+    this.loadUserSettings();
   }
 
   aboutToDisappear(): void {
@@ -106,6 +134,90 @@ export struct SettingsPage {
     SystemUiController.syncWithCurrentTheme();
     this.showThemeSheet = false;
     SystemToast.show(`已切换为${AppThemeManager.getThemeLabel(mode)}`, this.getUIContext());
+  }
+
+  // ==================== 偏好开关（对齐前端 settings 乐观更新契约） ====================
+
+  private async loadLocalPreferences(): Promise<void> {
+    this.pushNotifyEnabled = await PreferencesUtil.get(SettingsPage.KEY_PUSH_NOTIFY, true);
+    this.isDarkForced = await PreferencesUtil.get(SettingsPage.KEY_DARK_FORCED, false);
+  }
+
+  private async loadUserSettings(): Promise<void> {
+    if (!this.isLoggedIn) {
+      return;
+    }
+    try {
+      const response = await ApiClient.getSettings();
+      if (this.isDestroyed || response.code !== 0 || !response.data) {
+        return;
+      }
+      this.privacyPrivate = response.data.privacy_level === 'private';
+      this.locationVisible = response.data.location_visible;
+    } catch (error) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `加载用户设置失败: ${JSON.stringify(error)}`);
+    }
+  }
+
+  private async togglePrivacyPrivate(next: boolean): Promise<void> {
+    if (!this.requireLogin('管理隐私设置', PageNames.PRIVACY_SETTINGS)) {
+      return;
+    }
+    const snapshot = this.privacyPrivate;
+    this.privacyPrivate = next;
+    this.privacyPending = true;
+    try {
+      const response = await ApiClient.updateSettings({ settings: { privacy_level: next ? 'private' : 'public' } });
+      if (response.code !== 0) {
+        throw new Error(response.message || 'update failed');
+      }
+      SystemToast.show(next ? '已切换为私密账号' : '已切换为公开账号', this.getUIContext());
+    } catch (error) {
+      this.privacyPrivate = snapshot;
+      SystemToast.showWarning('设置失败，请稍后重试', this.getUIContext());
+    } finally {
+      this.privacyPending = false;
+    }
+  }
+
+  private async toggleLocationVisible(next: boolean): Promise<void> {
+    if (!this.requireLogin('管理隐私设置', PageNames.PRIVACY_SETTINGS)) {
+      return;
+    }
+    const snapshot = this.locationVisible;
+    this.locationVisible = next;
+    this.locationPending = true;
+    try {
+      const response = await ApiClient.updateSettings({ settings: { location_visible: next } });
+      if (response.code !== 0) {
+        throw new Error(response.message || 'update failed');
+      }
+      SystemToast.show(next ? '已开启位置共享' : '已关闭位置共享', this.getUIContext());
+    } catch (error) {
+      this.locationVisible = snapshot;
+      SystemToast.showWarning('设置失败，请稍后重试', this.getUIContext());
+    } finally {
+      this.locationPending = false;
+    }
+  }
+
+  private async togglePushNotify(next: boolean): Promise<void> {
+    this.pushNotifyEnabled = next;
+    await PreferencesUtil.set(SettingsPage.KEY_PUSH_NOTIFY, next);
+  }
+
+  private async toggleDarkMode(next: boolean): Promise<void> {
+    // 强制深色=setColorMode(DARK)；关闭=NOT_SET 回到跟随系统（对齐前端 isDark 偏好语义）
+    this.isDarkForced = next;
+    await PreferencesUtil.set(SettingsPage.KEY_DARK_FORCED, next);
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      context.getApplicationContext().setColorMode(next ?
+        ConfigurationConstant.ColorMode.COLOR_MODE_DARK :
+        ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
+    } catch (error) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `切换颜色模式失败: ${JSON.stringify(error)}`);
+    }
   }
 
   private async refreshAll(force: boolean): Promise<void> {
@@ -276,22 +388,150 @@ export struct SettingsPage {
           AppRouter.push(PageNames.ANNOUNCEMENTS, params);
         },
         accentColor: this.announcements.length > 0 ? this.getCurrentThemePalette().accentBackground : undefined
-      },
-      {
-        icon: AppIcon.LOCK,
-        title: '密码与会话安全',
-        subtitle: '修改密码、查看登录设备并撤销其他会话',
-        action: () => {
-          if (this.requireLogin('管理密码与会话安全', PageNames.SAFETY_SETTINGS)) {
-            AppRouter.push(PageNames.SAFETY_SETTINGS);
-          }
-        }
       }
     ];
   }
 
+  private buildSecurityEntry(): SettingsEntryItem {
+    // 密码与会话安全归属隐私与安全组（通知组只留通知相关行）
+    return {
+      icon: AppIcon.LOCK,
+      title: '密码与会话安全',
+      subtitle: '修改密码、查看登录设备并撤销其他会话',
+      action: () => {
+        if (this.requireLogin('管理密码与会话安全', PageNames.SAFETY_SETTINGS)) {
+          AppRouter.push(PageNames.SAFETY_SETTINGS);
+        }
+      }
+    };
+  }
+
+  // ==================== 用户卡（对齐前端 settings 顶部 hero 用户卡） ====================
+  @Builder
+  private buildUserCard() {
+    if (this.isLoggedIn && this.currentUser) {
+      Row({ space: DesignConstants.SPACING.MD }) {
+        SystemAvatar({
+          avatarUrl: this.currentUser.avatar_url ?? '',
+          name: this.currentUser.nickname ?? '',
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS
+        })
+
+        Column({ space: DesignConstants.SPACING.THREE }) {
+          Text(this.currentUser.nickname ?? '未命名用户')
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            .fontColor(this.getCurrentThemePalette().textPrimary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          if (this.currentUser.email) {
+            Text(this.currentUser.email)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+
+        Text() {
+          SymbolSpan($r(AppIcon.ARROW_RIGHT))
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontColor([this.getCurrentThemePalette().textSecondary])
+        }
+      }
+      .width('100%')
+      .padding(DesignConstants.SPACING.LG)
+      .borderRadius(DesignConstants.SHAPE.CARD)
+      .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+      .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+      .onClick(() => this.openProfile())
+    } else {
+      Row({ space: DesignConstants.SPACING.MD }) {
+        Text('登录后同步你的设置与资料')
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+          .layoutWeight(1)
+
+        SystemButton({
+          label: '登录',
+          variant: 'primary',
+          buttonSize: 'small',
+          onPress: () => {
+            const loginParams = new LoginRouteParam();
+            loginParams.reason = 'action_required';
+            loginParams.action = '登录';
+            AppRouter.push(PageNames.LOGIN, loginParams);
+          }
+        })
+      }
+      .width('100%')
+      .padding(DesignConstants.SPACING.LG)
+      .borderRadius(DesignConstants.SHAPE.CARD)
+      .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+      .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+    }
+  }
+
+  // ==================== 主题分段卡（对齐前端主题二选一：星际 / 清野） ====================
+  @Builder
+  private buildThemeSegment() {
+    Row({ space: DesignConstants.SPACING.SM }) {
+      this.buildThemeSegmentCard('vibrant', '星际', ThemeConstants.VIBRANT_LIGHT_COLORS.accentBackground)
+      this.buildThemeSegmentCard('default_clean', '清野', ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.accentBackground)
+    }
+    .width('100%')
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.MD,
+      bottom: DesignConstants.SPACING.SM
+    })
+  }
+
+  @Builder
+  private buildThemeSegmentCard(mode: ThemeMode, label: string, swatch: string) {
+    Row({ space: DesignConstants.SPACING.SM }) {
+      Column()
+        .width(DesignConstants.SPACING.LG)
+        .height(DesignConstants.SPACING.LG)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(swatch)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+
+      Text(label)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        .fontColor(this.getActiveSegmentModes().indexOf(mode) >= 0 ?
+          this.getCurrentThemePalette().accentText :
+          this.getCurrentThemePalette().textSecondary)
+    }
+    .layoutWeight(1)
+    .justifyContent(FlexAlign.Center)
+    .padding({ top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
+    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+    .backgroundColor(this.getActiveSegmentModes().indexOf(mode) >= 0 ?
+      this.getCurrentThemePalette().accentMuted :
+      DesignConstants.COLOR.TRANSPARENT)
+    .border({
+      width: this.getActiveSegmentModes().indexOf(mode) >= 0 ?
+        DesignConstants.BORDER_WIDTH.HAIRLINE : 0,
+      color: this.getCurrentThemePalette().accentBackground
+    })
+    .onClick(() => { this.handleThemeChange(mode); })
+  }
+
+  private getActiveSegmentModes(): ThemeMode[] {
+    // 跟随系统时默认解析为 vibrant，星旗舰同步高亮
+    return this.themeMode === 'follow_system' ? ['vibrant'] : [this.themeMode];
+  }
+
   build() {
     NavDestination() {
+      Stack() {
       Column() {
         SystemPageHeader({
           title: '设置',
@@ -302,113 +542,156 @@ export struct SettingsPage {
         Refresh({ refreshing: $$this.metaRefreshing, builder: RefreshIndicator }) {
           Scroll() {
             PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
-              // === Section 1: 外观与主题 ===
               Column() {
-                SettingsSectionCard({ title: '外观与主题' }) {
-                  Column() {
-                    SettingsEntryRow({ item: {
-                      icon: AppIcon.STAR_FILL,
-                      title: '外观主题',
-                      subtitle: this.getThemeDisplayLabel(),
-                      action: () => { this.showThemeSheet = true; },
-                      accentColor: this.getThemePreviewColor()
-                    } })
-                  }
-                }
-              }
-              .padding(this.getSectionMargin(DesignConstants.SPACING.LG))
+                // === 用户卡 ===
+                this.buildUserCard()
 
-              // === Section 2: 隐私、安全与通知 ===
-              Column() {
-                SettingsSectionCard({ title: '隐私、安全与通知' }) {
-                  Column() {
-                    ForEach(this.buildPrivacyEntries(), (item: SettingsEntryItem) => {
-                      SettingsEntryRow({ item })
-                    }, (item: SettingsEntryItem) => item.title)
-                    ForEach(this.buildSystemEntries(), (item: SettingsEntryItem) => {
-                      SettingsEntryRow({ item })
-                    }, (item: SettingsEntryItem) => item.title)
-                  }
-                }
-              }
-              .padding(this.getSectionMargin())
-
-              // === Section 3: 账号、记录与高级 ===
-              Column() {
-                SettingsSectionCard({ title: '账号、记录与高级' }) {
-                  Column() {
-                    ForEach(this.buildAccountEntries(), (item: SettingsEntryItem) => {
-                      SettingsEntryRow({ item })
-                    }, (item: SettingsEntryItem) => item.title)
-                    SettingsEntryRow({ item: {
-                      icon: AppIcon.SETTINGS,
-                      title: '高级设置',
-                      subtitle: '开发者选项、诊断与缓存工具',
-                      action: () => AppRouter.push(PageNames.ADVANCED_SETTINGS)
-                    } })
-                  }
-                }
-              }
-              .padding(this.getSectionMargin())
-
-              // === Supplementary: 平台状态 ===
-              Column() {
-                SettingsSectionCard({ title: '平台状态' }) {
-                  SettingsMetaCard({
-                    meta: this.systemMeta,
-                    loading: this.systemMetaLoading,
-                    error: this.systemMetaError,
-                    lastChecked: this.systemMetaLastChecked,
-                    refreshAction: () => {
-                      this.loadSystemMeta(true);
-                      this.loadAnnouncements(true);
+                // === 外观 ===
+                SettingsGroupLabel({ label: '外观' })
+                Column() {
+                  SettingsSectionCard() {
+                    Column() {
+                      this.buildThemeSegment()
+                      SettingsToggleRow({
+                        icon: AppIcon.MOON,
+                        title: '深色模式',
+                        subtitle: '关闭时跟随系统深浅设置',
+                        isOn: this.isDarkForced,
+                        onToggle: (next: boolean) => { this.toggleDarkMode(next); }
+                      })
+                      SettingsEntryRow({ item: {
+                        icon: AppIcon.STAR_FILL,
+                        title: '更多外观模式',
+                        subtitle: '跟随系统 / 浮雕暖调（大图预览）',
+                        action: () => { this.showThemeSheet = true; }
+                      } })
                     }
-                  })
+                  }
                 }
-              }
-              .padding(this.getSectionMargin())
+                .padding(this.getSectionMargin(0))
 
-              // === Supplementary: 系统公告速览 ===
-              Column() {
-                SettingsSectionCard({ title: '系统公告速览' }) {
-                  AnnouncementSummaryCard({
-                    items: this.announcements,
-                    openAll: () => {
-                      const params = new AnnouncementsRouteParam();
-                      params.items = this.announcements as Object[];
-                      AppRouter.push(PageNames.ANNOUNCEMENTS, params);
+                // === 通知 ===
+                SettingsGroupLabel({ label: '通知' })
+                Column() {
+                  SettingsSectionCard() {
+                    Column() {
+                      SettingsToggleRow({
+                        icon: AppIcon.NOTIFICATION,
+                        title: '推送通知',
+                        subtitle: '当前设备提醒总开关（本地偏好）',
+                        isOn: this.pushNotifyEnabled,
+                        onToggle: (next: boolean) => { this.togglePushNotify(next); }
+                      })
+                      ForEach(this.buildSystemEntries(), (item: SettingsEntryItem) => {
+                        SettingsEntryRow({ item })
+                      }, (item: SettingsEntryItem) => item.title)
                     }
-                  })
+                  }
+                }
+                .padding(this.getSectionMargin(0))
+
+                // === 隐私与安全 ===
+                SettingsGroupLabel({ label: '隐私与安全' })
+                Column() {
+                  SettingsSectionCard() {
+                    Column() {
+                      SettingsToggleRow({
+                        icon: AppIcon.LOCK,
+                        title: '私密账号',
+                        subtitle: '开启后动态仅对关注者可见',
+                        isOn: this.privacyPrivate,
+                        pending: this.privacyPending,
+                        onToggle: (next: boolean) => { this.togglePrivacyPrivate(next); }
+                      })
+                      SettingsToggleRow({
+                        icon: AppIcon.LOCATION,
+                        title: '位置共享',
+                        subtitle: '控制附近的人是否可以看到你的距离',
+                        isOn: this.locationVisible,
+                        pending: this.locationPending,
+                        onToggle: (next: boolean) => { this.toggleLocationVisible(next); }
+                      })
+                      ForEach(this.buildPrivacyEntries(), (item: SettingsEntryItem) => {
+                        SettingsEntryRow({ item })
+                      }, (item: SettingsEntryItem) => item.title)
+                      SettingsEntryRow({ item: this.buildSecurityEntry() })
+                    }
+                  }
+                }
+                .padding(this.getSectionMargin(0))
+
+                // === 通用 ===
+                SettingsGroupLabel({ label: '通用' })
+                Column() {
+                  SettingsSectionCard() {
+                    Column() {
+                      ForEach(this.buildAccountEntries(), (item: SettingsEntryItem) => {
+                        SettingsEntryRow({ item })
+                      }, (item: SettingsEntryItem) => item.title)
+                      SettingsEntryRow({ item: {
+                        icon: AppIcon.SETTINGS,
+                        title: '高级设置',
+                        subtitle: '开发者选项、诊断与缓存工具',
+                        action: () => AppRouter.push(PageNames.ADVANCED_SETTINGS)
+                      } })
+                      SettingsEntryRow({ item: {
+                        icon: AppIcon.INFO,
+                        title: '关于',
+                        subtitle: this.systemMeta ? `版本 ${this.systemMeta.version}` : '版本信息加载中…',
+                        action: () => { this.loadSystemMeta(true); }
+                      } })
+                    }
+                  }
+                }
+                .padding(this.getSectionMargin(0))
+
+                // === 平台信息（本端补充运维卡，前端无对应分组） ===
+                SettingsGroupLabel({ label: '平台信息' })
+                Column() {
+                  SettingsSectionCard() {
+                    Column() {
+                      SettingsMetaCard({
+                        meta: this.systemMeta,
+                        loading: this.systemMetaLoading,
+                        error: this.systemMetaError,
+                        lastChecked: this.systemMetaLastChecked,
+                        refreshAction: () => {
+                          this.loadSystemMeta(true);
+                          this.loadAnnouncements(true);
+                        }
+                      })
+                      AnnouncementSummaryCard({
+                        items: this.announcements,
+                        openAll: () => {
+                          const params = new AnnouncementsRouteParam();
+                          params.items = this.announcements as Object[];
+                          AppRouter.push(PageNames.ANNOUNCEMENTS, params);
+                        }
+                      })
+                      SupportConfigCard({ config: this.clientConfig })
+                    }
+                  }
+                }
+                .padding(this.getSectionMargin(0))
+
+                if (this.isLoggedIn) {
+                  Button('退出登录')
+                    .width('100%')
+                    .height(DesignConstants.COMPONENT.LOGOUT_BUTTON_HEIGHT)
+                    .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+                    .fontColor(this.getCurrentThemePalette().accentBackground)
+                    .fontSize(DesignConstants.FONT.SIZE.LG)
+                    .type(ButtonType.Normal)
+                    .borderRadius(DesignConstants.SHAPE.BUTTON)
+                    .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+                    .onClick(() => { this.showLogoutConfirm = true; })
                 }
               }
-              .padding(this.getSectionMargin())
-
-              // === Supplementary: 公开配置与帮助 ===
-              Column() {
-                SettingsSectionCard({ title: '公开配置与帮助' }) {
-                  SupportConfigCard({ config: this.clientConfig })
-                }
-              }
-              .padding(this.getSectionMargin())
-
-              if (this.isLoggedIn) {
-                Button('退出登录')
-                  .width('100%')
-                  .height(DesignConstants.COMPONENT.LOGOUT_BUTTON_HEIGHT)
-                  .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-                  .fontColor(this.getCurrentThemePalette().accentBackground)
-                  .fontSize(DesignConstants.FONT.SIZE.LG)
-                  .type(ButtonType.Normal)
-                  .borderRadius(DesignConstants.SHAPE.BUTTON)
-                  .shadow(this.getCurrentThemePalette().controlShadow)
-                  .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-                  .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.XXL })
-                  .onClick(() => { this.logout(); })
-              }
+              .width('100%')
             }
           }
           .scrollBar(BarState.Auto)
-          .padding({ top: DesignConstants.SPACING.LG, bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })
+          .padding({ bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })
         }
         .onRefreshing(() => {
           if (!this.metaRefreshing) {
@@ -421,13 +704,27 @@ export struct SettingsPage {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor(this.getCurrentThemePalette().pageBackground)
       .bindSheet($$this.showThemeSheet, this.ThemeSheet(), {
         height: SheetSize.FIT_CONTENT,
         showClose: true,
         dragBar: true,
         backgroundColor: this.getCurrentThemePalette().sheetBackground
       })
+
+      // 退出登录二次确认
+      SystemDialog({
+        visible: this.showLogoutConfirm,
+        title: '退出登录',
+        description: '退出后需要重新登录',
+        confirmText: '退出登录',
+        confirmVariant: 'danger',
+        onCancel: () => { this.showLogoutConfirm = false; },
+        onConfirm: () => {
+          this.showLogoutConfirm = false;
+          this.logout();
+        }
+      })
+      }
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

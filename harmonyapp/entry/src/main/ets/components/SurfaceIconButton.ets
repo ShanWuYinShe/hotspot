@@ -2,6 +2,7 @@ import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
+import { LucideIcon } from './LucideIcon';
 import { curves } from '@kit.ArkUI';
 
 export type SurfaceIconButtonKind = 'primary' | 'neutral';
@@ -51,11 +52,11 @@ export struct SurfaceIconButton {
 
   build() {
     Button() {
-      Text() {
-        SymbolSpan($r(this.icon))
-          .fontSize(this.glyphSize)
-          .fontColor([this.getIconColor()])
-      }
+      LucideIcon({
+        icon: this.icon,
+        size: this.glyphSize,
+        color: this.getIconColor()
+      })
     }
     .type(ButtonType.Normal)
     .stateEffect(false)

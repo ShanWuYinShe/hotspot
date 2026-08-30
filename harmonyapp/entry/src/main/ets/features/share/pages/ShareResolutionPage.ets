@@ -136,7 +136,6 @@ export struct ShareResolutionPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, 0, 0)
       })
-      .backgroundColor(this.getCurrentThemePalette().pageBackground)
       }
     }
     .hideTitleBar(true)

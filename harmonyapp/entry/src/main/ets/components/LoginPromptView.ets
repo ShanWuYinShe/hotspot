@@ -51,6 +51,8 @@ export struct LoginPromptView {
   @State isQuickInputFocused: boolean = false;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  /** 作为独立全屏页时由调用方注入背景；嵌入场景不传则透明（让父容器背景透出）。 */
+  @Prop surfaceColor: ResourceColor | null = null;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -58,13 +60,25 @@ export struct LoginPromptView {
 
   build() {
     Column({ space: DesignConstants.SPACING.LG2 }) {
-      // 图标
-      Text() {
-        SymbolSpan($r(this.icon))
-          .fontSize(DesignConstants.FONT.SIZE.HERO_LARGE)
-          .fontColor([this.getPalette().iconMuted])
+      // 图标（accent 淡底圆容器 + 主题色 glyph + 光晕，对齐前端 EmptyState 柔和 accent 图标）
+      Stack() {
+        Column()
+          .width(DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE)
+          .height(DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .backgroundColor(this.getPalette().accentMuted)
+          .shadow(this.getPalette().accentShadow)
+
+        Text() {
+          SymbolSpan($r(this.icon))
+            .fontSize(DesignConstants.FONT.SIZE.XXXL)
+            .fontColor([this.getPalette().accentBackground])
+            .opacity(DesignConstants.OPACITY.EMPHASIZED)
+        }
       }
-      .margin({ bottom: DesignConstants.SPACING.XS })
+      .width(DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE)
+      .height(DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE)
+      .margin({ bottom: DesignConstants.SPACING.LG })
 
       // 主标题
       Text(this.title)
@@ -80,7 +94,7 @@ export struct LoginPromptView {
         .textAlign(TextAlign.Center)
         .lineHeight(DesignConstants.FONT.LINE_HEIGHT.MD)
 
-      // 按钮区（胶囊化加阴影）
+      // 按钮区（全宽铺满，去掉旧 80% 限制让内容真正占满页面宽度）
       Column({ space: DesignConstants.SPACING.MD }) {
         SystemButton({
           label: '快速体验（无需注册）',
@@ -102,7 +116,7 @@ export struct LoginPromptView {
           }
         })
       }
-      .width('80%')
+      .width('100%')
       .margin({ top: DesignConstants.SPACING.SM })
 
       // 底部提示
@@ -116,10 +130,13 @@ export struct LoginPromptView {
     }
     .width('100%')
     .height('100%')
-    .justifyContent(FlexAlign.Center)
+    // 嵌入场景：内容顶部对齐 + 水平靠左，让主内容真正占满页面宽度（旧的垂直居中 + 80% 按钮
+    // 在嵌入到 ProfilePage 时视觉上"集中在中间 50%"，看起来严重没占满）
+    .justifyContent(FlexAlign.Start)
     .padding(DesignConstants.SPACING.XXL)
-    .backgroundColor(this.getPalette().pageBackground)
-    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
+    // 嵌入场景下不设自己的页面背景（让父容器 PageShellContainer 的 pageBackground + ambientGlow 透出）；
+    // 仅作为独立全屏页时由调用方注入 surfaceColor。
+    .backgroundColor(this.surfaceColor ?? DesignConstants.COLOR.TRANSPARENT)
     .bindSheet($$this.showQuickStart, this.buildQuickStartSheet(), {
       height: SheetSize.FIT_CONTENT,
       showClose: true,

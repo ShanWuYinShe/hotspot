@@ -65,7 +65,7 @@ export struct SystemDialog {
               .lineHeight(DesignConstants.FONT.LINE_HEIGHT.SM)
           }
 
-          Row() {
+          Row({ space: DesignConstants.SPACING.MD }) {
             if (this.showCancel) {
               Column() {
                 SystemButton({
@@ -98,6 +98,8 @@ export struct SystemDialog {
         .padding(DesignConstants.SPACING.XL)
         .backgroundColor(this.getPalette().surfaceBackground)
         .borderRadius(DesignConstants.SHAPE.CARD) // 20
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
+        .shadow(this.getPalette().elevatedShadow)
         .alignItems(HorizontalAlign.Center)
       }
       .width('100%')

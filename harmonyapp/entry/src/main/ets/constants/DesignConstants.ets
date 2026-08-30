@@ -44,7 +44,6 @@ export interface FontSizes {
   XS2: number;
   LG_PLUS: number;
   HERO: number;
-  HERO_LARGE: number;
 }
 
 export interface FontLineHeights {
@@ -197,7 +196,11 @@ export interface BorderWidthSystem {
 
 // ==================== 组件特定常量接口 ====================
 export interface AvatarSizes {
+  /** 22 — 瀑布墙卡作者头像（对齐前端 MomentCard size 22px） */
+  XXS: number;
   XS: number;
+  /** 68 — 个人页身份卡头像（对齐前端 ProfileMobile Avatar size 68px） */
+  PROFILE: number;
   SMALL: number;
   /** 44 — 通知行/会话列表头像（对齐前端 size-11） */
   SMALL_PLUS: number;
@@ -220,6 +223,8 @@ export interface ComponentConstants {
   SHEET_ACTION_HEIGHT: number;
   /** 主按钮大号（48，登录/提交主操作） */
   BUTTON_HEIGHT_LG: number;
+  /** 次级按钮小号（36，列表/卡片内嵌入按钮） */
+  BUTTON_HEIGHT_SM: number;
   /** 筛选 chip 高度（30） */
   FILTER_CHIP_HEIGHT: number;
   /** 状态图标尺寸（28，定位/通知 banner） */
@@ -236,6 +241,8 @@ export interface ComponentConstants {
   BANNER_HEIGHT: number;
   /** 首页群组横滑卡片宽度（140） */
   GROUP_CARD_WIDTH: number;
+  /** 附近群组 featured 精选全宽卡高度（对齐前端 min-h-85=340px） */
+  GROUP_FEATURED_HEIGHT: number;
   /** 通知中心加载空态区域高度（200） */
   LOADING_AREA_HEIGHT: number;
   /** 创建群组人数输入框宽度（64） */
@@ -330,7 +337,7 @@ export interface LayoutSystem {
   RIGHT_SIDEBAR_WIDTH: number;
   /** 移动端通栏底栏高度（对齐前端 MobileBottomNav） */
   MOBILE_BOTTOM_NAV_HEIGHT: number;
-  /** 平板浮动玻璃药丸底栏最大宽度（对齐前端 TabletBottomNav） */
+  /** 平板浮动玻璃药丸底栏最大宽度（对齐前端 --cst-tablet-dock-max 680px） */
   TABLET_NAV_MAX_WIDTH: number;
   /** 中央发布 FAB 尺寸（对齐前端 52x52） */
   FAB_SIZE: number;
@@ -413,13 +420,12 @@ const FONT: FontSystem = {
     LG: 16,
     XL: 20,
     XXL: 24,
-    XXXL: 32,
+    XXXL: 30, // 对齐前端 text-3xl(30)；原 32 为 2px 近邻档已归并
     XS2: 10, // 最小档（对齐前端 --text-xxs；原 9fp 的 XS_MINUS 已按可读性下限收敛并档）
     // 近邻档（13/15/22/28）已按前端口径归并：13→12、15→14、22→20、28→24，
     // 消除 1-2px 近邻档位（前端 theme-registry 同原则）
     LG_PLUS: 18,
-    HERO: 48,
-    HERO_LARGE: 56,
+    HERO: 36, // 对齐前端 text-4xl(36，前端最大 text 档)；原 48/56 超前端刻度已归并
   },
   WEIGHT: {
     REGULAR: 400,
@@ -555,7 +561,9 @@ const EFFECT: MaterialEffectSystem = {
 
 const COMPONENT: ComponentConstants = {
   AVATAR_SIZE: {
+    XXS: 22,
     XS: 32,
+    PROFILE: 68,
     SMALL: 40,
     SMALL_PLUS: 44,
     MEDIUM: 48,
@@ -569,6 +577,7 @@ const COMPONENT: ComponentConstants = {
   ACTION_BUTTON_HEIGHT_LG: 34,
   SHEET_ACTION_HEIGHT: 44,
   BUTTON_HEIGHT_LG: 48,
+  BUTTON_HEIGHT_SM: 36,
   FILTER_CHIP_HEIGHT: 30,
   STATUS_ICON_SIZE: 28,
   LOADING_ICON_SIZE: 20,
@@ -577,6 +586,8 @@ const COMPONENT: ComponentConstants = {
   BRAND_ICON_SIZE: 38,
   BANNER_HEIGHT: 140,
   GROUP_CARD_WIDTH: 140,
+  /** 附近群组 featured 精选全宽卡高度（对齐前端 min-h-85=340px） */
+  GROUP_FEATURED_HEIGHT: 340,
   LOADING_AREA_HEIGHT: 200,
   NUMBER_INPUT_WIDTH: 64,
   ICON_SIZE_XS: 16,
@@ -618,7 +629,7 @@ const LAYOUT: LayoutSystem = {
   DESKTOP_SIDEBAR_WIDTH: 224,
   RIGHT_SIDEBAR_WIDTH: 220,
   MOBILE_BOTTOM_NAV_HEIGHT: 56,
-  TABLET_NAV_MAX_WIDTH: 520,
+  TABLET_NAV_MAX_WIDTH: 680,
   FAB_SIZE: 52,
   ICON_BUTTON_SIZE: 36,
   LABEL_WIDTH: 60,

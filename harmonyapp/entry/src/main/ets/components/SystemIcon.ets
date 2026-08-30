@@ -67,6 +67,7 @@ export enum AppIcon {
   HEART_FILL = 'sys.symbol.heart_fill',
   STAR = 'sys.symbol.star',
   STAR_FILL = 'sys.symbol.star_fill',
+  MOON = 'sys.symbol.moon',
 
   // 系统图标
   INFO = 'sys.symbol.info_circle',
@@ -201,6 +202,7 @@ export const AppIconMap: Map<AppIcon, string> = new Map<AppIcon, string>([
   [AppIcon.CODE, 'doc_text'],
   [AppIcon.BUG, 'exclamationmark'],
   [AppIcon.TIME, 'clock'],
+  [AppIcon.MOON, 'moon'],
   [AppIcon.ALL, 'square_grid_2x2']
 ]);
 

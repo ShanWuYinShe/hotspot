@@ -1,19 +1,18 @@
 /**
  * 附近的人 - 独立列表页
- * 对齐前端 /users/nearby：用户列表（距离/在线）+ 下拉刷新 + 上拉分页。
- * 数据来自 users/search（reference_point + radius + sort_by=distance）。
+ * 对齐前端 /nearby/people：2 列 3:4 用户图片卡墙（桌面 3 列）+ 距离徽章 + 行内关注，
+ * 搜索/排序/统计行保留；下拉刷新 + 上拉分页。数据来自 users/search。
  */
 
 import { GlobalStateManager, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
-import { curves } from '@kit.ArkUI';
 import { PageShellContainer } from '../../../components/PageShellContainer';
-import type { BreakpointType } from '../../../core/responsive/Breakpoint';
+import { isDesktopForm, BreakpointType } from '../../../core/responsive/Breakpoint';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { AppRouter, ProfileRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { UserItem, GeoPoint, SearchUsersRequest } from '../../../core/types/api';
-import { SystemAvatar } from '../../../components/SystemAvatar';
+import { UserCard } from '../components/UserCard';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemInput } from '../../../components/SystemInput';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -46,8 +45,10 @@ export struct NearbyUsersListPage {
   @State errorMessage: string = '';
   @State keyword: string = '';
   @State activeSort: string = 'distance';
+  // 「在线」tab：users/search 接口无在线筛选/排序参数，但 UserItem 带 presence_status，
+  // 因此「在线」为客户端过滤开关（不改变服务端 sort_by）
+  @State onlineOnly: boolean = false;
   @State onlineCount: number = 0;
-  @State private pressedUserKey: string = '';
   private usersDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
   private isDestroyed: boolean = false;
   private loadVersion: number = 0;
@@ -58,11 +59,6 @@ export struct NearbyUsersListPage {
 
   private getSurfaceBorder(): ResourceColor {
     return this.getCurrentThemePalette().borderColor;
-  }
-
-  private getSortLabel(): string {
-    const labelMap: Record<string, string> = { 'distance': '距离', 'relevance': '共同好友', 'newest': '最新' };
-    return labelMap[this.activeSort] || '距离';
   }
 
   private getReferencePoint(): GeoPoint | null {
@@ -83,6 +79,15 @@ export struct NearbyUsersListPage {
 
   private hasAnyData(): boolean {
     return this.users.length > 0;
+  }
+
+  /** 刷新列表数据源：onlineOnly 时按 presence_status 客户端过滤在线用户 */
+  private refreshUsersDataSource(): void {
+    if (this.onlineOnly) {
+      this.usersDataSource.setData(this.users.filter((u: UserItem) => u.presence_status === 'online'));
+    } else {
+      this.usersDataSource.setData(this.users);
+    }
   }
 
   private async loadUsers(refresh: boolean = false): Promise<void> {
@@ -116,7 +121,7 @@ export struct NearbyUsersListPage {
         this.users = typeof myId === 'string'
           ? items.filter((u: UserItem) => u.user!.user_id !== myId)
           : items;
-        this.usersDataSource.setData(this.users);
+        this.refreshUsersDataSource();
         this.hasMore = !!(response.data?.next_cursor);
         this.nextCursor = response.data?.next_cursor ?? '';
         this.onlineCount = this.users.filter((u: UserItem) => u.presence_status === 'online').length;
@@ -162,7 +167,10 @@ export struct NearbyUsersListPage {
           ? items.filter((u: UserItem) => u.user!.user_id !== myId)
           : items;
         this.users = this.users.concat(filtered);
-        this.usersDataSource.appendData(filtered);
+        // onlineOnly 模式下仅追加在线用户，保持当前过滤视图一致
+        this.usersDataSource.appendData(
+          this.onlineOnly ? filtered.filter((u: UserItem) => u.presence_status === 'online') : filtered
+        );
         this.hasMore = !!(response.data?.next_cursor);
         this.nextCursor = response.data?.next_cursor ?? '';
       }
@@ -173,88 +181,9 @@ export struct NearbyUsersListPage {
     }
   }
 
-  private openProfile(userId: string): void {
-    const params = new ProfileRouteParam();
-    params.userId = userId;
-    AppRouter.push(PageNames.PROFILE, params);
-  }
-
-  @Builder
-  private buildUserRow(user: UserItem) {
-    Row({ space: DesignConstants.SPACING.MD }) {
-      Stack({ alignContent: Alignment.BottomEnd }) {
-        SystemAvatar({
-          avatarUrl: user.user?.avatar_url ?? '',
-          name: user.user?.nickname ?? '',
-          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM,
-          shape: 'circle'
-        })
-        if (user.presence_status === 'online') {
-          Row()
-            .width(DesignConstants.SPACING.MD)
-            .height(DesignConstants.SPACING.MD)
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .backgroundColor(this.getCurrentThemePalette().success)
-            .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getCurrentThemePalette().surfaceBackground })
-        }
-      }
-      .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
-      .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
-
-      Column({ space: DesignConstants.SPACING.XS }) {
-        Text(user.user?.nickname ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        Row({ space: DesignConstants.SPACING.SM }) {
-          if (user.presence_status === 'online') {
-            Text('在线')
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getCurrentThemePalette().success)
-          }
-          if (user.location?.distance !== undefined && user.location?.distance !== null) {
-            Text(LocationUtil.formatDistance(user.location.distance))
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-          }
-        }
-        .alignItems(VerticalAlign.Center)
-      }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
-
-      Text() {
-        SymbolSpan($r(AppIcon.ARROW_RIGHT))
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor([this.getCurrentThemePalette().textTertiary])
-      }
-    }
-    .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
-    // 整行按压反馈（对齐 tap-97 语义）
-    .scale(this.pressedUserKey === (user.user?.user_id ?? '') ?
-      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
-      { x: 1, y: 1 })
-    .animation({ curve: curves.springMotion(
-      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-    ) })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.pressedUserKey = user.user?.user_id ?? '';
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.pressedUserKey = '';
-      }
-    })
-    .onClick(() => {
-      const userId = user.user?.user_id;
-      if (userId) {
-        this.openProfile(userId);
-      }
-    })
+  private getGridColumnCount(): number {
+    // 对齐前端 /nearby/people gridColumns：mobile/tablet 2 列，desktop(≥1280) 3 列
+    return isDesktopForm(this.currentBreakpoint) ? 3 : 2;
   }
 
   build() {
@@ -286,14 +215,27 @@ export struct NearbyUsersListPage {
         // 排序 TabsPillGroup（对齐前端 TabBar）
         TabsPillGroup({
           tabs: [{ label: '距离' }, { label: '在线' }, { label: '共同好友' }],
-          activeIndex: Math.max(0, ['距离', '在线', '共同好友'].indexOf(this.getSortLabel())),
+          activeIndex: this.onlineOnly ? 1 : (this.activeSort === 'relevance' ? 2 : 0),
           actions: {
             onChange: (index: number) => {
+              // 「在线」非服务端排序（接口无在线参数），仅切换客户端过滤，无需重新请求
+              if (index === 1) {
+                if (!this.onlineOnly) {
+                  this.onlineOnly = true;
+                  this.refreshUsersDataSource();
+                }
+                return;
+              }
               const sortMap: string[] = ['distance', 'distance', 'relevance'];
               const newSort = sortMap[index] || 'distance';
-              if (newSort !== this.activeSort) {
+              const needReload = newSort !== this.activeSort;
+              this.onlineOnly = false;
+              if (needReload) {
                 this.activeSort = newSort;
                 this.loadUsers(true);
+              } else {
+                // 排序未变，仅退出在线过滤，直接恢复完整列表
+                this.refreshUsersDataSource();
               }
             }
           }
@@ -377,32 +319,37 @@ export struct NearbyUsersListPage {
             .layoutWeight(1)
         } else {
           Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-            List() {
-              LazyForEach(this.usersDataSource, (user: UserItem) => {
-                ListItem() {
-                  this.buildUserRow(user)
-                }
-              }, (user: UserItem) => user.user?.user_id ?? '')
+            Column() {
+              Grid() {
+                LazyForEach(this.usersDataSource, (user: UserItem) => {
+                  GridItem() {
+                    UserCard({ user: user })
+                  }
+                }, (user: UserItem) => user.user?.user_id ?? '')
+              }
+              .width('100%')
+              .layoutWeight(1)
+              .columnsTemplate(this.getGridColumnCount() === 3 ? '1fr 1fr 1fr' : '1fr 1fr')
+              .columnsGap(DesignConstants.SPACING.LG)
+              .rowsGap(DesignConstants.SPACING.LG)
+              .cachedCount(4)
+              .scrollBar(BarState.Auto)
+              .onReachEnd(() => { this.loadMoreUsers(); })
 
+              // 分页状态条（Grid 外常驻，规避 GridItem 跨列占位）
               if (this.hasMore) {
-                ListItem() {
-                  LoadingMoreIndicator()
-                }
+                LoadingMoreIndicator()
               } else {
-                ListItem() {
-                  Text('没有更多了')
-                    .fontSize(DesignConstants.FONT.SIZE.XS)
-                    .fontColor(this.getCurrentThemePalette().textTertiary)
-                    .width('100%')
-                    .textAlign(TextAlign.Center)
-                    .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
-                }
+                Text('没有更多了')
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .fontColor(this.getCurrentThemePalette().textTertiary)
+                  .width('100%')
+                  .textAlign(TextAlign.Center)
+                  .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.LG })
               }
             }
             .width('100%')
-            .layoutWeight(1)
-            .scrollBar(BarState.Auto)
-            .onReachEnd(() => { this.loadMoreUsers(); })
+            .height('100%')
           }
           .layoutWeight(1)
           .onRefreshing(() => { this.loadUsers(true); })
@@ -410,7 +357,6 @@ export struct NearbyUsersListPage {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
     }
     .hideTitleBar(true)

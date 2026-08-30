@@ -25,12 +25,14 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { SystemDialog } from '../../../components/SystemDialog';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { SystemInput } from '../../../components/SystemInput';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { useMasterDetail } from '../../../core/responsive/Breakpoint';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
+import { LucideIcon } from '../../../components/LucideIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { MessageCacheService, ChatCacheItem } from '../../../core/database/MessageCacheService';
@@ -88,6 +90,8 @@ export struct MessagePage {
   private groupNextCursor: string = '';
   @State isLoadingMore: boolean = false;
   @State deletingChatKeys: string[] = [];
+  @State showDeleteChatConfirm: boolean = false;
+  @State pendingDeleteChat: ChatItem | null = null;
   @State pressedChatKey: string = '';
   @State searchKeyword: string = '';
   @State chatItems: ChatItem[] = [];
@@ -613,6 +617,7 @@ export struct MessagePage {
   }
 
   build() {
+  Stack() {
   PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
     Column() {
       // 粘性头部 —— 统一走 SystemPageHeader（标题 + 未读副标题 + ADD trailing）
@@ -627,11 +632,11 @@ export struct MessagePage {
         // trailing: 添加(菜单)（对齐前端移动端 trailing 仅 Plus；搜索走下方本地过滤框）
         Row({ space: DesignConstants.SPACING.MD }) {
           Row() {
-            Text() {
-              SymbolSpan($r(AppIcon.ADD))
-                .fontSize(DesignConstants.FONT.SIZE.LG)
-                .fontColor([this.getCurrentThemePalette().textSecondary])
-            }
+            LucideIcon({
+              icon: AppIcon.ADD,
+              size: DesignConstants.FONT.SIZE.LG,
+              paletteRole: 'textSecondary'
+            })
           }
           .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
           .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
@@ -721,11 +726,11 @@ export struct MessagePage {
       // 宽屏（master-detail）提示：当前点击会话仍 push 独立页（保持聊天功能完整）
       if (useMasterDetail(this.currentBreakpoint)) {
         Row({ space: DesignConstants.SPACING.SM }) {
-          Text() {
-            SymbolSpan($r(AppIcon.INFO))
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor([this.getCurrentThemePalette().accentText])
-          }
+          LucideIcon({
+            icon: AppIcon.INFO,
+            size: DesignConstants.FONT.SIZE.SM,
+            paletteRole: 'accentText'
+          })
           Text('宽屏模式：点击左侧会话将在新页面打开聊天窗口')
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getCurrentThemePalette().textSecondary)
@@ -853,7 +858,29 @@ export struct MessagePage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(this.getCurrentThemePalette().pageBackground)
+  }
+
+  // 删除会话 / 退出群组二次确认
+  SystemDialog({
+    visible: this.showDeleteChatConfirm,
+    title: this.pendingDeleteChat?.type === 'group' ? '退出群组' : '删除会话',
+    description: this.pendingDeleteChat?.type === 'group' ?
+      '退出后将不再接收该群组的消息' : '删除后该会话将从消息列表移除',
+    confirmText: this.pendingDeleteChat?.type === 'group' ? '退出群组' : '删除',
+    confirmVariant: 'danger',
+    onCancel: () => {
+      this.showDeleteChatConfirm = false;
+      this.pendingDeleteChat = null;
+    },
+    onConfirm: () => {
+      const target = this.pendingDeleteChat;
+      this.showDeleteChatConfirm = false;
+      this.pendingDeleteChat = null;
+      if (target) {
+        this.deleteChat(target);
+      }
+    }
+  })
   }
   }
 
@@ -1022,8 +1049,11 @@ export struct MessagePage {
         action: () => { this.togglePin(item); }
       },
       {
-        value: '删除',
-        action: () => { this.deleteChat(item); }
+        value: item.type === 'group' ? '退出群组' : '删除',
+        action: () => {
+          this.pendingDeleteChat = item;
+          this.showDeleteChatConfirm = true;
+        }
       }
     ])
   }

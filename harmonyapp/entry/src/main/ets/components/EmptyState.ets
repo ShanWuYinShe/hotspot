@@ -50,6 +50,7 @@ export struct EmptyState {
               .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .backgroundColor(this.getPalette().accentMuted)
+              .shadow(this.getPalette().accentShadow)
 
             Text() {
               SymbolSpan($r(this.icon))

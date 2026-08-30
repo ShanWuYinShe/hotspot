@@ -24,12 +24,14 @@ import { SystemToast } from '../../../components/SystemToast';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemTextArea } from '../../../components/SystemTextArea';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { SystemDialog } from '../../../components/SystemDialog';
 import { LoginPromptView } from '../../../components/LoginPromptView';
 import { AccountInfo, UpdateLocationRequest, UpgradeAccountRequest, UserItem, OpenUserDoorRequest, UserSharePayload, MomentItem, FetchUserMomentsRequest } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { common } from '@kit.AbilityKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
+import { LucideIcon } from '../../../components/LucideIcon';
 import { EmptyState } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
@@ -82,6 +84,7 @@ export struct ProfilePage {
   @State editAvatarLocalUri: string = '';
   @State editAvatarFileId: string = '';
   @State isAvatarUploading: boolean = false;
+  @State showLogoutConfirm: boolean = false;
   @State isLoading: boolean = false;
   @State myMomentsCount: number = 0;
   @State myGroupsCount: number = 0;
@@ -462,6 +465,46 @@ export struct ProfilePage {
     }
   }
 
+  /**
+   * 身份卡/头像相机按钮（非编辑态）：选图后直接上传并更新头像。
+   * 此前复用 selectAvatarForEdit，仅写入编辑态暂存字段，
+   * 未进入编辑态时用户没有保存入口，头像变更会丢失。
+   */
+  private async changeAvatarDirectly(): Promise<void> {
+    if (this.isLoading || this.isAvatarUploading) {
+      return;
+    }
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const selectedUris = await MediaServiceManager.selectImages(context, 1);
+      if (selectedUris.length === 0) {
+        return;
+      }
+      this.isAvatarUploading = true;
+      const compressedPath = await MediaServiceManager.compressImage(context, selectedUris[0], 80, 1024 * 1024 * 2);
+      const uploadUri = await MediaServiceManager.prepareFileForUpload(context, compressedPath);
+      const uploadResult = await ApiClient.uploadFile(context, uploadUri, 'avatar');
+      if (!uploadResult.file_id) {
+        throw new Error('头像上传失败');
+      }
+      const updateResponse = await ApiClient.updateProfile({ avatar_file_id: uploadResult.file_id });
+      if (updateResponse.code !== 0) {
+        throw new Error(getErrorMessage(updateResponse, '头像更新失败'));
+      }
+      const accountResponse = await ApiClient.getAccountInfo();
+      if (accountResponse.code === 0 && accountResponse.data) {
+        this.stateManager.updateUser(accountResponse.data);
+      }
+      SystemToast.showSuccess('头像已更新', this.getUIContext());
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `更换头像失败: ${JSON.stringify(error)}`);
+      const message = error instanceof Error ? error.message : '更换头像失败，请重试';
+      SystemToast.showError(message, this.getUIContext());
+    } finally {
+      this.isAvatarUploading = false;
+    }
+  }
+
   private async ensureEditAvatarUploaded(context: common.UIAbilityContext): Promise<string | undefined> {
     if (!this.editAvatarLocalUri) {
       return undefined;
@@ -642,7 +685,7 @@ export struct ProfilePage {
 
   build() {
     NavDestination() {
-      PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
+      PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, ambientGlow: false }) {
         Stack({ alignContent: Alignment.Top }) {
         Column() {}
           .width('50%')
@@ -730,6 +773,20 @@ export struct ProfilePage {
         .width('100%')
         .height('100%')
         .constraintSize({ maxWidth: useMasterDetail(this.currentBreakpoint) ? 720 : '100%' })
+
+        // 退出登录二次确认（危险操作统一样式：danger 确认键）
+        SystemDialog({
+          visible: this.showLogoutConfirm,
+          title: '退出登录',
+          description: '退出后需要重新登录',
+          confirmText: '退出登录',
+          confirmVariant: 'danger',
+          onCancel: () => { this.showLogoutConfirm = false; },
+          onConfirm: () => {
+            this.showLogoutConfirm = false;
+            this.logout();
+          }
+        })
       }
       .width('100%')
       .height('100%')
@@ -1001,11 +1058,11 @@ export struct ProfilePage {
       ListItem() {
         Column({ space: DesignConstants.SPACING.MD }) {
           Row({ space: DesignConstants.SPACING.SM }) {
-            Text() {
-              SymbolSpan($r(AppIcon.INFO))
-                .fontSize(DesignConstants.FONT.SIZE.LG)
-                .fontColor([this.getWarningTextColor()])
-            }
+            LucideIcon({
+              icon: AppIcon.INFO,
+              size: DesignConstants.FONT.SIZE.LG,
+              color: this.getWarningTextColor()
+            })
             Text('临时身份')
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
@@ -1067,7 +1124,7 @@ export struct ProfilePage {
         }
 
         ListItem() {
-          ProfileMenuItem({ title: '退出登录', icon: AppIcon.CLOSE, onTap: () => this.logout(), resolvedThemeId: this.resolvedThemeId })
+          ProfileMenuItem({ title: '退出登录', icon: AppIcon.CLOSE, onTap: () => { this.showLogoutConfirm = true; }, resolvedThemeId: this.resolvedThemeId })
         }
         .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
       }
@@ -1099,59 +1156,61 @@ export struct ProfilePage {
       } else {
         Scroll() {
           Column() {
-            // 头像区 (居中 + 发光 + 编辑按钮)
-            this.buildProfileAvatar()
+            if (useMasterDetail(this.currentBreakpoint)) {
+              // ======== 宽端（≥960）：保留垂直居中形态 ========
+              this.buildProfileAvatar()
 
-            // 简介
-            if (this.currentUser?.bio) {
-              Text(this.currentUser.bio)
-                .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor(this.getSecondaryTextColor())
-                .textAlign(TextAlign.Center)
-                .lineHeight(DesignConstants.FONT.LINE_HEIGHT.SM)
-                .margin({ top: DesignConstants.SPACING.XS })
-            }
-
-            // 所在地
-            if (this.currentUser?.location?.location_name) {
-              Row({ space: DesignConstants.SPACING.XS }) {
-                Text() {
-                  SymbolSpan($r(AppIcon.LOCATION))
-                    .fontSize(DesignConstants.FONT.SIZE.XS)
-                    .fontColor([this.getAccentBackground()])
-                }
-                Text(this.currentUser.location.location_name)
-                  .fontSize(DesignConstants.FONT.SIZE.XS)
-                  .fontColor(this.getSecondaryTextColor())
-              }
-              .margin({ top: DesignConstants.SPACING.SM })
-            }
-
-            // 编辑按钮
-            Button() {
-              Row({ space: DesignConstants.SPACING.SM2 }) {
-                Text() {
-                  SymbolSpan($r(AppIcon.EDIT))
-                    .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor([this.getSecondaryTextColor()])
-                }
-                Text('编辑资料')
+              if (this.currentUser?.bio) {
+                Text(this.currentUser.bio)
                   .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor(this.getSecondaryTextColor())
+                  .textAlign(TextAlign.Center)
+                  .lineHeight(DesignConstants.FONT.LINE_HEIGHT.SM)
+                  .margin({ top: DesignConstants.SPACING.XS })
               }
-            }
-            .type(ButtonType.Normal)
-            .width('100%')
-            .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
-            .borderRadius(DesignConstants.SHAPE.BUTTON)
-            .backgroundColor(this.getSurfaceBackground())
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .shadow(this.getCurrentThemePalette().controlShadow)
-            .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG2 })
-            .onClick(() => this.startEdit())
 
-            // 统计行 (3列: posts/followers/friends)
-            this.buildFigmaStatsRow()
+              if (this.currentUser?.location?.location_name) {
+                Row({ space: DesignConstants.SPACING.XS }) {
+                  LucideIcon({
+                    icon: AppIcon.LOCATION,
+                    size: DesignConstants.FONT.SIZE.XS,
+                    color: this.getAccentBackground()
+                  })
+                  Text(this.currentUser.location.location_name)
+                    .fontSize(DesignConstants.FONT.SIZE.XS)
+                    .fontColor(this.getSecondaryTextColor())
+                }
+                .margin({ top: DesignConstants.SPACING.SM })
+              }
+
+              Button() {
+                Row({ space: DesignConstants.SPACING.SM2 }) {
+                  LucideIcon({
+                    icon: AppIcon.EDIT,
+                    size: DesignConstants.FONT.SIZE.SM,
+                    color: this.getSecondaryTextColor()
+                  })
+                  Text('编辑资料')
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .fontColor(this.getSecondaryTextColor())
+                }
+              }
+              .type(ButtonType.Normal)
+              .width('100%')
+              .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
+              .borderRadius(DesignConstants.SHAPE.BUTTON)
+              .backgroundColor(this.getSurfaceBackground())
+              .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+              .shadow(this.getCurrentThemePalette().controlShadow)
+              .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG2 })
+              .onClick(() => this.startEdit())
+
+              this.buildFigmaStatsRow()
+            } else {
+              // ======== 移动/平板：前端 ProfileMobile 形态（身份卡 + 个人数据列表） ========
+              this.buildIdentityCard()
+              this.buildProfileDataList()
+            }
 
             // 标签栏 (posts/liked/saved) —— 统一 TabsPillGroup
             TabsPillGroup({
@@ -1180,7 +1239,7 @@ export struct ProfilePage {
               if (this.isAdminUser()) {
                 ProfileMenuItem({ title: '管理员工具台', icon: AppIcon.SHIELD, onTap: () => this.openAdminPanel(), resolvedThemeId: this.resolvedThemeId })
               }
-              ProfileMenuItem({ title: '退出登录', icon: AppIcon.CLOSE, onTap: () => this.logout(), resolvedThemeId: this.resolvedThemeId })
+              ProfileMenuItem({ title: '退出登录', icon: AppIcon.CLOSE, onTap: () => { this.showLogoutConfirm = true; }, resolvedThemeId: this.resolvedThemeId })
             }
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.SHAPE.CARD)
@@ -1200,9 +1259,237 @@ export struct ProfilePage {
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
   }
 
+  // ==================== 移动/平板身份卡（对齐前端 ProfileMobile 身份卡） ====================
   @Builder
-  private buildProfileAvatar() {
+  private buildIdentityCard() {
     Column() {
+      Row({ space: DesignConstants.SPACING.MD }) {
+        Stack({ alignContent: Alignment.BottomEnd }) {
+          SystemAvatar({
+            avatarUrl: this.currentUser?.avatar_url || '',
+            name: this.currentUser?.nickname || '',
+            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.PROFILE,
+            shape: 'circle',
+            showBorder: true
+          })
+
+          // 相机角钮（24vp accent 实底，点击换头像）
+          Button() {
+            LucideIcon({
+              icon: AppIcon.CAMERA,
+              size: DesignConstants.FONT.SIZE.XS2,
+              paletteRole: 'accentText'
+            })
+          }
+          .type(ButtonType.Normal)
+          .width(DesignConstants.COMPONENT.ICON_SIZE_SM)
+          .height(DesignConstants.COMPONENT.ICON_SIZE_SM)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .backgroundColor(this.getAccentBackground())
+          .border({
+            width: DesignConstants.BORDER_WIDTH.STRONG,
+            color: this.getCurrentThemePalette().pageBackground
+          })
+          .shadow(this.getCurrentThemePalette().accentShadow)
+          .onClick(() => this.changeAvatarDirectly())
+        }
+
+        Column({ space: DesignConstants.SPACING.THREE }) {
+          Text(this.currentUser?.nickname || '未命名用户')
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            .fontColor(this.getPrimaryTextColor())
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          if (this.currentUser?.user_id) {
+            Text(`@${this.currentUser.user_id}`)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getSecondaryTextColor())
+          }
+          if (this.currentUser?.location?.location_name) {
+            Row({ space: DesignConstants.SPACING.HALF }) {
+              LucideIcon({
+                icon: AppIcon.LOCATION,
+                size: DesignConstants.FONT.SIZE.XS,
+                color: this.getAccentBackground()
+              })
+              Text(this.currentUser.location.location_name)
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontColor(this.getSecondaryTextColor())
+            }
+            .alignItems(VerticalAlign.Center)
+          }
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+
+        // 编辑资料描边小钮
+        Button('编辑资料')
+          .type(ButtonType.Normal)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor(this.getPrimaryTextColor())
+          .backgroundColor(this.getSurfaceBackground())
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+          .borderRadius(DesignConstants.SHAPE.INPUT)
+          .padding({
+            left: DesignConstants.SPACING.MD2,
+            right: DesignConstants.SPACING.MD2,
+            top: DesignConstants.SPACING.SM,
+            bottom: DesignConstants.SPACING.SM
+          })
+          .onClick(() => this.startEdit())
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Top)
+
+      if (this.currentUser?.bio) {
+        Text(this.currentUser.bio)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getSecondaryTextColor())
+          .lineHeight(DesignConstants.FONT.LINE_HEIGHT.MD)
+          .width('100%')
+          .margin({ top: DesignConstants.SPACING.LG })
+      }
+
+      // 卡底三列统计（border-t + 竖分隔，对齐前端统计条）
+      Row() {
+        this.buildIdentityStat('瞬间', this.myMomentsCount, 0)
+        this.buildIdentityStat('关注者', this.myFollowersCount, 1)
+        this.buildIdentityStat('群组', this.myGroupsCount, 2)
+      }
+      .width('100%')
+      .border({
+        width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE },
+        color: { top: this.getSurfaceBorder() }
+      })
+      .margin({ top: DesignConstants.SPACING.LG })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+    .padding(DesignConstants.SPACING.LG2)
+    .borderRadius(DesignConstants.SHAPE.CARD)
+    .backgroundColor(this.getSurfaceBackground())
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+  }
+
+  @Builder
+  private buildIdentityStat(label: string, value: number, index: number) {
+    Row() {
+      if (index > 0) {
+        Column()
+          .width(DesignConstants.BORDER_WIDTH.HAIRLINE)
+          .height(DesignConstants.COMPONENT.ICON_SIZE_XS)
+          .backgroundColor(this.getSurfaceBorder())
+      }
+      Column({ space: DesignConstants.SPACING.HALF }) {
+        Text(formatCount(value))
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontColor(this.getPrimaryTextColor())
+        Text(label)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor(this.getSecondaryTextColor())
+      }
+      .layoutWeight(1)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+    }
+    .layoutWeight(1)
+    .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
+  }
+
+  // ==================== 移动/平板「个人数据」列表（对齐前端 ProfileMobile 5 行） ====================
+  @Builder
+  private buildProfileDataList() {
+    Column() {
+      // 头部行
+      Row() {
+        Column({ space: DesignConstants.SPACING.THREE }) {
+          Text('个人数据')
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontColor(this.getPrimaryTextColor())
+          Text('快速查看你的内容与关系')
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getSecondaryTextColor())
+        }
+        .alignItems(HorizontalAlign.Start)
+      }
+      .width('100%')
+      .padding(DesignConstants.SPACING.LG2)
+      .backgroundColor(this.getSurfaceBackground())
+
+      this.buildProfileDataRow(AppIcon.PHOTO, '我的瞬间', formatCount(this.myMomentsCount), () => {
+        AppRouter.push(PageNames.MOMENT);
+      }, true)
+      this.buildProfileDataRow(AppIcon.GROUP, '我的群组', formatCount(this.myGroupsCount), () => {
+        AppRouter.push(PageNames.GROUP);
+      }, false)
+      this.buildProfileDataRow(AppIcon.PERSON, '好友', formatCount(this.myFriendsCount), () => {
+        AppRouter.push(PageNames.RELATIONSHIP_HUB);
+      }, false)
+      this.buildProfileDataRow(AppIcon.STAR, '关注', formatCount(this.myFollowingCount), () => {
+        AppRouter.push(PageNames.RELATIONSHIP_HUB);
+      }, false)
+      this.buildProfileDataRow(AppIcon.HEART, '粉丝', formatCount(this.myFollowersCount), () => {
+        AppRouter.push(PageNames.RELATIONSHIP_HUB);
+      }, false)
+    }
+    .width('100%')
+    .borderRadius(DesignConstants.SHAPE.CARD)
+    .backgroundColor(this.getSurfaceBackground())
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+    .clip(true)
+    .margin({ top: DesignConstants.SPACING.LG })
+  }
+
+  @Builder
+  private buildProfileDataRow(icon: AppIcon, label: string, detail: string, onTap: () => void, divider: boolean) {
+    Row({ space: DesignConstants.SPACING.MD }) {
+      Row() {
+        LucideIcon({
+          icon: icon,
+          size: DesignConstants.FONT.SIZE.MD,
+          color: this.getAccentBackground()
+        })
+      }
+      .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+      .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
+      .justifyContent(FlexAlign.Center)
+
+      Text(label)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .fontColor(this.getPrimaryTextColor())
+        .layoutWeight(1)
+
+      Text(detail)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontColor(this.getSecondaryTextColor())
+
+      LucideIcon({
+        icon: AppIcon.ARROW_RIGHT,
+        size: DesignConstants.FONT.SIZE.SM,
+        color: this.getSecondaryTextColor()
+      })
+    }
+    .width('100%')
+    .padding({
+      left: DesignConstants.SPACING.LG2,
+      right: DesignConstants.SPACING.LG2,
+      top: DesignConstants.SPACING.MD3,
+      bottom: DesignConstants.SPACING.MD3
+    })
+    .border(divider ? {
+      width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
+      color: { bottom: this.getSurfaceBorder() }
+    } : { width: 0 })
+    .onClick(() => { onTap(); })
+  }
+
+  @Builder
+  private buildProfileAvatar() {    Column() {
       Stack({ alignContent: Alignment.BottomEnd }) {
         // 头像
         SystemAvatar({
@@ -1214,11 +1501,11 @@ export struct ProfilePage {
 
         // 相机按钮
         Button() {
-          Text() {
-            SymbolSpan($r(AppIcon.CAMERA))
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor([this.getCurrentThemePalette().accentText])
-          }
+          LucideIcon({
+            icon: AppIcon.CAMERA,
+            size: DesignConstants.FONT.SIZE.XS2,
+            paletteRole: 'accentText'
+          })
         }
         .type(ButtonType.Normal)
         .width(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
@@ -1227,7 +1514,7 @@ export struct ProfilePage {
         .backgroundColor(this.getAccentBackground())
         .border({ width: DesignConstants.BORDER_WIDTH.HEAVY, color: this.getCurrentThemePalette().pageBackground })
         .shadow(this.getCurrentThemePalette().accentShadow)
-        .onClick(() => this.selectAvatarForEdit())
+        .onClick(() => this.changeAvatarDirectly())
       }
       .margin({ top: DesignConstants.SPACING.LG2, bottom: DesignConstants.SPACING.MD })
 

@@ -27,6 +27,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { curves } from '@kit.ArkUI';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppIcon } from '../../../components/SystemIcon';
+import { LucideIcon } from '../../../components/LucideIcon';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
@@ -266,7 +267,7 @@ export struct LoginPage {
 
   build() {
     NavDestination() {
-    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
+    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true, ambientGlow: false }) {
       Column() {
       if (this.isLoading) {
         SystemLoadingView({
@@ -283,17 +284,18 @@ export struct LoginPage {
         Column() {
           // 顶部导航栏（固定）- 使用 SafeArea 避免与状态栏重叠
           Row() {
-            Text() {
-              SymbolSpan($r(AppIcon.BACK))
-                .fontSize(DesignConstants.FONT.SIZE.XXL)
-                .fontColor([this.getCurrentThemePalette().textPrimary])
-            }
+            // 返回钮：统一 lucide chevron-left + 按压缩放
+            LucideIcon({
+              icon: AppIcon.BACK,
+              size: DesignConstants.FONT.SIZE.XXL,
+              paletteRole: 'textPrimary'
+            })
             .onClick(() => {
               AppRouter.pop();
             })
             .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
             .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
-            .textAlign(TextAlign.Center)
+            .justifyContent(FlexAlign.Center)
             .scale(this.isBackPressed ?
               { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
               { x: 1, y: 1 })
@@ -523,7 +525,6 @@ export struct LoginPage {
             this.isLoginBtnPressed = false;
           }
         })
-        .onClick(() => this.userLogin())
 
       Text('没有账号？切换到「注册」标签')
         .fontSize(DesignConstants.FONT.SIZE.SM)

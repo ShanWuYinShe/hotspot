@@ -148,7 +148,6 @@ export struct RelationshipHubPage {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor(this.getPalette().pageBackground)
     }
     }
     .hideTitleBar(true)

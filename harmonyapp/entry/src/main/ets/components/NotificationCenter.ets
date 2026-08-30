@@ -760,7 +760,7 @@ export struct NotificationCenter {
       case 'social':
         return this.getPalette().accentBackground;
       case 'interaction':
-        return this.getPalette().error;
+        return this.getPalette().accentBackground;
       case 'group':
         return this.getPalette().success;
       case 'system':
@@ -773,7 +773,8 @@ export struct NotificationCenter {
   private getSoftStatusColor(type: string): string {
     switch (this.mapTypeToCategory(type as NotifyType)) {
       case 'interaction':
-        return AppThemeManager.getSoftStatusBackground('danger');
+        // 互动（点赞/评论）非告警，淡底用 info（与 getTypeColor 的 accent 映射语义一致）
+        return AppThemeManager.getSoftStatusBackground('info');
       case 'group':
         return AppThemeManager.getSoftStatusBackground('success');
       case 'system':

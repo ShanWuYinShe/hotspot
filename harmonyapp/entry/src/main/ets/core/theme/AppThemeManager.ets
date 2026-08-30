@@ -90,6 +90,7 @@ function buildPalette(
     label,
     description,
     pageBackground: colors.pageBackground,
+    workspaceBackground: colors.workspaceBackground,
     pageGlow: colors.pageGlow,
     heroGlow: colors.heroGlow,
     surfaceBackground: colors.surfaceBackground,
@@ -141,9 +142,10 @@ const DEFAULT_CLEAN_LIGHT_VISUALS = buildVisualTokens(
   DEFAULT_THEME_SHAPE,
   DEFAULT_THEME_METRICS,
   {
-    avatarShadow: NO_SHADOW,
+    // 头像抬升阴影（对齐前端 --cst-elevation-profile-avatar 0 6px 20px 0.22）
+    avatarShadow: new AppThemeShadow(20, '#00000038', 0, 6),
     haloShadow: NO_SHADOW,
-    previewShadow: NO_SHADOW,
+    previewShadow: new AppThemeShadow(24, '#00000029', 0, 8),
     insetShadow: NO_SHADOW,
     highlightShadow: NO_SHADOW,
     tabActiveGlow: new AppThemeShadow(12, '#3D7A5526', 0, 4)
@@ -154,9 +156,10 @@ const DEFAULT_CLEAN_DARK_VISUALS = buildVisualTokens(
   DEFAULT_THEME_SHAPE,
   DEFAULT_THEME_METRICS,
   {
-    avatarShadow: NO_SHADOW,
+    // 头像抬升阴影（深色增强透明度）
+    avatarShadow: new AppThemeShadow(20, '#00000066', 0, 6),
     haloShadow: NO_SHADOW,
-    previewShadow: NO_SHADOW,
+    previewShadow: new AppThemeShadow(28, '#00000059', 0, 8),
     insetShadow: NO_SHADOW,
     highlightShadow: NO_SHADOW,
     tabActiveGlow: new AppThemeShadow(12, '#52B8782E', 0, 4)

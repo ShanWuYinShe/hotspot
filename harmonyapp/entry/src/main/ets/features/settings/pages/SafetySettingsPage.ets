@@ -7,6 +7,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemButton } from '../../../components/SystemButton';
+import { SystemDialog } from '../../../components/SystemDialog';
 import { SystemToast } from '../../../components/SystemToast';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { ChangePasswordRequest, SessionItem } from '../../../core/types/api';
@@ -28,6 +29,11 @@ export struct SafetySettingsPage {
   @State oldPassword: string = '';
   @State newPassword: string = '';
   @State sessions: SessionItem[] = [];
+  @State showRevokeSessionConfirm: boolean = false;
+  @State showRevokeAllConfirm: boolean = false;
+  @State pendingRevokeSession: SessionItem | null = null;
+  @State revokingSessionId: string = '';
+  @State revokingAllSessions: boolean = false;
 
   private isDestroyed: boolean = false;
 
@@ -80,6 +86,8 @@ export struct SafetySettingsPage {
 
   private async revokeSession(item: SessionItem): Promise<void> {
     if (this.isDestroyed) return;
+    if (this.revokingSessionId.length > 0) return;
+    this.revokingSessionId = item.session_id;
     try {
       const response = await ApiClient.revokeSession({ session_id: item.session_id });
       if (this.isDestroyed) return;
@@ -91,11 +99,15 @@ export struct SafetySettingsPage {
       }
     } catch (_) {
       SystemToast.showError('撤销失败', this.getUIContext());
+    } finally {
+      this.revokingSessionId = '';
     }
   }
 
   private async revokeAll(): Promise<void> {
     if (this.isDestroyed) return;
+    if (this.revokingAllSessions) return;
+    this.revokingAllSessions = true;
     try {
       const response = await ApiClient.revokeAllSessions();
       if (this.isDestroyed) return;
@@ -107,11 +119,14 @@ export struct SafetySettingsPage {
       }
     } catch (_) {
       SystemToast.showError('操作失败', this.getUIContext());
+    } finally {
+      this.revokingAllSessions = false;
     }
   }
 
   build() {
     NavDestination() {
+    Stack() {
     PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
       Column() {
         SystemPageHeader({
@@ -158,8 +173,11 @@ export struct SafetySettingsPage {
               SettingsSectionCard({ title: '登录设备' }) {
                 SessionListSection({
                   sessions: this.sessions,
-                  revokeOne: (item: SessionItem) => this.revokeSession(item),
-                  revokeAll: () => this.revokeAll()
+                  revokeOne: (item: SessionItem) => {
+                    this.pendingRevokeSession = item;
+                    this.showRevokeSessionConfirm = true;
+                  },
+                  revokeAll: () => { this.showRevokeAllConfirm = true; }
                 })
               }
             }
@@ -173,7 +191,41 @@ export struct SafetySettingsPage {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor(this.getPalette().pageBackground)
+    }
+
+    // 撤销单个会话二次确认
+    SystemDialog({
+      visible: this.showRevokeSessionConfirm,
+      title: '撤销会话',
+      description: '该设备将立即退出登录，需要重新登录才能继续使用',
+      confirmText: '撤销',
+      onCancel: () => {
+        this.showRevokeSessionConfirm = false;
+        this.pendingRevokeSession = null;
+      },
+      onConfirm: () => {
+        const target = this.pendingRevokeSession;
+        this.showRevokeSessionConfirm = false;
+        this.pendingRevokeSession = null;
+        if (target) {
+          this.revokeSession(target);
+        }
+      }
+    })
+
+    // 全部下线二次确认
+    SystemDialog({
+      visible: this.showRevokeAllConfirm,
+      title: '全部下线',
+      description: '除当前设备外，所有已登录设备将立即退出登录',
+      confirmText: '全部下线',
+      confirmVariant: 'danger',
+      onCancel: () => { this.showRevokeAllConfirm = false; },
+      onConfirm: () => {
+        this.showRevokeAllConfirm = false;
+        this.revokeAll();
+      }
+    })
     }
     }
     .hideTitleBar(true)

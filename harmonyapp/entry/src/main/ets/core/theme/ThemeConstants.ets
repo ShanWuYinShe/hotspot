@@ -7,6 +7,8 @@ import { AppThemeShadow } from './AppThemeTypes';
 
 export interface ColorConfig {
   pageBackground: string;
+  /** 工作区舞台底色（比 page 深一档，对齐前端 --cst-palette-workspace-bg） */
+  workspaceBackground: string;
   pageGlow: string;
   heroGlow: string;
   surfaceBackground: string;
@@ -60,19 +62,29 @@ export interface ThemeShadows {
 
 class ThemeShadowRegistry {
   readonly DEFAULT_CLEAN_LIGHT: ThemeShadows = {
-    surface: new AppThemeShadow(0, '#00000000', 0, 0),
-    elevated: new AppThemeShadow(0, '#00000000', 0, 0),
-    accent: new AppThemeShadow(14, '#3D7A5526', 0, 4),
-    control: new AppThemeShadow(0, '#00000000', 0, 0),
-    tabBar: new AppThemeShadow(0, '#00000000', 0, 0)
+    // 卡片轻微抬升（对齐前端 elevation-card 的"浮起"感；ArkUI 无 spread 做不了硬边 ring，用轻量模糊近似）
+    surface: new AppThemeShadow(10, '#3D7A5514', 0, 2),
+    // 弹层抬升（对齐前端 --cst-elevation-modal 0 24px 80px 0.24）
+    elevated: new AppThemeShadow(40, '#0000003D', 0, 12),
+    // 主操作光晕（对齐前端 --cst-elevation-fab 0 6px 18px glow）
+    accent: new AppThemeShadow(18, '#3D7A552E', 0, 6),
+    // 菜单浮层（对齐前端 --cst-elevation-menu 0 16px 40px 0.16）
+    control: new AppThemeShadow(32, '#00000029', 0, 8),
+    // 底部导航（对齐前端 --cst-elevation-nav，向上微光）
+    tabBar: new AppThemeShadow(24, '#3D7A551A', 0, -4)
   };
 
   readonly DEFAULT_CLEAN_DARK: ThemeShadows = {
-    surface: new AppThemeShadow(0, '#00000000', 0, 0),
-    elevated: new AppThemeShadow(0, '#00000000', 0, 0),
-    accent: new AppThemeShadow(14, '#52B8782E', 0, 4),
-    control: new AppThemeShadow(0, '#00000000', 0, 0),
-    tabBar: new AppThemeShadow(0, '#00000000', 0, 0)
+    // 深色下黑阴影对比弱，卡片抬升改用更亮的描边承载（border 单独加亮），阴影只做轻微加深
+    surface: new AppThemeShadow(14, '#0000004D', 0, 4),
+    // 弹层抬升（对齐前端 --cst-elevation-modal 0 28px 88px 0.42）
+    elevated: new AppThemeShadow(44, '#0000006B', 0, 14),
+    // 主操作光晕（对齐前端 --cst-elevation-fab 0 6px 22px glow）
+    accent: new AppThemeShadow(22, '#52B8783D', 0, 6),
+    // 菜单浮层
+    control: new AppThemeShadow(40, '#00000059', 0, 8),
+    // 底部导航（对齐前端 --cst-elevation-nav 0 -4px 24px 0.40）
+    tabBar: new AppThemeShadow(28, '#00000066', 0, -4)
   };
 
   readonly FIGMA_NEU_LIGHT: ThemeShadows = {
@@ -111,6 +123,7 @@ class ThemeShadowRegistry {
 export class ThemeConstants {
   static readonly DEFAULT_CLEAN_LIGHT_COLORS: ColorConfig = {
     pageBackground: '#F6F7F3',
+    workspaceBackground: '#EBEEE5',
     pageGlow: '#F2F4F2',
     heroGlow: '#E8EDE8',
     surfaceBackground: '#F6F7F3',
@@ -154,6 +167,7 @@ export class ThemeConstants {
 
   static readonly DEFAULT_CLEAN_DARK_COLORS: ColorConfig = {
     pageBackground: '#161A16',
+    workspaceBackground: '#0F130E',
     pageGlow: '#171A17',
     heroGlow: '#1A201A',
     surfaceBackground: '#161A16',
@@ -197,6 +211,7 @@ export class ThemeConstants {
 
   static readonly FIGMA_NEU_LIGHT_COLORS: ColorConfig = {
     pageBackground: '#E2D6C5',
+    workspaceBackground: '#D8C9B5',
     pageGlow: '#EFE7DA',
     heroGlow: '#F4E9DE',
     surfaceBackground: '#EFE7DA',
@@ -238,6 +253,7 @@ export class ThemeConstants {
 
   static readonly FIGMA_NEU_DARK_COLORS: ColorConfig = {
     pageBackground: '#15110E',
+    workspaceBackground: '#0F0C0A',
     pageGlow: '#211B17',
     heroGlow: '#2A2017',
     surfaceBackground: '#211B17',
@@ -281,6 +297,7 @@ export class ThemeConstants {
 
   static readonly VIBRANT_LIGHT_COLORS: ColorConfig = {
     pageBackground: '#F7FAFF',
+    workspaceBackground: '#EBF1FA',
     pageGlow: '#E8EDFF',
     heroGlow: '#DDE4FF',
     surfaceBackground: '#F7FAFF',
@@ -322,6 +339,7 @@ export class ThemeConstants {
 
   static readonly VIBRANT_DARK_COLORS: ColorConfig = {
     pageBackground: '#0B1424',
+    workspaceBackground: '#060D19',
     pageGlow: '#122036',
     heroGlow: '#16263E',
     surfaceBackground: '#0B1424',

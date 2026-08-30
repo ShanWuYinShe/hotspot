@@ -62,6 +62,8 @@ export struct NotificationBanner {
             }
           }
         })
+        // 透明 padding 扩命中区至 40vp（16 + 2*12），视觉尺寸不变
+        .padding(DesignConstants.SPACING.MD)
         .margin({ left: DesignConstants.SPACING.SM })
       }
       .width('100%')
@@ -127,10 +129,10 @@ export struct NotificationBanner {
 
   private getPriorityColor(priority: string): string | Resource {
     switch (priority) {
-      case 'critical': return this.getPalette().textTertiary;
-      case 'high': return this.getPalette().textSecondary;
-      case 'medium': return this.getPalette().accentBackground;
-      default: return this.getPalette().textSecondary;
+      case 'critical': return this.getPalette().error;
+      case 'high': return this.getPalette().warning;
+      case 'medium': return this.getPalette().textSecondary;
+      default: return this.getPalette().textTertiary;
     }
   }
 }

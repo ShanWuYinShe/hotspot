@@ -28,25 +28,28 @@ import { PerformanceIndicator } from '../PerformanceIndicator';
 import { NotificationRenderer } from '../../core/services/notification/NotificationRenderer';
 import { type SmartNotification, type NotificationAction } from '../../core/services/notification/NotificationDataManager';
 import { AppThemeManager } from '../../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../../core/theme/AppThemeVisuals';
 import { DesignConstants } from '../../constants/DesignConstants';
 import { curves } from '@kit.ArkUI';
 import { SystemBadge } from '../SystemBadge';
 import { SystemButton } from '../SystemButton';
 import { AppIcon } from '../SystemIcon';
+import { LucideIcon } from '../LucideIcon';
 import { AppRouter, LoginRouteParam } from '../../core/router/AppRouter';
 import { PageNames } from '../../constants/AppConstants';
+import { CreateMomentSheet } from '../../features/moments/components/CreateMomentSheet';
 
 interface TabItem {
   label: string;
-  symbolId: Resource;
+  icon: AppIcon;
 }
 
 const TAB_ITEMS: TabItem[] = [
-  { label: '首页', symbolId: $r(AppIcon.HOME) },
-  { label: '附近', symbolId: $r(AppIcon.COMPASS) },
-  { label: '发布', symbolId: $r(AppIcon.ADD) },
-  { label: '消息', symbolId: $r(AppIcon.MESSAGE) },
-  { label: '我的', symbolId: $r(AppIcon.PERSON) }
+  { label: '首页', icon: AppIcon.HOME },
+  { label: '附近', icon: AppIcon.COMPASS },
+  { label: '发布', icon: AppIcon.ADD },
+  { label: '消息', icon: AppIcon.MESSAGE },
+  { label: '我的', icon: AppIcon.PERSON }
 ];
 
 const CREATE_TAB_INDEX: number = 2;
@@ -76,7 +79,6 @@ export struct PhoneLayout {
   /** 当前按下的底部导航 Tab 索引（-1 表示无），用于按下缩放反馈，对齐前端 hover-btn:active */
   @State pressedTabIndex: number = -1;
   @State private tabletFabPressed: boolean = false;
-  @State private pressedSheetItem: string = '';
 
   private tabsController: TabsController = new TabsController();
 
@@ -138,8 +140,9 @@ export struct PhoneLayout {
         })
         .barBackgroundColor(DesignConstants.COLOR.TRANSPARENT)
         // 底部导航毛玻璃：Medium 档（对齐前端 --cst-blur-lg 底部导航档，见 AGENTS 映射表）
+        // 背景改半透明（对齐前端 nav-glass 90%），否则实色会盖住 backgroundBlurStyle 使模糊失效
         .backgroundBlurStyle(BlurStyle.Thick)
-        .backgroundColor(this.getPalette().pageBackground)
+        .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().tabBarBackground, 0.9))
         .layoutWeight(1)
         .padding({ bottom: this.safeAreaBottom })
         .constraintSize({ maxWidth: this.isTablet ? 720 : Infinity })
@@ -186,10 +189,13 @@ export struct PhoneLayout {
 
     }
     .bindSheet($$this.showCreateSheet, this.CreateSheetContent(), {
-      height: SheetSize.FIT_CONTENT,
-      dragBar: true,
-      showClose: true,
-      backgroundColor: this.getPalette().pageBackground
+      // 92% 高完整表单 Sheet（对齐前端 CreateSheet Dialog side=bottom height:92%）
+      height: '92%',
+      dragBar: false,
+      showClose: false,
+      backgroundColor: this.getPalette().pageBackground,
+      // 键盘避让：输入框随键盘上移（沿用 LoginPromptView 先例）
+      keyboardAvoidMode: SheetKeyboardAvoidMode.TRANSLATE_AND_SCROLL
     })
     .width('100%').height('100%')
     .backgroundColor(this.getPalette().pageBackground)
@@ -205,15 +211,11 @@ export struct PhoneLayout {
         // Stack 不设固定尺寸 → 跟随图标 Text 尺寸，图标居中撑满；
         // 未读 badge 由 TopEnd 钉到图标右上角，不再把图标挤偏。
         Stack({ alignContent: Alignment.TopEnd }) {
-          Text() {
-            SymbolSpan(TAB_ITEMS[index].symbolId)
-              .fontSize(DesignConstants.FONT.SIZE.XXL)
-              .fontColor([
-                this.currentTabIndex === index
-                  ? this.getPalette().accentBackground
-                  : this.getPalette().tabBarInactive
-              ])
-          }
+          LucideIcon({
+            icon: TAB_ITEMS[index].icon,
+            size: DesignConstants.FONT.SIZE.XXL,
+            paletteRole: this.currentTabIndex === index ? 'tabActive' : 'tabInactive'
+          })
           // 消息 tab（index 3）未读角标，对齐前端 inbox badge
           if (index === 3 && this.unreadCount > 0) {
             SystemBadge({ count: this.unreadCount })
@@ -268,7 +270,7 @@ export struct PhoneLayout {
     })
   }
 
-  // 平板浮动药丸底栏（对齐前端 TabletBottomNav：max-width 520 + pill 圆角 + 玻璃 blur + safe-area）
+  // 平板浮动药丸底栏（对齐前端 TabletLayout 宽平板浮动 Dock：max-width 680 + pill 圆角 + 玻璃 blur + safe-area）
   @Builder buildFloatingTabletNav() {
     Column() {
       Row() {
@@ -283,7 +285,7 @@ export struct PhoneLayout {
       .justifyContent(FlexAlign.SpaceAround)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(this.getPalette().tabBarBackground)
+      .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().tabBarBackground, 0.9))
       // 平板浮动药丸：Medium 档毛玻璃（对齐前端 tablet dock --cst-blur-lg）
       .backgroundBlurStyle(BlurStyle.Thick)
       .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
@@ -297,15 +299,11 @@ export struct PhoneLayout {
   @Builder FloatingTabItem(index: number) {
     Column() {
       Stack({ alignContent: Alignment.TopEnd }) {
-        Text() {
-          SymbolSpan(TAB_ITEMS[index].symbolId)
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontColor([
-              this.currentTabIndex === index
-                ? this.getPalette().accentBackground
-                : this.getPalette().tabBarInactive
-            ])
-        }
+        LucideIcon({
+          icon: TAB_ITEMS[index].icon,
+          size: DesignConstants.FONT.SIZE.XL,
+          paletteRole: this.currentTabIndex === index ? 'tabActive' : 'tabInactive'
+        })
         // 消息 tab 未读角标，与手机端 TabBarBuilder 一致
         if (index === 3 && this.unreadCount > 0) {
           SystemBadge({ count: this.unreadCount })
@@ -357,11 +355,11 @@ export struct PhoneLayout {
 
   @Builder FloatingFab() {
     Row() {
-      Text() {
-        SymbolSpan($r(AppIcon.ADD))
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontColor([this.getPalette().accentText])
-      }
+      LucideIcon({
+        icon: AppIcon.ADD,
+        size: DesignConstants.FONT.SIZE.XL,
+        paletteRole: 'accentText'
+      })
     }
     .width(DesignConstants.LAYOUT.FAB_SIZE)
     .height(DesignConstants.LAYOUT.FAB_SIZE)
@@ -394,11 +392,11 @@ export struct PhoneLayout {
   @Builder CreateTabBuilder() {
     Column() {
       Row() {
-        Text() {
-          SymbolSpan($r(AppIcon.ADD))
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontColor([this.getPalette().accentText])
-        }
+        LucideIcon({
+          icon: AppIcon.ADD,
+          size: DesignConstants.FONT.SIZE.XL,
+          paletteRole: 'accentText'
+        })
       }
       .width(DesignConstants.LAYOUT.FAB_SIZE).height(DesignConstants.LAYOUT.FAB_SIZE)
       .justifyContent(FlexAlign.Center)
@@ -430,67 +428,12 @@ export struct PhoneLayout {
     })
   }
 
+  // 发动态完整表单 Sheet（对齐前端 CreateSheet；「创建群组」切路由页，分享位置入口在地图页）
   @Builder CreateSheetContent() {
-    Column() {
-      Text('创建')
-        .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18
-        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-        .fontColor(this.getPalette().textPrimary)
-        .margin({ top: DesignConstants.SPACING.XL, bottom: DesignConstants.SPACING.LG })
-      this.CreateSheetItem(AppIcon.PHOTO, '发布动态', () => {
-        this.showCreateSheet = false;
-        AppRouter.push(PageNames.CREATE_MOMENT);
-      })
-      this.CreateSheetItem(AppIcon.GROUP, '创建群组', () => {
-        this.showCreateSheet = false;
-        AppRouter.push(PageNames.CREATE_GROUP);
-      })
-      this.CreateSheetItem(AppIcon.LOCATION, '分享位置', () => {
-        this.showCreateSheet = false;
-        AppRouter.push(PageNames.LOCATION_PICKER);
-      })
-    }
-    .width('100%')
-    .padding({ bottom: DesignConstants.SPACING.XXL })
-    .alignItems(HorizontalAlign.Center)
-  }
-
-  @Builder CreateSheetItem(icon: AppIcon, label: string, action: () => void) {
-    Row() {
-      Text() {
-        SymbolSpan($r(icon))
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontColor([this.getPalette().accentBackground])
-      }
-      Text(label)
-        .fontSize(DesignConstants.FONT.SIZE.MD) // 14
-        .fontColor(this.getPalette().textPrimary)
-        .margin({ left: DesignConstants.SPACING.MD })
-    }
-    .width('90%')
-    .height(DesignConstants.LAYOUT.FAB_SIZE)
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-    .borderRadius(DesignConstants.SHAPE.INPUT) // 16
-    .backgroundColor(this.getPalette().surfaceSubtle)
-    .alignItems(VerticalAlign.Center)
-    .justifyContent(FlexAlign.Center)
-    .margin({ bottom: DesignConstants.SPACING.SM })
-    // 按压反馈（对齐 DesktopLayout 创建菜单行 tap-97 语义）
-    .scale(this.pressedSheetItem === label ?
-      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
-      { x: 1, y: 1 })
-    .animation({ curve: curves.springMotion(
-      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-    ) })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.pressedSheetItem = label;
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.pressedSheetItem = '';
-      }
+    CreateMomentSheet({
+      onClose: () => { this.showCreateSheet = false; },
+      onSwitchToGroup: () => { AppRouter.push(PageNames.CREATE_GROUP); }
     })
-    .onClick(() => action())
   }
 
   @Builder UpgradeBanner() {

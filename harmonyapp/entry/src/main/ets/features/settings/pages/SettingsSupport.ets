@@ -17,6 +17,7 @@ import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemAvatar } from '../../../components/SystemAvatar';
+import { SystemToggle } from '../../../components/SystemToggle';
 import { AppRouter, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 
@@ -104,11 +105,13 @@ export struct SettingsSectionCard {
 
   build() {
     Column({ space: DesignConstants.SPACING.SM }) {
-      Text(this.title)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-        .fontColor(this.getPalette().textSecondary)
-        .width('100%')
+      if (this.title.length > 0) {
+        Text(this.title)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontColor(this.getPalette().textSecondary)
+          .width('100%')
+      }
 
       Column({ space: 0 }) {
         this.content();
@@ -144,7 +147,7 @@ export struct SettingsEntryRow {
         Text() {
           SymbolSpan($r(this.item.icon))
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([this.getPalette().textSecondary])
+            .fontColor([this.getPalette().accentText])
         }
       }
       .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
@@ -198,6 +201,107 @@ export struct SettingsEntryRow {
       }
     })
     .onClick(this.item.action)
+  }
+}
+
+/**
+ * 设置分组 eyebrow 小标（对齐前端 settings 页分组标题：卡外小标 + letterSpacing）。
+ */
+@Component
+export struct SettingsGroupLabel {
+  @Prop label: string = '';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  build() {
+    Text(this.label)
+      .fontSize(DesignConstants.FONT.SIZE.XS2)
+      .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+      .fontColor(this.getPalette().textSecondary)
+      .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
+      .textCase(TextCase.UpperCase)
+      .width('100%')
+      .padding({
+        left: DesignConstants.SPACING.SM2,
+        top: DesignConstants.SPACING.MD2,
+        bottom: DesignConstants.SPACING.SM
+      })
+  }
+}
+
+/**
+ * 设置开关行（对齐前端 SettingRow + Toggle：36vp icon-badge + 标题/描述 + 右侧 50×28 iOS 开关）。
+ * 整行与开关均可触发 onToggle；无箭头（前端 Toggle 行无 chevron）。
+ */
+@Component
+export struct SettingsToggleRow {
+  @Prop icon: AppIcon = AppIcon.SETTINGS;
+  @Prop title: string = '';
+  @Prop subtitle: string = '';
+  @Prop isOn: boolean = false;
+  @Prop pending: boolean = false;
+  onToggle: (next: boolean) => void = () => {
+  };
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getListItemStyle() {
+    return AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId);
+  }
+
+  build() {
+    Row({ space: DesignConstants.SPACING.MD }) {
+      Row() {
+        Text() {
+          SymbolSpan($r(this.icon))
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontColor([this.getPalette().accentText])
+        }
+      }
+      .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+      .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(this.getPalette().surfaceSubtle)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+
+      Column({ space: DesignConstants.SPACING.XS }) {
+        Text(this.title)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontColor(this.getPalette().textPrimary)
+        if (this.subtitle) {
+          Text(this.subtitle)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getPalette().textSecondary)
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+
+      SystemToggle({
+        isOn: this.isOn,
+        disabled: this.pending,
+        onToggle: (next: boolean) => { this.onToggle(next); }
+      })
+    }
+    .width('100%')
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD3, bottom: DesignConstants.SPACING.MD3 })
+    .backgroundColor(this.getListItemStyle().backgroundColor)
+    .borderRadius(this.getListItemStyle().borderRadius)
+    .onClick(() => {
+      if (!this.pending) {
+        this.onToggle(!this.isOn);
+      }
+    })
   }
 }
 

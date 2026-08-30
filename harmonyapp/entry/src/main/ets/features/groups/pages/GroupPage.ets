@@ -540,7 +540,6 @@ export struct GroupPage {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor(this.getCurrentThemePalette().pageBackground)
         .bindSheet($$this.showMyInvitesSheet, this.buildMyInvitesSheet(), {
           height: '68%',
           showClose: false,
@@ -855,13 +854,17 @@ export struct GroupPage {
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
 
+      // 本列表为已加入群组（getJoinedGroups），操作为「进入」详情而非「加入」
       SystemButton({
-        label: '加入',
+        label: '进入',
         variant: 'surface-accent',
         buttonSize: 'small',
         shadowed: true,
-        loading: this.isGroupJoining(group.group.group_id),
-        onPress: () => { this.joinGroup(group); }
+        onPress: () => {
+          const detailParams = new GroupDetailRouteParam();
+          detailParams.groupId = group.group.group_id;
+          AppRouter.push(PageNames.GROUP_DETAIL, detailParams);
+        }
       })
     }
     .width('100%')

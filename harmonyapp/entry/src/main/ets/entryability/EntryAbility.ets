@@ -180,6 +180,17 @@ export default class EntryAbility extends UIAbility {
     }
   }
 
+  private async restoreForcedDarkMode(): Promise<void> {
+    try {
+      const forced = await PreferencesUtil.get('settings_dark_forced', false);
+      if (forced) {
+        this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_DARK);
+      }
+    } catch (error) {
+      // 偏好读取失败时保持跟随系统，不阻塞启动
+    }
+  }
+
   /**
    * 初始化通知管理
    */
@@ -614,9 +625,12 @@ export default class EntryAbility extends UIAbility {
       
       // 5. 输出服务统计信息
       const stats = this.serviceRegistry.getServiceStats();
-      hilog.info(DOMAIN_NUMBER, TAG, 
+      hilog.info(DOMAIN_NUMBER, TAG,
         `服务初始化完成: 总计${stats.totalServices}, 已初始化${stats.initializedServices}, 错误${stats.errorServices}`);
-      
+
+      // 6. 恢复用户"强制深色"偏好（设置页深色 Toggle 持久化；Preferences 就绪后应用）
+      await this.restoreForcedDarkMode();
+
     } catch (error) {
       const err = error as BusinessError;
       hilog.error(DOMAIN_NUMBER, TAG, `智能服务初始化失败: ${err.message}`);

@@ -8,6 +8,7 @@
 
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
+import { LucideIcon } from '../../../components/LucideIcon';
 import { curves } from '@kit.ArkUI';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
@@ -75,11 +76,11 @@ export struct NearbyPage {
           Column() {
             // 搜索入口（门户第一入口，对齐前端 shadow-raised-md 搜索卡片）
             Row({ space: DesignConstants.SPACING.MD2 }) {
-              Text() {
-                SymbolSpan($r(AppIcon.SEARCH))
-                  .fontSize(DesignConstants.FONT.SIZE.LG)
-                  .fontColor([this.getCurrentThemePalette().accentBackground])
-              }
+              LucideIcon({
+                icon: AppIcon.SEARCH,
+                size: DesignConstants.FONT.SIZE.LG,
+                paletteRole: 'accent'
+              })
               Text('搜索用户、群组、动态、地点…')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
                 .fontColor(this.getCurrentThemePalette().textSecondary)
@@ -93,7 +94,7 @@ export struct NearbyPage {
             .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
             .borderRadius(DesignConstants.SHAPE.INPUT)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .shadow(this.getCurrentThemePalette().surfaceShadow)
+            .shadow(this.getCurrentThemePalette().elevatedShadow)
             // 按压反馈（对齐 tap-97 语义）
             .scale(this.searchEntryPressed ?
               { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
@@ -137,7 +138,6 @@ export struct NearbyPage {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
   }
 
@@ -146,16 +146,17 @@ export struct NearbyPage {
     Row({ space: DesignConstants.SPACING.MD2 }) {
       // 图标徽章圆 tile（对齐前端 icon-badge size-9 圆）
       Column() {
-        Text() {
-          SymbolSpan($r(entry.icon))
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([this.getCurrentThemePalette().accentBackground])
-        }
+        LucideIcon({
+          icon: entry.icon,
+          size: DesignConstants.FONT.SIZE.LG,
+          paletteRole: 'accent'
+        })
       }
       .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(AppThemeManager.getSoftStatusBackground('info'))
+      .shadow(this.getCurrentThemePalette().accentShadow)
       .justifyContent(FlexAlign.Center)
 
       Column({ space: DesignConstants.SPACING.HALF }) {
@@ -174,18 +175,18 @@ export struct NearbyPage {
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
 
-      Text() {
-        SymbolSpan($r(AppIcon.ARROW_RIGHT))
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor([this.getCurrentThemePalette().textSecondary])
-      }
+      LucideIcon({
+        icon: AppIcon.ARROW_RIGHT,
+        size: DesignConstants.FONT.SIZE.MD,
+        paletteRole: 'textSecondary'
+      })
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
     .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
     .borderRadius(DesignConstants.SHAPE.CARD)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    .shadow(this.getCurrentThemePalette().surfaceShadow)
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
     // 整卡按压反馈（对齐 tap-97 语义）
     .scale(this.pressedSectionKey === entry.key ?
       { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :

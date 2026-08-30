@@ -16,6 +16,10 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { SystemDialog } from '../../../components/SystemDialog';
+import { CacheManager } from '../../../core/cache/CacheManager';
+import { MessageCacheService } from '../../../core/database/MessageCacheService';
+import { MomentCacheService } from '../../../core/database/MomentCacheService';
 
 @Preview
 @Component
@@ -25,9 +29,37 @@ export struct AdvancedSettingsPage {
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State private pressedSettingKey: string = '';
+  @State private showClearCacheDialog: boolean = false;
+  @State private isClearingCache: boolean = false;
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
+  }
+
+  private requestClearCache(): void {
+    this.showClearCacheDialog = true;
+  }
+
+  private async confirmClearCache(): Promise<void> {
+    this.showClearCacheDialog = false;
+    if (this.isClearingCache) {
+      return;
+    }
+    this.isClearingCache = true;
+    try {
+      // 运行时内存缓存（图片/网络等）
+      CacheManager.getInstance().clearAll();
+      // 本地消息与会话缓存（RDB）
+      await MessageCacheService.getInstance().clearAll();
+      // 本地动态缓存（RDB）
+      await MomentCacheService.getInstance().clearAll();
+      SystemToast.showSuccess('缓存已清理', this.getUIContext());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '未知错误';
+      SystemToast.showError(`缓存清理失败：${message}`, this.getUIContext());
+    } finally {
+      this.isClearingCache = false;
+    }
   }
 
   private getCurrentThemePalette() {
@@ -40,6 +72,7 @@ export struct AdvancedSettingsPage {
 
   build() {
     NavDestination() {
+    Stack() {
   PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
     Column() {
       // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回）
@@ -55,7 +88,7 @@ export struct AdvancedSettingsPage {
       Column() {
         Column() {
           this.SettingItem(AppIcon.CLEAN, '清理缓存', '清除本地缓存数据', () => {
-            SystemToast.show('缓存已清理', this.getUIContext());
+            this.requestClearCache();
           })
 
           this.SettingItem(AppIcon.DEBUG, '调试面板', '网络诊断、状态检查', () => {
@@ -76,8 +109,21 @@ export struct AdvancedSettingsPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
+
+    SystemDialog({
+      visible: this.showClearCacheDialog,
+      title: '清理缓存',
+      description: '将清除应用内存缓存、本地消息与动态缓存数据，清理后相关内容需重新加载，且不可恢复。账号信息与登录状态不受影响。',
+      confirmText: '清理',
+      cancelText: '取消',
+      confirmVariant: 'danger',
+      onCancel: () => { this.showClearCacheDialog = false; },
+      onConfirm: () => { this.confirmClearCache(); }
+    })
+    }
+    .width('100%')
+    .height('100%')
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

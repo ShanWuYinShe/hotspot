@@ -9,6 +9,7 @@
 import { curves } from '@kit.ArkUI';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
+import { LucideIcon } from '../../../components/LucideIcon';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 
@@ -23,11 +24,12 @@ export struct CompactStatItem {
   build() {
     Button() {
       Column({ space: DesignConstants.SPACING.XS }) {
-        Text() {
-          SymbolSpan($r(this.icon))
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground])
-        }
+        LucideIcon({
+          icon: this.icon,
+          size: DesignConstants.FONT.SIZE.LG,
+          color: AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground,
+          overrideThemeId: this.resolvedThemeId
+        })
         Text(this.value)
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
@@ -63,11 +65,12 @@ export struct ProfileQuickAction {
     Button() {
       Column({ space: DesignConstants.SPACING.SM }) {
         Row() {
-          Text() {
-            SymbolSpan($r(this.icon))
-              .fontSize(AppThemeVisuals.getProfileVisualStyle(this.resolvedThemeId).quickAction.iconSize)
-              .fontColor([AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground])
-          }
+          LucideIcon({
+            icon: this.icon,
+            size: AppThemeVisuals.getProfileVisualStyle(this.resolvedThemeId).quickAction.iconSize,
+            color: AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground,
+            overrideThemeId: this.resolvedThemeId
+          })
         }
         .width(AppThemeVisuals.getProfileVisualStyle(this.resolvedThemeId).quickAction.iconWrapperSize)
         .height(AppThemeVisuals.getProfileVisualStyle(this.resolvedThemeId).quickAction.iconWrapperSize)
@@ -106,11 +109,12 @@ export struct ProfileIntentCard {
     Button() {
       Column({ space: DesignConstants.SPACING.MD }) {
         Row() {
-          Text() {
-            SymbolSpan($r(this.icon))
-              .fontSize(DesignConstants.FONT.SIZE.XL)
-              .fontColor([AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground])
-          }
+          LucideIcon({
+            icon: this.icon,
+            size: DesignConstants.FONT.SIZE.XL,
+            color: AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground,
+            overrideThemeId: this.resolvedThemeId
+          })
         }
         .width(AppThemeVisuals.getProfileVisualStyle(this.resolvedThemeId).intentCard.iconWrapperSize)
         .height(AppThemeVisuals.getProfileVisualStyle(this.resolvedThemeId).intentCard.iconWrapperSize)
@@ -159,11 +163,12 @@ export struct ProfileMenuItem {
   build() {
     Row({ space: DesignConstants.SPACING.MD }) {
       Row() {
-        Text() {
-          SymbolSpan($r(this.icon))
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground])
-        }
+        LucideIcon({
+          icon: this.icon,
+          size: DesignConstants.FONT.SIZE.LG,
+          color: AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground,
+          overrideThemeId: this.resolvedThemeId
+        })
       }
       .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
@@ -177,11 +182,12 @@ export struct ProfileMenuItem {
         .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
         .layoutWeight(1)
 
-      Text() {
-        SymbolSpan($r(AppIcon.FORWARD))
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor([AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary])
-      }
+      LucideIcon({
+        icon: AppIcon.FORWARD,
+        size: DesignConstants.FONT.SIZE.LG,
+        color: AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary,
+        overrideThemeId: this.resolvedThemeId
+      })
     }
     .width('100%')
     .padding({

@@ -28,6 +28,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState } from '../../../components/EmptyState';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemButton } from '../../../components/SystemButton';
+import { SystemDialog } from '../../../components/SystemDialog';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SoftDivider } from '../../../components/SoftDivider';
@@ -109,6 +110,8 @@ export struct ChatPage {
   @State historyNextCursor: string = '';
   @State isLoadingMoreHistory: boolean = false;
   @State showConversationActionsSheet: boolean = false;
+  @State showReportConfirm: boolean = false;
+  @State reportSubmitting: boolean = false;
   @State targetAvatar: string = '';
   @State isGroupServerMuted: boolean = false;
   @State groupMutedUntil: string = '';
@@ -1099,6 +1102,7 @@ export struct ChatPage {
 
   build() {
     NavDestination() {
+    Stack() {
     ResponsiveContainer({ fill: true }) {
     Column() {
       // 头部 —— 统一走 ChatPageHeader（浮动卡片 + 返回 + 头像 + 标题 + 信息操作）
@@ -1405,6 +1409,21 @@ export struct ChatPage {
       backgroundColor: this.getCurrentThemePalette().sheetBackground
     })
     }
+
+    // 举报二次确认
+    SystemDialog({
+      visible: this.showReportConfirm,
+      title: '举报',
+      description: '将对该用户及相关聊天内容提交举报，我们会尽快审核处理',
+      confirmText: '提交举报',
+      confirmVariant: 'danger',
+      onCancel: () => { this.showReportConfirm = false; },
+      onConfirm: () => {
+        this.showReportConfirm = false;
+        this.submitReport();
+      }
+    })
+    }
     }
     .hideTitleBar(true)
     .onBackPressed((): boolean => this.handleBackNavigation())
@@ -1445,6 +1464,27 @@ export struct ChatPage {
     .margin({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
   }
 
+  private async submitReport(): Promise<void> {
+    if (this.reportSubmitting) {
+      return;
+    }
+    this.reportSubmitting = true;
+    try {
+      const reportReq: CreateReportRequest = {
+        target_type: 'user',
+        target_id: this.targetId ?? this.chatId,
+        reason: 'harassment',
+        description: '来自聊天页面的举报'
+      };
+      await ApiClient.createReport(reportReq);
+      SystemToast.show('举报已提交', this.getUIContext());
+    } catch {
+      SystemToast.showError('举报提交失败', this.getUIContext());
+    } finally {
+      this.reportSubmitting = false;
+    }
+  }
+
   @Builder
   private conversationActionsSheetBuilder() {
     ChatActionsSheet({
@@ -1469,17 +1509,7 @@ export struct ChatPage {
       },
       onReport: () => {
         this.showConversationActionsSheet = false;
-        const reportReq: CreateReportRequest = {
-          target_type: 'user',
-          target_id: this.targetId ?? this.chatId,
-          reason: 'harassment',
-          description: '来自聊天页面的举报'
-        };
-        ApiClient.createReport(reportReq).then(() => {
-          SystemToast.show('举报已提交', this.getUIContext());
-        }).catch(() => {
-          SystemToast.showError('举报提交失败', this.getUIContext());
-        });
+        this.showReportConfirm = true;
       },
       onClose: () => { this.showConversationActionsSheet = false; }
     })

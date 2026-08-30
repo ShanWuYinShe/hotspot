@@ -1,0 +1,260 @@
+import { DesignConstants } from '../constants/DesignConstants';
+import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { AppIcon } from './SystemIcon';
+import { curves } from '@kit.ArkUI';
+
+@Builder
+function emptyNearbyCardSlot() {
+}
+
+/**
+ * NearbyImageCard — 图片优先的附近内容卡片统一原语。
+ * 对齐前端 data-display/NearbyImageCard 契约：
+ *   - 图片 objectFit Cover 铺满卡片，底部 footer 托盘（尾随闭包）承载元数据/操作，
+ *     托盘 surfaceElevated 底 + hairline 顶边
+ *   - 图片层叠 media scrim 渐变保证图上徽章可读；无图/加载失败回退
+ *     accent 渐变占位层 + 首字
+ *   - 图上角徽章参数化：pill（距离/精选文字胶囊）或 circle（隐私圆徽章），
+ *     topRight / topLeft 对齐
+ *   - 整卡按压 spring 缩放（SCALE_PRESSED_CARD）；id 以 CHILD_CONTROL_PREFIX
+ *     开头的子控件（关注钮等行内操作）触摸不带动整卡按压，需自行处理反馈
+ */
+@Reusable
+@Component
+export struct NearbyImageCard {
+  /** 行内子控件 id 前缀约定：设置 .id(`${CHILD_CONTROL_PREFIX}xxx`) 的子控件不触发整卡按压 */
+  static readonly CHILD_CONTROL_PREFIX: string = 'nic-child-';
+
+  @Watch('onImageUrlChange')
+  @Prop imageUrl: string = '';
+  @Prop imageAlt: string = '';
+  /** 宽高比（宽/高，3:4 竖卡传 0.75）；为 0 时高度由 fixedHeight 或父容器决定 */
+  @Prop cardAspectRatio: number = 0;
+  /** 固定高度（aspectRatio 为 0 时生效；同为 0 则撑满父容器） */
+  @Prop fixedHeight: number = 0;
+  @Prop cardRadius: number = DesignConstants.SHAPE.COMPACT_CARD;
+  /** 无图占位首字来源（昵称/群名） */
+  @Prop placeholderText: string = '';
+  /** 图上徽章：pill 文本（空 = 不渲染 pill） */
+  @Prop badgeText: string = '';
+  /** 图上徽章图标（pill 前缀图标 / circle 徽章主体） */
+  @Prop badgeIcon: AppIcon = AppIcon.LOCATION;
+  /** circle 徽章（仅图标）时置 true */
+  @Prop badgeShape: 'pill' | 'circle' = 'pill';
+  /** pill 底色变体：glass = 半透明玻璃（距离/精选）；accent = accent 实底白字（分类胶囊） */
+  @Prop badgeVariant: 'glass' | 'accent' = 'glass';
+  @Prop badgeAlign: 'topRight' | 'topLeft' = 'topRight';
+  @Prop disabled: boolean = false;
+  onPress?: () => void = () => {
+  };
+  @BuilderParam footer: () => void = emptyNearbyCardSlot;
+
+  @State private imageFailed: boolean = false;
+  @State private isPressed: boolean = false;
+  @State private slideOut: boolean = false;
+  @State private cardWidth: number = 0;
+  @State private cardHeight: number = 0;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+
+  private onImageUrlChange(): void {
+    this.imageFailed = false;
+  }
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getPlaceholderInitial(): string {
+    if (!this.placeholderText) {
+      return '?';
+    }
+    return Array.from(this.placeholderText)[0] ?? '?';
+  }
+
+  private isChildControlTouch(event: TouchEvent): boolean {
+    const targetId: string = event.target?.id ?? '';
+    return targetId.startsWith(NearbyImageCard.CHILD_CONTROL_PREFIX);
+  }
+
+  private getBadgePosition(): Position {
+    return this.badgeAlign === 'topRight'
+      ? { x: DesignConstants.SPACING.MD2, y: DesignConstants.SPACING.MD2 }
+      : { x: DesignConstants.SPACING.MD2, y: DesignConstants.SPACING.MD2 };
+  }
+
+  @Builder
+  private buildBadge() {
+    if (this.badgeShape === 'circle') {
+      Row() {
+        Text() {
+          SymbolSpan($r(this.badgeIcon))
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor([DesignConstants.COLOR.WHITE])
+        }
+      }
+      .width(DesignConstants.LAYOUT.UNREAD_BADGE_SIZE)
+      .height(DesignConstants.LAYOUT.UNREAD_BADGE_SIZE)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(DesignConstants.COLOR.IMAGE_BADGE_BG)
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: DesignConstants.COLOR.IMAGE_BADGE_BORDER })
+      .justifyContent(FlexAlign.Center)
+      .position(this.getBadgePosition())
+    } else if (this.badgeText.length > 0) {
+      Row({ space: DesignConstants.SPACING.HALF }) {
+        if (this.badgeVariant === 'glass') {
+          Text() {
+            SymbolSpan($r(this.badgeIcon))
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .fontColor([DesignConstants.COLOR.WHITE])
+          }
+        }
+        Text(this.badgeText)
+          .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .fontColor(DesignConstants.COLOR.WHITE)
+      }
+      .alignItems(VerticalAlign.Center)
+      .padding({
+        left: this.badgeVariant === 'accent' ? DesignConstants.SPACING.SM2 : DesignConstants.SPACING.SM,
+        right: this.badgeVariant === 'accent' ? DesignConstants.SPACING.SM2 : DesignConstants.SPACING.SM,
+        top: DesignConstants.SPACING.THREE,
+        bottom: DesignConstants.SPACING.THREE
+      })
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(this.badgeVariant === 'accent' ?
+        this.getPalette().accentBackground :
+        DesignConstants.COLOR.IMAGE_BADGE_BG)
+      .border(this.badgeVariant === 'accent' ?
+        { width: 0 } :
+        { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: DesignConstants.COLOR.IMAGE_BADGE_BORDER })
+      .position(this.getBadgePosition())
+    }
+  }
+
+  @Builder
+  private buildFallbackLayer() {
+    Stack() {
+      // accent 渐变 + 首字兜底（对齐前端 surface-accent-gradient 占位层）
+      Column()
+        .width('100%')
+        .height('100%')
+        .linearGradient({
+          angle: 160,
+          colors: [
+            [this.getPalette().accentMuted, 0.0],
+            [this.getPalette().surfaceBackground, 1.0]
+          ] as [ResourceColor, number][]
+        })
+
+      Text(this.getPlaceholderInitial())
+        .fontSize(DesignConstants.FONT.SIZE.XXL)
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.getPalette().accentText)
+    }
+    .width('100%')
+    .height('100%')
+  }
+
+  @Builder
+  private buildImageLayer() {
+    Stack() {
+      if (this.imageUrl && !this.imageFailed) {
+        Image(MediaUrlUtil.normalize(this.imageUrl))
+          .width('100%')
+          .height('100%')
+          .objectFit(ImageFit.Cover)
+          .draggable(false)
+          .accessibilityText(this.imageAlt)
+          .onError(() => {
+            this.imageFailed = true;
+          })
+
+        // media scrim：图上轻渐变，保证图上徽章可读（对齐前端 surface-media-scrim-card）
+        Column()
+          .width('100%')
+          .height('100%')
+          .linearGradient({
+            angle: 180,
+            colors: [
+              [DesignConstants.COLOR.IMAGE_OVERLAY_START, 0.0],
+              [DesignConstants.COLOR.IMAGE_OVERLAY_END, 0.55]
+            ] as [ResourceColor, number][]
+          })
+          .hitTestBehavior(HitTestMode.None)
+      } else {
+        this.buildFallbackLayer()
+      }
+
+      this.buildBadge()
+    }
+    .width('100%')
+    .height('100%')
+  }
+
+  build() {
+    Stack({ alignContent: Alignment.Bottom }) {
+      this.buildImageLayer()
+
+      // 底部托盘（surfaceElevated 底 + hairline 顶边，对齐前端 card-menu tray）
+      Column() {
+        this.footer()
+      }
+      .width('100%')
+      .backgroundColor(this.getPalette().surfaceElevated)
+      .border({
+        width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE },
+        color: { top: this.getPalette().borderColor }
+      })
+    }
+    .width('100%')
+    .aspectRatio(this.cardAspectRatio > 0 ? this.cardAspectRatio : undefined)
+    .height(this.cardAspectRatio > 0 ? undefined : (this.fixedHeight > 0 ? this.fixedHeight : '100%'))
+    .borderRadius(this.cardRadius)
+    .clip(true)
+    .onAreaChange((_oldValue: Area, newValue: Area) => {
+      this.cardWidth = newValue.width as number;
+      this.cardHeight = newValue.height as number;
+    })
+    .scale(this.isPressed && !this.disabled ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+      { x: 1, y: 1 })
+    .animation({
+      curve: curves.springMotion(
+        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+      )
+    })
+    .onTouch((event: TouchEvent) => {
+      if (this.disabled) {
+        this.isPressed = false;
+        return;
+      }
+      // 行内子控件（CHILD_CONTROL_PREFIX 约定）自行处理按压，不带动整卡缩放
+      if (this.isChildControlTouch(event)) {
+        this.isPressed = false;
+        return;
+      }
+      if (event.type === TouchType.Down) {
+        this.isPressed = true;
+        this.slideOut = false;
+      } else if (event.type === TouchType.Move && event.touches.length > 0) {
+        const touch = event.touches[0];
+        if (this.isPressed &&
+          (touch.x < 0 || touch.y < 0 || touch.x > this.cardWidth || touch.y > this.cardHeight)) {
+          this.isPressed = false;
+          this.slideOut = true;
+        }
+      } else if (event.type === TouchType.Up) {
+        if (this.isPressed && !this.slideOut && this.onPress) {
+          this.onPress();
+        }
+        this.isPressed = false;
+        this.slideOut = false;
+      } else if (event.type === TouchType.Cancel) {
+        this.isPressed = false;
+        this.slideOut = false;
+      }
+    })
+  }
+}

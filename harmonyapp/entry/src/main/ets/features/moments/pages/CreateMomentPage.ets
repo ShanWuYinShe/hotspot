@@ -311,7 +311,9 @@ export struct CreateMomentPage {
               location_name: localLoc.locationName || "未知位置"
             },
             tags: this.tags.length > 0 ? this.tags : undefined,
-            image_file_ids: imageFileIds.length > 0 ? imageFileIds : undefined
+            image_file_ids: imageFileIds.length > 0 ? imageFileIds : undefined,
+            // 创建分支补传可见范围（原仅编辑分支生效，属遗漏；对齐前端 CreateSheet 隐私选择契约）
+            privacy_level: this.privacyLevel as PrivacyLevel
           };
           response = await ApiClient.createMoment(request);
         }
@@ -633,7 +635,6 @@ export struct CreateMomentPage {
     }
       .width('100%')
       .height('100%')
-    .backgroundColor(this.getCurrentThemePalette().pageBackground)
 
       if (this.isPublishing) {
         SystemLoadingView({ message: this.publishingMessage })

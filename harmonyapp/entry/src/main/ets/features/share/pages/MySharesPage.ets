@@ -10,6 +10,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
+import { SystemDialog } from '../../../components/SystemDialog';
 import { AppIcon, IconButton, IconSize } from '../../../components/SystemIcon';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
@@ -40,6 +41,8 @@ export struct MySharesPage {
   @State private hasMore: boolean = false;
   @State private nextCursor: string = '';
   @State private revokingShareId: string = '';
+  @State private showRevokeConfirm: boolean = false;
+  @State private pendingRevokeShare: ShareListItem | null = null;
   private readonly pageLimit: number = DefaultConfig.PAGE_SIZE;
 
   private isDestroyed: boolean = false;
@@ -208,6 +211,7 @@ export struct MySharesPage {
 
   build() {
     NavDestination() {
+    Stack() {
   PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
     Column() {
       // 头部 —— 统一走 SystemPageHeader（居中标题 + 返回）
@@ -255,7 +259,28 @@ export struct MySharesPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    }
+
+    // 撤销分享二次确认
+    SystemDialog({
+      visible: this.showRevokeConfirm,
+      title: '撤销分享',
+      description: '撤销后分享链接将失效，他人将无法再通过该链接访问',
+      confirmText: '撤销分享',
+      confirmVariant: 'danger',
+      onCancel: () => {
+        this.showRevokeConfirm = false;
+        this.pendingRevokeShare = null;
+      },
+      onConfirm: () => {
+        const target = this.pendingRevokeShare;
+        this.showRevokeConfirm = false;
+        this.pendingRevokeShare = null;
+        if (target) {
+          this.revokeShare(target);
+        }
+      }
+    })
     }
     }
     .hideTitleBar(true)
@@ -378,7 +403,10 @@ export struct MySharesPage {
             variant: 'surface-danger',
             buttonSize: 'small',
             loading: this.revokingShareId === share.share_id,
-            onPress: () => { this.revokeShare(share); }
+            onPress: () => {
+              this.pendingRevokeShare = share;
+              this.showRevokeConfirm = true;
+            }
           })
         } else {
           Text('已撤销')

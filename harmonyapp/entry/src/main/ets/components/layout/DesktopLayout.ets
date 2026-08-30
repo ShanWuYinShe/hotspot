@@ -117,6 +117,7 @@ export struct DesktopLayout {
           .borderRadius(DesignConstants.SHAPE.HERO_CARD) // 24
           .backgroundColor(this.getPalette().surfaceBackground)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+          .shadow(this.getPalette().elevatedShadow)
           .clip(true)
         }
         .layoutWeight(1)
@@ -125,7 +126,8 @@ export struct DesktopLayout {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor(this.getPalette().pageBackground)
+      // 桌面舞台底色（深一档，承载浮动侧栏与内容卡的边界感，对齐前端 --cst-surface-workspace）
+      .backgroundColor(this.getPalette().workspaceBackground)
 
       // 通知中心 overlay（遮罩淡入淡出，避免 if 硬切闪现）
       if (this.showNotificationCenter) {

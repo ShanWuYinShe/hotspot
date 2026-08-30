@@ -147,7 +147,7 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 - 明暗差异：本端明暗始终跟随系统（`isDarkMode`），与 Web 端可手动切换
   `isDark` 不同；主题族（vibrant/forest）双端可选集一致；鸿蒙端 figma_neu 为存量兼容项，不作为双端对齐目标
 
-字号（FONT.SIZE，禁用裸 `fontSize(N)`）：`XS_MINUS 9` / `XS2 10` / `XS 11` / `SM 12` / `MD 14` / `LG 16` / `LG_PLUS 18` / `XL 20` / `XXL 24` / `XXXL 32` / `HERO 48` / `HERO_LARGE 56`（近邻档 13/15/22/28 与 XXXL_PLUS 36 已按前端口径归并/删除，不保留）。字重 `FONT.WEIGHT.{REGULAR,MEDIUM,SEMIBOLD,BOLD}`。行高 `FONT.LINE_HEIGHT.{XS 18, SM 20, MD 22, LG 24, XL 26}`；字距 `FONT.LETTER_SPACING.{EYEBROW 1.4, LABEL 1.2, FIELD 1.28, ICON_LABEL 0.6}`（对齐前端 tracking-eyebrow/label/field 刻度）。
+字号（FONT.SIZE，禁用裸 `fontSize(N)`）：`XS_MINUS 9` / `XS2 10` / `XS 11` / `SM 12` / `MD 14` / `LG 16` / `LG_PLUS 18` / `XL 20` / `XXL 24` / `XXXL 30` / `HERO 36`（近邻档 13/15/22/28/32/48/56 与 XXXL_PLUS 36 已按前端口径归并/删除，不保留；`LG 16` 为 HarmonyOS 标准正文尺寸的平台适配档）。字重 `FONT.WEIGHT.{REGULAR,MEDIUM,SEMIBOLD,BOLD}`。行高 `FONT.LINE_HEIGHT.{XS 18, SM 20, MD 22, LG 24, XL 26}`；字距 `FONT.LETTER_SPACING.{EYEBROW 1.4, LABEL 1.2, FIELD 1.28, ICON_LABEL 0.6}`（对齐前端 tracking-eyebrow/label/field 刻度）。
 
 间距（SPACING，4px 网格 + 微步）：`HALF 2` / `THREE 3` / `XS 4` / `SM2 6` / `SM 8` / `MD2 10` / `MD 12` / `MD3 14` / `LG 16` / `LG2 20` / `XL 24` / `XXL 32`。禁止组件内 `padding({left:16})` 这类裸数——用 `SPACING.LG`。1vp 级微距（top:1 等）与 0 值允许保留（对齐前端间距不强制收敛原则）。
 

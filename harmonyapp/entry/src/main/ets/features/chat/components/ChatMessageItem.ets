@@ -123,13 +123,13 @@ export struct ChatMessageItem {
           Row({ space: DesignConstants.SPACING.XS }) {
             Text(this.timeText)
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.msg.isSelf ? this.chatTheme?.sendButtonActiveText : this.palette.textSecondary)
+              .fontColor(this.msg.isSelf ? this.palette.textTertiary : this.palette.textSecondary)
               .opacity(DesignConstants.OPACITY.SUBTLE)
             if (this.msg.isSelf && this.isLastSent) {
               Text() {
                 SymbolSpan($r(AppIcon.CHECK_ALL))
                   .fontSize(DesignConstants.FONT.SIZE.XS)
-                  .fontColor([this.chatTheme?.sendButtonActiveText])
+                  .fontColor([this.palette.online])
               }
             }
           }

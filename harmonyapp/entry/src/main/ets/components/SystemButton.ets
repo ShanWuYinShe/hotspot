@@ -53,8 +53,8 @@ export struct SystemButton {
   private getHeight(): number {
     if (this.buttonSize === 'compact') return DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT; // 28
     if (this.buttonSize === 'sheet') return DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT; // 44
-    if (this.buttonSize === 'small') return 36;
-    if (this.buttonSize === 'large') return 48;
+    if (this.buttonSize === 'small') return DesignConstants.COMPONENT.BUTTON_HEIGHT_SM; // 36
+    if (this.buttonSize === 'large') return DesignConstants.COMPONENT.BUTTON_HEIGHT_LG; // 48
     return DesignConstants.COMPONENT.BUTTON_HEIGHT; // 42
   }
 

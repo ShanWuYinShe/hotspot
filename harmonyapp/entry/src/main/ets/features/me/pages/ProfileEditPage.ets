@@ -24,6 +24,8 @@ import { validateField, FieldRule } from '../../../core/util/FormValidator';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
+import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
+import { common } from '@kit.AbilityKit';
 
 const TAG_OPTIONS: string[] = ['摄影', '旅行', '音乐', '美食', '运动', '阅读', '艺术', '科技', '游戏', '户外', '时尚', '电影'];
 const MAX_TAGS: number = 5;
@@ -58,6 +60,7 @@ export struct ProfileEditPage {
   private saveAnimTimer: number = -1;
   @State nicknameTouched: boolean = false;
   @State bioTouched: boolean = false;
+  @State isAvatarUploading: boolean = false;
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
@@ -182,6 +185,44 @@ export struct ProfileEditPage {
     }
   }
 
+  /**
+   * 更换头像：选图 → 压缩 → 上传 → 更新资料 → 刷新本地用户状态。
+   * 与 ProfilePage.changeAvatarDirectly 同一套上传流程。
+   */
+  private async changeAvatar(): Promise<void> {
+    if (this.isSaving || this.isAvatarUploading) {
+      return;
+    }
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const selectedUris = await MediaServiceManager.selectImages(context, 1);
+      if (selectedUris.length === 0) {
+        return;
+      }
+      this.isAvatarUploading = true;
+      const compressedPath = await MediaServiceManager.compressImage(context, selectedUris[0], 80, 1024 * 1024 * 2);
+      const uploadUri = await MediaServiceManager.prepareFileForUpload(context, compressedPath);
+      const uploadResult = await ApiClient.uploadFile(context, uploadUri, 'avatar');
+      if (!uploadResult.file_id) {
+        throw new Error('头像上传失败');
+      }
+      const updateResponse = await ApiClient.updateProfile({ avatar_file_id: uploadResult.file_id });
+      if (updateResponse.code !== 0) {
+        throw new Error(getErrorMessage(updateResponse, '头像更新失败'));
+      }
+      const accountResponse = await ApiClient.getAccountInfo();
+      if (accountResponse.code === 0 && accountResponse.data) {
+        GlobalStateManager.getInstance().updateUser(accountResponse.data);
+      }
+      SystemToast.showSuccess('头像已更新', this.getUIContext());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '头像更换失败，请重试';
+      SystemToast.showError(message, this.getUIContext());
+    } finally {
+      this.isAvatarUploading = false;
+    }
+  }
+
   private getHeaderAction(): PageHeaderAction | null {
     return {
       label: this.isSaved ? '' : (this.isSaving ? '保存中...' : '保存'),
@@ -203,49 +244,21 @@ export struct ProfileEditPage {
 
         Scroll() {
           Column({ space: DesignConstants.SPACING.LG }) {
-            // Banner 占位（使用 Stack 代替 overlay builder 以确保兼容性）
-            Stack({ alignContent: Alignment.TopStart }) {
-              Column()
-                .width('100%')
-                .height(DesignConstants.COMPONENT.BANNER_HEIGHT)
-                .borderRadius({ topLeft: DesignConstants.SHAPE.SHEET_TOP_RADIUS, topRight: DesignConstants.SHAPE.SHEET_TOP_RADIUS })
-                .linearGradient({
-                  direction: GradientDirection.Bottom,
-                  colors: [
-                    [AppThemeVisuals.withAlpha(this.getCurrentThemePalette().accentBackground, 0.38), 0.0],
-                    [AppThemeVisuals.withAlpha(this.getCurrentThemePalette().accentBackground, 0.12), 1.0]
-                  ]
-                })
-
-              // 更换横幅按钮：贴横幅右上角（用 alignContent 取代硬编码坐标）
-              Stack({ alignContent: Alignment.TopEnd }) {
-                Button() {
-                  Row({ space: DesignConstants.SPACING.XS }) {
-                    Text() {
-                      SymbolSpan($r(AppIcon.CAMERA))
-                        .fontSize(DesignConstants.FONT.SIZE.SM)
-                        .fontColor([this.getCurrentThemePalette().accentText])
-                    }
-                    Text('更换横幅')
-                      .fontSize(DesignConstants.FONT.SIZE.SM)
-                      .fontColor(this.getCurrentThemePalette().accentText)
-                  }
-                }
-                .type(ButtonType.Normal)
-                .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
-                .borderRadius(DesignConstants.SHAPE.BUTTON)
-                .backgroundColor(this.getCurrentThemePalette().overlayStrong)
-                .onClick(() => {
-                  SystemToast.show('横幅更换功能开发中', this.getUIContext());
-                })
-              }
+            // Banner 占位（渐变装饰）。
+            // 注：后端用户模型（core/types/api/user.ets 的 AccountInfo / UpdateAccountRequest）
+            // 暂无 banner 字段，「更换横幅」入口已移除（原「开发中」Toast 一并删除），
+            // 待后端支持 banner 字段后恢复。
+            Column()
               .width('100%')
-              .height('100%')
-              .padding({ top: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD })
-            }
-            .width('100%')
-            .height(DesignConstants.COMPONENT.BANNER_HEIGHT)
-            .borderRadius({ topLeft: DesignConstants.SHAPE.SHEET_TOP_RADIUS, topRight: DesignConstants.SHAPE.SHEET_TOP_RADIUS })
+              .height(DesignConstants.COMPONENT.BANNER_HEIGHT)
+              .borderRadius({ topLeft: DesignConstants.SHAPE.SHEET_TOP_RADIUS, topRight: DesignConstants.SHAPE.SHEET_TOP_RADIUS })
+              .linearGradient({
+                direction: GradientDirection.Bottom,
+                colors: [
+                  [AppThemeVisuals.withAlpha(this.getCurrentThemePalette().accentBackground, 0.38), 0.0],
+                  [AppThemeVisuals.withAlpha(this.getCurrentThemePalette().accentBackground, 0.12), 1.0]
+                ]
+              })
 
             // 头像 + 名称区
             Row({ space: DesignConstants.SPACING.MD }) {
@@ -271,8 +284,10 @@ export struct ProfileEditPage {
                 .borderRadius(DesignConstants.RADIUS.FULL)
                 .backgroundColor(this.getCurrentThemePalette().accentBackground)
                 .border({ width: DesignConstants.BORDER_WIDTH.HEAVY, color: this.getSurfaceBackground() })
+                .enabled(!this.isSaving && !this.isAvatarUploading)
+                .opacity(this.isAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)
                 .onClick(() => {
-                  SystemToast.show('头像更换功能开发中', this.getUIContext());
+                  this.changeAvatar();
                 })
               }
 
@@ -360,7 +375,6 @@ export struct ProfileEditPage {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
     }
     .hideTitleBar(true)

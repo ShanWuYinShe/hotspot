@@ -1,30 +1,29 @@
 /**
  * 附近的群组 - 独立列表页
- * 对齐前端 /groups/nearby：群组列表（距离/成员数）+ 下拉刷新 + 上拉分页。
+ * 对齐前端 /nearby/groups：2 列 3:4 群组图片卡墙（桌面 3 列）+ 移动端首卡 featured
+ * 全宽精选大卡；搜索/分类/统计行保留；下拉刷新 + 上拉分页。
  * 数据来自 groups/search（reference_point + radius + sort_by=distance）。
  */
 
 import { GlobalStateManager, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
-import { curves } from '@kit.ArkUI';
 import { PageShellContainer } from '../../../components/PageShellContainer';
-import type { BreakpointType } from '../../../core/responsive/Breakpoint';
-import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
+import { isDesktopForm, BreakpointType } from '../../../core/responsive/Breakpoint';
+import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, GroupDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { GroupItem, GeoPoint, SearchGroupsRequest } from '../../../core/types/api';
+import { GroupCard } from '../components/GroupCard';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemInput } from '../../../components/SystemInput';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
-import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { EmptyState, RefreshIndicator, LoadingMoreIndicator } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
-import { formatCount } from '../../../core/utils/FormatUtil';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 @Preview
@@ -46,9 +45,7 @@ export struct NearbyGroupsListPage {
   @State errorMessage: string = '';
   @State keyword: string = '';
   @State activeTag: string = '全部';
-  @State private pressedGroupKey: string = '';
   private readonly TAGS: string[] = ['全部', '摄影', '音乐', '户外', '阅读', '美食', '健身', '游戏'];
-  private groupsDataSource: BasicDataSource<GroupItem> = new BasicDataSource<GroupItem>([]);
   private isDestroyed: boolean = false;
 
   private getCurrentThemePalette() {
@@ -99,13 +96,11 @@ export struct NearbyGroupsListPage {
       if (response.code === 0) {
         const items = (response.data?.items ?? []).filter((g: GroupItem) => g.group?.group_id);
         this.groups = items;
-        this.groupsDataSource.setData(this.groups);
         this.hasMore = !!(response.data?.next_cursor);
         this.nextCursor = response.data?.next_cursor ?? '';
       } else {
         this.errorMessage = getErrorMessage(response, '加载失败');
         this.groups = [];
-        this.groupsDataSource.clear();
       }
     } catch (error) {
       this.errorMessage = '加载附近群组失败';
@@ -125,6 +120,9 @@ export struct NearbyGroupsListPage {
         reference_point: ref,
         radius: DefaultConfig.NEARBY_RADIUS,
         sort_by: 'distance',
+        // 翻页必须透传当前生效的筛选条件，否则翻页后 keyword/tag 筛选失效
+        keyword: this.keyword || undefined,
+        tag: (this.activeTag !== '全部' ? this.activeTag : undefined) as string | undefined,
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.nextCursor }
       };
       const response = await ApiClient.searchGroups(request);
@@ -132,7 +130,6 @@ export struct NearbyGroupsListPage {
       if (response.code === 0) {
         const items = (response.data?.items ?? []).filter((g: GroupItem) => g.group?.group_id);
         this.groups = this.groups.concat(items);
-        this.groupsDataSource.appendData(items);
         this.hasMore = !!(response.data?.next_cursor);
         this.nextCursor = response.data?.next_cursor ?? '';
       }
@@ -149,82 +146,37 @@ export struct NearbyGroupsListPage {
     AppRouter.push(PageNames.GROUP_DETAIL, params);
   }
 
-  @Builder
-  private buildGroupRow(group: GroupItem) {
-    Row({ space: DesignConstants.SPACING.MD }) {
-      Row() {
-        Text() {
-          SymbolSpan($r(AppIcon.GROUP))
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontColor([this.getCurrentThemePalette().accentBackground])
-        }
-      }
-      .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
-      .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
-      .justifyContent(FlexAlign.Center)
-      .borderRadius(DesignConstants.RADIUS.LG)
-      .backgroundColor(this.getCurrentThemePalette().accentMuted)
+  private isDesktop(): boolean {
+    return isDesktopForm(this.currentBreakpoint);
+  }
 
-      Column({ space: DesignConstants.SPACING.XS }) {
-        Text(group.group?.name ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+  /** 网格卡分列数：mobile/tablet 2 列，desktop(≥1280) 3 列（对齐前端 /nearby/groups） */
+  private getColumnCount(): number {
+    return this.isDesktop() ? 3 : 2;
+  }
 
-        Row({ space: DesignConstants.SPACING.SM }) {
-          Text(`${formatCount(group.group?.members_count)} 人`)
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getCurrentThemePalette().textTertiary)
-          if (group.location?.distance !== undefined && group.location?.distance !== null) {
-            Text(LocationUtil.formatDistance(group.location.distance))
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getCurrentThemePalette().accentText)
-          }
-        }
-        .alignItems(VerticalAlign.Center)
-
-        if (group.description) {
-          Text(group.description)
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-      }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
-
-      Text() {
-        SymbolSpan($r(AppIcon.ARROW_RIGHT))
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor([this.getCurrentThemePalette().textTertiary])
-      }
+  /** featured 首卡仅移动/平板端（对齐前端移动端首卡精选，桌面 BSP 无 featured） */
+  private getFeaturedGroup(): GroupItem | null {
+    if (this.isDesktop() || this.groups.length === 0) {
+      return null;
     }
-    .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-    // 整行按压反馈（对齐 tap-97 语义）
-    .scale(this.pressedGroupKey === (group.group?.group_id ?? '') ?
-      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
-      { x: 1, y: 1 })
-    .animation({ curve: curves.springMotion(
-      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-    ) })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.pressedGroupKey = group.group?.group_id ?? '';
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.pressedGroupKey = '';
-      }
-    })
-    .onClick(() => {
-      const groupId = group.group?.group_id;
-      if (groupId) {
-        this.openGroupDetail(groupId);
-      }
-    })
+    return this.groups[0];
+  }
+
+  /** featured 之后的卡按列数分块（Scroll + ForEach chunk，分页规模可控） */
+  private getWallGroups(): GroupItem[] {
+    const featured = this.getFeaturedGroup();
+    return featured ? this.groups.slice(1) : this.groups;
+  }
+
+  private getWallRows(): GroupItem[][] {
+    const columns = this.getColumnCount();
+    const items = this.getWallGroups();
+    const rows: GroupItem[][] = [];
+    for (let index = 0; index < items.length; index += columns) {
+      rows.push(items.slice(index, index + columns));
+    }
+    return rows;
   }
 
   build() {
@@ -328,32 +280,51 @@ export struct NearbyGroupsListPage {
             .layoutWeight(1)
         } else {
           Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-            List() {
-              LazyForEach(this.groupsDataSource, (group: GroupItem) => {
-                ListItem() {
-                  this.buildGroupRow(group)
+            Scroll() {
+              Column() {
+                // 移动/平板端首卡 featured 全宽精选大卡
+                if (this.getFeaturedGroup()) {
+                  GroupCard({ group: this.getFeaturedGroup() as GroupItem, featured: true })
+                    .margin({ bottom: DesignConstants.SPACING.LG })
                 }
-              }, (group: GroupItem) => group.group?.group_id ?? '')
 
-              if (this.hasMore) {
-                ListItem() {
+                // 2/3 列图片卡墙
+                ForEach(this.getWallRows(), (rowGroups: GroupItem[]) => {
+                  Row({ space: DesignConstants.SPACING.LG }) {
+                    ForEach(rowGroups, (group: GroupItem) => {
+                      GroupCard({ group: group })
+                        .layoutWeight(1)
+                    }, (group: GroupItem) => group.group?.group_id ?? '')
+                  }
+                  .width('100%')
+                  .alignItems(VerticalAlign.Top)
+                  .margin({ bottom: DesignConstants.SPACING.LG })
+                }, (rowGroups: GroupItem[], index: number) => `row-${index}`)
+
+                // 分页状态条
+                if (this.hasMore) {
                   LoadingMoreIndicator()
-                }
-              } else {
-                ListItem() {
+                } else {
                   Text('没有更多了')
                     .fontSize(DesignConstants.FONT.SIZE.XS)
                     .fontColor(this.getCurrentThemePalette().textTertiary)
                     .width('100%')
                     .textAlign(TextAlign.Center)
-                    .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+                    .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.LG })
                 }
               }
+              .width('100%')
+              .padding({
+                left: DesignConstants.SPACING.LG,
+                right: DesignConstants.SPACING.LG
+              })
+              .constraintSize({ minHeight: '100%' })
             }
             .width('100%')
             .layoutWeight(1)
             .scrollBar(BarState.Auto)
             .onReachEnd(() => { this.loadMoreGroups(); })
+            .edgeEffect(EdgeEffect.None)
           }
           .layoutWeight(1)
           .onRefreshing(() => { this.loadGroups(true); })
@@ -361,7 +332,6 @@ export struct NearbyGroupsListPage {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
     }
     .hideTitleBar(true)

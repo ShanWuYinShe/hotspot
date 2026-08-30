@@ -732,7 +732,6 @@ export struct CreateGroupPage {
       }
       .width('100%')
       .height('100%')
-    .backgroundColor(this.getCurrentThemePalette().pageBackground)
 
       if (this.isCreating) {
         SystemLoadingView()

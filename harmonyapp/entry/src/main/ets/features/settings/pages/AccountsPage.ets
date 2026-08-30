@@ -18,6 +18,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
+import { SystemDialog } from '../../../components/SystemDialog';
 import { EmptyState } from '../../../components/EmptyState';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -44,6 +45,9 @@ export struct AccountsPage {
   @State currentUserId: string | null = null;
   @State isLoading: boolean = true;
   @State errorMessage: string = '';
+  @State showDeleteConfirm: boolean = false;
+  @State pendingDeleteAccount: AuthData | null = null;
+  @State deletingAccountId: string = '';
 
   private stateManager = GlobalStateManager.getInstance();
   private ws = WebSocketService.getInstance();
@@ -172,6 +176,8 @@ export struct AccountsPage {
 
   private async remove(auth: AuthData) {
     if (this.isDestroyed) return;
+    if (this.deletingAccountId.length > 0) return;
+    this.deletingAccountId = auth.user_id;
     try {
       await AuthAccountManager.removeAccount(auth.user_id);
       if (this.currentUserId !== null && this.currentUserId === auth.user_id) {
@@ -185,11 +191,14 @@ export struct AccountsPage {
       await this.load();
     } catch {
       SystemToast.showError('删除失败', this.getUIContext());
+    } finally {
+      this.deletingAccountId = '';
     }
   }
 
   build() {
     NavDestination() {
+    Stack() {
   PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
     Column() {
       // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回）
@@ -278,9 +287,13 @@ export struct AccountsPage {
 
                       SystemButton({
                         label: '删除',
-                        variant: 'primary',
+                        variant: 'danger',
                         buttonSize: 'small',
-                        onPress: () => { this.remove(acc); }
+                        loading: this.deletingAccountId === acc.user_id,
+                        onPress: () => {
+                          this.pendingDeleteAccount = acc;
+                          this.showDeleteConfirm = true;
+                        }
                       })
                 }
               }
@@ -309,7 +322,28 @@ export struct AccountsPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    }
+
+    // 删除账号二次确认
+    SystemDialog({
+      visible: this.showDeleteConfirm,
+      title: '删除账号',
+      description: '将删除该账号在本机的登录信息与本地数据，删除后需重新登录',
+      confirmText: '删除',
+      confirmVariant: 'danger',
+      onCancel: () => {
+        this.showDeleteConfirm = false;
+        this.pendingDeleteAccount = null;
+      },
+      onConfirm: () => {
+        const target = this.pendingDeleteAccount;
+        this.showDeleteConfirm = false;
+        this.pendingDeleteAccount = null;
+        if (target) {
+          this.remove(target);
+        }
+      }
+    })
     }
     }
     .hideTitleBar(true)

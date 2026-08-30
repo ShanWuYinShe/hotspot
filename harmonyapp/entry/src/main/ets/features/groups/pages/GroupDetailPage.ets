@@ -53,6 +53,7 @@ import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManag
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
+import { ErrorCode } from '../../../core/constants/ErrorCodes';
 
 interface GroupSyncData {
   groupId: string;
@@ -422,8 +423,10 @@ export struct GroupDetailPage {
           } else if (response.data.status === 'pending_approval') {
             SystemToast.showSuccess('已提交申请，等待管理员审批', this.getUIContext());
           }
-        } else if (response.code === 10400) {
-          SystemToast.show(getErrorMessage(response, '加入群组失败'), this.getUIContext());
+        } else if (response.code === ErrorCode.BUSINESS_CONFLICT && (response.message ?? '').includes('已是群成员')) {
+          // 10400 为通用业务冲突（密码错误/群已满/已申请过/仅限邀请均为此码），
+          // 仅「已是群成员」语义放行进入聊天，其余按错误展示、不跳转
+          SystemToast.show('你已是群成员', this.getUIContext());
           this.isMember = true;
           InteractionStateStore.getInstance().updateGroupMembership(this.groupId, { is_member: true });
           await this.enterChat();
@@ -1246,7 +1249,6 @@ export struct GroupDetailPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
     }
     .hideTitleBar(true)

@@ -1,5 +1,7 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { BreakpointType } from '../core/responsive/Breakpoint';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 /**
  * 页面内容栏容器（对齐前端 .page-shell + .page-pad）
@@ -32,6 +34,13 @@ export struct PageShellContainer {
   @Prop currentBreakpoint: BreakpointType = 'sm';
   /** 关闭横向留白（父级已自行处理 padding 时用） */
   @Prop noHorizontalPadding: boolean = false;
+  /** 顶部氛围光晕（对齐前端 ambient-glow，默认开启；地图/预览等沉浸页可关闭） */
+  @Prop ambientGlow: boolean = true;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
 
   private getMaxWidth(): number {
     const shell = DesignConstants.PAGE_SHELL;
@@ -67,18 +76,36 @@ export struct PageShellContainer {
   }
 
   build() {
-    Row() {
-      Column() {
-        this.content()
+    Stack({ alignContent: Alignment.Top }) {
+      // 顶部氛围光晕（统一注入，深色下消除「死黑」背景；对齐前端 ambient-glow）
+      if (this.ambientGlow) {
+        Column()
+          .width('70%')
+          .height(DesignConstants.LAYOUT.GLOW_BLOB_LARGE)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .backgroundColor(this.getPalette().heroGlow)
+          .opacity(this.getPalette().isDarkTheme ? 0.10 : 0.20)
+          .blur(DesignConstants.EFFECT.GLOW_BLUR_LARGE)
+          .align(Alignment.Top)
+          .margin({ top: DesignConstants.SPACING.MD })
       }
-      .constraintSize({ maxWidth: this.getMaxWidth() })
+
+      Row() {
+        Column() {
+          this.content()
+        }
+        .constraintSize({ maxWidth: this.getMaxWidth() })
+        .width('100%')
+      }
       .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .padding({
+        left: this.noHorizontalPadding ? 0 : this.getHorizontalPadding(),
+        right: this.noHorizontalPadding ? 0 : this.getHorizontalPadding()
+      })
     }
     .width('100%')
-    .justifyContent(FlexAlign.Center)
-    .padding({
-      left: this.noHorizontalPadding ? 0 : this.getHorizontalPadding(),
-      right: this.noHorizontalPadding ? 0 : this.getHorizontalPadding()
-    })
+    .height('100%')
+    .backgroundColor(this.getPalette().pageBackground)
   }
 }

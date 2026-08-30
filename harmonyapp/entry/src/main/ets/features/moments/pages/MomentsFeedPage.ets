@@ -6,7 +6,7 @@
 import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN } from '../../../core/state/GlobalStateManager';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
-import { useMasterDetail } from '../../../core/responsive/Breakpoint';
+import { useMasterDetail, isDesktopForm } from '../../../core/responsive/Breakpoint';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
@@ -30,6 +30,7 @@ import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { MomentFeedCard } from '../../../components/MomentFeedCard';
+import { MomentWallCard } from '../components/MomentWallCard';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
@@ -79,7 +80,8 @@ export struct MomentsFeedPage {
   @State activeTab: string = '热门';
   @State activeTag: string = '';
 
-  private readonly TABS: string[] = ['热门', '附近', '活动', '关注'];
+  // 「活动」与「热门」后端逻辑完全一致（同走 moments/search sort_by=popular），无法区分，故移除
+  private readonly TABS: string[] = ['热门', '附近', '关注'];
 
   private getAvailableTags(): string[] {
     const tagSet = new Set<string>();
@@ -89,6 +91,15 @@ export struct MomentsFeedPage {
       }
     }
     return Array.from(tagSet);
+  }
+
+  /** 标签药片客户端过滤：activeTag 为空（未选/再次点击取消）时恢复全部 */
+  private getVisibleMoments(): MomentItem[] {
+    if (!this.activeTag) {
+      return this.hotMoments;
+    }
+    const tag = this.activeTag;
+    return this.hotMoments.filter((moment: MomentItem) => (moment.tags ?? []).includes(tag));
   }
 
   private isUserActionPending(userId: string): boolean {
@@ -261,8 +272,8 @@ export struct MomentsFeedPage {
           showBackButton: this.showBackButton,
           onBack: this.showBackButton ? () => { AppRouter.pop(); } : null
         }) {
-          if (this.hotMoments.length > 0) {
-            Text(`${this.hotMoments.length} 条内容`)
+          if (this.getVisibleMoments().length > 0) {
+            Text(`${this.getVisibleMoments().length} 条内容`)
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor(this.getCurrentThemePalette().textSecondary)
           }
@@ -299,6 +310,8 @@ export struct MomentsFeedPage {
               const tab = this.TABS[index];
               if (tab && tab !== this.activeTab) {
                 this.activeTab = tab;
+                // 标签药片基于当前数据集的 tags 生成，切换数据源时重置过滤
+                this.activeTag = '';
                 this.loadData(true);
               }
             }
@@ -331,63 +344,47 @@ export struct MomentsFeedPage {
         .transition(TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
           .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })))
       } else {
-        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          if (useMasterDetail(this.currentBreakpoint)) {
-            // ======== 宽屏两栏布局（master-detail，对齐前端 useMasterDetail） ========
-            Row() {
-              // 左栏：标签药片 + 动态网格
-              Scroll() {
-                Column() {
-                  this.buildTagChipsStrip()
-                  this.buildMomentFeed()
-                }
-                .width('100%')
-              }
-              .layoutWeight(1)
-              .scrollBar(BarState.Auto)
-              // 桌面分支同样给滚动尾部留呼吸（对齐移动分支的 bottom 安全区语义）
-              .padding({ bottom: DesignConstants.SPACING.LG })
-
-              // 右栏：热门话题 + 活跃用户（对齐前端 rightSidebar，宽 220vp + border-left）
-              Column() {
-                this.buildRightSidebar()
-              }
-              .width(DesignConstants.LAYOUT.RIGHT_SIDEBAR_WIDTH)
-              .height('100%')
-              .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-              .border({ width: { left: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
+        // 下拉刷新由 buildMomentFeed 内包 WaterFlow 的 Refresh 承担
+        if (useMasterDetail(this.currentBreakpoint)) {
+          // ======== 宽屏两栏布局（master-detail，对齐前端 useMasterDetail） ========
+          Row() {
+            // 左栏：标签药片 + 动态瀑布墙（WaterFlow 自滚）
+            Column() {
+              this.buildTagChipsStrip()
+              this.buildMomentFeed()
             }
-            .layoutWeight(1)
             .width('100%')
-          } else {
-            // ======== 移动端单栏布局（对齐前端 !isDesktop 分支） ========
-            Scroll() {
-              Column() {
-                this.buildTagChipsStrip()
-                this.buildMomentFeed()
-              }
-              .width('100%')
-            }
             .layoutWeight(1)
-            .scrollBar(BarState.Auto)
-            .padding({
-              bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
-            })
+
+            // 右栏：热门话题 + 活跃用户（对齐前端 rightSidebar，宽 220vp + border-left）
+            Column() {
+              this.buildRightSidebar()
+            }
+            .width(DesignConstants.LAYOUT.RIGHT_SIDEBAR_WIDTH)
+            .height('100%')
+            .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+            .border({ width: { left: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
           }
+          .layoutWeight(1)
+          .width('100%')
+        } else {
+          // ======== 移动端单栏布局（对齐前端 !isDesktop 分支） ========
+          Column() {
+            this.buildTagChipsStrip()
+            this.buildMomentFeed()
+          }
+          .width('100%')
+          .layoutWeight(1)
         }
-        .layoutWeight(1)
-        .onRefreshing(() => { this.loadData(true); })
-        .transition(TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-          .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })))
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(this.getCurrentThemePalette().pageBackground)
   }
   }
 
-  // ==================== 动态列表/网格（对齐前端 feedGrid） ====================
+  // ==================== 动态瀑布墙（对齐前端 BSP 卡片墙：移动/平板 2 列，桌面 3 列） ====================
+  // tag 胶囊条固定在瀑布上方（不随流滚动）以保留 WaterFlow 虚拟化；无首卡 hero，全部项进统一墙。
   @Builder
   buildMomentFeed() {
     Column() {
@@ -406,63 +403,66 @@ export struct MomentsFeedPage {
         bottom: DesignConstants.SPACING.SM
       })
 
-      // Hero first card（对齐前端 ambient-glow 首个卡片突出）
-      if (this.hotMoments.length > 0) {
-        Column() {
-          MomentFeedCard({
-            moment: this.hotMoments[0],
-            variant: 'postCard',
-            showFavorite: false,
-            onOpenDetail: (item: MomentItem) => this.openMomentDetail(item),
-            onImagePreview: (momentId: string, images: string[], index: number) => {
-              this.previewImage(momentId, images, index);
-            }
-          })
-        }
-        .width('100%')
-        .padding({
-          left: DesignConstants.SPACING.LG,
-          right: DesignConstants.SPACING.LG,
-          bottom: DesignConstants.SPACING.XS
-        })
-      }
-
-      // 剩余动态用紧凑卡片列表（对齐前端 feedGrid 的 dense 模式）
-      if (this.hotMoments.length > 1) {
-        ForEach(this.hotMoments.slice(1), (moment: MomentItem) => {
-          MomentFeedCard({
-            moment: moment,
-            variant: 'default',
-            showFavorite: false,
-            onOpenDetail: (item: MomentItem) => this.openMomentDetail(item),
-            onImagePreview: (momentId: string, images: string[], index: number) => {
-              this.previewImage(momentId, images, index);
-            }
-          })
+      if (this.getVisibleMoments().length > 0) {
+        // Refresh 直接包可滚动的 WaterFlow（子组件需为滚动组件下拉刷新才生效）
+        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
+          WaterFlow() {
+            ForEach(this.getVisibleMoments(), (moment: MomentItem) => {
+              FlowItem() {
+                MomentWallCard({
+                  moment: moment,
+                  onOpenDetail: (item: MomentItem) => this.openMomentDetail(item),
+                  onImagePreview: (momentId: string, images: string[], index: number) => {
+                    this.previewImage(momentId, images, index);
+                  }
+                })
+              }
+            }, (moment: MomentItem) => moment.moment_id)
+          }
+          .width('100%')
+          .columnsTemplate(this.getWallColumns() === 3 ? '1fr 1fr 1fr' : '1fr 1fr')
+          .columnsGap(DesignConstants.SPACING.LG)
+          .rowsGap(DesignConstants.SPACING.LG)
           .padding({
             left: DesignConstants.SPACING.LG,
             right: DesignConstants.SPACING.LG,
-            top: DesignConstants.SPACING.XS,
-            bottom: DesignConstants.SPACING.XS
+            bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
           })
-        }, (moment: MomentItem) => moment.moment_id)
-      }
-
-      // 空态（对齐前端 EmptyState：图标 + 文案，不再裸灰块）
-      if (this.hotMoments.length === 0) {
-        Column() {
+          .cachedCount(4)
+          .scrollBar(BarState.Auto)
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .onRefreshing(() => { this.loadData(true); })
+      } else {
+        // 空态（对齐前端 EmptyState：图标 + 文案）
+        if (this.activeTag) {
+          // 标签过滤后为空：提供「查看全部」退出过滤
+          EmptyState({
+            icon: AppIcon.RECOMMEND,
+            message: `「${this.activeTag}」标签下暂时没有动态`,
+            actionLabel: '查看全部',
+            onAction: () => { this.activeTag = ''; }
+          })
+            .layoutWeight(1)
+        } else {
           EmptyState({
             icon: AppIcon.RECOMMEND,
             message: '附近暂时没有瞬间',
             actionLabel: '刷新',
             onAction: () => { this.loadData(true); }
           })
+            .layoutWeight(1)
         }
-        .width('100%')
-        .padding({ top: DesignConstants.SPACING.XXL, bottom: DesignConstants.SPACING.XXL })
       }
     }
     .width('100%')
+    .height('100%')
+  }
+
+  private getWallColumns(): number {
+    // 对齐前端 /nearby/moments gridColumns：mobile 2 / tablet 2 / desktop 3
+    return isDesktopForm(this.currentBreakpoint) ? 3 : 2;
   }
 
   // ==================== 右侧栏（桌面端，对齐前端 rightSidebar） ====================
