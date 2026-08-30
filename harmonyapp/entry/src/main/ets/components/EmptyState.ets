@@ -8,6 +8,7 @@ import { AppIcon } from './SystemIcon';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { SystemButton } from './SystemButton';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { LucideIcon } from './LucideIcon';
 
 @Reusable
 @Component
@@ -35,12 +36,12 @@ export struct EmptyState {
       Column({ space: DesignConstants.SPACING.LG }) {
         // bare：无圆形容器，图标直接渲染 + muted 文案（对齐前端 EmptyState bare 契约）
         if (this.bare) {
-          Text() {
-            SymbolSpan($r(this.icon))
-              .fontSize(DesignConstants.FONT.SIZE.XXL)
-              .fontColor([this.getPalette().textSecondary])
-              .opacity(DesignConstants.OPACITY.MUTED)
-          }
+          LucideIcon({
+            icon: this.icon,
+            size: DesignConstants.FONT.SIZE.XXL,
+            color: this.getPalette().textSecondary
+          })
+          .opacity(DesignConstants.OPACITY.MUTED)
         } else {
           Stack() {
             // 图标底改 accent 淡底、glyph 用主题色（对齐前端空态的柔和 accent 图标，
@@ -52,12 +53,12 @@ export struct EmptyState {
               .backgroundColor(this.getPalette().accentMuted)
               .shadow(this.getPalette().accentShadow)
 
-            Text() {
-              SymbolSpan($r(this.icon))
-                .fontSize(DesignConstants.FONT.SIZE.XXL)
-                .fontColor([this.getPalette().accentBackground])
-                .opacity(DesignConstants.OPACITY.EMPHASIZED)
-            }
+            LucideIcon({
+              icon: this.icon,
+              size: DesignConstants.FONT.SIZE.XXL,
+              color: this.getPalette().accentBackground
+            })
+            .opacity(DesignConstants.OPACITY.EMPHASIZED)
           }
           .width(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
           .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)

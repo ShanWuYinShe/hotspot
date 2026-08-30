@@ -9,6 +9,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { MomentItem } from '../../../core/types/api';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 @Component
 export struct ProfileMomentGallery {
@@ -76,11 +77,11 @@ export struct ProfileMomentGallery {
       // 帖子 tab
       if (this.moments.length === 0) {
         Column({ space: DesignConstants.SPACING.MD }) {
-          Text() {
-            SymbolSpan($r(AppIcon.EMPTY))
-              .fontSize(DesignConstants.FONT.SIZE.XL)
-              .fontColor([this.palette().textSecondary])
-          }
+          LucideIcon({
+              icon: AppIcon.EMPTY,
+              size: DesignConstants.FONT.SIZE.XL,
+              color: this.palette().textSecondary
+            })
           .opacity(DesignConstants.OPACITY.MUTED)
 
           Text('还没有发布帖子')
@@ -101,11 +102,11 @@ export struct ProfileMomentGallery {
     } else {
       // 喜欢 / 收藏 tab
       Column({ space: DesignConstants.SPACING.MD }) {
-        Text() {
-          SymbolSpan($r(this.selectedTab === 1 ? AppIcon.HEART : AppIcon.STAR))
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontColor([this.palette().textSecondary])
-        }
+        LucideIcon({
+            icon: this.selectedTab === 1 ? AppIcon.HEART : AppIcon.STAR,
+            size: DesignConstants.FONT.SIZE.XL,
+            color: this.palette().textSecondary
+          })
         .opacity(DesignConstants.OPACITY.MUTED)
 
         Text(this.selectedTab === 1 ? '喜欢的帖子将在这里展示' : '收藏的帖子将在这里展示')

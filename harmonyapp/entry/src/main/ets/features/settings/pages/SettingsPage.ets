@@ -40,6 +40,7 @@ import { common } from '@kit.AbilityKit';
 import { ConfigurationConstant } from '@kit.AbilityKit';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 const DOMAIN_NUMBER: number = 0xFF27;
 const TAG: string = 'SettingsPage';
@@ -435,11 +436,11 @@ export struct SettingsPage {
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
 
-        Text() {
-          SymbolSpan($r(AppIcon.ARROW_RIGHT))
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor([this.getCurrentThemePalette().textSecondary])
-        }
+        LucideIcon({
+            icon: AppIcon.ARROW_RIGHT,
+            size: DesignConstants.FONT.SIZE.MD,
+            color: this.getCurrentThemePalette().textSecondary
+          })
       }
       .width('100%')
       .padding(DesignConstants.SPACING.LG)

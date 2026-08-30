@@ -3,6 +3,7 @@ import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { curves } from '@kit.ArkUI';
+import { LucideIcon } from './LucideIcon';
 
 /**
  * 通用按钮组件（对齐前端 button 设计系统）
@@ -181,11 +182,11 @@ export struct SystemButton {
             .color(this.getTextColor() as ResourceColor)
             .margin({ right: this.showIcon || this.label.length === 0 ? 0 : DesignConstants.SPACING.XS })
         } else if (this.showIcon) {
-          Text() {
-            SymbolSpan($r(this.icon))
-              .fontSize(this.getIconSize())
-              .fontColor([this.getTextColor()])
-          }
+          LucideIcon({
+            icon: this.icon,
+            size: this.getIconSize(),
+            color: this.getTextColor()
+          })
           .margin({ right: this.label.length === 0 ? 0 : DesignConstants.SPACING.XS })
         }
         if (this.label.length > 0) {

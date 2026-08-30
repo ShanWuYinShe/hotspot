@@ -9,6 +9,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { NearbyImageCard } from '../../../components/NearbyImageCard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 /**
  * 附近用户卡 — 3:4 图片卡（头像即卡图，对齐前端 nearby/people/UserCard）。
@@ -74,13 +75,11 @@ export struct UserCard {
   @Builder
   private buildFollowButton() {
     Row() {
-      Text() {
-        SymbolSpan($r(this.isFollowing() ? AppIcon.CHECK : AppIcon.ADD))
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor([this.isFollowing() ?
-            this.getPalette().accentText :
-            DesignConstants.COLOR.WHITE])
-      }
+      LucideIcon({
+        icon: this.isFollowing() ? AppIcon.CHECK : AppIcon.ADD,
+        size: DesignConstants.FONT.SIZE.SM,
+        color: this.isFollowing() ? this.getPalette().accentText : DesignConstants.COLOR.WHITE
+      })
     }
     .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}follow-${this.getUserId()}`)
     .width(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)

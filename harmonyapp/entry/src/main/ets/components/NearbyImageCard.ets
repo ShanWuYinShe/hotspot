@@ -4,6 +4,7 @@ import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { curves } from '@kit.ArkUI';
+import { LucideIcon } from '../components/LucideIcon';
 
 @Builder
 function emptyNearbyCardSlot() {
@@ -88,11 +89,11 @@ export struct NearbyImageCard {
   private buildBadge() {
     if (this.badgeShape === 'circle') {
       Row() {
-        Text() {
-          SymbolSpan($r(this.badgeIcon))
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor([DesignConstants.COLOR.WHITE])
-        }
+        LucideIcon({
+            icon: this.badgeIcon,
+            size: DesignConstants.FONT.SIZE.XS,
+            color: DesignConstants.COLOR.WHITE
+          })
       }
       .width(DesignConstants.LAYOUT.UNREAD_BADGE_SIZE)
       .height(DesignConstants.LAYOUT.UNREAD_BADGE_SIZE)
@@ -104,11 +105,11 @@ export struct NearbyImageCard {
     } else if (this.badgeText.length > 0) {
       Row({ space: DesignConstants.SPACING.HALF }) {
         if (this.badgeVariant === 'glass') {
-          Text() {
-            SymbolSpan($r(this.badgeIcon))
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor([DesignConstants.COLOR.WHITE])
-          }
+          LucideIcon({
+              icon: this.badgeIcon,
+              size: DesignConstants.FONT.SIZE.XS2,
+              color: DesignConstants.COLOR.WHITE
+            })
         }
         Text(this.badgeText)
           .fontSize(DesignConstants.FONT.SIZE.XS2)

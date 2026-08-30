@@ -3,6 +3,7 @@ import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppThemeVisuals, InputBorderResolution } from '../core/theme/AppThemeVisuals';
 import { AppIcon } from './SystemIcon';
+import { LucideIcon } from '../components/LucideIcon';
 
 /**
  * 通用单行输入框（对齐前端 input-surface）
@@ -63,11 +64,11 @@ export struct SystemInput {
   build() {
     Row() {
       if (this.showPrefixIcon) {
-        Text() {
-          SymbolSpan($r(this.prefixIcon))
-            .fontSize(this.fontSize + 2)
-            .fontColor([this.getPalette().textSecondary])
-        }
+        LucideIcon({
+            icon: this.prefixIcon,
+            size: this.fontSize + 2,
+            color: this.getPalette().textSecondary
+          })
         .margin({ right: DesignConstants.SPACING.SM })
       }
 
@@ -101,11 +102,11 @@ export struct SystemInput {
       if (this.showClearButton && this.value.length > 0) {
         // 清除钮用 ICON_BUTTON_SIZE(36) 命中区包裹小图标：触控达标 ≥36vp，视觉尺寸不变
         Row() {
-          Text() {
-            SymbolSpan($r(AppIcon.CLOSE))
-              .fontSize(this.clearIconSize)
-              .fontColor([this.getPalette().textSecondary])
-          }
+          LucideIcon({
+              icon: AppIcon.CLOSE,
+              size: this.clearIconSize,
+              color: this.getPalette().textSecondary
+            })
         }
         .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
         .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)

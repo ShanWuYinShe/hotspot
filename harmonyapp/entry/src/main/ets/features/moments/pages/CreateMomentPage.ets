@@ -34,6 +34,7 @@ import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManag
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 const DOMAIN_NUMBER: number = 0xFF06;
 const TAG: string = 'CreateMomentPage';
@@ -461,11 +462,11 @@ export struct CreateMomentPage {
                   GridItem() {
                     Button() {
                       Column() {
-                        Text() {
-                          SymbolSpan($r(AppIcon.ADD))
-                            .fontSize(DesignConstants.FONT.SIZE.XXL)
-                            .fontColor([this.getCurrentThemePalette().textSecondary])
-                        }
+                        LucideIcon({
+                            icon: AppIcon.ADD,
+                            size: DesignConstants.FONT.SIZE.XXL,
+                            color: this.getCurrentThemePalette().textSecondary
+                          })
                         Text('相册')
                           .fontSize(DesignConstants.FONT.SIZE.XS)
                           .fontColor(this.getCurrentThemePalette().textSecondary)
@@ -486,11 +487,11 @@ export struct CreateMomentPage {
                   GridItem() {
                     Button() {
                       Column() {
-                        Text() {
-                          SymbolSpan($r(AppIcon.CAMERA))
-                            .fontSize(DesignConstants.FONT.SIZE.XXL)
-                            .fontColor([this.getCurrentThemePalette().textSecondary])
-                        }
+                        LucideIcon({
+                            icon: AppIcon.CAMERA,
+                            size: DesignConstants.FONT.SIZE.XXL,
+                            color: this.getCurrentThemePalette().textSecondary
+                          })
                         Text('拍照')
                           .fontSize(DesignConstants.FONT.SIZE.XS)
                           .fontColor(this.getCurrentThemePalette().textSecondary)
@@ -597,11 +598,11 @@ export struct CreateMomentPage {
 
               if (this.localLocation) {
                 Row() {
-                  Text() {
-                    SymbolSpan($r(AppIcon.LOCATION))
-                      .fontSize(DesignConstants.FONT.SIZE.XL)
-                      .fontColor([this.getCurrentThemePalette().accentBackground])
-                  }
+                  LucideIcon({
+                      icon: AppIcon.LOCATION,
+                      size: DesignConstants.FONT.SIZE.XL,
+                      color: this.getCurrentThemePalette().accentBackground
+                    })
 
                   Text(this.localLocation.locationName)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -718,11 +719,11 @@ export struct CreateMomentPage {
         .backgroundColor(this.getSurfaceBackground())
 
       Button() {
-        Text() {
-          SymbolSpan($r(AppIcon.CANCEL))
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor([this.getCurrentThemePalette().accentText])
-        }
+        LucideIcon({
+            icon: AppIcon.CANCEL,
+            size: DesignConstants.FONT.SIZE.MD,
+            color: this.getCurrentThemePalette().accentText
+          })
       }
       .type(ButtonType.Normal)
       .backgroundColor(this.getCurrentThemePalette().overlayStrong)

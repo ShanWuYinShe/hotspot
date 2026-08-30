@@ -21,6 +21,7 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { LucideIcon } from '../../../components/LucideIcon';
 export const DOMAIN_NUMBER: number = 0xFF13;
 export const TAG: string = 'LocationPickerPage';
 export const SEARCH_PANEL_HEIGHT: number = 440;
@@ -101,11 +102,11 @@ export function TopBar(props: TopBarProps) {
     alignItems: ItemAlign.Center
   }) {
     Row() {
-      Text() {
-        SymbolSpan($r(AppIcon.BACK))
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textPrimary])
-      }
+      LucideIcon({
+          icon: AppIcon.BACK,
+          size: DesignConstants.FONT.SIZE.XL,
+          color: resolveLocationPickerPalette(props.resolvedThemeId).textPrimary
+        })
     }
     .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
     .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
@@ -115,11 +116,11 @@ export function TopBar(props: TopBarProps) {
     .onClick(props.onBack)
 
     Row({ space: DesignConstants.SPACING.SM2 }) {
-      Text() {
-        SymbolSpan($r(AppIcon.FILTER))
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textPrimary])
-      }
+      LucideIcon({
+          icon: AppIcon.FILTER,
+          size: DesignConstants.FONT.SIZE.LG,
+          color: resolveLocationPickerPalette(props.resolvedThemeId).textPrimary
+        })
       Text('筛选')
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
@@ -432,11 +433,11 @@ export struct SearchPanel {
                   ListItem() {
                     Row({ space: DesignConstants.SPACING.MD }) {
                       Column() {
-                        Text() {
-                          SymbolSpan($r(AppIcon.TIME))
-                            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-                            .fontColor([resolveLocationPickerPalette(this.resolvedThemeId).textSecondary])
-                        }
+                        LucideIcon({
+                            icon: AppIcon.TIME,
+                            size: DesignConstants.FONT.SIZE.LG_PLUS,
+                            color: resolveLocationPickerPalette(this.resolvedThemeId).textSecondary
+                          })
                       }
                       .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
                       .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
@@ -586,11 +587,11 @@ export struct MainPanel {
 
       // 搜索入口（模拟 Search 输入框外观，点击后展开真正的搜索面板）
       Row({ space: DesignConstants.SPACING.SM }) {
-        Text() {
-          SymbolSpan($r(AppIcon.SEARCH))
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([resolveLocationPickerPalette(this.resolvedThemeId).textTertiary])
-        }
+        LucideIcon({
+            icon: AppIcon.SEARCH,
+            size: DesignConstants.FONT.SIZE.LG,
+            color: resolveLocationPickerPalette(this.resolvedThemeId).textTertiary
+          })
         Text('搜索地点、地标或坐标')
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textTertiary)
@@ -660,11 +661,11 @@ export struct MainPanel {
                   ListItem() {
                     Row({ space: DesignConstants.SPACING.MD }) {
                       Column() {
-                        Text() {
-                          SymbolSpan($r(AppIcon.TIME))
-                            .fontSize(DesignConstants.FONT.SIZE.LG)
-                            .fontColor([resolveLocationPickerPalette(this.resolvedThemeId).textTertiary])
-                        }
+                        LucideIcon({
+                            icon: AppIcon.TIME,
+                            size: DesignConstants.FONT.SIZE.LG,
+                            color: resolveLocationPickerPalette(this.resolvedThemeId).textTertiary
+                          })
                       }
                       .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
                       .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)

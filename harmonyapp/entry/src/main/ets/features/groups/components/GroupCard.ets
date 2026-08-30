@@ -8,6 +8,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { NearbyImageCard } from '../../../components/NearbyImageCard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 /**
  * 附近群组卡 — 基于 NearbyImageCard 的图片卡（对齐前端 nearby/groups/shared/GroupCard）。
@@ -138,11 +139,11 @@ export struct GroupCard {
   @Builder
   private buildNameLockIcon() {
     if (this.isPrivate()) {
-      Text() {
-        SymbolSpan($r(AppIcon.LOCK))
-          .fontSize(DesignConstants.FONT.SIZE.XS2)
-          .fontColor([this.getPalette().textSecondary])
-      }
+      LucideIcon({
+          icon: AppIcon.LOCK,
+          size: DesignConstants.FONT.SIZE.XS2,
+          color: this.getPalette().textSecondary
+        })
       .margin({ left: DesignConstants.SPACING.HALF })
     }
   }
@@ -163,11 +164,11 @@ export struct GroupCard {
       .alignItems(VerticalAlign.Center)
 
       Row({ space: DesignConstants.SPACING.SM }) {
-        Text() {
-          SymbolSpan($r(AppIcon.GROUP))
-            .fontSize(DesignConstants.FONT.SIZE.XS2)
-            .fontColor([this.getPalette().textSecondary])
-        }
+        LucideIcon({
+            icon: AppIcon.GROUP,
+            size: DesignConstants.FONT.SIZE.XS2,
+            color: this.getPalette().textSecondary
+          })
         Text(`${this.formatMembers()} 人`)
           .fontSize(DesignConstants.FONT.SIZE.XS2)
           .fontColor(this.getPalette().textSecondary)
@@ -176,11 +177,11 @@ export struct GroupCard {
 
         if (this.getDistanceText().length > 0) {
           Row({ space: DesignConstants.SPACING.HALF }) {
-            Text() {
-              SymbolSpan($r(AppIcon.LOCATION))
-                .fontSize(DesignConstants.FONT.SIZE.XS2)
-                .fontColor([this.getPalette().accentText])
-            }
+            LucideIcon({
+                icon: AppIcon.LOCATION,
+                size: DesignConstants.FONT.SIZE.XS2,
+                color: this.getPalette().accentText
+              })
             Text(this.getDistanceText())
               .fontSize(DesignConstants.FONT.SIZE.XS2)
               .fontColor(this.getPalette().accentText)
@@ -194,11 +195,11 @@ export struct GroupCard {
       Row() {
         if (this.getActivityText().length > 0) {
           Row({ space: DesignConstants.SPACING.HALF }) {
-            Text() {
-              SymbolSpan($r(AppIcon.TIME))
-                .fontSize(DesignConstants.FONT.SIZE.XS2)
-                .fontColor([this.getPalette().online])
-            }
+            LucideIcon({
+                icon: AppIcon.TIME,
+                size: DesignConstants.FONT.SIZE.XS2,
+                color: this.getPalette().online
+              })
             Text(this.getActivityText())
               .fontSize(DesignConstants.FONT.SIZE.XS2)
               .fontColor(this.getPalette().online)
@@ -248,11 +249,11 @@ export struct GroupCard {
 
       Row({ space: DesignConstants.SPACING.MD2 }) {
         Row({ space: DesignConstants.SPACING.HALF }) {
-          Text() {
-            SymbolSpan($r(AppIcon.GROUP))
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor([this.getPalette().textSecondary])
-          }
+          LucideIcon({
+              icon: AppIcon.GROUP,
+              size: DesignConstants.FONT.SIZE.XS,
+              color: this.getPalette().textSecondary
+            })
           Text(`${this.formatMembers()} 人`)
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getPalette().textSecondary)
@@ -284,11 +285,11 @@ export struct GroupCard {
       Row() {
         if (this.getActivityText().length > 0) {
           Row({ space: DesignConstants.SPACING.HALF }) {
-            Text() {
-              SymbolSpan($r(AppIcon.TIME))
-                .fontSize(DesignConstants.FONT.SIZE.XS2)
-                .fontColor([this.getPalette().accentText])
-            }
+            LucideIcon({
+                icon: AppIcon.TIME,
+                size: DesignConstants.FONT.SIZE.XS2,
+                color: this.getPalette().accentText
+              })
             Text(this.getActivityText())
               .fontSize(DesignConstants.FONT.SIZE.XS2)
               .fontColor(this.getPalette().accentText)

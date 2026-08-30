@@ -18,6 +18,7 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 const SUBSCRIPTIONS_STORAGE_KEY = 'notification_subscriptions';
 
@@ -246,11 +247,11 @@ export struct SubscriptionsPage {
   private SubscriptionItemRow(item: SubscriptionItem) {
     Row({ space: DesignConstants.SPACING.MD }) {
       Row() {
-        Text() {
-          SymbolSpan($r(item.icon))
-            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-            .fontColor([this.getCurrentThemePalette().accentBackground])
-        }
+        LucideIcon({
+            icon: item.icon,
+            size: DesignConstants.FONT.SIZE.LG_PLUS,
+            color: this.getCurrentThemePalette().accentBackground
+          })
       }
       .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
       .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)

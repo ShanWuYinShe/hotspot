@@ -9,6 +9,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
 import { LocationInfo } from '../../../core/location/LocationUtil';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 @Component
 export struct LocationResultRow {
@@ -24,11 +25,11 @@ export struct LocationResultRow {
   build() {
     Row({ space: DesignConstants.SPACING.MD }) {
       Column() {
-        Text() {
-          SymbolSpan($r(AppIcon.LOCATION))
-            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-            .fontColor([this.palette().accentBackground])
-        }
+        LucideIcon({
+            icon: AppIcon.LOCATION,
+            size: DesignConstants.FONT.SIZE.LG_PLUS,
+            color: this.palette().accentBackground
+          })
       }
       .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
       .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)

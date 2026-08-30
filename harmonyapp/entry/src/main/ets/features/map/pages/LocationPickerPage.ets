@@ -22,6 +22,7 @@ import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { DOMAIN_NUMBER, TAG, SearchPanel, MainPanel, TopBar, FilterDropdownPanel, MapToast, resolveLocationPickerPalette, SEARCH_PANEL_HEIGHT, PANEL_SNAP_MIN, DEFAULT_GESTURE_HINT, DOUBLE_CLICK_PLACEMENT_HINT, LONG_PRESS_PLACEMENT_HINT, ANCHOR_PLACEMENT_HINT, GENERIC_PLACEMENT_HINT, MapRenderItem, ConvertedRenderItem, BoundsDelta, LocationPickerParamLike, LocationPickerMode } from '../components/LocationPickerShared';
+import { LucideIcon } from '../../../components/LucideIcon';
 @Preview
 @Component
 export struct LocationPickerPage {
@@ -1177,11 +1178,11 @@ export struct LocationPickerPage {
         // 既不阻塞地图拖拽，又能独占按钮区域的点击事件
         Column({ space: DesignConstants.SPACING.MD }) {
           Column() {
-            Text() {
-              SymbolSpan($r(AppIcon.LOCATION))
-                .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontColor([this.getCurrentThemePalette().mapUser])
-            }
+            LucideIcon({
+                icon: AppIcon.LOCATION,
+                size: DesignConstants.FONT.SIZE.XL,
+                color: this.getCurrentThemePalette().mapUser
+              })
           }
           .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
           .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
@@ -1238,11 +1239,11 @@ export struct LocationPickerPage {
           .onClick(() => { this.locateBrowseAnchor(); })
 
           Column() {
-            Text() {
-              SymbolSpan($r(AppIcon.ADD))
-                .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontColor([resolveLocationPickerPalette(this.resolvedThemeId).textPrimary])
-            }
+            LucideIcon({
+                icon: AppIcon.ADD,
+                size: DesignConstants.FONT.SIZE.XL,
+                color: resolveLocationPickerPalette(this.resolvedThemeId).textPrimary
+              })
           }
           .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
           .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
@@ -1269,11 +1270,11 @@ export struct LocationPickerPage {
           .onClick(() => { if (this.mapActions) this.mapActions.zoomIn(); })
 
           Column() {
-            Text() {
-              SymbolSpan($r(AppIcon.REMOVE))
-                .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontColor([resolveLocationPickerPalette(this.resolvedThemeId).textPrimary])
-            }
+            LucideIcon({
+                icon: AppIcon.REMOVE,
+                size: DesignConstants.FONT.SIZE.XL,
+                color: resolveLocationPickerPalette(this.resolvedThemeId).textPrimary
+              })
           }
           .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
           .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)

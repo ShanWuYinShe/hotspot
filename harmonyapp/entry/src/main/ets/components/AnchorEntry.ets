@@ -7,6 +7,7 @@ import { DefaultConfig, PageNames } from '../constants/AppConstants';
 import { AppRouter } from '../core/router/AppRouter';
 import { AppIcon } from './SystemIcon';
 import { curves } from '@kit.ArkUI';
+import { LucideIcon } from '../components/LucideIcon';
 
 /**
  * 浏览锚点入口（对齐前端 anchor-entry.svelte）
@@ -70,11 +71,11 @@ export struct AnchorEntry {
   CardVariant() {
     Row() {
       Row() {
-        Text() {
-          SymbolSpan($r(AppIcon.NEARBY))
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor([this.getPalette().accentText])
-        }
+        LucideIcon({
+            icon: AppIcon.NEARBY,
+            size: DesignConstants.FONT.SIZE.MD,
+            color: this.getPalette().accentText
+          })
       }
       .width(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
       .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
@@ -109,11 +110,11 @@ export struct AnchorEntry {
       .margin({ left: DesignConstants.SPACING.SM })
       .alignItems(HorizontalAlign.Start)
 
-      Text() {
-        SymbolSpan($r(AppIcon.ARROW_RIGHT))
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor([this.getPalette().textSecondary])
-      }
+      LucideIcon({
+          icon: AppIcon.ARROW_RIGHT,
+          size: DesignConstants.FONT.SIZE.MD,
+          color: this.getPalette().textSecondary
+        })
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
@@ -140,11 +141,11 @@ export struct AnchorEntry {
   @Builder
   PillVariant() {
     Row() {
-      Text() {
-        SymbolSpan($r(AppIcon.LOCATION))
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor([this.getPalette().accentBackground])
-      }
+      LucideIcon({
+          icon: AppIcon.LOCATION,
+          size: DesignConstants.FONT.SIZE.SM,
+          color: this.getPalette().accentBackground
+        })
       Text(this.getDisplayName())
         .fontSize(DesignConstants.FONT.SIZE.XS) // 11
         .fontColor(this.getPalette().textSecondary)

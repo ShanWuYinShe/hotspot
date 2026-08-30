@@ -13,6 +13,7 @@ import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
 import curves from '@ohos.curves';
+import { LucideIcon } from '../components/LucideIcon';
 
 @Component
 export struct SearchPageHeader {
@@ -49,11 +50,11 @@ export struct SearchPageHeader {
     Row({ space: DesignConstants.SPACING.MD }) {
       // 圆形返回按钮（带按压弹簧缩放）
       Button() {
-        Text() {
-          SymbolSpan($r(AppIcon.BACK))
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor([this.getPalette().textSecondary])
-        }
+        LucideIcon({
+            icon: AppIcon.BACK,
+            size: DesignConstants.FONT.SIZE.MD,
+            color: this.getPalette().textSecondary
+          })
       }
       .type(ButtonType.Circle)
       .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
@@ -83,11 +84,11 @@ export struct SearchPageHeader {
 
       // 搜索输入框（inset neumorphic 风格）
       Row({ space: DesignConstants.SPACING.SM }) {
-        Text() {
-          SymbolSpan($r(AppIcon.SEARCH))
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor([this.getPalette().textSecondary])
-        }
+        LucideIcon({
+            icon: AppIcon.SEARCH,
+            size: DesignConstants.FONT.SIZE.MD,
+            color: this.getPalette().textSecondary
+          })
 
         TextInput({ placeholder: this.placeholder, text: this.keyword })
           .layoutWeight(1)

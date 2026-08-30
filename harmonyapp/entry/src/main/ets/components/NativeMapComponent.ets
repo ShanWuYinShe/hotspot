@@ -14,6 +14,7 @@ import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
+import { LucideIcon } from '../components/LucideIcon';
 
 
 const DOMAIN_NUMBER: number = 0xFF11;
@@ -933,11 +934,11 @@ export struct NativeMapComponent {
       if (this.mapError.length > 0) {
         // 地图加载失败提示
         Column({ space: DesignConstants.SPACING.MD }) {
-          Text() {
-            SymbolSpan($r(AppIcon.MAP))
-              .fontSize(DesignConstants.FONT.SIZE.HERO)
-              .fontColor([AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary])
-          }
+          LucideIcon({
+              icon: AppIcon.MAP,
+              size: DesignConstants.FONT.SIZE.HERO,
+              color: AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary
+            })
 
           Text('地图服务不可用')
             .fontSize(DesignConstants.FONT.SIZE.LG)

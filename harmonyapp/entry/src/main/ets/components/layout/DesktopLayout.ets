@@ -41,6 +41,7 @@ import { KEY_RESOLVED_THEME_ID } from '../../core/theme/AppThemeTypes';
 import { SystemUiController } from '../../core/utils/SystemUiController';
 import { SystemToast } from '../SystemToast';
 import { type ThemeMode, type ThemeOptionItem } from '../../core/theme/AppThemeTypes';
+import { LucideIcon } from '../../components/LucideIcon';
 
 @Component
 export struct DesktopLayout {
@@ -193,11 +194,11 @@ export struct DesktopLayout {
     Row() {
       // Logo
       Row({ space: DesignConstants.SPACING.SM }) {
-        Text() {
-          SymbolSpan($r(AppIcon.NEARBY))
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontColor([this.getPalette().accentBackground])
-        }
+        LucideIcon({
+            icon: AppIcon.NEARBY,
+            size: DesignConstants.FONT.SIZE.XL,
+            color: this.getPalette().accentBackground
+          })
         Text('HotSpot')
           .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18
           .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
@@ -424,11 +425,11 @@ export struct DesktopLayout {
         .margin({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
 
       Row() {
-        Text() {
-          SymbolSpan($r(AppIcon.SHIELD))
-            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-            .fontColor([this.getPalette().textSecondary])
-        }
+        LucideIcon({
+            icon: AppIcon.SHIELD,
+            size: DesignConstants.FONT.SIZE.LG_PLUS,
+            color: this.getPalette().textSecondary
+          })
         Text('管理后台')
           .fontSize(DesignConstants.FONT.SIZE.SM) // 12
           .fontColor(this.getPalette().textPrimary)
@@ -481,11 +482,11 @@ export struct DesktopLayout {
   @Builder
   NavItemBuilder(item: AppNavItem) {
     Row() {
-      Text() {
-        SymbolSpan($r(item.icon))
-          .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-          .fontColor([this.isItemActive(item) ? this.getPalette().accentBackground : this.getPalette().textSecondary])
-      }
+      LucideIcon({
+          icon: item.icon,
+          size: DesignConstants.FONT.SIZE.LG_PLUS,
+          color: this.isItemActive(item) ? this.getPalette().accentBackground : this.getPalette().textSecondary
+        })
       Text(item.label)
         .fontSize(DesignConstants.FONT.SIZE.SM) // 12
         .fontColor(this.isItemActive(item) ? this.getPalette().textPrimary : this.getPalette().textSecondary)
@@ -672,11 +673,11 @@ export struct DesktopLayout {
   @Builder
   CreateSheetItem(icon: AppIcon, label: string, action: () => void) {
     Row() {
-      Text() {
-        SymbolSpan($r(icon))
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontColor([this.getPalette().accentBackground])
-      }
+      LucideIcon({
+          icon: icon,
+          size: DesignConstants.FONT.SIZE.XL,
+          color: this.getPalette().accentBackground
+        })
       Text(label)
         .fontSize(DesignConstants.FONT.SIZE.MD) // 14
         .fontColor(this.getPalette().textPrimary)

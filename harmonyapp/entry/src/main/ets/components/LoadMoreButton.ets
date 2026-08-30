@@ -3,6 +3,7 @@ import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { curves } from '@kit.ArkUI';
+import { LucideIcon } from '../components/LucideIcon';
 
 /**
  * 加载更多指示器（对齐前端 load-more-button.svelte）
@@ -39,11 +40,11 @@ export struct LoadMoreButton {
             .fontSize(DesignConstants.FONT.SIZE.SM) // 12
             .fontColor(this.getPalette().textSecondary)
         } else {
-          Text() {
-            SymbolSpan($r(AppIcon.ARROW_DOWN))
-              .fontSize(DesignConstants.FONT.SIZE.XL)
-              .fontColor([this.getPalette().textSecondary])
-          }
+          LucideIcon({
+              icon: AppIcon.ARROW_DOWN,
+              size: DesignConstants.FONT.SIZE.XL,
+              color: this.getPalette().textSecondary
+            })
           .margin({ right: DesignConstants.SPACING.XS })
           Text(this.actionText)
             .fontSize(DesignConstants.FONT.SIZE.XS) // 11

@@ -10,6 +10,7 @@ import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
+import { LucideIcon } from './LucideIcon';
 import { curves } from '@kit.ArkUI';
 
 export interface TabItem {
@@ -55,11 +56,11 @@ export struct TabsPillGroup {
     Column() {
       Row({ space: DesignConstants.SPACING.SM2 }) {
         if (tab.icon) {
-          Text() {
-            SymbolSpan($r(tab.icon))
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontColor(isActiveTab ? [this.getPalette().accentText] : [this.getPalette().tabBarInactive])
-          }
+          LucideIcon({
+            icon: tab.icon,
+            size: DesignConstants.FONT.SIZE.MD,
+            color: isActiveTab ? this.getPalette().accentText : this.getPalette().tabBarInactive
+          })
         }
 
         Text(tab.label)

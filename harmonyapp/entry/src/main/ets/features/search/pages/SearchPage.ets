@@ -41,6 +41,7 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { TimerManager } from '../../../core/utils/TimerManager';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'SearchPage';
@@ -585,11 +586,11 @@ export struct SearchPage {
             Pressable({ onPress: () => this.applyKeywordAndSearch(tag) }) {
               Row({ space: DesignConstants.SPACING.MD }) {
                 Row() {
-                  Text() {
-                    SymbolSpan($r(AppIcon.CHART))
-                      .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-                      .fontColor([this.getCurrentThemePalette().accentBackground])
-                  }
+                  LucideIcon({
+                      icon: AppIcon.CHART,
+                      size: DesignConstants.FONT.SIZE.LG_PLUS,
+                      color: this.getCurrentThemePalette().accentBackground
+                    })
                 }
                 .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
                 .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
@@ -605,11 +606,11 @@ export struct SearchPage {
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
                   .layoutWeight(1)
 
-                Text() {
-                  SymbolSpan($r(AppIcon.ARROW_RIGHT))
-                    .fontSize(DesignConstants.FONT.SIZE.LG)
-                    .fontColor([this.getCurrentThemePalette().textSecondary])
-                }
+                LucideIcon({
+                    icon: AppIcon.ARROW_RIGHT,
+                    size: DesignConstants.FONT.SIZE.LG,
+                    color: this.getCurrentThemePalette().textSecondary
+                  })
               }
               .width('100%')
               .padding(DesignConstants.SPACING.MD)
@@ -671,22 +672,22 @@ export struct SearchPage {
             ForEach(this.recentSearches, (item: string) => {
               Pressable({ onPress: () => this.applyKeywordAndSearch(item) }) {
                 Row({ space: DesignConstants.SPACING.MD }) {
-                  Text() {
-                    SymbolSpan($r(AppIcon.TIME))
-                      .fontSize(DesignConstants.FONT.SIZE.MD)
-                      .fontColor([this.getCurrentThemePalette().textSecondary])
-                  }
+                  LucideIcon({
+                      icon: AppIcon.TIME,
+                      size: DesignConstants.FONT.SIZE.MD,
+                      color: this.getCurrentThemePalette().textSecondary
+                    })
                   Text(item)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .fontColor(this.getCurrentThemePalette().textPrimary)
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                     .layoutWeight(1)
-                  Text() {
-                    SymbolSpan($r(AppIcon.ARROW_RIGHT))
-                      .fontSize(DesignConstants.FONT.SIZE.MD)
-                      .fontColor([this.getCurrentThemePalette().textSecondary])
-                  }
+                  LucideIcon({
+                      icon: AppIcon.ARROW_RIGHT,
+                      size: DesignConstants.FONT.SIZE.MD,
+                      color: this.getCurrentThemePalette().textSecondary
+                    })
                 }
                 .width('100%')
                 .padding({
@@ -931,11 +932,11 @@ export struct SearchPage {
         })
 
         Row() {
-          Text() {
-            SymbolSpan($r(AppIcon.MORE))
-              .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontColor([this.getCurrentThemePalette().textSecondary])
-          }
+          LucideIcon({
+              icon: AppIcon.MORE,
+              size: DesignConstants.FONT.SIZE.LG,
+              color: this.getCurrentThemePalette().textSecondary
+            })
         }
         .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
         .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
@@ -1034,11 +1035,11 @@ export struct SearchPage {
         .layoutWeight(1)
 
         Row() {
-          Text() {
-            SymbolSpan($r(AppIcon.MORE))
-              .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontColor([this.getCurrentThemePalette().textSecondary])
-          }
+          LucideIcon({
+              icon: AppIcon.MORE,
+              size: DesignConstants.FONT.SIZE.LG,
+              color: this.getCurrentThemePalette().textSecondary
+            })
         }
         .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
         .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
@@ -1132,11 +1133,11 @@ export struct SearchPage {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
         Row({ space: DesignConstants.SPACING.HALF }) {
-          Text() {
-            SymbolSpan($r(AppIcon.HEART))
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor([this.getCurrentThemePalette().textTertiary])
-          }
+          LucideIcon({
+              icon: AppIcon.HEART,
+              size: DesignConstants.FONT.SIZE.XS,
+              color: this.getCurrentThemePalette().textTertiary
+            })
           Text(formatCount(sumReactionCounts(item.reactions)))
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getCurrentThemePalette().textTertiary)

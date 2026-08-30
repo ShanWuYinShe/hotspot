@@ -20,6 +20,7 @@ import { SystemDialog } from '../../../components/SystemDialog';
 import { CacheManager } from '../../../core/cache/CacheManager';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
 import { MomentCacheService } from '../../../core/database/MomentCacheService';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 @Preview
 @Component
@@ -135,11 +136,11 @@ export struct AdvancedSettingsPage {
   SettingItem(icon: AppIcon, title: string, subtitle: string, onClick: () => void) {
     Row({ space: DesignConstants.SPACING.MD }) {
       Row() {
-        Text() {
-          SymbolSpan($r(icon))
-            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-            .fontColor([this.getCurrentThemePalette().accentBackground])
-        }
+        LucideIcon({
+            icon: icon,
+            size: DesignConstants.FONT.SIZE.LG_PLUS,
+            color: this.getCurrentThemePalette().accentBackground
+          })
       }
       .width(DesignConstants.COMPONENT.BRAND_ICON_SIZE)
       .height(DesignConstants.COMPONENT.BRAND_ICON_SIZE)
@@ -163,11 +164,11 @@ export struct AdvancedSettingsPage {
       .alignItems(HorizontalAlign.Start)
 
       Row() {
-        Text() {
-          SymbolSpan($r(AppIcon.ARROW_RIGHT))
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor([this.getCurrentThemePalette().textSecondary])
-        }
+        LucideIcon({
+            icon: AppIcon.ARROW_RIGHT,
+            size: DesignConstants.FONT.SIZE.MD,
+            color: this.getCurrentThemePalette().textSecondary
+          })
       }
       .width(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
       .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)

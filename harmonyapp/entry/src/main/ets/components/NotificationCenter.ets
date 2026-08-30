@@ -17,6 +17,7 @@ import { SmartNotificationService, NotificationEvent, SmartNotification } from '
 import { LoadingMoreIndicator, RefreshIndicator } from './EmptyState';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { LucideIcon } from '../components/LucideIcon';
 
 type NotificationFilterKey = 'all' | 'unread' | 'social' | 'interaction' | 'group' | 'report' | 'nearby' | 'system';
 
@@ -393,11 +394,11 @@ export struct NotificationCenter {
         Row({ space: DesignConstants.SPACING.MD }) {
           if (this.onClose) {
             Row() {
-              Text() {
-                SymbolSpan($r(AppIcon.BACK))
-                  .fontSize(DesignConstants.FONT.SIZE.LG)
-                  .fontColor([this.getPalette().textSecondary])
-              }
+              LucideIcon({
+                  icon: AppIcon.BACK,
+                  size: DesignConstants.FONT.SIZE.LG,
+                  color: this.getPalette().textSecondary
+                })
             }
             .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
             .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
@@ -589,11 +590,11 @@ export struct NotificationCenter {
             .objectFit(ImageFit.Cover)
         } else {
           Row() {
-            Text() {
-              SymbolSpan($r(this.getNotificationIcon(notification.type)))
-                .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontColor([this.getTypeColor(notification.type)])
-            }
+            LucideIcon({
+              icon: this.getNotificationIcon(notification.type),
+              size: DesignConstants.FONT.SIZE.XL,
+              color: this.getTypeColor(notification.type)
+            })
           }
           .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
           .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
@@ -605,11 +606,11 @@ export struct NotificationCenter {
         // 类型图标徽章：贴头像右下角（用 alignContent 取代硬编码坐标）
         Stack({ alignContent: Alignment.BottomEnd }) {
           Row() {
-            Text() {
-              SymbolSpan($r(this.getNotificationIcon(notification.type)))
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor([this.getPalette().accentText])
-            }
+            LucideIcon({
+              icon: this.getNotificationIcon(notification.type),
+              size: DesignConstants.FONT.SIZE.XS,
+              color: this.getPalette().accentText
+            })
           }
           .width(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
           .height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)

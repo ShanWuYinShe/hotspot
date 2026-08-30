@@ -44,6 +44,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 const DOMAIN_NUMBER: number = 0xFF1A;
 const TAG: string = 'MomentDetailPage';
@@ -469,11 +470,11 @@ export struct MomentDetailPage {
           }
         } }) {
           Row({ space: DesignConstants.SPACING.XS }) {
-            Text() {
-              SymbolSpan($r(AppIcon.LOCATION))
-                .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor([this.getCurrentThemePalette().textSecondary])
-            }
+            LucideIcon({
+                icon: AppIcon.LOCATION,
+                size: DesignConstants.FONT.SIZE.SM,
+                color: this.getCurrentThemePalette().textSecondary
+              })
             Text(moment.location.location_name)
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor(this.getCurrentThemePalette().textSecondary)

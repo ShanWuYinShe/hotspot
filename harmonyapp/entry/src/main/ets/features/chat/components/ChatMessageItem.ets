@@ -12,6 +12,7 @@ import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
 import { ChatThemeColors, ChatThemeManager } from '../../../core/theme/ChatTheme';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { MessageType } from '../../../core/types/api';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 /** 消息展示视图模型（与 ChatPage 的 ChatMessage 结构一致） */
 export interface ChatMessageView {
@@ -126,11 +127,11 @@ export struct ChatMessageItem {
               .fontColor(this.msg.isSelf ? this.palette.textTertiary : this.palette.textSecondary)
               .opacity(DesignConstants.OPACITY.SUBTLE)
             if (this.msg.isSelf && this.isLastSent) {
-              Text() {
-                SymbolSpan($r(AppIcon.CHECK_ALL))
-                  .fontSize(DesignConstants.FONT.SIZE.XS)
-                  .fontColor([this.palette.online])
-              }
+              LucideIcon({
+                  icon: AppIcon.CHECK_ALL,
+                  size: DesignConstants.FONT.SIZE.XS,
+                  color: this.palette.online
+                })
             }
           }
           .width('100%')

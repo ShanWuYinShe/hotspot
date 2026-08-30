@@ -208,12 +208,12 @@ export struct LucideIcon {
           .width(this.size).height(this.size)
           .colorFilter(ColorFilter.tint(this.resolveColor()))
           .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.LIKE || this.icon === AppIcon.HEART) {
+      } else if (this.icon === AppIcon.LIKE || this.icon === AppIcon.HEART || this.icon === AppIcon.HEART_FILL) {
         Image($r('app.media.icons.heart'))
           .width(this.size).height(this.size)
           .colorFilter(ColorFilter.tint(this.resolveColor()))
           .interpolation(ImageInterpolation.High)
-      } else if (this.icon === AppIcon.STAR) {
+      } else if (this.icon === AppIcon.STAR || this.icon === AppIcon.STAR_FILL) {
         Image($r('app.media.icons.star'))
           .width(this.size).height(this.size)
           .colorFilter(ColorFilter.tint(this.resolveColor()))
@@ -230,6 +230,71 @@ export struct LucideIcon {
           .interpolation(ImageInterpolation.High)
       } else if (this.icon === AppIcon.WARNING) {
         Image($r('app.media.icons.shield-alert'))
+          .width(this.size).height(this.size)
+          .colorFilter(ColorFilter.tint(this.resolveColor()))
+          .interpolation(ImageInterpolation.High)
+      } else if (this.icon === AppIcon.ERROR) {
+        Image($r('app.media.icons.circle-x'))
+          .width(this.size).height(this.size)
+          .colorFilter(ColorFilter.tint(this.resolveColor()))
+          .interpolation(ImageInterpolation.High)
+      } else if (this.icon === AppIcon.EMPTY) {
+        Image($r('app.media.icons.inbox'))
+          .width(this.size).height(this.size)
+          .colorFilter(ColorFilter.tint(this.resolveColor()))
+          .interpolation(ImageInterpolation.High)
+      } else if (this.icon === AppIcon.TIME) {
+        Image($r('app.media.icons.clock'))
+          .width(this.size).height(this.size)
+          .colorFilter(ColorFilter.tint(this.resolveColor()))
+          .interpolation(ImageInterpolation.High)
+      } else if (this.icon === AppIcon.REMOVE) {
+        Image($r('app.media.icons.minus'))
+          .width(this.size).height(this.size)
+          .colorFilter(ColorFilter.tint(this.resolveColor()))
+          .interpolation(ImageInterpolation.High)
+      } else if (this.icon === AppIcon.CHECK_ALL) {
+        Image($r('app.media.icons.check-check'))
+          .width(this.size).height(this.size)
+          .colorFilter(ColorFilter.tint(this.resolveColor()))
+          .interpolation(ImageInterpolation.High)
+      } else if (this.icon === AppIcon.FILTER) {
+        Image($r('app.media.icons.filter'))
+          .width(this.size).height(this.size)
+          .colorFilter(ColorFilter.tint(this.resolveColor()))
+          .interpolation(ImageInterpolation.High)
+      } else if (this.icon === AppIcon.REFRESH) {
+        Image($r('app.media.icons.rotate-cw'))
+          .width(this.size).height(this.size)
+          .colorFilter(ColorFilter.tint(this.resolveColor()))
+          .interpolation(ImageInterpolation.High)
+      } else if (this.icon === AppIcon.QUESTION) {
+        Image($r('app.media.icons.circle-help'))
+          .width(this.size).height(this.size)
+          .colorFilter(ColorFilter.tint(this.resolveColor()))
+          .interpolation(ImageInterpolation.High)
+      } else if (this.icon === AppIcon.SHIELD) {
+        Image($r('app.media.icons.shield'))
+          .width(this.size).height(this.size)
+          .colorFilter(ColorFilter.tint(this.resolveColor()))
+          .interpolation(ImageInterpolation.High)
+      } else if (this.icon === AppIcon.CHART) {
+        Image($r('app.media.icons.chart-column'))
+          .width(this.size).height(this.size)
+          .colorFilter(ColorFilter.tint(this.resolveColor()))
+          .interpolation(ImageInterpolation.High)
+      } else if (this.icon === AppIcon.CODE) {
+        Image($r('app.media.icons.code'))
+          .width(this.size).height(this.size)
+          .colorFilter(ColorFilter.tint(this.resolveColor()))
+          .interpolation(ImageInterpolation.High)
+      } else if (this.icon === AppIcon.PALETTE) {
+        Image($r('app.media.icons.palette'))
+          .width(this.size).height(this.size)
+          .colorFilter(ColorFilter.tint(this.resolveColor()))
+          .interpolation(ImageInterpolation.High)
+      } else if (this.icon === AppIcon.NOTIFICATION_FILL) {
+        Image($r('app.media.icons.bell'))
           .width(this.size).height(this.size)
           .colorFilter(ColorFilter.tint(this.resolveColor()))
           .interpolation(ImageInterpolation.High)

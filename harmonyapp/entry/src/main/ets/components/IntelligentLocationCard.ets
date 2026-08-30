@@ -10,6 +10,7 @@ import { AppIcon } from './SystemIcon';
 import { LocationUtil } from '../core/location/LocationUtil';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { LucideIcon } from '../components/LucideIcon';
 
 const DOMAIN_NUMBER: number = 0xFF11;
 const TAG: string = 'IntelligentLocationCard';
@@ -41,11 +42,11 @@ export struct IntelligentLocationCard {
   build() {
     Row({ space: DesignConstants.SPACING.MD }) {
       // 位置图标 - 使用SymbolSpan
-      Text() {
-        SymbolSpan($r(AppIcon.LOCATION))
-          .fontSize(DesignConstants.FONT.SIZE.XXL)
-          .fontColor([this.getPalette().accentBackground])
-      }
+      LucideIcon({
+          icon: AppIcon.LOCATION,
+          size: DesignConstants.FONT.SIZE.XXL,
+          color: this.getPalette().accentBackground
+        })
 
       Column({ space: DesignConstants.SPACING.SM2 }) {
         // 地址信息
@@ -60,11 +61,11 @@ export struct IntelligentLocationCard {
           // 距离信息
           if (this.distance >= 0) {
               Row({ space: DesignConstants.SPACING.XS }) {
-                Text() {
-                  SymbolSpan($r(AppIcon.SEND))
-                    .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor([this.getPalette().textSecondary])
-                }
+                LucideIcon({
+                    icon: AppIcon.SEND,
+                    size: DesignConstants.FONT.SIZE.SM,
+                    color: this.getPalette().textSecondary
+                  })
                 Text(LocationUtil.formatDistance(this.distance))
                   .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor(this.getPalette().textSecondary)
@@ -92,11 +93,11 @@ export struct IntelligentLocationCard {
       Column({ space: DesignConstants.SPACING.SM }) {
         // 查看详情按钮
         Button({ type: ButtonType.Normal, stateEffect: true }) {
-          Text() {
-            SymbolSpan($r(AppIcon.INFO))
-              .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontColor([this.getPalette().accentText as ResourceColor])
-          }
+          LucideIcon({
+              icon: AppIcon.INFO,
+              size: DesignConstants.FONT.SIZE.LG,
+              color: this.getPalette().accentText as ResourceColor
+            })
         }
         .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
         .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
@@ -111,11 +112,11 @@ export struct IntelligentLocationCard {
 
         // 导航按钮
         Button({ type: ButtonType.Normal, stateEffect: true }) {
-          Text() {
-            SymbolSpan($r(AppIcon.UP))
-              .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontColor([this.getPalette().accentBackground])
-          }
+          LucideIcon({
+              icon: AppIcon.UP,
+              size: DesignConstants.FONT.SIZE.LG,
+              color: this.getPalette().accentBackground
+            })
         }
         .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
         .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)

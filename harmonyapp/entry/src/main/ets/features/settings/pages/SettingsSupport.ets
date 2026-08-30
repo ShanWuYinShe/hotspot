@@ -20,6 +20,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemToggle } from '../../../components/SystemToggle';
 import { AppRouter, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 export interface SettingsEntryItem {
   icon: AppIcon;
@@ -144,11 +145,11 @@ export struct SettingsEntryRow {
   build() {
     Row({ space: DesignConstants.SPACING.MD }) {
       Row() {
-        Text() {
-          SymbolSpan($r(this.item.icon))
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([this.getPalette().accentText])
-        }
+        LucideIcon({
+            icon: this.item.icon,
+            size: DesignConstants.FONT.SIZE.LG,
+            color: this.getPalette().accentText
+          })
       }
       .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
@@ -258,11 +259,11 @@ export struct SettingsToggleRow {
   build() {
     Row({ space: DesignConstants.SPACING.MD }) {
       Row() {
-        Text() {
-          SymbolSpan($r(this.icon))
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([this.getPalette().accentText])
-        }
+        LucideIcon({
+            icon: this.icon,
+            size: DesignConstants.FONT.SIZE.LG,
+            color: this.getPalette().accentText
+          })
       }
       .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)

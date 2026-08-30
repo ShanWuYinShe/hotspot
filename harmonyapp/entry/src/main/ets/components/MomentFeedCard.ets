@@ -15,6 +15,7 @@ import { SystemCard, CardVariant } from './SystemCard';
 import { IntelligentLocationCard } from './IntelligentLocationCard';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { LucideIcon } from '../components/LucideIcon';
 
 @Reusable
 @Component
@@ -58,12 +59,12 @@ export struct MomentFeedCard {
   @Builder
   private imageFallback() {
     Column() {
-      Text() {
-        SymbolSpan($r(AppIcon.PHOTO))
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor([this.getPalette().textSecondary])
-          .opacity(DesignConstants.OPACITY.MUTED)
-      }
+      LucideIcon({
+        icon: AppIcon.PHOTO,
+        size: DesignConstants.FONT.SIZE.LG,
+        color: this.getPalette().textSecondary
+      })
+      .opacity(DesignConstants.OPACITY.MUTED)
     }
     .backgroundColor(this.getPalette().surfaceSubtle)
     .justifyContent(FlexAlign.Center)
@@ -236,11 +237,11 @@ export struct MomentFeedCard {
               .textOverflow({ overflow: TextOverflow.Ellipsis })
 
             if (this.moment.location?.location_name) {
-              Text() {
-                SymbolSpan($r(AppIcon.LOCATION))
-                  .fontSize(DesignConstants.FONT.SIZE.XS2)
-                  .fontColor([DesignConstants.COLOR.WHITE])
-              }
+              LucideIcon({
+                  icon: AppIcon.LOCATION,
+                  size: DesignConstants.FONT.SIZE.XS2,
+                  color: DesignConstants.COLOR.WHITE
+                })
               Text(this.moment.location.location_name)
                 .fontSize(DesignConstants.FONT.SIZE.XS2)
                 .fontColor(DesignConstants.COLOR.WHITE)
@@ -275,13 +276,11 @@ export struct MomentFeedCard {
       Row() {
           Row({ space: DesignConstants.SPACING.MD }) {
             Row({ space: DesignConstants.SPACING.XS }) {
-              Text() {
-                SymbolSpan($r(AppIcon.HEART))
-                  .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor([this.isLikedByMe()
-                    ? this.getPalette().accentBackground
-                    : this.getPalette().textSecondary])
-              }
+              LucideIcon({
+                  icon: AppIcon.HEART,
+                  size: DesignConstants.FONT.SIZE.MD,
+                  color: this.isLikedByMe() ? this.getPalette().accentBackground : this.getPalette().textSecondary
+                })
               .padding(DesignConstants.SPACING.MD3)
               // 按压反馈 + 点赞色过渡（对齐前端动作条颜色变化语义）
               .scale(this.pressedActionKey === 'like' ?
@@ -309,11 +308,11 @@ export struct MomentFeedCard {
             }
 
             Row({ space: DesignConstants.SPACING.XS }) {
-              Text() {
-                SymbolSpan($r(AppIcon.MESSAGE))
-                  .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor([this.getPalette().textSecondary])
-              }
+              LucideIcon({
+                  icon: AppIcon.MESSAGE,
+                  size: DesignConstants.FONT.SIZE.MD,
+                  color: this.getPalette().textSecondary
+                })
               .padding(DesignConstants.SPACING.MD3)
               .scale(this.pressedActionKey === 'comment' ?
                 { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
@@ -337,13 +336,11 @@ export struct MomentFeedCard {
           }
 
           Row({ space: DesignConstants.SPACING.MD }) {
-            Text() {
-              SymbolSpan($r(AppIcon.STAR_FILL))
-                .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor([this.getMomentState()?.is_favorited ?? this.moment.is_favorited
-                  ? this.getPalette().accentBackground
-                  : this.getPalette().textSecondary])
-            }
+            LucideIcon({
+                icon: AppIcon.STAR_FILL,
+                size: DesignConstants.FONT.SIZE.MD,
+                color: this.getMomentState()?.is_favorited ?? this.moment.is_favorited ? this.getPalette().accentBackground : this.getPalette().textSecondary
+              })
             .padding(DesignConstants.SPACING.MD3)
             // 按压反馈 + 收藏色过渡（对齐前端动作条颜色变化语义）
             .scale(this.pressedActionKey === 'favorite' ?
@@ -366,11 +363,11 @@ export struct MomentFeedCard {
             })
             .onClick(() => this.onFavoriteClick(this.moment))
 
-            Text() {
-              SymbolSpan($r(AppIcon.SHARE))
-                .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor([this.getPalette().textSecondary])
-            }
+            LucideIcon({
+                icon: AppIcon.SHARE,
+                size: DesignConstants.FONT.SIZE.MD,
+                color: this.getPalette().textSecondary
+              })
             .padding(DesignConstants.SPACING.MD3)
             .scale(this.pressedActionKey === 'share' ?
               { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
@@ -476,11 +473,11 @@ export struct MomentFeedCard {
       // location pill（对齐前端 moment-card__location：品牌色胶囊 + MapPin + 地名）
       if (this.moment.location?.location_name) {
         Row({ space: DesignConstants.SPACING.THREE }) {
-          Text() {
-            SymbolSpan($r(AppIcon.LOCATION))
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor([this.getPalette().accentBackground])
-          }
+          LucideIcon({
+              icon: AppIcon.LOCATION,
+              size: DesignConstants.FONT.SIZE.XS,
+              color: this.getPalette().accentBackground
+            })
           Text(this.moment.location.location_name)
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)

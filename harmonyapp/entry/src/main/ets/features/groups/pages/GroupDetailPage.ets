@@ -54,6 +54,7 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { ErrorCode } from '../../../core/constants/ErrorCodes';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 interface GroupSyncData {
   groupId: string;
@@ -1027,11 +1028,11 @@ export struct GroupDetailPage {
           ListItem() {
              Column() {
                 Row() {
-                  Text() {
-                    SymbolSpan($r(AppIcon.LOCATION))
-                      .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-                      .fontColor([this.getCurrentThemePalette().accentBackground])
-                  }
+                  LucideIcon({
+                      icon: AppIcon.LOCATION,
+                      size: DesignConstants.FONT.SIZE.LG_PLUS,
+                      color: this.getCurrentThemePalette().accentBackground
+                    })
                   Text('位置信息')
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
@@ -1080,11 +1081,11 @@ export struct GroupDetailPage {
               .layoutWeight(1)
               .alignItems(HorizontalAlign.Start)
 
-              Text() {
-                SymbolSpan($r(AppIcon.FORWARD))
-                  .fontSize(DesignConstants.FONT.SIZE.LG)
-                  .fontColor([this.getCurrentThemePalette().textSecondary])
-              }
+              LucideIcon({
+                  icon: AppIcon.FORWARD,
+                  size: DesignConstants.FONT.SIZE.LG,
+                  color: this.getCurrentThemePalette().textSecondary
+                })
             }
             .width('100%')
             .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
@@ -1129,11 +1130,11 @@ export struct GroupDetailPage {
                 .layoutWeight(1)
                 .alignItems(HorizontalAlign.Start)
 
-                Text() {
-                  SymbolSpan($r(AppIcon.FORWARD))
-                    .fontSize(DesignConstants.FONT.SIZE.LG)
-                    .fontColor([this.getCurrentThemePalette().textSecondary])
-                }
+                LucideIcon({
+                    icon: AppIcon.FORWARD,
+                    size: DesignConstants.FONT.SIZE.LG,
+                    color: this.getCurrentThemePalette().textSecondary
+                  })
               }
               .width('100%')
               .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,

@@ -26,6 +26,7 @@ import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { common } from '@kit.AbilityKit';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 const TAG_OPTIONS: string[] = ['摄影', '旅行', '音乐', '美食', '运动', '阅读', '艺术', '科技', '游戏', '户外', '时尚', '电影'];
 const MAX_TAGS: number = 5;
@@ -272,11 +273,11 @@ export struct ProfileEditPage {
 
                 // 相机编辑按钮
                 Button() {
-                  Text() {
-                    SymbolSpan($r(AppIcon.CAMERA))
-                      .fontSize(DesignConstants.FONT.SIZE.SM)
-                      .fontColor([this.getCurrentThemePalette().accentText])
-                  }
+                  LucideIcon({
+                      icon: AppIcon.CAMERA,
+                      size: DesignConstants.FONT.SIZE.SM,
+                      color: this.getCurrentThemePalette().accentText
+                    })
                 }
                 .type(ButtonType.Normal)
                 .width(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
@@ -407,11 +408,11 @@ export struct ProfileEditPage {
   private buildInputField(label: string, placeholder: string, value: string, maxLen: number, multiline: boolean, onChange: (v: string) => void, focused: boolean, error: string, onFocus: () => void, onBlur: () => void) {
     Column({ space: DesignConstants.SPACING.SM }) {
       Row({ space: DesignConstants.SPACING.XS }) {
-        Text() {
-          SymbolSpan($r(AppIcon.EDIT))
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor([this.getCurrentThemePalette().accentBackground])
-        }
+        LucideIcon({
+            icon: AppIcon.EDIT,
+            size: DesignConstants.FONT.SIZE.SM,
+            color: this.getCurrentThemePalette().accentBackground
+          })
         Text(label)
           .fontSize(DesignConstants.FONT.SIZE.XS)
           .fontColor(this.getCurrentThemePalette().textSecondary)

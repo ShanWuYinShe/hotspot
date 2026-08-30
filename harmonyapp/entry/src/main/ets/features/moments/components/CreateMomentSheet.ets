@@ -13,6 +13,7 @@ import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 const DOMAIN_NUMBER: number = 0xFF28;
 const TAG: string = 'CreateMomentSheet';
@@ -231,11 +232,11 @@ export struct CreateMomentSheet {
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         Row({ space: DesignConstants.SPACING.HALF }) {
-          Text() {
-            SymbolSpan($r(AppIcon.LOCATION))
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor([this.getPalette().textSecondary])
-          }
+          LucideIcon({
+              icon: AppIcon.LOCATION,
+              size: DesignConstants.FONT.SIZE.XS2,
+              color: this.getPalette().textSecondary
+            })
           Text(this.localLocation?.locationName || '当前浏览位置')
             .fontSize(DesignConstants.FONT.SIZE.XS2)
             .fontColor(this.getPalette().textSecondary)
@@ -318,11 +319,11 @@ export struct CreateMomentSheet {
                 .objectFit(ImageFit.Cover)
                 .borderRadius(DesignConstants.RADIUS.SM)
               Row() {
-                Text() {
-                  SymbolSpan($r(AppIcon.CLOSE))
-                    .fontSize(DesignConstants.FONT.SIZE.XS)
-                    .fontColor([DesignConstants.COLOR.WHITE])
-                }
+                LucideIcon({
+                    icon: AppIcon.CLOSE,
+                    size: DesignConstants.FONT.SIZE.XS,
+                    color: DesignConstants.COLOR.WHITE
+                  })
               }
               .width(DesignConstants.COMPONENT.ICON_SIZE_XS)
               .height(DesignConstants.COMPONENT.ICON_SIZE_XS)
@@ -336,11 +337,11 @@ export struct CreateMomentSheet {
 
           if (this.imageUrls.length < 9) {
             Column({ space: DesignConstants.SPACING.THREE }) {
-              Text() {
-                SymbolSpan($r(AppIcon.ADD))
-                  .fontSize(DesignConstants.FONT.SIZE.LG)
-                  .fontColor([this.getPalette().textSecondary])
-              }
+              LucideIcon({
+                  icon: AppIcon.ADD,
+                  size: DesignConstants.FONT.SIZE.LG,
+                  color: this.getPalette().textSecondary
+                })
               Text('添加')
                 .fontSize(DesignConstants.FONT.SIZE.XS2)
                 .fontColor(this.getPalette().textSecondary)
@@ -443,13 +444,11 @@ export struct CreateMomentSheet {
   @Builder
   private buildPrivacyOption(level: PrivacyLevel, icon: AppIcon, title: string, hint: string) {
     Column({ space: DesignConstants.SPACING.THREE }) {
-      Text() {
-        SymbolSpan($r(icon))
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor([this.privacyLevel === level ?
-            this.getPalette().accentText :
-            this.getPalette().textSecondary])
-      }
+      LucideIcon({
+          icon: icon,
+          size: DesignConstants.FONT.SIZE.LG,
+          color: this.privacyLevel === level ? this.getPalette().accentText : this.getPalette().textSecondary
+        })
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)

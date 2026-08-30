@@ -14,6 +14,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { curves } from '@kit.ArkUI';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 /**
  * 动态瀑布墙卡 — 4:3 图片卡（对齐前端 nearby/moments/shared/MomentCard）。
@@ -110,11 +111,11 @@ export struct MomentWallCard {
 
       if (this.moment.location?.location_name) {
         Row({ space: DesignConstants.SPACING.HALF }) {
-          Text() {
-            SymbolSpan($r(AppIcon.LOCATION))
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor([this.getPalette().textSecondary])
-          }
+          LucideIcon({
+              icon: AppIcon.LOCATION,
+              size: DesignConstants.FONT.SIZE.XS2,
+              color: this.getPalette().textSecondary
+            })
           Text(this.moment.location.location_name)
             .fontSize(DesignConstants.FONT.SIZE.XS2)
             .fontColor(this.getPalette().textSecondary)
@@ -135,11 +136,11 @@ export struct MomentWallCard {
       Row({ space: DesignConstants.SPACING.SM2 }) {
         // 点赞（liked = accent + 实心 + count-pop 弹跳）
         Row({ space: DesignConstants.SPACING.HALF }) {
-          Text() {
-            SymbolSpan($r(this.isLikedByMe() ? AppIcon.HEART_FILL : AppIcon.HEART))
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontColor([this.isLikedByMe() ? this.getPalette().accentBackground : this.getPalette().textSecondary])
-          }
+          LucideIcon({
+            icon: this.isLikedByMe() ? AppIcon.HEART_FILL : AppIcon.HEART,
+            size: DesignConstants.FONT.SIZE.MD,
+            color: this.isLikedByMe() ? this.getPalette().accentBackground : this.getPalette().textSecondary
+          })
           Text(`${this.getLikeCount()}`)
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.isLikedByMe() ? this.getPalette().accentBackground : this.getPalette().textSecondary)
@@ -154,11 +155,11 @@ export struct MomentWallCard {
 
         // 评论数（点击进详情评论区）
         Row({ space: DesignConstants.SPACING.HALF }) {
-          Text() {
-            SymbolSpan($r(AppIcon.MESSAGE))
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontColor([this.getPalette().textSecondary])
-          }
+          LucideIcon({
+              icon: AppIcon.MESSAGE,
+              size: DesignConstants.FONT.SIZE.MD,
+              color: this.getPalette().textSecondary
+            })
           Text(`${this.getCommentCount()}`)
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getPalette().textSecondary)
@@ -173,11 +174,11 @@ export struct MomentWallCard {
       Blank()
 
       // 收藏
-      Text() {
-        SymbolSpan($r(this.isFavorited() ? AppIcon.STAR_FILL : AppIcon.STAR))
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor([this.isFavorited() ? this.getPalette().accentBackground : this.getPalette().textSecondary])
-      }
+      LucideIcon({
+        icon: this.isFavorited() ? AppIcon.STAR_FILL : AppIcon.STAR,
+        size: DesignConstants.FONT.SIZE.MD,
+        color: this.isFavorited() ? this.getPalette().accentBackground : this.getPalette().textSecondary
+      })
       .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}favorite-${this.moment.moment_id}`)
       .onClick(() => {
         interactionActions.toggleMomentFavorite(this.moment.moment_id);

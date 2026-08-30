@@ -30,6 +30,7 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 @Preview
 @Component
@@ -243,11 +244,11 @@ export struct AccountsPage {
             ListItem() {
               Row({ space: DesignConstants.SPACING.MD }) {
                 Row() {
-                  Text() {
-                    SymbolSpan($r(AppIcon.PERSON))
-                      .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-                      .fontColor([this.getCurrentThemePalette().accentBackground])
-                  }
+                  LucideIcon({
+                      icon: AppIcon.PERSON,
+                      size: DesignConstants.FONT.SIZE.LG_PLUS,
+                      color: this.getCurrentThemePalette().accentBackground
+                    })
                 }
                 .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
                 .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)

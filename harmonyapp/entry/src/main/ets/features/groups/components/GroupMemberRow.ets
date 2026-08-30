@@ -9,6 +9,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
 import { GroupMemberItem } from '../../../core/types/api';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 @Component
 export struct GroupMemberRow {
@@ -60,11 +61,11 @@ export struct GroupMemberRow {
       .margin({ left: DesignConstants.SPACING.MD })
 
       if (this.showMenu) {
-        Text() {
-          SymbolSpan($r(AppIcon.MORE))
-            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-            .fontColor([this.palette?.textSecondary])
-        }
+        LucideIcon({
+            icon: AppIcon.MORE,
+            size: DesignConstants.FONT.SIZE.LG_PLUS,
+            color: this.palette?.textSecondary
+          })
         .padding(DesignConstants.SPACING.SM)
         .borderRadius(DesignConstants.RADIUS.SM)
         .bindMenu(this.menuItems)

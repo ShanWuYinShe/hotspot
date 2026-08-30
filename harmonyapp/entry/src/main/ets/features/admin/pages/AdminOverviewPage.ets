@@ -22,6 +22,7 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 const DOMAIN: number = 0xFF20;
 const TAG: string = 'AdminOverviewPage';
@@ -149,11 +150,11 @@ struct AdminOverviewPage {
   buildPermissionCard() {
     Row({ space: DesignConstants.SPACING.MD }) {
       Row() {
-        Text() {
-          SymbolSpan($r(AppIcon.SHIELD))
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontColor([this.getPalette().accentText])
-        }
+        LucideIcon({
+            icon: AppIcon.SHIELD,
+            size: DesignConstants.FONT.SIZE.XL,
+            color: this.getPalette().accentText
+          })
       }
       .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
       .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
@@ -204,11 +205,11 @@ struct AdminOverviewPage {
   buildModuleItem(m: AdminModule) {
     Row({ space: DesignConstants.SPACING.SM }) {
       Row() {
-        Text() {
-          SymbolSpan($r(m.icon))
-            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-            .fontColor([this.getPalette().accentBackground])
-        }
+        LucideIcon({
+            icon: m.icon,
+            size: DesignConstants.FONT.SIZE.LG_PLUS,
+            color: this.getPalette().accentBackground
+          })
       }
       .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
       .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
@@ -228,11 +229,11 @@ struct AdminOverviewPage {
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
 
-      Text() {
-        SymbolSpan($r(AppIcon.ARROW_RIGHT))
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor([this.getPalette().textSecondary])
-      }
+      LucideIcon({
+          icon: AppIcon.ARROW_RIGHT,
+          size: DesignConstants.FONT.SIZE.MD,
+          color: this.getPalette().textSecondary
+        })
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
@@ -264,11 +265,11 @@ struct AdminOverviewPage {
   buildWebGuideCard() {
     Column({ space: DesignConstants.SPACING.XS }) {
       Row({ space: DesignConstants.SPACING.XS }) {
-        Text() {
-          SymbolSpan($r(AppIcon.INFO))
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor([this.getPalette().textSecondary])
-        }
+        LucideIcon({
+            icon: AppIcon.INFO,
+            size: DesignConstants.FONT.SIZE.MD,
+            color: this.getPalette().textSecondary
+          })
         Text('完整管理请在 Web 端进行')
           .fontSize(DesignConstants.FONT.SIZE.SM) // 12
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)

@@ -50,6 +50,7 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { ChatThemeManager } from '../../../core/theme/ChatTheme';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'ChatPage';
@@ -1265,11 +1266,11 @@ export struct ChatPage {
       // 服务端禁言横幅
       if (this.isGroupServerMuted) {
         Row({ space: DesignConstants.SPACING.XS }) {
-          Text() {
-            SymbolSpan($r(AppIcon.WARNING))
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor([this.getCurrentThemePalette().error])
-          }
+          LucideIcon({
+              icon: AppIcon.WARNING,
+              size: DesignConstants.FONT.SIZE.SM,
+              color: this.getCurrentThemePalette().error
+            })
           Text(this.groupMutedUntil ? `你已被禁言，解除时间：${this.formatMutedUntil(this.groupMutedUntil)}` : '你已被禁言')
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getCurrentThemePalette().error)
@@ -1281,11 +1282,11 @@ export struct ChatPage {
 
       Row() {
         Button() {
-          Text() {
-            SymbolSpan($r(AppIcon.ADD))
-              .fontSize(DesignConstants.FONT.SIZE.XL)
-              .fontColor([this.getCurrentThemePalette().textSecondary])
-          }
+          LucideIcon({
+              icon: AppIcon.ADD,
+              size: DesignConstants.FONT.SIZE.XL,
+              color: this.getCurrentThemePalette().textSecondary
+            })
         }
         .type(ButtonType.Circle)
         .stateEffect(false)

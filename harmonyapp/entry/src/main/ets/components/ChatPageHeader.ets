@@ -17,6 +17,7 @@ import { AppIcon } from './SystemIcon';
 import { SystemAvatar } from './SystemAvatar';
 import { KeyboardDismissManager } from '../core/utils/KeyboardDismissManager';
 import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
+import { LucideIcon } from '../components/LucideIcon';
 
 @Component
 export struct ChatPageHeader {
@@ -43,11 +44,11 @@ export struct ChatPageHeader {
       // 左侧：返回按钮 + 可选 leading 头像 + 标题
       Row() {
         Button() {
-          Text() {
-            SymbolSpan($r(AppIcon.BACK))
-              .fontSize(DesignConstants.FONT.SIZE.XL)
-              .fontColor([this.getPalette().textPrimary])
-          }
+          LucideIcon({
+              icon: AppIcon.BACK,
+              size: DesignConstants.FONT.SIZE.XL,
+              color: this.getPalette().textPrimary
+            })
         }
         .type(ButtonType.Circle)
         .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
@@ -80,11 +81,11 @@ export struct ChatPageHeader {
 
       // 尾随：会话信息/操作按钮
       Button() {
-        Text() {
-          SymbolSpan($r(AppIcon.INFO))
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontColor([this.getPalette().textSecondary])
-        }
+        LucideIcon({
+            icon: AppIcon.INFO,
+            size: DesignConstants.FONT.SIZE.XL,
+            color: this.getPalette().textSecondary
+          })
       }
       .type(ButtonType.Circle)
       .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)

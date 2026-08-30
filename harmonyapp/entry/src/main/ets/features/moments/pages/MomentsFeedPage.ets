@@ -41,6 +41,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import pasteboard from '@ohos.pasteboard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 const DOMAIN_NUMBER: number = 0xFF11;
 const TAG: string = 'MomentsFeedPage';
@@ -281,11 +282,11 @@ export struct MomentsFeedPage {
 
         // 搜索栏（对齐前端：search icon + input + clear button）
         Row({ space: DesignConstants.SPACING.MD2 }) {
-          Text() {
-            SymbolSpan($r(AppIcon.SEARCH))
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontColor([this.getCurrentThemePalette().textSecondary])
-          }
+          LucideIcon({
+              icon: AppIcon.SEARCH,
+              size: DesignConstants.FONT.SIZE.MD,
+              color: this.getCurrentThemePalette().textSecondary
+            })
           Text('搜索用户、动态、地点或话题')
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getCurrentThemePalette().textSecondary)
@@ -715,11 +716,11 @@ export struct MomentsFeedPage {
   buildGroupCard(group: GroupItem) {
     Column() {
       Row() {
-        Text() {
-          SymbolSpan($r(AppIcon.GROUP))
-            .fontSize(DesignConstants.FONT.SIZE.XXL)
-            .fontColor([this.getCurrentThemePalette().accentBackground])
-        }
+        LucideIcon({
+            icon: AppIcon.GROUP,
+            size: DesignConstants.FONT.SIZE.XXL,
+            color: this.getCurrentThemePalette().accentBackground
+          })
       }
       .width('100%')
       .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)

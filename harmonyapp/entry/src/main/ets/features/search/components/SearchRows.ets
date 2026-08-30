@@ -10,6 +10,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { Pressable } from '../../../components/Pressable';
 import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
 import { MomentItem } from '../../../core/types/api';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 export type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
 
@@ -28,13 +29,11 @@ export struct SearchSuggestRow {
     Pressable({ onPress: () => { this.onPress(); } }) {
       Row({ space: DesignConstants.SPACING.MD }) {
         Row() {
-          Text() {
-            SymbolSpan($r(
-              this.itemType === 'tag' ? AppIcon.CHART : this.itemType === 'user' ? AppIcon.PERSON : this.itemType === 'group' ? AppIcon.GROUP : AppIcon.CAMERA
-            ))
-              .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-              .fontColor([this.palette?.accentBackground])
-          }
+          LucideIcon({
+              icon: this.itemType === 'tag' ? AppIcon.CHART : this.itemType === 'user' ? AppIcon.PERSON : this.itemType === 'group' ? AppIcon.GROUP : AppIcon.CAMERA,
+              size: DesignConstants.FONT.SIZE.LG_PLUS,
+              color: this.palette?.accentBackground
+            })
         }
         .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
         .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
@@ -59,11 +58,11 @@ export struct SearchSuggestRow {
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
 
-        Text() {
-          SymbolSpan($r(AppIcon.ARROW_RIGHT))
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([this.palette?.textSecondary])
-        }
+        LucideIcon({
+            icon: AppIcon.ARROW_RIGHT,
+            size: DesignConstants.FONT.SIZE.LG,
+            color: this.palette?.textSecondary
+          })
       }
       .width('100%')
       .padding(DesignConstants.SPACING.MD)
@@ -101,11 +100,11 @@ export struct SearchMomentRow {
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
 
-        Text() {
-          SymbolSpan($r(AppIcon.ARROW_RIGHT))
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([this.palette?.textSecondary])
-        }
+        LucideIcon({
+            icon: AppIcon.ARROW_RIGHT,
+            size: DesignConstants.FONT.SIZE.LG,
+            color: this.palette?.textSecondary
+          })
       }
       .width('100%')
       .padding(DesignConstants.SPACING.MD)

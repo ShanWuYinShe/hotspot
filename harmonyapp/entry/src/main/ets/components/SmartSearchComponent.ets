@@ -23,6 +23,7 @@ import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { TabsPillGroup } from './TabsPillGroup';
+import { LucideIcon } from '../components/LucideIcon';
 
 const DOMAIN_NUMBER: number = 0xFF13;
 const TAG: string = 'SmartSearchComponent';
@@ -327,11 +328,11 @@ export struct SmartSearchComponent {
             ForEach(this.searchHistory, (historyItem: string) => {
               ListItem() {
                 Row() {
-                  Text() {
-                      SymbolSpan($r(AppIcon.TIME))
-                        .fontSize(DesignConstants.FONT.SIZE.LG)
-                        .fontColor([this.getPalette().textSecondary])
-                    }
+                  LucideIcon({
+                        icon: AppIcon.TIME,
+                        size: DesignConstants.FONT.SIZE.LG,
+                        color: this.getPalette().textSecondary
+                      })
                     .margin({ right: DesignConstants.SPACING.MD })
 
                   Text(historyItem)
@@ -364,12 +365,12 @@ export struct SmartSearchComponent {
             ForEach(this.searchResults, (result: SearchResult) => {
               ListItem() {
                 Row() {
-                  Text() {
-                      SymbolSpan($r(this.getResultIcon(result.type)))
-                        .fontSize(DesignConstants.FONT.SIZE.XL)
-                        .fontColor([this.getPalette().textSecondary])
-                    }
-                    .margin({ right: DesignConstants.SPACING.MD })
+                  LucideIcon({
+                    icon: this.getResultIcon(result.type),
+                    size: DesignConstants.FONT.SIZE.XL,
+                    color: this.getPalette().textSecondary
+                  })
+                  .margin({ right: DesignConstants.SPACING.MD })
 
                   Column() {
                     Text(result.title)
@@ -397,11 +398,11 @@ export struct SmartSearchComponent {
           } else if (this.searchText.trim() !== '' && !this.isSearching) {
             ListItem() {
               Column() {
-                Text() {
-                    SymbolSpan($r(AppIcon.EMPTY))
-                      .fontSize(DesignConstants.FONT.SIZE.XXXL)
-                      .fontColor([this.getPalette().textTertiary])
-                  }
+                LucideIcon({
+                      icon: AppIcon.EMPTY,
+                      size: DesignConstants.FONT.SIZE.XXXL,
+                      color: this.getPalette().textTertiary
+                    })
                   .margin({ bottom: DesignConstants.SPACING.SM })
 
                 Text('未找到相关内容')

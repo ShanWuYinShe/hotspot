@@ -24,6 +24,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { KeyboardDismissManager } from '../core/utils/KeyboardDismissManager';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { LucideIcon } from './LucideIcon';
 
 const DOMAIN_NUMBER: number = 0xFF20;
 const TAG: string = 'LoginPromptView';
@@ -69,12 +70,12 @@ export struct LoginPromptView {
           .backgroundColor(this.getPalette().accentMuted)
           .shadow(this.getPalette().accentShadow)
 
-        Text() {
-          SymbolSpan($r(this.icon))
-            .fontSize(DesignConstants.FONT.SIZE.XXXL)
-            .fontColor([this.getPalette().accentBackground])
-            .opacity(DesignConstants.OPACITY.EMPHASIZED)
-        }
+        LucideIcon({
+          icon: this.icon,
+          size: DesignConstants.FONT.SIZE.XXXL,
+          color: this.getPalette().accentBackground
+        })
+        .opacity(DesignConstants.OPACITY.EMPHASIZED)
       }
       .width(DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE)
       .height(DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE)

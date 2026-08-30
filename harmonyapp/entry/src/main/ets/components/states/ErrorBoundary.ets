@@ -26,6 +26,7 @@ import { SystemButton } from '../SystemButton';
 import { AppIcon } from '../SystemIcon';
 import { AppThemeManager } from '../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../core/theme/AppThemeTypes';
+import { LucideIcon } from '../../components/LucideIcon';
 
 @Component
 export struct ErrorBoundary {
@@ -46,11 +47,11 @@ export struct ErrorBoundary {
   build() {
     if (this.err) {
       Column({ space: DesignConstants.SPACING.LG }) {
-        Text() {
-          SymbolSpan($r(AppIcon.WARNING))
-            .fontSize(DesignConstants.FONT.SIZE.HERO)
-            .fontColor([this.getPalette().error])
-        }
+        LucideIcon({
+            icon: AppIcon.WARNING,
+            size: DesignConstants.FONT.SIZE.HERO,
+            color: this.getPalette().error
+          })
 
         Text('加载失败')
           .fontSize(DesignConstants.FONT.SIZE.XL)

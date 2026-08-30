@@ -33,6 +33,7 @@ import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManag
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 const GROUP_NAME_MAX: number = 50;
 const GROUP_DESCRIPTION_MAX: number = 500;
@@ -569,13 +570,11 @@ export struct CreateGroupPage {
 
                 Row({ space: DesignConstants.SPACING.XS }) {
                   Button() {
-                    Text() {
-                      SymbolSpan($r(AppIcon.REMOVE))
-                        .fontSize(DesignConstants.FONT.SIZE.LG)
-                        .fontColor([this.maxMembers > GROUP_MEMBERS_MIN
-                          ? this.getCurrentThemePalette().textPrimary
-                          : this.getCurrentThemePalette().textTertiary])
-                    }
+                    LucideIcon({
+                        icon: AppIcon.REMOVE,
+                        size: DesignConstants.FONT.SIZE.LG,
+                        color: this.maxMembers > GROUP_MEMBERS_MIN ? this.getCurrentThemePalette().textPrimary : this.getCurrentThemePalette().textTertiary
+                      })
                   }
                   .type(ButtonType.Capsule)
                   .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
@@ -612,13 +611,11 @@ export struct CreateGroupPage {
                     })
 
                   Button() {
-                    Text() {
-                      SymbolSpan($r(AppIcon.ADD))
-                        .fontSize(DesignConstants.FONT.SIZE.LG)
-                        .fontColor([this.maxMembers < GROUP_MEMBERS_MAX
-                          ? this.getCurrentThemePalette().textPrimary
-                          : this.getCurrentThemePalette().textTertiary])
-                    }
+                    LucideIcon({
+                        icon: AppIcon.ADD,
+                        size: DesignConstants.FONT.SIZE.LG,
+                        color: this.maxMembers < GROUP_MEMBERS_MAX ? this.getCurrentThemePalette().textPrimary : this.getCurrentThemePalette().textTertiary
+                      })
                   }
                   .type(ButtonType.Capsule)
                   .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
