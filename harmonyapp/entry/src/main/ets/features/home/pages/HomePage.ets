@@ -349,7 +349,17 @@ export struct HomePage {
       // 粘性头部
       this.buildStickyHeader()
 
-      if (this.isHomePageAllFailed()) {
+      if (this.getReferencePoint() === null) {
+        // 未设置浏览位置：聚合页无数据源，引导先去设置位置（避免误导性「附近没有内容」）
+        EmptyState({
+          icon: AppIcon.LOCATION,
+          title: '设置你的浏览位置',
+          message: '选择一个位置后，可查看附近的实时动态、人与群组。',
+          fillMode: true,
+          actionLabel: '设置浏览位置',
+          onAction: () => AppRouter.push(PageNames.LOCATION_PICKER)
+        })
+      } else if (this.isHomePageAllFailed()) {
         // 整页兜底：三个接口都失败（对齐前端 LoadError 契约，提供统一重试）
         Column({ space: DesignConstants.SPACING.MD }) {
           Text('首页数据加载失败')
