@@ -156,6 +156,8 @@ export struct ProfileIntentCard {
 export struct ProfileMenuItem {
   @Prop title: string = '';
   @Prop icon: AppIcon;
+  /** 右侧计数/描述（对齐前端个人数据列表项「好友 42」契约） */
+  @Prop value: string = '';
   @Prop resolvedThemeId: string = 'vibrant_light';
   @State pressed: boolean = false;
   onTap: () => void = () => {};
@@ -181,6 +183,12 @@ export struct ProfileMenuItem {
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
         .layoutWeight(1)
+
+      if (this.value.length > 0) {
+        Text(this.value)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
+      }
 
       LucideIcon({
         icon: AppIcon.FORWARD,

@@ -1739,11 +1739,21 @@ export struct ProfilePage {
       }
       .width('100%')
 
-      Row({ space: DesignConstants.SPACING.MD }) {
-        ProfileIntentCard({ title: '隐私偏好', description: '控制资料可见范围与互动设置', icon: AppIcon.SHIELD, onTap: () => this.openPrivacySettings(), resolvedThemeId: this.resolvedThemeId })
-        ProfileIntentCard({ title: '安全设置', description: '管理密码、登录设备与账号安全', icon: AppIcon.LOCK, onTap: () => this.openSafetySettings(), resolvedThemeId: this.resolvedThemeId })
+      // 个人数据列表（对齐前端 /me「个人数据」卡：我的瞬间/我的群组/好友/关注/粉丝，带计数+箭头）
+      Column({ space: DesignConstants.SPACING.THREE }) {
+        ProfileMenuItem({ title: '我的瞬间', icon: AppIcon.CAMERA, value: formatCount(this.myMomentsCount), onTap: () => this.openMyMoments(), resolvedThemeId: this.resolvedThemeId })
+        ProfileMenuItem({ title: '我的群组', icon: AppIcon.GROUP, value: formatCount(this.myGroupsCount), onTap: () => this.openMyGroups(), resolvedThemeId: this.resolvedThemeId })
+        ProfileMenuItem({ title: '好友', icon: AppIcon.HEART, value: formatCount(this.myFriendsCount), onTap: () => this.openRelationshipHub(), resolvedThemeId: this.resolvedThemeId })
+        ProfileMenuItem({ title: '关注', icon: AppIcon.PERSON, value: formatCount(this.myFollowingCount), onTap: () => this.openRelationshipHub(), resolvedThemeId: this.resolvedThemeId })
+        ProfileMenuItem({ title: '粉丝', icon: AppIcon.COMPASS, value: formatCount(this.myFollowersCount), onTap: () => this.openRelationshipHub(), resolvedThemeId: this.resolvedThemeId })
       }
       .width('100%')
+      .padding(DesignConstants.SPACING.MD)
+      .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
+      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
+      .shadow(this.getProfileVisualStyle().card.shadow)
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+      .margin({ bottom: DesignConstants.SPACING.MD })
     }
     .width('100%')
   }
