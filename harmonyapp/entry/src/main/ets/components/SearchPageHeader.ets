@@ -93,11 +93,14 @@ export struct SearchPageHeader {
         TextInput({ placeholder: this.placeholder, text: this.keyword })
           .layoutWeight(1)
           .height(DesignConstants.CHAT.INPUT_HEIGHT)
+          // 完全透明化：消除 TextInput 系统主题默认背景/圆角溢出
           .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
+          .background(DesignConstants.COLOR.TRANSPARENT)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .placeholderColor(this.getPalette().textTertiary)
           .fontColor(this.getPalette().textPrimary)
           .border({ width: 0 })
+          .borderRadius(0)
           .padding(0)
           .onFocus(() => {
             this.isFocused = true;
@@ -130,6 +133,8 @@ export struct SearchPageHeader {
       .backgroundColor(this.getSurfaceBackground())
       .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.isFocused ? this.getPalette().accentText : this.getSurfaceBorder() })
       .shadow(this.isFocused ? this.getPalette().accentShadow : this.getPalette().surfaceShadow)
+      // 裁剪子组件，防止 TextInput 系统默认视觉溢出圆角
+      .clip(true)
     }
     .width('100%')
     .padding({

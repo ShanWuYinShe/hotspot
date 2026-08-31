@@ -74,7 +74,12 @@ export struct SystemInput {
 
       TextInput({ placeholder: this.placeholder, text: this.value })
         .layoutWeight(1)
+        // 完全透明化：消除 TextInput 系统主题默认背景/圆角（否则会溢出外层
+        // 圆角容器露出直角矩形，对齐前端 input 无自身视觉层）
         .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
+        .background(DesignConstants.COLOR.TRANSPARENT)
+        .border({ width: 0 })
+        .borderRadius(0)
         .padding({ top: 0, bottom: 0, left: 0, right: 0 })
         .fontColor(this.getPalette().textPrimary)
         .fontSize(this.fontSize)
@@ -123,5 +128,7 @@ export struct SystemInput {
     .borderRadius(DesignConstants.SHAPE.INPUT) // 16
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getBorderResolution().borderColor })
     .shadow(this.getBorderResolution().shadow)
+    // 裁剪子组件（TextInput 等），防止系统默认视觉溢出圆角
+    .clip(true)
   }
 }

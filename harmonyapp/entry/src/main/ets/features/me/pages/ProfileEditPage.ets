@@ -428,6 +428,8 @@ export struct ProfileEditPage {
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .placeholderColor(this.getCurrentThemePalette().textTertiary)
             .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
+            .background(DesignConstants.COLOR.TRANSPARENT)
+            .border({ width: 0 })
             .borderRadius(0)
             .maxLength(maxLen)
             .onChange((v: string) => { onChange(v); })
@@ -439,6 +441,8 @@ export struct ProfileEditPage {
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .placeholderColor(this.getCurrentThemePalette().textTertiary)
             .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
+            .background(DesignConstants.COLOR.TRANSPARENT)
+            .border({ width: 0 })
             .borderRadius(0)
             .maxLength(maxLen)
             .onChange((v: string) => { onChange(v); })
@@ -469,6 +473,8 @@ export struct ProfileEditPage {
       .borderRadius(DesignConstants.SHAPE.INPUT)
       .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.fieldBorder(focused, error.length > 0).borderColor })
       .shadow(this.fieldBorder(focused, error.length > 0).shadow)
+      // 裁剪子组件（TextInput/TextArea），防止系统默认视觉溢出圆角
+      .clip(true)
     }
     .width('100%')
   }

@@ -278,6 +278,9 @@ export struct CreateMomentSheet {
         .fontColor(this.getPalette().textPrimary)
         .placeholderColor(this.getPalette().textSecondary)
         .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
+        .background(DesignConstants.COLOR.TRANSPARENT)
+        .border({ width: 0 })
+        .borderRadius(0)
         .padding(0)
         .constraintSize({ minHeight: 120 })
         .width('100%')
@@ -298,6 +301,8 @@ export struct CreateMomentSheet {
     .borderRadius(DesignConstants.SHAPE.INPUT)
     .backgroundColor(this.getPalette().inputBackgroundColor)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+    // 裁剪子组件（TextArea），防止系统默认视觉溢出圆角
+    .clip(true)
   }
 
   // ==================== 照片行 ====================
