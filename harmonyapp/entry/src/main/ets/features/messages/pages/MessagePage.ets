@@ -713,7 +713,6 @@ export struct MessagePage {
         ],
         activeIndex: this.chatFilterIndex,
         gap: DesignConstants.SPACING.XS,
-        freeWidth: true,
         actions: {
           onChange: (index: number) => {
             this.chatFilterIndex = index;
