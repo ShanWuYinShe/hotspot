@@ -721,9 +721,21 @@ export struct RelationshipListSection {
   }
 
   @Builder
-  private buildUserLine(userId: string, nickname: string, meta: string, actionLabel?: string, action?: () => void) {
+  private buildUserLine(userId: string, nickname: string, meta: string, online: boolean, actionLabel?: string, action?: () => void) {
     Row({ space: DesignConstants.SPACING.MD }) {
-      SystemAvatar({ name: nickname, avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL })
+      Stack({ alignContent: Alignment.BottomEnd }) {
+        SystemAvatar({ name: nickname, avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL })
+        if (online) {
+          Row()
+            .width(DesignConstants.SPACING.MD)
+            .height(DesignConstants.SPACING.MD)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .backgroundColor(this.getPalette().success)
+            .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getPalette().surfaceBackground })
+        }
+      }
+      .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+      .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
       Column({ space: DesignConstants.SPACING.XS }) {
         Text(nickname)
           .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -785,27 +797,46 @@ export struct RelationshipListSection {
       }
 
       if (!(this.friends.length > 0 || this.following.length > 0 || this.followers.length > 0 || this.blocked.length > 0)) {
-        Text(this.emptyText)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getPalette().textSecondary)
-          .width('100%')
+        // 空态：居中图标 + 文案（对齐前端 EmptyState 居中布局，避免顶部大片空白）
+        Column({ space: DesignConstants.SPACING.MD }) {
+          Row() {
+            LucideIcon({
+              icon: AppIcon.GROUP,
+              iconSize: DesignConstants.FONT.SIZE.XXL,
+              paletteRole: 'textSecondary'
+            })
+          }
+          .width(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
+          .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .backgroundColor(this.getPalette().surfaceSubtle)
+          .justifyContent(FlexAlign.Center)
+
+          Text(this.emptyText)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(this.getPalette().textSecondary)
+            .textAlign(TextAlign.Center)
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Center)
+        .padding({ top: DesignConstants.SPACING.XXL, bottom: DesignConstants.SPACING.XXL })
       }
 
       if (this.friends.length > 0) {
         ForEach(this.friends, (item: RelatedUserItem) => {
-          this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `成为好友于 ${formatDateTime(item.followed_back_at ?? undefined)}`)
+          this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `成为好友于 ${formatDateTime(item.followed_back_at ?? undefined)}`, item.user.presence_status === 'online')
         }, (item: RelatedUserItem) => item.user.user.user_id)
       }
 
       if (this.following.length > 0) {
         ForEach(this.following, (item: RelatedUserItem) => {
-          this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注于 ${formatDateTime(item.followed_at)}`)
+          this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注于 ${formatDateTime(item.followed_at)}`, item.user.presence_status === 'online')
         }, (item: RelatedUserItem) => item.user.user.user_id)
       }
 
       if (this.followers.length > 0) {
         ForEach(this.followers, (item: RelatedUserItem) => {
-          this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注你于 ${formatDateTime(item.followed_at)}`)
+          this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注你于 ${formatDateTime(item.followed_at)}`, item.user.presence_status === 'online')
         }, (item: RelatedUserItem) => item.user.user.user_id)
       }
 
@@ -815,6 +846,7 @@ export struct RelationshipListSection {
             item.user.user_id,
             item.user.nickname,
             item.reason ? `原因：${item.reason}` : `拉黑于 ${formatDateTime(item.blocked_at)}`,
+            false,
             '解除',
             () => this.unblockUserAction(item.user.user_id)
           )

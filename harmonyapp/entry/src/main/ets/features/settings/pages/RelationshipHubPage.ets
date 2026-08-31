@@ -6,6 +6,8 @@ import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
+import { SystemInput } from '../../../components/SystemInput';
+import { AppIcon } from '../../../components/SystemIcon';
 import { SystemToast } from '../../../components/SystemToast';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { BlockedUserItem, RelatedUserItem } from '../../../core/types/api';
@@ -25,6 +27,8 @@ export struct RelationshipHubPage {
   @State followers: RelatedUserItem[] = [];
   @State blocked: BlockedUserItem[] = [];
   @State activeRelTab: number = 0;
+  @State searchKeyword: string = '';
+  @State onlineFilterIndex: number = 0; // 0=全部 1=在线 2=离线（对齐前端 FilterTabs）
 
   private isDestroyed: boolean = false;
 
@@ -39,6 +43,29 @@ export struct RelationshipHubPage {
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getRelationCount(): number {
+    return this.friends.length + this.following.length + this.followers.length;
+  }
+
+  /** 在线/离线过滤 + 昵称/备注关键词过滤（对齐前端 FilterTabs + SearchInput 客户端过滤） */
+  private filterUsers(items: RelatedUserItem[]): RelatedUserItem[] {
+    let result: RelatedUserItem[] = items;
+    if (this.onlineFilterIndex === 1) {
+      result = result.filter((i: RelatedUserItem) => i.user.presence_status === 'online');
+    } else if (this.onlineFilterIndex === 2) {
+      result = result.filter((i: RelatedUserItem) => i.user.presence_status !== 'online');
+    }
+    const kw = this.searchKeyword.trim().toLowerCase();
+    if (kw.length > 0) {
+      result = result.filter((i: RelatedUserItem) => {
+        const name = (i.user.user.nickname ?? '').toLowerCase();
+        const remark = (i.remark ?? '').toLowerCase();
+        return name.includes(kw) || remark.includes(kw);
+      });
+    }
+    return result;
   }
 
   private async loadAll(): Promise<void> {
@@ -82,16 +109,45 @@ export struct RelationshipHubPage {
       Column() {
         SystemPageHeader({
           title: '关系',
+          subtitle: this.getRelationCount() > 0 ? `${this.getRelationCount()} 人` : '',
           showBackButton: true,
           onBack: () => { AppRouter.pop(); }
         })
+
+        // 搜索框（对齐前端 SearchInput：昵称/备注本地过滤）
+        SystemInput({
+          value: this.searchKeyword,
+          placeholder: '搜索昵称、备注…',
+          prefixIcon: AppIcon.SEARCH,
+          showPrefixIcon: true,
+          inputHeight: DesignConstants.COMPONENT.INPUT_HEIGHT,
+          onChange: (value: string) => {
+            this.searchKeyword = value;
+          }
+        })
+        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+
+        // 在线过滤（对齐前端 FilterTabs：全部 / 在线 / 离线）
+        TabsPillGroup({
+          tabs: [
+            { label: '全部' },
+            { label: '在线' },
+            { label: '离线' }
+          ],
+          activeIndex: this.onlineFilterIndex,
+          actions: {
+            onChange: (index: number) => {
+              this.onlineFilterIndex = index;
+            }
+          }
+        })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
 
         TabsPillGroup({
           tabs: [
             { label: `好友 (${this.friends.length})` },
             { label: `关注 (${this.following.length})` },
-            { label: `粉丝 (${this.followers.length})` },
-            { label: `黑名单 (${this.blocked.length})` }
+            { label: `粉丝 (${this.followers.length})` }
           ],
           activeIndex: this.activeRelTab,
           actions: {
@@ -108,30 +164,22 @@ export struct RelationshipHubPage {
               RelationshipListSection({
                 title: '互相关注',
                 subtitle: '你们已经成为彼此的好友。',
-                emptyText: '暂时还没有好友。',
-                friends: this.friends
+                emptyText: this.onlineFilterIndex === 0 && this.searchKeyword.length === 0 ? '暂时还没有好友。' : '没有符合条件的好友。',
+                friends: this.filterUsers(this.friends)
               })
             } else if (this.activeRelTab === 1) {
               RelationshipListSection({
                 title: '我的关注',
                 subtitle: '你主动关注的人。',
-                emptyText: '还没有关注任何人。',
-                following: this.following
-              })
-            } else if (this.activeRelTab === 2) {
-              RelationshipListSection({
-                title: '我的粉丝',
-                subtitle: '关注你的人。',
-                emptyText: '还没有新的粉丝。',
-                followers: this.followers
+                emptyText: this.onlineFilterIndex === 0 && this.searchKeyword.length === 0 ? '还没有关注任何人。' : '没有符合条件的关注。',
+                following: this.filterUsers(this.following)
               })
             } else {
               RelationshipListSection({
-                title: '已拉黑用户',
-                subtitle: '你已屏蔽的用户会在这里出现。',
-                emptyText: '当前没有拉黑任何用户。',
-                blocked: this.blocked,
-                unblockUserAction: (userId: string) => this.unblock(userId)
+                title: '我的粉丝',
+                subtitle: '关注你的人。',
+                emptyText: this.onlineFilterIndex === 0 && this.searchKeyword.length === 0 ? '还没有新的粉丝。' : '没有符合条件的粉丝。',
+                followers: this.filterUsers(this.followers)
               })
             }
           }
