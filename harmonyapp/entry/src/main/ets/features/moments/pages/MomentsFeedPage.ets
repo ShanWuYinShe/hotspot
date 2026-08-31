@@ -260,6 +260,7 @@ export struct MomentsFeedPage {
   }
 
   build() {
+  NavDestination() {
   PageShellContainer({ variant: 'feed-medium', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
     Column() {
       // 粘性头部：标题(走 SystemPageHeader) + 搜索栏 + 标签栏（对齐前端 nearby/moments 页 headerContent）
@@ -381,7 +382,9 @@ export struct MomentsFeedPage {
     }
     .width('100%')
     .height('100%')
+    }
   }
+  .hideTitleBar(true)
   }
 
   // ==================== 动态瀑布墙（对齐前端 BSP 卡片墙：移动/平板 2 列，桌面 3 列） ====================
