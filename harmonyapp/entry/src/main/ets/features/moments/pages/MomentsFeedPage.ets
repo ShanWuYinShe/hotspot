@@ -80,9 +80,11 @@ export struct MomentsFeedPage {
   @State userActionPendingIds: string[] = [];
   @State activeTab: string = '热门';
   @State activeTag: string = '';
+  /** 动态 tag 列表（从前 N 条 moment.tags 聚合去重，对齐前端 moments tagsList 派生模式） */
+  @State hotTags: string[] = [];
 
   // 「活动」与「热门」后端逻辑完全一致（同走 moments/search sort_by=popular），无法区分，故移除
-  private readonly TABS: string[] = ['热门', '附近', '关注'];
+  private readonly TABS: string[] = ['热门', '附近', '活动', '关注'];
 
   private getAvailableTags(): string[] {
     const tagSet = new Set<string>();
@@ -107,6 +109,25 @@ export struct MomentsFeedPage {
     }
     const tag = this.activeTag;
     return this.hotMoments.filter((moment: MomentItem) => (moment.tags ?? []).includes(tag));
+  }
+
+  /** 动态聚合 tag 药片（从前 N 条 moment.tags 去重 + 取前 8；对齐前端 tagsList 派生） */
+  private deriveHotTags(): void {
+    const collected: Set<string> = new Set();
+    for (const moment of this.hotMoments) {
+      for (const tag of moment.tags ?? []) {
+        if (tag && tag.length > 0 && tag.length <= 12) {
+          collected.add(tag);
+          if (collected.size >= 8) break;
+        }
+      }
+      if (collected.size >= 8) break;
+    }
+    this.hotTags = Array.from(collected);
+    // 当前选中的 tag 已不在新列表 → 清空，恢复全部
+    if (this.activeTag && !this.hotTags.includes(this.activeTag)) {
+      this.activeTag = '';
+    }
   }
 
   /** 同步过滤到 LazyForEach 数据源（activeTag 变更/数据加载后调用，保持虚拟化列表与筛选一致） */
@@ -155,6 +176,7 @@ export struct MomentsFeedPage {
       if (this.isDestroyed) return;
       if (response.code === 0) {
         this.hotMoments = response.data?.items ?? [];
+        this.deriveHotTags();
         this.hotMomentsDataSource.setData(this.getVisibleMoments());
         this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         this.recommendedUsers = [];
@@ -173,6 +195,7 @@ export struct MomentsFeedPage {
       if (this.isDestroyed) return;
       if (response.code === 0) {
         this.hotMoments = response.data?.items ?? [];
+        this.deriveHotTags();
         this.hotMomentsDataSource.setData(this.getVisibleMoments());
         this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         this.recommendedUsers = [];
@@ -242,6 +265,7 @@ export struct MomentsFeedPage {
         const trendingResponse = results[0];
         if (trendingResponse.code === 0) {
           this.hotMoments = trendingResponse.data?.items ?? [];
+          this.deriveHotTags();
           this.hotMomentsDataSource.setData(this.getVisibleMoments());
           this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         }
@@ -253,6 +277,7 @@ export struct MomentsFeedPage {
         if (this.isDestroyed) return;
         if (trendingResponse.code === 0) {
           this.hotMoments = trendingResponse.data?.items ?? [];
+          this.deriveHotTags();
           this.hotMomentsDataSource.setData(this.getVisibleMoments());
           this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         } else if (!this.hasAnyData()) {
@@ -334,6 +359,22 @@ export struct MomentsFeedPage {
             }
           }
         })
+        // 动态 tag 药片（对齐前端 nearby/moments tags 药片栏；hotTags 由 hotMoments 派生）
+        if (this.hotTags.length > 0) {
+          TabsPillGroup({
+            tabs: this.hotTags.map((tag: string): TabItem => ({ label: tag })),
+            activeIndex: this.activeTag ? Math.max(0, this.hotTags.indexOf(this.activeTag)) : -1,
+            actions: {
+              onChange: (index: number) => {
+                const tag = this.hotTags[index];
+                // 再次点击已激活项可取消筛选（对齐前端 activeTag === id ? null : id）
+                this.activeTag = this.activeTag === tag ? '' : (tag ?? '');
+                this.refreshVisibleDataSource();
+              }
+            }
+          })
+            .margin({ top: DesignConstants.SPACING.SM })
+        }
       }
       .width('100%')
       .padding({
