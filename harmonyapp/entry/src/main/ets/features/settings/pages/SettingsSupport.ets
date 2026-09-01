@@ -702,6 +702,8 @@ export struct RelationshipListSection {
   @Prop title: string = '';
   @Prop subtitle: string = '';
   @Prop emptyText: string = '';
+  /** embedded 模式（对齐前端 ProfileUserSection embedded）：隐藏 section header，仅渲染内容区 */
+  @Prop embedded: boolean = false;
   @Prop friends: RelatedUserItem[] = [];
   @Prop following: RelatedUserItem[] = [];
   @Prop followers: RelatedUserItem[] = [];
@@ -784,16 +786,19 @@ export struct RelationshipListSection {
 
   build() {
     Column({ space: DesignConstants.SPACING.MD }) {
-      Text(this.title)
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-        .fontColor(this.getPalette().textPrimary)
-        .width('100%')
-      if (this.subtitle) {
-        Text(this.subtitle)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getPalette().textSecondary)
+      // embedded 模式隐藏 header（对齐前端 embedded：section 头不渲染，标题在页面层）
+      if (!this.embedded) {
+        Text(this.title)
+          .fontSize(DesignConstants.FONT.SIZE.LG)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontColor(this.getPalette().textPrimary)
           .width('100%')
+        if (this.subtitle) {
+          Text(this.subtitle)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(this.getPalette().textSecondary)
+            .width('100%')
+        }
       }
 
       if (!(this.friends.length > 0 || this.following.length > 0 || this.followers.length > 0 || this.blocked.length > 0)) {

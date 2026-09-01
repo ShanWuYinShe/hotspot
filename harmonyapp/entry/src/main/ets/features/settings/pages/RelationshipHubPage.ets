@@ -28,7 +28,7 @@ export struct RelationshipHubPage {
   @State blocked: BlockedUserItem[] = [];
   @State activeRelTab: number = 0;
   @State searchKeyword: string = '';
-  @State onlineFilterIndex: number = 0; // 0=全部 1=在线 2=离线（对齐前端 FilterTabs）
+  @State onlineFilterIndex: number = 0; // 0=全部 1=在线 2=离线（对齐前端 SectionFilter）
 
   private isDestroyed: boolean = false;
 
@@ -45,11 +45,18 @@ export struct RelationshipHubPage {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
-  private getRelationCount(): number {
-    return this.friends.length + this.following.length + this.followers.length;
+  /** 当前激活 tab 的计数（对齐前端 RelationshipsPage activeCount：好友/关注/粉丝 当前区人数） */
+  private getActiveTabCount(): number {
+    if (this.activeRelTab === 0) {
+      return this.friends.length;
+    }
+    if (this.activeRelTab === 1) {
+      return this.following.length;
+    }
+    return this.followers.length;
   }
 
-  /** 在线/离线过滤 + 昵称/备注关键词过滤（对齐前端 FilterTabs + SearchInput 客户端过滤） */
+  /** 在线/离线过滤 + 昵称/备注关键词过滤（对齐前端 SectionFilter + SearchInput 客户端过滤） */
   private filterUsers(items: RelatedUserItem[]): RelatedUserItem[] {
     let result: RelatedUserItem[] = items;
     if (this.onlineFilterIndex === 1) {
@@ -107,14 +114,39 @@ export struct RelationshipHubPage {
     NavDestination() {
     PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
       Column() {
+        // 头部 —— 标题 24pt + 计数 trailing（对齐前端 RelationshipsPage：
+        // titleSize 2xl + trailing「N 人」当前区计数）
         SystemPageHeader({
           title: '关系',
-          subtitle: this.getRelationCount() > 0 ? `${this.getRelationCount()} 人` : '',
+          titleSize: DesignConstants.FONT.SIZE.XXL,
+          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); }
-        })
+        }) {
+          if (this.getActiveTabCount() > 0) {
+            Text(`${this.getActiveTabCount()} 人`)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getPalette().textSecondary)
+          }
+        }
 
-        // 搜索框（对齐前端 SearchInput：昵称/备注本地过滤）
+        // 关系三 Tab —— below 吸顶（对齐前端 below TabBar；count 角标对齐 TabBar count 契约）
+        TabsPillGroup({
+          tabs: [
+            { label: '好友', count: this.friends.length },
+            { label: '关注', count: this.following.length },
+            { label: '粉丝', count: this.followers.length }
+          ],
+          activeIndex: this.activeRelTab,
+          actions: {
+            onChange: (index: number) => {
+              this.activeRelTab = index;
+            }
+          }
+        })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+
+        // 搜索框 + 在线过滤（对齐前端 Section 内嵌：search + filters 位于内容区顶部）
         SystemInput({
           value: this.searchKeyword,
           placeholder: '搜索昵称、备注…',
@@ -125,9 +157,8 @@ export struct RelationshipHubPage {
             this.searchKeyword = value;
           }
         })
-        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
 
-        // 在线过滤（对齐前端 FilterTabs：全部 / 在线 / 离线）
         TabsPillGroup({
           tabs: [
             { label: '全部' },
@@ -141,43 +172,25 @@ export struct RelationshipHubPage {
             }
           }
         })
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-
-        TabsPillGroup({
-          tabs: [
-            { label: `好友 (${this.friends.length})` },
-            { label: `关注 (${this.following.length})` },
-            { label: `粉丝 (${this.followers.length})` }
-          ],
-          activeIndex: this.activeRelTab,
-          actions: {
-            onChange: (index: number) => {
-              this.activeRelTab = index;
-            }
-          }
-        })
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.MD })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
 
         Scroll() {
           Column() {
             if (this.activeRelTab === 0) {
               RelationshipListSection({
-                title: '互相关注',
-                subtitle: '你们已经成为彼此的好友。',
+                embedded: true,
                 emptyText: this.onlineFilterIndex === 0 && this.searchKeyword.length === 0 ? '暂时还没有好友。' : '没有符合条件的好友。',
                 friends: this.filterUsers(this.friends)
               })
             } else if (this.activeRelTab === 1) {
               RelationshipListSection({
-                title: '我的关注',
-                subtitle: '你主动关注的人。',
+                embedded: true,
                 emptyText: this.onlineFilterIndex === 0 && this.searchKeyword.length === 0 ? '还没有关注任何人。' : '没有符合条件的关注。',
                 following: this.filterUsers(this.following)
               })
             } else {
               RelationshipListSection({
-                title: '我的粉丝',
-                subtitle: '关注你的人。',
+                embedded: true,
                 emptyText: this.onlineFilterIndex === 0 && this.searchKeyword.length === 0 ? '还没有新的粉丝。' : '没有符合条件的粉丝。',
                 followers: this.filterUsers(this.followers)
               })
