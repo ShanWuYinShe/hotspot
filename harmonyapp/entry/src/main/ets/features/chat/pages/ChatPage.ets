@@ -76,6 +76,8 @@ interface ChatMessage {
   sentAt: string;
   isSelf: boolean;
   isSystem: boolean;
+  /** 本地乐观气泡标记（发送中未确认；WS 回显后由服务端消息替换） */
+  pending?: boolean;
   rawData?: Object;
 }
 
@@ -452,6 +454,29 @@ export struct ChatPage {
     });
     if (duplicated) {
       return;
+    }
+
+    // 乐观气泡确认：WS 回显与本地 pending 消息匹配（本人 + 同类型 + 同内容）时，
+    // 用服务端消息替换 pending（保留真实 id），避免重复展示
+    if (newMessage.isSelf) {
+      const pendingIndex = this.messages.findIndex((m: ChatMessage) =>
+        m.pending === true && m.content === newMessage.content && m.type === newMessage.type);
+      if (pendingIndex >= 0) {
+        this.messages[pendingIndex] = newMessage;
+        // BasicDataSource 无 replaceData，用 setData 全量刷新
+        this.messagesDataSource.setData(this.messages);
+        this.scrollToBottom();
+        this.messageCacheService.addMessage({
+          id: newMessage.id,
+          chatId: this.chatId,
+          type: newMessage.type,
+          senderId: newMessage.senderId,
+          content: newMessage.content,
+          sentAt: newMessage.sentAt,
+          data: JSON.stringify(newMessage.rawData ?? null)
+        });
+        return;
+      }
     }
 
     this.messages.push(newMessage);
@@ -886,6 +911,24 @@ export struct ChatPage {
         };
         await ApiClient.sendGroupMessage(request);
       }
+
+      // 乐观气泡：API 确认后本地立即上屏（pending 标记），WS 回显时由
+      // handleNewMessage 替换为服务端消息；弱网下不再「发了没影」
+      const pendingMessage: ChatMessage = {
+        id: `pending-${Date.now()}`,
+        content: content,
+        senderId: this.currentUser.user_id,
+        senderName: this.currentUser.nickname ?? '',
+        senderAvatar: this.currentUser.avatar_url ?? '',
+        type: 'text',
+        sentAt: new Date().toISOString(),
+        isSelf: true,
+        isSystem: false,
+        pending: true
+      };
+      this.messages.push(pendingMessage);
+      this.messagesDataSource.addData([pendingMessage]);
+      this.scrollToBottom();
 
       this.inputText = '';
     } catch (error) {
