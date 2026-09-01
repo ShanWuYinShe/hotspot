@@ -838,6 +838,21 @@ export struct GroupPage {
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getCurrentThemePalette().textSecondary)
 
+          if (group.online_members_count !== undefined && group.online_members_count !== null && group.online_members_count > 0) {
+            // 在线人数（对齐前端 SectionGroups「N 人在线」语义，用 online 状态色）
+            Row({ space: DesignConstants.SPACING.XS }) {
+              Row()
+                .width(DesignConstants.SPACING.SM2)
+                .height(DesignConstants.SPACING.SM2)
+                .borderRadius(DesignConstants.RADIUS.FULL)
+                .backgroundColor(this.getCurrentThemePalette().online)
+              Text(`${group.online_members_count} 在线`)
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .fontColor(this.getCurrentThemePalette().online)
+            }
+            .alignItems(VerticalAlign.Center)
+          }
+
           if (group.location?.distance !== undefined && group.location?.distance !== null) {
             Text(LocationUtil.formatDistance(group.location.distance))
               .fontSize(DesignConstants.FONT.SIZE.SM)
