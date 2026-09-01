@@ -20,6 +20,7 @@ import {
   FetchCommentsRequest,
   CreateCommentRequest,
   UserInfo,
+  Reaction,
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -78,6 +79,8 @@ export struct MomentDetailPage {
   @State commentSending: boolean = false;
   /** 本地新增评论数（服务端计数刷新前叠加展示，避免手动克隆 MomentItem） */
   @State commentAdditions: number = 0;
+  /** 评论点赞 in-flight 去重（防连点双翻转） */
+  private commentLikePending: Set<string> = new Set<string>();
   @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
 
   private isDestroyed: boolean = false;
@@ -301,6 +304,102 @@ export struct MomentDetailPage {
     previewParams.images = this.moment.images.map((image: MomentImage) => MediaUrlUtil.normalize(image.url));
     previewParams.index = index;
     AppRouter.push(PageNames.PHOTO_PREVIEW, previewParams);
+  }
+
+  /** 评论点赞态（由 reactions[].reacted_by_me 推导，对齐前端 c.liked） */
+  private isCommentLiked(comment: CommentItem): boolean {
+    return (comment.reactions ?? []).some((r: Reaction) => r.reacted_by_me);
+  }
+
+  /** 评论点赞计数（reactions[].count 求和，对齐前端 c.likes） */
+  private getCommentLikesCount(comment: CommentItem): number {
+    return (comment.reactions ?? []).reduce((sum: number, r: Reaction) => sum + (r.count ?? 0), 0);
+  }
+
+  /**
+   * 评论点赞：乐观翻转（likes 同步 ±1）+ reactions/set(target_type='comment')，失败回滚。
+   * 对齐前端 toggleCommentLike（登录闸 + in-flight 去重）。
+   */
+  private async toggleCommentLike(commentId: string): Promise<void> {
+    const target = this.comments.find((c: CommentItem) => c.comment_id === commentId);
+    if (!target || this.commentLikePending.has(commentId)) return;
+    if (!this.currentUser) {
+      SystemToast.showWarning('请先登录后再点赞', this.getUIContext());
+      return;
+    }
+    const prevLiked = this.isCommentLiked(target);
+    const prevLikes = this.getCommentLikesCount(target);
+    // 乐观翻转：克隆评论更新 reactions（liked + count ±1）；ArkTS 无 spread，用 concat + 显式拷贝
+    this.comments = this.comments.map((c: CommentItem) => {
+      if (c.comment_id !== commentId) return c;
+      const reactions: Reaction[] = (c.reactions ?? []).concat();
+      const mine = reactions.find((r: Reaction) => r.reacted_by_me);
+      if (prevLiked) {
+        if (mine) {
+          mine.reacted_by_me = false;
+          mine.count = Math.max(0, (mine.count ?? 1) - 1);
+        }
+      } else {
+        if (mine) {
+          mine.reacted_by_me = true;
+          mine.count = (mine.count ?? 0) + 1;
+        } else {
+          reactions.push({ emoji: ApiClient.getDefaultLikeEmoji(), count: 1, reacted_by_me: true } as Reaction);
+        }
+      }
+      const updated: CommentItem = {
+        comment_id: c.comment_id,
+        user: c.user,
+        content: c.content,
+        parent_id: c.parent_id,
+        mentions: c.mentions,
+        created_at: c.created_at,
+        replies_count: c.replies_count,
+        is_deleted: c.is_deleted,
+        reactions: reactions,
+        top_replies: c.top_replies
+      };
+      return updated;
+    });
+    this.commentLikePending.add(commentId);
+    try {
+      const res = await ApiClient.setCommentReaction(commentId, ApiClient.getDefaultLikeEmoji(), !prevLiked);
+      if (res.code !== 0) throw new Error(res.message || '操作失败');
+    } catch (err) {
+      // 失败回滚
+      this.comments = this.comments.map((c: CommentItem) => {
+        if (c.comment_id !== commentId) return c;
+        const reactions: Reaction[] = (c.reactions ?? []).concat();
+        const mine = reactions.find((r: Reaction) => r.reacted_by_me);
+        if (prevLiked) {
+          if (mine) {
+            mine.reacted_by_me = true;
+            mine.count = prevLikes;
+          }
+        } else {
+          if (mine) {
+            mine.reacted_by_me = false;
+            mine.count = prevLikes;
+          }
+        }
+        const updated: CommentItem = {
+          comment_id: c.comment_id,
+          user: c.user,
+          content: c.content,
+          parent_id: c.parent_id,
+          mentions: c.mentions,
+          created_at: c.created_at,
+          replies_count: c.replies_count,
+          is_deleted: c.is_deleted,
+          reactions: reactions,
+          top_replies: c.top_replies
+        };
+        return updated;
+      });
+      SystemToast.showError(err instanceof Error ? err.message : '操作失败，请重试', this.getUIContext());
+    } finally {
+      this.commentLikePending.delete(commentId);
+    }
   }
 
   private isMomentLiked(moment: MomentItem): boolean {
@@ -541,6 +640,25 @@ export struct MomentDetailPage {
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .width('100%')
           .textAlign(TextAlign.Start)
+
+        // 评论点赞（对齐前端评论行：Heart 图标 + 计数 + liked 态 accent + 按压反馈）
+        Row({ space: DesignConstants.SPACING.XS }) {
+          LucideIcon({
+            icon: this.isCommentLiked(comment) ? AppIcon.HEART_FILL : AppIcon.HEART,
+            iconSize: DesignConstants.FONT.SIZE.SM,
+            color: this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
+          })
+          Text(formatCount(this.getCommentLikesCount(comment)))
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
+        }
+        .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+        .scale(this.commentLikePending.has(comment.comment_id) ?
+          { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+          { x: 1, y: 1 })
+        .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
+        .onClick(() => { this.toggleCommentLike(comment.comment_id); })
+        .accessibilityText(this.isCommentLiked(comment) ? '取消点赞评论' : '点赞评论')
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
