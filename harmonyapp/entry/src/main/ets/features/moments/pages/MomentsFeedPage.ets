@@ -289,7 +289,8 @@ export struct MomentsFeedPage {
           onBack: this.showBackButton ? () => { AppRouter.pop(); } : null
         }) {
           if (this.getVisibleMoments().length > 0) {
-            Text(`${this.getVisibleMoments().length} 条内容`)
+            // 当前页数量（limit 20 截断）：满 20 显示 20+，标注限定（审查 P2 数据展示诚实）
+            Text(this.getVisibleMoments().length >= 20 ? '20+ 条内容' : `${this.getVisibleMoments().length} 条内容`)
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor(this.getCurrentThemePalette().textSecondary)
           }

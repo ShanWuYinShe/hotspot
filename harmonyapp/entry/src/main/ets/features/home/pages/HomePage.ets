@@ -596,9 +596,9 @@ export struct HomePage {
 
       // Stats grid：三段统计 + 竖分割线（数字统一 accent，对齐前端 HeroStats）
       Row({ space: DesignConstants.SPACING.MD }) {
-        // 人附近
+        // 人附近（接口 limit=10 截断：满 10 显示 10+，标注限定；审查 P2 数据展示诚实）
         Column({ space: DesignConstants.SPACING.HALF }) {
-          Text(`${this.users.length}`)
+          Text(this.users.length >= 10 ? '10+' : `${this.users.length}`)
             .fontSize(DesignConstants.FONT.SIZE.XXL)
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(this.getPalette().accentBackground)
