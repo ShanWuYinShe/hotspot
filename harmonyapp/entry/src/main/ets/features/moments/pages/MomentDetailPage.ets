@@ -402,6 +402,15 @@ export struct MomentDetailPage {
     }
   }
 
+  /**
+   * 评论回复：输入栏置 @对方 并滚动到评论区（对齐前端 replyTo：
+   * input = `@${user} ` + commentInputEl.focus()；鸿蒙端以滚动到输入栏替代聚焦）。
+   */
+  private replyToComment(userName: string): void {
+    this.commentText = `@${userName} `;
+    this.contentScroller.scrollEdge(Edge.Bottom);
+  }
+
   private isMomentLiked(moment: MomentItem): boolean {
     // 点赞态由 reactions[].reacted_by_me 推导（响应数据驱动，优先本地最新聚合）
     const state = this.momentStateMap[moment.moment_id];
@@ -641,24 +650,34 @@ export struct MomentDetailPage {
           .width('100%')
           .textAlign(TextAlign.Start)
 
-        // 评论点赞（对齐前端评论行：Heart 图标 + 计数 + liked 态 accent + 按压反馈）
-        Row({ space: DesignConstants.SPACING.XS }) {
-          LucideIcon({
-            icon: this.isCommentLiked(comment) ? AppIcon.HEART_FILL : AppIcon.HEART,
-            iconSize: DesignConstants.FONT.SIZE.SM,
-            color: this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
-          })
-          Text(formatCount(this.getCommentLikesCount(comment)))
+        // 评论点赞 + 回复（对齐前端评论行：点赞 Heart+计数 / 回复按钮）
+        Row({ space: DesignConstants.SPACING.MD }) {
+          Row({ space: DesignConstants.SPACING.XS }) {
+            LucideIcon({
+              icon: this.isCommentLiked(comment) ? AppIcon.HEART_FILL : AppIcon.HEART,
+              iconSize: DesignConstants.FONT.SIZE.SM,
+              color: this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
+            })
+            Text(formatCount(this.getCommentLikesCount(comment)))
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
+          }
+          .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+          .scale(this.commentLikePending.has(comment.comment_id) ?
+            { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+            { x: 1, y: 1 })
+          .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
+          .onClick(() => { this.toggleCommentLike(comment.comment_id); })
+          .accessibilityText(this.isCommentLiked(comment) ? '取消点赞评论' : '点赞评论')
+
+          Text('回复')
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+            .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+            .onClick(() => { this.replyToComment(comment.user?.nickname ?? ''); })
+            .accessibilityText('回复评论')
         }
-        .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-        .scale(this.commentLikePending.has(comment.comment_id) ?
-          { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
-          { x: 1, y: 1 })
-        .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
-        .onClick(() => { this.toggleCommentLike(comment.comment_id); })
-        .accessibilityText(this.isCommentLiked(comment) ? '取消点赞评论' : '点赞评论')
+        .alignItems(VerticalAlign.Center)
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
