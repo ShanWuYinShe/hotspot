@@ -9,5 +9,7 @@
 set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
-git config core.hooksPath .husky
-echo "git hooks 已激活: core.hooksPath = $(git config core.hooksPath) ($repo_root)"
+# 用绝对路径避免相对路径在不同 cwd/平台下的解析歧义（git rev-parse --git-path hooks
+# 对相对 hooksPath 是相对 cwd 解析的，子目录运行 git 命令时行为易混淆）。
+git config core.hooksPath "$repo_root/.husky"
+echo "git hooks 已激活: core.hooksPath = $(git config core.hooksPath)"

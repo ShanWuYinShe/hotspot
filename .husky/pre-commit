@@ -1,1 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# 提交前校验（与 CI frontend job 对齐）：svelte-check + eslint + 主题一致性。
+# 注意：此处校验失败必须非零退出，否则 git 会放行提交。
 bun run --cwd frontend check
