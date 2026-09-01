@@ -325,21 +325,42 @@ export struct LoginPage {
           .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
           .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
-          // 标题区域（固定）
+          // 品牌区（对齐前端 /login 品牌契约：44 圆标 + eyebrow 品牌名 accent 色
+          // + 标语 2xl medium + 副文案 sm secondary）
           Column({ space: DesignConstants.SPACING.SM }) {
-            Image($r('app.media.foreground'))
-              .width(DesignConstants.COMPONENT.LOADING_CONTAINER_SIZE)
-              .height(DesignConstants.COMPONENT.LOADING_CONTAINER_SIZE)
-              .objectFit(ImageFit.Contain)
+            Row() {
+              Image($r('app.media.foreground'))
+                .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+                .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+                .objectFit(ImageFit.Contain)
+            }
+            .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+            .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .justifyContent(FlexAlign.Center)
+            .backgroundColor(this.getCurrentThemePalette().accentBackground)
+            .shadow(this.getCurrentThemePalette().accentShadow)
 
-            Text($r('app.string.app_name'))
+            Text('热点')
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .fontColor(this.getCurrentThemePalette().accentBackground)
+              .textCase(TextCase.UpperCase)
+              .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
+              .margin({ top: DesignConstants.SPACING.LG })
+
+            Text('回来看看附近的故事。')
               .fontSize(DesignConstants.FONT.SIZE.XXL)
-              .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getCurrentThemePalette().textPrimary)
+              .letterSpacing(DesignConstants.FONT.LETTER_SPACING.TITLE)
+              .textAlign(TextAlign.Center)
+              .margin({ top: DesignConstants.SPACING.XS })
 
-            Text($r('app.string.app_description'))
-              .fontSize(DesignConstants.FONT.SIZE.LG)
+            Text('使用手机号、邮箱或账号登录。')
+              .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontColor(this.getCurrentThemePalette().textSecondary)
+              .textAlign(TextAlign.Center)
+              .margin({ top: DesignConstants.SPACING.XS })
           }
           .width('100%')
           .alignItems(HorizontalAlign.Center)

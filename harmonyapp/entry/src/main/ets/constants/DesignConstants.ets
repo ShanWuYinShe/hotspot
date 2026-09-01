@@ -59,6 +59,7 @@ export interface FontLetterSpacing {
   LABEL: number;    // 1.2 — 小标/在线标签（对齐前端 tracking-label 0.12em）
   FIELD: number;    // 1.28 — 表单字段标签（0.08em × 16px，对齐前端 tracking-field 0.08em）
   ICON_LABEL: number; // 0.6 — 图标下小字
+  TITLE: number;    // -0.12 — 大标题微收紧（对齐前端 tracking-title -0.01em @12px+）
 }
 
 export interface FontWeights {
@@ -445,6 +446,7 @@ const FONT: FontSystem = {
     LABEL: 1.2,
     FIELD: 1.28,
     ICON_LABEL: 0.6,
+    TITLE: -0.12, // 大标题微收紧（对齐前端 tracking-title -0.01em @12px+）
   },
 };
 
