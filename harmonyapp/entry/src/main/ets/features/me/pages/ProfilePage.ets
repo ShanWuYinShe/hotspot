@@ -742,7 +742,7 @@ export struct ProfilePage {
           } else {
             SystemPageHeader({
               title: this.isExternalProfileMode() ? this.resolveHeaderTitle() : '个人中心',
-              titleSize: this.isExternalProfileMode() ? DesignConstants.FONT.SIZE.XL : DesignConstants.FONT.SIZE.MD,
+              titleSize: this.isExternalProfileMode() ? DesignConstants.FONT.SIZE.XL : DesignConstants.FONT.SIZE.XS2,
               titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
               showBackButton: this.isExternalProfileMode(),
               onBack: this.isExternalProfileMode() ? () => { AppRouter.pop(); } : undefined,
@@ -1441,7 +1441,7 @@ export struct ProfilePage {
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getPrimaryTextColor())
-          Text('快速查看你的内容与关系')
+          Text('在这里查看你的内容与关系')
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getSecondaryTextColor())
         }
@@ -1451,19 +1451,19 @@ export struct ProfilePage {
       .padding(DesignConstants.SPACING.LG2)
       .backgroundColor(this.getSurfaceBackground())
 
-      this.buildProfileDataRow(AppIcon.PHOTO, '我的瞬间', formatCount(this.myMomentsCount), () => {
+      this.buildProfileDataRow(AppIcon.PHOTO, '我的瞬间', '查看已发布的记录', () => {
         AppRouter.push(PageNames.MOMENT);
       }, true)
-      this.buildProfileDataRow(AppIcon.GROUP, '我的群组', formatCount(this.myGroupsCount), () => {
+      this.buildProfileDataRow(AppIcon.GROUP, '我的群组', `${formatCount(this.myGroupsCount)} 个正在参与`, () => {
         AppRouter.push(PageNames.GROUP);
       }, false)
-      this.buildProfileDataRow(AppIcon.PERSON, '好友', formatCount(this.myFriendsCount), () => {
+      this.buildProfileDataRow(AppIcon.PERSON, '好友', `${formatCount(this.myFriendsCount)} 位好友`, () => {
         AppRouter.push(PageNames.RELATIONSHIP_HUB);
       }, false)
-      this.buildProfileDataRow(AppIcon.STAR, '关注', formatCount(this.myFollowingCount), () => {
+      this.buildProfileDataRow(AppIcon.STAR, '关注', `${formatCount(this.myFollowingCount)} 人`, () => {
         AppRouter.push(PageNames.RELATIONSHIP_HUB);
       }, false)
-      this.buildProfileDataRow(AppIcon.HEART, '粉丝', formatCount(this.myFollowersCount), () => {
+      this.buildProfileDataRow(AppIcon.HEART, '粉丝', `${formatCount(this.myFollowersCount)} 人`, () => {
         AppRouter.push(PageNames.RELATIONSHIP_HUB);
       }, false)
     }
