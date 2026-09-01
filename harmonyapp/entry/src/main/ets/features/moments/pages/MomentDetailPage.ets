@@ -81,6 +81,8 @@ export struct MomentDetailPage {
   @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
 
   private isDestroyed: boolean = false;
+  /** 内容区滚动控制器（评论键点击滚动到评论区，对齐前端 focusComments） */
+  private contentScroller: Scroller = new Scroller();
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
@@ -335,7 +337,7 @@ export struct MomentDetailPage {
             onAction: () => { this.loadMomentDetail(); }
           })
         } else {
-          Scroll() {
+          Scroll(this.contentScroller) {
             Column() {
               this.buildMomentContent(this.moment as MomentItem)
               this.buildCommentsSection()
@@ -346,8 +348,8 @@ export struct MomentDetailPage {
           .width('100%')
           .align(Alignment.TopStart)
 
-          this.buildCommentInput()
           this.buildActionBar(this.moment as MomentItem)
+          this.buildCommentInput()
         }
       }
       .width('100%')
@@ -608,58 +610,83 @@ export struct MomentDetailPage {
   }
 
   @Builder
+  /**
+   * 移动端互动操作条（对齐前端 moments/[momentId] footer：四键图标 + 计数，
+   * 44pt 拇指热区等分；点赞/评论带计数，收藏/分享纯图标；激活态 accent 色）。
+   */
   private buildActionBar(moment: MomentItem) {
-    Row({ space: DesignConstants.SPACING.LG }) {
-      SystemButton({
-        label: this.likePending ? '处理中...' : (this.isMomentLiked(moment) ? '已点赞' : '点赞'),
-        icon: this.isMomentLiked(moment) ? AppIcon.HEART_FILL : AppIcon.HEART,
-        showIcon: true,
-        variant: this.isMomentLiked(moment) ? 'surface-accent' : 'ghost',
-        buttonSize: 'small',
-        loading: this.likePending,
-        disabled: this.likePending,
-        onPress: () => {
-          this.toggleLike();
-        }
-      })
-        .layoutWeight(1)
+    Row() {
+      // 点赞（Heart + 计数，liked 时 accent）
+      Column({ space: DesignConstants.SPACING.HALF }) {
+        LucideIcon({
+          icon: this.isMomentLiked(moment) ? AppIcon.HEART_FILL : AppIcon.HEART,
+          iconSize: DesignConstants.FONT.SIZE.LG,
+          color: this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
+        })
+        Text(formatCount(this.getMomentLikesCount(moment)))
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
+      }
+      .layoutWeight(1)
+      .justifyContent(FlexAlign.Center)
+      .scale(this.likePending ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } : { x: 1, y: 1 })
+      .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
+      .onClick(() => { this.toggleLike(); })
+      .accessibilityText(this.isMomentLiked(moment) ? '取消点赞' : '点赞')
 
-      SystemButton({
-        label: this.favoritePending ? '处理中...' : (this.isMomentFavorited(moment) ? '已收藏' : '收藏'),
-        icon: this.isMomentFavorited(moment) ? AppIcon.STAR_FILL : AppIcon.STAR,
-        showIcon: true,
-        variant: this.isMomentFavorited(moment) ? 'surface-accent' : 'ghost',
-        buttonSize: 'small',
-        loading: this.favoritePending,
-        disabled: this.favoritePending,
-        onPress: () => {
-          this.toggleFavorite();
-        }
-      })
-        .layoutWeight(1)
+      // 评论（MessageCircle + 计数，点击滚动到评论区并聚焦输入栏）
+      Column({ space: DesignConstants.SPACING.HALF }) {
+        LucideIcon({
+          icon: AppIcon.MESSAGE,
+          iconSize: DesignConstants.FONT.SIZE.LG,
+          color: this.getCurrentThemePalette().textSecondary
+        })
+        Text(formatCount(this.getCommentCount(moment)))
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+      }
+      .layoutWeight(1)
+      .justifyContent(FlexAlign.Center)
+      .onClick(() => { this.contentScroller.scrollEdge(Edge.Bottom); })
+      .accessibilityText('查看评论')
 
-      SystemButton({
-        label: '分享',
-        icon: AppIcon.SHARE,
-        showIcon: true,
-        variant: 'ghost',
-        buttonSize: 'small',
-        onPress: () => {
-          this.shareMoment();
-        }
-      })
-        .layoutWeight(1)
+      // 收藏（Bookmark，saved 时 accent）
+      Column() {
+        LucideIcon({
+          icon: this.isMomentFavorited(moment) ? AppIcon.STAR_FILL : AppIcon.STAR,
+          iconSize: DesignConstants.FONT.SIZE.LG,
+          color: this.isMomentFavorited(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
+        })
+      }
+      .layoutWeight(1)
+      .justifyContent(FlexAlign.Center)
+      .scale(this.favoritePending ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } : { x: 1, y: 1 })
+      .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
+      .onClick(() => { this.toggleFavorite(); })
+      .accessibilityText(this.isMomentFavorited(moment) ? '取消收藏' : '收藏')
+
+      // 分享（Share）
+      Column() {
+        LucideIcon({
+          icon: AppIcon.SHARE,
+          iconSize: DesignConstants.FONT.SIZE.LG,
+          color: this.getCurrentThemePalette().textSecondary
+        })
+      }
+      .layoutWeight(1)
+      .justifyContent(FlexAlign.Center)
+      .onClick(() => { this.shareMoment(); })
+      .accessibilityText('分享动态')
     }
     .width('100%')
+    .height(DesignConstants.LAYOUT.MOBILE_BOTTOM_NAV_HEIGHT)
+    .alignItems(VerticalAlign.Center)
     .padding({
       left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.MD,
-      bottom: DesignConstants.SPACING.MD + this.safeAreaBottom
+      right: DesignConstants.SPACING.LG
     })
     .backgroundColor(this.getSurfaceBackground())
     .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
-    .borderRadius({ topLeft: DesignConstants.SHAPE.SHEET_TOP_RADIUS, topRight: DesignConstants.SHAPE.SHEET_TOP_RADIUS })
   }
 }
 
