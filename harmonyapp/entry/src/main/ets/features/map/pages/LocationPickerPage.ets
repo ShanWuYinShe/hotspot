@@ -1,4 +1,5 @@
 import { KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION, KEY_LOCATION_PICK_RESULT } from '../../../core/state/GlobalStateManager';
+import { GlobalStateManager } from '../../../core/state/GlobalStateManager';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AnchorHistoryItem, AnchorHistoryUtil } from '../../../core/utils/AnchorHistoryUtil';
@@ -490,7 +491,7 @@ export struct LocationPickerPage {
       return;
     }
 
-    AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, location);
+    GlobalStateManager.setBrowseAnchor(location);
     SystemToast.showSuccess('浏览锚点已更新', this.getUIContext());
     AppRouter.pop();
   }

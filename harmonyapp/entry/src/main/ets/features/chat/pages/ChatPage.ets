@@ -1163,7 +1163,18 @@ export struct ChatPage {
             }
           })
       } else {
-      List({ scroller: this.scroller, initialIndex: this.messages.length - 1 }) {
+      List({ scroller: this.scroller, initialIndex: this.messages.length - 1 + (this.hasMoreHistory ? 0 : 1) }) {
+        // 列表头部：没有更早历史时展示（语义=顶端收尾，原误置列表尾部）
+        if (!this.hasMoreHistory) {
+          ListItem() {
+            Text('没有更多了')
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getCurrentThemePalette().textTertiary)
+              .width('100%')
+              .textAlign(TextAlign.Center)
+              .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XS })
+          }
+        }
         // 顶部加载更多历史指示器
         if (this.isLoadingMoreHistory) {
           ListItem() {
@@ -1197,17 +1208,6 @@ export struct ChatPage {
           }
         }, (msg: ChatMessage) => msg.id)
 
-        // 列表收尾：没有更早历史时展示
-        if (!this.hasMoreHistory) {
-          ListItem() {
-            Text('没有更多了')
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getCurrentThemePalette().textTertiary)
-              .width('100%')
-              .textAlign(TextAlign.Center)
-              .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
-          }
-        }
       }
       .width('100%')
       .layoutWeight(1)
@@ -1346,17 +1346,22 @@ export struct ChatPage {
             this.sendMessage();
           })
 
-        Button(this.isSending ? '发送中...' : '发送')
-          .type(ButtonType.Normal)
-          .stateEffect(false)
-          .backgroundColor(this.isSendInteractive() ? this.getChatTheme().sendButtonActive : this.getChatTheme().sendButtonDisabled)
-          .fontColor(this.isSendInteractive() ? this.getChatTheme().sendButtonActiveText : this.getCurrentThemePalette().textSecondary)
-          .height(this.getChatVisualStyle().sendButton.height)
-          .borderRadius(this.getChatVisualStyle().sendButton.borderRadius)
-          .shadow(this.getChatVisualStyle().sendButton.shadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getChatTheme().inputBorder })
-          .padding({ left: this.getChatVisualStyle().sendButton.horizontalPadding, right: this.getChatVisualStyle().sendButton.horizontalPadding })
-          .margin({ left: DesignConstants.SPACING.MD })
+        // 对齐前端：圆形发送钮（纸飞机 icon）；交互态 accent 底，非交互灰底
+        Button() {
+          LucideIcon({
+              icon: this.isSending ? AppIcon.TIME : AppIcon.SEND,
+              iconSize: DesignConstants.FONT.SIZE.LG,
+              color: this.isSendInteractive() ? this.getChatTheme().sendButtonActiveText : this.getCurrentThemePalette().textSecondary
+            })
+        }
+        .type(ButtonType.Circle)
+        .stateEffect(false)
+        .width(this.getChatVisualStyle().sendButton.height)
+        .height(this.getChatVisualStyle().sendButton.height)
+        .backgroundColor(this.isSendInteractive() ? this.getChatTheme().sendButtonActive : this.getChatTheme().sendButtonDisabled)
+        .shadow(this.getChatVisualStyle().sendButton.shadow)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getChatTheme().inputBorder })
+        .margin({ left: DesignConstants.SPACING.MD })
           .opacity(this.isSendInteractive() ? 1 : DesignConstants.OPACITY.DISABLED)
           .scale(this.isSendPressed && this.isSendInteractive() ?
             { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON } :

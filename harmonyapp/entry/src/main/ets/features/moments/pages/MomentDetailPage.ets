@@ -470,7 +470,7 @@ export struct MomentDetailPage {
               longitude: moment.location.point.longitude,
               locationName: moment.location.location_name ?? ''
             };
-            AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, locationInfo);
+            GlobalStateManager.setBrowseAnchor(locationInfo);
             SystemToast.showSuccess('已设为浏览锚点', this.getUIContext());
           }
         } }) {

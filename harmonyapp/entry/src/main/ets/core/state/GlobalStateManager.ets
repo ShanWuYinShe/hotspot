@@ -9,6 +9,7 @@
  */
 
 import { AccountInfo, ClientConfig, AppLimits } from '../types/api';
+import { PreferencesUtil } from '../storage/PreferencesUtil';
 import type { UserType } from '../types/api';
 import { LocationInfo } from '../location/LocationUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -53,6 +54,13 @@ export const KEY_UNREAD_COUNT = 'unreadCount';
 export const KEY_NETWORK_CONNECTED = 'networkConnected';
 export const KEY_LAST_MESSAGE_SYNC_TIME = 'lastMessageSyncTime';
 export const KEY_CLIENT_CONFIG = 'clientConfig';
+const BROWSE_ANCHOR_PREF_KEY = 'browse_anchor';
+
+interface PersistedBrowseAnchor {
+  latitude: number;
+  longitude: number;
+  locationName: string;
+}
 
 // PersistentStorage 不支持 null 默认值，可空类型改用 AppStorage 初始化
 // 需要持久化的扩展状态统一通过 PreferencesUtil 处理
@@ -90,6 +98,7 @@ export class GlobalStateManager {
     if (!AppStorage.has(KEY_BROWSE_ANCHOR)) {
       AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, null);
     }
+    await GlobalStateManager.restoreBrowseAnchor();
     if (!AppStorage.has(KEY_UNREAD_COUNT)) {
       AppStorage.setOrCreate<UnreadCount>(KEY_UNREAD_COUNT, { total_unread_count: 0 });
     }
@@ -211,12 +220,41 @@ export class GlobalStateManager {
   }
 
   /**
+   * 写入浏览锚点（AppStorage + 持久化）。所有锚点写入统一走此入口，
+   * 此前锚点仅存 AppStorage，重启即丢失，用户每次启动都要重新设置。
+   */
+  static setBrowseAnchor(loc: LocationInfo | null): void {
+    AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, loc);
+    if (loc) {
+      const persisted: PersistedBrowseAnchor = {
+        latitude: loc.latitude, longitude: loc.longitude, locationName: loc.locationName ?? ''
+      };
+      PreferencesUtil.setObject(BROWSE_ANCHOR_PREF_KEY, persisted).catch(() => {});
+    } else {
+      PreferencesUtil.remove(BROWSE_ANCHOR_PREF_KEY).catch(() => {});
+    }
+  }
+
+  /** 启动时恢复持久化的浏览锚点 */
+  static async restoreBrowseAnchor(): Promise<void> {
+    try {
+      const saved = await PreferencesUtil.getObject<PersistedBrowseAnchor>(BROWSE_ANCHOR_PREF_KEY);
+      if (saved && typeof saved.latitude === 'number' && typeof saved.longitude === 'number') {
+        const loc: LocationInfo = { latitude: saved.latitude, longitude: saved.longitude, locationName: saved.locationName ?? '' };
+        AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, loc);
+      }
+    } catch {
+      hilog.warn(DOMAIN_NUMBER, TAG, '恢复浏览锚点失败');
+    }
+  }
+
+  /**
    * 清理资源 (登出时调用)
    */
   clear(): void {
     this.updateUser(null);
     this.updateUnreadCount({ total_unread_count: 0 });
-    AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, null);
+    GlobalStateManager.setBrowseAnchor(null);
     AppStorage.setOrCreate<LocationInfo | null>(KEY_LOCATION_PICK_RESULT, null);
     MessageSyncManager.getInstance().destroy();
     hilog.info(DOMAIN_NUMBER, TAG, 'GlobalStateManager 状态已重置');

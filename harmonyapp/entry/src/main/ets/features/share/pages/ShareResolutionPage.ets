@@ -86,7 +86,7 @@ export struct ShareResolutionPage {
         longitude: loc.point.longitude,
         locationName: loc.location_name
       };
-      AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, anchor);
+      GlobalStateManager.setBrowseAnchor(anchor);
       SystemToast.showSuccess('浏览锚点已更新', this.getUIContext());
       AppRouter.clear();
     } else if (shareType === 'user') {

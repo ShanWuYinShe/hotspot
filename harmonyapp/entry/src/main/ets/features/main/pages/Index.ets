@@ -360,7 +360,7 @@ struct Index {
       longitude: wgs84Location.longitude,
       locationName: wgs84Location.locationName
     };
-    AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, anchor);
+    GlobalStateManager.setBrowseAnchor(anchor);
     hilog.info(DOMAIN_NUMBER, TAG, `✅ 初始浏览锚点已设置(WGS84): ${anchor.locationName ?? '未知'}`);
   }
 
