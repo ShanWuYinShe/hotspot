@@ -382,6 +382,13 @@ export struct MomentsFeedPage {
           // ======== 移动端单栏布局（对齐前端 !isDesktop 分支） ========
           Column() {
             this.buildTagChipsStrip()
+            // 推荐用户/群组（有数据才渲染；横向滚动卡片，独立于瀑布流滚动）
+            if (this.recommendedUsers.length > 0) {
+              this.buildRecommendedUsersSection()
+            }
+            if (this.recommendedGroups.length > 0) {
+              this.buildRecommendedGroupsSection()
+            }
             this.buildMomentFeed()
           }
           .width('100%')
@@ -612,6 +619,21 @@ export struct MomentsFeedPage {
   @Builder
   buildRecommendedUsersSection() {
     Column() {
+      // 区块标题（对齐前端 SectionHead：标题 + 查看全部跳附近的人专区）
+      Row() {
+        Text('推荐用户')
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .layoutWeight(1)
+        Text('查看全部')
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor(this.getCurrentThemePalette().accentBackground)
+          .onClick(() => AppRouter.push(PageNames.NEARBY_USERS))
+      }
+      .width('100%')
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+
       SystemCard({
         cardPadding: DesignConstants.SPACING.MD,
         variant: CardVariant.OUTLINED
@@ -691,6 +713,21 @@ export struct MomentsFeedPage {
   @Builder
   buildRecommendedGroupsSection() {
     Column() {
+      // 区块标题（对齐前端 SectionHead：标题 + 查看全部跳附近群组专区）
+      Row() {
+        Text('推荐群组')
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .layoutWeight(1)
+        Text('查看全部')
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor(this.getCurrentThemePalette().accentBackground)
+          .onClick(() => AppRouter.push(PageNames.NEARBY_GROUPS))
+      }
+      .width('100%')
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+
       SystemCard({
         cardPadding: DesignConstants.SPACING.MD,
         variant: CardVariant.OUTLINED
