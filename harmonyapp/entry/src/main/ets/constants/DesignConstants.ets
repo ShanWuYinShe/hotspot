@@ -366,6 +366,8 @@ export interface LayoutSystem {
   GLOW_BLOB_SMALL: number;
   /** 个人页 glow 光晕右上定位偏移（64） */
   GLOW_BLOB_MARGIN_TOP: number;
+  /** 登录卡片最大宽度（对齐前端 /login max-w-100=400px） */
+  LOGIN_CARD_MAX_WIDTH: number;
 }
 
 // ==================== 页面内容栏档位接口（对齐前端 .page-shell / .feed-density-shell）====================
@@ -654,6 +656,7 @@ const LAYOUT: LayoutSystem = {
   GLOW_BLOB_MEDIUM: 160,
   GLOW_BLOB_SMALL: 120,
   GLOW_BLOB_MARGIN_TOP: 64,
+  LOGIN_CARD_MAX_WIDTH: 400,
 };
 
 // ==================== 页面内容栏档位（对齐前端 .page-shell / .feed-density-shell）====================

@@ -325,6 +325,8 @@ export struct LoginPage {
           .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
           .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
+          // 登录卡片容器（对齐前端 /login：400px 居中卡片 + 品牌区/表单/操作同卡）
+          Column() {
           // 品牌区（对齐前端 /login 品牌契约：44 圆标 + eyebrow 品牌名 accent 色
           // + 标语 2xl medium + 副文案 sm secondary）
           Column({ space: DesignConstants.SPACING.SM }) {
@@ -428,9 +430,19 @@ export struct LoginPage {
           .align(Alignment.Top)
           .layoutWeight(1)
           .scrollBar(BarState.Off)
+          }
+          // 登录卡片样式：400vp 居中卡片 + 描边 + 圆角 + 表面色（对齐前端 /login max-w-100 卡片契约）
+          .width('100%')
+          .constraintSize({ maxWidth: DesignConstants.LAYOUT.LOGIN_CARD_MAX_WIDTH })
+          .alignItems(HorizontalAlign.Center)
+          .padding(DesignConstants.SPACING.LG)
+          .backgroundColor(this.getSurfaceBackground())
+          .borderRadius(DesignConstants.RADIUS.LG)
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+          .shadow(this.getCurrentThemePalette().elevatedShadow)
         }
-        .width('100%')
-        .height('100%')
+          .width('100%')
+          .height('100%')
         .transition(
           TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
             .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
