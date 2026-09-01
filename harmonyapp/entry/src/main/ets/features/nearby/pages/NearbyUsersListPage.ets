@@ -21,7 +21,7 @@ import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { EmptyState, RefreshIndicator, LoadingMoreIndicator } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
-import { TabsPillGroup } from '../../../components/TabsPillGroup';
+import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
@@ -48,6 +48,10 @@ export struct NearbyUsersListPage {
   // 「在线」tab：users/search 接口无在线筛选/排序参数，但 UserItem 带 presence_status，
   // 因此「在线」为客户端过滤开关（不改变服务端 sort_by）
   @State onlineOnly: boolean = false;
+  /** 兴趣分类筛选（对齐前端 nearby/people FILTER_TAGS：全部/摄影/旅行/音乐/美食/运动/阅读/艺术） */
+  @State activeTag: string = '全部';
+  /** 兴趣分类常量（前端 8 档，全量对齐） */
+  private static readonly FILTER_TAGS: string[] = ['全部', '摄影', '旅行', '音乐', '美食', '运动', '阅读', '艺术'];
   private usersDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
   private isDestroyed: boolean = false;
   private loadVersion: number = 0;
@@ -88,11 +92,18 @@ export struct NearbyUsersListPage {
 
   /** 刷新列表数据源：onlineOnly 时按 presence_status 客户端过滤在线用户 */
   private refreshUsersDataSource(): void {
-    if (this.onlineOnly) {
-      this.usersDataSource.setData(this.users.filter((u: UserItem) => u.presence_status === 'online'));
-    } else {
-      this.usersDataSource.setData(this.users);
+    let filtered = this.users;
+    // 兴趣分类（对齐前端 tagFilter）：「全部」不过滤；其余按 tags[0] === activeTag 客户端过滤
+    if (this.activeTag !== '全部') {
+      filtered = filtered.filter((u: UserItem) => {
+        const tags = u.tags ?? [];
+        return tags.length > 0 && tags[0] === this.activeTag;
+      });
     }
+    if (this.onlineOnly) {
+      filtered = filtered.filter((u: UserItem) => u.presence_status === 'online');
+    }
+    this.usersDataSource.setData(filtered);
   }
 
   private async loadUsers(refresh: boolean = false): Promise<void> {
@@ -251,6 +262,22 @@ export struct NearbyUsersListPage {
                 // 排序未变，仅退出在线过滤，直接恢复完整列表
                 this.refreshUsersDataSource();
               }
+            }
+          }
+        })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+
+        // 兴趣分类 TabBar（对齐前端 nearby/people FILTER_TAGS：全部/摄影/旅行/音乐/美食/运动/阅读/艺术）
+        TabsPillGroup({
+          tabs: NearbyUsersListPage.FILTER_TAGS.map((label: string): TabItem => ({ label })),
+          activeIndex: NearbyUsersListPage.FILTER_TAGS.indexOf(this.activeTag),
+          actions: {
+            onChange: (index: number) => {
+              const tag = NearbyUsersListPage.FILTER_TAGS[index] || '全部';
+              if (tag === this.activeTag) return;
+              this.activeTag = tag;
+              // 客户端过滤（不重新请求服务端）—— 对齐前端 tagFilter === '全部' || user.tag === tagFilter 语义
+              this.refreshUsersDataSource();
             }
           }
         })
