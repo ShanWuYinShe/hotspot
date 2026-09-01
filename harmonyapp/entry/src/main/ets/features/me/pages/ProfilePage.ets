@@ -7,6 +7,8 @@
  */
 
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
+import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
+import { interactionActions } from '../../../core/state/InteractionActions';
 import { curves } from '@kit.ArkUI';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
@@ -34,6 +36,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { EmptyState } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { SystemButton } from '../../../components/SystemButton';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
@@ -104,6 +107,8 @@ export struct ProfilePage {
   @State pressedThumbKey: string = '';
   @State viewedUserId: string = '';
   @State viewedUserProfile: UserItem | null = null;
+  @StorageLink('interaction_user_state') viewedUserStateMap: Record<string, UserRelationState> = {};
+  @State viewedFollowPending: boolean = false;
   @State viewedUserMoments: MomentItem[] = [];
   @State viewedUserLoading: boolean = false;
   @State viewedUserError: string = '';
@@ -179,6 +184,7 @@ export struct ProfilePage {
       if (response.code === 0 && response.data?.user?.user?.user_id) {
         this.viewedUserProfile = response.data.user;
         this.viewedUserMoments = response.data.recent_moments?.items ?? [];
+        InteractionStateStore.getInstance().patchUserFromItem(this.viewedUserProfile);
       } else {
         this.viewedUserError = getErrorMessage(response, '无法获取该用户资料');
       }
@@ -186,6 +192,28 @@ export struct ProfilePage {
       this.viewedUserError = '加载用户资料失败';
     } finally {
       this.viewedUserLoading = false;
+    }
+  }
+
+  private isViewedUserFollowing(): boolean {
+    const uid = this.viewedUserProfile?.user?.user_id ?? '';
+    return this.viewedUserStateMap[uid]?.relation?.is_following ?? false;
+  }
+
+  private async toggleViewedUserFollow(): Promise<void> {
+    const uid = this.viewedUserProfile?.user?.user_id ?? '';
+    if (!uid || this.viewedFollowPending) {
+      return;
+    }
+    this.viewedFollowPending = true;
+    try {
+      const isFollowing = this.isViewedUserFollowing();
+      const ok = await interactionActions.setFollowUser(uid, !isFollowing, isFollowing ? '已取消关注' : '已关注');
+      if (!ok) {
+        SystemToast.showError('操作失败', this.getUIContext());
+      }
+    } finally {
+      this.viewedFollowPending = false;
     }
   }
 
@@ -827,170 +855,172 @@ export struct ProfilePage {
       })
       .layoutWeight(1)
     } else {
-      Scroll() {
-        Column({ space: DesignConstants.SPACING.MD }) {
-          Column({ space: DesignConstants.SPACING.SM }) {
-            SystemAvatar({
-              avatarUrl: this.viewedUserProfile?.user?.avatar_url ?? '',
-              name: this.viewedUserProfile?.user?.nickname ?? '',
-              avatarSize: this.getProfileVisualStyle().identity.avatarSize,
-              shape: 'circle'
-            })
+      // 对齐前端 users/[userId] 移动端：左对齐身份行 + bio + 标签 + 三段统计
+      // + 近期瞬间九宫格；底部操作条 私信 + 关注
+      Column() {
+        Scroll() {
+          Column({ space: DesignConstants.SPACING.MD }) {
+            Row({ space: DesignConstants.SPACING.MD }) {
+              Stack({ alignContent: Alignment.BottomEnd }) {
+                SystemAvatar({
+                  avatarUrl: this.viewedUserProfile?.user?.avatar_url ?? '',
+                  name: this.viewedUserProfile?.user?.nickname ?? '',
+                  avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.LARGE,
+                  shape: 'circle',
+                  isOnline: this.viewedUserProfile?.presence_status === 'online'
+                })
+              }
+              .width(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
+              .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
 
-            Text(this.viewedUserProfile?.user?.nickname ?? '未知用户')
-              .fontSize(DesignConstants.FONT.SIZE.XXL)
-              .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-              .fontColor(this.getPrimaryTextColor())
-              .textAlign(TextAlign.Center)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-            if (this.viewedUserProfile?.presence_status === 'online') {
-              Text('在线')
-                .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor(this.getAccentBackground())
-            } else {
-              Text('离线')
-                .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor(this.getSecondaryTextColor())
-            }
-          }
-          .width('100%')
-          .alignItems(HorizontalAlign.Center)
-          .padding({
-            left: DesignConstants.SPACING.MD,
-            right: DesignConstants.SPACING.MD,
-            top: DesignConstants.SPACING.LG,
-            bottom: DesignConstants.SPACING.LG
-          })
-          .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
-          .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-          .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
-          .shadow(this.getProfileVisualStyle().card.shadow)
-
-          Column({ space: DesignConstants.SPACING.SM }) {
-            Text('个人简介')
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor(this.getSecondaryTextColor())
-            Text(this.viewedUserProfile?.bio?.length ? this.viewedUserProfile?.bio : '这个人很神秘，暂时还没有留下简介')
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .lineHeight(DesignConstants.FONT.LINE_HEIGHT.MD)
-              .fontColor(this.getPrimaryTextColor())
-          }
-          .width('100%')
-          .padding(DesignConstants.SPACING.LG)
-          .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
-          .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-          .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
-          .shadow(this.getProfileVisualStyle().card.shadow)
-
-          if ((this.viewedUserProfile?.tags?.length ?? 0) > 0) {
-            Flex({ wrap: FlexWrap.Wrap }) {
-              ForEach((this.viewedUserProfile?.tags ?? []).slice(0, 8), (tag: string) => {
-                Text(`#${tag}`)
-                  .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor(this.getAccentBackground())
-                  .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-                  .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-                  .backgroundColor(this.getSurfaceSubtle())
-                  .borderRadius(DesignConstants.RADIUS.XL)
-              }, (tag: string) => tag)
+              Column({ space: DesignConstants.SPACING.XS }) {
+                Text(this.viewedUserProfile?.user?.nickname ?? '未知用户')
+                  .fontSize(DesignConstants.FONT.SIZE.XXL)
+                  .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                  .fontColor(this.getPrimaryTextColor())
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                Row({ space: DesignConstants.SPACING.XS }) {
+                  LucideIcon({
+                      icon: AppIcon.LOCATION,
+                      iconSize: DesignConstants.FONT.SIZE.SM,
+                      color: this.getAccentBackground()
+                    })
+                  Text(this.viewedUserProfile?.location?.location_name ?? '未设置位置')
+                    .fontSize(DesignConstants.FONT.SIZE.XS)
+                    .fontColor(this.getSecondaryTextColor())
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                }
+                .alignItems(VerticalAlign.Center)
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
             }
             .width('100%')
-            .padding(DesignConstants.SPACING.LG)
-            .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .shadow(this.getProfileVisualStyle().card.shadow)
-          }
+            .alignItems(VerticalAlign.Center)
 
-          Row({ space: DesignConstants.SPACING.SM }) {
-            Button('私聊')
-              .type(ButtonType.Normal)
-              .layoutWeight(1)
-              .height(this.getProfileVisualStyle().secondaryButton.height)
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-              .backgroundColor(this.getAccentBackground())
-              .fontColor(this.getAccentText())
-              .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
-              .shadow(this.getProfileVisualStyle().primaryButton.shadow)
-              .onClick(() => {
-                this.startPrivateChatWithViewedUser();
-              })
+            Text(this.viewedUserProfile?.bio ?? '这个人很神秘，暂时还没有留下简介')
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .lineHeight(DesignConstants.FONT.LINE_HEIGHT.MD)
+              .fontColor(this.getSecondaryTextColor())
+              .width('100%')
 
-            Button('分享')
-              .type(ButtonType.Normal)
-              .layoutWeight(1)
-              .height(this.getProfileVisualStyle().secondaryButton.height)
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-              .backgroundColor(this.getProfileVisualStyle().secondaryButton.backgroundColor)
-              .fontColor(this.getProfileVisualStyle().secondaryButton.textColor)
-              .borderRadius(this.getProfileVisualStyle().secondaryButton.borderRadius)
-              .shadow(this.getProfileVisualStyle().secondaryButton.shadow)
-              .border({ width: this.getProfileVisualStyle().secondaryButton.borderWidth, color: this.getProfileVisualStyle().secondaryButton.borderColor })
-              .onClick(() => {
-                this.shareProfileByCode();
-              })
-
-            Button('返回')
-              .type(ButtonType.Normal)
-              .layoutWeight(1)
-              .height(this.getProfileVisualStyle().secondaryButton.height)
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-              .backgroundColor(this.getProfileVisualStyle().secondaryButton.backgroundColor)
-              .fontColor(this.getProfileVisualStyle().secondaryButton.textColor)
-              .borderRadius(this.getProfileVisualStyle().secondaryButton.borderRadius)
-              .shadow(this.getProfileVisualStyle().secondaryButton.shadow)
-              .border({ width: this.getProfileVisualStyle().secondaryButton.borderWidth, color: this.getProfileVisualStyle().secondaryButton.borderColor })
-              .onClick(() => {
-                AppRouter.pop();
-              })
-          }
-          .width('100%')
-
-          // 近期瞬间九宫格
-          if (this.viewedUserMoments.length > 0) {
-            Column({ space: DesignConstants.SPACING.SM }) {
-              Text('近期瞬间')
-                .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor(this.getSecondaryTextColor())
-
-              Grid() {
-                ForEach(this.viewedUserMoments, (moment: MomentItem) => {
-                  GridItem() {
-                    ViewedMomentThumb({
-                      moment: moment,
-                      palette: this.getCurrentThemePalette()
-                    })
-                  }
-                }, (moment: MomentItem) => moment.moment_id)
+            if ((this.viewedUserProfile?.tags?.length ?? 0) > 0) {
+              Flex({ wrap: FlexWrap.Wrap }) {
+                ForEach((this.viewedUserProfile?.tags ?? []).slice(0, 8), (tag: string) => {
+                  Text(`#${tag}`)
+                    .fontSize(DesignConstants.FONT.SIZE.XS)
+                    .fontColor(this.getAccentBackground())
+                    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+                    .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+                    .backgroundColor(this.getCurrentThemePalette().accentMuted)
+                    .borderRadius(DesignConstants.RADIUS.FULL)
+                }, (tag: string) => tag)
               }
-              .columnsTemplate('1fr 1fr 1fr')
-              .columnsGap(DesignConstants.SPACING.SM)
-              .rowsGap(DesignConstants.SPACING.SM)
               .width('100%')
             }
+
+            Row() {
+              this.ViewedStatItem(`${this.viewedUserProfile?.stats?.moments_count ?? 0}`, '瞬间')
+              this.ViewedStatItem(`${this.viewedUserProfile?.stats?.followers_count ?? 0}`, '粉丝')
+              this.ViewedStatItem(`${this.viewedUserProfile?.stats?.following_count ?? 0}`, '关注')
+            }
             .width('100%')
+            .margin({ top: DesignConstants.SPACING.SM })
+
+            // 近期瞬间九宫格
+            if (this.viewedUserMoments.length > 0) {
+              Column({ space: DesignConstants.SPACING.SM }) {
+                Text('近期瞬间')
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .fontColor(this.getSecondaryTextColor())
+
+                Grid() {
+                  ForEach(this.viewedUserMoments, (moment: MomentItem) => {
+                    GridItem() {
+                      ViewedMomentThumb({
+                        moment: moment,
+                        palette: this.getCurrentThemePalette()
+                      })
+                    }
+                  }, (moment: MomentItem) => moment.moment_id)
+                }
+                .columnsTemplate('1fr 1fr 1fr')
+                .columnsGap(DesignConstants.SPACING.SM)
+                .rowsGap(DesignConstants.SPACING.SM)
+                .width('100%')
+              }
+              .width('100%')
+              .margin({ top: DesignConstants.SPACING.SM })
+            }
           }
+          .width('100%')
+          .justifyContent(FlexAlign.Start)
+          .padding({
+            left: DesignConstants.SPACING.LG2,
+            right: DesignConstants.SPACING.LG2,
+            top: DesignConstants.SPACING.MD,
+            bottom: DesignConstants.SPACING.LG
+          })
+          .alignItems(HorizontalAlign.Start)
         }
         .width('100%')
-        .justifyContent(FlexAlign.Start)
+        .layoutWeight(1)
+        .align(Alignment.TopStart)
+        .scrollBar(BarState.Auto)
+
+        // 底部操作条（对齐前端 footer snippet：私信 + 关注 下沉拇指热区）
+        Row({ space: DesignConstants.SPACING.MD }) {
+          SystemButton({
+            label: '私信',
+            variant: 'outline',
+            buttonSize: 'small',
+            onPress: () => {
+              this.startPrivateChatWithViewedUser();
+            }
+          })
+            .layoutWeight(1)
+
+          SystemButton({
+            label: this.isViewedUserFollowing() ? '已关注' : '关注',
+            variant: this.isViewedUserFollowing() ? 'outline' : 'primary',
+            buttonSize: 'small',
+            disabled: this.viewedFollowPending,
+            onPress: () => {
+              this.toggleViewedUserFollow();
+            }
+          })
+            .layoutWeight(1)
+        }
+        .width('100%')
         .padding({
-          left: DesignConstants.SPACING.LG,
-          right: DesignConstants.SPACING.LG,
-          top: DesignConstants.SPACING.SM,
-          bottom: DesignConstants.SPACING.LG
+          left: DesignConstants.SPACING.LG2,
+          right: DesignConstants.SPACING.LG2,
+          top: DesignConstants.SPACING.MD,
+          bottom: DesignConstants.SPACING.MD + this.safeAreaBottom
         })
-        .alignItems(HorizontalAlign.Start)
+        .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+        .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
       }
       .width('100%')
-      .layoutWeight(1)
-      .align(Alignment.TopStart)
-      .scrollBar(BarState.Auto)
+      .height('100%')
     }
+  }
+
+  @Builder
+  private ViewedStatItem(value: string, label: string) {
+    Column({ space: DesignConstants.SPACING.HALF }) {
+      Text(value)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.getPrimaryTextColor())
+      Text(label)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontColor(this.getSecondaryTextColor())
+    }
+    .alignItems(HorizontalAlign.Center)
+    .layoutWeight(1)
   }
 
   // ==================== 匿名用户 - 游客界面 ====================
