@@ -109,6 +109,11 @@ export struct MomentsFeedPage {
     return this.hotMoments.filter((moment: MomentItem) => (moment.tags ?? []).includes(tag));
   }
 
+  /** 同步过滤到 LazyForEach 数据源（activeTag 变更/数据加载后调用，保持虚拟化列表与筛选一致） */
+  private refreshVisibleDataSource(): void {
+    this.hotMomentsDataSource.setData(this.getVisibleMoments());
+  }
+
   private isUserActionPending(userId: string): boolean {
     return this.userActionPendingIds.indexOf(userId) >= 0;
   }
@@ -150,7 +155,7 @@ export struct MomentsFeedPage {
       if (this.isDestroyed) return;
       if (response.code === 0) {
         this.hotMoments = response.data?.items ?? [];
-        this.hotMomentsDataSource.setData(this.hotMoments);
+        this.hotMomentsDataSource.setData(this.getVisibleMoments());
         this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         this.recommendedUsers = [];
         this.recommendedGroups = [];
@@ -168,7 +173,7 @@ export struct MomentsFeedPage {
       if (this.isDestroyed) return;
       if (response.code === 0) {
         this.hotMoments = response.data?.items ?? [];
-        this.hotMomentsDataSource.setData(this.hotMoments);
+        this.hotMomentsDataSource.setData(this.getVisibleMoments());
         this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         this.recommendedUsers = [];
         this.recommendedGroups = [];
@@ -237,7 +242,7 @@ export struct MomentsFeedPage {
         const trendingResponse = results[0];
         if (trendingResponse.code === 0) {
           this.hotMoments = trendingResponse.data?.items ?? [];
-          this.hotMomentsDataSource.setData(this.hotMoments);
+          this.hotMomentsDataSource.setData(this.getVisibleMoments());
           this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         }
         if (usersResponse.code !== 0 && trendingResponse.code !== 0 && !this.hasAnyData()) {
@@ -248,7 +253,7 @@ export struct MomentsFeedPage {
         if (this.isDestroyed) return;
         if (trendingResponse.code === 0) {
           this.hotMoments = trendingResponse.data?.items ?? [];
-          this.hotMomentsDataSource.setData(this.hotMoments);
+          this.hotMomentsDataSource.setData(this.getVisibleMoments());
           this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         } else if (!this.hasAnyData()) {
           this.errorMessage = getErrorMessage(trendingResponse, '加载附近动态失败');
@@ -427,7 +432,9 @@ export struct MomentsFeedPage {
         // Refresh 直接包可滚动的 WaterFlow（子组件需为滚动组件下拉刷新才生效）
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           WaterFlow() {
-            ForEach(this.getVisibleMoments(), (moment: MomentItem) => {
+            // LazyForEach 虚拟化（审查 P1-9：替换全量 ForEach，长列表滚动不掉帧）；
+            // 数据源由 refreshVisibleDataSource 保持与标签过滤同步
+            LazyForEach(this.hotMomentsDataSource, (moment: MomentItem) => {
               FlowItem() {
                 MomentWallCard({
                   moment: moment,
@@ -581,6 +588,8 @@ export struct MomentsFeedPage {
             .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
             .onClick(() => {
               this.activeTag = this.activeTag === tag ? '' : tag;
+              // 同步刷新 LazyForEach 数据源（含标签过滤），保持虚拟化列表与筛选一致
+              this.refreshVisibleDataSource();
             })
         }, (tag: string) => tag)
       }
