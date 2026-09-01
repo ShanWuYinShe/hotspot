@@ -60,6 +60,12 @@ export struct NearbyGroupsListPage {
     return null;
   }
 
+  /** 位置行副标题（对齐前端 nearby 页 subtitle：{locationName} · 5km 内 / 5km 内） */
+  private getLocationSubtitle(): string {
+    const name = (this.browseAnchor ?? this.currentLocation)?.locationName ?? '';
+    return name.length > 0 ? `${name} · 5km 内` : '5km 内';
+  }
+
   aboutToAppear() {
     this.loadGroups();
   }
@@ -183,14 +189,24 @@ export struct NearbyGroupsListPage {
     NavDestination() {
     PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
       Column() {
-        // 头部 —— 统一走 SystemPageHeader（返回 + 标题）
+        // 头部 —— 统一走 SystemPageHeader（返回 + 标题 24pt + 位置行副标题 + 计数 trailing，
+        // 对齐前端 /nearby/groups PageHeader：titleSize 2xl + MapPin 图标 + {位置} · 5km 内 + trailing N 个活跃群组）
         SystemPageHeader({
-        title: '附近群组',
+          title: '附近群组',
+          subtitle: this.getLocationSubtitle(),
+          subtitleIcon: AppIcon.LOCATION,
+          titleSize: DesignConstants.FONT.SIZE.XXL,
+          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); },
-          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           backgroundVariant: 'transparent'
-        })
+        }) {
+          if (this.hasAnyData()) {
+            Text(`${this.groups.length} 个活跃群组`)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+          }
+        }
 
         // 搜索栏（对齐前端 /groups/nearby）
         SystemInput({
@@ -220,45 +236,6 @@ export struct NearbyGroupsListPage {
           }
         })
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
-
-        // Hero 统计卡（对齐前端「附近概览」）
-        if (this.hasAnyData()) {
-          Row({ space: DesignConstants.SPACING.MD }) {
-            Column({ space: DesignConstants.SPACING.HALF }) {
-              Text(`${this.groups.length}`)
-                .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-                .fontColor(this.getCurrentThemePalette().accentBackground)
-              Text('群组')
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor(this.getCurrentThemePalette().textSecondary)
-            }
-            .alignItems(HorizontalAlign.Center)
-            .layoutWeight(1)
-
-            Column()
-              .width(DesignConstants.BORDER_WIDTH.HAIRLINE).height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
-              .backgroundColor(this.getCurrentThemePalette().borderColor)
-
-            Column({ space: DesignConstants.SPACING.HALF }) {
-              Text('5km')
-                .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-                .fontColor(this.getCurrentThemePalette().accentBackground)
-              Text('半径')
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor(this.getCurrentThemePalette().textSecondary)
-            }
-            .alignItems(HorizontalAlign.Center)
-            .layoutWeight(1)
-          }
-          .width('100%')
-          .padding(DesignConstants.SPACING.MD)
-          .borderRadius(DesignConstants.SHAPE.CARD)
-          .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
-        }
 
         // 内容区
         if (this.isLoading) {

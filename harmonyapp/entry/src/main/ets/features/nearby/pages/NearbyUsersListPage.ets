@@ -48,7 +48,6 @@ export struct NearbyUsersListPage {
   // 「在线」tab：users/search 接口无在线筛选/排序参数，但 UserItem 带 presence_status，
   // 因此「在线」为客户端过滤开关（不改变服务端 sort_by）
   @State onlineOnly: boolean = false;
-  @State onlineCount: number = 0;
   private usersDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
   private isDestroyed: boolean = false;
   private loadVersion: number = 0;
@@ -67,6 +66,12 @@ export struct NearbyUsersListPage {
       return { latitude: ref.latitude, longitude: ref.longitude };
     }
     return null;
+  }
+
+  /** 位置行副标题（对齐前端 nearby 页 subtitle：{locationName} · 5km 内 / 5km 内） */
+  private getLocationSubtitle(): string {
+    const name = (this.browseAnchor ?? this.currentLocation)?.locationName ?? '';
+    return name.length > 0 ? `${name} · 5km 内` : '5km 内';
   }
 
   aboutToAppear() {
@@ -124,7 +129,6 @@ export struct NearbyUsersListPage {
         this.refreshUsersDataSource();
         this.hasMore = !!(response.data?.next_cursor);
         this.nextCursor = response.data?.next_cursor ?? '';
-        this.onlineCount = this.users.filter((u: UserItem) => u.presence_status === 'online').length;
       } else {
         this.errorMessage = getErrorMessage(response, '加载失败');
         this.users = [];
@@ -190,14 +194,24 @@ export struct NearbyUsersListPage {
     NavDestination() {
     PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
       Column() {
-        // 头部 —— 统一走 SystemPageHeader（返回 + 标题）
+        // 头部 —— 统一走 SystemPageHeader（返回 + 标题 24pt + 位置行副标题 + 计数 trailing，
+        // 对齐前端 /nearby/people PageHeader：titleSize 2xl + MapPin 图标 + {位置} · 5km 内 + trailing N 人）
         SystemPageHeader({
           title: '附近的人',
+          subtitle: this.getLocationSubtitle(),
+          subtitleIcon: AppIcon.LOCATION,
+          titleSize: DesignConstants.FONT.SIZE.XXL,
+          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); },
-          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           backgroundVariant: 'transparent'
-        })
+        }) {
+          if (this.hasAnyData()) {
+            Text(`${this.users.length} 人`)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+          }
+        }
 
         // 搜索栏（对齐前端 /users/nearby 搜索框）
         SystemInput({
@@ -241,61 +255,6 @@ export struct NearbyUsersListPage {
           }
         })
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
-
-        // Hero 统计卡（对齐前端「附近概览」）
-        if (this.hasAnyData()) {
-          Row({ space: DesignConstants.SPACING.MD }) {
-            Column({ space: DesignConstants.SPACING.HALF }) {
-              Text(`${this.onlineCount}`)
-                .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-                .fontColor(this.getCurrentThemePalette().success)
-              Text('在线')
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor(this.getCurrentThemePalette().textSecondary)
-            }
-            .alignItems(HorizontalAlign.Center)
-            .layoutWeight(1)
-
-            Column()
-              .width(DesignConstants.BORDER_WIDTH.HAIRLINE).height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
-              .backgroundColor(this.getCurrentThemePalette().borderColor)
-
-            Column({ space: DesignConstants.SPACING.HALF }) {
-              Text(`${this.users.length}`)
-                .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-                .fontColor(this.getCurrentThemePalette().textPrimary)
-              Text('总数')
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor(this.getCurrentThemePalette().textSecondary)
-            }
-            .alignItems(HorizontalAlign.Center)
-            .layoutWeight(1)
-
-            Column()
-              .width(DesignConstants.BORDER_WIDTH.HAIRLINE).height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
-              .backgroundColor(this.getCurrentThemePalette().borderColor)
-
-            Column({ space: DesignConstants.SPACING.HALF }) {
-              Text('5km')
-                .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-                .fontColor(this.getCurrentThemePalette().accentBackground)
-              Text('半径')
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor(this.getCurrentThemePalette().textSecondary)
-            }
-            .alignItems(HorizontalAlign.Center)
-            .layoutWeight(1)
-          }
-          .width('100%')
-          .padding(DesignConstants.SPACING.MD)
-          .borderRadius(DesignConstants.SHAPE.CARD)
-          .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
-        }
 
         // 内容区
         if (this.isLoading) {

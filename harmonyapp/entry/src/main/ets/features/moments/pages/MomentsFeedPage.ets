@@ -94,6 +94,12 @@ export struct MomentsFeedPage {
     return Array.from(tagSet);
   }
 
+  /** 位置行副标题（对齐前端 nearby/moments subtitle：{locationName} · 5km 内 / 5km 内） */
+  private getLocationSubtitle(): string {
+    const name = (this.browseAnchor ?? this.currentLocation)?.locationName ?? '';
+    return name.length > 0 ? `${name} · 5km 内` : '5km 内';
+  }
+
   /** 标签药片客户端过滤：activeTag 为空（未选/再次点击取消）时恢复全部 */
   private getVisibleMoments(): MomentItem[] {
     if (!this.activeTag) {
@@ -265,10 +271,13 @@ export struct MomentsFeedPage {
     Column() {
       // 粘性头部：标题(走 SystemPageHeader) + 搜索栏 + 标签栏（对齐前端 nearby/moments 页 headerContent）
       Column() {
-        // 标题行 —— 统一走 SystemPageHeader（标题 + 内容数 trailing，透明背景自带安全区）
+        // 标题行 —— 统一走 SystemPageHeader（标题 24pt + 位置行副标题 + 内容数 trailing，
+        // 对齐前端 nearby/moments PageHeader：titleSize 2xl + MapPin 图标 + {位置} · 5km 内）
         SystemPageHeader({
           title: '附近动态',
-          titleSize: DesignConstants.FONT.SIZE.XL,
+          subtitle: this.getLocationSubtitle(),
+          subtitleIcon: AppIcon.LOCATION,
+          titleSize: DesignConstants.FONT.SIZE.XXL,
           titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           backgroundVariant: 'transparent',
           showBackButton: this.showBackButton,

@@ -16,6 +16,7 @@ import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { AppThemeShadow, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
+import { LucideIcon } from './LucideIcon';
 import { SurfaceIconButton } from './SurfaceIconButton';
 import { SystemButton } from './SystemButton';
 import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
@@ -54,6 +55,9 @@ export struct SystemPageHeader {
   rightAction: IconAction | null = null;
   /** 任意尾随内容（@BuilderParam，可选）。提供时优先于 action/rightAction。 */
   @BuilderParam trailing?: () => void;
+  /** 副标题前置图标（可选；对齐前端 PageHeader subtitleIcon，如附近页 MapPin 位置行）。
+   *  注：不用 @BuilderParam——ArkTS trailing lambda 要求唯一 BuilderParam，多参数会破坏全部现有调用。 */
+  @Prop subtitleIcon: AppIcon | null = null;
   /** 标题对齐，默认 Start；详情页居中标题用 Center。 */
   @Prop titleAlign: TextAlign = TextAlign.Start;
   /** 标题字号，默认 FONT.SIZE.XL（20）。顶级 Tab 页对齐前端传 XXL（24）。 */
@@ -193,12 +197,22 @@ export struct SystemPageHeader {
             .textAlign(this.titleAlign)
 
           if (this.subtitle.length > 0) {
-            Text(this.subtitle)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.subtitleColor.length > 0 ? this.subtitleColor : this.getPalette().textSecondary)
-              .margin({ top: DesignConstants.SPACING.XS })
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
+            Row({ space: DesignConstants.SPACING.XS }) {
+              if (this.subtitleIcon !== null) {
+                LucideIcon({
+                  icon: this.subtitleIcon,
+                  iconSize: DesignConstants.FONT.SIZE.XS,
+                  color: this.getPalette().accentBackground
+                })
+              }
+              Text(this.subtitle)
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontColor(this.subtitleColor.length > 0 ? this.subtitleColor : this.getPalette().textSecondary)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+            }
+            .alignItems(VerticalAlign.Center)
+            .margin({ top: DesignConstants.SPACING.XS })
           }
         }
         .layoutWeight(1)
