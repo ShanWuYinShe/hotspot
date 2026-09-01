@@ -429,24 +429,27 @@ export struct NotificationCenter {
             })
           }
 
-          Column({ space: 1 }) {
+          Row({ space: DesignConstants.SPACING.MD }) {
             Text('通知')
-              .fontSize(DesignConstants.FONT.SIZE.XL)
-              .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+              .fontSize(DesignConstants.FONT.SIZE.XXL)
+              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getPalette().textPrimary)
             if (this.getUnreadCount() > 0) {
               Text(`${this.getUnreadCount()} 条未读`)
-                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .fontSize(DesignConstants.FONT.SIZE.XS)
                 .fontColor(this.getPalette().textSecondary)
             }
           }
+          .alignItems(VerticalAlign.Center)
         }
         .layoutWeight(1)
 
         if (this.getUnreadCount() > 0) {
           SystemButton({
             label: '全部已读',
-            variant: 'surface',
+            icon: AppIcon.CHECK_ALL,
+            showIcon: true,
+            variant: 'primary',
             buttonSize: 'small',
             onPress: () => this.onMarkAllRead()
           })
@@ -570,11 +573,19 @@ export struct NotificationCenter {
 
   @Builder
   private buildGroupHeader(label: string) {
-    Text(label)
-      .fontSize(DesignConstants.FONT.SIZE.SM)
-      .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-      .fontColor(this.getPalette().textSecondary)
-      .padding({ left: DesignConstants.SPACING.XS, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.XS })
+    Row({ space: DesignConstants.SPACING.SM }) {
+      Row()
+        .width(DesignConstants.SPACING.SM2)
+        .height(DesignConstants.SPACING.SM2)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(this.getPalette().accentBackground)
+      Text(label)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        .fontColor(this.getPalette().textPrimary)
+    }
+    .alignItems(VerticalAlign.Center)
+    .padding({ left: DesignConstants.SPACING.XS, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.XS })
   }
 
   @Builder
