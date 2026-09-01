@@ -238,6 +238,8 @@ export struct ProfileEditPage {
       Column() {
         SystemPageHeader({
           title: '编辑资料',
+          titleSize: DesignConstants.FONT.SIZE.XXL,
+          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); },
           action: this.isSaving || this.isSaved ? null : this.getHeaderAction()
@@ -261,14 +263,14 @@ export struct ProfileEditPage {
                 ]
               })
 
-            // 头像 + 名称区
+            // 头像 + 名称区（对齐前端 me/edit：Avatar 72 rounded + 昵称 text-md + @userId）
             Row({ space: DesignConstants.SPACING.MD }) {
               Stack({ alignContent: Alignment.BottomEnd }) {
                 SystemAvatar({
                   avatarUrl: this.currentUser?.avatar_url ?? '',
                   name: this.nickname || this.currentUser?.nickname || '',
-                  avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.LARGE,
-                  shape: 'squircle'
+                  avatarSize: 72,
+                  shape: 'circle'
                 })
 
                 // 相机编辑按钮
@@ -294,8 +296,8 @@ export struct ProfileEditPage {
 
               Column({ space: DesignConstants.SPACING.HALF }) {
                 Text(this.nickname || (this.currentUser?.nickname ?? ''))
-                  .fontSize(DesignConstants.FONT.SIZE.XL)
-                  .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                   .fontColor(this.getCurrentThemePalette().textPrimary)
 
                 Text('@' + (this.currentUser?.user_id?.substring(0, 8) ?? 'user'))
@@ -311,9 +313,9 @@ export struct ProfileEditPage {
             .padding({ left: DesignConstants.SPACING.LG })
 
             // 表单字段
-            this.buildInputField('昵称', '你的名字', this.nickname, MAX_NICKNAME, false, (v: string) => { this.nickname = v; }, this.nicknameFocused, this.getNicknameError() ?? '', () => { this.nicknameFocused = true; }, () => { this.nicknameFocused = false; this.nicknameTouched = true; })
+            this.buildInputField('昵称', '你的名字', this.nickname, MAX_NICKNAME, false, (v: string) => { this.nickname = v; }, this.nicknameFocused, this.getNicknameError() ?? '', () => { this.nicknameFocused = true; }, () => { this.nicknameFocused = false; this.nicknameTouched = true; }, false)
 
-            this.buildInputField('个人简介', '介绍一下自己…', this.bio, MAX_BIO, true, (v: string) => { this.bio = v; }, this.bioFocused, this.getBioError() ?? '', () => { this.bioFocused = true; }, () => { this.bioFocused = false; this.bioTouched = true; })
+            this.buildInputField('个人简介', '介绍一下自己…', this.bio, MAX_BIO, true, (v: string) => { this.bio = v; }, this.bioFocused, this.getBioError() ?? '', () => { this.bioFocused = true; }, () => { this.bioFocused = false; this.bioTouched = true; }, true)
 
             // 兴趣标签
             Column({ space: DesignConstants.SPACING.SM }) {
@@ -405,7 +407,7 @@ export struct ProfileEditPage {
   }
 
   @Builder
-  private buildInputField(label: string, placeholder: string, value: string, maxLen: number, multiline: boolean, onChange: (v: string) => void, focused: boolean, error: string, onFocus: () => void, onBlur: () => void) {
+  private buildInputField(label: string, placeholder: string, value: string, maxLen: number, multiline: boolean, onChange: (v: string) => void, focused: boolean, error: string, onFocus: () => void, onBlur: () => void, showCounter: boolean = true) {
     Column({ space: DesignConstants.SPACING.SM }) {
       Row({ space: DesignConstants.SPACING.XS }) {
         LucideIcon({
@@ -450,14 +452,17 @@ export struct ProfileEditPage {
             .onBlur(() => { onBlur(); KeyboardDismissManager.getInstance().dismiss(); })
         }
 
-        Text(value.length + '/' + maxLen)
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(value.length > maxLen * 0.85
-            ? this.getCurrentThemePalette().accentBackground
-            : this.getCurrentThemePalette().textTertiary)
-          .width('100%')
-          .textAlign(TextAlign.End)
-          .margin({ top: DesignConstants.SPACING.XS })
+        if (showCounter) {
+          // 计数变色阈值 127/150 对齐前端 me/edit（bio.length > 127 起 accent 色）
+          Text(value.length + '/' + maxLen)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(value.length > MAX_BIO - 23
+              ? this.getCurrentThemePalette().accentBackground
+              : this.getCurrentThemePalette().textTertiary)
+            .width('100%')
+            .textAlign(TextAlign.End)
+            .margin({ top: DesignConstants.SPACING.XS })
+        }
 
         if (error.length > 0) {
           Text(error)
