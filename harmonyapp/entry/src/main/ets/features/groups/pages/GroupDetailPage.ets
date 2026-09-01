@@ -1061,9 +1061,10 @@ export struct GroupDetailPage {
 
         // 使用 List 布局（扁平风格）
         List() {
-          // 1. 简介区（封面已承载群名/分类，元信息行已承载成员/在线/距离，这里只留描述正文）
+          // 1. 简介区（封面已承载群名/分类，元信息行已承载成员/在线/距离；
+          //    位置名以 MapPin 行展示，对齐前端 users/[userId] 位置行模式）
           ListItem() {
-            Column() {
+            Column({ space: DesignConstants.SPACING.MD }) {
               if (this.groupInfo?.description) {
                 Text(this.groupInfo?.description)
                   .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -1071,52 +1072,24 @@ export struct GroupDetailPage {
                   .textAlign(TextAlign.Start)
                   .width('100%')
                   .lineHeight(DesignConstants.FONT.LINE_HEIGHT.MD)
-                  .margin({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
               }
+              Row({ space: DesignConstants.SPACING.XS }) {
+                LucideIcon({
+                  icon: AppIcon.LOCATION,
+                  iconSize: DesignConstants.FONT.SIZE.SM,
+                  color: this.getCurrentThemePalette().accentBackground
+                })
+                Text(this.groupInfo?.location?.location_name || '未知位置')
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+              }
+              .alignItems(VerticalAlign.Center)
             }
             .width('100%')
-            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-          }
-          .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .shadow(this.getCurrentThemePalette().elevatedShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-          .margin({ bottom: DesignConstants.SPACING.MD })
-
-          // 2. 位置信息
-          ListItem() {
-             Column() {
-                Row() {
-                  LucideIcon({
-                      icon: AppIcon.LOCATION,
-                      iconSize: DesignConstants.FONT.SIZE.LG_PLUS,
-                      color: this.getCurrentThemePalette().accentBackground
-                    })
-                  Text('位置信息')
-                    .fontSize(DesignConstants.FONT.SIZE.MD)
-                    .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                    .fontColor(this.getCurrentThemePalette().textPrimary)
-                    .margin({ left: DesignConstants.SPACING.SM })
-                }
-                .width('100%')
-                .margin({ bottom: DesignConstants.SPACING.SM })
-
-                Text(this.groupInfo?.location?.location_name || '未知位置')
-                  .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor(this.getCurrentThemePalette().textSecondary)
-                  .width('100%')
-
-                if ((this.groupInfo?.location as RelativeLocation)?.distance !== undefined &&
-                  (this.groupInfo!.location as RelativeLocation).distance! >= 0) {
-                  Text(`距你 ${LocationUtil.formatDistance((this.groupInfo!.location as RelativeLocation).distance!)}`)
-                    .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor(this.getCurrentThemePalette().textTertiary)
-                    .width('100%')
-                    .margin({ top: DesignConstants.SPACING.XS })
-                }
-             }
-             .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
-               top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+            .alignItems(HorizontalAlign.Start)
+            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
           }
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.LG)
