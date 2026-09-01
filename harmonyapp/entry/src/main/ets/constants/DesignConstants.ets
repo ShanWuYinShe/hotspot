@@ -301,6 +301,8 @@ export interface ChatLayoutConstants {
   AVATAR_SIZE: number;
   /** 图片消息最大宽度（200） */
   IMAGE_MAX_WIDTH: number;
+  /** 图片消息最大高度（240 — 超高图限高防撑爆列表，对齐审查 P1 聊天三件套） */
+  IMAGE_MAX_HEIGHT: number;
 }
 
 // ==================== 语义化形状 token ====================
@@ -627,6 +629,7 @@ const CHAT: ChatLayoutConstants = {
   SEND_BUTTON_HEIGHT: 36,
   AVATAR_SIZE: 40,
   IMAGE_MAX_WIDTH: 200,
+  IMAGE_MAX_HEIGHT: 240,
 };
 
 // ==================== 页面布局系统（对齐前端 navigation chrome）====================

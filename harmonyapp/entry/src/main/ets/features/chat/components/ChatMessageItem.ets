@@ -12,6 +12,8 @@ import { ChatThemeColors, ChatThemeManager } from '../../../core/theme/ChatTheme
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { MessageType } from '../../../core/types/api';
 import { LucideIcon } from '../../../components/LucideIcon';
+import { AppRouter, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
+import { PageNames } from '../../../constants/AppConstants';
 
 /** 消息展示视图模型（与 ChatPage 的 ChatMessage 结构一致） */
 export interface ChatMessageView {
@@ -36,6 +38,18 @@ export struct ChatMessageItem {
   @Prop timeText: string = '';
   palette: AppThemePalette = AppThemeManager.getPaletteById('vibrant_light');
   chatTheme: ChatThemeColors = ChatThemeManager.current();
+
+  /** 图片加载失败标记（加载占位显示） */
+  @State imageFailed: boolean = false;
+
+  /** 图片点击预览（走 PhotoPreviewPage，与动态详情图片预览同一入口） */
+  private previewImage(): void {
+    const previewParams = new PhotoPreviewRouteParam();
+    previewParams.momentId = '';
+    previewParams.images = [MediaUrlUtil.normalize(this.msg.content)];
+    previewParams.index = 0;
+    AppRouter.push(PageNames.PHOTO_PREVIEW, previewParams);
+  }
 
   private getBubbleRadius(isSelf: boolean): BorderRadiuses {
     const big: number = DesignConstants.CHAT.BUBBLE_RADIUS;
@@ -85,15 +99,43 @@ export struct ChatMessageItem {
 
           Column() {
             if (this.msg.type === 'image') {
-              Image(MediaUrlUtil.normalize(this.msg.content))
-                .width(DesignConstants.CHAT.IMAGE_MAX_WIDTH)
-                .objectFit(ImageFit.Cover)
-                .backgroundColor(this.chatTheme?.listBackground)
-                .borderRadius(this.getBubbleRadius(this.msg.isSelf))
-                .shadow(this.palette.controlShadow)
-                .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.chatTheme?.divider })
-                .margin(DesignConstants.SPACING.XS)
-                .accessibilityText('[图片消息]')
+              // 图片消息：限高（超高图防撑爆列表）+ 加载占位 + 点击预览
+              Stack({ alignContent: Alignment.Center }) {
+                if (this.imageFailed) {
+                  // 加载失败占位（对齐前端图片占位：accent-soft 底 + 图标）
+                  Column({ space: DesignConstants.SPACING.SM }) {
+                    LucideIcon({
+                      icon: AppIcon.PHOTO,
+                      iconSize: DesignConstants.FONT.SIZE.LG,
+                      paletteRole: 'textSecondary'
+                    })
+                    Text('图片加载失败')
+                      .fontSize(DesignConstants.FONT.SIZE.XS)
+                      .fontColor(this.palette.textSecondary)
+                  }
+                  .width(DesignConstants.CHAT.IMAGE_MAX_WIDTH)
+                  .height(DesignConstants.CHAT.IMAGE_MAX_HEIGHT)
+                  .justifyContent(FlexAlign.Center)
+                  .backgroundColor(this.chatTheme?.listBackground)
+                  .borderRadius(this.getBubbleRadius(this.msg.isSelf))
+                } else {
+                  Image(MediaUrlUtil.normalize(this.msg.content))
+                    .width(DesignConstants.CHAT.IMAGE_MAX_WIDTH)
+                    .height(DesignConstants.CHAT.IMAGE_MAX_HEIGHT)
+                    .objectFit(ImageFit.Contain)
+                    .backgroundColor(this.chatTheme?.listBackground)
+                    .borderRadius(this.getBubbleRadius(this.msg.isSelf))
+                    .shadow(this.palette.controlShadow)
+                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.chatTheme?.divider })
+                    .margin(DesignConstants.SPACING.XS)
+                    .onError(() => { this.imageFailed = true; })
+                    .accessibilityText('[图片消息]')
+                }
+              }
+              .width(DesignConstants.CHAT.IMAGE_MAX_WIDTH)
+              .height(DesignConstants.CHAT.IMAGE_MAX_HEIGHT)
+              .onClick(() => { this.previewImage(); })
+              .accessibilityText('点击预览图片')
             } else {
               Text(this.msg.content)
                 .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
