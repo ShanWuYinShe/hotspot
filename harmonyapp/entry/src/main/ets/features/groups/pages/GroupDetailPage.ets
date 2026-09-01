@@ -55,6 +55,7 @@ import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { ErrorCode } from '../../../core/constants/ErrorCodes';
 import { LucideIcon } from '../../../components/LucideIcon';
+import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 
 interface GroupSyncData {
   groupId: string;
@@ -137,6 +138,11 @@ export struct GroupDetailPage {
 
   private getCurrentThemePalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  /** 封面返回按钮顶部安全区避让（对齐 SystemPageHeader 内聚逻辑） */
+  private getHeaderTopPadding(): number {
+    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
   }
 
   private getSurfaceBackground(): string {
@@ -924,19 +930,74 @@ export struct GroupDetailPage {
     NavDestination() {
     PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
     Column() {
-      // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回 + 分享）
-      SystemPageHeader({
-        title: '群组详情',
-        showBackButton: true,
-        onBack: () => { AppRouter.pop(); },
-        titleAlign: TextAlign.Center,
-        titleSize: DesignConstants.FONT.SIZE.XL,
-        titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
-        rightAction: {
+      // 封面型头部（对齐前端 groups/[groupId]：全幅封面 + 返回浮层 + 左下分类胶囊 + 群名白字；
+      // 鸿蒙 GroupInfo 无 banner 字段，用 accent 渐变占位，待后端支持后接真图）
+      Stack({ alignContent: Alignment.TopStart }) {
+        // 封面占位（accent 渐变，对齐 ProfileEditPage banner 占位模式）
+        Column()
+          .width('100%')
+          .height(DesignConstants.LAYOUT.COVER_HEIGHT)
+          .linearGradient({
+            direction: GradientDirection.Bottom,
+            colors: [
+              [AppThemeVisuals.withAlpha(this.getCurrentThemePalette().accentBackground, 0.38), 0.0],
+              [AppThemeVisuals.withAlpha(this.getCurrentThemePalette().accentBackground, 0.12), 1.0]
+            ]
+          })
+
+        // 返回按钮浮在封面左上（对齐前端 ActionIconButton overlay/inverse）
+        IconButton({
+          icon: AppIcon.BACK,
+          iconSize: IconSize.SMALL,
+          bgColor: DesignConstants.COLOR.TRANSPARENT,
+          iconColor: DesignConstants.COLOR.WHITE,
+          radius: DesignConstants.RADIUS.FULL,
+          minButtonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
+          onButtonClick: () => { AppRouter.pop(); }
+        })
+          .margin({ left: DesignConstants.SPACING.LG, top: this.getHeaderTopPadding() })
+
+        // 分享按钮浮在封面右上（原 SystemPageHeader rightAction 迁移）
+        IconButton({
           icon: AppIcon.SHARE,
-          onClick: () => this.shareGroup()
+          iconSize: IconSize.SMALL,
+          bgColor: DesignConstants.COLOR.TRANSPARENT,
+          iconColor: DesignConstants.COLOR.WHITE,
+          radius: DesignConstants.RADIUS.FULL,
+          minButtonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
+          onButtonClick: () => { this.shareGroup(); }
+        })
+          .margin({ right: DesignConstants.SPACING.LG, top: this.getHeaderTopPadding() })
+          .align(Alignment.TopEnd)
+
+        // 左下：分类胶囊 + 群名（对齐前端封面底部：玻璃徽章 + h1 白字）
+        Column({ space: DesignConstants.SPACING.SM }) {
+          if (this.groupInfo?.tags && this.groupInfo.tags.length > 0) {
+            // 玻璃分类徽章（对齐前端 bg-surface-glass-badge + backdrop-blur-sm）
+            Text(`#${this.groupInfo.tags[0]}`)
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .fontColor(DesignConstants.COLOR.WHITE)
+              .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .backgroundBlurStyle(BlurStyle.Thin)
+              .backgroundColor(AppThemeVisuals.withAlpha(DesignConstants.COLOR.BLACK, 0.25))
+          }
+          if (this.groupInfo?.group?.name) {
+            Text(this.groupInfo.group.name)
+              .fontSize(DesignConstants.FONT.SIZE.XXL)
+              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+              .fontColor(DesignConstants.COLOR.WHITE)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
         }
-      })
+        .alignItems(HorizontalAlign.Start)
+        .width('100%')
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+        .align(Alignment.BottomStart)
+      }
+      .width('100%')
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
         SystemLoadingView({ message: '加载群组信息中...' })
@@ -954,68 +1015,66 @@ export struct GroupDetailPage {
           onAction: () => { this.loadGroupDetail(); }
         })
         } else if (this.groupInfo) {
+        // 元信息行（对齐前端 groups/[groupId]：成员 / 在线 / 距你 行，text-sm secondary）
+        Row({ space: DesignConstants.SPACING.LG }) {
+          Row({ space: DesignConstants.SPACING.XS }) {
+            LucideIcon({
+              icon: AppIcon.GROUP,
+              iconSize: DesignConstants.FONT.SIZE.SM,
+              paletteRole: 'textSecondary'
+            })
+            Text(`${formatCount(this.groupInfo.group.members_count)} 位成员`)
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+          }
+
+          if (this.groupInfo.online_members_count !== null && this.groupInfo.online_members_count !== undefined && this.groupInfo.online_members_count > 0) {
+            Row({ space: DesignConstants.SPACING.XS }) {
+              Row()
+                .width(DesignConstants.SPACING.SM2)
+                .height(DesignConstants.SPACING.SM2)
+                .borderRadius(DesignConstants.RADIUS.FULL)
+                .backgroundColor(this.getCurrentThemePalette().online)
+              Text(`${this.groupInfo.online_members_count} 人在线`)
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .fontColor(this.getCurrentThemePalette().online)
+            }
+            .alignItems(VerticalAlign.Center)
+          }
+
+          if ((this.groupInfo.location as RelativeLocation | null)?.distance !== undefined &&
+            (this.groupInfo.location as RelativeLocation | null)?.distance !== null) {
+            Row({ space: DesignConstants.SPACING.XS }) {
+              LucideIcon({
+                icon: AppIcon.LOCATION,
+                iconSize: DesignConstants.FONT.SIZE.SM,
+                paletteRole: 'textSecondary'
+              })
+              Text(`距你 ${LocationUtil.formatDistance((this.groupInfo.location as RelativeLocation).distance!)}`)
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .fontColor(this.getCurrentThemePalette().textSecondary)
+            }
+          }
+        }
+        .width('100%')
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD })
+
         // 使用 List 布局（扁平风格）
         List() {
-          // 1. 基本信息区域
+          // 1. 简介区（封面已承载群名/分类，元信息行已承载成员/在线/距离，这里只留描述正文）
           ListItem() {
             Column() {
-              // 头像和名称
-              Column() {
-                SystemAvatar({
-                  src: this.groupInfo?.group?.avatar_url ?? '',
-                  name: this.groupInfo?.group?.name ?? '',
-                  avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE
-                })
-                Text(this.groupInfo?.group?.name ?? '')
-                  .fontSize(DesignConstants.FONT.SIZE.XL)
-                  .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-                  .fontColor(this.getCurrentThemePalette().textPrimary)
-                  .margin({ top: DesignConstants.SPACING.MD })
-
-                if (this.groupInfo?.description) {
-                  Text(this.groupInfo?.description)
-                    .fontSize(DesignConstants.FONT.SIZE.MD)
-                    .fontColor(this.getCurrentThemePalette().textSecondary)
-                    .textAlign(TextAlign.Center)
-                    .maxLines(3)
-                    .textOverflow({ overflow: TextOverflow.Ellipsis })
-                    .margin({ top: DesignConstants.SPACING.SM })
-                }
+              if (this.groupInfo?.description) {
+                Text(this.groupInfo?.description)
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+                  .textAlign(TextAlign.Start)
+                  .width('100%')
+                  .lineHeight(DesignConstants.FONT.LINE_HEIGHT.MD)
+                  .margin({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
               }
-              .width('100%')
-              .padding({ top: DesignConstants.SPACING.XL, bottom: DesignConstants.SPACING.XL })
-
-              // 统计信息
-              Row() {
-                Column() {
-                  Text(formatCount(this.groupInfo?.group?.members_count))
-                    .fontSize(DesignConstants.FONT.SIZE.LG)
-                    .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-                    .fontColor(this.getCurrentThemePalette().textPrimary)
-                  Text('成员')
-                    .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor(this.getCurrentThemePalette().textSecondary)
-                    .margin({ top: DesignConstants.SPACING.XS })
-                }
-                .layoutWeight(1)
-
-                Column() {
-                  Text((this.groupInfo?.location as RelativeLocation)?.distance
-                    ? `${Math.round((this.groupInfo!.location as RelativeLocation).distance!)}m` : '--')
-                    .fontSize(DesignConstants.FONT.SIZE.LG)
-                    .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-                    .fontColor(this.getCurrentThemePalette().textPrimary)
-                  Text('距离')
-                    .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor(this.getCurrentThemePalette().textSecondary)
-                    .margin({ top: DesignConstants.SPACING.XS })
-                }
-                .layoutWeight(1)
-              }
-              .width('100%')
-              .padding({ bottom: DesignConstants.SPACING.XL })
-              .justifyContent(FlexAlign.SpaceAround)
             }
+            .width('100%')
             .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           }
           .backgroundColor(this.getSurfaceBackground())

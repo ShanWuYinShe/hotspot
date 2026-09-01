@@ -348,6 +348,8 @@ export interface LayoutSystem {
   LABEL_WIDTH: number;
   /** 会话列表行尾未读徽章直径（对齐前端 size-5=20px） */
   UNREAD_BADGE_SIZE: number;
+  /** 封面型页全幅封面高度（对齐前端 --cst-cover-height clamp 220→340px，移动端取 220） */
+  COVER_HEIGHT: number;
   /** 头像条昵称截断宽度（布局几何，非主题风格） */
   NICKNAME_MAX_WIDTH: number;
   /** 首页桌面双栏左区宽度（420） */
@@ -637,6 +639,7 @@ const LAYOUT: LayoutSystem = {
   LABEL_WIDTH: 60,
   /** 会话列表行尾未读徽章直径（对齐前端 size-5=20px） */
   UNREAD_BADGE_SIZE: 20,
+  COVER_HEIGHT: 220,
   /** 头像条昵称截断宽度（布局几何，非主题风格） */
   NICKNAME_MAX_WIDTH: 56,
   HOME_COLUMN_WIDTH: 420,
