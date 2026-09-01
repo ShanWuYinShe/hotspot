@@ -5,7 +5,8 @@
  * 当前规则：
  *   hotspot/no-list-item-card-classes —— ListItem 调用方禁止行级卡片类（多边框防线）
  *
- * 运行：bun run lint（已挂入 bun run check 与 pre-commit）。
+ * 运行：bun run lint（已挂入 bun run check；check 经仓库根 .husky/pre-commit
+ * 在每次提交前自动执行，见 frontend/scripts/setup-git-hooks.sh）。
  */
 import svelteParser from 'svelte-eslint-parser';
 import { parser as tsParser } from 'typescript-eslint';

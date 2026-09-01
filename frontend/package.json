@@ -15,7 +15,7 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"lint": "eslint .",
-		"prepare": "husky"
+		"prepare": "bash scripts/setup-git-hooks.sh"
 	},
 	"dependencies": {
 		"@lucide/svelte": "^1.28.0",
@@ -36,7 +36,6 @@
 		"@typescript/native": "npm:typescript@7",
 		"eslint": "^10.8.0",
 		"eslint-plugin-svelte": "^3.22.0",
-		"husky": "^9.1.7",
 		"jsdom": "^30.0.1",
 		"msw": "^2.15.0",
 		"svelte-check": "^4.7.4",
