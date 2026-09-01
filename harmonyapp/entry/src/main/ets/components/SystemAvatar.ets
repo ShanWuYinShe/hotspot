@@ -30,9 +30,12 @@ export struct SystemAvatar {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
-  private getBorderOptions(): BorderOptions | undefined {
+  private getBorderOptions(): BorderOptions {
+    // 无描边时返回 0 宽边框而非 undefined：.border(undefined) 在部分 ArkUI 版本
+    // 会破坏同链前序属性（实测 borderRadius 失效渲染直角）
     if (!this.showBorder && !this.inset) {
-      return undefined;
+      const none: BorderOptions = { width: 0, color: DesignConstants.COLOR.TRANSPARENT };
+      return none;
     }
     const borderOptions: BorderOptions = {
       width: this.inset ? DesignConstants.BORDER_WIDTH.HEAVY : DesignConstants.BORDER_WIDTH.STRONG,
@@ -78,12 +81,13 @@ export struct SystemAvatar {
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(this.getPalette().accentText as ResourceColor)
             .textAlign(TextAlign.Center)
-            .width(this.avatarSize)
-            .height(this.avatarSize)
-            .backgroundColor(this.generateAvatarColor(this.name))
-            .borderRadius(this.getBorderRadius())
-            .border(this.getBorderOptions())
         }
+        .width(this.avatarSize)
+        .height(this.avatarSize)
+        .backgroundColor(this.generateAvatarColor(this.name))
+        .borderRadius(this.avatarSize / 2)
+        .clip(true)
+        .border(this.getBorderOptions())
       }
 
       if (this.isOnline) {
@@ -107,6 +111,7 @@ export struct SystemAvatar {
     }
     .width(this.avatarSize)
     .height(this.avatarSize)
+    .borderRadius(this.getBorderRadius())
     .shadow(this.getAvatarShadow())
   }
 
@@ -127,7 +132,8 @@ export struct SystemAvatar {
   }
 
   private getBorderRadius(): Length {
-    if (this.shape === 'circle') return DesignConstants.RADIUS.FULL;
+    // 圆形用百分比：部分 ArkUI 版本对超过尺寸的数值圆角（999）不生效，渲染成方角
+    if (this.shape === 'circle') return '50%';
     if (this.shape === 'squircle') return (this.avatarSize * 0.22) + 'vp';
     return DesignConstants.RADIUS.SM;
   }

@@ -1,6 +1,6 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { AppThemeShadow, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { LucideIcon } from './LucideIcon';
 import { curves } from '@kit.ArkUI';
@@ -29,25 +29,30 @@ export struct SurfaceIconButton {
     if (this.kind === 'primary') {
       return this.getPalette().accentBackground;
     }
-    return this.getPalette().surfaceBackground;
+    // neutral → 对齐前端 ActionIconButton variant=ghost：透明底、无边框、无阴影
+    return DesignConstants.COLOR.TRANSPARENT;
   }
 
   private getBorderColor(): ResourceColor | Color {
     if (this.kind === 'primary') {
       return this.getPalette().accentBackground;
     }
-    return this.getPalette().borderColor;
+    return DesignConstants.COLOR.TRANSPARENT;
   }
 
   private getShadowColor(): ShadowOptions {
-    return this.kind === 'primary' ? this.getPalette().accentShadow : this.getPalette().surfaceShadow;
+    if (this.kind === 'primary') {
+      return this.getPalette().accentShadow;
+    }
+    return new AppThemeShadow(0, DesignConstants.COLOR.TRANSPARENT, 0, 0);
   }
 
   private getIconColor(): ResourceColor | Color {
     if (this.kind === 'primary') {
       return this.getPalette().accentText;
     }
-    return this.getPalette().textPrimary;
+    // ghost 图标用次级文字色（对齐前端 text-secondary）
+    return this.getPalette().textSecondary;
   }
 
   build() {
@@ -58,7 +63,8 @@ export struct SurfaceIconButton {
         color: this.getIconColor()
       })
     }
-    .type(ButtonType.Normal)
+    // Circle：同 SystemButton，Normal 类型忽略 borderRadius
+    .type(ButtonType.Circle)
     .stateEffect(false)
     .width(this.buttonSize)
     .height(this.buttonSize)

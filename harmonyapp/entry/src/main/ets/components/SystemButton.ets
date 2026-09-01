@@ -156,16 +156,18 @@ export struct SystemButton {
     return DesignConstants.SHAPE.BUTTON;
   }
 
-  private getShadow(): ShadowOptions | undefined {
+  private getShadow(): ShadowOptions {
     const p = this.getPalette();
-    // 扁平风格：仅 primary / danger 带品牌阴影（对齐前端 --shadow-brand-btn）
+    // 扁平风格：仅 primary / danger 带品牌阴影（对齐前端 --shadow-brand-btn）；
+    // 无阴影时返回零阴影而非 undefined（undefined 实参会破坏属性链导致直角）
     if (this.variant === 'primary' || this.variant === 'danger') {
       return p.accentShadow;
     }
     if (this.shadowed) {
       return p.controlShadow;
     }
-    return undefined;
+    const none: ShadowOptions = { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 };
+    return none;
   }
 
   private isInteractive(): boolean {
@@ -201,10 +203,12 @@ export struct SystemButton {
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
     }
-    .type(ButtonType.Normal)
+    // Capsule：该 ArkUI 版本 ButtonType.Normal 会忽略 borderRadius 渲染直角；
+    // 全部 radius 档均为 FULL，胶囊等价
+    .type(ButtonType.Capsule)
     .stateEffect(false)
     .height(this.getHeight())
-    .width(this.fullWidth ? '100%' : undefined)
+    .width(this.fullWidth ? '100%' : 'auto')
     .padding({ left: this.getHorizontalPadding(), right: this.getHorizontalPadding() })
     .backgroundColor(this.getBackgroundColor())
     .borderRadius(this.getRadius())

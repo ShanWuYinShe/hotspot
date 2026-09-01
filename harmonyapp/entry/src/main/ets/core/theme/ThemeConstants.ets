@@ -63,60 +63,60 @@ export interface ThemeShadows {
 class ThemeShadowRegistry {
   readonly DEFAULT_CLEAN_LIGHT: ThemeShadows = {
     // 卡片轻微抬升（对齐前端 elevation-card 的"浮起"感；ArkUI 无 spread 做不了硬边 ring，用轻量模糊近似）
-    surface: new AppThemeShadow(10, '#3D7A5514', 0, 2),
+    surface: new AppThemeShadow(10, '#143D7A55', 0, 2),
     // 弹层抬升（对齐前端 --cst-elevation-modal 0 24px 80px 0.24）
-    elevated: new AppThemeShadow(40, '#0000003D', 0, 12),
+    elevated: new AppThemeShadow(40, '#3D000000', 0, 12),
     // 主操作光晕（对齐前端 --cst-elevation-fab 0 6px 18px glow）
-    accent: new AppThemeShadow(18, '#3D7A552E', 0, 6),
+    accent: new AppThemeShadow(18, '#2E3D7A55', 0, 6),
     // 菜单浮层（对齐前端 --cst-elevation-menu 0 16px 40px 0.16）
-    control: new AppThemeShadow(32, '#00000029', 0, 8),
+    control: new AppThemeShadow(32, '#29000000', 0, 8),
     // 底部导航（对齐前端 --cst-elevation-nav，向上微光）
-    tabBar: new AppThemeShadow(24, '#3D7A551A', 0, -4)
+    tabBar: new AppThemeShadow(24, '#1A3D7A55', 0, -4)
   };
 
   readonly DEFAULT_CLEAN_DARK: ThemeShadows = {
     // 深色下黑阴影对比弱，卡片抬升改用更亮的描边承载（border 单独加亮），阴影只做轻微加深
-    surface: new AppThemeShadow(14, '#0000004D', 0, 4),
+    surface: new AppThemeShadow(14, '#4D000000', 0, 4),
     // 弹层抬升（对齐前端 --cst-elevation-modal 0 28px 88px 0.42）
-    elevated: new AppThemeShadow(44, '#0000006B', 0, 14),
+    elevated: new AppThemeShadow(44, '#6B000000', 0, 14),
     // 主操作光晕（对齐前端 --cst-elevation-fab 0 6px 22px glow）
-    accent: new AppThemeShadow(22, '#52B8783D', 0, 6),
+    accent: new AppThemeShadow(22, '#3D52B878', 0, 6),
     // 菜单浮层
-    control: new AppThemeShadow(40, '#00000059', 0, 8),
+    control: new AppThemeShadow(40, '#59000000', 0, 8),
     // 底部导航（对齐前端 --cst-elevation-nav 0 -4px 24px 0.40）
-    tabBar: new AppThemeShadow(28, '#00000066', 0, -4)
+    tabBar: new AppThemeShadow(28, '#66000000', 0, -4)
   };
 
   readonly FIGMA_NEU_LIGHT: ThemeShadows = {
-    surface: new AppThemeShadow(20, '#BFB7AC55', 8, 8),
-    elevated: new AppThemeShadow(28, '#C3BAAE55', 12, 12),
-    accent: new AppThemeShadow(22, '#D4845A40', 0, 8),
-    control: new AppThemeShadow(12, '#FFFFFFBB', -4, -4),
-    tabBar: new AppThemeShadow(18, '#B4AB9E55', 0, -6)
+    surface: new AppThemeShadow(20, '#55BFB7AC', 8, 8),
+    elevated: new AppThemeShadow(28, '#55C3BAAE', 12, 12),
+    accent: new AppThemeShadow(22, '#40D4845A', 0, 8),
+    control: new AppThemeShadow(12, '#BBFFFFFF', -4, -4),
+    tabBar: new AppThemeShadow(18, '#55B4AB9E', 0, -6)
   };
 
   readonly FIGMA_NEU_DARK: ThemeShadows = {
-    surface: new AppThemeShadow(20, '#0C0D1280', 8, 8),
-    elevated: new AppThemeShadow(28, '#0B0C1090', 12, 12),
-    accent: new AppThemeShadow(22, '#E8A87C3D', 0, 8),
-    control: new AppThemeShadow(12, '#282A31BB', -4, -4),
-    tabBar: new AppThemeShadow(18, '#0B0C10AA', 0, -6)
+    surface: new AppThemeShadow(20, '#800C0D12', 8, 8),
+    elevated: new AppThemeShadow(28, '#900B0C10', 12, 12),
+    accent: new AppThemeShadow(22, '#3DE8A87C', 0, 8),
+    control: new AppThemeShadow(12, '#BB282A31', -4, -4),
+    tabBar: new AppThemeShadow(18, '#AA0B0C10', 0, -6)
   };
 
   readonly VIBRANT_LIGHT: ThemeShadows = {
-    surface: new AppThemeShadow(8, '#635BC81A', 0, 3),
-    elevated: new AppThemeShadow(14, '#635BC830', 0, 6),
-    accent: new AppThemeShadow(22, '#2E66C052', 0, 8),
-    control: new AppThemeShadow(4, '#635BC80D', 0, 1),
-    tabBar: new AppThemeShadow(8, '#635BC818', 0, -2)
+    surface: new AppThemeShadow(8, '#1A635BC8', 0, 3),
+    elevated: new AppThemeShadow(14, '#30635BC8', 0, 6),
+    accent: new AppThemeShadow(22, '#522E66C0', 0, 8),
+    control: new AppThemeShadow(4, '#0D635BC8', 0, 1),
+    tabBar: new AppThemeShadow(8, '#18635BC8', 0, -2)
   };
 
   readonly VIBRANT_DARK: ThemeShadows = {
-    surface: new AppThemeShadow(10, '#000000A6', 0, 3),
-    elevated: new AppThemeShadow(16, '#00000080', 0, 5),
-    accent: new AppThemeShadow(22, '#69A8FF42', 0, 8),
-    control: new AppThemeShadow(4, '#69A8FF0F', 0, 0),
-    tabBar: new AppThemeShadow(10, '#00000080', 0, -3)
+    surface: new AppThemeShadow(10, '#A6000000', 0, 3),
+    elevated: new AppThemeShadow(16, '#80000000', 0, 5),
+    accent: new AppThemeShadow(22, '#4269A8FF', 0, 8),
+    control: new AppThemeShadow(4, '#0F69A8FF', 0, 0),
+    tabBar: new AppThemeShadow(10, '#80000000', 0, -3)
   };
 }
 
@@ -129,15 +129,15 @@ export class ThemeConstants {
     surfaceBackground: '#F6F7F3',
     surfaceSubtle: '#F0F1F0',
     surfaceElevated: '#F6F7F3',
-    borderColor: '#2A49343D',
-    floatingBorderColor: '#2A493414',
+    borderColor: '#3D2A4934',
+    floatingBorderColor: '#142A4934',
     sheetBackground: '#F6F7F3',
     accentBackground: '#3D7A55',
     accentText: '#FFFFFF',
-    accentMuted: '#3D7A551A',
+    accentMuted: '#1A3D7A55',
     chatBackground: '#F2F3F2',
     systemSurfaceBaseColor: '#EDEDED',
-    overlayStrong: '#80000000',
+    overlayStrong: '#00800000',
     textPrimary: '#152219',
     textSecondary: '#3F5547',
     textTertiary: '#AAB0AF',
@@ -173,15 +173,15 @@ export class ThemeConstants {
     surfaceBackground: '#161A16',
     surfaceSubtle: '#242624',
     surfaceElevated: '#181C18',
-    borderColor: '#A9C7B22E',
-    floatingBorderColor: '#A9C7B214',
+    borderColor: '#2EA9C7B2',
+    floatingBorderColor: '#14A9C7B2',
     sheetBackground: '#161A16',
     accentBackground: '#52B878',
     accentText: '#0C1911',
-    accentMuted: '#52B8781A',
+    accentMuted: '#1A52B878',
     chatBackground: '#0E100E',
     systemSurfaceBaseColor: '#111311',
-    overlayStrong: '#99000000',
+    overlayStrong: '#00990000',
     textPrimary: '#E8F1E9',
     textSecondary: '#A8BDAE',
     textTertiary: '#5A6B60',
@@ -217,15 +217,15 @@ export class ThemeConstants {
     surfaceBackground: '#EFE7DA',
     surfaceSubtle: '#E2D6C5',
     surfaceElevated: '#F4E9DE',
-    borderColor: '#5D483417',
-    floatingBorderColor: '#5D48342E',
+    borderColor: '#175D4834',
+    floatingBorderColor: '#2E5D4834',
     sheetBackground: '#EFE7DA',
     accentBackground: '#B86F4B',
     accentText: '#FFF8F4',
-    accentMuted: '#B86F4B1A',
+    accentMuted: '#1AB86F4B',
     chatBackground: '#E2D6C5',
     systemSurfaceBaseColor: '#E2D6C5',
-    overlayStrong: '#2B211975',
+    overlayStrong: '#752B2119',
     textPrimary: '#3F342A',
     textSecondary: '#65594A',
     textTertiary: '#8C7F6E',
@@ -259,15 +259,15 @@ export class ThemeConstants {
     surfaceBackground: '#211B17',
     surfaceSubtle: '#2A231C',
     surfaceElevated: '#26201A',
-    borderColor: '#FFDCB714',
-    floatingBorderColor: '#FFDCB729',
+    borderColor: '#14FFDCB7',
+    floatingBorderColor: '#29FFDCB7',
     sheetBackground: '#211B17',
     accentBackground: '#D18A5D',
     accentText: '#FFF8F4',
-    accentMuted: '#D18A5D1F',
+    accentMuted: '#1FD18A5D',
     chatBackground: '#1A1511',
     systemSurfaceBaseColor: '#15110E',
-    overlayStrong: '#0000008F',
+    overlayStrong: '#8F000000',
     textPrimary: '#F1E4D2',
     textSecondary: '#A99682',
     textTertiary: '#8C7F6E',
@@ -303,15 +303,15 @@ export class ThemeConstants {
     surfaceBackground: '#F7FAFF',
     surfaceSubtle: '#EAF1FA',
     surfaceElevated: '#F7FAFF',
-    borderColor: '#2E66C02E',
-    floatingBorderColor: '#2E66C014',
+    borderColor: '#2E2E66C0',
+    floatingBorderColor: '#142E66C0',
     sheetBackground: '#F7FAFF',
     accentBackground: '#2E66C0',
     accentText: '#FFFFFF',
     accentMuted: '#E2EAF8',
     chatBackground: '#EDF3FC',
     systemSurfaceBaseColor: '#EDF3FC',
-    overlayStrong: '#80000000',
+    overlayStrong: '#00800000',
     textPrimary: '#16233A',
     textSecondary: '#52647F',
     textTertiary: '#8A97AD',
@@ -345,15 +345,15 @@ export class ThemeConstants {
     surfaceBackground: '#0B1424',
     surfaceSubtle: '#14243A',
     surfaceElevated: '#16273C',
-    borderColor: '#88B7FF2E',
-    floatingBorderColor: '#88B7FF14',
+    borderColor: '#2E88B7FF',
+    floatingBorderColor: '#1488B7FF',
     sheetBackground: '#0B1424',
     accentBackground: '#69A8FF',
     accentText: '#071426',
     accentMuted: '#2D2650',
     chatBackground: '#0D1726',
     systemSurfaceBaseColor: '#0B1424',
-    overlayStrong: '#AA000000',
+    overlayStrong: '#00AA0000',
     textPrimary: '#E8F1FF',
     textSecondary: '#A5B6CE',
     textTertiary: '#5E6C85',

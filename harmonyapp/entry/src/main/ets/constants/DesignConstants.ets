@@ -398,14 +398,14 @@ export interface DesignConstantsType {
 // ==================== 颜色系统（仅主题无关固定色）====================
 const COLOR: ColorPalette = {
   MEDIA_CHROME_TEXT: '#F2F6F3',
-  OVERLAY_LIGHT: '#59FFFFFF',
-  OVERLAY_STRONG: '#80000000',
+  OVERLAY_LIGHT: '#FF59FFFF',
+  OVERLAY_STRONG: '#00800000',
   IMAGE_OVERLAY_START: 'rgba(0, 0, 0, 0.04)',
   IMAGE_OVERLAY_END: 'rgba(0, 0, 0, 0.44)',
   IMAGE_BADGE_BG: 'rgba(15, 23, 42, 0.58)',
   IMAGE_BADGE_BORDER: 'rgba(255, 255, 255, 0.24)',
-  OVERLAY_BORDER_LIGHT: '#40FFFFFF',
-  OVERLAY_BORDER_DARK: '#26000000',
+  OVERLAY_BORDER_LIGHT: '#FF40FFFF',
+  OVERLAY_BORDER_DARK: '#00260000',
   WHITE: '#FFFFFF',
   TRANSPARENT: '#00000000',
   BLACK: '#000000',

@@ -40,7 +40,7 @@ const DEFAULT_THEME_METRICS: AppThemeMetricTokens = {
   profilePrimaryButtonHeight: DesignConstants.COMPONENT.BUTTON_HEIGHT,
   profilePrimaryButtonHorizontalPadding: DesignConstants.SPACING.XXL,
   secondaryButtonHorizontalPadding: DesignConstants.SPACING.XL,
-  profileAvatarSize: 96,
+  profileAvatarSize: 68,
   profileTitleFontSize: DesignConstants.FONT.SIZE.XL,
   profileSubtitleFontSize: DesignConstants.FONT.SIZE.LG,
   profileMetricMinHeight: 164,
@@ -143,12 +143,12 @@ const DEFAULT_CLEAN_LIGHT_VISUALS = buildVisualTokens(
   DEFAULT_THEME_METRICS,
   {
     // 头像抬升阴影（对齐前端 --cst-elevation-profile-avatar 0 6px 20px 0.22）
-    avatarShadow: new AppThemeShadow(20, '#00000038', 0, 6),
+    avatarShadow: new AppThemeShadow(20, '#38000000', 0, 6),
     haloShadow: NO_SHADOW,
-    previewShadow: new AppThemeShadow(24, '#00000029', 0, 8),
+    previewShadow: new AppThemeShadow(24, '#29000000', 0, 8),
     insetShadow: NO_SHADOW,
     highlightShadow: NO_SHADOW,
-    tabActiveGlow: new AppThemeShadow(12, '#3D7A5526', 0, 4)
+    tabActiveGlow: new AppThemeShadow(12, '#263D7A55', 0, 4)
   }
 );
 
@@ -157,12 +157,12 @@ const DEFAULT_CLEAN_DARK_VISUALS = buildVisualTokens(
   DEFAULT_THEME_METRICS,
   {
     // 头像抬升阴影（深色增强透明度）
-    avatarShadow: new AppThemeShadow(20, '#00000066', 0, 6),
+    avatarShadow: new AppThemeShadow(20, '#66000000', 0, 6),
     haloShadow: NO_SHADOW,
-    previewShadow: new AppThemeShadow(28, '#00000059', 0, 8),
+    previewShadow: new AppThemeShadow(28, '#59000000', 0, 8),
     insetShadow: NO_SHADOW,
     highlightShadow: NO_SHADOW,
-    tabActiveGlow: new AppThemeShadow(12, '#52B8782E', 0, 4)
+    tabActiveGlow: new AppThemeShadow(12, '#2E52B878', 0, 4)
   }
 );
 
@@ -186,7 +186,7 @@ const FIGMA_NEU_THEME_METRICS: AppThemeMetricTokens = {
   profilePrimaryButtonHeight: DesignConstants.COMPONENT.BUTTON_HEIGHT,
   profilePrimaryButtonHorizontalPadding: DesignConstants.SPACING.XXL,
   secondaryButtonHorizontalPadding: DesignConstants.SPACING.XXL,
-  profileAvatarSize: 96,
+  profileAvatarSize: 68,
   profileTitleFontSize: DesignConstants.FONT.SIZE.XL,
   profileSubtitleFontSize: DesignConstants.FONT.SIZE.LG,
   profileMetricMinHeight: 164,
@@ -211,9 +211,9 @@ const FIGMA_NEU_LIGHT_VISUALS = buildVisualTokens(
     avatarShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_LIGHT.surface),
     haloShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_LIGHT.control),
     previewShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_LIGHT.elevated),
-    insetShadow: new AppThemeShadow(12, '#BFB7AC44', 4, 4),
-    highlightShadow: new AppThemeShadow(10, '#FFFFFFC8', -4, -4),
-    tabActiveGlow: new AppThemeShadow(22, '#D4845A59', 0, 6)
+    insetShadow: new AppThemeShadow(12, '#44BFB7AC', 4, 4),
+    highlightShadow: new AppThemeShadow(10, '#C8FFFFFF', -4, -4),
+    tabActiveGlow: new AppThemeShadow(22, '#59D4845A', 0, 6)
   }
 );
 
@@ -224,9 +224,9 @@ const FIGMA_NEU_DARK_VISUALS = buildVisualTokens(
     avatarShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_DARK.surface),
     haloShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_DARK.control),
     previewShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_DARK.elevated),
-    insetShadow: new AppThemeShadow(12, '#282A3199', 4, 4),
+    insetShadow: new AppThemeShadow(12, '#99282A31', 4, 4),
     highlightShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_DARK.accent),
-    tabActiveGlow: new AppThemeShadow(22, '#E8A87C59', 0, 6)
+    tabActiveGlow: new AppThemeShadow(22, '#59E8A87C', 0, 6)
   }
 );
 
@@ -250,7 +250,7 @@ const VIBRANT_THEME_METRICS: AppThemeMetricTokens = {
   profilePrimaryButtonHeight: DesignConstants.COMPONENT.BUTTON_HEIGHT,
   profilePrimaryButtonHorizontalPadding: DesignConstants.SPACING.XXL,
   secondaryButtonHorizontalPadding: DesignConstants.SPACING.XXL,
-  profileAvatarSize: 96,
+  profileAvatarSize: 68,
   profileTitleFontSize: DesignConstants.FONT.SIZE.XL,
   profileSubtitleFontSize: DesignConstants.FONT.SIZE.LG,
   profileMetricMinHeight: 164,
@@ -275,9 +275,9 @@ const VIBRANT_LIGHT_VISUALS = buildVisualTokens(
     avatarShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_LIGHT.surface),
     haloShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_LIGHT.control),
     previewShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_LIGHT.elevated),
-    insetShadow: new AppThemeShadow(10, '#635BC81A', 3, 3),
-    highlightShadow: new AppThemeShadow(8, '#FFFFFFC0', -3, -3),
-    tabActiveGlow: new AppThemeShadow(20, '#2E66C052', 0, 6)
+    insetShadow: new AppThemeShadow(10, '#1A635BC8', 3, 3),
+    highlightShadow: new AppThemeShadow(8, '#C0FFFFFF', -3, -3),
+    tabActiveGlow: new AppThemeShadow(20, '#522E66C0', 0, 6)
   }
 );
 
@@ -288,9 +288,9 @@ const VIBRANT_DARK_VISUALS = buildVisualTokens(
     avatarShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_DARK.surface),
     haloShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_DARK.control),
     previewShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_DARK.elevated),
-    insetShadow: new AppThemeShadow(10, '#00000080', 3, 3),
-    highlightShadow: new AppThemeShadow(8, '#69A8FF18', -3, -3),
-    tabActiveGlow: new AppThemeShadow(20, '#69A8FF42', 0, 6)
+    insetShadow: new AppThemeShadow(10, '#80000000', 3, 3),
+    highlightShadow: new AppThemeShadow(8, '#1869A8FF', -3, -3),
+    tabActiveGlow: new AppThemeShadow(20, '#4269A8FF', 0, 6)
   }
 );
 
