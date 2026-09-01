@@ -4,8 +4,8 @@
  * 用法：
  *   SkeletonShimmer({ active: this.isLoading }) {
  *     Column() {
- *       Skeleton({ width: '100%', height: 16 })
- *       Skeleton({ width: '80%', height: 16 }).margin({ top: DesignConstants.SPACING.SM })
+ *       Skeleton({ blockWidth: '100%', blockHeight: 16 })
+ *       Skeleton({ blockWidth: '80%', blockHeight: 16 }).margin({ top: DesignConstants.SPACING.SM })
  *     }
  *   }
  *
@@ -15,12 +15,14 @@
  * 与 frontend /frontend/src/lib/components/ui/skeleton.tsx 对齐
  */
 
+import { DesignConstants } from '../../constants/DesignConstants';
+
 @Component
 export struct SkeletonShimmer {
   @Prop active: boolean = true;
   @BuilderParam child: () => void = this.defaultChild;
 
-  @State opacity: number = 1.0;
+  @State shimmerOpacity: number = 1.0;
 
   aboutToAppear() {
     if (this.active) {
@@ -40,7 +42,7 @@ export struct SkeletonShimmer {
         this.defaultChild();
       }
     }
-    .opacity(this.opacity)
+    .opacity(this.shimmerOpacity)
     .width('100%')
   }
 
@@ -50,14 +52,14 @@ export struct SkeletonShimmer {
   }
 
   private startShimmer() {
-    this.opacity = 1.0;
+    this.shimmerOpacity = 1.0;
     animateTo({
       duration: DesignConstants.ANIMATION.DURATION_SLOW, // 脉冲/shimmer 循环周期
       curve: DesignConstants.ANIMATION.CURVE_SMOOTH,
       iterations: -1,
       playMode: PlayMode.Alternate
     }, () => {
-      this.opacity = 0.4;
+      this.shimmerOpacity = 0.4;
     });
   }
 

@@ -12,6 +12,8 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { MomentItem, FetchNearbyMomentsRequest } from '../../../core/types/api';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { Skeleton } from '../../../components/states/Skeleton';
+import { SkeletonShimmer } from '../../../components/states/SkeletonShimmer';
 import { SystemPageHeader, PageHeaderAction } from '../../../components/SystemPageHeader';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -223,11 +225,39 @@ export struct MomentPage {
 
           // 内容区域
           if (this.isLoading) {
-            SystemLoadingView({ message: '正在加载我的瞬间...' })
-              .transition(
-                TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
-              )
+            // 骨架屏列表（对齐前端加载态视觉；SkeletonShimmer + 占位卡）
+            // 注：trailing lambda 组件无法链式调用，外层 Column 承载 layoutWeight
+            Column() {
+              SkeletonShimmer({ active: true }) {
+                Column({ space: DesignConstants.SPACING.LG }) {
+                  ForEach([0, 1, 2], (i: number) => {
+                    Column({ space: DesignConstants.SPACING.SM }) {
+                      Row({ space: DesignConstants.SPACING.MD }) {
+                        Skeleton({ blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM, blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM, cornerRadius: DesignConstants.RADIUS.FULL })
+                        Column({ space: DesignConstants.SPACING.SM }) {
+                          Skeleton({ blockWidth: '60%', blockHeight: DesignConstants.FONT.SIZE.MD, cornerRadius: DesignConstants.RADIUS.SM })
+                          Skeleton({ blockWidth: '40%', blockHeight: DesignConstants.FONT.SIZE.XS, cornerRadius: DesignConstants.RADIUS.SM })
+                        }
+                        .alignItems(HorizontalAlign.Start)
+                        .layoutWeight(1)
+                      }
+                      .width('100%')
+
+                      Skeleton({ blockWidth: '100%', blockHeight: 180, cornerRadius: DesignConstants.SHAPE.CARD })
+                      Skeleton({ blockWidth: '90%', blockHeight: DesignConstants.FONT.SIZE.SM, cornerRadius: DesignConstants.RADIUS.SM })
+                    }
+                    .width('100%')
+                    .padding(DesignConstants.SPACING.LG)
+                    .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+                    .borderRadius(DesignConstants.SHAPE.CARD)
+                  }, (i: number) => `skeleton-${i}`)
+                }
+                .width('100%')
+                .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD })
+              }
+            }
+            .width('100%')
+            .layoutWeight(1)
           } else if (!this.hasData && this.errorMessage) {
             EmptyState({
               icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试',

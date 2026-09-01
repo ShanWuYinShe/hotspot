@@ -22,7 +22,8 @@ import {
   DeletePrivateChatRequest
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
-import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { Skeleton } from '../../../components/states/Skeleton';
+import { SkeletonShimmer } from '../../../components/states/SkeletonShimmer';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemDialog } from '../../../components/SystemDialog';
@@ -753,12 +754,29 @@ export struct MessagePage {
 
       // 内容区域
       if (this.isLoading) {
-        SystemLoadingView({ message: '收取信件中...' })
-          .layoutWeight(1)
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
-          )
+        // 骨架屏会话列表（对齐前端消息列表加载态；trailing lambda 组件包 Column 承载 layoutWeight）
+        Column() {
+          SkeletonShimmer({ active: true }) {
+            Column() {
+              ForEach([0, 1, 2, 3, 4], (i: number) => {
+                Row({ space: DesignConstants.SPACING.MD }) {
+                  Skeleton({ blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL, blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL, cornerRadius: DesignConstants.RADIUS.FULL })
+                  Column({ space: DesignConstants.SPACING.SM }) {
+                    Skeleton({ blockWidth: '55%', blockHeight: DesignConstants.FONT.SIZE.MD, cornerRadius: DesignConstants.RADIUS.SM })
+                    Skeleton({ blockWidth: '35%', blockHeight: DesignConstants.FONT.SIZE.XS, cornerRadius: DesignConstants.RADIUS.SM })
+                  }
+                  .alignItems(HorizontalAlign.Start)
+                  .layoutWeight(1)
+                }
+                .width('100%')
+                .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+              }, (i: number) => `conv-skeleton-${i}`)
+            }
+            .width('100%')
+          }
+        }
+        .width('100%')
+        .layoutWeight(1)
       } else if (!this.hasData && this.errorMessage) {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           EmptyState({ icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试', onAction: () => { this.loadData(true); } })
