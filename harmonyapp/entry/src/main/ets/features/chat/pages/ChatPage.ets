@@ -128,6 +128,8 @@ export struct ChatPage {
   private messageCacheService = MessageCacheService.getInstance();
   private scroller: Scroller = new Scroller();
   private firstVisibleIndex: number = 0;
+  /** 上翻读历史时收到新消息：显示「↓新消息」悬浮钮（对齐审查 P1 聊天三件套） */
+  @State showNewMessageBadge: boolean = false;
   private typingStopTimer: number = -1;
   private lastTypingSentAt: number = 0;
   private typingStateReported: boolean = false;
@@ -481,10 +483,18 @@ export struct ChatPage {
 
     this.messages.push(newMessage);
     this.messagesDataSource.addData([newMessage]);
-    this.scrollToBottom();
 
     if (!newMessage.isSelf) {
+      // 仅贴底时自动滚动到底（上翻读历史不拽回底部）；否则显示「↓新消息」悬浮钮
+      if (this.isNearBottom()) {
+        this.scrollToBottom();
+      } else {
+        this.showNewMessageBadge = true;
+      }
       this.markAsRead(newMessage.id);
+    } else {
+      // 自己的消息（含乐观气泡确认）总是滚动到底
+      this.scrollToBottom();
     }
 
     this.messageCacheService.addMessage({
@@ -781,6 +791,18 @@ export struct ChatPage {
       this.scrollTimer = -1;
       this.scroller.scrollEdge(Edge.Bottom);
     }, 100);
+  }
+
+  /** 是否贴底（末尾 3 条内视为贴底）：上翻读历史时收新消息不拽回底部 */
+  private isNearBottom(): boolean {
+    const total = this.messages.length;
+    return total === 0 || this.firstVisibleIndex >= total - 3;
+  }
+
+  /** 悬浮钮点击：滚动到底并清除标记 */
+  private jumpToBottom(): void {
+    this.showNewMessageBadge = false;
+    this.scrollToBottom();
   }
 
   /** 加载更早历史后恢复视口锚点：等 reload 布局与顶部指示项移除完成后，定位到「旧 index + 新增条数」 */
@@ -1269,6 +1291,10 @@ export struct ChatPage {
         if (start <= 1 && this.hasMoreHistory && !this.isLoadingMoreHistory) {
           this.loadMoreHistory();
         }
+        // 贴底（接近末尾）时清除「↓新消息」悬浮钮
+        if (this.isNearBottom()) {
+          this.showNewMessageBadge = false;
+        }
       })
       .onTouch((event: TouchEvent) => {
         if (event.type === TouchType.Down) {
@@ -1476,6 +1502,28 @@ export struct ChatPage {
         this.submitReport();
       }
     })
+
+    // 「↓新消息」悬浮钮（外层 Stack child，position 定位右下；上翻读历史时收到新消息才显示）
+    if (this.showNewMessageBadge) {
+      Row({ space: DesignConstants.SPACING.XS }) {
+        LucideIcon({
+          icon: AppIcon.ARROW_DOWN,
+          iconSize: DesignConstants.FONT.SIZE.MD,
+          color: this.getCurrentThemePalette().accentText
+        })
+        Text('新消息')
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor(this.getCurrentThemePalette().accentText)
+      }
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(this.getCurrentThemePalette().accentBackground)
+      .shadow(this.getCurrentThemePalette().accentShadow)
+      .position({ x: '50%', y: '78%' })
+      .translate({ x: 0, y: 0 })
+      .onClick(() => { this.jumpToBottom(); })
+      .accessibilityText('滚动到最新消息')
+    }
     }
     }
     .hideTitleBar(true)
