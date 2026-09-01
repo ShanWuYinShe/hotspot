@@ -470,9 +470,10 @@ export struct LocationPickerPage {
   }
 
   private confirm(): void {
+    // 地理编码不可用（模拟器/定位关闭/服务失败）时 resolveLocation 不会被触发，
+    // locationName 保持空串；回退为坐标命名，避免「设为锚点」被永久阻塞
     if (this.locationName.length === 0) {
-      SystemToast.show('请等待位置识别完成', this.getUIContext());
-      return;
+      this.locationName = `${this.centerLat.toFixed(5)}, ${this.centerLng.toFixed(5)}`;
     }
     const wgs84 = CoordinateConverter.convertGcj02ToWgs84(this.centerLat, this.centerLng);
     const location: LocationInfo = {

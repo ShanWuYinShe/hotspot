@@ -145,7 +145,7 @@ export function TopBar(props: TopBarProps) {
     right: DesignConstants.SPACING.MD,
     top: SafeAreaUtils.resolveTopPadding(props.safeAreaTop, DesignConstants.SPACING.XS)
   })
-  .onClick(() => {})
+  .hitTestBehavior(HitTestMode.Default)
 }
 
 export interface FilterMenuItemProps {
@@ -250,7 +250,7 @@ export function FilterDropdownPanel(props: FilterPanelProps) {
   .borderRadius(DesignConstants.SHAPE.CARD)
   .shadow(DesignConstants.SHADOW.MEDIUM)
   .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
-  .onClick(() => {})
+  .hitTestBehavior(HitTestMode.Default)
 }
 
 export interface MapToastProps {
@@ -272,7 +272,7 @@ export function MapToast(props: MapToastProps) {
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
       .shadow(DesignConstants.SHADOW.SMALL)
       .position({ top: SafeAreaUtils.resolveTopPadding(props.safeAreaTop, 76), left: 20, right: 20 })
-      .onClick(() => {})
+      .hitTestBehavior(HitTestMode.Default)
       .transition(
         TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_280, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
           .combine(TransitionEffect.move(TransitionEdge.TOP).animation({ duration: DesignConstants.ANIMATION.DURATION_280, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
@@ -510,7 +510,7 @@ export struct SearchPanel {
     .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
     .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
     .borderRadius({ topLeft: DesignConstants.SHAPE.SHEET_TOP_RADIUS, topRight: DesignConstants.SHAPE.SHEET_TOP_RADIUS })
-    .onClick(() => {})
+    .hitTestBehavior(HitTestMode.Default)
   }
 }
 
@@ -749,7 +749,7 @@ export struct MainPanel {
     .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
     .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
     .borderRadius({ topLeft: DesignConstants.SHAPE.SHEET_TOP_RADIUS, topRight: DesignConstants.SHAPE.SHEET_TOP_RADIUS })
-    .onClick(() => {})
+    .hitTestBehavior(HitTestMode.Default)
   }
 }
 
