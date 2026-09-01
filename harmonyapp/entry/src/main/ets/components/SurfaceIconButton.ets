@@ -56,22 +56,29 @@ export struct SurfaceIconButton {
   }
 
   build() {
-    Button() {
-      LucideIcon({
-        icon: this.icon,
-        iconSize: this.glyphSize,
-        color: this.getIconColor()
-      })
+    // 触控命中区 ≥44vp（对齐 WCAG 2.5.5 / HarmonyOS 最小热区）：外层透明扩展，
+    // 内层保持视觉尺寸（buttonSize 默认 36 不变），按压/点击绑定在外层。
+    Stack() {
+      Button() {
+        LucideIcon({
+          icon: this.icon,
+          iconSize: this.glyphSize,
+          color: this.getIconColor()
+        })
+      }
+      // Circle：同 SystemButton，Normal 类型忽略 borderRadius
+      .type(ButtonType.Circle)
+      .stateEffect(false)
+      .width(this.buttonSize)
+      .height(this.buttonSize)
+      .backgroundColor(this.getBackgroundColor())
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getBorderColor() })
+      .shadow(this.getShadowColor())
     }
-    // Circle：同 SystemButton，Normal 类型忽略 borderRadius
-    .type(ButtonType.Circle)
-    .stateEffect(false)
-    .width(this.buttonSize)
-    .height(this.buttonSize)
-    .backgroundColor(this.getBackgroundColor())
-    .borderRadius(DesignConstants.RADIUS.FULL)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getBorderColor() })
-    .shadow(this.getShadowColor())
+    .width(Math.max(this.buttonSize, DesignConstants.LAYOUT.MIN_HIT_TARGET))
+    .height(Math.max(this.buttonSize, DesignConstants.LAYOUT.MIN_HIT_TARGET))
+    .alignContent(Alignment.Center)
     .enabled(!this.disabled)
     .opacity(this.disabled ? DesignConstants.OPACITY.DISABLED : 1)
     .accessibilityText(this.accessibilityLabel)

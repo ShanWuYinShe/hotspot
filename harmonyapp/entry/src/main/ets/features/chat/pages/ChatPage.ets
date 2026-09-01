@@ -1294,8 +1294,8 @@ export struct ChatPage {
         }
         .type(ButtonType.Circle)
         .stateEffect(false)
-        .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-        .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+        .width(DesignConstants.LAYOUT.MIN_HIT_TARGET)
+        .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
         .backgroundColor(this.getChatTheme().inputFieldBg)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .shadow(this.getChatVisualStyle().input.shadow)

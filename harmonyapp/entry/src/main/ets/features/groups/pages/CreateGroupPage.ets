@@ -578,8 +578,8 @@ export struct CreateGroupPage {
                       })
                   }
                   .type(ButtonType.Capsule)
-                  .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-                  .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+                  .width(DesignConstants.LAYOUT.MIN_HIT_TARGET)
+                  .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
                   .backgroundColor(this.getSurfaceSubtle())
                   .enabled(this.maxMembers > GROUP_MEMBERS_MIN)
                   .onClick(() => {
@@ -619,8 +619,8 @@ export struct CreateGroupPage {
                       })
                   }
                   .type(ButtonType.Capsule)
-                  .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-                  .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+                  .width(DesignConstants.LAYOUT.MIN_HIT_TARGET)
+                  .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
                   .backgroundColor(this.getSurfaceSubtle())
                   .enabled(this.maxMembers < GROUP_MEMBERS_MAX)
                   .onClick(() => {

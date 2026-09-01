@@ -105,7 +105,7 @@ export struct SystemInput {
         })
 
       if (this.showClearButton && this.value.length > 0) {
-        // 清除钮用 ICON_BUTTON_SIZE(36) 命中区包裹小图标：触控达标 ≥36vp，视觉尺寸不变
+        // 清除钮用 MIN_HIT_TARGET(44) 命中区包裹小图标：触控达标 ≥44vp（WCAG 2.5.5），视觉尺寸不变
         Row() {
           LucideIcon({
               icon: AppIcon.CLOSE,
@@ -113,8 +113,8 @@ export struct SystemInput {
               color: this.getPalette().textSecondary
             })
         }
-        .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-        .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+        .width(DesignConstants.LAYOUT.MIN_HIT_TARGET)
+        .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
         .onClick(() => {
