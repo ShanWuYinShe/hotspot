@@ -214,6 +214,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	let commentCountBase = $state(0);
 	let commentDelta = $state(0);
 	const commentCount = $derived(commentCountBase + commentDelta);
+	// 点赞计数：moment.likes 由本页维护（服务端快照 + toggleLike 乐观增量，已含本人状态），
+	// 与 MomentPostBody 内 likeCount 同口径，避免按 liked 叠加导致刷新后计数双倍。
+	const likeCount = $derived(moment.likes);
 	const isAuthor = $derived(Boolean(auth.user?.user_id) && auth.user?.user_id === moment.authorId);
 
 	// in-flight 去重：写请求未完成时忽略重复触发，避免连点双翻转 + 并发乱序
