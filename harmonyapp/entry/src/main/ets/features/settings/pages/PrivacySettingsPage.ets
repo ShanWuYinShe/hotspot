@@ -143,6 +143,8 @@ export struct PrivacySettingsPage {
       Column() {
         SystemPageHeader({
           title: '隐私设置',
+          titleSize: DesignConstants.FONT.SIZE.XXL,
+          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); }
         })

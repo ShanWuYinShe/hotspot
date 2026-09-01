@@ -131,6 +131,8 @@ export struct SafetySettingsPage {
       Column() {
         SystemPageHeader({
           title: '密码与会话安全',
+          titleSize: DesignConstants.FONT.SIZE.XXL,
+          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); }
         })

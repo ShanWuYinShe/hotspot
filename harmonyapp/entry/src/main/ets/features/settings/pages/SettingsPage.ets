@@ -534,6 +534,8 @@ export struct SettingsPage {
       Column() {
         SystemPageHeader({
           title: '设置',
+          titleSize: DesignConstants.FONT.SIZE.XXL,
+          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); }
         })

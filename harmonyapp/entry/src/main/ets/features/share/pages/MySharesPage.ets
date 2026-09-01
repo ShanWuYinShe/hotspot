@@ -217,10 +217,11 @@ export struct MySharesPage {
       // 头部 —— 统一走 SystemPageHeader（居中标题 + 返回）
       SystemPageHeader({
         title: '我的分享',
+        titleSize: DesignConstants.FONT.SIZE.XXL,
+        titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
         showBackButton: true,
         onBack: () => { AppRouter.pop(); },
         titleAlign: TextAlign.Center,
-        titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM
       })
 
       if (!this.isLoggedIn) {

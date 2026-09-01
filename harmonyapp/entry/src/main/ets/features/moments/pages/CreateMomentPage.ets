@@ -370,10 +370,11 @@ export struct CreateMomentPage {
       // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回 + 保存/发布 action）
       SystemPageHeader({
         title: this.isEditMode ? '编辑瞬间' : '发布瞬间',
+        titleSize: DesignConstants.FONT.SIZE.XXL,
+        titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
         showBackButton: true,
         onBack: () => { AppRouter.pop(); },
         titleAlign: TextAlign.Center,
-        titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
         backgroundVariant: 'transparent',
         action: {
           label: this.isEditMode ? '保存' : '发布',

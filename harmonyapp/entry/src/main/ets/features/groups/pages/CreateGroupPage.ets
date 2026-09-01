@@ -351,10 +351,11 @@ export struct CreateGroupPage {
         // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回）
         SystemPageHeader({
           title: '创建群组',
+          titleSize: DesignConstants.FONT.SIZE.XXL,
+          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); },
           titleAlign: TextAlign.Center,
-          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           backgroundVariant: 'transparent'
         })
 

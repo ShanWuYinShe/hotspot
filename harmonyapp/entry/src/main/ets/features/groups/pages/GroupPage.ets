@@ -473,6 +473,8 @@ export struct GroupPage {
           // 标题栏 —— 统一走 SystemPageHeader（标题 + 邀请/申请/创建 trailing）
           SystemPageHeader({
             title: '我的群组',
+            titleSize: DesignConstants.FONT.SIZE.XXL,
+            titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
             backgroundVariant: 'transparent'
           }) {
             // trailing: 三按钮簇（邀请/申请 次要 + 创建 主操作）

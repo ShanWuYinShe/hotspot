@@ -200,6 +200,8 @@ export struct MomentPage {
           // 标题栏 —— 统一走 SystemPageHeader（透明背景 + 发布 action）
           SystemPageHeader({
             title: '我的瞬间',
+            titleSize: DesignConstants.FONT.SIZE.XXL,
+            titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
             backgroundVariant: 'transparent',
             action: {
               label: '发布',

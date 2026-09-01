@@ -370,7 +370,9 @@ export struct MomentDetailPage {
       title: '动态详情',
       showBackButton: true,
       onBack: () => { AppRouter.pop(); },
-      titleWeight: DesignConstants.FONT.WEIGHT.BOLD,
+      // 对齐前端 moments/[momentId]：PageHeader titleSize=base(16) + font-medium
+      titleSize: DesignConstants.FONT.SIZE.LG,
+      titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
       backgroundVariant: 'transparent',
       rightAction: this.isOwner()
         ? { icon: AppIcon.EDIT, onClick: () => this.editMoment() }
