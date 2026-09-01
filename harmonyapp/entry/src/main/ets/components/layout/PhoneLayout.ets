@@ -115,7 +115,14 @@ export struct PhoneLayout {
           TabContent() {
             if (this.isLoggedIn) {
               Column() {
-                if (this.showUpgradeBanner) { this.UpgradeBanner() }
+                if (this.showUpgradeBanner) {
+                  // banner 顶入安全区上方：补 safeAreaTop 避让状态栏（对齐 MessagePage 头部避让）
+                  Column() {
+                    this.UpgradeBanner()
+                  }
+                  .width('100%')
+                  .padding({ top: this.safeAreaTop })
+                }
                 MessagePage()
               }.width('100%').height('100%')
             } else {

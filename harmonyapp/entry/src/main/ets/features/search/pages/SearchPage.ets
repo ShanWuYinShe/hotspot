@@ -404,6 +404,7 @@ export struct SearchPage {
       Column() {
         // Search header —— 统一走 SearchPageHeader（返回 + 内联搜索框）
         SearchPageHeader({
+          title: '搜索',
           keyword: this.keyword,
           placeholder: '搜索用户、动态、地点或话题',
           onBack: () => { AppRouter.pop(); },
@@ -709,6 +710,14 @@ export struct SearchPage {
         // 正在关注（热门搜索）
         Column() {
           this.buildDiscoveryCard('正在关注')
+          if (this.discoveryHot.length === 0) {
+            Text('暂无热门搜索')
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+              .width('100%')
+              .textAlign(TextAlign.Center)
+              .padding(DesignConstants.SPACING.LG)
+          }
           ForEach(this.discoveryHot.slice(0, 5), (item: string, index: number) => {
             Pressable({ onPress: () => this.applyKeywordAndSearch(item) }) {
               Row({ space: DesignConstants.SPACING.MD }) {
@@ -742,6 +751,14 @@ export struct SearchPage {
         // 推荐话题
         Column() {
           this.buildDiscoveryCard('推荐话题')
+          if (this.discoveryTopics.length === 0) {
+            Text('暂无推荐话题')
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+              .width('100%')
+              .textAlign(TextAlign.Center)
+              .padding(DesignConstants.SPACING.LG)
+          }
           Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
             ForEach(this.discoveryTopics, (topic: string) => {
               Text(`#${topic}`)
@@ -785,6 +802,7 @@ export struct SearchPage {
     .width('100%')
     .layoutWeight(1)
     .scrollBar(BarState.Auto)
+    .align(Alignment.Top)
     .edgeEffect(EdgeEffect.Spring)
   }
 

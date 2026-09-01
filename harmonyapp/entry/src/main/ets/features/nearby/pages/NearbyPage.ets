@@ -60,7 +60,7 @@ export struct NearbyPage {
         SystemPageHeader({
           title: '附近',
           subtitle: '发现周边有趣的人和事',
-          titleSize: DesignConstants.FONT.SIZE.XL,
+          titleSize: DesignConstants.FONT.SIZE.XXL,
           titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           backgroundVariant: 'transparent'
         }) {
@@ -94,7 +94,7 @@ export struct NearbyPage {
             .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
             .borderRadius(DesignConstants.SHAPE.INPUT)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .shadow(this.getCurrentThemePalette().elevatedShadow)
+            .shadow(this.getCurrentThemePalette().surfaceShadow)
             // 按压反馈（对齐 tap-97 语义）
             .scale(this.searchEntryPressed ?
               { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
@@ -143,8 +143,8 @@ export struct NearbyPage {
 
   @Builder
   private buildSectionCard(entry: NearbySectionEntry) {
-    Row({ space: DesignConstants.SPACING.MD2 }) {
-      // 图标徽章圆 tile（对齐前端 icon-badge size-9 圆）
+    Row({ space: DesignConstants.SPACING.MD3 }) {
+      // 图标徽章圆 tile（对齐前端 icon-badge：surface 底 + hairline 描边 + raised-sm 阴影）
       Column() {
         LucideIcon({
           icon: entry.icon,
@@ -155,8 +155,9 @@ export struct NearbyPage {
       .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(AppThemeManager.getSoftStatusBackground('info'))
-      .shadow(this.getCurrentThemePalette().accentShadow)
+      .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+      .shadow(this.getCurrentThemePalette().surfaceShadow)
       .justifyContent(FlexAlign.Center)
 
       Column({ space: DesignConstants.SPACING.HALF }) {
@@ -186,7 +187,7 @@ export struct NearbyPage {
     .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
     .borderRadius(DesignConstants.SHAPE.CARD)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    .shadow(this.getCurrentThemePalette().elevatedShadow)
+    .shadow(this.getCurrentThemePalette().surfaceShadow)
     // 整卡按压反馈（对齐 tap-97 语义）
     .scale(this.pressedSectionKey === entry.key ?
       { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :

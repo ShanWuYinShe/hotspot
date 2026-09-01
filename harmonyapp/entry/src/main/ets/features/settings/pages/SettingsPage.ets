@@ -425,13 +425,11 @@ export struct SettingsPage {
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-          if (this.currentUser.email) {
-            Text(this.currentUser.email)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-          }
+          Text(this.currentUser.email || (this.userType === 'temp' ? '游客身份 · 未绑定邮箱' : '未绑定邮箱'))
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)

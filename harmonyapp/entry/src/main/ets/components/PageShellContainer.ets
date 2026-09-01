@@ -34,8 +34,8 @@ export struct PageShellContainer {
   @Prop currentBreakpoint: BreakpointType = 'sm';
   /** 关闭横向留白（父级已自行处理 padding 时用） */
   @Prop noHorizontalPadding: boolean = false;
-  /** 顶部氛围光晕（对齐前端 ambient-glow，默认开启；地图/预览等沉浸页可关闭） */
-  @Prop ambientGlow: boolean = true;
+  /** 顶部氛围光晕。前端无页面级光晕（ambient-glow 仅在 Hero 卡内部），默认关闭 */
+  @Prop ambientGlow: boolean = false;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   private getPalette() {

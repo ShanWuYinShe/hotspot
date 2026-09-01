@@ -109,10 +109,14 @@ export struct MomentDetailPage {
   private formatTime(timeStr: string): string {
     const time = new Date(timeStr);
     const now = new Date();
+    const hhmm = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
     if (time.toDateString() === now.toDateString()) {
-      return `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
+      return hhmm;
     }
-    return time.toLocaleDateString();
+    // 对齐前端格式：YYYY-MM-DD HH:mm（此前 toLocaleDateString 输出美式 8/31/2026）
+    const mm = (time.getMonth() + 1).toString().padStart(2, '0');
+    const dd = time.getDate().toString().padStart(2, '0');
+    return `${time.getFullYear()}-${mm}-${dd} ${hhmm}`;
   }
 
 
@@ -382,6 +386,7 @@ export struct MomentDetailPage {
           avatarUrl: moment.user?.avatar_url ?? '',
           name: moment.user?.nickname ?? '未知用户',
           avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
+          shape: 'circle',
           userInfo: moment.user
         })
 
@@ -607,7 +612,7 @@ export struct MomentDetailPage {
         label: this.likePending ? '处理中...' : (this.isMomentLiked(moment) ? '已点赞' : '点赞'),
         icon: this.isMomentLiked(moment) ? AppIcon.HEART_FILL : AppIcon.HEART,
         showIcon: true,
-        variant: this.isMomentLiked(moment) ? 'surface-accent' : 'surface',
+        variant: this.isMomentLiked(moment) ? 'surface-accent' : 'ghost',
         buttonSize: 'small',
         loading: this.likePending,
         disabled: this.likePending,
@@ -621,7 +626,7 @@ export struct MomentDetailPage {
         label: this.favoritePending ? '处理中...' : (this.isMomentFavorited(moment) ? '已收藏' : '收藏'),
         icon: this.isMomentFavorited(moment) ? AppIcon.STAR_FILL : AppIcon.STAR,
         showIcon: true,
-        variant: this.isMomentFavorited(moment) ? 'surface-accent' : 'surface',
+        variant: this.isMomentFavorited(moment) ? 'surface-accent' : 'ghost',
         buttonSize: 'small',
         loading: this.favoritePending,
         disabled: this.favoritePending,
@@ -635,7 +640,7 @@ export struct MomentDetailPage {
         label: '分享',
         icon: AppIcon.SHARE,
         showIcon: true,
-        variant: 'surface',
+        variant: 'ghost',
         buttonSize: 'small',
         onPress: () => {
           this.shareMoment();

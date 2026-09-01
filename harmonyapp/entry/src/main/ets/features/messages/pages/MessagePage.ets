@@ -493,6 +493,7 @@ export struct MessagePage {
     chatParams.title = item.name;
     if (item.type === 'private') {
       chatParams.targetId = targetUserId;
+      chatParams.presenceText = this.isChatOnline(item) ? '在线' : '离线';
     }
     AppRouter.push(PageNames.CHAT, chatParams);
   }
@@ -620,21 +621,29 @@ export struct MessagePage {
   Stack() {
   PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
     Column() {
-      // 粘性头部 —— 统一走 SystemPageHeader（标题 + 未读副标题 + ADD trailing）
+      // 粘性头部 —— 对齐前端移动端 PageHeader titleSize=2xl：未读计数与「+」在标题右侧同排
       SystemPageHeader({
         title: '消息',
-        subtitle: this.getTotalUnread() > 0 ? `${this.getTotalUnread()} 条未读` : '全部已读',
-        subtitleColor: this.getTotalUnread() > 0 ? '' : this.getCurrentThemePalette().success,
-        titleSize: DesignConstants.FONT.SIZE.XL,
-        titleWeight: DesignConstants.FONT.WEIGHT.REGULAR,
+        titleSize: DesignConstants.FONT.SIZE.XXL,
+        titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
         backgroundVariant: 'transparent'
       }) {
-        // trailing: 添加(菜单)（对齐前端移动端 trailing 仅 Plus；搜索走下方本地过滤框）
-        Row({ space: DesignConstants.SPACING.MD }) {
+        // trailing: 未读计数 + 添加(菜单)（对齐前端移动端 trailing：N 条未读 / 全部已读 + Plus ghost）
+        Row({ space: DesignConstants.SPACING.MD2 }) {
+          if (this.getTotalUnread() > 0) {
+            Text(`${this.getTotalUnread()} 条未读`)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+          } else {
+            Text('全部已读')
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getCurrentThemePalette().online)
+          }
+
           Row() {
             LucideIcon({
               icon: AppIcon.ADD,
-              iconSize: DesignConstants.FONT.SIZE.LG,
+              iconSize: DesignConstants.FONT.SIZE.MD,
               paletteRole: 'textSecondary'
             })
           }
@@ -642,8 +651,6 @@ export struct MessagePage {
           .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
           .justifyContent(FlexAlign.Center)
           .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .bindMenu([
             {
               value: '发起群聊',
@@ -802,33 +809,28 @@ export struct MessagePage {
                   })
               }
 
-              // 聊天列表卡片（单个大卡片包裹所有项）
+              // 会话列表（对齐前端 ListContainer 嵌入式：无外框卡片，仅行间分割线）
               if (this.filteredChatItems.length > 0) {
                 Column() {
                   ForEach(this.filteredChatItems, (item: ChatItem, index: number) => {
-                  Column() {
-                    this.buildChatItem(item)
-                  }
-                  .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+                    Column() {
+                      this.buildChatItem(item)
+                    }
+                    .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
 
-                  if (index < this.filteredChatItems.length - 1) {
-                    Row()
-                      .width('100%')
-                      .height(0.5)
-                      .backgroundColor(this.getSurfaceBorder())
-                      .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-                  }
+                    if (index < this.filteredChatItems.length - 1) {
+                      Row()
+                        .width('100%')
+                        .height(0.5)
+                        .backgroundColor(this.getSurfaceBorder())
+                        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+                    }
                   }, (item: ChatItem) => item.id + item.type)
                 }
                 .width('100%')
-                .borderRadius(DesignConstants.RADIUS.LG)
-                .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-                .shadow(this.getCurrentThemePalette().elevatedShadow)
-                .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-                .clip(true)
                 .margin({
-                  left: DesignConstants.SPACING.LG,
-                  right: DesignConstants.SPACING.LG
+                  left: DesignConstants.SPACING.LG2,
+                  right: DesignConstants.SPACING.LG2
                 })
               }
 
@@ -885,45 +887,32 @@ export struct MessagePage {
 
   @Builder
   buildOnlineAvatarsStrip() {
+    // 对齐前端 OnlineStrip（lg）：eyebrow「在线」+ 52px 头像（2px accent 描边）+ 在线点 + 昵称
     Column() {
       Text('在线')
         .fontSize(DesignConstants.FONT.SIZE.XS2)
         .fontColor(this.getCurrentThemePalette().textSecondary)
         .textCase(TextCase.UpperCase)
-        .padding({ left: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD2 })
+        .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
+        .padding({ left: DesignConstants.SPACING.LG2, bottom: DesignConstants.SPACING.MD2 })
 
       Scroll() {
-        Row({ space: DesignConstants.SPACING.LG }) {
+        Row({ space: DesignConstants.SPACING.MD }) {
           ForEach(this.getOnlineChats(), (chat: ChatItem) => {
             Pressable({ onPress: () => {
               this.enterChat(chat);
             } }) {
               Column({ space: DesignConstants.SPACING.SM2 }) {
-                Stack({ alignContent: Alignment.Center }) {
-                  SystemAvatar({
-                    avatarUrl: chat.avatarUrl,
-                    name: chat.name,
-                    avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
-                    shape: 'circle'
-                  })
-                  .border({ width: DesignConstants.BORDER_WIDTH.REGULAR, color: this.getCurrentThemePalette().accentBackground })
-                  .borderRadius(DesignConstants.RADIUS.FULL)
-                  .padding(DesignConstants.SPACING.HALF)
-                  .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-                  .shadow(this.getCurrentThemePalette().controlShadow)
-
-                  // 在线状态点：贴头像右下角（用 alignContent 取代硬编码坐标）
-                  Stack({ alignContent: Alignment.BottomEnd }) {
-                    Row()
-                      .width(DesignConstants.SPACING.MD)
-                      .height(DesignConstants.SPACING.MD)
-                      .borderRadius(DesignConstants.RADIUS.FULL)
-                      .backgroundColor(this.getCurrentThemePalette().success)
-                      .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getCurrentThemePalette().surfaceBackground })
-                  }
-                  .width('100%')
-                  .height('100%')
-                }
+                // 48px 头像 + accent 描边环；在线点由 SystemAvatar 内建（isOnline）
+                SystemAvatar({
+                  avatarUrl: chat.avatarUrl,
+                  name: chat.name,
+                  avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM,
+                  shape: 'circle',
+                  isOnline: true
+                })
+                .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getCurrentThemePalette().accentBackground })
+                .borderRadius(DesignConstants.RADIUS.FULL)
 
                 Text(chat.name)
                   .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -936,13 +925,14 @@ export struct MessagePage {
             }
           }, (chat: ChatItem) => chat.id + chat.type)
         }
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+        .padding({ left: DesignConstants.SPACING.LG2, right: DesignConstants.SPACING.LG2 })
       }
       .scrollable(ScrollDirection.Horizontal)
       .scrollBar(BarState.Off)
+      .constraintSize({ maxHeight: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM + DesignConstants.SPACING.MD3 })
     }
     .width('100%')
-    .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+    .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.MD })
   }
 
   // 私聊对端在线（群聊无 presence 语义，恒 false；对齐前端 ChatListItem online 点）
@@ -954,26 +944,16 @@ export struct MessagePage {
   @Builder
   buildChatItem(item: ChatItem) {
     Row({ space: DesignConstants.SPACING.MD }) {
-      // 头像 + 在线角标（未读徽章移至行尾，对齐前端 ChatListItem 契约）
-      Stack({ alignContent: Alignment.BottomEnd }) {
-        SystemAvatar({
-          avatarUrl: item.avatarUrl,
-          name: item.name,
-          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL, // 40
-          shape: item.type === 'group' ? 'squircle' : 'circle',
-          inset: true
-        })
-        if (this.isChatOnline(item)) {
-          Row()
-            .width(DesignConstants.SPACING.MD)
-            .height(DesignConstants.SPACING.MD)
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .backgroundColor(this.getCurrentThemePalette().success)
-            .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getCurrentThemePalette().surfaceBackground })
-        }
-      }
-      .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
-      .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+      // 头像 44 + hairline 描边 + 在线角标（对齐前端 ChatListItem 契约）
+      SystemAvatar({
+        avatarUrl: item.avatarUrl,
+        name: item.name,
+        avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
+        shape: item.type === 'group' ? 'squircle' : 'circle',
+        isOnline: this.isChatOnline(item)
+      })
+      .border({ width: DesignConstants.BORDER_WIDTH.REGULAR, color: this.getCurrentThemePalette().borderColor })
+      .borderRadius(DesignConstants.RADIUS.FULL)
 
       Column({ space: DesignConstants.SPACING.HALF }) {
         Row() {
@@ -992,7 +972,7 @@ export struct MessagePage {
         .width('100%')
 
         Text(item.lastMessage || '')
-          .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-meta
+          .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-xs 预览
           .fontColor(this.getCurrentThemePalette().textSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })

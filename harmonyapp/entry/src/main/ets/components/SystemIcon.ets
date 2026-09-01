@@ -62,6 +62,10 @@ export enum AppIcon {
   PERSON = 'sys.symbol.person',
   GROUP = 'sys.symbol.person_2',
 
+  // 内容类型图标（lucide 专属：coffee/music 无系统符号，LucideIcon 映射到 rawfile SVG）
+  COFFEE = 'sys.symbol.cup',
+  MUSIC = 'sys.symbol.music_note',
+
   // 状态图标
   HEART = 'sys.symbol.heart',
   HEART_FILL = 'sys.symbol.heart_fill',

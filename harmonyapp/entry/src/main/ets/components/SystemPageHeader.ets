@@ -56,10 +56,10 @@ export struct SystemPageHeader {
   @BuilderParam trailing?: () => void;
   /** 标题对齐，默认 Start；详情页居中标题用 Center。 */
   @Prop titleAlign: TextAlign = TextAlign.Start;
-  /** 标题字号，默认 FONT.SIZE.XL（20）。 */
+  /** 标题字号，默认 FONT.SIZE.XL（20）。顶级 Tab 页对齐前端传 XXL（24）。 */
   @Prop titleSize: number = DesignConstants.FONT.SIZE.XL;
-  /** 标题字重，默认 600。 */
-  @Prop titleWeight: number = DesignConstants.FONT.WEIGHT.SEMIBOLD;
+  /** 标题字重，默认 500（对齐前端 PageHeader font-medium）。 */
+  @Prop titleWeight: number = DesignConstants.FONT.WEIGHT.MEDIUM;
   /** 背景变体：bar(默认全宽底栏) / transparent / card(浮动圆角卡)。 */
   @Prop backgroundVariant: HeaderBackgroundVariant = 'bar';
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
@@ -81,7 +81,8 @@ export struct SystemPageHeader {
     if (this.backgroundVariant === 'transparent') {
       return DesignConstants.COLOR.TRANSPARENT;
     }
-    return this.getPalette().sheetBackground;
+    // 对齐前端 PageHeader：背景 = --cst-surface-page（页面画布同底）
+    return this.getPalette().pageBackground;
   }
 
   private getHeaderShadow(): AppThemeShadow {
@@ -96,7 +97,8 @@ export struct SystemPageHeader {
     if (this.backgroundVariant === 'transparent' || this.backgroundVariant === 'card') {
       return DesignConstants.COLOR.TRANSPARENT;
     }
-    return this.getPalette().floatingBorderColor;
+    // 对齐前端 border-bottom: hairline solid var(--cst-border-default)
+    return this.getPalette().borderColor;
   }
 
   private getRadius(): number {
@@ -192,7 +194,7 @@ export struct SystemPageHeader {
 
           if (this.subtitle.length > 0) {
             Text(this.subtitle)
-              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(this.subtitleColor.length > 0 ? this.subtitleColor : this.getPalette().textSecondary)
               .margin({ top: DesignConstants.SPACING.XS })
               .maxLines(1)
@@ -219,13 +221,12 @@ export struct SystemPageHeader {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
-      // 标题行垂直 padding 收紧（MD→SM）：header 总高从 ~105vp 压到 ~88vp，
-      // 全站页面首屏内容多出 ~17vp（安全区 52vp 不变，仅压缩行内呼吸）
+      // 对齐前端 PageHeader：内容列 gutter 20（ContentColumn mobile），pt-4(16) pb-3(12)
       .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
-        top: DesignConstants.SPACING.SM,
-        bottom: DesignConstants.SPACING.SM
+        left: DesignConstants.SPACING.LG2,
+        right: DesignConstants.SPACING.LG2,
+        top: DesignConstants.SPACING.MD,
+        bottom: DesignConstants.SPACING.MD2
       })
     }
     .width('100%')

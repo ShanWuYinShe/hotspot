@@ -6,7 +6,6 @@
 
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
-import { SystemAvatar } from '../../../components/SystemAvatar';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
 import { ChatThemeColors, ChatThemeManager } from '../../../core/theme/ChatTheme';
@@ -74,16 +73,8 @@ export struct ChatMessageItem {
       .justifyContent(FlexAlign.Center)
       .margin({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
     } else {
+      // 对齐前端 MessageBubble：无侧边头像；时间 + 已读勾在气泡内部底行
       Row() {
-        if (!this.msg.isSelf) {
-          SystemAvatar({
-            avatarUrl: this.msg.senderAvatar,
-            name: this.msg.senderName,
-            avatarSize: DesignConstants.CHAT.AVATAR_SIZE
-          })
-          .margin({ right: DesignConstants.SPACING.SM })
-        }
-
         Column() {
           if (!this.msg.isSelf && this.isGroupChat) {
             Text(this.msg.senderName)
@@ -92,7 +83,7 @@ export struct ChatMessageItem {
               .margin({ bottom: DesignConstants.SPACING.XS, left: DesignConstants.SPACING.XS })
           }
 
-          Row() {
+          Column() {
             if (this.msg.type === 'image') {
               Image(MediaUrlUtil.normalize(this.msg.content))
                 .width(DesignConstants.CHAT.IMAGE_MAX_WIDTH)
@@ -107,48 +98,44 @@ export struct ChatMessageItem {
               Text(this.msg.content)
                 .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
                 .fontColor(this.msg.isSelf ? this.chatTheme?.sendButtonActiveText : this.palette.textPrimary)
-                .backgroundColor(this.msg.isSelf ? this.chatTheme?.bubbleSelf : this.chatTheme?.bubblePeer)
-                .padding({
-                  left: DesignConstants.CHAT.BUBBLE_PADDING_H,
-                  right: DesignConstants.CHAT.BUBBLE_PADDING_H,
-                  top: DesignConstants.CHAT.BUBBLE_PADDING_V,
-                  bottom: DesignConstants.CHAT.BUBBLE_PADDING_V
-                })
-                .borderRadius(this.getBubbleRadius(this.msg.isSelf))
-                .constraintSize({ maxWidth: DesignConstants.CHAT.BUBBLE_MAX_WIDTH })
-                .shadow(this.msg.isSelf ? this.palette.accentShadow : this.palette.controlShadow)
-            }
-          }
-          .justifyContent(this.msg.isSelf ? FlexAlign.End : FlexAlign.Start)
+                .maxLines(200)
 
-          Row({ space: DesignConstants.SPACING.XS }) {
-            Text(this.timeText)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.msg.isSelf ? this.palette.textTertiary : this.palette.textSecondary)
-              .opacity(DesignConstants.OPACITY.SUBTLE)
-            if (this.msg.isSelf && this.isLastSent) {
-              LucideIcon({
-                  icon: AppIcon.CHECK_ALL,
-                  iconSize: DesignConstants.FONT.SIZE.XS,
-                  color: this.palette.online
-                })
+              // 气泡内底行：时间（自己=on-accent 70%；对方=textSecondary）+ 已读勾
+              Row({ space: DesignConstants.SPACING.XS }) {
+                Text(this.timeText)
+                  .fontSize(DesignConstants.FONT.SIZE.XS2)
+                  .fontColor(this.msg.isSelf ? this.chatTheme?.sendButtonActiveText : this.palette.textSecondary)
+                  .opacity(this.msg.isSelf ? DesignConstants.OPACITY.PRESSED : 1)
+                if (this.msg.isSelf && this.isLastSent) {
+                  LucideIcon({
+                      icon: AppIcon.CHECK_ALL,
+                      iconSize: DesignConstants.FONT.SIZE.XS2,
+                      color: this.chatTheme?.sendButtonActiveText
+                    })
+                    .opacity(DesignConstants.OPACITY.EMPHASIZED)
+                }
+              }
+              .justifyContent(this.msg.isSelf ? FlexAlign.End : FlexAlign.Start)
+              .width('100%')
+              .margin({ top: DesignConstants.SPACING.HALF })
             }
           }
-          .width('100%')
-          .justifyContent(this.msg.isSelf ? FlexAlign.End : FlexAlign.Start)
-          .margin({ top: DesignConstants.SPACING.XS })
+          .constraintSize({ maxWidth: DesignConstants.CHAT.BUBBLE_MAX_WIDTH })
+          .alignItems(this.msg.isSelf ? HorizontalAlign.End : HorizontalAlign.Start)
+          .padding({
+            left: DesignConstants.CHAT.BUBBLE_PADDING_H,
+            right: DesignConstants.CHAT.BUBBLE_PADDING_H,
+            top: DesignConstants.CHAT.BUBBLE_PADDING_V,
+            bottom: DesignConstants.CHAT.BUBBLE_PADDING_V
+          })
+          .backgroundColor(this.msg.isSelf ? this.chatTheme?.bubbleSelf : this.chatTheme?.bubblePeer)
+          .borderRadius(this.getBubbleRadius(this.msg.isSelf))
+          .shadow(this.msg.isSelf ? this.palette.accentShadow : this.palette.surfaceShadow)
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.msg.isSelf ? DesignConstants.COLOR.TRANSPARENT : this.chatTheme?.divider })
+          .margin({ top: DesignConstants.SPACING.HALF })
         }
         .alignItems(this.msg.isSelf ? HorizontalAlign.End : HorizontalAlign.Start)
         .layoutWeight(1)
-
-        if (this.msg.isSelf) {
-          SystemAvatar({
-            avatarUrl: this.msg.senderAvatar,
-            name: this.msg.senderName,
-            avatarSize: DesignConstants.CHAT.AVATAR_SIZE
-          })
-          .margin({ left: DesignConstants.SPACING.SM })
-        }
       }
       .width('100%')
       .justifyContent(this.msg.isSelf ? FlexAlign.End : FlexAlign.Start)

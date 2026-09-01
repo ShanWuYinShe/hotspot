@@ -38,6 +38,7 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { formatCount } from '../../../core/utils/FormatUtil';
 import pasteboard from '@ohos.pasteboard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { curves } from '@kit.ArkUI';
@@ -483,12 +484,13 @@ export struct HomePage {
 
   @Builder
   private buildStickyHeader() {
-    // 统一走 SystemPageHeader（标题 + 副标题 + 位置 chip trailing）
+    // 统一走 SystemPageHeader（标题 + 副标题 + 位置 chip trailing）；
+    // 顶级 Tab 页标题对齐前端 titleSize=2xl（24）
     SystemPageHeader({
       title: '首页',
       subtitle: '发现周边有趣的人和事',
-      titleSize: DesignConstants.FONT.SIZE.XL,
-      titleWeight: DesignConstants.FONT.WEIGHT.REGULAR
+      titleSize: DesignConstants.FONT.SIZE.XXL,
+      titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM
     }) {
       // trailing: 在线计数 chip + 搜索/地图入口（对齐前端 PageHeader trailing；
       // 定位语义由 HeroStats 副标题承载）
@@ -592,13 +594,13 @@ export struct HomePage {
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
-      // Stats grid：三段统计 + 竖分割线
+      // Stats grid：三段统计 + 竖分割线（数字统一 accent，对齐前端 HeroStats）
       Row({ space: DesignConstants.SPACING.MD }) {
         // 人附近
         Column({ space: DesignConstants.SPACING.HALF }) {
           Text(`${this.users.length}`)
             .fontSize(DesignConstants.FONT.SIZE.XXL)
-            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(this.getPalette().accentBackground)
           Text('人附近')
             .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -617,9 +619,9 @@ export struct HomePage {
         Column({ space: DesignConstants.SPACING.HALF }) {
           Text(`${this.moments.length}`)
             .fontSize(DesignConstants.FONT.SIZE.XXL)
-            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-            .fontColor(this.getPalette().warning)
-          Text('活动中')
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            .fontColor(this.getPalette().accentBackground)
+          Text('动态')
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getPalette().textSecondary)
         }
@@ -636,8 +638,8 @@ export struct HomePage {
         Column({ space: DesignConstants.SPACING.HALF }) {
           Text(`${this.getOnlineCount()}`)
             .fontSize(DesignConstants.FONT.SIZE.XXL)
-            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-            .fontColor(this.getPalette().success)
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            .fontColor(this.getPalette().accentBackground)
           Text('在线')
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getPalette().textSecondary)
@@ -993,7 +995,7 @@ export struct HomePage {
               if (group.location?.distance !== undefined && group.location?.distance !== null) {
                 Text(LocationUtil.formatDistance(group.location.distance))
                   .fontSize(DesignConstants.FONT.SIZE.XS2)
-                  .fontColor(this.getPalette().accentText)
+                  .fontColor(this.getPalette().accentBackground)
               }
             }
             .width('100%')
@@ -1087,12 +1089,12 @@ export struct HomePage {
   }
 
   // 活动行配色轮换（对齐前端 ActivityRow ICONS/COLORS/BGS 四档循环）：
-  // [warning+星标, accent+爱心, info+人群, danger+图片]，淡底全部走 token。
+  // [warning+咖啡, accent+音乐, marker-group+人群, danger+星标]，淡底全部走 token。
   private activityAccent(index: number): string {
     const accents: string[] = [
       this.getPalette().warning,
       this.getPalette().accentBackground,
-      this.getPalette().info,
+      this.getPalette().mapGroup,
       this.getPalette().error
     ];
     return accents[index % 4];
@@ -1102,14 +1104,14 @@ export struct HomePage {
     const bgs: string[] = [
       this.getPalette().warningSoft,
       this.getPalette().accentMuted,
-      AppThemeManager.getSoftStatusBackground('info'),
+      AppThemeVisuals.withAlpha(this.getPalette().mapGroup, 0.12),
       this.getPalette().dangerSoft
     ];
     return bgs[index % 4];
   }
 
   private activityIcon(index: number): AppIcon {
-    const icons: AppIcon[] = [AppIcon.STAR, AppIcon.HEART, AppIcon.GROUP, AppIcon.PHOTO];
+    const icons: AppIcon[] = [AppIcon.COFFEE, AppIcon.MUSIC, AppIcon.GROUP, AppIcon.STAR];
     return icons[index % 4];
   }
 

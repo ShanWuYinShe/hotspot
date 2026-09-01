@@ -321,6 +321,16 @@ export struct LucideIcon {
         .width(this.iconSize).height(this.iconSize)
         .colorFilter(this.tintColorFilter())
         .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'coffee') {
+      Image($rawfile('icons/coffee.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
+    } else if (iconName === 'music') {
+      Image($rawfile('icons/music.svg'))
+        .width(this.iconSize).height(this.iconSize)
+        .colorFilter(this.tintColorFilter())
+        .interpolation(ImageInterpolation.High)
     } else if (iconName === 'moon') {
       Image($rawfile('icons/moon.svg'))
         .width(this.iconSize).height(this.iconSize)
@@ -367,6 +377,8 @@ export struct LucideIcon {
       case AppIcon.MESSAGE: return 'message-circle';
       case AppIcon.PERSON: return 'circle-user';
       case AppIcon.GROUP: return 'users';
+      case AppIcon.COFFEE: return 'coffee';
+      case AppIcon.MUSIC: return 'music';
       case AppIcon.NEARBY: return 'map-pin';
       case AppIcon.LOCATION: return 'map-pin';
       case AppIcon.MAP: return 'map';

@@ -158,6 +158,8 @@ export struct ProfileMenuItem {
   @Prop icon: AppIcon;
   /** 右侧计数/描述（对齐前端个人数据列表项「好友 42」契约） */
   @Prop value: string = '';
+  /** 副标题描述行（对齐前端 ListItem detail，如「查看已发布的记录」） */
+  @Prop detail: string = '';
   @Prop resolvedThemeId: string = 'vibrant_light';
   @State pressed: boolean = false;
   onTap: () => void = () => {};
@@ -179,10 +181,23 @@ export struct ProfileMenuItem {
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
 
-      Text(this.title)
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
-        .layoutWeight(1)
+      Column({ space: DesignConstants.SPACING.XS }) {
+        Text(this.title)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        if (this.detail.length > 0) {
+          Text(this.detail)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
 
       if (this.value.length > 0) {
         Text(this.value)

@@ -22,6 +22,8 @@ export class ChatRouteParam {
   chatType: string = 'private_chat';
   title: string = '聊天';
   targetId: string = '';
+  /** 对端在线状态文本（在线/离线；空串不显示，来自会话列表 presence） */
+  presenceText: string = '';
 }
 
 /** 群组详情页参数 */

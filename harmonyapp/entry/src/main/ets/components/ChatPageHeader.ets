@@ -29,6 +29,10 @@ export struct ChatPageHeader {
   @Prop targetAvatar: string = '';
   /** 是否展示 leading 头像（私聊 true / 群聊 false）。 */
   @Prop showAvatar: boolean = false;
+  /** 在线状态副文本（在线/离线；空串不显示）。 */
+  @Prop presenceText: string = '';
+  /** 对端是否在线（决定副文本颜色）。 */
+  @Prop presenceOnline: boolean = false;
   /** 返回回调。 */
   onBack: () => void = () => {};
   /** 尾随操作回调（打开会话设置/操作）。 */
@@ -58,7 +62,7 @@ export struct ChatPageHeader {
           this.onBack();
         })
 
-        if (this.showAvatar && this.targetAvatar.length > 0) {
+        if (this.showAvatar) {
           SystemAvatar({
             avatarUrl: this.targetAvatar,
             name: this.title,
@@ -68,38 +72,52 @@ export struct ChatPageHeader {
             .margin({ left: DesignConstants.SPACING.XS })
         }
 
-        Text(this.title)
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-          .fontColor(this.getPalette().textPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .layoutWeight(1)
-          .margin({ left: DesignConstants.SPACING.SM })
+        // 标题 + 在线状态副文本（对齐前端 ChatPageHeader：名字 sm medium + presence xs）
+        Column() {
+          Text(this.title)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontColor(this.getPalette().textPrimary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          if (this.presenceText.length > 0) {
+            Text(this.presenceText)
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .fontColor(this.presenceOnline ? this.getPalette().online : this.getPalette().textSecondary)
+              .maxLines(1)
+          }
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+        .margin({ left: DesignConstants.SPACING.SM })
       }
       .layoutWeight(1)
 
-      // 尾随：会话信息/操作按钮
+      // 尾随：会话操作 ghost 圆钮（对齐前端 trailing ghost 动作组）
       Button() {
         LucideIcon({
-            icon: AppIcon.INFO,
-            iconSize: DesignConstants.FONT.SIZE.XL,
+            icon: AppIcon.MORE,
+            iconSize: DesignConstants.FONT.SIZE.MD,
             color: this.getPalette().textSecondary
           })
       }
       .type(ButtonType.Circle)
-      .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-      .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-      .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
+      .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+      .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+      .backgroundColor(this.getPalette().surfaceSubtle)
       .onClick(() => {
         this.onTrailingAction();
       })
     }
     .width('100%')
+    .padding({
+      left: DesignConstants.SPACING.MD,
+      right: DesignConstants.SPACING.MD,
+      top: DesignConstants.SPACING.SM2,
+      bottom: DesignConstants.SPACING.SM2
+    })
     .margin({ top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop), bottom: DesignConstants.SPACING.XS })
-    .shadow(this.getPalette().elevatedShadow)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: ChatThemeManager.current().titleBarBorder })
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getPalette().borderColor })
     .zIndex(1)
     .onTouch((event: TouchEvent) => {
       // 点头部空白处收起输入法（与原 ChatPage 行为一致）

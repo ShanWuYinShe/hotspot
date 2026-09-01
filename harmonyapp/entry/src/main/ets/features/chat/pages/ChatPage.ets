@@ -114,6 +114,8 @@ export struct ChatPage {
   @State showReportConfirm: boolean = false;
   @State reportSubmitting: boolean = false;
   @State targetAvatar: string = '';
+  @State targetPresenceText: string = '';
+  @State targetPresenceOnline: boolean = false;
   @State isGroupServerMuted: boolean = false;
   @State groupMutedUntil: string = '';
 
@@ -1111,6 +1113,8 @@ export struct ChatPage {
         title: this.title,
         showAvatar: this.chatType === 'private_chat',
         targetAvatar: this.targetAvatar ?? '',
+        presenceText: this.chatType === 'private_chat' ? this.targetPresenceText : '',
+        presenceOnline: this.targetPresenceOnline,
         onBack: () => this.handleBackNavigation(),
         onTrailingAction: () => this.openConversationActions()
       })
@@ -1436,6 +1440,8 @@ export struct ChatPage {
         this.chatType = String(param.chatType ?? 'private_chat') as 'private_chat' | 'group_chat';
         this.title = String(param.title ?? '聊天');
         this.targetId = param.targetId ? String(param.targetId) : undefined;
+        this.targetPresenceText = String(param.presenceText ?? '');
+        this.targetPresenceOnline = this.targetPresenceText === '在线';
         this.initChatData();
       } else {
         hilog.error(DOMAIN_NUMBER, TAG, 'ChatPage 缺少路由参数');
