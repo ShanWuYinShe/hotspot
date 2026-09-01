@@ -26,7 +26,7 @@
 <ListItem
 	onClick={() => onRead(notif.id)}
 	ariaLabel={`通知：${notif.user.name}${notif.text}`}
-	class="flex items-center gap-3.5 px-3 py-3.5"
+	class="flex items-center gap-3.5 px-4 py-3"
 >
 	<!-- Avatar + icon badge -->
 	<div class="relative shrink-0">
@@ -62,12 +62,12 @@
 			<button
 				type="button"
 				onclick={(e) => { e.stopPropagation(); onAccept?.(notif.inviteId!); }}
-				class="hover-btn rounded-full bg-accent-default px-3.5 py-1.5 text-sm font-medium text-text-on-accent focus-ring"
+				class="hover-btn hit-slop rounded-full bg-accent-default px-3.5 py-1.5 text-sm font-medium text-text-on-accent focus-ring"
 			>接受</button>
 			<button
 				type="button"
 				onclick={(e) => { e.stopPropagation(); onReject?.(notif.inviteId!); }}
-				class="hover-btn rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring"
+				class="hover-btn hit-slop rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring"
 			>拒绝</button>
 		{/if}
 		{#if notif.momentImage}
@@ -76,7 +76,11 @@
 			</div>
 		{/if}
 		{#if !notif.read}
-			<div class="rounded-full size-2" style="background:{cfg.color};"></div>
+			<!-- 未读指示：accent 描边小圈（克制，与 status-online 实心点语义区分） -->
+			<div
+				class="rounded-full size-2.5"
+				style="border:var(--cst-border-width-hairline) solid var(--cst-accent-default);"
+			></div>
 		{/if}
 	</div>
 </ListItem>

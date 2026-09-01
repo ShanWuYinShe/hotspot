@@ -49,7 +49,7 @@
 
 <button
 	{type}
-	{disabled}
+	disabled={disabled || loading}
 	class={cn(
 		'inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap font-medium hover-btn focus-ring transition-colors',
 		VARIANTS[variant],

@@ -45,7 +45,7 @@
 					type="button"
 					variant={followed ? 'outline' : 'primary'}
 					size="sm"
-					class="rounded-full px-3 py-1 {followed ? 'border-border-strong text-text-secondary' : ''}"
+					class="hit-slop rounded-full px-3 py-1 {followed ? 'border-border-strong text-text-secondary' : ''}"
 					onclick={() => onToggle(u.id)}
 				>
 					{followed ? '已关注' : '关注'}

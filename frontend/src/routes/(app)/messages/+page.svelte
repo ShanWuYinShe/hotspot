@@ -190,13 +190,14 @@
 					{#snippet trailing()}
 						<button
 							type="button"
-							class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring surface-flat size-9"
-							onclick={() => {
-								newChatTab = 'chat';
-								showNewChat = true;
-							}}
-						>
-							<Plus class="size-3.5 text-text-secondary"   strokeWidth={1.5} />
+						class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring surface-flat size-9"
+						onclick={() => {
+							newChatTab = 'chat';
+							showNewChat = true;
+						}}
+						aria-label="发起新会话"
+					>
+						<Plus class="size-3.5 text-text-secondary"   strokeWidth={1.5} />
 						</button>
 					{/snippet}
 					{#snippet below()}
@@ -305,6 +306,7 @@
 						newChatTab = 'chat';
 						showNewChat = true;
 					}}
+					aria-label="发起新会话"
 				>
 					<Plus class="size-4 text-text-secondary"   strokeWidth={1.5} />
 				</button>

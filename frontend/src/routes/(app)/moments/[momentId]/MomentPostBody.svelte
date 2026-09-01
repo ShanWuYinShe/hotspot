@@ -4,6 +4,7 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import ImageViewer from '@/components/overlays/ImageViewer.svelte';
 	import { ROUTES } from '@/lib/routes';
+	import { platform } from '@/stores/platform.svelte';
 
 	// 动态详情内容体：作者/正文/图片（单图全幅封面、多图网格）/操作条/评论区。
 	// 评论输入栏由页面经 SplitPageLayout footer 渲染，本组件只负责内容体。
@@ -161,7 +162,9 @@
 	<!-- Content -->
 	<p class="text-text-primary text-sm leading-copy">{moment.content}</p>
 
-	<!-- Actions（对齐交互契约：行内小图标动作用 hover-action——hover 1.20/按下 0.94） -->
+	<!-- Actions（对齐交互契约：行内小图标动作用 hover-action——hover 1.20/按下 0.94）。
+	     移动端互动已下沉为页面底部操作条（SplitPageLayout footer），内容区只读 -->
+	{#if platform.platform !== 'mobile'}
 	<div class="flex items-center justify-between py-3 border-t border-border-default border-b border-border-default" >
 		<div class="flex gap-4">
 			<button
@@ -210,6 +213,7 @@
 			</button>
 		</div>
 	</div>
+	{/if}
 
 	<!-- Comments -->
 	<p class="eyebrow mt-4 mb-3" id="moment-comments">

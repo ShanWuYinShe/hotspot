@@ -44,6 +44,7 @@
 		style="box-shadow:{chat.inputVal.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:var(--cst-border-width-hairline) solid var(--cst-border-default);"
 		onclick={() => void chat.handleSend()}
 		aria-label="发送"
+		disabled={!chat.inputVal.trim()}
 	>
 		<Send class="size-3.5" style="color:{chat.inputVal.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
 	</button>

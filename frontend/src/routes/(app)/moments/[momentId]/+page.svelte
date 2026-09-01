@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { MoreHorizontal, Link2, Send, PencilLine, Trash2 } from '@lucide/svelte';
+	import { MoreHorizontal, Link2, Send, PencilLine, Trash2, Heart, MessageCircle, Bookmark, Share2, Check } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -10,6 +10,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
+	import { platform } from '@/stores/platform.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import RailSection from '@/components/rail/RailSection.svelte';
 	import RailUserRow from '@/components/rail/RailUserRow.svelte';
@@ -446,6 +447,49 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	{/if}
 
 	{#snippet footer()}
+		<!-- 移动端互动操作条（拇指热区）：点赞/评论/收藏/分享 44pt，内容区只读 -->
+		{#if platform.platform === 'mobile'}
+			<div class="flex shrink-0 items-stretch border-t border-border-default bg-surface-primary">
+				<button
+					type="button"
+					class="hover-btn tap-92 flex h-12 flex-1 items-center justify-center gap-1.5 focus-ring {liked ? 'text-accent-default' : 'text-text-secondary'}"
+					aria-label={liked ? '取消点赞' : '点赞'}
+					onclick={() => void toggleLike()}
+				>
+					<Heart class="size-5"  strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
+					<span class="text-sm">{likeCount}</span>
+				</button>
+				<button
+					type="button"
+					class="hover-btn tap-92 flex h-12 flex-1 items-center justify-center gap-1.5 text-text-secondary focus-ring"
+					aria-label="查看评论"
+					onclick={focusComments}
+				>
+					<MessageCircle class="size-5"  strokeWidth={1.5} />
+					<span class="text-sm">{commentCount}</span>
+				</button>
+				<button
+					type="button"
+					class="hover-btn tap-92 flex h-12 flex-1 items-center justify-center gap-1.5 focus-ring {saved ? 'text-accent-default' : 'text-text-secondary'}"
+					aria-label={saved ? '取消收藏' : '收藏'}
+					onclick={() => void toggleSave()}
+				>
+					<Bookmark class="size-5"  strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />
+				</button>
+				<button
+					type="button"
+					class="hover-btn tap-92 flex h-12 flex-1 items-center justify-center gap-1.5 focus-ring {shareStatus === 'copied' ? 'text-accent-default' : 'text-text-secondary'}"
+					aria-label={shareStatus === 'failed' ? '复制动态链接失败' : '复制动态链接'}
+					onclick={() => void copyMomentLink()}
+				>
+					{#if shareStatus === 'copied'}
+						<Check class="size-5"  strokeWidth={1.75} />
+					{:else}
+						<Share2 class="size-5"  strokeWidth={1.5} />
+					{/if}
+				</button>
+			</div>
+		{/if}
 		<!-- 评论输入栏固定在主区底部，不随正文滚动 -->
 		<CommentInputBar bind:input bind:inputEl={commentInputEl} onSend={() => void handleComment()} />
 	{/snippet}

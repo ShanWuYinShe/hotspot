@@ -14,6 +14,7 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import { showToast } from '@/stores/toast.svelte';
 	import { requireAuth } from '@/stores/auth.svelte';
+	import { platform } from '@/stores/platform.svelte';
 
 	// 用户详情：关注/私信/屏蔽/举报/备注 + 瞬间画廊 + 桌面 Rail。
 
@@ -267,7 +268,7 @@
 {#if loadError}
 	<LoadError message={loadError} onRetry={() => reloadKey++} />
 {:else}
-<SplitPageLayout contentClassName="animate-fade-in pt-4 pb-6">
+<SplitPageLayout contentClassName="animate-fade-in pt-4 {platform.platform === 'mobile' ? 'pb-28' : 'pb-6'}">
 	<!-- 资料头（无封面数据：紧凑头部，返回/分享/更多 浮在首行，对齐动态详情作者行层级） -->
 	<div class="flex items-center justify-between">
 		<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => history.back()} />
@@ -298,11 +299,12 @@
 						</div>
 					</div>
 
-					<!-- Action buttons -->
+					<!-- Action buttons（桌面/平板在头像旁；移动端下沉为底部操作条，见 footer snippet） -->
+					{#if platform.platform !== 'mobile'}
 					<div class="flex shrink-0 gap-2 pb-1">
 						<button
 							type="button"
-							class="hover-btn tap-92 flex items-center gap-1.5 rounded-full border border-border-default bg-surface-primary px-3.5 py-2 text-xs text-text-secondary shadow-raised-sm focus-ring disabled:cursor-not-allowed disabled:opacity-muted"
+							class="hover-btn tap-92 hit-slop flex items-center gap-1.5 rounded-full border border-border-default bg-surface-primary px-3.5 py-2 text-xs text-text-secondary shadow-raised-sm focus-ring disabled:cursor-not-allowed disabled:opacity-muted"
 							disabled={blocked}
 							onclick={() => !blocked && void goto(ROUTES.message(uid))}
 						>
@@ -311,7 +313,7 @@
 						</button>
 						<button
 							type="button"
-							class="hover-btn tap-92 flex items-center gap-1.5 px-4 py-2 rounded-full focus-ring transition-all disabled:cursor-not-allowed disabled:opacity-muted text-xs {followed ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
+							class="hover-btn tap-92 hit-slop flex items-center gap-1.5 px-4 py-2 rounded-full focus-ring transition-all disabled:cursor-not-allowed disabled:opacity-muted text-xs {followed ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
 							style={followed
 								? 'border:var(--cst-border-width-regular) solid var(--cst-accent-default);box-shadow:var(--shadow-raised-sm);'
 								: 'box-shadow:var(--shadow-glow-md);border:var(--cst-border-width-hairline) solid transparent;'}
@@ -327,6 +329,7 @@
 							{/if}
 						</button>
 					</div>
+					{/if}
 				</div>
 
 			{#if blocked}
@@ -404,6 +407,41 @@
 			</div>
 		</RailSection>
 	{/if}
+	{/snippet}
+
+	<!-- 移动端底部操作条：主操作（私信/关注）下沉拇指热区，桌面/平板使用头部按钮 -->
+	{#snippet footer()}
+		{#if platform.platform === 'mobile' && !blocked}
+			<div
+				class="flex gap-3 border-t border-border-default px-4 pt-2.5"
+				style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md)) saturate(1.5);-webkit-backdrop-filter:blur(var(--cst-blur-md)) saturate(1.5);padding-bottom:max(10px, env(safe-area-inset-bottom, 10px));"
+			>
+				<button
+					type="button"
+					class="hover-btn tap-92 flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-border-default bg-surface-primary text-sm text-text-secondary shadow-raised-sm focus-ring disabled:opacity-muted"
+					disabled={blocked}
+					onclick={() => !blocked && void goto(ROUTES.message(uid))}
+				>
+					<MessageCircle class="size-4"  strokeWidth={1.75} />
+					私信
+				</button>
+				<button
+					type="button"
+					class="hover-btn tap-92 flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl focus-ring transition-all disabled:opacity-muted text-sm {followed ? 'border border-accent-default bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
+					style={followed ? 'box-shadow:var(--shadow-raised-sm);' : 'box-shadow:var(--shadow-glow-md);'}
+					disabled={blocked}
+					onclick={toggleFollow}
+				>
+					{#if followed}
+						<UserCheck class="size-4"  strokeWidth={1.75} />
+						已关注
+					{:else}
+						<UserPlus class="size-4"  strokeWidth={1.75} />
+						关注
+					{/if}
+				</button>
+			</div>
+		{/if}
 	{/snippet}
 </SplitPageLayout>
 {/if}

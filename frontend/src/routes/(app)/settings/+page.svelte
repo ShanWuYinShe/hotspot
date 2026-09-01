@@ -168,7 +168,7 @@
 		</div>
 
 	<!-- Appearance（对齐 Figma Make SettingsPage：应用主题二选一 + 深色模式） -->
-	<p class="eyebrow px-1 mt-3 mb-1.5">外观</p>
+	<p class="eyebrow px-1 mt-6 mb-2 text-text-primary opacity-emphasis">外观</p>
 	<div class="rounded-lg overflow-hidden surface-flat">
 		<ListContainer>
 			<SettingRow title="应用主题" description="选择一套全局视觉风格">
@@ -215,7 +215,7 @@
 	</div>
 
 	<!-- Notify -->
-	<p class="eyebrow px-1 mt-3 mb-1.5">通知</p>
+	<p class="eyebrow px-1 mt-6 mb-2 text-text-primary opacity-emphasis">通知</p>
 	<div class="rounded-lg overflow-hidden surface-flat">
 		<ListContainer>
 			<SettingRow title="推送通知" description="消息、提及与新动态提醒">
@@ -228,7 +228,7 @@
 	</div>
 
 	<!-- Privacy -->
-	<p class="eyebrow px-1 mt-3 mb-1.5">隐私与安全</p>
+	<p class="eyebrow px-1 mt-6 mb-2 text-text-primary opacity-emphasis">隐私与安全</p>
 	<div class="rounded-lg overflow-hidden surface-flat">
 		<ListContainer>
 			<SettingRow title="私密账号" description="仅关注者可查看你的内容">
@@ -247,7 +247,7 @@
 	</div>
 
 	<!-- General -->
-	<p class="eyebrow px-1 mt-3 mb-1.5">通用</p>
+	<p class="eyebrow px-1 mt-6 mb-2 text-text-primary opacity-emphasis">通用</p>
 	<div class="rounded-lg overflow-hidden surface-flat">
 		<ListContainer>
 			<!-- 关于：复用 SettingRow 消除手写重复（版本号取自 package.json） -->

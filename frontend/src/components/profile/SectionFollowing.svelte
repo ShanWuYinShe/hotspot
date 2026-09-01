@@ -66,7 +66,7 @@
 			{#snippet actions()}
 				<button
 					type="button"
-					class="hover-btn tap-92 flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs focus-ring {unfollowedIds.has(f.id) ? 'bg-accent-default text-text-on-accent' : 'bg-transparent text-text-secondary'}"
+					class="hover-btn tap-92 hit-slop flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs focus-ring {unfollowedIds.has(f.id) ? 'bg-accent-default text-text-on-accent' : 'bg-transparent text-text-secondary'}"
 					style={unfollowedIds.has(f.id) ? 'border:var(--cst-border-width-hairline) solid transparent;' : 'border:var(--cst-border-width-hairline) solid var(--cst-border-strong);'}
 					onclick={(e) => {
 						e.stopPropagation();
