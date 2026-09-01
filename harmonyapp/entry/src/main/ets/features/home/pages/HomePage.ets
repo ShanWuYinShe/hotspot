@@ -750,11 +750,14 @@ export struct HomePage {
         .alignItems(HorizontalAlign.Center)
         .margin({ top: DesignConstants.SPACING.SM })
       } else if (!this.usersLoading && this.users.length === 0) {
-        Text('附近暂无其他用户，可稍后再来或调整浏览位置。')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getPalette().textSecondary)
+        // 空态（对齐前端 EmptyState bare：极简形态，替代单行灰字；审查 P2 空态统一）
+        EmptyState({
+          icon: AppIcon.PERSON,
+          message: '附近暂无其他用户，可稍后再来或调整浏览位置。',
+          bare: true
+        })
           .width('100%')
-          .margin({ top: DesignConstants.SPACING.HALF })
+          .margin({ top: DesignConstants.SPACING.MD })
       } else if (this.usersLoading && this.users.length === 0) {
         // loading skeleton（行骨架：头像圆 + 两行文字）
         Column({ space: DesignConstants.SPACING.MD }) {
