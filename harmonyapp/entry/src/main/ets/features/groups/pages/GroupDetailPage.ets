@@ -30,6 +30,7 @@ import {
   GroupApplicationItem,
   GroupMemberItem,
   GroupSharePayload,
+  GroupAnnouncementItem,
   RelativeLocation,
   SettableGroupRole,
   UpdateGroupRequest
@@ -47,7 +48,7 @@ import { AppRouter, LoginRouteParam, ChatRouteParam } from '../../../core/router
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
-import { formatCount } from '../../../core/utils/FormatUtil';
+import { formatCount, formatRelativeTime } from '../../../core/utils/FormatUtil';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
@@ -55,6 +56,7 @@ import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { ErrorCode } from '../../../core/constants/ErrorCodes';
 import { LucideIcon } from '../../../components/LucideIcon';
+import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 
 interface GroupSyncData {
@@ -119,6 +121,10 @@ export struct GroupDetailPage {
   @State handlingApplicationIds: string[] = [];
 
   @State isMember: boolean = false;
+  /** 内容 Tab（对齐前端 groups/[groupId] 三 Tab：简介/成员/公告） */
+  @State activeTab: number = 0;
+  /** 群公告列表（对齐前端 AnnouncementsList） */
+  @State announcements: GroupAnnouncementItem[] = [];
   @State showEditGroupSheet: boolean = false;
   @State editGroupName: string = '';
   @State editGroupDescription: string = '';
@@ -189,6 +195,8 @@ export struct GroupDetailPage {
           this.isMember = this.groupInfo.viewer_state != null;
           await this.syncGroupData();
           await this.accessibilityManager.announceText(`已加载群组：${this.groupInfo.group?.name ?? ''}`);
+          // 公告 Tab 数据（对齐前端 AnnouncementsList）
+          this.loadGroupAnnouncements();
         } else {
           this.errorMessage = getErrorMessage(response, '加载群组详情失败');
         }
@@ -197,6 +205,19 @@ export struct GroupDetailPage {
       this.errorMessage = '加载群组详情失败';
     } finally {
       this.isLoading = false;
+    }
+  }
+
+  /** 加载群公告（对齐前端 AnnouncementsList；spec: /public/v1/groups/announcements/fetch） */
+  private async loadGroupAnnouncements(): Promise<void> {
+    if (!this.groupId) return;
+    try {
+      const response = await ApiClient.getGroupAnnouncements({ group_id: this.groupId });
+      if (response.code === 0) {
+        this.announcements = response.data?.items ?? [];
+      }
+    } catch (error) {
+      // 静默失败：公告 Tab 显示空态，不阻塞主流程
     }
   }
 
@@ -1059,10 +1080,31 @@ export struct GroupDetailPage {
         .width('100%')
         .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD })
 
+        // 三 Tab（对齐前端 TabBar 胶囊：简介/成员/公告）
+        TabsPillGroup({
+          tabs: [
+            { label: '简介' },
+            { label: '成员' },
+            { label: '公告' }
+          ],
+          activeIndex: this.activeTab,
+          actions: {
+            onChange: (index: number) => {
+              this.activeTab = index;
+              // 公告 Tab 首次进入时懒加载
+              if (index === 2 && this.announcements.length === 0) {
+                this.loadGroupAnnouncements();
+              }
+            }
+          }
+        })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
+
         // 使用 List 布局（扁平风格）
         List() {
-          // 1. 简介区（封面已承载群名/分类，元信息行已承载成员/在线/距离；
+          // Tab 0 简介区（封面已承载群名/分类，元信息行已承载成员/在线/距离；
           //    位置名以 MapPin 行展示，对齐前端 users/[userId] 位置行模式）
+          if (this.activeTab === 0) {
           ListItem() {
             Column({ space: DesignConstants.SPACING.MD }) {
               if (this.groupInfo?.description) {
@@ -1096,8 +1138,9 @@ export struct GroupDetailPage {
           .shadow(this.getCurrentThemePalette().elevatedShadow)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .margin({ bottom: DesignConstants.SPACING.MD })
+          }
 
-          // 3. 成员列表入口
+          // 成员列表入口（Tab 1 成员 或 Tab 0 简介均显示）
           ListItem() {
             Row() {
               Column() {
@@ -1265,6 +1308,64 @@ export struct GroupDetailPage {
           .borderRadius(DesignConstants.RADIUS.LG)
           .shadow(this.getCurrentThemePalette().elevatedShadow)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+
+          // Tab 2 公告（对齐前端 AnnouncementsList：标题/内容/时间/置顶徽章）
+          if (this.activeTab === 2) {
+            if (this.announcements.length === 0) {
+              ListItem() {
+                EmptyState({
+                  icon: AppIcon.NOTIFICATION,
+                  message: '暂无公告',
+                  bare: true
+                })
+                  .width('100%')
+                  .padding({ top: DesignConstants.SPACING.XXL, bottom: DesignConstants.SPACING.XXL })
+              }
+            } else {
+              ForEach(this.announcements, (item: GroupAnnouncementItem) => {
+                ListItem() {
+                  Column({ space: DesignConstants.SPACING.XS }) {
+                    Row({ space: DesignConstants.SPACING.XS }) {
+                      if (item.is_pinned) {
+                        LucideIcon({
+                          icon: AppIcon.STAR_FILL,
+                          iconSize: DesignConstants.FONT.SIZE.SM,
+                          color: this.getCurrentThemePalette().accentBackground
+                        })
+                      }
+                      Text(item.title)
+                        .fontSize(DesignConstants.FONT.SIZE.MD)
+                        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                        .fontColor(this.getCurrentThemePalette().textPrimary)
+                        .maxLines(1)
+                        .textOverflow({ overflow: TextOverflow.Ellipsis })
+                    }
+                    .width('100%')
+
+                    Text(item.content)
+                      .fontSize(DesignConstants.FONT.SIZE.SM)
+                      .fontColor(this.getCurrentThemePalette().textSecondary)
+                      .width('100%')
+                      .maxLines(3)
+                      .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+                    Text(formatRelativeTime(item.created_at))
+                      .fontSize(DesignConstants.FONT.SIZE.XS)
+                      .fontColor(this.getCurrentThemePalette().textTertiary)
+                      .width('100%')
+                  }
+                  .width('100%')
+                  .alignItems(HorizontalAlign.Start)
+                  .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+                }
+                .backgroundColor(this.getSurfaceBackground())
+                .borderRadius(DesignConstants.RADIUS.LG)
+                .shadow(this.getCurrentThemePalette().elevatedShadow)
+                .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+                .margin({ bottom: DesignConstants.SPACING.MD })
+              }, (item: GroupAnnouncementItem) => item.announcement_id)
+            }
+          }
 
         }
         .width('100%')
