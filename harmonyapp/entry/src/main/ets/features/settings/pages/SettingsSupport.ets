@@ -100,10 +100,6 @@ export struct SettingsSectionCard {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
-  private getCardStyle() {
-    return AppThemeVisuals.getSurfaceCardStyle(this.resolvedThemeId);
-  }
-
   build() {
     Column({ space: DesignConstants.SPACING.SM }) {
       if (this.title.length > 0) {
@@ -114,17 +110,81 @@ export struct SettingsSectionCard {
           .width('100%')
       }
 
+      // 对齐前端 settings 分组改版：去外框与投影，分组感由 eyebrow 小标 +
+      // 行间 hairline 分隔线承担（移动端外框+行线+图标描边三层嵌套显局促）
       Column({ space: 0 }) {
         this.content();
       }
       .width('100%')
-      .backgroundColor(this.getCardStyle().backgroundColor)
-      .borderRadius(this.getCardStyle().borderRadius)
-      .shadow(this.getCardStyle().shadow)
-      .border({ width: this.getCardStyle().borderWidth, color: this.getCardStyle().borderColor })
       .clip(true)
     }
     .width('100%')
+  }
+}
+
+/** 分组内行间 hairline 分隔线（对齐前端 ListContainer embedded divide-y）。 */
+@Component
+export struct SettingsRowDivider {
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  build() {
+    Divider()
+      .strokeWidth(DesignConstants.BORDER_WIDTH.HAIRLINE)
+      .color(this.getPalette().borderColor)
+  }
+}
+
+/**
+ * 主题二选一分段卡（星际/清野，对齐前端 settings 主题分段选择器）。
+ * 独立 @Component：此前是 SettingsPage 的带参 @Builder 经 SettingsSectionCard 的
+ * @BuilderParam 渲染，跨组件作用域下 onClick 不触发，必须拆成组件。
+ */
+@Component
+export struct SettingsThemeSegmentCard {
+  @Prop mode: string = 'vibrant';
+  @Prop label: string = '';
+  @Prop swatch: string = '';
+  @Prop selected: boolean = false;
+  onSelect: (mode: string) => void = () => {
+  };
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  build() {
+    Row({ space: DesignConstants.SPACING.SM }) {
+      Column()
+        .width(DesignConstants.SPACING.LG)
+        .height(DesignConstants.SPACING.LG)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(this.swatch)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+
+      Text(this.label)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        .fontColor(this.selected ?
+          this.getPalette().accentText :
+          this.getPalette().textSecondary)
+    }
+    .layoutWeight(1)
+    .justifyContent(FlexAlign.Center)
+    .padding({ top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
+    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+    .backgroundColor(this.selected ?
+      this.getPalette().accentMuted :
+      DesignConstants.COLOR.TRANSPARENT)
+    .border({
+      width: this.selected ? DesignConstants.BORDER_WIDTH.HAIRLINE : 0,
+      color: this.getPalette().accentBackground
+    })
+    .onClick(() => { this.onSelect(this.mode); })
   }
 }
 
@@ -148,13 +208,13 @@ export struct SettingsEntryRow {
         LucideIcon({
             icon: this.item.icon,
             iconSize: DesignConstants.FONT.SIZE.LG,
-            color: this.getPalette().accentText
+            color: this.getPalette().accentBackground
           })
       }
       .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(this.getPalette().surfaceSubtle)
+      .backgroundColor(this.getPalette().accentMuted)
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
 
@@ -262,13 +322,13 @@ export struct SettingsToggleRow {
         LucideIcon({
             icon: this.icon,
             iconSize: DesignConstants.FONT.SIZE.LG,
-            color: this.getPalette().accentText
+            color: this.getPalette().accentBackground
           })
       }
       .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(this.getPalette().surfaceSubtle)
+      .backgroundColor(this.getPalette().accentMuted)
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
 

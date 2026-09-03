@@ -103,9 +103,10 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					{bio || '这个人还没有填写简介。'}
 				</p>
 			</div>
+			<!-- 统计横条：仅保留顶部分隔线，列间用留白（竖线在小屏三列里显得切割局促） -->
 			<div class="grid grid-cols-3 border-t border-border-default">
 				{#each statsList as stat}
-					<div class="border-l border-border-default px-4 py-3 text-center first:border-l-0">
+					<div class="px-4 py-3 text-center">
 						<p class="text-sm font-medium tabular-nums text-text-primary">{stat.value}</p>
 						<p class="mt-0.5 text-xs text-text-secondary">{stat.label}</p>
 					</div>
@@ -113,14 +114,11 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 			</div>
 		</section>
 
-		<!-- 个人数据 5 行链接 -->
-		<ListContainer bordered class="mt-5" ariaLabel="个人数据">
-			<div class="flex items-center justify-between bg-surface-primary px-5 py-3.5">
-				<div>
-					<p class="text-sm font-medium text-text-primary">个人数据</p>
-					<p class="mt-0.5 text-xs text-text-secondary">在这里查看你的内容与关系</p>
-				</div>
-			</div>
+		<!-- 个人数据 5 行链接（无外框：embedded 分隔线，分组感由 eyebrow 承担） -->
+		<div class="mt-5">
+			<p class="eyebrow px-1 mb-2 text-text-primary opacity-emphasis">个人数据</p>
+			<p class="px-1 mb-2 text-xs text-text-secondary">在这里查看你的内容与关系</p>
+			<ListContainer ariaLabel="个人数据">
 			{#each DATA_ITEMS as item (item.section)}
 				<ListItem
 					onClick={() => void goto(ME_SECTION_PATHS[item.section])}
@@ -136,7 +134,8 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					</span>
 					<ChevronRight class="size-4 shrink-0 text-text-secondary"   strokeWidth={1.75} />
 				</ListItem>
-			{/each}
-		</ListContainer>
+				{/each}
+			</ListContainer>
+		</div>
 	{/if}
 </StandardPageLayout>

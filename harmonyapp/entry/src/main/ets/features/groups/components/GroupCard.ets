@@ -180,11 +180,11 @@ export struct GroupCard {
             LucideIcon({
                 icon: AppIcon.LOCATION,
                 iconSize: DesignConstants.FONT.SIZE.XS2,
-                color: this.getPalette().accentText
+                color: this.getPalette().accentBackground
               })
             Text(this.getDistanceText())
               .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor(this.getPalette().accentText)
+              .fontColor(this.getPalette().accentBackground)
           }
           .alignItems(VerticalAlign.Center)
         }
@@ -275,7 +275,7 @@ export struct GroupCard {
         if (this.getDistanceText().length > 0) {
           Text(this.getDistanceText())
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getPalette().accentText)
+            .fontColor(this.getPalette().accentBackground)
         }
       }
       .width('100%')
@@ -288,11 +288,11 @@ export struct GroupCard {
             LucideIcon({
                 icon: AppIcon.TIME,
                 iconSize: DesignConstants.FONT.SIZE.XS2,
-                color: this.getPalette().accentText
+                color: this.getPalette().online
               })
             Text(this.getActivityText())
               .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor(this.getPalette().accentText)
+              .fontColor(this.getPalette().online)
           }
           .alignItems(VerticalAlign.Center)
         }

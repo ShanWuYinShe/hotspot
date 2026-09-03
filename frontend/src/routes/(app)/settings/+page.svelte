@@ -169,8 +169,7 @@
 
 	<!-- Appearance（对齐 Figma Make SettingsPage：应用主题二选一 + 深色模式） -->
 	<p class="eyebrow px-1 mt-6 mb-2 text-text-primary opacity-emphasis">外观</p>
-	<div class="rounded-lg overflow-hidden surface-flat">
-		<ListContainer>
+	<ListContainer>
 			<SettingRow title="应用主题" description="选择一套全局视觉风格">
 				{#snippet icon()}
 					<Palette class="size-4 text-accent-default"   strokeWidth={1.5} />
@@ -211,26 +210,22 @@
 				{/snippet}
 				<Toggle on={theme.isDark} onToggle={toggleDark} label="深色模式" />
 			</SettingRow>
-		</ListContainer>
-	</div>
+	</ListContainer>
 
 	<!-- Notify -->
 	<p class="eyebrow px-1 mt-6 mb-2 text-text-primary opacity-emphasis">通知</p>
-	<div class="rounded-lg overflow-hidden surface-flat">
-		<ListContainer>
+	<ListContainer>
 			<SettingRow title="推送通知" description="消息、提及与新动态提醒">
 				{#snippet icon()}
 					<Bell class="size-4 text-accent-default"   strokeWidth={1.5} />
 				{/snippet}
 				<Toggle on={notif} onToggle={toggleNotif} label="推送通知" />
 			</SettingRow>
-		</ListContainer>
-	</div>
+	</ListContainer>
 
 	<!-- Privacy -->
 	<p class="eyebrow px-1 mt-6 mb-2 text-text-primary opacity-emphasis">隐私与安全</p>
-	<div class="rounded-lg overflow-hidden surface-flat">
-		<ListContainer>
+	<ListContainer>
 			<SettingRow title="私密账号" description="仅关注者可查看你的内容">
 				{#snippet icon()}
 					<Lock class="size-4 text-accent-default"   strokeWidth={1.5} />
@@ -243,13 +238,11 @@
 				{/snippet}
 				<Toggle on={locationSharing} onToggle={toggleLocationSharing} label="位置共享" />
 			</SettingRow>
-		</ListContainer>
-	</div>
+	</ListContainer>
 
 	<!-- General -->
 	<p class="eyebrow px-1 mt-6 mb-2 text-text-primary opacity-emphasis">通用</p>
-	<div class="rounded-lg overflow-hidden surface-flat">
-		<ListContainer>
+	<ListContainer>
 			<!-- 关于：复用 SettingRow 消除手写重复（版本号取自 package.json） -->
 			<SettingRow title="关于" description="HotSpot">
 				{#snippet icon()}
@@ -257,14 +250,13 @@
 				{/snippet}
 				<span class="text-sm shrink-0 text-text-secondary">{APP_VERSION}</span>
 			</SettingRow>
-		</ListContainer>
-	</div>
+	</ListContainer>
 
 	<!-- Log Out — flat, less visually heavy -->
 	<div class="mt-5">
 		<button
 			type="button"
-			class="hover-btn flex items-center justify-center gap-2 px-4 py-3 rounded-md w-full focus-ring surface-flat text-accent-default"
+			class="hover-btn flex items-center justify-center gap-2 px-4 py-3 rounded-md w-full focus-ring text-accent-default"
 			onclick={() => void handleLogout()}
 		>
 			<LogOut class="size-3.5"  strokeWidth={1.75} />

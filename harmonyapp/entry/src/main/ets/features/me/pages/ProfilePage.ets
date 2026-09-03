@@ -1270,7 +1270,7 @@ export struct ProfilePage {
           .margin({ top: DesignConstants.SPACING.LG })
       }
 
-      // 卡底三列统计（border-t + 竖分隔，对齐前端统计条）
+      // 卡底三列统计（border-t，列间留白——竖线在小屏三列里显得切割局促）
       Row() {
         this.buildIdentityStat('瞬间', this.myMomentsCount, 0)
         this.buildIdentityStat('关注者', this.myFollowersCount, 1)
@@ -1294,12 +1294,6 @@ export struct ProfilePage {
   @Builder
   private buildIdentityStat(label: string, value: number, index: number) {
     Row() {
-      if (index > 0) {
-        Column()
-          .width(DesignConstants.BORDER_WIDTH.HAIRLINE)
-          .height(DesignConstants.COMPONENT.ICON_SIZE_XS)
-          .backgroundColor(this.getSurfaceBorder())
-      }
       Column({ space: DesignConstants.SPACING.HALF }) {
         Text(formatCount(value))
           .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -1321,22 +1315,20 @@ export struct ProfilePage {
   @Builder
   private buildProfileDataList() {
     Column() {
-      // 头部行
-      Row() {
-        Column({ space: DesignConstants.SPACING.THREE }) {
-          Text('个人数据')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-            .fontColor(this.getPrimaryTextColor())
-          Text('在这里查看你的内容与关系')
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getSecondaryTextColor())
-        }
-        .alignItems(HorizontalAlign.Start)
-      }
-      .width('100%')
-      .padding(DesignConstants.SPACING.LG2)
-      .backgroundColor(this.getSurfaceBackground())
+      // 分组小标（对齐前端 ProfileMobile 改版：eyebrow + 副文案在列表外，列表去外框）
+      Text('个人数据')
+        .fontSize(DesignConstants.FONT.SIZE.XS2)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        .fontColor(this.getSecondaryTextColor())
+        .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
+        .textCase(TextCase.UpperCase)
+        .width('100%')
+        .padding({ left: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM })
+      Text('在这里查看你的内容与关系')
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontColor(this.getSecondaryTextColor())
+        .width('100%')
+        .padding({ left: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM })
 
       this.buildProfileDataRow(AppIcon.PHOTO, '我的瞬间', '查看已发布的记录', () => {
         AppRouter.push(PageNames.MOMENT);
@@ -1355,10 +1347,7 @@ export struct ProfilePage {
       }, false)
     }
     .width('100%')
-    .borderRadius(DesignConstants.SHAPE.CARD)
-    .backgroundColor(this.getSurfaceBackground())
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    .clip(true)
+    .alignItems(HorizontalAlign.Start)
     .margin({ top: DesignConstants.SPACING.LG })
   }
 
@@ -1376,7 +1365,7 @@ export struct ProfilePage {
       .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
       .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
+      .backgroundColor(this.getCurrentThemePalette().accentMuted)
       .justifyContent(FlexAlign.Center)
 
       Column({ space: DesignConstants.SPACING.HALF }) {

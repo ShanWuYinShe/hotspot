@@ -31,7 +31,12 @@ export class PreferencesUtil {
    * 保存数据
    */
   static async set(key: string, value: preferences.ValueType): Promise<void> {
-    if (!PreferencesUtil.store) throw new Error('Storage not initialized');
+    if (!PreferencesUtil.store) {
+      // 未初始化直接降级返回（不抛出）：调用方遍布启动链路，抛出会中断
+      // 初始化；记日志保证问题可排查
+      hilog.error(DOMAIN_NUMBER, TAG, `Preferences not ready, drop set ${key}`);
+      return;
+    }
     try {
       await PreferencesUtil.store.put(key, value);
       await PreferencesUtil.store.flush();
@@ -44,7 +49,10 @@ export class PreferencesUtil {
    * 获取数据
    */
   static async get<T extends preferences.ValueType>(key: string, defaultValue: T): Promise<T> {
-    if (!PreferencesUtil.store) throw new Error('Storage not initialized');
+    if (!PreferencesUtil.store) {
+      hilog.error(DOMAIN_NUMBER, TAG, `Preferences not ready, fallback default for ${key}`);
+      return defaultValue;
+    }
     try {
       const result = await PreferencesUtil.store.get(key, defaultValue);
       return result as T;
@@ -58,7 +66,10 @@ export class PreferencesUtil {
    * 删除数据
    */
   static async remove(key: string): Promise<void> {
-    if (!PreferencesUtil.store) throw new Error('Storage not initialized');
+    if (!PreferencesUtil.store) {
+      hilog.error(DOMAIN_NUMBER, TAG, `Preferences not ready, drop remove ${key}`);
+      return;
+    }
     try {
       await PreferencesUtil.store.delete(key);
       await PreferencesUtil.store.flush();
@@ -71,7 +82,10 @@ export class PreferencesUtil {
    * 清空所有数据
    */
   static async clear(): Promise<void> {
-    if (!PreferencesUtil.store) throw new Error('Storage not initialized');
+    if (!PreferencesUtil.store) {
+      hilog.error(DOMAIN_NUMBER, TAG, 'Preferences not ready, drop clear');
+      return;
+    }
     try {
       await PreferencesUtil.store.clear();
       await PreferencesUtil.store.flush();

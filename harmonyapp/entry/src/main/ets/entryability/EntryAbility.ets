@@ -613,12 +613,16 @@ export default class EntryAbility extends UIAbility {
       
       // 1. 注册所有服务
       this.serviceRegistry.registerServices();
-      
-      // 2. 预加载核心服务
-      await this.serviceRegistry.preloadCoreServices();
-      
-      // 3. 初始化需要Context的服务
+
+      // 2. 初始化需要Context的服务（含 PreferencesUtil.init）
+      //    必须先于 preloadCoreServices：核心服务链（GlobalStateManager →
+      //    AppThemeManager.initialize）会同步读偏好，Preferences 未就绪会抛
+      //    'Storage not initialized' 中断整条初始化链，导致主题偏好、
+      //    深色开关、登录态等持久化全部静默失效
       await this.serviceRegistry.initializeContextServices(this.context);
+
+      // 3. 预加载核心服务
+      await this.serviceRegistry.preloadCoreServices();
       
       // 4. 预加载功能服务
       await this.serviceRegistry.preloadFeatureServices();

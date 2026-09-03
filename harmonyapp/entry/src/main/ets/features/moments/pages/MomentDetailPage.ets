@@ -558,10 +558,12 @@ export struct MomentDetailPage {
       if (moment.tags && moment.tags.length > 0) {
         Flex({ wrap: FlexWrap.Wrap }) {
           ForEach(moment.tags, (tag: string, index: number) => {
+            // 对齐前端 MomentPostBody：accent 实底胶囊 + on-accent 文字，
+            // 浅色下淡底淡字对比不足
             Text(`#${tag}`)
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor(this.getCurrentThemePalette().accentBackground)
-              .backgroundColor(this.getSurfaceSubtle())
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getCurrentThemePalette().accentText)
+              .backgroundColor(this.getCurrentThemePalette().accentBackground)
               .padding({
                 left: DesignConstants.SPACING.MD,
                 right: DesignConstants.SPACING.MD,

@@ -130,9 +130,9 @@
 
 /* ═══ Forest 组件覆盖（@layer utilities，与 utilities.css 同层）═══ */
 @layer utilities {
-  /* strict paper-flat：无阴影，仅 border 描边 */
+  /* strict paper-flat：无阴影，仅 border 描边（icon-badge 除外：
+     基类已改 accent 淡底无描边，forest 下同样适用，不再压回纸面底） */
   .forest .input-surface,
-  .forest .icon-badge,
   .forest .flat,
   .forest .pressed,
   .forest .card-hover,

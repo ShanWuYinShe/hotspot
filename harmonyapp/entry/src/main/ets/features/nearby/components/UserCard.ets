@@ -163,7 +163,7 @@ export struct UserCard {
           if (this.getPrimaryTag().length > 0) {
             Text(`#${this.getPrimaryTag()}`)
               .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor(this.getPalette().accentText)
+              .fontColor(this.getPalette().accentBackground)
               .backgroundColor(this.getPalette().accentMuted)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .padding({

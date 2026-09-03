@@ -29,7 +29,9 @@ import {
   SettingsEntryRow,
   SettingsGroupLabel,
   SettingsMetaCard,
+  SettingsRowDivider,
   SettingsSectionCard,
+  SettingsThemeSegmentCard,
   SettingsToggleRow,
   SupportConfigCard
 } from './SettingsSupport';
@@ -476,53 +478,8 @@ export struct SettingsPage {
   }
 
   // ==================== 主题分段卡（对齐前端主题二选一：星际 / 清野） ====================
-  @Builder
-  private buildThemeSegment() {
-    Row({ space: DesignConstants.SPACING.SM }) {
-      this.buildThemeSegmentCard('vibrant', '星际', ThemeConstants.VIBRANT_LIGHT_COLORS.accentBackground)
-      this.buildThemeSegmentCard('default_clean', '清野', ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.accentBackground)
-    }
-    .width('100%')
-    .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.MD,
-      bottom: DesignConstants.SPACING.SM
-    })
-  }
-
-  @Builder
-  private buildThemeSegmentCard(mode: ThemeMode, label: string, swatch: string) {
-    Row({ space: DesignConstants.SPACING.SM }) {
-      Column()
-        .width(DesignConstants.SPACING.LG)
-        .height(DesignConstants.SPACING.LG)
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .backgroundColor(swatch)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-
-      Text(label)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-        .fontColor(this.getActiveSegmentModes().indexOf(mode) >= 0 ?
-          this.getCurrentThemePalette().accentText :
-          this.getCurrentThemePalette().textSecondary)
-    }
-    .layoutWeight(1)
-    .justifyContent(FlexAlign.Center)
-    .padding({ top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
-    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-    .backgroundColor(this.getActiveSegmentModes().indexOf(mode) >= 0 ?
-      this.getCurrentThemePalette().accentMuted :
-      DesignConstants.COLOR.TRANSPARENT)
-    .border({
-      width: this.getActiveSegmentModes().indexOf(mode) >= 0 ?
-        DesignConstants.BORDER_WIDTH.HAIRLINE : 0,
-      color: this.getCurrentThemePalette().accentBackground
-    })
-    .onClick(() => { this.handleThemeChange(mode); })
-  }
-
+  // 独立组件 SettingsThemeSegmentCard（@Builder 经 @BuilderParam 跨组件渲染时
+  // onClick 丢失，见 SettingsSupport 内组件注释）
   private getActiveSegmentModes(): ThemeMode[] {
     // 跟随系统时默认解析为 vibrant，星旗舰同步高亮
     return this.themeMode === 'follow_system' ? ['vibrant'] : [this.themeMode];
@@ -552,7 +509,30 @@ export struct SettingsPage {
                 Column() {
                   SettingsSectionCard() {
                     Column() {
-                      this.buildThemeSegment()
+                      Row({ space: DesignConstants.SPACING.SM }) {
+                        SettingsThemeSegmentCard({
+                          mode: 'vibrant',
+                          label: '星际',
+                          swatch: ThemeConstants.VIBRANT_LIGHT_COLORS.accentBackground,
+                          selected: this.getActiveSegmentModes().indexOf('vibrant') >= 0,
+                          onSelect: (mode: string) => { this.handleThemeChange(mode as ThemeMode); }
+                        })
+                        SettingsThemeSegmentCard({
+                          mode: 'default_clean',
+                          label: '清野',
+                          swatch: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.accentBackground,
+                          selected: this.getActiveSegmentModes().indexOf('default_clean') >= 0,
+                          onSelect: (mode: string) => { this.handleThemeChange(mode as ThemeMode); }
+                        })
+                      }
+                      .width('100%')
+                      .padding({
+                        left: DesignConstants.SPACING.LG,
+                        right: DesignConstants.SPACING.LG,
+                        top: DesignConstants.SPACING.MD,
+                        bottom: DesignConstants.SPACING.SM
+                      })
+                      SettingsRowDivider()
                       SettingsToggleRow({
                         icon: AppIcon.MOON,
                         title: '深色模式',
@@ -583,7 +563,11 @@ export struct SettingsPage {
                         isOn: this.pushNotifyEnabled,
                         onToggle: (next: boolean) => { this.togglePushNotify(next); }
                       })
-                      ForEach(this.buildSystemEntries(), (item: SettingsEntryItem) => {
+                      SettingsRowDivider()
+                      ForEach(this.buildSystemEntries(), (item: SettingsEntryItem, index: number) => {
+                        if (index > 0) {
+                          SettingsRowDivider()
+                        }
                         SettingsEntryRow({ item })
                       }, (item: SettingsEntryItem) => item.title)
                     }
@@ -604,6 +588,7 @@ export struct SettingsPage {
                         pending: this.privacyPending,
                         onToggle: (next: boolean) => { this.togglePrivacyPrivate(next); }
                       })
+                      SettingsRowDivider()
                       SettingsToggleRow({
                         icon: AppIcon.LOCATION,
                         title: '位置共享',
@@ -612,9 +597,14 @@ export struct SettingsPage {
                         pending: this.locationPending,
                         onToggle: (next: boolean) => { this.toggleLocationVisible(next); }
                       })
-                      ForEach(this.buildPrivacyEntries(), (item: SettingsEntryItem) => {
+                      SettingsRowDivider()
+                      ForEach(this.buildPrivacyEntries(), (item: SettingsEntryItem, index: number) => {
+                        if (index > 0) {
+                          SettingsRowDivider()
+                        }
                         SettingsEntryRow({ item })
                       }, (item: SettingsEntryItem) => item.title)
+                      SettingsRowDivider()
                       SettingsEntryRow({ item: this.buildSecurityEntry() })
                     }
                   }
@@ -626,15 +616,20 @@ export struct SettingsPage {
                 Column() {
                   SettingsSectionCard() {
                     Column() {
-                      ForEach(this.buildAccountEntries(), (item: SettingsEntryItem) => {
+                      ForEach(this.buildAccountEntries(), (item: SettingsEntryItem, index: number) => {
+                        if (index > 0) {
+                          SettingsRowDivider()
+                        }
                         SettingsEntryRow({ item })
                       }, (item: SettingsEntryItem) => item.title)
+                      SettingsRowDivider()
                       SettingsEntryRow({ item: {
                         icon: AppIcon.SETTINGS,
                         title: '高级设置',
                         subtitle: '开发者选项、诊断与缓存工具',
                         action: () => AppRouter.push(PageNames.ADVANCED_SETTINGS)
                       } })
+                      SettingsRowDivider()
                       SettingsEntryRow({ item: {
                         icon: AppIcon.INFO,
                         title: '关于',
@@ -679,7 +674,7 @@ export struct SettingsPage {
                   Button('退出登录')
                     .width('100%')
                     .height(DesignConstants.COMPONENT.LOGOUT_BUTTON_HEIGHT)
-                    .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+                    .backgroundColor(Color.Transparent)
                     .fontColor(this.getCurrentThemePalette().accentBackground)
                     .fontSize(DesignConstants.FONT.SIZE.LG)
                     .type(ButtonType.Normal)
