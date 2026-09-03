@@ -8,7 +8,7 @@ import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { UserSettings } from '../../../core/types/api';
-import { SettingsSectionCard, ToggleSettingRow, SettingToggleItem } from './SettingsSupport';
+import { SettingsSectionCard, SettingsRowDivider, ToggleSettingRow, SettingToggleItem } from './SettingsSupport';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
@@ -154,7 +154,10 @@ export struct PrivacySettingsPage {
             Column() {
               SettingsSectionCard({ title: '可见性与搜索范围' }) {
                 Column() {
-                  ForEach(PRIVACY_ITEMS, (item: SettingToggleItem) => {
+                  ForEach(PRIVACY_ITEMS, (item: SettingToggleItem, index: number) => {
+                    if (index > 0) {
+                      SettingsRowDivider()
+                    }
                     ToggleSettingRow({
                       item,
                       isOn: this.getSettingValue(item.key),

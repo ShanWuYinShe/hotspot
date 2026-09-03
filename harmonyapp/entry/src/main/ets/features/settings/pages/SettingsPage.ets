@@ -499,7 +499,7 @@ export struct SettingsPage {
 
         Refresh({ refreshing: $$this.metaRefreshing, builder: RefreshIndicator }) {
           Scroll() {
-            PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
+            PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true, fillHeight: false }) {
               Column() {
                 // === 用户卡 ===
                 this.buildUserCard()
@@ -842,7 +842,7 @@ export struct SettingsPage {
     .padding(DesignConstants.SPACING.LG)
     .borderRadius(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).card.borderRadius)
     .backgroundColor(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).surfaceBackground : this.getThemeOptionPalette(option).surfaceSubtle)
-    .border({ width: this.isThemeOptionActive(option) ? 1.5 : 1, color: this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentBackground : this.getThemeOptionPalette(option).borderColor })
+    .border({ width: this.isThemeOptionActive(option) ? DesignConstants.BORDER_WIDTH.REGULAR : DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentBackground : this.getThemeOptionPalette(option).borderColor })
     .shadow(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentShadow : this.getThemeOptionPalette(option).surfaceShadow)
     // 选中底色/边框/阴影切换过渡（对齐 DesktopLayout 导航项，避免硬跳）
     .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })

@@ -185,6 +185,8 @@ export interface OpacitySystem {
 }
 
 export interface BorderWidthSystem {
+  /** 0.5vp 亚像素行间分隔线（列表 divide-y 密度场景） */
+  SUBPIXEL: number;
   /** 1vp 细线（默认边框，对齐前端 hairline） */
   HAIRLINE: number;
   /** 1.5vp 常规描边（头像/选中环，对齐前端 regular） */
@@ -681,6 +683,7 @@ const OPACITY: OpacitySystem = {
 
 // ==================== 边框宽度系统（对齐前端 --cst-border-width-* 档位）====================
 const BORDER_WIDTH: BorderWidthSystem = {
+  SUBPIXEL: 0.5,
   HAIRLINE: 1,
   REGULAR: 1.5,
   STRONG: 2,

@@ -21,6 +21,7 @@ import { CacheManager } from '../../../core/cache/CacheManager';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
 import { MomentCacheService } from '../../../core/database/MomentCacheService';
 import { LucideIcon } from '../../../components/LucideIcon';
+import { SettingsGroupLabel, SettingsRowDivider } from './SettingsSupport';
 
 @Preview
 @Component
@@ -88,21 +89,20 @@ export struct AdvancedSettingsPage {
       })
 
       Column() {
+        // 对齐主设置页分组改版：eyebrow 分组 + 无外框 + 行间分隔线
+        SettingsGroupLabel({ label: '工具' })
         Column() {
           this.SettingItem(AppIcon.CLEAN, '清理缓存', '清除本地缓存数据', () => {
             this.requestClearCache();
           })
 
+          SettingsRowDivider()
+
           this.SettingItem(AppIcon.DEBUG, '调试面板', '网络诊断、状态检查', () => {
             AppRouter.push(PageNames.DEBUG_PANEL);
           })
         }
-        .backgroundColor(this.getSurfaceBackground())
-        .borderRadius(DesignConstants.RADIUS.LG)
-        .shadow(this.getCurrentThemePalette().elevatedShadow)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
-          top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD3 })
+        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
       }
       .width('100%')
       .layoutWeight(1)
@@ -146,7 +146,7 @@ export struct AdvancedSettingsPage {
       .width(DesignConstants.COMPONENT.BRAND_ICON_SIZE)
       .height(DesignConstants.COMPONENT.BRAND_ICON_SIZE)
       .borderRadius(DesignConstants.SHAPE.ICON_TILE)
-      .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
+      .backgroundColor(this.getCurrentThemePalette().accentMuted)
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
 
@@ -164,19 +164,11 @@ export struct AdvancedSettingsPage {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
 
-      Row() {
-        LucideIcon({
-            icon: AppIcon.ARROW_RIGHT,
-            iconSize: DesignConstants.FONT.SIZE.MD,
-            color: this.getCurrentThemePalette().textSecondary
-          })
-      }
-      .width(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
-      .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
-      .borderRadius(DesignConstants.SHAPE.ICON_TILE)
-      .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
+      LucideIcon({
+          icon: AppIcon.ARROW_RIGHT,
+          iconSize: DesignConstants.FONT.SIZE.MD,
+          color: this.getCurrentThemePalette().textSecondary
+        })
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })

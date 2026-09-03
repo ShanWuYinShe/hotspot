@@ -638,7 +638,7 @@ export struct MessagePage {
           } else {
             Text('全部已读')
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getCurrentThemePalette().online)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
           }
 
           Row() {
@@ -851,7 +851,7 @@ export struct MessagePage {
                     if (index < this.filteredChatItems.length - 1) {
                       Row()
                         .width('100%')
-                        .height(0.5)
+                        .height(DesignConstants.BORDER_WIDTH.SUBPIXEL)
                         .backgroundColor(this.getSurfaceBorder())
                         .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
                     }
