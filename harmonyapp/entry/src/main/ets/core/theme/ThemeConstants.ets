@@ -296,11 +296,12 @@ export class ThemeConstants {
   static readonly SHADOWS: ThemeShadowRegistry = new ThemeShadowRegistry();
 
   static readonly VIBRANT_LIGHT_COLORS: ColorConfig = {
-    pageBackground: '#F7FAFF',
-    workspaceBackground: '#EBF1FA',
+    // 表面分层（对齐前端 vibrant.css）：画布灰蓝底 + 卡片纯白，卡片靠底色差与阴影浮起
+    pageBackground: '#EFF3F9',
+    workspaceBackground: '#E6EBF4',
     pageGlow: '#E8EDFF',
     heroGlow: '#DDE4FF',
-    surfaceBackground: '#F7FAFF',
+    surfaceBackground: '#FFFFFF',
     surfaceSubtle: '#EAF1FA',
     surfaceElevated: '#F7FAFF',
     borderColor: '#2E2E66C0',
@@ -308,7 +309,7 @@ export class ThemeConstants {
     sheetBackground: '#F7FAFF',
     accentBackground: '#2E66C0',
     accentText: '#FFFFFF',
-    accentMuted: '#E3EBF9',
+    accentMuted: '#DBE5F3',
     chatBackground: '#EDF3FC',
     systemSurfaceBaseColor: '#EDF3FC',
     overlayStrong: '#850C1930',
@@ -323,7 +324,7 @@ export class ThemeConstants {
     quickActionBackgroundColor: '#FFFFFF',
     tabBarBackground: '#F7FAFF',
     tabBarInactive: '#52647F',
-    tabBarActiveBackground: '#DDE7F7',
+    tabBarActiveBackground: '#D6E1F2',
     isDarkTheme: false,
     online: '#14B8A6',
     warning: '#F59E0B',
@@ -342,7 +343,7 @@ export class ThemeConstants {
     workspaceBackground: '#060D19',
     pageGlow: '#122036',
     heroGlow: '#16263E',
-    surfaceBackground: '#0B1424',
+    surfaceBackground: '#111D31',
     surfaceSubtle: '#14243A',
     surfaceElevated: '#16273C',
     borderColor: '#2E88B7FF',

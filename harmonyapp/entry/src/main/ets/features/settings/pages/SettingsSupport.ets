@@ -110,12 +110,15 @@ export struct SettingsSectionCard {
           .width('100%')
       }
 
-      // 对齐前端 settings 分组改版：去外框与投影，分组感由 eyebrow 小标 +
-      // 行间 hairline 分隔线承担（移动端外框+行线+图标描边三层嵌套显局促）
+      // 表面分层改版：白卡 + 圆角 + 阴影浮起（无边框线），分组感由卡片
+      // 承担、行间仍用 hairline 分隔线；靠底色差分层而非描边嵌套
       Column({ space: 0 }) {
         this.content();
       }
       .width('100%')
+      .backgroundColor(this.getPalette().surfaceBackground)
+      .borderRadius(DesignConstants.SHAPE.CARD)
+      .shadow(this.getPalette().elevatedShadow)
       .clip(true)
     }
     .width('100%')

@@ -136,6 +136,13 @@
     box-shadow: 0 0 0 1px var(--cst-border-default);
     transition: box-shadow var(--cst-motion-snappy) var(--cst-ease-standard), background-color var(--cst-motion-snappy) var(--cst-ease-standard);
   }
+
+  /* 卡片浮起：白卡 + 主题阴影，无边框线——灰画布上的主层级载体
+     （vibrant 阴影浮起 / forest 纸面用 1.5px ring，见 themes/forest.css 覆盖） */
+  .card-raised {
+    background-color: var(--cst-surface-primary);
+    box-shadow: var(--cst-elevation-card);
+  }
   @media (hover: hover) and (pointer: fine) {
     /* hover 描边只给可交互元素；非交互容器/浮层悬停不应误出外环 */
     .surface-flat:is(button, a, [role="button"]):hover {

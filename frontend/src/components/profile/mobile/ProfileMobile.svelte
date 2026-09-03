@@ -65,7 +65,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		<LoadError message={error} onRetry={retry} />
 	{:else}
 		<!-- 身份卡（compact）：头像复用 Avatar，统计横条居中（对齐桌面 MetricRow 原语） -->
-		<section class="rounded-lg surface-flat" aria-label="个人资料">
+		<section class="card-raised rounded-lg" aria-label="个人资料">
 			<div class="p-5">
 				<div class="flex items-start justify-between gap-5">
 					<div class="flex min-w-0 items-center gap-4">
@@ -82,7 +82,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 							</button>
 						</div>
 						<div class="min-w-0">
-							<h1 class="text-xl font-medium tracking-title text-text-primary">{nickname || '未设置昵称'}</h1>
+							<h1 class="text-xl font-semibold tracking-title text-text-primary">{nickname || '未设置昵称'}</h1>
 							<p class="mt-0.5 text-xs text-text-secondary">{handle}</p>
 							<p class="mt-2 flex items-center gap-1.5 text-xs text-text-secondary">
 								<MapPin class="size-3.5 text-accent-default"   strokeWidth={1.75} />
@@ -114,10 +114,11 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 			</div>
 		</section>
 
-		<!-- 个人数据 5 行链接（无外框：embedded 分隔线，分组感由 eyebrow 承担） -->
+		<!-- 个人数据 5 行链接（白卡容器 + embedded 行分隔线） -->
 		<div class="mt-5">
 			<p class="eyebrow px-1 mb-2 text-text-primary opacity-emphasis">个人数据</p>
 			<p class="px-1 mb-2 text-xs text-text-secondary">在这里查看你的内容与关系</p>
+			<div class="card-raised rounded-lg overflow-hidden">
 			<ListContainer ariaLabel="个人数据">
 			{#each DATA_ITEMS as item (item.section)}
 				<ListItem
@@ -136,6 +137,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 				</ListItem>
 				{/each}
 			</ListContainer>
+			</div>
 		</div>
 	{/if}
 </StandardPageLayout>

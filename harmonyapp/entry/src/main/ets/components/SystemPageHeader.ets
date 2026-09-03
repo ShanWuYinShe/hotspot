@@ -63,7 +63,7 @@ export struct SystemPageHeader {
   /** 标题字号，默认 FONT.SIZE.XL（20）。顶级 Tab 页对齐前端传 XXL（24）。 */
   @Prop titleSize: number = DesignConstants.FONT.SIZE.XL;
   /** 标题字重，默认 500（对齐前端 PageHeader font-medium）。 */
-  @Prop titleWeight: number = DesignConstants.FONT.WEIGHT.MEDIUM;
+  @Prop titleWeight: number = DesignConstants.FONT.WEIGHT.SEMIBOLD;
   /** 背景变体：bar(默认全宽底栏) / transparent / card(浮动圆角卡)。 */
   @Prop backgroundVariant: HeaderBackgroundVariant = 'bar';
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;

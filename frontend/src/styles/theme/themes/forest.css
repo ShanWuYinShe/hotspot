@@ -130,6 +130,12 @@
 
 /* ═══ Forest 组件覆盖（@layer utilities，与 utilities.css 同层）═══ */
 @layer utilities {
+  /* forest 纸面语言下 card-raised 用 ring 表达浮起（无投影） */
+  .forest .card-raised,
+  .forest.dark .card-raised {
+    box-shadow: 0 0 0 1.5px var(--cst-border-default);
+  }
+
   /* strict paper-flat：无阴影，仅 border 描边（icon-badge 除外：
      基类已改 accent 淡底无描边，forest 下同样适用，不再压回纸面底） */
   .forest .input-surface,

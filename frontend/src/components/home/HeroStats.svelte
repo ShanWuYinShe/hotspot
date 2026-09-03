@@ -49,15 +49,15 @@
 		<!-- Stats row -->
 		<div class="grid grid-cols-3 mt-4 bg-border-default gap-px"  style="border-radius:var(--cst-shape-md);overflow:hidden">
 			<div class="flex flex-col items-center justify-center py-2.5 bg-surface-primary">
-				<span class="text-xl font-semibold leading-none text-accent-default" >{stats.nearby}</span>
+				<span class="text-xl font-semibold leading-none tabular-nums text-text-primary" >{stats.nearby}</span>
 				<span class="text-xxs mt-1 text-text-secondary"  >人附近</span>
 			</div>
 			<div class="flex flex-col items-center justify-center py-2.5 bg-surface-primary">
-				<span class="text-xl font-semibold leading-none text-accent-default" >{stats.active}</span>
+				<span class="text-xl font-semibold leading-none tabular-nums text-text-primary" >{stats.active}</span>
 				<span class="text-xxs mt-1 text-text-secondary"  >动态</span>
 			</div>
 			<div class="flex flex-col items-center justify-center py-2.5 bg-surface-primary">
-				<span class="text-xl font-semibold leading-none text-accent-default" >{stats.online}</span>
+				<span class="text-xl font-semibold leading-none tabular-nums text-text-primary" >{stats.online}</span>
 				<span class="text-xxs mt-1 text-text-secondary"  >在线</span>
 			</div>
 		</div>

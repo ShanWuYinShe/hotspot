@@ -1288,7 +1288,7 @@ export struct ProfilePage {
     .padding(DesignConstants.SPACING.LG2)
     .borderRadius(DesignConstants.SHAPE.CARD)
     .backgroundColor(this.getSurfaceBackground())
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
   }
 
   @Builder
@@ -1330,21 +1330,29 @@ export struct ProfilePage {
         .width('100%')
         .padding({ left: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM })
 
-      this.buildProfileDataRow(AppIcon.PHOTO, '我的瞬间', '查看已发布的记录', () => {
-        AppRouter.push(PageNames.MOMENT);
-      }, true)
-      this.buildProfileDataRow(AppIcon.GROUP, '我的群组', `${formatCount(this.myGroupsCount)} 个正在参与`, () => {
-        AppRouter.push(PageNames.GROUP);
-      }, false)
-      this.buildProfileDataRow(AppIcon.PERSON, '好友', `${formatCount(this.myFriendsCount)} 位好友`, () => {
-        AppRouter.push(PageNames.RELATIONSHIP_HUB);
-      }, false)
-      this.buildProfileDataRow(AppIcon.STAR, '关注', `${formatCount(this.myFollowingCount)} 人`, () => {
-        AppRouter.push(PageNames.RELATIONSHIP_HUB);
-      }, false)
-      this.buildProfileDataRow(AppIcon.HEART, '粉丝', `${formatCount(this.myFollowersCount)} 人`, () => {
-        AppRouter.push(PageNames.RELATIONSHIP_HUB);
-      }, false)
+      // 数据行白卡容器（表面分层：底色差 + 阴影浮起，无边框线，对齐前端 card-raised）
+      Column() {
+        this.buildProfileDataRow(AppIcon.PHOTO, '我的瞬间', '查看已发布的记录', () => {
+          AppRouter.push(PageNames.MOMENT);
+        }, true)
+        this.buildProfileDataRow(AppIcon.GROUP, '我的群组', `${formatCount(this.myGroupsCount)} 个正在参与`, () => {
+          AppRouter.push(PageNames.GROUP);
+        }, false)
+        this.buildProfileDataRow(AppIcon.PERSON, '好友', `${formatCount(this.myFriendsCount)} 位好友`, () => {
+          AppRouter.push(PageNames.RELATIONSHIP_HUB);
+        }, false)
+        this.buildProfileDataRow(AppIcon.STAR, '关注', `${formatCount(this.myFollowingCount)} 人`, () => {
+          AppRouter.push(PageNames.RELATIONSHIP_HUB);
+        }, false)
+        this.buildProfileDataRow(AppIcon.HEART, '粉丝', `${formatCount(this.myFollowersCount)} 人`, () => {
+          AppRouter.push(PageNames.RELATIONSHIP_HUB);
+        }, false)
+      }
+      .width('100%')
+      .backgroundColor(this.getSurfaceBackground())
+      .borderRadius(DesignConstants.SHAPE.CARD)
+      .shadow(this.getCurrentThemePalette().elevatedShadow)
+      .clip(true)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)

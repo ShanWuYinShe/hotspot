@@ -13,10 +13,12 @@
 :root,
 .vibrant {
   /* ── 原始色板 --cst-palette-* ── */
-  --cst-palette-bg: #F7FAFF;
-  --cst-palette-page-bg: #F7FAFF;
+  /* 表面分层：画布（page）灰蓝底 + 卡片（bg）纯白，卡片靠底色差与阴影自然浮起，
+     取代旧的"同色 + 1px 描边"贴皮方案 */
+  --cst-palette-bg: #FFFFFF;
+  --cst-palette-page-bg: #EFF3F9;
   /* 工作区舞台底色：比 page 深一档，承载浮动侧栏/内容卡片的边界感 */
-  --cst-palette-workspace-bg: #EBF1FA;
+  --cst-palette-workspace-bg: #E6EBF4;
   --cst-palette-text: #16233A;
   --cst-palette-text-muted: #52647F;
   /* accent 加深（#3578D4→#2E66C0）确保浅色下白字对比度 ≥4.5:1（原 4.39 不达标） */
@@ -162,7 +164,7 @@
 /* ═══ Vibrant Dark ═══ */
 .vibrant.dark {
   /* ── 原始色板 --cst-palette-* ── */
-  --cst-palette-bg: #0B1424;
+  --cst-palette-bg: #111D31;
   --cst-palette-page-bg: #0B1424;
   --cst-palette-workspace-bg: #060D19;
   --cst-palette-text: #E8F1FF;
