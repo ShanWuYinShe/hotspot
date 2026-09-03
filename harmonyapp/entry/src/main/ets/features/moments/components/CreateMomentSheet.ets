@@ -6,6 +6,7 @@ import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { AccountInfo, CreateMomentRequest, GeoPoint, MomentItem, PrivacyLevel } from '../../../core/types/api';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
+import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemToast } from '../../../components/SystemToast';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
@@ -44,7 +45,9 @@ export struct CreateMomentSheet {
   @State private description: string = '';
   @State private imageUrls: string[] = [];
   @State private selectedMoods: string[] = [];
-  @State private privacyLevel: PrivacyLevel = 'public';
+  // 可见范围 UI 三选（对齐前端 CreateSheet AUDIENCES）；契约 PrivacyLevel 仅
+  // 'public' | 'private'（spec/api_spec_types.md），提交时 nearby→public、其余→private
+  @State private audience: string = 'nearby';
   @State private isPublishing: boolean = false;
   @State private publishingMessage: string = '';
   @State private localLocation: LocationInfo | null = null;
@@ -142,7 +145,7 @@ export struct CreateMomentSheet {
         },
         tags: this.selectedMoods.length > 0 ? this.selectedMoods : undefined,
         image_file_ids: imageFileIds.length > 0 ? imageFileIds : undefined,
-        privacy_level: this.privacyLevel
+        privacy_level: (this.audience === 'nearby' ? 'public' : 'private') as PrivacyLevel
       };
       const response = await ApiClient.createMoment(request);
       if (response.code === 0) {
@@ -176,7 +179,7 @@ export struct CreateMomentSheet {
         Column({ space: DesignConstants.SPACING.THREE }) {
           Text('附近动态')
             .fontSize(DesignConstants.FONT.SIZE.XS2)
-            .fontColor(this.getPalette().accentText)
+            .fontColor(this.getPalette().textSecondary)
             .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
           Text('记录此刻')
             .fontSize(DesignConstants.FONT.SIZE.XL)
@@ -186,10 +189,10 @@ export struct CreateMomentSheet {
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
 
-        // 创建群组切换 pill
+        // 创建群组切换 pill（对齐前端：accent-soft 底 + accent 蓝字，浅色表面语义）
         Text('创建群组')
           .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(this.getPalette().accentText)
+          .fontColor(this.getPalette().accentBackground)
           .backgroundColor(this.getPalette().accentMuted)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().accentBackground })
           .borderRadius(DesignConstants.RADIUS.FULL)
@@ -203,6 +206,14 @@ export struct CreateMomentSheet {
             this.onClose();
             this.onSwitchToGroup();
           })
+
+        // 关闭按钮（对齐前端 CreateSheet header 的 ActionIconButton X）
+        SurfaceIconButton({
+          icon: AppIcon.CLOSE,
+          kind: 'neutral',
+          buttonSize: 36,
+          onPress: (): void => this.onClose()
+        })
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
@@ -248,10 +259,12 @@ export struct CreateMomentSheet {
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
 
+      // 正在发布徽章（对齐前端：accent-soft 底 + accent 描边 + accent 蓝字）
       Text('正在发布')
         .fontSize(DesignConstants.FONT.SIZE.XS2)
-        .fontColor(this.getPalette().textSecondary)
-        .backgroundColor(this.getPalette().surfaceSubtle)
+        .fontColor(this.getPalette().accentBackground)
+        .backgroundColor(this.getPalette().accentMuted)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().accentBackground })
         .borderRadius(DesignConstants.RADIUS.FULL)
         .padding({
           left: DesignConstants.SPACING.SM2,
@@ -268,7 +281,7 @@ export struct CreateMomentSheet {
   @Builder
   private buildComposerCard() {
     Column() {
-      TextArea({ text: this.description, placeholder: '分享此刻的见闻与心情…' })
+      TextArea({ text: this.description, placeholder: '写下此刻发生的事，或分享一个想被附近的人看见的瞬间…' })
         .onChange((value: string) => {
           this.description = value.length > DESCRIPTION_MAX_LENGTH ?
             value.substring(0, DESCRIPTION_MAX_LENGTH) : value;
@@ -286,6 +299,18 @@ export struct CreateMomentSheet {
         .width('100%')
 
       Row() {
+        // 工具行左侧：表情 / 话题图标（对齐前端 CreateSheet 输入框底部 Smile/Hash）
+        Row({ space: DesignConstants.SPACING.MD }) {
+          LucideIcon({
+              icon: AppIcon.EMOJI,
+              iconSize: DesignConstants.FONT.SIZE.MD,
+              color: this.getPalette().textSecondary
+            })
+          Text('#')
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontColor(this.getPalette().textSecondary)
+        }
         Blank()
         Text(`${this.description.length}/${DESCRIPTION_MAX_LENGTH}`)
           .fontSize(DesignConstants.FONT.SIZE.XS2)
@@ -311,7 +336,7 @@ export struct CreateMomentSheet {
     Column({ space: DesignConstants.SPACING.SM }) {
       Text('照片')
         .fontSize(DesignConstants.FONT.SIZE.XS2)
-        .fontColor(this.getPalette().accentText)
+        .fontColor(this.getPalette().textSecondary)
         .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
 
       Scroll() {
@@ -366,6 +391,8 @@ export struct CreateMomentSheet {
       .scrollable(ScrollDirection.Horizontal)
       .scrollBar(BarState.Off)
       .width('100%')
+      // 照片不足一屏时内容仍左对齐（对齐前端照片区，避免 Scroll 居中显示）
+      .align(Alignment.Start)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -378,7 +405,7 @@ export struct CreateMomentSheet {
       Row() {
         Text('此刻氛围')
           .fontSize(DesignConstants.FONT.SIZE.XS2)
-          .fontColor(this.getPalette().accentText)
+          .fontColor(this.getPalette().textSecondary)
           .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
         Blank()
         if (this.selectedMoods.length > 0) {
@@ -396,7 +423,7 @@ export struct CreateMomentSheet {
             .fontWeight(this.selectedMoods.indexOf(mood) >= 0 ?
               DesignConstants.FONT.WEIGHT.SEMIBOLD : DesignConstants.FONT.WEIGHT.REGULAR)
             .fontColor(this.selectedMoods.indexOf(mood) >= 0 ?
-              this.getPalette().accentText :
+              this.getPalette().accentBackground :
               this.getPalette().textSecondary)
             .backgroundColor(this.selectedMoods.indexOf(mood) >= 0 ?
               this.getPalette().accentMuted :
@@ -428,14 +455,22 @@ export struct CreateMomentSheet {
   @Builder
   private buildPrivacySection() {
     Column({ space: DesignConstants.SPACING.SM }) {
-      Text('谁可以看到')
-        .fontSize(DesignConstants.FONT.SIZE.XS2)
-        .fontColor(this.getPalette().accentText)
-        .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
+      Row() {
+        Text('谁可以看到')
+          .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .fontColor(this.getPalette().textSecondary)
+          .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
+        Blank()
+        Text(this.resolveAudienceHint())
+          .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .fontColor(this.getPalette().textSecondary)
+      }
+      .width('100%')
 
       Row({ space: DesignConstants.SPACING.SM }) {
-        this.buildPrivacyOption('public', AppIcon.NEARBY, '附近可见', '5km 内的用户可发现')
-        this.buildPrivacyOption('private', AppIcon.LOCK, '仅自己', '仅你可见')
+        this.buildPrivacyOption('nearby', AppIcon.NEARBY, '附近可见')
+        this.buildPrivacyOption('friends', AppIcon.GROUP, '好友可见')
+        this.buildPrivacyOption('private', AppIcon.LOCK, '仅自己')
       }
       .width('100%')
     }
@@ -446,39 +481,42 @@ export struct CreateMomentSheet {
     .backgroundColor(this.getPalette().surfaceSubtle)
   }
 
+  /** 可见范围当前 hint（对齐前端 activeAudience.hint 文案） */
+  private resolveAudienceHint(): string {
+    if (this.audience === 'nearby') {
+      return '进入附近动态';
+    }
+    if (this.audience === 'friends') {
+      return '仅你的好友';
+    }
+    return '保存在我的瞬间';
+  }
+
   @Builder
-  private buildPrivacyOption(level: PrivacyLevel, icon: AppIcon, title: string, hint: string) {
-    Column({ space: DesignConstants.SPACING.THREE }) {
+  private buildPrivacyOption(level: string, icon: AppIcon, title: string) {
+    Column({ space: DesignConstants.SPACING.HALF }) {
       LucideIcon({
           icon: icon,
-          iconSize: DesignConstants.FONT.SIZE.LG,
-          color: this.privacyLevel === level ? this.getPalette().accentText : this.getPalette().textSecondary
+          iconSize: DesignConstants.FONT.SIZE.SM,
+          color: this.audience === level ? this.getPalette().accentBackground : this.getPalette().textSecondary
         })
       Text(title)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-        .fontColor(this.privacyLevel === level ?
-          this.getPalette().accentText :
-          this.getPalette().textPrimary)
-      Text(hint)
         .fontSize(DesignConstants.FONT.SIZE.XS2)
-        .fontColor(this.getPalette().textSecondary)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        .maxLines(1)
+        .fontColor(this.audience === level ?
+          this.getPalette().accentBackground :
+          this.getPalette().textSecondary)
     }
     .layoutWeight(1)
     .alignItems(HorizontalAlign.Center)
-    .padding({ top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
-    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-    .backgroundColor(this.privacyLevel === level ?
+    .padding({ top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
+    .borderRadius(DesignConstants.RADIUS.SM)
+    .backgroundColor(this.audience === level ?
       this.getPalette().accentMuted :
       DesignConstants.COLOR.TRANSPARENT)
-    .border({
-      width: DesignConstants.BORDER_WIDTH.HAIRLINE,
-      color: this.privacyLevel === level ?
-        this.getPalette().accentBackground :
-        this.getPalette().borderColor
-    })
     .onClick(() => {
-      this.privacyLevel = level;
+      this.audience = level;
     })
   }
 
@@ -486,14 +524,17 @@ export struct CreateMomentSheet {
   @Builder
   private buildFooter() {
     Row() {
-      Text(this.isPublishing ? this.publishingMessage : '发布后附近的用户可以看到这条动态')
+      Text(this.isPublishing ? this.publishingMessage :
+        (this.selectedMoods.length > 0 ?
+          `将以 ${this.selectedMoods.join(' · ')} 的氛围出现` :
+          '选择氛围，让附近的人更容易找到你'))
         .fontSize(DesignConstants.FONT.SIZE.XS)
         .fontColor(this.getPalette().textSecondary)
         .layoutWeight(1)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text(this.isPublishing ? '发布中…' : '发布')
+      Text(this.isPublishing ? '发布中…' : '发布动态')
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
         .fontColor(this.canPublish() ?

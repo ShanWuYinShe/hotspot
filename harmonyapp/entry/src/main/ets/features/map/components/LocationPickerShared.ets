@@ -528,6 +528,11 @@ export struct MainPanel {
   onConfirm: () => void = () => {};
   @Prop confirmLabel: string = '设为浏览锚点';
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+
+  /** 底部手势区兜底：safeAreaBottom 上报为 0 时按 XL(20vp) 处理 */
+  private resolveBottomInset(): number {
+    return Math.max(this.safeAreaBottom, DesignConstants.SPACING.XL);
+  }
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State clearPressed: boolean = false;
   @State searchEntryPressed: boolean = false;
@@ -738,13 +743,14 @@ export struct MainPanel {
         .margin({ top: DesignConstants.SPACING.SM })
         .onClick(this.onConfirm)
     }
-    .height(this.panelHeight + this.safeAreaBottom)
+    .height(this.panelHeight + this.resolveBottomInset())
     .clip(true)
     .padding({
       left: DesignConstants.SPACING.LG,
       right: DesignConstants.SPACING.LG,
       top: 0,
-      bottom: this.safeAreaBottom
+      // 兜底 navIndicator 高度：部分设备/模拟器 safeAreaBottom 上报 0，按钮贴底被手势条遮挡
+      bottom: this.resolveBottomInset()
     })
     .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceBackground)
     .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })

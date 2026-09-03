@@ -51,8 +51,8 @@ export struct SurfaceIconButton {
     if (this.kind === 'primary') {
       return this.getPalette().accentText;
     }
-    // ghost 图标用次级文字色（对齐前端 text-secondary）
-    return this.getPalette().textSecondary;
+    // ghost 图标用主文字色（对齐前端 PageHeader 末尾透明钮——深色保证在亮底上的可见性）
+    return this.getPalette().textPrimary;
   }
 
   build() {

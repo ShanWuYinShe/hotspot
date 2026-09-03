@@ -37,7 +37,7 @@ export struct NearbyPage {
   private static readonly SECTION_ENTRIES: NearbySectionEntry[] = [
     { key: 'people', icon: AppIcon.PERSON, title: '附近的人', description: '认识 5km 内的新朋友' },
     { key: 'groups', icon: AppIcon.GROUP, title: '附近群组', description: '加入身边的兴趣小组' },
-    { key: 'moments', icon: AppIcon.RECOMMEND, title: '附近动态', description: '看看周边正在发生什么' }
+    { key: 'moments', icon: AppIcon.SPARKLES, title: '附近动态', description: '看看周边正在发生什么' }
   ];
 
   private getCurrentThemePalette() {

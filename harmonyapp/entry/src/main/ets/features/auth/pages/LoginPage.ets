@@ -488,7 +488,7 @@ export struct LoginPage {
     Column({ space: DesignConstants.SPACING.LG }) {
       SystemInput({
         value: this.loginId,
-        placeholder: '邮箱 / 用户名',
+        placeholder: '手机号、邮箱或账号',
         fontSize: DesignConstants.FONT.SIZE.MD,
         hasError: this.getLoginIdError() !== undefined,
         onChange: (value: string) => { this.loginId = value; },
@@ -558,10 +558,19 @@ export struct LoginPage {
           }
         })
 
-      Text('没有账号？切换到「注册」标签')
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor(this.getCurrentThemePalette().textSecondary)
-        .textAlign(TextAlign.Center)
+      // 底部链接（对齐前端 AuthForm：注册 + 访客双入口，均可点击切换）
+      Row({ space: DesignConstants.SPACING.LG }) {
+        Text('注册新账号')
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().accentBackground)
+          .onClick(() => { this.loginMode = 'register'; })
+        Text('随便逛逛（访客）')
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().accentBackground)
+          .onClick(() => { this.loginMode = 'guest'; })
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
     }
     .width('100%')
     .transition(
@@ -598,7 +607,7 @@ export struct LoginPage {
 
       SystemInput({
         value: this.registerLoginId,
-        placeholder: '邮箱 / 用户名（登录凭证）',
+        placeholder: '手机号、邮箱或账号',
         fontSize: DesignConstants.FONT.SIZE.MD,
         hasError: this.getRegisterLoginIdError() !== undefined,
         onChange: (value: string) => { this.registerLoginId = value; },
@@ -621,6 +630,10 @@ export struct LoginPage {
 
       // 手机号/邮箱型 login_id 需验证码（所有权验证）；用户名型不显示
       if (this.needsRegisterVerificationCode()) {
+        Text('手机号 / 邮箱需验证码验证所有权；改用纯用户名注册则无需验证码')
+          .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+          .width('100%')
         Row({ space: DesignConstants.SPACING.SM }) {
           SystemInput({
             value: this.registerVerificationCode,
@@ -722,10 +735,18 @@ export struct LoginPage {
         onPress: () => { this.userRegister(); }
       })
 
-      Text('已有账号？切换到「登录」标签')
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor(this.getCurrentThemePalette().textSecondary)
-        .textAlign(TextAlign.Center)
+      Row({ space: DesignConstants.SPACING.LG }) {
+        Text('已有账号？登录')
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().accentBackground)
+          .onClick(() => { this.loginMode = 'login'; })
+        Text('随便逛逛（访客）')
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().accentBackground)
+          .onClick(() => { this.loginMode = 'guest'; })
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
     }
     .width('100%')
     .transition(

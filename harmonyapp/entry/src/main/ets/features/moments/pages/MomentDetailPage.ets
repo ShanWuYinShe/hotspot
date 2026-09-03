@@ -25,6 +25,7 @@ import {
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
+import { LoginGate } from '../../../core/state/LoginGate';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemInput } from '../../../components/SystemInput';
@@ -183,7 +184,7 @@ export struct MomentDetailPage {
     const content = this.commentText.trim();
     if (!content || this.commentSending) return;
     if (!this.currentUser) {
-      SystemToast.showWarning('请先登录后再评论', this.getUIContext());
+      LoginGate.requireAction('评论', this.getUIContext());
       return;
     }
     this.commentSending = true;
@@ -324,7 +325,7 @@ export struct MomentDetailPage {
     const target = this.comments.find((c: CommentItem) => c.comment_id === commentId);
     if (!target || this.commentLikePending.has(commentId)) return;
     if (!this.currentUser) {
-      SystemToast.showWarning('请先登录后再点赞', this.getUIContext());
+      LoginGate.requireAction('点赞', this.getUIContext());
       return;
     }
     const prevLiked = this.isCommentLiked(target);

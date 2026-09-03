@@ -61,7 +61,6 @@ export struct DesktopLayout {
   @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
-  @State showUpgradeBanner: boolean = false;
   @State showThemeSheet: boolean = false;
   @State logoPressed: boolean = false;
   // 当前按压中的侧栏行（nav label / '__admin__'），驱动整行 tap-97 按压缩放
@@ -74,7 +73,6 @@ export struct DesktopLayout {
   @State avatarPressed: boolean = false;
 
   aboutToAppear() {
-    this.showUpgradeBanner = this.isLoggedIn && this.userType === 'temp';
   }
 
   private getPalette() {
@@ -574,9 +572,6 @@ export struct DesktopLayout {
       } else if (this.currentRoute === 'messages') {
         if (this.isLoggedIn) {
           Column() {
-            if (this.showUpgradeBanner) {
-              this.UpgradeBanner()
-            }
             MessagePage()
           }
           .width('100%')
@@ -604,28 +599,6 @@ export struct DesktopLayout {
     .height('100%')
   }
 
-  @Builder
-  UpgradeBanner() {
-    Row() {
-      Text('当前为临时用户，注册账号可保留所有数据')
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontColor(this.getPalette().textSecondary)
-        .layoutWeight(1)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-      SystemButton({
-        label: '去注册',
-        variant: 'primary',
-        buttonSize: 'small',
-        onPress: () => {
-          AppRouter.push(PageNames.LOGIN, new LoginRouteParam());
-        }
-      })
-    }
-    .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-    .backgroundColor(this.getPalette().accentMuted)
-  }
 
   // ==================== 创建菜单（对齐前端 mobile-create-sheet 三项）====================
   private openCreate(): void {

@@ -60,6 +60,18 @@ export struct NearbyGroupsListPage {
     return null;
   }
 
+  /** 当前列表群组在线成员总数（对齐前端 group-data.ts totalOnline = Σ online_members_count） */
+  private getOnlineTotalCount(): number {
+    let total = 0;
+    for (let index = 0; index < this.groups.length; index++) {
+      const count = this.groups[index].online_members_count;
+      if (count !== null && count !== undefined) {
+        total += count;
+      }
+    }
+    return total;
+  }
+
   /** 位置行副标题（对齐前端 nearby 页 subtitle：{locationName} · 5km 内 / 5km 内） */
   private getLocationSubtitle(): string {
     const name = (this.browseAnchor ?? this.currentLocation)?.locationName ?? '';
@@ -259,6 +271,23 @@ export struct NearbyGroupsListPage {
           Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
             Scroll() {
               Column() {
+                // section header（对齐前端：eyebrow「此刻附近群组」+ status-online trailing）
+                Row() {
+                  Text('此刻附近群组')
+                    .fontSize(DesignConstants.FONT.SIZE.XS2)
+                    .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                    .fontColor(this.getCurrentThemePalette().accentBackground)
+                    .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
+                    .textCase(TextCase.UpperCase)
+                  Blank()
+                  Text(`${this.getOnlineTotalCount()} 人正在群聊`)
+                    .fontSize(DesignConstants.FONT.SIZE.XS)
+                    .fontColor(this.getCurrentThemePalette().online)
+                }
+                .width('100%')
+                .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+                .alignItems(VerticalAlign.Center)
+
                 // 移动/平板端首卡 featured 全宽精选大卡
                 if (this.getFeaturedGroup()) {
                   GroupCard({ group: this.getFeaturedGroup() as GroupItem, featured: true })

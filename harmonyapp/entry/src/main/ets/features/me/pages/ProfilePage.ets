@@ -161,10 +161,7 @@ export struct ProfilePage {
       const nickname = this.viewedUserProfile?.user?.nickname ?? '';
       return nickname.length > 0 ? nickname : '用户资料';
     }
-    // 已登录：展示昵称（与前端 profile header 对齐）
-    if (this.isLoggedIn && this.currentUser?.nickname) {
-      return this.currentUser.nickname;
-    }
+    // 对齐前端 /me 顶栏：固定「个人中心」小标题（不随昵称变化）
     return '个人中心';
   }
 
@@ -741,8 +738,8 @@ export struct ProfilePage {
             this.buildGuestView()
           } else {
             SystemPageHeader({
-              title: this.isExternalProfileMode() ? this.resolveHeaderTitle() : '个人中心',
-              titleSize: this.isExternalProfileMode() ? DesignConstants.FONT.SIZE.XL : DesignConstants.FONT.SIZE.XS2,
+              title: this.resolveHeaderTitle(),
+              titleSize: this.isExternalProfileMode() ? DesignConstants.FONT.SIZE.XL : DesignConstants.FONT.SIZE.XXL,
               titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
               showBackButton: this.isExternalProfileMode(),
               onBack: this.isExternalProfileMode() ? () => { AppRouter.pop(); } : undefined,
@@ -779,16 +776,9 @@ export struct ProfilePage {
                 TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
                   .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
               )
-            } else if (this.userType === 'temp') {
-              Column() {
-                this.buildTempUserView()
-              }
-              .layoutWeight(1)
-              .transition(
-                TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
-              )
             } else {
+              // 对齐前端：游客(temp)与注册用户共用同一套 ProfileMobile 形态，
+              // 不再单独渲染「临时用户视图」（前端 /me 无此分叉）
               Column() {
                 this.buildRegisteredUserView()
               }
@@ -1060,121 +1050,6 @@ export struct ProfilePage {
 
 
   // ==================== 临时用户界面 ====================
-  @Builder
-  private buildTempUserView() {
-    List() {
-      ListItem() {
-        if (this.isEditing) {
-          this.EditFormContent()
-        } else {
-          this.UserInfoContent()
-        }
-      }
-      .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
-      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-      .shadow(this.getProfileVisualStyle().card.shadow)
-      .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
-      .padding(this.getProfileVisualStyle().card.padding)
-      .margin({ bottom: DesignConstants.SPACING.MD })
-
-      ListItem() {
-        this.StatsContent()
-      }
-      .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
-      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-      .shadow(this.getProfileVisualStyle().card.shadow)
-      .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
-      .padding(this.getProfileVisualStyle().card.padding)
-      .margin({ bottom: DesignConstants.SPACING.MD })
-
-      ListItem() {
-        Column({ space: DesignConstants.SPACING.MD }) {
-          Row({ space: DesignConstants.SPACING.SM }) {
-            LucideIcon({
-              icon: AppIcon.INFO,
-              iconSize: DesignConstants.FONT.SIZE.LG,
-              color: this.getWarningTextColor()
-            })
-            Text('临时身份')
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-              .fontColor(this.getWarningTextColor())
-          }
-          .width('100%')
-
-          Text('当前为临时身份，继续注册可保留资料、关系与个性化偏好，让你的触感主题长期保存。')
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .lineHeight(DesignConstants.FONT.LINE_HEIGHT.MD)
-            .fontColor(this.getSecondaryTextColor())
-
-          Button('升级为完整账号')
-            .type(ButtonType.Normal)
-            .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
-            .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-            .width('100%')
-            .height(this.getProfileVisualStyle().primaryButton.height)
-            .padding({
-              left: this.getProfileVisualStyle().primaryButton.horizontalPadding,
-              right: this.getProfileVisualStyle().primaryButton.horizontalPadding
-            })
-            .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
-            .border({ width: this.getProfileVisualStyle().primaryButton.borderWidth, color: this.getProfileVisualStyle().primaryButton.borderColor })
-            .shadow(this.getProfileVisualStyle().primaryButton.shadow)
-            .onClick(() => {
-              this.showUpgradeForm = true;
-            })
-        }
-        .width('100%')
-        .padding(DesignConstants.SPACING.LG)
-      }
-      .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
-      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-      .shadow(this.getProfileVisualStyle().card.shadow)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-      .margin({ bottom: DesignConstants.SPACING.MD })
-
-      ListItemGroup() {
-        ListItem() {
-          ProfileMenuItem({ title: '更新位置', icon: AppIcon.LOCATION, onTap: () => this.updateLocation(), resolvedThemeId: this.resolvedThemeId })
-        }
-        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-
-        ListItem() {
-          ProfileMenuItem({ title: '设置', icon: AppIcon.SETTINGS, onTap: () => {
-            AppRouter.push(PageNames.SETTINGS);
-          }, resolvedThemeId: this.resolvedThemeId })
-        }
-        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-
-        if (this.isAdminUser()) {
-          ListItem() {
-            ProfileMenuItem({ title: '管理员工具台', icon: AppIcon.SHIELD, onTap: () => this.openAdminPanel(), resolvedThemeId: this.resolvedThemeId })
-          }
-          .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-        }
-
-        ListItem() {
-          ProfileMenuItem({ title: '退出登录', icon: AppIcon.CLOSE, onTap: () => { this.showLogoutConfirm = true; }, resolvedThemeId: this.resolvedThemeId })
-        }
-        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-      }
-      .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder(), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
-      .backgroundColor(this.getSurfaceBackground())
-      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-      .shadow(this.getProfileVisualStyle().card.shadow)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-      .margin({ bottom: DesignConstants.SPACING.MD })
-    }
-    .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
-    .backgroundColor(this.getCurrentThemePalette().pageBackground)
-    .backgroundBlurStyle(BlurStyle.Thin)
-    .layoutWeight(1)
-    .scrollBar(BarState.Auto)
-  }
-
   // ==================== 注册用户界面 ====================
   @Builder
   private buildRegisteredUserView() {
@@ -1266,6 +1141,10 @@ export struct ProfilePage {
 
             // 菜单项
             Column({ space: 0 }) {
+              if (this.userType === 'temp') {
+                // 游客升级入口（原「临时用户视图」的唯一功能，保留在菜单）
+                ProfileMenuItem({ title: '升级为完整账号', icon: AppIcon.EDIT, onTap: () => { this.showUpgradeForm = true; }, resolvedThemeId: this.resolvedThemeId })
+              }
               ProfileMenuItem({ title: '更新位置', icon: AppIcon.LOCATION, onTap: () => this.updateLocation(), resolvedThemeId: this.resolvedThemeId })
               ProfileMenuItem({ title: '设置', icon: AppIcon.SETTINGS, onTap: () => { AppRouter.push(PageNames.SETTINGS); }, resolvedThemeId: this.resolvedThemeId })
               if (this.isAdminUser()) {
@@ -1333,8 +1212,9 @@ export struct ProfilePage {
             .fontColor(this.getPrimaryTextColor())
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-          if (this.currentUser?.user_id) {
-            Text(`@${this.currentUser.user_id}`)
+          if (this.currentUser?.nickname) {
+            // 对齐前端：handle 显示 @昵称（前端 ProfileMobile 用 nickname，非 user_id）
+            Text(`@${this.currentUser.nickname}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(this.getSecondaryTextColor())
           }
@@ -1379,6 +1259,13 @@ export struct ProfilePage {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getSecondaryTextColor())
           .lineHeight(DesignConstants.FONT.LINE_HEIGHT.MD)
+          .width('100%')
+          .margin({ top: DesignConstants.SPACING.LG })
+      } else {
+        // 对齐前端：无简介时显示占位文案
+        Text('这个人还没有填写简介。')
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getSecondaryTextColor())
           .width('100%')
           .margin({ top: DesignConstants.SPACING.LG })
       }
@@ -1477,11 +1364,12 @@ export struct ProfilePage {
 
   @Builder
   private buildProfileDataRow(icon: AppIcon, label: string, detail: string, onTap: () => void, divider: boolean) {
+    // 对齐前端 ProfileMobile：圆形 icon-badge(32) + 左侧两行（标题/副标题）+ 右箭头
     Row({ space: DesignConstants.SPACING.MD }) {
       Row() {
         LucideIcon({
           icon: icon,
-          iconSize: DesignConstants.FONT.SIZE.MD,
+          iconSize: DesignConstants.FONT.SIZE.SM,
           color: this.getAccentBackground()
         })
       }
@@ -1491,14 +1379,20 @@ export struct ProfilePage {
       .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
       .justifyContent(FlexAlign.Center)
 
-      Text(label)
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontColor(this.getPrimaryTextColor())
-        .layoutWeight(1)
-
-      Text(detail)
-        .fontSize(DesignConstants.FONT.SIZE.XS)
-        .fontColor(this.getSecondaryTextColor())
+      Column({ space: DesignConstants.SPACING.HALF }) {
+        Text(label)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getPrimaryTextColor())
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(detail)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor(this.getSecondaryTextColor())
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
 
       LucideIcon({
         icon: AppIcon.ARROW_RIGHT,
@@ -1620,13 +1514,15 @@ export struct ProfilePage {
           .fontColor(this.getPrimaryTextColor())
           .alignSelf(ItemAlign.Start)
 
-        Text('设置登录凭证后，你的临时账号将升级为完整账号，所有数据都会保留。')
+        Text('设置用户名与密码后，临时账号将升级为完整账号，所有数据都会保留。')
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor(this.getSecondaryTextColor())
 
         SystemInput({
           value: this.upgradeLoginId,
-          placeholder: '邮箱 / 用户名（登录凭证）',
+          // spec user.md → upgrade：仅用户名型 login_id（手机/邮箱需验证码服务），
+          // placeholder 直接言明，避免用户填完密码才被拒
+          placeholder: '用户名（暂不支持手机号 / 邮箱）',
           inputType: 'email',
           fontSize: DesignConstants.FONT.SIZE.LG,
           onChange: (value: string) => { this.upgradeLoginId = value; },
@@ -1637,7 +1533,7 @@ export struct ProfilePage {
 
         SystemInput({
           value: this.upgradePassword,
-          placeholder: '密码（至少8位）',
+          placeholder: '密码（8-128位，含字母+数字）',
           passwordMode: true,
           fontSize: DesignConstants.FONT.SIZE.LG,
           onChange: (value: string) => { this.upgradePassword = value; },

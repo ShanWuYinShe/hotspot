@@ -7,6 +7,7 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import SectionMoments from '@/components/profile/SectionMoments.svelte';
 	import SectionGroups from '@/components/profile/SectionGroups.svelte';
 	import SectionFriends from '@/components/profile/SectionFriends.svelte';
@@ -36,6 +37,7 @@
 	const locationName = $derived(account.locationName);
 	const loading = $derived(account.loading);
 	const error = $derived(account.error);
+	const needsAuth = $derived(account.needsAuth);
 	const retry = account.retry;
 
 	const SECTION_META: Record<string, { title: string }> = {
@@ -111,6 +113,8 @@
 
 		{#if loading}
 			<InlineLoading label="加载个人资料…" />
+		{:else if needsAuth}
+			<NeedsAuthNotice title="登录后查看" description="登录后即可管理资料、查看互动数据与收藏内容" />
 		{:else if error}
 			<LoadError message={error} onRetry={retry} />
 		{:else}

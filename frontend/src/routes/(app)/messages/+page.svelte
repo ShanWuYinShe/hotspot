@@ -26,6 +26,8 @@
 	let chats = $state<ChatItem[]>([]);
 	let loading = $state(true);
 	let loadError = $state<string | null>(null);
+	// 未登录（10100）是正常业务态：显示登录引导而非错误重试
+	let needsAuth = $state(false);
 	let reloadKey = $state(0);
 	let unwatchPresence: (() => void) | null = null;
 
@@ -36,6 +38,7 @@
 			try {
 				loading = true;
 				loadError = null;
+				needsAuth = false;
 				// 并行加载私聊与我的群组，合并为统一会话列表（按时间倒序）。
 				const [privRes, groupRes] = await Promise.all([
 					getPrivateChats().catch(() => netError({ items: [] })),
@@ -44,6 +47,10 @@
 				if (cancelled) return;
 				const privData = privRes.code === 0 && privRes.data ? privRes.data.items : [];
 				const groupData = groupRes.code === 0 && groupRes.data ? groupRes.data.items : [];
+				if (privRes.code === 10100 || groupRes.code === 10100) {
+					if (!cancelled) needsAuth = true;
+					return;
+				}
 				if (privRes.code !== 0 || groupRes.code !== 0) {
 					if (!cancelled) loadError = privRes.message ?? groupRes.message ?? '加载失败';
 					return;
@@ -223,6 +230,7 @@
 			<ChatListBody
 				chats={filtered}
 				loadError={loadError}
+				needsAuth={needsAuth}
 				loading={loading}
 				onRetry={() => reloadKey++}
 				onSelect={selectChat}
@@ -337,6 +345,7 @@
 		<ChatListBody
 			chats={filtered}
 			loadError={loadError}
+			needsAuth={needsAuth}
 			loading={loading}
 			onRetry={() => reloadKey++}
 			onSelect={(chat) => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}

@@ -472,9 +472,10 @@ export struct LocationPickerPage {
 
   private confirm(): void {
     // 地理编码不可用（模拟器/定位关闭/服务失败）时 resolveLocation 不会被触发，
-    // locationName 保持空串；回退为坐标命名，避免「设为锚点」被永久阻塞
+    // locationName 保持空串；回退为通用占位名（对齐前端：location_name 缺失时
+    // 界面显示「当前位置」，不暴露原始经纬度坐标）。
     if (this.locationName.length === 0) {
-      this.locationName = `${this.centerLat.toFixed(5)}, ${this.centerLng.toFixed(5)}`;
+      this.locationName = '当前位置';
     }
     const wgs84 = CoordinateConverter.convertGcj02ToWgs84(this.centerLat, this.centerLng);
     const location: LocationInfo = {

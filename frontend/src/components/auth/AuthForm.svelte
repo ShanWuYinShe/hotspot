@@ -245,12 +245,8 @@
 
 	{#if mode === 'login' || mode === 'register'}
 		{#if mode === 'login'}
-			<!-- 登录方式选择：表单内标签统一走 TagPill（对齐 AGENTS 表单 chips 契约） -->
-			<div class="flex flex-wrap gap-2">
-				{#each ([['code', '验证码登录'], ['password', '密码登录']] as ['code' | 'password', string][]) as [id, label]}
-					<TagPill active={method === id} onClick={() => (method = id)}>{label}</TagPill>
-				{/each}
-			</div>
+			<!-- 登录方式选择：验证码登录接口 spec 暂无、后端未提供——不展示不可用选项，
+			     避免用户填完表单才被告知「暂未开放」（业务态不可伪装成可用功能） -->
 		{/if}
 		<label class="flex flex-col gap-1.5" for="auth-field-loginId">
 			<span class="text-xs font-medium text-text-secondary"  >手机号、邮箱或账号</span>

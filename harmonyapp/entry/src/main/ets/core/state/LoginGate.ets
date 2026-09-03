@@ -18,15 +18,15 @@ import { PageNames } from '../../constants/AppConstants';
 import { SystemToast } from '../../components/SystemToast';
 
 /** restoreAction 取值（登录后自动补做的动作标识） */
-export const RESTORE_ACTION = {
-  LIKE_MOMENT: 'like_moment',
-  FAVORITE_MOMENT: 'favorite_moment',
-  FOLLOW_USER: 'follow_user',
-  JOIN_GROUP: 'join_group',
-  ENTER_GROUP_CHAT: 'enter_group_chat',
-  OPEN_PRIVATE_CHAT: 'open_private_chat',
-  OPEN_CREATE_SHEET: 'open_create_sheet'
-} as const;
+export class RestoreAction {
+  static readonly LIKE_MOMENT: string = 'like_moment';
+  static readonly FAVORITE_MOMENT: string = 'favorite_moment';
+  static readonly FOLLOW_USER: string = 'follow_user';
+  static readonly JOIN_GROUP: string = 'join_group';
+  static readonly ENTER_GROUP_CHAT: string = 'enter_group_chat';
+  static readonly OPEN_PRIVATE_CHAT: string = 'open_private_chat';
+  static readonly OPEN_CREATE_SHEET: string = 'open_create_sheet';
+}
 
 export interface LoginGateOptions {
   /** 登录后自动补做的动作标识（见 RESTORE_ACTION） */

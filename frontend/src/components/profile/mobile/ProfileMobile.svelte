@@ -6,6 +6,7 @@
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import { useAccountData } from '@/lib/profile-data.svelte';
@@ -24,6 +25,7 @@
 	const locationName = $derived(account.locationName);
 	const loading = $derived(account.loading);
 	const error = $derived(account.error);
+	const needsAuth = $derived(account.needsAuth);
 	const retry = account.retry;
 
 	const DATA_ITEMS = $derived<{ section: ProfileSection; label: string; detail: string; icon: typeof ImageIcon }[]>([
@@ -47,14 +49,19 @@
 			<div class="border-b border-border-default bg-surface-page" >
 				<ContentColumn class="flex items-center justify-between py-3">
 					<p class="eyebrow font-medium text-accent-default">个人中心</p>
-					<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} variant="ghost" size={32} />
+					{#if !needsAuth}
+						<!-- 未登录时设置页无意义，隐藏入口 -->
+						<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} variant="ghost" size={32} />
+					{/if}
 				</ContentColumn>
 			</div>
 	{/snippet}
 
 	{#if loading}
 		<InlineLoading label="加载个人资料…" />
-	{:else if error}
+	{:else if needsAuth}
+		<NeedsAuthNotice title="登录后查看" description="登录后即可管理资料、查看互动数据与收藏内容" />
+{:else if error}
 		<LoadError message={error} onRetry={retry} />
 	{:else}
 		<!-- 身份卡（compact）：头像复用 Avatar，统计横条居中（对齐桌面 MetricRow 原语） -->

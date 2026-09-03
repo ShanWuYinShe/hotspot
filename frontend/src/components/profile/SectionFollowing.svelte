@@ -49,6 +49,7 @@
 	loading={loading}
 	error={rel.error}
 	onRetry={rel.retry}
+	needsAuth={rel.needsAuth}
 	items={filtered}
 >
 	{#snippet children(f)}

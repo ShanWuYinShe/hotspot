@@ -63,12 +63,15 @@ export function useAccountData() {
 	});
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	// 未登录（10100）是正常业务态而非错误：重试无意义，UI 应引导登录
+	let needsAuth = $state(false);
 	let reloadKey = $state(0);
 
 	$effect(() => {
 		void reloadKey;
 		loading = true;
 		error = null;
+		needsAuth = false;
 		getAccount()
 			.then((res) => {
 				if (res.code === 0 && res.data) {
@@ -79,9 +82,10 @@ export function useAccountData() {
 					locationName = d.location?.location_name ?? '';
 					handle = d.nickname ? `@${d.nickname.replace(/\s/g, '_')}` : '';
 					stats = d.stats ?? stats;
+				} else if (res.code === 10100) {
+					needsAuth = true;
 				} else {
-					// 10100（未登录/会话失效）对用户是技术黑话，转成可操作的指引
-					error = res.code === 10100 ? '请先登录后查看个人资料' : (res.message ?? '加载失败');
+					error = res.message ?? '加载失败';
 				}
 			})
 			.catch(() => (error = '网络异常，请稍后重试'))
@@ -113,6 +117,9 @@ export function useAccountData() {
 		get error() {
 			return error;
 		},
+		get needsAuth() {
+			return needsAuth;
+		},
 		retry() {
 			reloadKey++;
 		}
@@ -123,12 +130,14 @@ export function useGalleryMoments(type: 'my' | 'user' = 'my', userId?: string) {
 	let posts = $state<GalleryMoment[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let needsAuth = $state(false);
 	let reloadKey = $state(0);
 
 	$effect(() => {
 		void reloadKey;
 		loading = true;
 		error = null;
+		needsAuth = false;
 		const fetcher =
 			type === 'my' ? listMyMoments : (params: { pagination?: { limit?: number; cursor?: string } }) =>
 					listUserMoments(userId!, params.pagination);
@@ -137,7 +146,7 @@ export function useGalleryMoments(type: 'my' | 'user' = 'my', userId?: string) {
 				if (res.code === 0 && res.data) {
 					posts = res.data.items?.map(mapGalleryMoment) ?? [];
 				} else {
-					error = res.code === 10100 ? '请先登录后查看' : (res.message ?? '加载失败');
+					if (res.code === 10100) { needsAuth = true; } else { error = res.message ?? '加载失败'; }
 				}
 			})
 			.catch(() => (error = '网络异常，请稍后重试'))
@@ -153,6 +162,9 @@ export function useGalleryMoments(type: 'my' | 'user' = 'my', userId?: string) {
 		},
 		get error() {
 			return error;
+		},
+		get needsAuth() {
+			return needsAuth;
 		},
 		retry() {
 			reloadKey++;
@@ -164,18 +176,20 @@ export function useReactedMoments(userId?: string) {
 	let posts = $state<GalleryMoment[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let needsAuth = $state(false);
 	let reloadKey = $state(0);
 
 	$effect(() => {
 		void reloadKey;
 		loading = true;
 		error = null;
+		needsAuth = false;
 		listUserReactedMoments(userId ?? '', { limit: 20 })
 			.then((res) => {
 				if (res.code === 0 && res.data) {
 					posts = res.data.items?.map(mapGalleryMoment) ?? [];
 				} else {
-					error = res.code === 10100 ? '请先登录后查看' : (res.message ?? '加载失败');
+					if (res.code === 10100) { needsAuth = true; } else { error = res.message ?? '加载失败'; }
 				}
 			})
 			.catch(() => (error = '网络异常，请稍后重试'))
@@ -191,6 +205,9 @@ export function useReactedMoments(userId?: string) {
 		},
 		get error() {
 			return error;
+		},
+		get needsAuth() {
+			return needsAuth;
 		},
 		retry() {
 			reloadKey++;
@@ -202,18 +219,20 @@ export function useFavoriteMoments() {
 	let posts = $state<GalleryMoment[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let needsAuth = $state(false);
 	let reloadKey = $state(0);
 
 	$effect(() => {
 		void reloadKey;
 		loading = true;
 		error = null;
+		needsAuth = false;
 		getFavoriteMoments({ pagination: { limit: 20 } })
 			.then((res) => {
 				if (res.code === 0 && res.data) {
 					posts = res.data.items?.map(mapGalleryMoment) ?? [];
 				} else {
-					error = res.code === 10100 ? '请先登录后查看' : (res.message ?? '加载失败');
+					if (res.code === 10100) { needsAuth = true; } else { error = res.message ?? '加载失败'; }
 				}
 			})
 			.catch(() => (error = '网络异常，请稍后重试'))
@@ -229,6 +248,9 @@ export function useFavoriteMoments() {
 		},
 		get error() {
 			return error;
+		},
+		get needsAuth() {
+			return needsAuth;
 		},
 		retry() {
 			reloadKey++;
@@ -360,16 +382,18 @@ export function useMyGroups() {
 	let loading = $state(true);
 
 	let error = $state<string | null>(null);
+	let needsAuth = $state(false);
 	let reloadKey = $state(0);
 
 	$effect(() => {
 		void reloadKey;
 		loading = true;
 		error = null;
+		needsAuth = false;
 		listMyGroups({ pagination: { limit: 20 } })
 			.then((res) => {
 				if (res.code === 0) groups = (res.data.items ?? []).map(mapGroup);
-				else error = res.code === 10100 ? '请先登录后查看' : (res.message ?? '加载失败');
+				else if (res.code === 10100) { needsAuth = true; } else { error = res.message ?? '加载失败'; }
 			})
 			.catch(() => (error = '网络异常，请稍后重试'))
 			.finally(() => (loading = false));
@@ -385,6 +409,9 @@ export function useMyGroups() {
 		get error() {
 			return error;
 		},
+		get needsAuth() {
+			return needsAuth;
+		},
 		retry() {
 			reloadKey++;
 		}
@@ -398,17 +425,20 @@ export function useRelationships() {
 	let followers = $state<MappedFollower[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let needsAuth = $state(false);
 	let reloadKey = $state(0);
 
 	$effect(() => {
 		void reloadKey;
 		loading = true;
 		error = null;
+		needsAuth = false;
 		// spec: users/fetch_friends|following|followers 的 user_id 必传（拉自己的列表也要显式传自己的 user_id）。
 		getAccount()
 			.then((accountRes) => {
 				if (accountRes.code !== 0 || !accountRes.data) {
-					error = accountRes.code === 10100 ? '请先登录后查看' : (accountRes.message ?? '加载失败');
+					if (accountRes.code === 10100) needsAuth = true;
+					else error = accountRes.message ?? '加载失败';
 					loading = false;
 					return;
 				}
@@ -445,6 +475,9 @@ export function useRelationships() {
 		},
 		get error() {
 			return error;
+		},
+		get needsAuth() {
+			return needsAuth;
 		},
 		retry() {
 			reloadKey++;

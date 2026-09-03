@@ -15,12 +15,13 @@ import { Pressable } from '../../../components/Pressable';
 import { NearbyImageCard } from '../../../components/NearbyImageCard';
 import {
   MomentItem, UserItem, GroupItem, GeoPoint,
-  FetchNearbyMomentsRequest, SearchUsersRequest, SearchGroupsRequest,
+  SearchMomentsRequest, SearchUsersRequest, SearchGroupsRequest,
   EnterGroupRequest,
   BlockRequest, CreateReportRequest, Relationship
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemToast } from '../../../components/SystemToast';
+import { LoginGate } from '../../../core/state/LoginGate';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
@@ -138,17 +139,16 @@ export struct HomePage {
   // ==================== 数据加载 ====================
 
   private async loadNearbyMoments(): Promise<void> {
-    const ref = this.getReferencePoint();
-    if (!ref) { this.momentsLoading = false; return; }
     this.momentsLoading = true;
     this.momentsError = '';
     try {
-      // spec moment.md → 附近瞬间走 moments/fetch_nearby（原 feed/nearby 迁移）
-      const request: FetchNearbyMomentsRequest = {
-        reference_point: ref, radius: DefaultConfig.NEARBY_RADIUS,
-        pagination: { limit: 10 }
+      // 对齐前端 fetchHomeFeed：首页「附近活动」数据源为热门瞬间流
+      // searchMoments({ sort_by: 'popular', limit: 12 })，不按位置过滤
+      const request: SearchMomentsRequest = {
+        sort_by: 'popular',
+        pagination: { limit: 12 }
       };
-      const response = await LoadingUtil.withMinimumTime(() => ApiClient.fetchNearbyMoments(request));
+      const response = await LoadingUtil.withMinimumTime(() => ApiClient.searchMoments(request));
       if (this.isDestroyed) return;
       if (response.code === 0) {
         const items = response.data?.items ?? [];
@@ -172,7 +172,7 @@ export struct HomePage {
     try {
       const request: SearchUsersRequest = {
         reference_point: ref, radius: DefaultConfig.NEARBY_RADIUS,
-        sort_by: 'distance', pagination: { limit: 10 }
+        sort_by: 'distance', pagination: { limit: 12 }
       };
       const response = await LoadingUtil.withMinimumTime(() => ApiClient.searchUsers(request));
       if (this.isDestroyed) return;
@@ -203,7 +203,7 @@ export struct HomePage {
     try {
       const request: SearchGroupsRequest = {
         reference_point: ref, radius: DefaultConfig.NEARBY_RADIUS,
-        sort_by: 'distance', pagination: { limit: 10 }
+        sort_by: 'distance', pagination: { limit: 12 }
       };
       const response = await LoadingUtil.withMinimumTime(() => ApiClient.searchGroups(request));
       if (this.isDestroyed) return;
@@ -249,6 +249,14 @@ export struct HomePage {
 
   private async followUser(user: UserItem): Promise<void> {
     if (!user.user?.user_id) return;
+    // 未登录：引导登录（登录后可回跳补做），避免直接调 API 得到「操作失败」
+    if (!LoginGate.requireAction('关注用户', this.getUIContext(), {
+      restoreAction: 'follow_user',
+      restoreTargetId: user.user.user_id,
+      restoreTitle: user.user.nickname ?? ''
+    })) {
+      return;
+    }
     const userId = user.user.user_id;
     if (this.isUserActionPending(userId)) return;
     this.setUserActionPending(userId, true);
@@ -277,8 +285,8 @@ export struct HomePage {
   }
 
   private async joinGroup(group: GroupItem): Promise<void> {
-    if (!this.isLoggedIn) {
-      SystemToast.showWarning('请先登录后再加入群组', this.getUIContext());
+    // 未登录：Toast + 直达登录页（带补做意图），不再只弹 Toast 让用户自己找入口
+    if (!LoginGate.requireAction('加入群组', this.getUIContext())) {
       return;
     }
     const groupId = group.group?.group_id ?? '';
@@ -506,6 +514,7 @@ export struct HomePage {
 
             Text(`${this.getOnlineCount()} 在线`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getPalette().textSecondary)
           }
           .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
@@ -514,15 +523,19 @@ export struct HomePage {
           .backgroundColor(this.getPalette().surfaceBackground)
         }
 
+        // 搜索/地图入口：中性（透明底 + 主文字色图标），对齐前端 PageHeader 末尾
+        // 透明轮廓按钮——避免实色圆钮与下方内容视觉竞争；glyphSize 提到 20 对齐前端中等图标
         SurfaceIconButton({
           icon: AppIcon.SEARCH,
           kind: 'neutral',
+          glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
           onPress: () => AppRouter.push(PageNames.SEARCH)
         })
 
         SurfaceIconButton({
           icon: AppIcon.MAP,
           kind: 'neutral',
+          glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
           onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
         })
       }
@@ -596,10 +609,10 @@ export struct HomePage {
 
       // Stats grid：三段统计 + 竖分割线（数字统一 accent，对齐前端 HeroStats）
       Row({ space: DesignConstants.SPACING.MD }) {
-        // 人附近（接口 limit=10 截断：满 10 显示 10+，标注限定；审查 P2 数据展示诚实）
+        // 人附近（对齐前端：显示实际返回条数，limit 12）
         Column({ space: DesignConstants.SPACING.HALF }) {
-          Text(this.users.length >= 10 ? '10+' : `${this.users.length}`)
-            .fontSize(DesignConstants.FONT.SIZE.XXL)
+          Text(`${this.users.length}`)
+            .fontSize(DesignConstants.FONT.SIZE.XL)
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(this.getPalette().accentBackground)
           Text('人附近')
@@ -618,7 +631,7 @@ export struct HomePage {
         // 活动中（对齐前端 heroStats.active = moments.length）
         Column({ space: DesignConstants.SPACING.HALF }) {
           Text(`${this.moments.length}`)
-            .fontSize(DesignConstants.FONT.SIZE.XXL)
+            .fontSize(DesignConstants.FONT.SIZE.XL)
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(this.getPalette().accentBackground)
           Text('动态')
@@ -637,7 +650,7 @@ export struct HomePage {
         // 在线
         Column({ space: DesignConstants.SPACING.HALF }) {
           Text(`${this.getOnlineCount()}`)
-            .fontSize(DesignConstants.FONT.SIZE.XXL)
+            .fontSize(DesignConstants.FONT.SIZE.XL)
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(this.getPalette().accentBackground)
           Text('在线')
@@ -651,7 +664,10 @@ export struct HomePage {
       .margin({ top: DesignConstants.SPACING.LG })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+    // 页边距对齐前端 px-5(20)：卡本体不可贴屏幕边缘（此前 100% 宽导致边框贴边不可见）
+    .margin({ left: DesignConstants.SPACING.LG2, right: DesignConstants.SPACING.LG2 })
+    // 对齐前端 surface-hero：p-4.5 px-5（上下18 左右20；18 按近邻归并原则取 16/20 档，左右 LG2）
+    .padding({ left: DesignConstants.SPACING.LG2, right: DesignConstants.SPACING.LG2, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
     .borderRadius(DesignConstants.SHAPE.HERO_CARD)
     .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
@@ -728,7 +744,7 @@ export struct HomePage {
   @Builder
   private buildNearbyPeople() {
     Column() {
-      this.buildSectionHeader('附近的人', '查看全部', 0, () => {
+      this.buildSectionHeader('附近的人', '更多', 0, () => {
         AppRouter.push(PageNames.NEARBY_USERS);
       })
 
@@ -800,7 +816,7 @@ export struct HomePage {
       }
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+    .padding({ left: DesignConstants.SPACING.LG2, right: DesignConstants.SPACING.LG2 })
     .margin({ bottom: DesignConstants.SPACING.LG2 })
   }
 
@@ -817,7 +833,7 @@ export struct HomePage {
         SystemAvatar({
           avatarUrl: user.user?.avatar_url ?? '',
           name: user.user?.nickname ?? '',
-          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
           shape: 'circle'
         })
         if (user.presence_status === 'online') {
@@ -829,13 +845,13 @@ export struct HomePage {
             .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getPalette().surfaceBackground })
         }
       }
-      .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+      .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
       .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
 
       Column({ space: DesignConstants.SPACING.XS }) {
         Text(user.user?.nickname ?? '')
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontWeight(DesignConstants.FONT.WEIGHT.REGULAR)
           .fontColor(this.getPalette().textPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -896,7 +912,7 @@ export struct HomePage {
   private buildGroupCarousel() {
     // 附近群组横滑条（对齐前端 GroupCarousel：水平滑动的群组卡片条）
     Column() {
-      this.buildSectionHeader('附近群组', '查看全部', 1, () => {
+      this.buildSectionHeader('附近群组', '更多', 1, () => {
         AppRouter.push(PageNames.NEARBY_GROUPS);
       })
 
@@ -926,7 +942,7 @@ export struct HomePage {
           .margin({ top: DesignConstants.SPACING.HALF })
       } else {
         Scroll() {
-          Row({ space: DesignConstants.SPACING.SM }) {
+          Row({ space: DesignConstants.SPACING.MD }) {
             if (this.groupsLoading && this.groups.length === 0) {
               // loading skeleton
               Column()
@@ -941,20 +957,25 @@ export struct HomePage {
                 .backgroundColor(this.getPalette().surfaceSubtle)
             } else {
               ForEach(this.groups, (group: GroupItem) => {
-                this.buildGroupCarouselCard(group)
+                // 固定卡宽容器：NearbyImageCard 依赖外部宽度测量，横滚 Row 不提供宽度约束
+                Column() {
+                  this.buildGroupCarouselCard(group)
+                }
+                .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
               }, (group: GroupItem) => group.group?.group_id ?? '')
             }
           }
-          .width('100%')
+          // 横滚容器：Row 宽度自适应内容，钉死 100% 会把溢出卡片裁掉（只显示首卡）
           .padding({ left: DesignConstants.SPACING.XS })
         }
+        .align(Alignment.Start)
         .scrollBar(BarState.Auto)
         .scrollable(ScrollDirection.Horizontal)
         .width('100%')
       }
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+    .padding({ left: DesignConstants.SPACING.LG2, right: DesignConstants.SPACING.LG2 })
     .margin({ bottom: DesignConstants.SPACING.LG2 })
   }
 
@@ -1081,7 +1102,7 @@ export struct HomePage {
       }
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+    .padding({ left: DesignConstants.SPACING.LG2, right: DesignConstants.SPACING.LG2 })
     .margin({ bottom: DesignConstants.SPACING.XL })
   }
 
@@ -1124,24 +1145,25 @@ export struct HomePage {
       Column() {
         LucideIcon({
           icon: this.activityIcon(index),
-          iconSize: DesignConstants.FONT.SIZE.MD,
+          iconSize: DesignConstants.FONT.SIZE.LG,
           color: this.activityAccent(index)
         })
       }
-      .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
-      .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
+      // 对齐前端 size-8.5(34px) 图标圆底
+      .width(34)
+      .height(34)
       .borderRadius(DesignConstants.RADIUS.SM)
       .backgroundColor(this.activitySoftBg(index))
       .justifyContent(FlexAlign.Center)
 
       Column({ space: DesignConstants.SPACING.XS }) {
         Text(moment.description || '分享了一条动态')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor(this.getPalette().textPrimary)
-          .maxLines(1)
+          .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         Text(moment.location?.location_name ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getPalette().textSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -1152,12 +1174,12 @@ export struct HomePage {
 
       LucideIcon({
         icon: AppIcon.ARROW_RIGHT,
-        iconSize: DesignConstants.FONT.SIZE.SM,
+        iconSize: DesignConstants.FONT.SIZE.MD,
         paletteRole: 'textSecondary'
       })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM2 + DesignConstants.SPACING.HALF + 1, bottom: DesignConstants.SPACING.SM2 + DesignConstants.SPACING.HALF + 1 })
     // 整行按压反馈（对齐 tap-97 语义）
     .scale(this.pressedMomentKey === moment.moment_id ?
       { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :

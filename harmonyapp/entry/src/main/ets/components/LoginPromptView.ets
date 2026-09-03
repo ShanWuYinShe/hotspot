@@ -23,6 +23,7 @@ import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { KeyboardDismissManager } from '../core/utils/KeyboardDismissManager';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { LucideIcon } from './LucideIcon';
 
@@ -61,24 +62,27 @@ export struct LoginPromptView {
 
   build() {
     Column({ space: DesignConstants.SPACING.LG2 }) {
-      // 图标（accent 淡底圆容器 + 主题色 glyph + 光晕，对齐前端 EmptyState 柔和 accent 图标）
+      // 图标（accent 淡底圆容器 + 主题色 glyph + 光晕，对齐前端 EmptyState 柔和 accent 图标）。
+      // 容器放大到 AVATAR_LARGE(80) + 用 AppThemeVisuals 派生的更明亮 accent-soft 背景（vibrant light
+      // 主题下 #E2EAF8 实色与页面 #F7FAFF 太接近，导致空态图标区"灰暗没层次"；加深到
+      // accent-primary 18% 叠加色以拉开层次，对齐前端柔和 accent 视觉）。
       Stack() {
         Column()
-          .width(DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE)
-          .height(DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE)
+          .width(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
+          .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
           .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(this.getPalette().accentMuted)
+          .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().accentBackground, 0.18))
           .shadow(this.getPalette().accentShadow)
 
         LucideIcon({
           icon: this.icon,
-          iconSize: DesignConstants.FONT.SIZE.XXXL,
+          iconSize: DesignConstants.FONT.SIZE.HERO,
           color: this.getPalette().accentBackground
         })
         .opacity(DesignConstants.OPACITY.EMPHASIZED)
       }
-      .width(DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE)
-      .height(DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE)
+      .width(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
+      .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
       .margin({ bottom: DesignConstants.SPACING.LG })
 
       // 主标题

@@ -4,6 +4,7 @@
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { useMyGroups } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -19,6 +20,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	const groups = $derived(myGroups.groups);
 	const loading = $derived(myGroups.loading);
 	const error = $derived(myGroups.error);
+const needsAuth = $derived(myGroups.needsAuth);
 	const retry = myGroups.retry;
 	const filtered = $derived(groups.filter((g) => searchQ === '' || g.name.toLowerCase().includes(searchQ.toLowerCase())));
 	const totalOnline = $derived(groups.reduce((sum, g) => sum + (g.online ?? 0), 0));
@@ -40,6 +42,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 <!-- 横向媒体卡网格（对齐 Figma：1/2 列，min-h 148px，左 banner + 右详情） -->
 {#if loading}
 	<InlineLoading class="py-16" label="加载我的群组…" />
+{:else if needsAuth}
+	<NeedsAuthNotice title="登录后查看" description="登录后即可查看你加入的群组" />
 {:else if error}
 	<LoadError message={error} onRetry={retry} />
 {:else if filtered.length > 0}

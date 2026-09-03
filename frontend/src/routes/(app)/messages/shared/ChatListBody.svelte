@@ -3,6 +3,7 @@
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ChatListItem from '@/components/messages/ChatListItem.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import type { ChatItem } from '@/lib/chat-list';
@@ -13,6 +14,7 @@
 	let {
 		chats,
 		loadError,
+		needsAuth,
 		loading,
 		onRetry,
 		onSelect,
@@ -23,6 +25,8 @@
 	}: {
 		chats: ChatItem[];
 		loadError: string | null;
+		/** 未登录（10100）：显示登录引导而非错误重试 */
+		needsAuth: boolean;
 		loading: boolean;
 		onRetry: () => void;
 		onSelect: (chat: ChatItem) => void;
@@ -33,7 +37,9 @@
 	} = $props();
 </script>
 
-{#if loadError}
+{#if needsAuth}
+	<NeedsAuthNotice title="登录后查看" description="登录后即可查看和发起会话" />
+{:else if loadError}
 	<div class={fill ? 'flex flex-1 flex-col items-center justify-center px-4 py-10' : ''}>
 		<LoadError message={loadError} {onRetry} />
 	</div>

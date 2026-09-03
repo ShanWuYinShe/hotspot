@@ -75,16 +75,11 @@ export struct PhoneLayout {
   @Prop resolvedThemeId: string = 'vibrant_light';
 
   // 内部状态
-  @State showUpgradeBanner: boolean = false;
   /** 当前按下的底部导航 Tab 索引（-1 表示无），用于按下缩放反馈，对齐前端 hover-btn:active */
   @State pressedTabIndex: number = -1;
   @State private tabletFabPressed: boolean = false;
 
   private tabsController: TabsController = new TabsController();
-
-  aboutToAppear() {
-    this.showUpgradeBanner = this.isLoggedIn && this.userType === 'temp';
-  }
 
   build() {
     Stack() {
@@ -115,14 +110,6 @@ export struct PhoneLayout {
           TabContent() {
             if (this.isLoggedIn) {
               Column() {
-                if (this.showUpgradeBanner) {
-                  // banner 顶入安全区上方：补 safeAreaTop 避让状态栏（对齐 MessagePage 头部避让）
-                  Column() {
-                    this.UpgradeBanner()
-                  }
-                  .width('100%')
-                  .padding({ top: this.safeAreaTop })
-                }
                 MessagePage()
               }.width('100%').height('100%')
             } else {
@@ -236,7 +223,7 @@ export struct PhoneLayout {
               : this.getPalette().tabBarInactive
           )
           .fontWeight(
-            this.currentTabIndex === index ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR
+            this.currentTabIndex === index ? DesignConstants.FONT.WEIGHT.SEMIBOLD : DesignConstants.FONT.WEIGHT.REGULAR
           )
           .margin({ top: DesignConstants.SPACING.HALF })
       }
@@ -441,25 +428,5 @@ export struct PhoneLayout {
       onClose: () => { this.showCreateSheet = false; },
       onSwitchToGroup: () => { AppRouter.push(PageNames.CREATE_GROUP); }
     })
-  }
-
-  @Builder UpgradeBanner() {
-    Row() {
-      Text('当前为临时用户，注册账号可保留所有数据')
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontColor(this.getPalette().textSecondary)
-        .layoutWeight(1)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-      SystemButton({
-        label: '去注册',
-        variant: 'primary',
-        buttonSize: 'small',
-        onPress: () => AppRouter.push(PageNames.LOGIN, new LoginRouteParam())
-      })
-    }
-    .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-    .backgroundColor(this.getPalette().accentMuted)
   }
 }

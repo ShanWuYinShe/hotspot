@@ -4,6 +4,7 @@
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import MediaPlaceholder from '@/components/data-display/MediaPlaceholder.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import { openComposer } from '@/stores/composer.svelte';
@@ -26,6 +27,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	const archive = $derived(postsMap[activeTab]);
 	const loading = $derived(activeTab === 'posts' ? myPosts.loading : activeTab === 'liked' ? reacted.loading : savedP.loading);
 	const error = $derived(activeTab === 'posts' ? myPosts.error : activeTab === 'liked' ? reacted.error : savedP.error);
+	const needsAuth = $derived(
+		activeTab === 'posts' ? myPosts.needsAuth : activeTab === 'liked' ? reacted.needsAuth : savedP.needsAuth
+	);
 	const retryActive = () => {
 		if (activeTab === 'posts') myPosts.retry();
 		else if (activeTab === 'liked') reacted.retry();
@@ -57,6 +61,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 <div>
 		{#if loading}
 			<InlineLoading label="加载我的瞬间…" />
+		{:else if needsAuth}
+			<NeedsAuthNotice title="登录后查看" description="登录后即可查看你的瞬间与收藏" />
 		{:else if error}
 			<LoadError message={error} onRetry={retryActive} />
 		{:else if archive.length === 0}

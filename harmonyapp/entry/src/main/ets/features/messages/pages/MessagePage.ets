@@ -652,6 +652,8 @@ export struct MessagePage {
           .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
           .justifyContent(FlexAlign.Center)
           .borderRadius(DesignConstants.RADIUS.FULL)
+          // 对齐前端 surface-flat 圆钮（size-9 浅底圆形 + 次色 Plus）
+          .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
           .bindMenu([
             {
               value: '发起群聊',
@@ -736,7 +738,7 @@ export struct MessagePage {
           LucideIcon({
             icon: AppIcon.INFO,
             iconSize: DesignConstants.FONT.SIZE.SM,
-            paletteRole: 'accentText'
+            paletteRole: 'textSecondary'
           })
           Text('宽屏模式：点击左侧会话将在新页面打开聊天窗口')
             .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -789,7 +791,17 @@ export struct MessagePage {
         )
       } else if (!this.hasData) {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          EmptyState({ icon: AppIcon.MESSAGE, title: '还没有消息', message: '登录后即可查看和发起会话' })
+          // 空会话对齐前端：裸气泡图标 + muted「没有找到会话」（无卡片容器）
+          Column() {
+            Text('最近')
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+              .width('100%')
+              .padding({ left: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM })
+            EmptyState({ icon: AppIcon.MESSAGE, message: '没有找到会话', bare: true })
+              .margin({ top: DesignConstants.SPACING.XXL })
+          }
+          .width('100%')
         }
         .layoutWeight(1)
         .onRefreshing(() => { this.loadData(true, true); })

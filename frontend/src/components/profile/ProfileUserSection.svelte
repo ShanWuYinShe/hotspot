@@ -2,6 +2,7 @@
 	import type { Component, Snippet } from 'svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
@@ -33,6 +34,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		embedded = false,
 		loading = false,
 		error = null,
+		needsAuth = false,
 		onRetry,
 		items,
 		children
@@ -56,6 +58,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		loading?: boolean;
 		/** 加载失败信息：非空时列表区渲染 LoadError（重试走 onRetry），不落空态 */
 		error?: string | null;
+		/** 未登录（10100）：显示登录引导而非错误重试 */
+		needsAuth?: boolean;
 		onRetry?: () => void;
 		items: T[];
 		children: Snippet<[T]>;
@@ -119,6 +123,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		<div class="grid w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
 			{#if loading}
 				<div class="col-span-full"><InlineLoading class="py-16" label="加载中…" /></div>
+			{:else if needsAuth}
+				<NeedsAuthNotice title="登录后查看" description="登录后即可查看你的好友与关注关系" />
 			{:else if error}
 				<div class="col-span-full">
 					<LoadError message={error} onRetry={onRetry} />
@@ -143,6 +149,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		<div>
 			{#if loading}
 				<InlineLoading class="py-16" label="加载中…" />
+			{:else if needsAuth}
+				<NeedsAuthNotice title="登录后查看" description="登录后即可查看你的好友与关注关系" />
 			{:else if error}
 				<LoadError message={error} onRetry={onRetry} />
 			{:else if items.length === 0}

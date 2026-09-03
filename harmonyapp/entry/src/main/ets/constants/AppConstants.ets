@@ -4,12 +4,22 @@
  */
 
 import { DEBUG } from 'BuildProfile';
+import { deviceInfo } from '@kit.BasicServicesKit';
 
 // API 配置：根据构建模式自动切换
-// debug  → 开发服务器（docker compose 的 nginx 网关，局域网 IP，端口 = .env NGINX_PORT 默认 8888）
+// debug  → 开发服务器（docker compose 的 nginx 网关，端口 = .env NGINX_PORT 默认 8888）
 // release → 正式域名
-const DEV_SERVER = 'http://192.168.0.103:8888';
+// 设备拓扑（运行时自动区分，不再手改 IP）：
+// - 模拟器（QEMU 用户态 NAT）：10.0.2.2 直达宿主机最稳定（局域网 IP 经 SLIRP
+//   转发延迟极高 ~60s 会超时）
+// - 真机：宿主机 127.0.0.1:8888，配合 USB 反向转发
+//   `hdc -t <设备序列号> fport tcp:8888 tcp:8888`（等价 adb reverse，不依赖 WiFi）
+const EMULATOR_DEV_SERVER = 'http://10.0.2.2:8888';
+const REAL_DEVICE_DEV_SERVER = 'http://127.0.0.1:8888';
 const PROD_SERVER = 'https://api.chaoset.com';
+
+const IS_EMULATOR: boolean = deviceInfo.productModel.toLowerCase().includes('emulator');
+const DEV_SERVER: string = IS_EMULATOR ? EMULATOR_DEV_SERVER : REAL_DEVICE_DEV_SERVER;
 
 export const SERVER_BASE_URL: string = DEBUG ? DEV_SERVER : PROD_SERVER;
 
