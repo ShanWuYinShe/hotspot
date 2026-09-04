@@ -27,6 +27,7 @@ import { AppThemeVisuals, InputBorderResolution } from '../../../core/theme/AppT
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
+import { isDesktopForm } from '../../../core/responsive/Breakpoint';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
@@ -882,7 +883,9 @@ export struct SearchPage {
         }, (item: MomentItem) => item.moment_id)
       }
       .width('100%').height('100%')
-      .columnsTemplate('1fr 1fr')
+      // 桌面 3 列瀑布流（与 MomentsFeedPage getWallColumns 契约对齐），
+      // 平板/手机 2 列紧凑保留
+      .columnsTemplate(isDesktopForm(this.currentBreakpoint) ? '1fr 1fr 1fr' : '1fr 1fr')
       .columnsGap(DesignConstants.SPACING.MD)
       .rowsGap(DesignConstants.SPACING.MD)
       .padding({ top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })

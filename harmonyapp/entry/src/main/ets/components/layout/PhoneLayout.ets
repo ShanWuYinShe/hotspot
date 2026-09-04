@@ -22,6 +22,7 @@ import { MessagePage } from '../../features/messages/pages/MessagePage';
 import { ProfilePage } from '../../features/me/pages/ProfilePage';
 import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
 import { LoginPromptView } from '../LoginPromptView';
+import { type BreakpointType, isWideForm } from '../../core/responsive/Breakpoint';
 import { NotificationCenter } from '../NotificationCenter';
 import { NotificationBanner } from '../NotificationBanner';
 import { PerformanceIndicator } from '../PerformanceIndicator';
@@ -73,6 +74,8 @@ export struct PhoneLayout {
   @Prop safeAreaTop: number = 0;
   @Prop isTablet: boolean = false;
   @Prop resolvedThemeId: string = 'vibrant_light';
+  /** 实时断点（AppStorage 写入），用于在 PhoneLayout 内决策宽屏通知侧栏 */
+  @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
 
   // 内部状态
   /** 当前按下的底部导航 Tab 索引（-1 表示无），用于按下缩放反馈，对齐前端 hover-btn:active */
@@ -139,7 +142,10 @@ export struct PhoneLayout {
         .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().tabBarBackground, 0.9))
         .layoutWeight(1)
         .padding({ bottom: this.safeAreaBottom })
-        .constraintSize({ maxWidth: this.isTablet ? 720 : Infinity })
+        // 不在 Tabs 容器再加 maxWidth 约束：各页面通过 PageShellContainer / ResponsiveContainer
+        // 按断点自管宽度。原先 isTablet ? 720 会把 ≥960vp 开启的 master-detail 双栏
+        // （HomePage / MomentsFeedPage 右栏 420/220）挤在 720vp 内、左侧被压到 300/500vp，
+        // 与 useMasterDetail 的设计意图冲突。
 
         // 平板浮动药丸底栏（Tabs 系统 bar 已隐藏，用自定义浮动药丸替代，对齐前端 TabletBottomNav）
         if (this.isTablet) {
@@ -149,24 +155,53 @@ export struct PhoneLayout {
       .width('100%')
       .height('100%')
 
-      // 通知中心 overlay（模态遮罩，保留在叠加层；淡入淡出对齐 DesktopLayout）
+      // 通知中心 overlay：
+      // - 窄屏（< 960vp）：全屏模态遮罩（与原行为一致，遮罩外点击关闭）
+      // - 宽屏（≥ 960vp / 平板横屏 / 折叠屏展开）：右侧滑出侧栏卡片（约 420vp），
+      //   整页不被通知中心全屏接管（与「桌面侧边栏常驻 + 通知/详情内嵌」心智一致）
       if (this.showNotificationCenter) {
-        Stack() {
-          Column()
+        if (isWideForm(this.currentBreakpoint)) {
+          Stack({ alignContent: Alignment.Center }) {
+            Column()
+              .width('100%').height('100%')
+              .backgroundColor(this.getPalette().overlayStrong)
+              .transition(TransitionEffect.OPACITY
+                .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT }))
+              .onClick(() => { this.showNotificationCenter = false; })
+            Row() {
+              Blank().layoutWeight(1)
+              Column() {
+                NotificationCenter({ onClose: () => { this.showNotificationCenter = false; } })
+              }
+              .width(DesignConstants.LAYOUT.HOME_COLUMN_WIDTH)
+              .height('100%')
+              .backgroundColor(this.getPalette().pageBackground)
+              .borderRadius({ topLeft: DesignConstants.SHAPE.HERO_CARD, bottomLeft: DesignConstants.SHAPE.HERO_CARD })
+              .shadow(this.getPalette().elevatedShadow)
+              .transition(TransitionEffect.OPACITY
+                .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT }))
+            }
             .width('100%').height('100%')
-            .backgroundColor(this.getPalette().overlayStrong)
-            .transition(TransitionEffect.OPACITY
-              .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT }))
-            .onClick(() => { this.showNotificationCenter = false; })
-          Column() {
-            NotificationCenter({ onClose: () => { this.showNotificationCenter = false; } })
           }
           .width('100%').height('100%')
-          .backgroundColor(this.getPalette().pageBackground)
-          .transition(TransitionEffect.OPACITY
-            .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT }))
+        } else {
+          Stack() {
+            Column()
+              .width('100%').height('100%')
+              .backgroundColor(this.getPalette().overlayStrong)
+              .transition(TransitionEffect.OPACITY
+                .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT }))
+              .onClick(() => { this.showNotificationCenter = false; })
+            Column() {
+              NotificationCenter({ onClose: () => { this.showNotificationCenter = false; } })
+            }
+            .width('100%').height('100%')
+            .backgroundColor(this.getPalette().pageBackground)
+            .transition(TransitionEffect.OPACITY
+              .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT }))
+          }
+          .width('100%').height('100%')
         }
-        .width('100%').height('100%')
       }
 
       // 性能详情 overlay（模态，保留在叠加层）

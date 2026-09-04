@@ -175,8 +175,11 @@
 	);
 	const onlineChats = $derived(liveChats.filter((c) => c.online));
 	const totalUnread = $derived(chats.reduce((s, c) => s + c.unread, 0));
-	// 平板与桌面共用分栏（对齐 Figma Make：platform !== 'mobile' 即桌面分栏）
-	const isDesktop = $derived(platform.platform !== 'mobile');
+	// 分栏阈值 = 桌面 OR 宽平板（≥960px / isWideTablet）。
+	// 紧凑平板（600-959）走移动端单列流程：w-75=300px 左列 + 余宽聊天的分栏在
+	// 600-700vp 视口下会让右侧聊天被压到 300-400px，Tap & 键入都难用。
+	// 与 harmonyapp WIDE_MIN_VP=960 一致，让两端在"宽平板才分栏"上对齐。
+	const isDesktop = $derived(platform.platform === 'desktop' || platform.isWideTablet);
 	const selectedChat = $derived(liveChats.find((c) => c.id === selectedId));
 </script>
 <svelte:head>

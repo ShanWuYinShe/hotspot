@@ -159,8 +159,12 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				<Radar class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
 			{/snippet}
 		</EmptyState>
-	{:else if platform.platform !== 'mobile'}
-		<!-- Desktop/Tablet：左摘要栏 + 右用户列表（正文多列 grid，随页面统一滚动） -->
+	{:else if platform.platform === 'desktop'}
+		<!-- Desktop：左摘要栏（340px fixed）+ 右用户列表（两栏 grid）
+		     平板（600-1279）不进入此分支：固定的 340px 在 ≤880vp 时会把右列压到
+		     ≤500px、600-700vp 时压到 ≤260px，使 NearbyUserRows 不可读。平板直接走
+		     homeContent（单栏堆叠，4 条人物推荐 + 查看全部），与移动端保持同款
+		     内容密度。 -->
 		<div class="grid grid-cols-[21.25rem_minmax(0,1fr)] gap-6">
 			<!-- Left: hero + activity + groups (340px) -->
 			<div class="flex flex-col gap-6 border-r border-border-default pr-6">
