@@ -126,7 +126,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 {/snippet}
 
 	<StandardPageLayout
-		contentClassName={platform.platform === 'mobile' ? 'animate-fade-in flex flex-col gap-7 pt-4 pb-6' : 'animate-fade-in pt-4 pb-6'}
+		contentClassName={platform.platform === 'mobile' ? 'animate-fade-in flex flex-col gap-5 pt-4 pb-6' : 'animate-fade-in pt-4 pb-6'}
 	>
 	{#snippet header()}
 		<!-- ═══ 首页 — 统一 PageHeader（三端同标题；附近内容拆分到 /nearby 聚合页）═══ -->

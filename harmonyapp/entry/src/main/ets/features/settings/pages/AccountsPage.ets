@@ -313,21 +313,19 @@ export struct AccountsPage {
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.LG)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
-            // 当前账号 accent 边框选中指示（原仅小徽章「当前」，选中态过弱）
+            // 边框只留给当前账号做 accent 选中指示；非当前账号无描边，
+            // 避免多账号时整页变成「一排框」
             .border({
               width: this.currentUserId === acc.user_id ?
-              DesignConstants.BORDER_WIDTH.REGULAR :
-              DesignConstants.BORDER_WIDTH.HAIRLINE,
-              color: this.currentUserId === acc.user_id ?
-              this.getCurrentThemePalette().accentBackground :
-              this.getSurfaceBorder()
+              DesignConstants.BORDER_WIDTH.REGULAR : 0,
+              color: this.getCurrentThemePalette().accentBackground
             })
             .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD3 })
           }, (acc: AuthData) => acc.user_id)
         }
         .width('100%')
         .layoutWeight(1)
-        .scrollBar(BarState.Auto)
+        .scrollBar(BarState.Off)
         .padding({
           top: DesignConstants.SPACING.SM,
           bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)

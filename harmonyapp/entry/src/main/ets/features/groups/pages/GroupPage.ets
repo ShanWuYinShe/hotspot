@@ -601,7 +601,7 @@ export struct GroupPage {
         .divider({ strokeWidth: 0 })
         .width('100%')
         .layoutWeight(1)
-        .scrollBar(BarState.Auto)
+        .scrollBar(BarState.Off)
         .cachedCount(5)
         .onReachEnd(() => { this.loadMoreMyInvites(); })
       }
@@ -721,7 +721,7 @@ export struct GroupPage {
         .divider({ strokeWidth: 0 })
         .width('100%')
         .layoutWeight(1)
-        .scrollBar(BarState.Auto)
+        .scrollBar(BarState.Off)
         .cachedCount(5)
         .onReachEnd(() => { this.loadMoreMyApplications(); })
       }
@@ -805,13 +805,12 @@ export struct GroupPage {
     }
     .divider({ strokeWidth: 0 })
     .width('100%')
+    // 横向留白由外层 PageShellContainer 统一提供，这里不再叠加（否则双重 16vp 缩进）
     .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.SM,
       bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
     })
-    .scrollBar(BarState.Auto)
+    .scrollBar(BarState.Off)
     .cachedCount(5)
     .onReachEnd(() => { this.loadMoreGroups(); })
   }

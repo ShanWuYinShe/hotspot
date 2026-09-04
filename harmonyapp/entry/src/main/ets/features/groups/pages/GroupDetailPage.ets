@@ -1373,7 +1373,7 @@ export struct GroupDetailPage {
         }
         .width('100%')
         .layoutWeight(1)
-        .scrollBar(BarState.Auto)
+        .scrollBar(BarState.Off)
         .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
         .padding({
           bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
@@ -1563,7 +1563,7 @@ export struct GroupDetailPage {
       }
       .width('100%')
       .layoutWeight(1)
-      .scrollBar(BarState.Auto)
+      .scrollBar(BarState.Off)
     }
     .width('100%')
     .height('100%')
@@ -1630,8 +1630,8 @@ export struct GroupDetailPage {
         }
         .width('100%')
         .layoutWeight(1)
-        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-        .scrollBar(BarState.Auto)
+        // 横向留白由外层 PageShellContainer 统一提供，这里不再叠加
+        .scrollBar(BarState.Off)
         .cachedCount(5)
         .onReachEnd(() => { this.loadMoreMembers(); })
       } else {
@@ -1707,8 +1707,8 @@ export struct GroupDetailPage {
         }
         .width('100%')
         .layoutWeight(1)
-        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-        .scrollBar(BarState.Auto)
+        // 横向留白由外层 PageShellContainer 统一提供，这里不再叠加
+        .scrollBar(BarState.Off)
         .cachedCount(5)
         .onReachEnd(() => { this.loadMoreGroupApplications(); })
       } else {

@@ -47,8 +47,9 @@ export struct SystemCard {
   @Prop variant: CardVariant = CardVariant.DEFAULT;
   // 新增：圆角大小（重命名为 cardBorderRadius 避免冲突）
   @Prop cardBorderRadius: number = DesignConstants.SHAPE.CARD;
-  // 新增：是否显示边框
-  @Prop showBorder: boolean = true;
+  // 是否显示边框（默认关闭：卡片层级靠 surface 分层与阴影表达，1vp 描边满屏
+  // 叠加会让移动端呈现「框框」碎片感；需要描边的调用方显式传 true 或用 OUTLINED 变体）
+  @Prop showBorder: boolean = false;
   // 新增：边框颜色（使用系统颜色）
   @Prop cardBorderColor: ResourceColor | string = '';
 
@@ -121,7 +122,8 @@ export struct SystemCard {
   }
 
   private getBorder(): BorderConfig {
-    if (!this.showBorder) {
+    // OUTLINED 变体的语义就是描边样式，无视 showBorder 默认值
+    if (!this.showBorder && this.variant !== CardVariant.OUTLINED) {
       return { width: 0, color: DesignConstants.COLOR.TRANSPARENT };
     }
     const baseColor = (this.cardBorderColor || this.getPalette().floatingBorderColor ||
@@ -328,7 +330,6 @@ export struct MasonryCard {
       .backgroundColor(this.getPalette().surfaceBackground)
       .borderRadius(this.cardRadius)
       .shadow(this.getPalette().surfaceShadow)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
       .scale(this.clickable && this.isPressed ?
         { x: DesignConstants.INTERACTION.SCALE_PRESSED_MASONRY, y: DesignConstants.INTERACTION.SCALE_PRESSED_MASONRY } :
         { x: 1, y: 1 })

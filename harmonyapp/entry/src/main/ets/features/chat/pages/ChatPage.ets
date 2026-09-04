@@ -1281,6 +1281,7 @@ export struct ChatPage {
         }, (msg: ChatMessage) => msg.id)
 
       }
+      .scrollBar(BarState.Off)
       .width('100%')
       .layoutWeight(1)
       .cachedCount(8)

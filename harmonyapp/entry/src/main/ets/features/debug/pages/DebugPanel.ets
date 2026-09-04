@@ -150,6 +150,7 @@ export struct DebugPanel {
                 })
             }
           }
+          .scrollBar(BarState.Off)
           .columnsTemplate('1fr 1fr')
           .rowsGap(DesignConstants.SPACING.SM)
           .columnsGap(DesignConstants.SPACING.SM)
@@ -172,6 +173,7 @@ export struct DebugPanel {
               }
             }, (_item: string, index: number) => index.toString())
           }
+          .scrollBar(BarState.Off)
           .width('100%')
           .height(DesignConstants.COMPONENT.LOG_AREA_HEIGHT)
           .backgroundColor(this.getSurfaceBackground())
@@ -181,6 +183,7 @@ export struct DebugPanel {
         .padding(DesignConstants.SPACING.LG)
         .width('100%')
       }
+      .scrollBar(BarState.Off)
       .layoutWeight(1)
     }
     .width('100%')

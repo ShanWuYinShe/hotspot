@@ -316,7 +316,10 @@ const FILTER_TABS = [
 				{:else if loadError}
 					<LoadError message={loadError} onRetry={() => reloadKey++} />
 				{:else if filtered.length === 0}
-					<EmptyState title="暂无通知">
+					<EmptyState
+						title={filter === 'all' ? '暂无通知' : '该分类下暂无通知'}
+						description="收到的点赞、评论与关注会出现在这里"
+					>
 						{#snippet icon()}
 							<Bell class="size-6 opacity-muted text-text-secondary"  strokeWidth={1.5} />
 						{/snippet}

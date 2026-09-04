@@ -440,6 +440,7 @@ export struct SearchPage {
               }
             }, (item: SearchSuggestItem, index?: number) => this.getSuggestKey(item, index ?? 0))
           }
+          .scrollBar(BarState.Off)
           .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
           .layoutWeight(1)
           .width('100%')
@@ -567,7 +568,7 @@ export struct SearchPage {
       .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
       .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-      .scrollBar(BarState.Auto)
+      .scrollBar(BarState.Off)
     }
   }
 
@@ -627,7 +628,7 @@ export struct SearchPage {
       .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
       .padding({ top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
-      .scrollBar(BarState.Auto)
+      .scrollBar(BarState.Off)
     }
   }
 
@@ -802,7 +803,7 @@ export struct SearchPage {
     }
     .width('100%')
     .layoutWeight(1)
-    .scrollBar(BarState.Auto)
+    .scrollBar(BarState.Off)
     .align(Alignment.Top)
     .edgeEffect(EdgeEffect.Spring)
   }
@@ -831,7 +832,7 @@ export struct SearchPage {
       .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
       .padding({ top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
-      .scrollBar(BarState.Auto)
+      .scrollBar(BarState.Off)
     }
   }
 
@@ -859,7 +860,7 @@ export struct SearchPage {
       .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
       .padding({ top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
-      .scrollBar(BarState.Auto)
+      .scrollBar(BarState.Off)
     }
   }
 
@@ -882,6 +883,7 @@ export struct SearchPage {
           .width('100%')
         }, (item: MomentItem) => item.moment_id)
       }
+      .scrollBar(BarState.Off)
       .width('100%').height('100%')
       // 桌面 3 列瀑布流（与 MomentsFeedPage getWallColumns 契约对齐），
       // 平板/手机 2 列紧凑保留

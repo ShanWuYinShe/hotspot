@@ -885,7 +885,7 @@ export struct MessagePage {
             })
           }
           .width('100%')
-          .scrollBar(BarState.Auto)
+          .scrollBar(BarState.Off)
           .edgeEffect(EdgeEffect.Spring)
           .onReachEnd(() => { this.loadMore(); })
         }

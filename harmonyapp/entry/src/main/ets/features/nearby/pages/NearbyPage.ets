@@ -132,7 +132,7 @@ export struct NearbyPage {
         }
         .width('100%')
         .layoutWeight(1)
-        .scrollBar(BarState.Auto)
+        .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring)
         .align(Alignment.Top)
       }

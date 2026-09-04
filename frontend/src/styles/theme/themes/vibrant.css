@@ -41,7 +41,7 @@
   --cst-palette-map-group: #0B7A56;
   --cst-palette-map-moment: #C2470B;
   --cst-palette-overlay-strong: rgba(12, 25, 48, 0.52);
-  --cst-palette-shadow-card: 0 12px 28px rgba(53, 120, 212, 0.12), 0 3px 10px rgba(53, 120, 212, 0.07);
+  --cst-palette-shadow-card: 0 4px 14px rgba(53, 120, 212, 0.10), 0 1px 4px rgba(53, 120, 212, 0.06);
   --cst-palette-shadow-btn: 0 5px 14px rgba(53, 120, 212, 0.18);
 
   /* ── 透明度档位（opacity-* 语义类经 theme-registry 映射；glow 随主题/暗色变化）── */
@@ -187,7 +187,7 @@
   --cst-palette-map-group: #34D399;
   --cst-palette-map-moment: #FB923C;
   --cst-palette-overlay-strong: rgba(0, 8, 20, 0.62);
-  --cst-palette-shadow-card: 0 12px 28px rgba(36, 105, 194, 0.20), 0 3px 10px rgba(0, 0, 0, 0.26);
+  --cst-palette-shadow-card: 0 4px 14px rgba(36, 105, 194, 0.16), 0 1px 4px rgba(0, 0, 0, 0.20);
   --cst-palette-shadow-btn: 0 5px 14px rgba(105, 168, 255, 0.24);
 
   /* ── 透明度档位（dark）── */

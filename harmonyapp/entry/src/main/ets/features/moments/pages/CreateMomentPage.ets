@@ -632,6 +632,7 @@ export struct CreateMomentPage {
         .padding({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD,
           bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XL, 0) })
       }
+      .scrollBar(BarState.Off)
       .width('100%')
       .layoutWeight(1)
     }

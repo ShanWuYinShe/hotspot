@@ -319,7 +319,7 @@ export struct NearbyUsersListPage {
               .columnsGap(DesignConstants.SPACING.LG)
               .rowsGap(DesignConstants.SPACING.LG)
               .cachedCount(4)
-              .scrollBar(BarState.Auto)
+              .scrollBar(BarState.Off)
               .onReachEnd(() => { this.loadMoreUsers(); })
 
               // 分页状态条（Grid 外常驻，规避 GridItem 跨列占位）

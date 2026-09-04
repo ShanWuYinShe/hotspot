@@ -219,7 +219,7 @@ export struct SubscriptionsPage {
         }
         .divider({ strokeWidth: 0 })
         .layoutWeight(1)
-        .scrollBar(BarState.Auto)
+        .scrollBar(BarState.Off)
         .width('100%')
         .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
         .backgroundColor(DesignConstants.COLOR.TRANSPARENT)

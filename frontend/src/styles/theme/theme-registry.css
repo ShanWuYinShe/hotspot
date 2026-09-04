@@ -106,13 +106,14 @@
   --color-surface-toggle-off: var(--cst-surface-toggle-off);
   --color-surface-toggle-thumb: var(--cst-surface-toggle-thumb);
 
-  /* Raised elevation shadows — 双向凸起投影刻度（凸起控件/卡片/头像）。
-     消费 --cst-elevation-shadow-{dark,light} 原料：vibrant 显影（凸起立体）、
-     forest 透明（改由 border 表达层级，投影语言随主题切换）。
-     3 档强制收敛：sm=4/4/9（控件/按钮）、md=5/5/12（卡片）、lg=8/8/18（大卡片/封面）。 */
-  --shadow-raised-sm: 4px 4px 9px var(--cst-elevation-shadow-dark), -4px -4px 9px var(--cst-elevation-shadow-light);
-  --shadow-raised-md: 5px 5px 12px var(--cst-elevation-shadow-dark), -5px -5px 12px var(--cst-elevation-shadow-light);
-  --shadow-raised-lg: 8px 8px 18px var(--cst-elevation-shadow-dark), -8px -8px 18px var(--cst-elevation-shadow-light);
+  /* Raised elevation shadows — 单向柔和投影刻度（凸起控件/卡片/头像）。
+     消费 --cst-elevation-shadow-{dark,light} 原料。原双向新拟态投影
+     （右下暗+左上亮）在移动端满宽卡片上呈现浮肿的「框框感」，收敛为
+     标准 elevation 单向小投影；层级表达主力交给灰画布×白卡表面分层。
+     3 档：sm=0/1/3（控件/按钮）、md=0/2/8（卡片）、lg=0/6/16（大卡片/封面）。 */
+  --shadow-raised-sm: 0 1px 3px var(--cst-elevation-shadow-dark);
+  --shadow-raised-md: 0 2px 8px var(--cst-elevation-shadow-dark);
+  --shadow-raised-lg: 0 6px 16px var(--cst-elevation-shadow-dark);
 
   /* Inset elevation shadows — 双向凹陷投影刻度（输入框聚焦凹陷、选中态凹陷）。2 档。 */
   --shadow-inset-sm: inset 5px 5px 10px var(--cst-elevation-shadow-dark), inset -5px -5px 10px var(--cst-elevation-shadow-light);

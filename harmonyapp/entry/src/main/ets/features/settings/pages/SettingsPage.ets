@@ -688,7 +688,7 @@ export struct SettingsPage {
               .width('100%')
             }
           }
-          .scrollBar(BarState.Auto)
+          .scrollBar(BarState.Off)
           .padding({ bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })
         }
         .onRefreshing(() => {

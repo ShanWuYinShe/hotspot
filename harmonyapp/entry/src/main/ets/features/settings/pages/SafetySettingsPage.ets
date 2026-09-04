@@ -194,6 +194,7 @@ export struct SafetySettingsPage {
           .width('100%')
           .padding({ bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })
         }
+        .scrollBar(BarState.Off)
         .layoutWeight(1)
         .width('100%')
       }

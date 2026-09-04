@@ -311,7 +311,7 @@ export struct MySharesPage {
       top: DesignConstants.SPACING.SM,
       bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.SM, DesignConstants.SPACING.SM)
     })
-    .scrollBar(BarState.Auto)
+    .scrollBar(BarState.Off)
     .onReachEnd(() => { this.loadMoreShares(); })
   }
 

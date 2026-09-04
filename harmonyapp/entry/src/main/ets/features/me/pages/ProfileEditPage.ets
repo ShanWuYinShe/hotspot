@@ -381,7 +381,7 @@ export struct ProfileEditPage {
         }
         .layoutWeight(1)
         .width('100%')
-        .scrollBar(BarState.Auto)
+        .scrollBar(BarState.Off)
       }
       .width('100%')
       .height('100%')

@@ -402,6 +402,7 @@ export struct SearchPanel {
                 }
               }, (item: LocationInfo) => `search_${item.latitude}_${item.longitude}`)
             }
+            .scrollBar(BarState.Off)
             .width('100%')
             .divider({ strokeWidth: 0, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
           } else if (this.searchText.trim().length > 0) {
@@ -488,6 +489,7 @@ export struct SearchPanel {
                   }
                 }, (item: AnchorHistoryItem) => `hist_s_${item.latitude}_${item.longitude}`)
               }
+              .scrollBar(BarState.Off)
               .width('100%')
               .divider({ strokeWidth: 0, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
             }
@@ -501,7 +503,7 @@ export struct SearchPanel {
         .padding({ top: DesignConstants.SPACING.XS })
       }
       .scrollable(ScrollDirection.Vertical)
-      .scrollBar(BarState.Auto)
+      .scrollBar(BarState.Off)
       .layoutWeight(1)
       .width('100%')
     }
@@ -718,6 +720,7 @@ export struct MainPanel {
                   }
                 }, (item: AnchorHistoryItem) => `hist_m_${item.latitude}_${item.longitude}`)
               }
+              .scrollBar(BarState.Off)
               .width('100%')
               .divider({ strokeWidth: 0, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
             } else {

@@ -324,8 +324,9 @@ export struct MomentPage {
     }
     .divider({ strokeWidth: 0 })
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
-    .scrollBar(BarState.Auto)
+    // 横向留白由外层 PageShellContainer 统一提供，这里不再叠加（否则双重 16vp 缩进）
+    .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
+    .scrollBar(BarState.Off)
     .cachedCount(5)
     .onReachEnd(() => { this.loadMoreMoments(); })
   }

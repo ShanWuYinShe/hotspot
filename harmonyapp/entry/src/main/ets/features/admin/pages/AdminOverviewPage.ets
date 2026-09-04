@@ -134,7 +134,7 @@ struct AdminOverviewPage {
             }
           }
           .layoutWeight(1)
-          .scrollBar(BarState.Auto)
+          .scrollBar(BarState.Off)
         }
       }
       .width('100%')

@@ -616,7 +616,7 @@ export struct CreateMomentSheet {
         })
       }
       .layoutWeight(1)
-      .scrollBar(BarState.Auto)
+      .scrollBar(BarState.Off)
       .align(Alignment.Top)
 
       this.buildFooter()

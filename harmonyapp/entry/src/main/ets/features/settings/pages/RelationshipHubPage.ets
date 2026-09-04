@@ -224,6 +224,7 @@ export struct RelationshipHubPage {
             bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG)
           })
         }
+        .scrollBar(BarState.Off)
         .layoutWeight(1)
         .width('100%')
         }

@@ -569,6 +569,7 @@ export struct NotificationCenter {
               }
             }
           }
+          .scrollBar(BarState.Off)
           .width('100%')
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
           .onReachEnd(() => this.loadMoreNotifications())

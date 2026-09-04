@@ -1162,6 +1162,7 @@ export struct LocationPickerPage {
                   }
                 }, (item: MapRenderItem) => item.render_id)
               }
+              .scrollBar(BarState.Off)
               .width('100%')
               .divider({ strokeWidth: 0.5, color: this.getCurrentThemePalette().borderColor, startMargin: 60 })
               .constraintSize({ maxHeight: 320 })

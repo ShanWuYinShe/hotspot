@@ -328,7 +328,7 @@ export struct NearbyGroupsListPage {
             }
             .width('100%')
             .layoutWeight(1)
-            .scrollBar(BarState.Auto)
+            .scrollBar(BarState.Off)
             .onReachEnd(() => { this.loadMoreGroups(); })
             .edgeEffect(EdgeEffect.None)
           }

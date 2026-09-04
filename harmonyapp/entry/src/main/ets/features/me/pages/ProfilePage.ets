@@ -961,7 +961,7 @@ export struct ProfilePage {
         .width('100%')
         .layoutWeight(1)
         .align(Alignment.TopStart)
-        .scrollBar(BarState.Auto)
+        .scrollBar(BarState.Off)
 
         // 底部操作条（对齐前端 footer snippet：私信 + 关注 下沉拇指热区）
         Row({ space: DesignConstants.SPACING.MD }) {
@@ -1062,7 +1062,7 @@ export struct ProfilePage {
           this.EditFormContent()
         }
         .layoutWeight(1)
-        .scrollBar(BarState.Auto)
+        .scrollBar(BarState.Off)
       } else {
         Scroll() {
           Column() {
@@ -1161,7 +1161,7 @@ export struct ProfilePage {
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.XL })
         }
         .layoutWeight(1)
-        .scrollBar(BarState.Auto)
+        .scrollBar(BarState.Off)
       }
     }
     .width('100%')

@@ -454,7 +454,7 @@ export struct HomePage {
           .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XL })
         }
         .layoutWeight(1)
-        .scrollBar(BarState.Auto)
+        .scrollBar(BarState.Off)
         .align(Alignment.TopStart)
 
         // 分割线
@@ -472,7 +472,7 @@ export struct HomePage {
           .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XL })
         }
         .width(DesignConstants.LAYOUT.HOME_COLUMN_WIDTH)
-        .scrollBar(BarState.Auto)
+        .scrollBar(BarState.Off)
         .align(Alignment.TopStart)
       }
       .layoutWeight(1)
@@ -490,7 +490,7 @@ export struct HomePage {
         .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XL })
       }
       .layoutWeight(1)
-      .scrollBar(BarState.Auto)
+      .scrollBar(BarState.Off)
       .align(Alignment.TopStart)
     }
   }
@@ -983,7 +983,7 @@ export struct HomePage {
           .padding({ left: DesignConstants.SPACING.XS })
         }
         .align(Alignment.Start)
-        .scrollBar(BarState.Auto)
+        .scrollBar(BarState.Off)
         .scrollable(ScrollDirection.Horizontal)
         .width('100%')
       }

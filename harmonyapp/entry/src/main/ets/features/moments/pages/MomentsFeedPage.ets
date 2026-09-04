@@ -503,7 +503,7 @@ export struct MomentsFeedPage {
             bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
           })
           .cachedCount(4)
-          .scrollBar(BarState.Auto)
+          .scrollBar(BarState.Off)
         }
         .width('100%')
         .layoutWeight(1)
