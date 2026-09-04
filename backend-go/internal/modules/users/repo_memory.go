@@ -21,19 +21,19 @@ type memoryRelation struct {
 }
 
 type InMemoryRepository struct {
-	mu             sync.RWMutex
-	profiles       map[string]MyProfile
-	settings       map[string]UserSettings
-	relations      map[string]map[string]memoryRelation
-	blockedTags    map[string]struct{}
+	mu          sync.RWMutex
+	profiles    map[string]MyProfile
+	settings    map[string]UserSettings
+	relations   map[string]map[string]memoryRelation
+	blockedTags map[string]struct{}
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
-		profiles:       make(map[string]MyProfile),
-		settings:       make(map[string]UserSettings),
-		relations:      make(map[string]map[string]memoryRelation),
-		blockedTags:    make(map[string]struct{}),
+		profiles:    make(map[string]MyProfile),
+		settings:    make(map[string]UserSettings),
+		relations:   make(map[string]map[string]memoryRelation),
+		blockedTags: make(map[string]struct{}),
 	}
 }
 
@@ -483,7 +483,6 @@ func paginateFollowers(items []RelatedUserItem, limit int, cursor string) Pagina
 	}
 	return resp
 }
-
 
 func findUserCursorStart(cursor string, keyAt func(i int) (string, string), length int) (int, bool) {
 	if cursor == "" {

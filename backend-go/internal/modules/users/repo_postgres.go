@@ -191,7 +191,6 @@ func (r *PostgresRepository) ListBlocked(ctx context.Context, userID string, lim
 	return listBlockedUsersPostgres(ctx, r.factory, userID, limit, cursor)
 }
 
-
 func (r *PostgresRepository) ListFriends(ctx context.Context, userID string, limit int, cursor string) (PaginatedFriends, error) {
 	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return PaginatedFriends{}, persistence.ErrNotImplemented
@@ -212,9 +211,6 @@ func (r *PostgresRepository) ListFollowers(ctx context.Context, userID string, l
 	}
 	return listFollowersPostgres(ctx, r.factory, userID, limit, cursor)
 }
-
-
-
 
 func (r *PostgresRepository) UserExists(ctx context.Context, userID string) (bool, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)

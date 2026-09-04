@@ -242,10 +242,6 @@ WHERE me.target_user_id = $1 AND me.is_following = TRUE
 ORDER BY me.followed_at DESC, u.user_id ASC
 LIMIT $4`
 
-
-
-
-
 	queryUserExists = `
 SELECT 1 FROM users WHERE user_id = $1`
 
@@ -255,6 +251,4 @@ SELECT bt.name
 FROM unnest($1::text[]) AS candidate(tag_name)
 JOIN admin_blocked_tags bt ON bt.name = candidate.tag_name
 ORDER BY bt.name ASC`
-
-
 )

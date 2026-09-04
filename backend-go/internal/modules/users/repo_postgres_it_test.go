@@ -395,4 +395,3 @@ func TestPostgresIT_ListFollowingPagination(t *testing.T) {
 		}
 	})
 }
-

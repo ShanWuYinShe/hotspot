@@ -157,8 +157,6 @@ func (b *userBackendStub) Query(_ context.Context, query string, _ ...any) (pers
 	return &persistence.InMemoryRows{}, nil
 }
 
-
-
 func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 	backend := &userBackendStub{
 		queryRowByQuery: map[string]persistence.Row{
@@ -168,8 +166,8 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 			queryCountUserStats:  testdb.RowValues{Values: []any{2, 1, 3, 4, 5}},
 		},
 		queryRowsByQuery: map[string][][]any{
-			"FROM users u":                            {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC), false}},
-			queryListBlockedUsers:                     {{"user_bob", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC), "buddy"}},
+			"FROM users u":        {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC), false}},
+			queryListBlockedUsers: {{"user_bob", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC), "buddy"}},
 		},
 		queryErrs: map[string]error{},
 		execErrs:  map[string]error{},

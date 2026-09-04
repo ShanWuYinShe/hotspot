@@ -2,7 +2,6 @@ package users
 
 import (
 	"context"
-
 )
 
 type Repository interface {

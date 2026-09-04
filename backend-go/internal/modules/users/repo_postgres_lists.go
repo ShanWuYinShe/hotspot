@@ -113,9 +113,6 @@ func listFollowersPostgres(ctx context.Context, factory *persistence.Factory, us
 	return PaginatedFollowers{Items: items}, nil
 }
 
-
-
-
 func scanFriendRow(scanner interface{ Scan(...any) error }) (RelatedUserItem, time.Time, error) {
 	var item RelatedUserItem
 	var avatarURL string
@@ -177,9 +174,6 @@ func scanFollowerRow(scanner interface{ Scan(...any) error }) (RelatedUserItem, 
 	return item, followedAt.UTC(), nil
 }
 
-
-
-
 type userMomentCursor struct {
 	At string `json:"at"`
 	ID string `json:"id"`
@@ -223,4 +217,3 @@ func encodeUserCursor(at time.Time, id string) string {
 func decodeUserCursor(cursor string) (any, string, error) {
 	return decodeUserMomentCursor(cursor)
 }
-

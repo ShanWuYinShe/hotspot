@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	groups "hotspot/backend-go/internal/modules/groups"
-	momenttypes "hotspot/backend-go/internal/modules/moments"
 	moments "hotspot/backend-go/internal/modules/moments"
+	momenttypes "hotspot/backend-go/internal/modules/moments"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 )
