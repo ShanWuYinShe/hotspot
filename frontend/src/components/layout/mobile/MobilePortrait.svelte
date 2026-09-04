@@ -53,7 +53,7 @@
 			>
 				<div
 					class="flex items-center px-2"
-					style="padding-top:8px;padding-bottom:max(20px, env(safe-area-inset-bottom, 20px));"
+					style="padding-top:var(--cst-bottom-nav-pad-top);padding-bottom:max(var(--cst-bottom-nav-pad-bottom), env(safe-area-inset-bottom, var(--cst-bottom-nav-pad-bottom)));"
 				>
 					<!-- 左侧：首页 + 附近（flex-1 与右侧对称，保持 FAB 居中） -->
 					<div class="flex flex-1 justify-center gap-4">

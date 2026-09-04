@@ -62,6 +62,13 @@
     --cst-cover-height-sm: clamp(7.5rem, 18vw, 10rem);
     --cst-cover-height: clamp(13.75rem, 28vw, 21.25rem);
     --cst-cover-height-lg: clamp(13.75rem, 38vw, 23.75rem);
+    /* 移动壳导航几何（与桌面侧栏 token 对称）：
+       横屏左侧 rail 宽 64px；rail 图标钮 52px；
+       竖屏底栏上下留白 8/20px（底部与 env(safe-area-inset-bottom) 取大）。 */
+    --cst-mobile-rail-width: 4rem;      /* 64px */
+    --cst-mobile-rail-item: 3.25rem;    /* 52px */
+    --cst-bottom-nav-pad-top: 0.5rem;   /* 8px */
+    --cst-bottom-nav-pad-bottom: 1.25rem; /* 20px */
   }
 
   .desktop-workspace {

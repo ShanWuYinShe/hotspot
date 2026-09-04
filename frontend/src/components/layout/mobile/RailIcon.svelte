@@ -38,7 +38,7 @@
 <button
 	type="button"
 	class="relative flex flex-col items-center justify-center focus-ring rounded-md"
-	style="width:52px;height:52px;gap:3px;box-shadow:{hoverShadow};transform:scale({hoverScale});transition:box-shadow var(--cst-motion-standard) var(--cst-ease-standard), transform var(--cst-motion-standard) var(--cst-ease-bounce);"
+	style="width:var(--cst-mobile-rail-item);height:var(--cst-mobile-rail-item);gap:3px;box-shadow:{hoverShadow};transform:scale({hoverScale});transition:box-shadow var(--cst-motion-standard) var(--cst-ease-standard), transform var(--cst-motion-standard) var(--cst-ease-bounce);"
 	aria-label={label}
 	aria-current={isActive ? 'page' : undefined}
 	onclick={onClick}
