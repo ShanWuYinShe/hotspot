@@ -22,6 +22,12 @@ type Service struct {
 // nil disables ban checking (dev/test default).
 func (s *Service) SetBanChecker(bc BanChecker) { s.banChecker = bc }
 
+// AccessTTL / RefreshTTL expose the service-configured token lifetimes so
+// callers writing auth cookies use the same source of truth as token minting
+// (no duplicated literal TTLs).
+func (s *Service) AccessTTL() time.Duration  { return s.accessTTL }
+func (s *Service) RefreshTTL() time.Duration { return s.refreshTTL }
+
 // IsUserBanned reports whether the user is currently banned. Returns false
 // when no ban checker is configured. A checker error is treated as not banned
 // (fail-open) so a transient DB issue does not lock out every request.

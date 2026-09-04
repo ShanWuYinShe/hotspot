@@ -27,4 +27,9 @@ type Repository interface {
 	// status='completed' are returned. Unmatched file_ids are simply absent
 	// from the result; callers treat absence as an authorization failure.
 	ResolveByFileIDs(context.Context, []string, string, MediaCategory) (map[string]MediaAsset, error)
+	// CompletedFileMetaByID returns display metadata for a completed upload by
+	// its file_id, regardless of owner/category — report snapshots need the
+	// file truth value, not ownership scoping. found=false when the file does
+	// not exist or is not in status='completed'.
+	CompletedFileMetaByID(context.Context, string) (FileMeta, bool, error)
 }

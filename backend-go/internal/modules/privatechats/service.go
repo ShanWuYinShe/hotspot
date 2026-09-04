@@ -14,7 +14,7 @@ import (
 
 type userReader interface {
 	OpenTheDoor(context.Context, string) (users.UserItem, bool, error)
-	GetMySettings(context.Context) (users.UserSettings, error)
+	ChatSettingsFor(context.Context, string) (allowPrivateChat string, found bool, err error)
 	BlockStateBetween(context.Context, string, string) (callerBlocked, targetBlocked bool, err error)
 }
 
@@ -24,14 +24,6 @@ type Service struct {
 	users    userReader
 }
 
-func NewService() *Service {
-	userRepo := users.NewInMemoryRepository()
-	return NewServiceWithDeps(NewInMemoryRepository(), privatemessages.NewService(), users.NewServiceWithRepo(userRepo))
-}
-func NewServiceWithRepos(repo Repository, messages privatemessages.ReadService) *Service {
-	userRepo := users.NewInMemoryRepository()
-	return NewServiceWithDeps(repo, messages, users.NewServiceWithRepo(userRepo))
-}
 func NewServiceWithDeps(repo Repository, messages privatemessages.ReadService, userService userReader) *Service {
 	return &Service{repo: repo, messages: messages, users: userService}
 }
@@ -203,9 +195,15 @@ func (s *Service) buildChat(ctx context.Context, userID string, state ChatState)
 	if callerBlocked || targetBlocked {
 		blockReason(httpx.ReasonBlockedByUser)
 	}
-	settings, settingsErr := s.users.GetMySettings(platformauth.WithPrincipal(ctx, platformauth.Principal{UserID: state.TargetID, SessionID: "private-chat-probe"}))
-	if settingsErr == nil {
-		switch settings.AllowPrivateChat {
+	// 对方的私聊权限设置：显式按 user id 读取（users.Service.ChatSettingsFor），
+	// 不再伪造对方 Principal 复用 GetMySettings 绕过身份层。
+	allowPerm, found, settingsErr := s.users.ChatSettingsFor(ctx, state.TargetID)
+	if settingsErr != nil {
+		return item, settingsErr
+	}
+	if found {
+		allowPrivateChat := users.ChatPerm(allowPerm)
+		switch allowPrivateChat {
 		case users.ChatPermNobody:
 			blockReason(httpx.ReasonPrivacySetting)
 		case users.ChatPermFriends:

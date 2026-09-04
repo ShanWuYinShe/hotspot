@@ -34,12 +34,21 @@ func (r *PostgresRepository) ListApplications(ctx context.Context, groupID strin
 	if status != nil {
 		statusValue = string(*status)
 	}
-	rows, err := queryable.Query(ctx, queryListGroupApplications, groupID, statusValue)
+	cursorCreatedAt, cursorApplicationID, err := decodeGroupPageCursor(cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	var cursorCreatedAtValue any
+	if !cursorCreatedAt.IsZero() {
+		cursorCreatedAtValue = cursorCreatedAt
+	}
+	rows, err := queryable.Query(ctx, queryListGroupApplications, groupID, statusValue, cursorCreatedAtValue, cursorApplicationID, limit+1)
 	if err != nil {
 		return nil, "", err
 	}
 	defer rows.Close()
-	items := make([]GroupApplicationItem, 0)
+	items := make([]GroupApplicationItem, 0, limit+1)
+	createdAts := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item GroupApplicationItem
 		var groupID, groupName, groupAvatar, message, statusText, applicantUserID string
@@ -63,11 +72,16 @@ func (r *PostgresRepository) ListApplications(ctx context.Context, groupID strin
 			item.HandledAt = &value
 		}
 		items = append(items, item)
+		createdAts = append(createdAts, createdAt)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, "", err
 	}
-	return items, "", nil
+	if len(items) <= limit {
+		return items, "", nil
+	}
+	next := encodeGroupPageCursor(createdAts[limit-1], items[limit-1].ApplicationID)
+	return items[:limit], next, nil
 }
 
 func (r *PostgresRepository) ApproveApplication(ctx context.Context, approverID string, applicationID string) error {

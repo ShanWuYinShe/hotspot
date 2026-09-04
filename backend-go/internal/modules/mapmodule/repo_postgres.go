@@ -321,12 +321,20 @@ func normalizeMapDataType(dataType string) string {
 	}
 }
 
+// 模块级分页参数（地图画布渲染密度）
+const (
+	mapDefaultPageSize = 50
+	mapMaxPageSize     = 200
+)
+
 func normalizeMapLimit(limit int) int {
+	// 地图画布单屏渲染密度（50/200）是经产品确认的模块级参数，与通用分页
+	// Default/MaxPageSize(20/100) 语义不同——显式常量声明，非遗漏漂移。
 	switch {
 	case limit <= 0:
-		return 50
-	case limit > 200:
-		return 200
+		return mapDefaultPageSize
+	case limit > mapMaxPageSize:
+		return mapMaxPageSize
 	default:
 		return limit
 	}

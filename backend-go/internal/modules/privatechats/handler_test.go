@@ -632,3 +632,7 @@ func assertPrivateChatCode(t *testing.T, rr *httptest.ResponseRecorder, expected
 		t.Fatalf("expected code %d, got %#v", expected, resp)
 	}
 }
+
+func (r *privateChatUserReader) ChatSettingsFor(_ context.Context, _ string) (string, bool, error) {
+	return string(r.settings.AllowPrivateChat), true, nil
+}

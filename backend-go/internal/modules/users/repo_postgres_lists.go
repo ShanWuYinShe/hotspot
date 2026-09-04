@@ -15,7 +15,7 @@ func listFriendsPostgres(ctx context.Context, factory *persistence.Factory, user
 	if !ok {
 		return PaginatedFriends{}, persistence.ErrNotImplemented
 	}
-	limit = normalizeUserMomentLimit(limit)
+	limit = types.NormalizeLimit(limit)
 	cursorAt, cursorID, err := decodeUserCursor(cursor)
 	if err != nil {
 		return PaginatedFriends{}, ErrInvalidCursor
@@ -50,7 +50,7 @@ func listFollowingPostgres(ctx context.Context, factory *persistence.Factory, us
 	if !ok {
 		return PaginatedFollowing{}, persistence.ErrNotImplemented
 	}
-	limit = normalizeUserMomentLimit(limit)
+	limit = types.NormalizeLimit(limit)
 	cursorAt, cursorID, err := decodeUserCursor(cursor)
 	if err != nil {
 		return PaginatedFollowing{}, ErrInvalidCursor
@@ -85,7 +85,7 @@ func listFollowersPostgres(ctx context.Context, factory *persistence.Factory, us
 	if !ok {
 		return PaginatedFollowers{}, persistence.ErrNotImplemented
 	}
-	limit = normalizeUserMomentLimit(limit)
+	limit = types.NormalizeLimit(limit)
 	cursorAt, cursorID, err := decodeUserCursor(cursor)
 	if err != nil {
 		return PaginatedFollowers{}, ErrInvalidCursor
@@ -120,7 +120,7 @@ func listUserGroupsPostgres(ctx context.Context, factory *persistence.Factory, u
 	if !ok {
 		return grouptypes.PaginatedGroups{}, persistence.ErrNotImplemented
 	}
-	limit = normalizeUserMomentLimit(limit)
+	limit = types.NormalizeLimit(limit)
 	cursorAt, cursorID, err := decodeUserCursor(cursor)
 	if err != nil {
 		return grouptypes.PaginatedGroups{}, ErrInvalidCursor
@@ -155,7 +155,7 @@ func listUserMomentsPostgres(ctx context.Context, factory *persistence.Factory, 
 	if !ok {
 		return momenttypes.PaginatedMoments{}, persistence.ErrNotImplemented
 	}
-	limit = normalizeUserMomentLimit(limit)
+	limit = types.NormalizeLimit(limit)
 	cursorAt, cursorID, err := decodeUserMomentCursor(cursor)
 	if err != nil {
 		return momenttypes.PaginatedMoments{}, ErrInvalidCursor
@@ -207,7 +207,7 @@ func listReactedMomentsPostgres(ctx context.Context, factory *persistence.Factor
 	if !ok {
 		return momenttypes.PaginatedMoments{}, persistence.ErrNotImplemented
 	}
-	limit = normalizeUserMomentLimit(limit)
+	limit = types.NormalizeLimit(limit)
 	cursorReactedAt, cursorMomentID, err := decodeUserMomentCursor(cursor)
 	if err != nil {
 		return momenttypes.PaginatedMoments{}, ErrInvalidCursor
@@ -381,17 +381,6 @@ func scanUserReactedMomentRow(scanner interface{ Scan(...any) error }) (momentty
 type userMomentCursor struct {
 	At string `json:"at"`
 	ID string `json:"id"`
-}
-
-func normalizeUserMomentLimit(limit int) int {
-	switch {
-	case limit <= 0:
-		return 20
-	case limit > types.MaxPageSize:
-		return 100
-	default:
-		return limit
-	}
 }
 
 // usersCursorCodec caches the AES-GCM cipher used for user moment and

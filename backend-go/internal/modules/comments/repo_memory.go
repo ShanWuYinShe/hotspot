@@ -157,9 +157,7 @@ func (r *InMemoryRepository) List(_ context.Context, momentID string, limit int,
 			}
 		}
 	}
-	if limit <= 0 {
-		limit = 20
-	}
+	limit = types.NormalizeLimit(limit)
 	if limit > types.MaxPageSize {
 		limit = types.MaxPageSize
 	}

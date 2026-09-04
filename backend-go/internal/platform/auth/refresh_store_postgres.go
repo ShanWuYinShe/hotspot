@@ -94,3 +94,14 @@ func emptyToNull(value string) *string {
 	v := value
 	return &v
 }
+
+// Sweep deletes refresh tokens that can never be used again: expired tokens
+// and rotated-away tokens whose 30s grace window has long passed. Without it
+// auth_refresh_tokens grows unboundedly (one row per rotation forever).
+func (s *PostgresRefreshStore) Sweep(ctx context.Context, now time.Time) {
+	queryable, ok := s.queryable()
+	if !ok {
+		return
+	}
+	_ = queryable.Exec(ctx, querySweepRefreshTokens, now)
+}

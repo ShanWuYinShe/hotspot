@@ -182,9 +182,7 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 	if !ok {
 		return nil, "", persistence.ErrNotImplemented
 	}
-	if limit <= 0 {
-		limit = 20
-	}
+	limit = types.NormalizeLimit(limit)
 	if limit > types.MaxPageSize {
 		limit = types.MaxPageSize
 	}

@@ -77,4 +77,10 @@ RETURNING refresh_token`
 SELECT user_id, session_id, refresh_token, rotated_to, grace_until, expires_at
 FROM auth_refresh_tokens
 WHERE refresh_token = $1`
+
+	// 清理永不可用的 token：已过期，或轮换淘汰且 30s 宽限期早已结束的行。
+	querySweepRefreshTokens = `
+DELETE FROM auth_refresh_tokens
+WHERE expires_at < $1
+   OR (rotated_to IS NOT NULL AND (grace_until IS NULL OR grace_until < $1))`
 )

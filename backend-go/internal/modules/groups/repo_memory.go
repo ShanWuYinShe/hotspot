@@ -300,9 +300,7 @@ func (r *InMemoryRepository) Dismiss(_ context.Context, groupID string) error {
 func (r *InMemoryRepository) ListMyGroups(_ context.Context, userID string, limit int, pageToken string) ([]GroupItem, string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	if limit <= 0 {
-		limit = 20
-	}
+	limit = types.NormalizeLimit(limit)
 	if limit > types.MaxPageSize {
 		limit = types.MaxPageSize
 	}

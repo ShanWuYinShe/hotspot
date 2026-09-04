@@ -45,11 +45,20 @@ type groupMembershipAuthorizer interface {
 	IsMember(context.Context, string, string) (bool, error)
 }
 
+// banAuthorizer reports whether a user is currently banned platform-wide.
+// Implemented by the admin module's repository via bootstrap wiring. Without
+// it the realtime channel would accept connections from banned accounts —
+// the HTTP-side ban middleware never runs on the WS handshake path.
+type banAuthorizer interface {
+	IsBanned(context.Context, string) (bool, error)
+}
+
 type Handler struct {
 	auth           *platformauth.Service
 	users          userPresenceAuthorizer
 	userRepo       userRelationAuthorizer
 	groupRepo      groupMembershipAuthorizer
+	bans           banAuthorizer
 	actorProvider  typingActorProvider
 	typingThrottle sync.Map
 	resumeStore    ResumeStore
@@ -90,6 +99,11 @@ func (h *Handler) Close() {
 // (UserInfo) field of pushed typing payloads. Optional: nil falls back to
 // {user_id, nickname=user_id}.
 func (h *Handler) SetActorProvider(p typingActorProvider) { h.actorProvider = p }
+
+// SetBanAuthorizer wires the platform-wide ban checker consulted at WS auth.
+// Optional (nil = no ban check, dev/test default); the fail-open policy matches
+// the HTTP RequiredAuth middleware so both paths degrade identically.
+func (h *Handler) SetBanAuthorizer(b banAuthorizer) { h.bans = b }
 
 // SetResumeStore 注入 resume 增量恢复存储（spec L156, L159）。nil 时退化为 NopResumeStore
 // 语义：token 仍下发但 LoadState 恒空，客户端回退全量重放（spec L161 降级保证）。
@@ -211,6 +225,17 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "鉴权失败", Severity: "fatal", Retryable: false}})
 		sendCloseFrame(conn, 4001, "auth failed")
 		return
+	}
+	// 封禁检查（HTTP 中间件不覆盖 WS 握手路径）：被封禁账号不得建立实时连接，
+	// 否则封禁仅剩 HTTP 生效、实时通道（订阅/typing/事件）完全绕过。
+	// fail-open 与 RequiredAuth 同口径：ban checker 瞬时故障时不锁死全部连接。
+	if h.bans != nil {
+		if banned, err := h.bans.IsBanned(ctx, principal.UserID); err == nil && banned {
+			observability.L().Warn("ws: auth rejected, account banned", "user_id", principal.UserID)
+			_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSAccountBanned, Message: "账号已被封禁", Severity: "fatal", Retryable: false}})
+			sendCloseFrame(conn, 4003, "account banned")
+			return
+		}
 	}
 	principalCtx := platformauth.WithPrincipal(ctx, principal)
 	_ = conn.SetReadDeadline(time.Now().Add(90 * time.Second))

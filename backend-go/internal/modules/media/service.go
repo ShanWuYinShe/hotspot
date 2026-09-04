@@ -332,3 +332,9 @@ func storageKeyFor(userID, uploadID, fileName string) string {
 	}
 	return fmt.Sprintf("uploads/%s/%s.%s", userID, uploadID, ext)
 }
+
+// CompletedFileMetaByID 按 file_id 读取完成态文件的展示元数据（跨模块只读
+// 场景：举报快照冻结媒体真值；不限定 owner/category，见 Repository 同名方法）。
+func (s *Service) CompletedFileMetaByID(ctx context.Context, fileID string) (FileMeta, bool, error) {
+	return s.repo.CompletedFileMetaByID(ctx, fileID)
+}

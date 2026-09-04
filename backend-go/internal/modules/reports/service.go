@@ -9,6 +9,13 @@ import (
 	"hotspot/backend-go/internal/platform/types"
 )
 
+// 模块级 sentinel error（Handler 经 errors.Is 映射错误码；禁止字符串匹配）。
+var (
+	ErrInvalidRequest = errors.New("reports: invalid request")
+	ErrSelfReport     = errors.New("reports: self report")
+	ErrTargetNotFound = errors.New("reports: target not found")
+)
+
 type Service struct {
 	repo             Repository
 	messageSnapshots MessageSnapshotSource // optional; nil 时消息举报按目标不存在处理
@@ -35,10 +42,10 @@ func (s *Service) SetMessageSnapshotSource(src MessageSnapshotSource) { s.messag
 func (s *Service) Create(ctx context.Context, req CreateReportRequest) (ReportCreated, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	if !isValidReportTargetType(req.TargetType) || !isValidReportReason(req.Reason) || req.TargetID == "" || (req.Description != nil && len(*req.Description) > 1000) {
-		return ReportCreated{}, errors.New("reports: invalid request")
+		return ReportCreated{}, ErrInvalidRequest
 	}
 	if req.TargetType == ReportTargetTypeUser && req.TargetID == principal.UserID {
-		return ReportCreated{}, errors.New("reports: self report")
+		return ReportCreated{}, ErrSelfReport
 	}
 	ownerUserID, found, err := s.repo.TargetOwner(ctx, req.TargetType, req.TargetID)
 	if err != nil {
@@ -46,10 +53,10 @@ func (s *Service) Create(ctx context.Context, req CreateReportRequest) (ReportCr
 		return ReportCreated{}, err
 	}
 	if !found {
-		return ReportCreated{}, errors.New("reports: target not found")
+		return ReportCreated{}, ErrTargetNotFound
 	}
 	if ownerUserID != "" && ownerUserID == principal.UserID {
-		return ReportCreated{}, errors.New("reports: self report")
+		return ReportCreated{}, ErrSelfReport
 	}
 	// 消息举报的服务端快照（spec api_spec_types.md ReportSnapshot 生成方）：
 	// 基于消息真值生成并冻结，客户端不提交快照；消息不存在按目标不存在 10300。
@@ -57,7 +64,7 @@ func (s *Service) Create(ctx context.Context, req CreateReportRequest) (ReportCr
 	if req.TargetType == ReportTargetTypeMessage {
 		if s.messageSnapshots == nil {
 			observability.L().Error("reports.create message snapshot source unavailable", "target_id", req.TargetID)
-			return ReportCreated{}, errors.New("reports: target not found")
+			return ReportCreated{}, ErrTargetNotFound
 		}
 		snapshot, found, err = s.messageSnapshots.GetMessageSnapshot(ctx, req.TargetID, principal.UserID)
 		if err != nil {
@@ -65,7 +72,7 @@ func (s *Service) Create(ctx context.Context, req CreateReportRequest) (ReportCr
 			return ReportCreated{}, err
 		}
 		if !found {
-			return ReportCreated{}, errors.New("reports: target not found")
+			return ReportCreated{}, ErrTargetNotFound
 		}
 	}
 	existingID, duplicate, err := s.repo.FindExistingReport(ctx, principal.UserID, req.TargetType, req.TargetID)

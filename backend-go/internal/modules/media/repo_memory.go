@@ -74,3 +74,22 @@ func (r *InMemoryRepository) ResolveByFileIDs(_ context.Context, fileIDs []strin
 	}
 	return assets, nil
 }
+
+// CompletedFileMetaByID 在内存实现里按 uploadID 复用已完成上传的元数据
+// （测试桩场景：file_id 与 upload_id 同值约定）。
+func (r *InMemoryRepository) CompletedFileMetaByID(ctx context.Context, fileID string) (FileMeta, bool, error) {
+	upload, ok, err := r.Get(ctx, fileID)
+	if err != nil || !ok || !upload.Completed {
+		return FileMeta{}, false, err
+	}
+	return FileMeta{
+		StorageKey:   upload.StorageKey,
+		ThumbnailURL: upload.File.ThumbnailURL,
+		Width:        upload.File.Width,
+		Height:       upload.File.Height,
+		MimeType:     upload.File.MimeType,
+		FileName:     upload.FileName,
+		FileSize:     upload.File.FileSize,
+		Duration:     upload.File.Duration,
+	}, true, nil
+}

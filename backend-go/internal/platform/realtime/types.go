@@ -147,6 +147,9 @@ const (
 	CodeWSProtocol   ErrorCode = 20000 // 连接/协议错误（鉴权失败/心跳超时/消息格式错误）
 	CodeWSRateLimit  ErrorCode = 20300 // 限流
 	CodeWSPermission ErrorCode = 20400 // 权限错误（无权限/操作受限/群组已解散）
+	// CodeWSAccountBanned 账号被封禁（握手鉴权阶段拒绝，spec 10201 同源语义：
+	// 客户端须清除本地会话并展示封禁页，不可自动重连）。
+	CodeWSAccountBanned ErrorCode = 20401
 )
 
 type ErrorPayload struct {

@@ -477,9 +477,7 @@ func containsFold(items []string, target string) bool {
 }
 
 func paginateBlocked(items []BlockedUserItem, limit int, cursor string) PaginatedBlockedUsers {
-	if limit <= 0 {
-		limit = 20
-	}
+	limit = types.NormalizeLimit(limit)
 	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].BlockedAt, items[i].User.UserID }, len(items))
 	if !ok {
 		return PaginatedBlockedUsers{}
@@ -496,9 +494,7 @@ func paginateBlocked(items []BlockedUserItem, limit int, cursor string) Paginate
 	return resp
 }
 func paginateFriends(items []RelatedUserItem, limit int, cursor string) PaginatedFriends {
-	if limit <= 0 {
-		limit = 20
-	}
+	limit = types.NormalizeLimit(limit)
 	start, ok := findUserCursorStart(cursor, func(i int) (string, string) {
 		at := ""
 		if items[i].FollowedBackAt != nil {
@@ -521,9 +517,7 @@ func paginateFriends(items []RelatedUserItem, limit int, cursor string) Paginate
 	return resp
 }
 func paginateFollowing(items []RelatedUserItem, limit int, cursor string) PaginatedFollowing {
-	if limit <= 0 {
-		limit = 20
-	}
+	limit = types.NormalizeLimit(limit)
 	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].FollowedAt, items[i].User.User.UserID }, len(items))
 	if !ok {
 		return PaginatedFollowing{}
@@ -540,9 +534,7 @@ func paginateFollowing(items []RelatedUserItem, limit int, cursor string) Pagina
 	return resp
 }
 func paginateFollowers(items []RelatedUserItem, limit int, cursor string) PaginatedFollowers {
-	if limit <= 0 {
-		limit = 20
-	}
+	limit = types.NormalizeLimit(limit)
 	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].FollowedAt, items[i].User.User.UserID }, len(items))
 	if !ok {
 		return PaginatedFollowers{}
@@ -559,9 +551,7 @@ func paginateFollowers(items []RelatedUserItem, limit int, cursor string) Pagina
 	return resp
 }
 func paginateGroups(items []grouptypes.GroupItem, limit int, cursor string) grouptypes.PaginatedGroups {
-	if limit <= 0 {
-		limit = 20
-	}
+	limit = types.NormalizeLimit(limit)
 	start, ok := findUserCursorStart(cursor, func(i int) (string, string) {
 		joinedAt := ""
 		if items[i].ViewerState != nil {
@@ -588,9 +578,7 @@ func paginateGroups(items []grouptypes.GroupItem, limit int, cursor string) grou
 	return resp
 }
 func paginateMoments(items []momenttypes.MomentItem, limit int, cursor string) momenttypes.PaginatedMoments {
-	if limit <= 0 {
-		limit = 20
-	}
+	limit = types.NormalizeLimit(limit)
 	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].CreatedAt, items[i].MomentID }, len(items))
 	if !ok {
 		return momenttypes.PaginatedMoments{}
@@ -608,9 +596,7 @@ func paginateMoments(items []momenttypes.MomentItem, limit int, cursor string) m
 }
 
 func paginateReactedMoments(items []reactedMomentRecord, limit int, cursor string) momenttypes.PaginatedMoments {
-	if limit <= 0 {
-		limit = 20
-	}
+	limit = types.NormalizeLimit(limit)
 	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].ReactedAt, items[i].Moment.MomentID }, len(items))
 	if !ok {
 		return momenttypes.PaginatedMoments{}

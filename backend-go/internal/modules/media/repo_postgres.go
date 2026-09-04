@@ -198,3 +198,37 @@ func parseRFC3339OrNow(value string) time.Time {
 	}
 	return time.Now().UTC()
 }
+
+// CompletedFileMetaByID 按 file_id 读取完成态文件的展示元数据（不限定
+// owner/category——举报快照需要文件真值而非所有权范围内读取）。
+func (r *PostgresRepository) CompletedFileMetaByID(ctx context.Context, fileID string) (FileMeta, bool, error) {
+	q, err := r.queryable(ctx)
+	if err != nil {
+		return FileMeta{}, false, err
+	}
+	const q_ = `
+SELECT storage_key,
+       COALESCE(thumbnail_url, ''),
+       COALESCE(width, 0),
+       COALESCE(height, 0),
+       COALESCE(final_mime_type, declared_mime_type, ''),
+       COALESCE(file_name, ''),
+       COALESCE(final_file_size, declared_file_size, 0),
+       COALESCE(duration, 0)
+FROM media_upload_sessions
+WHERE file_id = $1 AND status = 'completed'`
+	var meta FileMeta
+	if err := q.QueryRow(ctx, q_, fileID).Scan(
+		&meta.StorageKey,
+		&meta.ThumbnailURL,
+		&meta.Width,
+		&meta.Height,
+		&meta.MimeType,
+		&meta.FileName,
+		&meta.FileSize,
+		&meta.Duration,
+	); err != nil {
+		return FileMeta{}, false, err
+	}
+	return meta, true, nil
+}

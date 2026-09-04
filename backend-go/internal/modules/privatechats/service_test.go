@@ -322,3 +322,7 @@ func TestServiceUpdateSettingsWithInMemoryRepo(t *testing.T) {
 		t.Fatalf("UpdateSettings with in-memory repo failed: %v", err)
 	}
 }
+
+func (u *stubChatUserReader) ChatSettingsFor(_ context.Context, _ string) (string, bool, error) {
+	return string(u.settings.AllowPrivateChat), u.found, u.userErr
+}

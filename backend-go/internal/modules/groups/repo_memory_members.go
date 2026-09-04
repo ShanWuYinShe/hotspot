@@ -2,6 +2,7 @@ package groups
 
 import (
 	"context"
+	"hotspot/backend-go/internal/platform/types"
 	"sort"
 	"strings"
 	"time"
@@ -80,9 +81,7 @@ func (r *InMemoryRepository) ListAdminMembers(_ context.Context, groupID string,
 		}
 		return items[i].JoinedAt < items[j].JoinedAt
 	})
-	if limit <= 0 {
-		limit = 20
-	}
+	limit = types.NormalizeLimit(limit)
 	if len(items) > limit {
 		return items[:limit], items[limit-1].JoinedAt + ":" + items[limit-1].User.UserID, nil
 	}
@@ -253,9 +252,7 @@ func (r *InMemoryRepository) ListBannedMembers(_ context.Context, groupID string
 		}
 		return items[i].BannedAt > items[j].BannedAt
 	})
-	if limit <= 0 {
-		limit = 20
-	}
+	limit = types.NormalizeLimit(limit)
 	// 消费游标：跳过 (BannedAt, UserID) >= cursor 的项（DESC 序）
 	if cursor != "" {
 		if parts := strings.SplitN(cursor, ":", 2); len(parts) == 2 {

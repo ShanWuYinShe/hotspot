@@ -51,7 +51,9 @@ SELECT gm.user_id, COALESCE(u.nickname, gm.user_id), gm.role, gm.joined_at
 FROM group_members gm
 LEFT JOIN users u ON u.user_id = gm.user_id
 WHERE gm.group_id = $1 AND ($2 = '' OR gm.role = $2)
-ORDER BY gm.joined_at ASC, gm.user_id ASC`
+  AND ($3::timestamptz IS NULL OR gm.joined_at > $3 OR (gm.joined_at = $3 AND gm.user_id > $4))
+ORDER BY gm.joined_at ASC, gm.user_id ASC
+LIMIT $5`
 
 	// queryListAdminGroupMembers 是管理视角成员列表（含 muted_until 真值，null=未禁言），
 	// 仅守卫子树 groups/admin/members/list 使用。
@@ -60,7 +62,9 @@ SELECT gm.user_id, COALESCE(u.nickname, gm.user_id), gm.role, gm.joined_at, gm.m
 FROM group_members gm
 LEFT JOIN users u ON u.user_id = gm.user_id
 WHERE gm.group_id = $1 AND ($2 = '' OR gm.role = $2)
-ORDER BY gm.joined_at ASC, gm.user_id ASC`
+  AND ($3::timestamptz IS NULL OR gm.joined_at > $3 OR (gm.joined_at = $3 AND gm.user_id > $4))
+ORDER BY gm.joined_at ASC, gm.user_id ASC
+LIMIT $5`
 
 	// queryListMyGroupsBase is the static prefix of the my-groups query. The
 	// keyset cursor predicate, ORDER BY and LIMIT are appended dynamically
@@ -131,7 +135,9 @@ SELECT ga.application_id, ga.group_id, g.name, COALESCE(g.avatar_url, ''),
 FROM group_applications ga
 JOIN groups g ON g.group_id = ga.group_id
 WHERE ga.group_id = $1 AND ($2 = '' OR ga.status = $2)
-ORDER BY ga.created_at DESC, ga.application_id DESC`
+  AND ($3::timestamptz IS NULL OR ga.created_at < $3 OR (ga.created_at = $3 AND ga.application_id < $4))
+ORDER BY ga.created_at DESC, ga.application_id DESC
+LIMIT $5`
 
 	queryListMyGroupApplications = `
 SELECT ga.application_id, ga.group_id, g.name, COALESCE(g.avatar_url, ''),
@@ -164,6 +170,7 @@ WHERE invite_id = $1`
 SELECT invite_id, expires_at
 FROM group_invites
 WHERE group_id = $1 AND invitee_user_id = $2 AND status = 'pending'
+  AND (expires_at IS NULL OR expires_at > now())
 ORDER BY created_at DESC, invite_id DESC
 LIMIT 1`
 
@@ -305,5 +312,7 @@ FROM group_members gm
 LEFT JOIN users u ON u.user_id = gm.user_id
 WHERE gm.group_id = $1 AND ($2 = '' OR gm.role = $2)
   AND ($3 = '' OR gm.user_id ILIKE '%' || $3 || '%' OR u.nickname ILIKE '%' || $3 || '%')
-ORDER BY gm.joined_at ASC, gm.user_id ASC`
+  AND ($4::timestamptz IS NULL OR gm.joined_at > $4 OR (gm.joined_at = $4 AND gm.user_id > $5))
+ORDER BY gm.joined_at ASC, gm.user_id ASC
+LIMIT $6`
 )

@@ -20,12 +20,21 @@ func (r *PostgresRepository) ListMembers(ctx context.Context, groupID string, ro
 	if role != nil {
 		roleValue = string(*role)
 	}
-	rows, err := queryable.Query(ctx, queryListGroupMembers, groupID, roleValue)
+	cursorJoinedAt, cursorUserID, err := decodeGroupPageCursor(cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	var cursorJoinedAtValue any
+	if !cursorJoinedAt.IsZero() {
+		cursorJoinedAtValue = cursorJoinedAt
+	}
+	rows, err := queryable.Query(ctx, queryListGroupMembers, groupID, roleValue, cursorJoinedAtValue, cursorUserID, limit+1)
 	if err != nil {
 		return nil, "", err
 	}
 	defer rows.Close()
-	items := make([]GroupMemberItem, 0)
+	items := make([]GroupMemberItem, 0, limit+1)
+	joinedAts := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item GroupMemberItem
 		var roleText string
@@ -36,11 +45,16 @@ func (r *PostgresRepository) ListMembers(ctx context.Context, groupID string, ro
 		item.Role = GroupRole(roleText)
 		item.JoinedAt = joinedAt.UTC().Format(time.RFC3339)
 		items = append(items, item)
+		joinedAts = append(joinedAts, joinedAt)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, "", err
 	}
-	return items, "", nil
+	if len(items) <= limit {
+		return items, "", nil
+	}
+	next := encodeGroupPageCursor(joinedAts[limit-1], items[limit-1].User.UserID)
+	return items[:limit], next, nil
 }
 
 // ListAdminMembers returns the admin-perspective member list (includes the
@@ -54,12 +68,21 @@ func (r *PostgresRepository) ListAdminMembers(ctx context.Context, groupID strin
 	if role != nil {
 		roleValue = string(*role)
 	}
-	rows, err := queryable.Query(ctx, queryListAdminGroupMembers, groupID, roleValue)
+	cursorJoinedAt, cursorUserID, err := decodeGroupPageCursor(cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	var cursorJoinedAtValue any
+	if !cursorJoinedAt.IsZero() {
+		cursorJoinedAtValue = cursorJoinedAt
+	}
+	rows, err := queryable.Query(ctx, queryListAdminGroupMembers, groupID, roleValue, cursorJoinedAtValue, cursorUserID, limit+1)
 	if err != nil {
 		return nil, "", err
 	}
 	defer rows.Close()
-	items := make([]AdminGroupMemberItem, 0)
+	items := make([]AdminGroupMemberItem, 0, limit+1)
+	joinedAts := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item AdminGroupMemberItem
 		var roleText string
@@ -72,11 +95,16 @@ func (r *PostgresRepository) ListAdminMembers(ctx context.Context, groupID strin
 		item.JoinedAt = joinedAt.UTC().Format(time.RFC3339)
 		item.MutedUntil = formatMutedUntil(mutedUntil)
 		items = append(items, item)
+		joinedAts = append(joinedAts, joinedAt)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, "", err
 	}
-	return items, "", nil
+	if len(items) <= limit {
+		return items, "", nil
+	}
+	next := encodeGroupPageCursor(joinedAts[limit-1], items[limit-1].User.UserID)
+	return items[:limit], next, nil
 }
 
 // IsMember is a direct membership probe (single indexed lookup) used on hot
@@ -91,12 +119,21 @@ func (r *PostgresRepository) SearchMembers(ctx context.Context, groupID string, 
 	if role != nil {
 		roleValue = string(*role)
 	}
-	rows, err := queryable.Query(ctx, querySearchGroupMembers, groupID, roleValue, keyword)
+	cursorJoinedAt, cursorUserID, err := decodeGroupPageCursor(cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	var cursorJoinedAtValue any
+	if !cursorJoinedAt.IsZero() {
+		cursorJoinedAtValue = cursorJoinedAt
+	}
+	rows, err := queryable.Query(ctx, querySearchGroupMembers, groupID, roleValue, keyword, cursorJoinedAtValue, cursorUserID, limit+1)
 	if err != nil {
 		return nil, "", err
 	}
 	defer rows.Close()
-	items := make([]GroupMemberItem, 0)
+	items := make([]GroupMemberItem, 0, limit+1)
+	joinedAts := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item GroupMemberItem
 		var roleText string
@@ -107,11 +144,16 @@ func (r *PostgresRepository) SearchMembers(ctx context.Context, groupID string, 
 		item.Role = GroupRole(roleText)
 		item.JoinedAt = joinedAt.UTC().Format(time.RFC3339)
 		items = append(items, item)
+		joinedAts = append(joinedAts, joinedAt)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, "", err
 	}
-	return items, "", nil
+	if len(items) <= limit {
+		return items, "", nil
+	}
+	next := encodeGroupPageCursor(joinedAts[limit-1], items[limit-1].User.UserID)
+	return items[:limit], next, nil
 }
 
 func (r *PostgresRepository) SetMemberRole(ctx context.Context, userID string, req SetMemberRoleRequest) error {

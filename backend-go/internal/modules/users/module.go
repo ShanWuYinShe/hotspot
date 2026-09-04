@@ -17,9 +17,8 @@ type Module struct {
 	Service *Service
 }
 
-func NewModule(factory *persistence.Factory, appConfig appconfig.Source) *Module {
+func NewModule(factory *persistence.Factory, appConfig appconfig.Source, notificationService *notify.Service) *Module {
 	repo := NewPostgresRepository(factory)
-	notificationService := notify.NewServiceWithRepo(notify.NewPostgresRepository(factory))
 	svc := NewServiceWithDeps(repo, notificationService, appConfig)
 	return &Module{handler: NewHandler(svc), Service: svc}
 }

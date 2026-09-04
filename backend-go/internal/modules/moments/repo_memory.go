@@ -90,9 +90,7 @@ func (r *InMemoryRepository) Get(_ context.Context, momentID string) (MomentItem
 func (r *InMemoryRepository) ListMine(_ context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	if limit <= 0 {
-		limit = 20
-	}
+	limit = types.NormalizeLimit(limit)
 	if limit > types.MaxPageSize {
 		limit = types.MaxPageSize
 	}

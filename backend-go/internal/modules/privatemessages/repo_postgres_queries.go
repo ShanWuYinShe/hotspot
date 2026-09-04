@@ -48,6 +48,7 @@ const (
 		  ON prs.chat_key = pm.chat_key AND prs.user_id = $3
 		WHERE pm.chat_key = $1
 		  AND ($4::timestamptz IS NULL OR pm.sent_at < $4::timestamptz OR (pm.sent_at = $4::timestamptz AND pm.message_id < $5))
+		  AND ($7::timestamptz IS NULL OR pm.sent_at > $7::timestamptz)
 		ORDER BY pm.sent_at DESC, pm.message_id DESC
 		LIMIT $6`
 

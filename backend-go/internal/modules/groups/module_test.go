@@ -5,11 +5,13 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+
+	"hotspot/backend-go/internal/modules/notify"
 )
 
 func TestGroupsModuleMountsSpecListBannedRoute(t *testing.T) {
 	router := chi.NewRouter()
-	NewModule(nil, nil).Mount(router)
+	NewModule(nil, nil, notify.NewService()).Mount(router)
 
 	var hasSpecRoute bool
 	var hasLegacyRoute bool

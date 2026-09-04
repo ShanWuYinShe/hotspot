@@ -83,4 +83,11 @@ func sweepDefaultStores(now time.Time) {
 	if r, ok := svc.refreshes.(*InMemoryRefreshStore); ok {
 		r.Sweep(now)
 	}
+	if r, ok := svc.refreshes.(*PostgresRefreshStore); ok {
+		// PG 版清理此前缺失：auth_refresh_tokens 每次轮换新增一行且永不删除，
+		// 表随登录/轮换无限增长。短超时上下文：清理失败静默等下一轮。
+		sweepCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		r.Sweep(sweepCtx, now)
+	}
 }

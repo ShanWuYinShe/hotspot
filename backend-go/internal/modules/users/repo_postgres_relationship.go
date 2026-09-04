@@ -128,7 +128,7 @@ func listBlockedUsersPostgres(ctx context.Context, factory *persistence.Factory,
 	if !ok {
 		return PaginatedBlockedUsers{}, persistence.ErrNotImplemented
 	}
-	limit = normalizeUserMomentLimit(limit)
+	limit = types.NormalizeLimit(limit)
 	cursorAt, cursorID, err := decodeUserCursor(cursor)
 	if err != nil {
 		return PaginatedBlockedUsers{}, ErrInvalidCursor

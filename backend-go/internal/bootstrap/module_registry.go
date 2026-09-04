@@ -28,7 +28,8 @@ import (
 )
 
 func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.Module {
-	return BuildModulesWithRedisPinger(context.Background(), cfg, factory, nil)
+	modules, _ := BuildModulesWithRedisPinger(context.Background(), cfg, factory, nil)
+	return modules
 }
 
 // BuildModulesWithRedisPinger is like BuildModules but additionally wires a
@@ -37,23 +38,29 @@ func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.M
 // skips the redis probe instead of reporting degraded. ctx governs the
 // lifetime of module-owned background goroutines (e.g. the auth login-tracker
 // sweeper) and should be the application root context.
-func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory *persistence.Factory, redisPinger func(ctx context.Context) error) []modulekit.Module {
+//
+// The second return value is the admin repository exposed as the platform-wide
+// ban checker (IsBanned); bootstrap hands it to the realtime handler so the WS
+// handshake enforces bans exactly like the HTTP RequiredAuth middleware.
+func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory *persistence.Factory, redisPinger func(ctx context.Context) error) ([]modulekit.Module, admin.Repository) {
 	sharedAppConfig := appconfig.NewPersistenceSource(cfg, factory)
 	ratelimit.SetSource(sharedAppConfig)
-	usersModule := users.NewModule(factory, sharedAppConfig)
-	groupsModule := groups.NewModule(factory, usersModule.Service)
+	// 通知服务全应用单一实例：此前 moments/groups/users/admin 各自再建一份
+	// notify.Service（共 5 个实例并存），装配属 bootstrap 职责，现统一注入。
+	notificationService := notify.NewServiceWithRepo(notify.NewPostgresRepository(factory))
+	usersModule := users.NewModule(factory, sharedAppConfig, notificationService)
+	groupsModule := groups.NewModule(factory, usersModule.Service, notificationService)
 	mediaModule := media.NewModule(cfg, factory)
 	mediaModule.Service.SetAppConfig(sharedAppConfig)
 	imageResolver := NewMomentImageResolver(mediaModule.Service)
-	momentsModule := moments.NewModule(factory, usersModule.Service, sharedAppConfig, imageResolver)
+	momentsModule := moments.NewModule(factory, usersModule.Service, sharedAppConfig, imageResolver, notificationService)
 	systemModule := system.NewModule(factory, sharedAppConfig)
 	systemModule.SetHealthRedisPinger(redisPinger)
 
-	notificationService := notify.NewServiceWithRepo(notify.NewPostgresRepository(factory))
 	shareModule := share.NewModule(factory)
 
 	gmModule := groupmessages.NewModule(factory, usersModule.Service, notificationService, shareModule.Service)
-	pcModule := privatechats.NewModule(factory, sharedAppConfig, shareModule.Service)
+	pcModule := privatechats.NewModule(factory, sharedAppConfig, shareModule.Service, usersModule.Service)
 
 	systemModule.Service().SetBootstrapResolver(systemBootstrapResolver{
 		users:  usersModule.Service,
@@ -94,12 +101,12 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// IsBanned can be wired into the platform auth Service (BanChecker),
 	// enforcing httpx.CodeAccountBanned for banned accounts on RequiredAuth endpoints.
 	authModule := auth.NewModule(ctx, cfg, factory, sharedAppConfig)
-	adminModule := admin.NewModule(factory, sharedAppConfig)
+	adminModule := admin.NewModule(factory, sharedAppConfig, notificationService)
 	// 举报快照源接线（spec api_spec_types.md ReportSnapshot：服务端生成）：
 	// 群聊 + 私聊两个消息源在各自模块构造完成后注入 reports；mediaFiles 经
 	// factory 解析媒体元数据，使 snapshot_media 为完整 MessageMedia。
 	reportsModule := reports.NewModule(factory)
-	reportsModule.Service.SetMessageSnapshotSource(newReportMessageSnapshotSource(factory, gmModule.Service, pcModule.MessageService()))
+	reportsModule.Service.SetMessageSnapshotSource(reports.NewMessageSnapshotSource(gmModule.Service, pcModule.MessageService(), reportsMediaSource{svc: mediaModule.Service}))
 	if svc := platformauth.DefaultService(); svc != nil {
 		svc.SetBanChecker(adminModule.Repo)
 	}
@@ -130,5 +137,5 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 		shareModule,
 		systemModule,
 		usersModule,
-	}
+	}, adminModule.Repo
 }

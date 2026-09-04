@@ -75,3 +75,7 @@ func TestMediaHandlerCompleteBatchErrorPaths(t *testing.T) {
 		t.Fatalf("unexpected code for batch error: %d", code)
 	}
 }
+
+func (r *mediaErrRepo) CompletedFileMetaByID(ctx context.Context, fileID string) (FileMeta, bool, error) {
+	return r.repo.CompletedFileMetaByID(ctx, fileID)
+}

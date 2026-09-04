@@ -181,6 +181,11 @@ func (s *Service) GetStatus(ctx context.Context) (SessionStatus, error) {
 	}, nil
 }
 
+// AccessTTL / RefreshTTL 透传 platformauth.Service 的令牌有效期（单一事实
+// 来源），供 Handler 写 auth Cookie 时引用，消除内联字面量 TTL。
+func (s *Service) AccessTTL() time.Duration  { return s.auth.AccessTTL() }
+func (s *Service) RefreshTTL() time.Duration { return s.auth.RefreshTTL() }
+
 func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
 	startedAt := time.Now()
 	// 手机号/邮箱型 login_id 必须先验证所有权（spec api_spec_public.md →
@@ -283,6 +288,17 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth
 
 	// Successful login — reset the failed-attempt counter.
 	s.loginTracker.Clear(ctx, req.LoginID)
+
+	// 封禁账号拒绝登录（spec api_spec_errors.md → 10201）：否则被封禁用户可反复
+	// 登录换取新 session；HTTP 侧虽被 RequiredAuth 拦截，但 WS 握手等非中间件
+	// 路径会绕过封禁。检查放在凭据校验之后，避免向封禁账号泄露账号存在性。
+	if s.auth.IsUserBanned(ctx, account.UserID) {
+		observability.L().Warn("login blocked: account banned",
+			"method", "Login",
+			"user_id", account.UserID,
+		)
+		return platformauth.AuthResult{}, ErrAccountBanned
+	}
 
 	if err := s.repo.UpdateLoginMeta(ctx, account.UserID, meta.IPAddress, meta.IPLocation); err != nil {
 		observability.L().Error("service error",

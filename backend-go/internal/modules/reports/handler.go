@@ -1,6 +1,7 @@
 package reports
 
 import (
+	"errors"
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
@@ -19,12 +20,12 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	created, err := h.service.Create(r.Context(), req)
 	if err != nil {
-		switch err.Error() {
-		case "reports: invalid request":
+		switch {
+		case errors.Is(err, ErrInvalidRequest):
 			httpx.WriteBusinessError(w, r, "Create", httpx.CodeInvalidRequest, "参数错误")
-		case "reports: target not found":
+		case errors.Is(err, ErrTargetNotFound):
 			httpx.WriteBusinessError(w, r, "Create", httpx.CodeNotFound, "举报目标不存在")
-		case "reports: self report":
+		case errors.Is(err, ErrSelfReport):
 			httpx.WriteBusinessError(w, r, "Create", httpx.CodeConflict, "举报被拒绝")
 		default:
 			observability.LogServerError(r, "Create", err)

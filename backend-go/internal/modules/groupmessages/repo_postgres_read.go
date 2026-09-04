@@ -13,12 +13,10 @@ func (r *PostgresRepository) History(ctx context.Context, groupID string, pagina
 	if !ok {
 		return PaginatedGroupMessages{}, persistence.ErrNotImplemented
 	}
-	limit := 20
+	// limit 归一化走全后端统一入口（默认 20、上限 100，spec api_spec_base.md）
+	limit := types.NormalizeLimit(types.PaginationLimit(pagination))
 	cursorValue := ""
 	if pagination != nil {
-		if pagination.Limit > 0 {
-			limit = pagination.Limit
-		}
 		cursorValue = pagination.Cursor
 	}
 	cursorSentAt, cursorMessageID, err := decodeGroupMessageCursor(cursorValue)

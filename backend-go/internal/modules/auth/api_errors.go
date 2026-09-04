@@ -15,6 +15,9 @@ var (
 	ErrPasswordResetThrottled         = errors.New("auth: password reset throttled")
 	ErrVerificationServiceUnavailable = errors.New("auth: verification service not available")
 	ErrAccountLocked                  = errors.New("auth: account locked due to too many failed attempts")
+	// ErrAccountBanned 封禁账号尝试登录（spec api_spec_errors.md → 10201：
+	// 客户端须强制登出并展示专用封禁页，与普通错误 toast 语义不同）。
+	ErrAccountBanned = errors.New("auth: account banned")
 	// ErrInvalidRegisterCode 注册验证码错误/已过期（spec api_spec_public.md →
 	// register：10401 旧凭证校验失败）。
 	ErrInvalidRegisterCode = errors.New("auth: invalid register verification code")
@@ -42,6 +45,9 @@ func apiErrorFrom(err error) *httpx.APIError {
 		// 10500 须携带 Retry-After（spec api_spec_errors.md → 10500）；
 		// 锁定窗口为服务端固定值，取完整窗口时长作为保守重试等待。
 		return &httpx.APIError{Code: httpx.CodeRateLimited, Message: "登录失败次数过多，请15分钟后重试", RetryAfterSeconds: int(defaultLockDuration.Seconds())}
+	case errors.Is(err, ErrAccountBanned):
+		// 10201（spec api_spec_errors.md）：账号被封禁，客户端强制登出 + 封禁页
+		return &httpx.APIError{Code: httpx.CodeAccountBanned, Message: "账号已被封禁"}
 	case errors.Is(err, ErrInvalidOldPassword):
 		return &httpx.APIError{Code: httpx.CodeInvalidOldCredential, Message: "旧密码错误"}
 	case errors.Is(err, ErrPasswordResetNotFound):

@@ -34,6 +34,19 @@ func (s *Service) GetMySettings(ctx context.Context) (UserSettings, error) {
 	return settings, nil
 }
 
+// ChatSettingsFor returns the target user's private-chat permission setting.
+// Explicit "by user id" read for cross-module callers (privatechats) — replaces
+// the former hack of forging a Principal for the target user to reuse
+// GetMySettings. found=false means the user never saved settings; callers
+// should treat that as the default (everyone).
+func (s *Service) ChatSettingsFor(ctx context.Context, userID string) (allowPrivateChat string, found bool, err error) {
+	settings, ok, err := s.repo.GetSettings(ctx, userID)
+	if err != nil || !ok {
+		return "", ok, err
+	}
+	return string(settings.AllowPrivateChat), true, nil
+}
+
 func (s *Service) UpdateMySettings(ctx context.Context, req UpdateSettingsRequest) error {
 	startedAt := time.Now()
 	observability.L().Info("users.update_my_settings started")

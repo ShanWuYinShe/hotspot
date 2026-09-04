@@ -17,9 +17,8 @@ type Module struct {
 	Service *Service
 }
 
-func NewModule(factory *persistence.Factory, actorProvider actor.Provider) *Module {
+func NewModule(factory *persistence.Factory, actorProvider actor.Provider, notificationService *notify.Service) *Module {
 	repo := NewPostgresRepository(factory)
-	notificationService := notify.NewServiceWithRepo(notify.NewPostgresRepository(factory))
 	svc := NewServiceWithDeps(repo, notificationService, actorProvider)
 	// 守卫子树角色解析器自接线：groups 自身的 Service.RoleOf 实现。
 	SetGroupRoleResolver(svc)

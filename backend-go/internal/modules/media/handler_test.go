@@ -236,3 +236,7 @@ func assertMediaCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx
 		t.Fatalf("expected code %d, got %#v", expected, resp)
 	}
 }
+
+func (r *mediaErrorRepo) CompletedFileMetaByID(context.Context, string) (FileMeta, bool, error) {
+	return FileMeta{}, false, nil
+}

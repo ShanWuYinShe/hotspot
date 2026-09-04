@@ -58,12 +58,10 @@ func (r *PostgresRepository) historySince(ctx context.Context, userID, targetUse
 	if !ok {
 		return PaginatedMessages{}, persistence.ErrNotImplemented
 	}
-	limit := 20
+	// limit 归一化走全后端统一入口（默认 20、上限 100，spec api_spec_base.md）
+	limit := types.NormalizeLimit(types.PaginationLimit(pagination))
 	cursorValue := ""
 	if pagination != nil {
-		if pagination.Limit > 0 {
-			limit = pagination.Limit
-		}
 		cursorValue = pagination.Cursor
 	}
 	cursorSentAt, cursorMessageID, err := decodeMessageCursor(cursorValue)
@@ -75,7 +73,13 @@ func (r *PostgresRepository) historySince(ctx context.Context, userID, targetUse
 	if !cursorSentAt.IsZero() {
 		cursorSentAtValue = cursorSentAt.Format(time.RFC3339Nano)
 	}
-	rows, err := queryable.Query(ctx, queryPrivateMessagesHistory, chatKey, userID, targetUserID, cursorSentAtValue, cursorMessageID, limit+1)
+	// deletedAfter 谓词下推 SQL（$7）：此前先 LIMIT 截断再在 Go 层跳过
+	// sent_at <= deleted_after 的行，被跳过行占用页配额会导致翻页提前终止漏数据。
+	var deletedAfterArg any
+	if deletedAfter != nil {
+		deletedAfterArg = deletedAfter.UTC()
+	}
+	rows, err := queryable.Query(ctx, queryPrivateMessagesHistory, chatKey, userID, targetUserID, cursorSentAtValue, cursorMessageID, limit+1, deletedAfterArg)
 	if err != nil {
 		return PaginatedMessages{}, err
 	}
@@ -96,12 +100,6 @@ func (r *PostgresRepository) historySince(ctx context.Context, userID, targetUse
 		var replySentAt string
 		if err := rows.Scan(&item.MessageID, &item.Type, &item.Content, &fileID, &item.ShareCode, &item.Sender.UserID, &senderNickname, &senderAvatar, &replyMessageID, &replyType, &replyContent, &replyShareCode, &replySenderUserID, &replySenderNickname, &replySenderAvatar, &replySentAt, &item.SentAt, &item.EditedAt, &item.RecalledAt, &item.IsRead); err != nil {
 			return PaginatedMessages{}, err
-		}
-		if deletedAfter != nil {
-			sentAt, err := time.Parse(time.RFC3339Nano, item.SentAt)
-			if err == nil && !sentAt.After(*deletedAfter) {
-				continue
-			}
 		}
 		item.Sender.Nickname = senderNickname
 		item.Sender.AvatarURL = types.StrPtr(senderAvatar)

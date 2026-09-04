@@ -21,9 +21,8 @@ type Module struct {
 	Comments        *comments.Service
 }
 
-func NewModule(factory *persistence.Factory, actorProvider actor.Provider, appConfig appconfig.Source, imageResolver ImageResolver) *Module {
+func NewModule(factory *persistence.Factory, actorProvider actor.Provider, appConfig appconfig.Source, imageResolver ImageResolver, notificationService *notify.Service) *Module {
 	momentRepo := NewPostgresRepository(factory)
-	notificationService := notify.NewServiceWithRepo(notify.NewPostgresRepository(factory))
 	txRunner := persistence.NewTxRunner(factory)
 	momentService := NewServiceWithDepsAndImagesAndConfig(momentRepo, notificationService, actorProvider, imageResolver, appConfig, txRunner)
 	commentService := comments.NewServiceWithDeps(comments.NewPostgresRepository(factory), momentService, notificationService, actorProvider, appConfig, txRunner)

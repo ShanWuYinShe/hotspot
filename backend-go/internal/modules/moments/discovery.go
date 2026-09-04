@@ -183,9 +183,7 @@ func paginateFollowingMoments(items []momentCandidate, limit int, cursor string)
 	if _, err := decodeFetchCursor(cursor); err != nil {
 		return PaginatedMoments{}, err
 	}
-	if limit <= 0 {
-		limit = 20
-	}
+	limit = types.NormalizeLimit(limit)
 	end := min(len(items), limit)
 	resp := PaginatedMoments{Items: make([]MomentItem, 0, end)}
 	for _, item := range items[:end] {
@@ -204,9 +202,7 @@ func paginateNearbyMoments(items []momentCandidate, limit int, cursor string) (P
 	if err != nil {
 		return PaginatedMoments{}, err
 	}
-	if limit <= 0 {
-		limit = 20
-	}
+	limit = types.NormalizeLimit(limit)
 	start := findNearbyCursorStart(items, decoded)
 	end := min(len(items), start+limit)
 	resp := PaginatedMoments{Items: make([]MomentItem, 0, max(0, end-start))}

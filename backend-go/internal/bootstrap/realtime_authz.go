@@ -3,10 +3,21 @@ package bootstrap
 import (
 	"context"
 
+	"hotspot/backend-go/internal/modules/admin"
 	"hotspot/backend-go/internal/modules/groups"
+	"hotspot/backend-go/internal/modules/media"
+	"hotspot/backend-go/internal/modules/reports"
 	"hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/actor"
 )
+
+// realtimeBanAuthorizer adapts the admin module repository to the realtime
+// handler's ban check at WS auth time (parity with HTTP RequiredAuth).
+type realtimeBanAuthorizer struct{ repo admin.Repository }
+
+func (a realtimeBanAuthorizer) IsBanned(ctx context.Context, userID string) (bool, error) {
+	return a.repo.IsBanned(ctx, userID)
+}
 
 type realtimeUserService struct{ svc *users.Service }
 
@@ -54,4 +65,25 @@ func (a realtimeGroupRepo) ListMembers(ctx context.Context, groupID string, limi
 
 func (a realtimeGroupRepo) IsMember(ctx context.Context, groupID, userID string) (bool, error) {
 	return a.repo.IsMember(ctx, groupID, userID)
+}
+
+// reportsMediaSource adapts the media module Service to the reports snapshot
+// source's file-metadata interface (keeps reports free of a media import).
+type reportsMediaSource struct{ svc *media.Service }
+
+func (a reportsMediaSource) CompletedFileMetaByID(ctx context.Context, fileID string) (reports.MediaFileMeta, bool, error) {
+	meta, found, err := a.svc.CompletedFileMetaByID(ctx, fileID)
+	if err != nil || !found {
+		return reports.MediaFileMeta{}, found, err
+	}
+	return reports.MediaFileMeta{
+		StorageKey:   meta.StorageKey,
+		ThumbnailURL: meta.ThumbnailURL,
+		Width:        meta.Width,
+		Height:       meta.Height,
+		MimeType:     meta.MimeType,
+		FileName:     meta.FileName,
+		FileSize:     meta.FileSize,
+		Duration:     meta.Duration,
+	}, true, nil
 }

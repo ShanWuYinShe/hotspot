@@ -22,12 +22,11 @@ type Module struct {
 	Repo Repository
 }
 
-func NewModule(factory *persistence.Factory, source appconfig.MutableSource) *Module {
+func NewModule(factory *persistence.Factory, source appconfig.MutableSource, pushService *notify.Service) *Module {
 	repo := NewPostgresRepository(factory)
 	provider := NewAppConfigProvider(source)
 	systemRepo := systemmodule.NewPostgresRepository(factory)
 	moderationStore := NewPersistenceModerationStore(factory, systemRepo)
-	pushService := notify.NewServiceWithRepo(notify.NewPostgresRepository(factory))
 	return NewModuleWithDeps(repo, provider, moderationStore, pushService)
 }
 

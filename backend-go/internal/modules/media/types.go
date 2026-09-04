@@ -69,3 +69,16 @@ type MediaAsset struct {
 	Height       int
 	MimeType     string
 }
+
+// FileMeta 是按 file_id 读取的完成态文件展示元数据（举报快照等跨模块
+// 只读场景消费；与 MediaAsset 的差异是附带 file_name/file_size/duration）。
+type FileMeta struct {
+	StorageKey   string
+	ThumbnailURL string
+	Width        int
+	Height       int
+	MimeType     string
+	FileName     string
+	FileSize     int
+	Duration     int
+}
