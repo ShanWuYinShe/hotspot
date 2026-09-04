@@ -49,7 +49,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		<!-- 资料页眉（eyebrow + 设置入口；底色对齐标准 PageHeader 的 surface-page） -->
 			<div class="border-b border-border-default bg-surface-page" >
 				<ContentColumn class="flex items-center justify-between py-3">
-					<p class="eyebrow font-medium text-accent-default">个人中心</p>
+					<p class="eyebrow font-medium text-text-secondary">个人中心</p>
 					{#if !needsAuth}
 						<!-- 未登录时设置页无意义，隐藏入口 -->
 						<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} variant="ghost" size={32} />
@@ -104,11 +104,12 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					{bio || '这个人还没有填写简介。'}
 				</p>
 			</div>
-			<!-- 统计横条：仅保留顶部分隔线，列间用留白（竖线在小屏三列里显得切割局促） -->
+			<!-- 统计横条：仅保留顶部分隔线，列间用留白（竖线在小屏三列里显得切割局促）。
+			     数字 display 化（大号粗体 + 紧字距），对齐 Figma stats 模式 -->
 			<div class="grid grid-cols-3 border-t border-border-default">
 				{#each statsList as stat}
-					<div class="px-4 py-3 text-center">
-						<p class="text-sm font-medium tabular-nums text-text-primary">{stat.value}</p>
+					<div class="px-4 py-3.5 text-center">
+						<p class="text-2xl font-bold tabular-nums tracking-tight text-text-primary">{stat.value}</p>
 						<p class="mt-0.5 text-xs text-text-secondary">{stat.label}</p>
 					</div>
 				{/each}

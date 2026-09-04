@@ -6,15 +6,16 @@
 	let { title, action, onAction }: { title: string; action?: string; onAction?: () => void } = $props();
 </script>
 
-<div class="flex items-end justify-between mb-3">
-	<span class="eyebrow">{title}</span>
+<div class="flex items-center justify-between mb-3">
+	<!-- 分区标题用真实标题层级（15px semibold），eyebrow 仅用于表单/分组 label -->
+	<h2 class="text-md font-semibold text-text-primary">{title}</h2>
 	{#if action && onAction}
 		<button
 			type="button"
-			class="hover-btn hit-slop flex items-center gap-0.5 focus-ring surface-ghost -my-1.5 rounded-full px-3 py-1.5 text-accent-default"
+			class="link-btn hit-slop flex items-center gap-0.5 focus-ring -my-1.5 px-1 py-1.5 text-xs text-accent-default"
 			onclick={onAction}
 		>
-			<span class="text-xs">{action}</span>
+			<span>{action}</span>
 			<ChevronRight class="size-3"  strokeWidth={1.5} />
 		</button>
 	{/if}

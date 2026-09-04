@@ -301,7 +301,7 @@
 	</div>
 {:else}
 	<!-- ═══ Mobile Messages ═══ -->
-	<PageHeader title="消息" sticky titleSize="2xl" subtitleSize="sm" contentClassName="pt-4 pb-0">
+	<PageHeader title="消息" sticky titleSize="3xl" subtitleSize="sm" contentClassName="pt-4 pb-0">
 		{#snippet trailing()}
 			<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「新会话」同排 -->
 			<div class="flex items-center gap-2">

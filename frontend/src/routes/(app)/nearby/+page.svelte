@@ -34,7 +34,8 @@
 			title="附近"
 			subtitle="发现周边有趣的人和事"
 			sticky
-			titleSize={device === 'desktop' ? 'xl' : '2xl'}
+			titleSize={device === 'desktop' ? 'xl' : '3xl'}
+			subtitleSize={device === 'desktop' ? 'xs' : 'sm'}
 		/>
 	{/snippet}
 
