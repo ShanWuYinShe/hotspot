@@ -31,4 +31,9 @@ type Repository interface {
 	// ListNearbyMoments 附近瞬间（spec moment.md → moments/fetch_nearby，
 	// 原 feed/nearby_moments 迁移）：distance 主序。
 	ListNearbyMoments(context.Context, momentsQuery) (PaginatedMoments, error)
+	// ListMomentsByAuthor / ListReactedByUser 供 users 模块个人主页聚合消费
+	// （原实现位于 users repo，直查 moments/reactions 表；现归位本模块，
+	// users 经 Service 接口消费，见 Service.ListMomentsByAuthor）。
+	ListMomentsByAuthor(context.Context, string, int, string, bool) (PaginatedMoments, error)
+	ListReactedByUser(context.Context, string, string, int, string) (PaginatedMoments, error)
 }

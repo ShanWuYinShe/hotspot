@@ -11,8 +11,10 @@ import (
 	"testing"
 	"time"
 
+	groups "hotspot/backend-go/internal/modules/groups"
 	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
+	moments "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/modules/notify"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
@@ -305,9 +307,12 @@ func TestFollowBlockRemarkAndOpenTheDoor(t *testing.T) {
 	if err := service.repo.PutProfile(ctx, charlie); err != nil {
 		t.Fatalf("put charlie profile: %v", err)
 	}
-	repo := service.repo.(*InMemoryRepository)
-	repo.groupsByUser["user_alice"] = []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_common", Name: "Common Group"}}}
-	repo.groupsByUser["user_bob"] = []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_common", Name: "Common Group"}}}
+	groupsRepo := groups.NewInMemoryRepository()
+	groupsRepo.SeedGroupsByUser("user_alice", []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_common", Name: "Common Group"}}})
+	groupsRepo.SeedGroupsByUser("user_bob", []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_common", Name: "Common Group"}}})
+	groupsSvc := groups.NewServiceWithRepo(groupsRepo)
+	momentsSvc := moments.NewServiceWithRepo(moments.NewInMemoryRepository())
+	service.SetContentProviders(groupsSvc, momentsSvc)
 	_ = service.repo.PutSettings(ctx, "user_bob", defaultSettings())
 	_ = service.repo.PutSettings(ctx, "user_charlie", defaultSettings())
 
@@ -661,9 +666,12 @@ func TestOpenTheDoorCountsNonSearchableCommonGroups(t *testing.T) {
 	if err := service.repo.PutProfile(ctx, bob); err != nil {
 		t.Fatalf("put bob profile: %v", err)
 	}
-	repo := service.repo.(*InMemoryRepository)
-	repo.groupsByUser["user_alice"] = []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_private", Name: "Private Group"}, IsSearchable: false}}
-	repo.groupsByUser["user_bob"] = []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_private", Name: "Private Group"}, IsSearchable: false}}
+	groupsRepo := groups.NewInMemoryRepository()
+	groupsRepo.SeedGroupsByUser("user_alice", []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_private", Name: "Private Group"}, IsSearchable: false}})
+	groupsRepo.SeedGroupsByUser("user_bob", []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_private", Name: "Private Group"}, IsSearchable: false}})
+	groupsSvc := groups.NewServiceWithRepo(groupsRepo)
+	momentsSvc := moments.NewServiceWithRepo(moments.NewInMemoryRepository())
+	service.SetContentProviders(groupsSvc, momentsSvc)
 	_ = service.repo.PutSettings(ctx, "user_bob", defaultSettings())
 
 	openReq := httptest.NewRequest(http.MethodPost, "/open_the_door", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
@@ -678,28 +686,6 @@ func TestOpenTheDoorCountsNonSearchableCommonGroups(t *testing.T) {
 	}
 	if openResp.Code != 0 || openResp.Data.User.SocialContext == nil || openResp.Data.User.SocialContext.CommonGroupsCount == nil || *openResp.Data.User.SocialContext.CommonGroupsCount != 1 {
 		t.Fatalf("unexpected open response: %#v", openResp)
-	}
-}
-
-func TestInMemoryReactedMomentsCursorUsesReactedAt(t *testing.T) {
-	repo := NewInMemoryRepository()
-	repo.reactedMoments["user_alice"] = []reactedMomentRecord{
-		{ReactedAt: "2026-03-29T12:00:00Z", Moment: momenttypes.MomentItem{MomentID: "moment_newer", CreatedAt: "2026-03-20T00:00:00Z", User: momenttypes.UserInfo{UserID: "user_bob"}}},
-		{ReactedAt: "2026-03-29T11:00:00Z", Moment: momenttypes.MomentItem{MomentID: "moment_older", CreatedAt: "2026-03-21T00:00:00Z", User: momenttypes.UserInfo{UserID: "user_bob"}}},
-	}
-	first, err := repo.ListReactedMoments(context.Background(), "user_alice", 1, "", "viewer")
-	if err != nil {
-		t.Fatalf("list reacted first page: %v", err)
-	}
-	if len(first.Items) != 1 || first.Items[0].MomentID != "moment_newer" || first.NextCursor == nil {
-		t.Fatalf("unexpected first page: %#v", first)
-	}
-	second, err := repo.ListReactedMoments(context.Background(), "user_alice", 1, *first.NextCursor, "viewer")
-	if err != nil {
-		t.Fatalf("list reacted second page: %v", err)
-	}
-	if len(second.Items) != 1 || second.Items[0].MomentID != "moment_older" {
-		t.Fatalf("unexpected second page: %#v", second)
 	}
 }
 
@@ -1178,7 +1164,8 @@ func TestListGroupsPermissionDenied(t *testing.T) {
 
 func TestListGroupsHappyPath(t *testing.T) {
 	repo := NewInMemoryRepository()
-	handler := NewHandler(NewServiceWithRepo(repo))
+	usersSvc := NewServiceWithRepo(repo)
+	handler := NewHandler(usersSvc)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	if err := repo.PutProfile(ctx, defaultTestProfile("user_alice")); err != nil {
 		t.Fatalf("put alice: %v", err)
@@ -1186,8 +1173,11 @@ func TestListGroupsHappyPath(t *testing.T) {
 	if err := repo.PutSettings(ctx, "user_alice", defaultSettings()); err != nil {
 		t.Fatalf("put alice settings: %v", err)
 	}
-	mr := repo
-	mr.groupsByUser["user_alice"] = []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_1", Name: "Test Group"}}}
+	groupsRepo := groups.NewInMemoryRepository()
+	groupsRepo.SeedGroupsByUser("user_alice", []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_1", Name: "Test Group"}}})
+	groupsSvc := groups.NewServiceWithRepo(groupsRepo)
+	momentsSvc := moments.NewServiceWithRepo(moments.NewInMemoryRepository())
+	usersSvc.SetContentProviders(groupsSvc, momentsSvc)
 	req := httptest.NewRequest(http.MethodPost, "/list_groups", strings.NewReader(`{"user_id":"user_alice"}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListGroups(rr, req)
@@ -1207,10 +1197,13 @@ func TestListGroupsHappyPath(t *testing.T) {
 }
 
 func TestListGroupsServerError(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&userErrorRepo{
+	errRepo := &userErrorRepo{
 		listBlockedErr: errors.New("boom"),
 		exists:         true,
-	}))
+	}
+	usersSvc := NewServiceWithRepo(errRepo)
+	usersSvc.SetContentProviders(errRepo, errRepo)
+	handler := NewHandler(usersSvc)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	req := httptest.NewRequest(http.MethodPost, "/list_groups", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
@@ -1271,10 +1264,13 @@ func TestListMomentsHappyPath(t *testing.T) {
 }
 
 func TestListMomentsServerError(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&userErrorRepo{
+	errRepo := &userErrorRepo{
 		listBlockedErr: errors.New("boom"),
 		exists:         true,
-	}))
+	}
+	usersSvc := NewServiceWithRepo(errRepo)
+	usersSvc.SetContentProviders(errRepo, errRepo)
+	handler := NewHandler(usersSvc)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	req := httptest.NewRequest(http.MethodPost, "/list_moments", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
@@ -1489,4 +1485,17 @@ func TestDeleteAccountHandlerRejectsInvalidJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/delete_account", strings.NewReader(`{broken`)).WithContext(ctx)
 	handler.DeleteAccount(rr, req)
 	assertUserCode(t, rr, httpx.CodeInvalidRequest)
+}
+
+func (r *userErrorRepo) ListGroupsByUser(context.Context, string, int, string) (grouptypes.PaginatedGroups, error) {
+	return grouptypes.PaginatedGroups{}, errors.New("boom")
+}
+func (r *userErrorRepo) ListMomentsByAuthor(context.Context, string, int, string, bool) (momenttypes.PaginatedMoments, error) {
+	return momenttypes.PaginatedMoments{}, errors.New("boom")
+}
+func (r *userErrorRepo) ListReactedByUser(context.Context, string, string, int, string) (momenttypes.PaginatedMoments, error) {
+	return momenttypes.PaginatedMoments{}, errors.New("boom")
+}
+func (r *userErrorRepo) CountCommonGroups(context.Context, string, string) (int, error) {
+	return 0, errors.New("boom")
 }

@@ -9,7 +9,9 @@ import (
 	"strings"
 	"testing"
 
+	groups "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
+	moments "hotspot/backend-go/internal/modules/moments"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 )
@@ -106,11 +108,16 @@ func TestListMomentsPublicOnly(t *testing.T) {
 	repo := NewInMemoryRepository()
 	ctx := context.Background()
 	_ = repo.PutProfile(ctx, defaultTestProfile("alice"))
-	repo.momentsByUser["alice"] = []momenttypes.MomentItem{
-		{MomentID: "m_pub", Description: "public", PrivacyLevel: "public"},
-		{MomentID: "m_priv", Description: "private", PrivacyLevel: "private"},
-	}
+	// 数据源走 moments Service（D1 迁移后 users 不再直查 moments 表）
+	momentsRepo := moments.NewInMemoryRepository()
+	momentsRepo.SeedMomentsByUser("alice", []momenttypes.MomentItem{
+		{MomentID: "m_pub", User: momenttypes.UserInfo{UserID: "alice"}, Description: "public", PrivacyLevel: "public"},
+		{MomentID: "m_priv", User: momenttypes.UserInfo{UserID: "alice"}, Description: "private", PrivacyLevel: "private"},
+	})
+	momentsSvc := moments.NewServiceWithRepo(momentsRepo)
+	groupsSvc := groups.NewServiceWithRepo(groups.NewInMemoryRepository())
 	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(groupsSvc, momentsSvc)
 	res, err := svc.ListMoments(platformauth.WithPrincipal(ctx, platformauth.Principal{UserID: "alice"}), UserMomentsRequest{UserID: "alice"})
 	if err != nil {
 		t.Fatalf("ListMoments: %v", err)

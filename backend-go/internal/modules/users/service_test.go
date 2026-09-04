@@ -111,9 +111,6 @@ func (r *stubUserRepo) CheckBlockedTags(_ context.Context, _ []string) ([]string
 func (r *stubUserRepo) ListBlocked(_ context.Context, _ string, _ int, _ string) (PaginatedBlockedUsers, error) {
 	return r.blockedResult, r.blockedErr
 }
-func (r *stubUserRepo) ListReactedMoments(_ context.Context, _ string, _ int, _ string, _ string) (momenttypes.PaginatedMoments, error) {
-	return r.reactedMoments, r.reactedErr
-}
 func (r *stubUserRepo) Relationship(_ context.Context, _, _ string) (Relationship, error) {
 	return r.relation, r.relationErr
 }
@@ -136,12 +133,6 @@ func (r *stubUserRepo) ListFollowing(_ context.Context, _ string, _ int, _ strin
 func (r *stubUserRepo) ListFollowers(_ context.Context, _ string, _ int, _ string) (PaginatedFollowers, error) {
 	return r.followers, r.followersErr
 }
-func (r *stubUserRepo) ListGroups(_ context.Context, _ string, _ int, _ string) (grouptypes.PaginatedGroups, error) {
-	return r.groupsResult, r.groupsErr
-}
-func (r *stubUserRepo) ListMoments(_ context.Context, _ string, _ int, _ string, _ bool) (momenttypes.PaginatedMoments, error) {
-	return r.momentsResult, r.momentsErr
-}
 func (r *stubUserRepo) CommonGroupCount(_ context.Context, _, _ string) (int, error) {
 	return r.commonGroups, r.commonErr
 }
@@ -161,6 +152,7 @@ func testProfile(userID string) MyProfile {
 
 func TestServiceGetMyProfileCreatesDefault(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{})
+	svc.SetContentProviders(&stubUserRepo{}, &stubUserRepo{})
 	profile, err := svc.GetMyProfile(userCtx("u1"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -190,6 +182,7 @@ func TestServiceGetMyProfileCreatesDefaultWhenMissing(t *testing.T) {
 func TestServiceGetMyProfileReturnsExisting(t *testing.T) {
 	expected := testProfile("u1")
 	svc := NewServiceWithRepo(&stubUserRepo{profile: expected, profileFound: true})
+	svc.SetContentProviders(&stubUserRepo{profile: expected, profileFound: true}, &stubUserRepo{profile: expected, profileFound: true})
 	profile, err := svc.GetMyProfile(userCtx("u1"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -201,6 +194,7 @@ func TestServiceGetMyProfileReturnsExisting(t *testing.T) {
 
 func TestServiceGetMyProfileRequiresAuth(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{})
+	svc.SetContentProviders(&stubUserRepo{}, &stubUserRepo{})
 	_, err := svc.GetMyProfile(context.Background())
 	if !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("expected unauthorized, got %v", err)
@@ -210,6 +204,7 @@ func TestServiceGetMyProfileRequiresAuth(t *testing.T) {
 func TestServiceUpdateMyProfileAppliesPatch(t *testing.T) {
 	repo := &stubUserRepo{profile: testProfile("u1"), profileFound: true}
 	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
 	nick := "new_nick"
 	err := svc.UpdateMyProfile(userCtx("u1"), UpdateAccountRequest{Nickname: &nick})
 	if err != nil {
@@ -219,6 +214,7 @@ func TestServiceUpdateMyProfileAppliesPatch(t *testing.T) {
 
 func TestServiceUpdateMyProfileRequiresAuth(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{})
+	svc.SetContentProviders(&stubUserRepo{}, &stubUserRepo{})
 	err := svc.UpdateMyProfile(context.Background(), UpdateAccountRequest{})
 	if !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("expected unauthorized, got %v", err)
@@ -229,6 +225,7 @@ func TestServiceUpdateMyProfileRequiresAuth(t *testing.T) {
 
 func TestServiceGetMySettingsCreatesDefault(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{})
+	svc.SetContentProviders(&stubUserRepo{}, &stubUserRepo{})
 	settings, err := svc.GetMySettings(userCtx("u1"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -241,6 +238,7 @@ func TestServiceGetMySettingsCreatesDefault(t *testing.T) {
 func TestServiceUpdateMySettingsAppliesPatch(t *testing.T) {
 	repo := &stubUserRepo{settingsFound: true}
 	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
 	locVisible := false
 	err := svc.UpdateMySettings(userCtx("u1"), UpdateSettingsRequest{
 		Settings: PartialUserSettings{LocationVisible: &locVisible},
@@ -254,6 +252,7 @@ func TestServiceUpdateMySettingsAppliesPatch(t *testing.T) {
 
 func TestServiceFollowRejectsSelf(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{exists: true})
+	svc.SetContentProviders(&stubUserRepo{exists: true}, &stubUserRepo{exists: true})
 	err := svc.Follow(userCtx("u1"), "u1", FollowSourceProfile, "")
 	if !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected conflict, got %v", err)
@@ -262,6 +261,7 @@ func TestServiceFollowRejectsSelf(t *testing.T) {
 
 func TestServiceFollowRejectsUnknownTarget(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{exists: false})
+	svc.SetContentProviders(&stubUserRepo{exists: false}, &stubUserRepo{exists: false})
 	err := svc.Follow(userCtx("u1"), "u2", FollowSourceProfile, "")
 	if !errors.Is(err, ErrUserNotFound) {
 		t.Fatalf("expected not found, got %v", err)
@@ -270,6 +270,7 @@ func TestServiceFollowRejectsUnknownTarget(t *testing.T) {
 
 func TestServiceFollowRejectsWhenFollowDisabled(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{exists: true, settings: UserSettings{AllowFollow: false}, settingsFound: true})
+	svc.SetContentProviders(&stubUserRepo{exists: true, settings: UserSettings{AllowFollow: false}, settingsFound: true}, &stubUserRepo{exists: true, settings: UserSettings{AllowFollow: false}, settingsFound: true})
 	err := svc.Follow(userCtx("u1"), "u2", FollowSourceProfile, "")
 	if !errors.Is(err, ErrPermissionDenied) {
 		t.Fatalf("expected permission denied, got %v", err)
@@ -279,6 +280,7 @@ func TestServiceFollowRejectsWhenFollowDisabled(t *testing.T) {
 func TestServiceFollowHappyPath(t *testing.T) {
 	repo := &stubUserRepo{exists: true, settingsFound: true, settings: defaultSettings()}
 	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
 	err := svc.Follow(userCtx("u1"), "u2", FollowSourceProfile, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -287,6 +289,7 @@ func TestServiceFollowHappyPath(t *testing.T) {
 
 func TestServiceUnfollowRejectsSelf(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{exists: true})
+	svc.SetContentProviders(&stubUserRepo{exists: true}, &stubUserRepo{exists: true})
 	err := svc.Unfollow(userCtx("u1"), "u1")
 	if !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected conflict, got %v", err)
@@ -297,6 +300,7 @@ func TestServiceUnfollowRejectsSelf(t *testing.T) {
 
 func TestServiceBlockRejectsSelf(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{exists: true})
+	svc.SetContentProviders(&stubUserRepo{exists: true}, &stubUserRepo{exists: true})
 	err := svc.Block(userCtx("u1"), "u1", "")
 	if !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected conflict, got %v", err)
@@ -306,6 +310,7 @@ func TestServiceBlockRejectsSelf(t *testing.T) {
 func TestServiceBlockHappyPath(t *testing.T) {
 	repo := &stubUserRepo{exists: true}
 	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
 	err := svc.Block(userCtx("u1"), "u2", "spam")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -314,6 +319,7 @@ func TestServiceBlockHappyPath(t *testing.T) {
 
 func TestServiceUnblockRejectsSelf(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{exists: true})
+	svc.SetContentProviders(&stubUserRepo{exists: true}, &stubUserRepo{exists: true})
 	err := svc.Unblock(userCtx("u1"), "u1")
 	if !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected conflict, got %v", err)
@@ -325,6 +331,7 @@ func TestServiceUnblockRejectsSelf(t *testing.T) {
 func TestServiceUpdateLocationHappyPath(t *testing.T) {
 	repo := &stubUserRepo{profile: testProfile("u1"), profileFound: true}
 	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
 	err := svc.UpdateLocation(userCtx("u1"), UpdateLocationRequest{Location: Location{Point: GeoPoint{Latitude: 1, Longitude: 2}, LocationName: "test"}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -335,6 +342,7 @@ func TestServiceUpdateLocationHappyPath(t *testing.T) {
 
 func TestServiceDeleteAccountHappyPath(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{})
+	svc.SetContentProviders(&stubUserRepo{}, &stubUserRepo{})
 	err := svc.DeleteAccount(userCtx("u1"), DeleteAccountRequest{Confirmation: "DELETE_MY_ACCOUNT"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -343,6 +351,7 @@ func TestServiceDeleteAccountHappyPath(t *testing.T) {
 
 func TestServiceDeleteAccountRequiresAuth(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{})
+	svc.SetContentProviders(&stubUserRepo{}, &stubUserRepo{})
 	err := svc.DeleteAccount(context.Background(), DeleteAccountRequest{Confirmation: "DELETE_MY_ACCOUNT"})
 	if !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("expected unauthorized, got %v", err)
@@ -385,6 +394,7 @@ func TestServiceDeleteAccountAnonymizesContentAuthor(t *testing.T) {
 
 func TestServiceDeleteAccountRejectsWrongConfirmation(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{})
+	svc.SetContentProviders(&stubUserRepo{}, &stubUserRepo{})
 	err := svc.DeleteAccount(userCtx("u1"), DeleteAccountRequest{Confirmation: "WRONG"})
 	if !errors.Is(err, ErrInvalidRequest) {
 		t.Fatalf("expected invalid request, got %v", err)
@@ -396,6 +406,7 @@ func TestServiceDeleteAccountRejectsWrongConfirmation(t *testing.T) {
 func TestServiceUpgradeRejectsAlreadyNormal(t *testing.T) {
 	repo := &stubUserRepo{profile: testProfile("u1"), profileFound: true}
 	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
 	_, err := svc.Upgrade(userCtx("u1"), UpgradeAccountRequest{LoginID: "test@test.com", Password: "pass"})
 	if !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected conflict for already normal user, got %v", err)
@@ -407,6 +418,7 @@ func TestServiceUpgradeWithEmailWritesToEmail(t *testing.T) {
 	tempProfile.UserType = UserTypeTemp
 	repo := &stubUserRepo{profile: tempProfile, profileFound: true}
 	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
 	_, err := svc.Upgrade(userCtx("u1"), UpgradeAccountRequest{LoginID: "test@test.com", Password: "pass"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -421,6 +433,7 @@ func TestServiceUpgradeWithPhoneWritesToPhone(t *testing.T) {
 	tempProfile.UserType = UserTypeTemp
 	repo := &stubUserRepo{profile: tempProfile, profileFound: true}
 	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
 	_, err := svc.Upgrade(userCtx("u1"), UpgradeAccountRequest{LoginID: "13800138000", Password: "pass"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -435,6 +448,7 @@ func TestServiceUpgradeWithPhoneWritesToPhone(t *testing.T) {
 func TestServiceSetRemarkRequiresFollowing(t *testing.T) {
 	repo := &stubUserRepo{exists: true, relation: RelationshipNone}
 	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
 	err := svc.SetRemark(userCtx("u1"), "u2", "friend")
 	if !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected conflict, got %v", err)
@@ -444,6 +458,7 @@ func TestServiceSetRemarkRequiresFollowing(t *testing.T) {
 func TestServiceSetRemarkHappyPath(t *testing.T) {
 	repo := &stubUserRepo{exists: true, relation: Relationship{IsFollowing: true}}
 	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
 	err := svc.SetRemark(userCtx("u1"), "u2", "friend")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -455,6 +470,7 @@ func TestServiceSetRemarkHappyPath(t *testing.T) {
 func TestServiceListBlockedHappyPath(t *testing.T) {
 	repo := &stubUserRepo{blockedResult: PaginatedBlockedUsers{Items: []BlockedUserItem{{User: UserInfo{UserID: "u2"}}}}}
 	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
 	result, err := svc.ListBlocked(userCtx("u1"), MyBlockedRequest{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -473,6 +489,7 @@ func TestServiceSearchDelegates(t *testing.T) {
 		settings:      defaultSettings(),
 	}
 	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
 	result, err := svc.Search(userCtx("u1"), SearchUsersRequest{ReferencePoint: GeoPoint{Latitude: 1, Longitude: 2}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -485,6 +502,7 @@ func TestServiceSearchDelegates(t *testing.T) {
 func TestServiceSearchRejectsInvalidCursor(t *testing.T) {
 	repo := &stubUserRepo{searchResult: PaginatedProfiles{InvalidCursor: true}}
 	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
 	_, err := svc.Search(userCtx("u1"), SearchUsersRequest{ReferencePoint: GeoPoint{Latitude: 1, Longitude: 2}})
 	if !errors.Is(err, ErrInvalidCursor) {
 		t.Fatalf("expected invalid cursor, got %v", err)
@@ -495,6 +513,7 @@ func TestServiceSearchRejectsInvalidCursor(t *testing.T) {
 
 func TestServiceListFriendsRequiresUserID(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{})
+	svc.SetContentProviders(&stubUserRepo{}, &stubUserRepo{})
 	_, err := svc.ListFriends(context.Background(), ListFriendsRequest{})
 	if !errors.Is(err, ErrInvalidRequest) {
 		t.Fatalf("expected invalid request (user_id required), got %v", err)
@@ -504,6 +523,7 @@ func TestServiceListFriendsRequiresUserID(t *testing.T) {
 func TestServiceListFriendsRejectsHidden(t *testing.T) {
 	repo := &stubUserRepo{exists: true, settingsFound: true, settings: UserSettings{SocialListsVisible: false}}
 	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
 	_, err := svc.ListFriends(userCtx("u1"), ListFriendsRequest{UserID: "u2"})
 	if !errors.Is(err, ErrPermissionDenied) {
 		t.Fatalf("expected permission denied, got %v", err)
@@ -515,6 +535,7 @@ func TestServiceListFriendsRejectsHidden(t *testing.T) {
 func TestServiceListReactedMomentsRejectsHidden(t *testing.T) {
 	repo := &stubUserRepo{exists: true, settingsFound: true, settings: UserSettings{ReactedMomentsVisible: false}}
 	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
 	_, err := svc.ListReactedMoments(userCtx("u1"), UserReactedMomentsRequest{UserID: "u2"})
 	if !errors.Is(err, ErrPermissionDenied) {
 		t.Fatalf("expected permission denied, got %v", err)
@@ -526,8 +547,44 @@ func TestServiceListReactedMomentsRejectsHidden(t *testing.T) {
 func TestServiceListGroupsRejectsHidden(t *testing.T) {
 	repo := &stubUserRepo{exists: true, settingsFound: true, settings: UserSettings{GroupsVisible: false}}
 	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
 	_, err := svc.ListGroups(userCtx("u1"), UserGroupsRequest{UserID: "u2"})
 	if !errors.Is(err, ErrPermissionDenied) {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
+}
+
+// stubContentProviders 承载原 stubUserRepo 的跨模块聚合数据（D1 迁移后
+// 数据获取走 GroupsByUserProvider / MomentsByUserProvider）。
+type stubContentProviders struct {
+	repo *stubUserRepo
+}
+
+func (p *stubContentProviders) ListGroupsByUser(_ context.Context, _ string, _ int, _ string) (grouptypes.PaginatedGroups, error) {
+	return p.repo.groupsResult, p.repo.groupsErr
+}
+func (p *stubContentProviders) ListMomentsByAuthor(_ context.Context, _ string, _ int, _ string, _ bool) (momenttypes.PaginatedMoments, error) {
+	return p.repo.momentsResult, p.repo.momentsErr
+}
+func (p *stubContentProviders) ListReactedByUser(_ context.Context, _ string, _ string, _ int, _ string) (momenttypes.PaginatedMoments, error) {
+	return p.repo.reactedMoments, p.repo.reactedErr
+}
+func (p *stubContentProviders) CountCommonGroups(_ context.Context, _, _ string) (int, error) {
+	return 0, nil
+}
+
+// ListGroupsByUser / ListMomentsByAuthor / ListReactedByUser / CountCommonGroups：
+// stubUserRepo 同时实现 GroupsByUserProvider / MomentsByUserProvider（数据复用
+// 原聚合字段），D1 迁移后由测试经 SetContentProviders 注入。
+func (r *stubUserRepo) ListGroupsByUser(_ context.Context, _ string, _ int, _ string) (grouptypes.PaginatedGroups, error) {
+	return r.groupsResult, r.groupsErr
+}
+func (r *stubUserRepo) ListMomentsByAuthor(_ context.Context, _ string, _ int, _ string, _ bool) (momenttypes.PaginatedMoments, error) {
+	return r.momentsResult, r.momentsErr
+}
+func (r *stubUserRepo) ListReactedByUser(_ context.Context, _ string, _ string, _ int, _ string) (momenttypes.PaginatedMoments, error) {
+	return r.reactedMoments, r.reactedErr
+}
+func (r *stubUserRepo) CountCommonGroups(_ context.Context, _, _ string) (int, error) {
+	return 0, nil
 }

@@ -182,7 +182,9 @@ FROM group_invites gi
 LEFT JOIN users ui ON ui.user_id = gi.inviter_user_id
 LEFT JOIN users ue ON ue.user_id = gi.invitee_user_id
 WHERE gi.group_id = $1 AND ($2 = '' OR gi.status = $2)
-ORDER BY gi.created_at DESC, gi.invite_id DESC`
+  AND ($3::timestamptz IS NULL OR gi.created_at < $3 OR (gi.created_at = $3 AND gi.invite_id < $4))
+ORDER BY gi.created_at DESC, gi.invite_id DESC
+LIMIT $5`
 
 	queryListMyInvites = `
 SELECT gi.invite_id, gi.group_id, g.name, COALESCE(g.avatar_url, ''),
@@ -191,7 +193,9 @@ SELECT gi.invite_id, gi.group_id, g.name, COALESCE(g.avatar_url, ''),
 FROM group_invites gi
 JOIN groups g ON g.group_id = gi.group_id
 WHERE gi.invitee_user_id = $1 AND ($2 = '' OR gi.status = $2)
-ORDER BY gi.created_at DESC, gi.invite_id DESC`
+  AND ($3::timestamptz IS NULL OR gi.created_at < $3 OR (gi.created_at = $3 AND gi.invite_id < $4))
+ORDER BY gi.created_at DESC, gi.invite_id DESC
+LIMIT $5`
 
 	// Accept/Reject 共用：仅 pending 可流转（RETURNING 让 0 行命中可检测）。
 	queryUpdateGroupInvite = `
@@ -315,4 +319,34 @@ WHERE gm.group_id = $1 AND ($2 = '' OR gm.role = $2)
   AND ($4::timestamptz IS NULL OR gm.joined_at > $4 OR (gm.joined_at = $4 AND gm.user_id > $5))
 ORDER BY gm.joined_at ASC, gm.user_id ASC
 LIMIT $6`
+
+	// queryListGroupsByUser 是 users 模块「某用户的群组列表」聚合读（原实现位于
+	// users repo，直查 groups/group_members 表；现已归位本模块，users 经 Service
+	// 接口消费）。
+	queryListGroupsByUser = `
+SELECT g.group_id, g.name, COALESCE(g.avatar_url, ''), COALESCE(g.description, ''), g.has_password, g.location_name, g.latitude, g.longitude, g.join_method, g.is_searchable, g.max_members, gm.joined_at
+FROM group_members gm
+JOIN groups g ON g.group_id = gm.group_id
+WHERE gm.user_id = $1 AND g.deleted_at IS NULL AND g.is_searchable = TRUE
+  AND (
+    $2::timestamptz IS NULL
+    OR gm.joined_at < $2::timestamptz
+    OR (gm.joined_at = $2::timestamptz AND g.group_id > $3)
+  )
+ORDER BY gm.joined_at DESC, g.group_id ASC
+LIMIT $4`
+
+	queryCountCommonGroups = `
+SELECT COUNT(*)
+FROM (
+	SELECT gm.group_id
+	FROM group_members gm
+	JOIN groups g ON g.group_id = gm.group_id
+	WHERE gm.user_id = $1 AND g.deleted_at IS NULL
+	INTERSECT
+	SELECT gm.group_id
+	FROM group_members gm
+	JOIN groups g ON g.group_id = gm.group_id
+	WHERE gm.user_id = $2 AND g.deleted_at IS NULL
+)`
 )

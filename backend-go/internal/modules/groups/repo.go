@@ -44,4 +44,9 @@ type Repository interface {
 	ListBannedMembers(context.Context, string, int, string) ([]AdminBannedMemberItem, string, error)
 	RemoveMember(context.Context, string, RemoveMemberRequest) error
 	TransferOwnership(context.Context, string, TransferOwnershipRequest) error
+	// ListGroupsByUser returns a user's visible groups for the profile
+	// aggregation consumed by the users module via Service (see
+	// Service.ListGroupsByUser).
+	ListGroupsByUser(context.Context, string, int, string) (PaginatedGroups, error)
+	CountCommonGroups(context.Context, string, string) (int, error)
 }

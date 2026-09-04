@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	grouptypes "hotspot/backend-go/internal/modules/groups"
-	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
 )
@@ -193,12 +191,6 @@ func (r *PostgresRepository) ListBlocked(ctx context.Context, userID string, lim
 	return listBlockedUsersPostgres(ctx, r.factory, userID, limit, cursor)
 }
 
-func (r *PostgresRepository) ListReactedMoments(ctx context.Context, userID string, limit int, cursor, viewerUserID string) (momenttypes.PaginatedMoments, error) {
-	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
-		return momenttypes.PaginatedMoments{}, persistence.ErrNotImplemented
-	}
-	return listReactedMomentsPostgres(ctx, r.factory, userID, limit, cursor, viewerUserID)
-}
 
 func (r *PostgresRepository) ListFriends(ctx context.Context, userID string, limit int, cursor string) (PaginatedFriends, error) {
 	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
@@ -221,31 +213,8 @@ func (r *PostgresRepository) ListFollowers(ctx context.Context, userID string, l
 	return listFollowersPostgres(ctx, r.factory, userID, limit, cursor)
 }
 
-func (r *PostgresRepository) ListGroups(ctx context.Context, userID string, limit int, cursor string) (grouptypes.PaginatedGroups, error) {
-	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
-		return grouptypes.PaginatedGroups{}, persistence.ErrNotImplemented
-	}
-	return listUserGroupsPostgres(ctx, r.factory, userID, limit, cursor)
-}
 
-func (r *PostgresRepository) ListMoments(ctx context.Context, userID string, limit int, cursor string, includePrivate bool) (momenttypes.PaginatedMoments, error) {
-	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
-		return momenttypes.PaginatedMoments{}, persistence.ErrNotImplemented
-	}
-	return listUserMomentsPostgres(ctx, r.factory, userID, limit, cursor, includePrivate)
-}
 
-func (r *PostgresRepository) CommonGroupCount(ctx context.Context, viewerUserID, targetUserID string) (int, error) {
-	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
-	if !ok {
-		return 0, persistence.ErrNotImplemented
-	}
-	var count int
-	if err := queryable.QueryRow(ctx, queryCountCommonGroups, viewerUserID, targetUserID).Scan(&count); err != nil {
-		return 0, err
-	}
-	return count, nil
-}
 
 func (r *PostgresRepository) UserExists(ctx context.Context, userID string) (bool, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)

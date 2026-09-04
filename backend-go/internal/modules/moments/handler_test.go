@@ -1080,3 +1080,10 @@ func TestUpdateMomentUnownedImagesReturns10300(t *testing.T) {
 		t.Fatalf("unowned image_file_ids on update: expected httpx.CodeNotFound(10300), got %d body=%s", code, rr.Body.String())
 	}
 }
+
+func (r *errorRepo) ListMomentsByAuthor(context.Context, string, int, string, bool) (PaginatedMoments, error) {
+	return PaginatedMoments{}, nil
+}
+func (r *errorRepo) ListReactedByUser(context.Context, string, string, int, string) (PaginatedMoments, error) {
+	return PaginatedMoments{}, nil
+}

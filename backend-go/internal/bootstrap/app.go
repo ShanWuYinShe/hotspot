@@ -65,6 +65,11 @@ func NewApp(cfg config.Config) (*App, error) {
 	platformauth.StartSweeper(rootCtx)
 	// Prune expired idempotency records from the in-memory store. Get/Reserve
 	// already apply lazy expiry so this is purely about bounding map growth.
+	// Redis 可用时幂等记录切到共享 store：多实例部署下同一 Idempotency-Key
+	// 只执行一次（进程内 store 各实例独立，多实例会重复执行写操作）。
+	if redisClient != nil {
+		idempotency.SetStore(idempotency.NewRedisStore(redisClient))
+	}
 	idempotency.StartSweeper(rootCtx)
 	modules, adminRepo := BuildModulesWithRedisPinger(rootCtx, cfg, persistenceFactory, redisPinger(redisClient))
 	bridge := initRedisBridgeFromClient(cfg, logger, redisClient)

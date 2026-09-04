@@ -21,12 +21,21 @@ func (r *PostgresRepository) ListMyInvites(ctx context.Context, userID string, s
 	if status != nil {
 		statusValue = string(*status)
 	}
-	rows, err := queryable.Query(ctx, queryListMyInvites, userID, statusValue)
+	cursorAt, cursorInviteID, err := decodeGroupPageCursor(cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	var cursorAtValue any
+	if !cursorAt.IsZero() {
+		cursorAtValue = cursorAt
+	}
+	rows, err := queryable.Query(ctx, queryListMyInvites, userID, statusValue, cursorAtValue, cursorInviteID, limit+1)
 	if err != nil {
 		return nil, "", err
 	}
 	defer rows.Close()
-	items := make([]GroupInviteItem, 0)
+	items := make([]GroupInviteItem, 0, limit+1)
+	createdAts := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item GroupInviteItem
 		var inviterUserID, groupID, message, statusText, groupName, groupAvatar string
@@ -52,11 +61,16 @@ func (r *PostgresRepository) ListMyInvites(ctx context.Context, userID string, s
 			item.RespondedAt = &value
 		}
 		items = append(items, item)
+		createdAts = append(createdAts, createdAt)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, "", err
 	}
-	return items, "", nil
+	if len(items) <= limit {
+		return items, "", nil
+	}
+	next := encodeGroupPageCursor(createdAts[limit-1], items[limit-1].InviteID)
+	return items[:limit], next, nil
 }
 
 func (r *PostgresRepository) AcceptInvite(ctx context.Context, userID string, inviteID string) error {
@@ -149,12 +163,21 @@ func (r *PostgresRepository) ListSentInvites(ctx context.Context, groupID string
 	if status != nil {
 		statusValue = string(*status)
 	}
-	rows, err := queryable.Query(ctx, queryListSentInvites, groupID, statusValue)
+	cursorAt, cursorInviteID, err := decodeGroupPageCursor(cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	var cursorAtValue any
+	if !cursorAt.IsZero() {
+		cursorAtValue = cursorAt
+	}
+	rows, err := queryable.Query(ctx, queryListSentInvites, groupID, statusValue, cursorAtValue, cursorInviteID, limit+1)
 	if err != nil {
 		return nil, "", err
 	}
 	defer rows.Close()
-	items := make([]GroupSentInviteItem, 0)
+	items := make([]GroupSentInviteItem, 0, limit+1)
+	createdAts := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item GroupSentInviteItem
 		var inviterUserID, inviterNickname, inviteeUserID, inviteeNickname, message, statusText string
@@ -179,11 +202,16 @@ func (r *PostgresRepository) ListSentInvites(ctx context.Context, groupID string
 			item.RespondedAt = &value
 		}
 		items = append(items, item)
+		createdAts = append(createdAts, createdAt)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, "", err
 	}
-	return items, "", nil
+	if len(items) <= limit {
+		return items, "", nil
+	}
+	next := encodeGroupPageCursor(createdAts[limit-1], items[limit-1].InviteID)
+	return items[:limit], next, nil
 }
 
 func (r *PostgresRepository) RevokeInvite(ctx context.Context, groupID string, inviteID string) error {

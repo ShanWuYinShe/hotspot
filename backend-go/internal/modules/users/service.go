@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	grouptypes "hotspot/backend-go/internal/modules/groups"
+	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/platform/actor"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -18,6 +20,16 @@ type Service struct {
 	repo          Repository
 	notifications userNotificationWriter
 	appConfig     appconfig.Source
+	// 跨模块读聚合（个人主页聚合），bootstrap 注入 groups/moments Service；
+	// nil 时对应端点按 ErrInvalidRequest 之外的服务错误拒绝（不可静默空结果）。
+	groupsByUser  GroupsByUserProvider
+	momentsByUser MomentsByUserProvider
+}
+
+// SetContentProviders 注入跨模块读聚合实现（groups/moments Service）。
+func (s *Service) SetContentProviders(groups GroupsByUserProvider, moments MomentsByUserProvider) {
+	s.groupsByUser = groups
+	s.momentsByUser = moments
 }
 
 type userNotificationWriter interface {
@@ -471,4 +483,19 @@ func computeRelativeDistance(reference GeoPoint, candidate GeoPoint) (int, int) 
 	point := geo.Point{Latitude: reference.Latitude, Longitude: reference.Longitude}
 	other := geo.Point{Latitude: candidate.Latitude, Longitude: candidate.Longitude}
 	return geo.DistanceMeters(point, other), geo.BearingDegrees(point, other)
+}
+
+// ListGroupsByUser / ListMomentsByAuthor / ListReactedByUser / CountCommonGroups
+// 透传注入的跨模块聚合 provider（供测试把 Service 自身同时用作 provider 桩）。
+func (s *Service) ListGroupsByUser(ctx context.Context, userID string, limit int, cursor string) (grouptypes.PaginatedGroups, error) {
+	return s.groupsByUser.ListGroupsByUser(ctx, userID, limit, cursor)
+}
+func (s *Service) CountCommonGroups(ctx context.Context, viewerUserID, targetUserID string) (int, error) {
+	return s.groupsByUser.CountCommonGroups(ctx, viewerUserID, targetUserID)
+}
+func (s *Service) ListMomentsByAuthor(ctx context.Context, userID string, limit int, cursor string, includePrivate bool) (momenttypes.PaginatedMoments, error) {
+	return s.momentsByUser.ListMomentsByAuthor(ctx, userID, limit, cursor, includePrivate)
+}
+func (s *Service) ListReactedByUser(ctx context.Context, userID, viewerUserID string, limit int, cursor string) (momenttypes.PaginatedMoments, error) {
+	return s.momentsByUser.ListReactedByUser(ctx, userID, viewerUserID, limit, cursor)
 }

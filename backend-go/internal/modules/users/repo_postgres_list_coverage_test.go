@@ -123,7 +123,7 @@ func TestListFriendsPostgresPaginationAndErrors(t *testing.T) {
 	}
 }
 
-func TestListFollowingFollowersGroupsPostgres(t *testing.T) {
+func TestListFollowingFollowersPostgres(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now().UTC().Round(time.Second)
 
@@ -155,25 +155,6 @@ func TestListFollowingFollowersGroupsPostgres(t *testing.T) {
 	}
 	if _, err := newUserListRepo(&userListStub{}).ListFollowers(ctx, "u1", 2, "garbage"); !errors.Is(err, ErrInvalidCursor) {
 		t.Fatalf("followers invalid cursor: %v", err)
-	}
-
-	// groups：3 行分页 + 行尾 Err
-	stub = &userListStub{rowsSeq: []persistence.Rows{&listRowsValues{rows: [][]any{
-		groupRow("g1", now), groupRow("g2", now.Add(-time.Hour)), groupRow("g3", now.Add(-2*time.Hour)),
-	}}}}
-	gpage, err := newUserListRepo(stub).ListGroups(ctx, "u1", 2, "")
-	if err != nil || len(gpage.Items) != 2 || gpage.NextCursor == nil || *gpage.NextCursor == "" {
-		t.Fatalf("list groups: %#v err=%v", gpage, err)
-	}
-	if gpage.Items[0].Location.Point.Latitude != 1.5 || gpage.Items[0].JoinMethod == "" {
-		t.Fatalf("group item fields: %#v", gpage.Items[0])
-	}
-	stub = &userListStub{rowsSeq: []persistence.Rows{&listRowsValues{rows: [][]any{groupRow("g1", now)}, err: errors.New("tail")}}}
-	if _, err := newUserListRepo(stub).ListGroups(ctx, "u1", 2, ""); err == nil {
-		t.Fatal("groups rows err must propagate")
-	}
-	if _, err := newUserListRepo(&userListStub{}).ListGroups(ctx, "u1", 2, "garbage"); !errors.Is(err, ErrInvalidCursor) {
-		t.Fatalf("groups invalid cursor: %v", err)
 	}
 }
 
@@ -264,21 +245,10 @@ func TestRelationshipBatchPostgres(t *testing.T) {
 	}
 }
 
-func TestCommonGroupCountAndUserExistsPostgres(t *testing.T) {
+func TestUserExistsPostgres(t *testing.T) {
 	ctx := context.Background()
 
-	repo := newUserListRepo(&userListStub{row: userRelRow{values: []any{3}}})
-	count, err := repo.CommonGroupCount(ctx, "u1", "u2")
-	if err != nil || count != 3 {
-		t.Fatalf("common count: %d err=%v", count, err)
-	}
-	// Scan 错误 → 传播
-	repo = newUserListRepo(&userListStub{row: userRelRow{values: nil}})
-	if _, err := repo.CommonGroupCount(ctx, "u1", "u2"); err == nil {
-		t.Fatal("common count scan error must propagate")
-	}
-
-	repo = newUserListRepo(&userListStub{row: userRelRow{values: []any{1}}})
+	repo := newUserListRepo(&userListStub{row: userRelRow{values: []any{1}}})
 	exists, err := repo.UserExists(ctx, "u1")
 	if err != nil || !exists {
 		t.Fatalf("user exists: %v err=%v", exists, err)
@@ -301,8 +271,5 @@ func TestScanRowsPostgresErrorPaths(t *testing.T) {
 	}
 	if _, _, err := scanFollowerRow(testdb.RowValues{Err: scanErr}); err == nil {
 		t.Fatal("scanFollowerRow error must propagate")
-	}
-	if _, _, err := scanUserGroupRow(testdb.RowValues{Err: scanErr}); err == nil {
-		t.Fatal("scanUserGroupRow error must propagate")
 	}
 }

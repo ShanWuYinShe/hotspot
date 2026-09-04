@@ -566,3 +566,18 @@ func (s *Service) applicationExpired(ctx context.Context, item GroupApplicationI
 	}
 	return time.Now().UTC().After(createdAt.Add(ttl))
 }
+
+// ListGroupsByUser returns a user's visible groups (searchable, not deleted)
+// in join-order desc, keyset-paginated. Public read capability for the users
+// module's profile aggregation — replaces the former cross-module SQL in the
+// users repository (spec api_spec_user.md fetch_groups).
+func (s *Service) ListGroupsByUser(ctx context.Context, userID string, limit int, cursor string) (PaginatedGroups, error) {
+	return s.repo.ListGroupsByUser(ctx, userID, limit, cursor)
+}
+
+// CountCommonGroups counts the groups shared by two users (profile "common
+// groups" badge; spec api_spec_user.md). Part of the same users-facing
+// aggregation family as ListGroupsByUser.
+func (s *Service) CountCommonGroups(ctx context.Context, viewerUserID, targetUserID string) (int, error) {
+	return s.repo.CountCommonGroups(ctx, viewerUserID, targetUserID)
+}

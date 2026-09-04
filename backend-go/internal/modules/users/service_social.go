@@ -242,12 +242,14 @@ func (s *Service) buildSocialContext(ctx context.Context, viewerUserID string, t
 	if !ok {
 		targetSettings = defaultSettings()
 	}
-	if targetSettings.GroupsVisible {
-		commonGroupsCount, err := s.repo.CommonGroupCount(ctx, viewerUserID, targetProfile.UserID)
+	if targetSettings.GroupsVisible && s.groupsByUser != nil {
+		commonGroupsCount, err := s.groupsByUser.CountCommonGroups(ctx, viewerUserID, targetProfile.UserID)
 		if err != nil {
 			return nil, err
 		}
 		context.CommonGroupsCount = &commonGroupsCount
+	} else if targetSettings.GroupsVisible {
+		observability.L().Warn("users.social_context groups provider not wired")
 	}
 	commonTags := intersectTags(viewerProfile.Tags, targetProfile.Tags)
 	if len(commonTags) > 0 {

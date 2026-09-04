@@ -396,20 +396,3 @@ func TestPostgresIT_ListFollowingPagination(t *testing.T) {
 	})
 }
 
-func TestPostgresIT_CommonGroupCount(t *testing.T) {
-	testdb.SkipIfShort(t)
-	factory := testdb.Open(t)
-	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
-		repo := NewPostgresRepository(txFactory)
-		alice := testdb.InsertUser(t, txFactory, "u_cgc_alice", "Alice")
-		bob := testdb.InsertUser(t, txFactory, "u_cgc_bob", "Bob")
-
-		count, err := repo.CommonGroupCount(ctx, alice, bob)
-		if err != nil {
-			t.Fatalf("CommonGroupCount: %v", err)
-		}
-		if count != 0 {
-			t.Fatalf("expected 0 common groups, got %d", count)
-		}
-	})
-}

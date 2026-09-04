@@ -7,8 +7,6 @@ import (
 	"sync"
 	"time"
 
-	grouptypes "hotspot/backend-go/internal/modules/groups"
-	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/types"
 )
@@ -22,19 +20,11 @@ type memoryRelation struct {
 	BlockReason string
 }
 
-type reactedMomentRecord struct {
-	ReactedAt string
-	Moment    momenttypes.MomentItem
-}
-
 type InMemoryRepository struct {
 	mu             sync.RWMutex
 	profiles       map[string]MyProfile
 	settings       map[string]UserSettings
 	relations      map[string]map[string]memoryRelation
-	reactedMoments map[string][]reactedMomentRecord
-	groupsByUser   map[string][]grouptypes.GroupItem
-	momentsByUser  map[string][]momenttypes.MomentItem
 	blockedTags    map[string]struct{}
 }
 
@@ -43,9 +33,6 @@ func NewInMemoryRepository() *InMemoryRepository {
 		profiles:       make(map[string]MyProfile),
 		settings:       make(map[string]UserSettings),
 		relations:      make(map[string]map[string]memoryRelation),
-		reactedMoments: make(map[string][]reactedMomentRecord),
-		groupsByUser:   make(map[string][]grouptypes.GroupItem),
-		momentsByUser:  make(map[string][]momenttypes.MomentItem),
 		blockedTags:    make(map[string]struct{}),
 	}
 }
@@ -83,9 +70,6 @@ func (r *InMemoryRepository) DeleteProfile(_ context.Context, userID string) err
 	}
 	delete(r.settings, userID)
 	delete(r.relations, userID)
-	delete(r.reactedMoments, userID)
-	delete(r.groupsByUser, userID)
-	delete(r.momentsByUser, userID)
 	for sourceUserID := range r.relations {
 		delete(r.relations[sourceUserID], userID)
 	}
@@ -270,18 +254,6 @@ func (r *InMemoryRepository) ListBlocked(_ context.Context, userID string, limit
 	})
 	return paginateBlocked(items, limit, cursor), nil
 }
-func (r *InMemoryRepository) ListReactedMoments(_ context.Context, userID string, limit int, cursor, viewerUserID string) (momenttypes.PaginatedMoments, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	records := append([]reactedMomentRecord(nil), r.reactedMoments[userID]...)
-	visible := make([]reactedMomentRecord, 0, len(records))
-	for _, record := range records {
-		if viewerUserID == record.Moment.User.UserID || record.Moment.PrivacyLevel != "private" {
-			visible = append(visible, record)
-		}
-	}
-	return paginateReactedMoments(visible, limit, cursor), nil
-}
 
 func (r *InMemoryRepository) Relationship(_ context.Context, userID, targetUserID string) (Relationship, error) {
 	r.mu.RLock()
@@ -393,45 +365,6 @@ func (r *InMemoryRepository) ListFollowers(_ context.Context, userID string, lim
 		return items[i].FollowedAt > items[j].FollowedAt
 	})
 	return paginateFollowers(items, limit, cursor), nil
-}
-func (r *InMemoryRepository) ListGroups(_ context.Context, userID string, limit int, cursor string) (grouptypes.PaginatedGroups, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	items := append([]grouptypes.GroupItem(nil), r.groupsByUser[userID]...)
-	return paginateGroups(items, limit, cursor), nil
-}
-func (r *InMemoryRepository) ListMoments(_ context.Context, userID string, limit int, cursor string, includePrivate bool) (momenttypes.PaginatedMoments, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	items := append([]momenttypes.MomentItem(nil), r.momentsByUser[userID]...)
-	filtered := make([]momenttypes.MomentItem, 0, len(items))
-	for _, item := range items {
-		if includePrivate || item.PrivacyLevel != "private" {
-			filtered = append(filtered, item)
-		}
-	}
-	return paginateMoments(filtered, limit, cursor), nil
-}
-func (r *InMemoryRepository) CommonGroupCount(_ context.Context, viewerUserID, targetUserID string) (int, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	targetSet := make(map[string]struct{}, len(r.groupsByUser[targetUserID]))
-	for _, item := range r.groupsByUser[targetUserID] {
-		targetSet[item.Group.GroupID] = struct{}{}
-	}
-	count := 0
-	seen := make(map[string]struct{})
-	for _, item := range r.groupsByUser[viewerUserID] {
-		groupID := item.Group.GroupID
-		if _, ok := seen[groupID]; ok {
-			continue
-		}
-		seen[groupID] = struct{}{}
-		if _, ok := targetSet[groupID]; ok {
-			count++
-		}
-	}
-	return count, nil
 }
 func (r *InMemoryRepository) UserExists(_ context.Context, userID string) (bool, error) {
 	r.mu.RLock()
@@ -550,71 +483,7 @@ func paginateFollowers(items []RelatedUserItem, limit int, cursor string) Pagina
 	}
 	return resp
 }
-func paginateGroups(items []grouptypes.GroupItem, limit int, cursor string) grouptypes.PaginatedGroups {
-	limit = types.NormalizeLimit(limit)
-	start, ok := findUserCursorStart(cursor, func(i int) (string, string) {
-		joinedAt := ""
-		if items[i].ViewerState != nil {
-			joinedAt = items[i].ViewerState.JoinedAt
-		}
-		return joinedAt, items[i].Group.GroupID
-	}, len(items))
-	if !ok {
-		return grouptypes.PaginatedGroups{}
-	}
-	end := start + limit
-	if end > len(items) {
-		end = len(items)
-	}
-	resp := grouptypes.PaginatedGroups{Items: items[start:end]}
-	if end < len(items) && end > start {
-		joinedAt := ""
-		if items[end-1].ViewerState != nil {
-			joinedAt = items[end-1].ViewerState.JoinedAt
-		}
-		next := encodeUserMomentCursor(joinedAt, items[end-1].Group.GroupID)
-		resp.NextCursor = &next
-	}
-	return resp
-}
-func paginateMoments(items []momenttypes.MomentItem, limit int, cursor string) momenttypes.PaginatedMoments {
-	limit = types.NormalizeLimit(limit)
-	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].CreatedAt, items[i].MomentID }, len(items))
-	if !ok {
-		return momenttypes.PaginatedMoments{}
-	}
-	end := start + limit
-	if end > len(items) {
-		end = len(items)
-	}
-	resp := momenttypes.PaginatedMoments{Items: items[start:end]}
-	if end < len(items) && end > start {
-		c := encodeUserMomentCursor(items[end-1].CreatedAt, items[end-1].MomentID)
-		resp.NextCursor = &c
-	}
-	return resp
-}
 
-func paginateReactedMoments(items []reactedMomentRecord, limit int, cursor string) momenttypes.PaginatedMoments {
-	limit = types.NormalizeLimit(limit)
-	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].ReactedAt, items[i].Moment.MomentID }, len(items))
-	if !ok {
-		return momenttypes.PaginatedMoments{}
-	}
-	end := start + limit
-	if end > len(items) {
-		end = len(items)
-	}
-	resp := momenttypes.PaginatedMoments{Items: make([]momenttypes.MomentItem, 0, end-start)}
-	for _, item := range items[start:end] {
-		resp.Items = append(resp.Items, item.Moment)
-	}
-	if end < len(items) && end > start {
-		c := encodeUserMomentCursor(items[end-1].ReactedAt, items[end-1].Moment.MomentID)
-		resp.NextCursor = &c
-	}
-	return resp
-}
 
 func findUserCursorStart(cursor string, keyAt func(i int) (string, string), length int) (int, bool) {
 	if cursor == "" {

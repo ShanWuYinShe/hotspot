@@ -242,63 +242,9 @@ WHERE me.target_user_id = $1 AND me.is_following = TRUE
 ORDER BY me.followed_at DESC, u.user_id ASC
 LIMIT $4`
 
-	queryListUserGroups = `
-SELECT g.group_id, g.name, COALESCE(g.avatar_url, ''), COALESCE(g.description, ''), g.has_password, g.location_name, g.latitude, g.longitude, g.join_method, g.is_searchable, g.max_members, gm.joined_at
-FROM group_members gm
-JOIN groups g ON g.group_id = gm.group_id
-WHERE gm.user_id = $1 AND g.deleted_at IS NULL AND g.is_searchable = TRUE
-  AND (
-    $2::timestamptz IS NULL
-    OR gm.joined_at < $2::timestamptz
-    OR (gm.joined_at = $2::timestamptz AND g.group_id > $3)
-  )
-ORDER BY gm.joined_at DESC, g.group_id ASC
-LIMIT $4`
 
-	queryListUserMoments = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level
-FROM moments m
-LEFT JOIN users u ON u.user_id = m.user_id
-WHERE m.user_id = $1
-  AND m.is_deleted = FALSE
-  AND ($2 OR m.privacy_level <> 'private')
-  AND (
-    $3::timestamptz IS NULL
-    OR m.created_at < $3::timestamptz
-    OR (m.created_at = $3::timestamptz AND m.moment_id < $4)
-  )
-ORDER BY m.created_at DESC, m.moment_id DESC
-LIMIT $5`
 
-	queryListReactedMoments = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, r.reacted_at
-FROM reactions r
-JOIN moments m ON m.moment_id = r.target_id
-LEFT JOIN users u ON u.user_id = m.user_id
-WHERE r.target_type = 'moment' AND r.user_id = $1
-  AND m.is_deleted = FALSE
-  AND ($2 = '' OR m.user_id = $2 OR m.privacy_level <> 'private')
-  AND (
-    $3::timestamptz IS NULL
-    OR r.reacted_at < $3::timestamptz
-    OR (r.reacted_at = $3::timestamptz AND m.moment_id < $4)
-  )
-ORDER BY r.reacted_at DESC, m.moment_id DESC
-LIMIT $5`
 
-	queryCountCommonGroups = `
-SELECT COUNT(*)
-FROM (
-	SELECT gm.group_id
-	FROM group_members gm
-	JOIN groups g ON g.group_id = gm.group_id
-	WHERE gm.user_id = $1 AND g.deleted_at IS NULL
-	INTERSECT
-	SELECT gm.group_id
-	FROM group_members gm
-	JOIN groups g ON g.group_id = gm.group_id
-	WHERE gm.user_id = $2 AND g.deleted_at IS NULL
-) common_groups`
 
 	queryUserExists = `
 SELECT 1 FROM users WHERE user_id = $1`
@@ -310,15 +256,5 @@ FROM unnest($1::text[]) AS candidate(tag_name)
 JOIN admin_blocked_tags bt ON bt.name = candidate.tag_name
 ORDER BY bt.name ASC`
 
-	momenttypesQueryListMomentTagsByMomentID = `
-SELECT tag_name
-FROM moment_tags
-WHERE moment_id = $1
-ORDER BY tag_name ASC`
 
-	momenttypesQueryListMomentTagsByMomentIDs = `
-SELECT moment_id, tag_name
-FROM moment_tags
-WHERE moment_id = ANY($1)
-ORDER BY moment_id, tag_name ASC`
 )

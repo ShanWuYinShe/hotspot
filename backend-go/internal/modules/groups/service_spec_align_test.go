@@ -604,3 +604,7 @@ func TestResolveUserInfoFallsBackOnProviderError(t *testing.T) {
 		t.Fatalf("expected fallback on provider error, got %#v", got)
 	}
 }
+
+func (r *captureGroupsRepo) CountCommonGroups(ctx context.Context, viewerUserID, targetUserID string) (int, error) {
+	return r.stubGroupsRepo.CountCommonGroups(ctx, viewerUserID, targetUserID)
+}

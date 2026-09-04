@@ -194,3 +194,38 @@ WHERE m.privacy_level = 'public'
 ORDER BY m.created_at DESC
 LIMIT 2000`
 )
+
+// ── users 模块「按作者聚合的瞬间列表」读能力（原实现位于 users repo，直查
+// moments/reactions 表；现已归位本模块，users 经 Service 接口消费）──
+const (
+	queryListMomentsByAuthor = `
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level
+FROM moments m
+LEFT JOIN users u ON u.user_id = m.user_id
+WHERE m.user_id = $1
+  AND m.is_deleted = FALSE
+  AND ($2 OR m.privacy_level <> 'private')
+  AND (
+    $3::timestamptz IS NULL
+    OR m.created_at < $3::timestamptz
+    OR (m.created_at = $3::timestamptz AND m.moment_id < $4)
+  )
+ORDER BY m.created_at DESC, m.moment_id DESC
+LIMIT $5`
+
+	queryListReactedByUser = `
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, r.reacted_at
+FROM reactions r
+JOIN moments m ON m.moment_id = r.target_id
+LEFT JOIN users u ON u.user_id = m.user_id
+WHERE r.target_type = 'moment' AND r.user_id = $1
+  AND m.is_deleted = FALSE
+  AND ($2 = '' OR m.user_id = $2 OR m.privacy_level <> 'private')
+  AND (
+    $3::timestamptz IS NULL
+    OR r.reacted_at < $3::timestamptz
+    OR (r.reacted_at = $3::timestamptz AND m.moment_id < $4)
+  )
+ORDER BY r.reacted_at DESC, m.moment_id DESC
+LIMIT $5`
+)

@@ -82,14 +82,18 @@ func (s *Service) List(ctx context.Context, req MyPrivateChatsRequest) (Paginate
 		}
 		items = append(items, item)
 	}
+	// 排序键用解析后的时间值而非 RFC3339Nano 字符串：变长小数秒格式下
+	// 字典序与时间序相反（"12:00:00Z" > "12:00:00.5Z"），同秒会话会错序。
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].IsPinned != items[j].IsPinned {
 			return items[i].IsPinned
 		}
-		if items[i].LastActivityAt == items[j].LastActivityAt {
-			return items[i].OtherUser.UserID < items[j].OtherUser.UserID
+		ati, _ := time.Parse(time.RFC3339Nano, items[i].LastActivityAt)
+		atj, _ := time.Parse(time.RFC3339Nano, items[j].LastActivityAt)
+		if !ati.Equal(atj) {
+			return ati.After(atj)
 		}
-		return items[i].LastActivityAt > items[j].LastActivityAt
+		return items[i].OtherUser.UserID < items[j].OtherUser.UserID
 	})
 	cursor := ""
 	if req.Pagination != nil {

@@ -16,6 +16,9 @@ type InMemoryRepository struct {
 	mu      sync.RWMutex
 	moments map[string]MomentItem
 	byUser  map[string][]string
+	// reactedByUser 按 user_id 聚合的反应瞬间 id（ListReactedByUser 消费，
+	// 测试经 SeedReactedMoment 填充）。
+	reactedByUser map[string][]string
 	// favorites 记录收藏时刻（userID -> momentID -> favorited_at），驱动
 	// fetch_favorites 的 favorited_at 倒序排序（spec api_spec_moment.md 排序）。
 	favorites map[string]map[string]time.Time
@@ -548,4 +551,71 @@ func (r *InMemoryRepository) ListNearbyMoments(_ context.Context, query momentsQ
 	start := findNearbyCursorStart(candidates, decoded)
 	candidates = candidates[start:]
 	return paginateNearbyMoments(candidates, query.Limit, "")
+}
+
+// ListMomentsByAuthor 内存实现：byUser 索引已有（open_the_door 测试路径），
+// 隐私过滤与 users 原版一致。
+func (r *InMemoryRepository) ListMomentsByAuthor(_ context.Context, userID string, limit int, cursor string, includePrivate bool) (PaginatedMoments, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	ids := r.byUser[userID]
+	items := make([]MomentItem, 0, len(ids))
+	for _, id := range ids {
+		item, ok := r.moments[id]
+		if !ok || item.IsDeleted {
+			continue
+		}
+		if !includePrivate && item.PrivacyLevel == "private" {
+			continue
+		}
+		items = append(items, item)
+	}
+	limit = types.NormalizeLimit(limit)
+	if len(items) > limit {
+		return PaginatedMoments{Items: items[:limit]}, nil
+	}
+	return PaginatedMoments{Items: items}, nil
+}
+
+// ListReactedByUser 内存实现：测试数据经 SeedReactedMoment 填充。
+func (r *InMemoryRepository) ListReactedByUser(_ context.Context, userID, viewerUserID string, limit int, cursor string) (PaginatedMoments, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	items := make([]MomentItem, 0)
+	for _, id := range r.reactedByUser[userID] {
+		item, ok := r.moments[id]
+		if !ok || item.IsDeleted {
+			continue
+		}
+		if item.PrivacyLevel == "private" && viewerUserID != item.User.UserID && viewerUserID != userID {
+			continue
+		}
+		items = append(items, item)
+	}
+	limit = types.NormalizeLimit(limit)
+	if len(items) > limit {
+		return PaginatedMoments{Items: items[:limit]}, nil
+	}
+	return PaginatedMoments{Items: items}, nil
+}
+
+// SeedReactedMoment 为 ListReactedByUser 的内存测试填充一条反应记录
+// （reactedAt 倒序由调用方保证插入顺序或自行排序）。
+func (r *InMemoryRepository) SeedReactedMoment(userID string, item MomentItem) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.moments[item.MomentID] = item
+	r.byUser[item.User.UserID] = append(r.byUser[item.User.UserID], item.MomentID)
+	r.reactedByUser[userID] = append(r.reactedByUser[userID], item.MomentID)
+}
+
+// SeedMomentsByUser 填充「按作者聚合的瞬间列表」测试数据（供跨包 handler
+// 测试构造 users 聚合场景）。
+func (r *InMemoryRepository) SeedMomentsByUser(userID string, items []MomentItem) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, item := range items {
+		r.moments[item.MomentID] = item
+		r.byUser[userID] = append(r.byUser[userID], item.MomentID)
+	}
 }

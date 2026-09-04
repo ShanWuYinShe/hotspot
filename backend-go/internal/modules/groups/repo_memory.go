@@ -54,8 +54,11 @@ type inMemoryBanRecord struct {
 }
 
 type InMemoryRepository struct {
-	mu           sync.RWMutex
-	groups       map[string]GroupItem
+	mu     sync.RWMutex
+	groups map[string]GroupItem
+	// groupsByUser 按 user_id 聚合的群组测试数据（ListGroupsByUser 消费），
+	// 测试直接填充；生产路径走 PostgresRepository。
+	groupsByUser map[string][]GroupItem
 	members      map[string]map[string]inMemoryMembership
 	banned       map[string]map[string]inMemoryBanRecord
 	invites      map[string]inMemoryInviteRecord
@@ -71,6 +74,7 @@ type InMemoryRepository struct {
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
 		groups:         make(map[string]GroupItem),
+		groupsByUser:   make(map[string][]GroupItem),
 		members:        make(map[string]map[string]inMemoryMembership),
 		announcements:  make(map[string]GroupAnnouncementItem),
 		banned:         make(map[string]map[string]inMemoryBanRecord),
@@ -459,4 +463,50 @@ func derefString(value *string) string {
 		return ""
 	}
 	return *value
+}
+
+// groupsByUser 是「按用户聚合的群组列表」的测试数据槽（对齐 users 模块原
+// memory 实现的数据形态），由测试直接填充。
+func (r *InMemoryRepository) ListGroupsByUser(_ context.Context, userID string, limit int, cursor string) (PaginatedGroups, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	items := append([]GroupItem(nil), r.groupsByUser[userID]...)
+	_ = cursor
+	limit = types.NormalizeLimit(limit)
+	if len(items) > limit {
+		next := encodeGroupsByUserCursor(time.Now().UTC(), items[limit-1].Group.GroupID)
+		return PaginatedGroups{Items: items[:limit], NextCursor: &next}, nil
+	}
+	return PaginatedGroups{Items: items}, nil
+}
+
+// CountCommonGroups 基于 groupsByUser 测试数据计算共同群组数。
+func (r *InMemoryRepository) CountCommonGroups(_ context.Context, viewerUserID, targetUserID string) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	targetSet := make(map[string]struct{}, len(r.groupsByUser[targetUserID]))
+	for _, item := range r.groupsByUser[targetUserID] {
+		targetSet[item.Group.GroupID] = struct{}{}
+	}
+	count := 0
+	seen := make(map[string]struct{})
+	for _, item := range r.groupsByUser[viewerUserID] {
+		groupID := item.Group.GroupID
+		if _, ok := seen[groupID]; ok {
+			continue
+		}
+		seen[groupID] = struct{}{}
+		if _, ok := targetSet[groupID]; ok {
+			count++
+		}
+	}
+	return count, nil
+}
+
+// SeedGroupsByUser 填充「按用户聚合的群组列表」测试数据（供跨包 handler
+// 测试构造 users 聚合场景；生产路径走 PostgresRepository）。
+func (r *InMemoryRepository) SeedGroupsByUser(userID string, items []GroupItem) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.groupsByUser[userID] = append([]GroupItem(nil), items...)
 }

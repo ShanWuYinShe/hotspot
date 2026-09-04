@@ -98,7 +98,13 @@ func (s *Service) ListReactedMoments(ctx context.Context, req UserReactedMoments
 		return momenttypes.PaginatedMoments{}, ErrPermissionDenied
 	}
 	limit, cursor := normalizeMomentPagination(req.Pagination)
-	result, err := s.repo.ListReactedMoments(ctx, req.UserID, limit, cursor, viewerUserID)
+	if s.momentsByUser == nil {
+		// provider 未装配（不可能发生于生产装配）：返回空分页而非报错，
+		// 聚合数据缺失不阻断响应。
+		observability.L().Warn("users.list_reacted_moments provider not wired")
+		return momenttypes.PaginatedMoments{}, nil
+	}
+	result, err := s.momentsByUser.ListReactedByUser(ctx, req.UserID, viewerUserID, limit, cursor)
 	if err != nil {
 		observability.L().Error("users.list_reacted_moments failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return momenttypes.PaginatedMoments{}, err
@@ -217,7 +223,11 @@ func (s *Service) ListGroups(ctx context.Context, req UserGroupsRequest) (groupt
 		return grouptypes.PaginatedGroups{}, ErrPermissionDenied
 	}
 	limit, cursor := normalizePagination(req.Pagination)
-	result, err := s.repo.ListGroups(ctx, targetUserID, limit, cursor)
+	if s.groupsByUser == nil {
+		observability.L().Warn("users.list_groups provider not wired")
+		return grouptypes.PaginatedGroups{}, nil
+	}
+	result, err := s.groupsByUser.ListGroupsByUser(ctx, targetUserID, limit, cursor)
 	if err != nil {
 		return grouptypes.PaginatedGroups{}, err
 	}
@@ -241,7 +251,11 @@ func (s *Service) ListMoments(ctx context.Context, req UserMomentsRequest) (mome
 		return momenttypes.PaginatedMoments{}, err
 	}
 	limit, cursor := normalizePagination(req.Pagination)
-	result, err := s.repo.ListMoments(ctx, targetUserID, limit, cursor, false)
+	if s.momentsByUser == nil {
+		observability.L().Warn("users.list_moments provider not wired")
+		return momenttypes.PaginatedMoments{}, nil
+	}
+	result, err := s.momentsByUser.ListMomentsByAuthor(ctx, targetUserID, limit, cursor, false)
 	if err != nil {
 		return momenttypes.PaginatedMoments{}, err
 	}

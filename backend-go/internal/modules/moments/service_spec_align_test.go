@@ -138,3 +138,10 @@ func TestServiceFillReactionsNilAggregatorIsNoop(t *testing.T) {
 		t.Fatalf("nil aggregator must be a no-op")
 	}
 }
+
+func (r *stubMomentRepo) ListMomentsByAuthor(context.Context, string, int, string, bool) (PaginatedMoments, error) {
+	return PaginatedMoments{}, nil
+}
+func (r *stubMomentRepo) ListReactedByUser(context.Context, string, string, int, string) (PaginatedMoments, error) {
+	return PaginatedMoments{}, nil
+}

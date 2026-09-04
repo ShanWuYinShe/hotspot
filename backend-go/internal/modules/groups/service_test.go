@@ -1340,3 +1340,11 @@ func TestServiceUpdateBroadcastsGroupUpdatedWithChangedFields(t *testing.T) {
 		t.Fatalf("unchanged fields must not be pushed: %#v", fields)
 	}
 }
+
+func (r *stubGroupsRepo) ListGroupsByUser(context.Context, string, int, string) (PaginatedGroups, error) {
+	return PaginatedGroups{}, nil
+}
+
+func (r *stubGroupsRepo) CountCommonGroups(context.Context, string, string) (int, error) {
+	return 0, nil
+}

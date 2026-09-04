@@ -666,3 +666,18 @@ func (s *Service) broadcastMomentDeletedToFavorites(ctx context.Context, momentI
 	}
 	return nil
 }
+
+// ListMomentsByAuthor 返回某用户的非删除瞬间（created_at DESC keyset）。
+// includePrivate=false 限定公开瞬间（公开个人主页视角）；true 保留给作者
+// 本人视角。users 模块个人主页聚合经 Service 接口消费（原 users repo 直查
+// moments 表的实现归位本模块）。
+func (s *Service) ListMomentsByAuthor(ctx context.Context, userID string, limit int, cursor string, includePrivate bool) (PaginatedMoments, error) {
+	return s.repo.ListMomentsByAuthor(ctx, userID, limit, cursor, includePrivate)
+}
+
+// ListReactedByUser 返回某用户反应过的瞬间（reacted_at DESC keyset）。
+// viewerUserID 为空表示匿名；非空时结果包含该作者自己的私密瞬间
+// （spec api_spec_moment.md → moments/list_reacted）。
+func (s *Service) ListReactedByUser(ctx context.Context, userID, viewerUserID string, limit int, cursor string) (PaginatedMoments, error) {
+	return s.repo.ListReactedByUser(ctx, userID, viewerUserID, limit, cursor)
+}

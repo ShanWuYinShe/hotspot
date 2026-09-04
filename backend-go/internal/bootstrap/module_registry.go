@@ -94,6 +94,9 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// 经 Service 接口注入 moments fetch_nearby/fetch_following 与各 search 端点）。
 	momentsModule.Service.SetLocationProvider(usersModule.Service)
 	groupsModule.Service.SetLocationProvider(usersModule.Service)
+	// users 个人主页聚合的跨模块读（fetch_groups/fetch_moments/list_reacted/
+	// 共同群组数）：注入 groups/moments Service，替代 users repo 直查对方表。
+	usersModule.Service.SetContentProviders(groupsModule.Service, momentsModule.Service)
 	groupsModule.Service.SetAppConfig(sharedAppConfig)
 	searchModule := search.NewModule(factory, sharedAppConfig)
 	searchModule.Service.SetLocationProvider(usersModule.Service)

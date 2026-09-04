@@ -272,3 +272,10 @@ func TestMomentUpdateRejectsOverlongDescription(t *testing.T) {
 		t.Fatalf("update overlong: expected httpx.CodeInvalidRequest, got %d", code)
 	}
 }
+
+func (r *momentErrRepo) ListMomentsByAuthor(ctx context.Context, userID string, limit int, cursor string, includePrivate bool) (PaginatedMoments, error) {
+	return r.repo.ListMomentsByAuthor(ctx, userID, limit, cursor, includePrivate)
+}
+func (r *momentErrRepo) ListReactedByUser(ctx context.Context, userID, viewerUserID string, limit int, cursor string) (PaginatedMoments, error) {
+	return r.repo.ListReactedByUser(ctx, userID, viewerUserID, limit, cursor)
+}
