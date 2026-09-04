@@ -31,7 +31,9 @@
   }
 
   /* 紧凑图标按钮触控热区扩展：视觉尺寸不变，可点击区域向四周扩展（不参与布局流）。
-     仅用于 36px 以下的 icon-only / 小按钮，避免移动端点击面积过小。 */
+     仅用于 36px 以下的 icon-only / 小按钮，避免移动端点击面积过小。
+     注意：本类自带 position:relative（作为 ::before 定位基准），会与 Tailwind 的
+     absolute/fixed 冲突（胜负取决于样式表顺序）——已定位元素禁止再挂本类。 */
   .hit-slop {
     position: relative;
   }

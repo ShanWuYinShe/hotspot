@@ -39,12 +39,12 @@
 	class="flex items-center gap-3.5 {compact ? 'px-4 py-2.5' : 'px-4 py-3'}"
 >
 	<span class="relative shrink-0">
+		<!-- 头像默认无边框（列表行内多层描边是噪音）；仅选中态用 inverse 框在 accent 底上区分 -->
 		<Avatar
 			src={chat.avatar}
 			name={chat.name}
 			size={compact ? 40 : 44}
-			class="border"
-			style="border-color:{isSelected ? 'var(--cst-border-inverse)' : 'var(--cst-border-default)'};border-width:var(--cst-border-width-regular);"
+			style={isSelected ? 'box-shadow:0 0 0 var(--cst-border-width-regular) var(--cst-border-inverse);' : ''}
 		/>
 		{#if chat.online}
 			<OnlineDot size="md" />

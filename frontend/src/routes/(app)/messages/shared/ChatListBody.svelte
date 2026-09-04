@@ -55,17 +55,21 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		</EmptyState>
 	</div>
 {:else}
-	<ListContainer class={fill ? 'flex-1 overflow-y-auto no-scrollbar py-2' : 'py-1'}>
+	<!-- 移动：一张 bordered 列表卡包全部会话行（行间 1px 分隔），与全 app
+	     「灰画布+白卡」语言一致；桌面分栏：embedded 连续行（面板内集合）。 -->
+	<ListContainer
+		bordered={!compact}
+		class={fill ? 'flex-1 overflow-y-auto no-scrollbar' : compact ? '' : 'mt-1'}
+		ariaLabel="会话列表"
+	>
 		{#each chats as chat (chat.id)}
-			<div class="px-2 py-1">
-				<ChatListItem
-					chat={chat}
-					isSelected={selectedId === chat.id}
-					onClick={() => onSelect(chat)}
-					onTogglePin={() => onTogglePin(chat)}
-					{compact}
-				/>
-			</div>
+			<ChatListItem
+				chat={chat}
+				isSelected={selectedId === chat.id}
+				onClick={() => onSelect(chat)}
+				onTogglePin={() => onTogglePin(chat)}
+				{compact}
+			/>
 		{/each}
 	</ListContainer>
 {/if}

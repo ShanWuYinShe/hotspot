@@ -216,7 +216,7 @@
 				{#if count > 1}
 					<button
 						type="button"
-						class="hover-btn scale-btn hit-slop absolute left-2 z-10 flex size-10 items-center justify-center rounded-full bg-surface-media-scrim-strong text-content-inverse focus-ring sm:left-4"
+						class="hover-btn scale-btn absolute left-2 z-10 flex size-10 items-center justify-center rounded-full bg-surface-media-scrim-strong text-content-inverse focus-ring sm:left-4"
 						aria-label="上一张"
 						onclick={(e) => {
 							e.stopPropagation();
@@ -251,7 +251,7 @@
 				{#if count > 1}
 					<button
 						type="button"
-						class="hover-btn scale-btn hit-slop absolute right-2 z-10 flex size-10 items-center justify-center rounded-full bg-surface-media-scrim-strong text-content-inverse focus-ring sm:right-4"
+						class="hover-btn scale-btn absolute right-2 z-10 flex size-10 items-center justify-center rounded-full bg-surface-media-scrim-strong text-content-inverse focus-ring sm:right-4"
 						aria-label="下一张"
 						onclick={(e) => {
 							e.stopPropagation();

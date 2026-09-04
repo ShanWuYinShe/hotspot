@@ -178,7 +178,7 @@
 				{/if}
 				<button
 					type="button"
-					class="hover-btn hit-slop absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-6.5"
+					class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-7"
 					style="border:var(--cst-border-width-strong) solid var(--cst-surface-primary);box-shadow:var(--shadow-glow-sm);"
 					onclick={() => coverInput?.click()}
 					aria-label="更换封面"

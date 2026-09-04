@@ -2,7 +2,6 @@
 	import { Clock, ArrowUpRight } from '@lucide/svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
-	import EmptyState from '@/components/data-display/EmptyState.svelte';
 
 	// 搜索页「无查询发现态」：最近搜索。
 	// 热门搜索/推荐话题无服务端数据源（search/suggest 需要非空 prefix），
@@ -20,17 +19,12 @@
 	} = $props();
 </script>
 
-<div class="mt-6">
-	<!-- 最近搜索 -->
-	<section
-		class="rounded-lg border border-border-default bg-surface-primary"
-		aria-label="最近搜索"
-	>
-		<div class="flex items-center justify-between border-b border-border-default px-5 py-4">
-			<div>
-				<h2 class="text-sm font-medium text-text-primary">最近搜索</h2>
-				<p class="mt-1 text-xs text-text-secondary">继续上一次的探索</p>
-			</div>
+<div class="mt-5">
+	<!-- 最近搜索：页面直出（eyebrow 小标 + 行动），无卡片壳——空态/少内容时
+	     一张几乎空白的浮起卡会放大页面的空洞感 -->
+	<section aria-label="最近搜索">
+		<div class="flex items-center justify-between">
+			<h2 class="eyebrow">最近搜索</h2>
 			{#if recent.length > 0}
 				<button
 					type="button"
@@ -42,12 +36,12 @@
 			{/if}
 		</div>
 		{#if recent.length > 0}
-			<ListContainer>
+			<ListContainer bordered class="mt-2.5">
 				{#each recent as item (item)}
 					<ListItem
 						onClick={() => onChoose(item)}
 						ariaLabel={`重新搜索 ${item}`}
-						class="flex items-center gap-3 px-5 py-4"
+						class="flex items-center gap-3 px-4 py-3"
 					>
 						<Clock class="size-4 text-text-secondary" strokeWidth={1.75} />
 						<span class="flex-1 text-sm text-text-primary">{item}</span>
@@ -56,7 +50,8 @@
 				{/each}
 			</ListContainer>
 		{:else}
-			<EmptyState bare title="还没有搜索记录" description="输入关键词搜索用户、动态与地点。" />
+			<!-- 紧凑空态：一行引导文案，不占视觉重量 -->
+			<p class="mt-3 text-sm text-text-secondary opacity-soft">输入关键词，搜索用户、动态与地点。</p>
 		{/if}
 	</section>
 </div>

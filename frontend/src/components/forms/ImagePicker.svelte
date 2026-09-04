@@ -50,7 +50,7 @@
 			<button
 				type="button"
 				onclick={() => removeAt(i)}
-				class="hit-slop absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-surface-media-scrim-strong text-content-inverse outline-none backdrop-blur-[var(--cst-blur-sm)] hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-content-inverse"
+				class="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-surface-media-scrim-strong text-content-inverse outline-none backdrop-blur-[var(--cst-blur-sm)] hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-content-inverse"
 				aria-label={`移除照片 ${i + 1}`}
 			>
 				<X size={12} strokeWidth={2} />

@@ -181,17 +181,19 @@
 	<div class="animate-fade-in flex flex-col gap-5">
 	<!-- Avatar section -->
 	<div class="relative rounded-xl overflow-hidden" style="height:var(--cst-cover-height-sm);">
-		<!-- 无封面数据时的占位底：accent 淡底渐变，避免整块空白显得未完成 -->
-		<div class="absolute inset-0" style="background:linear-gradient(135deg, var(--cst-accent-soft-bg), var(--cst-surface-primary) 70%);"></div>
+		<!-- 无封面数据时的占位底：accent 渐变 + 大圆形装饰，让占位可辨识而非空白；
+		     上传能力开放前「更换横幅」收敛为图标按钮（禁用态） -->
+		<div class="absolute inset-0" style="background:linear-gradient(135deg, color-mix(in srgb, var(--cst-accent-default) 26%, var(--cst-surface-primary)) 0%, color-mix(in srgb, var(--cst-accent-default) 8%, var(--cst-surface-primary)) 55%, var(--cst-surface-primary) 100%);"></div>
+		<div class="pointer-events-none absolute -right-6 -bottom-10 size-36 rounded-full" style="background:radial-gradient(circle, color-mix(in srgb, var(--cst-accent-default) 18%, transparent) 0%, transparent 70%);"></div>
 		<button
 			type="button"
-			class="hover-btn absolute top-3 right-3 flex items-center gap-1.5 rounded-full focus-ring bg-surface-overlay-strong text-content-inverse text-sm px-3 py-1.5 disabled:opacity-muted"
-			style="backdrop-filter:blur(var(--cst-blur-md));border:var(--cst-border-width-hairline) solid var(--cst-border-inverse);"
+			class="hover-btn absolute top-3 right-3 flex items-center justify-center rounded-full focus-ring bg-surface-overlay-strong text-content-inverse size-8 disabled:opacity-muted"
+			style="backdrop-filter:blur(var(--cst-blur-md));"
 			disabled
-			title="暂未开放"
+			title="更换横幅（暂未开放）"
+			aria-label="更换横幅（暂未开放）"
 		>
-			<Camera class="size-3.5"  strokeWidth={1.75} />
-			更换横幅
+			<Camera class="size-4"  strokeWidth={1.75} />
 		</button>
 	</div>
 
@@ -201,7 +203,7 @@
 			<Avatar src={avatar} name={nickname} size={72} shape="rounded" class="border-heavy border-surface-primary" style="box-shadow:var(--cst-elevation-profile-avatar);" />
 			<button
 				type="button"
-				class="hover-btn hit-slop absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-6"
+				class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-7"
 				style="border:var(--cst-border-width-strong) solid var(--cst-surface-primary);box-shadow:var(--shadow-glow-sm);"
 				aria-label="更换头像"
 				disabled={uploadingAvatar}

@@ -75,16 +75,16 @@
 			</div>
 			<div class="mt-2 flex items-center justify-between gap-2">
 				{#if user.tag}
-					<span class="badge border border-accent-border bg-accent-soft text-accent-default">#{user.tag}</span>
+					<span class="badge bg-accent-soft text-accent-default">#{user.tag}</span>
 				{:else}
 					<span></span>
 				{/if}
 				<button
 					type="button"
-					class="hover-btn tap-92 hit-slop flex items-center justify-center rounded-full border focus-ring shrink-0 size-7
+					class="hover-btn tap-92 hit-slop flex items-center justify-center rounded-full focus-ring shrink-0 size-7
 						{followed
-						? 'border-accent-border bg-accent-soft text-accent-default hover:bg-interactive-hover hover:text-text-primary'
-						: 'border-transparent bg-accent-default text-text-on-accent shadow-glow-sm hover:shadow-glow-md'}
+						? 'bg-accent-soft text-accent-default hover:bg-interactive-hover hover:text-text-primary'
+						: 'bg-accent-default text-text-on-accent'}
 						{pending ? 'pointer-events-none opacity-soft' : ''}"
 					aria-label={followed ? `取消关注 ${user.name}` : `关注 ${user.name}`}
 					aria-pressed={followed}

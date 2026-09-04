@@ -80,8 +80,8 @@ export struct ChatMessageItem {
             bottom: DesignConstants.CHAT.IMAGE_BUBBLE_PADDING_V
           })
           .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
-          .shadow(this.palette.controlShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.chatTheme?.divider })
+          // 系统 pill 纯底色即可，描边+阴影过重
+          .border({ width: 0, color: DesignConstants.COLOR.TRANSPARENT })
       }
       .width('100%')
       .justifyContent(FlexAlign.Center)
@@ -118,15 +118,13 @@ export struct ChatMessageItem {
                   .justifyContent(FlexAlign.Center)
                   .backgroundColor(this.chatTheme?.listBackground)
                   .borderRadius(this.getBubbleRadius(this.msg.isSelf))
-                } else {
+                  } else {
                   Image(MediaUrlUtil.normalize(this.msg.content))
                     .width(DesignConstants.CHAT.IMAGE_MAX_WIDTH)
                     .height(DesignConstants.CHAT.IMAGE_MAX_HEIGHT)
                     .objectFit(ImageFit.Contain)
                     .backgroundColor(this.chatTheme?.listBackground)
                     .borderRadius(this.getBubbleRadius(this.msg.isSelf))
-                    .shadow(this.palette.controlShadow)
-                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.chatTheme?.divider })
                     .margin(DesignConstants.SPACING.XS)
                     .onError(() => { this.imageFailed = true; })
                     .accessibilityText('[图片消息]')
@@ -189,8 +187,8 @@ export struct ChatMessageItem {
           })
           .backgroundColor(this.msg.isSelf ? this.chatTheme?.bubbleSelf : this.chatTheme?.bubblePeer)
           .borderRadius(this.getBubbleRadius(this.msg.isSelf))
-          .shadow(this.msg.isSelf ? this.palette.accentShadow : this.palette.surfaceShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.msg.isSelf ? DesignConstants.COLOR.TRANSPARENT : this.chatTheme?.divider })
+          // 气泡纯色底无边框无阴影（对齐前端 MessageBubble 与主流 IM；
+          // 描边+阴影会让气泡呈现「浮肿的框」）
           .margin({ top: DesignConstants.SPACING.HALF })
         }
         .alignItems(this.msg.isSelf ? HorizontalAlign.End : HorizontalAlign.Start)
