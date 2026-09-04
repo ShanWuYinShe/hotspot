@@ -14,6 +14,7 @@ import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { curves } from '@kit.ArkUI';
 import { LucideIcon } from '../../../components/LucideIcon';
 
 const DOMAIN_NUMBER: number = 0xFF28;
@@ -48,6 +49,8 @@ export struct CreateMomentSheet {
   // 可见范围 UI 三选（对齐前端 CreateSheet AUDIENCES）；契约 PrivacyLevel 仅
   // 'public' | 'private'（spec/api_spec_types.md），提交时 nearby→public、其余→private
   @State private audience: string = 'nearby';
+  /** 隐私选项按压态（选中按压=底色加深；未选中按压=缩放预览） */
+  @State private privacyPressed: string = '';
   @State private isPublishing: boolean = false;
   @State private publishingMessage: string = '';
   @State private localLocation: LocationInfo | null = null;
@@ -469,7 +472,9 @@ export struct CreateMomentSheet {
 
       Row({ space: DesignConstants.SPACING.SM }) {
         this.buildPrivacyOption('nearby', AppIcon.NEARBY, '附近可见')
-        this.buildPrivacyOption('friends', AppIcon.GROUP, '好友可见')
+        // spec PrivacyLevel 仅 public/private 两档：friends 选项提交的是 private（仅自己），
+        // 文案必须如实（原「好友可见」与实际提交语义直接矛盾）
+        this.buildPrivacyOption('friends', AppIcon.LOCK, '仅自己')
         this.buildPrivacyOption('private', AppIcon.LOCK, '仅自己')
       }
       .width('100%')
@@ -487,9 +492,9 @@ export struct CreateMomentSheet {
       return '进入附近动态';
     }
     if (this.audience === 'friends') {
-      return '仅你的好友';
+      return '仅自己可见';
     }
-    return '保存在我的瞬间';
+    return '仅自己可见';
   }
 
   @Builder
@@ -512,9 +517,25 @@ export struct CreateMomentSheet {
     .alignItems(HorizontalAlign.Center)
     .padding({ top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
     .borderRadius(DesignConstants.RADIUS.SM)
-    .backgroundColor(this.audience === level ?
+    .backgroundColor(this.privacyPressed === level ?
+      this.getPalette().buttonSecondaryBackground :
+      (this.audience === level ?
       this.getPalette().accentMuted :
-      DesignConstants.COLOR.TRANSPARENT)
+      DesignConstants.COLOR.TRANSPARENT))
+    .scale(this.privacyPressed === level && this.audience !== level ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL } :
+      { x: 1, y: 1 })
+    .animation({ curve: curves.springMotion(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ) })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.privacyPressed = level;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.privacyPressed = '';
+      }
+    })
     .onClick(() => {
       this.audience = level;
     })

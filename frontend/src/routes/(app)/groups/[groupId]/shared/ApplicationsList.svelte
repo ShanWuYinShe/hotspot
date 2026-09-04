@@ -27,7 +27,7 @@
 				<span class="block truncate text-sm text-text-primary">{app.applicant.nickname}</span>
 				<span class="text-xs text-text-secondary">{formatDateTime(app.created_at)}{app.message ? ` · ${app.message}` : ''}</span>
 			</span>
-			<button type="button" onclick={() => onApprove(app.application_id)} class="hover-btn rounded-full bg-accent-default px-3.5 py-1.5 text-sm font-medium text-text-on-accent focus-ring">同意</button>
+			<button type="button" onclick={() => onApprove(app.application_id)} class="hover-btn hit-slop rounded-full bg-accent-default px-3.5 py-1.5 text-sm font-medium text-text-on-accent shadow-glow-sm focus-ring hover:shadow-glow-md">同意</button>
 			<button type="button" onclick={() => onReject(app.application_id)} class="hover-btn rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring">拒绝</button>
 		</ListItem>
 	{:else}

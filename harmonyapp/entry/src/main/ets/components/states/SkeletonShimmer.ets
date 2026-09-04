@@ -19,7 +19,9 @@ import { DesignConstants } from '../../constants/DesignConstants';
 
 @Component
 export struct SkeletonShimmer {
-  @Prop active: boolean = true;
+  // @Watch：active true→false 时停住脉冲（原实现无 watch，加载完成后 shimmer 永续脉动；
+  // 且空回调 animateTo 无法终止 iterations:-1 的动画——停止靠把 opacity 归位到 1）
+  @Prop @Watch('onActiveChange') active: boolean = true;
   @BuilderParam child: () => void = this.defaultChild;
 
   @State shimmerOpacity: number = 1.0;
@@ -31,7 +33,15 @@ export struct SkeletonShimmer {
   }
 
   aboutToDisappear() {
-    this.cancelAnimation();
+    this.stopShimmer();
+  }
+
+  onActiveChange() {
+    if (this.active) {
+      this.startShimmer();
+    } else {
+      this.stopShimmer();
+    }
   }
 
   build() {
@@ -59,11 +69,14 @@ export struct SkeletonShimmer {
       iterations: -1,
       playMode: PlayMode.Alternate
     }, () => {
-      this.shimmerOpacity = 0.4;
+      this.shimmerOpacity = DesignConstants.OPACITY.LOADING;
     });
   }
 
-  private cancelAnimation() {
-    animateTo({ duration: 0 }, () => {});
+  private stopShimmer() {
+    // duration:0 立即把状态归位，中断无限循环动画（0.4→1 瞬时完成）
+    animateTo({ duration: 0 }, () => {
+      this.shimmerOpacity = 1.0;
+    });
   }
 }

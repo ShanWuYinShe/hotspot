@@ -22,6 +22,8 @@ export struct SystemTextArea {
   onFocusChange?: (focused: boolean) => void;
 
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  /** 聚焦态：边框 accent 化（对齐 SystemInput focus 契约） */
+  @State isFocused: boolean = false;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -38,8 +40,9 @@ export struct SystemTextArea {
       .backgroundColor(this.getPalette().inputBackgroundColor)
       .borderRadius(DesignConstants.SHAPE.INPUT) // 16
       .border({
-        width: DesignConstants.BORDER_WIDTH.HAIRLINE,
-        color: this.hasError ? this.getPalette().error : this.getPalette().borderColor
+        width: this.isFocused ? DesignConstants.BORDER_WIDTH.REGULAR : DesignConstants.BORDER_WIDTH.HAIRLINE,
+        color: this.hasError ? this.getPalette().error :
+          (this.isFocused ? this.getPalette().accentBackground : this.getPalette().borderColor)
       })
       .fontColor(this.getPalette().textPrimary)
       .fontSize(this.fontSize)
@@ -52,9 +55,11 @@ export struct SystemTextArea {
         this.onChange?.(v);
       })
       .onFocus(() => {
+        this.isFocused = true;
         this.onFocusChange?.(true);
       })
       .onBlur(() => {
+        this.isFocused = false;
         this.onFocusChange?.(false);
       })
   }

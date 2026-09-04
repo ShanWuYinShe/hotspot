@@ -35,11 +35,7 @@
 	const isDesktop = $derived(platform.platform === 'desktop');
 </script>
 
-<section
-	data-split-page-layout
-	class="flex h-full min-h-full w-full flex-col"
-	style="background-color:var(--cst-surface-primary);"
->
+<section data-split-page-layout class="flex h-full min-h-full w-full flex-col">
 	{#if isDesktop}
 		<!-- 主区与 rail 之间用 --context-rail-gap 留白分隔（rail 自带 border-left 作边界） -->
 		<div class="flex h-full w-full" style="gap:var(--cst-context-rail-gap);">
@@ -60,17 +56,20 @@
 			<ContextRail attached>{@render rail()}</ContextRail>
 		</div>
 	{:else}
+		<!-- 移动端：滚动交还 RoutedContentViewport（唯一滚动 owner），此处只承载
+		     header 吸顶 / 内容列 / 固定 footer，避免双层嵌套滚动 -->
 		{#if header}
 			<!-- 移动端 header 吸顶（滚动时内容上探，避免固定 header 常驻挤压内容区） -->
-			<div class="sticky top-0 z-20 shrink-0">{@render header()}</div>
+			<div class="sticky top-0 z-[var(--cst-z-sticky)] shrink-0">{@render header()}</div>
 		{/if}
-		<div class="no-scrollbar min-h-0 flex-1 overflow-y-auto">
+		<div class="min-h-0 flex-1">
 			<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>
 				{@render children()}
 			</ContentColumn>
 		</div>
 		{#if footer}
-			<div class="shrink-0">{@render footer()}</div>
+			<!-- sticky bottom：内容在 shell 滚动时操作条仍常驻视口底（拇指热区） -->
+			<div class="sticky bottom-0 shrink-0">{@render footer()}</div>
 		{/if}
 	{/if}
 </section>

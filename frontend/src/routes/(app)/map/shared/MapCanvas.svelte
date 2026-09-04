@@ -79,9 +79,16 @@
 		center = next;
 	}
 
-	/* ── 拖拽平移（pointer 统一鼠标/触屏） ── */
+	/* ── 拖拽平移 + 双指捏合缩放（pointer 统一鼠标/触屏） ── */
 	let dragStart: { x: number; y: number; center: { lat: number; lng: number } } | null = null;
 	let moved = false;
+	// 双指捏合（移动端地图核心手势）：跟踪活动指针，两指距离比驱动逐级缩放
+	const activePointers = new Map<number, { x: number; y: number }>();
+	let pinchBase = 0;
+	const pinchDist = () => {
+		const pts = Array.from(activePointers.values());
+		return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+	};
 
 	function onPointerDown(e: PointerEvent) {
 		if (!activeCenter) return;
@@ -91,11 +98,35 @@
 		} catch {
 			// ignore
 		}
+		activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+		if (activePointers.size === 2) {
+			// 第二指落下：进入捏合，取消单指拖拽语义
+			dragStart = null;
+			dragging = false;
+			pinchBase = pinchDist();
+			return;
+		}
+		if (activePointers.size > 2) return;
 		dragStart = { x: e.clientX, y: e.clientY, center: activeCenter };
 		moved = false;
 	}
 
 	function onPointerMove(e: PointerEvent) {
+		if (activePointers.has(e.pointerId)) {
+			activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+		}
+		if (activePointers.size >= 2) {
+			// 捏合中：距离比驱动整数级缩放（跟手 ±1 级步进，触达边界钳制）
+			if (pinchBase > 0) {
+				const ratio = pinchDist() / pinchBase;
+				const stepLevel = Math.round(Math.log2(ratio));
+				if (stepLevel !== 0) {
+					const next = Math.max(minZoom, Math.min(maxZoom, zoom + stepLevel));
+					if (next !== zoom) zoom = next;
+				}
+			}
+			return;
+		}
 		if (!dragStart) return;
 		const dx = e.clientX - dragStart.x;
 		const dy = e.clientY - dragStart.y;
@@ -110,7 +141,14 @@
 		renderCenter = gcj02ToWgs84(g.lat, g.lng);
 	}
 
-	function onPointerUp() {
+	function onPointerUp(e?: PointerEvent) {
+		if (e && activePointers.has(e.pointerId)) activePointers.delete(e.pointerId);
+		if (activePointers.size >= 1) {
+			// 捏合结束但仍有手指残留：不进入点击/拖拽判定，等待全部抬起
+			pinchBase = 0;
+			return;
+		}
+		pinchBase = 0;
 		if (!dragStart) return;
 		const next = renderCenter;
 		dragStart = null;
@@ -157,7 +195,8 @@
 	use:wheelAction
 	onpointerdown={onPointerDown}
 	onpointermove={onPointerMove}
-	onpointerup={onPointerUp}
+	onpointerup={(e) => onPointerUp(e)}
+	onpointercancel={(e) => onPointerUp(e)}
 	role="application"
 	aria-label="地图画布"
 >

@@ -51,7 +51,7 @@ const needsAuth = $derived(myGroups.needsAuth);
 		{#each filtered as g (g.id)}
 			<button
 				type="button"
-				class="tap-97 group flex min-h-37 w-full overflow-hidden rounded-md border border-border-default bg-surface-primary shadow-raised-md text-left outline-none transition-colors hover:border-accent-default focus-visible:ring-2 focus-visible:ring-accent-default"
+				class="card-hover tap-97 group flex min-h-37 w-full overflow-hidden rounded-md border border-border-default bg-surface-primary shadow-raised-md text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
 				aria-label={`进入群组：${g.name}`}
 				onclick={() => void goto(`${ROUTES.group(g.id)}?from=me`)}
 			>
@@ -114,6 +114,9 @@ const needsAuth = $derived(myGroups.needsAuth);
 		{/each}
 		</div>
 
+	{:else if searchQ}
+		<!-- 搜索无结果与初始无群组区分语义 -->
+		<EmptyState bare title="没有找到匹配的群组" description="换个关键词试试。" />
 	{:else}
-		<EmptyState bare title="没有找到匹配的群组" />
+		<EmptyState bare title="还没有加入群组" description="去附近群组发现感兴趣的小组。" />
 	{/if}

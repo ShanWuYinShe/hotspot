@@ -103,10 +103,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	const isDesktop = $derived(platform.platform === 'desktop');
 	const isTablet = $derived(platform.platform === 'tablet');
 	const device = $derived(platform.platform);
-	const gridColumns = $derived(platform.platform === 'mobile' ? 2 : isDesktop ? 3 : 2);
 
-	// in-flight 去重（防连点双翻转）；业务失败（code≠0）显式判 code 回滚
-	const followPending = new Set<string>();
+	// in-flight 去重（防连点双翻转，响应式供按钮 pending 态）；业务失败（code≠0）显式判 code 回滚
+	let followPending = $state(new Set<string>());
 
 	const toggleFollow = async (id: string) => {
 		if (followPending.has(id)) return;
@@ -115,7 +114,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		const willFollow = !next.has(id);
 		willFollow ? next.add(id) : next.delete(id);
 		followedIds = next;
-		followPending.add(id);
+		followPending = new Set(followPending).add(id);
 		try {
 			// spec: users/set_follow 两态统一；乐观更新 + 失败回滚
 			const res = await follow({ user_id: id, active: willFollow });
@@ -126,7 +125,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			followedIds = r;
 			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
 		} finally {
-			followPending.delete(id);
+			const rest = new Set(followPending);
+			rest.delete(id);
+			followPending = rest;
 		}
 	};
 </script>
@@ -203,13 +204,14 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 							<UserCard
 								user={user}
 								followed={followedIds.has(user.id)}
+								pending={followPending.has(user.id)}
 								onFollow={() => toggleFollow(user.id)}
 								onNavigate={() => void goto(ROUTES.user(user.id))}
 							/>
 						{/snippet}
 					</BspCardCanvas>
 				{:else}
-					<div class="grid gap-4" style="grid-template-columns:repeat({gridColumns}, minmax(0, 1fr));">
+					<div class="grid grid-cols-2 gap-4">
 						{#each list as user, index (user.id)}
 							<UserCard
 								user={user}

@@ -249,7 +249,7 @@
 			     避免用户填完表单才被告知「暂未开放」（业务态不可伪装成可用功能） -->
 		{/if}
 		<label class="flex flex-col gap-1.5" for="auth-field-loginId">
-			<span class="text-xs font-medium text-text-secondary"  >手机号、邮箱或账号</span>
+			<span class="text-xs font-medium tracking-field text-text-secondary">手机号、邮箱或账号</span>
 			<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
 				<Mail class="size-4 shrink-0 text-accent-default"   strokeWidth={1.75} />
 				<input
@@ -314,7 +314,7 @@
 			{/if}
 			{#if (mode === 'login' && method === 'password') || mode === 'register'}
 			<label class="flex flex-col gap-1.5" for="auth-field-password">
-				<span class="text-xs font-medium text-text-secondary"  >密码</span>
+				<span class="text-xs font-medium tracking-field text-text-secondary">密码</span>
 				<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
 					<LockKeyhole class="size-4 shrink-0 text-accent-default"   strokeWidth={1.75} />
 					<input
@@ -471,25 +471,25 @@
 	<!-- Mode switcher -->
 	<div class="flex flex-wrap items-center justify-center gap-3.5 mt-1" >
 		{#if mode !== 'login' && mode !== 'forgot' && mode !== 'reset'}
-			<button type="button" onclick={() => switchMode('login')} class="link-btn text-sm focus-ring text-accent-default" >
+			<button type="button" onclick={() => switchMode('login')} class="link-btn -my-1 py-1 text-sm focus-ring text-accent-default">
 				已有账号？登录
 			</button>
 		{/if}
 		{#if mode === 'login'}
-			<button type="button" onclick={() => switchMode('register')} class="link-btn text-sm focus-ring text-accent-default" >
+			<button type="button" onclick={() => switchMode('register')} class="link-btn -my-1 py-1 text-sm focus-ring text-accent-default">
 				注册新账号
 			</button>
-			<button type="button" onclick={() => switchMode('forgot')} class="link-btn text-sm focus-ring text-accent-default" >
+			<button type="button" onclick={() => switchMode('forgot')} class="link-btn -my-1 py-1 text-sm focus-ring text-accent-default">
 				忘记密码
 			</button>
 		{/if}
 		{#if mode === 'register' || mode === 'forgot' || mode === 'reset'}
-			<button type="button" onclick={() => switchMode('login')} class="link-btn text-sm focus-ring text-accent-default" >
+			<button type="button" onclick={() => switchMode('login')} class="link-btn -my-1 py-1 text-sm focus-ring text-accent-default">
 				返回登录
 			</button>
 		{/if}
 		{#if mode !== 'guest' && mode !== 'forgot' && mode !== 'reset'}
-			<button type="button" onclick={() => switchMode('guest')} class="link-btn text-sm focus-ring text-accent-default" >
+			<button type="button" onclick={() => switchMode('guest')} class="link-btn -my-1 py-1 text-sm focus-ring text-accent-default">
 				随便逛逛（访客）
 			</button>
 		{/if}

@@ -87,6 +87,7 @@ export struct SystemInput {
         .placeholderFont({ size: this.fontSize })
         .caretColor(this.getPalette().accentBackground)
         .enabled(!this.disabled)
+    .opacity(this.disabled ? DesignConstants.OPACITY.DISABLED : 1)
         .type(this.getInputType())
         .maxLength(this.maxLength)
         .onChange((v: string) => {

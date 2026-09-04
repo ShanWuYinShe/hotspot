@@ -25,7 +25,6 @@
 	let tab = $state<TabType>('all');
 	let searchSeq = 0;
 	let recent = $state<string[]>(readRecent());
-	let discoveryHot = $state<string[]>([]);
 	let discoveryTopics = $state<string[]>([]);
 	let results = $state<SearchResultsData>({
 		users: [],
@@ -41,13 +40,14 @@
 		localStorage.setItem('search_recent', JSON.stringify(recent));
 	});
 
-	// 发现态的热门搜索/推荐话题来自 search/suggest（spec SearchSuggestRequest prefix 1-50 必填），
-	// 空查询不调 suggest（spec 空串会 10000），沿用本地 recent/空面板；有输入时仅取 tag 类型联想，
-	// 避免混合类型下 `payload.name` 对 user/moment 字段丢失（user→nickname、moment→description_preview）。
+	const keyword = $derived(query.trim().toLowerCase());
+
+	// 输入联想（search/suggest，spec prefix 1-50 必填、types=['tag']）：
+	// 关键词非空时防抖取 tag 联想，作为结果页顶部的「相关话题」快速入口。
+	// 空查询不调 suggest（spec 空串会 10000），发现态只保留最近搜索。
 	$effect(() => {
 		const prefix = keyword;
 		if (!prefix) {
-			discoveryHot = [];
 			discoveryTopics = [];
 			return;
 		}
@@ -58,7 +58,6 @@
 				const suggest = res as unknown as { code: number; data?: { items?: Array<{ payload?: { name?: string } }> } | null };
 				const items = suggest.code === 0 ? suggest.data?.items ?? [] : [];
 				const names = items.map((i) => i.payload?.name ?? '').filter(Boolean) as string[];
-				discoveryHot = names;
 				discoveryTopics = names;
 			});
 		}, 300);
@@ -67,8 +66,6 @@
 			clearTimeout(timer);
 		};
 	});
-
-	const keyword = $derived(query.trim().toLowerCase());
 
 	async function doSearch(term: string) {
 		const seq = ++searchSeq;
@@ -137,11 +134,11 @@
 
 	const hasResults = $derived(results.users.length + results.moments.length + results.topics.length > 0);
 
-	const tabs = $derived<{ id: TabType; label: string }[]>([
+	const tabs = $derived<{ id: TabType; label: string; count?: number }[]>([
 		{ id: 'all', label: '全部' },
-		{ id: 'people', label: `用户 ${results.users.length || ''}` },
-		{ id: 'posts', label: `动态 ${results.moments.length || ''}` },
-		{ id: 'topics', label: `话题 ${results.topics.length || ''}` }
+		{ id: 'people', label: '用户', count: results.users.length || undefined },
+		{ id: 'posts', label: '动态', count: results.moments.length || undefined },
+		{ id: 'topics', label: '话题', count: results.topics.length || undefined }
 	]);
 </script>
 <svelte:head>
@@ -171,10 +168,10 @@
 	{#if searchError}
 		<LoadError message={searchError} onRetry={() => void doSearch(keyword)} />
 	{:else if !keyword}
-		<!-- 无查询发现态（对齐 Figma：双栏 grid + 推荐话题跨列） -->
-		<SearchDiscovery recent={recent} hot={discoveryHot} topics={discoveryTopics} onChoose={choose} onClear={() => (recent = [])} />
+		<!-- 无查询发现态：最近搜索（热搜/话题无服务端数据源，不渲染死区块） -->
+		<SearchDiscovery recent={recent} onChoose={choose} onClear={() => (recent = [])} />
 	{:else}
-		<!-- 有查询结果态（对齐 Figma） -->
+		<!-- 有查询结果态（对齐 Figma）；输入联想（相关话题）作为顶部快速入口 -->
 		<SearchResults
 			{query}
 			{tab}
@@ -182,6 +179,7 @@
 			{loading}
 			{hasResults}
 			{results}
+			suggestions={discoveryTopics.filter((t) => t.toLowerCase() !== keyword)}
 			onTabChange={(id) => (tab = id)}
 			onChoose={choose}
 		/>

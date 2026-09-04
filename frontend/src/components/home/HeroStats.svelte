@@ -24,7 +24,7 @@
 <div class="ambient-glow">
 	<button
 		type="button"
-		class="hover-btn tap-97 surface-hero rounded-xl cursor-pointer overflow-hidden text-left w-full p-4.5 px-5"
+		class="hover-btn tap-97 surface-hero rounded-xl cursor-pointer overflow-hidden text-left w-full py-4.5 px-5"
 		aria-label="查看附近的人"
 		onclick={onExplore}
 	>

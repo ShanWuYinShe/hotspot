@@ -15,13 +15,15 @@
 	type ButtonSize = 'sm' | 'md' | 'lg';
 
 	// hover 反馈走组件级 token（全局 button hover 填充只兜底透明裸按钮）：
-	// primary = accent 光晕抬档；secondary/outline = 描边加深；ghost = 淡底填充。
+	// primary = accent 光晕抬档；secondary/outline = 描边加深；ghost = 淡底填充；
+	// danger = 危险色光晕抬档（--shadow-danger-glow-*，随主题派生）。
+	// 带 bg-* 实底的变体命中全局 hover 排除集，必须自带 hover 反馈（交互四态契约）。
 	const VARIANTS: Record<ButtonVariant, string> = {
 		primary: 'bg-accent-default text-text-on-accent shadow-glow-sm hover:shadow-glow-md',
 		secondary: 'bg-surface-primary text-text-primary border border-border-default shadow-raised-sm hover:border-border-strong',
 		outline: 'bg-transparent text-text-primary border border-border-default hover:border-border-strong',
 		ghost: 'bg-transparent text-text-primary hover:bg-interactive-hover',
-		danger: 'bg-status-danger text-text-on-status'
+		danger: 'bg-status-danger text-text-on-status shadow-danger-glow-sm hover:shadow-danger-glow-md'
 	};
 
 	const SIZES: Record<ButtonSize, string> = {
@@ -51,7 +53,7 @@
 	{type}
 	disabled={disabled || loading}
 	class={cn(
-		'inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap font-medium hover-btn focus-ring transition-colors',
+		'inline-flex shrink-0 cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap font-medium hover-btn focus-ring disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint',
 		VARIANTS[variant],
 		SIZES[size],
 		loading && 'pointer-events-none opacity-soft',

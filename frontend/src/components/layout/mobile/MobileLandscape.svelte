@@ -7,6 +7,7 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
 	import RailIcon from '@/components/layout/mobile/RailIcon.svelte';
+	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 
 	// 移动横屏：紧凑左栏（无状态栏），全高内容 + 右侧滑入发布面板。
@@ -47,7 +48,7 @@
 			<button
 				type="button"
 				class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring my-1 size-11"
-				style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--shadow-glow-md)'};transition:background var(--cst-motion-standard) var(--cst-ease-standard), transform var(--cst-motion-snappy) var(--cst-ease-standard), filter var(--cst-motion-snappy) var(--cst-ease-standard);"
+				style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--cst-elevation-fab)'};transition:background var(--cst-motion-standard) var(--cst-ease-standard), transform var(--cst-motion-snappy) var(--cst-ease-standard), filter var(--cst-motion-snappy) var(--cst-ease-standard);"
 				aria-label={composer.composerOpen ? '关闭' : '发布'}
 				onclick={toggleComposer}
 			>
@@ -69,9 +70,9 @@
 		</aside>
 	{/if}
 
-	<main class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar" style="background-color:var(--cst-surface-primary);">
+	<RoutedContentViewport class="shrink-0" contentClassName="bg-surface-primary">
 		{@render children()}
-	</main>
+	</RoutedContentViewport>
 
 	<Dialog.Root open={showCreate} onOpenChange={(next) => (next ? openComposer() : closeComposer())}>
 		<Dialog.Content

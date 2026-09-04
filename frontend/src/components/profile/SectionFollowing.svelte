@@ -5,6 +5,8 @@
 	import type { SectionFilter } from '@/components/profile/section-filter';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
+	import { follow } from '@/api';
+	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 关注分区：ProfileUserSection 骨架 + UserCardRow 行。
@@ -12,17 +14,36 @@
 	let { embedded = false }: { embedded?: boolean } = $props();
 
 	let followingFilter = $state<'all' | 'mutual'>('all');
-	let unfollowedIds = $state<Set<string>>(new Set());
+	// 取关状态以服务端 following 列表为基准，本地 overrides 承载乐观切换（API 失败回滚）
+	let unfollowOverrides = $state<Record<string, boolean>>({});
+	let pendingIds = $state<Set<string>>(new Set());
 
 	// getter 对象解构会拿到非响应式快照，$derived 桥接
 	const rel = useRelationships();
 	const following = $derived(rel.following);
 	const loading = $derived(rel.loading);
 
-	const toggleUnfollow = (id: string) => {
-		const next = new Set(unfollowedIds);
-		next.has(id) ? next.delete(id) : next.add(id);
-		unfollowedIds = next;
+	const isUnfollowed = (id: string) => unfollowOverrides[id] ?? false;
+
+	const toggleUnfollow = async (id: string, name: string) => {
+		if (pendingIds.has(id)) return;
+		const prev = isUnfollowed(id);
+		const next = !prev;
+		unfollowOverrides = { ...unfollowOverrides, [id]: next };
+		pendingIds = new Set([...pendingIds, id]);
+		try {
+			// spec: users/set_follow——取消关注 active:false，重新关注 active:true
+			const res = await follow({ user_id: id, active: !next });
+			if (res.code !== 0) throw new Error(res.message ?? '操作失败');
+			if (next) showToast(`已取消关注 ${name}`, 'success');
+		} catch {
+			unfollowOverrides = { ...unfollowOverrides, [id]: prev };
+			showToast('操作失败，请重试', 'danger');
+		} finally {
+			const rest = new Set(pendingIds);
+			rest.delete(id);
+			pendingIds = rest;
+		}
 	};
 
 	const filtered = $derived(followingFilter === 'mutual' ? following.filter((f) => f.isMutual) : following);
@@ -38,7 +59,6 @@
 	subtitle="你主动订阅的动态与创作者"
 	count={following.length}
 	countSuffix=" 人"
-	headerNote="点击卡片查看主页"
 	{embedded}
 	filters={FILTERS}
 	filterValue={followingFilter}
@@ -59,7 +79,7 @@
 			tone={embedded ? 'card' : 'row'}
 			onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
 			ariaLabel={`查看 ${f.name} 的主页`}
-			style={`opacity:${unfollowedIds.has(f.id) ? 'var(--cst-opacity-muted)' : 'var(--cst-opacity-full)'};`}
+			style={`opacity:${isUnfollowed(f.id) ? 'var(--cst-opacity-muted)' : 'var(--cst-opacity-full)'};`}
 		>
 			{#snippet subtitle()}
 				<p class="truncate mt-px text-text-secondary text-xs">{f.desc}</p>
@@ -67,14 +87,18 @@
 			{#snippet actions()}
 				<button
 					type="button"
-					class="hover-btn tap-92 hit-slop flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs focus-ring {unfollowedIds.has(f.id) ? 'bg-accent-default text-text-on-accent' : 'bg-transparent text-text-secondary'}"
-					style={unfollowedIds.has(f.id) ? 'border:var(--cst-border-width-hairline) solid transparent;' : 'border:var(--cst-border-width-hairline) solid var(--cst-border-strong);'}
+					aria-pressed={!isUnfollowed(f.id)}
+					disabled={pendingIds.has(f.id)}
+					class="hover-btn tap-92 hit-slop flex shrink-0 items-center gap-1 rounded-full border px-3.5 py-1.5 text-xs focus-ring disabled:pointer-events-none disabled:opacity-faint
+						{isUnfollowed(f.id)
+						? 'border-transparent bg-accent-default text-text-on-accent shadow-glow-sm hover:shadow-glow-md'
+						: 'border-border-strong bg-transparent text-text-secondary hover:border-accent-border hover:bg-interactive-hover hover:text-text-primary'}"
 					onclick={(e) => {
 						e.stopPropagation();
-						toggleUnfollow(f.id);
+						void toggleUnfollow(f.id, f.name);
 					}}
 				>
-					{#if unfollowedIds.has(f.id)}
+					{#if isUnfollowed(f.id)}
 						<UserPlus class="size-2.5"  strokeWidth={2} />
 						关注
 					{:else}

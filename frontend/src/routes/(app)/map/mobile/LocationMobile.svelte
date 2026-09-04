@@ -233,9 +233,10 @@
 					type="button"
 					class="hover-btn flex items-center justify-center rounded-full focus-ring circle-hover size-10.5"
 					style="{floatBtnStyle}"
+					aria-label="返回"
 					onclick={() => history.back()}
 				>
-					<ArrowLeft class="size-4.5 text-text-primary"   strokeWidth={2} />
+					<ArrowLeft class="size-4.5 text-text-primary" strokeWidth={2} />
 				</button>
 
 				<!-- Filter menu（桌面/移动共用组件：徽章/重置/至少一项/外点关闭统一） -->
@@ -251,7 +252,7 @@
 		<div class="flex flex-col rounded-lg" style="border:var(--cst-border-width-hairline) solid var(--cst-border-default);{floatBtnStyle}">
 			<button
 				type="button"
-				class="flex items-center justify-center size-9 rounded-t-lg focus-ring text-text-primary"
+				class="flex items-center justify-center size-9 rounded-t-lg focus-ring text-text-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint"
 				style="border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);"
 				aria-label="放大"
 				disabled={mapZoom >= 16}
@@ -261,7 +262,7 @@
 			</button>
 			<button
 				type="button"
-				class="flex items-center justify-center size-9 rounded-b-lg focus-ring text-text-primary"
+				class="flex items-center justify-center size-9 rounded-b-lg focus-ring text-text-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint"
 				aria-label="缩小"
 				disabled={mapZoom <= 13}
 				onclick={() => (mapZoom = Math.max(13, mapZoom - 1))}
@@ -270,9 +271,11 @@
 			</button>
 		</div>
 
-		<!-- GPS re-center -->
+		<!-- 回到我的位置（re-center；原 Crosshair 与「我的位置」两个按钮功能重复，合并为一个） -->
 		<button
 			type="button"
+			aria-label="回到我的位置"
+			title="回到我的位置"
 			class="hover-btn flex items-center justify-center rounded-full focus-ring circle-hover size-10.5"
 			style="{floatBtnStyle}"
 			onclick={() => {
@@ -281,25 +284,7 @@
 				searchQuery = '';
 			}}
 		>
-			<Crosshair class="size-4.5 text-accent-default"   strokeWidth={1.75} />
-		</button>
-
-		<!-- My location dot（对齐 Figma Make：用户位置圆点 + 白描边 + 主题色 glow） -->
-		<button
-			type="button"
-			aria-label="我的位置"
-			class="hover-btn flex items-center justify-center rounded-full focus-ring circle-hover size-10.5"
-			style="{floatBtnStyle}"
-			onclick={() => {
-				mapCenter = defaultCenter;
-				selectedLoc = null;
-				searchQuery = '';
-			}}
-		>
-			<div
-				class="rounded-full"
-				style="width:14px;height:14px;background:var(--cst-marker-user);border:var(--cst-border-width-heavy) solid var(--cst-surface-primary);box-shadow:var(--cst-marker-halo) var(--cst-marker-user-glow);"
-			></div>
+			<Crosshair class="size-4.5 text-accent-default" strokeWidth={1.75} />
 		</button>
 	</div>
 
@@ -314,7 +299,7 @@
 			aria-valuemax={SNAP_MAX}
 			aria-valuenow={Math.min(SNAP_MAX, Math.max(SNAP_MIN, sheetH))}
 			tabindex="0"
-			style="shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:10px;padding-bottom:6px;cursor:grab;touch-action:none;user-select:none;"
+			style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:10px;padding-bottom:6px;cursor:grab;touch-action:none;user-select:none;"
 			onpointerdown={onHandlePointerDown}
 			onkeydown={onHandleKeydown}
 		>
@@ -355,33 +340,34 @@
 			</div>
 		</div>
 
-		<!-- Scrollable content — ONLY shown when snap is not "min" -->
-		{#if snap !== 'min'}
-			<div style="flex:1;min-height:0;overflow-y:auto;" class="no-scrollbar pb-3">
-				<LocationSheetList
-					bind:searchQuery
-					{searchResults}
-					bind:selectedPin
-					bind:selectedLoc
-					bind:activeTab
-					bind:recentItems
-					onSelectLoc={handleSelectLoc}
-					onOpenPinDetail={openPinDetail}
-					onClearPin={() => (selectedPin = null)}
-				/>
-			</div>
-		{/if}
+		<!-- Scrollable content — 收起(min)时隐藏而非卸载（保留滚动位置/输入状态） -->
+		<div
+			style="flex:1;min-height:0;overflow-y:auto;{snap === 'min' ? 'display:none;' : ''}"
+			class="no-scrollbar pb-3"
+			aria-hidden={snap === 'min'}
+		>
+			<LocationSheetList
+				bind:searchQuery
+				{searchResults}
+				bind:selectedPin
+				bind:selectedLoc
+				bind:activeTab
+				bind:recentItems
+				onSelectLoc={handleSelectLoc}
+				onOpenPinDetail={openPinDetail}
+				onClearPin={() => (selectedPin = null)}
+			/>
+		</div>
 
 		<!-- Confirm button — always at bottom of sheet -->
 		<div class="shrink-0 px-4 pt-2 pb-4.5">
 			<button
 				type="button"
-				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm h-12.5"
-				style="box-shadow:var(--shadow-glow-lg);"
+				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm h-12.5 px-4 shadow-glow-lg"
 				onclick={handleConfirm}
 			>
-				<MapPin class="size-4"  strokeWidth={2} />
-				{selectedLoc ? `确认：${selectedLoc.displayName.slice(0, 11)}` : '设为浏览锚点'}
+				<MapPin class="size-4 shrink-0" strokeWidth={2} />
+				<span class="min-w-0 truncate">{selectedLoc ? `确认：${selectedLoc.displayName}` : '设为浏览锚点'}</span>
 			</button>
 		</div>
 	</div>

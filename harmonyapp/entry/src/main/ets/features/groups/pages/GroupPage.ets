@@ -23,6 +23,7 @@ import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { curves } from '@kit.ArkUI';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
@@ -521,7 +522,7 @@ export struct GroupPage {
               )
           } else if (this.groups.length === 0) {
             Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-              EmptyState({ icon: AppIcon.GROUP, message: '附近暂无群组\n快来创建第一个吧！' })
+              EmptyState({ icon: AppIcon.GROUP, message: '还没有加入任何群组\n去附近发现感兴趣的小组吧！' })
             }
             .onRefreshing(() => { this.loadMyGroups(true); })
             .transition(
@@ -896,6 +897,14 @@ export struct GroupPage {
     .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
     .margin({ bottom: DesignConstants.SPACING.MD })
     .alignItems(VerticalAlign.Center)
+    // 按压缩放（消费 pressedGroupId 状态；原状态只写不读，卡片点击零按压反馈）
+    .scale(this.pressedGroupId === group.group.group_id ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
+      { x: 1, y: 1 })
+    .animation({ curve: curves.springMotion(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ) })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.pressedGroupId = group.group.group_id;

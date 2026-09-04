@@ -11,10 +11,13 @@
 	let {
 		users,
 		followingIds,
+		followPending,
 		onToggle
 	}: {
 		users: NearbyUser[];
 		followingIds: Set<string>;
+		/** 关注请求进行中的用户 id（按钮禁点防重复提交） */
+		followPending?: Set<string>;
 		onToggle: (id: string) => void;
 	} = $props();
 </script>
@@ -41,11 +44,17 @@
 				{/if}
 			{/snippet}
 			{#snippet actions()}
+				{@const pending = followPending?.has(u.id) ?? false}
+				<!-- 双态 hover 差异（四态契约）：未关注 = accent 光晕抬档；已关注 = 描边加深 + 淡底填充 -->
 				<Button
 					type="button"
 					variant={followed ? 'outline' : 'primary'}
 					size="sm"
-					class="hit-slop rounded-full px-3 py-1 {followed ? 'border-border-strong text-text-secondary' : ''}"
+					aria-pressed={followed}
+					disabled={pending}
+					class="hit-slop rounded-full px-3 py-1 {followed
+						? 'border-border-strong text-text-secondary hover:border-accent-border hover:bg-interactive-hover hover:text-text-primary'
+						: ''}"
 					onclick={() => onToggle(u.id)}
 				>
 					{followed ? '已关注' : '关注'}

@@ -41,13 +41,14 @@
 	<div
 		class={cn('flex flex-col gap-px overflow-hidden rounded-md border', className)}
 		style={`background:var(--cst-border-default);border-color:var(--cst-border-default);${styleProp}`}
+		role="list"
 		aria-label={ariaLabel}
 	>
 		{@render children()}
 	</div>
 {:else}
 	<!-- embedded：无外框，仅行内分隔线 -->
-	<div class={cn('flex flex-col divide-y divide-border-default', className)} aria-label={ariaLabel}>
+	<div role="list" class={cn('flex flex-col divide-y divide-border-default', className)} aria-label={ariaLabel}>
 		{@render children()}
 	</div>
 {/if}

@@ -235,8 +235,9 @@ export struct PhoneLayout {
           ? this.getPalette().tabBarActiveBackground
           : DesignConstants.COLOR.TRANSPARENT
       )
+      // 按压差异：选中 tab 按压不缩放（accent 底已表达选中），未选中按压缩放预览
       .scale(
-        this.pressedTabIndex === index
+        this.pressedTabIndex === index && this.currentTabIndex !== index
           ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL }
           : { x: 1, y: 1 }
       )
@@ -323,8 +324,9 @@ export struct PhoneLayout {
         ? this.getPalette().tabBarActiveBackground
         : DesignConstants.COLOR.TRANSPARENT
     )
+    // 按压差异：选中 tab 按压不缩放（accent 底已表达选中），未选中按压缩放预览
     .scale(
-      this.pressedTabIndex === index
+      this.pressedTabIndex === index && this.currentTabIndex !== index
         ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL }
         : { x: 1, y: 1 }
     )

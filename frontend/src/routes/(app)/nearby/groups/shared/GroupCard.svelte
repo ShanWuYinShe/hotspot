@@ -12,11 +12,14 @@
 	// rounded-md；精选的突出靠全宽大尺寸 + 徽章 + 大号 footer 表达。
 	let {
 		group,
+		pending = false,
 		onToggle,
 		onOpen,
 		featured = false
 	}: {
 		group: Group;
+		/** 加入/退出请求进行中（JoinButton 禁点防重复提交） */
+		pending?: boolean;
 		onToggle: () => void;
 		onOpen: () => void;
 		featured?: boolean;
@@ -78,7 +81,7 @@
 							{group.activity}
 						</p>
 					</div>
-					<JoinButton {group} {onToggle} />
+					<JoinButton {group} {pending} {onToggle} />
 				</div>
 			</div>
 		{:else}
@@ -112,7 +115,7 @@
 						<CalendarDays class="inline mr-1 size-2.5"  />
 						{group.activity}
 					</span>
-					<JoinButton {group} {onToggle} />
+					<JoinButton {group} {pending} {onToggle} />
 				</div>
 			</div>
 		{/if}

@@ -41,6 +41,7 @@
 		oninput={(e) => onChange(e.currentTarget.value)}
 		onkeydown={(e) => {
 			if (e.key === 'Enter') onEnter?.(value);
+			if (e.key === 'Escape' && value) onChange('');
 		}}
 		{placeholder}
 		class="min-w-0 flex-1 bg-transparent text-text-primary {textClass}"
@@ -48,7 +49,7 @@
 	{#if value}
 		<button
 			type="button"
-			class="hit-slop shrink-0 focus-ring"
+			class="hover-action -m-1.5 flex shrink-0 items-center justify-center rounded-full p-1.5 focus-ring hover:text-text-primary"
 			aria-label="清空搜索"
 			onclick={() => onChange('')}
 		>

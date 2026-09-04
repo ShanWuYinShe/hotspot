@@ -1,4 +1,7 @@
 <script lang="ts">
+	// 简介长度契约：上限 150，超过 85%（128）进入告警色
+	const MAX_BIO = 150;
+	const BIO_WARN = Math.floor(MAX_BIO * 0.85);
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';	import { Camera, User, FileText, Check } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
@@ -23,6 +26,8 @@
 	let bio = $state('');
 	let tags = $state<Set<string>>(new Set());
 	let saved = $state(false);
+	let savedTimer: number | undefined;
+	$effect(() => () => window.clearTimeout(savedTimer));
 	let saving = $state(false);
 	let uploadingAvatar = $state(false);
 	let deleteConfirmOpen = $state(false);
@@ -95,7 +100,8 @@
 			});
 			if (res.code !== 0) throw new Error(res.message || '保存失败');
 			saved = true;
-			setTimeout(() => {
+			showToast('已保存', 'success');
+			savedTimer = window.setTimeout(() => {
 				saved = false;
 				history.back();
 			}, 800);
@@ -159,7 +165,7 @@
 			onclick={() => void handleSave()}
 		>
 			{#if saved}
-				<Check class="size-3.5 text-text-on-status" strokeWidth={2.5} />
+				<Check class="size-3.5 text-accent-default" strokeWidth={2.5} />
 			{/if}
 			{saved ? '已保存' : '保存'}
 		</Button>
@@ -192,7 +198,7 @@
 	<!-- Avatar edit -->
 	<div class="flex items-center gap-4 -mt-8">
 		<div class="relative shrink-0">
-			<Avatar src={avatar} name={nickname} size={72} shape="rounded" class="border-3 border-surface-primary" style="box-shadow:var(--cst-elevation-profile-avatar);" />
+			<Avatar src={avatar} name={nickname} size={72} shape="rounded" class="border-heavy border-surface-primary" style="box-shadow:var(--cst-elevation-profile-avatar);" />
 			<button
 				type="button"
 				class="hover-btn hit-slop absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-6"
@@ -246,14 +252,14 @@
 				<textarea
 					id="edit-bio"
 					bind:value={bio}
-					oninput={(e) => (bio = e.currentTarget.value.slice(0, 150))}
+					oninput={(e) => (bio = e.currentTarget.value.slice(0, MAX_BIO))}
 					placeholder="介绍一下自己…"
 					rows={3}
 					class="w-full bg-transparent resize-none text-text-primary text-sm leading-copy"
 				></textarea>
 				<div class="flex justify-end mt-1">
-					<span class="{bio.length > 127 ? 'text-accent-default' : 'text-text-secondary'} text-xs">
-						{bio.length}/150
+					<span class="{bio.length > BIO_WARN ? 'text-status-warning' : 'text-text-secondary'} text-xs">
+						{bio.length}/{MAX_BIO}
 					</span>
 				</div>
 			</div>

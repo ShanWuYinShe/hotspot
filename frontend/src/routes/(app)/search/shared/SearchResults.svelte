@@ -5,6 +5,8 @@
 	import ListItem from '@/components/list/ListItem.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+	import TagPill from '@/components/forms/TagPill.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 
@@ -42,35 +44,43 @@
 		loading,
 		hasResults,
 		results,
+		suggestions = [],
 		onTabChange,
 		onChoose
 	}: {
 		query: string;
 		tab: TabType;
-		tabs: { id: TabType; label: string }[];
+		tabs: { id: TabType; label: string; count?: number }[];
 		loading: boolean;
 		hasResults: boolean;
 		results: SearchResultsData;
+		/** 输入联想（tag suggest）作为结果页顶部快速入口 */
+		suggestions?: string[];
 		onTabChange: (id: TabType) => void;
 		onChoose: (value: string) => void;
 	} = $props();
 </script>
 
 <section class="mt-5" aria-label="搜索结果">
-	<!-- 分类 Tab 统一走 TabBar（胶囊） -->
+	<!-- 分类 Tab 统一走 TabBar（胶囊）；count 结构化透传，不做 label 反解析 -->
 	<TabBar
-		items={tabs.map((t) => {
-			const m = t.label.match(/^(.*?)(?:\s+(\d+))?$/);
-			return { id: t.id, label: m?.[1] ?? t.label, count: m?.[2] ? Number(m[2]) : undefined };
-		})}
+		items={tabs}
 		value={tab}
 		onChange={(id) => onTabChange(id as TabType)}
 	/>
 
-	{#if loading}
-		<div class="flex items-center justify-center py-20">
-			<p class="text-sm text-text-secondary">搜索中...</p>
+	{#if suggestions.length > 0}
+		<!-- 输入联想（相关话题）：一键细化关键词 -->
+		<div class="mt-4 flex flex-wrap items-center gap-2" aria-label="相关话题">
+			<span class="text-xs text-text-secondary">相关话题</span>
+			{#each suggestions.slice(0, 8) as topic (topic)}
+				<TagPill onClick={() => onChoose(topic)}>#{topic}</TagPill>
+			{/each}
 		</div>
+	{/if}
+
+	{#if loading}
+		<InlineLoading label="搜索中…" />
 	{:else if !hasResults}
 		<!-- 空态统一 EmptyState（对齐全局空态契约） -->
 		<EmptyState iconSize={56} title={`没有找到“${query}”`} description="换个关键词再试试。">

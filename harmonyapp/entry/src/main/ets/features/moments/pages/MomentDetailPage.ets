@@ -73,10 +73,15 @@ export struct MomentDetailPage {
   @State isLoading: boolean = true;
   @State errorMessage: string = '';
   @State likePending: boolean = false;
+  /** 点赞计数弹跳（count-pop：成功瞬间 1→1.3→1，对齐前端 cst-count-pop） */
+  @State likePop: boolean = false;
+  /** 操作条按压键（comment/share 按压缩放反馈） */
+  @State actionBarPressedKey: string = '';
   @State favoritePending: boolean = false;
   @State comments: CommentItem[] = [];
   @State commentText: string = '';
   @State commentsLoading: boolean = false;
+  @State commentsError: string = '';
   @State commentSending: boolean = false;
   /** 本地新增评论数（服务端计数刷新前叠加展示，避免手动克隆 MomentItem） */
   @State commentAdditions: number = 0;
@@ -174,7 +179,8 @@ export struct MomentDetailPage {
         this.comments = (response.data.items ?? []).filter((c: CommentItem) => !c.is_deleted);
       }
     } catch (_) {
-      // 评论加载失败静默，保留空列表
+      // 加载失败显式提示：空列表会掩盖网络错误（「还没评论」误导）
+      this.commentsError = '评论加载失败，请重试';
     } finally {
       this.commentsLoading = false;
     }
@@ -237,7 +243,13 @@ export struct MomentDetailPage {
     try {
       const success = await interactionActions.toggleMomentLike(this.moment.moment_id);
       if (this.isDestroyed) return;
-      if (!success) {
+      if (success) {
+        // count-pop：点赞成功瞬间计数放大弹跳后回落
+        this.likePop = true;
+        setTimeout(() => {
+          this.likePop = false;
+        }, DesignConstants.ANIMATION.DURATION_FAST);
+      } else {
         SystemToast.showError('点赞操作失败', this.getUIContext());
       }
     } finally {
@@ -676,9 +688,20 @@ export struct MomentDetailPage {
           Text('回复')
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getCurrentThemePalette().textSecondary)
-            .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+            .padding({
+              left: DesignConstants.SPACING.SM,
+              right: DesignConstants.SPACING.SM,
+              top: DesignConstants.SPACING.SM2,
+              bottom: DesignConstants.SPACING.SM2
+            })
             .onClick(() => { this.replyToComment(comment.user?.nickname ?? ''); })
             .accessibilityText('回复评论')
+            .responseRegion({
+              x: 0,
+              y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT) / 2,
+              width: '100%',
+              height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+            })
         }
         .alignItems(VerticalAlign.Center)
       }
@@ -703,6 +726,14 @@ export struct MomentDetailPage {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().textSecondary)
           .width('100%')
+      } else if (this.commentsError.length > 0) {
+        // 错误态与空态区分：失败可重试（点击错误行重新拉取）
+        Text(`${this.commentsError}（点击重试）`)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().error)
+          .width('100%')
+          .padding(DesignConstants.SPACING.SM)
+          .onClick(() => { this.loadComments(); })
       } else if (this.comments.length === 0) {
         Text('还没有评论，来抢沙发')
           .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -743,7 +774,9 @@ export struct MomentDetailPage {
         paddingSize: DesignConstants.SPACING.SM2,
         onButtonClick: () => { this.sendComment(); }
       })
-        .opacity(this.commentSending ? DesignConstants.OPACITY.LOADING : 1)
+        .enabled(this.commentText.trim().length > 0 && !this.commentSending)
+        .opacity(this.commentText.trim().length === 0 || this.commentSending ?
+        DesignConstants.OPACITY.DISABLED : 1)
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
@@ -766,6 +799,13 @@ export struct MomentDetailPage {
         Text(formatCount(this.getMomentLikesCount(moment)))
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
+          .scale(this.likePop ?
+            { x: DesignConstants.INTERACTION.SCALE_LIKE_POP, y: DesignConstants.INTERACTION.SCALE_LIKE_POP } :
+            { x: 1, y: 1 })
+          .animation({
+            duration: DesignConstants.ANIMATION.DURATION_FAST,
+            curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+          })
       }
       .layoutWeight(1)
       .justifyContent(FlexAlign.Center)
@@ -789,6 +829,17 @@ export struct MomentDetailPage {
       .justifyContent(FlexAlign.Center)
       .onClick(() => { this.contentScroller.scrollEdge(Edge.Bottom); })
       .accessibilityText('查看评论')
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.actionBarPressedKey = 'comment';
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.actionBarPressedKey = '';
+        }
+      })
+      .scale(this.actionBarPressedKey === 'comment' ?
+        { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+        { x: 1, y: 1 })
+      .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
 
       // 收藏（Bookmark，saved 时 accent）
       Column() {
@@ -816,6 +867,17 @@ export struct MomentDetailPage {
       .layoutWeight(1)
       .justifyContent(FlexAlign.Center)
       .onClick(() => { this.shareMoment(); })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.actionBarPressedKey = 'share';
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.actionBarPressedKey = '';
+        }
+      })
+      .scale(this.actionBarPressedKey === 'share' ?
+        { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+        { x: 1, y: 1 })
+      .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
       .accessibilityText('分享动态')
     }
     .width('100%')

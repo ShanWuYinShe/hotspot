@@ -170,6 +170,8 @@ export struct SystemPageHeader {
               SurfaceIconButton({
                 icon: AppIcon.BACK,
                 kind: 'neutral',
+                // 读屏标签：纯图标钮必须播报用途（缺省空串读屏只读「按钮」）
+                accessibilityLabel: '返回',
                 onPress: () => {
                   if (this.onBack) {
                     this.onBack();

@@ -207,7 +207,7 @@
 			<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => history.back()} variant="overlay" tone="inverse" />
 		</div>
 		<div class="absolute bottom-5 left-6 right-6">
-			<span class="rounded-full bg-surface-glass-badge px-2.5 py-1 text-xs text-content-inverse backdrop-blur-sm">{gd.detail.category}</span>
+			<span class="rounded-full bg-surface-glass-badge px-2.5 py-1 text-xs text-content-inverse backdrop-blur-[var(--cst-blur-sm)]">{gd.detail.category}</span>
 			<h1 class="mt-3 text-2xl md:text-3xl font-medium tracking-title text-content-inverse">{gd.detail.name}</h1>
 		</div>
 	</div>
@@ -306,7 +306,7 @@
 		<aside class="flex h-fit flex-col gap-3 rounded-lg border border-border-default bg-surface-primary p-4">
 			<button
 				type="button"
-				class="hover-btn w-full rounded-full px-4 py-3 text-sm font-medium focus-ring {gd.joined ? 'border border-accent-default text-accent-default' : 'bg-accent-default text-text-on-accent'}"
+				class="hover-btn w-full rounded-full border px-4 py-3 text-sm font-medium focus-ring {gd.joined ? 'border-accent-border text-accent-default hover:bg-interactive-hover hover:text-text-primary' : 'border-transparent bg-accent-default text-text-on-accent shadow-glow-sm hover:shadow-glow-md'}"
 				onclick={() => (gd.joined ? (leaveConfirmOpen = true) : gd.toggleJoin())}
 			>
 				{#if gd.joined}

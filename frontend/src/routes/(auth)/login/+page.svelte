@@ -15,8 +15,8 @@
 </svelte:head>
 
 
-<div class="flex min-h-dvh items-center justify-center bg-surface-primary px-5 py-10">
-	<section class="w-full max-w-100 border border-border-default rounded-lg p-6 sm:p-8 bg-surface-primary" >
+<div class="flex min-h-dvh items-center justify-center bg-surface-page px-5 py-10">
+	<section class="w-full max-w-100 border border-border-default rounded-lg p-6 sm:p-8 bg-surface-page" >
 		<div class="flex items-center justify-center rounded-full size-11 shadow-glow-md bg-accent-default text-text-on-accent">
 			<Leaf class="size-5"  strokeWidth={1.75} />
 		</div>

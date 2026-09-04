@@ -10,7 +10,10 @@
 {#if chat.sendError}
 	<p class="px-4 pb-1.5 text-status-warning text-xs">{chat.sendError}</p>
 {/if}
-<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary border-t border-border-default">
+<div
+	class="shrink-0 flex items-center gap-2.5 bg-surface-primary border-t border-border-default px-4 pt-3"
+	style="padding-bottom:max(0.75rem, env(safe-area-inset-bottom));"
+>
 	{#if showEmojiButton}
 		<button
 			type="button"
@@ -40,12 +43,20 @@
 
 	<button
 		type="button"
-		class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring shrink-0 transition-all duration-standard {chat.inputVal.trim() ? 'bg-accent-default' : 'bg-surface-primary'} size-9"
-		style="box-shadow:{chat.inputVal.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:var(--cst-border-width-hairline) solid var(--cst-border-default);"
+		class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default focus-ring shrink-0 transition-all duration-standard size-9
+			{chat.inputVal.trim() && !chat.sending
+			? 'border-transparent bg-accent-default text-text-on-accent shadow-glow-md hover:shadow-glow-lg'
+			: 'bg-surface-primary text-text-secondary shadow-raised-sm'}
+			{chat.sending ? 'pointer-events-none opacity-soft' : ''}"
 		onclick={() => void chat.handleSend()}
 		aria-label="发送"
-		disabled={!chat.inputVal.trim()}
+		aria-busy={chat.sending || undefined}
+		disabled={!chat.inputVal.trim() || chat.sending}
 	>
-		<Send class="size-3.5" style="color:{chat.inputVal.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
+		{#if chat.sending}
+			<span class="spinner size-4" aria-hidden="true"></span>
+		{:else}
+			<Send class="size-3.5 {chat.inputVal.trim() ? '' : 'text-text-secondary'}" style="transform:translateX(1px);" strokeWidth={2} />
+		{/if}
 	</button>
 </div>

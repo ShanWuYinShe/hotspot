@@ -4,11 +4,17 @@
  * - 默认（segmented）：等宽分段 + surfaceSubtle 灰底槽（系统分段控件视觉）
  * - freeWidth：透明容器 + 自适应内容宽左对齐（对齐前端 TabBar 胶囊行，
  *   激活项 accent 实底胶囊 + glow，未激活项透明 + 次要色文字）
+ *
+ * 交互契约（四态）：
+ * - 按压差异：选中胶囊按压 = 底色加深（active 加深反馈）；未选中按压 = SCALE_PRESSED_PILL 缩放
+ * - hover（仅键鼠外接触发）：选中 = accentShadow 增强；未选中 = 淡底填充 + 主文字色预览
+ * - 触控热区：胶囊视觉高度不变，外层透明命中区扩到 LAYOUT.MIN_HIT_TARGET
+ * - ForEach key 只含 label-index（拼 activeIndex 会导致切换激活时全部胶囊销毁重建、打断位移动画）
  */
 
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { KEY_RESOLVED_THEME_ID, AppThemeShadow } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { LucideIcon } from './LucideIcon';
 import { curves } from '@kit.ArkUI';
@@ -28,6 +34,8 @@ export interface TabsPillGroupActions {
 export struct TabsPillGroup {
   /** 当前按下胶囊的索引（-1 表示无）：按 index 记录，仅缩放被按的那颗，不再整组齐缩 */
   @State pressedIndex: number = -1;
+  /** hover 中的胶囊索引（-1 表示无；onHover 仅键鼠外接触发，触屏不受影响） */
+  @State hoveredIndex: number = -1;
   @Prop tabs: TabItem[] = [];
   @Prop activeIndex: number = 0;
   @Prop gap: number = DesignConstants.SPACING.XS;
@@ -51,6 +59,30 @@ export struct TabsPillGroup {
     }
   }
 
+  /** 胶囊底色：选中 hover 保持 accent 实底（阴影增强表达，见下方 shadow 分支）；
+   *  未选中 hover = accentMuted 淡底（「将选中」预览） */
+  private getPillBackground(index: number, isActiveTab: boolean): ResourceColor {
+    const palette = this.getPalette();
+    if (isActiveTab) {
+      return palette.accentBackground;
+    }
+    return this.hoveredIndex === index ? palette.accentMuted : DesignConstants.COLOR.TRANSPARENT;
+  }
+
+  /** 选中胶囊 hover 阴影增强（同色系光晕抬档，表达已选中项的可交互增量） */
+  private getPillShadow(isActiveTab: boolean): AppThemeShadow {
+    const base = this.getPalette().accentShadow;
+    if (!isActiveTab || this.hoveredIndex < 0) {
+      return base;
+    }
+    return new AppThemeShadow(
+      Math.round(base.radius * 1.6),
+      base.color,
+      base.offsetX,
+      base.offsetY
+    );
+  }
+
   @Builder
   private buildTab(tab: TabItem, index: number, isActiveTab: boolean) {
     Column() {
@@ -59,14 +91,16 @@ export struct TabsPillGroup {
           LucideIcon({
             icon: tab.icon,
             iconSize: DesignConstants.FONT.SIZE.MD,
-            color: isActiveTab ? this.getPalette().accentText : this.getPalette().tabBarInactive
+            color: isActiveTab || this.hoveredIndex === index ?
+            this.getPalette().accentText : this.getPalette().tabBarInactive
           })
         }
 
         Text(tab.label)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(isActiveTab ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
-          .fontColor(isActiveTab ? this.getPalette().accentText : this.getPalette().tabBarInactive)
+          .fontColor(isActiveTab || this.hoveredIndex === index ?
+          this.getPalette().accentText : this.getPalette().tabBarInactive)
 
         if (tab.count !== undefined && tab.count > 0) {
           Text(`${tab.count}`)
@@ -78,10 +112,12 @@ export struct TabsPillGroup {
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
       .width('100%')
-      .height(this.freeWidth ? DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT : DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
+      .height(this.freeWidth ?
+      DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT :
+      DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(isActiveTab ? this.getPalette().accentBackground : DesignConstants.COLOR.TRANSPARENT)
-      .shadow(isActiveTab ? this.getPalette().accentShadow : {
+      .backgroundColor(this.getPillBackground(index, isActiveTab))
+      .shadow(isActiveTab ? this.getPillShadow(true) : {
         radius: 0,
         color: DesignConstants.COLOR.TRANSPARENT,
         offsetX: 0,
@@ -101,7 +137,12 @@ export struct TabsPillGroup {
     })
     // 等宽分段用 layoutWeight(1)；自由宽度收缩到内容宽
     .layoutWeight(this.freeWidth ? 0 : 1)
-    .scale(this.pressedIndex === index ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL } : { x: 1, y: 1 })
+    // 按压差异：选中胶囊按压不再缩放（底色已表达选中），未选中按压缩放（「将选中」预览）
+    .scale(!isActiveTab && this.pressedIndex === index ?
+    {
+      x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL,
+      y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL
+    } : { x: 1, y: 1 })
     .animation({
       curve: curves.springMotion(
         DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
@@ -115,18 +156,23 @@ export struct TabsPillGroup {
         this.pressedIndex = -1;
       }
     })
+    .onHover((isHover: boolean) => {
+      this.hoveredIndex = isHover ? index : -1;
+    })
     .onClick(() => {
       if (!isActiveTab) {
         this.dispatchChange(index);
       }
     })
+    // 触控热区：外层 Column 透明，constraintSize 只扩命中区（胶囊视觉高度由内层 Row 固定）
+    .constraintSize({ minHeight: DesignConstants.LAYOUT.MIN_HIT_TARGET })
   }
 
   build() {
     Row({ space: this.gap }) {
       ForEach(this.tabs, (tab: TabItem, index: number) => {
-        this.buildTab(tab, index, this.isActive(index));
-      }, (tab: TabItem, index: number) => `${tab.label}-${index}-${this.activeIndex}`)
+        this.buildTab(tab, index, this.isActive(index))
+      }, (tab: TabItem, index: number) => `${tab.label}-${index}`)
     }
     .width('100%')
     // 自由宽度模式：透明容器、无灰底槽、无内边距（对齐前端 TabBar 容器）

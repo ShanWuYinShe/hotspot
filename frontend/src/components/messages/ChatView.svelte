@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { ArrowLeft, Phone, Video, MoreHorizontal } from '@lucide/svelte';
+	import { goto } from '$app/navigation';
+	import { ROUTES } from '@/lib/routes';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import ChatMessageList from '@/components/messages/ChatMessageList.svelte';
@@ -194,25 +196,31 @@
 			</button>
 		{/if}
 
-		<!-- Avatar -->
-		<Avatar
-			src={contact?.avatar}
-			name={peerName}
-			size={compact ? 34 : 38}
-			style="border:var(--cst-border-width-regular) solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
+		<!-- 头像 + 名称/状态：点击进入对方主页（移动端私聊页的资料入口，Telegram/iMessage 惯例） -->
+		<button
+			type="button"
+			class="avatar-entry hover-bg focus-ring flex min-w-0 flex-1 items-center gap-3 rounded-md text-left"
+			onclick={() => void goto(ROUTES.user(peerUserId))}
+			aria-label={`查看 ${peerName || '对方'} 的资料`}
 		>
-			{#snippet badge()}
-				{#if onlineNow}
-					<OnlineDot size="sm" />
-				{/if}
-			{/snippet}
-		</Avatar>
+			<Avatar
+				src={contact?.avatar}
+				name={peerName}
+				size={compact ? 34 : 38}
+				style="border:var(--cst-border-width-regular) solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
+			>
+				{#snippet badge()}
+					{#if onlineNow}
+						<OnlineDot size="sm" />
+					{/if}
+				{/snippet}
+			</Avatar>
 
-		<!-- Name + status -->
-		<div class="flex-1 min-w-0">
-			<p class="truncate text-text-primary {compact ? 'text-sm' : 'text-md'}">
-				{peerName || '会话'}
-			</p>
+			<!-- Name + status -->
+			<div class="flex-1 min-w-0">
+				<p class="truncate text-text-primary {compact ? 'text-sm' : 'text-md'}">
+					{peerName || '会话'}
+				</p>
 			<p class="{typing.active ? 'text-accent-default' : onlineNow ? 'text-status-online' : 'text-text-secondary'} text-xs" >
 				{#if typing.active}
 					正在输入…
@@ -224,7 +232,8 @@
 					离线
 				{/if}
 			</p>
-		</div>
+			</div>
+		</button>
 
 		<!-- Actions -->
 		<div class="flex gap-1.5">

@@ -105,9 +105,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		</div>
 	{/if}
 
-	{#if filters}
+	{#if filters && !embedded}
 		<!-- Filter tabs — 分类/筛选一律 TabBar（与 nearby/people|groups、search 一致），
-		     TagPill 只用于表单内标签与多选 chips -->
+		     TagPill 只用于表单内标签与多选 chips；embedded（聚合页）时页面级 tab 已存在，不再双层嵌套 -->
 		<div class="pt-3 pb-3">
 			<TabBar
 				items={filters.map((f) => ({ id: f.id, label: f.label, icon: f.icon }))}

@@ -29,6 +29,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	const retry = account.retry;
 
 	const DATA_ITEMS = $derived<{ section: ProfileSection; label: string; detail: string; icon: typeof ImageIcon }[]>([
+		{ section: 'relationships', label: '关系', detail: '好友 / 关注 / 粉丝', icon: Users },
 		{ section: 'moments', label: '我的瞬间', detail: '查看已发布的记录', icon: ImageIcon },
 		{ section: 'groups', label: '我的群组', detail: `${stats.groups_count} 个正在参与`, icon: Users },
 		{ section: 'friends', label: '好友', detail: `${stats.friends_count} 位好友`, icon: Heart },
@@ -75,7 +76,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 								type="button"
 								aria-label="更换头像"
 								onclick={() => void goto(ROUTES.meEdit)}
-								class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default text-text-on-accent size-6"
+								class="hover-btn hit-slop absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default text-text-on-accent size-7"
 								 style="border:var(--cst-border-width-strong) solid var(--cst-surface-primary);"
 							>
 								<Camera class="size-3.5"  strokeWidth={2} />
@@ -93,7 +94,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					<button
 						type="button"
 						onclick={() => void goto(ROUTES.meEdit)}
-						class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-md bg-surface-primary px-3 py-2 text-xs font-medium text-text-primary focus-ring transition-colors hover:bg-accent-soft"
+						class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-md bg-surface-primary px-3.5 py-2.5 text-xs font-medium text-text-primary focus-ring transition-colors hover:bg-accent-soft"
 					>
 						<Pencil class="size-3.5"  strokeWidth={1.75} />
 						编辑资料

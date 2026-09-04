@@ -25,7 +25,7 @@ const base = (over: Record<string, unknown> = {}) => ({
 describe('SearchResults', () => {
 	it('加载态显示搜索中', () => {
 		render(SearchResults, { props: base({ loading: true }) });
-		expect(screen.getByText('搜索中...')).toBeTruthy();
+		expect(screen.getByText('搜索中…')).toBeTruthy();
 	});
 
 	it('空态显示没有找到查询词', () => {

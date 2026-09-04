@@ -12,7 +12,11 @@
 	//        以及 NewConversationSheet 的「创建群聊」入口。
 	// 创建走 groups/create（返回 GroupItem，group_id 经 onCreated 回调交给调用方）。
 
-	let { onClose, onCreated }: { onClose: () => void; onCreated?: (groupId: string) => void } = $props();
+	let {
+		onClose,
+		onBack,
+		onCreated
+	}: { onClose: () => void; /** 从发布器切来时的返回入口（CreateSheet surface 切换） */ onBack?: () => void; onCreated?: (groupId: string) => void } = $props();
 
 	const CATEGORIES = ['摄影', '音乐', '户外', '阅读', '美食', '健身', '游戏', '其他'];
 
@@ -100,15 +104,18 @@
 		<div class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-8 flex flex-col gap-5">
 			<!-- Cover photo selector -->
 			<div class="flex justify-center">
+				<!-- disabled 必须可见可解释：视觉降级 + 行内「即将开放」说明（title 在触屏不可见） -->
 				<button
 					type="button"
-					class="hover-btn flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border-default bg-surface-primary shadow-inset-sm focus-ring"
+					class="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border-default bg-surface-primary shadow-inset-sm focus-ring disabled:cursor-not-allowed disabled:opacity-faint"
 					style="width:100%;height:110px;"
 					disabled
+					aria-disabled="true"
 					title="暂未开放"
 				>
-					<Camera class="size-6.5 text-text-secondary"   strokeWidth={1.5} />
+					<Camera class="size-6.5 text-text-secondary" strokeWidth={1.5} />
 					<span class="text-sm text-text-secondary">添加封面图片</span>
+					<span class="text-xxs text-text-secondary">即将开放</span>
 				</button>
 			</div>
 

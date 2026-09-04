@@ -7,12 +7,15 @@
 
 	let {
 		notif,
+		actionPending = false,
 		onRead,
 		onRemove,
 		onAccept,
 		onReject
 	}: {
 		notif: NotifyViewItem;
+		/** 邀请接受/拒绝请求进行中（按钮禁点防重复提交） */
+		actionPending?: boolean;
 		onRead: (id: string) => void;
 		onRemove: (id: string) => void;
 		/** 入群邀请通知的可选操作（inviteId 存在时渲染接受/拒绝按钮）。 */
@@ -49,7 +52,7 @@
 	<!-- Text -->
 	<div class="flex-1 min-w-0">
 		<p class="truncate text-text-primary text-sm">
-			<span class="{notif.read ? 'font-normal' : 'font-medium'}">{notif.user.name}</span>
+			<span class="{notif.read ? 'font-normal text-text-secondary' : 'font-medium text-text-primary'}">{notif.user.name}</span>
 			{' '}{notif.text}
 		</p>
 		<p class="text-text-secondary text-xs mt-0.5">{notif.time}</p>
@@ -62,12 +65,14 @@
 			<button
 				type="button"
 				onclick={(e) => { e.stopPropagation(); onAccept?.(notif.inviteId!); }}
-				class="hover-btn hit-slop rounded-full bg-accent-default px-3.5 py-1.5 text-sm font-medium text-text-on-accent focus-ring"
+				disabled={actionPending}
+				class="hover-btn hit-slop rounded-full bg-accent-default px-3.5 py-1.5 text-sm font-medium text-text-on-accent shadow-glow-sm focus-ring hover:shadow-glow-md disabled:pointer-events-none disabled:opacity-faint"
 			>接受</button>
 			<button
 				type="button"
 				onclick={(e) => { e.stopPropagation(); onReject?.(notif.inviteId!); }}
-				class="hover-btn hit-slop rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring"
+				disabled={actionPending}
+				class="hover-btn hit-slop rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring hover:border-border-strong disabled:pointer-events-none disabled:opacity-faint"
 			>拒绝</button>
 		{/if}
 		{#if notif.momentImage}

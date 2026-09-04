@@ -53,6 +53,8 @@ export struct SystemCard {
   @Prop cardBorderColor: ResourceColor | string = '';
 
   @State isPressed: boolean = false;
+  /** hover（仅键鼠外接触发）：enableHoverEffect 打开时边框提亮 */
+  @State isHovered: boolean = false;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   private getPalette() {
@@ -122,7 +124,14 @@ export struct SystemCard {
     if (!this.showBorder) {
       return { width: 0, color: DesignConstants.COLOR.TRANSPARENT };
     }
-    return { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: (this.cardBorderColor || this.getPalette().floatingBorderColor || this.getPalette().borderColor) as ResourceColor };
+    const baseColor = (this.cardBorderColor || this.getPalette().floatingBorderColor ||
+      this.getPalette().borderColor) as ResourceColor;
+    // hover（键鼠）+ enableHoverEffect：边框提亮为 accent（阴影全零的扁平契约下，
+    // 边框是 hover 的唯一可见反馈；对齐前端 surface-flat:hover 描边加深）
+    if (this.enableHoverEffect && this.isHovered && this.clickable) {
+      return { width: DesignConstants.BORDER_WIDTH.REGULAR, color: this.getPalette().accentBackground };
+    }
+    return { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: baseColor };
   }
 
   // 获取毛玻璃效果
@@ -202,6 +211,11 @@ export struct SystemCard {
       })
       .accessibilityGroup(this.clickable)
       .accessibilityText(this.clickable ? '卡片' : '')
+      .onHover((isHover: boolean) => {
+        if (this.clickable) {
+          this.isHovered = isHover;
+        }
+      })
     } else {
       Column() {
         this.content();
@@ -231,6 +245,11 @@ export struct SystemCard {
       })
       .accessibilityGroup(this.clickable)
       .accessibilityText(this.clickable ? '卡片' : '')
+      .onHover((isHover: boolean) => {
+        if (this.clickable) {
+          this.isHovered = isHover;
+        }
+      })
     }
   }
 }

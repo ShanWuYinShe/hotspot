@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { UserPlus, MoreHorizontal } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import { goto } from '$app/navigation';
@@ -28,7 +29,7 @@
 
 {#if canManageMembers}
 	<div class="mt-6 flex justify-end">
-		<button type="button" onclick={onInvite} class="hover-btn flex items-center gap-1 rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring">
+		<button type="button" onclick={onInvite} class="hover-btn hit-slop flex items-center gap-1 rounded-full border border-border-default px-3.5 py-2 text-sm text-text-primary focus-ring hover:border-border-strong">
 			<UserPlus size={12} strokeWidth={1.75} />
 			添加成员
 		</button>
@@ -47,7 +48,7 @@
 			<div class="relative">
 				<Avatar src={member.avatar} name={member.name} size={40} />
 				{#if onlineMemberIds.has(member.userId)}
-					<span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-surface-primary bg-status-online"></span>
+					<OnlineDot size="md" />
 				{/if}
 			</div>
 			<span class="min-w-0 flex-1">
@@ -59,7 +60,7 @@
 				<button
 					type="button"
 					onclick={(e) => { e.stopPropagation(); onManage(member); }}
-					class="hit-slop flex h-7 w-7 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default"
+					class="hit-slop hover-btn scale-btn flex h-8 w-8 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default"
 					aria-label={`管理 ${member.name}`}
 				>
 					<MoreHorizontal size={15} strokeWidth={2} />

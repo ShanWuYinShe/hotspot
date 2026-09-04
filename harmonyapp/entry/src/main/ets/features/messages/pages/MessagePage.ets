@@ -512,8 +512,12 @@ export struct MessagePage {
   }
 
   private getChatItemBackground(item: ChatItem): ResourceColor {
+    // 选中/未选中按压反馈不同（四态契约）：选中按压 = accent 底再加深一档；
+    // 未选中按压 = surfaceSubtle（原实现两态按压同色，选中按压与常态无差）
     if (this.isChatSelected(item)) {
-      return this.getCurrentThemePalette().accentMuted;
+      return this.pressedChatKey === this.getChatKey(item) ?
+        this.getCurrentThemePalette().buttonSecondaryBackground :
+        this.getCurrentThemePalette().accentMuted;
     }
     if (this.pressedChatKey === this.getChatKey(item)) {
       return this.getCurrentThemePalette().surfaceSubtle;
@@ -654,6 +658,12 @@ export struct MessagePage {
           .borderRadius(DesignConstants.RADIUS.FULL)
           // 对齐前端 surface-flat 圆钮（size-9 浅底圆形 + 次色 Plus）
           .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
+          .responseRegion({
+            x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+            y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+            width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+            height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+          })
           .bindMenu([
             {
               value: '发起群聊',
@@ -1052,18 +1062,24 @@ export struct MessagePage {
       }
       this.enterChat(item);
     })
-    .bindMenu([
-      {
-        value: item.isPinned ? '取消置顶' : '置顶',
-        action: () => { this.togglePin(item); }
-      },
-      {
-        value: item.type === 'group' ? '退出群组' : '删除',
-        action: () => {
+    // 长按弹上下文菜单（原 bindMenu 点击即弹，与行 onClick「点一下同时进聊天+弹菜单」冲突）
+    .bindContextMenu(this.buildChatRowMenu(item), ResponseType.LongPress)
+  }
+
+  @Builder
+  private buildChatRowMenu(item: ChatItem) {
+    Menu() {
+      MenuItem({
+        content: item.isPinned ? '取消置顶' : '置顶'
+      })
+        .onClick(() => { this.togglePin(item); })
+      MenuItem({
+        content: item.type === 'group' ? '退出群组' : '删除'
+      })
+        .onClick(() => {
           this.pendingDeleteChat = item;
           this.showDeleteChatConfirm = true;
-        }
-      }
-    ])
+        })
+    }
   }
 }

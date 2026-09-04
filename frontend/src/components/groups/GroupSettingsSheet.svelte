@@ -294,7 +294,7 @@
 			type="button"
 			onclick={() => void handleSave()}
 			disabled={!canSave}
-			class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-lg focus-ring text-sm font-medium {canSave ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
+			class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-lg focus-ring text-sm font-medium {canSave ? 'bg-accent-default text-text-on-accent shadow-glow-sm hover:shadow-glow-md' : 'bg-surface-primary text-text-secondary'}"
 			style="box-shadow:{canSave ? 'var(--shadow-glow-lg)' : 'var(--shadow-inset-sm)'};border:{canSave ? 'none' : 'var(--cst-border-width-hairline) solid var(--cst-border-default)'};transition:all var(--cst-motion-standard) var(--cst-ease-standard);cursor:{canSave ? 'pointer' : 'not-allowed'};"
 		>
 			{saving ? '保存中…' : '保存设置'}
@@ -384,7 +384,7 @@
 		<p class="mt-1 text-sm text-text-secondary">转让后你将变为普通成员，无法再执行群管理操作。</p>
 		<div class="mt-4 flex items-center justify-end gap-3">
 			<button type="button" onclick={() => (transferTarget = null)} class="hover-btn rounded-full px-4 py-2 text-sm text-text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent-default">取消</button>
-			<button type="button" onclick={() => void handleConfirmTransfer()} disabled={transferring} class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:opacity-muted enabled:bg-accent-default">确认转让</button>
+			<button type="button" onclick={() => void handleConfirmTransfer()} disabled={transferring} class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:opacity-muted enabled:bg-accent-default enabled:shadow-glow-sm enabled:hover:shadow-glow-md">确认转让</button>
 		</div>
 	</Dialog.Content>
 </Dialog.Root>

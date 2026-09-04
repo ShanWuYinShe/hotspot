@@ -24,7 +24,8 @@
 
 <button
 	type="button"
-	class="hover-btn nav-tab relative flex flex-col items-center justify-center focus-ring select-none rounded-lg pt-2.5 pb-2 gap-1"
+	class="hover-btn nav-tab relative flex flex-col items-center justify-center rounded-lg pt-2.5 pb-2 gap-1 focus-ring select-none
+		{isActive ? '' : 'hover:bg-interactive-hover'}"
 	style="flex:1;min-width:0;"
 	aria-label={label}	aria-current={isActive ? 'page' : undefined}
 	onclick={onClick}

@@ -143,9 +143,13 @@ const FILTER_TABS = [
 	};
 
 	const markAllRead = () => {
-		// spec: notify.md → mark_read（参数必显式）：scope='all' 全部已读。乐观更新本地状态。
+		// spec: notify.md → mark_read（参数必显式）：scope='all' 全部已读。乐观更新 + 失败回滚。
+		const snapshot = notifies;
 		notifies = notifies.map((n) => ({ ...n, read: true }));
-		void markRead({ scope: 'all' }).catch(() => {});
+		void markRead({ scope: 'all' }).catch(() => {
+			notifies = snapshot;
+			showToast('全部已读失败，请重试', 'danger');
+		});
 	};
 	const markSingleRead = (id: string) => {
 		notifies = notifies.map((n) => (n.id === id ? { ...n, read: true } : n));
@@ -161,22 +165,40 @@ const FILTER_TABS = [
 		invites = invites.filter((i) => i.invite_id !== inviteId);
 		notifies = notifies.filter((n) => n.inviteId !== inviteId);
 	};
+	// 邀请处理 pending（响应式）：接受/拒绝进行中禁点防重复提交
+	let invitePending = $state(new Set<string>());
+	const beginInvite = (inviteId: string) => {
+		invitePending = new Set(invitePending).add(inviteId);
+	};
+	const endInvite = (inviteId: string) => {
+		const rest = new Set(invitePending);
+		rest.delete(inviteId);
+		invitePending = rest;
+	};
 	const handleAcceptInvite = async (inviteId: string) => {
+		if (invitePending.has(inviteId)) return;
+		beginInvite(inviteId);
 		try {
 			const res = await acceptGroupInvite({ invite_id: inviteId });
 			if (res.code === 0) { showToast('已加入群组', 'success'); removeInvite(inviteId); }
 			else showToast(res.message || '操作失败', 'danger');
 		} catch {
 			showToast('操作失败，请重试', 'danger');
+		} finally {
+			endInvite(inviteId);
 		}
 	};
 	const handleRejectInvite = async (inviteId: string) => {
+		if (invitePending.has(inviteId)) return;
+		beginInvite(inviteId);
 		try {
 			const res = await rejectGroupInvite({ invite_id: inviteId });
 			if (res.code === 0) { showToast('已拒绝邀请', 'success'); removeInvite(inviteId); }
 			else showToast(res.message || '操作失败', 'danger');
 		} catch {
 			showToast('操作失败，请重试', 'danger');
+		} finally {
+			endInvite(inviteId);
 		}
 	};
 
@@ -248,12 +270,14 @@ const FILTER_TABS = [
 								<button
 									type="button"
 									onclick={() => void handleAcceptInvite(inv.invite_id)}
-									class="hover-btn rounded-full bg-accent-default px-3.5 py-1.5 text-sm font-medium text-text-on-accent focus-ring"
+									disabled={invitePending.has(inv.invite_id)}
+									class="hover-btn rounded-full bg-accent-default px-3.5 py-1.5 text-sm font-medium text-text-on-accent shadow-glow-sm focus-ring hover:shadow-glow-md disabled:pointer-events-none disabled:opacity-faint"
 								>接受</button>
 								<button
 									type="button"
 									onclick={() => void handleRejectInvite(inv.invite_id)}
-									class="hover-btn rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring"
+									disabled={invitePending.has(inv.invite_id)}
+									class="hover-btn rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring hover:border-border-strong disabled:pointer-events-none disabled:opacity-faint"
 								>拒绝</button>
 							</div>
 						{/each}
@@ -269,7 +293,7 @@ const FILTER_TABS = [
 					</div>
 					<ListContainer bordered>
 						{#each unreadGroup as n (n.id)}
-							<NotifyRow notif={n} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
+							<NotifyRow notif={n} actionPending={n.inviteId ? invitePending.has(n.inviteId) : false} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
 						{/each}
 					</ListContainer>
 				{/if}
@@ -282,7 +306,7 @@ const FILTER_TABS = [
 					</div>
 					<ListContainer bordered>
 						{#each readGroup as n (n.id)}
-							<NotifyRow notif={n} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
+							<NotifyRow notif={n} actionPending={n.inviteId ? invitePending.has(n.inviteId) : false} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
 						{/each}
 					</ListContainer>
 				{/if}
@@ -314,8 +338,11 @@ const FILTER_TABS = [
 						<button
 							type="button"
 							aria-pressed={filter === type}
-							class="hover-btn flex items-center gap-2.5 rounded-sm px-2 py-1.5 focus-ring text-left {filter === type ? 'hover:bg-interactive-active' : 'hover:bg-interactive-hover'}"
-							style="{filter === type ? `background:${cfg.bg};border:var(--cst-border-width-hairline) solid ${cfg.border};` : ''}transition:background var(--cst-motion-rapid) var(--cst-ease-standard);"
+							class="hover-btn flex items-center gap-2.5 rounded-sm border px-2 py-1.5 focus-ring text-left transition-colors duration-rapid ease-standard
+								{filter === type
+								? 'border-[var(--notify-active-border)] bg-[var(--notify-active-bg)] hover:bg-interactive-active'
+								: 'border-transparent hover:bg-interactive-hover'}"
+							style="--notify-active-bg:{cfg.bg};--notify-active-border:{cfg.border};"
 							onclick={() => (filter = type)}
 						>
 							<div class="flex items-center justify-center rounded-full shrink-0 size-6" style="background:{cfg.bg};">

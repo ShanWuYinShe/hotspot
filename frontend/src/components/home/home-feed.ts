@@ -5,7 +5,9 @@ import type { NearbyUser } from './nearby-users';
 import type { NearbyGroup } from './GroupCarousel.svelte';
 
 // 首页的附近数据拉取：热门瞬间 + 附近用户/群组。
-// 统一 mapping 与失败兜底（任一接口失败返回空集，页面各自处理 loading/错误态）。
+// 请求异常统一转 netError；全部接口失败时抛 FeedError 让页面走 LoadError
+// （不再伪装成「附近还没有内容」空态——与 LoadError 契约一致），部分失败
+// 保留成功侧数据。
 // feed 域废除后（spec 第二轮审查）：热门瞬间走 moments/search 热门模式
 // （sort_by='popular'，统一返回 PaginatedData，取首页一页即可）；附近用户/群组
 // 走 users/groups/search 的 radius + sort_by='distance'（显式半径才过滤）。
@@ -17,6 +19,9 @@ export interface HomeFeed {
 	users: NearbyUser[];
 	groups: NearbyGroup[];
 }
+
+/** 三个数据源全部失败时抛出（页面 catch 后渲染 LoadError）。 */
+export class FeedError extends Error {}
 
 export async function fetchHomeFeed(
 	referencePoint?: { latitude: number; longitude: number } | null
@@ -32,6 +37,10 @@ export async function fetchHomeFeed(
 	const hotData = hotRes.code === 0 ? hotRes.data : null;
 	const usersData = nearbyUsersRes.code === 0 ? nearbyUsersRes.data : null;
 	const groupsData = nearbyGroupsRes.code === 0 ? nearbyGroupsRes.data : null;
+
+	if (!hotData && !usersData && !groupsData) {
+		throw new FeedError(hotRes.message || nearbyUsersRes.message || '加载失败');
+	}
 
 	return {
 		moments: hotData?.items ?? [],

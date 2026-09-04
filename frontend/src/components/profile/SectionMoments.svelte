@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { Heart, MessageCircle, CalendarDays, ArrowUpRight, Grid3X3 } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
@@ -16,8 +17,18 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	// 大特色精选卡（16/10 + 标题段落 + ArrowUpRight）+ 近期条目 4-col grid（item0 span 2）。
 
 	type Tab = 'posts' | 'liked' | 'saved';
+	const TABS: Tab[] = ['posts', 'liked', 'saved'];
 
-	let activeTab = $state<Tab>('posts');
+	// tab 状态入 URL ?tab=（刷新/分享/返回保留所选分区）
+	const initTab = (): Tab => {
+		const t = page.url.searchParams.get('tab');
+		return TABS.includes(t as Tab) ? (t as Tab) : 'posts';
+	};
+	let activeTab = $state<Tab>(initTab());
+	const setActiveTab = (tab: Tab) => {
+		activeTab = tab;
+		void goto(`?tab=${tab}`, { keepFocus: true, noScroll: true });
+	};
 
 	const myPosts = useGalleryMoments('my');
 	const reacted = useReactedMoments();
@@ -100,7 +111,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 				<!-- 分类 Tab 统一走 TabBar（胶囊） -->
 				<div class="mt-6 flex flex-wrap items-center justify-between gap-3">
 					<div class="min-w-0 flex-1" aria-label="瞬间分类">
-						<TabBar items={tabItems.map((t) => ({ id: t.id, label: t.label, count: t.count }))} value={activeTab} onChange={(id) => (activeTab = id as Tab)} />
+						<TabBar items={tabItems.map((t) => ({ id: t.id, label: t.label, count: t.count }))} value={activeTab} onChange={(id) => setActiveTab(id as Tab)} />
 					</div>
 					<div class="flex items-center gap-1.5 text-xs text-text-secondary">
 						<CalendarDays class="size-3.5 text-accent-default" strokeWidth={1.75} />
@@ -118,7 +129,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					<button
 						type="button"
 						onclick={() => void goto(`${ROUTES.moment(featured.id)}?from=me`)}
-						class="relative block w-full overflow-hidden rounded-lg border border-border-default bg-surface-primary shadow-raised-md text-left transition-colors hover:border-accent-default focus-ring"
+						class="card-hover relative block w-full overflow-hidden rounded-lg border border-border-default bg-surface-primary shadow-raised-md text-left focus-ring"
 						aria-label="查看精选瞬间"
 					>
 						<div class="lg:grid lg:grid-cols-[minmax(0,1.38fr)_minmax(280px,0.62fr)]">
@@ -167,7 +178,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					<button
 						type="button"
 						onclick={() => void goto(`${ROUTES.moment(moment.id)}?from=me`)}
-						class="relative overflow-hidden rounded-md border border-border-default bg-surface-primary shadow-raised-md text-left transition-colors hover:border-accent-default focus-ring {index === 0 ? 'col-span-2' : ''}"
+						class="card-hover relative overflow-hidden rounded-md border border-border-default bg-surface-primary shadow-raised-md text-left focus-ring {index === 0 ? 'col-span-2' : ''}"
 						aria-label="查看瞬间详情"
 					>
 						<div class="tap-97 relative overflow-hidden {index === 0 ? 'aspect-[16/8]' : 'aspect-square'} bg-surface-page" >

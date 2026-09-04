@@ -42,7 +42,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	function mapMoment(m: import('@/api/types').MomentItem, i: number): FeedItem {
 		const mine = (m.reactions || []).find((r) => r.reacted_by_me);
 		return {
-			id: m.moment_id ?? String(i + 1),
+			// 缺 moment_id 的项仅在本地作列表 key；点击导航在下方 openMoment 统一校验
+			id: m.moment_id ?? `local-${i + 1}`,
 			user: m.user?.nickname ?? '',
 			avatar: m.user?.avatar_url ?? '',
 			location: m.location?.location_name ?? '',
@@ -154,6 +155,12 @@ locationName = loc?.location_name ?? '';
 		visibleCount = Math.min(visibleCount + 8, apiFeedItems.length);
 	}
 
+	// 仅服务端 moment_id 可导航；本地合成 id（无 moment_id 的项）不可点进详情
+	function openMoment(id: string, focusComments = false) {
+		if (id.startsWith('local-')) return;
+		void goto(focusComments ? `${ROUTES.moment(id)}?focus=comments` : ROUTES.moment(id));
+	}
+
 	function initTabFromUrl(): string {
 		const t = page.url.searchParams.get('tab') ?? '';
 		return TABS.includes(t) ? t : '热门';
@@ -248,6 +255,13 @@ locationName = loc?.location_name ?? '';
 		<InlineLoading label="加载附近动态…" />
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
+	{:else if activeTab === '关注'}
+		<!-- 关注流专属空态：与「附近无内容」区分，指引用户先去关注 -->
+		<EmptyState title="关注的人还没有发布动态" description="去附近的人页关注感兴趣的用户，动态会出现在这里。">
+			{#snippet icon()}
+				<Sparkles size={24} color="var(--cst-text-secondary)" class="opacity-subtle" />
+			{/snippet}
+		</EmptyState>
 	{:else}
 		<EmptyState title="附近暂时没有瞬间">
 			{#snippet icon()}
@@ -290,8 +304,8 @@ locationName = loc?.location_name ?? '';
 				saved={item.saved}
 				onLike={() => void interactions.toggleLike(item.id)}
 				onSave={() => void interactions.toggleSave(item.id)}
-				onClick={() => void goto(ROUTES.moment(item.id))}
-				onCommentClick={() => void goto(`${ROUTES.moment(item.id)}?focus=comments`)}
+				onClick={() => openMoment(item.id)}
+				onCommentClick={() => openMoment(item.id, true)}
 			/>
 		{/snippet}
 		</BspCardCanvas>

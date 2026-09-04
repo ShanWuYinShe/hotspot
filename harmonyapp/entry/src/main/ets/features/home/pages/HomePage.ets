@@ -294,6 +294,11 @@ export struct HomePage {
       if (group.viewer_state != null) this.enterGroupChat(group);
       return;
     }
+    // in-flight 去重：连点重复提交加入请求
+    if (this.groupActionPendingIds.indexOf(groupId) >= 0) {
+      return;
+    }
+    this.groupActionPendingIds = [...this.groupActionPendingIds, groupId];
     try {
       const joinReq: EnterGroupRequest = { group_id: groupId };
       const response = await ApiClient.joinGroup(joinReq);
@@ -310,6 +315,8 @@ export struct HomePage {
       }
     } catch {
       SystemToast.showError('加入群组失败', this.getUIContext());
+    } finally {
+      this.groupActionPendingIds = this.groupActionPendingIds.filter((id: string) => id !== groupId);
     }
   }
 
@@ -510,7 +517,7 @@ export struct HomePage {
               .width(DesignConstants.SPACING.SM2)
               .height(DesignConstants.SPACING.SM2)
               .borderRadius(DesignConstants.RADIUS.FULL)
-              .backgroundColor(this.getPalette().success)
+              .backgroundColor(this.getPalette().online)
 
             Text(`${this.getOnlineCount()} 在线`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -734,6 +741,13 @@ export struct HomePage {
         }
       })
       .onClick(onViewAll)
+      // 触控热区：行高 ~20vp，垂直外扩到 MIN_HIT_TARGET（responseRegion 不占布局）
+      .responseRegion({
+        x: -DesignConstants.SPACING.MD,
+        y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT) / 2,
+        width: '120%',
+        height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+      })
     }
     .width('100%')
     .margin({ bottom: DesignConstants.SPACING.MD })
@@ -841,7 +855,7 @@ export struct HomePage {
             .width(DesignConstants.SPACING.MD)
             .height(DesignConstants.SPACING.MD)
             .borderRadius(DesignConstants.RADIUS.FULL)
-            .backgroundColor(this.getPalette().success)
+            .backgroundColor(this.getPalette().online)
             .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getPalette().surfaceBackground })
         }
       }

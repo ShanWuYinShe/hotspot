@@ -46,11 +46,19 @@
 	let hovered = $state(false);
 	let focused = $state(false);
 	let pointerDown = $state(false);
+	// JS hover 仅键鼠设备启用：触屏首击不闪现 hover 填充/返回后无残留高亮
+	const canHover =
+		typeof window !== 'undefined' &&
+		typeof window.matchMedia === 'function' &&
+		window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 	// 多边框防线（dev 提示）：joined 行调用方不得再叠卡片类（边框/圆角/阴影），
 	// 卡片化请用 tone="card"（独立卡片容器）或 ListContainer bordered（容器级唯一外框）；
 	// 静态防线见 eslint-rules/no-list-item-card-classes.mjs（ESLint 规则，已挂入 bun run lint / check / pre-commit）
-	const checkRowCardStyles = () => {
+	// dev 防线跟随 className/style 响应（原实现仅初始化时检测一次）
+	$effect(() => {
 		if (!import.meta.env.DEV) return;
+		void className;
+		void style;
 		if (
 			/\b(?:rounded|border|shadow|ring)[\w-]*/.test(className) ||
 			/(?:border|box-shadow|outline)\s*:/.test(style ?? '')
@@ -60,8 +68,7 @@
 					'卡片化请用 tone="card" 或 ListContainer bordered'
 			);
 		}
-	};
-	checkRowCardStyles();
+	});
 	// hover 或 focus 时行处于「激活表面」：叠加 hover-fill 背景
 	const surfaceActive = $derived(hovered || focused);
 	// 对齐 Figma Make：可点击时 tap → opacity-tap 档（0.1s），无 scale
@@ -104,13 +111,13 @@
 	data-active={pressed ? 'true' : undefined}
 	tabindex={onClick ? 0 : undefined}
 	class={cn(
-		'relative transition-[background-color,border-radius,box-shadow,opacity] duration-standard ease-out focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default',
+		'relative transition-[background-color,border-radius,box-shadow,opacity] duration-standard ease-standard focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default',
 		onClick && 'cursor-pointer',
 		isCard ? 'rounded-md border' : 'bg-surface-primary',
 		className
 	)}
 	style={`${itemStyle}opacity:${itemOpacity};transition-duration:${pointerDown ? 'var(--cst-motion-instant)' : 'var(--cst-motion-standard)'};`}
-	onmouseenter={() => (hovered = true)}
+	onmouseenter={() => canHover && (hovered = true)}
 	onmouseleave={() => {
 		hovered = false;
 		pointerDown = false;

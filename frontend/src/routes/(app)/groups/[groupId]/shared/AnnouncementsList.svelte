@@ -24,7 +24,7 @@
 <div class="mt-6 flex items-center justify-between">
 	<p class="text-sm text-text-secondary">群公告</p>
 	{#if canManage}
-		<button type="button" onclick={onCreate} class="hover-btn flex items-center gap-1 rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring">
+		<button type="button" onclick={onCreate} class="hover-btn hit-slop flex items-center gap-1 rounded-full border border-border-default px-3.5 py-2 text-sm text-text-primary focus-ring hover:border-border-strong">
 			<Megaphone size={12} strokeWidth={1.75} />
 			发公告
 		</button>
@@ -44,10 +44,10 @@
 			<p class="mt-2 text-xs text-text-secondary">{item.time}</p>
 			{#if canManage}
 				<div class="absolute right-3 top-3 flex gap-1">
-					<button type="button" onclick={() => onEdit(item)} class="hit-slop flex h-6 w-6 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default" aria-label="编辑公告">
+					<button type="button" onclick={() => onEdit(item)} class="hit-slop hover-btn scale-btn flex h-8 w-8 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default" aria-label="编辑公告">
 						<PencilLine size={12} strokeWidth={1.75} />
 					</button>
-					<button type="button" onclick={() => onDelete(item.id)} class="hit-slop flex h-6 w-6 items-center justify-center rounded-full text-status-danger outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-status-danger" aria-label="删除公告">
+					<button type="button" onclick={() => onDelete(item.id)} class="hit-slop hover-btn scale-btn flex h-8 w-8 items-center justify-center rounded-full text-status-danger outline-none hover:bg-danger-bg focus-visible:ring-2 focus-visible:ring-status-danger" aria-label="删除公告">
 						<Trash2 size={12} strokeWidth={1.75} />
 					</button>
 				</div>

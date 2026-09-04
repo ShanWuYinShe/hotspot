@@ -27,15 +27,16 @@
 	style="grid-template-columns:repeat({items.length}, minmax(0, 1fr));gap:1px;background:var(--cst-border-default);"
 >
 	{#each items as item (item.label)}
-		<div class="flex min-w-0 flex-col items-center bg-surface-primary px-2 py-2.5 text-center">
-			<dd class="truncate text-xl font-semibold leading-none {tones[item.tone ?? 'default']}">
+		<!-- DOM 保持 dt 先 dd 后（HTML 规范/读屏术语-定义顺序），视觉值在上用 col-reverse -->
+		<div class="flex min-w-0 flex-col-reverse items-center bg-surface-primary px-2 py-2.5 text-center">
+			<dt class="truncate text-xs text-text-secondary">{item.label}</dt>
+			<dd class="mb-1 truncate text-xl font-semibold leading-none {tones[item.tone ?? 'default']}">
 				{#if typeof item.value === 'function'}
 					{@render item.value()}
 				{:else}
 					{item.value}
 				{/if}
 			</dd>
-			<dt class="mt-1 truncate text-xs text-text-secondary">{item.label}</dt>
 		</div>
 	{/each}
 </dl>

@@ -24,6 +24,6 @@
 		<UserRound class="text-accent-default" size={64} strokeWidth={1.5} />
 	{/snippet}
 	{#snippet action()}
-		<Button type="button" size="sm" onclick={() => void goto('/login')}>去登录</Button>
+		<Button type="button" size="md" onclick={() => void goto('/login')}>去登录</Button>
 	{/snippet}
 </EmptyState>

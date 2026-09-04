@@ -79,7 +79,7 @@ export struct SystemAvatar {
           Text(this.getInitials(this.name))
             .fontSize(this.avatarSize * 0.4)
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-            .fontColor(this.getPalette().accentText as ResourceColor)
+            .fontColor(DesignConstants.COLOR.WHITE)
             .textAlign(TextAlign.Center)
         }
         .width(this.avatarSize)
@@ -144,14 +144,16 @@ export struct SystemAvatar {
   }
 
   private generateAvatarColor(name: string): ResourceColor {
-    if (!name) return this.getPalette().iconMuted;
+    // 底色限定饱和色族（accent/在线/地图标记色）：文字恒为白（见下方 fontColor），
+    // 原候选含 surfaceSubtle 等浅表面色，白字落在浅底上几乎不可读
+    const p = this.getPalette();
+    if (!name) return p.accentBackground;
 
     const colors: ResourceColor[] = [
-      this.getPalette().accentBackground,
-      this.getPalette().surfaceSubtle,
-      this.getPalette().buttonSecondaryBackground,
-      this.getPalette().iconMuted,
-      this.getPalette().borderColor
+      p.accentBackground,
+      p.online,
+      p.mapGroup,
+      p.mapMoment
     ];
 
     let hash = 0;

@@ -115,7 +115,9 @@
 				localStorage.setItem('hotspot_last_location', JSON.stringify([selectedLoc.lat, selectedLoc.lng]));
 			} catch {}
 		}
-		history.back();
+		// 深链直入时无站内历史，back 会离开站点——回退到首页
+		if (window.history.length > 1 && document.referrer.startsWith(window.location.origin)) history.back();
+		else void goto(ROUTES.home);
 	}
 </script>
 
@@ -172,12 +174,12 @@
 
 		{#if mapLoading}
 			<!-- 加载中的轻量指示 -->
-			<div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary shadow-raised-sm border border-border-default" >
+			<div role="status" aria-live="polite" class="absolute top-3 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary shadow-raised-sm border border-border-default" >
 				加载地图数据…
 			</div>
 		{:else if mapError}
 			<!-- 加载失败：给出原因与重试，避免空白地图被误认为「附近什么都没有」 -->
-			<div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full bg-surface-primary px-3 py-1.5 text-xs text-status-danger shadow-raised-sm border border-border-default" >
+			<div role="alert" class="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full bg-surface-primary px-3 py-1.5 text-xs text-status-danger shadow-raised-sm border border-border-default" >
 				<span>{mapError}</span>
 				<button type="button" class="link-btn focus-ring rounded-sm text-accent-default" onclick={() => mapReloadKey++}>重试</button>
 			</div>
@@ -190,7 +192,7 @@
 		<div class="absolute z-30 flex flex-col rounded-lg border border-border-default bg-surface-primary" style="right:14px;bottom:20px;box-shadow:var(--cst-elevation-fab);">
 			<button
 				type="button"
-				class="flex items-center justify-center size-9 rounded-t-lg focus-ring text-text-primary"
+				class="flex items-center justify-center size-9 rounded-t-lg focus-ring text-text-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint"
 				style="border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);"
 				aria-label="放大"
 				disabled={mapZoom >= 16}
@@ -200,7 +202,7 @@
 			</button>
 			<button
 				type="button"
-				class="flex items-center justify-center size-9 rounded-b-lg focus-ring text-text-primary"
+				class="flex items-center justify-center size-9 rounded-b-lg focus-ring text-text-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint"
 				aria-label="缩小"
 				disabled={mapZoom <= 13}
 				onclick={() => (mapZoom = Math.max(13, mapZoom - 1))}
@@ -284,9 +286,10 @@
 						<button
 							type="button"
 							class="hover-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shadow-raised-sm focus-ring"
+							aria-label="关闭详情"
 							onclick={() => (selectedPin = null)}
 						>
-							<X class="size-3.5 text-text-secondary"   strokeWidth={2} />
+							<X class="size-3.5 text-text-secondary" strokeWidth={2} />
 						</button>
 					</div>
 				</div>

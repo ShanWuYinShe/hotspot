@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { ROUTES } from '@/lib/routes';
 	import { ArrowLeft } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import ChatMessageList from '@/components/messages/ChatMessageList.svelte';
@@ -186,30 +188,37 @@
 			</button>
 		{/if}
 
-		<!-- Avatar -->
-		<Avatar
-			src={groupAvatar}
-			name={groupName}
-			size={compact ? 34 : 38}
-			shape="rounded"
-			style="border:var(--cst-border-width-regular) solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
-		/>
+		<!-- 头像 + 名称/状态：点击进入群详情（移动端群聊页的管理/公告入口） -->
+		<button
+			type="button"
+			class="avatar-entry hover-bg focus-ring flex min-w-0 flex-1 items-center gap-3 rounded-md text-left"
+			onclick={() => void goto(ROUTES.group(groupId))}
+			aria-label={`查看群「${groupName || '群聊'}」详情`}
+		>
+			<Avatar
+				src={groupAvatar}
+				name={groupName}
+				size={compact ? 34 : 38}
+				shape="rounded"
+				style="border:var(--cst-border-width-regular) solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
+			/>
 
-		<!-- Name + status -->
-		<div class="flex-1 min-w-0">
-			<p class="truncate text-text-primary {compact ? 'text-sm' : 'text-md'}">
-				{groupName || '群聊'}
-			</p>
-			<p class="{typing.active ? 'text-accent-default' : 'text-text-secondary'} text-xs" >
-				{#if typing.active}
-					{typing.actorName || '有人'}正在输入…
-				{:else if membersCount != null}
-					{membersCount} 位成员
-				{:else}
-					群聊
-				{/if}
-			</p>
-		</div>
+			<!-- Name + status -->
+			<div class="flex-1 min-w-0">
+				<p class="truncate text-text-primary {compact ? 'text-sm' : 'text-md'}">
+					{groupName || '群聊'}
+				</p>
+				<p class="{typing.active ? 'text-accent-default' : 'text-text-secondary'} text-xs" >
+					{#if typing.active}
+						{typing.actorName || '有人'}正在输入…
+					{:else if membersCount != null}
+						{membersCount} 位成员
+					{:else}
+						群聊
+					{/if}
+				</p>
+			</div>
+		</button>
 	</div>
 
 	<!-- Messages -->

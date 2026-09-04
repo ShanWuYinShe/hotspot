@@ -32,7 +32,7 @@
 			type="button"
 			onclick={() => onChange(tab.id)}
 			aria-pressed={isActive}
-		class="tab-item flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm focus-ring transition-colors duration-standard {isActive
+		class="tab-item flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2.5 text-sm focus-ring transition-colors duration-standard {isActive
 			? 'font-medium bg-accent-default text-text-on-accent shadow-glow-sm'
 			: 'font-normal text-text-secondary hover:text-text-primary'}"
 		>

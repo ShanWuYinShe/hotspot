@@ -74,8 +74,11 @@
 				<div class="flex gap-3.5">
 					<button
 						type="button"
-						class="hover-action hit-slop flex items-center gap-1.5 focus-ring {liked ? 'text-accent-default' : 'text-text-secondary'}"
+						class="hover-action hit-slop flex items-center gap-1.5 focus-ring {liked
+							? 'text-accent-default'
+							: 'text-text-secondary hover:text-accent-default'}"
 						aria-label={liked ? '取消点赞' : '点赞'}
+						aria-pressed={liked}
 						onclick={(e) => {
 							e.stopPropagation();
 							onLike();
@@ -103,8 +106,11 @@
 				<div class="flex gap-3">
 					<button
 						type="button"
-						class="hover-action hit-slop focus-ring {saved ? 'text-accent-default' : 'text-text-secondary'}"
+						class="hover-action hit-slop focus-ring {saved
+							? 'text-accent-default'
+							: 'text-text-secondary hover:text-accent-default'}"
 						aria-label={saved ? '取消收藏' : '收藏'}
+						aria-pressed={saved}
 						onclick={(e) => {
 							e.stopPropagation();
 							onSave();

@@ -55,7 +55,7 @@
 		subtitleSize?: 'xxs' | 'xs' | 'sm' | 'md';
 		glass?: boolean;
 		class?: string;
-		/** 内部 ContentColumn 的 className（默认 pt-4 pb-0，对齐样板 nearby/moments；传其他值可覆盖） */
+		/** 内部 ContentColumn 的 className（默认 pt-4 pb-3，对齐样板 nearby/moments；传其他值可覆盖） */
 		contentClassName?: string;
 	} = $props();
 
@@ -82,7 +82,7 @@
 </script>
 
 <header
-	class={cn('shrink-0', sticky && 'sticky top-0 z-20', className)}
+	class={cn('shrink-0', sticky && 'sticky top-0 z-[var(--cst-z-sticky)]', className)}
 	style={glass
 		? 'background-color:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md));border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);'
 		: 'background-color:var(--cst-surface-page);border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);'}

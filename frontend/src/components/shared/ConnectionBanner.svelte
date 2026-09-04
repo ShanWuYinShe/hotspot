@@ -18,7 +18,9 @@
 
 {#if show}
 	<div
-		class="fixed inset-x-0 top-0 z-[var(--cst-z-toast)] flex h-7 items-center justify-center gap-2 text-sm tracking-wide bg-status-warning text-text-on-status"
+		role="status"
+		aria-live="polite"
+		class="fixed inset-x-0 top-0 z-[var(--cst-z-toast)] flex h-7 items-center justify-center gap-2 text-sm tracking-label bg-status-warning text-text-on-status"
 		style="box-shadow:var(--cst-elevation-menu);"
 	>
 		网络连接已断开，正在重连…

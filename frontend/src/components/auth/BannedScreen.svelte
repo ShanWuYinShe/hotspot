@@ -18,7 +18,7 @@
 		</div>
 		<!-- 标题字重对齐全站 h1-h4 基线（base.css = font-medium）；
 		     font-semibold 只留给数字/统计、卡片主标题、激活态 -->
-		<h1 class="text-xl font-medium tracking-tight text-text-primary" >
+		<h1 role="alert" class="text-xl font-medium tracking-title text-text-primary" >
 			账号已被封禁
 		</h1>
 		<p class="text-sm leading-relaxed text-text-secondary" >

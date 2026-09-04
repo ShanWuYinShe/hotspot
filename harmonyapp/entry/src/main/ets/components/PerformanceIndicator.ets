@@ -47,6 +47,7 @@ export struct PerformanceIndicator {
 
   aboutToDisappear() {
     this.stopAutoUpdate();
+    this.stopPerformanceListener();
   }
 
   /**
@@ -64,9 +65,11 @@ export struct PerformanceIndicator {
   /**
    * 设置性能监听器
    */
+  private alertTimer: number = -1;
+
   private setupPerformanceListener(): void {
-    // 使用轮询方式检查性能告警
-    setInterval(() => {
+    // 使用轮询方式检查性能告警（句柄必须保存：组件销毁后 5s 轮询永续运行）
+    this.alertTimer = setInterval(() => {
       const alerts = this.performanceOptimizer.getPerformanceAlerts();
       if (alerts.length > 0) {
         const latestAlert = alerts[alerts.length - 1];
@@ -78,6 +81,13 @@ export struct PerformanceIndicator {
         }
       }
     }, 5000); // 每5秒检查一次
+  }
+
+  private stopPerformanceListener(): void {
+    if (this.alertTimer !== -1) {
+      clearInterval(this.alertTimer);
+      this.alertTimer = -1;
+    }
   }
 
   /**
@@ -158,7 +168,7 @@ export struct PerformanceIndicator {
       const averageLevel: PerformanceLevel = { level: '一般', color: this.getPalette().textSecondary, icon: AppIcon.WARNING };
       return averageLevel;
     } else {
-      const poorLevel: PerformanceLevel = { level: '较差', color: this.getPalette().textTertiary, icon: AppIcon.ERROR };
+      const poorLevel: PerformanceLevel = { level: '较差', color: this.getPalette().error, icon: AppIcon.ERROR };
       return poorLevel;
     }
   }

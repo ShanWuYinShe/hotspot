@@ -455,8 +455,11 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			<div class="flex shrink-0 items-stretch border-t border-border-default bg-surface-primary">
 				<button
 					type="button"
-					class="hover-btn tap-92 flex h-12 flex-1 items-center justify-center gap-1.5 focus-ring {liked ? 'text-accent-default' : 'text-text-secondary'}"
+					class="hover-btn tap-92 flex h-12 flex-1 items-center justify-center gap-1.5 focus-ring {liked
+						? 'text-accent-default'
+						: 'text-text-secondary active:text-accent-default'}"
 					aria-label={liked ? '取消点赞' : '点赞'}
+					aria-pressed={liked}
 					onclick={() => void toggleLike()}
 				>
 					<Heart class="size-5"  strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
@@ -473,8 +476,11 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				</button>
 				<button
 					type="button"
-					class="hover-btn tap-92 flex h-12 flex-1 items-center justify-center gap-1.5 focus-ring {saved ? 'text-accent-default' : 'text-text-secondary'}"
+					class="hover-btn tap-92 flex h-12 flex-1 items-center justify-center gap-1.5 focus-ring {saved
+						? 'text-accent-default'
+						: 'text-text-secondary active:text-accent-default'}"
 					aria-label={saved ? '取消收藏' : '收藏'}
+					aria-pressed={saved}
 					onclick={() => void toggleSave()}
 				>
 					<Bookmark class="size-5"  strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />

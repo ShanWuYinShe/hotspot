@@ -20,6 +20,8 @@ export struct SurfaceIconButton {
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   @State isPressed: boolean = false;
+  /** hover（仅键鼠外接触发） */
+  @State isHovered: boolean = false;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -42,9 +44,26 @@ export struct SurfaceIconButton {
 
   private getShadowColor(): ShadowOptions {
     if (this.kind === 'primary') {
-      return this.getPalette().accentShadow;
+      const base = this.getPalette().accentShadow;
+      if (this.isHovered && !this.disabled) {
+        return new AppThemeShadow(
+          Math.round(base.radius * 1.5),
+          base.color,
+          base.offsetX,
+          base.offsetY
+        );
+      }
+      return base;
     }
     return new AppThemeShadow(0, DesignConstants.COLOR.TRANSPARENT, 0, 0);
+  }
+
+  /** neutral hover 淡底填充（键鼠）；primary 保持实底（阴影承载 hover） */
+  private getHoverOverlayBackground(): ResourceColor {
+    if (this.kind === 'neutral' && this.isHovered && !this.disabled) {
+      return this.getPalette().accentMuted;
+    }
+    return this.getBackgroundColor();
   }
 
   private getIconColor(): ResourceColor | Color {
@@ -71,7 +90,7 @@ export struct SurfaceIconButton {
       .stateEffect(false)
       .width(this.buttonSize)
       .height(this.buttonSize)
-      .backgroundColor(this.getBackgroundColor())
+      .backgroundColor(this.getHoverOverlayBackground())
       .borderRadius(DesignConstants.RADIUS.FULL)
       .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getBorderColor() })
       .shadow(this.getShadowColor())
@@ -106,6 +125,11 @@ export struct SurfaceIconButton {
         return;
       }
       this.onPress?.();
+    })
+    .onHover((isHover: boolean) => {
+      if (!this.disabled) {
+        this.isHovered = isHover;
+      }
     })
   }
 }

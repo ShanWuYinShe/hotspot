@@ -19,10 +19,11 @@
 	} = $props();
 </script>
 
-<div class="hover-bg flex items-center gap-2.5 rounded-sm {onClick ? 'cursor-pointer' : ''}">
+<div class="flex items-center gap-2.5 rounded-sm {onClick ? 'hover-bg cursor-pointer' : ''}">
 	<button
 		type="button"
-		class="tap-97 flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-sm focus-ring"
+		class="tap-97 flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-sm focus-ring {onClick ? '' : 'cursor-default focus-visible:outline-none'}"
+		disabled={!onClick}
 		onclick={onClick}
 	>
 		<Avatar src={avatar} name={name} size={34} class="border border-border-default" />

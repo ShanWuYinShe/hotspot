@@ -45,7 +45,7 @@ import PinMedia from '../shared/PinMedia.svelte';
 				ariaLabel={`选择地点 ${r.displayName}`}
 				class="flex list-row-standard items-center gap-3 px-4 py-3"
 			>
-				<div class="flex items-center justify-center rounded-full shrink-0 size-8.5 {isSelected ? 'bg-surface-primary' : 'bg-accent-default'}"  style="{isSelected ? '' : 'opacity:var(--cst-opacity-active)'}">
+				<div class="flex items-center justify-center rounded-full shrink-0 size-8.5 {isSelected ? 'bg-surface-primary' : 'bg-accent-soft'}">
 					<MapPin class="size-3.5 text-accent-default"   strokeWidth={1.75} />
 				</div>
 				<span class="{isSelected ? 'text-text-on-accent' : 'text-text-primary'} text-sm"  style="flex:1">{r.displayName}</span>
@@ -97,7 +97,14 @@ import PinMedia from '../shared/PinMedia.svelte';
 				class="flex-1"
 			/>
 			{#if activeTab === 'recent' && recentItems.length > 0}
-				<button type="button" class="link-btn ml-auto focus-ring text-xs text-text-secondary hover:text-accent-default" onclick={() => (recentItems = [])}>
+				<!-- 一键清空不可恢复：二次确认防误触 -->
+				<button
+					type="button"
+					class="link-btn ml-auto -my-1 px-2 py-1 focus-ring text-xs text-text-secondary hover:text-accent-default"
+					onclick={() => {
+						if (window.confirm('清空全部最近记录？此操作不可恢复。')) recentItems = [];
+					}}
+				>
 					清空
 				</button>
 			{/if}

@@ -958,11 +958,14 @@ export struct GroupDetailPage {
         Column()
           .width('100%')
           .height(DesignConstants.LAYOUT.COVER_HEIGHT)
+          // 封面底部加深 scrim：文字区（群名白字）落在深色终止段，
+          // 浅色主题下纯 accent 淡渐变近似白底白字（对比度不足）
           .linearGradient({
             direction: GradientDirection.Bottom,
             colors: [
               [AppThemeVisuals.withAlpha(this.getCurrentThemePalette().accentBackground, 0.38), 0.0],
-              [AppThemeVisuals.withAlpha(this.getCurrentThemePalette().accentBackground, 0.12), 1.0]
+              [AppThemeVisuals.withAlpha(this.getCurrentThemePalette().accentBackground, 0.28), 0.55],
+              [AppThemeVisuals.withAlpha(DesignConstants.COLOR.BLACK, 0.42), 1.0]
             ]
           })
 
@@ -1475,13 +1478,12 @@ export struct GroupDetailPage {
                   .fontColor(this.getCurrentThemePalette().textSecondary)
 
                 if (this.editGroupAvatarLocalUri) {
-                  Button('恢复原头像')
-                    .type(ButtonType.Normal)
-                    .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-                    .fontColor(this.getCurrentThemePalette().textSecondary)
-                    .borderRadius(DesignConstants.RADIUS.XL)
-                    .height(DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT)
-                    .onClick(() => this.resetEditGroupAvatarSelection())
+                  SystemButton({
+                    label: '恢复原头像',
+                    variant: 'surface',
+                    buttonSize: 'small',
+                    onPress: () => this.resetEditGroupAvatarSelection()
+                  })
                 }
               }
               .alignItems(HorizontalAlign.Start)

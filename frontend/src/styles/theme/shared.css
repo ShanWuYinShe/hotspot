@@ -7,6 +7,8 @@
    Single source of truth for stacking order. */
 :root {
   --cst-z-dropdown: 10;
+  --cst-z-sticky: 20;   /* 页内 sticky header/筛选条（滚动内容之上、浮层之下） */
+  --cst-z-chrome: 30;   /* 应用 chrome：桌面顶栏/侧栏（页内 sticky 之上、遮罩之下） */
   --cst-z-overlay: 40;
   --cst-z-modal: 50;
   --cst-z-toast: 60;

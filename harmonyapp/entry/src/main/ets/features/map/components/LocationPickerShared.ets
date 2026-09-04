@@ -113,6 +113,7 @@ export function TopBar(props: TopBarProps) {
     .justifyContent(FlexAlign.Center)
     .borderRadius(DesignConstants.RADIUS.FULL)
     .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceSubtle)
+    // 按压缩放（顶层 @Builder 无组件状态，用 scale 类工具不可行；最少补 opacity 按压反馈）
     .onClick(props.onBack)
 
     Row({ space: DesignConstants.SPACING.SM2 }) {
@@ -159,8 +160,12 @@ export interface FilterMenuItemProps {
 
 @Builder
 export function FilterMenuItem(props: FilterMenuItemProps) {
-  // 整行按压反馈收敛到 Pressable（顶层 @Builder 无组件状态可用）
-  Pressable({ onPress: () => props.onToggle() }) {
+  // 整行按压反馈收敛到 Pressable（顶层 @Builder 无组件状态可用）；
+  // 按压差异：选中行按压不缩放（选中底色已表达状态），未选中按压缩放（「将选中」预览）
+  Pressable({
+    onPress: () => props.onToggle(),
+    pressScale: props.active ? 1.0 : DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW
+  }) {
     Row({ space: DesignConstants.SPACING.MD }) {
       Image($rawfile(props.markerSvg))
         .width(DesignConstants.COMPONENT.ICON_SIZE_MD)

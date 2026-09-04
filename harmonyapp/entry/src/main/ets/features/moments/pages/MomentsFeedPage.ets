@@ -162,6 +162,7 @@ export struct MomentsFeedPage {
   }
 
   private async loadFeedMoments(source: string): Promise<void> {
+    const version = this.loadVersion;
     const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
     // 契约：reference_point 可选，无定位时不传（服务端按回退链解析），不再用 0,0 兜底
     const refPoint: GeoPoint | undefined = refLoc ? { latitude: refLoc.latitude, longitude: refLoc.longitude } : undefined;
@@ -173,7 +174,7 @@ export struct MomentsFeedPage {
         pagination: pagination
       };
       const response = await LoadingUtil.withMinimumTime(() => ApiClient.fetchFollowingMoments(request));
-      if (this.isDestroyed) return;
+      if (this.isDestroyed || version !== this.loadVersion) return;
       if (response.code === 0) {
         this.hotMoments = response.data?.items ?? [];
         this.deriveHotTags();
@@ -192,7 +193,7 @@ export struct MomentsFeedPage {
         pagination: pagination
       };
       const response = await LoadingUtil.withMinimumTime(() => ApiClient.fetchNearbyMoments(request));
-      if (this.isDestroyed) return;
+      if (this.isDestroyed || version !== this.loadVersion) return;
       if (response.code === 0) {
         this.hotMoments = response.data?.items ?? [];
         this.deriveHotTags();
@@ -217,7 +218,11 @@ export struct MomentsFeedPage {
     return '热门动态';
   }
 
+  /** 数据加载版本号：快速切 tab 时旧响应不覆盖新 tab 内容 */
+  private loadVersion: number = 0;
+
   private async loadData(refresh: boolean = false): Promise<void> {
+    const version = ++this.loadVersion;
     if (!refresh) { this.isLoading = true; }
     this.errorMessage = '';
     try {
@@ -246,7 +251,7 @@ export struct MomentsFeedPage {
         const results = await LoadingUtil.withMinimumTime(() =>
           Promise.all([trendingPromise, ApiClient.searchUsers(usersRequest), ApiClient.searchGroups(groupsRequest)])
         );
-        if (this.isDestroyed) return;
+        if (this.isDestroyed || version !== this.loadVersion) return;
         const usersResponse = results[1];
         if (usersResponse.code === 0) {
           const items = usersResponse.data?.items ?? [];
@@ -571,8 +576,8 @@ export struct MomentsFeedPage {
                 .margin({ left: DesignConstants.SPACING.SM })
 
               SystemButton({
-                label: '关注',
-                variant: 'primary',
+                label: this.isUserFollowing(user.user?.user_id ?? '') ? '已关注' : '关注',
+                variant: this.isUserFollowing(user.user?.user_id ?? '') ? 'outline' : 'primary',
                 buttonSize: 'compact',
                 onPress: () => { this.followUser(user); }
               })

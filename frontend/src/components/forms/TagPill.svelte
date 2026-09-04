@@ -36,11 +36,11 @@
 		aria-pressed={active}
 		disabled={disabled}
 		class={cn(
-			'rounded-full outline-none transition-colors px-3 py-1 cursor-pointer surface-ghost focus-visible:ring-2 focus-visible:ring-accent-default',
+			'hit-slop rounded-full outline-none transition-colors px-3 py-1.5 cursor-pointer surface-ghost focus-visible:ring-2 focus-visible:ring-accent-default',
 			sizeClasses[size],
 			disabled && 'pointer-events-none opacity-subtle',
 			active
-				? 'bg-accent-soft text-accent-default border border-accent-border font-semibold'
+				? 'bg-accent-soft text-accent-default border border-accent-border font-semibold active:bg-interactive-active'
 				: 'text-text-secondary',
 			className
 		)}

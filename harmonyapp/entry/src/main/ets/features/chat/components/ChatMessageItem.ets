@@ -136,23 +136,40 @@ export struct ChatMessageItem {
               .height(DesignConstants.CHAT.IMAGE_MAX_HEIGHT)
               .onClick(() => { this.previewImage(); })
               .accessibilityText('点击预览图片')
+              // 图片气泡也带时间/已读底行（与文本气泡一致，Telegram 规范）
+              Row({ space: DesignConstants.SPACING.XS }) {
+                Text(this.timeText)
+                  .fontSize(DesignConstants.FONT.SIZE.XS2)
+                  .fontColor(this.msg.isSelf ? this.chatTheme?.bubbleSelfText : this.palette.textSecondary)
+                if (this.msg.isSelf && this.isLastSent) {
+                  LucideIcon({
+                    icon: AppIcon.CHECK_ALL,
+                    iconSize: DesignConstants.FONT.SIZE.XS2,
+                    color: this.chatTheme?.bubbleSelfText
+                  })
+                    .opacity(DesignConstants.OPACITY.EMPHASIZED)
+                }
+              }
+              .justifyContent(this.msg.isSelf ? FlexAlign.End : FlexAlign.Start)
+              .width('100%')
+              .margin({ top: DesignConstants.SPACING.HALF })
             } else {
               Text(this.msg.content)
                 .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
-                .fontColor(this.msg.isSelf ? this.chatTheme?.sendButtonActiveText : this.palette.textPrimary)
+                .fontColor(this.msg.isSelf ? this.chatTheme?.bubbleSelfText : this.palette.textPrimary)
                 .maxLines(200)
 
               // 气泡内底行：时间（自己=on-accent 70%；对方=textSecondary）+ 已读勾
               Row({ space: DesignConstants.SPACING.XS }) {
                 Text(this.timeText)
                   .fontSize(DesignConstants.FONT.SIZE.XS2)
-                  .fontColor(this.msg.isSelf ? this.chatTheme?.sendButtonActiveText : this.palette.textSecondary)
-                  .opacity(this.msg.isSelf ? DesignConstants.OPACITY.PRESSED : 1)
+                  .fontColor(this.msg.isSelf ? this.chatTheme?.bubbleSelfText : this.palette.textSecondary)
+                  .opacity(this.msg.isSelf ? DesignConstants.OPACITY.EMPHASIZED : 1)
                 if (this.msg.isSelf && this.isLastSent) {
                   LucideIcon({
                       icon: AppIcon.CHECK_ALL,
                       iconSize: DesignConstants.FONT.SIZE.XS2,
-                      color: this.chatTheme?.sendButtonActiveText
+                      color: this.chatTheme?.bubbleSelfText
                     })
                     .opacity(DesignConstants.OPACITY.EMPHASIZED)
                 }

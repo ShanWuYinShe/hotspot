@@ -53,9 +53,12 @@
 	<div bind:this={anchorEl}>
 		<button
 			type="button"
-			class="hover-btn scale-btn flex items-center gap-2 rounded-full focus-ring text-sm"
-			style="padding:9px 16px;background:{open ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};color:{open ? 'var(--cst-text-on-accent)' : 'var(--cst-text-primary)'};border:var(--cst-border-width-hairline) solid {open ? 'transparent' : 'var(--cst-border-default)'};box-shadow:{open ? 'var(--shadow-glow-md)' : 'var(--cst-elevation-fab)'};"
+			class="hover-btn scale-btn focus-ring flex items-center gap-2 rounded-full border px-4 py-2 text-sm
+				{open
+				? 'border-transparent bg-accent-default text-text-on-accent shadow-glow-md'
+				: 'border-border-default bg-surface-primary text-text-primary shadow-[var(--cst-elevation-fab)]'}"
 			aria-label="筛选地图显示类型"
+			aria-expanded={open}
 			onclick={() => (open = !open)}
 		>
 			<SlidersHorizontal class="size-3.5" strokeWidth={open ? 2.5 : 1.75} />
@@ -83,7 +86,7 @@
 				>
 					<span
 						class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg"
-						style="background:{active ? PIN_TONES[item.type].bg : 'var(--cst-surface-subtle)'};border:var(--cst-border-width-hairline) solid {active ? PIN_TONES[item.type].border : 'transparent'};"
+						style="background:{active ? PIN_TONES[item.type].bg : 'var(--cst-surface-workspace)'};border:var(--cst-border-width-hairline) solid {active ? PIN_TONES[item.type].border : 'transparent'};"
 					>
 						{@html markerSvg(item.type, 1, { w: 14, h: 19 })}
 					</span>

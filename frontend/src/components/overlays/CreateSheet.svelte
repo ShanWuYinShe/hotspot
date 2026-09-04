@@ -188,7 +188,7 @@
 						<Hash size={16} strokeWidth={topicActive ? 2 : 1.5} />
 					</button>
 					</div>
-					<span class="text-xs tabular-nums {text.length >= 260 ? 'text-destructive' : 'text-text-secondary'}">
+					<span class="text-xs tabular-nums {text.length >= 260 ? 'text-status-danger' : 'text-text-secondary'}">
 						{text.length}/280
 					</span>
 				</div>
@@ -253,13 +253,13 @@
 		<button
 			type="submit"
 			disabled={!canPublish}
-			class="hover-btn shrink-0 rounded-full px-5 py-2.5 text-sm font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:border disabled:border-border-default disabled:bg-transparent disabled:text-text-secondary enabled:bg-accent-default enabled:text-text-on-accent enabled:shadow-glow-lg"
+			class="hover-btn shrink-0 rounded-full px-5 py-2.5 text-sm font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:border disabled:border-border-default disabled:bg-transparent disabled:text-text-secondary enabled:bg-accent-default enabled:text-text-on-accent enabled:shadow-glow-md enabled:hover:shadow-glow-lg"
 		>
 			发布动态
 		</button>
 	</footer>
 </form>
 {:else}
-	<!-- 创建群组 surface（对齐 Figma Make CreateSheet 的 surface 切换） -->
-	<CreateGroupSheet onClose={onClose} />
+	<!-- 创建群组 surface（对齐 Figma Make CreateSheet 的 surface 切换；可返回发布动态） -->
+	<CreateGroupSheet onClose={onClose} onBack={() => (surface = 'moment')} />
 {/if}

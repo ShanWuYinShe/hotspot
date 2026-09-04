@@ -24,7 +24,7 @@
 		{#snippet trailing()}
 			<button
 				type="button"
-				class="hover-btn shrink-0 rounded-full border border-accent-border bg-accent-soft px-2.5 py-1 text-xs text-accent-default focus-ring"
+				class="hover-btn hit-slop shrink-0 rounded-full border border-accent-border bg-accent-soft px-3 py-1.5 text-xs text-accent-default focus-ring hover:bg-interactive-active hover:text-text-primary"
 				onclick={(e) => {
 					e.stopPropagation();
 					if (moment.authorId) void goto(ROUTES.message(moment.authorId));

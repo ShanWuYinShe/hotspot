@@ -5,6 +5,7 @@
 	// - 选中态：accent-soft 淡底 + accent 图标 + 常驻左侧指示条（克制的「当前位」表达，
 	//   替代旧实心 accent 块——大面积实底在窄侧栏里过重）
 	// - hover（未选中）：surface-navigation-hover 背景 + 主题文字色 + 左侧细指示条
+	// - hover（选中）：底色加深一档（interactive-active）——选中行 hover 仍有可感知增量
 	// - 行高固定 40px；图标列固定 40px 居中，折叠时文字随侧栏宽度同步收起
 	//   （max-width/opacity/margin 过渡与 aside 宽度过渡同时长，避免图标位移跳变）
 
@@ -21,10 +22,24 @@
 	} = $props();
 
 	const Icon = $derived(item.icon);
+	// JS hover 仅在键鼠（fine pointer）设备启用：宽屏触屏点按后不让 hover 预览粘滞
+	const canHover =
+		typeof window !== 'undefined' &&
+		typeof window.matchMedia === 'function' &&
+		window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 	let hovered = $state(false);
-	const showHover = $derived(hovered && !isActive);
+	const showHover = $derived(canHover && hovered);
 
-	const hoverBg = $derived(showHover ? 'var(--cst-surface-navigation-hover)' : 'transparent');
+	// 未选中 hover = 淡底预览；选中 hover = accent-soft 加深为 interactive-active（两态差异）
+	const hoverBg = $derived(
+		isActive
+			? showHover
+				? 'var(--cst-interactive-active)'
+				: 'var(--cst-accent-soft)'
+			: showHover
+				? 'var(--cst-surface-navigation-hover)'
+				: 'transparent'
+	);
 	// 指示条：hover 预览与选中常驻共用同一根（高度驱动），位移过渡自然衔接
 	const indicatorH = $derived(isActive || showHover ? 16 : 0);
 </script>
@@ -32,7 +47,7 @@
 <button
 	type="button"
 	class="tap-97 relative flex h-10 w-full items-center rounded-sm focus-ring text-left {collapsed ? 'justify-center' : ''}"
-	style="background:{isActive ? 'var(--cst-accent-soft)' : hoverBg};color:{isActive ? 'var(--cst-text-primary)' : showHover ? 'var(--cst-text-primary)' : 'var(--cst-text-secondary)'};transition:background var(--cst-motion-rapid) var(--cst-ease-standard), color var(--cst-motion-rapid) var(--cst-ease-standard), transform var(--cst-motion-instant) var(--cst-ease-standard);"
+	style="background:{hoverBg};color:{isActive || showHover ? 'var(--cst-text-primary)' : 'var(--cst-text-secondary)'};transition:background var(--cst-motion-rapid) var(--cst-ease-standard), color var(--cst-motion-rapid) var(--cst-ease-standard), transform var(--cst-motion-instant) var(--cst-ease-standard);"
 	aria-current={isActive ? 'page' : undefined}
 	data-active={isActive ? 'true' : undefined}
 	aria-label={item.label}

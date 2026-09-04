@@ -33,6 +33,12 @@
 
 	let hasError = $state(false);
 
+	// 头像 src 变化（如上传新头像）后重置错误态，否则永远停留首字母兜底
+	$effect(() => {
+		void src;
+		hasError = false;
+	});
+
 	const showImage = $derived(Boolean(src) && !hasError);
 	const initial = $derived((name || '?').slice(0, 1));
 	const borderRadius = $derived(shape === 'circle' ? '9999px' : `${Math.round(size * 0.28)}px`);
@@ -43,7 +49,7 @@
 	style="width:{size}px;height:{size}px;border-radius:{borderRadius};overflow:hidden;background:var(--cst-surface-primary);{ring ? 'border:var(--cst-border-width-hairline) solid var(--cst-accent-border-soft);' : ''}{style}"
 >
 	{#if showImage}
-		<img src={src} alt={name ?? ''} class="h-full w-full object-cover" onerror={() => (hasError = true)} />
+		<img src={src} loading="lazy" decoding="async" alt={name ?? ''} class="h-full w-full object-cover" onerror={() => (hasError = true)} />
 	{:else}
 		<span
 			class="flex h-full w-full items-center justify-center"

@@ -1,21 +1,21 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { UserPlus, MessageCircle, Users, Check } from '@lucide/svelte';
+	import { UserPlus, MessageCircle, Users } from '@lucide/svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import SheetShell from '@/components/overlays/SheetShell.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
-	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
-	// 新会话底部 Sheet：添加好友 / 开始私聊 / 创建群聊入口。
+	// 新会话底部 Sheet：开始私聊（联系人）/ 添加好友（去附近发现）/ 创建群聊入口。
+	// 联系人 = 好友 ∪ 关注 ∪ 粉丝 去重（useRelationships 统一数据源），
+	// 替代原硬编码空数组（「开始私聊」tab 永远空态的死 UI）。
 
 	type Tab = 'add' | 'chat';
-
-	const SUGGESTED: { id: number; name: string; subtitle: string; avatar: string; added: boolean }[] = [];
-	const CONTACTS: { id: number; name: string; avatar: string; online: boolean }[] = [];
 
 	let {
 		defaultTab = 'chat',
@@ -25,29 +25,28 @@
 	}: {
 		defaultTab?: Tab;
 		onClose: () => void;
-		onNewChat?: (contactId: number) => void;
+		onNewChat?: (contactId: string) => void;
 		onCreateGroup?: () => void;
 	} = $props();
 
-	let tab = $state<Tab>(initialTab());
+	const rel = useRelationships();
+	// 好友优先，其次关注/粉丝；按 id 去重
+	const CONTACTS = $derived.by(() => {
+		const seen = new Set<string>();
+		const list: { id: string; name: string; avatar: string }[] = [];
+		for (const f of [...rel.friends, ...rel.following, ...rel.followers]) {
+			if (seen.has(f.id)) continue;
+			seen.add(f.id);
+			list.push({ id: f.id, name: f.name, avatar: f.avatar });
+		}
+		return list;
+	});
 
 	// defaultTab 仅在打开时生效（此后切换走 tab 按钮），有意只读取一次初始值。
-	function initialTab(): Tab {
-		return defaultTab;
-	}
-let searchQ = $state('');
-let addedIds = $state<Set<number>>(new Set());
+	// svelte-ignore state_referenced_locally
+	let tab = $state<Tab>(defaultTab);
+	let searchQ = $state('');
 
-// 行整体与「添加」按钮共用同一切换逻辑（按钮 stopPropagation 避免双击切换）
-function toggleAdd(id: number) {
-	const n = new Set(addedIds);
-	n.has(id) ? n.delete(id) : n.add(id);
-	addedIds = n;
-}
-
-	const filteredSuggested = $derived(
-		SUGGESTED.filter((u) => !searchQ || u.name.toLowerCase().includes(searchQ.toLowerCase()) || u.subtitle.includes(searchQ))
-	);
 	const filteredContacts = $derived(CONTACTS.filter((c) => !searchQ || c.name.toLowerCase().includes(searchQ.toLowerCase())));
 </script>
 
@@ -56,8 +55,8 @@ function toggleAdd(id: number) {
 	<div class="shrink-0 px-5 pt-3 pb-2">
 		<TabBar
 			items={[
-				{ id: 'add', label: '添加好友', icon: UserPlus },
-				{ id: 'chat', label: '开始私聊', icon: MessageCircle }
+				{ id: 'chat', label: '开始私聊', icon: MessageCircle },
+				{ id: 'add', label: '添加好友', icon: UserPlus }
 			]}
 			value={tab}
 			onChange={(id) => {
@@ -80,65 +79,30 @@ function toggleAdd(id: number) {
 	<!-- Content -->
 	<div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-6">
 		{#if tab === 'add'}
+			<!-- 添加好友：无站内推荐数据源，直接引导到附近的人发现页 -->
 			<div class="animate-fade-in flex flex-col gap-2">
-				<p class="eyebrow mb-2">
-					附近推荐
-				</p>
-				{#if filteredSuggested.length > 0}
-				{#each filteredSuggested as u (u.id)}
-					<ListItem
-						tone="card"
-						onClick={() => toggleAdd(u.id)}
-						ariaLabel={addedIds.has(u.id) ? `取消添加 ${u.name}` : `添加 ${u.name}`}
-						class="flex items-center gap-3.5 p-3"
-					>
-						<Avatar src={u.avatar} name={u.name} size={44} class="shrink-0 border" style="border-color:var(--cst-border-default);border-width:var(--cst-border-width-regular);" />
-						<div class="flex-1 min-w-0">
-							<p class="text-text-primary text-sm" >{u.name}</p>
-							<p class="text-text-secondary text-xs" >{u.subtitle}</p>
-						</div>
+				<p class="eyebrow mb-2">添加好友</p>
+				<EmptyState
+					bare
+					title={searchQ.trim() ? '站内暂不支持搜索加人' : '去附近认识新朋友'}
+					description={searchQ.trim() ? '换个关键词试试，或到附近的人里逛逛' : '发现 5km 内有趣的人，关注后即可发起私聊'}
+				>
+					{#snippet action()}
 						<button
 							type="button"
-							class="hover-btn tap-92 flex items-center gap-1.5 px-3 py-1.5 rounded-full focus-ring shrink-0 text-xs {addedIds.has(u.id) ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
-							style={addedIds.has(u.id)
-								? 'box-shadow:var(--shadow-inset-sm);border:var(--cst-border-width-hairline) solid var(--cst-border-strong);'
-								: 'box-shadow:var(--shadow-glow-sm);'}
-							onclick={(e) => {
-								e.stopPropagation();
-								toggleAdd(u.id);
+							class="hover-btn rounded-full border border-border-default px-4 py-2 text-xs text-text-primary focus-ring hover:border-border-strong"
+							onclick={() => {
+								onClose();
+								void goto(ROUTES.nearbyPeople);
 							}}
 						>
-							{#if addedIds.has(u.id)}
-								<Check class="size-2.5"  strokeWidth={2.5} />
-								已添加
-							{:else}
-								<UserPlus class="size-2.5"  strokeWidth={2} />
-								添加
-							{/if}
+							去附近看看
 						</button>
-					</ListItem>
-				{/each}
-				{:else}
-					<EmptyState
-						bare
-						title={searchQ.trim() ? '未找到相关用户' : '暂无推荐好友'}
-						description={searchQ.trim() ? '换个关键词试试' : '去附近的人里认识新朋友'}
-					>
-						{#snippet action()}
-							<button
-								type="button"
-								class="hover-btn rounded-full border border-border-default px-4 py-2 text-xs text-text-primary focus-ring"
-								onclick={() => {
-									onClose();
-									void goto(ROUTES.nearbyPeople);
-								}}
-							>
-								去附近看看
-							</button>
-						{/snippet}
-					</EmptyState>
-				{/if}
+					{/snippet}
+				</EmptyState>
 			</div>
+		{:else if rel.loading}
+			<InlineLoading label="加载联系人…" />
 		{:else}
 			<div class="animate-fade-in flex flex-col gap-2">
 				<!-- Create group chat row -->
@@ -151,44 +115,35 @@ function toggleAdd(id: number) {
 					ariaLabel="创建群聊"
 					class="mb-3 flex items-center gap-3.5 p-3"
 				>
-					<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default size-11 shadow-glow-sm"  >
-						<Users class="size-5 text-text-on-accent"   strokeWidth={1.75} />
+					<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default size-11 shadow-glow-sm">
+						<Users class="size-5 text-text-on-accent" strokeWidth={1.75} />
 					</div>
 					<div>
 						<p class="text-text-primary text-sm font-medium">创建群聊</p>
-						<p class="text-text-secondary text-xs" >邀请好友一起聊</p>
+						<p class="text-text-secondary text-xs">邀请好友一起聊</p>
 					</div>
 				</ListItem>
 
-				<p class="eyebrow mb-2">
-					联系人
-				</p>
+				<p class="eyebrow mb-2">联系人</p>
 				{#if filteredContacts.length > 0}
-				{#each filteredContacts as c (c.id)}
-					<ListItem
-						tone="card"
-						onClick={() => {
-							onNewChat?.(c.id);
-							onClose();
-						}}
-						ariaLabel={`与 ${c.name} 开始私聊`}
-						class="flex items-center gap-3.5 p-3"
-					>
-						<div class="relative shrink-0">
+					{#each filteredContacts as c (c.id)}
+						<ListItem
+							tone="card"
+							onClick={() => {
+								onNewChat?.(c.id);
+								onClose();
+							}}
+							ariaLabel={`与 ${c.name} 开始私聊`}
+							class="flex items-center gap-3.5 p-3"
+						>
 							<Avatar src={c.avatar} name={c.name} size={44} class="border" style="border-color:var(--cst-border-default);border-width:var(--cst-border-width-regular);" />
-							{#if c.online}
-								<OnlineDot size="md" />
-							{/if}
-						</div>
-						<div class="flex-1 min-w-0">
-							<p class="text-text-primary text-sm" >{c.name}</p>
-							<p class="{c.online ? 'text-status-online' : 'text-text-secondary'} text-xs" >
-								{c.online ? '在线' : '离线'}
-							</p>
-						</div>
-						<MessageCircle class="size-4 shrink-0 text-text-secondary"   strokeWidth={1.5} />
-					</ListItem>
-				{/each}
+							<div class="flex-1 min-w-0">
+								<p class="text-text-primary text-sm">{c.name}</p>
+								<p class="text-text-secondary text-xs">发起新会话</p>
+							</div>
+							<MessageCircle class="size-4 shrink-0 text-text-secondary" strokeWidth={1.5} />
+						</ListItem>
+					{/each}
 				{:else}
 					<EmptyState
 						bare
@@ -198,7 +153,7 @@ function toggleAdd(id: number) {
 						{#snippet action()}
 							<button
 								type="button"
-								class="hover-btn rounded-full border border-border-default px-4 py-2 text-xs text-text-primary focus-ring"
+								class="hover-btn rounded-full border border-border-default px-4 py-2 text-xs text-text-primary focus-ring hover:border-border-strong"
 								onclick={() => {
 									tab = 'add';
 									searchQ = '';

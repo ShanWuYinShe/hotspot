@@ -41,19 +41,19 @@
 	<!-- 搜索入口（门户第一入口） -->
 	<button
 		type="button"
-		class="hover-btn flex w-full items-center gap-3 rounded-md border border-border-default bg-surface-primary shadow-raised-md p-3 text-left focus-ring"
+		class="hover-btn card-hover flex w-full items-center gap-3 rounded-md border border-border-default bg-surface-primary shadow-raised-md p-3 text-left focus-ring hover:border-border-strong"
 		onclick={() => void goto(ROUTES.search)}
 	>
 		<SearchIcon class="size-5 shrink-0 text-accent-default" strokeWidth={1.75} />
 		<span class="min-w-0 flex-1 py-2 text-md text-text-secondary">搜索用户、群组、动态、地点…</span>
 	</button>
 
-	<!-- 三分区入口卡（内容在各专区页，这里只做导航门户） -->
-	<div class="mt-5 grid gap-3">
+	<!-- 三分区入口卡（内容在各专区页，这里只做导航门户）；宽屏多列利用横向空间 -->
+	<div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 		{#each SECTIONS as section (section.id)}
 			<button
 				type="button"
-				class="hover-btn flex w-full items-center gap-3.5 rounded-md border border-border-default bg-surface-primary shadow-raised-md p-4 text-left focus-ring"
+				class="hover-btn card-hover flex w-full items-center gap-3.5 rounded-md border border-border-default bg-surface-primary shadow-raised-md p-4 text-left focus-ring hover:border-border-strong"
 				onclick={() => void goto(section.href)}
 			>
 				<span class="flex shrink-0 items-center justify-center rounded-full icon-badge size-9">

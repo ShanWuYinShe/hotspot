@@ -101,6 +101,11 @@
   --color-interactive-hover-fill: var(--cst-interactive-hover-fill);
   --color-interactive-active: var(--cst-interactive-active);
 
+  /* Toggle 表面（轨道 off 底/滑块底）——注册类供 Toggle 组件类化状态，
+     inline background 会压制一切 hover/active 反馈 */
+  --color-surface-toggle-off: var(--cst-surface-toggle-off);
+  --color-surface-toggle-thumb: var(--cst-surface-toggle-thumb);
+
   /* Raised elevation shadows — 双向凸起投影刻度（凸起控件/卡片/头像）。
      消费 --cst-elevation-shadow-{dark,light} 原料：vibrant 显影（凸起立体）、
      forest 透明（改由 border 表达层级，投影语言随主题切换）。
@@ -118,6 +123,15 @@
   --shadow-glow-sm: 0 3px 10px var(--cst-glow-accent);
   --shadow-glow-md: 0 4px 14px var(--cst-glow-accent);
   --shadow-glow-lg: 0 6px 18px var(--cst-glow-accent);
+
+  /* Danger glow shadows — danger 实底按钮/危险操作 hover 抬档（色随主题派生） */
+  --shadow-danger-glow-sm: 0 3px 10px var(--cst-glow-danger);
+  --shadow-danger-glow-md: 0 4px 14px var(--cst-glow-danger);
+
+  /* Toggle 轨道/滑块投影（on/off 双态档位，themes/*.css 定义） */
+  --shadow-toggle-on: var(--cst-elevation-toggle-on);
+  --shadow-toggle-off: var(--cst-elevation-toggle-off);
+  --shadow-toggle-thumb: var(--cst-elevation-toggle-thumb);
 
   /* Letter-spacing scale — 对齐 Figma eyebrow/分组标签/标题收紧，生成 tracking-* 类。
      eyebrow=0.14em（uppercase 分组标签）、label=0.12em（在线/未读小标）、
@@ -159,4 +173,7 @@
   --transition-duration-spring: var(--cst-motion-spring);
   --transition-duration-slow: var(--cst-motion-slow);
   --transition-duration-gentle: var(--cst-motion-gentle);
+
+  /* Animation scale — 页面/内容入场 fade（keyframes 见 utilities.css cst-fade-in） */
+  --animate-fade-in: cst-fade-in var(--cst-motion-standard) var(--cst-ease-standard);
 }

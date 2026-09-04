@@ -9,6 +9,7 @@ import { NearbyImageCard } from '../../../components/NearbyImageCard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { LucideIcon } from '../../../components/LucideIcon';
+import { SystemDialog } from '../../../components/SystemDialog';
 
 /**
  * 附近群组卡 — 基于 NearbyImageCard 的图片卡（对齐前端 nearby/groups/shared/GroupCard）。
@@ -86,13 +87,16 @@ export struct GroupCard {
     }
   }
 
+  /** 退出群组二次确认可见性（destructive 防误触：已加入态一点即静默退群） */
+  @State private showLeaveConfirm: boolean = false;
+
   private toggleJoin(): void {
     const groupId = this.getGroupId();
     if (!groupId) {
       return;
     }
     if (this.hasJoined()) {
-      interactionActions.leaveGroup(groupId);
+      this.showLeaveConfirm = true;
     } else {
       interactionActions.joinGroup(groupId);
     }
@@ -134,6 +138,13 @@ export struct GroupCard {
       })
       .onClick(() => this.toggleJoin())
       .accessibilityText(this.hasJoined() ? `退出群组 ${this.group.group?.name ?? ''}` : `加入群组 ${this.group.group?.name ?? ''}`)
+      // 触控热区：视觉高 ~18vp（Text+3vp padding），responseRegion 外扩到 44vp
+      .responseRegion({
+        x: -DesignConstants.SPACING.MD,
+        y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT) / 2,
+        width: '130%',
+        height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+      })
   }
 
   @Builder
@@ -316,7 +327,8 @@ export struct GroupCard {
   }
 
   build() {
-    if (this.featured) {
+    Stack() {
+      if (this.featured) {
       NearbyImageCard({
         imageUrl: this.group.group?.avatar_url ?? '',
         imageAlt: this.group.group?.name ?? '',
@@ -345,6 +357,23 @@ export struct GroupCard {
       }) {
         this.buildCompactFooter()
       }
+      }
+      // 退出群组二次确认（destructive 防误触）
+      SystemDialog({
+        visible: this.showLeaveConfirm,
+        title: '退出群组',
+        description: `退出「${this.group.group?.name ?? '该群组'}」后需要重新申请加入`,
+        confirmText: '退出',
+        confirmVariant: 'danger',
+        onCancel: () => { this.showLeaveConfirm = false; },
+        onConfirm: () => {
+          this.showLeaveConfirm = false;
+          const groupId = this.getGroupId();
+          if (groupId) {
+            interactionActions.leaveGroup(groupId);
+          }
+        }
+      })
     }
   }
 }

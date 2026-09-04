@@ -2,6 +2,8 @@
 	import { Wifi } from '@lucide/svelte';
 
 	// 模拟 iOS 风格状态栏：真实时钟 + 装饰性信号/电池。
+	// 注：信号/电池图标的 1-3px 微圆角属于模拟系统 chrome 的几何微调，
+	// 不在 shape token 刻度内（登记例外，非主题风格值）。
 
 	let now = $state(new Date());
 

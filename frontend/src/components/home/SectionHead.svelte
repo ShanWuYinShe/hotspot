@@ -11,7 +11,7 @@
 	{#if action && onAction}
 		<button
 			type="button"
-			class="hover-btn flex items-center gap-0.5 focus-ring surface-ghost rounded-full px-2 py-0.5 text-accent-default"
+			class="hover-btn hit-slop flex items-center gap-0.5 focus-ring surface-ghost -my-1.5 rounded-full px-3 py-1.5 text-accent-default"
 			onclick={onAction}
 		>
 			<span class="text-xs">{action}</span>

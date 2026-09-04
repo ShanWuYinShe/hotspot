@@ -85,8 +85,8 @@ export struct LoginPage {
   @State restoreTitle: string = '';
   @State isBackPressed: boolean = false;
   @State isLoginBtnPressed: boolean = false;
-  @State isRegisterBtnPressed: boolean = false;
-  @State isGuestBtnPressed: boolean = false;
+  /** 底部链接按压态（注册/访客切换链接的按压缩放反馈） */
+  @State linkPressed: string = '';
   @State loginIdFocused: boolean = false;
   @State passwordFocused: boolean = false;
   @State registerNicknameFocused: boolean = false;
@@ -538,7 +538,9 @@ export struct LoginPage {
         variant: 'primary',
         buttonSize: 'large',
         fullWidth: true,
-        disabled: !(this.isValidLoginId(this.loginId) && this.isValidPassword(this.password)),
+        // 复杂度校验（8-128 位字母+数字）只约束注册新密码；存量弱密码账号
+        // 必须可登录，登录态仅要求账号与密码非空
+        disabled: !(this.isValidLoginId(this.loginId) && this.password.length > 0),
         onPress: () => { this.userLogin(); }
       })
         .scale(this.isLoginBtnPressed ?
@@ -558,15 +560,50 @@ export struct LoginPage {
           }
         })
 
-      // 底部链接（对齐前端 AuthForm：注册 + 访客双入口，均可点击切换）
+      // 底部链接（对齐前端 AuthForm：注册 + 访客双入口，均可点击切换）；
+      // 纯 Text 热区 <44vp：补 padding + 按压缩放
       Row({ space: DesignConstants.SPACING.LG }) {
         Text('注册新账号')
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().accentBackground)
+          .padding({
+            left: DesignConstants.SPACING.MD,
+            right: DesignConstants.SPACING.MD,
+            top: DesignConstants.SPACING.SM2,
+            bottom: DesignConstants.SPACING.SM2
+          })
+          .scale(this.linkPressed === 'register' ?
+            { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL } :
+            { x: 1, y: 1 })
+          .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.linkPressed = 'register';
+            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+              this.linkPressed = '';
+            }
+          })
           .onClick(() => { this.loginMode = 'register'; })
         Text('随便逛逛（访客）')
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().accentBackground)
+          .padding({
+            left: DesignConstants.SPACING.MD,
+            right: DesignConstants.SPACING.MD,
+            top: DesignConstants.SPACING.SM2,
+            bottom: DesignConstants.SPACING.SM2
+          })
+          .scale(this.linkPressed === 'guest' ?
+            { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL } :
+            { x: 1, y: 1 })
+          .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.linkPressed = 'guest';
+            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+              this.linkPressed = '';
+            }
+          })
           .onClick(() => { this.loginMode = 'guest'; })
       }
       .width('100%')

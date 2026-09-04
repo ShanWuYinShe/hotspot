@@ -55,7 +55,7 @@
 			class="shrink-0 w-full flex justify-center"
 			style={isWide
 				? 'padding:10px 24px max(16px, env(safe-area-inset-bottom, 16px));background-color:transparent;'
-				: 'padding:0;background-color:var(--cst-surface-nav-glass);border-top:var(--cst-border-width-hairline) solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);'}
+				: 'padding:0;border-top:var(--cst-border-width-hairline) solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);'}
 		>
 			<div
 				class="flex items-center"

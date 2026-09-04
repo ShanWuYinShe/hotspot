@@ -6,6 +6,7 @@ import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
+import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemInput } from '../../../components/SystemInput';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SystemToast } from '../../../components/SystemToast';
@@ -53,7 +54,10 @@ export struct RelationshipHubPage {
     if (this.activeRelTab === 1) {
       return this.following.length;
     }
-    return this.followers.length;
+    if (this.activeRelTab === 2) {
+      return this.followers.length;
+    }
+    return this.blocked.length;
   }
 
   /** 在线/离线过滤 + 昵称/备注关键词过滤（对齐前端 SectionFilter + SearchInput 客户端过滤） */
@@ -75,8 +79,11 @@ export struct RelationshipHubPage {
     return result;
   }
 
+  @State private isLoading: boolean = true;
+
   private async loadAll(): Promise<void> {
     if (this.isDestroyed) return;
+    this.isLoading = true;
     try {
       const results = await Promise.all([
         ApiClient.getFriendsList({ pagination: { limit: 20 } }),
@@ -91,6 +98,8 @@ export struct RelationshipHubPage {
       this.blocked = results[3].data?.items ?? [];
     } catch (_) {
       SystemToast.showError('加载关系数据失败', this.getUIContext());
+    } finally {
+      this.isLoading = false;
     }
   }
 
@@ -135,7 +144,8 @@ export struct RelationshipHubPage {
           tabs: [
             { label: '好友', count: this.friends.length },
             { label: '关注', count: this.following.length },
-            { label: '粉丝', count: this.followers.length }
+            { label: '粉丝', count: this.followers.length },
+            { label: '黑名单', count: this.blocked.length }
           ],
           activeIndex: this.activeRelTab,
           actions: {
@@ -146,6 +156,10 @@ export struct RelationshipHubPage {
         })
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
 
+        if (this.isLoading) {
+          SystemLoadingView({ message: '加载关系数据…' })
+            .layoutWeight(1)
+        } else {
         // 搜索框 + 在线过滤（对齐前端 Section 内嵌：search + filters 位于内容区顶部）
         SystemInput({
           value: this.searchKeyword,
@@ -188,11 +202,17 @@ export struct RelationshipHubPage {
                 emptyText: this.onlineFilterIndex === 0 && this.searchKeyword.length === 0 ? '还没有关注任何人。' : '没有符合条件的关注。',
                 following: this.filterUsers(this.following)
               })
+            } else if (this.activeRelTab === 2) {
+              RelationshipListSection({
+                embedded: true,
+                emptyText: this.onlineFilterIndex === 0 && this.searchKeyword.length === 0 ? '还没有粉丝。' : '没有符合条件的粉丝。',
+                followers: this.filterUsers(this.followers)
+              })
             } else {
               RelationshipListSection({
                 embedded: true,
-                emptyText: this.onlineFilterIndex === 0 && this.searchKeyword.length === 0 ? '还没有新的粉丝。' : '没有符合条件的粉丝。',
-                followers: this.filterUsers(this.followers)
+                emptyText: '还没有屏蔽任何用户。',
+                blocked: this.blocked
               })
             }
           }
@@ -206,6 +226,7 @@ export struct RelationshipHubPage {
         }
         .layoutWeight(1)
         .width('100%')
+        }
       }
       .width('100%')
       .height('100%')

@@ -12,6 +12,8 @@
 	import { openTheDoor, follow, block, createReport, setRemark , netError } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import * as Dialog from '@/components/ui/dialog';
+	import Button from '@/components/ui/button.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { requireAuth } from '@/stores/auth.svelte';
 	import { platform } from '@/stores/platform.svelte';
@@ -144,6 +146,9 @@
 		}
 	};
 
+	let confirmBlockOpen = $state(false);
+	let confirmUnblockOpen = $state(false);
+
 	const toggleBlock = async () => {
 		if (blockPending) return;
 		if (!requireAuth({ action: '屏蔽', targetId: uid, run: () => void toggleBlock() })) return;
@@ -167,21 +172,46 @@
 		}
 	};
 
-	const submitReport = () => {
-		if (!requireAuth({ action: '举报', targetId: uid, run: submitReport })) return;
-		createReport({ target_type: 'user', target_id: uid, reason: 'other' })
-			.then((res) => {
-				if (res.code === 0) reportSent = true;
-				else showToast(res.message || '举报失败', 'danger');
-			})
-			.catch(() => showToast('举报失败，请重试', 'danger'));
-		moreOpen = false;
+	// 举报理由（api types ReportReason 枚举取常用四档；harassment 骚扰 / impersonation 冒充他人）
+	const REPORT_REASONS = [
+		{ id: 'spam', label: '垃圾信息' },
+		{ id: 'harassment', label: '骚扰攻击' },
+		{ id: 'impersonation', label: '冒充他人' },
+		{ id: 'other', label: '其他' }
+	] as const;
+	let reportReason = $state<(typeof REPORT_REASONS)[number]['id']>('spam');
+	let reportPending = $state(false);
+	let reportOpen = $state(false);
+
+	const submitReport = async () => {
+		if (reportPending) return;
+		if (!requireAuth({ action: '举报', targetId: uid, run: () => void submitReport() })) return;
+		reportPending = true;
+		try {
+			const res = await createReport({ target_type: 'user', target_id: uid, reason: reportReason });
+			if (res.code === 0) {
+				reportSent = true;
+				showToast('举报已记录，感谢你的反馈', 'success');
+				moreOpen = false;
+			} else {
+				showToast(res.message || '举报失败', 'danger');
+			}
+		} catch {
+			showToast('举报失败，请重试', 'danger');
+		} finally {
+			reportPending = false;
+		}
 	};
 
-	const copyProfileLink = () => {
-		navigator.clipboard?.writeText(`${window.location.origin}${ROUTES.user(uid)}`);
-		shareCopied = true;
-		window.setTimeout(() => (shareCopied = false), 1600);
+	const copyProfileLink = async () => {
+		try {
+			await navigator.clipboard?.writeText(`${window.location.origin}${ROUTES.user(uid)}`);
+			shareCopied = true;
+			showToast('链接已复制', 'success');
+			window.setTimeout(() => (shareCopied = false), 1600);
+		} catch {
+			showToast('复制失败，请手动复制地址栏链接', 'danger');
+		}
 	};
 </script>
 <svelte:head>
@@ -243,8 +273,8 @@
 			{/if}
 				<button
 					type="button"
-					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-sm py-2.5 text-sm text-status-danger outline-none focus-visible:ring-2 focus-visible:ring-status-danger"
-					onclick={toggleBlock}
+					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-sm py-2.5 text-sm text-status-danger outline-none hover:bg-danger-bg focus-visible:ring-2 focus-visible:ring-status-danger"
+					onclick={() => (blocked ? (confirmUnblockOpen = true) : (confirmBlockOpen = true))}
 				>
 					<UserX size={14} />
 					{blocked ? '解除屏蔽' : '屏蔽用户'}
@@ -252,16 +282,71 @@
 				<button
 					type="button"
 					class="hover-btn mt-1 flex w-full items-center justify-center gap-2 rounded-sm py-2.5 text-sm text-text-secondary focus-ring"
-					onclick={submitReport}
+					onclick={() => (reportOpen = !reportOpen)}
+					aria-expanded={reportOpen}
 				>
 					{#if reportSent}
 						<Check size={14} />
 						举报已记录
 					{:else}
 						<Flag size={14} />
-						举报用户
+						{reportOpen ? '收起理由' : '举报用户'}
 					{/if}
 				</button>
+				{#if reportOpen && !reportSent}
+					<div class="mt-2 flex flex-col gap-1.5" aria-label="举报理由">
+						{#each REPORT_REASONS as r (r.id)}
+							{@const selected = reportReason === r.id}
+							<!-- 选中/未选中 hover 差异化（四态契约）：未选中 hover 淡底预览、选中 hover 加深 -->
+							<button
+								type="button"
+								aria-pressed={selected}
+								onclick={() => (reportReason = r.id)}
+								class="hover-btn flex items-center justify-between rounded-sm border px-3 py-2 text-left text-sm transition-colors duration-rapid ease-standard focus-ring
+									{selected
+									? 'border-accent-border bg-accent-soft text-accent-default hover:bg-interactive-active'
+									: 'border-border-default text-text-secondary hover:bg-interactive-hover'}"
+							>
+								{r.label}
+								{#if selected}<Check class="size-3.5" strokeWidth={2.5} />{/if}
+							</button>
+						{/each}
+						<button
+							type="button"
+							disabled={reportPending}
+							onclick={() => void submitReport()}
+							class="hover-btn mt-1 flex w-full items-center justify-center gap-2 rounded-full border border-border-default py-2.5 text-sm font-medium text-status-danger focus-ring hover:bg-danger-bg disabled:pointer-events-none disabled:opacity-faint"
+						>
+							{reportPending ? '提交中…' : '提交举报'}
+						</button>
+					</div>
+				{/if}
+		</Dialog.Content>
+	</Dialog.Root>
+
+	<!-- 屏蔽/解除屏蔽二次确认（destructive 操作防误触） -->
+	<Dialog.Root bind:open={confirmBlockOpen}>
+		<Dialog.Content class="max-w-90 p-0">
+			<div class="px-5 pt-5 pb-4">
+				<Dialog.Title class="text-lg font-medium tracking-title text-text-primary">屏蔽该用户？</Dialog.Title>
+				<Dialog.Description class="mt-1 text-sm text-text-secondary">屏蔽后将无法收到对方消息与动态，且自动取消关注。</Dialog.Description>
+			</div>
+			<div class="flex flex-col gap-2 px-5 pb-5">
+				<Button type="button" variant="danger" size="lg" class="w-full" onclick={() => { confirmBlockOpen = false; void toggleBlock(); }}>屏蔽</Button>
+				<Button type="button" variant="secondary" size="lg" class="w-full" onclick={() => (confirmBlockOpen = false)}>取消</Button>
+			</div>
+		</Dialog.Content>
+	</Dialog.Root>
+	<Dialog.Root bind:open={confirmUnblockOpen}>
+		<Dialog.Content class="max-w-90 p-0">
+			<div class="px-5 pt-5 pb-4">
+				<Dialog.Title class="text-lg font-medium tracking-title text-text-primary">解除屏蔽？</Dialog.Title>
+				<Dialog.Description class="mt-1 text-sm text-text-secondary">解除后可以重新关注对方并接收其动态。</Dialog.Description>
+			</div>
+			<div class="flex flex-col gap-2 px-5 pb-5">
+				<Button type="button" variant="primary" size="lg" class="w-full" onclick={() => { confirmUnblockOpen = false; void toggleBlock(); }}>解除屏蔽</Button>
+				<Button type="button" variant="secondary" size="lg" class="w-full" onclick={() => (confirmUnblockOpen = false)}>取消</Button>
+			</div>
 		</Dialog.Content>
 	</Dialog.Root>
 
@@ -333,12 +418,12 @@
 				</div>
 
 			{#if blocked}
-				<div class="mt-5 flex items-center gap-2 rounded-sm ring-1 ring-status-danger/30 bg-danger-bg px-3 py-2 text-sm text-status-danger">
+				<div class="mt-5 flex items-center gap-2 rounded-sm ring-1 ring-status-danger-border bg-danger-bg px-3 py-2 text-sm text-status-danger">
 					<UserX size={14} />
 					你已屏蔽此用户；关注和私信已停用。
 				</div>
 			{/if}
-			<p class="mt-5 max-w-115 text-sm leading-6 text-text-secondary">{user.bio}</p>
+			<p class="mt-5 max-w-115 text-sm leading-6 text-text-secondary">{user.bio || '这个人还没有填写简介。'}</p>
 
 			<!-- 位置 + 标签 -->
 			<div class="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -368,19 +453,23 @@
 
 	<!-- Gallery（spec UserProfileBundle 仅含 recent_moments，无喜欢/收藏流）。
 	     整格跳转动态详情（大图查看在详情页内）。 -->
-	<div class="mt-5 grid grid-cols-3 gap-1.5">
-		{#each user.galleryMoments as g, i (g.id)}
-			<button
-				type="button"
-				class="image-hover-frame tap-97 relative cursor-pointer rounded-sm overflow-hidden focus-ring"
-				style="aspect-ratio:1;"
-				aria-label={`查看瞬间 ${i + 1}`}
-				onclick={() => void goto(ROUTES.moment(g.id))}
-			>
-				<img src={g.url} alt={`photo ${i}`} loading="lazy" class="image-hover-frame__image w-full h-full object-cover" />
-			</button>
-		{/each}
-	</div>
+	{#if user.galleryMoments.length > 0}
+		<div class="mt-5 grid grid-cols-3 gap-1.5">
+			{#each user.galleryMoments as g, i (g.id)}
+				<button
+					type="button"
+					class="image-hover-frame tap-97 relative cursor-pointer rounded-sm overflow-hidden focus-ring"
+					style="aspect-ratio:1;"
+					aria-label={`查看 ${user.name} 的瞬间图片 ${i + 1}`}
+					onclick={() => void goto(ROUTES.moment(g.id))}
+				>
+					<img src={g.url} alt={`${user.name} 的瞬间图片 ${i + 1}`} loading="lazy" class="image-hover-frame__image w-full h-full object-cover" />
+				</button>
+			{/each}
+		</div>
+	{:else}
+		<EmptyState bare title="还没有照片" description="该用户发布带图瞬间后会显示在这里。" />
+	{/if}
 </div>
 
 	{#snippet rail()}

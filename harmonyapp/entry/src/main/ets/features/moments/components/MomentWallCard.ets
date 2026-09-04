@@ -81,13 +81,12 @@ export struct MomentWallCard {
   }
 
   private onLikeClick(): void {
-    // count-pop：翻转弹跳态放大计数，随后 spring 回落（对齐前端 count-pop 弹跳）
-    this.getUIContext().animateTo(
-      { duration: DesignConstants.ANIMATION.DURATION_FAST, curve: curves.springMotion(0.3, 0.6) },
-      () => {
-        this.likePopped = !this.likePopped;
-      }
-    );
+    // count-pop：点赞瞬间计数放大弹跳后回落（对齐前端 cst-count-pop 1→1.3→1；
+    // 原实现翻转布尔永不回落，计数停留在缩小态）
+    this.likePopped = true;
+    setTimeout(() => {
+      this.likePopped = false;
+    }, DesignConstants.ANIMATION.DURATION_FAST);
     interactionActions.toggleMomentLike(this.moment.moment_id);
   }
 
@@ -145,8 +144,12 @@ export struct MomentWallCard {
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.isLikedByMe() ? this.getPalette().accentBackground : this.getPalette().textSecondary)
             .scale(this.likePopped ?
-              { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL } :
+              { x: DesignConstants.INTERACTION.SCALE_LIKE_POP, y: DesignConstants.INTERACTION.SCALE_LIKE_POP } :
               { x: 1, y: 1 })
+            .animation({
+              duration: DesignConstants.ANIMATION.DURATION_FAST,
+              curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+            })
         }
         .alignItems(VerticalAlign.Center)
         .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}like-${this.moment.moment_id}`)
@@ -168,6 +171,12 @@ export struct MomentWallCard {
         .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}comment-${this.moment.moment_id}`)
         .onClick(() => this.openDetail())
         .accessibilityText('查看评论')
+        .responseRegion({
+          x: -DesignConstants.SPACING.SM,
+          y: -DesignConstants.SPACING.SM,
+          width: '120%',
+          height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+        })
       }
       .alignItems(VerticalAlign.Center)
 
@@ -184,6 +193,12 @@ export struct MomentWallCard {
         interactionActions.toggleMomentFavorite(this.moment.moment_id);
       })
       .accessibilityText(this.isFavorited() ? '取消收藏' : '收藏')
+      .responseRegion({
+        x: -DesignConstants.SPACING.MD2,
+        y: -DesignConstants.SPACING.MD2,
+        width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+        height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+      })
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)

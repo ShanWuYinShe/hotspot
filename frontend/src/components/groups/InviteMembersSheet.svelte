@@ -107,7 +107,7 @@
 
 		<div class="flex items-center gap-2 input-surface rounded-md px-3 py-2.5">
 			<Search size={14} class="text-text-secondary" strokeWidth={1.75} />
-			<input bind:value={keyword} oninput={onInput} placeholder="搜索用户昵称…" class="flex-1 bg-transparent text-sm text-text-primary" />
+			<input bind:value={keyword} oninput={onInput} placeholder="搜索用户昵称…" aria-label="搜索用户昵称" class="flex-1 bg-transparent text-sm text-text-primary" />
 		</div>
 
 		<div class="mt-3 max-h-72 overflow-y-auto no-scrollbar pb-3">
@@ -121,22 +121,32 @@
 				<p class="py-6 text-center text-sm text-text-secondary">{keyword.trim() ? '无匹配用户' : '输入昵称搜索用户'}</p>
 			{:else}
 				{#each results as u (u.user.user_id)}
-					<button type="button" onclick={() => toggle(u.user.user_id)} class="hover-btn flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default">
-						<div class="relative">
-							<Avatar src={u.user.avatar_url ?? undefined} name={u.user.nickname} size={36} />
-							{#if selected.has(u.user.user_id)}
-								<span class="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent-default text-text-on-accent"><Check size={10} strokeWidth={3} /></span>
-							{/if}
-						</div>
+					{@const isSelected = selected.has(u.user.user_id)}
+					<!-- M3 checkbox 列表范式：选中行底色变化 + 尾部 checkbox 双态；
+					     hover 差异化——未选中 hover 显示「将选中」淡底预览，选中 hover 只加深一档 -->
+					<button
+						type="button"
+						onclick={() => toggle(u.user.user_id)}
+						aria-pressed={isSelected}
+						class="hover-btn flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors duration-rapid ease-standard outline-none focus-visible:ring-2 focus-visible:ring-accent-default
+							{isSelected ? 'bg-accent-soft hover:bg-interactive-active' : 'hover:bg-interactive-hover'}"
+					>
+						<Avatar src={u.user.avatar_url ?? undefined} name={u.user.nickname} size={36} />
 						<span class="min-w-0 flex-1">
 							<span class="block truncate text-sm text-text-primary">{u.user.nickname}</span>
+						</span>
+						<span
+							class="flex size-4.5 shrink-0 items-center justify-center rounded-full transition-colors duration-rapid ease-standard
+								{isSelected ? 'bg-accent-default text-text-on-accent' : 'border border-border-strong text-transparent'}"
+						>
+							<Check size={11} strokeWidth={3} />
 						</span>
 					</button>
 				{/each}
 			{/if}
 		</div>
 
-		<button type="button" disabled={selected.size === 0 || inviting} onclick={handleInvite} class="hover-btn mt-3 flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent-default disabled:opacity-muted enabled:bg-accent-default enabled:text-text-on-accent">
+		<button type="button" disabled={selected.size === 0 || inviting} onclick={handleInvite} class="hover-btn mt-3 flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent-default disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint enabled:bg-accent-default enabled:text-text-on-accent enabled:shadow-glow-sm enabled:hover:shadow-glow-md">
 			<UserPlus size={15} strokeWidth={1.75} />
 			{inviting ? '邀请中…' : `邀请${selected.size > 0 ? ` ${selected.size} 人` : ''}`}
 		</button>

@@ -246,9 +246,9 @@
 			{#if selectedId !== null && selectedChat}
 				<div class="h-full">
 					{#if selectedChat.kind === 'group'}
-						<GroupChatView groupId={selectedChat.id} showBackButton={false} />
+						<GroupChatView groupId={selectedChat.id} compact showBackButton={false} />
 					{:else}
-						<ChatView peerUserId={selectedChat.peerUserId} contact={{ name: selectedChat.name, avatar: selectedChat.avatar, online: selectedChat.online }} showBackButton={false} />
+						<ChatView peerUserId={selectedChat.peerUserId} compact contact={{ name: selectedChat.name, avatar: selectedChat.avatar, online: selectedChat.online }} showBackButton={false} />
 					{/if}
 				</div>
 			{:else}
@@ -309,7 +309,7 @@
 				{/if}
 				<button
 					type="button"
-					class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring surface-flat size-8"
+					class="hover-btn scale-btn hit-slop flex items-center justify-center rounded-full focus-ring surface-flat size-9"
 					onclick={() => {
 						newChatTab = 'chat';
 						showNewChat = true;

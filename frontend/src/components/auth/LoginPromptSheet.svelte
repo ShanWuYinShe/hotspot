@@ -23,7 +23,7 @@
 <Dialog.Root {open} onOpenChange={(next) => (next ? undefined : onClose())}>
 	<Dialog.Content
 		side="bottom"
-		class="left-1/2 w-full max-w-115 -translate-x-1/2 px-5 pb-8 pt-3"
+		class="w-full px-5 pb-8 pt-3 sm:max-w-115"
 	>
 		<div class="mb-3 flex justify-center" aria-hidden="true">
 			<span class="h-1 w-9 rounded-full bg-border-strong"></span>
@@ -31,7 +31,7 @@
 		<div class="mb-4 flex items-start justify-between">
 			<div>
 				<!-- 弹层标题字重对齐 h1-h4 基线（font-medium），不跟随数字/激活态的 semibold -->
-				<Dialog.Title class="text-lg font-medium tracking-tight text-text-primary" >
+				<Dialog.Title class="text-lg font-medium tracking-title text-text-primary">
 					登录后继续
 				</Dialog.Title>
 				{#if actionLabel}
@@ -42,8 +42,7 @@
 			</div>
 			<Dialog.Close
 				aria-label="关闭"
-				class="flex items-center justify-center rounded-full transition-opacity hover:opacity-soft size-8 text-text-secondary"
-				 
+				class="hover-action focus-ring hit-slop flex size-8 items-center justify-center rounded-full text-text-secondary transition-colors duration-rapid ease-standard hover:text-text-primary"
 			>
 				<X size={18} />
 			</Dialog.Close>

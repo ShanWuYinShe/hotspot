@@ -322,6 +322,12 @@
   }
   .map-pulse-halo { animation: map-pulse var(--cst-motion-pulse) ease-out infinite; }
 
+  /* 页面/内容入场 fade（配合 theme-registry 的 --animate-fade-in 消费）。 */
+  @keyframes cst-fade-in {
+    from { opacity: var(--cst-opacity-none); }
+    to { opacity: var(--cst-opacity-full); }
+  }
+
   /* Loading spinner（全站统一加载指示器：圆形 border + accent 顶边旋转）。
      消除各页 border-2 border-border-default border-t-accent-default animate-spin 重复。
      用法：<div class="spinner size-7"></div> */

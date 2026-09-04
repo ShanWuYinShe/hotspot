@@ -56,7 +56,7 @@
 	};
 </script>
 
-<div class="animate-fade-in flex {sent ? 'justify-end' : 'justify-start'}">
+<div class="group animate-fade-in flex {sent ? 'justify-end' : 'justify-start'}">
 	<div
 		class="max-w-chat-bubble px-3.5 py-2.5 {sent
 			? 'bg-accent-default shadow-glow-md'
@@ -81,7 +81,7 @@
 						type="button"
 						onclick={confirmEdit}
 						disabled={!draft.trim()}
-						class="flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xxs text-text-on-accent enabled:bg-accent-default disabled:opacity-muted outline-none hover-btn focus-visible:ring-2 focus-visible:ring-accent-default"
+						class="hover-btn flex items-center gap-0.5 rounded-full px-2.5 py-1 text-xxs text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:opacity-faint enabled:bg-accent-default enabled:shadow-glow-sm enabled:hover:shadow-glow-md"
 					>
 						<Check size={11} strokeWidth={2} />完成
 					</button>
@@ -116,13 +116,16 @@
 	{#if hasMenu && !editing}
 		<DropdownMenu.Root bind:open={menuOpen}>
 			<div bind:this={menuEl} class="relative flex items-center">
+				<!-- 桌面（fine pointer）：仅行 hover 时显现，降噪（Telegram/Slack 模式）；
+				     触屏常显（无 hover，常显是唯一入口）。菜单开启时保持可见。 -->
 				<button
 					type="button"
 					onclick={() => (menuOpen = !menuOpen)}
-					class="hit-slop ml-1 flex h-6 w-6 self-center items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-accent-default"
+					class="desktop-reveal hit-slop hover-btn scale-btn ml-1 flex h-8 w-8 self-center items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default"
 					aria-label="消息操作"
+					aria-expanded={menuOpen}
 				>
-					<MoreHorizontal size={14} strokeWidth={2} />
+					<MoreHorizontal size={15} strokeWidth={2} />
 				</button>
 			</div>
 			<DropdownMenu.Content customAnchor={menuEl}>
@@ -130,7 +133,8 @@
 					<DropdownMenu.Item onSelect={startEdit}>编辑</DropdownMenu.Item>
 				{/if}
 				{#if canRecall}
-					<DropdownMenu.Item class="text-status-danger" onSelect={handleRecall}>撤回</DropdownMenu.Item>
+					<!-- 危险操作：hover/键盘高亮走 danger 淡底档（与普通项 accent-soft 区分） -->
+					<DropdownMenu.Item class="text-status-danger hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={handleRecall}>撤回</DropdownMenu.Item>
 				{/if}
 			</DropdownMenu.Content>
 		</DropdownMenu.Root>

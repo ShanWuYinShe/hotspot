@@ -65,8 +65,13 @@ locationName = loc?.location_name ?? '';
 			class="flex-1 bg-transparent text-text-primary text-sm"
 		/>
 		{#if searchQuery}
-			<button type="button" class="hover-btn focus-ring hit-slop" onclick={() => (searchQuery = '')}>
-				<X class="size-3.5 text-text-secondary"   strokeWidth={2} />
+			<button
+				type="button"
+				class="hover-action -m-1.5 flex items-center justify-center rounded-full p-1.5 focus-ring"
+				aria-label="清空搜索"
+				onclick={() => (searchQuery = '')}
+			>
+				<X class="size-3.5 text-text-secondary" strokeWidth={2} />
 			</button>
 		{/if}
 	</div>
@@ -186,7 +191,7 @@ locationName = loc?.location_name ?? '';
 							ariaLabel={`选择热门地点 ${loc.displayName}`}
 							class="flex list-row-standard items-center gap-3 px-3.5 py-3"
 						>
-							<div class="flex items-center justify-center rounded-sm shrink-0 bg-accent-default size-9 text-lg opacity-hover">
+							<div class="icon-badge flex shrink-0 items-center justify-center rounded-sm size-9 text-lg" aria-hidden="true">
 								{loc.emoji}
 							</div>
 							<div class="flex-1 min-w-0">
@@ -259,13 +264,14 @@ locationName = loc?.location_name ?? '';
 			<p class="flex-1 truncate text-accent-default text-xs">{selectedLoc.displayName}</p>
 			<button
 				type="button"
-				class="hover-btn focus-ring"
+				class="hover-action -m-1.5 flex items-center justify-center rounded-full p-1.5 focus-ring"
+				aria-label="移除所选地点"
 				onclick={() => {
 					selectedLoc = null;
 					searchQuery = '';
 				}}
 			>
-				<X class="size-3 text-text-secondary"   strokeWidth={2} />
+				<X class="size-3 text-text-secondary" strokeWidth={2} />
 			</button>
 		</div>
 	{/if}

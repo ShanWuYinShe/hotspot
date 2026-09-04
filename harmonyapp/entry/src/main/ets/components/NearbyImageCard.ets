@@ -79,10 +79,25 @@ export struct NearbyImageCard {
     return targetId.startsWith(NearbyImageCard.CHILD_CONTROL_PREFIX);
   }
 
+  // topRight 用「右缘对齐 + markAnchor 右锚」表达（position 的 x 只从左缘起算，
+  // 原两分支同坐标导致 topRight 徽章实际渲染在左上）
   private getBadgePosition(): Position {
     return this.badgeAlign === 'topRight'
-      ? { x: DesignConstants.SPACING.MD2, y: DesignConstants.SPACING.MD2 }
+      ? { x: '100%', y: DesignConstants.SPACING.MD2 }
       : { x: DesignConstants.SPACING.MD2, y: DesignConstants.SPACING.MD2 };
+  }
+
+  private getBadgeAnchor(): Position {
+    return this.badgeAlign === 'topRight'
+      ? { x: '100%', y: 0 }
+      : { x: 0, y: 0 };
+  }
+
+  /** topRight 右缘对齐后向左平移回内边距（等价 left: 100% - MD2） */
+  private getBadgeAlignTranslate(): TranslateOptions {
+    return this.badgeAlign === 'topRight'
+      ? { x: -DesignConstants.SPACING.MD2 }
+      : { x: 0 };
   }
 
   @Builder
@@ -101,7 +116,9 @@ export struct NearbyImageCard {
       .backgroundColor(DesignConstants.COLOR.IMAGE_BADGE_BG)
       .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: DesignConstants.COLOR.IMAGE_BADGE_BORDER })
       .justifyContent(FlexAlign.Center)
+      .markAnchor(this.getBadgeAnchor())
       .position(this.getBadgePosition())
+      .translate(this.getBadgeAlignTranslate())
     } else if (this.badgeText.length > 0) {
       Row({ space: DesignConstants.SPACING.HALF }) {
         if (this.badgeVariant === 'glass') {
@@ -129,7 +146,9 @@ export struct NearbyImageCard {
       .border(this.badgeVariant === 'accent' ?
         { width: 0 } :
         { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: DesignConstants.COLOR.IMAGE_BADGE_BORDER })
+      .markAnchor(this.getBadgeAnchor())
       .position(this.getBadgePosition())
+      .translate(this.getBadgeAlignTranslate())
     }
   }
 
@@ -247,14 +266,17 @@ export struct NearbyImageCard {
           this.slideOut = true;
         }
       } else if (event.type === TouchType.Up) {
-        if (this.isPressed && !this.slideOut && this.onPress) {
-          this.onPress();
-        }
+        // 点击语义交由 onClick 触发（键盘/读屏可达）；此处只复位按压视觉
         this.isPressed = false;
         this.slideOut = false;
       } else if (event.type === TouchType.Cancel) {
         this.isPressed = false;
         this.slideOut = false;
+      }
+    })
+    .onClick(() => {
+      if (!this.disabled && this.onPress) {
+        this.onPress();
       }
     })
   }

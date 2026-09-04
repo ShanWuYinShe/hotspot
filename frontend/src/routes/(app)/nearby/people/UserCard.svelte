@@ -20,10 +20,13 @@
 	let {
 		user,
 		followed,
+		pending = false,
 		onFollow,
 		onNavigate
 	}: {
 		user: NearbyUser;
+		/** 关注请求进行中（按钮禁点防重复提交） */
+		pending?: boolean;
 		followed: boolean;
 		onFollow: () => void;
 		onNavigate: () => void;
@@ -78,11 +81,14 @@
 				{/if}
 				<button
 					type="button"
-					class="hover-btn scale-btn tap-92 hit-slop flex items-center justify-center rounded-full focus-ring shrink-0 size-7"
-					style="{followed
-						? 'background:var(--cst-accent-soft);border:var(--cst-border-width-hairline) solid var(--cst-accent-border);color:var(--cst-accent-default);'
-						: 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);box-shadow:var(--shadow-glow-sm);'}"
+					class="hover-btn tap-92 hit-slop flex items-center justify-center rounded-full border focus-ring shrink-0 size-7
+						{followed
+						? 'border-accent-border bg-accent-soft text-accent-default hover:bg-interactive-hover hover:text-text-primary'
+						: 'border-transparent bg-accent-default text-text-on-accent shadow-glow-sm hover:shadow-glow-md'}
+						{pending ? 'pointer-events-none opacity-soft' : ''}"
 					aria-label={followed ? `取消关注 ${user.name}` : `关注 ${user.name}`}
+					aria-pressed={followed}
+					disabled={pending}
 					onclick={(e) => {
 						e.stopPropagation();
 						onFollow();

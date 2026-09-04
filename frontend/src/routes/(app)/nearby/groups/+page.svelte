@@ -45,20 +45,22 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		async function fetchGroups() {
 			loading = true;
 			loadError = null;
-			const res = await searchGroups({
-				radius: 5000,
-				sort_by: 'distance',
-				...(referencePoint ? { reference_point: referencePoint } : {}),
-				pagination: { limit: 24 }
-			}).catch(() => netError({ items: [] }));
-			if (cancelled) return;
-			const items = res.code === 0 && res.data ? res.data.items : [];
-			if (res.code !== 0) {
-				if (!cancelled) loadError = res.message ?? '加载失败';
-				return;
+			try {
+				const res = await searchGroups({
+					radius: 5000,
+					sort_by: 'distance',
+					...(referencePoint ? { reference_point: referencePoint } : {}),
+					pagination: { limit: 24 }
+				}).catch(() => netError({ items: [] }));
+				if (cancelled) return;
+				if (res.code !== 0) {
+					loadError = res.message ?? '加载失败';
+					return;
+				}
+				groups = (res.code === 0 && res.data ? res.data.items : []).map(mapGroup);
+			} finally {
+				if (!cancelled) loading = false;
 			}
-			groups = items.map(mapGroup);
-			loading = false;
 		}
 		void fetchGroups();
 		return () => {
@@ -86,12 +88,18 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	// 加入/退出：乐观更新 + 失败回滚（spec: groups/enter、groups/exit）。
 	// join 对需审核群组返回 pending_approval——UI 仍标记 joined 简化（真实后端
 	// 以 is_joined 为准，审核通过前列表不会把它标为已加入）。
+	let joinPending = $state(new Set<string>());
+
 	const toggleJoin = (id: string) => {
 		const group = groups.find((g) => g.id === id);
-		if (!group) return;
+		if (!group || joinPending.has(id)) return;
 		const next = !group.joined;
+		joinPending = new Set(joinPending).add(id);
 		groups = groups.map((g) => (g.id === id ? { ...g, joined: next } : g));
 		const done = (res: { code: number }) => {
+			const rest = new Set(joinPending);
+			rest.delete(id);
+			joinPending = rest;
 			if (res.code !== 0) {
 				groups = groups.map((g) => (g.id === id ? { ...g, joined: !next } : g));
 				showToast(next ? '加入失败，请重试' : '退出失败，请重试', 'danger');
@@ -156,7 +164,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				<!-- 精选卡用 GroupCard featured（对齐 Figma），其余用普通网格卡；保留 BSP 布局（决策） -->
 				{#if featured}
 					<div class="mb-5">
-						<GroupCard featured group={featured} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
+						<GroupCard featured group={featured} pending={joinPending.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
 					</div>
 				{/if}
 				<BspCardCanvas
@@ -172,18 +180,18 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					onLoadMore={() => (visibleCount = Math.min(visibleCount + 8, filtered.length))}
 				>
 					{#snippet renderItem(group: Group, index: number)}
-						<GroupCard group={group} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
+						<GroupCard group={group} pending={joinPending.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
 					{/snippet}
 				</BspCardCanvas>
 			{:else}
 				{#if featured}
 					<div class="mb-5">
-						<GroupCard featured group={featured} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
+						<GroupCard featured group={featured} pending={joinPending.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
 					</div>
 				{/if}
 				<div class="grid grid-cols-2 gap-4">
 					{#each rest as group (group.id)}
-						<GroupCard group={group} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
+						<GroupCard group={group} pending={joinPending.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
 					{/each}
 				</div>
 			{/if}

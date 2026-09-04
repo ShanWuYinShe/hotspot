@@ -142,6 +142,8 @@ export interface AnimationSystem {
 
 // ==================== 交互反馈系统接口 ====================
 export interface InteractionSystem {
+  /** 点赞计数弹跳放大（对齐前端 count-pop keyframes 1→1.3→1） */
+  SCALE_LIKE_POP: number;
   /** 卡片按压缩放 */
   SCALE_PRESSED_CARD: number;
   /** 瀑布流卡片按压缩放 */
@@ -550,6 +552,7 @@ const ANIMATION: AnimationSystem = {
 
 // ==================== 交互反馈系统 ====================
 const INTERACTION: InteractionSystem = {
+  SCALE_LIKE_POP: 1.3,
   SCALE_PRESSED_CARD: 0.97,
   SCALE_PRESSED_MASONRY: 0.96,
   SCALE_PRESSED_BUTTON: 0.95,

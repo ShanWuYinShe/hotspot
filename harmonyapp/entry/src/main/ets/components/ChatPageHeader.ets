@@ -58,8 +58,16 @@ export struct ChatPageHeader {
         .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
         .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
         .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
+        .accessibilityText('返回')
         .onClick(() => {
           this.onBack();
+        })
+        // 触控热区：36 → 44（responseRegion 不占布局）
+        .responseRegion({
+          x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+          y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+          width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+          height: DesignConstants.LAYOUT.MIN_HIT_TARGET
         })
 
         if (this.showAvatar) {
@@ -105,8 +113,16 @@ export struct ChatPageHeader {
       .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
       .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
       .backgroundColor(this.getPalette().surfaceSubtle)
+      .accessibilityText('会话操作')
       .onClick(() => {
         this.onTrailingAction();
+      })
+      // 触控热区：32（AVATAR_SIZE.XS 尺寸档借用）→ 44（responseRegion 不占布局）
+      .responseRegion({
+        x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.AVATAR_SIZE.XS) / 2,
+        y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.AVATAR_SIZE.XS) / 2,
+        width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+        height: DesignConstants.LAYOUT.MIN_HIT_TARGET
       })
     }
     .width('100%')

@@ -63,8 +63,11 @@ export struct SafetySettingsPage {
     }
   }
 
+  @State private changingPassword: boolean = false;
+
   private async changePassword(): Promise<void> {
-    if (this.isDestroyed) return;
+    if (this.isDestroyed || this.changingPassword) return;
+    this.changingPassword = true;
     const request: ChangePasswordRequest = {
       old_password: this.oldPassword,
       new_password: this.newPassword
@@ -81,6 +84,8 @@ export struct SafetySettingsPage {
       }
     } catch (_) {
       SystemToast.showError('修改密码失败', this.getUIContext());
+    } finally {
+      this.changingPassword = false;
     }
   }
 
@@ -157,11 +162,12 @@ export struct SafetySettingsPage {
                     onChange: (value: string) => { this.newPassword = value; }
                   })
                   SystemButton({
-                    label: '更新密码',
+                    label: this.changingPassword ? '更新中…' : '更新密码',
                     variant: 'primary',
                     buttonSize: 'large',
                     pill: true,
                     fullWidth: true,
+                    loading: this.changingPassword,
                     onPress: () => { this.changePassword(); }
                   })
                 }

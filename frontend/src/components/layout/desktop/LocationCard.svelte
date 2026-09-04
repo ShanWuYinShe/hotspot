@@ -3,7 +3,7 @@
 	import { startDefaultLocation } from '@/lib/start-default-location';
 
 	// 侧栏底部「位置选择」锚点入口（地图门户）。
-	// 独立小卡片形态（surface-subtle 底 + hairline 边框），与上方导航行明确区隔：
+	// 独立小卡片形态（tinted 底 + hairline 边框），与上方导航行明确区隔：
 	// hover 沿 card-hover 契约抬升投影；折叠时文字随侧栏宽度同步收起，图标磁贴居中不位移。
 
 	let {
@@ -23,8 +23,7 @@
 
 <button
 	type="button"
-	class="card-hover relative flex w-full items-center rounded-md p-1.5 text-left focus-ring {collapsed ? 'justify-center' : ''}"
-	style="background:var(--cst-surface-subtle);border:var(--cst-border-width-hairline) solid var(--cst-border-default);"
+	class="surface-tinted card-hover relative flex w-full items-center rounded-md border border-border-default p-1.5 text-left focus-ring {collapsed ? 'justify-center' : ''}"
 	title={collapsed ? '位置选择' : undefined}
 	aria-label="位置选择"
 	onclick={onClick}

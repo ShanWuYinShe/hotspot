@@ -229,7 +229,11 @@ export struct LocationPickerPage {
 
   /** 定位到当前位置 */
   private locateUser(): void {
-    if (!this.currentLocation) return;
+    // 无定位时显式反馈（原静默 return，用户点定位钮无任何响应）
+    if (!this.currentLocation) {
+      this.showMapToast('暂无定位信息，请授权定位后重试');
+      return;
+    }
     const converted = CoordinateConverter.convertWgs84ToGcj02(
       this.currentLocation.latitude, this.currentLocation.longitude
     );

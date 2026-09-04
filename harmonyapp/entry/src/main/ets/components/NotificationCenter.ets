@@ -451,7 +451,23 @@ export struct NotificationCenter {
             showIcon: true,
             variant: 'primary',
             buttonSize: 'small',
-            onPress: () => this.onMarkAllRead()
+            // 批量标记不可撤销：二次确认防误触
+            onPress: () => {
+              this.getUIContext().showAlertDialog({
+                title: '全部标记已读',
+                message: `将 ${this.getUnreadCount()} 条通知标记为已读，此操作不可撤销。`,
+                primaryButton: {
+                  value: '标记',
+                  fontColor: this.getPalette().accentBackground,
+                  action: () => { this.onMarkAllRead(); }
+                },
+                secondaryButton: {
+                  value: '取消',
+                  fontColor: this.getPalette().textSecondary,
+                  action: () => {}
+                }
+              });
+            }
           })
         }
       }
@@ -638,11 +654,11 @@ export struct NotificationCenter {
       Column({ space: DesignConstants.SPACING.HALF }) {
         Text() {
           Span(this.buildNotificationTitle(notification))
-            .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getPalette().textPrimary)
             .fontWeight(notification.is_read ? DesignConstants.FONT.WEIGHT.REGULAR : DesignConstants.FONT.WEIGHT.MEDIUM)
           Span(' ' + this.buildNotificationMessage(notification))
-            .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getPalette().textPrimary)
         }
         .maxLines(2)

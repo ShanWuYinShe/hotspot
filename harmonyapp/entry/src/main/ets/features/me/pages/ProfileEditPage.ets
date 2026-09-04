@@ -282,8 +282,8 @@ export struct ProfileEditPage {
                     })
                 }
                 .type(ButtonType.Normal)
-                .width(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
-                .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
+                .width(DesignConstants.COMPONENT.STATUS_ICON_SIZE + DesignConstants.SPACING.XS)
+                .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE + DesignConstants.SPACING.XS)
                 .borderRadius(DesignConstants.RADIUS.FULL)
                 .backgroundColor(this.getCurrentThemePalette().accentBackground)
                 .border({ width: DesignConstants.BORDER_WIDTH.HEAVY, color: this.getSurfaceBackground() })
@@ -291,6 +291,13 @@ export struct ProfileEditPage {
                 .opacity(this.isAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)
                 .onClick(() => {
                   this.changeAvatar();
+                })
+                .accessibilityText('编辑头像')
+                .responseRegion({
+                  x: -DesignConstants.SPACING.SM,
+                  y: -DesignConstants.SPACING.SM,
+                  width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+                  height: DesignConstants.LAYOUT.MIN_HIT_TARGET
                 })
               }
 

@@ -6,6 +6,7 @@ import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { UserSettings } from '../../../core/types/api';
 import { SettingsSectionCard, SettingsRowDivider, ToggleSettingRow, SettingToggleItem } from './SettingsSupport';
@@ -117,13 +118,17 @@ export struct PrivacySettingsPage {
     }
   }
 
+  /** 按 key 的 pending 锁：全量 PUT 下 A/B 开关并发提交会互相用旧快照覆盖 */
+  @State private pendingKeys: string[] = [];
+
   private async updateSetting(key: keyof UserSettings, value: boolean): Promise<void> {
     if (this.isDestroyed) return;
-    if (!this.settings) {
+    if (!this.settings || this.pendingKeys.indexOf(String(key)) >= 0) {
       return;
     }
     const next = this.buildUpdatedSettings(this.settings, key, value);
     this.settings = next;
+    this.pendingKeys = this.pendingKeys.concat([String(key)]);
     try {
       const response = await ApiClient.updateSettings({ settings: next });
       if (this.isDestroyed) return;
@@ -134,6 +139,8 @@ export struct PrivacySettingsPage {
     } catch (_) {
       SystemToast.showError('保存失败', this.getUIContext());
       this.loadSettings();
+    } finally {
+      this.pendingKeys = this.pendingKeys.filter((k: string) => k !== String(key));
     }
   }
 
@@ -149,6 +156,12 @@ export struct PrivacySettingsPage {
           onBack: () => { AppRouter.pop(); }
         })
 
+        // 加载完成前不渲染开关列表：10 个开关在未加载时全部显示「关」，
+        // 隐私开关误显示关闭的风险高
+        if (this.loading || !this.settings) {
+          SystemLoadingView({ message: '加载隐私设置…' })
+            .layoutWeight(1)
+        } else {
         Scroll() {
           Column({ space: 0 }) {
             Column() {
@@ -174,6 +187,7 @@ export struct PrivacySettingsPage {
         }
         .layoutWeight(1)
         .width('100%')
+        }
       }
       .width('100%')
       .height('100%')

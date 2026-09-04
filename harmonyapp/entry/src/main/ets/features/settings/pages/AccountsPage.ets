@@ -134,8 +134,11 @@ export struct AccountsPage {
     };
   }
 
+  @State private switchingUserId: string = '';
+
   private async switchTo(auth: AuthData) {
-    if (this.isDestroyed) return;
+    if (this.isDestroyed || this.switchingUserId.length > 0) return;
+    this.switchingUserId = auth.user_id;
     try {
       // 1) 清空缓存（避免串数据）
       await this.cache.clearAll();
@@ -172,6 +175,8 @@ export struct AccountsPage {
       await this.load();
     } catch {
       SystemToast.showError('切换失败', this.getUIContext());
+    } finally {
+      this.switchingUserId = '';
     }
   }
 
@@ -280,12 +285,15 @@ export struct AccountsPage {
                 .alignItems(HorizontalAlign.Start)
 
                 Row({ space: DesignConstants.SPACING.SM }) {
-                      SystemButton({
-                        label: '切换',
-                        variant: 'outline',
-                        buttonSize: 'small',
-                        onPress: () => { this.switchTo(acc); }
-                      })
+                      if (this.currentUserId !== acc.user_id) {
+                        SystemButton({
+                          label: this.switchingUserId === acc.user_id ? '切换中…' : '切换',
+                          variant: 'outline',
+                          buttonSize: 'small',
+                          loading: this.switchingUserId === acc.user_id,
+                          onPress: () => { this.switchTo(acc); }
+                        })
+                      }
 
                       SystemButton({
                         label: '删除',
@@ -305,7 +313,15 @@ export struct AccountsPage {
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.LG)
             .shadow(this.getCurrentThemePalette().elevatedShadow)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+            // 当前账号 accent 边框选中指示（原仅小徽章「当前」，选中态过弱）
+            .border({
+              width: this.currentUserId === acc.user_id ?
+              DesignConstants.BORDER_WIDTH.REGULAR :
+              DesignConstants.BORDER_WIDTH.HAIRLINE,
+              color: this.currentUserId === acc.user_id ?
+              this.getCurrentThemePalette().accentBackground :
+              this.getSurfaceBorder()
+            })
             .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD3 })
           }, (acc: AuthData) => acc.user_id)
         }

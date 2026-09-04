@@ -10,6 +10,8 @@
 	import SettingRow from '@/components/forms/SettingRow.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import * as Dialog from '@/components/ui/dialog';
+	import Button from '@/components/ui/button.svelte';
 	import { logout } from '@/stores/auth.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { theme, setTheme, toggleDark, THEME_OPTIONS } from '@/stores/theme.svelte';
@@ -125,6 +127,8 @@
 		};
 	});
 
+	let confirmLogoutOpen = $state(false);
+
 	const handleLogout = async () => {
 		// auth store logout clears client auth state and keeps the user on the
 		// current route (anonymous browsing). No more redirect to a dead /login.
@@ -157,9 +161,9 @@
 				<Avatar class="border-2 border-surface-primary shadow-glow-md" src={accountAvatar} name={accountName} size={48}  />
 				<div class="flex-1 min-w-0">
 					{#if loading}
-						<p class="text-sm tracking-tight text-text-secondary">加载中…</p>
+						<p class="text-sm tracking-title text-text-secondary">加载中…</p>
 					{:else}
-						<p class="text-sm tracking-tight text-text-primary">{accountName || '用户'}</p>
+						<p class="text-sm tracking-title text-text-primary">{accountName || '用户'}</p>
 						<p class="text-xs mt-0.5 text-text-secondary">{accountEmail || '未绑定邮箱'}</p>
 					{/if}
 				</div>
@@ -187,7 +191,7 @@
 									aria-pressed={selected}
 									onclick={() => setTheme(t.id)}
 									class="flex items-center gap-2 rounded-sm border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {selected
-										? 'border-accent-border bg-accent-soft text-accent-default'
+										? 'border-accent-border bg-accent-soft text-accent-default hover:bg-interactive-active'
 										: 'border-border-default text-text-secondary hover:bg-interactive-hover'}"
 								>
 									{#if t.id === 'forest'}
@@ -201,7 +205,7 @@
 						</div>
 					{/snippet}
 			</SettingRow>
-			<SettingRow title="深色模式" description={theme.isDark ? '当前使用深色外观' : '当前使用浅色外观'}>
+			<SettingRow title="深色模式" description={theme.isDark ? '当前使用深色外观' : '当前使用浅色外观'} onRowClick={toggleDark}>
 				{#snippet icon()}
 					{#if theme.isDark}
 						<Moon class="size-4 text-accent-default"   strokeWidth={1.5} />
@@ -218,7 +222,7 @@
 	<p class="eyebrow px-1 mt-6 mb-2 text-text-primary opacity-emphasis">通知</p>
 	<div class="card-raised rounded-lg overflow-hidden">
 	<ListContainer>
-			<SettingRow title="推送通知" description="消息、提及与新动态提醒">
+			<SettingRow title="推送通知" description="消息、提及与新动态提醒" onRowClick={toggleNotif}>
 				{#snippet icon()}
 					<Bell class="size-4 text-accent-default"   strokeWidth={1.5} />
 				{/snippet}
@@ -231,13 +235,13 @@
 	<p class="eyebrow px-1 mt-6 mb-2 text-text-primary opacity-emphasis">隐私与安全</p>
 	<div class="card-raised rounded-lg overflow-hidden">
 	<ListContainer>
-			<SettingRow title="私密账号" description="仅关注者可查看你的内容">
+			<SettingRow title="私密账号" description="仅关注者可查看你的内容" onRowClick={loading ? undefined : togglePrivateProfile}>
 				{#snippet icon()}
 					<Lock class="size-4 text-accent-default"   strokeWidth={1.5} />
 				{/snippet}
 				<Toggle on={privateProfile} onToggle={togglePrivateProfile} label="私密账号" />
 			</SettingRow>
-			<SettingRow title="位置共享" description="允许附近用户发现你">
+			<SettingRow title="位置共享" description="允许附近用户发现你" onRowClick={loading ? undefined : toggleLocationSharing}>
 				{#snippet icon()}
 					<MapPin class="size-4 text-accent-default"   strokeWidth={1.5} />
 				{/snippet}
@@ -260,16 +264,29 @@
 	</ListContainer>
 	</div>
 
-	<!-- Log Out — flat, less visually heavy -->
+	<!-- Log Out — flat, less visually heavy；二次确认防误触 -->
 	<div class="mt-5">
 		<button
 			type="button"
-			class="hover-btn flex items-center justify-center gap-2 px-4 py-3 rounded-md w-full focus-ring text-accent-default"
-			onclick={() => void handleLogout()}
+			class="hover-btn flex items-center justify-center gap-2 px-4 py-3 rounded-md w-full focus-ring text-status-danger hover:bg-danger-bg"
+			onclick={() => (confirmLogoutOpen = true)}
 		>
 			<LogOut class="size-3.5"  strokeWidth={1.75} />
 			<span class="text-sm">退出登录</span>
 		</button>
 	</div>
+
+	<Dialog.Root bind:open={confirmLogoutOpen}>
+		<Dialog.Content class="max-w-90 p-0">
+			<div class="px-5 pt-5 pb-4">
+				<Dialog.Title class="text-lg font-medium tracking-title text-text-primary">退出登录？</Dialog.Title>
+				<Dialog.Description class="mt-1 text-sm text-text-secondary">退出后将保持游客浏览，发布、关注等操作需要重新登录。</Dialog.Description>
+			</div>
+			<div class="flex flex-col gap-2 px-5 pb-5">
+				<Button type="button" variant="danger" size="lg" class="w-full" onclick={() => void handleLogout()}>退出登录</Button>
+				<Button type="button" variant="secondary" size="lg" class="w-full" onclick={() => (confirmLogoutOpen = false)}>取消</Button>
+			</div>
+		</Dialog.Content>
+	</Dialog.Root>
 		{/if}
 </StandardPageLayout>

@@ -15,12 +15,16 @@
 	} = $props();
 </script>
 
-<div class="shrink-0 flex items-center gap-2.5 px-4 py-3 bg-surface-primary border-t border-border-default">
+<div
+	class="shrink-0 flex items-center gap-2.5 bg-surface-primary border-t border-border-default px-4 pt-3"
+	style="padding-bottom:max(0.75rem, env(safe-area-inset-bottom));"
+>
 	<Avatar class="border border-border-default" src={auth.user?.avatar_url} name={auth.user?.nickname} size={30} />
 	<div class="flex-1 flex items-center px-4 rounded-md input-surface h-9.5">
 		<input
 			bind:this={inputEl}
 			bind:value={input}
+			aria-label="评论输入框"
 			onkeydown={(e) => {
 				// IME 组合中的回车是选词确认，不能当发送（中文输入法致命）
 				if (e.key === 'Enter' && !e.isComposing) onSend();
@@ -31,9 +35,12 @@
 	</div>
 	<button
 		type="button"
-		class="hover-btn scale-btn tap-88 flex items-center justify-center rounded-full focus-ring shrink-0 size-9" style="background:{input.trim() ? 'var(--cst-accent-default)' : 'var(--cst-surface-primary)'};box-shadow:{input.trim() ? 'var(--shadow-glow-md)' : 'var(--shadow-raised-sm)'};border:var(--cst-border-width-hairline) solid var(--cst-border-default);transition:all var(--cst-motion-standard) var(--cst-ease-standard);"
+		class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default focus-ring shrink-0 size-9 transition-all duration-standard ease-standard
+			{input.trim() ? 'border-transparent bg-accent-default text-text-on-accent shadow-glow-md hover:shadow-glow-lg' : 'bg-surface-primary text-text-secondary shadow-raised-sm'}"
 		onclick={() => onSend()}
+		aria-label="发送评论"
+		disabled={!input.trim()}
 	>
-		<Send class="size-3.5" style="color:{input.trim() ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)'};transform:translateX(1px);" strokeWidth={2} />
+		<Send class="size-3.5" style="transform:translateX(1px);" strokeWidth={2} />
 	</button>
 </div>

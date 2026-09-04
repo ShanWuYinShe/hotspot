@@ -96,6 +96,9 @@ export struct ProfilePage {
   @State myFollowersCount: number = 0;
   @State myFollowingCount: number = 0;
   @State selectedTab: number = 0;
+  /** 数据行按压/hover（对齐 ProfileMenuItem 按压契约；原行点击零反馈） */
+  @State private profileRowPressed: string = '';
+  @State private profileRowHovered: string = '';
   // 快速体验弹窗
   // 升级表单
   @State showUpgradeForm: boolean = false;
@@ -1119,21 +1122,17 @@ export struct ProfilePage {
               this.buildProfileDataList()
             }
 
-            // 标签栏 (posts/liked/saved) —— 统一 TabsPillGroup
+            // 标签栏 —— 统一 TabsPillGroup；「喜欢/收藏」无数据源
+            // （spec UserProfileBundle 仅 recent_moments），移除恒空假 tab
             TabsPillGroup({
-              tabs: [{ label: '帖子' }, { label: '喜欢' }, { label: '收藏' }],
-              activeIndex: this.selectedTab,
-              actions: {
-                onChange: (index: number) => {
-                  this.selectedTab = index;
-                }
-              }
+              tabs: [{ label: '帖子' }],
+              activeIndex: 0
             })
               .margin({ bottom: DesignConstants.SPACING.MD })
 
             // 画廊 (根据选中的 tab 展示不同内容)
             ProfileMomentGallery({
-              selectedTab: this.selectedTab,
+              selectedTab: 0,
               moments: this.myMoments,
               columns: this.getMomentColumns(),
               resolvedThemeId: this.resolvedThemeId
@@ -1203,6 +1202,14 @@ export struct ProfilePage {
           })
           .shadow(this.getCurrentThemePalette().accentShadow)
           .onClick(() => this.changeAvatarDirectly())
+          .accessibilityText('更换头像')
+          // 触控热区：视觉 24 → 命中区 44（responseRegion 不占布局）
+          .responseRegion({
+            x: -DesignConstants.SPACING.SM,
+            y: -DesignConstants.SPACING.SM,
+            width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+            height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+          })
         }
 
         Column({ space: DesignConstants.SPACING.THREE }) {
@@ -1408,6 +1415,24 @@ export struct ProfilePage {
       width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
       color: { bottom: this.getSurfaceBorder() }
     } : { width: 0 })
+    .backgroundColor(this.profileRowPressed === label ?
+      this.getCurrentThemePalette().surfaceSubtle :
+      (this.profileRowHovered === label ? this.getCurrentThemePalette().accentMuted :
+      DesignConstants.COLOR.TRANSPARENT))
+    .scale(this.profileRowPressed === label ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW } :
+      { x: 1, y: 1 })
+    .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.profileRowPressed = label;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.profileRowPressed = '';
+      }
+    })
+    .onHover((isHover: boolean) => {
+      this.profileRowHovered = isHover ? label : '';
+    })
     .onClick(() => { onTap(); })
   }
 
@@ -1438,6 +1463,13 @@ export struct ProfilePage {
         .border({ width: DesignConstants.BORDER_WIDTH.HEAVY, color: this.getCurrentThemePalette().pageBackground })
         .shadow(this.getCurrentThemePalette().accentShadow)
         .onClick(() => this.changeAvatarDirectly())
+        .accessibilityText('更换头像')
+        .responseRegion({
+          x: -DesignConstants.SPACING.SM,
+          y: -DesignConstants.SPACING.SM,
+          width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+          height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+        })
       }
       .margin({ top: DesignConstants.SPACING.LG2, bottom: DesignConstants.SPACING.MD })
 
@@ -1617,6 +1649,13 @@ export struct ProfilePage {
             .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getCurrentThemePalette().pageBackground })
             .justifyContent(FlexAlign.Center)
             .onClick(() => this.startEdit())
+            .accessibilityText('编辑头像')
+            .responseRegion({
+              x: -DesignConstants.SPACING.SM,
+              y: -DesignConstants.SPACING.SM,
+              width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+              height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+            })
           }
           .width(DesignConstants.COMPONENT.AVATAR_SIZE.PROFILE)
           .height(DesignConstants.COMPONENT.AVATAR_SIZE.PROFILE)

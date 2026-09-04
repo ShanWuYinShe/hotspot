@@ -277,7 +277,7 @@ export struct MomentFeedCard {
           Row({ space: DesignConstants.SPACING.MD }) {
             Row({ space: DesignConstants.SPACING.XS }) {
               LucideIcon({
-                  icon: AppIcon.HEART,
+                  icon: this.isLikedByMe() ? AppIcon.HEART_FILL : AppIcon.HEART,
                   iconSize: DesignConstants.FONT.SIZE.MD,
                   color: this.isLikedByMe() ? this.getPalette().accentBackground : this.getPalette().textSecondary
                 })
@@ -286,10 +286,6 @@ export struct MomentFeedCard {
               .scale(this.pressedActionKey === 'like' ?
                 { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
                 { x: 1, y: 1 })
-              .animation({
-                duration: DesignConstants.ANIMATION.DURATION_FAST,
-                curve: DesignConstants.ANIMATION.CURVE_SMOOTH
-              })
               .animation({ curve: curves.springMotion(
                 DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
                 DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
@@ -337,7 +333,7 @@ export struct MomentFeedCard {
 
           Row({ space: DesignConstants.SPACING.MD }) {
             LucideIcon({
-                icon: AppIcon.STAR_FILL,
+                icon: this.getMomentState()?.is_favorited ?? this.moment.is_favorited ? AppIcon.STAR_FILL : AppIcon.STAR,
                 iconSize: DesignConstants.FONT.SIZE.MD,
                 color: this.getMomentState()?.is_favorited ?? this.moment.is_favorited ? this.getPalette().accentBackground : this.getPalette().textSecondary
               })
@@ -346,10 +342,6 @@ export struct MomentFeedCard {
             .scale(this.pressedActionKey === 'favorite' ?
               { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
               { x: 1, y: 1 })
-            .animation({
-              duration: DesignConstants.ANIMATION.DURATION_FAST,
-              curve: DesignConstants.ANIMATION.CURVE_SMOOTH
-            })
             .animation({ curve: curves.springMotion(
               DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
               DesignConstants.INTERACTION.SPRING_DAMPING_PRESS

@@ -816,6 +816,13 @@ export struct ChatPage {
   }
 
   private async pickAttachment(): Promise<void> {
+    // 禁言期间/发送中不允许发图（对齐 isSendInteractive 禁用契约；原实现仅守卫文字发送）
+    if (this.isGroupServerMuted || this.isSending) {
+      if (this.isGroupServerMuted) {
+        SystemToast.show('你已被禁言', this.getUIContext());
+      }
+      return;
+    }
     try {
       const context = AppStorage.get<common.UIAbilityContext>('context');
       if (!context) return;
@@ -1415,18 +1422,33 @@ export struct ChatPage {
             this.sendMessage();
           })
 
-        // 对齐前端：圆形发送钮（纸飞机 icon）；交互态 accent 底，非交互灰底
+        // 对齐前端：圆形发送钮（纸飞机 icon）；交互态 accent 底，非交互灰底；
+        // 发送中旋转指示（LoadingProgress 替代静态时钟图标）
         Button() {
-          LucideIcon({
-              icon: this.isSending ? AppIcon.TIME : AppIcon.SEND,
+          if (this.isSending) {
+            LoadingProgress()
+              .width(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
+              .height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
+              .color(this.getChatTheme().sendButtonActiveText)
+          } else {
+            LucideIcon({
+              icon: AppIcon.SEND,
               iconSize: DesignConstants.FONT.SIZE.LG,
               color: this.isSendInteractive() ? this.getChatTheme().sendButtonActiveText : this.getCurrentThemePalette().textSecondary
             })
+          }
         }
         .type(ButtonType.Circle)
         .stateEffect(false)
         .width(this.getChatVisualStyle().sendButton.height)
         .height(this.getChatVisualStyle().sendButton.height)
+        // 发送钮热区扩到 44（视觉 36 不变，对齐同排「+」钮 MIN_HIT_TARGET 契约）
+        .responseRegion({
+          x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - this.getChatVisualStyle().sendButton.height) / 2,
+          y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - this.getChatVisualStyle().sendButton.height) / 2,
+          width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+          height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+        })
         .backgroundColor(this.isSendInteractive() ? this.getChatTheme().sendButtonActive : this.getChatTheme().sendButtonDisabled)
         .shadow(this.getChatVisualStyle().sendButton.shadow)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getChatTheme().inputBorder })
@@ -1520,7 +1542,7 @@ export struct ChatPage {
       .backgroundColor(this.getCurrentThemePalette().accentBackground)
       .shadow(this.getCurrentThemePalette().accentShadow)
       .position({ x: '50%', y: '78%' })
-      .translate({ x: 0, y: 0 })
+      .translate({ x: -56, y: 0 }) // 半宽回中（markAnchor 亦可；pill 约 112vp 宽）
       .onClick(() => { this.jumpToBottom(); })
       .accessibilityText('滚动到最新消息')
     }

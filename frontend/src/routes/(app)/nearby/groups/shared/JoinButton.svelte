@@ -3,27 +3,34 @@
 	import type { Group } from './group-data';
 
 	// 加入/已加入切换按钮（对齐 Figma Make NearbyGroupsPage JoinButton）。
-	// 按钮位于底部 card-menu tray（非深色图片上），已加入用中性描边样式。
-
-	let { group, onToggle }: { group: Group; onToggle: () => void } = $props();
+	// 双态样式全部类化——inline 背景会压制 hover 反馈，导致两态 hover 相同：
+	//   未加入：accent 实底 + glow，hover 光晕抬档（hover:shadow-glow-md）；
+	//   已加入：中性描边，hover 淡底填充 + 文字加深——两态 hover 反馈不同（四态契约）。
+	// pending：提交中禁点防重复请求（乐观更新期间）。
+	let {
+		group,
+		pending = false,
+		onToggle
+	}: { group: Group; pending?: boolean; onToggle: () => void } = $props();
 </script>
 
 <button
 	type="button"
-	class="hover-btn scale-btn hit-slop rounded-full focus-ring text-sm px-3.25 py-1.5 shrink-0 {group.joined ? '' : 'font-semibold'}"
-	style={group.joined
-		? 'border:var(--cst-border-width-hairline) solid var(--cst-border-strong);color:var(--cst-text-secondary);'
-		: 'background:var(--cst-accent-default);color:var(--cst-text-on-accent);box-shadow:var(--shadow-glow-sm);'}
+	class="hover-btn hit-slop focus-ring flex shrink-0 items-center gap-1 rounded-full px-3.25 py-1.5 text-sm
+		{group.joined
+		? 'border border-border-strong text-text-secondary hover:bg-interactive-hover hover:text-text-primary'
+		: 'bg-accent-default font-semibold text-text-on-accent shadow-glow-sm hover:shadow-glow-md'}
+		{pending ? 'pointer-events-none opacity-soft' : ''}"
+	aria-pressed={group.joined}
+	disabled={pending}
 	onclick={(e) => {
 		e.stopPropagation();
 		onToggle();
 	}}
 >
 	{#if group.joined}
-		<span class="flex items-center gap-1">
-			<Check size={12} />
-			已加入
-		</span>
+		<Check size={12} />
+		已加入
 	{:else}
 		加入
 	{/if}

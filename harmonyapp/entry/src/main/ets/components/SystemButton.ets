@@ -46,6 +46,8 @@ export struct SystemButton {
 
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State isPressed: boolean = false;
+  /** hover（仅键鼠外接触发；onHover 在触屏设备不会触发） */
+  @State isHovered: boolean = false;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -68,7 +70,9 @@ export struct SystemButton {
   }
 
   private getIconSize(): number {
-    return this.getFontSize() + 3;
+    if (this.buttonSize === 'compact') return DesignConstants.COMPONENT.ICON_SIZE_XS; // 16
+    if (this.buttonSize === 'sheet' || this.buttonSize === 'large') return DesignConstants.COMPONENT.ICON_SIZE_MD; // 24
+    return DesignConstants.COMPONENT.ICON_SIZE_SM; // 20
   }
 
   private getHorizontalPadding(): number {
@@ -106,7 +110,8 @@ export struct SystemButton {
       case 'primary':
         return p.accentText; // --text-on-accent
       case 'danger':
-        return p.accentText;
+        // danger 实底文字：恒定白色（vibrant_light 的 accentText 与 error 底对比 <4.5:1）
+        return DesignConstants.COLOR.WHITE;
       case 'secondary':
         return p.buttonSecondaryText;
       case 'outline':
@@ -161,6 +166,15 @@ export struct SystemButton {
     // 扁平风格：仅 primary / danger 带品牌阴影（对齐前端 --shadow-brand-btn）；
     // 无阴影时返回零阴影而非 undefined（undefined 实参会破坏属性链导致直角）
     if (this.variant === 'primary' || this.variant === 'danger') {
+      // hover（键鼠）光晕抬档：同色系阴影半径放大（对齐前端 hover:shadow-glow-md）
+      if (this.isHovered && this.isInteractive()) {
+        return {
+          radius: Math.round(p.accentShadow.radius * 1.5),
+          color: p.accentShadow.color,
+          offsetX: p.accentShadow.offsetX,
+          offsetY: p.accentShadow.offsetY
+        };
+      }
       return p.accentShadow;
     }
     if (this.shadowed) {
@@ -170,8 +184,38 @@ export struct SystemButton {
     return none;
   }
 
+  /** hover 背景/边框（键鼠）：透明变体（ghost/outline）hover = accentMuted 淡填充 + 边框提亮 */
+  private getHoverOverlayBackground(): ResourceColor {
+    const p = this.getPalette();
+    const transparentVariants = ['ghost', 'outline'];
+    if (this.isHovered && this.isInteractive() && transparentVariants.indexOf(this.variant) >= 0) {
+      return p.accentMuted;
+    }
+    return this.getBackgroundColor();
+  }
+
+  private getHoverBorderColor(): ResourceColor {
+    const p = this.getPalette();
+    if (this.isHovered && this.isInteractive() && this.variant === 'ghost') {
+      return p.floatingBorderColor;
+    }
+    return this.getBorderColor();
+  }
+
   private isInteractive(): boolean {
     return !this.disabled && !this.loading;
+  }
+
+  /** compact(28)/small(36) 视觉高度的垂直热区扩展到 44vp */
+  private getResponseRegion(): Rectangle {
+    const height = this.getHeight();
+    const extend = Math.max(0, DesignConstants.LAYOUT.MIN_HIT_TARGET - height) / 2;
+    return {
+      x: 0,
+      y: -extend,
+      width: '100%',
+      height: height + extend * 2
+    };
   }
 
   build() {
@@ -210,9 +254,9 @@ export struct SystemButton {
     .height(this.getHeight())
     .width(this.fullWidth ? '100%' : 'auto')
     .padding({ left: this.getHorizontalPadding(), right: this.getHorizontalPadding() })
-    .backgroundColor(this.getBackgroundColor())
+    .backgroundColor(this.getHoverOverlayBackground())
     .borderRadius(this.getRadius())
-    .border({ width: this.getBorderWidth(), color: this.getBorderColor() })
+    .border({ width: this.getBorderWidth(), color: this.getHoverBorderColor() })
     .shadow(this.getShadow())
     .enabled(this.isInteractive())
     .opacity(this.disabled ? DesignConstants.OPACITY.DISABLED : 1)
@@ -240,6 +284,23 @@ export struct SystemButton {
         return;
       }
       this.onPress?.();
+    })
+    .onHover((isHover: boolean) => {
+      if (this.isInteractive()) {
+        this.isHovered = isHover;
+      }
+    })
+    // 小尺寸按钮触控热区：垂直方向外扩到 LAYOUT.MIN_HIT_TARGET（responseRegion
+    // 不影响布局与视觉；水平方向因 auto 宽度不可计算，保持原生命中区）
+    .responseRegion(this.getResponseRegion())
+    // 键盘焦点环（stateEffect 已关，系统焦点不显示；Tab 导航需要可感知焦点）
+    .onFocus(() => {
+      if (this.isInteractive()) {
+        this.isHovered = true;
+      }
+    })
+    .onBlur(() => {
+      this.isHovered = false;
     })
   }
 }

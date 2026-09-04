@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Pin } from './location-data';
-	import { markerSvg, PIN_COLORS, type MapBounds } from './location-shared';
+	import { markerSvg, PIN_COLORS, PIN_LABELS, type MapBounds } from './location-shared';
 
 	// 地图图钉。
 
@@ -27,6 +27,7 @@
 	type="button"
 	class="absolute focus-ring"
 	style="left:{pos.x}%;top:{pos.y}%;transform:translate(-50%, -100%) scale({isSelected ? 1.32 : 1});z-index:{isSelected ? 30 : 10};transition:transform var(--cst-motion-standard) var(--cst-ease-bounce);background:transparent;"
+	aria-label={pin.name || PIN_LABELS[pin.type]}
 	onclick={onSelect}
 >
 	{#if (pin.count ?? 1) > 1}

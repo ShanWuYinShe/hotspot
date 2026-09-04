@@ -65,10 +65,16 @@ export struct UserCard {
     }
   }
 
+  /** follow 请求进行中（防连点：乐观更新来回翻转 + 重复打 API） */
+  @State private followInFlight: boolean = false;
+
   private toggleFollow(): void {
     const userId = this.getUserId();
-    if (userId) {
-      interactionActions.setFollowUser(userId, !this.isFollowing());
+    if (userId && !this.followInFlight) {
+      this.followInFlight = true;
+      interactionActions.setFollowUser(userId, !this.isFollowing()).finally(() => {
+        this.followInFlight = false;
+      });
     }
   }
 
@@ -93,7 +99,16 @@ export struct UserCard {
       { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().accentBackground } :
       { width: 0 })
     .shadow(this.isFollowing() ? undefined : this.getPalette().accentShadow)
-    .scale(this.followPressed ?
+    // 双态按压差异：未跟随 = 缩放按压（「将选中」）；已跟随 = 边框加深（选中态再确认）
+    .border(this.isFollowing() ?
+      {
+        width: this.followPressed ?
+        DesignConstants.BORDER_WIDTH.STRONG :
+        DesignConstants.BORDER_WIDTH.HAIRLINE,
+        color: this.getPalette().accentBackground
+      } :
+      { width: 0 })
+    .scale(!this.isFollowing() && this.followPressed ?
       { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
       { x: 1, y: 1 })
     .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
@@ -105,6 +120,13 @@ export struct UserCard {
       }
     })
     .onClick(() => this.toggleFollow())
+    // 触控热区：视觉 28vp，responseRegion 外扩到 44vp（不占布局）
+    .responseRegion({
+      x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT) / 2,
+      y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT) / 2,
+      width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+      height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+    })
     .accessibilityText(this.isFollowing() ?
       `取消关注 ${this.user.user?.nickname ?? ''}` :
       `关注 ${this.user.user?.nickname ?? ''}`)

@@ -6,15 +6,12 @@
 	// 详情栏位置 mini 卡。
 
 	let { name, desc }: { name: string; desc?: string } = $props();
-	let hovered = $state(false);
 </script>
 
 <button
 	type="button"
-	class="hover-bg flex items-center gap-2.5 w-full focus-ring text-left rounded-sm p-2 -m-2"
+	class="hover-bg hit-slop flex items-center gap-2.5 w-full focus-ring text-left rounded-sm p-2"
 	onclick={() => void goto(ROUTES.map)}
-	onmouseenter={() => (hovered = true)}
-	onmouseleave={() => (hovered = false)}
 >
 	<div class="flex items-center justify-center rounded-full shrink-0 size-8 bg-accent-soft"  >
 		<MapPin class="size-3.5 text-accent-default"   strokeWidth={1.75} />

@@ -67,6 +67,8 @@ export struct SettingsPage {
   @State announcementsLoading: boolean = false;
   @State metaRefreshing: boolean = false;
   @State showThemeSheet: boolean = false;
+  /** 主题卡按压态（sheet 主交互元素；原零按压反馈） */
+  @State private themeCardPressed: string = '';
   @State showLogoutConfirm: boolean = false;
   // 用户偏好开关（对齐前端 settings：私密账号 / 位置共享 / 推送通知 / 深色）
   @State privacyPrivate: boolean = false;
@@ -675,7 +677,7 @@ export struct SettingsPage {
                     .width('100%')
                     .height(DesignConstants.COMPONENT.LOGOUT_BUTTON_HEIGHT)
                     .backgroundColor(Color.Transparent)
-                    .fontColor(this.getCurrentThemePalette().accentBackground)
+                    .fontColor(this.getCurrentThemePalette().error)
                     .fontSize(DesignConstants.FONT.SIZE.LG)
                     .type(ButtonType.Normal)
                     .borderRadius(DesignConstants.SHAPE.BUTTON)
@@ -845,6 +847,17 @@ export struct SettingsPage {
     .border({ width: this.isThemeOptionActive(option) ? DesignConstants.BORDER_WIDTH.REGULAR : DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentBackground : this.getThemeOptionPalette(option).borderColor })
     .shadow(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentShadow : this.getThemeOptionPalette(option).surfaceShadow)
     // 选中底色/边框/阴影切换过渡（对齐 DesktopLayout 导航项，避免硬跳）
+    .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.themeCardPressed = option.mode;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.themeCardPressed = '';
+      }
+    })
+    .scale(this.themeCardPressed === option.mode && !this.isThemeOptionActive(option) ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW } :
+      { x: 1, y: 1 })
     .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
     .onClick(() => {
       this.handleThemeChange(option.mode).catch(() => {

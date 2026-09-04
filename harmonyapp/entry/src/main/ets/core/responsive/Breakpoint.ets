@@ -131,10 +131,12 @@ export function getBreakpointType(widthVp: number): BreakpointType {
   if (widthVp >= BREAKPOINT_MD_MAX_VP + 1) {
     return 'lg';
   }
-  if (widthVp >= BREAKPOINT_XS_MAX_VP + 1) {
+  // 档位映射修复：320-599vp 是 sm（原误用 XS_MAX+1 判 md，导致 360/390vp 主流
+  // 手机竖屏全部被判成 md，污染 PageShellContainer 留白/网格列数等一切断点分支）
+  if (widthVp >= BREAKPOINT_SM_MAX_VP + 1) {
     return 'md';
   }
-  if (widthVp >= BREAKPOINT_XS_MAX_VP - 300) {
+  if (widthVp >= BREAKPOINT_XS_MAX_VP + 1) {
     return 'sm';
   }
   return 'xs';

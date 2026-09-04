@@ -53,7 +53,7 @@
 			'top-0 left-0 right-0 rounded-b-sheet shadow-[var(--cst-elevation-sheet)] data-[state=open]:slide-in-from-top data-[state=closed]:slide-out-to-top'
 	};
 
-	// 对齐 Figma Make Sheet：遮罩统一用 black/50（比 surface-overlay 更深，与设计一致）。
+	// 遮罩走 --cst-surface-scrim（themes/*.css 按主题/明暗定义，vibrant≈0.38-0.42）。
 	const canShowClose = $derived(showCloseButton && side !== 'center');
 </script>
 
@@ -68,11 +68,10 @@
 		{@render children?.()}
 		{#if canShowClose}
 			<Dialog.Close
-				class="absolute top-4 right-4 z-10 rounded-full opacity-soft transition-opacity hover:opacity-full focus-visible:outline-2 focus-visible:outline-accent-default focus-visible:outline-offset-2"
+				class="hover-action focus-ring absolute top-3 right-3 z-10 flex size-8 items-center justify-center rounded-full text-text-secondary transition-opacity duration-rapid ease-standard hover:text-text-primary"
 				aria-label="关闭"
 			>
 				<X class="size-4" strokeWidth={2} />
-				<span class="sr-only">Close</span>
 			</Dialog.Close>
 		{/if}
 	</Dialog.Content>

@@ -50,7 +50,7 @@
 			<button
 				type="button"
 				onclick={() => removeAt(i)}
-				class="hit-slop absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-surface-media-scrim-strong text-content-inverse outline-none backdrop-blur-sm hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-content-inverse"
+				class="hit-slop absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-surface-media-scrim-strong text-content-inverse outline-none backdrop-blur-[var(--cst-blur-sm)] hover-btn scale-btn focus-visible:ring-2 focus-visible:ring-content-inverse"
 				aria-label={`移除照片 ${i + 1}`}
 			>
 				<X size={12} strokeWidth={2} />
@@ -61,7 +61,7 @@
 		<button
 			type="button"
 			onclick={() => inputEl?.click()}
-			class="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border-strong text-text-secondary outline-none transition-colors hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default"
+			class="hover-btn flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border-strong text-text-secondary outline-none transition-colors hover:border-accent-border hover:bg-accent-soft hover:text-accent-default focus-visible:ring-2 focus-visible:ring-accent-default"
 			aria-label="添加照片"
 		>
 			<ImagePlus size={18} strokeWidth={1.5} />

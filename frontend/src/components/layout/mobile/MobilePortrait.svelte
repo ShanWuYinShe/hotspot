@@ -47,7 +47,7 @@
 
 		{#if !isSubPage}
 			<nav
-				aria-label="Main navigation"
+				aria-label="主导航"
 				class="shrink-0 w-full"
 				style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);-webkit-backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);border-top:var(--cst-border-width-hairline) solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);transition:background var(--cst-motion-slow) var(--cst-ease-standard), border-color var(--cst-motion-slow) var(--cst-ease-standard);"
 			>

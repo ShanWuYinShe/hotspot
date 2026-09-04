@@ -57,7 +57,7 @@
 		onBack={() => void goto(ROUTES.me)}
 	>
 		{#snippet trailing()}
-			<span class="text-text-secondary text-xs">{activeCount} 人</span>
+			<span class="text-text-secondary text-xs" aria-live="polite">{activeCount} 人</span>
 		{/snippet}
 		{#snippet below()}
 			<!-- TabBar 作为 below 首元素需带上间距（对齐 nearby/moments 样板 below 首元素 mt-3） -->

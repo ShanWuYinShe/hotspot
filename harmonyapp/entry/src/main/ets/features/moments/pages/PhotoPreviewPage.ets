@@ -203,6 +203,10 @@ export struct PhotoPreviewPage {
     .width('100%')
     .height('100%')
     .backgroundColor(DesignConstants.COLOR.BLACK)
+    .onClick(() => {
+      // 单击空白/图片退出预览（业内惯例；双击缩放由 PinchGesture/Pinch 识别器消费，不冲突）
+      this.pathStack?.pop();
+    })
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

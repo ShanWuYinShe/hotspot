@@ -66,18 +66,27 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	});
 
 	let followingIds = $state<Set<string>>(new Set());
+	let followPending = $state<Set<string>>(new Set());
 	const toggleFollow = (id: string) => {
+		if (followPending.has(id)) return;
 		const n = new Set(followingIds);
 		const next = !n.has(id);
 		next ? n.add(id) : n.delete(id);
 		followingIds = n;
+		followPending = new Set(followPending).add(id);
 		// spec: users/set_follow 两态统一；乐观更新 + 失败回滚
-		follow({ user_id: id, active: next }).catch(() => {
-			const r = new Set(followingIds);
-			next ? r.delete(id) : r.add(id);
-			followingIds = r;
-			showToast('操作失败，请重试', 'danger');
-		});
+		follow({ user_id: id, active: next })
+			.catch(() => {
+				const r = new Set(followingIds);
+				next ? r.delete(id) : r.add(id);
+				followingIds = r;
+				showToast('操作失败，请重试', 'danger');
+			})
+			.finally(() => {
+				const rest = new Set(followPending);
+				rest.delete(id);
+				followPending = rest;
+			});
 	};
 	const onlineCount = $derived(nearbyUsers.filter((u) => u.isOnline).length);
 	const heroStats = $derived({
@@ -101,33 +110,19 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 {/snippet}
 
 {#snippet homeContent()}
-	<!-- 三端共用的业务组件（只写一次）。首页为大纲页：列表限长 + 「更多」链接导航到专区 -->
-	{#if loading}
-		<!-- 加载中：统一 spinner（对齐样板 feedState） -->
-		<InlineLoading label="加载首页数据…" />
-	{:else if error}
-		<!-- 加载失败：统一错误态（LoadError） -->
-		<LoadError message={error} onRetry={() => reloadKey++} />
-	{:else if moments.length === 0 && nearbyUsers.length === 0 && nearbyGroups.length === 0}
-		<!-- 空态：无任何附近内容 -->
-		<EmptyState title="附近还没有内容" description="去发布第一条动态，或到附近的人认识新朋友。">
-			{#snippet icon()}
-				<Radar class="size-6 opacity-subtle text-text-secondary"   strokeWidth={1.5} />
-			{/snippet}
-		</EmptyState>
-	{:else}
+	<!-- 移动端成功态内容（loading/error/empty 三态由外层 156-166 统一承载，只写一次）。
+	     首页为大纲页：列表限长 + 「更多」链接导航到专区 -->
 	<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={defaultLocation?.location_name ?? ''} />
-		<div>
-			<SectionHead title="附近活动" action="更多" onAction={() => void goto(ROUTES.nearbyMoments)} />
-			{@render momentRows(moments.slice(0, 3), (id) => void goto(ROUTES.moment(id)))}
-		</div>
+	<div>
+		<SectionHead title="附近活动" action="更多" onAction={() => void goto(ROUTES.nearbyMoments)} />
+		{@render momentRows(moments.slice(0, 3), (id) => void goto(ROUTES.moment(id)))}
+	</div>
 	<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
 	<div>
 		<SectionHead title="人物推荐" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
 		<!-- 对齐 Figma HomePage：人物推荐仅展示前 4 位，其余引导到附近的人专区 -->
-		<NearbyUserRows users={nearbyUsers.slice(0, 4)} {followingIds} onToggle={toggleFollow} />
+		<NearbyUserRows users={nearbyUsers.slice(0, 4)} {followingIds} {followPending} onToggle={toggleFollow} />
 	</div>
-	{/if}
 {/snippet}
 
 	<StandardPageLayout
@@ -170,10 +165,10 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			<!-- Left: hero + activity + groups (340px) -->
 			<div class="flex flex-col gap-6 border-r border-border-default pr-6">
 				<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={defaultLocation?.location_name ?? ''} />
-					<div>
-						<SectionHead title="附近活动" />
-						{@render momentRows(moments, (id) => void goto(ROUTES.moment(id)))}
-					</div>
+				<div>
+					<SectionHead title="附近活动" />
+					{@render momentRows(moments, (id) => void goto(ROUTES.moment(id)))}
+				</div>
 				<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
 			</div>
 
@@ -197,7 +192,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				</div>
 
 				<div class="mt-6">
-					<NearbyUserRows users={nearbyUsers} {followingIds} onToggle={toggleFollow} />
+					<NearbyUserRows users={nearbyUsers} {followingIds} {followPending} onToggle={toggleFollow} />
 				</div>
 			</div>
 		</div>

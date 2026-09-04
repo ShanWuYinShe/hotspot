@@ -96,13 +96,13 @@
 >
 	<!-- HEADER — 52px, full width -->
 	<header
-		class="relative z-30 shrink-0 flex items-center border-b border-border-default bg-surface-page px-5 gap-2"
+		class="relative z-[var(--cst-z-chrome)] shrink-0 flex items-center border-b border-border-default bg-surface-page px-5 gap-2"
 		style="height:var(--cst-desktop-header-height);"
 	>
 		<!-- Logo -->
 		<button
 			type="button"
-			class="hover-btn flex items-center gap-2 mr-3 select-none rounded-full focus-ring focus-visible:ring-offset-surface-page"
+			class="hover-btn flex items-center gap-2 mr-3 select-none rounded-full focus-ring"
 			onclick={() => {
 				activeNavId = 'home';
 				void goto(ROUTES.home);
@@ -115,7 +115,7 @@
 		<!-- 侧边栏折叠开关：放在顶部栏、与 Logo 相邻，不占用/遮挡侧栏菜单布局 -->
 		<button
 			type="button"
-			class="header-action hover-btn scale-btn hit-slop flex size-9 shrink-0 items-center justify-center rounded-full focus-ring text-text-secondary"
+			class="header-action hit-slop flex size-9 shrink-0 items-center justify-center rounded-full focus-ring text-text-secondary"
 			aria-label={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
 			aria-pressed={isSidebarCollapsed}
 			title={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
@@ -166,7 +166,7 @@
 			{#if auth.user}
 				<button
 					type="button"
-					class="hover-btn scale-btn hit-slop relative ml-2 shrink-0 rounded-full focus-ring focus-visible:ring-offset-surface-page size-8"
+					class="hover-btn scale-btn hit-slop relative ml-2 shrink-0 rounded-full focus-ring size-8"
 					aria-label="打开个人主页"
 					onclick={() => guardNav('打开个人主页', ROUTES.me)}
 				>

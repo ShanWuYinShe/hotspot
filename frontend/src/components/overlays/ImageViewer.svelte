@@ -4,8 +4,8 @@
 
 	// ImageViewer — 全屏大图查看器（对齐 harmonyapp PhotoPreviewPage 的交互集合的 Web 版）。
 	// 能力：多图轮播（按钮/键盘/未放大时横向滑动）、单击图片切换放大（以点击位置为锚，
-	// 对齐 Google Photos 网页版习惯）、滚轮连续缩放（1x~4x）、放大后拖拽平移、
-	// 缩略图条与页码、Esc/点击背景关闭。
+	// 对齐 Google Photos 网页版习惯）、滚轮/双指捏合连续缩放（1x~4x）、放大后拖拽平移、
+	// 未放大时下拉关闭、缩略图条与页码、Esc/点击背景关闭。
 	// 底座用 bits-ui Dialog：Escape、外部点击、焦点圈、滚动锁由其统一提供，
 	// 入出场动画沿用项目弹层契约（fade + zoom）。
 	export interface ViewerImage {
@@ -26,7 +26,7 @@
 	} = $props();
 
 	// 缩放/平移状态（切换图片时重置）。originX/Y 是缩放锚点（图片内百分比），
-	// 单击/滚轮缩放都锚定在指针位置，复位回中心。
+	// 单击/滚轮/双指缩放都锚定在指针位置，复位回中心。
 	let scale = $state(1);
 	let originX = $state(50);
 	let originY = $state(50);
@@ -37,6 +37,14 @@
 	let dragStart = { x: 0, y: 0, panX: 0, panY: 0, moved: false };
 	// 拖拽/滑动结束后的 click 不再触发缩放（click 在 pointerup 后补发）
 	let suppressClick = false;
+
+	// 双指捏合缩放（移动端核心手势）：跟踪活动指针，两指距离比驱动 scale
+	const activePointers = new Map<number, { x: number; y: number }>();
+	let pinchBase = { dist: 0, scale: 1 };
+	const pinchDist = () => {
+		const pts = Array.from(activePointers.values());
+		return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+	};
 
 	const MAX_SCALE = 4;
 	const count = $derived(images.length);
@@ -98,13 +106,44 @@
 	}
 
 	function onPointerDown(e: PointerEvent) {
-		if (e.button !== 0) return;
+		if (e.pointerType === 'mouse' && e.button !== 0) return;
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+		if (activePointers.size === 2) {
+			// 进入双指捏合：取消单指拖拽语义，记录基线
+			dragging = false;
+			pinchBase = { dist: pinchDist(), scale };
+			return;
+		}
+		if (activePointers.size > 2) return;
 		dragging = true;
 		dragStart = { x: e.clientX, y: e.clientY, panX, panY, moved: false };
-		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 	}
 
 	function onPointerMove(e: PointerEvent) {
+		if (activePointers.has(e.pointerId)) {
+			activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+		}
+		if (activePointers.size >= 2) {
+			// 双指捏合：距离比驱动连续缩放（锚定首指位置）
+			if (pinchBase.dist > 0) {
+				const el = e.currentTarget as HTMLElement;
+				const rect = el.getBoundingClientRect();
+				if (rect.width > 0 && rect.height > 0) {
+					originX = ((e.clientX - rect.left) / rect.width) * 100;
+					originY = ((e.clientY - rect.top) / rect.height) * 100;
+				}
+				const next = Math.min(MAX_SCALE, Math.max(1, (pinchBase.scale * pinchDist()) / pinchBase.dist));
+				scale = next;
+				if (next === 1) {
+					panX = 0;
+					panY = 0;
+					originX = 50;
+					originY = 50;
+				}
+			}
+			return;
+		}
 		if (!dragging) return;
 		const dx = e.clientX - dragStart.x;
 		const dy = e.clientY - dragStart.y;
@@ -116,15 +155,28 @@
 	}
 
 	function onPointerUp(e: PointerEvent) {
+		const wasPinch = activePointers.size >= 2;
+		activePointers.delete(e.pointerId);
+		if (wasPinch) {
+			// 双指结束：残留单指不恢复拖拽（避免跳变），紧随的 click 屏蔽
+			suppressClick = true;
+			return;
+		}
 		if (!dragging) return;
 		dragging = false;
 		if (dragStart.moved) {
 			// 拖拽平移 / 滑动切图结束，紧随的 click 不触发缩放
 			suppressClick = true;
+			const dx = e.clientX - dragStart.x;
+			const dy = e.clientY - dragStart.y;
 			if (scale === 1 && count > 1) {
 				// 未放大时的横向滑动 = 切图（纵向滑动忽略，避免误切）
-				const dx = e.clientX - dragStart.x;
 				if (Math.abs(dx) > 48) step(dx < 0 ? 1 : -1);
+			}
+			// 未放大时的下拉 = 关闭（Material/iOS 查看器惯例）
+			if (scale === 1 && dy > 90) {
+				suppressClick = false;
+				handleOpenChange(false);
 			}
 		}
 	}

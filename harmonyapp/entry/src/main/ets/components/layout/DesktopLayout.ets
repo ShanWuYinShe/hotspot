@@ -439,6 +439,8 @@ export struct DesktopLayout {
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
       .borderRadius(DesignConstants.SHAPE.INPUT)
       .alignItems(VerticalAlign.Center)
+      // hover 淡填充（对齐 NavItemBuilder；其余侧栏项均有 hover，此处原遗漏）
+      .backgroundColor(this.hoveredNavLabel === '__admin__' ? this.getPalette().accentMuted : DesignConstants.COLOR.TRANSPARENT)
       // 按压反馈与 NavItemBuilder 同款（tap-97 + spring）
       .scale(this.pressedNavLabel === '__admin__' ?
         { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
@@ -453,6 +455,9 @@ export struct DesktopLayout {
         } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
           this.pressedNavLabel = '';
         }
+      })
+      .onHover((isHover: boolean) => {
+        this.hoveredNavLabel = isHover ? '__admin__' : '';
       })
       .onClick(() => {
         if (this.isLoggedIn) {
