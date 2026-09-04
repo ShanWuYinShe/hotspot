@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { MessageCircle, Users } from '@lucide/svelte';
-	import TagPill from '@/components/forms/TagPill.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
@@ -65,9 +64,6 @@
 			{#snippet avatarBadge()}
 				<OnlineDot size="md" color={f.online ? undefined : 'var(--cst-text-secondary)'} class={f.online ? '' : 'opacity-muted'} />
 			{/snippet}
-			{#snippet nameBadge()}
-				<TagPill size="sm">{f.tag}</TagPill>
-			{/snippet}
 			{#snippet subtitle()}
 				<p class="mt-0.5 text-text-secondary text-xs">{f.handle}</p>
 			{/snippet}
@@ -76,7 +72,6 @@
 					<button
 						type="button"
 						class="hover-btn tap-92 hit-slop flex items-center justify-center gap-1 rounded-full bg-accent-default px-2.5 py-1.5 text-sm text-text-on-accent focus-ring"
-						style="box-shadow:var(--shadow-glow-sm);"
 						onclick={(e) => {
 							e.stopPropagation();
 							void goto(ROUTES.message(f.id));
@@ -87,7 +82,7 @@
 					</button>
 					<button
 						type="button"
-						class="hover-btn tap-92 hit-slop flex items-center justify-center gap-1 rounded-full border border-border-default bg-surface-primary px-2.5 py-1.5 text-sm text-text-secondary shadow-raised-sm focus-ring"
+						class="hover-btn tap-92 hit-slop flex items-center justify-center gap-1 rounded-full border border-border-default bg-surface-primary px-2.5 py-1.5 text-sm text-text-secondary focus-ring"
 						onclick={(e) => {
 							e.stopPropagation();
 							void goto(`${ROUTES.user(f.id)}?from=relationships`);

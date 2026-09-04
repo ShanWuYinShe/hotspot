@@ -6,6 +6,7 @@
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
@@ -115,7 +116,7 @@
 					ariaLabel="创建群聊"
 					class="mb-3 flex items-center gap-3.5 p-3"
 				>
-					<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default size-11 shadow-glow-sm">
+					<div class="flex items-center justify-center rounded-full shrink-0 bg-accent-default size-11">
 						<Users class="size-5 text-text-on-accent" strokeWidth={1.75} />
 					</div>
 					<div>
@@ -126,24 +127,26 @@
 
 				<p class="eyebrow mb-2">联系人</p>
 				{#if filteredContacts.length > 0}
-					{#each filteredContacts as c (c.id)}
-						<ListItem
-							tone="card"
-							onClick={() => {
-								onNewChat?.(c.id);
-								onClose();
-							}}
-							ariaLabel={`与 ${c.name} 开始私聊`}
-							class="flex items-center gap-3.5 p-3"
-						>
-							<Avatar src={c.avatar} name={c.name} size={44} class="border" style="border-color:var(--cst-border-default);border-width:var(--cst-border-width-regular);" />
-							<div class="flex-1 min-w-0">
-								<p class="text-text-primary text-sm">{c.name}</p>
-								<p class="text-text-secondary text-xs">发起新会话</p>
-							</div>
-							<MessageCircle class="size-4 shrink-0 text-text-secondary" strokeWidth={1.5} />
-						</ListItem>
-					{/each}
+					<!-- 联系人集合用一张 bordered 列表卡（行间 1px 分隔），不用逐行独立卡 -->
+					<ListContainer bordered ariaLabel="联系人">
+						{#each filteredContacts as c (c.id)}
+							<ListItem
+								onClick={() => {
+									onNewChat?.(c.id);
+									onClose();
+								}}
+								ariaLabel={`与 ${c.name} 开始私聊`}
+								class="flex items-center gap-3.5 px-4 py-3"
+							>
+								<Avatar src={c.avatar} name={c.name} size={44} />
+								<div class="flex-1 min-w-0">
+									<p class="text-text-primary text-sm">{c.name}</p>
+									<p class="text-text-secondary text-xs">发起新会话</p>
+								</div>
+								<MessageCircle class="size-4 shrink-0 text-text-secondary" strokeWidth={1.5} />
+							</ListItem>
+						{/each}
+					</ListContainer>
 				{:else}
 					<EmptyState
 						bare

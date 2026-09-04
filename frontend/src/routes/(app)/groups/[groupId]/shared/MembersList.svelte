@@ -10,6 +10,15 @@
 
 	// MembersList —— 成员列表 + （管理者）添加成员入口；行点击进资料，
 	// 管理按钮交由父级 MemberActionSheet 处理。
+
+	/** 后端 role 值 → 中文展示（未收录角色回退原值）。 */
+	const ROLE_LABELS: Record<string, string> = {
+		owner: '群主',
+		admin: '管理员',
+		member: '成员'
+	};
+	const roleLabel = (role: string) => ROLE_LABELS[role] ?? role;
+
 	let {
 		members,
 		onlineMemberIds,
@@ -53,7 +62,7 @@
 			</div>
 			<span class="min-w-0 flex-1">
 				<span class="block text-sm text-text-primary">{member.name}</span>
-				<span class="text-xs text-text-secondary">{member.role}</span>
+				<span class="text-xs text-text-secondary">{roleLabel(member.role)}</span>
 			</span>
 			<span class="text-xs text-text-secondary">查看资料</span>
 			{#if canManageMember(member)}

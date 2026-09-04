@@ -8,10 +8,15 @@
 	let now = $state(new Date());
 
 	$effect(() => {
-		const timer = setInterval(() => {
+		// 时钟显示分钟精度，按分钟边界对齐刷新（+50ms 容差），
+		// 避免每秒 set 触发 60 倍的无谓重渲染
+		let timer: ReturnType<typeof setTimeout>;
+		const tick = () => {
 			now = new Date();
-		}, 1000);
-		return () => clearInterval(timer);
+			timer = setTimeout(tick, 60_000 - (Date.now() % 60_000) + 50);
+		};
+		tick();
+		return () => clearTimeout(timer);
 	});
 
 	const h = $derived(now.getHours().toString().padStart(2, '0'));
